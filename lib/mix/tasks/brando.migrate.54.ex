@@ -132,8 +132,7 @@ if Code.ensure_loaded?(Igniter) do
                   when is_list(keyword_list_blocks) ->
                     # Transform each keyword list into a `:filter` call
                     new_filter_calls =
-                      keyword_list_blocks
-                      |> Enum.map(fn keyword_list_block ->
+                      Enum.map_join(keyword_list_blocks, "\n", fn keyword_list_block ->
                         {:__block__, _meta_keyword_list, [keyword_tuples]} = keyword_list_block
 
                         # Reconstruct the keyword list
@@ -148,7 +147,6 @@ if Code.ensure_loaded?(Igniter) do
                         # Create a new `:filter` function call1
                         Sourceror.to_string({:filter, meta_filters, [keywords]})
                       end)
-                      |> Enum.join("\n")
 
                     Igniter.Code.Common.replace_code(zipper, new_filter_calls)
 
@@ -183,7 +181,7 @@ if Code.ensure_loaded?(Igniter) do
                   when is_list(keyword_list_blocks) ->
                     # Transform each keyword list into a `:action` call
                     new_action_calls =
-                      Enum.map(keyword_list_blocks, fn keyword_list_block ->
+                      Enum.map_join(keyword_list_blocks, "\n", fn keyword_list_block ->
                         {:__block__, _meta_keyword_list, [keyword_tuples]} = keyword_list_block
 
                         # Reconstruct the keyword list
@@ -196,10 +194,8 @@ if Code.ensure_loaded?(Igniter) do
                           end)
 
                         # Create a new `:action` function call
-                        {:action, meta_actions, [keywords]}
-                        |> Sourceror.to_string()
+                        Sourceror.to_string({:action, meta_actions, [keywords]})
                       end)
-                      |> Enum.join("\n")
 
                     Igniter.Code.Common.replace_code(zipper, new_action_calls)
 
@@ -235,9 +231,9 @@ if Code.ensure_loaded?(Igniter) do
             code =
               """
               relations do
-                #{Enum.map(villains_for_this_module, fn villain -> """
+                #{Enum.map_join(villains_for_this_module, "\n", fn villain -> """
                 relation #{inspect(villain)}, :has_many, module: :blocks
-                """ end) |> Enum.join("\n")}
+                """ end)}
               end
               """
 
@@ -247,9 +243,9 @@ if Code.ensure_loaded?(Igniter) do
             with {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper) do
               code =
                 """
-                #{Enum.map(villains_for_this_module, fn villain -> """
+                #{Enum.map_join(villains_for_this_module, "\n", fn villain -> """
                   relation #{inspect(villain)}, :has_many, module: :blocks
-                  """ end) |> Enum.join("\n")}
+                  """ end)}
                 """
 
               {:ok, Igniter.Code.Common.add_code(zipper, code)}

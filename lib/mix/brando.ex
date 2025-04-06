@@ -294,8 +294,7 @@ defmodule Mix.Brando do
         content_split =
           content
           |> String.split("\n")
-          |> Enum.map(&"#{whitespace}#{&1}")
-          |> Enum.join("\n")
+          |> Enum.map_join("\n", &"#{whitespace}#{&1}")
 
         content = "#{content_split}\n#{whitespace}#{marker}"
         String.replace(line, whitespace <> marker, content)
@@ -313,8 +312,7 @@ defmodule Mix.Brando do
         content_split =
           content
           |> String.split("\n")
-          |> Enum.map(&"#{whitespace}#{&1}")
-          |> Enum.join("\n")
+          |> Enum.map_join("\n", &"#{whitespace}#{&1}")
 
         content = "#{whitespace}#{marker}\n#{content_split}"
         String.replace(line, whitespace <> marker, content)
