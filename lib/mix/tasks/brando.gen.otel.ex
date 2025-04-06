@@ -139,14 +139,12 @@ if Code.ensure_loaded?(Igniter) do
                  zipper,
                  [:releases, app_atom, :applications, :opentelemetry_exporter],
                  :permanent
-               ),
-             {:ok, zipper} <-
-               Igniter.Code.Keyword.put_in_keyword(
-                 zipper,
-                 [:releases, app_atom, :applications, :opentelemetry],
-                 :temporary
                ) do
-          {:ok, zipper}
+          Igniter.Code.Keyword.put_in_keyword(
+            zipper,
+            [:releases, app_atom, :applications, :opentelemetry],
+            :temporary
+          )
         end
       end)
     end
