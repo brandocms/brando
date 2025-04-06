@@ -26,7 +26,7 @@ defmodule Brando.Villain.ParserTest do
 
   test "map/2" do
     assert map(%{embed_url: "https://nrk.no", source: :gmaps}, []) ==
-             "<div class=\"map-wrapper\">\n             <iframe width=\"420\"\n                     height=\"315\"\n                     src=\"https://nrk.no\"\n                     frameborder=\"0\"\n                     allowfullscreen>\n             </iframe>\n           </div>"
+             "<div class=\"map-wrapper\">\n         <iframe width=\"420\"\n                 height=\"315\"\n                 src=\"https://nrk.no\"\n                 frameborder=\"0\"\n                 allowfullscreen>\n         </iframe>\n       </div>"
   end
 
   test "html/2" do
@@ -35,12 +35,12 @@ defmodule Brando.Villain.ParserTest do
 
   test "video/2 youtube" do
     assert video(%{remote_id: "asdf1234", source: :youtube, autoplay: false}, []) ==
-             "<div class=\"video-wrapper video-embed\" data-orientation=\"landscape\" style=\"--aspect-ratio: 0.75\">\n             <iframe width=\"420\"\n                     height=\"315\"\n                     src=\"//www.youtube.com/embed/asdf1234?autoplay=0&controls=0&showinfo=0&rel=0\"\n                     frameborder=\"0\"\n                     allowfullscreen>\n             </iframe>\n           </div>"
+             "<div class=\"video-wrapper video-embed\" data-orientation=\"landscape\" style=\"--aspect-ratio: 0.75\">\n         <iframe width=\"420\"\n                 height=\"315\"\n                 src=\"//www.youtube.com/embed/asdf1234?autoplay=0&controls=0&showinfo=0&rel=0\"\n                 frameborder=\"0\"\n                 allowfullscreen>\n         </iframe>\n       </div>"
   end
 
   test "video/2 vimeo" do
     assert video(%{remote_id: "asdf1234", source: :vimeo}, []) ==
-             "<div class=\"video-wrapper video-embed\" data-orientation=\"landscape\" style=\"--aspect-ratio: 0.562\">\n             <iframe src=\"//player.vimeo.com/video/asdf1234?dnt=1\"\n                     width=\"500\"\n                     height=\"281\"\n                     frameborder=\"0\"\n                     webkitallowfullscreen\n                     mozallowfullscreen\n                     allowfullscreen>\n             </iframe>\n           </div>"
+             "<div class=\"video-wrapper video-embed\" data-orientation=\"landscape\" style=\"--aspect-ratio: 0.562\">\n         <iframe src=\"//player.vimeo.com/video/asdf1234?dnt=1\"\n                 width=\"500\"\n                 height=\"281\"\n                 frameborder=\"0\"\n                 webkitallowfullscreen\n                 mozallowfullscreen\n                 allowfullscreen>\n         </iframe>\n       </div>"
   end
 
   test "video/2 file" do
