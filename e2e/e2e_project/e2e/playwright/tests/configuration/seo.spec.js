@@ -32,6 +32,10 @@ test('seo changes affect the frontpage', async ({ page }) => {
   await page.getByTestId('submit').click()
   await syncLV(page)
   await expect(page).toHaveURL('/admin/config/seo')
+  
+  // Wait for the cache to be updated
+  // The SEO update happens through Cachex and needs time to propagate
+  await page.waitForTimeout(1000)
 
   // test meta tags
   await page.goto('/')
