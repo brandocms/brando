@@ -122,14 +122,24 @@ defmodule BrandoIntegrationWeb.Router do
     get "/", BrandoIntegration.LockdownController, :index
   end
 
-  scope "/" do
+  scope "/", assigns: %{language: "en"} do
     pipe_through :browser
     get "/projects", BrandoIntegration.ProjectController, :index
     get "/project/:uri", BrandoIntegration.ProjectController, :show
     get "/project/:uri/:id", BrandoIntegration.ProjectController, :show
-  end
 
-  scope "/" do
+    scope "/no", as: :no, assigns: %{language: "no"} do
+      get "/prosjekter", BrandoIntegration.ProjectController, :index
+      get "/prosjekt/:uri", BrandoIntegration.ProjectController, :show
+      get "/prosjekt/:uri/:id", BrandoIntegration.ProjectController, :show
+    end
+
+    scope "/en", as: :en, assigns: %{language: "en"} do
+      get "/projects", BrandoIntegration.ProjectController, :scoped_index
+      get "/project/:uri", BrandoIntegration.ProjectController, :scoped_show
+      get "/project/:uri/:id", BrandoIntegration.ProjectController, :scoped_show
+    end
+
     page_routes()
   end
 end

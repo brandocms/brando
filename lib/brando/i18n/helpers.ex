@@ -20,28 +20,39 @@ defmodule Brando.I18n.Helpers do
   def localized(locale, fun, args), do: localized_path(locale, fun, args)
 
   def localized_path(locale, fun, args) do
-    locale = (is_binary(locale) && locale) || to_string(locale)
+    locale = to_string(locale)
+    default_language = to_string(Brando.config(:default_language))
+    helpers_module = Brando.helpers()
 
-    default_language =
-      (is_binary(Brando.config(:default_language)) && Brando.config(:default_language)) ||
-        to_string(Brando.config(:default_language))
-
-    if Brando.config(:scope_default_language_routes) == false && default_language == locale do
-      # if the locale is the default language, we use the regular path
-      apply(Brando.helpers(), :"#{fun}", args)
-    else
-      localized_fun = :"#{locale}_#{fun}"
-
-      if :functions |> Brando.helpers().__info__() |> Keyword.has_key?(localized_fun) do
-        apply(Brando.helpers(), localized_fun, args)
+    # Determine which function to use based on locale and configuration
+    function_name =
+      if Brando.config(:scope_default_language_routes) == false && default_language == locale do
+        # Default language without scoping - use regular path
+        :"#{fun}"
       else
-        # fallback to regular function (mostly used for page_path)
-        if {:"#{fun}", Enum.count(args)} in Brando.helpers().__info__(:functions) do
-          apply(Brando.helpers(), :"#{fun}", args)
-        else
-          "/<url cannot be localized>"
-        end
+        # Either non-default language or scoped default language - use localized path
+        :"#{locale}_#{fun}"
       end
+
+    # Try to apply the function directly if it exists as a key in the helper module
+    cond do
+      # Check if the function exists in the module
+      function_exists?(helpers_module, function_name) ->
+        apply(helpers_module, function_name, args)
+
+      # Fallback to the regular function if localized version doesn't exist
+      function_name != :"#{fun}" && function_exists?(helpers_module, :"#{fun}") ->
+        apply(helpers_module, :"#{fun}", args)
+
+      # Cannot localize the URL
+      true ->
+        "/<url cannot be localized>"
     end
+  end
+
+  # Helper function to check if a function exists in a module
+  defp function_exists?(module, function_name) do
+    functions = module.__info__(:functions)
+    Enum.any?(functions, fn {fun, _} -> fun == function_name end)
   end
 end
