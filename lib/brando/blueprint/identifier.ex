@@ -41,55 +41,12 @@ defmodule Brando.Blueprint.Identifier do
 
       @parsed_identifier unquote(parsed_identifier)
       def __identifier__(entry, opts \\ []) do
-        skip_cover = Keyword.get(opts, :skip_cover, false)
-        context = Villain.get_base_context(entry)
-        {result, _} = Liquex.Render.render!([], @parsed_identifier, context)
-        title = Enum.join(result)
-        status = Map.get(entry, :status, nil)
-        language = Map.get(entry, :language, nil)
-
-        language =
-          (is_nil(language) && nil) || (is_binary(language) && String.to_existing_atom(language)) ||
-            language
-
-        image_assets =
-          Enum.filter(Brando.Blueprint.Assets.__assets__(__MODULE__), &(&1.type == :image))
-
-        # if image_assets has :meta_image first, move it last
-        image_assets =
-          if image_assets != [] and List.first(image_assets).name == :meta_image do
-            image_assets
-            |> List.delete_at(0)
-            |> List.insert_at(-1, List.first(image_assets))
-          else
-            image_assets
-          end
-
-        first_image_asset = List.first(image_assets)
-
-        cover =
-          if skip_cover,
-            do: nil,
-            else: Brando.Blueprint.Identifier.extract_cover(first_image_asset, entry)
-
-        updated_at =
-          (Map.has_key?(entry, :updated_at) && Brando.Utils.ensure_utc(entry.updated_at)) || nil
-
-        url =
-          if {:__absolute_url__, 1} in entry.__struct__.__info__(:functions) do
-            __absolute_url__(entry)
-          end
-
-        %Identifier{
-          entry_id: entry.id,
-          title: title,
-          status: status,
-          language: language,
-          cover: cover,
-          schema: __MODULE__,
-          updated_at: updated_at,
-          url: url
-        }
+        Brando.Blueprint.Identifier.handle_identifier(
+          __MODULE__,
+          entry,
+          @parsed_identifier,
+          opts
+        )
       end
     end
   end
@@ -104,6 +61,47 @@ defmodule Brando.Blueprint.Identifier do
     quote location: :keep do
       def __has_identifier__, do: false
     end
+  end
+
+  def handle_identifier(module, entry, parsed_identifier, opts) do
+    skip_cover = Keyword.get(opts, :skip_cover, false)
+    context = Villain.get_base_context(entry)
+    {result, _} = Liquex.Render.render!([], parsed_identifier, context)
+    title = Enum.join(result)
+    status = Map.get(entry, :status, nil)
+    language = Map.get(entry, :language, nil)
+
+    language =
+      (is_nil(language) && nil) || (is_binary(language) && String.to_existing_atom(language)) ||
+        language
+
+    image_assets = Enum.filter(Brando.Blueprint.Assets.__assets__(module), &(&1.type == :image))
+
+    # if image_assets has :meta_image first, move it last
+    image_assets =
+      if image_assets != [] and List.first(image_assets).name == :meta_image do
+        image_assets
+        |> List.delete_at(0)
+        |> List.insert_at(-1, List.first(image_assets))
+      else
+        image_assets
+      end
+
+    first_image_asset = List.first(image_assets)
+    cover = if skip_cover, do: nil, else: extract_cover(first_image_asset, entry)
+    updated_at = (Map.has_key?(entry, :updated_at) && Brando.Utils.ensure_utc(entry.updated_at)) || nil
+    url = if {:__absolute_url__, 1} in entry.__struct__.__info__(:functions), do: entry.__struct__.__absolute_url__(entry)
+
+    %Identifier{
+      entry_id: entry.id,
+      title: title,
+      status: status,
+      language: language,
+      cover: cover,
+      schema: module,
+      updated_at: updated_at,
+      url: url
+    }
   end
 
   def list_entry_types do

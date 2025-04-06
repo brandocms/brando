@@ -20,7 +20,9 @@ defmodule Brando.Blueprint.BlueprintTest do
              {Brando.Trait.Creator, []},
              {Brando.Trait.SoftDelete, []},
              {Brando.Trait.Sequenced, []},
-             {Brando.Trait.Timestamped, []}
+             {Brando.Trait.Status, []},
+             {Brando.Trait.Timestamped, []},
+             {Brando.Trait.Translatable, []}
            ]
   end
 
@@ -38,7 +40,7 @@ defmodule Brando.Blueprint.BlueprintTest do
 
   test "__required_attrs__" do
     required_attrs = Brando.BlueprintTest.Project.__required_attrs__()
-    assert required_attrs == [:slug]
+    assert required_attrs == [:language, :slug, :status]
   end
 
   test "__optional_attrs__" do
@@ -50,6 +52,18 @@ defmodule Brando.Blueprint.BlueprintTest do
     attrs = Brando.Blueprint.Attributes.__attributes__(Brando.BlueprintTest.Project)
 
     assert attrs == [
+             %Brando.Blueprint.Attributes.Attribute{
+               __identifier__: :status,
+               name: :status,
+               type: :status,
+               opts: %{required: true}
+             },
+             %Brando.Blueprint.Attributes.Attribute{
+               __identifier__: :language,
+               name: :language,
+               type: :language,
+               opts: %{values: [:no, :en], required: true}
+             },
              %Brando.Blueprint.Attributes.Attribute{
                __identifier__: :title,
                name: :title,
@@ -232,6 +246,12 @@ defmodule Brando.Blueprint.BlueprintTest do
                type: :belongs_to
              },
              %Brando.Blueprint.Relations.Relation{
+               name: :alternates,
+               type: :has_many,
+               opts: %{module: :alternates},
+               __identifier__: :alternates
+             },
+             %Brando.Blueprint.Relations.Relation{
                __identifier__: :properties,
                name: :properties,
                opts: %{module: Brando.BlueprintTest.Property},
@@ -245,6 +265,8 @@ defmodule Brando.Blueprint.BlueprintTest do
 
     assert schema == [
              :id,
+             :status,
+             :language,
              :title,
              :slug,
              :deleted_at,

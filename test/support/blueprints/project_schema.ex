@@ -78,12 +78,15 @@ defmodule Brando.BlueprintTest.Project do
     size_limit: 10_240_000
   }
 
-  absolute_url {:i18n, :page_path, :show, [[:slug], [:creator, :slug], [:properties, :name]]}
+  absolute_url {:i18n, :project_path, :show_fancy, [[:slug], [:creator, :slug], [:properties, :name]]}
+  identifier "{{ entry.title }} [{{ entry.id }}]"
 
   trait Brando.Trait.Creator
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Sequenced
+  trait Brando.Trait.Status
   trait Brando.Trait.Timestamped
+  trait Brando.Trait.Translatable
 
   attributes do
     attribute :title, :string

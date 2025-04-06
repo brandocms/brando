@@ -138,6 +138,7 @@ defmodule BrandoIntegrationWeb.Router do
       get "/projects", BrandoIntegration.ProjectController, :scoped_index
       get "/project/:uri", BrandoIntegration.ProjectController, :scoped_show
       get "/project/:uri/:id", BrandoIntegration.ProjectController, :scoped_show
+      get "/project/:slug/:creator_slug/:property_name", BrandoIntegration.ProjectController, :show_fancy
     end
 
     page_routes()
