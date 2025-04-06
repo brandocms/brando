@@ -8,32 +8,29 @@ defmodule BrandoAdmin.Components.Form.Block do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.BlockField
-
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
   alias BrandoAdmin.Components.Form.Input.Entries
   alias BrandoAdmin.Components.Form.Input.RenderVar
-  alias BrandoAdmin.Components.Form.Block
+  alias BrandoAdmin.Components.Form.Block.Events
   alias Brando.Content.BlockIdentifier
   alias Brando.Content.Var
   alias Brando.Villain
 
   def mount(socket) do
-    {:ok,
-     socket
-     |> Block.Events.attach_block_events()
-     |> assign(
-       block_initialized: false,
-       container_not_found: false,
-       module_not_found: false,
-       entry_template: nil,
-       initial_render: false,
-       dom_id: nil,
-       position_response_tracker: [],
-       source: nil,
-       live_preview_active?: false,
-       live_preview_cache_key: nil
-     )}
+    socket
+    |> assign(:block_initialized, false)
+    |> assign(:container_not_found, false)
+    |> assign(:module_not_found, false)
+    |> assign(:entry_template, nil)
+    |> assign(:initial_render, false)
+    |> assign(:dom_id, nil)
+    |> assign(:position_response_tracker, [])
+    |> assign(:source, nil)
+    |> assign(:live_preview_active?, false)
+    |> assign(:live_preview_cache_key, nil)
+    |> Events.attach_block_events()
+    |> then(&{:ok, &1})
   end
 
   # duplicate block (that is not an entry block)
@@ -850,50 +847,11 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def update_changeset_data_block_var(socket, var_key, type, data) when type in [:file, :image] do
     assoc_data = Map.get(data, :type)
-
     uid = socket.assigns.uid
     changeset = socket.assigns.form.source
     belongs_to = socket.assigns.belongs_to
-    load_path = (belongs_to == :root && [:data, :block, :vars]) || [:data, :vars]
 
-    # is the block loaded?
-    if Brando.Utils.try_path(changeset, load_path) do
-      access_path =
-        if belongs_to == :root do
-          [
-            Access.key(:data),
-            Access.key(:block),
-            Access.key(:vars),
-            Access.filter(&(&1.key == var_key)),
-            Access.key(type)
-          ]
-        else
-          [
-            Access.key(:data),
-            Access.key(:vars),
-            Access.filter(&(&1.key == var_key)),
-            Access.key(type)
-          ]
-        end
-
-      updated_changeset =
-        put_in(
-          changeset,
-          access_path,
-          assoc_data
-        )
-
-      updated_form =
-        build_form_from_changeset(
-          updated_changeset,
-          uid,
-          belongs_to
-        )
-
-      assign(socket, :form, updated_form)
-    else
-      socket
-    end
+    update_var_in_changeset(socket, var_key, belongs_to, changeset, uid, type, assoc_data)
   end
 
   def update_changeset_data_block_var(socket, var_key, :link, data) do
@@ -901,32 +859,22 @@ defmodule BrandoAdmin.Components.Form.Block do
     uid = socket.assigns.uid
     changeset = socket.assigns.form.source
     belongs_to = socket.assigns.belongs_to
-    load_path = (belongs_to == :root && [:data, :block, :vars]) || [:data, :vars]
+
+    update_var_in_changeset(socket, var_key, belongs_to, changeset, uid, :identifier, identifier)
+  end
+
+  def update_changeset_data_block_var(socket, _, _, _), do: socket
+
+  defp update_var_in_changeset(socket, var_key, belongs_to, changeset, uid, data_key, data_value) do
+    load_path = get_vars_path(belongs_to)
 
     # is the block loaded?
     vars = Brando.Utils.try_path(changeset, load_path)
-    loaded? = is_list(vars)
+    loaded? = if is_list(vars), do: true, else: vars != nil
 
     if loaded? do
-      access_path =
-        if belongs_to == :root do
-          [
-            Access.key(:data),
-            Access.key(:block),
-            Access.key(:vars),
-            Access.filter(&(&1.key == var_key)),
-            Access.key(:identifier)
-          ]
-        else
-          [
-            Access.key(:data),
-            Access.key(:vars),
-            Access.filter(&(&1.key == var_key)),
-            Access.key(:identifier)
-          ]
-        end
-
-      updated_changeset = put_in(changeset, access_path, identifier)
+      access_path = get_var_access_path(belongs_to, var_key, data_key)
+      updated_changeset = put_in(changeset, access_path, data_value)
 
       updated_form =
         build_form_from_changeset(
@@ -941,7 +889,27 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  def update_changeset_data_block_var(socket, _, _, _), do: socket
+  defp get_vars_path(:root), do: [:data, :block, :vars]
+  defp get_vars_path(_), do: [:data, :vars]
+
+  defp get_var_access_path(:root, var_key, data_key) do
+    [
+      Access.key(:data),
+      Access.key(:block),
+      Access.key(:vars),
+      Access.filter(&(&1.key == var_key)),
+      Access.key(data_key)
+    ]
+  end
+
+  defp get_var_access_path(_, var_key, data_key) do
+    [
+      Access.key(:data),
+      Access.key(:vars),
+      Access.filter(&(&1.key == var_key)),
+      Access.key(data_key)
+    ]
+  end
 
   def maybe_get_live_preview_status(%{assigns: %{form_is_new: true, block_initialized: false}} = socket) do
     form_cid = socket.assigns.form_cid
@@ -983,45 +951,40 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def maybe_render_module(%{assigns: %{belongs_to: :root, live_preview_active?: true}} = socket) do
-    changeset = socket.assigns.form.source
-    entry = socket.assigns.entry
-    uid = socket.assigns.uid
-    has_vars? = socket.assigns.has_vars?
-    has_table_rows? = socket.assigns.has_table_rows?
-
-    updated_changeset =
-      render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?)
-
-    new_form =
-      to_form(updated_changeset,
-        as: "entry_block",
-        id: "entry_block_form-#{uid}"
-      )
-
-    assign(socket, :form, new_form)
+    update_form_with_rendered_module(socket, :root)
   end
 
   def maybe_render_module(%{assigns: %{initial_render: false, live_preview_active?: true}} = socket) do
-    changeset = socket.assigns.form.source
-    entry = socket.assigns.entry
-    uid = socket.assigns.uid
-    has_vars? = socket.assigns.has_vars?
-    has_table_rows? = socket.assigns.has_table_rows?
-
-    updated_changeset =
-      render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)
-
-    new_form =
-      to_form(updated_changeset,
-        as: "child_block",
-        id: "child_block_form-#{uid}"
-      )
-
-    assign(socket, :form, new_form)
+    update_form_with_rendered_module(socket, :child)
   end
 
   def maybe_render_module(socket) do
     socket
+  end
+
+  defp update_form_with_rendered_module(socket, belongs_to_type) do
+    changeset = socket.assigns.form.source
+    entry = socket.assigns.entry
+    uid = socket.assigns.uid
+    has_vars? = socket.assigns.has_vars?
+    has_table_rows? = socket.assigns.has_table_rows?
+
+    updated_changeset =
+      if belongs_to_type == :root do
+        render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?)
+      else
+        render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)
+      end
+
+    form_type = if belongs_to_type == :root, do: "entry_block", else: "child_block"
+
+    new_form =
+      to_form(updated_changeset,
+        as: form_type,
+        id: "#{form_type}_form-#{uid}"
+      )
+
+    assign(socket, :form, new_form)
   end
 
   def register_block_wanting_entry(cid, form_cid) do
@@ -3249,6 +3212,9 @@ defmodule BrandoAdmin.Components.Form.Block do
       Changeset.get_field(updated_block_changeset, :active) == true
   end
 
+  @doc """
+  Build a form from a changeset based on whether it belongs to the root or not.
+  """
   def build_form_from_changeset(changeset, uid, belongs_to) do
     if belongs_to == :root do
       to_form(changeset,
@@ -3351,16 +3317,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         true
       end
 
-    rendered_html =
-      changeset
-      |> Brando.Utils.apply_changes_recursively()
-      |> reset_empty_vars(has_vars?, true)
-      |> reset_table_rows(has_table_rows?, true)
-      |> Brando.Villain.render_block(entry,
-        skip_children: skip_children,
-        format_html: true,
-        annotate_blocks: true
-      )
+    rendered_html = render_block_html(changeset, entry, has_vars?, has_table_rows?, true, skip_children)
 
     updated_block_changeset =
       changeset
@@ -3372,20 +3329,23 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?) do
-    rendered_html =
-      changeset
-      |> Brando.Utils.apply_changes_recursively()
-      |> reset_empty_vars(has_vars?, false)
-      |> reset_table_rows(has_table_rows?, false)
-      |> Brando.Villain.render_block(entry,
-        skip_children: true,
-        format_html: true,
-        annotate_blocks: true
-      )
+    rendered_html = render_block_html(changeset, entry, has_vars?, has_table_rows?, false, true)
 
     changeset
     |> Changeset.put_change(:rendered_html, rendered_html)
     |> maybe_update_rendered_at()
+  end
+
+  defp render_block_html(changeset, entry, has_vars?, has_table_rows?, is_root, skip_children) do
+    changeset
+    |> Brando.Utils.apply_changes_recursively()
+    |> reset_empty_vars(has_vars?, is_root)
+    |> reset_table_rows(has_table_rows?, is_root)
+    |> Brando.Villain.render_block(entry,
+      skip_children: skip_children,
+      format_html: true,
+      annotate_blocks: true
+    )
   end
 
   defp maybe_update_rendered_at(%Changeset{changes: %{rendered_html: _}} = changeset) do
@@ -3471,32 +3431,23 @@ defmodule BrandoAdmin.Components.Form.Block do
   def maybe_update_liquex_block_var(socket, _, _), do: socket
 
   def update_liquex_block_var(socket, var_key, :image, data) do
-    liquid_splits = socket.assigns.liquid_splits
-
-    updated_liquid_splits =
-      liquid_splits
-      |> Enum.reduce([], fn
-        {type, ^var_key, _prev_var_value}, acc ->
-          path = get_in(data, [:image, Access.key(:path)])
-          media_path = Brando.Utils.media_url(path)
-          [{type, var_key, media_path} | acc]
-
-        item, acc ->
-          [item | acc]
-      end)
-      |> Enum.reverse()
-
-    assign(socket, :liquid_splits, updated_liquid_splits)
+    path = get_in(data, [:image, Access.key(:path)])
+    media_path = Brando.Utils.media_url(path)
+    update_liquid_split_var(socket, var_key, media_path)
   end
 
   def update_liquex_block_var(socket, var_key, _var_type, data) do
+    update_liquid_split_var(socket, var_key, Map.get(data, :value))
+  end
+
+  defp update_liquid_split_var(socket, var_key, new_value) do
     liquid_splits = socket.assigns.liquid_splits
 
     updated_liquid_splits =
       liquid_splits
       |> Enum.reduce([], fn
         {type, ^var_key, _prev_var_value}, acc ->
-          [{type, var_key, Map.get(data, :value)} | acc]
+          [{type, var_key, new_value} | acc]
 
         item, acc ->
           [item | acc]
@@ -3648,6 +3599,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     )
   end
 
+  @doc """
+  Updates a block changeset based on whether it belongs to the root or not.
+  """
   def update_block_changeset(changeset, block_changeset, :root) do
     Changeset.put_assoc(changeset, :block, block_changeset)
   end
@@ -3660,6 +3614,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     Changeset.get_embed(block[:data].form.source, :data)
   end
 
+  @doc """
+  Gets the block changeset depending on whether it belongs to the root or not.
+  """
   def get_block_changeset(changeset, :root), do: Changeset.get_assoc(changeset, :block)
   def get_block_changeset(changeset, _), do: changeset
 
