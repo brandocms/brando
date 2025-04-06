@@ -240,11 +240,12 @@ defmodule Brando.Villain.Parser do
             _ -> children
           end
 
-        Enum.map(children, fn entry ->
-          entry
-          |> put_in([Access.key(:vars)], process_vars(entry.vars))
-          |> put_in([Access.key(:refs)], process_refs(entry.refs))
-        end)
+        children =
+          Enum.map(children, fn entry ->
+            entry
+            |> put_in([Access.key(:vars)], process_vars(entry.vars))
+            |> put_in([Access.key(:refs)], process_refs(entry.refs))
+          end)
 
         context =
           base_context

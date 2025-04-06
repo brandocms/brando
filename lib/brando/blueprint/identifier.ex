@@ -209,8 +209,10 @@ defmodule Brando.Blueprint.Identifier do
     relevant_modules =
       :include_brando
       |> Brando.Blueprint.list_blueprints()
-      |> Enum.filter(&(Brando.Content.has_identifier(&1) == {:ok, :has_identifier}))
-      |> Enum.filter(&(Brando.Content.persist_identifier(&1) == {:ok, :persist_identifier}))
+      |> Enum.filter(
+        &(Brando.Content.has_identifier(&1) == {:ok, :has_identifier} &&
+            Brando.Content.persist_identifier(&1) == {:ok, :persist_identifier})
+      )
 
     IO.puts("=> Syncing identifiers. Relevant modules: #{inspect(relevant_modules)}")
 
@@ -274,8 +276,10 @@ defmodule Brando.Blueprint.Identifier do
     relevant_modules =
       :include_brando
       |> Brando.Blueprint.list_blueprints()
-      |> Enum.filter(&(Brando.Content.has_identifier(&1) == {:ok, :has_identifier}))
-      |> Enum.filter(&(Brando.Content.persist_identifier(&1) == {:ok, :persist_identifier}))
+      |> Enum.filter(
+        &(Brando.Content.has_identifier(&1) == {:ok, :has_identifier} &&
+            Brando.Content.persist_identifier(&1) == {:ok, :persist_identifier})
+      )
 
     for module <- relevant_modules do
       identifiers_query =

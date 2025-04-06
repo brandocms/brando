@@ -152,7 +152,8 @@ if Code.ensure_loaded?(Igniter) do
 
                   _ ->
                     # Unexpected structure; continue traversal
-                    IO.inspect("——————— :filters with unexpected structure")
+                    require Logger
+                    Logger.error("——————— :filters with unexpected structure")
                     zipper
                 end
 
@@ -201,7 +202,8 @@ if Code.ensure_loaded?(Igniter) do
 
                   _ ->
                     # Unexpected structure; continue traversal
-                    IO.inspect("——————— :actions with unexpected structure")
+                    require Logger
+                    Logger.error("——————— :actions with unexpected structure")
                     zipper
                 end
 

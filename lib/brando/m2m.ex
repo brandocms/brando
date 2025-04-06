@@ -61,8 +61,7 @@ defmodule Brando.M2M do
       {:ok, ids} ->
         changes =
           ids
-          |> Enum.reject(&(&1 === ""))
-          |> Enum.reject(&(&1 === nil))
+          |> Enum.reject(&(&1 === "" || &1 === nil))
           |> lookup_fn.()
           |> Enum.map(&change/1)
 

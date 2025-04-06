@@ -49,8 +49,8 @@ defmodule Brando.AlternatesTest do
     {:ok, p1} = Pages.get_page(%{matches: %{id: p1.id}, preload: [:alternate_entries]})
     {:ok, p2} = Pages.get_page(%{matches: %{id: p2.id}, preload: [:alternate_entries]})
 
-    assert Enum.count(p1.alternate_entries) == 0
-    assert Enum.count(p2.alternate_entries) == 0
+    assert p1.alternate_entries == []
+    assert p2.alternate_entries == []
   end
 
   test "put_hreflang and render_hreflang" do

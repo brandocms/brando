@@ -790,8 +790,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
        when relation_type in [:has_many, {:subform, :has_many}] do
     count =
       selected_options
-      |> Enum.reject(&Ecto.Changeset.get_change(&1, :marked_as_deleted))
-      |> Enum.reject(&(&1.action == :replace))
+      |> Enum.reject(&(Ecto.Changeset.get_change(&1, :marked_as_deleted) || &1.action == :replace))
       |> Enum.count()
 
     gettext("%{count} selected", count: count)
