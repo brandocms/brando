@@ -194,7 +194,7 @@ defmodule Brando.Villain.Parser do
           else
             children
             |> Enum.with_index()
-            |> Enum.map(fn
+            |> Enum.map_join("\n", fn
               {%{active: false}, _} ->
                 ""
 
@@ -226,7 +226,6 @@ defmodule Brando.Villain.Parser do
                 code = maybe_annotate(child_module.code, child_block.uid, opts)
                 Villain.parse_and_render(code, context)
             end)
-            |> Enum.join("\n")
             |> annotate_children(block.uid)
           end
 
@@ -621,11 +620,7 @@ defmodule Brando.Villain.Parser do
             orientation = (img.width > img.height && "landscape") || "portrait"
             caption = render_caption(Map.merge(img, %{title: title, credits: credits}))
 
-            alt =
-              cond do
-                alt -> alt
-                true -> ""
-              end
+            alt = if alt, do: alt, else: ""
 
             assigns = %{
               src: img,
@@ -682,11 +677,7 @@ defmodule Brando.Villain.Parser do
             orientation = (img.width > img.height && "landscape") || "portrait"
             caption = render_caption(Map.merge(img, %{title: title, credits: credits}))
 
-            alt =
-              cond do
-                alt -> alt
-                true -> ""
-              end
+            alt = if alt, do: alt, else: ""
 
             assigns = %{
               src: img,
@@ -739,11 +730,7 @@ defmodule Brando.Villain.Parser do
             orientation = (img.width > img.height && "landscape") || "portrait"
             caption = render_caption(Map.merge(img, %{title: title, credits: credits}))
 
-            alt =
-              cond do
-                alt -> alt
-                true -> ""
-              end
+            alt = if alt, do: alt, else: ""
 
             assigns = %{
               src: img,
@@ -981,11 +968,7 @@ defmodule Brando.Villain.Parser do
 
         case Content.find_palette(palettes, palette_id) do
           {:ok, palette} ->
-            colors =
-              palette.colors
-              |> Enum.map(&"--#{&1.key}: #{&1.hex_value}")
-              |> Enum.join(";")
-
+            colors = Enum.map_join(palette.colors, ";", &"--#{&1.key}: #{&1.hex_value}")
             palette_vars = " style=\"#{colors}\""
 
             """
