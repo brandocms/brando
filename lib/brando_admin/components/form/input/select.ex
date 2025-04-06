@@ -136,7 +136,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                       type="button"
                       class={[
                         "options-option",
-                        is_selected?(opt, @selected_option) && "option-selected"
+                        selected?(opt, @selected_option) && "option-selected"
                       ]}
                       data-label={extract_label(opt)}
                       value={extract_value(opt)}
@@ -146,7 +146,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                         |> hide_modal("##{@modal_id}")
                       }
                     >
-                      <%!-- TODO: get rid of is_selected? --%>
+                      <%!-- TODO: get rid of selected? --%>
                       <.get_label opt={opt} />
                     </button>
                   <% end %>
@@ -347,11 +347,11 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     |> assign(:module, module)
   end
 
-  defp is_selected?(%{value: value}, opt) do
+  defp selected?(%{value: value}, opt) do
     value == opt
   end
 
-  defp is_selected?(%{id: id}, opt) do
+  defp selected?(%{id: id}, opt) do
     to_string(id) == opt
   end
 

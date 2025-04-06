@@ -599,7 +599,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
     assigns =
       assigns
-      |> assign(:selected?, is_selected?(opt, selected_options, relation_key, relation_type))
+      |> assign(:selected?, selected?(opt, selected_options, relation_key, relation_type))
       |> assign(:label, extract_label(opt))
       |> assign(:value, extract_value(opt))
 
@@ -681,7 +681,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     end)
   end
 
-  defp is_selected?(%{id: id}, selected_opts, relation_key, relation_type)
+  defp selected?(%{id: id}, selected_opts, relation_key, relation_type)
        when relation_type in [:has_many, {:subform, :has_many}] do
     Enum.find_index(
       selected_opts,
@@ -690,11 +690,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     ) != nil
   end
 
-  defp is_selected?(%{id: id}, opts, _, _) do
+  defp selected?(%{id: id}, opts, _, _) do
     Enum.find_index(opts, &(&1.id == id)) != nil
   end
 
-  defp is_selected?(%{value: value}, opts, _, _), do: value in opts
+  defp selected?(%{value: value}, opts, _, _), do: value in opts
 
   defp extract_value(%Ecto.Changeset{data: %{id: id}}), do: id
   defp extract_value(%{value: value}), do: value

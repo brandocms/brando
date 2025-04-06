@@ -2119,7 +2119,7 @@ defmodule BrandoAdmin.Components.Form do
     access_field_full_path = Brando.Utils.build_access_path(field_full_path)
 
     updated_entry =
-      if is_loaded_image(entrys_current_image) && entrys_current_image.id == image.id &&
+      if loaded_image?(entrys_current_image) && entrys_current_image.id == image.id &&
            updated_image.status == :processed do
         # the image has already been marked as processed, do not
         # update the image but merge in title, credits and alt text
@@ -2385,9 +2385,9 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
-  defp is_loaded_image(nil), do: false
-  defp is_loaded_image(%Ecto.Association.NotLoaded{}), do: false
-  defp is_loaded_image(%Brando.Images.Image{}), do: true
+  defp loaded_image?(nil), do: false
+  defp loaded_image?(%Ecto.Association.NotLoaded{}), do: false
+  defp loaded_image?(%Brando.Images.Image{}), do: true
 
   defp push_errors(socket, changeset, form, schema, env \\ :save) do
     error_title = gettext("Error")

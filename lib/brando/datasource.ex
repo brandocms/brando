@@ -238,7 +238,7 @@ defmodule Brando.Datasource do
 
     {:ok,
      modules
-     |> Enum.filter(&is_datasource/1)
+     |> Enum.filter(&datasource?/1)
      |> Enum.map(&to_string/1)}
   end
 
@@ -296,7 +296,7 @@ defmodule Brando.Datasource do
   Look through all villains for datasources using `schema`
   """
   def update_datasource(datasource_module, entry \\ nil) do
-    if is_datasource(datasource_module) do
+    if datasource?(datasource_module) do
       datasource_module
       |> Villain.list_block_ids_using_datamodule()
       |> Villain.reject_blocks_belonging_to_entry(entry)
@@ -309,8 +309,8 @@ defmodule Brando.Datasource do
   @doc """
   Check if `schema` is a datasource
   """
-  def is_datasource({schema, _, _}), do: {:__datasource__, 0} in schema.__info__(:functions)
-  def is_datasource(schema), do: {:__datasource__, 0} in schema.__info__(:functions)
+  def datasource?({schema, _, _}), do: {:__datasource__, 0} in schema.__info__(:functions)
+  def datasource?(schema), do: {:__datasource__, 0} in schema.__info__(:functions)
 
   def get_meta(module, type, query) do
     module
