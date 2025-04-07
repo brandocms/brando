@@ -378,56 +378,82 @@ defmodule Brando.Villain.Parser do
        </div>)
   end
 
-  def video(%{remote_id: remote_id, source: :youtube, autoplay: autoplay} = data, _) do
-    width = Map.get(data, :width, 420)
-    height = Map.get(data, :height, 315)
-
-    aspect_ratio =
-      if height > 0 && width > 0 do
-        height / width
-      else
-        0.5625
-      end
-
+  # Extract dimension data with defaults
+  defp extract_video_dimensions(data, default_width, default_height) do
+    width = Map.get(data, :width, default_width)
+    height = Map.get(data, :height, default_height)
     orientation = (width > height && "landscape") || "portrait"
-
-    params = "autoplay=#{(autoplay && 1) || 0}&controls=0&showinfo=0&rel=0"
-
-    ~s(<div class="video-wrapper video-embed" data-orientation="#{orientation}" style="--aspect-ratio: #{aspect_ratio}">
+    
+    %{width: width, height: height, orientation: orientation}
+  end
+  
+  # Calculate aspect ratio with fallback
+  defp calculate_aspect_ratio(width, height) do
+    if height > 0 && width > 0 do
+      height / width
+    else
+      0.5625  # Default 16:9 aspect ratio
+    end
+  end
+  
+  # Render iframe video with common wrapper
+  defp render_iframe_video(width, height, orientation, aspect_ratio, src, extra_attrs \\ false) do
+    # For YouTube
+    youtube_template = ~s(<div class="video-wrapper video-embed" data-orientation="#{orientation}" style="--aspect-ratio: #{aspect_ratio}">
          <iframe width="#{width}"
                  height="#{height}"
-                 src="//www.youtube.com/embed/#{remote_id}?#{params}"
+                 src="#{src}"
                  frameborder="0"
                  allowfullscreen>
          </iframe>
        </div>)
-  end
-
-  def video(%{remote_id: remote_id, source: :vimeo} = data, _) do
-    width = Map.get(data, :width, 500) || 500
-    height = Map.get(data, :height, 281) || 281
-    orientation = (width > height && "landscape") || "portrait"
-
-    width = (is_integer(width) && width) || String.to_integer(width)
-    height = (is_integer(height) && height) || String.to_integer(height)
-
-    aspect_ratio =
-      if height > 0 && width > 0 do
-        height / width
-      else
-        0.5625
-      end
-
-    ~s(<div class="video-wrapper video-embed" data-orientation="#{orientation}" style="--aspect-ratio: #{aspect_ratio}">
-         <iframe src="//player.vimeo.com/video/#{remote_id}?dnt=1"
-                 width="500"
-                 height="281"
+       
+    # For Vimeo
+    vimeo_template = ~s(<div class="video-wrapper video-embed" data-orientation="#{orientation}" style="--aspect-ratio: #{aspect_ratio}">
+         <iframe src="#{src}"
+                 width="#{width}"
+                 height="#{height}"
                  frameborder="0"
                  webkitallowfullscreen
                  mozallowfullscreen
                  allowfullscreen>
          </iframe>
        </div>)
+    
+    if extra_attrs, do: vimeo_template, else: youtube_template
+  end
+
+  def video(%{remote_id: remote_id, source: :youtube, autoplay: autoplay} = data, _) do
+    video_fields = extract_video_dimensions(data, 420, 315)
+    aspect_ratio = calculate_aspect_ratio(video_fields.width, video_fields.height)
+    params = "autoplay=#{(autoplay && 1) || 0}&controls=0&showinfo=0&rel=0"
+    
+    render_iframe_video(
+      video_fields.width, 
+      video_fields.height,
+      video_fields.orientation,
+      aspect_ratio,
+      "//www.youtube.com/embed/#{remote_id}?#{params}"
+    )
+  end
+
+  def video(%{remote_id: remote_id, source: :vimeo} = data, _) do
+    video_fields = extract_video_dimensions(data, 500, 281)
+    
+    # Ensure values are integers
+    width = (is_integer(video_fields.width) && video_fields.width) || String.to_integer(video_fields.width)
+    height = (is_integer(video_fields.height) && video_fields.height) || String.to_integer(video_fields.height)
+    
+    aspect_ratio = calculate_aspect_ratio(width, height)
+    
+    render_iframe_video(
+      width,
+      height,
+      video_fields.orientation,
+      aspect_ratio,
+      "//player.vimeo.com/video/#{remote_id}?dnt=1",
+      true  # Enable additional fullscreen attributes for Vimeo
+    )
   end
 
   # Convert file video to html
@@ -450,71 +476,102 @@ defmodule Brando.Villain.Parser do
   def picture(nil, _), do: ""
 
   def picture(data, _) do
-    title = Map.get(data, :title, nil)
-    credits = Map.get(data, :credits, nil)
-    alt = Map.get(data, :alt, nil)
-    width = Map.get(data, :width, nil)
-    height = Map.get(data, :height, nil)
-    orientation = (width > height && "landscape") || "portrait"
-    lightbox = Map.get(data, :lightbox, nil)
-    placeholder = Map.get(data, :placeholder, nil)
-    moonwalk = Map.get(data, :moonwalk, false)
-    lazyload = Map.get(data, :lazyload, false)
+    # Extract data fields with defaults
+    fields = extract_picture_fields(data)
+    
+    # Process text fields
+    fields = process_picture_text_fields(fields)
+    
+    # Determine link attributes
+    {rel, target} = get_link_attributes(fields.link)
+    
+    # Get caption and determine alt text
+    caption = render_caption(Map.merge(data, %{title: fields.title, credits: fields.credits}))
+    alt = get_alt_text(fields.alt, caption)
+    
+    # Build assigns for the template
+    assigns = build_picture_assigns(data, fields, rel, target, caption, alt)
+
+    # Render picture
+    assigns
+    |> Brando.Villain.Parser.picture_tag()
+    |> Phoenix.LiveViewTest.rendered_to_string()
+  end
+  
+  # Extract raw fields with default values from data
+  defp extract_picture_fields(data) do
+    %{
+      title: Map.get(data, :title, nil),
+      credits: Map.get(data, :credits, nil),
+      alt: Map.get(data, :alt, nil),
+      width: Map.get(data, :width, nil),
+      height: Map.get(data, :height, nil),
+      lightbox: Map.get(data, :lightbox, nil),
+      placeholder: Map.get(data, :placeholder, nil),
+      moonwalk: Map.get(data, :moonwalk, false),
+      lazyload: Map.get(data, :lazyload, false),
+      link: Map.get(data, :link) || "",
+      img_class: Map.get(data, :img_class, ""),
+      picture_class: Map.get(data, :picture_class, ""),
+      srcset: Map.get(data, :srcset, nil)
+    }
+  end
+  
+  # Process text fields (handle empty strings)
+  defp process_picture_text_fields(fields) do
+    %{fields |
+      title: if(fields.title == "", do: nil, else: fields.title),
+      credits: if(fields.credits == "", do: nil, else: fields.credits),
+      srcset: if(fields.srcset == "", do: nil, else: fields.srcset)
+    }
+  end
+  
+  # Determine link attributes based on link URL
+  defp get_link_attributes(link) do
+    if String.starts_with?(link, "/") or String.starts_with?(link, "#") do
+      {"", ""}
+    else
+      {"nofollow noopener", "_blank"}
+    end
+  end
+  
+  # Determine alt text with proper fallbacks
+  defp get_alt_text(alt, caption) do
+    cond do
+      alt != "" -> alt
+      caption != "" -> caption
+      true -> ""
+    end
+  end
+  
+  # Build assigns map for the template
+  defp build_picture_assigns(data, fields, rel, target, caption, alt) do
+    orientation = (fields.width > fields.height && "landscape") || "portrait"
     default_srcset = Brando.config(Brando.Images)[:default_srcset]
-
-    link = Map.get(data, :link) || ""
-    img_class = Map.get(data, :img_class, "")
-    picture_class = Map.get(data, :picture_class, "")
-    srcset = Map.get(data, :srcset, nil)
-
-    title = if title == "", do: nil, else: title
-    credits = if credits == "", do: nil, else: credits
-    srcset = if srcset == "", do: nil, else: srcset
-
-    {rel, target} =
-      if String.starts_with?(link, "/") or String.starts_with?(link, "#") do
-        {"", ""}
-      else
-        {"nofollow noopener", "_blank"}
-      end
-
-    caption = render_caption(Map.merge(data, %{title: title, credits: credits}))
-    media_queries = nil
-
-    alt =
-      cond do
-        alt != "" -> alt
-        caption != "" -> caption
-        true -> ""
-      end
-
-    assigns = %{
+    
+    %{
       src: data,
-      link: link,
+      link: fields.link,
       rel: rel,
       target: target,
       orientation: orientation,
       opts: [
         caption: caption,
-        img_class: img_class,
-        picture_class: picture_class,
-        media_queries: media_queries,
+        img_class: fields.img_class,
+        picture_class: fields.picture_class,
+        media_queries: nil,
         alt: alt,
-        moonwalk: moonwalk,
-        lazyload: lazyload,
-        width: width,
-        height: height,
-        lightbox: lightbox,
-        placeholder: placeholder,
-        srcset: srcset || default_srcset,
+        moonwalk: fields.moonwalk,
+        lazyload: fields.lazyload,
+        width: fields.width,
+        height: fields.height,
+        lightbox: fields.lightbox,
+        placeholder: fields.placeholder,
+        srcset: fields.srcset || default_srcset,
         sizes: "auto",
         prefix: Brando.Utils.media_url()
       ]
     }
-
-    assigns
-    |> Brando.Villain.Parser.picture_tag()
-    |> Phoenix.LiveViewTest.rendered_to_string()
   end
 
   def gallery(%{type: :slider, images: images} = data, _) do
