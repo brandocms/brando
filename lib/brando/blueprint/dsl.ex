@@ -377,20 +377,22 @@ defmodule Brando.Blueprint.Dsl do
 
       # generate changeset
       def changeset(schema, params \\ %{}, user \\ :system, sequence \\ nil, opts \\ []) do
-        run_changeset(
-          __MODULE__,
-          schema,
-          params,
-          sequence,
-          user,
-          @all_traits,
-          @attrs,
-          @relations,
-          @assets,
-          @castable_fields,
-          @required_castable_fields,
-          opts
-        )
+        params = %Brando.Blueprint.ChangesetParams{
+          module: __MODULE__,
+          schema: schema,
+          params: params,
+          sequence: sequence,
+          user: user,
+          traits: @all_traits,
+          attributes: @attrs,
+          relations: @relations,
+          assets: @assets,
+          castable_fields: @castable_fields,
+          required_castable_fields: @required_castable_fields,
+          opts: opts
+        }
+        
+        run_changeset(params)
       end
 
       for {trait, trait_opts} <- @all_traits do

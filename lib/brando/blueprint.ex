@@ -108,6 +108,7 @@ defmodule Brando.Blueprint do
 
   alias Brando.Blueprint.Assets
   alias Brando.Blueprint.Assets.Asset
+  alias Brando.Blueprint.ChangesetParams
   alias Brando.Blueprint.Constraints
   alias Brando.Blueprint.Relations
   alias Brando.Blueprint.Unique
@@ -569,53 +570,43 @@ defmodule Brando.Blueprint do
     end
   end
 
-  def run_changeset(
-        module,
-        schema,
-        params,
-        sequence,
-        user,
-        all_traits,
-        all_attributes,
-        all_relations,
-        all_assets,
-        castable_fields,
-        required_castable_fields,
-        opts
-      ) do
+  @doc """
+  Runs a changeset with complex validation and processing rules based on blueprint configuration.
+  """
+  def run_changeset(%ChangesetParams{} = cp) do
     start = System.monotonic_time()
 
     # TODO: split those as module attrs maybe? we shouldn't have to parse these each time
     {traits_before_validate_required, traits_after_validate_required} =
-      Trait.split_traits_by_changeset_phase(all_traits)
+      Trait.split_traits_by_changeset_phase(cp.traits)
 
-    if module != schema.__struct__ do
+    if cp.module != cp.schema.__struct__ do
       require Logger
 
       Logger.error(
-        "(!) MISMATCH BETWEEN MODULE AND SCHEMA STRUCT - module which runs the changeset: #{inspect(module)}, schema struct: #{inspect(schema.__struct__)}"
+        "(!) MISMATCH BETWEEN MODULE AND SCHEMA STRUCT - module which runs the changeset: #{inspect(cp.module)}, schema struct: #{inspect(cp.schema.__struct__)}"
       )
 
-      Logger.error(inspect(schema, pretty: true))
+      Logger.error(inspect(cp.schema, pretty: true))
     end
 
     changeset =
-      schema
-      |> Changeset.cast(params, castable_fields)
-      |> Relations.run_cast_relations(all_relations, user)
-      |> Assets.run_cast_assets(all_assets, user)
-      |> Villain.maybe_cast_blocks(module, user, opts)
-      |> Trait.run_changeset_mutators(module, traits_before_validate_required, user, opts)
-      |> maybe_validate_required(required_castable_fields)
-      |> Unique.run_unique_attribute_constraints(module, all_attributes)
-      |> Unique.run_unique_relation_constraints(module, all_relations)
-      |> Constraints.run_validations(module, all_attributes)
-      |> Constraints.run_validations(module, all_relations)
-      |> Constraints.run_fk_constraints(module, all_relations)
-      |> Upload.run_upload_validations(module, all_assets, user)
-      |> Trait.run_changeset_mutators(module, traits_after_validate_required, user, opts)
-      |> maybe_mark_for_deletion(module)
-      |> maybe_sequence(module, sequence)
+      cp.schema
+      |> Changeset.cast(cp.params, cp.castable_fields)
+      |> Relations.run_cast_relations(cp.relations, cp.user)
+      |> Assets.run_cast_assets(cp.assets, cp.user)
+      |> Villain.maybe_cast_blocks(cp.module, cp.user, cp.opts)
+      |> Trait.run_changeset_mutators(cp.module, traits_before_validate_required, cp.user, cp.opts)
+      |> maybe_validate_required(cp.required_castable_fields)
+      |> Unique.run_unique_attribute_constraints(cp.module, cp.attributes)
+      |> Unique.run_unique_relation_constraints(cp.module, cp.relations)
+      |> Constraints.run_validations(cp.module, cp.attributes)
+      |> Constraints.run_validations(cp.module, cp.relations)
+      |> Constraints.run_fk_constraints(cp.module, cp.relations)
+      |> Upload.run_upload_validations(cp.module, cp.assets, cp.user)
+      |> Trait.run_changeset_mutators(cp.module, traits_after_validate_required, cp.user, cp.opts)
+      |> maybe_mark_for_deletion(cp.module)
+      |> maybe_sequence(cp.module, cp.sequence)
 
     :telemetry.execute([:brando, :run_changeset], %{duration: System.monotonic_time() - start}, %{
       schema: changeset.data.__struct__
