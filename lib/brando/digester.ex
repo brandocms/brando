@@ -1,5 +1,4 @@
 defmodule Brando.Digester do
-  @digested_file_regex ~r/(-[a-fA-F\d]{32})/
   @manifest_version 1
   @empty_manifest %{
     "version" => @manifest_version,
@@ -131,7 +130,7 @@ defmodule Brando.Digester do
   defp manifest_join(path, filename), do: Path.join(path, filename)
 
   defp compiled_file?(file_path) do
-    Regex.match?(@digested_file_regex, Path.basename(file_path)) ||
+    Regex.match?(~r/(-[a-fA-F\d]{32})/, Path.basename(file_path)) ||
       Path.extname(file_path) in compressed_extensions() ||
       Path.basename(file_path) == "cache_manifest.json"
   end
@@ -226,12 +225,9 @@ defmodule Brando.Digester do
     %{file | digested_content: digested_content}
   end
 
-  @stylesheet_url_regex ~r{(url\(\s*)(\S+?)(\s*\))}
-  @quoted_text_regex ~r{\A(['"])(.+)\1\z}
-
   defp digest_stylesheet_asset_references(file, latest, with_vsn?) do
-    Regex.replace(@stylesheet_url_regex, file.content, fn _, open, url, close ->
-      case Regex.run(@quoted_text_regex, url) do
+    Regex.replace(~r{(url\(\s*)(\S+?)(\s*\))}, file.content, fn _, open, url, close ->
+      case Regex.run(~r{\A(['"])(.+)\1\z}, url) do
         [_, quote_symbol, url] ->
           open <>
             quote_symbol <> digested_url(url, file, latest, with_vsn?) <> quote_symbol <> close
