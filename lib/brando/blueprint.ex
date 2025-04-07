@@ -576,10 +576,6 @@ defmodule Brando.Blueprint do
   def run_changeset(%ChangesetParams{} = cp) do
     start = System.monotonic_time()
 
-    # TODO: split those as module attrs maybe? we shouldn't have to parse these each time
-    {traits_before_validate_required, traits_after_validate_required} =
-      Trait.split_traits_by_changeset_phase(cp.traits)
-
     if cp.module != cp.schema.__struct__ do
       require Logger
 
@@ -596,7 +592,7 @@ defmodule Brando.Blueprint do
       |> Relations.run_cast_relations(cp.relations, cp.user)
       |> Assets.run_cast_assets(cp.assets, cp.user)
       |> Villain.maybe_cast_blocks(cp.module, cp.user, cp.opts)
-      |> Trait.run_changeset_mutators(cp.module, traits_before_validate_required, cp.user, cp.opts)
+      |> Trait.run_changeset_mutators(cp.module, cp.traits_before_validate_required, cp.user, cp.opts)
       |> maybe_validate_required(cp.required_castable_fields)
       |> Unique.run_unique_attribute_constraints(cp.module, cp.attributes)
       |> Unique.run_unique_relation_constraints(cp.module, cp.relations)
@@ -604,7 +600,7 @@ defmodule Brando.Blueprint do
       |> Constraints.run_validations(cp.module, cp.relations)
       |> Constraints.run_fk_constraints(cp.module, cp.relations)
       |> Upload.run_upload_validations(cp.module, cp.assets, cp.user)
-      |> Trait.run_changeset_mutators(cp.module, traits_after_validate_required, cp.user, cp.opts)
+      |> Trait.run_changeset_mutators(cp.module, cp.traits_after_validate_required, cp.user, cp.opts)
       |> maybe_mark_for_deletion(cp.module)
       |> maybe_sequence(cp.module, cp.sequence)
 
