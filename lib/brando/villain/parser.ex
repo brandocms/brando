@@ -953,31 +953,43 @@ defmodule Brando.Villain.Parser do
     do: "#{title} — #{credits}"
 
   def video_file_options(data) do
-    play_button =
-      if data.play_button == true && data.autoplay == false do
-        Brando.config(:video_play_button_text) || true
-      else
-        false
-      end
-
-    autoplay =
-      if data.autoplay in [nil, false] do
-        false
-      else
-        data.autoplay
-      end
-
+    # Extract config values with consistent access patterns
+    has_play_button = Map.get(data, :play_button, false)
+    autoplay_setting = Map.get(data, :autoplay)
+    
+    # Determine play button display
+    play_button = get_play_button_setting(has_play_button, autoplay_setting)
+    
+    # Determine if autoplay should be enabled
+    autoplay = autoplay_setting not in [nil, false]
+    
+    # Build the options list
     [
-      width: data.width,
-      height: data.height,
+      width: Map.get(data, :width),
+      height: Map.get(data, :height),
       cover: :svg,
       autoplay: autoplay,
-      poster: data.poster || nil,
-      preload: (data.preload == nil && true) || data.preload,
-      opacity: data.opacity || 0.1,
-      controls: Map.get(data, :controls) || false,
+      poster: Map.get(data, :poster),
+      preload: get_preload_setting(data),
+      opacity: Map.get(data, :opacity, 0.1),
+      controls: Map.get(data, :controls, false),
       play_button: play_button
     ]
+  end
+  
+  # Helper function for determining play button setting
+  defp get_play_button_setting(has_play_button, autoplay_setting) do
+    if has_play_button && autoplay_setting == false do
+      Brando.config(:video_play_button_text) || true
+    else
+      false
+    end
+  end
+  
+  # Helper function for determining preload setting
+  defp get_preload_setting(data) do
+    preload = Map.get(data, :preload)
+    if is_nil(preload), do: true, else: preload
   end
 
   def replace_fragments(html) do
