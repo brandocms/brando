@@ -3509,14 +3509,6 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   defp liquid_render_module_picture_src(var_name, vars) do
-    # TODO: Give this another shake now that we have assocs
-    # FIXME
-    #
-    # This is suboptimal at best. We preload all our image vars in the form, but when running
-    # the polymorphic changesets, it clobbers the image's `value` - resetting it.
-    #
-    # Everything here will hopefully improve when we can update poly changesets instead
-    # of replacing/inserting new every time.
     if var_cs = Enum.find(vars, &(Changeset.get_field(&1, :key) == var_name)) do
       image_id = Changeset.get_field(var_cs, :image_id)
       image = Changeset.get_field(var_cs, :image)
