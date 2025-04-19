@@ -175,19 +175,17 @@
 
 .progress-popup {
   position: fixed;
-  left: 50%;
-  top: 50%;
   font-family: "Mono";
   font-size: 12px;
   text-transform: uppercase;
   background-color: var(--brando-color-dark);
   color: white;
   width: 400px;
-  transform: translateX(-50%);
   height: 60px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
   text-align: left;
   padding: 12px;
+  border: none;
 }
