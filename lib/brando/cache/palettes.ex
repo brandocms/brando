@@ -90,9 +90,19 @@ defmodule Brando.Cache.Palettes do
     opening_tag ++ colors ++ closing_tag
   end
 
-  @css_minification_regex ~r/( "(?:[^"\\]+|\\.)*" | '(?:[^'\\]+|\\.)*' )|\s* ; \s* ( } ) \s*|\s* ( [*$~^|]?= | [{};,>~] | !important\b ) \s*|\s*([+-])\s*(?=[^}]*{)|( [[(:] ) \s+|\s+ ( [])] )|\s+(:)(?![^\}]*\{)|^ \s+ | \s+ \z|(\s)\s+/si
+  @doc """
+  Minifies CSS by removing unnecessary whitespace and formatting.
 
+  ## Examples
+
+      iex> Brando.Cache.Palettes.minify_css("body { color: red; }")
+      "body{color:red;}"
+
+  """
   def minify_css(css) do
-    Regex.replace(@css_minification_regex, css, "\\1\\2\\3\\4\\5\\6\\7\\8")
+    css_minification_regex =
+      ~r/( "(?:[^"\\]+|\\.)*" | '(?:[^'\\]+|\\.)*' )|\s* ; \s* ( } ) \s*|\s* ( [*$~^|]?= | [{};,>~] | !important\b ) \s*|\s*([+-])\s*(?=[^}]*{)|( [[(:] ) \s+|\s+ ( [])] )|\s+(:)(?![^\}]*\{)|^ \s+ | \s+ \z|(\s)\s+/si
+
+    Regex.replace(css_minification_regex, css, "\\1\\2\\3\\4\\5\\6\\7\\8")
   end
 end
