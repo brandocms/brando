@@ -141,20 +141,20 @@ defmodule Brando.HTML do
     """
   end
 
-  defp get_menu_item_url(%{link: %{link_type: :url, value: url}}), do: url
-  defp get_menu_item_url(%{link: %{link_type: :identifier, identifier: %{url: url}}}), do: url
-  defp get_menu_item_url(_), do: nil
+  def get_menu_item_url(%{link: %{link_type: :url, value: url}}), do: url
+  def get_menu_item_url(%{link: %{link_type: :identifier, identifier: %{url: url}}}), do: url
+  def get_menu_item_url(_), do: nil
 
-  defp get_menu_item_text(%{link: %{link_type: :url, link_text: text}}), do: text
+  def get_menu_item_text(%{link: %{link_type: :url, link_text: text}}), do: text
 
-  defp get_menu_item_text(%{link: %{link_type: :identifier, link_text: text}}) when not is_nil(text), do: text
+  def get_menu_item_text(%{link: %{link_type: :identifier, link_text: text}}) when not is_nil(text), do: text
 
-  defp get_menu_item_text(%{link: %{link_type: :identifier, link_text: nil, identifier: %{title: text}}}), do: text
+  def get_menu_item_text(%{link: %{link_type: :identifier, link_text: nil, identifier: %{title: text}}}), do: text
 
-  defp get_menu_item_text(_), do: nil
+  def get_menu_item_text(_), do: nil
 
-  defp get_menu_item_target_blank(%{link: %{link_target_blank: true}}), do: true
-  defp get_menu_item_target_blank(_), do: false
+  def get_menu_item_target_blank(%{link: %{link_target_blank: true}}), do: true
+  def get_menu_item_target_blank(_), do: false
 
   @doc """
   Renders a [Heroicon](https://heroicons.com).
