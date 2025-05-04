@@ -420,9 +420,10 @@ defmodule Mix.Tasks.Brando.Install do
     # Frontend assets
     {:keep, "assets/frontend/public/fonts", "assets/frontend/public/fonts"},
     {:keep, "assets/frontend/public/fonts", "assets/frontend/public/images"},
-    {:copy, "assets/frontend/europa.config.js", "assets/frontend/europa.config.js"},
+    {:copy, "assets/frontend/eslint.config.cjs", "assets/frontend/eslint.config.cjs"},
+    {:copy, "assets/frontend/europa.config.cjs", "assets/frontend/europa.config.cjs"},
     {:copy, "assets/frontend/vite.config.js", "assets/frontend/vite.config.js"},
-    {:copy, "assets/frontend/postcss.config.js", "assets/frontend/postcss.config.js"},
+    {:copy, "assets/frontend/postcss.config.cjs", "assets/frontend/postcss.config.cjs"},
     {:copy, "assets/frontend/yarn.lock", "assets/frontend/yarn.lock"},
     {:eex, "assets/frontend/package.json", "assets/frontend/package.json"},
 

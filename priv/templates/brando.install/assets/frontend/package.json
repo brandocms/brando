@@ -2,13 +2,14 @@
   "name": "frontend",
   "description": "<%= application_name %> Frontend",
   "version": "0.0.0",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview"
   },
   "devDependencies": {
-    "@brandocms/europacss": "^0.13.1",
+    "@brandocms/europacss": "1.0.0-beta.3",
     "@vitejs/plugin-legacy": "^6.0.2",
     "css-mqgroup": "^7.1.0",
     "postcss": "^8.5.3",
@@ -17,7 +18,7 @@
     "vite": "^6.2.2"
   },
   "dependencies": {
-    "@brandocms/jupiter": "^3.55.0"
+    "@brandocms/jupiter": "4.0.0-beta.1"
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  "packageManager": "pnpm@9.14.3+sha256.652c47dac7c2b9350db4cdb9330c087d527114a0c2dff4cbac7ea9b96be928bd"
 }

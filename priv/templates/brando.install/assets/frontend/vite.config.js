@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import legacy from '@vitejs/plugin-legacy'
+import eslint from 'vite-plugin-eslint'
 
 function HMREuropa() {
   return {
@@ -55,5 +56,14 @@ export default defineConfig({
     },
   },
 
-  plugins: [HMREuropa(), legacy({})],
+  plugins: [
+    HMREuropa(),
+    eslint({
+      failOnError: command === 'build',
+      failOnWarning: false,
+      cache: false,
+    }),
+
+    legacy({}),
+  ],
 })
