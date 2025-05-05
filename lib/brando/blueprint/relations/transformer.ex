@@ -22,7 +22,7 @@ defmodule Brando.Blueprint.Relations.Transformer do
     # persist each relation
     dsl_state =
       Enum.reduce(relations, dsl_state, fn relation, updated_dsl_state ->
-        Transformer.persist(updated_dsl_state, relation.name, relation)
+        Transformer.persist(updated_dsl_state, {:relation, relation.name}, relation)
       end)
 
     processed_relations =

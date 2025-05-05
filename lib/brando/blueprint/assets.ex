@@ -83,7 +83,7 @@ defmodule Brando.Blueprint.Assets do
   end
 
   def __asset__(module, name) do
-    Extension.get_persisted(module, name)
+    Extension.get_persisted(module, {:asset, name})
   end
 
   def __asset_opts__(module, name) do

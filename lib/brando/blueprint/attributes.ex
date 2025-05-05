@@ -39,7 +39,7 @@ defmodule Brando.Blueprint.Attributes do
   end
 
   def __attribute__(module, name) do
-    Extension.get_persisted(module, name)
+    Extension.get_persisted(module, {:attribute, name})
   end
 
   def __attribute_opts__(module, name) do

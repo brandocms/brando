@@ -30,7 +30,7 @@ defmodule Brando.Blueprint.Attributes.Transformer do
     # persist each attribute
     dsl_state =
       Enum.reduce(entities, dsl_state, fn entity, updated_dsl_state ->
-        Transformer.persist(updated_dsl_state, entity.name, entity)
+        Transformer.persist(updated_dsl_state, {:attribute, entity.name}, entity)
       end)
 
     {required_attrs, optional_attrs} =

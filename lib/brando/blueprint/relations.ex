@@ -99,7 +99,7 @@ defmodule Brando.Blueprint.Relations do
   end
 
   def __relation__(module, name) do
-    Extension.get_persisted(module, name)
+    Extension.get_persisted(module, {:relation, name})
   end
 
   def __relation_opts__(module, name) do

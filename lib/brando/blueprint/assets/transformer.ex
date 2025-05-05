@@ -21,7 +21,7 @@ defmodule Brando.Blueprint.Assets.Transformer do
     # persist each asset
     dsl_state =
       Enum.reduce(entities, dsl_state, fn entity, updated_dsl_state ->
-        Transformer.persist(updated_dsl_state, entity.name, entity)
+        Transformer.persist(updated_dsl_state, {:asset, entity.name}, entity)
       end)
 
     processed_assets =
