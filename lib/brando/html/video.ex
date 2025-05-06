@@ -92,6 +92,13 @@ defmodule Brando.HTML.Video do
     aspect_ratio = build_aspect_ratio_style_string(aspect_ratio, width, height)
     loop = Keyword.get(opts, :loop, true)
 
+    caption =
+      case Keyword.get(opts, :caption, false) do
+        false -> false
+        true -> Keyword.get(opts, :title, false)
+        caption -> caption
+      end
+
     assigns =
       assigns
       |> assign(:orientation, orientation)
@@ -107,66 +114,70 @@ defmodule Brando.HTML.Video do
       |> assign(:loop, loop)
       |> assign(:play_button, play_button)
       |> assign(:video_cover, get_video_cover(cover, width, height, opacity))
+      |> assign(:caption, caption)
       |> assign_new(:cover, fn ->
         nil
       end)
 
     ~H"""
-    <div
-      class="video-wrapper video-file"
-      data-smart-video
-      data-orientation={@orientation}
-      data-progress={@progress}
-      data-preload={@preload && @src}
-      data-autoplay={@autoplay}
-      data-controls={@controls}
-      style={@aspect_ratio}
-    >
-      <video
-        width={@width}
-        height={@height}
-        alt=""
-        tabindex="0"
-        preload="auto"
-        autoplay={@autoplay}
-        muted={@autoplay}
-        loop={@loop}
-        playsinline
-        controls={@controls}
-        data-video
-        poster={@poster}
+      <div
+        class="video-wrapper video-file"
+        data-smart-video
+        data-orientation={@orientation}
+        data-progress={@progress}
+        data-preload={@preload && @src}
+        data-autoplay={@autoplay}
+        data-controls={@controls}
         style={@aspect_ratio}
-        data-src={@preload && @src}
-        src={!@preload && @src}
       >
-      </video>
-      <noscript>
         <video
           width={@width}
           height={@height}
           alt=""
           tabindex="0"
-          preload="metadata"
+          preload="auto"
+          autoplay={@autoplay}
           muted={@autoplay}
           loop={@loop}
           playsinline
-          src={@src}
+          controls={@controls}
+          data-video
+          poster={@poster}
+          style={@aspect_ratio}
+          data-src={@preload && @src}
+          src={!@preload && @src}
         >
         </video>
-      </noscript>
 
-      {get_play_button(@play_button)}
+        <noscript>
+          <video
+            width={@width}
+            height={@height}
+            alt=""
+            tabindex="0"
+            preload="metadata"
+            muted={@autoplay}
+            loop={@loop}
+            playsinline
+            src={@src}
+          >
+          </video>
+        </noscript>
 
-      <%= if @cover do %>
-        <div data-cover>
-          {render_slot(@cover)}
-        </div>
-      <% else %>
-        <%= if @video_cover do %>
-          {@video_cover}
+        {get_play_button(@play_button)}
+
+        <%= if @cover do %>
+          <div data-cover>
+            {render_slot(@cover)}
+          </div>
+        <% else %>
+          <%= if @video_cover do %>
+            {@video_cover}
+          <% end %>
         <% end %>
-      <% end %>
-    </div>
+        <.figcaption_tag :if={@caption} caption={@caption} />
+      </div>
+
     """
   end
 
@@ -174,6 +185,12 @@ defmodule Brando.HTML.Video do
     # catch if video is nil and just include a comment
     ~H"""
     <!-- empty video component -->
+    """
+  end
+
+  defp figcaption_tag(assigns) do
+    ~H"""
+    <figcaption>{Phoenix.HTML.raw(@caption)}</figcaption>
     """
   end
 

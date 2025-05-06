@@ -383,23 +383,25 @@ defmodule Brando.Villain.Parser do
     width = Map.get(data, :width, default_width)
     height = Map.get(data, :height, default_height)
     orientation = (width > height && "landscape") || "portrait"
-    
+
     %{width: width, height: height, orientation: orientation}
   end
-  
+
   # Calculate aspect ratio with fallback
   defp calculate_aspect_ratio(width, height) do
     if height > 0 && width > 0 do
       height / width
     else
-      0.5625  # Default 16:9 aspect ratio
+      # Default 16:9 aspect ratio
+      0.5625
     end
   end
-  
+
   # Render iframe video with common wrapper
   defp render_iframe_video(width, height, orientation, aspect_ratio, src, extra_attrs \\ false) do
     # For YouTube
-    youtube_template = ~s(<div class="video-wrapper video-embed" data-orientation="#{orientation}" style="--aspect-ratio: #{aspect_ratio}">
+    youtube_template =
+      ~s(<div class="video-wrapper video-embed" data-orientation="#{orientation}" style="--aspect-ratio: #{aspect_ratio}">
          <iframe width="#{width}"
                  height="#{height}"
                  src="#{src}"
@@ -407,9 +409,10 @@ defmodule Brando.Villain.Parser do
                  allowfullscreen>
          </iframe>
        </div>)
-       
+
     # For Vimeo
-    vimeo_template = ~s(<div class="video-wrapper video-embed" data-orientation="#{orientation}" style="--aspect-ratio: #{aspect_ratio}">
+    vimeo_template =
+      ~s(<div class="video-wrapper video-embed" data-orientation="#{orientation}" style="--aspect-ratio: #{aspect_ratio}">
          <iframe src="#{src}"
                  width="#{width}"
                  height="#{height}"
@@ -419,7 +422,7 @@ defmodule Brando.Villain.Parser do
                  allowfullscreen>
          </iframe>
        </div>)
-    
+
     if extra_attrs, do: vimeo_template, else: youtube_template
   end
 
@@ -427,9 +430,9 @@ defmodule Brando.Villain.Parser do
     video_fields = extract_video_dimensions(data, 420, 315)
     aspect_ratio = calculate_aspect_ratio(video_fields.width, video_fields.height)
     params = "autoplay=#{(autoplay && 1) || 0}&controls=0&showinfo=0&rel=0"
-    
+
     render_iframe_video(
-      video_fields.width, 
+      video_fields.width,
       video_fields.height,
       video_fields.orientation,
       aspect_ratio,
@@ -439,20 +442,21 @@ defmodule Brando.Villain.Parser do
 
   def video(%{remote_id: remote_id, source: :vimeo} = data, _) do
     video_fields = extract_video_dimensions(data, 500, 281)
-    
+
     # Ensure values are integers
     width = (is_integer(video_fields.width) && video_fields.width) || String.to_integer(video_fields.width)
     height = (is_integer(video_fields.height) && video_fields.height) || String.to_integer(video_fields.height)
-    
+
     aspect_ratio = calculate_aspect_ratio(width, height)
-    
+
     render_iframe_video(
       width,
       height,
       video_fields.orientation,
       aspect_ratio,
       "//player.vimeo.com/video/#{remote_id}?dnt=1",
-      true  # Enable additional fullscreen attributes for Vimeo
+      # Enable additional fullscreen attributes for Vimeo
+      true
     )
   end
 
@@ -478,17 +482,17 @@ defmodule Brando.Villain.Parser do
   def picture(data, _) do
     # Extract data fields with defaults
     fields = extract_picture_fields(data)
-    
+
     # Process text fields
     fields = process_picture_text_fields(fields)
-    
+
     # Determine link attributes
     {rel, target} = get_link_attributes(fields.link)
-    
+
     # Get caption and determine alt text
     caption = render_caption(Map.merge(data, %{title: fields.title, credits: fields.credits}))
     alt = get_alt_text(fields.alt, caption)
-    
+
     # Build assigns for the template
     assigns = build_picture_assigns(data, fields, rel, target, caption, alt)
 
@@ -497,7 +501,7 @@ defmodule Brando.Villain.Parser do
     |> Brando.Villain.Parser.picture_tag()
     |> Phoenix.LiveViewTest.rendered_to_string()
   end
-  
+
   # Extract raw fields with default values from data
   defp extract_picture_fields(data) do
     %{
@@ -516,16 +520,17 @@ defmodule Brando.Villain.Parser do
       srcset: Map.get(data, :srcset, nil)
     }
   end
-  
+
   # Process text fields (handle empty strings)
   defp process_picture_text_fields(fields) do
-    %{fields |
-      title: if(fields.title == "", do: nil, else: fields.title),
-      credits: if(fields.credits == "", do: nil, else: fields.credits),
-      srcset: if(fields.srcset == "", do: nil, else: fields.srcset)
+    %{
+      fields
+      | title: if(fields.title == "", do: nil, else: fields.title),
+        credits: if(fields.credits == "", do: nil, else: fields.credits),
+        srcset: if(fields.srcset == "", do: nil, else: fields.srcset)
     }
   end
-  
+
   # Determine link attributes based on link URL
   defp get_link_attributes(link) do
     if String.starts_with?(link, "/") or String.starts_with?(link, "#") do
@@ -534,7 +539,7 @@ defmodule Brando.Villain.Parser do
       {"nofollow noopener", "_blank"}
     end
   end
-  
+
   # Determine alt text with proper fallbacks
   defp get_alt_text(alt, caption) do
     cond do
@@ -543,12 +548,12 @@ defmodule Brando.Villain.Parser do
       true -> ""
     end
   end
-  
+
   # Build assigns map for the template
   defp build_picture_assigns(data, fields, rel, target, caption, alt) do
     orientation = (fields.width > fields.height && "landscape") || "portrait"
     default_srcset = Brando.config(Brando.Images)[:default_srcset]
-    
+
     %{
       src: data,
       link: fields.link,
@@ -1013,13 +1018,13 @@ defmodule Brando.Villain.Parser do
     # Extract config values with consistent access patterns
     has_play_button = Map.get(data, :play_button, false)
     autoplay_setting = Map.get(data, :autoplay)
-    
+
     # Determine play button display
     play_button = get_play_button_setting(has_play_button, autoplay_setting)
-    
+
     # Determine if autoplay should be enabled
     autoplay = autoplay_setting not in [nil, false]
-    
+
     # Build the options list
     [
       width: Map.get(data, :width),
@@ -1030,10 +1035,11 @@ defmodule Brando.Villain.Parser do
       preload: get_preload_setting(data),
       opacity: Map.get(data, :opacity, 0.1),
       controls: Map.get(data, :controls, false),
+      caption: Map.get(data, :title, false),
       play_button: play_button
     ]
   end
-  
+
   # Helper function for determining play button setting
   defp get_play_button_setting(has_play_button, autoplay_setting) do
     if has_play_button && autoplay_setting == false do
@@ -1042,7 +1048,7 @@ defmodule Brando.Villain.Parser do
       false
     end
   end
-  
+
   # Helper function for determining preload setting
   defp get_preload_setting(data) do
     preload = Map.get(data, :preload)
