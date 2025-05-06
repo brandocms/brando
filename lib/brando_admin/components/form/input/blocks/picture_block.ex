@@ -212,7 +212,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                     </button>
                   </div>
                   <Input.input type={:hidden} field={block_data[:config_target]} />
-                  <Input.rich_text field={block_data[:title]} label={gettext("Title")} />
+                  <Input.rich_text field={block_data[:title]} label={gettext("Caption")} />
                   <Input.text field={block_data[:alt]} label={gettext("Alt")} />
                   <Input.text field={block_data[:link]} label={gettext("Link")} />
                   <Input.radios
