@@ -197,10 +197,10 @@
     style-mod "^4.1.0"
     w3c-keyname "^2.2.4"
 
-"@codemirror/view@^6.36.7":
-  version "6.36.7"
-  resolved "https://registry.yarnpkg.com/@codemirror/view/-/view-6.36.7.tgz#f3711d3fea457a3eec1c09a76b8a132f98df17b1"
-  integrity sha512-kCWGW/chWGPgZqfZ36Um9Iz0X2IVpmCjg1P/qY6B6a2ecXtWRRAigmpJ6YgUQ5lTWXMyyVdfmpzhLZmsZQMbtg==
+"@codemirror/view@^6.36.8":
+  version "6.36.8"
+  resolved "https://registry.yarnpkg.com/@codemirror/view/-/view-6.36.8.tgz#d72e59d2b2d99bb5f177178f63e11cef6e605b94"
+  integrity sha512-yoRo4f+FdnD01fFt4XpfpMCcCAo9QvZOtbrXExn4SqzH32YC6LgzqxfLZw/r6Ge65xyY03mK/UfUqrVw1gFiFg==
   dependencies:
     "@codemirror/state" "^6.5.0"
     style-mod "^4.1.0"
@@ -977,10 +977,10 @@ domify@1.4.0:
   resolved "https://registry.yarnpkg.com/domify/-/domify-1.4.0.tgz#11483617f764f8695975b4bdc79b14f0803b629b"
   integrity sha512-CBzequt8IJiKV8fav4tn0qA9KSiZ76w3C2EkyfC8+df6UGNcZJRfvfBcRzLW39eGeETcunkOvvRBj/gKXIdULw==
 
-dompurify@^3.2.5:
-  version "3.2.5"
-  resolved "https://registry.yarnpkg.com/dompurify/-/dompurify-3.2.5.tgz#11b108656a5fb72b24d916df17a1421663d7129c"
-  integrity sha512-mLPd29uoRe9HpvwP2TxClGQBzGXeEC/we/q+bFlmPPmj2p2Ugl3r6ATu/UU1v77DXNcehiBg9zsr1dREyA/dJQ==
+dompurify@^3.2.6:
+  version "3.2.6"
+  resolved "https://registry.yarnpkg.com/dompurify/-/dompurify-3.2.6.tgz#ca040a6ad2b88e2a92dc45f38c79f84a714a1cad"
+  integrity sha512-/2GogDQlohXPZe6D6NOgQvXLPSYBqIWMnZ8zzOhn09REE4eyAzb+Hed3jhoM9OkuaJ8P6ZGTTVWQKAi8ieIzfQ==
   optionalDependencies:
     "@types/trusted-types" "^2.0.7"
 
@@ -1158,10 +1158,15 @@ linkify-it@^5.0.0:
   dependencies:
     uc.micro "^2.0.0"
 
-linkifyjs@^4.1.4, linkifyjs@^4.2.0:
+linkifyjs@^4.2.0:
   version "4.2.0"
   resolved "https://registry.yarnpkg.com/linkifyjs/-/linkifyjs-4.2.0.tgz#9dd30222b9cbabec9c950e725ec00031c7fa3f08"
   integrity sha512-pCj3PrQyATaoTYKHrgWRF3SJwsm61udVh+vuls/Rl6SptiDhgE7ziUIudAedRY9QEfynmM7/RmLEfPUyw1HPCw==
+
+linkifyjs@^4.3.1:
+  version "4.3.1"
+  resolved "https://registry.yarnpkg.com/linkifyjs/-/linkifyjs-4.3.1.tgz#1f246ebf4be040002accd1f4535b6af7c7e37898"
+  integrity sha512-DRSlB9DKVW04c4SUdGvKK5FR6be45lTU9M76JnngqPeeGDqPwYc0zdUErtsNVMtxPXgUWV4HbXbnC4sNyBxkYg==
 
 locate-character@^3.0.0:
   version "3.0.0"
@@ -1288,10 +1293,10 @@ phoenix_html@^4.2.1:
   resolved "https://registry.yarnpkg.com/phoenix_html/-/phoenix_html-4.2.1.tgz#fdca45a43aa055cb6edbcd6e2386a17163582ebd"
   integrity sha512-jmxnnkPO8mo5Vw/ZAq9c3AUog9d/M8VoSjleNAvhClE5ynVZuv/m31asHRfqWrhzrZwEM4H+pHh3Br719nr2gw==
 
-phoenix_live_view@^1.0.11:
-  version "1.0.11"
-  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-1.0.11.tgz#2c8904add99ca4394d2b037815ba9e1d1f11d623"
-  integrity sha512-CXD7CTWld2YISN0rgxT8ptr71vpus56dfJGN2CR/kC2jhc7k3t8T7luwa4ew5IzeTQNyBNv8nJsIOamakmVJUw==
+phoenix_live_view@^1.0.12:
+  version "1.0.12"
+  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-1.0.12.tgz#bd12c5cc8db96e7eebebfdb7f0cea31d55c13b08"
+  integrity sha512-W6qT0YGezFQ15U+eXui/FyM/BaLsiL8zg4e6nVrhit/pEBfmibWCrmgaaSxz5Vrk4m2xiTAp4Rbywo4RlwbonA==
   dependencies:
     morphdom "2.7.5"
 
@@ -1645,10 +1650,10 @@ svelte-preprocess@^6.0.3:
   resolved "https://registry.yarnpkg.com/svelte-preprocess/-/svelte-preprocess-6.0.3.tgz#fdc1f9dc41b6f22bf8b1f059e9f21eaaae181eeb"
   integrity sha512-PLG2k05qHdhmRG7zR/dyo5qKvakhm8IJ+hD2eFRQmMLHp7X3eJnjeupUtvuRpbNiF31RjVw45W+abDwHEmP5OA==
 
-svelte@^5.28.2:
-  version "5.28.2"
-  resolved "https://registry.yarnpkg.com/svelte/-/svelte-5.28.2.tgz#b0c4a6ad14e1562cc2255baac479fa16d75b9c0d"
-  integrity sha512-FbWBxgWOpQfhKvoGJv/TFwzqb4EhJbwCD17dB0tEpQiw1XyUEKZJtgm4nA4xq3LLsMo7hu5UY/BOFmroAxKTMg==
+svelte@^5.33.1:
+  version "5.33.1"
+  resolved "https://registry.yarnpkg.com/svelte/-/svelte-5.33.1.tgz#6c458907cb6fcf4b955d92c6ea28cfa376b92fb4"
+  integrity sha512-7znzaaQALL62NBzkdKV04tmYIVla8qjrW+k6GdgFZcKcj8XOb8iEjmfRPo40iaWZlKv3+uiuc0h4iaGgwoORtA==
   dependencies:
     "@ampproject/remapping" "^2.3.0"
     "@jridgewell/sourcemap-codec" "^1.5.0"
@@ -1665,10 +1670,10 @@ svelte@^5.28.2:
     magic-string "^0.30.11"
     zimmerframe "^1.1.2"
 
-sweetalert2@^11.21.0:
-  version "11.21.0"
-  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.21.0.tgz#afb4d9abd8d15446788671552f2b52e7eafdccbf"
-  integrity sha512-fiEK7SqRY/QD/wC2uqEHlfYGZ7qe2UcyQbJpbpj4YRVqplBgcI+euPZLZL+evLINcvbtXmL1SFUdZHKqBHGAAQ==
+sweetalert2@^11.21.2:
+  version "11.21.2"
+  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.21.2.tgz#319bc4a737ca9fe577306a4c18ce46854694e846"
+  integrity sha512-DNNFzx16LBQDZh7r5WOfeAfWZBdEdLHl3+tpO9Z1WWKMzdsgBgpLPBduJWVNMB283HYcm8ex99clLYXki21hdA==
 
 tinyglobby@^0.2.13:
   version "0.2.13"

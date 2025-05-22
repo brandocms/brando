@@ -1396,12 +1396,7 @@ defmodule BrandoAdmin.Components.Form do
             {gettext("Select existing image")}
           </button>
 
-          <button
-            :if={@edit_image.image}
-            class="secondary"
-            type="button"
-            phx-click={duplicate_image(@edit_image, @myself)}
-          >
+          <button :if={@edit_image.image} class="secondary" type="button" phx-click={duplicate_image(@edit_image, @myself)}>
             {gettext("Duplicate image")}
           </button>
 
@@ -3602,13 +3597,7 @@ defmodule BrandoAdmin.Components.Form do
       |> assign(:f_name, f_name)
 
     ~H"""
-    <label
-      class={@class}
-      for={@f_id}
-      data-popover={@popover}
-      phx-click={@click}
-      data-field-presence={@f_name}
-    >
+    <label class={@class} for={@f_id} data-popover={@popover} phx-click={@click} data-field-presence={@f_name}>
       {render_slot(@inner_block)}
       <div :if={!@skip_presence} class="field-presence" phx-update="ignore" id={"#{@f_id}-field-presence"}></div>
     </label>

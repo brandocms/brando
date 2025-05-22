@@ -61,6 +61,7 @@
 .btn-stealth {
   display: flex;
   font-size: 15px;
+  cursor: pointer;
   align-items: center;
   margin-left: auto;
   padding: 8px 14px;

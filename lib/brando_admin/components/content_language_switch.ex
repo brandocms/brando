@@ -47,11 +47,7 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
           </div>
           <div class="languages">
             <%= for language <- @languages do %>
-              <button
-                type="button"
-                phx-click={JS.push("select_language", target: @myself)}
-                phx-value-id={language[:value]}
-              >
+              <button type="button" phx-click={JS.push("select_language", target: @myself)} phx-value-id={language[:value]}>
                 {language[:text]}
               </button>
             <% end %>

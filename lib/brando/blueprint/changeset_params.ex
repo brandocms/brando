@@ -2,7 +2,7 @@ defmodule Brando.Blueprint.ChangesetParams do
   @moduledoc """
   Struct containing parameters for the Blueprint.run_changeset function
   """
-  
+
   defstruct [
     :module,
     :schema,

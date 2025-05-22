@@ -735,7 +735,7 @@ if Code.ensure_loaded?(Igniter) do
       end)
       |> Enum.reject(&is_nil/1)
     end
-    
+
     defp remove_view_modules(zipper) do
       # Remove all view_module calls
       Igniter.Code.Common.remove_all_matches(zipper, &view_module_call?(&1))

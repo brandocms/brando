@@ -120,64 +120,63 @@ defmodule Brando.HTML.Video do
       end)
 
     ~H"""
-      <div
-        class="video-wrapper video-file"
-        data-smart-video
-        data-orientation={@orientation}
-        data-progress={@progress}
-        data-preload={@preload && @src}
-        data-autoplay={@autoplay}
-        data-controls={@controls}
+    <div
+      class="video-wrapper video-file"
+      data-smart-video
+      data-orientation={@orientation}
+      data-progress={@progress}
+      data-preload={@preload && @src}
+      data-autoplay={@autoplay}
+      data-controls={@controls}
+      style={@aspect_ratio}
+    >
+      <video
+        width={@width}
+        height={@height}
+        alt=""
+        tabindex="0"
+        preload="auto"
+        autoplay={@autoplay}
+        muted={@autoplay}
+        loop={@loop}
+        playsinline
+        controls={@controls}
+        data-video
+        poster={@poster}
         style={@aspect_ratio}
+        data-src={@preload && @src}
+        src={!@preload && @src}
       >
+      </video>
+
+      <noscript>
         <video
           width={@width}
           height={@height}
           alt=""
           tabindex="0"
-          preload="auto"
-          autoplay={@autoplay}
+          preload="metadata"
           muted={@autoplay}
           loop={@loop}
           playsinline
-          controls={@controls}
-          data-video
-          poster={@poster}
-          style={@aspect_ratio}
-          data-src={@preload && @src}
-          src={!@preload && @src}
+          src={@src}
         >
         </video>
+      </noscript>
 
-        <noscript>
-          <video
-            width={@width}
-            height={@height}
-            alt=""
-            tabindex="0"
-            preload="metadata"
-            muted={@autoplay}
-            loop={@loop}
-            playsinline
-            src={@src}
-          >
-          </video>
-        </noscript>
+      {get_play_button(@play_button)}
 
-        {get_play_button(@play_button)}
-
-        <%= if @cover do %>
-          <div data-cover>
-            {render_slot(@cover)}
-          </div>
-        <% else %>
-          <%= if @video_cover do %>
-            {@video_cover}
-          <% end %>
+      <%= if @cover do %>
+        <div data-cover>
+          {render_slot(@cover)}
+        </div>
+      <% else %>
+        <%= if @video_cover do %>
+          {@video_cover}
         <% end %>
-        <.figcaption_tag :if={@caption} caption={@caption} />
-      </div>
-
+      <% end %>
+      <.figcaption_tag :if={@caption} caption={@caption} />
+    </div>
     """
   end
 

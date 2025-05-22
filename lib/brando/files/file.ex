@@ -59,6 +59,13 @@ defmodule Brando.Files.File do
     """
   end
 
+  translations do
+    context :naming do
+      translate :singular, t("file")
+      translate :plural, t("files")
+    end
+  end
+
   @derive {Jason.Encoder,
            only: [
              :title,
