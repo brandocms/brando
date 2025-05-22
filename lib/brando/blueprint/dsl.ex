@@ -112,9 +112,10 @@ defmodule Brando.Blueprint.Dsl do
       @all_traits Enum.reverse(@traits)
       {traits_before_validate_required, traits_after_validate_required} =
         Brando.Trait.split_traits_by_changeset_phase(@all_traits)
+
       @traits_before_validate_required traits_before_validate_required
       @traits_after_validate_required traits_after_validate_required
-      
+
       def __traits__, do: @all_traits
       def __traits_before_validate_required__, do: @traits_before_validate_required
       def __traits_after_validate_required__, do: @traits_after_validate_required
@@ -399,7 +400,7 @@ defmodule Brando.Blueprint.Dsl do
           required_castable_fields: @required_castable_fields,
           opts: opts
         }
-        
+
         run_changeset(params)
       end
 

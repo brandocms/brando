@@ -108,6 +108,13 @@ defmodule Brando.Images.Image do
     end
   end
 
+  translations do
+    context :naming do
+      translate :singular, t("image")
+      translate :plural, t("images")
+    end
+  end
+
   @derive {Jason.Encoder,
            only: [
              :title,
