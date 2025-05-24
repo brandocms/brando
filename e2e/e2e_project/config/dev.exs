@@ -1,5 +1,6 @@
 import Config
 
+config :e2e_project, hmr: false
 config :e2e_project, show_breakpoint_debug: true
 
 # Configure your database

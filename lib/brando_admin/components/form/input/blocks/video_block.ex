@@ -138,7 +138,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                   <Input.input type={:hidden} field={block_data[:source]} />
                   <Input.input type={:hidden} field={block_data[:thumbnail_url]} />
                   <Input.text field={block_data[:remote_id]} monospace label={gettext("Remote ID")} />
-                  <Input.rich_text field={block_data[:title]} label={gettext("Caption")} />
+                  <Input.rich_text field={block_data[:title]} label={gettext("Caption")} opts={[]} />
 
                   <div class="button-group-vertical">
                     <button

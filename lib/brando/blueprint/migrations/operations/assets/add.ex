@@ -19,7 +19,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Asset.Add do
 
   def up(%{asset: %{type: :gallery, name: name}}) do
     """
-    add #{inspect(name)}_id, references(:images_galleries, on_delete: :nilify_all)
+    add #{inspect(name)}_id, references(:galleries, on_delete: :nilify_all)
     """
   end
 

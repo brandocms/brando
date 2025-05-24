@@ -2502,8 +2502,6 @@ defmodule BrandoAdmin.Components.Form do
         upload_entry,
         %{assigns: %{current_user: current_user, schema: schema, form: form}} = socket
       ) do
-    socket = assign(socket, :processing, upload_entry.progress)
-
     if upload_entry.done? do
       %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(schema, key)
       config_target = "gallery:#{inspect(schema)}:#{key}"
@@ -2532,8 +2530,8 @@ defmodule BrandoAdmin.Components.Form do
       current_gallery_images =
         if gallery do
           Enum.map(
-            gallery.gallery_images || [],
-            &Map.take(&1, [:id, :image_id, :gallery_id, :sequence, :creator_id])
+            gallery.gallery_objects || [],
+            &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
           )
         else
           []
@@ -2553,17 +2551,17 @@ defmodule BrandoAdmin.Components.Form do
           %{
             id: gallery.id,
             config_target: gallery.config_target,
-            gallery_images: sequence(new_gallery_images)
+            gallery_objects: sequence(new_gallery_images)
           }
         else
           %{
             config_target: "gallery:#{inspect(schema)}:#{key}",
-            gallery_images: sequence(new_gallery_images)
+            gallery_objects: sequence(new_gallery_images)
           }
         end
 
       # TODO: This sucks.
-      current_gallery_images = (gallery && gallery.gallery_images) || []
+      current_gallery_images = (gallery && gallery.gallery_objects) || []
 
       unloaded_image_ids =
         current_gallery_images
@@ -2602,7 +2600,10 @@ defmodule BrandoAdmin.Components.Form do
         selected_images: selected_images
       )
 
-      {:noreply, assign(socket, :form, to_form(updated_changeset, []))}
+      {:noreply,
+       socket
+       |> update(:processing_images, &[image.id | &1])
+       |> assign(:form, to_form(updated_changeset, []))}
     else
       {:noreply, socket}
     end

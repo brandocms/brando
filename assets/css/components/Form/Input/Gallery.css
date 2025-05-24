@@ -1,4 +1,4 @@
-.gallery-images {
+.gallery-objects {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: 1fr;
@@ -6,7 +6,7 @@
   grid-row-gap: 8px;
   margin-top: 8px;
 
-  .gallery-image {
+  .gallery-object {
     cursor: move;
     position: relative;
 
@@ -19,11 +19,11 @@
       background-color: white;
     }
 
-    &:hover .delete-image {
+    &:hover .delete-object {
       opacity: 1;
     }
 
-    .delete-image {
+    .delete-object {
       opacity: 0;
       position: absolute;
       right: 5px;
@@ -58,8 +58,8 @@
     .upload-button {
       position: relative;
       cursor: pointer;
-      
-      input[type=file] {
+
+      input[type="file"] {
         display: inline-block;
         position: absolute;
         z-index: 1;

@@ -158,14 +158,14 @@ defmodule Brando.Blueprint.Assets do
   end
 
   def preloads_for(schema) do
-    gallery_images_query =
-      from gi in Brando.Images.GalleryImage,
-        order_by: [asc: gi.sequence],
-        preload: [:image]
+    gallery_objects_query =
+      from go in Brando.Galleries.GalleryObject,
+        order_by: [asc: go.sequence],
+        preload: [:image, :video]
 
     gallery_query =
-      from g in Brando.Images.Gallery,
-        preload: [gallery_images: ^gallery_images_query]
+      from g in Brando.Galleries.Gallery,
+        preload: [gallery_objects: ^gallery_objects_query]
 
     Enum.reduce(Brando.Blueprint.Assets.__assets__(schema), [], fn asset, acc ->
       case asset.type do

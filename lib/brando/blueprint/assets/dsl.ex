@@ -166,8 +166,10 @@ defmodule Brando.Blueprint.Assets.Dsl do
   end
 
   def transform(%{type: :gallery} = asset) do
-    opts_map = Map.merge(Enum.into(asset.opts, %{}), %{module: Brando.Images.Gallery})
-    default_config = Brando.config(Brando.Images)[:default_config] || %{}
+    opts_map = Map.merge(Enum.into(asset.opts, %{}), %{module: Brando.Galleries.Gallery})
+    default_image_config = Brando.config(Brando.Images)[:default_config] || %{}
+    default_video_config = Brando.config(Brando.Videos)[:default_config] || %{}
+    default_config = %{video: default_video_config, image: default_image_config}
 
     cfg =
       case Map.get(opts_map, :cfg) do
@@ -177,7 +179,7 @@ defmodule Brando.Blueprint.Assets.Dsl do
             Missing :cfg key for gallery asset `#{inspect(asset.name)}`
 
                 assets do
-                  asset #{inspect(asset.name)}, :gallery, cfg: [...]
+                  asset #{inspect(asset.name)}, :gallery, cfg: %{...}
                 end
             """
 

@@ -50,6 +50,7 @@ defmodule E2eProjectWeb.Router do
 
   if @sql_sandbox do
     forward "/__e2e", Brando.Plug.E2ETest
+
     scope "/e2e" do
       post "/setup_fixtures/:name", E2EFixtureController, :setup
       post "/login/:email", E2EFixtureController, :login
@@ -63,6 +64,18 @@ defmodule E2eProjectWeb.Router do
 
   admin_routes do
     live "/", E2eProjectAdmin.DashboardLive
+
+    scope "/projects", E2eProjectAdmin.Projects do
+      live "/clients", ClientListLive
+      live "/clients/create", ClientFormLive, :create
+      live "/clients/update/:entry_id", ClientFormLive, :update
+      live "/categories", CategoryListLive
+      live "/categories/create", CategoryFormLive, :create
+      live "/categories/update/:entry_id", CategoryFormLive, :update
+      live "/projects", ProjectListLive
+      live "/projects/create", ProjectFormLive, :create
+      live "/projects/update/:entry_id", ProjectFormLive, :update
+    end
   end
 
   scope "/coming-soon", E2eProjectWeb do
@@ -78,6 +91,7 @@ defmodule E2eProjectWeb.Router do
   scope "/" do
     pipe_through :browser
     get "/new/redirect", E2eProjectWeb.PageController, :redirect_success
+    get "/project/:slug", E2eProjectWeb.ProjectController, :detail
     page_routes()
   end
 end

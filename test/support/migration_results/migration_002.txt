@@ -8,7 +8,7 @@ defmodule Brando.Migrations.Projects.Project.Blueprint002 do
       add :meta_title, :text
       add :meta_description, :text
       add :meta_image_id, references(:images, on_delete: :nilify_all)
-      add :photos_id, references(:images_galleries, on_delete: :nilify_all)
+      add :photos_id, references(:galleries, on_delete: :nilify_all)
       add :more_properties, :jsonb
       remove :deleted_at
     end

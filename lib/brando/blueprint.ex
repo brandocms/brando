@@ -452,7 +452,7 @@ defmodule Brando.Blueprint do
         %Asset{type: :gallery, name: name} ->
           Ecto.Schema.belongs_to(
             name,
-            Brando.Images.Gallery,
+            Brando.Galleries.Gallery,
             on_replace: :delete
           )
 

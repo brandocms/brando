@@ -345,12 +345,23 @@ defmodule BrandoAdmin.Components.Form.Input do
   end
 
   def rich_text(assigns) do
-    assigns = prepare_input_component(assigns)
+    extensions = process_extensions(assigns)
+
+    assigns =
+      assigns
+      |> assign(:extensions, extensions)
+      |> prepare_input_component()
 
     ~H"""
     <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <div class="tiptap-wrapper" id={"#{@field.id}-rich-text-wrapper"}>
-        <div id={"#{@field.id}-rich-text"} phx-hook="Brando.TipTap" data-name="TipTap" data-tiptap-type="rich_text">
+        <div
+          id={"#{@field.id}-rich-text"}
+          phx-hook="Brando.TipTap"
+          data-name="TipTap"
+          data-tiptap-type="rich_text"
+          data-tiptap-extensions={@extensions}
+        >
           <div id={"#{@field.id}-rich-text-target-wrapper"} class="tiptap-target-wrapper" phx-update="ignore">
             <div id={"#{@field.id}-rich-text-target"} class="tiptap-target"></div>
           </div>
@@ -359,6 +370,20 @@ defmodule BrandoAdmin.Components.Form.Input do
       </div>
     </Form.field_base>
     """
+  end
+
+  defp process_extensions(%{opts: opts}) do
+    case Keyword.get(opts, :extensions) do
+      extensions when is_list(extensions) ->
+        Enum.join(extensions, "|")
+
+      _ ->
+        "all"
+    end
+  end
+
+  defp process_extensions(_assigns) do
+    "all"
   end
 
   attr :target, :any, default: nil

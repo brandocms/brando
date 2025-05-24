@@ -29,6 +29,9 @@ Finally resave entries with `mix brando.entries.resave`, sync identifiers with `
 then sync translations with `chmod +x scripts/sync_gettext.sh` then `./scripts/sync_gettext.sh priv/gettext/backend/no/LC_MESSAGES`
 if your translations are in `priv/gettext/backend/no/LC_MESSAGES`.
 
+* BREAKING: Galleries now have `gallery_objects` instead of `gallery_images`. 
+  Adjust your module templates accordingly!
+
 * BREAKING: Change from `mix phx.digest` to `mix brando.digest` in your Dockerfile,
   if you're using Vite. This ensures we can properly use chunks without double
   loading. Ensure you have the latest version of Vite installed.

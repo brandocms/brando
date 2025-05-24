@@ -14,7 +14,6 @@ config :brando, Oban,
   plugins: false,
   testing: :inline
 
-  # Ensure no HMR in prod :)
 config :e2e_project, hmr: false
 
 # Show breakpoint debug in frontend

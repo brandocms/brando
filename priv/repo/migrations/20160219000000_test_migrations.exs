@@ -43,35 +43,16 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
 
     create(index(:users, [:email], unique: true))
 
-    create table(:images_galleries) do
+    create table(:galleries) do
       add :config_target, :text
       add :deleted_at, :utc_datetime
       add :creator_id, references(:users, on_delete: :nothing)
       timestamps()
     end
 
-    create table(:images_gallery_images) do
-      add :sequence, :integer
-      add :gallery_id, references(:images_galleries, on_delete: :delete_all)
-      add :image_id, references(:images, on_delete: :delete_all)
-      add :creator_id, references(:users, on_delete: :nothing)
-      timestamps()
-    end
 
     alter table(:images) do
       add :creator_id, references(:users)
-    end
-
-    create table(:files) do
-      add :title, :text
-      add :mime_type, :text
-      add :filesize, :integer
-      add :filename, :text
-      add :config_target, :text
-      add :cdn, :boolean
-      add :deleted_at, :utc_datetime
-      timestamps()
-      add :creator_id, references(:users, on_delete: :nothing)
     end
 
     create table(:videos) do
@@ -93,6 +74,29 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :deleted_at, :utc_datetime
       timestamps()
     end
+
+    create table(:galleries_gallery_objects) do
+      add :sequence, :integer
+      add :gallery_id, references(:galleries, on_delete: :delete_all)
+      add :image_id, references(:images, on_delete: :delete_all)
+      add :video_id, references(:videos, on_delete: :delete_all)
+      add :creator_id, references(:users, on_delete: :nothing)
+      timestamps()
+    end
+
+    create table(:files) do
+      add :title, :text
+      add :mime_type, :text
+      add :filesize, :integer
+      add :filename, :text
+      add :config_target, :text
+      add :cdn, :boolean
+      add :deleted_at, :utc_datetime
+      timestamps()
+      add :creator_id, references(:users, on_delete: :nothing)
+    end
+
+
 
     create table(:users_tokens) do
       add :user_id, references(:users, on_delete: :delete_all), null: false
@@ -520,8 +524,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     drop index(:posts, [:status])
 
     drop table(:images)
-    drop table(:images_galleries)
-    drop table(:images_gallery_images)
+    drop table(:galleries)
+    drop table(:galleries_gallery_objects)
 
     drop table(:pages_fragments)
     drop index(:pages_fragments, [:language])
