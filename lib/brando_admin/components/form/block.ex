@@ -1276,8 +1276,8 @@ defmodule BrandoAdmin.Components.Form.Block do
       Brando.Datasource.list_results(
         module,
         query,
-        Map.get(entry, :language),
-        socket.assigns.vars
+        socket.assigns.vars,
+        Map.get(entry, :language)
       )
 
     assign(socket, :available_identifiers, available_identifiers)
