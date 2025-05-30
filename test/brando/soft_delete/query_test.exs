@@ -6,8 +6,9 @@ defmodule Brando.SoftDelete.QueryTest do
   alias Brando.Content.Palette
   alias Brando.Content.Template
   alias Brando.Factory
-  alias Brando.Images.Gallery
+  alias Brando.Galleries.Gallery
   alias Brando.Images.Image
+  alias Brando.Files.File
   alias Brando.MigrationTest.Profile
   alias Brando.Pages.Fragment
   alias Brando.Pages.Page
@@ -23,7 +24,7 @@ defmodule Brando.SoftDelete.QueryTest do
              Brando.Content.Module,
              Palette,
              Template,
-             Brando.Files.File,
+             File,
              Gallery,
              Image,
              Profile,
@@ -43,7 +44,7 @@ defmodule Brando.SoftDelete.QueryTest do
              {Brando.Content.Module, 0},
              {Palette, 0},
              {Template, 0},
-             {Brando.Files.File, 0},
+             {File, 0},
              {Gallery, 0},
              {Image, 0},
              {Profile, 0},
@@ -82,8 +83,8 @@ defmodule Brando.SoftDelete.QueryTest do
              {Brando.Content.Module, 0},
              {Palette, 0},
              {Template, 0},
-             {Brando.Files.File, 0},
-             {Gallery, 0},
+             {File, 0},
+             {Brando.Galleries.Gallery, 0},
              {Image, 1},
              {Profile, 0},
              {Brando.MigrationTest.Project, 0},
@@ -108,7 +109,7 @@ defmodule Brando.SoftDelete.QueryTest do
              {Brando.Content.Module, 0},
              {Palette, 0},
              {Template, 0},
-             {Brando.Files.File, 0},
+             {File, 0},
              {Gallery, 0},
              {Image, 0},
              {Profile, 0},

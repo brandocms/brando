@@ -1,10 +1,10 @@
-defmodule Brando.Images.Gallery do
+defmodule Brando.Galleries.Gallery do
   @moduledoc """
-  Collection of images
+  Collection of images and videos
   """
   use Brando.Blueprint,
     application: "Brando",
-    domain: "Images",
+    domain: "Galleries",
     schema: "Gallery",
     singular: "gallery",
     plural: "galleries",
@@ -24,22 +24,22 @@ defmodule Brando.Images.Gallery do
   end
 
   relations do
-    relation :gallery_images, :has_many,
-      module: Brando.Images.GalleryImage,
+    relation :gallery_objects, :has_many,
+      module: Brando.Galleries.GalleryObject,
       on_replace: :delete_if_exists,
       preload_order: [asc: :sequence],
-      sort_param: :sort_gallery_image_ids,
-      drop_param: :drop_gallery_image_ids,
+      sort_param: :sort_gallery_object_ids,
+      drop_param: :drop_gallery_object_ids,
       cast: true
   end
 
   def preloads_for do
-    gallery_images_query =
-      from gi in Brando.Images.GalleryImage,
-        order_by: [asc: gi.sequence],
-        preload: [:image]
+    gallery_objects_query =
+      from go in Brando.Galleries.GalleryObject,
+        order_by: [asc: go.sequence],
+        preload: [:image, :video]
 
-    from g in Brando.Images.Gallery,
-      preload: [gallery_images: ^gallery_images_query]
+    from g in Brando.Galleries.Gallery,
+      preload: [gallery_objects: ^gallery_objects_query]
   end
 end

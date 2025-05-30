@@ -1,11 +1,10 @@
-import { expect } from '@playwright/test'
+import { Locator, Page, expect } from '@playwright/test'
 import Crypto from 'crypto'
 
-const randomString = (size = 21) =>
-  Crypto.randomBytes(size).toString('base64').slice(0, size)
+const randomString = (size = 21) => Crypto.randomBytes(size).toString('base64').slice(0, size)
 
 // a helper function to wait until the LV has no pending events
-const syncLV = async (page) => {
+const syncLV = async page => {
   const promises = [
     expect(page.locator('.phx-connected').first()).toBeVisible(),
     expect(page.locator('.phx-change-loading')).toHaveCount(0),
@@ -22,21 +21,18 @@ const syncLV = async (page) => {
 const evalLV = async (page, code, selector = '[data-phx-main]') =>
   await page.evaluate(
     ([code, selector]) => {
-      return new Promise((resolve) => {
-        window.liveSocket.main.withinTargets(
-          selector,
-          (targetView, targetCtx) => {
-            targetView.pushEvent(
-              'event',
-              document.body,
-              targetCtx,
-              'sandbox:eval',
-              { value: code },
-              {},
-              ({ result }) => resolve(result)
-            )
-          }
-        )
+      return new Promise(resolve => {
+        window.liveSocket.main.withinTargets(selector, (targetView, targetCtx) => {
+          targetView.pushEvent(
+            'event',
+            document.body,
+            targetCtx,
+            'sandbox:eval',
+            { value: code },
+            {},
+            ({ result }) => resolve(result)
+          )
+        })
       })
     },
     [code, selector]
@@ -49,7 +45,7 @@ const evalPlug = async (request, code) => {
     .post('/eval', {
       data: { code },
     })
-    .then((resp) => resp.json())
+    .then(resp => resp.json())
 }
 
 const attributeMutations = (page, selector) => {
@@ -60,7 +56,7 @@ const attributeMutations = (page, selector) => {
   const id = randomString(24)
   // this promise resolves to the mutation list
   const promise = page.locator(selector).evaluate((target, id) => {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const mutations = []
       let observer
       window[id] = () => {
@@ -70,7 +66,7 @@ const attributeMutations = (page, selector) => {
       }
       // https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver
       observer = new MutationObserver((mutationsList, _observer) => {
-        mutationsList.forEach((mutation) => {
+        mutationsList.forEach(mutation => {
           if (mutation.type === 'attributes') {
             mutations.push({
               attr: mutation.attributeName,
@@ -91,4 +87,32 @@ const attributeMutations = (page, selector) => {
   }
 }
 
-module.exports = { randomString, syncLV, evalLV, evalPlug, attributeMutations }
+export async function dragAndDrop(page, dragLocator, dropLocator, targetPosition) {
+  const dragBoundingBox = await dragLocator.boundingBox()
+  const dropBoundingBox = await dropLocator.boundingBox()
+
+  // moving the mouse to the center of the drag HTML element
+  await page.mouse.move(
+    dragBoundingBox.x + dragBoundingBox.width / 2,
+    dragBoundingBox.y + dragBoundingBox.height / 2
+  )
+
+  // activating the drag action
+  await page.mouse.down()
+
+  await page.waitForTimeout(500)
+
+  // if targetPosition is undefined, defining the center of the
+  // drop HTML element as the target position
+  const targetX = targetPosition?.x || dropBoundingBox.x + dropBoundingBox.width / 2
+  const targetY = targetPosition?.y || dropBoundingBox.y + dropBoundingBox.height / 2
+
+  // moving the mouse to the (targetX, targetY) coordinates of the
+  // drop element
+  await page.mouse.move(targetX, targetY)
+  await page.waitForTimeout(500)
+  // releasing the mouse and terminating the drop option
+  await page.mouse.up()
+}
+
+module.exports = { randomString, syncLV, evalLV, evalPlug, attributeMutations, dragAndDrop }

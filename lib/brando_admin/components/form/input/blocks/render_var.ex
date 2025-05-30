@@ -424,7 +424,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :html} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Input.rich_text field={@var[:value]} label={@label} placeholder={@placeholder} instructions={@instructions} />
+      <Input.rich_text field={@var[:value]} label={@label} placeholder={@placeholder} opts={[]} instructions={@instructions} />
     </div>
     """
   end

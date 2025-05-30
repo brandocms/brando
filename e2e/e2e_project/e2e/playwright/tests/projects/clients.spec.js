@@ -1,0 +1,52 @@
+import { test, expect } from '../../test-support/setupAuth'
+import { syncLV } from '../../utils'
+
+test('creates and edits clients', async ({ page }) => {
+  await page.goto('/admin')
+  await page.getByRole('link', { name: 'Clients' }).click()
+  await page.getByRole('link', { name: 'Create new' }).click()
+  await syncLV(page)
+  await page.getByText('Published').click()
+  await page.getByRole('textbox', { name: 'Name' }).click()
+  await page.getByRole('textbox', { name: 'Name' }).fill('Google')
+  await page.getByTestId('submit').click()
+  await syncLV(page)
+  await page.getByRole('link', { name: 'Create new' }).click()
+  await syncLV(page)
+  await page.getByText('Published').click()
+  await page.getByRole('textbox', { name: 'Name' }).click()
+  await page.getByRole('textbox', { name: 'Name' }).fill('Microsoft')
+  await page.getByTestId('submit').click()
+  await syncLV(page)
+  await page.getByRole('link', { name: 'Create new' }).click()
+  await syncLV(page)
+  await page.getByText('Published').click()
+  await page.getByRole('textbox', { name: 'Name' }).click()
+  await page.getByRole('textbox', { name: 'Name' }).fill('OpenAI')
+  await page.getByTestId('submit').click()
+  await syncLV(page)
+  await page.getByRole('link', { name: 'Google →' }).click()
+  await syncLV(page)
+  await page.getByRole('textbox', { name: 'Name' }).click()
+  await page.getByRole('textbox', { name: 'Name' }).press('ControlOrMeta+Shift+ArrowLeft')
+  await page.getByRole('textbox', { name: 'Name' }).fill('Alphabet')
+  await page.getByTestId('submit').click()
+  await syncLV(page)
+  // list-row
+  await expect(page.locator('.content-list .list-row').nth(0)).toContainText('Alphabet')
+  await expect(page.locator('.content-list .list-row').nth(1)).toContainText('Microsoft')
+  await expect(page.locator('.content-list .list-row').nth(2)).toContainText('OpenAI')
+  await page.locator('.content-list .list-row').nth(2).locator('.status').click()
+  await page
+    .locator('.content-list .list-row')
+    .nth(2)
+    .locator('.status-dropdown button')
+    .nth(3)
+    .click()
+
+  await expect(
+    page.locator('.content-list .list-row').nth(2).locator('.status > div > svg > circle')
+  ).toHaveClass('pending')
+
+  await page.waitForTimeout(5000)
+})

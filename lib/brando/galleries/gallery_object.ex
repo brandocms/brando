@@ -1,17 +1,18 @@
-defmodule Brando.Images.GalleryImage do
+defmodule Brando.Galleries.GalleryObject do
   @moduledoc """
-  Gallery <-> Image join table
+  Gallery <-> Image/Video join table
   """
   use Brando.Blueprint,
     application: "Brando",
-    domain: "Images",
-    schema: "GalleryImage",
-    singular: "gallery_image",
-    plural: "gallery_images",
+    domain: "Galleries",
+    schema: "GalleryObject",
+    singular: "gallery_object",
+    plural: "gallery_objects",
     gettext_module: Brando.Gettext
 
-  alias Brando.Images.Gallery
+  alias Brando.Galleries.Gallery
   alias Brando.Images.Image
+  alias Brando.Videos.Video
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Sequenced
@@ -23,5 +24,6 @@ defmodule Brando.Images.GalleryImage do
   relations do
     relation :gallery, :belongs_to, module: Gallery
     relation :image, :belongs_to, module: Image
+    relation :video, :belongs_to, module: Video
   end
 end

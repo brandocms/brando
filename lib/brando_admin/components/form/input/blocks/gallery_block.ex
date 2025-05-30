@@ -146,7 +146,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                     </Content.image>
                   </figure>
                   <div>
-                    <Input.rich_text field={image[:title]} label={gettext("Title")} />
+                    <Input.rich_text field={image[:title]} label={gettext("Title")} opts={[]} />
                     <Input.text field={image[:credits]} label={gettext("Credits")} />
                     <Input.text field={image[:alt]} label={gettext("Alt. text")} />
                   </div>

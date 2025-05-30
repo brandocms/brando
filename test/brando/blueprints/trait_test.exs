@@ -13,7 +13,7 @@ defmodule Brando.Blueprint.TraitTest do
                Brando.Content.Palette,
                Brando.Content.Template,
                Brando.Files.File,
-               Brando.Images.Gallery,
+               Brando.Galleries.Gallery,
                Brando.Images.Image,
                Brando.MigrationTest.Profile,
                Brando.MigrationTest.Project,

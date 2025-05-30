@@ -177,9 +177,36 @@ defmodule Brando.Blueprint.Forms do
 
   ### `multi_select`: Multiple select field
 
+  ```
+  input :project_categories, :multi_select,
+    options: &__MODULE__.get_categories/2,
+    relation_key: :category_id,
+    relation: :category,
+    resetable: true,
+    wrapped_labels: true,
+    label: t("Categories")
+  ```
+
   ### `rich_text`: Rich text editor (TipTap)
 
+  #### Options
+
+      - `extensions`: List of extensions to enable. Defaults to `all`.
+          ```
+          input :rich_text, :rich_text,
+            label: "Rich text",
+            extensions: ["p", "h2", "bold", "link", "color"]
+          ```
+
   ### `select`: Select field
+
+  ```
+  input :client_id, :select,
+    options: &__MODULE__.get_clients/2,
+    update_relation: {:client, &__MODULE__.get_client/1},
+    resetable: true,
+    label: t("Client")
+  ```
 
   ### `slug`: Slug field
 

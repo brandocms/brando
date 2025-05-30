@@ -29,9 +29,11 @@ defmodule BrandoAdmin.Nav do
   def put_locale(socket) do
     current_user = socket.assigns.current_user
 
-    current_user.language
-    |> to_string()
-    |> Gettext.put_locale()
+    if current_user do
+      current_user.language
+      |> to_string()
+      |> Gettext.put_locale()
+    end
 
     socket
   end
