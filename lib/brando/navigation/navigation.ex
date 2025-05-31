@@ -15,23 +15,19 @@ defmodule Brando.Navigation do
   In your template:
 
       <nav>
-        <ul>
-        <%= for item <- @navigation.items do %>
-          <li>
-            <a href="<%= item.url %>">
-              <%= item.title %>
-            </a>
-          </li>
-        <% end %>
-        </ul>
+        <section :if={assigns[:navigation]} class="main">
+          <ul>
+            <div class="nav-indicator" aria-hidden="true"></div>
+            <.menu :let={item} menu={@navigation}>
+              <li>
+                <.menu_item :let={text} conn={@conn} item={item}>
+                  {text}
+                </.menu_item>
+              </li>
+            </.menu>
+          </ul>
+        </section>
       </nav>
-
-
-  If used in a Villain/Liquid template:
-
-      {% for item in navigation.main.en.items %}
-        {{ item.url }}
-      {% endfor %}
 
   """
   import Brando.Query
