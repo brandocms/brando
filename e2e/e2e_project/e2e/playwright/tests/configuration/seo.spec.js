@@ -8,37 +8,38 @@ test('seo changes affect the frontpage', async ({ page }) => {
   await expect(page).toHaveURL('/admin/config/seo')
   await syncLV(page)
   await page.getByLabel('Fallback META title').fill('Brando CMS')
-  await page
-    .getByLabel('Fallback META description')
-    .fill('Brando CMS: A CMS of sorts.')
+  await page.getByLabel('Fallback META description').fill('Brando CMS: A CMS of sorts.')
   await page.getByPlaceholder('https://yoursite.com').fill('https://brando.dev')
-  await page
-    .locator('textarea[name="seo[robots]"]')
-    .fill('User-agent: *\nDisallow: /secret')
+  await page.locator('textarea[name="seo[robots]"]').fill('User-agent: *\nDisallow: /secret')
   await page.getByRole('button', { name: 'Add entry' }).click()
   await page.locator('input[name="seo[redirects][0][code]"]').click()
   await page.locator('input[name="seo[redirects][0][code]"]').fill('301')
   // Add SEO image
   await page.getByRole('button', { name: 'Add image' }).click()
-  await page
-    .locator('input[name="fallback_meta_image"]')
-    .setInputFiles('./fixtures/image.jpg')
+  await page.locator('input[name="fallback_meta_image"]').setInputFiles('./fixtures/image.jpg')
   // Close drawer
   await page.getByRole('button', { name: 'Close' }).click()
   // Wait for the drawer to vanish or the form to be detached
   await page.waitForSelector('#image-drawer', { state: 'hidden' })
+  await page.evaluate(() => {
+    document
+      .querySelector('#image-drawer-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+
   await syncLV(page)
   await expect(page.getByText('No image associated with')).toHaveCount(0)
   await page.getByTestId('submit').click()
   await syncLV(page)
   await expect(page).toHaveURL('/admin/config/seo')
-  
+
   // Wait for the cache to be updated
   // The SEO update happens through Cachex and needs time to propagate
-  await page.waitForTimeout(1000)
+  await page.waitForTimeout(2000)
 
-  // test meta tags
-  await page.goto('/')
+  // test meta tags - go to homepage and wait for full load
+  await page.goto('/', { waitUntil: 'networkidle' })
+
   const metaDescriptionLocator = page.locator('meta[name="description"]')
   const metaDescription = await metaDescriptionLocator.getAttribute('content')
   expect(metaDescription).toBe('Brando CMS: A CMS of sorts.')
