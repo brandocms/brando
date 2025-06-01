@@ -148,6 +148,9 @@ defmodule Brando.Blueprint.Assets.Dsl do
         :default ->
           default_config
 
+        :config_target ->
+          :config_target
+
         fun when is_function(fun) ->
           fun.()
 
