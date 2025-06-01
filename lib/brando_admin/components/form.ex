@@ -35,6 +35,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.FilePicker
   alias BrandoAdmin.Components.ImagePicker
+  alias BrandoAdmin.Components.VideoPicker
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Utils
@@ -57,13 +58,16 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:edit_image, %{path: [], field: nil, relation_field: nil})
      |> assign(:edit_file, %{path: [], field: nil, relation_field: nil})
+     |> assign(:edit_video, %{path: [], field: nil, relation_field: nil})
      |> assign(:updated_entry_assocs, %{})
      |> assign(:file_changeset, nil)
      |> assign(:image_changeset, nil)
+     |> assign(:video_changeset, nil)
      |> assign(:initial_update, true)
      |> assign(:dirty_fields, [])
      |> assign(:editing_image?, false)
      |> assign(:editing_file?, false)
+     |> assign(:editing_video?, false)
      |> assign(:processing_images, [])
      |> assign(:presences, %{})
      |> assign(:transformer_defaults, %{})
@@ -148,6 +152,40 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:edit_image, edit_image)
      |> assign(:editing_image?, true)
      |> assign(:image_changeset, image_changeset)}
+  end
+
+  # edit_video
+  def update(%{action: :update_edit_video, video: video}, %{assigns: %{edit_video: edit_video}} = socket) do
+    updated_edit_video = Map.merge(edit_video, %{video: video, id: video.id})
+    video_changeset = change(video)
+
+    {:ok,
+     socket
+     |> assign(:edit_video, updated_edit_video)
+     |> assign(:video_changeset, video_changeset)}
+  end
+
+  def update(
+        %{action: :update_edit_video, edit_video: %{video: nil} = edit_video},
+        socket
+      ) do
+    video_changeset = change(%Brando.Videos.Video{})
+
+    {:ok,
+     socket
+     |> assign(:edit_video, edit_video)
+     |> assign(:editing_video?, true)
+     |> assign(:video_changeset, video_changeset)}
+  end
+
+  def update(%{action: :update_edit_video, edit_video: %{video: video} = edit_video}, socket) do
+    video_changeset = change(video)
+
+    {:ok,
+     socket
+     |> assign(:edit_video, edit_video)
+     |> assign(:editing_video?, true)
+     |> assign(:video_changeset, video_changeset)}
   end
 
   def update(
@@ -1027,6 +1065,7 @@ defmodule BrandoAdmin.Components.Form do
 
           <.live_component module={FilePicker} id="file-picker" />
           <.live_component module={ImagePicker} id="image-picker" />
+          <.live_component module={VideoPicker} id="video-picker" />
 
           <.file_drawer
             file_changeset={@file_changeset}
@@ -2152,6 +2191,77 @@ defmodule BrandoAdmin.Components.Form do
   # without image in params
   def handle_event("save_image", _, socket) do
     {:noreply, assign(socket, :editing_image?, false)}
+  end
+
+  def handle_event("validate_video", _, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "save_video",
+        %{"video" => video_params},
+        %{
+          assigns: %{
+            form: form,
+            entry: entry,
+            schema: schema,
+            singular: singular,
+            edit_video: %{video: video, path: path, field: field, relation_field: relation_field} = edit_video,
+            current_user: current_user
+          }
+        } = socket
+      ) do
+    entry_or_default = entry || struct(schema)
+
+    validated_changeset =
+      video
+      |> Brando.Videos.Video.changeset(video_params, current_user)
+      |> Map.put(:action, :update)
+      |> Brando.Trait.run_trait_before_save_callbacks(
+        Brando.Videos.Video,
+        current_user
+      )
+
+    {:ok, updated_video} = Brando.Videos.update_video(validated_changeset, current_user)
+
+    Brando.Trait.run_trait_after_save_callbacks(
+      Brando.Videos.Video,
+      updated_video,
+      validated_changeset,
+      current_user
+    )
+
+    edit_video = Map.put(edit_video, :video, updated_video)
+    relation_full_path = path ++ [relation_field.field]
+    field_full_path = path ++ [field]
+
+    updated_changeset =
+      form.source
+      |> apply_changes()
+      |> change()
+      |> EctoNestedChangeset.update_at(relation_full_path, fn _ -> video.id end)
+
+    access_field_full_path = Brando.Utils.build_access_path(field_full_path)
+    updated_entry = put_in(entry_or_default, access_field_full_path, updated_video)
+
+    target_field_name = Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")], "")
+
+    {:noreply,
+     socket
+     |> assign(:entry, updated_entry)
+     |> assign(:form, to_form(updated_changeset, []))
+     |> assign(:video_changeset, validated_changeset)
+     |> assign(:edit_video, edit_video)
+     |> assign(:editing_video?, false)
+     |> push_event("b:validate", %{
+       target: target_field_name,
+       value: video.id
+     })}
+  end
+
+  # without video in params
+  def handle_event("save_video", _, socket) do
+    {:noreply, assign(socket, :editing_video?, false)}
   end
 
   def handle_event("share_link", _, socket) do
