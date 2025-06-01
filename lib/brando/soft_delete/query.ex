@@ -3,7 +3,6 @@ defmodule Brando.SoftDelete.Query do
   Query tools for Soft deletion
   """
   import Ecto.Query
-
   alias Brando.Trait
 
   @doc """
