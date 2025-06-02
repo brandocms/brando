@@ -36,6 +36,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.FilePicker
   alias BrandoAdmin.Components.ImagePicker
   alias BrandoAdmin.Components.VideoPicker
+  alias BrandoAdmin.Components.Tab
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Utils
@@ -1502,26 +1503,24 @@ defmodule BrandoAdmin.Components.Form do
         phx-change="validate_video"
         phx-target={@myself}
       >
-        <div class="tab-container">
-          <div class="tab-header">
-            <button
-              type="button"
-              class={["tab-button", @active_video_tab == "upload" && "active"]}
-              phx-click={JS.push("select_tab", value: %{tab: "upload"}, target: @myself)}
-            >
-              {gettext("Upload / File")}
-            </button>
-            <button
-              type="button"
-              class={["tab-button", @active_video_tab == "external" && "active"]}
-              phx-click={JS.push("select_tab", value: %{tab: "external"}, target: @myself)}
-            >
-              {gettext("External (Vimeo/YouTube)")}
-            </button>
-          </div>
+        <Tab.tabs active_tab={@active_video_tab}>
+          <:buttons>
+            <Tab.tab_button 
+              id="upload" 
+              label={gettext("Upload / File")} 
+              active_tab={@active_video_tab} 
+              target={@myself} 
+            />
+            <Tab.tab_button 
+              id="external" 
+              label={gettext("External (Vimeo/YouTube)")} 
+              active_tab={@active_video_tab} 
+              target={@myself} 
+            />
+          </:buttons>
           
-          <div class="tab-content">
-            <div :if={@active_video_tab == "upload"} class="tab-panel" id="tab-panel-upload">
+          <:tabs>
+            <Tab.tab_content id="upload" active_tab={@active_video_tab}>
               <Input.input type={:hidden} field={video_form[:type]} value={:upload} />
               
               <div class="button-group vertical">
@@ -1612,9 +1611,9 @@ defmodule BrandoAdmin.Components.Form do
                   </button>
                 </div>
               </div>
-            </div>
+            </Tab.tab_content>
 
-            <div :if={@active_video_tab == "external"} class="tab-panel" id="tab-panel-external">
+            <Tab.tab_content id="external" active_tab={@active_video_tab}>
               <div class="brando-input">
                 <div class="field">
                   <label class="control-label" for={Phoenix.HTML.Form.input_id(video_form, :type)}>
@@ -1708,9 +1707,9 @@ defmodule BrandoAdmin.Components.Form do
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
+            </Tab.tab_content>
+          </:tabs>
+        </Tab.tabs>
 
         <div class="button-group vertical">
           <button class="secondary" type="button" phx-click={reset_video_field(@myself)}>
