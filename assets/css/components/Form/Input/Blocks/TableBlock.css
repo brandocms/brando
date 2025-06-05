@@ -37,7 +37,7 @@
       justify-content: flex-start;
     }
 
-    .label-wrapper {
+    > .variable .brando-input > .field-wrapper > .label-wrapper {
       height: 0;
       overflow: hidden;
     }
@@ -47,7 +47,7 @@
     }
 
     &:first-of-type {
-      .label-wrapper {
+      > .variable .brando-input > .field-wrapper > .label-wrapper {
         @space margin-bottom 5px;
         height: auto;
         overflow: visible;
