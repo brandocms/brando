@@ -33,7 +33,8 @@ defmodule Brando.Content.TableTemplate do
       on_replace: :delete_if_exists,
       preload_order: [asc: :sequence],
       cast: true,
-      drop_param: :drop_var_ids
+      drop_param: :drop_var_ids,
+      sort_param: :sort_var_ids
   end
 
   forms do
