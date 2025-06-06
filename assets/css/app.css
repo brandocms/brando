@@ -254,9 +254,7 @@ code {
   &[aria-hidden="true"] {
     visibility: hidden;
     opacity: 0;
-    transition:
-      opacity 0.15s,
-      visibility 0.15s;
+    transition: opacity 0.15s, visibility 0.15s;
   }
 
   &[aria-hidden="false"] {
@@ -354,9 +352,7 @@ strong {
 html {
   line-height: 1.35;
   height: 100%;
-  font-feature-settings:
-    "kern" 1,
-    "liga" 1;
+  font-feature-settings: "kern" 1, "liga" 1;
   font-kerning: normal;
 }
 
@@ -604,9 +600,7 @@ h3 {
   padding-bottom: 8px;
   min-width: 205px;
   text-align: center;
-  transition:
-    background-color 0.25s ease,
-    border-color 0.25s ease;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 
   &:hover {
     background-color: var(--brando-color-peach);
@@ -624,9 +618,7 @@ h3 {
   height: 40px;
   padding-bottom: 5px;
   text-align: center;
-  transition:
-    background-color 0.25s ease,
-    border-color 0.25s ease;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 
   &:hover {
     background-color: var(--brando-color-peach);
@@ -644,9 +636,7 @@ h3 {
   height: 60px;
   padding-bottom: 5px;
   text-align: center;
-  transition:
-    background-color 0.25s ease,
-    border-color 0.25s ease;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 
   + .btn-secondary {
     margin-top: -1px;
@@ -667,9 +657,7 @@ h3 {
   padding-bottom: 5px;
   min-width: 205px;
   text-align: center;
-  transition:
-    background-color 0.25s ease,
-    border-color 0.25s ease;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 
   &:hover {
     background-color: var(--brando-color-dark);
@@ -1111,6 +1099,17 @@ span[data-icon] {
   background-color: var(--brando-color-peach);
   margin: 5px 0;
   padding: 12px;
+  border: 1px dashed;
+  border-radius: 8px;
+  @font mono;
+  font-size: 14px;
+
+  .module-info {
+    padding: 12px;
+    border: 1px dashed;
+    border-radius: 8px;
+    margin-top: 0.5em;
+  }
 }
 
 .alert-backdrop {

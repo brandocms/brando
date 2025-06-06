@@ -50,6 +50,17 @@ defmodule BrandoAdmin.Content.ModuleListLive do
         <div class="imported-modules mt-2">
           <div :for={m <- @imported_modules} class="imported-module">
             <.i18n map={m.name} /> — <.i18n map={m.namespace} />
+            <div class="module-info">
+              <span :if={m.vars != []}>(+{length(m.vars)} {gettext("variables")})</span>
+              <span :if={m.refs != []}>(+{length(m.refs)} {gettext("references")})</span>
+              <div :for={c <- m.children} class="module-info-child">
+                <.i18n map={c.name} /> — <.i18n map={c.namespace} />
+                <div class="module-info-child-info">
+                  <span :if={c.vars != []}>(+{length(c.vars)} {gettext("variables")})</span>
+                  <span :if={c.refs != []}>(+{length(c.refs)} {gettext("references")})</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -76,17 +87,25 @@ defmodule BrandoAdmin.Content.ModuleListLive do
   end
 
   def handle_event("import_modules", _, socket) do
-    for mod <- socket.assigns.imported_modules do
-      Brando.Repo.insert!(mod)
+    # Import modules in a transaction to ensure atomicity
+    case Brando.Repo.transaction(fn ->
+           for mod <- socket.assigns.imported_modules do
+             Brando.Content.import_module_with_children(mod)
+           end
+         end) do
+      {:ok, _} ->
+        send(self(), {:toast, gettext("Modules imported")})
+        BrandoAdmin.LiveView.Listing.update_list_entries(socket.assigns.schema)
+
+        {:noreply,
+         socket
+         |> assign(:imported_modules, nil)
+         |> assign(:base64_modules, nil)}
+
+      {:error, reason} ->
+        send(self(), {:toast, gettext("Failed to import modules: %{reason}", reason: inspect(reason))})
+        {:noreply, socket}
     end
-
-    send(self(), {:toast, gettext("Modules imported")})
-    BrandoAdmin.LiveView.Listing.update_list_entries(socket.assigns.schema)
-
-    {:noreply,
-     socket
-     |> assign(:imported_modules, nil)
-     |> assign(:base64_modules, nil)}
   end
 
   def handle_event("reset_import_vars", _, socket) do
@@ -126,31 +145,11 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     current_user = socket.assigns.current_user
 
     base64_modules =
-      %{filter: %{ids: module_ids}, preload: [:vars]}
+      %{filter: %{ids: module_ids}, preload: [:vars, children: [:vars]]}
       |> Brando.Content.list_modules!()
-      |> prepare_modules_for_export(current_user.id)
+      |> Brando.Content.prepare_modules_for_export(current_user.id)
       |> Brando.Content.serialize_modules()
 
     {:noreply, assign(socket, :base64_modules, base64_modules)}
-  end
-
-  defp prepare_modules_for_export(modules, current_user_id) do
-    Enum.map(modules, fn module ->
-      module = Map.put(module, :id, nil)
-
-      refs_with_new_uids =
-        Enum.map(module.refs, &Map.put(&1, :uid, Brando.Utils.generate_uid()))
-
-      vars_without_ids =
-        Enum.map(module.vars, fn var ->
-          var
-          |> Map.put(:id, nil)
-          |> Map.put(:creator_id, current_user_id)
-        end)
-
-      module
-      |> Map.put(:refs, refs_with_new_uids)
-      |> Map.put(:vars, vars_without_ids)
-    end)
   end
 end

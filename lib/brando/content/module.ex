@@ -70,7 +70,8 @@ defmodule Brando.Content.Module do
     relation :children, :has_many,
       module: __MODULE__,
       on_replace: :delete_if_exists,
-      foreign_key: :parent_id
+      foreign_key: :parent_id,
+      preload_order: [asc: :sequence]
 
     relation :table_template, :belongs_to,
       module: Brando.Content.TableTemplate,

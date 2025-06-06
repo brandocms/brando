@@ -38,6 +38,7 @@ defmodule Brando.Content do
   alias Brando.Content.Palette
   alias Brando.Content.TableTemplate
   alias Brando.Content.Template
+  alias Brando.Content.Var
   alias Brando.Villain
 
   query :list, Block, do: fn query -> from(q in query) end
@@ -213,6 +214,11 @@ defmodule Brando.Content do
       mod -> {:ok, mod}
     end
   end
+
+  ## Vars
+  ##
+
+  mutation :create, Var
 
   ## Module Sets
   ##
@@ -801,5 +807,57 @@ defmodule Brando.Content do
     |> Enum.map(&Map.put(&1, :id, nil))
     |> Brando.Utils.term_to_binary()
     |> Base.encode64()
+  end
+
+  @doc """
+  Prepares modules for export by removing IDs and generating new UIDs for refs.
+  Handles child modules recursively.
+  """
+  def prepare_modules_for_export(modules, current_user_id) do
+    Enum.map(modules, fn module ->
+      prepare_single_module_for_export(module, current_user_id)
+    end)
+  end
+
+  defp prepare_single_module_for_export(module, current_user_id) do
+    module =
+      module
+      |> Map.put(:id, nil)
+      |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
+
+    refs_with_new_uids =
+      Enum.map(module.refs, &put_in(&1, [Access.key(:data), Access.key(:uid)], Brando.Utils.generate_uid()))
+
+    vars_without_ids =
+      module.vars
+      |> Brando.Villain.remove_pk_from_vars()
+      |> Enum.map(&put_in(&1, [Access.key(:__meta__), Access.key(:state)], :built))
+
+    prepared_module =
+      module
+      |> Map.put(:refs, refs_with_new_uids)
+      |> Map.put(:vars, vars_without_ids)
+
+    # Handle child modules if they exist
+    if Map.has_key?(prepared_module, :children) && is_list(prepared_module.children) do
+      prepared_children =
+        Enum.map(prepared_module.children, fn child ->
+          child
+          |> prepare_single_module_for_export(current_user_id)
+          |> Map.put(:parent_id, nil)
+        end)
+
+      Map.put(prepared_module, :children, prepared_children)
+    else
+      prepared_module
+    end
+  end
+
+  @doc """
+  Imports a module with its children, maintaining parent-child relationships.
+  Should be called within a transaction.
+  """
+  def import_module_with_children(module) do
+    Brando.Repo.insert(module)
   end
 end
