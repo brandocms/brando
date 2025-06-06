@@ -17,6 +17,23 @@ defmodule Brando.Villain.Tags.HeadlessRef do
         {% endhide %}
       </div>
 
+  Or a gallery:
+
+      <div class="gallery">
+        {% headless_ref refs.gallery %}
+        {% hide %}
+          {% assign images = refs.gallery.data.data.images %}
+          {% for image in images %}
+            {% picture image {
+              sizes: 'auto',
+              lazyload: true,
+              placeholder: 'dominant_color_faded',
+              srcset: 'default',
+              prefix: '/media'
+            } %}
+          {% endfor %}
+        {% endhide %}
+      </div>
   """
   @behaviour Liquex.Tag
 
