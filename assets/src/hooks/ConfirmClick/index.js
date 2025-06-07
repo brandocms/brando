@@ -6,8 +6,13 @@ export default app => ({
       e.preventDefault()
       e.stopPropagation()
 
-      const event = this.el.getAttribute('phx-confirm-click')
+      let event = this.el.getAttribute('phx-confirm-click')
       const message = this.el.getAttribute('phx-confirm-click-message')
+
+      // if the event is not a JS event, we need to convert it
+      if (event.indexOf('[') === -1) {
+        event = `[["push",{"event":"${event}"}]]`
+      }
 
       alertConfirm('OBS', message, confirmed => {
         if (confirmed !== false) {
@@ -15,5 +20,5 @@ export default app => ({
         }
       })
     })
-  }
+  },
 })
