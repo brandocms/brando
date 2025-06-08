@@ -145,10 +145,6 @@ defmodule Brando.VillainTest do
             data: %{
               type: "picture",
               data: %{
-                path: image.path,
-                sizes: image.sizes,
-                width: image.width,
-                height: image.height,
                 alt: image.alt,
                 title: image.title,
                 credits: image.credits
@@ -186,10 +182,6 @@ defmodule Brando.VillainTest do
             data: %{
               type: "picture",
               data: %Brando.Villain.Blocks.PictureBlock.Data{
-                path: image.path,
-                sizes: image.sizes,
-                width: image.width,
-                height: image.height,
                 alt: image.alt,
                 title: image.title,
                 credits: image.credits
@@ -339,10 +331,6 @@ defmodule Brando.VillainTest do
             data: %{
               type: "picture",
               data: %{
-                path: nil,
-                sizes: %{},
-                width: nil,
-                height: nil
               }
             }
           }
@@ -377,10 +365,6 @@ defmodule Brando.VillainTest do
           data: %{
             type: "picture",
             data: %Brando.Villain.Blocks.PictureBlock.Data{
-              path: image.path,
-              sizes: image.sizes,
-              width: image.width,
-              height: image.height,
               alt: image.alt,
               title: image.title,
               credits: image.credits
@@ -495,7 +479,7 @@ defmodule Brando.VillainTest do
   end
 
   test "list_block_ids_matching_regex", %{user: user} do
-    text_ref = %Brando.Content.Module.Ref{
+    text_ref = %Brando.Content.Ref{
       data: %Brando.Villain.Blocks.TextBlock{
         uid: "1wUr4ZLoOx53fqIslbP1dg",
         active: true,
@@ -634,7 +618,7 @@ defmodule Brando.VillainTest do
       name: "Name",
       help_text: "Help text",
       refs: [
-        %Brando.Content.Module.Ref{
+        %Brando.Content.Ref{
           data: %Brando.Villain.Blocks.TextBlock{
             uid: "1wUr4ZLoOx53fqIslbP1dg",
             type: "text",

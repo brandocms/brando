@@ -627,10 +627,8 @@ defmodule Brando.Villain do
     module_refs = module.refs
     module_ref_names = Enum.map(module_refs, & &1.name)
     changeset = Changeset.change(block)
-    current_refs = Changeset.get_embed(changeset, :refs, :struct)
-
-    current_refs =
-      Enum.filter(current_refs, &(&1.name in module_ref_names))
+    current_refs = Changeset.get_assoc(changeset, :refs, :struct)
+    current_refs = Enum.filter(current_refs, &(&1.name in module_ref_names))
 
     current_ref_names = Enum.map(current_refs, & &1.name)
     missing_ref_names = module_ref_names -- current_ref_names
@@ -664,7 +662,7 @@ defmodule Brando.Villain do
 
     changeset
     |> Changeset.put_assoc(:vars, reapplied_vars)
-    |> Changeset.put_embed(:refs, reapplied_refs)
+    |> Changeset.put_assoc(:refs, reapplied_refs)
   end
 
   def enqueue_entry_map_for_render(entry_map) do
@@ -814,11 +812,12 @@ defmodule Brando.Villain do
 
         from(q in query,
           left_join: vars in assoc(q, :vars),
+          left_join: refs in assoc(q, :refs),
           select_merge: %{
             ^search_name_refs =>
               fragment(
                 "regexp_matches(?, ?, 'g')",
-                type(q.refs, :string),
+                type(refs.data, :string),
                 ^search_term
               ),
             ^search_name_vars =>
