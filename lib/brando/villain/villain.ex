@@ -13,8 +13,12 @@ defmodule Brando.Villain do
 
   @type changeset :: Ecto.Changeset.t()
 
-  @module_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{preload: [:vars, refs: [:image, :video, gallery: [gallery_objects: [:image]]]]}) ||
-                      %{cache: {:ttl, :infinite}, preload: [:vars, refs: [:image, :video, gallery: [gallery_objects: [:image]]]]}
+  @module_cache_ttl (Brando.config(:env) in [:e2e, :test] &&
+                       %{preload: [:vars, refs: [:image, :video, gallery: [gallery_objects: [:image]]]]}) ||
+                      %{
+                        cache: {:ttl, :infinite},
+                        preload: [:vars, refs: [:image, :video, gallery: [gallery_objects: [:image]]]]
+                      }
   @container_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{preload: [:palette]}) ||
                          %{cache: {:ttl, :infinite}, preload: [:palette]}
   @palette_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{}) || %{cache: {:ttl, :infinite}}
@@ -1005,6 +1009,13 @@ defmodule Brando.Villain do
 
   def remove_pk_from_vars(vars) when is_list(vars) do
     Enum.map(vars, &Map.merge(&1, %{id: nil, module_id: nil}))
+  end
+
+  def remove_pk_from_refs(nil), do: nil
+  def remove_pk_from_refs([]), do: []
+
+  def remove_pk_from_refs(refs) when is_list(refs) do
+    Enum.map(refs, &Map.merge(&1, %{id: nil, module_id: nil}))
   end
 
   def reapply_refs(module, module_refs, refs) do

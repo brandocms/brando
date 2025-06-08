@@ -4,8 +4,6 @@ defmodule Brando.ContentTest do
   alias Brando.Factory
   alias Brando.Content
   alias Brando.Content.Var
-  alias Brando.Content.Module
-  alias Brando.Content.Module.Ref
 
   describe "module export/import with children" do
     test "prepare_modules_for_export/2 handles multi modules with children" do
@@ -23,8 +21,11 @@ defmodule Brando.ContentTest do
           %{
             name: "TestRef",
             description: "A test ref",
-            data: %{type: "text", data: %{text: "Hello"}},
-            uid: "abc123"
+            data: %{
+              uid: "abc123",
+              type: "text",
+              data: %{text: "Hello"}
+            }
           }
         ],
         vars: []
@@ -60,11 +61,11 @@ defmodule Brando.ContentTest do
 
       {:ok, _var} = Brando.Repo.insert(var)
 
-      # Load modules with children and vars
+      # Load modules with children, vars and refs
       modules =
         Content.list_modules!(%{
           filter: %{ids: [parent.id]},
-          preload: [:vars, children: [:vars]]
+          preload: [:vars, :refs, children: [:vars, :refs]]
         })
 
       # Prepare for export
@@ -78,7 +79,7 @@ defmodule Brando.ContentTest do
       assert prepared_parent.name == parent.name
       assert prepared_parent.multi == true
 
-      # Refs should have new UIDs
+      # Refs should have new UIDs during export
       assert length(prepared_parent.refs) == 1
       [prepared_ref] = prepared_parent.refs
       assert prepared_ref.name == "TestRef"
@@ -154,7 +155,7 @@ defmodule Brando.ContentTest do
       modules =
         Content.list_modules!(%{
           filter: %{ids: [original_parent.id]},
-          preload: [:vars, children: [:vars]]
+          preload: [:vars, :refs, children: [:vars, :refs]]
         })
 
       [orig_module] = modules
@@ -198,26 +199,61 @@ defmodule Brando.ContentTest do
       user = Factory.insert(:random_user)
       # Create complex module structure
 
-      child1 = %Module{
+      # Create the parent module
+      parent_attrs = %{
+        name: %{"en" => "Complex Parent"},
+        namespace: %{"en" => "complex"},
+        help_text: %{"en" => "Complex help"},
+        class: "complex-parent",
+        code: "<div>{{ content }}</div>",
+        multi: true,
+        refs: [
+          %{
+            name: "ParentRef",
+            description: "A test ref",
+            data: %{
+              uid: "abc123",
+              type: "text",
+              data: %{text: "Hello"}
+            }
+          }
+        ],
+        vars: [
+          %{
+            type: :text,
+            label: "Parent Variable",
+            key: "parent_var",
+            value: "Parent Value",
+            creator_id: user.id,
+            sequence: 0
+          }
+        ]
+      }
+      
+      {:ok, parent} = Content.create_module(parent_attrs, user)
+      
+      # Create child modules
+      child1_attrs = %{
         name: %{"en" => "Complex Child 1"},
         namespace: %{"en" => "general"},
         help_text: %{"en" => "Child 1"},
         class: "complex-child-1",
         code: "<p>Child 1</p>",
         sequence: 0,
+        parent_id: parent.id,
         refs: [
-          %Ref{
+          %{
             name: "TestRefChild1",
             description: "A test ref",
-            data: %Brando.Villain.Blocks.TextBlock{
+            data: %{
               uid: "abc123",
               type: "text",
-              data: %Brando.Villain.Blocks.TextBlock.Data{text: "Hello"}
+              data: %{text: "Hello"}
             }
           }
         ],
         vars: [
-          %Var{
+          %{
             type: :text,
             label: "Child1 Variable",
             key: "child1_var",
@@ -227,27 +263,30 @@ defmodule Brando.ContentTest do
           }
         ]
       }
-
-      child2 = %Module{
+      
+      {:ok, _child1} = Content.create_module(child1_attrs, user)
+      
+      child2_attrs = %{
         name: %{"en" => "Complex Child 2"},
         namespace: %{"en" => "general"},
         help_text: %{"en" => "Child 2"},
         class: "complex-child-2",
         code: "<p>Child 2</p>",
         sequence: 1,
+        parent_id: parent.id,
         refs: [
-          %Ref{
+          %{
             name: "TestRefChild2",
             description: "A test ref",
-            data: %Brando.Villain.Blocks.TextBlock{
+            data: %{
               uid: "abc123",
               type: "text",
-              data: %Brando.Villain.Blocks.TextBlock.Data{text: "Hello"}
+              data: %{text: "Hello"}
             }
           }
         ],
         vars: [
-          %Var{
+          %{
             type: :text,
             label: "Child2 Variable",
             key: "child2_var",
@@ -257,53 +296,26 @@ defmodule Brando.ContentTest do
           }
         ]
       }
-
-      parent_struct = %Module{
-        name: %{"en" => "Complex Parent"},
-        namespace: %{"en" => "complex"},
-        help_text: %{"en" => "Complex help"},
-        class: "complex-parent",
-        code: "<div>{{ content }}</div>",
-        multi: true,
-        refs: [
-          %Ref{
-            name: "ParentRef",
-            description: "A test ref",
-            data: %Brando.Villain.Blocks.TextBlock{
-              uid: "abc123",
-              type: "text",
-              data: %Brando.Villain.Blocks.TextBlock.Data{text: "Hello"}
-            }
-          }
-        ],
-        vars: [
-          %Var{
-            type: :text,
-            label: "Parent Variable",
-            key: "parent_var",
-            value: "Parent Value",
-            creator_id: user.id,
-            sequence: 0
-          }
-        ],
-        children: [child1, child2]
-      }
-
-      parent = Brando.Repo.insert!(parent_struct)
+      
+      {:ok, _child2} = Content.create_module(child2_attrs, user)
+      
       # Export
       modules =
         Content.list_modules!(%{
           filter: %{ids: [parent.id]},
-          preload: [:vars, children: [:vars]]
+          preload: [:vars, :refs, children: [:vars, :refs]]
         })
 
       prepared = Content.prepare_modules_for_export(modules, user.id)
       encoded = Content.serialize_modules(prepared)
 
       # Delete original
-      {:ok, _} = Content.delete_module(parent.id)
+      # Load parent with children to delete them
+      parent_with_children = Content.get_module!(%{matches: %{id: parent.id}, preload: [:children]})
+      
+      {:ok, _} = Content.delete_module(parent_with_children.id)
       # Delete children
-      for child <- parent.children do
+      for child <- parent_with_children.children do
         {:ok, _} = Content.delete_module(child.id)
       end
 
@@ -321,7 +333,7 @@ defmodule Brando.ContentTest do
       imported =
         Content.list_modules!(%{
           filter: %{namespace: "complex"},
-          preload: [:vars, :children]
+          preload: [:vars, :refs, :children]
         })
 
       assert length(imported) == 1
@@ -336,10 +348,24 @@ defmodule Brando.ContentTest do
       assert child1.name == %{"en" => "Complex Child 1"}
       assert child2.name == %{"en" => "Complex Child 2"}
 
-      # assert that we changed the uid of the refs
-      assert Enum.at(imported_parent.refs, 0).data.uid != "abc123"
-      assert Enum.at(child1.refs, 0).data.uid != "abc123"
-      assert Enum.at(child2.refs, 0).data.uid != "abc123"
+      # Load children with refs to check UIDs - new UIDs should be generated during import
+      child1_with_refs = Content.get_module!(%{matches: %{id: child1.id}, preload: [:refs]})
+      child2_with_refs = Content.get_module!(%{matches: %{id: child2.id}, preload: [:refs]})
+      
+      # Assert that new UIDs were generated during import (different from original "abc123")
+      parent_ref_uid = Enum.at(imported_parent.refs, 0).data.uid
+      child1_ref_uid = Enum.at(child1_with_refs.refs, 0).data.uid  
+      child2_ref_uid = Enum.at(child2_with_refs.refs, 0).data.uid
+      
+      # All UIDs should be different from the original
+      assert parent_ref_uid != "abc123"
+      assert child1_ref_uid != "abc123"
+      assert child2_ref_uid != "abc123"
+      
+      # All UIDs should be unique (proper cloning behavior)
+      assert parent_ref_uid != child1_ref_uid
+      assert parent_ref_uid != child2_ref_uid
+      assert child1_ref_uid != child2_ref_uid
     end
   end
 end
