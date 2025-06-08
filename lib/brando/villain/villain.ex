@@ -13,8 +13,8 @@ defmodule Brando.Villain do
 
   @type changeset :: Ecto.Changeset.t()
 
-  @module_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{preload: [:vars]}) ||
-                      %{cache: {:ttl, :infinite}, preload: [:vars]}
+  @module_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{preload: [:vars, refs: [:image, :video, gallery: [gallery_objects: [:image]]]]}) ||
+                      %{cache: {:ttl, :infinite}, preload: [:vars, refs: [:image, :video, gallery: [gallery_objects: [:image]]]]}
   @container_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{preload: [:palette]}) ||
                          %{cache: {:ttl, :infinite}, preload: [:palette]}
   @palette_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{}) || %{cache: {:ttl, :infinite}}
@@ -574,13 +574,13 @@ defmodule Brando.Villain do
     {:ok, module} =
       Content.get_module(%{
         matches: %{id: module_id},
-        preload: [:vars]
+        preload: [:vars, refs: [:image, :video, gallery: [gallery_objects: [:image]]]]
       })
 
     {:ok, blocks} =
       Content.list_blocks(%{
         filter: %{module_id: module_id},
-        preload: [:vars]
+        preload: [:vars, refs: [:image, :video, gallery: [gallery_objects: [:image]]]]
       })
 
     Enum.reduce(blocks, [], fn block, acc ->
@@ -879,13 +879,13 @@ defmodule Brando.Villain do
     {:ok, module} =
       Content.get_module(%{
         matches: %{id: module_id},
-        preload: [:vars]
+        preload: [:vars, refs: [:image, :video, gallery: [gallery_objects: [:image]]]]
       })
 
     {:ok, blocks} =
       Content.list_blocks(%{
         filter: %{ids: block_ids},
-        preload: [:vars]
+        preload: [:vars, refs: [:image, :video, gallery: [gallery_objects: [:image]]]]
       })
 
     blocks
@@ -1129,6 +1129,11 @@ defmodule Brando.Villain do
           order_by: [asc: :sequence],
           preload: [vars: ^vars_query]
 
+      refs_query =
+        from r in Brando.Content.Ref,
+          order_by: [asc: :sequence],
+          preload: [:image, :video, gallery: [gallery_objects: [:image]]]
+
       sub_sub_children_query =
         from b in Brando.Content.Block,
           preload: [
@@ -1138,6 +1143,7 @@ defmodule Brando.Villain do
             :children,
             block_identifiers: :identifier,
             vars: ^vars_query,
+            refs: ^refs_query,
             table_rows: ^table_row_query
           ],
           order_by: [asc: :sequence]
@@ -1150,6 +1156,7 @@ defmodule Brando.Villain do
             :module,
             block_identifiers: :identifier,
             vars: ^vars_query,
+            refs: ^refs_query,
             table_rows: ^table_row_query,
             children: ^sub_sub_children_query
           ],
@@ -1162,6 +1169,7 @@ defmodule Brando.Villain do
             :container,
             :module,
             vars: ^vars_query,
+            refs: ^refs_query,
             table_rows: ^table_row_query,
             block_identifiers: :identifier,
             children: [
@@ -1170,6 +1178,7 @@ defmodule Brando.Villain do
               :module,
               block_identifiers: :identifier,
               vars: ^vars_query,
+              refs: ^refs_query,
               table_rows: ^table_row_query,
               children: ^sub_children_query
             ]
@@ -1199,6 +1208,7 @@ defmodule Brando.Villain do
                    :palette,
                    block_identifiers: :identifier,
                    vars: ^vars_query,
+                   refs: ^refs_query,
                    table_rows: ^table_row_query,
                    children: ^children_query
                  ]
@@ -1289,5 +1299,47 @@ defmodule Brando.Villain do
     |> Changeset.put_change(:id, nil)
     |> Changeset.put_change(:block_id, nil)
     |> Map.put(:action, :insert)
+  end
+
+  def duplicate_refs(changeset, %Ecto.Association.NotLoaded{}, _) do
+    require Logger
+
+    Logger.error("""
+
+    duplicate_refs ——
+
+    refs NOT LOADED. This should not happen.
+
+    #{inspect(changeset, pretty: true, width: 0)}
+
+    """)
+
+    changeset
+  end
+
+  def duplicate_refs(changeset, refs, current_user_id) do
+    duplicated_refs = Enum.map(refs, &duplicate_ref(&1, current_user_id))
+    Changeset.put_assoc(changeset, :refs, duplicated_refs)
+  end
+
+  def duplicate_ref(ref_cs, current_user_id) do
+    # Clear IDs like we do for vars, but also preserve the UID generation for data
+    ref_cs
+    |> Map.merge(%{id: nil, block_id: nil, module_id: nil})
+    |> Brando.Content.Ref.changeset(%{creator_id: current_user_id})
+    |> add_uid_to_ref_changeset()
+    |> Map.put(:action, :insert)
+  end
+
+  def add_uid_to_ref_changeset(ref_changeset) do
+    data = Changeset.get_field(ref_changeset, :data)
+
+    if data do
+      data_changeset = Changeset.change(data)
+      updated_data_changeset = Changeset.put_change(data_changeset, :uid, Brando.Utils.generate_uid())
+      Changeset.put_change(ref_changeset, :data, updated_data_changeset)
+    else
+      ref_changeset
+    end
   end
 end

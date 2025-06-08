@@ -78,7 +78,13 @@ defmodule Brando.Content.Module do
       on_replace: :delete_if_exists
 
     relation :parent, :belongs_to, module: __MODULE__, on_replace: :delete_if_exists
-    relation :refs, :embeds_many, module: __MODULE__.Ref, on_replace: :delete
+    relation :refs, :has_many,
+      module: Brando.Content.Ref,
+      on_replace: :delete,
+      preload_order: [asc: :sequence],
+      cast: true,
+      sort_param: :sort_ref_ids,
+      drop_param: :drop_ref_ids
 
     relation :vars, :has_many,
       module: Brando.Content.Var,

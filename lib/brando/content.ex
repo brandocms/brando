@@ -117,7 +117,7 @@ defmodule Brando.Content do
     end
   end
 
-  query(:single, Module, do: fn query -> from(q in query, preload: [:vars]) end)
+  query(:single, Module, do: fn query -> from(q in query, preload: [:vars, refs: [:image, :video, gallery: [gallery_objects: [:image]]]]) end)
 
   matches Module do
     fn

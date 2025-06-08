@@ -28,6 +28,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     block_cs = Changeset.get_assoc(changeset, :block)
     vars = Changeset.get_assoc(block_cs, :vars, :struct)
     table_rows = Changeset.get_assoc(block_cs, :table_rows, :struct)
+    refs = Changeset.get_assoc(block_cs, :refs, :struct)
     children = Changeset.get_assoc(block_cs, :children, :struct)
 
     block_list = socket.assigns.block_list
@@ -48,15 +49,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         creator_id: current_user_id,
         children: [],
         vars: [],
-        table_rows: []
+        table_rows: [],
+        refs: []
       })
       |> Changeset.change()
       |> Villain.duplicate_vars(vars, current_user_id)
       |> Villain.duplicate_table_rows(table_rows)
-      |> Villain.add_uid_to_refs()
-      |> Changeset.update_change(:refs, fn ref_changesets ->
-        Enum.reject(ref_changesets, &(&1.action == :replace))
-      end)
+      |> Villain.duplicate_refs(refs, current_user_id)
       |> Villain.duplicate_children(children, current_user_id)
       |> Map.put(:action, :insert)
 
@@ -122,6 +121,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       # the block has no children, duplicate it right away.
       vars = Changeset.get_assoc(block_cs, :vars, :struct)
       table_rows = Changeset.get_assoc(block_cs, :table_rows, :struct)
+      refs = Changeset.get_assoc(block_cs, :refs, :struct)
 
       updated_block_cs =
         block_cs
@@ -133,15 +133,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           creator_id: current_user_id,
           children: [],
           vars: [],
-          table_rows: []
+          table_rows: [],
+          refs: []
         })
         |> Changeset.change()
         |> Villain.duplicate_vars(vars, current_user_id)
         |> Villain.duplicate_table_rows(table_rows)
-        |> Villain.add_uid_to_refs()
-        |> Changeset.update_change(:refs, fn ref_changesets ->
-          Enum.reject(ref_changesets, &(&1.action == :replace))
-        end)
+        |> Villain.duplicate_refs(refs, current_user_id)
         |> Map.put(:action, :insert)
 
       entry_block_cs =

@@ -106,9 +106,10 @@ defmodule Brando.Content.Block do
       on_replace: :delete_if_exists,
       cast: true
 
-    relation :refs, :embeds_many,
-      module: Brando.Content.Module.Ref,
-      on_replace: :delete,
+    relation :refs, :has_many,
+      module: Brando.Content.Ref,
+      preload_order: [asc: :sequence],
+      on_replace: :delete_if_exists,
       cast: true
 
     relation :table_rows, :has_many,
