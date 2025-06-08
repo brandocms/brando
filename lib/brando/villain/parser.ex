@@ -1286,7 +1286,69 @@ defmodule Brando.Villain.Parser do
   defp process_refs(nil), do: %{}
   defp process_refs(refs), do: Enum.map(refs, &process_ref(&1)) |> Enum.into(%{})
 
-  defp process_ref(%{name: ref_name} = ref_block), do: {ref_name, ref_block}
+  defp process_ref(%{name: ref_name} = ref_block) do
+    # Build the processed ref by combining data with referenced entities
+    processed_ref = 
+      ref_block
+      |> merge_ref_associations()
+      |> Map.put(:original_ref, ref_block)
+    
+    {ref_name, processed_ref}
+  end
+
+  defp merge_ref_associations(%{data: %{type: "picture"}} = ref) do
+    case ref.image do
+      nil -> ref.data.data
+      image -> 
+        # Merge image data with override data from ref.data.data
+        base_image = Map.from_struct(image)
+        override_data = ref.data.data || %{}
+        Map.merge(base_image, override_data)
+    end
+  end
+
+  defp merge_ref_associations(%{data: %{type: "video"}} = ref) do
+    case ref.video do
+      nil -> ref.data.data
+      video ->
+        # Merge video data with override data from ref.data.data
+        base_video = Map.from_struct(video)
+        override_data = ref.data.data || %{}
+        Map.merge(base_video, override_data)
+    end
+  end
+
+  defp merge_ref_associations(%{data: %{type: "gallery"}} = ref) do
+    case ref.gallery do
+      nil -> ref.data.data
+      gallery ->
+        # For galleries, expose the gallery association with override data
+        override_data = ref.data.data || %{}
+        
+        # Return the override data plus the gallery association
+        override_data
+        |> Map.put(:gallery, gallery)
+    end
+  end
+
+  defp merge_ref_associations(%{data: data} = ref) do
+    # For other types (like media blocks), return the data as-is
+    # but still provide access to any referenced associations
+    processed = Map.merge(ref.data.data || %{}, %{
+      image: ref.image,
+      video: ref.video,
+      gallery: ref.gallery,
+      file: ref.file
+    })
+    
+    # Remove nil values to keep the data clean
+    Enum.reject(processed, fn {_k, v} -> is_nil(v) end) |> Enum.into(%{})
+  end
+
+  defp merge_ref_associations(ref) do
+    # Fallback for refs without data
+    ref
+  end
 
   defp add_vars_to_context(context, vars),
     do: Enum.reduce(vars, context, fn {k, v}, acc -> Context.assign(acc, k, v) end)

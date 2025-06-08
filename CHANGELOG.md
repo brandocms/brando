@@ -29,8 +29,15 @@ Finally resave entries with `mix brando.entries.resave`, sync identifiers with `
 then sync translations with `chmod +x scripts/sync_gettext.sh` then `./scripts/sync_gettext.sh priv/gettext/backend/no/LC_MESSAGES`
 if your translations are in `priv/gettext/backend/no/LC_MESSAGES`.
 
+* BREAKING: Refs have been split out to their own table. Run `mix brando.upgrade` to get migrations.
+  The refs structure has changed significantly:
+  - Refs are now stored in a separate table with foreign keys to media
+  - Picture refs: `{{ refs.my_image.data.data.path }}` becomes `{{ refs.my_image.path }}`
+  - Gallery refs: `{{ refs.my_gallery_ref.data.images }}` becomes `{{ refs.my_gallery_ref.gallery.gallery_objects }}`
+  - Video refs work similarly with direct property access
+
 * BREAKING: Galleries now have `gallery_objects` instead of `gallery_images`. 
-  Adjust your module templates accordingly!
+  In your templates: `{{ entry.my_gallery.gallery_images }}` becomes `{{ entry.my_gallery.gallery_objects }}`
 
 * BREAKING: Change from `mix phx.digest` to `mix brando.digest` in your Dockerfile,
   if you're using Vite. This ensures we can properly use chunks without double

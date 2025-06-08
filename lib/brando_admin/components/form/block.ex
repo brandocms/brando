@@ -46,6 +46,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     children = Ecto.Changeset.get_assoc(block_cs, :children, :struct)
     vars = Ecto.Changeset.get_assoc(block_cs, :vars, :struct)
     table_rows = Ecto.Changeset.get_assoc(block_cs, :table_rows, :struct)
+    refs = Ecto.Changeset.get_assoc(block_cs, :refs, :struct)
 
     updated_block_cs =
       block_cs
@@ -58,15 +59,13 @@ defmodule BrandoAdmin.Components.Form.Block do
         creator_id: current_user_id,
         children: [],
         vars: [],
-        table_rows: []
+        table_rows: [],
+        refs: []
       })
       |> Changeset.change()
       |> Villain.duplicate_vars(vars, current_user_id)
       |> Villain.duplicate_table_rows(table_rows)
-      |> Villain.add_uid_to_refs()
-      |> Changeset.update_change(:refs, fn ref_changesets ->
-        Enum.reject(ref_changesets, &(&1.action == :replace))
-      end)
+      |> Villain.duplicate_refs(refs, current_user_id)
       |> Villain.duplicate_children(children, current_user_id)
 
     # insert the new block uid into the block_list

@@ -40,15 +40,6 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
       attribute :formats, {:array, Ecto.Enum}, values: [:original, :jpg, :png, :gif, :webp, :avif, :svg]
     end
 
-    relations do
-      relation :images, :embeds_many,
-        module: Blocks.PictureBlock.Data,
-        on_replace: :delete,
-        sort_param: :sort_images
-    end
   end
 
-  def protected_attrs do
-    [:images]
-  end
 end

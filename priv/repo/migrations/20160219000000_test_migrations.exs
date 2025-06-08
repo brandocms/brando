@@ -288,6 +288,31 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :identifier_metas, :jsonb
     end
 
+    create table(:content_refs) do
+      add :name, :text, null: false
+      add :description, :text
+      add :data, :jsonb
+      add :sequence, :integer
+      
+      # Foreign keys
+      add :module_id, references(:content_modules, on_delete: :delete_all)
+      add :block_id, references(:content_blocks, on_delete: :delete_all)
+      add :gallery_id, references(:galleries, on_delete: :nilify_all)
+      add :video_id, references(:videos, on_delete: :nilify_all)
+      add :file_id, references(:files, on_delete: :nilify_all)
+      add :image_id, references(:images, on_delete: :nilify_all)
+      
+      timestamps()
+      add :creator_id, references(:users, on_delete: :nothing)
+    end
+    
+    create index(:content_refs, [:module_id])
+    create index(:content_refs, [:block_id])
+    create index(:content_refs, [:gallery_id])
+    create index(:content_refs, [:video_id])
+    create index(:content_refs, [:file_id])
+    create index(:content_refs, [:image_id])
+
     create table(:content_identifiers) do
       add :entry_id, :id
       add :schema, :string
