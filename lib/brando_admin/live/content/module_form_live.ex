@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   use BrandoAdmin.Toast
   use Gettext, backend: Brando.Gettext
 
-  alias Brando.Content.Module.Ref
+  alias Brando.Content.Ref
   alias Brando.Content.Var
   alias Brando.Villain
   alias BrandoAdmin.Components.Content

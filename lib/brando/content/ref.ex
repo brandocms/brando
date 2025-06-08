@@ -15,6 +15,7 @@ defmodule Brando.Content.Ref do
   @type t :: %__MODULE__{}
 
   trait Brando.Trait.CastPolymorphicEmbeds
+  trait Brando.Trait.Timestamped
 
   identifier false
   persist_identifier false

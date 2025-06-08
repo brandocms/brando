@@ -1331,7 +1331,7 @@ defmodule Brando.Villain.Parser do
     end
   end
 
-  defp merge_ref_associations(%{data: data} = ref) do
+  defp merge_ref_associations(%{data: _data} = ref) do
     # For other types (like media blocks), return the data as-is
     # but still provide access to any referenced associations
     processed = Map.merge(ref.data.data || %{}, %{

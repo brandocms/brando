@@ -13,7 +13,6 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
       plural: "gallery_block_datas",
       gettext_module: Brando.Gettext
 
-    alias Brando.Villain.Blocks
 
     @primary_key false
     data_layer :embedded
