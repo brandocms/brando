@@ -170,7 +170,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
           }
       end
 
-    ref = %Brando.Content.Module.Ref{
+    ref = %Brando.Content.Ref{
       name: ref_name,
       description: ref_description,
       data: ref_data

@@ -13,7 +13,6 @@ defmodule Brando.Villain.Blocks.PictureBlock do
       plural: "picture_block_datas",
       gettext_module: Brando.Gettext
 
-    alias Brando.Images.Focal
 
     @primary_key false
     data_layer :embedded
