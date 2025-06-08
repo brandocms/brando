@@ -26,7 +26,7 @@
     "@codemirror/lang-liquid" "^6.2.3"
     "@codemirror/lang-markdown" "^6.3.1"
     "@codemirror/state" "^6.5.2"
-    "@codemirror/view" "^6.36.8"
+    "@codemirror/view" "^6.37.1"
     "@fontsource/jetbrains-mono" "^5.2.5"
     "@tiptap/core" "2.12.0"
     "@tiptap/extension-character-count" "2.12.0"
@@ -54,10 +54,10 @@
     morphdom "^2.7.5"
     phoenix "1.7.21"
     phoenix_html "^4.2.1"
-    phoenix_live_view "^1.0.12"
+    phoenix_live_view "^1.0.14"
     slugify "^1.6.6"
     sortablejs "^1.15.3"
-    sweetalert2 "^11.21.2"
+    sweetalert2 "^11.22.0"
     tippy.js "^6.3.7"
     vanilla-click-outside "^2.1.0"
     vanilla-picker "^2.12.3"
@@ -211,12 +211,22 @@
   dependencies:
     "@marijn/find-cluster-break" "^1.0.0"
 
-"@codemirror/view@^6.0.0", "@codemirror/view@^6.17.0", "@codemirror/view@^6.23.0", "@codemirror/view@^6.27.0", "@codemirror/view@^6.35.0", "@codemirror/view@^6.36.8":
+"@codemirror/view@^6.0.0", "@codemirror/view@^6.17.0", "@codemirror/view@^6.23.0", "@codemirror/view@^6.27.0", "@codemirror/view@^6.35.0":
   version "6.36.8"
   resolved "https://registry.yarnpkg.com/@codemirror/view/-/view-6.36.8.tgz#d72e59d2b2d99bb5f177178f63e11cef6e605b94"
   integrity sha512-yoRo4f+FdnD01fFt4XpfpMCcCAo9QvZOtbrXExn4SqzH32YC6LgzqxfLZw/r6Ge65xyY03mK/UfUqrVw1gFiFg==
   dependencies:
     "@codemirror/state" "^6.5.0"
+    style-mod "^4.1.0"
+    w3c-keyname "^2.2.4"
+
+"@codemirror/view@^6.37.1":
+  version "6.37.1"
+  resolved "https://registry.yarnpkg.com/@codemirror/view/-/view-6.37.1.tgz#e769e69c9b3dd3080a65a18a72c07dc3fc8d036c"
+  integrity sha512-Qy4CAUwngy/VQkEz0XzMKVRcckQuqLYWKqVpDDDghBe5FSXSqfVrJn49nw3ePZHxRUz4nRmb05Lgi+9csWo4eg==
+  dependencies:
+    "@codemirror/state" "^6.5.0"
+    crelt "^1.0.6"
     style-mod "^4.1.0"
     w3c-keyname "^2.2.4"
 
@@ -944,7 +954,7 @@ core-js@^2.6.5:
   resolved "https://registry.yarnpkg.com/core-js/-/core-js-2.6.12.tgz#d9333dfa7b065e347cc5682219d6f690859cc2ec"
   integrity sha512-Kb2wC0fvsWfQrgk8HU5lW6U/Lcs8+9aaYcy4ZFc6DDlo4nZ7n70dEgE5rtR0oG6ufKDUnrwfWL1mXR5ljDatrQ==
 
-crelt@^1.0.0, crelt@^1.0.5:
+crelt@^1.0.0, crelt@^1.0.5, crelt@^1.0.6:
   version "1.0.6"
   resolved "https://registry.yarnpkg.com/crelt/-/crelt-1.0.6.tgz#7cc898ea74e190fb6ef9dae57f8f81cf7302df72"
   integrity sha512-VQ2MBenTq1fWZUH9DJNGti7kKv6EeAuYr3cLwxUWhIu1baTaXh4Ib5W2CqHVqib4/MqbYGJqiL3Zb8GJZr3l4g==
@@ -1292,10 +1302,10 @@ phoenix_html@^4.2.1:
   resolved "https://registry.yarnpkg.com/phoenix_html/-/phoenix_html-4.2.1.tgz#fdca45a43aa055cb6edbcd6e2386a17163582ebd"
   integrity sha512-jmxnnkPO8mo5Vw/ZAq9c3AUog9d/M8VoSjleNAvhClE5ynVZuv/m31asHRfqWrhzrZwEM4H+pHh3Br719nr2gw==
 
-phoenix_live_view@^1.0.12:
-  version "1.0.12"
-  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-1.0.12.tgz#bd12c5cc8db96e7eebebfdb7f0cea31d55c13b08"
-  integrity sha512-W6qT0YGezFQ15U+eXui/FyM/BaLsiL8zg4e6nVrhit/pEBfmibWCrmgaaSxz5Vrk4m2xiTAp4Rbywo4RlwbonA==
+phoenix_live_view@^1.0.14:
+  version "1.0.17"
+  resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-1.0.17.tgz#5545510d9617156e6f6bea42b47f89cc7b0100f5"
+  integrity sha512-ydjiQeMkNrGv8OGYgT7BjIho/XM3eSHrk4FCs6qiLg9EfPf5M8w1W5Ax/E1tF9E0w6VFQsWm1fKFdWqzAezgjQ==
   dependencies:
     morphdom "2.7.5"
 
@@ -1323,7 +1333,7 @@ postcss-extend-rule@^3.0.0:
     postcss-nesting "^7.0.1"
     postcss-tape "^5.0.2"
 
-"postcss-functions@github:twined/postcss-functions":
+postcss-functions@twined/postcss-functions:
   version "4.0.0"
   resolved "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
   dependencies:
@@ -1660,7 +1670,7 @@ svelte@^5.25.6:
     magic-string "^0.30.11"
     zimmerframe "^1.1.2"
 
-sweetalert2@^11.21.2:
+sweetalert2@^11.22.0:
   version "11.22.0"
   resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.22.0.tgz#da67f7e7e635d0392548a4e3dd1f56979d4a3698"
   integrity sha512-pSMuRGDULhh+wrFkO22O0YsIXxs8yFE0O+WVYXcqc/sTa1oRnf0JlR+vfQIRY1QM1UeFfnCjyw6DYnG75/oxiQ==

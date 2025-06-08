@@ -51,6 +51,8 @@ defmodule E2eProject.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:tidewave, "~> 0.1"},
+      {:igniter, "~> 0.6"},
       # phoenix
       {:phoenix, "~> 1.7.19"},
       {:phoenix_pubsub, "~> 2.0"},

@@ -6,6 +6,7 @@
 - Run Elixir tests: `mix test`
 - Run specific test: `mix test path/to/test_file.exs:line_number`
 - Run end to end tests: `cd e2e/e2e_project && ./test_e2e.sh`
+- Start e2e project server (for use with MCP): `cd e2e/e2e_project && ./run_e2e.sh` - the server starts on port 4444
 - Code analysis:
   - Refactoring opportunities: `mix credo suggest --format json --all --only refactor`
   - Design: `mix credo suggest --format json --all --only design`
@@ -27,8 +28,7 @@
 - If you have better suggestions, feel free to suggest them.
 
 ## LiveView, Phoenix and Ecto (+ Forms & Changesets)
-
-
+- Use these technologies as intended
 
 ## Code Style Guidelines
 - Follow Elixir style conventions

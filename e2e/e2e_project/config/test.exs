@@ -19,7 +19,9 @@ config :e2e_project, E2eProject.Repo,
 config :e2e_project, E2eProjectWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "ngv3Man7Y6Z2hZhsjWuEoVmZNnVIdoaHFtTzeKNCiIdvs/7vavFhxK1LnmRZ+Nko",
-  server: false
+  server: true
+
+config :e2e_project, hmr: false
 
 # In test we don't send emails
 config :e2e_project, E2eProject.Mailer, adapter: Swoosh.Adapters.Test

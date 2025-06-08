@@ -23,8 +23,8 @@ defmodule E2eProjectWeb.Endpoint do
     longpoll: true
 
   socket "/live",
-    Phoenix.LiveView.Socket,
-    websocket: [connect_info: [:user_agent, session: @session_options]]
+         Phoenix.LiveView.Socket,
+         websocket: [connect_info: [:user_agent, session: @session_options]]
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -36,10 +36,13 @@ defmodule E2eProjectWeb.Endpoint do
     gzip: Brando.env() == :prod,
     only: ~w(assets js fonts images ico favicon.ico),
     cache_control_for_etags: (Brando.env() == :prod && "public, max-age=31536000") || false,
-    cache_control_for_vsn_requests:
-      (Brando.env() == :prod && "public, max-age=31536000") || false
+    cache_control_for_vsn_requests: (Brando.env() == :prod && "public, max-age=31536000") || false
 
   plug Brando.Plug.Media, at: "/media"
+
+  if Code.ensure_loaded?(Tidewave) do
+    plug Tidewave
+  end
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
