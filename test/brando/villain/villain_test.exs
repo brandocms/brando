@@ -648,7 +648,7 @@ defmodule Brando.VillainTest do
           module_id: tp1.id,
           uid: "1wUr4ZLoOx53fqIslbP1dg",
           refs: [
-            %{
+            %Brando.Content.Ref{
               data: %Brando.Villain.Blocks.TextBlock{
                 uid: "1wUr4ZLoOx53fqIslbP1dg",
                 type: "text",
@@ -688,7 +688,7 @@ defmodule Brando.VillainTest do
               data: %{
                 uid: "1wUr4ZLoOx53fqIslbP1dg",
                 type: "text",
-                hidden: false,
+                active: true,
                 data: %{
                   text: "<p>A REFZZZ!</p>",
                   extensions: nil,

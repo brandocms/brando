@@ -627,16 +627,23 @@ defmodule Brando.Villain do
     module_refs = module.refs
     module_ref_names = Enum.map(module_refs, & &1.name)
     changeset = Changeset.change(block)
-    current_refs = Changeset.get_assoc(changeset, :refs, :struct)
-    current_refs = Enum.filter(current_refs, &(&1.name in module_ref_names))
 
-    current_ref_names = Enum.map(current_refs, & &1.name)
+    # strip away refs that are no longer in the module
+    current_refs =
+      changeset
+      |> Changeset.get_assoc(:refs)
+      |> Enum.filter(&(Changeset.get_field(&1, :name) in module_ref_names))
+
+    current_ref_names = Enum.map(current_refs, &Changeset.get_field(&1, :name))
     missing_ref_names = module_ref_names -- current_ref_names
 
     missing_refs =
       module_refs
       |> Enum.filter(&(&1.name in missing_ref_names))
-      |> Brando.Villain.add_uid_to_refs()
+      |> add_uid_to_refs()
+      |> remove_pk_from_refs()
+      |> Enum.map(&Changeset.change/1)
+      |> Enum.map(&%{&1 | action: :insert})
 
     new_refs = current_refs ++ missing_refs
 
@@ -971,10 +978,9 @@ defmodule Brando.Villain do
   end
 
   def add_uid_to_refs(changeset) do
-    refs = Changeset.get_embed(changeset, :refs)
-
+    refs = Changeset.get_assoc(changeset, :refs)
     updated_refs = Brando.Villain.add_uid_to_ref_changesets(refs)
-    Changeset.put_embed(changeset, :refs, updated_refs)
+    Changeset.put_assoc(changeset, :refs, updated_refs)
   end
 
   def add_uid_to_ref_changesets(nil), do: nil
@@ -1018,26 +1024,32 @@ defmodule Brando.Villain do
   end
 
   def reapply_refs(module, module_refs, refs) do
-    Enum.map(refs, fn %{name: ref_name, data: %{__struct__: block_module}} = ref ->
-      ref_src = Enum.find(module_refs, &(&1.name == ref_name))
+    Enum.map(refs, fn
+      %Changeset{data: %{name: ref_name}} = ref ->
+        require Logger
+        Logger.error("===")
+        block_module = ref.data.data.__struct__
+        Logger.error("= block_module: #{inspect(block_module)}")
 
-      if ref_src == nil do
-        raise """
+        ref_src = Enum.find(module_refs, &(&1.name == ref_name)) || %{}
 
-        Ref #{ref_name} not found in module refs!
+        if ref_src == nil do
+          raise """
 
-        Module: ##{module.id} [#{module.namespace}] #{module.name}
+          Ref #{ref_name} not found in module refs!
 
-        #{inspect(module, pretty: true)}
+          Module: ##{module.id} [#{module.namespace}] #{module.name}
 
-        """
-      end
+          #{inspect(module, pretty: true)}
 
-      ref_target = apply_ref_principals(ref_src, ref)
+          """
+        end
 
-      ref_src.data.__struct__
-      |> block_module.apply_ref(ref_src, ref_target)
-      |> Changeset.change()
+        Logger.error("= ref_src.__struct__: #{inspect(ref_src.__struct__)}")
+        Logger.error("= ref_src.data.__struct__: #{inspect(ref_src.data.__struct__)}")
+
+        ref_target = apply_ref_principals(ref_src, ref)
+        block_module.apply_ref(ref_src.data.__struct__, ref_src, ref_target)
     end)
   end
 
@@ -1045,8 +1057,8 @@ defmodule Brando.Villain do
   # in case of changes.
   defp apply_ref_principals(ref_src, ref_target) do
     ref_target
-    |> put_in([Access.key(:name)], ref_src.name)
-    |> put_in([Access.key(:description)], ref_src.description)
+    |> Changeset.force_change(:name, ref_src.name)
+    |> Changeset.force_change(:description, ref_src.description)
   end
 
   @protected_and_ignored_var_attrs [
