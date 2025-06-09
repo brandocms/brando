@@ -117,6 +117,92 @@ defmodule Brando.Factory do
     }
   end
 
+  def ref_factory do
+    %Brando.Content.Ref{
+      name: sequence(:ref_name, &"test_ref_#{&1}"),
+      description: "A test ref",
+      data: %Brando.Villain.Blocks.TextBlock{
+        uid: "abc123",
+        type: "text",
+        data: %Brando.Villain.Blocks.TextBlock.Data{text: "Hello"}
+      },
+      sequence: 0
+    }
+  end
+
+  def picture_ref_factory do
+    image = build(:image)
+    
+    %Brando.Content.Ref{
+      name: sequence(:ref_name, &"picture_ref_#{&1}"),
+      description: "A picture ref",
+      data: %Brando.Villain.Blocks.PictureBlock{
+        uid: "abc123",
+        type: "picture",
+        data: %Brando.Villain.Blocks.PictureBlock.Data{title: "Override title"}
+      },
+      image: image,
+      sequence: 0
+    }
+  end
+
+  def video_ref_factory do
+    video = build(:video)
+    
+    %Brando.Content.Ref{
+      name: sequence(:ref_name, &"video_ref_#{&1}"),
+      description: "A video ref", 
+      data: %Brando.Villain.Blocks.VideoBlock{
+        uid: "abc123", 
+        type: "video",
+        data: %Brando.Villain.Blocks.VideoBlock.Data{title: "Override title"}
+      },
+      video: video,
+      sequence: 0
+    }
+  end
+
+  def gallery_factory do
+    %Brando.Galleries.Gallery{}
+  end
+
+  def video_factory do
+    %Brando.Videos.Video{
+      url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      source: :youtube,
+      remote_id: "dQw4w9WgXcQ",
+      width: 1920,
+      height: 1080,
+      thumbnail_url: "https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg"
+    }
+  end
+
+  def gallery_ref_factory do
+    gallery = build(:gallery)
+    
+    %Brando.Content.Ref{
+      name: sequence(:ref_name, &"gallery_ref_#{&1}"),
+      description: "A gallery ref",
+      data: %Brando.Villain.Blocks.GalleryBlock{
+        uid: "abc123",
+        type: "gallery", 
+        data: %Brando.Villain.Blocks.GalleryBlock.Data{}
+      },
+      gallery: gallery,
+      sequence: 0
+    }
+  end
+
+  def module_with_refs_factory do
+    module = build(:module)
+    refs = [
+      build(:ref, module: module),
+      build(:picture_ref, module: module)
+    ]
+    
+    %{module | refs: refs}
+  end
+
   def page_factory do
     %Page{
       uri: sequence(:uri, &"test#{&1}"),

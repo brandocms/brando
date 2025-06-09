@@ -52,8 +52,19 @@ defmodule Brando.Villain.Block do
       def protected_attrs, do: []
       defoverridable protected_attrs: 0
 
+      # ref_src = %Ref struct, ref_target = changeset
       def apply_ref(src_type, ref_src, ref_target) do
         protected_attrs = __MODULE__.protected_attrs()
+
+        require Logger
+
+        Logger.error("""
+        --
+        src_type: #{inspect(src_type)}
+        ref_src: #{inspect(ref_src)}
+        ref_target: #{inspect(ref_target)}
+        --
+        """)
 
         overwritten_attrs = Map.keys(ref_src.data.data) -- protected_attrs
         new_attrs = Map.take(ref_src.data.data, overwritten_attrs)
