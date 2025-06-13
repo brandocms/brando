@@ -44,26 +44,21 @@ defmodule Brando.Villain.Blocks.VideoBlock do
     # block template and merge against this instead
     tpl_src = ref_src.data.data.template_video
     
-    # Get the current data from the changeset
+    # Get the current data from the ref changeset - it might be a struct or changeset
     current_data = Ecto.Changeset.get_field(ref_target_changeset, :data)
     
-    # Get the current block data
-    current_block_data = 
-      case current_data do
-        %Ecto.Changeset{} = cs -> Ecto.Changeset.get_field(cs, :data)
-        data -> data.data
-      end
-    
-    # Merge the template data
-    merged_data = Map.merge(Map.from_struct(current_block_data), Map.from_struct(tpl_src))
-    
-    # Create updated data changeset
+    # Ensure we have a changeset for the data
     data_changeset = 
       case current_data do
         %Ecto.Changeset{} = cs -> cs
         data -> Ecto.Changeset.change(data)
       end
     
+    # Get the current block data and merge with template data
+    current_block_data = Ecto.Changeset.get_field(data_changeset, :data)
+    merged_data = Map.merge(Map.from_struct(current_block_data), Map.from_struct(tpl_src))
+    
+    # Update the data changeset
     updated_data_changeset = Ecto.Changeset.put_change(data_changeset, :data, merged_data)
     
     # Apply the data changeset to get the final block struct
@@ -74,29 +69,24 @@ defmodule Brando.Villain.Blocks.VideoBlock do
   end
 
   def apply_ref(_, ref_src, ref_target_changeset) do
-    # Get the current data from the changeset
+    # Get the current data from the ref changeset - it might be a struct or changeset
     current_data = Ecto.Changeset.get_field(ref_target_changeset, :data)
     
-    # Extract the source attributes
-    src_attrs = Map.from_struct(ref_src.data.data)
-    
-    # Get the current block data
-    current_block_data = 
-      case current_data do
-        %Ecto.Changeset{} = cs -> Ecto.Changeset.get_field(cs, :data)
-        data -> data.data
-      end
-    
-    # Merge the attributes
-    merged_data = Map.merge(Map.from_struct(current_block_data), src_attrs)
-    
-    # Create updated data changeset
+    # Ensure we have a changeset for the data
     data_changeset = 
       case current_data do
         %Ecto.Changeset{} = cs -> cs
         data -> Ecto.Changeset.change(data)
       end
     
+    # Extract the source attributes and get current block data
+    src_attrs = Map.from_struct(ref_src.data.data)
+    current_block_data = Ecto.Changeset.get_field(data_changeset, :data)
+    
+    # Merge the attributes
+    merged_data = Map.merge(Map.from_struct(current_block_data), src_attrs)
+    
+    # Update the data changeset
     updated_data_changeset = Ecto.Changeset.put_change(data_changeset, :data, merged_data)
     
     # Apply the data changeset to get the final block struct
