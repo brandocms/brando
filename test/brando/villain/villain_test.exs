@@ -142,6 +142,7 @@ defmodule Brando.VillainTest do
           %{
             name: "cover",
             description: nil,
+            image_id: image.id,
             data: %{
               type: "picture",
               data: %{
@@ -179,6 +180,8 @@ defmodule Brando.VillainTest do
           %{
             name: "cover",
             description: nil,
+            image_id: image.id,
+            image: image,  # Add the actual image association
             data: %{
               type: "picture",
               data: %Brando.Villain.Blocks.PictureBlock.Data{
@@ -328,6 +331,7 @@ defmodule Brando.VillainTest do
           %{
             name: "thumbnail",
             description: nil,
+            image_id: image.id,
             data: %{
               type: "picture",
               data: %{}
@@ -361,6 +365,8 @@ defmodule Brando.VillainTest do
         %{
           name: "thumbnail",
           description: nil,
+          image_id: image.id,
+          image: image,  # Add the actual image association
           data: %{
             type: "picture",
             data: %Brando.Villain.Blocks.PictureBlock.Data{
