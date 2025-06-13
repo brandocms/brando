@@ -277,7 +277,6 @@ defmodule Brando.Villain.Block.PictureBlockTest do
     assert applied_picture_ref.data.data.img_class == "img-class"
     assert applied_picture_ref.data.data.moonwalk == true
 
-
     [app_bool, app_col] = updated_block.vars
 
     assert app_bool.key == "wide"
