@@ -56,8 +56,15 @@ defmodule Brando.Villain.Block do
       def apply_ref(src_type, ref_src, ref_target_changeset) do
         protected_attrs = __MODULE__.protected_attrs()
         
-        # Get the current data from the changeset
+        # Get the current data from the ref changeset - it might be a struct or changeset
         current_data = get_field(ref_target_changeset, :data)
+        
+        # Ensure we have a changeset for the data
+        data_changeset = 
+          case current_data do
+            %Ecto.Changeset{} = cs -> cs
+            data -> change(data)
+          end
         
         # Extract the source attributes from ref_src.data.data (which is the block data)
         src_attrs = Map.from_struct(ref_src.data.data)
@@ -65,22 +72,10 @@ defmodule Brando.Villain.Block do
         new_attrs = Map.take(src_attrs, overwritten_attrs)
         
         # Get the current block data and merge with new attributes
-        current_block_data = 
-          case current_data do
-            %Ecto.Changeset{} = cs -> get_field(cs, :data)
-            data -> data.data
-          end
-        
-        # Merge the attributes
+        current_block_data = get_field(data_changeset, :data)
         merged_data = Map.merge(Map.from_struct(current_block_data), new_attrs)
         
-        # Create updated data changeset
-        data_changeset = 
-          case current_data do
-            %Ecto.Changeset{} = cs -> cs
-            data -> change(data)
-          end
-        
+        # Update the data changeset
         updated_data_changeset = put_change(data_changeset, :data, merged_data)
         
         # Apply the data changeset to get the final block struct
