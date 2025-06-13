@@ -1297,55 +1297,91 @@ defmodule Brando.Villain.Parser do
   end
 
   defp merge_ref_associations(%{data: %{type: "picture"}} = ref) do
-    case Map.get(ref, :image) do
-      nil ->
-        ref.data.data
+    merged_data = 
+      case Map.get(ref, :image) do
+        nil ->
+          # No image association, return the block data as-is
+          ref.data.data
 
-      image ->
-        # Merge image data with override data from ref.data.data
-        base_image = Map.from_struct(image)
-        override_data = ref.data.data || %{}
-        Map.merge(base_image, override_data)
-    end
+        image ->
+          # We have an image, so we should return the image data with overrides
+          # from the block data (like custom title, credits, alt)
+          override_data = Map.from_struct(ref.data.data || %{})
+          override_attrs = Map.take(override_data, [:title, :credits, :alt, :picture_class, :img_class, :link, :srcset, :media_queries, :lazyload, :moonwalk, :placeholder, :fetchpriority])
+          # Merge into the image struct while preserving the struct type
+          struct(image, Map.merge(Map.from_struct(image), override_attrs))
+      end
+
+    # Return the ref structure with merged data
+    %{
+      data: %{data: merged_data, type: "picture"},
+      name: ref.name,
+      description: ref.description
+    }
   end
 
   defp merge_ref_associations(%{data: %{type: "video"}} = ref) do
-    case Map.get(ref, :video) do
-      nil ->
-        ref.data.data
+    merged_data = 
+      case Map.get(ref, :video) do
+        nil ->
+          # No video association, return the block data as-is
+          ref.data.data
 
-      video ->
-        # Merge video data with override data from ref.data.data
-        base_video = Map.from_struct(video)
-        override_data = ref.data.data || %{}
-        Map.merge(base_video, override_data)
-    end
+        video ->
+          # We have a video, so we should return the video data with overrides
+          # from the block data
+          override_data = Map.from_struct(ref.data.data || %{})
+          override_attrs = Map.take(override_data, [:title, :poster, :autoplay, :opacity, :preload, :play_button, :controls, :cover, :aspect_ratio, :cover_image])
+          # Merge into the video struct while preserving the struct type
+          struct(video, Map.merge(Map.from_struct(video), override_attrs))
+      end
+
+    # Return the ref structure with merged data
+    %{
+      data: %{data: merged_data, type: "video"},
+      name: ref.name,
+      description: ref.description
+    }
   end
 
   defp merge_ref_associations(%{data: %{type: "gallery"}} = ref) do
-    case Map.get(ref, :gallery) do
-      nil ->
-        ref.data.data
+    merged_data = 
+      case Map.get(ref, :gallery) do
+        nil ->
+          ref.data.data
 
-      gallery ->
-        # For galleries, expose the gallery association with override data
-        override_data = ref.data.data || %{}
+        gallery ->
+          # For galleries, expose the gallery association with override data
+          override_data = Map.from_struct(ref.data.data || %{})
+          # Return the block data with the gallery association
+          struct(ref.data.data.__struct__, Map.put(override_data, :gallery, gallery))
+      end
 
-        # Return the override data plus the gallery association
-        override_data
-        |> Map.put(:gallery, gallery)
-    end
+    # Return the ref structure with merged data
+    %{
+      data: %{data: merged_data, type: "gallery"},
+      name: ref.name,
+      description: ref.description
+    }
   end
 
-  # defp merge_ref_associations(%{data: _data} = ref) do
-  #   # For other types (like media blocks), return the data as-is
-  #   # but still provide access to any referenced associations
-  #   ref
-  # end
+  # Handle all other ref types (text, html, svg, etc.)
+  defp merge_ref_associations(%{data: %{type: _type} = data} = ref) do
+    # Return the ref structure with data
+    %{
+      data: data,
+      name: ref.name,
+      description: ref.description
+    }
+  end
 
   defp merge_ref_associations(ref) do
-    # Fallback for refs without data
-    ref
+    # Fallback for refs without proper data structure
+    %{
+      data: Map.get(ref, :data, %{}),
+      name: Map.get(ref, :name),
+      description: Map.get(ref, :description)
+    }
   end
 
   defp add_vars_to_context(context, vars),

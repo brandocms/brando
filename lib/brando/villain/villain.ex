@@ -1026,12 +1026,18 @@ defmodule Brando.Villain do
   def reapply_refs(module, module_refs, refs) do
     Enum.map(refs, fn
       %Changeset{data: %{name: ref_name}} = ref ->
-        require Logger
-        Logger.error("===")
-        block_module = ref.data.data.__struct__
-        Logger.error("= block_module: #{inspect(block_module)}")
-
-        ref_src = Enum.find(module_refs, &(&1.name == ref_name)) || %{}
+        # Handle case where ref.data might be a changeset or the actual block
+        block_module = 
+          case Changeset.get_field(ref, :data) do
+            %Changeset{} = data_cs -> 
+              # Get the struct from the changeset data (which should be the block struct)
+              data_cs.data.__struct__
+            block_data -> 
+              # Get the block struct directly
+              block_data.__struct__
+          end
+        
+        ref_src = Enum.find(module_refs, &(&1.name == ref_name))
 
         if ref_src == nil do
           raise """
@@ -1044,9 +1050,6 @@ defmodule Brando.Villain do
 
           """
         end
-
-        Logger.error("= ref_src.__struct__: #{inspect(ref_src.__struct__)}")
-        Logger.error("= ref_src.data.__struct__: #{inspect(ref_src.data.__struct__)}")
 
         ref_target = apply_ref_principals(ref_src, ref)
         block_module.apply_ref(ref_src.data.__struct__, ref_src, ref_target)

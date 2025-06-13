@@ -52,25 +52,42 @@ defmodule Brando.Villain.Block do
       def protected_attrs, do: []
       defoverridable protected_attrs: 0
 
-      # ref_src = %Ref struct, ref_target = changeset
-      def apply_ref(src_type, ref_src, ref_target) do
+      # ref_src = %Ref struct, ref_target_changeset = changeset
+      def apply_ref(src_type, ref_src, ref_target_changeset) do
         protected_attrs = __MODULE__.protected_attrs()
-
-        require Logger
-
-        Logger.error("""
-        --
-        src_type: #{inspect(src_type)}
-        ref_src: #{inspect(ref_src)}
-        ref_target: #{inspect(ref_target)}
-        --
-        """)
-
-        overwritten_attrs = Map.keys(ref_src.data.data) -- protected_attrs
-        new_attrs = Map.take(ref_src.data.data, overwritten_attrs)
-        new_data = Map.merge(ref_target.data.data, new_attrs)
-
-        put_in(ref_target, [Access.key(:data), Access.key(:data)], new_data)
+        
+        # Get the current data from the changeset
+        current_data = get_field(ref_target_changeset, :data)
+        
+        # Extract the source attributes from ref_src.data.data (which is the block data)
+        src_attrs = Map.from_struct(ref_src.data.data)
+        overwritten_attrs = Map.keys(src_attrs) -- protected_attrs
+        new_attrs = Map.take(src_attrs, overwritten_attrs)
+        
+        # Get the current block data and merge with new attributes
+        current_block_data = 
+          case current_data do
+            %Ecto.Changeset{} = cs -> get_field(cs, :data)
+            data -> data.data
+          end
+        
+        # Merge the attributes
+        merged_data = Map.merge(Map.from_struct(current_block_data), new_attrs)
+        
+        # Create updated data changeset
+        data_changeset = 
+          case current_data do
+            %Ecto.Changeset{} = cs -> cs
+            data -> change(data)
+          end
+        
+        updated_data_changeset = put_change(data_changeset, :data, merged_data)
+        
+        # Apply the data changeset to get the final block struct
+        updated_block = apply_changes(updated_data_changeset)
+        
+        # Return the updated ref changeset with the applied block data
+        put_change(ref_target_changeset, :data, updated_block)
       end
 
       defoverridable apply_ref: 3

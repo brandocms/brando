@@ -39,16 +39,70 @@ defmodule Brando.Villain.Blocks.VideoBlock do
     end
   end
 
-  def apply_ref(Brando.Villain.Blocks.MediaBlock, ref_src, ref_target) do
+  def apply_ref(Brando.Villain.Blocks.MediaBlock, ref_src, ref_target_changeset) do
     # in order to not overwrite the chosen media block, we have to get the media
     # block template and merge against this instead
     tpl_src = ref_src.data.data.template_video
-    new_data = Map.merge(ref_target.data.data, tpl_src)
-    put_in(ref_target, [Access.key(:data), Access.key(:data)], new_data)
+    
+    # Get the current data from the changeset
+    current_data = Ecto.Changeset.get_field(ref_target_changeset, :data)
+    
+    # Get the current block data
+    current_block_data = 
+      case current_data do
+        %Ecto.Changeset{} = cs -> Ecto.Changeset.get_field(cs, :data)
+        data -> data.data
+      end
+    
+    # Merge the template data
+    merged_data = Map.merge(Map.from_struct(current_block_data), Map.from_struct(tpl_src))
+    
+    # Create updated data changeset
+    data_changeset = 
+      case current_data do
+        %Ecto.Changeset{} = cs -> cs
+        data -> Ecto.Changeset.change(data)
+      end
+    
+    updated_data_changeset = Ecto.Changeset.put_change(data_changeset, :data, merged_data)
+    
+    # Apply the data changeset to get the final block struct
+    updated_block = Ecto.Changeset.apply_changes(updated_data_changeset)
+    
+    # Return the updated ref changeset with the applied block data
+    Ecto.Changeset.put_change(ref_target_changeset, :data, updated_block)
   end
 
-  def apply_ref(_, ref_src, ref_target) do
-    new_data = Map.merge(ref_target.data.data, ref_src.data.data)
-    put_in(ref_target, [Access.key(:data), Access.key(:data)], new_data)
+  def apply_ref(_, ref_src, ref_target_changeset) do
+    # Get the current data from the changeset
+    current_data = Ecto.Changeset.get_field(ref_target_changeset, :data)
+    
+    # Extract the source attributes
+    src_attrs = Map.from_struct(ref_src.data.data)
+    
+    # Get the current block data
+    current_block_data = 
+      case current_data do
+        %Ecto.Changeset{} = cs -> Ecto.Changeset.get_field(cs, :data)
+        data -> data.data
+      end
+    
+    # Merge the attributes
+    merged_data = Map.merge(Map.from_struct(current_block_data), src_attrs)
+    
+    # Create updated data changeset
+    data_changeset = 
+      case current_data do
+        %Ecto.Changeset{} = cs -> cs
+        data -> Ecto.Changeset.change(data)
+      end
+    
+    updated_data_changeset = Ecto.Changeset.put_change(data_changeset, :data, merged_data)
+    
+    # Apply the data changeset to get the final block struct
+    updated_block = Ecto.Changeset.apply_changes(updated_data_changeset)
+    
+    # Return the updated ref changeset with the applied block data
+    Ecto.Changeset.put_change(ref_target_changeset, :data, updated_block)
   end
 end
