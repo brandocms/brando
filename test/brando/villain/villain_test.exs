@@ -330,8 +330,7 @@ defmodule Brando.VillainTest do
             description: nil,
             data: %{
               type: "picture",
-              data: %{
-              }
+              data: %{}
             }
           }
         ],
@@ -614,7 +613,7 @@ defmodule Brando.VillainTest do
 
   test "update module ref will update entries using ref", %{user: user} do
     module_params = %Brando.Content.Module{
-      code: "{% ref refs.lede %}",
+      code: "{% ref refs.intro %}",
       name: "Name",
       help_text: "Help text",
       refs: [
@@ -630,7 +629,7 @@ defmodule Brando.VillainTest do
             }
           },
           description: nil,
-          name: "lede"
+          name: "intro"
         }
       ],
       namespace: "all",
@@ -660,7 +659,7 @@ defmodule Brando.VillainTest do
                 }
               },
               description: nil,
-              name: "lede"
+              name: "intro"
             }
           ],
           vars: []
@@ -696,7 +695,7 @@ defmodule Brando.VillainTest do
                 }
               },
               description: nil,
-              name: "lede"
+              name: "intro"
             }
           ]
         },
