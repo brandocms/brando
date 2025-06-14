@@ -5,7 +5,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   alias Brando.Villain.Blocks.PictureBlock
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias Ecto.Changeset
@@ -16,7 +15,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   # prop block_count, :integer
   # prop index, :any
   # prop data_field, :atom
-  # prop is_ref?, :boolean, default: false
+  # prop ref_form, :any
   # prop ref_name, :string
   # prop ref_description, :string
   # prop belongs_to, :string
@@ -60,19 +59,25 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
      |> assign(:uid, assigns.block[:uid].value)
      |> assign_new(:compact, fn -> true end)
      |> assign_new(:image, fn ->
-       block_data_cs = Block.get_block_data_changeset(assigns.block)
+       # Get the image from the ref_form
+       ref_cs = assigns.ref_form.source
        
-       if assigns.is_ref? do
-         case Changeset.get_field(assigns.block.source, :image) do
-           nil -> Changeset.apply_changes(block_data_cs)  # No image associated yet
-           image -> image  # Get from image association
-         end
-       else
-         Changeset.apply_changes(block_data_cs)  # Block data only contains override fields
+       case Changeset.get_field(ref_cs, :image) do
+         nil ->
+           # If no image preloaded, try to fetch via image_id
+           case Changeset.get_field(ref_cs, :image_id) do
+             nil -> nil
+             image_id ->
+               case Brando.Images.get_image(image_id) do
+                 {:ok, image} -> image
+                 _ -> nil
+               end
+           end
+         image -> image
        end
      end)
-     |> assign_new(:extracted_path, fn %{is_ref?: is_ref?, image: image} ->
-       if is_ref? && image do
+     |> assign_new(:extracted_path, fn %{image: image} ->
+       if is_map(image) do
          Map.get(image, :path)
        else
          nil
@@ -86,8 +91,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
        end
      end)
      |> assign_new(:file_name, fn %{extracted_filename: extracted_filename} -> extracted_filename end)
-     |> assign_new(:upload_formats, fn %{is_ref?: is_ref?, image: image} ->
-       if is_ref? && image do
+     |> assign_new(:upload_formats, fn %{image: image} ->
+       if is_map(image) do
          case Map.get(image, :formats) do
            formats when is_list(formats) -> Enum.join(formats, ",")
            _ -> ""
@@ -110,7 +115,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           data-block-uid={@uid}
           data-upload-config-target={block_data[:config_target].value}
         >
-          <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+          <Block.block id={"block-#{@uid}-base"} block={@block} multi={false} target={@target}>
             <:description>
               <%= if @ref_description not in ["", nil] do %>
                 {@ref_description}
@@ -241,32 +246,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               </div>
 
               <Input.input type={:hidden} field={block_data[:placeholder]} />
-              <%= if not @is_ref? do %>
-                <Input.input type={:hidden} field={block_data[:cdn]} />
-              <% end %>
               <Input.input type={:hidden} field={block_data[:moonwalk]} />
               <Input.input type={:hidden} field={block_data[:lazyload]} />
               <Input.input type={:hidden} field={block_data[:credits]} />
-              <%= if not @is_ref? do %>
-                <Input.input type={:hidden} field={block_data[:height]} />
-                <Input.input type={:hidden} field={block_data[:width]} />
-                <Input.input type={:hidden} field={block_data[:path]} />
-              <% end %>
 
-              <%= if not @is_ref? do %>
-                <.inputs_for :let={focal_form} field={block_data[:focal]}>
-                  <Input.input type={:hidden} field={focal_form[:x]} />
-                  <Input.input type={:hidden} field={focal_form[:y]} />
-                </.inputs_for>
-
-                <Form.map_inputs :let={%{value: value, name: name}} field={block_data[:sizes]}>
-                  <input type="hidden" name={name} value={value} />
-                </Form.map_inputs>
-
-                <Form.array_inputs :let={%{value: array_value, name: array_name}} field={block_data[:formats]}>
-                  <input type="hidden" name={array_name} value={array_value} />
-                </Form.array_inputs>
-              <% end %>
 
               <input type="hidden" data-upload-formats={@upload_formats} />
             </:config>
@@ -281,41 +264,26 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   def handle_event("image_uploaded", %{"id" => id}, socket) do
     {:ok, image} = Brando.Images.get_image(id)
-    
-    # For refs, we need to update both the image association and the block data
-    if socket.assigns.is_ref? do
-      target = socket.assigns.target
-      ref_name = socket.assigns.ref_name
-      
-      # Get current block data to preserve any existing overrides
-      block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-      current_block_data = Changeset.apply_changes(block_data_cs)
-      
-      # Only keep override fields in block data, image data goes to association
-      new_block_data = 
-        current_block_data
-        |> Map.from_struct()
-        |> Map.take(@override_fields)
-      
-      send_update(target, %{
-        event: "update_ref_data", 
-        ref_data: new_block_data,
-        ref_name: ref_name,
-        image_id: image.id
-      })
-    else
-      # For regular blocks, merge image data into block data (legacy behavior)
-      block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-      block_data = Changeset.apply_changes(block_data_cs)
-      
-      new_data =
-        block_data
-        |> Map.merge(image)
-        |> Map.from_struct()
-        |> Map.take([:path, :width, :height, :formats, :sizes, :cdn, :dominant_color, :focal] ++ @override_fields)
-      
-      send_update(socket.assigns.target, %{event: "update_block_data", block_data: new_data})
-    end
+
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+
+    # Get current block data to preserve any existing overrides
+    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+    current_block_data = Changeset.apply_changes(block_data_cs)
+
+    # Only keep override fields in block data, image data goes to association
+    new_block_data =
+      current_block_data
+      |> Map.from_struct()
+      |> Map.take(@override_fields)
+
+    send_update(target, %{
+      event: "update_ref_data",
+      ref_data: new_block_data,
+      ref_name: ref_name,
+      image_id: image.id
+    })
 
     {:noreply, socket}
   end
@@ -333,76 +301,49 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   def handle_event("reset_image", _, socket) do
-    if socket.assigns.is_ref? do
-      target = socket.assigns.target
-      ref_name = socket.assigns.ref_name
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
 
-      # Reset to empty picture block data with no image association
-      new_data =
-        %PictureBlock.Data{}
-        |> Map.from_struct()
-        |> Map.take(@override_fields)
+    # Reset to empty picture block data with no image association
+    new_data =
+      %PictureBlock.Data{}
+      |> Map.from_struct()
+      |> Map.take(@override_fields)
 
-      uid = socket.assigns.uid
-      send_update(target, %{
-        event: "update_ref_data", 
-        ref_data: new_data, 
-        ref_name: ref_name,
-        image_id: nil
-      })
+    uid = socket.assigns.uid
+    send_update(target, %{
+      event: "update_ref_data",
+      ref_data: new_data,
+      ref_name: ref_name,
+      image_id: nil
+    })
 
-      {:noreply, push_event(socket, "b:picture_block:attach_listeners:#{uid}", %{})}
-    else
-      # For regular blocks, reset all data
-      target = socket.assigns.target
-      new_data =
-        %PictureBlock.Data{}
-        |> Map.from_struct()
-
-      uid = socket.assigns.uid
-      send_update(target, %{event: "update_block_data", block_data: new_data})
-
-      {:noreply, push_event(socket, "b:picture_block:attach_listeners:#{uid}", %{})}
-    end
+    {:noreply, push_event(socket, "b:picture_block:attach_listeners:#{uid}", %{})}
   end
 
   def handle_event("select_image", %{"id" => id}, socket) do
     {:ok, image} = Brando.Images.get_image(id)
-    
-    if socket.assigns.is_ref? do
-      target = socket.assigns.target
-      ref_name = socket.assigns.ref_name
-      
-      # Get current block data to preserve any existing overrides
-      block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-      current_block_data = Changeset.apply_changes(block_data_cs)
-      
-      # Only keep override fields in block data, image data goes to association
-      new_block_data = 
-        current_block_data
-        |> Map.from_struct()
-        |> Map.take(@override_fields)
-      
-      send_update(target, %{
-        event: "update_ref_data", 
-        ref_data: new_block_data,
-        ref_name: ref_name,
-        image_id: image.id
-      })
-    else
-      # For regular blocks, merge image data into block data (legacy behavior)
-      block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-      block_data = Changeset.apply_changes(block_data_cs)
-      
-      new_data =
-        block_data
-        |> Map.merge(image)
-        |> Map.from_struct()
-        |> Map.take([:path, :width, :height, :formats, :sizes, :cdn, :dominant_color, :focal] ++ @override_fields)
-      
-      send_update(socket.assigns.target, %{event: "update_block_data", block_data: new_data})
-    end
-    
+
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+
+    # Get current block data to preserve any existing overrides
+    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+    current_block_data = Changeset.apply_changes(block_data_cs)
+
+    # Only keep override fields in block data, image data goes to association
+    new_block_data =
+      current_block_data
+      |> Map.from_struct()
+      |> Map.take(@override_fields)
+
+    send_update(target, %{
+      event: "update_ref_data",
+      ref_data: new_block_data,
+      ref_name: ref_name,
+      image_id: image.id
+    })
+
     {:noreply, socket}
   end
 
