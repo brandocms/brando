@@ -14,7 +14,7 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
   end
 
   describe "PictureBlock apply_ref" do
-    test "applies picture ref correctly", %{image: image} do
+    test "applies picture ref correctly" do
       # Create source ref
       ref_src = %Content.Ref{
         name: "test_picture",
@@ -109,7 +109,7 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
   end
 
   describe "VideoBlock apply_ref" do
-    test "applies video ref correctly", %{video: video} do
+    test "applies video ref correctly" do
       ref_src = %Content.Ref{
         name: "test_video",
         data: %Brando.Villain.Blocks.VideoBlock{
@@ -193,7 +193,7 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
   end
 
   describe "SvgBlock apply_ref with protected attributes" do
-    test "preserves protected code attribute", %{user: user} do
+    test "preserves protected code attribute" do
       ref_src = %Content.Ref{
         name: "test_svg",
         data: %Brando.Villain.Blocks.SvgBlock{

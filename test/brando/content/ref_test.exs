@@ -162,7 +162,7 @@ defmodule Brando.Content.RefTest do
   end
 
   describe "protected attributes" do
-    test "SVG blocks preserve protected code attribute", %{user: user} do
+    test "SVG blocks preserve protected code attribute" do
       # Create a module with SVG ref
       module_with_svg = %Content.Module{
         vars: [],
@@ -210,7 +210,7 @@ defmodule Brando.Content.RefTest do
       assert svg_ref.data.data.code == "<svg>block code should be preserved</svg>"
     end
 
-    test "text blocks have protected text attribute", %{user: user} do
+    test "text blocks have protected text attribute" do
       module_with_text = %Content.Module{
         vars: [],
         refs: [
@@ -296,7 +296,7 @@ defmodule Brando.Content.RefTest do
       assert ref.data.data.type == :paragraph
     end
 
-    test "gracefully handles missing refs during sync", %{user: user} do
+    test "gracefully handles missing refs during sync" do
       # Module has a ref that doesn't exist in the block
       module_with_extra_ref = %Content.Module{
         vars: [],
