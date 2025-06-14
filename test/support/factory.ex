@@ -168,12 +168,11 @@ defmodule Brando.Factory do
 
   def video_factory do
     %Brando.Videos.Video{
-      url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-      source: :youtube,
+      source_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      type: :youtube,
       remote_id: "dQw4w9WgXcQ",
       width: 1920,
-      height: 1080,
-      thumbnail_url: "https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg"
+      height: 1080
     }
   end
 

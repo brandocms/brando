@@ -1,7 +1,7 @@
 defmodule Brando.HTML.Video do
   use Gettext, backend: Brando.Gettext
   use Phoenix.Component
-  alias Brando.Type.Video
+  alias Brando.Videos.Video
 
   @type safe_string :: {:safe, [...]}
   @type video :: Video.t()
@@ -23,7 +23,7 @@ defmodule Brando.HTML.Video do
   """
   def video(assigns)
 
-  def video(%{assigns: %{video: %Video{source: "vimeo", remote_id: remote_id, width: width, height: height}} = assigns}) do
+  def video(%{assigns: %{video: %Video{type: :vimeo, remote_id: remote_id, width: width, height: height}} = assigns}) do
     assigns =
       assigns
       |> assign(:remote_id, remote_id)
@@ -47,7 +47,7 @@ defmodule Brando.HTML.Video do
 
   def video(%{
         assigns:
-          %{video: %Video{source: "youtube", remote_id: remote_id, width: width, height: height}, opts: opts} = assigns
+          %{video: %Video{type: :youtube, remote_id: remote_id, width: width, height: height}, opts: opts} = assigns
       }) do
     autoplay = (Keyword.get(opts, :autoplay, false) && 1) || 0
     controls = (Keyword.get(opts, :controls, false) && 1) || 0
