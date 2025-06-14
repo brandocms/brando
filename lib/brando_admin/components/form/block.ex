@@ -713,7 +713,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     entry = socket.assigns.entry
 
     block_changeset = get_block_changeset(changeset, belongs_to)
-    refs = Changeset.get_embed(block_changeset, :refs)
+    refs = Changeset.get_assoc(block_changeset, :refs)
 
     new_refs =
       Enum.reduce(refs, [], fn
@@ -739,11 +739,11 @@ defmodule BrandoAdmin.Components.Form.Block do
     updated_changeset =
       if belongs_to == :root do
         block_changeset = Changeset.get_assoc(changeset, :block)
-        updated_block_changeset = Changeset.put_embed(block_changeset, :refs, new_refs)
+        updated_block_changeset = Changeset.put_assoc(block_changeset, :refs, new_refs)
         changeset = Changeset.put_assoc(changeset, :block, updated_block_changeset)
         render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?)
       else
-        changeset = Changeset.put_embed(changeset, :refs, new_refs)
+        changeset = Changeset.put_assoc(changeset, :refs, new_refs)
         render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)
       end
 
@@ -2299,6 +2299,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 is_ref?={true}
                 ref_name={ref_form[:name].value}
                 ref_description={ref_form[:description].value}
+                ref_form={ref_form}
                 block={block}
                 parent_uploads={@parent_uploads}
                 target={@target}
@@ -2307,6 +2308,10 @@ defmodule BrandoAdmin.Components.Form.Block do
             <Input.input type={:hidden} field={ref_form[:description]} />
             <Input.input type={:hidden} field={ref_form[:name]} />
             <Input.input type={:hidden} field={ref_form[:id]} />
+            <Input.input type={:hidden} field={ref_form[:image_id]} />
+            <Input.input type={:hidden} field={ref_form[:video_id]} />
+            <Input.input type={:hidden} field={ref_form[:gallery_id]} />
+            <Input.input type={:hidden} field={ref_form[:file_id]} />
           </section>
         <% end %>
       </.inputs_for>
@@ -2341,6 +2346,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> assign_new(:opts, fn -> [] end)
       |> assign_new(:ref_name, fn -> nil end)
       |> assign_new(:ref_description, fn -> nil end)
+      |> assign_new(:ref_form, fn -> nil end)
       |> assign_new(:block_id, fn -> assigns.block[:uid].value end)
       |> assign_new(:component_target, fn ->
         type_atom = String.to_existing_atom(assigns.block[:type].value)
@@ -2393,6 +2399,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         belongs_to={@belongs_to}
         ref_name={@ref_name}
         ref_description={@ref_description}
+        ref_form={@ref_form}
         insert_module={@insert_module}
         duplicate_block={@duplicate_block}
         parent_uploads={@parent_uploads}
