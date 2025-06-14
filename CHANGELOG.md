@@ -1,5 +1,14 @@
 ## 0.54.0
 
+### Breaking Changes
+
+- **Video Type Migration**: The deprecated `Brando.Type.Video` has been replaced with `Brando.Videos.Video`. The video schema has been updated:
+  - `source` field renamed to `type` (enum: `:upload`, `:external_file`, `:vimeo`, `:youtube`)
+  - `url` field renamed to `source_url`
+  - Added new fields: `title`, `caption`, `aspect_ratio`
+  - Videos are now stored as separate database entities instead of embedded JSON
+  - If you were using `Brando.Type.Video` in your code, update to use `Brando.Videos.Video`
+
 Before running the migration script, you must fix some `form` syntax in your blueprints.
 If you're passing parameters to the `form` macro, they must be moved to their own functions.
 For instance, if you have:

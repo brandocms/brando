@@ -426,7 +426,7 @@ defmodule Brando.Villain.Parser do
     if extra_attrs, do: vimeo_template, else: youtube_template
   end
 
-  def video(%{remote_id: remote_id, source: :youtube, autoplay: autoplay} = data, _) do
+  def video(%{remote_id: remote_id, type: :youtube, autoplay: autoplay} = data, _) do
     video_fields = extract_video_dimensions(data, 420, 315)
     aspect_ratio = calculate_aspect_ratio(video_fields.width, video_fields.height)
     params = "autoplay=#{(autoplay && 1) || 0}&controls=0&showinfo=0&rel=0"
@@ -440,7 +440,7 @@ defmodule Brando.Villain.Parser do
     )
   end
 
-  def video(%{remote_id: remote_id, source: :vimeo} = data, _) do
+  def video(%{remote_id: remote_id, type: :vimeo} = data, _) do
     video_fields = extract_video_dimensions(data, 500, 281)
 
     # Ensure values are integers
@@ -461,7 +461,7 @@ defmodule Brando.Villain.Parser do
   end
 
   # Convert file video to html
-  def video(%{remote_id: src, source: :file} = data, _) do
+  def video(%{remote_id: src, type: :upload} = data, _) do
     assigns = %{
       video: src,
       opts: video_file_options(data),

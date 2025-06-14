@@ -55,22 +55,35 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :creator_id, references(:users)
     end
 
-    create table(:videos) do
-      add :url, :text
-      add :source, :text
+    create table(:files) do
+      add :title, :text
+      add :mime_type, :text
+      add :filesize, :integer
       add :filename, :text
-      add :remote_id, :text
+      add :config_target, :text
+      add :cdn, :boolean
+      add :deleted_at, :utc_datetime
+      timestamps()
+      add :creator_id, references(:users, on_delete: :nothing)
+    end
+
+    create table(:videos) do
+      add :type, :string
+      add :title, :text
+      add :caption, :text
+      add :aspect_ratio, :string
       add :width, :integer
       add :height, :integer
-      add :thumbnail_url, :text
       add :autoplay, :boolean
       add :preload, :boolean
       add :loop, :boolean
       add :controls, :boolean
-      add :cdn, :boolean
+      add :source_url, :text
+      add :remote_id, :text
       add :config_target, :text
+      add :file_id, references(:files, on_delete: :nilify_all)
+      add :thumbnail_id, references(:images, on_delete: :nilify_all)
       add :creator_id, references(:users, on_delete: :nothing)
-      add :cover_image_id, references(:images, on_delete: :nilify_all)
       add :deleted_at, :utc_datetime
       timestamps()
     end
@@ -82,18 +95,6 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :video_id, references(:videos, on_delete: :delete_all)
       add :creator_id, references(:users, on_delete: :nothing)
       timestamps()
-    end
-
-    create table(:files) do
-      add :title, :text
-      add :mime_type, :text
-      add :filesize, :integer
-      add :filename, :text
-      add :config_target, :text
-      add :cdn, :boolean
-      add :deleted_at, :utc_datetime
-      timestamps()
-      add :creator_id, references(:users, on_delete: :nothing)
     end
 
 
