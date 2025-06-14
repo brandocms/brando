@@ -9,7 +9,7 @@ defmodule Brando.Migrations.TransferRefGalleryData do
 
     # Create a temporary function to process gallery refs
     execute """
-    CREATE OR REPLACE FUNCTION process_gallery_ref(ref_id integer, ref_data jsonb)
+    CREATE OR REPLACE FUNCTION process_gallery_ref(ref_id bigint, ref_data jsonb)
     RETURNS integer AS $$
     DECLARE
       new_gallery_id integer;
@@ -101,28 +101,12 @@ defmodule Brando.Migrations.TransferRefGalleryData do
     )
     """
 
-    # Log refs that couldn't be processed
-    execute """
-    INSERT INTO system_logs (level, message, metadata, inserted_at, updated_at)
-    SELECT
-      'warning',
-      'Gallery ref could not be processed - no images found',
-      jsonb_build_object(
-        'ref_id', id,
-        'ref_name', name,
-        'image_count', jsonb_array_length(data->'data'->'images'),
-        'module_id', module_id,
-        'block_id', block_id
-      ),
-      NOW(),
-      NOW()
-    FROM content_refs
-    WHERE data->>'type' = 'gallery'
-    AND gallery_id IS NULL
-    """
+    # Note: Gallery refs that couldn't be processed will have gallery_id = NULL
+    # You can check for these manually if needed:
+    # -- SELECT * FROM content_refs WHERE data->>'type' = 'gallery' AND gallery_id IS NULL;
 
     # Clean up the function
-    execute "DROP FUNCTION process_gallery_ref(integer, jsonb)"
+    execute "DROP FUNCTION process_gallery_ref(bigint, jsonb)"
   end
 
   def down do
