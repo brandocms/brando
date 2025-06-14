@@ -53,3 +53,12 @@
 - **Examples in Docs**: Include examples in documentation (as doctests when possible).
 - **Cautious Refactoring**: Propose bug fixes or optimizations without changing behavior or unrelated code.
 - **Comments**: Write comments only when information cannot be included in docs.
+
+## Content Refs Architecture
+- **Two-Layer Approach**: Refs use both block data (configuration/overrides) and asset associations (direct media references)
+- **Polymorphic Data**: Ref's data field can contain various block types with specific configurations
+- **Media Associations**: Refs can have direct associations to :image, :video, :gallery, and :file
+- **Override Mechanism**: Block data overrides take precedence over base asset attributes when merging
+- **Preloading Pattern**: Always preload refs with their associations: `preload: [:image, :video, gallery: [gallery_objects: [:image]]]`
+- **Apply Ref Pattern**: Each block type implements `apply_ref` to handle syncing with module changes while preserving local customizations
+- **Picture Block Merging**: Picture refs merge image data with block overrides (:title, :credits, :alt, :picture_class, :img_class, etc.)
