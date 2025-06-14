@@ -11,7 +11,7 @@ if Code.ensure_loaded?(Igniter) do
       %Igniter.Mix.Task.Info{group: :brando}
     end
 
-    def igniter(igniter, _) do
+    def igniter(igniter) do
       igniter
       |> add_dependencies()
       |> add_runtime_cfg()
