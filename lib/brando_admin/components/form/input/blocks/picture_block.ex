@@ -53,42 +53,43 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   def update(assigns, socket) do
+    # Get the current block data to access override fields like title/alt
+    block_data_cs = Block.get_block_data_changeset(assigns.block)
+    block_data = Changeset.apply_changes(block_data_cs)
+
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:uid, assigns.block[:uid].value)
+     |> assign(:block_data, block_data)
      |> assign_new(:compact, fn -> true end)
      |> assign_new(:image, fn ->
-       # Get the image from the ref_form
-       ref_cs = assigns.ref_form.source
-       
-       case Changeset.get_field(ref_cs, :image) do
-         nil ->
-           # If no image preloaded, try to fetch via image_id
-           case Changeset.get_field(ref_cs, :image_id) do
-             nil -> nil
-             image_id ->
-               case Brando.Images.get_image(image_id) do
-                 {:ok, image} -> image
-                 _ -> nil
-               end
-           end
-         image -> image
+       # Get the image from the ref_form (only on first load)
+       if assigns[:ref_form] do
+         ref_cs = assigns.ref_form.source
+         
+         case Changeset.get_field(ref_cs, :image) do
+           nil ->
+             # If no image preloaded, try to fetch via image_id
+             case Changeset.get_field(ref_cs, :image_id) do
+               nil -> nil
+               image_id ->
+                 case Brando.Images.get_image(image_id) do
+                   {:ok, image} -> image
+                   _ -> nil
+                 end
+             end
+           image -> image
+         end
+       else
+         nil
        end
      end)
      |> assign_new(:extracted_path, fn %{image: image} ->
-       if is_map(image) do
-         Map.get(image, :path)
-       else
-         nil
-       end
+       if is_map(image), do: Map.get(image, :path), else: nil
      end)
      |> assign_new(:extracted_filename, fn %{extracted_path: extracted_path} ->
-       if extracted_path do
-         Path.basename(extracted_path)
-       else
-         nil
-       end
+       if extracted_path, do: Path.basename(extracted_path), else: nil
      end)
      |> assign_new(:file_name, fn %{extracted_filename: extracted_filename} -> extracted_filename end)
      |> assign_new(:upload_formats, fn %{image: image} ->
@@ -138,14 +139,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                       <div class="dims">{@image.width}&times;{@image.height}</div>
                       <div id={"block-#{@uid}-figcaption-title"}>
                         <span>{gettext("Caption")}</span>
-                        <%= if @image.title in [nil, ""] do %>
+                        <%= if @block_data.title in [nil, ""] do %>
                           {gettext("<no caption>")}
                         <% else %>
-                          {raw(@image.title)}
+                          {raw(@block_data.title)}
                         <% end %>
                       </div>
                       <div id={"block-#{@uid}-figcaption-alt"}>
-                        <span>{gettext("Alt. text")}</span> {@image.alt ||
+                        <span>{gettext("Alt. text")}</span> {@block_data.alt ||
                           gettext("<no alt.text>")}
                       </div>
                     </div>
@@ -285,6 +286,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       image_id: image.id
     })
 
+    # Update the image assigns immediately
+    extracted_path = Map.get(image, :path)
+    extracted_filename = if extracted_path, do: Path.basename(extracted_path), else: nil
+    
+    upload_formats = 
+      case Map.get(image, :formats) do
+        formats when is_list(formats) -> Enum.join(formats, ",")
+        _ -> ""
+      end
+
+    socket = 
+      socket
+      |> assign(:image, image)
+      |> assign(:extracted_path, extracted_path)
+      |> assign(:extracted_filename, extracted_filename)
+      |> assign(:file_name, extracted_filename)
+      |> assign(:upload_formats, upload_formats)
+
     {:noreply, socket}
   end
 
@@ -318,6 +337,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       image_id: nil
     })
 
+    # Clear the image assigns immediately
+    socket = 
+      socket
+      |> assign(:image, nil)
+      |> assign(:extracted_path, nil)
+      |> assign(:extracted_filename, nil)
+      |> assign(:file_name, nil)
+      |> assign(:upload_formats, "")
+
     {:noreply, push_event(socket, "b:picture_block:attach_listeners:#{uid}", %{})}
   end
 
@@ -343,6 +371,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       ref_name: ref_name,
       image_id: image.id
     })
+
+    # Update the image assigns immediately
+    extracted_path = Map.get(image, :path)
+    extracted_filename = if extracted_path, do: Path.basename(extracted_path), else: nil
+    
+    upload_formats = 
+      case Map.get(image, :formats) do
+        formats when is_list(formats) -> Enum.join(formats, ",")
+        _ -> ""
+      end
+
+    socket = 
+      socket
+      |> assign(:image, image)
+      |> assign(:extracted_path, extracted_path)
+      |> assign(:extracted_filename, extracted_filename)
+      |> assign(:file_name, extracted_filename)
+      |> assign(:upload_formats, upload_formats)
 
     {:noreply, socket}
   end
