@@ -43,7 +43,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
   def update(assigns, socket) do
     block_data_cs = Block.get_block_data_changeset(assigns.block)
-    images = Changeset.get_embed(block_data_cs, :images, :struct)
+    
+    # For refs, we get gallery data from the gallery association
+    {gallery, images} = if assigns.is_ref? do
+      case Changeset.get_field(assigns.block.source, :gallery) do
+        nil -> {nil, []}
+        gallery -> 
+          gallery_objects = Map.get(gallery, :gallery_objects, [])
+          images = Enum.map(gallery_objects, & &1.image)
+          {gallery, images}
+      end
+    else
+      # For regular blocks, images are embedded (legacy)
+      images = Changeset.get_embed(block_data_cs, :images, :struct)
+      {nil, images}
+    end
+    
     selected_images_paths = Enum.map(images, & &1.path)
 
     upload_formats =
@@ -55,6 +70,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign(:gallery, gallery)
      |> assign(:images, images)
      |> assign(:indexed_images, Enum.with_index(images))
      |> assign(:upload_formats, upload_formats)
@@ -118,9 +134,35 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             data-sortable-handle=".sort-handle"
             data-sortable-selector=".preview"
           >
-            <.inputs_for :let={image} field={block_data[:images]} skip_hidden>
-              <.gallery_image image={image} uid={@uid} parent_form_name={block_data.name} display={@display} target={@myself} />
-            </.inputs_for>
+            <%= if @is_ref? do %>
+              <!-- For refs, display images from gallery association -->
+              <div :for={{image, index} <- @indexed_images} class="preview sort-handle draggable" data-id={index}>
+                <Content.image image={image} size={(@display == :grid && :thumb) || :smallest} />
+                <button class="delete-x" type="button" phx-click={JS.push("remove_image", target: @myself)} phx-value-path={image.path}>
+                  <.icon name="hero-x-mark" />
+                  <div class="text">{gettext("Delete")}</div>
+                </button>
+                <figcaption phx-click={JS.push("show_captions", target: @myself) |> show_modal("#block-#{@uid}_captions")}>
+                  <div :if={image.title}>
+                    <span>{gettext("Caption")}</span>
+                    {raw(image.title || "{ #{gettext("No caption")} }")}
+                  </div>
+                  <div :if={image.alt}>
+                    <span>{gettext("Alt. text")}</span>
+                    {image.alt || "{ #{gettext("No alt text")} }"}
+                  </div>
+                  <div :if={image.credits}>
+                    <span>{gettext("Credits")}</span>
+                    {image.credits || "{ #{gettext("No credits")} }"}
+                  </div>
+                </figcaption>
+              </div>
+            <% else %>
+              <!-- For regular blocks, use embedded images (legacy) -->
+              <.inputs_for :let={image} field={block_data[:images]} skip_hidden>
+                <.gallery_image image={image} uid={@uid} parent_form_name={block_data.name} display={@display} target={@myself} />
+              </.inputs_for>
+            <% end %>
           </div>
 
           <div :if={!@has_images?} class="upload-canvas empty">
@@ -133,25 +175,41 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
           <Content.modal title={gettext("Edit captions")} id={"block-#{@uid}_captions"}>
             <div class="caption-editor">
-              <.inputs_for :let={image} field={block_data[:images]}>
-                <div class="caption-row">
+              <%= if @is_ref? do %>
+                <!-- For refs, captions are managed through the gallery association -->
+                <div :for={{image, _index} <- @indexed_images} class="caption-row">
                   <figure>
-                    <Content.image image={image.data} size={:smallest}>
-                      <.live_component
-                        module={FocalPoint}
-                        id={"image-drawer-focal-#{@uid}-#{image.index}"}
-                        image={%{image: image.data}}
-                        form={image}
-                      />
-                    </Content.image>
+                    <Content.image image={image} size={:smallest} />
                   </figure>
                   <div>
-                    <Input.rich_text field={image[:title]} label={gettext("Title")} opts={[]} />
-                    <Input.text field={image[:credits]} label={gettext("Credits")} />
-                    <Input.text field={image[:alt]} label={gettext("Alt. text")} />
+                    <p><strong>Note:</strong> Captions for gallery refs are managed through the gallery association.</p>
+                    <p>Title: {image.title}</p>
+                    <p>Credits: {image.credits}</p>
+                    <p>Alt: {image.alt}</p>
                   </div>
                 </div>
-              </.inputs_for>
+              <% else %>
+                <!-- For regular blocks, use embedded image forms (legacy) -->
+                <.inputs_for :let={image} field={block_data[:images]}>
+                  <div class="caption-row">
+                    <figure>
+                      <Content.image image={image.data} size={:smallest}>
+                        <.live_component
+                          module={FocalPoint}
+                          id={"image-drawer-focal-#{@uid}-#{image.index}"}
+                          image={%{image: image.data}}
+                          form={image}
+                        />
+                      </Content.image>
+                    </figure>
+                    <div>
+                      <Input.rich_text field={image[:title]} label={gettext("Title")} opts={[]} />
+                      <Input.text field={image[:credits]} label={gettext("Credits")} />
+                      <Input.text field={image[:alt]} label={gettext("Alt. text")} />
+                    </div>
+                  </div>
+                </.inputs_for>
+              <% end %>
             </div>
           </Content.modal>
 
@@ -255,73 +313,160 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   def handle_event("image_uploaded", %{"id" => id}, socket) do
-    block = socket.assigns.block
-    block_data_cs = Block.get_block_data_changeset(block)
-    block_data = Changeset.apply_changes(block_data_cs)
-    target = socket.assigns.target
-    ref_name = socket.assigns.ref_name
+    if socket.assigns.is_ref? do
+      # For refs, add image to gallery association
+      target = socket.assigns.target
+      ref_name = socket.assigns.ref_name
+      {:ok, image} = Brando.Images.get_image(id)
+      
+      # Get current block data for gallery settings
+      block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+      block_data = Changeset.apply_changes(block_data_cs)
+      
+      # Only gallery configuration data goes to block data
+      new_block_data = Map.from_struct(block_data)
+      
+      send_update(target, %{
+        event: "update_ref_data", 
+        ref_data: new_block_data,
+        ref_name: ref_name,
+        add_gallery_image_id: image.id
+      })
+    else
+      # Legacy behavior for regular blocks
+      block = socket.assigns.block
+      block_data_cs = Block.get_block_data_changeset(block)
+      block_data = Changeset.apply_changes(block_data_cs)
+      target = socket.assigns.target
+      ref_name = socket.assigns.ref_name
 
-    {:ok, image} = Brando.Images.get_image(id)
-    picture_data_tpl = struct(PictureBlock.Data, Map.from_struct(image))
+      {:ok, image} = Brando.Images.get_image(id)
+      picture_data_tpl = struct(PictureBlock.Data, Map.from_struct(image))
 
-    images = block_data.images ++ [picture_data_tpl]
-    updated_block_data = Map.put(block_data, :images, images)
-    block_data = Map.from_struct(updated_block_data)
+      images = block_data.images ++ [picture_data_tpl]
+      updated_block_data = Map.put(block_data, :images, images)
+      block_data = Map.from_struct(updated_block_data)
 
-    send_update(target, %{event: "update_ref_data", ref_data: block_data, ref_name: ref_name})
+      send_update(target, %{event: "update_ref_data", ref_data: block_data, ref_name: ref_name})
+    end
 
     {:noreply, socket}
   end
 
   def handle_event("select_image", %{"id" => id, "selected" => "false"}, socket) do
-    block = socket.assigns.block
-    block_data_cs = Block.get_block_data_changeset(block)
-    block_data = Changeset.apply_changes(block_data_cs)
-    target = socket.assigns.target
-    ref_name = socket.assigns.ref_name
-    {:ok, image} = Brando.Images.get_image(id)
-    picture_data_tpl = struct(PictureBlock.Data, Map.from_struct(image))
+    if socket.assigns.is_ref? do
+      # For refs, add image to gallery association
+      target = socket.assigns.target
+      ref_name = socket.assigns.ref_name
+      {:ok, image} = Brando.Images.get_image(id)
+      
+      # Get current block data for gallery settings
+      block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+      block_data = Changeset.apply_changes(block_data_cs)
+      
+      # Only gallery configuration data goes to block data
+      new_block_data = Map.from_struct(block_data)
+      
+      send_update(target, %{
+        event: "update_ref_data", 
+        ref_data: new_block_data,
+        ref_name: ref_name,
+        add_gallery_image_id: image.id
+      })
+    else
+      # Legacy behavior for regular blocks
+      block = socket.assigns.block
+      block_data_cs = Block.get_block_data_changeset(block)
+      block_data = Changeset.apply_changes(block_data_cs)
+      target = socket.assigns.target
+      ref_name = socket.assigns.ref_name
+      {:ok, image} = Brando.Images.get_image(id)
+      picture_data_tpl = struct(PictureBlock.Data, Map.from_struct(image))
 
-    images = block_data.images ++ [picture_data_tpl]
-    updated_block_data = Map.put(block_data, :images, images)
-    block_data = Map.from_struct(updated_block_data)
+      images = block_data.images ++ [picture_data_tpl]
+      updated_block_data = Map.put(block_data, :images, images)
+      block_data = Map.from_struct(updated_block_data)
 
-    send_update(target, %{event: "update_ref_data", ref_data: block_data, ref_name: ref_name})
+      send_update(target, %{event: "update_ref_data", ref_data: block_data, ref_name: ref_name})
+    end
 
     {:noreply, socket}
   end
 
   def handle_event("select_image", %{"id" => id, "selected" => "true"}, socket) do
-    block = socket.assigns.block
-    block_data_cs = Block.get_block_data_changeset(block)
-    block_data = Changeset.apply_changes(block_data_cs)
-    target = socket.assigns.target
-    ref_name = socket.assigns.ref_name
-    {:ok, image} = Brando.Images.get_image(id)
+    if socket.assigns.is_ref? do
+      # For refs, remove image from gallery association
+      target = socket.assigns.target
+      ref_name = socket.assigns.ref_name
+      {:ok, image} = Brando.Images.get_image(id)
+      
+      # Get current block data for gallery settings
+      block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+      block_data = Changeset.apply_changes(block_data_cs)
+      
+      # Only gallery configuration data goes to block data
+      new_block_data = Map.from_struct(block_data)
+      
+      send_update(target, %{
+        event: "update_ref_data", 
+        ref_data: new_block_data,
+        ref_name: ref_name,
+        remove_gallery_image_id: image.id
+      })
+    else
+      # Legacy behavior for regular blocks
+      block = socket.assigns.block
+      block_data_cs = Block.get_block_data_changeset(block)
+      block_data = Changeset.apply_changes(block_data_cs)
+      target = socket.assigns.target
+      ref_name = socket.assigns.ref_name
+      {:ok, image} = Brando.Images.get_image(id)
 
-    images = Enum.reject(block_data.images, &(&1.path == image.path))
-    updated_block_data = Map.put(block_data, :images, images)
+      images = Enum.reject(block_data.images, &(&1.path == image.path))
+      updated_block_data = Map.put(block_data, :images, images)
 
-    block_data = Map.from_struct(updated_block_data)
-    send_update(target, %{event: "update_ref_data", ref_data: block_data, ref_name: ref_name})
+      block_data = Map.from_struct(updated_block_data)
+      send_update(target, %{event: "update_ref_data", ref_data: block_data, ref_name: ref_name})
+    end
 
     {:noreply, socket}
   end
 
   def handle_event("remove_image", %{"path" => path}, socket) do
-    block = socket.assigns.block
-    block_data_cs = Block.get_block_data_changeset(block)
-    block_data = Changeset.apply_changes(block_data_cs)
-    target = socket.assigns.target
-    ref_name = socket.assigns.ref_name
+    if socket.assigns.is_ref? do
+      # For refs, remove image from gallery association by path
+      target = socket.assigns.target
+      ref_name = socket.assigns.ref_name
+      
+      # Get current block data for gallery settings
+      block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+      block_data = Changeset.apply_changes(block_data_cs)
+      
+      # Only gallery configuration data goes to block data
+      new_block_data = Map.from_struct(block_data)
+      
+      send_update(target, %{
+        event: "update_ref_data", 
+        ref_data: new_block_data,
+        ref_name: ref_name,
+        remove_gallery_image_path: path
+      })
+    else
+      # Legacy behavior for regular blocks
+      block = socket.assigns.block
+      block_data_cs = Block.get_block_data_changeset(block)
+      block_data = Changeset.apply_changes(block_data_cs)
+      target = socket.assigns.target
+      ref_name = socket.assigns.ref_name
 
-    images = Enum.reject(block_data.images, &(&1.path == path))
-    updated_block_data = Map.put(block_data, :images, images)
+      images = Enum.reject(block_data.images, &(&1.path == path))
+      updated_block_data = Map.put(block_data, :images, images)
 
-    block_data =
-      Map.from_struct(updated_block_data)
+      block_data = Map.from_struct(updated_block_data)
 
-    send_update(target, %{event: "update_ref_data", ref_data: block_data, ref_name: ref_name})
+      send_update(target, %{event: "update_ref_data", ref_data: block_data, ref_name: ref_name})
+    end
+    
     {:noreply, socket}
   end
 
