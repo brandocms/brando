@@ -156,7 +156,7 @@ defmodule Brando.Content.Block do
     |> cast_table_rows(user)
     |> cast_block_identifiers(user)
     |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
-    |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
+    |> cast_assoc(:refs, with: &ref_changeset(&1, &2, user))
   end
 
   def recursive_block_changeset(block, attrs, user) do
@@ -166,7 +166,7 @@ defmodule Brando.Content.Block do
     |> cast_table_rows(user)
     |> cast_block_identifiers(user)
     |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
-    |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
+    |> cast_assoc(:refs, with: &ref_changeset(&1, &2, user))
     |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user))
   end
 
