@@ -703,7 +703,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
-  def update(%{event: "update_ref_data", ref_name: ref_name, ref_data: ref_data}, socket) do
+  def update(%{event: "update_ref_data", ref_name: ref_name, ref_data: ref_data} = params, socket) do
     form = socket.assigns.form
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
@@ -722,6 +722,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
         ref, acc ->
           if Changeset.get_field(ref, :name) == ref_name do
+            # Update the block data
             block =
               ref
               |> Changeset.get_field(:data)
@@ -730,7 +731,18 @@ defmodule BrandoAdmin.Components.Form.Block do
             updated_block =
               Changeset.put_embed(block, :data, ref_data)
 
-            acc ++ List.wrap(Changeset.force_change(ref, :data, updated_block))
+            # Update the ref with block data
+            updated_ref = Changeset.force_change(ref, :data, updated_block)
+
+            # Also update media associations if provided
+            updated_ref =
+              updated_ref
+              |> maybe_put_change(:image_id, params[:image_id])
+              |> maybe_put_change(:video_id, params[:video_id])
+              |> maybe_put_change(:gallery_id, params[:gallery_id])
+              |> maybe_put_change(:file_id, params[:file_id])
+
+            acc ++ List.wrap(updated_ref)
           else
             acc ++ List.wrap(ref)
           end
@@ -3632,4 +3644,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp extract_block_bg_color(_) do
     "transparent"
   end
+
+  defp maybe_put_change(changeset, _key, nil), do: changeset
+  defp maybe_put_change(changeset, key, value), do: Changeset.put_change(changeset, key, value)
 end
