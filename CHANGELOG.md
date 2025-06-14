@@ -7,7 +7,9 @@
   - `url` field renamed to `source_url`
   - Added new fields: `title`, `caption`, `aspect_ratio`
   - Videos are now stored as separate database entities instead of embedded JSON
+  - Video rendering components and parsers updated to use new schema
   - If you were using `Brando.Type.Video` in your code, update to use `Brando.Videos.Video`
+  - Test data using video factories should use new field names (`type` instead of `source`)
 
 Before running the migration script, you must fix some `form` syntax in your blueprints.
 If you're passing parameters to the `form` macro, they must be moved to their own functions.

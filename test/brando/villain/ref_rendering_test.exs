@@ -139,9 +139,6 @@ defmodule Brando.Villain.RefRenderingTest do
 
       parsed = Brando.Villain.parse([block], %Brando.Pages.Page{})
       
-      IO.inspect(parsed, label: "Parsed output")
-      IO.inspect(video, label: "Video data")
-      
       assert parsed =~ "Video:"
       assert parsed =~ "iframe"
       assert parsed =~ "youtube.com"
