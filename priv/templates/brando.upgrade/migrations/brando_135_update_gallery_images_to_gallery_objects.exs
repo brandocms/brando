@@ -14,7 +14,7 @@ defmodule Brando.Migrations.UpdateGalleryImagesToGalleryObjects do
     )
     WHERE code ~ 'entry\\.[a-zA-Z0-9_]+\\.gallery_images'
     """
-    
+
     # Also update refs that might reference gallery_images directly
     execute """
     UPDATE content_modules
@@ -26,7 +26,7 @@ defmodule Brando.Migrations.UpdateGalleryImagesToGalleryObjects do
     )
     WHERE code ~ 'refs\\.[a-zA-Z0-9_]+\\.gallery_images'
     """
-    
+
     # Update any direct gallery.gallery_images references
     execute """
     UPDATE content_modules
@@ -39,7 +39,7 @@ defmodule Brando.Migrations.UpdateGalleryImagesToGalleryObjects do
     WHERE code ~ '[a-zA-Z0-9_]+\\.gallery_images'
     AND code !~ '(entry|refs)\\.[a-zA-Z0-9_]+\\.gallery_images'
     """
-    
+
     # Update fragments that might contain gallery_images references
     execute """
     UPDATE pages_fragments
@@ -51,10 +51,10 @@ defmodule Brando.Migrations.UpdateGalleryImagesToGalleryObjects do
     )
     WHERE html ~ 'entry\\.[a-zA-Z0-9_]+\\.gallery_images'
     """
-    
+
     # Update any page templates that might have gallery_images
     execute """
-    UPDATE pages_pages
+    UPDATE pages
     SET html = regexp_replace(
       html,
       '(entry\\.[a-zA-Z0-9_]+)\\.gallery_images',
@@ -63,20 +63,9 @@ defmodule Brando.Migrations.UpdateGalleryImagesToGalleryObjects do
     )
     WHERE html ~ 'entry\\.[a-zA-Z0-9_]+\\.gallery_images'
     """
-    
-    # Update content templates
-    execute """
-    UPDATE content_templates
-    SET code = regexp_replace(
-      code,
-      '(entry\\.[a-zA-Z0-9_]+)\\.gallery_images',
-      '\\1.gallery_objects',
-      'g'
-    )
-    WHERE code ~ 'entry\\.[a-zA-Z0-9_]+\\.gallery_images'
-    """
+
   end
-  
+
   def down do
     # Reverse: change gallery_objects back to gallery_images
     execute """
@@ -89,7 +78,7 @@ defmodule Brando.Migrations.UpdateGalleryImagesToGalleryObjects do
     )
     WHERE code ~ 'entry\\.[a-zA-Z0-9_]+\\.gallery_objects'
     """
-    
+
     execute """
     UPDATE content_modules
     SET code = regexp_replace(
@@ -100,7 +89,7 @@ defmodule Brando.Migrations.UpdateGalleryImagesToGalleryObjects do
     )
     WHERE code ~ 'refs\\.[a-zA-Z0-9_]+\\.gallery_objects'
     """
-    
+
     execute """
     UPDATE content_modules
     SET code = regexp_replace(
@@ -112,7 +101,7 @@ defmodule Brando.Migrations.UpdateGalleryImagesToGalleryObjects do
     WHERE code ~ '[a-zA-Z0-9_]+\\.gallery_objects'
     AND code !~ '(entry|refs)\\.[a-zA-Z0-9_]+\\.gallery_objects'
     """
-    
+
     execute """
     UPDATE pages_fragments
     SET html = regexp_replace(
@@ -123,9 +112,9 @@ defmodule Brando.Migrations.UpdateGalleryImagesToGalleryObjects do
     )
     WHERE html ~ 'entry\\.[a-zA-Z0-9_]+\\.gallery_objects'
     """
-    
+
     execute """
-    UPDATE pages_pages
+    UPDATE pages
     SET html = regexp_replace(
       html,
       '(entry\\.[a-zA-Z0-9_]+)\\.gallery_objects',
@@ -134,16 +123,6 @@ defmodule Brando.Migrations.UpdateGalleryImagesToGalleryObjects do
     )
     WHERE html ~ 'entry\\.[a-zA-Z0-9_]+\\.gallery_objects'
     """
-    
-    execute """
-    UPDATE content_templates
-    SET code = regexp_replace(
-      code,
-      '(entry\\.[a-zA-Z0-9_]+)\\.gallery_objects',
-      '\\1.gallery_images',
-      'g'
-    )
-    WHERE code ~ 'entry\\.[a-zA-Z0-9_]+\\.gallery_objects'
-    """
+
   end
 end

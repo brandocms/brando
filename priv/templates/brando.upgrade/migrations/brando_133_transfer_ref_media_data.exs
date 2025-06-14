@@ -1,7 +1,5 @@
 defmodule Brando.Migrations.TransferRefMediaData do
   use Ecto.Migration
-  import Ecto.Query
-  alias Brando.Repo
 
   def up do
     # Process refs with PictureBlock data to extract image_id
@@ -42,22 +40,27 @@ defmodule Brando.Migrations.TransferRefMediaData do
     """
 
     # Process refs with VideoBlock data
-    # First, create video entries for file-based videos
+    # First, create video entries using the new video schema
     execute """
     INSERT INTO videos (
-      url, source, remote_id, width, height,
-      thumbnail_url, title, status,
+      source_url, type, title, caption, aspect_ratio,
+      width, height, remote_id,
       inserted_at, updated_at, creator_id
     )
     SELECT DISTINCT ON (r.data->'data'->>'url')
       r.data->'data'->>'url',
-      (r.data->'data'->>'source')::text,
-      r.data->'data'->>'remote_id',
+      CASE
+        WHEN r.data->'data'->>'source' = 'file' THEN 'external_file'
+        WHEN r.data->'data'->>'source' = 'youtube' THEN 'youtube'
+        WHEN r.data->'data'->>'source' = 'vimeo' THEN 'vimeo'
+        ELSE 'external_file'
+      END,
+      r.data->'data'->>'title',
+      r.data->'data'->>'title', -- Use title as caption for now
+      r.data->'data'->>'aspect_ratio',
       (r.data->'data'->>'width')::integer,
       (r.data->'data'->>'height')::integer,
-      r.data->'data'->>'thumbnail_url',
-      r.data->'data'->>'title',
-      'ready',
+      r.data->'data'->>'remote_id',
       NOW(),
       NOW(),
       1 -- Default creator_id, should be adjusted based on your needs
@@ -66,17 +69,17 @@ defmodule Brando.Migrations.TransferRefMediaData do
     AND r.data->'data'->>'url' IS NOT NULL
     AND NOT EXISTS (
       SELECT 1 FROM videos v
-      WHERE v.url = r.data->'data'->>'url'
+      WHERE v.source_url = r.data->'data'->>'url'
     )
     """
 
-    # Update refs with video_id
+    # Update refs with video_id using new schema
     execute """
     UPDATE content_refs r
     SET video_id = v.id
     FROM videos v
     WHERE r.data->>'type' = 'video'
-    AND v.url = r.data->'data'->>'url'
+    AND v.source_url = r.data->'data'->>'url'
     """
 
     # Clean up VideoBlock data - keep only override fields
@@ -112,7 +115,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
     UPDATE content_refs
     SET data = jsonb_build_object(
       'type', 'gallery',
-      'data', data->'data' - 'images'
+      'data', (data->'data')::jsonb - 'images'
     )
     WHERE data->>'type' = 'gallery'
     """
@@ -132,7 +135,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
     SET video_id = v.id
     FROM videos v
     WHERE r.data->>'type' = 'media'
-    AND r.data->'data'->'template_video'->>'url' = v.url
+    AND r.data->'data'->'template_video'->>'url' = v.source_url
     """
 
     # Clean up MediaBlock data
@@ -142,7 +145,13 @@ defmodule Brando.Migrations.TransferRefMediaData do
       'type', 'media',
       'data', jsonb_build_object(
         'available_blocks', data->'data'->'available_blocks',
-        'template_gallery', data->'data'->'template_gallery' - 'images',
+        'template_gallery',
+          CASE
+            WHEN data->'data'->'template_gallery' IS NOT NULL
+            AND jsonb_typeof(data->'data'->'template_gallery') = 'object' THEN
+              (data->'data'->'template_gallery')::jsonb - 'images'
+            ELSE data->'data'->'template_gallery'
+          END,
         'template_picture',
           CASE
             WHEN data->'data'->>'template_picture' IS NOT NULL THEN
@@ -218,15 +227,22 @@ defmodule Brando.Migrations.TransferRefMediaData do
     SET data = jsonb_build_object(
       'type', 'video',
       'data', jsonb_build_object(
-        'url', v.url,
-        'source', v.source,
+        'url', v.source_url,
+        'source', CASE
+          WHEN v.type = 'upload' THEN 'file'
+          WHEN v.type = 'youtube' THEN 'youtube'
+          WHEN v.type = 'vimeo' THEN 'vimeo'
+          WHEN v.type = 'external_file' THEN 'external'
+          ELSE v.type
+        END,
         'remote_id', v.remote_id,
         'width', v.width,
         'height', v.height,
-        'thumbnail_url', v.thumbnail_url
+        'title', v.title,
+        'aspect_ratio', v.aspect_ratio
       ) || COALESCE(r.data->'data', '{}'::jsonb)
     )
-    FROM videos_videos v
+    FROM videos v
     WHERE r.video_id = v.id
     AND r.data->>'type' = 'video'
     """
@@ -239,7 +255,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
     # Delete videos that were created by this migration
     # (This is a simplified approach - in production you'd want to track which were created)
     execute """
-    DELETE FROM videos_videos v
+    DELETE FROM videos v
     WHERE v.inserted_at >= (SELECT MAX(inserted_at) FROM content_refs WHERE video_id IS NOT NULL)
     AND NOT EXISTS (
       SELECT 1 FROM content_refs r
