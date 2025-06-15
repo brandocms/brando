@@ -735,6 +735,23 @@ defmodule BrandoAdmin.Components.Form.Block do
             # Update the ref with block data
             updated_ref = Changeset.force_change(ref, :data, updated_block)
 
+            # Handle video_data if provided (creates/updates video association)
+            updated_ref = if Map.has_key?(params, :video_data) do
+              video_data = params.video_data
+              current_user_id = socket.assigns.current_user_id
+              
+              case Brando.Videos.create_video(video_data, current_user_id) do
+                {:ok, video} ->
+                  updated_ref 
+                  |> Changeset.put_change(:video_id, video.id)
+                  |> Map.put(:data, Map.put(updated_ref.data, :video, nil))
+                {:error, _} ->
+                  updated_ref
+              end
+            else
+              updated_ref
+            end
+
             # Also update media associations if provided (including nil values)
             updated_ref =
               updated_ref

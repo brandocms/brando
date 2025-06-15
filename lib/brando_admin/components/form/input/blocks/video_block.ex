@@ -23,7 +23,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
   # data block_data, :any
   # data uid, :string
-  
+
   # Override fields that can be customized in the video block data
   @video_override_fields [
     :title,
@@ -36,7 +36,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     :cover,
     :aspect_ratio
   ]
-  
+
   # Override fields for cover image (still used for embedded cover images)
   @picture_fields_to_take [
     :picture_class,
@@ -64,25 +64,39 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     block_data = Changeset.get_field(block_cs, :data)
     _block_data_cs = Changeset.change(block_data)
 
-    # For refs, we need to get video data from the video association
-    video_data = if assigns.is_ref? do
-      # Video data comes from the ref's video association
-      case Changeset.get_field(assigns.block.source, :video) do
-        nil -> %{}
-        video -> Map.from_struct(video)
-      end
-    else
-      # For regular blocks, video data is in the block data (legacy)
-      Map.from_struct(block_data)
-    end
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(:uid, Changeset.get_field(block_cs, :uid))
+     |> assign_new(:video, fn ->
+       # Always get video from ref_form since we only use refs now
+       if assigns[:ref_form] do
+         ref_cs = assigns.ref_form.source
 
-    socket
-    |> assign(assigns)
-    |> assign(:uid, Changeset.get_field(block_cs, :uid))
-    |> assign(:type, Map.get(video_data, :type, :file))
-    |> assign(:video_data, video_data)
-    |> assign_new(:cover_image, fn -> block_data.cover_image end)
-    |> then(&{:ok, &1})
+         case Changeset.get_field(ref_cs, :video) do
+           nil ->
+             # If no video preloaded, try to fetch via video_id
+             case Changeset.get_field(ref_cs, :video_id) do
+               nil -> nil
+               video_id ->
+                 case Brando.Videos.get_video(video_id) do
+                   {:ok, video} -> video
+                   _ -> nil
+                 end
+             end
+           video -> video
+         end
+       else
+         nil
+       end
+     end)
+     |> assign_new(:video_data, fn %{video: video} ->
+       if video, do: Map.from_struct(video), else: %{}
+     end)
+     |> assign_new(:type, fn %{video_data: video_data} ->
+       Map.get(video_data, :type, :file)
+     end)
+     |> assign_new(:cover_image, fn -> block_data.cover_image end)}
   end
 
   def render(assigns) do
@@ -91,14 +105,25 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       <.inputs_for :let={block_data} field={@block[:data]}>
         <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
-            <%= if @type == :upload do %>
-              {gettext("Direct video file")}
-            <% else %>
-              {@type}: {@video_data[:remote_id]}
+            <%= case @type do %>
+              <% :upload -> %>
+                {gettext("Uploaded video file")}
+
+              <% :external_file -> %>
+                {gettext("External video URL")}
+
+              <% :youtube -> %>
+                {gettext("YouTube")}: {@video_data[:remote_id]}
+
+              <% :vimeo -> %>
+                {gettext("Vimeo")}: {@video_data[:remote_id]}
+
+              <% _ -> %>
+                {gettext("Unknown video type")}: {@type}
             <% end %>
           </:description>
           <:config>
-            <%= if @video_data[:remote_id] in [nil, ""] do %>
+            <%= if is_nil(@video) do %>
               <!-- Video association data is handled separately -->
               <Input.input type={:hidden} field={block_data[:title]} />
               <Input.input type={:hidden} field={block_data[:poster]} />
@@ -244,7 +269,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
               </div>
             <% end %>
           </:config>
-          <%= if @video_data[:remote_id] in [nil, ""] do %>
+          <%= if is_nil(@video) do %>
             <div class="empty">
               <figure>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -301,7 +326,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                       <div class="info-wrapper">
                         <div class="video-type">
                           <span>{gettext("Video type")}</span>
-                          {gettext("Direct video file")}
+                          {gettext("External video URL")}
                         </div>
                         <div class="video-dimensions">
                           <span>{gettext("Dimensions")}</span>
@@ -388,19 +413,27 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     # Get current block data to preserve any existing overrides
     block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
     current_block_data = Changeset.apply_changes(block_data_cs)
-    
+
     # Only keep override fields in block data, video data goes to association
-    new_block_data = 
+    new_block_data =
       current_block_data
       |> Map.from_struct()
       |> Map.take(@video_override_fields)
 
     send_update(target, %{
-      event: "update_ref_data", 
+      event: "update_ref_data",
       ref_data: new_block_data,
       ref_name: ref_name,
-      video_data: video_data
+      video_data: video_data,
+      force_render: true
     })
+
+    # Update assigns immediately for block editor display
+    socket =
+      socket
+      |> assign(:video_data, video_data)
+      |> assign(:type, Map.get(video_data, :type, :file))
+
     {:noreply, socket}
   end
 
@@ -421,12 +454,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   def handle_event("reset_image", _, socket) do
     target = socket.assigns.target
     ref_name = socket.assigns.ref_name
-    
+
     # Get current block data and only update cover_image override field
     block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
     current_block_data = Changeset.apply_changes(block_data_cs)
-    
-    new_block_data = 
+
+    new_block_data =
       current_block_data
       |> Map.from_struct()
       |> Map.take(@video_override_fields)
@@ -448,13 +481,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       |> Map.take(@video_override_fields)
 
     send_update(target, %{
-      event: "update_ref_data", 
-      ref_data: new_block_data, 
+      event: "update_ref_data",
+      ref_data: new_block_data,
       ref_name: ref_name,
-      video_id: nil
+      video_id: nil,
+      force_render: true
     })
 
-    {:noreply, assign(socket, :cover_image, nil)}
+    # Clear video assigns immediately for block editor display
+    socket =
+      socket
+      |> assign(:video, nil)
+      |> assign(:video_data, %{})
+      |> assign(:type, :file)
+      |> assign(:cover_image, nil)
+
+    {:noreply, socket}
   end
 
   def handle_event("select_image", %{"id" => id}, socket) do
@@ -471,8 +513,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     # Get current block data and update cover_image
     block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
     current_block_data = Changeset.apply_changes(block_data_cs)
-    
-    new_block_data = 
+
+    new_block_data =
       current_block_data
       |> Map.from_struct()
       |> Map.take(@video_override_fields)

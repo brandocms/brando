@@ -712,8 +712,11 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     has_vars? = socket.assigns.has_vars?
     has_table_rows? = socket.assigns.has_table_rows?
 
+    # Use apply_changes to get struct with our in-memory modifications (like image_id updates)
+    # instead of changeset.data which reverts to original database values
     updated_changeset =
-      changeset.data
+      changeset
+      |> Changeset.apply_changes()
       |> Brando.Content.Block.block_changeset(params, current_user_id)
       |> Map.put(:action, :validate)
       |> Block.render_and_update_block_changeset(entry, has_vars?, has_table_rows?)
