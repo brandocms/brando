@@ -3368,8 +3368,15 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   defp render_block_html(changeset, entry, has_vars?, has_table_rows?, is_root, skip_children) do
-    changeset
-    |> Brando.Utils.apply_changes_recursively()
+    # Debug: Check refs before apply_changes_recursively
+    debug_refs_before_apply_changes(changeset, is_root)
+    
+    applied_block = changeset |> Brando.Utils.apply_changes_recursively()
+    
+    # Debug: Check refs after apply_changes_recursively  
+    debug_refs_after_apply_changes(applied_block, is_root)
+    
+    applied_block
     |> reset_empty_vars(has_vars?, is_root)
     |> reset_table_rows(has_table_rows?, is_root)
     |> Brando.Villain.render_block(entry,
@@ -3656,6 +3663,69 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   defp extract_block_bg_color(_) do
     "transparent"
+  end
+
+  defp debug_refs_before_apply_changes(changeset, is_root) do
+    try do
+      refs = if is_root do
+        changeset
+        |> Changeset.get_assoc(:block)
+        |> Changeset.get_assoc(:refs)
+      else
+        Changeset.get_assoc(changeset, :refs)
+      end
+      
+      picture_refs = Enum.filter(refs, fn ref ->
+        case Changeset.get_field(ref, :data) do
+          %{type: "picture"} -> true
+          _ -> false
+        end
+      end)
+      
+      if length(picture_refs) > 0 do
+        Enum.each(picture_refs, fn ref ->
+          IO.inspect(%{
+            ref_name: Changeset.get_field(ref, :name),
+            image_id: Changeset.get_field(ref, :image_id),
+            image: Changeset.get_field(ref, :image) && %{id: Changeset.get_field(ref, :image).id},
+            stage: "before_apply_changes_recursively",
+            changeset_changes: Map.keys(ref.changes)
+          }, label: "📋 Ref in changeset")
+        end)
+      end
+    rescue
+      _ -> :ok
+    end
+  end
+  
+  defp debug_refs_after_apply_changes(applied_block, is_root) do
+    try do
+      refs = if is_root do
+        Map.get(applied_block, :block, %{}) |> Map.get(:refs, [])
+      else
+        Map.get(applied_block, :refs, [])
+      end
+      
+      picture_refs = Enum.filter(refs, fn ref ->
+        case Map.get(ref, :data) do
+          %{type: "picture"} -> true
+          _ -> false
+        end
+      end)
+      
+      if length(picture_refs) > 0 do
+        Enum.each(picture_refs, fn ref ->
+          IO.inspect(%{
+            ref_name: Map.get(ref, :name),
+            image_id: Map.get(ref, :image_id),
+            image: Map.get(ref, :image) && %{id: ref.image.id},
+            stage: "after_apply_changes_recursively"
+          }, label: "📄 Ref in applied struct")
+        end)
+      end
+    rescue
+      _ -> :ok
+    end
   end
 
   defp clear_preloaded_associations(changeset, params) do

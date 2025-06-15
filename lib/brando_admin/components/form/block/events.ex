@@ -712,11 +712,17 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     has_vars? = socket.assigns.has_vars?
     has_table_rows? = socket.assigns.has_table_rows?
 
+    # Debug: Check if we have refs with modified image_id before validation
+    debug_refs_before_validation(changeset, "child_block")
+
     updated_changeset =
       changeset.data
       |> Brando.Content.Block.block_changeset(params, current_user_id)
       |> Map.put(:action, :validate)
       |> Block.render_and_update_block_changeset(entry, has_vars?, has_table_rows?)
+      
+    # Debug: Check refs after creating new changeset from changeset.data
+    debug_refs_after_validation(updated_changeset, "child_block")
 
     updated_form =
       to_form(updated_changeset,
@@ -744,10 +750,19 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     has_children? = socket.assigns.has_children?
     has_table_rows? = socket.assigns.has_table_rows?
 
+    # Debug: Check if we have refs with modified image_id before validation
+    debug_refs_before_validation(changeset, "entry_block")
+
+    # Use apply_changes to get struct with our in-memory modifications (like image_id updates)
+    # instead of changeset.data which reverts to original database values
     updated_changeset =
-      changeset.data
+      changeset
+      |> Changeset.apply_changes()
       |> block_module.changeset(params, current_user_id)
       |> Map.put(:action, :validate)
+      
+    # Debug: Check refs after creating new changeset from apply_changes
+    debug_refs_after_validation(updated_changeset, "entry_block")
 
     # if this is a container and it's flipped from active = false to true,
     # then we must force an update to the live preview to get the rendered children.
@@ -784,5 +799,59 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   def handle_block_event(event, params, socket) do
     IO.puts("Unhandled event in events.ex: #{event} with params #{inspect(params)}")
     {:cont, socket}
+  end
+  
+  defp debug_refs_before_validation(changeset, block_type) do
+    try do
+      refs = Changeset.get_assoc(changeset, :refs)
+      
+      picture_refs = Enum.filter(refs, fn ref ->
+        case Changeset.get_field(ref, :data) do
+          %{type: "picture"} -> true
+          _ -> false
+        end
+      end)
+      
+      if length(picture_refs) > 0 do
+        Enum.each(picture_refs, fn ref ->
+          IO.inspect(%{
+            ref_name: Changeset.get_field(ref, :name),
+            image_id: Changeset.get_field(ref, :image_id),
+            image: Changeset.get_field(ref, :image) && %{id: Changeset.get_field(ref, :image).id},
+            stage: "before_#{block_type}_validation",
+            changeset_changes: Map.keys(ref.changes)
+          }, label: "🔍 Ref before validation")
+        end)
+      end
+    rescue
+      _ -> :ok
+    end
+  end
+  
+  defp debug_refs_after_validation(changeset, block_type) do
+    try do
+      refs = Changeset.get_assoc(changeset, :refs)
+      
+      picture_refs = Enum.filter(refs, fn ref ->
+        case Changeset.get_field(ref, :data) do
+          %{type: "picture"} -> true
+          _ -> false
+        end
+      end)
+      
+      if length(picture_refs) > 0 do
+        Enum.each(picture_refs, fn ref ->
+          IO.inspect(%{
+            ref_name: Changeset.get_field(ref, :name),
+            image_id: Changeset.get_field(ref, :image_id),
+            image: Changeset.get_field(ref, :image) && %{id: Changeset.get_field(ref, :image).id},
+            stage: "after_#{block_type}_validation",
+            changeset_changes: Map.keys(ref.changes)
+          }, label: "📝 Ref after validation")
+        end)
+      end
+    rescue
+      _ -> :ok
+    end
   end
 end
