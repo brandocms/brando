@@ -1297,14 +1297,6 @@ defmodule Brando.Villain.Parser do
   end
 
   defp merge_ref_associations(%{data: %{type: "picture"}} = ref) do
-    # Debug: log what the ref looks like
-    IO.inspect(%{
-      ref_name: ref.name,
-      image_id: ref.image_id,
-      image: ref.image && %{id: ref.image.id, path: ref.image.path},
-      active: Map.get(ref, :active, true)
-    }, label: "🖼️  Picture ref in merge_ref_associations")
-    
     # If ref is not active, return nil to skip rendering
     if Map.get(ref, :active, true) == false do
       nil
