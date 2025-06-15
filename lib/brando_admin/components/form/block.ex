@@ -742,8 +742,15 @@ defmodule BrandoAdmin.Components.Form.Block do
               |> put_change_if_key_exists(:video_id, params)
               |> put_change_if_key_exists(:gallery_id, params)
               |> put_change_if_key_exists(:file_id, params)
-              |> clear_preloaded_associations_if_nil(params)
+              |> clear_preloaded_associations(params)
 
+            # Debug: log what the ref looks like after update
+            applied_ref = Changeset.apply_changes(updated_ref)
+            IO.inspect(%{
+              image_id: applied_ref.image_id,
+              image: applied_ref.image,
+              ref_name: applied_ref.name
+            }, label: "Updated ref after changes")
 
             acc ++ List.wrap(updated_ref)
           else
@@ -3657,8 +3664,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  defp clear_preloaded_associations_if_nil(changeset, params) do
-    # When setting foreign keys to nil, also clear any preloaded associations
+  defp clear_preloaded_associations(changeset, params) do
+    # When setting foreign keys, clear any preloaded associations
     # so the rendered block doesn't use stale data
     data = changeset.data
 
@@ -3673,7 +3680,9 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   defp maybe_clear_preloaded_assoc(data, assoc_field, id_field, params) do
-    if Map.has_key?(params, id_field) && is_nil(params[id_field]) do
+    if Map.has_key?(params, id_field) do
+      # Clear the preloaded association whenever we're updating the foreign key
+      # This forces the renderer to load fresh data based on the new ID
       Map.put(data, assoc_field, nil)
     else
       data

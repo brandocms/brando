@@ -1297,15 +1297,36 @@ defmodule Brando.Villain.Parser do
   end
 
   defp merge_ref_associations(%{data: %{type: "picture"}} = ref) do
+    IO.inspect(%{
+      ref_name: ref.name,
+      image_id: ref.image_id,
+      image: ref.image && %{id: ref.image.id, path: ref.image.path}
+    }, label: "Picture ref in merge_ref_associations")
+    
     merged_data = 
-      case Map.get(ref, :image) do
-        nil ->
-          # No image association, return the block data as-is
+      case {Map.get(ref, :image), Map.get(ref, :image_id)} do
+        {nil, nil} ->
+          # No image association and no image_id, return the block data as-is
+          IO.inspect(ref.data.data, label: "No image_id - returning block data")
           ref.data.data
 
-        image ->
+        {nil, image_id} when is_integer(image_id) ->
+          # No image association but we have image_id, load the image
+          IO.inspect("Loading image by ID #{image_id}", label: "Loading missing image")
+          case Brando.Images.get_image(image_id) do
+            {:ok, image} ->
+              override_data = Map.from_struct(ref.data.data || %{})
+              override_attrs = Map.take(override_data, [:title, :credits, :alt, :picture_class, :img_class, :link, :srcset, :media_queries, :lazyload, :moonwalk, :placeholder, :fetchpriority])
+              struct(image, Map.merge(Map.from_struct(image), override_attrs))
+            _ ->
+              IO.inspect("Failed to load image #{image_id}", label: "Image load failed")
+              ref.data.data
+          end
+
+        {image, _} ->
           # We have an image, so we should return the image data with overrides
           # from the block data (like custom title, credits, alt)
+          IO.inspect(%{id: image.id, path: image.path}, label: "Found image - merging with overrides")
           override_data = Map.from_struct(ref.data.data || %{})
           override_attrs = Map.take(override_data, [:title, :credits, :alt, :picture_class, :img_class, :link, :srcset, :media_queries, :lazyload, :moonwalk, :placeholder, :fetchpriority])
           # Merge into the image struct while preserving the struct type
