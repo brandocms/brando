@@ -744,13 +744,6 @@ defmodule BrandoAdmin.Components.Form.Block do
               |> put_change_if_key_exists(:file_id, params)
               |> clear_preloaded_associations(params)
 
-            # Debug: log what the ref looks like after update
-            applied_ref = Changeset.apply_changes(updated_ref)
-            IO.inspect(%{
-              image_id: applied_ref.image_id,
-              image: applied_ref.image,
-              ref_name: applied_ref.name
-            }, label: "Updated ref after changes")
 
             acc ++ List.wrap(updated_ref)
           else
