@@ -744,7 +744,6 @@ defmodule BrandoAdmin.Components.Form.Block do
               |> put_change_if_key_exists(:file_id, params)
               |> clear_preloaded_associations(params)
 
-
             acc ++ List.wrap(updated_ref)
           else
             acc ++ List.wrap(ref)
@@ -2293,7 +2292,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :target, :any, required: true
 
   def ref(assigns) do
-    refs = Changeset.get_embed(assigns.refs_field.form.source, :refs, :struct)
+    refs = Changeset.get_assoc(assigns.refs_field.form.source, :refs, :struct)
     ref_names = Enum.map(refs, & &1.name)
     ref_found = Enum.member?(ref_names, assigns.ref_name)
 
@@ -2320,6 +2319,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 target={@target}
               />
             </.polymorphic_embed_inputs_for>
+            <!-- ref assocs -->
             <Input.input type={:hidden} field={ref_form[:description]} />
             <Input.input type={:hidden} field={ref_form[:name]} />
             <Input.input type={:hidden} field={ref_form[:id]} />

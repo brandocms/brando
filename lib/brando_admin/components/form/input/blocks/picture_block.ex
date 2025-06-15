@@ -67,7 +67,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
        # Get the image from the ref_form (only on first load)
        if assigns[:ref_form] do
          ref_cs = assigns.ref_form.source
-         
+
          case Changeset.get_field(ref_cs, :image) do
            nil ->
              # If no image preloaded, try to fetch via image_id
@@ -251,7 +251,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               <Input.input type={:hidden} field={block_data[:lazyload]} />
               <Input.input type={:hidden} field={block_data[:credits]} />
 
-
               <input type="hidden" data-upload-formats={@upload_formats} />
             </:config>
           </Block.block>
@@ -290,14 +289,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     # Update the image assigns immediately
     extracted_path = Map.get(image, :path)
     extracted_filename = if extracted_path, do: Path.basename(extracted_path), else: nil
-    
-    upload_formats = 
+
+    upload_formats =
       case Map.get(image, :formats) do
         formats when is_list(formats) -> Enum.join(formats, ",")
         _ -> ""
       end
 
-    socket = 
+    socket =
       socket
       |> assign(:image, image)
       |> assign(:extracted_path, extracted_path)
@@ -331,7 +330,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       |> Map.take(@override_fields)
 
     uid = socket.assigns.uid
-    
+
     # Send the update with nil image_id to clear the association
     send_update(target, %{
       event: "update_ref_data",
@@ -342,7 +341,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     })
 
     # Clear the image assigns immediately
-    socket = 
+    socket =
       socket
       |> assign(:image, nil)
       |> assign(:extracted_path, nil)
@@ -379,14 +378,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     # Update the image assigns immediately
     extracted_path = Map.get(image, :path)
     extracted_filename = if extracted_path, do: Path.basename(extracted_path), else: nil
-    
-    upload_formats = 
+
+    upload_formats =
       case Map.get(image, :formats) do
         formats when is_list(formats) -> Enum.join(formats, ",")
         _ -> ""
       end
 
-    socket = 
+    socket =
       socket
       |> assign(:image, image)
       |> assign(:extracted_path, extracted_path)
