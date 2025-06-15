@@ -1301,7 +1301,7 @@ defmodule Brando.Villain.Parser do
     if Map.get(ref, :active, true) == false do
       nil
     else
-      merged_data = 
+      merged_data =
       case {Map.get(ref, :image), Map.get(ref, :image_id)} do
         {nil, nil} ->
           # No image association and no image_id, return the block data as-is
@@ -1337,7 +1337,7 @@ defmodule Brando.Villain.Parser do
   end
 
   defp merge_ref_associations(%{data: %{type: "video"}} = ref) do
-    merged_data = 
+    merged_data =
       case Map.get(ref, :video) do
         nil ->
           # No video association, return the block data as-is
@@ -1361,7 +1361,7 @@ defmodule Brando.Villain.Parser do
   end
 
   defp merge_ref_associations(%{data: %{type: "gallery"}} = ref) do
-    merged_data = 
+    merged_data =
       case Map.get(ref, :gallery) do
         nil ->
           ref.data.data
