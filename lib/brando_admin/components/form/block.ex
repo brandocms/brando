@@ -744,6 +744,15 @@ defmodule BrandoAdmin.Components.Form.Block do
               |> put_change_if_key_exists(:file_id, params)
               |> clear_preloaded_associations(params)
 
+            # Debug: log what the ref looks like after update_ref_data
+            applied_ref = Changeset.apply_changes(updated_ref)
+            IO.inspect(%{
+              ref_name: applied_ref.name,
+              image_id: applied_ref.image_id,
+              image: applied_ref.image && %{id: applied_ref.image.id, path: applied_ref.image.path},
+              event: "update_ref_data"
+            }, label: "🔄 Updated ref after update_ref_data")
+
             acc ++ List.wrap(updated_ref)
           else
             acc ++ List.wrap(ref)
@@ -3649,6 +3658,45 @@ defmodule BrandoAdmin.Components.Form.Block do
     "transparent"
   end
 
+  defp clear_preloaded_associations(changeset, params) do
+    # Clear stale preloaded associations when updating foreign keys
+    # This ensures the parser gets consistent data by setting the association to nil
+    # rather than deleting the field entirely
+    changeset =
+      if Map.has_key?(params, :image_id) do
+        # Clear the preloaded :image association since we're updating image_id
+        Map.put(changeset, :data, Map.put(changeset.data, :image, nil))
+      else
+        changeset
+      end
+
+    changeset =
+      if Map.has_key?(params, :video_id) do
+        # Clear the preloaded :video association since we're updating video_id
+        Map.put(changeset, :data, Map.put(changeset.data, :video, nil))
+      else
+        changeset
+      end
+
+    changeset =
+      if Map.has_key?(params, :gallery_id) do
+        # Clear the preloaded :gallery association since we're updating gallery_id
+        Map.put(changeset, :data, Map.put(changeset.data, :gallery, nil))
+      else
+        changeset
+      end
+
+    changeset =
+      if Map.has_key?(params, :file_id) do
+        # Clear the preloaded :file association since we're updating file_id
+        Map.put(changeset, :data, Map.put(changeset.data, :file, nil))
+      else
+        changeset
+      end
+
+    changeset
+  end
+
   defp put_change_if_key_exists(changeset, key, params) do
     if Map.has_key?(params, key) do
       Changeset.put_change(changeset, key, params[key])
@@ -3657,29 +3705,5 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  defp clear_preloaded_associations(changeset, params) do
-    # When setting foreign keys, clear any preloaded associations
-    # so the rendered block doesn't use stale data
-    data = changeset.data
-
-    updated_data =
-      data
-      |> maybe_clear_preloaded_assoc(:image, :image_id, params)
-      |> maybe_clear_preloaded_assoc(:video, :video_id, params)
-      |> maybe_clear_preloaded_assoc(:gallery, :gallery_id, params)
-      |> maybe_clear_preloaded_assoc(:file, :file_id, params)
-
-    %{changeset | data: updated_data}
-  end
-
-  defp maybe_clear_preloaded_assoc(data, assoc_field, id_field, params) do
-    if Map.has_key?(params, id_field) do
-      # Clear the preloaded association whenever we're updating the foreign key
-      # This forces the renderer to load fresh data based on the new ID
-      Map.put(data, assoc_field, nil)
-    else
-      data
-    end
-  end
 
 end
