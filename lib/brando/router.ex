@@ -86,8 +86,9 @@ defmodule Brando.Router do
           # brando routes
           live "/assets/images", BrandoAdmin.Images.ImageListLive
           live "/assets/images/update/:entry_id", BrandoAdmin.Images.ImageFormLive, :update
-          live "/assets/files", BrandoAdmin.Files.FileListLive
           live "/assets/videos", BrandoAdmin.Videos.VideoListLive
+          live "/assets/videos/update/:entry_id", BrandoAdmin.Videos.VideoFormLive, :update
+          live "/assets/files", BrandoAdmin.Files.FileListLive
 
           scope "/config" do
             live "/cache", BrandoAdmin.Sites.CacheLive
