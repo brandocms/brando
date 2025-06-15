@@ -16,7 +16,7 @@ defmodule Brando.Videos.Video do
   trait Brando.Trait.Timestamped
   trait Brando.Trait.SoftDelete
 
-  @thumbnail_cfg [
+  @thumbnail_cfg %{
     formats: [:original, :webp],
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
     default_size: "xlarge",
@@ -39,7 +39,7 @@ defmodule Brando.Videos.Video do
         {"xlarge", "2100w"}
       ]
     }
-  ]
+  }
 
   identifier false
   persist_identifier false
@@ -73,37 +73,64 @@ defmodule Brando.Videos.Video do
     end
   end
 
+  forms do
+    form do
+      tab gettext("Content") do
+        fieldset do
+          size :half
+          input :title, :text, label: t("Title")
+          input :caption, :text, label: t("Caption")
+          input :type, :select, label: t("Type"), options: [:upload, :external_file, :vimeo, :youtube]
+          input :source_url, :text, label: t("Source URL"), monospace: true
+          input :remote_id, :text, label: t("Remote ID"), monospace: true
+          input :width, :number, label: t("Width"), monospace: true
+          input :height, :number, label: t("Height"), monospace: true
+          input :aspect_ratio, :text, label: t("Aspect ratio"), monospace: true
+          input :config_target, :text, label: t("Configuration target"), monospace: true
+        end
+
+        fieldset do
+          size :half
+          input :autoplay, :toggle, label: t("Autoplay")
+          input :preload, :toggle, label: t("Preload")
+          input :loop, :toggle, label: t("Loop")
+          input :controls, :toggle, label: t("Controls")
+          input :file, :file, label: t("Video file")
+          input :thumbnail, :image, label: t("Thumbnail")
+        end
+      end
+    end
+  end
+
   def listing_row(assigns) do
     ~H"""
-    <.field columns={2}>
+    <.field columns={1}>
       <div class="padded">
         <img :if={@entry.thumbnail} width="25" height="25" src={Brando.Utils.img_url(@entry.thumbnail, :smallest)} />
       </div>
     </.field>
-    <.field columns={9}>
+    <.field columns={1}>
       <small class="monospace">#{@entry.id}</small>
-      <br />
-      <small class="monospace">
-        <%= case @entry.type do %>
-          <% :upload -> %>
-            <%= if @entry.file do %>
-              {@entry.file.filename}
-            <% end %>
-          <% _ -> %>
-            {@entry.source_url || @entry.remote_id}
-        <% end %>
-      </small>
-      <br />
-      <small>{@entry.width}&times;{@entry.height}</small>
-      <br />
-      <div :if={@entry.title} class="badge mini">#{gettext("Title")}</div>
-      <div :if={@entry.caption} class="badge mini">#{gettext("Caption")}</div>
     </.field>
-    <.update_link entry={@entry} columns={6}>
+    <.update_link entry={@entry} columns={8}>
       {@entry.title || gettext("Untitled")}
       <:outside>
         <br />
-        <small class="badge">{@entry.type}</small>
+        <div>
+          <small>
+            <%= case @entry.type do %>
+              <% :upload -> %>
+                Upload: {@entry.file.filename}
+
+              <% :external_file -> %>
+                External file <span :if={@entry.source_url}>({URI.parse(@entry.source_url).host})</span>
+
+              <% _ -> %>
+                {@entry.type}: {@entry.source_url || @entry.remote_id}
+            <% end %>
+          </small>
+        </div>
+        <div><small>{@entry.width}&times;{@entry.height}</small></div>
       </:outside>
     </.update_link>
     <.url entry={@entry} />
