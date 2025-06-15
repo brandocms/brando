@@ -1074,7 +1074,7 @@ defmodule Brando.Villain.Parser do
 
   def picture_tag(assigns) do
     ~H"""
-    <%= if @src.path do %>
+    <%= if Map.get(@src, :path) do %>
       <div class="picture-wrapper" data-orientation={@orientation}>
         <%= if @link != "" do %>
           <.link href={@link} rel={@rel} target={@target}>

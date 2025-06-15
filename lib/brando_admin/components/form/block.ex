@@ -704,6 +704,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def update(%{event: "update_ref_data", ref_name: ref_name, ref_data: ref_data} = params, socket) do
+    force_render? = Map.get(params, :force_render, false)
     form = socket.assigns.form
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
@@ -734,13 +735,15 @@ defmodule BrandoAdmin.Components.Form.Block do
             # Update the ref with block data
             updated_ref = Changeset.force_change(ref, :data, updated_block)
 
-            # Also update media associations if provided
+            # Also update media associations if provided (including nil values)
             updated_ref =
               updated_ref
-              |> maybe_put_change(:image_id, params[:image_id])
-              |> maybe_put_change(:video_id, params[:video_id])
-              |> maybe_put_change(:gallery_id, params[:gallery_id])
-              |> maybe_put_change(:file_id, params[:file_id])
+              |> put_change_if_key_exists(:image_id, params)
+              |> put_change_if_key_exists(:video_id, params)
+              |> put_change_if_key_exists(:gallery_id, params)
+              |> put_change_if_key_exists(:file_id, params)
+              |> clear_preloaded_associations_if_nil(params)
+
 
             acc ++ List.wrap(updated_ref)
           else
@@ -753,10 +756,10 @@ defmodule BrandoAdmin.Components.Form.Block do
         block_changeset = Changeset.get_assoc(changeset, :block)
         updated_block_changeset = Changeset.put_assoc(block_changeset, :refs, new_refs)
         changeset = Changeset.put_assoc(changeset, :block, updated_block_changeset)
-        render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?)
+        render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render?)
       else
         changeset = Changeset.put_assoc(changeset, :refs, new_refs)
-        render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)
+        render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render?)
       end
 
     new_form =
@@ -3346,8 +3349,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     Changeset.put_assoc(changeset, :block, updated_block_changeset)
   end
 
-  def render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?) do
-    rendered_html = render_block_html(changeset, entry, has_vars?, has_table_rows?, false, true)
+  def render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render? \\ false) do
+    skip_children = if force_render?, do: :force_render, else: true
+    rendered_html = render_block_html(changeset, entry, has_vars?, has_table_rows?, false, skip_children)
 
     changeset
     |> Changeset.put_change(:rendered_html, rendered_html)
@@ -3645,6 +3649,35 @@ defmodule BrandoAdmin.Components.Form.Block do
     "transparent"
   end
 
-  defp maybe_put_change(changeset, _key, nil), do: changeset
-  defp maybe_put_change(changeset, key, value), do: Changeset.put_change(changeset, key, value)
+  defp put_change_if_key_exists(changeset, key, params) do
+    if Map.has_key?(params, key) do
+      Changeset.put_change(changeset, key, params[key])
+    else
+      changeset
+    end
+  end
+
+  defp clear_preloaded_associations_if_nil(changeset, params) do
+    # When setting foreign keys to nil, also clear any preloaded associations
+    # so the rendered block doesn't use stale data
+    data = changeset.data
+
+    updated_data =
+      data
+      |> maybe_clear_preloaded_assoc(:image, :image_id, params)
+      |> maybe_clear_preloaded_assoc(:video, :video_id, params)
+      |> maybe_clear_preloaded_assoc(:gallery, :gallery_id, params)
+      |> maybe_clear_preloaded_assoc(:file, :file_id, params)
+
+    %{changeset | data: updated_data}
+  end
+
+  defp maybe_clear_preloaded_assoc(data, assoc_field, id_field, params) do
+    if Map.has_key?(params, id_field) && is_nil(params[id_field]) do
+      Map.put(data, assoc_field, nil)
+    else
+      data
+    end
+  end
+
 end

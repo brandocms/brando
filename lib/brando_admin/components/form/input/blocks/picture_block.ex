@@ -283,7 +283,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       event: "update_ref_data",
       ref_data: new_block_data,
       ref_name: ref_name,
-      image_id: image.id
+      image_id: image.id,
+      force_render: true
     })
 
     # Update the image assigns immediately
@@ -330,11 +331,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       |> Map.take(@override_fields)
 
     uid = socket.assigns.uid
+    
+    # Send the update with nil image_id to clear the association
     send_update(target, %{
       event: "update_ref_data",
       ref_data: new_data,
       ref_name: ref_name,
-      image_id: nil
+      image_id: nil,
+      force_render: true
     })
 
     # Clear the image assigns immediately
