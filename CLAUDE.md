@@ -5,7 +5,7 @@
 - Compile project: `mix compile`
 - Run Elixir tests: `mix test`
 - Run specific test: `mix test path/to/test_file.exs:line_number`
-- Run end to end tests: `cd e2e/e2e_project && ./test_e2e.sh`
+- Run end to end tests: `cd e2e/e2e_project && ./test_e2e.sh --reset`
 - Start e2e project server (for use with MCP): `cd e2e/e2e_project && ./run_e2e.sh` - the server starts on port 4444
 - Code analysis:
   - Refactoring opportunities: `mix credo suggest --format json --all --only refactor`
