@@ -1516,10 +1516,26 @@ defmodule BrandoAdmin.Components.Form do
 
     socket_with_file_uploads =
       Enum.reduce(file_fields, socket_with_gallery_uploads, fn file_field, updated_socket ->
-        max_size = Brando.Utils.try_path(file_field, [:opts, :cfg, :size_limit]) || 4_000_000
-        accept = Brando.Utils.try_path(file_field, [:opts, :cfg, :accept]) || :any
-        cdn_enabled = Brando.Utils.try_path(file_field, [:opts, :cfg, :cdn, :enabled])
-        cdn_direct = Brando.Utils.try_path(file_field, [:opts, :cfg, :cdn, :direct])
+        # Resolve cfg if it's :config_target
+        cfg = Brando.Utils.try_path(file_field, [:opts, :cfg])
+
+        resolved_cfg =
+          case cfg do
+            :config_target ->
+              # Get the config_target value from the current form data
+              form_config_target = Map.get(updated_socket.assigns.form.data, :config_target)
+              target_string = form_config_target || "default"
+              {:ok, config} = Brando.Files.get_config_for(target_string)
+              config
+
+            _ ->
+              cfg
+          end
+
+        max_size = get_in(resolved_cfg, [Access.key(:size_limit)]) || 4_000_000
+        accept = get_in(resolved_cfg, [Access.key(:accept)]) || :any
+        cdn_enabled = get_in(resolved_cfg, [Access.key(:cdn), Access.key(:enabled)])
+        cdn_direct = get_in(resolved_cfg, [Access.key(:cdn), Access.key(:direct)])
 
         upload_options = [
           accept: accept,
@@ -1528,11 +1544,9 @@ defmodule BrandoAdmin.Components.Form do
           progress: &__MODULE__.handle_file_progress/3
         ]
 
-        cfg = Brando.Utils.try_path(file_field, [:opts, :cfg])
-
         upload_options =
           if cdn_enabled && cdn_direct do
-            upload_options ++ [external: &presign_upload(&1, &2, cfg)]
+            upload_options ++ [external: &presign_upload(&1, &2, resolved_cfg)]
           else
             upload_options
           end
@@ -2746,6 +2760,20 @@ defmodule BrandoAdmin.Components.Form do
       %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(schema, key)
       config_target = "file:#{inspect(schema)}:#{key}"
 
+      # Resolve cfg if it's :config_target
+      resolved_cfg =
+        case cfg do
+          :config_target ->
+            # Get the config_target value from the current form data
+            form_config_target = Map.get(socket.assigns.form.data, :config_target)
+            target_string = form_config_target || "default"
+            {:ok, config} = Brando.Files.get_config_for(target_string)
+            config
+
+          _ ->
+            cfg
+        end
+
       case consume_uploaded_entry(
              socket,
              upload_entry,
@@ -2753,7 +2781,7 @@ defmodule BrandoAdmin.Components.Form do
                Brando.Upload.handle_upload(
                  Map.put(meta, :config_target, config_target),
                  upload_entry,
-                 cfg,
+                 resolved_cfg,
                  current_user
                )
              end
