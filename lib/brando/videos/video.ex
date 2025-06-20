@@ -80,7 +80,13 @@ defmodule Brando.Videos.Video do
           size :half
           input :title, :text, label: t("Title")
           input :caption, :text, label: t("Caption")
-          input :type, :select, label: t("Type"), options: [:upload, :external_file, :vimeo, :youtube]
+          input :type, :select, label: t("Type"),
+            options: [
+              %{label: "Upload", value: :upload},
+              %{label: "External file", value: :external_file},
+              %{label: "Vimeo", value: :vimeo},
+              %{label: "YouTube", value: :youtube}
+            ]
           input :source_url, :text, label: t("Source URL"), monospace: true
           input :remote_id, :text, label: t("Remote ID"), monospace: true
           input :width, :number, label: t("Width"), monospace: true
