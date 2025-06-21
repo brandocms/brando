@@ -132,7 +132,7 @@ example_module = %Brando.Content.Module{
   name: "Example module",
   namespace: "general",
   refs: [
-    %Brando.Content.Module.Ref{
+    %Brando.Content.Ref{
       data: %Brando.Villain.Blocks.HeaderBlock{
         data: %Brando.Villain.Blocks.HeaderBlock.Data{
           class: nil,
@@ -145,7 +145,7 @@ example_module = %Brando.Content.Module{
       description: "",
       name: "h1"
     },
-    %Brando.Content.Module.Ref{
+    %Brando.Content.Ref{
       data: %Brando.Villain.Blocks.TextBlock{
         data: %Brando.Villain.Blocks.TextBlock.Data{
           extensions: [],
@@ -178,7 +178,7 @@ for lang <- languages do
           source: Elixir.Brando.Pages.Page.Blocks,
           multi: false,
           refs: [
-            %Brando.Content.Module.Ref{
+            %Brando.Content.Ref{
               data: %Brando.Villain.Blocks.HeaderBlock{
                 data: %Brando.Villain.Blocks.HeaderBlock.Data{
                   class: nil,
@@ -192,7 +192,7 @@ for lang <- languages do
               description: "",
               name: "h1"
             },
-            %Brando.Content.Module.Ref{
+            %Brando.Content.Ref{
               data: %Brando.Villain.Blocks.TextBlock{
                 data: %Brando.Villain.Blocks.TextBlock.Data{
                   extensions: [],
@@ -263,7 +263,7 @@ end
    table_template: nil,
    parent_id: nil,
    refs: [
-     %Brando.Content.Module.Ref{
+     %Brando.Content.Ref{
        name: "h2",
        description: nil,
        data: %Brando.Villain.Blocks.HeaderBlock{
@@ -278,11 +278,9 @@ end
            level: 2,
            link: nil,
            placeholder: nil,
-           id: nil,
-           marked_as_deleted: false
+           id: nil
          }
        },
-       marked_as_deleted: false
      }
    ],
    vars: []
@@ -307,7 +305,7 @@ end
    table_template: nil,
    parent_id: nil,
    refs: [
-     %Brando.Content.Module.Ref{
+     %Brando.Content.Ref{
        name: "media",
        description: nil,
        data: %Brando.Villain.Blocks.MediaBlock{
@@ -318,7 +316,6 @@ end
          marked_as_deleted: false,
          data: %Brando.Villain.Blocks.MediaBlock.Data{
            available_blocks: ["picture", "video"],
-           marked_as_deleted: false,
            template_picture: %Brando.Villain.Blocks.PictureBlock.Data{
              picture_class: nil,
              img_class: nil,
@@ -327,46 +324,28 @@ end
              media_queries: nil,
              title: nil,
              credits: nil,
-             formats: [:original, :webp],
              alt: nil,
-             path: nil,
-             width: nil,
-             height: nil,
-             sizes: nil,
-             cdn: false,
              lazyload: true,
              moonwalk: true,
-             dominant_color: nil,
              placeholder: :dominant_color_faded,
-             config_target: nil,
-             fetchpriority: :auto,
-             marked_as_deleted: false,
-             focal: nil
+             fetchpriority: :auto
            },
            template_video: %Brando.Villain.Blocks.VideoBlock.Data{
-             url: nil,
-             source: nil,
-             remote_id: nil,
+             title: nil,
              poster: nil,
-             width: nil,
-             height: nil,
              autoplay: true,
              opacity: 0,
              preload: true,
              play_button: false,
              controls: false,
              cover: "false",
-             thumbnail_url: nil,
-             title: nil,
              aspect_ratio: nil,
-             marked_as_deleted: false,
              cover_image: nil
            },
            template_gallery: nil,
            template_svg: nil
          }
-       },
-       marked_as_deleted: false
+       }
      }
    ],
    vars: [

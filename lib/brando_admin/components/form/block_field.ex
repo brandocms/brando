@@ -752,7 +752,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   defp get_module(module_id) do
-    modules = Brando.Content.list_modules!(%{cache: {:ttl, :infinite}, preload: [:vars]})
+    modules = Brando.Content.list_modules!(%{cache: {:ttl, :infinite}, preload: [:vars, :refs]})
     Enum.find(modules, &(&1.id == module_id))
   end
 

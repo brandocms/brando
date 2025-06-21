@@ -35,6 +35,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.FilePicker
   alias BrandoAdmin.Components.ImagePicker
+  alias BrandoAdmin.Components.VideoPicker
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Utils
@@ -46,6 +47,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.MetaDrawer
   alias BrandoAdmin.Components.Form.RevisionsDrawer
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
+  alias BrandoAdmin.Components.Form.Tab
 
   def mount(socket) do
     if connected?(socket) do
@@ -57,13 +59,17 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:edit_image, %{path: [], field: nil, relation_field: nil})
      |> assign(:edit_file, %{path: [], field: nil, relation_field: nil})
+     |> assign(:edit_video, %{path: [], field: nil, relation_field: nil})
      |> assign(:updated_entry_assocs, %{})
      |> assign(:file_changeset, nil)
      |> assign(:image_changeset, nil)
+     |> assign(:video_changeset, nil)
      |> assign(:initial_update, true)
      |> assign(:dirty_fields, [])
      |> assign(:editing_image?, false)
      |> assign(:editing_file?, false)
+     |> assign(:editing_video?, false)
+     |> assign(:active_video_tab, "upload")
      |> assign(:processing_images, [])
      |> assign(:presences, %{})
      |> assign(:transformer_defaults, %{})
@@ -148,6 +154,40 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:edit_image, edit_image)
      |> assign(:editing_image?, true)
      |> assign(:image_changeset, image_changeset)}
+  end
+
+  # edit_video
+  def update(%{action: :update_edit_video, video: video}, %{assigns: %{edit_video: edit_video}} = socket) do
+    updated_edit_video = Map.merge(edit_video, %{video: video, id: video.id})
+    video_changeset = change(video)
+
+    {:ok,
+     socket
+     |> assign(:edit_video, updated_edit_video)
+     |> assign(:video_changeset, video_changeset)}
+  end
+
+  def update(
+        %{action: :update_edit_video, edit_video: %{video: nil} = edit_video},
+        socket
+      ) do
+    video_changeset = change(%Brando.Videos.Video{})
+
+    {:ok,
+     socket
+     |> assign(:edit_video, edit_video)
+     |> assign(:editing_video?, true)
+     |> assign(:video_changeset, video_changeset)}
+  end
+
+  def update(%{action: :update_edit_video, edit_video: %{video: video} = edit_video}, socket) do
+    video_changeset = change(video)
+
+    {:ok,
+     socket
+     |> assign(:edit_video, edit_video)
+     |> assign(:editing_video?, true)
+     |> assign(:video_changeset, video_changeset)}
   end
 
   def update(
@@ -1027,6 +1067,7 @@ defmodule BrandoAdmin.Components.Form do
 
           <.live_component module={FilePicker} id="file-picker" />
           <.live_component module={ImagePicker} id="image-picker" />
+          <.live_component module={VideoPicker} id="video-picker" />
 
           <.file_drawer
             file_changeset={@file_changeset}
@@ -1041,6 +1082,14 @@ defmodule BrandoAdmin.Components.Form do
             myself={@myself}
             parent_uploads={@uploads}
             edit_image={@edit_image}
+            processing={@processing}
+          />
+
+          <.video_drawer
+            video_changeset={@video_changeset}
+            myself={@myself}
+            parent_uploads={@uploads}
+            edit_video={@edit_video}
             processing={@processing}
           />
 
@@ -1422,6 +1471,256 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  def video_drawer(assigns) do
+    upload_field =
+      case Map.get(assigns.parent_uploads, assigns.edit_video.field) do
+        nil ->
+          # if we have a path with length > 1
+          if Enum.count(assigns.edit_video.path) > 1 do
+            [sub | _] = assigns.edit_video.path
+            nested_field = :"#{to_string(sub)}|#{to_string(assigns.edit_video.field)}"
+            get_in(assigns.parent_uploads, [Access.key(nested_field)])
+          end
+
+        upload ->
+          upload
+      end
+
+    assigns =
+      assigns
+      |> assign(:upload_field, upload_field)
+      |> assign(:drop_target, Brando.Utils.try_path(upload_field, [:ref]))
+      |> assign(:random_id, Brando.Utils.generate_uid())
+
+    ~H"""
+    <Content.drawer id="video-drawer" title={gettext("Video")} close={close_video()} z={1001} narrow>
+      <.form
+        :let={video_form}
+        :if={@video_changeset}
+        id="video-drawer-form"
+        for={@video_changeset}
+        phx-submit="save_video"
+        phx-change="validate_video"
+        phx-target={@myself}
+      >
+        <Tab.tabs active_tab={@active_video_tab}>
+          <:buttons>
+            <Tab.tab_button
+              id="upload"
+              label={gettext("Upload / File")}
+              active_tab={@active_video_tab}
+              target={@myself}
+            />
+            <Tab.tab_button
+              id="external"
+              label={gettext("External (Vimeo/YouTube)")}
+              active_tab={@active_video_tab}
+              target={@myself}
+            />
+          </:buttons>
+
+          <:tabs>
+            <Tab.tab_content id="upload" active_tab={@active_video_tab}>
+              <Input.input type={:hidden} field={video_form[:type]} value={:upload} />
+
+              <div class="button-group vertical">
+                <div class="file-input-button">
+                  <span class="label">
+                    {gettext("Upload video file")}
+                  </span>
+                  <.live_file_input :if={@upload_field} upload={@upload_field} />
+                </div>
+
+                <button class="secondary" type="button" phx-click={toggle_drawer("#video-picker")}>
+                  {gettext("Select existing video")}
+                </button>
+
+                <button :if={@edit_video.video} class="secondary" type="button" phx-click={duplicate_video(@edit_video, @myself)}>
+                  {gettext("Duplicate video")}
+                </button>
+              </div>
+
+              <%= if @edit_video.video && @edit_video.video.type == :upload do %>
+                <div class="video-info">
+                  <h5>{gettext("Video Information")}</h5>
+                  <%= if @edit_video.video.file do %>
+                    <div><strong>{gettext("Filename")}:</strong> {@edit_video.video.file.filename}</div>
+                  <% end %>
+                  <%= if @edit_video.video.width && @edit_video.video.height do %>
+                    <div><strong>{gettext("Dimensions")}:</strong> {@edit_video.video.width}×{@edit_video.video.height}</div>
+                  <% end %>
+                </div>
+              <% end %>
+
+              <div class="brando-input">
+                <Input.text field={video_form[:title]} label={gettext("Title")} />
+              </div>
+
+              <div class="brando-input">
+                <Input.text field={video_form[:caption]} label={gettext("Caption")} />
+              </div>
+
+              <div class="brando-input">
+                <div class="field">
+                  <label class="control-label" for={Phoenix.HTML.Form.input_id(video_form, :aspect_ratio)}>
+                    {gettext("Aspect Ratio")}
+                  </label>
+                  <.input
+                    type={:select}
+                    field={video_form[:aspect_ratio]}
+                    options={[
+                      {gettext("16:9 (Standard Widescreen)"), "16:9"},
+                      {gettext("4:3 (Classic)"), "4:3"},
+                      {gettext("21:9 (Ultrawide)"), "21:9"},
+                      {gettext("1:1 (Square)"), "1:1"},
+                      {gettext("9:16 (Vertical/Mobile)"), "9:16"},
+                      {gettext("Custom"), "custom"}
+                    ]}
+                  />
+                </div>
+              </div>
+
+              <div class="video-thumbnail-section">
+                <h5>{gettext("Thumbnail")}</h5>
+                <%= if @edit_video.video && @edit_video.video.thumbnail do %>
+                  <figure>
+                    <Content.image image={@edit_video.video.thumbnail} size={:medium} />
+                  </figure>
+                  <figcaption class="tiny">{@edit_video.video.thumbnail.path}</figcaption>
+                <% else %>
+                  <div class="img-placeholder">
+                    <div class="placeholder-wrapper">
+                      <div class="svg-wrapper">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100" height="100">
+                          <path fill="none" d="M0 0h24v24H0z" /><path d="M3 3.993C3 3.445 3.445 3 3.993 3h16.014c.548 0 .993.445.993.993v16.014a.994.994 0 0 1-.993.993H3.993A.994.994 0 0 1 3 20.007V3.993zM5 5v14h14V5H5zm5.622 3.415l4.879 3.252a.4.4 0 0 1 0 .666l-4.88 3.252a.4.4 0 0 1-.621-.332V8.747a.4.4 0 0 1 .622-.332z" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                <% end %>
+
+                <div class="button-group vertical">
+                  <button class="secondary" type="button" phx-click={toggle_drawer("#image-picker")}>
+                    {gettext("Select thumbnail from library")}
+                  </button>
+                  <button :if={@edit_video.video && @edit_video.video.type == :upload} class="secondary" type="button" phx-click={extract_thumbnail(@myself)}>
+                    {gettext("Extract thumbnail from video")}
+                  </button>
+                  <button :if={@edit_video.video && @edit_video.video.thumbnail} class="secondary" type="button" phx-click={reset_video_thumbnail(@myself)}>
+                    {gettext("Remove thumbnail")}
+                  </button>
+                </div>
+              </div>
+            </Tab.tab_content>
+
+            <Tab.tab_content id="external" active_tab={@active_video_tab}>
+              <div class="brando-input">
+                <div class="field">
+                  <label class="control-label" for={Phoenix.HTML.Form.input_id(video_form, :type)}>
+                    {gettext("Video Service")}
+                  </label>
+                  <.input
+                    type={:select}
+                    field={video_form[:type]}
+                    options={[
+                      {gettext("Vimeo"), :vimeo},
+                      {gettext("YouTube"), :youtube}
+                    ]}
+                  />
+                </div>
+              </div>
+
+              <div class="brando-input">
+                <Input.text field={video_form[:source_url]} label={gettext("Video URL")} placeholder="https://vimeo.com/123456789 or https://youtube.com/watch?v=..." />
+              </div>
+
+              <div class="button-group vertical">
+                <button class="primary" type="button" phx-click={parse_video_url(@myself)}>
+                  {gettext("Parse URL and extract metadata")}
+                </button>
+              </div>
+
+              <%= if @edit_video.video && @edit_video.video.remote_id do %>
+                <div class="parsed-info">
+                  <h5>{gettext("Parsed Information")}</h5>
+                  <div><strong>{gettext("Remote ID")}:</strong> {@edit_video.video.remote_id}</div>
+                  <div><strong>{gettext("Type")}:</strong> {@edit_video.video.type}</div>
+                  <%= if @edit_video.video.width && @edit_video.video.height do %>
+                    <div><strong>{gettext("Dimensions")}:</strong> {@edit_video.video.width}×{@edit_video.video.height}</div>
+                  <% end %>
+                </div>
+              <% end %>
+
+              <div class="brando-input">
+                <Input.text field={video_form[:title]} label={gettext("Title")} />
+              </div>
+
+              <div class="brando-input">
+                <Input.text field={video_form[:caption]} label={gettext("Caption")} />
+              </div>
+
+              <div class="brando-input">
+                <div class="field">
+                  <label class="control-label" for={Phoenix.HTML.Form.input_id(video_form, :aspect_ratio)}>
+                    {gettext("Aspect Ratio")}
+                  </label>
+                  <.input
+                    type={:select}
+                    field={video_form[:aspect_ratio]}
+                    options={[
+                      {gettext("16:9 (Standard Widescreen)"), "16:9"},
+                      {gettext("4:3 (Classic)"), "4:3"},
+                      {gettext("21:9 (Ultrawide)"), "21:9"},
+                      {gettext("1:1 (Square)"), "1:1"},
+                      {gettext("9:16 (Vertical/Mobile)"), "9:16"},
+                      {gettext("Custom"), "custom"}
+                    ]}
+                  />
+                </div>
+              </div>
+
+              <div class="video-thumbnail-section">
+                <h5>{gettext("Thumbnail")}</h5>
+                <%= if @edit_video.video && @edit_video.video.thumbnail do %>
+                  <figure>
+                    <Content.image image={@edit_video.video.thumbnail} size={:medium} />
+                  </figure>
+                  <figcaption class="tiny">{@edit_video.video.thumbnail.path}</figcaption>
+                <% else %>
+                  <div class="img-placeholder">
+                    <div class="placeholder-wrapper">
+                      <div class="svg-wrapper">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100" height="100">
+                          <path fill="none" d="M0 0h24v24H0z" /><path d="M3 3.993C3 3.445 3.445 3 3.993 3h16.014c.548 0 .993.445.993.993v16.014a.994.994 0 0 1-.993.993H3.993A.994.994 0 0 1 3 20.007V3.993zM5 5v14h14V5H5zm5.622 3.415l4.879 3.252a.4.4 0 0 1 0 .666l-4.88 3.252a.4.4 0 0 1-.621-.332V8.747a.4.4 0 0 1 .622-.332z" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                <% end %>
+
+                <div class="button-group vertical">
+                  <button class="secondary" type="button" phx-click={toggle_drawer("#image-picker")}>
+                    {gettext("Select thumbnail from library")}
+                  </button>
+                  <button :if={@edit_video.video && @edit_video.video.thumbnail} class="secondary" type="button" phx-click={reset_video_thumbnail(@myself)}>
+                    {gettext("Remove thumbnail")}
+                  </button>
+                </div>
+              </div>
+            </Tab.tab_content>
+          </:tabs>
+        </Tab.tabs>
+
+        <div class="button-group vertical">
+          <button class="secondary" type="button" phx-click={reset_video_field(@myself)}>
+            {gettext("Reset video field")}
+          </button>
+        </div>
+      </.form>
+    </Content.drawer>
+    """
+  end
+
   def duplicate_image(js \\ %JS{}, edit_image, target) do
     JS.push(js, "duplicate_image", value: %{image_id: edit_image.image.id}, target: target)
   end
@@ -1448,6 +1747,34 @@ defmodule BrandoAdmin.Components.Form do
     js
     |> JS.dispatch("submit", to: "#image-drawer-form", detail: %{bubbles: true, cancelable: true})
     |> toggle_drawer("#image-drawer")
+  end
+
+   def duplicate_video(js \\ %JS{}, edit_video, target) do
+    JS.push(js, "duplicate_video", value: %{video_id: edit_video.video.id}, target: target)
+  end
+
+  def reset_video_field(js \\ %JS{}, target) do
+    js
+    |> JS.push("reset_video_field", target: target)
+    |> toggle_drawer("#video-drawer")
+  end
+
+  def reset_video_thumbnail(js \\ %JS{}, target) do
+    JS.push(js, "reset_video_thumbnail", target: target)
+  end
+
+  def parse_video_url(js \\ %JS{}, target) do
+    JS.push(js, "parse_video_url", target: target)
+  end
+
+  def extract_thumbnail(js \\ %JS{}, target) do
+    JS.push(js, "extract_thumbnail", target: target)
+  end
+
+  def close_video(js \\ %JS{}) do
+    js
+    |> JS.dispatch("submit", to: "#video-drawer-form", detail: %{bubbles: true, cancelable: true})
+    |> toggle_drawer("#video-drawer")
   end
 
   defp extract_transformers(%Brando.Blueprint.Forms.Form{tabs: tabs}) do
@@ -1943,6 +2270,63 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, socket}
   end
 
+  def handle_event(
+        "duplicate_video",
+        %{"video_id" => video_id},
+        %{assigns: %{singular: singular}} = socket
+      ) do
+    # For now, just get the existing video since we don't have duplicate_video implemented yet
+    {:ok, video} = Brando.Videos.get_video(video_id)
+
+    send_update(__MODULE__,
+      id: "#{singular}_form",
+      action: :update_edit_video,
+      video: video
+    )
+
+    send(self(), {:toast, gettext("Video selected")})
+
+    {:noreply, socket}
+  end
+
+  def handle_event("reset_video_field", _, socket) do
+    edit_video = socket.assigns.edit_video
+
+    {:noreply,
+     socket
+     |> assign(:video_changeset, nil)
+     |> assign(:editing_video?, false)
+     |> assign(:edit_video, %{edit_video | video: nil})}
+  end
+
+  def handle_event("reset_video_thumbnail", _, socket) do
+    edit_video = socket.assigns.edit_video
+
+    if edit_video.video do
+      # Remove thumbnail from video
+      updated_video = %{edit_video.video | thumbnail: nil, thumbnail_id: nil}
+      updated_edit_video = %{edit_video | video: updated_video}
+
+      {:noreply,
+       socket
+       |> assign(:edit_video, updated_edit_video)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("parse_video_url", _, socket) do
+    # Placeholder for URL parsing functionality
+    send(self(), {:toast, gettext("URL parsing not yet implemented")})
+    {:noreply, socket}
+  end
+
+  def handle_event("extract_thumbnail", _, socket) do
+    # Placeholder for thumbnail extraction functionality
+    send(self(), {:toast, gettext("Thumbnail extraction not yet implemented")})
+    {:noreply, socket}
+  end
+
   def handle_event("cancel_upload", %{"ref" => ref, "field_name" => field_name}, socket) do
     field_name_atom = String.to_existing_atom(field_name)
     {:noreply, cancel_upload(socket, field_name_atom, ref)}
@@ -2168,6 +2552,77 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, assign(socket, :editing_image?, false)}
   end
 
+  def handle_event("validate_video", _, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "save_video",
+        %{"video" => video_params},
+        %{
+          assigns: %{
+            form: form,
+            entry: entry,
+            schema: schema,
+            singular: singular,
+            edit_video: %{video: video, path: path, field: field, relation_field: relation_field} = edit_video,
+            current_user: current_user
+          }
+        } = socket
+      ) do
+    entry_or_default = entry || struct(schema)
+
+    validated_changeset =
+      video
+      |> Brando.Videos.Video.changeset(video_params, current_user)
+      |> Map.put(:action, :update)
+      |> Brando.Trait.run_trait_before_save_callbacks(
+        Brando.Videos.Video,
+        current_user
+      )
+
+    {:ok, updated_video} = Brando.Videos.update_video(validated_changeset, current_user)
+
+    Brando.Trait.run_trait_after_save_callbacks(
+      Brando.Videos.Video,
+      updated_video,
+      validated_changeset,
+      current_user
+    )
+
+    edit_video = Map.put(edit_video, :video, updated_video)
+    relation_full_path = path ++ [relation_field.field]
+    field_full_path = path ++ [field]
+
+    updated_changeset =
+      form.source
+      |> apply_changes()
+      |> change()
+      |> EctoNestedChangeset.update_at(relation_full_path, fn _ -> video.id end)
+
+    access_field_full_path = Brando.Utils.build_access_path(field_full_path)
+    updated_entry = put_in(entry_or_default, access_field_full_path, updated_video)
+
+    target_field_name = Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")], "")
+
+    {:noreply,
+     socket
+     |> assign(:entry, updated_entry)
+     |> assign(:form, to_form(updated_changeset, []))
+     |> assign(:video_changeset, validated_changeset)
+     |> assign(:edit_video, edit_video)
+     |> assign(:editing_video?, false)
+     |> push_event("b:validate", %{
+       target: target_field_name,
+       value: video.id
+     })}
+  end
+
+  # without video in params
+  def handle_event("save_video", _, socket) do
+    {:noreply, assign(socket, :editing_video?, false)}
+  end
+
   def handle_event("share_link", _, socket) do
     send(self(), {:toast, gettext("Gathering blocks for sharing...")})
     fetch_root_blocks(socket, :share, 500)
@@ -2230,6 +2685,12 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("select_tab", %{"name" => tab_name}, socket) do
     {:noreply, assign(socket, :active_tab, tab_name)}
+  end
+
+  # TODO: This is not a very good solution. We should just add a class with JS.add_class to the tab,
+  # we probably don't need state for this.
+  def handle_event("select_tab", %{"tab" => video_tab}, socket) do
+    {:noreply, assign(socket, :active_video_tab, video_tab)}
   end
 
   def handle_event("save_redirect_target", _, socket) do

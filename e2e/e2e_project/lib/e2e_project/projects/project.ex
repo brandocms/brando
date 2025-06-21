@@ -71,6 +71,11 @@ defmodule E2eProject.Projects.Project do
         }
       }
 
+    asset :cover_video, :video,
+      cfg: %{
+        upload_path: Path.join(["videos", "projects", "cover_videos"])
+      }
+
     asset :project_gallery, :gallery,
       cfg: %{
         upload_path: Path.join(["images", "projects", "project_gallery"]),
