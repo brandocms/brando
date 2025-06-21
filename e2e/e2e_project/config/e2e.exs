@@ -15,6 +15,7 @@ config :brando, Oban,
   testing: :inline
 
 config :e2e_project, hmr: false
+config :phoenix, :stacktrace_depth, 60
 
 # Show breakpoint debug in frontend
 config :e2e_project, show_breakpoint_debug: false

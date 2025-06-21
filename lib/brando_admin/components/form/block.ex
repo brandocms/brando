@@ -663,7 +663,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     entry = socket.assigns.entry
 
     block_changeset = get_block_changeset(changeset, belongs_to)
-    refs = Ecto.Changeset.get_embed(block_changeset, :refs)
+    refs = Ecto.Changeset.get_assoc(block_changeset, :refs)
 
     new_refs =
       Enum.reduce(refs, [], fn
@@ -681,11 +681,11 @@ defmodule BrandoAdmin.Components.Form.Block do
     updated_changeset =
       if belongs_to == :root do
         block_changeset = Changeset.get_assoc(changeset, :block)
-        updated_block_changeset = Changeset.put_embed(block_changeset, :refs, new_refs)
+        updated_block_changeset = Changeset.put_assoc(block_changeset, :refs, new_refs)
         changeset = Changeset.put_assoc(changeset, :block, updated_block_changeset)
         render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?)
       else
-        changeset = Changeset.put_embed(changeset, :refs, new_refs)
+        changeset = Changeset.put_assoc(changeset, :refs, new_refs)
         render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)
       end
 
