@@ -1309,6 +1309,7 @@ defmodule Brando.Villain do
   def duplicate_var(var_cs, current_user_id) do
     var_cs
     |> Map.merge(%{id: nil, block_id: nil})
+    |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
     |> Brando.Content.Var.changeset(%{creator_id: current_user_id})
     |> Map.put(:action, :insert)
   end
@@ -1351,6 +1352,7 @@ defmodule Brando.Villain do
     # Clear IDs like we do for vars, but also preserve the UID generation for data
     ref_cs
     |> Map.merge(%{id: nil, block_id: nil, module_id: nil})
+    |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
     |> Brando.Content.Ref.changeset(%{creator_id: current_user_id})
     |> add_uid_to_ref_changeset()
     |> Map.put(:action, :insert)

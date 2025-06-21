@@ -189,8 +189,11 @@ defmodule Brando.Content do
 
   def duplicate_refs(entry, _) do
     entry
+    |> Brando.Repo.preload(:refs)
     |> Map.get(:refs)
+    |> Brando.Villain.remove_pk_from_refs()
     |> Brando.Villain.add_uid_to_refs()
+    |> Enum.map(&put_in(&1, [Access.key(:__meta__), Access.key(:state)], :built))
   end
 
   @doc """
