@@ -12,7 +12,6 @@ defmodule Brando.Content.Block do
     gettext_module: Brando.Gettext
 
   use Gettext, backend: Brando.Gettext
-  import Ecto.Query
 
   @type t :: %__MODULE__{}
 
@@ -235,34 +234,9 @@ defmodule Brando.Content.Block do
   end
 
   def ref_changeset(ref, attrs, _user) do
-    IO.puts("=== REF_CHANGESET: Processing ref with attrs: #{inspect(Map.take(attrs, ["uid", :uid, "id", :id]))} ===")
-    IO.puts("=== REF_CHANGESET: Existing ref - id: #{inspect(ref.id)}, uid: #{inspect(ref.uid)} ===")
-    
-    changeset = ref
+    ref
     |> cast(attrs, [:name, :description, :uid, :sequence])
     |> unique_constraint(:uid)
     |> PolymorphicEmbed.cast_polymorphic_embed(:data)
-    
-    final_uid = Ecto.Changeset.get_field(changeset, :uid) || Ecto.Changeset.get_change(changeset, :uid)
-    final_id = Ecto.Changeset.get_field(changeset, :id) || Ecto.Changeset.get_change(changeset, :id)
-    action = changeset.action
-    IO.puts("=== REF_CHANGESET: Final ref - id: #{inspect(final_id)}, uid: #{inspect(final_uid)}, action: #{inspect(action)} ===")
-    
-    # Check if this UID already exists in the database
-    if final_uid do
-      existing_refs = Brando.Repo.all(from r in Brando.Content.Ref, where: r.uid == ^final_uid, select: [:id, :uid, :name])
-      if length(existing_refs) > 0 do
-        IO.puts("=== REF_CHANGESET: DUPLICATE UID FOUND! #{final_uid} already exists in database: #{inspect(existing_refs)} ===")
-        if final_id do
-          IO.puts("=== REF_CHANGESET: But current ref HAS ID #{final_id}, so this should be an UPDATE, not INSERT! ===")
-        else
-          IO.puts("=== REF_CHANGESET: Current ref has NO ID, so Ecto will try to INSERT (causing duplicate) ===")
-        end
-      else
-        IO.puts("=== REF_CHANGESET: UID #{final_uid} is unique in database ===")
-      end
-    end
-    
-    changeset
   end
 end

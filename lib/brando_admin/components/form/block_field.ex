@@ -696,7 +696,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   def build_block(module_id, user_id, parent_id, source, type) do
     module = get_module(module_id)
     refs_without_pk = Brando.Villain.remove_pk_from_refs(module.refs)
-    # Force fresh UIDs for all refs when creating new blocks from modules
+    # Generate fresh UIDs for all refs when creating blocks from modules
     refs_with_fresh_uids = Enum.map(refs_without_pk || [], fn ref ->
       Map.put(ref, :uid, Brando.Utils.generate_uid())
     end)

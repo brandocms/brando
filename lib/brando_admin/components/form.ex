@@ -2245,15 +2245,6 @@ defmodule BrandoAdmin.Components.Form do
       {:error, %Ecto.Changeset{} = changeset} ->
         require Logger
         Logger.error(inspect(changeset, pretty: true))
-        
-        # Log changeset errors to debug unique constraint violation
-        IO.puts("=== CHANGESET ERRORS: #{inspect(changeset.errors)} ===")
-        
-        # Log detailed error information for entry_blocks field
-        case Keyword.get(changeset.errors, :entry_blocks) do
-          nil -> IO.puts("=== No :entry_blocks errors ===")
-          errors -> IO.puts("=== :entry_blocks errors: #{inspect(errors)} ===")
-        end
 
         {:noreply,
          socket
