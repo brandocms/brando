@@ -1018,16 +1018,16 @@ defmodule Brando.Villain do
     Enum.map(refs, fn
       %Changeset{data: %{name: ref_name}} = ref ->
         # Handle case where ref.data might be a changeset or the actual block
-        block_module = 
+        block_module =
           case Changeset.get_field(ref, :data) do
-            %Changeset{} = data_cs -> 
+            %Changeset{} = data_cs ->
               # Get the struct from the changeset data (which should be the block struct)
               data_cs.data.__struct__
-            block_data -> 
+            block_data ->
               # Get the block struct directly
               block_data.__struct__
           end
-        
+
         ref_src = Enum.find(module_refs, &(&1.name == ref_name))
 
         if ref_src == nil do
@@ -1340,24 +1340,20 @@ defmodule Brando.Villain do
   end
 
   def duplicate_ref(ref_cs, current_user_id) do
-    # Clear IDs like we do for vars, but also preserve the UID generation for data
+    # Clear IDs like we do for vars, but also generate a UID for the ref
     ref_cs
     |> Map.merge(%{id: nil, block_id: nil, module_id: nil})
     |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
-    |> Brando.Content.Ref.changeset(%{creator_id: current_user_id})
+    |> set_creator_id(current_user_id)
     |> add_uid_to_ref_changeset()
     |> Map.put(:action, :insert)
   end
 
-  def add_uid_to_ref_changeset(ref_changeset) do
-    data = Changeset.get_field(ref_changeset, :data)
+  def set_creator_id(ref_changeset, current_user_id) do
+    Changeset.put_change(ref_changeset, :creator_id, current_user_id)
+  end
 
-    if data do
-      data_changeset = Changeset.change(data)
-      updated_data_changeset = Changeset.put_change(data_changeset, :uid, Brando.Utils.generate_uid())
-      Changeset.put_change(ref_changeset, :data, updated_data_changeset)
-    else
-      ref_changeset
-    end
+  def add_uid_to_ref_changeset(ref_changeset) do
+    Changeset.put_change(ref_changeset, :uid, Brando.Utils.generate_uid())
   end
 end
