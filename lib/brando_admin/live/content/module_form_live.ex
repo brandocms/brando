@@ -97,7 +97,8 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
     new_ref = %Ref{
       name: Brando.Utils.random_string(5),
-      data: ref_data
+      data: ref_data,
+      uid: Brando.Utils.generate_uid()
     }
 
     updated_changeset = Changeset.put_change(changeset, :refs, [new_ref | refs])
@@ -122,7 +123,10 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
     refs = Changeset.get_field(changeset, :refs)
     ref_to_dupe = Enum.find(refs, &(&1.name == ref_name))
 
-    new_ref = Map.put(ref_to_dupe, :name, Brando.Utils.random_string(5))
+    new_ref =
+      ref_to_dupe
+      |> Map.put(:name, Brando.Utils.random_string(5))
+      |> Map.put(:uid, Brando.Utils.generate_uid())
 
     updated_changeset = Changeset.put_change(changeset, :refs, refs ++ [new_ref])
     updated_form = to_form(updated_changeset, [])
