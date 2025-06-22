@@ -695,27 +695,23 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def build_block(module_id, user_id, parent_id, source, type) do
     module = get_module(module_id)
-    refs_without_pk = Brando.Villain.remove_pk_from_refs(module.refs)
-    # Generate fresh UIDs for all refs when creating blocks from modules
-    refs_with_fresh_uids = Enum.map(refs_without_pk || [], fn ref ->
-      Map.put(ref, :uid, Brando.Utils.generate_uid())
-    end)
+    # Generate fresh refs with new UIDs when creating blocks from modules
+    fresh_refs = 
+      (module.refs || [])
+      |> Brando.Villain.remove_pk_from_refs()
+      |> Enum.map(&Map.put(&1, :uid, Brando.Utils.generate_uid()))
     cleaned_vars = Brando.Villain.remove_pk_from_vars(module.vars)
 
     # Create clean ref structs with :built state
-    cleaned_refs = if refs_with_fresh_uids do
-      Enum.map(refs_with_fresh_uids, fn ref ->
-        %Brando.Content.Ref{
-          name: ref.name,
-          description: ref.description,
-          data: ref.data,
-          sequence: ref.sequence,
-          uid: ref.uid
-        }
-      end)
-    else
-      []
-    end
+    cleaned_refs = Enum.map(fresh_refs, fn ref ->
+      %Brando.Content.Ref{
+        name: ref.name,
+        description: ref.description,
+        data: ref.data,
+        sequence: ref.sequence,
+        uid: ref.uid
+      }
+    end)
 
     block_changeset =
       %Brando.Content.Block{}
