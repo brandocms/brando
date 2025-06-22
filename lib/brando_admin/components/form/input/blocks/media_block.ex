@@ -41,22 +41,59 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
 
     socket
     |> assign_new(:available_blocks, fn ->
-      block_data.available_blocks
+      if block_data && block_data.available_blocks do
+        block_data.available_blocks
+      else
+        ["picture", "video"]
+      end
     end)
     |> assign_new(:block_templates, fn ->
-      %{
-        picture: block_data.template_picture,
-        svg: block_data.template_svg,
-        video: block_data.template_video,
-        gallery: block_data.template_gallery
-      }
+      if block_data do
+        %{
+          picture: block_data.template_picture,
+          svg: block_data.template_svg,
+          video: block_data.template_video,
+          gallery: block_data.template_gallery
+        }
+      else
+        %{picture: nil, svg: nil, video: nil, gallery: nil}
+      end
     end)
   end
 
-  def render(assigns) do
+  def render(%{block: %{data: %{type: type}}} = assigns) when type in ["media", :media] do
+    IO.puts("=== MediaBlock render MAIN called with type: #{inspect(type)} ===")
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
+        <!-- Hidden inputs to preserve template data during form validation -->
+        <.inputs_for :let={template_picture} field={block_data[:template_picture]}>
+          <input type="hidden" name={template_picture[:title].name} value={template_picture[:title].value || ""} />
+          <input type="hidden" name={template_picture[:credits].name} value={template_picture[:credits].value || ""} />
+          <input type="hidden" name={template_picture[:alt].name} value={template_picture[:alt].value || ""} />
+          <input type="hidden" name={template_picture[:picture_class].name} value={template_picture[:picture_class].value || ""} />
+          <input type="hidden" name={template_picture[:img_class].name} value={template_picture[:img_class].value || ""} />
+          <input type="hidden" name={template_picture[:link].name} value={template_picture[:link].value || ""} />
+          <input type="hidden" name={template_picture[:srcset].name} value={template_picture[:srcset].value || ""} />
+          <input type="hidden" name={template_picture[:media_queries].name} value={template_picture[:media_queries].value || ""} />
+          <input type="hidden" name={template_picture[:lazyload].name} value={to_string(template_picture[:lazyload].value)} />
+          <input type="hidden" name={template_picture[:moonwalk].name} value={to_string(template_picture[:moonwalk].value)} />
+          <input type="hidden" name={template_picture[:placeholder].name} value={to_string(template_picture[:placeholder].value)} />
+          <input type="hidden" name={template_picture[:fetchpriority].name} value={to_string(template_picture[:fetchpriority].value)} />
+        </.inputs_for>
+
+        <.inputs_for :let={template_video} field={block_data[:template_video]}>
+          <input type="hidden" name={template_video[:title].name} value={template_video[:title].value || ""} />
+          <input type="hidden" name={template_video[:poster].name} value={template_video[:poster].value || ""} />
+          <input type="hidden" name={template_video[:autoplay].name} value={to_string(template_video[:autoplay].value)} />
+          <input type="hidden" name={template_video[:opacity].name} value={to_string(template_video[:opacity].value)} />
+          <input type="hidden" name={template_video[:preload].name} value={to_string(template_video[:preload].value)} />
+          <input type="hidden" name={template_video[:play_button].name} value={to_string(template_video[:play_button].value)} />
+          <input type="hidden" name={template_video[:controls].name} value={to_string(template_video[:controls].value)} />
+          <input type="hidden" name={template_video[:cover].name} value={to_string(template_video[:cover].value)} />
+          <input type="hidden" name={template_video[:aspect_ratio].name} value={template_video[:aspect_ratio].value || ""} />
+        </.inputs_for>
+
         <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
           <:description>
             <%= if @ref_description not in ["", nil] do %>
@@ -80,6 +117,45 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
           </div>
         </Block.block>
       </.inputs_for>
+    </div>
+    """
+  end
+
+  def render(assigns) do
+    # Log the actual structure to understand what we're dealing with
+    IO.puts("=== MediaBlock render fallback ===")
+    IO.puts("Assigns keys: #{inspect(Map.keys(assigns))}")
+    IO.puts("Pattern match attempt: %{block: %{type: %{value: type}}}")
+    
+    # Try to extract what we can to see what's different
+    case assigns do
+      %{block: %{type: %{value: type}}} -> 
+        IO.puts("Could match pattern with type: #{inspect(type)}")
+        IO.puts("Type in guard?: #{type in ["media", :media]}")
+      %{block: %{type: field}} ->
+        IO.puts("Block has type field but different structure: #{inspect(field)}")
+      %{block: block} ->
+        IO.puts("Block exists but no type field: #{inspect(Map.keys(block))}")
+      _ ->
+        IO.puts("No block field at all")
+    end
+    
+    IO.puts("Block structure: #{inspect(assigns.block)}")
+    IO.puts("Block type field: #{inspect(assigns.block[:type])}")
+    if assigns.block[:type] do
+      type_value = assigns.block[:type].value
+      IO.puts("Block type value: #{inspect(type_value)}")
+      IO.puts("Block type is atom?: #{is_atom(type_value)}")
+      IO.puts("Block type is string?: #{is_binary(type_value)}")
+    end
+    IO.puts("=== END MediaBlock render fallback ===")
+
+    # MediaBlock called with non-media type, render minimal placeholder
+    assigns = assign(assigns, :block_type, assigns.block[:type].value)
+
+    ~H"""
+    <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid} style="display: none;">
+      <!-- MediaBlock being replaced by <%= @block_type %> -->
     </div>
     """
   end

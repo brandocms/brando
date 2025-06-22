@@ -671,8 +671,24 @@ defmodule BrandoAdmin.Components.Form.Block do
           acc
 
         old_ref, acc ->
-          if Changeset.get_field(old_ref, :name) == ref.name do
-            acc ++ List.wrap(ref)
+          old_ref_name = Changeset.get_field(old_ref, :name)
+          if old_ref_name == ref.name do
+            # Update the existing changeset with new data
+            IO.puts("=== UPDATE_REF: Updating ref #{ref.name} ===")
+            IO.puts("Old ref data type: #{inspect(Changeset.get_field(old_ref, :data).__struct__)}")
+            IO.puts("New ref data type: #{inspect(ref.data.__struct__)}")
+            IO.puts("New ref data.type: #{inspect(ref.data.type)}")
+
+            updated_ref_changeset = Changeset.change(old_ref, %{
+              data: ref.data,
+              description: ref.description || Changeset.get_field(old_ref, :description)
+            })
+
+            IO.puts("Updated changeset data type: #{inspect(Changeset.get_field(updated_ref_changeset, :data).__struct__)}")
+            IO.puts("Updated changeset data.type: #{inspect(Changeset.get_field(updated_ref_changeset, :data).type)}")
+            IO.puts("=== END UPDATE_REF ===")
+
+            acc ++ List.wrap(updated_ref_changeset)
           else
             acc ++ List.wrap(old_ref)
           end
@@ -739,10 +755,10 @@ defmodule BrandoAdmin.Components.Form.Block do
             updated_ref = if Map.has_key?(params, :video_data) do
               video_data = params.video_data
               current_user_id = socket.assigns.current_user_id
-              
+
               case Brando.Videos.create_video(video_data, current_user_id) do
                 {:ok, video} ->
-                  updated_ref 
+                  updated_ref
                   |> Changeset.put_change(:video_id, video.id)
                   |> Map.put(:data, Map.put(updated_ref.data, :video, nil))
                 {:error, _} ->
@@ -2323,10 +2339,10 @@ defmodule BrandoAdmin.Components.Form.Block do
     <%= if @ref_found do %>
       <.inputs_for :let={ref_form} field={@refs_field} skip_hidden>
         <%= if ref_form[:name].value == @ref_name do %>
-          <section b-ref={ref_form[:name].value}>
+          <section b-ref={ref_form[:name].value} id={"block_ref-#{ref_form[:name].value}-#{ref_form[:type].value}"}>
             <.polymorphic_embed_inputs_for :let={block} field={ref_form[:data]}>
               <.dynamic_block
-                id={block[:uid].value}
+                id={"#{block[:uid].value}-#{block[:type].value}"}
                 block_id={block[:uid].value}
                 is_ref?={true}
                 ref_name={ref_form[:name].value}
@@ -3338,7 +3354,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   def get_module(id) do
     {:ok, modules} =
       Brando.Content.list_modules(%{
-        preload: [{:vars, {Var, [asc: :sequence]}}],
+        preload: [{:vars, {Var, [asc: :sequence]}}, :refs],
         cache: {:ttl, :infinite}
       })
 

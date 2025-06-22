@@ -17,9 +17,7 @@ test('creates a simple page', async ({ page }) => {
   await page.getByRole('button', { name: 'Add block' }).click()
   await page.getByRole('button', { name: 'HEADERS' }).click()
   await page.getByRole('button', { name: 'Heading Large text' }).click()
-  await expect(
-    page.locator('#block-field-blocks-module-picker')
-  ).not.toBeVisible()
+  await expect(page.locator('#block-field-blocks-module-picker')).not.toBeVisible()
   await expect(page.getByText('Module | Heading')).toBeVisible()
   await page.getByText('Text').click()
   await page.getByText('Text').fill('About Brando CMS')
@@ -27,12 +25,8 @@ test('creates a simple page', async ({ page }) => {
   // add media block
   await page.getByRole('button', { name: 'Add block' }).nth(1).click()
   await page.getByRole('button', { name: 'MEDIA' }).click()
-  await page
-    .getByRole('button', { name: 'Single Asset Full width image' })
-    .click()
-  await expect(
-    page.locator('#block-field-blocks-module-picker')
-  ).not.toBeVisible()
+  await page.getByRole('button', { name: 'Single Asset Full width image' }).click()
+  await expect(page.locator('#block-field-blocks-module-picker')).not.toBeVisible()
   await expect(page.getByText('Module | Single asset')).toBeVisible()
 
   // ensure that we can edit the module's var and interact with it afterwards
@@ -42,6 +36,9 @@ test('creates a simple page', async ({ page }) => {
   await syncLV(page)
 
   await page.getByRole('button', { name: 'Video' }).click()
+
+  // we can wait until we have [data-block-type="video"] in the DOM
+  await page.waitForSelector('[data-block-type="video"]', { state: 'visible' })
   await page.getByRole('button', { name: 'Configure video block' }).click()
 
   const videoBlock = page.locator('.entry-block').nth(1)
@@ -57,34 +54,23 @@ test('creates a simple page', async ({ page }) => {
   await syncLV(page)
 
   await videoBlockModal.getByRole('button', { name: 'Get video info' }).click()
-  await expect(
-    videoBlockModal.getByText('Fetching video information')
-  ).toBeVisible()
-  await expect(
-    videoBlockModal.getByRole('button', { name: 'Select cover image' })
-  ).toBeVisible({ timeout: 30000 })
+  await expect(videoBlockModal.getByText('Fetching video information')).toBeVisible()
+  await expect(videoBlockModal.getByRole('button', { name: 'Select cover image' })).toBeVisible({
+    timeout: 30000,
+  })
   await videoBlockModal.getByRole('button', { name: 'Close' }).click()
   await expect(videoBlockModal).not.toBeVisible()
 
   // add text block
   await page.getByRole('button', { name: 'Add block' }).nth(2).click()
   await page.getByRole('button', { name: 'general' }).click()
-  await page
-    .getByRole('button', { name: 'Example module Used for the' })
-    .click()
-  await expect(
-    page.locator('#block-field-blocks-module-picker')
-  ).not.toBeVisible()
+  await page.getByRole('button', { name: 'Example module Used for the' }).click()
+  await expect(page.locator('#block-field-blocks-module-picker')).not.toBeVisible()
   await expect(page.getByText('Module | Example module')).toBeVisible()
   const exampleBlock = page.locator('.entry-block').nth(2)
-  await exampleBlock
-    .locator('textarea')
-    .filter({ hasText: 'Heading' })
-    .fill('Another heading')
+  await exampleBlock.locator('textarea').filter({ hasText: 'Heading' }).fill('Another heading')
 
-  const editor = exampleBlock.locator(
-    '.tiptap-wrapper [contenteditable="true"]'
-  )
+  const editor = exampleBlock.locator('.tiptap-wrapper [contenteditable="true"]')
   await editor.click()
   await page.keyboard.down('ControlOrMeta')
   await page.keyboard.press('A')
@@ -97,7 +83,7 @@ test('creates a simple page', async ({ page }) => {
   const editorContent = await editor.innerText()
   expect(editorContent).toBe('Hello from Playwright!')
 
-  await editor.evaluate((node) => {
+  await editor.evaluate(node => {
     node.dispatchEvent(new Event('input', { bubbles: true }))
   })
 
@@ -120,13 +106,9 @@ test('creates a simple page', async ({ page }) => {
 
   // take a look at the frontend
   await page.goto('/about')
-  await expect(
-    page.getByRole('heading', { name: 'About Brando CMS' })
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'About Brando CMS' })).toBeVisible()
 
-  await expect(
-    page.getByRole('heading', { name: 'Another heading' })
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Another heading' })).toBeVisible()
 
   await expect(page.getByText('Hello from Playwright!')).toBeVisible()
 })
@@ -142,19 +124,11 @@ test('duplicates to other language', async ({ page }) => {
   await page.getByRole('button', { name: 'Add block' }).click()
   await page.getByRole('button', { name: 'HEADERS' }).click()
   await page.getByRole('button', { name: 'Heading Large text' }).click()
-  await page
-    .locator('textarea')
-    .filter({ hasText: 'Text' })
-    .first()
-    .fill('Heading')
+  await page.locator('textarea').filter({ hasText: 'Text' }).first().fill('Heading')
   await page.getByTestId('submit').click()
   await expect(page.getByRole('link', { name: 'Clients →' })).toBeVisible()
   await expect(page.getByRole('link', { name: '/clients' })).toBeVisible()
-  await page
-    .locator('.list-row')
-    .nth(1)
-    .getByTestId('circle-dropdown-button')
-    .click()
+  await page.locator('.list-row').nth(1).getByTestId('circle-dropdown-button').click()
   await page.getByRole('button', { name: 'Duplicate to [NO]' }).click()
   await expect(page.getByLabel('Title', { exact: true })).toBeVisible()
   await expect(page.getByText('/no/clients')).toBeVisible()
@@ -176,9 +150,7 @@ test('creates meta information', async ({ page }) => {
   await page.getByRole('button', { name: 'Add block' }).click()
   await page.getByRole('button', { name: 'HEADERS' }).click()
   await page.getByRole('button', { name: 'Heading Large text' }).click()
-  await expect(
-    page.locator('#block-field-blocks-module-picker')
-  ).not.toBeVisible()
+  await expect(page.locator('#block-field-blocks-module-picker')).not.toBeVisible()
   await expect(page.getByText('Module | Heading')).toBeVisible()
   await page.getByText('Text').click()
   await page.getByText('Text').fill('Hello!')
@@ -186,15 +158,11 @@ test('creates meta information', async ({ page }) => {
   // open meta drawer
   await page.getByRole('button', { name: 'Meta' }).click()
   await page.locator('input[name="page[meta_title]"]').fill('Overridden title')
-  await page
-    .locator('textarea[name="page[meta_description]"]')
-    .fill('Overridden description')
+  await page.locator('textarea[name="page[meta_description]"]').fill('Overridden description')
 
   // Add SEO image
   await page.getByRole('button', { name: 'Add image' }).click()
-  await page
-    .locator('input[name="meta_image"]')
-    .setInputFiles('./fixtures/image.jpg')
+  await page.locator('input[name="meta_image"]').setInputFiles('./fixtures/image.jpg')
   // Close drawer
   await page.getByRole('button', { name: 'Close' }).first().click()
   // Wait for the drawer to vanish or the form to be detached
