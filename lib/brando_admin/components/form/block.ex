@@ -2347,6 +2347,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             <!-- ref assocs -->
             <Input.input type={:hidden} field={ref_form[:description]} />
             <Input.input type={:hidden} field={ref_form[:name]} />
+            <Input.input type={:hidden} field={ref_form[:uid]} />
             <Input.input type={:hidden} field={ref_form[:id]} />
             <Input.input type={:hidden} field={ref_form[:image_id]} />
             <Input.input type={:hidden} field={ref_form[:video_id]} />

@@ -227,6 +227,28 @@ defmodule Brando.Query.Mutations do
           |> drop_fields()
           |> update_meta()
 
+        # Log ref UIDs before save to debug unique constraint violation
+        if has_blocks? do
+          block_fields = Enum.map(module.__blocks_fields__(), &String.to_atom("entry_#{&1.name}"))
+          
+          Enum.each(block_fields, fn field ->
+            blocks = Map.get(cloned_entry, field, [])
+            Enum.each(blocks, fn entry_block ->
+              refs = entry_block.block.refs || []
+              if length(refs) > 0 do
+                ref_uids = Enum.map(refs, & &1.uid)
+                IO.puts("=== DUPLICATE: Block #{entry_block.block.uid} has refs with UIDs: #{inspect(ref_uids)} ===")
+                
+                # Check for duplicates within this block
+                duplicates = ref_uids -- Enum.uniq(ref_uids)
+                if length(duplicates) > 0 do
+                  IO.puts("=== DUPLICATE: Found duplicate UIDs within block: #{inspect(duplicates)} ===")
+                end
+              end
+            end)
+          end)
+        end
+
         Brando.Repo.insert(cloned_entry)
 
       err ->
@@ -307,17 +329,19 @@ defmodule Brando.Query.Mutations do
   end
 
   defp duplicate_refs(refs) do
-    Enum.reduce(refs, [], fn
-      %{data: %{uid: _uid}} = ref, acc ->
-        new_uid = Brando.Utils.generate_uid()
-        updated_ref = put_in(ref, [Access.key(:data), Access.key(:uid)], new_uid)
-        [updated_ref | acc]
-
-      ref, acc ->
-        require Logger
-        Logger.debug("=> Malformed ref? #{inspect(ref, pretty: true)}")
-        acc
+    IO.puts("=== DUPLICATE_REFS: Starting duplication of #{length(refs)} refs ===")
+    
+    duplicated_refs = Enum.map(refs, fn ref ->
+      old_uid = ref.uid
+      new_uid = Brando.Utils.generate_uid()
+      IO.puts("=== DUPLICATE_REFS: Generated UID #{new_uid} for ref #{inspect(ref.name)} (old UID: #{old_uid}) ===")
+      updated_ref = Map.put(ref, :uid, new_uid)
+      IO.puts("=== DUPLICATE_REFS: Updated ref: #{inspect(updated_ref.name)} with UID: #{updated_ref.uid} ===")
+      updated_ref
     end)
+    
+    IO.puts("=== DUPLICATE_REFS: Final duplicated refs UIDs: #{inspect(Enum.map(duplicated_refs, & &1.uid))} ===")
+    duplicated_refs
   end
 
   defp maybe_change_fields(entry, %{change_fields: change_fields}) do

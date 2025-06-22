@@ -230,7 +230,8 @@ defmodule Brando.Content.Module do
           "type" => "header"
         },
         "description" => "A heading",
-        "name" => "H2"
+        "name" => "H2",
+        "uid" => "default-h2-ref"
       }
     ],
     vars: [],

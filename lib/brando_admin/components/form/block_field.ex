@@ -696,12 +696,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   def build_block(module_id, user_id, parent_id, source, type) do
     module = get_module(module_id)
     refs_without_pk = Brando.Villain.remove_pk_from_refs(module.refs)
-    refs_with_generated_uids = Brando.Villain.add_uid_to_refs(refs_without_pk)
-    vars_without_pk = Brando.Villain.remove_pk_from_vars(module.vars)
+    # Force fresh UIDs for all refs when creating new blocks from modules
+    refs_with_fresh_uids = Enum.map(refs_without_pk || [], fn ref ->
+      Map.put(ref, :uid, Brando.Utils.generate_uid())
+    end)
+    cleaned_vars = Brando.Villain.remove_pk_from_vars(module.vars)
 
     # Create clean ref structs with :built state
-    clean_refs = if refs_with_generated_uids do
-      Enum.map(refs_with_generated_uids, fn ref ->
+    cleaned_refs = if refs_with_fresh_uids do
+      Enum.map(refs_with_fresh_uids, fn ref ->
         %Brando.Content.Ref{
           name: ref.name,
           description: ref.description,
@@ -714,7 +717,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       []
     end
 
-    block_changeset = 
+    block_changeset =
       %Brando.Content.Block{}
       |> Changeset.change(%{
         uid: Brando.Utils.generate_uid(),
@@ -728,10 +731,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         block_identifiers: [],
         table_rows: []
       })
-      |> Changeset.put_assoc(:vars, vars_without_pk)
-      |> Changeset.put_assoc(:refs, clean_refs)
+      |> Changeset.put_assoc(:vars, cleaned_vars)
+      |> Changeset.put_assoc(:refs, cleaned_refs)
       |> Map.put(:action, :insert)
-    
+
     block_changeset
   end
 

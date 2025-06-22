@@ -16,6 +16,7 @@ defmodule Brando.Content.Ref do
 
   trait Brando.Trait.CastPolymorphicEmbeds
   trait Brando.Trait.Timestamped
+  trait Brando.Trait.EnsureUID
 
   identifier false
   persist_identifier false

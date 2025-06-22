@@ -2087,6 +2087,7 @@ defmodule BrandoAdmin.Components.Form do
 
     send(self(), {:progress_popup, "Saving entry..."})
 
+
     case apply(context, :"#{mutation_type}_#{singular}", [rendered_changeset, current_user]) do
       {:ok, entry} ->
         send(self(), {:progress_popup, "Entry saved."})
@@ -2244,6 +2245,15 @@ defmodule BrandoAdmin.Components.Form do
       {:error, %Ecto.Changeset{} = changeset} ->
         require Logger
         Logger.error(inspect(changeset, pretty: true))
+        
+        # Log changeset errors to debug unique constraint violation
+        IO.puts("=== CHANGESET ERRORS: #{inspect(changeset.errors)} ===")
+        
+        # Log detailed error information for entry_blocks field
+        case Keyword.get(changeset.errors, :entry_blocks) do
+          nil -> IO.puts("=== No :entry_blocks errors ===")
+          errors -> IO.puts("=== :entry_blocks errors: #{inspect(errors)} ===")
+        end
 
         {:noreply,
          socket

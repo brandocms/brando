@@ -986,7 +986,6 @@ defmodule Brando.Villain do
 
   def add_uid_to_ref_changesets(refs) when is_list(refs) do
     Enum.reduce(refs, [], fn ref, acc ->
-      # Ensure the ref itself has a UID, not the data
       updated_ref =
         if Changeset.get_field(ref, :uid) do
           ref
