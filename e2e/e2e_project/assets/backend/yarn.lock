@@ -27,7 +27,7 @@
     "@codemirror/lang-markdown" "^6.3.1"
     "@codemirror/state" "^6.5.2"
     "@codemirror/view" "^6.37.1"
-    "@fontsource/jetbrains-mono" "^5.2.5"
+    "@fontsource/jetbrains-mono" "^5.2.6"
     "@tiptap/core" "2.12.0"
     "@tiptap/extension-character-count" "2.12.0"
     "@tiptap/extension-color" "^2.12.0"
@@ -54,7 +54,7 @@
     morphdom "^2.7.5"
     phoenix "1.7.21"
     phoenix_html "^4.2.1"
-    phoenix_live_view "^1.0.14"
+    phoenix_live_view "^1.0.17"
     slugify "^1.6.6"
     sortablejs "^1.15.3"
     sweetalert2 "^11.22.0"
@@ -362,10 +362,10 @@
   resolved "https://registry.yarnpkg.com/@esbuild/win32-x64/-/win32-x64-0.25.5.tgz#7fc114af5f6563f19f73324b5d5ff36ece0803d1"
   integrity sha512-TXv6YnJ8ZMVdX+SXWVBo/0p8LTcrUYngpWjvm91TMjjBQii7Oz11Lw5lbDV5Y0TzuhSJHwiH4hEtC1I42mMS0g==
 
-"@fontsource/jetbrains-mono@^5.2.5":
-  version "5.2.5"
-  resolved "https://registry.yarnpkg.com/@fontsource/jetbrains-mono/-/jetbrains-mono-5.2.5.tgz#c3e9931ae7ebd70b25b6aaf98caf5c2720aaffb3"
-  integrity sha512-TPZ9b/uq38RMdrlZZkl0RwN8Ju9JxuqMETrw76pUQFbGtE1QbwQaNsLlnUrACNNBNbd0NZRXiJJSkC8ajPgbew==
+"@fontsource/jetbrains-mono@^5.2.6":
+  version "5.2.6"
+  resolved "https://registry.yarnpkg.com/@fontsource/jetbrains-mono/-/jetbrains-mono-5.2.6.tgz#1a78f8ef6fa206f619298cbefd769ab4ef1279f4"
+  integrity sha512-nz//dBr99hXZmHp10wgNI00qThWImkzRR5PQjvRM+rpmuHO5rYBJCqPPWufidCvmkkryXx/GOP/lgqsM3R3Org==
 
 "@jridgewell/gen-mapping@^0.3.5":
   version "0.3.8"
@@ -1302,7 +1302,7 @@ phoenix_html@^4.2.1:
   resolved "https://registry.yarnpkg.com/phoenix_html/-/phoenix_html-4.2.1.tgz#fdca45a43aa055cb6edbcd6e2386a17163582ebd"
   integrity sha512-jmxnnkPO8mo5Vw/ZAq9c3AUog9d/M8VoSjleNAvhClE5ynVZuv/m31asHRfqWrhzrZwEM4H+pHh3Br719nr2gw==
 
-phoenix_live_view@^1.0.14:
+phoenix_live_view@^1.0.17:
   version "1.0.17"
   resolved "https://registry.yarnpkg.com/phoenix_live_view/-/phoenix_live_view-1.0.17.tgz#5545510d9617156e6f6bea42b47f89cc7b0100f5"
   integrity sha512-ydjiQeMkNrGv8OGYgT7BjIho/XM3eSHrk4FCs6qiLg9EfPf5M8w1W5Ax/E1tF9E0w6VFQsWm1fKFdWqzAezgjQ==

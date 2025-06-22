@@ -150,13 +150,29 @@ defmodule Brando.Content.Block do
   end
 
   def block_changeset(block, attrs, user) do
-    block
+    changeset = block
     |> cast(attrs, @block_attrs)
     |> unique_constraint(:uid)
     |> cast_table_rows(user)
     |> cast_block_identifiers(user)
     |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
     |> cast_assoc(:refs, with: &ref_changeset(&1, &2, user))
+    
+    # Filter out :replace changesets from refs to prevent update issues
+    changeset = if is_nil(block.id) do
+      changeset
+      |> Ecto.Changeset.update_change(:refs, fn ref_changesets ->
+        Enum.reject(ref_changesets, &(&1.action == :replace))
+      end)
+      |> Ecto.Changeset.update_change(:vars, fn var_changesets ->
+        Enum.reject(var_changesets, &(&1.action == :replace))
+      end)
+      |> Map.put(:action, :insert)  # Force insert action for new blocks
+    else
+      changeset
+    end
+    
+    changeset
   end
 
   def recursive_block_changeset(block, attrs, user) do
