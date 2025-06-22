@@ -674,20 +674,11 @@ defmodule BrandoAdmin.Components.Form.Block do
           old_ref_name = Changeset.get_field(old_ref, :name)
           if old_ref_name == ref.name do
             # Update the existing changeset with new data
-            IO.puts("=== UPDATE_REF: Updating ref #{ref.name} ===")
-            IO.puts("Old ref data type: #{inspect(Changeset.get_field(old_ref, :data).__struct__)}")
-            IO.puts("New ref data type: #{inspect(ref.data.__struct__)}")
-            IO.puts("New ref data.type: #{inspect(ref.data.type)}")
-
             updated_ref_changeset = Changeset.change(old_ref, %{
               data: ref.data,
+              uid: ref.uid,
               description: ref.description || Changeset.get_field(old_ref, :description)
             })
-
-            IO.puts("Updated changeset data type: #{inspect(Changeset.get_field(updated_ref_changeset, :data).__struct__)}")
-            IO.puts("Updated changeset data.type: #{inspect(Changeset.get_field(updated_ref_changeset, :data).type)}")
-            IO.puts("=== END UPDATE_REF ===")
-
             acc ++ List.wrap(updated_ref_changeset)
           else
             acc ++ List.wrap(old_ref)
@@ -2339,7 +2330,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     <%= if @ref_found do %>
       <.inputs_for :let={ref_form} field={@refs_field} skip_hidden>
         <%= if ref_form[:name].value == @ref_name do %>
-          <section b-ref={ref_form[:name].value} id={"block_ref-#{ref_form[:name].value}-#{ref_form[:type].value}"}>
+          <section b-ref={ref_form[:name].value} id={"block_ref-#{ref_form[:uid].value}"}>
             <.polymorphic_embed_inputs_for :let={block} field={ref_form[:data]}>
               <.dynamic_block
                 id={"#{block[:uid].value}-#{block[:type].value}"}
@@ -2396,7 +2387,13 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> assign_new(:ref_name, fn -> nil end)
       |> assign_new(:ref_description, fn -> nil end)
       |> assign_new(:ref_form, fn -> nil end)
-      |> assign_new(:block_id, fn -> assigns.block[:uid].value end)
+      |> assign_new(:block_id, fn -> 
+        if assigns[:is_ref?] && assigns[:ref_form] do
+          assigns.ref_form[:uid].value
+        else
+          assigns.block[:uid].value
+        end
+      end)
       |> assign_new(:component_target, fn ->
         type_atom = String.to_existing_atom(assigns.block[:type].value)
 
@@ -2555,7 +2552,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   ## Ref blocks
 
   def html(assigns) do
-    assigns = assign(assigns, :uid, assigns.block[:uid].value)
+    uid = if assigns[:ref_form] do
+      assigns.ref_form[:uid].value
+    else
+      assigns.block[:uid].value
+    end
+    assigns = assign(assigns, :uid, uid)
 
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
@@ -2576,7 +2578,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def markdown(assigns) do
-    assigns = assign(assigns, :uid, assigns.block[:uid].value)
+    uid = if assigns[:ref_form] do
+      assigns.ref_form[:uid].value
+    else
+      assigns.block[:uid].value
+    end
+    assigns = assign(assigns, :uid, uid)
 
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
@@ -2599,9 +2606,15 @@ defmodule BrandoAdmin.Components.Form.Block do
   def comment(assigns) do
     block_data_cs = get_block_data_changeset(assigns.block)
 
+    uid = if assigns[:ref_form] do
+      assigns.ref_form[:uid].value
+    else
+      assigns.block[:uid].value
+    end
+
     assigns =
       assigns
-      |> assign(:uid, assigns.block[:uid].value)
+      |> assign(:uid, uid)
       |> assign(:text, Changeset.get_field(block_data_cs, :text))
 
     ~H"""
@@ -2628,7 +2641,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def input(assigns) do
-    assigns = assign(assigns, :uid, assigns.block[:uid].value)
+    uid = if assigns[:ref_form] do
+      assigns.ref_form[:uid].value
+    else
+      assigns.block[:uid].value
+    end
+    assigns = assign(assigns, :uid, uid)
 
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
@@ -2658,7 +2676,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def header(assigns) do
-    assigns = assign(assigns, :uid, assigns.block[:uid].value)
+    uid = if assigns[:ref_form] do
+      assigns.ref_form[:uid].value
+    else
+      assigns.block[:uid].value
+    end
+    assigns = assign(assigns, :uid, uid)
 
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
@@ -2719,9 +2742,15 @@ defmodule BrandoAdmin.Components.Form.Block do
         extensions -> extensions
       end
 
+    uid = if assigns[:ref_form] do
+      assigns.ref_form[:uid].value
+    else
+      assigns.block[:uid].value
+    end
+
     assigns =
       assigns
-      |> assign(:uid, assigns.block[:uid].value)
+      |> assign(:uid, uid)
       |> assign(:text_type, Changeset.get_field(block_data_cs, :type))
       |> assign(:extensions, extensions)
 

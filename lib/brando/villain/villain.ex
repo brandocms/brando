@@ -967,14 +967,13 @@ defmodule Brando.Villain do
   def add_uid_to_refs(nil), do: nil
 
   def add_uid_to_refs(refs) when is_list(refs) do
-    {_, refs_with_generated_uids} =
-      get_and_update_in(
-        refs,
-        [Access.all(), Access.key(:data), Access.key(:uid)],
-        &{&1, Brando.Utils.generate_uid()}
-      )
-
-    refs_with_generated_uids
+    Enum.map(refs, fn ref ->
+      if Map.has_key?(ref, :uid) and ref.uid do
+        ref
+      else
+        Map.put(ref, :uid, Brando.Utils.generate_uid())
+      end
+    end)
   end
 
   def add_uid_to_refs(changeset) do
@@ -987,25 +986,17 @@ defmodule Brando.Villain do
 
   def add_uid_to_ref_changesets(refs) when is_list(refs) do
     Enum.reduce(refs, [], fn ref, acc ->
-      data = Changeset.get_field(ref, :data)
-
-      if data do
-        data_changeset = Changeset.change(data)
-
-        updated_data_changeset =
-          Changeset.put_change(data_changeset, :uid, Brando.Utils.generate_uid())
-
-        updated_ref =
+      # Ensure the ref itself has a UID, not the data
+      updated_ref =
+        if Changeset.get_field(ref, :uid) do
           ref
-          |> Changeset.put_change(:data, updated_data_changeset)
+        else
+          ref
+          |> Changeset.put_change(:uid, Brando.Utils.generate_uid())
           |> Map.put(:action, :insert)
+        end
 
-        [updated_ref | acc]
-      else
-        require Logger
-        Logger.debug("=> Malformed ref: #{inspect(ref)}")
-        acc
-      end
+      [updated_ref | acc]
     end)
   end
 

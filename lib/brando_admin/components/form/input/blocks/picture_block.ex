@@ -60,7 +60,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:uid, assigns.block[:uid].value)
+     |> assign(:uid, assigns.ref_form[:uid].value)
      |> assign(:block_data, block_data)
      |> assign_new(:compact, fn -> true end)
      |> assign_new(:image, fn ->

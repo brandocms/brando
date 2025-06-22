@@ -30,7 +30,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   def update(assigns, socket) do
     socket
     |> assign(assigns)
-    |> assign(:uid, assigns.block[:uid].value)
+    |> assign(:uid, assigns.ref_form[:uid].value)
     |> assign_available_blocks_and_templates()
     |> then(&{:ok, &1})
   end
@@ -62,7 +62,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   end
 
   def render(%{block: %{data: %{type: type}}} = assigns) when type in ["media", :media] do
-    IO.puts("=== MediaBlock render MAIN called with type: #{inspect(type)} ===")
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
@@ -122,34 +121,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   end
 
   def render(assigns) do
-    # Log the actual structure to understand what we're dealing with
-    IO.puts("=== MediaBlock render fallback ===")
-    IO.puts("Assigns keys: #{inspect(Map.keys(assigns))}")
-    IO.puts("Pattern match attempt: %{block: %{type: %{value: type}}}")
-    
-    # Try to extract what we can to see what's different
-    case assigns do
-      %{block: %{type: %{value: type}}} -> 
-        IO.puts("Could match pattern with type: #{inspect(type)}")
-        IO.puts("Type in guard?: #{type in ["media", :media]}")
-      %{block: %{type: field}} ->
-        IO.puts("Block has type field but different structure: #{inspect(field)}")
-      %{block: block} ->
-        IO.puts("Block exists but no type field: #{inspect(Map.keys(block))}")
-      _ ->
-        IO.puts("No block field at all")
-    end
-    
-    IO.puts("Block structure: #{inspect(assigns.block)}")
-    IO.puts("Block type field: #{inspect(assigns.block[:type])}")
-    if assigns.block[:type] do
-      type_value = assigns.block[:type].value
-      IO.puts("Block type value: #{inspect(type_value)}")
-      IO.puts("Block type is atom?: #{is_atom(type_value)}")
-      IO.puts("Block type is string?: #{is_binary(type_value)}")
-    end
-    IO.puts("=== END MediaBlock render fallback ===")
-
     # MediaBlock called with non-media type, render minimal placeholder
     assigns = assign(assigns, :block_type, assigns.block[:type].value)
 
@@ -219,28 +190,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
       case selected_block_type do
         "picture" ->
           %Brando.Villain.Blocks.PictureBlock{
-            uid: uid,
             type: "picture",
             data: block_templates.picture
           }
 
         "video" ->
           %Brando.Villain.Blocks.VideoBlock{
-            uid: uid,
             type: "video",
             data: block_templates.video
           }
 
         "gallery" ->
           %Brando.Villain.Blocks.GalleryBlock{
-            uid: uid,
             type: "gallery",
             data: block_templates.gallery
           }
 
         "svg" ->
           %Brando.Villain.Blocks.SvgBlock{
-            uid: uid,
             type: "svg",
             data: block_templates.svg
           }
@@ -249,6 +216,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
     ref = %Brando.Content.Ref{
       name: ref_name,
       description: ref_description,
+      uid: uid,
       data: ref_data
     }
 

@@ -18,7 +18,6 @@ defmodule Brando.Villain.Block do
       @primary_key false
 
       embedded_schema do
-        field :uid, :string
         field :type, :string, default: unquote(type)
         field :active, :boolean, default: true
         field :collapsed, :boolean, default: false
@@ -28,17 +27,9 @@ defmodule Brando.Villain.Block do
 
       def changeset(struct, params \\ %{}) do
         struct
-        |> cast(params, ~w(uid type active marked_as_deleted collapsed)a)
+        |> cast(params, ~w(type active marked_as_deleted collapsed)a)
         |> cast_embed(:data)
-        |> ensure_uid()
         |> maybe_mark_for_deletion()
-      end
-
-      defp ensure_uid(changeset) do
-        case get_field(changeset, :uid) do
-          nil -> put_change(changeset, :uid, Brando.Utils.generate_uid())
-          uid -> changeset
-        end
       end
 
       defp maybe_mark_for_deletion(%{changes: %{marked_as_deleted: true}} = changeset) do

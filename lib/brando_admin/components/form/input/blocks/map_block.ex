@@ -26,7 +26,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
   def update(assigns, socket) do
     socket
     |> assign(assigns)
-    |> assign(:uid, assigns.block[:uid].value)
+    |> assign(:uid, assigns.ref_form[:uid].value)
     |> then(&{:ok, &1})
   end
 

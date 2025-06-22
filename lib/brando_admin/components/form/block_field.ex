@@ -706,7 +706,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           name: ref.name,
           description: ref.description,
           data: ref.data,
-          sequence: ref.sequence
+          sequence: ref.sequence,
+          uid: ref.uid
         }
       end)
     else

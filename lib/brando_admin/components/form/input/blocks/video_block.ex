@@ -67,7 +67,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:uid, Changeset.get_field(block_cs, :uid))
+     |> assign(:uid, assigns.ref_form[:uid].value)
      |> assign_new(:video, fn ->
        # Always get video from ref_form since we only use refs now
        if assigns[:ref_form] do

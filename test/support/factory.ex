@@ -121,8 +121,8 @@ defmodule Brando.Factory do
     %Brando.Content.Ref{
       name: sequence(:ref_name, &"test_ref_#{&1}"),
       description: "A test ref",
+      uid: Brando.Utils.generate_uid(),
       data: %Brando.Villain.Blocks.TextBlock{
-        uid: "abc123",
         type: "text",
         data: %Brando.Villain.Blocks.TextBlock.Data{text: "Hello"}
       },
@@ -136,8 +136,8 @@ defmodule Brando.Factory do
     %Brando.Content.Ref{
       name: sequence(:ref_name, &"picture_ref_#{&1}"),
       description: "A picture ref",
+      uid: Brando.Utils.generate_uid(),
       data: %Brando.Villain.Blocks.PictureBlock{
-        uid: "abc123",
         type: "picture",
         data: %Brando.Villain.Blocks.PictureBlock.Data{title: "Override title"}
       },
@@ -152,8 +152,8 @@ defmodule Brando.Factory do
     %Brando.Content.Ref{
       name: sequence(:ref_name, &"video_ref_#{&1}"),
       description: "A video ref", 
+      uid: Brando.Utils.generate_uid(),
       data: %Brando.Villain.Blocks.VideoBlock{
-        uid: "abc123", 
         type: "video",
         data: %Brando.Villain.Blocks.VideoBlock.Data{title: "Override title"}
       },
@@ -182,8 +182,8 @@ defmodule Brando.Factory do
     %Brando.Content.Ref{
       name: sequence(:ref_name, &"gallery_ref_#{&1}"),
       description: "A gallery ref",
+      uid: Brando.Utils.generate_uid(),
       data: %Brando.Villain.Blocks.GalleryBlock{
-        uid: "abc123",
         type: "gallery", 
         data: %Brando.Villain.Blocks.GalleryBlock.Data{}
       },

@@ -294,6 +294,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :description, :text
       add :data, :jsonb
       add :sequence, :integer
+      add :uid, :string, null: false
       
       # Foreign keys
       add :module_id, references(:content_modules, on_delete: :delete_all)
@@ -313,6 +314,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     create index(:content_refs, [:video_id])
     create index(:content_refs, [:file_id])
     create index(:content_refs, [:image_id])
+    create unique_index(:content_refs, [:uid])
 
     create table(:content_identifiers) do
       add :entry_id, :id

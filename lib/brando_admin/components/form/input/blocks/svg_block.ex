@@ -28,7 +28,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:uid, assigns.block[:uid].value)}
+     |> assign(:uid, assigns.ref_form[:uid].value)}
   end
 
   def render(assigns) do

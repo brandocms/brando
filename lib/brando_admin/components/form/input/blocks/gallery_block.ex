@@ -77,7 +77,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(:display, Changeset.get_field(block_data_cs, :display))
      |> assign(:selected_images_paths, selected_images_paths)
      |> assign(:has_images?, !Enum.empty?(images))
-     |> assign(:uid, assigns.block[:uid].value)}
+     |> assign(:uid, assigns.ref_form[:uid].value)}
   end
 
   def render(assigns) do
