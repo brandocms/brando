@@ -66,7 +66,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
     Logger.error("MediaBlock render - type is media: #{inspect(type)}")
     Logger.error("MediaBlock render - block data: #{inspect(assigns.block.data)}")
     Logger.error("MediaBlock render - block source: #{inspect(assigns.block.source)}")
-    
+
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
@@ -75,15 +75,31 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
           <input type="hidden" name={template_picture[:title].name} value={template_picture[:title].value || ""} />
           <input type="hidden" name={template_picture[:credits].name} value={template_picture[:credits].value || ""} />
           <input type="hidden" name={template_picture[:alt].name} value={template_picture[:alt].value || ""} />
-          <input type="hidden" name={template_picture[:picture_class].name} value={template_picture[:picture_class].value || ""} />
+          <input
+            type="hidden"
+            name={template_picture[:picture_class].name}
+            value={template_picture[:picture_class].value || ""}
+          />
           <input type="hidden" name={template_picture[:img_class].name} value={template_picture[:img_class].value || ""} />
           <input type="hidden" name={template_picture[:link].name} value={template_picture[:link].value || ""} />
           <input type="hidden" name={template_picture[:srcset].name} value={template_picture[:srcset].value || ""} />
-          <input type="hidden" name={template_picture[:media_queries].name} value={template_picture[:media_queries].value || ""} />
+          <input
+            type="hidden"
+            name={template_picture[:media_queries].name}
+            value={template_picture[:media_queries].value || ""}
+          />
           <input type="hidden" name={template_picture[:lazyload].name} value={to_string(template_picture[:lazyload].value)} />
           <input type="hidden" name={template_picture[:moonwalk].name} value={to_string(template_picture[:moonwalk].value)} />
-          <input type="hidden" name={template_picture[:placeholder].name} value={to_string(template_picture[:placeholder].value)} />
-          <input type="hidden" name={template_picture[:fetchpriority].name} value={to_string(template_picture[:fetchpriority].value)} />
+          <input
+            type="hidden"
+            name={template_picture[:placeholder].name}
+            value={to_string(template_picture[:placeholder].value)}
+          />
+          <input
+            type="hidden"
+            name={template_picture[:fetchpriority].name}
+            value={to_string(template_picture[:fetchpriority].value)}
+          />
         </.inputs_for>
 
         <.inputs_for :let={template_video} field={block_data[:template_video]}>
@@ -129,11 +145,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
     # MediaBlock called with non-media type, render minimal placeholder
     require Logger
     assigns = assign(assigns, :block_type, assigns.block[:type].value)
-    
+
     Logger.error("MediaBlock render - type is NOT media: #{inspect(assigns.block_type)}")
     Logger.error("MediaBlock render - block.data: #{inspect(assigns.block.data)}")
     Logger.error("MediaBlock render - block[:data]: #{inspect(assigns.block[:data])}")
-    if assigns.block[:data], do: Logger.error("MediaBlock render - block[:data][:type]: #{inspect(assigns.block[:data][:type].value)}")
+
+    if assigns.block[:data],
+      do: Logger.error("MediaBlock render - block[:data][:type]: #{inspect(assigns.block[:data][:type].value)}")
 
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid} style="display: none;">
@@ -193,7 +211,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
     require Logger
     Logger.error("MediaBlock handle_event - select_block: #{selected_block_type}")
     Logger.error("MediaBlock handle_event - assigns: #{inspect(Map.keys(socket.assigns))}")
-    
+
     block_templates = socket.assigns.block_templates
 
     target = socket.assigns.target

@@ -43,22 +43,25 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
   def update(assigns, socket) do
     block_data_cs = Block.get_block_data_changeset(assigns.block)
-    
+
     # For refs, we get gallery data from the gallery association
-    {gallery, images} = if assigns.is_ref? do
-      case Changeset.get_field(assigns.block.source, :gallery) do
-        nil -> {nil, []}
-        gallery -> 
-          gallery_objects = Map.get(gallery, :gallery_objects, [])
-          images = Enum.map(gallery_objects, & &1.image)
-          {gallery, images}
+    {gallery, images} =
+      if assigns.is_ref? do
+        case Changeset.get_field(assigns.block.source, :gallery) do
+          nil ->
+            {nil, []}
+
+          gallery ->
+            gallery_objects = Map.get(gallery, :gallery_objects, [])
+            images = Enum.map(gallery_objects, & &1.image)
+            {gallery, images}
+        end
+      else
+        # For regular blocks, images are embedded (legacy)
+        images = Changeset.get_embed(block_data_cs, :images, :struct)
+        {nil, images}
       end
-    else
-      # For regular blocks, images are embedded (legacy)
-      images = Changeset.get_embed(block_data_cs, :images, :struct)
-      {nil, images}
-    end
-    
+
     selected_images_paths = Enum.map(images, & &1.path)
 
     upload_formats =
@@ -138,7 +141,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               <!-- For refs, display images from gallery association -->
               <div :for={{image, index} <- @indexed_images} class="preview sort-handle draggable" data-id={index}>
                 <Content.image image={image} size={(@display == :grid && :thumb) || :smallest} />
-                <button class="delete-x" type="button" phx-click={JS.push("remove_image", target: @myself)} phx-value-path={image.path}>
+                <button
+                  class="delete-x"
+                  type="button"
+                  phx-click={JS.push("remove_image", target: @myself)}
+                  phx-value-path={image.path}
+                >
                   <.icon name="hero-x-mark" />
                   <div class="text">{gettext("Delete")}</div>
                 </button>
@@ -160,7 +168,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             <% else %>
               <!-- For regular blocks, use embedded images (legacy) -->
               <.inputs_for :let={image} field={block_data[:images]} skip_hidden>
-                <.gallery_image image={image} uid={@uid} parent_form_name={block_data.name} display={@display} target={@myself} />
+                <.gallery_image
+                  image={image}
+                  uid={@uid}
+                  parent_form_name={block_data.name}
+                  display={@display}
+                  target={@myself}
+                />
               </.inputs_for>
             <% end %>
           </div>
@@ -318,16 +332,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       target = socket.assigns.target
       ref_name = socket.assigns.ref_name
       {:ok, image} = Brando.Images.get_image(id)
-      
+
       # Get current block data for gallery settings
       block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
       block_data = Changeset.apply_changes(block_data_cs)
-      
+
       # Only gallery configuration data goes to block data
       new_block_data = Map.from_struct(block_data)
-      
+
       send_update(target, %{
-        event: "update_ref_data", 
+        event: "update_ref_data",
         ref_data: new_block_data,
         ref_name: ref_name,
         add_gallery_image_id: image.id
@@ -359,16 +373,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       target = socket.assigns.target
       ref_name = socket.assigns.ref_name
       {:ok, image} = Brando.Images.get_image(id)
-      
+
       # Get current block data for gallery settings
       block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
       block_data = Changeset.apply_changes(block_data_cs)
-      
+
       # Only gallery configuration data goes to block data
       new_block_data = Map.from_struct(block_data)
-      
+
       send_update(target, %{
-        event: "update_ref_data", 
+        event: "update_ref_data",
         ref_data: new_block_data,
         ref_name: ref_name,
         add_gallery_image_id: image.id
@@ -399,16 +413,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       target = socket.assigns.target
       ref_name = socket.assigns.ref_name
       {:ok, image} = Brando.Images.get_image(id)
-      
+
       # Get current block data for gallery settings
       block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
       block_data = Changeset.apply_changes(block_data_cs)
-      
+
       # Only gallery configuration data goes to block data
       new_block_data = Map.from_struct(block_data)
-      
+
       send_update(target, %{
-        event: "update_ref_data", 
+        event: "update_ref_data",
         ref_data: new_block_data,
         ref_name: ref_name,
         remove_gallery_image_id: image.id
@@ -437,16 +451,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       # For refs, remove image from gallery association by path
       target = socket.assigns.target
       ref_name = socket.assigns.ref_name
-      
+
       # Get current block data for gallery settings
       block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
       block_data = Changeset.apply_changes(block_data_cs)
-      
+
       # Only gallery configuration data goes to block data
       new_block_data = Map.from_struct(block_data)
-      
+
       send_update(target, %{
-        event: "update_ref_data", 
+        event: "update_ref_data",
         ref_data: new_block_data,
         ref_name: ref_name,
         remove_gallery_image_path: path
@@ -466,7 +480,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
       send_update(target, %{event: "update_ref_data", ref_data: block_data, ref_name: ref_name})
     end
-    
+
     {:noreply, socket}
   end
 

@@ -33,62 +33,62 @@ defmodule Brando.Villain.Blocks.SvgBlock do
     # block template and merge against this instead
     tpl_src = ref_src.data.data.template_svg
     protected_attrs = __MODULE__.protected_attrs()
-    
+
     # Get the source attributes, excluding protected ones
     src_attrs = Map.from_struct(tpl_src)
     overwritten_attrs = Map.keys(src_attrs) -- protected_attrs
     new_attrs = Map.take(src_attrs, overwritten_attrs)
-    
+
     # Get the current data from the ref changeset - it might be a struct or changeset
     current_data = Ecto.Changeset.get_field(ref_target_changeset, :data)
-    
+
     # Ensure we have a changeset for the data
-    data_changeset = 
+    data_changeset =
       case current_data do
         %Ecto.Changeset{} = cs -> cs
         data -> Ecto.Changeset.change(data)
       end
-    
+
     # Get the current block data and merge with new attributes
     current_block_data = Ecto.Changeset.get_field(data_changeset, :data)
     merged_data = Map.merge(Map.from_struct(current_block_data), new_attrs)
-    
+
     updated_data_changeset = Ecto.Changeset.put_change(data_changeset, :data, merged_data)
-    
+
     # Apply the data changeset to get the final block struct
     updated_block = Ecto.Changeset.apply_changes(updated_data_changeset)
-    
+
     # Return the updated ref changeset with the applied block data
     Ecto.Changeset.put_change(ref_target_changeset, :data, updated_block)
   end
 
   def apply_ref(_, ref_src, ref_target_changeset) do
     protected_attrs = __MODULE__.protected_attrs()
-    
+
     # Get the source attributes, excluding protected ones
     src_attrs = Map.from_struct(ref_src.data.data)
     overwritten_attrs = Map.keys(src_attrs) -- protected_attrs
     new_attrs = Map.take(src_attrs, overwritten_attrs)
-    
+
     # Get the current data from the ref changeset - it might be a struct or changeset
     current_data = Ecto.Changeset.get_field(ref_target_changeset, :data)
-    
+
     # Ensure we have a changeset for the data
-    data_changeset = 
+    data_changeset =
       case current_data do
         %Ecto.Changeset{} = cs -> cs
         data -> Ecto.Changeset.change(data)
       end
-    
+
     # Get the current block data and merge with new attributes
     current_block_data = Ecto.Changeset.get_field(data_changeset, :data)
     merged_data = Map.merge(Map.from_struct(current_block_data), new_attrs)
-    
+
     updated_data_changeset = Ecto.Changeset.put_change(data_changeset, :data, merged_data)
-    
+
     # Apply the data changeset to get the final block struct
     updated_block = Ecto.Changeset.apply_changes(updated_data_changeset)
-    
+
     # Return the updated ref changeset with the applied block data
     Ecto.Changeset.put_change(ref_target_changeset, :data, updated_block)
   end

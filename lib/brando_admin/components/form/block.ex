@@ -657,7 +657,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     require Logger
     Logger.error("Block.update_ref - received ref: #{inspect(ref)}")
     Logger.error("Block.update_ref - ref.data.type: #{inspect(ref.data.type)}")
-    
+
     form = socket.assigns.form
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
@@ -668,7 +668,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     block_changeset = get_block_changeset(changeset, belongs_to)
     refs = Ecto.Changeset.get_assoc(block_changeset, :refs)
-    
+
     Logger.error("Block.update_ref - existing refs count: #{length(refs)}")
 
     new_refs =
@@ -678,14 +678,18 @@ defmodule BrandoAdmin.Components.Form.Block do
 
         old_ref, acc ->
           old_ref_name = Changeset.get_field(old_ref, :name)
+
           if old_ref_name == ref.name do
             # Update the existing changeset with new data
             Logger.error("Block.update_ref - updating ref #{old_ref_name} with new data type: #{inspect(ref.data.type)}")
-            updated_ref_changeset = Changeset.change(old_ref, %{
-              data: ref.data,
-              uid: ref.uid,
-              description: ref.description || Changeset.get_field(old_ref, :description)
-            })
+
+            updated_ref_changeset =
+              Changeset.change(old_ref, %{
+                data: ref.data,
+                uid: ref.uid,
+                description: ref.description || Changeset.get_field(old_ref, :description)
+              })
+
             Logger.error("Block.update_ref - updated ref changeset: #{inspect(updated_ref_changeset)}")
             acc ++ List.wrap(updated_ref_changeset)
           else
@@ -751,21 +755,23 @@ defmodule BrandoAdmin.Components.Form.Block do
             updated_ref = Changeset.force_change(ref, :data, updated_block)
 
             # Handle video_data if provided (creates/updates video association)
-            updated_ref = if Map.has_key?(params, :video_data) do
-              video_data = params.video_data
-              current_user_id = socket.assigns.current_user_id
+            updated_ref =
+              if Map.has_key?(params, :video_data) do
+                video_data = params.video_data
+                current_user_id = socket.assigns.current_user_id
 
-              case Brando.Videos.create_video(video_data, current_user_id) do
-                {:ok, video} ->
-                  updated_ref
-                  |> Changeset.put_change(:video_id, video.id)
-                  |> Map.put(:data, Map.put(updated_ref.data, :video, nil))
-                {:error, _} ->
-                  updated_ref
+                case Brando.Videos.create_video(video_data, current_user_id) do
+                  {:ok, video} ->
+                    updated_ref
+                    |> Changeset.put_change(:video_id, video.id)
+                    |> Map.put(:data, Map.put(updated_ref.data, :video, nil))
+
+                  {:error, _} ->
+                    updated_ref
+                end
+              else
+                updated_ref
               end
-            else
-              updated_ref
-            end
 
             # Also update media associations if provided (including nil values)
             updated_ref =
@@ -775,7 +781,6 @@ defmodule BrandoAdmin.Components.Form.Block do
               |> put_change_if_key_exists(:gallery_id, params)
               |> put_change_if_key_exists(:file_id, params)
               |> clear_preloaded_associations(params)
-
 
             acc ++ List.wrap(updated_ref)
           else
@@ -2396,7 +2401,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> assign_new(:ref_name, fn -> nil end)
       |> assign_new(:ref_description, fn -> nil end)
       |> assign_new(:ref_form, fn -> nil end)
-      |> assign_new(:block_id, fn -> 
+      |> assign_new(:block_id, fn ->
         if assigns[:is_ref?] && assigns[:ref_form] do
           assigns.ref_form[:uid].value
         else
@@ -2409,7 +2414,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         Logger.error("Block.dynamic_block - block type value: #{inspect(type_value)}")
         Logger.error("Block.dynamic_block - block data: #{inspect(assigns.block.data)}")
         Logger.error("Block.dynamic_block - full block: #{inspect(assigns.block)}")
-        
+
         type_atom = String.to_existing_atom(type_value)
 
         block_type =
@@ -2418,14 +2423,15 @@ defmodule BrandoAdmin.Components.Form.Block do
            |> Macro.camelize()) <> "Block"
 
         block_module = Module.concat([Blocks, block_type])
-        
+
         Logger.error("Block.dynamic_block - block_type: #{block_type}, block_module: #{block_module}")
 
         case Code.ensure_compiled(block_module) do
-          {:module, _} -> 
+          {:module, _} ->
             Logger.error("Block.dynamic_block - using module: #{block_module}")
             block_module
-          _ -> 
+
+          _ ->
             Logger.error("Block.dynamic_block - using function capture for: #{type_atom}")
             Function.capture(__MODULE__, type_atom, 1)
         end
@@ -2573,11 +2579,13 @@ defmodule BrandoAdmin.Components.Form.Block do
   ## Ref blocks
 
   def html(assigns) do
-    uid = if assigns[:ref_form] do
-      assigns.ref_form[:uid].value
-    else
-      assigns.block[:uid].value
-    end
+    uid =
+      if assigns[:ref_form] do
+        assigns.ref_form[:uid].value
+      else
+        assigns.block[:uid].value
+      end
+
     assigns = assign(assigns, :uid, uid)
 
     ~H"""
@@ -2599,11 +2607,13 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def markdown(assigns) do
-    uid = if assigns[:ref_form] do
-      assigns.ref_form[:uid].value
-    else
-      assigns.block[:uid].value
-    end
+    uid =
+      if assigns[:ref_form] do
+        assigns.ref_form[:uid].value
+      else
+        assigns.block[:uid].value
+      end
+
     assigns = assign(assigns, :uid, uid)
 
     ~H"""
@@ -2627,11 +2637,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   def comment(assigns) do
     block_data_cs = get_block_data_changeset(assigns.block)
 
-    uid = if assigns[:ref_form] do
-      assigns.ref_form[:uid].value
-    else
-      assigns.block[:uid].value
-    end
+    uid =
+      if assigns[:ref_form] do
+        assigns.ref_form[:uid].value
+      else
+        assigns.block[:uid].value
+      end
 
     assigns =
       assigns
@@ -2662,11 +2673,13 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def input(assigns) do
-    uid = if assigns[:ref_form] do
-      assigns.ref_form[:uid].value
-    else
-      assigns.block[:uid].value
-    end
+    uid =
+      if assigns[:ref_form] do
+        assigns.ref_form[:uid].value
+      else
+        assigns.block[:uid].value
+      end
+
     assigns = assign(assigns, :uid, uid)
 
     ~H"""
@@ -2697,11 +2710,13 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def header(assigns) do
-    uid = if assigns[:ref_form] do
-      assigns.ref_form[:uid].value
-    else
-      assigns.block[:uid].value
-    end
+    uid =
+      if assigns[:ref_form] do
+        assigns.ref_form[:uid].value
+      else
+        assigns.block[:uid].value
+      end
+
     assigns = assign(assigns, :uid, uid)
 
     ~H"""
@@ -2763,11 +2778,12 @@ defmodule BrandoAdmin.Components.Form.Block do
         extensions -> extensions
       end
 
-    uid = if assigns[:ref_form] do
-      assigns.ref_form[:uid].value
-    else
-      assigns.block[:uid].value
-    end
+    uid =
+      if assigns[:ref_form] do
+        assigns.ref_form[:uid].value
+      else
+        assigns.block[:uid].value
+      end
 
     assigns =
       assigns
@@ -3779,6 +3795,4 @@ defmodule BrandoAdmin.Components.Form.Block do
       changeset
     end
   end
-
-
 end

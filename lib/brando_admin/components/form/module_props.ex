@@ -774,11 +774,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                         <h2 class="titlecase">Ref config — {ref_data[:type].value}</h2>
                         <Input.text field={ref[:name]} label={gettext("Name")} />
                         <Input.text field={ref[:description]} label={gettext("Description")} />
-                        <Input.input
-                          type={:hidden}
-                          field={ref[:uid]}
-                          value={ref[:uid].value || Brando.Utils.generate_uid()}
-                        />
+                        <Input.input type={:hidden} field={ref[:uid]} value={ref[:uid].value || Brando.Utils.generate_uid()} />
                       </div>
                     </Form.inputs_for_block>
                   </div>

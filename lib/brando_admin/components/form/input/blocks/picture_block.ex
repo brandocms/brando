@@ -72,14 +72,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
            nil ->
              # If no image preloaded, try to fetch via image_id
              case Changeset.get_field(ref_cs, :image_id) do
-               nil -> nil
+               nil ->
+                 nil
+
                image_id ->
                  case Brando.Images.get_image(image_id) do
                    {:ok, image} -> image
                    _ -> nil
                  end
              end
-           image -> image
+
+           image ->
+             image
          end
        else
          nil

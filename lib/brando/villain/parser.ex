@@ -1301,31 +1301,64 @@ defmodule Brando.Villain.Parser do
     if Map.get(ref, :active, true) == false do
       nil
     else
-      merged_data = 
-      case {Map.get(ref, :image), Map.get(ref, :image_id)} do
-        {nil, nil} ->
-          # No image association and no image_id, return the block data as-is
-          ref.data.data
+      merged_data =
+        case {Map.get(ref, :image), Map.get(ref, :image_id)} do
+          {nil, nil} ->
+            # No image association and no image_id, return the block data as-is
+            ref.data.data
 
-        {nil, image_id} when is_integer(image_id) ->
-          # No image association but we have image_id, load the image
-          case Brando.Images.get_image(image_id) do
-            {:ok, image} ->
-              override_data = Map.from_struct(ref.data.data || %{})
-              override_attrs = Map.take(override_data, [:title, :credits, :alt, :picture_class, :img_class, :link, :srcset, :media_queries, :lazyload, :moonwalk, :placeholder, :fetchpriority])
-              struct(image, Map.merge(Map.from_struct(image), override_attrs))
-            _ ->
-              ref.data.data
-          end
+          {nil, image_id} when is_integer(image_id) ->
+            # No image association but we have image_id, load the image
+            case Brando.Images.get_image(image_id) do
+              {:ok, image} ->
+                override_data = Map.from_struct(ref.data.data || %{})
 
-        {image, _} ->
-          # We have an image, so we should return the image data with overrides
-          # from the block data (like custom title, credits, alt)
-          override_data = Map.from_struct(ref.data.data || %{})
-          override_attrs = Map.take(override_data, [:title, :credits, :alt, :picture_class, :img_class, :link, :srcset, :media_queries, :lazyload, :moonwalk, :placeholder, :fetchpriority])
-          # Merge into the image struct while preserving the struct type
-          struct(image, Map.merge(Map.from_struct(image), override_attrs))
-      end
+                override_attrs =
+                  Map.take(override_data, [
+                    :title,
+                    :credits,
+                    :alt,
+                    :picture_class,
+                    :img_class,
+                    :link,
+                    :srcset,
+                    :media_queries,
+                    :lazyload,
+                    :moonwalk,
+                    :placeholder,
+                    :fetchpriority
+                  ])
+
+                struct(image, Map.merge(Map.from_struct(image), override_attrs))
+
+              _ ->
+                ref.data.data
+            end
+
+          {image, _} ->
+            # We have an image, so we should return the image data with overrides
+            # from the block data (like custom title, credits, alt)
+            override_data = Map.from_struct(ref.data.data || %{})
+
+            override_attrs =
+              Map.take(override_data, [
+                :title,
+                :credits,
+                :alt,
+                :picture_class,
+                :img_class,
+                :link,
+                :srcset,
+                :media_queries,
+                :lazyload,
+                :moonwalk,
+                :placeholder,
+                :fetchpriority
+              ])
+
+            # Merge into the image struct while preserving the struct type
+            struct(image, Map.merge(Map.from_struct(image), override_attrs))
+        end
 
       # Return the ref structure with merged data
       %{
@@ -1347,7 +1380,21 @@ defmodule Brando.Villain.Parser do
           # We have a video, so we should return the video data with overrides
           # from the block data
           override_data = Map.from_struct(ref.data.data || %{})
-          override_attrs = Map.take(override_data, [:title, :poster, :autoplay, :opacity, :preload, :play_button, :controls, :cover, :aspect_ratio, :cover_image])
+
+          override_attrs =
+            Map.take(override_data, [
+              :title,
+              :poster,
+              :autoplay,
+              :opacity,
+              :preload,
+              :play_button,
+              :controls,
+              :cover,
+              :aspect_ratio,
+              :cover_image
+            ])
+
           # Merge into the video struct while preserving the struct type
           struct(video, Map.merge(Map.from_struct(video), override_attrs))
       end

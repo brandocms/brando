@@ -33,7 +33,7 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
       target_ref = %Content.Ref{
         name: "test_picture",
         data: %Brando.Villain.Blocks.PictureBlock{
-          type: "picture", 
+          type: "picture",
           data: %Brando.Villain.Blocks.PictureBlock.Data{
             title: "Target Title",
             alt: "Target Alt",
@@ -42,15 +42,16 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
           }
         }
       }
-      
+
       target_changeset = Changeset.change(target_ref)
 
       # Apply the ref
-      result = Brando.Villain.Blocks.PictureBlock.apply_ref(
-        Brando.Villain.Blocks.PictureBlock,
-        ref_src,
-        target_changeset
-      )
+      result =
+        Brando.Villain.Blocks.PictureBlock.apply_ref(
+          Brando.Villain.Blocks.PictureBlock,
+          ref_src,
+          target_changeset
+        )
 
       updated_ref = Changeset.apply_changes(result)
 
@@ -93,11 +94,12 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
       target_changeset = Changeset.change(target_ref)
 
       # Apply MediaBlock template
-      result = Brando.Villain.Blocks.PictureBlock.apply_ref(
-        Brando.Villain.Blocks.MediaBlock,
-        media_ref_src,
-        target_changeset
-      )
+      result =
+        Brando.Villain.Blocks.PictureBlock.apply_ref(
+          Brando.Villain.Blocks.MediaBlock,
+          media_ref_src,
+          target_changeset
+        )
 
       updated_ref = Changeset.apply_changes(result)
 
@@ -136,16 +138,17 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
 
       target_changeset = Changeset.change(target_ref)
 
-      result = Brando.Villain.Blocks.VideoBlock.apply_ref(
-        Brando.Villain.Blocks.VideoBlock,
-        ref_src,
-        target_changeset
-      )
+      result =
+        Brando.Villain.Blocks.VideoBlock.apply_ref(
+          Brando.Villain.Blocks.VideoBlock,
+          ref_src,
+          target_changeset
+        )
 
       updated_ref = Changeset.apply_changes(result)
 
       assert updated_ref.data.data.autoplay == true
-      assert updated_ref.data.data.controls == false  
+      assert updated_ref.data.data.controls == false
       assert updated_ref.data.data.preload == true
     end
 
@@ -178,11 +181,12 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
 
       target_changeset = Changeset.change(target_ref)
 
-      result = Brando.Villain.Blocks.VideoBlock.apply_ref(
-        Brando.Villain.Blocks.MediaBlock,
-        media_ref_src,
-        target_changeset
-      )
+      result =
+        Brando.Villain.Blocks.VideoBlock.apply_ref(
+          Brando.Villain.Blocks.MediaBlock,
+          media_ref_src,
+          target_changeset
+        )
 
       updated_ref = Changeset.apply_changes(result)
 
@@ -206,7 +210,7 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
       }
 
       target_ref = %Content.Ref{
-        name: "test_svg", 
+        name: "test_svg",
         data: %Brando.Villain.Blocks.SvgBlock{
           type: "svg",
           data: %Brando.Villain.Blocks.SvgBlock.Data{
@@ -218,17 +222,18 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
 
       target_changeset = Changeset.change(target_ref)
 
-      result = Brando.Villain.Blocks.SvgBlock.apply_ref(
-        Brando.Villain.Blocks.SvgBlock,
-        ref_src,
-        target_changeset
-      )
+      result =
+        Brando.Villain.Blocks.SvgBlock.apply_ref(
+          Brando.Villain.Blocks.SvgBlock,
+          ref_src,
+          target_changeset
+        )
 
       updated_ref = Changeset.apply_changes(result)
 
       # Class should be updated (not protected)
       assert updated_ref.data.data.class == "source-svg-class"
-      
+
       # Code should be preserved (protected attribute)
       assert updated_ref.data.data.code == "<svg>target code should be preserved</svg>"
     end
@@ -260,17 +265,18 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
 
       target_changeset = Changeset.change(target_ref)
 
-      result = Brando.Villain.Blocks.SvgBlock.apply_ref(
-        Brando.Villain.Blocks.MediaBlock,
-        media_ref_src,
-        target_changeset
-      )
+      result =
+        Brando.Villain.Blocks.SvgBlock.apply_ref(
+          Brando.Villain.Blocks.MediaBlock,
+          media_ref_src,
+          target_changeset
+        )
 
       updated_ref = Changeset.apply_changes(result)
 
       # Class should be updated from template
       assert updated_ref.data.data.class == "media-svg-class"
-      
+
       # Code should still be preserved (protected)
       assert updated_ref.data.data.code == "<svg>original code should be preserved</svg>"
     end
@@ -284,7 +290,7 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
           type: "text",
           data: %Brando.Villain.Blocks.TextBlock.Data{
             text: "Source Text",
-type: :paragraph
+            type: :paragraph
           }
         }
       }
@@ -292,10 +298,10 @@ type: :paragraph
       target_ref = %Content.Ref{
         name: "test_text",
         data: %Brando.Villain.Blocks.TextBlock{
-          type: "text", 
+          type: "text",
           data: %Brando.Villain.Blocks.TextBlock.Data{
             text: "Target Text",
-type: :paragraph
+            type: :paragraph
           }
         }
       }
@@ -303,11 +309,12 @@ type: :paragraph
       target_changeset = Changeset.change(target_ref)
 
       # TextBlock uses the default implementation
-      result = Brando.Villain.Blocks.TextBlock.apply_ref(
-        Brando.Villain.Blocks.TextBlock,
-        ref_src,
-        target_changeset
-      )
+      result =
+        Brando.Villain.Blocks.TextBlock.apply_ref(
+          Brando.Villain.Blocks.TextBlock,
+          ref_src,
+          target_changeset
+        )
 
       updated_ref = Changeset.apply_changes(result)
 
@@ -339,7 +346,7 @@ type: :paragraph
           data: %Brando.Villain.Blocks.HeaderBlock.Data{
             text: "Target Header",
             level: 2,
-            class: "target-class", 
+            class: "target-class",
             id: "target-id"
           }
         }
@@ -347,11 +354,12 @@ type: :paragraph
 
       target_changeset = Changeset.change(target_ref)
 
-      result = Brando.Villain.Blocks.HeaderBlock.apply_ref(
-        Brando.Villain.Blocks.HeaderBlock,
-        ref_src,
-        target_changeset
-      )
+      result =
+        Brando.Villain.Blocks.HeaderBlock.apply_ref(
+          Brando.Villain.Blocks.HeaderBlock,
+          ref_src,
+          target_changeset
+        )
 
       updated_ref = Changeset.apply_changes(result)
 
@@ -366,7 +374,7 @@ type: :paragraph
   describe "edge cases and error handling" do
     test "handles changeset vs struct data field" do
       # Test both scenarios where data field is a changeset or a struct
-      
+
       ref_src = %Content.Ref{
         name: "test",
         data: %Brando.Villain.Blocks.TextBlock{
@@ -390,11 +398,12 @@ type: :paragraph
 
       target_changeset_1 = Changeset.change(target_ref_struct)
 
-      result_1 = Brando.Villain.Blocks.TextBlock.apply_ref(
-        Brando.Villain.Blocks.TextBlock,
-        ref_src,
-        target_changeset_1
-      )
+      result_1 =
+        Brando.Villain.Blocks.TextBlock.apply_ref(
+          Brando.Villain.Blocks.TextBlock,
+          ref_src,
+          target_changeset_1
+        )
 
       updated_ref_1 = Changeset.apply_changes(result_1)
       assert updated_ref_1.data.data.text == "Target Text"
@@ -403,11 +412,12 @@ type: :paragraph
       data_changeset = Changeset.change(target_ref_struct.data)
       target_changeset_2 = Changeset.put_change(target_changeset_1, :data, data_changeset)
 
-      result_2 = Brando.Villain.Blocks.TextBlock.apply_ref(
-        Brando.Villain.Blocks.TextBlock,
-        ref_src,
-        target_changeset_2
-      )
+      result_2 =
+        Brando.Villain.Blocks.TextBlock.apply_ref(
+          Brando.Villain.Blocks.TextBlock,
+          ref_src,
+          target_changeset_2
+        )
 
       updated_ref_2 = Changeset.apply_changes(result_2)
       assert updated_ref_2.data.data.text == "Target Text"
@@ -435,11 +445,12 @@ type: :paragraph
 
       target_changeset = Changeset.change(target_ref)
 
-      result = Brando.Villain.Blocks.TextBlock.apply_ref(
-        Brando.Villain.Blocks.TextBlock,
-        ref_src,
-        target_changeset
-      )
+      result =
+        Brando.Villain.Blocks.TextBlock.apply_ref(
+          Brando.Villain.Blocks.TextBlock,
+          ref_src,
+          target_changeset
+        )
 
       updated_ref = Changeset.apply_changes(result)
       # Text is protected, so it remains nil since target had empty data

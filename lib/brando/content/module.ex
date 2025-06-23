@@ -78,6 +78,7 @@ defmodule Brando.Content.Module do
       on_replace: :delete_if_exists
 
     relation :parent, :belongs_to, module: __MODULE__, on_replace: :delete_if_exists
+
     relation :refs, :has_many,
       module: Brando.Content.Ref,
       on_replace: :delete,

@@ -65,7 +65,7 @@ defmodule Brando.VillainTest do
               refs: [
                 %{
                   name: "text",
-                  uid: Brando.Utils.generate_uid(),
+                  uid: "pf_cs_ref_#{System.unique_integer([:positive])}",
                   data: %Brando.Villain.Blocks.TextBlock{
                     data: %Brando.Villain.Blocks.TextBlock.Data{
                       text: text,
@@ -496,7 +496,7 @@ defmodule Brando.VillainTest do
 
   test "list_block_ids_matching_regex", %{user: user} do
     text_ref = %Brando.Content.Ref{
-      uid: Brando.Utils.generate_uid(),
+      uid: "test_ref_#{System.unique_integer([:positive])}",
       data: %Brando.Villain.Blocks.TextBlock{
         active: true,
         data: %Brando.Villain.Blocks.TextBlock.Data{
@@ -523,7 +523,21 @@ defmodule Brando.VillainTest do
     }
 
     {:ok, module} = Brando.Repo.insert(module_params)
-    text_ref_with_new_uid = %{text_ref | uid: Brando.Utils.generate_uid()}
+
+    # Create a completely new ref for the block instead of modifying the existing one
+    block_text_ref = %Brando.Content.Ref{
+      uid: "test_ref_block_#{System.unique_integer([:positive])}",
+      data: %Brando.Villain.Blocks.TextBlock{
+        active: true,
+        data: %Brando.Villain.Blocks.TextBlock.Data{
+          text: "<p>{{ globals.site.name }}</p>",
+          extensions: nil,
+          type: "paragraph"
+        }
+      },
+      description: nil,
+      name: "text"
+    }
 
     simple_blocks = [
       %Brando.Pages.Fragment.Blocks{
@@ -533,7 +547,7 @@ defmodule Brando.VillainTest do
           module_id: module.id,
           uid: Brando.Utils.generate_uid(),
           refs: [
-            text_ref_with_new_uid
+            block_text_ref
           ],
           vars: []
         }
@@ -559,7 +573,44 @@ defmodule Brando.VillainTest do
     {:ok, pf1} = Brando.Pages.create_fragment(fragment_cs, user)
     _pf2 = Brando.Pages.create_fragment(params_empty_data, user)
     _pf3 = Brando.Pages.create_fragment(params_empty_data, user)
-    {:ok, pf4} = Brando.Pages.create_fragment(fragment_cs, user)
+
+    # Create a new fragment changeset with new refs for pf4
+    block_text_ref_2 = %Brando.Content.Ref{
+      uid: "test_ref_block_2_#{System.unique_integer([:positive])}",
+      data: %Brando.Villain.Blocks.TextBlock{
+        active: true,
+        data: %Brando.Villain.Blocks.TextBlock.Data{
+          text: "<p>{{ globals.site.name }}</p>",
+          extensions: nil,
+          type: "paragraph"
+        }
+      },
+      description: nil,
+      name: "text"
+    }
+
+    simple_blocks_2 = [
+      %Brando.Pages.Fragment.Blocks{
+        block: %Brando.Content.Block{
+          type: :module,
+          source: "Elixir.Brando.Pages.Fragment.Blocks",
+          module_id: module.id,
+          uid: Brando.Utils.generate_uid(),
+          refs: [
+            block_text_ref_2
+          ],
+          vars: []
+        }
+      }
+      |> Ecto.Changeset.change()
+      |> Map.put(:action, :insert)
+    ]
+
+    fragment_cs_2 = Brando.Pages.Fragment.changeset(%Brando.Pages.Fragment{}, fragment_params, user)
+    fragment_cs_2 = Ecto.Changeset.put_assoc(fragment_cs_2, :entry_blocks, simple_blocks_2)
+    fragment_cs_2 = Map.put(fragment_cs_2, :action, :insert)
+
+    {:ok, pf4} = Brando.Pages.create_fragment(fragment_cs_2, user)
 
     resulting_ids =
       Brando.Villain.list_block_ids_matching_regex(globals: "{{ globals\.(.*?) }}")
@@ -1063,14 +1114,15 @@ defmodule Brando.VillainTest do
       ]
     }
 
-    fragment_cs = pf_cs("So the global says: '{{ globals.system.text }}'.")
+    fragment_cs_1 = pf_cs("So the global says: '{{ globals.system.text }}'.")
+    fragment_cs_2 = pf_cs("So the global says: '{{ globals.system.text }}'.")
 
     {:ok, gc1} = Brando.Sites.create_global_set(global_set_params, user)
     {:ok, _} = Brando.Sites.create_global_set(global_set_params_no, user)
-    {:ok, pf1} = Brando.Pages.create_fragment(fragment_cs, user)
+    {:ok, pf1} = Brando.Pages.create_fragment(fragment_cs_1, user)
 
     {:ok, pf2} =
-      Brando.Pages.create_fragment(Ecto.Changeset.put_change(fragment_cs, :language, :no), user)
+      Brando.Pages.create_fragment(Ecto.Changeset.put_change(fragment_cs_2, :language, :no), user)
 
     {:ok, pf1} = Brando.Villain.render_entry(Brando.Pages.Fragment, pf1.id)
     {:ok, pf2} = Brando.Villain.render_entry(Brando.Pages.Fragment, pf2.id)

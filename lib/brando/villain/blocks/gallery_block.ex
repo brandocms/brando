@@ -13,7 +13,6 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
       plural: "gallery_block_datas",
       gettext_module: Brando.Gettext
 
-
     @primary_key false
     data_layer :embedded
     identifier false
@@ -38,7 +37,5 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
 
       attribute :formats, {:array, Ecto.Enum}, values: [:original, :jpg, :png, :gif, :webp, :avif, :svg]
     end
-
   end
-
 end

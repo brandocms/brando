@@ -1022,6 +1022,7 @@ defmodule Brando.Villain do
             %Changeset{} = data_cs ->
               # Get the struct from the changeset data (which should be the block struct)
               data_cs.data.__struct__
+
             block_data ->
               # Get the block struct directly
               block_data.__struct__

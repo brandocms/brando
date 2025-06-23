@@ -77,14 +77,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
            nil ->
              # If no video preloaded, try to fetch via video_id
              case Changeset.get_field(ref_cs, :video_id) do
-               nil -> nil
+               nil ->
+                 nil
+
                video_id ->
                  case Brando.Videos.get_video(video_id) do
                    {:ok, video} -> video
                    _ -> nil
                  end
              end
-           video -> video
+
+           video ->
+             video
          end
        else
          nil
@@ -108,16 +112,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
             <%= case @type do %>
               <% :upload -> %>
                 {gettext("Uploaded video file")}
-
               <% :external_file -> %>
                 {gettext("External video URL")}
-
               <% :youtube -> %>
                 {gettext("YouTube")}: {@video_data[:remote_id]}
-
               <% :vimeo -> %>
                 {gettext("Vimeo")}: {@video_data[:remote_id]}
-
               <% _ -> %>
                 {gettext("Unknown video type")}: {@type}
             <% end %>
@@ -524,5 +524,4 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
     {:noreply, assign(socket, :cover_image, picture_data)}
   end
-
 end

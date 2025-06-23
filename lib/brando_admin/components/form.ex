@@ -1505,12 +1505,7 @@ defmodule BrandoAdmin.Components.Form do
       >
         <Tab.tabs active_tab={@active_video_tab}>
           <:buttons>
-            <Tab.tab_button
-              id="upload"
-              label={gettext("Upload / File")}
-              active_tab={@active_video_tab}
-              target={@myself}
-            />
+            <Tab.tab_button id="upload" label={gettext("Upload / File")} active_tab={@active_video_tab} target={@myself} />
             <Tab.tab_button
               id="external"
               label={gettext("External (Vimeo/YouTube)")}
@@ -1535,7 +1530,12 @@ defmodule BrandoAdmin.Components.Form do
                   {gettext("Select existing video")}
                 </button>
 
-                <button :if={@edit_video.video} class="secondary" type="button" phx-click={duplicate_video(@edit_video, @myself)}>
+                <button
+                  :if={@edit_video.video}
+                  class="secondary"
+                  type="button"
+                  phx-click={duplicate_video(@edit_video, @myself)}
+                >
                   {gettext("Duplicate video")}
                 </button>
               </div>
@@ -1603,10 +1603,20 @@ defmodule BrandoAdmin.Components.Form do
                   <button class="secondary" type="button" phx-click={toggle_drawer("#image-picker")}>
                     {gettext("Select thumbnail from library")}
                   </button>
-                  <button :if={@edit_video.video && @edit_video.video.type == :upload} class="secondary" type="button" phx-click={extract_thumbnail(@myself)}>
+                  <button
+                    :if={@edit_video.video && @edit_video.video.type == :upload}
+                    class="secondary"
+                    type="button"
+                    phx-click={extract_thumbnail(@myself)}
+                  >
                     {gettext("Extract thumbnail from video")}
                   </button>
-                  <button :if={@edit_video.video && @edit_video.video.thumbnail} class="secondary" type="button" phx-click={reset_video_thumbnail(@myself)}>
+                  <button
+                    :if={@edit_video.video && @edit_video.video.thumbnail}
+                    class="secondary"
+                    type="button"
+                    phx-click={reset_video_thumbnail(@myself)}
+                  >
                     {gettext("Remove thumbnail")}
                   </button>
                 </div>
@@ -1631,7 +1641,11 @@ defmodule BrandoAdmin.Components.Form do
               </div>
 
               <div class="brando-input">
-                <Input.text field={video_form[:source_url]} label={gettext("Video URL")} placeholder="https://vimeo.com/123456789 or https://youtube.com/watch?v=..." />
+                <Input.text
+                  field={video_form[:source_url]}
+                  label={gettext("Video URL")}
+                  placeholder="https://vimeo.com/123456789 or https://youtube.com/watch?v=..."
+                />
               </div>
 
               <div class="button-group vertical">
@@ -1702,7 +1716,12 @@ defmodule BrandoAdmin.Components.Form do
                   <button class="secondary" type="button" phx-click={toggle_drawer("#image-picker")}>
                     {gettext("Select thumbnail from library")}
                   </button>
-                  <button :if={@edit_video.video && @edit_video.video.thumbnail} class="secondary" type="button" phx-click={reset_video_thumbnail(@myself)}>
+                  <button
+                    :if={@edit_video.video && @edit_video.video.thumbnail}
+                    class="secondary"
+                    type="button"
+                    phx-click={reset_video_thumbnail(@myself)}
+                  >
                     {gettext("Remove thumbnail")}
                   </button>
                 </div>
@@ -1749,7 +1768,7 @@ defmodule BrandoAdmin.Components.Form do
     |> toggle_drawer("#image-drawer")
   end
 
-   def duplicate_video(js \\ %JS{}, edit_video, target) do
+  def duplicate_video(js \\ %JS{}, edit_video, target) do
     JS.push(js, "duplicate_video", value: %{video_id: edit_video.video.id}, target: target)
   end
 
@@ -2086,7 +2105,6 @@ defmodule BrandoAdmin.Components.Form do
       )
 
     send(self(), {:progress_popup, "Saving entry..."})
-
 
     case apply(context, :"#{mutation_type}_#{singular}", [rendered_changeset, current_user]) do
       {:ok, entry} ->
