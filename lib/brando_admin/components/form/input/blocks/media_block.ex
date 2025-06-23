@@ -62,6 +62,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   end
 
   def render(%{block: %{data: %{type: type}}} = assigns) when type in ["media", :media] do
+    require Logger
+    Logger.error("MediaBlock render - type is media: #{inspect(type)}")
+    Logger.error("MediaBlock render - block data: #{inspect(assigns.block.data)}")
+    Logger.error("MediaBlock render - block source: #{inspect(assigns.block.source)}")
+    
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
@@ -122,7 +127,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
 
   def render(assigns) do
     # MediaBlock called with non-media type, render minimal placeholder
+    require Logger
     assigns = assign(assigns, :block_type, assigns.block[:type].value)
+    
+    Logger.error("MediaBlock render - type is NOT media: #{inspect(assigns.block_type)}")
+    Logger.error("MediaBlock render - block.data: #{inspect(assigns.block.data)}")
+    Logger.error("MediaBlock render - block[:data]: #{inspect(assigns.block[:data])}")
+    if assigns.block[:data], do: Logger.error("MediaBlock render - block[:data][:type]: #{inspect(assigns.block[:data][:type].value)}")
 
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid} style="display: none;">
@@ -179,12 +190,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   end
 
   def handle_event("select_block", %{"block" => selected_block_type}, socket) do
+    require Logger
+    Logger.error("MediaBlock handle_event - select_block: #{selected_block_type}")
+    Logger.error("MediaBlock handle_event - assigns: #{inspect(Map.keys(socket.assigns))}")
+    
     block_templates = socket.assigns.block_templates
 
     target = socket.assigns.target
     ref_name = socket.assigns.ref_name
     ref_description = socket.assigns.ref_description
     uid = Brando.Utils.generate_uid()
+
+    Logger.error("MediaBlock handle_event - ref_name: #{ref_name}, uid: #{uid}")
+    Logger.error("MediaBlock handle_event - block_templates: #{inspect(block_templates)}")
 
     ref_data =
       case selected_block_type do
@@ -219,6 +237,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
       uid: uid,
       data: ref_data
     }
+
+    Logger.error("MediaBlock handle_event - sending update_ref to target: #{inspect(target)}")
+    Logger.error("MediaBlock handle_event - ref data type: #{inspect(ref_data.type)}")
 
     send_update(target, %{
       event: "update_ref",

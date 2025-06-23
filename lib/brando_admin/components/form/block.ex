@@ -654,6 +654,10 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def update(%{event: "update_ref", ref: ref}, socket) do
+    require Logger
+    Logger.error("Block.update_ref - received ref: #{inspect(ref)}")
+    Logger.error("Block.update_ref - ref.data.type: #{inspect(ref.data.type)}")
+    
     form = socket.assigns.form
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
@@ -664,6 +668,8 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     block_changeset = get_block_changeset(changeset, belongs_to)
     refs = Ecto.Changeset.get_assoc(block_changeset, :refs)
+    
+    Logger.error("Block.update_ref - existing refs count: #{length(refs)}")
 
     new_refs =
       Enum.reduce(refs, [], fn
@@ -674,11 +680,13 @@ defmodule BrandoAdmin.Components.Form.Block do
           old_ref_name = Changeset.get_field(old_ref, :name)
           if old_ref_name == ref.name do
             # Update the existing changeset with new data
+            Logger.error("Block.update_ref - updating ref #{old_ref_name} with new data type: #{inspect(ref.data.type)}")
             updated_ref_changeset = Changeset.change(old_ref, %{
               data: ref.data,
               uid: ref.uid,
               description: ref.description || Changeset.get_field(old_ref, :description)
             })
+            Logger.error("Block.update_ref - updated ref changeset: #{inspect(updated_ref_changeset)}")
             acc ++ List.wrap(updated_ref_changeset)
           else
             acc ++ List.wrap(old_ref)
@@ -2396,7 +2404,13 @@ defmodule BrandoAdmin.Components.Form.Block do
         end
       end)
       |> assign_new(:component_target, fn ->
-        type_atom = String.to_existing_atom(assigns.block[:type].value)
+        require Logger
+        type_value = assigns.block[:type].value
+        Logger.error("Block.dynamic_block - block type value: #{inspect(type_value)}")
+        Logger.error("Block.dynamic_block - block data: #{inspect(assigns.block.data)}")
+        Logger.error("Block.dynamic_block - full block: #{inspect(assigns.block)}")
+        
+        type_atom = String.to_existing_atom(type_value)
 
         block_type =
           (type_atom
@@ -2404,10 +2418,16 @@ defmodule BrandoAdmin.Components.Form.Block do
            |> Macro.camelize()) <> "Block"
 
         block_module = Module.concat([Blocks, block_type])
+        
+        Logger.error("Block.dynamic_block - block_type: #{block_type}, block_module: #{block_module}")
 
         case Code.ensure_compiled(block_module) do
-          {:module, _} -> block_module
-          _ -> Function.capture(__MODULE__, type_atom, 1)
+          {:module, _} -> 
+            Logger.error("Block.dynamic_block - using module: #{block_module}")
+            block_module
+          _ -> 
+            Logger.error("Block.dynamic_block - using function capture for: #{type_atom}")
+            Function.capture(__MODULE__, type_atom, 1)
         end
       end)
 
