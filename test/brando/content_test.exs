@@ -21,8 +21,8 @@ defmodule Brando.ContentTest do
           %{
             name: "TestRef",
             description: "A test ref",
+            uid: Brando.Utils.generate_uid(),
             data: %{
-              uid: "abc123",
               type: "text",
               data: %{text: "Hello"}
             }
@@ -83,7 +83,7 @@ defmodule Brando.ContentTest do
       assert length(prepared_parent.refs) == 1
       [prepared_ref] = prepared_parent.refs
       assert prepared_ref.name == "TestRef"
-      assert prepared_ref.data.uid != "abc123"
+      assert prepared_ref.uid != "abc123"
 
       # Vars should have no IDs
       assert length(prepared_parent.vars) == 1
@@ -211,8 +211,8 @@ defmodule Brando.ContentTest do
           %{
             name: "ParentRef",
             description: "A test ref",
+            uid: Brando.Utils.generate_uid(),
             data: %{
-              uid: "abc123",
               type: "text",
               data: %{text: "Hello"}
             }
@@ -229,9 +229,9 @@ defmodule Brando.ContentTest do
           }
         ]
       }
-      
+
       {:ok, parent} = Content.create_module(parent_attrs, user)
-      
+
       # Create child modules
       child1_attrs = %{
         name: %{"en" => "Complex Child 1"},
@@ -245,8 +245,8 @@ defmodule Brando.ContentTest do
           %{
             name: "TestRefChild1",
             description: "A test ref",
+            uid: Brando.Utils.generate_uid(),
             data: %{
-              uid: "abc123",
               type: "text",
               data: %{text: "Hello"}
             }
@@ -263,9 +263,9 @@ defmodule Brando.ContentTest do
           }
         ]
       }
-      
+
       {:ok, _child1} = Content.create_module(child1_attrs, user)
-      
+
       child2_attrs = %{
         name: %{"en" => "Complex Child 2"},
         namespace: %{"en" => "general"},
@@ -278,8 +278,8 @@ defmodule Brando.ContentTest do
           %{
             name: "TestRefChild2",
             description: "A test ref",
+            uid: Brando.Utils.generate_uid(),
             data: %{
-              uid: "abc123",
               type: "text",
               data: %{text: "Hello"}
             }
@@ -296,9 +296,9 @@ defmodule Brando.ContentTest do
           }
         ]
       }
-      
+
       {:ok, _child2} = Content.create_module(child2_attrs, user)
-      
+
       # Export
       modules =
         Content.list_modules!(%{
@@ -312,7 +312,7 @@ defmodule Brando.ContentTest do
       # Delete original
       # Load parent with children to delete them
       parent_with_children = Content.get_module!(%{matches: %{id: parent.id}, preload: [:children]})
-      
+
       {:ok, _} = Content.delete_module(parent_with_children.id)
       # Delete children
       for child <- parent_with_children.children do
@@ -351,17 +351,17 @@ defmodule Brando.ContentTest do
       # Load children with refs to check UIDs - new UIDs should be generated during import
       child1_with_refs = Content.get_module!(%{matches: %{id: child1.id}, preload: [:refs]})
       child2_with_refs = Content.get_module!(%{matches: %{id: child2.id}, preload: [:refs]})
-      
+
       # Assert that new UIDs were generated during import (different from original "abc123")
-      parent_ref_uid = Enum.at(imported_parent.refs, 0).data.uid
-      child1_ref_uid = Enum.at(child1_with_refs.refs, 0).data.uid  
-      child2_ref_uid = Enum.at(child2_with_refs.refs, 0).data.uid
-      
+      parent_ref_uid = Enum.at(imported_parent.refs, 0).uid
+      child1_ref_uid = Enum.at(child1_with_refs.refs, 0).uid
+      child2_ref_uid = Enum.at(child2_with_refs.refs, 0).uid
+
       # All UIDs should be different from the original
       assert parent_ref_uid != "abc123"
       assert child1_ref_uid != "abc123"
       assert child2_ref_uid != "abc123"
-      
+
       # All UIDs should be unique (proper cloning behavior)
       assert parent_ref_uid != child1_ref_uid
       assert parent_ref_uid != child2_ref_uid

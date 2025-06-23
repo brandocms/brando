@@ -19,6 +19,7 @@ defmodule Brando.Content.RefTest do
       module_params = Factory.params_for(:module, %{
         refs: [
           %{
+            uid: Brando.Utils.generate_uid(),
             name: "picture_ref",
             description: "A picture ref",
             image_id: image.id,
@@ -52,21 +53,25 @@ defmodule Brando.Content.RefTest do
       module_params = Factory.params_for(:module, %{
         refs: [
           %{
+            uid: Brando.Utils.generate_uid(),
             name: "cover_image",
             image_id: image.id,
             data: %{type: "picture", data: %{title: "Cover Image"}}
           },
           %{
+            uid: Brando.Utils.generate_uid(),
             name: "hero_video", 
             video_id: video.id,
             data: %{type: "video", data: %{autoplay: true}}
           },
           %{
+            uid: Brando.Utils.generate_uid(),
             name: "photo_gallery",
             gallery_id: gallery.id,
             data: %{type: "gallery", data: %{}}
           },
           %{
+            uid: Brando.Utils.generate_uid(),
             name: "headline",
             data: %{type: "text", data: %{text: "Main Headline", type: :paragraph}}
           }
@@ -101,6 +106,7 @@ defmodule Brando.Content.RefTest do
       module_params = Factory.params_for(:module, %{
         refs: [
           %{
+            uid: Brando.Utils.generate_uid(),
             name: "cover",
             image_id: image.id,
             data: %{type: "picture", data: %{}}
@@ -127,6 +133,7 @@ defmodule Brando.Content.RefTest do
       module_params = Factory.params_for(:module, %{
         refs: [
           %{
+            uid: Brando.Utils.generate_uid(),
             name: "test_ref",
             image_id: image.id,
             data: %{type: "picture", data: %{title: "Original Title"}}
@@ -168,6 +175,7 @@ defmodule Brando.Content.RefTest do
         vars: [],
         refs: [
           %Content.Ref{
+            uid: Brando.Utils.generate_uid(),
             name: "svg_icon",
             data: %Brando.Villain.Blocks.SvgBlock{
               type: "svg",
@@ -259,6 +267,7 @@ defmodule Brando.Content.RefTest do
       module_params = Factory.params_for(:module, %{
         refs: [
           %{
+            uid: Brando.Utils.generate_uid(),
             name: "broken_picture",
             data: %{type: "picture", data: %{}}
           }
@@ -280,6 +289,7 @@ defmodule Brando.Content.RefTest do
       module_params = Factory.params_for(:module, %{
         refs: [
           %{
+            uid: Brando.Utils.generate_uid(),
             name: "minimal_ref",
             data: %{type: "text", data: %{}}
           }
@@ -386,10 +396,12 @@ defmodule Brando.Content.RefTest do
         code: "Title: {% ref refs.title %} | Image: {% ref refs.cover %}",
         refs: [
           %{
+            uid: Brando.Utils.generate_uid(),
             name: "title",
             data: %{type: "text", data: %{text: "Test Title", type: "paragraph"}}
           },
           %{
+            uid: Brando.Utils.generate_uid(),
             name: "cover",
             image_id: image.id,
             data: %{type: "picture", data: %{alt: "Cover image"}}
@@ -406,6 +418,7 @@ defmodule Brando.Content.RefTest do
           module_id: module.id,
           refs: [
             %{
+              uid: Brando.Utils.generate_uid(),
               name: "title",
               description: nil,
               data: %Brando.Villain.Blocks.TextBlock{
@@ -417,6 +430,7 @@ defmodule Brando.Content.RefTest do
               }
             },
             %{
+              uid: Brando.Utils.generate_uid(),
               name: "cover",
               description: nil,
               image_id: image.id,

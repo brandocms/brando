@@ -29,6 +29,7 @@ defmodule Brando.DatasourcesTest do
     refs: [
       %{
         name: "p",
+        uid: "1wUr4ZLoOx53fqIslbP1dg",
         data: %{
           type: "text",
           data: %{
@@ -218,6 +219,7 @@ defmodule Brando.DatasourcesTest do
           refs: [
             %{
               name: "p",
+              uid: "1wUr4ZLoOx53fqIslbP1dx",
               data: %Brando.Villain.Blocks.TextBlock{
                 type: "text",
                 data: %Brando.Villain.Blocks.TextBlock.Data{
@@ -240,6 +242,7 @@ defmodule Brando.DatasourcesTest do
           refs: [
             %{
               name: "p",
+              uid: "1wUr4ZLoOx53fqIslbP1df",
               data: %Brando.Villain.Blocks.TextBlock{
                 type: "text",
                 data: %Brando.Villain.Blocks.TextBlock.Data{
@@ -281,7 +284,7 @@ defmodule Brando.DatasourcesTest do
               refs: [
                 %{
                   name: "p",
-                  uid: "12323fdf",
+                  uid: "1wUr4ZLoOx5zfqIslbP1dg",
                   data: %Brando.Villain.Blocks.TextBlock{
                     type: "text",
                     data: %Brando.Villain.Blocks.TextBlock.Data{

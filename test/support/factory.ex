@@ -132,7 +132,7 @@ defmodule Brando.Factory do
 
   def picture_ref_factory do
     image = build(:image)
-    
+
     %Brando.Content.Ref{
       name: sequence(:ref_name, &"picture_ref_#{&1}"),
       description: "A picture ref",
@@ -148,10 +148,10 @@ defmodule Brando.Factory do
 
   def video_ref_factory do
     video = build(:video)
-    
+
     %Brando.Content.Ref{
       name: sequence(:ref_name, &"video_ref_#{&1}"),
-      description: "A video ref", 
+      description: "A video ref",
       uid: Brando.Utils.generate_uid(),
       data: %Brando.Villain.Blocks.VideoBlock{
         type: "video",
@@ -178,13 +178,13 @@ defmodule Brando.Factory do
 
   def gallery_ref_factory do
     gallery = build(:gallery)
-    
+
     %Brando.Content.Ref{
       name: sequence(:ref_name, &"gallery_ref_#{&1}"),
       description: "A gallery ref",
       uid: Brando.Utils.generate_uid(),
       data: %Brando.Villain.Blocks.GalleryBlock{
-        type: "gallery", 
+        type: "gallery",
         data: %Brando.Villain.Blocks.GalleryBlock.Data{}
       },
       gallery: gallery,
@@ -194,11 +194,12 @@ defmodule Brando.Factory do
 
   def module_with_refs_factory do
     module = build(:module)
+
     refs = [
       build(:ref, module: module),
       build(:picture_ref, module: module)
     ]
-    
+
     %{module | refs: refs}
   end
 

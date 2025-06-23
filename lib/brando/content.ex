@@ -833,7 +833,7 @@ defmodule Brando.Content do
     refs_with_new_uids =
       module.refs
       |> Brando.Villain.remove_pk_from_refs()
-      |> Enum.map(&put_in(&1, [Access.key(:data), Access.key(:uid)], Brando.Utils.generate_uid()))
+      |> Enum.map(&put_in(&1, [Access.key(:uid)], Brando.Utils.generate_uid()))
       |> Enum.map(&put_in(&1, [Access.key(:__meta__), Access.key(:state)], :built))
 
     vars_without_ids =

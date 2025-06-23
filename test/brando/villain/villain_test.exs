@@ -65,7 +65,7 @@ defmodule Brando.VillainTest do
               refs: [
                 %{
                   name: "text",
-                  uid: "1wUr4ZLoOx53fqIslbP1dg",
+                  uid: Brando.Utils.generate_uid(),
                   data: %Brando.Villain.Blocks.TextBlock{
                     data: %Brando.Villain.Blocks.TextBlock.Data{
                       text: text,
@@ -79,8 +79,7 @@ defmodule Brando.VillainTest do
         ]
       })
 
-    %Brando.Pages.Fragment{}
-    |> Ecto.Changeset.change(params)
+    Ecto.Changeset.change(%Brando.Pages.Fragment{}, params)
   end
 
   test "parse" do
@@ -131,6 +130,7 @@ defmodule Brando.VillainTest do
           %{
             name: "headline",
             description: nil,
+            uid: Brando.Utils.generate_uid(),
             data: %{
               type: "text",
               data: %{
@@ -143,6 +143,7 @@ defmodule Brando.VillainTest do
             name: "cover",
             description: nil,
             image_id: image.id,
+            uid: Brando.Utils.generate_uid(),
             data: %{
               type: "picture",
               data: %{
@@ -165,10 +166,12 @@ defmodule Brando.VillainTest do
         type: :module,
         source: "Elixir.Brando.Pages.Page.Blocks",
         module_id: module.id,
+        uid: Brando.Utils.generate_uid(),
         refs: [
           %{
             name: "headline",
             description: nil,
+            uid: Brando.Utils.generate_uid(),
             data: %{
               type: "text",
               data: %{
@@ -180,8 +183,10 @@ defmodule Brando.VillainTest do
           %{
             name: "cover",
             description: nil,
+            uid: Brando.Utils.generate_uid(),
             image_id: image.id,
-            image: image,  # Add the actual image association
+            # Add the actual image association
+            image: image,
             data: %{
               type: "picture",
               data: %Brando.Villain.Blocks.PictureBlock.Data{
@@ -192,7 +197,6 @@ defmodule Brando.VillainTest do
             }
           }
         ],
-        uid: Brando.Utils.generate_uid(),
         vars: [
           %{
             key: "testvar",
@@ -238,6 +242,7 @@ defmodule Brando.VillainTest do
           %{
             name: "content",
             description: nil,
+            uid: Brando.Utils.generate_uid(),
             data: %{
               type: "text",
               data: %{
@@ -262,6 +267,7 @@ defmodule Brando.VillainTest do
         %{
           name: "content",
           description: nil,
+          uid: Brando.Utils.generate_uid(),
           data: %{
             type: "text",
             data: %{
@@ -320,6 +326,7 @@ defmodule Brando.VillainTest do
           %{
             name: "headline",
             description: nil,
+            uid: Brando.Utils.generate_uid(),
             data: %{
               type: "text",
               data: %{
@@ -332,6 +339,7 @@ defmodule Brando.VillainTest do
             name: "thumbnail",
             description: nil,
             image_id: image.id,
+            uid: Brando.Utils.generate_uid(),
             data: %{
               type: "picture",
               data: %{}
@@ -354,6 +362,7 @@ defmodule Brando.VillainTest do
         %{
           name: "headline",
           description: nil,
+          uid: Brando.Utils.generate_uid(),
           data: %{
             type: "text",
             data: %{
@@ -366,7 +375,9 @@ defmodule Brando.VillainTest do
           name: "thumbnail",
           description: nil,
           image_id: image.id,
-          image: image,  # Add the actual image association
+          # Add the actual image association
+          image: image,
+          uid: Brando.Utils.generate_uid(),
           data: %{
             type: "picture",
             data: %Brando.Villain.Blocks.PictureBlock.Data{
@@ -485,7 +496,7 @@ defmodule Brando.VillainTest do
 
   test "list_block_ids_matching_regex", %{user: user} do
     text_ref = %Brando.Content.Ref{
-      uid: "1wUr4ZLoOx53fqIslbP1dg",
+      uid: Brando.Utils.generate_uid(),
       data: %Brando.Villain.Blocks.TextBlock{
         active: true,
         data: %Brando.Villain.Blocks.TextBlock.Data{
@@ -512,6 +523,7 @@ defmodule Brando.VillainTest do
     }
 
     {:ok, module} = Brando.Repo.insert(module_params)
+    text_ref_with_new_uid = %{text_ref | uid: Brando.Utils.generate_uid()}
 
     simple_blocks = [
       %Brando.Pages.Fragment.Blocks{
@@ -519,9 +531,9 @@ defmodule Brando.VillainTest do
           type: :module,
           source: "Elixir.Brando.Pages.Fragment.Blocks",
           module_id: module.id,
-          uid: "1wUr4ZLoOx53fqIslbP1dg",
+          uid: Brando.Utils.generate_uid(),
           refs: [
-            text_ref
+            text_ref_with_new_uid
           ],
           vars: []
         }
@@ -624,7 +636,7 @@ defmodule Brando.VillainTest do
       help_text: "Help text",
       refs: [
         %Brando.Content.Ref{
-          uid: "1wUr4ZLoOx53fqIslbP1dg",
+          uid: Brando.Utils.generate_uid(),
           data: %Brando.Villain.Blocks.TextBlock{
             type: "text",
             active: true,
@@ -651,10 +663,10 @@ defmodule Brando.VillainTest do
           type: :module,
           source: "Elixir.Brando.Pages.Page.Blocks",
           module_id: tp1.id,
-          uid: "1wUr4ZLoOx53fqIslbP1dg",
+          uid: Brando.Utils.generate_uid(),
           refs: [
             %Brando.Content.Ref{
-              uid: "1wUr4ZLoOx53fqIslbP1dg",
+              uid: Brando.Utils.generate_uid(),
               data: %Brando.Villain.Blocks.TextBlock{
                 type: "text",
                 active: true,
@@ -690,7 +702,7 @@ defmodule Brando.VillainTest do
         %{
           refs: [
             %{
-              uid: "1wUr4ZLoOx53fqIslbP1dg",
+              uid: Brando.Utils.generate_uid(),
               data: %{
                 type: "text",
                 active: true,
@@ -719,7 +731,7 @@ defmodule Brando.VillainTest do
       help_text: "Help text",
       refs: [
         %{
-          uid: "1wUr4ZLoOx53fqIslbP1dg",
+          uid: Brando.Utils.generate_uid(),
           data: %{
             type: "text",
             active: true,
@@ -770,7 +782,7 @@ defmodule Brando.VillainTest do
               multi: false,
               refs: [
                 %{
-                  uid: "1wUr4ZLoOx53fqIslbP1dg",
+                  uid: Brando.Utils.generate_uid(),
                   data: %Brando.Villain.Blocks.TextBlock{
                     type: "text",
                     active: true,
@@ -815,7 +827,7 @@ defmodule Brando.VillainTest do
       help_text: "Help text",
       refs: [
         %{
-          uid: "1wUr4ZLoOx53fqIslbP1dg",
+          uid: Brando.Utils.generate_uid(),
           data: %{
             type: "text",
             active: true,
@@ -863,7 +875,7 @@ defmodule Brando.VillainTest do
           multi: false,
           refs: [
             %{
-              uid: "1wUr4ZLoOx53fqIslbP1dg",
+              uid: Brando.Utils.generate_uid(),
               data: %Brando.Villain.Blocks.TextBlock{
                 type: "text",
                 active: true,
@@ -923,11 +935,11 @@ defmodule Brando.VillainTest do
           block: %{
             module_id: module.id,
             source: "Elixir.Brando.Pages.Page.Blocks",
-            uid: "1wUr4ZLoOx53fqIslbP1dg",
+            uid: Brando.Utils.generate_uid(),
             multi: false,
             refs: [
               %{
-                uid: "1wUr4ZLoOx53fqIslbP1dg",
+                uid: Brando.Utils.generate_uid(),
                 data: %Brando.Villain.Blocks.TextBlock{
                   type: :text,
                   active: true,
