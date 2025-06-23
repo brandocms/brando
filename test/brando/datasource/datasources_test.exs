@@ -281,8 +281,8 @@ defmodule Brando.DatasourcesTest do
               refs: [
                 %{
                   name: "p",
+                  uid: "12323fdf",
                   data: %Brando.Villain.Blocks.TextBlock{
-                    uid: "12323fdf",
                     type: "text",
                     data: %Brando.Villain.Blocks.TextBlock.Data{
                       text: "<p>Hello world</p>"

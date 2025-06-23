@@ -37,7 +37,7 @@ defmodule Brando.Content.Ref do
   relations do
     relation :module, :belongs_to, module: Brando.Content.Module
     relation :block, :belongs_to, module: Brando.Content.Block
-    relation :gallery, :belongs_to, module: Brando.Images.Gallery
+    relation :gallery, :belongs_to, module: Brando.Galleries.Gallery
     relation :video, :belongs_to, module: Brando.Videos.Video
     relation :file, :belongs_to, module: Brando.Files.File
     relation :image, :belongs_to, module: Brando.Images.Image

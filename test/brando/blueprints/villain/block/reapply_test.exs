@@ -24,9 +24,9 @@ defmodule Brando.Villain.Block.PictureBlockTest do
               text: "Text"
             },
             active: true,
-            type: "header",
-            uid: "1xVOR77rLseKd3RMm0m1Pl"
+            type: "header"
           },
+          uid: "1xVOR77rLseKd3RMm0m1Pl",
           description: nil,
           name: "h2"
         }
@@ -51,9 +51,9 @@ defmodule Brando.Villain.Block.PictureBlockTest do
               text: "Photography"
             },
             active: true,
-            type: "header",
-            uid: "1xVOTDOvPTUEMeOC6xlunJ"
+            type: "header"
           },
+          uid: "1xVOTDOvPTUEMeOC6xlunJ",
           description: nil,
           name: "h2"
         }
@@ -106,9 +106,9 @@ defmodule Brando.Villain.Block.PictureBlockTest do
               text: "Text"
             },
             active: true,
-            type: "header",
-            uid: "1xVOR77rLseKd3RMm0m1Pl"
+            type: "header"
           },
+          uid: "1xVOR77rLseKd3RMm0m1Pl",
           description: nil,
           name: "h2"
         },
@@ -129,9 +129,9 @@ defmodule Brando.Villain.Block.PictureBlockTest do
               title: nil
             },
             active: true,
-            type: "picture",
-            uid: "1xVOQeu7m5g2KqKRCsVaGn"
+            type: "picture"
           },
+          uid: "1xVOQeu7m5g2KqKRCsVaGn",
           description: nil,
           name: "pic"
         }
@@ -171,8 +171,8 @@ defmodule Brando.Villain.Block.PictureBlockTest do
         %Ref{
           name: "h2",
           description: nil,
+          uid: "1xVOTDOvPTUEMeOC6xlunJ",
           data: %Blocks.HeaderBlock{
-            uid: "1xVOTDOvPTUEMeOC6xlunJ",
             type: "header",
             active: true,
             collapsed: false,
@@ -188,8 +188,8 @@ defmodule Brando.Villain.Block.PictureBlockTest do
         %Ref{
           name: "pic",
           description: nil,
+          uid: "1xVOTDOvSKu2TQIN3ddD3S",
           data: %Brando.Villain.Blocks.PictureBlock{
-            uid: "1xVOTDOvSKu2TQIN3ddD3S",
             type: "picture",
             active: true,
             collapsed: false,
@@ -337,9 +337,9 @@ defmodule Brando.Villain.Block.PictureBlockTest do
               }
             },
             active: true,
-            type: "media",
-            uid: "1xTkuCvHo0eJGOmZ2Tjvd3"
+            type: "media"
           },
+          uid: "1xTkuCvHo0eJGOmZ2Tjvd3",
           description: nil,
           name: "asset2"
         },
@@ -380,9 +380,9 @@ defmodule Brando.Villain.Block.PictureBlockTest do
               }
             },
             active: true,
-            type: "media",
-            uid: "1xTktiszs3EAefrkah8P70"
+            type: "media"
           },
+          uid: "1xTktiszs3EAefrkah8P70",
           description: nil,
           name: "asset1"
         }
@@ -416,9 +416,9 @@ defmodule Brando.Villain.Block.PictureBlockTest do
               title: "<p>Cialux 1521 + Kurz Luxor 396</p>"
             },
             active: true,
-            type: "picture",
-            uid: "1xVLXsKeKyEJlLXro6R7yl"
+            type: "picture"
           },
+          uid: "1xVLXsKeKyEJlLXro6R7yl",
           description: nil,
           name: "asset2"
         },
@@ -439,9 +439,9 @@ defmodule Brando.Villain.Block.PictureBlockTest do
               title: "<p>Colorplan Claret + Cialux 1521</p>"
             },
             active: true,
-            type: "picture",
-            uid: "1xVLXqrZcSM5HdqRL1Tusv"
+            type: "picture"
           },
+          uid: "1xVLXqrZcSM5HdqRL1Tusv",
           description: nil,
           name: "asset1"
         }

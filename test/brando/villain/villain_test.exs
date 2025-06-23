@@ -65,8 +65,8 @@ defmodule Brando.VillainTest do
               refs: [
                 %{
                   name: "text",
+                  uid: "1wUr4ZLoOx53fqIslbP1dg",
                   data: %Brando.Villain.Blocks.TextBlock{
-                    uid: "1wUr4ZLoOx53fqIslbP1dg",
                     data: %Brando.Villain.Blocks.TextBlock.Data{
                       text: text,
                       type: :paragraph
@@ -485,8 +485,8 @@ defmodule Brando.VillainTest do
 
   test "list_block_ids_matching_regex", %{user: user} do
     text_ref = %Brando.Content.Ref{
+      uid: "1wUr4ZLoOx53fqIslbP1dg",
       data: %Brando.Villain.Blocks.TextBlock{
-        uid: "1wUr4ZLoOx53fqIslbP1dg",
         active: true,
         data: %Brando.Villain.Blocks.TextBlock.Data{
           text: "<p>{{ globals.site.name }}</p>",
@@ -624,8 +624,8 @@ defmodule Brando.VillainTest do
       help_text: "Help text",
       refs: [
         %Brando.Content.Ref{
+          uid: "1wUr4ZLoOx53fqIslbP1dg",
           data: %Brando.Villain.Blocks.TextBlock{
-            uid: "1wUr4ZLoOx53fqIslbP1dg",
             type: "text",
             active: true,
             data: %Brando.Villain.Blocks.TextBlock.Data{
@@ -654,8 +654,8 @@ defmodule Brando.VillainTest do
           uid: "1wUr4ZLoOx53fqIslbP1dg",
           refs: [
             %Brando.Content.Ref{
+              uid: "1wUr4ZLoOx53fqIslbP1dg",
               data: %Brando.Villain.Blocks.TextBlock{
-                uid: "1wUr4ZLoOx53fqIslbP1dg",
                 type: "text",
                 active: true,
                 data: %Brando.Villain.Blocks.TextBlock.Data{
@@ -690,8 +690,8 @@ defmodule Brando.VillainTest do
         %{
           refs: [
             %{
+              uid: "1wUr4ZLoOx53fqIslbP1dg",
               data: %{
-                uid: "1wUr4ZLoOx53fqIslbP1dg",
                 type: "text",
                 active: true,
                 data: %{
@@ -719,8 +719,8 @@ defmodule Brando.VillainTest do
       help_text: "Help text",
       refs: [
         %{
+          uid: "1wUr4ZLoOx53fqIslbP1dg",
           data: %{
-            uid: "1wUr4ZLoOx53fqIslbP1dg",
             type: "text",
             active: true,
             data: %{
@@ -770,8 +770,8 @@ defmodule Brando.VillainTest do
               multi: false,
               refs: [
                 %{
+                  uid: "1wUr4ZLoOx53fqIslbP1dg",
                   data: %Brando.Villain.Blocks.TextBlock{
-                    uid: "1wUr4ZLoOx53fqIslbP1dg",
                     type: "text",
                     active: true,
                     data: %Brando.Villain.Blocks.TextBlock.Data{
@@ -815,8 +815,8 @@ defmodule Brando.VillainTest do
       help_text: "Help text",
       refs: [
         %{
+          uid: "1wUr4ZLoOx53fqIslbP1dg",
           data: %{
-            uid: "1wUr4ZLoOx53fqIslbP1dg",
             type: "text",
             active: true,
             data: %{
@@ -863,8 +863,8 @@ defmodule Brando.VillainTest do
           multi: false,
           refs: [
             %{
+              uid: "1wUr4ZLoOx53fqIslbP1dg",
               data: %Brando.Villain.Blocks.TextBlock{
-                uid: "1wUr4ZLoOx53fqIslbP1dg",
                 type: "text",
                 active: true,
                 data: %Brando.Villain.Blocks.TextBlock.Data{
@@ -927,8 +927,8 @@ defmodule Brando.VillainTest do
             multi: false,
             refs: [
               %{
+                uid: "1wUr4ZLoOx53fqIslbP1dg",
                 data: %Brando.Villain.Blocks.TextBlock{
-                  uid: "1wUr4ZLoOx53fqIslbP1dg",
                   type: :text,
                   active: true,
                   data: %Brando.Villain.Blocks.TextBlock.Data{
