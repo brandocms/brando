@@ -67,11 +67,11 @@ defmodule Brando.Mixfile do
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_view, "~> 2.0", optional: true},
       {:postgrex, "~> 0.20"},
-      {:ecto, "~> 3.12.0"},
-      {:ecto_sql, "~> 3.12.0"},
+      {:ecto, "~> 3.13.0"},
+      {:ecto_sql, "~> 3.13.0"},
 
       # liveview
-      {:phoenix_live_view, "1.0.17"},
+      {:phoenix_live_view, "~> 1.1.0-rc.1"},
       {:phoenix_html, "~> 4.0"},
 
       # hashing/passwords
