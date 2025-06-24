@@ -870,7 +870,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     # is the block loaded?
     vars = Brando.Utils.try_path(changeset, load_path)
-    loaded? = if is_list(vars), do: true, else: vars != nil
+    loaded? = not is_nil(vars) and Ecto.assoc_loaded?(vars)
 
     if loaded? do
       access_path = get_var_access_path(belongs_to, var_key, data_key)
