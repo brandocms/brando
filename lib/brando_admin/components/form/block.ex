@@ -2502,6 +2502,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :block_type, :any
   attr :is_datasource?, :boolean, default: false
   attr :is_ref?, :boolean, default: false
+  attr :ref_form, :any, default: nil
   attr :datasource, :any
   attr :bg_color, :string, default: nil
   attr :uid, :any
@@ -2514,7 +2515,14 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def block(assigns) do
     block_cs = assigns.block.source
-    uid = Changeset.get_field(block_cs, :uid) || Brando.Utils.generate_uid()
+    
+    # For refs, use the ref's UID to ensure modal targets match
+    uid = 
+      if assigns[:is_ref?] && assigns[:ref_form] do
+        assigns.ref_form[:uid].value
+      else
+        Changeset.get_field(block_cs, :uid) || Brando.Utils.generate_uid()
+      end
 
     assigns =
       assigns

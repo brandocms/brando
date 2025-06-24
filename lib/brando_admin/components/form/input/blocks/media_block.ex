@@ -114,7 +114,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
           <input type="hidden" name={template_video[:aspect_ratio].name} value={template_video[:aspect_ratio].value || ""} />
         </.inputs_for>
 
-        <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+        <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target} ref_form={@ref_form}>
           <:description>
             <%= if @ref_description not in ["", nil] do %>
               {@ref_description}
@@ -217,7 +217,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
     target = socket.assigns.target
     ref_name = socket.assigns.ref_name
     ref_description = socket.assigns.ref_description
-    uid = Brando.Utils.generate_uid()
+    uid = socket.assigns.uid
 
     Logger.error("MediaBlock handle_event - ref_name: #{ref_name}, uid: #{uid}")
     Logger.error("MediaBlock handle_event - block_templates: #{inspect(block_templates)}")

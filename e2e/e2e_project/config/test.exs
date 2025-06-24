@@ -37,4 +37,6 @@ config :phoenix, :plug_init_mode, :runtime
 
 # Enable helpful, but potentially expensive runtime checks
 config :phoenix_live_view,
+  debug_heex_annotations: true,
+  debug_tags_location: true,
   enable_expensive_runtime_checks: true

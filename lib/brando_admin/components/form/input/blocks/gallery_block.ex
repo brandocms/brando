@@ -94,7 +94,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       data-block-uid={@uid}
     >
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+        <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target} ref_form={@ref_form}>
           <:description>
             {block_data[:type].value}
             <%= if @ref_description not in ["", nil] do %>
