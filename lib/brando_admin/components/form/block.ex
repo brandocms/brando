@@ -2405,7 +2405,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         # When dealing with polymorphic embeds (like refs), after form validation
         # the type field might not reflect the actual data type. Check the actual
         # block data type first if it exists.
-        type_value = 
+        type_value =
           if assigns.block.source && assigns.block.source.data && Map.has_key?(assigns.block.source.data, :type) do
             # If we have actual changeset data with a type, use that (most reliable)
             assigns.block.source.data.type
@@ -2499,9 +2499,9 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def block(assigns) do
     block_cs = assigns.block.source
-    
+
     # For refs, use the ref's UID to ensure modal targets match
-    uid = 
+    uid =
       if assigns[:is_ref?] && assigns[:ref_form] do
         assigns.ref_form[:uid].value
       else
