@@ -150,8 +150,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
     Logger.error("MediaBlock render - block.data: #{inspect(assigns.block.data)}")
     Logger.error("MediaBlock render - block[:data]: #{inspect(assigns.block[:data])}")
 
-    if assigns.block[:data],
-      do: Logger.error("MediaBlock render - block[:data][:type]: #{inspect(assigns.block[:data][:type].value)}")
+    if data = assigns.block.source.data,
+      do: Logger.error("MediaBlock render - block.source.data.type: #{inspect(data.type)}")
 
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid} style="display: none;">

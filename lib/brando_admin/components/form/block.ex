@@ -684,11 +684,12 @@ defmodule BrandoAdmin.Components.Form.Block do
             Logger.error("Block.update_ref - updating ref #{old_ref_name} with new data type: #{inspect(ref.data.type)}")
 
             updated_ref_changeset =
-              Changeset.change(old_ref, %{
-                data: ref.data,
+              old_ref
+              |> Changeset.change(%{
                 uid: ref.uid,
                 description: ref.description || Changeset.get_field(old_ref, :description)
               })
+              |> Changeset.force_change(:data, ref.data)
 
             Logger.error("Block.update_ref - updated ref changeset: #{inspect(updated_ref_changeset)}")
             acc ++ List.wrap(updated_ref_changeset)
@@ -2410,7 +2411,17 @@ defmodule BrandoAdmin.Components.Form.Block do
       end)
       |> assign_new(:component_target, fn ->
         require Logger
-        type_value = assigns.block[:type].value
+        # When dealing with polymorphic embeds (like refs), after form validation
+        # the type field might not reflect the actual data type. Check the actual
+        # block data type first if it exists.
+        type_value = 
+          if assigns.block.source && assigns.block.source.data && Map.has_key?(assigns.block.source.data, :type) do
+            # If we have actual changeset data with a type, use that (most reliable)
+            assigns.block.source.data.type
+          else
+            # Otherwise fall back to the form field value
+            assigns.block[:type].value
+          end
         Logger.error("Block.dynamic_block - block type value: #{inspect(type_value)}")
         Logger.error("Block.dynamic_block - block data: #{inspect(assigns.block.data)}")
         Logger.error("Block.dynamic_block - full block: #{inspect(assigns.block)}")
