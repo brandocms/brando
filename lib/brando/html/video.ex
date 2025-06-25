@@ -126,6 +126,7 @@ defmodule Brando.HTML.Video do
       data-orientation={@orientation}
       data-progress={@progress}
       data-preload={@preload && @src}
+      data-src={@src}
       data-autoplay={@autoplay}
       data-controls={@controls}
       style={@aspect_ratio}
