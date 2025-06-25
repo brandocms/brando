@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    {Application.get_env(:live_debugger, :live_debugger_tags)}
     <.csrf_meta_tag />
     <.live_title suffix={" | #{Brando.config(:app_name)}"}>
       {assigns[:page_title] || "Admin"}
