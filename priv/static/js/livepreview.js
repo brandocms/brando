@@ -1,357 +1,428 @@
-console.log('Live Preview')
-/* Add live preview class to html */
+/**
+ * Brando CMS Live Preview
+ * 
+ * This module handles real-time preview updates for the Brando CMS admin interface.
+ * It connects to a Phoenix socket channel and updates the DOM efficiently using morphdom
+ * when content changes are broadcast from the server.
+ */
+
+// Initialize live preview environment
 document.documentElement.classList.add('is-live-preview')
-var token = document
-  .querySelector('meta[name="user_token"]')
-  .getAttribute('content')
-var previewSocket = new Phoenix.Socket('/admin/socket', {
+
+// DOM Node Type Constants
+const NODE_TYPES = {
+  ELEMENT: 1,
+  TEXT: 3,
+  COMMENT: 8,
+  DOCUMENT: 9,
+  DOCUMENT_FRAGMENT: 11
+}
+
+// Valid node types for lazy loading operations
+const VALID_TARGET_NODES = [NODE_TYPES.ELEMENT, NODE_TYPES.DOCUMENT, NODE_TYPES.DOCUMENT_FRAGMENT]
+
+// Cache DOM references
+const token = document.querySelector('meta[name="user_token"]').getAttribute('content')
+const main = document.querySelector('main')
+const body = document.querySelector('body')
+const parser = new DOMParser()
+
+// Phoenix Socket connection
+const previewSocket = new Phoenix.Socket('/admin/socket', {
   params: { token: token },
 })
-var main = document.querySelector('main')
-var body = document.querySelector('body')
-var parser = new DOMParser()
 previewSocket.connect()
-var channel = previewSocket.channel('live_preview:' + livePreviewKey)
-var firstUpdate = true
-var MOONWALK_OVERRIDE_STYLES = `
-      .is-live-preview [data-moonwalk],
-      .is-live-preview [data-moonwalk-run],
-      .is-live-preview [data-moonwalk-section],
-      .is-live-preview [data-moonwalk-children] > *,
-      .is-live-preview [b-section] {
-        opacity: 1 !important;
-        transform: none !important;
-        visibility: visible !important;
-      }
-      .is-live-preview [data-smart-video][data-revealed] {
-        opacity: 1 !important;
-        visibility: visible !important;
-      }
-    `
 
-function forceLazyloadAllImages(target = document) {
-  // ensure target is an element, not comment
-  if (![1, 9, 11].includes(target.nodeType)) {
+const channel = previewSocket.channel('live_preview:' + livePreviewKey)
+
+// State management
+let isFirstUpdate = true
+let contentBlockRegistry = []
+
+// CSS overrides for live preview to ensure visibility of animated elements
+const MOONWALK_OVERRIDE_STYLES = `
+  .is-live-preview [data-moonwalk],
+  .is-live-preview [data-moonwalk-run],
+  .is-live-preview [data-moonwalk-section],
+  .is-live-preview [data-moonwalk-children] > *,
+  .is-live-preview [b-section] {
+    opacity: 1 !important;
+    transform: none !important;
+    visibility: visible !important;
+  }
+  .is-live-preview [data-smart-video][data-revealed] {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+`
+
+/**
+ * Force lazy-loaded images to load immediately
+ * @param {Node} target - The DOM node to search within (defaults to document)
+ */
+function initializeLazyImages(target = document) {
+  // Ensure target is a valid element node
+  if (!VALID_TARGET_NODES.includes(target.nodeType)) {
     return
   }
+
+  // Load images with data-ll-image or data-ll-srcset-image attributes
   target
-    .querySelectorAll(
-      '[data-ll-image]:not([data-ll-loaded]), [data-ll-srcset-image]:not([data-ll-loaded])'
-    )
-    .forEach((llImage) => {
-      llImage.src = llImage.dataset.src
-      if (llImage.dataset.srcset) {
-        llImage.srcset = llImage.dataset.srcset
+    .querySelectorAll('[data-ll-image]:not([data-ll-loaded]), [data-ll-srcset-image]:not([data-ll-loaded])')
+    .forEach(lazyImage => {
+      if (lazyImage.dataset.src) {
+        lazyImage.src = lazyImage.dataset.src
       }
-      llImage.src = llImage.dataset.src
-      llImage.dataset.llLoaded = ''
+      if (lazyImage.dataset.srcset) {
+        lazyImage.srcset = lazyImage.dataset.srcset
+      }
+      lazyImage.dataset.llLoaded = ''
     })
 
+  // Initialize srcset elements
   target
     .querySelectorAll('[data-ll-srcset]:not([data-data-ll-srcset-initialized])')
-    .forEach((llSrcSet) => {
-      llSrcSet.dataset.llSrcsetInitialized = ''
+    .forEach(lazySrcSet => {
+      lazySrcSet.dataset.llSrcsetInitialized = ''
     })
 }
 
-function forceLazyloadAllVideos(target = document) {
-  if (![1, 9, 11].includes(target.nodeType)) {
+/**
+ * Force lazy-loaded videos to load immediately
+ * Only processes new videos that haven't been initialized
+ * @param {Node} target - The DOM node to search within (defaults to document)
+ */
+function initializeLazyVideos(target = document) {
+  // Ensure target is a valid element node
+  if (!VALID_TARGET_NODES.includes(target.nodeType)) {
     return
   }
 
-  target
-    .querySelectorAll('[data-smart-video] video:not([data-booted])')
-    .forEach((llVideo) => {
-      llVideo.src = llVideo.dataset.src
-      llVideo.dataset.booted = ''
-    })
+  // Initialize video elements that haven't been booted
+  target.querySelectorAll('[data-smart-video] video:not([data-booted])').forEach(videoElement => {
+    // Only set src if data-src exists and src is not already set
+    if (videoElement.dataset.src && !videoElement.src) {
+      videoElement.src = videoElement.dataset.src
+    }
+    videoElement.dataset.booted = ''
+  })
 
-  target
-    .querySelectorAll('[data-smart-video]:not([data-revealed])')
-    .forEach((llVideo) => {
-      llVideo.dataset.revealed = ''
-      llVideo.dataset.booted = ''
-      llVideo.dataset.playing = ''
-    })
+  // Initialize smart video containers
+  target.querySelectorAll('[data-smart-video]:not([data-revealed])').forEach(videoContainer => {
+    videoContainer.dataset.revealed = ''
+    videoContainer.dataset.booted = ''
+    videoContainer.dataset.playing = ''
+  })
 }
 
-var blockMap = []
-
+/**
+ * NodeFilter helper for createNodeIterator
+ * @returns {number} - Always accepts the node
+ */
 function filterNone() {
   return NodeFilter.FILTER_ACCEPT
 }
 
-var uid
+/**
+ * Creates a reusable morphdom configuration
+ * @param {boolean} childrenOnly - Whether to only update children
+ * @returns {Object} - Morphdom configuration object
+ */
+function getMorphdomConfig(childrenOnly = true) {
+  return {
+    onBeforeElUpdated: (fromEl, toEl) => {
+      // Skip update if nodes are identical
+      if (fromEl.isEqualNode(toEl)) {
+        return false
+      }
 
-function buildMap() {
-  blockMap = []
-  var iterator = document.createNodeIterator(
+      // Preserve smart video elements if source hasn't changed
+      if (fromEl.hasAttribute('data-smart-video') && toEl.hasAttribute('data-smart-video')) {
+        if (fromEl.getAttribute('data-src') === toEl.getAttribute('data-src')) {
+          return false
+        }
+      }
+
+      // Handle lazy-loaded images
+      if (fromEl.dataset.src && toEl.dataset.src) {
+        // Compare image URLs without query parameters
+        const fromSrc = fromEl.dataset.src.split('?')[0]
+        const toSrc = toEl.dataset.src.split('?')[0]
+        
+        if (fromSrc === toSrc && toEl.dataset.llLoaded) {
+          return false
+        }
+
+        // Update src if data-src has changed
+        toEl.src = toEl.dataset.src
+      }
+
+      return true
+    },
+    childrenOnly: childrenOnly,
+  }
+}
+
+/**
+ * Build a map of content blocks for efficient updates
+ * Blocks are identified by HTML comments with UIDs
+ */
+function rebuildContentBlockRegistry() {
+  contentBlockRegistry = []
+  const iterator = document.createNodeIterator(
     document.body,
     NodeFilter.SHOW_COMMENT,
     filterNone,
     false
   )
 
-  var curNode
-
+  let curNode
   while ((curNode = iterator.nextNode())) {
     if (curNode.nodeValue.trim().startsWith('[+:B')) {
-      // extract uid
-      var uidStart = curNode.nodeValue.indexOf('<')
-      var uidEnd = curNode.nodeValue.indexOf('>')
-      var uid = curNode.nodeValue.substring(uidStart + 1, uidEnd)
-      var els = []
-      // loop through the next siblings until we find the end comment
+      // Extract UID from comment
+      const uidStart = curNode.nodeValue.indexOf('<')
+      const uidEnd = curNode.nodeValue.indexOf('>')
+      const uid = curNode.nodeValue.substring(uidStart + 1, uidEnd)
+      const blockElements = []
+      
+      // Collect all elements until the closing comment
       let sibling = curNode.nextSibling
       while (sibling) {
-        if (
-          sibling.nodeType === 8 &&
-          sibling.nodeValue.trim().startsWith(`[-:B<${uid}`)
-        ) {
-          blockMap.push({ uid, els, insertionPoint: sibling })
-          els = []
+        if (sibling.nodeType === NODE_TYPES.COMMENT && sibling.nodeValue.trim().startsWith(`[-:B<${uid}`)) {
+          contentBlockRegistry.push({ uid, elements: blockElements, insertionPoint: sibling })
           break
-        } else if (sibling.nodeType === 1) {
-          els.push({ element: sibling, children: [] })
-          sibling = sibling.nextSibling
-        } else {
-          sibling = sibling.nextSibling
+        } else if (sibling.nodeType === NODE_TYPES.ELEMENT) {
+          blockElements.push({ element: sibling, children: [] })
         }
+        sibling = sibling.nextSibling
       }
     }
   }
 }
 
-buildMap()
+/**
+ * Map nested content within block elements
+ * @param {Array} blockElements - Array of element objects
+ * @returns {Array} - Elements with their children mapped
+ */
+function mapNestedContent(blockElements) {
+  return blockElements.map(blockEl => {
+    const element = blockEl.element
+    const childNodes = []
 
-function getChildren(els) {
-  return els.map((el) => {
-    var element = el.element
-    var elChildren = []
-
-    var iterator = document.createNodeIterator(
+    const iterator = document.createNodeIterator(
       element,
       NodeFilter.SHOW_COMMENT,
       filterNone,
       false
     )
 
-    var curNode
-
+    let curNode
     while ((curNode = iterator.nextNode())) {
       if (curNode.nodeValue.trim().startsWith('[+:C')) {
-        // extract uid
-        var uidStart = curNode.nodeValue.indexOf('<')
-        var uidEnd = curNode.nodeValue.indexOf('>')
-        var uid = curNode.nodeValue.substring(uidStart + 1, uidEnd)
+        // Extract UID from comment
+        const uidStart = curNode.nodeValue.indexOf('<')
+        const uidEnd = curNode.nodeValue.indexOf('>')
+        const uid = curNode.nodeValue.substring(uidStart + 1, uidEnd)
 
-        // loop through the next siblings until we find the end comment
+        // Collect children until closing comment
         let sibling = curNode.nextSibling
         while (sibling) {
-          if (
-            sibling.nodeType === 8 &&
-            sibling.nodeValue.trim().startsWith(`[-:C<${uid}`)
-          ) {
-            el.childInsertionPoint = sibling
+          if (sibling.nodeType === NODE_TYPES.COMMENT && sibling.nodeValue.trim().startsWith(`[-:C<${uid}`)) {
+            blockEl.childInsertionPoint = sibling
             break
-          } else if (sibling.nodeType === 1) {
-            elChildren.push(sibling)
-            sibling = sibling.nextSibling
           } else {
-            elChildren.push(sibling)
-            sibling = sibling.nextSibling
+            childNodes.push(sibling)
           }
+          sibling = sibling.nextSibling
         }
       }
     }
-    el.children = elChildren
-    return el
+    
+    blockEl.children = childNodes
+    return blockEl
   })
 }
 
-function getInsertionPoint(newBlock, uid) {
-  var iterator = document.createNodeIterator(
-    newBlock,
-    NodeFilter.SHOW_TEXT,
-    filterNone,
-    false
-  )
-  var curNode
+/**
+ * Find the content insertion point within a block
+ * @param {Node} blockElement - The block element to search within
+ * @returns {Node|null} - The text node marking the insertion point
+ */
+function findContentInsertionMarker(blockElement) {
+  const iterator = document.createNodeIterator(blockElement, NodeFilter.SHOW_TEXT, filterNone, false)
+  let curNode
 
   while ((curNode = iterator.nextNode())) {
     if (curNode.nodeValue.trim().startsWith('[$ content $]')) {
-      break
+      return curNode
     }
   }
-  return curNode
+  return null
 }
 
-channel.on('update_block', function ({ uid, rendered_html, has_children }) {
-  if (firstUpdate) {
-    // insert styles to head
-    var style = document.createElement('style')
+/**
+ * Insert animation override styles on first update
+ */
+function insertOverrideStyles() {
+  if (isFirstUpdate) {
+    const style = document.createElement('style')
     style.innerHTML = MOONWALK_OVERRIDE_STYLES
     document.head.appendChild(style)
+    isFirstUpdate = false
   }
+}
 
-  var blockIndex = blockMap.findIndex((block) => block.uid === uid)
+/**
+ * Handle individual block updates
+ */
+channel.on('update_block', function ({ uid, rendered_html, has_children }) {
+  insertOverrideStyles()
+
+  // Find the block in our map
+  let blockIndex = contentBlockRegistry.findIndex(block => block.uid === uid)
+  
+  // If not found, rebuild the map and try again
   if (blockIndex === -1) {
-    // block not found —— rescan map
-    buildMap()
-    blockIndex = blockMap.findIndex((block) => block.uid === uid)
-    if (blockIndex === -1) {
-      console.error('Block not found')
-    }
+    rebuildContentBlockRegistry()
+    blockIndex = contentBlockRegistry.findIndex(block => block.uid === uid)
   }
-  if (blockIndex >= 0) {
-    var block = blockMap[blockIndex]
-    if (rendered_html === '') {
-      block.els.forEach((el) => el.element.remove())
-      return
-    }
 
-    var doc = parser.parseFromString(rendered_html, 'text/html')
-    var newBlocks = doc.querySelector('body').childNodes
+  if (blockIndex === -1) {
+    return // Block not found
+  }
 
-    if (has_children) {
-      var elsWithChildren = getChildren(block.els)
-      block.els = elsWithChildren
-    }
+  const block = contentBlockRegistry[blockIndex]
 
-    // if current block has no elements, just insert the new
-    // blocks and add them to the block.els array
-    if (!block.els.length) {
-      for (let idx = 0; idx < newBlocks.length; idx++) {
-        if (
-          newBlocks[idx].nodeType === 8 &&
-          newBlocks[idx].nodeValue.trim().startsWith(`[-:B<${block.uid}`)
-        ) {
-          continue
+  // Handle empty content (removed blocks)
+  if (rendered_html === '') {
+    block.elements.forEach(el => el.element.remove())
+    block.elements = []
+    return
+  }
+
+  // Parse new content
+  const doc = parser.parseFromString(rendered_html, 'text/html')
+  const newBlocks = Array.from(doc.querySelector('body').childNodes)
+
+  // Update children map if needed
+  if (has_children) {
+    block.elements = mapNestedContent(block.elements)
+  }
+
+  // Handle new blocks (no existing elements)
+  if (!block.elements.length) {
+    newBlocks.forEach((newBlock, idx) => {
+      // Skip comment nodes that mark block boundaries
+      if (newBlock.nodeType === NODE_TYPES.COMMENT && newBlock.nodeValue.trim().startsWith(`[-:B<${block.uid}`)) {
+        return
+      }
+
+      const newElement = block.insertionPoint.parentNode.insertBefore(
+        newBlock,
+        block.insertionPoint
+      )
+
+      block.elements[idx] = { element: newElement }
+      initializeLazyImages(newElement)
+      initializeLazyVideos(newElement)
+    })
+  } else {
+    // Update existing blocks
+    const newEls = []
+
+    newBlocks.forEach((newBlock, idx) => {
+      // Skip comment nodes that mark block boundaries
+      if (newBlock.nodeType === NODE_TYPES.COMMENT && newBlock.nodeValue.trim().startsWith(`[-:B<${block.uid}`)) {
+        return
+      }
+
+      const existingEl = block.elements[idx]
+
+      if (existingEl && existingEl.element.nodeType === newBlock.nodeType) {
+        // Update existing element with morphdom
+        morphdom(existingEl.element, newBlock, getMorphdomConfig(false))
+
+        // Handle nested children
+        if (has_children && existingEl.children) {
+          const childInsertionPoint = findContentInsertionMarker(existingEl.element)
+          if (childInsertionPoint) {
+            existingEl.children.forEach(child => {
+              // Skip boundary comments
+              if (child.nodeType === NODE_TYPES.COMMENT && child.nodeValue.trim().startsWith(`[-:C<${block.uid}`)) {
+                return
+              }
+              childInsertionPoint.parentNode.insertBefore(child, childInsertionPoint)
+            })
+            childInsertionPoint.remove()
+          }
         }
 
-        var newElement = block.insertionPoint.parentNode.insertBefore(
-          newBlocks[idx],
+        newEls.push(existingEl)
+        initializeLazyImages(existingEl.element)
+        initializeLazyVideos(existingEl.element)
+      } else {
+        // Replace element if types don't match
+        const newElement = block.insertionPoint.parentNode.insertBefore(
+          newBlock,
           block.insertionPoint
         )
 
-        block.els[idx] = { element: newElement }
-        forceLazyloadAllImages(newElement)
-        forceLazyloadAllVideos(newElement)
-      }
-    } else {
-      block.els.forEach((el, idx) => {
-        if (has_children) {
-          var childInsertionPoint = getInsertionPoint(newBlocks[idx], block.uid)
-          if (childInsertionPoint) {
-            // remove exitPoint from children array
-            for (var i = 0; i < el.children.length; i++) {
-              if (
-                el.children[i].nodeType === 8 &&
-                el.children[i].nodeValue.trim().startsWith(`[-:C<${block.uid}`)
-              ) {
-                continue
-              }
-              childInsertionPoint.parentNode.insertBefore(
-                el.children[i],
-                childInsertionPoint
-              )
-            }
-            childInsertionPoint.remove()
-          }
-
-          var newElement = block.insertionPoint.parentNode.insertBefore(
-            newBlocks[idx],
-            block.insertionPoint
-          )
-        } else {
-          var newElement = block.insertionPoint.parentNode.insertBefore(
-            newBlocks[idx],
-            block.insertionPoint
-          )
+        if (existingEl) {
+          existingEl.element.remove()
         }
 
-        el.element.remove()
-        block.els[idx].element = newElement
+        newEls.push({ element: newElement })
+        initializeLazyImages(newElement)
+        initializeLazyVideos(newElement)
+      }
+    })
 
-        forceLazyloadAllImages(newElement)
-        forceLazyloadAllVideos(newElement)
-      })
+    // Clean up any extra old elements
+    for (let idx = newEls.length; idx < block.elements.length; idx++) {
+      if (block.elements[idx]) {
+        block.elements[idx].element.remove()
+      }
     }
+
+    block.elements = newEls
   }
 })
 
+/**
+ * Handle full page updates (main content only)
+ */
 channel.on('update', function (payload) {
   document.documentElement.classList.add('is-updated-live-preview')
-  var doc = parser.parseFromString(payload.html, 'text/html')
-  var newMain = doc.querySelector('main')
-  morphdom(main, newMain, {
-    onBeforeElUpdated: (a, b) => {
-      if (a.isEqualNode(b)) {
-        return false
-      }
+  
+  const doc = parser.parseFromString(payload.html, 'text/html')
+  const newMain = doc.querySelector('main')
+  
+  morphdom(main, newMain, getMorphdomConfig(true))
 
-      if (a.dataset.src && b.dataset.src) {
-        if (
-          a.dataset.src.split('?')[0] === b.dataset.src.split('?')[0] &&
-          b.dataset.llLoaded
-        ) {
-          return false
-        }
-
-        // data-src differ. Update src
-        b.src = b.dataset.src
-      }
-
-      return true
-    },
-    childrenOnly: true,
-  })
-
-  forceLazyloadAllImages()
-  forceLazyloadAllVideos()
-
-  buildMap()
+  initializeLazyImages()
+  initializeLazyVideos()
+  rebuildContentBlockRegistry()
 })
 
+/**
+ * Handle full page re-renders (entire body)
+ */
 channel.on('rerender', function (payload) {
-  if (firstUpdate) {
-    // insert styles to head
-    var style = document.createElement('style')
-    style.innerHTML = MOONWALK_OVERRIDE_STYLES
-    document.head.appendChild(style)
-  }
+  insertOverrideStyles()
   document.documentElement.classList.add('is-updated-live-preview')
-  var doc = parser.parseFromString(payload.html, 'text/html')
-  var newBody = doc.querySelector('body')
+  
+  const doc = parser.parseFromString(payload.html, 'text/html')
+  const newBody = doc.querySelector('body')
 
-  morphdom(body, newBody, {
-    onBeforeElUpdated: (a, b) => {
-      if (a.isEqualNode(b)) {
-        return false
-      }
+  morphdom(body, newBody, getMorphdomConfig(false))
 
-      if (a.dataset.src && b.dataset.src) {
-        if (
-          a.dataset.src.split('?')[0] === b.dataset.src.split('?')[0] &&
-          b.dataset.llLoaded
-        ) {
-          return false
-        }
-
-        // data-src differ. Update src
-        b.src = b.dataset.src
-      }
-
-      return true
-    },
-    childrenOnly: false,
-  })
-
-  forceLazyloadAllImages()
-  forceLazyloadAllVideos()
-
-  buildMap()
+  initializeLazyImages()
+  initializeLazyVideos()
+  rebuildContentBlockRegistry()
 
   body.classList.remove('unloaded')
 })
+
+// Connect to the channel
 channel.join()
