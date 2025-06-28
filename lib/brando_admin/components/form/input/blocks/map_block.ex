@@ -34,7 +34,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target} ref_form={@ref_form}>
+        <Block.block
+          id={"block-#{@uid}-base"}
+          block={@block}
+          is_ref?={true}
+          multi={false}
+          target={@target}
+          ref_form={@ref_form}
+        >
           <:description>{block_data[:source].value}</:description>
           <:config>
             <Input.input type={:hidden} field={block_data[:embed_url]} />

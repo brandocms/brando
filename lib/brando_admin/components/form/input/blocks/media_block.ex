@@ -109,7 +109,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
           <input type="hidden" name={template_video[:aspect_ratio].name} value={template_video[:aspect_ratio].value || ""} />
         </.inputs_for>
 
-        <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target} ref_form={@ref_form}>
+        <Block.block
+          id={"block-#{@uid}-base"}
+          block={@block}
+          is_ref?={true}
+          multi={false}
+          target={@target}
+          ref_form={@ref_form}
+        >
           <:description>
             <%= if @ref_description not in ["", nil] do %>
               {@ref_description}
