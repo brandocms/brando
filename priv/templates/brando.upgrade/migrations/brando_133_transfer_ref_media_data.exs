@@ -12,6 +12,148 @@ defmodule Brando.Migrations.TransferRefMediaData do
     AND i.deleted_at IS NULL
     """
 
+    # Process refs with VideoBlock data
+    # First, create video entries using the new video schema
+    # IMPORTANT: Do this BEFORE cleaning up the ref data
+    # Use COALESCE to handle both url and remote_id as the video source
+    execute """
+    INSERT INTO videos (
+      source_url, type, title, caption, aspect_ratio,
+      width, height, remote_id,
+      inserted_at, updated_at, creator_id
+    )
+    SELECT DISTINCT ON (COALESCE(r.data->'data'->>'url', r.data->'data'->>'remote_id'))
+      CASE 
+        -- For vimeo videos without url, construct the vimeo.com URL from remote_id
+        WHEN r.data->'data'->>'source' = 'vimeo' 
+             AND r.data->'data'->>'url' IS NULL 
+             AND r.data->'data'->>'remote_id' IS NOT NULL
+        THEN 'https://vimeo.com/' || SPLIT_PART(r.data->'data'->>'remote_id', '?', 1)
+        -- For youtube videos without url, construct the youtube.com URL from remote_id  
+        WHEN r.data->'data'->>'source' = 'youtube' 
+             AND r.data->'data'->>'url' IS NULL 
+             AND r.data->'data'->>'remote_id' IS NOT NULL
+        THEN 'https://www.youtube.com/watch?v=' || SPLIT_PART(r.data->'data'->>'remote_id', '?', 1)
+        -- Otherwise use the existing logic
+        ELSE COALESCE(r.data->'data'->>'url', r.data->'data'->>'remote_id')
+      END,
+      CASE
+        WHEN r.data->'data'->>'source' = 'file' THEN 'external_file'
+        WHEN r.data->'data'->>'source' = 'youtube' THEN 'youtube'
+        WHEN r.data->'data'->>'source' = 'vimeo' THEN 'vimeo'
+        ELSE 'external_file'
+      END,
+      r.data->'data'->>'title',
+      r.data->'data'->>'title', -- Use title as caption for now
+      r.data->'data'->>'aspect_ratio',
+      (r.data->'data'->>'width')::integer,
+      (r.data->'data'->>'height')::integer,
+      -- Store clean remote_id based on video type and data availability
+      CASE 
+        -- For vimeo/youtube, extract clean video ID from remote_id (remove query params)
+        WHEN r.data->'data'->>'source' IN ('vimeo', 'youtube') AND r.data->'data'->>'remote_id' IS NOT NULL
+        THEN SPLIT_PART(r.data->'data'->>'remote_id', '?', 1)
+        -- For file type, never store remote_id (it's always the same as source_url)
+        ELSE NULL
+      END,
+      NOW(),
+      NOW(),
+      1 -- Default creator_id, should be adjusted based on your needs
+    FROM content_refs r
+    WHERE r.data->>'type' = 'video'
+    AND COALESCE(r.data->'data'->>'url', r.data->'data'->>'remote_id') IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM videos v
+      WHERE v.source_url = COALESCE(r.data->'data'->>'url', r.data->'data'->>'remote_id')
+    )
+    """
+
+    # Update refs with video_id using new schema
+    # IMPORTANT: Do this BEFORE cleaning up the ref data
+    execute """
+    UPDATE content_refs r
+    SET video_id = v.id
+    FROM videos v
+    WHERE r.data->>'type' = 'video'
+    AND v.source_url = COALESCE(r.data->'data'->>'url', r.data->'data'->>'remote_id')
+    """
+
+    # Process MediaBlock refs that contain template_video
+    # IMPORTANT: Do this BEFORE cleaning up the MediaBlock data
+    # Use COALESCE to handle both url and remote_id as the video source
+    execute """
+    INSERT INTO videos (
+      source_url, type, title, caption, aspect_ratio,
+      width, height, remote_id,
+      inserted_at, updated_at, creator_id
+    )
+    SELECT DISTINCT ON (COALESCE(r.data->'data'->'template_video'->>'url', r.data->'data'->'template_video'->>'remote_id'))
+      CASE 
+        -- For vimeo videos without url, construct the vimeo.com URL from remote_id
+        WHEN r.data->'data'->'template_video'->>'source' = 'vimeo' 
+             AND r.data->'data'->'template_video'->>'url' IS NULL 
+             AND r.data->'data'->'template_video'->>'remote_id' IS NOT NULL
+        THEN 'https://vimeo.com/' || SPLIT_PART(r.data->'data'->'template_video'->>'remote_id', '?', 1)
+        -- For youtube videos without url, construct the youtube.com URL from remote_id  
+        WHEN r.data->'data'->'template_video'->>'source' = 'youtube' 
+             AND r.data->'data'->'template_video'->>'url' IS NULL 
+             AND r.data->'data'->'template_video'->>'remote_id' IS NOT NULL
+        THEN 'https://www.youtube.com/watch?v=' || SPLIT_PART(r.data->'data'->'template_video'->>'remote_id', '?', 1)
+        -- Otherwise use the existing logic
+        ELSE COALESCE(r.data->'data'->'template_video'->>'url', r.data->'data'->'template_video'->>'remote_id')
+      END,
+      CASE
+        WHEN r.data->'data'->'template_video'->>'source' = 'file' THEN 'external_file'
+        WHEN r.data->'data'->'template_video'->>'source' = 'youtube' THEN 'youtube'
+        WHEN r.data->'data'->'template_video'->>'source' = 'vimeo' THEN 'vimeo'
+        ELSE 'external_file'
+      END,
+      r.data->'data'->'template_video'->>'title',
+      r.data->'data'->'template_video'->>'title',
+      r.data->'data'->'template_video'->>'aspect_ratio',
+      (r.data->'data'->'template_video'->>'width')::integer,
+      (r.data->'data'->'template_video'->>'height')::integer,
+      -- Store clean remote_id based on video type and data availability
+      CASE 
+        -- For vimeo/youtube, extract clean video ID from remote_id (remove query params)
+        WHEN r.data->'data'->'template_video'->>'source' IN ('vimeo', 'youtube') AND r.data->'data'->'template_video'->>'remote_id' IS NOT NULL
+        THEN SPLIT_PART(r.data->'data'->'template_video'->>'remote_id', '?', 1)
+        -- For file type, never store remote_id (it's always the same as source_url)
+        ELSE NULL
+      END,
+      NOW(),
+      NOW(),
+      1
+    FROM content_refs r
+    WHERE r.data->>'type' = 'media'
+    AND COALESCE(r.data->'data'->'template_video'->>'url', r.data->'data'->'template_video'->>'remote_id') IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM videos v
+      WHERE v.source_url = COALESCE(r.data->'data'->'template_video'->>'url', r.data->'data'->'template_video'->>'remote_id')
+    )
+    """
+
+    # Link MediaBlock refs to videos
+    execute """
+    UPDATE content_refs r
+    SET video_id = v.id
+    FROM videos v
+    WHERE r.data->>'type' = 'media'
+    AND v.source_url = COALESCE(r.data->'data'->'template_video'->>'url', r.data->'data'->'template_video'->>'remote_id')
+    """
+
+    # Process MediaBlock refs that contain template_picture
+    execute """
+    UPDATE content_refs r
+    SET image_id = i.id
+    FROM images i
+    WHERE r.data->>'type' = 'media'
+    AND r.data->'data'->'template_picture'->>'path' = i.path
+    AND i.deleted_at IS NULL
+    """
+
+    # NOW clean up the ref data - do this AFTER creating videos and linking refs
+
     # Clean up PictureBlock data - keep only override fields
     # Based on the updated schema, we keep: title, credits, alt, picture_class,
     # img_class, link, srcset, media_queries, lazyload, moonwalk, placeholder, fetchpriority
@@ -37,49 +179,6 @@ defmodule Brando.Migrations.TransferRefMediaData do
       )
     )
     WHERE data->>'type' = 'picture'
-    """
-
-    # Process refs with VideoBlock data
-    # First, create video entries using the new video schema
-    execute """
-    INSERT INTO videos (
-      source_url, type, title, caption, aspect_ratio,
-      width, height, remote_id,
-      inserted_at, updated_at, creator_id
-    )
-    SELECT DISTINCT ON (r.data->'data'->>'url')
-      r.data->'data'->>'url',
-      CASE
-        WHEN r.data->'data'->>'source' = 'file' THEN 'external_file'
-        WHEN r.data->'data'->>'source' = 'youtube' THEN 'youtube'
-        WHEN r.data->'data'->>'source' = 'vimeo' THEN 'vimeo'
-        ELSE 'external_file'
-      END,
-      r.data->'data'->>'title',
-      r.data->'data'->>'title', -- Use title as caption for now
-      r.data->'data'->>'aspect_ratio',
-      (r.data->'data'->>'width')::integer,
-      (r.data->'data'->>'height')::integer,
-      r.data->'data'->>'remote_id',
-      NOW(),
-      NOW(),
-      1 -- Default creator_id, should be adjusted based on your needs
-    FROM content_refs r
-    WHERE r.data->>'type' = 'video'
-    AND r.data->'data'->>'url' IS NOT NULL
-    AND NOT EXISTS (
-      SELECT 1 FROM videos v
-      WHERE v.source_url = r.data->'data'->>'url'
-    )
-    """
-
-    # Update refs with video_id using new schema
-    execute """
-    UPDATE content_refs r
-    SET video_id = v.id
-    FROM videos v
-    WHERE r.data->>'type' = 'video'
-    AND v.source_url = r.data->'data'->>'url'
     """
 
     # Clean up VideoBlock data - keep only override fields
@@ -118,24 +217,6 @@ defmodule Brando.Migrations.TransferRefMediaData do
       'data', (data->'data')::jsonb - 'images'
     )
     WHERE data->>'type' = 'gallery'
-    """
-
-    # Process MediaBlock refs that contain template_picture or template_video
-    execute """
-    UPDATE content_refs r
-    SET image_id = i.id
-    FROM images i
-    WHERE r.data->>'type' = 'media'
-    AND r.data->'data'->'template_picture'->>'path' = i.path
-    AND i.deleted_at IS NULL
-    """
-
-    execute """
-    UPDATE content_refs r
-    SET video_id = v.id
-    FROM videos v
-    WHERE r.data->>'type' = 'media'
-    AND r.data->'data'->'template_video'->>'url' = v.source_url
     """
 
     # Clean up MediaBlock data
