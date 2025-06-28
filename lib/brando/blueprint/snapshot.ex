@@ -27,7 +27,13 @@ defmodule Brando.Blueprint.Snapshot do
 
   @spec get_current_version(module) :: integer
   def get_current_version(module) do
-    get_snapshot_version(module)
+    # First check if the module has a @schema_version attribute (for Brando modules)
+    if function_exported?(module, :__schema_version__, 0) do
+      module.__schema_version__()
+    else
+      # Fall back to snapshot file system for app modules
+      get_snapshot_version(module)
+    end
   end
 
   @spec get_latest_snapshot(module) :: snapshot | nil
@@ -71,7 +77,19 @@ defmodule Brando.Blueprint.Snapshot do
   end
 
   defp build_path(module, opts) do
-    root_path = Keyword.get(opts, :snapshot_path)
+    # Get the application name from the module
+    app_name = module.__naming__().application |> String.downcase() |> String.to_atom()
+
+    # Get the priv dir for that specific application
+    priv_dir =
+      case :code.priv_dir(app_name) do
+        {:error, :bad_name} ->
+          # Fallback to default path for development or if app not found
+          Keyword.get(opts, :snapshot_path, "priv")
+
+        priv_dir_charlist ->
+          priv_dir_charlist |> to_string()
+      end
 
     snapshot_path =
       Enum.map_join(
@@ -80,7 +98,7 @@ defmodule Brando.Blueprint.Snapshot do
         &String.downcase/1
       )
 
-    Path.join(root_path, snapshot_path)
+    Path.join([priv_dir, "blueprints/snapshots", snapshot_path])
   end
 
   defp build_filename(module, version, opts) do

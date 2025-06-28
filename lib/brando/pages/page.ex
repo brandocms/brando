@@ -19,6 +19,11 @@ defmodule Brando.Pages.Page do
 
   @type t :: %__MODULE__{}
 
+  # Schema version for revision compatibility
+  @schema_version 1
+
+  def __schema_version__, do: @schema_version
+
   # ++ Traits
   trait Brando.Trait.CastPolymorphicEmbeds
   trait Brando.Trait.Creator
