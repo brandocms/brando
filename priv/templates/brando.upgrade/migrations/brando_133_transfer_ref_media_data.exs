@@ -207,9 +207,96 @@ defmodule Brando.Migrations.TransferRefMediaData do
     """
 
     # Process refs with GalleryBlock data
-    # For galleries, we need to find or create the gallery and link it
-    # This is complex as we need to match embedded images to gallery_objects
-    # For now, we'll keep the gallery data but remove the images array
+    # First, create galleries from gallery refs
+    execute """
+    INSERT INTO galleries (
+      config_target, creator_id,
+      inserted_at, updated_at
+    )
+    SELECT DISTINCT ON (r.data->>'uid')
+      'default',
+      COALESCE(b.creator_id, 1),
+      NOW(),
+      NOW()
+    FROM content_refs r
+    LEFT JOIN content_blocks b ON r.block_id = b.id
+    WHERE r.data->>'type' = 'gallery'
+    AND r.data->'data' IS NOT NULL
+    AND r.data->>'uid' IS NOT NULL
+    AND r.data->'data'->'images' IS NOT NULL
+    AND jsonb_array_length(r.data->'data'->'images') > 0
+    """
+
+    # Create gallery_objects for each image in the gallery
+    # We need to match each ref to its corresponding gallery by order
+    execute """
+    INSERT INTO galleries_gallery_objects (
+      gallery_id, image_id, sequence, creator_id,
+      inserted_at, updated_at
+    )
+    WITH ref_galleries AS (
+      SELECT 
+        r.id as ref_id,
+        ROW_NUMBER() OVER (ORDER BY r.id) as ref_order
+      FROM content_refs r
+      WHERE r.data->>'type' = 'gallery'
+      AND r.data->'data' IS NOT NULL
+      AND r.data->>'uid' IS NOT NULL
+      AND r.data->'data'->'images' IS NOT NULL
+      AND jsonb_array_length(r.data->'data'->'images') > 0
+    ),
+    gallery_ids AS (
+      SELECT 
+        id,
+        ROW_NUMBER() OVER (ORDER BY id) as gallery_order
+      FROM galleries
+      WHERE config_target = 'default'
+    )
+    SELECT 
+      gi.id,
+      i.id,
+      (row_number() OVER (PARTITION BY gi.id ORDER BY img_ord)) - 1,
+      COALESCE(b.creator_id, 1),
+      NOW(),
+      NOW()
+    FROM content_refs r
+    CROSS JOIN LATERAL jsonb_array_elements(r.data->'data'->'images') WITH ORDINALITY AS imgs(img_data, img_ord)
+    INNER JOIN ref_galleries rg ON r.id = rg.ref_id
+    INNER JOIN gallery_ids gi ON rg.ref_order = gi.gallery_order
+    INNER JOIN images i ON i.path = imgs.img_data->>'path' AND i.deleted_at IS NULL
+    LEFT JOIN content_blocks b ON r.block_id = b.id
+    WHERE r.data->>'type' = 'gallery'
+    """
+
+    # Update refs with gallery_id - we need a way to link each ref to its specific gallery
+    # Since we can't use config_target anymore, we'll need to match by the gallery creation order
+    execute """
+    WITH gallery_mapping AS (
+      SELECT 
+        r.id as ref_id,
+        ROW_NUMBER() OVER (ORDER BY r.id) as gallery_order
+      FROM content_refs r
+      WHERE r.data->>'type' = 'gallery'
+      AND r.data->'data' IS NOT NULL
+      AND r.data->>'uid' IS NOT NULL
+      AND r.data->'data'->'images' IS NOT NULL
+      AND jsonb_array_length(r.data->'data'->'images') > 0
+    ),
+    gallery_ids AS (
+      SELECT 
+        id,
+        ROW_NUMBER() OVER (ORDER BY id) as gallery_order
+      FROM galleries
+      WHERE config_target = 'default'
+    )
+    UPDATE content_refs r
+    SET gallery_id = gi.id
+    FROM gallery_mapping gm
+    JOIN gallery_ids gi ON gm.gallery_order = gi.gallery_order
+    WHERE r.id = gm.ref_id
+    """
+
+    # Clean up gallery data - remove the images array
     execute """
     UPDATE content_refs
     SET data = jsonb_build_object(
