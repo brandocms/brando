@@ -8,6 +8,8 @@ defmodule Brando.Migrations.SplitOutRefs do
       add :description, :text
       add :data, :jsonb
       add :sequence, :integer
+      add :active, :boolean, default: true, null: false
+      add :collapsed, :boolean, default: false, null: false
 
       # Foreign keys
       add :module_id, references(:content_modules, on_delete: :delete_all)
@@ -30,12 +32,14 @@ defmodule Brando.Migrations.SplitOutRefs do
     # Migrate data from embedded refs in modules
     # Since refs were embeds_many, they're stored as JSONB in the refs column
     execute """
-    INSERT INTO content_refs (name, description, data, sequence, module_id, inserted_at, updated_at)
+    INSERT INTO content_refs (name, description, data, sequence, active, collapsed, module_id, inserted_at, updated_at)
     SELECT
       ref_data->>'name',
       ref_data->>'description',
       ref_data->'data',
       (row_number() OVER (PARTITION BY m.id ORDER BY ordinality)) - 1,
+      COALESCE((ref_data->'data'->>'active')::boolean, true),
+      COALESCE((ref_data->'data'->>'collapsed')::boolean, false),
       m.id,
       NOW(),
       NOW()
@@ -46,12 +50,14 @@ defmodule Brando.Migrations.SplitOutRefs do
 
     # Migrate data from embedded refs in blocks
     execute """
-    INSERT INTO content_refs (name, description, data, sequence, block_id, inserted_at, updated_at)
+    INSERT INTO content_refs (name, description, data, sequence, active, collapsed, block_id, inserted_at, updated_at)
     SELECT
       ref_data->>'name',
       ref_data->>'description',
       ref_data->'data',
       (row_number() OVER (PARTITION BY b.id ORDER BY ordinality)) - 1,
+      COALESCE((ref_data->'data'->>'active')::boolean, true),
+      COALESCE((ref_data->'data'->>'collapsed')::boolean, false),
       b.id,
       NOW(),
       NOW()

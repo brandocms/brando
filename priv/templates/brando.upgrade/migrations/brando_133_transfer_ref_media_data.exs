@@ -157,6 +157,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
     # Clean up PictureBlock data - keep only override fields
     # Based on the updated schema, we keep: title, credits, alt, picture_class,
     # img_class, link, srcset, media_queries, lazyload, moonwalk, placeholder, fetchpriority
+    # NOTE: active and collapsed are now database columns, not in JSONB data
     execute """
     UPDATE content_refs
     SET data = jsonb_build_object(
@@ -184,6 +185,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
     # Clean up VideoBlock data - keep only override fields
     # Based on the updated schema, we keep: title, poster, autoplay, opacity,
     # preload, play_button, controls, cover, aspect_ratio, cover_image
+    # NOTE: active and collapsed are now database columns, not in JSONB data
     execute """
     UPDATE content_refs
     SET data = jsonb_build_object(
@@ -297,6 +299,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
     """
 
     # Clean up gallery data - remove the images array
+    # NOTE: active and collapsed are now database columns, not in JSONB data
     execute """
     UPDATE content_refs
     SET data = jsonb_build_object(

@@ -26,6 +26,8 @@ defmodule Brando.Content.Ref do
     attribute :description, :text
     attribute :sequence, :integer
     attribute :uid, :string, required: true
+    attribute :active, :boolean, default: true
+    attribute :collapsed, :boolean, default: false
 
     attribute :data, PolymorphicEmbed,
       types: Blocks.list_blocks(),
