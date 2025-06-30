@@ -7,11 +7,12 @@ defmodule Brando.Migrations.UpdateHeadlessRefs do
     # This migration needs to be done programmatically to check ref types
     # We'll process each module and update its code based on the actual ref types
 
-    modules = Repo.all(
-      from m in "content_modules",
-      select: %{id: m.id, code: m.code},
-      where: fragment("? ~ ?", m.code, "refs\\.[a-zA-Z0-9_]+\\.data\\.")
-    )
+    modules =
+      Repo.all(
+        from m in "content_modules",
+          select: %{id: m.id, code: m.code},
+          where: fragment("? ~ ?", m.code, "refs\\.[a-zA-Z0-9_]+\\.data\\.")
+      )
 
     Enum.each(modules, fn module ->
       updated_code = update_module_code(module.id, module.code)
@@ -32,35 +33,38 @@ defmodule Brando.Migrations.UpdateHeadlessRefs do
     refs = get_refs_for_module(module_id)
 
     # Build a map of ref names to their types
-    ref_types = Enum.reduce(refs, %{}, fn ref, acc ->
-      ref_type = get_ref_type(ref)
-      Map.put(acc, ref.name, ref_type)
-    end)
+    ref_types =
+      Enum.reduce(refs, %{}, fn ref, acc ->
+        ref_type = get_ref_type(ref)
+        Map.put(acc, ref.name, ref_type)
+      end)
 
     # Now update the code based on ref types
     code
     |> update_picture_refs(ref_types)
     |> update_video_refs(ref_types)
     |> update_gallery_refs(ref_types)
+    |> update_active_collapsed_refs(ref_types)
   end
-
 
   defp get_refs_for_module(module_id) do
     Repo.all(
       from r in "content_refs",
-      where: r.module_id == ^module_id,
-      select: %{name: r.name, data: r.data}
+        where: r.module_id == ^module_id,
+        select: %{name: r.name, data: r.data}
     )
   end
 
   defp get_ref_type(%{data: data}) when is_map(data) do
     Map.get(data, "type")
   end
+
   defp get_ref_type(_), do: nil
 
   defp update_picture_refs(code, ref_types) do
     # Find all ref names that are pictures
-    picture_refs = ref_types
+    picture_refs =
+      ref_types
       |> Enum.filter(fn {_name, type} -> type == "picture" end)
       |> Enum.map(fn {name, _type} -> name end)
 
@@ -72,7 +76,8 @@ defmodule Brando.Migrations.UpdateHeadlessRefs do
 
   defp update_video_refs(code, ref_types) do
     # Find all ref names that are videos
-    video_refs = ref_types
+    video_refs =
+      ref_types
       |> Enum.filter(fn {_name, type} -> type == "video" end)
       |> Enum.map(fn {name, _type} -> name end)
 
@@ -84,7 +89,8 @@ defmodule Brando.Migrations.UpdateHeadlessRefs do
 
   defp update_gallery_refs(code, ref_types) do
     # Find all ref names that are galleries
-    gallery_refs = ref_types
+    gallery_refs =
+      ref_types
       |> Enum.filter(fn {_name, type} -> type == "gallery" end)
       |> Enum.map(fn {name, _type} -> name end)
 
@@ -97,10 +103,25 @@ defmodule Brando.Migrations.UpdateHeadlessRefs do
     end)
   end
 
+  defp update_active_collapsed_refs(code, ref_types) do
+    # Get all ref names regardless of type since active/collapsed applies to all refs
+    ref_names = Map.keys(ref_types)
+
+    Enum.reduce(ref_names, code, fn ref_name, acc ->
+      acc
+      # Replace refs.<ref_name>.data.active with refs.<ref_name>.active
+      |> String.replace(~r/refs\.#{ref_name}\.data\.active/, "refs.#{ref_name}.active")
+      # Replace refs.<ref_name>.data.collapsed with refs.<ref_name>.collapsed
+      |> String.replace(~r/refs\.#{ref_name}\.data\.collapsed/, "refs.#{ref_name}.collapsed")
+    end)
+  end
+
   def down do
     # Since we're flattening the structure based on type, the down migration
     # would need to restore the nested structure, which is complex
     # For now, we'll leave this as a one-way migration
-    IO.puts "Warning: This migration cannot be fully reversed. The nested ref structure cannot be automatically restored."
+    IO.puts(
+      "Warning: This migration cannot be fully reversed. The nested ref structure cannot be automatically restored."
+    )
   end
 end

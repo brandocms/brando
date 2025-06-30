@@ -2508,14 +2508,23 @@ defmodule BrandoAdmin.Components.Form.Block do
         Changeset.get_field(block_cs, :uid) || Brando.Utils.generate_uid()
       end
 
+    # For refs, get active and collapsed from ref_form, otherwise from block
+    {active, collapsed} =
+      if assigns[:is_ref?] && assigns[:ref_form] do
+        ref_cs = assigns.ref_form.source
+        {Changeset.get_field(ref_cs, :active), Changeset.get_field(ref_cs, :collapsed)}
+      else
+        {Changeset.get_field(block_cs, :active), Changeset.get_field(block_cs, :collapsed)}
+      end
+
     assigns =
       assigns
       |> assign_new(:block_type, fn ->
         Changeset.get_field(block_cs, :type) || (assigns.is_entry? && "entry")
       end)
       |> assign(:uid, uid)
-      |> assign(:active, Changeset.get_field(block_cs, :active))
-      |> assign(:collapsed, Changeset.get_field(block_cs, :collapsed))
+      |> assign(:active, active)
+      |> assign(:collapsed, collapsed)
       |> assign(:marked_as_deleted, Changeset.get_field(block_cs, :marked_as_deleted))
 
     ~H"""
@@ -2560,6 +2569,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           config={@config}
           type={@block_type}
           block={@block}
+          ref_form={@ref_form}
           target={@target}
           multi={@multi}
           is_ref?={@is_ref?}
@@ -2915,6 +2925,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :config, :boolean, default: false
   attr :multi, :boolean, default: false
   attr :is_ref?, :boolean, default: false
+  attr :ref_form, :any, default: nil
   attr :palette, :any, default: nil
   attr :container, :any, default: nil
   attr :module_datasource_module_label, :string, default: nil
@@ -2926,11 +2937,22 @@ defmodule BrandoAdmin.Components.Form.Block do
   slot :description
 
   def toolbar(assigns) do
+    # Use ref_form fields when it's a ref, otherwise use block fields
+    active_field = if assigns.is_ref? && assigns.ref_form, do: assigns.ref_form[:active], else: assigns.block[:active]
+
+    collapsed_field =
+      if assigns.is_ref? && assigns.ref_form, do: assigns.ref_form[:collapsed], else: assigns.block[:collapsed]
+
+    assigns =
+      assigns
+      |> assign(:active_field, active_field)
+      |> assign(:collapsed_field, collapsed_field)
+
     ~H"""
     <div class="block-toolbar">
       <div class="block-description">
-        <Form.label field={@block[:active]} class="switch small inverse">
-          <Input.input type={:checkbox} field={@block[:active]} />
+        <Form.label field={@active_field} class="switch small inverse">
+          <Input.input type={:checkbox} field={@active_field} />
           <div class="slider round"></div>
         </Form.label>
         <span class="block-type">
@@ -2951,7 +2973,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           </span>
         </span>
         <span :if={@description} class="block-name">
-          {render_slot(@description)}<span :if={@block[:active].value in [false, "false"]}> &lt;{gettext("Deactivated")}&gt;</span>
+          {render_slot(@description)}<span :if={@active_field.value in [false, "false"]}> &lt;{gettext("Deactivated")}&gt;</span>
         </span>
         <%= if @type == :container do %>
           <%= if @container do %>
@@ -3035,13 +3057,13 @@ defmodule BrandoAdmin.Components.Form.Block do
           <.icon name="hero-trash" />
         </button>
         <Form.label
-          field={@block[:collapsed]}
+          field={@collapsed_field}
           class="block-action toggler"
           popover={gettext("Collapse (hide) block in block editor")}
         >
           <.icon :if={@collapsed} name="hero-eye-slash" />
           <.icon :if={!@collapsed} name="hero-eye" />
-          <Input.input type={:checkbox} field={@block[:collapsed]} />
+          <Input.input type={:checkbox} field={@collapsed_field} />
         </Form.label>
 
         <div
