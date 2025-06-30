@@ -1284,7 +1284,13 @@ defmodule Brando.Villain.Parser do
   defp process_var(%{key: key, label: _, type: _, value: value}), do: {key, value}
 
   defp process_refs(nil), do: %{}
-  defp process_refs(refs), do: Enum.map(refs, &process_ref(&1)) |> Enum.into(%{})
+
+  defp process_refs(refs) do
+    refs
+    |> Enum.filter(fn ref -> Map.get(ref, :active, true) != false end)
+    |> Enum.map(&process_ref(&1))
+    |> Enum.into(%{})
+  end
 
   defp process_ref(%{name: ref_name} = ref_block) do
     # Build the processed ref by combining data with referenced entities
@@ -1297,76 +1303,71 @@ defmodule Brando.Villain.Parser do
   end
 
   defp merge_ref_associations(%{data: %{type: "picture"}} = ref) do
-    # If ref is not active, return nil to skip rendering
-    if Map.get(ref, :active, true) == false do
-      nil
-    else
-      merged_data =
-        case {Map.get(ref, :image), Map.get(ref, :image_id)} do
-          {nil, nil} ->
-            # No image association and no image_id, return the block data as-is
-            ref.data.data
+    merged_data =
+      case {Map.get(ref, :image), Map.get(ref, :image_id)} do
+        {nil, nil} ->
+          # No image association and no image_id, return the block data as-is
+          ref.data.data
 
-          {nil, image_id} when is_integer(image_id) ->
-            # No image association but we have image_id, load the image
-            case Brando.Images.get_image(image_id) do
-              {:ok, image} ->
-                override_data = Map.from_struct(ref.data.data || %{})
+        {nil, image_id} when is_integer(image_id) ->
+          # No image association but we have image_id, load the image
+          case Brando.Images.get_image(image_id) do
+            {:ok, image} ->
+              override_data = Map.from_struct(ref.data.data || %{})
 
-                override_attrs =
-                  Map.take(override_data, [
-                    :title,
-                    :credits,
-                    :alt,
-                    :picture_class,
-                    :img_class,
-                    :link,
-                    :srcset,
-                    :media_queries,
-                    :lazyload,
-                    :moonwalk,
-                    :placeholder,
-                    :fetchpriority
-                  ])
+              override_attrs =
+                Map.take(override_data, [
+                  :title,
+                  :credits,
+                  :alt,
+                  :picture_class,
+                  :img_class,
+                  :link,
+                  :srcset,
+                  :media_queries,
+                  :lazyload,
+                  :moonwalk,
+                  :placeholder,
+                  :fetchpriority
+                ])
 
-                struct(image, Map.merge(Map.from_struct(image), override_attrs))
+              struct(image, Map.merge(Map.from_struct(image), override_attrs))
 
-              _ ->
-                ref.data.data
-            end
+            _ ->
+              ref.data.data
+          end
 
-          {image, _} ->
-            # We have an image, so we should return the image data with overrides
-            # from the block data (like custom title, credits, alt)
-            override_data = Map.from_struct(ref.data.data || %{})
+        {image, _} ->
+          # We have an image, so we should return the image data with overrides
+          # from the block data (like custom title, credits, alt)
+          override_data = Map.from_struct(ref.data.data || %{})
 
-            override_attrs =
-              Map.take(override_data, [
-                :title,
-                :credits,
-                :alt,
-                :picture_class,
-                :img_class,
-                :link,
-                :srcset,
-                :media_queries,
-                :lazyload,
-                :moonwalk,
-                :placeholder,
-                :fetchpriority
-              ])
+          override_attrs =
+            Map.take(override_data, [
+              :title,
+              :credits,
+              :alt,
+              :picture_class,
+              :img_class,
+              :link,
+              :srcset,
+              :media_queries,
+              :lazyload,
+              :moonwalk,
+              :placeholder,
+              :fetchpriority
+            ])
 
-            # Merge into the image struct while preserving the struct type
-            struct(image, Map.merge(Map.from_struct(image), override_attrs))
-        end
+          # Merge into the image struct while preserving the struct type
+          struct(image, Map.merge(Map.from_struct(image), override_attrs))
+      end
 
-      # Return the ref structure with merged data
-      %{
-        data: %{data: merged_data, type: "picture"},
-        name: ref.name,
-        description: ref.description
-      }
-    end
+    # Return the ref structure with merged data
+    %{
+      data: %{data: merged_data, type: "picture"},
+      name: ref.name,
+      description: ref.description
+    }
   end
 
   defp merge_ref_associations(%{data: %{type: "video"}} = ref) do
