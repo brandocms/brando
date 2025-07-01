@@ -460,6 +460,18 @@ defmodule Brando.Villain.Parser do
     )
   end
 
+  def video(%{source_url: src, type: :external_file} = data, _) do
+    assigns = %{
+      video: src,
+      opts: video_file_options(data),
+      cover_image: Map.get(data, :cover_image)
+    }
+
+    assigns
+    |> Brando.Villain.Parser.video_tag()
+    |> Phoenix.LiveViewTest.rendered_to_string()
+  end
+
   # Convert file video to html
   def video(%{remote_id: src, type: :upload} = data, _) do
     assigns = %{
@@ -471,6 +483,8 @@ defmodule Brando.Villain.Parser do
     assigns
     |> Brando.Villain.Parser.video_tag()
     |> Phoenix.LiveViewTest.rendered_to_string()
+
+    "!!! TODO: Implement video file upload"
   end
 
   def video(_, _), do: ""
@@ -1285,12 +1299,7 @@ defmodule Brando.Villain.Parser do
 
   defp process_refs(nil), do: %{}
 
-  defp process_refs(refs) do
-    refs
-    |> Enum.filter(fn ref -> Map.get(ref, :active, true) != false end)
-    |> Enum.map(&process_ref(&1))
-    |> Enum.into(%{})
-  end
+  defp process_refs(refs), do: Enum.map(refs, &process_ref(&1)) |> Enum.into(%{})
 
   defp process_ref(%{name: ref_name} = ref_block) do
     # Build the processed ref by combining data with referenced entities
@@ -1362,11 +1371,13 @@ defmodule Brando.Villain.Parser do
           struct(image, Map.merge(Map.from_struct(image), override_attrs))
       end
 
-    # Return the ref structure with merged data
+    # Return the ref structure with merged data, including active status
     %{
       data: %{data: merged_data, type: "picture"},
       name: ref.name,
-      description: ref.description
+      description: ref.description,
+      active: Map.get(ref, :active, true),
+      collapsed: Map.get(ref, :collapsed, false)
     }
   end
 
@@ -1400,11 +1411,13 @@ defmodule Brando.Villain.Parser do
           struct(video, Map.merge(Map.from_struct(video), override_attrs))
       end
 
-    # Return the ref structure with merged data
+    # Return the ref structure with merged data, including active status
     %{
       data: %{data: merged_data, type: "video"},
       name: ref.name,
-      description: ref.description
+      description: ref.description,
+      active: Map.get(ref, :active, true),
+      collapsed: Map.get(ref, :collapsed, false)
     }
   end
 
@@ -1421,30 +1434,36 @@ defmodule Brando.Villain.Parser do
           struct(ref.data.data.__struct__, Map.put(override_data, :gallery, gallery))
       end
 
-    # Return the ref structure with merged data
+    # Return the ref structure with merged data, including active status
     %{
       data: %{data: merged_data, type: "gallery"},
       name: ref.name,
-      description: ref.description
+      description: ref.description,
+      active: Map.get(ref, :active, true),
+      collapsed: Map.get(ref, :collapsed, false)
     }
   end
 
   # Handle all other ref types (text, html, svg, etc.)
   defp merge_ref_associations(%{data: %{type: _type} = data} = ref) do
-    # Return the ref structure with data
+    # Return the ref structure with data, including active status
     %{
       data: data,
       name: ref.name,
-      description: ref.description
+      description: ref.description,
+      active: Map.get(ref, :active, true),
+      collapsed: Map.get(ref, :collapsed, false)
     }
   end
 
   defp merge_ref_associations(ref) do
-    # Fallback for refs without proper data structure
+    # Fallback for refs without proper data structure, including active status
     %{
       data: Map.get(ref, :data, %{}),
       name: Map.get(ref, :name),
-      description: Map.get(ref, :description)
+      description: Map.get(ref, :description),
+      active: Map.get(ref, :active, true),
+      collapsed: Map.get(ref, :collapsed, false)
     }
   end
 
