@@ -238,7 +238,7 @@ defmodule Brando.Content.Block do
 
   def ref_changeset(ref, attrs, _user) do
     ref
-    |> cast(attrs, [:name, :description, :uid, :sequence])
+    |> cast(attrs, [:name, :description, :uid, :sequence, :active, :collapsed])
     |> unique_constraint(:uid)
     |> PolymorphicEmbed.cast_polymorphic_embed(:data)
   end

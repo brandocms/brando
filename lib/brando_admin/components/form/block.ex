@@ -2604,7 +2604,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
           <:description>
             <%= if @ref_description not in ["", nil] do %>
               {@ref_description}
@@ -2632,7 +2632,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
           <:description>
             <%= if @ref_description not in ["", nil] do %>
               {@ref_description}
@@ -2665,7 +2665,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
           <:description>
             {gettext("Comment — not shown on frontend.")}
           </:description>
@@ -2698,7 +2698,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
           <:description>
             <%= if @ref_description not in ["", nil] do %>
               {@ref_description}
@@ -2735,7 +2735,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
           <:description>
             (H{block_data[:level].value})<%= if @ref_description do %>
               {@ref_description}
@@ -2807,7 +2807,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     ~H"""
     <.inputs_for :let={text_block_data} field={@block[:data]}>
       <div id={"ref-#{@uid}-wrapper"} data-block-uid={@uid}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
           <:description>
             <%= if @ref_description not in [nil, ""] do %>
               {@ref_description}
