@@ -12,7 +12,6 @@ defmodule Brando.Villain.Block do
       @behaviour Brando.Villain.Block
 
       use Ecto.Schema
-
       import Ecto.Changeset
 
       @primary_key false
