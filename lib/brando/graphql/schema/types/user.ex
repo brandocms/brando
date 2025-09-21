@@ -48,6 +48,7 @@ defmodule Brando.GraphQL.Schema.Types.User do
   @desc "Filtering options for user"
   input_object :user_filter do
     field :name, :string
+    field :active, :boolean
   end
 
   @desc "Matching options for user"

@@ -502,7 +502,7 @@ export default {
     users: {
       query: gql`
         query Users {
-          users {
+          users(filter: { active: true }) {
             entries {
               id
               name
