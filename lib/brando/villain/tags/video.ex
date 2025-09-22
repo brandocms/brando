@@ -24,7 +24,7 @@ defmodule Brando.Villain.Tags.Video do
 
   @impl true
   def render([source: source, args: args], context) do
-    _ = [
+    allowed_atoms = [
       :aspect_ratio,
       :autoplay,
       :controls,
@@ -36,6 +36,9 @@ defmodule Brando.Villain.Tags.Video do
       :width,
       :height
     ]
+
+    # Force load them
+    _ = allowed_atoms
 
     evaled_source = Liquex.Argument.eval(source, context)
 
