@@ -1135,6 +1135,14 @@ defmodule Brando.Villain.Filters do
     nil
   end
 
+  def link_target_blank(%Var{type: :link} = var, _ctx) do
+    var.link_target_blank
+  end
+
+  def link_target_blank(nil, _ctx) do
+    false
+  end
+
   def i18n(value, _) when is_binary(value), do: value
 
   def i18n(string_map, ctx) when is_map(string_map) do
