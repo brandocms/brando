@@ -1,0 +1,107 @@
+.input-video {
+  .video-wrapper-compact {
+    display: flex;
+    border: 1px dashed var(--brando-color-dark);
+    border-radius: 8px;
+    padding: 8px 25px 8px 8px;
+    width: fit-content;
+
+    img {
+      width: 90px;
+      height: 90px;
+      min-width: auto;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+
+    .video-placeholder {
+      background-color: var(--brando-color-input);
+      width: 90px;
+      height: 90px;
+      min-width: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+
+      .shaded & {
+        @color bg white;
+      }
+
+      svg {
+        width: 48px;
+        height: 48px;
+        opacity: 0.5;
+      }
+    }
+
+    .video-info {
+      @font mono;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding-left: 12px;
+
+      .info-wrapper {
+        .type {
+          font-size: 11px;
+          text-transform: uppercase;
+          opacity: 0.7;
+          margin-bottom: 2px;
+        }
+
+        .title-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 4px;
+        }
+
+        .title {
+          @font main;
+        }
+
+        .status-indicator {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          flex-shrink: 0;
+
+          &.ready {
+            background-color: #22c55e;
+          }
+
+          &.uploading {
+            background-color: #9ca3af;
+            animation: pulse 1.5s ease-in-out infinite;
+          }
+
+          &.processing {
+            background-color: #f97316;
+            animation: pulse 1.5s ease-in-out infinite;
+          }
+
+          &.errored {
+            background-color: #ef4444;
+          }
+
+          &.pending {
+            background-color: #9ca3af;
+            animation: pulse 1.5s ease-in-out infinite;
+          }
+        }
+
+        .meta {
+          font-size: 11px;
+          opacity: 0.7;
+        }
+      }
+
+      .tiny {
+        width: fit-content;
+        margin-top: 5px;
+      }
+    }
+  }
+}

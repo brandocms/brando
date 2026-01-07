@@ -38,7 +38,15 @@ async function getVideoDimensions(url) {
     // to avoid any permission issues
     video.autoplay = true
     video.muted = true
+    video.preload = 'metadata'
+    video.crossOrigin = 'anonymous' // Handle CORS for video files
     video.src = url
+
+    // Add timeout to prevent hanging
+    const timeout = setTimeout(() => {
+      cleanup()
+      reject(new Error('Video dimension detection timed out after 10 seconds'))
+    }, 10000)
 
     const onLoadedMetadata = () => {
       // We have width/height once metadata is loaded
@@ -62,9 +70,15 @@ async function getVideoDimensions(url) {
         // 2: MEDIA_ERR_NETWORK
         // 3: MEDIA_ERR_DECODE
         // 4: MEDIA_ERR_SRC_NOT_SUPPORTED
+        const errorMessages = {
+          1: 'MEDIA_ERR_ABORTED',
+          2: 'MEDIA_ERR_NETWORK',
+          3: 'MEDIA_ERR_DECODE',
+          4: 'MEDIA_ERR_SRC_NOT_SUPPORTED'
+        }
         reject(
           new Error(
-            `Video load error (code ${mediaError.code}): ${mediaError.message || 'No detailed message'}`
+            `Video load error (${errorMessages[mediaError.code] || mediaError.code}): ${mediaError.message || 'No detailed message'}`
           )
         )
       } else {
@@ -73,8 +87,10 @@ async function getVideoDimensions(url) {
     }
 
     function cleanup() {
+      clearTimeout(timeout)
       video.removeEventListener('loadedmetadata', onLoadedMetadata)
       video.removeEventListener('error', onError)
+      video.src = '' // Clear src to stop any loading
       video.remove()
     }
 
@@ -127,44 +143,75 @@ export default (app) => ({
 
   handleInput(url) {
     let match
-    this.url = url
+    this.url = url.trim()
+
+    // Basic URL validation
+    if (!this.url) {
+      return Promise.reject(new Error('VideoURLParser: Empty URL provided'))
+    }
+
+    try {
+      new URL(this.url)
+    } catch {
+      return Promise.reject(new Error('VideoURLParser: Invalid URL format'))
+    }
 
     return new Promise(async (resolve, reject) => {
       this.resolve = resolve
 
-      // Some Vimeo “file”-style links have special handling
+      // Some Vimeo "file"-style links have special handling
       if (
-        url.startsWith('https://player.vimeo.com/external/') ||
-        url.startsWith('https://player.vimeo.com/progressive_redirect/')
+        this.url.startsWith('https://player.vimeo.com/external/') ||
+        this.url.startsWith('https://player.vimeo.com/progressive_redirect/')
       ) {
         this.source = 'file'
-        this.remoteId = url
+        this.remoteId = this.url
 
         try {
-          const { width, height } = await getVideoDimensions(url)
+          const { width, height } = await getVideoDimensions(this.url)
           this.width = width
           this.height = height
           resolve()
         } catch (e) {
-          reject(e)
+          // For direct video files, still resolve but without dimensions
+          console.warn('Could not get video dimensions:', e.message)
+          this.width = 0
+          this.height = 0
+          resolve()
         }
       } else {
         // Otherwise, check standard provider patterns
+        let sourceFound = false
+
         for (const key of Object.keys(PROVIDERS)) {
           const provider = PROVIDERS[key]
-          match = provider.regex.exec(url)
+          match = provider.regex.exec(this.url)
 
           if (match !== null && match[1] !== undefined) {
             this.source = key
             this.remoteId = match[1]
+            sourceFound = true
+
+            // For direct video files, try to get dimensions
+            if (key === 'file') {
+              try {
+                const { width, height } = await getVideoDimensions(this.url)
+                this.width = width
+                this.height = height
+              } catch (e) {
+                console.warn('Could not get video dimensions for file:', e.message)
+                this.width = 0
+                this.height = 0
+              }
+            }
+
             resolve()
             break
           }
         }
 
-        if (!{}.hasOwnProperty.call(PROVIDERS, this.source)) {
-          reject(new Error('VideoURLParser: Unknown video source'))
-          return false
+        if (!sourceFound) {
+          reject(new Error('VideoURLParser: URL does not match any supported video provider (YouTube, Vimeo, or direct video file)'))
         }
       }
     })

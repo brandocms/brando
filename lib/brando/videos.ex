@@ -51,7 +51,16 @@ defmodule Brando.Videos do
   end
 
   mutation :update, Video
-  mutation :delete, Video
+
+  mutation :delete, Video do
+    fn entry ->
+      if Brando.Videos.Uploader.get_delete_timing(entry) == :on_delete do
+        Brando.Videos.Uploader.delete_remote(entry)
+      end
+
+      {:ok, entry}
+    end
+  end
 
   @doc """
   Create new video
@@ -60,6 +69,16 @@ defmodule Brando.Videos do
   def create_video(params, user) do
     %Video{}
     |> Video.changeset(params, user)
+    |> Brando.Repo.insert()
+  end
+
+  @doc """
+  Create new video without user (used by uploaders)
+  """
+  @spec create_video(params) :: {:ok, Video.t()} | {:error, changeset}
+  def create_video(params) do
+    %Video{}
+    |> Video.changeset(params)
     |> Brando.Repo.insert()
   end
 
@@ -76,11 +95,25 @@ defmodule Brando.Videos do
   end
 
   @doc """
-  Delete `ids` from database
+  Get video by a meta field path and value.
+
+  ## Examples
+
+      iex> get_video_by_meta("mux.upload_id", "upload_123")
+      %Video{}
+
+      iex> get_video_by_meta("mux.asset_id", "asset_abc")
+      %Video{}
   """
-  def delete_videos(ids) when is_list(ids) do
-    q = from m in Video, where: m.id in ^ids
-    Brando.Repo.soft_delete_all(q)
+  def get_video_by_meta(field_path, value) do
+    # Split the field path to handle nested keys
+    keys = String.split(field_path, ".")
+
+    query =
+      from v in Video,
+        where: fragment("?#>>? = ?", v.meta, ^keys, ^value) and is_nil(v.deleted_at)
+
+    Brando.Repo.one(query)
   end
 
   def get_config_for(%{config_target: nil}) do

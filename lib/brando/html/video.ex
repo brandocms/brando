@@ -1,7 +1,7 @@
 defmodule Brando.HTML.Video do
   use Gettext, backend: Brando.Gettext
   use Phoenix.Component
-  alias Brando.Type.Video
+  alias Brando.Videos.Video
 
   @type safe_string :: {:safe, [...]}
   @type video :: Video.t()
@@ -23,7 +23,7 @@ defmodule Brando.HTML.Video do
   """
   def video(assigns)
 
-  def video(%{assigns: %{video: %Video{source: "vimeo", remote_id: remote_id, width: width, height: height}} = assigns}) do
+  def video(%{assigns: %{video: %Video{type: :vimeo, remote_id: remote_id, width: width, height: height}} = assigns}) do
     assigns =
       assigns
       |> assign(:remote_id, remote_id)
@@ -47,7 +47,7 @@ defmodule Brando.HTML.Video do
 
   def video(%{
         assigns:
-          %{video: %Video{source: "youtube", remote_id: remote_id, width: width, height: height}, opts: opts} = assigns
+          %{video: %Video{type: :youtube, remote_id: remote_id, width: width, height: height}, opts: opts} = assigns
       }) do
     autoplay = (Keyword.get(opts, :autoplay, false) && 1) || 0
     controls = (Keyword.get(opts, :controls, false) && 1) || 0
@@ -72,6 +72,261 @@ defmodule Brando.HTML.Video do
       allowfullscreen
     >
     </iframe>
+    """
+  end
+
+  def video(%{video: %Video{type: :bunny, meta: meta, status: :ready} = video, opts: opts} = assigns) do
+    video_guid = get_in(meta, ["bunny", "video_guid"])
+    library_id = get_in(meta, ["bunny", "library_id"])
+    cdn_hostname = get_bunny_cdn_hostname()
+
+    # Get aspect_ratio from Video record (stored as "1024/683" for CSS)
+    aspect_ratio = video.aspect_ratio || "16/9"
+
+    # Parse aspect ratio to get width/height
+    {width, height} =
+      case String.split(aspect_ratio, "/") do
+        [w, h] -> {String.to_integer(w), String.to_integer(h)}
+        _ -> {16, 9}
+      end
+
+    orientation = (width > height && "landscape") || "portrait"
+    opacity = Keyword.get(opts, :opacity, 0)
+    preload = Keyword.get(opts, :preload, false)
+    preload = if preload == true, do: "auto", else: preload
+    cover = Keyword.get(opts, :cover, false)
+    # Bunny thumbnail URL format
+    poster = "https://#{cdn_hostname}/#{video_guid}/thumbnail.jpg"
+    progress = Keyword.get(opts, :progress, false)
+    play_button = Keyword.get(opts, :play_button, false)
+    autoplay = Keyword.get(opts, :autoplay, false)
+    controls = Keyword.get(opts, :controls, false)
+    aspect_ratio_style = build_aspect_ratio_style_string(aspect_ratio, nil, nil)
+    loop = Keyword.get(opts, :loop, true)
+    # Bunny HLS URL format
+    src = "https://#{cdn_hostname}/#{video_guid}/playlist.m3u8"
+    # Alternative: embed iframe URL
+    _embed_url = "https://iframe.mediadelivery.net/embed/#{library_id}/#{video_guid}"
+
+    caption =
+      case Keyword.get(opts, :caption, false) do
+        false -> false
+        true -> Keyword.get(opts, :title, false)
+        caption -> caption
+      end
+
+    assigns =
+      assigns
+      |> assign(:orientation, orientation)
+      |> assign(:aspect_ratio, aspect_ratio_style)
+      |> assign(:autoplay, autoplay)
+      |> assign(:controls, controls)
+      |> assign(:poster, poster)
+      |> assign(:width, width)
+      |> assign(:height, height)
+      |> assign(:preload, preload)
+      |> assign(:progress, progress)
+      |> assign(:src, src)
+      |> assign(:loop, loop)
+      |> assign(:play_button, play_button)
+      |> assign(:video_cover, get_video_cover(cover, width, height, opacity))
+      |> assign(:caption, caption)
+      |> assign_new(:cover, fn -> nil end)
+
+    ~H"""
+    <div
+      class="video-wrapper video-bunny"
+      data-smart-video
+      data-orientation={@orientation}
+      data-progress={@progress}
+      data-preload={@preload && @src}
+      data-src={@src}
+      data-autoplay={@autoplay}
+      data-controls={@controls}
+      style={@aspect_ratio}
+    >
+      <video
+        width={@width}
+        height={@height}
+        alt=""
+        tabindex="0"
+        preload="auto"
+        autoplay={@autoplay}
+        muted={@autoplay}
+        loop={@loop}
+        playsinline
+        controls={@controls}
+        data-video
+        poster={@poster}
+        style={@aspect_ratio}
+        data-src={@preload && @src}
+        src={!@preload && @src}
+      >
+        <source src={@src} type="application/x-mpegURL" />
+      </video>
+
+      <noscript>
+        <video
+          width={@width}
+          height={@height}
+          alt=""
+          tabindex="0"
+          preload="metadata"
+          muted={@autoplay}
+          loop={@loop}
+          playsinline
+          poster={@poster}
+        >
+          <source src={@src} type="application/x-mpegURL" />
+        </video>
+      </noscript>
+      
+    <!-- play button -->
+      {get_play_button(@play_button)}
+      <!-- /play button -->
+
+    <!-- cover -->
+      <%= if @cover do %>
+        <div data-cover>
+          {render_slot(@cover)}
+        </div>
+      <% else %>
+        <%= if @video_cover do %>
+          {@video_cover}
+        <% end %>
+      <% end %>
+      <!-- /cover -->
+
+    <!-- caption -->
+      <.figcaption_tag :if={@caption} caption={@caption} />
+    </div>
+    """
+  end
+
+  def video(%{video: %Video{type: :mux, meta: meta, status: :ready} = video, opts: opts} = assigns) do
+    playback_id = get_in(meta, ["mux", "playback_id"])
+    mux_meta = get_in(meta, ["mux"]) || %{}
+
+    # Get aspect_ratio from Video record (stored as "1024/683" for CSS)
+    # Fall back to meta field for backwards compatibility (converting format), then default
+    aspect_ratio =
+      video.aspect_ratio ||
+        (mux_meta["aspect_ratio"] && String.replace(mux_meta["aspect_ratio"], ":", "/")) ||
+        "16/9"
+
+    # Parse aspect ratio to get width/height
+    {width, height} =
+      case String.split(aspect_ratio, "/") do
+        [w, h] -> {String.to_integer(w), String.to_integer(h)}
+        _ -> {16, 9}
+      end
+
+    orientation = (width > height && "landscape") || "portrait"
+    opacity = Keyword.get(opts, :opacity, 0)
+    preload = Keyword.get(opts, :preload, false)
+    preload = if preload == true, do: "auto", else: preload
+    cover = Keyword.get(opts, :cover, false)
+    poster = "https://image.mux.com/#{playback_id}/thumbnail.jpg"
+    progress = Keyword.get(opts, :progress, false)
+    play_button = Keyword.get(opts, :play_button, false)
+    autoplay = Keyword.get(opts, :autoplay, false)
+    controls = Keyword.get(opts, :controls, false)
+    aspect_ratio_style = build_aspect_ratio_style_string(aspect_ratio, nil, nil)
+    loop = Keyword.get(opts, :loop, true)
+    src = "https://stream.mux.com/#{playback_id}.m3u8"
+
+    caption =
+      case Keyword.get(opts, :caption, false) do
+        false -> false
+        true -> Keyword.get(opts, :title, false)
+        caption -> caption
+      end
+
+    assigns =
+      assigns
+      |> assign(:orientation, orientation)
+      |> assign(:aspect_ratio, aspect_ratio_style)
+      |> assign(:autoplay, autoplay)
+      |> assign(:controls, controls)
+      |> assign(:poster, poster)
+      |> assign(:width, width)
+      |> assign(:height, height)
+      |> assign(:preload, preload)
+      |> assign(:progress, progress)
+      |> assign(:src, src)
+      |> assign(:loop, loop)
+      |> assign(:play_button, play_button)
+      |> assign(:video_cover, get_video_cover(cover, width, height, opacity))
+      |> assign(:caption, caption)
+      |> assign_new(:cover, fn -> nil end)
+
+    ~H"""
+    <div
+      class="video-wrapper video-mux"
+      data-smart-video
+      data-orientation={@orientation}
+      data-progress={@progress}
+      data-preload={@preload && @src}
+      data-src={@src}
+      data-autoplay={@autoplay}
+      data-controls={@controls}
+      style={@aspect_ratio}
+    >
+      <video
+        width={@width}
+        height={@height}
+        alt=""
+        tabindex="0"
+        preload="auto"
+        autoplay={@autoplay}
+        muted={@autoplay}
+        loop={@loop}
+        playsinline
+        controls={@controls}
+        data-video
+        poster={@poster}
+        style={@aspect_ratio}
+        data-src={@preload && @src}
+        src={!@preload && @src}
+      >
+        <source src={@src} type="application/x-mpegURL" />
+      </video>
+
+      <noscript>
+        <video
+          width={@width}
+          height={@height}
+          alt=""
+          tabindex="0"
+          preload="metadata"
+          muted={@autoplay}
+          loop={@loop}
+          playsinline
+          poster={@poster}
+        >
+          <source src={@src} type="application/x-mpegURL" />
+        </video>
+      </noscript>
+      
+    <!-- play button -->
+      {get_play_button(@play_button)}
+      <!-- /play button -->
+
+    <!-- cover -->
+      <%= if @cover do %>
+        <div data-cover>
+          {render_slot(@cover)}
+        </div>
+      <% else %>
+        <%= if @video_cover do %>
+          {@video_cover}
+        <% end %>
+      <% end %>
+      <!-- /cover -->
+
+    <!-- caption -->
+      <.figcaption_tag :if={@caption} caption={@caption} />
+    </div>
     """
   end
 
@@ -214,6 +469,8 @@ defmodule Brando.HTML.Video do
     end
   end
 
+  defp get_video_cover("true", _, _, _), do: nil
+  defp get_video_cover(true, _, _, _), do: nil
   defp get_video_cover("false", _, _, _), do: nil
   defp get_video_cover(false, _, _, _), do: nil
   defp get_video_cover(url, _, _, _), do: url
@@ -254,4 +511,10 @@ defmodule Brando.HTML.Video do
 
   defp build_aspect_ratio_style_string(aspect_ratio, _, _),
     do: ~s(--aspect-ratio: #{aspect_ratio}; --aspect-ratio-division: #{aspect_ratio};)
+
+  defp get_bunny_cdn_hostname do
+    :brando
+    |> Application.get_env(Brando.Videos.Uploaders.Bunny, [])
+    |> Keyword.get(:cdn_hostname, "")
+  end
 end
