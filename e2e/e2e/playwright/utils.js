@@ -150,6 +150,14 @@ const setPreviewDevice = async (page, device) => {
   await syncLV(page)
 }
 
+// Fill an input that has a slug field connected to it
+// Uses pressSequentially to properly trigger the Slug hook's input event listener
+const fillSlugSource = async (locator, text) => {
+  await locator.click()
+  await locator.pressSequentially(text, { delay: 10 })
+  await locator.blur()
+}
+
 module.exports = {
   randomString,
   syncLV,
@@ -161,5 +169,6 @@ module.exports = {
   getPreviewFrame,
   waitForPreviewReady,
   waitForPreviewUpdate,
-  setPreviewDevice
+  setPreviewDevice,
+  fillSlugSource
 }

@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, fillSlugSource } from '../../utils'
 
 // Seed data creates 3 published projects: Alpha, Beta, Gamma (none have full_case)
 // We create 1 additional project with full_case: true for testing
@@ -14,7 +14,8 @@ test.describe('Listing Filters', () => {
     await page.getByRole('link', { name: 'Create new' }).click()
     await syncLV(page)
     await page.getByText('Published').click()
-    await page.getByRole('textbox', { name: 'Name' }).fill('Test Client')
+    await fillSlugSource(page.getByRole('textbox', { name: 'Name' }), 'Test Client')
+    await syncLV(page)
     await page.getByTestId('submit').click()
     await syncLV(page)
 
@@ -23,9 +24,7 @@ test.describe('Listing Filters', () => {
     await page.getByRole('link', { name: 'Create new' }).click()
     await syncLV(page)
     await page.locator('label').filter({ hasText: 'Published' }).click()
-    await page.getByRole('textbox', { name: 'Title' }).fill('Full Case Project')
-    await page.getByRole('textbox', { name: 'Title' }).dispatchEvent('input')
-    await page.getByRole('textbox', { name: 'Title' }).blur()
+    await fillSlugSource(page.getByRole('textbox', { name: 'Title' }), 'Full Case Project')
     await syncLV(page)
     // Enable full case toggle
     await page.locator('#project_full_case-field-base div').click()
@@ -70,8 +69,8 @@ test.describe('Listing Filters', () => {
     await expect(page.getByText('Full Case Project')).toBeVisible()
 
     // Click the boolean filter toggle for "Full case only"
-    const booleanFilter = page.locator('.boolean-filter')
-    await booleanFilter.click()
+    const booleanFilterLabel = page.locator('.boolean-filter .tiny-toggle-label')
+    await booleanFilterLabel.click()
     await syncLV(page)
 
     // Only the full case project should be visible
@@ -82,7 +81,7 @@ test.describe('Listing Filters', () => {
     await expect(page).toHaveURL(/filter:full_case=true/)
 
     // Toggle off
-    await booleanFilter.click()
+    await booleanFilterLabel.click()
     await syncLV(page)
 
     // All 4 projects should be visible again
@@ -146,7 +145,7 @@ test.describe('Listing Filters', () => {
     await syncLV(page)
 
     // Enable boolean filter (full case only)
-    await page.locator('.boolean-filter').click()
+    await page.locator('.boolean-filter .tiny-toggle-label').click()
     await syncLV(page)
 
     // Should show only the 1 full case project
@@ -178,7 +177,7 @@ test.describe('Listing Filters', () => {
     await expect(page.locator('.content-list .list-row')).toHaveCount(4)
 
     // Enable boolean filter
-    await page.locator('.boolean-filter').click()
+    await page.locator('.boolean-filter .tiny-toggle-label').click()
     await syncLV(page)
 
     // Only 1 full case project visible

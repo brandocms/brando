@@ -8,7 +8,7 @@
   2. Update translations:
      `$ mix gettext.extract && mix gettext.merge priv/gettext`
   3. `$ mix test`
-  4. `$ cd e2e/e2e_project && ./test_e2e.sh`
+  4. `$ cd e2e && ./test_e2e.sh`
   5.  Commit with `Release X.X.X`
   6.  Tag with `vX.X.X`
   7.  Push `vX.X.X` tag to `origin`

@@ -14,6 +14,9 @@ export default app => ({
 
   setupCurrentUserDropdown() {
     this.$currentUserDropdown = document.querySelector('#current-user')
+    if (!this.$currentUserDropdown) {
+      return
+    }
     this.$currentUserDropdownContent = Dom.find(this.$currentUserDropdown, '.dropdown-content')
     this.currentUserDropdownOpen = false
     this.$currentUserDropdown.addEventListener('click', e => {

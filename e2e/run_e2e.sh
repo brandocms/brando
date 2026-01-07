@@ -16,7 +16,7 @@ fi
 
 # build static assets
 echo "Building static assets [backend]"
-cd assets/backend && yalc update && yarn install --force && yarn build && cd ../../
+cd assets/backend && yarn install && yarn build && cd ../../
 echo "Building static assets [frontend]"
 cd assets/frontend && yarn install && yarn build && cd ../../
 

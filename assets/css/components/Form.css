@@ -439,6 +439,23 @@
   font-size: 10px;
   text-transform: uppercase;
   color: var(--brando-color-dark);
+  user-select: none;
+}
+
+/* When switch contains label text, expand to fit and move dimensions to slider */
+.switch:has(.tiny-toggle-label) {
+  width: auto;
+  height: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .slider {
+    position: relative;
+    flex-shrink: 0;
+    height: 15px;
+    width: 25px;
+  }
 }
 
 .field-wrapper + .tiny-toggle-wrapper {

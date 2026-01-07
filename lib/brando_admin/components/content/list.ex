@@ -159,9 +159,12 @@ defmodule BrandoAdmin.Components.Content.List do
   def handle_event("reset_filters", _, socket) do
     filters = socket.assigns.listing.filters
     advanced = Enum.filter(filters, &(&1.type in [:boolean, :select]))
-    filter_params = Enum.reduce(advanced, %{}, fn f, acc ->
-      Map.put(acc, "filter:#{f.key}", "")
-    end)
+
+    filter_params =
+      Enum.reduce(advanced, %{}, fn f, acc ->
+        Map.put(acc, "filter:#{f.key}", "")
+      end)
+
     {:noreply, push_query_params(socket, filter_params)}
   end
 
@@ -690,10 +693,14 @@ defmodule BrandoAdmin.Components.Content.List do
 
   defp resolve_options(filter, opts) do
     cond do
-      is_function(filter.options) -> filter.options.(opts)
+      is_function(filter.options) ->
+        filter.options.(opts)
+
       is_list(filter.options) and filter.options != [] ->
         Enum.map(filter.options, &{&1.label, &1.value})
-      true -> []
+
+      true ->
+        []
     end
   end
 
@@ -704,7 +711,8 @@ defmodule BrandoAdmin.Components.Content.List do
   end
 
   # Advanced filters bar component
-  attr :filters, :list, required: true
+  attr :advanced_filters, :list, required: true
+  attr :has_active_advanced_filters?, :boolean, required: true
   attr :schema, :atom, required: true
   attr :list_opts, :map, required: true
   attr :content_language, :string, required: true
@@ -713,12 +721,6 @@ defmodule BrandoAdmin.Components.Content.List do
   attr :reset_filters, :any, required: true
 
   def advanced_filters_bar(assigns) do
-    advanced = advanced_filters(assigns.filters)
-
-    assigns =
-      assigns
-      |> assign(:advanced_filters, advanced)
-
     ~H"""
     <form :if={@advanced_filters != []} class="advanced-filters-bar">
       <%= for filter <- @advanced_filters do %>
@@ -741,7 +743,7 @@ defmodule BrandoAdmin.Components.Content.List do
         <% end %>
       <% end %>
       <button
-        :if={has_active_advanced_filters?(@list_opts, @advanced_filters)}
+        :if={@has_active_advanced_filters?}
         type="button"
         class="reset-filters-btn"
         phx-click={@reset_filters}
@@ -786,8 +788,8 @@ defmodule BrandoAdmin.Components.Content.List do
           phx-value-filter={@filter_key}
         />
         <div class="slider round"></div>
+        <span class="tiny-toggle-label">{g(@schema, @filter.label)}</span>
       </label>
-      <span class="tiny-toggle-label">{g(@schema, @filter.label)}</span>
     </div>
     """
   end
@@ -896,43 +898,20 @@ defmodule BrandoAdmin.Components.Content.List do
 
         <.export_dropdown exports={@exports} schema={@schema} select_export={@select_export} />
       </div>
+      <.advanced_filters_bar
+        advanced_filters={@advanced_filters}
+        has_active_advanced_filters?={@has_active_advanced_filters?}
+        schema={@schema}
+        list_opts={@list_opts}
+        content_language={@content_language}
+        toggle_boolean_filter={@toggle_boolean_filter}
+        update_select_filter={@update_select_filter}
+        reset_filters={@reset_filters}
+      />
       <div class="list-filters-and-sorts">
-        <%= if @list_opts[:filter] do %>
-          <.active_filters active_filters={@list_opts[:filter]} filters={@filters} delete={@delete_filter} />
-        <% end %>
-        <%= if @sorts != [] do %>
-          <.sorts active_sort={@active_sort} sorts={@sorts} schema={@schema} on_update={@update_sort} />
-        <% end %>
+        <.active_filters :if={@list_opts[:filter]} active_filters={@list_opts[:filter]} filters={@filters} delete={@delete_filter} />
+        <.sorts :if={@sorts != []} active_sort={@active_sort} sorts={@sorts} schema={@schema} on_update={@update_sort} />
       </div>
-      <form :if={@advanced_filters != []} class="advanced-filters-bar">
-        <%= for filter <- @advanced_filters do %>
-          <%= case filter.type do %>
-            <% :boolean -> %>
-              <.boolean_filter
-                filter={filter}
-                schema={@schema}
-                list_opts={@list_opts}
-                toggle_filter={@toggle_boolean_filter}
-              />
-            <% :select -> %>
-              <.select_filter
-                filter={filter}
-                schema={@schema}
-                list_opts={@list_opts}
-                content_language={@content_language}
-                update_filter={@update_select_filter}
-              />
-          <% end %>
-        <% end %>
-        <button
-          :if={@has_active_advanced_filters?}
-          type="button"
-          class="reset-filters-btn"
-          phx-click={@reset_filters}
-        >
-          {gettext("Reset filters")}
-        </button>
-      </form>
     </div>
     """
   end

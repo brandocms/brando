@@ -8,7 +8,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@brandocms/brandojs": "file:.yalc/@brandocms/brandojs",
+    "@brandocms/brandojs": "file:../../../assets",
     "@brandocms/jupiter": "^3.55.0"
   },
   "devDependencies": {
