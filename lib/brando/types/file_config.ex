@@ -1,6 +1,58 @@
 defmodule Brando.Type.FileConfig do
   @moduledoc """
-  Defines a type for an image configuration field.
+  Defines a configuration type for file uploads.
+
+  ## Options
+
+    * `:allowed_mimetypes` - List of allowed MIME types.
+      Default: `["application/pdf", "text/plain"]`
+
+    * `:upload_path` - Path within media directory for storing files.
+      Default: `"files/default"`
+
+    * `:random_filename` - Generate a random filename instead of using the original.
+      Default: `false`
+
+    * `:slugify_filename` - Slugify the filename (sanitize special characters).
+      Default: `true`
+
+    * `:force_filename` - Force a specific filename for all uploads.
+      Default: `nil`
+
+    * `:overwrite` - Allow overwriting existing files with the same name.
+      Default: `false`
+
+    * `:size_limit` - Maximum file size in bytes.
+      Default: `10_240_000` (10MB)
+
+    * `:content_disposition` - Controls browser behavior when file is accessed via CDN.
+      * `nil` - No header set (browser default, typically downloads)
+      * `:inline` - Display in browser (e.g., PDFs open in browser tab)
+      * `:attachment` - Force download with filename
+
+    * `:completed_callback` - Function called after file processing completes.
+      Receives `(file, user)` as arguments. Default: `nil`
+
+  ## Example
+
+      assets do
+        asset :pdf, :file, cfg: %{
+          allowed_mimetypes: ["application/pdf"],
+          content_disposition: :inline,
+          upload_path: Path.join("files", "pdfs")
+        }
+      end
+
+  ## Updating Existing CDN Files
+
+  For files already uploaded to CDN, use the mix task to update Content-Disposition:
+
+      # Dry run
+      mix brando.files.update_content_disposition "file:MyApp.Schema:pdf_field" --dry-run
+
+      # Apply changes
+      mix brando.files.update_content_disposition "file:MyApp.Schema:pdf_field" --disposition inline
+
   """
   use Ecto.Type
   import Brando.Utils, only: [stringy_struct: 2]
@@ -17,7 +69,8 @@ defmodule Brando.Type.FileConfig do
             force_filename: nil,
             overwrite: false,
             size_limit: 10_240_000,
-            completed_callback: nil
+            completed_callback: nil,
+            content_disposition: nil
 
   @doc """
   Returns the internal type representation of our `Role` type for pg

@@ -108,8 +108,8 @@ defmodule Brando.Content.Container do
   listings do
     listing do
       query %{order: [{:asc, :sequence}, {:desc, :inserted_at}]}
-      filter label: gettext("Title"), filter: "title"
-      filter label: gettext("Namespace"), filter: "namespace"
+      filter label: gettext("Title"), key: "title"
+      filter label: gettext("Namespace"), key: "namespace"
       component &__MODULE__.listing_row/1
     end
   end

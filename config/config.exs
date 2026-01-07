@@ -53,6 +53,15 @@ config :brando,
     [value: "no", text: "Norsk"]
   ]
 
+# Mux video upload configuration
+# Uncomment and configure to enable Mux video uploads
+# Get credentials from https://dashboard.mux.com/settings/access-tokens
+# config :brando, Brando.Videos.Uploaders.Mux,
+#   access_token_id: System.get_env("MUX_TOKEN_ID"),
+#   access_token_secret: System.get_env("MUX_TOKEN_SECRET"),
+#   # Webhook signature verification (optional but recommended)
+#   webhook_secret: System.get_env("MUX_WEBHOOK_SECRET")
+
 config :phoenix, :json_library, Jason
 
 # Import environment specific config. This must remain at the bottom

@@ -66,6 +66,25 @@ defmodule Brando.SoftDelete.Query do
   """
   def clean_up_soft_deletions, do: Enum.map(list_soft_delete_schemas(), &clean_up_schema/1)
 
+  # Handle Video schema specially to support remote deletion on purge
+  defp clean_up_schema(Brando.Videos.Video = schema) do
+    query =
+      from t in schema,
+        where: fragment("? < current_timestamp - interval '30 day'", t.deleted_at)
+
+    # Fetch videos to delete remotely first
+    # Check timing per video since different videos may have different providers
+    videos = Brando.Repo.all(query)
+
+    for video <- videos do
+      if Brando.Videos.Uploader.get_delete_timing(video) == :on_purge do
+        Brando.Videos.Uploader.delete_remote(video)
+      end
+    end
+
+    Brando.Repo.delete_all(query)
+  end
+
   defp clean_up_schema(schema) do
     query =
       from t in schema,

@@ -58,7 +58,7 @@ defmodule Brando.Content.TableTemplate do
   listings do
     listing do
       query %{order: [{:asc, :name}]}
-      filter label: gettext("Name"), filter: "name"
+      filter label: gettext("Name"), key: "name"
       component &__MODULE__.listing_row/1
     end
   end

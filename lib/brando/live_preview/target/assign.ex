@@ -1,6 +1,7 @@
 defmodule Brando.LivePreview.Target.Assign do
   @moduledoc false
-  defstruct key: nil,
+  defstruct __spark_metadata__: nil,
+            key: nil,
             value_fn: nil
 
   @schema [

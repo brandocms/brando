@@ -107,7 +107,7 @@ defmodule Brando.Navigation.Menu do
         preload: &__MODULE__.preloads_for/0
       }
 
-      filter label: t("Title"), filter: "title"
+      filter label: t("Title"), key: "title"
       component &__MODULE__.listing_row/1
     end
   end

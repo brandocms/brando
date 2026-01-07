@@ -56,7 +56,7 @@ defmodule Brando.Sites.GlobalSet do
   listings do
     listing do
       query %{order: [{:asc, :label}, {:desc, :inserted_at}]}
-      filter label: t("Label"), filter: "label"
+      filter label: t("Label"), key: "label"
       component &__MODULE__.listing_row/1
     end
   end

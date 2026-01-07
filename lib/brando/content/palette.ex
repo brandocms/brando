@@ -73,8 +73,8 @@ defmodule Brando.Content.Palette do
         order: [{:asc, :namespace}, {:asc, :sequence}, {:desc, :inserted_at}]
       }
 
-      filter label: t("Name"), filter: "name"
-      filter label: t("Color"), filter: "color"
+      filter label: t("Name"), key: "name"
+      filter label: t("Color"), key: "color"
       component &__MODULE__.listing_row/1
     end
   end

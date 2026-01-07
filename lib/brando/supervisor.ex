@@ -14,6 +14,7 @@ defmodule Brando.Supervisor do
   end
 
   def init([]) do
+    Brando.Telemetry.attach()
     Calendar.put_time_zone_database(Tzdata.TimeZoneDatabase)
 
     children = [

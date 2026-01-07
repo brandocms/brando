@@ -5,6 +5,11 @@ defmodule Brando.Pages.Fragment do
 
   @type t :: %__MODULE__{}
 
+  # Schema version for revision compatibility
+  @schema_version 1
+
+  def __schema_version__, do: @schema_version
+
   use Brando.Blueprint,
     application: "Brando",
     domain: "Pages",

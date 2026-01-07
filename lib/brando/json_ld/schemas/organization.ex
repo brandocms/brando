@@ -37,6 +37,8 @@ defmodule Brando.JSONLD.Schema.Organization do
     }
   end
 
-  def build_social_media(%{links: links}) when length(links) > 0, do: Enum.map(links, & &1.url)
+  def build_social_media(%{links: links}) when is_list(links) and links != [],
+    do: Enum.map(links, & &1.url)
+
   def build_social_media(_), do: nil
 end

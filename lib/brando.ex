@@ -35,6 +35,11 @@ defmodule Brando do
   def timezone, do: config(:timezone) || "Europe/Oslo"
 
   @doc """
+  Gets the default video upload strategy
+  """
+  def default_video_upload_strategy, do: config(:default_video_upload_strategy) || :local
+
+  @doc """
   Gets the parent app's endpoint
   """
   def endpoint, do: web_module(Endpoint)

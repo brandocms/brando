@@ -1,9 +1,16 @@
 defmodule BrandoWeb.FallbackController do
-  use Phoenix.Controller,
-    namespace: Brando.config(:web_module),
-    formats: [:html, :json]
+  use Phoenix.Controller, formats: [:html, :json]
 
   import Brando.Plug.HTML
+
+  plug :put_namespace_layout
+
+  def put_namespace_layout(conn, _opts) do
+    web_module = Brando.config(:web_module)
+    layout_module = Module.concat([web_module, :Layouts])
+    put_layout(conn, html: {layout_module, :app})
+  end
+
   import Plug.Conn
 
   alias Brando.I18n

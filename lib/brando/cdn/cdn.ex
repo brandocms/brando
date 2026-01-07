@@ -208,7 +208,9 @@ defmodule Brando.CDN do
       |> Map.from_struct()
       |> Map.to_list()
 
-    case s3_upload(s3_bucket, original_key, dest_key, s3_config, user_id) do
+    upload_opts = build_content_disposition_opts(config, filename)
+
+    case s3_upload(s3_bucket, original_key, dest_key, s3_config, user_id, nil, upload_opts) do
       {:ok, s3_key} ->
         if cdn_config.keep_local_copy == false do
           local_path_and_filename = Path.join([local_path, filename])
@@ -298,10 +300,12 @@ defmodule Brando.CDN do
     end
   end
 
-  defp s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id, progress_key \\ nil) do
+  defp s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id, progress_key, opts \\ []) do
+    upload_opts = Keyword.merge([acl: :public_read], opts)
+
     src_key
     |> Upload.stream_file()
-    |> S3.upload(s3_bucket, s3_dest_key, acl: :public_read)
+    |> S3.upload(s3_bucket, s3_dest_key, upload_opts)
     |> ExAws.request(s3_config)
     |> case do
       {:ok, %{status_code: 200}} ->
@@ -394,5 +398,18 @@ defmodule Brando.CDN do
     !!Map.get(cdn_config, :enabled, false)
   rescue
     _ -> false
+  end
+
+  @doc """
+  Builds Content-Disposition header value from config.
+
+  Returns keyword list with :content_disposition key if configured, empty list otherwise.
+  """
+  def build_content_disposition_opts(config, filename) do
+    case Map.get(config, :content_disposition) do
+      nil -> []
+      :inline -> [content_disposition: "inline"]
+      :attachment -> [content_disposition: "attachment; filename=\"#{filename}\""]
+    end
   end
 end

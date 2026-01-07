@@ -31,25 +31,9 @@ defmodule Brando.Query.Mutations do
         {:ok, _} = Publisher.schedule_publishing(entry, changeset, user)
 
         revisioned? = module.__trait__(Trait.Revisioned)
-
-        if revisioned? do
-          Revisions.create_revision(entry, user)
-        end
-
-        if notify? do
-          case Brando.Blueprint.Identifier.identifier_for(entry) do
-            nil -> nil
-            identifier -> Notifications.push_mutation(gettext("created"), identifier, user)
-          end
-        end
-
-        if pubsub? do
-          Phoenix.PubSub.broadcast(
-            Brando.pubsub(),
-            "brando:mutations:#{inspect(module)}",
-            {:mutation, module, entry, :created}
-          )
-        end
+        maybe_create_revision(module, entry, user, revisioned?)
+        maybe_notify(entry, "created", user, notify?)
+        maybe_broadcast(module, entry, :created, pubsub?)
 
         callback_block.(entry)
 
@@ -71,25 +55,9 @@ defmodule Brando.Query.Mutations do
          {:ok, _} <- Content.create_identifier(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
       revisioned? = module.__trait__(Trait.Revisioned)
-
-      if revisioned? do
-        Revisions.create_revision(entry, user)
-      end
-
-      if notify? do
-        case Brando.Blueprint.Identifier.identifier_for(entry) do
-          nil -> nil
-          identifier -> Notifications.push_mutation(gettext("created"), identifier, user)
-        end
-      end
-
-      if pubsub? do
-        Phoenix.PubSub.broadcast(
-          Brando.pubsub(),
-          "brando:mutations:#{inspect(module)}",
-          {:mutation, module, entry, :created}
-        )
-      end
+      maybe_create_revision(module, entry, user, revisioned?)
+      maybe_notify(entry, "created", user, notify?)
+      maybe_broadcast(module, entry, :created, pubsub?)
 
       callback_block.(entry)
     end
@@ -98,18 +66,13 @@ defmodule Brando.Query.Mutations do
   defp maybe_preload(entry, nil), do: {:ok, entry}
   defp maybe_preload(entry, preloads), do: {:ok, entry |> Brando.Repo.preload(preloads)}
 
-  def update(
-        context,
-        module,
-        name,
-        id,
-        params,
-        user,
-        preloads,
-        callback_block,
-        custom_changeset,
-        show_notification
-      ) do
+  def update(context, module, name, id, params, opts) do
+    user = Keyword.fetch!(opts, :user)
+    preloads = Keyword.get(opts, :preloads)
+    callback = Keyword.get(opts, :callback, &{:ok, &1})
+    custom_changeset = Keyword.get(opts, :changeset)
+    notify? = Keyword.get(opts, :notify?, true)
+
     changeset_fun = custom_changeset || (&module.changeset/5)
 
     get_opts =
@@ -129,19 +92,10 @@ defmodule Brando.Query.Mutations do
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
       if has_changes(changeset) do
         revisioned? = module.__trait__(Trait.Revisioned)
+        maybe_create_revision(module, entry, user, revisioned?)
+        maybe_notify(entry, "updated", user, notify?)
 
-        if revisioned? do
-          Revisions.create_revision(entry, user)
-        end
-
-        if show_notification do
-          case Brando.Blueprint.Identifier.identifier_for(entry) do
-            nil -> nil
-            identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
-          end
-        end
-
-        callback_block.(entry)
+        callback.(entry)
       else
         {:ok, entry}
       end
@@ -152,7 +106,7 @@ defmodule Brando.Query.Mutations do
   end
 
   def update_with_changeset(module, changeset, user, preloads, callback_block, opts) do
-    show_notification = Keyword.get(opts, :show_notification, true)
+    notify? = Keyword.get(opts, :show_notification, true)
     pubsub? = Keyword.get(opts, :pubsub, true)
 
     with changeset <- Publisher.maybe_override_status(changeset),
@@ -164,25 +118,9 @@ defmodule Brando.Query.Mutations do
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
       if has_changes(changeset) do
         revisioned? = module.__trait__(Trait.Revisioned)
-
-        if revisioned? do
-          Revisions.create_revision(entry, user)
-        end
-
-        if show_notification do
-          case Brando.Blueprint.Identifier.identifier_for(entry) do
-            nil -> nil
-            identifier -> Notifications.push_mutation(gettext("updated"), identifier, user)
-          end
-        end
-
-        if pubsub? do
-          Phoenix.PubSub.broadcast(
-            Brando.pubsub(),
-            "brando:mutations:#{inspect(module)}",
-            {:mutation, module, entry, :updated}
-          )
-        end
+        maybe_create_revision(module, entry, user, revisioned?)
+        maybe_notify(entry, "updated", user, notify?)
+        maybe_broadcast(module, entry, :updated, pubsub?)
 
         callback_block.(entry)
       else
@@ -203,14 +141,16 @@ defmodule Brando.Query.Mutations do
     end
   end
 
-  def duplicate(context, module, name, id, opts, override_opts, user) do
-    override_opts = Enum.into(override_opts, %{})
-    preloads = Keyword.get(opts, :preload) || Brando.Blueprint.preloads_for(module)
+  def duplicate(context, module, name, id, opts) do
+    user = Keyword.fetch!(opts, :user)
+    duplicate_opts = Keyword.get(opts, :duplicate_opts, [])
+    override_opts = Keyword.get(opts, :override_opts, []) |> Enum.into(%{})
+    preloads = Keyword.get(duplicate_opts, :preload) || Brando.Blueprint.preloads_for(module)
 
     case apply(context, :"get_#{name}", [%{matches: %{id: id}, preload: preloads}]) do
       {:ok, entry} ->
-        opts =
-          opts
+        merged_opts =
+          duplicate_opts
           |> Enum.into(%{})
           |> Map.merge(override_opts)
 
@@ -218,11 +158,11 @@ defmodule Brando.Query.Mutations do
 
         cloned_entry =
           entry
-          |> maybe_change_fields(opts)
-          |> maybe_delete_fields(opts)
+          |> maybe_change_fields(merged_opts)
+          |> maybe_delete_fields(merged_opts)
           |> maybe_set_status()
           |> maybe_duplicate_blocks(module, has_blocks?)
-          |> maybe_merge_fields(opts)
+          |> maybe_merge_fields(merged_opts)
           |> maybe_put_creator(user)
           |> drop_fields()
           |> update_meta()
@@ -307,16 +247,16 @@ defmodule Brando.Query.Mutations do
   end
 
   defp duplicate_refs(refs) do
-    Enum.reduce(refs, [], fn
-      %{data: %{uid: _uid}} = ref, acc ->
-        new_uid = Brando.Utils.generate_uid()
-        updated_ref = put_in(ref, [Access.key(:data), Access.key(:uid)], new_uid)
-        [updated_ref | acc]
-
-      ref, acc ->
-        require Logger
-        Logger.debug("=> Malformed ref? #{inspect(ref, pretty: true)}")
-        acc
+    Enum.map(refs, fn ref ->
+      ref
+      |> Map.merge(%{
+        id: nil,
+        block_id: nil,
+        uid: Brando.Utils.generate_uid(),
+        inserted_at: nil,
+        updated_at: nil
+      })
+      |> update_meta()
     end)
   end
 
@@ -359,7 +299,11 @@ defmodule Brando.Query.Mutations do
 
   defp set_action(changeset, action), do: %{changeset | action: action}
 
-  def delete(context, module, name, id, user, preloads, callback_block) do
+  def delete(context, module, name, id, opts) do
+    user = Keyword.get(opts, :user, :system)
+    preloads = Keyword.get(opts, :preloads)
+    callback = Keyword.get(opts, :callback, &{:ok, &1})
+
     get_opts = (preloads && %{matches: %{id: id}, preload: preloads}) || %{matches: %{id: id}}
 
     {:ok, entry} = apply(context, :"get_#{name}", [get_opts])
@@ -374,21 +318,40 @@ defmodule Brando.Query.Mutations do
 
     Content.delete_identifier(module, entry)
     Datasource.update_datasource(module, entry)
+    maybe_notify(entry, "deleted", user, true)
+    maybe_broadcast(module, entry, :deleted, true)
 
-    case Brando.Blueprint.Identifier.identifier_for(entry) do
-      nil -> nil
-      identifier -> Notifications.push_mutation(gettext("deleted"), identifier, user)
-    end
-
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      "brando:mutations:#{inspect(module)}",
-      {:mutation, module, entry, :deleted}
-    )
-
-    callback_block.(entry)
+    callback.(entry)
   end
 
   defp has_changes(%Ecto.Changeset{changes: changes}) when map_size(changes) > 0, do: true
   defp has_changes(_), do: false
+
+  # Post-mutation effect helpers with pattern matching to avoid nesting
+  # Note: __trait__ returns false if not present, or opts list (possibly []) if present
+
+  defp maybe_create_revision(_module, _entry, _user, false), do: :ok
+
+  defp maybe_create_revision(_module, entry, user, _trait_opts) do
+    Revisions.create_revision(entry, user)
+  end
+
+  defp maybe_notify(_entry, _action, _user, false), do: :ok
+
+  defp maybe_notify(entry, action, user, true) do
+    case Brando.Blueprint.Identifier.identifier_for(entry) do
+      nil -> :ok
+      identifier -> Notifications.push_mutation(Gettext.gettext(Brando.Gettext, action), identifier, user)
+    end
+  end
+
+  defp maybe_broadcast(_module, _entry, _action, false), do: :ok
+
+  defp maybe_broadcast(module, entry, action, true) do
+    Phoenix.PubSub.broadcast(
+      Brando.pubsub(),
+      "brando:mutations:#{inspect(module)}",
+      {:mutation, module, entry, action}
+    )
+  end
 end

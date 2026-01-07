@@ -32,7 +32,7 @@ defmodule Brando.Files.File do
   listings do
     listing do
       query %{order: [{:desc, :id}]}
-      filter label: t("Filename"), filter: "filename"
+      filter label: t("Filename"), key: "filename"
       component &__MODULE__.listing_row/1
     end
   end

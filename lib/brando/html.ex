@@ -628,7 +628,7 @@ defmodule Brando.HTML do
   attr :ignored_chunks, :list, default: []
 
   def include_assets(%{admin: true} = assigns) do
-    if Brando.env() in [:prod, :e2e] do
+    if Brando.env() in [:prod, :e2e, :test] do
       ~H"""
       {Vite.Render.main_css(:admin) |> raw()}
       {Vite.Render.main_js(:admin) |> raw()}

@@ -32,6 +32,15 @@ defmodule Brando.Router do
     quote do
       import BrandoAdmin.UserAuth
 
+      # Check if @sql_sandbox module attribute is set (for e2e testing)
+      # If so, include LiveAcceptance hook to grant sandbox access before auth checks
+      sandbox_hooks =
+        if Module.get_attribute(__MODULE__, :sql_sandbox) do
+          [{BrandoAdmin.Mounts.LiveAcceptance, {:default, nil}}]
+        else
+          []
+        end
+
       upload_ctrl = BrandoAdmin.API.Images.UploadController
       villain_ctrl = BrandoAdmin.API.Villain.VillainController
 
@@ -61,7 +70,7 @@ defmodule Brando.Router do
           pipe_through [:admin, :redirect_if_user_is_authenticated]
 
           live_session :redirect_if_user_is_authenticated,
-            on_mount: [{BrandoAdmin.UserAuth, :redirect_if_user_is_authenticated}] do
+            on_mount: sandbox_hooks ++ [{BrandoAdmin.UserAuth, :redirect_if_user_is_authenticated}] do
             live "/login", UserLoginLive, :new
           end
 
@@ -82,12 +91,13 @@ defmodule Brando.Router do
         post "/api/content/upload/file", BrandoAdmin.API.Content.Upload.FileController, :create
 
         live_session :require_authenticated_user,
-          on_mount: [{BrandoAdmin.UserAuth, :ensure_authenticated}] do
+          on_mount: sandbox_hooks ++ [{BrandoAdmin.UserAuth, :ensure_authenticated}] do
           # brando routes
           live "/assets/images", BrandoAdmin.Images.ImageListLive
           live "/assets/images/update/:entry_id", BrandoAdmin.Images.ImageFormLive, :update
-          live "/assets/files", BrandoAdmin.Files.FileListLive
           live "/assets/videos", BrandoAdmin.Videos.VideoListLive
+          live "/assets/videos/update/:entry_id", BrandoAdmin.Videos.VideoFormLive, :update
+          live "/assets/files", BrandoAdmin.Files.FileListLive
 
           scope "/config" do
             live "/cache", BrandoAdmin.Sites.CacheLive

@@ -1,6 +1,7 @@
 defmodule Brando.LivePreview.Target do
   @moduledoc false
   defstruct __identifier__: nil,
+            __spark_metadata__: nil,
             schema: nil,
             layout: nil,
             template: nil,

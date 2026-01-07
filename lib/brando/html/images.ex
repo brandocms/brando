@@ -74,10 +74,10 @@ defmodule Brando.HTML.Images do
 
   def picture(%{src: %Ecto.Association.NotLoaded{}} = assigns) do
     ~H"""
-    <div>
-      <code>
+    <div class="brando-unloaded-association">
+      <code phx-no-format phx-no-curly-interpolation>
         Trying to call `picture` tag on an unloaded association<br /><br />
-        {inspect(@src, structs: false, pretty: true)}
+        <%= inspect(@src, structs: false, pretty: true) %>
       </code>
     </div>
     """
@@ -486,14 +486,17 @@ defmodule Brando.HTML.Images do
 
     fallback =
       case placeholder do
-        :svg -> svg_fallback(image_struct, 0.05, attrs.opts, attrs.cropped_ratio)
-        "svg" -> svg_fallback(image_struct, 0.05, attrs.opts, attrs.cropped_ratio)
-        :dominant_color -> svg_fallback(image_struct, 0, attrs.opts, attrs.cropped_ratio)
-        "dominant_color" -> svg_fallback(image_struct, 0, attrs.opts, attrs.cropped_ratio)
-        :dominant_color_faded -> svg_fallback(image_struct, 0, attrs.opts, attrs.cropped_ratio)
-        "dominant_color_faded" -> svg_fallback(image_struct, 0, attrs.opts, attrs.cropped_ratio)
-        false -> false
-        _ -> Utils.img_url(image_struct, placeholder, attrs.opts)
+        pl when pl in [:svg, "svg"] ->
+          svg_fallback(image_struct, 0.05, attrs.opts, attrs.cropped_ratio)
+
+        pl when pl in [:dominant_color, "dominant_color", :dominant_color_faded, "dominant_color_faded"] ->
+          svg_fallback(image_struct, 0, attrs.opts, attrs.cropped_ratio)
+
+        false ->
+          false
+
+        _ ->
+          Utils.img_url(image_struct, placeholder, attrs.opts)
       end
 
     attrs
@@ -517,37 +520,29 @@ defmodule Brando.HTML.Images do
   defp add_dominant_color(attrs, image_struct) do
     case Keyword.get(attrs.opts, :placeholder) do
       pl when pl in [:dominant_color, "dominant_color"] ->
-        color =
-          case image_struct.dominant_color do
-            nil -> "transparent"
-            "transparent" -> "transparent"
-            color -> color
-          end
-
-        style = "background-color: #{color}"
-
-        attrs
-        |> put_in([:picture, "style"], style)
-        |> put_in([:figure, "data-placeholder"], "dominant_color")
+        apply_dominant_color(attrs, image_struct.dominant_color, false)
 
       pl when pl in [:dominant_color_faded, "dominant_color_faded"] ->
-        color =
-          case image_struct.dominant_color do
-            nil -> "transparent"
-            "transparent" -> "transparent"
-            color -> color <> "11"
-          end
-
-        style = "background-color: #{color}"
-
-        attrs
-        |> put_in([:picture, "style"], style)
-        |> put_in([:figure, "data-placeholder"], "dominant_color")
+        apply_dominant_color(attrs, image_struct.dominant_color, true)
 
       _ ->
         attrs
     end
   end
+
+  defp apply_dominant_color(attrs, dominant_color, faded?) do
+    color = normalize_color(dominant_color, faded?)
+    style = "background-color: #{color}"
+
+    attrs
+    |> put_in([:picture, "style"], style)
+    |> put_in([:figure, "data-placeholder"], "dominant_color")
+  end
+
+  defp normalize_color(nil, _faded?), do: "transparent"
+  defp normalize_color("transparent", _faded?), do: "transparent"
+  defp normalize_color(color, true), do: color <> "11"
+  defp normalize_color(color, false), do: color
 
   defp add_dims(%{cropped_ratio: false} = attrs, image_struct) do
     img_width = Map.get(image_struct, :width)
@@ -555,26 +550,16 @@ defmodule Brando.HTML.Images do
 
     width =
       case Keyword.fetch(attrs.opts, :width) do
-        :error ->
-          false
-
-        {:ok, true} ->
-          Map.get(image_struct, :width)
-
-        {:ok, width} ->
-          width
+        :error -> false
+        {:ok, true} -> Map.get(image_struct, :width)
+        {:ok, width} -> width
       end
 
     height =
       case Keyword.fetch(attrs.opts, :height) do
-        :error ->
-          false
-
-        {:ok, true} ->
-          Map.get(image_struct, :height)
-
-        {:ok, height} ->
-          height
+        :error -> false
+        {:ok, true} -> Map.get(image_struct, :height)
+        {:ok, height} -> height
       end
 
     orientation = Brando.Images.get_image_orientation(img_width, img_height)

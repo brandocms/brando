@@ -117,7 +117,11 @@ defmodule Brando.Content do
     end
   end
 
-  query(:single, Module, do: fn query -> from(q in query, preload: [:vars]) end)
+  query(:single, Module,
+    do: fn query ->
+      from(q in query, preload: [:vars, refs: [:image, :video, gallery: [gallery_objects: [:image, :video]]]])
+    end
+  )
 
   matches Module do
     fn
@@ -187,8 +191,11 @@ defmodule Brando.Content do
 
   def duplicate_refs(entry, _) do
     entry
+    |> Brando.Repo.preload(:refs)
     |> Map.get(:refs)
-    |> Brando.Villain.add_uid_to_refs()
+    |> Brando.Villain.remove_pk_from_refs()
+    |> Enum.map(&Map.put(&1, :uid, Brando.Utils.generate_uid()))
+    |> Enum.map(&put_in(&1, [Access.key(:__meta__), Access.key(:state)], :built))
   end
 
   @doc """
@@ -826,7 +833,10 @@ defmodule Brando.Content do
       |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
 
     refs_with_new_uids =
-      Enum.map(module.refs, &put_in(&1, [Access.key(:data), Access.key(:uid)], Brando.Utils.generate_uid()))
+      module.refs
+      |> Brando.Villain.remove_pk_from_refs()
+      |> Enum.map(&put_in(&1, [Access.key(:uid)], Brando.Utils.generate_uid()))
+      |> Enum.map(&put_in(&1, [Access.key(:__meta__), Access.key(:state)], :built))
 
     vars_without_ids =
       module.vars

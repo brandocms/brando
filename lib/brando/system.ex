@@ -36,37 +36,34 @@ defmodule Brando.System do
   end
 
   defp check_media_path_exists do
-    case Brando.config(:media_path) do
-      nil ->
-        raise ConfigError,
-          message: """
-          Missing :media_path configuration.
+    path = Brando.config(:media_path) || raise_missing_media_path()
 
-          Set
-
-              config :brando, media_path: Path.expand("./media"),
-
-          """
-
-      path ->
-        if File.exists?(path) do
-          {:ok, {:media_path, :exists}}
-        else
-          File.mkdir_p(path)
-
-          if File.exists?(path) do
-            {:ok, {:media_path, :exists}}
-          else
-            raise ConfigError,
-              message: """
-              Failed creating :media_path
-
-                  #{inspect(path, pretty: true)}
-
-              """
-          end
-        end
+    case File.mkdir_p(path) do
+      :ok -> {:ok, {:media_path, :exists}}
+      {:error, _} -> raise_failed_media_path(path)
     end
+  end
+
+  defp raise_missing_media_path do
+    raise ConfigError,
+      message: """
+      Missing :media_path configuration.
+
+      Set
+
+          config :brando, media_path: Path.expand("./media"),
+
+      """
+  end
+
+  defp raise_failed_media_path(path) do
+    raise ConfigError,
+      message: """
+      Failed creating :media_path
+
+          #{inspect(path, pretty: true)}
+
+      """
   end
 
   defp check_media_url_exists do

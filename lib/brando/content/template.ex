@@ -37,8 +37,8 @@ defmodule Brando.Content.Template do
   listings do
     listing do
       query %{order: [{:asc, :namespace}, {:asc, :sequence}, {:desc, :inserted_at}]}
-      filter label: t("Name"), filter: "name"
-      filter label: t("Namespace"), filter: "namespace"
+      filter label: t("Name"), key: "name"
+      filter label: t("Namespace"), key: "namespace"
       component &__MODULE__.listing_row/1
     end
   end

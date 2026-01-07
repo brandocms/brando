@@ -19,6 +19,11 @@ defmodule Brando.Pages.Page do
 
   @type t :: %__MODULE__{}
 
+  # Schema version for revision compatibility
+  @schema_version 1
+
+  def __schema_version__, do: @schema_version
+
   # ++ Traits
   trait Brando.Trait.CastPolymorphicEmbeds
   trait Brando.Trait.Creator
@@ -124,8 +129,8 @@ defmodule Brando.Pages.Page do
       sort :title_asc, label: t("Title &darr;"), order: "asc title"
       sort :title_desc, label: t("Title &uarr;"), order: "desc title"
 
-      filter label: t("URI"), filter: "uri"
-      filter label: t("Title"), filter: "title"
+      filter label: t("URI"), key: "uri"
+      filter label: t("Title"), key: "title"
 
       action label: t("Create subpage"), event: "create_subpage"
       action label: t("Create fragment"), event: "create_fragment"

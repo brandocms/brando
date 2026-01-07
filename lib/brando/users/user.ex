@@ -102,10 +102,10 @@ defmodule Brando.Users.User do
 
   listings do
     listing do
-      query %{order: [{:asc, :name}]}
+      query %{order: "desc active, asc name"}
       component &__MODULE__.listing_row/1
-      filter label: t("Name"), filter: "name"
-      filter label: t("Email"), filter: "email"
+      filter label: t("Name"), key: "name"
+      filter label: t("Email"), key: "email"
       action label: t("Edit user"), event: "edit_entry"
       action label: t("Disable user"), event: "disable_user", confirm: t("Are you sure?")
       default_actions false
@@ -115,13 +115,12 @@ defmodule Brando.Users.User do
   def listing_row(assigns) do
     ~H"""
     <.cover image={@entry.avatar} columns={2} size={:smallest} />
-    <.update_link entry={@entry} columns={13}>
+    <.update_link entry={@entry} columns={13} class={if !@entry.active, do: "disabled"}>
       {@entry.name}
       <:outside>
-        <br />
-        <small>{@entry.email}</small>
-        <br />
-        <small class="badge">{@entry.role}</small>
+        <div :if={!@entry.active}><span class="badge">{t("Inactive")}</span></div>
+        <div><small>{@entry.email}</small></div>
+        <div><small class="badge">{@entry.role}</small></div>
       </:outside>
     </.update_link>
     """
@@ -168,11 +167,8 @@ defmodule Brando.Users.User do
 
           inputs_for :config do
             label t("Config")
-
             input :reset_password_on_first_login, :toggle, label: t("Reset password on first login", UserConfig)
-
             input :show_mutation_notifications, :toggle, label: t("Show mutation notifications", UserConfig)
-
             input :prefers_reduced_motion, :toggle, label: t("Prefers reduced motion", UserConfig)
           end
         end

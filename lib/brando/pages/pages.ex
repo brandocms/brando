@@ -97,17 +97,184 @@ defmodule Brando.Pages do
             change_fields: [
               :uri,
               :title,
-              children: [],
+              children: &__MODULE__.duplicate_children/2,
               alternates: [],
               alternate_entries: [],
-              vars: &__MODULE__.duplicate_vars/2
+              vars: &__MODULE__.duplicate_vars/2,
+              fragments: &__MODULE__.duplicate_fragments/2
             ]}
 
   def duplicate_vars(entry, _) do
     entry
     |> Brando.Repo.preload(:vars)
     |> Map.get(:vars)
-    |> Enum.map(&Map.put(&1, :id, nil))
+    |> Enum.map(fn var ->
+      var
+      |> Map.merge(%{
+        id: nil,
+        page_id: nil,
+        block_id: nil,
+        module_id: nil,
+        global_set_id: nil,
+        table_row_id: nil,
+        menu_item_id: nil,
+        inserted_at: nil,
+        updated_at: nil
+      })
+      |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
+    end)
+  end
+
+  def duplicate_fragments(entry, _) do
+    entry
+    |> Brando.Repo.preload(
+      fragments: [
+        entry_blocks: [
+          block: [:vars, :children, refs: Brando.Content.Ref.preloads()]
+        ]
+      ]
+    )
+    |> Map.get(:fragments)
+    |> Enum.map(&duplicate_fragment/1)
+  end
+
+  defp duplicate_fragment(fragment) do
+    # Duplicate entry_blocks for the fragment
+    duplicated_entry_blocks =
+      Enum.map(fragment.entry_blocks, fn entry_block ->
+        entry_block
+        |> Map.merge(%{
+          id: nil,
+          entry_id: nil,
+          block_id: nil,
+          inserted_at: nil,
+          updated_at: nil
+        })
+        |> Map.put(:block, duplicate_block(entry_block.block))
+        |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
+      end)
+
+    fragment
+    |> Map.merge(%{
+      id: nil,
+      page_id: nil,
+      inserted_at: nil,
+      updated_at: nil,
+      entry_blocks: duplicated_entry_blocks
+    })
+    |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
+  end
+
+  defp duplicate_block(block) do
+    %{
+      block
+      | id: nil,
+        uid: Brando.Utils.generate_uid(),
+        vars: Enum.map(block.vars || [], &duplicate_block_var/1),
+        children: Enum.map(block.children || [], &duplicate_block/1),
+        refs: duplicate_refs(block.refs || []),
+        creator: nil,
+        fragment: nil,
+        module: nil,
+        identifiers: nil,
+        inserted_at: nil,
+        updated_at: nil
+    }
+    |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
+  end
+
+  defp duplicate_block_var(var) do
+    %{var | id: nil, inserted_at: nil, updated_at: nil}
+    |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
+  end
+
+  defp duplicate_refs(refs) do
+    Enum.map(refs, fn ref ->
+      ref
+      |> Map.merge(%{
+        id: nil,
+        block_id: nil,
+        uid: Brando.Utils.generate_uid(),
+        inserted_at: nil,
+        updated_at: nil
+      })
+      |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
+    end)
+  end
+
+  def duplicate_children(entry, _) do
+    entry
+    |> Brando.Repo.preload(
+      children: [
+        :vars,
+        entry_blocks: [
+          block: [:vars, :children, refs: Brando.Content.Ref.preloads()]
+        ],
+        fragments: [
+          entry_blocks: [
+            block: [:vars, :children, refs: Brando.Content.Ref.preloads()]
+          ]
+        ]
+      ]
+    )
+    |> Map.get(:children)
+    |> Enum.map(&duplicate_child_page/1)
+  end
+
+  defp duplicate_child_page(child) do
+    # Duplicate the child page's entry_blocks
+    duplicated_entry_blocks =
+      Enum.map(child.entry_blocks, fn entry_block ->
+        entry_block
+        |> Map.merge(%{
+          id: nil,
+          entry_id: nil,
+          block_id: nil,
+          inserted_at: nil,
+          updated_at: nil
+        })
+        |> Map.put(:block, duplicate_block(entry_block.block))
+        |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
+      end)
+
+    # Duplicate the child page's vars
+    duplicated_vars =
+      Enum.map(child.vars || [], fn var ->
+        var
+        |> Map.merge(%{
+          id: nil,
+          page_id: nil,
+          block_id: nil,
+          module_id: nil,
+          global_set_id: nil,
+          table_row_id: nil,
+          menu_item_id: nil,
+          inserted_at: nil,
+          updated_at: nil
+        })
+        |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
+      end)
+
+    # Duplicate the child page's fragments
+    duplicated_fragments = Enum.map(child.fragments || [], &duplicate_fragment/1)
+
+    child
+    |> Map.merge(%{
+      id: nil,
+      parent_id: nil,
+      inserted_at: nil,
+      updated_at: nil,
+      entry_blocks: duplicated_entry_blocks,
+      vars: duplicated_vars,
+      fragments: duplicated_fragments,
+      children: [],
+      alternates: [],
+      alternate_entries: []
+    })
+    |> Map.update(:uri, child.uri, fn uri -> "#{uri}_dupl" end)
+    |> Map.update(:title, child.title, fn title -> "#{title}_dupl" end)
+    |> Map.put(:status, :draft)
+    |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
   end
 
   @doc """

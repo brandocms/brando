@@ -302,16 +302,19 @@ defmodule Brando.Query do
       def with_filter(query, unquote(module), filter) do
         Enum.reduce(filter, query, unquote(block))
       rescue
-        e in FunctionClauseError ->
-          raise Brando.Exception.QueryFilterClauseError,
-            message: """
+        _e in FunctionClauseError ->
+          reraise Brando.Exception.QueryFilterClauseError,
+                  [
+                    message: """
 
 
-            Could not find a matching query filter clause
+                    Could not find a matching query filter clause
 
-            Filter: #{inspect(filter)}
-            Context: #{inspect(unquote(module).__modules__().context)}
-            """
+                    Filter: #{inspect(filter)}
+                    Context: #{inspect(unquote(module).__modules__().context)}
+                    """
+                  ],
+                  __STACKTRACE__
 
         e ->
           reraise e, __STACKTRACE__
@@ -324,16 +327,19 @@ defmodule Brando.Query do
       def with_match(query, unquote(module), match) do
         Enum.reduce(match, query, unquote(block))
       rescue
-        e in FunctionClauseError ->
-          raise Brando.Exception.QueryMatchClauseError,
-            message: """
+        _e in FunctionClauseError ->
+          reraise Brando.Exception.QueryMatchClauseError,
+                  [
+                    message: """
 
 
-            Could not find a matching query match clause
+                    Could not find a matching query match clause
 
-            Matches: #{inspect(match)}
-            Context: #{inspect(unquote(module).__modules__().context)}
-            """
+                    Matches: #{inspect(match)}
+                    Context: #{inspect(unquote(module).__modules__().context)}
+                    """
+                  ],
+                  __STACKTRACE__
 
         e ->
           reraise e, __STACKTRACE__
@@ -699,11 +705,11 @@ defmodule Brando.Query do
           unquote(singular_schema),
           id,
           params,
-          user,
-          unquote(preloads),
-          unquote(callback_block),
-          nil,
-          true
+          user: user,
+          preloads: unquote(preloads),
+          callback: unquote(callback_block),
+          changeset: nil,
+          notify?: true
         )
       end
 
@@ -714,11 +720,11 @@ defmodule Brando.Query do
           unquote(singular_schema),
           id,
           params,
-          user,
-          unquote(preloads),
-          unquote(callback_block),
-          Keyword.get(opts, :changeset, nil),
-          Keyword.get(opts, :show_notification, true)
+          user: user,
+          preloads: unquote(preloads),
+          callback: unquote(callback_block),
+          changeset: Keyword.get(opts, :changeset),
+          notify?: Keyword.get(opts, :show_notification, true)
         )
       end
 
@@ -729,11 +735,11 @@ defmodule Brando.Query do
           unquote(singular_schema),
           id,
           params,
-          user,
-          unquote(preloads),
-          unquote(callback_block),
-          nil,
-          true
+          user: user,
+          preloads: unquote(preloads),
+          callback: unquote(callback_block),
+          changeset: nil,
+          notify?: true
         )
       end
 
@@ -744,11 +750,11 @@ defmodule Brando.Query do
           unquote(singular_schema),
           id,
           params,
-          user,
-          unquote(preloads),
-          unquote(callback_block),
-          Keyword.get(opts, :changeset, nil),
-          Keyword.get(opts, :show_notification, true)
+          user: user,
+          preloads: unquote(preloads),
+          callback: unquote(callback_block),
+          changeset: Keyword.get(opts, :changeset),
+          notify?: Keyword.get(opts, :show_notification, true)
         )
       end
     end
@@ -767,9 +773,9 @@ defmodule Brando.Query do
           unquote(module),
           unquote(singular_schema),
           id,
-          unquote(opts),
-          override_opts,
-          user
+          user: user,
+          duplicate_opts: unquote(opts),
+          override_opts: override_opts
         )
       end
     end
@@ -800,9 +806,9 @@ defmodule Brando.Query do
           unquote(module),
           unquote(singular_schema),
           id,
-          user,
-          unquote(preloads),
-          unquote(callback_block)
+          user: user,
+          preloads: unquote(preloads),
+          callback: unquote(callback_block)
         )
       end
     end

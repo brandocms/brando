@@ -47,8 +47,8 @@ defmodule Brando.Images.Image do
   listings do
     listing do
       query %{order: [{:desc, :id}]}
-      filter label: t("Path"), filter: "path"
-      filter label: t("Config target"), filter: "config_target_search"
+      filter label: t("Path"), key: "path"
+      filter label: t("Config target"), key: "config_target_search"
       component &__MODULE__.listing_row/1
     end
   end

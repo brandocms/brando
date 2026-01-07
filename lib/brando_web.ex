@@ -10,6 +10,7 @@ defmodule BrandoWeb do
     quote do
       use Phoenix.Controller,
         namespace: Brando.config(:web_module),
+        formats: [:html, :json],
         layouts: [html: Brando.web_module(Layouts)]
 
       use Gettext, backend: unquote(gettext_module)
