@@ -18,7 +18,6 @@ defmodule <%= application_module %>Web.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :put_extra_secure_browser_headers
-    plug PlugHeartbeat
     plug Brando.Plug.Identity
     plug Brando.Plug.Navigation, key: "main", as: :navigation
     plug Brando.Plug.Fragment, parent_key: "partials", as: :partials

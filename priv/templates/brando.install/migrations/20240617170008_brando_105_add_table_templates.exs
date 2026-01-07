@@ -1,6 +1,5 @@
 defmodule Brando.Repo.Migrations.AddTableTemplates do
   use Ecto.Migration
-  import Ecto.Query
 
   def up do
     create table(:content_table_templates) do

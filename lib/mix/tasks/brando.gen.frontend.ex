@@ -28,7 +28,7 @@ defmodule Mix.Tasks.Brando.Gen.Frontend do
       # Frontend assets
       {:keep, "assets/frontend/public/fonts", "assets/frontend/public/fonts"},
       {:keep, "assets/frontend/public/fonts", "assets/frontend/public/images"},
-      {:copy, "assets/frontend/eslint.config.cjs", "assets/frontend/eslint.config.cjs"},
+      {:copy, "assets/frontend/eslint.config.js", "assets/frontend/eslint.config.js"},
       {:copy, "assets/frontend/europa.config.cjs", "assets/frontend/europa.config.cjs"},
       {:copy, "assets/frontend/vite.config.js", "assets/frontend/vite.config.js"},
       {:copy, "assets/frontend/postcss.config.cjs", "assets/frontend/postcss.config.cjs"},

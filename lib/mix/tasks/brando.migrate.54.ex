@@ -11,7 +11,7 @@ if Code.ensure_loaded?(Igniter) do
       %Igniter.Mix.Task.Info{group: :brando}
     end
 
-    def igniter(igniter, _argv) do
+    def igniter(igniter) do
       Agent.start_link(fn -> %{} end, name: :villains)
 
       {igniter, modules} = find_blueprints(igniter)

@@ -21,7 +21,7 @@ function HMREuropa() {
 }
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   base: './',
   server: {
     host: 'localhost',
@@ -66,4 +66,4 @@ export default defineConfig({
 
     legacy({}),
   ],
-})
+}))

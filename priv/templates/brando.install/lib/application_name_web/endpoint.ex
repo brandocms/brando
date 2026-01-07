@@ -58,5 +58,6 @@ defmodule <%= application_module %>Web.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
   plug Brando.Plug.LivePreview
+  plug Brando.Plug.Health
   plug <%= application_module %>Web.Router
 end

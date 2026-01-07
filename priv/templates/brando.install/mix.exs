@@ -62,7 +62,7 @@ defmodule <%= application_module %>.MixProject do
       # {:exsync, "~> 0.2", only: :dev},
 
       # live view
-      {:phoenix_live_view, "~> 1.0.4"},
+      {:phoenix_live_view, "~> 1.1.8"},
       {:floki, ">= 0.27.0", only: :test},
 
       # general deps
@@ -75,7 +75,6 @@ defmodule <%= application_module %>.MixProject do
 
       # release management and production tools
       {:recon, "~> 2.3"},
-      {:plug_heartbeat, "~> 1.0"},
 
       # brando
       # {:brando, github: "brandocms/brando"}
