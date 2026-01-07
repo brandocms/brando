@@ -2,8 +2,9 @@
   "version": "v1",
   "packages": {
     "@brandocms/brandojs": {
-      "signature": "37586c5aff428ec19231197a1902b4ac",
-      "file": true
+      "signature": "7c71a4bd462e436e9c8bd7c7bc8456af",
+      "file": true,
+      "replaced": "file:../../../../assets"
     }
   }
 }

@@ -63,7 +63,7 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "1.7.21"},
+      {:phoenix, "1.8.2"},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_view, "~> 2.0", optional: true},
       {:postgrex, "~> 0.20"},
@@ -71,7 +71,7 @@ defmodule Brando.Mixfile do
       {:ecto_sql, "~> 3.13.0"},
 
       # liveview
-      {:phoenix_live_view, "1.0.18"},
+      {:phoenix_live_view, "~> 1.1.13"},
       {:phoenix_html, "~> 4.0"},
 
       # hashing/passwords
@@ -80,19 +80,19 @@ defmodule Brando.Mixfile do
       {:base62, "~> 1.2"},
 
       # dsl
-      {:spark, "~> 2.2.35"},
+      {:spark, "~> 2.3.0"},
 
       # monitoring
-      {:sentry, "~> 10.0"},
+      {:sentry, "~> 11.0"},
 
       # cache
       {:cachex, "~> 4.0"},
 
       # cron & processing
-      {:oban, "~> 2.19.0"},
+      {:oban, "~> 2.20.1"},
 
       # sitemaps
-      {:sitemapper, "~> 0.9.0"},
+      {:sitemapper, "~> 0.10.0"},
 
       # images
       {:fastimage, "~> 1.0.0-rc4"},
@@ -112,7 +112,7 @@ defmodule Brando.Mixfile do
 
       # Misc
       {:req, "~> 0.5 or ~> 1.0"},
-      {:gettext, "~> 0.26.1"},
+      {:gettext, "~> 1.0.0"},
       {:earmark, "~> 1.4.0"},
       {:jason, "~> 1.0"},
       {:slugify, "~> 1.3.1"},
@@ -128,7 +128,7 @@ defmodule Brando.Mixfile do
       {:credo, "~> 1.5", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
-      {:igniter, "~> 0.6.0", only: [:dev, :test]},
+      {:igniter, "~> 0.7.0", only: [:dev, :test]},
 
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test, runtime: false},
