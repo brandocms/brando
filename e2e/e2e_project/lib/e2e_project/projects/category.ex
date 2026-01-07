@@ -54,7 +54,7 @@ defmodule E2eProject.Projects.Category do
 
       filter(
         label: gettext("Title"),
-        filter: "title"
+        key: "title"
       )
 
       component &__MODULE__.listing_row/1

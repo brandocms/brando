@@ -1,13 +1,4 @@
-const request = require('@playwright/test').request
-
-module.exports = async () => {
-  try {
-    const context = await request.newContext({ baseURL: 'http://localhost:4444' })
-    // gracefully stops the e2e script to export coverage
-    await context.post('/halt')
-  } catch (e) {
-    // we expect the request to fail because the request
-    // actually stops the server
-    return
-  }
-}
+// Teardown is not needed - Playwright kills the server when tests complete.
+// The /halt endpoint was copied from Phoenix LiveView's e2e setup but requires
+// an e2e_helper.exs script to register a process that handles the shutdown.
+module.exports = async () => {}

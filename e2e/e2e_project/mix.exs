@@ -54,7 +54,7 @@ defmodule E2eProject.MixProject do
       {:tidewave, "~> 0.1"},
       {:igniter, "~> 0.6"},
       # phoenix
-      {:phoenix, "~> 1.7.19"},
+      {:phoenix, "~> 1.8.0"},
       {:phoenix_pubsub, "~> 2.0"},
       {:bandit, "~> 1.0"},
       {:phoenix_ecto, "~> 4.1"},
@@ -62,18 +62,18 @@ defmodule E2eProject.MixProject do
       {:phoenix_html, "~> 4.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_dashboard, "~> 0.7"},
-      {:telemetry, "~> 1.0", override: true},
+      {:telemetry, "~> 1.0"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       # {:exsync, "~> 0.2", only: :dev},
 
       # live view
-      {:phoenix_live_view, "~> 1.0.3"},
+      {:phoenix_live_view, "~> 1.1.0"},
       {:floki, ">= 0.27.0", only: :test},
 
       # general deps
       {:postgrex, "~> 0.15"},
-      {:gettext, "~> 0.11"},
+      {:gettext, "~> 1.0"},
       {:swoosh, "~> 1.0"},
       {:jason, "~> 1.0"},
       {:ex_machina, "~> 2.3"},

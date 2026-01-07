@@ -4,12 +4,13 @@ import Crypto from 'crypto'
 const randomString = (size = 21) => Crypto.randomBytes(size).toString('base64').slice(0, size)
 
 // a helper function to wait until the LV has no pending events
-const syncLV = async page => {
+// timeout defaults to 15s to handle image uploads and other slow operations
+const syncLV = async (page, timeout = 15000) => {
   const promises = [
-    expect(page.locator('.phx-connected').first()).toBeVisible(),
-    expect(page.locator('.phx-change-loading')).toHaveCount(0),
-    expect(page.locator('.phx-click-loading')).toHaveCount(0),
-    expect(page.locator('.phx-submit-loading')).toHaveCount(0),
+    expect(page.locator('.phx-connected').first()).toBeVisible({ timeout }),
+    expect(page.locator('.phx-change-loading')).toHaveCount(0, { timeout }),
+    expect(page.locator('.phx-click-loading')).toHaveCount(0, { timeout }),
+    expect(page.locator('.phx-submit-loading')).toHaveCount(0, { timeout }),
   ]
   return Promise.all(promises)
 }
@@ -100,7 +101,7 @@ export async function dragAndDrop(page, dragLocator, dropLocator, targetPosition
   // activating the drag action
   await page.mouse.down()
 
-  await page.waitForTimeout(500)
+  await page.waitForTimeout(100)
 
   // if targetPosition is undefined, defining the center of the
   // drop HTML element as the target position
@@ -110,9 +111,55 @@ export async function dragAndDrop(page, dragLocator, dropLocator, targetPosition
   // moving the mouse to the (targetX, targetY) coordinates of the
   // drop element
   await page.mouse.move(targetX, targetY)
-  await page.waitForTimeout(500)
+  await page.waitForTimeout(100)
   // releasing the mouse and terminating the drop option
   await page.mouse.up()
 }
 
-module.exports = { randomString, syncLV, evalLV, evalPlug, attributeMutations, dragAndDrop }
+// Toggle live preview on/off - clicks the eye icon in form tab builtins
+const toggleLivePreview = async page => {
+  // The live preview button has an eye icon SVG with path containing "M12 3c5.392"
+  // It's located in the .form-tab-builtins container, not .form-header
+  await page.locator('.form-tab-builtins button:has(svg path[d*="M12 3c5.392"])').click()
+  await syncLV(page)
+}
+
+// Get the preview iframe frame locator
+const getPreviewFrame = page => {
+  return page.frameLocator('.live-preview-wrapper iframe')
+}
+
+// Wait for preview to be ready after enabling
+const waitForPreviewReady = async page => {
+  await page.locator('.live-preview-wrapper iframe').waitFor({ state: 'visible', timeout: 10000 })
+  // Wait for initial render
+  await page.waitForTimeout(300)
+}
+
+// Wait for preview update after making a change
+const waitForPreviewUpdate = async page => {
+  await syncLV(page)
+  // Wait for morphdom to apply changes
+  await page.waitForTimeout(150)
+}
+
+// Click a device size button in live preview (desktop, tablet, mobile)
+const setPreviewDevice = async (page, device) => {
+  // Device buttons use data-live-preview-target attribute with values: desktop, tablet, mobile
+  await page.locator(`.live-preview-wrapper button[data-live-preview-target="${device}"]`).click()
+  await syncLV(page)
+}
+
+module.exports = {
+  randomString,
+  syncLV,
+  evalLV,
+  evalPlug,
+  attributeMutations,
+  dragAndDrop,
+  toggleLivePreview,
+  getPreviewFrame,
+  waitForPreviewReady,
+  waitForPreviewUpdate,
+  setPreviewDevice
+}

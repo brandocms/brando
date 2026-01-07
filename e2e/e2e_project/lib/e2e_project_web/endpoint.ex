@@ -14,8 +14,7 @@ defmodule E2eProjectWeb.Endpoint do
     plug Phoenix.Ecto.SQL.Sandbox,
       at: "/sandbox",
       repo: E2eProject.Repo,
-      # the default
-      timeout: 15_000
+      timeout: 30_000
   end
 
   socket "/admin/socket", BrandoAdmin.AdminSocket,

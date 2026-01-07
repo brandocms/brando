@@ -10,7 +10,6 @@ defmodule E2eProjectWeb.Router do
   @sql_sandbox Application.compile_env(:e2e_project, :sql_sandbox) || false
 
   pipeline :browser do
-    plug :halt
     plug :accepts, ["html"]
     plug :fetch_session
     plug :fetch_flash
@@ -40,14 +39,6 @@ defmodule E2eProjectWeb.Router do
     plug :basic_auth, username: "admin", password: "JM6wBszRWc"
   end
 
-  defp halt(%{request_path: "/halt"}, _opts) do
-    send(:e2e_helper, :halt)
-    # this ensure playwright waits until the server force stops
-    Process.sleep(:infinity)
-  end
-
-  defp halt(conn, _opts), do: conn
-
   if @sql_sandbox do
     forward "/__e2e", Brando.Plug.E2ETest
 
@@ -75,6 +66,12 @@ defmodule E2eProjectWeb.Router do
       live "/projects", ProjectListLive
       live "/projects/create", ProjectFormLive, :create
       live "/projects/update/:entry_id", ProjectFormLive, :update
+    end
+
+    scope "/prices", E2eProjectAdmin.Prices do
+      live "/price_categories", PriceCategoryListLive
+      live "/price_categories/create", PriceCategoryFormLive, :create
+      live "/price_categories/update/:entry_id", PriceCategoryFormLive, :update
     end
   end
 

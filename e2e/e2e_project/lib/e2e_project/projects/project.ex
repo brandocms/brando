@@ -71,6 +71,11 @@ defmodule E2eProject.Projects.Project do
         }
       }
 
+    asset :cover_video, :video,
+      cfg: %{
+        upload_path: Path.join(["videos", "projects", "cover_videos"])
+      }
+
     asset :project_gallery, :gallery,
       cfg: %{
         upload_path: Path.join(["images", "projects", "project_gallery"]),
@@ -128,7 +133,6 @@ defmodule E2eProject.Projects.Project do
             relation_key: :category_id,
             relation: :category,
             resetable: true,
-            wrapped_labels: true,
             label: t("Categories")
 
           input :client_id, :select,
@@ -168,10 +172,31 @@ defmodule E2eProject.Projects.Project do
         order: [{:asc, :sequence}, {:desc, :inserted_at}]
       }
 
+      # Text filter
       filter(
         label: gettext("Title"),
-        filter: "title"
+        key: "title"
       )
+
+      # Boolean filter
+      filter(
+        label: gettext("Full case only"),
+        key: "full_case",
+        type: :boolean,
+        default: false
+      )
+
+      # Select filter with static options
+      filter do
+        label gettext("Status")
+        key "status_filter"
+        type :select
+        default nil
+
+        option "All", nil
+        option "Published", "published"
+        option "Draft", "draft"
+      end
 
       component &__MODULE__.listing_row/1
     end

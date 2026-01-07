@@ -17,16 +17,11 @@ test('seo changes affect the frontpage', async ({ page }) => {
   // Add SEO image
   await page.getByRole('button', { name: 'Add image' }).click()
   await page.locator('input[name="fallback_meta_image"]').setInputFiles('./fixtures/image.jpg')
-  // Close drawer
+  // Wait for upload to complete - the image should appear in the drawer
+  await expect(page.locator('#image-drawer img')).toBeVisible({ timeout: 30000 })
+  // Close drawer - this should save the image selection
   await page.getByRole('button', { name: 'Close' }).click()
-  // Wait for the drawer to vanish or the form to be detached
   await page.waitForSelector('#image-drawer', { state: 'hidden' })
-  await page.evaluate(() => {
-    document
-      .querySelector('#image-drawer-form')
-      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
-  })
-
   await syncLV(page)
   await expect(page.getByText('No image associated with')).toHaveCount(0)
   await page.getByTestId('submit').click()
@@ -35,7 +30,7 @@ test('seo changes affect the frontpage', async ({ page }) => {
 
   // Wait for the cache to be updated
   // The SEO update happens through Cachex and needs time to propagate
-  await page.waitForTimeout(2000)
+  await page.waitForTimeout(500)
 
   // test meta tags - go to homepage and wait for full load
   await page.goto('/', { waitUntil: 'networkidle' })

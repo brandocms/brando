@@ -58,7 +58,7 @@ defmodule E2eProject.Projects.Client do
 
       filter(
         label: gettext("Name"),
-        filter: "name"
+        key: "name"
       )
 
       component &__MODULE__.listing_row/1

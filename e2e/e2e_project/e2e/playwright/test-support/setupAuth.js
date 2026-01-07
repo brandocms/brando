@@ -7,19 +7,32 @@ export const test = baseTest.extend({
   // via `test.use({ scenario: 'scenario-name' })`
   scenario: '',
   page: async ({ browser, scenario }, use) => {
+    // IMPORTANT: Checkout sandbox FIRST to get the user-agent string
+    // All subsequent requests must use this user-agent for sandbox isolation
+    const sandboxResp = await fetch('http://localhost:4444/sandbox', {
+      method: 'POST',
+    })
+
+    if (!sandboxResp.ok) {
+      throw new Error(`Sandbox checkout failed: ${sandboxResp.status} ${await sandboxResp.text()}`)
+    }
+
+    const userAgentString = await sandboxResp.text()
+
+    if (!userAgentString || !userAgentString.startsWith('BeamMetadata')) {
+      throw new Error(`Invalid sandbox response: ${userAgentString}`)
+    }
+
+    // Login WITH the sandbox user-agent so the request uses the sandbox connection
     const authResponse = await fetch(
       'http://localhost:4444/e2e/login/admin@brandocms.com',
       {
         method: 'POST',
+        headers: {
+          'user-agent': userAgentString,
+        },
       }
     )
-
-    // This checks out the DB and gets the user agent string
-    const resp = await fetch('http://localhost:4444/sandbox', {
-      method: 'POST',
-    })
-
-    const userAgentString = await resp.text()
 
     // We setup a new browser context with the user agent string
     // This allows the database to be sandboxed and provides isolation

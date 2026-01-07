@@ -47,6 +47,4 @@ test('creates and edits clients', async ({ page }) => {
   await expect(
     page.locator('.content-list .list-row').nth(2).locator('.status > div > svg > circle')
   ).toHaveClass('pending')
-
-  await page.waitForTimeout(5000)
 })

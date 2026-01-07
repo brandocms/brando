@@ -109,9 +109,27 @@ defmodule E2eProject.Projects do
     fn
       {:publish_at, publish_at}, query ->
         from q in query, where: ilike(q.publish_at, ^"%#{publish_at}%")
-  
+
       {:language, language}, query ->
         from q in query, where: q.language == ^language
+
+      # Text filter
+      {:title, title}, query ->
+        from q in query, where: ilike(q.title, ^"%#{title}%")
+
+      # Boolean filter
+      {:full_case, "true"}, query ->
+        from q in query, where: q.full_case == true
+
+      {:full_case, "false"}, query ->
+        query
+
+      # Select filter
+      {:status_filter, status}, query when status not in [nil, ""] ->
+        from q in query, where: q.status == ^String.to_existing_atom(status)
+
+      {:status_filter, _}, query ->
+        query
     end
   end
   

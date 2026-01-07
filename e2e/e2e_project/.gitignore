@@ -37,4 +37,3 @@ assets/backend/.yalc
 assets/frontend/.yalc
 /release-archives
 /certs
-.envrc*
