@@ -2623,7 +2623,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:128
 #, elixir-autogen, elixir-format
-msgid "No images currently in block. Click one of the buttons above to get started, or drag and drop images here."
+msgid "No objects currently in block. Click one of the buttons above to get started, or drag and drop images here."
 msgstr ""
 
 #: lib/brando_admin/live/config/utils_live.ex:101
