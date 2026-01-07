@@ -1,6 +1,5 @@
 defmodule Brando.Repo.Migrations.CreateContentIdentifiers do
   use Ecto.Migration
-  import Ecto.Query
 
   def change do
     create table(:content_identifiers) do

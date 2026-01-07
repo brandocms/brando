@@ -34,12 +34,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     assign_new(socket, :available_schemas, fn ->
       if wanted_schemas == [] do
         all_relevant_types =
-          :include_brando
-          |> Brando.Blueprint.list_blueprints()
-          |> Enum.filter(
-            &(Brando.Content.has_identifier(&1) == {:ok, :has_identifier} &&
-                Brando.Content.persist_identifier(&1) == {:ok, :persist_identifier})
-          )
+          Brando.Content.Identifier.Registry.list_persistent_identifier_modules(:include_brando)
 
         Enum.map(all_relevant_types, &{Brando.Blueprint.get_plural(&1), &1})
       else
