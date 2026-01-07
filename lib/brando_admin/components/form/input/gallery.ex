@@ -92,7 +92,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
     socket
     |> assign(:gallery, gallery)
-    |> assign_new(:selected_images, fn -> Enum.map(gallery_objects, & &1.image.path) end)
+    |> assign_new(:selected_images, fn -> Enum.map(gallery_objects, & &1.image_id) end)
     |> assign_new(:gallery_objects, fn -> gallery_objects end)
   end
 
@@ -297,7 +297,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           creator_id: current_user.id
         })
 
-    selected_objects = Enum.map(new_gallery_objects, & &1.image.path)
+    selected_objects = Enum.map(new_gallery_objects, & &1.image_id)
 
     send_update(ImagePicker,
       id: "image-picker",
@@ -329,7 +329,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     field_name = field.field
     image_id = (is_binary(image_id) && String.to_integer(image_id)) || image_id
     new_gallery_objects = Enum.filter(gallery_objects, &(&1.image_id != image_id))
-    selected_objects = Enum.map(new_gallery_objects, & &1.image.path)
+    selected_objects = Enum.map(new_gallery_objects, & &1.image_id)
 
     send_update(ImagePicker,
       id: "image-picker",

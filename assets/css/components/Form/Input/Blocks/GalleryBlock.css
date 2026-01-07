@@ -12,50 +12,78 @@
   }
 
   .images-grid {
-    @row 3/wrap/1em desktop_md;
-    @row 4/wrap/1em desktop_lg;
-    @row 5/wrap/1em desktop_xl;
+    @display flex/row/wrap;
+    @space gap 1;
 
     .preview {
       @column 4/12 desktop_md;
       @column 3/12 desktop_lg;
       @column 2/10 desktop_xl;
-      border: 1px dashed var(--brando-color-dark);
+      box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px;
+      background-color: white;
       border-radius: 8px;
-      padding: 8px;
+      overflow: clip;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       cursor: move;
+      position: relative;
 
       figcaption {
-        padding-top: 15px;
+        @display flex/column/nowrap;
+        @space gap 8px;
+        margin-top: 0;
+        padding: 8px;
+      }
+
+      .media-type-badge {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        z-index: 1;
+        background-color: white;
+        border: none;
+        box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 2px 0px;
+
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
       }
 
       .delete-x {
         cursor: pointer;
         z-index: 1;
         position: absolute;
-        top: 5px;
-        right: 5px;
+        top: 8px;
+        right: 8px;
         background-color: white;
-        width: 30px;
-        height: 30px;
+        width: 25px;
+        height: 25px;
         border-radius: 50%;
         border: none;
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 1px dashed var(--brando-color-dark);
+        background-color: white;
+        box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 2px 0px;
 
         &:hover {
           background-color: var(--brando-color-dark);
-          color: white;
           border: 1px solid var(--brando-color-dark);
+
+          span {
+            background-color: white;
+          }
         }
 
         span {
           background-color: var(--brando-color-dark);
+          width: 1rem;
+          height: 1rem;
         }
 
         .text {
@@ -71,11 +99,11 @@
       @space margin-bottom 15px;
 
       > figure {
-        @column 2/8;
+        @column 3/8;
       }
 
       > div {
-        @column 6/8;
+        @column 5/8;
       }
     }
   }
@@ -91,6 +119,15 @@
       align-items: center;
       border: 1px dashed var(--brando-color-dark);
       border-radius: 10px;
+      position: relative;
+
+      .media-type-badge {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        z-index: 1;
+        background-color: white;
+      }
 
       .image-content {
         @column 3/12 desktop_xl;
@@ -137,9 +174,7 @@
         display: inline-block;
         text-transform: uppercase;
         padding: 4px 7px;
-        transition:
-          background-color 0.35s ease,
-          color 0.35s ease;
+        transition: background-color 0.35s ease, color 0.35s ease;
         display: flex;
         align-items: center;
         gap: 0.5em;
