@@ -65,7 +65,7 @@ defmodule Brando.Content.ModuleSet do
         order: [{:asc, :title}, {:desc, :inserted_at}]
       }
 
-      filter label: gettext("Title"), filter: "title"
+      filter label: gettext("Title"), key: "title"
       component &__MODULE__.listing_row/1
     end
   end

@@ -559,6 +559,22 @@ defmodule Brando.Villain.Filters do
   def sort(list, field_name, _), do: Liquex.Collection.sort(list, field_name)
 
   @doc """
+  Extracts gallery_objects from a gallery ref
+
+  ## Examples
+
+      {% assign gallery_objects = refs.my_gallery|gallery %}
+      {% for gallery_object in gallery_objects %}
+        {{ gallery_object.image.url }}
+      {% endfor %}
+  """
+  def gallery(nil, _), do: []
+  def gallery(%{gallery: nil}, _), do: []
+  def gallery(%{gallery: %{gallery_objects: gallery_objects}}, _) when is_list(gallery_objects), do: gallery_objects
+  def gallery(%{gallery: %{gallery_objects: nil}}, _), do: []
+  def gallery(_, _), do: []
+
+  @doc """
   Sorts items in an array in case-insensitive order.
 
   ## Examples

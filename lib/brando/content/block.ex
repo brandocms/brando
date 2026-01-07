@@ -104,11 +104,14 @@ defmodule Brando.Content.Block do
       module: Brando.Content.Var,
       preload_order: [asc: :sequence],
       on_replace: :delete_if_exists,
-      cast: true
+      cast: true,
+      sort_param: :sort_var_ids,
+      drop_param: :drop_var_ids
 
-    relation :refs, :embeds_many,
-      module: Brando.Content.Module.Ref,
-      on_replace: :delete,
+    relation :refs, :has_many,
+      module: Brando.Content.Ref,
+      preload_order: [asc: :sequence],
+      on_replace: :delete_if_exists,
       cast: true
 
     relation :table_rows, :has_many,
@@ -149,13 +152,44 @@ defmodule Brando.Content.Block do
   end
 
   def block_changeset(block, attrs, user) do
-    block
-    |> cast(attrs, @block_attrs)
-    |> unique_constraint(:uid)
-    |> cast_table_rows(user)
-    |> cast_block_identifiers(user)
-    |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
-    |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
+    changeset =
+      block
+      |> cast(attrs, @block_attrs)
+      |> unique_constraint(:uid)
+      |> cast_table_rows(user)
+      |> cast_block_identifiers(user)
+      |> cast_assoc(:vars,
+        with: &var_changeset(&1, &2, &3, user),
+        sort_param: :sort_var_ids,
+        drop_param: :drop_var_ids
+      )
+      |> cast_assoc(:refs, with: &ref_changeset(&1, &2, user))
+
+    # Filter out :replace changesets from refs to prevent update issues
+    # Handle both struct and changeset inputs
+    block_id =
+      case block do
+        %Ecto.Changeset{data: data} -> data.id
+        %{id: id} -> id
+        _ -> nil
+      end
+
+    changeset =
+      if is_nil(block_id) do
+        changeset
+        |> Ecto.Changeset.update_change(:refs, fn ref_changesets ->
+          Enum.reject(ref_changesets, &(&1.action == :replace))
+        end)
+        |> Ecto.Changeset.update_change(:vars, fn var_changesets ->
+          Enum.reject(var_changesets, &(&1.action == :replace))
+        end)
+        # Force insert action for new blocks
+        |> Map.put(:action, :insert)
+      else
+        changeset
+      end
+
+    changeset
   end
 
   def recursive_block_changeset(block, attrs, user) do
@@ -164,8 +198,12 @@ defmodule Brando.Content.Block do
     |> unique_constraint(:uid)
     |> cast_table_rows(user)
     |> cast_block_identifiers(user)
-    |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
-    |> cast_embed(:refs, with: &ref_changeset(&1, &2, user))
+    |> cast_assoc(:vars,
+      with: &var_changeset(&1, &2, &3, user),
+      sort_param: :sort_var_ids,
+      drop_param: :drop_var_ids
+    )
+    |> cast_assoc(:refs, with: &ref_changeset(&1, &2, user))
     |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user))
   end
 
@@ -184,23 +222,21 @@ defmodule Brando.Content.Block do
   end
 
   defp cast_table_rows(changeset, user) do
-    case Map.get(changeset.params, "table_rows") do
-      "" ->
-        put_assoc(changeset, :table_rows, [])
-
-      _ ->
-        cast_assoc(changeset, :table_rows,
-          with: &table_row_changeset(&1, &2, &3, user),
-          drop_param: :drop_table_row_ids,
-          sort_param: :sort_table_row_ids
-        )
-    end
+    cast_assoc(changeset, :table_rows,
+      with: &table_row_changeset(&1, &2, &3, user),
+      drop_param: :drop_table_row_ids,
+      sort_param: :sort_table_row_ids
+    )
   end
 
   def table_row_changeset(table_row, attrs, position, user) do
     table_row
     |> cast(attrs, [:block_id])
-    |> cast_assoc(:vars, with: &var_changeset(&1, &2, user))
+    |> cast_assoc(:vars,
+      with: &var_changeset(&1, &2, &3, user),
+      sort_param: :sort_var_ids,
+      drop_param: :drop_var_ids
+    )
     |> change(sequence: position)
   end
 
@@ -210,15 +246,34 @@ defmodule Brando.Content.Block do
     |> change(sequence: position)
   end
 
+  def var_changeset(var, attrs, position, _user) when is_integer(position) do
+    var
+    |> cast(attrs, @var_attrs)
+    |> cast_embed(:options)
+    |> change(sequence: position)
+  end
+
   def var_changeset(var, attrs, _user) do
     var
     |> cast(attrs, @var_attrs)
     |> cast_embed(:options)
   end
 
-  def ref_changeset(ref, attrs, _user) do
+  def ref_changeset(ref, attrs, user) do
     ref
-    |> cast(attrs, [:name, :description])
+    |> cast(attrs, [
+      :name,
+      :description,
+      :uid,
+      :sequence,
+      :active,
+      :collapsed,
+      :image_id,
+      :video_id,
+      :file_id
+    ])
+    |> unique_constraint(:uid)
     |> PolymorphicEmbed.cast_polymorphic_embed(:data)
+    |> cast_assoc(:gallery, with: &Brando.Galleries.Gallery.changeset(&1, &2, user))
   end
 end

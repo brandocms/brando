@@ -25,10 +25,11 @@ defmodule Brando.Villain.Blocks.MediaBlock do
     end
 
     relations do
-      relation :template_picture, :embeds_one, module: Blocks.PictureBlock.Data
-      relation :template_video, :embeds_one, module: Blocks.VideoBlock.Data
-      relation :template_gallery, :embeds_one, module: Blocks.GalleryBlock.Data
-      relation :template_svg, :embeds_one, module: Blocks.SvgBlock.Data
+      relation :template_picture, :embeds_one, module: Blocks.PictureBlock.Data, on_replace: :delete
+      relation :template_video, :embeds_one, module: Blocks.VideoBlock.Data, on_replace: :delete
+      relation :template_gallery, :embeds_one, module: Blocks.GalleryBlock.Data, on_replace: :delete
+      relation :template_svg, :embeds_one, module: Blocks.SvgBlock.Data, on_replace: :delete
     end
   end
+
 end

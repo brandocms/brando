@@ -5,7 +5,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   alias Brando.Villain.Blocks.PictureBlock
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias Ecto.Changeset
@@ -16,7 +15,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   # prop block_count, :integer
   # prop index, :any
   # prop data_field, :atom
-  # prop is_ref?, :boolean, default: false
+  # prop ref_form, :any
   # prop ref_name, :string
   # prop ref_description, :string
   # prop belongs_to, :string
@@ -31,25 +30,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   # data image, :any
   # data upload_formats, :string
 
-  @fields_to_take [
+  # Only override fields that can be customized in the block data
+  @override_fields [
+    :title,
+    :credits,
+    :alt,
     :picture_class,
     :img_class,
     :link,
     :srcset,
     :media_queries,
-    :formats,
-    :path,
-    :width,
-    :height,
-    :sizes,
-    :cdn,
     :lazyload,
     :moonwalk,
-    :dominant_color,
     :placeholder,
-    :focal,
     :fetchpriority
-    # :config_target
   ]
 
   def mount(socket) do
@@ -59,33 +53,59 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   def update(assigns, socket) do
+    # Get the current block data to access override fields like title/alt
     block_data_cs = Block.get_block_data_changeset(assigns.block)
-
-    {extracted_path, extracted_filename} =
-      case Changeset.get_field(block_data_cs, :path) do
-        nil -> {nil, nil}
-        path -> {path, Path.basename(path)}
-      end
-
-    upload_formats =
-      case Changeset.get_field(block_data_cs, :formats) do
-        nil -> ""
-        formats -> Enum.join(formats, ",")
-      end
-
-    image = Changeset.apply_changes(block_data_cs)
-    file_name = if is_map(image) && image.path, do: Path.basename(image.path)
+    block_data = Changeset.apply_changes(block_data_cs)
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:image, image)
-     |> assign(:upload_formats, upload_formats)
-     |> assign(:extracted_path, extracted_path)
-     |> assign(:extracted_filename, extracted_filename)
-     |> assign(:uid, assigns.block[:uid].value)
-     |> assign(:file_name, file_name)
-     |> assign_new(:compact, fn -> true end)}
+     |> assign(:uid, assigns.ref_form[:uid].value)
+     |> assign(:block_data, block_data)
+     |> assign_new(:compact, fn -> true end)
+     |> assign_new(:image, fn ->
+       # Get the image from the ref_form (only on first load)
+       if assigns[:ref_form] do
+         ref_cs = assigns.ref_form.source
+
+         case Changeset.get_field(ref_cs, :image) do
+           nil ->
+             # If no image preloaded, try to fetch via image_id
+             case Changeset.get_field(ref_cs, :image_id) do
+               nil ->
+                 nil
+
+               image_id ->
+                 case Brando.Images.get_image(image_id) do
+                   {:ok, image} -> image
+                   _ -> nil
+                 end
+             end
+
+           image ->
+             image
+         end
+       else
+         nil
+       end
+     end)
+     |> assign_new(:extracted_path, fn %{image: image} ->
+       if is_map(image), do: Map.get(image, :path), else: nil
+     end)
+     |> assign_new(:extracted_filename, fn %{extracted_path: extracted_path} ->
+       if extracted_path, do: Path.basename(extracted_path), else: nil
+     end)
+     |> assign_new(:file_name, fn %{extracted_filename: extracted_filename} -> extracted_filename end)
+     |> assign_new(:upload_formats, fn %{image: image} ->
+       if is_map(image) do
+         case Map.get(image, :formats) do
+           formats when is_list(formats) -> Enum.join(formats, ",")
+           _ -> ""
+         end
+       else
+         ""
+       end
+     end)}
   end
 
   def render(assigns) do
@@ -100,7 +120,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
           data-block-uid={@uid}
           data-upload-config-target={block_data[:config_target].value}
         >
-          <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+          <Block.block
+            id={"block-#{@uid}-base"}
+            block={@block}
+            is_ref?={true}
+            multi={false}
+            target={@target}
+            ref_form={@ref_form}
+          >
             <:description>
               <%= if @ref_description not in ["", nil] do %>
                 {@ref_description}
@@ -108,7 +135,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                 {@extracted_filename}
               <% end %>
             </:description>
-            <input class="file-input" type="file" />
+            <div id={"block-#{@uid}-base-f-in"} phx-update="ignore">
+              <input name={"block-#{@uid}-f-in"} class="file-input" type="file" />
+            </div>
             <div
               :if={@extracted_path}
               class={["preview", (@compact && "compact") || "classic"]}
@@ -123,14 +152,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                       <div class="dims">{@image.width}&times;{@image.height}</div>
                       <div id={"block-#{@uid}-figcaption-title"}>
                         <span>{gettext("Caption")}</span>
-                        <%= if @image.title in [nil, ""] do %>
+                        <%= if @block_data.title in [nil, ""] do %>
                           {gettext("<no caption>")}
                         <% else %>
-                          {raw(@image.title)}
+                          {raw(@block_data.title)}
                         <% end %>
                       </div>
                       <div id={"block-#{@uid}-figcaption-alt"}>
-                        <span>{gettext("Alt. text")}</span> {@image.alt ||
+                        <span>{gettext("Alt. text")}</span> {@block_data.alt ||
                           gettext("<no alt.text>")}
                       </div>
                     </div>
@@ -231,31 +260,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               </div>
 
               <Input.input type={:hidden} field={block_data[:placeholder]} />
-              <Input.input type={:hidden} field={block_data[:cdn]} />
               <Input.input type={:hidden} field={block_data[:moonwalk]} />
               <Input.input type={:hidden} field={block_data[:lazyload]} />
               <Input.input type={:hidden} field={block_data[:credits]} />
-              <Input.input type={:hidden} field={block_data[:height]} />
-              <Input.input type={:hidden} field={block_data[:width]} />
-
-              <%= if is_nil(block_data[:path].value) and !is_nil(block_data[:sizes].value) do %>
-                <Input.input type={:hidden} field={block_data[:path]} value={@extracted_path} />
-              <% else %>
-                <Input.input type={:hidden} field={block_data[:path]} />
-              <% end %>
-
-              <.inputs_for :let={focal_form} field={block_data[:focal]}>
-                <Input.input type={:hidden} field={focal_form[:x]} />
-                <Input.input type={:hidden} field={focal_form[:y]} />
-              </.inputs_for>
-
-              <Form.map_inputs :let={%{value: value, name: name}} field={block_data[:sizes]}>
-                <input type="hidden" name={name} value={value} />
-              </Form.map_inputs>
-
-              <Form.array_inputs :let={%{value: array_value, name: array_name}} field={block_data[:formats]}>
-                <input type="hidden" name={array_name} value={array_value} />
-              </Form.array_inputs>
 
               <input type="hidden" data-upload-formats={@upload_formats} />
             </:config>
@@ -269,22 +276,46 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   def handle_event("focus", _, socket), do: {:noreply, socket}
 
   def handle_event("image_uploaded", %{"id" => id}, socket) do
-    block = socket.assigns.block
-    block_data_cs = Block.get_block_data_changeset(block)
-    block_data = Changeset.apply_changes(block_data_cs)
+    {:ok, image} = Brando.Images.get_image(id)
 
     target = socket.assigns.target
     ref_name = socket.assigns.ref_name
 
-    {:ok, image} = Brando.Images.get_image(id)
+    # Get current block data to preserve any existing overrides
+    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+    current_block_data = Changeset.apply_changes(block_data_cs)
 
-    new_data =
-      block_data
-      |> Map.merge(image)
+    # Only keep override fields in block data, image data goes to association
+    new_block_data =
+      current_block_data
       |> Map.from_struct()
-      |> Map.take(@fields_to_take)
+      |> Map.take(@override_fields)
 
-    send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
+    send_update(target, %{
+      event: "update_ref_data",
+      ref_data: new_block_data,
+      ref_name: ref_name,
+      image_id: image.id,
+      force_render: true
+    })
+
+    # Update the image assigns immediately
+    extracted_path = Map.get(image, :path)
+    extracted_filename = if extracted_path, do: Path.basename(extracted_path), else: nil
+
+    upload_formats =
+      case Map.get(image, :formats) do
+        formats when is_list(formats) -> Enum.join(formats, ",")
+        _ -> ""
+      end
+
+    socket =
+      socket
+      |> assign(:image, image)
+      |> assign(:extracted_path, extracted_path)
+      |> assign(:extracted_filename, extracted_filename)
+      |> assign(:file_name, extracted_filename)
+      |> assign(:upload_formats, upload_formats)
 
     {:noreply, socket}
   end
@@ -305,34 +336,76 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     target = socket.assigns.target
     ref_name = socket.assigns.ref_name
 
+    # Reset to empty picture block data with no image association
     new_data =
       %PictureBlock.Data{}
       |> Map.from_struct()
-      |> Map.take(@fields_to_take)
+      |> Map.take(@override_fields)
 
     uid = socket.assigns.uid
-    send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
+
+    # Send the update with nil image_id to clear the association
+    send_update(target, %{
+      event: "update_ref_data",
+      ref_data: new_data,
+      ref_name: ref_name,
+      image_id: nil,
+      force_render: true
+    })
+
+    # Clear the image assigns immediately
+    socket =
+      socket
+      |> assign(:image, nil)
+      |> assign(:extracted_path, nil)
+      |> assign(:extracted_filename, nil)
+      |> assign(:file_name, nil)
+      |> assign(:upload_formats, "")
 
     {:noreply, push_event(socket, "b:picture_block:attach_listeners:#{uid}", %{})}
   end
 
   def handle_event("select_image", %{"id" => id}, socket) do
-    block = socket.assigns.block
-    block_data_cs = Block.get_block_data_changeset(block)
-    block_data = Changeset.apply_changes(block_data_cs)
+    {:ok, image} = Brando.Images.get_image(id)
 
     target = socket.assigns.target
     ref_name = socket.assigns.ref_name
 
-    {:ok, image} = Brando.Images.get_image(id)
+    # Get current block data to preserve any existing overrides
+    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+    current_block_data = Changeset.apply_changes(block_data_cs)
 
-    new_data =
-      block_data
-      |> Map.merge(image)
+    # Only keep override fields in block data, image data goes to association
+    new_block_data =
+      current_block_data
       |> Map.from_struct()
-      |> Map.take(@fields_to_take)
+      |> Map.take(@override_fields)
 
-    send_update(target, %{event: "update_ref_data", ref_data: new_data, ref_name: ref_name})
+    send_update(target, %{
+      event: "update_ref_data",
+      ref_data: new_block_data,
+      ref_name: ref_name,
+      image_id: image.id
+    })
+
+    # Update the image assigns immediately
+    extracted_path = Map.get(image, :path)
+    extracted_filename = if extracted_path, do: Path.basename(extracted_path), else: nil
+
+    upload_formats =
+      case Map.get(image, :formats) do
+        formats when is_list(formats) -> Enum.join(formats, ",")
+        _ -> ""
+      end
+
+    socket =
+      socket
+      |> assign(:image, image)
+      |> assign(:extracted_path, extracted_path)
+      |> assign(:extracted_filename, extracted_filename)
+      |> assign(:file_name, extracted_filename)
+      |> assign(:upload_formats, upload_formats)
+
     {:noreply, socket}
   end
 

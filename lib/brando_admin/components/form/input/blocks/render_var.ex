@@ -32,146 +32,130 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   def update_many(assigns_sockets) do
-    {image_ids, cmp_imgs, file_ids, cmp_files, identifier_ids, cmp_identifiers} =
-      Enum.reduce(assigns_sockets, {[], [], [], [], [], []}, fn
-        {%{id: id, var: %{source: changeset}}, _socket},
-        {image_ids, cmp_imgs, file_ids, cmp_files, identifier_ids, cmp_identifiers} = acc ->
-          case get_field(changeset, :type) do
-            :image ->
-              image_id = get_field(changeset, :image_id)
+    asset_ids = collect_asset_ids(assigns_sockets)
+    lookups = build_asset_lookups(asset_ids)
+    Enum.map(assigns_sockets, &assemble_socket(&1, lookups))
+  end
 
-              {[image_id | image_ids], [{id, image_id} | cmp_imgs], file_ids, cmp_files, identifier_ids, cmp_identifiers}
-
-            :file ->
-              file_id = get_field(changeset, :file_id)
-
-              {image_ids, cmp_imgs, [file_id | file_ids], [{id, file_id} | cmp_files], identifier_ids, cmp_identifiers}
-
-            :link ->
-              case get_field(changeset, :identifier_id) do
-                nil ->
-                  acc
-
-                identifier_id ->
-                  {image_ids, cmp_imgs, file_ids, cmp_files, [identifier_id | identifier_ids],
-                   [{id, identifier_id} | cmp_identifiers]}
-              end
-
-            _ ->
-              acc
-          end
-      end)
-
-    {:ok, images} =
-      if image_ids == [] do
-        {:ok, []}
-      else
-        Brando.Images.list_images(%{filter: %{ids: image_ids}, cache: {:ttl, :timer.minutes(5)}})
-      end
-
-    mapped_imgs = Map.new(images, &{&1.id, &1})
-    mapped_img_ids = Map.new(cmp_imgs)
-
-    {:ok, files} =
-      if file_ids == [] do
-        {:ok, []}
-      else
-        Brando.Files.list_files(%{filter: %{ids: file_ids}, cache: {:ttl, :timer.minutes(5)}})
-      end
-
-    mapped_files = Map.new(files, &{&1.id, &1})
-    mapped_file_ids = Map.new(cmp_files)
-
-    {:ok, identifiers} =
-      if identifier_ids == [] do
-        {:ok, []}
-      else
-        Brando.Content.list_identifiers(%{
-          filter: %{ids: identifier_ids},
-          cache: {:ttl, :timer.minutes(5)},
-          order: {:array_position, identifier_ids}
-        })
-      end
-
-    mapped_identifiers = Map.new(identifiers, &{&1.id, &1})
-    mapped_identifier_ids = Map.new(cmp_identifiers)
-
-    Enum.map(assigns_sockets, fn {assigns, socket} ->
-      socket_i =
-        case Map.get(mapped_img_ids, assigns.id) do
-          nil -> assign_new(socket, :image, fn -> nil end)
-          key -> assign_new(socket, :image, fn -> Map.get(mapped_imgs, key) end)
-        end
-
-      socket_if =
-        case Map.get(mapped_file_ids, assigns.id) do
-          nil -> assign_new(socket_i, :file, fn -> nil end)
-          key -> assign_new(socket_i, :file, fn -> Map.get(mapped_files, key) end)
-        end
-
-      socket_ifi =
-        case Map.get(mapped_identifier_ids, assigns.id) do
-          nil -> assign(socket_if, :identifier, nil)
-          key -> assign(socket_if, :identifier, Map.get(mapped_identifiers, key))
-        end
-
-      var = assigns.var
-      changeset = var.source
-      important = get_field(changeset, :important)
-      render = Map.get(assigns, :render, :all)
-      edit = Map.get(assigns, :edit, false)
-      target = Map.get(assigns, :target, nil)
-
-      should_render? =
-        cond do
-          render == :all -> true
-          render == :only_important and important -> true
-          render == :only_regular and !important -> true
-          true -> false
-        end
-
-      type = get_field(changeset, :type)
-
-      value =
-        case type do
-          :image -> get_field(changeset, :image_id)
-          :file -> get_field(changeset, :file_id)
-          :boolean -> get_field(changeset, :value_boolean)
-          :link -> get_field(changeset, :value)
-          _ -> get_field(changeset, :value)
-        end
-
-      value = control_value(type, value)
-
-      socket_ifi
-      |> assign(assigns)
-      |> assign(:id, assigns.id)
-      |> assign(:edit, edit)
-      |> assign(:target, target)
-      |> assign(:should_render?, should_render?)
-      |> assign(:important, important)
-      |> assign(:label, get_field(changeset, :label))
-      |> assign(:key, var[:key].value)
-      |> assign(:type, type)
-      |> assign(:value, value)
-      |> assign_new(:blueprint_schema_opts, fn ->
-        schemas = Brando.Blueprint.list_blueprints()
-        Enum.map(schemas, &%{label: &1.__naming__().singular, value: &1})
-      end)
-      |> assign_new(:on_change, fn -> nil end)
-      |> assign_new(:images, fn -> nil end)
-      |> assign_new(:files, fn -> nil end)
-      |> assign_new(:inner_block, fn -> nil end)
-      |> assign_new(:identifiers, fn -> nil end)
-      |> assign_new(:value_id, fn -> value end)
-      |> assign_new(:image_id, fn -> if type == :image, do: value end)
-      |> assign_new(:file_id, fn -> if type == :file, do: value end)
-      |> assign(:identifier_id, get_field(changeset, :identifier_id))
-      |> assign(:instructions, get_field(changeset, :instructions))
-      |> assign(:placeholder, get_field(changeset, :placeholder))
-      |> assign(:var, var)
+  defp collect_asset_ids(assigns_sockets) do
+    Enum.reduce(assigns_sockets, %{images: [], files: [], identifiers: []}, fn
+      {%{id: id, var: %{source: changeset}}, _socket}, acc ->
+        collect_asset_id_for_type(get_field(changeset, :type), changeset, id, acc)
     end)
   end
+
+  defp collect_asset_id_for_type(:image, changeset, id, acc) do
+    image_id = get_field(changeset, :image_id)
+    %{acc | images: [{id, image_id} | acc.images]}
+  end
+
+  defp collect_asset_id_for_type(:file, changeset, id, acc) do
+    file_id = get_field(changeset, :file_id)
+    %{acc | files: [{id, file_id} | acc.files]}
+  end
+
+  defp collect_asset_id_for_type(:link, changeset, id, acc) do
+    case get_field(changeset, :identifier_id) do
+      nil -> acc
+      identifier_id -> %{acc | identifiers: [{id, identifier_id} | acc.identifiers]}
+    end
+  end
+
+  defp collect_asset_id_for_type(_type, _changeset, _id, acc), do: acc
+
+  defp build_asset_lookups(asset_ids) do
+    %{
+      images: fetch_and_map_assets(asset_ids.images, &fetch_images/1),
+      files: fetch_and_map_assets(asset_ids.files, &fetch_files/1),
+      identifiers: fetch_and_map_assets(asset_ids.identifiers, &fetch_identifiers/1)
+    }
+  end
+
+  defp fetch_and_map_assets([], _fetch_fn), do: {%{}, %{}}
+
+  defp fetch_and_map_assets(component_id_pairs, fetch_fn) do
+    ids = Enum.map(component_id_pairs, &elem(&1, 1))
+    {:ok, assets} = fetch_fn.(ids)
+    asset_map = Map.new(assets, &{&1.id, &1})
+    component_map = Map.new(component_id_pairs)
+    {asset_map, component_map}
+  end
+
+  defp fetch_images(ids) do
+    Brando.Images.list_images(%{filter: %{ids: ids}, cache: {:ttl, :timer.minutes(5)}})
+  end
+
+  defp fetch_files(ids) do
+    Brando.Files.list_files(%{filter: %{ids: ids}, cache: {:ttl, :timer.minutes(5)}})
+  end
+
+  defp fetch_identifiers(ids) do
+    Brando.Content.list_identifiers(%{
+      filter: %{ids: ids},
+      cache: {:ttl, :timer.minutes(5)},
+      order: {:array_position, ids}
+    })
+  end
+
+  defp assemble_socket({assigns, socket}, lookups) do
+    socket
+    |> assign_new(:image, fn -> lookup_asset(lookups.images, assigns.id) end)
+    |> assign_new(:file, fn -> lookup_asset(lookups.files, assigns.id) end)
+    |> assign(:identifier, lookup_asset(lookups.identifiers, assigns.id))
+    |> assign_var_fields(assigns)
+  end
+
+  defp lookup_asset({asset_map, component_map}, component_id) do
+    with asset_id when not is_nil(asset_id) <- Map.get(component_map, component_id) do
+      Map.get(asset_map, asset_id)
+    end
+  end
+
+  defp assign_var_fields(socket, assigns) do
+    var = assigns.var
+    changeset = var.source
+    type = get_field(changeset, :type)
+    important = get_field(changeset, :important)
+    value = type |> extract_value(changeset) |> then(&control_value(type, &1))
+
+    socket
+    |> assign(assigns)
+    |> assign(:id, assigns.id)
+    |> assign(:edit, Map.get(assigns, :edit, false))
+    |> assign(:target, Map.get(assigns, :target, nil))
+    |> assign(:should_render?, should_render?(Map.get(assigns, :render, :all), important))
+    |> assign(:important, important)
+    |> assign(:label, get_field(changeset, :label))
+    |> assign(:key, var[:key].value)
+    |> assign(:type, type)
+    |> assign(:value, value)
+    |> assign_new(:blueprint_schema_opts, fn ->
+      schemas = Brando.Blueprint.list_blueprints()
+      Enum.map(schemas, &%{label: &1.__naming__().singular, value: &1})
+    end)
+    |> assign_new(:on_change, fn -> nil end)
+    |> assign_new(:images, fn -> nil end)
+    |> assign_new(:files, fn -> nil end)
+    |> assign_new(:inner_block, fn -> nil end)
+    |> assign_new(:identifiers, fn -> nil end)
+    |> assign_new(:value_id, fn -> value end)
+    |> assign_new(:image_id, fn -> if type == :image, do: value end)
+    |> assign_new(:file_id, fn -> if type == :file, do: value end)
+    |> assign(:identifier_id, get_field(changeset, :identifier_id))
+    |> assign(:instructions, get_field(changeset, :instructions))
+    |> assign(:placeholder, get_field(changeset, :placeholder))
+    |> assign(:var, var)
+  end
+
+  defp extract_value(:image, changeset), do: get_field(changeset, :image_id)
+  defp extract_value(:file, changeset), do: get_field(changeset, :file_id)
+  defp extract_value(:boolean, changeset), do: get_field(changeset, :value_boolean)
+  defp extract_value(_type, changeset), do: get_field(changeset, :value)
+
+  defp should_render?(:all, _important), do: true
+  defp should_render?(:only_important, true), do: true
+  defp should_render?(:only_regular, false), do: true
+  defp should_render?(_render, _important), do: false
 
   defp control_value(nil, nil), do: ""
   defp control_value(:string, value) when is_binary(value), do: value
@@ -353,6 +337,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         <% else %>
           <div id={"#{@var.id}-value"}>
             <Input.input type={:hidden} field={@var[:id]} />
+            <Input.input type={:hidden} field={@var[:_persistent_id]} value={@var.index} />
             <Input.input type={:hidden} field={@var[:key]} />
             <Input.input type={:hidden} field={@var[:label]} />
             <Input.input type={:hidden} field={@var[:type]} />

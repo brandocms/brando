@@ -426,7 +426,7 @@ defmodule Brando.Villain.Parser do
     if extra_attrs, do: vimeo_template, else: youtube_template
   end
 
-  def video(%{remote_id: remote_id, source: :youtube, autoplay: autoplay} = data, _) do
+  def video(%{remote_id: remote_id, type: :youtube, autoplay: autoplay} = data, _) do
     video_fields = extract_video_dimensions(data, 420, 315)
     aspect_ratio = calculate_aspect_ratio(video_fields.width, video_fields.height)
     params = "autoplay=#{(autoplay && 1) || 0}&controls=0&showinfo=0&rel=0"
@@ -440,7 +440,7 @@ defmodule Brando.Villain.Parser do
     )
   end
 
-  def video(%{remote_id: remote_id, source: :vimeo} = data, _) do
+  def video(%{remote_id: remote_id, type: :vimeo} = data, _) do
     video_fields = extract_video_dimensions(data, 500, 281)
 
     # Ensure values are integers
@@ -460,8 +460,7 @@ defmodule Brando.Villain.Parser do
     )
   end
 
-  # Convert file video to html
-  def video(%{remote_id: src, source: :file} = data, _) do
+  def video(%{source_url: src, type: :external_file} = data, _) do
     assigns = %{
       video: src,
       opts: video_file_options(data),
@@ -471,6 +470,21 @@ defmodule Brando.Villain.Parser do
     assigns
     |> Brando.Villain.Parser.video_tag()
     |> Phoenix.LiveViewTest.rendered_to_string()
+  end
+
+  # Convert file video to html
+  def video(%{remote_id: src, type: :upload} = data, _) do
+    assigns = %{
+      video: src,
+      opts: video_file_options(data),
+      cover_image: Map.get(data, :cover_image)
+    }
+
+    assigns
+    |> Brando.Villain.Parser.video_tag()
+    |> Phoenix.LiveViewTest.rendered_to_string()
+
+    "!!! TODO: Implement video file upload"
   end
 
   def video(_, _), do: ""
@@ -1058,7 +1072,7 @@ defmodule Brando.Villain.Parser do
   def replace_fragments(html) do
     fragments = Regex.scan(~r/{% fragment (\w+) (\w+) (\w+) %}/, html)
 
-    if Enum.count(fragments) > 0 do
+    if fragments != [] do
       Enum.reduce(fragments, html, fn [_, parent_key, key, language], updated_html ->
         rendered_fragment =
           parent_key
@@ -1074,7 +1088,7 @@ defmodule Brando.Villain.Parser do
 
   def picture_tag(assigns) do
     ~H"""
-    <%= if @src.path do %>
+    <%= if Map.get(@src, :path) do %>
       <div class="picture-wrapper" data-orientation={@orientation}>
         <%= if @link != "" do %>
           <.link href={@link} rel={@rel} target={@target}>
@@ -1284,9 +1298,281 @@ defmodule Brando.Villain.Parser do
   defp process_var(%{key: key, label: _, type: _, value: value}), do: {key, value}
 
   defp process_refs(nil), do: %{}
+
   defp process_refs(refs), do: Enum.map(refs, &process_ref(&1)) |> Enum.into(%{})
 
-  defp process_ref(%{name: ref_name} = ref_block), do: {ref_name, ref_block}
+  defp process_ref(%{name: ref_name} = ref_block) do
+    # Build the processed ref by combining data with referenced entities
+    processed_ref =
+      ref_block
+      |> merge_ref_associations()
+      |> Map.put(:original_ref, ref_block)
+
+    {ref_name, processed_ref}
+  end
+
+  defp merge_ref_associations(%{data: %{type: "picture"}} = ref) do
+    merged_data =
+      case {Map.get(ref, :image), Map.get(ref, :image_id)} do
+        {nil, nil} ->
+          # No image association and no image_id, return the block data as-is
+          ref.data.data
+
+        {nil, image_id} when is_integer(image_id) ->
+          # No image association but we have image_id, load the image
+          case Brando.Images.get_image(image_id) do
+            {:ok, image} ->
+              override_data = Map.from_struct(ref.data.data || %{})
+
+              override_attrs =
+                Map.take(override_data, [
+                  :title,
+                  :credits,
+                  :alt,
+                  :picture_class,
+                  :img_class,
+                  :link,
+                  :srcset,
+                  :media_queries,
+                  :lazyload,
+                  :moonwalk,
+                  :placeholder,
+                  :fetchpriority
+                ])
+
+              struct(image, Map.merge(Map.from_struct(image), override_attrs))
+
+            _ ->
+              ref.data.data
+          end
+
+        {image, _} ->
+          # We have an image, so we should return the image data with overrides
+          # from the block data (like custom title, credits, alt)
+          override_data = Map.from_struct(ref.data.data || %{})
+
+          override_attrs =
+            Map.take(override_data, [
+              :title,
+              :credits,
+              :alt,
+              :picture_class,
+              :img_class,
+              :link,
+              :srcset,
+              :media_queries,
+              :lazyload,
+              :moonwalk,
+              :placeholder,
+              :fetchpriority
+            ])
+
+          # Merge into the image struct while preserving the struct type
+          struct(image, Map.merge(Map.from_struct(image), override_attrs))
+      end
+
+    # Return the ref structure with merged data, including active status
+    %{
+      data: %{data: merged_data, type: "picture"},
+      name: ref.name,
+      description: ref.description,
+      active: Map.get(ref, :active, true),
+      collapsed: Map.get(ref, :collapsed, false)
+    }
+  end
+
+  defp merge_ref_associations(%{data: %{type: "video"}} = ref) do
+    merged_data =
+      case Map.get(ref, :video) do
+        nil ->
+          # No video association, return the block data as-is
+          ref.data.data
+
+        video ->
+          # We have a video, so we should return the video data with overrides
+          # from the block data
+          override_data = Map.from_struct(ref.data.data || %{})
+
+          override_attrs =
+            Map.take(override_data, [
+              :title,
+              :poster,
+              :autoplay,
+              :opacity,
+              :preload,
+              :play_button,
+              :controls,
+              :cover,
+              :aspect_ratio,
+              :cover_image
+            ])
+
+          # Merge into the video struct while preserving the struct type
+          struct(video, Map.merge(Map.from_struct(video), override_attrs))
+      end
+
+    # Return the ref structure with merged data, including active status
+    %{
+      data: %{data: merged_data, type: "video"},
+      name: ref.name,
+      description: ref.description,
+      active: Map.get(ref, :active, true),
+      collapsed: Map.get(ref, :collapsed, false)
+    }
+  end
+
+  defp merge_ref_associations(%{data: %{type: "gallery"}} = ref) do
+    merged_data =
+      case Map.get(ref, :gallery) do
+        nil ->
+          ref.data.data
+
+        gallery ->
+          # For galleries, expose the gallery association with override data
+          override_data = Map.from_struct(ref.data.data || %{})
+
+          # Apply caption overrides to gallery objects
+          # TODO: Consider caching this merge operation for large galleries with many objects
+          updated_gallery = apply_gallery_caption_overrides(gallery, override_data)
+
+          # Return the block data with the updated gallery association
+          struct(ref.data.data.__struct__, Map.put(override_data, :gallery, updated_gallery))
+      end
+
+    # Return the ref structure with merged data, including active status
+    %{
+      data: %{data: merged_data, type: "gallery"},
+      gallery: ref.gallery,
+      name: ref.name,
+      description: ref.description,
+      active: Map.get(ref, :active, true),
+      collapsed: Map.get(ref, :collapsed, false)
+    }
+  end
+
+  # Handle all other ref types (text, html, svg, etc.)
+  defp merge_ref_associations(%{data: %{type: _type} = data} = ref) do
+    # Return the ref structure with data, including active status
+    %{
+      data: data,
+      name: ref.name,
+      description: ref.description,
+      active: Map.get(ref, :active, true),
+      collapsed: Map.get(ref, :collapsed, false)
+    }
+  end
+
+  defp merge_ref_associations(ref) do
+    # Fallback for refs without proper data structure, including active status
+    %{
+      data: Map.get(ref, :data, %{}),
+      name: Map.get(ref, :name),
+      description: Map.get(ref, :description),
+      active: Map.get(ref, :active, true),
+      collapsed: Map.get(ref, :collapsed, false)
+    }
+  end
+
+  defp apply_gallery_caption_overrides(gallery, override_data) do
+    gallery_object_overrides = Map.get(override_data, :gallery_object_overrides, [])
+
+    # If no overrides, return gallery as-is
+    if Enum.empty?(gallery_object_overrides) do
+      gallery
+    else
+      # Build a map for quick lookup
+      overrides_map =
+        Enum.reduce(gallery_object_overrides, %{}, fn override, acc ->
+          Map.put(acc, override.object_id, override)
+        end)
+
+      # Update gallery_objects with caption overrides
+      updated_gallery_objects =
+        Enum.map(gallery.gallery_objects, fn gallery_object ->
+          image = get_loaded_assoc(gallery_object, :image)
+          video = get_loaded_assoc(gallery_object, :video)
+
+          # Get the media object ID (image or video)
+          media_id =
+            cond do
+              image -> to_string(image.id)
+              video -> to_string(video.id)
+              true -> nil
+            end
+
+          # Get override for this specific object
+          object_override = Map.get(overrides_map, media_id)
+
+          # Apply overrides to the media object (image or video)
+          updated_gallery_object =
+            cond do
+              image && object_override ->
+                updated_image = apply_caption_overrides(image, object_override)
+                %{gallery_object | image: updated_image}
+
+              video && object_override ->
+                updated_video = apply_caption_overrides(video, object_override)
+                %{gallery_object | video: updated_video}
+
+              true ->
+                gallery_object
+            end
+
+          updated_gallery_object
+        end)
+
+      %{gallery | gallery_objects: updated_gallery_objects}
+    end
+  end
+
+  defp get_loaded_assoc(gallery_object, :image) do
+    with %Ecto.Association.NotLoaded{} <- Map.get(gallery_object, :image),
+         image_id when not is_nil(image_id) <- Map.get(gallery_object, :image_id),
+         {:ok, image} <- Brando.Images.get_image(image_id) do
+      image
+    else
+      %Brando.Images.Image{} = image -> image
+      _ -> nil
+    end
+  end
+
+  defp get_loaded_assoc(gallery_object, :video) do
+    with %Ecto.Association.NotLoaded{} <- Map.get(gallery_object, :video),
+         video_id when not is_nil(video_id) <- Map.get(gallery_object, :video_id),
+         {:ok, video} <- Brando.Videos.get_video(video_id) do
+      video
+    else
+      %Brando.Videos.Video{} = video -> video
+      _ -> nil
+    end
+  end
+
+  defp apply_caption_overrides(media_object, override) do
+    media_object
+    |> maybe_apply_override(:title, override.title, override.use_default_title)
+    |> maybe_apply_override(:credits, override.credits, override.use_default_credits)
+    |> maybe_apply_override(:alt, override.alt, override.use_default_alt)
+  end
+
+  defp maybe_apply_override(media_object, field, value, use_default) do
+    cond do
+      # Use default value from the media object
+      use_default ->
+        media_object
+
+      # Set to empty string (no caption)
+      is_nil(value) ->
+        Map.put(media_object, field, "")
+
+      # Use custom override value
+      is_binary(value) ->
+        Map.put(media_object, field, value)
+
+      # Fallback
+      true ->
+        media_object
+    end
+  end
 
   defp add_vars_to_context(context, vars),
     do: Enum.reduce(vars, context, fn {k, v}, acc -> Context.assign(acc, k, v) end)

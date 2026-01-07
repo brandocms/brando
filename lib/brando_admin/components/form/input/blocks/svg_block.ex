@@ -28,14 +28,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:uid, assigns.block[:uid].value)}
+     |> assign(:uid, assigns.ref_form[:uid].value)}
   end
 
   def render(assigns) do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <Block.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+        <Block.block
+          id={"block-#{@uid}-base"}
+          block={@block}
+          is_ref?={true}
+          multi={false}
+          target={@target}
+          ref_form={@ref_form}
+        >
           <:description>
             <%= if @ref_description not in ["", nil] do %>
               {@ref_description}

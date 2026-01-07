@@ -28,6 +28,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     block_cs = Changeset.get_assoc(changeset, :block)
     vars = Changeset.get_assoc(block_cs, :vars, :struct)
     table_rows = Changeset.get_assoc(block_cs, :table_rows, :struct)
+    refs = Changeset.get_assoc(block_cs, :refs, :struct)
     children = Changeset.get_assoc(block_cs, :children, :struct)
 
     block_list = socket.assigns.block_list
@@ -48,15 +49,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         creator_id: current_user_id,
         children: [],
         vars: [],
-        table_rows: []
+        table_rows: [],
+        refs: []
       })
       |> Changeset.change()
       |> Villain.duplicate_vars(vars, current_user_id)
       |> Villain.duplicate_table_rows(table_rows)
-      |> Villain.add_uid_to_refs()
-      |> Changeset.update_change(:refs, fn ref_changesets ->
-        Enum.reject(ref_changesets, &(&1.action == :replace))
-      end)
+      |> Villain.duplicate_refs(refs, current_user_id)
       |> Villain.duplicate_children(children, current_user_id)
       |> Map.put(:action, :insert)
 
@@ -122,6 +121,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       # the block has no children, duplicate it right away.
       vars = Changeset.get_assoc(block_cs, :vars, :struct)
       table_rows = Changeset.get_assoc(block_cs, :table_rows, :struct)
+      refs = Changeset.get_assoc(block_cs, :refs, :struct)
 
       updated_block_cs =
         block_cs
@@ -133,15 +133,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           creator_id: current_user_id,
           children: [],
           vars: [],
-          table_rows: []
+          table_rows: [],
+          refs: []
         })
         |> Changeset.change()
         |> Villain.duplicate_vars(vars, current_user_id)
         |> Villain.duplicate_table_rows(table_rows)
-        |> Villain.add_uid_to_refs()
-        |> Changeset.update_change(:refs, fn ref_changesets ->
-          Enum.reject(ref_changesets, &(&1.action == :replace))
-        end)
+        |> Villain.duplicate_refs(refs, current_user_id)
         |> Map.put(:action, :insert)
 
       entry_block_cs =
@@ -697,15 +695,29 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def build_block(module_id, user_id, parent_id, source, type) do
     module = get_module(module_id)
-    refs_with_generated_uids = Brando.Villain.add_uid_to_refs(module.refs)
-    vars_without_pk = Brando.Villain.remove_pk_from_vars(module.vars)
+    # Generate fresh refs with new UIDs when creating blocks from modules
+    fresh_refs =
+      (module.refs || [])
+      |> Brando.Villain.remove_pk_from_refs()
+      |> Enum.map(&Map.put(&1, :uid, Brando.Utils.generate_uid()))
 
-    var_changesets =
-      Enum.map(vars_without_pk, &(&1 |> Changeset.change(%{}) |> Map.put(:action, :insert)))
+    cleaned_vars = Brando.Villain.remove_pk_from_vars(module.vars)
 
-    Changeset.change(
-      %Brando.Content.Block{},
-      %{
+    # Create clean ref structs
+    cleaned_refs =
+      Enum.map(fresh_refs, fn ref ->
+        %Brando.Content.Ref{
+          name: ref.name,
+          description: ref.description,
+          data: ref.data,
+          sequence: ref.sequence,
+          uid: ref.uid
+        }
+      end)
+
+    block_changeset =
+      %Brando.Content.Block{}
+      |> Changeset.change(%{
         uid: Brando.Utils.generate_uid(),
         type: type,
         creator_id: user_id,
@@ -715,11 +727,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         source: source,
         children: [],
         block_identifiers: [],
-        table_rows: [],
-        vars: var_changesets,
-        refs: refs_with_generated_uids
-      }
-    )
+        table_rows: []
+      })
+      |> Changeset.put_assoc(:vars, cleaned_vars)
+      |> Changeset.put_assoc(:refs, cleaned_refs)
+      |> Map.put(:action, :insert)
+
+    block_changeset
   end
 
   def build_fragment(user_id, parent_id, source) do
@@ -749,12 +763,20 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       creator_id: user_id,
       parent_id: parent_id,
       source: source,
-      children: []
+      children: [],
+      table_rows: [],
+      vars: [],
+      refs: []
     })
   end
 
   defp get_module(module_id) do
-    modules = Brando.Content.list_modules!(%{cache: {:ttl, :infinite}, preload: [:vars]})
+    modules =
+      Brando.Content.list_modules!(%{
+        cache: {:ttl, :infinite},
+        preload: [:vars, refs: Brando.Content.Ref.preloads()]
+      })
+
     Enum.find(modules, &(&1.id == module_id))
   end
 

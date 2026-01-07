@@ -13,7 +13,6 @@ defmodule BrandoAdmin.Components.Form.Block do
   alias BrandoAdmin.Components.Form.Input.Entries
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.Form.Block.Events
-  alias Brando.Content.BlockIdentifier
   alias Brando.Content.Var
   alias Brando.Villain
 
@@ -46,6 +45,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     children = Ecto.Changeset.get_assoc(block_cs, :children, :struct)
     vars = Ecto.Changeset.get_assoc(block_cs, :vars, :struct)
     table_rows = Ecto.Changeset.get_assoc(block_cs, :table_rows, :struct)
+    refs = Ecto.Changeset.get_assoc(block_cs, :refs, :struct)
 
     updated_block_cs =
       block_cs
@@ -58,15 +58,13 @@ defmodule BrandoAdmin.Components.Form.Block do
         creator_id: current_user_id,
         children: [],
         vars: [],
-        table_rows: []
+        table_rows: [],
+        refs: []
       })
       |> Changeset.change()
       |> Villain.duplicate_vars(vars, current_user_id)
       |> Villain.duplicate_table_rows(table_rows)
-      |> Villain.add_uid_to_refs()
-      |> Changeset.update_change(:refs, fn ref_changesets ->
-        Enum.reject(ref_changesets, &(&1.action == :replace))
-      end)
+      |> Villain.duplicate_refs(refs, current_user_id)
       |> Villain.duplicate_children(children, current_user_id)
 
     # insert the new block uid into the block_list
@@ -308,6 +306,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
     |> assign(:live_preview_active?, true)
     |> assign(:live_preview_cache_key, cache_key)
+    |> maybe_render_module()
     |> then(&{:ok, &1})
   end
 
@@ -664,7 +663,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     entry = socket.assigns.entry
 
     block_changeset = get_block_changeset(changeset, belongs_to)
-    refs = Ecto.Changeset.get_embed(block_changeset, :refs)
+    refs = Ecto.Changeset.get_assoc(block_changeset, :refs)
 
     new_refs =
       Enum.reduce(refs, [], fn
@@ -672,8 +671,19 @@ defmodule BrandoAdmin.Components.Form.Block do
           acc
 
         old_ref, acc ->
-          if Changeset.get_field(old_ref, :name) == ref.name do
-            acc ++ List.wrap(ref)
+          old_ref_name = Changeset.get_field(old_ref, :name)
+
+          if old_ref_name == ref.name do
+            # Update the existing changeset with new data
+            updated_ref_changeset =
+              old_ref
+              |> Changeset.change(%{
+                uid: ref.uid,
+                description: ref.description || Changeset.get_field(old_ref, :description)
+              })
+              |> Changeset.force_change(:data, ref.data)
+
+            acc ++ List.wrap(updated_ref_changeset)
           else
             acc ++ List.wrap(old_ref)
           end
@@ -682,11 +692,11 @@ defmodule BrandoAdmin.Components.Form.Block do
     updated_changeset =
       if belongs_to == :root do
         block_changeset = Changeset.get_assoc(changeset, :block)
-        updated_block_changeset = Changeset.put_embed(block_changeset, :refs, new_refs)
+        updated_block_changeset = Changeset.put_assoc(block_changeset, :refs, new_refs)
         changeset = Changeset.put_assoc(changeset, :block, updated_block_changeset)
         render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?)
       else
-        changeset = Changeset.put_embed(changeset, :refs, new_refs)
+        changeset = Changeset.put_assoc(changeset, :refs, new_refs)
         render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)
       end
 
@@ -704,7 +714,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
-  def update(%{event: "update_ref_data", ref_name: ref_name, ref_data: ref_data}, socket) do
+  def update(%{event: "update_ref_data", ref_name: ref_name, ref_data: ref_data} = params, socket) do
+    force_render? = Map.get(params, :force_render, false)
     form = socket.assigns.form
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
@@ -714,7 +725,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     entry = socket.assigns.entry
 
     block_changeset = get_block_changeset(changeset, belongs_to)
-    refs = Changeset.get_embed(block_changeset, :refs)
+    refs = Changeset.get_assoc(block_changeset, :refs)
 
     new_refs =
       Enum.reduce(refs, [], fn
@@ -723,6 +734,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
         ref, acc ->
           if Changeset.get_field(ref, :name) == ref_name do
+            # Update the block data
             block =
               ref
               |> Changeset.get_field(:data)
@@ -731,7 +743,103 @@ defmodule BrandoAdmin.Components.Form.Block do
             updated_block =
               Changeset.put_embed(block, :data, ref_data)
 
-            acc ++ List.wrap(Changeset.force_change(ref, :data, updated_block))
+            # Update the ref with block data
+            updated_ref = Changeset.force_change(ref, :data, updated_block)
+
+            # Handle video_data if provided (creates/updates video association)
+            updated_ref =
+              if Map.has_key?(params, :video_data) do
+                video_data = params.video_data
+                current_user_id = socket.assigns.current_user_id
+
+                case Brando.Videos.create_video(video_data, current_user_id) do
+                  {:ok, video} ->
+                    updated_ref
+                    |> Changeset.put_change(:video_id, video.id)
+                    |> Map.put(:data, Map.put(updated_ref.data, :video, nil))
+
+                  {:error, _} ->
+                    updated_ref
+                end
+              else
+                updated_ref
+              end
+
+            # Also update media associations if provided (including nil values)
+            updated_ref =
+              updated_ref
+              |> put_change_if_key_exists(:image_id, params)
+              |> put_change_if_key_exists(:video_id, params)
+              |> put_change_if_key_exists(:gallery_id, params)
+              |> put_change_if_key_exists(:file_id, params)
+              |> clear_preloaded_associations(params)
+
+            # Handle adding image to gallery association
+            {updated_ref, updated_block} =
+              if Map.has_key?(params, :add_gallery_image_id) do
+                current_user = %{id: socket.assigns.current_user_id}
+                updated_ref = add_image_to_gallery_ref(updated_ref, params.add_gallery_image_id, current_user)
+                # Also add override for the new image
+                updated_block = add_gallery_image_override(updated_block, params.add_gallery_image_id)
+                {updated_ref, updated_block}
+              else
+                {updated_ref, updated_block}
+              end
+
+            # Handle removing image from gallery association
+            {updated_ref, updated_block} =
+              if Map.has_key?(params, :remove_gallery_image_id) do
+                updated_ref = remove_image_from_gallery_ref(updated_ref, params.remove_gallery_image_id)
+                # Also remove override for the removed image
+                updated_block = remove_gallery_image_override(updated_block, params.remove_gallery_image_id)
+                {updated_ref, updated_block}
+              else
+                {updated_ref, updated_block}
+              end
+
+            # Handle removing gallery object by index
+            {updated_ref, updated_block} =
+              if Map.has_key?(params, :remove_gallery_object_index) do
+                # Get the object at the index to find its image/video ID for override removal
+                current_gallery = Changeset.get_field(updated_ref, :gallery)
+                gallery_objects = (current_gallery && current_gallery.gallery_objects) || []
+                removed_object = Enum.at(gallery_objects, params.remove_gallery_object_index)
+
+                updated_ref = remove_gallery_object_from_ref_by_index(updated_ref, params.remove_gallery_object_index)
+
+                # Remove override for the removed object's image/video ID
+                updated_block =
+                  if removed_object do
+                    media_id = removed_object.image_id || removed_object.video_id
+
+                    if media_id do
+                      remove_gallery_object_override(updated_block, media_id)
+                    else
+                      updated_block
+                    end
+                  else
+                    updated_block
+                  end
+
+                {updated_ref, updated_block}
+              else
+                {updated_ref, updated_block}
+              end
+
+            # Handle reordering gallery objects
+            {updated_ref, updated_block} =
+              if Map.has_key?(params, :reorder_gallery_objects) do
+                {old_idx, new_idx} = params.reorder_gallery_objects
+                updated_ref = reorder_gallery_objects_in_ref(updated_ref, old_idx, new_idx)
+                {updated_ref, updated_block}
+              else
+                {updated_ref, updated_block}
+              end
+
+            # Update the ref with the modified block data
+            updated_ref = Changeset.force_change(updated_ref, :data, updated_block)
+
+            acc ++ List.wrap(updated_ref)
           else
             acc ++ List.wrap(ref)
           end
@@ -740,12 +848,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     updated_changeset =
       if belongs_to == :root do
         block_changeset = Changeset.get_assoc(changeset, :block)
-        updated_block_changeset = Changeset.put_embed(block_changeset, :refs, new_refs)
+        updated_block_changeset = Changeset.put_assoc(block_changeset, :refs, new_refs)
         changeset = Changeset.put_assoc(changeset, :block, updated_block_changeset)
-        render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?)
+        render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render?)
       else
-        changeset = Changeset.put_embed(changeset, :refs, new_refs)
-        render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)
+        changeset = Changeset.put_assoc(changeset, :refs, new_refs)
+        render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render?)
       end
 
     new_form =
@@ -798,7 +906,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     end)
     |> assign_new(:has_table_rows?, fn ->
       try do
-        Changeset.get_assoc(block_cs, :table_rows) != []
+        case Changeset.get_assoc(block_cs, :table_rows) do
+          %Ecto.Association.NotLoaded{} -> false
+          nil -> false
+          [] -> false
+          _rows -> true
+        end
       rescue
         _ -> false
       end
@@ -823,6 +936,14 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:fragment_id, fn -> Changeset.get_field(block_cs, :fragment_id) end)
     |> assign_new(:has_children?, fn -> assigns.children !== [] end)
     |> assign_new(:available_identifiers, fn -> [] end)
+    |> assign_new(:original_block_identifiers, fn ->
+      # Store original block_identifiers from database for restoring IDs when re-adding
+      case block_cs.data.block_identifiers do
+        %Ecto.Association.NotLoaded{} -> []
+        nil -> []
+        identifiers -> identifiers
+      end
+    end)
     |> assign_new(:module_picker_id, fn ->
       "#block-field-#{assigns.block_field}-module-picker"
     end)
@@ -1110,7 +1231,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             {:ok, table_template} =
               Brando.Content.get_table_template(%{
                 matches: %{id: table_template_id},
-                preload: [:vars]
+                preload: [vars: [:file, :image, :palette, :identifier, :menu_item]]
               })
 
             table_template
@@ -2279,7 +2400,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :target, :any, required: true
 
   def ref(assigns) do
-    refs = Changeset.get_embed(assigns.refs_field.form.source, :refs, :struct)
+    refs = Changeset.get_assoc(assigns.refs_field.form.source, :refs, :struct)
     ref_names = Enum.map(refs, & &1.name)
     ref_found = Enum.member?(ref_names, assigns.ref_name)
 
@@ -2292,22 +2413,30 @@ defmodule BrandoAdmin.Components.Form.Block do
     <%= if @ref_found do %>
       <.inputs_for :let={ref_form} field={@refs_field} skip_hidden>
         <%= if ref_form[:name].value == @ref_name do %>
-          <section b-ref={ref_form[:name].value}>
+          <section b-ref={ref_form[:name].value} id={"block_ref-#{ref_form[:uid].value}"}>
             <.polymorphic_embed_inputs_for :let={block} field={ref_form[:data]}>
               <.dynamic_block
-                id={block[:uid].value}
-                block_id={block[:uid].value}
+                id={"#{ref_form[:uid].value}-#{block[:type].value}"}
+                block_id={ref_form[:uid].value}
                 is_ref?={true}
                 ref_name={ref_form[:name].value}
                 ref_description={ref_form[:description].value}
+                ref_form={ref_form}
                 block={block}
                 parent_uploads={@parent_uploads}
                 target={@target}
               />
             </.polymorphic_embed_inputs_for>
+            <!-- ref assocs -->
             <Input.input type={:hidden} field={ref_form[:description]} />
             <Input.input type={:hidden} field={ref_form[:name]} />
+            <Input.input type={:hidden} field={ref_form[:uid]} />
             <Input.input type={:hidden} field={ref_form[:id]} />
+            <Input.input type={:hidden} field={ref_form[:_persistent_id]} value={ref_form.index} />
+            <Input.input type={:hidden} field={ref_form[:image_id]} />
+            <Input.input type={:hidden} field={ref_form[:video_id]} />
+            <Input.input type={:hidden} field={ref_form[:gallery_id]} />
+            <Input.input type={:hidden} field={ref_form[:file_id]} />
           </section>
         <% end %>
       </.inputs_for>
@@ -2342,9 +2471,29 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> assign_new(:opts, fn -> [] end)
       |> assign_new(:ref_name, fn -> nil end)
       |> assign_new(:ref_description, fn -> nil end)
-      |> assign_new(:block_id, fn -> assigns.block[:uid].value end)
+      |> assign_new(:ref_form, fn -> nil end)
+      |> assign_new(:block_id, fn ->
+        if assigns[:is_ref?] && assigns[:ref_form] do
+          assigns.ref_form[:uid].value
+        else
+          assigns.block[:uid].value
+        end
+      end)
       |> assign_new(:component_target, fn ->
-        type_atom = String.to_existing_atom(assigns.block[:type].value)
+        require Logger
+        # When dealing with polymorphic embeds (like refs), after form validation
+        # the type field might not reflect the actual data type. Check the actual
+        # block data type first if it exists.
+        type_value =
+          if assigns.block.source && assigns.block.source.data && Map.has_key?(assigns.block.source.data, :type) do
+            # If we have actual changeset data with a type, use that (most reliable)
+            assigns.block.source.data.type
+          else
+            # Otherwise fall back to the form field value
+            assigns.block[:type].value
+          end
+
+        type_atom = String.to_existing_atom(type_value)
 
         block_type =
           (type_atom
@@ -2354,8 +2503,11 @@ defmodule BrandoAdmin.Components.Form.Block do
         block_module = Module.concat([Blocks, block_type])
 
         case Code.ensure_compiled(block_module) do
-          {:module, _} -> block_module
-          _ -> Function.capture(__MODULE__, type_atom, 1)
+          {:module, _} ->
+            block_module
+
+          _ ->
+            Function.capture(__MODULE__, type_atom, 1)
         end
       end)
 
@@ -2387,13 +2539,14 @@ defmodule BrandoAdmin.Components.Form.Block do
     <% else %>
       <.live_component
         module={@component_target}
-        id={@block_id}
+        id={@id}
         block={@block}
         is_ref?={@is_ref?}
         opts={@opts}
         belongs_to={@belongs_to}
         ref_name={@ref_name}
         ref_description={@ref_description}
+        ref_form={@ref_form}
         insert_module={@insert_module}
         duplicate_block={@duplicate_block}
         parent_uploads={@parent_uploads}
@@ -2412,6 +2565,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :block_type, :any
   attr :is_datasource?, :boolean, default: false
   attr :is_ref?, :boolean, default: false
+  attr :ref_form, :any, default: nil
   attr :datasource, :any
   attr :bg_color, :string, default: nil
   attr :uid, :any
@@ -2424,7 +2578,23 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def block(assigns) do
     block_cs = assigns.block.source
-    uid = Changeset.get_field(block_cs, :uid) || Brando.Utils.generate_uid()
+
+    # For refs, use the ref's UID to ensure modal targets match
+    uid =
+      if assigns[:is_ref?] && assigns[:ref_form] do
+        assigns.ref_form[:uid].value
+      else
+        Changeset.get_field(block_cs, :uid) || Brando.Utils.generate_uid()
+      end
+
+    # For refs, get active and collapsed from ref_form, otherwise from block
+    {active, collapsed} =
+      if assigns[:is_ref?] && assigns[:ref_form] do
+        ref_cs = assigns.ref_form.source
+        {Changeset.get_field(ref_cs, :active), Changeset.get_field(ref_cs, :collapsed)}
+      else
+        {Changeset.get_field(block_cs, :active), Changeset.get_field(block_cs, :collapsed)}
+      end
 
     assigns =
       assigns
@@ -2432,8 +2602,8 @@ defmodule BrandoAdmin.Components.Form.Block do
         Changeset.get_field(block_cs, :type) || (assigns.is_entry? && "entry")
       end)
       |> assign(:uid, uid)
-      |> assign(:active, Changeset.get_field(block_cs, :active))
-      |> assign(:collapsed, Changeset.get_field(block_cs, :collapsed))
+      |> assign(:active, active)
+      |> assign(:collapsed, collapsed)
       |> assign(:marked_as_deleted, Changeset.get_field(block_cs, :marked_as_deleted))
 
     ~H"""
@@ -2478,6 +2648,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           config={@config}
           type={@block_type}
           block={@block}
+          ref_form={@ref_form}
           target={@target}
           multi={@multi}
           is_ref?={@is_ref?}
@@ -2500,12 +2671,19 @@ defmodule BrandoAdmin.Components.Form.Block do
   ## Ref blocks
 
   def html(assigns) do
-    assigns = assign(assigns, :uid, assigns.block[:uid].value)
+    uid =
+      if assigns[:ref_form] do
+        assigns.ref_form[:uid].value
+      else
+        assigns.block[:uid].value
+      end
+
+    assigns = assign(assigns, :uid, uid)
 
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
           <:description>
             <%= if @ref_description not in ["", nil] do %>
               {@ref_description}
@@ -2521,12 +2699,19 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def markdown(assigns) do
-    assigns = assign(assigns, :uid, assigns.block[:uid].value)
+    uid =
+      if assigns[:ref_form] do
+        assigns.ref_form[:uid].value
+      else
+        assigns.block[:uid].value
+      end
+
+    assigns = assign(assigns, :uid, uid)
 
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
           <:description>
             <%= if @ref_description not in ["", nil] do %>
               {@ref_description}
@@ -2544,15 +2729,22 @@ defmodule BrandoAdmin.Components.Form.Block do
   def comment(assigns) do
     block_data_cs = get_block_data_changeset(assigns.block)
 
+    uid =
+      if assigns[:ref_form] do
+        assigns.ref_form[:uid].value
+      else
+        assigns.block[:uid].value
+      end
+
     assigns =
       assigns
-      |> assign(:uid, assigns.block[:uid].value)
+      |> assign(:uid, uid)
       |> assign(:text, Changeset.get_field(block_data_cs, :text))
 
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
           <:description>
             {gettext("Comment — not shown on frontend.")}
           </:description>
@@ -2573,12 +2765,19 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def input(assigns) do
-    assigns = assign(assigns, :uid, assigns.block[:uid].value)
+    uid =
+      if assigns[:ref_form] do
+        assigns.ref_form[:uid].value
+      else
+        assigns.block[:uid].value
+      end
+
+    assigns = assign(assigns, :uid, uid)
 
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
           <:description>
             <%= if @ref_description not in ["", nil] do %>
               {@ref_description}
@@ -2603,12 +2802,19 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def header(assigns) do
-    assigns = assign(assigns, :uid, assigns.block[:uid].value)
+    uid =
+      if assigns[:ref_form] do
+        assigns.ref_form[:uid].value
+      else
+        assigns.block[:uid].value
+      end
+
+    assigns = assign(assigns, :uid, uid)
 
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
           <:description>
             (H{block_data[:level].value})<%= if @ref_description do %>
               {@ref_description}
@@ -2664,16 +2870,23 @@ defmodule BrandoAdmin.Components.Form.Block do
         extensions -> extensions
       end
 
+    uid =
+      if assigns[:ref_form] do
+        assigns.ref_form[:uid].value
+      else
+        assigns.block[:uid].value
+      end
+
     assigns =
       assigns
-      |> assign(:uid, assigns.block[:uid].value)
+      |> assign(:uid, uid)
       |> assign(:text_type, Changeset.get_field(block_data_cs, :type))
       |> assign(:extensions, extensions)
 
     ~H"""
     <.inputs_for :let={text_block_data} field={@block[:data]}>
       <div id={"ref-#{@uid}-wrapper"} data-block-uid={@uid}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} multi={false} target={@target}>
+        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
           <:description>
             <%= if @ref_description not in [nil, ""] do %>
               {@ref_description}
@@ -2769,10 +2982,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             render={(@important && :only_important) || :only_regular}
             on_change={fn params -> send_update(@target, params) end}
             publish
-          >
-            <input type="hidden" name={var[:id].name} value={var[:id].value} />
-            <input type="hidden" name={var[:_persistent_id].name} value={var.index} />
-          </.live_component>
+          />
         </.inputs_for>
       </div>
     </div>
@@ -2791,6 +3001,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :config, :boolean, default: false
   attr :multi, :boolean, default: false
   attr :is_ref?, :boolean, default: false
+  attr :ref_form, :any, default: nil
   attr :palette, :any, default: nil
   attr :container, :any, default: nil
   attr :module_datasource_module_label, :string, default: nil
@@ -2802,11 +3013,22 @@ defmodule BrandoAdmin.Components.Form.Block do
   slot :description
 
   def toolbar(assigns) do
+    # Use ref_form fields when it's a ref, otherwise use block fields
+    active_field = if assigns.is_ref? && assigns.ref_form, do: assigns.ref_form[:active], else: assigns.block[:active]
+
+    collapsed_field =
+      if assigns.is_ref? && assigns.ref_form, do: assigns.ref_form[:collapsed], else: assigns.block[:collapsed]
+
+    assigns =
+      assigns
+      |> assign(:active_field, active_field)
+      |> assign(:collapsed_field, collapsed_field)
+
     ~H"""
     <div class="block-toolbar">
       <div class="block-description">
-        <Form.label field={@block[:active]} class="switch small inverse">
-          <Input.input type={:checkbox} field={@block[:active]} />
+        <Form.label field={@active_field} class="switch small inverse">
+          <Input.input type={:checkbox} field={@active_field} />
           <div class="slider round"></div>
         </Form.label>
         <span class="block-type">
@@ -2827,7 +3049,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           </span>
         </span>
         <span :if={@description} class="block-name">
-          {render_slot(@description)}<span :if={@block[:active].value in [false, "false"]}> &lt;{gettext("Deactivated")}&gt;</span>
+          {render_slot(@description)}<span :if={@active_field.value in [false, "false"]}> &lt;{gettext("Deactivated")}&gt;</span>
         </span>
         <%= if @type == :container do %>
           <%= if @container do %>
@@ -2911,13 +3133,13 @@ defmodule BrandoAdmin.Components.Form.Block do
           <.icon name="hero-trash" />
         </button>
         <Form.label
-          field={@block[:collapsed]}
+          field={@collapsed_field}
           class="block-action toggler"
           popover={gettext("Collapse (hide) block in block editor")}
         >
           <.icon :if={@collapsed} name="hero-eye-slash" />
           <.icon :if={!@collapsed} name="hero-eye" />
-          <Input.input type={:checkbox} field={@block[:collapsed]} />
+          <Input.input type={:checkbox} field={@collapsed_field} />
         </Form.label>
 
         <div
@@ -2966,10 +3188,15 @@ defmodule BrandoAdmin.Components.Form.Block do
               {gettext("This block implements tabular data, but the table is empty.")}<br />
               {gettext("Click the 'add row' button below to get started.")}
             </p>
-            <button type="button" class="tiny" phx-click="add_table_row" phx-target={@target}>
+            <button
+              type="button"
+              class="tiny add-table-row"
+              phx-click="add_table_row"
+              phx-target={@target}
+              data-testid="add-table-row"
+            >
               {gettext("Add row")}
             </button>
-            <input type="hidden" name={@block_data[:table_rows].name} value={[]} />
           </div>
         <% else %>
           <div
@@ -3014,11 +3241,27 @@ defmodule BrandoAdmin.Components.Form.Block do
                 </.inputs_for>
               </div>
               <div class="insert-row">
-                <button type="button" class="tiny" phx-click="add_table_row" phx-target={@target}>
+                <button
+                  type="button"
+                  class="tiny add-table-row"
+                  phx-click="add_table_row"
+                  phx-target={@target}
+                >
                   {gettext("Add row")}
                 </button>
               </div>
             </.inputs_for>
+            <div class="add-row">
+              <button
+                type="button"
+                class="tiny add-table-row"
+                phx-click="add_table_row"
+                phx-target={@target}
+                data-testid="add-table-row"
+              >
+                {gettext("Add row")}
+              </button>
+            </div>
             <input type="hidden" name={"#{@block_data.name}[drop_table_row_ids][]"} />
           </div>
         <% end %>
@@ -3102,6 +3345,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                     name={"#{@block_identifiers.form.name}[drop_block_identifier_ids][]"}
                     value={block_identifier.index}
                     phx-click={JS.dispatch("change")}
+                    data-sortable-filter
                   >
                     <.icon name="hero-x-circle" />
                   </button>
@@ -3299,7 +3543,10 @@ defmodule BrandoAdmin.Components.Form.Block do
   def get_module(id) do
     {:ok, modules} =
       Brando.Content.list_modules(%{
-        preload: [{:vars, {Var, [asc: :sequence]}}],
+        preload: [
+          {:vars, {Var, [asc: :sequence]}},
+          refs: Brando.Content.Ref.preloads()
+        ],
         cache: {:ttl, :infinite}
       })
 
@@ -3328,8 +3575,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     Changeset.put_assoc(changeset, :block, updated_block_changeset)
   end
 
-  def render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?) do
-    rendered_html = render_block_html(changeset, entry, has_vars?, has_table_rows?, false, true)
+  def render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render? \\ false) do
+    skip_children = if force_render?, do: :force_render, else: true
+    rendered_html = render_block_html(changeset, entry, has_vars?, has_table_rows?, false, skip_children)
 
     changeset
     |> Changeset.put_change(:rendered_html, rendered_html)
@@ -3341,11 +3589,102 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> Brando.Utils.apply_changes_recursively()
     |> reset_empty_vars(has_vars?, is_root)
     |> reset_table_rows(has_table_rows?, is_root)
+    |> ensure_gallery_associations_loaded(is_root)
     |> Brando.Villain.render_block(entry,
       skip_children: skip_children,
       format_html: true,
       annotate_blocks: true
     )
+  end
+
+  # Ensure gallery objects have their image/video associations loaded for live preview
+  # This only modifies the struct for rendering - never touches the persistence changeset
+  defp ensure_gallery_associations_loaded(block, true) do
+    case get_in(block, [Access.key(:block), Access.key(:refs)]) do
+      nil ->
+        block
+
+      %Ecto.Association.NotLoaded{} ->
+        block
+
+      refs when is_list(refs) ->
+        put_in(block, [Access.key(:block), Access.key(:refs)], load_galleries_in_refs(refs))
+
+      _ ->
+        block
+    end
+  end
+
+  defp ensure_gallery_associations_loaded(block, false) do
+    case Map.get(block, :refs) do
+      nil -> block
+      %Ecto.Association.NotLoaded{} -> block
+      refs when is_list(refs) -> Map.put(block, :refs, load_galleries_in_refs(refs))
+      _ -> block
+    end
+  end
+
+  defp load_galleries_in_refs(refs) do
+    Enum.map(refs, fn ref ->
+      case Map.get(ref, :gallery) do
+        nil -> ref
+        %Ecto.Association.NotLoaded{} -> ref
+        gallery -> Map.put(ref, :gallery, load_gallery_objects(gallery))
+      end
+    end)
+  end
+
+  defp load_gallery_objects(gallery) do
+    case Map.get(gallery, :gallery_objects) do
+      nil -> gallery
+      %Ecto.Association.NotLoaded{} -> gallery
+      objects when is_list(objects) -> Map.put(gallery, :gallery_objects, Enum.map(objects, &load_media/1))
+      _ -> gallery
+    end
+  end
+
+  defp load_media(obj) do
+    obj
+    |> maybe_load_image()
+    |> maybe_load_video()
+  end
+
+  defp maybe_load_image(obj) do
+    case {Map.get(obj, :image_id), Map.get(obj, :image)} do
+      {nil, _} ->
+        obj
+
+      {_, %{id: _}} ->
+        obj
+
+      {_, %Brando.Images.Image{}} ->
+        obj
+
+      {image_id, _} ->
+        case Brando.Images.get_image(image_id) do
+          {:ok, image} -> Map.put(obj, :image, image)
+          _ -> obj
+        end
+    end
+  end
+
+  defp maybe_load_video(obj) do
+    case {Map.get(obj, :video_id), Map.get(obj, :video)} do
+      {nil, _} ->
+        obj
+
+      {_, %{id: _}} ->
+        obj
+
+      {_, %Brando.Videos.Video{}} ->
+        obj
+
+      {video_id, _} ->
+        case Brando.Videos.get_video(video_id) do
+          {:ok, video} -> Map.put(obj, :video, video)
+          _ -> obj
+        end
+    end
   end
 
   defp maybe_update_rendered_at(%Changeset{changes: %{rendered_html: _}} = changeset) do
@@ -3574,14 +3913,38 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  def insert_identifier(block_identifiers, identifier_id) do
+  @doc """
+  Inserts an identifier into the block_identifiers list.
+
+  If the identifier previously existed in the original data (was persisted),
+  we include its id so Ecto treats it as an update rather than insert.
+  This prevents unique constraint violations when re-adding removed identifiers.
+
+  The sequence is set to place the new identifier at the end of the list.
+  """
+  def insert_identifier(block_identifiers, identifier_id, original_identifiers \\ []) do
+    # Check if this identifier was previously persisted
+    existing = Enum.find(original_identifiers, &(&1.identifier_id == identifier_id && &1.id))
+
+    # Calculate new sequence (highest current sequence + 1)
+    new_sequence = get_next_sequence(block_identifiers)
+
     new_block_identifier =
-      %BlockIdentifier{}
-      |> Changeset.change()
-      |> Changeset.put_change(:identifier_id, identifier_id)
-      |> Map.put(:action, :insert)
+      if existing,
+        do: %{id: existing.id, identifier_id: identifier_id, sequence: new_sequence},
+        else: %{identifier_id: identifier_id, sequence: new_sequence}
 
     block_identifiers ++ [new_block_identifier]
+  end
+
+  defp get_next_sequence(block_identifiers) do
+    block_identifiers
+    |> Enum.map(&Changeset.get_field(&1, :sequence))
+    |> Enum.reject(&is_nil/1)
+    |> case do
+      [] -> 0
+      sequences -> Enum.max(sequences) + 1
+    end
   end
 
   def remove_identifier(block_identifiers, identifier_id) do
@@ -3625,5 +3988,342 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   defp extract_block_bg_color(_) do
     "transparent"
+  end
+
+  defp clear_preloaded_associations(changeset, params) do
+    # Clear stale preloaded associations when updating foreign keys
+    # This ensures the parser gets consistent data by setting the association to nil
+    # rather than deleting the field entirely
+    changeset =
+      if Map.has_key?(params, :image_id) do
+        # Clear the preloaded :image association since we're updating image_id
+        Map.put(changeset, :data, Map.put(changeset.data, :image, nil))
+      else
+        changeset
+      end
+
+    changeset =
+      if Map.has_key?(params, :video_id) do
+        # Clear the preloaded :video association since we're updating video_id
+        Map.put(changeset, :data, Map.put(changeset.data, :video, nil))
+      else
+        changeset
+      end
+
+    changeset =
+      if Map.has_key?(params, :gallery_id) do
+        # Clear the preloaded :gallery association since we're updating gallery_id
+        Map.put(changeset, :data, Map.put(changeset.data, :gallery, nil))
+      else
+        changeset
+      end
+
+    changeset =
+      if Map.has_key?(params, :file_id) do
+        # Clear the preloaded :file association since we're updating file_id
+        Map.put(changeset, :data, Map.put(changeset.data, :file, nil))
+      else
+        changeset
+      end
+
+    changeset
+  end
+
+  defp put_change_if_key_exists(changeset, key, params) do
+    if Map.has_key?(params, key) do
+      Changeset.put_change(changeset, key, params[key])
+    else
+      changeset
+    end
+  end
+
+  # Add an image to a gallery ref association
+  defp add_image_to_gallery_ref(ref_changeset, image_id, current_user) do
+    current_gallery = Changeset.get_field(ref_changeset, :gallery)
+
+    case current_gallery do
+      nil ->
+        # Create new gallery structure (not persisted to DB)
+        # Load the image so it's available for the parser
+        {:ok, image} = Brando.Images.get_image(image_id)
+
+        new_gallery = %{
+          config_target: "ref:gallery",
+          gallery_objects: [
+            %{
+              image_id: image_id,
+              image: image,
+              creator_id: current_user.id,
+              sequence: 0
+            }
+          ]
+        }
+
+        Changeset.put_assoc(ref_changeset, :gallery, new_gallery)
+
+      gallery ->
+        # Add image to existing gallery structure
+        # Preserve existing gallery objects with their loaded associations
+        current_gallery_objects =
+          Enum.map(
+            gallery.gallery_objects || [],
+            fn obj ->
+              # Keep the loaded image/video associations if they exist
+              base_fields = Map.take(obj, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
+
+              # Add back the loaded associations
+              base_fields
+              |> maybe_add_association(:image, obj)
+              |> maybe_add_association(:video, obj)
+            end
+          )
+
+        # Load the image so it's available for the parser
+        {:ok, image} = Brando.Images.get_image(image_id)
+
+        new_gallery_object = %{
+          image_id: image_id,
+          image: image,
+          creator_id: current_user.id
+        }
+
+        new_gallery_objects = current_gallery_objects ++ [new_gallery_object]
+
+        updated_gallery = %{
+          id: Map.get(gallery, :id),
+          config_target: Map.get(gallery, :config_target, "ref:gallery"),
+          gallery_objects: sequence_gallery_objects(new_gallery_objects)
+        }
+
+        Changeset.put_assoc(ref_changeset, :gallery, updated_gallery)
+    end
+  end
+
+  # Remove an image from a gallery ref association
+  defp remove_image_from_gallery_ref(ref_changeset, image_id) do
+    current_gallery = Changeset.get_field(ref_changeset, :gallery)
+
+    case current_gallery do
+      nil ->
+        ref_changeset
+
+      gallery ->
+        # Remove image from gallery objects in memory
+        existing_objects = gallery.gallery_objects || []
+        updated_objects = Enum.reject(existing_objects, &(&1.image_id == image_id))
+
+        if updated_objects == [] do
+          # If no objects left, remove the gallery association
+          Changeset.put_assoc(ref_changeset, :gallery, nil)
+        else
+          # Update gallery with remaining objects
+          updated_gallery = %{
+            id: Map.get(gallery, :id),
+            config_target: Map.get(gallery, :config_target, "ref:gallery"),
+            gallery_objects: sequence_gallery_objects(updated_objects)
+          }
+
+          Changeset.put_assoc(ref_changeset, :gallery, updated_gallery)
+        end
+    end
+  end
+
+  # Remove a gallery object by index from a gallery ref association
+  defp remove_gallery_object_from_ref_by_index(ref_changeset, object_index) do
+    current_gallery = Changeset.get_field(ref_changeset, :gallery)
+
+    case current_gallery do
+      nil ->
+        ref_changeset
+
+      gallery ->
+        # Remove object by index from gallery objects in memory
+        existing_objects = gallery.gallery_objects || []
+        updated_objects = List.delete_at(existing_objects, object_index)
+
+        if updated_objects == [] do
+          # If no objects left, remove the gallery association
+          Changeset.put_assoc(ref_changeset, :gallery, nil)
+        else
+          # Update gallery with remaining objects
+          updated_gallery = %{
+            id: Map.get(gallery, :id),
+            config_target: Map.get(gallery, :config_target, "ref:gallery"),
+            gallery_objects: sequence_gallery_objects(updated_objects)
+          }
+
+          Changeset.put_assoc(ref_changeset, :gallery, updated_gallery)
+        end
+    end
+  end
+
+  defp reorder_gallery_objects_in_ref(ref_changeset, old_idx, new_idx) do
+    current_gallery = Changeset.get_field(ref_changeset, :gallery)
+
+    case current_gallery do
+      nil ->
+        ref_changeset
+
+      gallery ->
+        existing_objects = gallery.gallery_objects || []
+
+        # Reorder objects: remove from old position, insert at new position
+        object_to_move = Enum.at(existing_objects, old_idx)
+
+        reordered_objects =
+          existing_objects
+          |> List.delete_at(old_idx)
+          |> List.insert_at(new_idx, object_to_move)
+
+        # Convert ALL objects to maps (same pattern as add_image_to_gallery_ref)
+        gallery_object_maps =
+          reordered_objects
+          |> Enum.with_index()
+          |> Enum.map(fn {obj, new_sequence} ->
+            base = %{
+              image_id: obj.image_id,
+              video_id: obj.video_id,
+              creator_id: obj.creator_id,
+              sequence: new_sequence
+            }
+
+            # Include ID for existing (persisted) objects
+            base = if obj.id, do: Map.put(base, :id, obj.id), else: base
+
+            # Add loaded associations (same as add_image_to_gallery_ref)
+            base
+            |> maybe_add_association(:image, obj)
+            |> maybe_add_association(:video, obj)
+          end)
+
+        # Use the SAME pattern as add_image_to_gallery_ref:
+        # Pass a plain MAP, not a changeset created from the gallery struct.
+        # This avoids Ecto comparing against existing gallery_objects with nil IDs.
+        updated_gallery = %{
+          id: Map.get(gallery, :id),
+          config_target: Map.get(gallery, :config_target, "ref:gallery"),
+          gallery_objects: gallery_object_maps
+        }
+
+        Changeset.put_assoc(ref_changeset, :gallery, updated_gallery)
+    end
+  end
+
+  # Note: Removed create_gallery_with_image and add_image_to_existing_gallery
+  # These are now handled inline in add_image_to_gallery_ref using changesets
+
+  defp sequence_gallery_objects(gallery_objects) do
+    gallery_objects
+    |> Enum.with_index()
+    |> Enum.map(fn {obj, index} -> Map.put(obj, :sequence, index) end)
+  end
+
+  defp maybe_add_association(base_fields, :image, obj) do
+    case Map.get(obj, :image) do
+      %Ecto.Association.NotLoaded{} -> base_fields
+      nil -> base_fields
+      image -> Map.put(base_fields, :image, image)
+    end
+  end
+
+  defp maybe_add_association(base_fields, :video, obj) do
+    case Map.get(obj, :video) do
+      %Ecto.Association.NotLoaded{} -> base_fields
+      nil -> base_fields
+      video -> Map.put(base_fields, :video, video)
+    end
+  end
+
+  # Note: Removed remove_image_from_existing_gallery and remove_gallery_object_by_id
+  # These are now handled inline in remove functions using changesets
+
+  # Add override entry for a new gallery image
+  defp add_gallery_image_override(block_changeset, image_id) do
+    # Get the current data from the block
+    current_data = Changeset.get_field(block_changeset, :data)
+    current_overrides = Map.get(current_data, :gallery_object_overrides, [])
+    object_id_str = to_string(image_id)
+
+    # Check if override already exists
+    override_exists =
+      Enum.any?(current_overrides, fn override ->
+        get_override_object_id(override) == object_id_str
+      end)
+
+    if override_exists do
+      block_changeset
+    else
+      new_override = %{
+        object_id: object_id_str,
+        object_type: :image,
+        title: nil,
+        credits: nil,
+        alt: nil,
+        use_default_title: true,
+        use_default_credits: true,
+        use_default_alt: true
+      }
+
+      updated_overrides = current_overrides ++ [new_override]
+
+      # Convert current data to map and update only the gallery_object_overrides field
+      # This respects the :on_replace :update constraint by providing only changed fields as a map
+      data_map = Map.from_struct(current_data)
+      updated_data_map = Map.put(data_map, :gallery_object_overrides, updated_overrides)
+
+      # Put the updated data map back into the block
+      Changeset.put_change(block_changeset, :data, updated_data_map)
+    end
+  end
+
+  # Remove override entry for a removed gallery image
+  defp remove_gallery_image_override(block_changeset, image_id) do
+    # Get the current data from the block
+    current_data = Changeset.get_field(block_changeset, :data)
+    current_overrides = Map.get(current_data, :gallery_object_overrides, [])
+    object_id_str = to_string(image_id)
+
+    updated_overrides =
+      Enum.reject(current_overrides, fn override ->
+        get_override_object_id(override) == object_id_str
+      end)
+
+    # Convert current data to map and update only the gallery_object_overrides field
+    # This respects the :on_replace :update constraint by providing only changed fields as a map
+    data_map = Map.from_struct(current_data)
+    updated_data_map = Map.put(data_map, :gallery_object_overrides, updated_overrides)
+
+    # Put the updated data map back into the block
+    Changeset.put_change(block_changeset, :data, updated_data_map)
+  end
+
+  # Remove override entry for a removed gallery object by object ID
+  defp remove_gallery_object_override(block_changeset, object_id) do
+    # Get the current data from the block
+    current_data = Changeset.get_field(block_changeset, :data)
+    current_overrides = Map.get(current_data, :gallery_object_overrides, [])
+    object_id_str = to_string(object_id)
+
+    updated_overrides =
+      Enum.reject(current_overrides, fn override ->
+        get_override_object_id(override) == object_id_str
+      end)
+
+    # Convert current data to map and update only the gallery_object_overrides field
+    # This respects the :on_replace :update constraint by providing only changed fields as a map
+    data_map = Map.from_struct(current_data)
+    updated_data_map = Map.put(data_map, :gallery_object_overrides, updated_overrides)
+
+    # Put the updated data map back into the block
+    Changeset.put_change(block_changeset, :data, updated_data_map)
+  end
+
+  # Helper to get object_id from override (handles both changeset and struct)
+  defp get_override_object_id(override) do
+    case override do
+      %Changeset{} -> Changeset.get_field(override, :object_id)
+      %{object_id: id} -> id
+      _ -> nil
+    end
   end
 end

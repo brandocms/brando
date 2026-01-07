@@ -13,8 +13,12 @@ defmodule Brando.Villain do
 
   @type changeset :: Ecto.Changeset.t()
 
-  @module_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{preload: [:vars]}) ||
-                      %{cache: {:ttl, :infinite}, preload: [:vars]}
+  @module_cache_ttl (Brando.config(:env) in [:e2e, :test] &&
+                       %{preload: [:vars, refs: [:image, :video, :file, gallery: [gallery_objects: [:image, :video]]]]}) ||
+                      %{
+                        cache: {:ttl, :infinite},
+                        preload: [:vars, refs: [:image, :video, :file, gallery: [gallery_objects: [:image, :video]]]]
+                      }
   @container_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{preload: [:palette]}) ||
                          %{cache: {:ttl, :infinite}, preload: [:palette]}
   @palette_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{}) || %{cache: {:ttl, :infinite}}
@@ -263,6 +267,34 @@ defmodule Brando.Villain do
 
   defp liquex_render([], parsed_doc, context) do
     Liquex.Render.render!([], parsed_doc, context)
+  rescue
+    error in Protocol.UndefinedError ->
+      case error do
+        %{protocol: Liquex.Collection, value: nil} ->
+          require Logger
+
+          Logger.error("""
+
+          >>> Liquex.Collection error: trying to iterate over nil <<<
+
+          This usually happens when a template tries to iterate over a collection that doesn't exist.
+          Common causes:
+          - Gallery refs using old syntax: `refs.*.images` instead of `refs.*.gallery_objects`
+          - For loops over nil collections: `{% for item in nil_collection %}`
+
+          Context variables:
+          #{inspect(context.scope.stack, pretty: true, limit: :infinity)}
+
+          Parsed template:
+          #{inspect(parsed_doc, pretty: true, limit: 10)}
+
+          """)
+
+          {["<!-- Liquex template error: trying to iterate over nil collection -->"], context}
+
+        _ ->
+          reraise error, __STACKTRACE__
+      end
   end
 
   defp maybe_put_timestamps(%{inserted_at: nil} = entry) do
@@ -574,13 +606,13 @@ defmodule Brando.Villain do
     {:ok, module} =
       Content.get_module(%{
         matches: %{id: module_id},
-        preload: [:vars]
+        preload: [:vars, refs: Brando.Content.Ref.preloads()]
       })
 
     {:ok, blocks} =
       Content.list_blocks(%{
         filter: %{module_id: module_id},
-        preload: [:vars]
+        preload: [:vars, refs: Brando.Content.Ref.preloads()]
       })
 
     Enum.reduce(blocks, [], fn block, acc ->
@@ -623,18 +655,23 @@ defmodule Brando.Villain do
     module_refs = module.refs
     module_ref_names = Enum.map(module_refs, & &1.name)
     changeset = Changeset.change(block)
-    current_refs = Changeset.get_embed(changeset, :refs, :struct)
 
+    # strip away refs that are no longer in the module
     current_refs =
-      Enum.filter(current_refs, &(&1.name in module_ref_names))
+      changeset
+      |> Changeset.get_assoc(:refs)
+      |> Enum.filter(&(Changeset.get_field(&1, :name) in module_ref_names))
 
-    current_ref_names = Enum.map(current_refs, & &1.name)
+    current_ref_names = Enum.map(current_refs, &Changeset.get_field(&1, :name))
     missing_ref_names = module_ref_names -- current_ref_names
 
     missing_refs =
       module_refs
       |> Enum.filter(&(&1.name in missing_ref_names))
-      |> Brando.Villain.add_uid_to_refs()
+      |> force_new_uids_for_refs()
+      |> remove_pk_from_refs()
+      |> Enum.map(&Changeset.change/1)
+      |> Enum.map(&%{&1 | action: :insert})
 
     new_refs = current_refs ++ missing_refs
 
@@ -660,7 +697,7 @@ defmodule Brando.Villain do
 
     changeset
     |> Changeset.put_assoc(:vars, reapplied_vars)
-    |> Changeset.put_embed(:refs, reapplied_refs)
+    |> Changeset.put_assoc(:refs, reapplied_refs)
   end
 
   def enqueue_entry_map_for_render(entry_map) do
@@ -749,11 +786,20 @@ defmodule Brando.Villain do
       {join_source, ids}, acc ->
         {:assoc, %{queryable: schema}} = Map.get(join_source.__changeset__(), :entry)
 
-        query =
+        base_query =
           from js in join_source,
+            join: e in ^schema,
+            on: e.id == js.entry_id,
             where: js.block_id in ^ids,
             select: js.entry_id,
             distinct: true
+
+        query =
+          if schema.has_trait(Brando.Trait.SoftDelete) do
+            from [js, e] in base_query, where: is_nil(e.deleted_at)
+          else
+            base_query
+          end
 
         entry_ids = Brando.Repo.all(query)
         Map.put(acc, schema, entry_ids)
@@ -810,11 +856,12 @@ defmodule Brando.Villain do
 
         from(q in query,
           left_join: vars in assoc(q, :vars),
+          left_join: refs in assoc(q, :refs),
           select_merge: %{
             ^search_name_refs =>
               fragment(
                 "regexp_matches(?, ?, 'g')",
-                type(q.refs, :string),
+                type(refs.data, :string),
                 ^search_term
               ),
             ^search_name_vars =>
@@ -879,13 +926,13 @@ defmodule Brando.Villain do
     {:ok, module} =
       Content.get_module(%{
         matches: %{id: module_id},
-        preload: [:vars]
+        preload: [:vars, refs: Brando.Content.Ref.preloads()]
       })
 
     {:ok, blocks} =
       Content.list_blocks(%{
         filter: %{ids: block_ids},
-        preload: [:vars]
+        preload: [:vars, refs: Brando.Content.Ref.preloads()]
       })
 
     blocks
@@ -957,46 +1004,47 @@ defmodule Brando.Villain do
   def add_uid_to_refs(nil), do: nil
 
   def add_uid_to_refs(refs) when is_list(refs) do
-    {_, refs_with_generated_uids} =
-      get_and_update_in(
-        refs,
-        [Access.all(), Access.key(:data), Access.key(:uid)],
-        &{&1, Brando.Utils.generate_uid()}
-      )
-
-    refs_with_generated_uids
+    Enum.map(refs, fn ref ->
+      if Map.has_key?(ref, :uid) and ref.uid do
+        ref
+      else
+        Map.put(ref, :uid, Brando.Utils.generate_uid())
+      end
+    end)
   end
 
   def add_uid_to_refs(changeset) do
-    refs = Changeset.get_embed(changeset, :refs)
-
+    refs = Changeset.get_assoc(changeset, :refs)
     updated_refs = Brando.Villain.add_uid_to_ref_changesets(refs)
-    Changeset.put_embed(changeset, :refs, updated_refs)
+    Changeset.put_assoc(changeset, :refs, updated_refs)
+  end
+
+  @doc """
+  Forces new UIDs for all refs in the list.
+
+  Used when syncing module refs to blocks - each block instance needs
+  its own unique UID, not the module template's UID.
+  """
+  def force_new_uids_for_refs(refs) when is_list(refs) do
+    Enum.map(refs, fn ref ->
+      Map.put(ref, :uid, Brando.Utils.generate_uid())
+    end)
   end
 
   def add_uid_to_ref_changesets(nil), do: nil
 
   def add_uid_to_ref_changesets(refs) when is_list(refs) do
     Enum.reduce(refs, [], fn ref, acc ->
-      data = Changeset.get_field(ref, :data)
-
-      if data do
-        data_changeset = Changeset.change(data)
-
-        updated_data_changeset =
-          Changeset.put_change(data_changeset, :uid, Brando.Utils.generate_uid())
-
-        updated_ref =
+      updated_ref =
+        if Changeset.get_field(ref, :uid) do
           ref
-          |> Changeset.put_change(:data, updated_data_changeset)
+        else
+          ref
+          |> Changeset.put_change(:uid, Brando.Utils.generate_uid())
           |> Map.put(:action, :insert)
+        end
 
-        [updated_ref | acc]
-      else
-        require Logger
-        Logger.debug("=> Malformed ref: #{inspect(ref)}")
-        acc
-      end
+      [updated_ref | acc]
     end)
   end
 
@@ -1004,30 +1052,51 @@ defmodule Brando.Villain do
   def remove_pk_from_vars([]), do: []
 
   def remove_pk_from_vars(vars) when is_list(vars) do
-    Enum.map(vars, &Map.merge(&1, %{id: nil, module_id: nil}))
+    Enum.map(vars, fn var ->
+      var
+      |> Map.merge(%{id: nil, module_id: nil, block_id: nil})
+      |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
+    end)
+  end
+
+  def remove_pk_from_refs(nil), do: nil
+  def remove_pk_from_refs([]), do: []
+
+  def remove_pk_from_refs(refs) when is_list(refs) do
+    Enum.map(refs, &Map.merge(&1, %{id: nil, module_id: nil}))
   end
 
   def reapply_refs(module, module_refs, refs) do
-    Enum.map(refs, fn %{name: ref_name, data: %{__struct__: block_module}} = ref ->
-      ref_src = Enum.find(module_refs, &(&1.name == ref_name))
+    Enum.map(refs, fn
+      %Changeset{data: %{name: ref_name}} = ref ->
+        # Handle case where ref.data might be a changeset or the actual block
+        block_module =
+          case Changeset.get_field(ref, :data) do
+            %Changeset{} = data_cs ->
+              # Get the struct from the changeset data (which should be the block struct)
+              data_cs.data.__struct__
 
-      if ref_src == nil do
-        raise """
+            block_data ->
+              # Get the block struct directly
+              block_data.__struct__
+          end
 
-        Ref #{ref_name} not found in module refs!
+        ref_src = Enum.find(module_refs, &(&1.name == ref_name))
 
-        Module: ##{module.id} [#{module.namespace}] #{module.name}
+        if ref_src == nil do
+          raise """
 
-        #{inspect(module, pretty: true)}
+          Ref #{ref_name} not found in module refs!
 
-        """
-      end
+          Module: ##{module.id} [#{module.namespace}] #{module.name}
 
-      ref_target = apply_ref_principals(ref_src, ref)
+          #{inspect(module, pretty: true)}
 
-      ref_src.data.__struct__
-      |> block_module.apply_ref(ref_src, ref_target)
-      |> Changeset.change()
+          """
+        end
+
+        ref_target = apply_ref_principals(ref_src, ref)
+        block_module.apply_ref(ref_src.data.__struct__, ref_src, ref_target)
     end)
   end
 
@@ -1035,8 +1104,8 @@ defmodule Brando.Villain do
   # in case of changes.
   defp apply_ref_principals(ref_src, ref_target) do
     ref_target
-    |> put_in([Access.key(:name)], ref_src.name)
-    |> put_in([Access.key(:description)], ref_src.description)
+    |> Changeset.force_change(:name, ref_src.name)
+    |> Changeset.force_change(:description, ref_src.description)
   end
 
   @protected_and_ignored_var_attrs [
@@ -1129,6 +1198,11 @@ defmodule Brando.Villain do
           order_by: [asc: :sequence],
           preload: [vars: ^vars_query]
 
+      refs_query =
+        from r in Brando.Content.Ref,
+          order_by: [asc: :sequence],
+          preload: [:image, :file, video: [:thumbnail], gallery: [gallery_objects: [:image, :video]]]
+
       sub_sub_children_query =
         from b in Brando.Content.Block,
           preload: [
@@ -1138,6 +1212,7 @@ defmodule Brando.Villain do
             :children,
             block_identifiers: :identifier,
             vars: ^vars_query,
+            refs: ^refs_query,
             table_rows: ^table_row_query
           ],
           order_by: [asc: :sequence]
@@ -1150,6 +1225,7 @@ defmodule Brando.Villain do
             :module,
             block_identifiers: :identifier,
             vars: ^vars_query,
+            refs: ^refs_query,
             table_rows: ^table_row_query,
             children: ^sub_sub_children_query
           ],
@@ -1162,6 +1238,7 @@ defmodule Brando.Villain do
             :container,
             :module,
             vars: ^vars_query,
+            refs: ^refs_query,
             table_rows: ^table_row_query,
             block_identifiers: :identifier,
             children: [
@@ -1170,6 +1247,7 @@ defmodule Brando.Villain do
               :module,
               block_identifiers: :identifier,
               vars: ^vars_query,
+              refs: ^refs_query,
               table_rows: ^table_row_query,
               children: ^sub_children_query
             ]
@@ -1199,6 +1277,7 @@ defmodule Brando.Villain do
                    :palette,
                    block_identifiers: :identifier,
                    vars: ^vars_query,
+                   refs: ^refs_query,
                    table_rows: ^table_row_query,
                    children: ^children_query
                  ]
@@ -1271,10 +1350,14 @@ defmodule Brando.Villain do
     Changeset.put_assoc(changeset, :vars, duplicated_vars)
   end
 
-  def duplicate_var(var_cs, current_user_id) do
-    var_cs
+  def duplicate_var(var, current_user_id) do
+    var
     |> Map.merge(%{id: nil, block_id: nil})
-    |> Brando.Content.Var.changeset(%{creator_id: current_user_id})
+    |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
+    |> Brando.Content.Var.changeset(%{
+      creator_id: current_user_id,
+      sequence: var.sequence
+    })
     |> Map.put(:action, :insert)
   end
 
@@ -1289,5 +1372,44 @@ defmodule Brando.Villain do
     |> Changeset.put_change(:id, nil)
     |> Changeset.put_change(:block_id, nil)
     |> Map.put(:action, :insert)
+  end
+
+  def duplicate_refs(changeset, %Ecto.Association.NotLoaded{}, _) do
+    require Logger
+
+    Logger.error("""
+
+    duplicate_refs ——
+
+    refs NOT LOADED. This should not happen.
+
+    #{inspect(changeset, pretty: true, width: 0)}
+
+    """)
+
+    changeset
+  end
+
+  def duplicate_refs(changeset, refs, current_user_id) do
+    duplicated_refs = Enum.map(refs, &duplicate_ref(&1, current_user_id))
+    Changeset.put_assoc(changeset, :refs, duplicated_refs)
+  end
+
+  def duplicate_ref(ref_cs, current_user_id) do
+    # Clear IDs like we do for vars, but also generate a UID for the ref
+    ref_cs
+    |> Map.merge(%{id: nil, block_id: nil, module_id: nil})
+    |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
+    |> set_creator_id(current_user_id)
+    |> add_uid_to_ref_changeset()
+    |> Map.put(:action, :insert)
+  end
+
+  def set_creator_id(ref_changeset, current_user_id) do
+    Changeset.put_change(ref_changeset, :creator_id, current_user_id)
+  end
+
+  def add_uid_to_ref_changeset(ref_changeset) do
+    Changeset.put_change(ref_changeset, :uid, Brando.Utils.generate_uid())
   end
 end

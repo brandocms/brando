@@ -78,7 +78,14 @@ defmodule Brando.Content.Module do
       on_replace: :delete_if_exists
 
     relation :parent, :belongs_to, module: __MODULE__, on_replace: :delete_if_exists
-    relation :refs, :embeds_many, module: __MODULE__.Ref, on_replace: :delete
+
+    relation :refs, :has_many,
+      module: Brando.Content.Ref,
+      on_replace: :delete,
+      preload_order: [asc: :sequence],
+      cast: true,
+      sort_param: :sort_ref_ids,
+      drop_param: :drop_ref_ids
 
     relation :vars, :has_many,
       module: Brando.Content.Var,
@@ -103,10 +110,10 @@ defmodule Brando.Content.Module do
         order: [{:asc, :namespace}, {:asc, :sequence}, {:desc, :inserted_at}]
       }
 
-      filter label: t("Name"), filter: "name"
-      filter label: t("Namespace"), filter: "namespace"
-      filter label: t("Class"), filter: "class"
-      filter label: t("Code"), filter: "code"
+      filter label: t("Name"), key: "name"
+      filter label: t("Namespace"), key: "namespace"
+      filter label: t("Class"), key: "class"
+      filter label: t("Code"), key: "code"
 
       selection_action label: t("Export modules"),
                        event:
@@ -224,7 +231,8 @@ defmodule Brando.Content.Module do
           "type" => "header"
         },
         "description" => "A heading",
-        "name" => "H2"
+        "name" => "H2",
+        "uid" => "default-h2-ref"
       }
     ],
     vars: [],

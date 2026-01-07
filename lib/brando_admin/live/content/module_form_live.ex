@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   use BrandoAdmin.Toast
   use Gettext, backend: Brando.Gettext
 
-  alias Brando.Content.Module.Ref
+  alias Brando.Content.Ref
   alias Brando.Content.Var
   alias Brando.Villain
   alias BrandoAdmin.Components.Content
@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
     <Content.header title={gettext("Content Modules")} subtitle={gettext("Edit module")} />
 
     <div id="module_form-el" phx-hook="Brando.Form" data-skip-keydown>
-      <.form for={@form} phx-change="validate" phx-submit="save">
+      <.form for={@form} class="main-form" phx-change="validate" phx-submit="save">
         <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
         <div class="block-editor">
           <div class="code">
@@ -97,7 +97,8 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
     new_ref = %Ref{
       name: Brando.Utils.random_string(5),
-      data: ref_data
+      data: ref_data,
+      uid: Brando.Utils.generate_uid()
     }
 
     updated_changeset = Changeset.put_change(changeset, :refs, [new_ref | refs])
@@ -122,7 +123,10 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
     refs = Changeset.get_field(changeset, :refs)
     ref_to_dupe = Enum.find(refs, &(&1.name == ref_name))
 
-    new_ref = Map.put(ref_to_dupe, :name, Brando.Utils.random_string(5))
+    new_ref =
+      ref_to_dupe
+      |> Map.put(:name, Brando.Utils.random_string(5))
+      |> Map.put(:uid, Brando.Utils.generate_uid())
 
     updated_changeset = Changeset.put_change(changeset, :refs, refs ++ [new_ref])
     updated_form = to_form(updated_changeset, [])

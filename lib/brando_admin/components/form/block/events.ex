@@ -3,7 +3,6 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   import Phoenix.LiveView, only: [attach_hook: 4, push_event: 3, send_update: 2]
   import Phoenix.Component
   alias Ecto.Changeset
-  alias Brando.Content.TableRow
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
 
@@ -107,57 +106,17 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     |> then(&{:halt, &1})
   end
 
-  def handle_block_event("add_table_row", _, socket) do
-    uid = socket.assigns.uid
-    belongs_to = socket.assigns.belongs_to
-    table_template = socket.assigns.table_template
-    vars_without_pk = Brando.Villain.remove_pk_from_vars(table_template.vars)
-
-    var_changesets =
-      Enum.map(
-        vars_without_pk,
-        &(&1 |> Changeset.change(%{table_template_id: nil}) |> Map.put(:action, :insert))
-      )
-
-    new_row = %TableRow{vars: var_changesets}
-    changeset = socket.assigns.form.source
-
-    block_changeset =
-      if belongs_to == :root, do: Changeset.get_assoc(changeset, :block), else: changeset
-
-    current_rows = Changeset.get_assoc(block_changeset, :table_rows) || []
-    new_rows = current_rows ++ List.wrap(new_row)
-    updated_block_changeset = Changeset.put_assoc(block_changeset, :table_rows, new_rows)
-
-    updated_form =
-      if belongs_to == :root do
-        updated_changeset = Changeset.put_assoc(changeset, :block, updated_block_changeset)
-
-        to_form(
-          updated_changeset,
-          as: "entry_block",
-          id: "entry_block_form-#{uid}"
-        )
-      else
-        to_form(
-          updated_block_changeset,
-          as: "child_block",
-          id: "child_block_form-#{uid}"
-        )
-      end
-
-    socket
-    |> assign(:form, updated_form)
-    |> assign(:has_table_rows?, true)
-    |> then(&{:halt, &1})
-  end
-
   ## Identifier events
   def handle_block_event("assign_available_identifiers", _, socket) do
     {:halt, Block.assign_available_identifiers(socket)}
   end
 
-  def handle_block_event("select_identifier", %{"id" => identifier_id}, socket) do
+  def handle_block_event("select_identifier", %{"id" => identifier_id_param}, socket) do
+    identifier_id =
+      if is_binary(identifier_id_param),
+        do: String.to_integer(identifier_id_param),
+        else: identifier_id_param
+
     form = socket.assigns.form
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
@@ -165,6 +124,8 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
     block_changeset = Block.get_block_changeset(changeset, belongs_to)
     block_identifiers = Changeset.get_assoc(block_changeset, :block_identifiers)
+    # Get original identifiers stored at mount time (not from changeset which gets mutated)
+    original_identifiers = socket.assigns.original_block_identifiers
 
     # check if the identifier is already assigned and if it is, remove it
     # also filter out any :replace actions
@@ -174,7 +135,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       |> Enum.find(&(Changeset.get_field(&1, :identifier_id) == identifier_id))
       |> case do
         nil ->
-          Block.insert_identifier(block_identifiers, identifier_id)
+          Block.insert_identifier(block_identifiers, identifier_id, original_identifiers)
 
         %{action: :replace} = replaced_changeset ->
           Enum.map(block_identifiers, fn block_identifier ->
@@ -189,7 +150,10 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
         _ ->
           Block.remove_identifier(block_identifiers, identifier_id)
       end
-      |> Enum.filter(&(&1.action != :replace))
+      |> Enum.filter(fn
+        %Ecto.Changeset{action: :replace} -> false
+        _ -> true
+      end)
 
     updated_block_changeset =
       Changeset.put_assoc(
@@ -395,9 +359,9 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       if belongs_to == :root do
         changeset
         |> Changeset.get_assoc(:block)
-        |> Changeset.get_assoc(:vars)
+        |> get_assoc_list(:vars)
       else
-        Changeset.get_assoc(changeset, :vars)
+        get_assoc_list(changeset, :vars)
       end
 
     current_var_names = Enum.map(current_vars, &Changeset.get_field(&1, :key))
@@ -406,8 +370,8 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     missing_vars =
       module_vars
       |> Enum.filter(&(&1.key in missing_var_names))
-      |> Enum.map(&Changeset.change/1)
       |> Brando.Villain.remove_pk_from_vars()
+      |> Enum.map(&var_struct_to_map/1)
 
     new_vars = current_vars ++ missing_vars
 
@@ -445,8 +409,8 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
     original_vars =
       module_vars
-      |> Enum.map(&Changeset.change/1)
       |> Brando.Villain.remove_pk_from_vars()
+      |> Enum.map(&var_struct_to_map/1)
 
     updated_changeset =
       if belongs_to == :root do
@@ -483,17 +447,17 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     var_to_replace =
       module_vars
       |> Enum.filter(&(&1.key == var_key))
-      |> Enum.map(&Changeset.change/1)
       |> Brando.Villain.remove_pk_from_vars()
+      |> Enum.map(&var_struct_to_map/1)
       |> List.first()
 
     current_vars =
       if belongs_to == :root do
         changeset
         |> Changeset.get_assoc(:block)
-        |> Changeset.get_assoc(:vars)
+        |> get_assoc_list(:vars)
       else
-        Changeset.get_assoc(changeset, :vars)
+        get_assoc_list(changeset, :vars)
       end
 
     updated_vars =
@@ -537,9 +501,9 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       if belongs_to == :root do
         changeset
         |> Changeset.get_assoc(:block)
-        |> Changeset.get_assoc(:vars)
+        |> get_assoc_list(:vars)
       else
-        Changeset.get_assoc(changeset, :vars)
+        get_assoc_list(changeset, :vars)
       end
 
     updated_vars =
@@ -712,8 +676,31 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     has_vars? = socket.assigns.has_vars?
     has_table_rows? = socket.assigns.has_table_rows?
 
+    # Use apply_changes to get struct with our in-memory modifications (like image_id updates)
+    # instead of changeset.data which reverts to original database values
+    applied_block = Changeset.apply_changes(changeset)
+
+    # Keep only persisted table_rows (with IDs) - cast_assoc needs them to match against params
+    # Remove unsaved rows (nil IDs) to avoid duplicate primary key warnings
+    # For block_identifiers, use the ORIGINAL data from socket assigns so cast_assoc can match records
+    # Clear vars/refs only for new blocks
+    # See: https://github.com/elixir-ecto/ecto/issues/3514
+    original_block_identifiers = socket.assigns[:original_block_identifiers] || []
+
+    block_for_changeset =
+      applied_block
+      |> Map.update!(:table_rows, fn rows -> Enum.filter(rows, & &1.id) end)
+      |> Map.put(:block_identifiers, original_block_identifiers)
+      |> then(fn block ->
+        if is_nil(block.id) do
+          Map.merge(block, %{vars: [], refs: []})
+        else
+          block
+        end
+      end)
+
     updated_changeset =
-      changeset.data
+      block_for_changeset
       |> Brando.Content.Block.block_changeset(params, current_user_id)
       |> Map.put(:action, :validate)
       |> Block.render_and_update_block_changeset(entry, has_vars?, has_table_rows?)
@@ -744,9 +731,66 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     has_children? = socket.assigns.has_children?
     has_table_rows? = socket.assigns.has_table_rows?
 
+    # Use changeset.data (original DB values) as the base for the new changeset.
+    # The params from the form contain ALL current field values, so cast will detect changes properly.
+    # We use apply_changes only for specific fields that are set programmatically (like image_id)
+    # and aren't in params.
+    original_data = changeset.data
+    applied_block = Changeset.apply_changes(changeset)
+
+    # For block_identifiers, use the ORIGINAL data from socket assigns so cast_assoc can match records
+    # See: https://github.com/elixir-ecto/ecto/issues/3514
+    original_block_identifiers = socket.assigns[:original_block_identifiers] || []
+
+    block_for_changeset =
+      if Map.has_key?(original_data, :block) do
+        # Entry block wrapper with nested block
+        # Use original_data but preserve any programmatic changes from applied_block
+        # that aren't covered by params (like image_id set via drawer)
+        inner_block = original_data.block
+
+        # Handle NotLoaded - if block is not loaded, use applied_block
+        inner_block =
+          if is_struct(inner_block, Ecto.Association.NotLoaded) do
+            applied_block.block
+          else
+            inner_block
+          end
+
+        # Filter to only persisted rows (with IDs) to avoid duplicate PK warnings
+        persisted_rows = Enum.filter(inner_block.table_rows || [], & &1.id)
+
+        inner_block =
+          inner_block
+          |> Map.put(:table_rows, persisted_rows)
+          |> Map.put(:block_identifiers, original_block_identifiers)
+
+        inner_block =
+          if is_nil(inner_block.id) do
+            Map.merge(inner_block, %{vars: [], refs: []})
+          else
+            inner_block
+          end
+
+        put_in(original_data.block, inner_block)
+      else
+        # Direct block (child_block)
+        persisted_rows = Enum.filter(original_data.table_rows || [], & &1.id)
+
+        block =
+          original_data
+          |> Map.put(:table_rows, persisted_rows)
+          |> Map.put(:block_identifiers, original_block_identifiers)
+
+        if is_nil(block.id) do
+          Map.merge(block, %{vars: [], refs: []})
+        else
+          block
+        end
+      end
+
     updated_changeset =
-      changeset.data
-      |> block_module.changeset(params, current_user_id)
+      block_module.changeset(block_for_changeset, params, current_user_id)
       |> Map.put(:action, :validate)
 
     # if this is a container and it's flipped from active = false to true,
@@ -780,9 +824,132 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     |> then(&{:halt, &1})
   end
 
+  ## Table row events
+  def handle_block_event("add_table_row", _, socket) do
+    uid = socket.assigns.uid
+    belongs_to = socket.assigns.belongs_to
+    table_template = socket.assigns.table_template
+
+    # Create vars from template
+    vars =
+      table_template.vars
+      |> Brando.Villain.remove_pk_from_vars()
+      # Ensure they are cleanly initialized for a new row
+      |> Enum.map(fn var ->
+        var
+        |> var_struct_to_map()
+        |> Map.put(:sequence, var.sequence)
+      end)
+
+    changeset = socket.assigns.form.source
+
+    block_changeset =
+      if belongs_to == :root do
+        Ecto.Changeset.get_assoc(changeset, :block)
+      else
+        changeset
+      end
+
+    # Get current table_rows as changesets/structs
+    # Filter out rows with :replace or :delete actions - these cannot be reused in put_assoc
+    current_rows =
+      block_changeset
+      |> get_assoc_list(:table_rows)
+      |> Enum.map(fn
+        %Ecto.Changeset{} = cs -> cs
+        struct -> Ecto.Changeset.change(struct)
+      end)
+      |> Enum.reject(fn cs -> cs.action in [:replace, :delete] end)
+
+    # Calculate next sequence
+    max_sequence =
+      current_rows
+      |> Enum.map(fn cs -> Ecto.Changeset.get_field(cs, :sequence) || 0 end)
+      |> Enum.max(fn -> -1 end)
+
+    new_row_struct = %Brando.Content.TableRow{
+      sequence: max_sequence + 1,
+      # Do not initialize with maps here, let put_assoc handle it
+      vars: []
+    }
+
+    new_row_changeset =
+      new_row_struct
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:vars, vars)
+      |> Map.put(:action, :insert)
+
+    updated_block_changeset =
+      Ecto.Changeset.put_assoc(block_changeset, :table_rows, current_rows ++ [new_row_changeset])
+
+    updated_form =
+      if belongs_to == :root do
+        updated_changeset = Ecto.Changeset.put_assoc(changeset, :block, updated_block_changeset)
+
+        to_form(
+          updated_changeset,
+          as: "entry_block",
+          id: "entry_block_form-#{uid}"
+        )
+      else
+        to_form(
+          updated_block_changeset,
+          as: "child_block",
+          id: "child_block_form-#{uid}"
+        )
+      end
+
+    socket
+    |> assign(:form, updated_form)
+    |> assign(:has_table_rows?, true)
+    |> then(&{:halt, &1})
+  end
+
   # Fallback for any unhandled events
   def handle_block_event(event, params, socket) do
     IO.puts("Unhandled event in events.ex: #{event} with params #{inspect(params)}")
     {:cont, socket}
+  end
+
+  ## Private helpers for table row handling
+
+  defp var_struct_to_map(%Brando.Content.Var{} = var) do
+    var
+    |> Map.from_struct()
+    |> Map.drop([
+      :__meta__,
+      :id,
+      :creator,
+      :palette,
+      :image,
+      :file,
+      :identifier,
+      :page,
+      :block,
+      :module,
+      :table_template,
+      :table_row,
+      :global_set,
+      :menu_item,
+      :inserted_at,
+      :updated_at,
+      :module_id,
+      :block_id,
+      :table_template_id,
+      :table_row_id,
+      :page_id,
+      :global_set_id,
+      :menu_item_id
+    ])
+  end
+
+  defp var_struct_to_map(var) when is_map(var), do: var
+
+  defp get_assoc_list(changeset, field) do
+    case Ecto.Changeset.get_assoc(changeset, field) do
+      %Ecto.Association.NotLoaded{} -> []
+      nil -> []
+      assoc -> assoc
+    end
   end
 end
