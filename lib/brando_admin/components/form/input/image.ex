@@ -85,23 +85,33 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     {socket, image} =
       cond do
         is_nil(image) && image_id ->
-          # we have an image in the changeset, but no loaded image
-          {:ok, image} = Brando.Images.get_image(image_id)
+          # we have an image_id in the changeset, but no loaded image
+          case Brando.Images.get_image(image_id) do
+            {:ok, image} ->
+              {socket
+               |> assign(:image, image)
+               |> assign(:image_id, image_id)
+               |> assign(:focal, {image.focal.x, image.focal.y}), image}
 
-          {socket
-           |> assign(:image, image)
-           |> assign(:image_id, image_id)
-           |> assign(:focal, {image.focal.x, image.focal.y}), image}
+            {:error, _} ->
+              # Image not found, keep current state
+              {socket, nil}
+          end
 
         image && to_string(image.id) != to_string(image_id) && image_id != nil ->
           # we have a loaded image, but it does not match the changeset image
           # load the changeset image
-          {:ok, image} = Brando.Images.get_image(image_id)
+          case Brando.Images.get_image(image_id) do
+            {:ok, image} ->
+              {socket
+               |> assign(:image, image)
+               |> assign(:image_id, image_id)
+               |> assign(:focal, {image.focal.x, image.focal.y}), image}
 
-          {socket
-           |> assign(:image, image)
-           |> assign(:image_id, image_id)
-           |> assign(:focal, {image.focal.x, image.focal.y}), image}
+            {:error, _} ->
+              # Image not found, keep current state
+              {socket, nil}
+          end
 
         image && image.id == nil && image_id == nil ->
           # no loaded image, no image_id in changeset
@@ -112,11 +122,16 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
             |> EctoNestedChangeset.get_at(full_path_fk)
             |> try_force_int()
 
-          {:ok, image} = Brando.Images.get_image(image_id)
+          case Brando.Images.get_image(image_id) do
+            {:ok, image} ->
+              {socket
+               |> assign(:image, image)
+               |> assign(:image_id, image_id), image}
 
-          {socket
-           |> assign(:image, image)
-           |> assign(:image_id, image_id), image}
+            {:error, _} ->
+              # Image not found, keep current state
+              {socket, nil}
+          end
 
         image_id == nil && image != nil ->
           # reset image to nil

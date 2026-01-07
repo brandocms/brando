@@ -43,7 +43,7 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
 
     payload =
       case Schema.handle_upload(params, cfg, user) do
-        {:error, changeset} ->
+        {:error, %Ecto.Changeset{} = changeset} ->
           traversed_errors =
             Ecto.Changeset.traverse_errors(changeset, fn
               {msg, opts} -> String.replace(msg, "%{count}", to_string(opts[:count]))
@@ -55,6 +55,10 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
           #{inspect(traversed_errors, pretty: true)}
           """
 
+          %{status: 500, error: error_msg}
+
+        {:error, {:image, :not_found}} ->
+          error_msg = "Image file not found during processing"
           %{status: 500, error: error_msg}
 
         {:error, :content_type, attemped_mime, allowed_mime} ->
@@ -81,6 +85,10 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
               height: image.height
             }
           }
+
+        {:error, error} ->
+          error_msg = "Error during upload: #{inspect(error)}"
+          %{status: 500, error: error_msg}
       end
 
     json(conn, payload)

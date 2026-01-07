@@ -5,7 +5,7 @@ export default (app) => ({
   mounted() {
     console.log('==> Form mounted')
     this.skipKeydown = this.el.hasAttribute('data-skip-keydown')
-    this.$form = this.el.querySelector('form')
+    this.$form = this.el.querySelector('form.main-form')
     this.$input = this.$form.querySelector('input')
     this.submitListenerEvent = this.submitListener.bind(this)
 
@@ -26,6 +26,14 @@ export default (app) => ({
         }
       }
       this.$input.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+
+    this.handleEvent('b:show_drawer', ({ drawer_id }) => {
+      const drawer = document.getElementById(drawer_id)
+      if (drawer) {
+        drawer.classList.remove('hidden', 'x-100')
+        drawer.classList.add('x-0')
+      }
     })
 
     this.handleEvent('b:set_active_field', (opts) => {

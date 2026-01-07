@@ -17,6 +17,8 @@ import LivePreviewHook from './hooks/LivePreview'
 import MapURLParserHook from './hooks/MapURLParser'
 import ModalHook from './hooks/Modal'
 import ModulePickerHook from './hooks/ModulePicker'
+import MuxUploaderHook from './hooks/MuxUploader'
+import BunnyUploaderHook from './hooks/BunnyUploader'
 import NavigationHook from './hooks/Navigation'
 import PublishClosestInputHook from './hooks/PublishClosestInput'
 import PublishInputHook from './hooks/PublishInput'
@@ -57,6 +59,8 @@ export default (app) => {
     'Brando.MapURLParser': MapURLParserHook(app),
     'Brando.Modal': ModalHook(app),
     'Brando.ModulePicker': ModulePickerHook(app),
+    'Brando.MuxUploader': MuxUploaderHook(app),
+    'Brando.BunnyUploader': BunnyUploaderHook(app),
     'Brando.Navigation': NavigationHook(app),
     'Brando.PublishClosestInput': PublishClosestInputHook(app),
     'Brando.PublishInput': PublishInputHook(app),

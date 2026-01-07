@@ -152,6 +152,35 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                   <% end %>
                 </div>
 
+                <%= if @allow_custom do %>
+                  <div class="custom-value-section">
+                    <h2 class="titlecase">{gettext("Custom value")}</h2>
+                    <div class="field-wrapper">
+                      <div class="field-base">
+                        <input
+                          class="text"
+                          type="text"
+                          name="custom_value"
+                          value={@custom_input_value}
+                          phx-keyup={JS.push("update_custom_value", target: @myself)}
+                          placeholder={gettext("Enter custom value...")}
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      class="secondary"
+                      phx-click={
+                        JS.push("select_custom_value", target: @myself)
+                        |> JS.push("toggle_modal", target: @myself)
+                        |> hide_modal("##{@modal_id}")
+                      }
+                    >
+                      {gettext("Use custom value")}
+                    </button>
+                  </div>
+                <% end %>
+
                 <%= if @select_form do %>
                   <.form :let={entry_form} for={@select_changeset} phx-change={JS.push("validate_new_entry", target: @myself)}>
                     {gettext("Create entry")}
@@ -212,6 +241,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      socket
      |> assign(:open, false)
      |> assign(:filter_string, "")
+     |> assign(:custom_input_value, "")
      |> assign_new(:publish, fn -> true end)
      |> assign(:initial_run, true)}
   end
@@ -227,6 +257,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     narrow = Keyword.get(assigns.opts, :narrow)
     inline = Keyword.get(assigns.opts, :inline)
     resetable = Keyword.get(assigns.opts, :resetable)
+    allow_custom = Keyword.get(assigns.opts, :allow_custom, false)
 
     changeset_fun = Keyword.get(assigns.opts, :changeset_fun)
     default = Keyword.get(assigns.opts, :default)
@@ -239,7 +270,9 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      |> prepare_input_component()
      |> assign_input_options()
      |> assign(:selected_option, selected_option)
+     |> assign_new(:allow_custom, fn -> allow_custom end)
      |> assign_label()
+     |> assign_custom_input_value()
      |> assign_new(:inline, fn -> inline end)
      |> assign_new(:narrow, fn -> narrow end)
      |> assign_new(:resetable, fn -> resetable end)
@@ -312,8 +345,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   defp ensure_string_values(map), do: map
 
-  def assign_label(%{assigns: %{input_options: input_options, selected_option: selected_option}} = socket) do
-    assign(socket, :select_label, get_label(input_options, selected_option))
+  def assign_label(
+        %{assigns: %{input_options: input_options, selected_option: selected_option, allow_custom: allow_custom}} = socket
+      ) do
+    assign(socket, :select_label, get_label(input_options, selected_option, allow_custom))
   end
 
   def maybe_assign_select_form(%{assigns: %{entry_form: {target_module, form_name}}} = socket) do
@@ -418,15 +453,35 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     """
   end
 
-  defp get_label(input_options, selected_option) do
+  defp get_label(input_options, selected_option, allow_custom) do
     case Enum.find(input_options, fn
            %{value: value} -> value == selected_option
            %{id: id} -> to_string(id) == selected_option
          end) do
-      nil -> gettext("No selection")
-      opt -> extract_label(opt)
+      nil ->
+        if allow_custom && selected_option && selected_option != "" do
+          selected_option
+        else
+          gettext("No selection")
+        end
+
+      opt ->
+        extract_label(opt)
     end
   end
+
+  defp assign_custom_input_value(
+         %{assigns: %{selected_option: selected, input_options: options, allow_custom: true}} =
+           socket
+       ) do
+    is_custom =
+      selected && selected != "" &&
+        !Enum.any?(options, fn opt -> extract_value(opt) == selected end)
+
+    assign(socket, :custom_input_value, if(is_custom, do: selected, else: ""))
+  end
+
+  defp assign_custom_input_value(socket), do: socket
 
   def handle_event("toggle_modal", _, socket) do
     socket = (!socket.assigns.open && update_input_options(socket)) || socket
@@ -526,6 +581,20 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      socket
      |> assign(:selected_option, nil)
      |> assign_label()}
+  end
+
+  def handle_event("update_custom_value", %{"value" => value}, socket) do
+    {:noreply, assign(socket, :custom_input_value, value)}
+  end
+
+  def handle_event("select_custom_value", _, socket) do
+    value = socket.assigns.custom_input_value
+    value = if value == "", do: nil, else: value
+
+    socket
+    |> assign(:selected_option, value)
+    |> assign_label()
+    |> then(&{:noreply, &1})
   end
 
   defp maybe_register_mutation_listener(%{assigns: %{initial_run: true, relation_schema: schema}} = socket)

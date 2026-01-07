@@ -45,11 +45,15 @@ export default (app) => ({
             to: e.to.dataset,
             ...e.item.dataset,
           }
-          this.pushEventTo(
-            this.el,
-            this.el.dataset['drop'] || 'reposition',
-            params
-          )
+
+          const eventName = this.el.dataset['drop'] || 'reposition'
+          const target = this.el.getAttribute('phx-target')
+
+          if (target === 'live_view') {
+            this.pushEvent(eventName, params)
+          } else {
+            this.pushEventTo(this.el, eventName, params)
+          }
         }
       },
     })

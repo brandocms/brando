@@ -298,3 +298,21 @@ h2.titlecase + .button-group-vertical button:first-of-type {
 .select-filter {
   margin-bottom: 15px;
 }
+
+.custom-value-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--brando-color-shaded);
+
+  h2 {
+    margin-bottom: 10px;
+  }
+
+  .field-wrapper {
+    margin-bottom: 15px;
+  }
+
+  button {
+    width: 100%;
+  }
+}

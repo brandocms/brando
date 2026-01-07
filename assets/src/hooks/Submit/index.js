@@ -3,7 +3,7 @@ import { Dom } from '@brandocms/jupiter'
 export default app => ({
   mounted() {
     this.$formWrapper = Dom.find(`#${this.el.dataset.formId}-el`)
-    this.$form = Dom.find(this.$formWrapper, 'form')
+    this.$form = Dom.find(this.$formWrapper, 'form.main-form')
 
     this.el.addEventListener('click', e => {
       e.preventDefault()

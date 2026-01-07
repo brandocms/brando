@@ -3,6 +3,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   use Gettext, backend: Brando.Gettext
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
+  import BrandoAdmin.Utils, only: [show_modal: 2, hide_modal: 2, prepare_input_component: 1]
+
   alias Brando.Exception.BlueprintError
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
@@ -90,13 +92,17 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             close={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}
           >
             <:header>
-              <%= if @select_form && !@creating do %>
-                <button class="header-button" type="button" phx-click={JS.push("show_form", target: @myself)}>
+              <%= if @select_form do %>
+                <button
+                  class="header-button"
+                  type="button"
+                  phx-click={JS.push("show_form", target: @myself) |> show_modal("##{@create_modal_id}")}
+                >
                   Create {@singular}
                 </button>
               <% end %>
             </:header>
-            <%= if @show_filter && !Enum.empty?(@input_options) && !@creating && @open do %>
+            <%= if @show_filter && !Enum.empty?(@input_options) && @open do %>
               <div class="select-filter" id={"#{@field.id}-select-modal-filter"} phx-hook="Brando.SelectFilter">
                 <div class="field-wrapper">
                   <div class="label-wrapper">
@@ -112,7 +118,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             <% end %>
 
             <div class="select-modal-wrapper">
-              <%= if !@creating && @open do %>
+              <%= if @open do %>
                 <div class="select-modal">
                   <div id={"#{@field.id}-options"} class="options" phx-hook="Brando.RememberScrollPosition">
                     <h2 class="titlecase">{gettext("Available options")}</h2>
@@ -141,27 +147,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                     <.get_label opt={opt} target={@myself} deletable />
                   </.labels>
                 </div>
-              <% else %>
-                <%= if @select_form do %>
-                  <.form :let={entry_form} for={@select_changeset} phx-change={JS.push("validate_new_entry", target: @myself)}>
-                    <div :for={tab <- @select_form.tabs} class={["form-tab", "active"]} data-tab-name={tab.name}>
-                      <div class="row">
-                        <Fieldset.render
-                          :for={fieldset <- tab.fields}
-                          form={entry_form}
-                          parent_uploads={[]}
-                          fieldset={fieldset}
-                        />
-                      </div>
-                    </div>
-                    <button phx-click={JS.push("save_new_entry", target: @myself)} type="button" class="primary">
-                      Save
-                    </button>
-                    <button phx-click={JS.push("hide_form", target: @myself)} type="button" class="secondary">
-                      Cancel
-                    </button>
-                  </.form>
-                <% end %>
               <% end %>
             </div>
             <:footer>
@@ -182,6 +167,51 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             </:footer>
           </Content.modal>
         </div>
+
+        <.portal :if={@select_form} id={"create-#{@field.id}-portal"} target="body">
+          <Content.modal
+            title={"Create #{@singular}"}
+            id={@create_modal_id}
+            narrow={true}
+            close={JS.push("hide_form", target: @myself) |> hide_modal("##{@create_modal_id}")}
+          >
+            <.form :let={entry_form} for={@select_changeset} phx-change="validate_new_entry" phx-target={@myself}>
+              <div :for={tab <- @select_form.tabs} class={["form-tab", "active", "portal-form"]} data-tab-name={tab.name}>
+                <div class="row">
+                  <Fieldset.render
+                    :for={fieldset <- tab.fields}
+                    form={entry_form}
+                    parent_uploads={%{}}
+                    relations={%{}}
+                    current_user={@current_user}
+                    form_cid={nil}
+                    fieldset={fieldset}
+                  />
+                </div>
+              </div>
+            </.form>
+            <:footer>
+              <div class="button-group">
+                <button
+                  type="button"
+                  class="primary small"
+                  phx-click={JS.push("save_new_entry", target: @myself)}
+                  phx-target={@myself}
+                >
+                  {gettext("Save")}
+                </button>
+                <button
+                  type="button"
+                  class="secondary small"
+                  phx-click={JS.push("hide_form", target: @myself) |> hide_modal("##{@create_modal_id}")}
+                  phx-target={@myself}
+                >
+                  {gettext("Cancel")}
+                </button>
+              </div>
+            </:footer>
+          </Content.modal>
+        </.portal>
       </Form.field_base>
     </div>
     """
@@ -239,10 +269,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign(:update_relation, update_relation)
      |> assign(:default, default)
      |> assign(:entry_form, entry_form)
-     |> maybe_assign_select_changeset()
      |> maybe_assign_select_form()
+     |> maybe_assign_select_changeset()
      |> maybe_register_mutation_listener()
      |> assign_new(:modal_id, fn -> "select-#{assigns.id}-modal" end)
+     |> assign_new(:create_modal_id, fn -> "create-#{assigns.id}-modal" end)
      |> assign(:initial_run, fn -> false end)}
   end
 
@@ -507,22 +538,32 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     assign(socket, :select_form, nil)
   end
 
-  def maybe_assign_select_changeset(%{assigns: %{changeset_fun: nil}} = socket) do
-    assign(socket, :select_changeset, nil)
+  def maybe_assign_select_changeset(%{assigns: %{entry_form: entry_form}} = socket)
+      when entry_form in [nil, false] do
+    socket
+    |> assign(:select_changeset, nil)
+    |> assign(:singular, nil)
+    |> assign(:module, nil)
   end
 
-  def maybe_assign_select_changeset(
-        %{assigns: %{changeset_fun: changeset_fun, default: default, current_user: current_user}} =
-          socket
-      ) do
-    select_changeset = changeset_fun.(default, %{}, current_user, [])
-    module = select_changeset.data.__struct__
+  def maybe_assign_select_changeset(%{assigns: %{entry_form: {module, _form_name}, current_user: current_user}} = socket) do
     singular = module.__naming__().singular
+
+    # Create an empty struct for the changeset
+    empty_struct = struct!(module)
+    select_changeset = module.changeset(empty_struct, %{}, current_user)
 
     socket
     |> assign(:select_changeset, select_changeset)
     |> assign(:singular, singular)
     |> assign(:module, module)
+  end
+
+  def maybe_assign_select_changeset(socket) do
+    socket
+    |> assign(:select_changeset, nil)
+    |> assign(:singular, nil)
+    |> assign(:module, nil)
   end
 
   def selected_options(%{relation_type: relation_type} = assigns)
@@ -534,8 +575,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       <div
         id={"#{@field.id}-selected-options"}
         class={["selected-labels", @wrapped_labels && "wrapped"]}
-        data-sequenced={@sequenced? != false}
-        phx-hook={@sequenced? != false && "Brando.SortableAssocs"}
+        data-sequenced={@sequenced? && @sequenced?.sort_param}
+        phx-hook={@sequenced? && @sequenced?.sort_param && "Brando.SortableAssocs"}
         data-sortable-id={"sortable-#{@field.id}-identifiers"}
         data-sortable-handle=".selected-label"
         data-sortable-selector=".selected-label"
@@ -835,12 +876,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     select_changeset = Map.put(select_changeset, :action, :create)
 
     case apply(context, :"create_#{singular}", [select_changeset, current_user]) do
-      {:ok, _} ->
+      {:ok, _entry} ->
         send(self(), {:toast, "#{String.capitalize(singular)} created"})
 
         {:noreply,
          socket
-         |> assign(select_changeset: select_changeset)
          |> assign(:creating, false)
          |> update_input_options()
          |> maybe_assign_select_changeset()}
@@ -856,17 +896,17 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         %{
           assigns: %{
             singular: singular,
-            changeset_fun: changeset_fun,
-            current_user: current_user,
-            default: default
+            module: module,
+            current_user: current_user
           }
         } = socket
       ) do
     entry_params = Map.get(params, singular)
 
+    empty_struct = struct!(module)
+
     select_changeset =
-      default
-      |> changeset_fun.(entry_params, current_user)
+      module.changeset(empty_struct, entry_params, current_user)
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, select_changeset: select_changeset)}
@@ -1036,6 +1076,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   def handle_event("hide_form", _, socket) do
     {:noreply, assign(socket, :creating, false)}
+  end
+
+  def handle_event("focus", _, socket) do
+    {:noreply, socket}
   end
 
   def maybe_add_relation(struct, nil, _assoc_data), do: struct

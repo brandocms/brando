@@ -147,22 +147,6 @@ defmodule BrandoAdmin.Components.Form.Input.File do
     {:noreply, socket}
   end
 
-  def empty_preview(assigns) do
-    ~H"""
-    <div class="file-preview-empty">
-      <Input.input type={:hidden} field={@relation_field} value="" />
-
-      <div>
-        {gettext("No file associated with field")}
-      </div>
-
-      <button class="btn-small" type="button" phx-click={@click} phx-value-id={"edit-file-#{@field.id}"}>
-        {gettext("Add file")}
-      </button>
-    </div>
-    """
-  end
-
   @doc """
   Show preview if we have a file with a filename
   """
@@ -201,12 +185,14 @@ defmodule BrandoAdmin.Components.Form.Input.File do
           </button>
         </div>
       <% else %>
-        <div class="file-preview-empty">
-          <div>
-            {gettext("No file associated with field")}
-          </div>
-
-          <button class="btn tiny mt-1" type="button" phx-click={@click} phx-value-id={"edit-file-#{@field.id}"}>
+        <div class="img-placeholder">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+            <path fill="none" d="M0 0h24v24H0z" /><path d="M20 22H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1zm-1-2V4H5v16h14zM8 7h8v2H8V7zm0 4h8v2H8v-2zm0 4h5v2H8v-2z" />
+          </svg>
+        </div>
+        <div class="file-info">
+          {gettext("No file associated with field")}
+          <button class="tiny" type="button" phx-click={@click} phx-value-id={"edit-file-#{@field.id}"}>
             {gettext("Add file")}
           </button>
         </div>

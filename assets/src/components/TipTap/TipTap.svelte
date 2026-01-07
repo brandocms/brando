@@ -1,9 +1,10 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import { Editor, mergeAttributes } from "@tiptap/core";
+  import { TextStyleKit } from '@tiptap/extension-text-style'
   import StarterKit from "@tiptap/starter-kit";
-  import Color from "@tiptap/extension-color";
-  import TextStyle from "@tiptap/extension-text-style";
+  import { Focus } from '@tiptap/extensions'
+  
   import Typography from "@tiptap/extension-typography";
   import Subscript from "@tiptap/extension-subscript";
   import Superscript from "@tiptap/extension-superscript";
@@ -13,7 +14,6 @@
   import HTMLInputParser from "./extensions/PasteCleaner/HTMLInputParser";
   import JumpAnchor from "./extensions/JumpAnchor";
   import PreventDrop from "./extensions/PreventDrop";
-  import Focus from "@tiptap/extension-focus";
   import TextAlign from "@tiptap/extension-text-align";
 
   import { alertPrompt } from "../../alerts";
@@ -232,6 +232,7 @@
       extensions: [
         StarterKit.configure({
           dropcursor: false,
+          link: false
         }),
         Typography,
 
@@ -250,8 +251,11 @@
         }),
         PreventDrop,
         SmartText,
-        TextStyle,
-        Color,
+        TextStyleKit.configure({
+          color: {
+            types: ['textStyle'],
+          },
+        }),
         TextAlign.configure({ types: ["heading", "paragraph"] }),
       ],
       content,

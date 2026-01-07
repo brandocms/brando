@@ -348,6 +348,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       phx-click={@select}
       phx-value-param={@identifier.id}
     >
+      <Input.hidden field={@block_identifier[:id]} />
       <Input.hidden field={@block_identifier[:block_id]} />
       <Input.hidden field={@block_identifier[:identifier_id]} />
 

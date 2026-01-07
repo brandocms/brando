@@ -71,7 +71,7 @@ export default (app) => ({
       this.files = e.target.files
 
       for (let i = 0; i < this.files.length; i++) {
-        await this.upload(this.files[i])
+        await this.uploadFile(this.files[i])
       }
 
       this.files = []
@@ -81,9 +81,16 @@ export default (app) => ({
   },
 
   attachListeners() {
+    // Always update the file input reference in case it changed
+    this.$fileInput = Dom.find(this.el, '.file-input')
     this.$uploadCanvases = Dom.all(this.el, '.upload-canvas')
 
     this.$uploadCanvases.forEach((uploadCanvas) => {
+      // Skip if listeners already attached to this element
+      if (uploadCanvas.dataset.listenersAttached === 'true') {
+        return
+      }
+
       uploadCanvas.addEventListener('click', (e) => {
         if (e.target.tagName === 'BUTTON') {
           return
@@ -117,13 +124,16 @@ export default (app) => ({
 
         if (!this.multi) {
           const f = files.item(0)
-          this.upload(f)
+          await this.uploadFile(f)
         } else {
           for (let i = 0; i < files.length; i++) {
-            await this.upload(files[i])
+            await this.uploadFile(files[i])
           }
         }
       })
+
+      // Mark this canvas as having listeners attached
+      uploadCanvas.dataset.listenersAttached = 'true'
     })
   },
 
@@ -147,7 +157,7 @@ export default (app) => ({
     gsap.to(this.plusTimeline, { timeScale: 0 })
   },
 
-  async upload(f) {
+  async uploadFile(f) {
     return new Promise(async (resolve, reject) => {
       const formData = new FormData()
       const headers = new Headers()

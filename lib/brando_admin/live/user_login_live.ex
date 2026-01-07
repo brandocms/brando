@@ -32,7 +32,7 @@ defmodule BrandoAdmin.UserLoginLive do
             fill="#012992"
           />
         </svg>
-        <div>Brando &copy;{NaiveDateTime.utc_now().year}</div>
+        <div>BRANDO CMS &copy;{NaiveDateTime.utc_now().year}</div>
       </div>
       <div class="login-container">
         <div class="login-box">

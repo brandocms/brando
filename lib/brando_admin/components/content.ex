@@ -111,11 +111,24 @@ defmodule BrandoAdmin.Components.Content do
     """
   end
 
+  attr :id, :string, required: true
+  attr :title, :string, required: true
+  attr :show, :boolean, default: false
+  attr :center_header, :boolean, default: false
+  attr :narrow, :boolean, default: false
+  attr :medium, :boolean, default: false
+  attr :wide, :boolean, default: false
+  attr :remember_scroll_position, :boolean, default: false
+  attr :close, :any, default: nil
+  attr :ok, :any, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+  slot :header
+  slot :footer
+
   def modal(assigns) do
     assigns =
       assigns
-      |> assign_new(:header, fn -> nil end)
-      |> assign_new(:footer, fn -> nil end)
       |> assign_new(:show, fn -> false end)
       |> assign_new(:center_header, fn -> false end)
       |> assign_new(:narrow, fn -> false end)
@@ -137,6 +150,7 @@ defmodule BrandoAdmin.Components.Content do
       ]}
       phx-window-keydown={@close}
       phx-key="escape"
+      {@rest}
     >
       <div class="modal-backdrop" phx-click={hide_modal("##{@id}")} />
       <div class="modal-dialog" role="document">
@@ -147,7 +161,7 @@ defmodule BrandoAdmin.Components.Content do
           ]}>
             <h2>{@title}</h2>
             <div class="header-wrap">
-              <%= if @header do %>
+              <%= if @header != [] do %>
                 {render_slot(@header)}
               <% end %>
               <button type="button" class="modal-close" phx-click={@close || hide_modal("##{@id}")}>
@@ -162,7 +176,7 @@ defmodule BrandoAdmin.Components.Content do
           >
             {render_slot(@inner_block)}
           </section>
-          <%= if @footer do %>
+          <%= if @footer != [] do %>
             <footer class="modal-footer">
               {render_slot(@footer)}
               <button :if={@ok} class="primary" type="button" phx-click={@ok} phx-value-id={@id}>Ok</button>
