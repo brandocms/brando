@@ -55,22 +55,38 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :creator_id, references(:users)
     end
 
-    create table(:videos) do
-      add :url, :text
-      add :source, :text
+    create table(:files) do
+      add :title, :text
+      add :mime_type, :text
+      add :filesize, :integer
       add :filename, :text
-      add :remote_id, :text
+      add :config_target, :text
+      add :cdn, :boolean
+      add :deleted_at, :utc_datetime
+      timestamps()
+      add :creator_id, references(:users, on_delete: :nothing)
+    end
+
+    create table(:videos) do
+      add :type, :string
+      add :title, :text
+      add :caption, :text
+      add :aspect_ratio, :string
       add :width, :integer
       add :height, :integer
-      add :thumbnail_url, :text
+      add :duration, :string
       add :autoplay, :boolean
       add :preload, :boolean
       add :loop, :boolean
       add :controls, :boolean
-      add :cdn, :boolean
+      add :source_url, :text
+      add :remote_id, :text
       add :config_target, :text
+      add :status, :string, default: "ready"
+      add :meta, :map, default: %{}
+      add :file_id, references(:files, on_delete: :nilify_all)
+      add :thumbnail_id, references(:images, on_delete: :nilify_all)
       add :creator_id, references(:users, on_delete: :nothing)
-      add :cover_image_id, references(:images, on_delete: :nilify_all)
       add :deleted_at, :utc_datetime
       timestamps()
     end
@@ -82,18 +98,6 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :video_id, references(:videos, on_delete: :delete_all)
       add :creator_id, references(:users, on_delete: :nothing)
       timestamps()
-    end
-
-    create table(:files) do
-      add :title, :text
-      add :mime_type, :text
-      add :filesize, :integer
-      add :filename, :text
-      add :config_target, :text
-      add :cdn, :boolean
-      add :deleted_at, :utc_datetime
-      timestamps()
-      add :creator_id, references(:users, on_delete: :nothing)
     end
 
 
@@ -287,6 +291,35 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :refs, :jsonb
       add :identifier_metas, :jsonb
     end
+
+    create table(:content_refs) do
+      add :name, :text, null: false
+      add :description, :text
+      add :data, :jsonb
+      add :sequence, :integer
+      add :uid, :string, null: false
+      add :active, :boolean, default: true, null: false
+      add :collapsed, :boolean, default: false, null: false
+      
+      # Foreign keys
+      add :module_id, references(:content_modules, on_delete: :delete_all)
+      add :block_id, references(:content_blocks, on_delete: :delete_all)
+      add :gallery_id, references(:galleries, on_delete: :nilify_all)
+      add :video_id, references(:videos, on_delete: :nilify_all)
+      add :file_id, references(:files, on_delete: :nilify_all)
+      add :image_id, references(:images, on_delete: :nilify_all)
+      
+      timestamps()
+      add :creator_id, references(:users, on_delete: :nothing)
+    end
+    
+    create index(:content_refs, [:module_id])
+    create index(:content_refs, [:block_id])
+    create index(:content_refs, [:gallery_id])
+    create index(:content_refs, [:video_id])
+    create index(:content_refs, [:file_id])
+    create index(:content_refs, [:image_id])
+    create unique_index(:content_refs, [:uid])
 
     create table(:content_identifiers) do
       add :entry_id, :id
@@ -507,6 +540,16 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :menu_item_id, references(:navigation_items, on_delete: :nilify_all)
       add :creator_id, references(:users, on_delete: :nothing)
 
+      timestamps()
+    end
+
+    # PriceCategory with embedded prices
+    create table(:prices_price_categories) do
+      add :status, :integer
+      add :title, :text
+      add :prices, :jsonb
+      add :sequence, :integer
+      add :creator_id, references(:users, on_delete: :nothing)
       timestamps()
     end
   end

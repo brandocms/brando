@@ -21,21 +21,21 @@ defmodule BrandoIntegrationWeb.Projects.ProjectListLive do
 end
 
 defmodule BrandoIntegration.LockdownController do
-  use Phoenix.Controller,
-    namespace: Brando
+  use Phoenix.Controller, formats: [:html, :json]
+  plug :put_layout, html: {Brando.LayoutView, :app}
 end
 
 defmodule BrandoIntegration.ProjectController do
-  use Phoenix.Controller,
-    namespace: Brando
+  use Phoenix.Controller, formats: [:html, :json]
+  plug :put_layout, html: {Brando.LayoutView, :app}
 
   def index(conn, _), do: send_resp(conn, 200, "index")
   def show(conn, _), do: send_resp(conn, 200, "show")
 end
 
 defmodule BrandoIntegrationWeb.PageController do
-  use Phoenix.Controller,
-    namespace: Brando
+  use Phoenix.Controller, formats: [:html, :json]
+  plug :put_layout, html: {Brando.LayoutView, :app}
 
   def index(conn, _), do: send_resp(conn, 200, "index")
   def show(conn, _), do: send_resp(conn, 200, "show")

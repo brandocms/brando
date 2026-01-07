@@ -987,8 +987,8 @@ defmodule Brando.HTMLTest do
               %{
                 name: "text",
                 description: "text",
+                uid: "asdfasdf",
                 data: %Brando.Villain.Blocks.TextBlock{
-                  uid: "asdfasdf",
                   data: %Brando.Villain.Blocks.TextBlock.Data{
                     type: "text",
                     text: "SOMETHING -> $__CONTENT__ <- ANYTHING"
@@ -1024,8 +1024,8 @@ defmodule Brando.HTMLTest do
               %{
                 name: "text",
                 description: "text",
+                uid: "asdfasdf",
                 data: %Brando.Villain.Blocks.TextBlock{
-                  uid: "asdfasdf",
                   data: %Brando.Villain.Blocks.TextBlock.Data{
                     type: "text",
                     text: "SOMETHING -><- ANYTHING"

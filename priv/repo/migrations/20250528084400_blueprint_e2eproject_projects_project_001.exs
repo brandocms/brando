@@ -18,6 +18,7 @@ defmodule E2eProject.Migrations.Projects.Project.Blueprint001 do
       add :meta_image_id, references(:images, on_delete: :nilify_all)
       add :listing_image_id, references(:images, on_delete: :nilify_all)
       add :project_gallery_id, references(:galleries, on_delete: :nilify_all)
+      add :cover_video_id, references(:videos, on_delete: :nilify_all)
       add :creator_id, references(:users, on_delete: :nothing)
       add :client_id, references(:projects_clients, on_delete: :nothing)
       add :rendered_blocks, :text

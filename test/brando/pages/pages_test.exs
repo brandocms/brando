@@ -2,6 +2,8 @@ defmodule Brando.PagesTest do
   use ExUnit.Case, async: true
   use Brando.ConnCase
 
+  import Ecto.Query
+
   alias Brando.Pages
   alias Brando.Factory
 
@@ -250,5 +252,288 @@ defmodule Brando.PagesTest do
 
     assert Pages.render_fragment("parent", "frag1") |> Phoenix.HTML.safe_to_string() ==
              "fragment content!"
+  end
+
+  test "duplicate_page duplicates fragments and child pages with their blocks and vars" do
+    user = Factory.insert(:random_user)
+
+    # Create a module for blocks
+    module_params =
+      Factory.params_for(:module, %{
+        name: "test_module",
+        namespace: "test",
+        code: "<div>{{ test_var }}</div>",
+        refs: [],
+        vars: []
+      })
+
+    {:ok, module} = Brando.Content.create_module(module_params, user)
+
+    # Helper to create a block with vars and refs
+    create_page_block_with_vars = fn ->
+      %Brando.Pages.Page.Blocks{
+        block: %Brando.Content.Block{
+          type: :module,
+          source: "Elixir.Brando.Pages.Page.Blocks",
+          module_id: module.id,
+          uid: Brando.Utils.generate_uid(),
+          refs: [
+            %Brando.Content.Ref{
+              name: "test_ref",
+              description: "A test ref",
+              uid: Brando.Utils.generate_uid(),
+              data: %Brando.Villain.Blocks.TextBlock{
+                type: "text",
+                data: %Brando.Villain.Blocks.TextBlock.Data{text: "Hello from ref"}
+              },
+              sequence: 0
+            }
+          ],
+          vars: [
+            %Brando.Content.Var{
+              type: :text,
+              label: "Test Var",
+              key: "test_var",
+              value: "test value",
+              creator: user
+            }
+          ]
+        }
+      }
+      |> Ecto.Changeset.change()
+      |> Map.put(:action, :insert)
+    end
+
+    create_fragment_block_with_vars = fn ->
+      %Brando.Pages.Fragment.Blocks{
+        block: %Brando.Content.Block{
+          type: :module,
+          source: "Elixir.Brando.Pages.Fragment.Blocks",
+          module_id: module.id,
+          uid: Brando.Utils.generate_uid(),
+          refs: [
+            %Brando.Content.Ref{
+              name: "fragment_ref",
+              description: "A fragment ref",
+              uid: Brando.Utils.generate_uid(),
+              data: %Brando.Villain.Blocks.TextBlock{
+                type: "text",
+                data: %Brando.Villain.Blocks.TextBlock.Data{text: "Hello from fragment ref"}
+              },
+              sequence: 0
+            }
+          ],
+          vars: [
+            %Brando.Content.Var{
+              type: :text,
+              label: "Test Var",
+              key: "test_var",
+              value: "test value",
+              creator: user
+            }
+          ]
+        }
+      }
+      |> Ecto.Changeset.change()
+      |> Map.put(:action, :insert)
+    end
+
+    # Create parent page with blocks
+    page_params = Factory.params_for(:page, %{title: "Parent Page", uri: "parent-page"})
+
+    page_cs =
+      %Brando.Pages.Page{}
+      |> Brando.Pages.Page.changeset(page_params, user)
+      |> Ecto.Changeset.put_assoc(:entry_blocks, [
+        create_page_block_with_vars.()
+      ])
+      |> Ecto.Changeset.put_assoc(:vars, [
+        %Brando.Content.Var{
+          type: :text,
+          label: "Page Var",
+          key: "page_var",
+          value: "page var value",
+          creator: user
+        }
+      ])
+      |> Map.put(:action, :insert)
+
+    {:ok, parent_page} = Pages.create_page(page_cs, user)
+
+    # Create fragments for the parent page
+    fragment_params =
+      Factory.params_for(:fragment, %{
+        parent_key: "parent_page",
+        key: "header",
+        page_id: parent_page.id
+      })
+
+    fragment_cs =
+      %Brando.Pages.Fragment{}
+      |> Brando.Pages.Fragment.changeset(fragment_params, user)
+      |> Ecto.Changeset.put_assoc(:entry_blocks, [
+        create_fragment_block_with_vars.()
+      ])
+      |> Map.put(:action, :insert)
+
+    {:ok, _fragment} = Pages.create_fragment(fragment_cs, user)
+
+    # Create child page with blocks
+    child_page_params =
+      Factory.params_for(:page, %{
+        title: "Child Page",
+        uri: "child-page",
+        parent_id: parent_page.id
+      })
+
+    child_page_cs =
+      %Brando.Pages.Page{}
+      |> Brando.Pages.Page.changeset(child_page_params, user)
+      |> Ecto.Changeset.put_assoc(:entry_blocks, [
+        create_page_block_with_vars.()
+      ])
+      |> Ecto.Changeset.put_assoc(:vars, [
+        %Brando.Content.Var{
+          type: :text,
+          label: "Child Var",
+          key: "child_var",
+          value: "child var value",
+          creator: user
+        }
+      ])
+      |> Map.put(:action, :insert)
+
+    {:ok, _child_page} = Pages.create_page(child_page_cs, user)
+
+    # Duplicate the parent page
+    {:ok, duplicated_page} = Pages.duplicate_page(parent_page.id, user)
+
+    # Reload the duplicated page with all associations
+    {:ok, duplicated_page} =
+      Pages.get_page(%{
+        matches: %{id: duplicated_page.id},
+        preload: [
+          :vars,
+          entry_blocks: [block: [:vars, :refs]],
+          fragments:
+            from(f in Brando.Pages.Fragment,
+              where: is_nil(f.deleted_at),
+              order_by: [asc: f.sequence, asc: f.key],
+              preload: [entry_blocks: [block: [:vars, :refs]]]
+            ),
+          children: [:vars, entry_blocks: [block: [:vars, :refs]]]
+        ]
+      })
+
+    # Reload original page to ensure it still has its associations
+    {:ok, original_page} =
+      Pages.get_page(%{
+        matches: %{id: parent_page.id},
+        preload: [
+          :vars,
+          entry_blocks: [block: [:vars, :refs]],
+          fragments:
+            from(f in Brando.Pages.Fragment,
+              where: is_nil(f.deleted_at),
+              order_by: [asc: f.sequence, asc: f.key],
+              preload: [entry_blocks: [block: [:vars, :refs]]]
+            ),
+          children: [:vars, entry_blocks: [block: [:vars, :refs]]]
+        ]
+      })
+
+    # Assert duplicated page has different ID
+    refute duplicated_page.id == parent_page.id
+
+    # Assert page blocks are duplicated
+    assert length(duplicated_page.entry_blocks) == 1
+    duplicated_page_block = hd(duplicated_page.entry_blocks)
+    original_page_block = hd(original_page.entry_blocks)
+    refute duplicated_page_block.id == original_page_block.id
+    refute duplicated_page_block.block.id == original_page_block.block.id
+
+    # Assert page block vars are duplicated
+    assert length(duplicated_page_block.block.vars) == 1
+    duplicated_page_block_var = hd(duplicated_page_block.block.vars)
+    original_page_block_var = hd(original_page_block.block.vars)
+    refute duplicated_page_block_var.id == original_page_block_var.id
+    assert duplicated_page_block_var.value == original_page_block_var.value
+
+    # Assert page block refs are duplicated
+    assert length(duplicated_page_block.block.refs) == 1
+    duplicated_page_block_ref = hd(duplicated_page_block.block.refs)
+    original_page_block_ref = hd(original_page_block.block.refs)
+    refute duplicated_page_block_ref.id == original_page_block_ref.id
+    refute duplicated_page_block_ref.uid == original_page_block_ref.uid
+    assert duplicated_page_block_ref.name == original_page_block_ref.name
+
+    # Assert page vars are duplicated
+    assert length(duplicated_page.vars) == 1
+    duplicated_page_var = hd(duplicated_page.vars)
+    original_page_var = hd(original_page.vars)
+    refute duplicated_page_var.id == original_page_var.id
+    assert duplicated_page_var.value == original_page_var.value
+
+    # Debug: Check if fragments were created correctly
+    {:ok, all_fragments} = Pages.list_fragments(%{})
+
+    fragments_for_original = Enum.filter(all_fragments, &(&1.page_id == original_page.id))
+    _fragments_for_duplicated = Enum.filter(all_fragments, &(&1.page_id == duplicated_page.id))
+
+    # Assert fragments are duplicated (not moved!)
+    # Currently this will fail because fragments are being MOVED, not duplicated
+    assert length(fragments_for_original) == 1,
+           "Original page should still have its fragment, but fragment was moved. Fragment page_id: #{inspect(hd(all_fragments).page_id)}, Expected: #{original_page.id}"
+
+    assert length(duplicated_page.fragments) == 1
+    assert length(original_page.fragments) == 1
+
+    duplicated_fragment = hd(duplicated_page.fragments)
+    original_fragment = hd(original_page.fragments)
+
+    refute duplicated_fragment.id == original_fragment.id
+    assert duplicated_fragment.page_id == duplicated_page.id
+    assert original_fragment.page_id == original_page.id
+    assert duplicated_fragment.key == original_fragment.key
+
+    # Assert fragment blocks are duplicated
+    assert length(duplicated_fragment.entry_blocks) == 1
+    duplicated_fragment_block = hd(duplicated_fragment.entry_blocks)
+    original_fragment_block = hd(original_fragment.entry_blocks)
+    refute duplicated_fragment_block.id == original_fragment_block.id
+    refute duplicated_fragment_block.block.id == original_fragment_block.block.id
+
+    # Assert fragment block vars are duplicated
+    assert length(duplicated_fragment_block.block.vars) == 1
+
+    # Assert child pages are duplicated
+    assert length(duplicated_page.children) == 1
+    assert length(original_page.children) == 1
+
+    duplicated_child = hd(duplicated_page.children)
+    original_child = hd(original_page.children)
+
+    refute duplicated_child.id == original_child.id
+    assert duplicated_child.parent_id == duplicated_page.id
+    assert original_child.parent_id == original_page.id
+    # Child title is appended with _dupl to distinguish it
+    assert duplicated_child.title == "#{original_child.title}_dupl"
+
+    # Assert child page blocks are duplicated
+    assert length(duplicated_child.entry_blocks) == 1
+    duplicated_child_block = hd(duplicated_child.entry_blocks)
+    original_child_block = hd(original_child.entry_blocks)
+    refute duplicated_child_block.id == original_child_block.id
+    refute duplicated_child_block.block.id == original_child_block.block.id
+
+    # Assert child page block vars are duplicated
+    assert length(duplicated_child_block.block.vars) == 1
+
+    # Assert child page vars are duplicated
+    assert length(duplicated_child.vars) == 1
+    duplicated_child_var = hd(duplicated_child.vars)
+    original_child_var = hd(original_child.vars)
+    refute duplicated_child_var.id == original_child_var.id
+    assert duplicated_child_var.value == original_child_var.value
   end
 end

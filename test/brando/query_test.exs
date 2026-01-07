@@ -1,5 +1,6 @@
 defmodule Brando.QueryTest do
-  use ExUnit.Case, async: true
+  # async: false because cache tests share global :query cache state
+  use ExUnit.Case, async: false
   use Brando.ConnCase
   import Ecto.Query
   alias Brando.Factory
@@ -126,6 +127,7 @@ defmodule Brando.QueryTest do
     end
 
     test "query :single cached" do
+      Cachex.clear(:query)
       _p1 = Factory.insert(:page, title: "page 1")
       p2a = Factory.insert(:page, title: "page 2")
 
@@ -153,6 +155,7 @@ defmodule Brando.QueryTest do
     end
 
     test "query :list cached" do
+      Cachex.clear(:query)
       p1 = Factory.insert(:page, title: "page 1")
       p2 = Factory.insert(:page, title: "page 2")
 
