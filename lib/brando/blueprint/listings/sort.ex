@@ -1,6 +1,7 @@
 defmodule Brando.Blueprint.Listings.Sort do
   @moduledoc false
-  defstruct label: nil,
+  defstruct __spark_metadata__: nil,
+            label: nil,
             key: nil,
             order: nil
 end

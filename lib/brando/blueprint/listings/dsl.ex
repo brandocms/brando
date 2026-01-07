@@ -57,19 +57,56 @@ defmodule Brando.Blueprint.Listings.Dsl do
     ]
   }
 
+  @option %Spark.Dsl.Entity{
+    name: :option,
+    args: [:label, :value],
+    target: Listings.Option,
+    schema: [
+      label: [
+        type: :string,
+        required: true,
+        doc: "Option label"
+      ],
+      value: [
+        type: {:or, [:string, nil]},
+        required: false,
+        default: nil,
+        doc: "Option value"
+      ]
+    ]
+  }
+
   @filter %Spark.Dsl.Entity{
     name: :filter,
     target: Listings.Filter,
+    entities: [options: [@option]],
     schema: [
       label: [
         type: :string,
         required: true,
         doc: "Filter label"
       ],
-      filter: [
+      key: [
         type: :string,
         required: true,
-        doc: "Filter"
+        doc: "Filter key (used in URL params and context filters)"
+      ],
+      type: [
+        type: {:in, [:text, :boolean, :select]},
+        required: false,
+        default: :text,
+        doc: "Filter type: :text (search input), :boolean (toggle), :select (dropdown)"
+      ],
+      options: [
+        type: {:fun, 1},
+        required: false,
+        doc: "Dynamic options function receiving %{language: lang}, returns [{label, value}]"
+      ],
+      default: [
+        type: :any,
+        required: false,
+        default: nil,
+        doc: "Default value. For :boolean, typically false. For :select, typically nil."
       ]
     ]
   }

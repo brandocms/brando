@@ -161,6 +161,9 @@
   }
 
   .list-tools-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
     @space margin-bottom 20px;
   }
 
@@ -425,6 +428,10 @@
       .main-content .circle-flag {
         background-color: #ffffff;
       }
+
+      .badge.tiny {
+        background-color: #ffffff;
+      }
     }
 
     &:nth-of-type(even) {
@@ -493,10 +500,7 @@
         right: 0;
         color: var(--brando-color-dark);
         transform: translate(3px, 1px);
-        transition:
-          transform 250ms ease,
-          opacity 250ms ease,
-          color 250ms ease;
+        transition: transform 250ms ease, opacity 250ms ease, color 250ms ease;
         display: inline-block;
         width: 15px;
         height: 15px;
@@ -538,6 +542,11 @@
       @space padding-bottom 10px;
       align-items: center;
       min-height: 50px;
+
+      &:has(> .disabled) {
+        background-color: #ffedeb;
+        opacity: 0.5;
+      }
 
       .padded {
         @space padding 15px;
@@ -705,5 +714,65 @@
     button svg .main-circle {
       stroke: var(--brando-color-dark);
     }
+  }
+}
+
+/* Advanced filters bar (boolean/select filters) */
+.advanced-filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+/* Uses tiny-toggle pattern from form/input - just add label styling */
+.boolean-filter .tiny-toggle-label {
+  @font mono 10px;
+  text-transform: uppercase;
+}
+
+.select-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0 !important;
+
+  .filter-label {
+    @font mono 10px;
+    text-transform: uppercase;
+  }
+
+  select {
+    @font mono 10px;
+    padding: 4px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: white;
+    min-width: 120px;
+
+    background: url("data:image/svg+xml,<svg height='10px' width='10px' viewBox='0 0 16 16' fill='%23000000' xmlns='http://www.w3.org/2000/svg'><path d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/></svg>")
+      no-repeat;
+    background-position: calc(100% - 4px) center !important;
+    -moz-appearance: none !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+  }
+}
+
+.reset-filters-btn {
+  @font mono 10px;
+  text-transform: uppercase;
+
+  padding: 4px 6px;
+  border: 1px solid var(--brando-color-dark);
+  border-radius: 4px;
+
+  background-color: transparent;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+
+  &:hover {
+    background-color: var(--brando-color-dark);
+    color: var(--brando-color-peach);
   }
 }

@@ -119,7 +119,7 @@ defmodule BrandoAdmin.Components.Content.List do
     current_key_idx =
       Enum.find_index(
         filters,
-        &(&1.filter == socket.assigns.active_filter.filter)
+        &(&1.key == socket.assigns.active_filter.key)
       )
 
     current_key_idx =
@@ -139,6 +139,30 @@ defmodule BrandoAdmin.Components.Content.List do
 
   def handle_event("update_filter", %{"filter" => filter_key, "q" => query}, socket) do
     {:noreply, push_query_params(socket, %{"filter:#{filter_key}" => query})}
+  end
+
+  # Toggle boolean filter
+  def handle_event("toggle_boolean_filter", %{"filter" => filter_key}, socket) do
+    current_value = get_in(socket.assigns, [:list_opts, :filter, String.to_existing_atom(filter_key)])
+    new_value = if current_value == "true", do: "false", else: "true"
+    {:noreply, push_query_params(socket, %{"filter:#{filter_key}" => new_value})}
+  end
+
+  # Update select filter - params come as %{"filter" => %{"key" => "value"}}
+  def handle_event("update_select_filter", %{"filter" => filter_map}, socket) do
+    # Extract the single key-value pair from the filter map
+    [{filter_key, value}] = Map.to_list(filter_map)
+    {:noreply, push_query_params(socket, %{"filter:#{filter_key}" => value})}
+  end
+
+  # Reset all advanced filters
+  def handle_event("reset_filters", _, socket) do
+    filters = socket.assigns.listing.filters
+    advanced = Enum.filter(filters, &(&1.type in [:boolean, :select]))
+    filter_params = Enum.reduce(advanced, %{}, fn f, acc ->
+      Map.put(acc, "filter:#{f.key}", "")
+    end)
+    {:noreply, push_query_params(socket, filter_params)}
   end
 
   def handle_event("update_sort", %{"sort_key" => sort_key}, socket) do
@@ -627,7 +651,7 @@ defmodule BrandoAdmin.Components.Content.List do
     ~H"""
     <div class={[
       "filter",
-      @filter.filter == @active_filter.filter && "visible"
+      @filter.key == @active_filter.key && "visible"
     ]}>
       <button class="filter-key" phx-click={@next_filter_key}>
         <span>
@@ -641,12 +665,12 @@ defmodule BrandoAdmin.Components.Content.List do
         for={%{}}
         as={:filter_form}
         phx-change={@update_filter}
-        phx-window-keydown={JS.focus(to: "#listing-filter-#{@filter.filter}")}
+        phx-window-keydown={JS.focus(to: "#listing-filter-#{@filter.key}")}
         phx-key="f"
         onkeydown="return event.key != 'Enter';"
       >
         <input
-          id={"listing-filter-#{@filter.filter}"}
+          id={"listing-filter-#{@filter.key}"}
           type="text"
           name="q"
           value=""
@@ -654,8 +678,154 @@ defmodule BrandoAdmin.Components.Content.List do
           autocomplete="off"
           phx-debounce="400"
         />
-        <input type="hidden" name="filter" value={@active_filter.filter} />
+        <input type="hidden" name="filter" value={@active_filter.key} />
       </.form>
+    </div>
+    """
+  end
+
+  # Helper functions for filter types
+  defp text_filters(filters), do: Enum.filter(filters, &(&1.type == :text))
+  defp advanced_filters(filters), do: Enum.filter(filters, &(&1.type in [:boolean, :select]))
+
+  defp resolve_options(filter, opts) do
+    cond do
+      is_function(filter.options) -> filter.options.(opts)
+      is_list(filter.options) and filter.options != [] ->
+        Enum.map(filter.options, &{&1.label, &1.value})
+      true -> []
+    end
+  end
+
+  defp get_filter_value(list_opts, filter_key) do
+    list_opts
+    |> Map.get(:filter, %{})
+    |> Map.get(String.to_existing_atom(filter_key), nil)
+  end
+
+  # Advanced filters bar component
+  attr :filters, :list, required: true
+  attr :schema, :atom, required: true
+  attr :list_opts, :map, required: true
+  attr :content_language, :string, required: true
+  attr :toggle_boolean_filter, :any, required: true
+  attr :update_select_filter, :any, required: true
+  attr :reset_filters, :any, required: true
+
+  def advanced_filters_bar(assigns) do
+    advanced = advanced_filters(assigns.filters)
+
+    assigns =
+      assigns
+      |> assign(:advanced_filters, advanced)
+
+    ~H"""
+    <form :if={@advanced_filters != []} class="advanced-filters-bar">
+      <%= for filter <- @advanced_filters do %>
+        <%= case filter.type do %>
+          <% :boolean -> %>
+            <.boolean_filter
+              filter={filter}
+              schema={@schema}
+              list_opts={@list_opts}
+              toggle_filter={@toggle_boolean_filter}
+            />
+          <% :select -> %>
+            <.select_filter
+              filter={filter}
+              schema={@schema}
+              list_opts={@list_opts}
+              content_language={@content_language}
+              update_filter={@update_select_filter}
+            />
+        <% end %>
+      <% end %>
+      <button
+        :if={has_active_advanced_filters?(@list_opts, @advanced_filters)}
+        type="button"
+        class="reset-filters-btn"
+        phx-click={@reset_filters}
+      >
+        {gettext("Reset filters")}
+      </button>
+    </form>
+    """
+  end
+
+  defp has_active_advanced_filters?(list_opts, filters) do
+    Enum.any?(filters, fn f ->
+      filter_atom = String.to_existing_atom(f.key)
+      value = Map.get(list_opts[:filter] || %{}, filter_atom)
+      value not in [nil, ""]
+    end)
+  end
+
+  # Boolean filter component (toggle switch)
+  attr :filter, :map, required: true
+  attr :schema, :atom, required: true
+  attr :list_opts, :map, required: true
+  attr :toggle_filter, :any, required: true
+
+  def boolean_filter(assigns) do
+    filter_key = assigns.filter.key
+    current_value = get_filter_value(assigns.list_opts, filter_key)
+    is_active = current_value == "true"
+
+    assigns =
+      assigns
+      |> assign(:is_active, is_active)
+      |> assign(:filter_key, filter_key)
+
+    ~H"""
+    <div class={["tiny-toggle-wrapper", "boolean-filter", @is_active && "active"]}>
+      <label class="switch small">
+        <input
+          type="checkbox"
+          checked={@is_active}
+          phx-click={@toggle_filter}
+          phx-value-filter={@filter_key}
+        />
+        <div class="slider round"></div>
+      </label>
+      <span class="tiny-toggle-label">{g(@schema, @filter.label)}</span>
+    </div>
+    """
+  end
+
+  # Select filter component (dropdown)
+  attr :filter, :map, required: true
+  attr :schema, :atom, required: true
+  attr :list_opts, :map, required: true
+  attr :content_language, :string, required: true
+  attr :update_filter, :any, required: true
+
+  def select_filter(assigns) do
+    filter_key = assigns.filter.key
+    current_value = get_filter_value(assigns.list_opts, filter_key)
+    options = resolve_options(assigns.filter, %{language: assigns.content_language})
+
+    assigns =
+      assigns
+      |> assign(:current_value, current_value)
+      |> assign(:filter_key, filter_key)
+      |> assign(:resolved_options, options)
+
+    ~H"""
+    <div class="select-filter">
+      <label class="filter-label">{g(@schema, @filter.label)}</label>
+      <select
+        name={"filter[#{@filter_key}]"}
+        phx-change={@update_filter}
+      >
+        <%= for {label, value} <- @resolved_options do %>
+          <option
+            value={value || ""}
+            selected={to_string(value) == @current_value || (is_nil(value) && is_nil(@current_value))}
+          >
+            {label}
+          </option>
+        <% end %>
+      </select>
     </div>
     """
   end
@@ -679,11 +849,18 @@ defmodule BrandoAdmin.Components.Content.List do
   end
 
   defp tools(assigns) do
+    # Only show text filters in the header tools area
+    all_filters = assigns.listing.filters
+    txt_filters = text_filters(all_filters)
+    adv_filters = advanced_filters(all_filters)
+
     assigns =
       assigns
       |> assign(:active_filter, assigns.active_filter)
       |> assign(:active_sort, assigns.active_sort)
       |> assign(:list_opts, assigns.list_opts)
+      |> assign(:advanced_filters, adv_filters)
+      |> assign(:has_active_advanced_filters?, has_active_advanced_filters?(assigns.list_opts, adv_filters))
       |> assign_new(:has_status?, fn -> assigns.schema.has_trait(Brando.Trait.Status) end)
       |> assign_new(:schema, fn -> assigns.schema end)
       |> assign_new(:listing, fn -> assigns.listing end)
@@ -693,7 +870,7 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign_new(:update_status, fn -> assigns.update_status end)
       |> assign_new(:next_filter_key, fn -> assigns.next_filter_key end)
       |> assign_new(:statuses, fn -> get_statuses(assigns.schema) end)
-      |> assign_new(:filters, fn -> assigns.listing.filters end)
+      |> assign_new(:filters, fn -> txt_filters end)
       |> assign_new(:sorts, fn -> assigns.listing.sorts end)
 
     ~H"""
@@ -727,6 +904,35 @@ defmodule BrandoAdmin.Components.Content.List do
           <.sorts active_sort={@active_sort} sorts={@sorts} schema={@schema} on_update={@update_sort} />
         <% end %>
       </div>
+      <form :if={@advanced_filters != []} class="advanced-filters-bar">
+        <%= for filter <- @advanced_filters do %>
+          <%= case filter.type do %>
+            <% :boolean -> %>
+              <.boolean_filter
+                filter={filter}
+                schema={@schema}
+                list_opts={@list_opts}
+                toggle_filter={@toggle_boolean_filter}
+              />
+            <% :select -> %>
+              <.select_filter
+                filter={filter}
+                schema={@schema}
+                list_opts={@list_opts}
+                content_language={@content_language}
+                update_filter={@update_select_filter}
+              />
+          <% end %>
+        <% end %>
+        <button
+          :if={@has_active_advanced_filters?}
+          type="button"
+          class="reset-filters-btn"
+          phx-click={@reset_filters}
+        >
+          {gettext("Reset filters")}
+        </button>
+      </form>
     </div>
     """
   end

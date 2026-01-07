@@ -1,6 +1,7 @@
 defmodule Brando.Blueprint.Listings.Listing do
   @moduledoc false
   defstruct __identifier__: nil,
+            __spark_metadata__: nil,
             name: nil,
             query: %{},
             fields: [],

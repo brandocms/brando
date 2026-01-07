@@ -1,6 +1,7 @@
 defmodule Brando.Blueprint.Listings.Action do
   @moduledoc false
-  defstruct label: nil,
+  defstruct __spark_metadata__: nil,
+            label: nil,
             event: nil,
             confirm: false
 end

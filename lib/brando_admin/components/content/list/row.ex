@@ -420,7 +420,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   def alternates(%{entry: %{alternate_entries: alternate_entries}} = assigns) do
     assigns =
       assigns
-      |> assign(:alternate_entries?, Enum.count(alternate_entries) > 0)
+      |> assign(:alternate_entries?, alternate_entries != [])
       |> assign(:identifiers, Identifier.identifiers_for!(alternate_entries))
 
     ~H"""

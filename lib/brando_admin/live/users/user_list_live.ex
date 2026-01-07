@@ -24,4 +24,18 @@ defmodule BrandoAdmin.Users.UserListLive do
     />
     """
   end
+
+  def handle_event("disable_user", %{"id" => id}, socket) do
+    user = Brando.Users.get_user!(id)
+    Brando.Users.set_active(id, false, user)
+    send(self(), {:toast, gettext("User disabled.")})
+    {:noreply, socket}
+  end
+
+  def handle_event("enable_user", %{"id" => id}, socket) do
+    user = Brando.Users.get_user!(id)
+    Brando.Users.set_active(id, true, user)
+    send(self(), {:toast, gettext("User enabled.")})
+    {:noreply, socket}
+  end
 end
