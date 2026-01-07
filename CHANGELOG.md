@@ -1,5 +1,60 @@
 ## 0.54.0
 
+### Features
+
+- **Advanced Listing Filters**: Added support for boolean switches and select dropdowns in listing filters.
+  - New filter types: `:boolean` (toggle switch) and `:select` (dropdown)
+  - Boolean filters appear as toggle switches below the header
+  - Select filters support both static options (nested DSL) and dynamic options (function)
+  - All filter state is stored in URL params for shareability
+
+  ```elixir
+  listings do
+    listing do
+      # Text filter (keyword form)
+      filter(label: "Title", key: "title")
+
+      # Boolean switch (keyword form)
+      filter(label: "Featured only", key: "featured", type: :boolean, default: false)
+
+      # Select with static options (block form)
+      # NOTE: When using block form, ALL properties must be inside the block
+      filter do
+        label "Category"
+        key "category_slug"
+        type :select
+        default nil
+
+        option "All", nil
+        option "News", "news"
+      end
+
+      # Select with dynamic options (block form)
+      filter do
+        label "Author"
+        key "author_id"
+        type :select
+        options &__MODULE__.list_authors/1
+      end
+    end
+  end
+  ```
+
+### Breaking Changes
+
+- **Filter DSL field renamed**: In listing filters, the `filter:` field has been renamed to `key:` for clarity.
+  - Before: `filter label: "Title", filter: "title"`
+  - After: `filter label: "Title", key: "title"`
+
+- **Video Type Migration**: The deprecated `Brando.Type.Video` has been replaced with `Brando.Videos.Video`. The video schema has been updated:
+  - `source` field renamed to `type` (enum: `:upload`, `:external_file`, `:vimeo`, `:youtube`)
+  - `url` field renamed to `source_url`
+  - Added new fields: `title`, `caption`, `aspect_ratio`
+  - Videos are now stored as separate database entities instead of embedded JSON
+  - Video rendering components and parsers updated to use new schema
+  - If you were using `Brando.Type.Video` in your code, update to use `Brando.Videos.Video`
+  - Test data using video factories should use new field names (`type` instead of `source`)
+
 Before running the migration script, you must fix some `form` syntax in your blueprints.
 If you're passing parameters to the `form` macro, they must be moved to their own functions.
 For instance, if you have:
@@ -29,8 +84,15 @@ Finally resave entries with `mix brando.entries.resave`, sync identifiers with `
 then sync translations with `chmod +x scripts/sync_gettext.sh` then `./scripts/sync_gettext.sh priv/gettext/backend/no/LC_MESSAGES`
 if your translations are in `priv/gettext/backend/no/LC_MESSAGES`.
 
+* BREAKING: Refs have been split out to their own table. Run `mix brando.upgrade` to get migrations.
+  The refs structure has changed significantly:
+  - Refs are now stored in a separate table with foreign keys to media
+  - Picture refs: `{{ refs.my_image.data.data.path }}` becomes `{{ refs.my_image.path }}`
+  - Gallery refs: `{{ refs.my_gallery_ref.data.images }}` becomes `{{ refs.my_gallery_ref.gallery.gallery_objects }}`
+  - Video refs work similarly with direct property access
+
 * BREAKING: Galleries now have `gallery_objects` instead of `gallery_images`. 
-  Adjust your module templates accordingly!
+  In your templates: `{{ entry.my_gallery.gallery_images }}` becomes `{{ entry.my_gallery.gallery_objects }}`
 
 * BREAKING: Change from `mix phx.digest` to `mix brando.digest` in your Dockerfile,
   if you're using Vite. This ensures we can properly use chunks without double

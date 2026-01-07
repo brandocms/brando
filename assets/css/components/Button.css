@@ -18,7 +18,7 @@ button.delete.tiny {
       }
     }
   }
-  
+
   svg {
     width: 6px;
     height: 6px;
@@ -26,7 +26,8 @@ button.delete.tiny {
   }
 }
 
-button.primary, a.primary {
+button.primary,
+a.primary {
   font-size: 18px;
   color: theme(colors.peach);
   border: 1px solid theme(colors.blue);
@@ -40,7 +41,8 @@ button.primary, a.primary {
   text-align: center;
   transition: background-color 0.25s ease, border-color 0.25s ease;
 
-  &[disabled], &:disabled {
+  &[disabled],
+  &:disabled {
     background-color: #333;
     border: none;
   }
@@ -50,7 +52,7 @@ button.primary, a.primary {
   }
 
   &.dark {
-    background-color: var(--brando-color-dark); 
+    background-color: var(--brando-color-dark);
     border: 1px solid var(--brando-color-dark);
     color: theme(colors.peach);
 
@@ -72,8 +74,8 @@ button.primary, a.primary {
   }
 
   &:hover {
-    background-color: var(--brando-color-dark); 
-    border-color: var(--brando-color-dark); 
+    background-color: var(--brando-color-dark);
+    border-color: var(--brando-color-dark);
   }
 
   &.small {
@@ -105,12 +107,18 @@ button.secondary {
 }
 
 %btnSmall {
-  @fontsize sm;
-  padding: 10px 15px;
+  @fontsize 15px;
   min-width: auto;
+  padding-left: 15px;
+  padding-right: 15px;
+  padding-top: 0;
+  padding-bottom: 0;
+  height: 40px;
+  line-height: 39px;
 }
 
-a.danger, button.danger {
+a.danger,
+button.danger {
   @fontsize button;
 
   white-space: nowrap;
@@ -150,14 +158,14 @@ a.danger, button.danger {
   }
 
   &:hover {
-    background-color: var(--brando-color-dark); 
+    background-color: var(--brando-color-dark);
   }
 }
 
 %btnSecondary {
   @fontsize button;
   white-space: nowrap;
-  color: var(--brando-color-dark); 
+  color: var(--brando-color-dark);
   border: 1px solid var(--brando-color-dark) !important;
   background-color: transparent;
   padding: 15px 25px 16px;
@@ -195,7 +203,8 @@ a.danger, button.danger {
   }
 }
 
-a.secondary, button.secondary {
+a.secondary,
+button.secondary {
   @extend %btnSecondary;
 }
 
@@ -212,11 +221,12 @@ button.stealth {
   align-self: center;
 }
 
-button.tiny, a.tiny {
+button.tiny,
+a.tiny {
   @font mono;
   border-radius: 5px;
   border: 1px solid var(--brando-color-dark);
-  color: var(--brando-color-dark); 
+  color: var(--brando-color-dark);
   font-size: 11px;
   display: inline-block;
   text-transform: uppercase;
@@ -233,7 +243,7 @@ button.tiny, a.tiny {
   }
 
   &:hover {
-    background-color: var(--brando-color-dark); 
+    background-color: var(--brando-color-dark);
     color: theme(colors.peach);
     path {
       &:nth-of-type(2) {

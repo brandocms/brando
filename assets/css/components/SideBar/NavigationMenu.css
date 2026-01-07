@@ -27,9 +27,7 @@
 
 #navigation {
   @space padding-bottom 50px;
-  @space width 370px desktop_lg/desktop_xl;
-  @space width 330px ipad_portrait/ipad_landscape/desktop_md;
-  @space width 330px $mobile;
+  @space width var(--navigation-width);
 
   @space padding-x sm;
   position: fixed;
@@ -55,7 +53,7 @@
       height: 15px;
       background-color: #bbb;
       opacity: 0;
-      margin-top: 12px;
+      margin-top: 7px;
       margin-left: -20px;
       transition: opacity 300ms ease;
       border-radius: 50%;

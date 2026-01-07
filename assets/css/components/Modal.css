@@ -155,6 +155,12 @@
     @space margin-bottom 1;
   }
 
+  label {
+    span {
+      font-size: 14px;
+    }
+  }
+
   textarea {
     background-color: theme(colors.input) !important;
     color: theme(colors.dark) !important;
@@ -165,6 +171,20 @@
     background-color: theme(colors.input) !important;
     color: theme(colors.dark) !important;
     border: none !important;
+    font-size: 16px;
+
+    &.text {
+      font-size: 16px;
+      height: 40px;
+      padding-top: 0;
+      padding-bottom: 0;
+      padding-left: 10px;
+      padding-right: 10px;
+
+      &::placeholder {
+        font-size: 16px;
+      }
+    }
   }
 
   .button-group-vertical {
@@ -247,14 +267,6 @@
       @column 6:1/12;
       @space padding-left 0.5;
       @space padding-right 1;
-
-      .text {
-        @fontsize sm;
-
-        &::placeholder {
-          @fontsize sm;
-        }
-      }
 
       &:nth-of-type(1) {
         @column 6/12;

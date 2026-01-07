@@ -26,6 +26,7 @@
 @import "./components/Form/BlockEditor.css";
 @import "./components/Form/FieldBase.css";
 @import "./components/Form/Subform.css";
+@import "./components/Form/Tab.css";
 @import "./components/Form/Input/CodeEditor.css";
 @import "./components/Form/Input/ColorPicker.css";
 @import "./components/Form/Input/CustomCheckbox.css";
@@ -33,6 +34,7 @@
 @import "./components/Form/Input/File.css";
 @import "./components/Form/Input/Gallery.css";
 @import "./components/Form/Input/Image.css";
+@import "./components/Form/Input/Video.css";
 @import "./components/Form/Input/Radios.css";
 @import "./components/Form/Input/Select.css";
 @import "./components/Form/Input/Text.css";
@@ -53,6 +55,7 @@
 @import "./components/Modal.css";
 @import "./components/Progress.css";
 @import "./components/Image/ImagePicker.css";
+@import "./components/Video/VideoPicker.css";
 @import "./components/SideBar/SideBar.css";
 @import "./components/SideBar/ContentLanguageSelector.css";
 @import "./components/SideBar/CurrentUser.css";
@@ -71,6 +74,17 @@
 
 html.moonwalk [data-moonwalk-run].moonwalked {
   opacity: 1 !important;
+}
+
+/* Button group for portal form */
+.button-group {
+  display: flex;
+  gap: 8px;
+}
+
+.portal-form fieldset {
+  border: none;
+  padding: 0;
 }
 
 .input-group {
@@ -444,16 +458,16 @@ body {
     display: flex;
 
     @responsive desktop_xl {
-      --navigation-width: 370px;
+      --navigation-width: 310px;
     }
     @responsive desktop_lg {
-      --navigation-width: 370px;
+      --navigation-width: 310px;
     }
     @responsive desktop_md {
-      --navigation-width: 330px;
+      --navigation-width: 300px;
     }
     @responsive ipad_landscape {
-      --navigation-width: 330px;
+      --navigation-width: 300px;
     }
     @responsive ipad_portrait {
       --navigation-width: 0;
@@ -844,7 +858,7 @@ h3 {
 }
 
 .mb-1 {
-  margin-bottom: 1vw;
+  margin-bottom: 15px;
 }
 
 .mb-2 {
@@ -1039,7 +1053,6 @@ h3 {
     border-radius: 0;
     font-size: 10px;
     border: none;
-    width: min-content;
   }
 
   &.lowercase {
@@ -1165,15 +1178,15 @@ span[data-icon] {
 
 .dbg-grid {
   @responsive ipad_landscape/desktop_md {
-    margin-left: 330px;
-    width: calc(100vw - 330px);
+    margin-left: var(--navigation-width);
+    width: calc(100vw - var(--navigation-width));
     padding-left: 25px;
     padding-right: 25px;
   }
 
   @responsive >=desktop_lg {
-    margin-left: 370px;
-    width: calc(100vw - 370px);
+    margin-left: var(--navigation-width);
+    width: calc(100vw - var(--navigation-width));
     padding-left: 25px;
     padding-right: 25px;
   }

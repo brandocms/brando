@@ -29,21 +29,32 @@
   .login-container {
     height: 100%;
     align-items: center;
+    justify-content: center;
     display: flex;
   }
 
   .login-box {
-    @column 10/16;
+    @column 10/16 desktop_xl;
+    @column 10/16 desktop_lg;
+    @column 12/16 desktop_md;
+    @column 14/16 ipad_landscape;
+    @column 14/16 ipad_portrait;
+    @column 16/16 $mobile;
 
-    @column-offset 4/16;
     max-width: 920px !important;
     background-color: var(--brando-color-peach);
-    box-shadow: 0 2.8px 2.2px rgba(0, 0, 0, 0.02), 0 6.7px 5.3px rgba(0, 0, 0, 0.028), 0 12.5px 10px rgba(0, 0, 0, 0.035), 0 22.3px 17.9px rgba(0, 0, 0, 0.042), 0 41.8px 33.4px rgba(0, 0, 0, 0.05), 0 100px 80px rgba(0, 0, 0, 0.07);
+    box-shadow: 0 2.8px 2.2px rgba(0, 0, 0, 0.02), 0 6.7px 5.3px rgba(0, 0, 0, 0.028),
+      0 12.5px 10px rgba(0, 0, 0, 0.035), 0 22.3px 17.9px rgba(0, 0, 0, 0.042),
+      0 41.8px 33.4px rgba(0, 0, 0, 0.05), 0 100px 80px rgba(0, 0, 0, 0.07);
     display: flex;
 
+    @responsive $mobile {
+      flex-direction: column;
+    }
+
     .figure-wrapper {
-      @column 5/10;
-      padding: 75px;
+      @column 5/10 >mobile;
+      @space padding container;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -54,9 +65,9 @@
     }
 
     .login-form {
-      @column 5:1/10;
+      @column 5:1/10 >mobile;
       background-color: #ffffff;
-      padding: 48px;
+      @space padding container;
     }
   }
 
