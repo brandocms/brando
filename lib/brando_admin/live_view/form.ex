@@ -27,12 +27,19 @@ defmodule BrandoAdmin.LiveView.Form do
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_active_field, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_modules, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_focal_point, unquote(schema)}})
+      on_mount({BrandoAdmin.LiveView.Form, {:hooks_focus, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_mutations, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_mutation_listener, unquote(schema)}})
 
       unless unquote(skip_image_hooks) do
         on_mount({BrandoAdmin.LiveView.Form, {:hooks_images, unquote(schema)}})
       end
+
+      on_mount({BrandoAdmin.LiveView.Form, {:hooks_videos, unquote(schema)}})
+      on_mount({BrandoAdmin.LiveView.Form, {:hooks_video_events, unquote(schema)}})
+
+      # Catch port exits from image processing (ImageMagick, etc)
+      on_mount({BrandoAdmin.LiveView.Form, {:hooks_port_exits, unquote(schema)}})
     end
   end
 
@@ -77,6 +84,18 @@ defmodule BrandoAdmin.LiveView.Form do
 
   def on_mount({:hooks_images, _schema}, _params, _session, socket) do
     {:cont, attach_hook(socket, :b_form_images, :handle_info, &handle_hooks_image_info/2)}
+  end
+
+  def on_mount({:hooks_videos, _schema}, _params, _session, socket) do
+    {:cont, attach_hook(socket, :b_form_videos, :handle_info, &handle_hooks_video_info/2)}
+  end
+
+  def on_mount({:hooks_video_events, _schema}, _params, _session, socket) do
+    {:cont, attach_hook(socket, :b_form_video_events, :handle_event, &handle_hooks_video_event/3)}
+  end
+
+  def on_mount({:hooks_port_exits, _schema}, _params, _session, socket) do
+    {:cont, attach_hook(socket, :b_form_port_exits, :handle_info, &handle_hooks_port_exits/2)}
   end
 
   def on_mount({:hooks_toast, _schema}, _params, _session, socket) do
@@ -167,6 +186,16 @@ defmodule BrandoAdmin.LiveView.Form do
      )}
   end
 
+  def on_mount({:hooks_focus, _schema}, _params, _session, socket) do
+    {:cont,
+     attach_hook(
+       socket,
+       :b_form_focus,
+       :handle_event,
+       &handle_hooks_focus_event/3
+     )}
+  end
+
   defp handle_hooks_focal_point_event(
          "update_focal_point",
          %{"field" => field, "x" => x, "y" => y},
@@ -187,6 +216,10 @@ defmodule BrandoAdmin.LiveView.Form do
 
   defp handle_hooks_focal_point_event(_, _, socket), do: {:cont, socket}
 
+  # Catch-all for focus events from portal forms (multi-select create modals, etc)
+  defp handle_hooks_focus_event("focus", _, socket), do: {:halt, socket}
+  defp handle_hooks_focus_event(_, _, socket), do: {:cont, socket}
+
   defp handle_hooks_image_info({image, [:image, :processing], path}, socket) do
     case String.split(image.config_target, ":") do
       ["image", image_schema_binary, field_name] ->
@@ -206,19 +239,44 @@ defmodule BrandoAdmin.LiveView.Form do
 
         image = Map.put(image, :status, :unprocessed)
 
-        send_update(BrandoAdmin.Components.Form,
+        # Only send update_entry_relation if the path is a valid struct field path.
+        # Paths containing only integers are metadata (IDs) and should be handled
+        # by the specific LiveView's handle_info, not by this generic hook.
+        if valid_struct_path?(full_path) do
+          send_update(BrandoAdmin.Components.Form,
+            id: target_id,
+            action: :update_entry_relation,
+            updated_relation: image,
+            path: full_path,
+            force_validation: true
+          )
+
+          {:halt, socket}
+        else
+          # not a struct field path, so nothing we need to send to the form.
+          # we will pass it on though, in case this is something that needs
+          # to be handled by the specific LiveView.
+          {:cont, socket}
+        end
+
+      ["gallery", _schema, field_name] ->
+        # Gallery images during processing - update the gallery input
+        schema = socket.assigns.schema
+        singular = schema.__naming__().singular
+        target_id = "#{singular}_#{field_name}"
+
+        send_update(BrandoAdmin.Components.Form.Input.Gallery,
           id: target_id,
-          action: :update_entry_relation,
-          updated_relation: image,
-          path: full_path,
+          action: :update_image,
+          updated_image: image,
           force_validation: true
         )
 
-      _ ->
-        nil
-    end
+        {:halt, socket}
 
-    {:halt, socket}
+      _ ->
+        {:cont, socket}
+    end
   end
 
   defp handle_hooks_image_info({image, [:image, :updated], path}, socket) do
@@ -244,13 +302,25 @@ defmodule BrandoAdmin.LiveView.Form do
           image_id: image.id
         )
 
-        send_update(BrandoAdmin.Components.Form,
-          id: target_id,
-          action: :update_entry_relation,
-          updated_relation: image,
-          path: full_path,
-          force_validation: true
-        )
+        # Only send update_entry_relation if the path is a valid struct field path.
+        # Paths containing only integers are metadata (IDs) and should be handled
+        # by the specific LiveView's handle_info, not by this generic hook.
+        if valid_struct_path?(full_path) do
+          send_update(BrandoAdmin.Components.Form,
+            id: target_id,
+            action: :update_entry_relation,
+            updated_relation: image,
+            path: full_path,
+            force_validation: true
+          )
+
+          {:halt, socket}
+        else
+          # not a struct field path, so nothing we need to send to the form.
+          # we will pass it on though, in case this is something that needs
+          # to be handled by the specific LiveView.
+          {:cont, socket}
+        end
 
       ["gallery", _schema, field_name] ->
         schema = socket.assigns.schema
@@ -265,14 +335,118 @@ defmodule BrandoAdmin.LiveView.Form do
           force_validation: true
         )
 
+        {:halt, socket}
+
       _ ->
-        nil
+        {:cont, socket}
     end
+  end
+
+  defp handle_hooks_image_info(_, socket), do: {:cont, socket}
+
+  # Video hooks - handle PubSub updates
+  defp handle_hooks_video_info({video, [:video, :updated], path}, socket) do
+    case String.split(video.config_target, ":") do
+      ["video", video_schema_binary, field_name] ->
+        field_atom = String.to_existing_atom(field_name)
+        schema = socket.assigns.schema
+        video_schema = Module.concat([video_schema_binary])
+
+        full_path =
+          if video_schema != schema do
+            path
+          else
+            [field_atom]
+          end
+
+        singular = schema.__naming__().singular
+        target_id = "#{singular}_form"
+
+        # Only send update_entry_relation if the path is a valid struct field path
+        if valid_struct_path?(full_path) do
+          send_update(BrandoAdmin.Components.Form,
+            id: target_id,
+            action: :update_entry_relation,
+            updated_relation: video,
+            path: full_path,
+            force_validation: true
+          )
+
+          {:halt, socket}
+        else
+          {:cont, socket}
+        end
+
+      _ ->
+        {:cont, socket}
+    end
+  end
+
+  defp handle_hooks_video_info(_, socket), do: {:cont, socket}
+
+  # Port exit hooks - catch normal exits from image processing ports (ImageMagick, etc.)
+  defp handle_hooks_port_exits({:EXIT, _port, :normal}, socket), do: {:halt, socket}
+  defp handle_hooks_port_exits(_, socket), do: {:cont, socket}
+
+  # Video event hooks - handle generic video uploader events
+  # These work with any upload strategy (Mux, Cloudflare, S3, Bunny, Vimeo, etc.)
+
+  defp handle_hooks_video_event("files_selected", %{"files" => _files}, socket) do
+    # Files selected, tell hook to start uploading
+    {:halt, push_event(socket, "start_upload_queue", %{})}
+  end
+
+  # Generic event for getting upload URL - works with any strategy
+  # The hook can be named MuxUploader, CloudflareUploader, S3Uploader, etc.
+  # but they all send generic events with no provider name
+  defp handle_hooks_video_event("get_video_upload_url", %{"filename" => filename}, socket) do
+    schema = socket.assigns.schema
+    singular = schema.__naming__().singular
+    form_id = "#{singular}_form"
+
+    # Delegate to Form component - it will push event back to JS when ready
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      action: :get_video_upload_url,
+      filename: filename
+    )
+
+    # Halt so the event doesn't propagate to LiveView-specific handlers
+    {:halt, socket}
+  end
+
+  # Generic event for upload completion - works with any strategy
+  defp handle_hooks_video_event("video_upload_complete", %{"video_id" => video_id}, socket) do
+    schema = socket.assigns.schema
+    singular = schema.__naming__().singular
+    form_id = "#{singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      action: :video_upload_complete,
+      video_id: video_id
+    )
 
     {:halt, socket}
   end
 
-  defp handle_hooks_image_info(_, socket), do: {:cont, socket}
+  # Generic event for upload progress - works with any strategy
+  defp handle_hooks_video_event("video_upload_progress", %{"video_id" => video_id, "percentage" => percentage}, socket) do
+    schema = socket.assigns.schema
+    singular = schema.__naming__().singular
+    form_id = "#{singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      action: :video_upload_progress,
+      video_id: video_id,
+      percentage: percentage
+    )
+
+    {:halt, socket}
+  end
+
+  defp handle_hooks_video_event(_, _, socket), do: {:cont, socket}
 
   defp handle_hooks_alert_info({:alert, message}, %{assigns: %{current_user: current_user}} = socket) do
     BrandoAdmin.Alert.send_to(current_user, message)
@@ -437,4 +611,14 @@ defmodule BrandoAdmin.LiveView.Form do
   defp assign_action(socket, action) do
     assign(socket, :form_action, action)
   end
+
+  # Check if a path is a valid struct field path (contains at least one atom)
+  # vs metadata path (contains only integers, which are IDs).
+  # Valid paths: [:listing_image], [:media_items, 0, :image]
+  # Metadata paths: [132] (just an ID)
+  defp valid_struct_path?(path) when is_list(path) do
+    Enum.any?(path, &is_atom/1)
+  end
+
+  defp valid_struct_path?(_), do: false
 end

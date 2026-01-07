@@ -9,6 +9,42 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.RenderVar
+  alias BrandoAdmin.Components.Form.ModuleProps.RefBlockForm
+
+  @ref_types [
+    %{value: "text", label: "Text"},
+    %{value: "header", label: "Header"},
+    %{value: "picture", label: "Picture"},
+    %{value: "gallery", label: "Gallery"},
+    %{value: "video", label: "Video"},
+    %{value: "media", label: "Media"},
+    %{value: "html", label: "HTML"},
+    %{value: "svg", label: "SVG"},
+    %{value: "markdown", label: "Markdown"},
+    %{value: "map", label: "Map"},
+    %{value: "comment", label: "Comment"}
+  ]
+
+  @var_types [
+    %{value: "text", label: "Rich text"},
+    %{value: "string", label: "String"},
+    %{value: "image", label: "Image"},
+    %{value: "file", label: "File"},
+    %{value: "boolean", label: "Boolean"},
+    %{value: "select", label: "Select"},
+    %{value: "link", label: "Link"},
+    %{value: "datetime", label: "Datetime"},
+    %{value: "color", label: "Color"},
+    %{value: "html", label: "Html"}
+  ]
+
+  @format_options [
+    %{label: "Original", value: "original"},
+    %{label: "jpg", value: "jpg"},
+    %{label: "png", value: "png"},
+    %{label: "webp", value: "webp"},
+    %{label: "avif", value: "avif"}
+  ]
 
   # prop form, :form, required: true
   # prop key, :string, default: "default"
@@ -24,6 +60,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     {:ok,
      socket
      |> assign(open_col_vars: [], datasource: false)
+     |> assign_new(:ref_types, fn -> @ref_types end)
+     |> assign_new(:var_types, fn -> @var_types end)
      |> assign_new(:entry_form, fn -> false end)
      |> assign_new(:key, fn -> "default" end)
      |> assign_available_datasources()
@@ -118,145 +156,12 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
         </Content.modal>
 
         <Content.modal title="Create ref" id={"#{@form.id}-#{@key}-create-ref"} narrow>
-          <div class="button-group">
-            <button
-              type="button"
-              phx-click={
-                @create_ref
-                |> hide_modal("##{@form.id}-#{@key}-create-ref")
-                |> show_modal("##{@form.id}-#{@key}-ref-0")
-              }
-              phx-value-type="text"
-              class="secondary"
-            >
-              Text
-            </button>
-            <button
-              type="button"
-              phx-click={
-                @create_ref
-                |> hide_modal("##{@form.id}-#{@key}-create-ref")
-                |> show_modal("##{@form.id}-#{@key}-ref-0")
-              }
-              phx-value-type="header"
-              class="secondary"
-            >
-              Header
-            </button>
-            <button
-              type="button"
-              phx-click={
-                @create_ref
-                |> hide_modal("##{@form.id}-#{@key}-create-ref")
-                |> show_modal("##{@form.id}-#{@key}-ref-0")
-              }
-              phx-value-type="picture"
-              class="secondary"
-            >
-              Picture
-            </button>
-            <button
-              type="button"
-              phx-click={
-                @create_ref
-                |> hide_modal("##{@form.id}-#{@key}-create-ref")
-                |> show_modal("##{@form.id}-#{@key}-ref-0")
-              }
-              phx-value-type="gallery"
-              class="secondary"
-            >
-              Gallery
-            </button>
-            <button
-              type="button"
-              phx-click={
-                @create_ref
-                |> hide_modal("##{@form.id}-#{@key}-create-ref")
-                |> show_modal("##{@form.id}-#{@key}-ref-0")
-              }
-              phx-value-type="video"
-              class="secondary"
-            >
-              Video
-            </button>
-            <button
-              type="button"
-              phx-click={
-                @create_ref
-                |> hide_modal("##{@form.id}-#{@key}-create-ref")
-                |> show_modal("##{@form.id}-#{@key}-ref-0")
-              }
-              phx-value-type="media"
-              class="secondary"
-            >
-              Media
-            </button>
-
-            <button
-              type="button"
-              phx-click={
-                @create_ref
-                |> hide_modal("##{@form.id}-#{@key}-create-ref")
-                |> show_modal("##{@form.id}-#{@key}-ref-0")
-              }
-              phx-value-type="html"
-              class="secondary"
-            >
-              HTML
-            </button>
-
-            <button
-              type="button"
-              phx-click={
-                @create_ref
-                |> hide_modal("##{@form.id}-#{@key}-create-ref")
-                |> show_modal("##{@form.id}-#{@key}-ref-0")
-              }
-              phx-value-type="svg"
-              class="secondary"
-            >
-              SVG
-            </button>
-
-            <button
-              type="button"
-              phx-click={
-                @create_ref
-                |> hide_modal("##{@form.id}-#{@key}-create-ref")
-                |> show_modal("##{@form.id}-#{@key}-ref-0")
-              }
-              phx-value-type="markdown"
-              class="secondary"
-            >
-              Markdown
-            </button>
-
-            <button
-              type="button"
-              phx-click={
-                @create_ref
-                |> hide_modal("##{@form.id}-#{@key}-create-ref")
-                |> show_modal("##{@form.id}-#{@key}-ref-0")
-              }
-              phx-value-type="map"
-              class="secondary"
-            >
-              Map
-            </button>
-
-            <button
-              type="button"
-              phx-click={
-                @create_ref
-                |> hide_modal("##{@form.id}-#{@key}-create-ref")
-                |> show_modal("##{@form.id}-#{@key}-ref-0")
-              }
-              phx-value-type="comment"
-              class="secondary"
-            >
-              Comment
-            </button>
-          </div>
+          <.type_buttons
+            types={@ref_types}
+            on_click={@create_ref}
+            hide_modal_id={"##{@form.id}-#{@key}-create-ref"}
+            show_modal_id={"##{@form.id}-#{@key}-ref-0"}
+          />
         </Content.modal>
 
         <div class="refs">
@@ -298,487 +203,20 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       <Input.input type={:hidden} field={ref_data[:type]} />
                       <div class="panel">
                         <h2 class="titlecase">Block template</h2>
-                        <%= case ref_data[:type].value do %>
-                          <% "header" -> %>
-                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
-                              <Input.text field={block_data[:level]} label={gettext("Level")} />
-                              <Input.text field={block_data[:text]} label={gettext("Text")} />
-                              <Input.text field={block_data[:id]} label={gettext("ID")} />
-                              <Input.text field={block_data[:link]} label={gettext("Link")} />
-                            </Form.inputs_for_block>
-                          <% "comment" -> %>
-                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
-                              <Input.code
-                                id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-comment-text"}
-                                field={block_data[:text]}
-                                label={gettext("Text")}
-                              />
-                            </Form.inputs_for_block>
-                          <% "html" -> %>
-                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
-                              <Input.code
-                                id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-html-code"}
-                                field={block_data[:text]}
-                                label={gettext("HTML")}
-                              />
-                            </Form.inputs_for_block>
-                          <% "markdown" -> %>
-                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
-                              <Input.code
-                                id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-markdown-code"}
-                                field={block_data[:text]}
-                                label={gettext("Markdown")}
-                              />
-                            </Form.inputs_for_block>
-                          <% "map" -> %>
-                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
-                              <Input.radios
-                                field={block_data[:source]}
-                                opts={[
-                                  options: [
-                                    %{label: gettext("GMaps"), value: :gmaps}
-                                  ]
-                                ]}
-                                label={gettext("Source")}
-                              />
-                              <Input.text field={block_data[:embed_url]} label={gettext("Embed URL")} />
-                            </Form.inputs_for_block>
-                          <% "svg" -> %>
-                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
-                              <Input.text field={block_data[:class]} label={gettext("Class")} />
-                              <Input.code
-                                id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-svg-code"}
-                                field={block_data[:code]}
-                                label={gettext("Code")}
-                              />
-                            </Form.inputs_for_block>
-                          <% "text" -> %>
-                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
-                              <Input.text field={block_data[:text]} label={gettext("Text")} />
-                              <Input.text field={block_data[:type]} label={gettext("Type")} />
-                              <.live_component
-                                module={Input.MultiSelect}
-                                id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-extensions"}
-                                label={gettext("Extensions")}
-                                field={block_data[:extensions]}
-                                opts={[
-                                  options: [
-                                    %{label: "All", value: nil},
-                                    %{label: "Paragraph", value: "p"},
-                                    %{label: "H1", value: "h1"},
-                                    %{label: "H2", value: "h2"},
-                                    %{label: "H3", value: "h3"},
-                                    %{label: "List", value: "list"},
-                                    %{label: "Link", value: "link"},
-                                    %{label: "Button", value: "button"},
-                                    %{label: "Bold", value: "bold"},
-                                    %{label: "Italic", value: "italic"},
-                                    %{label: "Subscript", value: "sub"},
-                                    %{label: "Superscript", value: "sup"},
-                                    %{label: "Color", value: "color"},
-                                    %{label: "Unset Marks", value: "unsetMarks"},
-                                    %{label: "Jump Anchor", value: "jumpAnchor"},
-                                    %{label: "Smart Text", value: "smartText"},
-                                    %{label: "Align", value: "align"}
-                                  ]
-                                ]}
-                              />
-                              <br />
-
-                              {block_data[:extensions].value}
-                            </Form.inputs_for_block>
-                          <% "picture" -> %>
-                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
-                              <Input.input type={:hidden} field={block_data[:cdn]} />
-                              <Input.toggle field={block_data[:lazyload]} label={gettext("Lazyload")} />
-                              <Input.toggle field={block_data[:moonwalk]} label={gettext("Moonwalk")} />
-                              <Input.text field={block_data[:title]} label={gettext("Title/Caption")} />
-                              <Input.text field={block_data[:alt]} label={gettext("Alt. text")} />
-                              <Input.text field={block_data[:credits]} label={gettext("Credits")} />
-                              <Input.text field={block_data[:link]} label={gettext("Link")} />
-                              <Input.text field={block_data[:picture_class]} label={gettext("Picture class(es)")} />
-                              <Input.text field={block_data[:img_class]} label={gettext("Img class(es)")} />
-                              <.live_component
-                                module={Input.Select}
-                                id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-placeholder"}
-                                field={block_data[:placeholder]}
-                                inline={true}
-                                opts={[
-                                  options: [
-                                    %{label: "SVG", value: :svg},
-                                    %{label: "Dominant Color", value: :dominant_color},
-                                    %{label: "Dominant Color Faded", value: :dominant_color_faded},
-                                    %{label: "Micro", value: :micro},
-                                    %{label: "None", value: :none}
-                                  ]
-                                ]}
-                              />
-                              <Form.array_inputs_from_data
-                                :let={
-                                  %{
-                                    id: array_id,
-                                    value: array_value,
-                                    label: array_label,
-                                    name: array_name,
-                                    checked: checked
-                                  }
-                                }
-                                field={block_data[:formats]}
-                                options={[
-                                  %{label: "Original", value: "original"},
-                                  %{label: "jpg", value: "jpg"},
-                                  %{label: "png", value: "png"},
-                                  %{label: "webp", value: "webp"},
-                                  %{label: "avif", value: "avif"}
-                                ]}
-                              >
-                                <div class="field-wrapper compact">
-                                  <div class="check-wrapper small">
-                                    <input
-                                      type="checkbox"
-                                      id={array_id}
-                                      name={array_name}
-                                      value={array_value}
-                                      checked={checked}
-                                    />
-                                    <label class="control-label small" for={array_id}>
-                                      {array_label}
-                                    </label>
-                                  </div>
-                                </div>
-                              </Form.array_inputs_from_data>
-                              <Input.text
-                                field={block_data[:config_target]}
-                                label={gettext("Config target")}
-                                instructions={gettext("i.e: `image:Elixir.MyApp.Schema:function:fn_name`")}
-                                monospace
-                              />
-                            </Form.inputs_for_block>
-                          <% "gallery" -> %>
-                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
-                              <Input.radios
-                                field={block_data[:type]}
-                                label={gettext("Type")}
-                                opts={[
-                                  options: [
-                                    %{label: gettext("Gallery"), value: :gallery},
-                                    %{label: gettext("Slider"), value: :slider},
-                                    %{label: gettext("Slideshow"), value: :slideshow}
-                                  ]
-                                ]}
-                              />
-                              <Input.radios
-                                field={block_data[:display]}
-                                label={gettext("Display")}
-                                opts={[
-                                  options: [
-                                    %{label: gettext("Grid"), value: :grid},
-                                    %{label: gettext("List"), value: :list}
-                                  ]
-                                ]}
-                              />
-                              <Input.text field={block_data[:class]} label={gettext("Class")} />
-                              <Input.text field={block_data[:series_slug]} label={gettext("Series slug")} />
-                              <Input.toggle field={block_data[:lightbox]} label={gettext("Lightbox")} />
-                              <Input.radios
-                                field={block_data[:placeholder]}
-                                label={gettext("Placeholder")}
-                                opts={[
-                                  options: [
-                                    %{label: gettext("Dominant color"), value: "dominant_color"},
-                                    %{
-                                      label: gettext("Dominant color faded"),
-                                      value: "dominant_color_faded"
-                                    },
-                                    %{label: gettext("SVG"), value: "svg"},
-                                    %{label: gettext("Micro"), value: "micro"},
-                                    %{label: gettext("None"), value: "none"}
-                                  ]
-                                ]}
-                              />
-
-                              <Form.array_inputs_from_data
-                                :let={
-                                  %{
-                                    id: array_id,
-                                    value: array_value,
-                                    label: array_label,
-                                    name: array_name,
-                                    checked: checked
-                                  }
-                                }
-                                field={block_data[:formats]}
-                                options={[
-                                  %{label: "Original", value: "original"},
-                                  %{label: "jpg", value: "jpg"},
-                                  %{label: "png", value: "png"},
-                                  %{label: "webp", value: "webp"},
-                                  %{label: "avif", value: "avif"}
-                                ]}
-                              >
-                                <div class="field-wrapper compact">
-                                  <div class="check-wrapper small">
-                                    <input
-                                      type="checkbox"
-                                      id={array_id}
-                                      name={array_name}
-                                      value={array_value}
-                                      checked={checked}
-                                    />
-                                    <label class="control-label small" for={array_id}>
-                                      {array_label}
-                                    </label>
-                                  </div>
-                                </div>
-                              </Form.array_inputs_from_data>
-                            </Form.inputs_for_block>
-                          <% "video" -> %>
-                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
-                              <Input.text field={block_data[:url]} label={gettext("URL")} />
-                              <Input.radios
-                                field={block_data[:source]}
-                                label={gettext("Source")}
-                                opts={[
-                                  options: [
-                                    %{label: "YouTube", value: "youtube"},
-                                    %{label: "Vimeo", value: "vimeo"},
-                                    %{label: "File", value: "file"}
-                                  ]
-                                ]}
-                              />
-                              <Input.input type={:hidden} field={block_data[:width]} />
-                              <Input.input type={:hidden} field={block_data[:height]} />
-                              <Input.text field={block_data[:remote_id]} label={gettext("Remote ID")} />
-                              <Input.text field={block_data[:poster]} label={gettext("Poster")} />
-                              <Input.text field={block_data[:cover]} label={gettext("Cover")} />
-                              <Input.number field={block_data[:opacity]} label={gettext("Opacity")} />
-                              <Input.toggle field={block_data[:autoplay]} label={gettext("Autoplay")} />
-                              <Input.toggle field={block_data[:preload]} label={gettext("Preload")} />
-                              <Input.toggle field={block_data[:play_button]} label={gettext("Play button")} />
-                            </Form.inputs_for_block>
-                          <% "media" -> %>
-                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
-                              <Form.array_inputs_from_data
-                                :let={
-                                  %{
-                                    id: array_id,
-                                    value: array_value,
-                                    label: array_label,
-                                    name: array_name,
-                                    checked: checked
-                                  }
-                                }
-                                field={block_data[:available_blocks]}
-                                options={[
-                                  %{label: gettext("Picture"), value: "picture"},
-                                  %{label: gettext("Video"), value: "video"},
-                                  %{label: gettext("Gallery"), value: "gallery"},
-                                  %{label: gettext("SVG"), value: "svg"}
-                                ]}
-                              >
-                                <div class="field-wrapper compact">
-                                  <div class="check-wrapper small">
-                                    <input
-                                      type="checkbox"
-                                      id={array_id}
-                                      name={array_name}
-                                      value={array_value}
-                                      checked={checked}
-                                    />
-                                    <label class="control-label small" for={array_id}>
-                                      {array_label}
-                                    </label>
-                                  </div>
-                                </div>
-                              </Form.array_inputs_from_data>
-
-                              <%= if "picture" in block_data[:available_blocks].value do %>
-                                <h2>Picture block template</h2>
-                                <.inputs_for :let={tpl_data} field={block_data[:template_picture]}>
-                                  <Input.toggle field={tpl_data[:lazyload]} label={gettext("Lazyload")} />
-                                  <Input.toggle field={tpl_data[:moonwalk]} label={gettext("Moonwalk")} />
-                                  <Input.text field={tpl_data[:picture_class]} label={gettext("Picture class")} />
-                                  <Input.text field={tpl_data[:img_class]} label={gettext("Image class")} />
-                                  <.live_component
-                                    module={Input.Select}
-                                    id={"#{@form.id}-ref-#{@key}-#{ref[:name].value}-tpl-placeholder"}
-                                    field={tpl_data[:placeholder]}
-                                    label={gettext("Placeholder")}
-                                    inline={true}
-                                    opts={[
-                                      options: [
-                                        %{label: "SVG", value: :svg},
-                                        %{label: "Dominant Color", value: :dominant_color},
-                                        %{
-                                          label: "Dominant Color faded",
-                                          value: :dominant_color_faded
-                                        },
-                                        %{label: "Micro", value: :micro},
-                                        %{label: "None", value: :none}
-                                      ]
-                                    ]}
-                                  />
-
-                                  <Form.array_inputs_from_data
-                                    :let={
-                                      %{
-                                        id: array_id,
-                                        value: array_value,
-                                        label: array_label,
-                                        name: array_name,
-                                        checked: checked
-                                      }
-                                    }
-                                    field={tpl_data[:formats]}
-                                    options={[
-                                      %{label: "Original", value: "original"},
-                                      %{label: "jpg", value: "jpg"},
-                                      %{label: "png", value: "png"},
-                                      %{label: "webp", value: "webp"},
-                                      %{label: "avif", value: "avif"}
-                                    ]}
-                                  >
-                                    <div class="field-wrapper compact">
-                                      <div class="check-wrapper small">
-                                        <input
-                                          type="checkbox"
-                                          id={array_id}
-                                          name={array_name}
-                                          value={array_value}
-                                          checked={checked}
-                                        />
-                                        <label class="control-label small" for={array_id}>
-                                          {array_label}
-                                        </label>
-                                      </div>
-                                    </div>
-                                  </Form.array_inputs_from_data>
-                                  <Input.text
-                                    field={tpl_data[:config_target]}
-                                    label={gettext("Config target")}
-                                    instructions={gettext("i.e: `image:Elixir.MyApp.Schema:function:fn_name`")}
-                                    monospace
-                                  />
-                                </.inputs_for>
-                              <% end %>
-
-                              <%= if "video" in block_data[:available_blocks].value do %>
-                                <h2>Video block template</h2>
-                                <.inputs_for :let={tpl_data} field={block_data[:template_video]}>
-                                  <Input.number field={tpl_data[:opacity]} label={gettext("Opacity")} />
-                                  <Input.toggle field={tpl_data[:autoplay]} label={gettext("Autoplay")} />
-                                  <Input.toggle field={tpl_data[:preload]} label={gettext("Preload")} />
-                                  <Input.toggle field={tpl_data[:play_button]} label={gettext("Play button")} />
-                                </.inputs_for>
-                              <% end %>
-
-                              <%= if "gallery" in block_data[:available_blocks].value do %>
-                                <h2>Gallery block template</h2>
-                                <.inputs_for :let={tpl_data} field={block_data[:template_gallery]}>
-                                  <Input.radios
-                                    field={tpl_data[:type]}
-                                    label={gettext("Type")}
-                                    opts={[
-                                      options: [
-                                        %{label: "Gallery", value: :gallery},
-                                        %{label: "Slider", value: :slider},
-                                        %{label: "Slideshow", value: :slideshow}
-                                      ]
-                                    ]}
-                                  />
-                                  <Input.radios
-                                    field={tpl_data[:display]}
-                                    label={gettext("Display")}
-                                    opts={[
-                                      options: [
-                                        %{label: "Grid", value: :grid},
-                                        %{label: "List", value: :list}
-                                      ]
-                                    ]}
-                                  />
-                                  <Input.text field={tpl_data[:class]} label={gettext("Class")} />
-                                  <Input.text field={tpl_data[:series_slug]} label={gettext("Series slug")} />
-                                  <Input.toggle field={tpl_data[:lightbox]} label={gettext("Lightbox")} />
-                                  <Input.radios
-                                    field={tpl_data[:placeholder]}
-                                    opts={[
-                                      options: [
-                                        %{label: "Dominant color", value: "dominant_color"},
-                                        %{
-                                          label: "Dominant color faded",
-                                          value: "dominant_color_faded"
-                                        },
-                                        %{label: "SVG", value: "svg"},
-                                        %{label: "Micro", value: "micro"},
-                                        %{label: "None", value: "none"}
-                                      ]
-                                    ]}
-                                  />
-
-                                  <Form.array_inputs_from_data
-                                    :let={
-                                      %{
-                                        id: array_id,
-                                        value: array_value,
-                                        label: array_label,
-                                        name: array_name,
-                                        checked: checked
-                                      }
-                                    }
-                                    field={tpl_data[:formats]}
-                                    options={[
-                                      %{label: "Original", value: "original"},
-                                      %{label: "jpg", value: "jpg"},
-                                      %{label: "png", value: "png"},
-                                      %{label: "webp", value: "webp"},
-                                      %{label: "avif", value: "avif"}
-                                    ]}
-                                  >
-                                    <div class="field-wrapper compact">
-                                      <div class="check-wrapper small">
-                                        <input
-                                          type="checkbox"
-                                          id={array_id}
-                                          name={array_name}
-                                          value={array_value}
-                                          checked={checked}
-                                        />
-                                        <label class="control-label small" for={array_id}>
-                                          {array_label}
-                                        </label>
-                                      </div>
-                                    </div>
-                                  </Form.array_inputs_from_data>
-                                </.inputs_for>
-                              <% end %>
-
-                              <%= if "svg" in block_data[:available_blocks].value do %>
-                                <h2>SVG block template</h2>
-                                <.inputs_for :let={tpl_data} field={block_data[:template_svg]}>
-                                  <Input.text field={tpl_data[:class]} label={gettext("Class")} />
-                                </.inputs_for>
-                              <% end %>
-                            </Form.inputs_for_block>
-                          <% "datasource" -> %>
-                            <Form.inputs_for_block :let={block_data} field={ref_data[:data]}>
-                              <Input.text field={block_data[:description]} label={gettext("Description")} />
-                              <Input.text field={block_data[:arg]} label={gettext("Arg")} />
-                              <Input.text field={block_data[:limit]} label={gettext("Limit")} />
-                            </Form.inputs_for_block>
-                          <% type -> %>
-                            No matching block {type} found
-                        <% end %>
+                        <RefBlockForm.block_form
+                          type={ref_data[:type].value}
+                          ref_data={ref_data}
+                          form_id={@form.id}
+                          key={@key}
+                          ref_name={ref[:name].value}
+                        />
                       </div>
 
                       <div class="panel">
                         <h2 class="titlecase">Ref config — {ref_data[:type].value}</h2>
                         <Input.text field={ref[:name]} label={gettext("Name")} />
                         <Input.text field={ref[:description]} label={gettext("Description")} />
-                        <Input.input
-                          type={:hidden}
-                          field={ref_data[:uid]}
-                          value={ref_data[:uid].value || Brando.Utils.generate_uid()}
-                        />
+                        <Input.input type={:hidden} field={ref[:uid]} value={ref[:uid].value || Brando.Utils.generate_uid()} />
                       </div>
                     </Form.inputs_for_block>
                   </div>
@@ -789,89 +227,11 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
         </div>
 
         <Content.modal title={gettext("Create var")} id={"#{@form.id}-#{@key}-create-var"} narrow>
-          <div class="button-group">
-            <button
-              type="button"
-              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="text"
-              class="secondary"
-            >
-              Rich text
-            </button>
-            <button
-              type="button"
-              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="string"
-              class="secondary"
-            >
-              String
-            </button>
-            <button
-              type="button"
-              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="image"
-              class="secondary"
-            >
-              Image
-            </button>
-            <button
-              type="button"
-              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="file"
-              class="secondary"
-            >
-              File
-            </button>
-
-            <button
-              type="button"
-              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="boolean"
-              class="secondary"
-            >
-              Boolean
-            </button>
-            <button
-              type="button"
-              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="select"
-              class="secondary"
-            >
-              Select
-            </button>
-            <button
-              type="button"
-              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="link"
-              class="secondary"
-            >
-              Link
-            </button>
-            <button
-              type="button"
-              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="datetime"
-              class="secondary"
-            >
-              Datetime
-            </button>
-            <button
-              type="button"
-              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="color"
-              class="secondary"
-            >
-              Color
-            </button>
-            <button
-              type="button"
-              phx-click={@create_var |> hide_modal("##{@form.id}-#{@key}-create-var")}
-              phx-value-type="html"
-              class="secondary"
-            >
-              Html
-            </button>
-          </div>
+          <.type_buttons
+            types={@var_types}
+            on_click={@create_var}
+            hide_modal_id={"##{@form.id}-#{@key}-create-var"}
+          />
         </Content.modal>
 
         <div class="vars">
@@ -904,8 +264,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                 <!-- ^- had publish -->
               </Content.modal>
               <li class="var padded sort-handle draggable" data-id={var.index}>
-                <input type="hidden" name={var[:id].name} value={var[:id].value} />
-                <input type="hidden" name={var[:_persistent_id].name} value={var.index} />
+                <Input.input type={:hidden} field={var[:id]} />
+                <Input.input type={:hidden} field={var[:_persistent_id]} value={var.index} />
                 <input type="hidden" name={"#{@form.name}[sort_var_ids][]"} value={var.index} />
 
                 <span class="text-mono">
@@ -1041,5 +401,56 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   def handle_event("del_select_var_option", params, socket) do
     send(self(), {:del_select_var_option, params})
     {:noreply, socket}
+  end
+
+  # --- Function components ---
+
+  attr :types, :list, required: true
+  attr :on_click, :any, required: true
+  attr :hide_modal_id, :string, default: nil
+  attr :show_modal_id, :string, default: nil
+
+  defp type_buttons(assigns) do
+    ~H"""
+    <div class="button-group-vertical">
+      <button
+        :for={%{value: value, label: label} <- @types}
+        type="button"
+        phx-click={build_click_action(@on_click, @hide_modal_id, @show_modal_id)}
+        phx-value-type={value}
+        class="secondary"
+      >
+        {label}
+      </button>
+    </div>
+    """
+  end
+
+  defp build_click_action(on_click, nil, nil), do: on_click
+  defp build_click_action(on_click, hide_id, nil), do: on_click |> hide_modal(hide_id)
+  defp build_click_action(on_click, nil, show_id), do: on_click |> show_modal(show_id)
+
+  defp build_click_action(on_click, hide_id, show_id),
+    do: on_click |> hide_modal(hide_id) |> show_modal(show_id)
+
+  attr :field, :any, required: true
+
+  def format_checkboxes(assigns) do
+    assigns = assign(assigns, :options, @format_options)
+
+    ~H"""
+    <Form.array_inputs_from_data
+      :let={%{id: array_id, value: array_value, label: array_label, name: array_name, checked: checked}}
+      field={@field}
+      options={@options}
+    >
+      <div class="field-wrapper compact">
+        <div class="check-wrapper small">
+          <input type="checkbox" id={array_id} name={array_name} value={array_value} checked={checked} />
+          <label class="control-label small" for={array_id}>{array_label}</label>
+        </div>
+      </div>
+    </Form.array_inputs_from_data>
+    """
   end
 end

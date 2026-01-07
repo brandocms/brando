@@ -457,7 +457,7 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   attr :rest, :global,
     include:
-      ~w(class phx-hook phx-debounce rows phx-update data-slug-for data-slug-type data-autosize autocorrect spellcheck)
+      ~w(class phx-hook phx-debounce rows phx-update data-slug-for data-slug-type data-autosize autocorrect spellcheck readonly)
 
   attr :field, FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
@@ -733,6 +733,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :compact, :boolean
   attr :placeholder, :string
   attr :disabled, :boolean
+  attr :readonly, :boolean, default: nil
   attr :debounce, :integer
   attr :monospace, :boolean
   attr :change, :any, default: nil
@@ -749,6 +750,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         field={@field}
         placeholder={@placeholder}
         disabled={@disabled}
+        readonly={@readonly}
         class={["text", @monospace && "monospace"]}
         phx-debounce={@debounce}
         data-watch-focus
@@ -853,25 +855,40 @@ defmodule BrandoAdmin.Components.Form.Input do
       assigns
       |> prepare_input_component()
       |> assign_new(:inner_block, fn -> nil end)
+      |> assign_new(:tiny, fn -> false end)
 
     ~H"""
-    <Form.field_base
-      field={@field}
-      label={@label}
-      instructions={@instructions}
-      class={@class}
-      compact={@compact}
-      left_justify_meta
-    >
-      <Form.label field={@field} class={["switch", @compact && "small"]} skip_presence>
-        <%= if @inner_block do %>
-          {render_slot(@inner_block)}
-        <% else %>
-          <.input type={:checkbox} field={@field} />
-        <% end %>
-        <div class="slider round"></div>
-      </Form.label>
-    </Form.field_base>
+    <%= if @tiny do %>
+      <div class="tiny-toggle-wrapper">
+        <Form.label field={@field} class="switch small" skip_presence>
+          <%= if @inner_block do %>
+            {render_slot(@inner_block)}
+          <% else %>
+            <.input type={:checkbox} field={@field} />
+          <% end %>
+          <div class="slider round"></div>
+        </Form.label>
+        <span class="tiny-toggle-label">{@label}</span>
+      </div>
+    <% else %>
+      <Form.field_base
+        field={@field}
+        label={@label}
+        instructions={@instructions}
+        class={@class}
+        compact={@compact}
+        left_justify_meta
+      >
+        <Form.label field={@field} class={["switch", @compact && "small"]} skip_presence>
+          <%= if @inner_block do %>
+            {render_slot(@inner_block)}
+          <% else %>
+            <.input type={:checkbox} field={@field} />
+          <% end %>
+          <div class="slider round"></div>
+        </Form.label>
+      </Form.field_base>
+    <% end %>
     """
   end
 end

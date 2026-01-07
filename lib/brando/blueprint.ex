@@ -169,7 +169,7 @@ defmodule Brando.Blueprint do
       import Brando.Blueprint.Assets
       import Brando.Blueprint.Attributes
       import Brando.Blueprint.Forms
-      import Brando.Blueprint.Identifier
+      import Brando.Blueprint.Identifier.DSL
       import Brando.Blueprint.Listings
       import Brando.Blueprint.Listings.Components
       import Brando.Blueprint.Naming

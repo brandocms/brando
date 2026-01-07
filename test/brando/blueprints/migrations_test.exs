@@ -32,4 +32,20 @@ defmodule Brando.Blueprint.MigrationsTest do
     assert [file] = Path.wildcard("tmp/test_migrations/*_brando_persons_person_001.exs")
     assert File.read!(file) == File.read!("test/support/migration_results/migration_004.txt")
   end
+
+  test "join table migration with auto on_delete" do
+    # First create the Tag table
+    Migrations.create_migration(Brando.MigrationTest.Tag, @test_opts)
+    assert [_file] = Path.wildcard("tmp/test_migrations/*_brando_projects_tag_001.exs")
+
+    # Then create the join table
+    Migrations.create_migration(Brando.MigrationTest.ProjectTag, @test_opts)
+    assert [file] = Path.wildcard("tmp/test_migrations/*_brando_projects_projecttag_001.exs")
+
+    # Verify that the join table has :delete_all on both foreign keys
+    content = File.read!(file)
+    assert content =~ "on_delete: :delete_all"
+    assert content =~ ~r/add :project_id, references\(:projects, on_delete: :delete_all\)/
+    assert content =~ ~r/add :tag_id, references\(:projects_tags, on_delete: :delete_all\)/
+  end
 end

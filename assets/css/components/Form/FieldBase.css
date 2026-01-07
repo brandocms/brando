@@ -27,6 +27,7 @@
     border-radius: 50%;
     width: fit-content;
     aspect-ratio: 1 / 1;
+    z-index: 2;
     transition: background-color 250ms ease;
 
     span[class^="hero-"] {

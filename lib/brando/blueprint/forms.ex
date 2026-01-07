@@ -187,6 +187,21 @@ defmodule Brando.Blueprint.Forms do
     label: t("Categories")
   ```
 
+  For `:has_many` relations, the join schema must have `@allow_mark_as_deleted true` set.
+
+  To enable drag-and-drop reordering of selected items, the join schema must have `Brando.Trait.Sequenced`,
+  and the relation must have `sort_param` configured:
+
+  ```
+  relation :project_categories, :has_many,
+    module: Projects.ProjectCategory,
+    preload_order: [{:asc, :sequence}],
+    sort_param: :sort_category_ids,
+    drop_param: :drop_category_ids,
+    on_replace: :delete_if_exists,
+    cast: true
+  ```
+
   ### `rich_text`: Rich text editor (TipTap)
 
   #### Options
@@ -207,6 +222,24 @@ defmodule Brando.Blueprint.Forms do
     resetable: true,
     label: t("Client")
   ```
+
+  #### Options
+
+      - `options` - List of options or a function returning options.
+      - `update_relation` - Tuple of `{relation_field, fetcher_function}` to update a relation.
+      - `resetable` - Allow resetting the value to nil.
+      - `narrow` - Use a narrower modal.
+      - `inline` - Show options inline instead of in a modal.
+      - `filter` - Show filter input in modal. Defaults to `true`.
+      - `allow_custom` - Allow entering custom values not in the options list.
+          When enabled, shows a "Custom value" input in the modal and displays
+          custom values in the select label instead of "No selection".
+          ```
+          input :aspect_ratio, :select,
+            options: [{"16:9", "16:9"}, {"4:3", "4:3"}],
+            allow_custom: true,
+            label: t("Aspect Ratio")
+          ```
 
   ### `slug`: Slug field
 

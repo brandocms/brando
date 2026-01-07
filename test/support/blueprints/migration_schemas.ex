@@ -177,3 +177,38 @@ defmodule Brando.Persons.Person do
     relation :related_entries, :entries, constraints: [max_length: 3]
   end
 end
+
+defmodule Brando.MigrationTest.Tag do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Projects",
+    schema: "Tag",
+    singular: "tag",
+    plural: "tags",
+    gettext_module: Brando.Gettext
+
+  trait Brando.Trait.Timestamped
+
+  attributes do
+    attribute :name, :string, required: true
+  end
+end
+
+defmodule Brando.MigrationTest.ProjectTag do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Projects",
+    schema: "ProjectTag",
+    singular: "project_tag",
+    plural: "project_tags",
+    gettext_module: Brando.Gettext
+
+  trait Brando.Trait.Sequenced
+
+  @allow_mark_as_deleted true
+
+  relations do
+    relation :project, :belongs_to, module: Brando.MigrationTest.Project
+    relation :tag, :belongs_to, module: Brando.MigrationTest.Tag
+  end
+end

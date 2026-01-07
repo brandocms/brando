@@ -1,6 +1,7 @@
 defmodule Brando.Blueprint.Datasources.Meta do
   @moduledoc false
-  defstruct key: nil,
+  defstruct __spark_metadata__: nil,
+            key: nil,
             type: nil,
             label: nil,
             opts: []

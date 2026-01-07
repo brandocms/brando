@@ -25,7 +25,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Asset.Add do
 
   def up(%{asset: %{type: :video, name: name}}) do
     """
-    add #{inspect(name)}, :jsonb
+    add #{inspect(name)}_id, references(:videos, on_delete: :nilify_all)
     """
   end
 
@@ -47,7 +47,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Asset.Add do
 
   def down(%{asset: %{type: :video, name: name}}) do
     """
-    remove #{inspect(name)}
+    remove #{inspect(name)}_id
     """
   end
 

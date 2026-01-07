@@ -27,7 +27,13 @@ defmodule Brando.Blueprint.Snapshot do
 
   @spec get_current_version(module) :: integer
   def get_current_version(module) do
-    get_snapshot_version(module)
+    # First check if the module has a @schema_version attribute (for Brando modules)
+    if function_exported?(module, :__schema_version__, 0) do
+      module.__schema_version__()
+    else
+      # Fall back to snapshot file system for app modules
+      get_snapshot_version(module)
+    end
   end
 
   @spec get_latest_snapshot(module) :: snapshot | nil
@@ -42,9 +48,31 @@ defmodule Brando.Blueprint.Snapshot do
     |> build_filename(version, opts)
     |> File.read!()
     |> :erlang.binary_to_term()
+    |> migrate_snapshot()
   rescue
     _ -> nil
   end
+
+  # Migrate old snapshot structs to current format
+  defp migrate_snapshot(%Snapshot{assets: assets} = snapshot) when is_list(assets) do
+    migrated_assets = Enum.map(assets, &migrate_asset/1)
+    %{snapshot | assets: migrated_assets}
+  end
+
+  defp migrate_snapshot(snapshot), do: snapshot
+
+  # Convert old Brando.Blueprint.Asset to Brando.Blueprint.Assets.Asset
+  defp migrate_asset(%{__struct__: Brando.Blueprint.Asset} = old_asset) do
+    %Brando.Blueprint.Assets.Asset{
+      __identifier__: Map.get(old_asset, :__identifier__),
+      __spark_metadata__: Map.get(old_asset, :__spark_metadata__),
+      name: old_asset.name,
+      type: old_asset.type,
+      opts: old_asset.opts
+    }
+  end
+
+  defp migrate_asset(asset), do: asset
 
   @spec store_snapshot(module) :: :ok | no_return
   def store_snapshot(module, opts \\ @default_opts) do
@@ -71,16 +99,44 @@ defmodule Brando.Blueprint.Snapshot do
   end
 
   defp build_path(module, opts) do
-    root_path = Keyword.get(opts, :snapshot_path)
+    # Check if a custom snapshot_path is provided in opts
+    case Keyword.get(opts, :snapshot_path) do
+      nil ->
+        # No custom path provided, use the application's priv directory
+        # Get the application name from the module
+        app_name = module.__naming__().application |> String.downcase() |> String.to_atom()
 
-    snapshot_path =
-      Enum.map_join(
-        [module.__naming__().application, module.__naming__().domain, module.__naming__().schema],
-        "_",
-        &String.downcase/1
-      )
+        # Get the priv dir for that specific application
+        priv_dir =
+          case :code.priv_dir(app_name) do
+            {:error, :bad_name} ->
+              # Fallback to default path for development or if app not found
+              "priv"
 
-    Path.join(root_path, snapshot_path)
+            priv_dir_charlist ->
+              priv_dir_charlist |> to_string()
+          end
+
+        snapshot_path =
+          Enum.map_join(
+            [module.__naming__().application, module.__naming__().domain, module.__naming__().schema],
+            "_",
+            &String.downcase/1
+          )
+
+        Path.join([priv_dir, "blueprints/snapshots", snapshot_path])
+
+      custom_path ->
+        # Custom path provided, use it directly
+        snapshot_path =
+          Enum.map_join(
+            [module.__naming__().application, module.__naming__().domain, module.__naming__().schema],
+            "_",
+            &String.downcase/1
+          )
+
+        Path.join([custom_path, snapshot_path])
+    end
   end
 
   defp build_filename(module, version, opts) do

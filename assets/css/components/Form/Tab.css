@@ -1,0 +1,53 @@
+.tab-container {
+  margin-bottom: 20px;
+
+  .tab-header {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid azure;
+    margin-bottom: 20px;
+  }
+
+  .tab-button {
+    @font mono;
+    @fontsize 12px;
+    background: transparent;
+    border: 1px solid azure;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    padding: 8px 16px;
+    cursor: pointer;
+    color: azure;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    margin-right: -1px;
+    position: relative;
+    text-transform: uppercase;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    &.active {
+      background-color: azure;
+      color: var(--brando-color-dark);
+      z-index: 1;
+    }
+
+    &:first-child {
+      border-top-left-radius: 8px;
+    }
+
+    &:last-child {
+      border-top-right-radius: 8px;
+      margin-right: 0;
+    }
+  }
+
+  .tab-content {
+    /* Content wrapper */
+  }
+
+  .tab-panel {
+    /* Individual tab panel */
+  }
+}

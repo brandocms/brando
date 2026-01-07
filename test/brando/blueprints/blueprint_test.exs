@@ -1,5 +1,6 @@
 defmodule Brando.Blueprint.BlueprintTest do
   use ExUnit.Case
+  import Brando.Test.Support, only: [strip_spark_metadata: 1]
 
   test "naming" do
     assert Brando.BlueprintTest.Project.__naming__().application == "Brando"
@@ -51,56 +52,57 @@ defmodule Brando.Blueprint.BlueprintTest do
   test "attributes" do
     attrs = Brando.Blueprint.Attributes.__attributes__(Brando.BlueprintTest.Project)
 
-    assert attrs == [
-             %Brando.Blueprint.Attributes.Attribute{
-               __identifier__: :status,
-               name: :status,
-               type: :status,
-               opts: %{required: true}
-             },
-             %Brando.Blueprint.Attributes.Attribute{
-               __identifier__: :language,
-               name: :language,
-               type: :language,
-               opts: %{values: [:no, :en], required: true}
-             },
-             %Brando.Blueprint.Attributes.Attribute{
-               __identifier__: :title,
-               name: :title,
-               opts: %{},
-               type: :string
-             },
-             %Brando.Blueprint.Attributes.Attribute{
-               __identifier__: :slug,
-               name: :slug,
-               opts: %{required: true},
-               type: :slug
-             },
-             %Brando.Blueprint.Attributes.Attribute{
-               __identifier__: :deleted_at,
-               name: :deleted_at,
-               opts: %{},
-               type: :datetime
-             },
-             %Brando.Blueprint.Attributes.Attribute{
-               __identifier__: :sequence,
-               name: :sequence,
-               opts: %{default: 0},
-               type: :integer
-             },
-             %Brando.Blueprint.Attributes.Attribute{
-               __identifier__: :inserted_at,
-               name: :inserted_at,
-               opts: %{},
-               type: :datetime
-             },
-             %Brando.Blueprint.Attributes.Attribute{
-               __identifier__: :updated_at,
-               name: :updated_at,
-               opts: %{},
-               type: :datetime
-             }
-           ]
+    assert strip_spark_metadata(attrs) ==
+             strip_spark_metadata([
+               %Brando.Blueprint.Attributes.Attribute{
+                 __identifier__: :status,
+                 name: :status,
+                 type: :status,
+                 opts: %{required: true}
+               },
+               %Brando.Blueprint.Attributes.Attribute{
+                 __identifier__: :language,
+                 name: :language,
+                 type: :language,
+                 opts: %{values: [:no, :en], required: true}
+               },
+               %Brando.Blueprint.Attributes.Attribute{
+                 __identifier__: :title,
+                 name: :title,
+                 opts: %{},
+                 type: :string
+               },
+               %Brando.Blueprint.Attributes.Attribute{
+                 __identifier__: :slug,
+                 name: :slug,
+                 opts: %{required: true},
+                 type: :slug
+               },
+               %Brando.Blueprint.Attributes.Attribute{
+                 __identifier__: :deleted_at,
+                 name: :deleted_at,
+                 opts: %{},
+                 type: :datetime
+               },
+               %Brando.Blueprint.Attributes.Attribute{
+                 __identifier__: :sequence,
+                 name: :sequence,
+                 opts: %{default: 0},
+                 type: :integer
+               },
+               %Brando.Blueprint.Attributes.Attribute{
+                 __identifier__: :inserted_at,
+                 name: :inserted_at,
+                 opts: %{},
+                 type: :datetime
+               },
+               %Brando.Blueprint.Attributes.Attribute{
+                 __identifier__: :updated_at,
+                 name: :updated_at,
+                 opts: %{},
+                 type: :datetime
+               }
+             ])
   end
 
   test "attribute_opts" do
@@ -113,90 +115,91 @@ defmodule Brando.Blueprint.BlueprintTest do
   test "assets" do
     assets = Brando.Blueprint.Assets.__assets__(Brando.BlueprintTest.Project)
 
-    assert assets == [
-             %Brando.Blueprint.Assets.Asset{
-               __identifier__: :cover,
-               name: :cover,
-               opts: %{
-                 cfg: %Brando.Type.ImageConfig{
-                   allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-                   cdn: nil,
-                   default_size: "medium",
-                   formats: [:original],
-                   overwrite: false,
-                   random_filename: true,
-                   size_limit: 10_240_000,
-                   sizes: %{
-                     "crop_medium" => %{"crop" => true, "quality" => 65, "size" => "500x500"},
-                     "crop_small" => %{"crop" => true, "quality" => 65, "size" => "300x300"},
-                     "large" => %{"crop" => true, "quality" => 65, "size" => "700x700"},
-                     "medium" => %{"crop" => true, "quality" => 65, "size" => "500x500"},
-                     "micro" => %{"crop" => false, "quality" => 10, "size" => "25"},
-                     "small" => %{"crop" => true, "quality" => 65, "size" => "300x300"},
-                     "thumb" => %{"crop" => true, "quality" => 65, "size" => "150x150"},
-                     "xlarge" => %{"crop" => true, "quality" => 65, "size" => "900x900"}
+    assert strip_spark_metadata(assets) ==
+             strip_spark_metadata([
+               %Brando.Blueprint.Assets.Asset{
+                 __identifier__: :cover,
+                 name: :cover,
+                 opts: %{
+                   cfg: %Brando.Type.ImageConfig{
+                     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
+                     cdn: nil,
+                     default_size: "medium",
+                     formats: [:original],
+                     overwrite: false,
+                     random_filename: true,
+                     size_limit: 10_240_000,
+                     sizes: %{
+                       "crop_medium" => %{"crop" => true, "quality" => 65, "size" => "500x500"},
+                       "crop_small" => %{"crop" => true, "quality" => 65, "size" => "300x300"},
+                       "large" => %{"crop" => true, "quality" => 65, "size" => "700x700"},
+                       "medium" => %{"crop" => true, "quality" => 65, "size" => "500x500"},
+                       "micro" => %{"crop" => false, "quality" => 10, "size" => "25"},
+                       "small" => %{"crop" => true, "quality" => 65, "size" => "300x300"},
+                       "thumb" => %{"crop" => true, "quality" => 65, "size" => "150x150"},
+                       "xlarge" => %{"crop" => true, "quality" => 65, "size" => "900x900"}
+                     },
+                     srcset: %{
+                       cropped: [{"crop_small", "300w"}, {"crop_medium", "500w"}],
+                       default: [
+                         {"small", "300w"},
+                         {"medium", "500w"},
+                         {"large", "700w"},
+                         {"xlarge", "900w"}
+                       ]
+                     },
+                     upload_path: "images/avatars"
                    },
-                   srcset: %{
-                     cropped: [{"crop_small", "300w"}, {"crop_medium", "500w"}],
-                     default: [
-                       {"small", "300w"},
-                       {"medium", "500w"},
-                       {"large", "700w"},
-                       {"xlarge", "900w"}
-                     ]
+                   module: Brando.Images.Image
+                 },
+                 type: :image
+               },
+               %Brando.Blueprint.Assets.Asset{
+                 __identifier__: :cover_cdn,
+                 name: :cover_cdn,
+                 opts: %{
+                   cfg: %Brando.Type.ImageConfig{
+                     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
+                     cdn: %{enabled: true, media_url: "https://mycustomcdn.com", s3: :default},
+                     default_size: "medium",
+                     formats: [:original],
+                     overwrite: false,
+                     random_filename: true,
+                     size_limit: 10_240_000,
+                     sizes: %{
+                       "large" => %{"quality" => 75, "size" => "1700"},
+                       "medium" => %{"quality" => 75, "size" => "1100"},
+                       "micro" => %{"crop" => false, "quality" => 20, "size" => "25"},
+                       "small" => %{"quality" => 75, "size" => "700"},
+                       "thumb" => %{"crop" => true, "quality" => 75, "size" => "400x400>"},
+                       "xlarge" => %{"quality" => 65, "size" => "2800"},
+                       "crop_xlarge" => %{"crop" => true, "quality" => 65, "size" => "1000x500"}
+                     },
+                     srcset: %{cropped: [{"crop_xlarge", "900w"}], default: [{"xlarge", "900w"}]},
+                     upload_path: "images/avatars"
                    },
-                   upload_path: "images/avatars"
+                   module: Brando.Images.Image
                  },
-                 module: Brando.Images.Image
+                 type: :image
                },
-               type: :image
-             },
-             %Brando.Blueprint.Assets.Asset{
-               __identifier__: :cover_cdn,
-               name: :cover_cdn,
-               opts: %{
-                 cfg: %Brando.Type.ImageConfig{
-                   allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
-                   cdn: %{enabled: true, media_url: "https://mycustomcdn.com", s3: :default},
-                   default_size: "medium",
-                   formats: [:original],
-                   overwrite: false,
-                   random_filename: true,
-                   size_limit: 10_240_000,
-                   sizes: %{
-                     "large" => %{"quality" => 75, "size" => "1700"},
-                     "medium" => %{"quality" => 75, "size" => "1100"},
-                     "micro" => %{"crop" => false, "quality" => 20, "size" => "25"},
-                     "small" => %{"quality" => 75, "size" => "700"},
-                     "thumb" => %{"crop" => true, "quality" => 75, "size" => "400x400>"},
-                     "xlarge" => %{"quality" => 65, "size" => "2800"},
-                     "crop_xlarge" => %{"crop" => true, "quality" => 65, "size" => "1000x500"}
+               %Brando.Blueprint.Assets.Asset{
+                 __identifier__: :pdf,
+                 name: :pdf,
+                 opts: %{
+                   cfg: %Brando.Type.FileConfig{
+                     accept: :any,
+                     allowed_mimetypes: ["application/pdf"],
+                     force_filename: nil,
+                     overwrite: false,
+                     random_filename: false,
+                     size_limit: 10_240_000,
+                     upload_path: "files/projects"
                    },
-                   srcset: %{cropped: [{"crop_xlarge", "900w"}], default: [{"xlarge", "900w"}]},
-                   upload_path: "images/avatars"
+                   module: Brando.Files.File
                  },
-                 module: Brando.Images.Image
-               },
-               type: :image
-             },
-             %Brando.Blueprint.Assets.Asset{
-               __identifier__: :pdf,
-               name: :pdf,
-               opts: %{
-                 cfg: %Brando.Type.FileConfig{
-                   accept: :any,
-                   allowed_mimetypes: ["application/pdf"],
-                   force_filename: nil,
-                   overwrite: false,
-                   random_filename: false,
-                   size_limit: 10_240_000,
-                   upload_path: "files/projects"
-                 },
-                 module: Brando.Files.File
-               },
-               type: :file
-             }
-           ]
+                 type: :file
+               }
+             ])
   end
 
   test "asset_opts" do
@@ -238,26 +241,27 @@ defmodule Brando.Blueprint.BlueprintTest do
   test "relations" do
     relations = Brando.Blueprint.Relations.__relations__(Brando.BlueprintTest.Project)
 
-    assert relations == [
-             %Brando.Blueprint.Relations.Relation{
-               __identifier__: :creator,
-               name: :creator,
-               opts: %{module: Brando.Users.User, required: true},
-               type: :belongs_to
-             },
-             %Brando.Blueprint.Relations.Relation{
-               name: :alternates,
-               type: :has_many,
-               opts: %{module: :alternates},
-               __identifier__: :alternates
-             },
-             %Brando.Blueprint.Relations.Relation{
-               __identifier__: :properties,
-               name: :properties,
-               opts: %{module: Brando.BlueprintTest.Property},
-               type: :embeds_many
-             }
-           ]
+    assert strip_spark_metadata(relations) ==
+             strip_spark_metadata([
+               %Brando.Blueprint.Relations.Relation{
+                 __identifier__: :creator,
+                 name: :creator,
+                 opts: %{module: Brando.Users.User, required: true},
+                 type: :belongs_to
+               },
+               %Brando.Blueprint.Relations.Relation{
+                 name: :alternates,
+                 type: :has_many,
+                 opts: %{module: :alternates},
+                 __identifier__: :alternates
+               },
+               %Brando.Blueprint.Relations.Relation{
+                 __identifier__: :properties,
+                 name: :properties,
+                 opts: %{module: Brando.BlueprintTest.Property},
+                 type: :embeds_many
+               }
+             ])
   end
 
   test "ecto schema" do

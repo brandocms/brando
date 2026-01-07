@@ -76,6 +76,28 @@ defmodule BrandoAdmin.Components.Form.Subform do
           _ -> false
         end
       end)
+      |> assign_new(:sort_param, fn ->
+        parent_schema = assigns.field.form.data.__struct__
+
+        case Brando.Blueprint.Relations.__relation__(parent_schema, assigns.subform.name) do
+          %Brando.Blueprint.Relations.Relation{opts: opts} ->
+            Map.get(opts, :sort_param, :"sort_#{assigns.subform.name}_ids")
+
+          _ ->
+            :"sort_#{assigns.subform.name}_ids"
+        end
+      end)
+      |> assign_new(:drop_param, fn ->
+        parent_schema = assigns.field.form.data.__struct__
+
+        case Brando.Blueprint.Relations.__relation__(parent_schema, assigns.subform.name) do
+          %Brando.Blueprint.Relations.Relation{opts: opts} ->
+            Map.get(opts, :drop_param, :"drop_#{assigns.subform.name}_ids")
+
+          _ ->
+            :"drop_#{assigns.subform.name}_ids"
+        end
+      end)
       |> assign(:empty_subform_fields, assigns.field == [])
       |> assign(:path, List.wrap(assigns.subform.name))
       |> assign_new(:parent_form_id, fn ->
@@ -119,14 +141,14 @@ defmodule BrandoAdmin.Components.Form.Subform do
             >
               <input type="hidden" name={sub_form[:id].name} value={sub_form[:id].value} />
               <input type="hidden" name={sub_form[:_persistent_id].name} value={sub_form.index} />
-              <input type="hidden" name={"#{@field.form.name}[sort_#{@field.field}_ids][]"} value={sub_form.index} />
+              <input type="hidden" name={"#{@field.form.name}[#{@sort_param}][]"} value={sub_form.index} />
               <div class="subform-tools">
                 <.subentry_edit
                   on_click={JS.push("edit_subentry", value: %{index: sub_form.index}, target: @myself)}
                   open={sub_form.index in @open_entries}
                 />
                 <.subentry_sequence :if={@sequenced?} />
-                <.subentry_remove name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} index={sub_form.index} />
+                <.subentry_remove name={"#{@field.form.name}[#{@drop_param}][]"} index={sub_form.index} />
               </div>
               <.listing subform={sub_form} subform_config={@subform} />
               <div class="subform-fields">
@@ -210,10 +232,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
           <.empty_subform :if={@empty_subform_fields} field={@field} />
           <.inputs_for :let={sub_form} field={@field}>
             <div class={["subform-entry", @subform.style == :inline && "inline"]}>
-              <input type="hidden" name={"#{@field.form.name}[sort_#{@field.field}_ids][]"} value={sub_form.index} />
+              <input type="hidden" name={"#{@field.form.name}[#{@sort_param}][]"} value={sub_form.index} />
               <div class="subform-tools">
                 <.subentry_sequence :if={@sequenced?} />
-                <.subentry_remove name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} index={sub_form.index} />
+                <.subentry_remove name={"#{@field.form.name}[#{@drop_param}][]"} index={sub_form.index} />
               </div>
 
               <div class="subform-fields">
@@ -231,7 +253,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
               </div>
             </div>
           </.inputs_for>
-          <input type="hidden" name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} />
+          <input type="hidden" name={"#{@field.form.name}[#{@drop_param}][]"} />
         </div>
         <.subentry_add on_click={JS.push("add_subentry", target: @myself)} />
       </Form.field_base>

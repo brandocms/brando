@@ -1,26 +1,40 @@
 defmodule Brando.Blueprint.Assets do
   @moduledoc """
-  WIP
+  Assets are media attachments for blueprints: images, files, videos, and galleries.
 
-  ## Asset types
+  Assets are declared in the `assets` block of a blueprint and create belongs_to
+  relationships to the corresponding media schemas (`Brando.Images.Image`,
+  `Brando.Files.File`, `Brando.Videos.Video`, `Brando.Galleries.Gallery`).
 
+  ## Asset Types
 
   ### File
+
+  File assets store uploaded files (PDFs, documents, etc.) with configurable behavior.
+
+  #### Configuration Options
+
+  See `Brando.Type.FileConfig` for all available options. Key options include:
+
+    * `:allowed_mimetypes` - List of allowed MIME types
+    * `:upload_path` - Storage path within media directory
+    * `:content_disposition` - Browser behavior (`:inline` to display, `:attachment` to download)
+    * `:size_limit` - Maximum file size in bytes
 
   #### Example
 
       assets do
         asset :pdf, :file, required: true, cfg: %{
           allowed_mimetypes: ["application/pdf"],
-          random_filename: false,
+          content_disposition: :inline,
           upload_path: Path.join("files", "pdfs"),
-          force_filename: "a_single_file.pdf",
-          overwrite: true,
           size_limit: 16_000_000
         }
       end
 
   ### Gallery
+
+  Gallery assets store collections of images and/or videos.
 
   #### Example
 
@@ -48,6 +62,8 @@ defmodule Brando.Blueprint.Assets do
 
   ### Image
 
+  Image assets store single images with automatic resizing and srcset generation.
+
   #### Example
 
       asset :cover, :image,
@@ -71,6 +87,16 @@ defmodule Brando.Blueprint.Assets do
             ]
           }
         }
+
+  ### Video
+
+  Video assets store uploaded or embedded videos.
+
+  #### Example
+
+      asset :promo_video, :video, cfg: %{
+        upload_path: Path.join(["videos", "promos"])
+      }
   """
   import Ecto.Query
 
@@ -171,6 +197,7 @@ defmodule Brando.Blueprint.Assets do
       case asset.type do
         :file -> [asset.name | acc]
         :image -> [asset.name | acc]
+        :video -> [asset.name | acc]
         :gallery -> [{asset.name, gallery_query} | acc]
         _ -> acc
       end

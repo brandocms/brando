@@ -35,6 +35,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.FilePicker
   alias BrandoAdmin.Components.ImagePicker
+  alias BrandoAdmin.Components.VideoPicker
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Utils
@@ -46,6 +47,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.MetaDrawer
   alias BrandoAdmin.Components.Form.RevisionsDrawer
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
+  alias BrandoAdmin.Components.Form.Tab
 
   def mount(socket) do
     if connected?(socket) do
@@ -57,13 +59,18 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:edit_image, %{path: [], field: nil, relation_field: nil})
      |> assign(:edit_file, %{path: [], field: nil, relation_field: nil})
+     |> assign(:edit_video, %{path: [], field: nil, relation_field: nil})
      |> assign(:updated_entry_assocs, %{})
      |> assign(:file_changeset, nil)
      |> assign(:image_changeset, nil)
+     |> assign(:video_changeset, nil)
      |> assign(:initial_update, true)
      |> assign(:dirty_fields, [])
      |> assign(:editing_image?, false)
      |> assign(:editing_file?, false)
+     |> assign(:editing_video?, false)
+     |> assign(:video_context, :asset)
+     |> assign(:active_video_tab, "upload")
      |> assign(:processing_images, [])
      |> assign(:presences, %{})
      |> assign(:transformer_defaults, %{})
@@ -78,7 +85,13 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:blocks_wanting_entry, [])
      |> assign(:blocks_ready_for_sharing, false)
      |> assign(:fields_demanding_full_live_preview_rerender, [])
-     |> assign(:fields_demanding_live_preview_reassign, [])}
+     |> assign(:fields_demanding_live_preview_reassign, [])
+     |> assign_new(:footer, fn -> [] end)
+     |> assign(:editing_drawer_type, nil)
+     |> assign(:editing_resource_id, nil)
+     |> assign(:editing_field, nil)
+     |> assign(:editing_path, [])
+     |> assign(:editing_schema, nil)}
   end
 
   def update(%{action: :image_processed, image_id: id}, socket) do
@@ -93,7 +106,8 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:edit_file, updated_edit_file)
-     |> assign(:file_changeset, file_changeset)}
+     |> assign(:file_changeset, file_changeset)
+     |> assign_drawer_recovery_state()}
   end
 
   def update(%{action: :update_edit_file, edit_file: %{file: nil} = edit_file}, socket) do
@@ -103,7 +117,8 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:edit_file, edit_file)
      |> assign(:editing_file?, true)
-     |> assign(:file_changeset, file_changeset)}
+     |> assign(:file_changeset, file_changeset)
+     |> assign_drawer_recovery_state()}
   end
 
   def update(%{action: :update_edit_file, edit_file: %{file: file} = edit_file}, socket) do
@@ -113,7 +128,8 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:edit_file, edit_file)
      |> assign(:editing_file?, true)
-     |> assign(:file_changeset, file_changeset)}
+     |> assign(:file_changeset, file_changeset)
+     |> assign_drawer_recovery_state()}
   end
 
   # edit_image
@@ -124,7 +140,8 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:edit_image, updated_edit_image)
-     |> assign(:image_changeset, image_changeset)}
+     |> assign(:image_changeset, image_changeset)
+     |> assign_drawer_recovery_state()}
   end
 
   def update(
@@ -137,7 +154,8 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:edit_image, edit_image)
      |> assign(:editing_image?, true)
-     |> assign(:image_changeset, image_changeset)}
+     |> assign(:image_changeset, image_changeset)
+     |> assign_drawer_recovery_state()}
   end
 
   def update(%{action: :update_edit_image, edit_image: %{image: image} = edit_image}, socket) do
@@ -147,7 +165,166 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:edit_image, edit_image)
      |> assign(:editing_image?, true)
-     |> assign(:image_changeset, image_changeset)}
+     |> assign(:image_changeset, image_changeset)
+     |> assign_drawer_recovery_state()}
+  end
+
+  # edit_video
+  def update(%{action: :update_edit_video, video: video}, %{assigns: %{edit_video: edit_video}} = socket) do
+    updated_edit_video = Map.merge(edit_video, %{video: video, id: video.id})
+    video_changeset = change(video)
+
+    {:ok,
+     socket
+     |> assign(:edit_video, updated_edit_video)
+     |> assign(:video_changeset, video_changeset)
+     |> assign_drawer_recovery_state()}
+  end
+
+  def update(
+        %{action: :update_edit_video, edit_video: %{video: nil} = edit_video},
+        socket
+      ) do
+    video_changeset = change(%Brando.Videos.Video{})
+
+    {:ok,
+     socket
+     |> assign(:edit_video, edit_video)
+     |> assign(:editing_video?, true)
+     |> assign(:video_changeset, video_changeset)
+     |> assign_drawer_recovery_state()}
+  end
+
+  def update(%{action: :update_edit_video, edit_video: %{video: video} = edit_video}, socket) do
+    video_changeset = change(video)
+
+    {:ok,
+     socket
+     |> assign(:edit_video, edit_video)
+     |> assign(:editing_video?, true)
+     |> assign(:video_changeset, video_changeset)
+     |> assign_drawer_recovery_state()}
+  end
+
+  # Open video drawer with context awareness
+  def update(%{action: :open_video_drawer, video_context: context, edit_video: edit_video}, socket) do
+    video_changeset =
+      if edit_video.video do
+        # Apply defaults if this is a new video for :asset context
+        video_with_defaults =
+          if context == :asset && edit_video.defaults && edit_video.defaults != %{} && is_nil(edit_video.video.id) do
+            Map.merge(edit_video.video, edit_video.defaults)
+          else
+            edit_video.video
+          end
+
+        change(video_with_defaults)
+      else
+        # Create new video with defaults if provided
+        new_video =
+          if context == :asset && edit_video.defaults && edit_video.defaults != %{} do
+            struct(%Brando.Videos.Video{}, edit_video.defaults)
+          else
+            %Brando.Videos.Video{}
+          end
+
+        change(new_video)
+      end
+
+    {:ok,
+     socket
+     |> assign(:video_context, context)
+     |> assign(:edit_video, edit_video)
+     |> assign(:editing_video?, true)
+     |> assign(:video_changeset, video_changeset)
+     |> assign_drawer_recovery_state()}
+  end
+
+  # Video upload actions - generic, works with any upload strategy
+  def update(%{action: :get_video_upload_url, filename: filename}, socket) do
+    schema = socket.assigns.schema
+    edit_video = socket.assigns.edit_video
+    field = edit_video.field
+    user = socket.assigns.current_user
+
+    # Get video config - this determines the upload strategy
+    %{cfg: _cfg} = Brando.Blueprint.Assets.__asset_opts__(schema, field)
+    config_target = "video:#{inspect(schema)}:#{field}"
+
+    case Brando.Videos.get_config_for(config_target) do
+      {:ok, video_config} ->
+        # The uploader will use the strategy specified in video_config
+        # Could be :mux, :cloudflare, :s3, :bunny, :vimeo, etc.
+        case Brando.Videos.Uploader.initiate_upload(filename, user,
+               config: video_config,
+               config_target: config_target
+             ) do
+          {:ok, %{upload_url: url, video: video} = result} ->
+            # Subscribe to video updates
+            Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:video:#{video.id}", link: true)
+
+            # Update edit_video with the created video
+            edit_video = Map.put(edit_video, :video, video)
+            video_changeset = change(video)
+
+            # Build event payload - include tus_auth for Bunny uploads
+            event_payload = %{upload_url: url, video_id: video.id, filename: filename}
+
+            event_payload =
+              case Map.get(result, :tus_auth) do
+                nil -> event_payload
+                tus_auth -> Map.put(event_payload, :tus_auth, tus_auth)
+              end
+
+            # Push event to JavaScript hook with upload URL
+            {:ok,
+             socket
+             |> assign(:edit_video, edit_video)
+             |> assign(:video_changeset, video_changeset)
+             |> push_event("video_upload_url_ready", event_payload)}
+
+          {:error, reason} ->
+            require Logger
+            Logger.error("Failed to get video upload URL: #{inspect(reason)}")
+            error_message = extract_video_error_message(reason)
+
+            # Push error event to JavaScript hook
+            {:ok, push_event(socket, "video_upload_url_error", %{error: error_message, filename: filename})}
+        end
+
+      {:error, reason} ->
+        require Logger
+        Logger.error("Failed to get video config: #{inspect(reason)}")
+        error_message = extract_video_error_message(reason)
+
+        # Push error event to JavaScript hook
+        {:ok, push_event(socket, "video_upload_url_error", %{error: error_message, filename: filename})}
+    end
+  end
+
+  def update(%{action: :video_upload_complete, video_id: video_id}, socket) do
+    # Video uploaded, webhook will update status
+    # Reload video to get latest data
+    case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}) do
+      {:ok, video} ->
+        edit_video = Map.put(socket.assigns.edit_video, :video, video)
+        video_changeset = change(video)
+        relation_key = String.to_existing_atom("#{socket.assigns.edit_video.field}_id")
+
+        {:ok,
+         socket
+         |> update_changeset(relation_key, video.id)
+         |> assign(:edit_video, edit_video)
+         |> assign(:video_changeset, video_changeset)}
+
+      {:error, _} ->
+        {:ok, socket}
+    end
+  end
+
+  def update(%{action: :video_upload_progress, video_id: _video_id, percentage: percentage}, socket) do
+    # Update processing indicator
+    {:ok, assign(socket, :processing, percentage)}
   end
 
   def update(
@@ -276,7 +453,7 @@ defmodule BrandoAdmin.Components.Form do
     access_path = Brando.Utils.build_access_path(path)
     updated_entry = put_in(entry_or_default, access_path, updated_relation)
 
-    {:ok, assign(socket, entry, updated_entry)}
+    {:ok, assign(socket, :entry, updated_entry)}
   end
 
   def update(%{action: :update_entry_hard_reset, updated_entry: updated_entry}, socket) do
@@ -348,6 +525,10 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:block_changesets, updated_block_changesets)
      |> event_tag_received(tag)}
+  end
+
+  def update(%{action: :event_tag_received, tag: tag}, socket) do
+    {:ok, event_tag_received(socket, tag)}
   end
 
   def update(%{action: :update_changeset, changeset: updated_changeset, force_validation: true}, socket) do
@@ -489,6 +670,8 @@ defmodule BrandoAdmin.Components.Form do
        nil
      end)
      |> assign_new(:instructions, fn -> [] end)
+     |> assign_new(:active_video_tab, fn -> "upload" end)
+     |> assign_new(:video_context, fn -> :asset end)
      |> assign_entry()
      |> assign_addon_statuses()
      |> assign_default_params()
@@ -584,7 +767,20 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
-  defp maybe_full_rerender_live_preview(socket, true) do
+  defp maybe_full_rerender_live_preview(%{assigns: %{has_blocks?: false, live_preview_active?: true}} = socket, true) do
+    # For non-block schemas, update the live preview without changing cache_key
+    # This broadcasts to the Phoenix channel which triggers morphdom in the iframe
+    changeset = socket.assigns.form.source
+    updated_entry_assocs = socket.assigns.updated_entry_assocs
+    schema = socket.assigns.schema
+    cache_key = socket.assigns.live_preview_cache_key
+
+    Brando.LivePreview.update(schema, changeset, cache_key, updated_entry_assocs)
+
+    socket
+  end
+
+  defp maybe_full_rerender_live_preview(%{assigns: %{has_blocks?: true}} = socket, true) do
     fetch_root_blocks(socket, :live_preview_full_rerender, 1200)
     socket
   end
@@ -787,6 +983,43 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  # live preview for schema without blocks
+  def event_tag_received(%{assigns: %{has_blocks?: false}} = socket, :live_preview) do
+    changeset = socket.assigns.form.source
+    updated_entry_assocs = socket.assigns.updated_entry_assocs
+    schema = socket.assigns.schema
+
+    if changeset.errors == [] do
+      case Brando.LivePreview.initialize(schema, changeset, updated_entry_assocs) do
+        {:ok, cache_key} ->
+          socket
+          |> assign(:live_preview_active?, true)
+          |> assign(:live_preview_cache_key, cache_key)
+          |> assign_entry_fields_demanding_live_preview_rerender(schema)
+          |> assign_entry_fields_demanding_live_preview_reassign(schema)
+          |> push_event("b:live_preview", %{cache_key: cache_key})
+
+        {:error, err} ->
+          require Logger
+
+          Logger.error("""
+          => Live Preview error: #{inspect(err)}
+          """)
+
+          push_event(socket, "b:alert", %{
+            title: "Live Preview error",
+            message: err,
+            type: "error"
+          })
+      end
+    else
+      form_blueprint = socket.assigns.form_blueprint
+
+      socket
+      |> push_errors(changeset, form_blueprint, schema)
+    end
+  end
+
   def event_tag_received(socket, :live_preview) do
     block_changesets = socket.assigns.block_changesets
     changeset = socket.assigns.form.source
@@ -831,6 +1064,30 @@ defmodule BrandoAdmin.Components.Form do
         |> clear_blocks_root_changesets()
         |> push_errors(changeset, form_blueprint, schema)
       end
+    end
+  end
+
+  # live preview standalone for schema without blocks
+  def event_tag_received(%{assigns: %{has_blocks?: false}} = socket, :live_preview_standalone) do
+    changeset = socket.assigns.form.source
+    updated_entry_assocs = socket.assigns.updated_entry_assocs
+    schema = socket.assigns.schema
+
+    if changeset.errors == [] do
+      cache_key = socket.assigns.live_preview_cache_key
+
+      Brando.LivePreview.update_cache(cache_key, schema, changeset, updated_entry_assocs)
+      send(self(), {:toast, gettext("Opening standalone live preview...")})
+
+      url = "/__livepreview?key=#{cache_key}&mode=standalone"
+
+      socket
+      |> push_event("b:open_window", %{url: url})
+    else
+      form_blueprint = socket.assigns.form_blueprint
+
+      socket
+      |> push_errors(changeset, form_blueprint, schema)
     end
   end
 
@@ -1027,6 +1284,7 @@ defmodule BrandoAdmin.Components.Form do
 
           <.live_component module={FilePicker} id="file-picker" />
           <.live_component module={ImagePicker} id="image-picker" />
+          <.live_component module={VideoPicker} id="video-picker" />
 
           <.file_drawer
             file_changeset={@file_changeset}
@@ -1044,7 +1302,32 @@ defmodule BrandoAdmin.Components.Form do
             processing={@processing}
           />
 
-          <.form id={"#{@id}_form"} for={@form} phx-target={@myself} phx-submit="save" phx-change="validate">
+          <.video_drawer
+            video_changeset={@video_changeset}
+            myself={@myself}
+            parent_uploads={@uploads}
+            edit_video={@edit_video}
+            processing={@processing}
+            active_video_tab={@active_video_tab}
+            video_context={@video_context}
+          />
+
+          <form
+            id={"#{@id}-drawer-recovery"}
+            phx-change="noop"
+            phx-auto-recover="recover_drawer_state"
+            phx-target={@myself}
+            class="hidden"
+          >
+            <input type="hidden" name="drawer[type]" value={@editing_drawer_type} />
+            <input type="hidden" name="drawer[resource_id]" value={@editing_resource_id} />
+            <input type="hidden" name="drawer[field]" value={@editing_field} />
+            <input type="hidden" name="drawer[path]" value={Jason.encode!(@editing_path || [])} />
+            <input type="hidden" name="drawer[schema]" value={@editing_schema} />
+            <input type="hidden" name="drawer[form_id]" value={@id} />
+          </form>
+
+          <.form id={"#{@id}_form"} class="main-form" for={@form} phx-target={@myself} phx-submit="save" phx-change="validate">
             <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
             <MetaDrawer.render
               :if={@has_meta?}
@@ -1114,6 +1397,10 @@ defmodule BrandoAdmin.Components.Form do
           />
 
           <.submit_button processing={@processing} form_id={@id} label={gettext("Save (⌘S)")} class="primary submit-button" />
+
+          <div :if={@footer} class="form-footer">
+            {render_slot(@footer)}
+          </div>
         </div>
 
         <.live_preview
@@ -1422,6 +1709,310 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  @aspect_ratio_options [
+    {"16:9 (Standard Widescreen)", "16:9"},
+    {"4:3 (Classic)", "4:3"},
+    {"21:9 (Ultrawide)", "21:9"},
+    {"1:1 (Square)", "1:1"},
+    {"4:5 (Portrait)", "4:5"},
+    {"9:16 (Vertical/Stories)", "9:16"},
+    {"1.91:1 (Landscape)", "1.91:1"},
+    {"Custom", "custom"}
+  ]
+
+  defp video_metadata_inputs(assigns) do
+    assigns = assign(assigns, :aspect_ratio_options, @aspect_ratio_options)
+
+    ~H"""
+    <div class="brando-input">
+      <Input.text field={@video_form[:title]} label={gettext("Title")} />
+    </div>
+
+    <div class="brando-input">
+      <Input.text field={@video_form[:caption]} label={gettext("Caption")} />
+    </div>
+
+    <.input
+      type={:select}
+      field={@video_form[:aspect_ratio]}
+      label={gettext("Aspect Ratio")}
+      placeholder={nil}
+      instructions={nil}
+      parent_uploads={%{}}
+      current_user={nil}
+      form_cid={nil}
+      opts={[allow_custom: true]}
+      options={@aspect_ratio_options}
+    />
+    """
+  end
+
+  defp video_thumbnail_section(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:show_extract_button, fn -> false end)
+
+    ~H"""
+    <div class="brando-input">
+      <div class="field-wrapper">
+        <div class="label-wrapper">
+          <label class="control-label"><span>{gettext("Thumbnail")}</span></label>
+        </div>
+        <%= if @video && Ecto.assoc_loaded?(@video.thumbnail) && @video.thumbnail do %>
+          <figure>
+            <Content.image image={@video.thumbnail} size={:medium} />
+          </figure>
+          <figcaption class="tiny">{@video.thumbnail.path}</figcaption>
+        <% else %>
+          <div class="img-placeholder">
+            <div class="placeholder-wrapper">
+              <.icon name="hero-video-camera" />
+            </div>
+          </div>
+        <% end %>
+
+        <div class="button-group vertical">
+          <button class="secondary" type="button" phx-click={toggle_drawer("#image-picker")}>
+            {gettext("Select thumbnail from library")}
+          </button>
+          <button
+            :if={@show_extract_button}
+            class="secondary"
+            type="button"
+            phx-click={extract_thumbnail(@myself)}
+          >
+            {gettext("Extract thumbnail from video")}
+          </button>
+          <button
+            :if={@video && Ecto.assoc_loaded?(@video.thumbnail) && @video.thumbnail}
+            class="secondary"
+            type="button"
+            phx-click={reset_video_thumbnail(@myself)}
+          >
+            {gettext("Remove thumbnail")}
+          </button>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp video_settings_section(assigns) do
+    ~H"""
+    <div class="video-settings-section">
+      <div class="label-wrapper">
+        <label class="control-label"><span>{gettext("Video Settings (Defaults)")}</span></label>
+      </div>
+      <p class="section-help">{gettext("These settings will be used as defaults when this video is displayed.")}</p>
+
+      <div class="settings-grid">
+        <Input.toggle field={@video_form[:autoplay]} label={gettext("Autoplay")} tiny={true} />
+        <Input.toggle field={@video_form[:muted]} label={gettext("Muted")} tiny={true} />
+        <Input.toggle field={@video_form[:controls]} label={gettext("Show controls")} tiny={true} />
+        <Input.toggle field={@video_form[:loop]} label={gettext("Loop")} tiny={true} />
+        <Input.toggle field={@video_form[:preload]} label={gettext("Preload")} tiny={true} />
+        <Input.toggle field={@video_form[:playsinline]} label={gettext("Plays inline (mobile)")} tiny={true} />
+      </div>
+    </div>
+    """
+  end
+
+  def video_drawer(assigns) do
+    upload_field =
+      case Map.get(assigns.parent_uploads, assigns.edit_video.field) do
+        nil ->
+          # if we have a path with length > 1
+          if Enum.count(assigns.edit_video.path) > 1 do
+            [sub | _] = assigns.edit_video.path
+            nested_field = :"#{to_string(sub)}|#{to_string(assigns.edit_video.field)}"
+            get_in(assigns.parent_uploads, [Access.key(nested_field)])
+          end
+
+        upload ->
+          upload
+      end
+
+    # Get upload strategy from video field config
+    upload_strategy =
+      if assigns.edit_video[:schema] && assigns.edit_video[:field] do
+        schema = assigns.edit_video.schema
+        field = assigns.edit_video.field
+        %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(schema, field)
+        Map.get(cfg, :upload_strategy, :local)
+      else
+        :local
+      end
+
+    # Generate hook name for non-local upload strategies (Mux, Cloudflare, etc.)
+    video_uploader_hook =
+      if upload_strategy != :local do
+        "Brando.#{upload_strategy |> to_string() |> String.capitalize()}Uploader"
+      end
+
+    video_filename =
+      case assigns.edit_video do
+        %{video: %{file: %{filename: filename}}} when is_binary(filename) -> filename
+        _ -> nil
+      end
+
+    assigns =
+      assigns
+      |> assign(:upload_field, upload_field)
+      |> assign(:drop_target, Brando.Utils.try_path(upload_field, [:ref]))
+      |> assign(:upload_strategy, upload_strategy)
+      |> assign(:video_uploader_hook, video_uploader_hook)
+      |> assign(:video_filename, video_filename)
+
+    ~H"""
+    <Content.drawer id="video-drawer" title={gettext("Video")} close={close_video()} z={1001} narrow>
+      <.form
+        :let={video_form}
+        :if={@video_changeset}
+        id="video-drawer-form"
+        for={@video_changeset}
+        phx-submit="save_video"
+        phx-change="validate_video"
+        phx-target={@myself}
+      >
+        <Tab.tabs active_tab={@active_video_tab}>
+          <:buttons>
+            <Tab.tab_button id="upload" label={gettext("Upload / File")} active_tab={@active_video_tab} target={@myself} />
+            <Tab.tab_button
+              id="external"
+              label={gettext("External (Vimeo/YouTube)")}
+              active_tab={@active_video_tab}
+              target={@myself}
+            />
+          </:buttons>
+
+          <:tabs>
+            <Tab.tab_content id="upload" active_tab={@active_video_tab}>
+              <Input.input
+                type={:hidden}
+                field={video_form[:type]}
+                value={(@edit_video.video && @edit_video.video.type) || :upload}
+              />
+
+              <div class="button-group vertical">
+                <%!-- Direct upload strategies (Mux, Cloudflare, S3, Bunny) use external hooks --%>
+                <%!-- Local strategy uses standard LiveView upload --%>
+                <%= if @video_uploader_hook do %>
+                  <div class="file-input-button">
+                    <span class="label">
+                      {gettext("Upload video file")}
+                    </span>
+                    <input
+                      id={"video-uploader-#{@edit_video.field}"}
+                      type="file"
+                      accept=".mp4,.webm,.mov,.avi"
+                      phx-hook={@video_uploader_hook}
+                      data-upload-target={@edit_video.field}
+                    />
+                  </div>
+                <% else %>
+                  <div class="file-input-button">
+                    <span class="label">
+                      {gettext("Upload video file")}
+                    </span>
+                    <.live_file_input :if={@upload_field} upload={@upload_field} />
+                  </div>
+                <% end %>
+
+                <button class="secondary" type="button" phx-click={toggle_drawer("#video-picker")}>
+                  {gettext("Select existing video")}
+                </button>
+              </div>
+
+              <%= if @edit_video.video && @edit_video.video.type == :upload do %>
+                <div class="video-info">
+                  <h5>{gettext("Video Information")}</h5>
+                  <%= if @video_filename do %>
+                    <div><strong>{gettext("Filename")}:</strong> {@video_filename}</div>
+                  <% end %>
+                  <%= if @edit_video.video.width && @edit_video.video.height do %>
+                    <div><strong>{gettext("Dimensions")}:</strong> {@edit_video.video.width}×{@edit_video.video.height}</div>
+                  <% end %>
+                </div>
+              <% end %>
+
+              <%= if @edit_video.video && @edit_video.video.id do %>
+                <.video_metadata_inputs video_form={video_form} />
+                <.video_thumbnail_section
+                  video={@edit_video.video}
+                  myself={@myself}
+                  show_extract_button={@edit_video.video.type == :upload}
+                />
+              <% end %>
+            </Tab.tab_content>
+
+            <Tab.tab_content id="external" active_tab={@active_video_tab}>
+              <div class="brando-input">
+                <.input
+                  type={:select}
+                  field={video_form[:type]}
+                  label={gettext("Video Service")}
+                  placeholder={nil}
+                  instructions={nil}
+                  parent_uploads={%{}}
+                  current_user={nil}
+                  form_cid={nil}
+                  opts={[]}
+                  options={[
+                    {gettext("Vimeo"), :vimeo},
+                    {gettext("YouTube"), :youtube}
+                  ]}
+                />
+              </div>
+
+              <div class="brando-input">
+                <Input.text
+                  field={video_form[:source_url]}
+                  label={gettext("Video URL")}
+                  placeholder="https://vimeo.com/123456789 or https://youtube.com/watch?v=..."
+                />
+              </div>
+
+              <div class="button-group vertical">
+                <button class="primary" type="button" phx-click={parse_video_url(@myself)}>
+                  {gettext("Parse URL and extract metadata")}
+                </button>
+              </div>
+
+              <%= if @edit_video.video && @edit_video.video.remote_id do %>
+                <div class="parsed-info">
+                  <h5>{gettext("Parsed Information")}</h5>
+                  <div><strong>{gettext("Remote ID")}:</strong> {@edit_video.video.remote_id}</div>
+                  <div><strong>{gettext("Type")}:</strong> {@edit_video.video.type}</div>
+                  <%= if @edit_video.video.width && @edit_video.video.height do %>
+                    <div><strong>{gettext("Dimensions")}:</strong> {@edit_video.video.width}×{@edit_video.video.height}</div>
+                  <% end %>
+                </div>
+              <% end %>
+
+              <%= if @edit_video.video && @edit_video.video.id do %>
+                <.video_metadata_inputs video_form={video_form} />
+                <.video_thumbnail_section video={@edit_video.video} myself={@myself} />
+              <% end %>
+            </Tab.tab_content>
+          </:tabs>
+        </Tab.tabs>
+
+        <%= if @video_context == :asset && @edit_video.video && @edit_video.video.id do %>
+          <.video_settings_section video_form={video_form} />
+        <% end %>
+
+        <%= if @edit_video.video && @edit_video.video.id do %>
+          <div class="button-group vertical">
+            <button class="secondary" type="button" phx-click={reset_video_field(@myself)}>
+              {gettext("Reset video field")}
+            </button>
+          </div>
+        <% end %>
+      </.form>
+    </Content.drawer>
+    """
+  end
+
   def duplicate_image(js \\ %JS{}, edit_image, target) do
     JS.push(js, "duplicate_image", value: %{image_id: edit_image.image.id}, target: target)
   end
@@ -1448,6 +2039,34 @@ defmodule BrandoAdmin.Components.Form do
     js
     |> JS.dispatch("submit", to: "#image-drawer-form", detail: %{bubbles: true, cancelable: true})
     |> toggle_drawer("#image-drawer")
+  end
+
+  def duplicate_video(js \\ %JS{}, edit_video, target) do
+    JS.push(js, "duplicate_video", value: %{video_id: edit_video.video.id}, target: target)
+  end
+
+  def reset_video_field(js \\ %JS{}, target) do
+    js
+    |> JS.push("reset_video_field", target: target)
+    |> toggle_drawer("#video-drawer")
+  end
+
+  def reset_video_thumbnail(js \\ %JS{}, target) do
+    JS.push(js, "reset_video_thumbnail", target: target)
+  end
+
+  def parse_video_url(js \\ %JS{}, target) do
+    JS.push(js, "parse_video_url", target: target)
+  end
+
+  def extract_thumbnail(js \\ %JS{}, target) do
+    JS.push(js, "extract_thumbnail", target: target)
+  end
+
+  def close_video(js \\ %JS{}) do
+    js
+    |> JS.dispatch("submit", to: "#video-drawer-form", detail: %{bubbles: true, cancelable: true})
+    |> toggle_drawer("#video-drawer")
   end
 
   defp extract_transformers(%Brando.Blueprint.Forms.Form{tabs: tabs}) do
@@ -1482,6 +2101,7 @@ defmodule BrandoAdmin.Components.Form do
     image_fields = schema.__image_fields__()
     gallery_fields = schema.__gallery_fields__()
     file_fields = schema.__file_fields__()
+    video_fields = schema.__video_fields__()
     transformers = extract_transformers(socket.assigns.form_blueprint)
     # since LV changed to not allow us to set the :uploads assigns to [] or nil,
     # we need to set a "fake" upload key to not error when passing @uploads to
@@ -1516,10 +2136,26 @@ defmodule BrandoAdmin.Components.Form do
 
     socket_with_file_uploads =
       Enum.reduce(file_fields, socket_with_gallery_uploads, fn file_field, updated_socket ->
-        max_size = Brando.Utils.try_path(file_field, [:opts, :cfg, :size_limit]) || 4_000_000
-        accept = Brando.Utils.try_path(file_field, [:opts, :cfg, :accept]) || :any
-        cdn_enabled = Brando.Utils.try_path(file_field, [:opts, :cfg, :cdn, :enabled])
-        cdn_direct = Brando.Utils.try_path(file_field, [:opts, :cfg, :cdn, :direct])
+        # Resolve cfg if it's :config_target
+        cfg = Brando.Utils.try_path(file_field, [:opts, :cfg])
+
+        resolved_cfg =
+          case cfg do
+            :config_target ->
+              # Get the config_target value from the current form data
+              form_config_target = Map.get(updated_socket.assigns.form.data, :config_target)
+              target_string = form_config_target || "default"
+              {:ok, config} = Brando.Files.get_config_for(target_string)
+              config
+
+            _ ->
+              cfg
+          end
+
+        max_size = get_in(resolved_cfg, [Access.key(:size_limit)]) || 4_000_000
+        accept = get_in(resolved_cfg, [Access.key(:accept)]) || :any
+        cdn_enabled = get_in(resolved_cfg, [Access.key(:cdn), Access.key(:enabled)])
+        cdn_direct = get_in(resolved_cfg, [Access.key(:cdn), Access.key(:direct)])
 
         upload_options = [
           accept: accept,
@@ -1528,11 +2164,9 @@ defmodule BrandoAdmin.Components.Form do
           progress: &__MODULE__.handle_file_progress/3
         ]
 
-        cfg = Brando.Utils.try_path(file_field, [:opts, :cfg])
-
         upload_options =
           if cdn_enabled && cdn_direct do
-            upload_options ++ [external: &presign_upload(&1, &2, cfg)]
+            upload_options ++ [external: &presign_upload(&1, &2, resolved_cfg)]
           else
             upload_options
           end
@@ -1540,8 +2174,23 @@ defmodule BrandoAdmin.Components.Form do
         allow_upload(updated_socket, file_field.name, upload_options)
       end)
 
+    socket_with_video_uploads =
+      Enum.reduce(video_fields, socket_with_file_uploads, fn video_field, updated_socket ->
+        cfg = Brando.Utils.try_path(video_field, [:opts, :cfg]) || %{}
+        max_size = Map.get(cfg, :size_limit, 100_000_000)
+
+        # For Mux uploads, we use the MuxUploader hook which bypasses LiveView upload
+        # For local/other strategies, use standard LiveView upload
+        allow_upload(updated_socket, video_field.name,
+          accept: ~w(.mp4 .webm .mov .avi),
+          max_file_size: max_size,
+          auto_upload: false,
+          progress: &__MODULE__.handle_video_progress/3
+        )
+      end)
+
     socket_with_transformers =
-      Enum.reduce(transformers, socket_with_file_uploads, fn
+      Enum.reduce(transformers, socket_with_video_uploads, fn
         {relation_key, field, default}, updated_socket ->
           relation = Brando.Blueprint.Relations.__relation__(schema, relation_key)
           relation_module = get_in(relation, [Access.key(:opts), Access.key(:module)])
@@ -1582,13 +2231,21 @@ defmodule BrandoAdmin.Components.Form do
       |> Brando.Utils.build_upload_key(cfg)
       |> Brando.Utils.strip_leading_slash()
 
-    {:ok, fields} =
-      Brando.SimpleS3Upload.sign_form_upload(s3_config, bucket,
-        key: key,
-        content_type: entry.client_type,
-        max_file_size: uploads[entry.upload_config].max_file_size,
-        expires_in: :timer.hours(1)
-      )
+    sign_opts = [
+      key: key,
+      content_type: entry.client_type,
+      max_file_size: uploads[entry.upload_config].max_file_size,
+      expires_in: :timer.hours(1)
+    ]
+
+    sign_opts =
+      case Map.get(cfg, :content_disposition) do
+        nil -> sign_opts
+        :inline -> sign_opts ++ [content_disposition: "inline"]
+        :attachment -> sign_opts ++ [content_disposition: "attachment; filename=\"#{entry.client_name}\""]
+      end
+
+    {:ok, fields} = Brando.SimpleS3Upload.sign_form_upload(s3_config, bucket, sign_opts)
 
     meta = %{
       uploader: "S3",
@@ -1929,6 +2586,64 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, socket}
   end
 
+  def handle_event(
+        "duplicate_video",
+        %{"video_id" => video_id},
+        %{assigns: %{singular: singular}} = socket
+      ) do
+    # For now, just get the existing video since we don't have duplicate_video implemented yet
+    {:ok, video} = Brando.Videos.get_video(video_id)
+
+    send_update(__MODULE__,
+      id: "#{singular}_form",
+      action: :update_edit_video,
+      video: video
+    )
+
+    send(self(), {:toast, gettext("Video selected")})
+
+    {:noreply, socket}
+  end
+
+  def handle_event("reset_video_field", _, socket) do
+    edit_video = socket.assigns.edit_video
+
+    {:noreply,
+     socket
+     |> assign(:video_changeset, nil)
+     |> assign(:editing_video?, false)
+     |> assign(:edit_video, %{edit_video | video: nil})
+     |> assign_drawer_recovery_state()}
+  end
+
+  def handle_event("reset_video_thumbnail", _, socket) do
+    edit_video = socket.assigns.edit_video
+
+    if edit_video.video do
+      # Remove thumbnail from video
+      updated_video = %{edit_video.video | thumbnail: nil, thumbnail_id: nil}
+      updated_edit_video = %{edit_video | video: updated_video}
+
+      {:noreply,
+       socket
+       |> assign(:edit_video, updated_edit_video)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("parse_video_url", _, socket) do
+    # Placeholder for URL parsing functionality
+    send(self(), {:toast, gettext("URL parsing not yet implemented")})
+    {:noreply, socket}
+  end
+
+  def handle_event("extract_thumbnail", _, socket) do
+    # Placeholder for thumbnail extraction functionality
+    send(self(), {:toast, gettext("Thumbnail extraction not yet implemented")})
+    {:noreply, socket}
+  end
+
   def handle_event("cancel_upload", %{"ref" => ref, "field_name" => field_name}, socket) do
     field_name_atom = String.to_existing_atom(field_name)
     {:noreply, cancel_upload(socket, field_name_atom, ref)}
@@ -2051,6 +2766,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:file_changeset, validated_changeset)
      |> assign(:editing_file?, false)
      |> assign(:edit_file, edit_file)
+     |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
        target: "#{singular}[#{edit_file.relation_field.field}]",
        value: file.id
@@ -2059,7 +2775,7 @@ defmodule BrandoAdmin.Components.Form do
 
   # without file in params
   def handle_event("save_file", _, socket) do
-    {:noreply, socket}
+    {:noreply, assign_drawer_recovery_state(socket)}
   end
 
   def handle_event("validate_image", _, socket) do
@@ -2143,6 +2859,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:image_changeset, validated_changeset)
      |> assign(:edit_image, edit_image)
      |> assign(:editing_image?, false)
+     |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
        target: target_field_name,
        value: image.id
@@ -2151,7 +2868,105 @@ defmodule BrandoAdmin.Components.Form do
 
   # without image in params
   def handle_event("save_image", _, socket) do
-    {:noreply, assign(socket, :editing_image?, false)}
+    {:noreply,
+     socket
+     |> assign(:editing_image?, false)
+     |> assign_drawer_recovery_state()}
+  end
+
+  def handle_event("validate_video", _, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "save_video",
+        %{"video" => video_params},
+        %{
+          assigns: %{
+            form: form,
+            entry: entry,
+            schema: schema,
+            singular: singular,
+            edit_video: %{video: video, path: path, field: field, relation_field: relation_field} = edit_video,
+            current_user: current_user
+          }
+        } = socket
+      ) do
+    entry_or_default = entry || struct(schema)
+
+    validated_changeset =
+      video
+      |> Brando.Videos.Video.changeset(video_params, current_user)
+      |> Map.put(:action, :update)
+      |> Brando.Trait.run_trait_before_save_callbacks(
+        Brando.Videos.Video,
+        current_user
+      )
+
+    {:ok, updated_video} = Brando.Videos.update_video(validated_changeset, current_user)
+
+    Brando.Trait.run_trait_after_save_callbacks(
+      Brando.Videos.Video,
+      updated_video,
+      validated_changeset,
+      current_user
+    )
+
+    edit_video = Map.put(edit_video, :video, updated_video)
+    relation_full_path = path ++ [relation_field.field]
+    field_full_path = path ++ [field]
+
+    updated_changeset =
+      form.source
+      |> apply_changes()
+      |> change()
+      |> EctoNestedChangeset.update_at(relation_full_path, fn _ -> video.id end)
+
+    access_field_full_path = Brando.Utils.build_access_path(field_full_path)
+    updated_entry = put_in(entry_or_default, access_field_full_path, updated_video)
+
+    target_field_name = Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")], "")
+
+    {:noreply,
+     socket
+     |> assign(:entry, updated_entry)
+     |> assign(:form, to_form(updated_changeset, []))
+     |> assign(:video_changeset, validated_changeset)
+     |> assign(:edit_video, edit_video)
+     |> assign(:editing_video?, false)
+     |> assign_drawer_recovery_state()
+     |> push_event("b:validate", %{
+       target: target_field_name,
+       value: video.id
+     })}
+  end
+
+  # without video in params
+  def handle_event("save_video", _, socket) do
+    {:noreply,
+     socket
+     |> assign(:editing_video?, false)
+     |> assign_drawer_recovery_state()}
+  end
+
+  def handle_event("noop", _params, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("recover_drawer_state", %{"drawer" => drawer_params}, socket) do
+    case drawer_params do
+      %{"type" => "image", "resource_id" => id} when id != "" ->
+        restore_image_drawer(socket, drawer_params)
+
+      %{"type" => "video", "resource_id" => id} when id != "" ->
+        restore_video_drawer(socket, drawer_params)
+
+      %{"type" => "file", "resource_id" => id} when id != "" ->
+        restore_file_drawer(socket, drawer_params)
+
+      _ ->
+        {:noreply, socket}
+    end
   end
 
   def handle_event("share_link", _, socket) do
@@ -2170,11 +2985,38 @@ defmodule BrandoAdmin.Components.Form do
     |> then(&{:noreply, &1})
   end
 
+  # try to open live_preview for schema without blocks
+  def handle_event("open_live_preview", _, %{assigns: %{has_blocks?: false, live_preview_active?: false}} = socket) do
+    send(self(), {:toast, gettext("Starting Live Preview...")})
+
+    # Send update to self (the Form component) to trigger live preview initialization
+    send_update_after(__MODULE__, [id: socket.assigns.id, action: :event_tag_received, tag: :live_preview], 100)
+
+    socket =
+      socket
+      |> push_event("js-exec", %{to: "#sidebar", attr: "data-js-hide"})
+
+    {:noreply, socket}
+  end
+
   # try to open live_preview, but blocks are not ready.
   def handle_event("open_live_preview", _, %{assigns: %{live_preview_ready?: false}} = socket) do
     send(self(), {:toast, gettext("Starting Live Preview — fetching initial render...")})
     fetch_root_blocks(socket, :live_preview, 500)
     {:noreply, push_event(socket, "js-exec", %{to: "#sidebar", attr: "data-js-hide"})}
+  end
+
+  # open standalone live preview for schema without blocks
+  def handle_event("open_live_preview_standalone", _, %{assigns: %{has_blocks?: false}} = socket) do
+    send(self(), {:toast, gettext("Opening stand alone live preview window...")})
+
+    send_update_after(
+      __MODULE__,
+      [id: socket.assigns.id, action: :event_tag_received, tag: :live_preview_standalone],
+      100
+    )
+
+    {:noreply, socket}
   end
 
   def handle_event("open_live_preview_standalone", _, socket) do
@@ -2203,7 +3045,17 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("toggle_revisions_drawer_status", _, socket) do
     if socket.assigns.entry_id do
-      {:noreply, assign(socket, :status_revisions, (socket.assigns.status_revisions == :open && :closed) || :open)}
+      new_status = (socket.assigns.status_revisions == :open && :closed) || :open
+
+      # Send update to revision drawer component to trigger loading if opening
+      if new_status == :open do
+        send_update(BrandoAdmin.Components.Form.RevisionsDrawer,
+          id: "#{socket.assigns.id}-revisions-drawer",
+          action: :fetch_revisions
+        )
+      end
+
+      {:noreply, assign(socket, :status_revisions, new_status)}
     else
       error_title = gettext("Notice")
 
@@ -2216,6 +3068,12 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("select_tab", %{"name" => tab_name}, socket) do
     {:noreply, assign(socket, :active_tab, tab_name)}
+  end
+
+  # TODO: This is not a very good solution. We should just add a class with JS.add_class to the tab,
+  # we probably don't need state for this.
+  def handle_event("select_tab", %{"tab" => video_tab}, socket) do
+    {:noreply, assign(socket, :active_video_tab, video_tab)}
   end
 
   def handle_event("save_redirect_target", _, socket) do
@@ -2568,21 +3426,12 @@ defmodule BrandoAdmin.Components.Form do
         |> Enum.filter(&(&1.image != nil && &1.image.__struct__ == Ecto.Association.NotLoaded))
         |> Enum.map(& &1.image_id)
 
-      loaded_image_paths =
+      loaded_image_ids =
         current_gallery_images
         |> Enum.filter(&(&1.image != nil && &1.image.__struct__ != Ecto.Association.NotLoaded))
-        |> Enum.map(& &1.image.path)
+        |> Enum.map(& &1.image_id)
 
-      unloaded_image_paths =
-        if unloaded_image_ids == [] do
-          []
-        else
-          %{filter: %{ids: unloaded_image_ids}, select: [:path]}
-          |> Brando.Images.list_images!()
-          |> Enum.map(& &1.path)
-        end
-
-      selected_images = loaded_image_paths ++ unloaded_image_paths ++ [image.path]
+      selected_images = loaded_image_ids ++ unloaded_image_ids ++ [image.id]
 
       send_update(BrandoAdmin.Components.ImagePicker,
         id: "image-picker",
@@ -2746,6 +3595,20 @@ defmodule BrandoAdmin.Components.Form do
       %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(schema, key)
       config_target = "file:#{inspect(schema)}:#{key}"
 
+      # Resolve cfg if it's :config_target
+      resolved_cfg =
+        case cfg do
+          :config_target ->
+            # Get the config_target value from the current form data
+            form_config_target = Map.get(socket.assigns.form.data, :config_target)
+            target_string = form_config_target || "default"
+            {:ok, config} = Brando.Files.get_config_for(target_string)
+            config
+
+          _ ->
+            cfg
+        end
+
       case consume_uploaded_entry(
              socket,
              upload_entry,
@@ -2753,7 +3616,7 @@ defmodule BrandoAdmin.Components.Form do
                Brando.Upload.handle_upload(
                  Map.put(meta, :config_target, config_target),
                  upload_entry,
-                 cfg,
+                 resolved_cfg,
                  current_user
                )
              end
@@ -2778,6 +3641,57 @@ defmodule BrandoAdmin.Components.Form do
            |> update_changeset(relation_key, file.id)
            |> assign(:edit_file, edit_file)
            |> assign(:file_changeset, file_changeset)}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_video_progress(
+        key,
+        upload_entry,
+        %{assigns: %{schema: schema, edit_video: edit_video, current_user: current_user}} = socket
+      ) do
+    socket = assign(socket, :processing, upload_entry.progress)
+
+    if upload_entry.done? do
+      socket = assign(socket, :processing, false)
+      relation_key = String.to_existing_atom("#{key}_id")
+      %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(schema, key)
+      config_target = "video:#{inspect(schema)}:#{key}"
+
+      case consume_uploaded_entry(
+             socket,
+             upload_entry,
+             fn meta ->
+               Brando.Upload.handle_upload(
+                 Map.put(meta, :config_target, config_target),
+                 upload_entry,
+                 cfg,
+                 current_user
+               )
+             end
+           ) do
+        {:error, :content_type, rejected_type, allowed_types} ->
+          error_title = gettext("Error uploading")
+
+          error_msg =
+            gettext(
+              "Server rejected file type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
+              %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
+            )
+
+          {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+
+        video ->
+          video_changeset = change(video)
+          edit_video = Map.merge(edit_video, %{id: video.id, video: video})
+
+          {:noreply,
+           socket
+           |> update_changeset(relation_key, video.id)
+           |> assign(:edit_video, edit_video)
+           |> assign(:video_changeset, video_changeset)}
       end
     else
       {:noreply, socket}
@@ -3604,4 +4518,156 @@ defmodule BrandoAdmin.Components.Form do
     </label>
     """
   end
+
+  # Extract user-friendly error message from various video provider error formats
+  # Supports: Mux, Cloudflare, S3, Bunny, Vimeo, etc.
+  defp extract_video_error_message(%{"error" => %{"messages" => messages}}) when is_list(messages) do
+    # Mux format: %{"error" => %{"messages" => [...]}}
+    Enum.join(messages, ". ")
+  end
+
+  defp extract_video_error_message(%{"error" => %{"message" => message}}) when is_binary(message) do
+    # Generic format: %{"error" => %{"message" => "..."}}
+    message
+  end
+
+  defp extract_video_error_message(%{"message" => message}) when is_binary(message) do
+    # Simplified format: %{"message" => "..."}
+    message
+  end
+
+  defp extract_video_error_message(error) when is_binary(error) do
+    # Plain string error
+    error
+  end
+
+  defp extract_video_error_message(error) do
+    inspect(error)
+  end
+
+  defp restore_image_drawer(socket, params) do
+    resource_id = String.to_integer(params["resource_id"])
+
+    case Brando.Images.get_image(resource_id) do
+      {:ok, image} ->
+        edit_image = %{
+          id: resource_id,
+          path: decode_recovery_path(params["path"]),
+          field: String.to_existing_atom(params["field"]),
+          relation_field: nil,
+          schema: String.to_existing_atom(params["schema"]),
+          form_id: params["form_id"],
+          image: image
+        }
+
+        {:noreply,
+         socket
+         |> assign(:edit_image, edit_image)
+         |> assign(:editing_image?, true)
+         |> assign(:image_changeset, Ecto.Changeset.change(image))
+         |> assign_drawer_recovery_state()
+         |> push_event("b:show_drawer", %{drawer_id: "image-drawer"})}
+
+      {:error, _} ->
+        {:noreply, socket}
+    end
+  end
+
+  defp restore_video_drawer(socket, params) do
+    resource_id = String.to_integer(params["resource_id"])
+
+    case Brando.Videos.get_video(%{matches: %{id: resource_id}, preload: [:thumbnail, :file]}) do
+      {:ok, video} ->
+        edit_video = %{
+          id: resource_id,
+          path: decode_recovery_path(params["path"]),
+          field: String.to_existing_atom(params["field"]),
+          relation_field: nil,
+          schema: String.to_existing_atom(params["schema"]),
+          form_id: params["form_id"],
+          video: video
+        }
+
+        {:noreply,
+         socket
+         |> assign(:edit_video, edit_video)
+         |> assign(:editing_video?, true)
+         |> assign(:video_changeset, Ecto.Changeset.change(video))
+         |> assign_drawer_recovery_state()
+         |> push_event("b:show_drawer", %{drawer_id: "video-drawer"})}
+
+      {:error, _} ->
+        {:noreply, socket}
+    end
+  end
+
+  defp restore_file_drawer(socket, params) do
+    resource_id = String.to_integer(params["resource_id"])
+
+    case Brando.Files.get_file(resource_id) do
+      {:ok, file} ->
+        edit_file = %{
+          id: resource_id,
+          path: decode_recovery_path(params["path"]),
+          field: String.to_existing_atom(params["field"]),
+          relation_field: nil,
+          schema: String.to_existing_atom(params["schema"]),
+          form_id: params["form_id"],
+          file: file
+        }
+
+        {:noreply,
+         socket
+         |> assign(:edit_file, edit_file)
+         |> assign(:editing_file?, true)
+         |> assign(:file_changeset, Ecto.Changeset.change(file))
+         |> assign_drawer_recovery_state()
+         |> push_event("b:show_drawer", %{drawer_id: "file-drawer"})}
+
+      {:error, _} ->
+        {:noreply, socket}
+    end
+  end
+
+  defp assign_drawer_recovery_state(socket) do
+    %{
+      editing_image?: editing_image?,
+      editing_video?: editing_video?,
+      editing_file?: editing_file?,
+      edit_image: edit_image,
+      edit_video: edit_video,
+      edit_file: edit_file
+    } = socket.assigns
+
+    {type, resource_id, field, path, schema} =
+      cond do
+        editing_image? and edit_image[:id] ->
+          {"image", edit_image.id, edit_image[:field], edit_image[:path], edit_image[:schema]}
+
+        editing_video? and edit_video[:id] ->
+          {"video", edit_video.id, edit_video[:field], edit_video[:path], edit_video[:schema]}
+
+        editing_file? and edit_file[:id] ->
+          {"file", edit_file.id, edit_file[:field], edit_file[:path], edit_file[:schema]}
+
+        true ->
+          {nil, nil, nil, [], nil}
+      end
+
+    socket
+    |> assign(:editing_drawer_type, type)
+    |> assign(:editing_resource_id, resource_id)
+    |> assign(:editing_field, field && to_string(field))
+    |> assign(:editing_path, path || [])
+    |> assign(:editing_schema, schema && to_string(schema))
+  end
+
+  defp decode_recovery_path(path_json) when is_binary(path_json) do
+    case Jason.decode(path_json) do
+      {:ok, list} when is_list(list) -> Enum.map(list, &String.to_existing_atom/1)
+      _ -> []
+    end
+  end
+
+  defp decode_recovery_path(_), do: []
 end

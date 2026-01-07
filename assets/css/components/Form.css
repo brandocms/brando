@@ -428,6 +428,31 @@
   }
 }
 
+.tiny-toggle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tiny-toggle-label {
+  font-family: "Mono", monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--brando-color-dark);
+}
+
+.field-wrapper + .tiny-toggle-wrapper {
+  margin-top: -0.7vw;
+}
+
+.tiny-toggle-wrapper + .field-wrapper {
+  margin-top: 15px;
+}
+
+.tiny-toggle-wrapper + .tiny-toggle-wrapper {
+  margin-top: 8px;
+}
+
 .form-tabs {
   margin-bottom: 25px;
   background-color: var(--brando-color-shaded);

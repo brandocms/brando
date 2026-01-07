@@ -17,10 +17,61 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   # data active_revision, :any
 
   def update(%{action: :refresh_revisions}, socket) do
+    entry_id = socket.assigns.entry_id
+    entry_type = socket.assigns.entry_type
+
     {:ok,
      socket
-     |> assign_refreshed_revisions()
-     |> assign_refreshed_active_revision()}
+     |> assign_async([:revisions, :active_revision], fn ->
+       list_opts = %{
+         filter: %{entry_id: entry_id, entry_type: entry_type},
+         preload: [:creator],
+         order: [{:desc, :revision}]
+       }
+
+       case Brando.Revisions.list_revisions(list_opts) do
+         {:ok, revisions} ->
+           active_revision =
+             case Enum.find(revisions, & &1.active) do
+               nil -> nil
+               %{revision: revision} -> revision
+             end
+
+           {:ok, %{revisions: revisions, active_revision: active_revision}}
+
+         {:error, _} ->
+           {:error, :failed_to_load_revisions}
+       end
+     end)}
+  end
+
+  def update(%{action: :fetch_revisions}, socket) do
+    entry_id = socket.assigns.entry_id
+    entry_type = socket.assigns.entry_type
+
+    {:ok,
+     socket
+     |> assign_async([:revisions, :active_revision], fn ->
+       list_opts = %{
+         filter: %{entry_id: entry_id, entry_type: entry_type},
+         preload: [:creator],
+         order: [{:desc, :revision}]
+       }
+
+       case Brando.Revisions.list_revisions(list_opts) do
+         {:ok, revisions} ->
+           active_revision =
+             case Enum.find(revisions, & &1.active) do
+               nil -> nil
+               %{revision: revision} -> revision
+             end
+
+           {:ok, %{revisions: revisions, active_revision: active_revision}}
+
+         {:error, _} ->
+           {:error, :failed_to_load_revisions}
+       end
+     end)}
   end
 
   def update(assigns, socket) do
@@ -34,78 +85,17 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
        Brando.Blueprint.Snapshot.get_current_version(entry_type)
      end)
      |> assign_new(:show_publish_at, fn -> nil end)
-     |> assign_revisions()
-     |> assign_active_revision()}
+     |> assign_new(:revisions, fn -> Phoenix.LiveView.AsyncResult.loading() end)
+     |> assign_new(:active_revision, fn -> Phoenix.LiveView.AsyncResult.loading() end)}
   end
 
-  defp assign_revisions(socket) do
-    form = socket.assigns.form
-    entry_id = socket.assigns.entry_id
-    entry_type = form.source.data.__struct__
+  defp refresh_revisions(socket) do
+    send_update(__MODULE__,
+      id: socket.assigns.id,
+      action: :refresh_revisions
+    )
 
-    case entry_id do
-      nil ->
-        assign(
-          socket,
-          revisions: [],
-          entry_id: nil,
-          entry_type: entry_type
-        )
-
-      entry_id ->
-        socket
-        |> assign_new(:revisions, fn ->
-          list_opts = %{
-            filter: %{entry_id: entry_id, entry_type: entry_type},
-            preload: [:creator],
-            order: [{:desc, :revision}]
-          }
-
-          {:ok, revisions} = Brando.Revisions.list_revisions(list_opts)
-
-          revisions
-        end)
-        |> assign(:entry_id, entry_id)
-        |> assign(:entry_type, entry_type)
-    end
-  end
-
-  defp assign_refreshed_revisions(%{assigns: %{entry_id: nil}} = socket) do
     socket
-  end
-
-  defp assign_refreshed_revisions(socket) do
-    entry_id = socket.assigns.entry_id
-    entry_type = socket.assigns.entry_type
-
-    list_opts = %{
-      filter: %{entry_id: entry_id, entry_type: entry_type},
-      preload: [:creator],
-      order: [{:desc, :revision}]
-    }
-
-    {:ok, revisions} = Brando.Revisions.list_revisions(list_opts)
-
-    assign(socket, :revisions, revisions)
-  end
-
-  defp assign_active_revision(%{assigns: %{revisions: revisions}} = socket) do
-    assign_new(socket, :active_revision, fn ->
-      case Enum.find(revisions, & &1.active) do
-        nil -> nil
-        %{revision: revision} -> revision
-      end
-    end)
-  end
-
-  defp assign_refreshed_active_revision(%{assigns: %{revisions: revisions}} = socket) do
-    active_revision =
-      case Enum.find(revisions, & &1.active) do
-        nil -> nil
-        %{revision: revision} -> revision
-      end
-
-    assign(socket, :active_revision, active_revision)
   end
 
   def render(assigns) do
@@ -141,127 +131,157 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
           </div>
         </:info>
         <%= if @status == :open do %>
-          <table class="revisions-table">
-            <%= for revision <- @revisions do %>
-              <tr
-                id={"revision-line-#{revision.revision}"}
-                class={[
-                  "revisions-line",
-                  @active_revision == revision.revision && "active",
-                  revision.schema_version != @schema_version && "outdated"
-                ]}
-                phx-hook="Brando.ConfirmClick"
-                phx-confirm-click-message={
-                  if revision.schema_version != @schema_version,
-                    do:
-                      gettext(
-                        "Discrepancy between current schema version and revision's schema version. There might be changes in the schema that will prevent correct loading of the revision. Activate anyway?"
-                      ),
-                    else: gettext("Are you sure you want to activate this version?")
-                }
-                phx-confirm-click={JS.push("select_revision", value: %{revision: revision.revision}, target: @myself)}
-                phx-click={JS.push("select_revision", target: @myself)}
-              >
-                <td class="fit">
-                  #{revision.revision}
-                </td>
-                <td class="fit">
-                  <%= if revision.active do %>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
-                      <path fill="none" d="M0 0h24v24H0z" /><path d="M12 17l-5.878 3.59 1.598-6.7-5.23-4.48 6.865-.55L12 2.5l2.645 6.36 6.866.55-5.231 4.48 1.598 6.7z" />
-                    </svg>
-                  <% end %>
-                </td>
-                <td class="fit">
-                  <%= if revision.protected do %>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
-                      <path fill="none" d="M0 0h24v24H0z" /><path d="M6 8V7a6 6 0 1 1 12 0v1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1h2zm13 2H5v10h14V10zm-8 5.732a2 2 0 1 1 2 0V18h-2v-2.268zM8 8h8V7a4 4 0 1 0-8 0v1z" />
-                    </svg>
-                  <% end %>
-                </td>
-                <td class="date fit">
-                  {Brando.Utils.Datetime.format_datetime(revision.inserted_at, "%d/%m/%y, %H:%M")}
-                </td>
-                <td class="user">{revision.creator.name}</td>
-                <td class="activate fit">
-                  <CircleDropdown.render id={"revision-dropdown-#{revision.revision}"}>
-                    <Button.dropdown
-                      confirm={
-                        if revision.schema_version != @schema_version,
-                          do:
-                            gettext(
-                              "Discrepancy between current schema version and revision's schema version. There might be changes in the schema that will prevent correct loading of the revision. Activate anyway?"
-                            ),
-                          else: gettext("Are you sure you want to activate this version?")
-                      }
-                      value={revision.revision}
-                      event={
-                        JS.push("activate_revision",
-                          target: @myself,
-                          value: %{value: revision.revision}
-                        )
-                      }
-                    >
-                      {gettext("Activate revision")}
-                    </Button.dropdown>
-                    <%= if revision.protected do %>
-                      <Button.dropdown
-                        event={
-                          JS.push("unprotect_revision",
-                            target: @myself,
-                            value: %{value: revision.revision}
-                          )
-                        }
-                        value={revision.revision}
-                        loading
-                      >
-                        {gettext("Unprotect version")}
-                      </Button.dropdown>
-                    <% else %>
-                      <Button.dropdown
-                        event={
-                          JS.push("protect_revision",
-                            target: @myself,
-                            value: %{value: revision.revision}
-                          )
-                        }
-                        value={revision.revision}
-                        loading
-                      >
-                        {gettext("Protect version")}
-                      </Button.dropdown>
-                    <% end %>
-                    <%= unless revision.active do %>
-                      <Button.dropdown
-                        event={
-                          JS.push("show_publish_at",
-                            target: @myself,
-                            value: %{value: revision.revision}
-                          )
-                        }
-                        value={revision.revision}
-                        loading
-                      >
-                        {gettext("Schedule version")}
-                      </Button.dropdown>
-                    <% end %>
-                    <%= if !revision.protected && !revision.active do %>
-                      <Button.dropdown
-                        confirm={gettext("Are you sure you want to delete this?")}
-                        event={
-                          JS.push("delete_revision",
-                            target: @myself,
-                            value: %{value: revision.revision}
-                          )
-                        }
-                        value={revision.revision}
-                        loading
-                      >
-                        {gettext("Delete version")}
-                      </Button.dropdown>
-                    <% end %>
-                  </CircleDropdown.render>
-                  <!--
+          <.async_result :let={revisions} assign={@revisions}>
+            <:loading>
+              <div class="revisions-loading">
+                <svg class="spinner" viewBox="0 0 24 24" width="24" height="24">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" opacity="0.3" />
+                  <path
+                    d="M12 2 A10 10 0 0 1 22 12"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    fill="none"
+                    stroke-linecap="round"
+                  />
+                </svg>
+                <span>{gettext("Loading revisions...")}</span>
+              </div>
+            </:loading>
+            <:failed :let={_failure}>
+              <div class="revisions-error">
+                <span>{gettext("Failed to load revisions. Please try again.")}</span>
+              </div>
+            </:failed>
+            <.async_result :let={active_revision} assign={@active_revision}>
+              <:loading></:loading>
+              <:failed></:failed>
+              <div class="current-schema-version">
+                {gettext("Current schema version")}: <span class="version">v{@schema_version}</span>
+              </div>
+              <table class="revisions-table">
+                <%= for revision <- revisions do %>
+                  <tr
+                    id={"revision-line-#{revision.revision}"}
+                    class={[
+                      "revisions-line",
+                      active_revision == revision.revision && "active",
+                      revision.schema_version != @schema_version && "outdated"
+                    ]}
+                    phx-hook="Brando.ConfirmClick"
+                    phx-confirm-click-message={
+                      if revision.schema_version != @schema_version,
+                        do:
+                          gettext(
+                            "Discrepancy between current schema version and revision's schema version. There might be changes in the schema that will prevent correct loading of the revision. Activate anyway?"
+                          ),
+                        else: gettext("Are you sure you want to activate this version?")
+                    }
+                    phx-confirm-click={JS.push("select_revision", value: %{revision: revision.revision}, target: @myself)}
+                    phx-click={JS.push("select_revision", target: @myself)}
+                  >
+                    <td class="fit">
+                      #{revision.revision}
+                    </td>
+                    <td class="fit">
+                      <%= if revision.active do %>
+                        &#9679;
+                      <% end %>
+                    </td>
+                    <td class="fit">
+                      <%= if revision.protected do %>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+                          <path fill="none" d="M0 0h24v24H0z" /><path d="M6 8V7a6 6 0 1 1 12 0v1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1h2zm13 2H5v10h14V10zm-8 5.732a2 2 0 1 1 2 0V18h-2v-2.268zM8 8h8V7a4 4 0 1 0-8 0v1z" />
+                        </svg>
+                      <% end %>
+                    </td>
+                    <td class="date fit">
+                      {Brando.Utils.Datetime.format_datetime(revision.inserted_at, "%d/%m/%y, %H:%M")}
+                    </td>
+                    <td class="schema-version fit">
+                      <%= if revision.schema_version do %>
+                        v{revision.schema_version}
+                      <% end %>
+                    </td>
+                    <td class="user">{revision.creator.name}</td>
+                    <td class="activate fit">
+                      <CircleDropdown.render id={"revision-dropdown-#{revision.revision}"}>
+                        <Button.dropdown
+                          confirm={
+                            if revision.schema_version != @schema_version,
+                              do:
+                                gettext(
+                                  "Discrepancy between current schema version and revision's schema version. There might be changes in the schema that will prevent correct loading of the revision. Activate anyway?"
+                                ),
+                              else: gettext("Are you sure you want to activate this version?")
+                          }
+                          value={revision.revision}
+                          event={
+                            JS.push("activate_revision",
+                              target: @myself,
+                              value: %{value: revision.revision}
+                            )
+                          }
+                        >
+                          {gettext("Activate revision")}
+                        </Button.dropdown>
+                        <%= if revision.protected do %>
+                          <Button.dropdown
+                            event={
+                              JS.push("unprotect_revision",
+                                target: @myself,
+                                value: %{value: revision.revision}
+                              )
+                            }
+                            value={revision.revision}
+                            loading
+                          >
+                            {gettext("Unprotect version")}
+                          </Button.dropdown>
+                        <% else %>
+                          <Button.dropdown
+                            event={
+                              JS.push("protect_revision",
+                                target: @myself,
+                                value: %{value: revision.revision}
+                              )
+                            }
+                            value={revision.revision}
+                            loading
+                          >
+                            {gettext("Protect version")}
+                          </Button.dropdown>
+                        <% end %>
+                        <%= unless revision.active do %>
+                          <Button.dropdown
+                            event={
+                              JS.push("show_publish_at",
+                                target: @myself,
+                                value: %{value: revision.revision}
+                              )
+                            }
+                            value={revision.revision}
+                            loading
+                          >
+                            {gettext("Schedule version")}
+                          </Button.dropdown>
+                        <% end %>
+                        <%= if !revision.protected && !revision.active do %>
+                          <Button.dropdown
+                            confirm={gettext("Are you sure you want to delete this?")}
+                            event={
+                              JS.push("delete_revision",
+                                target: @myself,
+                                value: %{value: revision.revision}
+                              )
+                            }
+                            value={revision.revision}
+                            loading
+                          >
+                            {gettext("Delete version")}
+                          </Button.dropdown>
+                        <% end %>
+                      </CircleDropdown.render>
+                      <!--
                     <li>
                       <button
                         type="button"
@@ -294,50 +314,52 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                     </li>
                   </CircleDropdown>
                   -->
-                </td>
-              </tr>
-              <%= if @show_publish_at == revision.revision do %>
-                <tr class={[
-                  "revisions-line",
-                  @active_revision == revision.revision && "active"
-                ]}>
-                  <td colspan="3"></td>
-                  <td colspan="3" class="revision-publish_at">
-                    <div class="field-wrapper">
-                      <label>
-                        {gettext("Publish at")}
-                      </label>
-                      <div class="datepicker-and-button">
-                        <div
-                          id={"revision-#{revision.revision}-datetimepicker"}
-                          class="datetime-wrapper"
-                          phx-hook="Brando.Scheduler"
-                          data-locale={Gettext.get_locale()}
-                          data-revision={revision.revision}
-                        >
-                          <div id={"revision-#{revision.revision}-datetimepicker-flatpickr"} phx-update="ignore">
-                            <input type={:hidden} class="flatpickr" />
+                    </td>
+                  </tr>
+                  <%= if @show_publish_at == revision.revision do %>
+                    <tr class={[
+                      "revisions-line",
+                      active_revision == revision.revision && "active"
+                    ]}>
+                      <td colspan="4"></td>
+                      <td colspan="3" class="revision-publish_at">
+                        <div class="field-wrapper">
+                          <label>
+                            {gettext("Publish at")}
+                          </label>
+                          <div class="datepicker-and-button">
+                            <div
+                              id={"revision-#{revision.revision}-datetimepicker"}
+                              class="datetime-wrapper"
+                              phx-hook="Brando.Scheduler"
+                              data-locale={Gettext.get_locale()}
+                              data-revision={revision.revision}
+                            >
+                              <div id={"revision-#{revision.revision}-datetimepicker-flatpickr"} phx-update="ignore">
+                                <input type={:hidden} class="flatpickr" />
+                              </div>
+                            </div>
+                            <button type="button">
+                              {gettext("Schedule")}
+                            </button>
                           </div>
                         </div>
-                        <button type="button">
-                          {gettext("Schedule")}
-                        </button>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              <% end %>
-              <%= if revision.description do %>
-                <tr class={[
-                  "revisions-line",
-                  @active_revision == revision.revision && "active"
-                ]}>
-                  <td colspan="3"></td>
-                  <td colspan="3" class="revision-description">&uarr; {revision.description}</td>
-                </tr>
-              <% end %>
-            <% end %>
-          </table>
+                      </td>
+                    </tr>
+                  <% end %>
+                  <%= if revision.description do %>
+                    <tr class={[
+                      "revisions-line",
+                      active_revision == revision.revision && "active"
+                    ]}>
+                      <td colspan="4"></td>
+                      <td colspan="3" class="revision-description">&uarr; {revision.description}</td>
+                    </tr>
+                  <% end %>
+                <% end %>
+              </table>
+            </.async_result>
+          </.async_result>
         <% end %>
       </Content.drawer>
     </div>
@@ -348,7 +370,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     schema = changeset.data.__struct__
     Brando.Revisions.purge_revisions(schema, entry_id)
 
-    {:noreply, assign_refreshed_revisions(socket)}
+    {:noreply, refresh_revisions(socket)}
   end
 
   def handle_event(
@@ -359,7 +381,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     schema = changeset.data.__struct__
     Brando.Revisions.delete_revision(schema, entry_id, selected_revision_id)
 
-    {:noreply, assign_refreshed_revisions(socket)}
+    {:noreply, refresh_revisions(socket)}
   end
 
   def handle_event(
@@ -370,7 +392,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     schema = changeset.data.__struct__
     Brando.Revisions.protect_revision(schema, entry_id, selected_revision_id, true)
 
-    {:noreply, assign_refreshed_revisions(socket)}
+    {:noreply, refresh_revisions(socket)}
   end
 
   def handle_event(
@@ -393,7 +415,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     {:noreply,
      socket
      |> assign(:show_publish_at, nil)
-     |> assign_refreshed_revisions()}
+     |> refresh_revisions()}
   end
 
   def handle_event("show_publish_at", %{"value" => selected_revision_id}, socket) do
@@ -408,7 +430,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     schema = changeset.data.__struct__
     Brando.Revisions.protect_revision(schema, entry_id, selected_revision_id, false)
 
-    {:noreply, assign_refreshed_revisions(socket)}
+    {:noreply, refresh_revisions(socket)}
   end
 
   def handle_event("store_revision", _, socket) do
@@ -417,12 +439,9 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
 
     if changeset.errors == [] do
       entry = Ecto.Changeset.apply_changes(changeset)
-      {:ok, revision} = Brando.Revisions.create_revision(entry, current_user, false)
+      {:ok, _revision} = Brando.Revisions.create_revision(entry, current_user, false)
 
-      {:noreply,
-       socket
-       |> assign_refreshed_revisions()
-       |> assign(:active_revision, revision.revision)}
+      {:noreply, refresh_revisions(socket)}
     else
       error_title = gettext("Error")
 
@@ -437,7 +456,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     %{entry_id: entry_id, entry_type: entry_type} = socket.assigns
     form_cid = socket.assigns.form_cid
 
-    {:ok, {_revision, {revision_id, decoded_entry}}} =
+    {:ok, {_revision, {_revision_id, decoded_entry}}} =
       Brando.Revisions.get_revision(entry_type, entry_id, selected_revision_id)
 
     send_update(form_cid, %{
@@ -445,7 +464,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
       updated_entry: decoded_entry
     })
 
-    {:noreply, assign(socket, :active_revision, revision_id)}
+    {:noreply, socket}
   end
 
   def handle_event(
@@ -464,9 +483,6 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
       updated_entry: new_entry
     })
 
-    {:noreply,
-     socket
-     |> assign(:active_revision, selected_revision_id)
-     |> assign_refreshed_revisions()}
+    {:noreply, refresh_revisions(socket)}
   end
 end
