@@ -48,7 +48,7 @@ defmodule <%= application_module %>.MixProject do
   defp deps do
     [
       # phoenix
-      {:phoenix, "~> 1.7.19"},
+      {:phoenix, "~> 1.8.3"},
       {:phoenix_pubsub, "~> 2.0"},
       {:bandit, "~> 1.0"},
       {:phoenix_ecto, "~> 4.1"},
@@ -67,7 +67,7 @@ defmodule <%= application_module %>.MixProject do
 
       # general deps
       {:postgrex, "~> 0.15"},
-      {:gettext, "~> 0.11"},
+      {:gettext, "~> 1.0"},
       {:swoosh, "~> 1.0"},
       {:jason, "~> 1.0"},
       {:ex_machina, "~> 2.3"},
@@ -94,7 +94,8 @@ defmodule <%= application_module %>.MixProject do
       "test.all": ["test.unit", "test.e2e"],
       "test.unit": &run_unit_tests/1,
       "test.e2e": &run_e2e_tests/1,
-      test: ["ecto.create --quiet", "ecto.migrate", "test"]
+      test: ["ecto.create --quiet", "ecto.migrate", "test"],
+      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
     ]
   end
 

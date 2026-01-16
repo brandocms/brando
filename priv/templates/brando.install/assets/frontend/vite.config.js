@@ -39,7 +39,7 @@ export default defineConfig(({ command }) => ({
     cssMinify: 'lightningcss',
     minify: 'terser',
     emptyOutDir: false,
-    outDir: '../web/assets',
+    outDir: '../../priv/static', // <- Phoenix expects our files here
     sourcemap: true, // we want to debug our code in production
     rollupOptions: {
       input: {

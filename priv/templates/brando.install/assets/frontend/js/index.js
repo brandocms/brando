@@ -16,7 +16,6 @@ import {
   Moonwalk,
   FixedHeader,
   Typography,
-  gsap
 } from '@brandocms/jupiter'
 
 /**
@@ -39,8 +38,8 @@ const app = new Application({
     fadeIn: callback => {
       document.body.classList.remove('unloaded')
       callback()
-    }
-  }
+    },
+  },
 })
 
 app.registerCallback(Events.APPLICATION_READY, () => {
