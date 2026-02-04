@@ -22,7 +22,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
   def render(assigns) do
     # Find the corresponding object for display - use index for new objects without IDs
     obj = Enum.at(assigns.gallery_objects, assigns.gallery_object_form.index)
-    object_modal_id = "gallery-object-modal-#{assigns.gallery_object_form.index}"
+    object_modal_id = "gallery-object-modal-#{assigns.uid}-#{assigns.gallery_object_form.index}"
 
     # Get the override info for this object to determine what values to display
     object_id_str =
@@ -44,7 +44,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
 
     ~H"""
     <div
-      id={"gallery-object-#{@gallery_object_form[:image_id].value || @gallery_object_form[:video_id].value}"}
+      id={"gallery-object-#{@uid}-#{@gallery_object_form[:image_id].value || @gallery_object_form[:video_id].value}"}
       class="gallery-object preview sort-handle-gallery-object draggable"
       data-id={@gallery_object_form.index}
     >
@@ -134,6 +134,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
           <div class="panel">
             <.gallery_caption_overrides
               obj={@obj}
+              uid={@uid}
               override_data={@override_data}
               block_data={@block_data}
             />
@@ -264,6 +265,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
   ## Function components
 
   attr :obj, :map, required: true
+  attr :uid, :string, required: true
   attr :override_data, :map, required: true
   attr :block_data, :any, required: true
 
@@ -290,7 +292,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
           <%= if override_form[:object_id].value == @object_id_str do %>
             <.live_component
               module={OverrideForm}
-              id={"override-inline-#{@object_id_str}"}
+              id={"override-inline-#{@uid}-#{@object_id_str}"}
               form={override_form}
               override_info={@override_info}
               variant={:inline}

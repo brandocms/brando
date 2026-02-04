@@ -372,6 +372,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   ## Function components
 
   attr :obj, :map, required: true
+  attr :uid, :string, required: true
   attr :override_data, :map, required: true
   attr :block_data, :any, required: true
 
@@ -398,7 +399,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         <%= if override_form[:object_id].value == @object_id_str do %>
           <.live_component
             module={OverrideForm}
-            id={"override-modal-#{@object_id_str}"}
+            id={"override-modal-#{@uid}-#{@object_id_str}"}
             form={override_form}
             override_info={@override_info}
             variant={:modal}
