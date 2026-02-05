@@ -292,7 +292,7 @@ defmodule Brando.Query.Mutations do
   end
 
   defp duplicate_table_row(table_row) do
-    %{table_row | id: nil}
+    %{table_row | id: nil, vars: Enum.map(table_row.vars || [], &duplicate_var/1)}
     |> update_meta()
   end
 
