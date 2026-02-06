@@ -83,7 +83,7 @@ defmodule Brando.Mixfile do
       {:spark, "~> 2.2.35"},
 
       # monitoring
-      {:sentry, "~> 10.0"},
+      {:sentry, "~> 11.0"},
 
       # cache
       {:cachex, "~> 4.0"},
