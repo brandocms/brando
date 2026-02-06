@@ -336,5 +336,117 @@ defmodule Brando.Query.MutationsTest do
 
       assert duplicate.title == "Custom Title"
     end
+
+    test "duplicates table rows with their vars" do
+      user = Factory.insert(:random_user)
+
+      module_params = Factory.params_for(:module, %{code: "table code"})
+      {:ok, module} = Brando.Content.create_module(module_params, :system)
+
+      page_params = Factory.params_for(:page, %{title: "Table Row Test", creator_id: user.id})
+      page_cs = Page.changeset(%Page{}, page_params, user)
+
+      entry_blocks = [
+        %{
+          block: %{
+            uid: Brando.Utils.generate_uid(),
+            type: :module,
+            source: "Elixir.Brando.Pages.Page.Blocks",
+            module_id: module.id,
+            refs: [],
+            vars: [],
+            table_rows: [
+              %{
+                sequence: 0,
+                vars: [
+                  %{
+                    type: :string,
+                    label: "Column 1",
+                    key: "col1",
+                    value: "Row 1 Col 1",
+                    sequence: 0,
+                    creator_id: user.id
+                  },
+                  %{
+                    type: :string,
+                    label: "Column 2",
+                    key: "col2",
+                    value: "Row 1 Col 2",
+                    sequence: 1,
+                    creator_id: user.id
+                  }
+                ]
+              },
+              %{
+                sequence: 1,
+                vars: [
+                  %{
+                    type: :string,
+                    label: "Column 1",
+                    key: "col1",
+                    value: "Row 2 Col 1",
+                    sequence: 0,
+                    creator_id: user.id
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+
+      page_cs = Ecto.Changeset.put_assoc(page_cs, :entry_blocks, entry_blocks)
+      page_cs = Map.put(page_cs, :action, :insert)
+
+      {:ok, page} = Brando.Pages.create_page(page_cs, user)
+
+      # Verify the original page has table rows with vars
+      {:ok, original} =
+        TestContext.get_page(%{
+          matches: %{id: page.id},
+          preload: Brando.Blueprint.preloads_for(Page)
+        })
+
+      original_block = hd(original.entry_blocks).block
+      assert length(original_block.table_rows) == 2
+
+      original_row = hd(original_block.table_rows)
+      assert length(original_row.vars) >= 1
+      original_var_ids = Enum.map(original_row.vars, & &1.id)
+      assert Enum.all?(original_var_ids, &(not is_nil(&1)))
+
+      # Duplicate the page
+      {:ok, duplicate} = TestContext.duplicate_page(page.id, user)
+
+      # Reload the duplicate with full preloads
+      {:ok, dup} =
+        TestContext.get_page(%{
+          matches: %{id: duplicate.id},
+          preload: Brando.Blueprint.preloads_for(Page)
+        })
+
+      dup_block = hd(dup.entry_blocks).block
+
+      # Table rows should be duplicated
+      assert length(dup_block.table_rows) == 2
+
+      # Each table row should have new IDs
+      for dup_row <- dup_block.table_rows do
+        assert dup_row.id != nil
+
+        # Vars should be duplicated with new IDs
+        assert length(dup_row.vars) >= 1
+
+        for var <- dup_row.vars do
+          assert var.id != nil
+          refute var.id in original_var_ids
+        end
+      end
+
+      # Verify var values are preserved
+      dup_first_row = Enum.find(dup_block.table_rows, &(&1.sequence == 0))
+      dup_first_row_values = Enum.map(dup_first_row.vars, & &1.value) |> Enum.sort()
+      assert dup_first_row_values == Enum.sort(["Row 1 Col 1", "Row 1 Col 2"])
+    end
   end
 end
