@@ -80,7 +80,7 @@ defmodule Brando.Mixfile do
       {:base62, "~> 1.2"},
 
       # dsl
-      {:spark, "~> 2.2.35"},
+      {:spark, "~> 2.4.0"},
 
       # monitoring
       {:sentry, "~> 10.0"},
