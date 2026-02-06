@@ -112,7 +112,7 @@ defmodule Brando.Mixfile do
 
       # Misc
       {:req, "~> 0.5 or ~> 1.0"},
-      {:gettext, "~> 0.26.1"},
+      {:gettext, "~> 1.0.2"},
       {:earmark, "~> 1.4.0"},
       {:jason, "~> 1.0"},
       {:slugify, "~> 1.3.1"},
