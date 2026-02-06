@@ -380,12 +380,21 @@ defmodule Brando.Villain.Parser do
 
   # Extract dimension data with defaults
   defp extract_video_dimensions(data, default_width, default_height) do
-    width = Map.get(data, :width, default_width)
-    height = Map.get(data, :height, default_height)
+    width = Map.get(data, :width) || default_width
+    height = Map.get(data, :height) || default_height
     orientation = (width > height && "landscape") || "portrait"
 
     %{width: width, height: height, orientation: orientation}
   end
+
+  defp to_integer(val, _default) when is_integer(val), do: val
+  defp to_integer(val, default) when is_binary(val) do
+    case Integer.parse(val) do
+      {int, _} -> int
+      :error -> default
+    end
+  end
+  defp to_integer(_, default), do: default
 
   # Calculate aspect ratio with fallback
   defp calculate_aspect_ratio(width, height) do
@@ -444,8 +453,8 @@ defmodule Brando.Villain.Parser do
     video_fields = extract_video_dimensions(data, 500, 281)
 
     # Ensure values are integers
-    width = (is_integer(video_fields.width) && video_fields.width) || String.to_integer(video_fields.width)
-    height = (is_integer(video_fields.height) && video_fields.height) || String.to_integer(video_fields.height)
+    width = to_integer(video_fields.width, 500)
+    height = to_integer(video_fields.height, 281)
 
     aspect_ratio = calculate_aspect_ratio(width, height)
 
