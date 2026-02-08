@@ -6,6 +6,8 @@ defmodule BrandoAdmin.Galleries.GalleryFormLive do
   import Ecto.Query
 
   alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Input.Entries
+  alias Phoenix.LiveView.JS
 
   def render(assigns) do
     ~H"""
@@ -21,17 +23,17 @@ defmodule BrandoAdmin.Galleries.GalleryFormLive do
       </:header>
     </.live_component>
 
-    <div :if={@gallery_usage != %{}} class="usage-section">
-      <h2>{gettext("Where used")}</h2>
+    <div :if={@gallery_usage != %{}} class="shaded" style="margin-top: 15px;">
+      <h2 class="subheader">{gettext("Where used")}</h2>
       <div :for={{schema, identifiers} <- @gallery_usage} class="usage-group">
-        <h3>{Brando.Blueprint.get_plural(schema)}</h3>
-        <ul>
-          <li :for={identifier <- identifiers}>
-            <.link navigate={edit_url(identifier)}>
-              {identifier.title || "##{identifier.entry_id}"}
-            </.link>
-          </li>
-        </ul>
+        <h3 class="usage-schema-label">{Brando.Blueprint.get_plural(schema)}</h3>
+        <div class="selected-entries">
+          <Entries.dumb_identifier
+            :for={identifier <- identifiers}
+            identifier={identifier}
+            select={JS.navigate(edit_url(identifier))}
+          />
+        </div>
       </div>
     </div>
     """

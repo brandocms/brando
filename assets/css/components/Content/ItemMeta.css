@@ -226,3 +226,19 @@
 .identifier + .identifier {
   @space margin-top 5px;
 }
+
+.usage-group {
+  margin-bottom: 15px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.usage-schema-label {
+  @font mono;
+  font-size: 10px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  opacity: 0.6;
+}
