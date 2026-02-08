@@ -577,6 +577,17 @@ defmodule Brando.Villain do
   end
 
   @doc """
+  Render and update all entries with a block using a ref with `gallery_id`
+  """
+  def render_entries_with_gallery_id(gallery_id) do
+    gallery_id
+    |> list_block_ids_using_gallery()
+    |> list_root_block_ids_by_source()
+    |> list_entry_ids_for_root_blocks_by_source()
+    |> enqueue_entry_map_for_render()
+  end
+
+  @doc """
   Render and update all entries with a block with a var with an identifier
   """
   def render_entries_with_identifier(identifier_id) do
@@ -631,6 +642,18 @@ defmodule Brando.Villain do
       from b in Content.Block,
         select: b.id,
         where: b.palette_id == ^palette_id
+
+    Brando.Repo.all(query)
+  end
+
+  @doc """
+  Return list of all block IDs that have a ref using `gallery_id`
+  """
+  def list_block_ids_using_gallery(gallery_id) do
+    query =
+      from r in Content.Ref,
+        select: r.block_id,
+        where: r.gallery_id == ^gallery_id and not is_nil(r.block_id)
 
     Brando.Repo.all(query)
   end

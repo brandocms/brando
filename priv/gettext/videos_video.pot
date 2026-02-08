@@ -11,7 +11,82 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/videos/video.ex:70
+#: lib/brando/videos/video.ex:78
 #, elixir-autogen, elixir-format
 msgid "Path"
+msgstr ""
+
+#: lib/brando/videos/video.ex:105
+#, elixir-autogen, elixir-format
+msgid "Aspect ratio"
+msgstr ""
+
+#: lib/brando/videos/video.ex:111
+#, elixir-autogen, elixir-format
+msgid "Autoplay"
+msgstr ""
+
+#: lib/brando/videos/video.ex:89
+#, elixir-autogen, elixir-format
+msgid "Caption"
+msgstr ""
+
+#: lib/brando/videos/video.ex:106
+#, elixir-autogen, elixir-format
+msgid "Configuration target"
+msgstr ""
+
+#: lib/brando/videos/video.ex:114
+#, elixir-autogen, elixir-format
+msgid "Controls"
+msgstr ""
+
+#: lib/brando/videos/video.ex:104
+#, elixir-autogen, elixir-format
+msgid "Height"
+msgstr ""
+
+#: lib/brando/videos/video.ex:113
+#, elixir-autogen, elixir-format
+msgid "Loop"
+msgstr ""
+
+#: lib/brando/videos/video.ex:112
+#, elixir-autogen, elixir-format
+msgid "Preload"
+msgstr ""
+
+#: lib/brando/videos/video.ex:102
+#, elixir-autogen, elixir-format
+msgid "Remote ID"
+msgstr ""
+
+#: lib/brando/videos/video.ex:101
+#, elixir-autogen, elixir-format
+msgid "Source URL"
+msgstr ""
+
+#: lib/brando/videos/video.ex:116
+#, elixir-autogen, elixir-format
+msgid "Thumbnail"
+msgstr ""
+
+#: lib/brando/videos/video.ex:88
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr ""
+
+#: lib/brando/videos/video.ex:92
+#, elixir-autogen, elixir-format
+msgid "Type"
+msgstr ""
+
+#: lib/brando/videos/video.ex:115
+#, elixir-autogen, elixir-format
+msgid "Video file"
+msgstr ""
+
+#: lib/brando/videos/video.ex:103
+#, elixir-autogen, elixir-format
+msgid "Width"
 msgstr ""

@@ -10,77 +10,77 @@ msgid ""
 msgstr ""
 "Language: en\n"
 
-#: lib/brando/pages/fragment.ex:110
+#: lib/brando/pages/fragment.ex:115
 #, elixir-autogen, elixir-format
 msgid "Advanced"
 msgstr ""
 
-#: lib/brando/pages/fragment.ex:73
+#: lib/brando/pages/fragment.ex:78
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr ""
 
-#: lib/brando/pages/fragment.ex:75
+#: lib/brando/pages/fragment.ex:80
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
 
-#: lib/brando/pages/fragment.ex:91
+#: lib/brando/pages/fragment.ex:96
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr ""
 
-#: lib/brando/pages/fragment.ex:101
+#: lib/brando/pages/fragment.ex:106
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
 
-#: lib/brando/pages/fragment.ex:86
+#: lib/brando/pages/fragment.ex:91
 #, elixir-autogen, elixir-format
 msgid "Parent key"
 msgstr ""
 
-#: lib/brando/pages/fragment.ex:106
+#: lib/brando/pages/fragment.ex:111
 #, elixir-autogen, elixir-format
 msgid "Parent page"
 msgstr ""
 
-#: lib/brando/pages/fragment.ex:77
+#: lib/brando/pages/fragment.ex:82
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
 
-#: lib/brando/pages/fragment.ex:82
+#: lib/brando/pages/fragment.ex:87
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/brando/pages/fragment.ex:113
+#: lib/brando/pages/fragment.ex:118
 #, elixir-autogen, elixir-format
 msgid "Wrapper"
 msgstr ""
 
-#: lib/brando/pages/fragment.ex:114
+#: lib/brando/pages/fragment.ex:119
 #, elixir-autogen, elixir-format
 msgid "You can access the fragment's rendered content as <code>{{ content }}</code>"
 msgstr ""
 
-#: lib/brando/pages/fragment.ex:64
+#: lib/brando/pages/fragment.ex:69
 #, elixir-autogen, elixir-format
 msgid "fragment"
 msgstr ""
 
-#: lib/brando/pages/fragment.ex:65
+#: lib/brando/pages/fragment.ex:70
 #, elixir-autogen, elixir-format
 msgid "fragments"
 msgstr ""
 
-#: lib/brando/pages/fragment.ex:92
+#: lib/brando/pages/fragment.ex:97
 #, elixir-autogen, elixir-format
 msgid "key"
 msgstr ""
 
-#: lib/brando/pages/fragment.ex:87
+#: lib/brando/pages/fragment.ex:92
 #, elixir-autogen, elixir-format
 msgid "parent_key"
 msgstr ""

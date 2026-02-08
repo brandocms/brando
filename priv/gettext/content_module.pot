@@ -11,37 +11,37 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/content/module.ex:107
+#: lib/brando/content/module.ex:115
 #, elixir-autogen, elixir-format
 msgid "Class"
 msgstr ""
 
-#: lib/brando/content/module.ex:110
+#: lib/brando/content/module.ex:118
 #, elixir-autogen, elixir-format
 msgid "Export modules"
 msgstr ""
 
-#: lib/brando/content/module.ex:105
+#: lib/brando/content/module.ex:113
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 
-#: lib/brando/content/module.ex:106
+#: lib/brando/content/module.ex:114
 #, elixir-autogen, elixir-format
 msgid "Namespace"
 msgstr ""
 
-#: lib/brando/content/module.ex:194
+#: lib/brando/content/module.ex:202
 #, elixir-autogen, elixir-format
 msgid "module"
 msgstr ""
 
-#: lib/brando/content/module.ex:195
+#: lib/brando/content/module.ex:203
 #, elixir-autogen, elixir-format
 msgid "modules"
 msgstr ""
 
-#: lib/brando/content/module.ex:108
+#: lib/brando/content/module.ex:116
 #, elixir-autogen, elixir-format
 msgid "Code"
 msgstr ""

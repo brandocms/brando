@@ -11,22 +11,22 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/content/table_template.ex:49
+#: lib/brando/content/table_template.ex:50
 #, elixir-autogen, elixir-format
 msgid "Columns"
 msgstr "Kolonner"
 
-#: lib/brando/content/table_template.ex:41
+#: lib/brando/content/table_template.ex:42
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/content/table_template.ex:75
+#: lib/brando/content/table_template.ex:76
 #, elixir-autogen, elixir-format
 msgid "table template"
 msgstr "tabellmal"
 
-#: lib/brando/content/table_template.ex:76
+#: lib/brando/content/table_template.ex:77
 #, elixir-autogen, elixir-format
 msgid "table templates"
 msgstr "tabellmaler"

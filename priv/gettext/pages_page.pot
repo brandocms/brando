@@ -11,150 +11,150 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/pages/page.ex:271
+#: lib/brando/pages/page.ex:269
 #, elixir-autogen, elixir-format
 msgid "Advanced"
 msgstr ""
 
-#: lib/brando/pages/page.ex:149
-#: lib/brando/pages/page.ex:157
+#: lib/brando/pages/page.ex:147
+#: lib/brando/pages/page.ex:155
 #, elixir-autogen, elixir-format
 msgid "Are you sure?"
 msgstr ""
 
-#: lib/brando/pages/page.ex:243
+#: lib/brando/pages/page.ex:241
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr ""
 
-#: lib/brando/pages/page.ex:288
+#: lib/brando/pages/page.ex:286
 #, elixir-autogen, elixir-format
 msgid "CSS classes"
 msgstr ""
 
-#: lib/brando/pages/page.ex:245
+#: lib/brando/pages/page.ex:243
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
 
-#: lib/brando/pages/page.ex:138
+#: lib/brando/pages/page.ex:136
 #, elixir-autogen, elixir-format
 msgid "Create fragment"
 msgstr ""
 
-#: lib/brando/pages/page.ex:137
+#: lib/brando/pages/page.ex:135
 #, elixir-autogen, elixir-format
 msgid "Create subpage"
 msgstr ""
 
-#: lib/brando/pages/page.ex:149
+#: lib/brando/pages/page.ex:147
 #, elixir-autogen, elixir-format
 msgid "Delete fragment"
 msgstr ""
 
-#: lib/brando/pages/page.ex:157
+#: lib/brando/pages/page.ex:155
 #, elixir-autogen, elixir-format
 msgid "Delete sub page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:148
+#: lib/brando/pages/page.ex:146
 #, elixir-autogen, elixir-format
 msgid "Duplicate fragment"
 msgstr ""
 
-#: lib/brando/pages/page.ex:156
+#: lib/brando/pages/page.ex:154
 #, elixir-autogen, elixir-format
 msgid "Duplicate sub page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:147
+#: lib/brando/pages/page.ex:145
 #, elixir-autogen, elixir-format
 msgid "Edit fragment"
 msgstr ""
 
-#: lib/brando/pages/page.ex:155
+#: lib/brando/pages/page.ex:153
 #, elixir-autogen, elixir-format
 msgid "Edit sub page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:280
+#: lib/brando/pages/page.ex:278
 #, elixir-autogen, elixir-format
 msgid "Has URL"
 msgstr ""
 
-#: lib/brando/pages/page.ex:276
+#: lib/brando/pages/page.ex:274
 #, elixir-autogen, elixir-format
 msgid "Homepage"
 msgstr ""
 
-#: lib/brando/pages/page.ex:262
+#: lib/brando/pages/page.ex:260
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
 
-#: lib/brando/pages/page.ex:281
+#: lib/brando/pages/page.ex:279
 #, elixir-autogen, elixir-format
 msgid "Page has an URL and should be included in sitemap"
 msgstr ""
 
-#: lib/brando/pages/page.ex:277
+#: lib/brando/pages/page.ex:275
 #, elixir-autogen, elixir-format
 msgid "Page is loaded at root address"
 msgstr ""
 
-#: lib/brando/pages/page.ex:293
+#: lib/brando/pages/page.ex:291
 #, elixir-autogen, elixir-format
 msgid "Page variables"
 msgstr ""
 
-#: lib/brando/pages/page.ex:267
+#: lib/brando/pages/page.ex:265
 #, elixir-autogen, elixir-format
 msgid "Parent page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:247
+#: lib/brando/pages/page.ex:245
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
 
-#: lib/brando/pages/page.ex:286
+#: lib/brando/pages/page.ex:284
 #, elixir-autogen, elixir-format
 msgid "Template"
 msgstr ""
 
-#: lib/brando/pages/page.ex:135
-#: lib/brando/pages/page.ex:252
+#: lib/brando/pages/page.ex:133
+#: lib/brando/pages/page.ex:250
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/brando/pages/page.ex:134
-#: lib/brando/pages/page.ex:253
+#: lib/brando/pages/page.ex:132
+#: lib/brando/pages/page.ex:251
 #, elixir-autogen, elixir-format
 msgid "URI"
 msgstr ""
 
-#: lib/brando/pages/page.ex:104
+#: lib/brando/pages/page.ex:324
 #, elixir-autogen, elixir-format
 msgid "page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:105
+#: lib/brando/pages/page.ex:325
 #, elixir-autogen, elixir-format
 msgid "pages"
 msgstr ""
 
-#: lib/brando/pages/page.ex:130
+#: lib/brando/pages/page.ex:128
 #, elixir-autogen, elixir-format
 msgid "Default"
 msgstr ""
 
-#: lib/brando/pages/page.ex:131
+#: lib/brando/pages/page.ex:129
 #, elixir-autogen, elixir-format
 msgid "Title &darr;"
 msgstr ""
 
-#: lib/brando/pages/page.ex:132
+#: lib/brando/pages/page.ex:130
 #, elixir-autogen, elixir-format
 msgid "Title &uarr;"
 msgstr ""

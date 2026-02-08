@@ -11,12 +11,12 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/content/block.ex:136
+#: lib/brando/content/block.ex:139
 #, elixir-autogen, elixir-format
 msgid "block"
 msgstr ""
 
-#: lib/brando/content/block.ex:137
+#: lib/brando/content/block.ex:140
 #, elixir-autogen, elixir-format
 msgid "blocks"
 msgstr ""

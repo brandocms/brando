@@ -9,13 +9,14 @@
 msgid ""
 msgstr ""
 "Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/content/block.ex:139
+#: lib/brando/galleries/gallery.ex:52
 #, elixir-autogen, elixir-format
-msgid "block"
+msgid "Configuration target"
 msgstr ""
 
-#: lib/brando/content/block.ex:140
+#: lib/brando/galleries/gallery.ex:59
 #, elixir-autogen, elixir-format
-msgid "blocks"
+msgid "Gallery objects"
 msgstr ""

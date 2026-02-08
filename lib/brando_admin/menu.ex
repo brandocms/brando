@@ -327,6 +327,10 @@ defmodule BrandoAdmin.Menu do
               %{
                 name: gettext("Videos"),
                 url: "/admin/assets/videos"
+              },
+              %{
+                name: gettext("Galleries"),
+                url: "/admin/assets/galleries"
               }
             ]
           },

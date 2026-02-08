@@ -97,6 +97,12 @@ defmodule Brando.Router do
           live "/assets/images/update/:entry_id", BrandoAdmin.Images.ImageFormLive, :update
           live "/assets/videos", BrandoAdmin.Videos.VideoListLive
           live "/assets/videos/update/:entry_id", BrandoAdmin.Videos.VideoFormLive, :update
+          live "/assets/galleries", BrandoAdmin.Galleries.GalleryListLive
+
+          live "/assets/galleries/update/:entry_id",
+               BrandoAdmin.Galleries.GalleryFormLive,
+               :update
+
           live "/assets/files", BrandoAdmin.Files.FileListLive
 
           scope "/config" do

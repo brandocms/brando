@@ -71,3 +71,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Focal"
 msgstr ""
+
+#: lib/brando/images/image.ex:113
+#, elixir-autogen, elixir-format
+msgid "image"
+msgstr ""
+
+#: lib/brando/images/image.ex:114
+#, elixir-autogen, elixir-format
+msgid "images"
+msgstr ""

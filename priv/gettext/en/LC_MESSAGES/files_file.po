@@ -14,3 +14,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Filename"
 msgstr ""
+
+#: lib/brando/files/file.ex:64
+#, elixir-autogen, elixir-format
+msgid "file"
+msgstr ""
+
+#: lib/brando/files/file.ex:65
+#, elixir-autogen, elixir-format
+msgid "files"
+msgstr ""

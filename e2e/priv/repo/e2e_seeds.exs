@@ -782,3 +782,14 @@ table_template = %Brando.Content.TableTemplate{
     }
   ]
 } |> E2eProject.Repo.insert!()
+
+# Gallery for gallery listing/editing tests
+%Brando.Galleries.Gallery{
+  config_target: "gallery:E2eProject.Projects.Project:project_gallery",
+  gallery_objects: []
+} |> E2eProject.Repo.insert!()
+
+%Brando.Galleries.Gallery{
+  config_target: "test_gallery",
+  gallery_objects: []
+} |> E2eProject.Repo.insert!()
