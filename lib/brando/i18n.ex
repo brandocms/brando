@@ -80,7 +80,7 @@ defmodule Brando.I18n do
   Extract language from path or fall back to default language
   """
   @spec parse_path(list) :: {language :: binary, modified_path :: list} | nil
-  def parse_path([]), do: {Brando.config(:default_language), ["index"]}
+  def parse_path([]), do: {to_string(Brando.config(:default_language)), ["index"]}
 
   def parse_path(path) do
     [first_path_segment | rest] = path
@@ -94,7 +94,7 @@ defmodule Brando.I18n do
     if first_path_segment in langs do
       (Enum.empty?(rest) && {first_path_segment, ["index"]}) || {first_path_segment, rest}
     else
-      {Brando.config(:default_language), path}
+      {to_string(Brando.config(:default_language)), path}
     end
   end
 end

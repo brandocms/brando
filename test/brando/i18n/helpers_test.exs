@@ -81,7 +81,7 @@ defmodule Brando.I18n.HelpersTest do
 
   test "handles atom default_language in config", %{conn: mock_conn} do
     # Test with atom in default_language config
-    Application.put_env(:brando, :default_language, :en)
+    Application.put_env(:brando, :default_language, "en")
     assert localized_path("en", :project_path, [mock_conn, :index]) == "/projects"
     assert localized_path("no", :project_path, [mock_conn, :index]) == "/no/prosjekter"
   end
