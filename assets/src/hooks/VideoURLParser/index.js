@@ -83,6 +83,38 @@ async function getVideoDimensions(url) {
   })
 }
 
+// Parse an HLS manifest to extract the highest resolution
+async function getHLSDimensions(url) {
+  const response = await fetch(url)
+  const text = await response.text()
+
+  let maxWidth = 0
+  let maxHeight = 0
+
+  const lines = text.split('\n')
+  for (const line of lines) {
+    const match = line.match(/RESOLUTION=(\d+)x(\d+)/)
+    if (match) {
+      const w = parseInt(match[1], 10)
+      const h = parseInt(match[2], 10)
+      if (w * h > maxWidth * maxHeight) {
+        maxWidth = w
+        maxHeight = h
+      }
+    }
+  }
+
+  if (maxWidth && maxHeight) {
+    return { width: maxWidth, height: maxHeight }
+  }
+
+  throw new Error('No RESOLUTION found in HLS manifest')
+}
+
+function isHLSUrl(url) {
+  return /\.m3u8($|\?)/i.test(url)
+}
+
 export default (app) => ({
   mounted() {
     this.target = this.el.dataset.target
@@ -157,7 +189,6 @@ export default (app) => ({
           if (match !== null && match[1] !== undefined) {
             this.source = key
             this.remoteId = match[1]
-            resolve()
             break
           }
         }
@@ -166,6 +197,21 @@ export default (app) => ({
           reject(new Error('VideoURLParser: Unknown video source'))
           return false
         }
+
+        // For file sources, try to extract dimensions
+        if (this.source === 'file') {
+          try {
+            const { width, height } = isHLSUrl(url)
+              ? await getHLSDimensions(url)
+              : await getVideoDimensions(url)
+            this.width = width
+            this.height = height
+          } catch (e) {
+            console.warn('VideoURLParser: Could not get video dimensions', e)
+          }
+        }
+
+        resolve()
       }
     })
   },
