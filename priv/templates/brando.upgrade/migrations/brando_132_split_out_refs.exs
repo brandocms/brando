@@ -29,6 +29,35 @@ defmodule Brando.Migrations.SplitOutRefs do
     create index(:content_refs, [:file_id])
     create index(:content_refs, [:image_id])
 
+    # Clean out invalid refs (entries with null names) before migrating
+    execute """
+    UPDATE content_modules
+    SET refs = (
+      SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb)
+      FROM jsonb_array_elements(refs) AS elem
+      WHERE elem->>'name' IS NOT NULL
+    )
+    WHERE refs IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM jsonb_array_elements(refs) AS elem
+        WHERE elem->>'name' IS NULL
+      )
+    """
+
+    execute """
+    UPDATE content_blocks
+    SET refs = (
+      SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb)
+      FROM jsonb_array_elements(refs) AS elem
+      WHERE elem->>'name' IS NOT NULL
+    )
+    WHERE refs IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM jsonb_array_elements(refs) AS elem
+        WHERE elem->>'name' IS NULL
+      )
+    """
+
     # Migrate data from embedded refs in modules
     # Since refs were embeds_many, they're stored as JSONB in the refs column
     execute """
@@ -46,9 +75,11 @@ defmodule Brando.Migrations.SplitOutRefs do
     FROM content_modules m
     CROSS JOIN LATERAL jsonb_array_elements(m.refs) WITH ORDINALITY AS t(ref_data, ordinality)
     WHERE m.refs IS NOT NULL AND jsonb_array_length(m.refs) > 0
+      AND ref_data->>'name' IS NOT NULL
     """
 
     # Migrate data from embedded refs in blocks
+    # Filter out refs with null names (stale/junk data)
     execute """
     INSERT INTO content_refs (name, description, data, sequence, active, collapsed, block_id, inserted_at, updated_at)
     SELECT
@@ -64,6 +95,7 @@ defmodule Brando.Migrations.SplitOutRefs do
     FROM content_blocks b
     CROSS JOIN LATERAL jsonb_array_elements(b.refs) WITH ORDINALITY AS t(ref_data, ordinality)
     WHERE b.refs IS NOT NULL AND jsonb_array_length(b.refs) > 0
+      AND ref_data->>'name' IS NOT NULL
     """
 
     # Remove the refs column from modules and blocks since they now use has_many
