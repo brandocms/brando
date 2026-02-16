@@ -15,6 +15,7 @@ export default (app) => ({
 
   mounted() {
     this.attachListenersOnUpdate = false
+    this.canvasListenerController = null
     this.multi = this.el.hasAttribute('data-upload-multi')
     this.files = []
     this.configTarget = this.el.hasAttribute('data-upload-config-target')
@@ -81,16 +82,18 @@ export default (app) => ({
   },
 
   attachListeners() {
+    // Abort previous canvas listeners to prevent duplicates
+    if (this.canvasListenerController) {
+      this.canvasListenerController.abort()
+    }
+    this.canvasListenerController = new AbortController()
+    const { signal } = this.canvasListenerController
+
     // Always update the file input reference in case it changed
     this.$fileInput = Dom.find(this.el, '.file-input')
     this.$uploadCanvases = Dom.all(this.el, '.upload-canvas')
 
     this.$uploadCanvases.forEach((uploadCanvas) => {
-      // Skip if listeners already attached to this element
-      if (uploadCanvas.dataset.listenersAttached === 'true') {
-        return
-      }
-
       uploadCanvas.addEventListener('click', (e) => {
         if (e.target.tagName === 'BUTTON') {
           return
@@ -101,17 +104,17 @@ export default (app) => ({
         } else {
           e.preventDefault()
         }
-      })
+      }, { signal })
 
       uploadCanvas.addEventListener('dragenter', () => {
         uploadCanvas.classList.add('dragging')
-      })
+      }, { signal })
       uploadCanvas.addEventListener('dragover', () => {
         uploadCanvas.classList.add('dragging')
-      })
+      }, { signal })
       uploadCanvas.addEventListener('dragleave', () => {
         uploadCanvas.classList.remove('dragging')
-      })
+      }, { signal })
 
       uploadCanvas.addEventListener('drop', async (event) => {
         event.preventDefault()
@@ -130,10 +133,7 @@ export default (app) => ({
             await this.uploadFile(files[i])
           }
         }
-      })
-
-      // Mark this canvas as having listeners attached
-      uploadCanvas.dataset.listenersAttached = 'true'
+      }, { signal })
     })
   },
 
