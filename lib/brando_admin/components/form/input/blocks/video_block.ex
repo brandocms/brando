@@ -110,6 +110,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
      socket
      |> assign(assigns)
      |> assign(:uid, assigns.ref_form[:uid].value)
+     |> assign_new(:initial_override_defaults, fn ->
+       # Capture the initial override field values (from the module's template_video)
+       # so we can restore them when resetting the video
+       block_data
+       |> Map.from_struct()
+       |> Map.take(@video_override_fields)
+     end)
      |> assign_new(:video, fn ->
        # Always get video from ref_form since we only use refs now
        if assigns[:ref_form] do
@@ -477,11 +484,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     target = socket.assigns.target
     ref_name = socket.assigns.ref_name
 
-    # Reset to empty video block data with no video association
-    new_block_data =
-      %Brando.Villain.Blocks.VideoBlock.Data{}
-      |> Map.from_struct()
-      |> Map.take(@video_override_fields)
+    # Reset to the ref's template defaults (captured on first mount)
+    # instead of a blank struct with all-false values
+    new_block_data = socket.assigns.initial_override_defaults
 
     send_update(target, %{
       event: "update_ref_data",
@@ -546,18 +551,37 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     ref_name = socket.assigns.ref_name
     ref_form = socket.assigns.ref_form
 
+    # Get the current block data to preserve override fields
+    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+    current_block_data = Changeset.apply_changes(block_data_cs)
+
+    ref_data =
+      current_block_data
+      |> Map.from_struct()
+      |> Map.take(@video_override_fields)
+
     case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}) do
       {:ok, video} ->
         # Update the ref to point to the selected video
         send_update(target, %{
           event: "update_ref_data",
           ref_name: ref_name,
+          ref_data: ref_data,
           video_id: video_id,
           form: ref_form,
           force_render: true
         })
 
-        {:noreply, assign(socket, :video, video)}
+        video_data = Map.from_struct(video)
+
+        socket =
+          socket
+          |> assign(:video, video)
+          |> assign(:video_data, video_data)
+          |> assign(:type, Map.get(video_data, :type, :file))
+          |> assign(:cover_image, Map.get(video_data, :thumbnail))
+
+        {:noreply, socket}
 
       {:error, _} ->
         {:noreply, socket}
