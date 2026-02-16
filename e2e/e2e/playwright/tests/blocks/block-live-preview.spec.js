@@ -49,6 +49,58 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       await expect(page.locator('.live-preview-wrapper')).not.toBeVisible()
     })
 
+    test('live preview restores after LiveSocket reconnect', async ({ page }) => {
+      // Navigate to Pages
+      await page.goto('/admin')
+      await page.getByRole('link', { name: 'Pages & Sections' }).click()
+      await syncLV(page)
+
+      // Create new page
+      await page.getByRole('link', { name: 'Create page' }).click()
+      await syncLV(page)
+
+      // Fill page basics
+      await page.getByLabel('Title', { exact: true }).fill('Reconnect Test Page')
+      await page.getByLabel('URI').fill('reconnect-test')
+
+      // Add a simple header block
+      await page.getByRole('button', { name: 'Add block' }).click()
+      await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await page.getByRole('button', { name: 'Styled Header' }).click()
+      await syncLV(page)
+
+      // Enable live preview
+      await toggleLivePreview(page)
+      await waitForPreviewReady(page)
+
+      // Verify preview is active
+      const frame = getPreviewFrame(page)
+      await expect(frame.locator('header[b-tpl="styled-header"] h1')).toContainText('Header Text')
+
+      // Disconnect the LiveSocket to simulate a network blip
+      await page.evaluate(() => window.liveSocket.disconnect())
+      await page.waitForTimeout(500)
+
+      // Reconnect the LiveSocket — the reconnect hook restores the preview
+      await page.evaluate(() => window.liveSocket.connect())
+      await syncLV(page)
+
+      // Wait for the preview to be restored by the reconnect hook
+      await waitForPreviewReady(page)
+
+      // Verify the preview iframe is visible after restore
+      await expect(page.locator('.live-preview-wrapper iframe')).toBeVisible()
+
+      // Get a fresh frame reference (iframe was recreated)
+      const restoredFrame = getPreviewFrame(page)
+
+      // Make a change and verify the preview still updates
+      const headerTextarea = page.locator('.header-block textarea')
+      await headerTextarea.fill('After Reconnect')
+      await waitForPreviewUpdate(page)
+      await expect(restoredFrame.locator('header[b-tpl="styled-header"] h1')).toContainText('After Reconnect')
+    })
+
     test('device size buttons work (desktop/tablet/mobile)', async ({ page }) => {
       await page.goto('/admin')
       await page.getByRole('link', { name: 'Pages & Sections' }).click()
