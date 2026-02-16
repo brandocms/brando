@@ -1407,7 +1407,6 @@ defmodule BrandoAdmin.Components.Form do
           live_preview_active?={@live_preview_active?}
           live_preview_cache_key={@live_preview_cache_key}
           live_preview_target={@live_preview_target}
-          change_preview_target={JS.push("change_preview_target", target: @myself)}
           target={@myself}
         />
       </div>
@@ -2975,6 +2974,38 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, socket}
   end
 
+  # restore live preview after reconnect via form recovery
+  def handle_event(
+        "recover_live_preview_state",
+        %{"live_preview" => %{"cache_key" => cache_key}},
+        socket
+      )
+      when cache_key != "" do
+    schema = socket.assigns.schema
+
+    socket =
+      socket
+      |> assign(:live_preview_active?, true)
+      |> assign(:live_preview_cache_key, cache_key)
+      |> assign_entry_fields_demanding_live_preview_rerender(schema)
+      |> assign_entry_fields_demanding_live_preview_reassign(schema)
+      |> push_event("b:live_preview", %{cache_key: cache_key})
+      |> push_event("js-exec", %{to: "#sidebar", attr: "data-js-hide"})
+
+    socket =
+      if socket.assigns.has_blocks? do
+        enable_live_preview_in_blocks(socket)
+      else
+        socket
+      end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("recover_live_preview_state", _params, socket) do
+    {:noreply, socket}
+  end
+
   # close live_preview
   def handle_event("open_live_preview", _, %{assigns: %{live_preview_active?: true}} = socket) do
     socket
@@ -3898,6 +3929,15 @@ defmodule BrandoAdmin.Components.Form do
 
   def live_preview(assigns) do
     ~H"""
+    <form
+      id="live-preview-recovery"
+      phx-change="noop"
+      phx-auto-recover="recover_live_preview_state"
+      phx-target={@target}
+      class="hidden"
+    >
+      <input type="hidden" name="live_preview[cache_key]" value={@live_preview_cache_key} />
+    </form>
     <%= if @live_preview_active? do %>
       <div class="live-preview-wrapper" phx-update="ignore" id="live-preview" phx-hook="Brando.LivePreview">
         <div class="live-preview">
