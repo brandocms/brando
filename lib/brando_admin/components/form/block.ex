@@ -2934,7 +2934,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 <div id={"block-#{@uid}-rich-text-target-wrapper"} class="tiptap-target-wrapper" phx-update="ignore">
                   <div id={"block-#{@uid}-rich-text-target"} class="tiptap-target"></div>
                 </div>
-                <Input.input type={:hidden} field={text_block_data[:text]} class="tiptap-text" phx-debounce={400} />
+                <Input.input type={:hidden} field={text_block_data[:text]} class="tiptap-text" phx-debounce={300} />
               </div>
             </div>
           </div>

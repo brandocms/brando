@@ -677,7 +677,7 @@ defmodule BrandoAdmin.Components.Content.List do
           value=""
           placeholder={gettext("Filter")}
           autocomplete="off"
-          phx-debounce="400"
+          phx-debounce="300"
         />
         <input type="hidden" name="filter" value={@active_filter.key} />
       </.form>
