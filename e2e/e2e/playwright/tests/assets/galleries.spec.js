@@ -4,7 +4,8 @@ import { syncLV } from '../../utils'
 test('lists galleries and edits a gallery', async ({ page }) => {
   await page.goto('/admin')
 
-  // Navigate to galleries via menu
+  // Navigate to galleries via menu (expand Assets submenu first)
+  await page.getByText('Assets').click()
   await page.getByRole('link', { name: 'Galleries' }).click()
   await syncLV(page)
 

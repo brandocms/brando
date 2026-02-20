@@ -51,6 +51,15 @@ export const test = baseTest.extend({
 
     const page = await context.newPage()
 
+    // Hide toast notifications so they don't intercept pointer events in tests
+    await context.addInitScript(() => {
+      const style = document.createElement('style')
+      style.textContent = '.iziToast-wrapper { display: none !important; }'
+      const inject = () => document.head?.appendChild(style.cloneNode(true))
+      if (document.head) inject()
+      else document.addEventListener('DOMContentLoaded', inject)
+    })
+
     // page.request allows us to execute a HTTP call in the actual browser context
     // It's used for setting up fixtures in the database
     // and will also allow the created user to be logged in
