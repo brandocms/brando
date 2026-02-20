@@ -219,6 +219,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     translated_singular = Brando.Blueprint.get_singular(assigns.schema)
 
     has_duplicate_fn? = {:"duplicate_#{singular}", 2} in ctx.__info__(:functions)
+    has_blocks? = assigns.schema.has_trait(Brando.Trait.Blocks)
 
     duplicate_langs? =
       assigns.schema.has_trait(Brando.Trait.Translatable) && has_duplicate_fn? &&
@@ -231,6 +232,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       |> assign(:processed_actions, processed_actions)
       |> assign(:id, "entry-dropdown-#{assigns.listing.name}-#{assigns.entry.id}")
       |> assign(:has_duplicate_fn?, has_duplicate_fn?)
+      |> assign(:has_blocks?, has_blocks?)
       |> assign(:duplicate_langs?, duplicate_langs?)
       |> assign(:translated_singular, translated_singular)
       |> assign(
@@ -276,6 +278,15 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           event="duplicate_entry_to_language"
         >
           {gettext("Duplicate to")} [{String.upcase(lang)}]
+        </.action_button>
+        <.action_button
+          :if={@has_blocks?}
+          id={"action_#{@listing.name}_rerender_entry_#{@entry.id}"}
+          entry_id={@entry.id}
+          language={@language}
+          event="rerender_entry"
+        >
+          {gettext("Re-render")}
         </.action_button>
       <% end %>
       <.action_button

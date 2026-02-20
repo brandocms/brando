@@ -231,6 +231,17 @@ defmodule BrandoAdmin.LiveView.Listing do
             {:halt, socket}
         end
 
+      "rerender_entry", %{"id" => entry_id}, socket ->
+        case Brando.Villain.render_entry(schema, entry_id) do
+          {:ok, _entry} ->
+            send(self(), {:toast, gettext("Entry re-rendered")})
+
+          {:error, _} ->
+            send(self(), {:toast, gettext("Error re-rendering entry")})
+        end
+
+        {:halt, socket}
+
       _, _, socket ->
         {:cont, socket}
     end)
