@@ -13,19 +13,32 @@ const STORAGE_PREFIX = 'brando:block-recovery:'
  * Phoenix's parameter parsing convention.
  *
  * "entry_block[block][uid]" = "abc" → { entry_block: { block: { uid: "abc" } } }
+ * "entry_block[extensions][]" = "italic" → { entry_block: { extensions: ["italic"] } }
  */
 function formDataToParams(form) {
   const result = {}
   new FormData(form).forEach((value, key) => {
     const parts = key.replace(/\]/g, '').split('[')
     let current = result
+
     for (let i = 0; i < parts.length - 1; i++) {
-      if (!(parts[i] in current)) {
-        current[parts[i]] = {}
+      const part = parts[i]
+      if (part === '') continue
+
+      if (!(part in current)) {
+        const nextPart = parts[i + 1]
+        // name[] syntax — collect values into an array
+        current[part] = (nextPart === '' && i === parts.length - 2) ? [] : {}
       }
-      current = current[parts[i]]
+      current = current[part]
     }
-    current[parts[parts.length - 1]] = value
+
+    const lastPart = parts[parts.length - 1]
+    if (lastPart === '' && Array.isArray(current)) {
+      current.push(value)
+    } else if (lastPart !== '') {
+      current[lastPart] = value
+    }
   })
   return result
 }
