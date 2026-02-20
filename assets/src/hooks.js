@@ -1,5 +1,6 @@
 // hooks and callbacks
 import AdminHook from './hooks/Admin'
+import BlockFieldHook from './hooks/BlockField'
 import BlockHook from './hooks/Block'
 import CodeEditorHook from './hooks/CodeEditor'
 import ColorPickerHook from './hooks/ColorPicker'
@@ -42,6 +43,7 @@ import VideoURLParserHook from './hooks/VideoURLParser'
 export default (app) => {
   return {
     'Brando.Admin': AdminHook(app),
+    'Brando.BlockField': BlockFieldHook(app),
     'Brando.Block': BlockHook(app),
     'Brando.CodeEditor': CodeEditorHook(app),
     'Brando.ColorPicker': ColorPickerHook(app),

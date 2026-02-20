@@ -9,10 +9,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   alias Ecto.Changeset
 
   def mount(socket) do
-    socket
-    |> assign(:entry_blocks_forms, [])
-    |> assign(:first_run, true)
-    |> then(&{:ok, &1})
+    {:ok, socket}
   end
 
   # duplicate block (that is an entry block)
@@ -469,26 +466,32 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   def update(assigns, socket) do
+    socket
+    |> assign(assigns)
+    |> initialize_blocks(assigns)
+    |> assign_templates()
+    |> assign_module_set()
+    |> reset_position_response_tracker()
+    |> then(&{:ok, &1})
+  end
+
+  defp initialize_blocks(%{assigns: %{blocks_initialized: true}} = socket, _assigns), do: socket
+
+  defp initialize_blocks(socket, assigns) do
     block_module = assigns.block_module
     user_id = assigns.current_user.id
     entry_blocks = assigns.entry_blocks || []
     entry_blocks_forms = Enum.map(entry_blocks, &to_change_form(block_module, &1, %{}, user_id))
+    block_list = Enum.map(entry_blocks, & &1.block.uid)
 
     socket
-    |> assign(assigns)
-    |> assign_new(:block_list, fn -> Enum.map(entry_blocks, & &1.block.uid) end)
-    |> assign_new(:block_count, fn %{block_list: block_list} -> Enum.count(block_list) end)
-    |> assign_new(:root_changesets, fn -> Enum.map(entry_blocks, &{&1.block.uid, nil}) end)
-    |> assign_new(:module_picker_id, fn ->
-      "#block-field-#{assigns.block_field}-module-picker"
-    end)
-    |> maybe_assign_forms(entry_blocks_forms)
-    |> assign_templates()
-    |> assign_module_set()
-    |> reset_position_response_tracker()
-    |> maybe_sequence_blocks()
-    |> assign(:first_run, false)
-    |> then(&{:ok, &1})
+    |> assign(:entry_blocks_forms, entry_blocks_forms)
+    |> assign(:block_list, block_list)
+    |> assign(:block_count, length(block_list))
+    |> assign(:root_changesets, Enum.map(entry_blocks, &{&1.block.uid, nil}))
+    |> assign(:module_picker_id, "#block-field-#{assigns.block_field}-module-picker")
+    |> send_block_entry_position_update(block_list)
+    |> assign(:blocks_initialized, true)
   end
 
   defp reload_all_blocks(socket) do
@@ -496,28 +499,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     block_module = socket.assigns.block_module
     entry_blocks = socket.assigns.entry_blocks || []
     entry_blocks_forms = Enum.map(entry_blocks, &to_change_form(block_module, &1, %{}, user_id))
+    block_list = Enum.map(entry_blocks, & &1.block.uid)
 
     socket
-    |> assign_new(:block_list, fn -> Enum.map(entry_blocks, & &1.block.uid) end)
-    |> assign_new(:block_count, fn %{block_list: block_list} -> Enum.count(block_list) end)
-    |> assign_new(:root_changesets, fn -> Enum.map(entry_blocks, &{&1.block.uid, nil}) end)
     |> assign(:entry_blocks_forms, entry_blocks_forms)
+    |> assign(:block_list, block_list)
+    |> assign(:block_count, length(block_list))
+    |> assign(:root_changesets, Enum.map(entry_blocks, &{&1.block.uid, nil}))
   end
-
-  defp maybe_sequence_blocks(%{assigns: %{first_run: true}} = socket) do
-    block_list = socket.assigns.block_list
-    send_block_entry_position_update(socket, block_list)
-  end
-
-  defp maybe_sequence_blocks(socket) do
-    socket
-  end
-
-  defp maybe_assign_forms(%{assigns: %{first_run: true}} = socket, entry_blocks_forms) do
-    assign(socket, :entry_blocks_forms, entry_blocks_forms)
-  end
-
-  defp maybe_assign_forms(socket, _), do: socket
 
   defp get_form_block_uid(form) do
     block_cs = Changeset.get_assoc(form.source, :block)
@@ -606,6 +595,114 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:noreply, socket}
   end
 
+  @doc """
+  Recover blocks after a WebSocket reconnect where the LV process died.
+
+  The JS BlockField hook captures all block form data to sessionStorage on
+  disconnect. On reconnect, it compares stored UIDs against what's currently
+  rendered and sends any missing blocks here for reconstruction.
+
+  The recovered form params are run through the normal changeset pipeline
+  (`block_module.changeset`), so all form field values — vars, refs,
+  table_rows — are properly cast and restored, not just the block structure.
+  """
+  def handle_event("recover_blocks", params, socket) do
+    %{"rootUids" => root_uids, "missingUids" => missing_uids, "forms" => forms} = params
+
+    if missing_uids == [] do
+      {:noreply, socket}
+    else
+      block_module = socket.assigns.block_module
+      user_id = socket.assigns.current_user.id
+      entry_id = socket.assigns.entry.id
+      missing_set = MapSet.new(missing_uids)
+
+      # Build forms for missing blocks by casting recovered params through
+      # the normal changeset pipeline — this preserves all form field values
+      recovered_forms =
+        for uid <- missing_uids, reduce: %{} do
+          acc ->
+            form_id = "entry_block_form-#{uid}"
+            form_data = forms[form_id]
+
+            if form_data do
+              entry_block_params = form_data["entry_block"] || %{}
+
+              # Create base struct with an empty block so cast_assoc has
+              # a loaded association to work with (not NotLoaded)
+              base_block = %Brando.Content.Block{
+                vars: [],
+                refs: [],
+                table_rows: [],
+                children: [],
+                block_identifiers: []
+              }
+
+              base_struct = block_module |> struct(%{}) |> Map.put(:block, base_block)
+
+              # Include entry_id in params (no hidden field for it in the form)
+              params_with_entry = Map.put(entry_block_params, "entry_id", to_string(entry_id))
+
+              entry_block_cs =
+                block_module.changeset(base_struct, params_with_entry, user_id)
+                |> Map.put(:action, :insert)
+
+              block_cs = Changeset.get_assoc(entry_block_cs, :block)
+              recovered_uid = Changeset.get_field(block_cs, :uid)
+
+              entry_block_form =
+                to_form(entry_block_cs,
+                  as: "entry_block",
+                  id: "entry_block_form-#{recovered_uid}"
+                )
+
+              Map.put(acc, recovered_uid, entry_block_form)
+            else
+              acc
+            end
+        end
+
+      if recovered_forms == %{} do
+        {:noreply, socket}
+      else
+        # Rebuild the full ordered list: existing forms + recovered forms
+        # in the original root_uids order
+        current_forms_by_uid =
+          Map.new(socket.assigns.entry_blocks_forms, &{get_form_block_uid(&1), &1})
+
+        {merged_forms, merged_uids} =
+          root_uids
+          |> Enum.with_index()
+          |> Enum.reduce({[], []}, fn {uid, sequence}, {forms_acc, uids_acc} ->
+            form =
+              if MapSet.member?(missing_set, uid) do
+                recovered_forms[uid]
+              else
+                current_forms_by_uid[uid]
+              end
+
+            if form do
+              form =
+                to_change_form(block_module, form.source, %{sequence: sequence}, user_id)
+
+              {forms_acc ++ [form], uids_acc ++ [uid]}
+            else
+              {forms_acc, uids_acc}
+            end
+          end)
+
+        socket
+        |> assign(:entry_blocks_forms, merged_forms)
+        |> assign(:block_list, merged_uids)
+        |> assign(:block_count, length(merged_uids))
+        |> assign(:root_changesets, Enum.map(merged_uids, &{&1, nil}))
+        |> reset_position_response_tracker()
+        |> send_block_entry_position_update(merged_uids)
+        |> then(&{:noreply, &1})
+      end
+    end
+  end
+
   def reset_position_response_tracker(socket) do
     block_list = socket.assigns.block_list
     assign(socket, :position_response_tracker, Enum.map(block_list, &{&1, false}))
@@ -621,7 +718,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def render(assigns) do
     ~H"""
-    <div class="blocks-wrapper" data-block-field={"#{@form_name}[#{@block_field}]"}>
+    <div id={"#{@id}-wrapper"} phx-hook="Brando.BlockField" class="blocks-wrapper" data-block-field={"#{@form_name}[#{@block_field}]"}>
       <div class="label-wrapper ">
         <label class="control-label" data-field-presence={"#{@form_name}[#{@block_field}]"}>
           <span>{gettext("Blocks")}</span>

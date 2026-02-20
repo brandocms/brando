@@ -1414,7 +1414,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     assign(socket, :available_identifiers, available_identifiers)
   end
 
-  # we don't touch the child form stream if the block is already initialized
+  # we don't touch children_forms if the block is already initialized
   def maybe_assign_children(%{assigns: %{block_initialized: true}} = socket), do: socket
 
   def maybe_assign_children(%{assigns: %{children: []}} = socket) do
