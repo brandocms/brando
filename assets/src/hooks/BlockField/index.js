@@ -63,10 +63,8 @@ export default app => ({
       forms[form.id] = formDataToParams(form)
     })
 
-    sessionStorage.setItem(
-      STORAGE_PREFIX + this.el.id,
-      JSON.stringify({ rootUids, forms })
-    )
+    const key = STORAGE_PREFIX + this.el.id
+    sessionStorage.setItem(key, JSON.stringify({ rootUids, forms }))
   },
 
   /**
@@ -81,10 +79,10 @@ export default app => ({
     const stored = sessionStorage.getItem(key)
     if (!stored) return
 
-    sessionStorage.removeItem(key)
-
     const sortableEl = this.el.querySelector('[data-sortable-id="sortable-blocks"]')
     if (!sortableEl) return
+
+    sessionStorage.removeItem(key)
 
     try {
       const data = JSON.parse(stored)
@@ -99,7 +97,6 @@ export default app => ({
       // Filter forms to only include missing blocks' data
       const missingForms = {}
       for (const [formId, formData] of Object.entries(data.forms)) {
-        // Include root block forms for missing UIDs
         for (const uid of missingUids) {
           if (formId === `entry_block_form-${uid}`) {
             missingForms[formId] = formData
