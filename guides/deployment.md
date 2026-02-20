@@ -17,6 +17,7 @@ configuring web servers, database operations, and blue/green deployments.
 ```bash
 # 1. Initialize config
 florist init
+florist local config:generate
 
 # 2. Set up the server (one-time)
 florist prod bootstrap
