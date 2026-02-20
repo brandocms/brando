@@ -10,13 +10,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def mount(socket) do
     socket
-    |> stream_configure(:entry_blocks_forms,
-      dom_id: fn %{source: changeset} ->
-        block_cs = Changeset.get_assoc(changeset, :block)
-        uid = Changeset.get_field(block_cs, :uid)
-        "base-#{uid}"
-      end
-    )
+    |> assign(:entry_blocks_forms, [])
     |> assign(:first_run, true)
     |> then(&{:ok, &1})
   end
@@ -80,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     updated_root_changesets = insert_root_changeset(root_changesets, new_uid, new_sequence)
 
     socket
-    |> stream_insert(:entry_blocks_forms, entry_block_form, at: new_sequence)
+    |> update(:entry_blocks_forms, &List.insert_at(&1, new_sequence, entry_block_form))
     |> assign(:block_list, new_block_list)
     |> assign(:root_changesets, updated_root_changesets)
     |> update(:block_count, &(&1 + 1))
@@ -163,7 +157,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       updated_root_changesets = insert_root_changeset(root_changesets, new_uid, new_sequence)
 
       socket
-      |> stream_insert(:entry_blocks_forms, entry_block_form, at: new_sequence)
+      |> update(:entry_blocks_forms, &List.insert_at(&1, new_sequence, entry_block_form))
       |> assign(:block_list, new_block_list)
       |> assign(:root_changesets, updated_root_changesets)
       |> update(:block_count, &(&1 + 1))
@@ -182,7 +176,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> assign(:root_changesets, updated_root_changesets)
     |> assign(:block_list, new_block_list)
-    |> stream_delete_by_dom_id(:entry_blocks_forms, "base-#{uid}")
+    |> update(:entry_blocks_forms, fn forms ->
+      Enum.reject(forms, &(get_form_block_uid(&1) == uid))
+    end)
     |> update(:block_count, &(&1 - 1))
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
@@ -200,11 +196,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         socket.assigns.current_user.id
       )
 
-    {:ok, stream_insert(socket, :entry_blocks_forms, entry_block_form)}
+    uid = get_form_block_uid(entry_block_form)
+    updated = replace_form_by_uid(socket.assigns.entry_blocks_forms, uid, entry_block_form)
+    {:ok, assign(socket, :entry_blocks_forms, updated)}
   end
 
   def update(%{event: "update_block", level: _level, form: form}, socket) do
-    {:ok, stream_insert(socket, :entry_blocks_forms, form)}
+    uid = get_form_block_uid(form)
+    updated = replace_form_by_uid(socket.assigns.entry_blocks_forms, uid, form)
+    {:ok, assign(socket, :entry_blocks_forms, updated)}
   end
 
   def update(%{event: "provide_root_block", changeset: changeset, uid: uid, tag: tag}, socket) do
@@ -264,7 +264,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     selector = "[data-block-uid=\"#{uid}\"]"
 
     socket
-    |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
+    |> update(:entry_blocks_forms, &List.insert_at(&1, sequence, entry_block_form))
     |> assign(:block_list, new_block_list)
     |> assign(:root_changesets, updated_root_changesets)
     |> update(:block_count, &(&1 + 1))
@@ -306,7 +306,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
 
     socket
-    |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
+    |> update(:entry_blocks_forms, &List.insert_at(&1, sequence, entry_block_form))
     |> assign(:block_list, new_block_list)
     |> update(:block_count, &(&1 + 1))
     |> assign(:root_changesets, updated_root_changesets)
@@ -347,7 +347,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
 
     socket
-    |> stream_insert(:entry_blocks_forms, entry_block_form, at: sequence)
+    |> update(:entry_blocks_forms, &List.insert_at(&1, sequence, entry_block_form))
     |> assign(:block_list, new_block_list)
     |> assign(:root_changesets, updated_root_changesets)
     |> update(:block_count, &(&1 + 1))
@@ -482,7 +482,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign_new(:module_picker_id, fn ->
       "#block-field-#{assigns.block_field}-module-picker"
     end)
-    |> maybe_stream(entry_blocks_forms)
+    |> maybe_assign_forms(entry_blocks_forms)
     |> assign_templates()
     |> assign_module_set()
     |> reset_position_response_tracker()
@@ -492,7 +492,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   defp reload_all_blocks(socket) do
-    # reset the stream
     user_id = socket.assigns.current_user.id
     block_module = socket.assigns.block_module
     entry_blocks = socket.assigns.entry_blocks || []
@@ -502,7 +501,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign_new(:block_list, fn -> Enum.map(entry_blocks, & &1.block.uid) end)
     |> assign_new(:block_count, fn %{block_list: block_list} -> Enum.count(block_list) end)
     |> assign_new(:root_changesets, fn -> Enum.map(entry_blocks, &{&1.block.uid, nil}) end)
-    |> stream(:entry_blocks_forms, entry_blocks_forms, reset: true)
+    |> assign(:entry_blocks_forms, entry_blocks_forms)
   end
 
   defp maybe_sequence_blocks(%{assigns: %{first_run: true}} = socket) do
@@ -514,12 +513,21 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
   end
 
-  def maybe_stream(%{assigns: %{first_run: true}} = socket, entry_blocks_forms) do
-    stream(socket, :entry_blocks_forms, entry_blocks_forms)
+  defp maybe_assign_forms(%{assigns: %{first_run: true}} = socket, entry_blocks_forms) do
+    assign(socket, :entry_blocks_forms, entry_blocks_forms)
   end
 
-  def maybe_stream(socket, _) do
-    socket
+  defp maybe_assign_forms(socket, _), do: socket
+
+  defp get_form_block_uid(form) do
+    block_cs = Changeset.get_assoc(form.source, :block)
+    Changeset.get_field(block_cs, :uid)
+  end
+
+  defp replace_form_by_uid(forms, target_uid, new_form) do
+    Enum.map(forms, fn form ->
+      if get_form_block_uid(form) == target_uid, do: new_form, else: form
+    end)
   end
 
   def update_root_changeset(root_changesets, uid, new_changeset) do
@@ -564,7 +572,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         end)
       end)
 
+    # reorder entry_blocks_forms to match new block_list order
+    new_forms =
+      Enum.map(new_block_list, fn uid ->
+        Enum.find(socket.assigns.entry_blocks_forms, &(get_form_block_uid(&1) == uid))
+      end)
+
     socket
+    |> assign(:entry_blocks_forms, new_forms)
     |> assign(:block_list, new_block_list)
     |> assign(:root_changesets, new_root_changesets)
     |> reset_position_response_tracker()
@@ -640,15 +655,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
         <div
           id={"block-field-#{@block_field}"}
-          phx-update="stream"
           phx-hook="Brando.SortableBlocks"
           data-sortable-id="sortable-blocks"
           data-sortable-handle=".sort-handle"
           data-sortable-selector=".block"
         >
-          <%= for {id, entry_block_form} <- @streams.entry_blocks_forms do %>
+          <%= for entry_block_form <- @entry_blocks_forms do %>
             <.inputs_for :let={block} field={entry_block_form[:block]} skip_hidden>
-              <div id={id} data-id={entry_block_form[:id].value} data-uid={block[:uid].value} class="entry-block draggable">
+              <div id={"base-#{block[:uid].value}"} data-id={entry_block_form[:id].value} data-uid={block[:uid].value} class="entry-block draggable">
                 <.live_component
                   module={Block}
                   id={"block-#{block[:uid].value}"}

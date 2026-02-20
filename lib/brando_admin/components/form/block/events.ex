@@ -184,7 +184,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
     socket
     |> assign(:form, new_form)
-    |> Block.send_form_to_parent_stream()
+    |> Block.send_form_to_parent()
     |> Block.render_module()
     |> Block.maybe_update_live_preview_block()
     |> then(&{:halt, &1})
@@ -619,7 +619,16 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
         end)
       end)
 
+    # reorder children_forms to match new block_list order
+    new_forms =
+      Enum.map(new_block_list, fn block_uid ->
+        Enum.find(socket.assigns.children_forms, fn form ->
+          Changeset.get_field(form.source, :uid) == block_uid
+        end)
+      end)
+
     socket
+    |> assign(:children_forms, new_forms)
     |> assign(:block_list, new_block_list)
     |> assign(:changesets, new_changesets)
     |> Block.reset_position_response_tracker()
@@ -714,7 +723,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     socket
     |> assign(:form, updated_form)
     |> assign(:form_has_changes, updated_form.source.changes !== %{})
-    |> Block.send_form_to_parent_stream()
+    |> Block.send_form_to_parent()
     |> Block.maybe_update_liquex_block_var(params_target, params)
     |> Block.maybe_update_live_preview_block()
     |> then(&{:halt, &1})
@@ -820,7 +829,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     |> Block.maybe_update_container(params_target)
     |> Block.maybe_update_fragment(params_target)
     |> Block.maybe_update_live_preview_block()
-    |> Block.send_form_to_parent_stream()
+    |> Block.send_form_to_parent()
     |> then(&{:halt, &1})
   end
 

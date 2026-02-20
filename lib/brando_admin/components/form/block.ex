@@ -24,6 +24,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:entry_template, nil)
     |> assign(:initial_render, false)
     |> assign(:dom_id, nil)
+    |> assign(:children_forms, [])
     |> assign(:position_response_tracker, [])
     |> assign(:source, nil)
     |> assign(:live_preview_active?, false)
@@ -80,7 +81,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     selector = "[data-block-uid=\"#{new_uid}\"]"
 
     socket
-    |> stream_insert(:children_forms, block_form, at: new_sequence)
+    |> update(:children_forms, &List.insert_at(&1, new_sequence, block_form))
     |> assign(:has_children?, true)
     |> assign(:block_list, new_block_list)
     |> assign(:changesets, updated_changesets)
@@ -154,7 +155,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       selector = "[data-block-uid=\"#{new_uid}\"]"
 
       socket
-      |> stream_insert(:children_forms, block_form, at: sequence)
+      |> update(:children_forms, &List.insert_at(&1, sequence, block_form))
       |> assign(:has_children?, true)
       |> assign(:block_list, new_block_list)
       |> assign(:changesets, updated_changesets)
@@ -332,7 +333,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
-  def update(%{event: "delete_block", uid: uid, dom_id: dom_id}, socket) do
+  def update(%{event: "delete_block", uid: uid, dom_id: _dom_id}, socket) do
     changesets = socket.assigns.changesets
     block_list = socket.assigns.block_list
     updated_changesets = delete_child_changeset(changesets, uid)
@@ -373,7 +374,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:block_list, new_block_list)
     |> assign(:has_children?, has_children?)
     |> assign(:form, updated_form)
-    |> stream_delete_by_dom_id(:children_forms, dom_id)
+    |> update(:children_forms, fn forms ->
+      Enum.reject(forms, &(Changeset.get_field(&1.source, :uid) == uid))
+    end)
     |> update(:block_count, &(&1 - 1))
     |> reset_position_response_tracker()
     |> send_child_position_update(new_block_list)
@@ -613,7 +616,14 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def update(%{event: "update_block", form: form}, socket) do
-    {:ok, stream_insert(socket, :children_forms, form)}
+    uid = Changeset.get_field(form.source, :uid)
+
+    updated =
+      Enum.map(socket.assigns.children_forms, fn child_form ->
+        if Changeset.get_field(child_form.source, :uid) == uid, do: form, else: child_form
+      end)
+
+    {:ok, assign(socket, :children_forms, updated)}
   end
 
   def update(%{event: "insert_block", sequence: sequence, module_id: module_id, type: type}, socket) do
@@ -642,7 +652,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     selector = "[data-block-uid=\"#{uid}\"]"
 
     socket
-    |> stream_insert(:children_forms, block_form, at: sequence)
+    |> update(:children_forms, &List.insert_at(&1, sequence, block_form))
     |> assign(:has_children?, true)
     |> assign(:block_list, updated_block_list)
     |> assign(:changesets, updated_changesets)
@@ -709,7 +719,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> assign(:form, new_form)
-    # |> send_form_to_parent_stream()
+    # |> send_form_to_parent()
     |> maybe_update_live_preview_block()
     |> then(&{:ok, &1})
   end
@@ -1412,7 +1422,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:block_list, fn -> [] end)
     |> assign_new(:changesets, fn -> [] end)
     |> assign_new(:block_count, fn -> 0 end)
-    |> stream(:children_forms, [])
+    |> assign(:children_forms, [])
   end
 
   def maybe_assign_children(%{assigns: %{type: :container, children: children}} = socket) do
@@ -1425,7 +1435,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       )
 
     socket
-    |> stream(:children_forms, children_forms)
+    |> assign(:children_forms, children_forms)
     |> assign_new(:block_count, fn -> Enum.count(children) end)
     |> assign_new(:changesets, fn -> Enum.map(children, &{extract_uid(&1), nil}) end)
     |> assign_new(:block_list, fn -> Enum.map(children, &extract_uid(&1)) end)
@@ -1441,7 +1451,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       )
 
     socket
-    |> stream(:children_forms, children_forms)
+    |> assign(:children_forms, children_forms)
     |> assign_new(:block_count, fn -> Enum.count(children) end)
     |> assign_new(:changesets, fn -> Enum.map(children, &{extract_uid(&1), nil}) end)
     |> assign_new(:block_list, fn -> Enum.map(children, &extract_uid(&1)) end)
@@ -1544,15 +1554,14 @@ defmodule BrandoAdmin.Components.Form.Block do
           :if={@has_children?}
           id={"#{@id}-children"}
           class="block-children"
-          phx-update="stream"
           phx-hook="Brando.SortableBlocks"
           data-sortable-id={"sortable-blocks-multi-#{@uid}"}
           data-sortable-handle=".sort-handle"
           data-sortable-selector=".block"
         >
           <div
-            :for={{id, child_block_form} <- @streams.children_forms}
-            id={id}
+            :for={child_block_form <- @children_forms}
+            id={"child-#{child_block_form[:uid].value}"}
             data-id={child_block_form.data.id}
             data-uid={child_block_form[:uid].value}
             data-parent_id={child_block_form[:parent_id].value}
@@ -1561,7 +1570,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             <.live_component
               module={__MODULE__}
               id={"#{@id}-child-#{child_block_form[:uid].value}"}
-              dom_id={id}
+              dom_id={"child-#{child_block_form[:uid].value}"}
               multi={child_block_form[:multi].value}
               block_module={@block_module}
               block_field={@block_field}
@@ -1678,15 +1687,14 @@ defmodule BrandoAdmin.Components.Form.Block do
           :if={@has_children?}
           id={"#{@id}-children"}
           class="block-children"
-          phx-update="stream"
           phx-hook="Brando.SortableBlocks"
           data-sortable-id="sortable-blocks"
           data-sortable-handle=".sort-handle"
           data-sortable-selector=".block"
         >
           <div
-            :for={{id, child_block_form} <- @streams.children_forms}
-            id={id}
+            :for={child_block_form <- @children_forms}
+            id={"child-#{child_block_form[:uid].value}"}
             data-id={child_block_form[:id].value}
             data-uid={child_block_form[:uid].value}
             data-parent_id={child_block_form[:parent_id].value}
@@ -1696,7 +1704,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             <.live_component
               module={__MODULE__}
               id={"#{@id}-child-#{child_block_form[:uid].value}"}
-              dom_id={id}
+              dom_id={"child-#{child_block_form[:uid].value}"}
               block_module={@block_module}
               block_field={@block_field}
               children={child_block_form[:children].value}
@@ -3486,7 +3494,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     changeset
   end
 
-  def send_form_to_parent_stream(socket) do
+  def send_form_to_parent(socket) do
     parent_cid = socket.assigns.parent_cid
     level = socket.assigns.level
     form = socket.assigns.form
