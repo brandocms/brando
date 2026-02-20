@@ -1,5 +1,6 @@
 #!/bin/zsh
 set -e
+source .envrc
 
 # Default test command
 TEST_COMMAND="test"

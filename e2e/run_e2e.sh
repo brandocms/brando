@@ -1,5 +1,6 @@
 #!/bin/zsh
 set -e
+source .envrc
 
 # Check if database exists, create it if not, then ensure it's up to date
 MIX_ENV=test mix do ecto.create, ecto.migrate
