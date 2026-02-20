@@ -83,7 +83,7 @@ defmodule Brando.LivePreview do
             template_css_classes: nil,
             assigns: []
 
-  def render(schema_module, entry, cache_key) do
+  def render(schema_module, entry, cache_key, render_opts \\ []) do
     opts = Brando.LivePreview.get_target_config(schema_module)
     language = Map.get(entry, :language, Brando.config(:default_language))
     processed_assigns = process_assigns(opts.assigns, entry, language, cache_key)
@@ -154,6 +154,7 @@ defmodule Brando.LivePreview do
       |> Brando.router().browser([])
       |> Brando.Plug.HTML.put_section(section)
       |> Brando.Plug.HTML.put_css_classes(css_classes)
+      |> maybe_put_meta(render_opts, schema_module, entry)
 
     render_assigns =
       (Map.to_list(conn.assigns) ++
@@ -190,6 +191,19 @@ defmodule Brando.LivePreview do
 
   defp maybe_mutate(entry, nil), do: entry
   defp maybe_mutate(entry, mutate_fn), do: mutate_fn.(entry)
+
+  defp maybe_put_meta(conn, render_opts, schema_module, entry) do
+    if Keyword.get(render_opts, :include_meta, false) do
+      conn = Brando.Plug.HTML.put_meta(conn, schema_module, entry)
+
+      case List.keyfind(conn.private[:brando_meta] || [], "title", 0) do
+        {"title", title} -> Brando.Plug.HTML.put_title(conn, title)
+        nil -> conn
+      end
+    else
+      conn
+    end
+  end
 
   defp process_assigns(assigns, entry, language, cache_key) do
     Enum.map(assigns, fn
@@ -365,7 +379,7 @@ defmodule Brando.LivePreview do
 
     html =
       schema_module
-      |> render(entry_struct, cache_key)
+      |> render(entry_struct, cache_key, include_meta: true)
       |> Utils.term_to_binary()
 
     preview_key = Utils.random_string(12)

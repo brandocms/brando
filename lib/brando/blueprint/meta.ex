@@ -25,21 +25,33 @@ defmodule Brando.Blueprint.Meta do
   """
 
   def extract_meta(module, data) do
-    meta_data =
-      module
-      |> Spark.Dsl.Extension.get_entities(:meta_schemas)
-      |> List.first()
+    case module
+         |> Spark.Dsl.Extension.get_entities(:meta_schemas)
+         |> List.first() do
+      nil ->
+        []
 
-    fields = meta_data.fields
+      meta_data ->
+        Enum.reduce(meta_data.fields, [], fn
+          %{targets: targets, value_fn: mutator}, acc ->
+            targets = (is_list(targets) && targets) || List.wrap(targets)
 
-    Enum.reduce(fields, [], fn
-      %{targets: targets, value_fn: mutator}, acc ->
-        targets = (is_list(targets) && targets) || List.wrap(targets)
-        result = mutator.(data)
+            case safe_apply(mutator, data) do
+              nil ->
+                acc
 
-        Enum.reduce(targets, acc, fn target, acc ->
-          (result && acc ++ [{target, result}]) || acc
+              result ->
+                Enum.reduce(targets, acc, fn target, acc ->
+                  acc ++ [{target, result}]
+                end)
+            end
         end)
-    end)
+    end
+  end
+
+  defp safe_apply(fun, data) do
+    fun.(data)
+  rescue
+    KeyError -> nil
   end
 end
