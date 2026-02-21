@@ -7,6 +7,7 @@
 - Run specific test: `mix test path/to/test_file.exs:line_number`
 - Run end to end tests: `cd e2e && ./test_e2e.sh --reset` (user will ask Claude to run these)
 - Start e2e project server (for use with MCP): `cd e2e && ./run_e2e.sh` - the server starts on port 4444
+- E2E login credentials: email `admin@brandocms.com`, password `brandocms`
 - E2E test workflow:
   - **CRITICAL**: Always `source .envrc` in the `e2e/` folder before running any e2e commands
   - **If JS/CSS changed**: Rebuild assets first: `cd e2e/assets/backend && pnpm build`
