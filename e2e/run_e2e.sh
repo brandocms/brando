@@ -17,9 +17,9 @@ fi
 
 # build static assets
 echo "Building static assets [backend]"
-cd assets/backend && yarn install && yarn build && cd ../../
+cd assets/backend && pnpm install && pnpm build && cd ../../
 echo "Building static assets [frontend]"
-cd assets/frontend && yarn install && yarn build && cd ../../
+cd assets/frontend && pnpm install && pnpm build && cd ../../
 
 echo "Starting E2E project server"
 MIX_ENV=test PORT=4444 iex -S mix phx.server

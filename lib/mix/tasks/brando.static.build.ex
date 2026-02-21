@@ -14,10 +14,10 @@ defmodule Mix.Tasks.Brando.Static.Build do
     end
 
     Mix.shell().info("==> Build backend assets")
-    System.cmd("sh", ["-c", "cd assets/backend; yarn build"], opts)
+    System.cmd("sh", ["-c", "cd assets/backend; pnpm build"], opts)
 
     Mix.shell().info("==> Build frontend assets")
-    System.cmd("sh", ["-c", "cd assets/frontend; yarn build"], opts)
+    System.cmd("sh", ["-c", "cd assets/frontend; pnpm build"], opts)
 
     Mix.shell().info("=> Digesting assets")
     Mix.Task.run("phx.digest")

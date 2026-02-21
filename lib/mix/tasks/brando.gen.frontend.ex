@@ -32,7 +32,6 @@ defmodule Mix.Tasks.Brando.Gen.Frontend do
       {:copy, "assets/frontend/europa.config.cjs", "assets/frontend/europa.config.cjs"},
       {:copy, "assets/frontend/vite.config.js", "assets/frontend/vite.config.js"},
       {:copy, "assets/frontend/postcss.config.cjs", "assets/frontend/postcss.config.cjs"},
-      {:copy, "assets/frontend/yarn.lock", "assets/frontend/yarn.lock"},
       {:eex, "assets/frontend/package.json", "assets/frontend/package.json"},
 
       # Frontend static

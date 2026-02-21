@@ -70,14 +70,20 @@ export const test = baseTest.extend({
     //   }
     // })
 
-    await use(page)
-
-    await fetch('http://localhost:4444/sandbox', {
-      method: 'DELETE',
-      headers: {
-        'user-agent': userAgentString,
-      },
-    })
+    try {
+      await use(page)
+    } finally {
+      // Ensure sandbox is always cleaned up, even if the test fails.
+      // Without this, failed tests leak sandbox connections, causing
+      // cascading sandbox errors in subsequent tests.
+      await fetch('http://localhost:4444/sandbox', {
+        method: 'DELETE',
+        headers: {
+          'user-agent': userAgentString,
+        },
+      })
+      await context.close()
+    }
   },
 })
 

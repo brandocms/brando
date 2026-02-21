@@ -9,11 +9,11 @@
 - Start e2e project server (for use with MCP): `cd e2e && ./run_e2e.sh` - the server starts on port 4444
 - E2E test workflow:
   - **CRITICAL**: Always `source .envrc` in the `e2e/` folder before running any e2e commands
-  - **If JS/CSS changed**: Rebuild assets first: `cd e2e/assets/backend && yarn build`
+  - **If JS/CSS changed**: Rebuild assets first: `cd e2e/assets/backend && pnpm build`
   - **Full suite with reset**: `cd e2e && source .envrc && ./test_e2e.sh --reset`
   - **Single test with reset**: `cd e2e && source .envrc && ./test_e2e.sh --reset tests/path/to/test.spec.js`
   - **When troubleshooting/fixing failing tests**: Always run only the specific failing test, not the full suite. Use the single test command above.
-  - **Individual tests** (server already running): `cd e2e/e2e/playwright && yarn playwright test tests/path/to/test.spec.js`
+  - **Individual tests** (server already running): `cd e2e/e2e/playwright && pnpm playwright test tests/path/to/test.spec.js`
   - **Start server manually**: `cd e2e && source .envrc && MIX_ENV=e2e PORT=4444 mix phx.server`
   - **Seeding**: `cd e2e && source .envrc && BRANDO_SEEDING=true MIX_ENV=e2e mix run priv/repo/e2e_seeds.exs`
 - Code analysis:
