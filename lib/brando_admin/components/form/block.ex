@@ -3236,8 +3236,16 @@ defmodule BrandoAdmin.Components.Form.Block do
       </div>
       <div class="block-actions" id={"block-#{@uid}-block-toolbar-actions"}>
         <.handle :if={!@is_ref?} />
+        <.block_actions_dropdown
+          :if={!@is_ref?}
+          uid={@uid}
+          target={@target}
+          instructions={@instructions}
+          config={@config}
+        />
+        <%!-- Ref: keep inline buttons --%>
         <div
-          :if={@instructions}
+          :if={@is_ref? && @instructions}
           class="block-action help"
           phx-click={JS.push("toggle_help", target: @target)}
           data-popover={gettext("Show instructions")}
@@ -3245,44 +3253,13 @@ defmodule BrandoAdmin.Components.Form.Block do
           <.icon name="hero-question-mark-circle" />
         </div>
         <button
-          :if={@is_ref? == false}
-          type="button"
-          phx-value-block_uid={@uid}
-          class="block-action duplicate"
-          phx-click="duplicate_block"
-          phx-target={@target}
-          data-popover={gettext("Duplicate block")}
-        >
-          <.icon name="hero-document-duplicate" />
-        </button>
-        <button
-          :if={@is_ref? == false}
-          type="button"
-          class="block-action copy"
-          phx-click="copy_block"
-          phx-target={@target}
-          data-popover={gettext("Copy block")}
-        >
-          <.icon name="hero-clipboard-document" />
-        </button>
-        <button
-          :if={@config}
+          :if={@is_ref? && @config}
           type="button"
           class="block-action config"
           phx-click={show_modal("#block-#{@uid}_config")}
           data-popover={gettext("Configure block")}
         >
           <.icon name="hero-cog-8-tooth" />
-        </button>
-        <button
-          :if={@is_ref? == false}
-          type="button"
-          class="block-action toggler"
-          phx-click="delete_block"
-          phx-target={@target}
-          data-popover={gettext("Delete block")}
-        >
-          <.icon name="hero-trash" />
         </button>
         <Form.label
           field={@collapsed_field}
@@ -3303,6 +3280,75 @@ defmodule BrandoAdmin.Components.Form.Block do
           ●
         </div>
       </div>
+    </div>
+    """
+  end
+
+  attr :uid, :string, required: true
+  attr :target, :any, required: true
+  attr :instructions, :string, default: nil
+  attr :config, :boolean, default: false
+
+  defp block_actions_dropdown(assigns) do
+    dropdown_id = "block-#{assigns.uid}-dropdown"
+    assigns = assign(assigns, :dropdown_id, dropdown_id)
+
+    ~H"""
+    <div class="block-action-dropdown">
+      <button
+        type="button"
+        class="block-action"
+        phx-click={toggle_dropdown("##{@dropdown_id}")}
+        phx-click-away={hide_dropdown("##{@dropdown_id}")}
+        data-popover={gettext("More actions")}
+      >
+        <.icon name="hero-ellipsis-horizontal-circle" />
+      </button>
+      <ul class="block-action-dropdown-content hidden" id={@dropdown_id}>
+        <li :if={@instructions}>
+          <button
+            type="button"
+            phx-click={JS.push("toggle_help", target: @target) |> hide_dropdown("##{@dropdown_id}")}
+          >
+            <.icon name="hero-question-mark-circle" /> {gettext("Instructions")}
+          </button>
+        </li>
+        <li :if={@config}>
+          <button
+            type="button"
+            phx-click={show_modal("#block-#{@uid}_config") |> hide_dropdown("##{@dropdown_id}")}
+          >
+            <.icon name="hero-cog-8-tooth" /> {gettext("Configure")}
+          </button>
+        </li>
+        <li>
+          <button
+            type="button"
+            phx-click={
+              JS.push("duplicate_block", target: @target, value: %{block_uid: @uid})
+              |> hide_dropdown("##{@dropdown_id}")
+            }
+          >
+            <.icon name="hero-document-duplicate" /> {gettext("Duplicate")}
+          </button>
+        </li>
+        <li>
+          <button
+            type="button"
+            phx-click={JS.push("copy_block", target: @target) |> hide_dropdown("##{@dropdown_id}")}
+          >
+            <.icon name="hero-clipboard-document" /> {gettext("Copy")}
+          </button>
+        </li>
+        <li>
+          <button
+            type="button"
+            phx-click={JS.push("delete_block", target: @target) |> hide_dropdown("##{@dropdown_id}")}
+          >
+            <.icon name="hero-trash" /> {gettext("Delete")}
+          </button>
+        </li>
+      </ul>
     </div>
     """
   end

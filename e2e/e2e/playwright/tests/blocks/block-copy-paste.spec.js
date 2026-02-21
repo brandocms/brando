@@ -1,6 +1,15 @@
 import { test, expect } from '../../test-support/setupAuth'
 import { syncLV } from '../../utils'
 
+/**
+ * Opens the block action dropdown and clicks the Copy button.
+ * @param {import('@playwright/test').Locator} scope - A locator scoped to the block element
+ */
+async function copyBlock(scope) {
+  await scope.locator('.block-action-dropdown > .block-action').click()
+  await scope.locator('.block-action-dropdown-content button', { hasText: 'Copy' }).click()
+}
+
 test.describe('Block Copy/Paste', () => {
   test('copy root module and paste at root level', async ({ page }) => {
     // Navigate to Pages
@@ -29,8 +38,8 @@ test.describe('Block Copy/Paste', () => {
     // Verify no paste buttons exist initially
     await expect(page.locator('.block-paste')).toHaveCount(0)
 
-    // Click the Copy button on the block toolbar
-    await page.locator('.block-action.copy').first().click()
+    // Click the Copy button via the block toolbar dropdown
+    await copyBlock(page.locator('.entry-block').first())
     await syncLV(page)
 
     // After copying, paste buttons should appear at root-compatible positions
@@ -62,8 +71,8 @@ test.describe('Block Copy/Paste', () => {
     await page.getByRole('button', { name: 'Heading' }).click()
     await syncLV(page)
 
-    // Copy the block
-    await page.locator('.block-action.copy').first().click()
+    // Copy the block via dropdown
+    await copyBlock(page.locator('.entry-block').first())
     await syncLV(page)
 
     // Click the bottom paste button (last one on the page, inside blocks-content)
@@ -100,8 +109,8 @@ test.describe('Block Copy/Paste', () => {
     await page.waitForTimeout(400) // debounce
     await syncLV(page)
 
-    // Copy the block
-    await firstBlock.locator('.block-action.copy').click()
+    // Copy the block via dropdown
+    await copyBlock(firstBlock)
     await syncLV(page)
 
     // Paste at the bottom
@@ -155,7 +164,7 @@ test.describe('Block Copy/Paste', () => {
 
     // Copy the child module block (target the child specifically, not the container itself)
     const childBlock = container.locator('.block-children > [data-uid]').first()
-    await childBlock.locator('.block-action.copy').click()
+    await copyBlock(childBlock)
     await syncLV(page)
 
     // A paste button should appear inside the container (at the bottom of children)
@@ -187,7 +196,7 @@ test.describe('Block Copy/Paste', () => {
     await syncLV(page)
 
     // Copy and paste to get 2 blocks
-    await page.locator('.block-action.copy').first().click()
+    await copyBlock(page.locator('.entry-block').first())
     await syncLV(page)
 
     const bottomPaste = page.locator('.blocks-content > .block-plus-wrapper .block-paste')
@@ -245,8 +254,8 @@ test.describe('Block Copy/Paste', () => {
     await page.waitForTimeout(400)
     await syncLV(page)
 
-    // Copy the team member entry
-    await memberBlock.locator('.block-action.copy').click()
+    // Copy the team member entry via dropdown
+    await copyBlock(memberBlock)
     await syncLV(page)
 
     // Paste button should appear inside the multi-block (matching parent_module_id)

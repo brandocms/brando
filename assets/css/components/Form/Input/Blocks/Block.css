@@ -1077,6 +1077,62 @@ button.btn-palette {
         }
       }
     }
+
+    .block-action-dropdown {
+      position: relative;
+      display: flex;
+
+      > .block-action span {
+        transition: transform 0.3s ease;
+        transform: rotate(90deg);
+      }
+
+      &:has(.block-action-dropdown-content:not(.hidden)) > .block-action span {
+        transform: rotate(180deg);
+      }
+
+      .block-action-dropdown-content {
+        position: absolute;
+        top: 30px;
+        right: 0;
+        z-index: 10;
+        min-width: 170px;
+        border-radius: 6px;
+        overflow: clip;
+        border: 1px solid var(--brando-color-dark);
+        background-color: var(--brando-color-peach);
+        color: var(--brando-color-dark);
+
+        li {
+          list-style: none;
+
+          button {
+            @font mono;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 8px 12px;
+            border: none;
+            background: none;
+            font-size: 12px;
+            text-transform: uppercase;
+            cursor: pointer;
+            color: inherit;
+
+            span {
+              width: 14px;
+              height: 14px;
+            }
+
+            &:hover {
+              background-color: var(--brando-color-dark);
+              color: var(--brando-color-peach);
+            }
+          }
+        }
+      }
+    }
   }
 }
 
