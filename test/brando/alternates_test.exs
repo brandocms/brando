@@ -1,5 +1,5 @@
 defmodule Brando.AlternatesTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   use Brando.ConnCase
 
   import Phoenix.LiveViewTest
