@@ -783,6 +783,77 @@ table_template = %Brando.Content.TableTemplate{
   ]
 } |> E2eProject.Repo.insert!()
 
+# ============================================================================
+# COPY/PASTE TEST MODULES
+# ============================================================================
+
+# Multi module (parent) — "Team Section" that holds "Team Member" entries
+team_section = %Brando.Content.Module{
+  type: :liquid,
+  name: %{"en" => "Team Section", "no" => "Teamblokk"},
+  namespace: %{"en" => "06 COPY PASTE TEST", "no" => "06 COPY PASTE TEST"},
+  help_text: %{"en" => "Multi block for team members", "no" => "Multiblokk for teammedlemmer"},
+  class: "team-section",
+  code: "<section b-tpl=\"team-section\">\n  <div class=\"inner\">\n    {% for child in block.children %}\n      {% render_child child %}\n    {% endfor %}\n  </div>\n</section>",
+  svg: nil,
+  multi: true,
+  datasource: false,
+  sequence: 30,
+  deleted_at: nil,
+  table_template_id: nil,
+  parent_id: nil,
+  refs: [],
+  vars: [
+    %Brando.Content.Var{
+      type: :string,
+      label: "Section title",
+      key: "section_title",
+      important: true,
+      value: "Our Team",
+      sequence: 0,
+      width: :full
+    }
+  ]
+} |> E2eProject.Repo.insert!()
+
+# Multi module (child) — "Team Member" entry
+%Brando.Content.Module{
+  type: :liquid,
+  name: %{"en" => "Team Member", "no" => "Teammedlem"},
+  namespace: %{"en" => "06 COPY PASTE TEST", "no" => "06 COPY PASTE TEST"},
+  help_text: %{"en" => "A single team member", "no" => "Enkelt teammedlem"},
+  class: "team-member",
+  code: "<div b-tpl=\"team-member\">\n  <h3>{{ member_name }}</h3>\n  <p>{{ member_role }}</p>\n</div>",
+  svg: nil,
+  multi: false,
+  datasource: false,
+  sequence: 31,
+  deleted_at: nil,
+  table_template_id: nil,
+  parent_id: team_section.id,
+  refs: [],
+  vars: [
+    %Brando.Content.Var{
+      type: :string,
+      label: "Name",
+      key: "member_name",
+      important: true,
+      value: "John Doe",
+      sequence: 0,
+      width: :half
+    },
+    %Brando.Content.Var{
+      type: :string,
+      label: "Role",
+      key: "member_role",
+      important: true,
+      value: "Developer",
+      sequence: 1,
+      width: :half
+    }
+  ]
+} |> E2eProject.Repo.insert!()
+
 # Gallery for gallery listing/editing tests
 %Brando.Galleries.Gallery{
   config_target: "gallery:E2eProject.Projects.Project:project_gallery",

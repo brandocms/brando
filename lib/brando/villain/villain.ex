@@ -1418,21 +1418,11 @@ defmodule Brando.Villain do
     Changeset.put_assoc(changeset, :refs, duplicated_refs)
   end
 
-  def duplicate_ref(ref_cs, current_user_id) do
-    # Clear IDs like we do for vars, but also generate a UID for the ref
-    ref_cs
+  def duplicate_ref(ref, _current_user_id) do
+    ref
     |> Map.merge(%{id: nil, block_id: nil, module_id: nil})
     |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
-    |> set_creator_id(current_user_id)
-    |> add_uid_to_ref_changeset()
+    |> Changeset.change(%{uid: Brando.Utils.generate_uid()})
     |> Map.put(:action, :insert)
-  end
-
-  def set_creator_id(ref_changeset, current_user_id) do
-    Changeset.put_change(ref_changeset, :creator_id, current_user_id)
-  end
-
-  def add_uid_to_ref_changeset(ref_changeset) do
-    Changeset.put_change(ref_changeset, :uid, Brando.Utils.generate_uid())
   end
 end

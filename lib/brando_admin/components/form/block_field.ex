@@ -103,7 +103,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           uid: block_uid,
           parent_uid: uid,
           root_uid: uid,
-          parent_sequence: sequence
+          parent_sequence: sequence,
+          action: :duplicate
         )
       end
 
@@ -162,6 +163,52 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       |> send_block_entry_position_update(new_block_list)
       |> then(&{:ok, &1})
     end
+  end
+
+  # copy_block — no children (leaf block), store in clipboard immediately
+  def update(%{event: "copy_block", changeset: changeset, children: nil, uid: _uid}, socket) do
+    store_clipboard(socket, changeset)
+  end
+
+  # copy_block — populated (gathering complete), store in clipboard
+  def update(%{event: "copy_block", changeset: changeset, uid: _uid, populated: true}, socket) do
+    store_clipboard(socket, changeset)
+  end
+
+  # copy_block — has children, start gathering with action: :copy
+  def update(%{event: "copy_block", changeset: _changeset, children: children, uid: uid}, socket)
+      when not is_nil(children) do
+    for {id, block_uid} <- children do
+      send_update(Block,
+        id: id,
+        event: "fetch_changeset_for_duplication",
+        uid: block_uid,
+        parent_uid: uid,
+        root_uid: uid,
+        parent_sequence: 0,
+        action: :copy
+      )
+    end
+
+    {:ok, socket}
+  end
+
+  # paste_block — from a child block's inline paste button, forwarded up via Block
+  def update(%{event: "paste_block", sequence: sequence}, socket) do
+    {:ok, paste_root_block(socket, sequence)}
+  end
+
+  # paste_child_block — from a multi/container end paste button, forwarded up via Block
+  def update(%{event: "paste_child_block", parent_cid: parent_cid, sequence: sequence}, socket) do
+    user_id = socket.assigns.current_user.id
+    clipboard = Brando.Cache.get({:block_clipboard, user_id})
+
+    if clipboard do
+      block_cs = create_duplicate_from_clipboard(clipboard, user_id)
+      send_update(parent_cid, %{event: "insert_pasted_block", block_cs: block_cs, sequence: sequence})
+    end
+
+    {:ok, socket}
   end
 
   def update(%{event: "delete_block", uid: uid}, socket) do
@@ -490,6 +537,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_count, length(block_list))
     |> assign(:root_changesets, Enum.map(entry_blocks, &{&1.block.uid, nil}))
     |> assign(:module_picker_id, "#block-field-#{assigns.block_field}-module-picker")
+    |> assign(:clipboard_meta, nil)
     |> send_block_entry_position_update(block_list)
     |> assign(:blocks_initialized, true)
   end
@@ -574,6 +622,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
     |> then(&{:noreply, &1})
+  end
+
+  def handle_event("paste_block_at_end", _, socket) do
+    {:noreply, paste_root_block(socket, socket.assigns.block_count)}
   end
 
   def handle_event("show_block_picker", _, socket) do
@@ -718,7 +770,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def render(assigns) do
     ~H"""
-    <div id={"#{@id}-wrapper"} phx-hook="Brando.BlockField" class="blocks-wrapper" data-block-field={"#{@form_name}[#{@block_field}]"}>
+    <div
+      id={"#{@id}-wrapper"}
+      phx-hook="Brando.BlockField"
+      class="blocks-wrapper"
+      data-block-field={"#{@form_name}[#{@block_field}]"}
+    >
       <div class="label-wrapper ">
         <label class="control-label" data-field-presence={"#{@form_name}[#{@block_field}]"}>
           <span>{gettext("Blocks")}</span>
@@ -759,7 +816,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         >
           <%= for entry_block_form <- @entry_blocks_forms do %>
             <.inputs_for :let={block} field={entry_block_form[:block]} skip_hidden>
-              <div id={"base-#{block[:uid].value}"} data-id={entry_block_form[:id].value} data-uid={block[:uid].value} class="entry-block draggable">
+              <div
+                id={"base-#{block[:uid].value}"}
+                data-id={entry_block_form[:id].value}
+                data-uid={block[:uid].value}
+                class="entry-block draggable"
+              >
                 <.live_component
                   module={Block}
                   id={"block-#{block[:uid].value}"}
@@ -776,6 +838,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                   form_cid={@form_cid}
                   current_user_id={@current_user.id}
                   belongs_to={:root}
+                  clipboard_meta={@clipboard_meta}
                   level={0}
                 />
               </div>
@@ -783,7 +846,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           <% end %>
         </div>
 
-        <Block.plus click={JS.push("show_block_picker", target: @myself) |> show_modal(@module_picker_id)} />
+        <Block.plus
+          click={JS.push("show_block_picker", target: @myself) |> show_modal(@module_picker_id)}
+          clipboard_meta={@clipboard_meta}
+          paste_context={:root}
+          paste_click={JS.push("paste_block_at_end", target: @myself)}
+        />
       </div>
     </div>
     """
@@ -904,5 +972,162 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       opts = socket.assigns.opts
       opts[:module_set] || "all"
     end)
+  end
+
+  ## Clipboard helpers
+
+  defp store_clipboard(socket, changeset) do
+    user_id = socket.assigns.current_user.id
+
+    # Extract block type and module_id from the changeset
+    {type, module_id} =
+      if Map.has_key?(changeset.data, :block) do
+        # Entry block wrapper — get inner block
+        bc = Changeset.get_assoc(changeset, :block)
+        {Changeset.get_field(bc, :type), Changeset.get_field(bc, :module_id)}
+      else
+        # Direct block (child)
+        {Changeset.get_field(changeset, :type), Changeset.get_field(changeset, :module_id)}
+      end
+
+    # For module_entry blocks, look up the child module definition's parent_id
+    # which is the parent module definition's id (for smart matching in can_paste?)
+    parent_mid =
+      if type == :module_entry && module_id do
+        module = get_module(module_id)
+        module && module.parent_id
+      end
+
+    clipboard = %{changeset: changeset, type: type, parent_module_id: parent_mid}
+    Brando.Cache.put({:block_clipboard, user_id}, clipboard)
+
+    clipboard_meta = %{type: type, parent_module_id: parent_mid}
+
+    socket
+    |> assign(:clipboard_meta, clipboard_meta)
+    |> then(&{:ok, &1})
+  end
+
+  defp paste_root_block(socket, sequence) do
+    user_id = socket.assigns.current_user.id
+    clipboard = Brando.Cache.get({:block_clipboard, user_id})
+
+    if clipboard do
+      insert_pasted_root_block(socket, clipboard, sequence)
+    else
+      socket
+    end
+  end
+
+  defp insert_pasted_root_block(socket, clipboard, sequence) do
+    block_module = socket.assigns.block_module
+    current_user_id = socket.assigns.current_user.id
+    entry_id = socket.assigns.entry.id
+
+    # The clipboard changeset may be an entry_block or a direct block.
+    # Extract the inner block changeset.
+    src_changeset = clipboard.changeset
+
+    block_cs =
+      if Map.has_key?(src_changeset.data, :block) do
+        Changeset.get_assoc(src_changeset, :block)
+      else
+        src_changeset
+      end
+
+    new_uid = Brando.Utils.generate_uid()
+    children = Changeset.get_assoc(block_cs, :children, :struct)
+    vars = Changeset.get_assoc(block_cs, :vars, :struct)
+    table_rows = Changeset.get_assoc(block_cs, :table_rows, :struct)
+    refs = Changeset.get_assoc(block_cs, :refs, :struct)
+
+    updated_block_cs =
+      block_cs
+      |> Changeset.apply_changes()
+      |> Map.merge(%{
+        id: nil,
+        uid: new_uid,
+        sequence: sequence,
+        creator_id: current_user_id,
+        children: [],
+        vars: [],
+        table_rows: [],
+        refs: []
+      })
+      |> Changeset.change()
+      |> Villain.duplicate_vars(vars, current_user_id)
+      |> Villain.duplicate_table_rows(table_rows)
+      |> Villain.duplicate_refs(refs, current_user_id)
+      |> Villain.duplicate_children(children, current_user_id)
+      |> Map.put(:action, :insert)
+
+    entry_block_cs =
+      block_module
+      |> struct(%{})
+      |> Changeset.change(%{entry_id: entry_id})
+      |> Changeset.put_assoc(:block, updated_block_cs)
+      |> Map.put(:action, :insert)
+
+    # insert the new block uid into the block_list
+    block_list = socket.assigns.block_list
+    root_changesets = socket.assigns.root_changesets
+    new_block_list = List.insert_at(block_list, sequence, new_uid)
+
+    entry_block_form =
+      to_change_form(
+        block_module,
+        entry_block_cs,
+        %{sequence: sequence},
+        current_user_id
+      )
+
+    updated_root_changesets = insert_root_changeset(root_changesets, new_uid, sequence)
+    selector = "[data-block-uid=\"#{new_uid}\"]"
+
+    socket
+    |> update(:entry_blocks_forms, &List.insert_at(&1, sequence, entry_block_form))
+    |> assign(:block_list, new_block_list)
+    |> assign(:root_changesets, updated_root_changesets)
+    |> update(:block_count, &(&1 + 1))
+    |> reset_position_response_tracker()
+    |> send_block_entry_position_update(new_block_list)
+    |> push_event("b:scroll_to", %{selector: selector})
+  end
+
+  defp create_duplicate_from_clipboard(clipboard, user_id) do
+    src_changeset = clipboard.changeset
+
+    # Extract the inner block changeset (may be entry_block or direct block)
+    block_cs =
+      if Map.has_key?(src_changeset.data, :block) do
+        Changeset.get_assoc(src_changeset, :block)
+      else
+        src_changeset
+      end
+
+    new_uid = Brando.Utils.generate_uid()
+    children = Changeset.get_assoc(block_cs, :children, :struct)
+    vars = Changeset.get_assoc(block_cs, :vars, :struct)
+    table_rows = Changeset.get_assoc(block_cs, :table_rows, :struct)
+    refs = Changeset.get_assoc(block_cs, :refs, :struct)
+
+    block_cs
+    |> Changeset.apply_changes()
+    |> Map.merge(%{
+      id: nil,
+      uid: new_uid,
+      sequence: 0,
+      creator_id: user_id,
+      children: [],
+      vars: [],
+      table_rows: [],
+      refs: []
+    })
+    |> Changeset.change()
+    |> Villain.duplicate_vars(vars, user_id)
+    |> Villain.duplicate_table_rows(table_rows)
+    |> Villain.duplicate_refs(refs, user_id)
+    |> Villain.duplicate_children(children, user_id)
+    |> Map.put(:action, :insert)
   end
 end

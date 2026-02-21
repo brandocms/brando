@@ -17,7 +17,7 @@ config :e2e_project, E2eProject.Repo,
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :e2e_project, E2eProjectWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4002],
+  http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("PORT") || "4444")],
   secret_key_base: "ngv3Man7Y6Z2hZhsjWuEoVmZNnVIdoaHFtTzeKNCiIdvs/7vavFhxK1LnmRZ+Nko",
   server: true
 

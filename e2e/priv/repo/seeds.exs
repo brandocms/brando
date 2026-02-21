@@ -84,7 +84,7 @@ example_module = %Brando.Content.Module{
   name: "Example module",
   namespace: "general",
   refs: [
-    %Brando.Content.Module.Ref{
+    %Brando.Content.Ref{
       data: %Brando.Villain.Blocks.HeaderBlock{
         data: %Brando.Villain.Blocks.HeaderBlock.Data{
           class: nil,
@@ -97,7 +97,7 @@ example_module = %Brando.Content.Module{
       description: "",
       name: "h1"
     },
-    %Brando.Content.Module.Ref{
+    %Brando.Content.Ref{
       data: %Brando.Villain.Blocks.TextBlock{
         data: %Brando.Villain.Blocks.TextBlock.Data{
           extensions: [],
@@ -130,7 +130,7 @@ for lang <- languages do
           source: Elixir.Brando.Pages.Page.Blocks,
           multi: false,
           refs: [
-            %Brando.Content.Module.Ref{
+            %Brando.Content.Ref{
               data: %Brando.Villain.Blocks.HeaderBlock{
                 data: %Brando.Villain.Blocks.HeaderBlock.Data{
                   class: nil,
@@ -144,7 +144,7 @@ for lang <- languages do
               description: "",
               name: "h1"
             },
-            %Brando.Content.Module.Ref{
+            %Brando.Content.Ref{
               data: %Brando.Villain.Blocks.TextBlock{
                 data: %Brando.Villain.Blocks.TextBlock.Data{
                   extensions: [],

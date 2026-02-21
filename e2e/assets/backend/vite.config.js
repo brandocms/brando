@@ -7,6 +7,9 @@ export default defineConfig({
   server: {
     port: 3333
   },
+  resolve: {
+    preserveSymlinks: true
+  },
   optimizeDeps: {
     include: [
       'vex-js',

@@ -12,6 +12,59 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
   ##
   ## Block events
+  def handle_block_event("copy_block", _, socket) do
+    changeset = socket.assigns.form.source
+    changesets = socket.assigns.changesets
+    has_children? = socket.assigns.has_children?
+    uid = socket.assigns.uid
+    parent_cid = socket.assigns.parent_cid
+    id = socket.assigns.id
+
+    children =
+      if has_children? do
+        prefix = "#{id}-child"
+        Enum.map(changesets, fn {block_uid, _} -> {"#{prefix}-#{block_uid}", block_uid} end)
+      end
+
+    send_update(parent_cid, %{
+      event: "copy_block",
+      changeset: changeset,
+      children: children,
+      uid: uid
+    })
+
+    {:halt, socket}
+  end
+
+  def handle_block_event("paste_block", _, socket) do
+    parent_cid = socket.assigns.parent_cid
+    sequence =
+      case socket.assigns.form[:sequence].value do
+        v when is_integer(v) -> v
+        v when is_binary(v) -> String.to_integer(v)
+      end
+
+    send_update(parent_cid, %{
+      event: "paste_block",
+      sequence: sequence
+    })
+
+    {:halt, socket}
+  end
+
+  def handle_block_event("paste_child_block", _, socket) do
+    parent_cid = socket.assigns.parent_cid
+    block_count = socket.assigns.block_count
+
+    send_update(parent_cid, %{
+      event: "paste_child_block",
+      parent_cid: socket.assigns.myself,
+      sequence: block_count
+    })
+
+    {:halt, socket}
+  end
+
   def handle_block_event("duplicate_block", _, socket) do
     changeset = socket.assigns.form.source
     changesets = socket.assigns.changesets

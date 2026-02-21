@@ -86,7 +86,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   ## Sequence event
   def handle_event("create_ref", %{"type" => block_type}, %{assigns: %{form: form}} = socket) do
     changeset = form.source
-    refs = Changeset.get_field(changeset, :refs)
+    refs = Changeset.get_assoc(changeset, :refs)
 
     block_module =
       block_type
@@ -95,13 +95,16 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
     ref_data = struct(block_module, %{data: struct(Module.concat([block_module, Data]))})
 
-    new_ref = %Ref{
-      name: Brando.Utils.random_string(5),
-      data: ref_data,
-      uid: Brando.Utils.generate_uid()
-    }
+    new_ref =
+      %Ref{
+        name: Brando.Utils.random_string(5),
+        data: ref_data,
+        uid: Brando.Utils.generate_uid()
+      }
+      |> Changeset.change()
+      |> Map.put(:action, :insert)
 
-    updated_changeset = Changeset.put_change(changeset, :refs, [new_ref | refs])
+    updated_changeset = Changeset.put_assoc(changeset, :refs, [new_ref | refs])
     updated_form = to_form(updated_changeset, [])
 
     {:noreply, assign(socket, :form, updated_form)}
@@ -109,10 +112,15 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
   def handle_event("delete_ref", %{"id" => ref_name}, %{assigns: %{form: form}} = socket) do
     changeset = form.source
-    refs = Changeset.get_field(changeset, :refs)
-    filtered_refs = Enum.reject(refs, &(&1.name == ref_name))
+    refs = Changeset.get_assoc(changeset, :refs)
 
-    updated_changeset = Changeset.put_change(changeset, :refs, filtered_refs)
+    filtered_refs =
+      Enum.reject(refs, fn
+        %Changeset{action: :replace} -> true
+        ref_cs -> Changeset.get_field(ref_cs, :name) == ref_name
+      end)
+
+    updated_changeset = Changeset.put_assoc(changeset, :refs, filtered_refs)
     updated_form = to_form(updated_changeset, [])
 
     {:noreply, assign(socket, :form, updated_form)}
@@ -120,15 +128,23 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
   def handle_event("duplicate_ref", %{"id" => ref_name}, %{assigns: %{form: form}} = socket) do
     changeset = form.source
-    refs = Changeset.get_field(changeset, :refs)
-    ref_to_dupe = Enum.find(refs, &(&1.name == ref_name))
+    refs = Changeset.get_assoc(changeset, :refs)
+
+    ref_to_dupe =
+      Enum.find(refs, fn ref_cs ->
+        Changeset.get_field(ref_cs, :name) == ref_name
+      end)
 
     new_ref =
-      ref_to_dupe
-      |> Map.put(:name, Brando.Utils.random_string(5))
-      |> Map.put(:uid, Brando.Utils.generate_uid())
+      %Ref{
+        name: Brando.Utils.random_string(5),
+        data: Changeset.get_field(ref_to_dupe, :data),
+        uid: Brando.Utils.generate_uid()
+      }
+      |> Changeset.change()
+      |> Map.put(:action, :insert)
 
-    updated_changeset = Changeset.put_change(changeset, :refs, refs ++ [new_ref])
+    updated_changeset = Changeset.put_assoc(changeset, :refs, refs ++ [new_ref])
     updated_form = to_form(updated_changeset, [])
 
     {:noreply, assign(socket, :form, updated_form)}
@@ -291,7 +307,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
   defp assign_entry(socket, entry_id) do
     assign_new(socket, :entry, fn ->
-      Brando.Content.get_module!(%{matches: %{id: entry_id}, preload: [:vars]})
+      Brando.Content.get_module!(%{matches: %{id: entry_id}, preload: [:vars, :refs]})
     end)
   end
 

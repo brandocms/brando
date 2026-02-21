@@ -29,7 +29,65 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:source, nil)
     |> assign(:live_preview_active?, false)
     |> assign(:live_preview_cache_key, nil)
+    |> assign_new(:clipboard_meta, fn -> nil end)
     |> Events.attach_block_events()
+    |> then(&{:ok, &1})
+  end
+
+  # copy_block — intermediate blocks forward copy requests up the parent chain to BlockField
+  def update(%{event: "copy_block"} = msg, socket) do
+    send_update(socket.assigns.parent_cid, msg)
+    {:ok, socket}
+  end
+
+  # paste_block — child block requests paste; forward up to BlockField
+  def update(%{event: "paste_block", sequence: sequence}, socket) do
+    send_update(socket.assigns.parent_cid, %{
+      event: "paste_child_block",
+      parent_cid: socket.assigns.myself,
+      sequence: sequence
+    })
+
+    {:ok, socket}
+  end
+
+  # paste_child_block — already has parent_cid, forward preserving it
+  def update(%{event: "paste_child_block", parent_cid: _} = msg, socket) do
+    send_update(socket.assigns.parent_cid, msg)
+    {:ok, socket}
+  end
+
+  # paste_child_block — no parent_cid, add myself
+  def update(%{event: "paste_child_block", sequence: sequence}, socket) do
+    send_update(socket.assigns.parent_cid, %{
+      event: "paste_child_block",
+      parent_cid: socket.assigns.myself,
+      sequence: sequence
+    })
+
+    {:ok, socket}
+  end
+
+  # insert_pasted_block — BlockField sends pasted block changeset to be inserted as child
+  def update(%{event: "insert_pasted_block", block_cs: block_cs, sequence: sequence}, socket) do
+    uid = Changeset.get_field(block_cs, :uid)
+    block_list = socket.assigns.block_list
+    new_block_list = List.insert_at(block_list, sequence, uid)
+
+    block_form = to_form(block_cs, as: "child_block", id: "child_block_form-#{uid}")
+    changesets = socket.assigns.changesets
+    updated_changesets = insert_child_changeset(changesets, uid, sequence)
+    selector = "[data-block-uid=\"#{uid}\"]"
+
+    socket
+    |> update(:children_forms, &List.insert_at(&1, sequence, block_form))
+    |> assign(:has_children?, true)
+    |> assign(:block_list, new_block_list)
+    |> assign(:changesets, updated_changesets)
+    |> update(:block_count, &(&1 + 1))
+    |> reset_position_response_tracker()
+    |> send_child_position_update(new_block_list)
+    |> push_event("b:scroll_to", %{selector: selector})
     |> then(&{:ok, &1})
   end
 
@@ -112,7 +170,8 @@ defmodule BrandoAdmin.Components.Form.Block do
           uid: block_uid,
           parent_uid: uid,
           root_uid: uid,
-          parent_sequence: sequence
+          parent_sequence: sequence,
+          action: :duplicate
         )
       end
 
@@ -174,9 +233,10 @@ defmodule BrandoAdmin.Components.Form.Block do
           parent_uid: parent_uid,
           root_uid: root_uid,
           parent_sequence: parent_sequence
-        },
+        } = msg,
         socket
       ) do
+    action = Map.get(msg, :action, :duplicate)
     changeset = socket.assigns.form.source
     has_children? = socket.assigns.has_children?
     parent_cid = socket.assigns.parent_cid
@@ -194,7 +254,8 @@ defmodule BrandoAdmin.Components.Form.Block do
           uid: block_uid,
           parent_uid: uid,
           root_uid: root_uid,
-          parent_sequence: parent_sequence
+          parent_sequence: parent_sequence,
+          action: action
         )
       end
 
@@ -206,7 +267,8 @@ defmodule BrandoAdmin.Components.Form.Block do
         uid: uid,
         parent_uid: parent_uid,
         root_uid: root_uid,
-        parent_sequence: parent_sequence
+        parent_sequence: parent_sequence,
+        action: action
       })
 
       {:ok, socket}
@@ -221,9 +283,10 @@ defmodule BrandoAdmin.Components.Form.Block do
           root_uid: root_uid,
           parent_uid: parent_uid,
           parent_sequence: parent_sequence
-        },
+        } = msg,
         socket
       ) do
+    action = Map.get(msg, :action, :duplicate)
     changeset = socket.assigns.form.source
     changesets = socket.assigns.changesets
     updated_changesets = update_child_changeset(changesets, uid, child_changeset)
@@ -255,9 +318,11 @@ defmodule BrandoAdmin.Components.Form.Block do
         end
 
       if root_uid == this_uid do
-        # we have the changeset with child changesets, now we need to send it to the parent for duplication
+        # Terminal: send populated changeset to parent for duplication or copy
+        event_name = if action == :copy, do: "copy_block", else: "duplicate_block"
+
         send_update(parent_cid, %{
-          event: "duplicate_block",
+          event: event_name,
           uid: root_uid,
           changeset: updated_changeset,
           populated: true
@@ -269,7 +334,8 @@ defmodule BrandoAdmin.Components.Form.Block do
           uid: this_uid,
           parent_uid: parent_uid,
           root_uid: root_uid,
-          parent_sequence: parent_sequence
+          parent_sequence: parent_sequence,
+          action: action
         })
       end
     end
@@ -1549,6 +1615,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           |> show_modal(@module_picker_id)
         }
         has_children?={@has_children?}
+        clipboard_meta={@clipboard_meta}
       >
         <div
           :if={@has_children?}
@@ -1588,6 +1655,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               entry={@entry}
               current_user_id={@current_user_id}
               belongs_to={:multi}
+              clipboard_meta={@clipboard_meta}
               level={@level + 1}
             />
           </div>
@@ -1625,6 +1693,8 @@ defmodule BrandoAdmin.Components.Form.Block do
         module_datasource_query={@module_datasource_query}
         datasource_meta={@datasource_meta}
         available_identifiers={@available_identifiers}
+        clipboard_meta={@clipboard_meta}
+        paste_context={if @belongs_to == :container, do: :container, else: :root}
       />
     </div>
     """
@@ -1653,6 +1723,8 @@ defmodule BrandoAdmin.Components.Form.Block do
         has_children?={false}
         module_name={@module_name}
         module_color={@module_color}
+        clipboard_meta={@clipboard_meta}
+        paste_context={{:multi, @parent_module_id}}
       />
     </div>
     """
@@ -1682,6 +1754,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           |> show_modal(@module_picker_id)
         }
         has_children?={@has_children?}
+        clipboard_meta={@clipboard_meta}
       >
         <div
           :if={@has_children?}
@@ -1720,6 +1793,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               form_cid={@form_cid}
               current_user_id={@current_user_id}
               belongs_to={:container}
+              clipboard_meta={@clipboard_meta}
               level={@level + 1}
             >
             </.live_component>
@@ -1745,6 +1819,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         deleted={@deleted}
         target={@myself}
         block_module={@block_module}
+        clipboard_meta={@clipboard_meta}
       />
     </div>
     """
@@ -1783,6 +1858,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :insert_block, :any
   attr :fragment, :any, default: nil
   attr :fragments, :list, default: []
+  attr :clipboard_meta, :map, default: nil
 
   def fragment_block(assigns) do
     changeset = assigns.form.source
@@ -1814,7 +1890,12 @@ defmodule BrandoAdmin.Components.Form.Block do
         (@dirty or @new) && "dirty"
       ]}
     >
-      <.plus click={@insert_block} />
+      <.plus
+        click={@insert_block}
+        clipboard_meta={@clipboard_meta}
+        paste_context={:root}
+        paste_click={JS.push("paste_block", target: @target)}
+      />
 
       <div
         id={"block-#{@uid}"}
@@ -1922,7 +2003,12 @@ defmodule BrandoAdmin.Components.Form.Block do
         (@dirty or @new) && "dirty"
       ]}
     >
-      <.plus click={@insert_block} />
+      <.plus
+        click={@insert_block}
+        clipboard_meta={@clipboard_meta}
+        paste_context={:root}
+        paste_click={JS.push("paste_block", target: @target)}
+      />
 
       <div
         id={"block-#{@uid}"}
@@ -1972,12 +2058,22 @@ defmodule BrandoAdmin.Components.Form.Block do
         </.form>
         <%= if @has_children? do %>
           {render_slot(@inner_block)}
-          <.plus click={@insert_child_block} />
+          <.plus
+            click={@insert_child_block}
+            clipboard_meta={@clipboard_meta}
+            paste_context={:container}
+            paste_click={JS.push("paste_child_block", target: @target)}
+          />
         <% else %>
           <div class="blocks-empty-instructions">
             {gettext("Click the plus to start adding content blocks")}
           </div>
-          <.plus click={@insert_child_block} />
+          <.plus
+            click={@insert_child_block}
+            clipboard_meta={@clipboard_meta}
+            paste_context={:container}
+            paste_click={JS.push("paste_child_block", target: @target)}
+          />
         <% end %>
       </div>
     </div>
@@ -2011,6 +2107,8 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :module_datasource_query, :string, default: ""
   attr :datasource_meta, :any, default: nil
   attr :available_identifiers, :any, default: []
+  attr :clipboard_meta, :map, default: nil
+  attr :paste_context, :any, default: :root
   slot :inner_block
 
   def module(assigns) do
@@ -2039,7 +2137,12 @@ defmodule BrandoAdmin.Components.Form.Block do
         (@dirty or @new) && "dirty"
       ]}
     >
-      <.plus click={@insert_block} />
+      <.plus
+        click={@insert_block}
+        clipboard_meta={@clipboard_meta}
+        paste_context={@paste_context}
+        paste_click={JS.push("paste_block", target: @target)}
+      />
 
       <div
         id={"block-#{@uid}"}
@@ -2135,13 +2238,23 @@ defmodule BrandoAdmin.Components.Form.Block do
         </.form>
         <%= if @has_children? do %>
           {render_slot(@inner_block)}
-          <.plus click={@insert_multi_block} />
+          <.plus
+            click={@insert_multi_block}
+            clipboard_meta={@clipboard_meta}
+            paste_context={{:multi, @module_id}}
+            paste_click={JS.push("paste_child_block", target: @target)}
+          />
         <% else %>
           <%= if @multi do %>
             <div class="blocks-empty-instructions">
               {gettext("Click the plus to start adding content blocks")}
             </div>
-            <.plus click={@insert_multi_block} />
+            <.plus
+              click={@insert_multi_block}
+              clipboard_meta={@clipboard_meta}
+              paste_context={{:multi, @module_id}}
+              paste_click={JS.push("paste_child_block", target: @target)}
+            />
           <% end %>
         <% end %>
       </div>
@@ -2945,14 +3058,35 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   attr :click, :any, required: true
+  attr :clipboard_meta, :map, default: nil
+  attr :paste_context, :any, default: nil
+  attr :paste_click, :any, default: nil
 
   def plus(assigns) do
+    assigns = assign(assigns, :show_paste, can_paste?(assigns.clipboard_meta, assigns.paste_context))
+
     ~H"""
-    <button class="block-plus" type="button" phx-click={@click}>
-      <.icon name="hero-plus" />
-    </button>
+    <div class="block-plus-wrapper">
+      <button class="block-plus" type="button" phx-click={@click}>
+        <.icon name="hero-plus" />
+      </button>
+      <button
+        :if={@show_paste}
+        class="block-paste"
+        type="button"
+        phx-click={@paste_click}
+      >
+        <.icon name="hero-clipboard-document-check" />
+      </button>
+    </div>
     """
   end
+
+  defp can_paste?(nil, _), do: false
+  defp can_paste?(%{type: t}, :root) when t in [:module, :container, :fragment], do: true
+  defp can_paste?(%{type: :module}, :container), do: true
+  defp can_paste?(%{type: :module_entry, parent_module_id: pmid}, {:multi, mid}), do: pmid == mid
+  defp can_paste?(_, _), do: false
 
   attr :uid, :string, required: true
   attr :vars, :any, required: true
@@ -3120,6 +3254,16 @@ defmodule BrandoAdmin.Components.Form.Block do
           data-popover={gettext("Duplicate block")}
         >
           <.icon name="hero-document-duplicate" />
+        </button>
+        <button
+          :if={@is_ref? == false}
+          type="button"
+          class="block-action copy"
+          phx-click="copy_block"
+          phx-target={@target}
+          data-popover={gettext("Copy block")}
+        >
+          <.icon name="hero-clipboard-document" />
         </button>
         <button
           :if={@config}
