@@ -59,9 +59,9 @@ test.describe('Block Identifier Selection', () => {
 
     // === TEST 2: Save and reload to verify persistence ===
     await page.getByTestId('submit').click()
-    await syncLV(page)
-    // Wait for redirect to pages list
+    // Wait for redirect to pages list before syncing new page
     await expect(page).toHaveURL(/\/admin\/pages$/)
+    await syncLV(page)
 
     // Re-open the page
     await page.getByRole('link', { name: 'Identifier Test Page' }).click()

@@ -68,8 +68,8 @@ test('create menu item', async ({ page }) => {
     page.locator('#menu_items_3_link_0_identifier_id-field-base')
   ).toContainText('https://google.com')
   await page.getByTestId('submit').click()
-  await syncLV(page)
   await expect(page).toHaveURL('/admin/config/navigation/menus')
+  await syncLV(page)
 
   await page.goto('/')
   await expect(
@@ -90,8 +90,8 @@ test('delete menu item', async ({ page }) => {
     .first()
     .click()
   await page.getByTestId('submit').click()
-  await syncLV(page)
   await expect(page).toHaveURL('/admin/config/navigation/menus')
+  await syncLV(page)
 
   await page.goto('/')
   await expect(
@@ -120,8 +120,8 @@ test('reorder menu items', async ({ page }) => {
 
   await syncLV(page)
   await page.getByTestId('submit').click()
-  await syncLV(page)
   await expect(page).toHaveURL('/admin/config/navigation/menus')
+  await syncLV(page)
 
   await page.goto('/')
 

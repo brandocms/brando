@@ -12,16 +12,19 @@ test.describe('Listing Filters', () => {
     // Create a client first
     await page.getByRole('link', { name: 'Clients' }).click()
     await page.getByRole('link', { name: 'Create new' }).click()
+    await expect(page).toHaveURL(/\/clients\/create/)
     await syncLV(page)
     await page.getByText('Published').click()
     await fillSlugSource(page.getByRole('textbox', { name: 'Name' }), 'Test Client')
     await syncLV(page)
     await page.getByTestId('submit').click()
+    await expect(page).toHaveURL(/\/clients/)
     await syncLV(page)
 
     // Create one project with full_case: true
     await page.getByRole('link', { name: 'Projects' }).click()
     await page.getByRole('link', { name: 'Create new' }).click()
+    await expect(page).toHaveURL(/\/projects\/create/)
     await syncLV(page)
     await page.locator('label').filter({ hasText: 'Published' }).click()
     await fillSlugSource(page.getByRole('textbox', { name: 'Title' }), 'Full Case Project')
@@ -38,10 +41,10 @@ test.describe('Listing Filters', () => {
     await page.locator('#project_client_id-field-base').getByRole('button', { name: 'Select' }).click()
     await page.getByRole('button', { name: 'Test Client' }).click()
     await page.getByTestId('submit').click()
-    await syncLV(page)
 
     // Verify we're back on listing and project was created
     await expect(page).toHaveURL(/\/admin\/projects\/projects/)
+    await syncLV(page)
     await expect(page.locator('.content-list').getByText('Full Case Project')).toBeVisible()
   })
 

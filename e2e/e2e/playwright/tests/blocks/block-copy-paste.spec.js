@@ -198,8 +198,8 @@ test.describe('Block Copy/Paste', () => {
 
     // Save
     await page.getByTestId('submit').click()
-    await syncLV(page)
     await expect(page).toHaveURL(/\/admin\/pages$/)
+    await syncLV(page)
 
     // Re-open the page
     await page.getByRole('link', { name: 'Copy Paste Persist Test' }).click()

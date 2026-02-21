@@ -97,15 +97,8 @@ test('creates a simple page', async ({ page }) => {
 
   await syncLV(page)
   await page.getByTestId('submit').click()
-  await expect(
-    page.locator('div').filter({ hasText: 'Providing root block' }).first()
-  ).toBeVisible()
-  await syncLV(page)
-  await expect(
-    page.locator('div').filter({ hasText: 'Providing root block' }).first()
-  ).not.toBeVisible()
-
   await expect(page).toHaveURL('/admin/pages')
+  await syncLV(page)
   await expect(page.getByRole('link', { name: 'About →' })).toBeVisible()
   await expect(page.getByRole('link', { name: '/about' })).toBeVisible()
 
@@ -175,15 +168,8 @@ test('creates meta information', async ({ page }) => {
   await page.waitForSelector('#image-drawer', { state: 'hidden' })
   await syncLV(page)
   await page.getByTestId('submit').click()
-  await expect(
-    page.locator('div').filter({ hasText: 'Providing root block' }).first()
-  ).toBeVisible()
-  await syncLV(page)
-  await expect(
-    page.locator('div').filter({ hasText: 'Providing root block' }).first()
-  ).not.toBeVisible()
-
   await expect(page).toHaveURL('/admin/pages')
+  await syncLV(page)
 
   // take a look at the frontend
   await page.goto('/hello')

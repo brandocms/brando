@@ -35,10 +35,10 @@ test('lists galleries and edits a gallery', async ({ page }) => {
 
   // Save the form
   await page.getByTestId('submit').click()
-  await syncLV(page)
 
   // Verify we're back on the listing page
   await expect(page).toHaveURL(/\/admin\/assets\/galleries/)
+  await syncLV(page)
 
   // Verify the updated config_target is shown
   await expect(rows.first()).toContainText('updated_target')

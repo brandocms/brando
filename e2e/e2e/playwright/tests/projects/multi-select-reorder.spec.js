@@ -15,6 +15,7 @@ test.describe('Multi-select reordering', () => {
     await clientNameField.blur()
     await syncLV(page)
     await page.getByTestId('submit').click()
+    await expect(page).toHaveURL(/\/clients/)
     await syncLV(page)
 
     // Create three categories
@@ -27,6 +28,7 @@ test.describe('Multi-select reordering', () => {
     await catAField.blur()
     await syncLV(page)
     await page.getByTestId('submit').click()
+    await expect(page).toHaveURL(/\/categories/)
     await syncLV(page)
 
     await page.getByRole('link', { name: 'Create new' }).click()
@@ -36,6 +38,7 @@ test.describe('Multi-select reordering', () => {
     await catBField.blur()
     await syncLV(page)
     await page.getByTestId('submit').click()
+    await expect(page).toHaveURL(/\/categories/)
     await syncLV(page)
 
     await page.getByRole('link', { name: 'Create new' }).click()
@@ -45,6 +48,7 @@ test.describe('Multi-select reordering', () => {
     await catCField.blur()
     await syncLV(page)
     await page.getByTestId('submit').click()
+    await expect(page).toHaveURL(/\/categories/)
     await syncLV(page)
   })
 
@@ -158,8 +162,8 @@ test.describe('Multi-select reordering', () => {
 
     // Save the project
     await page.getByTestId('submit').click()
-    await syncLV(page)
     await expect(page).toHaveURL(/\/admin\/projects\/projects/)
+    await syncLV(page)
 
     // Re-open the project to verify order persisted
     await page.getByRole('link', { name: 'Reorder Test Project' }).click()

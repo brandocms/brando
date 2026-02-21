@@ -47,8 +47,8 @@ test('create a simple text module', async ({ page }) => {
 
   await syncLV(page)
   await page.getByTestId('submit').click()
-  await syncLV(page)
   await expect(page).toHaveURL('/admin/config/content/modules')
+  await syncLV(page)
   await expect(page.getByRole('link', { name: 'New module →' })).toBeVisible()
   await expect(page.getByText('Help text')).toBeVisible()
 })

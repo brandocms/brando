@@ -25,8 +25,8 @@ test('seo changes affect the frontpage', async ({ page }) => {
   await syncLV(page)
   await expect(page.getByText('No image associated with')).toHaveCount(0)
   await page.getByTestId('submit').click()
-  await syncLV(page)
   await expect(page).toHaveURL('/admin/config/seo')
+  await syncLV(page)
 
   // Wait for the cache to be updated
   // The SEO update happens through Cachex and needs time to propagate

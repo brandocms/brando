@@ -57,7 +57,7 @@ test('update identity', async ({ page }) => {
   await page.locator('#identity_links_2_name').fill('Twitter')
   await page.locator('#identity_links_2_url').fill('https://twitter.com/acme')
 
-  // await syncLV(page)
+  await syncLV(page)
 
   await page
     .locator('button[name="identity\\[drop_links_ids\\]\\[\\]"]')
@@ -65,7 +65,7 @@ test('update identity', async ({ page }) => {
     .click()
 
   await page.getByTestId('submit').click()
-  // await syncLV(page)
+  await syncLV(page)
 
   await page.goto('/')
   await expect(page).toHaveTitle('Acme // Index')

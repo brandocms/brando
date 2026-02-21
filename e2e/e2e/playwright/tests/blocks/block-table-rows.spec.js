@@ -70,8 +70,8 @@ test.describe('Block Table Rows', () => {
 
     // === TEST 4: Save and verify persistence ===
     await page.getByTestId('submit').click()
-    await syncLV(page)
     await expect(page).toHaveURL(/\/admin\/pages$/)
+    await syncLV(page)
 
     // Re-open the page
     await page.getByRole('link', { name: 'Table Rows Test Page' }).click()
@@ -266,6 +266,7 @@ test.describe('Block Table Rows', () => {
 
     // Save
     await page.getByTestId('submit').click()
+    await expect(page).toHaveURL(/\/admin\/pages$/)
     await syncLV(page)
 
     // Re-open

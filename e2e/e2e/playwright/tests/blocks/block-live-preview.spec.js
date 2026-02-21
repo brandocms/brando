@@ -439,8 +439,8 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
       // Save the page
       await page.getByTestId('submit').click()
-      await syncLV(page)
       await expect(page).toHaveURL(/\/admin\/pages$/)
+      await syncLV(page)
 
       // Re-open the page
       await page.getByRole('link', { name: 'Persistence Test Page' }).click()
