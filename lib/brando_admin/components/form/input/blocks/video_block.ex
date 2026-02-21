@@ -39,7 +39,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     :muted,
     :playsinline,
     :video_class,
-    :container_class
+    :container_class,
+    :config_target
   ]
 
   # Override fields for cover image (still used for embedded cover images)
@@ -146,7 +147,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
      |> assign_new(:video_data, fn %{video: video} -> if video, do: Map.from_struct(video), else: %{} end)
      |> assign_new(:type, fn %{video_data: video_data} -> Map.get(video_data, :type, :file) end)
      |> assign_new(:cover_image, fn %{video_data: video_data} -> Map.get(video_data, :thumbnail) end)
-     |> assign_new(:video_upload_strategy, fn -> Brando.default_video_upload_strategy() end)}
+     |> assign_new(:video_upload_strategy, fn ->
+       config_target = Map.get(block_data, :config_target)
+
+       if config_target do
+         case Brando.Videos.get_config_for(config_target) do
+           {:ok, %{upload_strategy: strategy}} -> strategy
+           _ -> Brando.default_video_upload_strategy()
+         end
+       else
+         Brando.default_video_upload_strategy()
+       end
+     end)}
   end
 
   def render(assigns) do
@@ -192,6 +204,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
             <% end %>
           </:description>
           <:config>
+            <Input.input type={:hidden} field={block_data[:config_target]} />
             <%= if is_nil(@video) do %>
               <!-- Video association data is handled separately -->
               <Input.input type={:hidden} field={block_data[:title]} />
@@ -218,11 +231,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
               <div class="panels">
                 <div class="panel">
                   <div :if={@cover_image} class="cover">
-                    <small><strong>Cover:</strong></small> <br />
                     <Content.image image={@cover_image} size={:smallest} />
                   </div>
 
-                  <div :if={!@cover_image} class="cover">
+                  <div :if={!@cover_image && @video_data[:source_url]} class="cover">
+                    <video
+                      preload="metadata"
+                      muted
+                      class="video-frame-preview"
+                      src={"#{@video_data[:source_url]}#t=0.1"}
+                    />
+                  </div>
+
+                  <div :if={!@cover_image && !@video_data[:source_url]} class="cover">
                     <div class="img-placeholder">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                         <path fill="none" d="M0 0h24v24H0z" /><path d="M4.828 21l-.02.02-.021-.02H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3h18.016c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H4.828zM20 15V5H4v14L14 9l6 6zm0 2.828l-6-6L6.828 19H20v-1.172zM8 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
@@ -238,21 +259,33 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                       <Input.number placeholder={@video_data[:height]} field={block_data[:height]} label={gettext("Height")} />
                     </div>
                   </div>
+
+                  <div class="video-info">
+                    <div class="video-info-item">
+                      <span>{gettext("Video type")}</span>
+                      {String.upcase(to_string(@type || ""))}
+                    </div>
+                    <div :if={@video_data[:source_url]} class="video-info-item">
+                      <span>{gettext("Source URL")}</span>
+                      <span class="video-info-url" title={@video_data[:source_url]}>{@video_data[:source_url]}</span>
+                    </div>
+                    <div :if={@video_data[:remote_id]} class="video-info-item">
+                      <span>{gettext("Remote ID")}</span>
+                      {@video_data[:remote_id]}
+                    </div>
+                  </div>
                 </div>
                 <div class="panel">
-                  <!-- Video source information -->
-                  <div class="video-info">
-                    <p><strong>{gettext("Video Type")}:</strong> {String.upcase(to_string(@type || ""))}</p>
-                    <%= if @video_data[:source_url] do %>
-                      <p><strong>{gettext("Source URL")}:</strong> {@video_data[:source_url]}</p>
-                    <% end %>
-                    <%= if @video_data[:remote_id] do %>
-                      <p><strong>{gettext("Remote ID")}:</strong> {@video_data[:remote_id]}</p>
-                    <% end %>
-                  </div>
                   <Input.rich_text field={block_data[:title]} label={gettext("Caption")} opts={[]} />
 
                   <div class="button-group-vertical">
+                    <button
+                      type="button"
+                      class="secondary"
+                      phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
+                    >
+                      {gettext("Change video")}
+                    </button>
                     <button
                       type="button"
                       class="secondary"
@@ -260,12 +293,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                     >
                       {gettext("Select cover image")}
                     </button>
-
                     <button type="button" class="danger" phx-click={JS.push("reset_image", target: @myself)}>
                       {gettext("Reset cover image")}
-                    </button>
-                    <button type="button" class="danger" phx-click={JS.push("reset_video", target: @myself)}>
-                      {gettext("Reset video")}
                     </button>
                   </div>
 
@@ -534,10 +563,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   end
 
   def handle_event("open_video_picker", _, socket) do
+    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+    block_data = Changeset.apply_changes(block_data_cs)
+    config_target = Map.get(block_data, :config_target) || "default"
+
+    upload_strategy =
+      case Brando.Videos.get_config_for(config_target) do
+        {:ok, %{upload_strategy: strategy}} -> strategy
+        _ -> Brando.default_video_upload_strategy()
+      end
+
     send_update(BrandoAdmin.Components.VideoPicker,
       id: "video-picker",
-      config_target: "default",
-      upload_strategy: socket.assigns.video_upload_strategy,
+      config_target: config_target,
+      upload_strategy: upload_strategy,
       event_target: socket.assigns.myself,
       multi: false,
       selected_videos: if(socket.assigns.video, do: [socket.assigns.video.id], else: [])

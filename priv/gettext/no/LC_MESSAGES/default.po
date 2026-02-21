@@ -1812,10 +1812,10 @@ msgstr "Dette kan skje under en serveroppdatering eller omstart"
 msgid "Export"
 msgstr "Eksporter"
 
-#: lib/brando_admin/components/form/input/blocks/video_block.ex:268
+#: lib/brando_admin/components/form/input/blocks/video_block.ex:273
 #, elixir-autogen, elixir-format
-msgid "Reset video"
-msgstr "Nullstill video"
+msgid "Change video"
+msgstr "Bytt video"
 
 #: lib/brando_admin/components/form/subform.ex:317
 #, elixir-autogen, elixir-format

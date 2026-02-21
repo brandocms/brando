@@ -137,6 +137,56 @@
       @fontsize 13px;
     }
 
+    .cover {
+      margin-bottom: 15px;
+
+      img {
+        max-width: 100%;
+        height: auto;
+      }
+    }
+
+    .video-frame-preview {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      pointer-events: none;
+    }
+
+    .video-info {
+      @font mono;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      row-gap: 5px;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid var(--brando-color-dark);
+
+      .video-info-item {
+        display: flex;
+        flex-direction: column;
+        row-gap: 2px;
+
+        > span:first-child {
+          text-transform: uppercase;
+          font-size: 10px;
+          opacity: 0.5;
+        }
+      }
+
+      .video-info-url {
+        text-transform: none;
+        font-size: 12px;
+        opacity: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
+        display: block;
+      }
+    }
+
     .img-placeholder {
       background-color: var(--brando-color-peach);
       color: var(--brando-color-dark);

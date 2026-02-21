@@ -12,7 +12,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
      |> assign_new(:show_url_input, fn -> false end)
      |> assign_new(:url_input, fn -> "" end)
      |> assign_new(:creating_video, fn -> false end)
-     |> assign_new(:playing_video, fn -> nil end)}
+     |> assign_new(:playing_video, fn -> nil end)
+     |> assign_new(:editing_video_id, fn -> nil end)}
   end
 
   def update(
@@ -147,6 +148,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
               multi={@multi}
               event_target={@event_target}
               myself={@myself}
+              editing_video_id={@editing_video_id}
             />
           <% end %>
         </div>
@@ -202,6 +204,28 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   def handle_event("toggle_url_input", _, socket) do
     {:noreply, assign(socket, :show_url_input, !socket.assigns.show_url_input)}
+  end
+
+  def handle_event("start_rename", %{"video-id" => video_id}, socket) do
+    {:noreply, assign(socket, :editing_video_id, String.to_integer(video_id))}
+  end
+
+  def handle_event("cancel_rename", _, socket) do
+    {:noreply, assign(socket, :editing_video_id, nil)}
+  end
+
+  def handle_event("rename_video", %{"title" => title, "video_id" => video_id}, socket) do
+    video_id = if is_binary(video_id), do: String.to_integer(video_id), else: video_id
+
+    Brando.Videos.Video
+    |> Brando.Repo.get!(video_id)
+    |> Ecto.Changeset.change(%{title: title})
+    |> Brando.Repo.update()
+
+    {:noreply,
+     socket
+     |> assign(:editing_video_id, nil)
+     |> assign_videos()}
   end
 
   def handle_event("play_video", %{"video-id" => video_id, "source-url" => source_url, "type" => type}, socket) do
@@ -408,8 +432,11 @@ defmodule BrandoAdmin.Components.VideoPicker do
   attr :multi, :boolean, required: true
   attr :event_target, :any, required: true
   attr :myself, :any, required: true
+  attr :editing_video_id, :any, required: true
 
   def video_row(assigns) do
+    assigns = assign(assigns, :editing, assigns.editing_video_id == assigns.video.id)
+
     ~H"""
     <div class={["video-picker__video", @video.id in @selected_videos && "selected"]}>
       <.video_preview video={@video} myself={@myself} />
@@ -418,7 +445,18 @@ defmodule BrandoAdmin.Components.VideoPicker do
         selected_videos={@selected_videos}
         multi={@multi}
         event_target={@event_target}
+        myself={@myself}
+        editing={@editing}
       />
+      <button
+        :if={!@editing}
+        type="button"
+        class="rename-video-btn"
+        phx-click={JS.push("start_rename", target: @myself)}
+        phx-value-video-id={@video.id}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M15.728 9.686l-1.414-1.414L5 17.586V19h1.414l9.314-9.314zm1.414-1.414l1.414-1.414-1.414-1.414-1.414 1.414 1.414 1.414zM7.242 21H3v-4.243L16.435 3.322a1 1 0 0 1 1.414 0l2.829 2.829a1 1 0 0 1 0 1.414L7.243 21z"/></svg>
+      </button>
     </div>
     """
   end
@@ -465,20 +503,45 @@ defmodule BrandoAdmin.Components.VideoPicker do
   attr :selected_videos, :list, required: true
   attr :multi, :boolean, required: true
   attr :event_target, :any, required: true
+  attr :myself, :any, required: true
+  attr :editing, :boolean, required: true
 
   def video_info(assigns) do
     ~H"""
     <div
       class="video-info"
       phx-click={
-        if @multi,
-          do: JS.push("select_video", target: @event_target),
-          else: JS.push("select_video", target: @event_target) |> toggle_drawer("#video-picker")
+        unless @editing do
+          if @multi,
+            do: JS.push("select_video", target: @event_target),
+            else: JS.push("select_video", target: @event_target) |> toggle_drawer("#video-picker")
+        end
       }
       phx-value-id={@video.id}
       phx-value-selected={(@video.id in @selected_videos && "true") || "false"}
     >
-      <div class="video-title">{@video.title || gettext("Untitled")}</div>
+      <%= if @editing do %>
+        <form
+          id={"rename-video-#{@video.id}"}
+          phx-submit={JS.push("rename_video", target: @myself)}
+        >
+          <input type="hidden" name="video_id" value={@video.id} />
+          <input
+            type="text"
+            name="title"
+            value={@video.title || ""}
+            class="video-title-input"
+            phx-blur={JS.dispatch("submit", to: "#rename-video-#{@video.id}")}
+            phx-keydown={JS.push("cancel_rename", target: @myself)}
+            phx-key="Escape"
+            autofocus
+          />
+        </form>
+      <% else %>
+        <div class="video-title">
+          {@video.title || gettext("Untitled")}
+        </div>
+      <% end %>
       <div class="video-meta">
         Type..........: {@video.type}
       </div>

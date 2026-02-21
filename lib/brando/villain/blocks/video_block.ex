@@ -37,6 +37,7 @@ defmodule Brando.Villain.Blocks.VideoBlock do
       attribute :playsinline, :boolean, default: true
       attribute :video_class, :string
       attribute :container_class, :string
+      attribute :config_target, :text
     end
 
     relations do
