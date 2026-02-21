@@ -87,10 +87,12 @@ defmodule BrandoAdmin.Content.ModuleListLive do
   end
 
   def handle_event("import_modules", _, socket) do
+    current_user = socket.assigns.current_user
+
     # Import modules in a transaction to ensure atomicity
     case Brando.Repo.transaction(fn ->
            for mod <- socket.assigns.imported_modules do
-             Brando.Content.import_module_with_children(mod)
+             Brando.Content.import_module_with_children(mod, current_user)
            end
          end) do
       {:ok, _} ->
@@ -145,7 +147,10 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     current_user = socket.assigns.current_user
 
     base64_modules =
-      %{filter: %{ids: module_ids}, preload: [:vars, children: [:vars]]}
+      %{
+        filter: %{ids: module_ids},
+        preload: [:vars, :refs, table_template: [:vars], children: [:vars, :refs, table_template: [:vars]]]
+      }
       |> Brando.Content.list_modules!()
       |> Brando.Content.prepare_modules_for_export(current_user.id)
       |> Brando.Content.serialize_modules()

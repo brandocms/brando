@@ -847,6 +847,7 @@ defmodule Brando.Content do
       module
       |> Map.put(:refs, refs_with_new_uids)
       |> Map.put(:vars, vars_without_ids)
+      |> prepare_table_template_for_export()
 
     # Handle child modules if they exist
     if Map.has_key?(prepared_module, :children) && is_list(prepared_module.children) do
@@ -863,11 +864,95 @@ defmodule Brando.Content do
     end
   end
 
+  defp prepare_table_template_for_export(%{table_template: %TableTemplate{} = tt} = module) do
+    prepared_tt =
+      tt
+      |> Map.merge(%{id: nil, creator_id: nil})
+      |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
+      |> Map.put(:vars, Brando.Villain.remove_pk_from_vars(tt.vars))
+
+    module
+    |> Map.put(:table_template, prepared_tt)
+    |> Map.put(:table_template_id, nil)
+  end
+
+  defp prepare_table_template_for_export(module), do: module
+
   @doc """
   Imports a module with its children, maintaining parent-child relationships.
+  Resolves table templates by name to avoid duplicates.
   Should be called within a transaction.
   """
-  def import_module_with_children(module) do
-    Brando.Repo.insert(module)
+  def import_module_with_children(module, user \\ :system) do
+    module
+    |> resolve_table_template_for_import(user)
+    |> resolve_children_table_templates_for_import(user)
+    |> Brando.Repo.insert()
+  end
+
+  defp resolve_table_template_for_import(%{table_template: %TableTemplate{} = tt} = module, user) do
+    table_template_id =
+      case get_table_template(%{matches: %{name: tt.name}}) do
+        {:ok, existing_tt} ->
+          existing_tt.id
+
+        {:error, _} ->
+          {:ok, new_tt} = create_table_template(table_template_to_params(tt), user)
+          new_tt.id
+      end
+
+    module
+    |> Map.put(:table_template_id, table_template_id)
+    |> Map.put(:table_template, %Ecto.Association.NotLoaded{
+      __field__: :table_template,
+      __owner__: Module,
+      __cardinality__: :one
+    })
+  end
+
+  defp resolve_table_template_for_import(module, _user), do: module
+
+  defp resolve_children_table_templates_for_import(
+         %{children: children} = module,
+         user
+       )
+       when is_list(children) do
+    resolved_children = Enum.map(children, &resolve_table_template_for_import(&1, user))
+    Map.put(module, :children, resolved_children)
+  end
+
+  defp resolve_children_table_templates_for_import(module, _user), do: module
+
+  defp table_template_to_params(%TableTemplate{} = tt) do
+    vars =
+      (tt.vars || [])
+      |> Enum.map(fn var ->
+        var
+        |> Map.from_struct()
+        |> Map.drop([
+          :__meta__,
+          :id,
+          :table_template_id,
+          :table_template,
+          :table_row_id,
+          :table_row,
+          :block_id,
+          :block,
+          :module_id,
+          :module,
+          :page_id,
+          :page,
+          :global_set_id,
+          :global_set,
+          :menu_item_id,
+          :menu_item,
+          :palette,
+          :image,
+          :file,
+          :identifier
+        ])
+      end)
+
+    %{name: tt.name, vars: vars}
   end
 end
