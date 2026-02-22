@@ -306,22 +306,20 @@ defmodule Brando.Query.Mutations do
 
     get_opts = (preloads && %{matches: %{id: id}, preload: preloads}) || %{matches: %{id: id}}
 
-    {:ok, entry} = apply(context, :"get_#{name}", [get_opts])
-    soft_deletable? = module.__trait__(Trait.SoftDelete)
+    with {:ok, entry} <- apply(context, :"get_#{name}", [get_opts]),
+         soft_deletable? = module.__trait__(Trait.SoftDelete),
+         {:ok, entry} <-
+           if(soft_deletable?,
+             do: Brando.Repo.soft_delete(entry),
+             else: Query.delete(entry)
+           ) do
+      Content.delete_identifier(module, entry)
+      Datasource.update_datasource(module, entry)
+      maybe_notify(entry, "deleted", user, true)
+      maybe_broadcast(module, entry, :deleted, true)
 
-    {:ok, entry} =
-      if soft_deletable? do
-        Brando.Repo.soft_delete(entry)
-      else
-        Query.delete(entry)
-      end
-
-    Content.delete_identifier(module, entry)
-    Datasource.update_datasource(module, entry)
-    maybe_notify(entry, "deleted", user, true)
-    maybe_broadcast(module, entry, :deleted, true)
-
-    callback.(entry)
+      callback.(entry)
+    end
   end
 
   defp has_changes(%Ecto.Changeset{changes: changes}) when map_size(changes) > 0, do: true
