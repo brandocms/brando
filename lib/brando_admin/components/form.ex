@@ -368,8 +368,16 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, update(socket, :blocks_wanting_entry, &Enum.uniq(&1 ++ [cid]))}
   end
 
-  # from select, image, file, etc.
+  # Unified handler for updating entry relations.
+  # Handles live preview, entry/changeset updates, and validation in one place.
+  #
+  # Optional params:
+  #   update_entry: false       - also update socket.assigns.entry
+  #   force_validation: false   - also push b:validate + svelte remounts (implies update_entry)
+  #   force_live_preview_update: false - force immediate live preview update
   def update(%{event: "update_entry_relation", path: path, updated_relation: updated_relation} = params, socket) do
+    update_entry? = Map.get(params, :update_entry, false)
+    force_validation? = Map.get(params, :force_validation, false)
     live_preview_active? = socket.assigns.live_preview_active?
 
     force_live_preview_update =
@@ -378,82 +386,59 @@ defmodule BrandoAdmin.Components.Form do
     fields_demanding_full_live_preview_rerender =
       socket.assigns.fields_demanding_full_live_preview_rerender
 
-    access_path = Brando.Utils.build_access_path(path)
+    is_transformer? = match?([:transformer | _], path)
 
-    updated_entry_assocs =
-      put_in(socket.assigns.updated_entry_assocs, access_path, updated_relation)
+    # 1. Transformer changeset update FIRST (so updated_entry_assocs can read from it)
+    socket =
+      case path do
+        [:transformer, relation_key, asset_key, image_id] when force_validation? ->
+          update_transformer_changeset(socket, relation_key, asset_key, image_id, updated_relation)
+
+        _ ->
+          socket
+      end
+
+    # 2. Always update updated_entry_assocs (for live preview)
+    socket = update_entry_assocs(socket, path, updated_relation)
+
+    # 3. Optionally update entry (not for transformer paths — those update the changeset)
+    socket =
+      if (update_entry? or force_validation?) and not is_transformer? do
+        update_entry_with_relation(socket, path, updated_relation)
+      else
+        socket
+      end
+
+    # 4. Optionally trigger validation + svelte remounts
+    socket =
+      if force_validation? do
+        socket |> push_event("b:validate", %{}) |> force_svelte_remounts()
+      else
+        socket
+      end
+
+    # 5. Always handle live preview
+    lp_path = live_preview_path(path)
 
     full_rerender? =
       live_preview_active? &&
-        Enum.any?(fields_demanding_full_live_preview_rerender, &(&1 == path))
+        Enum.any?(fields_demanding_full_live_preview_rerender, &(&1 == lp_path))
 
     socket
-    |> assign(:updated_entry_assocs, updated_entry_assocs)
-    |> maybe_invalidate_live_preview_assign(path)
+    |> maybe_invalidate_live_preview_assign(lp_path)
     |> maybe_full_rerender_live_preview(full_rerender?)
     |> maybe_force_live_preview_update(full_rerender?, force_live_preview_update)
     |> then(&{:ok, &1})
   end
 
-  # TODO: rewrite to event: "update_entry_relation
-  def update(
-        %{
-          action: :update_entry_relation,
-          updated_relation: updated_relation,
-          path: [:transformer, relation_key, asset_key, image_id],
-          force_validation: true
-        },
-        socket
-      ) do
-    schema = socket.assigns.schema
-    changeset = socket.assigns.form.source
-    entries = get_field(changeset, relation_key)
-    assoc_type = Brando.Blueprint.Relations.__relation__(schema, relation_key).type
+  # Deprecation wrapper — delegates to the unified event handler
+  def update(%{action: :update_entry_relation} = params, socket) do
+    IO.warn("send_update with action: :update_entry_relation is deprecated, use event: \"update_entry_relation\"")
 
-    case Enum.find_index(entries, &(Map.get(&1, :"#{asset_key}_id") == image_id)) do
-      nil ->
-        {:ok, socket}
-
-      idx ->
-        updated_entries =
-          put_in(entries, [Access.at(idx), Access.key(asset_key)], updated_relation)
-
-        updated_changeset =
-          (assoc_type == :has_many && put_assoc(changeset, relation_key, updated_entries)) ||
-            put_embed(changeset, relation_key, updated_entries)
-
-        {:ok,
-         socket
-         |> assign(:form, to_form(updated_changeset, []))
-         |> force_svelte_remounts()}
-    end
-  end
-
-  def update(
-        %{action: :update_entry_relation, updated_relation: updated_relation, path: path, force_validation: true},
-        %{assigns: %{entry: entry, schema: schema}} = socket
-      ) do
-    entry_or_default = entry || struct(schema)
-    access_path = Brando.Utils.build_access_path(path)
-
-    updated_entry = put_in(entry_or_default, access_path, updated_relation)
-
-    {:ok,
-     socket
-     |> assign(:entry, updated_entry)
-     |> push_event("b:validate", %{})
-     |> force_svelte_remounts()}
-  end
-
-  def update(
-        %{action: :update_entry_relation, updated_relation: updated_relation, path: path},
-        %{assigns: %{entry: entry, schema: schema}} = socket
-      ) do
-    entry_or_default = entry || struct(schema)
-    access_path = Brando.Utils.build_access_path(path)
-    updated_entry = put_in(entry_or_default, access_path, updated_relation)
-
-    {:ok, assign(socket, :entry, updated_entry)}
+    params
+    |> Map.delete(:action)
+    |> Map.put(:event, "update_entry_relation")
+    |> update(socket)
   end
 
   def update(%{action: :update_entry_hard_reset, updated_entry: updated_entry}, socket) do
@@ -753,6 +738,60 @@ defmodule BrandoAdmin.Components.Form do
       socket
     end
   end
+
+  # -- Helpers for unified update_entry_relation handler --
+
+  # For transformer paths, read the full relation from the already-updated changeset.
+  defp update_entry_assocs(socket, [:transformer, relation_key | _], _updated_relation) do
+    changeset = socket.assigns.form.source
+    entries = get_field(changeset, relation_key)
+
+    if entries do
+      access_path = Brando.Utils.build_access_path([relation_key])
+      assign(socket, :updated_entry_assocs, put_in(socket.assigns.updated_entry_assocs, access_path, entries))
+    else
+      socket
+    end
+  end
+
+  defp update_entry_assocs(socket, path, updated_relation) do
+    access_path = Brando.Utils.build_access_path(path)
+    assign(socket, :updated_entry_assocs, put_in(socket.assigns.updated_entry_assocs, access_path, updated_relation))
+  end
+
+  # Updates nested asset in form changeset for transformer paths
+  defp update_transformer_changeset(socket, relation_key, asset_key, image_id, updated_relation) do
+    schema = socket.assigns.schema
+    changeset = socket.assigns.form.source
+    entries = get_field(changeset, relation_key)
+    assoc_type = Brando.Blueprint.Relations.__relation__(schema, relation_key).type
+
+    case Enum.find_index(entries, &(Map.get(&1, :"#{asset_key}_id") == image_id)) do
+      nil ->
+        socket
+
+      idx ->
+        updated_entries =
+          put_in(entries, [Access.at(idx), Access.key(asset_key)], updated_relation)
+
+        updated_changeset =
+          if assoc_type == :has_many,
+            do: put_assoc(changeset, relation_key, updated_entries),
+            else: put_embed(changeset, relation_key, updated_entries)
+
+        assign(socket, :form, to_form(updated_changeset, []))
+    end
+  end
+
+  defp update_entry_with_relation(socket, path, updated_relation) do
+    entry = socket.assigns.entry || struct(socket.assigns.schema)
+    access_path = Brando.Utils.build_access_path(path)
+    assign(socket, :entry, put_in(entry, access_path, updated_relation))
+  end
+
+  # Strip :transformer prefix for live preview path matching
+  defp live_preview_path([:transformer, relation_key | _]), do: [relation_key]
+  defp live_preview_path(path), do: path
 
   defp maybe_force_live_preview_update(socket, true, _) do
     socket

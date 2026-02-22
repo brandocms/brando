@@ -15,14 +15,10 @@ configuring web servers, database operations, and blue/green deployments.
 ## Quick start
 
 ```bash
-# 1. Initialize config
 florist init
 florist local config:generate
-
-# 2. Set up the server (one-time)
+florist prod traefik:setup
 florist prod bootstrap
-
-# 3. Deploy
 florist prod release:deploy
 ```
 

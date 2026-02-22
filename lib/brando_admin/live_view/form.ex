@@ -245,7 +245,7 @@ defmodule BrandoAdmin.LiveView.Form do
         if valid_struct_path?(full_path) do
           send_update(BrandoAdmin.Components.Form,
             id: target_id,
-            action: :update_entry_relation,
+            event: "update_entry_relation",
             updated_relation: image,
             path: full_path,
             force_validation: true
@@ -308,7 +308,7 @@ defmodule BrandoAdmin.LiveView.Form do
         if valid_struct_path?(full_path) do
           send_update(BrandoAdmin.Components.Form,
             id: target_id,
-            action: :update_entry_relation,
+            event: "update_entry_relation",
             updated_relation: image,
             path: full_path,
             force_validation: true
@@ -366,7 +366,7 @@ defmodule BrandoAdmin.LiveView.Form do
         if valid_struct_path?(full_path) do
           send_update(BrandoAdmin.Components.Form,
             id: target_id,
-            action: :update_entry_relation,
+            event: "update_entry_relation",
             updated_relation: video,
             path: full_path,
             force_validation: true
