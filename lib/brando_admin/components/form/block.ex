@@ -13,7 +13,6 @@ defmodule BrandoAdmin.Components.Form.Block do
   alias BrandoAdmin.Components.Form.Input.Entries
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.Form.Block.Events
-  alias Brando.Content.Var
   alias Brando.Villain
 
   def mount(socket) do
@@ -101,30 +100,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     new_sequence = sequence + 1
     current_user_id = socket.assigns.current_user_id
     new_uid = Brando.Utils.generate_uid()
-    children = Ecto.Changeset.get_assoc(block_cs, :children, :struct)
-    vars = Ecto.Changeset.get_assoc(block_cs, :vars, :struct)
-    table_rows = Ecto.Changeset.get_assoc(block_cs, :table_rows, :struct)
-    refs = Ecto.Changeset.get_assoc(block_cs, :refs, :struct)
 
     updated_block_cs =
-      block_cs
-      |> Map.put(:action, :insert)
-      |> Changeset.apply_changes()
-      |> Map.merge(%{
-        id: nil,
-        uid: new_uid,
-        sequence: new_sequence,
-        creator_id: current_user_id,
-        children: [],
-        vars: [],
-        table_rows: [],
-        refs: []
-      })
-      |> Changeset.change()
-      |> Villain.duplicate_vars(vars, current_user_id)
-      |> Villain.duplicate_table_rows(table_rows)
-      |> Villain.duplicate_refs(refs, current_user_id)
-      |> Villain.duplicate_children(children, current_user_id)
+      Villain.duplicate_block(block_cs, user_id: current_user_id, sequence: new_sequence, uid: new_uid)
 
     # insert the new block uid into the block_list
     new_block_list = List.insert_at(block_list, new_sequence, new_uid)
@@ -177,29 +155,8 @@ defmodule BrandoAdmin.Components.Form.Block do
 
       {:ok, socket}
     else
-      vars = Ecto.Changeset.get_assoc(block_cs, :vars, :struct)
-      table_rows = Ecto.Changeset.get_assoc(block_cs, :table_rows, :struct)
-
       updated_block_cs =
-        block_cs
-        |> Map.put(:action, :insert)
-        |> Changeset.apply_changes()
-        |> Map.merge(%{
-          id: nil,
-          uid: new_uid,
-          sequence: new_sequence,
-          creator_id: current_user_id,
-          children: [],
-          vars: [],
-          table_rows: []
-        })
-        |> Changeset.change()
-        |> Villain.duplicate_vars(vars, current_user_id)
-        |> Villain.duplicate_table_rows(table_rows)
-        |> Villain.add_uid_to_refs()
-        |> Changeset.update_change(:refs, fn ref_changesets ->
-          Enum.reject(ref_changesets, &(&1.action == :replace))
-        end)
+        Villain.duplicate_block(block_cs, user_id: current_user_id, sequence: new_sequence, uid: new_uid)
 
       # insert the new block uid into the block_list
       new_block_list = List.insert_at(block_list, sequence, new_uid)
@@ -1447,10 +1404,8 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp assoc_is_loaded(%Ecto.Association.NotLoaded{}), do: false
   defp assoc_is_loaded(_), do: true
 
-  def reset_position_response_tracker(socket) do
-    block_list = socket.assigns.block_list
-    assign(socket, :position_response_tracker, Enum.map(block_list, &{&1, false}))
-  end
+  defdelegate reset_position_response_tracker(socket),
+    to: BrandoAdmin.Components.Form.BlockChangesetList
 
   # after we've sent messages to block asking for position updates, if we have deleted the
   # last child block, we refresh the live preview
@@ -1491,43 +1446,33 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:children_forms, [])
   end
 
-  def maybe_assign_children(%{assigns: %{type: :container, children: children}} = socket) do
-    current_user_id = socket.assigns.current_user_id
+  def maybe_assign_children(%{assigns: %{type: :container}} = socket),
+    do: do_assign_children(socket)
 
-    children_forms =
-      Enum.map(
-        children,
-        &to_change_form(&1, %{}, current_user_id)
-      )
-
-    socket
-    |> assign(:children_forms, children_forms)
-    |> assign_new(:block_count, fn -> Enum.count(children) end)
-    |> assign_new(:changesets, fn -> Enum.map(children, &{extract_uid(&1), nil}) end)
-    |> assign_new(:block_list, fn -> Enum.map(children, &extract_uid(&1)) end)
-  end
-
-  def maybe_assign_children(%{assigns: %{type: :module, multi: true, children: children}} = socket) do
-    current_user_id = socket.assigns.current_user_id
-
-    children_forms =
-      Enum.map(
-        children,
-        &to_change_form(&1, %{}, current_user_id)
-      )
-
-    socket
-    |> assign(:children_forms, children_forms)
-    |> assign_new(:block_count, fn -> Enum.count(children) end)
-    |> assign_new(:changesets, fn -> Enum.map(children, &{extract_uid(&1), nil}) end)
-    |> assign_new(:block_list, fn -> Enum.map(children, &extract_uid(&1)) end)
-  end
+  def maybe_assign_children(%{assigns: %{type: :module, multi: true}} = socket),
+    do: do_assign_children(socket)
 
   def maybe_assign_children(socket) do
     socket
     |> assign_new(:block_count, fn -> 0 end)
     |> assign_new(:block_list, fn -> [] end)
     |> assign_new(:changesets, fn -> [] end)
+  end
+
+  defp do_assign_children(%{assigns: %{children: children}} = socket) do
+    current_user_id = socket.assigns.current_user_id
+
+    children_forms =
+      Enum.map(
+        children,
+        &to_change_form(&1, %{}, current_user_id)
+      )
+
+    socket
+    |> assign(:children_forms, children_forms)
+    |> assign_new(:block_count, fn -> Enum.count(children) end)
+    |> assign_new(:changesets, fn -> Enum.map(children, &{extract_uid(&1), nil}) end)
+    |> assign_new(:block_list, fn -> Enum.map(children, &extract_uid(&1)) end)
   end
 
   defp extract_uid(%{uid: uid}), do: uid
@@ -1548,23 +1493,17 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
   end
 
-  def update_child_changeset(changesets, uid, new_changeset) do
-    Enum.map(changesets, fn
-      {^uid, _changeset} -> {uid, new_changeset}
-      {uid, changeset} -> {uid, changeset}
-    end)
-  end
+  defdelegate update_child_changeset(changesets, uid, new_changeset),
+    to: BrandoAdmin.Components.Form.BlockChangesetList,
+    as: :update_changeset
 
-  def insert_child_changeset(changesets, uid, position) do
-    List.insert_at(changesets, position, {uid, nil})
-  end
+  defdelegate insert_child_changeset(changesets, uid, position),
+    to: BrandoAdmin.Components.Form.BlockChangesetList,
+    as: :insert_changeset
 
-  def delete_child_changeset(changesets, uid) do
-    Enum.reject(changesets, fn
-      {^uid, _} -> true
-      _ -> false
-    end)
-  end
+  defdelegate delete_child_changeset(changesets, uid),
+    to: BrandoAdmin.Components.Form.BlockChangesetList,
+    as: :delete_changeset
 
   def render(%{module_not_found: true} = assigns) do
     ~H"""
@@ -3725,34 +3664,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     })
   end
 
-  def get_container(id) do
-    {:ok, containers} =
-      Brando.Content.list_containers(%{
-        preload: [:palette],
-        cache: {:ttl, :infinite}
-      })
-
-    case Enum.find(containers, &(&1.id == id)) do
-      nil -> nil
-      container -> container
-    end
-  end
-
-  def get_module(id) do
-    {:ok, modules} =
-      Brando.Content.list_modules(%{
-        preload: [
-          {:vars, {Var, [asc: :sequence]}},
-          refs: Brando.Content.Ref.preloads()
-        ],
-        cache: {:ttl, :infinite}
-      })
-
-    case Enum.find(modules, &(&1.id == id)) do
-      nil -> nil
-      module -> module
-    end
-  end
+  defdelegate get_container(id), to: Brando.Content, as: :fetch_container
+  defdelegate get_module(id), to: Brando.Content, as: :fetch_module
 
   def render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render? \\ false) do
     skip_children =

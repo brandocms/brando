@@ -17,11 +17,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   def update(%{event: "duplicate_block", uid: uid, changeset: changeset, populated: true}, socket) do
     block_module = socket.assigns.block_module
     block_cs = Changeset.get_assoc(changeset, :block)
-    vars = Changeset.get_assoc(block_cs, :vars, :struct)
-    table_rows = Changeset.get_assoc(block_cs, :table_rows, :struct)
-    refs = Changeset.get_assoc(block_cs, :refs, :struct)
-    children = Changeset.get_assoc(block_cs, :children, :struct)
-
     block_list = socket.assigns.block_list
     root_changesets = socket.assigns.root_changesets
     sequence = Enum.find_index(block_list, &(&1 == uid))
@@ -31,24 +26,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     new_uid = Brando.Utils.generate_uid()
 
     updated_block_cs =
-      block_cs
-      |> Changeset.apply_changes()
-      |> Map.merge(%{
-        id: nil,
-        uid: new_uid,
-        sequence: new_sequence,
-        creator_id: current_user_id,
-        children: [],
-        vars: [],
-        table_rows: [],
-        refs: []
-      })
-      |> Changeset.change()
-      |> Villain.duplicate_vars(vars, current_user_id)
-      |> Villain.duplicate_table_rows(table_rows)
-      |> Villain.duplicate_refs(refs, current_user_id)
-      |> Villain.duplicate_children(children, current_user_id)
-      |> Map.put(:action, :insert)
+      Villain.duplicate_block(block_cs, user_id: current_user_id, sequence: new_sequence, uid: new_uid)
 
     entry_block_cs =
       block_module
@@ -111,28 +89,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       {:ok, socket}
     else
       # the block has no children, duplicate it right away.
-      vars = Changeset.get_assoc(block_cs, :vars, :struct)
-      table_rows = Changeset.get_assoc(block_cs, :table_rows, :struct)
-      refs = Changeset.get_assoc(block_cs, :refs, :struct)
-
       updated_block_cs =
-        block_cs
-        |> Changeset.apply_changes()
-        |> Map.merge(%{
-          id: nil,
-          uid: new_uid,
-          sequence: new_sequence,
-          creator_id: current_user_id,
-          children: [],
-          vars: [],
-          table_rows: [],
-          refs: []
-        })
-        |> Changeset.change()
-        |> Villain.duplicate_vars(vars, current_user_id)
-        |> Villain.duplicate_table_rows(table_rows)
-        |> Villain.duplicate_refs(refs, current_user_id)
-        |> Map.put(:action, :insert)
+        Villain.duplicate_block(block_cs, user_id: current_user_id, sequence: new_sequence, uid: new_uid)
 
       entry_block_cs =
         block_module
@@ -567,23 +525,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end)
   end
 
-  def update_root_changeset(root_changesets, uid, new_changeset) do
-    Enum.map(root_changesets, fn
-      {^uid, _changeset} -> {uid, new_changeset}
-      {uid, changeset} -> {uid, changeset}
-    end)
-  end
+  defdelegate update_root_changeset(root_changesets, uid, new_changeset),
+    to: BrandoAdmin.Components.Form.BlockChangesetList,
+    as: :update_changeset
 
-  def insert_root_changeset(root_changesets, uid, position) do
-    List.insert_at(root_changesets, position, {uid, nil})
-  end
+  defdelegate insert_root_changeset(root_changesets, uid, position),
+    to: BrandoAdmin.Components.Form.BlockChangesetList,
+    as: :insert_changeset
 
-  def delete_root_changeset(root_changesets, uid) do
-    Enum.reject(root_changesets, fn
-      {^uid, _} -> true
-      _ -> false
-    end)
-  end
+  defdelegate delete_root_changeset(root_changesets, uid),
+    to: BrandoAdmin.Components.Form.BlockChangesetList,
+    as: :delete_changeset
 
   # reposition a main block
   def handle_event("reposition", %{"new" => new_idx, "old" => old_idx}, socket) when new_idx == old_idx do
@@ -755,10 +707,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
-  def reset_position_response_tracker(socket) do
-    block_list = socket.assigns.block_list
-    assign(socket, :position_response_tracker, Enum.map(block_list, &{&1, false}))
-  end
+  defdelegate reset_position_response_tracker(socket),
+    to: BrandoAdmin.Components.Form.BlockChangesetList
 
   def send_block_entry_position_update(socket, block_list) do
     for {block_uid, idx} <- Enum.with_index(block_list) do
@@ -949,15 +899,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     })
   end
 
-  defp get_module(module_id) do
-    modules =
-      Brando.Content.list_modules!(%{
-        cache: {:ttl, :infinite},
-        preload: [:vars, refs: Brando.Content.Ref.preloads()]
-      })
-
-    Enum.find(modules, &(&1.id == module_id))
-  end
+  defp get_module(module_id), do: Brando.Content.fetch_module(module_id)
 
   defp assign_templates(socket) do
     assign_new(socket, :templates, fn ->
@@ -1026,40 +968,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     # The clipboard changeset may be an entry_block or a direct block.
     # Extract the inner block changeset.
-    src_changeset = clipboard.changeset
-
-    block_cs =
-      if Map.has_key?(src_changeset.data, :block) do
-        Changeset.get_assoc(src_changeset, :block)
-      else
-        src_changeset
-      end
-
+    block_cs = extract_block_changeset(clipboard.changeset)
     new_uid = Brando.Utils.generate_uid()
-    children = Changeset.get_assoc(block_cs, :children, :struct)
-    vars = Changeset.get_assoc(block_cs, :vars, :struct)
-    table_rows = Changeset.get_assoc(block_cs, :table_rows, :struct)
-    refs = Changeset.get_assoc(block_cs, :refs, :struct)
 
     updated_block_cs =
-      block_cs
-      |> Changeset.apply_changes()
-      |> Map.merge(%{
-        id: nil,
-        uid: new_uid,
-        sequence: sequence,
-        creator_id: current_user_id,
-        children: [],
-        vars: [],
-        table_rows: [],
-        refs: []
-      })
-      |> Changeset.change()
-      |> Villain.duplicate_vars(vars, current_user_id)
-      |> Villain.duplicate_table_rows(table_rows)
-      |> Villain.duplicate_refs(refs, current_user_id)
-      |> Villain.duplicate_children(children, current_user_id)
-      |> Map.put(:action, :insert)
+      Villain.duplicate_block(block_cs, user_id: current_user_id, sequence: sequence, uid: new_uid)
 
     entry_block_cs =
       block_module
@@ -1095,39 +1008,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   defp create_duplicate_from_clipboard(clipboard, user_id) do
-    src_changeset = clipboard.changeset
+    block_cs = extract_block_changeset(clipboard.changeset)
+    Villain.duplicate_block(block_cs, user_id: user_id)
+  end
 
-    # Extract the inner block changeset (may be entry_block or direct block)
-    block_cs =
-      if Map.has_key?(src_changeset.data, :block) do
-        Changeset.get_assoc(src_changeset, :block)
-      else
-        src_changeset
-      end
-
-    new_uid = Brando.Utils.generate_uid()
-    children = Changeset.get_assoc(block_cs, :children, :struct)
-    vars = Changeset.get_assoc(block_cs, :vars, :struct)
-    table_rows = Changeset.get_assoc(block_cs, :table_rows, :struct)
-    refs = Changeset.get_assoc(block_cs, :refs, :struct)
-
-    block_cs
-    |> Changeset.apply_changes()
-    |> Map.merge(%{
-      id: nil,
-      uid: new_uid,
-      sequence: 0,
-      creator_id: user_id,
-      children: [],
-      vars: [],
-      table_rows: [],
-      refs: []
-    })
-    |> Changeset.change()
-    |> Villain.duplicate_vars(vars, user_id)
-    |> Villain.duplicate_table_rows(table_rows)
-    |> Villain.duplicate_refs(refs, user_id)
-    |> Villain.duplicate_children(children, user_id)
-    |> Map.put(:action, :insert)
+  defp extract_block_changeset(src_changeset) do
+    if Map.has_key?(src_changeset.data, :block) do
+      Changeset.get_assoc(src_changeset, :block)
+    else
+      src_changeset
+    end
   end
 end

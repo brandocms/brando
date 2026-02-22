@@ -27,7 +27,6 @@ defmodule Brando.Content.Block do
     :module_id,
     :container_id,
     :fragment_id,
-    :anchor,
     :multi,
     :palette_id,
     :type,

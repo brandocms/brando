@@ -222,6 +222,32 @@ defmodule Brando.Content do
     end
   end
 
+  @module_cache_opts %{
+    cache: {:ttl, :infinite},
+    preload: [{:vars, {Var, [asc: :sequence]}}, refs: Brando.Content.Ref.preloads()]
+  }
+
+  @container_cache_opts %{
+    cache: {:ttl, :infinite},
+    preload: [:palette]
+  }
+
+  @doc """
+  Fetch a single module by ID from the cached module list.
+  """
+  def fetch_module(id) do
+    {:ok, modules} = list_modules(@module_cache_opts)
+    Enum.find(modules, &(&1.id == id))
+  end
+
+  @doc """
+  Fetch a single container by ID from the cached container list.
+  """
+  def fetch_container(id) do
+    {:ok, containers} = list_containers(@container_cache_opts)
+    Enum.find(containers, &(&1.id == id))
+  end
+
   ## Vars
   ##
 

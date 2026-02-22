@@ -1315,41 +1315,69 @@ defmodule Brando.Villain do
 
   alias Ecto.Changeset
 
+  @doc """
+  Duplicates a block from its changeset.
+
+  Generates a new UID, clears database IDs, and recursively duplicates
+  all associations (vars, refs, table_rows, children).
+
+  ## Options
+
+    * `:user_id` - required, the creator ID for the duplicated block
+    * `:sequence` - optional, defaults to 0
+    * `:uid` - optional, auto-generated if not provided
+  """
+  def duplicate_block(block_cs, opts) do
+    user_id = Keyword.fetch!(opts, :user_id)
+    sequence = Keyword.get(opts, :sequence, 0)
+    uid = Keyword.get(opts, :uid, Brando.Utils.generate_uid())
+
+    children = Changeset.get_assoc(block_cs, :children, :struct)
+    vars = Changeset.get_assoc(block_cs, :vars, :struct)
+    table_rows = Changeset.get_assoc(block_cs, :table_rows, :struct)
+    refs = Changeset.get_assoc(block_cs, :refs, :struct)
+
+    block_cs
+    |> Changeset.apply_changes()
+    |> Map.merge(%{
+      id: nil,
+      uid: uid,
+      sequence: sequence,
+      creator_id: user_id,
+      parent_id: nil,
+      children: [],
+      vars: [],
+      table_rows: [],
+      refs: []
+    })
+    |> Changeset.change()
+    |> duplicate_vars(vars, user_id)
+    |> duplicate_table_rows(table_rows, user_id)
+    |> duplicate_refs(refs, user_id)
+    |> duplicate_children(children, user_id)
+    |> Map.put(:action, :insert)
+  end
+
   def duplicate_children(changeset, children, current_user_id) do
     duplicated_children =
-      Enum.map(children, &duplicate_child(&1, current_user_id))
+      Enum.map(children, fn child ->
+        child
+        |> Changeset.change()
+        |> duplicate_block(user_id: current_user_id)
+      end)
 
     Changeset.put_assoc(changeset, :children, duplicated_children)
   end
 
-  def duplicate_child(child_cs, current_user_id) do
-    new_uid = Brando.Utils.generate_uid()
-    children = child_cs.children
-    vars = child_cs.vars
-    table_rows = child_cs.table_rows
+  @doc """
+  Duplicates a single child block struct.
 
-    child_cs
-    |> Map.merge(%{
-      id: nil,
-      uid: new_uid,
-      creator_id: current_user_id,
-      parent_id: nil,
-      vars: [],
-      table_rows: [],
-      children: []
-    })
+  Wraps the struct in a changeset and delegates to `duplicate_block/2`.
+  """
+  def duplicate_child(child_struct, current_user_id) do
+    child_struct
     |> Changeset.change()
-    |> Map.put(:action, :insert)
-    |> duplicate_vars(vars, current_user_id)
-    |> duplicate_table_rows(table_rows)
-    |> add_uid_to_refs()
-    |> Changeset.update_change(:refs, fn ref_changesets ->
-      Enum.reject(ref_changesets, &(&1.action == :replace))
-    end)
-    |> Changeset.update_change(:vars, fn var_changesets ->
-      Enum.reject(var_changesets, &(&1.action == :replace))
-    end)
-    |> duplicate_children(children, current_user_id)
+    |> duplicate_block(user_id: current_user_id)
   end
 
   def duplicate_vars(changeset, %Ecto.Association.NotLoaded{}, _) do
@@ -1384,17 +1412,20 @@ defmodule Brando.Villain do
     |> Map.put(:action, :insert)
   end
 
-  def duplicate_table_rows(changeset, table_rows) do
-    duplicated_table_rows = Enum.map(table_rows, &duplicate_table_row/1)
+  def duplicate_table_rows(changeset, table_rows, user_id) do
+    duplicated_table_rows = Enum.map(table_rows, &duplicate_table_row(&1, user_id))
     Changeset.put_assoc(changeset, :table_rows, duplicated_table_rows)
   end
 
-  def duplicate_table_row(table_row_struct) do
+  def duplicate_table_row(table_row_struct, user_id) do
+    vars = table_row_struct.vars
+
     table_row_struct
+    |> Map.merge(%{id: nil, block_id: nil, vars: []})
+    |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
     |> Changeset.change()
-    |> Changeset.put_change(:id, nil)
-    |> Changeset.put_change(:block_id, nil)
     |> Map.put(:action, :insert)
+    |> duplicate_vars(vars, user_id)
   end
 
   def duplicate_refs(changeset, %Ecto.Association.NotLoaded{}, _) do
