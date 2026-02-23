@@ -21,7 +21,6 @@ defmodule Brando.Revisions do
   import Ecto.Query
 
   alias Brando.Cache
-  alias Brando.Datasource
   alias Brando.Query
   alias Brando.Revisions.Revision
   alias Brando.Utils
@@ -289,7 +288,7 @@ defmodule Brando.Revisions do
       {:ok, new_entry} ->
         activate_revision(revision)
         deactivate_all_revisions_except(revision)
-        Datasource.update_datasource(entry_schema, new_entry)
+        Brando.Villain.enqueue_entry_cascade(entry_schema, new_entry, nil)
         Cache.Query.evict({:ok, new_entry})
 
       err ->

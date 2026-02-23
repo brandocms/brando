@@ -22,8 +22,15 @@ defmodule Brando.Trait.Status do
       |> Ecto.Changeset.cast(%{status: status}, [:status])
       |> Brando.Repo.update()
 
-    Brando.Datasource.update_datasource(schema)
-    Brando.Content.update_identifier(schema, updated_entry)
+    {:ok, identifier_result} = Brando.Content.update_identifier(schema, updated_entry)
+
+    identifier_id =
+      case identifier_result do
+        %Brando.Content.Identifier{id: id} -> id
+        _ -> nil
+      end
+
+    Brando.Villain.enqueue_entry_cascade(schema, updated_entry, identifier_id)
     Brando.Cache.Query.evict({:ok, %{__struct__: schema, id: id}})
   end
 end

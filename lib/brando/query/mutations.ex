@@ -6,9 +6,9 @@ defmodule Brando.Query.Mutations do
   alias Brando.Notifications
   alias Brando.Publisher
   alias Brando.Query
-  alias Brando.Revisions
   alias Brando.Trait
   alias Brando.Utils
+  alias Brando.Villain
 
   def create(module, params, user, callback_block, opts) do
     {preloads, opts} = Keyword.pop(opts, :preloads)
@@ -26,12 +26,16 @@ defmodule Brando.Query.Mutations do
     case Query.insert(changeset) do
       {:ok, entry} ->
         {:ok, entry} = maybe_preload(entry, preloads)
-        {:ok, _} = Datasource.update_datasource(module, entry)
-        {:ok, _} = Content.create_identifier(module, entry)
+        {:ok, identifier_result} = Content.create_identifier(module, entry)
         {:ok, _} = Publisher.schedule_publishing(entry, changeset, user)
 
+        # Enqueue async cascade (merged datasource + identifier)
+        identifier_id = get_identifier_id(identifier_result)
+        Villain.enqueue_entry_cascade(module, entry, identifier_id)
+
+        # Enqueue async revision
         revisioned? = module.__trait__(Trait.Revisioned)
-        maybe_create_revision(module, entry, user, revisioned?)
+        maybe_enqueue_revision(module, entry, user, revisioned?)
         maybe_notify(entry, "created", user, notify?)
         maybe_broadcast(module, entry, :created, pubsub?)
 
@@ -51,11 +55,15 @@ defmodule Brando.Query.Mutations do
          changeset <- set_action(changeset, :insert),
          {:ok, entry} <- Query.insert(changeset),
          {:ok, entry} <- maybe_preload(entry, preloads),
-         {:ok, _} <- Datasource.update_datasource(module, entry),
-         {:ok, _} <- Content.create_identifier(module, entry),
+         {:ok, identifier_result} <- Content.create_identifier(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
+      # Enqueue async cascade (merged datasource + identifier)
+      identifier_id = get_identifier_id(identifier_result)
+      Villain.enqueue_entry_cascade(module, entry, identifier_id)
+
+      # Enqueue async revision
       revisioned? = module.__trait__(Trait.Revisioned)
-      maybe_create_revision(module, entry, user, revisioned?)
+      maybe_enqueue_revision(module, entry, user, revisioned?)
       maybe_notify(entry, "created", user, notify?)
       maybe_broadcast(module, entry, :created, pubsub?)
 
@@ -87,12 +95,16 @@ defmodule Brando.Query.Mutations do
          changeset <- Publisher.maybe_override_status(changeset),
          changeset <- set_action(changeset, :update),
          {:ok, entry} <- Query.update(changeset),
-         {:ok, _} <- Datasource.update_datasource(module, entry),
-         {:ok, _} <- Content.update_identifier(module, entry),
+         {:ok, identifier_result} <- Content.update_identifier(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
       if has_changes(changeset) do
+        # Enqueue async cascade (merged datasource + identifier)
+        identifier_id = get_identifier_id(identifier_result)
+        Villain.enqueue_entry_cascade(module, entry, identifier_id)
+
+        # Enqueue async revision
         revisioned? = module.__trait__(Trait.Revisioned)
-        maybe_create_revision(module, entry, user, revisioned?)
+        maybe_enqueue_revision(module, entry, user, revisioned?)
         maybe_notify(entry, "updated", user, notify?)
 
         callback.(entry)
@@ -113,12 +125,16 @@ defmodule Brando.Query.Mutations do
          changeset <- set_action(changeset, :update),
          {:ok, entry} <- Query.update(changeset),
          {:ok, entry} <- maybe_preload(entry, preloads),
-         {:ok, _} <- Datasource.update_datasource(module, entry),
-         {:ok, _} <- Content.update_identifier(module, entry),
+         {:ok, identifier_result} <- Content.update_identifier(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
       if has_changes(changeset) do
+        # Enqueue async cascade (merged datasource + identifier)
+        identifier_id = get_identifier_id(identifier_result)
+        Villain.enqueue_entry_cascade(module, entry, identifier_id)
+
+        # Enqueue async revision
         revisioned? = module.__trait__(Trait.Revisioned)
-        maybe_create_revision(module, entry, user, revisioned?)
+        maybe_enqueue_revision(module, entry, user, revisioned?)
         maybe_notify(entry, "updated", user, notify?)
         maybe_broadcast(module, entry, :updated, pubsub?)
 
@@ -328,10 +344,10 @@ defmodule Brando.Query.Mutations do
   # Post-mutation effect helpers with pattern matching to avoid nesting
   # Note: __trait__ returns false if not present, or opts list (possibly []) if present
 
-  defp maybe_create_revision(_module, _entry, _user, false), do: :ok
+  defp maybe_enqueue_revision(_module, _entry, _user, false), do: :ok
 
-  defp maybe_create_revision(_module, entry, user, _trait_opts) do
-    Revisions.create_revision(entry, user)
+  defp maybe_enqueue_revision(module, entry, user, _trait_opts) do
+    enqueue_revision(module, entry, user)
   end
 
   defp maybe_notify(_entry, _action, _user, false), do: :ok
@@ -351,5 +367,16 @@ defmodule Brando.Query.Mutations do
       "brando:mutations:#{inspect(module)}",
       {:mutation, module, entry, action}
     )
+  end
+
+  defp get_identifier_id(%Brando.Content.Identifier{id: id}), do: id
+  defp get_identifier_id(_), do: nil
+
+  defp enqueue_revision(module, entry, user) do
+    user_id = if user == :system, do: nil, else: user.id
+
+    %{schema: to_string(module), entry_id: entry.id, user_id: user_id}
+    |> Brando.Worker.EntryRevision.new()
+    |> Oban.insert()
   end
 end

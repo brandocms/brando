@@ -756,10 +756,9 @@ defmodule Brando.Content do
       changeset = Ecto.Changeset.change(identifier, updated_identifier_data)
 
       case Brando.Repo.update(changeset) do
-        {:ok, entry} ->
-          # check if there are any blocks/vars that need to be updated
-          Villain.render_entries_with_identifier(entry.id)
-          Brando.Cache.Query.evict({:ok, entry})
+        {:ok, updated_identifier} ->
+          Brando.Cache.Query.evict({:ok, updated_identifier})
+          {:ok, updated_identifier}
 
         {:error, changeset} ->
           {:error, changeset}

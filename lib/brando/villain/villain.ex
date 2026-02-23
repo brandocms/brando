@@ -723,6 +723,16 @@ defmodule Brando.Villain do
     |> Changeset.put_assoc(:refs, reapplied_refs)
   end
 
+  @doc """
+  Enqueue an async cascade job that merges datasource + identifier cascade
+  discovery and enqueues EntryRenderer jobs in the background.
+  """
+  def enqueue_entry_cascade(module, entry, identifier_id) do
+    %{schema: to_string(module), entry_id: entry.id, identifier_id: identifier_id}
+    |> Brando.Worker.EntryCascade.new()
+    |> Oban.insert()
+  end
+
   def enqueue_entry_map_for_render(entry_map) do
     for {schema, ids} <- entry_map, entry_id <- ids do
       enqueue_entry_for_render(%{schema: schema, entry_id: entry_id})
