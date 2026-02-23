@@ -11,12 +11,12 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/content/block.ex:139
+#: lib/brando/content/block.ex:138
 #, elixir-autogen, elixir-format
 msgid "block"
 msgstr "blokk"
 
-#: lib/brando/content/block.ex:140
+#: lib/brando/content/block.ex:139
 #, elixir-autogen, elixir-format
 msgid "blocks"
 msgstr "blokker"

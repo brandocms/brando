@@ -49,6 +49,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     ~H"""
     <div>
       <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+        <.invalid_options_warning
+          :if={@invalid_options != []}
+          invalid_options={@invalid_options}
+          target={@myself}
+        />
         <.selected_options
           selected_options={@selected_options}
           relation_fields={@relation_fields}
@@ -257,6 +262,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign_selected_options(changeset, assigns.field)
      |> assign_selected_options_structs()
      |> assign_input_options()
+     |> assign_invalid_options()
      |> assign_sequenced?(assigns.field)
      |> assign_relation_fields(assigns.field)
      |> assign_relation_schema(assigns.field)
@@ -527,6 +533,56 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       :count_label,
       get_count_label(input_options, selected_options, socket.assigns.relation_type)
     )
+  end
+
+  defp assign_invalid_options(socket) do
+    %{
+      selected_options: selected_options,
+      input_options: input_options,
+      relation_key: relation_key,
+      relation_type: relation_type,
+      relation: relation
+    } = socket.assigns
+
+    invalid_options =
+      find_invalid_options(selected_options, input_options, relation_key, relation_type, relation)
+
+    assign(socket, :invalid_options, invalid_options)
+  end
+
+  defp find_invalid_options(selected_options, input_options, relation_key, relation_type, relation)
+       when relation_type in [:has_many, {:subform, :has_many}] do
+    selected_options
+    |> Enum.reject(&(Ecto.Changeset.get_change(&1, :marked_as_deleted) == true))
+    |> Enum.filter(&is_nil(get_opt(&1, input_options, relation_key, relation_type)))
+    |> Enum.map(fn changeset ->
+      %{title: get_invalid_option_title(changeset, relation)}
+    end)
+  end
+
+  defp find_invalid_options(selected_options, input_options, relation_key, relation_type, _relation) do
+    selected_options
+    |> Enum.filter(&is_nil(get_opt(&1, input_options, relation_key, relation_type)))
+    |> Enum.map(fn opt -> %{title: to_string(opt)} end)
+  end
+
+  defp get_invalid_option_title(changeset, relation) when is_atom(relation) and not is_nil(relation) do
+    related = Map.get(changeset.data, relation)
+
+    case related do
+      %Ecto.Association.NotLoaded{} -> nil
+      nil -> nil
+      struct -> extract_identifier_title(struct)
+    end
+  end
+
+  defp get_invalid_option_title(_changeset, _relation), do: nil
+
+  defp extract_identifier_title(struct) do
+    identifier = struct.__struct__.__identifier__(struct, skip_cover: true)
+    identifier.title
+  rescue
+    _ -> nil
   end
 
   def maybe_assign_select_form(%{assigns: %{entry_form: {target_module, form_name}}} = socket) do
@@ -817,6 +873,42 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     """
   end
 
+  defp invalid_options_warning(assigns) do
+    titles =
+      assigns.invalid_options
+      |> Enum.map(& &1.title)
+      |> Enum.reject(&is_nil/1)
+
+    message =
+      if titles != [] do
+        gettext("Unavailable options: %{titles}", titles: Enum.join(titles, ", "))
+      else
+        ngettext(
+          "%{count} selected option is no longer available",
+          "%{count} selected options are no longer available",
+          length(assigns.invalid_options),
+          count: length(assigns.invalid_options)
+        )
+      end
+
+    assigns = assign(assigns, :message, message)
+
+    ~H"""
+    <div class="invalid-options-warning">
+      <div class="invalid-options-warning-content">
+        <span class="invalid-options-warning-text">{@message}</span>
+        <button
+          type="button"
+          class="tiny clear-invalid-button"
+          phx-click={JS.push("clear_invalid_options", target: @target)}
+        >
+          {gettext("Remove invalid")}
+        </button>
+      </div>
+    </div>
+    """
+  end
+
   defp maybe_slug(%Ecto.Changeset{data: %{id: id}}), do: id
   defp maybe_slug(%{id: id}), do: id
   defp maybe_slug(opt) when is_atom(opt), do: to_string(opt)
@@ -946,7 +1038,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       when relation_type in [:has_many, {:subform, :has_many}] do
     form = socket.assigns.field.form
     field = socket.assigns.field
-    subform_id = socket.assigns.subform_id
     changeset = form.source
     module = form.data.__struct__
     sequenced? = socket.assigns.sequenced?
@@ -1011,53 +1102,43 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         {selected_options_structs ++ [selected_option_struct], selected_options ++ [new_rel]}
       end
 
-    on_change = socket.assigns.on_change
-
-    path =
-      if subform_id do
-        socket.assigns.path ++ [field.field]
-      else
-        [field.field]
-      end
-
-    if relation do
-      on_change.(%{
-        event: "update_entry_relation",
-        path: path,
-        force_live_preview_update: true,
-        updated_relation: selected_options_structs
-      })
-    end
-
-    updated_changeset = update_relation(changeset, field.field, selected_options, relation_type)
-
-    # if we have a subform, throw the updated changeset that way
-    if subform_id do
-      send_update(subform_id,
-        index: form.index,
-        action: :update_changeset,
-        updated_changeset: updated_changeset
-      )
-    else
-      # form_id = "#{module.__naming__().singular}_form"
-
-      # send_update(BrandoAdmin.Components.Form,
-      #   id: form_id,
-      #   action: :update_changeset,
-      #   changeset: updated_changeset
-      # )
-
-      on_change.(%{
-        action: :update_changeset,
-        path: path,
-        changeset: updated_changeset
-      })
-    end
-
     socket
-    |> assign(:selected_options, selected_options)
-    |> assign(:selected_options_structs, selected_options_structs)
+    |> propagate_has_many_update(selected_options, selected_options_structs)
     |> then(&{:noreply, &1})
+  end
+
+  def handle_event("clear_invalid_options", _, %{assigns: %{relation_type: rt}} = socket)
+      when rt in [:has_many, {:subform, :has_many}] do
+    %{field: field, input_options: opts, relation_key: rk, relation_type: rt} = socket.assigns
+    selected = get_selected_options(field.form.source, field, rt)
+
+    {updated, updated_structs} =
+      Enum.reduce(selected, {[], socket.assigns.selected_options_structs}, fn opt, {acc, structs} ->
+        already_deleted? = Ecto.Changeset.get_change(opt, :marked_as_deleted) == true
+        valid? = already_deleted? or not is_nil(get_opt(opt, opts, rk, rt))
+
+        cond do
+          valid? ->
+            {acc ++ [opt], structs}
+
+          opt.data.id ->
+            deleted = opt |> Ecto.Changeset.change(marked_as_deleted: true) |> Map.put(:action, :delete)
+            fk_val = to_string(Ecto.Changeset.get_field(opt, rk))
+            {acc ++ [deleted], Enum.reject(structs, &(to_string(Map.get(&1, rk)) == fk_val))}
+
+          true ->
+            {acc, structs}
+        end
+      end)
+
+    {:noreply, propagate_has_many_update(socket, updated, updated_structs)}
+  end
+
+  def handle_event("clear_invalid_options", _, socket) do
+    %{selected_options: selected, input_options: opts, relation_key: rk, relation_type: rt} = socket.assigns
+    updated = Enum.filter(selected, &(not is_nil(get_opt(&1, opts, rk, rt))))
+
+    {:noreply, socket |> assign(:selected_options, updated) |> assign(:invalid_options, []) |> assign_label()}
   end
 
   def handle_event("reset", _, %{assigns: %{input_options: input_options}} = socket) do
@@ -1088,10 +1169,58 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     put_in(struct, [Access.key(relation_key)], assoc_data)
   end
 
+  defp propagate_has_many_update(socket, selected_options, selected_options_structs) do
+    %{field: field, subform_id: subform_id, on_change: on_change, relation: relation, relation_type: relation_type} =
+      socket.assigns
+
+    form = field.form
+    changeset = form.source
+
+    path =
+      if subform_id do
+        socket.assigns.path ++ [field.field]
+      else
+        [field.field]
+      end
+
+    if relation do
+      on_change.(%{
+        event: "update_entry_relation",
+        path: path,
+        force_live_preview_update: true,
+        updated_relation: selected_options_structs
+      })
+    end
+
+    updated_changeset = update_relation(changeset, field.field, selected_options, relation_type)
+
+    if subform_id do
+      send_update(subform_id,
+        index: form.index,
+        action: :update_changeset,
+        updated_changeset: updated_changeset
+      )
+    else
+      on_change.(%{
+        action: :update_changeset,
+        path: path,
+        changeset: updated_changeset
+      })
+    end
+
+    socket
+    |> assign(:selected_options, selected_options)
+    |> assign(:selected_options_structs, selected_options_structs)
+    |> assign_label()
+  end
+
   defp update_relation(changeset, field, updated_relation, relation_type)
        when relation_type in [:has_many, :many_to_many, {:subform, :has_many}] do
-    # TODO: update the "through" relation -- so if we are acting on articles_contributors here,
-    # could we also act on contributors?
+    # TODO: Implement :update_relation support for multi_select (already works in select.ex).
+    # The `update_relation: {relation_field, fetcher_fn}` opt is assigned but unused here.
+    # For a :has_many through a join table (e.g. article_contributors -> contributors),
+    # we should fetch and put the full "through" structs on the changeset, similar to how
+    # select.ex uses the fetcher_fn to update the belongs_to relation after selection.
 
     Ecto.Changeset.put_assoc(changeset, field, updated_relation)
   end

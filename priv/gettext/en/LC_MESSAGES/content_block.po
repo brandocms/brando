@@ -10,12 +10,12 @@ msgid ""
 msgstr ""
 "Language: en\n"
 
-#: lib/brando/content/block.ex:139
+#: lib/brando/content/block.ex:138
 #, elixir-autogen, elixir-format
 msgid "block"
 msgstr ""
 
-#: lib/brando/content/block.ex:140
+#: lib/brando/content/block.ex:139
 #, elixir-autogen, elixir-format
 msgid "blocks"
 msgstr ""

@@ -299,6 +299,36 @@ h2.titlecase + .button-group-vertical button:first-of-type {
   margin-bottom: 15px;
 }
 
+.invalid-options-warning {
+  @space margin-bottom 10px;
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: "Mono";
+
+  .invalid-options-warning-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .clear-invalid-button {
+    white-space: nowrap;
+    border: 1px solid var(--brando-color-dark);
+    padding: 4px 8px;
+    background: none;
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--brando-color-dark);
+      color: var(--brando-color-input);
+    }
+  }
+}
+
 .custom-value-section {
   margin-top: 20px;
   padding-top: 20px;
