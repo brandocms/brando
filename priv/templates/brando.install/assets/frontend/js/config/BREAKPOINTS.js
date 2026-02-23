@@ -1,4 +1,4 @@
-export default application => ({
+export default _application => ({
   breakpoints: [
     'iphone',
     'mobile',
@@ -6,12 +6,12 @@ export default application => ({
     'ipad_landscape',
     'desktop_md',
     'desktop_lg',
-    'desktop_xl'
+    'desktop_xl',
   ],
 
   runListenerOnInit: true,
 
   listeners: {
-    desktop_xl: mq => {}
-  }
+    desktop_xl: _mq => {},
+  },
 })
