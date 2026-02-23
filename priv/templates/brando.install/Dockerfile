@@ -81,21 +81,27 @@ RUN yarn build
 
 FROM node:22 AS assets_frontend
 WORKDIR /opt/app/assets/frontend
-ENV YARN_CACHE_FOLDER ~/.yarn
 
-COPY assets/frontend/package.json assets/frontend/yarn.lock ./
-#COPY assets/frontend/.yalc ./.yalc
-# Use the yarn cache directory as a cache mount
-RUN --mount=type=cache,target=~/.yarn,sharing=locked \
-  yarn \
-  install \
-  --pure-lockfile \
-  --prefer-offline \
-  --progress=false
+# pnpm uses a different cache structure
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY assets/frontend/package.json assets/frontend/pnpm-lock.yaml ./
+COPY assets/frontend/.yalc ./.yalc
+
+# Use pnpm cache directory as a cache mount
+# pnpm stores cache in ~/.local/share/pnpm/store by default
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
+  pnpm install \
+  --frozen-lockfile \
+  --prefer-offline
 
 COPY assets/frontend/ ./
 
-RUN yarn build
+RUN pnpm build
 RUN mkdir -p ../../priv/static/assets/__srcmaps && \
   mv ../../priv/static/assets/*.map ../../priv/static/assets/__srcmaps/
 
