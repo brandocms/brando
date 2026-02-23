@@ -51,6 +51,31 @@
     }
   }
 
+  &.compact {
+    .image-wrapper-compact {
+      border: none;
+      padding: 0;
+      align-items: center;
+      column-gap: 8px;
+
+      img {
+        width: 35px;
+        height: 35px;
+        border-radius: 4px;
+      }
+
+      .img-placeholder {
+        width: 35px;
+        height: 35px;
+      }
+
+      .image-info {
+        font-size: 12px;
+        padding-left: 0;
+      }
+    }
+  }
+
   .image-modal-content-info {
     .file-input-wrapper {
       span.label {

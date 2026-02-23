@@ -197,9 +197,9 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   def render(assigns) do
     ~H"""
     <div>
-      <Form.field_base :if={@editable} field={@field} label={@label} instructions={@instructions} class={@class} relation>
+      <Form.field_base :if={@editable} field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact} relation>
         <div>
-          <div class={["input-image", @small && "small", @square && "square"]}>
+          <div class={["input-image", @small && "small", @square && "square", @compact && "compact"]}>
             <.image_preview
               image={@image}
               field={@field}
@@ -207,11 +207,12 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
               click={@editable && open_image(@myself)}
               editable={@editable}
               file_name={@file_name}
+              compact={@compact}
             />
           </div>
         </div>
       </Form.field_base>
-      <div :if={!@editable} class={["input-image", @small && "small", @square && "square"]}>
+      <div :if={!@editable} class={["input-image", @small && "small", @square && "square", @compact && "compact"]}>
         <.image_preview
           image={@image}
           field={@field}
@@ -219,6 +220,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
           click={@editable && open_image(@myself)}
           editable={@editable}
           file_name={@file_name}
+          compact={@compact}
         />
       </div>
     </div>
@@ -331,6 +333,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       |> assign_new(:value, fn -> nil end)
       |> assign_new(:editable, fn -> true end)
       |> assign_new(:publish, fn -> false end)
+      |> assign_new(:compact, fn -> false end)
       |> assign_new(:image_id, fn ->
         if assigns[:image] do
           assigns[:image].id
@@ -351,7 +354,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
           </div>
         <% end %>
         <div :if={@editable} class="image-info">
-          <div class="info-wrapper">
+          <div :if={!@compact} class="info-wrapper">
             <div class="filename">{@file_name}</div>
             <div class="dims">{@image.width}&times;{@image.height}</div>
             <div :if={@image.title} class="title">● {@image.title}</div>
@@ -368,7 +371,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         </div>
 
         <div :if={@editable} class="image-info">
-          {gettext("No image associated with field")}
+          <span :if={!@compact}>{gettext("No image associated with field")}</span>
           <button class="tiny" type="button" phx-click={@click} phx-value-id={"edit-image-#{@field.id}"}>
             {gettext("Add image")}
           </button>
