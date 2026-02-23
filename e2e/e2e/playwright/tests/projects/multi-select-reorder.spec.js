@@ -20,7 +20,8 @@ test.describe('Multi-select reordering', () => {
 
     // Create three categories
     await page.getByRole('link', { name: 'Categories', exact: true }).click()
-
+    await expect(page).toHaveURL(/\/categories/)
+    await syncLV(page)
     await page.getByRole('link', { name: 'Create new' }).click()
     await syncLV(page)
     const catAField = page.getByRole('textbox', { name: 'Title' })
@@ -55,6 +56,8 @@ test.describe('Multi-select reordering', () => {
   test('reorders selected items in multi-select and persists order', async ({ page }) => {
     // Navigate to Projects and create new
     await page.getByRole('link', { name: 'Projects' }).click()
+    await expect(page).toHaveURL(/\/projects\/projects/)
+    await syncLV(page)
     await page.getByRole('link', { name: 'Create new' }).click()
     await syncLV(page)
 

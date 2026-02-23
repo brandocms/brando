@@ -12,6 +12,8 @@ test('creates project', async ({ page }) => {
   await page.getByTestId('submit').click()
   await syncLV(page)
   await page.getByRole('link', { name: 'Categories', exact: true }).click()
+  await expect(page).toHaveURL(/\/categories/)
+  await syncLV(page)
   await page.getByRole('link', { name: 'Create new' }).click()
   await syncLV(page)
   await page.getByRole('textbox', { name: 'Title' }).click()
@@ -24,6 +26,8 @@ test('creates project', async ({ page }) => {
   await page.getByTestId('submit').click()
   await syncLV(page)
   await page.getByRole('link', { name: 'Projects' }).click()
+  await expect(page).toHaveURL(/\/projects\/projects/)
+  await syncLV(page)
   await page.getByRole('link', { name: 'Create new' }).click()
   await syncLV(page)
 

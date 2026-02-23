@@ -23,6 +23,8 @@ test.describe('Listing Filters', () => {
 
     // Create one project with full_case: true
     await page.getByRole('link', { name: 'Projects' }).click()
+    await expect(page).toHaveURL(/\/projects\/projects/)
+    await syncLV(page)
     await page.getByRole('link', { name: 'Create new' }).click()
     await expect(page).toHaveURL(/\/projects\/create/)
     await syncLV(page)
