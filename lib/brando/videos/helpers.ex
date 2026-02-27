@@ -62,12 +62,24 @@ defmodule Brando.Videos.Helpers do
     Brando.Videos.Uploaders.Mux.get_playback_url(video)
   end
 
-  def get_playback_url(%Video{type: :upload, file: %{path: path}}) do
-    {:ok, Brando.Utils.media_url(path)}
+  def get_playback_url(%Video{type: :upload, file: %Brando.Files.File{} = file}) do
+    {:ok, Brando.Utils.media_url(file)}
   end
 
-  def get_playback_url(%Video{type: :external_file, source_url: url}) do
+  def get_playback_url(%Video{type: :upload, remote_id: remote_id}) when is_binary(remote_id) do
+    {:ok, Brando.Utils.media_url() <> "/" <> remote_id}
+  end
+
+  def get_playback_url(%Video{type: :upload}) do
+    {:error, :file_not_loaded}
+  end
+
+  def get_playback_url(%Video{type: :external_file, source_url: url}) when is_binary(url) do
     {:ok, url}
+  end
+
+  def get_playback_url(%Video{type: :external_file}) do
+    {:error, :missing_source_url}
   end
 
   def get_playback_url(%Video{}) do

@@ -153,6 +153,56 @@ defmodule Brando.Villain.RefRenderingTest do
       assert parsed =~ "youtube.com"
     end
 
+    test "renders video refs with external_file video", %{user: user} do
+      video = Factory.insert(:external_file_video, creator: user)
+
+      module_params =
+        Factory.params_for(:module, %{
+          code: "Video: {% ref refs.hero_video %}",
+          refs: [
+            %{
+              name: "hero_video",
+              video_id: video.id,
+              uid: Brando.Utils.generate_uid(),
+              data: %{type: "video", data: %{autoplay: false}}
+            }
+          ]
+        })
+
+      {:ok, module} = Content.create_module(module_params, user)
+
+      block = %{
+        block: %{
+          type: :module,
+          module_id: module.id,
+          refs: [
+            %{
+              name: "hero_video",
+              description: nil,
+              video_id: video.id,
+              video: video,
+              uid: Brando.Utils.generate_uid(),
+              data: %Brando.Villain.Blocks.VideoBlock{
+                type: "video",
+                data: %Brando.Villain.Blocks.VideoBlock.Data{
+                  autoplay: true
+                }
+              }
+            }
+          ],
+          uid: Brando.Utils.generate_uid(),
+          vars: []
+        }
+      }
+
+      parsed = Brando.Villain.parse([block], %Brando.Pages.Page{})
+
+      assert parsed =~ "Video:"
+      assert parsed =~ "video-wrapper video-file"
+      assert parsed =~ "https://example.com/video.mp4"
+      refute parsed =~ "iframe"
+    end
+
     test "handles missing refs gracefully", %{user: user} do
       module_params =
         Factory.params_for(:module, %{

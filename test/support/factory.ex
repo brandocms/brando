@@ -176,6 +176,50 @@ defmodule Brando.Factory do
     }
   end
 
+  def upload_video_factory do
+    %Brando.Videos.Video{
+      type: :upload,
+      remote_id: "videos/default/test_upload.mp4",
+      width: 1920,
+      height: 1080,
+      aspect_ratio: "1920/1080",
+      autoplay: false,
+      controls: true,
+      loop: false,
+      status: :ready
+    }
+  end
+
+  def external_file_video_factory do
+    %Brando.Videos.Video{
+      type: :external_file,
+      source_url: "https://example.com/video.mp4",
+      width: 1280,
+      height: 720,
+      aspect_ratio: "1280/720",
+      autoplay: true,
+      controls: false,
+      loop: true,
+      status: :ready
+    }
+  end
+
+  def external_file_video_ref_factory do
+    video = build(:external_file_video)
+
+    %Brando.Content.Ref{
+      name: sequence(:ref_name, &"video_ref_#{&1}"),
+      description: "A video ref (external file)",
+      uid: sequence(:ref_name, &"video_ref_uid_#{&1}"),
+      data: %Brando.Villain.Blocks.VideoBlock{
+        type: "video",
+        data: %Brando.Villain.Blocks.VideoBlock.Data{title: "Override title"}
+      },
+      video: video,
+      sequence: 0
+    }
+  end
+
   def gallery_ref_factory do
     gallery = build(:gallery)
 

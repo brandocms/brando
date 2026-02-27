@@ -14,10 +14,10 @@ defmodule Brando.Villain do
   @type changeset :: Ecto.Changeset.t()
 
   @module_cache_ttl (Brando.config(:env) in [:e2e, :test] &&
-                       %{preload: [:vars, refs: [:image, :video, :file, gallery: [gallery_objects: [:image, :video]]]]}) ||
+                       %{preload: [:vars, refs: [:image, :file, video: [:thumbnail, :file], gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]]]}) ||
                       %{
                         cache: {:ttl, :infinite},
-                        preload: [:vars, refs: [:image, :video, :file, gallery: [gallery_objects: [:image, :video]]]]
+                        preload: [:vars, refs: [:image, :file, video: [:thumbnail, :file], gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]]]
                       }
   @container_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{preload: [:palette]}) ||
                          %{cache: {:ttl, :infinite}, preload: [:palette]}
@@ -1234,7 +1234,7 @@ defmodule Brando.Villain do
       refs_query =
         from r in Brando.Content.Ref,
           order_by: [asc: :sequence],
-          preload: [:image, :file, video: [:thumbnail], gallery: [gallery_objects: [:image, :video]]]
+          preload: [:image, :file, video: [:thumbnail, :file], gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]]
 
       sub_sub_children_query =
         from b in Brando.Content.Block,

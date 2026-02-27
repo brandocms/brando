@@ -49,6 +49,6 @@ defmodule Brando.Content.Ref do
   Returns the standard preload list for refs with all media associations
   """
   def preloads do
-    [:image, :file, video: [:thumbnail], gallery: [gallery_objects: [:image, :video]]]
+    [:image, :file, video: [:thumbnail, :file], gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]]
   end
 end

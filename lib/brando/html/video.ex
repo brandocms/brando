@@ -330,22 +330,48 @@ defmodule Brando.HTML.Video do
     """
   end
 
+  def video(%{video: %Video{type: :upload} = video, opts: opts} = assigns) do
+    src = get_upload_video_url(video)
+    poster = get_video_thumbnail(video)
+    render_file_video(assigns, video, src, poster, opts)
+  end
+
+  def video(%{video: %Video{type: :external_file} = video, opts: opts} = assigns) do
+    src = video.source_url || ""
+    poster = get_video_thumbnail(video)
+    render_file_video(assigns, video, src, poster, opts)
+  end
+
   def video(%{video: src, opts: opts} = assigns) when is_binary(src) do
-    width = Keyword.get(opts, :width)
-    height = Keyword.get(opts, :height)
-    orientation = (width > height && "landscape") || "portrait"
-    opacity = Keyword.get(opts, :opacity, 0)
-    preload = Keyword.get(opts, :preload, false)
-    preload = if preload == true, do: "auto", else: preload
-    cover = Keyword.get(opts, :cover, false)
     poster = Keyword.get(opts, :poster, false)
+    render_file_video(assigns, nil, src, poster, opts)
+  end
+
+  def video(%{video: nil} = assigns) do
+    # catch if video is nil and just include a comment
+    ~H"""
+    <!-- empty video component -->
+    """
+  end
+
+  defp render_file_video(assigns, video, src, poster, opts) do
+    width = (video && video.width) || Keyword.get(opts, :width)
+    height = (video && video.height) || Keyword.get(opts, :height)
+    orientation = (width && height && width > height && "landscape") || "portrait"
+    opacity = Keyword.get(opts, :opacity, 0)
+    preload_opt = (video && video.preload) || Keyword.get(opts, :preload, false)
+    preload_opt = if preload_opt == true, do: "auto", else: preload_opt
+    cover = Keyword.get(opts, :cover, false)
     progress = Keyword.get(opts, :progress, false)
     play_button = Keyword.get(opts, :play_button, false)
-    autoplay = Keyword.get(opts, :autoplay, false)
-    controls = Keyword.get(opts, :controls, false)
-    aspect_ratio = Keyword.get(opts, :aspect_ratio, nil)
+    autoplay = (video && video.autoplay) || Keyword.get(opts, :autoplay, false)
+    controls = (video && video.controls) || Keyword.get(opts, :controls, false)
+
+    aspect_ratio =
+      (video && video.aspect_ratio) || Keyword.get(opts, :aspect_ratio, nil)
+
     aspect_ratio = build_aspect_ratio_style_string(aspect_ratio, width, height)
-    loop = Keyword.get(opts, :loop, true)
+    loop = (video && video.loop) || Keyword.get(opts, :loop, true)
 
     caption =
       case Keyword.get(opts, :caption, false) do
@@ -363,16 +389,14 @@ defmodule Brando.HTML.Video do
       |> assign(:poster, validate_poster(poster))
       |> assign(:width, width)
       |> assign(:height, height)
-      |> assign(:preload, preload)
+      |> assign(:preload, preload_opt)
       |> assign(:progress, progress)
       |> assign(:src, src)
       |> assign(:loop, loop)
       |> assign(:play_button, play_button)
       |> assign(:video_cover, get_video_cover(cover, width, height, opacity))
       |> assign(:caption, caption)
-      |> assign_new(:cover, fn ->
-        nil
-      end)
+      |> assign_new(:cover, fn -> nil end)
 
     ~H"""
     <div
@@ -436,12 +460,21 @@ defmodule Brando.HTML.Video do
     """
   end
 
-  def video(%{video: nil} = assigns) do
-    # catch if video is nil and just include a comment
-    ~H"""
-    <!-- empty video component -->
-    """
+  defp get_upload_video_url(%Video{file: %Brando.Files.File{} = file}) do
+    Brando.Utils.media_url(file)
   end
+
+  defp get_upload_video_url(%Video{remote_id: remote_id}) when is_binary(remote_id) do
+    Brando.Utils.media_url(remote_id)
+  end
+
+  defp get_upload_video_url(_), do: ""
+
+  defp get_video_thumbnail(%Video{thumbnail: %Brando.Images.Image{} = img}) do
+    Brando.Utils.media_url(img.path)
+  end
+
+  defp get_video_thumbnail(_), do: false
 
   defp figcaption_tag(assigns) do
     ~H"""

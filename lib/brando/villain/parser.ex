@@ -483,8 +483,6 @@ defmodule Brando.Villain.Parser do
     assigns
     |> Brando.Villain.Parser.video_tag()
     |> Phoenix.LiveViewTest.rendered_to_string()
-
-    "!!! TODO: Implement video file upload"
   end
 
   def video(_, _), do: ""
