@@ -145,6 +145,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           >
             {gettext("Select images")}
           </button>
+          <button
+            type="button"
+            class="tiny"
+            phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
+          >
+            {gettext("Select videos")}
+          </button>
           <%= if @gallery do %>
             <.inputs_for :let={gallery_form} field={@ref_form[:gallery]}>
               <Input.input type={:hidden} field={gallery_form[:id]} />
@@ -369,6 +376,62 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:noreply, socket}
   end
 
+  def handle_event("open_video_picker", _, socket) do
+    myself = socket.assigns.myself
+    gallery_objects = socket.assigns.gallery_objects
+
+    selected_videos =
+      gallery_objects
+      |> Enum.filter(& &1.video_id)
+      |> Enum.map(& &1.video_id)
+
+    send_update(BrandoAdmin.Components.VideoPicker,
+      id: "video-picker",
+      config_target: nil,
+      event_target: myself,
+      multi: true,
+      selected_videos: selected_videos
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("select_video", %{"id" => id, "selected" => "false"}, socket) do
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+
+    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+    block_data = Changeset.apply_changes(block_data_cs)
+    new_block_data = Map.from_struct(block_data)
+
+    send_update(target, %{
+      event: "update_ref_data",
+      ref_data: new_block_data,
+      ref_name: ref_name,
+      add_gallery_video_id: String.to_integer(id)
+    })
+
+    {:noreply, socket}
+  end
+
+  def handle_event("select_video", %{"id" => id, "selected" => "true"}, socket) do
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+
+    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+    block_data = Changeset.apply_changes(block_data_cs)
+    new_block_data = Map.from_struct(block_data)
+
+    send_update(target, %{
+      event: "update_ref_data",
+      ref_data: new_block_data,
+      ref_name: ref_name,
+      remove_gallery_video_id: String.to_integer(id)
+    })
+
+    {:noreply, socket}
+  end
+
   ## Function components
 
   attr :obj, :map, required: true
@@ -380,8 +443,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     # Extract object ID and look up precomputed data
     object_id_str =
       cond do
-        assigns.obj.image -> to_string(assigns.obj.image.id)
-        assigns.obj.video -> to_string(assigns.obj.video.id)
+        loaded_assoc?(assigns.obj, :image) -> to_string(assigns.obj.image.id)
+        loaded_assoc?(assigns.obj, :video) -> to_string(assigns.obj.video.id)
         true -> nil
       end
 
@@ -455,15 +518,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       Enum.map(gallery_objects, fn obj ->
         object_id_str =
           cond do
-            obj.image -> to_string(obj.image.id)
-            obj.video -> to_string(obj.video.id)
+            loaded_assoc?(obj, :image) -> to_string(obj.image.id)
+            loaded_assoc?(obj, :video) -> to_string(obj.video.id)
             true -> nil
           end
 
         object_type =
           cond do
-            obj.image -> :image
-            obj.video -> :video
+            loaded_assoc?(obj, :image) -> :image
+            loaded_assoc?(obj, :video) -> :video
             true -> nil
           end
 
@@ -554,6 +617,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     # Handle case where we only have image_id but image is nil or NotLoaded
     obj =
       case {Map.get(obj, :image_id), Map.get(obj, :image)} do
+        {nil, %Ecto.Association.NotLoaded{}} ->
+          Map.put(obj, :image, nil)
+
         {nil, _} ->
           obj
 
@@ -575,6 +641,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     # Handle case where we only have video_id but video is nil or NotLoaded
     case {Map.get(obj, :video_id), Map.get(obj, :video)} do
+      {nil, %Ecto.Association.NotLoaded{}} ->
+        Map.put(obj, :video, nil)
+
       {nil, _} ->
         obj
 
@@ -611,7 +680,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       # Get the object ID and type - handle both loaded and ID-only cases
       {object_id, object_id_str, object_type, media_object} =
         cond do
-          Map.get(obj, :image) ->
+          loaded_assoc?(obj, :image) ->
             image = Map.get(obj, :image)
             {image.id, to_string(image.id), :image, image}
 
@@ -622,7 +691,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               _ -> {nil, nil, nil, nil}
             end
 
-          Map.get(obj, :video) ->
+          loaded_assoc?(obj, :video) ->
             video = Map.get(obj, :video)
             {video.id, to_string(video.id), :video, video}
 
@@ -643,7 +712,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
         # Get default values from the media object
         default_title = media_object.title || ""
-        default_credits = media_object.credits || ""
+        default_credits = Map.get(media_object, :credits) || ""
         default_alt = if object_type == :image, do: media_object.alt || "", else: ""
 
         # Determine current values and use_default states from the override
@@ -682,5 +751,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         acc
       end
     end)
+  end
+
+  defp loaded_assoc?(obj, key) do
+    case Map.get(obj, key) do
+      %Ecto.Association.NotLoaded{} -> false
+      nil -> false
+      _ -> true
+    end
   end
 end

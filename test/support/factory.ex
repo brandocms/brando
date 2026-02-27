@@ -166,6 +166,12 @@ defmodule Brando.Factory do
     %Brando.Galleries.Gallery{}
   end
 
+  def gallery_object_factory do
+    %Brando.Galleries.GalleryObject{
+      sequence: 0
+    }
+  end
+
   def video_factory do
     %Brando.Videos.Video{
       source_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",

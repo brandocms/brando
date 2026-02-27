@@ -37,7 +37,7 @@ defmodule Brando.Galleries.Gallery do
     listing do
       query %{
         order: [{:desc, :id}],
-        preload: [{:gallery_objects, [:image, :video]}]
+        preload: [{:gallery_objects, [:image, video: [:thumbnail]]}]
       }
 
       component &__MODULE__.listing_row/1
@@ -106,7 +106,7 @@ defmodule Brando.Galleries.Gallery do
     gallery_objects_query =
       from go in Brando.Galleries.GalleryObject,
         order_by: [asc: go.sequence],
-        preload: [:image, :video]
+        preload: [:image, video: [:thumbnail]]
 
     from g in Brando.Galleries.Gallery,
       preload: [gallery_objects: ^gallery_objects_query]

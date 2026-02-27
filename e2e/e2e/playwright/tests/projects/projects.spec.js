@@ -125,6 +125,25 @@ test('creates project', async ({ page }) => {
   expect(secondGalleryObjectImgSrc).toBeTruthy()
   expect(firstGalleryObjectImgSrc).not.toBe(secondGalleryObjectImgSrc)
 
+  // Select video for gallery
+  await page.getByRole('button', { name: 'Select videos' }).click()
+  await syncLV(page)
+
+  const videoPicker = page.locator('#video-picker')
+  await expect(videoPicker).toBeVisible()
+
+  // Select seeded video
+  await videoPicker.locator('.video-info').first().click()
+  await syncLV(page)
+
+  // Close the video picker drawer
+  await videoPicker.getByRole('button', { name: 'Close' }).click()
+  await page.waitForSelector('#video-picker', { state: 'hidden' })
+
+  // Verify video appears in gallery grid (2 images + 1 video)
+  const galleryObjects = page.locator('#sortable-gallery-objects .gallery-object')
+  await expect(galleryObjects).toHaveCount(3)
+
   const firstGalleryObjectHandle = page
     .locator('#sortable-gallery-objects .gallery-object')
     .first()

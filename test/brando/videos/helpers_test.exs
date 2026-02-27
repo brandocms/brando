@@ -32,4 +32,49 @@ defmodule Brando.Videos.HelpersTest do
     assert {:error, :unsupported_type} =
              Helpers.get_playback_url(%Video{type: :unknown})
   end
+
+  describe "thumbnail_url/1" do
+    test "returns media URL for video with Image thumbnail" do
+      video = %Video{
+        type: :upload,
+        thumbnail: %Brando.Images.Image{path: "images/videos/thumbnails/thumb.jpg"}
+      }
+
+      result = Helpers.thumbnail_url(video)
+      assert result =~ "images/videos/thumbnails/thumb.jpg"
+    end
+
+    test "returns Mux thumbnail URL for Mux video with playback_id" do
+      video = %Video{
+        type: :mux,
+        meta: %{"mux" => %{"playback_id" => "abc123"}}
+      }
+
+      assert Helpers.thumbnail_url(video) == "https://image.mux.com/abc123/thumbnail.jpg"
+    end
+
+    test "returns nil for Mux video without playback_id" do
+      video = %Video{
+        type: :mux,
+        meta: %{"mux" => %{}}
+      }
+
+      assert Helpers.thumbnail_url(video) == nil
+    end
+
+    test "returns nil for YouTube video" do
+      video = %Video{type: :youtube}
+      assert Helpers.thumbnail_url(video) == nil
+    end
+
+    test "returns nil for Vimeo video" do
+      video = %Video{type: :vimeo}
+      assert Helpers.thumbnail_url(video) == nil
+    end
+
+    test "returns nil for upload video without thumbnail" do
+      video = %Video{type: :upload, thumbnail: nil}
+      assert Helpers.thumbnail_url(video) == nil
+    end
+  end
 end

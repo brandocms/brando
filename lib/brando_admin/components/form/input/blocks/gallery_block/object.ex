@@ -27,8 +27,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
     # Get the override info for this object to determine what values to display
     object_id_str =
       cond do
-        obj && obj.image -> to_string(obj.image.id)
-        obj && obj.video -> to_string(obj.video.id)
+        obj && loaded_assoc?(obj, :image) -> to_string(obj.image.id)
+        obj && loaded_assoc?(obj, :video) -> to_string(obj.video.id)
         true -> nil
       end
 
@@ -74,18 +74,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
 
       <%= if @gallery_object_form[:image_id].value do %>
         <%!-- Display image if available --%>
-        <%= if @obj && @obj.image do %>
+        <%= if @obj && loaded_assoc?(@obj, :image) do %>
           <Content.image image={@obj.image} size={(@display == :grid && :thumb) || :smallest} />
         <% end %>
       <% else %>
         <%!-- Display video thumbnail or placeholder --%>
-        <%= if @obj && @obj.video && @obj.video.thumbnail do %>
+        <%= if @obj && loaded_assoc?(@obj, :video) && @obj.video.thumbnail do %>
           <Content.image image={@obj.video.thumbnail} size={(@display == :grid && :thumb) || :smallest} />
         <% else %>
           <div class="video-placeholder">
             <.icon name="hero-video-camera" />
-            <%= if @obj && @obj.video do %>
-              <span>{@obj.video.filename || "Video"}</span>
+            <%= if @obj && loaded_assoc?(@obj, :video) do %>
+              <span>{@obj.video.title || "Video"}</span>
             <% end %>
           </div>
         <% end %>
@@ -118,10 +118,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
         <div class="panels">
           <div class="panel">
             <figure>
-              <%= if @obj && @obj.image do %>
+              <%= if @obj && loaded_assoc?(@obj, :image) do %>
                 <Content.image image={@obj.image} size={:smallest} />
               <% else %>
-                <%= if @obj && @obj.video && @obj.video.thumbnail do %>
+                <%= if @obj && loaded_assoc?(@obj, :video) && @obj.video.thumbnail do %>
                   <Content.image image={@obj.video.thumbnail} size={:smallest} />
                 <% else %>
                   <div class="video-placeholder">
@@ -174,18 +174,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
   defp compute_display_values_from_form(obj, nil) do
     # No override form, use base values
     cond do
-      obj.image ->
+      loaded_assoc?(obj, :image) ->
         %{
           title: obj.image.title,
           alt: obj.image.alt,
           credits: obj.image.credits
         }
 
-      obj.video ->
+      loaded_assoc?(obj, :video) ->
         %{
           title: obj.video.title,
           alt: nil,
-          credits: obj.video.credits
+          credits: nil
         }
 
       true ->
@@ -197,18 +197,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
     # Get base values
     base_values =
       cond do
-        obj.image ->
+        loaded_assoc?(obj, :image) ->
           %{
             title: obj.image.title,
             alt: obj.image.alt,
             credits: obj.image.credits
           }
 
-        obj.video ->
+        loaded_assoc?(obj, :video) ->
           %{
             title: obj.video.title,
             alt: nil,
-            credits: obj.video.credits
+            credits: nil
           }
 
         true ->
@@ -273,8 +273,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
     # Extract object ID and look up precomputed data
     object_id_str =
       cond do
-        assigns.obj.image -> to_string(assigns.obj.image.id)
-        assigns.obj.video -> to_string(assigns.obj.video.id)
+        loaded_assoc?(assigns.obj, :image) -> to_string(assigns.obj.image.id)
+        loaded_assoc?(assigns.obj, :video) -> to_string(assigns.obj.video.id)
         true -> nil
       end
 
@@ -307,6 +307,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
         <p>{gettext("Caption overrides not available - no override data")}</p>
       </div>
       """
+    end
+  end
+
+  defp loaded_assoc?(obj, key) do
+    case Map.get(obj, key) do
+      %Ecto.Association.NotLoaded{} -> false
+      nil -> false
+      _ -> true
     end
   end
 end

@@ -119,7 +119,9 @@ defmodule Brando.Content do
 
   query(:single, Module,
     do: fn query ->
-      from(q in query, preload: [:vars, refs: [:image, :video, gallery: [gallery_objects: [:image, :video]]]])
+      from(q in query,
+        preload: [:vars, refs: [:image, :video, gallery: [gallery_objects: [:image, video: [:thumbnail]]]]]
+      )
     end
   )
 

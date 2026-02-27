@@ -864,3 +864,16 @@ team_section = %Brando.Content.Module{
   config_target: "test_gallery",
   gallery_objects: []
 } |> E2eProject.Repo.insert!()
+
+# Video for gallery video selection tests
+%Brando.Videos.Video{
+  title: "Test Video",
+  type: :youtube,
+  source_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  remote_id: "dQw4w9WgXcQ",
+  width: 1920,
+  height: 1080,
+  aspect_ratio: "1920/1080",
+  status: :ready,
+  creator_id: user.id
+} |> E2eProject.Repo.insert!()

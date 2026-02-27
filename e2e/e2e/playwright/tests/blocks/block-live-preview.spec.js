@@ -278,6 +278,21 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       await page.waitForTimeout(2000) // Wait for uploads
 
       await waitForPreviewUpdate(page)
+
+      // Select video for gallery
+      await page.getByRole('button', { name: 'Select videos' }).click()
+      await syncLV(page)
+
+      // Pick a video from the video picker drawer
+      const videoPicker = page.locator('#video-picker')
+      await expect(videoPicker).toBeVisible()
+
+      // Select the seeded test video
+      await videoPicker.locator('.video-info').first().click()
+      await syncLV(page)
+
+      // Verify video object appears in gallery
+      await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(3)
     })
   })
 

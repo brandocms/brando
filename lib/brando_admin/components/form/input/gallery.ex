@@ -11,6 +11,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.ImagePicker
+  alias BrandoAdmin.Components.VideoPicker
 
   # prop form, :form
   # prop field, :atom
@@ -49,7 +50,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
     updated_gallery_objects =
       Enum.map(gallery_objects, fn
-        %{image_id: ^updated_image_id} -> %{image_id: updated_image_id, image: updated_image}
+        %{image_id: ^updated_image_id} = obj -> Map.put(obj, :image, updated_image)
         other -> other
       end)
 
@@ -92,7 +93,12 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
     socket
     |> assign(:gallery, gallery)
-    |> assign_new(:selected_images, fn -> Enum.map(gallery_objects, & &1.image_id) end)
+    |> assign_new(:selected_images, fn ->
+      gallery_objects |> Enum.filter(&Map.get(&1, :image_id)) |> Enum.map(&Map.get(&1, :image_id))
+    end)
+    |> assign_new(:selected_videos, fn ->
+      gallery_objects |> Enum.filter(&Map.get(&1, :video_id)) |> Enum.map(&Map.get(&1, :video_id))
+    end)
     |> assign_new(:gallery_objects, fn -> gallery_objects end)
   end
 
@@ -112,6 +118,13 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
               class="tiny"
             >
               {gettext("Select images")}
+            </button>
+            <button
+              phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
+              type="button"
+              class="tiny"
+            >
+              {gettext("Select videos")}
             </button>
           </div>
 
@@ -159,7 +172,10 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                 <Input.input type={:hidden} field={gallery_form[:config_target]} />
 
                 <.inputs_for :let={gallery_object} field={gallery_form[:gallery_objects]}>
-                  <figure class="gallery-object sort-handle draggable" data-id={gallery_object[:image_id].value}>
+                  <figure
+                    class="gallery-object sort-handle draggable"
+                    data-id={gallery_object[:image_id].value || gallery_object[:video_id].value}
+                  >
                     <.gallery_object
                       gallery_objects={@gallery_objects}
                       gallery_object_field={gallery_object}
@@ -172,6 +188,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                     />
                   </figure>
                   <Input.input type={:hidden} field={gallery_object[:image_id]} />
+                  <Input.input type={:hidden} field={gallery_object[:video_id]} />
                   <Input.input type={:hidden} field={gallery_object[:gallery_id]} />
                   <Input.input type={:hidden} field={gallery_object[:creator_id]} />
                 </.inputs_for>
@@ -185,35 +202,53 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   end
 
   def gallery_object(assigns) do
+    image_id = assigns.gallery_object_field[:image_id].value
+    video_id = assigns.gallery_object_field[:video_id].value
+
     gallery_object =
-      Enum.find(
-        assigns.gallery_objects,
-        &(to_string(&1.image_id) == to_string(assigns.gallery_object_field[:image_id].value))
-      )
+      Enum.find(assigns.gallery_objects, fn obj ->
+        (image_id && to_string(Map.get(obj, :image_id)) == to_string(image_id)) ||
+          (video_id && to_string(Map.get(obj, :video_id)) == to_string(video_id))
+      end)
 
     assigns = assign(assigns, :gallery_object, gallery_object)
 
     ~H"""
     <div :if={@gallery_object}>
-      <%= if @gallery_object.image.status == :processed do %>
-        <img width="25" height="25" src={"#{Utils.img_url(@gallery_object.image, :thumb, prefix: Utils.media_url())}"} />
-        <button
-          type="button"
-          class="delete-object"
-          name={"#{@parent_form_name}[drop_gallery_object_ids][]"}
-          value={@gallery_object_field.index}
-          data-sortable-filter
-          phx-click={JS.dispatch("change")}
-        >
-          <.icon name="hero-x-mark" />
-        </button>
+      <%= if Map.get(@gallery_object, :image_id) && loaded_assoc?(@gallery_object, :image) do %>
+        <%= if @gallery_object.image.status == :processed do %>
+          <img
+            width="25"
+            height="25"
+            src={"#{Utils.img_url(@gallery_object.image, :thumb, prefix: Utils.media_url())}"}
+          />
+        <% else %>
+          <div class="img-placeholder">
+            <svg class="spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+              <path fill="none" d="M0 0h24v24H0z" /><path d="M5.463 4.433A9.961 9.961 0 0 1 12 2c5.523 0 10 4.477 10 10 0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228l-.997-1.795zm13.074 15.134A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772l.997 1.795z" />
+            </svg>
+          </div>
+        <% end %>
       <% else %>
-        <div class="img-placeholder">
-          <svg class="spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-            <path fill="none" d="M0 0h24v24H0z" /><path d="M5.463 4.433A9.961 9.961 0 0 1 12 2c5.523 0 10 4.477 10 10 0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228l-.997-1.795zm13.074 15.134A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772l.997 1.795z" />
-          </svg>
-        </div>
+        <% thumb_url = if(loaded_assoc?(@gallery_object, :video), do: Brando.Videos.Helpers.thumbnail_url(@gallery_object.video)) %>
+        <%= if thumb_url do %>
+          <img width="25" height="25" src={thumb_url} />
+        <% else %>
+          <div class="img-placeholder">
+            <.icon name="hero-video-camera" />
+          </div>
+        <% end %>
       <% end %>
+      <button
+        type="button"
+        class="delete-object"
+        name={"#{@parent_form_name}[drop_gallery_object_ids][]"}
+        value={@gallery_object_field.index}
+        data-sortable-filter
+        phx-click={JS.dispatch("change")}
+      >
+        <.icon name="hero-x-mark" />
+      </button>
     </div>
     """
   end
@@ -297,7 +332,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           creator_id: current_user.id
         })
 
-    selected_objects = Enum.map(new_gallery_objects, & &1.image_id)
+    selected_objects = Enum.map(new_gallery_objects, &Map.get(&1, :image_id))
 
     send_update(ImagePicker,
       id: "image-picker",
@@ -328,8 +363,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     gallery = Ecto.Changeset.get_field(changeset, field.field)
     field_name = field.field
     image_id = (is_binary(image_id) && String.to_integer(image_id)) || image_id
-    new_gallery_objects = Enum.filter(gallery_objects, &(&1.image_id != image_id))
-    selected_objects = Enum.map(new_gallery_objects, & &1.image_id)
+    new_gallery_objects = Enum.filter(gallery_objects, &(Map.get(&1, :image_id) != image_id))
+    selected_objects = Enum.map(new_gallery_objects, &Map.get(&1, :image_id))
 
     send_update(ImagePicker,
       id: "image-picker",
@@ -361,6 +396,131 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     )
 
     {:noreply, assign(socket, gallery_objects: new_gallery_objects, selected_images: selected_objects)}
+  end
+
+  def handle_event("open_video_picker", _, socket) do
+    send_update(VideoPicker,
+      id: "video-picker",
+      config_target: nil,
+      event_target: socket.assigns.myself,
+      multi: true,
+      selected_videos: socket.assigns.selected_videos
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "select_video",
+        %{"id" => video_id, "selected" => "false"},
+        %{assigns: %{field: field, gallery_objects: gallery_objects, current_user: current_user}} = socket
+      ) do
+    changeset = field.form.source
+    field_name = field.field
+    schema = field.form.data.__struct__
+    gallery = Ecto.Changeset.get_field(changeset, field_name)
+
+    {:ok, new_video} = Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]})
+
+    current_gallery_objects =
+      if gallery do
+        Enum.map(
+          gallery.gallery_objects || [],
+          &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
+        )
+      else
+        []
+      end
+
+    new_gallery_object = %{video_id: String.to_integer(video_id), creator_id: current_user.id}
+    new_gallery_objects = current_gallery_objects ++ List.wrap(new_gallery_object)
+
+    new_gallery =
+      if gallery do
+        %{
+          id: gallery.id,
+          config_target: gallery.config_target,
+          gallery_objects: sequence(new_gallery_objects)
+        }
+      else
+        %{
+          config_target: "gallery:#{inspect(schema)}:#{field_name}",
+          gallery_objects: sequence(new_gallery_objects)
+        }
+      end
+
+    new_gallery_objects_full =
+      gallery_objects ++
+        List.wrap(%GalleryObject{
+          video_id: new_video.id,
+          video: new_video,
+          creator_id: current_user.id
+        })
+
+    selected_videos = new_gallery_objects_full |> Enum.filter(&Map.get(&1, :video_id)) |> Enum.map(&Map.get(&1, :video_id))
+
+    send_update(VideoPicker,
+      id: "video-picker",
+      selected_videos: selected_videos
+    )
+
+    updated_changeset = put_assoc(changeset, field_name, new_gallery)
+
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      action: :update_changeset,
+      changeset: updated_changeset,
+      force_validation: true
+    )
+
+    {:noreply, assign(socket, gallery_objects: new_gallery_objects_full, selected_videos: selected_videos)}
+  end
+
+  def handle_event(
+        "select_video",
+        %{"id" => video_id, "selected" => "true"},
+        %{assigns: %{field: field, gallery_objects: gallery_objects}} = socket
+      ) do
+    changeset = field.form.source
+    gallery = Ecto.Changeset.get_field(changeset, field.field)
+    field_name = field.field
+    video_id = (is_binary(video_id) && String.to_integer(video_id)) || video_id
+    new_gallery_objects = Enum.filter(gallery_objects, &(Map.get(&1, :video_id) != video_id))
+    selected_videos = new_gallery_objects |> Enum.filter(&Map.get(&1, :video_id)) |> Enum.map(&Map.get(&1, :video_id))
+
+    send_update(VideoPicker,
+      id: "video-picker",
+      selected_videos: selected_videos
+    )
+
+    slimmed_gallery_objects =
+      Enum.map(
+        new_gallery_objects,
+        &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
+      )
+
+    new_gallery = %{
+      id: gallery.id,
+      config_target: gallery.config_target,
+      gallery_objects: sequence(slimmed_gallery_objects)
+    }
+
+    updated_changeset = put_assoc(changeset, field_name, new_gallery)
+
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      action: :update_changeset,
+      changeset: updated_changeset,
+      force_validation: true
+    )
+
+    {:noreply, assign(socket, gallery_objects: new_gallery_objects, selected_videos: selected_videos)}
   end
 
   def handle_event("edit_image", %{"id" => _id}, socket) do
@@ -395,5 +555,13 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     )
 
     {:noreply, assign(socket, :selected_images, [])}
+  end
+
+  defp loaded_assoc?(obj, key) do
+    case Map.get(obj, key) do
+      %Ecto.Association.NotLoaded{} -> false
+      nil -> false
+      _ -> true
+    end
   end
 end

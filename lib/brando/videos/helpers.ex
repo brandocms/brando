@@ -85,4 +85,48 @@ defmodule Brando.Videos.Helpers do
   def get_playback_url(%Video{}) do
     {:error, :unsupported_type}
   end
+
+  @doc """
+  Get the thumbnail URL for a video.
+
+  Returns the URL as a string or nil if no thumbnail is available.
+
+  ## Examples
+
+      iex> thumbnail_url(%Video{thumbnail: %Image{path: "images/thumb.jpg"}})
+      "/media/images/thumb.jpg"
+
+      iex> thumbnail_url(%Video{type: :mux, meta: %{"mux" => %{"playback_id" => "xyz"}}})
+      "https://image.mux.com/xyz/thumbnail.jpg"
+
+      iex> thumbnail_url(%Video{type: :youtube})
+      nil
+  """
+  def thumbnail_url(%Video{thumbnail: %Brando.Images.Image{} = img}) do
+    Brando.Utils.media_url(img.path)
+  end
+
+  def thumbnail_url(%Video{type: :mux, meta: %{"mux" => %{"playback_id" => playback_id}}})
+      when is_binary(playback_id) do
+    "https://image.mux.com/#{playback_id}/thumbnail.jpg"
+  end
+
+  def thumbnail_url(%Video{type: :bunny, meta: %{"bunny" => %{"video_guid" => guid}}})
+      when is_binary(guid) do
+    cdn_hostname = get_bunny_cdn_hostname()
+
+    if cdn_hostname != "" do
+      "https://#{cdn_hostname}/#{guid}/thumbnail.jpg"
+    else
+      nil
+    end
+  end
+
+  def thumbnail_url(%Video{}), do: nil
+
+  defp get_bunny_cdn_hostname do
+    :brando
+    |> Application.get_env(Brando.Videos.Uploaders.Bunny, [])
+    |> Keyword.get(:cdn_hostname, "")
+  end
 end
