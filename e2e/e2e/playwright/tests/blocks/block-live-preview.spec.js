@@ -659,4 +659,94 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       await expect(frame.locator('header[b-tpl="styled-header"] h1').last()).toContainText('Original Header')
     })
   })
+
+  test.describe('Morph Preservation (skipFromChildren)', () => {
+    test('video element survives morphdom update when data-src unchanged', async ({ page }) => {
+      await page.goto('/admin')
+      await page.getByRole('link', { name: 'Pages & Sections' }).click()
+      await syncLV(page)
+
+      await page.getByRole('link', { name: 'Create page' }).click()
+      await syncLV(page)
+
+      await page.getByLabel('Title', { exact: true }).fill('Morph Video Test Page')
+      await page.getByLabel('URI').fill('morph-video-test')
+
+      // Add Morph Preservation block
+      await page.getByRole('button', { name: 'Add block' }).click()
+      await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await page.getByRole('button', { name: 'Morph Preservation' }).click()
+      await syncLV(page)
+
+      // Enable live preview
+      await toggleLivePreview(page)
+      await waitForPreviewReady(page)
+
+      const frame = getPreviewFrame(page)
+      // The video container exists but may be CSS-hidden (page styles hide unbooted videos)
+      await expect(frame.locator('[data-smart-video]')).toHaveCount(1)
+
+      // Trigger an initial update so initializeLazyVideos runs and adds data-booted
+      await page.getByRole('textbox', { name: 'Label' }).fill('First update')
+      await waitForPreviewUpdate(page)
+      await expect(frame.locator('[data-smart-video][data-booted]')).toHaveCount(1)
+
+      // Stamp a custom property on the <video> element to track DOM identity
+      await frame.locator('[data-smart-video] video').evaluate(el => {
+        el.__morphTestStamp = 'video-alive'
+      })
+
+      // Change the label var again to trigger another morphdom update
+      await page.getByRole('textbox', { name: 'Label' }).fill('Second update')
+      await waitForPreviewUpdate(page)
+
+      // Verify the label updated (morphdom worked)
+      await expect(frame.locator('.morph-label')).toContainText('Second update')
+
+      // Verify the video element was NOT recreated — stamp should survive
+      const stamp = await frame.locator('[data-smart-video] video').evaluate(el => el.__morphTestStamp)
+      expect(stamp).toBe('video-alive')
+    })
+
+    test('iframe element survives morphdom update when src unchanged', async ({ page }) => {
+      await page.goto('/admin')
+      await page.getByRole('link', { name: 'Pages & Sections' }).click()
+      await syncLV(page)
+
+      await page.getByRole('link', { name: 'Create page' }).click()
+      await syncLV(page)
+
+      await page.getByLabel('Title', { exact: true }).fill('Morph Iframe Test Page')
+      await page.getByLabel('URI').fill('morph-iframe-test')
+
+      // Add Morph Preservation block
+      await page.getByRole('button', { name: 'Add block' }).click()
+      await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await page.getByRole('button', { name: 'Morph Preservation' }).click()
+      await syncLV(page)
+
+      // Enable live preview
+      await toggleLivePreview(page)
+      await waitForPreviewReady(page)
+
+      const frame = getPreviewFrame(page)
+      await expect(frame.locator('iframe.embed-frame')).toBeVisible()
+
+      // Stamp a custom property on the iframe to track DOM identity
+      await frame.locator('iframe.embed-frame').evaluate(el => {
+        el.__morphTestStamp = 'iframe-alive'
+      })
+
+      // Change the label var to trigger a morphdom update
+      await page.getByRole('textbox', { name: 'Label' }).fill('Changed label')
+      await waitForPreviewUpdate(page)
+
+      // Verify the label updated (morphdom worked)
+      await expect(frame.locator('.morph-label')).toContainText('Changed label')
+
+      // Verify the iframe was NOT recreated — stamp should survive
+      const stamp = await frame.locator('iframe.embed-frame').evaluate(el => el.__morphTestStamp)
+      expect(stamp).toBe('iframe-alive')
+    })
+  })
 })

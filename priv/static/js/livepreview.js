@@ -130,17 +130,28 @@ function filterNone() {
  */
 function getMorphdomConfig(childrenOnly = true) {
   return {
-    onBeforeElUpdated: (fromEl, toEl) => {
+    skipFromChildren(fromEl, toEl) {
+      // Preserve playing video internals when source hasn't changed
+      if (fromEl.hasAttribute('data-smart-video') && fromEl.hasAttribute('data-booted') &&
+          fromEl.getAttribute('data-src') === toEl.getAttribute('data-src')) {
+        return true
+      }
+      // Iframes are opaque — never morph their children
+      if (fromEl.tagName === 'IFRAME') {
+        return true
+      }
+      return false
+    },
+
+    onBeforeElUpdated(fromEl, toEl) {
       // Skip update if nodes are identical
       if (fromEl.isEqualNode(toEl)) {
         return false
       }
 
-      // Preserve smart video elements if source hasn't changed
-      if (fromEl.hasAttribute('data-smart-video') && toEl.hasAttribute('data-smart-video')) {
-        if (fromEl.getAttribute('data-src') === toEl.getAttribute('data-src')) {
-          return false
-        }
+      // Preserve iframes when src hasn't changed (prevents reload flash)
+      if (fromEl.tagName === 'IFRAME' && fromEl.getAttribute('src') === toEl.getAttribute('src')) {
+        return false
       }
 
       // Handle lazy-loaded images
@@ -148,7 +159,7 @@ function getMorphdomConfig(childrenOnly = true) {
         // Compare image URLs without query parameters
         const fromSrc = fromEl.dataset.src.split('?')[0]
         const toSrc = toEl.dataset.src.split('?')[0]
-        
+
         if (fromSrc === toSrc && toEl.dataset.llLoaded) {
           return false
         }
@@ -290,7 +301,8 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
   }
 
   if (!block) {
-    return // Block not found
+    console.warn(`[LivePreview] Block not found in registry: ${uid}`)
+    return
   }
 
   // Handle empty content (removed blocks)
@@ -423,12 +435,42 @@ channel.on('rerender', function (payload) {
   body.classList.remove('unloaded')
 })
 
+/**
+ * Show or hide a connection status indicator
+ * @param {boolean} connected - Whether the channel is connected
+ */
+function showConnectionStatus(connected) {
+  let indicator = document.getElementById('lp-connection-status')
+  if (connected) {
+    if (indicator) indicator.remove()
+    return
+  }
+  if (indicator) return
+  indicator = document.createElement('div')
+  indicator.id = 'lp-connection-status'
+  indicator.textContent = 'Preview disconnected'
+  indicator.style.cssText =
+    'position:fixed;top:8px;right:8px;z-index:99999;padding:6px 14px;' +
+    'background:#e53e3e;color:#fff;font:13px/1.4 sans-serif;border-radius:4px;' +
+    'box-shadow:0 2px 6px rgba(0,0,0,.25);pointer-events:none;'
+  document.body.appendChild(indicator)
+}
+
+// Channel lifecycle
+channel.onError(() => showConnectionStatus(false))
+channel.onClose(() => showConnectionStatus(false))
+
 // Connect to the channel
 channel
   .join()
+  .receive('ok', () => {
+    showConnectionStatus(true)
+  })
   .receive('error', resp => {
     console.error('[LivePreview] Channel join error:', resp)
+    showConnectionStatus(false)
   })
   .receive('timeout', () => {
     console.error('[LivePreview] Channel join timeout')
+    showConnectionStatus(false)
   })

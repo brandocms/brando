@@ -783,6 +783,46 @@ table_template = %Brando.Content.TableTemplate{
   ]
 } |> E2eProject.Repo.insert!()
 
+# Module 6: Morph Preservation Test (hardcoded video + iframe + editable label)
+# Used to verify that skipFromChildren preserves video/iframe DOM elements during morphdom updates
+%Brando.Content.Module{
+  type: :liquid,
+  name: %{"en" => "Morph Preservation", "no" => "Morph-bevaring"},
+  namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
+  help_text: %{"en" => "Tests that morphdom preserves video and iframe elements", "no" => "Tester at morphdom bevarer video- og iframe-elementer"},
+  class: "morph-preservation",
+  code: """
+  <div b-tpl="morph-preservation">
+    <div class="video-wrapper" data-smart-video data-src="https://example.com/test-video.m3u8">
+      <video data-video width="640" height="360" preload="none">
+        <source src="https://example.com/test-video.m3u8" type="application/x-mpegURL" />
+      </video>
+    </div>
+    <iframe class="embed-frame" src="https://example.com/embed" width="560" height="315" frameborder="0"></iframe>
+    <p class="morph-label">{{ label }}</p>
+  </div>
+  """,
+  svg: nil,
+  multi: false,
+  datasource: false,
+  sequence: 25,
+  deleted_at: nil,
+  table_template_id: nil,
+  parent_id: nil,
+  refs: [],
+  vars: [
+    %Brando.Content.Var{
+      type: :string,
+      label: "Label",
+      key: "label",
+      important: true,
+      value: "Initial label",
+      sequence: 0,
+      width: :full
+    }
+  ]
+} |> E2eProject.Repo.insert!()
+
 # ============================================================================
 # COPY/PASTE TEST MODULES
 # ============================================================================
