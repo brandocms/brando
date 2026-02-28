@@ -1,0 +1,222 @@
+.image-editor {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  grid-template-rows: 1fr auto;
+  gap: 16px;
+  height: calc(100vh - 100px);
+}
+
+.image-editor-main {
+  position: relative;
+  grid-row: 1;
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: #0a1929;
+  border-radius: 4px;
+
+  canvas {
+    display: block;
+  }
+
+  #image-editor-overlay {
+    position: absolute;
+    pointer-events: none;
+  }
+
+  .image-editor-focal-pin {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), 0 0 8px rgba(0, 0, 0, 0.3);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+
+    &.visible {
+      opacity: 1;
+    }
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: white;
+      transform: translate(-50%, -50%);
+    }
+  }
+}
+
+.image-editor-sidebar {
+  grid-row: 1;
+  grid-column: 2;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.image-editor-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .zoom-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  label {
+    font-family: "Mono";
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: azure;
+    border: none;
+    background: transparent;
+  }
+
+  .zoom-value {
+    font-family: "Mono";
+    font-size: 12px;
+  }
+
+  button {
+    font-family: "Mono";
+    font-size: 11px;
+    text-transform: uppercase;
+    color: azure;
+    border: 1px solid azure;
+    background: transparent;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 250ms ease, color 250ms ease;
+
+    &:hover {
+      background-color: azure;
+      color: #052753;
+    }
+  }
+}
+
+.image-editor-previews {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  overflow-y: auto;
+
+  .image-editor-previews-title {
+    font-family: "Mono";
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+}
+
+.crop-preview {
+  canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 2px;
+    background-color: #0a1929;
+  }
+
+  .crop-preview-label {
+    font-family: "Mono";
+    font-size: 11px;
+    color: azure;
+    margin-top: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .crop-preview-sizes {
+    font-size: 10px;
+    opacity: 0.6;
+  }
+}
+
+.image-editor-actions {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 12px 0 4px;
+  border-top: 1px solid rgba(240, 255, 255, 0.15);
+
+  button {
+    font-family: "Mono" !important;
+    font-size: 12px !important;
+    padding: 8px 20px !important;
+    border-radius: 20px !important;
+    border: 1px solid azure !important;
+    cursor: pointer;
+    white-space: nowrap;
+    line-height: 1.4 !important;
+    transition: background-color 250ms ease, color 250ms ease;
+  }
+
+  button.primary {
+    background-color: azure !important;
+    color: #052753 !important;
+    height: auto !important;
+
+    &:hover {
+      background-color: #d0ffff !important;
+    }
+  }
+
+  button.secondary {
+    background-color: transparent !important;
+    color: azure !important;
+    margin-top: 0 !important;
+
+    &:hover {
+      background-color: azure !important;
+      color: #052753 !important;
+    }
+  }
+}
+
+.image-editor-freeform {
+  .freeform-instructions {
+    font-family: "Mono";
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    opacity: 0.7;
+  }
+
+  .freeform-preview {
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 2px;
+      background-color: #0a1929;
+    }
+  }
+}

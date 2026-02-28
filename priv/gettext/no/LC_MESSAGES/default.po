@@ -2645,9 +2645,9 @@ msgid "Assets — Galleries"
 msgstr "Ressurser — Gallerier"
 
 #: lib/brando_admin/components/form/input/multi_select.ex:214
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Cancel"
-msgstr "Mellomlagring"
+msgstr "Avbryt"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:396
 #, elixir-autogen, elixir-format, fuzzy
@@ -3125,3 +3125,28 @@ msgstr "Utilgjengelige alternativer: %{titles}"
 #, elixir-autogen, elixir-format
 msgid "i.e: `video:Elixir.MyApp.Schema:field_name`"
 msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-format
+msgid "Image Editor"
+msgstr "Bilderedigering"
+
+#: lib/brando_admin/components/form.ex
+#, elixir-format
+msgid "Edit/Crop image"
+msgstr "Rediger/Beskjær bilde"
+
+#: lib/brando_admin/components/form.ex
+#, elixir-format
+msgid "Update focal point"
+msgstr "Oppdater fokuspunkt"
+
+#: lib/brando_admin/components/form.ex
+#, elixir-format
+msgid "Save as new copy"
+msgstr "Lagre som ny kopi"
+
+#: lib/brando_admin/components/form.ex
+#, elixir-format
+msgid "Focal point updated. Image is reprocessing."
+msgstr "Fokuspunkt oppdatert. Bildet behandles på nytt."

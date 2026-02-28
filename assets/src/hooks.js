@@ -10,6 +10,7 @@ import DateTimePickerHook from './hooks/DateTimePicker'
 import DragDropHook from './hooks/DragDrop'
 import FieldBaseHook from './hooks/FieldBase'
 import FocalPointHook from './hooks/FocalPoint'
+import ImageEditorHook from './hooks/ImageEditor'
 import FormHook from './hooks/Form'
 import LegacyFileUploadHook from './hooks/LegacyFileUpload'
 import LegacyImageUploadHook from './hooks/LegacyImageUpload'
@@ -54,6 +55,7 @@ export default (app) => {
     'Brando.FieldBase': FieldBaseHook(app),
     'Brando.FocalPoint': FocalPointHook(app),
     'Brando.Form': FormHook(app),
+    'Brando.ImageEditor': ImageEditorHook(app),
     'Brando.LegacyFileUpload': LegacyFileUploadHook(app),
     'Brando.LegacyImageUpload': LegacyImageUploadHook(app),
     'Brando.Listing': ListingHook(app),

@@ -35,12 +35,17 @@ defmodule BrandoAdmin.Components.Content do
       assigns
       |> assign_new(:z, fn -> 999 end)
       |> assign_new(:narrow, fn -> false end)
+      |> assign_new(:wide, fn -> false end)
       |> assign_new(:info, fn -> nil end)
       |> assign_new(:dark, fn -> false end)
       |> assign_new(:hidden, fn -> true end)
 
     ~H"""
-    <div id={@id} class={["drawer", @hidden && "hidden", @narrow && "narrow", @dark && "dark"]} style={"z-index: #{@z}"}>
+    <div
+      id={@id}
+      class={["drawer", @hidden && "hidden", @narrow && "narrow", @wide && "wide", @dark && "dark"]}
+      style={"z-index: #{@z}"}
+    >
       <div class="inner">
         <div class="drawer-header">
           <h2>

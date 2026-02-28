@@ -59,7 +59,8 @@ defmodule E2eProject.Projects.Project do
           "small" => %{"size" => "700", "quality" => 70},
           "medium" => %{"size" => "1100", "quality" => 70},
           "large" => %{"size" => "1700", "quality" => 70},
-          "xlarge" => %{"size" => "2100", "quality" => 70}
+          "xlarge" => %{"size" => "2100", "quality" => 70},
+          "xlarge_crop" => %{"size" => "2100x1400>", "quality" => 70, "crop" => true}
         },
         srcset: %{
           default: [

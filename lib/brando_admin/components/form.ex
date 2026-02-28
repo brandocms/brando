@@ -1348,6 +1348,11 @@ defmodule BrandoAdmin.Components.Form do
             processing={@processing}
           />
 
+          <.image_editor_drawer
+            edit_image={@edit_image}
+            myself={@myself}
+          />
+
           <.video_drawer
             video_changeset={@video_changeset}
             myself={@myself}
@@ -1728,6 +1733,15 @@ defmodule BrandoAdmin.Components.Form do
             {gettext("Select existing image")}
           </button>
 
+          <button
+            :if={@edit_image.image && @edit_image.image.path}
+            class="secondary"
+            type="button"
+            phx-click={open_image_editor(@edit_image, @myself)}
+          >
+            {gettext("Edit/Crop image")}
+          </button>
+
           <button :if={@edit_image.image} class="secondary" type="button" phx-click={duplicate_image(@edit_image, @myself)}>
             {gettext("Duplicate image")}
           </button>
@@ -1752,6 +1766,60 @@ defmodule BrandoAdmin.Components.Form do
       </.form>
     </Content.drawer>
     """
+  end
+
+  defp image_editor_drawer(assigns) do
+    ~H"""
+    <Content.drawer
+      id="image-editor-drawer"
+      title={gettext("Image Editor")}
+      close={close_image_editor()}
+      z={1002}
+      wide
+    >
+      <div id="image-editor-hook" phx-hook="Brando.ImageEditor" phx-update="ignore">
+        <div class="image-editor">
+          <div class="image-editor-main">
+            <canvas id="image-editor-canvas"></canvas>
+            <canvas id="image-editor-overlay"></canvas>
+            <div class="image-editor-focal-pin"></div>
+          </div>
+          <div class="image-editor-sidebar">
+            <div class="image-editor-controls">
+              <div class="zoom-header">
+                <label>{gettext("Zoom")}</label>
+                <span class="zoom-value" id="image-editor-zoom-value">1.00x</span>
+              </div>
+              <input type="range" id="image-editor-zoom" min="1" max="3" step="0.05" value="1" />
+              <button type="button" id="image-editor-reset">{gettext("Reset")}</button>
+            </div>
+            <div class="image-editor-previews" id="image-editor-previews"></div>
+          </div>
+          <div class="image-editor-actions">
+            <button type="button" class="secondary" phx-click={close_image_editor()}>
+              {gettext("Cancel")}
+            </button>
+            <button type="button" class="secondary" id="image-editor-save-replace">
+              {gettext("Update focal point")}
+            </button>
+            <button type="button" class="primary" id="image-editor-save-new">
+              {gettext("Save as new copy")}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Content.drawer>
+    """
+  end
+
+  def open_image_editor(js \\ %JS{}, edit_image, target) do
+    js
+    |> JS.push("open_image_editor", value: %{image_id: edit_image.image.id}, target: target)
+    |> toggle_drawer("#image-editor-drawer")
+  end
+
+  def close_image_editor(js \\ %JS{}) do
+    toggle_drawer(js, "#image-editor-drawer")
   end
 
   @aspect_ratio_options [
@@ -2629,6 +2697,64 @@ defmodule BrandoAdmin.Components.Form do
     send(self(), {:toast, gettext("Image duplicated")})
 
     {:noreply, socket}
+  end
+
+  def handle_event("open_image_editor", %{"image_id" => _image_id}, socket) do
+    image = socket.assigns.edit_image.image
+
+    crop_groups =
+      case Brando.Images.get_config_for(image) do
+        {:ok, config} -> build_crop_groups(config.sizes)
+        _ -> []
+      end
+
+    {:noreply,
+     push_event(socket, "b:image_editor:init", %{
+       image_src: Brando.Utils.img_url(image, :original, prefix: Brando.Utils.media_url()),
+       image_width: image.width,
+       image_height: image.height,
+       focal_x: (image.focal && image.focal.x) || 50,
+       focal_y: (image.focal && image.focal.y) || 50,
+       crop_groups: crop_groups
+     })}
+  end
+
+  def handle_event(
+        "image_editor_save",
+        %{"mode" => "replace", "focal_x" => x, "focal_y" => y},
+        %{assigns: %{singular: singular, current_user: current_user}} = socket
+      ) do
+    image = socket.assigns.edit_image.image
+
+    changeset =
+      image
+      |> Brando.Images.Image.changeset(%{focal: %{x: x, y: y}, status: :unprocessed}, current_user)
+      |> Map.put(:action, :update)
+
+    {:ok, updated_image} = Brando.Repo.update(changeset)
+    Brando.Images.Processing.queue_processing(updated_image, current_user)
+
+    send_update(__MODULE__,
+      id: "#{singular}_form",
+      action: :update_edit_image,
+      image: updated_image
+    )
+
+    send(self(), {:toast, gettext("Focal point updated. Image is reprocessing.")})
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "image_editor_save",
+        %{"mode" => "new_copy", "focal_x" => x, "focal_y" => y},
+        socket
+      ) do
+    # The new copy focal point is stored temporarily.
+    # The actual file upload is handled through the standard LiveView upload mechanism
+    # triggered by the JS side setting the file input.
+    # We store the focal data to apply after upload completes.
+    {:noreply, assign(socket, :image_editor_focal, %{x: x, y: y})}
   end
 
   def handle_event(
@@ -4756,4 +4882,69 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp decode_recovery_path(_), do: []
+
+  # Build crop groups from image config sizes.
+  # Groups crop sizes by their aspect ratio and returns a list of maps
+  # with `ratio`, `label`, and `size_keys` for the image editor.
+  defp build_crop_groups(nil), do: []
+
+  defp build_crop_groups(sizes) when is_map(sizes) do
+    sizes
+    |> Enum.filter(fn {key, cfg} ->
+      is_map(cfg) and cfg["crop"] == true and to_string(key) != "thumb"
+    end)
+    |> Enum.map(fn {key, cfg} ->
+      {w, h} = Brando.Images.Operations.Sizing.get_crop_dimensions_from_cfg(cfg)
+      ratio = w / h
+      %{key: to_string(key), width: w, height: h, ratio: ratio}
+    end)
+    |> Enum.group_by(fn s -> Float.round(s.ratio, 4) end)
+    |> Enum.map(fn {ratio, group_sizes} ->
+      {num, den} = rationalize(ratio)
+
+      %{
+        ratio: ratio,
+        label: "#{num}:#{den}",
+        size_keys: Enum.map(group_sizes, & &1.key)
+      }
+    end)
+  end
+
+  defp build_crop_groups(_), do: []
+
+  defp rationalize(ratio) when is_float(ratio) do
+    # Try common ratios first
+    common_ratios = [
+      {1.0, {1, 1}},
+      {4 / 3, {4, 3}},
+      {3 / 2, {3, 2}},
+      {16 / 9, {16, 9}},
+      {21 / 9, {21, 9}},
+      {3 / 4, {3, 4}},
+      {2 / 3, {2, 3}},
+      {9 / 16, {9, 16}},
+      {5 / 4, {5, 4}},
+      {4 / 5, {4, 5}}
+    ]
+
+    Enum.find_value(common_ratios, fn {r, label} ->
+      if abs(ratio - r) < 0.01, do: label
+    end) ||
+      approximate_ratio(ratio)
+  end
+
+  defp approximate_ratio(ratio) do
+    # Find closest integer ratio within reasonable bounds
+    best =
+      for den <- 1..20, reduce: {round(ratio), 1} do
+        {best_num, best_den} ->
+          num = round(ratio * den)
+
+          if abs(num / den - ratio) < abs(best_num / best_den - ratio),
+            do: {num, den},
+            else: {best_num, best_den}
+      end
+
+    best
+  end
 end

@@ -86,6 +86,11 @@ figcaption.tiny {
     width: 425px;
   }
 
+  &.wide {
+    width: 85vw;
+    max-width: 1200px;
+  }
+
   > .inner {
     display: block;
     @space padding-y 15px;
