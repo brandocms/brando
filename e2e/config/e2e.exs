@@ -24,6 +24,41 @@ config :brando, Oban,
   testing: :inline
 
 config :e2e_project, hmr: false
+
+# Minimal image sizes for faster uploads in e2e tests.
+# Core code now uses :largest (resolved dynamically) so we can safely
+# drop medium/large/xlarge. 3 sizes × 1 format vs the default 6 × 2.
+config :brando, Brando.Images,
+  processor_module: Brando.Images.Processor.Sharp,
+  default_config: %{
+    allowed_mimetypes: [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/avif",
+      "image/webp",
+      "image/svg+xml"
+    ],
+    upload_path: Path.join(["images", "site", "default"]),
+    default_size: :largest,
+    random_filename: true,
+    size_limit: 10_240_000,
+    sizes: %{
+      "micro" => %{"size" => "25", "quality" => 20, "crop" => false},
+      "thumb" => %{"size" => "400x400>", "quality" => 75, "crop" => true},
+      "small" => %{"size" => "700", "quality" => 75}
+    },
+    srcset: %{
+      default: [
+        {"small", "700w"}
+      ]
+    }
+  },
+  default_srcset: %{
+    default: [
+      {"small", "700w"}
+    ]
+  }
 config :phoenix, :stacktrace_depth, 60
 
 # Show breakpoint debug in frontend

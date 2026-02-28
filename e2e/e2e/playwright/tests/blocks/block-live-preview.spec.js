@@ -275,7 +275,8 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // The gallery block has class .gallery-block with a .file-input inside
       await page.locator('.gallery-block .file-input').setInputFiles(['./fixtures/image.jpg', './fixtures/image2.jpg'])
       await syncLV(page)
-      await page.waitForTimeout(2000) // Wait for uploads
+      // Wait for both image objects to appear in gallery (replaces hardcoded timeout)
+      await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(2, { timeout: 15000 })
 
       await waitForPreviewUpdate(page)
 
@@ -515,6 +516,147 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Verify both changes in preview (use b-tpl to target module output)
       await expect(frame.locator('header[b-tpl="styled-header"][style*="text-align: right"]')).toBeVisible()
       await expect(frame.locator('figcaption')).toContainText('Multi block caption')
+    })
+  })
+
+  test.describe('Block Lifecycle', () => {
+    test('deleting a block removes it from preview', async ({ page }) => {
+      await page.goto('/admin')
+      await page.getByRole('link', { name: 'Pages & Sections' }).click()
+      await syncLV(page)
+
+      await page.getByRole('link', { name: 'Create page' }).click()
+      await syncLV(page)
+
+      await page.getByLabel('Title', { exact: true }).fill('Delete Block Test Page')
+      await page.getByLabel('URI').fill('delete-block-test')
+
+      // Add Styled Header block
+      await page.getByRole('button', { name: 'Add block' }).click()
+      await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await page.getByRole('button', { name: 'Styled Header' }).click()
+      await syncLV(page)
+
+      // Add Single Image with Caption block
+      await page.getByRole('button', { name: 'Add block' }).first().click()
+      await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await page.getByRole('button', { name: 'Single Image with Caption' }).click()
+      await syncLV(page)
+
+      // Enable live preview
+      await toggleLivePreview(page)
+      await waitForPreviewReady(page)
+
+      const frame = getPreviewFrame(page)
+
+      // Verify both blocks visible in iframe
+      await expect(frame.locator('header[b-tpl="styled-header"]')).toBeVisible()
+      await expect(frame.locator('figure[b-tpl="single-image"]')).toBeVisible()
+
+      // Target the header module block by its name label (avoids position ambiguity)
+      const headerBlock = page.locator('.entry-block:has(:text("STYLED HEADER"))')
+      await headerBlock.locator('.block-action-dropdown > button.block-action').first().click()
+
+      // Click Delete from the dropdown
+      await headerBlock.locator('.block-action-dropdown-content button:has-text("Delete")').first().click()
+      await waitForPreviewUpdate(page)
+
+      // Assert: header is NOT visible in iframe
+      await expect(frame.locator('header[b-tpl="styled-header"]')).not.toBeVisible()
+
+      // Assert: image block IS still visible in iframe
+      await expect(frame.locator('figure[b-tpl="single-image"]')).toBeVisible()
+    })
+
+    test('deactivating a block hides it from preview', async ({ page }) => {
+      await page.goto('/admin')
+      await page.getByRole('link', { name: 'Pages & Sections' }).click()
+      await syncLV(page)
+
+      await page.getByRole('link', { name: 'Create page' }).click()
+      await syncLV(page)
+
+      await page.getByLabel('Title', { exact: true }).fill('Deactivate Block Test Page')
+      await page.getByLabel('URI').fill('deactivate-block-test')
+
+      // Add Styled Header block
+      await page.getByRole('button', { name: 'Add block' }).click()
+      await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await page.getByRole('button', { name: 'Styled Header' }).click()
+      await syncLV(page)
+
+      // Enable live preview
+      await toggleLivePreview(page)
+      await waitForPreviewReady(page)
+
+      const frame = getPreviewFrame(page)
+
+      // Verify header visible in iframe
+      await expect(frame.locator('header[b-tpl="styled-header"]')).toBeVisible()
+
+      // Click the module-level active toggle (first() to skip nested ref block toggles)
+      const block = page.locator('.entry-block:has(:text("STYLED HEADER"))')
+      await block.locator('.switch.small.inverse .slider').first().click()
+      await waitForPreviewUpdate(page)
+
+      // Assert: header NOT visible in iframe (deactivated blocks render empty)
+      await expect(frame.locator('header[b-tpl="styled-header"]')).not.toBeVisible()
+
+      // Click toggle again to reactivate
+      await block.locator('.switch.small.inverse .slider').first().click()
+      await waitForPreviewUpdate(page)
+
+      // Assert: header IS visible again in iframe
+      await expect(frame.locator('header[b-tpl="styled-header"]')).toBeVisible()
+    })
+
+    test('duplicating a block shows the copy in preview', async ({ page }) => {
+      await page.goto('/admin')
+      await page.getByRole('link', { name: 'Pages & Sections' }).click()
+      await syncLV(page)
+
+      await page.getByRole('link', { name: 'Create page' }).click()
+      await syncLV(page)
+
+      await page.getByLabel('Title', { exact: true }).fill('Duplicate Block Test Page')
+      await page.getByLabel('URI').fill('duplicate-block-test')
+
+      // Add Styled Header block
+      await page.getByRole('button', { name: 'Add block' }).click()
+      await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await page.getByRole('button', { name: 'Styled Header' }).click()
+      await syncLV(page)
+
+      // Change header text to "Original Header"
+      const headerTextarea = page.locator('.header-block textarea')
+      await headerTextarea.fill('Original Header')
+      await syncLV(page)
+
+      // Enable live preview
+      await toggleLivePreview(page)
+      await waitForPreviewReady(page)
+
+      const frame = getPreviewFrame(page)
+
+      // Verify header visible with "Original Header"
+      await expect(frame.locator('header[b-tpl="styled-header"] h1')).toContainText('Original Header')
+      await expect(frame.locator('header[b-tpl="styled-header"]')).toHaveCount(1)
+
+      // Open action dropdown on the header block
+      const block = page.locator('.base-block').first()
+      await block.locator('.block-action-dropdown > button.block-action').click()
+
+      // Click Duplicate from the dropdown
+      await block.locator('.block-action-dropdown-content button:has-text("Duplicate")').click()
+      await syncLV(page)
+      await waitForPreviewUpdate(page)
+
+      // Assert: TWO styled-header elements in iframe
+      await expect(frame.locator('header[b-tpl="styled-header"]')).toHaveCount(2)
+
+      // Assert: both contain "Original Header"
+      await expect(frame.locator('header[b-tpl="styled-header"] h1').first()).toContainText('Original Header')
+      await expect(frame.locator('header[b-tpl="styled-header"] h1').last()).toContainText('Original Header')
     })
   })
 })

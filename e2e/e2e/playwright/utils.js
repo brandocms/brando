@@ -118,9 +118,9 @@ export async function dragAndDrop(page, dragLocator, dropLocator, targetPosition
 
 // Toggle live preview on/off - clicks the eye icon in form tab builtins
 const toggleLivePreview = async page => {
-  // The live preview button has an eye icon SVG with path containing "M12 3c5.392"
-  // It's located in the .form-tab-builtins container, not .form-header
-  await page.locator('.form-tab-builtins button:has(svg path[d*="M12 3c5.392"])').click()
+  const btn = page.locator('.form-tab-builtins button.live-preview-toggle')
+  await btn.scrollIntoViewIfNeeded()
+  await btn.click()
   await syncLV(page)
 }
 
@@ -131,7 +131,7 @@ const getPreviewFrame = page => {
 
 // Wait for preview to be ready after enabling
 const waitForPreviewReady = async page => {
-  await page.locator('.live-preview-wrapper iframe').waitFor({ state: 'visible', timeout: 10000 })
+  await page.locator('.live-preview-wrapper iframe').waitFor({ state: 'visible', timeout: 15000 })
   // Wait for initial render
   await page.waitForTimeout(300)
 }

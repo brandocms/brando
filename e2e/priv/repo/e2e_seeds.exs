@@ -557,7 +557,7 @@ table_template = %Brando.Content.TableTemplate{
           placeholder: :dominant_color_faded,
           display: :grid,
           type: :gallery,
-          formats: [:original, :webp]
+          formats: [:original]
         }
       }
     }
