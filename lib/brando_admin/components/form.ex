@@ -328,6 +328,13 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(
+        %{event: "update_live_preview_block"},
+        %{assigns: %{live_preview_cache_key: nil}} = socket
+      ) do
+    {:ok, socket}
+  end
+
+  def update(
         %{event: "update_live_preview_block", rendered_html: rendered_html, uid: uid, has_children?: has_children?},
         socket
       ) do
@@ -1288,7 +1295,7 @@ defmodule BrandoAdmin.Components.Form do
               <button
                 :if={@has_live_preview?}
                 phx-click={JS.push("open_live_preview", target: @myself)}
-                class={[@live_preview_active? && "active"]}
+                class={["live-preview-toggle", @live_preview_active? && "active"]}
                 type="button"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
@@ -3256,7 +3263,7 @@ defmodule BrandoAdmin.Components.Form do
     id = socket.assigns.id
     cache_key = socket.assigns.live_preview_cache_key
 
-    for {block_field_name, _schema, _entry_blocks, _opts} <- block_map do
+    Enum.each(block_map, fn {block_field_name, _schema, _entry_blocks, _opts} ->
       block_field_id = "#{id}-blocks-#{block_field_name}"
 
       send_update(BlockField,
@@ -3264,7 +3271,7 @@ defmodule BrandoAdmin.Components.Form do
         event: "enable_live_preview",
         cache_key: cache_key
       )
-    end
+    end)
 
     socket
   end
@@ -3273,14 +3280,14 @@ defmodule BrandoAdmin.Components.Form do
     block_map = socket.assigns.block_map
     id = socket.assigns.id
 
-    for {block_field_name, _schema, _entry_blocks, _opts} <- block_map do
+    Enum.each(block_map, fn {block_field_name, _schema, _entry_blocks, _opts} ->
       block_field_id = "#{id}-blocks-#{block_field_name}"
 
       send_update(BlockField,
         id: block_field_id,
         event: "disable_live_preview"
       )
-    end
+    end)
 
     socket
   end

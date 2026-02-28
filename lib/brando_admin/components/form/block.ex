@@ -316,15 +316,15 @@ defmodule BrandoAdmin.Components.Form.Block do
     id = socket.assigns.id
 
     if has_children? do
-      for {block_uid, _} <- changesets do
-        id = "#{id}-child-#{block_uid}"
+      Enum.each(changesets, fn {block_uid, _} ->
+        child_id = "#{id}-child-#{block_uid}"
 
         send_update(__MODULE__,
-          id: id,
+          id: child_id,
           event: "enable_live_preview",
           cache_key: cache_key
         )
-      end
+      end)
     end
 
     socket
@@ -340,14 +340,14 @@ defmodule BrandoAdmin.Components.Form.Block do
     id = socket.assigns.id
 
     if has_children? do
-      for {block_uid, _} <- changesets do
-        id = "#{id}-child-#{block_uid}"
+      Enum.each(changesets, fn {block_uid, _} ->
+        child_id = "#{id}-child-#{block_uid}"
 
         send_update(__MODULE__,
-          id: id,
+          id: child_id,
           event: "disable_live_preview"
         )
-      end
+      end)
     end
 
     socket
@@ -807,48 +807,44 @@ defmodule BrandoAdmin.Components.Form.Block do
               |> put_change_if_key_exists(:file_id, params)
               |> clear_preloaded_associations(params)
 
-            # Handle adding image to gallery association
+            # Handle adding media (image or video) to gallery association
             {updated_ref, updated_block} =
-              if Map.has_key?(params, :add_gallery_image_id) do
-                current_user = %{id: socket.assigns.current_user_id}
-                updated_ref = add_image_to_gallery_ref(updated_ref, params.add_gallery_image_id, current_user)
-                # Also add override for the new image
-                updated_block = add_gallery_image_override(updated_block, params.add_gallery_image_id)
-                {updated_ref, updated_block}
-              else
-                {updated_ref, updated_block}
+              cond do
+                Map.has_key?(params, :add_gallery_image_id) ->
+                  current_user = %{id: socket.assigns.current_user_id}
+                  id = params.add_gallery_image_id
+                  updated_ref = add_media_to_gallery_ref(updated_ref, :image, id, current_user)
+                  updated_block = add_gallery_media_override(updated_block, id, :image)
+                  {updated_ref, updated_block}
+
+                Map.has_key?(params, :add_gallery_video_id) ->
+                  current_user = %{id: socket.assigns.current_user_id}
+                  id = params.add_gallery_video_id
+                  updated_ref = add_media_to_gallery_ref(updated_ref, :video, id, current_user)
+                  updated_block = add_gallery_media_override(updated_block, id, :video)
+                  {updated_ref, updated_block}
+
+                true ->
+                  {updated_ref, updated_block}
               end
 
-            # Handle removing image from gallery association
+            # Handle removing media (image or video) from gallery association
             {updated_ref, updated_block} =
-              if Map.has_key?(params, :remove_gallery_image_id) do
-                updated_ref = remove_image_from_gallery_ref(updated_ref, params.remove_gallery_image_id)
-                # Also remove override for the removed image
-                updated_block = remove_gallery_image_override(updated_block, params.remove_gallery_image_id)
-                {updated_ref, updated_block}
-              else
-                {updated_ref, updated_block}
-              end
+              cond do
+                Map.has_key?(params, :remove_gallery_image_id) ->
+                  id = params.remove_gallery_image_id
+                  updated_ref = remove_media_from_gallery_ref(updated_ref, :image, id)
+                  updated_block = remove_gallery_object_override(updated_block, id)
+                  {updated_ref, updated_block}
 
-            # Handle adding video to gallery association
-            {updated_ref, updated_block} =
-              if Map.has_key?(params, :add_gallery_video_id) do
-                current_user = %{id: socket.assigns.current_user_id}
-                updated_ref = add_video_to_gallery_ref(updated_ref, params.add_gallery_video_id, current_user)
-                updated_block = add_gallery_video_override(updated_block, params.add_gallery_video_id)
-                {updated_ref, updated_block}
-              else
-                {updated_ref, updated_block}
-              end
+                Map.has_key?(params, :remove_gallery_video_id) ->
+                  id = params.remove_gallery_video_id
+                  updated_ref = remove_media_from_gallery_ref(updated_ref, :video, id)
+                  updated_block = remove_gallery_object_override(updated_block, id)
+                  {updated_ref, updated_block}
 
-            # Handle removing video from gallery association
-            {updated_ref, updated_block} =
-              if Map.has_key?(params, :remove_gallery_video_id) do
-                updated_ref = remove_video_from_gallery_ref(updated_ref, params.remove_gallery_video_id)
-                updated_block = remove_gallery_video_override(updated_block, params.remove_gallery_video_id)
-                {updated_ref, updated_block}
-              else
-                {updated_ref, updated_block}
+                true ->
+                  {updated_ref, updated_block}
               end
 
             # Handle removing gallery object by index
@@ -4170,54 +4166,26 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   # Add an image to a gallery ref association
-  defp add_image_to_gallery_ref(ref_changeset, image_id, current_user) do
+  defp add_media_to_gallery_ref(ref_changeset, media_type, media_id, current_user) do
     current_gallery = Changeset.get_field(ref_changeset, :gallery)
+    {:ok, media} = fetch_media(media_type, media_id)
+
+    new_gallery_object =
+      %{creator_id: current_user.id}
+      |> put_media_fields(media_type, media_id, media)
 
     case current_gallery do
       nil ->
-        # Create new gallery structure (not persisted to DB)
-        # Load the image so it's available for the parser
-        {:ok, image} = Brando.Images.get_image(image_id)
-
         new_gallery = %{
           config_target: "ref:gallery",
-          gallery_objects: [
-            %{
-              image_id: image_id,
-              image: image,
-              creator_id: current_user.id,
-              sequence: 0
-            }
-          ]
+          gallery_objects: [Map.put(new_gallery_object, :sequence, 0)]
         }
 
         Changeset.put_assoc(ref_changeset, :gallery, new_gallery)
 
       gallery ->
-        # Add image to existing gallery structure
-        # Preserve existing gallery objects with their loaded associations
         current_gallery_objects =
-          Enum.map(
-            gallery.gallery_objects || [],
-            fn obj ->
-              # Keep the loaded image/video associations if they exist
-              base_fields = Map.take(obj, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
-
-              # Add back the loaded associations
-              base_fields
-              |> maybe_add_association(:image, obj)
-              |> maybe_add_association(:video, obj)
-            end
-          )
-
-        # Load the image so it's available for the parser
-        {:ok, image} = Brando.Images.get_image(image_id)
-
-        new_gallery_object = %{
-          image_id: image_id,
-          image: image,
-          creator_id: current_user.id
-        }
+          Enum.map(gallery.gallery_objects || [], &preserve_gallery_object/1)
 
         new_gallery_objects = current_gallery_objects ++ [new_gallery_object]
 
@@ -4231,24 +4199,21 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  # Remove an image from a gallery ref association
-  defp remove_image_from_gallery_ref(ref_changeset, image_id) do
+  defp remove_media_from_gallery_ref(ref_changeset, media_type, media_id) do
     current_gallery = Changeset.get_field(ref_changeset, :gallery)
+    id_field = media_id_field(media_type)
 
     case current_gallery do
       nil ->
         ref_changeset
 
       gallery ->
-        # Remove image from gallery objects in memory
         existing_objects = gallery.gallery_objects || []
-        updated_objects = Enum.reject(existing_objects, &(&1.image_id == image_id))
+        updated_objects = Enum.reject(existing_objects, &(Map.get(&1, id_field) == media_id))
 
         if updated_objects == [] do
-          # If no objects left, remove the gallery association
           Changeset.put_assoc(ref_changeset, :gallery, nil)
         else
-          # Update gallery with remaining objects
           updated_gallery = %{
             id: Map.get(gallery, :id),
             config_target: Map.get(gallery, :config_target, "ref:gallery"),
@@ -4355,7 +4320,9 @@ defmodule BrandoAdmin.Components.Form.Block do
       %Ecto.Association.NotLoaded{} ->
         # Re-fetch if we have the ID
         case Map.get(obj, :image_id) do
-          nil -> base_fields
+          nil ->
+            base_fields
+
           id ->
             case Brando.Images.get_image(id) do
               {:ok, image} -> Map.put(base_fields, :image, image)
@@ -4363,8 +4330,11 @@ defmodule BrandoAdmin.Components.Form.Block do
             end
         end
 
-      nil -> base_fields
-      image -> Map.put(base_fields, :image, image)
+      nil ->
+        base_fields
+
+      image ->
+        Map.put(base_fields, :image, image)
     end
   end
 
@@ -4373,7 +4343,9 @@ defmodule BrandoAdmin.Components.Form.Block do
       %Ecto.Association.NotLoaded{} ->
         # Re-fetch if we have the ID
         case Map.get(obj, :video_id) do
-          nil -> base_fields
+          nil ->
+            base_fields
+
           id ->
             case Brando.Videos.get_video(%{matches: %{id: id}, preload: [:thumbnail]}) do
               {:ok, video} -> Map.put(base_fields, :video, video)
@@ -4381,22 +4353,19 @@ defmodule BrandoAdmin.Components.Form.Block do
             end
         end
 
-      nil -> base_fields
-      video -> Map.put(base_fields, :video, video)
+      nil ->
+        base_fields
+
+      video ->
+        Map.put(base_fields, :video, video)
     end
   end
 
-  # Note: Removed remove_image_from_existing_gallery and remove_gallery_object_by_id
-  # These are now handled inline in remove functions using changesets
-
-  # Add override entry for a new gallery image
-  defp add_gallery_image_override(block_changeset, image_id) do
-    # Get the current data from the block
+  defp add_gallery_media_override(block_changeset, media_id, media_type) do
     current_data = Changeset.get_field(block_changeset, :data)
     current_overrides = Map.get(current_data, :gallery_object_overrides, [])
-    object_id_str = to_string(image_id)
+    object_id_str = to_string(media_id)
 
-    # Check if override already exists
     override_exists =
       Enum.any?(current_overrides, fn override ->
         get_override_object_id(override) == object_id_str
@@ -4407,7 +4376,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     else
       new_override = %{
         object_id: object_id_str,
-        object_type: :image,
+        object_type: media_type,
         title: nil,
         credits: nil,
         alt: nil,
@@ -4417,41 +4386,13 @@ defmodule BrandoAdmin.Components.Form.Block do
       }
 
       updated_overrides = current_overrides ++ [new_override]
-
-      # Convert current data to map and update only the gallery_object_overrides field
-      # This respects the :on_replace :update constraint by providing only changed fields as a map
       data_map = Map.from_struct(current_data)
       updated_data_map = Map.put(data_map, :gallery_object_overrides, updated_overrides)
-
-      # Put the updated data map back into the block
       Changeset.put_change(block_changeset, :data, updated_data_map)
     end
   end
 
-  # Remove override entry for a removed gallery image
-  defp remove_gallery_image_override(block_changeset, image_id) do
-    # Get the current data from the block
-    current_data = Changeset.get_field(block_changeset, :data)
-    current_overrides = Map.get(current_data, :gallery_object_overrides, [])
-    object_id_str = to_string(image_id)
-
-    updated_overrides =
-      Enum.reject(current_overrides, fn override ->
-        get_override_object_id(override) == object_id_str
-      end)
-
-    # Convert current data to map and update only the gallery_object_overrides field
-    # This respects the :on_replace :update constraint by providing only changed fields as a map
-    data_map = Map.from_struct(current_data)
-    updated_data_map = Map.put(data_map, :gallery_object_overrides, updated_overrides)
-
-    # Put the updated data map back into the block
-    Changeset.put_change(block_changeset, :data, updated_data_map)
-  end
-
-  # Remove override entry for a removed gallery object by object ID
   defp remove_gallery_object_override(block_changeset, object_id) do
-    # Get the current data from the block
     current_data = Changeset.get_field(block_changeset, :data)
     current_overrides = Map.get(current_data, :gallery_object_overrides, [])
     object_id_str = to_string(object_id)
@@ -4461,149 +4402,35 @@ defmodule BrandoAdmin.Components.Form.Block do
         get_override_object_id(override) == object_id_str
       end)
 
-    # Convert current data to map and update only the gallery_object_overrides field
-    # This respects the :on_replace :update constraint by providing only changed fields as a map
-    data_map = Map.from_struct(current_data)
-    updated_data_map = Map.put(data_map, :gallery_object_overrides, updated_overrides)
-
-    # Put the updated data map back into the block
-    Changeset.put_change(block_changeset, :data, updated_data_map)
-  end
-
-  # Add a video to a gallery ref association
-  defp add_video_to_gallery_ref(ref_changeset, video_id, current_user) do
-    current_gallery = Changeset.get_field(ref_changeset, :gallery)
-
-    case current_gallery do
-      nil ->
-        {:ok, video} = Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]})
-
-        new_gallery = %{
-          config_target: "ref:gallery",
-          gallery_objects: [
-            %{
-              image_id: nil,
-              image: nil,
-              video_id: video_id,
-              video: video,
-              creator_id: current_user.id,
-              sequence: 0
-            }
-          ]
-        }
-
-        Changeset.put_assoc(ref_changeset, :gallery, new_gallery)
-
-      gallery ->
-        current_gallery_objects =
-          Enum.map(
-            gallery.gallery_objects || [],
-            fn obj ->
-              base_fields = Map.take(obj, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
-
-              base_fields
-              |> maybe_add_association(:image, obj)
-              |> maybe_add_association(:video, obj)
-            end
-          )
-
-        {:ok, video} = Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]})
-
-        new_gallery_object = %{
-          image_id: nil,
-          image: nil,
-          video_id: video_id,
-          video: video,
-          creator_id: current_user.id
-        }
-
-        new_gallery_objects = current_gallery_objects ++ [new_gallery_object]
-
-        updated_gallery = %{
-          id: Map.get(gallery, :id),
-          config_target: Map.get(gallery, :config_target, "ref:gallery"),
-          gallery_objects: sequence_gallery_objects(new_gallery_objects)
-        }
-
-        Changeset.put_assoc(ref_changeset, :gallery, updated_gallery)
-    end
-  end
-
-  # Remove a video from a gallery ref association
-  defp remove_video_from_gallery_ref(ref_changeset, video_id) do
-    current_gallery = Changeset.get_field(ref_changeset, :gallery)
-
-    case current_gallery do
-      nil ->
-        ref_changeset
-
-      gallery ->
-        existing_objects = gallery.gallery_objects || []
-        updated_objects = Enum.reject(existing_objects, &(&1.video_id == video_id))
-
-        if updated_objects == [] do
-          Changeset.put_assoc(ref_changeset, :gallery, nil)
-        else
-          updated_gallery = %{
-            id: Map.get(gallery, :id),
-            config_target: Map.get(gallery, :config_target, "ref:gallery"),
-            gallery_objects: sequence_gallery_objects(updated_objects)
-          }
-
-          Changeset.put_assoc(ref_changeset, :gallery, updated_gallery)
-        end
-    end
-  end
-
-  # Add override entry for a new gallery video
-  defp add_gallery_video_override(block_changeset, video_id) do
-    current_data = Changeset.get_field(block_changeset, :data)
-    current_overrides = Map.get(current_data, :gallery_object_overrides, [])
-    object_id_str = to_string(video_id)
-
-    override_exists =
-      Enum.any?(current_overrides, fn override ->
-        get_override_object_id(override) == object_id_str
-      end)
-
-    if override_exists do
-      block_changeset
-    else
-      new_override = %{
-        object_id: object_id_str,
-        object_type: :video,
-        title: nil,
-        credits: nil,
-        alt: nil,
-        use_default_title: true,
-        use_default_credits: true,
-        use_default_alt: true
-      }
-
-      updated_overrides = current_overrides ++ [new_override]
-      data_map = Map.from_struct(current_data)
-      updated_data_map = Map.put(data_map, :gallery_object_overrides, updated_overrides)
-      Changeset.put_change(block_changeset, :data, updated_data_map)
-    end
-  end
-
-  # Remove override entry for a removed gallery video
-  defp remove_gallery_video_override(block_changeset, video_id) do
-    current_data = Changeset.get_field(block_changeset, :data)
-    current_overrides = Map.get(current_data, :gallery_object_overrides, [])
-    object_id_str = to_string(video_id)
-
-    updated_overrides =
-      Enum.reject(current_overrides, fn override ->
-        get_override_object_id(override) == object_id_str
-      end)
-
     data_map = Map.from_struct(current_data)
     updated_data_map = Map.put(data_map, :gallery_object_overrides, updated_overrides)
     Changeset.put_change(block_changeset, :data, updated_data_map)
   end
 
-  # Helper to get object_id from override (handles both changeset and struct)
+  # Shared helpers for gallery media operations
+
+  defp fetch_media(:image, id), do: Brando.Images.get_image(id)
+  defp fetch_media(:video, id), do: Brando.Videos.get_video(%{matches: %{id: id}, preload: [:thumbnail]})
+
+  defp media_id_field(:image), do: :image_id
+  defp media_id_field(:video), do: :video_id
+
+  defp media_assoc_field(:image), do: :image
+  defp media_assoc_field(:video), do: :video
+
+  defp put_media_fields(map, media_type, media_id, media) do
+    Map.merge(map, %{
+      media_id_field(media_type) => media_id,
+      media_assoc_field(media_type) => media
+    })
+  end
+
+  defp preserve_gallery_object(obj) do
+    Map.take(obj, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
+    |> maybe_add_association(:image, obj)
+    |> maybe_add_association(:video, obj)
+  end
+
   defp get_override_object_id(override) do
     case override do
       %Changeset{} -> Changeset.get_field(override, :object_id)

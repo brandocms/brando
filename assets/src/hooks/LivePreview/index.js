@@ -93,6 +93,14 @@ export default app => ({
     gsap.to(this.$livePreview, { width: width, ease: 'sine.inOut', duration })
   },
 
+  destroyed() {
+    const lpDivider = Dom.find('.live-preview-divider')
+    if (lpDivider) {
+      lpDivider.removeEventListener('mousedown', this.resizeListener)
+    }
+    window.removeEventListener(Events.APPLICATION_RESIZE, this.windowResizeListener)
+  },
+
   setPreviewTarget(target, previewWidth, duration = 0) {
     let deviceWidth
     let deviceHeight

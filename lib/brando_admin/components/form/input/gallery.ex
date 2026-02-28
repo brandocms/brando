@@ -1,9 +1,9 @@
 defmodule BrandoAdmin.Components.Form.Input.Gallery do
   @moduledoc false
   use BrandoAdmin, :live_component
-  # use Phoenix.HTML
   use Gettext, backend: Brando.Gettext
 
+  import Brando.Utils, only: [loaded_assoc?: 2]
   import Ecto.Changeset
 
   alias Brando.Galleries.GalleryObject
@@ -230,7 +230,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           </div>
         <% end %>
       <% else %>
-        <% thumb_url = if(loaded_assoc?(@gallery_object, :video), do: Brando.Videos.Helpers.thumbnail_url(@gallery_object.video)) %>
+        <% thumb_url =
+          if(loaded_assoc?(@gallery_object, :video), do: Brando.Videos.Helpers.thumbnail_url(@gallery_object.video)) %>
         <%= if thumb_url do %>
           <img width="25" height="25" src={thumb_url} />
         <% else %>
@@ -285,117 +286,12 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:noreply, socket}
   end
 
-  def handle_event(
-        "select_image",
-        %{"id" => image_id, "selected" => "false"},
-        %{assigns: %{field: field, gallery_objects: gallery_objects, current_user: current_user}} = socket
-      ) do
-    changeset = field.form.source
-    field_name = field.field
-    schema = field.form.data.__struct__
-    gallery = Ecto.Changeset.get_field(changeset, field_name)
-
-    {:ok, new_image} = Brando.Images.get_image(image_id)
-
-    current_gallery_objects =
-      if gallery do
-        Enum.map(
-          gallery.gallery_objects || [],
-          &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
-        )
-      else
-        []
-      end
-
-    new_gallery_object = %{image_id: String.to_integer(image_id), creator_id: current_user.id}
-    new_gallery_objects = current_gallery_objects ++ List.wrap(new_gallery_object)
-
-    new_gallery =
-      if gallery do
-        %{
-          id: gallery.id,
-          config_target: gallery.config_target,
-          gallery_objects: sequence(new_gallery_objects)
-        }
-      else
-        %{
-          config_target: "gallery:#{inspect(schema)}:#{field_name}",
-          gallery_objects: sequence(new_gallery_objects)
-        }
-      end
-
-    new_gallery_objects =
-      gallery_objects ++
-        List.wrap(%GalleryObject{
-          image_id: new_image.id,
-          image: new_image,
-          creator_id: current_user.id
-        })
-
-    selected_objects = Enum.map(new_gallery_objects, &Map.get(&1, :image_id))
-
-    send_update(ImagePicker,
-      id: "image-picker",
-      selected_images: selected_objects
-    )
-
-    updated_changeset = put_assoc(changeset, field_name, new_gallery)
-
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: true
-    )
-
-    {:noreply, assign(socket, gallery_objects: new_gallery_objects, selected_images: selected_objects)}
+  def handle_event("select_image", %{"id" => id, "selected" => "false"}, socket) do
+    {:noreply, add_gallery_media(socket, :image, id)}
   end
 
-  def handle_event(
-        "select_image",
-        %{"id" => image_id, "selected" => "true"},
-        %{assigns: %{field: field, gallery_objects: gallery_objects}} = socket
-      ) do
-    changeset = field.form.source
-    gallery = Ecto.Changeset.get_field(changeset, field.field)
-    field_name = field.field
-    image_id = (is_binary(image_id) && String.to_integer(image_id)) || image_id
-    new_gallery_objects = Enum.filter(gallery_objects, &(Map.get(&1, :image_id) != image_id))
-    selected_objects = Enum.map(new_gallery_objects, &Map.get(&1, :image_id))
-
-    send_update(ImagePicker,
-      id: "image-picker",
-      selected_images: selected_objects
-    )
-
-    slimmed_gallery_objects =
-      Enum.map(
-        new_gallery_objects,
-        &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
-      )
-
-    new_gallery = %{
-      id: gallery.id,
-      config_target: gallery.config_target,
-      gallery_objects: sequence(slimmed_gallery_objects)
-    }
-
-    updated_changeset = put_assoc(changeset, field_name, new_gallery)
-
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: true
-    )
-
-    {:noreply, assign(socket, gallery_objects: new_gallery_objects, selected_images: selected_objects)}
+  def handle_event("select_image", %{"id" => id, "selected" => "true"}, socket) do
+    {:noreply, remove_gallery_media(socket, :image, id)}
   end
 
   def handle_event("open_video_picker", _, socket) do
@@ -410,117 +306,12 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:noreply, socket}
   end
 
-  def handle_event(
-        "select_video",
-        %{"id" => video_id, "selected" => "false"},
-        %{assigns: %{field: field, gallery_objects: gallery_objects, current_user: current_user}} = socket
-      ) do
-    changeset = field.form.source
-    field_name = field.field
-    schema = field.form.data.__struct__
-    gallery = Ecto.Changeset.get_field(changeset, field_name)
-
-    {:ok, new_video} = Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]})
-
-    current_gallery_objects =
-      if gallery do
-        Enum.map(
-          gallery.gallery_objects || [],
-          &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
-        )
-      else
-        []
-      end
-
-    new_gallery_object = %{video_id: String.to_integer(video_id), creator_id: current_user.id}
-    new_gallery_objects = current_gallery_objects ++ List.wrap(new_gallery_object)
-
-    new_gallery =
-      if gallery do
-        %{
-          id: gallery.id,
-          config_target: gallery.config_target,
-          gallery_objects: sequence(new_gallery_objects)
-        }
-      else
-        %{
-          config_target: "gallery:#{inspect(schema)}:#{field_name}",
-          gallery_objects: sequence(new_gallery_objects)
-        }
-      end
-
-    new_gallery_objects_full =
-      gallery_objects ++
-        List.wrap(%GalleryObject{
-          video_id: new_video.id,
-          video: new_video,
-          creator_id: current_user.id
-        })
-
-    selected_videos = new_gallery_objects_full |> Enum.filter(&Map.get(&1, :video_id)) |> Enum.map(&Map.get(&1, :video_id))
-
-    send_update(VideoPicker,
-      id: "video-picker",
-      selected_videos: selected_videos
-    )
-
-    updated_changeset = put_assoc(changeset, field_name, new_gallery)
-
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: true
-    )
-
-    {:noreply, assign(socket, gallery_objects: new_gallery_objects_full, selected_videos: selected_videos)}
+  def handle_event("select_video", %{"id" => id, "selected" => "false"}, socket) do
+    {:noreply, add_gallery_media(socket, :video, id)}
   end
 
-  def handle_event(
-        "select_video",
-        %{"id" => video_id, "selected" => "true"},
-        %{assigns: %{field: field, gallery_objects: gallery_objects}} = socket
-      ) do
-    changeset = field.form.source
-    gallery = Ecto.Changeset.get_field(changeset, field.field)
-    field_name = field.field
-    video_id = (is_binary(video_id) && String.to_integer(video_id)) || video_id
-    new_gallery_objects = Enum.filter(gallery_objects, &(Map.get(&1, :video_id) != video_id))
-    selected_videos = new_gallery_objects |> Enum.filter(&Map.get(&1, :video_id)) |> Enum.map(&Map.get(&1, :video_id))
-
-    send_update(VideoPicker,
-      id: "video-picker",
-      selected_videos: selected_videos
-    )
-
-    slimmed_gallery_objects =
-      Enum.map(
-        new_gallery_objects,
-        &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
-      )
-
-    new_gallery = %{
-      id: gallery.id,
-      config_target: gallery.config_target,
-      gallery_objects: sequence(slimmed_gallery_objects)
-    }
-
-    updated_changeset = put_assoc(changeset, field_name, new_gallery)
-
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: true
-    )
-
-    {:noreply, assign(socket, gallery_objects: new_gallery_objects, selected_videos: selected_videos)}
+  def handle_event("select_video", %{"id" => id, "selected" => "true"}, socket) do
+    {:noreply, remove_gallery_media(socket, :video, id)}
   end
 
   def handle_event("edit_image", %{"id" => _id}, socket) do
@@ -557,11 +348,122 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:noreply, assign(socket, :selected_images, [])}
   end
 
-  defp loaded_assoc?(obj, key) do
-    case Map.get(obj, key) do
-      %Ecto.Association.NotLoaded{} -> false
-      nil -> false
-      _ -> true
-    end
+  defp add_gallery_media(socket, media_type, media_id_str) do
+    %{field: field, gallery_objects: gallery_objects, current_user: current_user} = socket.assigns
+
+    changeset = field.form.source
+    field_name = field.field
+    schema = field.form.data.__struct__
+    gallery = Ecto.Changeset.get_field(changeset, field_name)
+
+    {:ok, media} = fetch_media(media_type, media_id_str)
+    media_id = String.to_integer(media_id_str)
+    id_field = media_id_field(media_type)
+    assoc_field = media_assoc_field(media_type)
+
+    current_gallery_objects =
+      if gallery do
+        Enum.map(
+          gallery.gallery_objects || [],
+          &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
+        )
+      else
+        []
+      end
+
+    new_gallery_object_slim = %{id_field => media_id, creator_id: current_user.id}
+    slimmed_objects = current_gallery_objects ++ [new_gallery_object_slim]
+
+    new_gallery =
+      if gallery do
+        %{id: gallery.id, config_target: gallery.config_target, gallery_objects: sequence(slimmed_objects)}
+      else
+        %{config_target: "gallery:#{inspect(schema)}:#{field_name}", gallery_objects: sequence(slimmed_objects)}
+      end
+
+    new_gallery_object = %GalleryObject{creator_id: current_user.id}
+    new_gallery_object = Map.put(new_gallery_object, id_field, media.id)
+    new_gallery_object = Map.put(new_gallery_object, assoc_field, media)
+    updated_gallery_objects = gallery_objects ++ [new_gallery_object]
+
+    selected_ids = extract_selected_ids(updated_gallery_objects, id_field)
+    notify_picker(media_type, selected_ids)
+    update_form_changeset(changeset, field_name, new_gallery)
+
+    selection_assign = selection_assign_key(media_type)
+    assign(socket, [{:gallery_objects, updated_gallery_objects}, {selection_assign, selected_ids}])
   end
+
+  defp remove_gallery_media(socket, media_type, media_id_str) do
+    %{field: field, gallery_objects: gallery_objects} = socket.assigns
+
+    changeset = field.form.source
+    gallery = Ecto.Changeset.get_field(changeset, field.field)
+    field_name = field.field
+    id_field = media_id_field(media_type)
+    media_id = parse_id(media_id_str)
+
+    updated_gallery_objects = Enum.filter(gallery_objects, &(Map.get(&1, id_field) != media_id))
+    selected_ids = extract_selected_ids(updated_gallery_objects, id_field)
+    notify_picker(media_type, selected_ids)
+
+    slimmed_objects =
+      Enum.map(
+        updated_gallery_objects,
+        &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
+      )
+
+    new_gallery = %{
+      id: gallery.id,
+      config_target: gallery.config_target,
+      gallery_objects: sequence(slimmed_objects)
+    }
+
+    update_form_changeset(changeset, field_name, new_gallery)
+
+    selection_assign = selection_assign_key(media_type)
+    assign(socket, [{:gallery_objects, updated_gallery_objects}, {selection_assign, selected_ids}])
+  end
+
+  defp fetch_media(:image, id), do: Brando.Images.get_image(id)
+  defp fetch_media(:video, id), do: Brando.Videos.get_video(%{matches: %{id: id}, preload: [:thumbnail]})
+
+  defp media_id_field(:image), do: :image_id
+  defp media_id_field(:video), do: :video_id
+
+  defp media_assoc_field(:image), do: :image
+  defp media_assoc_field(:video), do: :video
+
+  defp selection_assign_key(:image), do: :selected_images
+  defp selection_assign_key(:video), do: :selected_videos
+
+  defp extract_selected_ids(gallery_objects, id_field) do
+    gallery_objects
+    |> Enum.filter(&Map.get(&1, id_field))
+    |> Enum.map(&Map.get(&1, id_field))
+  end
+
+  defp notify_picker(:image, selected_ids) do
+    send_update(ImagePicker, id: "image-picker", selected_images: selected_ids)
+  end
+
+  defp notify_picker(:video, selected_ids) do
+    send_update(VideoPicker, id: "video-picker", selected_videos: selected_ids)
+  end
+
+  defp update_form_changeset(changeset, field_name, new_gallery) do
+    updated_changeset = put_assoc(changeset, field_name, new_gallery)
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      action: :update_changeset,
+      changeset: updated_changeset,
+      force_validation: true
+    )
+  end
+
+  defp parse_id(id) when is_binary(id), do: String.to_integer(id)
+  defp parse_id(id), do: id
 end

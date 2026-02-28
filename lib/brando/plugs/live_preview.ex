@@ -77,24 +77,7 @@ defmodule Brando.Plug.LivePreview do
         rescue
           err ->
             require Logger
-
-            Logger.error("""
-            Livepreview call failed.
-            """)
-
-            Logger.error("""
-            Error:
-
-            #{inspect(err, pretty: true)}
-            """)
-
-            Logger.error("""
-
-            Stacktrace:
-
-            #{Exception.format(:error, err, __STACKTRACE__)}
-
-            """)
+            Logger.error("Livepreview call failed: #{Exception.format(:error, err, __STACKTRACE__)}")
 
             conn
             |> put_resp_content_type("text/html")

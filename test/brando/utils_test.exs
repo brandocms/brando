@@ -368,4 +368,31 @@ defmodule Brando.UtilsTest do
              status: :published
            }
   end
+
+  describe "loaded_assoc?/2" do
+    test "returns true for loaded association" do
+      assert loaded_assoc?(%{image: %{id: 1, path: "test.jpg"}}, :image)
+    end
+
+    test "returns false for nil association" do
+      refute loaded_assoc?(%{image: nil}, :image)
+    end
+
+    test "returns false for NotLoaded association" do
+      refute loaded_assoc?(
+               %{
+                 image: %Ecto.Association.NotLoaded{
+                   __field__: :image,
+                   __owner__: Brando.Images.Image,
+                   __cardinality__: :one
+                 }
+               },
+               :image
+             )
+    end
+
+    test "returns false for missing key" do
+      refute loaded_assoc?(%{}, :image)
+    end
+  end
 end

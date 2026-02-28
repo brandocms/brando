@@ -1399,4 +1399,18 @@ defmodule Brando.Utils do
         acc
     end)
   end
+
+  @doc """
+  Check if an Ecto association is loaded (not nil, not `%Ecto.Association.NotLoaded{}`).
+
+  Returns `true` if the key exists on `obj` and its value is neither `nil`
+  nor `%Ecto.Association.NotLoaded{}`.
+  """
+  def loaded_assoc?(obj, key) do
+    case Map.get(obj, key) do
+      %Ecto.Association.NotLoaded{} -> false
+      nil -> false
+      _ -> true
+    end
+  end
 end

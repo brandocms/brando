@@ -91,7 +91,7 @@ defmodule Brando.Type.ImageConfig do
         "image/svg+xml"
       ],
       upload_path: Path.join(["images", "site", "default"]),
-      default_size: :xlarge,
+      default_size: :largest,
       random_filename: true,
       size_limit: 10_240_000,
       sizes: %{

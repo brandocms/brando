@@ -37,7 +37,7 @@ const channel = previewSocket.channel('live_preview:' + livePreviewKey)
 
 // State management
 let isFirstUpdate = true
-let contentBlockRegistry = []
+let contentBlockRegistry = new Map()
 
 // CSS overrides for live preview to ensure visibility of animated elements
 const MOONWALK_OVERRIDE_STYLES = `
@@ -168,7 +168,7 @@ function getMorphdomConfig(childrenOnly = true) {
  * Blocks are identified by HTML comments with UIDs
  */
 function rebuildContentBlockRegistry() {
-  contentBlockRegistry = []
+  contentBlockRegistry = new Map()
   const iterator = document.createNodeIterator(
     document.body,
     NodeFilter.SHOW_COMMENT,
@@ -184,12 +184,13 @@ function rebuildContentBlockRegistry() {
       const uidEnd = curNode.nodeValue.indexOf('>')
       const uid = curNode.nodeValue.substring(uidStart + 1, uidEnd)
       const blockElements = []
-      
+
       // Collect all elements until the closing comment
       let sibling = curNode.nextSibling
-      while (sibling) {
+      let safety = 0
+      while (sibling && safety++ < 10000) {
         if (sibling.nodeType === NODE_TYPES.COMMENT && sibling.nodeValue.trim().startsWith(`[-:B<${uid}`)) {
-          contentBlockRegistry.push({ uid, elements: blockElements, insertionPoint: sibling })
+          contentBlockRegistry.set(uid, { elements: blockElements, insertionPoint: sibling })
           break
         } else if (sibling.nodeType === NODE_TYPES.ELEMENT) {
           blockElements.push({ element: sibling, children: [] })
@@ -279,25 +280,23 @@ function insertOverrideStyles() {
 channel.on('update_block', function ({ uid, rendered_html, has_children }) {
   insertOverrideStyles()
 
-  // Find the block in our map
-  let blockIndex = contentBlockRegistry.findIndex(block => block.uid === uid)
-  
-  // If not found, rebuild the map and try again
-  if (blockIndex === -1) {
+  // Find the block in our registry
+  let block = contentBlockRegistry.get(uid)
+
+  // If not found, rebuild the registry and try again
+  if (!block) {
     rebuildContentBlockRegistry()
-    blockIndex = contentBlockRegistry.findIndex(block => block.uid === uid)
+    block = contentBlockRegistry.get(uid)
   }
 
-  if (blockIndex === -1) {
+  if (!block) {
     return // Block not found
   }
-
-  const block = contentBlockRegistry[blockIndex]
 
   // Handle empty content (removed blocks)
   if (rendered_html === '') {
     block.elements.forEach(el => el.element.remove())
-    block.elements = []
+    contentBlockRegistry.delete(uid)
     return
   }
 
@@ -425,4 +424,11 @@ channel.on('rerender', function (payload) {
 })
 
 // Connect to the channel
-channel.join()
+channel
+  .join()
+  .receive('error', resp => {
+    console.error('[LivePreview] Channel join error:', resp)
+  })
+  .receive('timeout', () => {
+    console.error('[LivePreview] Channel join timeout')
+  })

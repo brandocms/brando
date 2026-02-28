@@ -4,13 +4,16 @@ defmodule Brando.Worker.PreviewPurger do
   """
   use Oban.Worker,
     queue: :default,
-    max_attempts: 10
+    max_attempts: 3
 
   alias Brando.Sites
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"id" => id}}) do
-    Sites.delete_preview(id)
+    case Sites.delete_preview(id) do
+      {:ok, _} -> :ok
+      {:error, _} -> :ok
+    end
   end
 
   @impl Oban.Worker

@@ -135,7 +135,7 @@ defmodule Brando.Meta.HTML do
 
   defp put_meta_image(conn, meta_image) when is_map(meta_image) do
     # grab xlarge from img
-    img_src = Brando.Utils.img_url(meta_image, :xlarge, prefix: Brando.Utils.media_url())
+    img_src = Brando.Utils.img_url(meta_image, :largest, prefix: Brando.Utils.media_url())
     img = Brando.Utils.hostname(img_src)
 
     type =

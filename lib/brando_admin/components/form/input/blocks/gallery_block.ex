@@ -3,6 +3,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  import Brando.Utils, only: [loaded_assoc?: 2]
+
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
@@ -41,12 +43,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   def update(assigns, socket) do
-    # For refs, we get gallery data from the ref_form source (like picture_block and video_block do)
     {gallery, gallery_objects} = get_gallery_and_objects(assigns)
 
-    # Extract IDs from objects for selection tracking
     selected_ids =
-      Enum.map(gallery_objects, fn obj ->
+      gallery_objects
+      |> Enum.map(fn obj ->
         cond do
           obj.image_id -> {:image, obj.image_id}
           obj.video_id -> {:video, obj.video_id}
@@ -63,44 +64,27 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         formats -> Enum.join(formats, ",")
       end
 
-    # Initialize overrides for all gallery objects using assign_new
+    # Initialize overrides once on mount, then preserve across updates
     initialized_overrides =
-      socket
-      |> assign_new(:initialized_overrides, fn ->
+      socket.assigns[:initialized_overrides] ||
         initialize_gallery_overrides(gallery_objects, block_data_cs)
-      end)
-      |> Map.get(:assigns)
-      |> Map.get(:initialized_overrides)
 
-    # Apply the initialized overrides to the block's changeset data
     updated_block = update_block_with_overrides(assigns.block, initialized_overrides)
 
-    socket =
-      socket
-      |> assign(assigns)
-      |> assign(:gallery, gallery)
-      |> assign(:gallery_objects, gallery_objects)
-      |> assign(:indexed_objects, Enum.with_index(gallery_objects))
-      |> assign(:upload_formats, upload_formats)
-      |> assign(:display, Changeset.get_field(block_data_cs, :display))
-      |> assign(:selected_ids, selected_ids)
-      |> assign(:has_objects?, !Enum.empty?(gallery_objects))
-      |> assign(:block, updated_block)
-      |> assign(:uid, assigns.ref_form[:uid].value)
-      |> assign_new(:override_data, fn -> precompute_override_data(gallery_objects, block_data_cs) end)
-
-    # Update ImagePicker with current selection when gallery objects change
-    selected_image_ids =
-      gallery_objects
-      |> Enum.filter(& &1.image_id)
-      |> Enum.map(& &1.image_id)
-
-    send_update(BrandoAdmin.Components.ImagePicker,
-      id: "image-picker",
-      selected_images: selected_image_ids
-    )
-
-    {:ok, socket}
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(:initialized_overrides, initialized_overrides)
+     |> assign(:gallery, gallery)
+     |> assign(:gallery_objects, gallery_objects)
+     |> assign(:indexed_objects, Enum.with_index(gallery_objects))
+     |> assign(:upload_formats, upload_formats)
+     |> assign(:display, Changeset.get_field(block_data_cs, :display))
+     |> assign(:selected_ids, selected_ids)
+     |> assign(:has_objects?, !Enum.empty?(gallery_objects))
+     |> assign(:block, updated_block)
+     |> assign(:uid, assigns.ref_form[:uid].value)
+     |> assign_new(:override_data, fn -> precompute_override_data(gallery_objects, block_data_cs) end)}
   end
 
   def render(assigns) do
@@ -486,8 +470,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     # Convert the data to a map and add the overrides
     data_map =
       case current_data do
-        %Changeset{} -> Changeset.get_field(current_data, :__struct__) |> struct_to_map()
-        data -> struct_to_map(data)
+        %Changeset{} -> current_data |> Changeset.get_field(:__struct__) |> Map.from_struct()
+        data -> Map.from_struct(data)
       end
 
     # Update the data map with the overrides
@@ -498,10 +482,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     # Return the updated form
     %{block_form | source: updated_changeset}
-  end
-
-  defp struct_to_map(struct) do
-    Map.from_struct(struct)
   end
 
   defp initialize_gallery_overrides(gallery_objects, block_data_cs) do
@@ -600,151 +580,102 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         []
 
       objects when is_list(objects) ->
-        # Ensure we have proper preloading for each object
-        # This handles both persisted and changeset-based galleries
-        Enum.map(objects, fn obj ->
-          # If image/video are IDs only, we need to fetch them
-          obj = ensure_media_loaded(obj)
-          obj
-        end)
+        batch_load_media(objects)
 
       _ ->
         []
     end
   end
 
-  defp ensure_media_loaded(obj) do
-    # Handle case where we only have image_id but image is nil or NotLoaded
-    obj =
-      case {Map.get(obj, :image_id), Map.get(obj, :image)} do
-        {nil, %Ecto.Association.NotLoaded{}} ->
-          Map.put(obj, :image, nil)
+  defp batch_load_media(objects) do
+    # Collect IDs that need loading
+    {missing_image_ids, missing_video_ids} =
+      Enum.reduce(objects, {[], []}, fn obj, {img_ids, vid_ids} ->
+        img_ids = collect_missing_media_id(obj, :image_id, :image, img_ids)
+        vid_ids = collect_missing_media_id(obj, :video_id, :video, vid_ids)
+        {img_ids, vid_ids}
+      end)
 
-        {nil, _} ->
-          obj
+    # Batch fetch missing media
+    images_map = batch_fetch_images(Enum.uniq(missing_image_ids))
+    videos_map = batch_fetch_videos(Enum.uniq(missing_video_ids))
 
-        {image_id, %Ecto.Association.NotLoaded{}} ->
-          case Brando.Images.get_image(image_id) do
-            {:ok, image} -> Map.put(obj, :image, image)
-            _ -> obj
-          end
+    # Merge loaded media back into objects
+    Enum.map(objects, fn obj ->
+      obj
+      |> maybe_set_media(:image_id, :image, images_map)
+      |> maybe_set_media(:video_id, :video, videos_map)
+    end)
+  end
 
-        {image_id, nil} ->
-          case Brando.Images.get_image(image_id) do
-            {:ok, image} -> Map.put(obj, :image, image)
-            _ -> obj
-          end
+  defp collect_missing_media_id(obj, id_field, assoc_field, acc) do
+    media_id = Map.get(obj, id_field)
+    assoc = Map.get(obj, assoc_field)
 
-        _ ->
-          obj
-      end
+    needs_load? = media_id && (assoc == nil || match?(%Ecto.Association.NotLoaded{}, assoc))
 
-    # Handle case where we only have video_id but video is nil or NotLoaded
-    case {Map.get(obj, :video_id), Map.get(obj, :video)} do
-      {nil, %Ecto.Association.NotLoaded{}} ->
-        Map.put(obj, :video, nil)
+    if needs_load?, do: [media_id | acc], else: acc
+  end
 
-      {nil, _} ->
+  defp batch_fetch_images([]), do: %{}
+
+  defp batch_fetch_images(ids) do
+    case Brando.Images.list_images(%{filter: %{ids: ids}}) do
+      {:ok, images} -> Map.new(images, &{&1.id, &1})
+      _ -> %{}
+    end
+  end
+
+  defp batch_fetch_videos([]), do: %{}
+
+  defp batch_fetch_videos(ids) do
+    case Brando.Videos.list_videos(%{filter: %{ids: ids}, preload: [:thumbnail]}) do
+      {:ok, videos} -> Map.new(videos, &{&1.id, &1})
+      _ -> %{}
+    end
+  end
+
+  defp maybe_set_media(obj, id_field, assoc_field, media_map) do
+    media_id = Map.get(obj, id_field)
+    assoc = Map.get(obj, assoc_field)
+
+    cond do
+      is_nil(media_id) && match?(%Ecto.Association.NotLoaded{}, assoc) ->
+        Map.put(obj, assoc_field, nil)
+
+      is_nil(media_id) ->
         obj
 
-      {video_id, %Ecto.Association.NotLoaded{}} ->
-        case Brando.Videos.get_video(video_id) do
-          {:ok, video} -> Map.put(obj, :video, video)
-          _ -> obj
-        end
+      is_nil(assoc) || match?(%Ecto.Association.NotLoaded{}, assoc) ->
+        Map.put(obj, assoc_field, Map.get(media_map, media_id))
 
-      {video_id, nil} ->
-        case Brando.Videos.get_video(video_id) do
-          {:ok, video} -> Map.put(obj, :video, video)
-          _ -> obj
-        end
-
-      _ ->
+      true ->
         obj
     end
   end
 
   defp precompute_override_data(gallery_objects, block_data_cs) do
-    # Get current gallery_object_overrides from the block data (now a list of embedded schemas)
-    current_overrides =
-      Changeset.get_field(block_data_cs, :gallery_object_overrides, [])
+    current_overrides = Changeset.get_field(block_data_cs, :gallery_object_overrides, [])
 
-    # Build a map of overrides by object_id for quick lookup
-    overrides_map =
-      Enum.reduce(current_overrides, %{}, fn override, acc ->
-        Map.put(acc, override.object_id, override)
-      end)
+    overrides_map = Map.new(current_overrides, &{&1.object_id, &1})
 
-    # Build override data for each gallery object
+    # Gallery objects should already have media loaded via batch_load_media
     Enum.reduce(gallery_objects, %{}, fn obj, acc ->
-      # Get the object ID and type - handle both loaded and ID-only cases
-      {object_id, object_id_str, object_type, media_object} =
+      {object_id_str, object_type, media_object} =
         cond do
-          loaded_assoc?(obj, :image) ->
-            image = Map.get(obj, :image)
-            {image.id, to_string(image.id), :image, image}
-
-          Map.get(obj, :image_id) ->
-            # If we only have the ID, try to get the image
-            case Brando.Images.get_image(Map.get(obj, :image_id)) do
-              {:ok, image} -> {image.id, to_string(image.id), :image, image}
-              _ -> {nil, nil, nil, nil}
-            end
-
-          loaded_assoc?(obj, :video) ->
-            video = Map.get(obj, :video)
-            {video.id, to_string(video.id), :video, video}
-
-          Map.get(obj, :video_id) ->
-            # If we only have the ID, try to get the video
-            case Brando.Videos.get_video(Map.get(obj, :video_id)) do
-              {:ok, video} -> {video.id, to_string(video.id), :video, video}
-              _ -> {nil, nil, nil, nil}
-            end
-
-          true ->
-            {nil, nil, nil, nil}
+          loaded_assoc?(obj, :image) -> {to_string(obj.image.id), :image, obj.image}
+          loaded_assoc?(obj, :video) -> {to_string(obj.video.id), :video, obj.video}
+          true -> {nil, nil, nil}
         end
 
-      if object_id do
-        # Get current override for this object
-        object_override = Map.get(overrides_map, object_id_str)
-
-        # Get default values from the media object
-        default_title = media_object.title || ""
-        default_credits = Map.get(media_object, :credits) || ""
-        default_alt = if object_type == :image, do: media_object.alt || "", else: ""
-
-        # Determine current values and use_default states from the override
-        {use_default_title, use_default_credits, use_default_alt, current_title, current_credits, current_alt} =
-          if object_override do
-            {
-              object_override.use_default_title,
-              object_override.use_default_credits,
-              object_override.use_default_alt,
-              if(object_override.use_default_title, do: default_title, else: object_override.title || ""),
-              if(object_override.use_default_credits, do: default_credits, else: object_override.credits || ""),
-              if(object_override.use_default_alt, do: default_alt, else: object_override.alt || "")
-            }
-          else
-            # No override exists yet, use defaults
-            {true, true, true, default_title, default_credits, default_alt}
-          end
-
-        override_info = %{
-          object_id: object_id_str,
-          object_type: object_type,
-          default_title: default_title,
-          default_credits: default_credits,
-          default_alt: default_alt,
-          use_default_title: use_default_title,
-          use_default_credits: use_default_credits,
-          use_default_alt: use_default_alt,
-          current_title: current_title,
-          current_credits: current_credits,
-          current_alt: current_alt,
-          override_exists: object_override != nil
-        }
+      if object_id_str do
+        override_info =
+          build_override_info(
+            object_id_str,
+            object_type,
+            media_object,
+            Map.get(overrides_map, object_id_str)
+          )
 
         Map.put(acc, object_id_str, override_info)
       else
@@ -753,11 +684,38 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     end)
   end
 
-  defp loaded_assoc?(obj, key) do
-    case Map.get(obj, key) do
-      %Ecto.Association.NotLoaded{} -> false
-      nil -> false
-      _ -> true
-    end
+  defp build_override_info(object_id_str, object_type, media_object, object_override) do
+    default_title = media_object.title || ""
+    default_credits = Map.get(media_object, :credits) || ""
+    default_alt = if object_type == :image, do: media_object.alt || "", else: ""
+
+    {use_default_title, use_default_credits, use_default_alt, current_title, current_credits, current_alt} =
+      if object_override do
+        {
+          object_override.use_default_title,
+          object_override.use_default_credits,
+          object_override.use_default_alt,
+          if(object_override.use_default_title, do: default_title, else: object_override.title || ""),
+          if(object_override.use_default_credits, do: default_credits, else: object_override.credits || ""),
+          if(object_override.use_default_alt, do: default_alt, else: object_override.alt || "")
+        }
+      else
+        {true, true, true, default_title, default_credits, default_alt}
+      end
+
+    %{
+      object_id: object_id_str,
+      object_type: object_type,
+      default_title: default_title,
+      default_credits: default_credits,
+      default_alt: default_alt,
+      use_default_title: use_default_title,
+      use_default_credits: use_default_credits,
+      use_default_alt: use_default_alt,
+      current_title: current_title,
+      current_credits: current_credits,
+      current_alt: current_alt,
+      override_exists: object_override != nil
+    }
   end
 end

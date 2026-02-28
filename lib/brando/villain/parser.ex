@@ -615,7 +615,7 @@ defmodule Brando.Villain.Parser do
           caption: caption,
           orientation: orientation,
           opts: [
-            key: :xlarge,
+            key: :largest,
             caption: caption,
             alt: alt,
             width: true,
@@ -670,7 +670,7 @@ defmodule Brando.Villain.Parser do
           caption: caption,
           orientation: orientation,
           opts: [
-            key: :xlarge,
+            key: :largest,
             caption: caption,
             alt: alt,
             width: true,
@@ -721,7 +721,7 @@ defmodule Brando.Villain.Parser do
           caption: caption,
           orientation: orientation,
           opts: [
-            key: :xlarge,
+            key: :largest,
             caption: caption,
             alt: alt,
             width: true,

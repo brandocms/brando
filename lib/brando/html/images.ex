@@ -507,7 +507,7 @@ defmodule Brando.HTML.Images do
   end
 
   defp add_src(%{lazyload: false} = attrs, image_struct) do
-    key = Keyword.get(attrs.opts, :key) || :xlarge
+    key = Keyword.get(attrs.opts, :key) || :largest
     src = Utils.img_url(image_struct, key, attrs.opts)
 
     attrs

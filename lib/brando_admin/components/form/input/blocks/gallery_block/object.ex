@@ -2,6 +2,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
   @moduledoc false
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext
+
+  import Brando.Utils, only: [loaded_assoc?: 2]
   import Phoenix.HTML, only: [raw: 1]
 
   alias BrandoAdmin.Components.Content
@@ -307,14 +309,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
         <p>{gettext("Caption overrides not available - no override data")}</p>
       </div>
       """
-    end
-  end
-
-  defp loaded_assoc?(obj, key) do
-    case Map.get(obj, key) do
-      %Ecto.Association.NotLoaded{} -> false
-      nil -> false
-      _ -> true
     end
   end
 end
