@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   alias Brando.Villain.Blocks.PictureBlock
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias Ecto.Changeset
@@ -62,6 +63,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
      |> assign(assigns)
      |> assign(:uid, assigns.ref_form[:uid].value)
      |> assign(:block_data, block_data)
+     |> assign_new(:form_id, fn -> derive_form_id(assigns.ref_form.name) end)
      |> assign_new(:compact, fn -> true end)
      |> assign_new(:image, fn ->
        # Get the image from the ref_form (only on first load)
@@ -143,7 +145,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               class={["preview", (@compact && "compact") || "classic"]}
               phx-click={!@compact && show_modal("#block-#{@uid}_config")}
             >
-              <Content.image image={@image} size={:largest} />
+              <div class="image-wrapper">
+                <Content.image image={@image} size={:largest} />
+                <button
+                  class="edit-image-btn"
+                  type="button"
+                  phx-click={
+                    JS.push("open_image_editor", target: @myself)
+                    |> toggle_drawer("#image-editor-drawer")
+                  }
+                >
+                  <.icon name="hero-pencil-square" />
+                </button>
+              </div>
               <div class="image-info">
                 <figcaption phx-click={!@compact && show_modal("#block-#{@uid}_config")}>
                   <div class="info-wrapper">
@@ -234,6 +248,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                       phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
                     >
                       {gettext("Select image")}
+                    </button>
+
+                    <button
+                      :if={@image}
+                      type="button"
+                      class="secondary"
+                      phx-click={
+                        JS.push("open_image_editor", target: @myself)
+                        |> toggle_drawer("#image-editor-drawer")
+                      }
+                    >
+                      {gettext("Edit/Crop")}
                     </button>
 
                     <button type="button" class="danger" phx-click={JS.push("reset_image", target: @myself)}>
@@ -409,8 +435,50 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     {:noreply, socket}
   end
 
+  def handle_event("open_image_editor", _, socket) do
+    image = socket.assigns.image
+
+    # Set edit_image on Form so the save handler knows which image to update
+    send_update(Form,
+      id: socket.assigns.form_id,
+      action: :set_edit_image_from_block,
+      image: image
+    )
+
+    # Push the init event directly from this component (same render cycle, no race)
+    crop_groups = build_crop_groups_for(image)
+
+    {:noreply,
+     push_event(socket, "b:image_editor:init", %{
+       image_src: Brando.Utils.img_url(image, :original, prefix: Brando.Utils.media_url()),
+       image_width: image.width,
+       image_height: image.height,
+       image_id: image.id,
+       focal_x: (image.focal && image.focal.x) || 50,
+       focal_y: (image.focal && image.focal.y) || 50,
+       crop_groups: crop_groups,
+       from_block: true
+     })}
+  end
+
   def handle_event("show_image_picker", _, socket) do
     {:ok, images} = Brando.Images.list_images()
     {:noreply, assign(socket, :images, images)}
+  end
+
+  # Derives the Form component ID from the ref_form name.
+  # e.g. "page[blocks][...]" -> "page" -> "page_form"
+  defp derive_form_id(ref_form_name) do
+    ref_form_name
+    |> String.split("[")
+    |> hd()
+    |> Kernel.<>("_form")
+  end
+
+  defp build_crop_groups_for(image) do
+    case Brando.Images.get_config_for(image) do
+      {:ok, config} -> Form.build_crop_groups(config.sizes)
+      _ -> []
+    end
   end
 end

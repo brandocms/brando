@@ -14,10 +14,28 @@ defmodule Brando.Villain do
   @type changeset :: Ecto.Changeset.t()
 
   @module_cache_ttl (Brando.config(:env) in [:e2e, :test] &&
-                       %{preload: [:vars, refs: [:image, :file, video: [:thumbnail, :file], gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]]]}) ||
+                       %{
+                         preload: [
+                           :vars,
+                           refs: [
+                             :image,
+                             :file,
+                             video: [:thumbnail, :file],
+                             gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]
+                           ]
+                         ]
+                       }) ||
                       %{
                         cache: {:ttl, :infinite},
-                        preload: [:vars, refs: [:image, :file, video: [:thumbnail, :file], gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]]]
+                        preload: [
+                          :vars,
+                          refs: [
+                            :image,
+                            :file,
+                            video: [:thumbnail, :file],
+                            gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]
+                          ]
+                        ]
                       }
   @container_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{preload: [:palette]}) ||
                          %{cache: {:ttl, :infinite}, preload: [:palette]}
@@ -237,8 +255,10 @@ defmodule Brando.Villain do
   def parse_and_render(html, context) do
     liquex_parser = Brando.config(Brando.Villain)[:liquex_parser] || Brando.Villain.LiquexParser
 
-    with {:ok, parsed_doc} <- liquex_parse(ensure_string(html), liquex_parser),
-         {result, _} <- liquex_render([], parsed_doc, context) do
+    html_string = ensure_string(html)
+
+    with {:ok, parsed_doc} <- liquex_parse(html_string, liquex_parser),
+         {result, _} <- liquex_render(html_string, [], parsed_doc, context) do
       Enum.join(result)
     else
       {:error, "expected end of string", err} ->
@@ -265,13 +285,15 @@ defmodule Brando.Villain do
     Liquex.parse(html, liquex_parser)
   end
 
-  defp liquex_render([], parsed_doc, context) do
+  defp liquex_render(html_string, [], parsed_doc, context) do
     Liquex.Render.render!([], parsed_doc, context)
   rescue
     error in Protocol.UndefinedError ->
       case error do
         %{protocol: Liquex.Collection, value: nil} ->
           require Logger
+
+          for_lines = extract_for_lines(html_string)
 
           Logger.error("""
 
@@ -281,6 +303,9 @@ defmodule Brando.Villain do
           Common causes:
           - Gallery refs using old syntax: `refs.*.images` instead of `refs.*.gallery_objects`
           - For loops over nil collections: `{% for item in nil_collection %}`
+
+          For loops in template:
+          #{for_lines}
 
           Context variables:
           #{inspect(context.scope.stack, pretty: true, limit: :infinity)}
@@ -295,6 +320,24 @@ defmodule Brando.Villain do
         _ ->
           reraise error, __STACKTRACE__
       end
+  end
+
+  defp extract_for_lines(html_string) do
+    html_string
+    |> String.split("\n")
+    |> Enum.with_index(1)
+    |> Enum.flat_map(fn {line, idx} ->
+      if String.contains?(line, "{% for") do
+        [{idx, String.trim(line)}]
+      else
+        []
+      end
+    end)
+    |> Enum.map_join("\n", fn {idx, line} -> "  line #{idx}: #{line}" end)
+    |> case do
+      "" -> "  (none found)"
+      lines -> lines
+    end
   end
 
   defp maybe_put_timestamps(%{inserted_at: nil} = entry) do
@@ -1234,7 +1277,12 @@ defmodule Brando.Villain do
       refs_query =
         from r in Brando.Content.Ref,
           order_by: [asc: :sequence],
-          preload: [:image, :file, video: [:thumbnail, :file], gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]]
+          preload: [
+            :image,
+            :file,
+            video: [:thumbnail, :file],
+            gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]
+          ]
 
       sub_sub_children_query =
         from b in Brando.Content.Block,

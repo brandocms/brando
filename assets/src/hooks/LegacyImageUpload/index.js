@@ -106,10 +106,12 @@ export default (app) => ({
         }
       }, { signal })
 
-      uploadCanvas.addEventListener('dragenter', () => {
+      uploadCanvas.addEventListener('dragenter', (event) => {
+        event.preventDefault()
         uploadCanvas.classList.add('dragging')
       }, { signal })
-      uploadCanvas.addEventListener('dragover', () => {
+      uploadCanvas.addEventListener('dragover', (event) => {
+        event.preventDefault()
         uploadCanvas.classList.add('dragging')
       }, { signal })
       uploadCanvas.addEventListener('dragleave', () => {

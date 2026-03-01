@@ -148,6 +148,14 @@ export default app => ({
     this.cropGroups = payload.crop_groups || []
     this.zoom = 1
     this.freeformMode = this.cropGroups.length === 0
+    this.fromBlock = !!payload.from_block
+    this.imageId = payload.image_id || null
+
+    // Hide "Save as new copy" when opened from a block (no upload input available)
+    const saveNewBtn = this.el.querySelector('#image-editor-save-new')
+    if (saveNewBtn) {
+      saveNewBtn.style.display = this.fromBlock ? 'none' : ''
+    }
 
     // Reset zoom slider
     const zoomSlider = this.el.querySelector('#image-editor-zoom')
@@ -253,17 +261,17 @@ export default app => ({
       // Freeform mode: show instructions and single preview
       const title = document.createElement('div')
       title.className = 'image-editor-previews-title'
-      title.textContent = 'Freeform crop'
+      title.textContent = this.el.dataset.labelFreeformCrop || 'Freeform crop'
       previewsContainer.appendChild(title)
 
       const instructions = document.createElement('div')
       instructions.className = 'freeform-instructions'
-      instructions.textContent = 'No crop ratios configured. Use focal point only.'
+      instructions.textContent = this.el.dataset.labelFreeformInstructions || 'No crop ratios configured. Use focal point only.'
       previewsContainer.appendChild(instructions)
     } else {
       const title = document.createElement('div')
       title.className = 'image-editor-previews-title'
-      title.textContent = 'Crop previews'
+      title.textContent = this.el.dataset.labelCropPreviews || 'Crop previews'
       previewsContainer.appendChild(title)
 
       // Create a preview canvas for each unique crop ratio
@@ -387,11 +395,13 @@ export default app => ({
     if (saveReplaceBtn) {
       if (this._onSaveReplace) saveReplaceBtn.removeEventListener('click', this._onSaveReplace)
       this._onSaveReplace = () => {
-        this.pushEventTo(this.el, 'image_editor_save', {
+        const payload = {
           mode: 'replace',
           focal_x: Math.round(this.focalX),
           focal_y: Math.round(this.focalY)
-        })
+        }
+        if (this.imageId) payload.image_id = this.imageId
+        this.pushEventTo(this.el, 'image_editor_save', payload)
         this.closeDrawer()
       }
       saveReplaceBtn.addEventListener('click', this._onSaveReplace)

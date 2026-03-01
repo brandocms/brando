@@ -180,6 +180,43 @@
   }
 }
 
+.picture-block .image-wrapper {
+  position: relative;
+
+  .edit-image-btn {
+    cursor: pointer;
+    z-index: 1;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background-color: white;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 2px 0px;
+
+    &:hover {
+      background-color: var(--brando-color-dark);
+      border: 1px solid var(--brando-color-dark);
+
+      span {
+        background-color: white;
+      }
+    }
+
+    span {
+      background-color: var(--brando-color-dark);
+      width: 14px;
+      height: 14px;
+    }
+  }
+}
+
 .image-content {
   position: relative;
   flex-shrink: 0;

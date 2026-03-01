@@ -20,6 +20,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
   # prop gallery_form, :any, required: true
   # prop override_data, :map, required: true
   # prop block_data, :any, required: true
+  # prop form_id, :string, required: true
 
   def render(assigns) do
     # Find the corresponding object for display - use index for new objects without IDs
@@ -102,6 +103,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
       >
         <.icon name="hero-x-mark" />
         <div class="text">{gettext("Delete")}</div>
+      </button>
+
+      <button
+        :if={@gallery_object_form[:image_id].value}
+        class="edit-image-btn"
+        type="button"
+        phx-click={
+          JS.push("open_image_editor",
+            target: @myself,
+            value: %{image_id: @gallery_object_form[:image_id].value}
+          )
+          |> toggle_drawer("#image-editor-drawer")
+        }
+        data-sortable-filter
+      >
+        <.icon name="hero-pencil-square" />
       </button>
 
       <figcaption phx-click={show_modal("##{@object_modal_id}")} data-sortable-filter>

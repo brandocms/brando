@@ -169,6 +169,12 @@ defmodule BrandoAdmin.Components.Form do
      |> assign_drawer_recovery_state()}
   end
 
+  # Set edit_image for the save handler when image editor is opened from a block.
+  # The block's handle_event pushes b:image_editor:init directly (same render cycle).
+  def update(%{action: :set_edit_image_from_block, image: image}, socket) do
+    {:ok, assign(socket, :edit_image, %{path: [], field: nil, relation_field: nil, image: image})}
+  end
+
   # edit_video
   def update(%{action: :update_edit_video, video: video}, %{assigns: %{edit_video: edit_video}} = socket) do
     updated_edit_video = Map.merge(edit_video, %{video: video, id: video.id})
@@ -1580,12 +1586,14 @@ defmodule BrandoAdmin.Components.Form do
             </div>
           </div>
 
-          <%= for entry <- @upload_field.entries do %>
-            <%= for err <- upload_errors(@upload_field, entry) do %>
-              <div class="alert alert-danger">
-                <.icon name="hero-exclamation-triangle" />
-                {Brando.Upload.error_to_string(err)}
-              </div>
+          <%= if @upload_field do %>
+            <%= for entry <- @upload_field.entries do %>
+              <%= for err <- upload_errors(@upload_field, entry) do %>
+                <div class="alert alert-danger">
+                  <.icon name="hero-exclamation-triangle" />
+                  {Brando.Upload.error_to_string(err)}
+                </div>
+              <% end %>
             <% end %>
           <% end %>
 
@@ -1712,12 +1720,14 @@ defmodule BrandoAdmin.Components.Form do
             </div>
           <% end %>
 
-          <%= for entry <- @upload_field.entries do %>
-            <%= for err <- upload_errors(@upload_field, entry) do %>
-              <div class="alert alert-danger">
-                <.icon name="hero-exclamation-triangle" />
-                {Brando.Upload.error_to_string(err)}
-              </div>
+          <%= if @upload_field do %>
+            <%= for entry <- @upload_field.entries do %>
+              <%= for err <- upload_errors(@upload_field, entry) do %>
+                <div class="alert alert-danger">
+                  <.icon name="hero-exclamation-triangle" />
+                  {Brando.Upload.error_to_string(err)}
+                </div>
+              <% end %>
             <% end %>
           <% end %>
         </div>
@@ -1777,7 +1787,14 @@ defmodule BrandoAdmin.Components.Form do
       z={1002}
       wide
     >
-      <div id="image-editor-hook" phx-hook="Brando.ImageEditor" phx-update="ignore">
+      <div
+        id="image-editor-hook"
+        phx-hook="Brando.ImageEditor"
+        phx-update="ignore"
+        data-label-freeform-crop={gettext("Freeform crop")}
+        data-label-freeform-instructions={gettext("No crop ratios configured. Use focal point only.")}
+        data-label-crop-previews={gettext("Crop previews")}
+      >
         <div class="image-editor">
           <div class="image-editor-main">
             <canvas id="image-editor-canvas"></canvas>
@@ -2721,10 +2738,20 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event(
         "image_editor_save",
-        %{"mode" => "replace", "focal_x" => x, "focal_y" => y},
+        %{"mode" => "replace", "focal_x" => x, "focal_y" => y} = params,
         %{assigns: %{singular: singular, current_user: current_user}} = socket
       ) do
-    image = socket.assigns.edit_image.image
+    image =
+      case socket.assigns.edit_image do
+        %{image: image} when not is_nil(image) ->
+          image
+
+        _ ->
+          # Fallback: when opened from a block, send_update may not have completed yet.
+          # Use image_id passed through the JS payload instead.
+          {:ok, img} = Brando.Images.get_image(params["image_id"])
+          img
+      end
 
     changeset =
       image
@@ -4883,12 +4910,15 @@ defmodule BrandoAdmin.Components.Form do
 
   defp decode_recovery_path(_), do: []
 
-  # Build crop groups from image config sizes.
-  # Groups crop sizes by their aspect ratio and returns a list of maps
-  # with `ratio`, `label`, and `size_keys` for the image editor.
-  defp build_crop_groups(nil), do: []
+  @doc """
+  Build crop groups from image config sizes.
 
-  defp build_crop_groups(sizes) when is_map(sizes) do
+  Groups crop sizes by their aspect ratio and returns a list of maps
+  with `ratio`, `label`, and `size_keys` for the image editor.
+  """
+  def build_crop_groups(nil), do: []
+
+  def build_crop_groups(sizes) when is_map(sizes) do
     sizes
     |> Enum.filter(fn {key, cfg} ->
       is_map(cfg) and cfg["crop"] == true and to_string(key) != "thumb"
@@ -4910,7 +4940,7 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
-  defp build_crop_groups(_), do: []
+  def build_crop_groups(_), do: []
 
   defp rationalize(ratio) when is_float(ratio) do
     # Try common ratios first

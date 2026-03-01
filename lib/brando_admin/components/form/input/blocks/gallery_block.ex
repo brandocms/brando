@@ -75,6 +75,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      socket
      |> assign(assigns)
      |> assign(:initialized_overrides, initialized_overrides)
+     |> assign_new(:form_id, fn -> derive_form_id(assigns.ref_form.name) end)
      |> assign(:gallery, gallery)
      |> assign(:gallery_objects, gallery_objects)
      |> assign(:indexed_objects, Enum.with_index(gallery_objects))
@@ -163,6 +164,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                     gallery_form={gallery_form}
                     override_data={@override_data}
                     block_data={block_data}
+                    form_id={@form_id}
                   />
                 </.inputs_for>
               </div>
@@ -414,6 +416,32 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     })
 
     {:noreply, socket}
+  end
+
+  def handle_event("open_image_editor", %{"image_id" => image_id}, socket) do
+    {:ok, image} = Brando.Images.get_image(image_id)
+
+    # Set edit_image on Form so the save handler knows which image to update
+    send_update(Form,
+      id: socket.assigns.form_id,
+      action: :set_edit_image_from_block,
+      image: image
+    )
+
+    # Push the init event directly from this component (same render cycle, no race)
+    crop_groups = build_crop_groups_for(image)
+
+    {:noreply,
+     push_event(socket, "b:image_editor:init", %{
+       image_src: Brando.Utils.img_url(image, :original, prefix: Brando.Utils.media_url()),
+       image_width: image.width,
+       image_height: image.height,
+       image_id: image.id,
+       focal_x: (image.focal && image.focal.x) || 50,
+       focal_y: (image.focal && image.focal.y) || 50,
+       crop_groups: crop_groups,
+       from_block: true
+     })}
   end
 
   ## Function components
@@ -717,5 +745,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       current_alt: current_alt,
       override_exists: object_override != nil
     }
+  end
+
+  # Derives the Form component ID from the ref_form name.
+  # e.g. "page[blocks][...]" -> "page" -> "page_form"
+  defp derive_form_id(ref_form_name) do
+    ref_form_name
+    |> String.split("[")
+    |> hd()
+    |> Kernel.<>("_form")
+  end
+
+  defp build_crop_groups_for(image) do
+    case Brando.Images.get_config_for(image) do
+      {:ok, config} -> Form.build_crop_groups(config.sizes)
+      _ -> []
+    end
   end
 end
