@@ -132,10 +132,25 @@ defmodule Brando.System do
   end
 
   defp check_image_processing_executable do
-    image_processing_module =
-      Brando.config(Brando.Images, :processor_module) || Brando.Images.Processor.Vix
+    case Brando.config(Brando.Images, :processor_module) do
+      Brando.Images.Processor.Sharp ->
+        raise ConfigError,
+          message: """
+          Brando.Images.Processor.Sharp has been removed.
 
-    apply(image_processing_module, :confirm_executable_exists, [])
+          Image processing now uses Vix (libvips) instead of sharp-cli.
+
+          Remove this line from your config:
+
+              config :brando, Brando.Images, processor_module: Brando.Images.Processor.Sharp
+
+          The default processor is now Brando.Images.Processor.Vix.
+          """
+
+      module ->
+        module = module || Brando.Images.Processor.Vix
+        apply(module, :confirm_executable_exists, [])
+    end
   end
 
   defp check_identity_exists do
