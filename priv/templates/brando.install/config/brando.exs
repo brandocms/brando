@@ -62,7 +62,7 @@ config :brando,
   """
 
 config :brando, Brando.Images,
-  processor_module: Brando.Images.Processor.Sharp,
+  processor_module: Brando.Images.Processor.Vix,
   default_config: %{
     allowed_mimetypes: ["image/jpeg", "image/png", "image/gif", "image/avif", "image/webp", "image/svg+xml"],
     upload_path: Path.join(["images", "site", "default"]),

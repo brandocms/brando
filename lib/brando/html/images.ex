@@ -201,22 +201,15 @@ defmodule Brando.HTML.Images do
     else
       sizes_format = List.first(formats)
       assigns = assign(assigns, :sizes_format, sizes_format)
-      # FIXME: only add one source for gifs for now -- sharp doesn't seem to handle
-      # animated webps very well?
-      if sizes_format == :gif do
-        ~H"""
-        <source {@attrs.source} />
-        """
-      else
-        ~H"""
-        <.source_tag
-          :for={format <- Enum.reverse(@src.formats)}
-          format={format}
-          original_format={@sizes_format}
-          source={@attrs.source}
-        />
-        """
-      end
+
+      ~H"""
+      <.source_tag
+        :for={format <- Enum.reverse(@src.formats)}
+        format={format}
+        original_format={@sizes_format}
+        source={@attrs.source}
+      />
+      """
     end
   end
 

@@ -178,13 +178,20 @@ defmodule Brando.Images do
 
   def get_processed_formats(path, nil) do
     original_type = Images.Utils.image_type(path)
-    List.wrap(original_type)
+    List.wrap(remap_format(original_type))
   end
 
   def get_processed_formats(path, formats) do
     original_type = Images.Utils.image_type(path)
-    Enum.map(formats, &((&1 == :original && original_type) || &1))
+
+    Enum.map(formats, fn
+      :original -> remap_format(original_type)
+      format -> remap_format(format)
+    end)
   end
+
+  defp remap_format(:gif), do: :webp
+  defp remap_format(format), do: format
 
   def list_generated_sizes(image) do
     {:ok, %{formats: _formats, sizes: _sizes}} = get_config_for(image)

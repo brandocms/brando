@@ -117,11 +117,6 @@ defmodule BrandoIntegration.AdminSocket do
   def id(_socket), do: nil
 end
 
-defmodule BrandoIntegration.Processor.Commands do
-  @moduledoc false
-  def command(_, _, _), do: {:ok, 0}
-end
-
 defmodule BrandoIntegrationWeb.PageHTML do
   use Phoenix.Component
 

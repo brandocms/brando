@@ -653,7 +653,7 @@ defmodule Brando.OperationsTest do
                  width: 2600
                },
                operation_index: 1,
-               processed_formats: [:gif],
+               processed_formats: [:webp],
                size_cfg: %{"quality" => 90, "size" => "1700"},
                size_key: "large",
                sized_image_dir: "images/exhibitions/cover/large",
@@ -693,7 +693,7 @@ defmodule Brando.OperationsTest do
                  width: 2600
                },
                operation_index: 2,
-               processed_formats: [:gif],
+               processed_formats: [:webp],
                size_cfg: %{"quality" => 90, "size" => "1100"},
                size_key: "medium",
                sized_image_dir: "images/exhibitions/cover/medium",
@@ -733,7 +733,7 @@ defmodule Brando.OperationsTest do
                  width: 2600
                },
                operation_index: 3,
-               processed_formats: [:gif],
+               processed_formats: [:webp],
                size_cfg: %{"crop" => true, "quality" => 30, "size" => "25x25>"},
                size_key: "micro",
                sized_image_dir: "images/exhibitions/cover/micro",
@@ -773,7 +773,7 @@ defmodule Brando.OperationsTest do
                  width: 2600
                },
                operation_index: 4,
-               processed_formats: [:gif],
+               processed_formats: [:webp],
                size_cfg: %{"quality" => 90, "size" => "700"},
                size_key: "small",
                sized_image_dir: "images/exhibitions/cover/small",
@@ -813,7 +813,7 @@ defmodule Brando.OperationsTest do
                  width: 2600
                },
                operation_index: 5,
-               processed_formats: [:gif],
+               processed_formats: [:webp],
                size_cfg: %{"crop" => true, "quality" => 90, "size" => "400x400>"},
                size_key: "thumb",
                sized_image_dir: "images/exhibitions/cover/thumb",
@@ -853,7 +853,7 @@ defmodule Brando.OperationsTest do
                  width: 2600
                },
                operation_index: 6,
-               processed_formats: [:gif],
+               processed_formats: [:webp],
                size_cfg: %{"quality" => 90, "size" => "2100"},
                size_key: "xlarge",
                sized_image_dir: "images/exhibitions/cover/xlarge",
@@ -865,13 +865,19 @@ defmodule Brando.OperationsTest do
            ]
   end
 
-  test "create_image_size gif" do
+  test "create_image_size gif (converted to webp)" do
+    # Create the source file so the general clause's existence check passes
+    src_path = Brando.Images.Utils.media_path("images/exhibitions/cover/image.gif")
+    File.mkdir_p!(Path.dirname(src_path))
+    File.write!(src_path, "GIF89a")
+
     op = %Brando.Images.Operation{
       filename: "image.gif",
       image_id: 1,
+      processed_formats: [:webp],
       image_struct: %Brando.Images.Image{
         credits: nil,
-        focal: %{"x" => 50, "y" => 50},
+        focal: %Brando.Images.Focal{x: 50, y: 50},
         height: 2600,
         path: "images/exhibitions/cover/image.gif",
         sizes: %{
@@ -891,17 +897,24 @@ defmodule Brando.OperationsTest do
     }
 
     {:ok, result} = Brando.Images.Operations.Sizing.create_image_size(op)
-    assert result.cmd_params =~ "--resize-fit-width 10"
     assert result.size_key == "micro"
+    assert result.format == "webp"
+    assert result.image_path =~ ".webp"
   end
 
-  test "create_image_size cropped gif" do
+  test "create_image_size cropped gif (converted to webp)" do
+    # Create the source file so the general clause's existence check passes
+    src_path = Brando.Images.Utils.media_path("images/exhibitions/cover/image.gif")
+    File.mkdir_p!(Path.dirname(src_path))
+    File.write!(src_path, "GIF89a")
+
     op = %Brando.Images.Operation{
       filename: "image.gif",
       image_id: 1,
+      processed_formats: [:webp],
       image_struct: %Brando.Images.Image{
         credits: nil,
-        focal: %{"x" => 50, "y" => 50},
+        focal: %Brando.Images.Focal{x: 50, y: 50},
         height: 2600,
         path: "images/exhibitions/cover/image.gif",
         sizes: %{
@@ -921,7 +934,8 @@ defmodule Brando.OperationsTest do
     }
 
     {:ok, result} = Brando.Images.Operations.Sizing.create_image_size(op)
-    assert result.cmd_params =~ "--crop 0,0-10,10 --resize 10x10"
     assert result.size_key == "micro"
+    assert result.format == "webp"
+    assert result.image_path =~ ".webp"
   end
 end

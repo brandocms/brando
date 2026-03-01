@@ -29,8 +29,8 @@ defmodule Brando.Images.Crop do
     File.write!(dest_file, binary_data)
 
     {width, height} =
-      case Fastimage.size(dest_file) do
-        {:ok, %{width: w, height: h}} -> {w, h}
+      case Image.open(dest_file) do
+        {:ok, img} -> {Image.width(img), Image.height(img)}
         _ -> {nil, nil}
       end
 

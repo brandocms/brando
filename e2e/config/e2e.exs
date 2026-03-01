@@ -29,7 +29,7 @@ config :e2e_project, hmr: false
 # Core code now uses :largest (resolved dynamically) so we can safely
 # drop medium/large/xlarge. 3 sizes × 1 format vs the default 6 × 2.
 config :brando, Brando.Images,
-  processor_module: Brando.Images.Processor.Sharp,
+  processor_module: Brando.Images.Processor.Vix,
   default_config: %{
     allowed_mimetypes: [
       "image/jpeg",

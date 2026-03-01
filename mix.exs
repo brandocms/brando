@@ -95,7 +95,7 @@ defmodule Brando.Mixfile do
       {:sitemapper, "~> 0.10.0"},
 
       # images
-      {:fastimage, "~> 1.0.0-rc4"},
+      {:image, "~> 0.63"},
 
       # AWS
       {:ex_aws, "~> 2.0"},

@@ -7,11 +7,6 @@ defmodule Brando.Images.Processor.Dummy do
   alias Brando.Images
 
   @doc """
-  Wrapper for System.cmd
-  """
-  def command(_cmd, _params, _opts), do: nil
-
-  @doc """
   Process image conversion
   """
   def process_image(%Images.ConversionParameters{

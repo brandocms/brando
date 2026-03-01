@@ -122,11 +122,10 @@ defmodule Brando.Upload do
   def handle_upload_type(%{meta: meta, upload_entry: _upload_entry, cfg: _cfg}, user) do
     media_path = meta.media_path
 
-    media_path
-    |> Images.Utils.media_path()
-    |> Fastimage.size()
-    |> case do
-      {:ok, %{width: width, height: height}} ->
+    case media_path |> Images.Utils.media_path() |> Image.open() do
+      {:ok, img} ->
+        width = Image.width(img)
+        height = Image.height(img)
         dominant_color = Images.Operations.Info.get_dominant_color(media_path)
 
         image_params = %{
@@ -143,7 +142,7 @@ defmodule Brando.Upload do
         Images.create_image(image_params, user)
 
       {:error, _} ->
-        {:error, {:handle_upload_type, "Fastimage.size() failed."}}
+        {:error, {:handle_upload_type, "Failed to read image dimensions."}}
     end
   end
 
@@ -228,7 +227,7 @@ defmodule Brando.Upload do
     {:error, :empty_filename}
   end
 
-  # make sure jpeg's extension are jpg to avoid headaches w/sharp-cli
+  # Normalize .jpeg extension to .jpg
   defp ensure_correct_ext(%__MODULE__{meta: %{filename: filename}} = upload) do
     upload = put_in(upload.meta.filename, ensure_correct_extension(filename))
 

@@ -14,58 +14,13 @@ defmodule Brando.Images.Operations.Sizing do
   Get processor module from config and call process function
   """
   def delegate_processor(conversion_parameters) do
-    module = Brando.config(Brando.Images, :processor_module) || Brando.Images.Processor.Sharp
+    module = Brando.config(Brando.Images, :processor_module) || Brando.Images.Processor.Vix
     apply(module, :process_image, [conversion_parameters])
   end
 
   @doc """
   Create a sized version of image
   """
-  def create_image_size(%Images.Operation{
-        type: :gif,
-        image_id: image_id,
-        image_struct: %{path: image_src, width: width, height: height},
-        sized_image_path: image_dest,
-        sized_image_dir: image_dest_dir,
-        size_key: size_key,
-        size_cfg: size_cfg
-      }) do
-    image_src_path = Images.Utils.media_path(image_src)
-    image_dest_path = Images.Utils.media_path(image_dest)
-    image_dest_dir = Images.Utils.media_path(image_dest_dir)
-
-    File.mkdir_p!(image_dest_dir)
-
-    size_cfg = get_size_cfg_orientation(size_cfg, height, width)
-
-    # This is slightly dumb, but should be enough. If we crop, we always pass WxH.
-    # If we don't, we always pass W or xH.
-    {crop, modifier, size} =
-      if size_cfg["crop"] do
-        size_coords = String.replace(size_cfg["size"], "x", ",")
-        {"--crop 0,0-#{size_coords}", "--resize", size_cfg["size"]}
-      else
-        modifier =
-          (String.contains?(size_cfg["size"], "x") && "--resize-fit-height") ||
-            "--resize-fit-width"
-
-        size = String.replace(size_cfg["size"], ~r/x|\^|\!|\>|\<|\%/, "")
-        {"", modifier, size}
-      end
-
-    params = ~w(#{crop} #{modifier} #{size} --output #{image_dest_path} -i #{image_src_path})
-
-    Images.Processor.Commands.delegate("gifsicle", params, stderr_to_stdout: true)
-
-    {:ok,
-     %Images.TransformResult{
-       image_id: image_id,
-       size_key: size_key,
-       image_path: image_dest,
-       cmd_params: Enum.join(params, " ")
-     }}
-  end
-
   def create_image_size(%Images.Operation{
         type: :svg,
         image_id: image_id,
@@ -96,6 +51,7 @@ defmodule Brando.Images.Operations.Sizing do
         user_id: user_id
       }) do
     format = maybe_change_format(type)
+    image_dest = maybe_change_extension(image_dest, type, format)
     image_src_path = Images.Utils.media_path(image_src)
     image_dest_path = Images.Utils.media_path(image_dest)
     image_dest_dir = Images.Utils.media_path(image_dest_dir)
@@ -152,12 +108,9 @@ defmodule Brando.Images.Operations.Sizing do
   end
 
   defp ensure_dims(width, height, img_path) when is_nil(width) or is_nil(height) do
-    case Fastimage.size(img_path) do
-      {:ok, %{width: width, height: height}} ->
-        {width, height}
-
-      {:error, _} ->
-        {0, 0}
+    case Image.open(img_path) do
+      {:ok, img} -> {Image.width(img), Image.height(img)}
+      {:error, _} -> {0, 0}
     end
   end
 
@@ -489,7 +442,11 @@ defmodule Brando.Images.Operations.Sizing do
     conversion_parameters
   end
 
+  defp maybe_change_format(:gif), do: "webp"
   defp maybe_change_format(type) when type in @supported_formats, do: Atom.to_string(type)
 
   defp maybe_change_format(_), do: "jpg"
+
+  defp maybe_change_extension(path, :gif, "webp"), do: String.replace(path, ~r/\.gif$/, ".webp")
+  defp maybe_change_extension(path, _, _), do: path
 end
