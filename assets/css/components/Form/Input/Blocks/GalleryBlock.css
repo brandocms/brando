@@ -29,6 +29,35 @@
       cursor: move;
       position: relative;
 
+      .video-placeholder {
+        aspect-ratio: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background-color: var(--brando-color-input);
+
+        [data-icon] {
+          width: 2rem;
+          height: 2rem;
+          opacity: 0.3;
+        }
+
+        span {
+          font-family: "Mono";
+          font-size: 10px;
+          text-transform: uppercase;
+          opacity: 0.5;
+          text-align: center;
+          padding: 0 8px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          max-width: 100%;
+        }
+      }
+
       figcaption {
         @display flex/column/nowrap;
         @space gap 8px;
@@ -127,6 +156,33 @@
         left: 8px;
         z-index: 1;
         background-color: white;
+      }
+
+      .video-placeholder {
+        @column 3/12 desktop_xl;
+        @column 3/12 desktop_lg;
+        @column 3/12 desktop_md;
+        @order 0;
+        aspect-ratio: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        background-color: var(--brando-color-input);
+        border-radius: 4px;
+
+        [data-icon] {
+          width: 1.5rem;
+          height: 1.5rem;
+          opacity: 0.3;
+        }
+
+        span {
+          font-family: "Mono";
+          font-size: 10px;
+          opacity: 0.5;
+        }
       }
 
       .image-content {

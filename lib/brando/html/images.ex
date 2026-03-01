@@ -72,12 +72,16 @@ defmodule Brando.HTML.Images do
     ~H||
   end
 
-  def picture(%{src: %Ecto.Association.NotLoaded{}} = assigns) do
+  def picture(%{src: %Ecto.Association.NotLoaded{__field__: field, __owner__: owner}} = assigns) do
+    assigns =
+      assigns
+      |> assign(:field, field)
+      |> assign(:owner, inspect(owner))
+
     ~H"""
     <div class="brando-unloaded-association">
-      <code phx-no-format phx-no-curly-interpolation>
-        Trying to call `picture` tag on an unloaded association<br /><br />
-        <%= inspect(@src, structs: false, pretty: true) %>
+      <code>
+        Trying to call `picture` tag on an unloaded association: {@owner}.{@field}
       </code>
     </div>
     """
