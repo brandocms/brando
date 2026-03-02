@@ -2615,13 +2615,13 @@ msgstr[0] "1 objekt"
 msgstr[1] "%{count} objekter"
 
 #: lib/brando_admin/components/form/input/video.ex:341
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Add video"
-msgstr "Legg til fil"
+msgstr "Legg til video"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block/override_form.ex:85
 #: lib/brando_admin/components/form/input/blocks/gallery_block/override_form.ex:121
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Alt text"
 msgstr "Alternativ tekst"
 
@@ -2652,9 +2652,9 @@ msgid "Cancel"
 msgstr "Avbryt"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:471
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Caption Overrides"
-msgstr "Bildetekst"
+msgstr "Overstyr bildetekst"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block/object.ex:326
 #, elixir-autogen, elixir-format
@@ -2667,9 +2667,9 @@ msgid "Choose from existing videos or create new from URL (YouTube, Vimeo, direc
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/video_block.ex:335
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Container CSS class"
-msgstr "Seksjoner"
+msgstr "CSS-klasse for beholder"
 
 #: lib/brando_admin/components/video_picker.ex:86
 #, elixir-autogen, elixir-format
@@ -2725,14 +2725,14 @@ msgid "External (Vimeo/YouTube)"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/video_block.ex:179
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "External video"
-msgstr "Ekstern fil"
+msgstr "Ekstern video"
 
 #: lib/brando_admin/components/form/input/blocks/video_block.ex:431
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "External video URL"
-msgstr "Ekstern fil"
+msgstr "Ekstern video-URL"
 
 #: lib/brando_admin/components/form.ex:1914
 #, elixir-autogen, elixir-format
@@ -2815,24 +2815,24 @@ msgid "No images in gallery"
 msgstr "Ingen bilder i galleriet"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block.ex:176
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "No objects currently in block. Click one of the buttons above to get started, or drag and drop media here."
-msgstr "Ingen objekter i blokken. Klikk på en av knappene over for å legge til, eller dra og slipp bilder her."
+msgstr "Ingen objekter i blokken. Klikk på en av knappene over for å legge til, eller dra og slipp media her."
 
 #: lib/brando_admin/components/form/input/video.ex:339
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "No video associated with field"
-msgstr "Inget bilde knyttet til feltet"
+msgstr "Ingen video knyttet til feltet"
 
 #: lib/brando_admin/components/form/input/blocks/video_block.ex:202
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "No video selected"
-msgstr "<Ingen valgt>"
+msgstr "Ingen video valgt"
 
 #: lib/brando_admin/components/form/input/blocks/video_block.ex:341
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Opacity (0-100)"
-msgstr "Gjennomsiktighet"
+msgstr "Gjennomsiktighet (0-100)"
 
 #: lib/brando_admin/components/video_picker.ex:122
 #, elixir-autogen, elixir-format
@@ -2865,19 +2865,19 @@ msgid "Remove thumbnail"
 msgstr ""
 
 #: lib/brando_admin/components/content/list.ex:749
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reset filters"
-msgstr "Nullstill filfeltet"
+msgstr "Nullstill filtre"
 
 #: lib/brando_admin/components/form.ex:2137
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reset video field"
-msgstr "Nullstill video"
+msgstr "Nullstill videofeltet"
 
 #: lib/brando_admin/components/form.ex:2052
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Select existing video"
-msgstr "Velg eksisterende fil"
+msgstr "Velg eksisterende video"
 
 #: lib/brando_admin/components/form/input/blocks/video_block.ex:221
 #: lib/brando_admin/components/form/input/blocks/video_block.ex:383
@@ -2886,9 +2886,9 @@ msgid "Select or create video"
 msgstr ""
 
 #: lib/brando_admin/components/video_picker.ex:73
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Select similarly typed video from library"
-msgstr "Velg fra lignende filtype i filbiblioteket"
+msgstr "Velg lignende videotype fra biblioteket"
 
 #: lib/brando_admin/components/form.ex:1906
 #, elixir-autogen, elixir-format
@@ -2896,9 +2896,9 @@ msgid "Select thumbnail from library"
 msgstr ""
 
 #: lib/brando_admin/components/video_picker.ex:69
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Select video"
-msgstr "Nullstill video"
+msgstr "Velg video"
 
 #: lib/brando_admin/components/form.ex:1941
 #, elixir-autogen, elixir-format
@@ -2906,9 +2906,9 @@ msgid "Show controls"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/video_block.ex:269
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Source URL"
-msgstr "Kilde"
+msgstr "Kilde-URL"
 
 #: lib/brando_admin/components/form.ex:3220
 #, elixir-autogen, elixir-format
@@ -2942,25 +2942,25 @@ msgid "Untitled"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex:2009
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Upload / File"
-msgstr "Last opp fil"
+msgstr "Last opp / Fil"
 
 #: lib/brando_admin/live/files/file_list_live.ex:68
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Upload Files"
-msgstr "Last opp fil"
+msgstr "Last opp filer"
 
 #: lib/brando_admin/live/images/image_list_live.ex:69
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Upload Images"
 msgstr "Last opp bilder"
 
 #: lib/brando_admin/components/form.ex:2032
 #: lib/brando_admin/components/form.ex:2045
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Upload video file"
-msgstr "Last opp fil"
+msgstr "Last opp videofil"
 
 #: lib/brando_admin/components/form/input/blocks/video_block.ex:194
 #, elixir-autogen, elixir-format
@@ -3011,14 +3011,14 @@ msgid "Video Information"
 msgstr ""
 
 #: lib/brando_admin/components/video_picker.ex:157
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Video Preview"
-msgstr "Videoens coverbilde"
+msgstr "Videoforhåndsvisning"
 
 #: lib/brando_admin/components/form.ex:2083
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Video Service"
-msgstr "Videoens coverbilde"
+msgstr "Videotjeneste"
 
 #: lib/brando_admin/components/form.ex:1934
 #, elixir-autogen, elixir-format
@@ -3027,14 +3027,14 @@ msgstr ""
 
 #: lib/brando_admin/components/form.ex:2100
 #: lib/brando_admin/components/video_picker.ex:99
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Video URL"
-msgstr "Video"
+msgstr "Video-URL"
 
 #: lib/brando_admin/components/form.ex:2801
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Video selected"
-msgstr "Ingen valgt"
+msgstr "Video valgt"
 
 #: lib/brando_admin/components/video_picker.ex:191
 #, elixir-autogen, elixir-format
@@ -3043,9 +3043,9 @@ msgstr ""
 
 #: lib/brando_admin/components/form.ex:2091
 #: lib/brando_admin/components/form/input/blocks/video_block.ex:189
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Vimeo"
-msgstr "Video"
+msgstr "Vimeo"
 
 #: lib/brando_admin/live/galleries/gallery_form_live.ex:27
 #, elixir-autogen, elixir-format
@@ -3071,9 +3071,9 @@ msgstr ""
 
 #: lib/brando_admin/live/content/modules_list_live.ex:54
 #: lib/brando_admin/live/content/modules_list_live.ex:59
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "variables"
-msgstr "Variabler"
+msgstr "variabler"
 
 #: lib/brando_admin/live_view/listing.ex:237
 #, elixir-autogen, elixir-format
@@ -3108,9 +3108,9 @@ msgid "Copy"
 msgstr ""
 
 #: lib/brando_admin/components/form/block.ex:3259
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "More actions"
-msgstr "Mer informasjon"
+msgstr "Handlinger"
 
 #: lib/brando_admin/components/form/input/multi_select.ex:905
 #, elixir-autogen, elixir-format
@@ -3171,9 +3171,9 @@ msgid "Crop previews"
 msgstr "Forhåndsvisning av beskjæring"
 
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex:260
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Edit/Crop"
-msgstr "Rediger/Beskjær bilde"
+msgstr "Rediger/Beskjær"
 
 #: lib/brando_admin/components/form.ex:1794
 #, elixir-autogen, elixir-format
