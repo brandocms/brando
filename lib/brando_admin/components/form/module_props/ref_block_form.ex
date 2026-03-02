@@ -235,7 +235,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
         opts={[options: @display_options]}
       />
       <Input.text field={block_data[:class]} label={gettext("Class")} />
-      <Input.text field={block_data[:series_slug]} label={gettext("Series slug")} />
       <Input.toggle field={block_data[:lightbox]} label={gettext("Lightbox")} />
       <Input.radios
         field={block_data[:placeholder]}
@@ -445,7 +444,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
         opts={[options: @display_options]}
       />
       <Input.text field={tpl_data[:class]} label={gettext("Class")} />
-      <Input.text field={tpl_data[:series_slug]} label={gettext("Series slug")} />
       <Input.toggle field={tpl_data[:lightbox]} label={gettext("Lightbox")} />
       <Input.radios
         field={tpl_data[:placeholder]}

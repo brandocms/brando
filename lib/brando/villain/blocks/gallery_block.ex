@@ -20,7 +20,6 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
 
     attributes do
       attribute :class, :string
-      attribute :series_slug, :string, default: "post"
       attribute :lightbox, :boolean, default: false
 
       attribute :placeholder, :enum,

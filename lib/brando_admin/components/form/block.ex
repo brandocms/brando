@@ -2373,6 +2373,13 @@ defmodule BrandoAdmin.Components.Form.Block do
             <button type="button" class="secondary" phx-click={JS.push("reset_vars", target: @target)}>
               {gettext("Reset all variables")}
             </button>
+            <a
+              href={"/admin/config/content/modules/update/#{@block_form[:module_id].value}"}
+              class="secondary"
+              target="_blank"
+            >
+              {gettext("Edit module")}
+            </a>
           </div>
         </div>
       </div>

@@ -192,7 +192,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               ]}
             />
             <Input.text field={block_data[:class]} label={gettext("Class")} />
-            <Input.text field={block_data[:series_slug]} label={gettext("Series slug")} />
             <Input.toggle field={block_data[:lightbox]} label={gettext("Lightbox")} />
 
             <Input.radios

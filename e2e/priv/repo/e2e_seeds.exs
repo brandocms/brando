@@ -552,7 +552,6 @@ table_template = %Brando.Content.TableTemplate{
         type: "gallery",
         data: %Brando.Villain.Blocks.GalleryBlock.Data{
           class: nil,
-          series_slug: "post",
           lightbox: false,
           placeholder: :dominant_color_faded,
           display: :grid,

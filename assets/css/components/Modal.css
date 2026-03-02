@@ -192,26 +192,26 @@
     display: flex;
     flex-direction: column;
 
-    button {
+    :is(button, a) {
       margin-top: 0;
       text-align: center !important;
       border-radius: 0;
 
-      &:first-of-type {
+      &:first-child {
         border-top-left-radius: 30px !important;
         border-top-right-radius: 30px !important;
         border-bottom-left-radius: 0;
         border-bottom-right-radius: 0;
       }
 
-      &:last-of-type {
+      &:last-child {
         border-top-left-radius: 0;
         border-top-right-radius: 0;
         border-bottom-left-radius: 30px !important;
         border-bottom-right-radius: 30px !important;
       }
 
-      + button {
+      + :is(button, a) {
         margin-top: -1px;
       }
 
