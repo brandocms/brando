@@ -18,7 +18,7 @@
     "vite": "^6.2.2"
   },
   "dependencies": {
-    "@brandocms/jupiter": "4.0.0-beta.1"
+    "@brandocms/jupiter": "4.0.0-beta.2"
   },
   "packageManager": "pnpm@9.14.3+sha256.652c47dac7c2b9350db4cdb9330c087d527114a0c2dff4cbac7ea9b96be928bd"
 }
