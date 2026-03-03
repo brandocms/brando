@@ -171,8 +171,16 @@ defmodule BrandoAdmin.Components.Form do
 
   # Set edit_image for the save handler when image editor is opened from a block.
   # The block's handle_event pushes b:image_editor:init directly (same render cycle).
-  def update(%{action: :set_edit_image_from_block, image: image}, socket) do
-    {:ok, assign(socket, :edit_image, %{path: [], field: nil, relation_field: nil, image: image})}
+  def update(%{action: :set_edit_image_from_block, image: image} = params, socket) do
+    {:ok,
+     assign(socket, :edit_image, %{
+       path: [],
+       field: nil,
+       relation_field: nil,
+       image: image,
+       block_cid: params[:block_cid],
+       old_image_id: params[:old_image_id]
+     })}
   end
 
   # edit_video
@@ -1791,8 +1799,6 @@ defmodule BrandoAdmin.Components.Form do
         id="image-editor-hook"
         phx-hook="Brando.ImageEditor"
         phx-update="ignore"
-        data-label-freeform-crop={gettext("Freeform crop")}
-        data-label-freeform-instructions={gettext("No crop ratios configured. Use focal point only.")}
         data-label-crop-previews={gettext("Crop previews")}
       >
         <div class="image-editor">
@@ -1817,7 +1823,7 @@ defmodule BrandoAdmin.Components.Form do
               {gettext("Cancel")}
             </button>
             <button type="button" class="secondary" id="image-editor-save-replace">
-              {gettext("Update focal point")}
+              {gettext("Save changes")}
             </button>
             <button type="button" class="primary" id="image-editor-save-new">
               {gettext("Save as new copy")}
@@ -2727,49 +2733,114 @@ defmodule BrandoAdmin.Components.Form do
 
     {:noreply,
      push_event(socket, "b:image_editor:init", %{
+       image_id: image.id,
        image_src: Brando.Utils.img_url(image, :original, prefix: Brando.Utils.media_url()),
        image_width: image.width,
        image_height: image.height,
        focal_x: (image.focal && image.focal.x) || 50,
        focal_y: (image.focal && image.focal.y) || 50,
-       crop_groups: crop_groups
+       crop_groups: crop_groups,
+       config_target: image.config_target
      })}
   end
 
   def handle_event(
         "image_editor_save",
-        %{"mode" => "replace", "focal_x" => x, "focal_y" => y} = params,
-        %{assigns: %{singular: singular, current_user: current_user}} = socket
+        %{"mode" => "replace", "focal_x" => _x, "focal_y" => _y} = params,
+        %{assigns: %{current_user: current_user}} = socket
       ) do
-    image =
-      case socket.assigns.edit_image do
-        %{image: image} when not is_nil(image) ->
-          image
+    edit_image = socket.assigns.edit_image
+    block_cid = Map.get(edit_image, :block_cid)
 
-        _ ->
-          # Fallback: when opened from a block, send_update may not have completed yet.
-          # Use image_id passed through the JS payload instead.
-          {:ok, img} = Brando.Images.get_image(params["image_id"])
-          img
+    updated_image =
+      if params["crop_applied"] do
+        # Crop was already applied via the HTTP replace_crop endpoint.
+        # The controller's Crop.save_replace already queued processing.
+        image_id = params["image_id"] || edit_image.image.id
+        {:ok, img} = Brando.Images.get_image(image_id)
+        img
+      else
+        # No crop — just update focal point and reprocess from the original file.
+        image =
+          case edit_image do
+            %{image: image} when not is_nil(image) ->
+              image
+
+            _ ->
+              {:ok, img} = Brando.Images.get_image(params["image_id"])
+              img
+          end
+
+        x = params["focal_x"]
+        y = params["focal_y"]
+
+        changeset =
+          image
+          |> Brando.Images.Image.changeset(%{focal: %{x: x, y: y}, status: :unprocessed}, current_user)
+          |> Map.put(:action, :update)
+
+        {:ok, img} = Brando.Repo.update(changeset)
+        img
       end
 
-    changeset =
-      image
-      |> Brando.Images.Image.changeset(%{focal: %{x: x, y: y}, status: :unprocessed}, current_user)
-      |> Map.put(:action, :update)
+    # Subscribe to PubSub BEFORE queuing processing so inline Oban
+    # broadcasts aren't missed. Always subscribe — both block and non-block
+    # paths need processing notifications to update their UI.
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
 
-    {:ok, updated_image} = Brando.Repo.update(changeset)
-    Brando.Images.Processing.queue_processing(updated_image, current_user)
+    if block_cid do
+      send(self(), {:register_pending_block_image, updated_image.id, block_cid})
+    end
 
-    send_update(__MODULE__,
-      id: "#{singular}_form",
-      action: :update_edit_image,
-      image: updated_image
-    )
+    # For non-crop case, queue processing after subscribing.
+    unless params["crop_applied"] do
+      Brando.Images.Processing.queue_processing(updated_image, current_user)
+    end
 
-    send(self(), {:toast, gettext("Focal point updated. Image is reprocessing.")})
+    # For crop_applied, processing was already queued by the controller.
+    # With Oban inline testing, the broadcast was sent before we subscribed.
+    # Re-fetch to get the latest state (may already be processed).
+    updated_image =
+      if params["crop_applied"] do
+        {:ok, fresh} = Brando.Images.get_image(updated_image.id)
+        fresh
+      else
+        updated_image
+      end
 
-    {:noreply, socket}
+    send(self(), {:toast, gettext("Changes saved. Image is reprocessing.")})
+
+    if block_cid do
+      # Block path: update image drawer; PubSub hooks handle the block component.
+      singular = socket.assigns.singular
+
+      send_update(__MODULE__,
+        id: "#{singular}_form",
+        action: :update_edit_image,
+        image: updated_image
+      )
+
+      {:noreply, socket}
+    else
+      # Non-block path: update entry with the image so the Image input
+      # detects the change when the form re-validates (same pattern as new_copy).
+      schema = socket.assigns.schema
+      field_atom = String.to_existing_atom("#{edit_image.field}")
+      entry = socket.assigns.entry || struct(schema)
+      field_path = edit_image.path ++ [field_atom]
+      access_path = Brando.Utils.build_access_path(field_path)
+      updated_entry = put_in(entry, access_path, updated_image)
+
+      image_changeset = change(updated_image)
+      updated_edit_image = Map.merge(edit_image, %{image: updated_image})
+
+      {:noreply,
+       socket
+       |> assign(:entry, updated_entry)
+       |> assign(:edit_image, updated_edit_image)
+       |> assign(:image_changeset, image_changeset)
+       |> push_event("b:validate", %{})}
+    end
   end
 
   def handle_event(
@@ -2777,11 +2848,63 @@ defmodule BrandoAdmin.Components.Form do
         %{"mode" => "new_copy", "focal_x" => x, "focal_y" => y},
         socket
       ) do
-    # The new copy focal point is stored temporarily.
-    # The actual file upload is handled through the standard LiveView upload mechanism
-    # triggered by the JS side setting the file input.
-    # We store the focal data to apply after upload completes.
+    # Non-block path: the canvas blob is uploaded via the #image-drawer-form LiveView upload.
+    # Store focal so it can be applied to the new image once the upload completes.
     {:noreply, assign(socket, :image_editor_focal, %{x: x, y: y})}
+  end
+
+  def handle_event(
+        "image_editor_new_copy",
+        %{"new_image_id" => new_image_id, "focal_x" => x, "focal_y" => y},
+        %{assigns: %{current_user: current_user}} = socket
+      ) do
+    edit_image = socket.assigns.edit_image
+    {:ok, new_image} = Brando.Images.get_image(new_image_id)
+
+    changeset =
+      new_image
+      |> Brando.Images.Image.changeset(%{focal: %{x: x, y: y}, status: :unprocessed}, current_user)
+      |> Map.put(:action, :update)
+
+    case Brando.Repo.update(changeset) do
+      {:ok, updated_image} ->
+        # Subscribe to PubSub and register the pending block image BEFORE
+        # queuing processing. With Oban testing: :inline, the job runs
+        # synchronously and broadcasts before returning — subscribing after
+        # would miss the broadcast.
+        if block_cid = Map.get(edit_image, :block_cid) do
+          Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
+          send(self(), {:register_pending_block_image, updated_image.id, block_cid})
+        end
+
+        Brando.Images.Processing.queue_processing(updated_image, current_user)
+
+        if block_cid = Map.get(edit_image, :block_cid) do
+          send_update(block_cid, %{event: "image_editor_new_copy", new_image: updated_image, old_image_id: Map.get(edit_image, :old_image_id)})
+          send(self(), {:toast, gettext("New image created.")})
+          {:noreply, socket}
+        else
+          relation_key = String.to_existing_atom("#{edit_image.field}_id")
+          image_changeset = change(updated_image)
+          updated_edit_image = Map.merge(edit_image, %{id: updated_image.id, image: updated_image})
+
+          {:noreply,
+           socket
+           |> update_changeset(edit_image.path, relation_key, updated_image.id)
+           |> assign(:edit_image, updated_edit_image)
+           |> assign(:image_changeset, image_changeset)}
+        end
+
+      {:error, reason} ->
+        error_title = gettext("Error creating image")
+
+        {:noreply,
+         push_event(socket, "b:alert", %{
+           title: error_title,
+           type: "error",
+           message: inspect(reason)
+         })}
+    end
   end
 
   def handle_event(
@@ -2978,6 +3101,55 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("validate_image", _, socket) do
     {:noreply, socket}
+  end
+
+  # When opened from a block, edit_image has no path/field/relation_field.
+  # Create a new image record and notify the block component to update its reference.
+  def handle_event(
+        "save_image",
+        %{"image" => image_params},
+        %{
+          assigns: %{
+            edit_image: %{field: nil, image: original_image, block_cid: block_cid},
+            current_user: current_user
+          }
+        } = socket
+      ) do
+    new_image_params = Map.put(image_params, "config_target", original_image.config_target)
+
+    validated_changeset =
+      %Brando.Images.Image{}
+      |> Brando.Images.Image.changeset(new_image_params, current_user)
+      |> Map.put(:action, :insert)
+      |> Brando.Trait.run_trait_before_save_callbacks(
+        Brando.Images.Image,
+        current_user
+      )
+
+    {:ok, new_image} = Brando.Repo.insert(validated_changeset)
+
+    Brando.Trait.run_trait_after_save_callbacks(
+      Brando.Images.Image,
+      new_image,
+      validated_changeset,
+      current_user
+    )
+
+    if new_image.status !== :processed do
+      Brando.Images.Processing.queue_processing(new_image, current_user)
+    end
+
+    if block_cid do
+      old_image_id = Map.get(socket.assigns.edit_image, :old_image_id)
+      send_update(block_cid, %{event: "image_editor_new_copy", new_image: new_image, old_image_id: old_image_id})
+    end
+
+    send(self(), {:toast, gettext("New image created.")})
+
+    {:noreply,
+     socket
+     |> assign(:editing_image?, false)
+     |> assign_drawer_recovery_state()}
   end
 
   def handle_event(
@@ -3584,6 +3756,7 @@ defmodule BrandoAdmin.Components.Form do
       {:noreply, socket}
     end
   end
+
 
   def handle_gallery_progress(
         key,

@@ -847,6 +847,18 @@ defmodule BrandoAdmin.Components.Form.Block do
                   {updated_ref, updated_block}
               end
 
+            # Handle replacing a gallery image (remove old, add new in same position)
+            {updated_ref, updated_block} =
+              if Map.has_key?(params, :replace_gallery_image_id) do
+                {old_image_id, new_image_id} = params.replace_gallery_image_id
+                current_user = %{id: socket.assigns.current_user_id}
+                updated_ref = replace_media_in_gallery_ref(updated_ref, :image, old_image_id, new_image_id, current_user)
+                updated_block = replace_gallery_media_override(updated_block, old_image_id, new_image_id)
+                {updated_ref, updated_block}
+              else
+                {updated_ref, updated_block}
+              end
+
             # Handle removing gallery object by index
             {updated_ref, updated_block} =
               if Map.has_key?(params, :remove_gallery_object_index) do
@@ -1558,6 +1570,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         liquid_splits={@liquid_splits}
         parent_uploads={@parent_uploads}
         target={@myself}
+        form_cid={@form_cid}
         insert_block={
           JS.push("insert_block", target: @myself)
           |> show_modal(@module_picker_id)
@@ -1636,6 +1649,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         has_table_template?={@has_table_template?}
         table_template_name={@table_template_name}
         target={@myself}
+        form_cid={@form_cid}
         module_class={@module_class}
         block_module={@block_module}
         vars={@vars}
@@ -1671,6 +1685,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         has_table_template?={@has_table_template?}
         table_template_name={@table_template_name}
         target={@myself}
+        form_cid={@form_cid}
         module_class={@module_class}
         block_module={@block_module}
         vars={@vars}
@@ -2065,6 +2080,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :available_identifiers, :any, default: []
   attr :clipboard_meta, :map, default: nil
   attr :paste_context, :any, default: :root
+  attr :form_cid, :any, default: nil
   slot :inner_block
 
   def module(assigns) do
@@ -2142,6 +2158,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 has_table_template?={@has_table_template?}
                 table_template_name={@table_template_name}
                 target={@target}
+                form_cid={@form_cid}
                 is_datasource?={@is_datasource?}
                 datasource_meta={@datasource_meta}
                 module_datasource_module_label={@module_datasource_module_label}
@@ -2182,6 +2199,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               table_template_name={@table_template_name}
               parent_uploads={@parent_uploads}
               target={@target}
+              form_cid={@form_cid}
               is_datasource?={@is_datasource?}
               datasource_meta={@datasource_meta}
               module_datasource_module_label={@module_datasource_module_label}
@@ -2242,7 +2260,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           <%= for split <- @liquid_splits do %>
             <%= case split do %>
               <% {:ref, ref} -> %>
-                <.ref parent_uploads={@parent_uploads} refs_field={@block_form[:refs]} ref_name={ref} target={@target} />
+                <.ref parent_uploads={@parent_uploads} refs_field={@block_form[:refs]} ref_name={ref} target={@target} form_cid={@form_cid} />
               <% {:content, _} -> %>
                 <div class="split_content"></div>
               <% {:entry_variable, var_name, variable_value} -> %>
@@ -2482,6 +2500,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :refs_field, :any, required: true
   attr :parent_uploads, :any, required: true
   attr :target, :any, required: true
+  attr :form_cid, :any, default: nil
 
   def ref(assigns) do
     refs = Changeset.get_assoc(assigns.refs_field.form.source, :refs, :struct)
@@ -2509,6 +2528,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 block={block}
                 parent_uploads={@parent_uploads}
                 target={@target}
+                form_cid={@form_cid}
               />
             </.polymorphic_embed_inputs_for>
             <!-- ref assocs -->
@@ -2556,6 +2576,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> assign_new(:ref_name, fn -> nil end)
       |> assign_new(:ref_description, fn -> nil end)
       |> assign_new(:ref_form, fn -> nil end)
+      |> assign_new(:form_cid, fn -> nil end)
       |> assign_new(:block_id, fn ->
         if assigns[:is_ref?] && assigns[:ref_form] do
           assigns.ref_form[:uid].value
@@ -2635,6 +2656,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         duplicate_block={@duplicate_block}
         parent_uploads={@parent_uploads}
         target={@target}
+        form_cid={@form_cid}
       />
     <% end %>
     """
@@ -4232,6 +4254,61 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
+  # Replace a media item in a gallery ref association (same position)
+  defp replace_media_in_gallery_ref(ref_changeset, media_type, old_media_id, new_media_id, current_user) do
+    current_gallery = Changeset.get_field(ref_changeset, :gallery)
+    id_field = media_id_field(media_type)
+    {:ok, new_media} = fetch_media(media_type, new_media_id)
+
+    case current_gallery do
+      nil ->
+        ref_changeset
+
+      gallery ->
+        existing_objects = gallery.gallery_objects || []
+
+        updated_objects =
+          Enum.map(existing_objects, fn obj ->
+            if Map.get(obj, id_field) == old_media_id do
+              %{creator_id: current_user.id}
+              |> put_media_fields(media_type, new_media_id, new_media)
+            else
+              preserve_gallery_object(obj)
+            end
+          end)
+
+        updated_gallery = %{
+          id: Map.get(gallery, :id),
+          config_target: Map.get(gallery, :config_target, "ref:gallery"),
+          gallery_objects: sequence_gallery_objects(updated_objects)
+        }
+
+        Changeset.put_assoc(ref_changeset, :gallery, updated_gallery)
+    end
+  end
+
+  defp replace_gallery_media_override(block_changeset, old_media_id, new_media_id) do
+    current_data = Changeset.get_field(block_changeset, :data)
+    {current_overrides, data_map} = extract_gallery_data(current_data)
+    old_id_str = to_string(old_media_id)
+    new_id_str = to_string(new_media_id)
+
+    updated_overrides =
+      Enum.map(current_overrides, fn override ->
+        if get_override_object_id(override) == old_id_str do
+          case override do
+            %Changeset{} -> Changeset.put_change(override, :object_id, new_id_str)
+            %{} -> Map.put(override, :object_id, new_id_str)
+          end
+        else
+          override
+        end
+      end)
+
+    updated_data_map = Map.put(data_map, :gallery_object_overrides, updated_overrides)
+    Changeset.put_change(block_changeset, :data, updated_data_map)
+  end
+
   # Remove a gallery object by index from a gallery ref association
   defp remove_gallery_object_from_ref_by_index(ref_changeset, object_index) do
     current_gallery = Changeset.get_field(ref_changeset, :gallery)
@@ -4323,25 +4400,16 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   defp maybe_add_association(base_fields, :image, obj) do
-    case Map.get(obj, :image) do
-      %Ecto.Association.NotLoaded{} ->
-        # Re-fetch if we have the ID
-        case Map.get(obj, :image_id) do
-          nil ->
-            base_fields
+    # Always re-fetch from DB to avoid stale data (e.g. unprocessed images
+    # stored in changeset that have since been processed)
+    case Map.get(obj, :image_id) do
+      nil -> base_fields
 
-          id ->
-            case Brando.Images.get_image(id) do
-              {:ok, image} -> Map.put(base_fields, :image, image)
-              _ -> base_fields
-            end
+      id ->
+        case Brando.Images.get_image(id) do
+          {:ok, image} -> Map.put(base_fields, :image, image)
+          _ -> base_fields
         end
-
-      nil ->
-        base_fields
-
-      image ->
-        Map.put(base_fields, :image, image)
     end
   end
 
@@ -4370,7 +4438,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   defp add_gallery_media_override(block_changeset, media_id, media_type) do
     current_data = Changeset.get_field(block_changeset, :data)
-    current_overrides = Map.get(current_data, :gallery_object_overrides, [])
+    {current_overrides, data_map} = extract_gallery_data(current_data)
     object_id_str = to_string(media_id)
 
     override_exists =
@@ -4393,7 +4461,6 @@ defmodule BrandoAdmin.Components.Form.Block do
       }
 
       updated_overrides = current_overrides ++ [new_override]
-      data_map = Map.from_struct(current_data)
       updated_data_map = Map.put(data_map, :gallery_object_overrides, updated_overrides)
       Changeset.put_change(block_changeset, :data, updated_data_map)
     end
@@ -4401,7 +4468,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   defp remove_gallery_object_override(block_changeset, object_id) do
     current_data = Changeset.get_field(block_changeset, :data)
-    current_overrides = Map.get(current_data, :gallery_object_overrides, [])
+    {current_overrides, data_map} = extract_gallery_data(current_data)
     object_id_str = to_string(object_id)
 
     updated_overrides =
@@ -4409,9 +4476,23 @@ defmodule BrandoAdmin.Components.Form.Block do
         get_override_object_id(override) == object_id_str
       end)
 
-    data_map = Map.from_struct(current_data)
     updated_data_map = Map.put(data_map, :gallery_object_overrides, updated_overrides)
     Changeset.put_change(block_changeset, :data, updated_data_map)
+  end
+
+  # Extracts gallery overrides and a plain map from block data that may be a changeset,
+  # a struct, or a plain map (from a previous put_change call).
+  defp extract_gallery_data(%Ecto.Changeset{} = cs) do
+    struct = Changeset.apply_changes(cs)
+    {Map.get(struct, :gallery_object_overrides, []), Map.from_struct(struct)}
+  end
+
+  defp extract_gallery_data(data) when is_struct(data) do
+    {Map.get(data, :gallery_object_overrides, []), Map.from_struct(data)}
+  end
+
+  defp extract_gallery_data(data) when is_map(data) do
+    {Map.get(data, :gallery_object_overrides, []), data}
   end
 
   # Shared helpers for gallery media operations

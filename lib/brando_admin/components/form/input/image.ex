@@ -166,6 +166,17 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
                image.alt != image_from_changeset.alt) ->
           {assign(socket, :image, image_from_changeset), image_from_changeset}
 
+        # image replaced in place (same ID, different dimensions or status — e.g., after crop)
+        image && image_from_changeset &&
+            image.id == image_from_changeset.id &&
+            (image.width != image_from_changeset.width ||
+               image.height != image_from_changeset.height ||
+               image.status != image_from_changeset.status) ->
+          {socket
+           |> assign(:image, image_from_changeset)
+           |> assign(:focal, {image_from_changeset.focal.x, image_from_changeset.focal.y}),
+           image_from_changeset}
+
         true ->
           if image && image.status == :unprocessed do
             # if the image is unprocessed, we can try to reload and see if it's done.

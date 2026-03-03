@@ -1,6 +1,54 @@
 import { minigl } from '@xdadda/mini-gl'
 
 /**
+ * Preset ratios for freeform crop mode.
+ * key: display label, w/h: ratio components (0/0 = unconstrained free crop)
+ */
+const FREEFORM_RATIOS = [
+  { key: 'free', label: 'Free', w: 0, h: 0 },
+  { key: '1:1', label: '1:1', w: 1, h: 1 },
+  { key: '2:3', label: '2:3', w: 2, h: 3 },
+  { key: '3:2', label: '3:2', w: 3, h: 2 },
+  { key: '4:5', label: '4:5', w: 4, h: 5 },
+  { key: '5:4', label: '5:4', w: 5, h: 4 },
+  { key: '16:10', label: '16:10', w: 16, h: 10 }
+]
+
+/**
+ * Generate an SVG rectangle icon for a ratio button.
+ */
+function ratioSVG(w, h, isFree) {
+  const vs = 28
+  const maxS = 20
+  const pad = (vs - maxS) / 2
+
+  if (isFree) {
+    return `<svg viewBox="0 0 ${vs} ${vs}" width="${vs}" height="${vs}">
+      <rect x="${pad}" y="${pad}" width="${maxS}" height="${maxS}" rx="1.5"
+            fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2"/>
+    </svg>`
+  }
+
+  const ratio = w / h
+  let rw, rh
+  if (ratio >= 1) {
+    rw = maxS
+    rh = maxS / ratio
+  } else {
+    rh = maxS
+    rw = maxS * ratio
+  }
+
+  const rx = (vs - rw) / 2
+  const ry = (vs - rh) / 2
+
+  return `<svg viewBox="0 0 ${vs} ${vs}" width="${vs}" height="${vs}">
+    <rect x="${rx.toFixed(1)}" y="${ry.toFixed(1)}" width="${rw.toFixed(1)}" height="${rh.toFixed(1)}" rx="1.5"
+          fill="none" stroke="currentColor" stroke-width="1.5"/>
+  </svg>`
+}
+
+/**
  * Calculate crop region for a given ratio centered on the focal point.
  *
  * @param {number} focalX - Focal X in percentage (0-100)
@@ -40,34 +88,98 @@ function calculateCropRegion(focalX, focalY, origWidth, origHeight, targetRatio,
 }
 
 /**
- * Draw crop region outlines on the overlay canvas.
+ * Draw configured-ratio crop frame overlay.
+ * Primary (first) region: dimmed exterior, solid white border, rule-of-thirds, L-handles.
+ * Secondary regions: colored dashed outlines with labels.
  */
-function drawCropOverlays(overlayCtx, cropRegions, displayScale, canvasOffsetX, canvasOffsetY) {
+function drawConfiguredOverlays(overlayCtx, cropRegions, displayScale) {
   const dpr = window.devicePixelRatio || 1
-  overlayCtx.clearRect(0, 0, overlayCtx.canvas.width / dpr, overlayCtx.canvas.height / dpr)
+  const cw = overlayCtx.canvas.width / dpr
+  const ch = overlayCtx.canvas.height / dpr
+  overlayCtx.clearRect(0, 0, cw, ch)
 
+  if (cropRegions.length === 0) return
+
+  const primary = cropRegions[0]
+  const px = primary.left * displayScale
+  const py = primary.top * displayScale
+  const pw = primary.width * displayScale
+  const ph = primary.height * displayScale
+
+  // Dim outside primary crop
+  overlayCtx.fillStyle = 'rgba(0, 0, 0, 0.5)'
+  overlayCtx.fillRect(0, 0, cw, ch)
+  overlayCtx.clearRect(px, py, pw, ph)
+
+  // Primary border
+  overlayCtx.strokeStyle = 'rgba(255, 255, 255, 0.9)'
+  overlayCtx.lineWidth = 1.5
+  overlayCtx.setLineDash([])
+  overlayCtx.strokeRect(px, py, pw, ph)
+
+  // Rule-of-thirds grid
+  overlayCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)'
+  overlayCtx.lineWidth = 0.5
+  for (let i = 1; i <= 2; i++) {
+    overlayCtx.beginPath()
+    overlayCtx.moveTo(px + (pw * i) / 3, py)
+    overlayCtx.lineTo(px + (pw * i) / 3, py + ph)
+    overlayCtx.stroke()
+    overlayCtx.beginPath()
+    overlayCtx.moveTo(px, py + (ph * i) / 3)
+    overlayCtx.lineTo(px + pw, py + (ph * i) / 3)
+    overlayCtx.stroke()
+  }
+
+  // L-corner handles
+  const cl = Math.min(16, Math.min(pw, ph) * 0.2)
+  overlayCtx.strokeStyle = 'white'
+  overlayCtx.lineWidth = 2.5
+  overlayCtx.lineCap = 'square'
+  // NW
+  overlayCtx.beginPath()
+  overlayCtx.moveTo(px, py + cl)
+  overlayCtx.lineTo(px, py)
+  overlayCtx.lineTo(px + cl, py)
+  overlayCtx.stroke()
+  // NE
+  overlayCtx.beginPath()
+  overlayCtx.moveTo(px + pw - cl, py)
+  overlayCtx.lineTo(px + pw, py)
+  overlayCtx.lineTo(px + pw, py + cl)
+  overlayCtx.stroke()
+  // SW
+  overlayCtx.beginPath()
+  overlayCtx.moveTo(px, py + ph - cl)
+  overlayCtx.lineTo(px, py + ph)
+  overlayCtx.lineTo(px + cl, py + ph)
+  overlayCtx.stroke()
+  // SE
+  overlayCtx.beginPath()
+  overlayCtx.moveTo(px + pw - cl, py + ph)
+  overlayCtx.lineTo(px + pw, py + ph)
+  overlayCtx.lineTo(px + pw, py + ph - cl)
+  overlayCtx.stroke()
+
+  // Secondary regions — colored dashed outlines
   const colors = [
-    'rgba(255, 100, 100, 0.8)',
     'rgba(100, 200, 255, 0.8)',
     'rgba(100, 255, 100, 0.8)',
     'rgba(255, 200, 100, 0.8)',
     'rgba(200, 100, 255, 0.8)'
   ]
-
-  cropRegions.forEach((region, idx) => {
-    const x = canvasOffsetX + region.left * displayScale
-    const y = canvasOffsetY + region.top * displayScale
+  cropRegions.slice(1).forEach((region, idx) => {
+    const x = region.left * displayScale
+    const y = region.top * displayScale
     const w = region.width * displayScale
     const h = region.height * displayScale
-
-    overlayCtx.strokeStyle = colors[idx % colors.length]
-    overlayCtx.lineWidth = 2
+    const color = colors[idx % colors.length]
+    overlayCtx.strokeStyle = color
+    overlayCtx.lineWidth = 1.5
     overlayCtx.setLineDash([6, 4])
     overlayCtx.strokeRect(x, y, w, h)
-
-    // Label
     overlayCtx.setLineDash([])
-    overlayCtx.fillStyle = colors[idx % colors.length]
+    overlayCtx.fillStyle = color
     overlayCtx.font = '11px monospace'
     overlayCtx.fillText(region.label, x + 4, y + 14)
   })
@@ -77,21 +189,24 @@ function drawCropOverlays(overlayCtx, cropRegions, displayScale, canvasOffsetX, 
  * Draw a single crop preview into a 2D canvas
  */
 function drawCropPreview(previewCanvas, sourceImg, region) {
-  const ctx = previewCanvas.getContext('2d')
   const dpr = window.devicePixelRatio || 1
-  const previewWidth = 270
-  const previewHeight = Math.round(previewWidth / (region.width / region.height))
+  const displayWidth = previewCanvas.parentElement?.clientWidth || 270
+  const aspectRatio = region.width / region.height
+  const displayHeight = Math.round(displayWidth / aspectRatio)
 
-  previewCanvas.width = Math.round(previewWidth * dpr)
-  previewCanvas.height = Math.round(previewHeight * dpr)
-  previewCanvas.style.width = previewWidth + 'px'
-  previewCanvas.style.height = previewHeight + 'px'
+  // Set buffer size; remove inline styles so CSS width:100% + height:auto handles display
+  const bufW = Math.round(displayWidth * dpr)
+  const bufH = Math.round(displayHeight * dpr)
+  previewCanvas.width = bufW
+  previewCanvas.height = bufH
+  previewCanvas.style.removeProperty('width')
+  previewCanvas.style.removeProperty('height')
 
-  ctx.scale(dpr, dpr)
+  const ctx = previewCanvas.getContext('2d')
   ctx.drawImage(
     sourceImg,
     region.left, region.top, region.width, region.height,
-    0, 0, previewWidth, previewHeight
+    0, 0, bufW, bufH
   )
 }
 
@@ -107,9 +222,16 @@ export default app => ({
     this.imageHeight = 0
     this.isDragging = false
     this.freeformMode = false
-    this.freeformRect = null
-    this.freeformDragging = false
-    this.freeformResizing = false
+
+    // Freeform crop state
+    this.cropRect = null            // { left, top, width, height } in original image coords
+    this.freeformSelectedRatio = null // null = free, or w/h number
+    this.freeformDragState = null    // { mode, startX, startY, startRect, anchor }
+    this.freeformFocalDrag = false   // true when dragging focal point outside crop rect
+    this.freeformPreviewCanvas = null
+
+    // Configured ratio crop frame drag state
+    this.cropFrameDragState = null  // { mode, startX, startY, startFocalX, startFocalY, startZoom, cornerOffset }
 
     this.handleEvent('b:image_editor:init', (payload) => {
       this.initEditor(payload)
@@ -130,6 +252,11 @@ export default app => ({
       this._resizeObserver = null
     }
     this.sourceImg = null
+    this.cropRect = null
+    this.freeformDragState = null
+    this.freeformFocalDrag = false
+    this.freeformPreviewCanvas = null
+    this.cropFrameDragState = null
 
     // Remove dynamically created preview canvases
     const previewsContainer = this.el.querySelector('#image-editor-previews')
@@ -150,12 +277,12 @@ export default app => ({
     this.freeformMode = this.cropGroups.length === 0
     this.fromBlock = !!payload.from_block
     this.imageId = payload.image_id || null
+    this.configTarget = payload.config_target || null
 
-    // Hide "Save as new copy" when opened from a block (no upload input available)
-    const saveNewBtn = this.el.querySelector('#image-editor-save-new')
-    if (saveNewBtn) {
-      saveNewBtn.style.display = this.fromBlock ? 'none' : ''
-    }
+    // Freeform state
+    this.freeformSelectedRatio = null
+    this.cropRect = null
+    this.freeformDragState = null
 
     // Reset zoom slider
     const zoomSlider = this.el.querySelector('#image-editor-zoom')
@@ -169,6 +296,17 @@ export default app => ({
     img.crossOrigin = 'anonymous'
     img.onload = () => {
       this.sourceImg = img
+
+      // Use actual loaded dimensions — the server-provided values may be stale
+      // (e.g. after a crop that updated the DB but the :original file differs).
+      this.imageWidth = img.naturalWidth
+      this.imageHeight = img.naturalHeight
+
+      // Initialize freeform crop rect after image loads
+      if (this.freeformMode) {
+        this.initCropRect()
+      }
+
       this.setupMainCanvas()
       this.setupPreviews()
       this.setupInteractions()
@@ -176,6 +314,121 @@ export default app => ({
       this.setupResizeObserver()
     }
     img.src = payload.image_src
+  },
+
+  /**
+   * Initialize the crop rectangle for freeform mode.
+   * Centers the crop and makes it as large as possible for the selected ratio.
+   */
+  initCropRect(ratio) {
+    const r = ratio !== undefined ? ratio : this.freeformSelectedRatio
+    const iw = this.imageWidth
+    const ih = this.imageHeight
+
+    if (r === null) {
+      // Free mode: cover 80% of the image, centered
+      const w = Math.round(iw * 0.8)
+      const h = Math.round(ih * 0.8)
+      this.cropRect = {
+        left: Math.round((iw - w) / 2),
+        top: Math.round((ih - h) / 2),
+        width: w,
+        height: h
+      }
+    } else {
+      // Ratio mode: largest rectangle at this ratio that fits the image
+      let w, h
+      if (r >= iw / ih) {
+        w = iw
+        h = Math.round(iw / r)
+      } else {
+        h = ih
+        w = Math.round(ih * r)
+      }
+      this.cropRect = {
+        left: Math.round((iw - w) / 2),
+        top: Math.round((ih - h) / 2),
+        width: w,
+        height: h
+      }
+    }
+  },
+
+  /**
+   * Handle ratio button click in freeform mode.
+   */
+  selectFreeformRatio(key) {
+    const entry = FREEFORM_RATIOS.find(r => r.key === key)
+    if (!entry) return
+
+    const newRatio = entry.w === 0 ? null : entry.w / entry.h
+    this.freeformSelectedRatio = newRatio
+
+    // Adjust crop rect to the new ratio, keeping center if possible
+    if (this.cropRect) {
+      const cx = this.cropRect.left + this.cropRect.width / 2
+      const cy = this.cropRect.top + this.cropRect.height / 2
+
+      if (newRatio === null) {
+        // Switching to free: keep current rect
+      } else {
+        // Calculate new dimensions at this ratio, using current size as guide
+        const currentArea = this.cropRect.width * this.cropRect.height
+        let w = Math.sqrt(currentArea * newRatio)
+        let h = w / newRatio
+
+        // Clamp to image bounds
+        if (w > this.imageWidth) { w = this.imageWidth; h = w / newRatio }
+        if (h > this.imageHeight) { h = this.imageHeight; w = h * newRatio }
+
+        w = Math.round(w)
+        h = Math.round(h)
+
+        let left = Math.round(cx - w / 2)
+        let top = Math.round(cy - h / 2)
+        left = Math.max(0, Math.min(left, this.imageWidth - w))
+        top = Math.max(0, Math.min(top, this.imageHeight - h))
+
+        this.cropRect = { left, top, width: w, height: h }
+      }
+    } else {
+      this.initCropRect(newRatio)
+    }
+
+    // Reset zoom to match the new crop size
+    this.syncZoomFromCropRect()
+
+    // Update active button state
+    this.el.querySelectorAll('.ratio-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.ratio === key)
+    })
+
+    this.updateAll()
+  },
+
+  /**
+   * Sync the zoom slider to reflect the current crop rect size.
+   */
+  syncZoomFromCropRect() {
+    if (!this.cropRect) return
+
+    const r = this.freeformSelectedRatio || (this.cropRect.width / this.cropRect.height)
+    let maxW, maxH
+    if (r >= this.imageWidth / this.imageHeight) {
+      maxW = this.imageWidth
+      maxH = this.imageWidth / r
+    } else {
+      maxH = this.imageHeight
+      maxW = this.imageHeight * r
+    }
+
+    this.zoom = Math.max(1, maxW / this.cropRect.width)
+
+    const slider = this.el.querySelector('#image-editor-zoom')
+    if (slider) slider.value = String(Math.min(3, this.zoom))
+
+    const zoomValue = this.el.querySelector('#image-editor-zoom-value')
+    if (zoomValue) zoomValue.textContent = Math.min(3, this.zoom).toFixed(2) + 'x'
   },
 
   setupResizeObserver() {
@@ -258,16 +511,41 @@ export default app => ({
     previewsContainer.innerHTML = ''
 
     if (this.freeformMode) {
-      // Freeform mode: show instructions and single preview
-      const title = document.createElement('div')
-      title.className = 'image-editor-previews-title'
-      title.textContent = this.el.dataset.labelFreeformCrop || 'Freeform crop'
-      previewsContainer.appendChild(title)
+      // Ratio buttons bar
+      const ratiosBar = document.createElement('div')
+      ratiosBar.className = 'freeform-ratios'
 
-      const instructions = document.createElement('div')
-      instructions.className = 'freeform-instructions'
-      instructions.textContent = this.el.dataset.labelFreeformInstructions || 'No crop ratios configured. Use focal point only.'
-      previewsContainer.appendChild(instructions)
+      FREEFORM_RATIOS.forEach(entry => {
+        const btn = document.createElement('button')
+        btn.type = 'button'
+        btn.className = 'ratio-btn'
+        btn.dataset.ratio = entry.key
+        if ((entry.w === 0 && this.freeformSelectedRatio === null) ||
+            (entry.w !== 0 && this.freeformSelectedRatio === entry.w / entry.h)) {
+          btn.classList.add('active')
+        }
+
+        btn.innerHTML = ratioSVG(entry.w, entry.h, entry.w === 0)
+        const label = document.createElement('span')
+        label.className = 'ratio-btn-label'
+        label.textContent = entry.label
+        btn.appendChild(label)
+
+        btn.addEventListener('click', () => this.selectFreeformRatio(entry.key))
+        ratiosBar.appendChild(btn)
+      })
+
+      previewsContainer.appendChild(ratiosBar)
+
+      // Single preview canvas
+      const previewWrapper = document.createElement('div')
+      previewWrapper.className = 'freeform-preview'
+
+      const previewCanvas = document.createElement('canvas')
+      previewWrapper.appendChild(previewCanvas)
+      previewsContainer.appendChild(previewWrapper)
+
+      this.freeformPreviewCanvas = previewCanvas
     } else {
       const title = document.createElement('div')
       title.className = 'image-editor-previews-title'
@@ -323,34 +601,38 @@ export default app => ({
       document.removeEventListener('touchend', this._onTouchEnd)
     }
 
-    this._onMouseDown = (e) => {
-      this.isDragging = true
-      this.updateFocalFromEvent(e, canvas)
-    }
+    if (this.freeformMode) {
+      // Freeform mode: interact with crop rectangle
+      this._onMouseDown = (e) => this.freeformMouseDown(e, canvas)
+      this._onMouseMove = (e) => this.freeformMouseMove(e, canvas)
+      this._onMouseUp = () => this.freeformMouseUp()
 
-    this._onMouseMove = (e) => {
-      if (!this.isDragging) return
-      this.updateFocalFromEvent(e, canvas)
-    }
+      this._onTouchStart = (e) => {
+        e.preventDefault()
+        this.freeformMouseDown(e.touches[0], canvas)
+      }
+      this._onTouchMove = (e) => {
+        if (!this.freeformDragState && !this.freeformFocalDrag) return
+        e.preventDefault()
+        this.freeformMouseMove(e.touches[0], canvas)
+      }
+      this._onTouchEnd = () => this.freeformMouseUp()
+    } else {
+      // Configured ratio mode: interact with crop frame (drag to move, corner-drag to resize)
+      this._onMouseDown = (e) => this.cropFrameMouseDown(e, canvas)
+      this._onMouseMove = (e) => this.cropFrameMouseMove(e, canvas)
+      this._onMouseUp = () => this.cropFrameMouseUp()
 
-    this._onMouseUp = () => {
-      this.isDragging = false
-    }
-
-    this._onTouchStart = (e) => {
-      e.preventDefault()
-      this.isDragging = true
-      this.updateFocalFromEvent(e.touches[0], canvas)
-    }
-
-    this._onTouchMove = (e) => {
-      if (!this.isDragging) return
-      e.preventDefault()
-      this.updateFocalFromEvent(e.touches[0], canvas)
-    }
-
-    this._onTouchEnd = () => {
-      this.isDragging = false
+      this._onTouchStart = (e) => {
+        e.preventDefault()
+        this.cropFrameMouseDown(e.touches[0], canvas)
+      }
+      this._onTouchMove = (e) => {
+        if (!this.cropFrameDragState) return
+        e.preventDefault()
+        this.cropFrameMouseMove(e.touches[0], canvas)
+      }
+      this._onTouchEnd = () => this.cropFrameMouseUp()
     }
 
     canvas.addEventListener('mousedown', this._onMouseDown)
@@ -368,6 +650,11 @@ export default app => ({
         this.zoom = parseFloat(e.target.value)
         const zoomValue = this.el.querySelector('#image-editor-zoom-value')
         if (zoomValue) zoomValue.textContent = this.zoom.toFixed(2) + 'x'
+
+        if (this.freeformMode && this.cropRect) {
+          this.resizeCropRectFromZoom()
+        }
+
         this.updateAll()
       }
       zoomSlider.addEventListener('input', this._onZoom)
@@ -378,8 +665,17 @@ export default app => ({
     if (resetBtn) {
       if (this._onReset) resetBtn.removeEventListener('click', this._onReset)
       this._onReset = () => {
-        this.focalX = 50
-        this.focalY = 50
+        if (this.freeformMode) {
+          this.freeformSelectedRatio = null
+          this.initCropRect()
+          this.el.querySelectorAll('.ratio-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.ratio === 'free')
+          })
+          this.syncZoomFromCropRect()
+        } else {
+          this.focalX = 50
+          this.focalY = 50
+        }
         this.zoom = 1
         const slider = this.el.querySelector('#image-editor-zoom')
         if (slider) slider.value = '1'
@@ -395,13 +691,20 @@ export default app => ({
     if (saveReplaceBtn) {
       if (this._onSaveReplace) saveReplaceBtn.removeEventListener('click', this._onSaveReplace)
       this._onSaveReplace = () => {
-        const payload = {
-          mode: 'replace',
-          focal_x: Math.round(this.focalX),
-          focal_y: Math.round(this.focalY)
+        const hasCrop = (this.freeformMode && this.cropRect) || (!this.freeformMode && this.zoom > 1)
+
+        if (hasCrop && this.sourceImg && this.imageId) {
+          this._saveReplaceWithCrop()
+        } else {
+          // No crop applied — just update focal point
+          const payload = {
+            mode: 'replace',
+            focal_x: Math.round(this.focalX),
+            focal_y: Math.round(this.focalY)
+          }
+          if (this.imageId) payload.image_id = this.imageId
+          this.pushEventTo(this.el, 'image_editor_save', payload)
         }
-        if (this.imageId) payload.image_id = this.imageId
-        this.pushEventTo(this.el, 'image_editor_save', payload)
         this.closeDrawer()
       }
       saveReplaceBtn.addEventListener('click', this._onSaveReplace)
@@ -419,6 +722,439 @@ export default app => ({
     }
   },
 
+  // ── Freeform crop interaction ──────────────────────────────────────
+
+  /**
+   * Hit-test the crop rectangle. Returns 'nw', 'ne', 'sw', 'se', 'move', or null.
+   */
+  hitTestCropRect(displayX, displayY) {
+    if (!this.cropRect) return null
+
+    const x = this.cropRect.left * this.displayScale
+    const y = this.cropRect.top * this.displayScale
+    const w = this.cropRect.width * this.displayScale
+    const h = this.cropRect.height * this.displayScale
+    const ht = 14 // hit threshold in display pixels
+
+    // Corners
+    if (Math.abs(displayX - x) < ht && Math.abs(displayY - y) < ht) return 'nw'
+    if (Math.abs(displayX - (x + w)) < ht && Math.abs(displayY - y) < ht) return 'ne'
+    if (Math.abs(displayX - x) < ht && Math.abs(displayY - (y + h)) < ht) return 'sw'
+    if (Math.abs(displayX - (x + w)) < ht && Math.abs(displayY - (y + h)) < ht) return 'se'
+
+    // Inside
+    if (displayX >= x && displayX <= x + w && displayY >= y && displayY <= y + h) return 'move'
+
+    return null
+  },
+
+  getCanvasMousePos(e, canvas) {
+    const rect = canvas.getBoundingClientRect()
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    }
+  },
+
+  freeformMouseDown(e, canvas) {
+    const pos = this.getCanvasMousePos(e, canvas)
+
+    // Focal pin takes priority — check proximity before crop rect hit test
+    const focalDisplayX = (this.focalX / 100) * this.displayW
+    const focalDisplayY = (this.focalY / 100) * this.displayH
+    const distToFocal = Math.sqrt(
+      Math.pow(pos.x - focalDisplayX, 2) + Math.pow(pos.y - focalDisplayY, 2)
+    )
+    if (distToFocal < 16) {
+      this.freeformFocalDrag = true
+      return
+    }
+
+    const hit = this.hitTestCropRect(pos.x, pos.y)
+
+    if (hit) {
+      this.freeformDragState = {
+        mode: hit,
+        startX: pos.x,
+        startY: pos.y,
+        startRect: { ...this.cropRect },
+        // For corner resize, anchor is the opposite corner in original image coords
+        anchor: this.getAnchorForCorner(hit)
+      }
+    } else {
+      // Outside crop rect and not on focal pin: teleport focal to this position
+      this.freeformFocalDrag = true
+      this.updateFocalFromEvent(e, canvas)
+    }
+  },
+
+  freeformMouseMove(e, canvas) {
+    const pos = this.getCanvasMousePos(e, canvas)
+
+    if (this.freeformDragState) {
+      // Actively dragging crop rect
+      if (this.freeformDragState.mode === 'move') {
+        this.moveCropRect(pos.x, pos.y)
+      } else {
+        this.resizeCropRect(pos.x, pos.y)
+      }
+      this.updateAll()
+    } else if (this.freeformFocalDrag) {
+      // Actively dragging focal point
+      canvas.style.cursor = 'grabbing'
+      this.updateFocalFromEvent(e, canvas)
+    } else {
+      // Hover: update cursor — focal pin takes priority
+      const focalDisplayX = (this.focalX / 100) * this.displayW
+      const focalDisplayY = (this.focalY / 100) * this.displayH
+      const distToFocal = Math.sqrt(
+        Math.pow(pos.x - focalDisplayX, 2) + Math.pow(pos.y - focalDisplayY, 2)
+      )
+      if (distToFocal < 16) {
+        canvas.style.cursor = 'grab'
+      } else {
+        const hit = this.hitTestCropRect(pos.x, pos.y)
+        this.updateCropCursor(hit, canvas)
+      }
+    }
+  },
+
+  freeformMouseUp() {
+    if (this.freeformDragState) {
+      this.freeformDragState = null
+      this.syncZoomFromCropRect()
+    }
+    this.freeformFocalDrag = false
+  },
+
+  getAnchorForCorner(mode) {
+    if (!this.cropRect) return { x: 0, y: 0 }
+    const r = this.cropRect
+    switch (mode) {
+      case 'nw': return { x: r.left + r.width, y: r.top + r.height }
+      case 'ne': return { x: r.left, y: r.top + r.height }
+      case 'sw': return { x: r.left + r.width, y: r.top }
+      case 'se': return { x: r.left, y: r.top }
+      default: return { x: 0, y: 0 }
+    }
+  },
+
+  moveCropRect(displayX, displayY) {
+    const ds = this.displayScale
+    const state = this.freeformDragState
+    const dx = (displayX - state.startX) / ds
+    const dy = (displayY - state.startY) / ds
+
+    let left = state.startRect.left + dx
+    let top = state.startRect.top + dy
+
+    // Clamp to image bounds
+    left = Math.max(0, Math.min(left, this.imageWidth - state.startRect.width))
+    top = Math.max(0, Math.min(top, this.imageHeight - state.startRect.height))
+
+    this.cropRect = {
+      left: Math.round(left),
+      top: Math.round(top),
+      width: state.startRect.width,
+      height: state.startRect.height
+    }
+  },
+
+  resizeCropRect(displayX, displayY) {
+    const ds = this.displayScale
+    const state = this.freeformDragState
+    const anchor = state.anchor
+    const ratio = this.freeformSelectedRatio
+    const minSize = 30
+
+    // Mouse position in original image coords, clamped
+    let mx = Math.max(0, Math.min(displayX / ds, this.imageWidth))
+    let my = Math.max(0, Math.min(displayY / ds, this.imageHeight))
+
+    // Direction from anchor
+    const dirX = (state.mode === 'se' || state.mode === 'ne') ? 1 : -1
+    const dirY = (state.mode === 'se' || state.mode === 'sw') ? 1 : -1
+
+    let rawW = (mx - anchor.x) * dirX
+    let rawH = (my - anchor.y) * dirY
+
+    rawW = Math.max(minSize, rawW)
+    rawH = Math.max(minSize, rawH)
+
+    if (ratio) {
+      // Constrain to ratio: use whichever dimension gives a smaller crop
+      const hFromW = rawW / ratio
+      const wFromH = rawH * ratio
+
+      if (hFromW <= rawH) {
+        rawH = hFromW
+      } else {
+        rawW = wFromH
+      }
+    }
+
+    let left = dirX > 0 ? anchor.x : anchor.x - rawW
+    let top = dirY > 0 ? anchor.y : anchor.y - rawH
+
+    // Clamp to image bounds
+    if (left < 0) { rawW += left; left = 0 }
+    if (top < 0) { rawH += top; top = 0 }
+    if (left + rawW > this.imageWidth) rawW = this.imageWidth - left
+    if (top + rawH > this.imageHeight) rawH = this.imageHeight - top
+
+    // Re-constrain ratio after clamping
+    if (ratio) {
+      const hFromW = rawW / ratio
+      const wFromH = rawH * ratio
+      if (hFromW <= rawH) {
+        rawH = hFromW
+      } else {
+        rawW = wFromH
+      }
+    }
+
+    this.cropRect = {
+      left: Math.round(left),
+      top: Math.round(top),
+      width: Math.round(Math.max(minSize, rawW)),
+      height: Math.round(Math.max(minSize, rawH))
+    }
+  },
+
+  /**
+   * Resize crop rect from center when zoom slider changes in freeform mode.
+   */
+  resizeCropRectFromZoom() {
+    if (!this.cropRect) return
+
+    const cx = this.cropRect.left + this.cropRect.width / 2
+    const cy = this.cropRect.top + this.cropRect.height / 2
+
+    const r = this.freeformSelectedRatio || (this.cropRect.width / this.cropRect.height)
+
+    let maxW, maxH
+    if (r >= this.imageWidth / this.imageHeight) {
+      maxW = this.imageWidth
+      maxH = this.imageWidth / r
+    } else {
+      maxH = this.imageHeight
+      maxW = this.imageHeight * r
+    }
+
+    let newW = Math.round(maxW / this.zoom)
+    let newH = Math.round(maxH / this.zoom)
+
+    let left = Math.round(cx - newW / 2)
+    let top = Math.round(cy - newH / 2)
+    left = Math.max(0, Math.min(left, this.imageWidth - newW))
+    top = Math.max(0, Math.min(top, this.imageHeight - newH))
+
+    this.cropRect = { left, top, width: newW, height: newH }
+  },
+
+  updateCropCursor(hit, canvas) {
+    switch (hit) {
+      case 'nw': case 'se': canvas.style.cursor = 'nwse-resize'; break
+      case 'ne': case 'sw': canvas.style.cursor = 'nesw-resize'; break
+      case 'move': canvas.style.cursor = 'move'; break
+      default: canvas.style.cursor = 'crosshair'; break
+    }
+  },
+
+  // ── Configured ratio crop frame interaction ────────────────────────
+
+  /**
+   * Hit-test the primary (first) crop frame.
+   * Returns 'nw', 'ne', 'sw', 'se', 'move', or null.
+   */
+  hitTestPrimaryFrame(displayX, displayY) {
+    if (this.cropGroups.length === 0) return null
+
+    const region = calculateCropRegion(
+      this.focalX, this.focalY,
+      this.imageWidth, this.imageHeight,
+      this.cropGroups[0].ratio, this.zoom
+    )
+    const x = region.left * this.displayScale
+    const y = region.top * this.displayScale
+    const w = region.width * this.displayScale
+    const h = region.height * this.displayScale
+    const ht = 14
+
+    if (Math.abs(displayX - x) < ht && Math.abs(displayY - y) < ht) return 'nw'
+    if (Math.abs(displayX - (x + w)) < ht && Math.abs(displayY - y) < ht) return 'ne'
+    if (Math.abs(displayX - x) < ht && Math.abs(displayY - (y + h)) < ht) return 'sw'
+    if (Math.abs(displayX - (x + w)) < ht && Math.abs(displayY - (y + h)) < ht) return 'se'
+    if (displayX >= x && displayX <= x + w && displayY >= y && displayY <= y + h) return 'move'
+    return null
+  },
+
+  cropFrameMouseDown(e, canvas) {
+    const pos = this.getCanvasMousePos(e, canvas)
+    const hit = this.hitTestPrimaryFrame(pos.x, pos.y)
+
+    if (!hit) {
+      // Click outside frame: jump focal to clicked position
+      this.updateFocalFromEvent(e, canvas)
+      return
+    }
+
+    const region = calculateCropRegion(
+      this.focalX, this.focalY,
+      this.imageWidth, this.imageHeight,
+      this.cropGroups[0].ratio, this.zoom
+    )
+    const ds = this.displayScale
+    const halfW = (region.width * ds) / 2
+    const halfH = (region.height * ds) / 2
+
+    // Corner offset from frame center (used for resize scaling)
+    const cornerOffsets = {
+      nw: { x: -halfW, y: -halfH },
+      ne: { x: +halfW, y: -halfH },
+      sw: { x: -halfW, y: +halfH },
+      se: { x: +halfW, y: +halfH }
+    }
+
+    this.cropFrameDragState = {
+      mode: hit,
+      startX: pos.x,
+      startY: pos.y,
+      startFocalX: this.focalX,
+      startFocalY: this.focalY,
+      startZoom: this.zoom,
+      cornerOffset: cornerOffsets[hit] || null
+    }
+  },
+
+  cropFrameMouseMove(e, canvas) {
+    const pos = this.getCanvasMousePos(e, canvas)
+
+    if (!this.cropFrameDragState) {
+      // Hover: update cursor
+      const hit = this.hitTestPrimaryFrame(pos.x, pos.y)
+      this.updateCropCursor(hit, canvas)
+      return
+    }
+
+    const state = this.cropFrameDragState
+    const dx = pos.x - state.startX
+    const dy = pos.y - state.startY
+
+    if (state.mode === 'move') {
+      // Drag frame interior: shift focal point
+      const deltaFocalX = (dx / this.displayW) * 100
+      const deltaFocalY = (dy / this.displayH) * 100
+      this.focalX = Math.max(0, Math.min(100, state.startFocalX + deltaFocalX))
+      this.focalY = Math.max(0, Math.min(100, state.startFocalY + deltaFocalY))
+      canvas.style.cursor = 'grabbing'
+    } else {
+      // Drag corner: scale zoom symmetrically from frame center
+      const co = state.cornerOffset
+      const startDist = Math.sqrt(co.x ** 2 + co.y ** 2)
+      if (startDist > 0) {
+        const newDist = Math.sqrt((co.x + dx) ** 2 + (co.y + dy) ** 2)
+        const scaleFactor = newDist / startDist
+        this.zoom = Math.max(1, Math.min(10, state.startZoom / scaleFactor))
+        const slider = this.el.querySelector('#image-editor-zoom')
+        if (slider) slider.value = this.zoom.toFixed(2)
+        const zoomValue = this.el.querySelector('#image-editor-zoom-value')
+        if (zoomValue) zoomValue.textContent = this.zoom.toFixed(2) + 'x'
+      }
+    }
+
+    this.updateAll()
+  },
+
+  cropFrameMouseUp() {
+    this.cropFrameDragState = null
+  },
+
+  // ── Freeform overlay drawing ───────────────────────────────────────
+
+  drawFreeformOverlay() {
+    const overlay = this.el.querySelector('#image-editor-overlay')
+    if (!overlay || !this.cropRect) return
+
+    const ctx = overlay.getContext('2d')
+    const dpr = window.devicePixelRatio || 1
+    const cw = overlay.width / dpr
+    const ch = overlay.height / dpr
+
+    ctx.clearRect(0, 0, cw, ch)
+
+    const x = this.cropRect.left * this.displayScale
+    const y = this.cropRect.top * this.displayScale
+    const w = this.cropRect.width * this.displayScale
+    const h = this.cropRect.height * this.displayScale
+
+    // Dim area outside crop
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
+    ctx.fillRect(0, 0, cw, ch)
+    ctx.clearRect(x, y, w, h)
+
+    // Crop border
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)'
+    ctx.lineWidth = 1.5
+    ctx.setLineDash([])
+    ctx.strokeRect(x, y, w, h)
+
+    // Rule-of-thirds grid
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'
+    ctx.lineWidth = 0.5
+    for (let i = 1; i <= 2; i++) {
+      ctx.beginPath()
+      ctx.moveTo(x + (w * i) / 3, y)
+      ctx.lineTo(x + (w * i) / 3, y + h)
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.moveTo(x, y + (h * i) / 3)
+      ctx.lineTo(x + w, y + (h * i) / 3)
+      ctx.stroke()
+    }
+
+    // Corner handles (L-shapes)
+    const cl = Math.min(16, Math.min(w, h) * 0.2)
+    ctx.strokeStyle = 'white'
+    ctx.lineWidth = 2.5
+    ctx.lineCap = 'square'
+
+    // NW
+    ctx.beginPath()
+    ctx.moveTo(x, y + cl)
+    ctx.lineTo(x, y)
+    ctx.lineTo(x + cl, y)
+    ctx.stroke()
+
+    // NE
+    ctx.beginPath()
+    ctx.moveTo(x + w - cl, y)
+    ctx.lineTo(x + w, y)
+    ctx.lineTo(x + w, y + cl)
+    ctx.stroke()
+
+    // SW
+    ctx.beginPath()
+    ctx.moveTo(x, y + h - cl)
+    ctx.lineTo(x, y + h)
+    ctx.lineTo(x + cl, y + h)
+    ctx.stroke()
+
+    // SE
+    ctx.beginPath()
+    ctx.moveTo(x + w - cl, y + h)
+    ctx.lineTo(x + w, y + h)
+    ctx.lineTo(x + w, y + h - cl)
+    ctx.stroke()
+  },
+
+  drawFreeformPreview() {
+    if (!this.freeformPreviewCanvas || !this.sourceImg || !this.cropRect) return
+    drawCropPreview(this.freeformPreviewCanvas, this.sourceImg, this.cropRect)
+  },
+
+  // ── Common update/render methods ───────────────────────────────────
+
   updateFocalFromEvent(e, canvas) {
     const rect = canvas.getBoundingClientRect()
     const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100))
@@ -429,9 +1165,15 @@ export default app => ({
   },
 
   updateAll() {
-    this.updateFocalPin()
-    this.updateCropOverlays()
-    this.updateCropPreviews()
+    if (this.freeformMode) {
+      this.updateFocalPin()
+      this.drawFreeformOverlay()
+      this.drawFreeformPreview()
+    } else {
+      this.updateFocalPin()
+      this.updateCropOverlays()
+      this.updateCropPreviews()
+    }
   },
 
   updateFocalPin() {
@@ -460,7 +1202,7 @@ export default app => ({
       return { ...region, label: group.label }
     })
 
-    drawCropOverlays(ctx, regions, this.displayScale, 0, 0)
+    drawConfiguredOverlays(ctx, regions, this.displayScale)
   },
 
   updateCropPreviews() {
@@ -476,18 +1218,27 @@ export default app => ({
     })
   },
 
-  closeDrawer() {
-    const closeBtn = document.querySelector('#image-editor-drawer .drawer-close-button')
-    if (closeBtn) closeBtn.click()
-  },
-
-  saveAsNewCopy() {
-    // Use the main canvas or create a temporary one for export
+  /**
+   * Export the current crop/zoom state to a canvas.
+   * Returns the canvas, or null if no crop is applied (full image unchanged).
+   * Also recomputes focal from crop center in freeform mode.
+   */
+  _exportCroppedCanvas() {
     const exportCanvas = document.createElement('canvas')
     const ctx = exportCanvas.getContext('2d')
 
-    if (this.cropGroups.length > 0) {
-      // Export at original resolution using the first crop ratio
+    if (this.freeformMode && this.cropRect) {
+      const r = this.cropRect
+      exportCanvas.width = Math.round(r.width)
+      exportCanvas.height = Math.round(r.height)
+      ctx.drawImage(
+        this.sourceImg,
+        r.left, r.top, r.width, r.height,
+        0, 0, r.width, r.height
+      )
+      this.focalX = (r.left + r.width / 2) / this.imageWidth * 100
+      this.focalY = (r.top + r.height / 2) / this.imageHeight * 100
+    } else if (this.cropGroups.length > 0 && this.zoom > 1) {
       const region = calculateCropRegion(
         this.focalX, this.focalY,
         this.imageWidth, this.imageHeight,
@@ -501,31 +1252,143 @@ export default app => ({
         0, 0, region.width, region.height
       )
     } else {
-      // Freeform — export full image
+      return null
+    }
+
+    return exportCanvas
+  },
+
+  /**
+   * Upload a cropped canvas blob via HTTP to replace an existing image's file.
+   */
+  _saveReplaceWithCrop() {
+    const exportCanvas = this._exportCroppedCanvas()
+    if (!exportCanvas) return
+
+    const focalX = Math.round(this.focalX)
+    const focalY = Math.round(this.focalY)
+    const imageId = this.imageId
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content
+    const hook = this
+
+    exportCanvas.toBlob(async (blob) => {
+      if (!blob) return
+
+      const formData = new FormData()
+      formData.append('image', new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' }))
+      formData.append('image_id', String(imageId))
+      formData.append('focal_x', String(focalX))
+      formData.append('focal_y', String(focalY))
+
+      try {
+        const response = await fetch('/admin/api/content/image/replace_crop', {
+          method: 'post',
+          headers: {
+            'accept': 'application/json, text/javascript, */*; q=0.01',
+            'x-csrf-token': csrfToken
+          },
+          body: formData
+        })
+        const data = await response.json()
+
+        if (data.status === 200) {
+          hook.pushEventTo(hook.el, 'image_editor_save', {
+            mode: 'replace',
+            focal_x: focalX,
+            focal_y: focalY,
+            image_id: imageId,
+            crop_applied: true
+          })
+        } else {
+          console.error('Error replacing image crop:', data.error)
+        }
+      } catch (e) {
+        console.error('Error replacing image crop:', e)
+      }
+    }, 'image/jpeg', 0.95)
+  },
+
+  closeDrawer() {
+    const closeBtn = document.querySelector('#image-editor-drawer .drawer-close-button')
+    if (closeBtn) closeBtn.click()
+  },
+
+  saveAsNewCopy() {
+    // Use shared export, with full-image fallback for "save as new copy"
+    let exportCanvas = this._exportCroppedCanvas()
+
+    if (!exportCanvas) {
+      exportCanvas = document.createElement('canvas')
+      const ctx = exportCanvas.getContext('2d')
       exportCanvas.width = this.imageWidth
       exportCanvas.height = this.imageHeight
       ctx.drawImage(this.sourceImg, 0, 0)
     }
 
-    exportCanvas.toBlob((blob) => {
-      if (!blob) return
+    const focalX = Math.round(this.focalX)
+    const focalY = Math.round(this.focalY)
 
-      // Use the live_file_input upload mechanism
-      const uploadInput = document.querySelector('#image-drawer-form input[type="file"]')
-      if (uploadInput) {
-        const file = new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' })
-        const dataTransfer = new DataTransfer()
-        dataTransfer.items.add(file)
-        uploadInput.files = dataTransfer.files
-        uploadInput.dispatchEvent(new Event('change', { bubbles: true }))
+    if (this.fromBlock) {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').content
+      const headers = new Headers()
+      headers.append('accept', 'application/json, text/javascript, */*; q=0.01')
+      headers.append('x-csrf-token', csrfToken)
+      const configTarget = this.configTarget
 
-        // Push the new focal point to save on the uploaded image
-        this.pushEventTo(this.el, 'image_editor_save', {
-          mode: 'new_copy',
-          focal_x: Math.round(this.focalX),
-          focal_y: Math.round(this.focalY)
-        })
-      }
-    }, 'image/jpeg', 0.95)
+      exportCanvas.toBlob(async (blob) => {
+        if (!blob) return
+
+        const file = new File([blob], 'edited-image.jpg', { type: 'image/jpeg' })
+        const formData = new FormData()
+        formData.append('image', file)
+        formData.append('name', file.name)
+        formData.append('slug', 'image')
+        formData.append('uid', 'image-editor')
+        formData.append('formats', '')
+        if (configTarget) {
+          formData.append('config_target', configTarget)
+        }
+
+        try {
+          const response = await fetch('/admin/api/content/upload/image', {
+            headers,
+            method: 'post',
+            body: formData,
+          })
+          const data = await response.json()
+
+          if (data.status === 200) {
+            this.pushEventTo(this.el, 'image_editor_new_copy', {
+              new_image_id: data.image.id,
+              focal_x: focalX,
+              focal_y: focalY
+            })
+          } else {
+            console.error('Error creating image copy:', data.error)
+          }
+        } catch (e) {
+          console.error('Error creating image copy:', e)
+        }
+      }, 'image/jpeg', 0.95)
+    } else {
+      exportCanvas.toBlob((blob) => {
+        if (!blob) return
+
+        const uploadInput = document.querySelector('#image-drawer-form input[type="file"]')
+        if (uploadInput) {
+          const file = new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' })
+          const dataTransfer = new DataTransfer()
+          dataTransfer.items.add(file)
+          uploadInput.files = dataTransfer.files
+          uploadInput.dispatchEvent(new Event('change', { bubbles: true }))
+
+          this.pushEventTo(this.el, 'image_editor_save', {
+            mode: 'new_copy',
+            focal_x: focalX,
+            focal_y: focalY
+          })
+        }
+      }, 'image/jpeg', 0.95)
+    }
   }
 })

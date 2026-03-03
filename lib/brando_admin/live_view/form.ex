@@ -83,7 +83,10 @@ defmodule BrandoAdmin.LiveView.Form do
   end
 
   def on_mount({:hooks_images, _schema}, _params, _session, socket) do
-    {:cont, attach_hook(socket, :b_form_images, :handle_info, &handle_hooks_image_info/2)}
+    {:cont,
+     socket
+     |> assign(:pending_block_image_updates, %{})
+     |> attach_hook(:b_form_images, :handle_info, &handle_hooks_image_info/2)}
   end
 
   def on_mount({:hooks_videos, _schema}, _params, _session, socket) do
@@ -275,7 +278,13 @@ defmodule BrandoAdmin.LiveView.Form do
         {:halt, socket}
 
       _ ->
-        {:cont, socket}
+        pending = Map.get(socket.assigns, :pending_block_image_updates, %{})
+
+        if Map.has_key?(pending, image.id) do
+          {:halt, socket}
+        else
+          {:cont, socket}
+        end
     end
   end
 
@@ -338,8 +347,22 @@ defmodule BrandoAdmin.LiveView.Form do
         {:halt, socket}
 
       _ ->
-        {:cont, socket}
+        # Check if this is a pending block image update (e.g. "save as new copy" from a block)
+        pending = Map.get(socket.assigns, :pending_block_image_updates, %{})
+
+        case Map.pop(pending, image.id) do
+          {nil, _} ->
+            {:cont, socket}
+
+          {block_cid, remaining} ->
+            send_update(block_cid, %{event: "image_processed", image: image})
+            {:halt, assign(socket, :pending_block_image_updates, remaining)}
+        end
     end
+  end
+
+  defp handle_hooks_image_info({:register_pending_block_image, image_id, block_cid}, socket) do
+    {:halt, update(socket, :pending_block_image_updates, &Map.put(&1, image_id, block_cid))}
   end
 
   defp handle_hooks_image_info(_, socket), do: {:cont, socket}

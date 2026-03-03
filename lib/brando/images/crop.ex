@@ -18,21 +18,8 @@ defmodule Brando.Images.Crop do
       {:ok, %Brando.Images.Image{}}
   """
   def save_as_new_copy(original_image, binary_data, focal, user) do
-    media_path = Brando.config(:media_path)
     new_path = Brando.Utils.unique_filename(original_image.path)
-
-    dest_file =
-      media_path
-      |> Path.join(new_path)
-
-    File.mkdir_p!(Path.dirname(dest_file))
-    File.write!(dest_file, binary_data)
-
-    {width, height} =
-      case Image.open(dest_file) do
-        {:ok, img} -> {Image.width(img), Image.height(img)}
-        _ -> {nil, nil}
-      end
+    {width, height} = write_and_measure(new_path, binary_data, {nil, nil})
 
     new_image_params = %{
       path: new_path,
@@ -52,6 +39,62 @@ defmodule Brando.Images.Crop do
 
       error ->
         error
+    end
+  end
+
+  @doc """
+  Replace an existing image's original file with cropped binary data.
+
+  Overwrites the file at the image's current path, updates dimensions,
+  clears processed sizes, sets focal point, and queues reprocessing.
+
+  ## Examples
+
+      iex> save_replace(image, binary_data, %{x: 50, y: 50}, user)
+      {:ok, %Brando.Images.Image{}}
+  """
+  def save_replace(image, binary_data, focal, user) do
+    {width, height} = write_and_measure(image.path, binary_data, {image.width, image.height})
+
+    update_params = %{
+      width: width,
+      height: height,
+      focal: focal,
+      status: :unprocessed,
+      sizes: %{},
+      formats: []
+    }
+
+    changeset =
+      image
+      |> Brando.Images.Image.changeset(update_params, user)
+      |> Map.put(:action, :update)
+
+    case Brando.Repo.update(changeset) do
+      {:ok, updated_image} ->
+        Images.Processing.queue_processing(updated_image, user)
+        {:ok, updated_image}
+
+      error ->
+        error
+    end
+  end
+
+  defp write_and_measure(path, binary_data, fallback_dimensions) do
+    media_path = Brando.config(:media_path)
+    dest_file = Path.join(media_path, path)
+
+    File.mkdir_p!(Path.dirname(dest_file))
+    File.write!(dest_file, binary_data)
+
+    # Use Image.from_binary instead of Image.open(path) to bypass the libvips
+    # file cache, which returns stale dimensions when overwriting an existing file.
+    case Image.from_binary(binary_data) do
+      {:ok, img} ->
+        {Image.width(img), Image.height(img)}
+
+      {:error, _reason} ->
+        fallback_dimensions
     end
   end
 end

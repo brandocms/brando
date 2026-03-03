@@ -39,7 +39,51 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   # data upload_formats, :string
 
   def mount(socket) do
-    {:ok, assign(socket, available_images: [], show_only_selected?: false)}
+    {:ok, assign(socket, available_images: [], show_only_selected?: false, form_cid: nil)}
+  end
+
+  def update(%{event: "image_processed", image: image}, socket) do
+    {gallery, gallery_objects} = get_gallery_and_objects(socket.assigns)
+
+    # Replace the stale preloaded image with the fresh processed version
+    gallery_objects =
+      Enum.map(gallery_objects, fn obj ->
+        if obj.image_id == image.id, do: Map.put(obj, :image, image), else: obj
+      end)
+
+    {:ok,
+     socket
+     |> assign(:gallery, gallery)
+     |> assign(:gallery_objects, gallery_objects)
+     |> assign(:indexed_objects, Enum.with_index(gallery_objects))
+     |> assign(:has_objects?, !Enum.empty?(gallery_objects))}
+  end
+
+  def update(%{event: "image_editor_new_copy", new_image: new_image, old_image_id: old_image_id}, socket) do
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+
+    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+    block_data = Changeset.apply_changes(block_data_cs)
+    new_block_data = Map.from_struct(block_data)
+
+    if old_image_id do
+      send_update(target, %{
+        event: "update_ref_data",
+        ref_data: new_block_data,
+        ref_name: ref_name,
+        replace_gallery_image_id: {old_image_id, new_image.id}
+      })
+    else
+      send_update(target, %{
+        event: "update_ref_data",
+        ref_data: new_block_data,
+        ref_name: ref_name,
+        add_gallery_image_id: new_image.id
+      })
+    end
+
+    {:ok, socket}
   end
 
   def update(assigns, socket) do
@@ -292,6 +336,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       add_gallery_image_id: image.id
     })
 
+    # Update image picker's selected state
+    selected_images = current_selected_image_ids(socket) ++ [image.id]
+
+    send_update(BrandoAdmin.Components.ImagePicker,
+      id: "image-picker",
+      selected_images: selected_images
+    )
+
     {:noreply, socket}
   end
 
@@ -314,6 +366,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       ref_name: ref_name,
       remove_gallery_image_id: image.id
     })
+
+    # Update image picker's selected state
+    selected_images = Enum.reject(current_selected_image_ids(socket), &(&1 == image.id))
+
+    send_update(BrandoAdmin.Components.ImagePicker,
+      id: "image-picker",
+      selected_images: selected_images
+    )
 
     {:noreply, socket}
   end
@@ -421,10 +481,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:ok, image} = Brando.Images.get_image(image_id)
 
     # Set edit_image on Form so the save handler knows which image to update
-    send_update(Form,
-      id: socket.assigns.form_id,
+    send_update(socket.assigns.form_cid,
       action: :set_edit_image_from_block,
-      image: image
+      image: image,
+      block_cid: socket.assigns.myself,
+      old_image_id: image.id
     )
 
     # Push the init event directly from this component (same render cycle, no race)
@@ -439,7 +500,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
        focal_x: (image.focal && image.focal.x) || 50,
        focal_y: (image.focal && image.focal.y) || 50,
        crop_groups: crop_groups,
-       from_block: true
+       from_block: true,
+       config_target: image.config_target
      })}
   end
 
@@ -487,27 +549,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   ## Private functions
 
   defp update_block_with_overrides(block_form, initialized_overrides) do
-    # Update the changeset in the form's source with the initialized overrides
     changeset = block_form.source
-
-    # Since :data has on_replace: :update, we need to update it via put_change with a map
-    # Get the current data
     current_data = Changeset.get_field(changeset, :data)
 
-    # Convert the data to a map and add the overrides
     data_map =
       case current_data do
-        %Changeset{} -> current_data |> Changeset.get_field(:__struct__) |> Map.from_struct()
-        data -> Map.from_struct(data)
+        %Changeset{} = cs -> cs |> Changeset.apply_changes() |> Map.from_struct()
+        data when is_struct(data) -> Map.from_struct(data)
+        data when is_map(data) -> data
       end
 
-    # Update the data map with the overrides
     updated_data_map = Map.put(data_map, :gallery_object_overrides, initialized_overrides)
-
-    # Update the main changeset with the map (not a changeset)
     updated_changeset = Changeset.put_change(changeset, :data, updated_data_map)
 
-    # Return the updated form
     %{block_form | source: updated_changeset}
   end
 
@@ -555,6 +609,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     # Return the complete overrides list - will be applied to changeset in render
     all_overrides
+  end
+
+  defp current_selected_image_ids(socket) do
+    socket.assigns.gallery_objects
+    |> Enum.filter(& &1.image_id)
+    |> Enum.map(& &1.image_id)
   end
 
   defp get_gallery_and_objects(assigns) do

@@ -50,7 +50,39 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   def mount(socket) do
     socket
     |> assign(:images, [])
+    |> assign(:form_cid, nil)
     |> then(&{:ok, &1})
+  end
+
+  def update(%{event: "image_processed", image: image}, socket) do
+    extracted_path = image.path
+    extracted_filename = Path.basename(extracted_path)
+
+    {:ok,
+     socket
+     |> assign(:image, image)
+     |> assign(:extracted_path, extracted_path)
+     |> assign(:extracted_filename, extracted_filename)
+     |> assign(:file_name, extracted_filename)}
+  end
+
+  def update(%{event: "image_editor_new_copy", new_image: new_image}, socket) do
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+
+    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+    current_block_data = Changeset.apply_changes(block_data_cs)
+    new_block_data = current_block_data |> Map.from_struct() |> Map.take(@override_fields)
+
+    send_update(target, %{
+      event: "update_ref_data",
+      ref_data: new_block_data,
+      ref_name: ref_name,
+      image_id: new_image.id,
+      force_render: true
+    })
+
+    {:ok, assign(socket, :image, new_image)}
   end
 
   def update(assigns, socket) do
@@ -255,7 +287,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                       type="button"
                       class="secondary"
                       phx-click={
-                        JS.push("open_image_editor", target: @myself)
+                        hide_modal("#block-#{@uid}_config")
+                        |> JS.push("open_image_editor", target: @myself)
                         |> toggle_drawer("#image-editor-drawer")
                       }
                     >
@@ -439,10 +472,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     image = socket.assigns.image
 
     # Set edit_image on Form so the save handler knows which image to update
-    send_update(Form,
-      id: socket.assigns.form_id,
+    send_update(socket.assigns.form_cid,
       action: :set_edit_image_from_block,
-      image: image
+      image: image,
+      block_cid: socket.assigns.myself
     )
 
     # Push the init event directly from this component (same render cycle, no race)
@@ -457,7 +490,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
        focal_x: (image.focal && image.focal.x) || 50,
        focal_y: (image.focal && image.focal.y) || 50,
        crop_groups: crop_groups,
-       from_block: true
+       from_block: true,
+       config_target: image.config_target
      })}
   end
 

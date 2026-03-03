@@ -134,8 +134,7 @@
 
     .help-text {
       font-size: 11px;
-      font-family: monospace;
-      text-transform: uppercase;
+      line-height: normal;
       margin-top: 2px;
       text-align: left;
       max-width: 55ch;

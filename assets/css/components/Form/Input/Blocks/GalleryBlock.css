@@ -29,6 +29,14 @@
       cursor: move;
       position: relative;
 
+      .img-placeholder {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--brando-color-input);
+      }
+
       .video-placeholder {
         aspect-ratio: 1;
         display: flex;
@@ -194,6 +202,19 @@
         left: 8px;
         z-index: 1;
         background-color: white;
+      }
+
+      .img-placeholder {
+        @column 3/12 desktop_xl;
+        @column 3/12 desktop_lg;
+        @column 3/12 desktop_md;
+        @order 0;
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--brando-color-input);
+        border-radius: 4px;
       }
 
       .video-placeholder {
