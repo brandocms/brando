@@ -347,12 +347,18 @@ defmodule BrandoAdmin.LiveView.Form do
         {:halt, socket}
 
       _ ->
-        # Check if this is a pending block image update (e.g. "save as new copy" from a block)
+        # Check if this is a pending block image update (e.g. block upload or
+        # "save as new copy" from a block). Supports both CID targets and
+        # {module, id} tuples.
         pending = Map.get(socket.assigns, :pending_block_image_updates, %{})
 
         case Map.pop(pending, image.id) do
           {nil, _} ->
             {:cont, socket}
+
+          {{module, id}, remaining} ->
+            send_update(module, id: id, event: "image_processed", image: image)
+            {:halt, assign(socket, :pending_block_image_updates, remaining)}
 
           {block_cid, remaining} ->
             send_update(block_cid, %{event: "image_processed", image: image})

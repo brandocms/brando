@@ -2,6 +2,7 @@
 import AdminHook from './hooks/Admin'
 import BlockFieldHook from './hooks/BlockField'
 import BlockHook from './hooks/Block'
+import BlockUploadHook from './hooks/BlockUpload'
 import CodeEditorHook from './hooks/CodeEditor'
 import ColorPickerHook from './hooks/ColorPicker'
 import ConfirmClickHook from './hooks/ConfirmClick'
@@ -46,6 +47,7 @@ export default (app) => {
     'Brando.Admin': AdminHook(app),
     'Brando.BlockField': BlockFieldHook(app),
     'Brando.Block': BlockHook(app),
+    'Brando.BlockUpload': BlockUploadHook(app),
     'Brando.CodeEditor': CodeEditorHook(app),
     'Brando.ColorPicker': ColorPickerHook(app),
     'Brando.ConfirmClick': ConfirmClickHook(app),

@@ -39,7 +39,7 @@ export default class Progress {
             <div class="percent">
               ${data.percent}%
             </div>
-          </div>          
+          </div>
           `)
             this.$progress.append(updateProgress)
             break

@@ -10,7 +10,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   alias BrandoAdmin.Components.Form.Input
   alias Ecto.Changeset
 
-  # prop uploads, :any
   # prop base_form, :any
   # prop block, :any
   # prop block_count, :integer
@@ -51,19 +50,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     socket
     |> assign(:images, [])
     |> assign(:form_cid, nil)
+    |> assign(:upload_registered, false)
     |> then(&{:ok, &1})
   end
 
   def update(%{event: "image_processed", image: image}, socket) do
-    extracted_path = image.path
-    extracted_filename = Path.basename(extracted_path)
-
-    {:ok,
-     socket
-     |> assign(:image, image)
-     |> assign(:extracted_path, extracted_path)
-     |> assign(:extracted_filename, extracted_filename)
-     |> assign(:file_name, extracted_filename)}
+    {:ok, handle_image_complete(socket, image)}
   end
 
   def update(%{event: "image_editor_new_copy", new_image: new_image}, socket) do
@@ -86,29 +78,38 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   def update(assigns, socket) do
-    # Get the current block data to access override fields like title/alt
     block_data_cs = Block.get_block_data_changeset(assigns.block)
     block_data = Changeset.apply_changes(block_data_cs)
+    uid = assigns.ref_form[:uid].value
+    upload_name = :"block_#{uid}_image"
+
+    # Register upload on the Form component (only once).
+    # The Form owns the upload so that LiveView channel events route correctly.
+    if !socket.assigns.upload_registered && assigns[:form_cid] do
+      send_update(assigns.form_cid, %{
+        event: "register_block_upload",
+        upload_name: upload_name,
+        block_uid: uid
+      })
+    end
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:uid, assigns.ref_form[:uid].value)
+     |> assign(:uid, uid)
+     |> assign(:upload_name, upload_name)
+     |> assign(:upload_registered, assigns[:form_cid] != nil)
      |> assign(:block_data, block_data)
      |> assign_new(:form_id, fn -> derive_form_id(assigns.ref_form.name) end)
      |> assign_new(:compact, fn -> true end)
      |> assign_new(:image, fn ->
-       # Get the image from the ref_form (only on first load)
        if assigns[:ref_form] do
          ref_cs = assigns.ref_form.source
 
          case Changeset.get_field(ref_cs, :image) do
            nil ->
-             # If no image preloaded, try to fetch via image_id
              case Changeset.get_field(ref_cs, :image_id) do
-               nil ->
-                 nil
-
+               nil -> nil
                image_id ->
                  case Brando.Images.get_image(image_id) do
                    {:ok, image} -> image
@@ -142,6 +143,43 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
      end)}
   end
 
+  defp handle_image_complete(socket, image) do
+    target = socket.assigns.target
+    ref_name = socket.assigns.ref_name
+
+    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+    current_block_data = Changeset.apply_changes(block_data_cs)
+
+    new_block_data =
+      current_block_data
+      |> Map.from_struct()
+      |> Map.take(@override_fields)
+
+    send_update(target, %{
+      event: "update_ref_data",
+      ref_data: new_block_data,
+      ref_name: ref_name,
+      image_id: image.id,
+      force_render: true
+    })
+
+    extracted_path = Map.get(image, :path)
+    extracted_filename = if extracted_path, do: Path.basename(extracted_path), else: nil
+
+    upload_formats =
+      case Map.get(image, :formats) do
+        formats when is_list(formats) -> Enum.join(formats, ",")
+        _ -> ""
+      end
+
+    socket
+    |> assign(:image, image)
+    |> assign(:extracted_path, extracted_path)
+    |> assign(:extracted_filename, extracted_filename)
+    |> assign(:file_name, extracted_filename)
+    |> assign(:upload_formats, upload_formats)
+  end
+
   def render(assigns) do
     ~H"""
     <div>
@@ -149,10 +187,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
         <div
           id={"block-#{@uid}-wrapper"}
           class="picture-block"
-          phx-hook="Brando.LegacyImageUpload"
-          data-text-uploading={gettext("Uploading...")}
-          data-block-uid={@uid}
-          data-upload-config-target={block_data[:config_target].value}
         >
           <Block.block
             id={"block-#{@uid}-base"}
@@ -169,9 +203,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                 {@extracted_filename}
               <% end %>
             </:description>
-            <div id={"block-#{@uid}-base-f-in"} phx-update="ignore">
-              <input name={"block-#{@uid}-f-in"} class="file-input" type="file" />
-            </div>
             <div
               :if={@extracted_path}
               class={["preview", (@compact && "compact") || "classic"]}
@@ -217,7 +248,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               </div>
             </div>
 
-            <div class={["empty", "upload-canvas", @extracted_path && "hidden"]}>
+            <div
+              id={"block-#{@uid}-upload"}
+              phx-hook="Brando.BlockUpload"
+              data-upload-name={@upload_name}
+              data-label-uploading={gettext("Uploading")}
+              data-label-processing={gettext("Processing image sizes...")}
+              class={["empty", "upload-canvas", @extracted_path && "hidden"]}
+            >
+              <input type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" style="display:none" />
+              <div class="upload-progress" style="display:none">
+                <progress value="0" max="100">0%</progress>
+                <div class="upload-progress-label"></div>
+              </div>
               <figure>
                 <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                   <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none" />
@@ -250,7 +293,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                       Path: {@image.path}<br /> Dimensions: {@image.width}&times;{@image.height}<br />
                     </div>
                   <% end %>
-                  <div :if={!@extracted_path} class="img-placeholder empty upload-canvas">
+                  <div
+                    :if={!@extracted_path}
+                    id={"block-#{@uid}-modal-upload"}
+                    phx-hook="Brando.BlockUpload"
+                    data-upload-name={@upload_name}
+                    data-label-uploading={gettext("Uploading")}
+                    data-label-processing={gettext("Processing image sizes...")}
+                    class="img-placeholder empty upload-canvas"
+                  >
+                    <input type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" style="display:none" />
+                    <div class="upload-progress" style="display:none">
+                      <progress value="0" max="100">0%</progress>
+                      <div class="upload-progress-label"></div>
+                    </div>
                     <div class="placeholder-wrapper">
                       <div class="svg-wrapper">
                         <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -334,51 +390,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   def handle_event("focus", _, socket), do: {:noreply, socket}
 
-  def handle_event("image_uploaded", %{"id" => id}, socket) do
-    {:ok, image} = Brando.Images.get_image(id)
-
-    target = socket.assigns.target
-    ref_name = socket.assigns.ref_name
-
-    # Get current block data to preserve any existing overrides
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    current_block_data = Changeset.apply_changes(block_data_cs)
-
-    # Only keep override fields in block data, image data goes to association
-    new_block_data =
-      current_block_data
-      |> Map.from_struct()
-      |> Map.take(@override_fields)
-
-    send_update(target, %{
-      event: "update_ref_data",
-      ref_data: new_block_data,
-      ref_name: ref_name,
-      image_id: image.id,
-      force_render: true
-    })
-
-    # Update the image assigns immediately
-    extracted_path = Map.get(image, :path)
-    extracted_filename = if extracted_path, do: Path.basename(extracted_path), else: nil
-
-    upload_formats =
-      case Map.get(image, :formats) do
-        formats when is_list(formats) -> Enum.join(formats, ",")
-        _ -> ""
-      end
-
-    socket =
-      socket
-      |> assign(:image, image)
-      |> assign(:extracted_path, extracted_path)
-      |> assign(:extracted_filename, extracted_filename)
-      |> assign(:file_name, extracted_filename)
-      |> assign(:upload_formats, upload_formats)
-
-    {:noreply, socket}
-  end
-
   def handle_event("set_target", _, socket) do
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
@@ -401,8 +412,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       |> Map.from_struct()
       |> Map.take(@override_fields)
 
-    uid = socket.assigns.uid
-
     # Send the update with nil image_id to clear the association
     send_update(target, %{
       event: "update_ref_data",
@@ -413,15 +422,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     })
 
     # Clear the image assigns immediately
-    socket =
-      socket
-      |> assign(:image, nil)
-      |> assign(:extracted_path, nil)
-      |> assign(:extracted_filename, nil)
-      |> assign(:file_name, nil)
-      |> assign(:upload_formats, "")
-
-    {:noreply, push_event(socket, "b:picture_block:attach_listeners:#{uid}", %{})}
+    {:noreply,
+     socket
+     |> assign(:image, nil)
+     |> assign(:extracted_path, nil)
+     |> assign(:extracted_filename, nil)
+     |> assign(:file_name, nil)
+     |> assign(:upload_formats, "")}
   end
 
   def handle_event("select_image", %{"id" => id}, socket) do

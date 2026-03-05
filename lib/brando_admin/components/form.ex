@@ -389,6 +389,33 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, update(socket, :blocks_wanting_entry, &Enum.uniq(&1 ++ [cid]))}
   end
 
+  @doc """
+  Register a LiveView upload for a block component.
+
+  Called via send_update from block components (e.g. PictureBlock) that need
+  file upload support. The upload is registered on the Form component's socket
+  so that the upload events are routed correctly through the LiveView channel.
+  """
+  def update(%{event: "register_block_upload", upload_name: upload_name, block_uid: block_uid}, socket) do
+    block_uploads = Map.get(socket.assigns, :block_uploads, %{})
+
+    socket =
+      if Map.has_key?(block_uploads, upload_name) do
+        socket
+      else
+        socket
+        |> allow_upload(upload_name,
+          accept: ~w(.jpg .jpeg .png .gif .webp .svg),
+          max_file_size: 10_000_000,
+          auto_upload: true,
+          progress: &__MODULE__.handle_block_image_progress/3
+        )
+        |> assign(:block_uploads, Map.put(block_uploads, upload_name, %{block_uid: block_uid}))
+      end
+
+    {:ok, socket}
+  end
+
   # Unified handler for updating entry relations.
   # Handles live preview, entry/changeset updates, and validation in one place.
   #
@@ -1394,6 +1421,13 @@ defmodule BrandoAdmin.Components.Form do
 
           <.form id={"#{@id}_form"} class="main-form" for={@form} phx-target={@myself} phx-submit="save" phx-change="validate">
             <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
+            <div :if={map_size(Map.get(assigns, :block_uploads, %{})) > 0} style="display:none">
+              <.live_file_input
+                :for={{name, _info} <- @block_uploads}
+                upload={@uploads[name]}
+                data-block-upload={name}
+              />
+            </div>
             <MetaDrawer.render
               :if={@has_meta?}
               id={"#{@id}-meta-drawer"}
@@ -3757,6 +3791,110 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+
+  @doc """
+  Progress callback for block image uploads.
+
+  Processes the uploaded image and sends the result back to the originating
+  block component via send_update using the block's stable component ID.
+  """
+  def handle_block_image_progress(upload_name, entry, socket) do
+    block_uploads = Map.get(socket.assigns, :block_uploads, %{})
+    block_info = Map.get(block_uploads, upload_name, %{})
+    block_uid = block_info[:block_uid]
+
+    if entry.done? do
+      current_user = socket.assigns.current_user
+
+      # Tell the JS hook the upload is complete so it can switch to "processing"
+      # state. Sent via PubSub (not push_event) so it arrives at the client
+      # immediately, before the async image processing starts.
+      if block_uid do
+        Brando.endpoint().broadcast!(
+          "user:#{current_user.id}",
+          "block:upload_complete",
+          %{upload_name: to_string(upload_name)}
+        )
+      end
+
+      # Resolve image config for this block upload
+      {cfg, config_target} = resolve_block_image_config("default")
+
+      case consume_uploaded_entry(socket, entry, fn meta ->
+             Brando.Upload.handle_upload(
+               Map.put(meta, :config_target, config_target),
+               entry,
+               cfg,
+               current_user
+             )
+           end) do
+        {:error, :content_type, rejected_type, allowed_types} ->
+          error_title = gettext("Error uploading")
+
+          error_msg =
+            gettext(
+              "Server rejected image type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
+              %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
+            )
+
+          {:noreply,
+           push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+
+        image ->
+          # Queue async processing (same pattern as gallery uploads).
+          # Subscribe BEFORE queueing so inline Oban broadcasts aren't missed.
+          Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+
+          if block_uid do
+            # Register so the :updated PubSub hook knows where to forward
+            # the processed image. Use {module, id} tuple for send_update.
+            send(self(), {
+              :register_pending_block_image,
+              image.id,
+              {BrandoAdmin.Components.Form.Input.Blocks.PictureBlock, "#{block_uid}-picture"}
+            })
+          end
+
+          Brando.Images.Processing.queue_processing(image, current_user)
+
+          {:noreply, socket}
+      end
+    else
+      # Upload in progress — broadcast progress via PubSub to the user channel.
+      # We bypass push_event/send_update because those go through the LV diff
+      # pipeline, which can't keep up with rapid chunk progress messages.
+      # PubSub → user channel is near-instant (no diff computation).
+      if block_uid do
+        Brando.endpoint().broadcast!(
+          "user:#{socket.assigns.current_user.id}",
+          "block:upload_progress",
+          %{upload_name: to_string(upload_name), progress: entry.progress}
+        )
+      end
+
+      {:noreply, socket}
+    end
+  end
+
+  defp resolve_block_image_config(config_target) do
+    case Brando.Images.get_config_for(config_target) do
+      {:ok, cfg} ->
+        {cfg, config_target}
+
+      _ ->
+        default_config =
+          Brando.config(Brando.Images)[:default_config] ||
+            Brando.Type.ImageConfig.default_config()
+
+        cfg =
+          case default_config do
+            %Brando.Type.ImageConfig{} = c -> c
+            config -> struct(Brando.Type.ImageConfig, config)
+          end
+
+        {cfg, "default"}
+    end
+  end
 
   def handle_gallery_progress(
         key,
