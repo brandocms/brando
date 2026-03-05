@@ -256,7 +256,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               data-label-processing={gettext("Processing image sizes...")}
               class={["empty", "upload-canvas", @extracted_path && "hidden"]}
             >
-              <input type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" style="display:none" />
+              <input type="file" class="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" style="display:none" />
               <div class="upload-progress" style="display:none">
                 <progress value="0" max="100">0%</progress>
                 <div class="upload-progress-label"></div>
