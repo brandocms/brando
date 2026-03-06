@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, fillSlugSource } from '../../utils'
 
 test('opens image editor, adjusts focal point, and saves', async ({ page }) => {
   test.setTimeout(120000)
@@ -10,7 +10,9 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }) => {
   await page.getByRole('link', { name: 'Create new' }).click()
   await syncLV(page)
   await page.getByText('Published').click()
-  await page.getByRole('textbox', { name: 'Name' }).fill('ImgEdClient')
+  await fillSlugSource(page.getByRole('textbox', { name: 'Name' }), 'ImgEdClient')
+  await syncLV(page)
+  await expect(page.locator('input[name="client[slug]"]')).toHaveValue('imgedclient', { timeout: 10000 })
   await page.getByTestId('submit').click()
   await syncLV(page)
 
@@ -24,9 +26,7 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }) => {
   // Fill required fields
   await page.locator('label').filter({ hasText: 'Published' }).click()
   const titleField = page.getByRole('textbox', { name: 'Title' })
-  await titleField.fill('ImgEditorTest')
-  await titleField.dispatchEvent('input')
-  await titleField.blur()
+  await fillSlugSource(titleField, 'ImgEditorTest')
   await syncLV(page)
   await expect(page.locator('input[name="project[slug]"]')).toHaveValue(/imgeditortest/, {
     timeout: 10000,

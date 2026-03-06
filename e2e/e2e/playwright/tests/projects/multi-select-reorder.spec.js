@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, dragAndDrop } from '../../utils'
+import { syncLV, dragAndDrop, fillSlugSource } from '../../utils'
 
 test.describe('Multi-select reordering', () => {
   test.beforeEach(async ({ page }) => {
@@ -10,10 +10,9 @@ test.describe('Multi-select reordering', () => {
     await syncLV(page)
     await page.getByText('Published').click()
     const clientNameField = page.getByRole('textbox', { name: 'Name' })
-    await clientNameField.fill('Test Client')
-    // Blur to trigger auto-slug generation, then wait for it
-    await clientNameField.blur()
+    await fillSlugSource(clientNameField, 'Test Client')
     await syncLV(page)
+    await expect(page.locator('input[name="client[slug]"]')).toHaveValue('test-client', { timeout: 10000 })
     await page.getByTestId('submit').click()
     await expect(page).toHaveURL(/\/clients/)
     await syncLV(page)
@@ -25,9 +24,9 @@ test.describe('Multi-select reordering', () => {
     await page.getByRole('link', { name: 'Create new' }).click()
     await syncLV(page)
     const catAField = page.getByRole('textbox', { name: 'Title' })
-    await catAField.fill('Category A')
-    await catAField.blur()
+    await fillSlugSource(catAField, 'Category A')
     await syncLV(page)
+    await expect(page.locator('input[name="category[slug]"]')).toHaveValue('category-a', { timeout: 10000 })
     await page.getByTestId('submit').click()
     await expect(page).toHaveURL(/\/categories/)
     await syncLV(page)
@@ -35,9 +34,9 @@ test.describe('Multi-select reordering', () => {
     await page.getByRole('link', { name: 'Create new' }).click()
     await syncLV(page)
     const catBField = page.getByRole('textbox', { name: 'Title' })
-    await catBField.fill('Category B')
-    await catBField.blur()
+    await fillSlugSource(catBField, 'Category B')
     await syncLV(page)
+    await expect(page.locator('input[name="category[slug]"]')).toHaveValue('category-b', { timeout: 10000 })
     await page.getByTestId('submit').click()
     await expect(page).toHaveURL(/\/categories/)
     await syncLV(page)
@@ -45,9 +44,9 @@ test.describe('Multi-select reordering', () => {
     await page.getByRole('link', { name: 'Create new' }).click()
     await syncLV(page)
     const catCField = page.getByRole('textbox', { name: 'Title' })
-    await catCField.fill('Category C')
-    await catCField.blur()
+    await fillSlugSource(catCField, 'Category C')
     await syncLV(page)
+    await expect(page.locator('input[name="category[slug]"]')).toHaveValue('category-c', { timeout: 10000 })
     await page.getByTestId('submit').click()
     await expect(page).toHaveURL(/\/categories/)
     await syncLV(page)

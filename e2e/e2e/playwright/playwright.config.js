@@ -12,6 +12,7 @@ module.exports = defineConfig({
     url: 'http://localhost:4444/',
     stdout: 'pipe',
     stderr: 'pipe',
+    wait: { stdout: /Running.*Endpoint.*at/ },
     reuseExistingServer: !process.env.CI,
   },
   testDir: './tests',
