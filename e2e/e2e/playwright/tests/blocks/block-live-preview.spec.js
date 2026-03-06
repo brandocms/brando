@@ -660,6 +660,56 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
     })
   })
 
+  test.describe('Image Var + Live Preview', () => {
+    test('uploading image var updates preview iframe', async ({ page }) => {
+      await page.goto('/admin')
+      await page.getByRole('link', { name: 'Pages & Sections' }).click()
+      await syncLV(page)
+
+      await page.getByRole('link', { name: 'Create page' }).click()
+      await syncLV(page)
+
+      await page.getByLabel('Title', { exact: true }).fill('Image Var Preview Test Page')
+      await page.getByLabel('URI').fill('image-var-preview-test')
+
+      // Add Image and File Vars module
+      await page.getByRole('button', { name: 'Add block' }).click()
+      await page.getByRole('button', { name: '07 VAR UPLOAD TEST' }).click()
+      await page.getByRole('button', { name: 'Image and File Vars' }).click()
+      await syncLV(page)
+
+      // Enable live preview
+      await toggleLivePreview(page)
+      await waitForPreviewReady(page)
+
+      const frame = getPreviewFrame(page)
+
+      // Verify no image in preview yet
+      await expect(frame.locator('div[b-tpl="image-file-vars"] img')).not.toBeVisible()
+
+      // Click "Add image" to open the image modal
+      await page.getByRole('button', { name: 'Add image' }).click()
+      const imageModal = page.locator('[id$="image-config"]:visible')
+      await expect(imageModal).toBeVisible({ timeout: 5000 })
+
+      // Upload image via file input in the modal
+      await imageModal.locator('input[type="file"].file-input').setInputFiles('./fixtures/image.jpg')
+
+      // Wait for image to process
+      await expect(imageModal.locator('img')).toBeVisible({ timeout: 20000 })
+      await expect(imageModal.locator('.image-info')).toBeVisible()
+
+      // Close the modal
+      await imageModal.locator('button.modal-close').click()
+      await syncLV(page)
+
+      await waitForPreviewUpdate(page)
+
+      // Verify image now appears in preview iframe
+      await expect(frame.locator('div[b-tpl="image-file-vars"] img')).toBeVisible()
+    })
+  })
+
   test.describe('Morph Preservation (skipFromChildren)', () => {
     test('video element survives morphdom update when data-src unchanged', async ({ page }) => {
       await page.goto('/admin')
