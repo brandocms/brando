@@ -179,7 +179,7 @@ defmodule Brando.HTML.Images do
 
   defp mq_sources(assigns) do
     ~H"""
-    <source :for={{media, srcset} <- @mqs} media={media} srcset={srcset} />
+    <source :for={{media, srcset} <- @mqs} :key={media} media={media} srcset={srcset} />
     """
   end
 
@@ -205,6 +205,7 @@ defmodule Brando.HTML.Images do
       ~H"""
       <.source_tag
         :for={format <- Enum.reverse(@src.formats)}
+        :key={format}
         format={format}
         original_format={@sizes_format}
         source={@attrs.source}

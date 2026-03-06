@@ -415,6 +415,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     <div class="button-group-vertical">
       <button
         :for={%{value: value, label: label} <- @types}
+        :key={value}
         type="button"
         phx-click={build_click_action(@on_click, @hide_modal_id, @show_modal_id)}
         phx-value-type={value}

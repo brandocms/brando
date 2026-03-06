@@ -39,6 +39,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
         <h3 class="mb-1">{gettext("Currently linked entries")}</h3>
         <Entries.identifier
           :for={identifier <- @identifiers}
+          :key={identifier.id}
           identifier_id={identifier.id}
           available_identifiers={@identifiers}
         >
@@ -76,6 +77,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
           <h3 class="mb-1">{gettext("Available entries")}</h3>
           <Entries.identifier
             :for={identifier <- @entries_identifiers}
+            :key={identifier.id}
             identifier_id={identifier.id}
             selected_identifiers={@identifiers}
             available_identifiers={@entries_identifiers}

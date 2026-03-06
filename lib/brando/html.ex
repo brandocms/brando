@@ -233,6 +233,7 @@ defmodule Brando.HTML do
     ~H"""
     <link
       :for={{type, font} <- @fonts}
+      :key={font}
       rel="preload"
       href={Brando.endpoint().static_path(font)}
       as="font"
@@ -280,7 +281,7 @@ defmodule Brando.HTML do
 
     ~H"""
     <link rel="canonical" href={@canonical} />
-    <link :for={{lang, url} <- @hreflangs} :if={@multilang} rel="alternate" href={url} type="text/html" hreflang={lang} />
+    <link :for={{lang, url} <- @hreflangs} :key={lang} :if={@multilang} rel="alternate" href={url} type="text/html" hreflang={lang} />
     """
   end
 

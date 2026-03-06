@@ -63,6 +63,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
       <div class="button-group-vertical tiny">
         <button
           :for={{label, schema} <- @available_schemas}
+          :key={schema}
           type="button"
           class={["secondary", @selected_schema_raw == schema && "selected"]}
           phx-click={JS.push("select_schema", target: @myself)}
@@ -90,6 +91,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
         <div class="identifier-options">
           <.identifier
             :for={identifier <- @identifiers}
+            :key={identifier.id}
             identifier={identifier}
             selected_identifier_id={@selected_identifier_id}
             select={JS.push("select_identifier", target: @myself, value: %{id: identifier.id})}

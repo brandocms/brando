@@ -1354,6 +1354,7 @@ defmodule BrandoAdmin.Components.Form do
             <div class="form-tab-customs">
               <button
                 :for={tab <- @tabs}
+                :key={tab}
                 type="button"
                 class={[@active_tab == tab && "active"]}
                 phx-click={JS.push("select_tab", target: @myself)}
@@ -1496,6 +1497,7 @@ defmodule BrandoAdmin.Components.Form do
             <div :if={map_size(Map.get(assigns, :block_uploads, %{})) > 0} style="display:none">
               <.live_file_input
                 :for={{name, _info} <- @block_uploads}
+                :key={name}
                 upload={@uploads[name]}
                 data-block-upload={name}
               />
@@ -1503,6 +1505,7 @@ defmodule BrandoAdmin.Components.Form do
             <div :if={map_size(Map.get(assigns, :var_uploads, %{})) > 0} style="display:none">
               <.live_file_input
                 :for={{name, _info} <- @var_uploads}
+                :key={name}
                 upload={@uploads[name]}
                 data-var-upload={name}
               />
@@ -1563,6 +1566,7 @@ defmodule BrandoAdmin.Components.Form do
 
           <.live_component
             :for={{block_field, block_module, entry_blocks, field_opts} <- @block_map}
+            :key={block_field}
             :if={@has_blocks?}
             module={BlockField}
             block_module={block_module}
@@ -1600,7 +1604,7 @@ defmodule BrandoAdmin.Components.Form do
   def form_presences(assigns) do
     ~H"""
     <div class="page-presences">
-      <div :for={{_, user} <- @presences} class="user-presence visible" data-presence-user-id={user.id}>
+      <div :for={{_, user} <- @presences} :key={user.id} class="user-presence visible" data-presence-user-id={user.id}>
         <div class="avatar" data-popover={user.name}>
           <Content.image image={user.avatar} size={:thumb} />
         </div>
@@ -1611,7 +1615,7 @@ defmodule BrandoAdmin.Components.Form do
 
   def form_tabs(assigns) do
     ~H"""
-    <div :for={tab <- @tabs} class={["form-tab", @active_tab == tab.name && "active"]} data-tab-name={tab.name}>
+    <div :for={tab <- @tabs} :key={tab.name} class={["form-tab", @active_tab == tab.name && "active"]} data-tab-name={tab.name}>
       <div class="row">
         <.tab_fields
           tab={tab}

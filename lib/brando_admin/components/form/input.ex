@@ -611,7 +611,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       ~H"""
       <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
         <div class="radios-wrapper status">
-          <div :for={status <- @statuses} class="form-check">
+          <div :for={status <- @statuses} :key={status.value} class="form-check">
             <label class="form-check-label">
               <input
                 type="radio"

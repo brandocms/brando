@@ -25,11 +25,12 @@ defmodule BrandoAdmin.Galleries.GalleryFormLive do
 
     <div :if={@gallery_usage != %{}} class="shaded" style="margin-top: 15px;">
       <h2 class="subheader">{gettext("Where used")}</h2>
-      <div :for={{schema, identifiers} <- @gallery_usage} class="usage-group">
+      <div :for={{schema, identifiers} <- @gallery_usage} :key={schema} class="usage-group">
         <h3 class="usage-schema-label">{Brando.Blueprint.get_plural(schema)}</h3>
         <div class="selected-entries">
           <Entries.dumb_identifier
             :for={identifier <- identifiers}
+            :key={identifier.id}
             identifier={identifier}
             select={JS.navigate(edit_url(identifier))}
           />

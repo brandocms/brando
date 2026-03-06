@@ -48,12 +48,12 @@ defmodule BrandoAdmin.Content.ModuleListLive do
           {Enum.count(@imported_modules)} {gettext("encoded modules found.")}
         </p>
         <div class="imported-modules mt-2">
-          <div :for={m <- @imported_modules} class="imported-module">
+          <div :for={m <- @imported_modules} :key={m.id} class="imported-module">
             <.i18n map={m.name} /> — <.i18n map={m.namespace} />
             <div class="module-info">
               <span :if={m.vars != []}>(+{length(m.vars)} {gettext("variables")})</span>
               <span :if={m.refs != []}>(+{length(m.refs)} {gettext("references")})</span>
-              <div :for={c <- m.children} class="module-info-child">
+              <div :for={c <- m.children} :key={c.id} class="module-info-child">
                 <.i18n map={c.name} /> — <.i18n map={c.namespace} />
                 <div class="module-info-child-info">
                   <span :if={c.vars != []}>(+{length(c.vars)} {gettext("variables")})</span>

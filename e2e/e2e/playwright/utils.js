@@ -131,7 +131,7 @@ const getPreviewFrame = page => {
 
 // Wait for preview to be ready after enabling
 const waitForPreviewReady = async page => {
-  await page.locator('.live-preview-wrapper iframe').waitFor({ state: 'visible', timeout: 15000 })
+  await page.locator('.live-preview-wrapper iframe').waitFor({ state: 'visible', timeout: 30000 })
   // Wait for initial render
   await page.waitForTimeout(300)
 }

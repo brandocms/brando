@@ -181,7 +181,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             close={JS.push("hide_form", target: @myself) |> hide_modal("##{@create_modal_id}")}
           >
             <.form :let={entry_form} for={@select_changeset} phx-change="validate_new_entry" phx-target={@myself}>
-              <div :for={tab <- @select_form.tabs} class={["form-tab", "active", "portal-form"]} data-tab-name={tab.name}>
+              <div :for={tab <- @select_form.tabs} :key={tab.name} class={["form-tab", "active", "portal-form"]} data-tab-name={tab.name}>
                 <div class="row">
                   <Fieldset.render
                     :for={fieldset <- tab.fields}

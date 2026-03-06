@@ -523,7 +523,7 @@ defmodule BrandoAdmin.Components.Content.List do
     ~H"""
     <div class="active-filters">
       {gettext("Active filters")} &rarr;
-      <button :for={{name, value} <- @active_filters} class="filter" phx-click={@delete} phx-value-filter={name}>
+      <button :for={{name, value} <- @active_filters} :key={name} class="filter" phx-click={@delete} phx-value-filter={name}>
         <div class="icon-wrapper"><.icon name="hero-x-circle" /></div>
         {name}: {inspect(value)}
       </button>
@@ -622,6 +622,7 @@ defmodule BrandoAdmin.Components.Content.List do
       <div class="pagination-buttons">
         <.pagination_button
           :for={page_number <- @page_numbers}
+          :key={page_number}
           page_number={page_number}
           current_page={@current_page}
           change_page={@change_page}
@@ -840,7 +841,7 @@ defmodule BrandoAdmin.Components.Content.List do
     <div :if={@exports != []} class="exports">
       {gettext("Export")}
       <CircleDropdown.render id="listing-exports-dropdown">
-        <button :for={export <- @exports} type="button" phx-value-name={export.name} phx-click={@select_export}>
+        <button :for={export <- @exports} :key={export.name} type="button" phx-value-name={export.name} phx-click={@select_export}>
           {g(@schema, export.label)} <span class="shortcut">{export.type}</span>
         </button>
       </CircleDropdown.render>
@@ -878,13 +879,14 @@ defmodule BrandoAdmin.Components.Content.List do
       <div class="list-tools">
         <%= if @has_status? do %>
           <div class="statuses">
-            <.status :for={status <- @statuses} status={status} list_opts={@list_opts} on_update_status={@update_status} />
+            <.status :for={status <- @statuses} :key={status} status={status} list_opts={@list_opts} on_update_status={@update_status} />
           </div>
         <% end %>
 
         <div class="filters">
           <.filter_input
             :for={filter <- @filters}
+            :key={filter.key}
             filter={filter}
             active_filter={@active_filter}
             schema={@schema}
@@ -926,7 +928,7 @@ defmodule BrandoAdmin.Components.Content.List do
       <.simple_dropdown id="sorts-dropdown" label={g(@schema, @active_sort.label)}>
         <:options>
           <li>
-            <button :for={sort <- @sorts} type="button" phx-click={@on_update} phx-value-sort_key={sort.key}>
+            <button :for={sort <- @sorts} :key={sort.key} type="button" phx-click={@on_update} phx-value-sort_key={sort.key}>
               {raw(g(@schema, sort.label))}
             </button>
           </li>

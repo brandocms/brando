@@ -27,7 +27,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
         <div class="global-tabs">
           <.live_component module={ImagePicker} id="image-picker" />
           <div class="form-tabs">
-            <div :for={{global_set, index} <- @indexed_global_sets} class="form-tab-customs">
+            <div :for={{global_set, index} <- @indexed_global_sets} :key={global_set.key} class="form-tab-customs">
               <button
                 id={"set-#{global_set.key}-#{global_set.language}"}
                 type="button"
@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
               </button>
             </div>
           </div>
-          <div :for={{global_set, index} <- @indexed_global_sets} :if={index == @active_tab} id={"set-#{index}"}>
+          <div :for={{global_set, index} <- @indexed_global_sets} :key={global_set.key} :if={index == @active_tab} id={"set-#{index}"}>
             <.set_form global_set={global_set} index={index} target={@myself} />
           </div>
         </div>

@@ -51,7 +51,7 @@ defmodule Brando.Meta.HTML do
     assigns = assign(assigns, :metas, metas)
 
     ~H"""
-    <.meta_tag :for={{key, value} <- @metas} key={key} value={value} />
+    <.meta_tag :for={{key, value} <- @metas} :key={key} key={key} value={value} />
     """
   end
 

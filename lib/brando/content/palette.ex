@@ -85,6 +85,7 @@ defmodule Brando.Content.Palette do
       <div class="circle-stack">
         <div
           :for={{color, idx} <- Enum.with_index(Enum.reverse(@entry.colors))}
+          :key={idx}
           class="circle"
           data-color-no={idx}
           data-popover={color.hex_value}

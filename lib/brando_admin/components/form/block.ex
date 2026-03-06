@@ -1603,6 +1603,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         >
           <div
             :for={child_block_form <- @children_forms}
+            :key={child_block_form[:uid].value}
             id={"child-#{child_block_form[:uid].value}"}
             data-id={child_block_form.data.id}
             data-uid={child_block_form[:uid].value}
@@ -1744,6 +1745,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         >
           <div
             :for={child_block_form <- @children_forms}
+            :key={child_block_form[:uid].value}
             id={"child-#{child_block_form[:uid].value}"}
             data-id={child_block_form[:id].value}
             data-uid={child_block_form[:uid].value}
@@ -2568,7 +2570,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         Ref <code>{@ref_name}</code>
         is missing!<br /><br /> If the module has been changed, this block might be out of sync!<br /><br />
         Available refs are:<br /><br />
-        <div :for={ref_name <- @ref_names}>
+        <div :for={ref_name <- @ref_names} :key={ref_name}>
           &rarr; {ref_name}<br />
         </div>
       </section>
@@ -3213,6 +3215,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             <div class="circle-stack">
               <span
                 :for={color <- Enum.reverse(@palette.colors)}
+                :key={color.hex_value}
                 class="circle tiny"
                 style={"background-color:#{color.hex_value}"}
                 data-popover={"#{color.name}"}
@@ -3520,6 +3523,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           <h2 class="titlecase">{gettext("Available entries")}</h2>
           <Entries.block_identifier
             :for={identifier <- @available_identifiers}
+            :key={identifier.id}
             identifier={identifier}
             select={JS.push("select_identifier", value: %{id: identifier.id}, target: @target)}
             available_identifiers={@available_identifiers}
@@ -3632,7 +3636,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     ~H"""
     <div :if={@datasource_meta != []} class="identifier-meta">
       <div class="meta-fields">
-        <div :for={field <- @datasource_meta} class="meta-field">
+        <div :for={field <- @datasource_meta} :key={field.key} class="meta-field">
           <%= case field.type do %>
             <% :text -> %>
               <Input.text field={@meta_form[field.key]} opts={field.opts} label={field.label} />
@@ -4220,7 +4224,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   # Add an image to a gallery ref association
   defp add_media_to_gallery_ref(ref_changeset, media_type, media_id, current_user) do
     current_gallery = Changeset.get_field(ref_changeset, :gallery)
-    {:ok, media} = fetch_media(media_type, media_id)
+
+    {:ok, media} =
+      case fetch_media(media_type, media_id) do
+        {:ok, _} = result -> result
+        {:error, reason} -> raise "add_media_to_gallery_ref: failed to fetch #{media_type} with id #{inspect(media_id)}: #{inspect(reason)}"
+      end
 
     new_gallery_object =
       %{creator_id: current_user.id}
@@ -4281,7 +4290,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp replace_media_in_gallery_ref(ref_changeset, media_type, old_media_id, new_media_id, current_user) do
     current_gallery = Changeset.get_field(ref_changeset, :gallery)
     id_field = media_id_field(media_type)
-    {:ok, new_media} = fetch_media(media_type, new_media_id)
+
+    {:ok, new_media} =
+      case fetch_media(media_type, new_media_id) do
+        {:ok, _} = result -> result
+        {:error, reason} -> raise "replace_media_in_gallery_ref: failed to fetch #{media_type} with id #{inspect(new_media_id)}: #{inspect(reason)}"
+      end
 
     case current_gallery do
       nil ->

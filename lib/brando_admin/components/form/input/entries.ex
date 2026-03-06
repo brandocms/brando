@@ -164,6 +164,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           <div :if={!@selected_schema} class="button-group-vertical">
             <button
               :for={{label, schema, _} <- @available_schemas}
+              :key={schema}
               type="button"
               class="secondary"
               phx-click={JS.push("select_schema", target: @myself)}
@@ -176,6 +177,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
             <h2 class="titlecase">{gettext("Available entries")}</h2>
             <.assoc_identifier
               :for={identifier <- @available_identifiers}
+              :key={identifier.id}
               identifier={identifier}
               select={JS.push("select_identifier", value: %{id: identifier.id}, target: @myself)}
               available_identifiers={@available_identifiers}

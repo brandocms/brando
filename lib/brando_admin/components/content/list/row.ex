@@ -64,7 +64,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
             {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
           )}
         <% else %>
-          <.field :for={field <- @listing.fields} field={field} entry={@entry} schema={@schema} />
+          <.field :for={field <- @listing.fields} :key={field.name} field={field} entry={@entry} schema={@schema} />
         <% end %>
         <.alternates :if={@alternates?} entry={@entry} target={@myself} schema={@schema} />
         <.creator :if={@creator?} entry={@entry} soft_delete?={@soft_delete?} />
@@ -74,6 +74,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       <%= if @show_children do %>
         <div
           :for={child_field <- @child_fields}
+          :key={child_field}
           class="child-rows"
           id={"sortable-#{@entry.id}-#{child_field}"}
           data-target={@target}
@@ -85,6 +86,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         >
           <.child_row
             :for={child_entry <- Map.get(@entry, child_field, [])}
+            :key={child_entry.id}
             entry={child_entry}
             schema={@schema}
             target={@myself}
@@ -271,6 +273,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         </.action_button>
         <.action_button
           :for={lang <- @duplicate_langs}
+          :key={lang}
           :if={@duplicate_langs?}
           id={"action_#{@listing.name}_duplicate_entry_to_lang_#{@entry.id}_lang_#{lang}"}
           entry_id={@entry.id}
@@ -291,6 +294,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       <% end %>
       <.action_button
         :for={%{event: event, label: label, confirm: confirm} <- @processed_actions}
+        :key={event}
         id={"action_#{@listing.name}_#{Brando.Utils.slugify(label)}_#{@entry.id}"}
         entry_id={@entry.id}
         language={@language}
@@ -371,7 +375,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
     ~H"""
     <div class="status-dropdown hidden" id={@id}>
-      <.status_button :for={status <- @statuses} status={status} id={@id} entry_id={@entry_id} schema={@schema} />
+      <.status_button :for={status <- @statuses} :key={status} status={status} id={@id} entry_id={@entry_id} schema={@schema} />
     </div>
     """
   end
@@ -447,6 +451,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       <Content.modal title={gettext("Alternates")} narrow id={"entry-#{@entry.id}-alternates"}>
         <Entries.dumb_identifier
           :for={identifier <- @identifiers}
+          :key={identifier.id}
           identifier={identifier}
           select={
             JS.push("update_entry",
@@ -577,7 +582,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
         )}
       <% else %>
-        <.field :for={field <- @listing.fields} field={field} entry={@entry} schema={@schema} />
+        <.field :for={field <- @listing.fields} :key={field.name} field={field} entry={@entry} schema={@schema} />
       <% end %>
       <.alternates :if={@alternates?} entry={@entry} target={@target} schema={@schema} />
       <.creator :if={@creator?} entry={@entry} soft_delete?={@soft_delete?} />

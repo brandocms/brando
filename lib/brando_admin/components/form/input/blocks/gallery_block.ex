@@ -340,7 +340,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       event: "update_ref_data",
       ref_data: new_block_data,
       ref_name: ref_name,
-      reorder_gallery_objects: {old_idx, new_idx}
+      reorder_gallery_objects: {old_idx, new_idx},
+      propagate: true
     })
 
     {:noreply, socket}
@@ -394,7 +395,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       event: "update_ref_data",
       ref_data: new_block_data,
       ref_name: ref_name,
-      remove_gallery_image_id: image.id
+      remove_gallery_image_id: image.id,
+      propagate: true
     })
 
     # Update image picker's selected state
@@ -424,7 +426,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       event: "update_ref_data",
       ref_data: new_block_data,
       ref_name: ref_name,
-      remove_gallery_object_index: String.to_integer(obj_index)
+      remove_gallery_object_index: String.to_integer(obj_index),
+      propagate: true
     })
 
     {:noreply, socket}
@@ -501,7 +504,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       event: "update_ref_data",
       ref_data: new_block_data,
       ref_name: ref_name,
-      remove_gallery_video_id: String.to_integer(id)
+      remove_gallery_video_id: String.to_integer(id),
+      propagate: true
     })
 
     {:noreply, socket}

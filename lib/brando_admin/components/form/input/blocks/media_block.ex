@@ -172,6 +172,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
 
     <button
       :for={block_type <- @available_blocks}
+      :key={block_type}
       type="button"
       class="tiny"
       phx-click={JS.push("select_block", target: @target)}

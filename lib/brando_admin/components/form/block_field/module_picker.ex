@@ -93,6 +93,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
               <%= if namespace_map == nil do %>
                 <button
                   :for={module <- modules}
+                  :key={module.id}
                   type="button"
                   class="module-button"
                   phx-click={JS.push("insert_module", target: @myself) |> hide_modal("##{@id}")}
