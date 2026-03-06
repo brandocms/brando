@@ -32,9 +32,40 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   def update_many(assigns_sockets) do
-    asset_ids = collect_asset_ids(assigns_sockets)
-    lookups = build_asset_lookups(asset_ids)
-    Enum.map(assigns_sockets, &assemble_socket(&1, lookups))
+    {upload_events, var_updates} =
+      Enum.split_with(assigns_sockets, fn {assigns, _socket} ->
+        Map.has_key?(assigns, :event) && assigns.event == "upload_complete"
+      end)
+
+    # Handle upload_complete events directly (no DB lookups needed)
+    upload_results =
+      Enum.map(upload_events, fn {assigns, socket} ->
+        case assigns.asset_type do
+          :image ->
+            socket
+            |> assign(:image, assigns.asset)
+            |> assign(:image_id, assigns.asset.id)
+            |> on_change(%{image: assigns.asset, image_id: assigns.asset.id})
+
+          :file ->
+            socket
+            |> assign(:file, assigns.asset)
+            |> assign(:file_id, assigns.asset.id)
+            |> on_change(%{file: assigns.asset, file_id: assigns.asset.id})
+        end
+      end)
+
+    # Handle normal var updates with batched DB lookups
+    var_results =
+      if var_updates != [] do
+        asset_ids = collect_asset_ids(var_updates)
+        lookups = build_asset_lookups(asset_ids)
+        Enum.map(var_updates, &assemble_socket(&1, lookups))
+      else
+        []
+      end
+
+    upload_results ++ var_results
   end
 
   defp collect_asset_ids(assigns_sockets) do
@@ -133,6 +164,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       schemas = Brando.Blueprint.list_blueprints()
       Enum.map(schemas, &%{label: &1.__naming__().singular, value: &1})
     end)
+    |> assign_new(:form_cid, fn -> nil end)
     |> assign_new(:on_change, fn -> nil end)
     |> assign_new(:images, fn -> nil end)
     |> assign_new(:files, fn -> nil end)
@@ -145,6 +177,35 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign(:instructions, get_field(changeset, :instructions))
     |> assign(:placeholder, get_field(changeset, :placeholder))
     |> assign(:var, var)
+    |> maybe_register_var_upload(type, assigns)
+  end
+
+  defp maybe_register_var_upload(socket, type, assigns) when type in [:image, :file] do
+    form_cid = Map.get(assigns, :form_cid)
+
+    if form_cid && !socket.assigns[:upload_registered] do
+      var_id = assigns.var[:key].value || assigns.var.index
+      upload_name = :"var_#{var_id}_#{type}"
+
+      send_update(form_cid, %{
+        event: "register_var_upload",
+        upload_name: upload_name,
+        var_type: type,
+        component_id: assigns.id
+      })
+
+      assign(socket, upload_registered: true, upload_name: upload_name)
+    else
+      socket
+      |> assign_new(:upload_registered, fn -> false end)
+      |> assign_new(:upload_name, fn -> nil end)
+    end
+  end
+
+  defp maybe_register_var_upload(socket, _type, _assigns) do
+    socket
+    |> assign_new(:upload_registered, fn -> false end)
+    |> assign_new(:upload_name, fn -> nil end)
   end
 
   defp extract_value(:image, changeset), do: get_field(changeset, :image_id)
@@ -276,6 +337,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 target={@myself}
                 publish={@publish}
                 on_change={@on_change}
+                upload_name={@upload_name}
               />
 
               <%= case @type do %>
@@ -364,6 +426,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               target={@myself}
               publish={@publish}
               on_change={@on_change}
+              upload_name={@upload_name}
             />
           </div>
         <% end %>
@@ -391,6 +454,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   attr :target, :any
   attr :publish, :any
   attr :on_change, :any
+  attr :upload_name, :any, default: nil
 
   def render_value_inputs(%{type: nil} = assigns) do
     ~H"""
@@ -504,7 +568,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             file_name={@image && @image.path && Path.basename(@image.path)}
             publish
           />
-          <.image_modal field={@var} image={@image} target={@target} />
+          <.image_modal field={@var} image={@image} target={@target} upload_name={@upload_name} />
         </div>
       </Form.field_base>
       <div :if={@edit} class="brando-input">
@@ -533,7 +597,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             click={show_modal("#var-#{@var.id}-file-config")}
             file_name={@file && @file.filename && Path.basename(@file.filename)}
           />
-          <.file_modal field={@var} file={@file} target={@target} />
+          <.file_modal field={@var} file={@file} target={@target} upload_name={@upload_name} />
         </div>
       </Form.field_base>
       <div :if={@edit} class="brando-input">
@@ -742,15 +806,19 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <% end %>
           <%= if !@image do %>
             <div
-              id={"#{@field.id}-legacy-uploader"}
+              id={"#{@field.id}-var-uploader"}
               class="input-image"
-              phx-hook="Brando.LegacyImageUpload"
-              data-text-uploading={gettext("Uploading...")}
-              data-block-uid={"var-#{@field.id}"}
-              data-upload-event-target={@target}
-              data-upload-config-target={@field[:config_target].value}
+              phx-hook="Brando.BlockUpload"
+              data-upload-name={@upload_name}
+              data-upload-mode="single"
+              data-label-uploading={gettext("Uploading")}
+              data-label-processing={gettext("Processing image...")}
             >
-              <input class="file-input" type="file" />
+              <input type="file" class="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" style="display:none" />
+              <div class="upload-progress" style="display:none">
+                <progress value="0" max="100">0%</progress>
+                <div class="upload-progress-label"></div>
+              </div>
               <div class="img-placeholder empty upload-canvas">
                 <div class="placeholder-wrapper">
                   <div class="svg-wrapper">
@@ -808,15 +876,19 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <% end %>
           <%= if !@file do %>
             <div
-              id={"#{@field.id}-legacy-uploader"}
+              id={"#{@field.id}-var-uploader"}
               class="input-image"
-              phx-hook="Brando.LegacyFileUpload"
-              data-text-uploading={gettext("Uploading...")}
-              data-block-uid={"var-#{@field.id}"}
-              data-upload-event-target={@target}
-              data-upload-config-target={@field[:config_target].value}
+              phx-hook="Brando.BlockUpload"
+              data-upload-name={@upload_name}
+              data-upload-mode="single"
+              data-label-uploading={gettext("Uploading")}
+              data-label-processing={gettext("Processing...")}
             >
-              <input class="file-input" type="file" />
+              <input type="file" class="file-input" style="display:none" />
+              <div class="upload-progress" style="display:none">
+                <progress value="0" max="100">0%</progress>
+                <div class="upload-progress-label"></div>
+              </div>
               <div class="img-placeholder empty upload-canvas">
                 <div class="placeholder-wrapper">
                   <div class="svg-wrapper">
@@ -917,27 +989,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> then(&{:noreply, &1})
   end
 
-  def handle_event("image_uploaded", %{"id" => image_id}, socket) do
-    image = Brando.Images.get_image!(image_id)
-
-    socket
-    |> assign(:image_id, image_id)
-    |> assign(:image, image)
-    |> on_change(%{image: image, image_id: image_id})
-    |> then(&{:noreply, &1})
-  end
-
   def handle_event("select_file", %{"id" => file_id}, socket) do
-    file = Brando.Files.get_file!(file_id)
-
-    socket
-    |> assign(:file_id, file_id)
-    |> assign(:file, file)
-    |> on_change(%{file: file, file_id: file_id})
-    |> then(&{:noreply, &1})
-  end
-
-  def handle_event("file_uploaded", %{"id" => file_id}, socket) do
     file = Brando.Files.get_file!(file_id)
 
     socket

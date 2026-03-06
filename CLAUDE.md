@@ -17,6 +17,7 @@
   - **Individual tests** (server already running): `cd e2e/e2e/playwright && pnpm playwright test tests/path/to/test.spec.js`
   - **Start server manually**: `cd e2e && source .envrc && MIX_ENV=e2e PORT=4444 mix phx.server`
   - **Seeding**: `cd e2e && source .envrc && BRANDO_SEEDING=true MIX_ENV=e2e mix run priv/repo/e2e_seeds.exs`
+  - **E2E logger level**: Default is `:warning` in `e2e/config/e2e.exs`. Change to `:debug` when troubleshooting server-side issues, then change back.
 - Code analysis:
   - Refactoring opportunities: `mix credo suggest --format json --all --only refactor`
   - Design: `mix credo suggest --format json --all --only design`

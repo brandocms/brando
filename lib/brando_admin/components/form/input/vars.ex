@@ -62,7 +62,14 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
                 </button>
               </div>
 
-              <.live_component module={RenderVar} id={"#{@field.id}-render-var-#{var.index}"} var={var} render={:all} edit />
+              <.live_component
+                module={RenderVar}
+                id={"#{@field.id}-render-var-#{var.index}"}
+                var={var}
+                render={:all}
+                form_cid={@form_cid}
+                edit
+              />
             </div>
           </.inputs_for>
           <input type="hidden" name={"#{@field.form.name}[drop_var_ids][]"} />

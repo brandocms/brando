@@ -2154,7 +2154,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 </:description>
               </.toolbar>
 
-              <.module_config uid={@uid} block_form={block_form} target={@target} />
+              <.module_config uid={@uid} block_form={block_form} target={@target} form_cid={@form_cid} />
               <.module_content
                 uid={@uid}
                 block_form={block_form}
@@ -2195,7 +2195,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               </:description>
             </.toolbar>
 
-            <.module_config uid={@uid} block_form={@form} target={@target} />
+            <.module_config uid={@uid} block_form={@form} target={@target} form_cid={@form_cid} />
             <.module_content
               uid={@uid}
               block_form={@form}
@@ -2246,7 +2246,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     ~H"""
     <div class="block-content">
       <div b-editor-tpl={@module_class}>
-        <.vars vars={@block_form[:vars]} uid={@uid} target={@target} />
+        <.vars vars={@block_form[:vars]} uid={@uid} target={@target} form_cid={@form_cid} />
         <.datasource
           :if={@is_datasource?}
           block_data={@block_form}
@@ -2260,7 +2260,13 @@ defmodule BrandoAdmin.Components.Form.Block do
           target={@target}
         />
         <div :if={@has_table_template?} class="block-table" id={"block-#{@uid}-block-table"}>
-          <.table block_data={@block_form} uid={@uid} target={@target} table_template_name={@table_template_name} />
+          <.table
+            block_data={@block_form}
+            uid={@uid}
+            target={@target}
+            table_template_name={@table_template_name}
+            form_cid={@form_cid}
+          />
         </div>
         <div class="block-splits">
           <%= for split <- @liquid_splits do %>
@@ -2332,6 +2338,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :uid, :string, required: true
   attr :block_form, :any, required: true
   attr :target, :any, required: true
+  attr :form_cid, :any, default: nil
 
   def module_config(assigns) do
     ~H"""
@@ -2344,7 +2351,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             instructions={gettext("Helpful for collapsed blocks")}
           />
           <Input.text field={@block_form[:anchor]} instructions={gettext("Anchor available to block.")} />
-          <.vars vars={@block_form[:vars]} uid={@uid} important={false} target={@target} />
+          <.vars vars={@block_form[:vars]} uid={@uid} important={false} target={@target} form_cid={@form_cid} />
           <div>
             UID: <span class="text-mono">{@uid}</span>
           </div>
@@ -3089,6 +3096,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :vars, :any, required: true
   attr :important, :boolean, default: true
   attr :target, :any
+  attr :form_cid, :any, default: nil
 
   def vars(assigns) do
     changeset = assigns.vars.form.source
@@ -3120,6 +3128,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             var={var}
             render={(@important && :only_important) || :only_regular}
             on_change={fn params -> send_update(@target, params) end}
+            form_cid={@form_cid}
             publish
           />
         </.inputs_for>
@@ -3354,6 +3363,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :uid, :string, required: true
   attr :target, :any, required: true
   attr :table_template_name, :string
+  attr :form_cid, :any, default: nil
 
   def table(assigns) do
     table_rows_value = assigns.block_data[:table_rows].value
@@ -3431,6 +3441,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                     id={"block-#{@uid}-table-row-#{var.id}"}
                     var={var}
                     render={:all}
+                    form_cid={@form_cid}
                     publish
                   />
                 </.inputs_for>

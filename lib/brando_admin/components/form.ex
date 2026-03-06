@@ -427,6 +427,67 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, socket}
   end
 
+  # Register a LiveView upload for a var component (image or file).
+  # Called via send_update from RenderVar components that need upload support.
+  def update(
+        %{
+          event: "register_var_upload",
+          upload_name: upload_name,
+          var_type: var_type,
+          component_id: component_id
+        },
+        socket
+      ) do
+    var_uploads = Map.get(socket.assigns, :var_uploads, %{})
+
+    socket =
+      if Map.has_key?(var_uploads, upload_name) do
+        socket
+      else
+        accept =
+          if var_type == :image,
+            do: ~w(.jpg .jpeg .png .gif .webp .svg),
+            else: :any
+
+        socket
+        |> allow_upload(upload_name,
+          accept: accept,
+          max_file_size: 50_000_000,
+          max_entries: 1,
+          auto_upload: true,
+          progress: &__MODULE__.handle_var_upload_progress/3
+        )
+        |> assign(
+          :var_uploads,
+          Map.put(var_uploads, upload_name, %{var_type: var_type, component_id: component_id})
+        )
+      end
+
+    {:ok, socket}
+  end
+
+  def update(
+        %{event: "var_upload_complete", upload_name: upload_name, asset_type: asset_type, asset: asset},
+        socket
+      ) do
+    var_uploads = Map.get(socket.assigns, :var_uploads, %{})
+
+    case Map.get(var_uploads, upload_name) do
+      %{component_id: component_id} ->
+        send_update(BrandoAdmin.Components.Form.Input.RenderVar,
+          id: component_id,
+          event: "upload_complete",
+          asset_type: asset_type,
+          asset: asset
+        )
+
+      _ ->
+        :ok
+    end
+
+    {:ok, socket}
+  end
+
   # Unified handler for updating entry relations.
   # Handles live preview, entry/changeset updates, and validation in one place.
   #
@@ -1439,6 +1500,16 @@ defmodule BrandoAdmin.Components.Form do
                 data-block-upload={name}
               />
             </div>
+            <div :if={map_size(Map.get(assigns, :var_uploads, %{})) > 0} style="display:none">
+              <.live_file_input
+                :for={{name, _info} <- @var_uploads}
+                upload={@uploads[name]}
+                data-var-upload={name}
+              />
+            </div>
+            <div style="display:none">
+              <.live_file_input upload={@uploads[:image_editor_upload]} />
+            </div>
             <MetaDrawer.render
               :if={@has_meta?}
               id={"#{@id}-meta-drawer"}
@@ -2287,7 +2358,16 @@ defmodule BrandoAdmin.Components.Form do
     # since LV changed to not allow us to set the :uploads assigns to [] or nil,
     # we need to set a "fake" upload key to not error when passing @uploads to
     # child components :(
-    default_socket = allow_upload(socket, :__dfu__, accept: :any)
+    default_socket =
+      socket
+      |> allow_upload(:__dfu__, accept: :any)
+      |> allow_upload(:image_editor_upload,
+        accept: ~w(.jpg .jpeg .png .webp),
+        max_file_size: 50_000_000,
+        max_entries: 1,
+        auto_upload: true,
+        progress: &__MODULE__.handle_image_editor_upload_progress/3
+      )
 
     socket_with_image_uploads =
       Enum.reduce(image_fields, default_socket, fn img_field, updated_socket ->
@@ -2890,71 +2970,17 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event(
         "image_editor_save",
-        %{"mode" => "new_copy", "focal_x" => x, "focal_y" => y},
+        %{"mode" => "new_copy", "focal_x" => x, "focal_y" => y} = params,
         socket
       ) do
-    # Non-block path: the canvas blob is uploaded via the #image-drawer-form LiveView upload.
-    # Store focal so it can be applied to the new image once the upload completes.
-    {:noreply, assign(socket, :image_editor_focal, %{x: x, y: y})}
-  end
+    # Store focal and config_target so they can be applied once the upload completes.
+    # Used by both block and non-block paths.
+    config_target = Map.get(params, "config_target", "default")
 
-  def handle_event(
-        "image_editor_new_copy",
-        %{"new_image_id" => new_image_id, "focal_x" => x, "focal_y" => y},
-        %{assigns: %{current_user: current_user}} = socket
-      ) do
-    edit_image = socket.assigns.edit_image
-    {:ok, new_image} = Brando.Images.get_image(new_image_id)
-
-    changeset =
-      new_image
-      |> Brando.Images.Image.changeset(%{focal: %{x: x, y: y}, status: :unprocessed}, current_user)
-      |> Map.put(:action, :update)
-
-    case Brando.Repo.update(changeset) do
-      {:ok, updated_image} ->
-        # Subscribe to PubSub and register the pending block image BEFORE
-        # queuing processing. With Oban testing: :inline, the job runs
-        # synchronously and broadcasts before returning — subscribing after
-        # would miss the broadcast.
-        if block_cid = Map.get(edit_image, :block_cid) do
-          Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
-          send(self(), {:register_pending_block_image, updated_image.id, block_cid})
-        end
-
-        Brando.Images.Processing.queue_processing(updated_image, current_user)
-
-        if block_cid = Map.get(edit_image, :block_cid) do
-          send_update(block_cid, %{
-            event: "image_editor_new_copy",
-            new_image: updated_image,
-            old_image_id: Map.get(edit_image, :old_image_id)
-          })
-
-          send(self(), {:toast, gettext("New image created.")})
-          {:noreply, socket}
-        else
-          relation_key = String.to_existing_atom("#{edit_image.field}_id")
-          image_changeset = change(updated_image)
-          updated_edit_image = Map.merge(edit_image, %{id: updated_image.id, image: updated_image})
-
-          {:noreply,
-           socket
-           |> update_changeset(edit_image.path, relation_key, updated_image.id)
-           |> assign(:edit_image, updated_edit_image)
-           |> assign(:image_changeset, image_changeset)}
-        end
-
-      {:error, reason} ->
-        error_title = gettext("Error creating image")
-
-        {:noreply,
-         push_event(socket, "b:alert", %{
-           title: error_title,
-           type: "error",
-           message: inspect(reason)
-         })}
-    end
+    {:noreply,
+     socket
+     |> assign(:image_editor_focal, %{x: x, y: y})
+     |> assign(:image_editor_config_target, config_target)}
   end
 
   def handle_event(
@@ -3908,6 +3934,196 @@ defmodule BrandoAdmin.Components.Form do
       end
 
       {:noreply, socket}
+    end
+  end
+
+  @doc """
+  Handle upload progress for var image/file uploads.
+
+  Similar to `handle_block_image_progress/3` but for var uploads (single file,
+  no gallery queueing).
+  """
+  def handle_var_upload_progress(upload_name, entry, socket) do
+    if entry.done? do
+      current_user = socket.assigns.current_user
+      var_uploads = Map.get(socket.assigns, :var_uploads, %{})
+      var_info = Map.get(var_uploads, upload_name, %{})
+      var_type = var_info[:var_type] || :image
+
+      # Broadcast upload complete to JS hook
+      Brando.endpoint().broadcast!(
+        "user:#{current_user.id}",
+        "block:upload_complete",
+        %{upload_name: to_string(upload_name)}
+      )
+
+      case var_type do
+        :image ->
+          {cfg, config_target} = resolve_block_image_config("default")
+
+          case consume_uploaded_entry(socket, entry, fn meta ->
+                 Brando.Upload.handle_upload(
+                   Map.put(meta, :config_target, config_target),
+                   entry,
+                   cfg,
+                   current_user
+                 )
+               end) do
+            {:error, :content_type, rejected_type, allowed_types} ->
+              error_title = gettext("Error uploading")
+
+              error_msg =
+                gettext(
+                  "Server rejected image type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
+                  %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
+                )
+
+              {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+
+            image ->
+              Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+              Brando.Images.Processing.queue_processing(image, current_user)
+              send(self(), {:var_upload_complete, upload_name, :image, image})
+              {:noreply, socket}
+          end
+
+        :file ->
+          cfg = resolve_file_config("default")
+
+          case consume_uploaded_entry(socket, entry, fn meta ->
+                 Brando.Upload.handle_upload(
+                   Map.put(meta, :config_target, "default"),
+                   entry,
+                   cfg,
+                   current_user
+                 )
+               end) do
+            {:error, :content_type, rejected_type, allowed_types} ->
+              error_title = gettext("Error uploading")
+
+              error_msg =
+                gettext(
+                  "Server rejected file type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
+                  %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
+                )
+
+              {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+
+            file ->
+              send(self(), {:var_upload_complete, upload_name, :file, file})
+              {:noreply, socket}
+          end
+      end
+    else
+      # Upload in progress — broadcast progress
+      Brando.endpoint().broadcast!(
+        "user:#{socket.assigns.current_user.id}",
+        "block:upload_progress",
+        %{upload_name: to_string(upload_name), progress: entry.progress}
+      )
+
+      {:noreply, socket}
+    end
+  end
+
+  @doc """
+  Handle upload progress for the image editor's "save as new copy" feature.
+
+  Applies stored focal point and config_target to the new image, then queues
+  processing and forwards the result to the block component (if from a block).
+  """
+  def handle_image_editor_upload_progress(:image_editor_upload, entry, socket) do
+    if entry.done? do
+      current_user = socket.assigns.current_user
+      edit_image = socket.assigns.edit_image
+      config_target = Map.get(socket.assigns, :image_editor_config_target, "default")
+      focal = Map.get(socket.assigns, :image_editor_focal, %{x: 50, y: 50})
+
+      {cfg, resolved_target} = resolve_block_image_config(config_target)
+
+      case consume_uploaded_entry(socket, entry, fn meta ->
+             Brando.Upload.handle_upload(
+               Map.put(meta, :config_target, resolved_target),
+               entry,
+               cfg,
+               current_user
+             )
+           end) do
+        {:error, :content_type, rejected_type, allowed_types} ->
+          error_title = gettext("Error uploading")
+
+          error_msg =
+            gettext(
+              "Server rejected image type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
+              %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
+            )
+
+          {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+
+        new_image ->
+          # Apply focal and mark for reprocessing
+          changeset =
+            new_image
+            |> Brando.Images.Image.changeset(
+              %{focal: %{x: focal.x, y: focal.y}, status: :unprocessed},
+              current_user
+            )
+            |> Map.put(:action, :update)
+
+          case Brando.Repo.update(changeset) do
+            {:ok, updated_image} ->
+              Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
+
+              if block_cid = Map.get(edit_image, :block_cid) do
+                send(self(), {:register_pending_block_image, updated_image.id, block_cid})
+              end
+
+              Brando.Images.Processing.queue_processing(updated_image, current_user)
+
+              if block_cid = Map.get(edit_image, :block_cid) do
+                send_update(block_cid, %{
+                  event: "image_editor_new_copy",
+                  new_image: updated_image,
+                  old_image_id: Map.get(edit_image, :old_image_id)
+                })
+
+                send(self(), {:toast, gettext("New image created.")})
+                {:noreply, socket}
+              else
+                # Non-block path
+                relation_key = String.to_existing_atom("#{edit_image.field}_id")
+                image_changeset = change(updated_image)
+                updated_edit_image = Map.merge(edit_image, %{id: updated_image.id, image: updated_image})
+
+                {:noreply,
+                 socket
+                 |> update_changeset(edit_image.path, relation_key, updated_image.id)
+                 |> assign(:edit_image, updated_edit_image)
+                 |> assign(:image_changeset, image_changeset)}
+              end
+
+            {:error, reason} ->
+              {:noreply,
+               push_event(socket, "b:alert", %{
+                 title: gettext("Error creating image"),
+                 type: "error",
+                 message: inspect(reason)
+               })}
+          end
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  defp resolve_file_config(config_target) do
+    case Brando.Files.get_config_for(config_target) do
+      {:ok, cfg} ->
+        cfg
+
+      _ ->
+        Brando.config(Brando.Files)[:default_config] ||
+          Brando.Type.FileConfig.default_config()
     end
   end
 

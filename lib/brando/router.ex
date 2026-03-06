@@ -87,9 +87,7 @@ defmodule Brando.Router do
       scope unquote(path), as: :admin do
         pipe_through [:admin, :brando_root_layout, :require_authenticated_user]
 
-        post "/api/content/upload/image", BrandoAdmin.API.Content.Upload.ImageController, :create
         post "/api/content/image/replace_crop", BrandoAdmin.API.Content.Upload.ImageController, :replace_crop
-        post "/api/content/upload/file", BrandoAdmin.API.Content.Upload.FileController, :create
 
         live_session :require_authenticated_user,
           on_mount: sandbox_hooks ++ [{BrandoAdmin.UserAuth, :ensure_authenticated}] do

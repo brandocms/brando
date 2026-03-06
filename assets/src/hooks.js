@@ -13,8 +13,6 @@ import FieldBaseHook from './hooks/FieldBase'
 import FocalPointHook from './hooks/FocalPoint'
 import ImageEditorHook from './hooks/ImageEditor'
 import FormHook from './hooks/Form'
-import LegacyFileUploadHook from './hooks/LegacyFileUpload'
-import LegacyImageUploadHook from './hooks/LegacyImageUpload'
 import ListingHook from './hooks/Listing'
 import LivePreviewHook from './hooks/LivePreview'
 import MapURLParserHook from './hooks/MapURLParser'
@@ -58,8 +56,6 @@ export default (app) => {
     'Brando.FocalPoint': FocalPointHook(app),
     'Brando.Form': FormHook(app),
     'Brando.ImageEditor': ImageEditorHook(app),
-    'Brando.LegacyFileUpload': LegacyFileUploadHook(app),
-    'Brando.LegacyImageUpload': LegacyImageUploadHook(app),
     'Brando.Listing': ListingHook(app),
     'Brando.LivePreview': LivePreviewHook(app),
     'Brando.MapURLParser': MapURLParserHook(app),

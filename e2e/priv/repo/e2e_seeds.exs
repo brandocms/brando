@@ -893,6 +893,49 @@ team_section = %Brando.Content.Module{
   ]
 } |> E2eProject.Repo.insert!()
 
+# Module with image and file vars for upload testing
+%Brando.Content.Module{
+  type: :liquid,
+  name: %{"en" => "Image and File Vars", "no" => "Bilde- og filvariabler"},
+  namespace: %{"en" => "07 VAR UPLOAD TEST", "no" => "07 VAR UPLOAD TEST"},
+  help_text: %{"en" => "Module with image and file variable types", "no" => "Modul med bilde- og filvariabler"},
+  class: "image-file-vars",
+  code: """
+  <div b-tpl="image-file-vars">
+    {% if my_image %}<img src="{{ my_image | media_url }}" />{% endif %}
+    {% if my_file %}<a href="{{ my_file | media_url }}">Download</a>{% endif %}
+  </div>
+  """,
+  svg: nil,
+  multi: false,
+  datasource: false,
+  sequence: 40,
+  deleted_at: nil,
+  table_template_id: nil,
+  parent_id: nil,
+  refs: [],
+  vars: [
+    %Brando.Content.Var{
+      type: :image,
+      label: "My image",
+      key: "my_image",
+      important: true,
+      sequence: 0,
+      width: :half,
+      creator_id: user.id
+    },
+    %Brando.Content.Var{
+      type: :file,
+      label: "My file",
+      key: "my_file",
+      important: true,
+      sequence: 1,
+      width: :half,
+      creator_id: user.id
+    }
+  ]
+} |> E2eProject.Repo.insert!()
+
 # Gallery for gallery listing/editing tests
 %Brando.Galleries.Gallery{
   config_target: "gallery:E2eProject.Projects.Project:project_gallery",

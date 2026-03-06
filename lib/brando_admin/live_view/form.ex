@@ -391,6 +391,25 @@ defmodule BrandoAdmin.LiveView.Form do
     {:halt, socket}
   end
 
+  defp handle_hooks_image_info(
+         {:var_upload_complete, upload_name, asset_type, asset},
+         socket
+       ) do
+    schema = socket.assigns.schema
+    singular = schema.__naming__().singular
+    form_id = "#{singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      event: "var_upload_complete",
+      upload_name: upload_name,
+      asset_type: asset_type,
+      asset: asset
+    )
+
+    {:halt, socket}
+  end
+
   defp handle_hooks_image_info(_, socket), do: {:cont, socket}
 
   # Video hooks - handle PubSub updates

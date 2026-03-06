@@ -1329,45 +1329,28 @@ export default app => ({
     const focalY = Math.round(this.focalY)
 
     if (this.fromBlock) {
-      const csrfToken = document.querySelector('meta[name="csrf-token"]').content
-      const headers = new Headers()
-      headers.append('accept', 'application/json, text/javascript, */*; q=0.01')
-      headers.append('x-csrf-token', csrfToken)
       const configTarget = this.configTarget
 
-      exportCanvas.toBlob(async (blob) => {
+      exportCanvas.toBlob((blob) => {
         if (!blob) return
 
+        // Store focal and config_target on the server before triggering upload
+        this.pushEventTo(this.el, 'image_editor_save', {
+          mode: 'new_copy',
+          focal_x: focalX,
+          focal_y: focalY,
+          config_target: configTarget || 'default'
+        })
+
         const file = new File([blob], 'edited-image.jpg', { type: 'image/jpeg' })
-        const formData = new FormData()
-        formData.append('image', file)
-        formData.append('name', file.name)
-        formData.append('slug', 'image')
-        formData.append('uid', 'image-editor')
-        formData.append('formats', '')
-        if (configTarget) {
-          formData.append('config_target', configTarget)
-        }
 
-        try {
-          const response = await fetch('/admin/api/content/upload/image', {
-            headers,
-            method: 'post',
-            body: formData,
-          })
-          const data = await response.json()
-
-          if (data.status === 200) {
-            this.pushEventTo(this.el, 'image_editor_new_copy', {
-              new_image_id: data.image.id,
-              focal_x: focalX,
-              focal_y: focalY
-            })
-          } else {
-            console.error('Error creating image copy:', data.error)
+        // Forward to LiveView upload
+        const liveInput = document.querySelector('input[name="image_editor_upload"]')
+        if (liveInput) {
+          const formEl = liveInput.closest('form')
+          if (formEl) {
+            this.uploadTo(`#${formEl.id}`, 'image_editor_upload', [file])
           }
-        } catch (e) {
-          console.error('Error creating image copy:', e)
         }
       }, 'image/jpeg', 0.95)
     } else {

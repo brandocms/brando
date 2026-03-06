@@ -235,12 +235,8 @@ test.describe('Image Editor from Blocks', () => {
     await zoomSlider.dispatchEvent('input')
     await page.waitForTimeout(500)
 
-    // Click "Save as new copy" — wait for the HTTP upload to complete
-    const uploadPromise = page.waitForResponse(
-      (resp) => resp.url().includes('/api/content/upload/image') && resp.status() === 200
-    )
+    // Click "Save as new copy" — uses LiveView upload
     await page.locator('#image-editor-save-new').click()
-    await uploadPromise
 
     // Editor drawer should close
     await page.waitForSelector('#image-editor-drawer', { state: 'hidden', timeout: 10000 })
@@ -625,12 +621,8 @@ test.describe('Image Editor from Blocks', () => {
     await zoomSlider.dispatchEvent('input')
     await page.waitForTimeout(500)
 
-    // Click "Save as new copy" — wait for the HTTP upload to complete
-    const uploadPromise = page.waitForResponse(
-      (resp) => resp.url().includes('/api/content/upload/image') && resp.status() === 200
-    )
+    // Click "Save as new copy" — uses LiveView upload
     await page.locator('#image-editor-save-new').click()
-    await uploadPromise
 
     // Editor drawer should close
     await page.waitForSelector('#image-editor-drawer', { state: 'hidden', timeout: 10000 })

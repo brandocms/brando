@@ -2,7 +2,7 @@ import Config
 
 import_config "test.exs"
 # Use :warning to reduce log noise, change to :debug for troubleshooting
-config :logger, level: :debug
+config :logger, level: :warning
 config :e2e_project, sql_sandbox: true
 
 # Override pool settings for e2e tests - need more connections for
