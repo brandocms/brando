@@ -742,13 +742,14 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> assign(:form, new_form)
-    # |> send_form_to_parent()
     |> maybe_update_live_preview_block()
     |> then(&{:ok, &1})
   end
 
-  def update(%{event: "update_ref_data", ref_name: ref_name, ref_data: ref_data} = params, socket) do
+  def update(%{event: "update_ref_data", ref_name: ref_name} = params, socket) do
+    ref_data = Map.get(params, :ref_data)
     force_render? = Map.get(params, :force_render, false)
+    propagate? = Map.get(params, :propagate, false)
     form = socket.assigns.form
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
@@ -767,17 +768,20 @@ defmodule BrandoAdmin.Components.Form.Block do
 
         ref, acc ->
           if Changeset.get_field(ref, :name) == ref_name do
-            # Update the block data
+            # Update the block data (only if ref_data provided)
             block =
               ref
               |> Changeset.get_field(:data)
               |> Changeset.change()
 
-            updated_block =
-              Changeset.put_embed(block, :data, ref_data)
-
-            # Update the ref with block data
-            updated_ref = Changeset.force_change(ref, :data, updated_block)
+            {updated_block, updated_ref} =
+              if ref_data do
+                updated_block = Changeset.put_embed(block, :data, ref_data)
+                updated_ref = Changeset.force_change(ref, :data, updated_block)
+                {updated_block, updated_ref}
+              else
+                {block, ref}
+              end
 
             # Handle video_data if provided (creates/updates video association)
             updated_ref =
@@ -925,8 +929,10 @@ defmodule BrandoAdmin.Components.Form.Block do
         belongs_to
       )
 
+    socket = assign(socket, :form, new_form)
+    if propagate?, do: send_form_to_parent(socket)
+
     socket
-    |> assign(:form, new_form)
     |> maybe_update_live_preview_block()
     |> then(&{:ok, &1})
   end
@@ -2260,7 +2266,13 @@ defmodule BrandoAdmin.Components.Form.Block do
           <%= for split <- @liquid_splits do %>
             <%= case split do %>
               <% {:ref, ref} -> %>
-                <.ref parent_uploads={@parent_uploads} refs_field={@block_form[:refs]} ref_name={ref} target={@target} form_cid={@form_cid} />
+                <.ref
+                  parent_uploads={@parent_uploads}
+                  refs_field={@block_form[:refs]}
+                  ref_name={ref}
+                  target={@target}
+                  form_cid={@form_cid}
+                />
               <% {:content, _} -> %>
                 <div class="split_content"></div>
               <% {:entry_variable, var_name, variable_value} -> %>
@@ -4403,7 +4415,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     # Always re-fetch from DB to avoid stale data (e.g. unprocessed images
     # stored in changeset that have since been processed)
     case Map.get(obj, :image_id) do
-      nil -> base_fields
+      nil ->
+        base_fields
 
       id ->
         case Brando.Images.get_image(id) do

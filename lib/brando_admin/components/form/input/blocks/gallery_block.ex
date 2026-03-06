@@ -39,7 +39,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   # data upload_formats, :string
 
   def mount(socket) do
-    {:ok, assign(socket, available_images: [], show_only_selected?: false, form_cid: nil)}
+    {:ok,
+     assign(socket,
+       available_images: [],
+       show_only_selected?: false,
+       form_cid: nil,
+       upload_registered: false,
+       upload_name: nil
+     )}
   end
 
   def update(%{event: "image_processed", image: image}, socket) do
@@ -57,6 +64,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(:gallery_objects, gallery_objects)
      |> assign(:indexed_objects, Enum.with_index(gallery_objects))
      |> assign(:has_objects?, !Enum.empty?(gallery_objects))}
+  end
+
+  def update(%{event: "live_upload_complete", image_id: image_id}, socket) do
+    send_update(socket.assigns.target, %{
+      event: "update_ref_data",
+      ref_name: socket.assigns.ref_name,
+      add_gallery_image_id: image_id,
+      propagate: true
+    })
+
+    {:ok, socket}
   end
 
   def update(%{event: "image_editor_new_copy", new_image: new_image, old_image_id: old_image_id}, socket) do
@@ -115,6 +133,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     updated_block = update_block_with_overrides(assigns.block, initialized_overrides)
 
+    uid = assigns.ref_form[:uid].value
+    upload_name = :"block_#{uid}_image"
+
+    # Register upload on the Form component (only once).
+    # The Form owns the upload so that LiveView channel events route correctly.
+    if !socket.assigns.upload_registered && assigns[:form_cid] do
+      send_update(assigns.form_cid, %{
+        event: "register_block_upload",
+        upload_name: upload_name,
+        block_uid: uid,
+        block_type: :gallery
+      })
+    end
+
     {:ok,
      socket
      |> assign(assigns)
@@ -128,20 +160,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(:selected_ids, selected_ids)
      |> assign(:has_objects?, !Enum.empty?(gallery_objects))
      |> assign(:block, updated_block)
-     |> assign(:uid, assigns.ref_form[:uid].value)
+     |> assign(:uid, uid)
+     |> assign(:upload_name, upload_name)
+     |> assign(:upload_registered, assigns[:form_cid] != nil)
      |> assign_new(:override_data, fn -> precompute_override_data(gallery_objects, block_data_cs) end)}
   end
 
   def render(assigns) do
     ~H"""
-    <div
-      id={"block-#{@uid}-wrapper"}
-      class="gallery-block"
-      phx-hook="Brando.LegacyImageUpload"
-      data-upload-multi="true"
-      data-text-uploading={gettext("Uploading...")}
-      data-block-uid={@uid}
-    >
+    <div id={"block-#{@uid}-wrapper"} class="gallery-block">
       <.inputs_for :let={block_data} field={@block[:data]}>
         <Block.block
           id={"block-#{@uid}-base"}
@@ -158,68 +185,91 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             <% end %>
           </:description>
 
-          <div id={"block-#{@uid}-base-f-in"} phx-update="ignore">
-            <input name={"block-#{@uid}-f-in"} class="file-input" type="file" multiple />
-          </div>
+          <div
+            id={"block-#{@uid}-upload"}
+            phx-hook="Brando.BlockUpload"
+            data-upload-name={@upload_name}
+            data-upload-mode="multi"
+            data-label-uploading={gettext("Uploading")}
+            data-label-processing={gettext("Processing image sizes...")}
+            class="gallery-upload-wrapper"
+          >
+            <input
+              type="file"
+              class="file-input"
+              accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
+              multiple
+              style="display:none"
+            />
+            <div class="upload-progress" style="display:none">
+              <progress value="0" max="100">0%</progress>
+              <div class="upload-progress-label"></div>
+            </div>
 
-          <span id={"block-#{@uid}-base-file-upload-btn-with-images"} phx-update="ignore">
-            <button type="button" class="tiny file-upload" id={"block-#{@uid}-up-btn-with-images"}>
-              {gettext("Upload images")}
-            </button>
-          </span>
-          <button
-            type="button"
-            class="tiny"
-            phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
-          >
-            {gettext("Select images")}
-          </button>
-          <button
-            type="button"
-            class="tiny"
-            phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
-          >
-            {gettext("Select videos")}
-          </button>
-          <%= if @gallery do %>
-            <.inputs_for :let={gallery_form} field={@ref_form[:gallery]}>
-              <Input.input type={:hidden} field={gallery_form[:id]} />
-              <Input.input type={:hidden} field={gallery_form[:config_target]} />
-              <div
-                id={"sortable-#{block_data.id}-gallery-objects"}
-                class={[
-                  "images",
-                  (@display == :grid && "images-grid") || "images-list"
-                ]}
-                phx-hook="Brando.SortableAssocs"
-                data-target={@myself}
-                data-sortable-id={"sortable-#{block_data.id}-gallery"}
-                data-sortable-handle=".sort-handle-gallery-object"
-                data-sortable-selector=".gallery-object"
-                data-sortable-push-event="true"
+            <div class="gallery-buttons">
+              <button type="button" class="tiny upload-trigger">
+                {gettext("Upload images")}
+              </button>
+              <button
+                type="button"
+                class="tiny"
+                phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
               >
-                <.inputs_for :let={gallery_object_form} field={gallery_form[:gallery_objects]} skip_hidden>
-                  <Object.render
-                    gallery_object_form={gallery_object_form}
-                    gallery_objects={@gallery_objects}
-                    display={@display}
-                    myself={@myself}
-                    uid={@uid}
-                    gallery_form={gallery_form}
-                    override_data={@override_data}
-                    block_data={block_data}
-                    form_id={@form_id}
-                  />
-                </.inputs_for>
-              </div>
-            </.inputs_for>
-          <% end %>
+                {gettext("Select images")}
+              </button>
+              <button
+                type="button"
+                class="tiny"
+                phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
+              >
+                {gettext("Select videos")}
+              </button>
+            </div>
 
-          <div :if={!@has_objects?} class="upload-canvas empty">
-            <div class="alert">
-              {gettext(
-                "No objects currently in block. Click one of the buttons above to get started, or drag and drop media here."
-              )}
+            <%= if @gallery do %>
+              <.inputs_for :let={gallery_form} field={@ref_form[:gallery]}>
+                <Input.input type={:hidden} field={gallery_form[:id]} />
+                <Input.input type={:hidden} field={gallery_form[:config_target]} />
+                <div
+                  id={"sortable-#{block_data.id}-gallery-objects"}
+                  class={[
+                    "images",
+                    (@display == :grid && "images-grid") || "images-list"
+                  ]}
+                  phx-hook="Brando.SortableAssocs"
+                  data-target={@myself}
+                  data-sortable-id={"sortable-#{block_data.id}-gallery"}
+                  data-sortable-handle=".sort-handle-gallery-object"
+                  data-sortable-selector=".gallery-object"
+                  data-sortable-push-event="true"
+                >
+                  <.inputs_for
+                    :let={gallery_object_form}
+                    field={gallery_form[:gallery_objects]}
+                    skip_hidden
+                  >
+                    <Object.render
+                      gallery_object_form={gallery_object_form}
+                      gallery_objects={@gallery_objects}
+                      display={@display}
+                      myself={@myself}
+                      uid={@uid}
+                      gallery_form={gallery_form}
+                      override_data={@override_data}
+                      block_data={block_data}
+                      form_id={@form_id}
+                    />
+                  </.inputs_for>
+                </div>
+              </.inputs_for>
+            <% end %>
+
+            <div :if={!@has_objects?} class="upload-canvas empty">
+              <div class="alert">
+                {gettext(
+                  "No objects currently in block. Click one of the buttons above to get started, or drag and drop media here."
+                )}
+              </div>
             </div>
           </div>
 
@@ -252,7 +302,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               ]}
             />
 
-            <Form.array_inputs :let={%{value: array_value, name: array_name}} field={block_data[:formats]}>
+            <Form.array_inputs
+              :let={%{value: array_value, name: array_name}}
+              field={block_data[:formats]}
+            >
               <input type="hidden" name={array_name} value={array_value} />
             </Form.array_inputs>
 
@@ -288,29 +341,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       ref_data: new_block_data,
       ref_name: ref_name,
       reorder_gallery_objects: {old_idx, new_idx}
-    })
-
-    {:noreply, socket}
-  end
-
-  def handle_event("image_uploaded", %{"id" => id}, socket) do
-    # For refs, add image to gallery association
-    target = socket.assigns.target
-    ref_name = socket.assigns.ref_name
-    {:ok, image} = Brando.Images.get_image(id)
-
-    # Get current block data for gallery settings
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    block_data = Changeset.apply_changes(block_data_cs)
-
-    # Only gallery configuration data goes to block data
-    new_block_data = Map.from_struct(block_data)
-
-    send_update(target, %{
-      event: "update_ref_data",
-      ref_data: new_block_data,
-      ref_name: ref_name,
-      add_gallery_image_id: image.id
     })
 
     {:noreply, socket}

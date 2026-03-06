@@ -396,21 +396,32 @@ defmodule BrandoAdmin.Components.Form do
   file upload support. The upload is registered on the Form component's socket
   so that the upload events are routed correctly through the LiveView channel.
   """
-  def update(%{event: "register_block_upload", upload_name: upload_name, block_uid: block_uid}, socket) do
+  def update(
+        %{event: "register_block_upload", upload_name: upload_name, block_uid: block_uid} = params,
+        socket
+      ) do
     block_uploads = Map.get(socket.assigns, :block_uploads, %{})
 
     socket =
       if Map.has_key?(block_uploads, upload_name) do
         socket
       else
+        block_type = Map.get(params, :block_type, :picture)
+
+        block_info = %{
+          block_uid: block_uid,
+          block_type: block_type
+        }
+
         socket
         |> allow_upload(upload_name,
           accept: ~w(.jpg .jpeg .png .gif .webp .svg),
           max_file_size: 10_000_000,
+          max_entries: if(block_type == :gallery, do: 100, else: 1),
           auto_upload: true,
           progress: &__MODULE__.handle_block_image_progress/3
         )
-        |> assign(:block_uploads, Map.put(block_uploads, upload_name, %{block_uid: block_uid}))
+        |> assign(:block_uploads, Map.put(block_uploads, upload_name, block_info))
       end
 
     {:ok, socket}
@@ -2914,7 +2925,12 @@ defmodule BrandoAdmin.Components.Form do
         Brando.Images.Processing.queue_processing(updated_image, current_user)
 
         if block_cid = Map.get(edit_image, :block_cid) do
-          send_update(block_cid, %{event: "image_editor_new_copy", new_image: updated_image, old_image_id: Map.get(edit_image, :old_image_id)})
+          send_update(block_cid, %{
+            event: "image_editor_new_copy",
+            new_image: updated_image,
+            old_image_id: Map.get(edit_image, :old_image_id)
+          })
+
           send(self(), {:toast, gettext("New image created.")})
           {:noreply, socket}
         else
@@ -3791,7 +3807,6 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-
   @doc """
   Progress callback for block image uploads.
 
@@ -3802,6 +3817,7 @@ defmodule BrandoAdmin.Components.Form do
     block_uploads = Map.get(socket.assigns, :block_uploads, %{})
     block_info = Map.get(block_uploads, upload_name, %{})
     block_uid = block_info[:block_uid]
+    block_type = block_info[:block_type] || :picture
 
     if entry.done? do
       current_user = socket.assigns.current_user
@@ -3837,22 +3853,41 @@ defmodule BrandoAdmin.Components.Form do
               %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
             )
 
-          {:noreply,
-           push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+          {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
 
         image ->
-          # Queue async processing (same pattern as gallery uploads).
           # Subscribe BEFORE queueing so inline Oban broadcasts aren't missed.
           Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
 
           if block_uid do
-            # Register so the :updated PubSub hook knows where to forward
-            # the processed image. Use {module, id} tuple for send_update.
-            send(self(), {
-              :register_pending_block_image,
-              image.id,
-              {BrandoAdmin.Components.Form.Input.Blocks.PictureBlock, "#{block_uid}-picture"}
-            })
+            case block_type do
+              :gallery ->
+                # Defer gallery image addition to handle_info so each image
+                # gets its own render cycle. Direct send_update calls within
+                # the same upload event are batched by LiveView, causing the
+                # Block component to process multiple updates against the same
+                # initial state.
+                send(
+                  self(),
+                  {:add_gallery_image, block_uid, image.id, upload_name, current_user.id}
+                )
+
+                # Register for processed image notification
+                send(
+                  self(),
+                  {:register_pending_block_image, image.id,
+                   {BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock, "#{block_uid}-gallery"}}
+                )
+
+              _picture ->
+                # Register so the :updated PubSub hook knows where to forward
+                # the processed image. Use {module, id} tuple for send_update.
+                send(
+                  self(),
+                  {:register_pending_block_image, image.id,
+                   {BrandoAdmin.Components.Form.Input.Blocks.PictureBlock, "#{block_uid}-picture"}}
+                )
+            end
           end
 
           Brando.Images.Processing.queue_processing(image, current_user)

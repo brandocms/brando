@@ -2,6 +2,8 @@ export default (app) => ({
   mounted() {
     const input = this.el.querySelector('input[type="file"]')
     const uploadName = this.el.dataset.uploadName
+    const mode = this.el.dataset.uploadMode || 'single'
+    this._uploadQueue = []
 
     // Listen for progress and completion via PubSub → user channel.
     // This bypasses the LV diff pipeline so updates arrive in real-time.
@@ -17,6 +19,28 @@ export default (app) => ({
           this.showProcessing()
         }
       })
+
+      // Server signals "send next file" after consuming the previous one.
+      // Only relevant in multi mode (gallery uploads).
+      this._nextFileRef = app.userChannel.on('block:upload_next_file', ({ upload_name }) => {
+        console.log('[BlockUpload] received block:upload_next_file', upload_name, 'queue length:', this._uploadQueue.length)
+        if (upload_name !== uploadName) return
+
+        if (this._uploadQueue.length > 0) {
+          const nextFile = this._uploadQueue.shift()
+          console.log('[BlockUpload] uploading next file:', nextFile.name)
+          // Delay to let the LV diff (which clears the consumed entry from
+          // the upload state) arrive at the client before we push a new file.
+          // Without this, the client-side upload state still shows max_entries
+          // reached and silently rejects the new upload.
+          setTimeout(() => {
+            this.forwardUpload(uploadName, [nextFile])
+          }, 100)
+        } else {
+          console.log('[BlockUpload] queue empty, hiding progress')
+          this.hideProgress()
+        }
+      })
     }
 
     if (input) {
@@ -24,17 +48,36 @@ export default (app) => ({
         e.stopPropagation()
         const files = e.target.files
         if (files && files.length > 0) {
-          this.forwardUpload(uploadName, files)
+          if (mode === 'multi' && files.length > 1) {
+            // Queue all files after the first, send first immediately
+            this._uploadQueue = Array.from(files).slice(1)
+            console.log('[BlockUpload] multi: queued', this._uploadQueue.length, 'files, uploading first:', files[0].name)
+            this.forwardUpload(uploadName, [files[0]])
+          } else {
+            this.forwardUpload(uploadName, files)
+          }
         }
         input.value = ''
       })
     }
 
-    this.el.addEventListener('click', (e) => {
-      if (e.target.closest('button') || e.target.closest('a')) return
-      e.stopPropagation()
-      if (input) input.click()
-    })
+    // Click handling: mode-dependent
+    if (mode === 'single') {
+      // Existing: click anywhere (except buttons) opens file dialog
+      this.el.addEventListener('click', (e) => {
+        if (e.target.closest('button') || e.target.closest('a')) return
+        e.stopPropagation()
+        if (input) input.click()
+      })
+    } else {
+      // Multi: only .upload-trigger buttons and .upload-canvas.empty clicks open dialog
+      this.el.addEventListener('click', (e) => {
+        if (e.target.closest('.upload-trigger') || e.target.closest('.upload-canvas.empty')) {
+          e.stopPropagation()
+          if (input) input.click()
+        }
+      })
+    }
 
     this.el.addEventListener('dragenter', (e) => {
       e.preventDefault()
@@ -58,7 +101,12 @@ export default (app) => ({
       this.el.classList.remove('dragging')
       const files = e.dataTransfer.files
       if (files && files.length > 0) {
-        this.forwardUpload(uploadName, files)
+        if (mode === 'multi' && files.length > 1) {
+          this._uploadQueue = Array.from(files).slice(1)
+          this.forwardUpload(uploadName, [files[0]])
+        } else {
+          this.forwardUpload(uploadName, files)
+        }
       }
     })
   },
@@ -67,6 +115,7 @@ export default (app) => ({
     if (app.userChannel) {
       if (this._progressRef) app.userChannel.off('block:upload_progress', this._progressRef)
       if (this._completeRef) app.userChannel.off('block:upload_complete', this._completeRef)
+      if (this._nextFileRef) app.userChannel.off('block:upload_next_file', this._nextFileRef)
     }
   },
 
@@ -101,6 +150,15 @@ export default (app) => ({
       if (bar) bar.removeAttribute('value') // indeterminate state
       if (label) label.textContent = this.el.dataset.labelProcessing || 'Processing image sizes...'
     }
+  },
+
+  hideProgress() {
+    const progressEl = this.el.querySelector('.upload-progress')
+    const figure = this.el.querySelector('figure')
+    const instructions = this.el.querySelector('.instructions')
+    if (progressEl) progressEl.style.display = 'none'
+    if (figure) figure.style.display = ''
+    if (instructions) instructions.style.display = ''
   },
 
   forwardUpload(uploadName, files) {

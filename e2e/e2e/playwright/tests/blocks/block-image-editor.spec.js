@@ -2,7 +2,6 @@ import { test, expect } from '../../test-support/setupAuth'
 import { syncLV } from '../../utils'
 
 test.describe('Image Editor from Blocks', () => {
-  test.describe.configure({ mode: 'parallel' })
 
   test('opens image editor from picture block preview icon', async ({ page }) => {
     test.setTimeout(120000)

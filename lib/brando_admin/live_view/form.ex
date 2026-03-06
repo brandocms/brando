@@ -371,6 +371,26 @@ defmodule BrandoAdmin.LiveView.Form do
     {:halt, update(socket, :pending_block_image_updates, &Map.put(&1, image_id, block_cid))}
   end
 
+  defp handle_hooks_image_info(
+         {:add_gallery_image, block_uid, image_id, upload_name, user_id},
+         socket
+       ) do
+    send_update(
+      BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock,
+      id: "#{block_uid}-gallery",
+      event: "live_upload_complete",
+      image_id: image_id
+    )
+
+    Brando.endpoint().broadcast!(
+      "user:#{user_id}",
+      "block:upload_next_file",
+      %{upload_name: to_string(upload_name)}
+    )
+
+    {:halt, socket}
+  end
+
   defp handle_hooks_image_info(_, socket), do: {:cont, socket}
 
   # Video hooks - handle PubSub updates
