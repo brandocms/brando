@@ -59,20 +59,22 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   def update(%{event: "image_editor_new_copy", new_image: new_image}, socket) do
-    target = socket.assigns.target
+    {module, id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
 
     block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
     current_block_data = Changeset.apply_changes(block_data_cs)
     new_block_data = current_block_data |> Map.from_struct() |> Map.take(@override_fields)
 
-    send_update(target, %{
+    send_update(module,
+      id: id,
       event: "update_ref_data",
       ref_data: new_block_data,
       ref_name: ref_name,
       image_id: new_image.id,
-      force_render: true
-    })
+      force_render: true,
+      propagate: true
+    )
 
     {:ok, assign(socket, :image, new_image)}
   end
@@ -144,7 +146,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   defp handle_image_complete(socket, image) do
-    target = socket.assigns.target
+    {module, id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
 
     block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
@@ -155,13 +157,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       |> Map.from_struct()
       |> Map.take(@override_fields)
 
-    send_update(target, %{
+    send_update(module,
+      id: id,
       event: "update_ref_data",
       ref_data: new_block_data,
       ref_name: ref_name,
       image_id: image.id,
       force_render: true
-    })
+    )
 
     extracted_path = Map.get(image, :path)
     extracted_filename = if extracted_path, do: Path.basename(extracted_path), else: nil
@@ -403,7 +406,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   def handle_event("reset_image", _, socket) do
-    target = socket.assigns.target
+    {module, id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
 
     # Reset to empty picture block data with no image association
@@ -413,13 +416,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       |> Map.take(@override_fields)
 
     # Send the update with nil image_id to clear the association
-    send_update(target, %{
+    send_update(module,
+      id: id,
       event: "update_ref_data",
       ref_data: new_data,
       ref_name: ref_name,
       image_id: nil,
       force_render: true
-    })
+    )
 
     # Clear the image assigns immediately
     {:noreply,
@@ -434,7 +438,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   def handle_event("select_image", %{"id" => id}, socket) do
     {:ok, image} = Brando.Images.get_image(id)
 
-    target = socket.assigns.target
+    {module, target_id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
 
     # Get current block data to preserve any existing overrides
@@ -447,12 +451,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       |> Map.from_struct()
       |> Map.take(@override_fields)
 
-    send_update(target, %{
+    send_update(module,
+      id: target_id,
       event: "update_ref_data",
       ref_data: new_block_data,
       ref_name: ref_name,
       image_id: image.id
-    })
+    )
 
     # Update the image assigns immediately
     extracted_path = Map.get(image, :path)
@@ -482,7 +487,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     send_update(socket.assigns.form_cid,
       action: :set_edit_image_from_block,
       image: image,
-      block_cid: socket.assigns.myself
+      block_target: {__MODULE__, socket.assigns.id}
     )
 
     # Push the init event directly from this component (same render cycle, no race)

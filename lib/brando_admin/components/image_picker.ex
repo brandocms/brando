@@ -42,7 +42,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
     {:ok, images} =
       Brando.Images.list_images(%{
         select: [:id, :width, :height, :formats, :status, :path, :sizes, :cdn],
-        filter: %{config_target: socket.assigns.config_target},
+        filter: %{config_target: socket.assigns.config_target, status: :processed},
         order: "desc id"
       })
 

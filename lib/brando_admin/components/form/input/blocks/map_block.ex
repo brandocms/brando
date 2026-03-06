@@ -104,7 +104,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
   end
 
   def handle_event("url", %{"source" => source, "embedUrl" => embed_url}, socket) do
-    target = socket.assigns.target
+    {module, id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
 
     new_data = %{
@@ -113,7 +113,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
     }
 
     updated_data = update_block_data(socket, new_data)
-    send_update(target, %{event: "update_ref_data", ref_data: updated_data, ref_name: ref_name})
+    send_update(module, id: id, event: "update_ref_data", ref_data: updated_data, ref_name: ref_name)
 
     {:noreply, socket}
   end

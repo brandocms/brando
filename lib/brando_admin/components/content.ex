@@ -72,7 +72,7 @@ defmodule BrandoAdmin.Components.Content do
 
   def image(assigns) do
     path =
-      if assigns.image do
+      if assigns.image && assigns.image.status == :processed do
         type = Brando.Images.Utils.image_type(assigns.image.path)
 
         Brando.Utils.img_url(

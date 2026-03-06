@@ -97,8 +97,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
       <button
         class="delete-x"
         type="button"
-        phx-click={JS.push("remove_object", target: @myself)}
-        phx-value-index={@gallery_object_form.index}
+        name={"#{@gallery_form.name}[drop_gallery_object_ids][]"}
+        value={@gallery_object_form.index}
+        phx-click={JS.dispatch("change")}
         data-sortable-filter
       >
         <.icon name="hero-x-mark" />

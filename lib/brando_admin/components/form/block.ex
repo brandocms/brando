@@ -853,53 +853,24 @@ defmodule BrandoAdmin.Components.Form.Block do
 
             # Handle replacing a gallery image (remove old, add new in same position)
             {updated_ref, updated_block} =
-              if Map.has_key?(params, :replace_gallery_image_id) do
-                {old_image_id, new_image_id} = params.replace_gallery_image_id
-                current_user = %{id: socket.assigns.current_user_id}
-                updated_ref = replace_media_in_gallery_ref(updated_ref, :image, old_image_id, new_image_id, current_user)
-                updated_block = replace_gallery_media_override(updated_block, old_image_id, new_image_id)
-                {updated_ref, updated_block}
-              else
-                {updated_ref, updated_block}
-              end
+              cond do
+                Map.has_key?(params, :replace_gallery_image) ->
+                  {old_image_id, new_image} = params.replace_gallery_image
+                  current_user = %{id: socket.assigns.current_user_id}
+                  updated_ref = replace_media_in_gallery_ref(updated_ref, :image, old_image_id, new_image, current_user)
+                  updated_block = replace_gallery_media_override(updated_block, old_image_id, new_image.id)
+                  {updated_ref, updated_block}
 
-            # Handle removing gallery object by index
-            {updated_ref, updated_block} =
-              if Map.has_key?(params, :remove_gallery_object_index) do
-                # Get the object at the index to find its image/video ID for override removal
-                current_gallery = Changeset.get_field(updated_ref, :gallery)
-                gallery_objects = (current_gallery && current_gallery.gallery_objects) || []
-                removed_object = Enum.at(gallery_objects, params.remove_gallery_object_index)
+                Map.has_key?(params, :replace_gallery_image_id) ->
+                  {old_image_id, new_image_id} = params.replace_gallery_image_id
+                  current_user = %{id: socket.assigns.current_user_id}
+                  {:ok, new_image} = fetch_media(:image, new_image_id)
+                  updated_ref = replace_media_in_gallery_ref(updated_ref, :image, old_image_id, new_image, current_user)
+                  updated_block = replace_gallery_media_override(updated_block, old_image_id, new_image_id)
+                  {updated_ref, updated_block}
 
-                updated_ref = remove_gallery_object_from_ref_by_index(updated_ref, params.remove_gallery_object_index)
-
-                # Remove override for the removed object's image/video ID
-                updated_block =
-                  if removed_object do
-                    media_id = removed_object.image_id || removed_object.video_id
-
-                    if media_id do
-                      remove_gallery_object_override(updated_block, media_id)
-                    else
-                      updated_block
-                    end
-                  else
-                    updated_block
-                  end
-
-                {updated_ref, updated_block}
-              else
-                {updated_ref, updated_block}
-              end
-
-            # Handle reordering gallery objects
-            {updated_ref, updated_block} =
-              if Map.has_key?(params, :reorder_gallery_objects) do
-                {old_idx, new_idx} = params.reorder_gallery_objects
-                updated_ref = reorder_gallery_objects_in_ref(updated_ref, old_idx, new_idx)
-                {updated_ref, updated_block}
-              else
-                {updated_ref, updated_block}
+                true ->
+                  {updated_ref, updated_block}
               end
 
             # Update the ref with the modified block data
@@ -1576,6 +1547,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         liquid_splits={@liquid_splits}
         parent_uploads={@parent_uploads}
         target={@myself}
+        target_ref={{__MODULE__, @id}}
         form_cid={@form_cid}
         insert_block={
           JS.push("insert_block", target: @myself)
@@ -1656,6 +1628,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         has_table_template?={@has_table_template?}
         table_template_name={@table_template_name}
         target={@myself}
+        target_ref={{__MODULE__, @id}}
         form_cid={@form_cid}
         module_class={@module_class}
         block_module={@block_module}
@@ -1692,6 +1665,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         has_table_template?={@has_table_template?}
         table_template_name={@table_template_name}
         target={@myself}
+        target_ref={{__MODULE__, @id}}
         form_cid={@form_cid}
         module_class={@module_class}
         block_module={@block_module}
@@ -2073,6 +2047,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :vars, :list, default: []
   attr :parent_uploads, :list, default: []
   attr :target, :any
+  attr :target_ref, :any, default: nil
   attr :has_children?, :boolean, default: false
   attr :multi, :boolean, default: false
   attr :liquid_splits, :any, default: []
@@ -2166,6 +2141,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 has_table_template?={@has_table_template?}
                 table_template_name={@table_template_name}
                 target={@target}
+                target_ref={@target_ref}
                 form_cid={@form_cid}
                 is_datasource?={@is_datasource?}
                 datasource_meta={@datasource_meta}
@@ -2207,6 +2183,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               table_template_name={@table_template_name}
               parent_uploads={@parent_uploads}
               target={@target}
+              target_ref={@target_ref}
               form_cid={@form_cid}
               is_datasource?={@is_datasource?}
               datasource_meta={@datasource_meta}
@@ -2279,6 +2256,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                   refs_field={@block_form[:refs]}
                   ref_name={ref}
                   target={@target}
+                  target_ref={@target_ref}
                   form_cid={@form_cid}
                 />
               <% {:content, _} -> %>
@@ -2521,6 +2499,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :refs_field, :any, required: true
   attr :parent_uploads, :any, required: true
   attr :target, :any, required: true
+  attr :target_ref, :any, default: nil
   attr :form_cid, :any, default: nil
 
   def ref(assigns) do
@@ -2549,6 +2528,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 block={block}
                 parent_uploads={@parent_uploads}
                 target={@target}
+                target_ref={@target_ref}
                 form_cid={@form_cid}
               />
             </.polymorphic_embed_inputs_for>
@@ -2598,6 +2578,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> assign_new(:ref_description, fn -> nil end)
       |> assign_new(:ref_form, fn -> nil end)
       |> assign_new(:form_cid, fn -> nil end)
+      |> assign_new(:target_ref, fn -> nil end)
       |> assign_new(:block_id, fn ->
         if assigns[:is_ref?] && assigns[:ref_form] do
           assigns.ref_form[:uid].value
@@ -2677,6 +2658,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         duplicate_block={@duplicate_block}
         parent_uploads={@parent_uploads}
         target={@target}
+        target_ref={@target_ref}
         form_cid={@form_cid}
       />
     <% end %>
@@ -4286,16 +4268,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  # Replace a media item in a gallery ref association (same position)
-  defp replace_media_in_gallery_ref(ref_changeset, media_type, old_media_id, new_media_id, current_user) do
+  # Replace a media item in a gallery ref association (same position).
+  # `new_media` is the full struct (avoids re-fetching from DB).
+  defp replace_media_in_gallery_ref(ref_changeset, media_type, old_media_id, new_media, current_user) do
     current_gallery = Changeset.get_field(ref_changeset, :gallery)
     id_field = media_id_field(media_type)
-
-    {:ok, new_media} =
-      case fetch_media(media_type, new_media_id) do
-        {:ok, _} = result -> result
-        {:error, reason} -> raise "replace_media_in_gallery_ref: failed to fetch #{media_type} with id #{inspect(new_media_id)}: #{inspect(reason)}"
-      end
+    new_media_id = new_media.id
 
     case current_gallery do
       nil ->
@@ -4346,86 +4324,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     Changeset.put_change(block_changeset, :data, updated_data_map)
   end
 
-  # Remove a gallery object by index from a gallery ref association
-  defp remove_gallery_object_from_ref_by_index(ref_changeset, object_index) do
-    current_gallery = Changeset.get_field(ref_changeset, :gallery)
-
-    case current_gallery do
-      nil ->
-        ref_changeset
-
-      gallery ->
-        # Remove object by index from gallery objects in memory
-        existing_objects = gallery.gallery_objects || []
-        updated_objects = List.delete_at(existing_objects, object_index)
-
-        if updated_objects == [] do
-          # If no objects left, remove the gallery association
-          Changeset.put_assoc(ref_changeset, :gallery, nil)
-        else
-          # Update gallery with remaining objects
-          updated_gallery = %{
-            id: Map.get(gallery, :id),
-            config_target: Map.get(gallery, :config_target, "ref:gallery"),
-            gallery_objects: sequence_gallery_objects(updated_objects)
-          }
-
-          Changeset.put_assoc(ref_changeset, :gallery, updated_gallery)
-        end
-    end
-  end
-
-  defp reorder_gallery_objects_in_ref(ref_changeset, old_idx, new_idx) do
-    current_gallery = Changeset.get_field(ref_changeset, :gallery)
-
-    case current_gallery do
-      nil ->
-        ref_changeset
-
-      gallery ->
-        existing_objects = gallery.gallery_objects || []
-
-        # Reorder objects: remove from old position, insert at new position
-        object_to_move = Enum.at(existing_objects, old_idx)
-
-        reordered_objects =
-          existing_objects
-          |> List.delete_at(old_idx)
-          |> List.insert_at(new_idx, object_to_move)
-
-        # Convert ALL objects to maps (same pattern as add_image_to_gallery_ref)
-        gallery_object_maps =
-          reordered_objects
-          |> Enum.with_index()
-          |> Enum.map(fn {obj, new_sequence} ->
-            base = %{
-              image_id: obj.image_id,
-              video_id: obj.video_id,
-              creator_id: obj.creator_id,
-              sequence: new_sequence
-            }
-
-            # Include ID for existing (persisted) objects
-            base = if obj.id, do: Map.put(base, :id, obj.id), else: base
-
-            # Add loaded associations (same as add_image_to_gallery_ref)
-            base
-            |> maybe_add_association(:image, obj)
-            |> maybe_add_association(:video, obj)
-          end)
-
-        # Use the SAME pattern as add_image_to_gallery_ref:
-        # Pass a plain MAP, not a changeset created from the gallery struct.
-        # This avoids Ecto comparing against existing gallery_objects with nil IDs.
-        updated_gallery = %{
-          id: Map.get(gallery, :id),
-          config_target: Map.get(gallery, :config_target, "ref:gallery"),
-          gallery_objects: gallery_object_maps
-        }
-
-        Changeset.put_assoc(ref_changeset, :gallery, updated_gallery)
-    end
-  end
 
   # Note: Removed create_gallery_with_image and add_image_to_existing_gallery
   # These are now handled inline in add_image_to_gallery_ref using changesets

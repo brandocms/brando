@@ -67,7 +67,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
   def update(%{event: "video_created_from_url"} = assigns, socket) do
     # Handle the video creation event from VideoPicker
-    target = socket.assigns.target
+    {module, id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
     ref_form = socket.assigns.ref_form
 
@@ -82,14 +82,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       |> Map.take(@video_override_fields)
 
     # Send the update to the parent with both ref_data and video_data
-    send_update(target, %{
+    send_update(module,
+      id: id,
       event: "update_ref_data",
       ref_name: ref_name,
       ref_data: ref_data,
       video_data: assigns.video_data,
       form: ref_form,
       force_render: true
-    })
+    )
 
     # Update assigns for immediate display
     socket =
@@ -491,7 +492,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   end
 
   def handle_event("reset_image", _, socket) do
-    target = socket.assigns.target
+    {module, id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
 
     # Get current block data and only update cover_image override field
@@ -504,26 +505,27 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       |> Map.take(@video_override_fields)
       |> Map.put(:cover_image, nil)
 
-    send_update(target, %{event: "update_ref_data", ref_data: new_block_data, ref_name: ref_name})
+    send_update(module, id: id, event: "update_ref_data", ref_data: new_block_data, ref_name: ref_name)
 
     {:noreply, assign(socket, :cover_image, nil)}
   end
 
   def handle_event("reset_video", _, socket) do
-    target = socket.assigns.target
+    {module, id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
 
     # Reset to the ref's template defaults (captured on first mount)
     # instead of a blank struct with all-false values
     new_block_data = socket.assigns.initial_override_defaults
 
-    send_update(target, %{
+    send_update(module,
+      id: id,
       event: "update_ref_data",
       ref_data: new_block_data,
       ref_name: ref_name,
       video_id: nil,
       force_render: true
-    })
+    )
 
     # Clear video assigns immediately for block editor display
     socket =
@@ -537,7 +539,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   end
 
   def handle_event("select_image", %{"id" => id}, socket) do
-    target = socket.assigns.target
+    {module, target_id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
     {:ok, image} = Brando.Images.get_image(id)
 
@@ -557,7 +559,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       |> Map.take(@video_override_fields)
       |> Map.put(:cover_image, picture_data)
 
-    send_update(target, %{event: "update_ref_data", ref_data: new_block_data, ref_name: ref_name})
+    send_update(module, id: target_id, event: "update_ref_data", ref_data: new_block_data, ref_name: ref_name)
 
     {:noreply, assign(socket, :cover_image, picture_data)}
   end
@@ -586,7 +588,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   end
 
   def handle_event("select_video", %{"id" => video_id}, socket) do
-    target = socket.assigns.target
+    {module, id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
     ref_form = socket.assigns.ref_form
 
@@ -602,14 +604,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}) do
       {:ok, video} ->
         # Update the ref to point to the selected video
-        send_update(target, %{
+        send_update(module,
+          id: id,
           event: "update_ref_data",
           ref_name: ref_name,
           ref_data: ref_data,
           video_id: video_id,
           form: ref_form,
           force_render: true
-        })
+        )
 
         video_data = Map.from_struct(video)
 

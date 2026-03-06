@@ -50,9 +50,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   def update(%{event: "image_processed", image: image}, socket) do
-    {gallery, gallery_objects} = get_gallery_and_objects(socket.assigns)
+    # Use locally tracked gallery_objects instead of re-reading from form.
+    # After image_editor_new_copy, propagation may not have completed yet,
+    # so the form changeset might still have the old image_id. But we update
+    # @gallery_objects locally in image_editor_new_copy, so the new image_id
+    # is already available here for matching.
+    gallery_objects = socket.assigns[:gallery_objects] || []
 
-    # Replace the stale preloaded image with the fresh processed version
     gallery_objects =
       Enum.map(gallery_objects, fn obj ->
         if obj.image_id == image.id, do: Map.put(obj, :image, image), else: obj
@@ -60,52 +64,82 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     {:ok,
      socket
-     |> assign(:gallery, gallery)
      |> assign(:gallery_objects, gallery_objects)
      |> assign(:indexed_objects, Enum.with_index(gallery_objects))
      |> assign(:has_objects?, !Enum.empty?(gallery_objects))}
   end
 
   def update(%{event: "live_upload_complete", image_id: image_id}, socket) do
-    send_update(socket.assigns.target, %{
+    {module, id} = socket.assigns.target_ref
+
+    send_update(module,
+      id: id,
       event: "update_ref_data",
       ref_name: socket.assigns.ref_name,
       add_gallery_image_id: image_id,
       propagate: true
-    })
+    )
 
     {:ok, socket}
   end
 
   def update(%{event: "image_editor_new_copy", new_image: new_image, old_image_id: old_image_id}, socket) do
-    target = socket.assigns.target
+    {module, id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
 
     block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
     block_data = Changeset.apply_changes(block_data_cs)
     new_block_data = Map.from_struct(block_data)
 
+    # Update gallery_objects locally so image_processed can match on the new
+    # image_id immediately, even before the propagation cascade completes.
+    gallery_objects = socket.assigns[:gallery_objects] || []
+
+    updated_gallery_objects =
+      if old_image_id do
+        Enum.map(gallery_objects, fn obj ->
+          if obj.image_id == old_image_id do
+            obj |> Map.put(:image_id, new_image.id) |> Map.put(:image, new_image)
+          else
+            obj
+          end
+        end)
+      else
+        # Adding new image — append a temporary gallery object
+        new_obj = %{image_id: new_image.id, image: new_image, video_id: nil, video: nil}
+        gallery_objects ++ [new_obj]
+      end
+
     if old_image_id do
-      send_update(target, %{
+      send_update(module,
+        id: id,
         event: "update_ref_data",
         ref_data: new_block_data,
         ref_name: ref_name,
-        replace_gallery_image_id: {old_image_id, new_image.id}
-      })
+        replace_gallery_image: {old_image_id, new_image},
+        propagate: true
+      )
     else
-      send_update(target, %{
+      send_update(module,
+        id: id,
         event: "update_ref_data",
         ref_data: new_block_data,
         ref_name: ref_name,
-        add_gallery_image_id: new_image.id
-      })
+        add_gallery_image_id: new_image.id,
+        propagate: true
+      )
     end
 
-    {:ok, socket}
+    {:ok,
+     socket
+     |> assign(:gallery_objects, updated_gallery_objects)
+     |> assign(:indexed_objects, Enum.with_index(updated_gallery_objects))
+     |> assign(:has_objects?, !Enum.empty?(updated_gallery_objects))}
   end
 
   def update(assigns, socket) do
     {gallery, gallery_objects} = get_gallery_and_objects(assigns)
+
 
     selected_ids =
       gallery_objects
@@ -241,7 +275,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                   data-sortable-id={"sortable-#{block_data.id}-gallery"}
                   data-sortable-handle=".sort-handle-gallery-object"
                   data-sortable-selector=".gallery-object"
-                  data-sortable-push-event="true"
+                  data-sortable-dispatch-event="true"
                 >
                   <.inputs_for
                     :let={gallery_object_form}
@@ -261,6 +295,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                     />
                   </.inputs_for>
                 </div>
+                <input type="hidden" name={"#{gallery_form.name}[drop_gallery_object_ids][]"} />
               </.inputs_for>
             <% end %>
 
@@ -325,31 +360,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:noreply, assign(socket, :show_only_selected?, !socket.assigns.show_only_selected?)}
   end
 
-  def handle_event("reposition", %{"old" => old_idx, "new" => new_idx}, socket) do
-    target = socket.assigns.target
-    ref_name = socket.assigns.ref_name
-
-    # Get current block data for gallery settings
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    block_data = Changeset.apply_changes(block_data_cs)
-
-    # Only gallery configuration data goes to block data
-    new_block_data = Map.from_struct(block_data)
-
-    send_update(target, %{
-      event: "update_ref_data",
-      ref_data: new_block_data,
-      ref_name: ref_name,
-      reorder_gallery_objects: {old_idx, new_idx},
-      propagate: true
-    })
-
-    {:noreply, socket}
-  end
-
   def handle_event("select_image", %{"id" => id, "selected" => "false"}, socket) do
     # For refs, add image to gallery association
-    target = socket.assigns.target
+    {module, target_id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
     {:ok, image} = Brando.Images.get_image(id)
 
@@ -360,12 +373,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     # Only gallery configuration data goes to block data
     new_block_data = Map.from_struct(block_data)
 
-    send_update(target, %{
+    send_update(module,
+      id: target_id,
       event: "update_ref_data",
       ref_data: new_block_data,
       ref_name: ref_name,
-      add_gallery_image_id: image.id
-    })
+      add_gallery_image_id: image.id,
+      propagate: true
+    )
 
     # Update image picker's selected state
     selected_images = current_selected_image_ids(socket) ++ [image.id]
@@ -380,7 +395,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
   def handle_event("select_image", %{"id" => id, "selected" => "true"}, socket) do
     # For refs, remove image from gallery association
-    target = socket.assigns.target
+    {module, target_id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
     {:ok, image} = Brando.Images.get_image(id)
 
@@ -391,13 +406,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     # Only gallery configuration data goes to block data
     new_block_data = Map.from_struct(block_data)
 
-    send_update(target, %{
+    send_update(module,
+      id: target_id,
       event: "update_ref_data",
       ref_data: new_block_data,
       ref_name: ref_name,
       remove_gallery_image_id: image.id,
       propagate: true
-    })
+    )
 
     # Update image picker's selected state
     selected_images = Enum.reject(current_selected_image_ids(socket), &(&1 == image.id))
@@ -406,29 +422,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       id: "image-picker",
       selected_images: selected_images
     )
-
-    {:noreply, socket}
-  end
-
-  def handle_event("remove_object", %{"index" => obj_index}, socket) do
-    # For refs, remove object from gallery association by index
-    target = socket.assigns.target
-    ref_name = socket.assigns.ref_name
-
-    # Get current block data for gallery settings
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    block_data = Changeset.apply_changes(block_data_cs)
-
-    # Only gallery configuration data goes to block data
-    new_block_data = Map.from_struct(block_data)
-
-    send_update(target, %{
-      event: "update_ref_data",
-      ref_data: new_block_data,
-      ref_name: ref_name,
-      remove_gallery_object_index: String.to_integer(obj_index),
-      propagate: true
-    })
 
     {:noreply, socket}
   end
@@ -475,38 +468,41 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   def handle_event("select_video", %{"id" => id, "selected" => "false"}, socket) do
-    target = socket.assigns.target
+    {module, target_id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
 
     block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
     block_data = Changeset.apply_changes(block_data_cs)
     new_block_data = Map.from_struct(block_data)
 
-    send_update(target, %{
+    send_update(module,
+      id: target_id,
       event: "update_ref_data",
       ref_data: new_block_data,
       ref_name: ref_name,
-      add_gallery_video_id: String.to_integer(id)
-    })
+      add_gallery_video_id: String.to_integer(id),
+      propagate: true
+    )
 
     {:noreply, socket}
   end
 
   def handle_event("select_video", %{"id" => id, "selected" => "true"}, socket) do
-    target = socket.assigns.target
+    {module, target_id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
 
     block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
     block_data = Changeset.apply_changes(block_data_cs)
     new_block_data = Map.from_struct(block_data)
 
-    send_update(target, %{
+    send_update(module,
+      id: target_id,
       event: "update_ref_data",
       ref_data: new_block_data,
       ref_name: ref_name,
       remove_gallery_video_id: String.to_integer(id),
       propagate: true
-    })
+    )
 
     {:noreply, socket}
   end
@@ -518,7 +514,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     send_update(socket.assigns.form_cid,
       action: :set_edit_image_from_block,
       image: image,
-      block_cid: socket.assigns.myself,
+      block_target: {__MODULE__, socket.assigns.id},
       old_image_id: image.id
     )
 
@@ -733,7 +729,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     media_id = Map.get(obj, id_field)
     assoc = Map.get(obj, assoc_field)
 
-    needs_load? = media_id && (assoc == nil || match?(%Ecto.Association.NotLoaded{}, assoc))
+    needs_load? =
+      media_id &&
+        (assoc == nil ||
+           match?(%Ecto.Association.NotLoaded{}, assoc) ||
+           (assoc_field == :image && is_map(assoc) && Map.get(assoc, :status) != :processed))
 
     if needs_load?, do: [media_id | acc], else: acc
   end
@@ -768,6 +768,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         obj
 
       is_nil(assoc) || match?(%Ecto.Association.NotLoaded{}, assoc) ->
+        Map.put(obj, assoc_field, Map.get(media_map, media_id))
+
+      # Re-fetch unprocessed images from DB (they may have been processed since)
+      assoc_field == :image && Map.get(assoc, :status) != :processed && Map.has_key?(media_map, media_id) ->
         Map.put(obj, assoc_field, Map.get(media_map, media_id))
 
       true ->

@@ -210,7 +210,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
   def handle_event("select_block", %{"block" => selected_block_type}, socket) do
     block_templates = socket.assigns.block_templates
 
-    target = socket.assigns.target
+    {module, id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
     ref_description = socket.assigns.ref_description
     uid = socket.assigns.uid
@@ -249,10 +249,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
       data: ref_data
     }
 
-    send_update(target, %{
+    send_update(module,
+      id: id,
       event: "update_ref",
       ref: ref
-    })
+    )
 
     {:noreply, socket}
   end

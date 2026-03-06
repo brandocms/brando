@@ -68,6 +68,9 @@ defmodule Brando.Images do
 
       {:path, path}, query ->
         from q in query, where: ilike(q.path, ^"%#{path}%")
+
+      {:status, status}, query ->
+        from t in query, where: t.status == ^status
     end
   end
 

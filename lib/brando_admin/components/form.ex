@@ -178,7 +178,7 @@ defmodule BrandoAdmin.Components.Form do
        field: nil,
        relation_field: nil,
        image: image,
-       block_cid: params[:block_cid],
+       block_target: params[:block_target],
        old_image_id: params[:old_image_id]
      })}
   end
@@ -2879,7 +2879,7 @@ defmodule BrandoAdmin.Components.Form do
         %{assigns: %{current_user: current_user}} = socket
       ) do
     edit_image = socket.assigns.edit_image
-    block_cid = Map.get(edit_image, :block_cid)
+    block_target = Map.get(edit_image, :block_target)
 
     updated_image =
       if params["crop_applied"] do
@@ -2917,8 +2917,8 @@ defmodule BrandoAdmin.Components.Form do
     # paths need processing notifications to update their UI.
     Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
 
-    if block_cid do
-      send(self(), {:register_pending_block_image, updated_image.id, block_cid})
+    if block_target do
+      send(self(), {:register_pending_block_image, updated_image.id, block_target})
     end
 
     # For non-crop case, queue processing after subscribing.
@@ -2939,7 +2939,7 @@ defmodule BrandoAdmin.Components.Form do
 
     send(self(), {:toast, gettext("Changes saved. Image is reprocessing.")})
 
-    if block_cid do
+    if block_target do
       # Block path: update image drawer; PubSub hooks handle the block component.
       singular = socket.assigns.singular
 
@@ -3190,7 +3190,7 @@ defmodule BrandoAdmin.Components.Form do
         %{"image" => image_params},
         %{
           assigns: %{
-            edit_image: %{field: nil, image: original_image, block_cid: block_cid},
+            edit_image: %{field: nil, image: original_image, block_target: block_target},
             current_user: current_user
           }
         } = socket
@@ -3219,9 +3219,10 @@ defmodule BrandoAdmin.Components.Form do
       Brando.Images.Processing.queue_processing(new_image, current_user)
     end
 
-    if block_cid do
+    if block_target do
+      {module, id} = block_target
       old_image_id = Map.get(socket.assigns.edit_image, :old_image_id)
-      send_update(block_cid, %{event: "image_editor_new_copy", new_image: new_image, old_image_id: old_image_id})
+      send_update(module, id: id, event: "image_editor_new_copy", new_image: new_image, old_image_id: old_image_id)
     end
 
     send(self(), {:toast, gettext("New image created.")})
@@ -4078,18 +4079,21 @@ defmodule BrandoAdmin.Components.Form do
             {:ok, updated_image} ->
               Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
 
-              if block_cid = Map.get(edit_image, :block_cid) do
-                send(self(), {:register_pending_block_image, updated_image.id, block_cid})
+              if block_target = Map.get(edit_image, :block_target) do
+                send(self(), {:register_pending_block_image, updated_image.id, block_target})
               end
 
               Brando.Images.Processing.queue_processing(updated_image, current_user)
 
-              if block_cid = Map.get(edit_image, :block_cid) do
-                send_update(block_cid, %{
+              if block_target = Map.get(edit_image, :block_target) do
+                {module, id} = block_target
+
+                send_update(module,
+                  id: id,
                   event: "image_editor_new_copy",
                   new_image: updated_image,
                   old_image_id: Map.get(edit_image, :old_image_id)
-                })
+                )
 
                 send(self(), {:toast, gettext("New image created.")})
                 {:noreply, socket}
