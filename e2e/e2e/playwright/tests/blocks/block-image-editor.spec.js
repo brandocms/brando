@@ -628,15 +628,12 @@ test.describe('Image Editor from Blocks', () => {
     await page.waitForSelector('#image-editor-drawer', { state: 'hidden', timeout: 10000 })
     await syncLV(page)
 
-    // Wait for the new image to be processed and appear
-    await expect(page.locator('.picture-block .preview .image-content img')).toBeVisible({
-      timeout: 20000,
-    })
+    // Wait for the new image to be processed — src must change from the original
+    const imgAfter = page.locator('.picture-block .preview .image-content img')
+    await expect(imgAfter).not.toHaveAttribute('src', srcBefore, { timeout: 20000 })
 
-    // Verify the image src changed (new image created from the crop)
-    const srcAfter = await page
-      .locator('.picture-block .preview .image-content img')
-      .getAttribute('src')
+    // Verify the image src actually changed (new image created from the crop)
+    const srcAfter = await imgAfter.getAttribute('src')
     expect(srcAfter).not.toEqual(srcBefore)
   })
 })
