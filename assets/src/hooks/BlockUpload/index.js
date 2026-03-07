@@ -4,6 +4,8 @@ export default (app) => ({
     const uploadName = this.el.dataset.uploadName
     const mode = this.el.dataset.uploadMode || 'single'
     this._uploadQueue = []
+    this._pendingProcessing = 0
+    this._progressState = { visible: false, phase: 'idle', progress: 0 }
 
     // Listen for progress and completion via PubSub → user channel.
     // This bypasses the LV diff pipeline so updates arrive in real-time.
@@ -16,8 +18,15 @@ export default (app) => ({
 
       this._completeRef = app.userChannel.on('block:upload_complete', ({ upload_name }) => {
         if (upload_name === uploadName) {
+          this._pendingProcessing += 1
           this.showProcessing()
         }
+      })
+
+      this._processedRef = app.userChannel.on('block:upload_processed', ({ upload_name }) => {
+        if (upload_name !== uploadName) return
+        this._pendingProcessing = Math.max(0, this._pendingProcessing - 1)
+        this.maybeHideProgress()
       })
 
       // Server signals "send next file" after consuming the previous one.
@@ -37,8 +46,8 @@ export default (app) => ({
             this.forwardUpload(uploadName, [nextFile])
           }, 100)
         } else {
-          console.log('[BlockUpload] queue empty, hiding progress')
-          this.hideProgress()
+          console.log('[BlockUpload] queue empty, waiting for processing to complete')
+          this.maybeHideProgress()
         }
       })
     }
@@ -109,25 +118,79 @@ export default (app) => ({
         }
       }
     })
+
+    this.syncProgressUI()
+  },
+
+  updated() {
+    // LiveView diffs can patch this subtree while uploads progress.
+    // Re-apply local UI state to avoid progress bar flicker/reset.
+    this.syncProgressUI()
   },
 
   destroyed() {
     if (app.userChannel) {
       if (this._progressRef) app.userChannel.off('block:upload_progress', this._progressRef)
       if (this._completeRef) app.userChannel.off('block:upload_complete', this._completeRef)
+      if (this._processedRef) app.userChannel.off('block:upload_processed', this._processedRef)
       if (this._nextFileRef) app.userChannel.off('block:upload_next_file', this._nextFileRef)
     }
   },
 
   showProgress(progress) {
+    this._progressState = {
+      visible: true,
+      phase: 'uploading',
+      progress,
+    }
+    this.syncProgressUI()
+  },
+
+  showProcessing() {
+    this._progressState = {
+      ...this._progressState,
+      visible: true,
+      phase: 'processing',
+    }
+    this.syncProgressUI()
+  },
+
+  maybeHideProgress() {
+    if (this._uploadQueue.length === 0 && this._pendingProcessing === 0) {
+      this.hideProgress()
+    } else {
+      this.showProcessing()
+    }
+  },
+
+  hideProgress() {
+    this._progressState = { visible: false, phase: 'idle', progress: 0 }
+    this.syncProgressUI()
+  },
+
+  syncProgressUI() {
     const progressEl = this.el.querySelector('.upload-progress')
     const figure = this.el.querySelector('figure')
     const instructions = this.el.querySelector('.instructions')
 
-    if (progressEl) {
-      progressEl.style.display = ''
-      const bar = progressEl.querySelector('progress')
-      const label = progressEl.querySelector('.upload-progress-label')
+    if (!progressEl) return
+
+    if (!this._progressState.visible) {
+      progressEl.style.display = 'none'
+      if (figure) figure.style.display = ''
+      if (instructions) instructions.style.display = ''
+      return
+    }
+
+    progressEl.style.display = ''
+    if (figure) figure.style.display = 'none'
+    if (instructions) instructions.style.display = 'none'
+
+    const bar = progressEl.querySelector('progress')
+    const label = progressEl.querySelector('.upload-progress-label')
+
+    if (this._progressState.phase === 'uploading') {
+      const progress = this._progressState.progress || 0
       if (bar) {
         bar.value = progress
         bar.textContent = `${progress}%`
@@ -136,29 +199,10 @@ export default (app) => ({
         const uploadingLabel = this.el.dataset.labelUploading || 'Uploading'
         label.textContent = `${uploadingLabel} ${progress}%`
       }
-    }
-
-    if (figure) figure.style.display = 'none'
-    if (instructions) instructions.style.display = 'none'
-  },
-
-  showProcessing() {
-    const progressEl = this.el.querySelector('.upload-progress')
-    if (progressEl) {
-      const bar = progressEl.querySelector('progress')
-      const label = progressEl.querySelector('.upload-progress-label')
+    } else if (this._progressState.phase === 'processing') {
       if (bar) bar.removeAttribute('value') // indeterminate state
       if (label) label.textContent = this.el.dataset.labelProcessing || 'Processing image sizes...'
     }
-  },
-
-  hideProgress() {
-    const progressEl = this.el.querySelector('.upload-progress')
-    const figure = this.el.querySelector('figure')
-    const instructions = this.el.querySelector('.instructions')
-    if (progressEl) progressEl.style.display = 'none'
-    if (figure) figure.style.display = ''
-    if (instructions) instructions.style.display = ''
   },
 
   forwardUpload(uploadName, files) {

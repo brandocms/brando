@@ -5,11 +5,12 @@
 - Compile project: `mix compile`
 - Run Elixir tests: `mix test`
 - Run specific test: `mix test path/to/test_file.exs:line_number`
-- Run end to end tests: `cd e2e && ./test_e2e.sh --reset` (user will ask Claude to run these)
 - Start e2e project server (for use with MCP): `cd e2e && ./run_e2e.sh` - the server starts on port 4444
+- Run end to end tests: `cd e2e && source .envrc && ./test_e2e.sh --reset` (user will ask Claude to run these)
 - E2E login credentials: email `admin@brandocms.com`, password `brandocms`
 - E2E test workflow:
   - **CRITICAL**: Always `source .envrc` in the `e2e/` folder before running any e2e commands
+  - **E2E logger level**: Default is `:warning` in `e2e/config/e2e.exs`. Change to `:debug` when troubleshooting server-side issues, then change back.
   - **If JS/CSS changed**: Rebuild assets first: `cd e2e/assets/backend && pnpm build`
   - **Full suite with reset**: `cd e2e && source .envrc && ./test_e2e.sh --reset`
   - **Single test with reset**: `cd e2e && source .envrc && ./test_e2e.sh --reset tests/path/to/test.spec.js`
@@ -17,7 +18,6 @@
   - **Individual tests** (server already running): `cd e2e/e2e/playwright && pnpm playwright test tests/path/to/test.spec.js`
   - **Start server manually**: `cd e2e && source .envrc && MIX_ENV=e2e PORT=4444 mix phx.server`
   - **Seeding**: `cd e2e && source .envrc && BRANDO_SEEDING=true MIX_ENV=e2e mix run priv/repo/e2e_seeds.exs`
-  - **E2E logger level**: Default is `:warning` in `e2e/config/e2e.exs`. Change to `:debug` when troubleshooting server-side issues, then change back.
 - Code analysis:
   - Refactoring opportunities: `mix credo suggest --format json --all --only refactor`
   - Design: `mix credo suggest --format json --all --only design`

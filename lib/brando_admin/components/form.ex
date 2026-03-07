@@ -1566,8 +1566,8 @@ defmodule BrandoAdmin.Components.Form do
 
           <.live_component
             :for={{block_field, block_module, entry_blocks, field_opts} <- @block_map}
-            :key={block_field}
             :if={@has_blocks?}
+            :key={block_field}
             module={BlockField}
             block_module={block_module}
             block_field={block_field}
@@ -1615,7 +1615,12 @@ defmodule BrandoAdmin.Components.Form do
 
   def form_tabs(assigns) do
     ~H"""
-    <div :for={tab <- @tabs} :key={tab.name} class={["form-tab", @active_tab == tab.name && "active"]} data-tab-name={tab.name}>
+    <div
+      :for={tab <- @tabs}
+      :key={tab.name}
+      class={["form-tab", @active_tab == tab.name && "active"]}
+      data-tab-name={tab.name}
+    >
       <div class="row">
         <.tab_fields
           tab={tab}
@@ -3907,7 +3912,7 @@ defmodule BrandoAdmin.Components.Form do
                 send(
                   self(),
                   {:register_pending_block_image, image.id,
-                   {BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock, "#{block_uid}-gallery"}}
+                   {BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock, "#{block_uid}-gallery"}, upload_name}
                 )
 
               _picture ->
@@ -3916,7 +3921,7 @@ defmodule BrandoAdmin.Components.Form do
                 send(
                   self(),
                   {:register_pending_block_image, image.id,
-                   {BrandoAdmin.Components.Form.Input.Blocks.PictureBlock, "#{block_uid}-picture"}}
+                   {BrandoAdmin.Components.Form.Input.Blocks.PictureBlock, "#{block_uid}-picture"}, upload_name}
                 )
             end
           end

@@ -1420,27 +1420,38 @@ defmodule Brando.Villain.Parser do
   end
 
   defp merge_ref_associations(%{data: %{type: "gallery"}} = ref) do
-    merged_data =
-      case Map.get(ref, :gallery) do
-        nil ->
-          ref.data.data
+    gallery =
+      ref
+      |> Map.get(:gallery)
+      |> resolve_gallery_assoc(Map.get(ref, :gallery_id))
 
-        gallery ->
+    {merged_data, merged_gallery} =
+      case gallery do
+        nil ->
+          {ref.data.data, nil}
+
+        %Brando.Galleries.Gallery{} = loaded_gallery ->
           # For galleries, expose the gallery association with override data
           override_data = Map.from_struct(ref.data.data || %{})
 
           # Apply caption overrides to gallery objects
           # TODO: Consider caching this merge operation for large galleries with many objects
-          updated_gallery = apply_gallery_caption_overrides(gallery, override_data)
+          updated_gallery = apply_gallery_caption_overrides(loaded_gallery, override_data)
 
           # Return the block data with the updated gallery association
-          struct(ref.data.data.__struct__, Map.put(override_data, :gallery, updated_gallery))
+          {
+            struct(ref.data.data.__struct__, Map.put(override_data, :gallery, updated_gallery)),
+            updated_gallery
+          }
+
+        _ ->
+          {ref.data.data, nil}
       end
 
     # Return the ref structure with merged data, including active status
     %{
       data: %{data: merged_data, type: "gallery"},
-      gallery: ref.gallery,
+      gallery: merged_gallery,
       name: ref.name,
       description: ref.description,
       active: Map.get(ref, :active, true),
@@ -1471,66 +1482,83 @@ defmodule Brando.Villain.Parser do
     }
   end
 
-  defp apply_gallery_caption_overrides(gallery, override_data) do
-    gallery_object_overrides = Map.get(override_data, :gallery_object_overrides, [])
+  defp resolve_gallery_assoc(%Ecto.Association.NotLoaded{}, gallery_id), do: fetch_gallery_assoc(gallery_id)
+  defp resolve_gallery_assoc(nil, _gallery_id), do: nil
+  defp resolve_gallery_assoc(gallery, _gallery_id), do: gallery
 
-    # If no overrides, return gallery as-is
-    if Enum.empty?(gallery_object_overrides) do
-      gallery
-    else
-      # Build a map for quick lookup
-      overrides_map =
-        Enum.reduce(gallery_object_overrides, %{}, fn override, acc ->
-          Map.put(acc, override.object_id, override)
-        end)
+  defp fetch_gallery_assoc(nil), do: nil
 
-      # Update gallery_objects with caption overrides
-      updated_gallery_objects =
-        Enum.map(gallery.gallery_objects, fn gallery_object ->
-          image = get_loaded_assoc(gallery_object, :image)
-          video = get_loaded_assoc(gallery_object, :video)
+  defp fetch_gallery_assoc(gallery_id) do
+    case Brando.Repo.get(Brando.Galleries.Gallery, gallery_id) do
+      nil ->
+        nil
 
-          # Get the media object ID (image or video)
-          media_id =
-            cond do
-              image -> to_string(image.id)
-              video -> to_string(video.id)
-              true -> nil
-            end
-
-          # Get override for this specific object
-          object_override = Map.get(overrides_map, media_id)
-
-          # Apply overrides to the media object (image or video)
-          updated_gallery_object =
-            cond do
-              image && object_override ->
-                updated_image = apply_caption_overrides(image, object_override)
-                %{gallery_object | image: updated_image}
-
-              video && object_override ->
-                updated_video = apply_caption_overrides(video, object_override)
-                %{gallery_object | video: updated_video}
-
-              true ->
-                gallery_object
-            end
-
-          updated_gallery_object
-        end)
-
-      %{gallery | gallery_objects: updated_gallery_objects}
+      gallery ->
+        Brando.Repo.preload(gallery, gallery_objects: [:image, video: [:thumbnail]])
     end
   end
 
+  defp apply_gallery_caption_overrides(gallery, override_data) do
+    gallery_object_overrides = Map.get(override_data, :gallery_object_overrides, [])
+
+    overrides_map =
+      Enum.reduce(gallery_object_overrides, %{}, fn override, acc ->
+        case override_object_id(override) do
+          nil -> acc
+          object_id -> Map.put(acc, object_id, override)
+        end
+      end)
+
+    updated_gallery_objects =
+      Enum.map(gallery.gallery_objects || [], fn gallery_object ->
+        image = get_loaded_assoc(gallery_object, :image)
+        video = get_loaded_assoc(gallery_object, :video)
+
+        media_id =
+          cond do
+            image -> to_string(image.id)
+            video -> to_string(video.id)
+            true -> nil
+          end
+
+        object_override = Map.get(overrides_map, media_id)
+
+        gallery_object =
+          gallery_object
+          |> maybe_put_loaded_assoc(:image, image)
+          |> maybe_put_loaded_assoc(:video, video)
+
+        cond do
+          image && object_override ->
+            %{gallery_object | image: apply_caption_overrides(image, object_override)}
+
+          video && object_override ->
+            %{gallery_object | video: apply_caption_overrides(video, object_override)}
+
+          true ->
+            gallery_object
+        end
+      end)
+
+    %{gallery | gallery_objects: updated_gallery_objects}
+  end
+
   defp get_loaded_assoc(gallery_object, :image) do
-    with %Ecto.Association.NotLoaded{} <- Map.get(gallery_object, :image),
-         image_id when not is_nil(image_id) <- Map.get(gallery_object, :image_id),
-         {:ok, image} <- Brando.Images.get_image(image_id) do
-      image
-    else
-      %Brando.Images.Image{} = image -> image
-      _ -> nil
+    image = Map.get(gallery_object, :image)
+    image_id = Map.get(gallery_object, :image_id)
+
+    cond do
+      match?(%Brando.Images.Image{}, image) && stale_gallery_image?(image, image_id) ->
+        fetch_gallery_image(image_id, image)
+
+      match?(%Brando.Images.Image{}, image) ->
+        image
+
+      match?(%Ecto.Association.NotLoaded{}, image) && not is_nil(image_id) ->
+        fetch_gallery_image(image_id)
+
+      true ->
+        nil
     end
   end
 
@@ -1543,6 +1571,54 @@ defmodule Brando.Villain.Parser do
       %Brando.Videos.Video{} = video -> video
       _ -> nil
     end
+  end
+
+  defp maybe_put_loaded_assoc(gallery_object, _assoc, nil), do: gallery_object
+  defp maybe_put_loaded_assoc(gallery_object, assoc, loaded), do: Map.put(gallery_object, assoc, loaded)
+
+  defp stale_gallery_image?(%Brando.Images.Image{id: loaded_id, sizes: sizes}, image_id) do
+    id_mismatch? = not is_nil(image_id) and to_string(loaded_id) != to_string(image_id)
+    empty_sizes? = is_map(sizes) and map_size(sizes) == 0
+    id_mismatch? || empty_sizes?
+  end
+
+  defp fetch_gallery_image(image_id, fallback \\ nil)
+  defp fetch_gallery_image(nil, fallback), do: fallback
+
+  defp fetch_gallery_image(image_id, fallback) do
+    case Brando.Images.get_image(image_id) do
+      {:ok, image} -> image
+      _ -> fallback
+    end
+  end
+
+  defp override_object_id(%Ecto.Changeset{} = override) do
+    Ecto.Changeset.get_field(override, :object_id)
+  end
+
+  defp override_object_id(%{object_id: object_id}) do
+    object_id
+  end
+
+  defp override_object_id(_), do: nil
+
+  defp apply_caption_overrides(media_object, %Ecto.Changeset{} = override) do
+    media_object
+    |> maybe_apply_override(
+      :title,
+      Ecto.Changeset.get_field(override, :title),
+      Ecto.Changeset.get_field(override, :use_default_title)
+    )
+    |> maybe_apply_override(
+      :credits,
+      Ecto.Changeset.get_field(override, :credits),
+      Ecto.Changeset.get_field(override, :use_default_credits)
+    )
+    |> maybe_apply_override(
+      :alt,
+      Ecto.Changeset.get_field(override, :alt),
+      Ecto.Changeset.get_field(override, :use_default_alt)
+    )
   end
 
   defp apply_caption_overrides(media_object, override) do

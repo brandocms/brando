@@ -348,27 +348,57 @@ defmodule BrandoAdmin.LiveView.Form do
 
       _ ->
         # Check if this is a pending block image update (e.g. block upload or
-        # "save as new copy" from a block). Supports both CID targets and
-        # {module, id} tuples.
+        # "save as new copy" from a block). Uses stable {module, id} tuples.
         pending = Map.get(socket.assigns, :pending_block_image_updates, %{})
 
         case Map.pop(pending, image.id) do
           {nil, _} ->
             {:cont, socket}
 
+          {%{target: {module, id}, upload_name: upload_name}, remaining} ->
+            send_update(module, id: id, event: "image_processed", image: image)
+            maybe_broadcast_block_upload_processed(socket, upload_name)
+            {:halt, assign(socket, :pending_block_image_updates, remaining)}
+
           {{module, id}, remaining} ->
             send_update(module, id: id, event: "image_processed", image: image)
             {:halt, assign(socket, :pending_block_image_updates, remaining)}
 
-          {block_cid, remaining} ->
-            send_update(block_cid, %{event: "image_processed", image: image})
+          {unexpected_target, remaining} ->
+            require Logger
+
+            Logger.warning("Dropping pending block image update with unexpected target: #{inspect(unexpected_target)}")
+
             {:halt, assign(socket, :pending_block_image_updates, remaining)}
         end
     end
   end
 
-  defp handle_hooks_image_info({:register_pending_block_image, image_id, block_cid}, socket) do
-    {:halt, update(socket, :pending_block_image_updates, &Map.put(&1, image_id, block_cid))}
+  defp handle_hooks_image_info(
+         {:register_pending_block_image, image_id, block_target, upload_name},
+         socket
+       ) do
+    case block_target do
+      {module, id} ->
+        pending_entry = %{target: {module, id}, upload_name: to_string(upload_name)}
+        {:halt, update(socket, :pending_block_image_updates, &Map.put(&1, image_id, pending_entry))}
+
+      _ ->
+        require Logger
+        Logger.warning("Ignoring register_pending_block_image with non-stable target: #{inspect(block_target)}")
+        {:halt, socket}
+    end
+  end
+
+  defp handle_hooks_image_info({:register_pending_block_image, image_id, {module, id}}, socket) do
+    pending_entry = %{target: {module, id}, upload_name: nil}
+    {:halt, update(socket, :pending_block_image_updates, &Map.put(&1, image_id, pending_entry))}
+  end
+
+  defp handle_hooks_image_info({:register_pending_block_image, _image_id, invalid_target}, socket) do
+    require Logger
+    Logger.warning("Ignoring register_pending_block_image with non-stable target: #{inspect(invalid_target)}")
+    {:halt, socket}
   end
 
   defp handle_hooks_image_info(
@@ -451,6 +481,16 @@ defmodule BrandoAdmin.LiveView.Form do
   end
 
   defp handle_hooks_video_info(_, socket), do: {:cont, socket}
+
+  defp maybe_broadcast_block_upload_processed(_socket, nil), do: :ok
+
+  defp maybe_broadcast_block_upload_processed(socket, upload_name) do
+    Brando.endpoint().broadcast!(
+      "user:#{socket.assigns.current_user.id}",
+      "block:upload_processed",
+      %{upload_name: upload_name}
+    )
+  end
 
   # Port exit hooks - catch normal exits from image processing ports (ImageMagick, etc.)
   defp handle_hooks_port_exits({:EXIT, _port, :normal}, socket), do: {:halt, socket}

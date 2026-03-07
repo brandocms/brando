@@ -984,6 +984,46 @@ defmodule Brando.HTMLTest do
            |> assert_attr("height", ["1000"])
   end
 
+  test "picture_tag falls back to original while image is unprocessed" do
+    user = Factory.build(:user)
+    avatar = %{user.avatar | sizes: %{}, status: :unprocessed}
+
+    opts = [
+      prefix: media_url(),
+      key: :small,
+      placeholder: :dominant_color_faded,
+      lazyload: true
+    ]
+
+    assigns = %{avatar: avatar, opts: opts}
+
+    comp = ~H"""
+    <.picture src={@avatar} opts={@opts} />
+    """
+
+    doc =
+      comp
+      |> rendered_to_string()
+      |> Floki.parse_document!()
+
+    assert doc
+           |> Floki.find("picture")
+           |> assert_attr("data-ll-srcset", [])
+
+    assert doc
+           |> Floki.find("picture > img")
+           |> assert_attr("data-ll-image", ["data-ll-image"])
+           |> assert_attr("data-ll-srcset-image", [])
+           |> assert_attr("data-src", ["/media/images/avatars/27i97a.jpeg"])
+           |> assert_attr("src", [
+             "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E"
+           ])
+
+    assert doc
+           |> Floki.find("noscript > img")
+           |> assert_attr("src", ["/media/images/avatars/27i97a.jpeg"])
+  end
+
   test "svg_fallback" do
     assert Brando.HTML.Images.svg_fallback(%{}, nil, width: 200, height: 200) ==
              "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27200%27%20height%3D%27200%27%20style%3D%27background%3Argba%280%2C0%2C0%2C%29%27%2F%3E"

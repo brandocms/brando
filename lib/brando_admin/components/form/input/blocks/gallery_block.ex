@@ -50,6 +50,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   def update(%{event: "image_processed", image: image}, socket) do
+    {module, id} = socket.assigns.target_ref
+
+    # Keep the parent ref changeset in sync so live preview sees the processed image
+    # without waiting for another block mutation (e.g. drag-and-drop reorder).
+    send_update(module,
+      id: id,
+      event: "update_ref_data",
+      ref_name: socket.assigns.ref_name,
+      replace_gallery_image: {image.id, image},
+      force_render: true,
+      propagate: true
+    )
+
     # Use locally tracked gallery_objects instead of re-reading from form.
     # After image_editor_new_copy, propagation may not have completed yet,
     # so the form changeset might still have the old image_id. But we update
@@ -140,7 +153,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   def update(assigns, socket) do
     {gallery, gallery_objects} = get_gallery_and_objects(assigns)
 
-
     selected_ids =
       gallery_objects
       |> Enum.map(fn obj ->
@@ -160,12 +172,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         formats -> Enum.join(formats, ",")
       end
 
-    # Initialize overrides once on mount, then preserve across updates
-    initialized_overrides =
-      socket.assigns[:initialized_overrides] ||
-        initialize_gallery_overrides(gallery_objects, block_data_cs)
+    # Recompute overrides from current gallery objects + current form state.
+    # This keeps overrides in sync when objects are added/removed after mount.
+    initialized_overrides = initialize_gallery_overrides(gallery_objects, block_data_cs)
 
     updated_block = update_block_with_overrides(assigns.block, initialized_overrides)
+    updated_block_data_cs = Block.get_block_data_changeset(updated_block)
 
     uid = assigns.ref_form[:uid].value
     upload_name = :"block_#{uid}_image"
@@ -197,7 +209,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(:uid, uid)
      |> assign(:upload_name, upload_name)
      |> assign(:upload_registered, assigns[:form_cid] != nil)
-     |> assign_new(:override_data, fn -> precompute_override_data(gallery_objects, block_data_cs) end)}
+     |> assign(:override_data, precompute_override_data(gallery_objects, updated_block_data_cs))}
   end
 
   def render(assigns) do
@@ -235,7 +247,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               multiple
               style="display:none"
             />
-            <div class="upload-progress" style="display:none">
+            <div id={"block-#{@uid}-upload-progress"} class="upload-progress" style="display:none" phx-update="ignore">
               <progress value="0" max="100">0%</progress>
               <div class="upload-progress-label"></div>
             </div>
@@ -582,14 +594,23 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     changeset = block_form.source
     current_data = Changeset.get_field(changeset, :data)
 
-    data_map =
+    updated_data_map =
       case current_data do
-        %Changeset{} = cs -> cs |> Changeset.apply_changes() |> Map.from_struct()
-        data when is_struct(data) -> Map.from_struct(data)
-        data when is_map(data) -> data
+        %Changeset{} = data_cs ->
+          data_cs
+          |> Changeset.apply_changes()
+          |> Map.from_struct()
+          |> Map.put(:gallery_object_overrides, initialized_overrides)
+
+        data when is_struct(data) ->
+          data
+          |> Map.from_struct()
+          |> Map.put(:gallery_object_overrides, initialized_overrides)
+
+        data when is_map(data) ->
+          Map.put(data, :gallery_object_overrides, initialized_overrides)
       end
 
-    updated_data_map = Map.put(data_map, :gallery_object_overrides, initialized_overrides)
     updated_changeset = Changeset.put_change(changeset, :data, updated_data_map)
 
     %{block_form | source: updated_changeset}
@@ -601,7 +622,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     # Build a map of existing overrides by object_id
     existing_map =
       Enum.reduce(existing_overrides, %{}, fn override, acc ->
-        Map.put(acc, override.object_id, override)
+        case extract_override_object_id(override) do
+          nil -> acc
+          object_id -> Map.put(acc, object_id, override)
+        end
       end)
 
     # Create override entries for all gallery objects
@@ -782,7 +806,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   defp precompute_override_data(gallery_objects, block_data_cs) do
     current_overrides = Changeset.get_field(block_data_cs, :gallery_object_overrides, [])
 
-    overrides_map = Map.new(current_overrides, &{&1.object_id, &1})
+    overrides_map =
+      Enum.reduce(current_overrides, %{}, fn override, acc ->
+        case extract_override_object_id(override) do
+          nil -> acc
+          object_id -> Map.put(acc, object_id, override)
+        end
+      end)
 
     # Gallery objects should already have media loaded via batch_load_media
     Enum.reduce(gallery_objects, %{}, fn obj, acc ->
@@ -816,14 +846,41 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     {use_default_title, use_default_credits, use_default_alt, current_title, current_credits, current_alt} =
       if object_override do
-        {
-          object_override.use_default_title,
-          object_override.use_default_credits,
-          object_override.use_default_alt,
-          if(object_override.use_default_title, do: default_title, else: object_override.title || ""),
-          if(object_override.use_default_credits, do: default_credits, else: object_override.credits || ""),
-          if(object_override.use_default_alt, do: default_alt, else: object_override.alt || "")
-        }
+        case object_override do
+          %Changeset{} ->
+            use_default_title = Changeset.get_field(object_override, :use_default_title)
+            use_default_credits = Changeset.get_field(object_override, :use_default_credits)
+            use_default_alt = Changeset.get_field(object_override, :use_default_alt)
+            title = Changeset.get_field(object_override, :title)
+            credits = Changeset.get_field(object_override, :credits)
+            alt = Changeset.get_field(object_override, :alt)
+
+            {
+              use_default_title,
+              use_default_credits,
+              use_default_alt,
+              if(use_default_title, do: default_title, else: title || ""),
+              if(use_default_credits, do: default_credits, else: credits || ""),
+              if(use_default_alt, do: default_alt, else: alt || "")
+            }
+
+          _ ->
+            use_default_title = Map.get(object_override, :use_default_title, true)
+            use_default_credits = Map.get(object_override, :use_default_credits, true)
+            use_default_alt = Map.get(object_override, :use_default_alt, true)
+            title = Map.get(object_override, :title)
+            credits = Map.get(object_override, :credits)
+            alt = Map.get(object_override, :alt)
+
+            {
+              use_default_title,
+              use_default_credits,
+              use_default_alt,
+              if(use_default_title, do: default_title, else: title || ""),
+              if(use_default_credits, do: default_credits, else: credits || ""),
+              if(use_default_alt, do: default_alt, else: alt || "")
+            }
+        end
       else
         {true, true, true, default_title, default_credits, default_alt}
       end
@@ -843,6 +900,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       override_exists: object_override != nil
     }
   end
+
+  defp extract_override_object_id(%Changeset{} = override) do
+    Changeset.get_field(override, :object_id)
+  end
+
+  defp extract_override_object_id(%{object_id: object_id}) do
+    object_id
+  end
+
+  defp extract_override_object_id(_), do: nil
 
   # Derives the Form component ID from the ref_form name.
   # e.g. "page[blocks][...]" -> "page" -> "page_form"

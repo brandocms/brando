@@ -378,11 +378,13 @@ defmodule Brando.HTML.Images do
 
     {cropped_ratio, srcset} =
       (Keyword.get(attrs.opts, :srcset) &&
+         has_rendered_sizes?(image_struct) &&
          get_srcset(image_struct, attrs.opts[:srcset], attrs.opts)) ||
         {false, false}
 
     {_, placeholder_srcset} =
       (Keyword.get(attrs.opts, :srcset) &&
+         has_rendered_sizes?(image_struct) &&
          get_srcset(image_struct, attrs.opts[:srcset], attrs.opts, placeholder)) ||
         {false, false}
 
@@ -399,6 +401,7 @@ defmodule Brando.HTML.Images do
   defp add_srcset(%{lazyload: false} = attrs, image_struct) do
     {cropped_ratio, srcset} =
       (Keyword.get(attrs.opts, :srcset) &&
+         has_rendered_sizes?(image_struct) &&
          get_srcset(image_struct, attrs.opts[:srcset], attrs.opts)) ||
         {false, false}
 
@@ -421,6 +424,7 @@ defmodule Brando.HTML.Images do
 
   defp add_mq(%{lazyload: _} = attrs, image_struct) do
     case (Keyword.get(attrs.opts, :media_queries) &&
+            has_rendered_sizes?(image_struct) &&
             get_mq(image_struct, attrs.opts[:media_queries], attrs.opts)) ||
            false do
       false ->
@@ -479,7 +483,11 @@ defmodule Brando.HTML.Images do
   defp add_src(%{lazyload: true} = attrs, image_struct) do
     placeholder = Keyword.get(attrs.opts, :placeholder, false)
 
-    key = Keyword.get(attrs.opts, :key) || :small
+    key =
+      attrs.opts
+      |> Keyword.get(:key, :small)
+      |> resolve_src_key(image_struct)
+
     src = Utils.img_url(image_struct, key, attrs.opts)
 
     fallback =
@@ -494,18 +502,33 @@ defmodule Brando.HTML.Images do
           false
 
         _ ->
-          Utils.img_url(image_struct, placeholder, attrs.opts)
+          placeholder
+          |> resolve_src_key(image_struct)
+          |> then(&Utils.img_url(image_struct, &1, attrs.opts))
       end
 
     attrs
+    |> then(fn updated_attrs ->
+      data_src =
+        if Map.get(updated_attrs.picture, "data-ll-srcset", false) do
+          (placeholder == :micro && src) || fallback
+        else
+          src
+        end
+
+      put_in(updated_attrs, [:img, "data-src"], data_src)
+    end)
     |> put_in([:img, "src"], fallback)
-    |> put_in([:img, "data-src"], (placeholder == :micro && src) || fallback)
     |> put_in([:noscript_img, "src"], src)
     |> Map.put(:src, src)
   end
 
   defp add_src(%{lazyload: false} = attrs, image_struct) do
-    key = Keyword.get(attrs.opts, :key) || :largest
+    key =
+      attrs.opts
+      |> Keyword.get(:key, :largest)
+      |> resolve_src_key(image_struct)
+
     src = Utils.img_url(image_struct, key, attrs.opts)
 
     attrs
@@ -541,6 +564,21 @@ defmodule Brando.HTML.Images do
   defp normalize_color("transparent", _faded?), do: "transparent"
   defp normalize_color(color, true), do: color <> "11"
   defp normalize_color(color, false), do: color
+
+  defp resolve_src_key(nil, _image_struct), do: :original
+  defp resolve_src_key(:original, _image_struct), do: :original
+  defp resolve_src_key("original", _image_struct), do: :original
+
+  defp resolve_src_key(requested_key, image_struct) do
+    if has_rendered_sizes?(image_struct) do
+      requested_key
+    else
+      :original
+    end
+  end
+
+  defp has_rendered_sizes?(%{sizes: sizes}) when is_map(sizes), do: map_size(sizes) > 0
+  defp has_rendered_sizes?(_), do: false
 
   defp add_dims(%{cropped_ratio: false} = attrs, image_struct) do
     img_width = Map.get(image_struct, :width)
