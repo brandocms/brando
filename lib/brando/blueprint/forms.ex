@@ -146,6 +146,37 @@ defmodule Brando.Blueprint.Forms do
 
   ## Input types
 
+  ## Common input options
+
+  ### `hidden`: Conditionally hide an input
+
+  You can hide any input based on a static value, another field's value, or custom logic.
+
+  #### Option shapes
+
+      - `hidden: true | false`
+      - `hidden: {:field_name, expected_value}`
+      - `hidden: fn form -> boolean end`
+
+  #### Example
+
+      input :type, :radios,
+        options: [
+          %{value: :full_case, label: "Full case"},
+          %{value: :external_link, label: "External link"}
+        ]
+
+      input :external_link, :text,
+        hidden: {:type, :full_case}
+
+      input :client_quote, :textarea,
+        hidden: fn form ->
+          form[:type].value != :full_case
+        end
+
+  For tuple rules, atom/string values are treated as equivalent (`:full_case` matches `"full_case"`).
+  The rule is evaluated whenever the form re-renders.
+
   ### `blocks`: Block editor
 
   #### Options

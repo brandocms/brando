@@ -40,6 +40,52 @@
   end
   ```
 
+- **Conditional form visibility**: Added `hidden` rules for form inputs.
+  - Supports `hidden: true | false`
+  - Supports `hidden: {:field_name, expected_value}`
+  - Supports `hidden: fn form -> boolean end`
+  - Tuple rules compare atom/string values as equivalent (`:full_case` and `"full_case"`)
+
+- **Media and gallery workflow improvements**
+  - Added video support in galleries
+  - Added gallery listing and improved gallery admin UX
+  - Added interactive image editor with live crop previews
+  - Added image editor access from picture and gallery blocks
+  - Added compact image input variant for subforms
+
+- **Upload and preview improvements**
+  - Added non-blocking live uploads with real-time progress for picture blocks
+  - Moved gallery blocks and image/file vars to LiveView uploads
+  - Added LivePreview recovery and improved shared preview metadata handling
+  - Upgraded `livepreview.js` integration with newer `morphdom` capabilities
+
+- **Block editor and module tooling**
+  - Moved block toolbar actions into a dropdown menu
+  - Refactored block duplication internals and shared helpers
+  - Included table templates in module export/import flows
+  - Added a listing action to trigger block re-rendering
+
+- **Runtime/infrastructure improvements**
+  - Moved cascade and revision processing to background Oban jobs
+  - Added listeners to generated mix templates
+  - Standardized frontend template tooling on `pnpm`
+
+### Fixes
+
+- Prevented duplicate upload submissions caused by multi-triggered events.
+- Fixed video rendering edge cases for `:upload` and `:external_file` types.
+- Added HLS manifest parsing support in the video pipeline.
+- Cleaned out invalid refs handling paths.
+- Fixed duplicate ID generation in table/template related workflows.
+- Added missing guards for relation updates when entries are absent.
+- Fixed listing filter shortcut handling.
+- Improved resilience in E2E and flaky test scenarios.
+
+### Documentation
+
+- Added form API docs for `hidden` input rules in `Brando.Blueprint.Forms`.
+- Updated deployment guide and install/developer workflow documentation.
+
 ### Breaking Changes
 
 - **Filter DSL field renamed**: In listing filters, the `filter:` field has been renamed to `key:` for clarity.
@@ -54,6 +100,8 @@
   - Video rendering components and parsers updated to use new schema
   - If you were using `Brando.Type.Video` in your code, update to use `Brando.Videos.Video`
   - Test data using video factories should use new field names (`type` instead of `source`)
+
+- **Image processing backend update**: Replaced `sharp-cli` usage with Image/Vix processors. If you had custom sharp-based processing setup, migrate to Image/Vix-based processing.
 
 Before running the migration script, you must fix some `form` syntax in your blueprints.
 If you're passing parameters to the `form` macro, they must be moved to their own functions.
