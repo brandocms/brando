@@ -2,6 +2,44 @@ defmodule Brando.Blueprint.FormsTest do
   use ExUnit.Case
   import Brando.Test.Support, only: [strip_spark_metadata: 1]
 
+  defmodule BlocksHiddenOpts do
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "Tests",
+      schema: "BlocksHiddenOpts",
+      singular: "blocks_hidden_opts",
+      plural: "blocks_hidden_opts",
+      gettext_module: Brando.Gettext
+
+    attributes do
+      attribute :title, :string
+    end
+
+    forms do
+      form do
+        blocks :blocks, hidden: {:title, "hide"}
+
+        tab "Content" do
+          fieldset do
+            input :title, :text
+          end
+        end
+      end
+
+      form :with_fn do
+        blocks :blocks, hidden: &__MODULE__.hide_blocks?/1
+
+        tab "Content" do
+          fieldset do
+            input :title, :text
+          end
+        end
+      end
+    end
+
+    def hide_blocks?(_form), do: false
+  end
+
   test "default form" do
     assert strip_spark_metadata(Brando.BlueprintTest.Project.__form__()) ==
              strip_spark_metadata(%Brando.Blueprint.Forms.Form{
@@ -193,5 +231,16 @@ defmodule Brando.Blueprint.FormsTest do
                  ]
                }
              ])
+  end
+
+  test "blocks accepts hidden opts" do
+    default_form = BlocksHiddenOpts.__form__()
+    with_fn_form = BlocksHiddenOpts.__form__(:with_fn)
+
+    assert [%Brando.Blueprint.Forms.Input{name: :blocks, opts: opts}] = default_form.blocks
+    assert Keyword.get(opts, :hidden) == {:title, "hide"}
+
+    assert [%Brando.Blueprint.Forms.Input{name: :blocks, opts: fn_opts}] = with_fn_form.blocks
+    assert is_function(Keyword.get(fn_opts, :hidden), 1)
   end
 end
