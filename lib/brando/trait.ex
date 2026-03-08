@@ -19,6 +19,7 @@ defmodule Brando.Trait do
   @callback after_save(entry, changeset, user) :: any()
   @callback before_save(changeset, user) :: any()
   @callback generate_code(module, config) :: any()
+  @callback ai_field_opts(module, config, atom) :: Keyword.t() | map() | nil
 
   defmacro __using__(_) do
     defprotocol Module.concat([__CALLER__.module, Implemented]) do
@@ -55,6 +56,9 @@ defmodule Brando.Trait do
       end
 
       defoverridable generate_code: 2
+
+      def ai_field_opts(_module, _config, _field_name), do: []
+      defoverridable ai_field_opts: 3
 
       def list_implementations, do: list_implementations(__MODULE__)
     end
@@ -94,4 +98,27 @@ defmodule Brando.Trait do
       trait.after_save(entry, changeset, user)
     end
   end
+
+  def get_trait_ai_field_opts(schema, field_name) when is_atom(schema) and is_atom(field_name) do
+    if function_exported?(schema, :__traits__, 0) do
+      schema.__traits__()
+      |> Enum.find_value([], fn {trait, trait_opts} ->
+        opts = trait.ai_field_opts(schema, normalize_trait_opts(trait_opts), field_name)
+
+        case opts do
+          nil -> nil
+          [] -> nil
+          opts -> opts
+        end
+      end)
+    else
+      []
+    end
+  end
+
+  def get_trait_ai_field_opts(_, _), do: []
+
+  defp normalize_trait_opts(opts) when is_map(opts), do: opts
+  defp normalize_trait_opts(opts) when is_list(opts), do: Map.new(opts)
+  defp normalize_trait_opts(_), do: %{}
 end

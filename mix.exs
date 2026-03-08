@@ -8,7 +8,7 @@ defmodule Brando.Mixfile do
     [
       app: :brando,
       version: @version,
-      elixir: "~> 1.14.1 or ~> 1.15",
+      elixir: "~> 1.15",
       deps: deps(),
       package: package(),
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -111,6 +111,7 @@ defmodule Brando.Mixfile do
       {:html_sanitize_ex, "~> 1.4"},
 
       # Misc
+      {:req_llm, "~> 1.6"},
       {:req, "~> 0.5 or ~> 1.0"},
       {:gettext, "~> 1.0.0"},
       {:earmark, "~> 1.4.0"},

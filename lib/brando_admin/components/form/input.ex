@@ -351,10 +351,11 @@ defmodule BrandoAdmin.Components.Form.Input do
       assigns
       |> assign(:extensions, extensions)
       |> prepare_input_component()
+      |> prepare_ai_support()
 
     ~H"""
     <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
-      <div class="tiptap-wrapper" id={"#{@field.id}-rich-text-wrapper"}>
+      <div class={["tiptap-wrapper", "input-with-action", @ai_enabled? && "has-action"]} id={"#{@field.id}-rich-text-wrapper"}>
         <div
           id={"#{@field.id}-rich-text"}
           phx-hook="Brando.TipTap"
@@ -367,6 +368,25 @@ defmodule BrandoAdmin.Components.Form.Input do
           </div>
           <.input type={:hidden} field={@field} class="tiptap-text" phx-debounce={300} />
         </div>
+        <button
+          :if={@ai_enabled?}
+          type="button"
+          class="ai-generate-button"
+          phx-click="ai_generate_input"
+          phx-target={@target}
+          phx-value-field_name={to_string(@field.name)}
+          phx-value-field_key={to_string(@field.field)}
+          title={@ai_label}
+          aria-label={@ai_label}
+        >
+          <.icon name="hero-sparkles" class="icon-default" />
+          <svg class="icon-loading spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+            <path
+              fill="none"
+              d="M0 0h24v24H0z"
+            /><path d="M12 2a10 10 0 0 1 10 10h-2a8 8 0 0 0-8-8V2z" />
+          </svg>
+        </button>
       </div>
     </Form.field_base>
     """
@@ -741,22 +761,46 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :opts, :list
 
   def text(assigns) do
-    assigns = prepare_input_component(assigns)
+    assigns =
+      assigns
+      |> prepare_input_component()
+      |> prepare_ai_support()
 
     ~H"""
     <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
-      <.input
-        type={:text}
-        field={@field}
-        placeholder={@placeholder}
-        disabled={@disabled}
-        readonly={@readonly}
-        class={["text", @monospace && "monospace"]}
-        phx-debounce={@debounce}
-        data-watch-focus
-        phx-target={@target}
-        phx-change={@change}
-      />
+      <div class={["input-with-action", @ai_enabled? && "has-action"]}>
+        <.input
+          type={:text}
+          field={@field}
+          placeholder={@placeholder}
+          disabled={@disabled}
+          readonly={@readonly}
+          class={["text", @monospace && "monospace", @ai_enabled? && "has-ai-action"]}
+          phx-debounce={@debounce}
+          data-watch-focus
+          phx-target={@target}
+          phx-change={@change}
+        />
+        <button
+          :if={@ai_enabled?}
+          type="button"
+          class="ai-generate-button"
+          phx-click="ai_generate_input"
+          phx-target={@target}
+          phx-value-field_name={to_string(@field.name)}
+          phx-value-field_key={to_string(@field.field)}
+          title={@ai_label}
+          aria-label={@ai_label}
+        >
+          <.icon name="hero-sparkles" class="icon-default" />
+          <svg class="icon-loading spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+            <path
+              fill="none"
+              d="M0 0h24v24H0z"
+            /><path d="M12 2a10 10 0 0 1 10 10h-2a8 8 0 0 0-8-8V2z" />
+          </svg>
+        </button>
+      </div>
     </Form.field_base>
     """
   end
@@ -769,7 +813,10 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :opts, :list
 
   def textarea(assigns) do
-    assigns = prepare_input_component(assigns)
+    assigns =
+      assigns
+      |> prepare_input_component()
+      |> prepare_ai_support()
 
     assigns =
       assigns
@@ -779,20 +826,55 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
-      <.input
-        type={:textarea}
-        field={@field}
-        class={["text", @monospace && "monospace"]}
-        placeholder={@placeholder}
-        rows={@rows}
-        disabled={@disabled}
-        phx-debounce={@debounce}
-        phx-target={@target}
-        data-watch-focus
-        id={@generated_uid}
-      />
+      <div class={["input-with-action", @ai_enabled? && "has-action"]}>
+        <.input
+          type={:textarea}
+          field={@field}
+          class={["text", @monospace && "monospace", @ai_enabled? && "has-ai-action"]}
+          placeholder={@placeholder}
+          rows={@rows}
+          disabled={@disabled}
+          phx-debounce={@debounce}
+          phx-target={@target}
+          data-watch-focus
+          id={@generated_uid}
+        />
+        <button
+          :if={@ai_enabled?}
+          type="button"
+          class="ai-generate-button"
+          phx-click="ai_generate_input"
+          phx-target={@target}
+          phx-value-field_name={to_string(@field.name)}
+          phx-value-field_key={to_string(@field.field)}
+          title={@ai_label}
+          aria-label={@ai_label}
+        >
+          <.icon name="hero-sparkles" class="icon-default" />
+          <svg class="icon-loading spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+            <path
+              fill="none"
+              d="M0 0h24v24H0z"
+            /><path d="M12 2a10 10 0 0 1 10 10h-2a8 8 0 0 0-8-8V2z" />
+          </svg>
+        </button>
+      </div>
     </Form.field_base>
     """
+  end
+
+  defp prepare_ai_support(assigns) do
+    ai_opts = Brando.AI.normalize_ai_opts(assigns.opts[:ai])
+
+    ai_enabled? =
+      ai_opts != [] &&
+        !is_nil(assigns[:target]) &&
+        Brando.AI.configured?(ai_opts)
+
+    assigns
+    |> assign(:ai_opts, ai_opts)
+    |> assign(:ai_enabled?, ai_enabled?)
+    |> assign(:ai_label, gettext("Generate with AI"))
   end
 
   attr :field, FormField

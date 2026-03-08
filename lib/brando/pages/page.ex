@@ -27,7 +27,21 @@ defmodule Brando.Pages.Page do
   # ++ Traits
   trait Brando.Trait.CastPolymorphicEmbeds
   trait Brando.Trait.Creator
-  trait Brando.Trait.Meta
+
+  trait Brando.Trait.Meta,
+    ai: [
+      meta_title: [
+        prompt:
+          "Write an SEO title tag based on the page title and rendered content. The `language` context value is the CMS language code (for example `en` = English, `no` = Norwegian); always write the output in that language. Return plain text only (no Markdown, no quotes, no emojis). Keep it clear, specific, and unique. Put the primary topic first. Target 50-60 characters; do not exceed 65 characters. If a brand name is clearly present in the source, place it at the end only if it fits naturally. Return exactly one title string.",
+        context: [:title, :blocks, :language]
+      ],
+      meta_description: [
+        prompt:
+          "Write an SEO meta description based on the page title and rendered content. The `language` context value is the CMS language code (for example `en` = English, `no` = Norwegian); always write the output in that language. Return plain text only (no Markdown, no quotes, no emojis, no line breaks). Use one concise sentence in active voice with concrete value. Include key topic terms from the source naturally and avoid keyword stuffing. Target 140-155 characters; do not exceed 160 characters. Return exactly one description string.",
+        context: [:title, :blocks, :language]
+      ]
+    ]
+
   trait Brando.Trait.Revisioned
   trait Brando.Trait.ScheduledPublishing
   trait Brando.Trait.Sequenced, append: true

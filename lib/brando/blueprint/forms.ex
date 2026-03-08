@@ -177,6 +177,77 @@ defmodule Brando.Blueprint.Forms do
   For tuple rules, atom/string values are treated as equivalent (`:full_case` matches `"full_case"`).
   The rule is evaluated whenever the form re-renders.
 
+  ### `ai`: Generate text with ReqLLM
+
+  Add an AI action button to `:text`, `:textarea`, and `:rich_text` inputs. Clicking the button
+  sends a server-side request and replaces the field value with generated text.
+
+  #### Field options
+
+      input :meta_description, :textarea,
+        ai: [
+          prompt: "Write a succinct meta description based on title and intro",
+          context: [:title, :intro]
+        ]
+
+  For `:rich_text` fields, prompt the model to return HTML (not Markdown),
+  since the editor stores HTML.
+
+  #### AI options
+
+      - `prompt` (required): Instruction sent to the model
+      - `context` (optional): List of fields to append as context.
+        Supports regular fields and `:blocks` (rendered block content)
+      - `model` (optional): Model in `"provider:model"` format.
+        If omitted, `Brando.AI` uses its configured `:default_model`
+      - `api_key` (optional): Per-field/provider key override
+      - `temperature`, `max_tokens`, `top_p`, `presence_penalty`, `frequency_penalty`,
+        `tool_choice`, `tools`, `system_prompt`, `provider_options`,
+        `receive_timeout`, `thinking_timeout` (optional): forwarded to ReqLLM
+
+  #### Configuration
+
+  Configure AI defaults in your app config:
+
+      config :brando, Brando.AI,
+        enabled: true,
+        default_model: "openai:gpt-4o-mini",
+        providers: [
+          openai: [api_key: System.get_env("OPENAI_API_KEY")]
+        ],
+        default_opts: [temperature: 0.4]
+
+  Optional per-field defaults:
+
+      config :brando, Brando.AI,
+        fields: [
+          summary: [prompt: "Summarize title and intro", context: [:title, :intro]],
+          teaser: [prompt: "Write a short teaser from title and intro", context: [:title, :intro]]
+        ]
+
+  Trait-provided defaults:
+    Traits may provide field defaults before generic `fields` fallback.
+    For `Brando.Trait.Meta`, configure `meta_title`/`meta_description` defaults
+    on the blueprint:
+
+      trait Brando.Trait.Meta,
+        ai: [
+          meta_title: [prompt: "Write SEO title from title", context: [:title]],
+          meta_description: [prompt: "Write SEO description from title and blocks", context: [:title, :blocks]]
+        ]
+
+  The AI action only appears when:
+    - the input has `ai: [...]`
+    - or a matching trait / `Brando.AI` fallback exists
+    - Brando AI is enabled/configured for that provider/model
+
+  #### Meta trait fields
+
+  `meta_title` and `meta_description` are rendered in the Meta drawer.
+  You can configure AI for these fields either by:
+    - declaring form inputs with `ai: [...]`
+    - setting `trait Brando.Trait.Meta, ai: [...]`
+
   ### `blocks`: Block editor
 
   #### Options

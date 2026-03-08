@@ -29,6 +29,7 @@ defmodule BrandoAdmin.Components.Form do
   import Ecto.Changeset
   import Phoenix.LiveView.TagEngine
 
+  alias Brando.Blueprint.Forms, as: BlueprintForms
   alias Brando.Villain
   alias BrandoAdmin.Components.Button
   alias BrandoAdmin.Components.SplitDropdown
@@ -1517,6 +1518,8 @@ defmodule BrandoAdmin.Components.Form do
               :if={@has_meta?}
               id={"#{@id}-meta-drawer"}
               form={@form}
+              blueprint={@form_blueprint}
+              form_cid={@myself}
               parent_uploads={@uploads}
               current_user={@current_user}
               close={toggle_drawer("##{@id}-meta-drawer")}
@@ -3107,6 +3110,28 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, socket}
   end
 
+  def handle_event("ai_generate_input", %{"field_name" => field_name, "field_key" => field_key}, socket) do
+    with {:ok, field_atom} <- safe_to_existing_atom(field_key),
+         {:ok, ai_opts} <- fetch_field_ai_opts(socket.assigns.form_blueprint, field_atom, socket.assigns.schema),
+         {:ok, prompt} <- build_ai_prompt(socket, ai_opts),
+         {:ok, path, key, string_path} <- parse_form_field_name(field_name, socket.assigns.singular),
+         {:ok, %{text: generated_text}} <- Brando.AI.generate_text(prompt, ai_opts) do
+      updated_socket =
+        socket
+        |> update_changeset(path, key, generated_text)
+        |> maybe_send_ai_update_to_blocks(string_path, generated_text)
+        |> maybe_invalidate_live_preview_assign(string_path, :string_path)
+        |> maybe_fetch_root_blocks(:live_preview_update, 0)
+        |> maybe_force_ai_component_remount(socket.assigns.form_blueprint, field_atom)
+
+      {:noreply, updated_socket}
+    else
+      {:error, reason} ->
+        send(self(), {:toast, ai_error_message(reason)})
+        {:noreply, socket}
+    end
+  end
+
   def handle_event(
         "save_file",
         %{"file" => file_params},
@@ -4607,6 +4632,234 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
+  defp fetch_field_ai_opts(form_blueprint, field_atom, schema) do
+    case BlueprintForms.get_field(field_atom, form_blueprint) do
+      nil ->
+        fetch_fallback_ai_opts(schema, field_atom, :missing_field)
+
+      %{opts: opts} ->
+        opts = opts || []
+
+        if Keyword.has_key?(opts, :ai) do
+          ai_opts = Brando.AI.normalize_ai_opts(Keyword.get(opts, :ai))
+
+          if ai_opts == [] do
+            {:error, :missing_ai_config}
+          else
+            {:ok, ai_opts}
+          end
+        else
+          fetch_fallback_ai_opts(schema, field_atom, :missing_ai_config)
+        end
+    end
+  end
+
+  defp fetch_fallback_ai_opts(schema, field_atom, error_reason) do
+    case Brando.AI.field_ai_opts(schema, field_atom) do
+      [] -> {:error, error_reason}
+      ai_opts -> {:ok, ai_opts}
+    end
+  end
+
+  defp build_ai_prompt(socket, ai_opts) do
+    case Keyword.get(ai_opts, :prompt) do
+      prompt when is_binary(prompt) ->
+        prompt = String.trim(prompt)
+
+        if prompt == "" do
+          {:error, :missing_prompt}
+        else
+          context_fields =
+            ai_opts
+            |> Keyword.get(:context, [])
+            |> normalize_ai_context_fields()
+
+          context_values = build_ai_context_values(socket, context_fields)
+
+          context_lines =
+            context_values
+            |> Enum.map(fn {field, value} -> "#{field}: #{value}" end)
+            |> Enum.reject(&(&1 == ""))
+
+          full_prompt =
+            if context_lines == [] do
+              prompt
+            else
+              [prompt, "\n\nContext:\n", Enum.join(context_lines, "\n")]
+              |> IO.iodata_to_binary()
+            end
+
+          {:ok, full_prompt}
+        end
+
+      _ ->
+        {:error, :missing_prompt}
+    end
+  end
+
+  defp normalize_ai_context_fields(context) when is_list(context) do
+    context
+    |> Enum.map(&normalize_ai_context_field/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp normalize_ai_context_fields(context) do
+    context
+    |> List.wrap()
+    |> normalize_ai_context_fields()
+  end
+
+  defp normalize_ai_context_field(field) when is_atom(field), do: field
+
+  defp normalize_ai_context_field(field) when is_binary(field) do
+    String.to_existing_atom(field)
+  rescue
+    ArgumentError -> nil
+  end
+
+  defp normalize_ai_context_field(_), do: nil
+
+  defp build_ai_context_values(socket, context_fields) do
+    entry = apply_changes(socket.assigns.form.source)
+
+    Enum.reduce(context_fields, [], fn
+      :blocks, acc ->
+        case render_ai_blocks_context(socket) do
+          nil -> acc
+          "" -> acc
+          value -> acc ++ [{:blocks, value}]
+        end
+
+      field, acc ->
+        value = Map.get(entry, field) |> format_ai_context_value()
+
+        if value in [nil, ""] do
+          acc
+        else
+          acc ++ [{field, value}]
+        end
+    end)
+  end
+
+  defp render_ai_blocks_context(%{assigns: %{has_blocks?: false}}), do: nil
+
+  defp render_ai_blocks_context(%{assigns: %{form: form, block_map: block_map}}) do
+    changeset = form.source
+    entry_for_blocks = build_entry_for_blocks(changeset, block_map)
+    rendered_changeset = render_blocks_for_entry(block_map, changeset, entry_for_blocks)
+
+    block_map
+    |> Enum.map(fn {block_field_name, _schema, _entry_blocks, _opts} ->
+      rendered_field_name = :"rendered_#{block_field_name}"
+
+      Ecto.Changeset.get_change(rendered_changeset, rendered_field_name) ||
+        Ecto.Changeset.get_field(rendered_changeset, rendered_field_name)
+    end)
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.map(&HtmlSanitizeEx.strip_tags/1)
+    |> Enum.join("\n\n")
+    |> String.trim()
+  end
+
+  defp format_ai_context_value(nil), do: nil
+  defp format_ai_context_value(value) when is_binary(value), do: value |> HtmlSanitizeEx.strip_tags() |> String.trim()
+  defp format_ai_context_value(value) when is_integer(value), do: Integer.to_string(value)
+  defp format_ai_context_value(value) when is_float(value), do: to_string(value)
+  defp format_ai_context_value(value) when is_boolean(value), do: to_string(value)
+
+  defp format_ai_context_value(value) when is_list(value) do
+    value
+    |> Enum.map(&format_ai_context_value/1)
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.join(", ")
+  end
+
+  defp format_ai_context_value(value) when is_map(value) do
+    value
+    |> inspect(pretty: false, limit: :infinity)
+  end
+
+  defp format_ai_context_value(value), do: to_string(value)
+
+  defp parse_form_field_name(field_name, singular) do
+    segments = Regex.scan(~r/[^\[\]]+/, field_name) |> List.flatten()
+
+    with [root | field_segments] <- segments,
+         true <- root == singular,
+         false <- field_segments == [],
+         {:ok, typed_segments} <- cast_form_path_segments(field_segments),
+         key when is_atom(key) <- List.last(typed_segments) do
+      path = Enum.drop(typed_segments, -1)
+      {:ok, path, key, field_segments}
+    else
+      _ -> {:error, :invalid_field_name}
+    end
+  end
+
+  defp cast_form_path_segments(segments) do
+    Enum.reduce_while(segments, {:ok, []}, fn segment, {:ok, acc} ->
+      case cast_form_path_segment(segment) do
+        {:ok, casted} ->
+          {:cont, {:ok, acc ++ [casted]}}
+
+        {:error, _reason} = error ->
+          {:halt, error}
+      end
+    end)
+  end
+
+  defp cast_form_path_segment(segment) do
+    case Integer.parse(segment) do
+      {idx, ""} ->
+        {:ok, idx}
+
+      _ ->
+        {:ok, String.to_existing_atom(segment)}
+    end
+  rescue
+    ArgumentError -> {:error, :invalid_field_segment}
+  end
+
+  defp maybe_send_ai_update_to_blocks(%{assigns: %{has_blocks?: false}} = socket, _string_path, _generated_text),
+    do: socket
+
+  defp maybe_send_ai_update_to_blocks(socket, string_path, generated_text) do
+    if string_path == ["__force_change"] do
+      socket
+    else
+      access_path = string_path_to_access_path(string_path)
+      send_updated_entry_field_to_blocks(socket, access_path, generated_text)
+    end
+  end
+
+  defp maybe_force_ai_component_remount(socket, nil, _field_atom), do: socket
+
+  defp maybe_force_ai_component_remount(socket, form_blueprint, field_atom) do
+    case BlueprintForms.get_field(field_atom, form_blueprint) do
+      %{type: :rich_text} -> force_svelte_remounts(socket)
+      _ -> socket
+    end
+  end
+
+  defp ai_error_message(:missing_field), do: gettext("Could not resolve AI settings for this field")
+  defp ai_error_message(:missing_ai_config), do: gettext("No AI configuration was found for this field")
+  defp ai_error_message(:missing_prompt), do: gettext("Missing AI prompt configuration")
+  defp ai_error_message(:missing_model), do: gettext("Missing AI model configuration")
+  defp ai_error_message(:missing_api_key), do: gettext("Missing API key for selected AI provider")
+  defp ai_error_message(:empty_response), do: gettext("AI returned an empty response")
+  defp ai_error_message(:invalid_field_name), do: gettext("Could not update this field from AI response")
+  defp ai_error_message(_), do: gettext("Failed to generate text with AI")
+
+  defp safe_to_existing_atom(value) when is_atom(value), do: {:ok, value}
+
+  defp safe_to_existing_atom(value) when is_binary(value) do
+    {:ok, String.to_existing_atom(value)}
+  rescue
+    ArgumentError -> {:error, :invalid_field}
+  end
+
+  defp safe_to_existing_atom(_), do: {:error, :invalid_field}
+
   # used for updating schema assets
   def update_changeset(socket, [], key, arg) do
     # empty path, treat as root field
@@ -4672,30 +4925,21 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp string_path_to_atom_path(string_path) do
-    Enum.map(string_path, &String.to_existing_atom/1)
+    Enum.map(string_path, fn segment ->
+      case Integer.parse(segment) do
+        {idx, ""} -> idx
+        _ -> String.to_existing_atom(segment)
+      end
+    end)
   end
 
   defp string_path_to_access_path(string_path) do
-    case string_path do
-      [field] ->
-        field
-        |> String.to_existing_atom()
-        |> Access.key()
-        |> List.wrap()
-
-      [relation, field] ->
-        [
-          relation |> String.to_existing_atom() |> Access.key(),
-          field |> String.to_existing_atom() |> Access.key()
-        ]
-
-      [relation, index, field] ->
-        [
-          relation |> String.to_existing_atom() |> Access.key(),
-          index |> String.to_integer() |> Access.at(),
-          field |> String.to_existing_atom() |> Access.key()
-        ]
-    end
+    Enum.map(string_path, fn segment ->
+      case Integer.parse(segment) do
+        {idx, ""} -> Access.at(idx)
+        _ -> segment |> String.to_existing_atom() |> Access.key()
+      end
+    end)
   end
 
   ##

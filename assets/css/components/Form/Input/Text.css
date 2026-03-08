@@ -88,3 +88,72 @@ textarea.text {
     float: right;
   }
 }
+
+.input-with-action {
+  position: relative;
+
+  .ai-generate-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 1px dashed color-mix(in srgb, #6d4de3 45%, transparent);
+    background: transparent;
+    color: #6d4de3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 200ms ease;
+    z-index: 2;
+
+    &:hover {
+      background: transparent;
+      border-color: #6d4de3;
+    }
+
+    .icon-loading {
+      display: none;
+    }
+
+    &.phx-click-loading {
+      cursor: wait;
+      opacity: 0.8;
+      pointer-events: none;
+
+      .icon-default {
+        display: none;
+      }
+
+      .icon-loading {
+        display: block;
+      }
+    }
+
+    .hero-sparkles {
+      width: 0.9rem;
+      height: 0.9rem;
+    }
+  }
+}
+
+.drawer {
+  .input-with-action {
+    .ai-generate-button {
+      background: transparent;
+      border: 1px dashed azure;
+      color: azure;
+
+      &:hover {
+        background: transparent;
+        border-color: azure;
+      }
+    }
+  }
+}
+
+input.text.has-ai-action,
+textarea.text.has-ai-action {
+  padding-right: 46px;
+}

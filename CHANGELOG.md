@@ -10,16 +10,26 @@
   - Includes normalization, validation, and deduplication for style definitions
 - **TipTap style integration**: Text block editor now reads `data-tiptap-styles` and renders style actions in the toolbar.
 - **Module text ref defaults**: Creating a new text ref in Module Form now initializes default styles with a `p.lede` preset.
+- **AI form input generation**: Added `ai: [...]` support for `:text`, `:textarea`, and `:rich_text` inputs with server-side generation via `ReqLLM`.
+  - Shows an AI action button in inputs only when configured
+  - Updates form fields server-side and keeps block/live-preview synchronization
+  - Supports context fields including rendered `:blocks`
+  - Supports Meta drawer fields (`meta_title`, `meta_description`) by reusing blueprint input opts
+  - Adds trait-provided AI defaults (`Brando.Trait.ai_field_opts/3`) with Meta trait support
+    for `trait Brando.Trait.Meta, ai: [...]`
 
 #### Documentation
 
 - Added guide: `guides/villain_text_styles.md`.
+- Added AI input docs to `guides/blueprints.md` and `Brando.Blueprint.Forms` module docs.
 
 #### Tests
 
 - Added tests for `styles` normalization/validation/defaults in `test/brando/villain/blocks/text_block_test.exs`.
 - Added Module Form test ensuring text refs initialize with default styles in `test/brando_admin/live/content/module_form_live_test.exs`.
 - Extended existing parser/ref tests to cover styled text and style propagation.
+- Added `Brando.AI` config-resolution tests in `test/brando/ai_test.exs`.
+- Added AI input rendering tests for `meta_description` in `test/brando_admin/components/form/input_test.exs`.
 
 ### Features
 
