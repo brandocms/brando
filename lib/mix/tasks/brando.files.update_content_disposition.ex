@@ -103,31 +103,37 @@ defmodule Mix.Tasks.Brando.Files.UpdateContentDisposition do
       for file <- files do
         s3_key = Path.join(["media", config.upload_path, file.filename])
 
-        disposition_value =
-          case disposition do
-            :inline -> "inline"
-            :attachment -> "attachment; filename=\"#{file.filename}\""
-          end
+        case bucket |> S3.head_object(s3_key) |> ExAws.request(s3_config) do
+          {:error, _} ->
+            Mix.shell().error("  [SKIP] Key not found: #{s3_key}\n")
 
-        Mix.shell().info("  Updating: #{s3_key}")
-        Mix.shell().info("    -> Content-Disposition: #{disposition_value}")
+          {:ok, _} ->
+            disposition_value =
+              case disposition do
+                :inline -> "inline"
+                :attachment -> "attachment; filename=\"#{file.filename}\""
+              end
 
-        unless dry_run? do
-          bucket
-          |> S3.put_object_copy(s3_key, bucket, s3_key,
-            metadata_directive: :REPLACE,
-            content_disposition: disposition_value,
-            content_type: file.mime_type,
-            acl: :public_read
-          )
-          |> ExAws.request(s3_config)
-          |> case do
-            {:ok, _} ->
-              Mix.shell().info([:green, "    [OK]\n"])
+            Mix.shell().info("  Updating: #{s3_key}")
+            Mix.shell().info("    -> Content-Disposition: #{disposition_value}")
 
-            {:error, err} ->
-              Mix.shell().error("    [ERROR] #{inspect(err)}\n")
-          end
+            unless dry_run? do
+              bucket
+              |> S3.put_object_copy(s3_key, bucket, s3_key,
+                metadata_directive: :REPLACE,
+                content_disposition: disposition_value,
+                content_type: file.mime_type,
+                acl: :public_read
+              )
+              |> ExAws.request(s3_config)
+              |> case do
+                {:ok, _} ->
+                  Mix.shell().info([:green, "    [OK]\n"])
+
+                {:error, err} ->
+                  Mix.shell().error("    [ERROR] #{inspect(err)}\n")
+              end
+            end
         end
       end
 
