@@ -93,7 +93,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
       |> String.to_existing_atom()
       |> Villain.get_block_by_type()
 
-    ref_data = struct(block_module, %{data: struct(Module.concat([block_module, Data]))})
+    ref_data = struct(block_module, %{data: build_ref_data(block_module)})
 
     new_ref =
       %Ref{
@@ -317,5 +317,14 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
       |> Brando.Content.Module.changeset(%{}, current_user)
       |> to_form([])
     end)
+  end
+
+  defp build_ref_data(Brando.Villain.Blocks.TextBlock) do
+    data_module = Brando.Villain.Blocks.TextBlock.Data
+    struct(data_module, %{styles: data_module.default_styles()})
+  end
+
+  defp build_ref_data(block_module) do
+    struct(Module.concat([block_module, Data]))
   end
 end

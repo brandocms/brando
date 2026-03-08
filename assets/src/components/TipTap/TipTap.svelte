@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from "svelte";
-  import { Editor, mergeAttributes } from "@tiptap/core";
+  import { Editor, Extension, Mark, mergeAttributes } from "@tiptap/core";
   import { TextStyleKit } from '@tiptap/extension-text-style'
   import StarterKit from "@tiptap/starter-kit";
   import { Focus } from '@tiptap/extensions'
@@ -18,11 +18,40 @@
 
   import { alertPrompt } from "../../alerts";
 
-  let { content, extensions = $bindable(), onFocus } = $props();
+  const STYLED_NODE_ELEMENTS = ["p", "h1", "h2", "h3", "h4", "h5", "h6"];
+  const STYLED_MARK_ELEMENTS = ["span"];
+  const STYLE_CLASS_REGEX = /^[A-Za-z_][A-Za-z0-9_-]*$/;
+
+  const StyledNodes = Extension.create({
+    name: "styledNodes",
+    addGlobalAttributes() {
+      return [
+        {
+          types: ["paragraph", "heading"],
+          attributes: {
+            class: {
+              default: null,
+              parseHTML: (element) => element.getAttribute("class"),
+              renderHTML: (attributes) => {
+                if (!attributes.class) {
+                  return {};
+                }
+
+                return { class: attributes.class };
+              },
+            },
+          },
+        },
+      ];
+    },
+  });
+
+  let { content, extensions = $bindable(), styles = "[]", onFocus } = $props();
 
   let element = $state();
   let editor = $state();
   let tiptapInput;
+  let parsedStyles = $state([]);
 
   let isLinkActive = $state(false);
   let isH1Active = $state(false);
@@ -118,6 +147,207 @@
     }
   };
 
+  const headingLevelForElement = (element) => {
+    if (typeof element !== "string" || !element.startsWith("h")) {
+      return null;
+    }
+
+    const level = Number.parseInt(element.slice(1), 10);
+
+    if (Number.isNaN(level) || level < 1 || level > 6) {
+      return null;
+    }
+
+    return level;
+  };
+
+  const markNameForStyle = (element, className) => {
+    const slug = `${element}_${className}`
+      .toLowerCase()
+      .replace(/[^a-z0-9_]+/g, "_");
+    return `style_${slug}`;
+  };
+
+  const createStyledMarkExtension = (style) =>
+    Mark.create({
+      name: style.markName,
+      parseHTML() {
+        return [
+          {
+            tag: `${style.element}.${style.className}`,
+          },
+        ];
+      },
+      renderHTML({ HTMLAttributes }) {
+        return [
+          style.element,
+          mergeAttributes({ class: style.className }, HTMLAttributes),
+          0,
+        ];
+      },
+    });
+
+  const normalizeStyles = () => {
+    let styleConfig = styles;
+
+    if (!styleConfig) {
+      return [];
+    }
+
+    if (typeof styleConfig === "string") {
+      try {
+        styleConfig = JSON.parse(styleConfig);
+      } catch {
+        return [];
+      }
+    }
+
+    if (!Array.isArray(styleConfig)) {
+      return [];
+    }
+
+    const seen = new Set();
+
+    return styleConfig.reduce((acc, style) => {
+      if (!style || typeof style !== "object") {
+        return acc;
+      }
+
+      const rawElement = String(style.element ?? "")
+        .trim()
+        .toLowerCase();
+      const rawClass = String(style.class ?? "").trim();
+
+      if (
+        ![...STYLED_NODE_ELEMENTS, ...STYLED_MARK_ELEMENTS].includes(rawElement) ||
+        !STYLE_CLASS_REGEX.test(rawClass)
+      ) {
+        return acc;
+      }
+
+      const dedupeKey = `${rawElement}:${rawClass}`;
+
+      if (seen.has(dedupeKey)) {
+        return acc;
+      }
+
+      seen.add(dedupeKey);
+
+      const rawLabel = String(style.label ?? "").trim();
+      const rawIcon = String(style.icon ?? "").trim();
+
+      const mode = STYLED_NODE_ELEMENTS.includes(rawElement) ? "node" : "mark";
+
+      acc.push({
+        key: dedupeKey,
+        element: rawElement,
+        className: rawClass,
+        label: rawLabel || `${rawElement.toUpperCase()} ${rawClass}`,
+        icon: rawIcon || null,
+        mode,
+        markName: mode === "mark" ? markNameForStyle(rawElement, rawClass) : null,
+      });
+
+      return acc;
+    }, []);
+  };
+
+  const applyStyle = (style) => {
+    if (!editor || !style) {
+      return;
+    }
+
+    if (style.mode === "mark" && style.markName) {
+      editor.chain().focus().toggleMark(style.markName).run();
+      return;
+    }
+
+    const chain = editor.chain().focus();
+
+    if (style.element === "p") {
+      chain
+        .setParagraph()
+        .updateAttributes("paragraph", { class: style.className })
+        .run();
+
+      return;
+    }
+
+    const level = headingLevelForElement(style.element);
+
+    if (!level) {
+      return;
+    }
+
+    chain
+      .setHeading({ level })
+      .updateAttributes("heading", { level, class: style.className })
+      .run();
+  };
+
+  const isStyleActive = (style) => {
+    if (!editor || !style) {
+      return false;
+    }
+
+    if (style.mode === "mark" && style.markName) {
+      return editor.isActive(style.markName);
+    }
+
+    if (style.element === "p") {
+      return editor.isActive("paragraph", { class: style.className });
+    }
+
+    const level = headingLevelForElement(style.element);
+
+    if (!level) {
+      return false;
+    }
+
+    return editor.isActive("heading", { level, class: style.className });
+  };
+
+  const clearBlockStyle = () => {
+    if (!editor) {
+      return;
+    }
+
+    if (editor.isActive("paragraph")) {
+      editor.chain().focus().updateAttributes("paragraph", { class: null }).run();
+      return;
+    }
+
+    for (const level of [1, 2, 3, 4, 5, 6]) {
+      if (editor.isActive("heading", { level })) {
+        editor.chain().focus().updateAttributes("heading", { level, class: null }).run();
+        return;
+      }
+    }
+  };
+
+  const setParagraph = () => {
+    editor
+      .chain()
+      .focus()
+      .setParagraph()
+      .updateAttributes("paragraph", { class: null })
+      .run();
+  };
+
+  const toggleHeading = (level) => {
+    if (editor.isActive("heading", { level })) {
+      setParagraph();
+      return;
+    }
+
+    editor
+      .chain()
+      .focus()
+      .setHeading({ level })
+      .updateAttributes("heading", { level, class: null })
+      .run();
+  };
+
   const toggleAnchor = () => {
     let currentId = "";
 
@@ -195,6 +425,10 @@
     }
 
     extensions = processExtensions();
+    parsedStyles = normalizeStyles();
+    const styleMarkExtensions = parsedStyles
+      .filter((style) => style.mode === "mark")
+      .map((style) => createStyledMarkExtension(style));
 
     tiptapInput =
       element.parentNode.parentNode.parentNode.parentNode.parentNode.querySelector(
@@ -234,6 +468,8 @@
           dropcursor: false,
           link: false
         }),
+        StyledNodes,
+        ...styleMarkExtensions,
         Typography,
 
         CustomLink.configure({
@@ -317,7 +553,7 @@
   <div class="tiptap-menu">
     {#if extensions.includes("p")}
       <button
-        onclick={() => editor.chain().focus().setParagraph().run()}
+        onclick={() => setParagraph()}
         class="menu-item"
         class:active={isPActive}
         type="button"
@@ -329,7 +565,7 @@
     {/if}
     {#if extensions.includes("h1")}
       <button
-        onclick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+        onclick={() => toggleHeading(1)}
         class="menu-item"
         class:active={isH1Active}
         type="button"
@@ -341,7 +577,7 @@
     {/if}
     {#if extensions.includes("h2")}
       <button
-        onclick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+        onclick={() => toggleHeading(2)}
         class="menu-item"
         class:active={isH2Active}
         type="button"
@@ -353,7 +589,7 @@
     {/if}
     {#if extensions.includes("h3")}
       <button
-        onclick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+        onclick={() => toggleHeading(3)}
         class="menu-item"
         class:active={isH3Active}
         type="button"
@@ -361,6 +597,33 @@
         aria-label="Heading 3"
       >
         <span class="tiptap-h3"></span>
+      </button>
+    {/if}
+    {#each parsedStyles as style (style.key)}
+      <button
+        onclick={() => applyStyle(style)}
+        class="menu-item"
+        class:active={isStyleActive(style)}
+        type="button"
+        title={style.label}
+        aria-label={style.label}
+      >
+        {#if style.icon}
+          <span class={style.icon}></span>
+        {:else}
+          <span>{style.label}</span>
+        {/if}
+      </button>
+    {/each}
+    {#if parsedStyles.some((style) => style.mode === "node")}
+      <button
+        onclick={() => clearBlockStyle()}
+        class="menu-item"
+        type="button"
+        title="Clear block style"
+        aria-label="Clear block style"
+      >
+        <span class="hero-x-mark"></span>
       </button>
     {/if}
     {#if extensions.includes("list")}

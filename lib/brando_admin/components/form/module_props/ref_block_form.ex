@@ -160,7 +160,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
     ~H"""
     <Form.inputs_for_block :let={block_data} field={@ref_data[:data]}>
       <Input.text field={block_data[:text]} label={gettext("Text")} />
-      <Input.text field={block_data[:type]} label={gettext("Type")} />
       <.live_component
         module={Input.MultiSelect}
         id={"#{@form_id}-ref-#{@key}-#{@ref_name}-extensions"}
@@ -168,6 +167,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
         field={block_data[:extensions]}
         opts={[options: @text_extension_options]}
       />
+      <Input.hidden field={block_data[:type]} />
       <br />
       {block_data[:extensions].value}
     </Form.inputs_for_block>

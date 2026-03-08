@@ -29,6 +29,7 @@ export default (app) => ({
       props: {
         content: $input.getAttribute('value') || '',
         extensions: this.el.getAttribute('data-tiptap-extensions'),
+        styles: this.el.getAttribute('data-tiptap-styles'),
         onFocus: reportFocus,
       },
     })

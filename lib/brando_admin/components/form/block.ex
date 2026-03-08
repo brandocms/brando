@@ -2986,11 +2986,18 @@ defmodule BrandoAdmin.Components.Form.Block do
         assigns.block[:uid].value
       end
 
+    styles =
+      block_data_cs
+      |> Changeset.get_field(:styles)
+      |> Brando.Villain.Blocks.TextBlock.Data.normalize_styles()
+      |> Jason.encode!()
+
     assigns =
       assigns
       |> assign(:uid, uid)
       |> assign(:text_type, Changeset.get_field(block_data_cs, :type))
       |> assign(:extensions, extensions)
+      |> assign(:styles, styles)
 
     ~H"""
     <.inputs_for :let={text_block_data} field={@block[:data]}>
@@ -3028,6 +3035,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 id={"block-#{@uid}-rich-text"}
                 data-block-uid={@uid}
                 data-tiptap-extensions={@extensions}
+                data-tiptap-styles={@styles}
                 phx-hook="Brando.TipTap"
                 data-tiptap-type="block"
                 data-name="TipTap"
@@ -4209,8 +4217,11 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     {:ok, media} =
       case fetch_media(media_type, media_id) do
-        {:ok, _} = result -> result
-        {:error, reason} -> raise "add_media_to_gallery_ref: failed to fetch #{media_type} with id #{inspect(media_id)}: #{inspect(reason)}"
+        {:ok, _} = result ->
+          result
+
+        {:error, reason} ->
+          raise "add_media_to_gallery_ref: failed to fetch #{media_type} with id #{inspect(media_id)}: #{inspect(reason)}"
       end
 
     new_gallery_object =
@@ -4323,7 +4334,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     updated_data_map = Map.put(data_map, :gallery_object_overrides, updated_overrides)
     Changeset.put_change(block_changeset, :data, updated_data_map)
   end
-
 
   # Note: Removed create_gallery_with_image and add_image_to_existing_gallery
   # These are now handled inline in add_image_to_gallery_ref using changesets

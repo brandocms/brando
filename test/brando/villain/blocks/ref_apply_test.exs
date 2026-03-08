@@ -290,7 +290,10 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
           type: "text",
           data: %Brando.Villain.Blocks.TextBlock.Data{
             text: "Source Text",
-            type: :paragraph
+            type: :paragraph,
+            styles: [
+              %{"element" => "p", "class" => "lede", "label" => "Lede"}
+            ]
           }
         }
       }
@@ -301,7 +304,8 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
           type: "text",
           data: %Brando.Villain.Blocks.TextBlock.Data{
             text: "Target Text",
-            type: :paragraph
+            type: :paragraph,
+            styles: []
           }
         }
       }
@@ -321,6 +325,7 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
       # Text should be preserved (protected attribute), type should be updated
       assert updated_ref.data.data.text == "Target Text"
       assert updated_ref.data.data.type == :paragraph
+      assert updated_ref.data.data.styles == [%{"element" => "p", "class" => "lede", "label" => "Lede"}]
     end
   end
 

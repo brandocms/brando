@@ -1,4 +1,25 @@
-## 0.54.0
+## 0.54.0 (Unreleased)
+
+### Unreleased
+
+#### Features
+
+- **Villain text styles API**: Added `styles` to `Brando.Villain.Blocks.TextBlock.Data` for configurable text style presets.
+  - Supports styled node elements: `p`, `h1`-`h6`
+  - Supports styled inline elements: `span`
+  - Includes normalization, validation, and deduplication for style definitions
+- **TipTap style integration**: Text block editor now reads `data-tiptap-styles` and renders style actions in the toolbar.
+- **Module text ref defaults**: Creating a new text ref in Module Form now initializes default styles with a `p.lede` preset.
+
+#### Documentation
+
+- Added guide: `guides/villain_text_styles.md`.
+
+#### Tests
+
+- Added tests for `styles` normalization/validation/defaults in `test/brando/villain/blocks/text_block_test.exs`.
+- Added Module Form test ensuring text refs initialize with default styles in `test/brando_admin/live/content/module_form_live_test.exs`.
+- Extended existing parser/ref tests to cover styled text and style propagation.
 
 ### Features
 
