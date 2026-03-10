@@ -32,7 +32,26 @@ defmodule Brando.Images.Uploads.Schema do
     {:ok, %{client_name: filename, client_type: content_type}}
   end
 
+  def build_meta(%{
+        "image" => %Plug.Upload{path: path},
+        "config_target" => config_target,
+        "folder_id" => folder_id
+      }) do
+    {:ok, %{path: path, config_target: config_target, folder_id: parse_folder_id(folder_id)}}
+  end
+
   def build_meta(%{"image" => %Plug.Upload{path: path}, "config_target" => config_target}) do
     {:ok, %{path: path, config_target: config_target}}
   end
+
+  defp parse_folder_id(folder_id) when is_integer(folder_id), do: folder_id
+
+  defp parse_folder_id(folder_id) when is_binary(folder_id) do
+    case Integer.parse(folder_id) do
+      {id, ""} -> id
+      _ -> nil
+    end
+  end
+
+  defp parse_folder_id(_), do: nil
 end

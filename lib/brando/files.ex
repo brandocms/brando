@@ -48,6 +48,12 @@ defmodule Brando.Files do
 
       {:path, path}, query ->
         from q in query, where: ilike(q.path, ^"%#{path}%")
+
+      {:folder_id, folder_id}, query ->
+        case normalize_folder_id(folder_id) do
+          nil -> from(t in query, where: is_nil(t.folder_id))
+          id -> from(t in query, where: t.folder_id == ^id)
+        end
     end
   end
 
@@ -130,6 +136,19 @@ defmodule Brando.Files do
   def get_config_for(_) do
     get_config_for(%{config_target: "default"})
   end
+
+  defp normalize_folder_id(nil), do: nil
+  defp normalize_folder_id(""), do: nil
+  defp normalize_folder_id(folder_id) when is_integer(folder_id), do: folder_id
+
+  defp normalize_folder_id(folder_id) when is_binary(folder_id) do
+    case Integer.parse(folder_id) do
+      {id, ""} -> id
+      _ -> nil
+    end
+  end
+
+  defp normalize_folder_id(_), do: nil
 
   defp maybe_struct(_struct_type, %FileConfig{} = config), do: config
   defp maybe_struct(struct_type, config), do: struct(struct_type, config)

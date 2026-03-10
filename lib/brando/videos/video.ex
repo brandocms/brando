@@ -59,6 +59,7 @@ defmodule Brando.Videos.Video do
     attribute :source_url, :text
     attribute :remote_id, :text
     attribute :config_target, :text
+    attribute :folder_id, :integer
 
     attribute :status, :enum,
       values: [:uploading, :processing, :ready, :errored],

@@ -6,7 +6,6 @@ const calc = (c, mw, w) => {
 
 export default app => ({
   mounted() {
-    console.log('==> Image FocalPoint mounted!!!')
     const field = this.el.dataset.field
     this.movePoint(this.el, this.el.dataset.x, this.el.dataset.y)
 
@@ -22,9 +21,7 @@ export default app => ({
   },
 
   updated() {
-    console.log('==> Image FocalPoint updated')
     if (this.previousX !== this.el.dataset.x || this.previousY !== this.el.dataset.y) {
-      console.log('movepoint!')
       this.movePoint(this.el, this.el.dataset.x, this.el.dataset.y)
     }
   },

@@ -289,6 +289,8 @@ defmodule BrandoAdmin.LiveView.Form do
   end
 
   defp handle_hooks_image_info({image, [:image, :updated], path}, socket) do
+    send_update(BrandoAdmin.Components.ImagePicker, id: "image-picker", refresh_images: true)
+
     case String.split(image.config_target, ":") do
       ["image", image_schema_binary, field_name] ->
         field_atom = String.to_existing_atom(field_name)

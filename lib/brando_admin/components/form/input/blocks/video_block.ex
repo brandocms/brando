@@ -479,10 +479,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
   def handle_event("set_target", _, socket) do
     myself = socket.assigns.myself
+    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+    block_data = Changeset.apply_changes(block_data_cs)
+    config_target = Map.get(block_data, :config_target, "default") || "default"
 
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
-      config_target: "default",
+      config_target: config_target,
       event_target: myself,
       multi: false,
       selected_images: []

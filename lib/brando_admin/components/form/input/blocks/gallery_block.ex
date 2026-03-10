@@ -189,7 +189,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         event: "register_block_upload",
         upload_name: upload_name,
         block_uid: uid,
-        block_type: :gallery
+        block_type: :gallery,
+        config_target: (gallery && Map.get(gallery, :config_target)) || "default"
       })
     end
 
@@ -208,6 +209,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(:block, updated_block)
      |> assign(:uid, uid)
      |> assign(:upload_name, upload_name)
+     |> assign(:config_target, (gallery && Map.get(gallery, :config_target)) || "default")
      |> assign(:upload_registered, assigns[:form_cid] != nil)
      |> assign(:override_data, precompute_override_data(gallery_objects, updated_block_data_cs))}
   end
@@ -235,6 +237,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             id={"block-#{@uid}-upload"}
             phx-hook="Brando.BlockUpload"
             data-upload-name={@upload_name}
+            data-config-target={@config_target}
+            data-folder-browser="true"
             data-upload-mode="multi"
             data-label-uploading={gettext("Uploading")}
             data-label-processing={gettext("Processing image sizes...")}
@@ -450,7 +454,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
-      config_target: "default",
+      config_target: socket.assigns.config_target,
       event_target: myself,
       multi: true,
       selected_images: selected_images

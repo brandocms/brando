@@ -27,6 +27,7 @@ defmodule Brando.Files.File do
     attribute :filename, :text, required: true
     attribute :config_target, :text, required: true
     attribute :cdn, :boolean, default: false
+    attribute :folder_id, :integer
   end
 
   listings do
@@ -73,7 +74,8 @@ defmodule Brando.Files.File do
              :filesize,
              :filename,
              :config_target,
-             :cdn
+             :cdn,
+             :folder_id
            ]}
 
   defimpl Phoenix.HTML.Safe do

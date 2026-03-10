@@ -33,16 +33,19 @@ defmodule BrandoAdmin.Files.FileListLive do
       {:ok, cfg} = Files.get_config_for(%{config_target: config_target})
 
       case consume_uploaded_entry(socket, entry, fn %{path: path} ->
-             Files.Uploads.Schema.handle_upload(
-               %{
-                 "file" => %Plug.Upload{filename: entry.client_name, content_type: entry.client_type, path: path},
-                 "config_target" => config_target
-               },
-               cfg,
-               socket.assigns.current_user
-             )
+             case Files.Uploads.Schema.handle_upload(
+                    %{
+                      "file" => %Plug.Upload{filename: entry.client_name, content_type: entry.client_type, path: path},
+                      "config_target" => config_target
+                    },
+                    cfg,
+                    socket.assigns.current_user
+                  ) do
+               {:ok, file} -> {:ok, file}
+               {:error, reason} -> {:ok, {:upload_error, reason}}
+             end
            end) do
-        {:error, _changeset} ->
+        {:upload_error, _reason} ->
           send(self(), {:toast, gettext("Failed to upload file")})
 
         _file ->

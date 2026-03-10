@@ -3,7 +3,10 @@ export default (app) => ({
     const input = this.el.querySelector('input[type="file"]')
     const uploadName = this.el.dataset.uploadName
     const mode = this.el.dataset.uploadMode || 'single'
+    const useFolderBrowser = this.el.dataset.folderBrowser === 'true'
+    const configTarget = this.el.dataset.configTarget || 'default'
     this._uploadQueue = []
+    this._pendingDroppedFiles = []
     this._pendingProcessing = 0
     this._progressState = { visible: false, phase: 'idle', progress: 0 }
 
@@ -51,6 +54,14 @@ export default (app) => ({
         }
       })
     }
+
+    this.handleEvent('b:block_upload_folder_confirmed', ({ upload_name, folder }) => {
+      if (upload_name !== uploadName) return
+      if (!this._pendingDroppedFiles.length) return
+
+      this.storeRecentFolder(folder)
+      this.startPendingUpload(uploadName, mode)
+    })
 
     if (input) {
       input.addEventListener('change', (e) => {
@@ -110,6 +121,12 @@ export default (app) => ({
       this.el.classList.remove('dragging')
       const files = e.dataTransfer.files
       if (files && files.length > 0) {
+        if (useFolderBrowser) {
+          this._pendingDroppedFiles = Array.from(files)
+          this.openFolderBrowser(uploadName, configTarget, files.length)
+          return
+        }
+
         if (mode === 'multi' && files.length > 1) {
           this._uploadQueue = Array.from(files).slice(1)
           this.forwardUpload(uploadName, [files[0]])
@@ -219,5 +236,66 @@ export default (app) => ({
     }
 
     this.uploadTo(`#${formEl.id}`, uploadName, files)
+  },
+
+  startPendingUpload(uploadName, mode) {
+    if (!this._pendingDroppedFiles.length) return
+
+    if (mode === 'multi' && this._pendingDroppedFiles.length > 1) {
+      this._uploadQueue = this._pendingDroppedFiles.slice(1)
+      this.forwardUpload(uploadName, [this._pendingDroppedFiles[0]])
+    } else {
+      this.forwardUpload(uploadName, this._pendingDroppedFiles)
+    }
+
+    this._pendingDroppedFiles = []
+  },
+
+  openFolderBrowser(uploadName, configTarget, fileCount) {
+    const liveInput = document.querySelector(`input[name="${uploadName}"]`)
+    if (!liveInput) {
+      console.error(`BlockUpload: no live_file_input found for "${uploadName}"`)
+      return
+    }
+
+    const formEl = liveInput.closest('form')
+    if (!formEl || !formEl.id) {
+      console.error(`BlockUpload: no parent form found for "${uploadName}"`)
+      return
+    }
+
+    this.pushEventTo(`#${formEl.id}`, 'open_block_upload_folder_browser', {
+      upload_name: uploadName,
+      config_target: configTarget || 'default',
+      file_count: fileCount,
+      initial_folder: this.lastRecentFolder(),
+      recent_folders: this.recentFolders(),
+    })
+  },
+
+  recentFolders() {
+    try {
+      const value = localStorage.getItem('brando:image_upload:recent_folders')
+      const parsed = value ? JSON.parse(value) : []
+      return Array.isArray(parsed) ? parsed : []
+    } catch (_) {
+      return []
+    }
+  },
+
+  lastRecentFolder() {
+    const folders = this.recentFolders()
+    return folders.length > 0 ? folders[0] : null
+  },
+
+  storeRecentFolder(folder) {
+    if (!folder) return
+    const recent = [folder, ...this.recentFolders().filter((entry) => entry !== folder)].slice(0, 5)
+
+    try {
+      localStorage.setItem('brando:image_upload:recent_folders', JSON.stringify(recent))
+    } catch (_) {
+      // ignore localStorage failures
+    }
   },
 })

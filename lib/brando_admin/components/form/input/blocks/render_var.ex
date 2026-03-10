@@ -191,7 +191,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         event: "register_var_upload",
         upload_name: upload_name,
         var_type: type,
-        component_id: assigns.id
+        component_id: assigns.id,
+        config_target: assigns.var[:config_target].value || "default"
       })
 
       assign(socket, upload_registered: true, upload_name: upload_name)
@@ -810,6 +811,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               class="input-image"
               phx-hook="Brando.BlockUpload"
               data-upload-name={@upload_name}
+              data-config-target={@field[:config_target].value || "default"}
+              data-folder-browser="true"
               data-upload-mode="single"
               data-label-uploading={gettext("Uploading")}
               data-label-processing={gettext("Processing image...")}
@@ -880,6 +883,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               class="input-image"
               phx-hook="Brando.BlockUpload"
               data-upload-name={@upload_name}
+              data-config-target={@field[:config_target].value || "default"}
+              data-folder-browser="false"
               data-upload-mode="single"
               data-label-uploading={gettext("Uploading")}
               data-label-processing={gettext("Processing...")}
@@ -938,10 +943,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   def handle_event("set_target", _, %{assigns: %{myself: myself}} = socket) do
+    config_target = socket.assigns.var[:config_target].value || "default"
+
     send_update(
       BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
-      config_target: "default",
+      config_target: config_target,
       event_target: myself,
       multi: false,
       selected_images: []

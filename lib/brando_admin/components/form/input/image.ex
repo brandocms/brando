@@ -168,14 +168,13 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
         # image replaced in place (same ID, different dimensions or status — e.g., after crop)
         image && image_from_changeset &&
-            image.id == image_from_changeset.id &&
+          image.id == image_from_changeset.id &&
             (image.width != image_from_changeset.width ||
                image.height != image_from_changeset.height ||
                image.status != image_from_changeset.status) ->
           {socket
            |> assign(:image, image_from_changeset)
-           |> assign(:focal, {image_from_changeset.focal.x, image_from_changeset.focal.y}),
-           image_from_changeset}
+           |> assign(:focal, {image_from_changeset.focal.x, image_from_changeset.focal.y}), image_from_changeset}
 
         true ->
           if image && image.status == :unprocessed do
@@ -192,12 +191,19 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
     file_name = if is_map(image) && image.path, do: Path.basename(image.path)
 
+    form_path = Brando.Utils.get_path_from_field_name(assigns.field.form.name)
+    upload_name = upload_name(form_path, assigns.field.field)
+
+    upload_field =
+      Map.get(socket.assigns.parent_uploads || %{}, upload_name) ||
+        Map.get(socket.assigns.parent_uploads || %{}, assigns.field.field)
+
     {:ok,
      socket
      |> prepare_input_component()
      |> assign(:file_name, file_name)
      |> assign_new(:editable, fn -> Keyword.get(socket.assigns.opts, :editable, true) end)
-     |> assign_new(:upload_field, fn -> socket.assigns.parent_uploads[assigns.field.field] end)
+     |> assign(:upload_field, upload_field)
      |> assign_new(:relation_field, fn -> relation_field end)}
   end
 
@@ -208,7 +214,15 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   def render(assigns) do
     ~H"""
     <div>
-      <Form.field_base :if={@editable} field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact} relation>
+      <Form.field_base
+        :if={@editable}
+        field={@field}
+        label={@label}
+        instructions={@instructions}
+        class={@class}
+        compact={@compact}
+        relation
+      >
         <div>
           <div class={["input-image", @small && "small", @square && "square", @compact && "compact"]}>
             <.image_preview
@@ -271,15 +285,21 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         Brando.Utils.get_parent_module_from_field_name(form.name, module_from_form)
       end
 
+    form_id = "#{module.__naming__().singular}_form"
+
+    upload_name = upload_name(path, field_name)
+    drop_target = upload_ref(socket.assigns.parent_uploads, upload_name, socket.assigns.upload_field)
+
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
       config_target: {"image", form.data.__struct__, field_name},
       event_target: myself,
       multi: false,
-      selected_images: []
+      selected_images: if(image_id, do: [image_id], else: []),
+      form_id: form_id,
+      upload_name: upload_name,
+      drop_target: drop_target
     )
-
-    form_id = "#{module.__naming__().singular}_form"
 
     edit_image = %{
       id: image_id,
@@ -326,6 +346,28 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     end
 
     {:noreply, socket}
+  end
+
+  defp upload_name(path, field_name) do
+    if Enum.count(path) > 1 do
+      [sub | _] = path
+      :"#{to_string(sub)}|#{to_string(field_name)}"
+    else
+      field_name
+    end
+  end
+
+  defp upload_ref(parent_uploads, upload_name, fallback_upload_field) do
+    case Map.get(parent_uploads || %{}, upload_name) do
+      %{ref: ref} when is_binary(ref) ->
+        ref
+
+      _ ->
+        case fallback_upload_field do
+          %{ref: ref} when is_binary(ref) -> ref
+          _ -> nil
+        end
+    end
   end
 
   @doc """

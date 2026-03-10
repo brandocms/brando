@@ -79,7 +79,8 @@ defmodule Brando.Upload do
       filesize: upload.upload_entry.client_size,
       filename: extract_filename_from_key(upload.meta.key),
       config_target: upload.meta.config_target,
-      cdn: true
+      cdn: true,
+      folder_id: upload.meta[:folder_id]
     }
 
     Files.create_file(file_params, user)
@@ -100,7 +101,8 @@ defmodule Brando.Upload do
       dominant_color: dominant_color,
       focal: %{x: 50, y: 50},
       sizes: %{},
-      status: :processed
+      status: :processed,
+      folder_id: upload.meta[:folder_id]
     }
 
     Images.create_image(image_params, user)
@@ -113,7 +115,8 @@ defmodule Brando.Upload do
       filesize: upload.upload_entry.client_size,
       filename: upload.meta.filename,
       config_target: upload.meta.config_target,
-      cdn: false
+      cdn: false,
+      folder_id: upload.meta[:folder_id]
     }
 
     Files.create_file(file_params, user)
@@ -136,7 +139,8 @@ defmodule Brando.Upload do
           dominant_color: dominant_color,
           focal: %{x: 50, y: 50},
           sizes: %{},
-          status: :unprocessed
+          status: :unprocessed,
+          folder_id: meta[:folder_id]
         }
 
         Images.create_image(image_params, user)

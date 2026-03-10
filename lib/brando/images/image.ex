@@ -37,6 +37,7 @@ defmodule Brando.Images.Image do
     attribute :cdn, :boolean, default: false
     attribute :dominant_color, :text
     attribute :config_target, :text
+    attribute :folder_id, :integer
     attribute :fetchpriority, :enum, values: [:high, :low, :auto], default: :auto
   end
 
@@ -128,6 +129,7 @@ defmodule Brando.Images.Image do
              :height,
              :cdn,
              :dominant_color,
-             :config_target
+             :config_target,
+             :folder_id
            ]}
 end

@@ -91,7 +91,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       send_update(assigns.form_cid, %{
         event: "register_block_upload",
         upload_name: upload_name,
-        block_uid: uid
+        block_uid: uid,
+        block_type: :picture,
+        config_target: Map.get(block_data, :config_target, "default") || "default"
       })
     end
 
@@ -111,7 +113,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
          case Changeset.get_field(ref_cs, :image) do
            nil ->
              case Changeset.get_field(ref_cs, :image_id) do
-               nil -> nil
+               nil ->
+                 nil
+
                image_id ->
                  case Brando.Images.get_image(image_id) do
                    {:ok, image} -> image
@@ -255,6 +259,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               id={"block-#{@uid}-upload"}
               phx-hook="Brando.BlockUpload"
               data-upload-name={@upload_name}
+              data-config-target={@block_data.config_target || "default"}
+              data-folder-browser="true"
               data-label-uploading={gettext("Uploading")}
               data-label-processing={gettext("Processing image sizes...")}
               class={["empty", "upload-canvas", @extracted_path && "hidden"]}
@@ -301,6 +307,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                     id={"block-#{@uid}-modal-upload"}
                     phx-hook="Brando.BlockUpload"
                     data-upload-name={@upload_name}
+                    data-config-target={@block_data.config_target || "default"}
+                    data-folder-browser="true"
                     data-label-uploading={gettext("Uploading")}
                     data-label-processing={gettext("Processing image sizes...")}
                     class="img-placeholder empty upload-canvas"
@@ -394,12 +402,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   def handle_event("focus", _, socket), do: {:noreply, socket}
 
   def handle_event("set_target", _, socket) do
+    config_target = Map.get(socket.assigns.block_data, :config_target, "default") || "default"
+
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
-      config_target: "default",
+      config_target: config_target,
       event_target: socket.assigns.myself,
       multi: false,
-      selected_images: []
+      selected_images: if(socket.assigns.image, do: [socket.assigns.image.id], else: [])
     )
 
     {:noreply, socket}

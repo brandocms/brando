@@ -37,6 +37,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.FilePicker
   alias BrandoAdmin.Components.ImagePicker
   alias BrandoAdmin.Components.VideoPicker
+  alias BrandoAdmin.Images.FolderBrowser
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.Utils
@@ -87,6 +88,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:blocks_ready_for_sharing, false)
      |> assign(:fields_demanding_full_live_preview_rerender, [])
      |> assign(:fields_demanding_live_preview_reassign, [])
+     |> assign(:upload_folder_targets, %{})
      |> assign_new(:footer, fn -> [] end)
      |> assign(:editing_drawer_type, nil)
      |> assign(:editing_resource_id, nil)
@@ -168,6 +170,19 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:editing_image?, true)
      |> assign(:image_changeset, image_changeset)
      |> assign_drawer_recovery_state()}
+  end
+
+  def update(%{action: :open_image_editor_from_picker, image: image}, %{assigns: %{edit_image: edit_image}} = socket) do
+    updated_edit_image = Map.merge(edit_image, %{image: image, id: image.id})
+    image_changeset = change(image)
+
+    {:ok,
+     socket
+     |> assign(:edit_image, updated_edit_image)
+     |> assign(:editing_image?, true)
+     |> assign(:image_changeset, image_changeset)
+     |> assign_drawer_recovery_state()
+     |> push_event("b:image_editor:init", image_editor_payload(image))}
   end
 
   # Set edit_image for the save handler when image editor is opened from a block.
@@ -405,13 +420,19 @@ defmodule BrandoAdmin.Components.Form do
 
     socket =
       if Map.has_key?(block_uploads, upload_name) do
-        socket
+        existing = Map.get(block_uploads, upload_name, %{})
+        config_target = Map.get(params, :config_target, existing[:config_target] || "default")
+        updated_block_info = Map.put(existing, :config_target, config_target)
+
+        assign(socket, :block_uploads, Map.put(block_uploads, upload_name, updated_block_info))
       else
         block_type = Map.get(params, :block_type, :picture)
+        config_target = Map.get(params, :config_target, "default")
 
         block_info = %{
           block_uid: block_uid,
-          block_type: block_type
+          block_type: block_type,
+          config_target: config_target
         }
 
         socket
@@ -436,14 +457,17 @@ defmodule BrandoAdmin.Components.Form do
           upload_name: upload_name,
           var_type: var_type,
           component_id: component_id
-        },
+        } = params,
         socket
       ) do
     var_uploads = Map.get(socket.assigns, :var_uploads, %{})
 
     socket =
       if Map.has_key?(var_uploads, upload_name) do
-        socket
+        existing = Map.get(var_uploads, upload_name, %{})
+        config_target = Map.get(params, :config_target, existing[:config_target] || "default")
+        updated_var_info = Map.put(existing, :config_target, config_target)
+        assign(socket, :var_uploads, Map.put(var_uploads, upload_name, updated_var_info))
       else
         accept =
           if var_type == :image,
@@ -460,11 +484,39 @@ defmodule BrandoAdmin.Components.Form do
         )
         |> assign(
           :var_uploads,
-          Map.put(var_uploads, upload_name, %{var_type: var_type, component_id: component_id})
+          Map.put(var_uploads, upload_name, %{
+            var_type: var_type,
+            component_id: component_id,
+            config_target: Map.get(params, :config_target, "default")
+          })
         )
       end
 
     {:ok, socket}
+  end
+
+  def update(
+        %{event: "set_block_upload_folder", upload_name: upload_name} = params,
+        socket
+      ) do
+    folder = Map.get(params, :folder)
+    folder_id = Map.get(params, :folder_id)
+
+    config_target =
+      params
+      |> Map.get(:config_target)
+      |> normalize_upload_config_target()
+
+    upload_folder_targets = Map.get(socket.assigns, :upload_folder_targets, %{})
+
+    updated_targets =
+      Map.put(upload_folder_targets, upload_name, %{
+        folder: folder,
+        folder_id: folder_id,
+        config_target: config_target || "default"
+      })
+
+    {:ok, assign(socket, :upload_folder_targets, updated_targets)}
   end
 
   def update(
@@ -1788,11 +1840,14 @@ defmodule BrandoAdmin.Components.Form do
           upload
       end
 
+    upload_target_name = to_string((upload_field && upload_field.name) || assigns.edit_image.field)
+    upload_dom_id = upload_target_dom_id(upload_target_name)
+
     assigns =
       assigns
       |> assign(:upload_field, upload_field)
       |> assign(:drop_target, Brando.Utils.try_path(upload_field, [:ref]))
-      |> assign(:random_id, Brando.Utils.generate_uid())
+      |> assign(:upload_dom_id, upload_dom_id)
 
     ~H"""
     <Content.drawer id="image-drawer" title={gettext("Image")} close={close_image()} z={1001} narrow>
@@ -1824,9 +1879,10 @@ defmodule BrandoAdmin.Components.Form do
               </div>
               <.live_component
                 module={FocalPoint}
-                id={"image-drawer-focal-#{@random_id}"}
+                id={"image-drawer-focal-#{@upload_dom_id}"}
                 image={@edit_image}
-                form={image_form}
+                form_id={image_form.id}
+                form_name={image_form.name}
               />
               <img
                 width={@edit_image.image.width}
@@ -1869,7 +1925,10 @@ defmodule BrandoAdmin.Components.Form do
         </div>
 
         <div class="button-group vertical">
-          <div class="file-input-button">
+          <div
+            id={"image-drawer-upload-#{@upload_dom_id}"}
+            class="file-input-button"
+          >
             <span class="label">
               {gettext("Upload image")}
             </span>
@@ -2384,9 +2443,11 @@ defmodule BrandoAdmin.Components.Form do
     socket_with_image_uploads =
       Enum.reduce(image_fields, default_socket, fn img_field, updated_socket ->
         max_size = Brando.Utils.try_path(img_field, [:opts, :cfg, :size_limit]) || 4_000_000
+        max_entries = Brando.Utils.try_path(img_field, [:opts, :max_entries]) || 25
 
         allow_upload(updated_socket, img_field.name,
           accept: ~w(.jpg .jpeg .png .gif .webp .svg),
+          max_entries: max_entries,
           max_file_size: max_size,
           auto_upload: true,
           progress: &__MODULE__.handle_image_progress/3
@@ -2580,6 +2641,59 @@ defmodule BrandoAdmin.Components.Form do
       [_] ->
         {:noreply, socket}
     end
+  end
+
+  def handle_event("open_block_upload_folder_browser", params, socket) do
+    upload_name =
+      case params["upload_name"] do
+        name when is_binary(name) ->
+          try do
+            String.to_existing_atom(name)
+          rescue
+            _ -> nil
+          end
+
+        name ->
+          name
+      end
+
+    block_uploads = Map.get(socket.assigns, :block_uploads, %{})
+    block_info = Map.get(block_uploads, upload_name, %{})
+    config_target = block_info[:config_target] || params["config_target"] || "default"
+
+    recent_folders =
+      case params["recent_folders"] do
+        folders when is_list(folders) -> folders
+        _ -> []
+      end
+
+    file_count =
+      case params["file_count"] do
+        count when is_integer(count) ->
+          count
+
+        count when is_binary(count) ->
+          case Integer.parse(count) do
+            {parsed, _} -> parsed
+            _ -> 0
+          end
+
+        _ ->
+          0
+      end
+
+    send_update(ImagePicker,
+      id: "image-picker",
+      event: "open_block_upload_browser",
+      upload_name: upload_name,
+      file_count: file_count,
+      config_target: config_target,
+      initial_folder: params["initial_folder"],
+      recent_folders: recent_folders,
+      form_cid: socket.assigns.myself
+    )
+
+    {:noreply, push_event(socket, "b:show_drawer", %{drawer_id: "image-picker"})}
   end
 
   def handle_event("focus", %{"field" => field}, socket) do
@@ -2862,23 +2976,7 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event("open_image_editor", %{"image_id" => _image_id}, socket) do
     image = socket.assigns.edit_image.image
 
-    crop_groups =
-      case Brando.Images.get_config_for(image) do
-        {:ok, config} -> build_crop_groups(config.sizes)
-        _ -> []
-      end
-
-    {:noreply,
-     push_event(socket, "b:image_editor:init", %{
-       image_id: image.id,
-       image_src: Brando.Utils.img_url(image, :original, prefix: Brando.Utils.media_url()),
-       image_width: image.width,
-       image_height: image.height,
-       focal_x: (image.focal && image.focal.x) || 50,
-       focal_y: (image.focal && image.focal.y) || 50,
-       crop_groups: crop_groups,
-       config_target: image.config_target
-     })}
+    {:noreply, push_event(socket, "b:image_editor:init", image_editor_payload(image))}
   end
 
   def handle_event(
@@ -3068,7 +3166,8 @@ defmodule BrandoAdmin.Components.Form do
         %{assigns: %{form: form, edit_file: edit_file, entry: entry, singular: singular}} = socket
       ) do
     changeset = form.source
-    full_path = edit_file.path ++ [edit_file.relation_field.field]
+    relation_key = relation_field_key(edit_file.relation_field, edit_file.field)
+    full_path = edit_file.path ++ [relation_key]
     updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> nil end)
     updated_edit_file = Map.put(edit_file, :file, nil)
 
@@ -3079,7 +3178,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:edit_file, updated_edit_file)
      |> assign(:form, to_form(updated_changeset, []))
      |> push_event("b:validate", %{
-       target: "#{singular}[#{edit_file.relation_field.field}]",
+       target: "#{singular}[#{relation_key}]",
        value: ""
      })}
   end
@@ -3090,7 +3189,8 @@ defmodule BrandoAdmin.Components.Form do
         %{assigns: %{form: form, edit_image: edit_image, entry: entry, singular: singular}} = socket
       ) do
     changeset = form.source
-    full_path = edit_image.path ++ [edit_image.relation_field.field]
+    relation_key = relation_field_key(edit_image.relation_field, edit_image.field)
+    full_path = edit_image.path ++ [relation_key]
     updated_changeset = EctoNestedChangeset.update_at(changeset, full_path, fn _ -> nil end)
     updated_edit_image = Map.put(edit_image, :image, nil)
 
@@ -3101,7 +3201,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:edit_image, updated_edit_image)
      |> assign(:form, to_form(updated_changeset, []))
      |> push_event("b:validate", %{
-       target: "#{singular}[#{edit_image.relation_field.field}]",
+       target: "#{singular}[#{relation_key}]",
        value: ""
      })}
   end
@@ -3173,7 +3273,8 @@ defmodule BrandoAdmin.Components.Form do
     end
 
     edit_file = Map.put(edit_file, :file, updated_file)
-    full_path = path ++ [relation_field.field]
+    relation_key = relation_field_key(relation_field, field)
+    full_path = path ++ [relation_key]
 
     updated_changeset =
       form.source
@@ -3199,7 +3300,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:edit_file, edit_file)
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
-       target: "#{singular}[#{edit_file.relation_field.field}]",
+       target: "#{singular}[#{relation_key}]",
        value: file.id
      })}
   end
@@ -3298,7 +3399,8 @@ defmodule BrandoAdmin.Components.Form do
     )
 
     edit_image = Map.put(edit_image, :image, updated_image)
-    relation_full_path = path ++ [relation_field.field]
+    relation_key = relation_field_key(relation_field, field)
+    relation_full_path = path ++ [relation_key]
     field_full_path = path ++ [field]
 
     updated_changeset =
@@ -3394,7 +3496,8 @@ defmodule BrandoAdmin.Components.Form do
     )
 
     edit_video = Map.put(edit_video, :video, updated_video)
-    relation_full_path = path ++ [relation_field.field]
+    relation_key = relation_field_key(relation_field, field)
+    relation_full_path = path ++ [relation_key]
     field_full_path = path ++ [field]
 
     updated_changeset =
@@ -3812,9 +3915,23 @@ defmodule BrandoAdmin.Components.Form do
   def handle_image_progress(key, upload_entry, socket) do
     edit_image = socket.assigns.edit_image
     current_user = socket.assigns.current_user
+    upload_target_name = to_string(key)
+    upload_folder_targets = Map.get(socket.assigns, :upload_folder_targets, %{})
+
+    upload_target =
+      Map.get(upload_folder_targets, key) ||
+        Map.get(upload_folder_targets, to_string(key)) ||
+        %{}
+
     socket = assign(socket, :processing, upload_entry.progress)
 
     if upload_entry.done? do
+      Brando.endpoint().broadcast!(
+        "user:#{current_user.id}",
+        "picker:upload_progress",
+        %{upload_name: upload_target_name, progress: 100}
+      )
+
       socket = assign(socket, :processing, false)
 
       # if we have a concat'ed key (from a subform) we split out our field and schema
@@ -3826,44 +3943,67 @@ defmodule BrandoAdmin.Components.Form do
 
       relation_key = String.to_existing_atom("#{key}_id")
 
-      %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(edit_image.schema, key)
-      config_target = "image:#{inspect(edit_image.schema)}:#{key}"
+      configured_target =
+        upload_target[:config_target] || "image:#{inspect(edit_image.schema)}:#{key}"
 
-      case consume_uploaded_entry(
-             socket,
-             upload_entry,
-             fn meta ->
-               updated_meta =
-                 Map.merge(meta, %{
-                   config_target: config_target,
-                   field_path: edit_image.path ++ [relation_key]
-                 })
+      {cfg, config_target} = resolve_block_image_config(configured_target)
+      cfg = maybe_override_image_upload_path(cfg, upload_target[:folder])
 
-               Brando.Upload.handle_upload(updated_meta, upload_entry, cfg, current_user)
-             end
-           ) do
-        {:error, :content_type, rejected_type, allowed_types} ->
-          error_title = gettext("Error uploading")
+      consume_result =
+        case consume_uploaded_entry(
+               socket,
+               upload_entry,
+               fn meta ->
+                 updated_meta =
+                   Map.merge(meta, %{
+                     config_target: config_target,
+                     field_path: edit_image.path ++ [relation_key]
+                   })
+                   |> maybe_put_folder_id(upload_target[:folder_id])
 
-          error_msg =
-            gettext(
-              "Server rejected image type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
-              %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
+                 safe_handle_upload(updated_meta, upload_entry, cfg, current_user)
+               end
+             ) do
+          {:upload_error, reason} ->
+            upload_error_noreply(socket, :image, reason)
+
+          image ->
+            image_changeset = change(image)
+            edit_image = Map.merge(edit_image, %{id: image.id, image: image})
+            field_full_path = edit_image.path ++ [key]
+
+            # Subscribe before queueing so inline processing notifications are not missed.
+            Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+
+            socket =
+              if image.status !== :processed do
+                Brando.Images.Processing.queue_processing(image, current_user, field_full_path)
+                update(socket, :processing_images, &[image.id | &1])
+              else
+                socket
+              end
+
+            send_update(ImagePicker,
+              id: "image-picker",
+              refresh_images: true,
+              requested_folder: upload_target[:folder]
             )
 
-          {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+            {:noreply,
+             socket
+             |> update_changeset(edit_image.path, relation_key, image.id)
+             |> assign(:edit_image, edit_image)
+             |> assign(:image_changeset, image_changeset)}
+        end
 
-        image ->
-          image_changeset = change(image)
-          edit_image = Map.merge(edit_image, %{id: image.id, image: image})
-
-          {:noreply,
-           socket
-           |> update_changeset(edit_image.path, relation_key, image.id)
-           |> assign(:edit_image, edit_image)
-           |> assign(:image_changeset, image_changeset)}
-      end
+      maybe_send_upload_next_file(consume_result, upload_target_name)
     else
+      Brando.endpoint().broadcast!(
+        "user:#{current_user.id}",
+        "picker:upload_progress",
+        %{upload_name: upload_target_name, progress: upload_entry.progress}
+      )
+
       {:noreply, socket}
     end
   end
@@ -3877,6 +4017,8 @@ defmodule BrandoAdmin.Components.Form do
   def handle_block_image_progress(upload_name, entry, socket) do
     block_uploads = Map.get(socket.assigns, :block_uploads, %{})
     block_info = Map.get(block_uploads, upload_name, %{})
+    upload_folder_targets = Map.get(socket.assigns, :upload_folder_targets, %{})
+    upload_target = Map.get(upload_folder_targets, upload_name, %{})
     block_uid = block_info[:block_uid]
     block_type = block_info[:block_type] || :picture
 
@@ -3894,27 +4036,26 @@ defmodule BrandoAdmin.Components.Form do
         )
       end
 
-      # Resolve image config for this block upload
-      {cfg, config_target} = resolve_block_image_config("default")
+      configured_target =
+        upload_target[:config_target] || block_info[:config_target] || "default"
+
+      # Resolve image config for this block upload and override upload path
+      # when the user chose a custom folder in the image browser.
+      {cfg, config_target} = resolve_block_image_config(configured_target)
+      cfg = maybe_override_image_upload_path(cfg, upload_target[:folder])
 
       case consume_uploaded_entry(socket, entry, fn meta ->
-             Brando.Upload.handle_upload(
-               Map.put(meta, :config_target, config_target),
+             safe_handle_upload(
+               meta
+               |> Map.put(:config_target, config_target)
+               |> maybe_put_folder_id(upload_target[:folder_id]),
                entry,
                cfg,
                current_user
              )
            end) do
-        {:error, :content_type, rejected_type, allowed_types} ->
-          error_title = gettext("Error uploading")
-
-          error_msg =
-            gettext(
-              "Server rejected image type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
-              %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
-            )
-
-          {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+        {:upload_error, reason} ->
+          upload_error_noreply(socket, :image, reason)
 
         image ->
           # Subscribe BEFORE queueing so inline Oban broadcasts aren't missed.
@@ -3983,6 +4124,8 @@ defmodule BrandoAdmin.Components.Form do
       current_user = socket.assigns.current_user
       var_uploads = Map.get(socket.assigns, :var_uploads, %{})
       var_info = Map.get(var_uploads, upload_name, %{})
+      upload_folder_targets = Map.get(socket.assigns, :upload_folder_targets, %{})
+      upload_target = Map.get(upload_folder_targets, upload_name, %{})
       var_type = var_info[:var_type] || :image
 
       # Broadcast upload complete to JS hook
@@ -3994,26 +4137,24 @@ defmodule BrandoAdmin.Components.Form do
 
       case var_type do
         :image ->
-          {cfg, config_target} = resolve_block_image_config("default")
+          configured_target =
+            upload_target[:config_target] || var_info[:config_target] || "default"
+
+          {cfg, config_target} = resolve_block_image_config(configured_target)
+          cfg = maybe_override_image_upload_path(cfg, upload_target[:folder])
 
           case consume_uploaded_entry(socket, entry, fn meta ->
-                 Brando.Upload.handle_upload(
-                   Map.put(meta, :config_target, config_target),
+                 safe_handle_upload(
+                   meta
+                   |> Map.put(:config_target, config_target)
+                   |> maybe_put_folder_id(upload_target[:folder_id]),
                    entry,
                    cfg,
                    current_user
                  )
                end) do
-            {:error, :content_type, rejected_type, allowed_types} ->
-              error_title = gettext("Error uploading")
-
-              error_msg =
-                gettext(
-                  "Server rejected image type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
-                  %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
-                )
-
-              {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+            {:upload_error, reason} ->
+              upload_error_noreply(socket, :image, reason)
 
             image ->
               Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
@@ -4026,23 +4167,17 @@ defmodule BrandoAdmin.Components.Form do
           cfg = resolve_file_config("default")
 
           case consume_uploaded_entry(socket, entry, fn meta ->
-                 Brando.Upload.handle_upload(
-                   Map.put(meta, :config_target, "default"),
+                 safe_handle_upload(
+                   meta
+                   |> Map.put(:config_target, "default")
+                   |> maybe_put_folder_id(upload_target[:folder_id]),
                    entry,
                    cfg,
                    current_user
                  )
                end) do
-            {:error, :content_type, rejected_type, allowed_types} ->
-              error_title = gettext("Error uploading")
-
-              error_msg =
-                gettext(
-                  "Server rejected file type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
-                  %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
-                )
-
-              {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+            {:upload_error, reason} ->
+              upload_error_noreply(socket, :file, reason)
 
             file ->
               send(self(), {:var_upload_complete, upload_name, :file, file})
@@ -4077,23 +4212,15 @@ defmodule BrandoAdmin.Components.Form do
       {cfg, resolved_target} = resolve_block_image_config(config_target)
 
       case consume_uploaded_entry(socket, entry, fn meta ->
-             Brando.Upload.handle_upload(
+             safe_handle_upload(
                Map.put(meta, :config_target, resolved_target),
                entry,
                cfg,
                current_user
              )
            end) do
-        {:error, :content_type, rejected_type, allowed_types} ->
-          error_title = gettext("Error uploading")
-
-          error_msg =
-            gettext(
-              "Server rejected image type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
-              %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
-            )
-
-          {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+        {:upload_error, reason} ->
+          upload_error_noreply(socket, :image, reason)
 
         new_image ->
           # Apply focal and mark for reprocessing
@@ -4166,9 +4293,11 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp resolve_block_image_config(config_target) do
-    case Brando.Images.get_config_for(config_target) do
+    resolved_target = normalize_upload_config_target(config_target) || "default"
+
+    case Brando.Images.get_config_for(resolved_target) do
       {:ok, cfg} ->
-        {cfg, config_target}
+        {cfg, resolved_target}
 
       _ ->
         default_config =
@@ -4185,6 +4314,103 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  defp normalize_upload_config_target(nil), do: nil
+  defp normalize_upload_config_target(config_target) when is_binary(config_target), do: config_target
+  defp normalize_upload_config_target(%{config_target: config_target}), do: normalize_upload_config_target(config_target)
+
+  defp normalize_upload_config_target({type, schema, :function, function_name}) do
+    "#{type}:#{inspect(schema)}:function:#{function_name}"
+  end
+
+  defp normalize_upload_config_target({type, schema, field}) do
+    "#{type}:#{inspect(schema)}:#{field}"
+  end
+
+  defp normalize_upload_config_target(_), do: nil
+
+  defp safe_handle_upload(meta, upload_entry, cfg, current_user) do
+    case Brando.Upload.handle_upload(meta, upload_entry, cfg, current_user) do
+      {:ok, asset} -> {:ok, asset}
+      {:error, reason} -> {:ok, {:upload_error, reason}}
+    end
+  end
+
+  defp upload_error_noreply(socket, kind, {:content_type, rejected_type, allowed_types}) do
+    error_title = gettext("Error uploading")
+
+    error_msg =
+      gettext(
+        "Server rejected %{kind} type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
+        %{
+          kind: upload_kind_label(kind),
+          rejected_type: rejected_type,
+          allowed_types: inspect(allowed_types)
+        }
+      )
+
+    {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+  end
+
+  defp upload_error_noreply(socket, _kind, %Ecto.Changeset{} = changeset) do
+    require Logger
+
+    Logger.error("""
+    Upload failed with validation errors:
+    #{inspect(changeset.errors, pretty: true)}
+    """)
+
+    {:noreply,
+     push_event(socket, "b:alert", %{
+       title: gettext("Error uploading"),
+       type: "error",
+       message: gettext("Could not store uploaded file. Check upload settings and try again.")
+     })}
+  end
+
+  defp upload_error_noreply(socket, _kind, reason) do
+    {:noreply,
+     push_event(socket, "b:alert", %{
+       title: gettext("Error uploading"),
+       type: "error",
+       message: inspect(reason)
+     })}
+  end
+
+  defp upload_kind_label(:image), do: gettext("image")
+  defp upload_kind_label(:file), do: gettext("file")
+  defp upload_kind_label(:video), do: gettext("video")
+  defp upload_kind_label(_), do: gettext("file")
+
+  defp maybe_override_image_upload_path(cfg, nil), do: cfg
+
+  defp maybe_override_image_upload_path(%Brando.Type.ImageConfig{} = cfg, folder) do
+    resolved_folder = FolderBrowser.absolute_folder(folder, cfg.upload_path)
+
+    if resolved_folder do
+      %{cfg | upload_path: resolved_folder}
+    else
+      cfg
+    end
+  end
+
+  defp maybe_put_folder_id(meta, folder_id) when is_integer(folder_id),
+    do: Map.put(meta, :folder_id, folder_id)
+
+  defp maybe_put_folder_id(meta, folder_id) when is_binary(folder_id) do
+    case Integer.parse(folder_id) do
+      {id, ""} -> Map.put(meta, :folder_id, id)
+      _ -> meta
+    end
+  end
+
+  defp maybe_put_folder_id(meta, _), do: meta
+
+  defp maybe_send_upload_next_file({:noreply, socket}, upload_target_name) do
+    {:noreply, push_event(socket, "upload_send_next_file", %{upload_target: upload_target_name})}
+  end
+
+  defp maybe_send_upload_next_file(other, _upload_target_name), do: other
+
   def handle_gallery_progress(
         key,
         upload_entry,
@@ -4194,95 +4420,98 @@ defmodule BrandoAdmin.Components.Form do
       %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(schema, key)
       config_target = "gallery:#{inspect(schema)}:#{key}"
 
-      image =
-        consume_uploaded_entry(
-          socket,
-          upload_entry,
-          fn meta ->
-            Brando.Upload.handle_upload(
-              Map.put(meta, :config_target, config_target),
-              upload_entry,
-              cfg,
-              current_user
-            )
-          end
-        )
+      case consume_uploaded_entry(
+             socket,
+             upload_entry,
+             fn meta ->
+               safe_handle_upload(
+                 Map.put(meta, :config_target, config_target),
+                 upload_entry,
+                 cfg,
+                 current_user
+               )
+             end
+           ) do
+        {:upload_error, reason} ->
+          upload_error_noreply(socket, :image, reason)
 
-      # Subscribe parent live view to changes to this image
-      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
-      Brando.Images.Processing.queue_processing(image, current_user)
+        image ->
+          # Subscribe parent live view to changes to this image
+          Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+          Brando.Images.Processing.queue_processing(image, current_user)
 
-      changeset = form.source
-      gallery = get_field(changeset, key)
+          changeset = form.source
+          gallery = get_field(changeset, key)
 
-      current_gallery_images =
-        if gallery do
-          Enum.map(
-            gallery.gallery_objects || [],
-            &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
+          current_gallery_images =
+            if gallery do
+              Enum.map(
+                gallery.gallery_objects || [],
+                &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
+              )
+            else
+              []
+            end
+
+          new_gallery_image = %{
+            image_id: image.id,
+            creator_id: current_user.id,
+            gallery_id: gallery && gallery.id,
+            image: image
+          }
+
+          new_gallery_images = current_gallery_images ++ List.wrap(new_gallery_image)
+
+          new_gallery =
+            if gallery do
+              %{
+                id: gallery.id,
+                config_target: gallery.config_target,
+                gallery_objects: sequence(new_gallery_images)
+              }
+            else
+              %{
+                config_target: "gallery:#{inspect(schema)}:#{key}",
+                gallery_objects: sequence(new_gallery_images)
+              }
+            end
+
+          # TODO: This sucks.
+          current_gallery_images = (gallery && gallery.gallery_objects) || []
+
+          unloaded_image_ids =
+            current_gallery_images
+            |> Enum.filter(&(&1.image != nil && &1.image.__struct__ == Ecto.Association.NotLoaded))
+            |> Enum.map(& &1.image_id)
+
+          loaded_image_ids =
+            current_gallery_images
+            |> Enum.filter(&(&1.image != nil && &1.image.__struct__ != Ecto.Association.NotLoaded))
+            |> Enum.map(& &1.image_id)
+
+          selected_images = loaded_image_ids ++ unloaded_image_ids ++ [image.id]
+
+          send_update(BrandoAdmin.Components.ImagePicker,
+            id: "image-picker",
+            selected_images: selected_images
           )
-        else
-          []
-        end
 
-      new_gallery_image = %{
-        image_id: image.id,
-        creator_id: current_user.id,
-        gallery_id: gallery && gallery.id,
-        image: image
-      }
+          updated_changeset = put_assoc(changeset, key, new_gallery)
 
-      new_gallery_images = current_gallery_images ++ List.wrap(new_gallery_image)
+          module = changeset.data.__struct__
+          form_id = "#{module.__naming__().singular}_#{key}"
 
-      new_gallery =
-        if gallery do
-          %{
-            id: gallery.id,
-            config_target: gallery.config_target,
-            gallery_objects: sequence(new_gallery_images)
-          }
-        else
-          %{
-            config_target: "gallery:#{inspect(schema)}:#{key}",
-            gallery_objects: sequence(new_gallery_images)
-          }
-        end
+          send_update(BrandoAdmin.Components.Form.Input.Gallery,
+            id: form_id,
+            new_image: %{image_id: image.id, image: image},
+            selected_images: selected_images
+          )
 
-      # TODO: This sucks.
-      current_gallery_images = (gallery && gallery.gallery_objects) || []
-
-      unloaded_image_ids =
-        current_gallery_images
-        |> Enum.filter(&(&1.image != nil && &1.image.__struct__ == Ecto.Association.NotLoaded))
-        |> Enum.map(& &1.image_id)
-
-      loaded_image_ids =
-        current_gallery_images
-        |> Enum.filter(&(&1.image != nil && &1.image.__struct__ != Ecto.Association.NotLoaded))
-        |> Enum.map(& &1.image_id)
-
-      selected_images = loaded_image_ids ++ unloaded_image_ids ++ [image.id]
-
-      send_update(BrandoAdmin.Components.ImagePicker,
-        id: "image-picker",
-        selected_images: selected_images
-      )
-
-      updated_changeset = put_assoc(changeset, key, new_gallery)
-
-      module = changeset.data.__struct__
-      form_id = "#{module.__naming__().singular}_#{key}"
-
-      send_update(BrandoAdmin.Components.Form.Input.Gallery,
-        id: form_id,
-        new_image: %{image_id: image.id, image: image},
-        selected_images: selected_images
-      )
-
-      {:noreply,
-       socket
-       |> update(:processing_images, &[image.id | &1])
-       |> assign(:form, to_form(updated_changeset, []))}
+          {:noreply,
+           socket
+           |> update(:processing_images, &[image.id | &1])
+           |> assign(:form, to_form(updated_changeset, []))}
+      end
     else
       {:noreply, socket}
     end
@@ -4318,7 +4547,7 @@ defmodule BrandoAdmin.Components.Form do
              socket,
              upload_entry,
              fn meta ->
-               Brando.Upload.handle_upload(
+               safe_handle_upload(
                  Map.put(meta, :config_target, config_target),
                  upload_entry,
                  cfg,
@@ -4326,16 +4555,8 @@ defmodule BrandoAdmin.Components.Form do
                )
              end
            ) do
-        {:error, :content_type, rejected_type, allowed_types} ->
-          error_title = gettext("Error uploading")
-
-          error_msg =
-            gettext(
-              "Server rejected image type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
-              %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
-            )
-
-          {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+        {:upload_error, reason} ->
+          upload_error_noreply(socket, :image, reason)
 
         image ->
           socket =
@@ -4443,7 +4664,7 @@ defmodule BrandoAdmin.Components.Form do
              socket,
              upload_entry,
              fn meta ->
-               Brando.Upload.handle_upload(
+               safe_handle_upload(
                  Map.put(meta, :config_target, config_target),
                  upload_entry,
                  resolved_cfg,
@@ -4451,16 +4672,8 @@ defmodule BrandoAdmin.Components.Form do
                )
              end
            ) do
-        {:error, :content_type, rejected_type, allowed_types} ->
-          error_title = gettext("Error uploading")
-
-          error_msg =
-            gettext(
-              "Server rejected file type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
-              %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
-            )
-
-          {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+        {:upload_error, reason} ->
+          upload_error_noreply(socket, :file, reason)
 
         file ->
           file_changeset = change(file)
@@ -4494,7 +4707,7 @@ defmodule BrandoAdmin.Components.Form do
              socket,
              upload_entry,
              fn meta ->
-               Brando.Upload.handle_upload(
+               safe_handle_upload(
                  Map.put(meta, :config_target, config_target),
                  upload_entry,
                  cfg,
@@ -4502,16 +4715,8 @@ defmodule BrandoAdmin.Components.Form do
                )
              end
            ) do
-        {:error, :content_type, rejected_type, allowed_types} ->
-          error_title = gettext("Error uploading")
-
-          error_msg =
-            gettext(
-              "Server rejected file type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
-              %{rejected_type: rejected_type, allowed_types: inspect(allowed_types)}
-            )
-
-          {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+        {:upload_error, reason} ->
+          upload_error_noreply(socket, :video, reason)
 
         video ->
           video_changeset = change(video)
@@ -5603,6 +5808,20 @@ defmodule BrandoAdmin.Components.Form do
     inspect(error)
   end
 
+  defp relation_field_key(%{field: relation_key}, _field) when not is_nil(relation_key), do: relation_key
+
+  defp relation_field_key(_relation_field, field) when is_atom(field) do
+    candidate = "#{field}_id"
+
+    try do
+      String.to_existing_atom(candidate)
+    rescue
+      ArgumentError -> field
+    end
+  end
+
+  defp relation_field_key(_relation_field, field), do: field
+
   defp restore_image_drawer(socket, params) do
     resource_id = String.to_integer(params["resource_id"])
 
@@ -5720,6 +5939,20 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:editing_schema, schema && to_string(schema))
   end
 
+  defp upload_target_dom_id(value) when is_atom(value), do: value |> Atom.to_string() |> upload_target_dom_id()
+
+  defp upload_target_dom_id(value) when is_binary(value) do
+    value
+    |> String.replace(~r/[^a-zA-Z0-9_-]/, "-")
+    |> String.trim("-")
+    |> case do
+      "" -> "image"
+      sanitized -> sanitized
+    end
+  end
+
+  defp upload_target_dom_id(_), do: "image"
+
   defp decode_recovery_path(path_json) when is_binary(path_json) do
     case Jason.decode(path_json) do
       {:ok, list} when is_list(list) -> Enum.map(list, &String.to_existing_atom/1)
@@ -5728,6 +5961,25 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp decode_recovery_path(_), do: []
+
+  defp image_editor_payload(image) do
+    crop_groups =
+      case Brando.Images.get_config_for(image) do
+        {:ok, config} -> build_crop_groups(config.sizes)
+        _ -> []
+      end
+
+    %{
+      image_id: image.id,
+      image_src: Brando.Utils.img_url(image, :original, prefix: Brando.Utils.media_url()),
+      image_width: image.width,
+      image_height: image.height,
+      focal_x: (image.focal && image.focal.x) || 50,
+      focal_y: (image.focal && image.focal.y) || 50,
+      crop_groups: crop_groups,
+      config_target: image.config_target
+    }
+  end
 
   @doc """
   Build crop groups from image config sizes.

@@ -7,6 +7,20 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
   def up do
     Oban.Migrations.up()
 
+    create table(:media_folders) do
+      add :scope, :text, null: false
+      add :name, :text, null: false
+      add :path, :text, null: false
+      add :parent_id, references(:media_folders, on_delete: :delete_all)
+      timestamps()
+    end
+
+    create index(:media_folders, [:scope], name: :media_folders_scope_idx)
+    create index(:media_folders, [:parent_id], name: :media_folders_parent_idx)
+    create unique_index(:media_folders, [:scope, :path], name: :media_folders_scope_path_idx)
+
+    create unique_index(:media_folders, [:scope, :parent_id, :name], name: :media_folders_scope_parent_name_idx)
+
     create table(:images) do
       add :title, :text
       add :credits, :text
@@ -22,10 +36,13 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :focal, :jsonb
       add :config_target, :text, default: "default"
       add :fetchpriority, :string, default: "auto"
+      add :folder_id, references(:media_folders, on_delete: :nilify_all)
       soft_delete()
       add :sequence, :integer
       timestamps()
     end
+
+    create index(:images, [:folder_id], name: :images_folder_id_idx)
 
     create table(:users) do
       add :name, :text
@@ -50,7 +67,6 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       timestamps()
     end
 
-
     alter table(:images) do
       add :creator_id, references(:users)
     end
@@ -62,10 +78,13 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :filename, :text
       add :config_target, :text
       add :cdn, :boolean
+      add :folder_id, references(:media_folders, on_delete: :nilify_all)
       add :deleted_at, :utc_datetime
       timestamps()
       add :creator_id, references(:users, on_delete: :nothing)
     end
+
+    create index(:files, [:folder_id], name: :files_folder_id_idx)
 
     create table(:videos) do
       add :type, :string
@@ -84,12 +103,15 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :config_target, :text
       add :status, :string, default: "ready"
       add :meta, :map, default: %{}
+      add :folder_id, references(:media_folders, on_delete: :nilify_all)
       add :file_id, references(:files, on_delete: :nilify_all)
       add :thumbnail_id, references(:images, on_delete: :nilify_all)
       add :creator_id, references(:users, on_delete: :nothing)
       add :deleted_at, :utc_datetime
       timestamps()
     end
+
+    create index(:videos, [:folder_id], name: :videos_folder_id_idx)
 
     create table(:galleries_gallery_objects) do
       add :sequence, :integer
@@ -99,8 +121,6 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :creator_id, references(:users, on_delete: :nothing)
       timestamps()
     end
-
-
 
     create table(:users_tokens) do
       add :user_id, references(:users, on_delete: :delete_all), null: false
@@ -300,7 +320,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :uid, :string, null: false
       add :active, :boolean, default: true, null: false
       add :collapsed, :boolean, default: false, null: false
-      
+
       # Foreign keys
       add :module_id, references(:content_modules, on_delete: :delete_all)
       add :block_id, references(:content_blocks, on_delete: :delete_all)
@@ -308,11 +328,11 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :video_id, references(:videos, on_delete: :nilify_all)
       add :file_id, references(:files, on_delete: :nilify_all)
       add :image_id, references(:images, on_delete: :nilify_all)
-      
+
       timestamps()
       add :creator_id, references(:users, on_delete: :nothing)
     end
-    
+
     create index(:content_refs, [:module_id])
     create index(:content_refs, [:block_id])
     create index(:content_refs, [:gallery_id])
