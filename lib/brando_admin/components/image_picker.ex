@@ -439,7 +439,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
 
             <form :if={@show_new_folder_form} phx-submit="create_folder" phx-target={@myself} class="new-folder-form">
               <input
-                id={"image-picker-new-folder-#{@id}"}
+                id={"#{@id}-new-folder"}
                 class="text small"
                 type="text"
                 name="folder[name]"

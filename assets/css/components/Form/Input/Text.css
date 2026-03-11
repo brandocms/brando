@@ -1,10 +1,12 @@
-.i18n-text, .i18n-textarea {
+.i18n-text,
+.i18n-textarea {
   position: relative;
   border-bottom: 1px dashed #eee;
   display: flex;
 
   &:first-of-type {
-    input.text, textarea.text {
+    input.text,
+    textarea.text {
       border-top-left-radius: 10px;
       border-top-right-radius: 10px;
     }
@@ -12,7 +14,8 @@
 
   &:last-of-type {
     border-bottom: 0;
-    input.text, textarea.text {
+    input.text,
+    textarea.text {
       border-bottom-left-radius: 10px;
       border-bottom-right-radius: 10px;
     }
@@ -22,14 +25,15 @@
     position: absolute;
     font-size: 10px;
     text-transform: uppercase;
-    font-family: 'Mono';
+    font-family: "Mono";
     left: 15px;
     top: 50%;
     transform: translateY(-50%);
     opacity: 0.6;
   }
 
-  input.text, textarea.text {
+  input.text,
+  textarea.text {
     padding-left: 40px;
   }
 }
@@ -54,11 +58,11 @@ input.text {
 
   &.monospace {
     @font mono;
-    font-size: 16px;
+    font-size: 15px;
 
     &::placeholder {
       @font mono;
-      font-size: 16px;
+      font-size: 15px;
     }
   }
 
@@ -80,7 +84,7 @@ textarea.text {
 
   &.monospace {
     @font mono;
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .counter {

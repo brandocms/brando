@@ -6,12 +6,12 @@
   }
 
   input {
-    margin-right: 17px;
+    margin-right: 12px;
     margin-top: -1px;
   }
 
   label {
-    @fontsize 18px;
+    @fontsize 15px;
     display: flex;
     align-items: center;
   }
@@ -42,7 +42,7 @@
     }
 
     input {
-      margin-right: 17px;
+      margin-right: 8px;
       margin-top: 8px;
     }
 
@@ -92,7 +92,7 @@
 
     .label-text {
       @font mono;
-      font-size: 15px;
+      font-size: 13px;
       line-height: 1.8;
       border: 1px solid;
       padding: 3px 14px;

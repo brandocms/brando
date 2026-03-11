@@ -61,11 +61,10 @@ h2.titlecase + .button-group-vertical button:first-of-type {
     &-text {
       display: flex;
       align-items: center;
-      font-size: 14px;
-      font-family: "Mono";
+      font-size: 12px;
 
       svg {
-        margin-right: 9px;
+        margin-right: 5px;
 
         circle {
           fill: theme(colors.status.published);

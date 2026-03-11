@@ -225,9 +225,29 @@
     }
 
     .folder-actions {
-      display: flex;
-      gap: 0.35rem;
+      display: inline-flex;
       align-self: flex-start;
+      border: 1px solid color-mix(in srgb, var(--brando-color-dark) 28%, transparent);
+      border-radius: 999px;
+      overflow: hidden;
+      background: color-mix(in srgb, white 74%, transparent);
+    }
+
+    .folder-actions .folder-action {
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      margin: 0;
+    }
+
+    .folder-actions .folder-action + .folder-action {
+      border-left: 1px solid color-mix(in srgb, var(--brando-color-dark) 20%, transparent);
+    }
+
+    .folder-actions .folder-action:hover {
+      background: color-mix(in srgb, var(--brando-color-peach) 24%, white);
+      border-color: transparent;
+      color: var(--brando-color-dark);
     }
   }
 
@@ -277,9 +297,10 @@
   .new-folder-form {
     display: flex;
     gap: 0.5rem;
-    align-items: center;
+    align-items: stretch;
     width: 100%;
 
+    #image-picker-new-folder,
     .text.small {
       min-width: 0;
       flex: 1;
@@ -287,13 +308,30 @@
       padding: 0.48rem 0.6rem;
       border-radius: 8px;
       width: 100%;
+      height: auto;
+      min-height: 0;
+      line-height: 1.2;
+    }
+
+    #image-picker-new-folder {
+      height: 30px;
+      border-radius: 999px;
+    }
+
+    #image-picker-new-folder::placeholder,
+    .text.small::placeholder {
+      font-size: 13px;
     }
   }
 
   .new-folder-actions {
     display: inline-flex;
-    gap: 0.35rem;
-    align-items: center;
+    align-items: stretch;
+    align-self: stretch;
+    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 25%, transparent);
+    border-radius: 999px;
+    overflow: hidden;
+    background: color-mix(in srgb, white 75%, transparent);
   }
 
   .folder-icon-button {
@@ -326,6 +364,25 @@
     &.cancel:hover {
       background: color-mix(in srgb, #cb2d3e 14%, white);
     }
+  }
+
+  .new-folder-actions .folder-icon-button {
+    width: 36px;
+    min-width: 36px;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .new-folder-actions .folder-icon-button + .folder-icon-button {
+    border-left: 1px solid color-mix(in srgb, var(--brando-color-dark) 20%, transparent);
+  }
+
+  .new-folder-actions .folder-icon-button [data-icon],
+  .new-folder-actions .folder-icon-button svg {
+    width: 0.8rem;
+    height: 0.8rem;
   }
 
   .new-folder-trigger {
