@@ -4,7 +4,6 @@ defmodule Brando.Blueprint.Listings.Components do
   """
   use Phoenix.Component
 
-  import Brando.HTML, only: [icon: 1]
 
   alias BrandoAdmin.Components.ChildrenButton
   alias BrandoAdmin.Components.Content
@@ -54,7 +53,7 @@ defmodule Brando.Blueprint.Listings.Components do
       @offset && "offset-#{@offset}"
     ]}>
       <a :if={@status == :published} href={@href} target="_blank">
-        <.icon name="hero-link" />
+        <Brando.HTML.icon name="hero-link" />
       </a>
     </div>
     """
@@ -125,5 +124,5 @@ defmodule Brando.Blueprint.Listings.Components do
     """
   end
 
-  defdelegate i18n(assigns), to: Brando.HTML
+  def i18n(assigns), do: Brando.HTML.i18n(assigns)
 end
