@@ -29,12 +29,22 @@ defmodule Brando.Blueprint.Identifier.Generator do
         ...
       }
   """
-  @spec generate(module(), map(), list(), keyword()) :: Identifier.t()
-  def generate(module, entry, parsed_identifier, opts \\ []) do
-    skip_cover = Keyword.get(opts, :skip_cover, false)
+  @spec generate(module(), map(), list() | String.t(), keyword()) :: Identifier.t()
+  def generate(module, entry, parsed_identifier, opts \\ [])
+
+  def generate(module, entry, parsed_identifier, opts) when is_list(parsed_identifier) do
     context = Villain.get_base_context(entry)
     {result, _} = Liquex.Render.render!([], parsed_identifier, context)
     title = Enum.join(result)
+    build_identifier(module, entry, title, opts)
+  end
+
+  def generate(module, entry, title, opts) when is_binary(title) do
+    build_identifier(module, entry, title, opts)
+  end
+
+  defp build_identifier(module, entry, title, opts) do
+    skip_cover = Keyword.get(opts, :skip_cover, false)
     status = Map.get(entry, :status, nil)
     language = normalize_language(Map.get(entry, :language, nil))
 

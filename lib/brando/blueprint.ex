@@ -1,106 +1,134 @@
 defmodule Brando.Blueprint do
   @moduledoc """
+  Declarative schema definition with admin UI, forms, listings, and content management.
 
-  # Override Gettext module
-
-  If you have a nonstandard named gettext module for your app (not MyAppAdmin.Gettext),
-  you can supply a `gettext_module` option to your use statement:
+  ## Basic usage
 
       use Brando.Blueprint,
         application: "MyApp",
-        # ...
+        domain: "Projects",
+        schema: "Project",
+        singular: "project",
+        plural: "projects"
+
+      identifier ~H"{@entry.title}"
+      absolute_url ~H"/projects/{@entry.slug}"
+
+      trait Brando.Trait.Status
+      trait Brando.Trait.Timestamped
+
+      attributes do
+        attribute :title, :string, required: true
+        attribute :slug, :slug, required: true
+      end
+
+  ## Identifier
+
+  Generates a title string for an entry, used in select inputs, multi-selects,
+  entries relation selections, and persisted identifier records. Both HEEx and
+  Liquex templates are supported — `@entry` is the entry struct.
+
+  ### HEEx
+
+      identifier ~H"{@entry.title}"
+      identifier ~H"{@entry.title} [{@entry.category.name}]"
+
+  ### Liquex
+
+      identifier "{{ entry.title }}"
+      identifier "{{ entry.title }} [{{ entry.category.name }}]"
+
+  ### Disabling and persistence
+
+      identifier false
+      persist_identifier false
+
+  When the template references associations (e.g. `@entry.category.name`),
+  they are automatically detected and available via `__identifier_preloads__/0`.
+
+  ## Absolute URL
+
+  Defines the front-end URL for an entry, used for SEO, sitemaps,
+  and admin preview links.
+
+  ### HEEx
+
+      absolute_url ~H"/projects/{@entry.slug}"
+      absolute_url ~H"/projects/{@entry.category.slug}/{@entry.slug}"
+
+  ### Liquex
+
+      absolute_url "/projects/{{ entry.slug }}"
+
+  ### i18n route helper
+
+      absolute_url {:i18n, :project_path, :detail, [[:category, :slug], :slug]}
+
+  ### Disabling
+
+      absolute_url false
+
+  Association references are automatically detected for preloads
+  via `__absolute_url_preloads__/0`.
+
+  ## Override Gettext module
+
+      use Brando.Blueprint,
+        application: "MyApp",
         gettext_module: MyApp.Gettext.Frontend
 
-
-  # Assets
+  ## Assets
 
       assets do
         asset :cover, :image, cfg: [...]
       end
 
-  # Relations
+  ## Relations
 
-  ## Many to many
+  ### Many to many
 
-    - create the join schema yourself
-
-      use Brando.Blueprint,
-        application: "MyApp",
-        domain: "Projects",
-        schema: "ProjectWorker",
-        singular: "project_worker",
-        plural: "project_workers"
+  Create the join schema:
 
       relations do
         relation :project, :belongs_to, module: Project
         relation :worker, :belongs_to, module: Worker
       end
 
-    - then add the relation as a m2m:
-
-      use Brando.Blueprint,
-        application: "MyApp",
-        domain: "Projects",
-        schema: "Project",
-        singular: "project",
-        plural: "projects"
+  Then add the m2m relation:
 
       relations do
         relation :workers, :many_to_many, module: Worker, join_through: ProjectWorker, cast: true
       end
 
-    # add `cast: :true` to :projects_workers opts if you need M2M casting
-
-
   ## Embedded schema
-
-      use Brando.Blueprint,
-        application: "MyApp",
-        domain: "Projects",
-        schema: "Project",
-        singular: "project",
-        plural: "projects"
 
       data_layer :embedded
 
   ## UUID primary key
 
-      use Brando.Blueprint,
-        application: "MyApp",
-        domain: "Projects",
-        schema: "Project",
-        singular: "project",
-        plural: "projects"
-
       primary_key :uuid
 
-      # for relations that have uuids
       relations do
         relation :some_module, :belongs_to, module: SomeModule, type: :binary_id
       end
 
-  # Extra changesets
+  ## Extra changesets
 
-  Sometimes you will need additional changeset functions to process different
-  subsets of your fields. Currently you'd just add your own function to your schema:
+  Add custom changeset functions for processing different subsets of fields:
 
-  ```elixir
-  def name_changeset(schema, params, user \\ :system) do
-    schema
-    |> cast(params, [:name])
-    |> validate_required([:name])
-  end
-  ```
+      def name_changeset(schema, params, user \\\\ :system) do
+        schema
+        |> cast(params, [:name])
+        |> validate_required([:name])
+      end
 
-  Then force your mutation to use this changeset by passing it explicitly:
+  Then pass it to your mutation:
 
-  ```elixir
-  {:ok, project} = Projects.update_project(
-    project_id,
-    %{"name" => "New Name"},
-    user, changeset: &Projects.Project.name_changeset/3)
-  )
-  ```
+      {:ok, project} = Projects.update_project(
+        project_id,
+        %{"name" => "New Name"},
+        user, changeset: &Projects.Project.name_changeset/3)
+      )
 
   """
 

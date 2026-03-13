@@ -1,19 +1,33 @@
 defmodule Brando.Blueprint.AbsoluteURL do
   @moduledoc """
-  Defines the absolute URL for the entry
+  DSL macro for defining the absolute URL of a blueprint entry.
 
-  ## Examples
+  Used for SEO, sitemaps, and admin preview links. The template receives
+  the entry struct — use `@entry` in HEEx or `entry` in Liquex templates.
+
+  Association references (e.g. `@entry.category.slug`) are automatically
+  detected and included in `__absolute_url_preloads__/0`.
+
+  ## HEEx
+
+      absolute_url ~H"/projects/{@entry.slug}"
+      absolute_url ~H"/projects/{@entry.category.slug}/{@entry.slug}"
+
+  ## Liquex
+
+      absolute_url "/projects/{{ entry.slug }}"
+      absolute_url \"""
+      {%- assign language = entry.language|strip -%}
+      /{{ language }}/projects/{{ entry.slug }}
+      \"""
+
+  ## i18n route helper
 
       absolute_url {:i18n, :project_path, :detail, [[:category, :slug], :slug]}
 
-  or
+  ## Disabling
 
-      absolute_url "{% route_i18n entry.language project_path detail { entry.category.slug, entry.slug } %}"
-
-  or
-
-      absolute_url "/projects/{{ entry.id }}"
-
+      absolute_url false
   """
   alias Brando.Villain
 
@@ -58,6 +72,28 @@ defmodule Brando.Blueprint.AbsoluteURL do
       end
 
       def __absolute_url_type__, do: :liquid
+      def __has_absolute_url__, do: true
+    end
+  end
+
+  defmacro absolute_url({:sigil_H, _, [{:<<>>, _, [tpl_string]}, _]} = heex_ast) do
+    quote location: :keep do
+      @absolute_url_tpl unquote(tpl_string)
+      @absolute_url_type :heex
+      def __absolute_url__(entry) do
+        var!(assigns) = %{entry: entry}
+
+        unquote(heex_ast)
+        |> Phoenix.HTML.Safe.to_iodata()
+        |> IO.iodata_to_binary()
+        |> String.trim()
+      rescue
+        UndefinedFunctionError -> nil
+        ArgumentError -> nil
+      end
+
+      def __absolute_url_type__, do: :heex
+      def __absolute_url_template__, do: unquote(tpl_string)
       def __has_absolute_url__, do: true
     end
   end

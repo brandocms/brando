@@ -4,6 +4,22 @@
 
 #### Features
 
+- **HEEx support for `identifier` and `absolute_url`**: Both macros now accept `~H` templates
+  as an alternative to Liquex templates.
+
+  ```elixir
+  identifier ~H"{@entry.title} [{@entry.category.name}]"
+  absolute_url ~H"/projects/{@entry.category.slug}/{@entry.slug}"
+  ```
+
+  Association references are automatically extracted for preloads.
+
+- **Identifier preloads**: Added `__identifier_preloads__/0` to blueprints, matching the
+  existing `__absolute_url_preloads__/0`. Associations referenced in identifier templates
+  are now automatically detected.
+
+#### Features
+
 - **Villain text styles API**: Added `styles` to `Brando.Villain.Blocks.TextBlock.Data` for configurable text style presets.
   - Supports styled node elements: `p`, `h1`-`h6`
   - Supports styled inline elements: `span`

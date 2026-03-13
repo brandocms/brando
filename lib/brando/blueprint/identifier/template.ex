@@ -22,6 +22,7 @@ defmodule Brando.Blueprint.Identifier.Template do
 
       iex> extract_fields("{{ entry.name }} - {{ entry.category.title }}")
       [:name, [{:category, :title}]]
+
   """
   @spec extract_fields(String.t()) :: [atom() | [{atom(), atom()}]]
   def extract_fields(template) do

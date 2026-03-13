@@ -17,14 +17,22 @@ defmodule Brando.Blueprint.Dsl do
     opts_to_document: []
 
   def extract_absolute_url_preloads(module) do
-    absolute_url_type = Module.get_attribute(module, :absolute_url_type)
-    absolute_url_tpl = Module.get_attribute(module, :absolute_url_tpl)
+    type = Module.get_attribute(module, :absolute_url_type)
+    tpl = Module.get_attribute(module, :absolute_url_tpl)
     relations = Module.get_attribute(module, :relations)
+    extract_template_preloads(type, tpl, relations)
+  end
 
-    all_relations = relations
+  def extract_identifier_preloads(module) do
+    type = Module.get_attribute(module, :identifier_type)
+    tpl = Module.get_attribute(module, :identifier_tpl)
+    relations = Module.get_attribute(module, :relations)
+    extract_template_preloads(type, tpl, relations)
+  end
 
+  defp extract_template_preloads(type, tpl, relations) do
     try_relation = fn name ->
-      all_relations
+      relations
       |> Enum.find(fn rel ->
         atom_name = (is_atom(name) && name) || String.to_existing_atom(name)
         rel.name == atom_name
@@ -35,10 +43,10 @@ defmodule Brando.Blueprint.Dsl do
       end
     end
 
-    case absolute_url_type do
+    case type do
       :liquid ->
         ~r/.*?(entry[.a-zA-Z0-9_]+).*?/
-        |> Regex.scan(absolute_url_tpl || "", capture: :all_but_first)
+        |> Regex.scan(tpl || "", capture: :all_but_first)
         |> Enum.map(&String.split(List.first(&1), "."))
         |> Enum.filter(&(Enum.count(&1) > 1))
         |> Enum.map(fn
@@ -49,12 +57,19 @@ defmodule Brando.Blueprint.Dsl do
         |> Enum.uniq()
 
       :i18n ->
-        absolute_url_tpl
+        tpl
         |> Enum.filter(&(Enum.count(&1) > 1))
         |> Enum.map(fn
           [rel, _] -> try_relation.(rel)
           [rel] -> try_relation.(rel)
         end)
+        |> Enum.reject(&is_nil(&1))
+        |> Enum.uniq()
+
+      :heex ->
+        ~r/@entry\.([a-zA-Z_]+)\.([a-zA-Z_]+)/
+        |> Regex.scan(tpl || "", capture: :all_but_first)
+        |> Enum.map(fn [rel, _field] -> try_relation.(rel) end)
         |> Enum.reject(&is_nil(&1))
         |> Enum.uniq()
 
@@ -103,6 +118,11 @@ defmodule Brando.Blueprint.Dsl do
       @absolute_url_preloads Brando.Blueprint.Dsl.extract_absolute_url_preloads(__MODULE__)
       def __absolute_url_preloads__ do
         @absolute_url_preloads
+      end
+
+      @identifier_preloads Brando.Blueprint.Dsl.extract_identifier_preloads(__MODULE__)
+      def __identifier_preloads__ do
+        @identifier_preloads
       end
 
       def __primary_key__ do
