@@ -403,6 +403,10 @@
     border-radius: 20px;
     transition: background-color 250ms ease;
 
+    &.selected {
+      cursor: grab;
+    }
+
     .main-content .status + div,
     .child-row .status + div {
       margin-left: 0 !important;
@@ -642,6 +646,13 @@
           }
         }
       }
+    }
+  }
+
+  &.selection-dragging {
+    .list-row.selected {
+      opacity: 0.75;
+      cursor: grabbing;
     }
   }
 }

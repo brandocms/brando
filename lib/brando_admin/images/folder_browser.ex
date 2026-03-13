@@ -96,7 +96,7 @@ defmodule BrandoAdmin.Images.FolderBrowser do
 
     folders_from_images =
       images
-      |> Enum.map(&image_folder_absolute(&1, folder_paths_by_id))
+      |> Enum.map(&image_folder_absolute(&1, folder_paths_by_id, normalized_root))
       |> Enum.reject(&is_nil/1)
       |> Enum.map(&normalize_folder/1)
       |> Enum.reject(&is_nil/1)
@@ -161,16 +161,17 @@ defmodule BrandoAdmin.Images.FolderBrowser do
   def images_in_folder(images, current_folder, upload_root) do
     current = normalize_folder(current_folder) || ""
     folder_paths_by_id = folder_absolute_paths_for_images(images)
+    normalized_root = normalize_folder(upload_root)
 
     abs_folder =
       if current == "" do
-        normalize_folder(upload_root)
+        normalized_root
       else
-        absolute_folder(current, upload_root)
+        absolute_folder(current, normalized_root)
       end
 
     Enum.filter(images, fn image ->
-      normalize_folder(image_folder_absolute(image, folder_paths_by_id)) == abs_folder
+      normalize_folder(image_folder_absolute(image, folder_paths_by_id, normalized_root)) == abs_folder
     end)
   end
 
@@ -217,6 +218,22 @@ defmodule BrandoAdmin.Images.FolderBrowser do
     end
   end
 
+  def folder_path_for_id(folder_id, upload_root \\ nil)
+
+  def folder_path_for_id(nil, _upload_root), do: ""
+  def folder_path_for_id("", _upload_root), do: ""
+
+  def folder_path_for_id(folder_id, upload_root) do
+    scope = scope_for(upload_root)
+
+    with id when is_integer(id) <- parse_folder_id(folder_id),
+         %Folder{scope: ^scope, path: path} <- Repo.get(Folder, id) do
+      relative_folder(path, scope)
+    else
+      _ -> ""
+    end
+  end
+
   defp directory_from_path(nil), do: nil
 
   defp directory_from_path(path) when is_binary(path) do
@@ -241,9 +258,9 @@ defmodule BrandoAdmin.Images.FolderBrowser do
     [root | Enum.scan(segments, root, fn segment, acc -> "#{acc}/#{segment}" end)]
   end
 
-  defp image_folder_absolute(image, folder_paths_by_id) do
+  defp image_folder_absolute(image, folder_paths_by_id, upload_root) do
     image_folder_from_db(image, folder_paths_by_id) ||
-      image_folder_from_path(image)
+      image_folder_from_path(image, upload_root)
   end
 
   defp image_folder_from_db(%{folder_id: folder_id}, folder_paths_by_id) when is_integer(folder_id) do
@@ -252,8 +269,37 @@ defmodule BrandoAdmin.Images.FolderBrowser do
 
   defp image_folder_from_db(_, _), do: nil
 
-  defp image_folder_from_path(%{path: path}) when is_binary(path), do: directory_from_path(path)
-  defp image_folder_from_path(_), do: nil
+  defp image_folder_from_path(%{path: path}, upload_root) when is_binary(path) do
+    path
+    |> directory_from_path()
+    |> normalize_legacy_folder_path(upload_root)
+  end
+
+  defp image_folder_from_path(_, _), do: nil
+
+  defp normalize_legacy_folder_path(nil, _upload_root), do: nil
+
+  defp normalize_legacy_folder_path(folder, upload_root) do
+    normalized_folder = normalize_folder(folder)
+    normalized_root = normalize_folder(upload_root)
+
+    cond do
+      is_nil(normalized_folder) ->
+        nil
+
+      is_nil(normalized_root) ->
+        normalized_folder
+
+      normalized_folder == normalized_root ->
+        normalized_folder
+
+      String.starts_with?(normalized_folder, normalized_root <> "/") ->
+        normalized_folder
+
+      true ->
+        absolute_folder(normalized_folder, normalized_root)
+    end
+  end
 
   defp folders_from_database(upload_root) do
     Folder
@@ -331,6 +377,17 @@ defmodule BrandoAdmin.Images.FolderBrowser do
     |> limit(1)
     |> Repo.one()
   end
+
+  defp parse_folder_id(folder_id) when is_integer(folder_id), do: folder_id
+
+  defp parse_folder_id(folder_id) when is_binary(folder_id) do
+    case Integer.parse(folder_id) do
+      {id, ""} -> id
+      _ -> nil
+    end
+  end
+
+  defp parse_folder_id(_), do: nil
 
   defp normalize_config_target(nil), do: nil
   defp normalize_config_target(config_target) when is_binary(config_target), do: config_target

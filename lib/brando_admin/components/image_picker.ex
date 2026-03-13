@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Images.FolderBrowser
@@ -330,8 +331,18 @@ defmodule BrandoAdmin.Components.ImagePicker do
     <div>
       <Content.drawer id={@id} title={gettext("Select image")} close={toggle_drawer("##{@id}")} z={@z_index} wide>
         <:info>
-          <div class="image-picker-top">
-            <%= if @picker_mode == :block_upload do %>
+          <.live_component
+            module={FileBrowser}
+            id={"#{@id}-top"}
+            section={:top}
+            mode={:drawer}
+            target={@myself}
+            upload_root={@upload_root}
+            current_folder={@current_folder}
+            breadcrumbs={@breadcrumbs}
+            recent_folders={@recent_folders_for_root}
+          >
+            <:top_lead :if={@picker_mode == :block_upload}>
               <div class="image-picker-upload-callout">
                 <div>
                   {gettext(
@@ -347,22 +358,8 @@ defmodule BrandoAdmin.Components.ImagePicker do
                   {gettext("Upload here")}
                 </button>
               </div>
-            <% end %>
-
-            <div class="image-picker-toolbar">
-              <nav class="image-picker-path" aria-label={gettext("Folder path")}>
-                <%= for {crumb, idx} <- Enum.with_index(@breadcrumbs) do %>
-                  <button
-                    type="button"
-                    class={["path-link", crumb.folder == @current_folder && "active"]}
-                    phx-click={JS.push("go_folder", target: @myself, value: %{folder: crumb.folder})}
-                  >
-                    {if crumb.folder == "", do: root_label(@upload_root), else: crumb.label}
-                  </button>
-                  <span :if={idx < length(@breadcrumbs) - 1} class="path-separator">/</span>
-                <% end %>
-              </nav>
-
+            </:top_lead>
+            <:toolbar_actions>
               <div class="image-picker-view-toggle">
                 <button
                   id={"#{@id}-view-grid"}
@@ -381,112 +378,27 @@ defmodule BrandoAdmin.Components.ImagePicker do
                   {gettext("List")}
                 </button>
               </div>
-            </div>
-
-            <div :if={@recent_folders_for_root != []} class="image-picker-recent-folders">
-              <span class="label">{gettext("Recent folders")}</span>
-              <%= for folder <- @recent_folders_for_root do %>
-                <button
-                  type="button"
-                  class="folder-pill subtle"
-                  phx-click={JS.push("go_recent_folder", target: @myself, value: %{folder: folder})}
-                >
-                  {folder_label_for_display(FolderBrowser.relative_folder(folder, @upload_root), @upload_root)}
-                </button>
-              <% end %>
-            </div>
-          </div>
+            </:toolbar_actions>
+          </.live_component>
         </:info>
 
-        <div class="image-picker-browser">
-          <aside class="image-picker-folders">
-            <div class="image-picker-folders-header">
-              <div>
-                <h3>{gettext("Folders")}</h3>
-                <p>{gettext("Navigate and create folders")}</p>
-              </div>
-              <div class="folder-actions">
-                <button
-                  type="button"
-                  class="folder-action icon-only"
-                  phx-click={JS.push("go_parent_folder", target: @myself)}
-                  disabled={@current_folder == ""}
-                  title={gettext("Up")}
-                  aria-label={gettext("Up")}
-                >
-                  <.icon name="hero-arrow-up-mini" />
-                </button>
-                <button
-                  type="button"
-                  class="folder-action"
-                  phx-click={JS.push("go_root", target: @myself)}
-                  disabled={@current_folder == ""}
-                >
-                  {gettext("Root")}
-                </button>
-              </div>
-            </div>
-
-            <button
-              :if={!@show_new_folder_form}
-              type="button"
-              class="new-folder-trigger"
-              phx-click={JS.push("show_new_folder_form", target: @myself)}
-            >
-              <.icon name="hero-plus-small" />
-              {gettext("New folder")}
-            </button>
-
-            <form :if={@show_new_folder_form} phx-submit="create_folder" phx-target={@myself} class="new-folder-form">
-              <input
-                id={"#{@id}-new-folder"}
-                class="text small"
-                type="text"
-                name="folder[name]"
-                value={@new_folder}
-                placeholder={gettext("Folder name")}
-                phx-mounted={JS.focus()}
-              />
-              <div class="new-folder-actions">
-                <button
-                  type="submit"
-                  class="folder-icon-button confirm"
-                  title={gettext("Create folder")}
-                  aria-label={gettext("Create folder")}
-                >
-                  <.icon name="hero-check-circle" />
-                </button>
-                <button
-                  type="button"
-                  class="folder-icon-button cancel"
-                  title={gettext("Cancel")}
-                  aria-label={gettext("Cancel")}
-                  phx-click={JS.push("cancel_new_folder_form", target: @myself)}
-                >
-                  <.icon name="hero-x-mark" />
-                </button>
-              </div>
-            </form>
-
-            <div class="folder-list">
-              <%= if @child_folders == [] do %>
-                <div class="empty">{gettext("No subfolders in this location")}</div>
-              <% end %>
-
-              <%= for folder <- @child_folders do %>
-                <button
-                  type="button"
-                  class={["folder-row", folder == @current_folder && "active"]}
-                  phx-click={JS.push("go_folder", target: @myself, value: %{folder: folder})}
-                >
-                  <.icon name="hero-folder" />
-                  <span class="folder-name">{folder_label(folder, @current_folder)}</span>
-                </button>
-              <% end %>
-            </div>
-          </aside>
-
-          <section id={"image-picker-main-#{@id}"} class="image-picker-main">
+        <.live_component
+          module={FileBrowser}
+          id={@id}
+          section={:browser}
+          mode={:drawer}
+          target={@myself}
+          upload_root={@upload_root}
+          current_folder={@current_folder}
+          breadcrumbs={@breadcrumbs}
+          recent_folders={@recent_folders_for_root}
+          show_recent_folders={false}
+          child_folders={@child_folders}
+          show_new_folder_form={@show_new_folder_form}
+          new_folder={@new_folder}
+          main_id={"image-picker-main-#{@id}"}
+        >
+          <:main_header>
             <div class="image-picker-main-header">
               <h3>{folder_label_for_display(@current_folder, @upload_root)}</h3>
               <div class="image-picker-main-actions">
@@ -524,56 +436,56 @@ defmodule BrandoAdmin.Components.ImagePicker do
                 </button>
               </div>
             </div>
+          </:main_header>
 
-            <div
-              id={"image-picker-drawer-#{@id}"}
-              class="image-picker list"
-              phx-hook="Brando.QueuedUploader"
-              data-upload-target={if @picker_mode == :select && @upload_name, do: to_string(@upload_name), else: ""}
-              data-upload-form="#image-drawer-form"
-              data-progress-target={if @picker_mode == :select && @upload_name, do: "#image-picker-main-#{@id}", else: ""}
-              data-progress-listener="true"
-              data-listen-document-change={if @picker_mode == :select && @upload_name, do: "true", else: "false"}
-              data-enable-drop={if @picker_mode == :select && @upload_name, do: "true", else: "false"}
-              data-max-concurrency="1"
-            >
-              <div :if={@picker_mode == :select && @upload_name} class="folder-drop-indicator">
-                <.icon name="hero-photo" />
-                <span>{gettext("Drop files to upload into")}</span>
-                <strong>{folder_label_for_display(@current_folder, @upload_root)}</strong>
-              </div>
-
-              <%= if @visible_images == [] do %>
-                <div class="image-picker-empty">
-                  <button
-                    :if={@picker_mode == :select && @upload_name}
-                    type="button"
-                    class="empty-upload-trigger"
-                    phx-click={
-                      JS.push("prepare_picker_upload", target: @myself)
-                      |> dispatch_upload_click(@upload_name, @drop_target)
-                    }
-                  >
-                    <.icon name="hero-photo" />
-                  </button>
-                  <.icon :if={!(@picker_mode == :select && @upload_name)} name="hero-photo" />
-                  <h4>{gettext("No images in this folder")}</h4>
-                  <p>{gettext("Upload files here or choose another folder")}</p>
-                </div>
-              <% end %>
-
-              <.image_row
-                :for={image <- @visible_images}
-                image={image}
-                selected_images={@selected_images}
-                multi={@multi}
-                event_target={@event_target}
-                picker_mode={@picker_mode}
-                myself={@myself}
-              />
+          <div
+            id={"image-picker-drawer-#{@id}"}
+            class="image-picker list"
+            phx-hook="Brando.QueuedUploader"
+            data-upload-target={if @picker_mode == :select && @upload_name, do: to_string(@upload_name), else: ""}
+            data-upload-form="#image-drawer-form"
+            data-progress-target={if @picker_mode == :select && @upload_name, do: "#image-picker-main-#{@id}", else: ""}
+            data-progress-listener="true"
+            data-listen-document-change={if @picker_mode == :select && @upload_name, do: "true", else: "false"}
+            data-enable-drop={if @picker_mode == :select && @upload_name, do: "true", else: "false"}
+            data-max-concurrency="1"
+          >
+            <div :if={@picker_mode == :select && @upload_name} class="folder-drop-indicator">
+              <.icon name="hero-photo" />
+              <span>{gettext("Drop files to upload into")}</span>
+              <strong>{folder_label_for_display(@current_folder, @upload_root)}</strong>
             </div>
-          </section>
-        </div>
+
+            <%= if @visible_images == [] do %>
+              <div class="image-picker-empty">
+                <button
+                  :if={@picker_mode == :select && @upload_name}
+                  type="button"
+                  class="empty-upload-trigger"
+                  phx-click={
+                    JS.push("prepare_picker_upload", target: @myself)
+                    |> dispatch_upload_click(@upload_name, @drop_target)
+                  }
+                >
+                  <.icon name="hero-photo" />
+                </button>
+                <.icon :if={!(@picker_mode == :select && @upload_name)} name="hero-photo" />
+                <h4>{gettext("No images in this folder")}</h4>
+                <p>{gettext("Upload files here or choose another folder")}</p>
+              </div>
+            <% end %>
+
+            <.image_row
+              :for={image <- @visible_images}
+              image={image}
+              selected_images={@selected_images}
+              multi={@multi}
+              event_target={@event_target}
+              picker_mode={@picker_mode}
+              myself={@myself}
+            />
+          </div>
+        </.live_component>
       </Content.drawer>
     </div>
     """
@@ -786,13 +698,6 @@ defmodule BrandoAdmin.Components.ImagePicker do
     socket
     |> assign(:recent_folders, recent_folders)
     |> assign_folder_state(socket.assigns.current_folder)
-  end
-
-  defp folder_label(folder, current_folder) do
-    folder
-    |> String.replace_prefix(current_folder <> "/", "")
-    |> String.split("/", parts: 2)
-    |> hd()
   end
 
   defp folder_label_for_display(folder, upload_root) do

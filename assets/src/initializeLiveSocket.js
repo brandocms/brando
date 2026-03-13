@@ -12,6 +12,14 @@ export default (hooks) => {
     timeout: 70000,
     uploaders: Uploaders,
     metadata: {
+      click: (e, el) => {
+        return {
+          shiftKey: e.shiftKey,
+          metaKey: e.metaKey,
+          altKey: e.altKey,
+          ctrlKey: e.ctrlKey,
+        }
+      },
       keydown: (e, el) => {
         return {
           key: e.key,

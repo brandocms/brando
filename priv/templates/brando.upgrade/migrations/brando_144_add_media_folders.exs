@@ -76,11 +76,12 @@ defmodule Brando.Migrations.Media.AddMediaFolders do
       """)
 
     Enum.each(rows, fn [id, path, config_target] ->
-      path = normalize_path(path)
       upload_root = image_upload_root(config_target)
+      scope = "images"
+      full_path = resolve_image_path(path, upload_root)
 
-      with relative when is_binary(relative) <- relative_folder_for_path(path, upload_root),
-           folder_id when is_integer(folder_id) <- ensure_folder(upload_root, relative) do
+      with relative when is_binary(relative) <- relative_folder_for_path(full_path, scope),
+           folder_id when is_integer(folder_id) <- ensure_folder(scope, relative) do
         repo().query!("UPDATE images SET folder_id = $1 WHERE id = $2 AND folder_id IS NULL", [folder_id, id])
       else
         _ -> :ok
@@ -223,6 +224,67 @@ defmodule Brando.Migrations.Media.AddMediaFolders do
   end
 
   defp normalize_path(_), do: ""
+
+  defp resolve_image_path(path, upload_root) do
+    normalized_path = normalize_path(path)
+    scope = "images"
+    absolute_upload_root = absolute_upload_root(upload_root, scope)
+    upload_root_relative = strip_scope_prefix(absolute_upload_root, scope)
+
+    cond do
+      normalized_path in ["", "."] ->
+        ""
+
+      absolute_media_path?(normalized_path) ->
+        normalized_path
+
+      upload_root_relative != "" and
+          (normalized_path == upload_root_relative or
+             String.starts_with?(normalized_path, upload_root_relative <> "/")) ->
+        Path.join(scope, normalized_path) |> normalize_path()
+
+      String.contains?(normalized_path, "/") ->
+        Path.join(scope, normalized_path) |> normalize_path()
+
+      true ->
+        Path.join(absolute_upload_root, normalized_path) |> normalize_path()
+    end
+  end
+
+  defp absolute_upload_root(upload_root, scope) do
+    normalized_upload_root = normalize_path(upload_root)
+    normalized_scope = normalize_path(scope)
+
+    cond do
+      normalized_upload_root in ["", "."] ->
+        normalized_scope
+
+      normalized_upload_root == normalized_scope ->
+        normalized_scope
+
+      String.starts_with?(normalized_upload_root, normalized_scope <> "/") ->
+        normalized_upload_root
+
+      true ->
+        Path.join(normalized_scope, normalized_upload_root) |> normalize_path()
+    end
+  end
+
+  defp strip_scope_prefix(path, scope) do
+    normalized_path = normalize_path(path)
+    normalized_scope = normalize_path(scope)
+
+    cond do
+      normalized_path == normalized_scope ->
+        ""
+
+      String.starts_with?(normalized_path, normalized_scope <> "/") ->
+        String.replace_prefix(normalized_path, normalized_scope <> "/", "")
+
+      true ->
+        normalized_path
+    end
+  end
 
   defp resolve_file_path(filename, config_target) do
     if absolute_media_path?(filename) do

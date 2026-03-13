@@ -18,10 +18,10 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   # prop selected_rows, :list
   # prop listing, :any
   # prop schema, :any
+  # prop click_event, :string, required: true
   # prop sortable?, :boolean
   # prop status?, :boolean
   # prop creator?, :boolean
-  # prop click, :event, required: true
   # prop target, :any, required: true
 
   def mount(socket) do
@@ -50,9 +50,11 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         "draggable",
         @selected? && "selected"
       ]}
-      data-id={@entry.id}
-      phx-click={@click}
+      phx-click={@click_event}
+      phx-target={@target}
       phx-value-id={@entry.id}
+      data-id={@entry.id}
+      draggable="true"
     >
       <div class="main-content">
         <.status :if={@status?} entry={@entry} soft_delete?={@soft_delete?} />
@@ -273,8 +275,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         </.action_button>
         <.action_button
           :for={lang <- @duplicate_langs}
-          :key={lang}
           :if={@duplicate_langs?}
+          :key={lang}
           id={"action_#{@listing.name}_duplicate_entry_to_lang_#{@entry.id}_lang_#{lang}"}
           entry_id={@entry.id}
           language={lang}

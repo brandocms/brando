@@ -471,6 +471,13 @@
         opacity: 1;
       }
     }
+
+    &.drop-active {
+      background: color-mix(in srgb, var(--brando-color-blue) 18%, white);
+      border-color: color-mix(in srgb, var(--brando-color-blue) 52%, white);
+      color: var(--brando-color-dark);
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brando-color-blue) 38%, white);
+    }
   }
 
   .image-picker-main {

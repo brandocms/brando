@@ -15,11 +15,15 @@ defmodule BrandoAdmin.Components.Content.List do
   NimbleCSV.define(Brando.CSVParser, separator: "\t", escape: "\"")
 
   def mount(socket) do
-    {:ok, assign(socket, :selected_rows, [])}
+    {:ok, socket |> assign(:selected_rows, []) |> assign(:last_selected_row_id, nil)}
   end
 
   def update(%{action: :update_entries} = assigns, socket) do
     {:ok, assign_entries(socket, assigns)}
+  end
+
+  def update(%{action: :clear_selection}, socket) do
+    {:ok, socket |> assign(:selected_rows, []) |> assign(:last_selected_row_id, nil)}
   end
 
   def update(assigns, socket) do
@@ -199,12 +203,30 @@ defmodule BrandoAdmin.Components.Content.List do
     {:noreply, push_query_params(socket, %{"limit" => limit})}
   end
 
-  def handle_event("select_row", %{"id" => id}, socket) do
-    {:noreply, select_row(socket, String.to_integer(id))}
+  def handle_event("select_row", %{"id" => id} = params, socket) do
+    shift? = truthy?(Map.get(params, "shift") || Map.get(params, "shiftKey"))
+    command? =
+      truthy?(
+        Map.get(params, "meta") || Map.get(params, "metaKey") || Map.get(params, "ctrl") ||
+          Map.get(params, "ctrlKey")
+      )
+
+    parsed_id = String.to_integer(id)
+
+    cond do
+      shift? and command? ->
+        {:noreply, select_row(socket, parsed_id, :range)}
+
+      shift? ->
+        {:noreply, select_row(socket, parsed_id, :toggle)}
+
+      true ->
+        {:noreply, socket}
+    end
   end
 
   def handle_event("clear_selection", _, socket) do
-    {:noreply, assign(socket, :selected_rows, [])}
+    {:noreply, socket |> assign(:selected_rows, []) |> assign(:last_selected_row_id, nil)}
   end
 
   def handle_event("sequenced", %{"sortable_id" => sortable_id} = params, %{assigns: %{schema: schema}} = socket) do
@@ -224,16 +246,60 @@ defmodule BrandoAdmin.Components.Content.List do
     end
   end
 
-  defp select_row(%{assigns: %{selected_rows: selected_rows}} = socket, id) do
+  defp select_row(socket, id, :toggle) do
+    selected_rows = socket.assigns.selected_rows
+
     updated_selected_rows =
       if id in selected_rows do
         List.delete(selected_rows, id)
       else
-        [id | selected_rows]
+        Enum.uniq([id | selected_rows])
       end
 
-    assign(socket, :selected_rows, updated_selected_rows)
+    new_last_selected_row_id = if(updated_selected_rows == [], do: nil, else: id)
+
+    socket
+    |> assign(:selected_rows, updated_selected_rows)
+    |> assign(:last_selected_row_id, new_last_selected_row_id)
   end
+
+  defp select_row(socket, id, :range) do
+    selected_rows = socket.assigns.selected_rows
+    anchor_id = socket.assigns.last_selected_row_id
+    range_ids = range_ids_between(socket, anchor_id, id)
+
+    updated_selected_rows =
+      if range_ids == [] do
+        Enum.uniq([id | selected_rows])
+      else
+        Enum.uniq(selected_rows ++ range_ids)
+      end
+
+    socket
+    |> assign(:selected_rows, updated_selected_rows)
+    |> assign(:last_selected_row_id, id)
+  end
+
+  defp range_ids_between(_socket, nil, _id), do: []
+
+  defp range_ids_between(%{assigns: %{entries: %{entries: entries}}}, from_id, to_id) do
+    ids = Enum.map(entries, & &1.id)
+    from_idx = Enum.find_index(ids, &(&1 == from_id))
+    to_idx = Enum.find_index(ids, &(&1 == to_id))
+
+    if is_integer(from_idx) and is_integer(to_idx) do
+      start_idx = min(from_idx, to_idx)
+      end_idx = max(from_idx, to_idx)
+      Enum.slice(ids, start_idx..end_idx)
+    else
+      []
+    end
+  end
+
+  defp range_ids_between(_socket, _from_id, _to_id), do: []
+
+  defp truthy?(value) when value in [true, "true", "1", 1], do: true
+  defp truthy?(_value), do: false
 
   defp assign_defaults(socket, assigns) do
     schema = assigns.schema
@@ -247,6 +313,7 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign(:uri, assigns.uri)
       |> assign(:params, assigns.params)
       |> assign(:current_user, assigns.current_user)
+      |> assign(:extra_selection_actions, Map.get(assigns, :extra_selection_actions, []))
       |> assign_new(:schema, fn -> schema end)
       |> assign_new(:context, fn -> context end)
       |> assign_new(:singular, fn -> singular end)
@@ -841,7 +908,13 @@ defmodule BrandoAdmin.Components.Content.List do
     <div :if={@exports != []} class="exports">
       {gettext("Export")}
       <CircleDropdown.render id="listing-exports-dropdown">
-        <button :for={export <- @exports} :key={export.name} type="button" phx-value-name={export.name} phx-click={@select_export}>
+        <button
+          :for={export <- @exports}
+          :key={export.name}
+          type="button"
+          phx-value-name={export.name}
+          phx-click={@select_export}
+        >
           {g(@schema, export.label)} <span class="shortcut">{export.type}</span>
         </button>
       </CircleDropdown.render>
@@ -879,7 +952,13 @@ defmodule BrandoAdmin.Components.Content.List do
       <div class="list-tools">
         <%= if @has_status? do %>
           <div class="statuses">
-            <.status :for={status <- @statuses} :key={status} status={status} list_opts={@list_opts} on_update_status={@update_status} />
+            <.status
+              :for={status <- @statuses}
+              :key={status}
+              status={status}
+              list_opts={@list_opts}
+              on_update_status={@update_status}
+            />
           </div>
         <% end %>
 
@@ -909,7 +988,12 @@ defmodule BrandoAdmin.Components.Content.List do
         reset_filters={@reset_filters}
       />
       <div class="list-filters-and-sorts">
-        <.active_filters :if={@list_opts[:filter]} active_filters={@list_opts[:filter]} filters={@filters} delete={@delete_filter} />
+        <.active_filters
+          :if={@list_opts[:filter]}
+          active_filters={@list_opts[:filter]}
+          filters={@filters}
+          delete={@delete_filter}
+        />
         <.sorts :if={@sorts != []} active_sort={@active_sort} sorts={@sorts} schema={@schema} on_update={@update_sort} />
       </div>
     </div>

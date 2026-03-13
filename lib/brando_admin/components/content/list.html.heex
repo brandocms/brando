@@ -1,5 +1,10 @@
 <div class="content-list-wrapper">
-  <article id={"listing-#{@listing.name}"} class="content-list" phx-hook="Brando.Listing">
+  <article
+    id={"listing-#{@listing.name}"}
+    class="content-list"
+    phx-hook="Brando.Listing"
+    data-target={@myself}
+  >
     <.tools
       schema={@schema}
       listing={@listing}
@@ -51,7 +56,7 @@
         selected_rows={@selected_rows}
         content_language={@content_language}
         target={@myself}
-        click={JS.push("select_row", target: @myself)}
+        click_event="select_row"
       />
     </.entries>
 
@@ -66,7 +71,7 @@
     content_language={@content_language}
     schema={@schema}
     selected_rows={@selected_rows}
-    selection_actions={@listing.selection_actions}
+    selection_actions={@listing.selection_actions ++ @extra_selection_actions}
     target={@myself}
   />
 </div>

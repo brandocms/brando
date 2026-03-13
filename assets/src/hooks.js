@@ -1,5 +1,6 @@
 // hooks and callbacks
 import AdminHook from './hooks/Admin'
+import AssetFolderDropHook from './hooks/AssetFolderDrop'
 import BlockFieldHook from './hooks/BlockField'
 import BlockHook from './hooks/Block'
 import BlockUploadHook from './hooks/BlockUpload'
@@ -43,6 +44,7 @@ import VideoURLParserHook from './hooks/VideoURLParser'
 export default (app) => {
   return {
     'Brando.Admin': AdminHook(app),
+    'Brando.AssetFolderDrop': AssetFolderDropHook(app),
     'Brando.BlockField': BlockFieldHook(app),
     'Brando.Block': BlockHook(app),
     'Brando.BlockUpload': BlockUploadHook(app),
