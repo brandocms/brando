@@ -24,16 +24,14 @@ defmodule Mix.Tasks.Brando.Static.Deploy do
       Brando.Static
       |> Brando.CDN.config(:s3)
       |> Map.from_struct()
-      |> Map.to_list()
 
-    require Logger
-    Logger.error(inspect(s3_config, pretty: true))
+    s3_config_list = Map.to_list(s3_config)
 
     bucket = Brando.CDN.config(Brando.Static, :bucket)
 
     bucket
     |> S3.get_bucket_location()
-    |> ExAws.request(s3_config)
+    |> ExAws.request(s3_config_list)
     |> case do
       {:ok, _result} ->
         Mix.shell().info("==> OK - bucket [#{bucket}] exists")
@@ -44,20 +42,18 @@ defmodule Mix.Tasks.Brando.Static.Deploy do
 
         bucket
         |> ExAws.S3.put_bucket(s3_config.region)
-        |> ExAws.request(s3_config)
+        |> ExAws.request(s3_config_list)
     end
-
-    require Logger
 
     if parsed_opts[:purge] == true do
       stream =
         ExAws.S3.list_objects(bucket, prefix: "static/")
-        |> ExAws.stream!(s3_config)
+        |> ExAws.stream!(s3_config_list)
         |> Stream.map(& &1.key)
 
       bucket
       |> ExAws.S3.delete_all_objects(stream)
-      |> ExAws.request(s3_config)
+      |> ExAws.request(s3_config_list)
     end
 
     static_dir = "priv/static"
@@ -74,7 +70,7 @@ defmodule Mix.Tasks.Brando.Static.Deploy do
         acl: :public_read,
         content_type: MIME.from_path(f)
       )
-      |> ExAws.request!(s3_config)
+      |> ExAws.request!(s3_config_list)
     end)
 
     Mix.shell().info("==> Static files uploaded")

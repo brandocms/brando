@@ -4409,8 +4409,6 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, push_event(socket, "upload_send_next_file", %{upload_target: upload_target_name})}
   end
 
-  defp maybe_send_upload_next_file(other, _upload_target_name), do: other
-
   def handle_gallery_progress(
         key,
         upload_entry,
@@ -5037,8 +5035,6 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp maybe_force_ai_component_remount(socket, nil, _field_atom), do: socket
-
   defp maybe_force_ai_component_remount(socket, form_blueprint, field_atom) do
     case BlueprintForms.get_field(field_atom, form_blueprint) do
       %{type: :rich_text} -> force_svelte_remounts(socket)
@@ -5092,16 +5088,10 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update_changeset(socket, path, key, value) when is_list(path) do
-    changeset = socket.assigns.form.source
-    # if we have a path, apply_changes and change the changeset before updating it(?)
     changeset =
-      if path == [] do
-        changeset
-      else
-        changeset
-        |> apply_changes()
-        |> change()
-      end
+      socket.assigns.form.source
+      |> apply_changes()
+      |> change()
 
     new_changeset = EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> value end)
 

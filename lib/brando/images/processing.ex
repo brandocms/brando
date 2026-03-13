@@ -10,8 +10,6 @@ defmodule Brando.Images.Processing do
   alias Brando.Worker
   alias Ecto.Changeset
 
-  require Logger
-
   @type changeset :: Changeset.t()
   @type id :: binary | integer
   @type image :: Image.t()

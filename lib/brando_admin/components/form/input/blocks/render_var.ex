@@ -661,7 +661,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <%= if @value not in [nil, ""] do %>
             <dl>
               <dt>{gettext("URL")}=</dt>
-              <dd>{raw(@value) || gettext("<No URL>")}</dd>
+              <dd>{raw(@value)}</dd>
             </dl>
           <% else %>
             <dl>

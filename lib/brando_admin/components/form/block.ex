@@ -3831,9 +3831,6 @@ defmodule BrandoAdmin.Components.Form.Block do
       {_, %{id: _}} ->
         obj
 
-      {_, %Brando.Images.Image{}} ->
-        obj
-
       {image_id, _} ->
         case Brando.Images.get_image(image_id) do
           {:ok, image} -> Map.put(obj, :image, image)
@@ -3848,9 +3845,6 @@ defmodule BrandoAdmin.Components.Form.Block do
         obj
 
       {_, %{id: _}} ->
-        obj
-
-      {_, %Brando.Videos.Video{}} ->
         obj
 
       {video_id, _} ->

@@ -1,6 +1,5 @@
 defmodule Brando.Worker.ImageUploader do
   use Oban.Worker, queue: :default, max_attempts: 5
-  require Logger
   import Ecto.Query
   alias Brando.CDN
   alias Brando.Images

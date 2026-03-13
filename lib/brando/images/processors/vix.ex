@@ -163,21 +163,14 @@ defmodule Brando.Images.Processor.Vix do
   end
 
   @doc """
-  Verify that the Vix NIF is available.
-
-  Since Vix is compiled as a NIF, it's always present if the module compiled successfully.
+  Verify that the Vix NIF is available by checking that the module is loaded.
   """
   def confirm_executable_exists do
-    case Vix.Vips.version() do
-      version when is_binary(version) ->
-        {:ok, {:executable, :exists}}
-
-      _ ->
-        {:error, {:executable, :missing, "vix/libvips"}}
-    end
-  rescue
-    _ ->
+    if Code.ensure_loaded?(Vix.Vips) do
+      {:ok, {:executable, :exists}}
+    else
       {:error, {:executable, :missing, "vix/libvips"}}
+    end
   end
 
   # -- Private helpers --

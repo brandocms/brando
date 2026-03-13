@@ -5,7 +5,6 @@ defmodule Brando.Plug.HTML do
   import Plug.Conn
 
   alias Brando.JSONLD
-  alias Brando.Pages.Page
   alias Brando.Utils
 
   require Logger
@@ -66,7 +65,7 @@ defmodule Brando.Plug.HTML do
   @doc """
   Adds JSON-LD breadcrumbs to conn
   """
-  def put_breadcrumbs(conn, %Page{is_homepage: true}) do
+  def put_breadcrumbs(conn, %{is_homepage: true}) do
     breadcrumbs = [
       {Brando.config(:app_name), "/"}
     ]
@@ -74,7 +73,7 @@ defmodule Brando.Plug.HTML do
     put_json_ld(conn, :breadcrumbs, breadcrumbs)
   end
 
-  def put_breadcrumbs(conn, %Page{}) do
+  def put_breadcrumbs(conn, %{}) do
     breadcrumbs = [
       {Brando.config(:app_name), "/"}
     ]

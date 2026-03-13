@@ -315,7 +315,7 @@ defmodule Brando.Pages do
     view_module = Brando.web_module(PageView)
 
     if Code.ensure_loaded?(view_module) do
-      {_, _, templates} = view_module.__templates__
+      {_, _, templates} = apply(view_module, :__templates__, [])
 
       main_templates = Enum.filter(templates, &(not String.starts_with?(&1, "_")))
 
@@ -409,8 +409,6 @@ defmodule Brando.Pages do
   Get set of fragments by parent key
   """
   def get_fragments(parent_key) when is_binary(parent_key) do
-    require Logger
-
     IO.warn("get_fragments(binary) is deprecated! Use `get_fragments(map)` instead")
     get_fragments(%{filter: %{parent_key: parent_key}})
   end

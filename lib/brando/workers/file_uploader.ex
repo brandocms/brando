@@ -6,8 +6,6 @@ defmodule Brando.Worker.FileUploader do
   alias Brando.Files
   alias Brando.Users
 
-  require Logger
-
   @impl Oban.Worker
   def perform(%Oban.Job{
         args: %{

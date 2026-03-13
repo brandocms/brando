@@ -234,8 +234,6 @@ defmodule BrandoAdmin.Images.FolderBrowser do
     end
   end
 
-  defp directory_from_path(nil), do: nil
-
   defp directory_from_path(path) when is_binary(path) do
     case Path.dirname(path) do
       "." -> nil

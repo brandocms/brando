@@ -414,7 +414,6 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   defp extract_value(%{value: value}), do: value
   defp extract_value(%{id: value}), do: value
-  defp extract_value(%Brando.Content.Var.Option{value: value}), do: value
 
   defp get_label(%{opt: %{label: _}} = assigns) do
     assigns = assign_new(assigns, :deletable, fn -> false end)

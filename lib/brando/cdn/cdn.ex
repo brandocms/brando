@@ -344,11 +344,12 @@ defmodule Brando.CDN do
       module
       |> config(:s3)
       |> Map.from_struct()
-      |> Map.to_list()
+
+    s3_config_list = Map.to_list(s3_config)
 
     bucket
     |> S3.get_bucket_location()
-    |> ExAws.request(s3_config)
+    |> ExAws.request(s3_config_list)
     |> case do
       {:ok, _result} ->
         :ok

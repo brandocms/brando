@@ -378,7 +378,7 @@ defmodule BrandoAdmin.LiveView.Listing do
 
   defp assign_title(%{assigns: %{schema: schema}} = socket) do
     translated_plural = Brando.Blueprint.get_plural(schema)
-    page_title = (translated_plural && String.capitalize(translated_plural)) || nil
+    page_title = String.capitalize(translated_plural)
     assign(socket, :page_title, page_title)
   end
 
