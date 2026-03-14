@@ -1222,6 +1222,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:module_class, fn -> nil end)
     |> assign_new(:module_code, fn -> nil end)
     |> assign_new(:module_type, fn -> nil end)
+    |> assign_new(:heex_compiled_module, fn -> nil end)
     |> assign_new(:module_color, fn -> :blue end)
     |> assign_new(:is_datasource?, fn -> false end)
     |> assign_new(:has_table_template?, fn -> false end)
@@ -1260,6 +1261,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         |> assign_new(:module_class, fn -> module.class end)
         |> assign_new(:module_code, fn -> module.code end)
         |> assign_new(:module_type, fn -> module.type end)
+        |> assign_new(:heex_compiled_module, fn -> nil end)
         |> assign_new(:module_color, fn -> module.color end)
         |> assign_new(:is_datasource?, fn -> module.datasource end)
         |> assign_new(:has_table_template?, fn -> (module.table_template_id && true) || false end)
@@ -1303,7 +1305,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     # assign statements, or in the module code itself
     module_code = socket.assigns.module_code
 
-    if Regex.run(~r/entry\.[a-zA-Z0-9_]+/, module_code) do
+    if Regex.run(~r/(?:entry\.|@entry\.)[\w]+/, module_code) do
       cid = socket.assigns.myself
       form_cid = socket.assigns.form_cid
 
@@ -1381,6 +1383,46 @@ defmodule BrandoAdmin.Components.Form.Block do
       socket
       |> assign(:liquid_splits, splits)
       |> assign(:vars, vars)
+    end
+  end
+
+  defp maybe_parse_module(%{assigns: %{module_code: module_code, module_type: :heex} = assigns} = socket) do
+    block_initialized = assigns.block_initialized
+
+    if block_initialized do
+      socket
+    else
+      belongs_to = socket.assigns.belongs_to
+      changeset = socket.assigns.form.source
+      changeset = maybe_preload_changeset_data(changeset, :vars, belongs_to)
+
+      vars =
+        if belongs_to == :root do
+          changeset
+          |> Changeset.get_field(:block)
+          |> Changeset.change()
+          |> Changeset.get_assoc(:vars)
+        else
+          Changeset.get_assoc(changeset, :vars)
+        end
+
+      heex_compiled_module =
+        try do
+          Brando.Villain.HeexRenderer.get_or_compile!(
+            "admin_#{socket.assigns.uid}",
+            module_code
+          )
+        rescue
+          e ->
+            require Logger
+            Logger.warning("Failed to compile HEEx module template: #{Exception.message(e)}")
+            nil
+        end
+
+      socket
+      |> assign(:liquid_splits, [])
+      |> assign(:vars, vars)
+      |> assign(:heex_compiled_module, heex_compiled_module)
     end
   end
 
@@ -1542,6 +1584,8 @@ defmodule BrandoAdmin.Components.Form.Block do
         module_class={@module_class}
         module_color={@module_color}
         module_name={@module_name}
+        module_type={@module_type}
+        heex_compiled_module={@heex_compiled_module}
         block_module={@block_module}
         vars={@vars}
         liquid_splits={@liquid_splits}
@@ -1549,6 +1593,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         target={@myself}
         target_ref={{__MODULE__, @id}}
         form_cid={@form_cid}
+        entry={@entry}
         insert_block={
           JS.push("insert_block", target: @myself)
           |> show_modal(@module_picker_id)
@@ -1631,9 +1676,12 @@ defmodule BrandoAdmin.Components.Form.Block do
         target_ref={{__MODULE__, @id}}
         form_cid={@form_cid}
         module_class={@module_class}
+        module_type={@module_type}
+        heex_compiled_module={@heex_compiled_module}
         block_module={@block_module}
         vars={@vars}
         liquid_splits={@liquid_splits}
+        entry={@entry}
         insert_block={JS.push("insert_block", target: @myself) |> show_modal(@module_picker_id)}
         has_children?={false}
         module_name={@module_name}
@@ -1668,9 +1716,12 @@ defmodule BrandoAdmin.Components.Form.Block do
         target_ref={{__MODULE__, @id}}
         form_cid={@form_cid}
         module_class={@module_class}
+        module_type={@module_type}
+        heex_compiled_module={@heex_compiled_module}
         block_module={@block_module}
         vars={@vars}
         liquid_splits={@liquid_splits}
+        entry={@entry}
         insert_block={JS.push("insert_block_entry", target: @myself) |> show_modal(@module_picker_id)}
         has_children?={false}
         module_name={@module_name}
@@ -2064,6 +2115,9 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :clipboard_meta, :map, default: nil
   attr :paste_context, :any, default: :root
   attr :form_cid, :any, default: nil
+  attr :module_type, :atom, default: :liquid
+  attr :heex_compiled_module, :any, default: nil
+  attr :entry, :any, default: nil
   slot :inner_block
 
   def module(assigns) do
@@ -2137,6 +2191,8 @@ defmodule BrandoAdmin.Components.Form.Block do
                 block_form={block_form}
                 liquid_splits={@liquid_splits}
                 module_class={@module_class}
+                module_type={@module_type}
+                heex_compiled_module={assigns[:heex_compiled_module]}
                 parent_uploads={@parent_uploads}
                 has_table_template?={@has_table_template?}
                 table_template_name={@table_template_name}
@@ -2150,6 +2206,8 @@ defmodule BrandoAdmin.Components.Form.Block do
                 module_datasource_query={@module_datasource_query}
                 available_identifiers={@available_identifiers}
                 block_identifiers={block_form[:block_identifiers]}
+                vars={@vars}
+                entry={@entry}
               />
             </.inputs_for>
           <% else %>
@@ -2179,6 +2237,8 @@ defmodule BrandoAdmin.Components.Form.Block do
               block_form={@form}
               liquid_splits={@liquid_splits}
               module_class={@module_class}
+              module_type={@module_type}
+              heex_compiled_module={assigns[:heex_compiled_module]}
               has_table_template?={@has_table_template?}
               table_template_name={@table_template_name}
               parent_uploads={@parent_uploads}
@@ -2192,6 +2252,8 @@ defmodule BrandoAdmin.Components.Form.Block do
               module_datasource_query={@module_datasource_query}
               available_identifiers={@available_identifiers}
               block_identifiers={@form[:block_identifiers]}
+              vars={@vars}
+              entry={@entry}
             />
           <% end %>
         </.form>
@@ -2216,6 +2278,55 @@ defmodule BrandoAdmin.Components.Form.Block do
             />
           <% end %>
         <% end %>
+      </div>
+    </div>
+    """
+  end
+
+  def module_content(%{module_type: :heex} = assigns) do
+    heex_assigns = build_heex_admin_assigns(assigns)
+    heex_render_fn =
+      assigns.heex_compiled_module && Function.capture(assigns.heex_compiled_module, :render, 1)
+
+    assigns =
+      assigns
+      |> assign(:heex_assigns, heex_assigns)
+      |> assign(:heex_render_fn, heex_render_fn)
+
+    ~H"""
+    <div class="block-content">
+      <div b-editor-tpl={@module_class}>
+        <.vars vars={@block_form[:vars]} uid={@uid} target={@target} form_cid={@form_cid} />
+        <.datasource
+          :if={@is_datasource?}
+          block_data={@block_form}
+          uid={@uid}
+          datasource_meta={@datasource_meta}
+          module_datasource_module_label={@module_datasource_module_label}
+          module_datasource_type={@module_datasource_type}
+          module_datasource_query={@module_datasource_query}
+          available_identifiers={@available_identifiers}
+          block_identifiers={@block_identifiers}
+          target={@target}
+        />
+        <div :if={@has_table_template?} class="block-table" id={"block-#{@uid}-block-table"}>
+          <.table
+            block_data={@block_form}
+            uid={@uid}
+            target={@target}
+            table_template_name={@table_template_name}
+            form_cid={@form_cid}
+          />
+        </div>
+        <div class="block-heex-preview">
+          <%= if @heex_render_fn do %>
+            {Phoenix.LiveView.TagEngine.component(
+              @heex_render_fn,
+              @heex_assigns,
+              {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+            )}
+          <% end %>
+        </div>
       </div>
     </div>
     """
@@ -4466,4 +4577,86 @@ defmodule BrandoAdmin.Components.Form.Block do
       _ -> nil
     end
   end
+
+  defp build_heex_admin_assigns(assigns) do
+    # Build assigns map for HEEx admin preview rendering.
+    # Read current var values from the form (live changeset data), not
+    # from the static :vars assign which is only set at init.
+    block_form = assigns[:block_form]
+
+    var_assigns =
+      case block_form[:vars] do
+        nil ->
+          %{}
+
+        vars_field ->
+          vars_field.value
+          |> normalize_vars_value()
+          |> Enum.reduce(%{}, fn var, acc ->
+            var = if is_struct(var, Changeset), do: Changeset.apply_changes(var), else: var
+            var_key = get_var_field(var, :key)
+            var_type = get_var_field(var, :type)
+
+            key = if is_atom(var_key), do: var_key, else: String.to_atom(var_key)
+
+            value =
+              case to_string(var_type) do
+                "boolean" -> get_var_field(var, :value_boolean)
+                "image" -> get_var_field(var, :image)
+                "file" -> get_var_field(var, :file)
+                "link" -> var
+                _ -> get_var_field(var, :value)
+              end
+
+            Map.put(acc, key, value)
+          end)
+      end
+
+    block_form = assigns[:block_form]
+
+    block = %{
+      class: assigns[:module_class],
+      uid: assigns[:uid],
+      module_id: block_form[:module_id] && block_form[:module_id].value,
+      anchor: block_form[:anchor] && block_form[:anchor].value,
+      description: block_form[:description] && block_form[:description].value
+    }
+
+    heex_ctx = %{
+      refs_field: block_form[:refs],
+      target: assigns[:target],
+      target_ref: assigns[:target_ref],
+      form_cid: assigns[:form_cid],
+      parent_uploads: assigns[:parent_uploads]
+    }
+
+    base = %{
+      render_context: :admin,
+      block: block,
+      refs: %{},
+      entries: [],
+      content: "",
+      entry: assigns[:entry],
+      _heex_ctx: heex_ctx
+    }
+
+    Map.merge(base, var_assigns)
+  end
+
+  # When vars come as form params (map indexed by position), extract the values
+  defp normalize_vars_value(%{} = map) when not is_struct(map), do: Map.values(map)
+  defp normalize_vars_value(list) when is_list(list), do: list
+  defp normalize_vars_value(nil), do: []
+
+  defp get_var_field(var, field) when is_struct(var), do: Map.get(var, field)
+
+  defp get_var_field(var, field) when is_map(var) do
+    string_key = to_string(field)
+
+    case Map.fetch(var, string_key) do
+      {:ok, value} -> value
+      :error -> Map.get(var, field)
+    end
+  end
+
 end

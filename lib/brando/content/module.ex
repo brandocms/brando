@@ -38,6 +38,12 @@ defmodule Brando.Content.Module do
 
   @type t :: %__MODULE__{}
 
+  @reserved_heex_assigns ~w(
+    block refs entries content forloop identity globals navigation
+    language locale entry render_context parser_module module_id
+    links url request refs_field target target_ref form_cid parent_uploads
+  )
+
   identifier "[{{ entry.namespace | i18n }}] {{ entry.name | i18n }}"
   persist_identifier false
 
@@ -48,6 +54,7 @@ defmodule Brando.Content.Module do
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Timestamped
   trait Brando.Trait.CastPolymorphicEmbeds
+  trait Brando.Trait.ValidateVarKeys
 
   attributes do
     attribute :type, :enum, values: [:liquid, :heex], default: :liquid
@@ -239,4 +246,39 @@ defmodule Brando.Content.Module do
     multi: false,
     uid: "abcdef"
   }
+
+  @doc """
+  Returns the list of reserved HEEx assign names that cannot be used as var keys.
+  """
+  def reserved_heex_assigns, do: @reserved_heex_assigns
+
+  @doc """
+  Validates that var keys in the changeset don't collide with reserved HEEx assigns.
+
+  Only applies when the module type is `:heex`.
+  """
+  def validate_var_keys(changeset) do
+    type = Ecto.Changeset.get_field(changeset, :type)
+
+    if type == :heex do
+      vars = Ecto.Changeset.get_field(changeset, :vars) || []
+
+      collisions =
+        vars
+        |> Enum.map(& &1.key)
+        |> Enum.filter(&(&1 in @reserved_heex_assigns))
+
+      if collisions == [] do
+        changeset
+      else
+        Ecto.Changeset.add_error(
+          changeset,
+          :vars,
+          "var keys conflict with reserved HEEx assigns: #{Enum.join(collisions, ", ")}"
+        )
+      end
+    else
+      changeset
+    end
+  end
 end

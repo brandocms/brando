@@ -193,10 +193,15 @@ defmodule Brando.Villain.Parser do
   import Brando.HTML
 
   alias Brando.Content
-  alias Brando.Datasource
   alias Brando.Utils
-  alias Brando.Villain
-  alias Liquex.Context
+  alias Brando.Villain.TemplateAdapter
+
+  @doc """
+  Returns the template adapter module for a given template type.
+  """
+  def adapter_for(:liquid), do: TemplateAdapter.Liquex
+  def adapter_for(:heex), do: TemplateAdapter.Heex
+  def adapter_for(nil), do: TemplateAdapter.Liquex
 
   def header(%{text: nil}, _), do: ""
 
@@ -237,11 +242,12 @@ defmodule Brando.Villain.Parser do
   end
 
   def module(%{multi: true, module_id: id, children: children} = block, opts) do
-    base_context = opts.context
     modules = opts.modules
     skip_children? = Map.get(opts, :skip_children, false)
 
     {:ok, module} = Content.find_module(modules, id)
+    adapter = adapter_for(module.type)
+    opts = Map.put(opts, :parser_module, __MODULE__)
 
     content =
       if skip_children? do
@@ -269,18 +275,8 @@ defmodule Brando.Villain.Parser do
               "count" => Enum.count(children)
             }
 
-            context =
-              base_context
-              |> add_vars_to_context(vars)
-              |> add_refs_to_context(refs)
-              |> add_admin_to_context(opts)
-              |> add_parser_to_context(__MODULE__)
-              |> add_module_id_to_context(id)
-              |> add_block_to_context(child_module, child_block)
-              |> Context.assign("forloop", forloop)
-
-            code = maybe_annotate(child_module.code, child_block.uid, opts)
-            Villain.parse_and_render(code, context)
+            adapter.render_child_module(child_module, child_block, vars, refs, forloop, id, opts)
+            |> maybe_annotate(child_block.uid, opts)
         end)
         |> annotate_children(block.uid)
       end
@@ -302,20 +298,8 @@ defmodule Brando.Villain.Parser do
         |> put_in([Access.key(:refs)], process_refs(entry.refs))
       end)
 
-    context =
-      base_context
-      |> add_vars_to_context(base_vars)
-      |> add_refs_to_context(base_refs)
-      |> add_admin_to_context(opts)
-      |> add_parser_to_context(__MODULE__)
-      |> add_module_id_to_context(id)
-      |> add_block_to_context(module, block)
-      |> Context.assign("entries", children)
-      |> Context.assign("content", content)
-
-    module.code
+    adapter.render_multi_module(module, block, base_vars, base_refs, children, content, opts)
     |> maybe_annotate(block.uid, opts)
-    |> Villain.parse_and_render(context)
     |> maybe_format(opts)
   end
 
@@ -324,23 +308,13 @@ defmodule Brando.Villain.Parser do
 
     case Content.find_module(modules, id) do
       {:ok, module} ->
-        base_context = opts.context
         processed_vars = process_vars(block.vars)
         processed_refs = process_refs(block.refs)
+        adapter = adapter_for(module.type)
+        opts = Map.put(opts, :parser_module, __MODULE__)
 
-        context =
-          base_context
-          |> add_vars_to_context(processed_vars)
-          |> add_refs_to_context(processed_refs)
-          |> add_admin_to_context(opts)
-          |> add_parser_to_context(__MODULE__)
-          |> add_module_id_to_context(id)
-          |> add_datasource_entries_to_context(module, block)
-          |> add_block_to_context(module, block)
-
-        module.code
+        adapter.render_module(module, block, processed_vars, processed_refs, opts)
         |> maybe_annotate(block.uid, opts)
-        |> Villain.parse_and_render(context)
         |> maybe_format(opts)
 
       {:error, {:module, :not_found, module_id}} ->
@@ -970,9 +944,9 @@ defmodule Brando.Villain.Parser do
         |> annotate_children(block.uid)
       end
 
-    container.code
-    |> String.replace("{{ content }}", children_html)
-    |> Brando.Villain.Parser.replace_fragments()
+    adapter = adapter_for(container.type)
+
+    adapter.render_container(container, children_html, block, opts)
     |> maybe_annotate(block.uid, opts)
     |> maybe_format(opts)
   end
@@ -1150,80 +1124,6 @@ defmodule Brando.Villain.Parser do
       nil -> nil
       {_, meta} -> meta
     end
-  end
-
-  defp add_datasource_entries_to_context(
-         context,
-         %{
-           datasource: true,
-           datasource_type: :list,
-           datasource_module: module,
-           datasource_query: query
-         },
-         %{vars: vars}
-       ) do
-    language = Context.get(context, "language")
-    request = Context.get(context, "request")
-
-    mapped_vars =
-      vars
-      |> map_vars()
-      |> Map.merge(%{"request" => request})
-
-    {:ok, entries} = Datasource.list_results(module, query, mapped_vars, language)
-
-    Context.assign(context, :entries, entries || [])
-  end
-
-  defp add_datasource_entries_to_context(
-         context,
-         %{
-           datasource: true,
-           datasource_type: :selection,
-           datasource_module: module,
-           datasource_query: query
-         },
-         block
-       ) do
-    identifier_ids = Enum.map(block.block_identifiers, & &1.identifier_id)
-    {:ok, entries} = Datasource.get_selection(module, query, identifier_ids)
-    entries_with_meta = Brando.Villain.Parser.add_meta_to_entries(entries, block)
-
-    context
-    |> Context.assign(:entries, entries || [])
-    |> Context.assign(:entries_with_meta, entries_with_meta || [])
-  end
-
-  defp add_datasource_entries_to_context(context, _, _),
-    do: Context.assign(context, :entries, [])
-
-  defp add_block_to_context(context, module, block) do
-    simple_block =
-      block
-      |> Map.take([
-        :uid,
-        :type,
-        :module_id,
-        :sequence,
-        :active,
-        :collapsed,
-        :table_rows,
-        :anchor,
-        :description
-      ])
-      |> Map.merge(%{class: module.class})
-
-    Context.assign(context, :block, simple_block)
-  end
-
-  defp map_vars(nil), do: %{}
-  defp map_vars(%Ecto.Association.NotLoaded{}), do: %{}
-
-  defp map_vars(vars) do
-    Enum.reduce(vars, %{}, fn
-      var, acc ->
-        Map.put(acc, var.key, var.value)
-    end)
   end
 
   # ...
@@ -1647,26 +1547,6 @@ defmodule Brando.Villain.Parser do
         media_object
     end
   end
-
-  defp add_vars_to_context(context, vars),
-    do: Enum.reduce(vars, context, fn {k, v}, acc -> Context.assign(acc, k, v) end)
-
-  defp add_refs_to_context(context, refs),
-    do: Context.assign(context, :refs, refs)
-
-  defp add_admin_to_context(context, opts) do
-    if Map.get(opts, :brando_render_for_admin) do
-      Context.assign(context, :brando_render_for_admin, true)
-    else
-      context
-    end
-  end
-
-  defp add_parser_to_context(context, module),
-    do: Context.assign(context, :brando_parser_module, module)
-
-  defp add_module_id_to_context(context, module_id),
-    do: Context.assign(context, :brando_module_id, module_id)
 
   def maybe_annotate(code, uid, %{annotate_blocks: true}) do
     """
