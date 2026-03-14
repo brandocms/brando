@@ -4590,22 +4590,19 @@ defmodule BrandoAdmin.Components.Form.Block do
           %{}
 
         vars_field ->
-          vars_field.value
-          |> normalize_vars_value()
-          |> Enum.reduce(%{}, fn var, acc ->
-            var = if is_struct(var, Changeset), do: Changeset.apply_changes(var), else: var
-            var_key = get_var_field(var, :key)
-            var_type = get_var_field(var, :type)
+          block_cs = vars_field.form.source
+          vars = Changeset.get_assoc(block_cs, :vars, :struct)
 
-            key = if is_atom(var_key), do: var_key, else: String.to_atom(var_key)
+          Enum.reduce(vars, %{}, fn var, acc ->
+            key = var.key
 
             value =
-              case to_string(var_type) do
-                "boolean" -> get_var_field(var, :value_boolean)
-                "image" -> get_var_field(var, :image)
-                "file" -> get_var_field(var, :file)
-                "link" -> var
-                _ -> get_var_field(var, :value)
+              case var.type do
+                :boolean -> var.value_boolean
+                :image -> var.image
+                :file -> var.file
+                :link -> var
+                _ -> var.value
               end
 
             Map.put(acc, key, value)
@@ -4643,20 +4640,5 @@ defmodule BrandoAdmin.Components.Form.Block do
     Map.merge(base, var_assigns)
   end
 
-  # When vars come as form params (map indexed by position), extract the values
-  defp normalize_vars_value(%{} = map) when not is_struct(map), do: Map.values(map)
-  defp normalize_vars_value(list) when is_list(list), do: list
-  defp normalize_vars_value(nil), do: []
-
-  defp get_var_field(var, field) when is_struct(var), do: Map.get(var, field)
-
-  defp get_var_field(var, field) when is_map(var) do
-    string_key = to_string(field)
-
-    case Map.fetch(var, string_key) do
-      {:ok, value} -> value
-      :error -> Map.get(var, field)
-    end
-  end
 
 end
