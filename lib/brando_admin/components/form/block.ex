@@ -4593,9 +4593,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           block_cs = vars_field.form.source
           vars = Changeset.get_assoc(block_cs, :vars, :struct)
 
-          Enum.reduce(vars, %{}, fn var, acc ->
-            key = var.key
-
+          Map.new(vars, fn var ->
             value =
               case var.type do
                 :boolean -> var.value_boolean
@@ -4605,11 +4603,9 @@ defmodule BrandoAdmin.Components.Form.Block do
                 _ -> var.value
               end
 
-            Map.put(acc, key, value)
+            {String.to_existing_atom(var.key), value}
           end)
       end
-
-    block_form = assigns[:block_form]
 
     block = %{
       class: assigns[:module_class],
@@ -4639,6 +4635,4 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     Map.merge(base, var_assigns)
   end
-
-
 end
