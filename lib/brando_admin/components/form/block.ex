@@ -2358,7 +2358,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             form_cid={@form_cid}
           />
         </div>
-        <div class="block-splits">
+        <div class="block-liquex-preview">
           <%= for split <- @liquid_splits do %>
             <%= case split do %>
               <% {:ref, ref} -> %>

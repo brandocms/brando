@@ -312,7 +312,8 @@ button.btn-palette {
     }
   }
 
-  .block-splits {
+  .block-liquex-preview,
+  .block-heex-preview {
     border-top: 1px solid #e4edf6;
   }
 
@@ -353,7 +354,8 @@ button.btn-palette {
       }
     }
 
-    .block-splits {
+    .block-liquex-preview,
+    .block-heex-preview {
       border-top: 1px solid #fce7f3;
     }
 
@@ -418,7 +420,8 @@ button.btn-palette {
       }
     }
 
-    .block-splits {
+    .block-liquex-preview,
+    .block-heex-preview {
       border-top: 1px solid #d1fae5;
     }
 
@@ -471,7 +474,8 @@ button.btn-palette {
       }
     }
 
-    .block-splits {
+    .block-liquex-preview,
+    .block-heex-preview {
       border-top: 1px solid #ffedd5;
     }
 
@@ -893,7 +897,8 @@ button.btn-palette {
     }
   }
 
-  .block-splits {
+  .block-liquex-preview,
+  .block-heex-preview {
     border-top: 1px solid #eee;
     padding: 15px 10px 0;
   }
