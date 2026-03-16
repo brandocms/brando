@@ -61,13 +61,11 @@ defmodule Brando.Villain.Block do
 
         # Get the current block data and merge with new attributes
         current_block_data = get_field(data_changeset, :data)
-        merged_data = Map.merge(Map.from_struct(current_block_data), new_attrs)
+        merged_data = struct(current_block_data, new_attrs)
 
-        # Update the data changeset
-        updated_data_changeset = put_change(data_changeset, :data, merged_data)
-
-        # Apply the data changeset to get the final block struct
-        updated_block = apply_changes(updated_data_changeset)
+        # Build the updated block struct with the merged data
+        current_block = apply_changes(data_changeset)
+        updated_block = %{current_block | data: merged_data}
 
         # Return the updated ref changeset with the applied block data
         put_change(ref_target_changeset, :data, updated_block)

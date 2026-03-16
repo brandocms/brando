@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.ModuleProps
+  alias Phoenix.LiveView.JS
 
   @text_extension_options [
     %{label: "All", value: nil},
@@ -155,7 +156,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
   end
 
   def block_form(%{type: "text"} = assigns) do
-    assigns = assign(assigns, :text_extension_options, @text_extension_options)
+    assigns =
+      assign(assigns, :text_extension_options, @text_extension_options)
 
     ~H"""
     <Form.inputs_for_block :let={block_data} field={@ref_data[:data]}>
@@ -463,5 +465,58 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
       <Input.text field={tpl_data[:class]} label={gettext("Class")} />
     </.inputs_for>
     """
+  end
+
+  @style_element_options Enum.map(
+                           Brando.Villain.Blocks.TextBlock.Style.style_elements(),
+                           &%{label: &1, value: &1}
+                         )
+
+  def block_form_extras(%{type: "text"} = assigns) do
+    assigns = assign(assigns, :style_element_options, @style_element_options)
+
+    ~H"""
+    <Form.inputs_for_block :let={block_data} field={@block_data[:data]}>
+      <Form.field_base field={block_data[:styles]} label={gettext("Styles")} class="subform">
+        <.inputs_for :let={style_form} field={block_data[:styles]}>
+          <div class="subform-entry inline">
+            <input type="hidden" name={"#{block_data.name}[sort_style_ids][]"} value={style_form.index} />
+            <div class="subform-tools">
+              <button
+                name={"#{block_data.name}[drop_style_ids][]"}
+                type="button"
+                value={style_form.index}
+                phx-click={JS.dispatch("change")}
+                class="subform-delete"
+              >
+                <.icon name="hero-x-mark" />
+              </button>
+            </div>
+            <div class="subform-fields">
+              <.live_component
+                module={Input.Select}
+                id={"#{style_form.id}-element"}
+                label={gettext("Element")}
+                field={style_form[:element]}
+                inline={true}
+                opts={[options: @style_element_options]}
+              />
+              <Input.text field={style_form[:class]} label={gettext("Class")} />
+              <Input.text field={style_form[:label]} label={gettext("Label")} />
+              <Input.text field={style_form[:icon]} label={gettext("Icon")} />
+            </div>
+          </div>
+        </.inputs_for>
+        <input type="hidden" name={"#{block_data.name}[drop_style_ids][]"} />
+        <button type="button" name={"#{block_data.name}[sort_style_ids][]"} value="new" phx-click={JS.dispatch("change")} class="add-entry-button">
+          {gettext("Add style")}
+        </button>
+      </Form.field_base>
+    </Form.inputs_for_block>
+    """
+  end
+
+  def block_form_extras(assigns) do
+    ~H""
   end
 end

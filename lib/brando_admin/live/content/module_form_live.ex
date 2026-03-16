@@ -11,6 +11,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.ModuleProps
+  alias Brando.Villain.Blocks.TextBlock
   alias Ecto.Changeset
 
   def mount(%{"entry_id" => entry_id}, %{"user_token" => token}, socket) do
@@ -319,9 +320,8 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
     end)
   end
 
-  defp build_ref_data(Brando.Villain.Blocks.TextBlock) do
-    data_module = Brando.Villain.Blocks.TextBlock.Data
-    struct(data_module, %{styles: data_module.default_styles()})
+  defp build_ref_data(TextBlock) do
+    struct(TextBlock.Data, %{styles: TextBlock.Data.default_styles()})
   end
 
   defp build_ref_data(block_module) do

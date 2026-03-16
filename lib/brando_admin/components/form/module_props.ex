@@ -198,9 +198,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                 </Form.inputs_for_block>
 
                 <Content.modal title="Edit ref" id={"#{@form.id}-#{@key}-ref-#{ref.index}"} wide>
-                  <div class="panels">
-                    <Form.inputs_for_block :let={ref_data} field={ref[:data]}>
-                      <Input.input type={:hidden} field={ref_data[:type]} />
+                  <Form.inputs_for_block :let={ref_data} field={ref[:data]}>
+                    <Input.input type={:hidden} field={ref_data[:type]} />
+                    <div class="panels">
                       <div class="panel">
                         <h2 class="titlecase">Block template</h2>
                         <RefBlockForm.block_form
@@ -218,8 +218,12 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                         <Input.text field={ref[:description]} label={gettext("Description")} />
                         <Input.input type={:hidden} field={ref[:uid]} value={ref[:uid].value || Brando.Utils.generate_uid()} />
                       </div>
-                    </Form.inputs_for_block>
-                  </div>
+                    </div>
+                    <RefBlockForm.block_form_extras
+                      type={ref_data[:type].value}
+                      block_data={ref_data}
+                    />
+                  </Form.inputs_for_block>
                 </Content.modal>
               </li>
             </.inputs_for>

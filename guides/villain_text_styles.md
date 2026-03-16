@@ -1,24 +1,15 @@
 ## Villain Text Styles
 
-Text blocks support configurable style presets through `styles`.
+Text blocks support configurable style presets through `styles`, an embedded schema.
 
-Each style entry is a map with:
+Each style entry has:
 
-- `element`: HTML element to target (`p`, `h1`-`h6`, `span`)
-- `class`: CSS class to apply
+- `element` (required): HTML element to target (`p`, `h1`-`h6`, `span`)
+- `class` (required): CSS class to apply
 - `label` (optional): UI label in the editor toolbar
 - `icon` (optional): icon class for toolbar button rendering
 
-Example:
-
-```elixir
-%{
-  styles: [
-    %{"element" => "p", "class" => "lede", "label" => "Lede", "icon" => "hero-circle"},
-    %{"element" => "span", "class" => "eyebrow", "label" => "Eyebrow"}
-  ]
-}
-```
+Styles are configured per-ref in the Module form under the text block's "Styles" section.
 
 ### Behavior
 
@@ -30,14 +21,14 @@ Example:
 
 - `element` is restricted to `p`, `h1`-`h6`, and `span`.
 - `class` must match CSS-friendly identifiers (`[A-Za-z_][A-Za-z0-9_-]*`).
-- Duplicate `{element, class}` pairs are deduplicated.
+- Duplicate `{element, class}` pairs are deduplicated when passed to the TipTap component.
 
 ### Module Ref Defaults
 
 When creating new text refs in Module Form, Brando initializes `styles` with:
 
 ```elixir
-[%{"element" => "p", "class" => "lede", "label" => "Lede", "icon" => "hero-circle"}]
+[%Style{element: "p", class: "lede", label: "Lede", icon: "hero-circle"}]
 ```
 
 This gives editors a sensible default variant without making `"paragraph"` a classed style.
