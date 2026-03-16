@@ -69,6 +69,11 @@
       .button-edit {
         font-size: 14px;
       }
+
+      .inline-options {
+        left: 0;
+        right: auto;
+      }
     }
 
     .label-wrapper {
@@ -165,6 +170,10 @@
 
         .subform-tools {
           justify-content: flex-start;
+
+          &:has(> :only-child) {
+            align-self: center;
+          }
         }
 
         .subform-fields {
