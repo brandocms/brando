@@ -16,7 +16,6 @@ export default Extension.create({
           },
           handleDOMEvents: {
             drop: (view, event) => {
-              console.log('DROP handleDOMEvents', event)
               event.preventDefault()
               return false
             }

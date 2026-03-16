@@ -31,6 +31,7 @@ export default (app) => ({
         extensions: this.el.getAttribute('data-tiptap-extensions'),
         styles: this.el.getAttribute('data-tiptap-styles'),
         onFocus: reportFocus,
+        tiptapInput: $input,
       },
     })
   },

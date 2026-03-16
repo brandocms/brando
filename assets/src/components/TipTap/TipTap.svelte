@@ -46,11 +46,10 @@
     },
   });
 
-  let { content, extensions = $bindable(), styles = "[]", onFocus } = $props();
+  let { content, extensions = $bindable(), styles = "[]", onFocus, tiptapInput } = $props();
 
   let element = $state();
   let editor = $state();
-  let tiptapInput;
   let parsedStyles = $state([]);
 
   let isLinkActive = $state(false);
@@ -69,6 +68,7 @@
   let isAlignRightActive = $state(false);
   let isColorActive = $state(false);
   let isJumpAnchorActive = $state(false);
+  let activeStyleKeys = $state(new Set());
 
   const ATTR_WHITESPACE =
     /[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u2029\u205F\u3000]/g;
@@ -430,11 +430,6 @@
       .filter((style) => style.mode === "mark")
       .map((style) => createStyledMarkExtension(style));
 
-    tiptapInput =
-      element.parentNode.parentNode.parentNode.parentNode.parentNode.querySelector(
-        ".tiptap-text",
-      );
-
     const CustomLink = Link.extend({
       parseHTML() {
         return [
@@ -519,27 +514,17 @@
         isAlignRightActive = editor.isActive({ textAlign: "right" });
         isColorActive = editor.isActive("textStyle", { color: true });
         isJumpAnchorActive = editor.isActive("jumpAnchor");
+
+        const nextActive = new Set();
+        for (const style of parsedStyles) {
+          if (isStyleActive(style)) {
+            nextActive.add(style.key);
+          }
+        }
+        activeStyleKeys = nextActive;
       },
     });
 
-    const handleDrop = (ev) => {
-      console.log("handleDrop", ev);
-    };
-
-    element.addEventListener("drop", (ev) => {
-      console.log("Svelte el got drop");
-      ev.preventDefault();
-      ev.stopPropagation();
-      return false;
-    });
-
-    const proseMirrorEl = element.querySelector(".ProseMirror");
-    proseMirrorEl.addEventListener("drop", (ev) => {
-      console.log("ProseMirror el got drop");
-      ev.preventDefault();
-      ev.stopPropagation();
-      return false;
-    });
   });
 
   onDestroy(() => {
@@ -603,7 +588,7 @@
       <button
         onclick={() => applyStyle(style)}
         class="menu-item"
-        class:active={isStyleActive(style)}
+        class:active={activeStyleKeys.has(style.key)}
         type="button"
         title={style.label}
         aria-label={style.label}

@@ -58,7 +58,7 @@ export default Mark.create({
       unsetJumpAnchor:
         () =>
         ({ commands }) => {
-          console.log('unsetJumpAnchor not written...')
+          return commands.unsetMark(this.name)
         }
     }
   }
