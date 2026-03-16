@@ -69,6 +69,8 @@
   let isColorActive = $state(false);
   let isJumpAnchorActive = $state(false);
   let activeStyleKeys = $state(new Set());
+  let dropdownTriggerEl = $state();
+  let dropdownEl = $state();
 
   const ATTR_WHITESPACE =
     /[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u2029\u205F\u3000]/g;
@@ -536,81 +538,90 @@
 
 {#if editor}
   <div class="tiptap-menu">
-    {#if extensions.includes("p")}
+    <div class="menu-item-group">
       <button
-        onclick={() => setParagraph()}
-        class="menu-item"
-        class:active={isPActive}
+        bind:this={dropdownTriggerEl}
+        onclick={() => {
+          if (dropdownEl.matches(":popover-open")) {
+            dropdownEl.hidePopover();
+          } else {
+            const rect = dropdownTriggerEl.getBoundingClientRect();
+            dropdownEl.style.top = `${rect.bottom + 2}px`;
+            dropdownEl.style.left = `${rect.left}px`;
+            dropdownEl.showPopover();
+          }
+        }}
+        class="menu-item has-dropdown"
         type="button"
-        title="Paragraph"
-        aria-label="Paragraph"
+        title="Block type"
+        aria-label="Block type"
       >
         <span class="tiptap-paragraph"></span>
       </button>
-    {/if}
-    {#if extensions.includes("h1")}
-      <button
-        onclick={() => toggleHeading(1)}
-        class="menu-item"
-        class:active={isH1Active}
-        type="button"
-        title="Heading 1"
-        aria-label="Heading 1"
-      >
-        <span class="tiptap-h1"></span>
-      </button>
-    {/if}
-    {#if extensions.includes("h2")}
-      <button
-        onclick={() => toggleHeading(2)}
-        class="menu-item"
-        class:active={isH2Active}
-        type="button"
-        title="Heading 2"
-        aria-label="Heading 2"
-      >
-        <span class="tiptap-h2"></span>
-      </button>
-    {/if}
-    {#if extensions.includes("h3")}
-      <button
-        onclick={() => toggleHeading(3)}
-        class="menu-item"
-        class:active={isH3Active}
-        type="button"
-        title="Heading 3"
-        aria-label="Heading 3"
-      >
-        <span class="tiptap-h3"></span>
-      </button>
-    {/if}
-    {#each parsedStyles as style (style.key)}
-      <button
-        onclick={() => applyStyle(style)}
-        class="menu-item"
-        class:active={activeStyleKeys.has(style.key)}
-        type="button"
-        title={style.label}
-        aria-label={style.label}
-      >
-        {#if style.icon}
-          <span class={style.icon}></span>
-        {:else}
-          <span>{style.label}</span>
+      <div bind:this={dropdownEl} popover="auto" class="style-dropdown">
+        {#if extensions.includes("p")}
+          <button
+            onclick={() => { setParagraph(); dropdownEl.hidePopover(); }}
+            class="style-dropdown-item"
+            class:active={isPActive}
+            type="button"
+          >
+            Paragraph
+          </button>
         {/if}
-      </button>
-    {/each}
-    {#if parsedStyles.some((style) => style.mode === "node")}
-      <button
-        onclick={() => clearBlockStyle()}
-        class="menu-item"
-        type="button"
-        title="Clear block style"
-        aria-label="Clear block style"
-      >
-        <span class="hero-x-mark"></span>
-      </button>
-    {/if}
+        {#if extensions.includes("h1")}
+          <button
+            onclick={() => { toggleHeading(1); dropdownEl.hidePopover(); }}
+            class="style-dropdown-item"
+            class:active={isH1Active}
+            type="button"
+          >
+            Heading 1
+          </button>
+        {/if}
+        {#if extensions.includes("h2")}
+          <button
+            onclick={() => { toggleHeading(2); dropdownEl.hidePopover(); }}
+            class="style-dropdown-item"
+            class:active={isH2Active}
+            type="button"
+          >
+            Heading 2
+          </button>
+        {/if}
+        {#if extensions.includes("h3")}
+          <button
+            onclick={() => { toggleHeading(3); dropdownEl.hidePopover(); }}
+            class="style-dropdown-item"
+            class:active={isH3Active}
+            type="button"
+          >
+            Heading 3
+          </button>
+        {/if}
+        {#if parsedStyles.length > 0}
+          <div class="style-dropdown-separator"></div>
+          {#each parsedStyles as style (style.key)}
+            <button
+              onclick={() => { applyStyle(style); dropdownEl.hidePopover(); }}
+              class="style-dropdown-item"
+              class:active={activeStyleKeys.has(style.key)}
+              type="button"
+            >
+              {style.label}
+            </button>
+          {/each}
+        {/if}
+        <div class="style-dropdown-separator"></div>
+        <button
+          onclick={() => { clearBlockStyle(); dropdownEl.hidePopover(); }}
+          class="style-dropdown-item"
+          type="button"
+        >
+          Clear style
+        </button>
+      </div>
+    </div>
     {#if extensions.includes("list")}
       <button
         onclick={() => editor.chain().focus().toggleBulletList().run()}
