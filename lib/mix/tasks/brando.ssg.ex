@@ -5,12 +5,19 @@ defmodule Mix.Tasks.Brando.Ssg do
   Static site generation
 
       mix brando.ssg
+      mix brando.ssg --force
+
+  Options:
+
+    * `--force` - Skip all prompts and run all steps
 
   """
   use Mix.Task
 
   @default_host "http://localhost:4000"
-  def run(_) do
+  def run(args) do
+    {opts, _} = OptionParser.parse!(args, strict: [force: :boolean])
+    force? = Keyword.get(opts, :force, false)
     Application.put_env(:phoenix, :serve_endpoints, true)
     Application.put_env(:logger, :level, :error)
 
@@ -32,7 +39,7 @@ defmodule Mix.Tasks.Brando.Ssg do
     Application.put_env(Brando.config(:otp_app), :hmr, false)
     Application.put_env(Brando.config(:otp_app), :show_breakpoint_debug, false)
 
-    if Mix.shell().yes?("\nGenerate static files? (cleans priv/static first)") do
+    if force? or Mix.shell().yes?("\nGenerate static files? (cleans priv/static first)") do
       # delete static
       static_path = Path.join([File.cwd!(), "priv", "static"])
 
@@ -70,7 +77,7 @@ defmodule Mix.Tasks.Brando.Ssg do
       IO.write([IO.ANSI.green(), "done!\n", IO.ANSI.reset()])
     end
 
-    if Mix.shell().yes?("\nGenerate HTML?") do
+    if force? or Mix.shell().yes?("\nGenerate HTML?") do
       Application.put_env(:brando, :ssg_run, :html)
 
       for url <- ssg_urls do
@@ -82,7 +89,7 @@ defmodule Mix.Tasks.Brando.Ssg do
 
     Application.put_env(:brando, :ssg_run, :media)
 
-    if Mix.shell().yes?("\nCopy media directory?") do
+    if force? or Mix.shell().yes?("\nCopy media directory?") do
       media_path = Path.join([File.cwd!(), "media"])
       File.cp_r!(media_path, Path.join([ssg_path, "media"]))
     end
