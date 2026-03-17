@@ -1143,6 +1143,8 @@ defmodule Brando.Villain do
   end
 
   def reapply_refs(module, module_refs, refs) do
+    refs_by_name = Map.new(module_refs, &{&1.name, &1})
+
     Enum.map(refs, fn
       %Changeset{data: %{name: ref_name}} = ref ->
         # Handle case where ref.data might be a changeset or the actual block
@@ -1157,7 +1159,7 @@ defmodule Brando.Villain do
               block_data.__struct__
           end
 
-        ref_src = Enum.find(module_refs, &(&1.name == ref_name))
+        ref_src = Map.get(refs_by_name, ref_name)
 
         if ref_src == nil do
           raise """
@@ -1218,9 +1220,11 @@ defmodule Brando.Villain do
     :__meta__
   ]
   def reapply_vars(_module, module_vars, vars) do
+    vars_by_key = Map.new(module_vars, &{&1.key, &1})
+
     Enum.map(vars, fn
       %Changeset{data: %{key: var_key}} = var ->
-        var_src = Enum.find(module_vars, &(&1.key == var_key)) || %{}
+        var_src = Map.get(vars_by_key, var_key, %{})
         attrs_to_take = Map.keys(var_src) -- @protected_and_ignored_var_attrs
         new_attrs = Map.take(var_src, attrs_to_take)
         Changeset.change(var, new_attrs)

@@ -110,11 +110,12 @@ defmodule Brando.Images.Processing do
       end)
 
     {:ok, operation_results} = Operations.perform(operations, user)
+    images_by_id = Map.new(images, &{&1.id, &1})
 
     updated_images =
       for {image_id, result} <- operation_results do
-        images
-        |> Enum.find(&(&1.id == image_id))
+        images_by_id
+        |> Map.fetch!(image_id)
         |> Changeset.change(%{sizes: result.sizes, formats: result.formats})
         |> Brando.Repo.update!()
       end
@@ -141,11 +142,12 @@ defmodule Brando.Images.Processing do
       end)
 
     {:ok, operation_results} = Operations.perform(operations, user)
+    images_by_id = Map.new(images, &{&1.id, &1})
 
     updated_images =
       for {image_id, result} <- operation_results do
-        images
-        |> Enum.find(&(&1.id == image_id))
+        images_by_id
+        |> Map.fetch!(image_id)
         |> Changeset.change(%{sizes: result.sizes, formats: result.formats})
         |> Brando.Repo.update!()
       end
