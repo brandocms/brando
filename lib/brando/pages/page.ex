@@ -370,17 +370,6 @@ defmodule Brando.Pages.Page do
       |> Phoenix.HTML.Safe.to_iodata()
       |> Brando.HTML.replace_timestamp()
     end
-
-    def to_iodata(_) do
-      raise """
-
-      Failed to auto generate protocol for #{inspect(__MODULE__)} struct.
-      Missing `:html` key.
-
-      Call `use Brando.Villain.Schema, generate_protocol: false` instead
-
-      """
-    end
   end
 
   factory %{
