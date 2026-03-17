@@ -80,11 +80,11 @@ defmodule Brando.Blueprint.Assets.Dsl do
           fun.()
 
         map when is_map(map) ->
-          map = Brando.Utils.deep_merge(default_config, map)
+          map = merge_asset_config(default_config, map)
           struct(Brando.Type.ImageConfig, map)
 
         kwlist when is_list(kwlist) ->
-          kwlist = Brando.Utils.deep_merge(default_config, Enum.into(kwlist, %{}))
+          kwlist = merge_asset_config(default_config, Enum.into(kwlist, %{}))
           struct(Brando.Type.ImageConfig, kwlist)
       end
 
@@ -208,5 +208,18 @@ defmodule Brando.Blueprint.Assets.Dsl do
 
   def transform(asset) do
     {:ok, %{asset | opts: Enum.into(asset.opts, %{})}}
+  end
+
+  # Deep merges default_config into override, but replaces :sizes wholly
+  # if the override provides its own sizes rather than merging individual
+  # size entries from the default config.
+  defp merge_asset_config(default_config, override) do
+    merged = Brando.Utils.deep_merge(default_config, override)
+
+    if Map.has_key?(override, :sizes) do
+      Map.put(merged, :sizes, override.sizes)
+    else
+      merged
+    end
   end
 end
