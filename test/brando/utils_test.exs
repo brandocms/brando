@@ -265,6 +265,124 @@ defmodule Brando.UtilsTest do
              "Wrong size key for img_url function."
   end
 
+  test "img_url with :largest resolves to the largest configured size" do
+    # Image with config_target pointing to a schema with custom sizes
+    # The BlueprintTest.Project :cover asset has sizes:
+    # micro=25, thumb=150x150, small=300x300, medium=500x500, large=700x700, xlarge=900x900
+    img = %{
+      path: "images/file.jpg",
+      cdn: false,
+      config_target: "image:Brando.BlueprintTest.Project:cover",
+      sizes: %{
+        "micro" => "images/micro/file.jpg",
+        "thumb" => "images/thumb/file.jpg",
+        "small" => "images/small/file.jpg",
+        "medium" => "images/medium/file.jpg",
+        "large" => "images/large/file.jpg",
+        "xlarge" => "images/xlarge/file.jpg"
+      }
+    }
+
+    assert img_url(img, :largest) == "images/xlarge/file.jpg"
+  end
+
+  test "img_url with :largest uses default config when config_target is nil" do
+    # Default config has: micro=25, thumb=400x400, small=700, medium=1100, large=1700, xlarge=2100
+    img = %{
+      path: "images/file.jpg",
+      cdn: false,
+      config_target: nil,
+      sizes: %{
+        "micro" => "images/micro/file.jpg",
+        "thumb" => "images/thumb/file.jpg",
+        "small" => "images/small/file.jpg",
+        "medium" => "images/medium/file.jpg",
+        "large" => "images/large/file.jpg",
+        "xlarge" => "images/xlarge/file.jpg"
+      }
+    }
+
+    assert img_url(img, :largest) == "images/xlarge/file.jpg"
+  end
+
+  test "img_url with :largest on meta_image uses only meta trait sizes" do
+    # Meta trait only defines: micro=25, thumb=400x400, xlarge=2400x1260
+    # Should NOT include default sizes like small, medium, large
+    img = %{
+      path: "images/meta/file.jpg",
+      cdn: false,
+      config_target: "image:Brando.Pages.Page:meta_image",
+      sizes: %{
+        "micro" => "images/meta/micro/file.jpg",
+        "thumb" => "images/meta/thumb/file.jpg",
+        "xlarge" => "images/meta/xlarge/file.jpg"
+      }
+    }
+
+    assert img_url(img, :largest) == "images/meta/xlarge/file.jpg"
+  end
+
+  test "img_url with :smallest resolves correctly" do
+    # :smallest drops "thumb" and "micro", then picks the smallest remaining
+    # Default config has: small=700, medium=1100, large=1700, xlarge=2100
+    img = %{
+      path: "images/file.jpg",
+      cdn: false,
+      config_target: nil,
+      sizes: %{
+        "micro" => "images/micro/file.jpg",
+        "thumb" => "images/thumb/file.jpg",
+        "small" => "images/small/file.jpg",
+        "medium" => "images/medium/file.jpg",
+        "large" => "images/large/file.jpg",
+        "xlarge" => "images/xlarge/file.jpg"
+      }
+    }
+
+    assert img_url(img, :smallest) == "images/small/file.jpg"
+  end
+
+  test "img_url with :smallest on meta_image resolves to xlarge (only non-thumb/micro size)" do
+    img = %{
+      path: "images/meta/file.jpg",
+      cdn: false,
+      config_target: "image:Brando.Pages.Page:meta_image",
+      sizes: %{
+        "micro" => "images/meta/micro/file.jpg",
+        "thumb" => "images/meta/thumb/file.jpg",
+        "xlarge" => "images/meta/xlarge/file.jpg"
+      }
+    }
+
+    assert img_url(img, :smallest) == "images/meta/xlarge/file.jpg"
+  end
+
+  test "asset config with custom sizes does not inherit default sizes" do
+    # The meta_image trait defines only micro, thumb, xlarge
+    # It should NOT have small, medium, large from the default config
+    alias Brando.Blueprint.Assets
+
+    cfg = Assets.__asset_opts__(Brando.Pages.Page, :meta_image) |> Map.get(:cfg)
+    size_keys = Map.keys(cfg.sizes) |> Enum.sort()
+
+    assert size_keys == ["micro", "thumb", "xlarge"]
+    refute Map.has_key?(cfg.sizes, "small")
+    refute Map.has_key?(cfg.sizes, "medium")
+    refute Map.has_key?(cfg.sizes, "large")
+  end
+
+  test "asset config with custom sizes still inherits non-sizes defaults" do
+    # Custom asset cfg should still get defaults like allowed_mimetypes merged
+    alias Brando.Blueprint.Assets
+
+    cfg = Assets.__asset_opts__(Brando.Pages.Page, :meta_image) |> Map.get(:cfg)
+
+    # The meta trait overrides allowed_mimetypes to only jpeg and png
+    assert cfg.allowed_mimetypes == ["image/jpeg", "image/png"]
+    # But random_filename should be inherited/set
+    assert cfg.random_filename == true
+  end
+
   test "get_now" do
     now = get_now()
     assert is_bitstring(now)

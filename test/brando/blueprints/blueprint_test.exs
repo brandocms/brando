@@ -167,11 +167,6 @@ defmodule Brando.Blueprint.BlueprintTest do
                      random_filename: true,
                      size_limit: 10_240_000,
                      sizes: %{
-                       "large" => %{"quality" => 75, "size" => "1700"},
-                       "medium" => %{"quality" => 75, "size" => "1100"},
-                       "micro" => %{"crop" => false, "quality" => 20, "size" => "25"},
-                       "small" => %{"quality" => 75, "size" => "700"},
-                       "thumb" => %{"crop" => true, "quality" => 75, "size" => "400x400>"},
                        "xlarge" => %{"quality" => 65, "size" => "2800"},
                        "crop_xlarge" => %{"crop" => true, "quality" => 65, "size" => "1000x500"}
                      },
