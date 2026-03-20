@@ -13,6 +13,7 @@ import DragDropHook from './hooks/DragDrop'
 import FieldBaseHook from './hooks/FieldBase'
 import FocalPointHook from './hooks/FocalPoint'
 import ImageEditorHook from './hooks/ImageEditor'
+import ImagePickerGridHook from './hooks/ImagePickerGrid'
 import FormHook from './hooks/Form'
 import ListingHook from './hooks/Listing'
 import LivePreviewHook from './hooks/LivePreview'
@@ -58,6 +59,7 @@ export default (app) => {
     'Brando.FocalPoint': FocalPointHook(app),
     'Brando.Form': FormHook(app),
     'Brando.ImageEditor': ImageEditorHook(app),
+    'Brando.ImagePickerGrid': ImagePickerGridHook(app),
     'Brando.Listing': ListingHook(app),
     'Brando.LivePreview': LivePreviewHook(app),
     'Brando.MapURLParser': MapURLParserHook(app),

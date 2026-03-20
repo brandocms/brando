@@ -14,7 +14,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   @impl true
   def mount(_params, _session, socket) do
     {:ok, default_cfg} = Videos.get_config_for(%{config_target: "default"})
-    upload_root = FolderBrowser.scope_for(default_cfg.upload_path)
+    upload_root = FolderBrowser.scope_for((default_cfg && default_cfg.upload_path) || "videos/default")
 
     socket =
       socket

@@ -376,8 +376,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:noreply, assign(socket, :show_only_selected?, !socket.assigns.show_only_selected?)}
   end
 
-  def handle_event("select_image", %{"id" => id, "selected" => "false"}, socket) do
-    # For refs, add image to gallery association
+  def handle_event("select_image", %{"id" => id}, socket) do
     {module, target_id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
     {:ok, image} = Brando.Images.get_image(id)
@@ -385,54 +384,28 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     # Get current block data for gallery settings
     block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
     block_data = Changeset.apply_changes(block_data_cs)
-
-    # Only gallery configuration data goes to block data
     new_block_data = Map.from_struct(block_data)
 
-    send_update(module,
-      id: target_id,
-      event: "update_ref_data",
-      ref_data: new_block_data,
-      ref_name: ref_name,
-      add_gallery_image_id: image.id,
-      propagate: true
+    already_selected? = image.id in current_selected_image_ids(socket)
+
+    {action_key, selected_images} =
+      if already_selected? do
+        {:remove_gallery_image_id, Enum.reject(current_selected_image_ids(socket), &(&1 == image.id))}
+      else
+        {:add_gallery_image_id, current_selected_image_ids(socket) ++ [image.id]}
+      end
+
+    send_update(
+      module,
+      [
+        {:id, target_id},
+        {:event, "update_ref_data"},
+        {:ref_data, new_block_data},
+        {:ref_name, ref_name},
+        {action_key, image.id},
+        {:propagate, true}
+      ]
     )
-
-    # Update image picker's selected state
-    selected_images = current_selected_image_ids(socket) ++ [image.id]
-
-    send_update(BrandoAdmin.Components.ImagePicker,
-      id: "image-picker",
-      selected_images: selected_images
-    )
-
-    {:noreply, socket}
-  end
-
-  def handle_event("select_image", %{"id" => id, "selected" => "true"}, socket) do
-    # For refs, remove image from gallery association
-    {module, target_id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
-    {:ok, image} = Brando.Images.get_image(id)
-
-    # Get current block data for gallery settings
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    block_data = Changeset.apply_changes(block_data_cs)
-
-    # Only gallery configuration data goes to block data
-    new_block_data = Map.from_struct(block_data)
-
-    send_update(module,
-      id: target_id,
-      event: "update_ref_data",
-      ref_data: new_block_data,
-      ref_name: ref_name,
-      remove_gallery_image_id: image.id,
-      propagate: true
-    )
-
-    # Update image picker's selected state
-    selected_images = Enum.reject(current_selected_image_ids(socket), &(&1 == image.id))
 
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
@@ -483,41 +456,32 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:noreply, socket}
   end
 
-  def handle_event("select_video", %{"id" => id, "selected" => "false"}, socket) do
+  def handle_event("select_video", %{"id" => id}, socket) do
     {module, target_id} = socket.assigns.target_ref
     ref_name = socket.assigns.ref_name
+    video_id = String.to_integer(id)
 
     block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
     block_data = Changeset.apply_changes(block_data_cs)
     new_block_data = Map.from_struct(block_data)
 
-    send_update(module,
-      id: target_id,
-      event: "update_ref_data",
-      ref_data: new_block_data,
-      ref_name: ref_name,
-      add_gallery_video_id: String.to_integer(id),
-      propagate: true
-    )
+    current_video_ids =
+      socket.assigns.gallery_objects
+      |> Enum.filter(& &1.video_id)
+      |> Enum.map(& &1.video_id)
 
-    {:noreply, socket}
-  end
+    action_key = if video_id in current_video_ids, do: :remove_gallery_video_id, else: :add_gallery_video_id
 
-  def handle_event("select_video", %{"id" => id, "selected" => "true"}, socket) do
-    {module, target_id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
-
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    block_data = Changeset.apply_changes(block_data_cs)
-    new_block_data = Map.from_struct(block_data)
-
-    send_update(module,
-      id: target_id,
-      event: "update_ref_data",
-      ref_data: new_block_data,
-      ref_name: ref_name,
-      remove_gallery_video_id: String.to_integer(id),
-      propagate: true
+    send_update(
+      module,
+      [
+        {:id, target_id},
+        {:event, "update_ref_data"},
+        {:ref_data, new_block_data},
+        {:ref_name, ref_name},
+        {action_key, video_id},
+        {:propagate, true}
+      ]
     )
 
     {:noreply, socket}

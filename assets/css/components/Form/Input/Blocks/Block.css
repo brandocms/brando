@@ -75,16 +75,6 @@
   span {
     width: 20px;
     height: 20px;
-
-    &:after {
-      content: "Add block";
-      font-family: "Mono";
-      font-size: 11px;
-      text-transform: uppercase;
-      border: 1px solid #000;
-      padding: 2px 4px;
-      border-radius: 10px;
-    }
   }
 }
 
@@ -1310,8 +1300,8 @@ button.btn-palette {
   .CodeMirror {
     /* Set height, width, borders, and global font properties here */
     font-family:
-      "SF Mono", "Menlo", "Monaco", "Inconsolata", "Fira Mono",
-      "Droid Sans Mono", "Source Code Pro", monospace;
+      "SF Mono", "Menlo", "Monaco", "Inconsolata", "Fira Mono", "Droid Sans Mono",
+      "Source Code Pro", monospace;
     font-size: 14px;
     height: auto;
     color: black;

@@ -182,12 +182,14 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
     {:noreply, socket}
   end
 
-  def handle_event("select_image", %{"id" => id, "selected" => "false"}, socket) do
-    {:noreply, add_gallery_media(socket, :image, id)}
-  end
+  def handle_event("select_image", %{"id" => id}, socket) do
+    image_id = if is_binary(id), do: String.to_integer(id), else: id
 
-  def handle_event("select_image", %{"id" => id, "selected" => "true"}, socket) do
-    {:noreply, remove_gallery_media(socket, :image, id)}
+    if image_id in socket.assigns.selected_images do
+      {:noreply, remove_gallery_media(socket, :image, id)}
+    else
+      {:noreply, add_gallery_media(socket, :image, id)}
+    end
   end
 
   def handle_event("open_video_picker", _, socket) do
@@ -202,12 +204,14 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
     {:noreply, socket}
   end
 
-  def handle_event("select_video", %{"id" => id, "selected" => "false"}, socket) do
-    {:noreply, add_gallery_media(socket, :video, id)}
-  end
+  def handle_event("select_video", %{"id" => id}, socket) do
+    video_id = if is_binary(id), do: String.to_integer(id), else: id
 
-  def handle_event("select_video", %{"id" => id, "selected" => "true"}, socket) do
-    {:noreply, remove_gallery_media(socket, :video, id)}
+    if video_id in socket.assigns.selected_videos do
+      {:noreply, remove_gallery_media(socket, :video, id)}
+    else
+      {:noreply, add_gallery_media(socket, :video, id)}
+    end
   end
 
   def handle_event("edit_image", %{"id" => _id}, socket) do
