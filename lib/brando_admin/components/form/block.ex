@@ -2285,6 +2285,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def module_content(%{module_type: :heex} = assigns) do
     heex_assigns = build_heex_admin_assigns(assigns)
+
     heex_render_fn =
       assigns.heex_compiled_module && Function.capture(assigns.heex_compiled_module, :render, 1)
 
@@ -3174,7 +3175,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     ~H"""
     <div class="block-plus-wrapper">
-      <button class="block-plus" type="button" phx-click={@click}>
+      <button class="block-plus" type="button" phx-click={@click} aria-label={gettext("Add block")}>
         <.icon name="hero-plus" />
       </button>
       <button

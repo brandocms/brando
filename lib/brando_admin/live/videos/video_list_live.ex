@@ -277,7 +277,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
     folder_entries = folder_entries(videos)
 
     folders =
-      FolderBrowser.folders_from_images(folder_entries, socket.assigns.upload_root)
+      FolderBrowser.folders_from_entries(folder_entries, socket.assigns.upload_root)
       |> Kernel.++(socket.assigns.custom_folders)
       |> Enum.map(&(FolderBrowser.normalize_folder(&1) || ""))
       |> Enum.uniq()
@@ -295,7 +295,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
 
     child_folders = FolderBrowser.child_folders(folders, current_folder)
     breadcrumbs = FolderBrowser.breadcrumbs(current_folder)
-    visible_videos = FolderBrowser.images_in_folder(folder_entries, current_folder, socket.assigns.upload_root)
+    visible_videos = FolderBrowser.entries_in_folder(folder_entries, current_folder, socket.assigns.upload_root)
 
     recent_folders =
       if current_folder_abs do

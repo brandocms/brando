@@ -2,18 +2,19 @@ defmodule BrandoAdmin.Components.VideoPicker do
   @moduledoc false
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
+  use BrandoAdmin.Components.PickerHelpers
 
+  alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Images.FolderBrowser
+  alias Phoenix.LiveView.JS
 
   def mount(socket) do
     {:ok,
      socket
      |> assign_new(:z_index, fn -> 1100 end)
-     |> assign_new(:show_url_input, fn -> false end)
-     |> assign_new(:url_input, fn -> "" end)
-     |> assign_new(:creating_video, fn -> false end)
-     |> assign_new(:playing_video, fn -> nil end)
-     |> assign_new(:editing_video_id, fn -> nil end)}
+     |> assign_defaults()
+     |> stream(:visible_videos, [])}
   end
 
   def update(
@@ -27,32 +28,42 @@ defmodule BrandoAdmin.Components.VideoPicker do
      |> assign(:event_target, event_target)
      |> assign(:multi, multi)
      |> assign(:selected_videos, selected_videos)
-     |> assign(:upload_strategy, assigns[:upload_strategy] || :local)
+     |> assign(:upload_strategy, assigns[:upload_strategy] || Brando.default_video_upload_strategy())
+     |> assign(:new_folder, "")
+     |> assign(:show_new_folder_form, false)
      |> assign_new(:current_user, fn -> assigns[:current_user] end)
      |> assign_new(:upload_progress, fn -> nil end)
-     |> assign_videos()}
+     |> assign_videos()
+     |> assign_folder_state(nil)
+     |> push_selection_state()}
   end
 
   def update(%{selected_videos: selected_videos}, socket) do
-    {:ok, assign(socket, :selected_videos, selected_videos)}
+    {:ok,
+     socket
+     |> assign(:selected_videos, selected_videos)
+     |> push_selection_state()}
+  end
+
+  def update(%{refresh_videos: true} = assigns, socket) do
+    requested_folder = Map.get(assigns, :requested_folder)
+
+    {:ok,
+     socket
+     |> assign_defaults()
+     |> assign_videos()
+     |> assign_folder_state(requested_folder || socket.assigns.current_folder)
+     |> push_selection_state()}
   end
 
   def update(assigns, socket) do
     {:ok,
      socket
-     |> assign(assigns)
-     |> assign_new(:multi, fn -> false end)
-     |> assign_new(:videos, fn -> [] end)
-     |> assign_new(:config_target, fn -> nil end)
-     |> assign_new(:event_target, fn -> nil end)
-     |> assign_new(:current_user, fn -> nil end)
-     |> assign_new(:deselect_video, fn -> nil end)
-     |> assign_new(:selected_videos, fn -> [] end)
-     |> assign_new(:upload_strategy, fn -> :local end)
-     |> assign_new(:upload_progress, fn -> nil end)}
+     |> assign_defaults()
+     |> assign(assigns)}
   end
 
-  def assign_videos(socket) do
+  defp assign_videos(socket) do
     {:ok, videos} =
       Brando.Videos.list_videos(%{
         filter: %{config_target: socket.assigns.config_target},
@@ -63,95 +74,602 @@ defmodule BrandoAdmin.Components.VideoPicker do
     assign(socket, :videos, videos)
   end
 
+  defp assign_defaults(socket) do
+    socket
+    |> assign_new(:multi, fn -> false end)
+    |> assign_new(:videos, fn -> [] end)
+    |> assign_new(:config_target, fn -> nil end)
+    |> assign_new(:event_target, fn -> nil end)
+    |> assign_new(:selected_videos, fn -> [] end)
+    |> assign_new(:current_user, fn -> nil end)
+    |> assign_new(:upload_strategy, fn -> Brando.default_video_upload_strategy() end)
+    |> assign_new(:upload_progress, fn -> nil end)
+    |> assign_new(:show_url_input, fn -> false end)
+    |> assign_new(:url_input, fn -> "" end)
+    |> assign_new(:creating_video, fn -> false end)
+    |> assign_new(:playing_video, fn -> nil end)
+    |> assign_new(:editing_video_id, fn -> nil end)
+    # Folder state
+    |> assign_new(:folders, fn -> [""] end)
+    |> assign_new(:custom_folders, fn -> [] end)
+    |> assign_new(:child_folders, fn -> [] end)
+    |> assign_new(:breadcrumbs, fn -> [%{label: "Root", folder: ""}] end)
+    |> assign_new(:current_folder, fn -> "" end)
+    |> assign_new(:new_folder, fn -> "" end)
+    |> assign_new(:show_new_folder_form, fn -> false end)
+    |> assign_new(:upload_root, fn -> "videos/default" end)
+    |> assign_new(:recent_folders, fn -> [] end)
+    |> assign_new(:recent_folders_for_root, fn -> [] end)
+    # Organize state
+    |> assign_new(:organize_selected, fn -> [] end)
+    |> assign_new(:last_organize_selected_id, fn -> nil end)
+    |> assign_new(:video_count, fn -> 0 end)
+    |> assign_new(:visible_item_ids, fn -> [] end)
+  end
+
+  # -- PickerHelpers callbacks --
+
+  defp on_folder_change(socket) do
+    push_selection_state(socket)
+  end
+
+  defp push_selection_state(socket) do
+    selected_ids = Enum.map(socket.assigns.selected_videos, &normalize_item_id/1)
+    organize_ids = socket.assigns.organize_selected
+
+    push_event(socket, "video_picker_selection_changed", %{
+      selected_ids: selected_ids,
+      organize_ids: organize_ids
+    })
+  end
+
+  defp assign_folder_state(socket, requested_folder) do
+    upload_root = video_upload_root(socket.assigns.config_target)
+
+    entries = folder_entries(socket.assigns.videos)
+
+    folders =
+      FolderBrowser.folders_from_entries(entries, upload_root)
+      |> Kernel.++(socket.assigns.custom_folders)
+      |> Enum.map(&(FolderBrowser.normalize_folder(&1) || ""))
+      |> Enum.uniq()
+      |> Enum.sort()
+
+    requested_relative =
+      case requested_folder do
+        nil ->
+          socket.assigns.current_folder
+
+        folder ->
+          FolderBrowser.relative_folder(folder, upload_root)
+      end
+
+    current_folder =
+      if requested_relative in folders do
+        requested_relative
+      else
+        ""
+      end
+
+    matched_entries =
+      FolderBrowser.entries_in_folder(
+        entries,
+        current_folder,
+        upload_root
+      )
+
+    matched_ids = MapSet.new(Enum.map(matched_entries, & &1.id))
+
+    # Videos with nil folder_id and nil path belong to root
+    unassigned_ids =
+      if current_folder == "" do
+        entries
+        |> Enum.filter(&(is_nil(&1.folder_id) and is_nil(&1.path)))
+        |> Enum.map(& &1.id)
+        |> MapSet.new()
+      else
+        MapSet.new()
+      end
+
+    visible_ids = MapSet.union(matched_ids, unassigned_ids)
+
+    visible_video_structs =
+      socket.assigns.videos
+      |> Enum.filter(&(&1.id in visible_ids))
+      |> Enum.sort_by(& &1.id, :desc)
+
+    child_folders = FolderBrowser.child_folders(folders, current_folder)
+    breadcrumbs = FolderBrowser.breadcrumbs(current_folder)
+
+    recent_folders_for_root =
+      socket.assigns.recent_folders
+      |> Enum.map(&FolderBrowser.normalize_folder/1)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.filter(&folder_under_root?(&1, upload_root))
+      |> Enum.reject(&(FolderBrowser.relative_folder(&1, upload_root) == ""))
+      |> Enum.take(5)
+
+    socket
+    |> assign(:upload_root, upload_root)
+    |> assign(:folders, folders)
+    |> assign(:current_folder, current_folder)
+    |> assign(:video_count, length(visible_video_structs))
+    |> assign(:visible_item_ids, Enum.map(visible_video_structs, & &1.id))
+    |> stream(:visible_videos, visible_video_structs, reset: true)
+    |> assign(:child_folders, child_folders)
+    |> assign(:breadcrumbs, breadcrumbs)
+    |> assign(:recent_folders_for_root, recent_folders_for_root)
+  end
+
+  defp folder_entries(videos) do
+    Enum.map(videos, fn video ->
+      %{
+        id: video.id,
+        folder_id: video.folder_id,
+        config_target: video.config_target,
+        path: folder_entry_path(video)
+      }
+    end)
+  end
+
+  defp folder_entry_path(%{type: :upload, remote_id: rid}) when is_binary(rid), do: rid
+  defp folder_entry_path(_), do: nil
+
+  # -- Video-specific event handlers --
+
+  def handle_event("organize_select_video", %{"id" => id} = params, socket) do
+    with {:ok, parsed_id} <- parse_item_id(id) do
+      meta? = truthy?(params["meta"])
+
+      socket =
+        if meta?,
+          do: organize_select_range(socket, parsed_id),
+          else: organize_select_toggle(socket, parsed_id)
+
+      {:noreply, push_selection_state(socket)}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("clear_organize_selection", _, socket) do
+    {:noreply,
+     socket
+     |> assign(:organize_selected, [])
+     |> assign(:last_organize_selected_id, nil)
+     |> push_selection_state()}
+  end
+
+  def handle_event("picker_move_to_folder", %{"folder" => folder, "ids" => ids}, socket) do
+    ids = parse_selected_ids(ids)
+    absolute_folder = FolderBrowser.absolute_folder(folder, socket.assigns.upload_root)
+
+    cond do
+      ids == [] ->
+        {:noreply, socket}
+
+      not folder_under_root?(absolute_folder, socket.assigns.upload_root) ->
+        {:noreply, socket}
+
+      true ->
+        folder_id = FolderBrowser.folder_id_for(folder, socket.assigns.upload_root)
+        move_videos_to_folder(ids, folder_id)
+
+        send(self(), {:toast, gettext("Moved %{count} videos", count: length(ids))})
+
+        {:noreply,
+         socket
+         |> assign(:organize_selected, [])
+         |> assign(:last_organize_selected_id, nil)
+         |> assign_videos()
+         |> assign_folder_state(socket.assigns.current_folder)
+         |> push_selection_state()}
+    end
+  end
+
+  def handle_event("toggle_url_input", _, socket) do
+    {:noreply, assign(socket, :show_url_input, !socket.assigns.show_url_input)}
+  end
+
+  def handle_event("start_rename", %{"video-id" => video_id}, socket) do
+    {:noreply, assign(socket, :editing_video_id, String.to_integer(video_id))}
+  end
+
+  def handle_event("cancel_rename", _, socket) do
+    {:noreply, assign(socket, :editing_video_id, nil)}
+  end
+
+  def handle_event("rename_video", %{"title" => title, "video_id" => video_id}, socket) do
+    video_id = if is_binary(video_id), do: String.to_integer(video_id), else: video_id
+
+    Brando.Videos.Video
+    |> Brando.Repo.get!(video_id)
+    |> Ecto.Changeset.change(%{title: title})
+    |> Brando.Repo.update()
+
+    {:noreply,
+     socket
+     |> assign(:editing_video_id, nil)
+     |> assign_videos()
+     |> assign_folder_state(socket.assigns.current_folder)
+     |> push_selection_state()}
+  end
+
+  def handle_event("play_video", %{"video-id" => video_id, "source-url" => source_url, "type" => type}, socket) do
+    video_data = Enum.find(socket.assigns.videos, &(&1.id == String.to_integer(video_id)))
+
+    video = %{
+      id: video_id,
+      source_url: source_url,
+      type: String.to_existing_atom(type),
+      unique_id: System.unique_integer([:positive]),
+      width: video_data && video_data.width,
+      height: video_data && video_data.height
+    }
+
+    {:noreply, assign(socket, :playing_video, video)}
+  end
+
+  def handle_event("close_video_player", _, socket) do
+    {:noreply, assign(socket, :playing_video, nil)}
+  end
+
+  def handle_event("url", params, socket) do
+    %{
+      "width" => width,
+      "height" => height,
+      "source" => source,
+      "remoteId" => remote_id,
+      "url" => url
+    } = params
+
+    video_type =
+      case source do
+        "vimeo" -> :vimeo
+        "youtube" -> :youtube
+        "file" -> :external_file
+        _ -> :external_file
+      end
+
+    {title, description, _thumbnail_url} =
+      case video_type do
+        :youtube -> fetch_oembed_metadata("youtube", url)
+        :vimeo -> fetch_oembed_metadata("vimeo", url)
+        _ -> {extract_title_from_url(url), nil, nil}
+      end
+
+    video_params = %{
+      type: video_type,
+      source_url: url,
+      remote_id: remote_id,
+      width: width,
+      height: height,
+      title: title,
+      caption: description,
+      aspect_ratio: calculate_aspect_ratio(width, height),
+      config_target: normalize_video_config_target(socket.assigns.config_target)
+    }
+
+    case Brando.Videos.create_video(video_params, Map.get(socket.assigns, :current_user)) do
+      {:ok, video} ->
+        send_update(socket.assigns.event_target, %{
+          event: "video_created_from_url",
+          video_data: Map.from_struct(video),
+          video_changeset: Ecto.Changeset.change(video)
+        })
+
+        {:noreply,
+         socket
+         |> assign(:creating_video, false)
+         |> assign(:show_url_input, false)
+         |> assign(:selected_videos, [video.id])
+         |> assign_videos()
+         |> assign_folder_state(socket.assigns.current_folder)
+         |> push_selection_state()}
+
+      {:error, changeset} ->
+        error_msg =
+          changeset.errors
+          |> Enum.map(fn {field, {msg, _}} -> "#{field}: #{msg}" end)
+          |> Enum.join(", ")
+
+        require Logger
+        Logger.warning("Video changeset error: #{error_msg}")
+        {:noreply, assign(socket, :creating_video, false)}
+    end
+  end
+
+  def handle_event("get_video_upload_url", %{"filename" => filename}, socket) do
+    strategy = socket.assigns.upload_strategy
+    user = socket.assigns.current_user
+
+    video_config = %Brando.Type.VideoConfig{
+      upload_strategy: strategy
+    }
+
+    case Brando.Videos.Uploader.initiate_upload(filename, user,
+           config: video_config,
+           config_target: "default"
+         ) do
+      {:ok, %{upload_url: upload_url, video: video} = result} ->
+        event_payload = %{
+          upload_url: upload_url,
+          video_id: video.id,
+          filename: filename
+        }
+
+        event_payload =
+          case Map.get(result, :tus_auth) do
+            nil -> event_payload
+            tus_auth -> Map.put(event_payload, :tus_auth, tus_auth)
+          end
+
+        {:noreply, push_event(socket, "video_upload_url_ready", event_payload)}
+
+      {:error, reason} ->
+        {:noreply,
+         push_event(socket, "video_upload_url_error", %{
+           error: inspect(reason),
+           filename: filename
+         })}
+    end
+  end
+
+  def handle_event("video_upload_complete", %{"video_id" => video_id}, socket) do
+    case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}) do
+      {:ok, _video} ->
+        send_update(socket.assigns.event_target, %{
+          event: "select_video",
+          id: video_id
+        })
+
+        {:noreply,
+         socket
+         |> assign(:upload_progress, nil)
+         |> assign_videos()
+         |> assign_folder_state(socket.assigns.current_folder)
+         |> push_selection_state()}
+
+      {:error, _} ->
+        {:noreply, assign(socket, :upload_progress, nil)}
+    end
+  end
+
+  def handle_event("video_upload_progress", params, socket) do
+    progress = %{
+      percentage: params["percentage"],
+      uploaded_mb: params["uploaded_mb"],
+      total_mb: params["total_mb"]
+    }
+
+    {:noreply, assign(socket, :upload_progress, progress)}
+  end
+
+  def handle_event("upload_error", %{"error" => error, "filename" => filename}, socket) do
+    require Logger
+    Logger.warning("Video upload error for #{filename}: #{error}")
+    {:noreply, assign(socket, :upload_progress, nil)}
+  end
+
+  def handle_event("delete_video_from_picker", %{"id" => id}, socket) do
+    with {:ok, video_id} <- parse_item_id(id) do
+      _ = Brando.Videos.delete_video(video_id, socket.assigns.current_user)
+
+      send(self(), {:toast, gettext("Video deleted")})
+
+      {:noreply,
+       socket
+       |> assign(
+         :selected_videos,
+         Enum.reject(socket.assigns.selected_videos, &same_item_id?(&1, video_id))
+       )
+       |> assign_videos()
+       |> assign_folder_state(socket.assigns.current_folder)
+       |> push_selection_state()}
+    else
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  # -- Render --
+
   def render(assigns) do
     ~H"""
     <div>
-      <Content.drawer id={@id} title={gettext("Select video")} close={toggle_drawer("##{@id}")} z={@z_index} dark>
+      <Content.drawer id={@id} title={gettext("Select video")} close={toggle_drawer("##{@id}")} z={@z_index} wide light>
         <:info>
-          <%= if @config_target do %>
-            <div class="mb-2">
-              {gettext("Select similarly typed video from library")}
-            </div>
-          <% end %>
+          <.live_component
+            module={FileBrowser}
+            id={"#{@id}-top"}
+            section={:top}
+            mode={:drawer}
+            target={@myself}
+            upload_root={@upload_root}
+            current_folder={@current_folder}
+            breadcrumbs={@breadcrumbs}
+            recent_folders={@recent_folders_for_root}
+          >
+            <:top_lead>
+              <div class="video-picker-url-section">
+                <div class="video-picker-add-actions">
+                  <button
+                    type="button"
+                    class="video-picker-add-btn"
+                    phx-click={JS.push("toggle_url_input", target: @myself)}
+                  >
+                    <.icon name="hero-link" />
+                    <%= if @show_url_input do %>
+                      {gettext("Hide URL input")}
+                    <% else %>
+                      {gettext("Add from URL")}
+                    <% end %>
+                  </button>
 
-          <div class="mb-2">
-            <button
-              type="button"
-              class="primary small"
-              phx-click={JS.push("toggle_url_input", target: @myself)}
-            >
-              <%= if @show_url_input do %>
-                {gettext("Hide URL input")}
-              <% else %>
-                {gettext("Create new video from URL")}
-              <% end %>
-            </button>
-          </div>
+                  <div
+                    :if={@upload_strategy != :local}
+                    phx-hook={video_uploader_hook(@upload_strategy)}
+                    id={"video-uploader-#{@id}"}
+                    data-target={@myself}
+                  >
+                    <button
+                      type="button"
+                      class="video-picker-add-btn"
+                      onclick="this.closest('[phx-hook]').querySelector('.video-picker-file-input').click()"
+                    >
+                      <.icon name="hero-arrow-up-tray" />
+                      {gettext("Upload file")}
+                    </button>
+                    <input type="file" accept="video/*" class="video-picker-file-input" />
+                  </div>
+                </div>
 
-          <div :if={@show_url_input} class="url-input-wrapper">
-            <div
-              class="video-url-parser"
-              phx-hook="Brando.VideoURLParser"
-              data-target={@myself}
-              id={"video-url-parser-#{@id}"}
-            >
-              <div class="field-wrapper">
-                <label>{gettext("Video URL")}</label>
-                <input
-                  type="text"
-                  class="text"
-                  placeholder={gettext("Paste YouTube, Vimeo or direct video URL")}
-                />
-                <button type="button" class="secondary small mt-1">
-                  <%= if @creating_video do %>
-                    {gettext("Creating...")}
-                  <% else %>
-                    {gettext("Create video")}
-                  <% end %>
-                </button>
-                <div class="video-loading hidden">
-                  <div class="spinner"></div>
-                  {gettext("Analyzing video...")}
+                <div :if={@show_url_input} class="video-picker-url-input">
+                  <div
+                    class="video-url-parser"
+                    phx-hook="Brando.VideoURLParser"
+                    data-target={@myself}
+                    id={"video-url-parser-#{@id}"}
+                  >
+                    <div class="video-picker-url-field">
+                      <label>{gettext("Video URL")}</label>
+                      <input
+                        type="text"
+                        class="text"
+                        placeholder={gettext("Paste YouTube, Vimeo or direct video URL")}
+                      />
+                      <button type="button" class="video-picker-add-btn">
+                        <%= if @creating_video do %>
+                          {gettext("Creating...")}
+                        <% else %>
+                          {gettext("Create video")}
+                        <% end %>
+                      </button>
+                      <div class="video-picker-analyzing hidden">
+                        <div class="spinner"></div>
+                        <span>{gettext("Analyzing video...")}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div :if={@upload_progress} class="video-picker-upload-progress">
+                  <div class="progress-bar">
+                    <div class="progress-fill" style={"width: #{@upload_progress.percentage}%"}></div>
+                  </div>
+                  <span class="progress-text">
+                    {gettext("Uploading...")} {@upload_progress.percentage}%
+                    ({@upload_progress.uploaded_mb}/{@upload_progress.total_mb} MB)
+                  </span>
                 </div>
               </div>
-            </div>
-          </div>
+            </:top_lead>
+            <:toolbar_actions>
+              <div class="video-picker-view-toggle">
+                <button
+                  id={"#{@id}-view-grid"}
+                  class="view-toggle"
+                  type="button"
+                  phx-click={show_grid(@id)}
+                >
+                  {gettext("Grid")}
+                </button>
+                <button
+                  id={"#{@id}-view-list"}
+                  class="view-toggle is-active"
+                  type="button"
+                  phx-click={show_list(@id)}
+                >
+                  {gettext("List")}
+                </button>
+              </div>
+            </:toolbar_actions>
+          </.live_component>
+        </:info>
 
-          <div :if={@upload_strategy != :local} class="file-upload-wrapper mt-2">
-            <div class="mb-1">
-              <strong>{gettext("Or upload a video file directly:")}</strong>
-            </div>
-            <div
-              phx-hook={video_uploader_hook(@upload_strategy)}
-              id={"video-uploader-#{@id}"}
-              data-target={@myself}
-            >
-              <input type="file" accept="video/*" class="file-input" />
-              <div :if={@upload_progress} class="upload-progress mt-1">
-                <div class="progress-bar">
-                  <div class="progress-fill" style={"width: #{@upload_progress.percentage}%"}></div>
-                </div>
-                <span class="progress-text">
-                  {gettext("Uploading...")} {@upload_progress.percentage}%
-                  ({@upload_progress.uploaded_mb}/{@upload_progress.total_mb} MB)
+        <.live_component
+          module={FileBrowser}
+          id={"#{@id}-browser"}
+          section={:browser}
+          mode={:drawer}
+          target={@myself}
+          upload_root={@upload_root}
+          current_folder={@current_folder}
+          breadcrumbs={@breadcrumbs}
+          recent_folders={@recent_folders_for_root}
+          show_recent_folders={false}
+          child_folders={@child_folders}
+          show_new_folder_form={@show_new_folder_form}
+          new_folder={@new_folder}
+          main_id={"video-picker-main-#{@id}"}
+          enable_folder_drop={true}
+          folder_drop_event="picker_move_to_folder"
+        >
+          <:main_header>
+            <div class="video-picker-main-header">
+              <h3>{folder_label_for_display(@current_folder, @upload_root)}</h3>
+              <div class="video-picker-main-actions">
+                <span>
+                  {ngettext("%{count} video", "%{count} videos", @video_count, count: @video_count)}
                 </span>
               </div>
             </div>
-          </div>
-        </:info>
+          </:main_header>
 
-        <div class="video-picker list" id={"video-picker-drawer-#{@id}"}>
-          <%= for video <- @videos do %>
-            <.video_row
-              video={video}
-              selected_videos={@selected_videos}
-              multi={@multi}
-              event_target={@event_target}
-              myself={@myself}
-              editing_video_id={@editing_video_id}
-            />
-          <% end %>
-        </div>
+          <div
+            id={"video-picker-drawer-#{@id}"}
+            class="video-picker list"
+          >
+            <%= if @video_count == 0 do %>
+              <div class="video-picker-empty">
+                <.icon name="hero-film" />
+                <h4>{gettext("No videos in this folder")}</h4>
+                <p>{gettext("Create a video from URL or choose another folder")}</p>
+              </div>
+            <% end %>
+
+            <div
+              :if={@organize_selected != []}
+              class="video-picker-organize-bar"
+            >
+              <.icon name="hero-arrows-pointing-out" />
+              <span>
+                {ngettext(
+                  "%{count} video selected for organizing",
+                  "%{count} videos selected for organizing",
+                  length(@organize_selected),
+                  count: length(@organize_selected)
+                )}
+              </span>
+              <span class="video-picker-organize-hint">{gettext("Drag to a folder")}</span>
+              <button
+                type="button"
+                class="video-picker-organize-clear"
+                phx-click="clear_organize_selection"
+                phx-target={@myself}
+              >
+                {gettext("Clear")}
+              </button>
+            </div>
+
+            <div
+              id={"video-picker-grid-#{@id}"}
+              phx-update="stream"
+              phx-hook="Brando.VideoPickerGrid"
+              data-target-component={@myself}
+            >
+              <.video_row
+                :for={{dom_id, video} <- @streams.visible_videos}
+                id={dom_id}
+                video={video}
+                multi={@multi}
+                event_target={@event_target}
+                myself={@myself}
+                editing_video_id={@editing_video_id}
+              />
+            </div>
+          </div>
+        </.live_component>
       </Content.drawer>
 
       <Content.modal title={gettext("Video Preview")} id="video-player-modal">
@@ -202,197 +720,192 @@ defmodule BrandoAdmin.Components.VideoPicker do
     """
   end
 
-  def handle_event("toggle_url_input", _, socket) do
-    {:noreply, assign(socket, :show_url_input, !socket.assigns.show_url_input)}
+  # -- Sub-components --
+
+  defp video_row(assigns) do
+    assigns = assign(assigns, :editing, assigns.editing_video_id == assigns.video.id)
+
+    ~H"""
+    <div
+      id={@id}
+      class="video-picker__video"
+      data-id={@video.id}
+      phx-click={
+        if @multi,
+          do: JS.push("select_video", target: @event_target),
+          else: JS.push("select_video", target: @event_target) |> toggle_drawer("#video-picker")
+      }
+      phx-value-id={@video.id}
+    >
+      <.video_preview video={@video} myself={@myself} />
+      <span class="video-picker__selected-indicator">
+        <.icon name="hero-check-mini" />
+      </span>
+      <div class="video-picker__info">
+        <div class="video-picker__name">
+          <%= if @editing do %>
+            <form
+              id={"rename-video-#{@video.id}"}
+              phx-submit={JS.push("rename_video", target: @myself)}
+            >
+              <input type="hidden" name="video_id" value={@video.id} />
+              <input
+                type="text"
+                name="title"
+                value={@video.title || ""}
+                class="video-title-input"
+                phx-blur={JS.dispatch("submit", to: "#rename-video-#{@video.id}")}
+                phx-keydown={JS.push("cancel_rename", target: @myself)}
+                phx-key="Escape"
+                autofocus
+              />
+            </form>
+          <% else %>
+            <div class="video-picker__title">{@video.title || gettext("Untitled")}</div>
+            <div
+              :if={@video.type == :external_file && @video.source_url}
+              class="video-picker__source-url"
+            >
+              {@video.source_url}
+            </div>
+          <% end %>
+        </div>
+        <div class="video-picker__meta">{@video.type}</div>
+        <div :if={@video.width && @video.height} class="video-picker__meta">
+          {@video.width}&times;{@video.height}
+        </div>
+        <div class="video-picker__actions">
+          <button
+            type="button"
+            class="video-picker-action-button"
+            aria-label={gettext("Video actions")}
+            phx-click={toggle_dropdown("#video-picker-menu-#{@video.id}")}
+            phx-click-away={hide_dropdown("#video-picker-menu-#{@video.id}")}
+          >
+            <.icon name="hero-ellipsis-horizontal-circle" />
+          </button>
+          <ul id={"video-picker-menu-#{@video.id}"} class="video-picker-action-dropdown hidden">
+            <li>
+              <button
+                type="button"
+                phx-click={
+                  JS.push("start_rename", target: @myself)
+                  |> hide_dropdown("#video-picker-menu-#{@video.id}")
+                }
+                phx-value-video-id={@video.id}
+              >
+                <.icon name="hero-pencil-square" />
+                {gettext("Rename")}
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                phx-click={
+                  JS.push("play_video", target: @myself)
+                  |> show_modal("#video-player-modal")
+                  |> hide_dropdown("#video-picker-menu-#{@video.id}")
+                }
+                phx-value-video-id={@video.id}
+                phx-value-source-url={@video.source_url}
+                phx-value-type={@video.type}
+              >
+                <.icon name="hero-play" />
+                {gettext("Preview")}
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="delete-action"
+                phx-confirm={gettext("Delete this video?")}
+                phx-click={
+                  JS.push("delete_video_from_picker",
+                    target: @myself,
+                    value: %{id: @video.id}
+                  )
+                  |> hide_dropdown("#video-picker-menu-#{@video.id}")
+                }
+              >
+                <.icon name="hero-trash" />
+                {gettext("Delete video")}
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    """
   end
 
-  def handle_event("start_rename", %{"video-id" => video_id}, socket) do
-    {:noreply, assign(socket, :editing_video_id, String.to_integer(video_id))}
+  defp video_preview(assigns) do
+    thumbnail_url =
+      Brando.Videos.Helpers.thumbnail_url(assigns.video) ||
+        Brando.Videos.Helpers.derive_external_thumbnail_url(assigns.video)
+
+    assigns = assign(assigns, :thumbnail_url, thumbnail_url)
+
+    ~H"""
+    <div
+      class="video-preview"
+      phx-click={JS.push("play_video", target: @myself) |> show_modal("#video-player-modal")}
+      phx-value-video-id={@video.id}
+      phx-value-source-url={@video.source_url}
+      phx-value-type={@video.type}
+    >
+      <%= cond do %>
+        <% @video.thumbnail -> %>
+          <Content.image image={@video.thumbnail} size={:smallest} />
+        <% @thumbnail_url -> %>
+          <img src={@thumbnail_url} loading="lazy" />
+        <% @video.type == :upload && @video.file -> %>
+          <video preload="metadata" muted src={Brando.Utils.media_url(@video.file)} />
+        <% @video.type == :external_file && @video.source_url && !String.ends_with?(@video.source_url, ".m3u8") -> %>
+          <video preload="metadata" muted src={@video.source_url} />
+        <% true -> %>
+          <.video_placeholder />
+      <% end %>
+    </div>
+    """
   end
 
-  def handle_event("cancel_rename", _, socket) do
-    {:noreply, assign(socket, :editing_video_id, nil)}
+  defp video_placeholder(assigns) do
+    ~H"""
+    <div class="img-placeholder">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100" height="100">
+        <path fill="none" d="M0 0h24v24H0z" /><path d="M3 3.993C3 3.445 3.445 3 3.993 3h16.014c.548 0 .993.445.993.993v16.014a.994.994 0 0 1-.993.993H3.993A.994.994 0 0 1 3 20.007V3.993zM5 5v14h14V5H5zm5.622 3.415l4.879 3.252a.4.4 0 0 1 0 .666l-4.88 3.252a.4.4 0 0 1-.621-.332V8.747a.4.4 0 0 1 .622-.332z" />
+      </svg>
+    </div>
+    """
   end
 
-  def handle_event("rename_video", %{"title" => title, "video_id" => video_id}, socket) do
-    video_id = if is_binary(video_id), do: String.to_integer(video_id), else: video_id
+  # -- Private helpers --
 
-    Brando.Videos.Video
-    |> Brando.Repo.get!(video_id)
-    |> Ecto.Changeset.change(%{title: title})
-    |> Brando.Repo.update()
+  defp move_videos_to_folder(ids, folder_id) when is_list(ids) do
+    import Ecto.Query
+    timestamp = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 
-    {:noreply,
-     socket
-     |> assign(:editing_video_id, nil)
-     |> assign_videos()}
+    from(v in Brando.Videos.Video, where: v.id in ^ids)
+    |> Brando.Repo.update_all(set: [folder_id: folder_id, updated_at: timestamp])
   end
 
-  def handle_event("play_video", %{"video-id" => video_id, "source-url" => source_url, "type" => type}, socket) do
-    # Find the video in our list to get its dimensions
-    video_data = Enum.find(socket.assigns.videos, &(&1.id == String.to_integer(video_id)))
-
-    video = %{
-      id: video_id,
-      source_url: source_url,
-      type: String.to_atom(type),
-      unique_id: System.unique_integer([:positive]),
-      width: video_data && video_data.width,
-      height: video_data && video_data.height
-    }
-
-    {:noreply, assign(socket, :playing_video, video)}
+  def show_grid(js \\ %JS{}, id) do
+    js
+    |> JS.add_class("grid", to: "#video-picker-drawer-#{id}")
+    |> JS.remove_class("list", to: "#video-picker-drawer-#{id}")
+    |> JS.add_class("is-active", to: "##{id}-view-grid")
+    |> JS.remove_class("is-active", to: "##{id}-view-list")
   end
 
-  def handle_event("close_video_player", _, socket) do
-    {:noreply, assign(socket, :playing_video, nil)}
+  def show_list(js \\ %JS{}, id) do
+    js
+    |> JS.add_class("list", to: "#video-picker-drawer-#{id}")
+    |> JS.remove_class("grid", to: "#video-picker-drawer-#{id}")
+    |> JS.add_class("is-active", to: "##{id}-view-list")
+    |> JS.remove_class("is-active", to: "##{id}-view-grid")
   end
-
-  def handle_event("url", params, socket) do
-    # This event comes from the JavaScript VideoURLParser hook
-    %{
-      "width" => width,
-      "height" => height,
-      "source" => source,
-      "remoteId" => remote_id,
-      "url" => url
-    } = params
-
-    # Map JS source types to our video types
-    video_type =
-      case source do
-        "vimeo" -> :vimeo
-        "youtube" -> :youtube
-        "file" -> :external_file
-        _ -> :external_file
-      end
-
-    # Fetch oEmbed metadata for YouTube/Vimeo
-    {title, description, _thumbnail_url} =
-      case video_type do
-        :youtube -> fetch_oembed_metadata("youtube", url)
-        :vimeo -> fetch_oembed_metadata("vimeo", url)
-        _ -> {extract_title_from_url(url), nil, nil}
-      end
-
-    # Build video parameters from hook data + oEmbed
-    video_params = %{
-      type: video_type,
-      source_url: url,
-      remote_id: remote_id,
-      width: width,
-      height: height,
-      title: title,
-      caption: description,
-      aspect_ratio: calculate_aspect_ratio(width, height)
-    }
-
-    # Create a changeset for the video (don't save yet - like gallery objects)
-    video_changeset = Ecto.Changeset.change(%Brando.Videos.Video{}, video_params)
-
-    case Ecto.Changeset.apply_action(video_changeset, :insert) do
-      {:ok, video_struct} ->
-        # Send the video data to the target component
-        send_update(socket.assigns.event_target, %{
-          event: "video_created_from_url",
-          video_data: Map.from_struct(video_struct),
-          video_changeset: video_changeset
-        })
-
-        {:noreply,
-         socket
-         |> assign(:creating_video, false)
-         |> assign(:show_url_input, false)}
-
-      {:error, changeset} ->
-        error_msg =
-          changeset.errors
-          |> Enum.map(fn {field, {msg, _}} -> "#{field}: #{msg}" end)
-          |> Enum.join(", ")
-
-        IO.puts("Video changeset error: #{error_msg}")
-        {:noreply, assign(socket, :creating_video, false)}
-    end
-  end
-
-  # Video file upload handlers (for Mux, Cloudflare, etc.)
-
-  def handle_event("get_video_upload_url", %{"filename" => filename}, socket) do
-    strategy = socket.assigns.upload_strategy
-    user = socket.assigns.current_user
-
-    # Create a config struct with the upload strategy from global config
-    video_config = %Brando.Type.VideoConfig{
-      upload_strategy: strategy
-    }
-
-    case Brando.Videos.Uploader.initiate_upload(filename, user,
-           config: video_config,
-           config_target: "default"
-         ) do
-      {:ok, %{upload_url: upload_url, video: video} = result} ->
-        # Build event payload - include tus_auth for Bunny uploads
-        event_payload = %{
-          upload_url: upload_url,
-          video_id: video.id,
-          filename: filename
-        }
-
-        event_payload =
-          case Map.get(result, :tus_auth) do
-            nil -> event_payload
-            tus_auth -> Map.put(event_payload, :tus_auth, tus_auth)
-          end
-
-        {:noreply, push_event(socket, "video_upload_url_ready", event_payload)}
-
-      {:error, reason} ->
-        {:noreply,
-         push_event(socket, "video_upload_url_error", %{
-           error: inspect(reason),
-           filename: filename
-         })}
-    end
-  end
-
-  def handle_event("video_upload_complete", %{"video_id" => video_id}, socket) do
-    case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}) do
-      {:ok, _video} ->
-        # Send to parent component to select the uploaded video
-        send_update(socket.assigns.event_target, %{
-          event: "select_video",
-          id: video_id
-        })
-
-        {:noreply,
-         socket
-         |> assign(:upload_progress, nil)
-         |> assign_videos()}
-
-      {:error, _} ->
-        {:noreply, assign(socket, :upload_progress, nil)}
-    end
-  end
-
-  def handle_event("video_upload_progress", params, socket) do
-    progress = %{
-      percentage: params["percentage"],
-      uploaded_mb: params["uploaded_mb"],
-      total_mb: params["total_mb"]
-    }
-
-    {:noreply, assign(socket, :upload_progress, progress)}
-  end
-
-  def handle_event("upload_error", %{"error" => error, "filename" => filename}, socket) do
-    IO.puts("Video upload error for #{filename}: #{error}")
-    {:noreply, assign(socket, :upload_progress, nil)}
-  end
-
-  # Helper functions
 
   defp get_embed_url(%{type: :youtube, source_url: source_url}) do
-    # Convert YouTube URL to embed format with autoplay
     cond do
       String.contains?(source_url, "watch?v=") ->
         String.replace(source_url, "watch?v=", "embed/") <> "?autoplay=1"
@@ -417,149 +930,11 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   defp get_aspect_ratio(%{width: width, height: height})
        when is_integer(width) and is_integer(height) and width > 0 and height > 0 do
-    # Calculate aspect ratio as percentage for CSS padding-bottom
     ratio = height / width * 100
     "#{ratio}%"
   end
 
-  # Default 16:9 aspect ratio
   defp get_aspect_ratio(_), do: "56.25%"
-
-  # Function components
-
-  attr :video, :map, required: true
-  attr :selected_videos, :list, required: true
-  attr :multi, :boolean, required: true
-  attr :event_target, :any, required: true
-  attr :myself, :any, required: true
-  attr :editing_video_id, :any, required: true
-
-  def video_row(assigns) do
-    assigns = assign(assigns, :editing, assigns.editing_video_id == assigns.video.id)
-
-    ~H"""
-    <div class={["video-picker__video", @video.id in @selected_videos && "selected"]}>
-      <.video_preview video={@video} myself={@myself} />
-      <.video_info
-        video={@video}
-        selected_videos={@selected_videos}
-        multi={@multi}
-        event_target={@event_target}
-        myself={@myself}
-        editing={@editing}
-      />
-      <button
-        :if={!@editing}
-        type="button"
-        class="rename-video-btn"
-        phx-click={JS.push("start_rename", target: @myself)}
-        phx-value-video-id={@video.id}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M15.728 9.686l-1.414-1.414L5 17.586V19h1.414l9.314-9.314zm1.414-1.414l1.414-1.414-1.414-1.414-1.414 1.414 1.414 1.414zM7.242 21H3v-4.243L16.435 3.322a1 1 0 0 1 1.414 0l2.829 2.829a1 1 0 0 1 0 1.414L7.243 21z"/></svg>
-      </button>
-    </div>
-    """
-  end
-
-  attr :video, :map, required: true
-  attr :myself, :any, required: true
-
-  def video_preview(assigns) do
-    ~H"""
-    <div
-      class="video-preview"
-      phx-click={JS.push("play_video", target: @myself) |> show_modal("#video-player-modal")}
-      phx-value-video-id={@video.id}
-      phx-value-source-url={@video.source_url}
-      phx-value-type={@video.type}
-    >
-      <%= case @video.type do %>
-        <% :upload -> %>
-          <.video_placeholder />
-        <% type when type in [:vimeo, :youtube, :external_file] -> %>
-          <%= if @video.thumbnail do %>
-            <Content.image image={@video.thumbnail} size={:smallest} />
-          <% else %>
-            <.video_placeholder />
-          <% end %>
-        <% _ -> %>
-          <.video_placeholder />
-      <% end %>
-    </div>
-    """
-  end
-
-  def video_placeholder(assigns) do
-    ~H"""
-    <div class="img-placeholder">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100" height="100">
-        <path fill="none" d="M0 0h24v24H0z" /><path d="M3 3.993C3 3.445 3.445 3 3.993 3h16.014c.548 0 .993.445.993.993v16.014a.994.994 0 0 1-.993.993H3.993A.994.994 0 0 1 3 20.007V3.993zM5 5v14h14V5H5zm5.622 3.415l4.879 3.252a.4.4 0 0 1 0 .666l-4.88 3.252a.4.4 0 0 1-.621-.332V8.747a.4.4 0 0 1 .622-.332z" />
-      </svg>
-    </div>
-    """
-  end
-
-  attr :video, :map, required: true
-  attr :selected_videos, :list, required: true
-  attr :multi, :boolean, required: true
-  attr :event_target, :any, required: true
-  attr :myself, :any, required: true
-  attr :editing, :boolean, required: true
-
-  def video_info(assigns) do
-    ~H"""
-    <div
-      class="video-info"
-      phx-click={
-        unless @editing do
-          if @multi,
-            do: JS.push("select_video", target: @event_target),
-            else: JS.push("select_video", target: @event_target) |> toggle_drawer("#video-picker")
-        end
-      }
-      phx-value-id={@video.id}
-      phx-value-selected={(@video.id in @selected_videos && "true") || "false"}
-    >
-      <%= if @editing do %>
-        <form
-          id={"rename-video-#{@video.id}"}
-          phx-submit={JS.push("rename_video", target: @myself)}
-        >
-          <input type="hidden" name="video_id" value={@video.id} />
-          <input
-            type="text"
-            name="title"
-            value={@video.title || ""}
-            class="video-title-input"
-            phx-blur={JS.dispatch("submit", to: "#rename-video-#{@video.id}")}
-            phx-keydown={JS.push("cancel_rename", target: @myself)}
-            phx-key="Escape"
-            autofocus
-          />
-        </form>
-      <% else %>
-        <div class="video-title">
-          {@video.title || gettext("Untitled")}
-        </div>
-      <% end %>
-      <div class="video-meta">
-        Type..........: {@video.type}
-      </div>
-      <%= if @video.width && @video.height do %>
-        <div class="video-meta">
-          Dimensions....: {@video.width}&times;{@video.height}
-        </div>
-      <% end %>
-      <%= if @video.source_url do %>
-        <div class="video-meta">
-          Source........: {@video.source_url}
-        </div>
-      <% end %>
-    </div>
-    """
-  end
-
-  # Helper functions using existing Brando.OEmbed
 
   defp fetch_oembed_metadata(provider, url) do
     case Brando.OEmbed.get(provider, url) do
@@ -587,8 +962,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
     end
   end
 
-  defp calculate_aspect_ratio(width, height) when is_integer(width) and is_integer(height) and width > 0 and height > 0 do
-    # Calculate common aspect ratios
+  defp calculate_aspect_ratio(width, height)
+       when is_integer(width) and is_integer(height) and width > 0 and height > 0 do
     ratio = width / height
 
     cond do
@@ -606,4 +981,21 @@ defmodule BrandoAdmin.Components.VideoPicker do
   defp video_uploader_hook(strategy) do
     "Brando.#{strategy |> to_string() |> String.capitalize()}Uploader"
   end
+
+  defp video_upload_root(config_target) do
+    resolved_target = normalize_video_config_target(config_target) || "default"
+
+    case Brando.Videos.get_config_for(%{config_target: resolved_target}) do
+      {:ok, %{upload_path: upload_path}} ->
+        FolderBrowser.normalize_folder(upload_path) || "videos/default"
+
+      _ ->
+        "videos/default"
+    end
+  end
+
+  defp normalize_video_config_target(nil), do: nil
+  defp normalize_video_config_target(ct) when is_binary(ct), do: ct
+  defp normalize_video_config_target({"video", schema, field}), do: "video:#{inspect(schema)}:#{field}"
+  defp normalize_video_config_target(_), do: nil
 end

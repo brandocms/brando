@@ -39,6 +39,7 @@ import SubFormSortableHook from './hooks/SubFormSortable'
 import SubmitHook from './hooks/Submit'
 import SVGDropHook from './hooks/SVGDrop'
 import TipTapHook from './hooks/TipTap'
+import VideoPickerGridHook from './hooks/VideoPickerGrid'
 import VideoURLParserHook from './hooks/VideoURLParser'
 
 // Brando hooks
@@ -84,6 +85,7 @@ export default (app) => {
     'Brando.Submit': SubmitHook(app),
     'Brando.SVGDrop': SVGDropHook(app),
     'Brando.TipTap': TipTapHook(app),
+    'Brando.VideoPickerGrid': VideoPickerGridHook(app),
     'Brando.VideoURLParser': VideoURLParserHook(app),
   }
 }

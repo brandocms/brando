@@ -1497,7 +1497,7 @@ defmodule BrandoAdmin.Components.Form do
 
           <.live_component module={FilePicker} id="file-picker" />
           <.live_component module={ImagePicker} id="image-picker" />
-          <.live_component module={VideoPicker} id="video-picker" />
+          <.live_component module={VideoPicker} id="video-picker" current_user={@current_user} />
 
           <.file_drawer
             file_changeset={@file_changeset}

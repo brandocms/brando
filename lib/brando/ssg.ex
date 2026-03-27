@@ -25,7 +25,7 @@ defmodule Brando.SSG do
         urls :projects do
           %{status: :published}
           |> Projects.list_projects!()
-          |> Enum.map(Projects.Project.__absolute_url__())
+          |> Enum.map(&Projects.Project.__absolute_url__/1)
         end
       end
   ```

@@ -133,7 +133,7 @@ test('creates project', async ({ page }) => {
   await expect(videoPicker).toBeVisible()
 
   // Select seeded video
-  await videoPicker.locator('.video-info').first().click()
+  await videoPicker.locator('.video-picker__video').first().click()
   await syncLV(page)
 
   // Close the video picker drawer

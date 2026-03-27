@@ -289,7 +289,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       await expect(videoPicker).toBeVisible()
 
       // Select the seeded test video
-      await videoPicker.locator('.video-info').first().click()
+      await videoPicker.locator('.video-picker__video').first().click()
       await syncLV(page)
 
       // Verify video object appears in gallery

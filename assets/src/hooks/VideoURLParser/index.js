@@ -134,7 +134,7 @@ function isHLSUrl(url) {
 export default (app) => ({
   mounted() {
     this.target = this.el.dataset.target
-    this.$loader = Dom.find(this.el, '.video-loading')
+    this.$loader = Dom.find(this.el, '.video-loading') || Dom.find(this.el, '.video-picker-analyzing')
     this.bindInput()
   },
 

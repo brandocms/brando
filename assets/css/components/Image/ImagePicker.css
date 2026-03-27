@@ -1,37 +1,3 @@
-#image-picker.drawer {
-  background-color: #f6f2ea;
-  color: var(--brando-color-dark);
-
-  .drawer-info {
-    padding-top: 8px !important;
-    padding-bottom: 10px !important;
-  }
-
-  .drawer-header h2 {
-    color: var(--brando-color-dark);
-  }
-
-  .drawer-close-button {
-    color: var(--brando-color-dark);
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 35%, transparent);
-    background: color-mix(in srgb, white 90%, transparent);
-
-    &:hover {
-      background-color: var(--brando-color-dark);
-      color: white;
-    }
-  }
-
-  .drawer-form {
-    input,
-    textarea {
-      color: var(--brando-color-dark);
-      border: 1px solid color-mix(in srgb, var(--brando-color-dark) 30%, transparent);
-      background: white;
-    }
-  }
-}
-
 .image-picker-top {
   display: flex;
   flex-direction: column;

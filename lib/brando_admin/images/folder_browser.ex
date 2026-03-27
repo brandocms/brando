@@ -90,13 +90,13 @@ defmodule BrandoAdmin.Images.FolderBrowser do
     end
   end
 
-  def folders_from_images(images, upload_root) do
+  def folders_from_entries(images, upload_root) do
     normalized_root = normalize_folder(upload_root)
-    folder_paths_by_id = folder_absolute_paths_for_images(images)
+    folder_paths_by_id = folder_absolute_paths_for_entries(images)
 
-    folders_from_images =
+    folders_from_entries =
       images
-      |> Enum.map(&image_folder_absolute(&1, folder_paths_by_id, normalized_root))
+      |> Enum.map(&entry_folder_absolute(&1, folder_paths_by_id, normalized_root))
       |> Enum.reject(&is_nil/1)
       |> Enum.map(&normalize_folder/1)
       |> Enum.reject(&is_nil/1)
@@ -108,7 +108,7 @@ defmodule BrandoAdmin.Images.FolderBrowser do
 
     folders =
       folders_from_database(normalized_root)
-      |> Kernel.++(folders_from_images)
+      |> Kernel.++(folders_from_entries)
       |> Enum.uniq()
       |> Enum.sort()
 
@@ -158,9 +158,9 @@ defmodule BrandoAdmin.Images.FolderBrowser do
     end
   end
 
-  def images_in_folder(images, current_folder, upload_root) do
+  def entries_in_folder(images, current_folder, upload_root) do
     current = normalize_folder(current_folder) || ""
-    folder_paths_by_id = folder_absolute_paths_for_images(images)
+    folder_paths_by_id = folder_absolute_paths_for_entries(images)
     normalized_root = normalize_folder(upload_root)
 
     abs_folder =
@@ -171,7 +171,7 @@ defmodule BrandoAdmin.Images.FolderBrowser do
       end
 
     Enum.filter(images, fn image ->
-      normalize_folder(image_folder_absolute(image, folder_paths_by_id, normalized_root)) == abs_folder
+      normalize_folder(entry_folder_absolute(image, folder_paths_by_id, normalized_root)) == abs_folder
     end)
   end
 
@@ -256,24 +256,24 @@ defmodule BrandoAdmin.Images.FolderBrowser do
     [root | Enum.scan(segments, root, fn segment, acc -> "#{acc}/#{segment}" end)]
   end
 
-  defp image_folder_absolute(image, folder_paths_by_id, upload_root) do
-    image_folder_from_db(image, folder_paths_by_id) ||
-      image_folder_from_path(image, upload_root)
+  defp entry_folder_absolute(image, folder_paths_by_id, upload_root) do
+    entry_folder_from_db(image, folder_paths_by_id) ||
+      entry_folder_from_path(image, upload_root)
   end
 
-  defp image_folder_from_db(%{folder_id: folder_id}, folder_paths_by_id) when is_integer(folder_id) do
+  defp entry_folder_from_db(%{folder_id: folder_id}, folder_paths_by_id) when is_integer(folder_id) do
     Map.get(folder_paths_by_id, folder_id)
   end
 
-  defp image_folder_from_db(_, _), do: nil
+  defp entry_folder_from_db(_, _), do: nil
 
-  defp image_folder_from_path(%{path: path}, upload_root) when is_binary(path) do
+  defp entry_folder_from_path(%{path: path}, upload_root) when is_binary(path) do
     path
     |> directory_from_path()
     |> normalize_legacy_folder_path(upload_root)
   end
 
-  defp image_folder_from_path(_, _), do: nil
+  defp entry_folder_from_path(_, _), do: nil
 
   defp normalize_legacy_folder_path(nil, _upload_root), do: nil
 
@@ -313,7 +313,7 @@ defmodule BrandoAdmin.Images.FolderBrowser do
     |> Enum.uniq()
   end
 
-  defp folder_absolute_paths_for_images(images) do
+  defp folder_absolute_paths_for_entries(images) do
     folder_ids =
       images
       |> Enum.map(&Map.get(&1, :folder_id))

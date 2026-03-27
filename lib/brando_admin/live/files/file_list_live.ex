@@ -325,7 +325,7 @@ defmodule BrandoAdmin.Files.FileListLive do
     {:ok, files} = Files.list_files(%{select: [:filename, :folder_id, :config_target], order: "desc id"})
 
     folders =
-      FolderBrowser.folders_from_images(files, socket.assigns.upload_root)
+      FolderBrowser.folders_from_entries(files, socket.assigns.upload_root)
       |> Kernel.++(socket.assigns.custom_folders)
       |> Enum.map(&(FolderBrowser.normalize_folder(&1) || ""))
       |> Enum.uniq()
@@ -343,7 +343,7 @@ defmodule BrandoAdmin.Files.FileListLive do
 
     child_folders = FolderBrowser.child_folders(folders, current_folder)
     breadcrumbs = FolderBrowser.breadcrumbs(current_folder)
-    visible_files = FolderBrowser.images_in_folder(files, current_folder, socket.assigns.upload_root)
+    visible_files = FolderBrowser.entries_in_folder(files, current_folder, socket.assigns.upload_root)
 
     current_folder_config_target =
       resolve_folder_config_target(files, visible_files, current_folder, current_folder_abs, socket.assigns.upload_root)

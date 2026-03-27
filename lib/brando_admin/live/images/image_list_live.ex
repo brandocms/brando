@@ -324,10 +324,11 @@ defmodule BrandoAdmin.Images.ImageListLive do
   defp assign_folder_state(socket, folder_filter) do
     {:ok, images} =
       Images.list_images(%{select: [:id, :path, :folder_id, :config_target], order: "desc id"})
+
     images = ensure_image_folder_ids(images, socket.assigns.upload_root)
 
     folders =
-      FolderBrowser.folders_from_images(images, socket.assigns.upload_root)
+      FolderBrowser.folders_from_entries(images, socket.assigns.upload_root)
       |> Kernel.++(socket.assigns.custom_folders)
       |> Enum.map(&(FolderBrowser.normalize_folder(&1) || ""))
       |> Enum.uniq()
@@ -345,7 +346,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
 
     child_folders = FolderBrowser.child_folders(folders, current_folder)
     breadcrumbs = FolderBrowser.breadcrumbs(current_folder)
-    visible_images = FolderBrowser.images_in_folder(images, current_folder, socket.assigns.upload_root)
+    visible_images = FolderBrowser.entries_in_folder(images, current_folder, socket.assigns.upload_root)
 
     current_folder_config_target =
       resolve_folder_config_target(images, visible_images, current_folder, current_folder_abs, socket.assigns.upload_root)

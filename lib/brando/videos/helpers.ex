@@ -124,6 +124,38 @@ defmodule Brando.Videos.Helpers do
 
   def thumbnail_url(%Video{}), do: nil
 
+  @doc """
+  Attempt to derive a thumbnail URL from an external file video's source URL
+  by matching against known provider URL patterns.
+
+  Currently supports:
+    - Bunny CDN Stream: `https://vz-*.b-cdn.net/{guid}/playlist.m3u8`
+  """
+  def derive_external_thumbnail_url(%Video{type: :external_file, source_url: url})
+      when is_binary(url) do
+    derive_external_thumbnail(url)
+  end
+
+  def derive_external_thumbnail_url(_), do: nil
+
+  defp derive_external_thumbnail(url) do
+    cond do
+      # Bunny CDN Stream: https://vz-*.b-cdn.net/{guid}/playlist.m3u8
+      String.contains?(url, ".b-cdn.net/") and String.ends_with?(url, "/playlist.m3u8") ->
+        String.replace_trailing(url, "/playlist.m3u8", "/thumbnail.jpg")
+
+      # Mux Stream: https://stream.mux.com/{playback_id}.m3u8
+      String.starts_with?(url, "https://stream.mux.com/") ->
+        case Regex.run(~r{https://stream\.mux\.com/([^/.]+)}, url) do
+          [_, playback_id] -> "https://image.mux.com/#{playback_id}/thumbnail.jpg"
+          _ -> nil
+        end
+
+      true ->
+        nil
+    end
+  end
+
   defp get_bunny_cdn_hostname do
     :brando
     |> Application.get_env(Brando.Videos.Uploaders.Bunny, [])

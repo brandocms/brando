@@ -46,7 +46,7 @@ test('creates a simple page', async ({ page }) => {
   await expect(videoPicker).toBeVisible()
 
   // Click to show URL input section
-  await videoPicker.getByRole('button', { name: 'Create new video from URL' }).click()
+  await videoPicker.getByRole('button', { name: 'Add from URL' }).click()
 
   // Fill the video URL
   const videoUrlInput = videoPicker.locator('input.text').first()

@@ -2,6 +2,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
   @moduledoc false
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
+  use BrandoAdmin.Components.PickerHelpers
 
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Form
@@ -133,70 +134,6 @@ defmodule BrandoAdmin.Components.ImagePicker do
     assign(socket, :images, images)
   end
 
-  def handle_event("go_root", _, socket) do
-    {:noreply, set_current_folder(socket, "")}
-  end
-
-  def handle_event("go_folder", %{"folder" => folder}, socket) do
-    {:noreply, set_current_folder(socket, folder)}
-  end
-
-  def handle_event("go_parent_folder", _, %{assigns: %{current_folder: ""}} = socket) do
-    {:noreply, socket}
-  end
-
-  def handle_event("go_parent_folder", _, socket) do
-    parent =
-      socket.assigns.current_folder
-      |> String.split("/", trim: true)
-      |> Enum.drop(-1)
-      |> Enum.join("/")
-
-    {:noreply, set_current_folder(socket, parent)}
-  end
-
-  def handle_event("go_recent_folder", %{"folder" => folder}, socket) do
-    relative = FolderBrowser.relative_folder(folder, socket.assigns.upload_root)
-    {:noreply, set_current_folder(socket, relative)}
-  end
-
-  def handle_event("create_folder", %{"folder" => %{"name" => folder_name}}, socket) do
-    cleaned = FolderBrowser.normalize_folder(folder_name)
-
-    socket =
-      if cleaned do
-        current = socket.assigns.current_folder
-        relative = if current in ["", nil], do: cleaned, else: Path.join(current, cleaned)
-        custom_folders = Enum.uniq([relative | socket.assigns.custom_folders])
-
-        case FolderBrowser.create_folder(relative, socket.assigns.upload_root) do
-          {:ok, _folder} ->
-            socket
-            |> assign(:custom_folders, custom_folders)
-            |> set_current_folder(relative)
-            |> assign(:show_new_folder_form, false)
-
-          {:error, _reason} ->
-            socket
-        end
-      else
-        socket
-      end
-
-    {:noreply, assign(socket, :new_folder, "")}
-  end
-
-  def handle_event("show_new_folder_form", _, socket) do
-    {:noreply, assign(socket, :show_new_folder_form, true)}
-  end
-
-  def handle_event("cancel_new_folder_form", _, socket) do
-    {:noreply,
-     socket
-     |> assign(:new_folder, "")
-     |> assign(:show_new_folder_form, false)}
-  end
-
   def handle_event("confirm_block_upload_folder", _, socket) do
     upload_name = socket.assigns.pending_upload_name
     absolute_folder = FolderBrowser.absolute_folder(socket.assigns.current_folder, socket.assigns.upload_root)
@@ -300,7 +237,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
   end
 
   def handle_event("edit_image_from_picker", %{"id" => id}, socket) do
-    with {:ok, image_id} <- parse_image_id(id),
+    with {:ok, image_id} <- parse_item_id(id),
          {:ok, image} <- Brando.Images.get_image(image_id) do
       if socket.assigns.form_id do
         send_update(Form,
@@ -315,14 +252,14 @@ defmodule BrandoAdmin.Components.ImagePicker do
   end
 
   def handle_event("delete_image_from_picker", %{"id" => id}, socket) do
-    with {:ok, image_id} <- parse_image_id(id) do
+    with {:ok, image_id} <- parse_item_id(id) do
       _ = Brando.Images.delete_images([image_id])
 
       send(self(), {:toast, gettext("Image deleted")})
 
       {:noreply,
        socket
-       |> assign(:selected_images, Enum.reject(socket.assigns.selected_images, &same_image_id?(&1, image_id)))
+       |> assign(:selected_images, Enum.reject(socket.assigns.selected_images, &same_item_id?(&1, image_id)))
        |> assign_images()
        |> assign_folder_state(socket.assigns.current_folder)
        |> sync_picker_upload_folder()
@@ -334,15 +271,18 @@ defmodule BrandoAdmin.Components.ImagePicker do
   end
 
   def handle_event("organize_select_image", %{"id" => id} = params, socket) do
-    meta? = truthy?(params["meta"])
-    parsed_id = String.to_integer(id)
+    with {:ok, parsed_id} <- parse_item_id(id) do
+      meta? = truthy?(params["meta"])
 
-    socket =
-      if meta?,
-        do: organize_select_range(socket, parsed_id),
-        else: organize_select_toggle(socket, parsed_id)
+      socket =
+        if meta?,
+          do: organize_select_range(socket, parsed_id),
+          else: organize_select_toggle(socket, parsed_id)
 
-    {:noreply, push_selection_state(socket)}
+      {:noreply, push_selection_state(socket)}
+    else
+      _ -> {:noreply, socket}
+    end
   end
 
   def handle_event("clear_organize_selection", _, socket) do
@@ -383,7 +323,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
   def render(assigns) do
     ~H"""
     <div>
-      <Content.drawer id={@id} title={gettext("Select image")} close={toggle_drawer("##{@id}")} z={@z_index} wide>
+      <Content.drawer id={@id} title={gettext("Select image")} close={toggle_drawer("##{@id}")} z={@z_index} wide light>
         <:info>
           <.live_component
             module={FileBrowser}
@@ -699,14 +639,14 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign_new(:organize_selected, fn -> [] end)
     |> assign_new(:last_organize_selected_id, fn -> nil end)
     |> assign_new(:image_count, fn -> 0 end)
-    |> assign_new(:visible_image_ids, fn -> [] end)
+    |> assign_new(:visible_item_ids, fn -> [] end)
   end
 
   defp assign_folder_state(socket, requested_folder) do
     upload_root = FolderBrowser.upload_root(socket.assigns.config_target)
 
     folders =
-      FolderBrowser.folders_from_images(socket.assigns.images, upload_root)
+      FolderBrowser.folders_from_entries(socket.assigns.images, upload_root)
       |> Kernel.++(socket.assigns.custom_folders)
       |> Enum.map(&(FolderBrowser.normalize_folder(&1) || ""))
       |> Enum.uniq()
@@ -729,7 +669,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
       end
 
     visible_images =
-      FolderBrowser.images_in_folder(
+      FolderBrowser.entries_in_folder(
         socket.assigns.images,
         current_folder,
         upload_root
@@ -751,59 +691,32 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign(:folders, folders)
     |> assign(:current_folder, current_folder)
     |> assign(:image_count, length(visible_images))
-    |> assign(:visible_image_ids, Enum.map(visible_images, & &1.id))
+    |> assign(:visible_item_ids, Enum.map(visible_images, & &1.id))
     |> stream(:visible_images, visible_images, reset: true)
     |> assign(:child_folders, child_folders)
     |> assign(:breadcrumbs, breadcrumbs)
     |> assign(:recent_folders_for_root, recent_folders_for_root)
   end
 
-  defp set_current_folder(socket, folder) do
-    folder = FolderBrowser.normalize_folder(folder) || ""
+  # -- PickerHelpers callbacks --
 
-    custom_folders =
-      if folder in ["", nil] do
-        socket.assigns.custom_folders
-      else
-        Enum.uniq([folder | socket.assigns.custom_folders])
-      end
-
+  defp on_folder_change(socket) do
     socket
-    |> assign(:custom_folders, custom_folders)
-    |> assign(:current_folder, folder)
-    |> assign(:organize_selected, [])
-    |> assign(:last_organize_selected_id, nil)
-    |> assign_folder_state(folder)
-    |> remember_folder(FolderBrowser.absolute_folder(folder, socket.assigns.upload_root))
     |> sync_picker_upload_folder()
     |> push_selection_state()
   end
 
-  defp remember_folder(socket, nil), do: socket
+  defp push_selection_state(socket) do
+    selected_ids = Enum.map(socket.assigns.selected_images, &normalize_item_id/1)
+    organize_ids = socket.assigns.organize_selected
 
-  defp remember_folder(socket, folder) do
-    recent_folders =
-      socket.assigns.recent_folders
-      |> FolderBrowser.push_recent_folder(folder)
-
-    socket
-    |> assign(:recent_folders, recent_folders)
-    |> assign_folder_state(socket.assigns.current_folder)
+    push_event(socket, "image_picker_selection_changed", %{
+      selected_ids: selected_ids,
+      organize_ids: organize_ids
+    })
   end
 
-  defp folder_label_for_display(folder, upload_root) do
-    case FolderBrowser.relative_folder(folder, upload_root) do
-      relative when relative in [nil, ""] -> root_label(upload_root)
-      relative -> relative
-    end
-  end
-
-  defp root_label(upload_root) do
-    case FolderBrowser.normalize_folder(upload_root) do
-      nil -> "Root"
-      root -> root
-    end
-  end
+  # -- ImagePicker-specific helpers --
 
   defp image_filename(path) when is_binary(path), do: Path.basename(path)
   defp image_filename(_path), do: "-"
@@ -840,16 +753,6 @@ defmodule BrandoAdmin.Components.ImagePicker do
 
   defp image_status(status) when is_binary(status), do: status
   defp image_status(_status), do: "-"
-
-  defp folder_under_root?(folder, nil), do: not is_nil(FolderBrowser.normalize_folder(folder))
-
-  defp folder_under_root?(folder, root) do
-    normalized_folder = FolderBrowser.normalize_folder(folder)
-    normalized_root = FolderBrowser.normalize_folder(root)
-
-    normalized_folder == normalized_root ||
-      String.starts_with?(normalized_folder || "", (normalized_root || "") <> "/")
-  end
 
   defp dispatch_upload_click(js, upload_name, drop_target) do
     selector =
@@ -888,108 +791,6 @@ defmodule BrandoAdmin.Components.ImagePicker do
 
   defp image_menu_id(image_id), do: "image-picker-image-menu-#{image_id}"
 
-  defp parse_image_id(id) when is_integer(id), do: {:ok, id}
-
-  defp parse_image_id(id) when is_binary(id) do
-    case Integer.parse(id) do
-      {parsed, ""} -> {:ok, parsed}
-      _ -> :error
-    end
-  end
-
-  defp parse_image_id(_), do: :error
-
-  defp same_image_id?(left, right), do: normalize_image_id(left) == normalize_image_id(right)
-
-  defp normalize_image_id(id) when is_integer(id), do: id
-
-  defp normalize_image_id(id) when is_binary(id) do
-    case Integer.parse(id) do
-      {parsed, ""} -> parsed
-      _ -> id
-    end
-  end
-
-  defp normalize_image_id(%{id: id}), do: normalize_image_id(id)
-  defp normalize_image_id(%{"id" => id}), do: normalize_image_id(id)
-  defp normalize_image_id(%{image_id: id}), do: normalize_image_id(id)
-  defp normalize_image_id(%{"image_id" => id}), do: normalize_image_id(id)
-  defp normalize_image_id(id), do: id
-
-  defp normalize_upload_name(nil), do: nil
-  defp normalize_upload_name(name) when is_atom(name), do: Atom.to_string(name)
-  defp normalize_upload_name(name) when is_binary(name), do: name
-  defp normalize_upload_name(_), do: nil
-
-  defp parse_nonnegative_int(value, _default) when is_integer(value), do: max(value, 0)
-
-  defp parse_nonnegative_int(value, default) when is_binary(value) do
-    case Integer.parse(value) do
-      {parsed, ""} -> max(parsed, 0)
-      _ -> default
-    end
-  end
-
-  defp parse_nonnegative_int(_, default), do: default
-
-  # -- Organize selection helpers --
-
-  defp organize_select_toggle(socket, id) do
-    selected = socket.assigns.organize_selected
-
-    updated =
-      if id in selected,
-        do: List.delete(selected, id),
-        else: Enum.uniq([id | selected])
-
-    last_id = if updated == [], do: nil, else: id
-
-    socket
-    |> assign(:organize_selected, updated)
-    |> assign(:last_organize_selected_id, last_id)
-  end
-
-  defp organize_select_range(socket, id) do
-    selected = socket.assigns.organize_selected
-    anchor = socket.assigns.last_organize_selected_id
-    visible_ids = socket.assigns.visible_image_ids
-    range_ids = ids_between(visible_ids, anchor, id)
-
-    updated =
-      if range_ids == [],
-        do: Enum.uniq([id | selected]),
-        else: Enum.uniq(selected ++ range_ids)
-
-    socket
-    |> assign(:organize_selected, updated)
-    |> assign(:last_organize_selected_id, id)
-  end
-
-  defp ids_between(_ids, nil, _to), do: []
-
-  defp ids_between(ids, from, to) do
-    from_idx = Enum.find_index(ids, &(&1 == from))
-    to_idx = Enum.find_index(ids, &(&1 == to))
-
-    if is_integer(from_idx) and is_integer(to_idx) do
-      start_idx = min(from_idx, to_idx)
-      end_idx = max(from_idx, to_idx)
-      Enum.slice(ids, start_idx..end_idx)
-    else
-      []
-    end
-  end
-
-  defp push_selection_state(socket) do
-    selected_ids = Enum.map(socket.assigns.selected_images, &normalize_image_id/1)
-    organize_ids = socket.assigns.organize_selected
-
-    push_event(socket, "image_picker_selection_changed", %{
-      selected_ids: selected_ids,
-      organize_ids: organize_ids
-    })
-  end
-
   defp move_images_to_folder(ids, folder_id) when is_list(ids) do
     import Ecto.Query
     timestamp = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
@@ -997,34 +798,4 @@ defmodule BrandoAdmin.Components.ImagePicker do
     from(i in Brando.Images.Image, where: i.id in ^ids)
     |> Brando.Repo.update_all(set: [folder_id: folder_id, updated_at: timestamp])
   end
-
-  defp parse_selected_ids(ids) when is_list(ids) do
-    ids
-    |> Enum.map(&parse_int/1)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.uniq()
-  end
-
-  defp parse_selected_ids(ids) when is_binary(ids) do
-    case Jason.decode(ids) do
-      {:ok, parsed} -> parse_selected_ids(parsed)
-      _ -> []
-    end
-  end
-
-  defp parse_selected_ids(_), do: []
-
-  defp parse_int(value) when is_integer(value), do: value
-
-  defp parse_int(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {id, ""} -> id
-      _ -> nil
-    end
-  end
-
-  defp parse_int(_), do: nil
-
-  defp truthy?(value) when value in [true, "true", "1", 1], do: true
-  defp truthy?(_value), do: false
 end
