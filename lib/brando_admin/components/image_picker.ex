@@ -124,14 +124,32 @@ defmodule BrandoAdmin.Components.ImagePicker do
   end
 
   def assign_images(socket) do
+    config_target = resolve_config_target(socket.assigns.config_target)
+
     {:ok, images} =
       Brando.Images.list_images(%{
         select: [:id, :width, :height, :formats, :status, :path, :sizes, :cdn, :config_target, :folder_id],
-        filter: %{config_target: socket.assigns.config_target, status: :processed},
+        filter: %{config_target: config_target, status: :processed},
         order: "desc id"
       })
 
-    assign(socket, :images, images)
+    socket
+    |> assign(:config_target, config_target)
+    |> assign(:images, images)
+  end
+
+  # Resolve the config_target to the actual target used when storing images.
+  # For example, "ref:gallery" has no registered config, so images are stored
+  # with config_target "default". We need to query with the resolved target.
+  defp resolve_config_target(nil), do: "default"
+
+  defp resolve_config_target(config_target) do
+    case Brando.Images.get_config_for(config_target) do
+      {:ok, _} -> config_target
+      _ -> "default"
+    end
+  rescue
+    _ -> "default"
   end
 
   def handle_event("confirm_block_upload_folder", _, socket) do
