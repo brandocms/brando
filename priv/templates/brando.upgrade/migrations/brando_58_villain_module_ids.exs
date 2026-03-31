@@ -3,43 +3,26 @@ defmodule Brando.Repo.Migrations.MigrateVillainModuleIds do
   import Ecto.Query
 
   def change do
-    # Add your own schemas to the reject list, if they were created AFTER this migration
-    villain_schemas =
-      Enum.reject(
-        Brando.Villain.list_blocks(),
-        &(elem(&1, 0) in [
-            Brando.Content.Template,
-            Brando.Pages.Page,
-            Brando.Pages.Fragment
-            # your schemas here
-          ])
-      )
-
-    # since these are old now, we use :data as field name (since list_blocks will return :blocks for these)
-    villain_schemas =
-      villain_schemas ++
-        [
-          {Brando.Pages.Page, [%{name: :data}]},
-          {Brando.Pages.Fragment, [%{name: :data}]}
-        ]
-
-    actions =
-      for {schema, fields} <- villain_schemas do
-        Enum.map(fields, fn %{name: f} ->
-          from(t in schema.__schema__(:source),
-            update: [
-              set: [
-                {^f,
-                 fragment("REPLACE(?::text, '\"id\":', '\"module_id\":')::jsonb", field(t, ^f))}
-              ]
-            ]
-          )
-        end)
-      end
-      |> List.flatten()
-
-    for action <- actions do
-      Brando.Repo.update_all(action, [])
+    for {table, data_field} <- list_villain_columns() do
+      execute("""
+      UPDATE #{table}
+      SET #{data_field} = REPLACE(#{data_field}::text, '"id":', '"module_id":')::jsonb
+      WHERE #{data_field} IS NOT NULL
+      """)
     end
+  end
+
+  defp list_villain_columns do
+    Brando.repo().all(
+      from("columns",
+        prefix: "information_schema",
+        select: [:table_name, :column_name],
+        where: [table_schema: "public"],
+        where: [data_type: "jsonb"]
+      )
+    )
+    |> Enum.filter(&String.ends_with?(&1.column_name, "data"))
+    |> Enum.reject(&(&1.table_name in ~w(revisions content_modules sites_globals pages_properties)))
+    |> Enum.map(&{&1.table_name, &1.column_name})
   end
 end

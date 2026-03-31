@@ -4,7 +4,7 @@ defmodule Brando.Repo.Migrations.RenameModuleVarsNameToKey do
 
   def up do
     query = from(m in "pages_modules", select: %{id: m.id, vars: m.vars})
-    modules = Brando.Repo.all(query)
+    modules = Brando.repo().all(query)
 
     for module <- modules do
       # convert from string map to list of objects
@@ -23,51 +23,30 @@ defmodule Brando.Repo.Migrations.RenameModuleVarsNameToKey do
           update: [set: [vars: ^vars]]
         )
 
-      Brando.Repo.update_all(query, [])
+      Brando.repo().update_all(query, [])
     end
 
-    # Add your own schemas to the reject list, if they were created AFTER this migration
-    villain_schemas =
-      Enum.reject(
-        Brando.Villain.list_blocks(),
-        &(elem(&1, 0) in [
-            Brando.Content.Template,
-            Brando.Pages.Page,
-            Brando.Pages.Fragment
-            # your schemas here
-          ])
-      )
-
-    # since these are old now, we use :data as field name (since list_blocks will return :blocks for these)
-    villain_schemas =
-      villain_schemas ++
-        [
-          {Brando.Pages.Page, [%{name: :data}]},
-          {Brando.Pages.Fragment, [%{name: :data}]}
-        ]
-
-    for {schema, attrs} <- villain_schemas,
-        %{name: data_field} <- attrs do
+    for {table, data_field} <- list_villain_columns() do
       query =
-        from(m in schema.__schema__(:source),
+        from(m in table,
           select: %{id: m.id, data: field(m, ^data_field)},
           where: not is_nil(field(m, ^data_field)),
           order_by: [desc: m.id]
         )
 
-      entries = Brando.Repo.all(query)
+      entries = Brando.repo().all(query)
 
       for entry <- entries do
         new_data = find_and_replace_vars(entry.data)
         update_args = Keyword.new([{data_field, new_data}])
 
         query =
-          from(m in schema.__schema__(:source),
+          from(m in table,
             where: m.id == ^entry.id,
             update: [set: ^update_args]
           )
 
-        Brando.Repo.update_all(query, [])
+        Brando.repo().update_all(query, [])
       end
     end
   end
@@ -113,4 +92,18 @@ defmodule Brando.Repo.Migrations.RenameModuleVarsNameToKey do
   end
 
   def find_and_replace_vars(value), do: value
+
+  defp list_villain_columns do
+    Brando.repo().all(
+      from("columns",
+        prefix: "information_schema",
+        select: [:table_name, :column_name],
+        where: [table_schema: "public"],
+        where: [data_type: "jsonb"]
+      )
+    )
+    |> Enum.filter(&String.ends_with?(&1.column_name, "data"))
+    |> Enum.reject(&(&1.table_name in ~w(revisions content_modules sites_globals pages_properties)))
+    |> Enum.map(fn row -> {row.table_name, String.to_existing_atom(row.column_name)} end)
+  end
 end

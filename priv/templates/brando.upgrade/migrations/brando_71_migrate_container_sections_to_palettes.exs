@@ -3,46 +3,37 @@ defmodule Brando.Repo.Migrations.ContainerSectionsToPalettes do
   import Ecto.Query
 
   def change do
-    # Add your own schemas to the reject list, if they were created AFTER this migration
-    villain_schemas =
-      Enum.reject(
-        Brando.Villain.list_blocks(),
-        &(elem(&1, 0) in [
-            Brando.Content.Template,
-            Brando.Pages.Page,
-            Brando.Pages.Fragment
-            # your schemas here
-          ])
-      )
-
-    # since these are old now, we use :data as field name (since list_blocks will return :blocks for these)
-    villain_schemas =
-      villain_schemas ++
-        [
-          {Brando.Pages.Page, [%{name: :data}]},
-          {Brando.Pages.Fragment, [%{name: :data}]}
-        ]
-
     actions =
-      for {schema, fields} <- villain_schemas do
-        Enum.map(fields, fn %{name: f} ->
-          from(t in schema.__schema__(:source),
-            update: [
-              set: [
-                {^f,
-                 fragment(
-                   "REPLACE(?::text, '\"section_id\":', '\"palette_id\":')::jsonb",
-                   field(t, ^f)
-                 )}
-              ]
+      for {table, data_field} <- list_villain_columns() do
+        from(t in table,
+          update: [
+            set: [
+              {^data_field,
+               fragment(
+                 "REPLACE(?::text, '\"section_id\":', '\"palette_id\":')::jsonb",
+                 field(t, ^data_field)
+               )}
             ]
-          )
-        end)
+          ]
+        )
       end
-      |> List.flatten()
 
     for action <- actions do
-      Brando.Repo.update_all(action, [])
+      Brando.repo().update_all(action, [])
     end
+  end
+
+  defp list_villain_columns do
+    Brando.repo().all(
+      from("columns",
+        prefix: "information_schema",
+        select: [:table_name, :column_name],
+        where: [table_schema: "public"],
+        where: [data_type: "jsonb"]
+      )
+    )
+    |> Enum.filter(&String.ends_with?(&1.column_name, "data"))
+    |> Enum.reject(&(&1.table_name in ~w(revisions content_modules sites_globals pages_properties)))
+    |> Enum.map(fn row -> {row.table_name, String.to_existing_atom(row.column_name)} end)
   end
 end

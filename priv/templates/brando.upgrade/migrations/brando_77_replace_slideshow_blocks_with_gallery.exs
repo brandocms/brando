@@ -11,7 +11,7 @@ defmodule Brando.Repo.Migrations.ReplaceSlideshowBlocksWithGalleryBlocks do
         }
       )
 
-    modules = Brando.Repo.all(query)
+    modules = Brando.repo().all(query)
 
     for module <- modules do
       new_refs = replace_block(module.refs)
@@ -26,51 +26,29 @@ defmodule Brando.Repo.Migrations.ReplaceSlideshowBlocksWithGalleryBlocks do
           ]
         )
 
-      Brando.Repo.update_all(query, [])
+      Brando.repo().update_all(query, [])
     end
 
-    # Add your own schemas to the reject list, if they were created AFTER this migration
-    villain_schemas =
-      Enum.reject(
-        Brando.Villain.list_blocks(),
-        &(elem(&1, 0) in [
-            Brando.Content.Template,
-            Brando.Pages.Page,
-            Brando.Pages.Fragment
-            # your schemas here
-          ])
-      )
+    for {table, data_field} <- list_villain_columns() do
+      query =
+        from(t in table,
+          select: %{id: t.id, data_field: field(t, ^data_field)}
+        )
 
-    # since these are old now, we use :data as field name (since list_blocks will return :blocks for these)
-    villain_schemas =
-      villain_schemas ++
-        [
-          {Brando.Pages.Page, [%{name: :data}]},
-          {Brando.Pages.Fragment, [%{name: :data}]}
-        ]
+      results = Brando.repo().all(query)
 
-    for {schema, fields} <- villain_schemas do
-      Enum.map(fields, fn %{name: f} ->
-        query =
-          from(t in schema.__schema__(:source),
-            select: %{id: t.id, data_field: field(t, ^f)}
+      for result <- results do
+        processed_result = process_block(result)
+        processed_data_field = processed_result.processed_data_field
+
+        up_query =
+          from(t in table,
+            where: t.id == ^processed_result.id,
+            update: [set: ^[{data_field, processed_data_field}]]
           )
 
-        results = Brando.Repo.all(query)
-
-        for result <- results do
-          processed_result = process_block(result)
-          processed_data_field = processed_result.processed_data_field
-
-          up_query =
-            from(t in schema.__schema__(:source),
-              where: t.id == ^processed_result.id,
-              update: [set: ^[{f, processed_data_field}]]
-            )
-
-          Brando.Repo.update_all(up_query, [])
-        end
-      end)
+        Brando.repo().update_all(up_query, [])
+      end
     end
   end
 
@@ -136,5 +114,19 @@ defmodule Brando.Repo.Migrations.ReplaceSlideshowBlocksWithGalleryBlocks do
         [block | acc]
     end)
     |> Enum.reverse()
+  end
+
+  defp list_villain_columns do
+    Brando.repo().all(
+      from("columns",
+        prefix: "information_schema",
+        select: [:table_name, :column_name],
+        where: [table_schema: "public"],
+        where: [data_type: "jsonb"]
+      )
+    )
+    |> Enum.filter(&String.ends_with?(&1.column_name, "data"))
+    |> Enum.reject(&(&1.table_name in ~w(revisions content_modules sites_globals pages_properties)))
+    |> Enum.map(fn row -> {row.table_name, String.to_existing_atom(row.column_name)} end)
   end
 end

@@ -2,47 +2,28 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
   use Ecto.Migration
   import Ecto.Query
 
+  @legacy_block_types ~w(text markdown image picture video divider header blockquote datasource map svg html)
+
   def up do
-    villain_schemas = Brando.Villain.list_blocks()
+    # First, ensure we have a wrapper module for legacy free-standing blocks
+    wrapper_module_id = ensure_legacy_wrapper_module()
 
-    for {schema, _} <- villain_schemas do
-      table = schema.__schema__(:source)
-
-      data_fields =
-        Brando.Repo.all(
-          from("columns",
-            prefix: "information_schema",
-            select: [:column_name, :data_type],
-            where: [table_name: ^table]
-          )
+    for {table, data_field, new_block_rel} <- list_villain_columns() do
+      query =
+        from(m in table,
+          select: %{id: m.id, data: field(m, ^data_field)},
+          where: not is_nil(field(m, ^data_field)),
+          order_by: [desc: m.id]
         )
-        |> Enum.filter(fn row ->
-          row[:data_type] == "jsonb" && String.ends_with?(row[:column_name], "data")
-        end)
 
-      for %{column_name: data_field_string} <- data_fields do
-        data_field = String.to_atom(data_field_string)
+      entries = Brando.repo().all(query)
 
-        new_block_rel =
-          data_field_string
-          |> String.replace("_data", "_blocks")
-          |> String.replace("data", "blocks")
-
-        query =
-          from(m in schema.__schema__(:source),
-            select: %{id: m.id, data: field(m, ^data_field)},
-            where: not is_nil(field(m, ^data_field)),
-            order_by: [desc: m.id]
-          )
-
-        entries = Brando.Repo.all(query)
-
-        for entry <- entries do
-          parse_block_data(schema, entry, Map.get(entry, data_field), new_block_rel)
-        end
+      for entry <- entries do
+        parse_block_data(table, entry, entry.data, new_block_rel, wrapper_module_id)
       end
     end
 
+    # Process refs: strip table refs and convert to table_rows
     query =
       from(m in "content_blocks",
         select: %{id: m.id, refs: m.refs, uid: m.uid, creator_id: m.creator_id},
@@ -50,32 +31,27 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
         order_by: [desc: m.id]
       )
 
-    entries = Brando.Repo.all(query)
+    entries = Brando.repo().all(query)
 
     for entry <- entries do
-      # strip table refs and add them as table_rows in the block
       new_refs =
         Enum.reduce(entry.refs, [], fn
           %{"data" => %{"type" => "table"}} = ref, acc ->
             rows = get_in(ref, ["data", "data", "rows"])
 
-            # create a new content_table_rows for each row
-            Enum.map(rows, fn
-              row ->
-                table_row = %{
-                  block_id: entry.id,
-                  inserted_at: DateTime.utc_now(),
-                  updated_at: DateTime.utc_now()
-                }
+            Enum.map(rows || [], fn row ->
+              table_row = %{
+                block_id: entry.id,
+                inserted_at: DateTime.utc_now(),
+                updated_at: DateTime.utc_now()
+              }
 
-                {_, [%{id: table_row_id}]} =
-                  Brando.Repo.insert_all("content_table_rows", [table_row], returning: [:id])
+              {_, [%{id: table_row_id}]} =
+                Brando.repo().insert_all("content_table_rows", [table_row], returning: [:id])
 
-                old_cols = get_in(row, ["cols"])
-                process_vars(:table_row_id, table_row_id, entry.creator_id, old_cols)
-
-                # skip the table ref..
-                acc
+              old_cols = get_in(row, ["cols"])
+              process_vars(:table_row_id, table_row_id, entry.creator_id, old_cols)
+              acc
             end)
 
             acc
@@ -92,25 +68,71 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           update: [set: ^update_args]
         )
 
-      Brando.Repo.update_all(query, [])
+      Brando.repo().update_all(query, [])
     end
   end
 
   def down do
   end
 
-  def parse_block_data(schema, entry, blocks, new_block_rel) when is_list(blocks) do
+  def parse_block_data(table_name, entry, blocks, new_block_rel, wrapper_module_id)
+      when is_list(blocks) do
     for {block, idx} <- Enum.with_index(blocks) do
-      process_block(block, idx, nil, schema, entry.id, new_block_rel)
+      process_block(block, idx, nil, table_name, entry.id, new_block_rel, wrapper_module_id)
     end
   end
 
-  defp process_block(block, idx, parent_id, schema, entry_id, new_block_rel \\ "blocks") do
-    table_name = schema.__schema__(:source)
+  defp process_block(
+         block,
+         idx,
+         parent_id,
+         table_name,
+         entry_id,
+         new_block_rel \\ "blocks",
+         wrapper_module_id \\ nil
+       ) do
     join_source = Enum.join([table_name, new_block_rel], "_")
-    join_schema = Module.concat([schema, Macro.camelize(new_block_rel)])
 
     case block do
+      # Legacy free-standing block types — wrap in a module block with content as ref
+      %{"type" => type} = legacy_block when type in @legacy_block_types ->
+        ref_data = build_legacy_ref_data(legacy_block)
+
+        ref = %{
+          "name" => "content",
+          "id" => Ecto.UUID.generate(),
+          "data" =>
+            Map.merge(ref_data, %{
+              "uid" => Brando.Utils.generate_uid(),
+              "active" => true
+            })
+        }
+
+        new_block = %{
+          type: "module",
+          multi: false,
+          parent_id: parent_id,
+          uid: Map.get(legacy_block, "uid") || Brando.Utils.generate_uid(),
+          active: !Map.get(legacy_block, "hidden", false),
+          collapsed: Map.get(legacy_block, "collapsed"),
+          module_id: wrapper_module_id,
+          datasource: false,
+          refs: [ref],
+          source: join_source,
+          inserted_at: DateTime.utc_now(),
+          updated_at: DateTime.utc_now(),
+          sequence: parent_id && idx
+        }
+
+        {_, [%{id: block_id}]} =
+          Brando.repo().insert_all("content_blocks", [new_block], returning: [:id])
+
+        unless new_block.parent_id do
+          Brando.repo().insert_all(join_source, [
+            %{entry_id: entry_id, block_id: block_id, sequence: idx}
+          ])
+        end
+
       %{"type" => "container"} = container ->
         new_container = %{
           type: "container",
@@ -124,36 +146,36 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           collapsed: Map.get(container, "collapsed"),
           datasource: get_in(container, ["data", "datasource"]) || false,
           refs: fix_refs(get_in(container, ["data", "refs"]) || []),
-          source: to_string(join_schema),
+          source: join_source,
           inserted_at: DateTime.utc_now(),
           updated_at: DateTime.utc_now(),
           sequence: parent_id && idx
         }
 
-        # repo insert block
         {_, [%{id: container_id}]} =
-          Brando.Repo.insert_all("content_blocks", [new_container], returning: [:id])
+          Brando.repo().insert_all("content_blocks", [new_container], returning: [:id])
 
-        # only insert to join table if we have no parent
         unless new_container.parent_id do
-          Brando.Repo.insert_all(join_source, [
-            %{
-              entry_id: entry_id,
-              block_id: container_id,
-              sequence: idx
-            }
+          Brando.repo().insert_all(join_source, [
+            %{entry_id: entry_id, block_id: container_id, sequence: idx}
           ])
         end
 
-        # now process blocks with container_id as parent.
         c_blocks = get_in(container, ["data", "blocks"])
 
-        for {c_block, c_block_idx} <- Enum.with_index(c_blocks) do
-          process_block(c_block, c_block_idx, container_id, schema, entry_id)
+        for {c_block, c_block_idx} <- Enum.with_index(c_blocks || []) do
+          process_block(
+            c_block,
+            c_block_idx,
+            container_id,
+            table_name,
+            entry_id,
+            new_block_rel,
+            wrapper_module_id
+          )
         end
 
       %{"type" => "fragment", "data" => %{"fragment_id" => fragment_id}} = fragment_block ->
-        # multi with entries
         new_block = %{
           type: "fragment",
           multi: false,
@@ -163,28 +185,22 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           active: !Map.get(fragment_block, "hidden", false),
           collapsed: Map.get(fragment_block, "collapsed"),
           fragment_id: fragment_id,
-          source: to_string(join_schema),
+          source: join_source,
           inserted_at: DateTime.utc_now(),
           updated_at: DateTime.utc_now(),
           sequence: parent_id && idx
         }
 
-        # repo insert block
         {_, [%{id: block_id}]} =
-          Brando.Repo.insert_all("content_blocks", [new_block], returning: [:id])
+          Brando.repo().insert_all("content_blocks", [new_block], returning: [:id])
 
         unless new_block.parent_id do
-          Brando.Repo.insert_all(join_source, [
-            %{
-              entry_id: entry_id,
-              block_id: block_id,
-              sequence: idx
-            }
+          Brando.repo().insert_all(join_source, [
+            %{entry_id: entry_id, block_id: block_id, sequence: idx}
           ])
         end
 
       %{"type" => "module", "data" => %{"multi" => true}} = module ->
-        # multi with entries
         new_block = %{
           type: "module",
           multi: true,
@@ -196,31 +212,33 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           module_id: get_in(module, ["data", "module_id"]),
           datasource: get_in(module, ["data", "datasource"]) || false,
           refs: fix_refs(get_in(module, ["data", "refs"]) || []),
-          source: to_string(join_schema),
+          source: join_source,
           inserted_at: DateTime.utc_now(),
           updated_at: DateTime.utc_now(),
           sequence: parent_id && idx
         }
 
-        # repo insert block
         {_, [%{id: block_id}]} =
-          Brando.Repo.insert_all("content_blocks", [new_block], returning: [:id])
+          Brando.repo().insert_all("content_blocks", [new_block], returning: [:id])
 
         unless new_block.parent_id do
-          Brando.Repo.insert_all(join_source, [
-            %{
-              entry_id: entry_id,
-              block_id: block_id,
-              sequence: idx
-            }
+          Brando.repo().insert_all(join_source, [
+            %{entry_id: entry_id, block_id: block_id, sequence: idx}
           ])
         end
 
-        # insert entries
         entries = get_in(module, ["data", "entries"])
 
-        for {entry_block, entry_idx} <- Enum.with_index(entries) do
-          process_block(entry_block, entry_idx, block_id, schema, entry_id)
+        for {entry_block, entry_idx} <- Enum.with_index(entries || []) do
+          process_block(
+            entry_block,
+            entry_idx,
+            block_id,
+            table_name,
+            entry_id,
+            new_block_rel,
+            wrapper_module_id
+          )
         end
 
       %{"type" => module_or_module_entry} = module
@@ -229,15 +247,13 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           if module_or_module_entry == "module" do
             get_in(module, ["data", "module_id"])
           else
-            # module_entry has no module_id -- we must grab it the module who has parent_id as parent_id
-            # first we get the parent block
             query = from(m in "content_blocks", where: m.id == ^parent_id, select: m.module_id)
-            parent_module_id = Brando.Repo.one(query)
+            parent_module_id = Brando.repo().one(query)
 
             query =
               from(m in "content_modules", where: m.parent_id == ^parent_module_id, select: m.id)
 
-            Brando.Repo.one(query)
+            Brando.repo().one(query)
           end
 
         new_block = %{
@@ -251,28 +267,21 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           module_id: module_id,
           datasource: get_in(module, ["data", "datasource"]) || false,
           refs: fix_refs(get_in(module, ["data", "refs"]) || []),
-          source: to_string(join_schema),
+          source: join_source,
           inserted_at: DateTime.utc_now(),
           updated_at: DateTime.utc_now(),
           sequence: parent_id && idx
         }
 
-        # repo insert block
         {_, [%{id: block_id}]} =
-          Brando.Repo.insert_all("content_blocks", [new_block], returning: [:id])
+          Brando.repo().insert_all("content_blocks", [new_block], returning: [:id])
 
-        # only insert to join table if we have no parent
         unless new_block.parent_id do
-          Brando.Repo.insert_all(join_source, [
-            %{
-              entry_id: entry_id,
-              block_id: block_id,
-              sequence: idx
-            }
+          Brando.repo().insert_all(join_source, [
+            %{entry_id: entry_id, block_id: block_id, sequence: idx}
           ])
         end
 
-        # TODO: build "datasource_selected_ids" as relations
         datasource_selected_ids = get_in(module, ["data", "datasource_selected_ids"])
 
         if datasource_selected_ids do
@@ -290,7 +299,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
 
         got unknown block in migration for:
 
-        Schema....: #{inspect(schema)}
+        Table.....: #{inspect(table_name)}
         Entry id..: #{inspect(entry_id)}
 
         #{inspect(unknown_block, pretty: true)}
@@ -299,6 +308,106 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
         before migrating.
 
         """
+    end
+  end
+
+  # Build ref data for legacy block types
+  defp build_legacy_ref_data(%{"type" => "text", "data" => data}),
+    do: %{"type" => "text", "data" => data}
+
+  defp build_legacy_ref_data(%{"type" => "markdown", "data" => data}),
+    do: %{"type" => "text", "data" => %{"text" => Map.get(data, "text", ""), "type" => "paragraph"}}
+
+  defp build_legacy_ref_data(%{"type" => "image", "data" => data}) do
+    %{
+      "type" => "picture",
+      "data" =>
+        Map.merge(
+          %{
+            "path" => Map.get(data, "url", ""),
+            "width" => Map.get(data, "width"),
+            "height" => Map.get(data, "height"),
+            "sizes" => %{},
+            "title" => Map.get(data, "title", ""),
+            "credits" => Map.get(data, "credits", ""),
+            "alt" => Map.get(data, "alt")
+          },
+          Map.take(data, ["focal", "cdn", "dominant_color"])
+        )
+    }
+  end
+
+  defp build_legacy_ref_data(%{"type" => "picture", "data" => data}),
+    do: %{"type" => "picture", "data" => data}
+
+  defp build_legacy_ref_data(%{"type" => "video", "data" => data}),
+    do: %{"type" => "video", "data" => data}
+
+  defp build_legacy_ref_data(%{"type" => "header", "data" => data}),
+    do: %{"type" => "header", "data" => data}
+
+  defp build_legacy_ref_data(%{"type" => "divider", "data" => _data}),
+    do: %{"type" => "text", "data" => %{"text" => "---", "type" => "paragraph"}}
+
+  defp build_legacy_ref_data(%{"type" => "blockquote", "data" => data}),
+    do: %{
+      "type" => "text",
+      "data" => %{"text" => "> #{Map.get(data, "text", "")}", "type" => "paragraph"}
+    }
+
+  defp build_legacy_ref_data(%{"type" => _type, "data" => data}),
+    do: %{"type" => "text", "data" => %{"text" => Map.get(data, "text", ""), "type" => "paragraph"}}
+
+  defp ensure_legacy_wrapper_module do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    # Check if wrapper module already exists
+    existing =
+      Brando.repo().one(
+        from(m in "content_modules",
+          where: m.namespace == "migration" and m.class == "legacy-content",
+          select: m.id
+        )
+      )
+
+    if existing do
+      existing
+    else
+      module_refs = [
+        %{
+          "name" => "content",
+          "data" => %{
+            "type" => "text",
+            "data" => %{"text" => "", "type" => "paragraph"}
+          }
+        }
+      ]
+
+      module_code = "{% for ref in refs %}{{ ref.content }}{% endfor %}"
+
+      {_, [%{id: id}]} =
+        Brando.repo().insert_all(
+          "content_modules",
+          [
+            %{
+              name: "Legacy Content Wrapper",
+              namespace: "migration",
+              class: "legacy-content",
+              help_text: "Auto-generated module for wrapping legacy villain blocks during migration",
+              code: module_code,
+              refs: module_refs,
+              wrapper: false,
+              datasource: false,
+              type: "liquid",
+              sequence: 999,
+              inserted_at: now,
+              updated_at: now
+            }
+          ],
+          returning: [:id]
+        )
+
+      id
     end
   end
 
@@ -315,24 +424,19 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
 
   defp process_datasource(block_id, datasource_selected_ids) do
     for {id, idx} <- Enum.with_index(datasource_selected_ids) do
-      block_identifier =
-        %{
-          block_id: block_id,
-          identifier_id: id,
-          sequence: idx
-        }
-
-      Brando.Repo.insert_all("content_block_identifiers", [block_identifier])
+      Brando.repo().insert_all("content_block_identifiers", [
+        %{block_id: block_id, identifier_id: id, sequence: idx}
+      ])
     end
   end
 
   defp process_vars(block_id, vars) do
     for var <- vars do
+      base_var = build_var(var, block_id)
+
       new_var =
         case var do
           %{"type" => "color"} ->
-            base_var = build_var(var, block_id)
-
             Map.merge(base_var, %{
               value: get_in(var, ["value"]),
               color_picker: get_in(var, ["picker"]),
@@ -341,40 +445,22 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
             })
 
           %{"type" => "image"} ->
-            base_var = build_var(var, block_id)
-
-            Map.merge(base_var, %{
-              image_id: get_in(var, ["value_id"])
-            })
+            Map.merge(base_var, %{image_id: get_in(var, ["value_id"])})
 
           %{"type" => "file"} ->
-            base_var = build_var(var, block_id)
-
-            Map.merge(base_var, %{
-              file_id: get_in(var, ["value_id"])
-            })
+            Map.merge(base_var, %{file_id: get_in(var, ["value_id"])})
 
           %{"type" => "boolean"} ->
-            base_var = build_var(var, block_id)
-
-            Map.merge(base_var, %{
-              value_boolean: get_in(var, ["value"])
-            })
+            Map.merge(base_var, %{value_boolean: get_in(var, ["value"])})
 
           %{"type" => "select"} ->
-            base_var = build_var(var, block_id)
-
             Map.merge(base_var, %{
               value: get_in(var, ["value"]),
               options: get_in(var, ["options"])
             })
 
           _ ->
-            base_var = build_var(var, block_id)
-
-            Map.merge(base_var, %{
-              value: get_in(var, ["value"])
-            })
+            Map.merge(base_var, %{value: get_in(var, ["value"])})
         end
 
       new_var =
@@ -383,7 +469,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           updated_at: DateTime.utc_now()
         })
 
-      Brando.Repo.insert_all("content_vars", [new_var])
+      Brando.repo().insert_all("content_vars", [new_var])
     end
   end
 
@@ -417,19 +503,13 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
             })
 
           %{"type" => "image"} ->
-            Map.merge(base_var, %{
-              image_id: get_in(var, ["value_id"])
-            })
+            Map.merge(base_var, %{image_id: get_in(var, ["value_id"])})
 
           %{"type" => "file"} ->
-            Map.merge(base_var, %{
-              file_id: get_in(var, ["value_id"])
-            })
+            Map.merge(base_var, %{file_id: get_in(var, ["value_id"])})
 
           %{"type" => "boolean"} ->
-            Map.merge(base_var, %{
-              value_boolean: get_in(var, ["value"])
-            })
+            Map.merge(base_var, %{value_boolean: get_in(var, ["value"])})
 
           %{"type" => "select"} ->
             Map.merge(base_var, %{
@@ -438,9 +518,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
             })
 
           _ ->
-            Map.merge(base_var, %{
-              value: get_in(var, ["value"])
-            })
+            Map.merge(base_var, %{value: get_in(var, ["value"])})
         end
 
       new_var =
@@ -449,7 +527,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           updated_at: DateTime.utc_now()
         })
 
-      Brando.Repo.insert_all("content_vars", [new_var])
+      Brando.repo().insert_all("content_vars", [new_var])
     end
   end
 
@@ -464,5 +542,32 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
       creator_id: creator_id
     }
     |> Map.put(fk_name, fk_value)
+  end
+
+  # Discovers villain data columns and derives block relation names.
+  defp list_villain_columns do
+    Brando.repo().all(
+      from("columns",
+        prefix: "information_schema",
+        select: [:table_name, :column_name],
+        where: [table_schema: "public"],
+        where: [data_type: "jsonb"]
+      )
+    )
+    |> Enum.filter(&String.ends_with?(&1.column_name, "data"))
+    |> Enum.reject(&(&1.table_name in ~w(revisions content_modules sites_globals pages_properties)))
+    |> Enum.map(fn row ->
+      data_field = String.to_existing_atom(row.column_name)
+
+      blocks_rel =
+        row.column_name
+        |> String.replace("_data", "")
+        |> then(fn
+          "data" -> "blocks"
+          other -> other
+        end)
+
+      {row.table_name, data_field, blocks_rel}
+    end)
   end
 end

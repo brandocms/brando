@@ -1,5 +1,6 @@
 defmodule Brando.Repo.Migrations.CreateBlocksTable do
   use Ecto.Migration
+  import Ecto.Query
 
   def up do
     create table(:content_blocks) do
@@ -34,25 +35,22 @@ defmodule Brando.Repo.Migrations.CreateBlocksTable do
 
     create unique_index(:content_block_identifiers, [:block_id, :identifier_id])
 
-    villain_schemas = Brando.Villain.list_blocks()
-
-    for {schema, attrs} <- villain_schemas,
-        %{name: blocks_field} <- attrs do
-      # create a join table
-      table_name = schema.__schema__(:source)
-      join_source = Enum.join([table_name, blocks_field], "_")
-
-      create table(join_source) do
-        add :entry_id, references(table_name, on_delete: :delete_all)
+    for {table, blocks_name} <- list_villain_tables() do
+      create table(blocks_name) do
+        add :entry_id, references(table, on_delete: :delete_all)
         add :block_id, references(:content_blocks, on_delete: :delete_all)
         add :sequence, :integer
       end
 
-      create unique_index(join_source, [:entry_id, :block_id])
+      create unique_index(blocks_name, [:entry_id, :block_id])
 
-      alter table(table_name) do
-        add :"rendered_#{blocks_field}", :text
-        add :"rendered_#{blocks_field}_at", :utc_datetime
+      # derive rendered column name from join table
+      # e.g. "illustrators_biography" -> "rendered_biography"
+      rendered_field = blocks_name |> String.replace("#{table}_", "")
+
+      alter table(table) do
+        add :"rendered_#{rendered_field}", :text
+        add :"rendered_#{rendered_field}_at", :utc_datetime
       end
     end
   end
@@ -60,16 +58,41 @@ defmodule Brando.Repo.Migrations.CreateBlocksTable do
   def down do
     drop table(:content_block_identifiers)
 
-    villain_schemas = Brando.Villain.list_blocks()
-
-    for {schema, attrs} <- villain_schemas,
-        %{name: _} <- attrs do
-      # create a join table
-      table_name = schema.__schema__(:source)
-      join_source = "#{table_name}_blocks"
-      drop table(join_source)
+    for {table, blocks_name} <- list_villain_tables() do
+      drop table(blocks_name)
     end
 
     drop table(:content_blocks)
+  end
+
+  # Discovers villain data columns and derives block join table names.
+  # "biography_data" -> join table "illustrators_biography"
+  # "data" -> join table "illustrators_blocks"
+  defp list_villain_tables do
+    db_columns =
+      Brando.repo().all(
+        from("columns",
+          prefix: "information_schema",
+          select: [:table_name, :column_name],
+          where: [table_schema: "public"],
+          where: [data_type: "jsonb"]
+        )
+      )
+      |> Enum.filter(&String.ends_with?(&1.column_name, "data"))
+      |> Enum.reject(&(&1.table_name in ~w(revisions content_modules sites_globals pages_properties content_templates)))
+      |> Enum.map(fn row ->
+        blocks_rel =
+          row.column_name
+          |> String.replace("_data", "")
+          |> then(fn
+            "data" -> "blocks"
+            other -> other
+          end)
+
+        {row.table_name, "#{row.table_name}_#{blocks_rel}"}
+      end)
+
+    # Include brando internal schemas that also have blocks
+    db_columns ++ [{"content_templates", "content_templates_blocks"}]
   end
 end

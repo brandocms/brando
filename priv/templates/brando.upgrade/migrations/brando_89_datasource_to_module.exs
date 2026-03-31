@@ -12,48 +12,27 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
 
     flush()
 
-    villain_schemas =
-      Enum.reject(
-        Brando.Villain.list_blocks(),
-        &(elem(&1, 0) in [
-            Brando.Content.Template,
-            Brando.Pages.Page,
-            Brando.Pages.Fragment
-            # your schemas here
-          ])
-      )
-
-    # since these are old now, we use :data as field name (since list_blocks will return :blocks for these)
-    villain_schemas =
-      villain_schemas ++
-        [
-          {Brando.Content.Template, [%{name: :data}]},
-          {Brando.Pages.Page, [%{name: :data}]},
-          {Brando.Pages.Fragment, [%{name: :data}]}
-        ]
-
-    for {schema, attrs} <- villain_schemas,
-        %{name: data_field} <- attrs do
+    for {table, data_field} <- list_villain_columns() do
       query =
-        from(m in schema.__schema__(:source),
+        from(m in table,
           select: %{id: m.id, data: field(m, ^data_field)},
           where: not is_nil(field(m, ^data_field)),
           order_by: [desc: m.id]
         )
 
-      entries = Brando.Repo.all(query)
+      entries = Brando.repo().all(query)
 
       for entry <- entries do
         new_data = replace_datasources(entry.data)
         update_args = Keyword.new([{data_field, new_data}])
 
         query =
-          from(m in schema.__schema__(:source),
+          from(m in table,
             where: m.id == ^entry.id,
             update: [set: ^update_args]
           )
 
-        Brando.Repo.update_all(query, [])
+        Brando.repo().update_all(query, [])
       end
     end
   end
@@ -91,15 +70,14 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
       ) do
     {mod, refs} =
       Enum.reduce(module_block["data"]["refs"] || [], {module_block, []}, fn
-        %{"data" => %{"type" => "datasource", "data" => ds_data}, "name" => ref_name},
-        {updated_mod, updated_refs} ->
+        %{"data" => %{"type" => "datasource", "data" => ds_data}, "name" => ref_name}, {updated_mod, updated_refs} ->
           ds_module_query =
             from(m in "content_modules",
               select: [:id, :vars, :refs, :wrapper, :code],
               where: m.id == ^ds_data["module_id"]
             )
 
-          ds_module = Brando.Repo.one(ds_module_query)
+          ds_module = Brando.repo().one(ds_module_query)
 
           mod_module_query =
             from(m in "content_modules",
@@ -107,7 +85,7 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
               where: m.id == ^module_block["data"]["module_id"]
             )
 
-          mod_module = Brando.Repo.one(mod_module_query)
+          mod_module = Brando.repo().one(mod_module_query)
 
           updated_vars =
             mod_module.vars
@@ -138,7 +116,7 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
               ]
             )
 
-          Brando.Repo.update_all(module_update_query, [])
+          Brando.repo().update_all(module_update_query, [])
 
           updated_mod =
             updated_mod
@@ -177,7 +155,7 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
         where: m.id == ^module_id
       )
 
-    module = Brando.Repo.one(module_query)
+    module = Brando.repo().one(module_query)
 
     updated_vars =
       (module.vars || [])
@@ -199,9 +177,9 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
         ]
       )
 
-    Brando.Repo.update_all(module_update_query, [])
+    Brando.repo().update_all(module_update_query, [])
 
-    module = Brando.Repo.one(module_query)
+    module = Brando.repo().one(module_query)
 
     # build a module block from the updated module -^
     generated_uid = Brando.Utils.generate_uid()
@@ -277,5 +255,19 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
     }
 
     [limit_var | vars]
+  end
+
+  defp list_villain_columns do
+    Brando.repo().all(
+      from("columns",
+        prefix: "information_schema",
+        select: [:table_name, :column_name],
+        where: [table_schema: "public"],
+        where: [data_type: "jsonb"]
+      )
+    )
+    |> Enum.filter(&String.ends_with?(&1.column_name, "data"))
+    |> Enum.reject(&(&1.table_name in ~w(revisions content_modules sites_globals pages_properties)))
+    |> Enum.map(fn row -> {row.table_name, String.to_existing_atom(row.column_name)} end)
   end
 end
