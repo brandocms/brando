@@ -5,7 +5,7 @@ defmodule Brando.Repo.Migrations.ChangeTranslatableAlternatesConstraints do
     blueprints = Brando.Blueprint.list_blueprints() ++ [Brando.Pages.Page, Brando.Pages.Fragment]
 
     for blueprint <- blueprints do
-      if blueprint.has_trait(Brando.Trait.Translatable) and blueprint.has_alternates? do
+      if blueprint.has_trait(Brando.Trait.Translatable) and blueprint.has_alternates?() do
         alternate_source = "#{blueprint.__schema__(:source)}_alternates"
 
         drop_if_exists constraint(alternate_source, "#{alternate_source}_entry_id_fkey")
