@@ -54,7 +54,7 @@ defmodule Mix.Tasks.Brando.Upgrade do
         [[id]] = Regex.scan(~r/^brando_(\d+)_/, m, capture: :all_but_first)
         {String.to_integer(id), m}
       end)
-      |> Enum.sort(&(elem(&1, 0) <= elem(&2, 0)))
+      |> Enum.sort_by(&elem(&1, 0))
 
     for {_, m} <- brando_migrations do
       Mix.shell().info("* #{m}")
