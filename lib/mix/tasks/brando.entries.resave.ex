@@ -7,14 +7,22 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
   Re-save all entries
 
       mix brando.entries.resave
+      mix brando.entries.resave --force
 
   Re-save entries for specific blueprint
 
       mix brando.entries.resave MyApp.Projects.Project
 
+  Options:
+
+    * `--force` - Skip confirmation prompt
+
   """
   @spec run(any) :: no_return
-  def run([]) do
+  def run(args) do
+    {opts, rest} = OptionParser.parse!(args, strict: [force: :boolean])
+    force? = Keyword.get(opts, :force, false)
+
     Application.put_env(:phoenix, :serve_endpoints, true)
     Application.put_env(:logger, :level, :error)
 
@@ -27,6 +35,13 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
     ------------------------------
     """)
 
+    case rest do
+      [] -> resave_all(force?)
+      [blueprint_binary] -> resave_one(blueprint_binary)
+    end
+  end
+
+  defp resave_all(force?) do
     blueprints =
       [Brando.Pages.Fragment] ++
         Brando.Blueprint.list_blueprints() ++ [Brando.Pages.Page]
@@ -37,7 +52,7 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
       Mix.shell().info([:green, "    * #{inspect(blueprint, pretty: true)}"])
     end
 
-    if Mix.shell().yes?("\n\nProceed?") do
+    if force? or Mix.shell().yes?("\n\nProceed?") do
       for blueprint <- blueprints do
         if blueprint.__has_identifier__() do
           resave_entries(blueprint)
@@ -48,19 +63,7 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
     end
   end
 
-  def run([blueprint_binary]) do
-    Application.put_env(:phoenix, :serve_endpoints, true)
-    Application.put_env(:logger, :level, :error)
-
-    Mix.Tasks.Run.run([])
-
-    Mix.shell().info("""
-
-    ------------------------------
-    % Brando Resave Entries
-    ------------------------------
-    """)
-
+  defp resave_one(blueprint_binary) do
     blueprint_module = Module.concat([blueprint_binary])
 
     if blueprint_module.__has_identifier__() do
