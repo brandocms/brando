@@ -56,6 +56,7 @@
   let isH1Active = $state(false);
   let isH2Active = $state(false);
   let isH3Active = $state(false);
+  let isH4Active = $state(false);
   let isPActive = $state(false);
   let isListActive = $state(false);
   let isButtonActive = $state(false);
@@ -503,6 +504,7 @@
         isH1Active = editor.isActive("heading", { level: 1 });
         isH2Active = editor.isActive("heading", { level: 2 });
         isH3Active = editor.isActive("heading", { level: 3 });
+        isH4Active = editor.isActive("heading", { level: 4 });
         isPActive = editor.isActive("paragraph");
         isListActive = editor.isActive("bulletList");
         isLinkActive = editor.isActive("link");
@@ -597,6 +599,16 @@
             type="button"
           >
             Heading 3
+          </button>
+        {/if}
+        {#if extensions.includes("h4")}
+          <button
+            onclick={() => { toggleHeading(4); dropdownEl.hidePopover(); }}
+            class="style-dropdown-item"
+            class:active={isH4Active}
+            type="button"
+          >
+            Heading 4
           </button>
         {/if}
         {#if parsedStyles.length > 0}
