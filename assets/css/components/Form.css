@@ -168,6 +168,7 @@
 
     &.full,
     &.half,
+    &.third,
     &.sized {
       margin-bottom: 25px;
     }
