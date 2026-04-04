@@ -145,15 +145,19 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           active: !Map.get(container, "hidden", false),
           collapsed: Map.get(container, "collapsed"),
           datasource: get_in(container, ["data", "datasource"]) || false,
-          refs: fix_refs(get_in(container, ["data", "refs"]) || []),
           source: join_source,
           inserted_at: DateTime.utc_now(),
           updated_at: DateTime.utc_now(),
           sequence: parent_id && idx
         }
 
+        {regular_refs, list_refs} = fix_refs(get_in(container, ["data", "refs"]) || [])
+        new_container = Map.put(new_container, :refs, regular_refs)
+
         {_, [%{id: container_id}]} =
           Brando.repo().insert_all("content_blocks", [new_container], returning: [:id])
+
+        process_list_refs(container_id, list_refs)
 
         unless new_container.parent_id do
           Brando.repo().insert_all(join_source, [
@@ -201,6 +205,8 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
         end
 
       %{"type" => "module", "data" => %{"multi" => true}} = module ->
+        {regular_refs, list_refs} = fix_refs(get_in(module, ["data", "refs"]) || [])
+
         new_block = %{
           type: "module",
           multi: true,
@@ -211,7 +217,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           collapsed: Map.get(module, "collapsed"),
           module_id: get_in(module, ["data", "module_id"]),
           datasource: get_in(module, ["data", "datasource"]) || false,
-          refs: fix_refs(get_in(module, ["data", "refs"]) || []),
+          refs: regular_refs,
           source: join_source,
           inserted_at: DateTime.utc_now(),
           updated_at: DateTime.utc_now(),
@@ -220,6 +226,8 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
 
         {_, [%{id: block_id}]} =
           Brando.repo().insert_all("content_blocks", [new_block], returning: [:id])
+
+        process_list_refs(block_id, list_refs)
 
         unless new_block.parent_id do
           Brando.repo().insert_all(join_source, [
@@ -256,6 +264,8 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
             Brando.repo().one(query)
           end
 
+        {regular_refs, list_refs} = fix_refs(get_in(module, ["data", "refs"]) || [])
+
         new_block = %{
           type: module_or_module_entry,
           multi: false,
@@ -266,7 +276,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           collapsed: Map.get(module, "collapsed"),
           module_id: module_id,
           datasource: get_in(module, ["data", "datasource"]) || false,
-          refs: fix_refs(get_in(module, ["data", "refs"]) || []),
+          refs: regular_refs,
           source: join_source,
           inserted_at: DateTime.utc_now(),
           updated_at: DateTime.utc_now(),
@@ -275,6 +285,8 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
 
         {_, [%{id: block_id}]} =
           Brando.repo().insert_all("content_blocks", [new_block], returning: [:id])
+
+        process_list_refs(block_id, list_refs)
 
         unless new_block.parent_id do
           Brando.repo().insert_all(join_source, [
@@ -315,8 +327,17 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
   defp build_legacy_ref_data(%{"type" => "text", "data" => data}),
     do: %{"type" => "text", "data" => data}
 
-  defp build_legacy_ref_data(%{"type" => "markdown", "data" => data}),
-    do: %{"type" => "text", "data" => %{"text" => Map.get(data, "text", ""), "type" => "paragraph"}}
+  defp build_legacy_ref_data(%{"type" => "markdown", "data" => data}) do
+    text = Map.get(data, "text", "")
+
+    html =
+      case Earmark.as_html(text) do
+        {:ok, converted, _} -> converted
+        _ -> text
+      end
+
+    %{"type" => "text", "data" => %{"text" => html, "type" => "paragraph"}}
+  end
 
   defp build_legacy_ref_data(%{"type" => "image", "data" => data}) do
     %{
@@ -412,14 +433,136 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
   end
 
   defp fix_refs(refs) do
-    Enum.map(refs, fn ref ->
-      ref
-      |> put_in([Access.key("id")], Ecto.UUID.generate())
-      |> put_in([Access.key("data"), Access.key("uid")], Brando.Utils.generate_uid())
-      |> put_in([Access.key("data"), Access.key("active")], !ref["data"]["hidden"])
-      |> pop_in([Access.key("data"), Access.key("hidden")])
-      |> elem(1)
-    end)
+    {regular_refs, list_refs} =
+      Enum.split_with(refs, fn ref ->
+        get_in(ref, ["data", "type"]) != "list"
+      end)
+
+    fixed_regular =
+      Enum.map(regular_refs, fn ref ->
+        ref
+        |> put_in([Access.key("id")], Ecto.UUID.generate())
+        |> put_in([Access.key("data"), Access.key("uid")], Brando.Utils.generate_uid())
+        |> put_in([Access.key("data"), Access.key("active")], !ref["data"]["hidden"])
+        |> pop_in([Access.key("data"), Access.key("hidden")])
+        |> elem(1)
+      end)
+
+    {fixed_regular, list_refs}
+  end
+
+  # Create table rows from list refs after block insertion
+  defp process_list_refs(_block_id, []), do: :ok
+
+  defp process_list_refs(block_id, list_refs) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    for list_ref <- list_refs do
+      list_data = get_in(list_ref, ["data", "data"]) || %{}
+      rows = (is_map(list_data) && list_data["rows"]) || []
+
+      for {row, idx} <- Enum.with_index(rows) do
+        {_, [%{id: row_id}]} =
+          Brando.repo().insert_all(
+            "content_table_rows",
+            [%{block_id: block_id, sequence: idx, inserted_at: now, updated_at: now}],
+            returning: [:id]
+          )
+
+        value = (is_map(row) && row["value"]) || ""
+
+        Brando.repo().insert_all("content_vars", [
+          %{
+            type: "html",
+            key: "text",
+            label: "Text",
+            value: value,
+            table_row_id: row_id,
+            important: false,
+            color_picker: false,
+            color_opacity: false,
+            inserted_at: now,
+            updated_at: now
+          }
+        ])
+      end
+
+      # Update the module to use table_rows if it references this list ref
+      ref_name = list_ref["name"]
+
+      if ref_name do
+        # Find the module for this block and update its code
+        %{rows: module_rows} =
+          Brando.repo().query!(
+            """
+            SELECT m.id, m.code, m.table_template_id
+            FROM content_modules m
+            JOIN content_blocks b ON b.module_id = m.id
+            WHERE b.id = $1
+            LIMIT 1
+            """,
+            [block_id]
+          )
+
+        case module_rows do
+          [[module_id, code, existing_template_id]] when is_binary(code) ->
+            # Create table template if module doesn't have one yet
+            template_id =
+              if existing_template_id do
+                existing_template_id
+              else
+                {_, [%{id: tid}]} =
+                  Brando.repo().insert_all(
+                    "content_table_templates",
+                    [%{name: "List item (#{ref_name})", creator_id: 1,
+                       inserted_at: now, updated_at: now}],
+                    returning: [:id]
+                  )
+
+                Brando.repo().insert_all("content_vars", [
+                  %{type: "html", key: "text", label: "Text", value: "<p>Item</p>",
+                    table_template_id: tid, important: false,
+                    color_picker: false, color_opacity: false,
+                    inserted_at: now, updated_at: now}
+                ])
+
+                tid
+              end
+
+            # Build the replacement code for the list ref
+            inner = get_in(list_ref, ["data", "data"]) || %{}
+            id_attr = is_map(inner) && inner["id"]
+            class_attr = is_map(inner) && inner["class"]
+
+            ul_attrs =
+              [id_attr && "id=\"#{id_attr}\"", class_attr && "class=\"#{class_attr}\""]
+              |> Enum.reject(&is_nil/1)
+
+            attrs_str = if ul_attrs != [], do: " " <> Enum.join(ul_attrs, " "), else: ""
+
+            ref_tag = ~s({% ref refs.#{ref_name} %})
+            replacement = """
+            {% if block.table_rows.size > 0 %}
+            <ul#{attrs_str}>
+              {% for row in block.table_rows %}
+                <li>{{ row.text }}</li>
+              {% endfor %}
+            </ul>
+            {% endif %}\
+            """
+
+            new_code = String.replace(code, ref_tag, replacement)
+
+            Brando.repo().query!(
+              "UPDATE content_modules SET code = $1, table_template_id = $2 WHERE id = $3",
+              [new_code, template_id, module_id]
+            )
+
+          _ ->
+            :ok
+        end
+      end
+    end
   end
 
   defp process_datasource(block_id, datasource_selected_ids) do
@@ -551,13 +694,13 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
         prefix: "information_schema",
         select: [:table_name, :column_name],
         where: [table_schema: "public"],
-        where: [data_type: "jsonb"]
+        where: fragment("data_type IN ('json', 'jsonb')")
       )
     )
     |> Enum.filter(&String.ends_with?(&1.column_name, "data"))
     |> Enum.reject(&(&1.table_name in ~w(revisions content_modules sites_globals pages_properties)))
     |> Enum.map(fn row ->
-      data_field = String.to_existing_atom(row.column_name)
+      data_field = String.to_atom(row.column_name)
 
       blocks_rel =
         row.column_name

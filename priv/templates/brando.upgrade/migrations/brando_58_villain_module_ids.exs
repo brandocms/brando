@@ -18,7 +18,7 @@ defmodule Brando.Repo.Migrations.MigrateVillainModuleIds do
         prefix: "information_schema",
         select: [:table_name, :column_name],
         where: [table_schema: "public"],
-        where: [data_type: "jsonb"]
+        where: fragment("data_type IN ('json', 'jsonb')")
       )
     )
     |> Enum.filter(&String.ends_with?(&1.column_name, "data"))

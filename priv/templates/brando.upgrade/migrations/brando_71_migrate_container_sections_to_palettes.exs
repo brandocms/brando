@@ -29,11 +29,11 @@ defmodule Brando.Repo.Migrations.ContainerSectionsToPalettes do
         prefix: "information_schema",
         select: [:table_name, :column_name],
         where: [table_schema: "public"],
-        where: [data_type: "jsonb"]
+        where: fragment("data_type IN ('json', 'jsonb')")
       )
     )
     |> Enum.filter(&String.ends_with?(&1.column_name, "data"))
     |> Enum.reject(&(&1.table_name in ~w(revisions content_modules sites_globals pages_properties)))
-    |> Enum.map(fn row -> {row.table_name, String.to_existing_atom(row.column_name)} end)
+    |> Enum.map(fn row -> {row.table_name, String.to_atom(row.column_name)} end)
   end
 end

@@ -10,6 +10,18 @@ defmodule Brando.Repo.Migrations.MigrateOldModules do
 
     flush()
 
+    # Fix sequence — table was renamed from pages_modules/templates but sequence
+    # may not have advanced if rows were inserted with explicit IDs
+    execute """
+      SELECT setval(
+        pg_get_serial_sequence('content_modules', 'id'),
+        COALESCE((SELECT MAX(id) FROM content_modules), 0) + 1,
+        false
+      )
+    """
+
+    flush()
+
     ## move entry templates to own module with parent_id reference
 
     query =

@@ -71,11 +71,11 @@ defmodule Brando.Repo.Migrations.CreateBlocksTable do
   defp list_villain_tables do
     db_columns =
       Brando.repo().all(
-        from("columns",
+        from(c in "columns",
           prefix: "information_schema",
           select: [:table_name, :column_name],
           where: [table_schema: "public"],
-          where: [data_type: "jsonb"]
+          where: c.data_type in ^["json", "jsonb"]
         )
       )
       |> Enum.filter(&String.ends_with?(&1.column_name, "data"))
