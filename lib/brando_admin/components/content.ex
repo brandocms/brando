@@ -84,7 +84,7 @@ defmodule BrandoAdmin.Components.Content do
         )
       end
 
-    focal = assigns.image && Map.get(assigns.image, :focal, %{x: 50, y: 50})
+    focal = (assigns.image && assigns.image.focal) || %{x: 50, y: 50}
     orientation = Brando.Images.get_image_orientation(assigns.image)
 
     assigns =
