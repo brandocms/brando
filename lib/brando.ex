@@ -52,7 +52,7 @@ defmodule Brando do
   @doc """
   Gets the parent app's repo
   """
-  def repo, do: app_module(Repo)
+  def repo, do: config(:repo_module)
 
   @doc """
   Gets the parent app's factory
