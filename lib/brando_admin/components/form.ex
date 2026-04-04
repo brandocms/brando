@@ -1015,7 +1015,7 @@ defmodule BrandoAdmin.Components.Form do
             blocks,
             &{
               &1.name,
-              Module.concat(schema, "Blocks"),
+              Module.concat(schema, &1.name |> to_string() |> Macro.camelize()),
               Map.get(entry, :"entry_#{&1.name}"),
               &1.opts
             }
@@ -1043,7 +1043,7 @@ defmodule BrandoAdmin.Components.Form do
             blocks,
             &{
               &1.name,
-              Module.concat(schema, "Blocks"),
+              Module.concat(schema, &1.name |> to_string() |> Macro.camelize()),
               Map.get(entry, :"entry_#{&1.name}"),
               &1.opts
             }
