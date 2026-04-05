@@ -15,33 +15,29 @@ defmodule Brando.Blueprint.AbsoluteURLTest do
   end
 
   describe "__absolute_url_type__/0" do
-    test "returns :liquid for liquid template absolute urls" do
-      assert Page.__absolute_url_type__() == :liquid
-      assert Brando.MigrationTest.Project.__absolute_url_type__() == :liquid
-    end
-
-    test "returns :i18n for i18n tuple absolute urls" do
-      assert Brando.BlueprintTest.Project.__absolute_url_type__() == :i18n
+    test "returns :heex for all converted templates" do
+      assert Page.__absolute_url_type__() == :heex
+      assert Brando.MigrationTest.Project.__absolute_url_type__() == :heex
+      assert Brando.BlueprintTest.Project.__absolute_url_type__() == :heex
     end
   end
 
   describe "__absolute_url_template__/0" do
-    test "returns the raw liquid template string" do
+    test "returns the raw HEEx template string for page" do
       assert is_binary(Page.__absolute_url_template__())
     end
 
-    test "returns the args template list for i18n type" do
-      assert Brando.BlueprintTest.Project.__absolute_url_template__() ==
-               [[:slug], [:creator, :slug], [:properties, :name]]
+    test "returns the raw HEEx template string for BlueprintTest.Project" do
+      assert is_binary(Brando.BlueprintTest.Project.__absolute_url_template__())
     end
   end
 
   describe "__absolute_url_preloads__/0" do
-    test "extracts relation preloads from liquid template" do
+    test "extracts relation preloads from HEEx template" do
       assert Brando.MigrationTest.Project.__absolute_url_preloads__() == [:creator, :properties]
     end
 
-    test "extracts relation preloads from i18n args" do
+    test "extracts relation preloads from HEEx with route_i18n" do
       assert Brando.BlueprintTest.Project.__absolute_url_preloads__() == [:creator, :properties]
     end
 
@@ -51,12 +47,12 @@ defmodule Brando.Blueprint.AbsoluteURLTest do
   end
 
   describe "__absolute_url__/1" do
-    test "generates URL from liquid template" do
+    test "generates URL from HEEx template with route_i18n for pages" do
       assert Page.__absolute_url__(%Page{language: "no", uri: "om-oss"}) == "/no/om-oss"
       assert Page.__absolute_url__(%Page{language: "en", uri: "about"}) == "/en/about"
     end
 
-    test "handles index pages by stripping uri" do
+    test "handles index pages" do
       assert Page.__absolute_url__(%Page{language: "no", uri: "index"}) == "/no/"
       assert Page.__absolute_url__(%Page{language: "en", uri: "index"}) == "/en/"
     end
@@ -72,7 +68,7 @@ defmodule Brando.Blueprint.AbsoluteURLTest do
       Application.put_env(:brando, :scope_default_language_routes, true)
     end
 
-    test "generates URL from i18n route helper" do
+    test "generates URL from HEEx route_i18n helper" do
       project = %Brando.BlueprintTest.Project{
         slug: "my-project",
         language: :en,

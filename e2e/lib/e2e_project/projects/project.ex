@@ -25,7 +25,7 @@ defmodule E2eProject.Projects.Project do
   trait Brando.Trait.Blocks
 
   identifier "{{ entry.title }}"
-  absolute_url "{% route_i18n entry.language project_path detail { entry.slug } %}"
+  absolute_url ~H|{route_i18n(@entry, :project_path, :detail, [@entry.slug])}|
   table "projects_projects"
 
   attributes do
@@ -125,8 +125,7 @@ defmodule E2eProject.Projects.Project do
 
           input :introduction, :rich_text,
             label: t("Introduction"),
-            instructions:
-              t("Used for case listings and also the heading for the case detail page"),
+            instructions: t("Used for case listings and also the heading for the case detail page"),
             extensions: ["p", "bold", "link", "color"]
 
           input :project_categories, :multi_select,
@@ -190,13 +189,13 @@ defmodule E2eProject.Projects.Project do
       # Select filter with static options
       filter do
         label gettext("Status")
-        key "status_filter"
+        key("status_filter")
         type :select
         default nil
 
-        option "All", nil
-        option "Published", "published"
-        option "Draft", "draft"
+        option("All", nil)
+        option("Published", "published")
+        option("Draft", "draft")
       end
 
       component &__MODULE__.listing_row/1
@@ -211,7 +210,7 @@ defmodule E2eProject.Projects.Project do
       <% end %>
     </.field>
     <.update_link entry={@entry} columns={6}>
-      <%= @entry.title %>
+      {@entry.title}
     </.update_link>
     <.url entry={@entry} />
     """

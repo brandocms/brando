@@ -14,7 +14,7 @@ defmodule E2eProject.Projects.ProjectCategory do
 
   trait Brando.Trait.Sequenced
 
-  absolute_url "{% route project_category_path detail { entry.slug } %}"
+  absolute_url ~H|{route(:project_category_path, :detail, [@entry.slug])}|
 
   @allow_mark_as_deleted true
 

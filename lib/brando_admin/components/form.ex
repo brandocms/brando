@@ -4405,6 +4405,19 @@ defmodule BrandoAdmin.Components.Form do
 
   defp maybe_put_folder_id(meta, _), do: meta
 
+  defp maybe_resolve_dynamic_upload_path(cfg, %{upload_path: upload_path_fn}, changeset)
+       when is_function(upload_path_fn, 1) do
+    entry = Ecto.Changeset.apply_changes(changeset)
+    resolved_path = upload_path_fn.(entry)
+    updated_cfg = %{cfg | upload_path: resolved_path}
+    folder_id = FolderBrowser.folder_id_for(resolved_path)
+    {updated_cfg, folder_id}
+  end
+
+  defp maybe_resolve_dynamic_upload_path(cfg, _opts, _changeset) do
+    {cfg, nil}
+  end
+
   defp maybe_send_upload_next_file({:noreply, socket}, upload_target_name) do
     {:noreply, push_event(socket, "upload_send_next_file", %{upload_target: upload_target_name})}
   end
@@ -4415,15 +4428,21 @@ defmodule BrandoAdmin.Components.Form do
         %{assigns: %{current_user: current_user, schema: schema, form: form}} = socket
       ) do
     if upload_entry.done? do
-      %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(schema, key)
+      asset_opts = Brando.Blueprint.Assets.__asset_opts__(schema, key)
+      %{cfg: cfg} = asset_opts
       config_target = "gallery:#{inspect(schema)}:#{key}"
+
+      # Resolve dynamic upload path if provided in asset opts
+      {cfg, folder_id} = maybe_resolve_dynamic_upload_path(cfg, asset_opts, form.source)
 
       case consume_uploaded_entry(
              socket,
              upload_entry,
              fn meta ->
                safe_handle_upload(
-                 Map.put(meta, :config_target, config_target),
+                 meta
+                 |> Map.put(:config_target, config_target)
+                 |> maybe_put_folder_id(folder_id),
                  upload_entry,
                  cfg,
                  current_user

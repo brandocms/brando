@@ -78,7 +78,7 @@ defmodule Brando.BlueprintTest.Project do
     size_limit: 10_240_000
   }
 
-  absolute_url {:i18n, :project_path, :show_fancy, [[:slug], [:creator, :slug], [:properties, :name]]}
+  absolute_url ~H|{route_i18n(@entry, :project_path, :show_fancy, [@entry.slug, @entry.creator.slug, @entry.properties.name])}|
   identifier "{{ entry.title }} [{{ entry.id }}]"
 
   trait Brando.Trait.Creator

@@ -67,9 +67,9 @@ defmodule Brando.Blueprint.Dsl do
         |> Enum.uniq()
 
       :heex ->
-        ~r/@entry\.([a-zA-Z_]+)\.([a-zA-Z_]+)/
+        ~r/@entry\.([a-zA-Z_]+)/
         |> Regex.scan(tpl || "", capture: :all_but_first)
-        |> Enum.map(fn [rel, _field] -> try_relation.(rel) end)
+        |> Enum.map(fn [rel] -> try_relation.(rel) end)
         |> Enum.reject(&is_nil(&1))
         |> Enum.uniq()
 

@@ -19,7 +19,7 @@ defmodule E2eProject.Projects.Category do
   trait Brando.Trait.Translatable
 
   identifier "{{ entry.title }}"
-  absolute_url "{% route_i18n entry.language category_path detail { entry.slug } %}"
+  absolute_url ~H|{route_i18n(@entry, :category_path, :detail, [@entry.slug])}|
 
   attributes do
     attribute :title, :text, required: true
@@ -64,7 +64,7 @@ defmodule E2eProject.Projects.Category do
   def listing_row(assigns) do
     ~H"""
     <.update_link entry={@entry} columns={9}>
-      <%= @entry.title %>
+      {@entry.title}
     </.update_link>
     """
   end

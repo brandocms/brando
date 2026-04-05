@@ -20,7 +20,7 @@ defmodule E2eProject.Projects.Client do
   trait Brando.Trait.Translatable
 
   identifier "{{ entry.name }}"
-  absolute_url "{% route_i18n entry.language client_path detail { entry.slug } %}"
+  absolute_url ~H|{route_i18n(@entry, :client_path, :detail, [@entry.slug])}|
 
   attributes do
     attribute :name, :text, required: true
@@ -31,7 +31,7 @@ defmodule E2eProject.Projects.Client do
     relation :projects, :has_many, module: Projects.Project
   end
 
-    forms do
+  forms do
     form do
       default_params %{"status" => "draft"}
 
@@ -68,7 +68,7 @@ defmodule E2eProject.Projects.Client do
   def listing_row(assigns) do
     ~H"""
     <.update_link entry={@entry} columns={10}>
-      <%= @entry.name %>
+      {@entry.name}
     </.update_link>
     """
   end

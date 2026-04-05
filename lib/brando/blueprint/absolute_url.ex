@@ -8,20 +8,40 @@ defmodule Brando.Blueprint.AbsoluteURL do
   Association references (e.g. `@entry.category.slug`) are automatically
   detected and included in `__absolute_url_preloads__/0`.
 
-  ## HEEx
+  ## HEEx (preferred)
 
+  Use `route/2,3` for non-localized routes and `route_i18n/3,4` for
+  locale-aware URLs:
+
+      # Non-localized route
+      absolute_url ~H|{route(:project_category_path, :detail, [@entry.slug])}|
+
+      # Localized route (reads language from entry)
+      absolute_url ~H|{route_i18n(@entry, :project_path, :detail, [@entry.slug])}|
+
+      # Static path (no route helper)
       absolute_url ~H"/projects/{@entry.slug}"
-      absolute_url ~H"/projects/{@entry.category.slug}/{@entry.slug}"
 
-  ## Liquex
+      # Page routes (special handling — args split by `/`)
+      absolute_url ~H|{route(:page_path, :show, [@entry.uri])}|
+
+  ### When to use `route` vs `route_i18n`
+
+  - `route/2,3` — schema has no `language` field, or routes should not be localized
+  - `route_i18n/3,4` — schema uses `Brando.Trait.Translatable` and routes should
+    include a locale prefix
+
+  ### Indexed association access
+
+  Use `Enum.at/2` for indexed access to association lists:
+
+      absolute_url ~H|/projects/{Enum.at(@entry.properties, 0).slug}|
+
+  ## Liquex (legacy)
 
       absolute_url "/projects/{{ entry.slug }}"
-      absolute_url \"""
-      {%- assign language = entry.language|strip -%}
-      /{{ language }}/projects/{{ entry.slug }}
-      \"""
 
-  ## i18n route helper
+  ## i18n tuple (deprecated — use HEEx with `route_i18n` instead)
 
       absolute_url {:i18n, :project_path, :detail, [[:category, :slug], :slug]}
 
@@ -30,6 +50,73 @@ defmodule Brando.Blueprint.AbsoluteURL do
       absolute_url false
   """
   alias Brando.Villain
+
+  @doc """
+  Route helper for `absolute_url` HEEx templates. Calls the route helper
+  directly without i18n localization.
+
+  Special handling for `:page_path` with `:show` action — args are split by `/`.
+
+  ## Examples
+
+      absolute_url ~H|{route(:project_category_path, :detail, [@entry.slug])}|
+      absolute_url ~H|{route(:page_path, :show, [@entry.uri])}|
+  """
+  def route(fun, action, args \\ [])
+
+  def route(:page_path, :show, args) do
+    prepared = Enum.map(args, &String.split(to_string(&1), "/"))
+    apply(Brando.helpers(), :page_path, [Brando.endpoint(), :show] ++ prepared)
+  end
+
+  def route(fun, action, args) do
+    apply(Brando.helpers(), fun, [Brando.endpoint(), action] ++ args)
+  end
+
+  @doc """
+  I18n route helper for `absolute_url` HEEx templates. Reads `language` from
+  the entry and uses `Brando.I18n.Helpers.localized_path/3` for locale-aware URLs.
+
+  Special handling for `:page_path` — the page route is never localized via
+  `localized_path` (no `:no_page_path` etc. exists). Instead, the language
+  prefix is prepended manually, matching the behavior of the Liquex `route_i18n`
+  tag. Args for `:show` action are split by `/`.
+
+  ## Examples
+
+      absolute_url ~H|{route_i18n(@entry, :project_path, :detail, [@entry.slug])}|
+      absolute_url ~H|{route_i18n(@entry, :page_path, :show, [@entry.uri])}|
+  """
+  def route_i18n(entry, fun, action, args \\ [])
+
+  def route_i18n(entry, :page_path, action, args) do
+    path =
+      case action do
+        :show ->
+          prepared = Enum.map(args, &String.split(to_string(&1), "/"))
+          apply(Brando.helpers(), :page_path, [Brando.endpoint(), :show] ++ prepared)
+
+        _ ->
+          apply(Brando.helpers(), :page_path, [Brando.endpoint(), action] ++ args)
+      end
+
+    locale = to_string(entry.language)
+    default_language = to_string(Brando.config(:default_language))
+
+    if Brando.config(:scope_default_language_routes) == false && default_language == locale do
+      path
+    else
+      "/#{locale}#{path}"
+    end
+  end
+
+  def route_i18n(entry, fun, action, args) do
+    Brando.I18n.Helpers.localized_path(
+      entry.language,
+      fun,
+      [Brando.endpoint(), action] ++ args
+    )
+  end
 
   defmacro absolute_url(false) do
     quote location: :keep do
@@ -81,6 +168,9 @@ defmodule Brando.Blueprint.AbsoluteURL do
       @absolute_url_tpl unquote(tpl_string)
       @absolute_url_type :heex
       def __absolute_url__(entry) do
+        import Brando.Blueprint.AbsoluteURL,
+          only: [route: 2, route: 3, route_i18n: 3, route_i18n: 4]
+
         var!(assigns) = %{entry: entry}
 
         unquote(heex_ast)
@@ -90,6 +180,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
       rescue
         UndefinedFunctionError -> nil
         ArgumentError -> nil
+        KeyError -> nil
       end
 
       def __absolute_url_type__, do: :heex
@@ -100,6 +191,11 @@ defmodule Brando.Blueprint.AbsoluteURL do
 
   defmacro absolute_url({:{}, _, [:i18n, fun, fun_target, args_tpl]}) do
     quote location: :keep do
+      IO.warn(
+        "absolute_url {:i18n, ...} is deprecated. Use HEEx with route_i18n/3 instead.",
+        Macro.Env.stacktrace(__ENV__)
+      )
+
       @absolute_url_tpl unquote(args_tpl)
       @absolute_url_type :i18n
       def __absolute_url__(entry) do

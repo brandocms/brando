@@ -24,7 +24,8 @@ defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
   # trait Brando.Trait.Translatable
 
   identifier "{{ entry.title }}"
-  absolute_url "{% route <%= Macro.underscore(schema) %>_path detail { entry.slug } %}"
+  # NOTE: If using Brando.Trait.Translatable, change `route` to `route_i18n(@entry, ...)`
+  absolute_url ~H|{route(:<%= Macro.underscore(schema) %>_path, :detail, [@entry.slug])}|
 
   attributes do
   end

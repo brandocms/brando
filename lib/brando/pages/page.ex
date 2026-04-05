@@ -78,18 +78,11 @@ defmodule Brando.Pages.Page do
 
   identifier "{{ entry.title }}"
 
-  absolute_url """
-  {%- assign language = entry.language|strip -%}
-  {%- if config.scope_default_language_routes == true -%}
-    /{{ entry.language }}
-  {%- else -%}
-    {%- if language != config.default_language -%}/{{ entry.language }}{%- endif -%}
-  {%- endif -%}
-  {%- if entry.uri == "index" -%}
-    {%- route_i18n entry.language page_path index -%}
-  {%- else -%}
-    {%- route_i18n entry.language page_path show { entry.uri } -%}
-  {%- endif -%}
+  absolute_url ~H"""
+  {if(@entry.uri == "index",
+    do: route_i18n(@entry, :page_path, :index),
+    else: route_i18n(@entry, :page_path, :show, [@entry.uri])
+  )}
   """
 
   attributes do
