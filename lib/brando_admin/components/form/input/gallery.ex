@@ -166,7 +166,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
               data-sortable-id="sortable-gallery"
               data-sortable-handle=".sort-handle"
               data-sortable-selector=".gallery-object"
-              class="gallery-objects"
+              class={"gallery-objects gallery-objects--#{@preview_layout}"}
             >
               <.inputs_for :let={gallery_form} field={@field}>
                 <Input.input type={:hidden} field={gallery_form[:config_target]} />
@@ -180,6 +180,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                       gallery_objects={@gallery_objects}
                       gallery_object_field={gallery_object}
                       parent_form_name={gallery_form.name}
+                      preview_layout={@preview_layout}
+                      myself={@myself}
                     />
                     <input
                       type="hidden"
@@ -197,6 +199,88 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           <% end %>
         </div>
       </Form.field_base>
+    </div>
+    """
+  end
+
+  def gallery_object(%{preview_layout: :list} = assigns) do
+    gallery_object = find_gallery_object(assigns)
+
+    assigns =
+      assigns
+      |> assign(:gallery_object, gallery_object)
+      |> assign_list_object_data(gallery_object)
+
+    ~H"""
+    <div :if={@gallery_object} class="gallery-object-list-row">
+      <div class="gallery-object-list-thumb">
+        <%= if @thumb_url do %>
+          <img src={@thumb_url} />
+        <% else %>
+          <div class="img-placeholder">
+            <.icon name={if @media_type == :video, do: "hero-video-camera", else: "hero-photo"} />
+          </div>
+        <% end %>
+      </div>
+      <div class="gallery-object-list-info">
+        <div class="gallery-object-list-name">
+          <div class="gallery-object-list-filename">{@display_filename}</div>
+          <div :if={@display_dir} class="gallery-object-list-dir">{@display_dir}</div>
+        </div>
+        <div class="gallery-object-list-detail">
+          <span :if={@display_title} class="gallery-object-list-title">{@display_title}</span>
+          <%= if @display_alt do %>
+            <span class="gallery-object-list-alt" title={@display_alt}>
+              <.icon name="hero-chat-bubble-bottom-center-text-mini" /> {truncate_text(@display_alt, 40)}
+            </span>
+          <% else %>
+            <span :if={@media_type == :image} class="gallery-object-list-alt missing">
+              <.icon name="hero-chat-bubble-bottom-center-text-mini" /> {gettext("No alt text")}
+            </span>
+          <% end %>
+        </div>
+        <div class="gallery-object-list-meta">{@display_dimensions}</div>
+        <div class="gallery-object-list-meta">{@display_formats}</div>
+        <div class={"gallery-object-list-status gallery-object-list-status--#{@display_status_key}"}>{@display_status}</div>
+        <div class="gallery-object-list-actions" data-sortable-filter>
+          <button
+            type="button"
+            class="gallery-object-action-button"
+            aria-label={gettext("Actions")}
+            phx-click={toggle_dropdown("##{@menu_id}")}
+            phx-click-away={hide_dropdown("##{@menu_id}")}
+          >
+            <.icon name="hero-ellipsis-horizontal-circle" />
+          </button>
+          <ul id={@menu_id} class="gallery-object-action-dropdown hidden">
+            <li :if={@media_type == :image}>
+              <button
+                type="button"
+                phx-click={
+                  JS.push("open_image_editor", target: @myself, value: %{image_id: @gallery_object.image_id})
+                  |> hide_dropdown("##{@menu_id}")
+                  |> toggle_drawer("#image-editor-drawer")
+                }
+              >
+                <.icon name="hero-pencil-square" />
+                {gettext("Edit image")}
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="delete-action"
+                name={"#{@parent_form_name}[drop_gallery_object_ids][]"}
+                value={@gallery_object_field.index}
+                phx-click={JS.dispatch("change")}
+              >
+                <.icon name="hero-trash" />
+                {gettext("Remove from gallery")}
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
     """
   end
@@ -254,10 +338,144 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     """
   end
 
+  defp find_gallery_object(assigns) do
+    image_id = assigns.gallery_object_field[:image_id].value
+    video_id = assigns.gallery_object_field[:video_id].value
+
+    Enum.find(assigns.gallery_objects, fn obj ->
+      (image_id && to_string(Map.get(obj, :image_id)) == to_string(image_id)) ||
+        (video_id && to_string(Map.get(obj, :video_id)) == to_string(video_id))
+    end)
+  end
+
+  defp assign_list_object_data(assigns, nil), do: assigns
+
+  defp assign_list_object_data(assigns, obj) when is_map_key(obj, :image_id) and not is_nil(obj.image_id) do
+    if loaded_assoc?(obj, :image) do
+      image = obj.image
+
+      assigns
+      |> assign(:media_type, :image)
+      |> assign(:menu_id, "gallery-obj-menu-img-#{image.id}")
+      |> assign(:thumb_url, thumb_url_for_image(image))
+      |> assign(:display_filename, Path.basename(image.path))
+      |> assign(:display_dir, Path.dirname(image.path))
+      |> assign(:display_title, image.title)
+      |> assign(:display_alt, image.alt)
+      |> assign(:display_dimensions, "#{image.width}\u00d7#{image.height}")
+      |> assign(:display_formats, format_image_formats(image.formats))
+      |> assign(:display_status, format_status(image.status))
+      |> assign(:display_status_key, image.status)
+    else
+      assign_list_object_defaults(assigns, :image, obj.image_id)
+    end
+  end
+
+  defp assign_list_object_data(assigns, obj) do
+    if Map.get(obj, :video_id) && loaded_assoc?(obj, :video) do
+      video = obj.video
+
+      assigns
+      |> assign(:media_type, :video)
+      |> assign(:menu_id, "gallery-obj-menu-vid-#{video.id}")
+      |> assign(:thumb_url, Brando.Videos.Helpers.thumbnail_url(video))
+      |> assign(:display_filename, video.title || video.remote_id || "-")
+      |> assign(:display_dir, video.source_url)
+      |> assign(:display_title, nil)
+      |> assign(:display_alt, nil)
+      |> assign(:display_dimensions, gettext("Video"))
+      |> assign(:display_formats, "")
+      |> assign(:display_status, format_status(video.status))
+      |> assign(:display_status_key, video.status)
+    else
+      assign_list_object_defaults(assigns, :video, Map.get(obj, :video_id))
+    end
+  end
+
+  defp assign_list_object_defaults(assigns, type, id) do
+    assigns
+    |> assign(:media_type, type)
+    |> assign(:menu_id, "gallery-obj-menu-#{type}-#{id}")
+    |> assign(:thumb_url, nil)
+    |> assign(:display_filename, "-")
+    |> assign(:display_dir, nil)
+    |> assign(:display_title, nil)
+    |> assign(:display_alt, nil)
+    |> assign(:display_dimensions, "-")
+    |> assign(:display_formats, "")
+    |> assign(:display_status, "-")
+    |> assign(:display_status_key, :unknown)
+  end
+
+  defp thumb_url_for_image(%{status: :processed} = image) do
+    Utils.img_url(image, :thumb, prefix: Utils.media_url())
+  end
+
+  defp thumb_url_for_image(_image), do: nil
+
+  defp format_image_formats(formats) when is_list(formats) do
+    formats
+    |> Enum.reject(&(&1 == :original))
+    |> Enum.map_join(", ", &to_string/1)
+    |> case do
+      "" -> "-"
+      str -> str
+    end
+  end
+
+  defp format_image_formats(_), do: "-"
+
+  defp format_status(status) when is_atom(status) do
+    status |> to_string() |> String.replace("_", " ") |> String.capitalize()
+  end
+
+  defp format_status(status) when is_binary(status), do: status
+  defp format_status(_), do: "-"
+
+  defp truncate_text(text, max_length) when byte_size(text) > max_length do
+    String.slice(text, 0, max_length) <> "..."
+  end
+
+  defp truncate_text(text, _max_length), do: text
+
+  defp build_crop_groups_for(image) do
+    case Brando.Images.get_config_for(image) do
+      {:ok, config} -> Form.build_crop_groups(config.sizes)
+      _ -> []
+    end
+  end
+
   defp sequence(gallery_objects) do
     gallery_objects
     |> Enum.with_index()
     |> Enum.map(fn {gi, idx} -> Map.put(gi, :sequence, idx) end)
+  end
+
+  def handle_event("open_image_editor", %{"image_id" => image_id}, socket) do
+    {:ok, image} = Brando.Images.get_image(image_id)
+
+    changeset = socket.assigns.field.form.source
+    module = changeset.data.__struct__
+    form_id = "#{module.__naming__().singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      action: :set_edit_image_from_block,
+      image: image,
+      block_target: {__MODULE__, socket.assigns.id},
+      old_image_id: image.id
+    )
+
+    crop_groups = build_crop_groups_for(image)
+
+    {:noreply,
+     push_event(socket, "b:image_editor:init", %{
+       image_src: Utils.img_url(image, :original, prefix: Utils.media_url()),
+       image_width: image.width,
+       image_height: image.height,
+       image_id: image.id,
+       crop_groups: crop_groups
+     })}
   end
 
   def handle_event("cancel_upload", %{"ref" => ref, "field_name" => field_name}, socket) do
