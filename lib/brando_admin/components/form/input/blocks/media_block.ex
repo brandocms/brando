@@ -111,7 +111,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
           <input type="hidden" name={template_video[:muted].name} value={to_string(template_video[:muted].value)} />
           <input type="hidden" name={template_video[:playsinline].name} value={to_string(template_video[:playsinline].value)} />
           <input type="hidden" name={template_video[:video_class].name} value={template_video[:video_class].value || ""} />
-          <input type="hidden" name={template_video[:container_class].name} value={template_video[:container_class].value || ""} />
+          <input
+            type="hidden"
+            name={template_video[:container_class].name}
+            value={template_video[:container_class].value || ""}
+          />
         </.inputs_for>
 
         <Block.block

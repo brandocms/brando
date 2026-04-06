@@ -25,6 +25,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
       |> assign(:placeholder, nil)
       |> assign(:hidden, hidden?(assigns.input, assigns.form))
       |> assign_new(:form_cid, fn -> nil end)
+      |> assign_new(:form_id, fn -> nil end)
 
     ~H"""
     <%= unless @hidden do %>
@@ -41,6 +42,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
             parent_uploads={@parent_uploads}
             current_user={@current_user}
             form_cid={@form_cid}
+            form_id={@form_id}
             opts={[]}
           />
         <% else %>
@@ -56,6 +58,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
             placeholder={@placeholder}
             current_user={@current_user}
             form_cid={@form_cid}
+            form_id={@form_id}
           />
         <% end %>
       <% else %>
@@ -68,7 +71,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
           opts={@input.opts || []}
           type={@input.type}
           current_user={@current_user}
-          form_cid={@form_cid}
+          form_id={@form_id}
           target={@form_cid}
         />
       <% end %>

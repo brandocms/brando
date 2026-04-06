@@ -57,6 +57,11 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:ok, assign(socket, :gallery_objects, updated_gallery_objects)}
   end
 
+  def update(%{event: "video_created_from_url", video_data: %{id: video_id}}, socket) do
+    # Skip notify_picker since the VideoPicker already knows about this video
+    {:ok, add_gallery_media(socket, :video, to_string(video_id), notify_picker: false)}
+  end
+
   def update(assigns, socket) do
     schema = assigns.field.form.data.__struct__
 
@@ -192,7 +197,6 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                   <Input.input type={:hidden} field={gallery_object[:image_id]} />
                   <Input.input type={:hidden} field={gallery_object[:video_id]} />
                   <Input.input type={:hidden} field={gallery_object[:gallery_id]} />
-                  <Input.input type={:hidden} field={gallery_object[:creator_id]} />
                 </.inputs_for>
               </.inputs_for>
             </div>
@@ -286,15 +290,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   end
 
   def gallery_object(assigns) do
-    image_id = assigns.gallery_object_field[:image_id].value
-    video_id = assigns.gallery_object_field[:video_id].value
-
-    gallery_object =
-      Enum.find(assigns.gallery_objects, fn obj ->
-        (image_id && to_string(Map.get(obj, :image_id)) == to_string(image_id)) ||
-          (video_id && to_string(Map.get(obj, :video_id)) == to_string(video_id))
-      end)
-
+    gallery_object = find_gallery_object(assigns)
     assigns = assign(assigns, :gallery_object, gallery_object)
 
     ~H"""
@@ -343,10 +339,14 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     video_id = assigns.gallery_object_field[:video_id].value
 
     Enum.find(assigns.gallery_objects, fn obj ->
-      (image_id && to_string(Map.get(obj, :image_id)) == to_string(image_id)) ||
-        (video_id && to_string(Map.get(obj, :video_id)) == to_string(video_id))
+      (present?(image_id) && to_string(Map.get(obj, :image_id)) == to_string(image_id)) ||
+        (present?(video_id) && to_string(Map.get(obj, :video_id)) == to_string(video_id))
     end)
   end
+
+  defp present?(nil), do: false
+  defp present?(""), do: false
+  defp present?(_), do: true
 
   defp assign_list_object_data(assigns, nil), do: assigns
 
@@ -570,7 +570,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:noreply, assign(socket, :selected_images, [])}
   end
 
-  defp add_gallery_media(socket, media_type, media_id_str) do
+  defp add_gallery_media(socket, media_type, media_id_str, opts \\ []) do
     %{field: field, gallery_objects: gallery_objects, current_user: current_user} = socket.assigns
 
     changeset = field.form.source
@@ -609,7 +609,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     updated_gallery_objects = gallery_objects ++ [new_gallery_object]
 
     selected_ids = extract_selected_ids(updated_gallery_objects, id_field)
-    notify_picker(media_type, selected_ids)
+    if Keyword.get(opts, :notify_picker, true), do: notify_picker(media_type, selected_ids)
     update_form_changeset(changeset, field_name, new_gallery)
 
     selection_assign = selection_assign_key(media_type)

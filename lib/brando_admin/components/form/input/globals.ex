@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
                   id={"#{@field.id}-render-var-#{var.index}"}
                   var={var}
                   render={:all}
-                  form_cid={@form_cid}
+                  form_id={@form_id}
                   edit
                   publish
                 />

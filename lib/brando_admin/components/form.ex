@@ -379,15 +379,12 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, socket}
   end
 
-  def update(%{event: "get_live_preview_status", cid: cid}, socket) do
+  def update(%{event: "get_live_preview_status", block_ref: {mod, id}}, socket) do
     cache_key = socket.assigns.live_preview_cache_key
     live_preview_active = socket.assigns.live_preview_active?
     event = (live_preview_active && "enable_live_preview") || "disable_live_preview"
 
-    send_update(cid, %{
-      event: event,
-      cache_key: cache_key
-    })
+    send_update(mod, id: id, event: event, cache_key: cache_key)
 
     {:ok, socket}
   end
@@ -401,8 +398,8 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, socket}
   end
 
-  def update(%{event: "register_block_wanting_entry", cid: cid}, socket) do
-    {:ok, update(socket, :blocks_wanting_entry, &Enum.uniq(&1 ++ [cid]))}
+  def update(%{event: "register_block_wanting_entry", block_ref: block_ref}, socket) do
+    {:ok, update(socket, :blocks_wanting_entry, &Enum.uniq(&1 ++ [block_ref]))}
   end
 
   @doc """
@@ -615,8 +612,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(%{action: :update_entry_hard_reset, updated_entry: updated_entry}, socket) do
-    myself = socket.assigns.myself
-    send_update_after(myself, %{event: "set_block_map"}, 1000)
+    send_update_after(__MODULE__, [id: socket.assigns.id, event: "set_block_map"], 1000)
     send(self(), {:progress_popup, "Setting new block map..."})
 
     socket
@@ -633,9 +629,8 @@ defmodule BrandoAdmin.Components.Form do
   def update(%{action: :update_entry, updated_entry: updated_entry}, socket) do
     %{schema: schema, current_user: current_user} = socket.assigns
     new_changeset = schema.changeset(updated_entry, %{}, current_user)
-    myself = socket.assigns.myself
 
-    send_update_after(myself, %{event: "set_block_map"}, 500)
+    send_update_after(__MODULE__, [id: socket.assigns.id, event: "set_block_map"], 500)
 
     {:ok,
      socket
@@ -1584,7 +1579,7 @@ defmodule BrandoAdmin.Components.Form do
               current_user={@current_user}
               entry_id={@entry_id}
               form={@form}
-              form_cid={@myself}
+              form_id={@id}
               status={@status_revisions}
               close={
                 JS.push("toggle_revisions_drawer_status", target: @myself)
@@ -1615,6 +1610,7 @@ defmodule BrandoAdmin.Components.Form do
               parent_uploads={@uploads}
               form={@form}
               form_cid={@myself}
+              form_id={@id}
               schema={@schema}
             />
           </.form>
@@ -1633,7 +1629,7 @@ defmodule BrandoAdmin.Components.Form do
             entry={@entry_for_blocks}
             entry_blocks={entry_blocks}
             current_user={@current_user}
-            form_cid={@myself}
+            form_id={@id}
           />
 
           <.submit_button processing={@processing} form_id={@id} label={gettext("Save (⌘S)")} class="primary submit-button" />
@@ -1684,6 +1680,7 @@ defmodule BrandoAdmin.Components.Form do
           schema={@schema}
           form={@form}
           form_cid={@form_cid}
+          form_id={@form_id}
         />
       </div>
     </div>
@@ -1714,6 +1711,7 @@ defmodule BrandoAdmin.Components.Form do
           parent_uploads={@parent_uploads}
           current_user={@current_user}
           form_cid={@form_cid}
+          form_id={@form_id}
         />
       <% end %>
     <% end %>
@@ -2063,7 +2061,7 @@ defmodule BrandoAdmin.Components.Form do
       instructions={nil}
       parent_uploads={%{}}
       current_user={nil}
-      form_cid={nil}
+      form_id={nil}
       opts={[allow_custom: true]}
       options={@aspect_ratio_options}
     />
@@ -2278,7 +2276,7 @@ defmodule BrandoAdmin.Components.Form do
                   instructions={nil}
                   parent_uploads={%{}}
                   current_user={nil}
-                  form_cid={nil}
+                  form_id={nil}
                   opts={[]}
                   options={[
                     {gettext("Vimeo"), :vimeo},
@@ -2690,7 +2688,7 @@ defmodule BrandoAdmin.Components.Form do
       config_target: config_target,
       initial_folder: params["initial_folder"],
       recent_folders: recent_folders,
-      form_cid: socket.assigns.myself
+      form_id: socket.assigns.id
     )
 
     {:noreply, push_event(socket, "b:show_drawer", %{drawer_id: "image-picker"})}
@@ -3760,17 +3758,21 @@ defmodule BrandoAdmin.Components.Form do
     id = socket.assigns.id
     block_map = socket.assigns.block_map
 
-    for {block_field_name, _schema, _entry_blocks, _opts} <- block_map do
-      block_field_id = "#{id}-blocks-#{block_field_name}"
+    if block_map == [] do
+      event_tag_received(socket, tag)
+    else
+      for {block_field_name, _schema, _entry_blocks, _opts} <- block_map do
+        block_field_id = "#{id}-blocks-#{block_field_name}"
 
-      send_update_after(
-        BlockField,
-        [id: block_field_id, event: "fetch_root_blocks", tag: tag],
-        delay
-      )
+        send_update_after(
+          BlockField,
+          [id: block_field_id, event: "fetch_root_blocks", tag: tag],
+          delay
+        )
+      end
+
+      socket
     end
-
-    socket
   end
 
   defp clear_blocks_root_changesets(socket) do
@@ -3871,9 +3873,8 @@ defmodule BrandoAdmin.Components.Form do
       end
 
     traversed_errors =
-      traverse_errors(changeset, fn
-        {msg, opts} -> String.replace(msg, "%{count}", to_string(opts[:count]))
-        msg -> msg
+      traverse_errors(changeset, fn {msg, opts} ->
+        String.replace(msg, "%{count}", to_string(opts[:count]))
       end)
 
     error_keys = Map.keys(traversed_errors)
@@ -3885,14 +3886,20 @@ defmodule BrandoAdmin.Components.Form do
 
     translated_error_keys = Brando.Blueprint.Utils.translate_error_keys(error_keys, form, schema)
 
-    error_list =
+    # Include nested association errors as "parent → child → field" paths
+    nested_error_paths = flatten_nested_errors(traversed_errors)
+
+    all_error_items =
       for key <- translated_error_keys do
         "<li class=\"text-mono\">#{key}</li>"
-      end
+      end ++
+        for {path, messages} <- nested_error_paths do
+          "<li class=\"text-mono\">#{path}: #{Enum.join(messages, ", ")}</li>"
+        end
 
     error_msg = """
     #{error_notice}<br><br>
-    <ul class="error-keys">#{error_list}</ul>
+    <ul class="error-keys">#{all_error_items}</ul>
     """
 
     require Logger
@@ -3902,7 +3909,7 @@ defmodule BrandoAdmin.Components.Form do
 
     Changeset errors:
 
-    #{inspect(changeset.errors, pretty: true)}
+    #{inspect(traversed_errors, pretty: true)}
 
     """)
 
@@ -3910,6 +3917,30 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:active_tab, tab_with_first_error)
     |> push_event("b:alert", %{title: error_title, message: error_msg, type: "error"})
     |> push_event("b:scroll_to_first_error", %{})
+  end
+
+  defp flatten_nested_errors(errors, prefix \\ []) do
+    Enum.flat_map(errors, fn
+      {field, messages} when is_list(messages) ->
+        path = prefix ++ [field]
+
+        if Enum.all?(messages, &is_binary/1) do
+          # Only include if this is a nested path (not top-level, those are handled separately)
+          if prefix == [], do: [], else: [{Enum.join(path, " → "), messages}]
+        else
+          # messages contains nested maps (from associations)
+          Enum.flat_map(messages, fn
+            nested when is_map(nested) -> flatten_nested_errors(nested, path)
+            _ -> []
+          end)
+        end
+
+      {field, nested} when is_map(nested) ->
+        flatten_nested_errors(nested, prefix ++ [field])
+
+      _ ->
+        []
+    end)
   end
 
   def handle_image_progress(key, upload_entry, socket) do
@@ -4847,8 +4878,8 @@ defmodule BrandoAdmin.Components.Form do
   defp send_updated_entry_field_to_blocks(socket, path, change) do
     blocks_wanting_entry = socket.assigns.blocks_wanting_entry
 
-    Enum.each(blocks_wanting_entry, fn cid ->
-      send_update(cid, %{event: "update_entry_field", path: path, change: change})
+    Enum.each(blocks_wanting_entry, fn {mod, id} ->
+      send_update(mod, id: id, event: "update_entry_field", path: path, change: change)
     end)
 
     socket
@@ -5342,7 +5373,7 @@ defmodule BrandoAdmin.Components.Form do
       |> assign_new(:parent_form, fn -> nil end)
       |> assign_new(:parent_form_id, fn -> nil end)
       |> assign_new(:subform_id, fn -> nil end)
-      |> assign_new(:form_cid, fn -> nil end)
+      |> assign_new(:form_id, fn -> nil end)
       |> assign_new(:compact, fn -> Keyword.get(assigns.opts, :compact, false) end)
       |> assign_new(:size, fn -> Keyword.get(assigns.opts, :size, "full") end)
       |> assign_new(:component_target, fn ->
@@ -5400,8 +5431,8 @@ defmodule BrandoAdmin.Components.Form do
           parent_uploads={@parent_uploads}
           opts={@opts}
           current_user={@current_user}
-          form_cid={@form_cid}
-          on_change={fn params -> send_update(@form_cid, params) end}
+          form_id={@form_id}
+          on_change={if @form_id, do: fn params -> send_update(__MODULE__, Map.put(params, :id, @form_id)) end}
         />
       </div>
     <% end %>

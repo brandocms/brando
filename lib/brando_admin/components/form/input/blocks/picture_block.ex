@@ -49,7 +49,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   def mount(socket) do
     socket
     |> assign(:images, [])
-    |> assign(:form_cid, nil)
+    |> assign(:form_id, nil)
     |> assign(:upload_registered, false)
     |> then(&{:ok, &1})
   end
@@ -87,14 +87,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
     # Register upload on the Form component (only once).
     # The Form owns the upload so that LiveView channel events route correctly.
-    if !socket.assigns.upload_registered && assigns[:form_cid] do
-      send_update(assigns.form_cid, %{
+    form_id = assigns[:form_id] || socket.assigns[:form_id] || BrandoAdmin.Utils.derive_form_id(assigns.ref_form.name)
+
+    if !socket.assigns.upload_registered && form_id do
+      send_update(BrandoAdmin.Components.Form,
+        id: form_id,
         event: "register_block_upload",
         upload_name: upload_name,
         block_uid: uid,
         block_type: :picture,
         config_target: Map.get(block_data, :config_target, "default") || "default"
-      })
+      )
     end
 
     {:ok,
@@ -102,9 +105,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
      |> assign(assigns)
      |> assign(:uid, uid)
      |> assign(:upload_name, upload_name)
-     |> assign(:upload_registered, assigns[:form_cid] != nil)
+     |> assign(:upload_registered, form_id != nil)
      |> assign(:block_data, block_data)
-     |> assign_new(:form_id, fn -> derive_form_id(assigns.ref_form.name) end)
+     |> assign(:form_id, form_id)
      |> assign_new(:compact, fn -> true end)
      |> assign_new(:image, fn ->
        if assigns[:ref_form] do
@@ -494,7 +497,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     image = socket.assigns.image
 
     # Set edit_image on Form so the save handler knows which image to update
-    send_update(socket.assigns.form_cid,
+    send_update(BrandoAdmin.Components.Form,
+      id: socket.assigns.form_id,
       action: :set_edit_image_from_block,
       image: image,
       block_target: {__MODULE__, socket.assigns.id}
@@ -520,15 +524,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   def handle_event("show_image_picker", _, socket) do
     {:ok, images} = Brando.Images.list_images()
     {:noreply, assign(socket, :images, images)}
-  end
-
-  # Derives the Form component ID from the ref_form name.
-  # e.g. "page[blocks][...]" -> "page" -> "page_form"
-  defp derive_form_id(ref_form_name) do
-    ref_form_name
-    |> String.split("[")
-    |> hd()
-    |> Kernel.<>("_form")
   end
 
   defp build_crop_groups_for(image) do

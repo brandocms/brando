@@ -35,32 +35,32 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   # copy_block — intermediate blocks forward copy requests up the parent chain to BlockField
   def update(%{event: "copy_block"} = msg, socket) do
-    send_update(socket.assigns.parent_cid, msg)
+    send_to_ref(socket.assigns.parent_ref, msg)
     {:ok, socket}
   end
 
   # paste_block — child block requests paste; forward up to BlockField
   def update(%{event: "paste_block", sequence: sequence}, socket) do
-    send_update(socket.assigns.parent_cid, %{
+    send_to_ref(socket.assigns.parent_ref, %{
       event: "paste_child_block",
-      parent_cid: socket.assigns.myself,
+      parent_ref: {__MODULE__, socket.assigns.id},
       sequence: sequence
     })
 
     {:ok, socket}
   end
 
-  # paste_child_block — already has parent_cid, forward preserving it
-  def update(%{event: "paste_child_block", parent_cid: _} = msg, socket) do
-    send_update(socket.assigns.parent_cid, msg)
+  # paste_child_block — already has parent_ref, forward preserving it
+  def update(%{event: "paste_child_block", parent_ref: _} = msg, socket) do
+    send_to_ref(socket.assigns.parent_ref, msg)
     {:ok, socket}
   end
 
-  # paste_child_block — no parent_cid, add myself
+  # paste_child_block — no parent_ref, add myself
   def update(%{event: "paste_child_block", sequence: sequence}, socket) do
-    send_update(socket.assigns.parent_cid, %{
+    send_to_ref(socket.assigns.parent_ref, %{
       event: "paste_child_block",
-      parent_cid: socket.assigns.myself,
+      parent_ref: {__MODULE__, socket.assigns.id},
       sequence: sequence
     })
 
@@ -196,7 +196,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     action = Map.get(msg, :action, :duplicate)
     changeset = socket.assigns.form.source
     has_children? = socket.assigns.has_children?
-    parent_cid = socket.assigns.parent_cid
+    parent_ref = socket.assigns.parent_ref
 
     if has_children? do
       changesets = socket.assigns.changesets
@@ -218,7 +218,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
       {:ok, socket}
     else
-      send_update(parent_cid, %{
+      send_to_ref(parent_ref, %{
         event: "provide_changeset_for_duplication",
         changeset: changeset,
         uid: uid,
@@ -248,7 +248,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     changesets = socket.assigns.changesets
     updated_changesets = update_child_changeset(changesets, uid, child_changeset)
     this_uid = socket.assigns.uid
-    parent_cid = socket.assigns.parent_cid
+    parent_ref = socket.assigns.parent_ref
 
     if !Enum.any?(updated_changesets, &(elem(&1, 1) == nil)) do
       updated_changesets_list = Enum.map(updated_changesets, &elem(&1, 1))
@@ -278,14 +278,14 @@ defmodule BrandoAdmin.Components.Form.Block do
         # Terminal: send populated changeset to parent for duplication or copy
         event_name = if action == :copy, do: "copy_block", else: "duplicate_block"
 
-        send_update(parent_cid, %{
+        send_to_ref(parent_ref, %{
           event: event_name,
           uid: root_uid,
           changeset: updated_changeset,
           populated: true
         })
       else
-        send_update(parent_cid, %{
+        send_to_ref(parent_ref, %{
           event: "provide_changeset_for_duplication",
           changeset: updated_changeset,
           uid: this_uid,
@@ -409,7 +409,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def update(%{event: "update_sequence", sequence: sequence}, socket) do
     belongs_to = socket.assigns.belongs_to
-    parent_cid = socket.assigns.parent_cid
+    parent_ref = socket.assigns.parent_ref
     changeset = socket.assigns.form.source
     uid = socket.assigns.uid
 
@@ -438,7 +438,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         )
       end
 
-    send_update(parent_cid, %{event: "signal_position_update", uid: uid})
+    send_to_ref(parent_ref, %{event: "signal_position_update", uid: uid})
 
     {:ok,
      socket
@@ -447,7 +447,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def update(%{event: "signal_position_update", uid: uid}, socket) do
-    form_cid = socket.assigns.form_cid
+    form_id = socket.assigns.form_id
     position_response_tracker = socket.assigns.position_response_tracker
 
     position_response_tracker =
@@ -459,7 +459,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     if Enum.any?(position_response_tracker, &(elem(&1, 1) == false)) do
       {:ok, assign(socket, :position_response_tracker, position_response_tracker)}
     else
-      send_update(form_cid, %{event: "update_live_preview"})
+      send_update(BrandoAdmin.Components.Form, id: form_id, event: "update_live_preview")
       {:ok, assign(socket, :position_response_tracker, position_response_tracker)}
     end
   end
@@ -490,7 +490,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   def update(%{event: "fetch_root_block", tag: tag}, socket) do
     # a message we will receive from the block field
     id = socket.assigns.id
-    parent_cid = socket.assigns.parent_cid
+    parent_ref = socket.assigns.parent_ref
     changeset = socket.assigns.form.source
     uid = socket.assigns.uid
     has_children? = socket.assigns.has_children?
@@ -502,7 +502,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         send(self(), {:progress_popup, "Providing block #{uid}..."})
       end
 
-      send_update(parent_cid, %{
+      send_to_ref(parent_ref, %{
         event: "provide_root_block",
         changeset: nil,
         uid: uid,
@@ -527,7 +527,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           send(self(), {:progress_popup, "Providing root block #{uid}..."})
         end
 
-        send_update(parent_cid, %{
+        send_to_ref(parent_ref, %{
           event: "provide_root_block",
           changeset: changeset,
           uid: uid,
@@ -542,7 +542,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   def update(%{event: "fetch_child_block", tag: tag}, socket) do
     # a message we will receive from parent block
     id = socket.assigns.id
-    parent_cid = socket.assigns.parent_cid
+    parent_ref = socket.assigns.parent_ref
     changeset = socket.assigns.form.source
     uid = socket.assigns.uid
     has_children? = socket.assigns.has_children?
@@ -566,7 +566,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         send(self(), {:progress_popup, "Providing block #{uid}..."})
       end
 
-      send_update(parent_cid, %{
+      send_to_ref(parent_ref, %{
         event: "provide_child_block",
         changeset: changeset,
         uid: uid,
@@ -579,7 +579,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def update(%{event: "provide_child_block", changeset: child_changeset, uid: uid, tag: tag}, socket) do
     parent_uid = socket.assigns.uid
-    parent_cid = socket.assigns.parent_cid
+    parent_ref = socket.assigns.parent_ref
     level = socket.assigns.level
     changeset = socket.assigns.form.source
 
@@ -615,7 +615,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           send(self(), {:progress_popup, "Providing root block #{uid}..."})
         end
 
-        send_update(parent_cid, %{
+        send_to_ref(parent_ref, %{
           event: "provide_root_block",
           changeset: updated_changeset,
           uid: parent_uid,
@@ -626,7 +626,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           send(self(), {:progress_popup, "Providing block #{uid}..."})
         end
 
-        send_update(parent_cid, %{
+        send_to_ref(parent_ref, %{
           event: "provide_child_block",
           changeset: updated_changeset,
           uid: parent_uid,
@@ -1072,9 +1072,15 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def maybe_get_live_preview_status(%{assigns: %{form_is_new: true, block_initialized: false}} = socket) do
-    form_cid = socket.assigns.form_cid
-    cid = socket.assigns.myself
-    send_update(form_cid, %{event: "get_live_preview_status", cid: cid})
+    form_id = socket.assigns.form_id
+    block_ref = {__MODULE__, socket.assigns.id}
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      event: "get_live_preview_status",
+      block_ref: block_ref
+    )
+
     socket
   end
 
@@ -1147,8 +1153,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     assign(socket, :form, new_form)
   end
 
-  def register_block_wanting_entry(cid, form_cid) do
-    send_update(form_cid, %{event: "register_block_wanting_entry", cid: cid})
+  def register_block_wanting_entry(block_ref, form_id) do
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      event: "register_block_wanting_entry",
+      block_ref: block_ref
+    )
   end
 
   def maybe_assign_container(%{assigns: %{container_id: nil}} = socket) do
@@ -1293,10 +1303,10 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def maybe_register_block_wanting_entry(%{assigns: %{block_initialized: false, is_datasource?: true}} = socket) do
-    cid = socket.assigns.myself
-    form_cid = socket.assigns.form_cid
+    block_ref = {__MODULE__, socket.assigns.id}
+    form_id = socket.assigns.form_id
 
-    register_block_wanting_entry(cid, form_cid)
+    register_block_wanting_entry(block_ref, form_id)
     socket
   end
 
@@ -1306,10 +1316,10 @@ defmodule BrandoAdmin.Components.Form.Block do
     module_code = socket.assigns.module_code
 
     if Regex.run(~r/(?:entry\.|@entry\.)[\w]+/, module_code) do
-      cid = socket.assigns.myself
-      form_cid = socket.assigns.form_cid
+      block_ref = {__MODULE__, socket.assigns.id}
+      form_id = socket.assigns.form_id
 
-      register_block_wanting_entry(cid, form_cid)
+      register_block_wanting_entry(block_ref, form_id)
     end
 
     socket
@@ -1458,8 +1468,8 @@ defmodule BrandoAdmin.Components.Form.Block do
   # after we've sent messages to block asking for position updates, if we have deleted the
   # last child block, we refresh the live preview
   defp update_live_preview_on_empty_block_list(%{assigns: %{block_list: []}} = socket) do
-    form_cid = socket.assigns.form_cid
-    send_update(form_cid, %{event: "update_live_preview"})
+    form_id = socket.assigns.form_id
+    send_update(BrandoAdmin.Components.Form, id: form_id, event: "update_live_preview")
     socket
   end
 
@@ -1592,7 +1602,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         parent_uploads={@parent_uploads}
         target={@myself}
         target_ref={{__MODULE__, @id}}
-        form_cid={@form_cid}
+        form_id={@form_id}
         entry={@entry}
         insert_block={
           JS.push("insert_block", target: @myself)
@@ -1637,14 +1647,14 @@ defmodule BrandoAdmin.Components.Form.Block do
               children={child_block_form[:children].value}
               live_preview_active?={@live_preview_active?}
               live_preview_cache_key={@live_preview_cache_key}
-              parent_cid={@myself}
+              parent_ref={{__MODULE__, @id}}
               parent_uid={@uid}
               parent_path={@path}
               parent_uploads={@parent_uploads}
               parent_module_id={@module_id}
               module_set={@module_set}
               form={child_block_form}
-              form_cid={@form_cid}
+              form_id={@form_id}
               entry={@entry}
               current_user_id={@current_user_id}
               belongs_to={:multi}
@@ -1674,7 +1684,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         table_template_name={@table_template_name}
         target={@myself}
         target_ref={{__MODULE__, @id}}
-        form_cid={@form_cid}
+        form_id={@form_id}
         module_class={@module_class}
         module_type={@module_type}
         heex_compiled_module={@heex_compiled_module}
@@ -1714,7 +1724,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         table_template_name={@table_template_name}
         target={@myself}
         target_ref={{__MODULE__, @id}}
-        form_cid={@form_cid}
+        form_id={@form_id}
         module_class={@module_class}
         module_type={@module_type}
         heex_compiled_module={@heex_compiled_module}
@@ -1787,14 +1797,14 @@ defmodule BrandoAdmin.Components.Form.Block do
               children={child_block_form[:children].value}
               live_preview_active?={@live_preview_active?}
               live_preview_cache_key={@live_preview_cache_key}
-              parent_cid={@myself}
+              parent_ref={{__MODULE__, @id}}
               parent_uid={@uid}
               parent_path={@path}
               parent_uploads={@parent_uploads}
               module_set={@module_set}
               entry={@entry}
               form={child_block_form}
-              form_cid={@form_cid}
+              form_id={@form_id}
               current_user_id={@current_user_id}
               belongs_to={:container}
               clipboard_meta={@clipboard_meta}
@@ -2114,7 +2124,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :available_identifiers, :any, default: []
   attr :clipboard_meta, :map, default: nil
   attr :paste_context, :any, default: :root
-  attr :form_cid, :any, default: nil
+  attr :form_id, :any, default: nil
   attr :module_type, :atom, default: :liquid
   attr :heex_compiled_module, :any, default: nil
   attr :entry, :any, default: nil
@@ -2185,7 +2195,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 </:description>
               </.toolbar>
 
-              <.module_config uid={@uid} block_form={block_form} target={@target} form_cid={@form_cid} />
+              <.module_config uid={@uid} block_form={block_form} target={@target} form_id={@form_id} />
               <.module_content
                 uid={@uid}
                 block_form={block_form}
@@ -2198,7 +2208,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 table_template_name={@table_template_name}
                 target={@target}
                 target_ref={@target_ref}
-                form_cid={@form_cid}
+                form_id={@form_id}
                 is_datasource?={@is_datasource?}
                 datasource_meta={@datasource_meta}
                 module_datasource_module_label={@module_datasource_module_label}
@@ -2231,7 +2241,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               </:description>
             </.toolbar>
 
-            <.module_config uid={@uid} block_form={@form} target={@target} form_cid={@form_cid} />
+            <.module_config uid={@uid} block_form={@form} target={@target} form_id={@form_id} />
             <.module_content
               uid={@uid}
               block_form={@form}
@@ -2244,7 +2254,7 @@ defmodule BrandoAdmin.Components.Form.Block do
               parent_uploads={@parent_uploads}
               target={@target}
               target_ref={@target_ref}
-              form_cid={@form_cid}
+              form_id={@form_id}
               is_datasource?={@is_datasource?}
               datasource_meta={@datasource_meta}
               module_datasource_module_label={@module_datasource_module_label}
@@ -2297,7 +2307,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     ~H"""
     <div class="block-content">
       <div b-editor-tpl={@module_class}>
-        <.vars vars={@block_form[:vars]} uid={@uid} target={@target} form_cid={@form_cid} />
+        <.vars vars={@block_form[:vars]} uid={@uid} target={@target} form_id={@form_id} />
         <.datasource
           :if={@is_datasource?}
           block_data={@block_form}
@@ -2316,7 +2326,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             uid={@uid}
             target={@target}
             table_template_name={@table_template_name}
-            form_cid={@form_cid}
+            form_id={@form_id}
           />
         </div>
         <div class="block-heex-preview">
@@ -2337,7 +2347,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     ~H"""
     <div class="block-content">
       <div b-editor-tpl={@module_class}>
-        <.vars vars={@block_form[:vars]} uid={@uid} target={@target} form_cid={@form_cid} />
+        <.vars vars={@block_form[:vars]} uid={@uid} target={@target} form_id={@form_id} />
         <.datasource
           :if={@is_datasource?}
           block_data={@block_form}
@@ -2356,7 +2366,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             uid={@uid}
             target={@target}
             table_template_name={@table_template_name}
-            form_cid={@form_cid}
+            form_id={@form_id}
           />
         </div>
         <div class="block-liquex-preview">
@@ -2369,7 +2379,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                   ref_name={ref}
                   target={@target}
                   target_ref={@target_ref}
-                  form_cid={@form_cid}
+                  form_id={@form_id}
                 />
               <% {:content, _} -> %>
                 <div class="split_content"></div>
@@ -2430,7 +2440,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :uid, :string, required: true
   attr :block_form, :any, required: true
   attr :target, :any, required: true
-  attr :form_cid, :any, default: nil
+  attr :form_id, :any, default: nil
 
   def module_config(assigns) do
     ~H"""
@@ -2443,7 +2453,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             instructions={gettext("Helpful for collapsed blocks")}
           />
           <Input.text field={@block_form[:anchor]} instructions={gettext("Anchor available to block.")} />
-          <.vars vars={@block_form[:vars]} uid={@uid} important={false} target={@target} form_cid={@form_cid} />
+          <.vars vars={@block_form[:vars]} uid={@uid} important={false} target={@target} form_id={@form_id} />
           <div>
             UID: <span class="text-mono">{@uid}</span>
           </div>
@@ -2612,7 +2622,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :parent_uploads, :any, required: true
   attr :target, :any, required: true
   attr :target_ref, :any, default: nil
-  attr :form_cid, :any, default: nil
+  attr :form_id, :any, default: nil
 
   def ref(assigns) do
     refs = Changeset.get_assoc(assigns.refs_field.form.source, :refs, :struct)
@@ -2641,7 +2651,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                 parent_uploads={@parent_uploads}
                 target={@target}
                 target_ref={@target_ref}
-                form_cid={@form_cid}
+                form_id={@form_id}
               />
             </.polymorphic_embed_inputs_for>
             <!-- ref assocs -->
@@ -2689,7 +2699,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> assign_new(:ref_name, fn -> nil end)
       |> assign_new(:ref_description, fn -> nil end)
       |> assign_new(:ref_form, fn -> nil end)
-      |> assign_new(:form_cid, fn -> nil end)
+      |> assign_new(:form_id, fn -> nil end)
       |> assign_new(:target_ref, fn -> nil end)
       |> assign_new(:block_id, fn ->
         if assigns[:is_ref?] && assigns[:ref_form] do
@@ -2771,7 +2781,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         parent_uploads={@parent_uploads}
         target={@target}
         target_ref={@target_ref}
-        form_cid={@form_cid}
+        form_id={@form_id}
       />
     <% end %>
     """
@@ -3200,7 +3210,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :vars, :any, required: true
   attr :important, :boolean, default: true
   attr :target, :any
-  attr :form_cid, :any, default: nil
+  attr :form_id, :any, default: nil
 
   def vars(assigns) do
     changeset = assigns.vars.form.source
@@ -3232,7 +3242,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             var={var}
             render={(@important && :only_important) || :only_regular}
             on_change={fn params -> send_update(@target, params) end}
-            form_cid={@form_cid}
+            form_id={@form_id}
             publish
           />
         </.inputs_for>
@@ -3468,7 +3478,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   attr :uid, :string, required: true
   attr :target, :any, required: true
   attr :table_template_name, :string
-  attr :form_cid, :any, default: nil
+  attr :form_id, :any, default: nil
 
   def table(assigns) do
     table_rows_value = assigns.block_data[:table_rows].value
@@ -3546,7 +3556,7 @@ defmodule BrandoAdmin.Components.Form.Block do
                     id={"block-#{@uid}-table-row-#{var.id}"}
                     var={var}
                     render={:all}
-                    form_cid={@form_cid}
+                    form_id={@form_id}
                     publish
                   />
                 </.inputs_for>
@@ -3799,11 +3809,11 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def send_form_to_parent(socket) do
-    parent_cid = socket.assigns.parent_cid
+    parent_ref = socket.assigns.parent_ref
     level = socket.assigns.level
     form = socket.assigns.form
 
-    send_update(parent_cid, %{event: "update_block", level: level, form: form})
+    send_to_ref(parent_ref, %{event: "update_block", level: level, form: form})
     socket
   end
 
@@ -3812,19 +3822,20 @@ defmodule BrandoAdmin.Components.Form.Block do
       form: %{source: changeset},
       belongs_to: belongs_to,
       has_children?: has_children?,
-      form_cid: form_cid
+      form_id: form_id
     } = socket.assigns
 
     block_cs = get_block_changeset(changeset, belongs_to)
     rendered_html = Changeset.get_field(block_cs, :rendered_html)
     uid = Changeset.get_field(block_cs, :uid)
 
-    send_update(form_cid, %{
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
       event: "update_live_preview_block",
       rendered_html: rendered_html,
       uid: uid,
       has_children?: has_children?
-    })
+    )
 
     socket
   end
@@ -4620,7 +4631,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       refs_field: block_form[:refs],
       target: assigns[:target],
       target_ref: assigns[:target_ref],
-      form_cid: assigns[:form_cid],
+      form_id: assigns[:form_id],
       parent_uploads: assigns[:parent_uploads]
     }
 

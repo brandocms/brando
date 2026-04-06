@@ -281,7 +281,15 @@ defmodule Brando.HTML do
 
     ~H"""
     <link rel="canonical" href={@canonical} />
-    <link :for={{lang, url} <- @hreflangs} :key={lang} :if={@multilang} rel="alternate" href={url} type="text/html" hreflang={lang} />
+    <link
+      :for={{lang, url} <- @hreflangs}
+      :if={@multilang}
+      :key={lang}
+      rel="alternate"
+      href={url}
+      type="text/html"
+      hreflang={lang}
+    />
     """
   end
 

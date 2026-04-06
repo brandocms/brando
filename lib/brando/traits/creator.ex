@@ -22,8 +22,10 @@ defmodule Brando.Trait.Creator do
   @changeset_phase :before_validate_required
   def changeset_mutator(_, _cfg, changeset, :system, _), do: changeset
 
-  def changeset_mutator(_, _cfg, %{data: %{id: id}, changes: changes} = changeset, _, _)
-      when not is_nil(id) and changes == %{} do
+  # Skip setting creator for existing records that already have a creator and no changes.
+  # Matches on %Ecto.Changeset{}.changes directly — this is stable Ecto struct layout.
+  def changeset_mutator(_, _cfg, %{data: %{id: id, creator_id: creator_id}, changes: changes} = changeset, _, _)
+      when not is_nil(id) and not is_nil(creator_id) and changes == %{} do
     changeset
   end
 

@@ -3,8 +3,19 @@ defmodule BrandoAdmin.Utils do
   use BrandoAdmin.Translator
 
   import Phoenix.Component
+  import Phoenix.LiveView, only: [send_update: 2]
 
   alias Phoenix.LiveView.JS
+
+  @type component_ref :: {module(), term()}
+
+  @doc """
+  Send an update to a component identified by a `{module, id}` ref tuple.
+  """
+  @spec send_to_ref(component_ref(), map()) :: :ok
+  def send_to_ref({module, id}, assigns) when is_atom(module) do
+    send_update(module, Map.put(assigns, :id, id))
+  end
 
   def prepare_subform_component(%{assigns: assigns} = socket) do
     schema = assigns.field.form.source.data.__struct__
@@ -165,6 +176,23 @@ defmodule BrandoAdmin.Utils do
       out: {"transition ease-in duration-300", "x-0", "x-100"},
       time: 300
     )
+  end
+
+  @doc """
+  Derives the Form component ID from a form name string or a Phoenix.HTML.Form struct.
+
+  Extracts the root name from a nested form path and appends "_form".
+
+      derive_form_id("page[blocks][0][data]")  => "page_form"
+      derive_form_id(%Phoenix.HTML.Form{name: "project[blocks][0]"})  => "project_form"
+  """
+  def derive_form_id(%Phoenix.HTML.Form{name: name}), do: derive_form_id(name)
+
+  def derive_form_id(form_name) when is_binary(form_name) do
+    form_name
+    |> String.split("[")
+    |> hd()
+    |> Kernel.<>("_form")
   end
 
   def make_id(entry) do

@@ -246,7 +246,7 @@ defmodule Brando.Villain.DuplicationTest do
       # this is fine because it's used in the save path where action
       # is managed by the parent cast_assoc
       assert is_nil(changeset.action),
-        "recursive_block_changeset leaves action as nil (managed by parent)"
+             "recursive_block_changeset leaves action as nil (managed by parent)"
     end
   end
 
@@ -256,12 +256,13 @@ defmodule Brando.Villain.DuplicationTest do
 
   describe "duplicate_block/2" do
     test "duplicates a block changeset with all associations", %{user: user} do
-      block = build_block(%{
-        table_rows: [build_table_row()],
-        children: [
-          build_block(%{id: 99, uid: "child-uid", parent_id: 50, refs: [], vars: [], table_rows: [], children: []})
-        ]
-      })
+      block =
+        build_block(%{
+          table_rows: [build_table_row()],
+          children: [
+            build_block(%{id: 99, uid: "child-uid", parent_id: 50, refs: [], vars: [], table_rows: [], children: []})
+          ]
+        })
 
       block_cs = Changeset.change(block)
 
@@ -319,15 +320,16 @@ defmodule Brando.Villain.DuplicationTest do
 
   describe "duplicate_child/2" do
     test "child gets new uid, nil id, nil parent_id", %{user: user} do
-      child = build_block(%{
-        id: 99,
-        uid: "child-original-uid",
-        parent_id: 50,
-        refs: [build_ref(%{id: 201, block_id: 99})],
-        vars: [build_var(%{id: 101, block_id: 99})],
-        table_rows: [],
-        children: []
-      })
+      child =
+        build_block(%{
+          id: 99,
+          uid: "child-original-uid",
+          parent_id: 50,
+          refs: [build_ref(%{id: 201, block_id: 99})],
+          vars: [build_var(%{id: 101, block_id: 99})],
+          table_rows: [],
+          children: []
+        })
 
       result = Villain.duplicate_child(child, user.id)
 
@@ -339,15 +341,16 @@ defmodule Brando.Villain.DuplicationTest do
     end
 
     test "child's refs have nil block_id, module_id, and new uid", %{user: user} do
-      child = build_block(%{
-        id: 99,
-        uid: "child-original-uid",
-        parent_id: 50,
-        refs: [build_ref(%{id: 201, block_id: 99, module_id: 10})],
-        vars: [build_var(%{id: 101, block_id: 99})],
-        table_rows: [],
-        children: []
-      })
+      child =
+        build_block(%{
+          id: 99,
+          uid: "child-original-uid",
+          parent_id: 50,
+          refs: [build_ref(%{id: 201, block_id: 99, module_id: 10})],
+          vars: [build_var(%{id: 101, block_id: 99})],
+          table_rows: [],
+          children: []
+        })
 
       result = Villain.duplicate_child(child, user.id)
 
@@ -366,15 +369,16 @@ defmodule Brando.Villain.DuplicationTest do
     end
 
     test "child vars are properly duplicated with nil IDs", %{user: user} do
-      child = build_block(%{
-        id: 99,
-        uid: "child-original-uid",
-        parent_id: 50,
-        refs: [build_ref(%{id: 201, block_id: 99})],
-        vars: [build_var(%{id: 101, block_id: 99, key: "myvar", value: "myval"})],
-        table_rows: [],
-        children: []
-      })
+      child =
+        build_block(%{
+          id: 99,
+          uid: "child-original-uid",
+          parent_id: 50,
+          refs: [build_ref(%{id: 201, block_id: 99})],
+          vars: [build_var(%{id: 101, block_id: 99, key: "myvar", value: "myval"})],
+          table_rows: [],
+          children: []
+        })
 
       result = Villain.duplicate_child(child, user.id)
 

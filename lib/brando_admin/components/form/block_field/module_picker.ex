@@ -121,7 +121,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   end
 
   def update(
-        %{event: :show_module_picker, sequence: sequence, parent_cid: parent_cid, module_set: module_set, type: type} =
+        %{event: :show_module_picker, sequence: sequence, parent_ref: parent_ref, module_set: module_set, type: type} =
           assigns,
         socket
       ) do
@@ -129,7 +129,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
     |> assign(
       show: true,
       sequence: sequence,
-      parent_cid: parent_cid,
+      parent_ref: parent_ref,
       type: type,
       module_set: module_set
     )
@@ -216,11 +216,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   end
 
   def handle_event("insert_module", %{"module-id" => module_id}, socket) do
-    parent_cid = socket.assigns.parent_cid
+    parent_ref = socket.assigns.parent_ref
     sequence = socket.assigns.sequence
     type = socket.assigns.type
 
-    send_update(parent_cid, %{
+    send_to_ref(parent_ref, %{
       event: "insert_block",
       sequence: sequence,
       module_id: module_id,
@@ -234,18 +234,18 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   end
 
   def handle_event("insert_container", _, socket) do
-    parent_cid = socket.assigns.parent_cid
+    parent_ref = socket.assigns.parent_ref
     sequence = socket.assigns.sequence
 
-    send_update(parent_cid, %{event: "insert_container", sequence: sequence})
+    send_to_ref(parent_ref, %{event: "insert_container", sequence: sequence})
     {:noreply, assign(socket, :show, false)}
   end
 
   def handle_event("insert_fragment", _, socket) do
-    parent_cid = socket.assigns.parent_cid
+    parent_ref = socket.assigns.parent_ref
     sequence = socket.assigns.sequence
 
-    send_update(parent_cid, %{event: "insert_fragment", sequence: sequence})
+    send_to_ref(parent_ref, %{event: "insert_fragment", sequence: sequence})
     {:noreply, assign(socket, :show, false)}
   end
 

@@ -36,8 +36,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> assign(:upload_progress, 0)
      |> assign(:upload_total_files, 0)
      |> assign(:upload_completed_files, 0)
-     |> assign(:form_cid, assigns[:form_cid] || socket.assigns.form_cid)
-     |> assign(:form_id, nil)
+     |> assign(:form_id, assigns[:form_id] || socket.assigns.form_id)
      |> assign(:upload_name, nil)
      |> assign(:drop_target, nil)
      |> assign(:recent_folders, recent_folders)
@@ -158,8 +157,9 @@ defmodule BrandoAdmin.Components.ImagePicker do
     folder_id = FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root)
     config_target = socket.assigns.config_target || "default"
 
-    if socket.assigns.form_cid && upload_name do
-      send_update(socket.assigns.form_cid,
+    if socket.assigns.form_id && upload_name do
+      send_update(BrandoAdmin.Components.Form,
+        id: socket.assigns.form_id,
         event: "set_block_upload_folder",
         upload_name: upload_name,
         folder: absolute_folder,
@@ -636,7 +636,6 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign_new(:picker_mode, fn -> :select end)
     |> assign_new(:pending_upload_name, fn -> nil end)
     |> assign_new(:pending_file_count, fn -> 0 end)
-    |> assign_new(:form_cid, fn -> nil end)
     |> assign_new(:form_id, fn -> nil end)
     |> assign_new(:upload_name, fn -> nil end)
     |> assign_new(:drop_target, fn -> nil end)

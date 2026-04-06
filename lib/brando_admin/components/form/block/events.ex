@@ -2,6 +2,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   use Gettext, backend: Brando.Gettext
   import Phoenix.LiveView, only: [attach_hook: 4, push_event: 3, send_update: 2]
   import Phoenix.Component
+  import BrandoAdmin.Utils, only: [send_to_ref: 2]
   alias Ecto.Changeset
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
@@ -17,7 +18,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     changesets = socket.assigns.changesets
     has_children? = socket.assigns.has_children?
     uid = socket.assigns.uid
-    parent_cid = socket.assigns.parent_cid
+    parent_ref = socket.assigns.parent_ref
     id = socket.assigns.id
 
     children =
@@ -26,7 +27,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
         Enum.map(changesets, fn {block_uid, _} -> {"#{prefix}-#{block_uid}", block_uid} end)
       end
 
-    send_update(parent_cid, %{
+    send_to_ref(parent_ref, %{
       event: "copy_block",
       changeset: changeset,
       children: children,
@@ -37,14 +38,15 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   end
 
   def handle_block_event("paste_block", _, socket) do
-    parent_cid = socket.assigns.parent_cid
+    parent_ref = socket.assigns.parent_ref
+
     sequence =
       case socket.assigns.form[:sequence].value do
         v when is_integer(v) -> v
         v when is_binary(v) -> String.to_integer(v)
       end
 
-    send_update(parent_cid, %{
+    send_to_ref(parent_ref, %{
       event: "paste_block",
       sequence: sequence
     })
@@ -53,12 +55,12 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   end
 
   def handle_block_event("paste_child_block", _, socket) do
-    parent_cid = socket.assigns.parent_cid
+    parent_ref = socket.assigns.parent_ref
     block_count = socket.assigns.block_count
 
-    send_update(parent_cid, %{
+    send_to_ref(parent_ref, %{
       event: "paste_child_block",
-      parent_cid: socket.assigns.myself,
+      parent_ref: {Block, socket.assigns.id},
       sequence: block_count
     })
 
@@ -70,7 +72,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     changesets = socket.assigns.changesets
     has_children? = socket.assigns.has_children?
     uid = socket.assigns.uid
-    parent_cid = socket.assigns.parent_cid
+    parent_ref = socket.assigns.parent_ref
     id = socket.assigns.id
 
     children =
@@ -79,7 +81,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
         Enum.map(changesets, fn {block_uid, _} -> {"#{prefix}-#{block_uid}", block_uid} end)
       end
 
-    send_update(parent_cid, %{
+    send_to_ref(parent_ref, %{
       event: "duplicate_block",
       changeset: changeset,
       children: children,
@@ -597,9 +599,9 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     block_count = socket.assigns.block_count
     module_set = socket.assigns.module_set
 
-    {parent_cid, sequence} =
-      (Map.get(value, "container") && {socket.assigns.myself, block_count}) ||
-        {socket.assigns.parent_cid, socket.assigns.form[:sequence].value}
+    {parent_ref, sequence} =
+      (Map.get(value, "container") && {{Block, socket.assigns.id}, block_count}) ||
+        {socket.assigns.parent_ref, socket.assigns.form[:sequence].value}
 
     send_update(ModulePicker,
       id: block_picker_id,
@@ -608,7 +610,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       module_set: module_set,
       type: :module,
       sequence: sequence,
-      parent_cid: parent_cid
+      parent_ref: parent_ref
     )
 
     {:halt, socket}
@@ -616,7 +618,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
   def handle_block_event("insert_block_entry", value, socket) do
     block_picker_id = "block-field-#{socket.assigns.block_field}-module-picker"
-    parent_cid = (Map.get(value, "multi") && socket.assigns.myself) || socket.assigns.parent_cid
+    parent_ref = (Map.get(value, "multi") && {Block, socket.assigns.id}) || socket.assigns.parent_ref
     block_count = socket.assigns.block_count
     sequence = (Map.get(value, "multi") && block_count) || socket.assigns.form[:sequence].value
 
@@ -634,7 +636,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       module_set: "all",
       type: :module_entry,
       sequence: sequence,
-      parent_cid: parent_cid
+      parent_ref: parent_ref
     )
 
     {:halt, socket}
@@ -704,10 +706,10 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
   def handle_block_event("delete_block", _params, socket) do
     uid = socket.assigns.uid
-    parent_cid = socket.assigns.parent_cid
+    parent_ref = socket.assigns.parent_ref
     dom_id = socket.assigns.dom_id
 
-    send_update(parent_cid, %{
+    send_to_ref(parent_ref, %{
       event: "delete_block",
       uid: uid,
       dom_id: dom_id
@@ -969,7 +971,8 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
   # Fallback for any unhandled events
   def handle_block_event(event, params, socket) do
-    IO.puts("Unhandled event in events.ex: #{event} with params #{inspect(params)}")
+    require Logger
+    Logger.warning("Unhandled block event: #{inspect(event)} params=#{inspect(params)}")
     {:cont, socket}
   end
 

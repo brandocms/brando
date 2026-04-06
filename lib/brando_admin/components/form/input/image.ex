@@ -48,8 +48,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   end
 
   def update(assigns, socket) do
-    # TODO: do we have a form_cid we can use instead of this form id stuff?
-
     socket =
       socket
       |> assign(assigns)

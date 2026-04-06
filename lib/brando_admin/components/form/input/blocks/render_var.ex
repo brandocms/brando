@@ -164,7 +164,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       schemas = Brando.Blueprint.list_blueprints()
       Enum.map(schemas, &%{label: &1.__naming__().singular, value: &1})
     end)
-    |> assign_new(:form_cid, fn -> nil end)
+    |> assign_new(:form_id, fn -> nil end)
     |> assign_new(:on_change, fn -> nil end)
     |> assign_new(:images, fn -> nil end)
     |> assign_new(:files, fn -> nil end)
@@ -181,19 +181,20 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   defp maybe_register_var_upload(socket, type, assigns) when type in [:image, :file] do
-    form_cid = Map.get(assigns, :form_cid)
+    form_id = Map.get(assigns, :form_id)
 
-    if form_cid && !socket.assigns[:upload_registered] do
+    if form_id && !socket.assigns[:upload_registered] do
       var_id = assigns.var[:key].value || assigns.var.index
       upload_name = :"var_#{var_id}_#{type}"
 
-      send_update(form_cid, %{
+      send_update(BrandoAdmin.Components.Form,
+        id: form_id,
         event: "register_var_upload",
         upload_name: upload_name,
         var_type: type,
         component_id: assigns.id,
         config_target: assigns.var[:config_target].value || "default"
-      })
+      )
 
       assign(socket, upload_registered: true, upload_name: upload_name)
     else

@@ -4,7 +4,6 @@ defmodule Brando.Blueprint.Listings.Components do
   """
   use Phoenix.Component
 
-
   alias BrandoAdmin.Components.ChildrenButton
   alias BrandoAdmin.Components.Content
 

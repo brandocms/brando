@@ -38,7 +38,12 @@ defmodule BrandoAdmin.Components.GlobalTabs do
               </button>
             </div>
           </div>
-          <div :for={{global_set, index} <- @indexed_global_sets} :key={global_set.key} :if={index == @active_tab} id={"set-#{index}"}>
+          <div
+            :for={{global_set, index} <- @indexed_global_sets}
+            :if={index == @active_tab}
+            :key={global_set.key}
+            id={"set-#{index}"}
+          >
             <.set_form global_set={global_set} index={index} target={@myself} />
           </div>
         </div>

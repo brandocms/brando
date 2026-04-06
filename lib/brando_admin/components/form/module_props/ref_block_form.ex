@@ -508,7 +508,13 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
           </div>
         </.inputs_for>
         <input type="hidden" name={"#{block_data.name}[drop_style_ids][]"} />
-        <button type="button" name={"#{block_data.name}[sort_style_ids][]"} value="new" phx-click={JS.dispatch("change")} class="add-entry-button">
+        <button
+          type="button"
+          name={"#{block_data.name}[sort_style_ids][]"}
+          value="new"
+          phx-click={JS.dispatch("change")}
+          class="add-entry-button"
+        >
           {gettext("Add style")}
         </button>
       </Form.field_base>

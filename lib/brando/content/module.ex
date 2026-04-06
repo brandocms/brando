@@ -41,7 +41,7 @@ defmodule Brando.Content.Module do
   @reserved_heex_assigns ~w(
     block refs entries content forloop identity globals navigation
     language locale entry render_context parser_module module_id
-    links url request refs_field target target_ref form_cid parent_uploads
+    links url request refs_field target target_ref form_id parent_uploads
   )
 
   identifier "[{{ entry.namespace | i18n }}] {{ entry.name | i18n }}"

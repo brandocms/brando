@@ -205,6 +205,7 @@ defmodule BrandoAdmin.Components.Content.List do
 
   def handle_event("select_row", %{"id" => id} = params, socket) do
     shift? = truthy?(Map.get(params, "shift") || Map.get(params, "shiftKey"))
+
     command? =
       truthy?(
         Map.get(params, "meta") || Map.get(params, "metaKey") || Map.get(params, "ctrl") ||

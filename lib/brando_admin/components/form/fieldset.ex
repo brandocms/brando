@@ -28,6 +28,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
         parent_uploads={@parent_uploads}
         current_user={@current_user}
         form_cid={@form_cid}
+        form_id={@form_id}
       />
     </fieldset>
     """

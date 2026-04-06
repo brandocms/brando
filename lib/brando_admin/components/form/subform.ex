@@ -161,7 +161,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
                   path={@path ++ [sub_form.index]}
                   parent_uploads={@parent_uploads}
                   parent_form_id={@parent_form_id}
-                  subform_id={@myself}
+                  subform_id={@id}
                   current_user={@current_user}
                 />
               </div>
@@ -207,7 +207,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
               path={@path}
               parent_uploads={@parent_uploads}
               parent_form_id={@parent_form_id}
-              subform_id={@myself}
+              subform_id={@id}
               current_user={@current_user}
             />
           </div>
@@ -247,7 +247,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
                   path={@path ++ [sub_form.index]}
                   parent_uploads={@parent_uploads}
                   parent_form_id={@parent_form_id}
-                  subform_id={@myself}
+                  subform_id={@id}
                   current_user={@current_user}
                 />
               </div>

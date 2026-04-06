@@ -31,5 +31,4 @@ defmodule Brando.Villain.Blocks.MediaBlock do
       relation :template_svg, :embeds_one, module: Blocks.SvgBlock.Data, on_replace: :delete
     end
   end
-
 end

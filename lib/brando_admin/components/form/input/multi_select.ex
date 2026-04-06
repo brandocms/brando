@@ -180,8 +180,19 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             narrow={true}
             close={JS.push("hide_form", target: @myself) |> hide_modal("##{@create_modal_id}")}
           >
-            <.form :let={entry_form} for={@select_changeset} phx-change="validate_new_entry" phx-target={@myself}>
-              <div :for={tab <- @select_form.tabs} :key={tab.name} class={["form-tab", "active", "portal-form"]} data-tab-name={tab.name}>
+            <.form
+              :let={entry_form}
+              for={@select_changeset}
+              as={@create_form_key}
+              phx-change="validate_new_entry"
+              phx-target={@myself}
+            >
+              <div
+                :for={tab <- @select_form.tabs}
+                :key={tab.name}
+                class={["form-tab", "active", "portal-form"]}
+                data-tab-name={tab.name}
+              >
                 <div class="row">
                   <Fieldset.render
                     :for={fieldset <- tab.fields}
@@ -190,6 +201,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                     relations={%{}}
                     current_user={@current_user}
                     form_cid={nil}
+                    form_id={nil}
                     fieldset={fieldset}
                   />
                 </div>
@@ -280,6 +292,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> maybe_register_mutation_listener()
      |> assign_new(:modal_id, fn -> "select-#{assigns.id}-modal" end)
      |> assign_new(:create_modal_id, fn -> "create-#{assigns.id}-modal" end)
+     |> assign_new(:create_form_key, fn -> "#{assigns.field.id}_new" end)
      |> assign(:initial_run, fn -> false end)}
   end
 
@@ -987,13 +1000,13 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         params,
         %{
           assigns: %{
-            singular: singular,
+            create_form_key: create_form_key,
             module: module,
             current_user: current_user
           }
         } = socket
       ) do
-    entry_params = Map.get(params, singular)
+    entry_params = Map.get(params, create_form_key)
 
     empty_struct = struct!(module)
 
@@ -1195,7 +1208,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     updated_changeset = update_relation(changeset, field.field, selected_options, relation_type)
 
     if subform_id do
-      send_update(subform_id,
+      send_update(BrandoAdmin.Components.Form.Subform,
+        id: subform_id,
         index: form.index,
         action: :update_changeset,
         updated_changeset: updated_changeset

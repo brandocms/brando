@@ -43,7 +43,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      assign(socket,
        available_images: [],
        show_only_selected?: false,
-       form_cid: nil,
+       form_id: nil,
        upload_registered: false,
        upload_name: nil
      )}
@@ -150,6 +150,28 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(:has_objects?, !Enum.empty?(updated_gallery_objects))}
   end
 
+  def update(%{event: "video_created_from_url", video_data: %{id: video_id}}, socket) do
+    # Video was already created by VideoPicker — add it to gallery like select_video does
+    {module, target_id} = socket.assigns.target_ref
+    ref_name = socket.assigns.ref_name
+
+    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+    block_data = Changeset.apply_changes(block_data_cs)
+    new_block_data = Map.from_struct(block_data)
+
+    send_update(
+      module,
+      id: target_id,
+      event: "update_ref_data",
+      ref_data: new_block_data,
+      ref_name: ref_name,
+      add_gallery_video_id: video_id,
+      propagate: true
+    )
+
+    {:ok, socket}
+  end
+
   def update(assigns, socket) do
     {gallery, gallery_objects} = get_gallery_and_objects(assigns)
 
@@ -184,21 +206,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     # Register upload on the Form component (only once).
     # The Form owns the upload so that LiveView channel events route correctly.
-    if !socket.assigns.upload_registered && assigns[:form_cid] do
-      send_update(assigns.form_cid, %{
+    form_id = assigns[:form_id] || socket.assigns[:form_id] || BrandoAdmin.Utils.derive_form_id(assigns.ref_form.name)
+
+    if !socket.assigns.upload_registered && form_id do
+      send_update(BrandoAdmin.Components.Form,
+        id: form_id,
         event: "register_block_upload",
         upload_name: upload_name,
         block_uid: uid,
         block_type: :gallery,
         config_target: (gallery && Map.get(gallery, :config_target)) || "default"
-      })
+      )
     end
 
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:initialized_overrides, initialized_overrides)
-     |> assign_new(:form_id, fn -> derive_form_id(assigns.ref_form.name) end)
+     |> assign(:form_id, form_id)
      |> assign(:gallery, gallery)
      |> assign(:gallery_objects, gallery_objects)
      |> assign(:indexed_objects, Enum.with_index(gallery_objects))
@@ -210,7 +235,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(:uid, uid)
      |> assign(:upload_name, upload_name)
      |> assign(:config_target, (gallery && Map.get(gallery, :config_target)) || "default")
-     |> assign(:upload_registered, assigns[:form_cid] != nil)
+     |> assign(:upload_registered, form_id != nil)
      |> assign(:override_data, precompute_override_data(gallery_objects, updated_block_data_cs))}
   end
 
@@ -491,7 +516,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     {:ok, image} = Brando.Images.get_image(image_id)
 
     # Set edit_image on Form so the save handler knows which image to update
-    send_update(socket.assigns.form_cid,
+    send_update(BrandoAdmin.Components.Form,
+      id: socket.assigns.form_id,
       action: :set_edit_image_from_block,
       image: image,
       block_target: {__MODULE__, socket.assigns.id},
@@ -878,15 +904,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   defp extract_override_object_id(_), do: nil
-
-  # Derives the Form component ID from the ref_form name.
-  # e.g. "page[blocks][...]" -> "page" -> "page_form"
-  defp derive_form_id(ref_form_name) do
-    ref_form_name
-    |> String.split("[")
-    |> hd()
-    |> Kernel.<>("_form")
-  end
 
   defp build_crop_groups_for(image) do
     case Brando.Images.get_config_for(image) do

@@ -362,7 +362,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
          socket
          |> assign(:creating_video, false)
          |> assign(:show_url_input, false)
-         |> assign(:selected_videos, [video.id])
+         |> update(:selected_videos, &Enum.uniq([video.id | &1]))
          |> assign_videos()
          |> assign_folder_state(socket.assigns.current_folder)
          |> push_selection_state()}

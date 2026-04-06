@@ -55,8 +55,8 @@ defmodule Brando.Villain.Blocks.TextBlockTest do
       styles = Ecto.Changeset.get_change(changeset, :styles)
 
       assert Enum.any?(styles, fn cs ->
-        not cs.valid?
-      end)
+               not cs.valid?
+             end)
     end
   end
 

@@ -67,6 +67,7 @@ defmodule BrandoAdmin do
       import BrandoAdmin.Utils,
         only: [
           prepare_input_component: 1,
+          send_to_ref: 2,
           toggle_dropdown: 1,
           toggle_dropdown: 2,
           show_dropdown: 1,
@@ -110,6 +111,7 @@ defmodule BrandoAdmin do
         only: [
           prepare_subform_component: 1,
           prepare_input_component: 1,
+          send_to_ref: 2,
           toggle_dropdown: 1,
           toggle_dropdown: 2,
           show_dropdown: 1,

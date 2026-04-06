@@ -156,7 +156,7 @@ defmodule Brando.Blueprint.Assets do
     end
   end
 
-  def run_cast_asset(%{type: :gallery, name: name, opts: opts}, changeset, _user) do
+  def run_cast_asset(%{type: :gallery, name: name, opts: opts}, changeset, user) do
     case Map.get(changeset.params, to_string(name)) do
       "" ->
         if Map.get(opts, :required) do
@@ -166,11 +166,13 @@ defmodule Brando.Blueprint.Assets do
         end
 
       _ ->
-        Changeset.cast_assoc(
-          changeset,
-          name,
+        gallery_module = Brando.Galleries.Gallery
+
+        cast_opts =
           Blueprint.Utils.to_changeset_opts(:belongs_to, opts)
-        )
+          |> Keyword.put(:with, &gallery_module.changeset(&1, &2, user))
+
+        Changeset.cast_assoc(changeset, name, cast_opts)
     end
   end
 

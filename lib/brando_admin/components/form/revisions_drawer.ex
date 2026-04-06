@@ -454,15 +454,16 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
 
   def handle_event("select_revision", %{"revision" => selected_revision_id}, socket) do
     %{entry_id: entry_id, entry_type: entry_type} = socket.assigns
-    form_cid = socket.assigns.form_cid
+    form_id = socket.assigns.form_id
 
     {:ok, {_revision, {_revision_id, decoded_entry}}} =
       Brando.Revisions.get_revision(entry_type, entry_id, selected_revision_id)
 
-    send_update(form_cid, %{
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
       action: :update_entry_hard_reset,
       updated_entry: decoded_entry
-    })
+    )
 
     {:noreply, socket}
   end
@@ -473,15 +474,16 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
         %{assigns: %{entry_id: entry_id, form: form, current_user: current_user}} = socket
       ) do
     module = form.source.data.__struct__
-    form_cid = socket.assigns.form_cid
+    form_id = socket.assigns.form_id
 
     {:ok, new_entry} =
       Brando.Revisions.set_entry_to_revision(module, entry_id, selected_revision_id, current_user)
 
-    send_update(form_cid, %{
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
       action: :update_entry_hard_reset,
       updated_entry: new_entry
-    })
+    )
 
     {:noreply, refresh_revisions(socket)}
   end

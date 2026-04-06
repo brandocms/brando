@@ -157,13 +157,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   # paste_child_block — from a multi/container end paste button, forwarded up via Block
-  def update(%{event: "paste_child_block", parent_cid: parent_cid, sequence: sequence}, socket) do
+  def update(%{event: "paste_child_block", parent_ref: parent_ref, sequence: sequence}, socket) do
     user_id = socket.assigns.current_user.id
     clipboard = Brando.Cache.get({:block_clipboard, user_id})
 
     if clipboard do
       block_cs = create_duplicate_from_clipboard(clipboard, user_id)
-      send_update(parent_cid, %{event: "insert_pasted_block", block_cs: block_cs, sequence: sequence})
+      send_to_ref(parent_ref, %{event: "insert_pasted_block", block_cs: block_cs, sequence: sequence})
     end
 
     {:ok, socket}
@@ -211,19 +211,20 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def update(%{event: "provide_root_block", changeset: changeset, uid: uid, tag: tag}, socket) do
     root_changesets = socket.assigns.root_changesets
-    form_cid = socket.assigns.form_cid
+    form_id = socket.assigns.form_id
     block_field = socket.assigns.block_field
     updated_root_changesets = update_root_changeset(root_changesets, uid, changeset)
 
     if Enum.any?(updated_root_changesets, &(elem(&1, 1) == nil)) do
       {:ok, assign(socket, :root_changesets, updated_root_changesets)}
     else
-      send_update(form_cid, %{
+      send_update(BrandoAdmin.Components.Form,
+        id: form_id,
         event: "provide_root_blocks",
         root_changesets: updated_root_changesets,
         block_field: block_field,
         tag: tag
-      })
+      )
 
       {:ok, assign(socket, :root_changesets, updated_root_changesets)}
     end
@@ -361,19 +362,20 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   def update(%{event: "fetch_root_blocks", tag: tag}, socket) do
     block_list = socket.assigns.block_list
     block_field = socket.assigns.block_field
-    form_cid = socket.assigns.form_cid
+    form_id = socket.assigns.form_id
 
     if block_list == [] do
       if tag == :save do
         send(self(), {:progress_popup, "Providing root blocks..."})
       end
 
-      send_update(form_cid, %{
+      send_update(BrandoAdmin.Components.Form,
+        id: form_id,
         event: "provide_root_blocks",
         root_changesets: [],
         block_field: block_field,
         tag: tag
-      })
+      )
     else
       # for each root block in block_list, send_update requesting their changeset
       for block_uid <- block_list do
@@ -392,14 +394,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   def update(%{event: "fetch_root_renders"}, socket) do
     block_list = socket.assigns.block_list
     block_field = socket.assigns.block_field
-    form_cid = socket.assigns.form_cid
+    form_id = socket.assigns.form_id
 
     if block_list == [] do
-      send_update(form_cid, %{
+      send_update(BrandoAdmin.Components.Form,
+        id: form_id,
         event: "provide_root_renders",
         renders: [],
         block_field: block_field
-      })
+      )
     else
       # for each root block in block_list, send_update requesting their rendered_html
       for block_uid <- block_list do
@@ -422,7 +425,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   def update(%{event: "signal_position_update", uid: uid}, socket) do
-    form_cid = socket.assigns.form_cid
+    form_id = socket.assigns.form_id
     position_response_tracker = socket.assigns.position_response_tracker
 
     position_response_tracker =
@@ -434,7 +437,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     if Enum.any?(position_response_tracker, &(elem(&1, 1) == false)) do
       {:ok, assign(socket, :position_response_tracker, position_response_tracker)}
     else
-      send_update(form_cid, %{event: "update_live_preview"})
+      send_update(BrandoAdmin.Components.Form, id: form_id, event: "update_live_preview")
       {:ok, assign(socket, :position_response_tracker, position_response_tracker)}
     end
   end
@@ -593,7 +596,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       module_set: module_set,
       type: :module,
       sequence: block_count + 1,
-      parent_cid: socket.assigns.myself
+      parent_ref: {__MODULE__, socket.assigns.id}
     )
 
     {:noreply, socket}
@@ -779,13 +782,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                   block_field={@block_field}
                   children={block[:children].value}
                   parent_uploads={@parent_uploads}
-                  parent_cid={@myself}
+                  parent_ref={{__MODULE__, @id}}
                   parent_uid={}
                   parent_path={[]}
                   module_set={@module_set}
                   entry={@entry}
                   form={entry_block_form}
-                  form_cid={@form_cid}
+                  form_id={@form_id}
                   current_user_id={@current_user.id}
                   belongs_to={:root}
                   clipboard_meta={@clipboard_meta}
