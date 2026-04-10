@@ -127,7 +127,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
 
     {:ok, images} =
       Brando.Images.list_images(%{
-        select: [:id, :width, :height, :formats, :status, :path, :sizes, :cdn, :config_target, :folder_id],
+        select: [:id, :width, :height, :formats, :status, :path, :sizes, :cdn, :config_target, :folder_id, :focal],
         filter: %{config_target: config_target, status: :processed},
         order: "desc id"
       })

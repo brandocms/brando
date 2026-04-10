@@ -25,15 +25,18 @@ defmodule Brando.Villain.Blocks.VideoBlock do
       attribute :poster, :string
 
       # Block-specific styling and behavior
-      attribute :autoplay, :boolean, default: false
+      # Playback override fields — nil = use video's value
+      attribute :autoplay, :boolean
+      attribute :preload, :boolean
+      attribute :controls, :boolean
+      attribute :loop, :boolean
+      attribute :muted, :boolean
+
+      # Block-specific styling and behavior (not overrides, keep defaults)
       attribute :opacity, :integer, default: 0
-      attribute :preload, :boolean, default: false
       attribute :play_button, :boolean, default: false
-      attribute :controls, :boolean, default: false
       attribute :cover, :string, default: "false"
       attribute :aspect_ratio, :string
-      attribute :loop, :boolean, default: false
-      attribute :muted, :boolean, default: false
       attribute :playsinline, :boolean, default: true
       attribute :video_class, :string
       attribute :container_class, :string

@@ -277,7 +277,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                   </div>
                 </div>
                 <div class="panel">
-                  <Input.rich_text field={block_data[:title]} label={gettext("Caption")} opts={[]} />
+                  <Input.override_text
+                    field={block_data[:title]}
+                    label={gettext("Caption")}
+                    default_value={@video && @video.title}
+                    target={@myself}
+                  />
 
                   <div class="button-group-vertical">
                     <button
@@ -307,11 +312,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                   <% end %>
 
                   <Input.toggle tiny field={block_data[:play_button]} label={gettext("Play button")} />
-                  <Input.toggle tiny field={block_data[:autoplay]} label={gettext("Autoplay")} />
-                  <Input.toggle tiny field={block_data[:preload]} label={gettext("Preload")} />
-                  <Input.toggle tiny field={block_data[:controls]} label={gettext("Show native player controls")} />
-                  <Input.toggle tiny field={block_data[:loop]} label={gettext("Loop")} />
-                  <Input.toggle tiny field={block_data[:muted]} label={gettext("Muted")} />
+
+                  <Input.override_toggle_group
+                    label={gettext("Video playback")}
+                    fields={[
+                      {block_data[:autoplay], gettext("Autoplay"), @video && @video.autoplay},
+                      {block_data[:preload], gettext("Preload"), @video && @video.preload},
+                      {block_data[:controls], gettext("Controls"), @video && @video.controls},
+                      {block_data[:loop], gettext("Loop"), @video && @video.loop},
+                      {block_data[:muted], gettext("Muted"), @video && Map.get(@video, :muted, false)}
+                    ]}
+                    target={@myself}
+                  />
 
                   <Input.text
                     field={block_data[:aspect_ratio]}
@@ -474,6 +486,87 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   end
 
   def handle_event("focus", _, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("toggle_override", %{"field" => field_name, "default" => default_str}, socket) do
+    {module, id} = socket.assigns.target_ref
+    ref_name = socket.assigns.ref_name
+    field_atom = String.to_existing_atom(field_name)
+    default_val = default_str == "true"
+
+    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+    current_block_data = Changeset.apply_changes(block_data_cs)
+    current_value = Map.get(current_block_data, field_atom)
+
+    visual_state = if is_nil(current_value), do: default_val, else: current_value
+    new_value = !visual_state
+
+    ref_data =
+      current_block_data
+      |> Map.from_struct()
+      |> Map.take(@video_override_fields)
+      |> Map.put(field_atom, new_value)
+
+    send_update(module,
+      id: id,
+      event: "update_ref_data",
+      ref_data: ref_data,
+      ref_name: ref_name,
+      force_render: true,
+      propagate: true
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("reset_override", %{"field" => field_name}, socket) do
+    {module, id} = socket.assigns.target_ref
+    ref_name = socket.assigns.ref_name
+    field_atom = String.to_existing_atom(field_name)
+
+    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+    current_block_data = Changeset.apply_changes(block_data_cs)
+
+    ref_data =
+      current_block_data
+      |> Map.from_struct()
+      |> Map.take(@video_override_fields)
+      |> Map.put(field_atom, nil)
+
+    send_update(module,
+      id: id,
+      event: "update_ref_data",
+      ref_data: ref_data,
+      ref_name: ref_name,
+      force_render: true
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("reset_override_group", %{"fields" => fields_str}, socket) do
+    {module, id} = socket.assigns.target_ref
+    ref_name = socket.assigns.ref_name
+    field_atoms = fields_str |> String.split(",") |> Enum.map(&String.to_existing_atom/1)
+
+    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
+    current_block_data = Changeset.apply_changes(block_data_cs)
+
+    ref_data =
+      current_block_data
+      |> Map.from_struct()
+      |> Map.take(@video_override_fields)
+      |> then(fn data -> Enum.reduce(field_atoms, data, &Map.put(&2, &1, nil)) end)
+
+    send_update(module,
+      id: id,
+      event: "update_ref_data",
+      ref_data: ref_data,
+      ref_name: ref_name,
+      force_render: true
+    )
+
     {:noreply, socket}
   end
 

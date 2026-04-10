@@ -1,0 +1,152 @@
+/* Reset button — same position pattern as .ai-generate-button */
+.override-reset-button {
+  position: absolute;
+  top: 12px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  background: transparent;
+  color: var(--brando-color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 200ms ease;
+  z-index: 2;
+  cursor: pointer;
+
+  span {
+    width: 0.5rem;
+    height: 0.5rem;
+  }
+}
+
+button.override-reset-button:hover {
+  background-color: aliceblue;
+  border-color: var(--brando-color-dark);
+}
+
+/* Coexist with AI button */
+.has-ai-action + .override-reset-button,
+.has-ai-action ~ .override-reset-button {
+  right: 48px;
+}
+
+/* Subtle override indicator on input */
+input.is-overridden {
+  border-left: 3px solid var(--brando-color-primary);
+}
+
+/* Toggle group fieldset */
+.override-toggle-group {
+  border: none !important;
+  border-radius: 10px;
+  padding: 5px 10px 8px;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.override-toggle-group legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+  font-size: 12px;
+  padding-left: 4px;
+  background-color: white;
+}
+
+.override-reset-all {
+  font-size: 11px;
+  color: var(--brando-color-text-muted);
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  span {
+    width: 0.4rem;
+    height: 0.4rem;
+  }
+}
+
+button.override-reset-all:hover {
+  background-color: aliceblue;
+  border-color: var(--brando-color-dark);
+}
+
+.override-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+/* Custom toggle button — not a form input, avoids nil→false issue */
+.override-toggle-btn {
+  width: 26px;
+  height: 14px;
+  border-radius: 7px;
+  background: #ccc;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background 200ms, opacity 200ms;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.override-toggle-btn::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: white;
+  top: 2px;
+  left: 2px;
+  transition: transform 200ms;
+}
+
+.override-toggle-btn.active {
+  background: var(--brando-color-primary, #0d6efd);
+}
+
+.override-toggle-btn.active::after {
+  transform: translateX(12px);
+}
+
+.override-toggle-label {
+  font-size: 12px;
+  user-select: none;
+}
+
+.override-reset-inline {
+  width: 16px;
+  height: 16px;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  background: none;
+  color: var(--brando-color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  span {
+    width: 0.4rem;
+    height: 0.4rem;
+  }
+}
+
+button.override-reset-inline:hover {
+  background-color: aliceblue;
+  border-color: var(--brando-color-dark);
+}

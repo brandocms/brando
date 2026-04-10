@@ -806,6 +806,111 @@ defmodule BrandoAdmin.Components.Form.Input do
   end
 
   attr :field, FormField
+  attr :label, :string, default: nil
+  attr :default_value, :string, default: nil
+  attr :target, :any, default: nil
+  attr :opts, :list, default: []
+
+  def override_text(assigns) do
+    assigns = prepare_input_component(assigns)
+
+    is_overridden =
+      assigns.field.value not in [nil, ""]
+
+    assigns =
+      assigns
+      |> assign(:is_overridden, is_overridden)
+      |> assign(:display_placeholder, assigns.default_value || "")
+
+    ~H"""
+    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+      <div class="input-with-action has-action">
+        <.input
+          type={:text}
+          field={@field}
+          placeholder={@display_placeholder}
+          class={["text", @is_overridden && "is-overridden"]}
+          phx-debounce={@debounce}
+          data-watch-focus
+        />
+        <button
+          :if={@is_overridden}
+          type="button"
+          class="override-reset-button"
+          phx-click={
+            Phoenix.LiveView.JS.set_attribute({"value", ""}, to: "##{@field.id}")
+            |> Phoenix.LiveView.JS.dispatch("input", to: "##{@field.id}")
+          }
+          title={gettext("Reset to default")}
+        >
+          <.icon name="hero-arrow-uturn-left-mini" />
+        </button>
+      </div>
+    </Form.field_base>
+    """
+  end
+
+  attr :label, :string, default: nil
+  attr :fields, :list
+  attr :target, :any, default: nil
+
+  def override_toggle_group(assigns) do
+    any_overridden =
+      Enum.any?(assigns.fields, fn {f, _, d} -> f.value != nil && f.value != (d || false) end)
+
+    assigns = assign(assigns, :any_overridden, any_overridden)
+
+    ~H"""
+    <fieldset class="override-toggle-group">
+      <legend>
+        {@label}
+        <button
+          :if={@any_overridden}
+          type="button"
+          class="override-reset-all"
+          phx-click="reset_override_group"
+          phx-target={@target}
+          phx-value-fields={Enum.map_join(@fields, ",", fn {f, _, _} -> f.field end)}
+        >
+          <.icon name="hero-arrow-uturn-left-mini" />
+        </button>
+      </legend>
+      <div :for={{field, label, default_val} <- @fields} class="override-toggle-row">
+        <input
+          :if={field.value != nil}
+          type="hidden"
+          name={field.name}
+          value={to_string(field.value)}
+        />
+        <button
+          type="button"
+          class={[
+            "override-toggle-btn",
+            (field.value == true || (field.value == nil && default_val)) && "active"
+          ]}
+          phx-click="toggle_override"
+          phx-target={@target}
+          phx-value-field={to_string(field.field)}
+          phx-value-default={to_string(default_val || false)}
+        >
+        </button>
+        <span class="override-toggle-label">{label}</span>
+        <button
+          :if={field.value != nil && field.value != (default_val || false)}
+          type="button"
+          class="override-reset-inline"
+          phx-click="reset_override"
+          phx-target={@target}
+          phx-value-field={field.field}
+        >
+          <.icon name="hero-arrow-uturn-left-mini" />
+        </button>
+      </div>
+    </fieldset>
+    """
+  end
+
+  attr :field, FormField
   attr :label, :string
   attr :instructions, :string
   attr :placeholder, :string

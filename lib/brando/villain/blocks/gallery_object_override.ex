@@ -22,5 +22,17 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
     attribute :use_default_title, :boolean, default: true
     attribute :use_default_credits, :boolean, default: true
     attribute :use_default_alt, :boolean, default: true
+
+    # Video playback config overrides
+    attribute :autoplay, :boolean
+    attribute :loop, :boolean
+    attribute :muted, :boolean
+    attribute :controls, :boolean
+    attribute :preload, :boolean
+    attribute :use_default_autoplay, :boolean, default: true
+    attribute :use_default_loop, :boolean, default: true
+    attribute :use_default_muted, :boolean, default: true
+    attribute :use_default_controls, :boolean, default: true
+    attribute :use_default_preload, :boolean, default: true
   end
 end

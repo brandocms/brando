@@ -22,8 +22,6 @@ if (PREFERS_REDUCED_MOTION) {
   gsap.globalTimeline.timeScale(200)
 }
 
-const IS_LOGIN = Dom.find('#application-login')
-
 topbar.config({
   barThickness: 1,
   barColors: { 0: 'rgba(5, 39, 82, 1)', 1: '#0047FF' },
@@ -81,8 +79,8 @@ export default (hooks, enableDebug = false) => {
       app.liveSocket.enableDebug()
     }
     // if login screen, do some animations
-    if (IS_LOGIN) {
-      const el = Dom.find('#application-login')
+    const el = Dom.find('#application-login')
+    if (el) {
       const timeline = gsap.timeline()
       const loginBox = Dom.find('#application-login .login-box')
       const figureWrapper = Dom.find('#application-login .figure-wrapper')

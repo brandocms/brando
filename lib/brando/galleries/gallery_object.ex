@@ -21,6 +21,10 @@ defmodule Brando.Galleries.GalleryObject do
   identifier false
   persist_identifier false
 
+  attributes do
+    attribute :config, :map, default: %{}
+  end
+
   relations do
     relation :gallery, :belongs_to, module: Gallery
     relation :image, :belongs_to, module: Image

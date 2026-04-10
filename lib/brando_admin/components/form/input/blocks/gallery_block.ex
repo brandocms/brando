@@ -838,6 +838,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     default_credits = Map.get(media_object, :credits) || ""
     default_alt = if object_type == :image, do: media_object.alt || "", else: ""
 
+    # Video playback defaults
+    video_defaults =
+      if object_type == :video do
+        %{
+          default_autoplay: Map.get(media_object, :autoplay) || false,
+          default_loop: Map.get(media_object, :loop) || false,
+          default_muted: Map.get(media_object, :muted) || false,
+          default_controls: Map.get(media_object, :controls) || false,
+          default_preload: Map.get(media_object, :preload) || false
+        }
+      else
+        %{}
+      end
+
     {use_default_title, use_default_credits, use_default_alt, current_title, current_credits, current_alt} =
       if object_override do
         case object_override do
@@ -879,7 +893,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         {true, true, true, default_title, default_credits, default_alt}
       end
 
-    %{
+    base = %{
       object_id: object_id_str,
       object_type: object_type,
       default_title: default_title,
@@ -893,6 +907,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
       current_alt: current_alt,
       override_exists: object_override != nil
     }
+
+    Map.merge(base, video_defaults)
   end
 
   defp extract_override_object_id(%Changeset{} = override) do

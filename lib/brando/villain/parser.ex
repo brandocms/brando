@@ -1238,7 +1238,7 @@ defmodule Brando.Villain.Parser do
                   :fetchpriority
                 ])
 
-              struct(image, Map.merge(Map.from_struct(image), override_attrs))
+              Brando.Content.OverrideResolver.merge_overrides(image, override_attrs)
 
             _ ->
               ref.data.data
@@ -1265,8 +1265,8 @@ defmodule Brando.Villain.Parser do
               :fetchpriority
             ])
 
-          # Merge into the image struct while preserving the struct type
-          struct(image, Map.merge(Map.from_struct(image), override_attrs))
+          # Merge into the image struct, nil values = use image default
+          Brando.Content.OverrideResolver.merge_overrides(image, override_attrs)
       end
 
     # Return the ref structure with merged data, including active status
@@ -1305,8 +1305,8 @@ defmodule Brando.Villain.Parser do
               :cover_image
             ])
 
-          # Merge into the video struct while preserving the struct type
-          struct(video, Map.merge(Map.from_struct(video), override_attrs))
+          # Merge into the video struct, nil values = use video default
+          Brando.Content.OverrideResolver.merge_overrides(video, override_attrs)
       end
 
     # Return the ref structure with merged data, including active status
@@ -1433,7 +1433,12 @@ defmodule Brando.Villain.Parser do
             %{gallery_object | image: apply_caption_overrides(image, object_override)}
 
           video && object_override ->
-            %{gallery_object | video: apply_caption_overrides(video, object_override)}
+            updated_video =
+              video
+              |> apply_caption_overrides(object_override)
+              |> apply_playback_overrides(object_override)
+
+            %{gallery_object | video: updated_video}
 
           true ->
             gallery_object
@@ -1530,22 +1535,42 @@ defmodule Brando.Villain.Parser do
 
   defp maybe_apply_override(media_object, field, value, use_default) do
     cond do
-      # Use default value from the media object
-      use_default ->
+      # Legacy: explicit use_default flag
+      use_default == true ->
         media_object
 
-      # Set to empty string (no caption)
-      is_nil(value) ->
-        Map.put(media_object, field, "")
+      # New convention: nil use_default + nil value = use default
+      is_nil(use_default) and is_nil(value) ->
+        media_object
 
-      # Use custom override value
+      # Explicit override
       is_binary(value) ->
+        Map.put(media_object, field, value)
+
+      # Boolean override (for video playback fields)
+      is_boolean(value) ->
         Map.put(media_object, field, value)
 
       # Fallback
       true ->
         media_object
     end
+  end
+
+  defp apply_playback_overrides(video, %Ecto.Changeset{} = override) do
+    Enum.reduce(~w(autoplay loop muted controls preload)a, video, fn field, acc ->
+      value = Ecto.Changeset.get_field(override, field)
+      use_default = Ecto.Changeset.get_field(override, :"use_default_#{field}")
+      maybe_apply_override(acc, field, value, use_default)
+    end)
+  end
+
+  defp apply_playback_overrides(video, override) do
+    Enum.reduce(~w(autoplay loop muted controls preload)a, video, fn field, acc ->
+      value = Map.get(override, field)
+      use_default = Map.get(override, :"use_default_#{field}")
+      maybe_apply_override(acc, field, value, use_default)
+    end)
   end
 
   def maybe_annotate(code, uid, %{annotate_blocks: true}) do

@@ -56,6 +56,7 @@ defmodule Brando.Videos.Video do
     attribute :preload, :boolean
     attribute :loop, :boolean
     attribute :controls, :boolean
+    attribute :muted, :boolean
     attribute :source_url, :text
     attribute :remote_id, :text
     attribute :config_target, :text

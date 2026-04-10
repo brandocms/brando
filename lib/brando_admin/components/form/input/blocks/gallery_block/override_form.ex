@@ -1,41 +1,20 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
   @moduledoc """
-  LiveComponent wrapper for gallery object override forms.
+  LiveComponent for gallery object override forms.
 
-  Normalizes checkbox values in update/2 to handle the case where
-  form[:field].value returns raw string params ("false") instead of
-  properly cast booleans.
+  Uses the unified override convention: nil = use default from media record.
+  Shows reset icons when values differ from defaults.
+
+  Text field resets use client-side JS (clearing the input and dispatching a
+  change event). Toggle fields are standard toggles — users toggle them directly.
   """
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Form.Input
 
-  @doc """
-  Renders the override form fields.
-
-  ## Assigns
-
-    * `:form` - The override form from inputs_for
-    * `:override_info` - Map with :default_title, :default_credits, :default_alt, :object_type
-    * `:variant` - Either `:modal` (checkbox before input) or `:inline` (toggle after input)
-
-  """
   def update(assigns, socket) do
-    use_default_title = normalize_checkbox(assigns.form[:use_default_title].value)
-    use_default_credits = normalize_checkbox(assigns.form[:use_default_credits].value)
-    use_default_alt = normalize_checkbox(assigns.form[:use_default_alt].value)
-
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:use_default_title, use_default_title)
-     |> assign(:use_default_credits, use_default_credits)
-     |> assign(:use_default_alt, use_default_alt)}
-  end
-
-  defp normalize_checkbox(value) do
-    Phoenix.HTML.Form.normalize_value("checkbox", value)
+    {:ok, assign(socket, assigns)}
   end
 
   def render(%{variant: :modal} = assigns) do
@@ -44,48 +23,35 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
       <Input.input type={:hidden} field={@form[:object_id]} />
       <Input.input type={:hidden} field={@form[:object_type]} />
 
-      <Input.input
-        type={:checkbox}
-        field={@form[:use_default_title]}
-        label={gettext("Use default title")}
-      />
-
-      <Input.input
-        type={:text}
+      <Input.override_text
         field={@form[:title]}
         label={gettext("Title")}
-        disabled={@use_default_title}
-        placeholder={if @use_default_title, do: gettext("Default: %{title}", title: @override_info.default_title)}
+        default_value={@override_info.default_title}
       />
 
-      <Input.input
-        type={:checkbox}
-        field={@form[:use_default_credits]}
-        label={gettext("Use default credits")}
-      />
-
-      <Input.input
-        type={:text}
+      <Input.override_text
         field={@form[:credits]}
         label={gettext("Credits")}
-        disabled={@use_default_credits}
-        placeholder={if @use_default_credits, do: gettext("Default: %{credits}", credits: @override_info.default_credits)}
+        default_value={@override_info.default_credits}
       />
 
       <%= if @override_info.object_type == :image do %>
-        <Input.input
-          type={:checkbox}
-          field={@form[:use_default_alt]}
-          label={gettext("Use default alt text")}
-        />
-
-        <Input.input
-          type={:text}
+        <Input.override_text
           field={@form[:alt]}
           label={gettext("Alt text")}
-          disabled={@use_default_alt}
-          placeholder={if @use_default_alt, do: gettext("Default: %{alt}", alt: @override_info.default_alt)}
+          default_value={@override_info.default_alt}
         />
+      <% end %>
+
+      <%= if @override_info.object_type == :video do %>
+        <div class="video-config-section">
+          <h4>{gettext("Video playback")}</h4>
+          <Input.toggle tiny field={@form[:autoplay]} label={gettext("Autoplay")} />
+          <Input.toggle tiny field={@form[:loop]} label={gettext("Loop")} />
+          <Input.toggle tiny field={@form[:muted]} label={gettext("Muted")} />
+          <Input.toggle tiny field={@form[:controls]} label={gettext("Controls")} />
+          <Input.toggle tiny field={@form[:preload]} label={gettext("Preload")} />
+        </div>
       <% end %>
     </div>
     """
@@ -97,33 +63,32 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
       <Input.input type={:hidden} field={@form[:object_id]} />
       <Input.input type={:hidden} field={@form[:object_type]} />
 
-      <Input.text
+      <Input.override_text
         field={@form[:title]}
         label={gettext("Title")}
-        disabled={@use_default_title}
-        placeholder={if @use_default_title, do: gettext("Default: %{title}", title: @override_info.default_title)}
+        default_value={@override_info.default_title}
       />
 
-      <Input.toggle tiny field={@form[:use_default_title]} label={gettext("Use default title")} />
-
-      <Input.text
+      <Input.override_text
         field={@form[:credits]}
         label={gettext("Credits")}
-        disabled={@use_default_credits}
-        placeholder={if @use_default_credits, do: gettext("Default: %{credits}", credits: @override_info.default_credits)}
+        default_value={@override_info.default_credits}
       />
 
-      <Input.toggle tiny field={@form[:use_default_credits]} label={gettext("Use default credits")} />
-
       <%= if @override_info.object_type == :image do %>
-        <Input.text
+        <Input.override_text
           field={@form[:alt]}
           label={gettext("Alt text")}
-          disabled={@use_default_alt}
-          placeholder={if @use_default_alt, do: gettext("Default: %{alt}", alt: @override_info.default_alt)}
+          default_value={@override_info.default_alt}
         />
+      <% end %>
 
-        <Input.toggle tiny field={@form[:use_default_alt]} label={gettext("Use default alt text")} />
+      <%= if @override_info.object_type == :video do %>
+        <Input.toggle tiny field={@form[:autoplay]} label={gettext("Autoplay")} />
+        <Input.toggle tiny field={@form[:loop]} label={gettext("Loop")} />
+        <Input.toggle tiny field={@form[:muted]} label={gettext("Muted")} />
+        <Input.toggle tiny field={@form[:controls]} label={gettext("Controls")} />
+        <Input.toggle tiny field={@form[:preload]} label={gettext("Preload")} />
       <% end %>
     </div>
     """

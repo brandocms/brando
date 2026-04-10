@@ -10,6 +10,9 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   alias Brando.Utils
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.Gallery.ImageConfig
+  alias BrandoAdmin.Components.Form.Input.Gallery.VideoConfig
+  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.ImagePicker
   alias BrandoAdmin.Components.VideoPicker
 
@@ -31,6 +34,46 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   # data gallery, :any
   # data preview_layout, :atom
   # data selected_images, :list
+
+  def update(%{event: "update_object_config", gallery_object_index: index, config: config}, socket) do
+    %{field: field, gallery_objects: gallery_objects} = socket.assigns
+
+    changeset = field.form.source
+    field_name = field.field
+    gallery = get_field(changeset, field_name)
+
+    slimmed_objects =
+      gallery.gallery_objects
+      |> Enum.with_index()
+      |> Enum.map(fn {obj, i} ->
+        obj_map = Map.take(obj, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id, :config])
+        if i == index, do: Map.put(obj_map, :config, config), else: obj_map
+      end)
+
+    new_gallery = %{
+      id: gallery.id,
+      config_target: gallery.config_target,
+      gallery_objects: slimmed_objects
+    }
+
+    updated_gallery_objects =
+      gallery_objects
+      |> Enum.with_index()
+      |> Enum.map(fn {obj, i} ->
+        if i == index, do: Map.put(obj, :config, config), else: obj
+      end)
+
+    update_form_changeset(changeset, field_name, new_gallery)
+
+    {:ok,
+     socket
+     |> assign(:gallery_objects, updated_gallery_objects)
+     |> assign(:config_modal, nil)}
+  end
+
+  def update(%{event: "close_config_modal"}, socket) do
+    {:ok, assign(socket, :config_modal, nil)}
+  end
 
   def update(
         %{new_image: new_image, selected_images: selected_images},
@@ -82,6 +125,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
      |> prepare_input_component()
      |> assign(:preview_layout, assigns.opts[:layout] || :grid)
      |> assign(:schema, schema)
+     |> assign_new(:config_modal, fn -> nil end)
      |> assign_value()}
   end
 
@@ -197,13 +241,64 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                   <Input.input type={:hidden} field={gallery_object[:image_id]} />
                   <Input.input type={:hidden} field={gallery_object[:video_id]} />
                   <Input.input type={:hidden} field={gallery_object[:gallery_id]} />
+                  <.config_hidden_fields field={gallery_object[:config]} />
                 </.inputs_for>
               </.inputs_for>
             </div>
           <% end %>
+
+          <Content.modal
+            id="gallery-object-config-modal"
+            title={
+              if(@config_modal && @config_modal.type == :video,
+                do: gettext("Video configuration"),
+                else: gettext("Image configuration")
+              )
+            }
+            narrow
+            close={hide_modal("#gallery-object-config-modal") |> JS.push("close_config_modal", target: @myself)}
+          >
+            <%= if @config_modal do %>
+              <%= case @config_modal.type do %>
+                <% :image -> %>
+                  <.live_component
+                    module={ImageConfig}
+                    id={"gallery-image-config-#{@config_modal.index}"}
+                    image={@config_modal.media}
+                    config={@config_modal.config}
+                    gallery_object_index={@config_modal.index}
+                    gallery_component={__MODULE__}
+                    gallery_component_id={@id}
+                  />
+                <% :video -> %>
+                  <.live_component
+                    module={VideoConfig}
+                    id={"gallery-video-config-#{@config_modal.index}"}
+                    video={@config_modal.media}
+                    config={@config_modal.config}
+                    gallery_object_index={@config_modal.index}
+                    gallery_component={__MODULE__}
+                    gallery_component_id={@id}
+                  />
+              <% end %>
+            <% end %>
+          </Content.modal>
         </div>
       </Form.field_base>
     </div>
+    """
+  end
+
+  attr :field, :any, required: true
+
+  defp config_hidden_fields(assigns) do
+    config = assigns.field.value || %{}
+    assigns = assign(assigns, :config, config)
+
+    ~H"""
+    <%= for {key, value} <- @config do %>
+      <input type="hidden" name={"#{@field.name}[#{key}]"} value={to_string(value)} />
+    <% end %>
     """
   end
 
@@ -268,6 +363,22 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
               >
                 <.icon name="hero-pencil-square" />
                 {gettext("Edit image")}
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                phx-click={
+                  JS.push("open_config_modal",
+                    target: @myself,
+                    value: %{index: @gallery_object_field.index}
+                  )
+                  |> hide_dropdown("##{@menu_id}")
+                  |> show_modal("#gallery-object-config-modal")
+                }
+              >
+                <.icon name="hero-cog-6-tooth" />
+                {gettext("Configure")}
               </button>
             </li>
             <li>
@@ -451,6 +562,29 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     |> Enum.map(fn {gi, idx} -> Map.put(gi, :sequence, idx) end)
   end
 
+  def handle_event("open_config_modal", %{"index" => index}, socket) do
+    gallery_objects = socket.assigns.gallery_objects
+    obj = Enum.at(gallery_objects, index)
+
+    config_modal =
+      cond do
+        obj && Map.get(obj, :image_id) && loaded_assoc?(obj, :image) ->
+          %{type: :image, media: obj.image, config: Map.get(obj, :config) || %{}, index: index}
+
+        obj && Map.get(obj, :video_id) && loaded_assoc?(obj, :video) ->
+          %{type: :video, media: obj.video, config: Map.get(obj, :config) || %{}, index: index}
+
+        true ->
+          nil
+      end
+
+    {:noreply, assign(socket, :config_modal, config_modal)}
+  end
+
+  def handle_event("close_config_modal", _, socket) do
+    {:noreply, assign(socket, :config_modal, nil)}
+  end
+
   def handle_event("open_image_editor", %{"image_id" => image_id}, socket) do
     {:ok, image} = Brando.Images.get_image(image_id)
 
@@ -587,7 +721,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       if gallery do
         Enum.map(
           gallery.gallery_objects || [],
-          &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
+          &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id, :config])
         )
       else
         []
@@ -632,7 +766,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     slimmed_objects =
       Enum.map(
         updated_gallery_objects,
-        &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
+        &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id, :config])
       )
 
     new_gallery = %{

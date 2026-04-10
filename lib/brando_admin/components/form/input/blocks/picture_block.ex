@@ -370,8 +370,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                     </button>
                   </div>
                   <Input.input type={:hidden} field={block_data[:config_target]} />
-                  <Input.rich_text field={block_data[:title]} label={gettext("Caption")} opts={[]} />
-                  <Input.text field={block_data[:alt]} label={gettext("Alt")} />
+                  <Input.override_text
+                    field={block_data[:title]}
+                    label={gettext("Caption")}
+                    default_value={@image && @image.title}
+                    target={@myself}
+                  />
+                  <Input.override_text
+                    field={block_data[:alt]}
+                    label={gettext("Alt")}
+                    default_value={@image && @image.alt}
+                    target={@myself}
+                  />
+                  <Input.override_text
+                    field={block_data[:credits]}
+                    label={gettext("Credits")}
+                    default_value={@image && @image.credits}
+                    target={@myself}
+                  />
                   <Input.text field={block_data[:link]} label={gettext("Link")} />
                   <Input.radios
                     field={block_data[:fetchpriority]}
@@ -391,7 +407,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               <Input.input type={:hidden} field={block_data[:placeholder]} />
               <Input.input type={:hidden} field={block_data[:moonwalk]} />
               <Input.input type={:hidden} field={block_data[:lazyload]} />
-              <Input.input type={:hidden} field={block_data[:credits]} />
 
               <input type="hidden" data-upload-formats={@upload_formats} />
             </:config>

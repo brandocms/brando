@@ -98,6 +98,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :preload, :boolean
       add :loop, :boolean
       add :controls, :boolean
+      add :muted, :boolean
       add :source_url, :text
       add :remote_id, :text
       add :config_target, :text
