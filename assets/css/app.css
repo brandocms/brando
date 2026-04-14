@@ -306,6 +306,19 @@ code {
   .user-presence {
     margin-top: 0;
     display: flex;
+
+    > .avatar {
+      box-shadow: 0 0 0 0.01px var(--presence-color, transparent);
+      will-change: box-shadow;
+      animation: pulsate 2s ease-in-out infinite alternate;
+    }
+
+    &:nth-child(6n+1) { --presence-color: rgba(77, 144, 254, 0.6); }
+    &:nth-child(6n+2) { --presence-color: rgba(72, 199, 142, 0.6); }
+    &:nth-child(6n+3) { --presence-color: rgba(245, 166, 35, 0.6); }
+    &:nth-child(6n+4) { --presence-color: rgba(168, 85, 247, 0.6); }
+    &:nth-child(6n+5) { --presence-color: rgba(239, 68, 68, 0.6); }
+    &:nth-child(6n+6) { --presence-color: rgba(20, 184, 166, 0.6); }
   }
 }
 

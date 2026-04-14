@@ -133,6 +133,15 @@ export default (hooks, enableDebug = false) => {
     app.components.forEach((cmp) => cmp.remount())
   })
 
+  window.addEventListener('phx:b:component:remount_block', ({ detail }) => {
+    const blockEl = document.querySelector(`[data-block-uid="${detail.uid}"]`)
+    if (blockEl) {
+      app.components
+        .filter((cmp) => blockEl.contains(cmp.el))
+        .forEach((cmp) => cmp.remount())
+    }
+  })
+
   window.addEventListener('phx:page-loading-start', () => {
     topbar.delayedShow(200)
   })

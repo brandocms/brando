@@ -125,5 +125,6 @@ defmodule BrandoAdmin.Hooks do
     socket
     |> update(:presences, &Map.delete(&1, user.id))
     |> update(:presence_ids, &Map.delete(&1, user.id))
+    |> push_event("b:clear_user_presence", %{user_id: user.id})
   end
 end

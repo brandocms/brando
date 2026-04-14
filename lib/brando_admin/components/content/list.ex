@@ -1014,7 +1014,7 @@ defmodule BrandoAdmin.Components.Content.List do
         <:options>
           <li>
             <button :for={sort <- @sorts} :key={sort.key} type="button" phx-click={@on_update} phx-value-sort_key={sort.key}>
-              {raw(g(@schema, sort.label))}
+              {g(@schema, sort.label)}
             </button>
           </li>
         </:options>
@@ -1028,7 +1028,7 @@ defmodule BrandoAdmin.Components.Content.List do
   slot :options, required: true
 
   def simple_dropdown(assigns) do
-    assigns = assign(assigns, :label, raw(assigns.label))
+    assigns = assign(assigns, :label, assigns.label)
 
     ~H"""
     <div class="simple-dropdown wrapper">

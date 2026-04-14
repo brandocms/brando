@@ -669,7 +669,7 @@
       border: 1px solid var(--brando-color-dark);
       border-radius: 50%;
       transform: translateY(1px);
-      box-shadow: 0 0 0 0.01px rgba(77, 144, 254, 0.6);
+      box-shadow: 0 0 0 0.01px var(--presence-color, rgba(77, 144, 254, 0.6));
       will-change: box-shadow;
       animation: pulsate 2s ease-in-out infinite alternate;
 
@@ -684,14 +684,22 @@
   }
 }
 
+/* Field locked — another user is editing this field */
+.field-wrapper.field-locked {
+  > :not(.label-wrapper) {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+}
+
 @keyframes pulsate {
   0% {
-    box-shadow: 0 0 0 0.01px rgba(77, 144, 254, 0.6);
+    box-shadow: 0 0 0 0.01px var(--presence-color, rgba(77, 144, 254, 0.6));
   }
   50% {
-    box-shadow: 0 0 7px 1px rgba(77, 144, 254, 0.8);
+    box-shadow: 0 0 7px 1px var(--presence-color, rgba(77, 144, 254, 0.6));
   }
   100% {
-    box-shadow: 0 0 0 0.01px rgba(77, 144, 254, 0.6);
+    box-shadow: 0 0 0 0.01px var(--presence-color, rgba(77, 144, 254, 0.6));
   }
 }

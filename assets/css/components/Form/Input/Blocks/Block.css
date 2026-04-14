@@ -234,6 +234,7 @@ button.btn-palette {
   align-items: center;
   justify-content: space-between;
   padding: 0 10px;
+  position: relative;
 }
 
 .block {
@@ -1927,4 +1928,35 @@ CodeMirror template by Jan T. Sott (https://github.com/idleberg), adapted by Bra
     text-decoration: underline;
     color: #faf8f5 !important;
   }
+}
+
+/* Block presence glow — shows when another user is editing a block */
+.block.block-presence-active {
+  box-shadow: 0 0 0 2px var(--presence-color, rgba(77, 144, 254, 0.6));
+  animation: block-pulsate 2s ease-in-out infinite alternate;
+}
+
+@keyframes block-pulsate {
+  0% { box-shadow: 0 0 0 2px var(--presence-color, rgba(77, 144, 254, 0.6)); }
+  50% { box-shadow: 0 0 7px 2px var(--presence-color-strong, rgba(77, 144, 254, 0.8)); }
+  100% { box-shadow: 0 0 0 2px var(--presence-color, rgba(77, 144, 254, 0.6)); }
+}
+
+/* Block locked — another user is actively editing */
+.block.block-locked {
+  .block-content {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  .block-toolbar {
+    pointer-events: auto;
+  }
+}
+
+.block-lock-icon {
+  display: flex;
+  align-items: center;
+  margin-right: 7px;
+  margin-top: -2px;
 }

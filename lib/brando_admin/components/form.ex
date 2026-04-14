@@ -97,6 +97,53 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:editing_schema, nil)}
   end
 
+  # Ship field changes — triggered by child components (e.g. multi-select on close)
+  def update(%{event: "ship_field_changes"}, socket) do
+    {:ok, ship_all_field_changes(socket)}
+  end
+
+  # Apply field changes received from another user
+  def update(%{event: "apply_remote_field_changes", changes: changes}, socket) do
+    changeset = socket.assigns.form.source
+    schema = changeset.data.__struct__
+
+    # Build a set of image/video/file FK fields so we can load associations
+    asset_fk_map = build_asset_fk_map(schema)
+
+    updated_changeset =
+      Enum.reduce(changes, changeset, fn %{field: field, value: value, assoc?: assoc?}, cs ->
+        cs =
+          if assoc? do
+            Ecto.Changeset.put_assoc(cs, field, value)
+          else
+            Ecto.Changeset.put_change(cs, field, value)
+          end
+
+        # If this is an asset FK (e.g. :cover_id), load the record
+        # and put it directly on the changeset data (not via put_assoc,
+        # which can fail with :on_replace => :update)
+        case Map.get(asset_fk_map, field) do
+          nil ->
+            cs
+
+          {assoc_field, asset_schema} ->
+            case Brando.repo().get(asset_schema, value) do
+              nil ->
+                cs
+
+              record ->
+                updated_data = Map.put(cs.data, assoc_field, record)
+                %{cs | data: updated_data}
+            end
+        end
+      end)
+
+    {:ok,
+     socket
+     |> assign(:form, to_form(updated_changeset, []))
+     |> force_svelte_remounts()}
+  end
+
   def update(%{action: :image_processed, image_id: id}, socket) do
     {:ok, update(socket, :processing_images, &Enum.reject(&1, fn proc_id -> proc_id == id end))}
   end
@@ -1112,6 +1159,91 @@ defmodule BrandoAdmin.Components.Form do
     push_event(socket, "b:component:remount", %{})
   end
 
+  # Maps FK fields (e.g. :cover_id) to {assoc_field, schema_module}
+  # for loading associated records when receiving remote field changes.
+  defp build_asset_fk_map(schema) do
+    image_fields =
+      if function_exported?(schema, :__image_fields__, 0),
+        do: Enum.map(schema.__image_fields__(), &{:"#{&1.name}_id", {&1.name, Brando.Images.Image}}),
+        else: []
+
+    video_fields =
+      if function_exported?(schema, :__video_fields__, 0),
+        do: Enum.map(schema.__video_fields__(), &{:"#{&1.name}_id", {&1.name, Brando.Videos.Video}}),
+        else: []
+
+    file_fields =
+      if function_exported?(schema, :__file_fields__, 0),
+        do: Enum.map(schema.__file_fields__(), &{:"#{&1.name}_id", {&1.name, Brando.Files.File}}),
+        else: []
+
+    Map.new(image_fields ++ video_fields ++ file_fields)
+  end
+
+  # Ship all non-block changeset changes to other users.
+  # Used on field blur, save, and after image/video/file selection.
+  defp ship_all_field_changes(socket) do
+    entry = socket.assigns[:entry]
+    user_id = socket.assigns.current_user.id
+
+    if entry && entry.id do
+      do_ship_field_changes(socket, entry.id, user_id)
+    else
+      socket
+    end
+  end
+
+  defp do_ship_field_changes(socket, entry_id, user_id) do
+    changeset = socket.assigns.form.source
+    schema = changeset.data.__struct__
+
+    # Only ship belongs_to associations (FK changes), not has_many/many_to_many
+    # which have complex nested changesets that can't be put_assoc'd on the receiver
+    belongs_to_assocs =
+      schema.__schema__(:associations)
+      |> Enum.filter(fn assoc_name ->
+        case schema.__schema__(:association, assoc_name) do
+          %Ecto.Association.BelongsTo{} -> true
+          _ -> false
+        end
+      end)
+
+    # Exclude block-related fields, rendered fields, has_many/many_to_many assocs
+    block_fields =
+      if function_exported?(schema, :__blocks_fields__, 0) do
+        schema.__blocks_fields__()
+        |> Enum.flat_map(fn %{name: name} ->
+          name_str = to_string(name)
+          [name, :"rendered_#{name_str}", :"entry_#{name_str}"]
+        end)
+      else
+        []
+      end
+
+    # Collect all has_many/many_to_many association names to skip
+    all_assocs = schema.__schema__(:associations)
+    has_many_assocs = all_assocs -- belongs_to_assocs
+
+    skip_fields = [:updated_at, :inserted_at | block_fields ++ has_many_assocs]
+
+    changes =
+      changeset.changes
+      |> Map.drop(skip_fields)
+      |> Enum.map(fn {field, value} ->
+        %{field: field, value: value, assoc?: field in belongs_to_assocs}
+      end)
+
+    if changes != [] do
+      Phoenix.PubSub.broadcast(
+        Brando.pubsub(),
+        "brando:field_sync:#{entry_id}",
+        {:fields_shipped, %{changes: changes, user_id: user_id}}
+      )
+    end
+
+    socket
+  end
+
   defp extract_tab_names(%{assigns: %{form_blueprint: %{tabs: tabs}}} = socket) do
     socket
     |> assign_new(:active_tab, fn ->
@@ -1700,7 +1832,7 @@ defmodule BrandoAdmin.Components.Form do
           <:icon>
             <.icon name="hero-exclamation-triangle" />
           </:icon>
-          {raw(g(@form.source.data.__struct__, fieldset.content))}
+          {g(@form.source.data.__struct__, fieldset.content)}
         </.alert>
       <% else %>
         <Fieldset.render
@@ -2697,18 +2829,45 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event("focus", %{"field" => field}, socket) do
     current_user = socket.assigns.current_user
     entry = socket.assigns.entry
+    old_field = socket.assigns[:focused_field]
 
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      "brando:active_field:#{entry.id}",
-      {:active_field, field, current_user.id}
-    )
+    if entry && entry.id do
+      Phoenix.PubSub.broadcast(
+        Brando.pubsub(),
+        "brando:active_field:#{entry.id}",
+        {:active_field, field, current_user.id}
+      )
+
+      # Clear block focus/lock when a regular field gets focus
+      send(self(), :force_ship_focused_block)
+    end
+
+    # Ship all field changeset diffs on blur
+    socket =
+      if old_field && old_field != field && entry && entry.id do
+        ship_all_field_changes(socket)
+      else
+        socket
+      end
 
     {:noreply, assign(socket, :focused_field, field)}
   end
 
   def handle_event("focus", _, socket) do
     {:noreply, socket}
+  end
+
+  def handle_event("blur", _, socket) do
+    entry = socket.assigns[:entry]
+
+    socket =
+      if socket.assigns[:focused_field] && entry && entry.id do
+        ship_all_field_changes(socket)
+      else
+        socket
+      end
+
+    {:noreply, assign(socket, :focused_field, nil)}
   end
 
   def handle_event("save", _params, %{assigns: %{editing_image?: true}} = socket) do
@@ -2868,12 +3027,19 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("save", _params, %{assigns: %{has_blocks?: true}} = socket) do
     # has blocks, but not all blocks have been received
+    # Force-ship the currently focused block before collecting for save
+    send(self(), :force_ship_focused_block)
     fetch_root_blocks(socket, :save, 150)
     send(self(), {:progress_popup, "Saving..."})
-    {:noreply, assign(socket, :processing, true)}
+
+    {:noreply,
+     socket
+     |> ship_all_field_changes()
+     |> assign(:processing, true)}
   end
 
   def handle_event("save", params, %{assigns: %{has_blocks?: false}} = socket) do
+    socket = ship_all_field_changes(socket)
     schema = socket.assigns.schema
     entry = socket.assigns.entry
     current_user = socket.assigns.current_user
@@ -3440,6 +3606,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:image_changeset, validated_changeset)
      |> assign(:edit_image, edit_image)
      |> assign(:editing_image?, false)
+     |> ship_all_field_changes()
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
        target: target_field_name,
@@ -3452,6 +3619,7 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply,
      socket
      |> assign(:editing_image?, false)
+     |> ship_all_field_changes()
      |> assign_drawer_recovery_state()}
   end
 
@@ -3516,6 +3684,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:video_changeset, validated_changeset)
      |> assign(:edit_video, edit_video)
      |> assign(:editing_video?, false)
+     |> ship_all_field_changes()
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
        target: target_field_name,

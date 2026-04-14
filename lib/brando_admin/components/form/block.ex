@@ -25,6 +25,19 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
+  # fetch_for_shipping — collect current changeset and send to BlockField for broadcasting
+  def update(%{event: "fetch_for_shipping"}, socket) do
+    changeset = socket.assigns.form.source
+
+    send_to_ref(socket.assigns.parent_ref, %{
+      event: "ship_block_data",
+      uid: socket.assigns.uid,
+      changeset: changeset
+    })
+
+    {:ok, socket}
+  end
+
   # copy_block — intermediate blocks forward copy requests up the parent chain to BlockField
   def update(%{event: "copy_block"} = msg, socket) do
     send_to_ref(socket.assigns.parent_ref, msg)

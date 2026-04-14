@@ -25,6 +25,8 @@ defmodule BrandoAdmin.LiveView.Form do
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_content_language, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_dirty_fields, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_active_field, unquote(schema)}})
+      on_mount({BrandoAdmin.LiveView.Form, {:hooks_block_presence, unquote(schema)}})
+      on_mount({BrandoAdmin.LiveView.Form, {:hooks_block_sync, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_modules, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_focal_point, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_focus, unquote(schema)}})
@@ -57,8 +59,10 @@ defmodule BrandoAdmin.LiveView.Form do
 
       Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:dirty_fields:#{entry_id}")
       Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:active_field:#{entry_id}")
+      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:block_presence:#{entry_id}")
+      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:field_sync:#{entry_id}")
 
-      {:cont, socket}
+      {:cont, assign(socket, :current_focused_block_uid, nil)}
     else
       {:cont, assign(socket, :socket_connected, false)}
     end
@@ -146,6 +150,31 @@ defmodule BrandoAdmin.LiveView.Form do
        :b_form_active_field,
        :handle_info,
        &handle_hooks_active_field_info/2
+     )}
+  end
+
+  def on_mount({:hooks_block_presence, _schema}, _params, _session, socket) do
+    {:cont,
+     socket
+     |> attach_hook(
+       :b_form_block_presence,
+       :handle_info,
+       &handle_hooks_block_presence_info/2
+     )
+     |> attach_hook(
+       :b_form_block_focused,
+       :handle_event,
+       &handle_hooks_block_focused_event/3
+     )}
+  end
+
+  def on_mount({:hooks_block_sync, _schema}, _params, _session, socket) do
+    {:cont,
+     attach_hook(
+       socket,
+       :b_form_block_sync,
+       :handle_info,
+       &handle_hooks_block_sync_info/2
      )}
   end
 
@@ -645,6 +674,183 @@ defmodule BrandoAdmin.LiveView.Form do
   end
 
   defp handle_hooks_active_field_info(_, socket), do: {:cont, socket}
+
+  defp handle_hooks_block_presence_info({:block_focus, %{uid: uid, user_id: user_id}}, socket) do
+    socket =
+      if user_id == socket.assigns.current_user.id do
+        socket
+      else
+        push_event(socket, "b:set_active_block", %{uid: uid, user_id: user_id})
+      end
+
+    {:halt, socket}
+  end
+
+  defp handle_hooks_block_presence_info({:block_blur, %{uid: uid, user_id: user_id}}, socket) do
+    socket =
+      if user_id == socket.assigns.current_user.id do
+        socket
+      else
+        push_event(socket, "b:clear_block_lock", %{uid: uid, user_id: user_id})
+      end
+
+    {:halt, socket}
+  end
+
+  defp handle_hooks_block_presence_info(_, socket), do: {:cont, socket}
+
+  # Block-level presence — fired by Brando.Block JS hook on any focusin
+  defp handle_hooks_block_focused_event("block_focused", %{"uid" => uid}, socket) do
+    entry_id = socket.assigns[:entry_id]
+    current_user_id = socket.assigns.current_user.id
+    old_uid = socket.assigns[:current_focused_block_uid]
+
+    if entry_id do
+      # If switching blocks, blur the old one — trigger data shipping
+      if old_uid && old_uid != uid do
+        send(self(), {:ship_block_data, old_uid, current_user_id})
+
+        Phoenix.PubSub.broadcast(
+          Brando.pubsub(),
+          "brando:block_presence:#{entry_id}",
+          {:block_blur, %{uid: old_uid, user_id: current_user_id}}
+        )
+      end
+
+      # Focus new block
+      Phoenix.PubSub.broadcast(
+        Brando.pubsub(),
+        "brando:block_presence:#{entry_id}",
+        {:block_focus, %{uid: uid, user_id: current_user_id}}
+      )
+    end
+
+    {:halt, assign(socket, :current_focused_block_uid, uid)}
+  end
+
+  defp handle_hooks_block_focused_event(_, _, socket), do: {:cont, socket}
+
+  # Force-ship the currently focused block (triggered before save)
+  defp handle_hooks_block_sync_info(:force_ship_focused_block, socket) do
+    current_uid = socket.assigns[:current_focused_block_uid]
+    entry_id = socket.assigns[:entry_id]
+    current_user_id = socket.assigns.current_user.id
+
+    if current_uid && entry_id do
+      send(self(), {:ship_block_data, current_uid, current_user_id})
+
+      Phoenix.PubSub.broadcast(
+        Brando.pubsub(),
+        "brando:block_presence:#{entry_id}",
+        {:block_blur, %{uid: current_uid, user_id: current_user_id}}
+      )
+    end
+
+    {:halt, assign(socket, :current_focused_block_uid, nil)}
+  end
+
+  # Block sync — routes {:ship_block_data, ...} and structural PubSub messages to BlockFields
+  defp handle_hooks_block_sync_info({:ship_block_data, uid, _user_id}, socket) do
+    send_to_block_fields(socket, event: "fetch_block_for_shipping", uid: uid)
+    {:halt, socket}
+  end
+
+  defp handle_hooks_block_sync_info({:block_data_shipped, %{user_id: user_id} = msg}, socket) do
+    if user_id != socket.assigns.current_user.id &&
+         socket.assigns[:current_focused_block_uid] != msg.uid do
+      send_to_block_fields(socket,
+        event: "apply_remote_block_data",
+        uid: msg.uid,
+        entry_block_cs: msg.entry_block_cs,
+        user_id: msg.user_id
+      )
+    end
+
+    {:halt, socket}
+  end
+
+  defp handle_hooks_block_sync_info({:block_added, %{user_id: user_id} = msg}, socket) do
+    if user_id != socket.assigns.current_user.id do
+      send_to_block_fields(socket,
+        event: "remote_block_added",
+        uid: msg.uid,
+        module_id: msg.module_id,
+        sequence: msg.sequence,
+        user_id: msg.user_id
+      )
+    end
+
+    {:halt, socket}
+  end
+
+  defp handle_hooks_block_sync_info({:block_deleted, %{user_id: user_id} = msg}, socket) do
+    if user_id != socket.assigns.current_user.id do
+      send_to_block_fields(socket, event: "remote_block_deleted", uid: msg.uid)
+    end
+
+    {:halt, socket}
+  end
+
+  defp handle_hooks_block_sync_info({:blocks_reordered, %{user_id: user_id} = msg}, socket) do
+    if user_id != socket.assigns.current_user.id do
+      send_to_block_fields(socket, event: "remote_blocks_reordered", block_list: msg.block_list)
+    end
+
+    {:halt, socket}
+  end
+
+  # Field sync — ship field changeset diffs between users
+  defp handle_hooks_block_sync_info({:fields_shipped, %{user_id: user_id} = msg}, socket) do
+    if user_id != socket.assigns.current_user.id do
+      schema = socket.assigns[:schema]
+
+      if schema do
+        singular = schema.__naming__().singular
+        form_id = "#{singular}_form"
+
+        send_update(BrandoAdmin.Components.Form,
+          id: form_id,
+          event: "apply_remote_field_changes",
+          changes: msg.changes
+        )
+      end
+    end
+
+    {:halt, socket}
+  end
+
+  # Multi-select sync — forward selected IDs directly to the multi-select component
+  defp handle_hooks_block_sync_info({:multi_select_changed, %{user_id: user_id} = msg}, socket) do
+    if user_id != socket.assigns.current_user.id do
+      send_update(BrandoAdmin.Components.Form.Input.MultiSelect,
+        id: msg.component_id,
+        event: "apply_remote_selections",
+        selected_ids: msg.selected_ids
+      )
+    end
+
+    {:halt, socket}
+  end
+
+  defp handle_hooks_block_sync_info(_, socket), do: {:cont, socket}
+
+  defp send_to_block_fields(socket, opts) do
+    schema = socket.assigns[:schema]
+
+    if schema && function_exported?(schema, :__blocks_fields__, 0) do
+      singular = schema.__naming__().singular
+      form_id = "#{singular}_form"
+
+      for %{name: field} <- schema.__blocks_fields__() do
+        block_field_id = "#{form_id}-blocks-#{field}"
+
+        send_update(
+          BrandoAdmin.Components.Form.BlockField,
+          [{:id, block_field_id} | opts]
+        )
+      end
+    end
+  end
 
   defp handle_hooks_modules_info({_module, [:module, action]}, socket) when action in [:created, :updated] do
     schema = socket.assigns.schema

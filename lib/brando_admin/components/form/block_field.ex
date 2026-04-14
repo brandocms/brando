@@ -170,21 +170,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   def update(%{event: "delete_block", uid: uid}, socket) do
-    root_changesets = socket.assigns.root_changesets
-    block_list = socket.assigns.block_list
-    updated_root_changesets = delete_root_changeset(root_changesets, uid)
-    new_block_list = List.delete(block_list, uid)
+    # Broadcast to other users
+    if topic = socket.assigns[:blocks_topic] do
+      Phoenix.PubSub.broadcast(
+        Brando.pubsub(),
+        topic,
+        {:block_deleted, %{uid: uid, user_id: socket.assigns.current_user.id}}
+      )
+    end
 
-    socket
-    |> assign(:root_changesets, updated_root_changesets)
-    |> assign(:block_list, new_block_list)
-    |> update(:entry_blocks_forms, fn forms ->
-      Enum.reject(forms, &(get_form_block_uid(&1) == uid))
-    end)
-    |> update(:block_count, &(&1 - 1))
-    |> reset_position_response_tracker()
-    |> send_block_entry_position_update(new_block_list)
-    |> then(&{:ok, &1})
+    {:ok, remove_block_from_state(socket, uid)}
   end
 
   def update(%{event: "update_root_sequence", sequence: sequence, form: form}, socket) do
@@ -265,6 +260,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
 
     selector = "[data-block-uid=\"#{uid}\"]"
+
+    # Broadcast to other users
+    if topic = socket.assigns[:blocks_topic] do
+      Phoenix.PubSub.broadcast(
+        Brando.pubsub(),
+        topic,
+        {:block_added, %{uid: uid, module_id: module_id, sequence: sequence, user_id: socket.assigns.current_user.id}}
+      )
+    end
 
     socket
     |> update(:entry_blocks_forms, &List.insert_at(&1, sequence, entry_block_form))
@@ -473,6 +477,153 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, reload_all_blocks(socket)}
   end
 
+  # === Block Sync: Data Shipping ===
+
+  # Fetch a block's changeset for shipping to other users on blur
+  def update(%{event: "fetch_block_for_shipping", uid: uid}, socket) do
+    block_list = socket.assigns.block_list
+
+    if uid in block_list do
+      send_update(Block, id: "block-#{uid}", event: "fetch_for_shipping")
+    end
+
+    {:ok, socket}
+  end
+
+  # Block responded with its changeset — broadcast to others
+  def update(%{event: "ship_block_data", uid: uid, changeset: changeset}, socket) do
+    topic = socket.assigns[:blocks_topic]
+
+    if topic do
+      Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {
+        :block_data_shipped,
+        %{uid: uid, entry_block_cs: changeset, user_id: socket.assigns.current_user.id}
+      })
+    end
+
+    {:ok, socket}
+  end
+
+  # Apply block data received from another user
+  def update(%{event: "apply_remote_block_data", uid: uid, entry_block_cs: cs}, socket) do
+    block_list = socket.assigns.block_list
+
+    if uid in block_list do
+      # Convert the remote changeset directly to a form — don't re-cast through
+      # block_module.changeset (which would lose changes with empty params)
+      new_form =
+        to_form(cs,
+          as: "entry_block",
+          id: "entry_block_form-#{uid}"
+        )
+
+      updated_forms = replace_form_by_uid(socket.assigns.entry_blocks_forms, uid, new_form)
+
+      {:ok,
+       socket
+       |> assign(:entry_blocks_forms, updated_forms)
+       |> push_event("b:component:remount_block", %{uid: uid})}
+    else
+      {:ok, socket}
+    end
+  end
+
+  # === Block Sync: Structural Operations ===
+
+  # Remote user added a block
+  def update(
+        %{
+          event: "remote_block_added",
+          uid: remote_uid,
+          module_id: module_id,
+          sequence: sequence,
+          user_id: remote_user_id
+        },
+        socket
+      ) do
+    block_list = socket.assigns.block_list
+
+    # Skip if we already have this block (dedup)
+    if remote_uid in block_list do
+      {:ok, socket}
+    else
+      root_changesets = socket.assigns.root_changesets
+      block_module = socket.assigns.block_module
+      source = socket.assigns.block_module
+
+      empty_block_cs = build_block(module_id, remote_user_id, nil, source, :module)
+      # Override UID to match the original
+      empty_block_cs = Changeset.put_change(empty_block_cs, :uid, remote_uid)
+
+      entry_block_cs =
+        block_module
+        |> struct(%{})
+        |> Changeset.change(%{entry_id: socket.assigns.entry.id})
+        |> Changeset.put_assoc(:block, empty_block_cs)
+        |> Changeset.put_change(:sequence, sequence)
+        |> Map.put(:action, :insert)
+
+      # Clamp sequence to valid range
+      clamped_sequence = min(sequence, length(block_list))
+
+      new_block_list = List.insert_at(block_list, clamped_sequence, remote_uid)
+
+      entry_block_form =
+        to_form(entry_block_cs,
+          as: "entry_block",
+          id: "entry_block_form-#{remote_uid}"
+        )
+
+      updated_root_changesets = insert_root_changeset(root_changesets, remote_uid, clamped_sequence)
+
+      socket
+      |> update(:entry_blocks_forms, &List.insert_at(&1, clamped_sequence, entry_block_form))
+      |> assign(:block_list, new_block_list)
+      |> assign(:root_changesets, updated_root_changesets)
+      |> update(:block_count, &(&1 + 1))
+      |> reset_position_response_tracker()
+      |> send_block_entry_position_update(new_block_list)
+      |> then(&{:ok, &1})
+    end
+  end
+
+  # Remote user deleted a block
+  def update(%{event: "remote_block_deleted", uid: uid}, socket) do
+    if uid in socket.assigns.block_list do
+      {:ok, remove_block_from_state(socket, uid)}
+    else
+      {:ok, socket}
+    end
+  end
+
+  # Remote user reordered blocks
+  def update(%{event: "remote_blocks_reordered", block_list: remote_block_list}, socket) do
+    root_changesets = socket.assigns.root_changesets
+
+    new_root_changesets =
+      Enum.map(remote_block_list, fn uid ->
+        Enum.find(root_changesets, fn
+          {^uid, _} -> true
+          _ -> false
+        end)
+      end)
+      |> Enum.reject(&is_nil/1)
+
+    new_forms =
+      Enum.map(remote_block_list, fn uid ->
+        Enum.find(socket.assigns.entry_blocks_forms, &(get_form_block_uid(&1) == uid))
+      end)
+      |> Enum.reject(&is_nil/1)
+
+    socket
+    |> assign(:entry_blocks_forms, new_forms)
+    |> assign(:block_list, remote_block_list)
+    |> assign(:root_changesets, new_root_changesets)
+    |> reset_position_response_tracker()
+    |> send_block_entry_position_update(remote_block_list)
+    |> then(&{:ok, &1})
+  end
+
   def update(assigns, socket) do
     socket
     |> assign(assigns)
@@ -492,6 +643,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     entry_blocks_forms = Enum.map(entry_blocks, &to_change_form(block_module, &1, %{}, user_id))
     block_list = Enum.map(entry_blocks, & &1.block.uid)
 
+    # Subscribe to blocks sync topic for structural changes + data shipping
+    entry_id = assigns.entry && assigns.entry.id
+    blocks_topic = entry_id && "brando:blocks:#{entry_id}:#{assigns.block_field}"
+
+    if blocks_topic do
+      Phoenix.PubSub.subscribe(Brando.pubsub(), blocks_topic)
+    end
+
     socket
     |> assign(:entry_blocks_forms, entry_blocks_forms)
     |> assign(:block_list, block_list)
@@ -499,6 +658,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:root_changesets, Enum.map(entry_blocks, &{&1.block.uid, nil}))
     |> assign(:module_picker_id, "#block-field-#{assigns.block_field}-module-picker")
     |> assign(:clipboard_meta, nil)
+    |> assign(:blocks_topic, blocks_topic)
     |> send_block_entry_position_update(block_list)
     |> assign(:blocks_initialized, true)
   end
@@ -515,6 +675,23 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_list, block_list)
     |> assign(:block_count, length(block_list))
     |> assign(:root_changesets, Enum.map(entry_blocks, &{&1.block.uid, nil}))
+  end
+
+  defp remove_block_from_state(socket, uid) do
+    root_changesets = socket.assigns.root_changesets
+    block_list = socket.assigns.block_list
+    updated_root_changesets = delete_root_changeset(root_changesets, uid)
+    new_block_list = List.delete(block_list, uid)
+
+    socket
+    |> assign(:root_changesets, updated_root_changesets)
+    |> assign(:block_list, new_block_list)
+    |> update(:entry_blocks_forms, fn forms ->
+      Enum.reject(forms, &(get_form_block_uid(&1) == uid))
+    end)
+    |> update(:block_count, &(&1 - 1))
+    |> reset_position_response_tracker()
+    |> send_block_entry_position_update(new_block_list)
   end
 
   defp get_form_block_uid(form) do
@@ -569,6 +746,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       Enum.map(new_block_list, fn uid ->
         Enum.find(socket.assigns.entry_blocks_forms, &(get_form_block_uid(&1) == uid))
       end)
+
+    # Broadcast to other users
+    if topic = socket.assigns[:blocks_topic] do
+      Phoenix.PubSub.broadcast(
+        Brando.pubsub(),
+        topic,
+        {:blocks_reordered, %{block_list: new_block_list, user_id: socket.assigns.current_user.id}}
+      )
+    end
 
     socket
     |> assign(:entry_blocks_forms, new_forms)

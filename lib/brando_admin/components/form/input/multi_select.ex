@@ -250,6 +250,44 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     {:ok, update_input_options(socket)}
   end
 
+  # Apply remote multi-select changes — rebuild selected options from received IDs
+  def update(%{event: "apply_remote_selections", selected_ids: selected_ids}, socket) do
+    relation_key = socket.assigns.relation_key
+    relation = socket.assigns.relation
+    input_options = socket.assigns.input_options
+    field = socket.assigns.field
+    sequenced? = socket.assigns.sequenced?
+
+    module = field.form.data.__struct__
+    %{opts: %{module: rel_module}} = Brando.Blueprint.Relations.__relation__(module, field.field)
+
+    # Build new changesets and structs from the selected IDs
+    {selected_options, selected_options_structs} =
+      selected_ids
+      |> Enum.with_index()
+      |> Enum.reduce({[], []}, fn {id, idx}, {cs_acc, struct_acc} ->
+        new_rel =
+          rel_module
+          |> struct!()
+          |> Ecto.Changeset.change([{relation_key, id}])
+          |> Map.put(:action, :insert)
+          |> maybe_change_sequence?(idx, sequenced?)
+
+        assoc_data = Enum.find(input_options, &(to_string(&1.id) == id))
+
+        struct =
+          new_rel
+          |> Ecto.Changeset.apply_changes()
+          |> maybe_add_relation(relation, assoc_data)
+
+        {cs_acc ++ [new_rel], struct_acc ++ [struct]}
+      end)
+
+    socket
+    |> propagate_has_many_update(selected_options, selected_options_structs)
+    |> then(&{:ok, &1})
+  end
+
   def update(assigns, socket) do
     show_filter = Keyword.get(assigns.opts, :filter, true)
     wrapped_labels = Keyword.get(assigns.opts, :wrapped_labels, false)
@@ -950,16 +988,23 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   def handle_event("toggle_modal", _, %{assigns: %{relation_type: relation_type}} = socket)
       when relation_type in [:has_many, {:subform, :has_many}] do
-    socket = assign(socket, :open, !socket.assigns.open)
+    was_open = socket.assigns.open
+    socket = assign(socket, :open, !was_open)
+
+    if !was_open, do: broadcast_field_focus(socket)
+    if was_open, do: request_field_ship(socket)
 
     {:noreply, socket}
   end
 
   def handle_event("toggle_modal", _, %{assigns: %{relation_type: _}} = socket) do
-    socket = assign(socket, :open, !socket.assigns.open)
+    was_open = socket.assigns.open
+    socket = assign(socket, :open, !was_open)
 
-    socket = (socket.assigns.open && update_input_options(socket)) || socket
-    # || push_event(socket, "b:validate", %{})
+    socket = (!was_open && update_input_options(socket)) || socket
+
+    if !was_open, do: broadcast_field_focus(socket)
+    if was_open, do: request_field_ship(socket)
 
     {:noreply, socket}
   end
@@ -1174,6 +1219,64 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   def handle_event("focus", _, socket) do
     {:noreply, socket}
+  end
+
+  defp request_field_ship(socket) do
+    field = socket.assigns.field
+    entry_id = Ecto.Changeset.get_field(field.form.source, :id)
+    current_user_id = socket.assigns.current_user.id
+
+    if entry_id do
+      # Ship scalar field changes via the Form component
+      form_id = socket.assigns[:form_id] || BrandoAdmin.Utils.derive_form_id(field.form.name)
+
+      if form_id do
+        send_update_after(
+          BrandoAdmin.Components.Form,
+          [id: form_id, event: "ship_field_changes"],
+          200
+        )
+      end
+
+      # For has_many multi-selects, broadcast the selected values directly
+      # so the receiver's multi-select can rebuild its state
+      relation_type = socket.assigns.relation_type
+
+      if relation_type in [:has_many, {:subform, :has_many}] do
+        relation_key = socket.assigns.relation_key
+        selected = socket.assigns.selected_options_structs
+
+        selected_ids =
+          Enum.map(selected, &(Map.get(&1, relation_key) |> to_string()))
+
+        Phoenix.PubSub.broadcast(
+          Brando.pubsub(),
+          "brando:field_sync:#{entry_id}",
+          {:multi_select_changed,
+           %{
+             field: field.field,
+             component_id: socket.assigns.id,
+             selected_ids: selected_ids,
+             user_id: current_user_id
+           }}
+        )
+      end
+    end
+  end
+
+  defp broadcast_field_focus(socket) do
+    field = socket.assigns.field
+    entry_id = Ecto.Changeset.get_field(field.form.source, :id)
+    current_user_id = socket.assigns.current_user.id
+    field_name = "#{field.form.name}[#{field.field}]"
+
+    if entry_id do
+      Phoenix.PubSub.broadcast(
+        Brando.pubsub(),
+        "brando:active_field:#{entry_id}",
+        {:active_field, field_name, current_user_id}
+      )
+    end
   end
 
   def maybe_add_relation(struct, nil, _assoc_data), do: struct
