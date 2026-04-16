@@ -15,6 +15,7 @@ export default (app) => ({
 
   mounted() {
     this.attachListenersOnUpdate = false
+    this.canvasListenerController = null
     this.multi = this.el.hasAttribute('data-upload-multi')
     this.files = []
     this.configTarget = this.el.hasAttribute('data-upload-config-target')
@@ -81,6 +82,13 @@ export default (app) => ({
   },
 
   attachListeners() {
+    // Abort previous canvas listeners to prevent duplicates
+    if (this.canvasListenerController) {
+      this.canvasListenerController.abort()
+    }
+    this.canvasListenerController = new AbortController()
+    const { signal } = this.canvasListenerController
+
     this.$uploadCanvases = Dom.all(this.el, '.upload-canvas')
 
     this.$uploadCanvases.forEach((uploadCanvas) => {
@@ -94,17 +102,17 @@ export default (app) => ({
         } else {
           e.preventDefault()
         }
-      })
+      }, { signal })
 
       uploadCanvas.addEventListener('dragenter', () => {
         uploadCanvas.classList.add('dragging')
-      })
+      }, { signal })
       uploadCanvas.addEventListener('dragover', () => {
         uploadCanvas.classList.add('dragging')
-      })
+      }, { signal })
       uploadCanvas.addEventListener('dragleave', () => {
         uploadCanvas.classList.remove('dragging')
-      })
+      }, { signal })
 
       uploadCanvas.addEventListener('drop', async (event) => {
         event.preventDefault()
@@ -123,7 +131,7 @@ export default (app) => ({
             await this.upload(files[i])
           }
         }
-      })
+      }, { signal })
     })
   },
 
