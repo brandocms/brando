@@ -7,7 +7,7 @@ defmodule Brando.JSONLD.Schema.Organization do
   alias Brando.Sites
 
   @derive Jason.Encoder
-  defstruct "@context": "http://schema.org",
+  defstruct "@context": "https://schema.org",
             "@id": "https://default/#identity",
             "@type": "Organization",
             address: nil,

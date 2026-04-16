@@ -6,7 +6,7 @@ defmodule Brando.JSONLD.Schema.Person do
   alias Brando.JSONLD.Schema
 
   @derive Jason.Encoder
-  defstruct "@context": "http://schema.org",
+  defstruct "@context": "https://schema.org",
             "@type": "Person",
             image: nil,
             name: nil

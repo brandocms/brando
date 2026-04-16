@@ -17,7 +17,7 @@ defmodule Brando.Sites.Identity do
   persist_identifier false
 
   @logo_cfg [
-    allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
+    allowed_mimetypes: ["image/jpeg", "image/png", "image/gif", "image/svg+xml"],
     default_size: "xlarge",
     upload_path: Path.join(["images", "sites", "identity", "logo"]),
     random_filename: true,
@@ -81,7 +81,10 @@ defmodule Brando.Sites.Identity do
           input :type, :radios,
             options: [
               %{value: :organization, label: t("Organization")},
-              %{value: :corporation, label: t("Corporation")}
+              %{value: :corporation, label: t("Corporation")},
+              %{value: :professional_service, label: t("Professional Service")},
+              %{value: :local_business, label: t("Local Business")},
+              %{value: :restaurant, label: t("Restaurant")}
             ],
             label: t("Type")
         end

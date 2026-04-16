@@ -3,7 +3,7 @@ defmodule Brando.JSONLD.Schema.Event do
    Event schema
   """
   @derive Jason.Encoder
-  defstruct "@context": "http://schema.org",
+  defstruct "@context": "https://schema.org",
             "@type": "Event",
             startDate: nil,
             endDate: nil,

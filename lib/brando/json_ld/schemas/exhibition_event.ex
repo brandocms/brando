@@ -4,7 +4,7 @@ defmodule Brando.JSONLD.Schema.ExhibitionEvent do
   """
 
   @derive Jason.Encoder
-  defstruct "@context": "http://schema.org",
+  defstruct "@context": "https://schema.org",
             "@type": "ExhibitionEvent",
             startDate: nil,
             endDate: nil,

@@ -3,7 +3,7 @@ defmodule Brando.JSONLD.Schema.CreativeWork do
   CreativeWork schema
   """
   @derive Jason.Encoder
-  defstruct "@context": "http://schema.org",
+  defstruct "@context": "https://schema.org",
             "@type": "CreativeWork",
             about: nil,
             abstract: nil,

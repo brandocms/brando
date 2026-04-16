@@ -22,12 +22,14 @@ defmodule Brando.JSONLD.HTML do
 
       breadcrumbs = output_json_ld(:breadcrumbs, conn)
       identity = output_json_ld(cached_identity_type, {cached_identity, cached_seo})
+      website = output_json_ld(:website, {cached_identity, cached_seo})
       entity = output_json_ld(:entity, conn)
 
       assigns =
         assigns
         |> assign(:breadcrumbs, breadcrumbs)
         |> assign(:identity, identity)
+        |> assign(:website, website)
         |> assign(:entity, entity)
 
       ~H"""
@@ -39,6 +41,11 @@ defmodule Brando.JSONLD.HTML do
       <%= if @identity != "" do %>
         <script type="application/ld+json">
           <%= @identity %>
+        </script>
+      <% end %>
+      <%= if @website != "" do %>
+        <script type="application/ld+json">
+          <%= @website %>
         </script>
       <% end %>
       <%= if @entity != "" do %>
@@ -83,6 +90,42 @@ defmodule Brando.JSONLD.HTML do
       |> JSONLD.to_json()
 
     raw(organization_json)
+  end
+
+  def output_json_ld(:professional_service, {cached_identity, cached_seo}) do
+    json =
+      {cached_identity, cached_seo}
+      |> JSONLD.Schema.ProfessionalService.build()
+      |> JSONLD.to_json()
+
+    raw(json)
+  end
+
+  def output_json_ld(:local_business, {cached_identity, cached_seo}) do
+    json =
+      {cached_identity, cached_seo}
+      |> JSONLD.Schema.LocalBusiness.build()
+      |> JSONLD.to_json()
+
+    raw(json)
+  end
+
+  def output_json_ld(:restaurant, {cached_identity, cached_seo}) do
+    json =
+      {cached_identity, cached_seo}
+      |> JSONLD.Schema.Restaurant.build()
+      |> JSONLD.to_json()
+
+    raw(json)
+  end
+
+  def output_json_ld(:website, {cached_identity, cached_seo}) do
+    website_json =
+      {cached_identity, cached_seo}
+      |> JSONLD.Schema.WebSite.build()
+      |> JSONLD.to_json()
+
+    raw(website_json)
   end
 
   def output_json_ld(:entity, %{assigns: %{json_ld_entity: entity}}) do

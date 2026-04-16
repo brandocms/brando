@@ -4,7 +4,7 @@ defmodule Brando.JSONLD.Schema.Article do
   """
 
   @derive Jason.Encoder
-  defstruct "@context": "http://schema.org",
+  defstruct "@context": "https://schema.org",
             "@type": "Article",
             author: nil,
             copyrightHolder: nil,

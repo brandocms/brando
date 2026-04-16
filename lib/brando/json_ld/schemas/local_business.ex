@@ -1,6 +1,6 @@
-defmodule Brando.JSONLD.Schema.Corporation do
+defmodule Brando.JSONLD.Schema.LocalBusiness do
   @moduledoc """
-  Corporation schema
+  LocalBusiness schema
   """
 
   alias Brando.JSONLD.Schema
@@ -9,7 +9,7 @@ defmodule Brando.JSONLD.Schema.Corporation do
   @derive Jason.Encoder
   defstruct "@context": "https://schema.org",
             "@id": "https://default/#identity",
-            "@type": "Corporation",
+            "@type": "LocalBusiness",
             address: nil,
             alternateName: nil,
             description: nil,
@@ -21,18 +21,18 @@ defmodule Brando.JSONLD.Schema.Corporation do
             sameAs: nil,
             url: nil
 
-  def build({%Sites.Identity{} = corporation, %Sites.SEO{} = seo}) do
+  def build({%Sites.Identity{} = identity, %Sites.SEO{} = seo}) do
     %__MODULE__{
       "@id": Path.join(Brando.Utils.hostname(), "#identity"),
-      address: Schema.PostalAddress.build(corporation),
-      alternateName: corporation.alternate_name,
+      address: Schema.PostalAddress.build(identity),
+      alternateName: identity.alternate_name,
       description: seo.fallback_meta_description,
-      email: corporation.email,
-      telephone: corporation.phone,
+      email: identity.email,
+      telephone: identity.phone,
       image: Schema.ImageObject.build(seo.fallback_meta_image),
-      logo: Schema.ImageObject.build(corporation.logo),
-      name: corporation.name,
-      sameAs: build_social_media(corporation),
+      logo: Schema.ImageObject.build(identity.logo),
+      name: identity.name,
+      sameAs: build_social_media(identity),
       url: seo.base_url
     }
   end
