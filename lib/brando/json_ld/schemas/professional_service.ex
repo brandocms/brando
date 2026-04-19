@@ -16,7 +16,10 @@ defmodule Brando.JSONLD.Schema.ProfessionalService do
             logo: nil,
             name: nil,
             sameAs: nil,
-            url: nil
+            url: nil,
+            foundingDate: nil,
+            areaServed: nil,
+            knowsAbout: nil
 
   def build(args) do
     struct(__MODULE__, Brando.JSONLD.Schema.IdentitySchema.build_base(args))
