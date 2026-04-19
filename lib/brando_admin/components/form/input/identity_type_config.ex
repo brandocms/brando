@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Input
 
   def mount(socket) do
     {:ok, socket}
@@ -60,20 +61,17 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
     ~H"""
     <div class="brando-input" data-component={@type}>
       <Form.field_base field={@config[@name]} label={@label} instructions={@instructions}>
-        <input
-          type={input_type(@type)}
-          id={@config[@name].id}
-          name={@config[@name].name}
-          value={@config[@name].value || ""}
+        <Input.input
+          type={@type}
+          field={@config[@name]}
+          class={["text"]}
+          phx-debounce={300}
+          data-watch-focus
         />
       </Form.field_base>
     </div>
     """
   end
-
-  defp input_type(:number), do: "number"
-  defp input_type(:date), do: "date"
-  defp input_type(_), do: "text"
 
   # Fields per identity type. Built at runtime for gettext translation.
   # Returns list of {field_name, input_type, label, opts} tuples.
