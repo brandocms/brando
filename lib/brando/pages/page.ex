@@ -295,13 +295,13 @@ defmodule Brando.Pages.Page do
 
           input :json_ld_type, :select,
             options: [
-              %{value: "WebPage", label: t("Web Page")},
-              %{value: "Article", label: t("Article")},
-              %{value: "AboutPage", label: t("About Page")},
-              %{value: "ContactPage", label: t("Contact Page")},
-              %{value: "CollectionPage", label: t("Collection Page")},
-              %{value: "ItemPage", label: t("Item Page")},
-              %{value: "ProfilePage", label: t("Profile Page")}
+              %{value: "WebPage", label: t("Web Page"), instructions: t("Default. Generic web page")},
+              %{value: "Article", label: t("Article"), instructions: t("Blog posts, news articles")},
+              %{value: "AboutPage", label: t("About Page"), instructions: t("About the organization")},
+              %{value: "ContactPage", label: t("Contact Page"), instructions: t("Contact information")},
+              %{value: "CollectionPage", label: t("Collection Page"), instructions: t("Listings, archives, indexes")},
+              %{value: "ItemPage", label: t("Item Page"), instructions: t("Individual item in a collection")},
+              %{value: "ProfilePage", label: t("Profile Page"), instructions: t("Person or user profile")}
             ],
             label: t("Structured data type")
         end

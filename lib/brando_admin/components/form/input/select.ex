@@ -416,10 +416,14 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   defp extract_value(%{id: value}), do: value
 
   defp get_label(%{opt: %{label: _}} = assigns) do
-    assigns = assign_new(assigns, :deletable, fn -> false end)
+    assigns =
+      assigns
+      |> assign_new(:deletable, fn -> false end)
+      |> assign_new(:instructions, fn -> Map.get(assigns.opt, :instructions) end)
 
     ~H"""
-    {@opt.label |> raw}
+    <span>{@opt.label |> raw}</span>
+    <small :if={@instructions} class="help-text">{@instructions}</small>
     """
   end
 
