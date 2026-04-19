@@ -123,7 +123,7 @@ defmodule Brando.JSONLDRenderTest do
 
     # WebPage entity (auto-generated)
     webpage_json = find_entity(graph, "WebPage")
-    assert webpage_json["@id"] == "http://localhost#webpage"
+    assert webpage_json["@id"] == "http://localhost/#webpage"
     assert webpage_json["isPartOf"] == %{"@id" => "http://localhost/#website"}
     assert webpage_json["inLanguage"] == "en"
     refute Map.has_key?(webpage_json, "@context")

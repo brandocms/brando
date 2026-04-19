@@ -42,7 +42,7 @@ defmodule Brando.JSONLDSchemaTest do
              %Brando.JSONLD.Schema.Article{
                "@context": "https://schema.org",
                "@type": "Article",
-               "@id": "http://localhost#article",
+               "@id": "http://localhost/#article",
                author: %{"@id": "http://localhost/#identity"},
                copyrightHolder: %{"@id": "http://localhost/#identity"},
                copyrightYear: 2000,
@@ -70,7 +70,7 @@ defmodule Brando.JSONLDSchemaTest do
              %Brando.JSONLD.Schema.Article{
                "@context": "https://schema.org",
                "@type": "Article",
-               "@id": "http://localhost#article",
+               "@id": "http://localhost/#article",
                author: %{"@id": "http://localhost/#identity"},
                copyrightHolder: %{"@id": "http://localhost/#identity"},
                copyrightYear: 2000,

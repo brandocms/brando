@@ -10,40 +10,6 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
 
   alias BrandoAdmin.Components.Form
 
-  # Fields to show per identity type.
-  # Maps identity type -> list of {field_name, input_type, label, opts} tuples.
-  @type_fields %{
-    "organization" => [
-      {:founding_date, :date, "Founding date", []},
-      {:number_of_employees, :number, "Number of employees", []}
-    ],
-    "corporation" => [
-      {:founding_date, :date, "Founding date", []},
-      {:number_of_employees, :number, "Number of employees", []},
-      {:ticker_symbol, :text, "Ticker symbol", []}
-    ],
-    "professional_service" => [
-      {:founding_date, :date, "Founding date", []},
-      {:area_served, :text, "Area served", []},
-      {:knows_about, :text, "Knows about", []}
-    ],
-    "local_business" => [
-      {:opening_hours, :text, "Opening hours", [instructions: "e.g. Mo-Fr 09:00-17:00"]},
-      {:price_range, :text, "Price range", [instructions: "e.g. $$, $$$"]},
-      {:area_served, :text, "Area served", []},
-      {:geo_latitude, :text, "Latitude", []},
-      {:geo_longitude, :text, "Longitude", []}
-    ],
-    "restaurant" => [
-      {:opening_hours, :text, "Opening hours", [instructions: "e.g. Mo-Fr 09:00-17:00"]},
-      {:price_range, :text, "Price range", [instructions: "e.g. $$, $$$"]},
-      {:serves_cuisine, :text, "Serves cuisine", []},
-      {:has_menu, :text, "Menu URL", []},
-      {:geo_latitude, :text, "Latitude", []},
-      {:geo_longitude, :text, "Longitude", []}
-    ]
-  }
-
   def mount(socket) do
     {:ok, socket}
   end
@@ -54,7 +20,7 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
       |> Ecto.Changeset.get_field(:type)
       |> to_string()
 
-    fields = Map.get(@type_fields, identity_type, [])
+    fields = type_fields(identity_type)
 
     {:ok,
      socket
@@ -94,7 +60,12 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
     ~H"""
     <div class="brando-input" data-component={@type}>
       <Form.field_base field={@config[@name]} label={@label} instructions={@instructions}>
-        <input type={input_type(@type)} id={@config[@name].id} name={@config[@name].name} value={@config[@name].value || ""} />
+        <input
+          type={input_type(@type)}
+          id={@config[@name].id}
+          name={@config[@name].name}
+          value={@config[@name].value || ""}
+        />
       </Form.field_base>
     </div>
     """
@@ -103,4 +74,52 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
   defp input_type(:number), do: "number"
   defp input_type(:date), do: "date"
   defp input_type(_), do: "text"
+
+  # Fields per identity type. Built at runtime for gettext translation.
+  # Returns list of {field_name, input_type, label, opts} tuples.
+  defp type_fields("organization") do
+    [
+      {:founding_date, :date, gettext("Founding date"), []},
+      {:number_of_employees, :number, gettext("Number of employees"), []}
+    ]
+  end
+
+  defp type_fields("corporation") do
+    [
+      {:founding_date, :date, gettext("Founding date"), []},
+      {:number_of_employees, :number, gettext("Number of employees"), []},
+      {:ticker_symbol, :text, gettext("Ticker symbol"), []}
+    ]
+  end
+
+  defp type_fields("professional_service") do
+    [
+      {:founding_date, :date, gettext("Founding date"), []},
+      {:area_served, :text, gettext("Area served"), []},
+      {:knows_about, :text, gettext("Knows about"), []}
+    ]
+  end
+
+  defp type_fields("local_business") do
+    [
+      {:opening_hours, :text, gettext("Opening hours"), [instructions: gettext("e.g. Mo-Fr 09:00-17:00")]},
+      {:price_range, :text, gettext("Price range"), [instructions: gettext("e.g. $$, $$$")]},
+      {:area_served, :text, gettext("Area served"), []},
+      {:geo_latitude, :text, gettext("Latitude"), []},
+      {:geo_longitude, :text, gettext("Longitude"), []}
+    ]
+  end
+
+  defp type_fields("restaurant") do
+    [
+      {:opening_hours, :text, gettext("Opening hours"), [instructions: gettext("e.g. Mo-Fr 09:00-17:00")]},
+      {:price_range, :text, gettext("Price range"), [instructions: gettext("e.g. $$, $$$")]},
+      {:serves_cuisine, :text, gettext("Serves cuisine"), []},
+      {:has_menu, :text, gettext("Menu URL"), []},
+      {:geo_latitude, :text, gettext("Latitude"), []},
+      {:geo_longitude, :text, gettext("Longitude"), []}
+    ]
+  end
+
+  defp type_fields(_), do: []
 end

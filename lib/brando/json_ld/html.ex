@@ -14,11 +14,10 @@ defmodule Brando.JSONLD.HTML do
     cached_identity = Brando.Cache.Identity.get(language)
 
     if map_size(cached_identity) > 0 do
-      cached_identity_type = String.to_existing_atom(cached_identity.type)
       cached_seo = Brando.Cache.SEO.get(language)
 
       entities = [
-        build_identity(cached_identity_type, cached_identity, cached_seo),
+        build_identity(cached_identity.type, cached_identity, cached_seo),
         build_website(cached_identity, cached_seo),
         build_webpage(conn, cached_identity, cached_seo),
         build_breadcrumbs(conn),
@@ -43,11 +42,11 @@ defmodule Brando.JSONLD.HTML do
     identity_schema_module(type).build({cached_identity, cached_seo})
   end
 
-  defp identity_schema_module(:organization), do: JSONLD.Schema.Organization
-  defp identity_schema_module(:corporation), do: JSONLD.Schema.Corporation
-  defp identity_schema_module(:professional_service), do: JSONLD.Schema.ProfessionalService
-  defp identity_schema_module(:local_business), do: JSONLD.Schema.LocalBusiness
-  defp identity_schema_module(:restaurant), do: JSONLD.Schema.Restaurant
+  defp identity_schema_module("organization"), do: JSONLD.Schema.Organization
+  defp identity_schema_module("corporation"), do: JSONLD.Schema.Corporation
+  defp identity_schema_module("professional_service"), do: JSONLD.Schema.ProfessionalService
+  defp identity_schema_module("local_business"), do: JSONLD.Schema.LocalBusiness
+  defp identity_schema_module("restaurant"), do: JSONLD.Schema.Restaurant
 
   defp build_website(cached_identity, cached_seo) do
     JSONLD.Schema.WebSite.build({cached_identity, cached_seo})

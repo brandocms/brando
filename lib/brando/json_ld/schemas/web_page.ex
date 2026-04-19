@@ -29,7 +29,7 @@ defmodule Brando.JSONLD.Schema.WebPage do
 
     %__MODULE__{
       "@type": type,
-      "@id": "#{url}#webpage",
+      "@id": Path.join(url, "#webpage"),
       url: url,
       name: conn.assigns[:page_title],
       inLanguage: conn.assigns[:language],

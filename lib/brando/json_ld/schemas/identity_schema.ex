@@ -34,10 +34,17 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
   defp merge_type_config(base, %{type: type, type_config: %{} = config}) do
     type_fields =
       case type do
-        t when t in ["organization", "corporation"] ->
+        "organization" ->
           %{
             foundingDate: format_date(config.founding_date),
             numberOfEmployees: config.number_of_employees
+          }
+
+        "corporation" ->
+          %{
+            foundingDate: format_date(config.founding_date),
+            numberOfEmployees: config.number_of_employees,
+            tickerSymbol: config.ticker_symbol
           }
 
         "professional_service" ->
@@ -66,14 +73,6 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
 
         _ ->
           %{}
-      end
-
-    # Corporation also gets tickerSymbol
-    type_fields =
-      if type == "corporation" do
-        Map.put(type_fields, :tickerSymbol, config.ticker_symbol)
-      else
-        type_fields
       end
 
     Map.merge(base, type_fields)

@@ -83,7 +83,7 @@ defmodule Brando.JSONLD do
       |> to_string()
       |> String.downcase()
 
-    Map.put(struct, :"@id", "#{url}##{type}")
+    Map.put(struct, :"@id", Path.join(url, "##{type}"))
   end
 
   defp maybe_add_id(struct, _), do: struct
