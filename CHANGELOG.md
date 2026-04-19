@@ -48,8 +48,8 @@
 
 #### Migrations
 
-- `brando_116`: Adds `type_config` (jsonb) to `sites_identities`.
-- `brando_117`: Adds `json_ld_type` (string, default "WebPage") to `pages`.
+- `brando_150`: Adds `type_config` (jsonb) to `sites_identities`.
+- `brando_151`: Adds `json_ld_type` (string, default "WebPage") to `pages`.
 
 - **HEEx support for `identifier` and `absolute_url`**: Both macros now accept `~H` templates
   as an alternative to Liquex templates.
