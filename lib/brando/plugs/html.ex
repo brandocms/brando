@@ -82,7 +82,20 @@ defmodule Brando.Plug.HTML do
   end
 
   @doc """
-  Adds JSON-LD to conn
+  Adds JSON-LD structured data to the conn.
+
+  Can be called multiple times to add multiple entities to the `@graph`.
+
+  ## Examples
+
+      # Add breadcrumbs
+      put_json_ld(conn, :breadcrumbs, [{"Home", "/"}, {"About", "/about"}])
+
+      # Add a content entity from blueprint DSL
+      put_json_ld(conn, MyApp.Blog.Post, post)
+
+      # Add with extra runtime fields
+      put_json_ld(conn, MyApp.Blog.Post, post, [%{name: :image, type: :image, value_fn: &get_image/1}])
   """
   def put_json_ld(conn, :breadcrumbs, breadcrumbs), do: assign(conn, :json_ld_breadcrumbs, breadcrumbs)
 

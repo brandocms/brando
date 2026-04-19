@@ -1,6 +1,17 @@
 defmodule Brando.JSONLD do
   @moduledoc """
-  JSON-LD is a lightweight Linked Data format.
+  JSON-LD structured data generation.
+
+  Extracts JSON-LD entities from blueprint DSL definitions and assembles
+  them into a connected `@graph` document following schema.org vocabulary.
+  """
+
+  @doc """
+  Extracts a JSON-LD entity from a blueprint module's `json_ld_schema` DSL.
+
+  Returns a struct populated with field values extracted from `data`.
+  Additional fields can be passed via `extra_fields` to supplement
+  the blueprint definition at runtime.
   """
   def extract_json_ld(module, data, extra_fields \\ []) do
     json_ld_data =

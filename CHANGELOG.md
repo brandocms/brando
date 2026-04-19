@@ -4,6 +4,53 @@
 
 #### Features
 
+- **JSON-LD `@graph` output**: All JSON-LD entities (identity, website, webpage, breadcrumbs,
+  content) are now combined into a single connected `@graph` document instead of separate
+  `<script>` tags. This follows Google's recommended approach and matches implementations
+  like Yoast and SEOmatic.
+
+- **Auto WebPage entity**: A `WebPage` entity is automatically added to the graph for every
+  page render, with `@id` references linking it to the site identity and website.
+
+- **WebPage type selection**: Pages now have a `json_ld_type` attribute (default: `"WebPage"`)
+  configurable in the admin Advanced tab. Supports `WebPage`, `Article`, `AboutPage`,
+  `ContactPage`, `CollectionPage`, `ItemPage`, and `ProfilePage`.
+
+- **Identity type-specific fields** (#2734): The Identity form now includes type-specific fields
+  via an embedded `type_config` schema:
+  - Organization/Corporation: `foundingDate`, `numberOfEmployees`
+  - Corporation: `tickerSymbol`
+  - ProfessionalService: `areaServed`, `knowsAbout`
+  - LocalBusiness/Restaurant: `openingHours`, `priceRange`, `geo`
+  - Restaurant: `servesCuisine`, `hasMenu`
+
+- **`{:list, SchemaModule}` field type**: New DSL field type for mapping over collections.
+  Example: `field :performer, {:list, JSONLD.Schema.Person}, & &1.performers`
+
+- **Multiple entities per page**: `put_json_ld/3` can be called multiple times to add
+  multiple content entities to the graph.
+
+- **`@id` on content entities**: Content entities extracted via the blueprint DSL now
+  automatically get an `@id` based on the current URL and entity type.
+
+#### Bug Fixes
+
+- Fixed `@context` inconsistency (`http` vs `https://schema.org`).
+- Breadcrumb URLs are now absolute (via `hostname/1`).
+- Fixed `PostalAddress.addressRegion` incorrectly mapping to `city` instead of `region`.
+- Fixed `CreativeWork.build/1` stub that logged errors and returned empty struct.
+- Added `image` field to Page's `json_ld_schema` using `meta_image`.
+
+#### Documentation
+
+- Rewrote `guides/jsonld.md` with complete guide covering `@graph` output, DSL field types,
+  list type, controller usage, WebPage types, identity type-specific fields, and custom schemas.
+
+#### Migrations
+
+- `brando_116`: Adds `type_config` (jsonb) to `sites_identities`.
+- `brando_117`: Adds `json_ld_type` (string, default "WebPage") to `pages`.
+
 - **HEEx support for `identifier` and `absolute_url`**: Both macros now accept `~H` templates
   as an alternative to Liquex templates.
 
