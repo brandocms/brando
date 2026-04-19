@@ -20,6 +20,7 @@ defmodule Brando.JSONLD.HTML do
       entities = [
         build_identity(cached_identity_type, cached_identity, cached_seo),
         build_website(cached_identity, cached_seo),
+        build_webpage(conn, cached_identity, cached_seo),
         build_breadcrumbs(conn),
         build_content_entity(conn)
       ]
@@ -50,6 +51,10 @@ defmodule Brando.JSONLD.HTML do
 
   defp build_website(cached_identity, cached_seo) do
     JSONLD.Schema.WebSite.build({cached_identity, cached_seo})
+  end
+
+  defp build_webpage(conn, cached_identity, cached_seo) do
+    JSONLD.Schema.WebPage.build(conn, cached_identity, cached_seo)
   end
 
   defp build_breadcrumbs(%{assigns: %{json_ld_breadcrumbs: breadcrumbs}}) do

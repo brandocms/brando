@@ -92,6 +92,7 @@ defmodule Brando.Pages.Page do
     attribute :is_homepage, :boolean
     attribute :has_url, :boolean, default: true
     attribute :css_classes, :string
+    attribute :json_ld_type, :string, default: "WebPage"
   end
 
   relations do
@@ -291,6 +292,18 @@ defmodule Brando.Pages.Page do
             label: t("Template")
 
           input :css_classes, :text, label: t("CSS classes")
+
+          input :json_ld_type, :select,
+            options: [
+              %{value: "WebPage", label: t("Web Page")},
+              %{value: "Article", label: t("Article")},
+              %{value: "AboutPage", label: t("About Page")},
+              %{value: "ContactPage", label: t("Contact Page")},
+              %{value: "CollectionPage", label: t("Collection Page")},
+              %{value: "ItemPage", label: t("Item Page")},
+              %{value: "ProfilePage", label: t("Profile Page")}
+            ],
+            label: t("Structured data type")
         end
 
         fieldset do

@@ -95,7 +95,11 @@ defmodule Brando.Plug.HTML do
     }
 
     data_with_meta = Map.merge(data, meta_meta)
-    assign(conn, :json_ld_entity, JSONLD.extract_json_ld(module, data_with_meta, extra_fields))
+    json_ld_type = Map.get(data, :json_ld_type, "WebPage")
+
+    conn
+    |> assign(:json_ld_entity, JSONLD.extract_json_ld(module, data_with_meta, extra_fields))
+    |> assign(:json_ld_page_type, json_ld_type)
   end
 
   @doc """
@@ -128,7 +132,7 @@ defmodule Brando.Plug.HTML do
 
     full_host_hreflangs =
       Enum.map(Brando.config(:languages), fn [value: lang_code, text: _] ->
-        {String.to_atom(lang_code), Brando.I18n.Helpers.localized_path(lang_code, fun, args)}
+        {String.to_existing_atom(lang_code), Brando.I18n.Helpers.localized_path(lang_code, fun, args)}
       end)
 
     put_private(conn, :brando_hreflangs, [full_host_canonical] ++ full_host_hreflangs)

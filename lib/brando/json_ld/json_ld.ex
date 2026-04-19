@@ -56,7 +56,14 @@ defmodule Brando.JSONLD do
         result = schema.build(value_fn.(data))
         Map.put(acc, name, result)
     end)
+    |> maybe_override_type(data)
   end
+
+  defp maybe_override_type(struct, %{json_ld_type: type}) when is_binary(type) do
+    Map.put(struct, :"@type", type)
+  end
+
+  defp maybe_override_type(struct, _), do: struct
 
   @doc """
   Converts struct to JSON. Strips out all nil fields

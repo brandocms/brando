@@ -121,6 +121,13 @@ defmodule Brando.JSONLDRenderTest do
     assert website_json["publisher"] == %{"@id" => "http://localhost/#identity"}
     refute Map.has_key?(website_json, "@context")
 
+    # WebPage entity (auto-generated)
+    webpage_json = find_entity(graph, "WebPage")
+    assert webpage_json["@id"] == "http://localhost#webpage"
+    assert webpage_json["isPartOf"] == %{"@id" => "http://localhost/#website"}
+    assert webpage_json["inLanguage"] == "en"
+    refute Map.has_key?(webpage_json, "@context")
+
     # Article entity
     article_json = find_entity(graph, "Article")
     assert article_json["author"] == %{"@id" => "http://localhost/#identity"}
@@ -174,6 +181,7 @@ defmodule Brando.JSONLDRenderTest do
     assert graph["@context"] == "https://schema.org"
 
     breadcrumbs_json = find_entity(graph, "BreadcrumbList")
+    assert breadcrumbs_json["@id"] == "http://localhost/#breadcrumb"
 
     assert breadcrumbs_json["itemListElement"] == [
              %{"@type" => "ListItem", "item" => "http://localhost", "name" => "Home", "position" => 1},
