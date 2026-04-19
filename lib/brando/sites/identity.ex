@@ -137,23 +137,7 @@ defmodule Brando.Sites.Identity do
             label t("Type-specific settings")
             cardinality :one
             default %Brando.Sites.Identity.TypeConfig{}
-
-            input :founding_date, :date, label: t("Founding date")
-            input :number_of_employees, :number, label: t("Number of employees")
-            input :ticker_symbol, :text, label: t("Ticker symbol")
-            input :area_served, :text, label: t("Area served")
-            input :knows_about, :text, label: t("Knows about")
-
-            input :opening_hours, :text,
-              label: t("Opening hours"),
-              instructions: t("e.g. Mo-Fr 09:00-17:00")
-
-            input :price_range, :text,
-              label: t("Price range"),
-              instructions: t("e.g. $$, $$$")
-
-            input :serves_cuisine, :text, label: t("Serves cuisine")
-            input :has_menu, :text, label: t("Menu URL")
+            component BrandoAdmin.Components.Form.Input.IdentityTypeConfig
           end
         end
 
