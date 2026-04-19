@@ -15,7 +15,7 @@ defmodule Brando.JSONLD.Schema.PostalAddress do
     %__MODULE__{
       addressCountry: organization.country || nil,
       addressLocality: organization.city || nil,
-      addressRegion: organization.city || nil,
+      addressRegion: Map.get(organization, :region, nil),
       postalCode: organization.zipcode || nil,
       streetAddress: build_street_adress(organization) || nil
     }

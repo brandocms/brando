@@ -9,7 +9,8 @@ defmodule Brando.JSONLDSchemaTest do
     updated_at: ~N[2000-01-01 23:30:00],
     language: "no",
     title: "Title of page",
-    meta_description: "Meta description"
+    meta_description: "Meta description",
+    meta_image: nil
   }
 
   @extra_fields [
@@ -39,7 +40,7 @@ defmodule Brando.JSONLDSchemaTest do
 
     assert extracted_json_ld ==
              %Brando.JSONLD.Schema.Article{
-               "@context": "http://schema.org",
+               "@context": "https://schema.org",
                "@type": "Article",
                author: %{"@id": "http://localhost/#identity"},
                copyrightHolder: %{"@id": "http://localhost/#identity"},
@@ -66,7 +67,7 @@ defmodule Brando.JSONLDSchemaTest do
 
     assert extracted_json_ld ==
              %Brando.JSONLD.Schema.Article{
-               "@context": "http://schema.org",
+               "@context": "https://schema.org",
                "@type": "Article",
                author: %{"@id": "http://localhost/#identity"},
                copyrightHolder: %{"@id": "http://localhost/#identity"},
@@ -96,14 +97,14 @@ defmodule Brando.JSONLDSchemaTest do
 
     assert Brando.JSONLD.Schema.Corporation.build({cached_identity, cached_seo}) ==
              %Brando.JSONLD.Schema.Corporation{
-               "@context": "http://schema.org",
+               "@context": "https://schema.org",
                "@id": "http://localhost/#identity",
                "@type": "Corporation",
                address: %Brando.JSONLD.Schema.PostalAddress{
                  "@type": "PostalAddress",
                  addressCountry: "NO",
                  addressLocality: "Oslo",
-                 addressRegion: "Oslo",
+                 addressRegion: nil,
                  postalCode: "0000",
                  streetAddress: "Testveien 1"
                },
@@ -126,7 +127,7 @@ defmodule Brando.JSONLDSchemaTest do
     }
 
     assert Brando.JSONLD.Schema.Person.build(u1) == %Brando.JSONLD.Schema.Person{
-             "@context": "http://schema.org",
+             "@context": "https://schema.org",
              "@type": "Person",
              image: %Brando.JSONLD.Schema.ImageObject{
                "@type": "ImageObject",
@@ -145,7 +146,7 @@ defmodule Brando.JSONLDSchemaTest do
     }
 
     assert Brando.JSONLD.Schema.WebSite.build(w) == %Brando.JSONLD.Schema.WebSite{
-             "@context": "http://schema.org",
+             "@context": "https://schema.org",
              "@type": "WebSite",
              name: "My website",
              url: "https://test.com"

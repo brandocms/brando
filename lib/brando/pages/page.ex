@@ -320,6 +320,7 @@ defmodule Brando.Pages.Page do
     field :datePublished, :datetime, & &1.inserted_at
     field :description, :string, & &1.meta_description
     field :headline, :string, & &1.title
+    field :image, :image, & &1.meta_image
     field :inLanguage, :language
     field :mainEntityOfPage, :current_url
     field :name, :string, & &1.title

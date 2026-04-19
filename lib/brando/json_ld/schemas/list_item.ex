@@ -10,7 +10,7 @@ defmodule Brando.JSONLD.Schema.ListItem do
     %__MODULE__{
       position: position,
       name: name,
-      item: item
+      item: Brando.Utils.hostname(item)
     }
   end
 end

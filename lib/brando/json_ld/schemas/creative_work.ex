@@ -114,14 +114,16 @@ defmodule Brando.JSONLD.Schema.CreativeWork do
             video: nil,
             workExample: nil
 
-  def build(work) do
-    require Logger
+  @doc """
+  Build a CreativeWork from data.
 
-    Logger.error("""
-    => JSONLD/Schema >> CreativeWork
-    #{inspect(work, pretty: true)}
-    """)
-
-    %__MODULE__{}
+  When used via the blueprint DSL, fields are populated by `extract_json_ld/3`
+  and this function is not called directly. This handles the case where
+  CreativeWork is used as a nested schema type.
+  """
+  def build(data) when is_map(data) do
+    struct(__MODULE__, Map.take(data, Map.keys(%__MODULE__{}) -- [:"@context", :"@type"]))
   end
+
+  def build(_), do: %__MODULE__{}
 end

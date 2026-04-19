@@ -15,7 +15,8 @@ defmodule Brando.JSONLDRenderTest do
     updated_at: ~N[2000-01-01 23:30:00],
     language: "no",
     title: "Title of page",
-    meta_description: "Meta description"
+    meta_description: "Meta description",
+    meta_image: nil
   }
 
   @img %{
@@ -73,17 +74,17 @@ defmodule Brando.JSONLDRenderTest do
       |> Enum.map(&Jason.decode!/1)
 
     identity_json = Enum.at(extracted_json, 0)
-    article_json = Enum.at(extracted_json, 1)
+    _website_json = Enum.at(extracted_json, 1)
+    article_json = Enum.at(extracted_json, 2)
 
     assert identity_json == %{
-             "@context" => "http://schema.org",
+             "@context" => "https://schema.org",
              "@id" => "http://localhost/#identity",
              "@type" => "Organization",
              "address" => %{
                "@type" => "PostalAddress",
                "addressCountry" => "NO",
                "addressLocality" => "Oslo",
-               "addressRegion" => "Oslo",
                "postalCode" => "0000",
                "streetAddress" => "Testveien 1"
              },
@@ -103,7 +104,7 @@ defmodule Brando.JSONLDRenderTest do
            }
 
     assert article_json == %{
-             "@context" => "http://schema.org",
+             "@context" => "https://schema.org",
              "@type" => "Article",
              "author" => %{"@id" => "http://localhost/#identity"},
              "copyrightHolder" => %{"@id" => "http://localhost/#identity"},
@@ -163,16 +164,16 @@ defmodule Brando.JSONLDRenderTest do
              "@context" => "https://schema.org",
              "@type" => "BreadcrumbList",
              "itemListElement" => [
-               %{"@type" => "ListItem", "item" => "/", "name" => "Home", "position" => 1},
+               %{"@type" => "ListItem", "item" => "http://localhost", "name" => "Home", "position" => 1},
                %{
                  "@type" => "ListItem",
-                 "item" => "/about",
+                 "item" => "http://localhost/about",
                  "name" => "About",
                  "position" => 2
                },
                %{
                  "@type" => "ListItem",
-                 "item" => "/about/contact",
+                 "item" => "http://localhost/about/contact",
                  "name" => "Contact",
                  "position" => 3
                }
