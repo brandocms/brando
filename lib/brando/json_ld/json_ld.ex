@@ -67,7 +67,36 @@ defmodule Brando.JSONLD do
     Jason.encode!(map)
   end
 
-  defp to_slim_map(%_{} = struct) do
+  @doc """
+  Assembles a list of JSON-LD entities into a single @graph structure.
+
+  Strips @context from individual entities (it goes at the top level only)
+  and wraps everything in a single JSON-LD document.
+  """
+  def to_graph_json(entities) do
+    graph_items =
+      entities
+      |> List.flatten()
+      |> Enum.reject(&is_nil/1)
+      |> Enum.map(fn entity ->
+        entity
+        |> to_slim_map()
+        |> Map.delete(:"@context")
+        |> Map.delete("@context")
+      end)
+      |> Enum.reject(&is_nil/1)
+
+    %{
+      "@context" => "https://schema.org",
+      "@graph" => graph_items
+    }
+    |> Jason.encode!()
+  end
+
+  @doc """
+  Converts a struct or map to a slim map, stripping nil values recursively.
+  """
+  def to_slim_map(%_{} = struct) do
     for {k, v} <- Map.from_struct(struct),
         v != nil,
         into: %{} do
@@ -75,7 +104,7 @@ defmodule Brando.JSONLD do
     end
   end
 
-  defp to_slim_map(map) when is_map(map) do
+  def to_slim_map(map) when is_map(map) do
     for {k, v} <- map,
         v != nil,
         into: %{} do

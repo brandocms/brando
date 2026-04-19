@@ -1,17 +1,14 @@
 defmodule Brando.JSONLD.HTML do
   @moduledoc """
-  HTML functions for rendering JSONLD data
+  HTML functions for rendering JSON-LD data as a single @graph document.
   """
 
   import Phoenix.Component
-  import Phoenix.HTML
-
+  import Phoenix.HTML, only: [raw: 1]
   alias Brando.JSONLD
 
-  @type conn :: Plug.Conn.t()
-
   @doc """
-  Renders all JSON LD
+  Renders all JSON-LD entities as a single `@graph` script tag.
   """
   def render_json_ld(%{conn: %{assigns: %{language: language}} = conn} = assigns) do
     cached_identity = Brando.Cache.Identity.get(language)
@@ -20,39 +17,19 @@ defmodule Brando.JSONLD.HTML do
       cached_identity_type = String.to_existing_atom(cached_identity.type)
       cached_seo = Brando.Cache.SEO.get(language)
 
-      breadcrumbs = output_json_ld(:breadcrumbs, conn)
-      identity = output_json_ld(cached_identity_type, {cached_identity, cached_seo})
-      website = output_json_ld(:website, {cached_identity, cached_seo})
-      entity = output_json_ld(:entity, conn)
+      entities = [
+        build_identity(cached_identity_type, cached_identity, cached_seo),
+        build_website(cached_identity, cached_seo),
+        build_breadcrumbs(conn),
+        build_content_entity(conn)
+      ]
 
-      assigns =
-        assigns
-        |> assign(:breadcrumbs, breadcrumbs)
-        |> assign(:identity, identity)
-        |> assign(:website, website)
-        |> assign(:entity, entity)
+      assigns = assign(assigns, :graph_json, encode_graph(entities))
 
       ~H"""
-      <%= if @breadcrumbs != "" do %>
-        <script type="application/ld+json">
-          <%= @breadcrumbs %>
-        </script>
-      <% end %>
-      <%= if @identity != "" do %>
-        <script type="application/ld+json">
-          <%= @identity %>
-        </script>
-      <% end %>
-      <%= if @website != "" do %>
-        <script type="application/ld+json">
-          <%= @website %>
-        </script>
-      <% end %>
-      <%= if @entity != "" do %>
-        <script type="application/ld+json">
-          <%= @entity %>
-        </script>
-      <% end %>
+      <script type="application/ld+json">
+        <%= @graph_json %>
+      </script>
       """
     else
       ~H""
@@ -61,77 +38,36 @@ defmodule Brando.JSONLD.HTML do
 
   def render_json_ld(assigns), do: ~H""
 
-  def output_json_ld(:breadcrumbs, %{assigns: %{json_ld_breadcrumbs: breadcrumbs}}) do
-    breadcrumb_json =
-      breadcrumbs
-      |> Enum.with_index()
-      |> Enum.map(fn {{name, url}, idx} ->
-        JSONLD.Schema.ListItem.build(idx + 1, name, url)
-      end)
-      |> JSONLD.Schema.BreadcrumbList.build()
-      |> JSONLD.to_json()
-
-    raw(breadcrumb_json)
+  defp build_identity(type, cached_identity, cached_seo) do
+    identity_schema_module(type).build({cached_identity, cached_seo})
   end
 
-  def output_json_ld(:corporation, {cached_identity, cached_seo}) do
-    corporation_json =
-      {cached_identity, cached_seo}
-      |> JSONLD.Schema.Corporation.build()
-      |> JSONLD.to_json()
+  defp identity_schema_module(:organization), do: JSONLD.Schema.Organization
+  defp identity_schema_module(:corporation), do: JSONLD.Schema.Corporation
+  defp identity_schema_module(:professional_service), do: JSONLD.Schema.ProfessionalService
+  defp identity_schema_module(:local_business), do: JSONLD.Schema.LocalBusiness
+  defp identity_schema_module(:restaurant), do: JSONLD.Schema.Restaurant
 
-    raw(corporation_json)
+  defp build_website(cached_identity, cached_seo) do
+    JSONLD.Schema.WebSite.build({cached_identity, cached_seo})
   end
 
-  def output_json_ld(:organization, {cached_identity, cached_seo}) do
-    organization_json =
-      {cached_identity, cached_seo}
-      |> JSONLD.Schema.Organization.build()
-      |> JSONLD.to_json()
-
-    raw(organization_json)
+  defp build_breadcrumbs(%{assigns: %{json_ld_breadcrumbs: breadcrumbs}}) do
+    breadcrumbs
+    |> Enum.with_index()
+    |> Enum.map(fn {{name, url}, idx} ->
+      JSONLD.Schema.ListItem.build(idx + 1, name, url)
+    end)
+    |> JSONLD.Schema.BreadcrumbList.build()
   end
 
-  def output_json_ld(:professional_service, {cached_identity, cached_seo}) do
-    json =
-      {cached_identity, cached_seo}
-      |> JSONLD.Schema.ProfessionalService.build()
-      |> JSONLD.to_json()
+  defp build_breadcrumbs(_), do: nil
 
-    raw(json)
-  end
+  defp build_content_entity(%{assigns: %{json_ld_entity: entity}}), do: entity
+  defp build_content_entity(_), do: nil
 
-  def output_json_ld(:local_business, {cached_identity, cached_seo}) do
-    json =
-      {cached_identity, cached_seo}
-      |> JSONLD.Schema.LocalBusiness.build()
-      |> JSONLD.to_json()
-
-    raw(json)
-  end
-
-  def output_json_ld(:restaurant, {cached_identity, cached_seo}) do
-    json =
-      {cached_identity, cached_seo}
-      |> JSONLD.Schema.Restaurant.build()
-      |> JSONLD.to_json()
-
-    raw(json)
-  end
-
-  def output_json_ld(:website, {cached_identity, cached_seo}) do
-    website_json =
-      {cached_identity, cached_seo}
-      |> JSONLD.Schema.WebSite.build()
-      |> JSONLD.to_json()
-
-    raw(website_json)
-  end
-
-  def output_json_ld(:entity, %{assigns: %{json_ld_entity: entity}}) do
-    entity_json = JSONLD.to_json(entity)
-    raw(entity_json)
-  end
-
-  def output_json_ld(_, _), do: ""
+  # Safe: to_graph_json returns JSON from Jason.encode!/1 — no user HTML content.
+  # Content is injected inside <script type="application/ld+json"> which is not
+  # parsed as HTML by browsers.
+  defp encode_graph(entities), do: raw(JSONLD.to_graph_json(entities))
 end

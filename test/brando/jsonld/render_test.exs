@@ -46,7 +46,19 @@ defmodule Brando.JSONLDRenderTest do
     }
   ]
 
-  test "render json ld" do
+  defp extract_graph(rendered_comp) do
+    [json_string] =
+      ~r/<script[^>]*>([\s\S]*?)<\/script>/
+      |> Regex.run(rendered_comp, capture: :all_but_first)
+
+    Jason.decode!(json_string)
+  end
+
+  defp find_entity(graph, type) do
+    Enum.find(graph["@graph"], &(&1["@type"] == type))
+  end
+
+  test "render json ld as @graph" do
     u0 = Factory.insert(:random_user)
     {:ok, fallback_meta_image} = Brando.Images.create_image(@img, u0)
     {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}, preload: [:logo]})
@@ -67,65 +79,70 @@ defmodule Brando.JSONLDRenderTest do
     """
 
     rendered_comp = rendered_to_string(comp)
+    graph = extract_graph(rendered_comp)
 
-    extracted_json =
-      ~r/<script[^>]*>([^<]+|<(?!\/script>))+/
-      |> Regex.scan(rendered_comp, capture: :all_but_first)
-      |> Enum.map(&Jason.decode!/1)
+    # Single top-level @context
+    assert graph["@context"] == "https://schema.org"
+    assert is_list(graph["@graph"])
 
-    identity_json = Enum.at(extracted_json, 0)
-    _website_json = Enum.at(extracted_json, 1)
-    article_json = Enum.at(extracted_json, 2)
+    # Identity entity
+    identity_json = find_entity(graph, "Organization")
+    assert identity_json["@id"] == "http://localhost/#identity"
+    assert identity_json["name"] == "Organization name"
+    assert identity_json["email"] == "mail@domain.tld"
+    assert identity_json["telephone"] == "+47 00 00 00 00"
+    assert identity_json["alternateName"] == "Shortform name"
+    assert identity_json["description"] == "Fallback meta description"
+    assert identity_json["url"] == "https://www.domain.tld"
+    assert identity_json["sameAs"] == ["https://instagram.com/test", "https://facebook.com/test"]
 
-    assert identity_json == %{
-             "@context" => "https://schema.org",
-             "@id" => "http://localhost/#identity",
-             "@type" => "Organization",
-             "address" => %{
-               "@type" => "PostalAddress",
-               "addressCountry" => "NO",
-               "addressLocality" => "Oslo",
-               "postalCode" => "0000",
-               "streetAddress" => "Testveien 1"
-             },
-             "alternateName" => "Shortform name",
-             "description" => "Fallback meta description",
-             "email" => "mail@domain.tld",
-             "image" => %{
-               "@type" => "ImageObject",
-               "height" => 933,
-               "url" => "http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg",
-               "width" => 1900
-             },
-             "name" => "Organization name",
-             "sameAs" => ["https://instagram.com/test", "https://facebook.com/test"],
-             "url" => "https://www.domain.tld",
-             "telephone" => "+47 00 00 00 00"
+    assert identity_json["address"] == %{
+             "@type" => "PostalAddress",
+             "addressCountry" => "NO",
+             "addressLocality" => "Oslo",
+             "postalCode" => "0000",
+             "streetAddress" => "Testveien 1"
            }
 
-    assert article_json == %{
-             "@context" => "https://schema.org",
-             "@type" => "Article",
-             "author" => %{"@id" => "http://localhost/#identity"},
-             "copyrightHolder" => %{"@id" => "http://localhost/#identity"},
-             "copyrightYear" => 2000,
-             "creator" => %{"@id" => "http://localhost/#identity"},
-             "dateModified" => "2000-01-01T23:30:00Z",
-             "datePublished" => "2000-01-01T23:00:00Z",
-             "description" => "Meta description",
-             "headline" => "Title of page",
-             "inLanguage" => "no",
-             "mainEntityOfPage" => "http://localhost",
-             "name" => "Title of page",
-             "publisher" => %{"@id" => "http://localhost/#identity"},
-             "url" => "http://localhost"
+    assert identity_json["image"] == %{
+             "@type" => "ImageObject",
+             "height" => 933,
+             "url" => "http://localhost/media/images/sites/identity/image/xlarge/20ri181teifg.jpg",
+             "width" => 1900
            }
+
+    # No @context on individual entities (it's at the top level)
+    refute Map.has_key?(identity_json, "@context")
+
+    # WebSite entity
+    website_json = find_entity(graph, "WebSite")
+    assert website_json["@id"] == "http://localhost/#website"
+    assert website_json["name"] == "Organization name"
+    assert website_json["publisher"] == %{"@id" => "http://localhost/#identity"}
+    refute Map.has_key?(website_json, "@context")
+
+    # Article entity
+    article_json = find_entity(graph, "Article")
+    assert article_json["author"] == %{"@id" => "http://localhost/#identity"}
+    assert article_json["copyrightHolder"] == %{"@id" => "http://localhost/#identity"}
+    assert article_json["copyrightYear"] == 2000
+    assert article_json["creator"] == %{"@id" => "http://localhost/#identity"}
+    assert article_json["dateModified"] == "2000-01-01T23:30:00Z"
+    assert article_json["datePublished"] == "2000-01-01T23:00:00Z"
+    assert article_json["description"] == "Meta description"
+    assert article_json["headline"] == "Title of page"
+    assert article_json["inLanguage"] == "no"
+    assert article_json["mainEntityOfPage"] == "http://localhost"
+    assert article_json["name"] == "Title of page"
+    assert article_json["publisher"] == %{"@id" => "http://localhost/#identity"}
+    assert article_json["url"] == "http://localhost"
+    refute Map.has_key?(article_json, "@context")
 
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
     Brando.Sites.update_seo(seo, %{fallback_meta_image_id: nil}, :system)
   end
 
-  test "render json ld :breadcrumbs" do
+  test "render json ld @graph with breadcrumbs" do
     {:ok, seo} = Brando.Sites.get_seo(%{matches: %{language: "en"}})
 
     Brando.Sites.update_seo(
@@ -152,32 +169,18 @@ defmodule Brando.JSONLDRenderTest do
     """
 
     rendered_comp = rendered_to_string(comp)
+    graph = extract_graph(rendered_comp)
 
-    extracted_json =
-      ~r/<script[^>]*>([^<]+|<(?!\/script>))+/
-      |> Regex.run(rendered_comp, capture: :all_but_first)
-      |> Enum.map(&Jason.decode!/1)
+    assert graph["@context"] == "https://schema.org"
 
-    breadcrumbs_json = Enum.at(extracted_json, 0)
+    breadcrumbs_json = find_entity(graph, "BreadcrumbList")
 
-    assert breadcrumbs_json == %{
-             "@context" => "https://schema.org",
-             "@type" => "BreadcrumbList",
-             "itemListElement" => [
-               %{"@type" => "ListItem", "item" => "http://localhost", "name" => "Home", "position" => 1},
-               %{
-                 "@type" => "ListItem",
-                 "item" => "http://localhost/about",
-                 "name" => "About",
-                 "position" => 2
-               },
-               %{
-                 "@type" => "ListItem",
-                 "item" => "http://localhost/about/contact",
-                 "name" => "Contact",
-                 "position" => 3
-               }
-             ]
-           }
+    assert breadcrumbs_json["itemListElement"] == [
+             %{"@type" => "ListItem", "item" => "http://localhost", "name" => "Home", "position" => 1},
+             %{"@type" => "ListItem", "item" => "http://localhost/about", "name" => "About", "position" => 2},
+             %{"@type" => "ListItem", "item" => "http://localhost/about/contact", "name" => "Contact", "position" => 3}
+           ]
+
+    refute Map.has_key?(breadcrumbs_json, "@context")
   end
 end
