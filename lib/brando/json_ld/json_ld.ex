@@ -52,12 +52,30 @@ defmodule Brando.JSONLD do
         result = value_fn.(data)
         Map.put(acc, name, result)
 
+      %{name: name, type: {:list, schema}, value_fn: value_fn}, acc ->
+        items = value_fn.(data)
+        result = if is_list(items), do: Enum.map(items, &schema.build/1), else: nil
+        Map.put(acc, name, result)
+
       %{name: name, type: schema, value_fn: value_fn}, acc ->
         result = schema.build(value_fn.(data))
         Map.put(acc, name, result)
     end)
     |> maybe_override_type(data)
+    |> maybe_add_id(data)
   end
+
+  defp maybe_add_id(struct, %{__meta__: %{current_url: url}}) do
+    type =
+      struct
+      |> Map.get(:"@type", "")
+      |> to_string()
+      |> String.downcase()
+
+    Map.put(struct, :"@id", "#{url}##{type}")
+  end
+
+  defp maybe_add_id(struct, _), do: struct
 
   defp maybe_override_type(struct, %{json_ld_type: type}) when is_binary(type) do
     Map.put(struct, :"@type", type)

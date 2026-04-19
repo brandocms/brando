@@ -6,6 +6,7 @@ defmodule Brando.JSONLD.Schema.Article do
   @derive Jason.Encoder
   defstruct "@context": "https://schema.org",
             "@type": "Article",
+            "@id": nil,
             author: nil,
             copyrightHolder: nil,
             copyrightYear: nil,

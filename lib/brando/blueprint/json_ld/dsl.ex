@@ -12,9 +12,9 @@ defmodule Brando.Blueprint.JSONLD.Dsl do
         doc: "Field name"
       ],
       type: [
-        type: :atom,
+        type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
         required: true,
-        doc: "Field type"
+        doc: "Field type. Atom for simple types or {:list, SchemaModule} for lists."
       ],
       value_fn: [
         type: {:or, [nil, {:fun, 1}]},

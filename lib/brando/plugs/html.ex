@@ -97,8 +97,11 @@ defmodule Brando.Plug.HTML do
     data_with_meta = Map.merge(data, meta_meta)
     json_ld_type = Map.get(data, :json_ld_type, "WebPage")
 
+    entity = JSONLD.extract_json_ld(module, data_with_meta, extra_fields)
+    existing = Map.get(conn.assigns, :json_ld_entities, [])
+
     conn
-    |> assign(:json_ld_entity, JSONLD.extract_json_ld(module, data_with_meta, extra_fields))
+    |> assign(:json_ld_entities, existing ++ List.wrap(entity))
     |> assign(:json_ld_page_type, json_ld_type)
   end
 
