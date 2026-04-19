@@ -82,18 +82,6 @@ defmodule Brando.Sites.Identity do
 
       tab t("Content") do
         fieldset do
-          input :type, :radios,
-            options: [
-              %{value: :organization, label: t("Organization")},
-              %{value: :corporation, label: t("Corporation")},
-              %{value: :professional_service, label: t("Professional Service")},
-              %{value: :local_business, label: t("Local Business")},
-              %{value: :restaurant, label: t("Restaurant")}
-            ],
-            label: t("Type")
-        end
-
-        fieldset do
           style :inline
           input :name, :text, label: t("Name")
 
@@ -130,6 +118,18 @@ defmodule Brando.Sites.Identity do
 
         fieldset do
           input :logo, :image, label: t("Logo")
+        end
+
+        fieldset do
+          input :type, :radios,
+            options: [
+              %{value: :organization, label: t("Organization")},
+              %{value: :corporation, label: t("Corporation")},
+              %{value: :professional_service, label: t("Professional Service")},
+              %{value: :local_business, label: t("Local Business")},
+              %{value: :restaurant, label: t("Restaurant")}
+            ],
+            label: t("Type")
         end
 
         fieldset do

@@ -66,7 +66,6 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
           field={@config[@name]}
           class={["text"]}
           phx-debounce={300}
-          data-watch-focus
         />
       </Form.field_base>
     </div>
