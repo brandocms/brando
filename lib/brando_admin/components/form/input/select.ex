@@ -422,8 +422,11 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       |> assign_new(:instructions, fn -> Map.get(assigns.opt, :instructions) end)
 
     ~H"""
-    <span>{@opt.label |> raw}</span>
-    <small :if={@instructions} class="help-text">{@instructions}</small>
+    <div :if={@instructions} class="option-label-wrap">
+      <span>{@opt.label |> raw}</span>
+      <small class="help-text">{@instructions}</small>
+    </div>
+    <span :if={!@instructions}>{@opt.label |> raw}</span>
     """
   end
 
