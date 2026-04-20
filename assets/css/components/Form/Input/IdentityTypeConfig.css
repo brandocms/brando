@@ -1,26 +1,20 @@
 .opening-hours-grid {
   margin-top: 15px;
 
-  .opening-hours-title {
-    font-family: theme(typography.families.mono);
-    font-size: 12px;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-    opacity: 0.5;
-  }
-
   .opening-hours-row {
     display: flex;
     align-items: center;
-    gap: 15px;
-    padding: 8px 15px;
+    gap: 10px;
+    padding: 6px 15px;
     background-color: var(--brando-color-input);
     margin-bottom: 1px;
+    max-width: 550px;
   }
 
   .opening-hours-day {
-    width: 100px;
+    width: 90px;
     flex-shrink: 0;
+    line-height: 1;
 
     .day-label {
       font-size: 13px;
@@ -31,7 +25,7 @@
   .opening-hours-times {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 
     &.closed {
       opacity: 0.3;
@@ -39,12 +33,13 @@
     }
 
     .time-input {
-      width: 110px;
-      padding: 5px 8px;
+      width: 100px;
+      height: 40px;
+      padding: 4px 8px;
       font-size: 13px;
       font-family: theme(typography.families.mono);
-      background-color: var(--brando-color-white);
-      border: 1px solid transparent;
+      background-color: var(--brando-color-input);
+      border: 1px solid rgba(0, 0, 0, 0.1);
     }
 
     .time-separator {
@@ -54,7 +49,6 @@
   }
 
   .opening-hours-closed {
-    margin-left: auto;
 
     .closed-toggle {
       display: flex;

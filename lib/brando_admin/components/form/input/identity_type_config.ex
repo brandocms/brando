@@ -62,7 +62,11 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
             />
           </div>
           <div :if={@has_opening_hours} class="opening-hours-grid">
-            <h3 class="opening-hours-title">{gettext("Opening hours")}</h3>
+            <div class="label-wrapper">
+              <label class="control-label">
+                <span>{gettext("Opening hours")}</span>
+              </label>
+            </div>
             <.opening_hours_row
               :for={{day_key, day_label} <- @days}
               config={config}
