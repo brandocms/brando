@@ -33,7 +33,7 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
       |> to_string()
 
     fields = type_fields(identity_type)
-    has_opening_hours = identity_type in ["local_business", "restaurant"]
+    has_opening_hours = identity_type in ["local_business", "restaurant", "art_gallery"]
 
     opening_hours =
       if has_opening_hours do
@@ -260,6 +260,23 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
       {:founding_date, :date, gettext("Founding date"), []},
       {:number_of_employees, :number, gettext("Number of employees"), []},
       {:sport, :text, gettext("Sport"), []}
+    ]
+  end
+
+  defp type_fields("art_gallery") do
+    [
+      {:price_range, :text, gettext("Price range"), [instructions: gettext("e.g. Free, $$")]},
+      {:area_served, :text, gettext("Area served"), []},
+      {:geo_latitude, :text, gettext("Latitude"), []},
+      {:geo_longitude, :text, gettext("Longitude"), []}
+    ]
+  end
+
+  defp type_fields("architect") do
+    [
+      {:founding_date, :date, gettext("Founding date"), []},
+      {:area_served, :text, gettext("Area served"), []},
+      {:knows_about, :text, gettext("Knows about"), []}
     ]
   end
 

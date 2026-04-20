@@ -102,6 +102,21 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
             sport: config.sport
           }
 
+        "art_gallery" ->
+          %{
+            openingHoursSpecification: build_opening_hours(config),
+            priceRange: config.price_range,
+            areaServed: config.area_served,
+            geo: build_geo(config)
+          }
+
+        "architect" ->
+          %{
+            foundingDate: format_date(config.founding_date),
+            areaServed: config.area_served,
+            knowsAbout: config.knows_about
+          }
+
         _ ->
           %{}
       end

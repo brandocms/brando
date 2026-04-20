@@ -52,6 +52,8 @@ defmodule Brando.JSONLD.HTML do
   defp identity_schema_module("ngo"), do: JSONLD.Schema.NGO
   defp identity_schema_module("medical_organization"), do: JSONLD.Schema.MedicalOrganization
   defp identity_schema_module("sports_organization"), do: JSONLD.Schema.SportsOrganization
+  defp identity_schema_module("art_gallery"), do: JSONLD.Schema.ArtGallery
+  defp identity_schema_module("architect"), do: JSONLD.Schema.Architect
 
   defp build_website(cached_identity, cached_seo) do
     JSONLD.Schema.WebSite.build({cached_identity, cached_seo})

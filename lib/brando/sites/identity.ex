@@ -148,7 +148,9 @@ defmodule Brando.Sites.Identity do
                 label: t("Medical Organization"),
                 instructions: t("Clinics, hospitals, practices")
               },
-              %{value: :sports_organization, label: t("Sports Organization"), instructions: t("Clubs, teams, leagues")}
+              %{value: :sports_organization, label: t("Sports Organization"), instructions: t("Clubs, teams, leagues")},
+              %{value: :art_gallery, label: t("Art Gallery"), instructions: t("Art galleries, exhibition spaces")},
+              %{value: :architect, label: t("Architect"), instructions: t("Architecture offices, studios")}
             ],
             label: t("Type")
         end
