@@ -3,7 +3,7 @@ defmodule Brando.Sites.Identity.TypeConfig do
   Embedded schema for type-specific Identity configuration.
 
   Stores fields that only apply to certain identity types
-  (e.g. `opening_hours` for LocalBusiness/Restaurant).
+  (e.g. `opening_hours_specification` for LocalBusiness/Restaurant).
   """
 
   use Brando.Blueprint,
@@ -20,7 +20,7 @@ defmodule Brando.Sites.Identity.TypeConfig do
   persist_identifier false
 
   attributes do
-    # Organization / Corporation
+    # Organization / Corporation / EducationalOrganization / GovernmentOrganization / NGO
     attribute :founding_date, :date
     attribute :number_of_employees, :integer
 
@@ -33,8 +33,9 @@ defmodule Brando.Sites.Identity.TypeConfig do
     # ProfessionalService
     attribute :knows_about, :string
 
-    # LocalBusiness / Restaurant
-    attribute :opening_hours, :string
+    # LocalBusiness / Restaurant — structured opening hours
+    # Stored as list of maps: [%{"days" => ["Monday", ...], "opens" => "09:00", "closes" => "17:00"}, ...]
+    attribute :opening_hours_specification, {:array, :map}, default: []
     attribute :price_range, :string
 
     # Restaurant only
@@ -44,5 +45,11 @@ defmodule Brando.Sites.Identity.TypeConfig do
     # LocalBusiness / Restaurant geo
     attribute :geo_latitude, :decimal
     attribute :geo_longitude, :decimal
+
+    # MedicalOrganization
+    attribute :medical_specialty, :string
+
+    # SportsOrganization
+    attribute :sport, :string
   end
 end

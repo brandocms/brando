@@ -121,13 +121,34 @@ defmodule Brando.Sites.Identity do
         end
 
         fieldset do
-          input :type, :radios,
+          input :type, :select,
             options: [
-              %{value: :organization, label: t("Organization")},
-              %{value: :corporation, label: t("Corporation")},
-              %{value: :professional_service, label: t("Professional Service")},
-              %{value: :local_business, label: t("Local Business")},
-              %{value: :restaurant, label: t("Restaurant")}
+              %{value: :organization, label: t("Organization"), instructions: t("Generic organization")},
+              %{value: :corporation, label: t("Corporation"), instructions: t("Large company, publicly traded")},
+              %{
+                value: :professional_service,
+                label: t("Professional Service"),
+                instructions: t("Designers, architects, lawyers, consultants")
+              },
+              %{value: :local_business, label: t("Local Business"), instructions: t("Physical location customers visit")},
+              %{value: :restaurant, label: t("Restaurant"), instructions: t("Restaurant, cafe, bar")},
+              %{
+                value: :educational_organization,
+                label: t("Educational Organization"),
+                instructions: t("Schools, universities, courses")
+              },
+              %{
+                value: :government_organization,
+                label: t("Government Organization"),
+                instructions: t("Public sector, government agencies")
+              },
+              %{value: :ngo, label: t("NGO"), instructions: t("Nonprofits, foundations, charities")},
+              %{
+                value: :medical_organization,
+                label: t("Medical Organization"),
+                instructions: t("Clinics, hospitals, practices")
+              },
+              %{value: :sports_organization, label: t("Sports Organization"), instructions: t("Clubs, teams, leagues")}
             ],
             label: t("Type")
         end

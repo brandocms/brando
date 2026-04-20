@@ -17,7 +17,7 @@ defmodule Brando.JSONLD.Schema.LocalBusiness do
             name: nil,
             sameAs: nil,
             url: nil,
-            openingHours: nil,
+            openingHoursSpecification: nil,
             priceRange: nil,
             areaServed: nil,
             geo: nil

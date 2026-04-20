@@ -41,6 +41,7 @@
 @import "./components/Form/Input/Override.css";
 @import "./components/Form/Input/Text.css";
 @import "./components/Form/Input/TipTap.css";
+@import "./components/Form/Input/IdentityTypeConfig.css";
 @import "./components/Form/Input/Blocks/Block.css";
 @import "./components/Form/Input/Blocks/Blocks.css";
 @import "./components/Form/Input/Blocks/FragmentBlock.css";

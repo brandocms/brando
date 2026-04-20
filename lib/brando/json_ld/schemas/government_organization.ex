@@ -1,12 +1,12 @@
-defmodule Brando.JSONLD.Schema.Restaurant do
+defmodule Brando.JSONLD.Schema.GovernmentOrganization do
   @moduledoc """
-  Restaurant schema
+  GovernmentOrganization schema
   """
 
   @derive Jason.Encoder
   defstruct "@context": "https://schema.org",
             "@id": "https://default/#identity",
-            "@type": "Restaurant",
+            "@type": "GovernmentOrganization",
             address: nil,
             alternateName: nil,
             description: nil,
@@ -17,11 +17,8 @@ defmodule Brando.JSONLD.Schema.Restaurant do
             name: nil,
             sameAs: nil,
             url: nil,
-            openingHoursSpecification: nil,
-            priceRange: nil,
-            servesCuisine: nil,
-            hasMenu: nil,
-            geo: nil
+            foundingDate: nil,
+            numberOfEmployees: nil
 
   def build(args) do
     struct(__MODULE__, Brando.JSONLD.Schema.IdentitySchema.build_base(args))

@@ -2,8 +2,7 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
   @moduledoc """
   Shared builder for all identity-type JSON-LD schemas.
 
-  Handles the common fields for Organization, Corporation,
-  ProfessionalService, LocalBusiness, and Restaurant.
+  Handles the common fields for all identity types.
   Type-specific fields are merged from `identity.type_config`.
   """
 
@@ -56,7 +55,7 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
 
         "local_business" ->
           %{
-            openingHours: config.opening_hours,
+            openingHoursSpecification: build_opening_hours(config),
             priceRange: config.price_range,
             areaServed: config.area_served,
             geo: build_geo(config)
@@ -64,11 +63,43 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
 
         "restaurant" ->
           %{
-            openingHours: config.opening_hours,
+            openingHoursSpecification: build_opening_hours(config),
             priceRange: config.price_range,
             servesCuisine: config.serves_cuisine,
             hasMenu: config.has_menu,
             geo: build_geo(config)
+          }
+
+        "educational_organization" ->
+          %{
+            foundingDate: format_date(config.founding_date),
+            numberOfEmployees: config.number_of_employees
+          }
+
+        "government_organization" ->
+          %{
+            foundingDate: format_date(config.founding_date),
+            numberOfEmployees: config.number_of_employees
+          }
+
+        "ngo" ->
+          %{
+            foundingDate: format_date(config.founding_date),
+            numberOfEmployees: config.number_of_employees
+          }
+
+        "medical_organization" ->
+          %{
+            foundingDate: format_date(config.founding_date),
+            numberOfEmployees: config.number_of_employees,
+            medicalSpecialty: config.medical_specialty
+          }
+
+        "sports_organization" ->
+          %{
+            foundingDate: format_date(config.founding_date),
+            numberOfEmployees: config.number_of_employees,
+            sport: config.sport
           }
 
         _ ->
@@ -83,6 +114,32 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
   defp format_date(nil), do: nil
   defp format_date(%Date{} = date), do: Calendar.strftime(date, "%Y-%m-%d")
   defp format_date(date), do: date
+
+  @doc """
+  Builds `openingHoursSpecification` from structured opening hours data.
+
+  Input format: `[%{"days" => ["Monday", ...], "opens" => "09:00", "closes" => "17:00"}, ...]`
+  Entries with `"closed" => true` are excluded from the output.
+  """
+  def build_opening_hours(%{opening_hours_specification: specs})
+      when is_list(specs) and specs != [] do
+    specs
+    |> Enum.reject(&(Map.get(&1, "closed") == true))
+    |> Enum.map(fn spec ->
+      %{
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: Map.get(spec, "days", []),
+        opens: Map.get(spec, "opens"),
+        closes: Map.get(spec, "closes")
+      }
+    end)
+    |> case do
+      [] -> nil
+      result -> result
+    end
+  end
+
+  def build_opening_hours(_), do: nil
 
   defp build_geo(%{geo_latitude: lat, geo_longitude: lng})
        when not is_nil(lat) and not is_nil(lng) do

@@ -47,6 +47,11 @@ defmodule Brando.JSONLD.HTML do
   defp identity_schema_module("professional_service"), do: JSONLD.Schema.ProfessionalService
   defp identity_schema_module("local_business"), do: JSONLD.Schema.LocalBusiness
   defp identity_schema_module("restaurant"), do: JSONLD.Schema.Restaurant
+  defp identity_schema_module("educational_organization"), do: JSONLD.Schema.EducationalOrganization
+  defp identity_schema_module("government_organization"), do: JSONLD.Schema.GovernmentOrganization
+  defp identity_schema_module("ngo"), do: JSONLD.Schema.NGO
+  defp identity_schema_module("medical_organization"), do: JSONLD.Schema.MedicalOrganization
+  defp identity_schema_module("sports_organization"), do: JSONLD.Schema.SportsOrganization
 
   defp build_website(cached_identity, cached_seo) do
     JSONLD.Schema.WebSite.build({cached_identity, cached_seo})

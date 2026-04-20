@@ -1,0 +1,75 @@
+.opening-hours-grid {
+  margin-top: 15px;
+
+  .opening-hours-title {
+    font-family: theme(typography.families.mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    opacity: 0.5;
+  }
+
+  .opening-hours-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .opening-hours-day {
+    width: 100px;
+    flex-shrink: 0;
+
+    .day-label {
+      font-size: 13px;
+      font-family: theme(typography.families.mono);
+    }
+  }
+
+  .opening-hours-times {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &.closed {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .time-input {
+      width: 110px;
+      padding: 5px 8px;
+      font-size: 13px;
+      font-family: theme(typography.families.mono);
+    }
+
+    .time-separator {
+      font-size: 13px;
+      opacity: 0.5;
+    }
+  }
+
+  .opening-hours-closed {
+    margin-left: auto;
+
+    .closed-toggle {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: theme(typography.families.mono);
+      opacity: 0.65;
+      user-select: none;
+
+      input[type='checkbox'] {
+        cursor: pointer;
+      }
+    }
+  }
+}
