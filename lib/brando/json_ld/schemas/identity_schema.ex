@@ -117,6 +117,14 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
             knowsAbout: config.knows_about
           }
 
+        "employment_agency" ->
+          %{
+            openingHoursSpecification: build_opening_hours(config),
+            priceRange: config.price_range,
+            areaServed: config.area_served,
+            geo: build_geo(config)
+          }
+
         _ ->
           %{}
       end

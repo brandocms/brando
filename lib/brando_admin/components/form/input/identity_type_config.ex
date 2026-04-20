@@ -22,7 +22,7 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
     {"sunday", "Sunday"}
   ]
 
-  @opening_hours_types ["local_business", "restaurant", "art_gallery"]
+  @opening_hours_types ["local_business", "restaurant", "art_gallery", "employment_agency"]
 
   def mount(socket) do
     {:ok, socket}
@@ -251,6 +251,15 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
       {:founding_date, :date, gettext("Founding date"), []},
       {:area_served, :text, gettext("Area served"), []},
       {:knows_about, :text, gettext("Knows about"), []}
+    ]
+  end
+
+  defp type_fields("employment_agency") do
+    [
+      {:price_range, :text, gettext("Price range"), [instructions: gettext("e.g. $$, $$$")]},
+      {:area_served, :text, gettext("Area served"), []},
+      {:geo_latitude, :text, gettext("Latitude"), []},
+      {:geo_longitude, :text, gettext("Longitude"), []}
     ]
   end
 

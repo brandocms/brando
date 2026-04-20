@@ -152,7 +152,12 @@ defmodule Brando.Sites.Identity do
               },
               %{value: :sports_organization, label: t("Sports Organization"), instructions: t("Clubs, teams, leagues")},
               %{value: :art_gallery, label: t("Art Gallery"), instructions: t("Art galleries, exhibition spaces")},
-              %{value: :architect, label: t("Architect"), instructions: t("Architecture offices, studios")}
+              %{value: :architect, label: t("Architect"), instructions: t("Architecture offices, studios")},
+              %{
+                value: :employment_agency,
+                label: t("Employment Agency"),
+                instructions: t("Talent, illustration, modeling agencies")
+              }
             ],
             narrow: true,
             label: t("Type")
