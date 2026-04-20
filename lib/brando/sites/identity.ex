@@ -121,6 +121,8 @@ defmodule Brando.Sites.Identity do
         end
 
         fieldset do
+          size :half
+
           input :type, :select,
             options: [
               %{value: :organization, label: t("Organization"), instructions: t("Generic organization")},
@@ -152,6 +154,7 @@ defmodule Brando.Sites.Identity do
               %{value: :art_gallery, label: t("Art Gallery"), instructions: t("Art galleries, exhibition spaces")},
               %{value: :architect, label: t("Architect"), instructions: t("Architecture offices, studios")}
             ],
+            narrow: true,
             label: t("Type")
         end
 
