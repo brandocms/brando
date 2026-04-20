@@ -130,22 +130,32 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
   defp format_date(%Date{} = date), do: Calendar.strftime(date, "%Y-%m-%d")
   defp format_date(date), do: date
 
+  @day_key_to_label %{
+    "monday" => "Monday",
+    "tuesday" => "Tuesday",
+    "wednesday" => "Wednesday",
+    "thursday" => "Thursday",
+    "friday" => "Friday",
+    "saturday" => "Saturday",
+    "sunday" => "Sunday"
+  }
+
   @doc """
   Builds `openingHoursSpecification` from structured opening hours data.
 
-  Input format: `[%{"days" => ["Monday", ...], "opens" => "09:00", "closes" => "17:00"}, ...]`
-  Entries with `"closed" => true` are excluded from the output.
+  Input format: `%{"monday" => %{"opens" => "09:00", "closes" => "17:00", "closed" => "false"}, ...}`
+  Days with `"closed" => "true"` are excluded from the output.
   """
   def build_opening_hours(%{opening_hours_specification: specs})
-      when is_list(specs) and specs != [] do
+      when is_map(specs) and map_size(specs) > 0 do
     specs
-    |> Enum.reject(&(Map.get(&1, "closed") == true))
-    |> Enum.map(fn spec ->
+    |> Enum.reject(fn {_day, data} -> Map.get(data, "closed") in [true, "true"] end)
+    |> Enum.map(fn {day_key, data} ->
       %{
         "@type": "OpeningHoursSpecification",
-        dayOfWeek: Map.get(spec, "days", []),
-        opens: Map.get(spec, "opens"),
-        closes: Map.get(spec, "closes")
+        dayOfWeek: Map.get(@day_key_to_label, day_key, day_key),
+        opens: Map.get(data, "opens"),
+        closes: Map.get(data, "closes")
       }
     end)
     |> case do

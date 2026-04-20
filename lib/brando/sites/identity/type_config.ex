@@ -33,9 +33,9 @@ defmodule Brando.Sites.Identity.TypeConfig do
     # ProfessionalService
     attribute :knows_about, :string
 
-    # LocalBusiness / Restaurant — structured opening hours
-    # Stored as list of maps: [%{"days" => ["Monday", ...], "opens" => "09:00", "closes" => "17:00"}, ...]
-    attribute :opening_hours_specification, {:array, :map}, default: []
+    # LocalBusiness / Restaurant / ArtGallery — structured opening hours
+    # Stored as map keyed by day: %{"monday" => %{"opens" => "09:00", "closes" => "17:00", "closed" => false}, ...}
+    attribute :opening_hours_specification, :map, default: %{}
     attribute :price_range, :string
 
     # Restaurant only
