@@ -334,8 +334,8 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     |> Enum.reject(&is_nil/1)
   end
 
-  defp ensure_string_values(%{label: label, value: value}) when not is_binary(value) do
-    %{label: label, value: to_string(value)}
+  defp ensure_string_values(%{label: _label, value: value} = opt) when not is_binary(value) do
+    %{opt | value: to_string(value)}
   end
 
   defp ensure_string_values(%Ecto.Changeset{action: :replace}), do: nil
