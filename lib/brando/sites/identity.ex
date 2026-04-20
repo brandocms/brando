@@ -125,42 +125,43 @@ defmodule Brando.Sites.Identity do
 
           input :type, :select,
             options: [
-              %{value: :organization, label: t("Organization"), instructions: t("Generic organization")},
+              %{value: :architect, label: t("Architect"), instructions: t("Architecture offices, studios")},
+              %{value: :art_gallery, label: t("Art Gallery"), instructions: t("Art galleries, exhibition spaces")},
               %{value: :corporation, label: t("Corporation"), instructions: t("Large company, publicly traded")},
-              %{
-                value: :professional_service,
-                label: t("Professional Service"),
-                instructions: t("Designers, architects, lawyers, consultants")
-              },
-              %{value: :local_business, label: t("Local Business"), instructions: t("Physical location customers visit")},
-              %{value: :restaurant, label: t("Restaurant"), instructions: t("Restaurant, cafe, bar")},
               %{
                 value: :educational_organization,
                 label: t("Educational Organization"),
                 instructions: t("Schools, universities, courses")
               },
               %{
+                value: :employment_agency,
+                label: t("Employment Agency"),
+                instructions: t("Talent, illustration, modeling agencies")
+              },
+              %{
                 value: :government_organization,
                 label: t("Government Organization"),
                 instructions: t("Public sector, government agencies")
               },
-              %{value: :ngo, label: t("NGO"), instructions: t("Nonprofits, foundations, charities")},
+              %{value: :local_business, label: t("Local Business"), instructions: t("Physical location customers visit")},
               %{
                 value: :medical_organization,
                 label: t("Medical Organization"),
                 instructions: t("Clinics, hospitals, practices")
               },
-              %{value: :sports_organization, label: t("Sports Organization"), instructions: t("Clubs, teams, leagues")},
-              %{value: :art_gallery, label: t("Art Gallery"), instructions: t("Art galleries, exhibition spaces")},
-              %{value: :architect, label: t("Architect"), instructions: t("Architecture offices, studios")},
+              %{value: :ngo, label: t("NGO"), instructions: t("Nonprofits, foundations, charities")},
+              %{value: :organization, label: t("Organization"), instructions: t("Generic organization")},
               %{
-                value: :employment_agency,
-                label: t("Employment Agency"),
-                instructions: t("Talent, illustration, modeling agencies")
-              }
+                value: :professional_service,
+                label: t("Professional Service"),
+                instructions: t("Designers, architects, lawyers, consultants")
+              },
+              %{value: :restaurant, label: t("Restaurant"), instructions: t("Restaurant, cafe, bar")},
+              %{value: :sports_organization, label: t("Sports Organization"), instructions: t("Clubs, teams, leagues")}
             ],
             narrow: true,
-            label: t("Type")
+            label: t("Type"),
+            instructions: t("Schema.org type used for structured data (JSON-LD)")
         end
 
         fieldset do
