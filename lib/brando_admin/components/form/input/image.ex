@@ -263,7 +263,19 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     entry_id = form.data.id
     relation_field = socket.assigns.relation_field
     image_id = socket.assigns.image_id
-    image = socket.assigns.image
+
+    # Reload the image from DB to ensure we have the latest
+    # caption/credits/alt (the changeset data may be stale)
+    image =
+      if image_id do
+        case Brando.Images.get_image(image_id) do
+          {:ok, fresh_image} -> fresh_image
+          _ -> socket.assigns.image
+        end
+      else
+        socket.assigns.image
+      end
+
     myself = socket.assigns.myself
     current_user = socket.assigns.current_user
 

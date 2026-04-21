@@ -96,26 +96,31 @@ h2.titlecase + .button-group-vertical button:first-of-type {
 
 .multiselect {
   @fontsize input/1;
-  @space height 51px;
+  height: 44px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-left: 15px;
-  padding-right: 15px;
+  padding-left: 14px;
+  padding-right: 14px;
   width: 100%;
   background-color: var(--brando-color-input);
-  border: 0;
+  border: 1px solid var(--brando-input-border);
+  border-radius: var(--brando-input-radius);
+  box-shadow: var(--brando-input-shadow);
   position: relative;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
   .inline-options {
     @extend %dropdown_options;
   }
 
   .button-edit {
-    @fontsize sm/1;
+    font-size: 13px;
+    line-height: 1;
     border: 1px solid var(--brando-color-dark);
-    padding: 8px 12px 8px;
-    transition: all 0.25s ease;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
 
     &:hover {
       background-color: var(--brando-color-dark);
@@ -176,28 +181,40 @@ h2.titlecase + .button-group-vertical button:first-of-type {
       align-items: center;
       cursor: pointer;
       color: var(--brando-color-dark);
-      background-color: var(--brando-color-peach);
+      background-color: #fff;
       user-select: none;
-      padding: 15px 15px 13px;
+      padding: 12px 14px;
       width: 100%;
       border: none;
+      border-bottom: 1px solid #f2f2f4;
       text-align: left;
-      font-size: 14px;
+      font-size: 13px;
       @font mono;
+      transition: background-color 0.15s ease;
+
+      &:last-of-type {
+        border-bottom: none;
+      }
 
       &.option-selected {
-        background-color: var(--brando-color-blue);
-        color: var(--brando-color-peach);
+        background-color: var(--brando-color-dark);
+        color: white;
       }
 
       &.option-highlight {
-        background-color: var(--brando-color-blue);
-        color: var(--brando-color-peach);
+        background-color: var(--brando-color-dark);
+        color: white;
       }
 
       &:hover {
-        color: var(--brando-color-peach);
+        color: var(--brando-color-dark);
+        background-color: #f5f5f8;
+      }
+
+      &.option-selected:hover,
+      &.option-highlight:hover {
         background-color: var(--brando-color-dark);
+        color: white;
       }
 
       .option-label-wrap {
@@ -206,9 +223,9 @@ h2.titlecase + .button-group-vertical button:first-of-type {
         gap: 2px;
 
         .help-text {
-          font-size: 12px;
-          opacity: 0.65;
-          margin-top: 4px;
+          font-size: 11px;
+          opacity: 0.55;
+          margin-top: 3px;
           font-family: 'Main';
         }
       }
@@ -228,11 +245,18 @@ h2.titlecase + .button-group-vertical button:first-of-type {
   .search {
     @fontsize input/1;
     width: 100%;
-    border: 0;
+    border: 1px solid var(--brando-input-border);
+    border-radius: var(--brando-input-radius);
     outline: none;
     background-color: var(--brando-color-input);
     margin-bottom: 10px;
-    padding: 8px 15px 4px;
+    padding: 8px 14px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:focus {
+      border-color: var(--brando-color-blue);
+      box-shadow: var(--brando-input-focus-shadow);
+    }
   }
 
   .similar-box {
@@ -271,13 +295,14 @@ h2.titlecase + .button-group-vertical button:first-of-type {
   display: flex;
   flex-direction: column;
   right: 0;
-  border-radius: 6px;
+  border-radius: 10px;
   overflow: clip;
-  border: 1px dashed #aaa;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04);
   color: var(--brando-color-dark);
   z-index: 2;
   font-family: "Mono";
-  font-size: 12px;
+  font-size: 11px;
 
   &.hidden {
     display: none;
@@ -289,16 +314,16 @@ h2.titlecase + .button-group-vertical button:first-of-type {
     align-items: center;
     gap: 0.5em;
     border: none;
-    background-color: #fbfbfb;
+    background-color: #fff;
     width: max-content;
     min-width: 250px;
-    padding: 8px 5px;
+    padding: 8px 10px;
     text-align: left;
     text-transform: uppercase;
-    border-bottom: 1px dashed #aaa;
+    border-bottom: 1px solid #f0f0f0;
 
     &:hover {
-      background-color: #f0f0f0;
+      background-color: #f7f7f9;
     }
 
     &:last-of-type {

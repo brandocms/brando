@@ -6,28 +6,28 @@
   }
 
   input {
-    margin-right: 12px;
+    margin-right: 10px;
     margin-top: -1px;
   }
 
   label {
-    @fontsize 15px;
+    font-size: 14px;
     display: flex;
     align-items: center;
   }
 
   &.status {
-    margin-top: 8px;
     position: relative;
 
     &.compact {
-      height: 51px;
+      height: 44px;
       margin: 0;
       display: flex;
       justify-content: center;
-      width: 50px;
+      width: 46px;
       background: var(--brando-color-input);
-      /* box-shadow: 1px 1px 5px #d9d9d9, -5px -5px 10px #ffffff; */
+      border: 1px solid var(--brando-input-border);
+      border-radius: var(--brando-input-radius);
       cursor: pointer;
 
       > svg {
@@ -38,12 +38,12 @@
     }
 
     .form-check {
+      display: flex;
       margin-bottom: 5px;
     }
 
     input {
       margin-right: 8px;
-      margin-top: 8px;
     }
 
     label {
@@ -51,23 +51,26 @@
 
       span {
         display: inline-flex;
-        align-items: baseline;
+        align-items: center;
       }
     }
 
     .status-dropdown {
       position: absolute;
-      width: 250px;
+      width: 240px;
       z-index: 1;
-      background-color: var(--brando-color-peach);
-      padding: 11px;
-      border: 1px solid var(--brando-color-dark);
-      border-radius: 12px;
+      background-color: white;
+      padding: 10px;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.08),
+        0 1px 3px rgba(0, 0, 0, 0.04);
       top: 35px;
     }
 
     svg {
-      margin-right: 12px;
+      margin-right: 10px;
       circle {
         fill: theme(colors.blue);
         transition: fill 500ms ease;
@@ -92,11 +95,11 @@
 
     .label-text {
       @font mono;
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.8;
       border: 1px solid;
-      padding: 3px 14px;
-      border-radius: 30px;
+      padding: 3px 12px 3px 10px;
+      border-radius: 6px;
 
       &.draft {
         border-color: theme(colors.status.draft);

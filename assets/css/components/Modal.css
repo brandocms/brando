@@ -44,7 +44,8 @@
 
 .modal-backdrop {
   display: none;
-  background-color: rgba(5, 0, 128, 0.8);
+  background-color: rgba(10, 15, 30, 0.55);
+  backdrop-filter: blur(4px);
   height: 100%;
   left: 0;
   overflow-y: scroll;
@@ -80,17 +81,17 @@
   align-items: baseline;
   @space padding-x 20px;
   @space padding-top 16px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f2;
+  padding-bottom: 14px;
 
   .header-wrap {
     margin-right: 50px;
 
     button.header-button {
       border: 1px solid;
-      font-size: 15px;
-      padding: 9px 15px;
-      border-radius: 25px;
+      font-size: 13px;
+      padding: 7px 14px;
+      border-radius: 8px;
       margin-top: -3px;
     }
   }
@@ -105,25 +106,27 @@
   h2 {
     @font mono;
     color: var(--brando-color-dark);
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 400;
     text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
   .modal-close {
     color: var(--brando-color-dark);
     border: 0;
     position: absolute;
-    top: 10px;
-    right: 15px;
-    font-size: 35px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background-color: #fafafa;
+    top: 12px;
+    right: 14px;
+    font-size: 28px;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background-color: #f5f5f7;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s ease;
 
     span {
       display: inline-block;
@@ -147,7 +150,8 @@
   outline: 0;
   position: relative;
   @space padding-bottom 15px;
-  border-radius: 10px;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.08);
   height: 100%;
   /* min-height: 80vh; */
 
@@ -170,19 +174,26 @@
   input {
     background-color: theme(colors.input) !important;
     color: theme(colors.dark) !important;
-    border: none !important;
-    font-size: 16px;
+    border: 1px solid var(--brando-input-border) !important;
+    border-radius: var(--brando-input-radius) !important;
+    font-size: 14px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:focus {
+      border-color: var(--brando-color-blue) !important;
+      box-shadow: var(--brando-input-focus-shadow);
+    }
 
     &.text {
-      font-size: 16px;
+      font-size: 14px;
       height: 40px;
       padding-top: 0;
       padding-bottom: 0;
-      padding-left: 10px;
-      padding-right: 10px;
+      padding-left: 12px;
+      padding-right: 12px;
 
       &::placeholder {
-        font-size: 16px;
+        font-size: 14px;
       }
     }
   }
@@ -198,8 +209,8 @@
       border-radius: 0;
 
       &:first-child {
-        border-top-left-radius: 30px !important;
-        border-top-right-radius: 30px !important;
+        border-top-left-radius: 12px !important;
+        border-top-right-radius: 12px !important;
         border-bottom-left-radius: 0;
         border-bottom-right-radius: 0;
       }
@@ -207,8 +218,8 @@
       &:last-child {
         border-top-left-radius: 0;
         border-top-right-radius: 0;
-        border-bottom-left-radius: 30px !important;
-        border-bottom-right-radius: 30px !important;
+        border-bottom-left-radius: 12px !important;
+        border-bottom-right-radius: 12px !important;
       }
 
       + :is(button, a) {
@@ -284,7 +295,7 @@
 }
 
 .modal-body {
-  @space padding-y 20px;
+  @space padding-y 18px;
   @space padding-x 20px;
   max-height: 80vh;
   overflow-y: scroll;
@@ -292,16 +303,16 @@
   background-color: #fff;
 
   > h2 {
-    font-size: 23px;
-    margin-bottom: 20px;
+    font-size: 20px;
+    margin-bottom: 18px;
   }
 }
 
 .modal-footer {
   @space padding-x 20px;
-  padding-top: 15px;
+  padding-top: 12px;
   justify-content: flex-end;
-  border-top: 1px solid #eee;
+  border-top: 1px solid #f0f0f2;
 
   button.secondary {
     margin-top: 0;

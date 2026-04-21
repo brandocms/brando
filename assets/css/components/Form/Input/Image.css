@@ -179,10 +179,17 @@
 
     &-compact {
       display: flex;
-      border: 1px dashed var(--brando-color-dark);
-      border-radius: 8px;
-      padding: 8px 25px 8px 8px;
+      background-color: var(--brando-color-input);
+      border: 1px solid var(--brando-input-border);
+      border-radius: var(--brando-input-radius);
+      box-shadow: var(--brando-input-shadow);
+      padding: 10px 20px 10px 10px;
       width: fit-content;
+
+      .shaded &,
+      .subform & {
+        background-color: white;
+      }
 
       img {
         width: 90px;

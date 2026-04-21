@@ -4,6 +4,11 @@
   .field-base & {
     /* when inside a fieldwrapper(?) */
     background-color: var(--brando-color-input);
+    border: 1px solid var(--brando-input-border);
+    border-radius: var(--brando-input-radius);
+    box-shadow: var(--brando-input-shadow);
+    overflow: hidden;
+
     .ProseMirror {
       padding: 12px 12px 15px;
     }

@@ -396,13 +396,20 @@ body {
   --brando-color-gray-light: theme(colors.grayLight);
   --brando-color-black: theme(colors.black);
   --brando-color-foreground: theme(colors.dark);
-  --brando-color-shaded: #fdf8f7;
+  --brando-color-shaded: #fcfcfd;
+  --brando-color-nav-background: #fef9f7;
   --brando-color-dark: theme(colors.dark);
   --brando-color-peach: theme(colors.peach);
   --brando-color-peach-darker: theme(colors.peachDarker);
-  --brando-color-input: theme(colors.input);
+  --brando-color-input: #ffffff;
   --brando-color-blue: theme(colors.blue);
   --brando-color-block-ref-background: #fcfcfc;
+  --brando-input-border: #e0e0e0;
+  --brando-input-radius: 8px;
+  --brando-input-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+  --brando-input-focus-shadow: 0 0 0 2.5px rgba(0,71,255,0.12);
+  --brando-card-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.03);
+  --brando-card-radius: 12px;
 
   background-color: var(--brando-color-background);
   color: var(--brando-color-foreground);
@@ -416,6 +423,7 @@ body {
     --brando-color-gray-light: theme(colors.grayLight);
     --brando-color-black: theme(colors.white);
     --brando-color-shaded: #031122;
+    --brando-color-nav-background: #031122;
     --brando-color-dark: theme(colors.peach);
     --brando-color-peach: theme(colors.dark);
     --brando-color-peach-darker: #072850;

@@ -3474,6 +3474,19 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, assign_drawer_recovery_state(socket)}
   end
 
+  def handle_event("validate_image", %{"image" => image_params}, socket) do
+    image_changeset =
+      socket.assigns.edit_image.image
+      |> change(%{
+        title: image_params["title"],
+        credits: image_params["credits"],
+        alt: image_params["alt"]
+      })
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :image_changeset, image_changeset)}
+  end
+
   def handle_event("validate_image", _, socket) do
     {:noreply, socket}
   end
@@ -3542,6 +3555,9 @@ defmodule BrandoAdmin.Components.Form do
           }
         } = socket
       ) do
+    require Logger
+    Logger.warning(">>> save_image called WITH image params: #{inspect(image_params)}")
+
     entry_or_default = entry || struct(schema)
 
     validated_changeset =
@@ -3615,7 +3631,10 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # without image in params
-  def handle_event("save_image", _, socket) do
+  def handle_event("save_image", params, socket) do
+    require Logger
+    Logger.warning(">>> save_image called WITHOUT image params. params=#{inspect(params)}")
+
     {:noreply,
      socket
      |> assign(:editing_image?, false)
