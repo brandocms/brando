@@ -421,6 +421,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
     {:noreply, socket}
   end
 
+  def handle_event("blur", _, socket) do
+    {:noreply, socket}
+  end
+
   def handle_event("reposition", _, socket) do
     {:noreply, socket}
   end

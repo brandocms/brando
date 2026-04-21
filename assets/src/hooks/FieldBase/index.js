@@ -11,11 +11,23 @@ export default (app) => ({
 
   handleFocus() {
     const fName = this.field.getAttribute('name')
-    this.pushEventTo(this.el, 'focus', { field: fName })
+    // Push to the brando-form component for field presence tracking,
+    // even when the input is inside a nested LiveComponent (subform, block, etc.)
+    const formEl = this.el.closest('.brando-form')
+    if (formEl) {
+      this.pushEventTo(formEl, 'focus', { field: fName })
+    } else {
+      this.pushEvent('focus', { field: fName })
+    }
   },
 
   handleBlur() {
-    this.pushEventTo(this.el, 'blur', {})
+    const formEl = this.el.closest('.brando-form')
+    if (formEl) {
+      this.pushEventTo(formEl, 'blur', {})
+    } else {
+      this.pushEvent('blur', {})
+    }
   },
 
   destroyed() {
