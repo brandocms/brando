@@ -1,8 +1,9 @@
 .field-wrapper {
   &.subform {
-    background-color: var(--brando-color-shaded);
+    background-color: #fcfcfc;
     padding: 15px;
-    border-radius: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 2px #ccccccb8;
 
     .text {
       @fontsize sm;
@@ -158,6 +159,7 @@
         background-color: white;
         border-radius: 12px;
         padding: 10px;
+        box-shadow: 0px 0px 2px #ccccccb8;
 
         .label-wrapper {
           height: 0;
