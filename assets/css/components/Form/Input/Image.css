@@ -188,7 +188,7 @@
 
       .shaded &,
       .subform & {
-        background-color: white;
+        background-color: transparent;
       }
 
       img {
@@ -198,7 +198,8 @@
       }
 
       .img-placeholder {
-        background-color: var(--brando-color-input);
+        background-color: #f5f5f7;
+        border-radius: 6px;
         width: 90px;
         height: 90px;
         min-width: auto;
@@ -206,8 +207,9 @@
         align-items: center;
         justify-content: center;
 
-        .shaded & {
-          @color bg white;
+        .shaded &,
+        .subform & {
+          background-color: #f5f5f7;
         }
       }
 

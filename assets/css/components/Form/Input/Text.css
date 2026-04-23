@@ -67,7 +67,7 @@
 input.text {
   @fontsize input;
   height: 44px;
-  background-color: var(--brando-color-input);
+  background-color: transparent;
   padding-top: 0;
   padding-bottom: 0;
   padding-left: 14px;
@@ -107,7 +107,7 @@ textarea.text {
   padding-left: 14px;
   padding-right: 14px;
   width: 100%;
-  background-color: var(--brando-color-input);
+  background-color: transparent;
   border: 1px solid var(--brando-input-border);
   border-radius: var(--brando-input-radius);
   box-shadow: var(--brando-input-shadow);

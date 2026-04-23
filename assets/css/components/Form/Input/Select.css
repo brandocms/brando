@@ -103,7 +103,7 @@ h2.titlecase + .button-group-vertical button:first-of-type {
   padding-left: 14px;
   padding-right: 14px;
   width: 100%;
-  background-color: var(--brando-color-input);
+  background-color: transparent;
   border: 1px solid var(--brando-input-border);
   border-radius: var(--brando-input-radius);
   box-shadow: var(--brando-input-shadow);
@@ -117,14 +117,16 @@ h2.titlecase + .button-group-vertical button:first-of-type {
   .button-edit {
     font-size: 13px;
     line-height: 1;
-    border: 1px solid var(--brando-color-dark);
+    border: 1px solid var(--brando-input-border);
     padding: 6px 12px;
     border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
     transition: all 0.2s ease;
 
     &:hover {
       background-color: var(--brando-color-dark);
-      color: var(--brando-color-input);
+      color: white;
+      border-color: var(--brando-color-dark);
     }
   }
 
