@@ -222,7 +222,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 </button>
                 <%= if @resetable do %>
                   <div class="reset">
-                    <button type="button" class="secondary" value={nil} phx-click={JS.push("select_option", target: @myself)}>
+                    <button type="button" class="tertiary" value={nil} phx-click={JS.push("select_option", target: @myself)}>
                       {gettext("Reset value")}
                     </button>
                   </div>

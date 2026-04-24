@@ -164,7 +164,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                   OK
                 </button>
                 <div :if={@resetable} class="reset">
-                  <button type="button" class="secondary" phx-click={JS.push("reset", target: @myself)}>
+                  <button type="button" class="tertiary" phx-click={JS.push("reset", target: @myself)}>
                     {gettext("Reset value")}
                   </button>
                 </div>

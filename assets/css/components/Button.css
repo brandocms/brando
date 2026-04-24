@@ -214,6 +214,22 @@ button.secondary {
   border-left: none;
 }
 
+button.tertiary,
+a.tertiary {
+  font-size: 14px;
+  color: var(--brando-color-dark);
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid var(--brando-color-dark);
+  padding: 4px 0;
+  min-width: auto;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.6;
+  }
+}
+
 button.stealth {
   font-size: 16px;
   border: none;

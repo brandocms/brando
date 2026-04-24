@@ -3555,9 +3555,6 @@ defmodule BrandoAdmin.Components.Form do
           }
         } = socket
       ) do
-    require Logger
-    Logger.warning(">>> save_image called WITH image params: #{inspect(image_params)}")
-
     entry_or_default = entry || struct(schema)
 
     validated_changeset =
@@ -3569,7 +3566,11 @@ defmodule BrandoAdmin.Components.Form do
         current_user
       )
 
-    {:ok, updated_image} = Brando.Images.update_image(validated_changeset, current_user)
+    {:ok, _} = Brando.Images.update_image(validated_changeset, current_user)
+
+    # Reload from DB — the Oban processing job may have updated
+    # status/sizes since the drawer was opened.
+    {:ok, updated_image} = Brando.Images.get_image(image.id)
 
     Brando.Trait.run_trait_after_save_callbacks(
       Brando.Images.Image,
@@ -3608,7 +3609,7 @@ defmodule BrandoAdmin.Components.Form do
     # Subscribe parent live view to changes to this image
     Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
 
-    # this is only for fresh uploads.
+    # Only queue processing for fresh uploads
     if updated_image.status !== :processed do
       Brando.Images.Processing.queue_processing(updated_image, current_user, field_full_path)
     end

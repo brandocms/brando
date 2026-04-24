@@ -142,8 +142,9 @@ html.moonwalk [data-moonwalk-run].moonwalked {
 }
 
 .empty-list {
-  @fontsize 16px;
-  font-style: italic;
+  font-size: 13px;
+  opacity: 0.5;
+  padding: 10px 0;
 }
 
 code {

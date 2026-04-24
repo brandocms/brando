@@ -80,9 +80,9 @@
   justify-content: space-between;
   align-items: baseline;
   @space padding-x 20px;
-  @space padding-top 16px;
+  padding-top: 20px;
   border-bottom: 1px solid #f0f0f2;
-  padding-bottom: 14px;
+  padding-bottom: 18px;
 
   .header-wrap {
     margin-right: 50px;
@@ -172,7 +172,7 @@
   }
 
   input {
-    background-color: theme(colors.input) !important;
+    background-color: transparent !important;
     color: theme(colors.dark) !important;
     border: 1px solid var(--brando-input-border) !important;
     border-radius: var(--brando-input-radius) !important;

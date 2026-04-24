@@ -7,7 +7,7 @@
 
   input.text,
   textarea.text {
-    background-color: var(--brando-color-white);
+    background-color: transparent;
   }
 }
 

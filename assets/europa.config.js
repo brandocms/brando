@@ -205,19 +205,19 @@ module.exports = {
               'line-height': '34px',
             },
             ipad_landscape: {
-              'font-size': '23px',
+              'font-size': '26px',
               'line-height': '34px',
             },
             desktop_md: {
-              'font-size': '23px',
+              'font-size': '26px',
               'line-height': '34px',
             },
             desktop_lg: {
-              'font-size': '23px',
+              'font-size': '26px',
               'line-height': '34px',
             },
             desktop_xl: {
-              'font-size': '23px',
+              'font-size': '26px',
               'line-height': '34px',
             },
           },

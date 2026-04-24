@@ -49,9 +49,17 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         """
     end
 
+    # Count active (non-dropped) entries from the changeset
+    active_count =
+      field.form.source
+      |> Ecto.Changeset.get_assoc(field.field)
+      |> Enum.reject(&(&1.action == :replace))
+      |> length()
+
     {:ok,
      socket
      |> assign(assigns)
+     |> assign(:has_entries, active_count > 0)
      |> prepare_input_component()
      |> assign_new(:join_schema, fn -> join_schema end)
      |> assign_new(:selected_identifiers, fn -> Enum.map(field.value, & &1.identifier) end)
@@ -107,7 +115,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     ~H"""
     <div>
       <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
-        <%= if Enum.empty?(@selected_identifiers) do %>
+        <%= if !@has_entries do %>
           <div class="empty-list">
             {gettext("No selected entries")}
             <input type="hidden" name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} />
