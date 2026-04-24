@@ -138,5 +138,12 @@ defmodule BrandoAdmin.Components.GlobalTabs do
     socket
     |> assign(:global_sets, global_sets)
     |> assign(:indexed_global_sets, indexed_global_sets)
+    |> then(fn socket ->
+      if socket.assigns.active_tab == nil && global_sets != [] do
+        assign(socket, :active_tab, 0)
+      else
+        socket
+      end
+    end)
   end
 end
