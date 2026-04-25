@@ -116,6 +116,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
 
     create table(:galleries_gallery_objects) do
       add :sequence, :integer
+      add :config, :map, default: %{}
       add :gallery_id, references(:galleries, on_delete: :delete_all)
       add :image_id, references(:images, on_delete: :delete_all)
       add :video_id, references(:videos, on_delete: :delete_all)

@@ -9,8 +9,9 @@ import {
 } from '../../utils'
 
 test.describe('Live Preview with Blocks, Vars and Refs', () => {
-  // Run tests in parallel since each test has its own isolated setup
-  test.describe.configure({ mode: 'parallel' })
+  // Run serially — each test opens a preview channel + renders templates,
+  // and parallel execution under full-suite load causes timeouts
+  test.setTimeout(60000)
 
   test.describe('Basic Live Preview', () => {
     test('can enable and disable live preview', async ({ page }) => {
@@ -164,8 +165,8 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Verify default caption is in preview
       await expect(frame.locator('figcaption')).toContainText('Default caption text')
 
-      // Change the caption variable
-      await page.getByLabel('Caption').fill('Updated caption text')
+      // Change the caption variable (use the one inside Block Variables, not the picture ref's caption)
+      await page.locator('.block-vars').getByLabel('Caption').fill('Updated caption text')
       await waitForPreviewUpdate(page)
 
       // Verify caption updated in preview

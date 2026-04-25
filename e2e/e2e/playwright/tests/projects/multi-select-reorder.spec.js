@@ -63,10 +63,7 @@ test.describe('Multi-select reordering', () => {
     // Fill required fields
     await page.locator('label').filter({ hasText: 'Published' }).click()
     const titleField = page.getByRole('textbox', { name: 'Title' })
-    await titleField.fill('Reorder Test Project')
-    // Dispatch input event to trigger slug hook, then blur and wait
-    await titleField.dispatchEvent('input')
-    await titleField.blur()
+    await fillSlugSource(titleField, 'Reorder Test Project')
     await syncLV(page)
     // Wait for slug field to be populated
     const slugField = page.locator('input[name="project[slug]"]')

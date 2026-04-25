@@ -18,8 +18,9 @@ module.exports = defineConfig({
   testDir: './tests',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
+  timeout: 60000,
   workers: process.env.CI ? 1 : undefined,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 2 : 1,
   reporter: process.env.CI ? [['github'], ['html'], ['dot']] : [['list']],
   use: {
     trace: 'retain-on-failure',

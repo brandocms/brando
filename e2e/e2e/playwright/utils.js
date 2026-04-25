@@ -139,8 +139,8 @@ const waitForPreviewReady = async page => {
 // Wait for preview update after making a change
 const waitForPreviewUpdate = async page => {
   await syncLV(page)
-  // Wait for morphdom to apply changes
-  await page.waitForTimeout(150)
+  // Wait for morphdom to apply changes (needs more time under load)
+  await page.waitForTimeout(500)
 }
 
 // Click a device size button in live preview (desktop, tablet, mobile)

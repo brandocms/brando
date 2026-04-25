@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, dragAndDrop } from '../../utils'
+import { syncLV, dragAndDrop, fillSlugSource } from '../../utils'
 
 test('creates project', async ({ page }) => {
   await page.goto('/admin')
@@ -33,11 +33,7 @@ test('creates project', async ({ page }) => {
 
   await page.locator('label').filter({ hasText: 'Published' }).click()
   const titleField = page.getByRole('textbox', { name: 'Title' })
-  await titleField.click()
-  await titleField.fill('Microsoft')
-  // Dispatch input event to trigger slug hook, then blur and wait
-  await titleField.dispatchEvent('input')
-  await titleField.blur()
+  await fillSlugSource(titleField, 'Microsoft')
   await syncLV(page)
   // Wait for slug field to be populated
   await expect(page.locator('input[name="project[slug]"]')).toHaveValue(/microsoft/, { timeout: 10000 })

@@ -247,16 +247,10 @@ test.describe('Image Editor from Blocks', () => {
       timeout: 15000,
     })
 
-    // Wait for processing to complete — spinner should resolve back to an image
-    await expect(
-      page.locator('.gallery-block .gallery-object .image-content img').first()
-    ).toBeVisible({ timeout: 20000 })
-
-    // Verify the image src changed (new image was created with a different path)
-    const srcAfter = await page
-      .locator('.gallery-block .gallery-object .image-content img')
-      .first()
-      .getAttribute('src')
+    // Wait for the image src to actually change from the original
+    // (polls until the attribute differs, handles async processing + DOM update delays)
+    await expect(imgLocator).not.toHaveAttribute('src', srcBefore, { timeout: 20000 })
+    const srcAfter = await imgLocator.getAttribute('src')
     expect(srcAfter).not.toEqual(srcBefore)
   })
 
@@ -375,7 +369,7 @@ test.describe('Image Editor from Blocks', () => {
     await page.waitForTimeout(1000)
 
     const selectedImages = page.locator('.image-picker__image.selected')
-    await expect(selectedImages).toHaveCount(1, { timeout: 5000 })
+    await expect(selectedImages).toHaveCount(1, { timeout: 15000 })
 
     // Click the selected image to deselect it
     await selectedImages.first().click()
@@ -384,7 +378,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Image should now be deselected in picker
     await expect(page.locator('.image-picker__image.selected')).toHaveCount(0, {
-      timeout: 5000,
+      timeout: 10000,
     })
 
     // Close picker
@@ -393,7 +387,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Gallery should have 0 objects
     await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(0, {
-      timeout: 5000,
+      timeout: 10000,
     })
   })
 

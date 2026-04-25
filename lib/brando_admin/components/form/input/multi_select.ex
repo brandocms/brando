@@ -1224,7 +1224,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   defp request_field_ship(socket) do
     field = socket.assigns.field
     entry_id = Ecto.Changeset.get_field(field.form.source, :id)
-    current_user_id = socket.assigns.current_user.id
+    current_user = socket.assigns[:current_user]
 
     if entry_id do
       # Ship scalar field changes via the Form component
@@ -1242,7 +1242,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       # so the receiver's multi-select can rebuild its state
       relation_type = socket.assigns.relation_type
 
-      if relation_type in [:has_many, {:subform, :has_many}] do
+      if relation_type in [:has_many, {:subform, :has_many}] and current_user do
         relation_key = socket.assigns.relation_key
         selected = socket.assigns.selected_options_structs
 
@@ -1257,7 +1257,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
              field: field.field,
              component_id: socket.assigns.id,
              selected_ids: selected_ids,
-             user_id: current_user_id
+             user_id: current_user.id
            }}
         )
       end
@@ -1267,14 +1267,14 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   defp broadcast_field_focus(socket) do
     field = socket.assigns.field
     entry_id = Ecto.Changeset.get_field(field.form.source, :id)
-    current_user_id = socket.assigns.current_user.id
+    current_user = socket.assigns[:current_user]
     field_name = "#{field.form.name}[#{field.field}]"
 
-    if entry_id do
+    if entry_id && current_user do
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
         "brando:active_field:#{entry_id}",
-        {:active_field, field_name, current_user_id}
+        {:active_field, field_name, current_user.id}
       )
     end
   end
