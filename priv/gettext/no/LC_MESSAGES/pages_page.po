@@ -11,150 +11,225 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/pages/page.ex:269
+#: lib/brando/pages/page.ex:277
 #, elixir-autogen, elixir-format
 msgid "Advanced"
 msgstr "Avansert"
 
-#: lib/brando/pages/page.ex:147
 #: lib/brando/pages/page.ex:155
+#: lib/brando/pages/page.ex:163
 #, elixir-autogen, elixir-format
 msgid "Are you sure?"
 msgstr "Er du sikker?"
 
-#: lib/brando/pages/page.ex:241
+#: lib/brando/pages/page.ex:249
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr "Blokker"
 
-#: lib/brando/pages/page.ex:286
+#: lib/brando/pages/page.ex:294
 #, elixir-autogen, elixir-format
 msgid "CSS classes"
 msgstr "CSS klasser"
 
-#: lib/brando/pages/page.ex:243
+#: lib/brando/pages/page.ex:251
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/pages/page.ex:136
+#: lib/brando/pages/page.ex:144
 #, elixir-autogen, elixir-format
 msgid "Create fragment"
 msgstr "Opprett fragment"
 
-#: lib/brando/pages/page.ex:135
+#: lib/brando/pages/page.ex:143
 #, elixir-autogen, elixir-format
 msgid "Create subpage"
 msgstr "Opprett underside"
 
-#: lib/brando/pages/page.ex:147
+#: lib/brando/pages/page.ex:155
 #, elixir-autogen, elixir-format
 msgid "Delete fragment"
 msgstr "Slett sidefragment"
 
-#: lib/brando/pages/page.ex:155
+#: lib/brando/pages/page.ex:163
 #, elixir-autogen, elixir-format
 msgid "Delete sub page"
 msgstr "Slett underside"
 
-#: lib/brando/pages/page.ex:146
+#: lib/brando/pages/page.ex:154
 #, elixir-autogen, elixir-format
 msgid "Duplicate fragment"
 msgstr "Dupliser fragment"
 
-#: lib/brando/pages/page.ex:154
+#: lib/brando/pages/page.ex:162
 #, elixir-autogen, elixir-format
 msgid "Duplicate sub page"
 msgstr "Dupliser underside"
 
-#: lib/brando/pages/page.ex:145
+#: lib/brando/pages/page.ex:153
 #, elixir-autogen, elixir-format
 msgid "Edit fragment"
 msgstr "Oppdater fragment"
 
-#: lib/brando/pages/page.ex:153
+#: lib/brando/pages/page.ex:161
 #, elixir-autogen, elixir-format
 msgid "Edit sub page"
 msgstr "Rediger underside"
 
-#: lib/brando/pages/page.ex:278
+#: lib/brando/pages/page.ex:286
 #, elixir-autogen, elixir-format
 msgid "Has URL"
 msgstr "Har URL"
 
-#: lib/brando/pages/page.ex:274
+#: lib/brando/pages/page.ex:282
 #, elixir-autogen, elixir-format
 msgid "Homepage"
 msgstr "Hjemmeside"
 
-#: lib/brando/pages/page.ex:260
+#: lib/brando/pages/page.ex:268
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr "Språk"
 
-#: lib/brando/pages/page.ex:279
+#: lib/brando/pages/page.ex:287
 #, elixir-autogen, elixir-format
 msgid "Page has an URL and should be included in sitemap"
 msgstr "Siden har en URL og skal inkluderes i nettstedkartet"
 
-#: lib/brando/pages/page.ex:275
+#: lib/brando/pages/page.ex:283
 #, elixir-autogen, elixir-format
 msgid "Page is loaded at root address"
 msgstr "Siden lastes inn på rotadressen"
 
-#: lib/brando/pages/page.ex:291
+#: lib/brando/pages/page.ex:311
 #, elixir-autogen, elixir-format
 msgid "Page variables"
 msgstr "Sidevariabler"
 
-#: lib/brando/pages/page.ex:265
+#: lib/brando/pages/page.ex:273
 #, elixir-autogen, elixir-format
 msgid "Parent page"
 msgstr "Overordnet side"
 
-#: lib/brando/pages/page.ex:245
+#: lib/brando/pages/page.ex:253
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr "Status"
 
-#: lib/brando/pages/page.ex:284
+#: lib/brando/pages/page.ex:292
 #, elixir-autogen, elixir-format
 msgid "Template"
 msgstr "Mal"
 
-#: lib/brando/pages/page.ex:133
-#: lib/brando/pages/page.ex:250
+#: lib/brando/pages/page.ex:141
+#: lib/brando/pages/page.ex:258
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Tittel"
 
-#: lib/brando/pages/page.ex:132
-#: lib/brando/pages/page.ex:251
+#: lib/brando/pages/page.ex:140
+#: lib/brando/pages/page.ex:259
 #, elixir-autogen, elixir-format
 msgid "URI"
 msgstr "URI"
 
-#: lib/brando/pages/page.ex:324
+#: lib/brando/pages/page.ex:345
 #, elixir-autogen, elixir-format
 msgid "page"
 msgstr "side"
 
-#: lib/brando/pages/page.ex:325
+#: lib/brando/pages/page.ex:346
 #, elixir-autogen, elixir-format
 msgid "pages"
 msgstr "sider"
 
-#: lib/brando/pages/page.ex:128
+#: lib/brando/pages/page.ex:136
 #, elixir-autogen, elixir-format
 msgid "Default"
 msgstr "Standard"
 
-#: lib/brando/pages/page.ex:129
+#: lib/brando/pages/page.ex:137
 #, elixir-autogen, elixir-format
 msgid "Title &darr;"
 msgstr "Tittel &darr;"
 
-#: lib/brando/pages/page.ex:130
+#: lib/brando/pages/page.ex:138
 #, elixir-autogen, elixir-format
 msgid "Title &uarr;"
 msgstr "Tittel &uarr;"
+
+#: lib/brando/pages/page.ex:300
+#, elixir-autogen, elixir-format
+msgid "About Page"
+msgstr ""
+
+#: lib/brando/pages/page.ex:300
+#, elixir-autogen, elixir-format
+msgid "About the organization"
+msgstr ""
+
+#: lib/brando/pages/page.ex:299
+#, elixir-autogen, elixir-format
+msgid "Article"
+msgstr ""
+
+#: lib/brando/pages/page.ex:299
+#, elixir-autogen, elixir-format
+msgid "Blog posts, news articles"
+msgstr ""
+
+#: lib/brando/pages/page.ex:302
+#, elixir-autogen, elixir-format
+msgid "Collection Page"
+msgstr ""
+
+#: lib/brando/pages/page.ex:301
+#, elixir-autogen, elixir-format
+msgid "Contact Page"
+msgstr ""
+
+#: lib/brando/pages/page.ex:301
+#, elixir-autogen, elixir-format
+msgid "Contact information"
+msgstr ""
+
+#: lib/brando/pages/page.ex:298
+#, elixir-autogen, elixir-format
+msgid "Default. Generic web page"
+msgstr ""
+
+#: lib/brando/pages/page.ex:303
+#, elixir-autogen, elixir-format
+msgid "Individual item in a collection"
+msgstr ""
+
+#: lib/brando/pages/page.ex:303
+#, elixir-autogen, elixir-format
+msgid "Item Page"
+msgstr ""
+
+#: lib/brando/pages/page.ex:302
+#, elixir-autogen, elixir-format
+msgid "Listings, archives, indexes"
+msgstr ""
+
+#: lib/brando/pages/page.ex:304
+#, elixir-autogen, elixir-format
+msgid "Person or user profile"
+msgstr ""
+
+#: lib/brando/pages/page.ex:304
+#, elixir-autogen, elixir-format
+msgid "Profile Page"
+msgstr ""
+
+#: lib/brando/pages/page.ex:306
+#, elixir-autogen, elixir-format
+msgid "Structured data type"
+msgstr ""
+
+#: lib/brando/pages/page.ex:298
+#, elixir-autogen, elixir-format
+msgid "Web Page"
+msgstr ""

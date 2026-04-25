@@ -25,12 +25,12 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: lib/brando/content/palette.ex:107
+#: lib/brando/content/palette.ex:108
 #, elixir-autogen, elixir-format
 msgid "palette"
 msgstr ""
 
-#: lib/brando/content/palette.ex:108
+#: lib/brando/content/palette.ex:109
 #, elixir-autogen, elixir-format
 msgid "palettes"
 msgstr ""

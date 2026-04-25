@@ -334,22 +334,25 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     <!-- playsinline is always true for better UX -->
                   <Input.input type={:hidden} field={block_data[:playsinline]} value="true" />
 
-                  <div class="row">
-                    <div class="half">
-                      <Input.text
-                        field={block_data[:video_class]}
-                        label={gettext("Video CSS class")}
-                        placeholder="my-video-class"
-                      />
+                  <fieldset class="override-toggle-group">
+                    <legend>{gettext("CSS classes")}</legend>
+                    <div class="row">
+                      <div class="half">
+                        <Input.text
+                          field={block_data[:video_class]}
+                          label={gettext("Video")}
+                          placeholder="my-video-class"
+                        />
+                      </div>
+                      <div class="half">
+                        <Input.text
+                          field={block_data[:container_class]}
+                          label={gettext("Container")}
+                          placeholder="my-container-class"
+                        />
+                      </div>
                     </div>
-                    <div class="half">
-                      <Input.text
-                        field={block_data[:container_class]}
-                        label={gettext("Container CSS class")}
-                        placeholder="my-container-class"
-                      />
-                    </div>
-                  </div>
+                  </fieldset>
 
                   <Input.number field={block_data[:opacity]} label={gettext("Opacity (0-100)")} step="1" min="0" max="100" />
                   <.inputs_for :let={cover_image} :if={block_data[:cover_image].value} field={block_data[:cover_image]}>

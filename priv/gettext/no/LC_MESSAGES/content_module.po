@@ -11,37 +11,37 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/content/module.ex:115
+#: lib/brando/content/module.ex:122
 #, elixir-autogen, elixir-format
 msgid "Class"
 msgstr "Klasse"
 
-#: lib/brando/content/module.ex:118
+#: lib/brando/content/module.ex:125
 #, elixir-autogen, elixir-format
 msgid "Export modules"
 msgstr "Eksporter moduler"
 
-#: lib/brando/content/module.ex:113
+#: lib/brando/content/module.ex:120
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Navn"
 
-#: lib/brando/content/module.ex:114
+#: lib/brando/content/module.ex:121
 #, elixir-autogen, elixir-format
 msgid "Namespace"
 msgstr "Kategori"
 
-#: lib/brando/content/module.ex:202
+#: lib/brando/content/module.ex:209
 #, elixir-autogen, elixir-format
 msgid "module"
 msgstr "modul"
 
-#: lib/brando/content/module.ex:203
+#: lib/brando/content/module.ex:210
 #, elixir-autogen, elixir-format
 msgid "modules"
 msgstr "moduler"
 
-#: lib/brando/content/module.ex:116
+#: lib/brando/content/module.ex:123
 #, elixir-autogen, elixir-format
 msgid "Code"
 msgstr "Kode"

@@ -11,113 +11,243 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/sites/identity.ex:95
+#: lib/brando/sites/identity.ex:90
 #, elixir-autogen, elixir-format
 msgid "A shortform version of the name"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:105
+#: lib/brando/sites/identity.ex:100
 #, elixir-autogen, elixir-format
 msgid "Address line 1"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:106
+#: lib/brando/sites/identity.ex:101
 #, elixir-autogen, elixir-format
 msgid "Address line 2"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:107
+#: lib/brando/sites/identity.ex:102
 #, elixir-autogen, elixir-format
 msgid "Address line 3"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:94
+#: lib/brando/sites/identity.ex:89
 #, elixir-autogen, elixir-format
 msgid "Alternate name"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:113
+#: lib/brando/sites/identity.ex:108
 #, elixir-autogen, elixir-format
 msgid "City"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:79
+#: lib/brando/sites/identity.ex:83
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:84
+#: lib/brando/sites/identity.ex:130
 #, elixir-autogen, elixir-format
 msgid "Corporation"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:114
+#: lib/brando/sites/identity.ex:109
 #, elixir-autogen, elixir-format
 msgid "Country"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:100
+#: lib/brando/sites/identity.ex:95
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:130
+#: lib/brando/sites/identity.ex:178
 #, elixir-autogen, elixir-format
 msgid "Links"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:125
+#: lib/brando/sites/identity.ex:120
 #, elixir-autogen, elixir-format
 msgid "Logo"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:142
+#: lib/brando/sites/identity.ex:190
 #, elixir-autogen, elixir-format
 msgid "Meta properties"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:91
+#: lib/brando/sites/identity.ex:86
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:83
+#: lib/brando/sites/identity.ex:153
 #, elixir-autogen, elixir-format
 msgid "Organization"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:101
+#: lib/brando/sites/identity.ex:96
 #, elixir-autogen, elixir-format
 msgid "Phone"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:120
+#: lib/brando/sites/identity.ex:115
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:121
+#: lib/brando/sites/identity.ex:116
 #, elixir-autogen, elixir-format
 msgid "Title (postfix)"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:119
+#: lib/brando/sites/identity.ex:114
 #, elixir-autogen, elixir-format
 msgid "Title (prefix)"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:86
+#: lib/brando/sites/identity.ex:163
 #, elixir-autogen, elixir-format
 msgid "Type"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:112
+#: lib/brando/sites/identity.ex:107
 #, elixir-autogen, elixir-format
 msgid "Zip code"
 msgstr ""
 
-#: lib/brando/sites/identity.ex:157
-#: lib/brando/sites/identity.ex:158
+#: lib/brando/sites/identity.ex:205
+#: lib/brando/sites/identity.ex:206
 #, elixir-autogen, elixir-format
 msgid "identity"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:128
+#, elixir-autogen, elixir-format
+msgid "Architect"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:128
+#, elixir-autogen, elixir-format
+msgid "Architecture offices, studios"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:129
+#, elixir-autogen, elixir-format
+msgid "Art Gallery"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:129
+#, elixir-autogen, elixir-format
+msgid "Art galleries, exhibition spaces"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:150
+#, elixir-autogen, elixir-format
+msgid "Clinics, hospitals, practices"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:160
+#, elixir-autogen, elixir-format
+msgid "Clubs, teams, leagues"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:157
+#, elixir-autogen, elixir-format
+msgid "Designers, architects, lawyers, consultants"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:133
+#, elixir-autogen, elixir-format
+msgid "Educational Organization"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:138
+#, elixir-autogen, elixir-format
+msgid "Employment Agency"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:153
+#, elixir-autogen, elixir-format
+msgid "Generic organization"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:143
+#, elixir-autogen, elixir-format
+msgid "Government Organization"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:130
+#, elixir-autogen, elixir-format
+msgid "Large company, publicly traded"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:146
+#, elixir-autogen, elixir-format
+msgid "Local Business"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:149
+#, elixir-autogen, elixir-format
+msgid "Medical Organization"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:152
+#, elixir-autogen, elixir-format
+msgid "NGO"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:152
+#, elixir-autogen, elixir-format
+msgid "Nonprofits, foundations, charities"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:146
+#, elixir-autogen, elixir-format
+msgid "Physical location customers visit"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:156
+#, elixir-autogen, elixir-format
+msgid "Professional Service"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:144
+#, elixir-autogen, elixir-format
+msgid "Public sector, government agencies"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:159
+#, elixir-autogen, elixir-format
+msgid "Restaurant"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:159
+#, elixir-autogen, elixir-format
+msgid "Restaurant, cafe, bar"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:164
+#, elixir-autogen, elixir-format
+msgid "Schema.org type used for structured data (JSON-LD)"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:134
+#, elixir-autogen, elixir-format
+msgid "Schools, universities, courses"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:160
+#, elixir-autogen, elixir-format
+msgid "Sports Organization"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:139
+#, elixir-autogen, elixir-format
+msgid "Talent, illustration, modeling agencies"
+msgstr ""
+
+#: lib/brando/sites/identity.ex:169
+#, elixir-autogen, elixir-format
+msgid "Type-specific settings"
 msgstr ""

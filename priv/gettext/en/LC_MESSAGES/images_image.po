@@ -10,73 +10,73 @@ msgid ""
 msgstr ""
 "Language: en\n"
 
-#: lib/brando/images/image.ex:81
+#: lib/brando/images/image.ex:82
 #, elixir-autogen, elixir-format
 msgid "Alt. text"
 msgstr ""
 
-#: lib/brando/images/image.ex:90
+#: lib/brando/images/image.ex:91
 #, elixir-autogen, elixir-format
 msgid "Asset has been transferred to CDN"
 msgstr ""
 
-#: lib/brando/images/image.ex:89
+#: lib/brando/images/image.ex:90
 #, elixir-autogen, elixir-format
 msgid "CDN"
 msgstr ""
 
-#: lib/brando/images/image.ex:51
+#: lib/brando/images/image.ex:52
 #, elixir-autogen, elixir-format
 msgid "Config target"
 msgstr ""
 
-#: lib/brando/images/image.ex:95
+#: lib/brando/images/image.ex:96
 #, elixir-autogen, elixir-format
 msgid "Configuration target"
 msgstr ""
 
-#: lib/brando/images/image.ex:80
+#: lib/brando/images/image.ex:81
 #, elixir-autogen, elixir-format
 msgid "Credits"
 msgstr ""
 
-#: lib/brando/images/image.ex:94
+#: lib/brando/images/image.ex:95
 #, elixir-autogen, elixir-format
 msgid "Dominant color"
 msgstr ""
 
-#: lib/brando/images/image.ex:93
+#: lib/brando/images/image.ex:94
 #, elixir-autogen, elixir-format
 msgid "Height"
 msgstr ""
 
-#: lib/brando/images/image.ex:50
-#: lib/brando/images/image.ex:82
+#: lib/brando/images/image.ex:51
+#: lib/brando/images/image.ex:83
 #, elixir-autogen, elixir-format
 msgid "Path"
 msgstr ""
 
-#: lib/brando/images/image.ex:79
+#: lib/brando/images/image.ex:80
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/brando/images/image.ex:92
+#: lib/brando/images/image.ex:93
 #, elixir-autogen, elixir-format
 msgid "Width"
 msgstr ""
 
-#: lib/brando/images/image.ex:98
+#: lib/brando/images/image.ex:99
 #, elixir-autogen, elixir-format
 msgid "Focal"
 msgstr ""
 
-#: lib/brando/images/image.ex:113
+#: lib/brando/images/image.ex:114
 #, elixir-autogen, elixir-format
 msgid "image"
 msgstr ""
 
-#: lib/brando/images/image.ex:114
+#: lib/brando/images/image.ex:115
 #, elixir-autogen, elixir-format
 msgid "images"
 msgstr ""

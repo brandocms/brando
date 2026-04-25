@@ -11,17 +11,17 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/files/file.ex:35
+#: lib/brando/files/file.ex:36
 #, elixir-autogen, elixir-format
 msgid "Filename"
 msgstr "Filnavn"
 
-#: lib/brando/files/file.ex:64
+#: lib/brando/files/file.ex:65
 #, elixir-autogen, elixir-format
 msgid "file"
 msgstr ""
 
-#: lib/brando/files/file.ex:65
+#: lib/brando/files/file.ex:66
 #, elixir-autogen, elixir-format
 msgid "files"
 msgstr ""
