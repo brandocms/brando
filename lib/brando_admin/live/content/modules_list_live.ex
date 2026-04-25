@@ -76,6 +76,9 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     """
   end
 
+  def handle_event("focus", _, socket), do: {:noreply, socket}
+  def handle_event("blur", _, socket), do: {:noreply, socket}
+
   def handle_event("validate_module_import", %{"encoded_modules" => ""}, socket) do
     {:noreply, socket}
   end

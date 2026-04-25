@@ -80,6 +80,9 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
      |> assign(:uri, uri)}
   end
 
+  def handle_event("focus", _, socket), do: {:noreply, socket}
+  def handle_event("blur", _, socket), do: {:noreply, socket}
+
   def handle_event("save_redirect_target", _, socket) do
     {:noreply, assign(socket, :save_redirect_target, :self)}
   end

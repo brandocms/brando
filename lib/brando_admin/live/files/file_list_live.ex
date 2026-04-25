@@ -50,6 +50,9 @@ defmodule BrandoAdmin.Files.FileListLive do
   end
 
   @impl true
+  def handle_event("focus", _, socket), do: {:noreply, socket}
+  def handle_event("blur", _, socket), do: {:noreply, socket}
+
   def handle_event("validate", _params, socket) do
     {:noreply, socket}
   end

@@ -76,6 +76,9 @@ defmodule BrandoAdmin.Components.GlobalTabs do
     """
   end
 
+  def handle_event("focus", _, socket), do: {:noreply, socket}
+  def handle_event("blur", _, socket), do: {:noreply, socket}
+
   def handle_event("select_tab", %{"index" => index}, socket) do
     {:noreply,
      socket

@@ -48,6 +48,9 @@ defmodule BrandoAdmin.Images.ImageListLive do
   end
 
   @impl true
+  def handle_event("focus", _, socket), do: {:noreply, socket}
+  def handle_event("blur", _, socket), do: {:noreply, socket}
+
   def handle_event("validate", params, socket) do
     folder = get_in(params, ["upload", "folder"]) || socket.assigns.current_folder_abs
     {:noreply, assign(socket, :upload_folder, folder)}
