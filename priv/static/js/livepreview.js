@@ -116,14 +116,6 @@ function initializeLazyVideos(target = document) {
 }
 
 /**
- * NodeFilter helper for createNodeIterator
- * @returns {number} - Always accepts the node
- */
-function filterNone() {
-  return NodeFilter.FILTER_ACCEPT
-}
-
-/**
  * Creates a reusable morphdom configuration
  * @param {boolean} childrenOnly - Whether to only update children
  * @returns {Object} - Morphdom configuration object
@@ -174,6 +166,10 @@ function getMorphdomConfig(childrenOnly = true) {
   }
 }
 
+// Pre-built morphdom configs to avoid creating new objects on every call
+const MORPHDOM_CONFIG_CHILDREN_ONLY = getMorphdomConfig(true)
+const MORPHDOM_CONFIG_FULL = getMorphdomConfig(false)
+
 /**
  * Build a map of content blocks for efficient updates
  * Blocks are identified by HTML comments with UIDs
@@ -183,7 +179,7 @@ function rebuildContentBlockRegistry() {
   const iterator = document.createNodeIterator(
     document.body,
     NodeFilter.SHOW_COMMENT,
-    filterNone,
+    null,
     false
   )
 
@@ -225,7 +221,7 @@ function mapNestedContent(blockElements) {
     const iterator = document.createNodeIterator(
       element,
       NodeFilter.SHOW_COMMENT,
-      filterNone,
+      null,
       false
     )
 
@@ -239,7 +235,8 @@ function mapNestedContent(blockElements) {
 
         // Collect children until closing comment
         let sibling = curNode.nextSibling
-        while (sibling) {
+        let safety = 0
+        while (sibling && safety++ < 10000) {
           if (sibling.nodeType === NODE_TYPES.COMMENT && sibling.nodeValue.trim().startsWith(`[-:C<${uid}`)) {
             blockEl.childInsertionPoint = sibling
             break
@@ -262,7 +259,7 @@ function mapNestedContent(blockElements) {
  * @returns {Node|null} - The text node marking the insertion point
  */
 function findContentInsertionMarker(blockElement) {
-  const iterator = document.createNodeIterator(blockElement, NodeFilter.SHOW_TEXT, filterNone, false)
+  const iterator = document.createNodeIterator(blockElement, NodeFilter.SHOW_TEXT, null, false)
   let curNode
 
   while ((curNode = iterator.nextNode())) {
@@ -352,7 +349,7 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
 
       if (existingEl && existingEl.element.nodeType === newBlock.nodeType) {
         // Update existing element with morphdom
-        morphdom(existingEl.element, newBlock, getMorphdomConfig(false))
+        morphdom(existingEl.element, newBlock, MORPHDOM_CONFIG_FULL)
 
         // Handle nested children
         if (has_children && existingEl.children) {
@@ -409,7 +406,7 @@ channel.on('update', function (payload) {
   const doc = parser.parseFromString(payload.html, 'text/html')
   const newMain = doc.querySelector('main')
   
-  morphdom(main, newMain, getMorphdomConfig(true))
+  morphdom(main, newMain, MORPHDOM_CONFIG_CHILDREN_ONLY)
 
   initializeLazyImages()
   initializeLazyVideos()
@@ -426,7 +423,7 @@ channel.on('rerender', function (payload) {
   const doc = parser.parseFromString(payload.html, 'text/html')
   const newBody = doc.querySelector('body')
 
-  morphdom(body, newBody, getMorphdomConfig(false))
+  morphdom(body, newBody, MORPHDOM_CONFIG_FULL)
 
   initializeLazyImages()
   initializeLazyVideos()

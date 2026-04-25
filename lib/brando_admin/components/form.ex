@@ -3780,6 +3780,8 @@ defmodule BrandoAdmin.Components.Form do
 
   # close live_preview
   def handle_event("open_live_preview", _, %{assigns: %{live_preview_active?: true}} = socket) do
+    Brando.LivePreview.cleanup_cache(socket.assigns.live_preview_cache_key)
+
     socket
     |> assign(:live_preview_active?, false)
     |> assign(:live_preview_cache_key, nil)

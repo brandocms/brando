@@ -7,7 +7,34 @@ defmodule Brando.Plug.LivePreview do
 
   import Plug.Conn
 
+  @external_resource Application.app_dir(:phoenix, "priv/static/phoenix.js")
+  @external_resource Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js")
   @external_resource Application.app_dir(:brando, "priv/static/js/livepreview.js")
+
+  @phoenix_js File.read!(Application.app_dir(:phoenix, "priv/static/phoenix.js"))
+  @morphdom_js File.read!(Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js"))
+  @livepreview_js File.read!(Application.app_dir(:brando, "priv/static/js/livepreview.js"))
+
+  @override_css """
+  html.is-updated-live-preview [data-moonwalk],
+  html.is-updated-live-preview [data-moonwalk-section],
+  html.is-updated-live-preview [data-moonwalk-run],
+  html.is-updated-live-preview [data-moonwalk-children] > *,
+  html.is-updated-live-preview [data-ll-srcset],
+  html.is-updated-live-preview [data-ll-srcset] img[data-ll-loaded] {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    transition: none !important;
+    clip-path: none !important;
+  }
+  html.is-updated-live-preview [data-smart-video],
+  html.is-updated-live-preview [data-smart-video] video,
+  html.is-updated-live-preview [data-smart-video] iframe {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  """
 
   def init(opts), do: opts
 
@@ -41,29 +68,12 @@ defmodule Brando.Plug.LivePreview do
           <meta name="user_token" content="#{Brando.Users.build_token(current_user.id)}">
           <script>
           var livePreviewKey = '#{key}';
-          #{File.read!(Application.app_dir(:phoenix, "priv/static/phoenix.js"))}
-          #{File.read!(Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js"))}
-          #{File.read!(Application.app_dir(:brando, "priv/static/js/livepreview.js"))}
+          #{@phoenix_js}
+          #{@morphdom_js}
+          #{@livepreview_js}
           </script>
           <style>
-            html.is-updated-live-preview [data-moonwalk],
-            html.is-updated-live-preview [data-moonwalk-section],
-            html.is-updated-live-preview [data-moonwalk-run],
-            html.is-updated-live-preview [data-moonwalk-children] > *,
-            html.is-updated-live-preview [data-ll-srcset],
-            html.is-updated-live-preview [data-ll-srcset] img[data-ll-loaded] {
-              opacity: 1 !important;
-              visibility: visible !important;
-              transform: none !important;
-              transition: none !important;
-              clip-path: none !important;
-            }
-            html.is-updated-live-preview [data-smart-video],
-            html.is-updated-live-preview [data-smart-video] video,
-            html.is-updated-live-preview [data-smart-video] iframe {
-              opacity: 1 !important;
-              visibility: visible !important;
-            }
+          #{@override_css}
           </style>
           """
 
@@ -81,10 +91,7 @@ defmodule Brando.Plug.LivePreview do
 
             conn
             |> put_resp_content_type("text/html")
-            |> send_resp(200, [
-              "LIVE PREVIEW FAILED\n\n",
-              inspect(err, pretty: true)
-            ])
+            |> send_resp(200, ["LIVE PREVIEW FAILED. Check server logs for details."])
             |> halt()
         end
     end

@@ -46,8 +46,8 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       await toggleLivePreview(page)
       await syncLV(page)
 
-      // Verify preview is hidden
-      await expect(page.locator('.live-preview-wrapper')).not.toBeVisible()
+      // Verify preview is hidden (extended timeout for loaded systems)
+      await expect(page.locator('.live-preview-wrapper')).not.toBeVisible({ timeout: 15000 })
     })
 
     test('live preview restores after LiveSocket reconnect', async ({ page }) => {

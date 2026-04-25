@@ -260,24 +260,38 @@ defmodule Brando.LivePreview do
   end
 
   defp build_cache_key(seed), do: "PREVIEW-" <> Hashids.encode(@preview_coder, seed)
-  def store_cache(key, html), do: Cachex.put(:cache, "__live_preview__" <> key, html)
+
+  def store_cache(key, html),
+    do: Cachex.put(:cache, "__live_preview__" <> key, html, expire: :timer.hours(1))
+
   def get_cache(key), do: Cachex.get(:cache, "__live_preview__" <> key)
+
+  @doc """
+  Clean up all Cachex entries for a live preview session.
+  Runs asynchronously to avoid blocking the calling process.
+  """
+  def cleanup_cache(nil), do: :ok
+
+  def cleanup_cache(cache_key) do
+    Task.start(fn ->
+      Cachex.del(:cache, "__live_preview__" <> cache_key)
+
+      {:ok, keys} = Cachex.keys(:cache)
+
+      keys
+      |> Enum.filter(&String.starts_with?(to_string(&1), "#{cache_key}__VAR__"))
+      |> Enum.each(&Cachex.del(:cache, &1))
+    end)
+  end
 
   def initialize(schema, changeset, updated_entry_assocs \\ %{}) do
     cache_key = build_cache_key(:erlang.system_time())
     schema_module = Module.concat([schema])
-
-    entry_struct =
-      changeset
-      |> Brando.Utils.apply_changes_recursively()
-      |> Map.merge(updated_entry_assocs)
+    entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
 
     try do
       wrapper_html = render(schema_module, entry_struct, cache_key)
-
-      if Cachex.get(:cache, cache_key) == {:ok, nil} do
-        store_cache(cache_key, wrapper_html)
-      end
+      store_cache(cache_key, wrapper_html)
 
       Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
 
@@ -311,12 +325,7 @@ defmodule Brando.LivePreview do
 
   def update_cache(cache_key, schema, changeset, updated_entry_assocs \\ %{}) do
     schema_module = Module.concat([schema])
-
-    entry_struct =
-      changeset
-      |> Brando.Utils.apply_changes_recursively()
-      |> Map.merge(updated_entry_assocs)
-
+    entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
     wrapper_html = render(schema_module, entry_struct, cache_key)
     store_cache(cache_key, wrapper_html)
   end
@@ -325,25 +334,16 @@ defmodule Brando.LivePreview do
 
   def update(schema, changeset, cache_key, updated_entry_assocs \\ %{}) do
     schema_module = Module.concat([schema])
-
-    entry_struct =
-      changeset
-      |> Brando.Utils.apply_changes_recursively()
-      |> Map.merge(updated_entry_assocs)
-
+    entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
     wrapper_html = render(schema_module, entry_struct, cache_key)
+    store_cache(cache_key, wrapper_html)
     Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
     cache_key
   end
 
   def rerender(schema, changeset, cache_key, updated_entry_assocs \\ %{}) do
     schema_module = Module.concat([schema])
-
-    entry_struct =
-      changeset
-      |> Brando.Utils.apply_changes_recursively()
-      |> Map.merge(updated_entry_assocs)
-
+    entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
     wrapper_html = render(schema_module, entry_struct, cache_key)
     Brando.endpoint().broadcast("live_preview:#{cache_key}", "rerender", %{html: wrapper_html})
   end
@@ -353,11 +353,7 @@ defmodule Brando.LivePreview do
   """
   def share(schema_module, changeset, user, updated_entry_assocs \\ %{}) do
     cache_key = build_cache_key(:erlang.system_time())
-
-    entry_struct =
-      changeset
-      |> Brando.Utils.apply_changes_recursively()
-      |> Map.merge(updated_entry_assocs)
+    entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
 
     expiry_days = Brando.config(:preview_expiry_days) || 2
 
@@ -417,6 +413,12 @@ defmodule Brando.LivePreview do
     Brando.live_preview()
     |> Spark.Dsl.Extension.get_entities([:live_preview])
     |> Enum.any?(&(&1.schema == schema_module))
+  end
+
+  defp prepare_entry_struct(changeset, updated_entry_assocs) do
+    changeset
+    |> Brando.Utils.apply_changes_recursively()
+    |> Map.merge(updated_entry_assocs)
   end
 
   defmodule Legacy do
