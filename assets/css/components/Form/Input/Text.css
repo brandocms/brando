@@ -54,6 +54,7 @@
   input.text,
   textarea.text {
     padding-left: 38px;
+    box-shadow: none;
   }
 }
 

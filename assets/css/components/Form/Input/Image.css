@@ -183,12 +183,17 @@
       border: 1px solid var(--brando-input-border);
       border-radius: var(--brando-input-radius);
       box-shadow: var(--brando-input-shadow);
-      padding: 10px 20px 10px 10px;
+      padding: 3px;
       width: fit-content;
 
       .shaded &,
       .subform & {
         background-color: transparent;
+      }
+
+      .image-content {
+        border-radius: 5px;
+        overflow: clip;
       }
 
       img {
@@ -199,7 +204,7 @@
 
       .img-placeholder {
         background-color: #f5f5f7;
-        border-radius: 6px;
+        border-radius: 5px;
         width: 90px;
         height: 90px;
         min-width: auto;
@@ -215,11 +220,14 @@
 
       .image-info {
         @font mono;
-        font-size: 13px;
+        font-size: 12px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
         padding-left: 12px;
+        padding-top: 5px;
+        padding-bottom: 5px;
+        padding-right: 20px;
 
         .title {
           @font main;
