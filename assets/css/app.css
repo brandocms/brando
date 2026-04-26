@@ -938,6 +938,10 @@ h3 {
   @space margin-left md;
 }
 
+.ml-auto {
+  margin-left: auto;
+}
+
 .mr-1 {
   margin-right: 5px;
 }

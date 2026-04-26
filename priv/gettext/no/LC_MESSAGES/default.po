@@ -140,7 +140,7 @@ msgstr "SEO"
 msgid "System"
 msgstr "System"
 
-#: lib/brando_admin/live/users/user_list_live.ex:10
+#: lib/brando_admin/live/users/user_list_live.ex:19
 #: lib/brando_admin/menu.ex:338
 #, elixir-autogen, elixir-format
 msgid "Users"
@@ -293,7 +293,7 @@ msgstr "Ingen matchende rader"
 #: lib/brando_admin/live/images/image_list_live.ex:250
 #: lib/brando_admin/live/navigation/menu_list_live.ex:10
 #: lib/brando_admin/live/pages/page_list_live.ex:11
-#: lib/brando_admin/live/users/user_list_live.ex:10
+#: lib/brando_admin/live/users/user_list_live.ex:19
 #: lib/brando_admin/live/videos/video_list_live.ex:203
 #, elixir-autogen, elixir-format
 msgid "Overview"
@@ -1178,7 +1178,7 @@ msgstr "Feil ved sletting av"
 #: lib/brando_admin/live/content/table_template_list_live.ex:12
 #: lib/brando_admin/live/content/template_list_live.ex:12
 #: lib/brando_admin/live/navigation/menu_list_live.ex:12
-#: lib/brando_admin/live/users/user_list_live.ex:12
+#: lib/brando_admin/live/users/user_list_live.ex:21
 #, elixir-autogen, elixir-format
 msgid "Create new"
 msgstr "Opprett ny"
@@ -2000,7 +2000,7 @@ msgstr "Seksjoner"
 msgid "Current selected identifier"
 msgstr "Valgt identifikator"
 
-#: lib/brando/users/user.ex:195
+#: lib/brando/users/user.ex:196
 #, elixir-autogen, elixir-format
 msgid "Current user updated. You should reload your application to see the changes."
 msgstr "Nåværende bruker oppdatert. Last inn applikasjonen på nytt for å se endringene."
@@ -2656,6 +2656,7 @@ msgstr "Ressurser — Gallerier"
 #: lib/brando_admin/components/form/input/gallery/image_config.ex:62
 #: lib/brando_admin/components/form/input/gallery/video_config.ex:79
 #: lib/brando_admin/components/form/input/multi_select.ex:226
+#: lib/brando_admin/live/users/user_list_live.ex:111
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Avbryt"
@@ -2939,12 +2940,12 @@ msgstr "Opplastet video"
 msgid "Use custom value"
 msgstr ""
 
-#: lib/brando_admin/live/users/user_list_live.ex:31
+#: lib/brando_admin/live/users/user_list_live.ex:207
 #, elixir-autogen, elixir-format
 msgid "User disabled."
 msgstr ""
 
-#: lib/brando_admin/live/users/user_list_live.ex:38
+#: lib/brando_admin/live/users/user_list_live.ex:214
 #, elixir-autogen, elixir-format
 msgid "User enabled."
 msgstr ""
@@ -3679,3 +3680,58 @@ msgstr "Bilde"
 #, elixir-autogen, elixir-format, fuzzy
 msgid "video"
 msgstr "Video"
+
+#: lib/brando_admin/live/users/user_list_live.ex:75
+#, elixir-autogen, elixir-format
+msgid "Content to transfer"
+msgstr "Innhold som overføres"
+
+#: lib/brando_admin/live/users/user_list_live.ex:37
+#, elixir-autogen, elixir-format
+msgid "Delete user"
+msgstr "Slett bruker"
+
+#: lib/brando_admin/live/users/user_list_live.ex:80
+#, elixir-autogen, elixir-format
+msgid "Entries"
+msgstr "Oppføringer"
+
+#: lib/brando_admin/live/users/user_list_live.ex:191
+#, elixir-autogen, elixir-format
+msgid "Error deleting user: %{reason}"
+msgstr "Feil ved sletting av bruker: %{reason}"
+
+#: lib/brando_admin/live/users/user_list_live.ex:79
+#, elixir-autogen, elixir-format
+msgid "Table"
+msgstr "Tabell"
+
+#: lib/brando_admin/live/users/user_list_live.ex:93
+#, elixir-autogen, elixir-format
+msgid "This user has no content to transfer."
+msgstr "Denne brukeren har ikke noe innhold å overføre."
+
+#: lib/brando_admin/live/users/user_list_live.ex:104
+#, elixir-autogen, elixir-format
+msgid "Transfer & Delete"
+msgstr "Overfør og slett"
+
+#: lib/brando_admin/live/users/user_list_live.ex:49
+#, elixir-autogen, elixir-format
+msgid "Transfer content from %{name} to:"
+msgstr "Overfør innhold fra %{name} til:"
+
+#: lib/brando_admin/live/users/user_list_live.ex:181
+#, elixir-autogen, elixir-format
+msgid "User deleted and content transferred."
+msgstr "Bruker slettet og innhold overført."
+
+#: lib/brando_admin/live/users/user_list_live.ex:44
+#, elixir-autogen, elixir-format
+msgid "When deleting a user, all content they have created must be transferred to another user. Select a user below to take over ownership of the content."
+msgstr "Når du sletter en bruker, må alt innhold de har opprettet overføres til en annen bruker. Velg en bruker nedenfor som skal overta eierskapet av innholdet."
+
+#: lib/brando_admin/live/users/user_list_live.ex:57
+#, elixir-autogen, elixir-format
+msgid "Select user..."
+msgstr "Velg bruker..."

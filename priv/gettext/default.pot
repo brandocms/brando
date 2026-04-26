@@ -139,7 +139,7 @@ msgstr ""
 msgid "System"
 msgstr ""
 
-#: lib/brando_admin/live/users/user_list_live.ex:10
+#: lib/brando_admin/live/users/user_list_live.ex:19
 #: lib/brando_admin/menu.ex:338
 #, elixir-autogen, elixir-format
 msgid "Users"
@@ -292,7 +292,7 @@ msgstr ""
 #: lib/brando_admin/live/images/image_list_live.ex:250
 #: lib/brando_admin/live/navigation/menu_list_live.ex:10
 #: lib/brando_admin/live/pages/page_list_live.ex:11
-#: lib/brando_admin/live/users/user_list_live.ex:10
+#: lib/brando_admin/live/users/user_list_live.ex:19
 #: lib/brando_admin/live/videos/video_list_live.ex:203
 #, elixir-autogen, elixir-format
 msgid "Overview"
@@ -1177,7 +1177,7 @@ msgstr ""
 #: lib/brando_admin/live/content/table_template_list_live.ex:12
 #: lib/brando_admin/live/content/template_list_live.ex:12
 #: lib/brando_admin/live/navigation/menu_list_live.ex:12
-#: lib/brando_admin/live/users/user_list_live.ex:12
+#: lib/brando_admin/live/users/user_list_live.ex:21
 #, elixir-autogen, elixir-format
 msgid "Create new"
 msgstr ""
@@ -1999,7 +1999,7 @@ msgstr ""
 msgid "Current selected identifier"
 msgstr ""
 
-#: lib/brando/users/user.ex:195
+#: lib/brando/users/user.ex:196
 #, elixir-autogen, elixir-format
 msgid "Current user updated. You should reload your application to see the changes."
 msgstr ""
@@ -2655,6 +2655,7 @@ msgstr ""
 #: lib/brando_admin/components/form/input/gallery/image_config.ex:62
 #: lib/brando_admin/components/form/input/gallery/video_config.ex:79
 #: lib/brando_admin/components/form/input/multi_select.ex:226
+#: lib/brando_admin/live/users/user_list_live.ex:111
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
@@ -2938,12 +2939,12 @@ msgstr ""
 msgid "Use custom value"
 msgstr ""
 
-#: lib/brando_admin/live/users/user_list_live.ex:31
+#: lib/brando_admin/live/users/user_list_live.ex:207
 #, elixir-autogen, elixir-format
 msgid "User disabled."
 msgstr ""
 
-#: lib/brando_admin/live/users/user_list_live.ex:38
+#: lib/brando_admin/live/users/user_list_live.ex:214
 #, elixir-autogen, elixir-format
 msgid "User enabled."
 msgstr ""
@@ -3677,4 +3678,59 @@ msgstr ""
 #: lib/brando_admin/components/form.ex:4603
 #, elixir-autogen, elixir-format
 msgid "video"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_list_live.ex:75
+#, elixir-autogen, elixir-format
+msgid "Content to transfer"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_list_live.ex:37
+#, elixir-autogen, elixir-format
+msgid "Delete user"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_list_live.ex:80
+#, elixir-autogen, elixir-format
+msgid "Entries"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_list_live.ex:191
+#, elixir-autogen, elixir-format
+msgid "Error deleting user: %{reason}"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_list_live.ex:79
+#, elixir-autogen, elixir-format
+msgid "Table"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_list_live.ex:93
+#, elixir-autogen, elixir-format
+msgid "This user has no content to transfer."
+msgstr ""
+
+#: lib/brando_admin/live/users/user_list_live.ex:104
+#, elixir-autogen, elixir-format
+msgid "Transfer & Delete"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_list_live.ex:49
+#, elixir-autogen, elixir-format
+msgid "Transfer content from %{name} to:"
+msgstr ""
+
+#: lib/brando_admin/live/users/user_list_live.ex:181
+#, elixir-autogen, elixir-format
+msgid "User deleted and content transferred."
+msgstr ""
+
+#: lib/brando_admin/live/users/user_list_live.ex:44
+#, elixir-autogen, elixir-format
+msgid "When deleting a user, all content they have created must be transferred to another user. Select a user below to take over ownership of the content."
+msgstr ""
+
+#: lib/brando_admin/live/users/user_list_live.ex:57
+#, elixir-autogen, elixir-format
+msgid "Select user..."
 msgstr ""

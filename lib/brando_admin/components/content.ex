@@ -167,7 +167,7 @@ defmodule BrandoAdmin.Components.Content do
       phx-key="escape"
       {@rest}
     >
-      <div class="modal-backdrop" phx-click={hide_modal("##{@id}")} />
+      <div class="modal-backdrop" phx-click={@close} />
       <div class="modal-dialog" role="document">
         <div class="modal-content">
           <header class={[

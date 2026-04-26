@@ -108,6 +108,7 @@ defmodule Brando.Users.User do
       filter label: t("Email"), key: "email"
       action label: t("Edit user"), event: "edit_entry"
       action label: t("Disable user"), event: "disable_user", confirm: t("Are you sure?")
+      action label: t("Delete user"), event: "delete_user"
       default_actions false
     end
   end
