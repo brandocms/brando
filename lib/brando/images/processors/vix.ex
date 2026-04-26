@@ -144,7 +144,7 @@ defmodule Brando.Images.Processor.Vix do
     prefixed_image_path = Images.Utils.media_path(image_path)
 
     with {:ok, img} <- Image.open(prefixed_image_path),
-         {:ok, [r, g, b | _]} <- Image.dominant_color(img) do
+         {:ok, [{r, g, b} | _]} <- Image.dominant_color(img, method: :imagequant, effort: 3) do
       r = round(r) |> min(255) |> max(0)
       g = round(g) |> min(255) |> max(0)
       b = round(b) |> min(255) |> max(0)

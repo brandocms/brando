@@ -80,7 +80,7 @@ defmodule Brando.Mixfile do
       {:base62, "~> 1.2"},
 
       # dsl
-      {:spark, "~> 2.4.0"},
+      {:spark, "~> 2.4"},
 
       # monitoring
       {:sentry, "~> 11.0"},
@@ -95,7 +95,7 @@ defmodule Brando.Mixfile do
       {:sitemapper, "~> 0.10.0"},
 
       # images
-      {:image, "~> 0.63"},
+      {:image, "~> 0.64"},
 
       # AWS
       {:ex_aws, "~> 2.0"},
