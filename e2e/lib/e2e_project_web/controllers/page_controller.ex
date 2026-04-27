@@ -32,6 +32,7 @@ defmodule E2eProjectWeb.PageController do
       |> put_section("index")
       |> put_meta(Pages.Page, page)
       |> put_hreflang(page)
+      |> put_breadcrumbs(page)
       |> put_title(page.title)
       |> assign(:partials, partials)
       |> assign(:page, page)
@@ -60,11 +61,12 @@ defmodule E2eProjectWeb.PageController do
       }
 
       with {:ok, page} <- Pages.get_page(page_opts),
-          {:ok, partials} <- Pages.get_fragments(fragment_opts) do
+           {:ok, partials} <- Pages.get_fragments(fragment_opts) do
         conn
         |> put_section(page.uri)
         |> put_meta(Pages.Page, page)
         |> put_hreflang(page)
+        |> put_breadcrumbs(page)
         |> put_title(page.title)
         |> assign(:partials, partials)
         |> assign(:page, page)

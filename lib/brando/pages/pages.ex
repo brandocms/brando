@@ -85,8 +85,18 @@ defmodule Brando.Pages do
     end
   end
 
-  mutation :create, Page
-  mutation :update, Page
+  mutation :create, Page do
+    fn entry ->
+      update_breadcrumbs(entry)
+    end
+  end
+
+  mutation :update, Page do
+    fn entry ->
+      update_breadcrumbs(entry)
+    end
+  end
+
   mutation :delete, Page
 
   mutation :duplicate,
@@ -581,6 +591,72 @@ defmodule Brando.Pages do
       {:ok, fragment} ->
         Phoenix.HTML.raw(fragment.rendered_blocks)
     end
+  end
+
+  @doc """
+  Compute and store breadcrumbs for a page and its descendants.
+
+  Breadcrumbs are stored as a list of `%{"title" => ..., "uri" => ...}` maps
+  representing the path from the root page down to the current page.
+  """
+  def update_breadcrumbs(%Page{} = page) do
+    page = Brando.Repo.preload(page, [:parent], force: true)
+    breadcrumbs = build_breadcrumbs(page)
+
+    page
+    |> Changeset.change(%{breadcrumbs: breadcrumbs})
+    |> Brando.Repo.update()
+    |> case do
+      {:ok, updated_page} ->
+        update_descendant_breadcrumbs(updated_page)
+        {:ok, updated_page}
+
+      error ->
+        error
+    end
+  end
+
+  defp build_breadcrumbs(%Page{is_homepage: true}) do
+    []
+  end
+
+  defp build_breadcrumbs(%Page{} = page) do
+    home_entry = %{"title" => Brando.config(:app_name), "uri" => "/"}
+    ancestors = collect_ancestors(page, [])
+
+    trail =
+      Enum.map(ancestors ++ [page], fn
+        %Page{uri: uri} = p -> %{"title" => p.title, "uri" => "/" <> uri}
+      end)
+
+    [home_entry | trail]
+  end
+
+  defp collect_ancestors(%Page{parent_id: nil}, acc), do: acc
+
+  defp collect_ancestors(%Page{parent: %Ecto.Association.NotLoaded{}} = page, acc) do
+    page = Brando.Repo.preload(page, [:parent])
+    collect_ancestors(page, acc)
+  end
+
+  defp collect_ancestors(%Page{parent: nil}, acc), do: acc
+
+  defp collect_ancestors(%Page{parent: parent}, acc) do
+    parent = Brando.Repo.preload(parent, [:parent])
+    collect_ancestors(parent, [parent | acc])
+  end
+
+  defp update_descendant_breadcrumbs(%Page{} = page) do
+    children =
+      Page
+      |> where([p], p.parent_id == ^page.id)
+      |> where([p], is_nil(p.deleted_at))
+      |> Brando.Repo.all()
+
+    Enum.each(children, fn child ->
+      child = %{child | parent: page}
+      update_breadcrumbs(child)
+    end)
   end
 
   defp build_fragments_query do

@@ -69,6 +69,7 @@ defmodule Brando.Pages.Page do
     meta_description
     meta_image
     sequence
+    breadcrumbs
     vars
     inserted_at
     updated_at
@@ -93,6 +94,7 @@ defmodule Brando.Pages.Page do
     attribute :has_url, :boolean, default: true
     attribute :css_classes, :string
     attribute :json_ld_type, :string, default: "WebPage"
+    attribute :breadcrumbs, {:array, :map}, default: []
   end
 
   relations do

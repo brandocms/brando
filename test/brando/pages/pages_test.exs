@@ -254,6 +254,70 @@ defmodule Brando.PagesTest do
              "fragment content!"
   end
 
+  test "breadcrumbs are computed on create and update" do
+    user = Factory.insert(:random_user)
+
+    # Create a homepage
+    {:ok, homepage} =
+      Pages.create_page(
+        %{title: "Home", uri: "index", language: "en", template: "default.html", is_homepage: true, status: :published},
+        user
+      )
+
+    # Homepage gets empty breadcrumbs (no useful single-item breadcrumb)
+    assert homepage.breadcrumbs == []
+
+    app_name = Brando.config(:app_name)
+
+    # Create a parent page
+    {:ok, parent} =
+      Pages.create_page(
+        %{title: "About", uri: "about", language: "en", template: "default.html", status: :published},
+        user
+      )
+
+    assert parent.breadcrumbs == [
+             %{"title" => app_name, "uri" => "/"},
+             %{"title" => "About", "uri" => "/about"}
+           ]
+
+    # Create a child page
+    {:ok, child} =
+      Pages.create_page(
+        %{
+          title: "Team",
+          uri: "about/team",
+          language: "en",
+          template: "default.html",
+          parent_id: parent.id,
+          status: :published
+        },
+        user
+      )
+
+    assert child.breadcrumbs == [
+             %{"title" => app_name, "uri" => "/"},
+             %{"title" => "About", "uri" => "/about"},
+             %{"title" => "Team", "uri" => "/about/team"}
+           ]
+
+    # Update parent title — child breadcrumbs should cascade
+    {:ok, updated_parent} = Pages.update_page(parent, %{title: "About Us"}, user)
+
+    assert updated_parent.breadcrumbs == [
+             %{"title" => app_name, "uri" => "/"},
+             %{"title" => "About Us", "uri" => "/about"}
+           ]
+
+    {:ok, updated_child} = Pages.get_page(%{matches: %{id: child.id}})
+
+    assert updated_child.breadcrumbs == [
+             %{"title" => app_name, "uri" => "/"},
+             %{"title" => "About Us", "uri" => "/about"},
+             %{"title" => "Team", "uri" => "/about/team"}
+           ]
+  end
+
   test "duplicate_page duplicates fragments and child pages with their blocks and vars" do
     user = Factory.insert(:random_user)
 

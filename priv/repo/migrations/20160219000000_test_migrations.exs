@@ -173,6 +173,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :publish_at, :utc_datetime
       add :has_url, :boolean, default: true
       add :json_ld_type, :string, default: "WebPage"
+      add :breadcrumbs, :jsonb, default: "[]"
       add :meta_title, :text
       add :meta_description, :text
       add :meta_image_id, references(:images)

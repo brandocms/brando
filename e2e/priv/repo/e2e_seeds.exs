@@ -11,20 +11,22 @@
 # and so on) as they will fail if something goes wrong.
 
 # Add this at the top of the file
-user = %Brando.Users.User{
-  name: "Brando Admin",
-  email: "admin@brandocms.com",
-  password: Bcrypt.hash_pwd_salt("brandocms"),
-  avatar: nil,
-  role: :superuser,
-  language: :en,
-  config: %{
-    prefers_reduced_motion: false,
-    reset_password_on_first_login: false,
-    show_mutation_notifications: true,
-    content_language: :en
+user =
+  %Brando.Users.User{
+    name: "Brando Admin",
+    email: "admin@brandocms.com",
+    password: Bcrypt.hash_pwd_salt("brandocms"),
+    avatar: nil,
+    role: :superuser,
+    language: :en,
+    config: %{
+      prefers_reduced_motion: false,
+      reset_password_on_first_login: false,
+      show_mutation_notifications: true,
+      content_language: :en
+    }
   }
-} |> E2eProject.Repo.insert!()
+  |> E2eProject.Repo.insert!()
 
 languages = Brando.config(:languages) |> Enum.map(&String.to_existing_atom(&1[:value]))
 
@@ -44,7 +46,8 @@ for lang <- languages do
     title_postfix: "",
     logo: nil,
     language: lang
-  } |> E2eProject.Repo.insert!()
+  }
+  |> E2eProject.Repo.insert!()
 end
 
 # Create SEO entries for each language
@@ -58,7 +61,8 @@ for lang <- languages do
     Disallow: /admin/
     """,
     language: lang
-  } |> E2eProject.Repo.insert!()
+  }
+  |> E2eProject.Repo.insert!()
 end
 
 for lang <- languages do
@@ -220,6 +224,7 @@ for lang <- languages do
     is_homepage: true,
     uri: "index",
     language: lang,
+    breadcrumbs: [],
     meta_description: nil,
     meta_image: nil,
     parent_id: nil,
@@ -247,167 +252,180 @@ end
 # Create modules
 
 %Brando.Content.Module{
-   type: :liquid,
-   name: %{"en" => "Heading", "no" => "Overskrift"},
-   namespace: %{"en" => "01 HEADERS", "no" => "01 HEADINGER"},
-   help_text: %{"en" => "Large text", "no" => "Stor tekst"},
-   class: "header",
-   code: "<article b-tpl=\"{{ block.class }}\">\n  <div class=\"inner\">\n    {% ref refs.h2 %}\n  </div>\n</article>",
-   svg: nil,
-   multi: false,
-   datasource: false,
-   datasource_module: nil,
-   datasource_type: nil,
-   datasource_query: nil,
-   sequence: 0,
-   deleted_at: nil,
-   table_template_id: nil,
-   table_template: nil,
-   parent_id: nil,
-   refs: [
-     %Brando.Content.Ref{
-       name: "h2",
-       description: nil,
-       uid: Brando.Utils.generate_uid(),
-       data: %Brando.Villain.Blocks.HeaderBlock{
-         type: "header",
-         data: %Brando.Villain.Blocks.HeaderBlock.Data{
-           class: nil,
-           text: "Text",
-           level: 2,
-           link: nil,
-           placeholder: nil,
-           id: nil
-         }
-       },
-     }
-   ],
-   vars: []
- } |> E2eProject.Repo.insert!()
+  type: :liquid,
+  name: %{"en" => "Heading", "no" => "Overskrift"},
+  namespace: %{"en" => "01 HEADERS", "no" => "01 HEADINGER"},
+  help_text: %{"en" => "Large text", "no" => "Stor tekst"},
+  class: "header",
+  code: "<article b-tpl=\"{{ block.class }}\">\n  <div class=\"inner\">\n    {% ref refs.h2 %}\n  </div>\n</article>",
+  svg: nil,
+  multi: false,
+  datasource: false,
+  datasource_module: nil,
+  datasource_type: nil,
+  datasource_query: nil,
+  sequence: 0,
+  deleted_at: nil,
+  table_template_id: nil,
+  table_template: nil,
+  parent_id: nil,
+  refs: [
+    %Brando.Content.Ref{
+      name: "h2",
+      description: nil,
+      uid: Brando.Utils.generate_uid(),
+      data: %Brando.Villain.Blocks.HeaderBlock{
+        type: "header",
+        data: %Brando.Villain.Blocks.HeaderBlock.Data{
+          class: nil,
+          text: "Text",
+          level: 2,
+          link: nil,
+          placeholder: nil,
+          id: nil
+        }
+      }
+    }
+  ],
+  vars: []
+}
+|> E2eProject.Repo.insert!()
 
- %Brando.Content.Module{
-   type: :liquid,
-   name: %{"en" => "Single Asset", "no" => "Enkelt bilde/video"},
-   namespace: %{"en" => "02 MEDIA", "no" => "02 MEDIA"},
-   help_text: %{"en" => "Full width image or video", "no" => "Fullbredde bilde eller video"},
-   class: "asset",
-   code: "<article b-tpl=\"asset\">\n  <div class=\"inner\">\n    {% ref refs.media %}\n  </div>\n</article>",
-   svg: nil,
-   multi: false,
-   datasource: false,
-   datasource_module: nil,
-   datasource_type: nil,
-   datasource_query: nil,
-   sequence: 4,
-   deleted_at: nil,
-   table_template_id: nil,
-   table_template: nil,
-   parent_id: nil,
-   refs: [
-     %Brando.Content.Ref{
-       name: "media",
-       description: nil,
-       uid: Brando.Utils.generate_uid(),
-       data: %Brando.Villain.Blocks.MediaBlock{
-         type: "media",
-         data: %Brando.Villain.Blocks.MediaBlock.Data{
-           available_blocks: ["picture", "video"],
-           template_picture: %Brando.Villain.Blocks.PictureBlock.Data{
-             picture_class: nil,
-             img_class: nil,
-             link: nil,
-             srcset: nil,
-             media_queries: nil,
-             title: nil,
-             credits: nil,
-             alt: nil,
-             lazyload: true,
-             moonwalk: true,
-             placeholder: :dominant_color_faded,
-             fetchpriority: :auto
-           },
-           template_video: %Brando.Villain.Blocks.VideoBlock.Data{
-             title: nil,
-             poster: nil,
-             autoplay: true,
-             opacity: 0,
-             preload: true,
-             play_button: false,
-             controls: false,
-             cover: "false",
-             aspect_ratio: nil,
-             cover_image: nil
-           },
-           template_gallery: nil,
-           template_svg: nil
-         }
-       }
-     }
-   ],
-   vars: [
-     %Brando.Content.Var{
+%Brando.Content.Module{
+  type: :liquid,
+  name: %{"en" => "Single Asset", "no" => "Enkelt bilde/video"},
+  namespace: %{"en" => "02 MEDIA", "no" => "02 MEDIA"},
+  help_text: %{"en" => "Full width image or video", "no" => "Fullbredde bilde eller video"},
+  class: "asset",
+  code: "<article b-tpl=\"asset\">\n  <div class=\"inner\">\n    {% ref refs.media %}\n  </div>\n</article>",
+  svg: nil,
+  multi: false,
+  datasource: false,
+  datasource_module: nil,
+  datasource_type: nil,
+  datasource_query: nil,
+  sequence: 4,
+  deleted_at: nil,
+  table_template_id: nil,
+  table_template: nil,
+  parent_id: nil,
+  refs: [
+    %Brando.Content.Ref{
+      name: "media",
+      description: nil,
+      uid: Brando.Utils.generate_uid(),
+      data: %Brando.Villain.Blocks.MediaBlock{
+        type: "media",
+        data: %Brando.Villain.Blocks.MediaBlock.Data{
+          available_blocks: ["picture", "video"],
+          template_picture: %Brando.Villain.Blocks.PictureBlock.Data{
+            picture_class: nil,
+            img_class: nil,
+            link: nil,
+            srcset: nil,
+            media_queries: nil,
+            title: nil,
+            credits: nil,
+            alt: nil,
+            lazyload: true,
+            moonwalk: true,
+            placeholder: :dominant_color_faded,
+            fetchpriority: :auto
+          },
+          template_video: %Brando.Villain.Blocks.VideoBlock.Data{
+            title: nil,
+            poster: nil,
+            autoplay: true,
+            opacity: 0,
+            preload: true,
+            play_button: false,
+            controls: false,
+            cover: "false",
+            aspect_ratio: nil,
+            cover_image: nil
+          },
+          template_gallery: nil,
+          template_svg: nil
+        }
+      }
+    }
+  ],
+  vars: [
+    %Brando.Content.Var{
       type: :string,
       label: "String label",
       key: "string_label",
       important: true,
-      value: "test value for string label",
+      value: "test value for string label"
     }
-   ]
- } |> E2eProject.Repo.insert!()
+  ]
+}
+|> E2eProject.Repo.insert!()
 
 # Create test projects for datasource selection and their identifiers
-project1 = %E2eProject.Projects.Project{
-  title: "Test Project Alpha",
-  slug: "test-project-alpha",
-  status: :published,
-  language: :en,
-  creator_id: user.id
-} |> E2eProject.Repo.insert!()
+project1 =
+  %E2eProject.Projects.Project{
+    title: "Test Project Alpha",
+    slug: "test-project-alpha",
+    status: :published,
+    language: :en,
+    creator_id: user.id
+  }
+  |> E2eProject.Repo.insert!()
+
 Brando.Content.create_identifier(E2eProject.Projects.Project, project1)
 
-project2 = %E2eProject.Projects.Project{
-  title: "Test Project Beta",
-  slug: "test-project-beta",
-  status: :published,
-  language: :en,
-  creator_id: user.id
-} |> E2eProject.Repo.insert!()
+project2 =
+  %E2eProject.Projects.Project{
+    title: "Test Project Beta",
+    slug: "test-project-beta",
+    status: :published,
+    language: :en,
+    creator_id: user.id
+  }
+  |> E2eProject.Repo.insert!()
+
 Brando.Content.create_identifier(E2eProject.Projects.Project, project2)
 
-project3 = %E2eProject.Projects.Project{
-  title: "Test Project Gamma",
-  slug: "test-project-gamma",
-  status: :published,
-  language: :en,
-  creator_id: user.id
-} |> E2eProject.Repo.insert!()
+project3 =
+  %E2eProject.Projects.Project{
+    title: "Test Project Gamma",
+    slug: "test-project-gamma",
+    status: :published,
+    language: :en,
+    creator_id: user.id
+  }
+  |> E2eProject.Repo.insert!()
+
 Brando.Content.create_identifier(E2eProject.Projects.Project, project3)
 
 # Create table template for testing table rows
-table_template = %Brando.Content.TableTemplate{
-  name: "Person Table",
-  creator_id: user.id,
-  vars: [
-    %Brando.Content.Var{
-      type: :string,
-      label: "Name",
-      key: "name",
-      important: true,
-      sequence: 0,
-      width: :half,
-      creator_id: user.id
-    },
-    %Brando.Content.Var{
-      type: :string,
-      label: "Role",
-      key: "role",
-      important: false,
-      sequence: 1,
-      width: :half,
-      creator_id: user.id
-    }
-  ]
-} |> E2eProject.Repo.insert!()
+table_template =
+  %Brando.Content.TableTemplate{
+    name: "Person Table",
+    creator_id: user.id,
+    vars: [
+      %Brando.Content.Var{
+        type: :string,
+        label: "Name",
+        key: "name",
+        important: true,
+        sequence: 0,
+        width: :half,
+        creator_id: user.id
+      },
+      %Brando.Content.Var{
+        type: :string,
+        label: "Role",
+        key: "role",
+        important: false,
+        sequence: 1,
+        width: :half,
+        creator_id: user.id
+      }
+    ]
+  }
+  |> E2eProject.Repo.insert!()
 
 # Create module with table template
 %Brando.Content.Module{
@@ -416,7 +434,8 @@ table_template = %Brando.Content.TableTemplate{
   namespace: %{"en" => "04 TABLES", "no" => "04 TABELLER"},
   help_text: %{"en" => "A table with person data", "no" => "En tabell med persondata"},
   class: "person-list",
-  code: "<section b-tpl=\"person-list\">\n  <div class=\"inner\">\n    <table>\n      {% for row in block.table_rows %}\n        <tr>\n          <td>{{ row.name }}</td>\n          <td>{{ row.role }}</td>\n        </tr>\n      {% endfor %}\n    </table>\n  </div>\n</section>",
+  code:
+    "<section b-tpl=\"person-list\">\n  <div class=\"inner\">\n    <table>\n      {% for row in block.table_rows %}\n        <tr>\n          <td>{{ row.name }}</td>\n          <td>{{ row.role }}</td>\n        </tr>\n      {% endfor %}\n    </table>\n  </div>\n</section>",
   svg: nil,
   multi: false,
   datasource: false,
@@ -429,7 +448,8 @@ table_template = %Brando.Content.TableTemplate{
   parent_id: nil,
   refs: [],
   vars: []
-} |> E2eProject.Repo.insert!()
+}
+|> E2eProject.Repo.insert!()
 
 # Create module with datasource (selection type)
 %Brando.Content.Module{
@@ -438,7 +458,8 @@ table_template = %Brando.Content.TableTemplate{
   namespace: %{"en" => "03 DATASOURCE", "no" => "03 DATAKILDE"},
   help_text: %{"en" => "Select featured projects", "no" => "Velg utvalgte prosjekter"},
   class: "featured-projects",
-  code: "<section b-tpl=\"featured-projects\">\n  <div class=\"inner\">\n    {% for entry in entries %}\n      <div class=\"project\">{{ entry.title }}</div>\n    {% endfor %}\n  </div>\n</section>",
+  code:
+    "<section b-tpl=\"featured-projects\">\n  <div class=\"inner\">\n    {% for entry in entries %}\n      <div class=\"project\">{{ entry.title }}</div>\n    {% endfor %}\n  </div>\n</section>",
   svg: nil,
   multi: false,
   datasource: true,
@@ -451,7 +472,8 @@ table_template = %Brando.Content.TableTemplate{
   parent_id: nil,
   refs: [],
   vars: []
-} |> E2eProject.Repo.insert!()
+}
+|> E2eProject.Repo.insert!()
 
 # ============================================================================
 # LIVE PREVIEW TEST MODULES
@@ -521,14 +543,18 @@ table_template = %Brando.Content.TableTemplate{
       width: :half
     }
   ]
-} |> E2eProject.Repo.insert!()
+}
+|> E2eProject.Repo.insert!()
 
 # Module 2: Gallery with Controls (gallery ref + vars)
 %Brando.Content.Module{
   type: :liquid,
   name: %{"en" => "Gallery with Controls", "no" => "Galleri med kontroller"},
   namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
-  help_text: %{"en" => "Gallery ref with layout and stagger variables", "no" => "Galleriref med layout og stagger variabler"},
+  help_text: %{
+    "en" => "Gallery ref with layout and stagger variables",
+    "no" => "Galleriref med layout og stagger variabler"
+  },
   class: "gallery-controls",
   code: """
   <section b-tpl="gallery-controls" data-layout="{{ layout }}" {% if stagger %}data-stagger="true"{% endif %}>
@@ -595,14 +621,18 @@ table_template = %Brando.Content.TableTemplate{
       width: :half
     }
   ]
-} |> E2eProject.Repo.insert!()
+}
+|> E2eProject.Repo.insert!()
 
 # Module 3: Styled Header (header ref + vars)
 %Brando.Content.Module{
   type: :liquid,
   name: %{"en" => "Styled Header", "no" => "Stilisert overskrift"},
   namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
-  help_text: %{"en" => "Header ref with color and alignment variables", "no" => "Overskriftref med farge og justeringsvariabler"},
+  help_text: %{
+    "en" => "Header ref with color and alignment variables",
+    "no" => "Overskriftref med farge og justeringsvariabler"
+  },
   class: "styled-header",
   code: """
   <header b-tpl="styled-header" style="color: {{ text_color }}; text-align: {{ alignment }}">
@@ -661,14 +691,18 @@ table_template = %Brando.Content.TableTemplate{
       ]
     }
   ]
-} |> E2eProject.Repo.insert!()
+}
+|> E2eProject.Repo.insert!()
 
 # Module 4: Rich Text Article (text ref + vars)
 %Brando.Content.Module{
   type: :liquid,
   name: %{"en" => "Rich Text Article", "no" => "Rik tekstartikkel"},
   namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
-  help_text: %{"en" => "Text ref with intro and show_intro variables", "no" => "Tekstref med intro og show_intro variabler"},
+  help_text: %{
+    "en" => "Text ref with intro and show_intro variables",
+    "no" => "Tekstref med intro og show_intro variabler"
+  },
   class: "rich-text-article",
   code: """
   <article b-tpl="rich-text">
@@ -718,14 +752,18 @@ table_template = %Brando.Content.TableTemplate{
       width: :half
     }
   ]
-} |> E2eProject.Repo.insert!()
+}
+|> E2eProject.Repo.insert!()
 
 # Module 5: Video Player (video ref + vars)
 %Brando.Content.Module{
   type: :liquid,
   name: %{"en" => "Video Player", "no" => "Videospiller"},
   namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
-  help_text: %{"en" => "Video ref with autoplay and controls variables", "no" => "Videoref med autoplay og kontrollvariabler"},
+  help_text: %{
+    "en" => "Video ref with autoplay and controls variables",
+    "no" => "Videoref med autoplay og kontrollvariabler"
+  },
   class: "video-player",
   code: """
   <div b-tpl="video-player" data-autoplay="{{ autoplay }}" data-controls="{{ show_controls }}">
@@ -780,7 +818,8 @@ table_template = %Brando.Content.TableTemplate{
       width: :half
     }
   ]
-} |> E2eProject.Repo.insert!()
+}
+|> E2eProject.Repo.insert!()
 
 # Module 6: Morph Preservation Test (hardcoded video + iframe + editable label)
 # Used to verify that skipFromChildren preserves video/iframe DOM elements during morphdom updates
@@ -788,7 +827,10 @@ table_template = %Brando.Content.TableTemplate{
   type: :liquid,
   name: %{"en" => "Morph Preservation", "no" => "Morph-bevaring"},
   namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
-  help_text: %{"en" => "Tests that morphdom preserves video and iframe elements", "no" => "Tester at morphdom bevarer video- og iframe-elementer"},
+  help_text: %{
+    "en" => "Tests that morphdom preserves video and iframe elements",
+    "no" => "Tester at morphdom bevarer video- og iframe-elementer"
+  },
   class: "morph-preservation",
   code: """
   <div b-tpl="morph-preservation">
@@ -820,40 +862,44 @@ table_template = %Brando.Content.TableTemplate{
       width: :full
     }
   ]
-} |> E2eProject.Repo.insert!()
+}
+|> E2eProject.Repo.insert!()
 
 # ============================================================================
 # COPY/PASTE TEST MODULES
 # ============================================================================
 
 # Multi module (parent) — "Team Section" that holds "Team Member" entries
-team_section = %Brando.Content.Module{
-  type: :liquid,
-  name: %{"en" => "Team Section", "no" => "Teamblokk"},
-  namespace: %{"en" => "06 COPY PASTE TEST", "no" => "06 COPY PASTE TEST"},
-  help_text: %{"en" => "Multi block for team members", "no" => "Multiblokk for teammedlemmer"},
-  class: "team-section",
-  code: "<section b-tpl=\"team-section\">\n  <div class=\"inner\">\n    {% for child in block.children %}\n      {% render_child child %}\n    {% endfor %}\n  </div>\n</section>",
-  svg: nil,
-  multi: true,
-  datasource: false,
-  sequence: 30,
-  deleted_at: nil,
-  table_template_id: nil,
-  parent_id: nil,
-  refs: [],
-  vars: [
-    %Brando.Content.Var{
-      type: :string,
-      label: "Section title",
-      key: "section_title",
-      important: true,
-      value: "Our Team",
-      sequence: 0,
-      width: :full
-    }
-  ]
-} |> E2eProject.Repo.insert!()
+team_section =
+  %Brando.Content.Module{
+    type: :liquid,
+    name: %{"en" => "Team Section", "no" => "Teamblokk"},
+    namespace: %{"en" => "06 COPY PASTE TEST", "no" => "06 COPY PASTE TEST"},
+    help_text: %{"en" => "Multi block for team members", "no" => "Multiblokk for teammedlemmer"},
+    class: "team-section",
+    code:
+      "<section b-tpl=\"team-section\">\n  <div class=\"inner\">\n    {% for child in block.children %}\n      {% render_child child %}\n    {% endfor %}\n  </div>\n</section>",
+    svg: nil,
+    multi: true,
+    datasource: false,
+    sequence: 30,
+    deleted_at: nil,
+    table_template_id: nil,
+    parent_id: nil,
+    refs: [],
+    vars: [
+      %Brando.Content.Var{
+        type: :string,
+        label: "Section title",
+        key: "section_title",
+        important: true,
+        value: "Our Team",
+        sequence: 0,
+        width: :full
+      }
+    ]
+  }
+  |> E2eProject.Repo.insert!()
 
 # Multi module (child) — "Team Member" entry
 %Brando.Content.Module{
@@ -891,7 +937,8 @@ team_section = %Brando.Content.Module{
       width: :half
     }
   ]
-} |> E2eProject.Repo.insert!()
+}
+|> E2eProject.Repo.insert!()
 
 # Module with image and file vars for upload testing
 %Brando.Content.Module{
@@ -934,18 +981,21 @@ team_section = %Brando.Content.Module{
       creator_id: user.id
     }
   ]
-} |> E2eProject.Repo.insert!()
+}
+|> E2eProject.Repo.insert!()
 
 # Gallery for gallery listing/editing tests
 %Brando.Galleries.Gallery{
   config_target: "gallery:E2eProject.Projects.Project:project_gallery",
   gallery_objects: []
-} |> E2eProject.Repo.insert!()
+}
+|> E2eProject.Repo.insert!()
 
 %Brando.Galleries.Gallery{
   config_target: "test_gallery",
   gallery_objects: []
-} |> E2eProject.Repo.insert!()
+}
+|> E2eProject.Repo.insert!()
 
 # Video for gallery video selection tests
 %Brando.Videos.Video{
@@ -958,4 +1008,5 @@ team_section = %Brando.Content.Module{
   aspect_ratio: "1920/1080",
   status: :ready,
   creator_id: user.id
-} |> E2eProject.Repo.insert!()
+}
+|> E2eProject.Repo.insert!()

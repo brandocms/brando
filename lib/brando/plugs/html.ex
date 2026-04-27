@@ -63,23 +63,31 @@ defmodule Brando.Plug.HTML do
   end
 
   @doc """
-  Adds JSON-LD breadcrumbs to conn
+  Adds JSON-LD breadcrumbs to conn.
+
+  Accepts either a page struct with pre-computed breadcrumbs, or a list
+  of `{name, url}` tuples for manual breadcrumb construction (useful for
+  non-page blueprints).
+
+  ## Examples
+
+      # From a page with stored breadcrumbs
+      put_breadcrumbs(conn, page)
+
+      # Manual breadcrumbs for other blueprints
+      put_breadcrumbs(conn, [{"Home", "/"}, {"Blog", "/blog"}, {"My Post", "/blog/my-post"}])
+
   """
-  def put_breadcrumbs(conn, %{is_homepage: true}) do
-    breadcrumbs = [
-      {Brando.config(:app_name), "/"}
-    ]
+  def put_breadcrumbs(conn, %{breadcrumbs: breadcrumbs}) when is_list(breadcrumbs) and breadcrumbs != [] do
+    tuples = Enum.map(breadcrumbs, fn %{"title" => title, "uri" => uri} -> {title, uri} end)
+    put_json_ld(conn, :breadcrumbs, tuples)
+  end
 
+  def put_breadcrumbs(conn, breadcrumbs) when is_list(breadcrumbs) do
     put_json_ld(conn, :breadcrumbs, breadcrumbs)
   end
 
-  def put_breadcrumbs(conn, %{}) do
-    breadcrumbs = [
-      {Brando.config(:app_name), "/"}
-    ]
-
-    put_json_ld(conn, :breadcrumbs, breadcrumbs)
-  end
+  def put_breadcrumbs(conn, _), do: conn
 
   @doc """
   Adds JSON-LD structured data to the conn.
