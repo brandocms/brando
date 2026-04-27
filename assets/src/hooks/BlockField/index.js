@@ -45,7 +45,7 @@ function formDataToParams(form) {
 
 export default app => ({
   mounted() {
-    this.maybeRecoverBlocks()
+    // No recovery on fresh mount — only on reconnect after disconnect
   },
 
   reconnected() {
