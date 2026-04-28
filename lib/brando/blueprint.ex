@@ -187,10 +187,12 @@ defmodule Brando.Blueprint do
     Module.register_attribute(__CALLER__.module, :allow_mark_as_deleted, accumulate: false)
     Module.register_attribute(__CALLER__.module, :factory, accumulate: false)
 
+    extensions = Keyword.get(opts, :extensions, [])
+
     quote location: :keep do
       use Ecto.Schema
       use Gettext, backend: unquote(gettext_module)
-      use Brando.Blueprint.Dsl
+      use Brando.Blueprint.Dsl, extensions: unquote(extensions)
 
       import Brando.Blueprint
       import Brando.Blueprint.AbsoluteURL

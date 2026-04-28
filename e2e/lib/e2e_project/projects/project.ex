@@ -8,7 +8,8 @@ defmodule E2eProject.Projects.Project do
     domain: "Projects",
     schema: "Project",
     singular: "project",
-    plural: "projects"
+    plural: "projects",
+    extensions: [BrandoJsonApi.Resource]
 
   import Ecto.Query
   alias E2eProject.Projects
@@ -259,5 +260,16 @@ defmodule E2eProject.Projects.Project do
         {:ok, E2eProject.Repo.all(results)}
       end
     end
+  end
+
+  json_api do
+    type "projects"
+
+    routes do
+      index(:list_projects)
+      show(:get_project)
+    end
+
+    hide_fields([:creator_id, :deleted_at, :marked_as_deleted])
   end
 end

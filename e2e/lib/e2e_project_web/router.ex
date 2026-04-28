@@ -85,6 +85,17 @@ defmodule E2eProjectWeb.Router do
     # get "/projects/all/:page", PostController, :api_get
   end
 
+  pipeline :json_api do
+    plug :accepts, ["json"]
+  end
+
+  scope "/api/v1", E2eProjectWeb.API do
+    pipe_through :json_api
+
+    import BrandoJsonApi.Router
+    json_api_resources("/projects", ProjectController)
+  end
+
   scope "/" do
     pipe_through :browser
     get "/new/redirect", E2eProjectWeb.PageController, :redirect_success
