@@ -4,61 +4,61 @@ defmodule Brando.Villain.Parser do
   """
 
   @doc "Parses a comment"
-  @callback comment(data :: map, opts :: map) :: binary
+  @callback comment(data :: map, opts :: map) :: iodata
 
   @doc "Parses a header"
-  @callback header(data :: map, opts :: map) :: binary
+  @callback header(data :: map, opts :: map) :: iodata
 
   @doc "Parses text/paragraphs"
-  @callback text(data :: map, opts :: map) :: binary
+  @callback text(data :: map, opts :: map) :: iodata
 
   @doc "Parses video"
-  @callback video(data :: map, opts :: map) :: binary
+  @callback video(data :: map, opts :: map) :: iodata
 
   @doc "Parses media"
-  @callback media(data :: map, opts :: map) :: binary
+  @callback media(data :: map, opts :: map) :: iodata
 
   @doc "Parses map"
-  @callback map(data :: map, opts :: map) :: binary
+  @callback map(data :: map, opts :: map) :: iodata
 
   @doc "Parses input (deprecated)"
-  @callback input(data :: map, opts :: map) :: binary
+  @callback input(data :: map, opts :: map) :: iodata
 
   @doc "Parses gallery"
-  @callback gallery(data :: map, opts :: map) :: binary
+  @callback gallery(data :: map, opts :: map) :: iodata
 
   @doc "Parses divider (deprecated)"
-  @callback divider(data :: map, opts :: map) :: binary
+  @callback divider(data :: map, opts :: map) :: iodata
 
   @doc "Parses list (deprecated)"
-  @callback list(data :: map, opts :: map) :: binary
+  @callback list(data :: map, opts :: map) :: iodata
 
   @doc "Parses blockquote (deprecated)"
-  @callback blockquote(data :: map, opts :: map) :: binary
+  @callback blockquote(data :: map, opts :: map) :: iodata
 
   @doc "Parses datatables (deprecated)"
-  @callback datatable(data :: map, opts :: map) :: binary
+  @callback datatable(data :: map, opts :: map) :: iodata
 
   @doc "Parses table"
-  @callback table(data :: map, opts :: map) :: binary
+  @callback table(data :: map, opts :: map) :: iodata
 
   @doc "Parses markdown (deprecated)"
-  @callback markdown(data :: map, opts :: map) :: binary
+  @callback markdown(data :: map, opts :: map) :: iodata
 
   @doc "Parses html"
-  @callback html(data :: map, opts :: map) :: binary
+  @callback html(data :: map, opts :: map) :: iodata
 
   @doc "Parses svg"
-  @callback svg(data :: map, opts :: map) :: binary
+  @callback svg(data :: map, opts :: map) :: iodata
 
   @doc "Parses module"
-  @callback module(data :: map, opts :: map) :: binary
+  @callback module(data :: map, opts :: map) :: iodata
 
   @doc "Parses datasource"
-  @callback datasource(data :: map, opts :: map) :: binary
+  @callback datasource(data :: map, opts :: map) :: iodata
 
   @doc "Renders caption for picture block"
-  @callback render_caption(data :: map) :: binary
+  @callback render_caption(data :: map) :: iodata
 
   @doc "Default options passed to <.video> component for :file type"
   @callback video_file_options(data :: map) :: list
@@ -230,11 +230,11 @@ defmodule Brando.Villain.Parser do
     if link = Map.get(data, :link) do
       ~s(<a href="#{link}"><#{header_size}#{classes}#{id}>#{nl2br(text)}</#{header_size}></a>)
     else
-      "<#{header_size}#{classes}#{id}>" <> nl2br(text) <> "</#{header_size}>"
+      ["<", header_size, classes, id, ">", nl2br(text), "</", header_size, ">"]
     end
   end
 
-  def header(%{text: text}, _), do: "<h1>" <> nl2br(text) <> "</h1>"
+  def header(%{text: text}, _), do: ["<h1>", nl2br(text), "</h1>"]
 
   def module(%{active: false} = block, opts) do
     # we might want to annotate disabled modules
@@ -256,7 +256,7 @@ defmodule Brando.Villain.Parser do
       else
         children
         |> Enum.with_index()
-        |> Enum.map_join("\n", fn
+        |> Enum.map(fn
           {%{active: false}, _} ->
             ""
 
@@ -278,6 +278,7 @@ defmodule Brando.Villain.Parser do
             adapter.render_child_module(child_module, child_block, vars, refs, forloop, id, opts)
             |> maybe_annotate(child_block.uid, opts)
         end)
+        |> Enum.intersperse("\n")
         |> annotate_children(block.uid)
       end
 
@@ -298,7 +299,7 @@ defmodule Brando.Villain.Parser do
         |> put_in([Access.key(:refs)], process_refs(entry.refs))
       end)
 
-    adapter.render_multi_module(module, block, base_vars, base_refs, children, content, opts)
+    adapter.render_multi_module(module, block, base_vars, base_refs, children, IO.iodata_to_binary(content), opts)
     |> maybe_annotate(block.uid, opts)
     |> maybe_format(opts)
   end
@@ -569,7 +570,8 @@ defmodule Brando.Villain.Parser do
     default_srcset = Brando.config(Brando.Images)[:default_srcset]
 
     items =
-      Enum.map_join(images, "\n", fn img ->
+      images
+      |> Enum.map(fn img ->
         title = Map.get(img, :title, nil)
         credits = Map.get(img, :credits, nil)
         alt = Map.get(img, :alt, nil)
@@ -607,6 +609,7 @@ defmodule Brando.Villain.Parser do
         |> Brando.Villain.Parser.panner_item()
         |> Phoenix.LiveViewTest.rendered_to_string()
       end)
+      |> Enum.intersperse("\n")
 
     """
     <div data-panner-container>
@@ -624,7 +627,8 @@ defmodule Brando.Villain.Parser do
     default_srcset = Brando.config(Brando.Images)[:default_srcset]
 
     items =
-      Enum.map_join(images, "\n", fn img ->
+      images
+      |> Enum.map(fn img ->
         title = Map.get(img, :title, nil)
         credits = Map.get(img, :credits, nil)
         alt = Map.get(img, :alt, nil)
@@ -662,6 +666,7 @@ defmodule Brando.Villain.Parser do
         |> Brando.Villain.Parser.picture_tag()
         |> Phoenix.LiveViewTest.rendered_to_string()
       end)
+      |> Enum.intersperse("\n")
 
     """
     <div data-slideshow="#{class}">
@@ -675,7 +680,8 @@ defmodule Brando.Villain.Parser do
     default_srcset = Brando.config(Brando.Images)[:default_srcset]
 
     items =
-      Enum.map_join(images, "\n", fn img ->
+      images
+      |> Enum.map(fn img ->
         title = Map.get(img, :title, nil)
         credits = Map.get(img, :credits, nil)
         alt = Map.get(img, :alt, nil)
@@ -713,6 +719,7 @@ defmodule Brando.Villain.Parser do
         |> Brando.Villain.Parser.picture_tag()
         |> Phoenix.LiveViewTest.rendered_to_string()
       end)
+      |> Enum.intersperse("\n")
 
     """
     <div data-gallery="#{class}">
@@ -730,7 +737,8 @@ defmodule Brando.Villain.Parser do
 
   def list(%{rows: rows} = data, _) do
     rows_html =
-      Enum.map_join(rows, "\n", fn row ->
+      rows
+      |> Enum.map(fn row ->
         class = (row[:class] && ~s( class="#{row.class}")) || ""
         value = row.value
 
@@ -740,6 +748,7 @@ defmodule Brando.Villain.Parser do
         </li>
         """
       end)
+      |> Enum.intersperse("\n")
 
     ul_id = (data.id && ~s( id="#{data.id}")) || ""
     ul_class = (data.class && ~s( class="#{data.class}")) || ""
@@ -753,7 +762,8 @@ defmodule Brando.Villain.Parser do
 
   def datatable(%{rows: rows}, _) do
     rows_html =
-      Enum.map_join(rows, "\n", fn row ->
+      rows
+      |> Enum.map(fn row ->
         """
         <tr>
           <td class="key">
@@ -765,6 +775,7 @@ defmodule Brando.Villain.Parser do
         </tr>
         """
       end)
+      |> Enum.intersperse("\n")
 
     """
     <div class="data-table-wrapper">
@@ -780,7 +791,8 @@ defmodule Brando.Villain.Parser do
   """
   def datatable(rows, _) when is_list(rows) do
     rows_html =
-      Enum.map_join(rows, "\n", fn row ->
+      rows
+      |> Enum.map(fn row ->
         """
         <tr>
           <td class="key">
@@ -792,6 +804,7 @@ defmodule Brando.Villain.Parser do
         </tr>
         """
       end)
+      |> Enum.intersperse("\n")
 
     """
     <div class="data-table-wrapper">
@@ -855,7 +868,6 @@ defmodule Brando.Villain.Parser do
             d, acc -> [apply(__MODULE__, d.type, [d, opts]) | acc]
           end)
           |> Enum.reverse()
-          |> Enum.join("")
           |> annotate_children(block.uid)
       end
 
@@ -883,7 +895,6 @@ defmodule Brando.Villain.Parser do
           d, acc -> [apply(__MODULE__, d.type, [d, opts]) | acc]
         end)
         |> Enum.reverse()
-        |> Enum.join("")
         |> annotate_children(block.uid)
       end
 
@@ -892,7 +903,7 @@ defmodule Brando.Villain.Parser do
 
     case Content.find_palette(palettes, palette_id) do
       {:ok, palette} ->
-        colors = Enum.map_join(palette.colors, ";", &"--#{&1.key}: #{&1.hex_value}")
+        colors = palette.colors |> Enum.map(&"--#{&1.key}: #{&1.hex_value}") |> Enum.intersperse(";")
         palette_vars = " style=\"#{colors}\""
 
         """
@@ -940,13 +951,12 @@ defmodule Brando.Villain.Parser do
           d, acc -> [apply(__MODULE__, d.type, [d, opts]) | acc]
         end)
         |> Enum.reverse()
-        |> Enum.join("")
         |> annotate_children(block.uid)
       end
 
     adapter = adapter_for(container.type)
 
-    adapter.render_container(container, children_html, block, opts)
+    adapter.render_container(container, IO.iodata_to_binary(children_html), block, opts)
     |> maybe_annotate(block.uid, opts)
     |> maybe_format(opts)
   end
@@ -1042,6 +1052,7 @@ defmodule Brando.Villain.Parser do
   end
 
   def replace_fragments(html) do
+    html = IO.iodata_to_binary(html)
     fragments = Regex.scan(~r/{% fragment (\w+) (\w+) (\w+) %}/, html)
 
     if fragments != [] do
@@ -1574,24 +1585,18 @@ defmodule Brando.Villain.Parser do
   end
 
   def maybe_annotate(code, uid, %{annotate_blocks: true}) do
-    """
-    <!-- [+:B<#{uid}>] -->
-      #{code}
-    <!-- [-:B<#{uid}>] -->
-    """
+    ["<!-- [+:B<", uid, ">] -->\n  ", code, "\n<!-- [-:B<", uid, ">] -->\n"]
   end
 
   def maybe_annotate(code, _, _), do: code
 
   def annotate_children(code, uid) do
-    """
-    <!-- [+:C<#{uid}>] -->
-      #{code}
-    <!-- [-:C<#{uid}>] -->
-    """
+    ["<!-- [+:C<", uid, ">] -->\n  ", code, "\n<!-- [-:C<", uid, ">] -->\n"]
   end
 
   def maybe_format(html, %{format_html: true}) do
+    html = IO.iodata_to_binary(html)
+
     try do
       Phoenix.LiveView.HTMLFormatter.format(html, [])
     rescue

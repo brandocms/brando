@@ -279,7 +279,10 @@ defmodule Brando.LivePreview do
       {:ok, keys} = Cachex.keys(:cache)
 
       keys
-      |> Enum.filter(&String.starts_with?(to_string(&1), "#{cache_key}__VAR__"))
+      |> Enum.filter(fn
+        key when is_binary(key) -> String.starts_with?(key, "#{cache_key}__VAR__")
+        _ -> false
+      end)
       |> Enum.each(&Cachex.del(:cache, &1))
     end)
   end

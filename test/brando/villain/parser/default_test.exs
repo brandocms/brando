@@ -6,8 +6,8 @@ defmodule Brando.Villain.ParserTest do
   import __MODULE__.Parser
 
   test "header/2" do
-    assert header(%{text: "Header"}, []) == ~s(<h1>Header</h1>)
-    assert header(%{text: "Header", level: "5"}, []) == ~s(<h5>Header</h5>)
+    assert IO.iodata_to_binary(header(%{text: "Header"}, [])) == ~s(<h1>Header</h1>)
+    assert IO.iodata_to_binary(header(%{text: "Header", level: "5"}, [])) == ~s(<h5>Header</h5>)
 
     assert header(%{text: "Header", level: "5", anchor: "test"}, []) ==
              ~s(<a name="test"></a><h5>Header</h5>)

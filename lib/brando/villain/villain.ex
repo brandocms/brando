@@ -86,7 +86,6 @@ defmodule Brando.Villain do
         %{block: block}, acc -> [parse_node(parser, block, opts_map) | acc]
       end)
       |> Enum.reverse()
-      |> Enum.join()
 
     output = parse_and_render(html, context)
 
