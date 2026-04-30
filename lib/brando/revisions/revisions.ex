@@ -288,7 +288,7 @@ defmodule Brando.Revisions do
       {:ok, new_entry} ->
         activate_revision(revision)
         deactivate_all_revisions_except(revision)
-        Brando.Villain.enqueue_entry_cascade(entry_schema, new_entry, nil)
+        Brando.Content.Blocks.enqueue_entry_cascade(entry_schema, new_entry, nil)
         Cache.Query.evict({:ok, new_entry})
 
       err ->

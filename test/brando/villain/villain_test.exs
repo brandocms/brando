@@ -31,7 +31,6 @@ defmodule Brando.VillainTest do
   use Brando.ConnCase
   import Brando.Test.Support, only: [strip_spark_metadata: 1]
   alias Brando.Factory
-  alias Brando.Villain
 
   setup do
     user = Factory.insert(:random_user)
@@ -425,7 +424,7 @@ defmodule Brando.VillainTest do
 
   test "list_blocks" do
     actual =
-      Brando.Villain.list_blocks()
+      Brando.Content.Blocks.list_blocks()
       |> Enum.sort()
       |> Enum.map(fn {k, v} -> {k, strip_spark_metadata(v)} end)
 
@@ -625,9 +624,9 @@ defmodule Brando.VillainTest do
     {:ok, pf4} = Brando.Pages.create_fragment(fragment_cs_2, user)
 
     resulting_ids =
-      Brando.Villain.list_block_ids_matching_regex(globals: "{{ globals\.(.*?) }}")
-      |> Brando.Villain.list_root_block_ids_by_source()
-      |> Brando.Villain.list_entry_ids_for_root_blocks_by_source()
+      Brando.Content.Blocks.list_block_ids_matching_regex(globals: "{{ globals\.(.*?) }}")
+      |> Brando.Content.Blocks.list_root_block_ids_by_source()
+      |> Brando.Content.Blocks.list_entry_ids_for_root_blocks_by_source()
 
     # sort the ids
     sorted_resulting_ids =
@@ -678,7 +677,7 @@ defmodule Brando.VillainTest do
       ])
 
     {:ok, page} = Brando.Pages.create_page(cs, user)
-    {:ok, page} = Brando.Villain.render_entry(Brando.Pages.Page, page.id)
+    {:ok, page} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
 
     assert page.rendered_blocks == "-- this is some code [Some text!] --"
 
@@ -755,7 +754,7 @@ defmodule Brando.VillainTest do
     page_cs = Map.put(page_cs, :action, :insert)
 
     {:ok, page} = Brando.Pages.create_page(page_cs, user)
-    {:ok, page} = Brando.Villain.render_entry(Brando.Pages.Page, page.id)
+    {:ok, page} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
 
     assert page.rendered_blocks == "<div class=\"lede\"><p>A REF!</p></div>"
 
@@ -879,7 +878,7 @@ defmodule Brando.VillainTest do
     page_cs = Ecto.Changeset.put_assoc(page_cs, :entry_blocks, simple_blocks)
     page_cs = Map.put(page_cs, :action, :insert)
     {:ok, page} = Brando.Pages.create_page(page_cs, user)
-    {:ok, page} = Brando.Villain.render_entry(Brando.Pages.Page, page.id)
+    {:ok, page} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
 
     assert page.rendered_blocks ==
              "<section b-section=\"general-green\" style=\"--color_bg: #000000;--color_fg: #FFFFFF;--color_accent: #FF00FF\">\n  <!-- [+:C<container-a1>] -->\n  -- this is some code Some text! -- <div class=\"paragraph\"><p>A REF!</p></div>\n<!-- [-:C<container-a1>] -->\n\n</section>\n"
@@ -970,7 +969,7 @@ defmodule Brando.VillainTest do
     page_cs = Ecto.Changeset.put_assoc(page_cs, :entry_blocks, simple_blocks)
     page_cs = Map.put(page_cs, :action, :insert)
     {:ok, page} = Brando.Pages.create_page(page_cs, user)
-    {:ok, page} = Brando.Villain.render_entry(Brando.Pages.Page, page.id)
+    {:ok, page} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
 
     assert page.rendered_blocks ==
              "A variable: VARIABLE! -- A ref: <div class=\"lede\"><p>A REF!</p></div>"
@@ -1031,7 +1030,7 @@ defmodule Brando.VillainTest do
       ])
 
     {:ok, page} = Brando.Pages.create_page(cs, user)
-    {:ok, page} = Brando.Villain.render_entry(Brando.Pages.Page, page.id)
+    {:ok, page} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
 
     assert page.rendered_blocks == "A variable: VARIABLE! -- A ref:"
   end
@@ -1076,7 +1075,7 @@ defmodule Brando.VillainTest do
         :system
       )
 
-    result = Brando.Villain.render_all_entries(Brando.Pages.Page)
+    result = Brando.Content.Blocks.render_all_entries(Brando.Pages.Page)
 
     assert result |> List.flatten() |> Keyword.keys() |> Enum.count() == 3
   end
@@ -1096,7 +1095,7 @@ defmodule Brando.VillainTest do
 
     pf_params = pf_cs("**Some** {{ navigation.main.en.title }} here.")
     {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
-    {:ok, pf1} = Brando.Villain.render_entry(Brando.Pages.Fragment, pf1.id)
+    {:ok, pf1} = Brando.Content.Blocks.render_entry(Brando.Pages.Fragment, pf1.id)
 
     Brando.Cache.Navigation.set()
     {:ok, _menu} = Brando.Navigation.update_menu(menu.id, %{title: "New title"}, user)
@@ -1136,8 +1135,8 @@ defmodule Brando.VillainTest do
     {:ok, pf2} =
       Brando.Pages.create_fragment(Ecto.Changeset.put_change(fragment_cs_2, :language, :no), user)
 
-    {:ok, pf1} = Brando.Villain.render_entry(Brando.Pages.Fragment, pf1.id)
-    {:ok, pf2} = Brando.Villain.render_entry(Brando.Pages.Fragment, pf2.id)
+    {:ok, pf1} = Brando.Content.Blocks.render_entry(Brando.Pages.Fragment, pf1.id)
+    {:ok, pf2} = Brando.Content.Blocks.render_entry(Brando.Pages.Fragment, pf2.id)
 
     assert pf1.rendered_blocks == "<div class=\"paragraph\">So the global says: 'My text'.</div>"
 
@@ -1172,7 +1171,7 @@ defmodule Brando.VillainTest do
     pf_params = pf_cs("So identity.name says: '{{ identity.name }}'.")
 
     {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
-    {:ok, pf1} = Brando.Villain.render_entry(Brando.Pages.Fragment, pf1.id)
+    {:ok, pf1} = Brando.Content.Blocks.render_entry(Brando.Pages.Fragment, pf1.id)
 
     assert pf1.rendered_blocks ==
              "<div class=\"paragraph\">So identity.name says: 'Organization name'.</div>"
@@ -1195,7 +1194,7 @@ defmodule Brando.VillainTest do
     pf_cs = pf_cs("So links.instagram.url says: '{{ links.instagram.url }}'.")
 
     {:ok, pf1} = Brando.Pages.create_fragment(pf_cs, user)
-    {:ok, pf1} = Brando.Villain.render_entry(Brando.Pages.Fragment, pf1.id)
+    {:ok, pf1} = Brando.Content.Blocks.render_entry(Brando.Pages.Fragment, pf1.id)
 
     assert pf1.rendered_blocks ==
              "<div class=\"paragraph\">So links.instagram.url says: 'https://instagram.com/test'.</div>"
@@ -1251,7 +1250,7 @@ defmodule Brando.VillainTest do
     page_cs = Ecto.Changeset.put_assoc(page_cs, :entry_blocks, fragment_block)
     page_cs = Map.put(page_cs, :action, :insert)
     {:ok, page} = Brando.Pages.create_page(page_cs, user)
-    {:ok, page} = Brando.Villain.render_entry(Brando.Pages.Page, page.id)
+    {:ok, page} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
 
     assert page.rendered_blocks == "Hello from the FRAGMENT!"
   end
@@ -1291,7 +1290,7 @@ defmodule Brando.VillainTest do
 
     search_terms = [old_vars: "\\${.*?}", old_for_loops: "{\\% for .*? <- .*? \\%}"]
 
-    [r1, r2] = Villain.search_modules_for_regex(search_terms)
+    [r1, r2] = Brando.Content.Blocks.search_modules_for_regex(search_terms)
 
     assert r1["name"] == %{"en" => "Old style"}
     assert r1["old_for_loops"] == ["{% for test <- old_style %}"]

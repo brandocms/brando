@@ -5,7 +5,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   alias Ecto.Changeset
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.Block.Events
-  alias Brando.Villain
+  alias Brando.Content.Blocks, as: ContentBlocks
 
   def mount(socket) do
     socket
@@ -107,7 +107,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     new_uid = Brando.Utils.generate_uid()
 
     updated_block_cs =
-      Villain.duplicate_block(block_cs, user_id: current_user_id, sequence: new_sequence, uid: new_uid)
+      ContentBlocks.duplicate_block(block_cs, user_id: current_user_id, sequence: new_sequence, uid: new_uid)
 
     # insert the new block uid into the block_list
     new_block_list = List.insert_at(block_list, new_sequence, new_uid)
@@ -161,7 +161,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       {:ok, socket}
     else
       updated_block_cs =
-        Villain.duplicate_block(block_cs, user_id: current_user_id, sequence: new_sequence, uid: new_uid)
+        ContentBlocks.duplicate_block(block_cs, user_id: current_user_id, sequence: new_sequence, uid: new_uid)
 
       # insert the new block uid into the block_list
       new_block_list = List.insert_at(block_list, sequence, new_uid)

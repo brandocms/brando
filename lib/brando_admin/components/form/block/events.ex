@@ -278,7 +278,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       module_refs
       |> Enum.filter(&(&1.name in missing_ref_names))
       |> Enum.map(&Changeset.change/1)
-      |> Brando.Villain.add_uid_to_ref_changesets()
+      |> Brando.Content.Blocks.add_uid_to_ref_changesets()
 
     new_refs = current_refs ++ missing_refs
 
@@ -318,7 +318,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       module_refs
       |> Enum.filter(&(&1.name == ref_name))
       |> Enum.map(&Changeset.change/1)
-      |> Brando.Villain.add_uid_to_ref_changesets()
+      |> Brando.Content.Blocks.add_uid_to_ref_changesets()
       |> List.first()
 
     current_refs =
@@ -375,7 +375,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     prepared_refs =
       module_refs
       |> Enum.map(&Changeset.change/1)
-      |> Brando.Villain.add_uid_to_ref_changesets()
+      |> Brando.Content.Blocks.add_uid_to_ref_changesets()
 
     updated_changeset =
       if belongs_to == :root do
@@ -425,7 +425,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     missing_vars =
       module_vars
       |> Enum.filter(&(&1.key in missing_var_names))
-      |> Brando.Villain.remove_pk_from_vars()
+      |> Brando.Content.Blocks.remove_pk_from_vars()
       |> Enum.map(&var_struct_to_map/1)
 
     new_vars = current_vars ++ missing_vars
@@ -464,7 +464,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
     original_vars =
       module_vars
-      |> Brando.Villain.remove_pk_from_vars()
+      |> Brando.Content.Blocks.remove_pk_from_vars()
       |> Enum.map(&var_struct_to_map/1)
 
     updated_changeset =
@@ -502,7 +502,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     var_to_replace =
       module_vars
       |> Enum.filter(&(&1.key == var_key))
-      |> Brando.Villain.remove_pk_from_vars()
+      |> Brando.Content.Blocks.remove_pk_from_vars()
       |> Enum.map(&var_struct_to_map/1)
       |> List.first()
 
@@ -897,7 +897,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     # Create vars from template
     vars =
       table_template.vars
-      |> Brando.Villain.remove_pk_from_vars()
+      |> Brando.Content.Blocks.remove_pk_from_vars()
       # Ensure they are cleanly initialized for a new row
       |> Enum.map(fn var ->
         var

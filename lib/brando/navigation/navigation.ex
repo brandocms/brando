@@ -36,7 +36,7 @@ defmodule Brando.Navigation do
   alias Brando.Cache
   alias Brando.Navigation.Item
   alias Brando.Navigation.Menu
-  alias Brando.Villain
+  alias Brando.Content.Blocks, as: ContentBlocks
 
   @type id :: binary | integer
   @type params :: map
@@ -178,10 +178,10 @@ defmodule Brando.Navigation do
     ]
 
     # Check for instances in blocks (refs/vars)
-    Villain.render_entries_matching_regex(search_terms)
+    ContentBlocks.render_entries_matching_regex(search_terms)
 
     # Check for instances in modules (this handles the `code` portion of the module's template)
-    Villain.rerender_matching_modules(search_terms)
+    ContentBlocks.rerender_matching_modules(search_terms)
 
     {:ok, menu}
   end

@@ -38,8 +38,8 @@ defmodule Brando.Content do
   alias Brando.Content.Palette
   alias Brando.Content.TableTemplate
   alias Brando.Content.Template
+  alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Content.Var
-  alias Brando.Villain
 
   query :list, Block, do: fn query -> from(q in query) end
 
@@ -156,7 +156,7 @@ defmodule Brando.Content do
 
   mutation :update, Module do
     fn entry ->
-      Villain.render_entries_with_module_id(entry.id)
+      ContentBlocks.render_entries_with_module_id(entry.id)
 
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
@@ -187,7 +187,7 @@ defmodule Brando.Content do
     entry
     |> Brando.Repo.preload(:vars)
     |> Map.get(:vars)
-    |> Brando.Villain.remove_pk_from_vars()
+    |> ContentBlocks.remove_pk_from_vars()
     |> Enum.map(&put_in(&1, [Access.key(:__meta__), Access.key(:state)], :built))
   end
 
@@ -195,7 +195,7 @@ defmodule Brando.Content do
     entry
     |> Brando.Repo.preload(:refs)
     |> Map.get(:refs)
-    |> Brando.Villain.remove_pk_from_refs()
+    |> ContentBlocks.remove_pk_from_refs()
     |> Enum.map(&Map.put(&1, :uid, Brando.Utils.generate_uid()))
     |> Enum.map(&put_in(&1, [Access.key(:__meta__), Access.key(:state)], :built))
   end
@@ -360,7 +360,7 @@ defmodule Brando.Content do
 
   mutation :update, Palette do
     fn palette ->
-      Villain.render_entries_with_palette_id(palette.id)
+      ContentBlocks.render_entries_with_palette_id(palette.id)
       Brando.Cache.Palettes.set()
 
       {:ok, palette}
@@ -861,13 +861,13 @@ defmodule Brando.Content do
 
     refs_with_new_uids =
       module.refs
-      |> Brando.Villain.remove_pk_from_refs()
+      |> ContentBlocks.remove_pk_from_refs()
       |> Enum.map(&put_in(&1, [Access.key(:uid)], Brando.Utils.generate_uid()))
       |> Enum.map(&put_in(&1, [Access.key(:__meta__), Access.key(:state)], :built))
 
     vars_without_ids =
       module.vars
-      |> Brando.Villain.remove_pk_from_vars()
+      |> ContentBlocks.remove_pk_from_vars()
       |> Enum.map(&put_in(&1, [Access.key(:__meta__), Access.key(:state)], :built))
 
     prepared_module =
@@ -896,7 +896,7 @@ defmodule Brando.Content do
       tt
       |> Map.merge(%{id: nil, creator_id: nil})
       |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
-      |> Map.put(:vars, Brando.Villain.remove_pk_from_vars(tt.vars))
+      |> Map.put(:vars, ContentBlocks.remove_pk_from_vars(tt.vars))
 
     module
     |> Map.put(:table_template, prepared_tt)

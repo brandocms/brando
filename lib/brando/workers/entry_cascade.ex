@@ -25,14 +25,14 @@ defmodule Brando.Worker.EntryCascade do
 
     datasource_block_ids =
       if Brando.Datasource.datasource?(schema) do
-        Brando.Villain.list_block_ids_using_datamodule(schema)
+        Brando.Content.Blocks.list_block_ids_using_datamodule(schema)
       else
         []
       end
 
     identifier_block_ids =
       if identifier_id do
-        Brando.Villain.list_block_ids_using_identifier(identifier_id)
+        Brando.Content.Blocks.list_block_ids_using_identifier(identifier_id)
       else
         []
       end
@@ -43,8 +43,8 @@ defmodule Brando.Worker.EntryCascade do
     # returning a %{schema => [entry_ids]} map ready for enqueue_entry_map_for_render.
     (datasource_block_ids ++ identifier_block_ids)
     |> Enum.uniq()
-    |> Brando.Villain.reject_blocks_belonging_to_entry(entry)
-    |> Brando.Villain.enqueue_entry_map_for_render()
+    |> Brando.Content.Blocks.reject_blocks_belonging_to_entry(entry)
+    |> Brando.Content.Blocks.enqueue_entry_map_for_render()
 
     :ok
   end

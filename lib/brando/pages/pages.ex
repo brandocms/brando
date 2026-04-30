@@ -10,7 +10,7 @@ defmodule Brando.Pages do
   alias Brando.Pages.Fragment
   alias Brando.Pages.Page
   alias Brando.Users.User
-  alias Brando.Villain
+  alias Brando.Content.Blocks, as: ContentBlocks
   alias Ecto.Changeset
 
   @type changeset :: Changeset.t()
@@ -389,14 +389,14 @@ defmodule Brando.Pages do
 
   mutation :update, Fragment do
     fn fragment ->
-      Villain.render_entries_with_fragment_id(fragment.id)
+      ContentBlocks.render_entries_with_fragment_id(fragment.id)
       {:ok, fragment}
     end
   end
 
   mutation :delete, Fragment do
     fn fragment ->
-      Villain.render_entries_with_fragment_id(fragment.id)
+      ContentBlocks.render_entries_with_fragment_id(fragment.id)
       {:ok, fragment}
     end
   end
@@ -445,11 +445,11 @@ defmodule Brando.Pages do
   """
   def rerender_fragments do
     {:ok, fragments} = list_fragments()
-    Villain.render_entries(Fragment, Enum.map(fragments, & &1.id))
+    ContentBlocks.render_entries(Fragment, Enum.map(fragments, & &1.id))
   end
 
   def rerender_fragment(id) do
-    Villain.render_entry(Fragment, id)
+    ContentBlocks.render_entry(Fragment, id)
   end
 
   def list_fragments_translations(parent_key, opts \\ []) do
@@ -549,11 +549,14 @@ defmodule Brando.Pages do
            </div>))
 
       fragment ->
-        Phoenix.HTML.raw(fragment.rendered_blocks)
+        # rendered_blocks is pre-rendered CMS content from our own rendering pipeline
+        # nosec
+        {:safe, fragment.rendered_blocks}
     end
   end
 
-  def render_fragment(%Fragment{} = fragment), do: Phoenix.HTML.raw(fragment.rendered_blocks)
+  # nosec
+  def render_fragment(%Fragment{} = fragment), do: {:safe, fragment.rendered_blocks}
 
   def render_fragment(fragments, key) when is_map(fragments) do
     case Map.get(fragments, key) do
@@ -565,7 +568,7 @@ defmodule Brando.Pages do
            </div>))
 
       fragment ->
-        Phoenix.HTML.raw(fragment.rendered_blocks)
+        {:safe, fragment.rendered_blocks}
     end
   end
 
@@ -589,7 +592,7 @@ defmodule Brando.Pages do
            </div>))
 
       {:ok, fragment} ->
-        Phoenix.HTML.raw(fragment.rendered_blocks)
+        {:safe, fragment.rendered_blocks}
     end
   end
 

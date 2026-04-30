@@ -30,7 +30,7 @@ defmodule Brando.Trait.Status do
         _ -> nil
       end
 
-    Brando.Villain.enqueue_entry_cascade(schema, updated_entry, identifier_id)
+    Brando.Content.Blocks.enqueue_entry_cascade(schema, updated_entry, identifier_id)
     Brando.Cache.Query.evict({:ok, %{__struct__: schema, id: id}})
   end
 end

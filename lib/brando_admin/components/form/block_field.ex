@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
-  alias Brando.Villain
+  alias Brando.Content.Blocks, as: ContentBlocks
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
   alias Ecto.Changeset
@@ -26,7 +26,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     new_uid = Brando.Utils.generate_uid()
 
     updated_block_cs =
-      Villain.duplicate_block(block_cs, user_id: current_user_id, sequence: new_sequence, uid: new_uid)
+      ContentBlocks.duplicate_block(block_cs, user_id: current_user_id, sequence: new_sequence, uid: new_uid)
 
     entry_block_cs =
       block_module
@@ -90,7 +90,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     else
       # the block has no children, duplicate it right away.
       updated_block_cs =
-        Villain.duplicate_block(block_cs, user_id: current_user_id, sequence: new_sequence, uid: new_uid)
+        ContentBlocks.duplicate_block(block_cs, user_id: current_user_id, sequence: new_sequence, uid: new_uid)
 
       entry_block_cs =
         block_module
@@ -1016,10 +1016,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     # Generate fresh refs with new UIDs when creating blocks from modules
     fresh_refs =
       (module.refs || [])
-      |> Brando.Villain.remove_pk_from_refs()
+      |> Brando.Content.Blocks.remove_pk_from_refs()
       |> Enum.map(&Map.put(&1, :uid, Brando.Utils.generate_uid()))
 
-    cleaned_vars = Brando.Villain.remove_pk_from_vars(module.vars)
+    cleaned_vars = Brando.Content.Blocks.remove_pk_from_vars(module.vars)
 
     # Create clean ref structs
     cleaned_refs =
@@ -1161,7 +1161,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     new_uid = Brando.Utils.generate_uid()
 
     updated_block_cs =
-      Villain.duplicate_block(block_cs, user_id: current_user_id, sequence: sequence, uid: new_uid)
+      ContentBlocks.duplicate_block(block_cs, user_id: current_user_id, sequence: sequence, uid: new_uid)
 
     entry_block_cs =
       block_module
@@ -1198,7 +1198,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp create_duplicate_from_clipboard(clipboard, user_id) do
     block_cs = extract_block_changeset(clipboard.changeset)
-    Villain.duplicate_block(block_cs, user_id: user_id)
+    ContentBlocks.duplicate_block(block_cs, user_id: user_id)
   end
 
   defp extract_block_changeset(src_changeset) do

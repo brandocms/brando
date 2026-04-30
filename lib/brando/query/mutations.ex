@@ -8,7 +8,7 @@ defmodule Brando.Query.Mutations do
   alias Brando.Query
   alias Brando.Trait
   alias Brando.Utils
-  alias Brando.Villain
+  alias Brando.Content.Blocks, as: ContentBlocks
 
   def create(module, params, user, callback_block, opts) do
     {preloads, opts} = Keyword.pop(opts, :preloads)
@@ -31,7 +31,7 @@ defmodule Brando.Query.Mutations do
 
         # Enqueue async cascade (merged datasource + identifier)
         identifier_id = get_identifier_id(identifier_result)
-        Villain.enqueue_entry_cascade(module, entry, identifier_id)
+        ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id)
 
         # Enqueue async revision
         revisioned? = module.__trait__(Trait.Revisioned)
@@ -59,7 +59,7 @@ defmodule Brando.Query.Mutations do
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
       # Enqueue async cascade (merged datasource + identifier)
       identifier_id = get_identifier_id(identifier_result)
-      Villain.enqueue_entry_cascade(module, entry, identifier_id)
+      ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id)
 
       # Enqueue async revision
       revisioned? = module.__trait__(Trait.Revisioned)
@@ -100,7 +100,7 @@ defmodule Brando.Query.Mutations do
       if has_changes(changeset) do
         # Enqueue async cascade (merged datasource + identifier)
         identifier_id = get_identifier_id(identifier_result)
-        Villain.enqueue_entry_cascade(module, entry, identifier_id)
+        ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id)
 
         # Enqueue async revision
         revisioned? = module.__trait__(Trait.Revisioned)
@@ -130,7 +130,7 @@ defmodule Brando.Query.Mutations do
       if has_changes(changeset) do
         # Enqueue async cascade (merged datasource + identifier)
         identifier_id = get_identifier_id(identifier_result)
-        Villain.enqueue_entry_cascade(module, entry, identifier_id)
+        ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id)
 
         # Enqueue async revision
         revisioned? = module.__trait__(Trait.Revisioned)

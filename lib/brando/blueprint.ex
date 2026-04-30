@@ -380,7 +380,7 @@ defmodule Brando.Blueprint do
 
         %{type: :has_many, name: rel_name, opts: %{module: :blocks}} ->
           main_module = unquote(module)
-          rel_module = rel_name |> to_string() |> Macro.camelize() |> String.to_atom()
+          rel_module = rel_name |> to_string() |> Macro.camelize() |> then(&:"#{&1}")
           block_module = Module.concat([main_module, rel_module])
 
           [
@@ -529,13 +529,13 @@ defmodule Brando.Blueprint do
   def get_castable_relation_fields(rels) do
     rels
     |> Enum.filter(&(&1.type == :belongs_to))
-    |> Enum.map(&(&1.name |> to_string() |> Kernel.<>("_id") |> String.to_atom()))
+    |> Enum.map(fn rel -> :"#{rel.name}_id" end)
   end
 
   def get_castable_asset_fields(rels) do
     rels
     |> Enum.filter(&(&1.type in [:file, :image, :video, :gallery]))
-    |> Enum.map(&(&1.name |> to_string() |> Kernel.<>("_id") |> String.to_atom()))
+    |> Enum.map(fn rel -> :"#{rel.name}_id" end)
   end
 
   def get_relation_key(%{type: :belongs_to, name: name}), do: :"#{name}_id"
@@ -677,7 +677,7 @@ defmodule Brando.Blueprint do
   """
   def preloads_for(schema, opts \\ []) do
     skip_blocks? = Keyword.get(opts, :skip_blocks, false)
-    blocks_preloads = (skip_blocks? && []) || Brando.Villain.preloads_for(schema)
+    blocks_preloads = (skip_blocks? && []) || Brando.Content.Blocks.preloads_for(schema)
     asset_preloads = Brando.Blueprint.Assets.preloads_for(schema)
     rel_preloads = Brando.Blueprint.Relations.preloads_for(schema)
     alternates_preload = Brando.Content.AlternateEntries.preloads_for(schema)

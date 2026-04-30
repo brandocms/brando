@@ -11,7 +11,7 @@ defmodule Brando.Worker.EntryRenderer do
   def perform(%Oban.Job{args: %{"entry_id" => entry_id, "schema" => schema}}) do
     schema = Module.concat([schema])
     Logger.info("==> [CRON] Rendering entry #{entry_id} for schema #{schema}")
-    Brando.Villain.render_entry(schema, entry_id)
+    Brando.Content.Blocks.render_entry(schema, entry_id)
   end
 
   @impl Oban.Worker

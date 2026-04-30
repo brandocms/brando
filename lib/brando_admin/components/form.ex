@@ -4040,7 +4040,7 @@ defmodule BrandoAdmin.Components.Form do
     Enum.reduce(block_changesets, changeset, fn {field_name, block_cs}, updated_changeset ->
       updated_block_cs =
         block_cs
-        |> Brando.Villain.reject_deleted(true)
+        |> Brando.Content.Blocks.reject_deleted(true)
         |> Brando.Utils.set_action()
 
       Ecto.Changeset.put_assoc(updated_changeset, :"entry_#{field_name}", updated_block_cs)

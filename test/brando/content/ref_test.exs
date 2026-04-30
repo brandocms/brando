@@ -211,7 +211,7 @@ defmodule Brando.Content.RefTest do
       }
 
       # Apply ref - should update class but preserve code
-      updated_block_cs = Brando.Villain.sync_module(original_block, module_with_svg)
+      updated_block_cs = Brando.Content.Blocks.sync_module(original_block, module_with_svg)
       updated_block = Ecto.Changeset.apply_changes(updated_block_cs)
 
       svg_ref = List.first(updated_block.refs)
@@ -256,7 +256,7 @@ defmodule Brando.Content.RefTest do
         ]
       }
 
-      updated_block_cs = Brando.Villain.sync_module(original_block, module_with_text)
+      updated_block_cs = Brando.Content.Blocks.sync_module(original_block, module_with_text)
       updated_block = Ecto.Changeset.apply_changes(updated_block_cs)
 
       text_ref = List.first(updated_block.refs)
@@ -350,7 +350,7 @@ defmodule Brando.Content.RefTest do
       }
 
       # Should add the missing ref and update existing one
-      updated_block_cs = Brando.Villain.sync_module(original_block, module_with_extra_ref)
+      updated_block_cs = Brando.Content.Blocks.sync_module(original_block, module_with_extra_ref)
       updated_block = Ecto.Changeset.apply_changes(updated_block_cs)
 
       assert length(updated_block.refs) == 2
@@ -390,7 +390,7 @@ defmodule Brando.Content.RefTest do
       }
 
       # Should remove the orphaned ref
-      updated_block_cs = Brando.Villain.sync_module(original_block, module_with_missing_ref)
+      updated_block_cs = Brando.Content.Blocks.sync_module(original_block, module_with_missing_ref)
       updated_block = Ecto.Changeset.apply_changes(updated_block_cs)
 
       assert updated_block.refs == []

@@ -194,7 +194,7 @@ defmodule Brando.Datasource do
   OR if you know that all changes to the `:all_areas_with_grants` are coming from `Grantee`
   mutations, you can move the datasource to the `Grantee` schema instead!
   """
-  alias Brando.Villain
+  alias Brando.Content.Blocks, as: ContentBlocks
   alias Spark.Dsl.Extension
 
   @doc """
@@ -262,7 +262,7 @@ defmodule Brando.Datasource do
   Grab list of entries from database
   """
   def list_results(module_binary, key, vars, language) do
-    atom_key = (is_binary(key) && String.to_atom(key)) || key
+    atom_key = (is_binary(key) && String.to_existing_atom(key)) || key
     module = Module.concat([module_binary])
     ds = get_datasource(module, :*, atom_key)
     ds.list.(module_binary, language, vars)
@@ -275,7 +275,7 @@ defmodule Brando.Datasource do
   def get_selection(_module_binary, _key, nil), do: {:ok, []}
 
   def get_selection(module_binary, key, ids) do
-    atom_key = (is_binary(key) && String.to_atom(key)) || key
+    atom_key = (is_binary(key) && String.to_existing_atom(key)) || key
     module = Module.concat([module_binary])
     ds = get_datasource(module, :selection, atom_key)
     {:ok, identifiers} = Brando.Content.list_identifiers(ids)
@@ -286,7 +286,7 @@ defmodule Brando.Datasource do
   Grab single entry from database
   """
   def get_single(module_binary, key, identifier) do
-    atom_key = (is_binary(key) && String.to_atom(key)) || key
+    atom_key = (is_binary(key) && String.to_existing_atom(key)) || key
     module = Module.concat([module_binary])
     ds = get_datasource(module, :single, atom_key)
     ds.get.(identifier)
@@ -298,9 +298,9 @@ defmodule Brando.Datasource do
   def update_datasource(datasource_module, entry \\ nil) do
     if datasource?(datasource_module) do
       datasource_module
-      |> Villain.list_block_ids_using_datamodule()
-      |> Villain.reject_blocks_belonging_to_entry(entry)
-      |> Villain.enqueue_entry_map_for_render()
+      |> ContentBlocks.list_block_ids_using_datamodule()
+      |> ContentBlocks.reject_blocks_belonging_to_entry(entry)
+      |> ContentBlocks.enqueue_entry_map_for_render()
     end
 
     {:ok, entry}

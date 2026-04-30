@@ -103,7 +103,7 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
       changeset =
         entry
         |> Ecto.Changeset.change()
-        |> Brando.Villain.render_all_block_fields_and_add_to_changeset(blueprint_module, entry)
+        |> Brando.Content.Blocks.render_all_block_fields_and_add_to_changeset(blueprint_module, entry)
         |> Ecto.Changeset.force_change(:updated_at, entry.updated_at)
 
       case Brando.Repo.update(changeset, force: true) do

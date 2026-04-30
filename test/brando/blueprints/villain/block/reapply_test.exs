@@ -63,7 +63,7 @@ defmodule Brando.Villain.Block.PictureBlockTest do
       uid: "1xVOTDOushEIQlh7sIihqo"
     }
 
-    updated_block_cs = Brando.Villain.sync_module(original_block, updated_module)
+    updated_block_cs = Brando.Content.Blocks.sync_module(original_block, updated_module)
     updated_block = Ecto.Changeset.apply_changes(updated_block_cs)
 
     [orig_header_ref] = original_block.refs
@@ -231,7 +231,7 @@ defmodule Brando.Villain.Block.PictureBlockTest do
       collapsed: false
     }
 
-    updated_block_cs = Brando.Villain.sync_module(original_block, updated_module)
+    updated_block_cs = Brando.Content.Blocks.sync_module(original_block, updated_module)
     updated_block = Ecto.Changeset.apply_changes(updated_block_cs)
 
     orig_header_ref = List.first(original_block.refs)
@@ -432,7 +432,7 @@ defmodule Brando.Villain.Block.PictureBlockTest do
       vars: []
     }
 
-    updated_block_cs = Brando.Villain.sync_module(original_block, updated_module)
+    updated_block_cs = Brando.Content.Blocks.sync_module(original_block, updated_module)
     updated_block = Ecto.Changeset.apply_changes(updated_block_cs)
 
     [mod_ref1, mod_ref2] = updated_module.refs

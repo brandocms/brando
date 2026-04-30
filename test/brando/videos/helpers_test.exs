@@ -7,9 +7,7 @@ defmodule Brando.Videos.HelpersTest do
 
   test "get_playback_url for :external_file with source_url" do
     assert {:ok, "https://example.com/video.mp4"} =
-             Helpers.get_playback_url(
-               video(type: :external_file, source_url: "https://example.com/video.mp4")
-             )
+             Helpers.get_playback_url(video(type: :external_file, source_url: "https://example.com/video.mp4"))
   end
 
   test "get_playback_url for :external_file without source_url" do
@@ -49,9 +47,7 @@ defmodule Brando.Videos.HelpersTest do
 
     test "returns Mux thumbnail URL for Mux video with playback_id" do
       result =
-        Helpers.thumbnail_url(
-          video(type: :mux, meta: %{"mux" => %{"playback_id" => "abc123"}})
-        )
+        Helpers.thumbnail_url(video(type: :mux, meta: %{"mux" => %{"playback_id" => "abc123"}}))
 
       assert result == "https://image.mux.com/abc123/thumbnail.jpg"
     end

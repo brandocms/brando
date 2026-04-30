@@ -11,7 +11,7 @@ defmodule Brando.Sites do
   alias Brando.Sites.Identity
   alias Brando.Sites.Preview
   alias Brando.Sites.SEO
-  alias Brando.Villain
+  alias Brando.Content.Blocks, as: ContentBlocks
 
   @type id :: integer | binary
   @type params :: map
@@ -68,7 +68,7 @@ defmodule Brando.Sites do
   """
   def create_default_identity(language \\ nil) do
     language_cfg = language || Brando.config(:default_language)
-    language = (is_binary(language_cfg) && String.to_atom(language_cfg)) || language_cfg
+    language = (is_binary(language_cfg) && String.to_existing_atom(language_cfg)) || language_cfg
 
     default_identity = %Identity{
       name: "Organization name",
@@ -125,10 +125,10 @@ defmodule Brando.Sites do
     ]
 
     # Check for instances in blocks (refs/vars)
-    Villain.render_entries_matching_regex(search_terms)
+    ContentBlocks.render_entries_matching_regex(search_terms)
 
     # Check for instances in modules (this handles the `code` portion of the module's template)
-    Villain.rerender_matching_modules(search_terms)
+    ContentBlocks.rerender_matching_modules(search_terms)
 
     {:ok, identity}
   end
@@ -180,7 +180,7 @@ defmodule Brando.Sites do
   """
   def create_default_seo(language \\ nil) do
     language_cfg = language || Brando.config(:default_language)
-    language = (is_binary(language_cfg) && String.to_atom(language_cfg)) || language_cfg
+    language = (is_binary(language_cfg) && String.to_existing_atom(language_cfg)) || language_cfg
     Brando.Repo.insert!(%SEO{language: language})
   end
 
@@ -336,10 +336,10 @@ defmodule Brando.Sites do
     search_terms = [globals: "{{ globals\.(.*?) }}"]
 
     # Check for instances in blocks (refs/vars)
-    Villain.render_entries_matching_regex(search_terms)
+    ContentBlocks.render_entries_matching_regex(search_terms)
 
     # Check for instances in modules (this handles the `code` portion of the module's template)
-    Villain.rerender_matching_modules(search_terms)
+    ContentBlocks.rerender_matching_modules(search_terms)
 
     {:ok, global_set}
   end

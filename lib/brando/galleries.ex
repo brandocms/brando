@@ -47,7 +47,7 @@ defmodule Brando.Galleries do
 
   mutation :update, Gallery do
     fn entry ->
-      Brando.Villain.render_entries_with_gallery_id(entry.id)
+      Brando.Content.Blocks.render_entries_with_gallery_id(entry.id)
       {:ok, entry}
     end
   end
@@ -100,8 +100,8 @@ defmodule Brando.Galleries do
 
     ref_usage =
       block_ids
-      |> Brando.Villain.list_root_block_ids_by_source()
-      |> Brando.Villain.list_entry_ids_for_root_blocks_by_source()
+      |> Brando.Content.Blocks.list_root_block_ids_by_source()
+      |> Brando.Content.Blocks.list_entry_ids_for_root_blocks_by_source()
 
     asset_usage = list_gallery_asset_usage(gallery_id)
 

@@ -6,7 +6,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
   alias Brando.Content.Ref
   alias Brando.Content.Var
-  alias Brando.Villain
+  alias Brando.Content.Blocks, as: ContentBlocks
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
@@ -95,7 +95,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
     block_module =
       block_type
       |> String.to_existing_atom()
-      |> Villain.get_block_by_type()
+      |> ContentBlocks.get_block_by_type()
 
     ref_data = struct(block_module, %{data: build_ref_data(block_module)})
 
@@ -304,9 +304,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   end
 
   defp assign_current_user(socket, token) do
-    assign_new(socket, :current_user, fn ->
-      Brando.Users.get_user_by_session_token(token)
-    end)
+    assign(socket, :current_user, Brando.Users.get_user_by_session_token(token))
   end
 
   defp assign_entry(socket, entry_id) do

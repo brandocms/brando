@@ -197,7 +197,7 @@ defmodule Brando.DatasourcesTest do
     page_cs = Map.put(page_cs, :action, :insert)
 
     {:ok, p1} = Brando.Pages.create_page(page_cs, user)
-    {:ok, p1} = Brando.Villain.render_entry(Brando.Pages.Page, p1.id)
+    {:ok, p1} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, p1.id)
     assert p1.rendered_blocks == "\n<li>1</li>\n\n<li>2</li>\n\n<li>3</li>\n\n"
   end
 
@@ -328,9 +328,9 @@ defmodule Brando.DatasourcesTest do
 
     found_ids =
       datasource_module
-      |> Brando.Villain.list_block_ids_using_datamodule()
-      |> Brando.Villain.list_root_block_ids_by_source()
-      |> Brando.Villain.list_entry_ids_for_root_blocks_by_source()
+      |> Brando.Content.Blocks.list_block_ids_using_datamodule()
+      |> Brando.Content.Blocks.list_root_block_ids_by_source()
+      |> Brando.Content.Blocks.list_entry_ids_for_root_blocks_by_source()
       |> Map.get(schema)
 
     assert page_with_refed_datasource.id in found_ids

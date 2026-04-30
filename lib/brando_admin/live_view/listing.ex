@@ -232,7 +232,7 @@ defmodule BrandoAdmin.LiveView.Listing do
         end
 
       "rerender_entry", %{"id" => entry_id}, socket ->
-        case Brando.Villain.render_entry(schema, entry_id) do
+        case Brando.Content.Blocks.render_entry(schema, entry_id) do
           {:ok, _entry} ->
             send(self(), {:toast, gettext("Entry re-rendered")})
 

@@ -1,6 +1,6 @@
 defmodule Brando.Villain.DuplicationTest do
   @moduledoc """
-  Tests for block duplication logic in Villain.
+  Tests for block duplication logic in ContentBlocks.
 
   Covers: duplicate_block, duplicate_refs, duplicate_vars, duplicate_table_rows,
   duplicate_child, add_uid_to_refs, and the block_changeset vs
@@ -10,7 +10,7 @@ defmodule Brando.Villain.DuplicationTest do
   use Brando.ConnCase
   alias Brando.Factory
   alias Brando.Content.{Block, Ref, Var, TableRow}
-  alias Brando.Villain
+  alias Brando.Content.Blocks, as: ContentBlocks
   alias Ecto.Changeset
 
   setup do
@@ -101,7 +101,7 @@ defmodule Brando.Villain.DuplicationTest do
         block
         |> Map.merge(%{id: nil, uid: "new-uid", refs: []})
         |> Changeset.change()
-        |> Villain.duplicate_refs(refs, user.id)
+        |> ContentBlocks.duplicate_refs(refs, user.id)
 
       duplicated_refs = Changeset.get_change(changeset, :refs)
       assert length(duplicated_refs) == 1
@@ -134,7 +134,7 @@ defmodule Brando.Villain.DuplicationTest do
         |> Changeset.change()
         |> Changeset.put_assoc(:refs, block.refs)
 
-      result = Villain.add_uid_to_refs(changeset)
+      result = ContentBlocks.add_uid_to_refs(changeset)
       ref_changes = Changeset.get_assoc(result, :refs)
 
       for ref_cs <- ref_changes do
@@ -159,7 +159,7 @@ defmodule Brando.Villain.DuplicationTest do
         block
         |> Map.merge(%{id: nil, table_rows: []})
         |> Changeset.change()
-        |> Villain.duplicate_table_rows(table_rows, user.id)
+        |> ContentBlocks.duplicate_table_rows(table_rows, user.id)
 
       dup_rows = Changeset.get_change(changeset, :table_rows)
       assert length(dup_rows) == 1
@@ -180,7 +180,7 @@ defmodule Brando.Villain.DuplicationTest do
         block
         |> Map.merge(%{id: nil, table_rows: []})
         |> Changeset.change()
-        |> Villain.duplicate_table_rows(block.table_rows, user.id)
+        |> ContentBlocks.duplicate_table_rows(block.table_rows, user.id)
 
       dup_rows = Changeset.get_change(changeset, :table_rows)
       row_cs = hd(dup_rows)
@@ -266,7 +266,7 @@ defmodule Brando.Villain.DuplicationTest do
 
       block_cs = Changeset.change(block)
 
-      result = Villain.duplicate_block(block_cs, user_id: user.id, sequence: 5, uid: "custom-uid")
+      result = ContentBlocks.duplicate_block(block_cs, user_id: user.id, sequence: 5, uid: "custom-uid")
 
       assert result.action == :insert
       assert Changeset.get_field(result, :uid) == "custom-uid"
@@ -305,7 +305,7 @@ defmodule Brando.Villain.DuplicationTest do
       block = build_block(%{refs: [], vars: [], table_rows: [], children: []})
       block_cs = Changeset.change(block)
 
-      result = Villain.duplicate_block(block_cs, user_id: user.id)
+      result = ContentBlocks.duplicate_block(block_cs, user_id: user.id)
 
       uid = Changeset.get_field(result, :uid)
       assert uid != "block-original-uid"
@@ -331,7 +331,7 @@ defmodule Brando.Villain.DuplicationTest do
           children: []
         })
 
-      result = Villain.duplicate_child(child, user.id)
+      result = ContentBlocks.duplicate_child(child, user.id)
 
       assert result.action == :insert
       uid = Changeset.get_field(result, :uid)
@@ -352,7 +352,7 @@ defmodule Brando.Villain.DuplicationTest do
           children: []
         })
 
-      result = Villain.duplicate_child(child, user.id)
+      result = ContentBlocks.duplicate_child(child, user.id)
 
       # Refs should now use duplicate_refs (not add_uid_to_refs)
       ref_changes = Changeset.get_change(result, :refs)
@@ -380,7 +380,7 @@ defmodule Brando.Villain.DuplicationTest do
           children: []
         })
 
-      result = Villain.duplicate_child(child, user.id)
+      result = ContentBlocks.duplicate_child(child, user.id)
 
       vars = Changeset.get_change(result, :vars)
       assert length(vars) == 1
