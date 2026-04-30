@@ -105,6 +105,25 @@ defmodule Brando.Plug.HTML do
       # Add with extra runtime fields
       put_json_ld(conn, MyApp.Blog.Post, post, [%{name: :image, type: :image, value_fn: &get_image/1}])
   """
+  @doc """
+  Sets the WebPage `@type` for JSON-LD without adding a content entity.
+
+  Useful for list pages or other controllers where you don't have a single
+  entity to pass to `put_json_ld/3` but still want to control the page type.
+
+  ## Example
+
+      # In a list controller action
+      conn
+      |> put_json_ld_type("CollectionPage")
+      |> put_breadcrumbs([{"Home", "/"}, {"Blog", "/blog"}])
+      |> render(:list)
+
+  """
+  def put_json_ld_type(conn, type) when is_binary(type) do
+    assign(conn, :json_ld_page_type, type)
+  end
+
   def put_json_ld(conn, :breadcrumbs, breadcrumbs), do: assign(conn, :json_ld_breadcrumbs, breadcrumbs)
 
   def put_json_ld(conn, module, data, extra_fields \\ []) do

@@ -133,6 +133,27 @@ conn
 
 Breadcrumb URLs are automatically converted to absolute URLs.
 
+#### List pages (CollectionPage)
+
+For controller actions that list multiple items (no single content entity),
+use `put_json_ld_type/2` to set the WebPage type directly:
+
+```elixir
+def list(conn, _params) do
+  {:ok, exhibitions} = Exhibitions.list_exhibitions(%{status: :published})
+
+  conn
+  |> put_json_ld_type("CollectionPage")
+  |> put_breadcrumbs([{gettext("Home"), "/"}, {gettext("Exhibitions"), "/exhibitions"}])
+  |> put_title(gettext("Exhibitions"))
+  |> assign(:exhibitions, exhibitions)
+  |> render(:list)
+end
+```
+
+This sets `@type` on the auto-generated WebPage entity to `"CollectionPage"`
+without requiring a content entity.
+
 #### Multiple entities per page
 
 You can call `put_json_ld/3` multiple times to add multiple entities to the
@@ -156,22 +177,26 @@ put_json_ld(conn, MyApp.Blog.Post, post, extra)
 ### WebPage type
 
 Pages have a `json_ld_type` attribute (default: `"WebPage"`) that controls the
-`@type` of the auto-generated WebPage entity. Available types:
+`@type` of the auto-generated WebPage entity. Only valid
+[schema.org WebPage subtypes](https://schema.org/WebPage) are available:
 
-- `WebPage` (default)
-- `Article`
-- `AboutPage`
-- `ContactPage`
-- `CollectionPage`
-- `ItemPage`
-- `ProfilePage`
+- `WebPage` — Default. Use when no other subtype fits.
+- `AboutPage` — "About us", company history, team pages.
+- `CollectionPage` — Index/listing pages: blog archives, project overviews, category listings.
+- `ContactPage` — Contact information, office addresses, contact forms.
+- `FAQPage` — Frequently asked questions. Google supports rich results for this type.
+- `ItemPage` — A single item within a collection, e.g. a specific product or portfolio piece.
+- `ProfilePage` — A person or organization profile. Google supports rich results for this type.
+- `SearchResultsPage` — Pages displaying search results.
 
 This is configurable per page in the admin under the Advanced tab.
 
-When `json_ld_type` is set, it also overrides the `@type` on the content entity
-extracted from the blueprint DSL. This means you can keep using
-`json_ld_schema JSONLD.Schema.Article` in the blueprint (for the field
-definitions) while the output type becomes whatever the editor selected.
+For custom controllers without a page record, use `put_json_ld_type/2`:
+
+```elixir
+conn
+|> put_json_ld_type("CollectionPage")
+```
 
 ### Identity type-specific fields
 
