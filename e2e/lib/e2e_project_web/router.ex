@@ -87,6 +87,8 @@ defmodule E2eProjectWeb.Router do
 
   pipeline :json_api do
     plug :accepts, ["json"]
+    plug BrandoJsonApi.Plug.RateLimit
+    plug BrandoGraphql.Plug.RateLimit
   end
 
   scope "/api/v1", E2eProjectWeb.API do
@@ -94,6 +96,14 @@ defmodule E2eProjectWeb.Router do
 
     import BrandoJsonApi.Router
     json_api_resources("/projects", ProjectController)
+  end
+
+  scope "/api" do
+    pipe_through :json_api
+
+    forward "/graphql", Absinthe.Plug,
+      schema: E2eProjectWeb.API.GraphqlSchema,
+      json_codec: Jason
   end
 
   scope "/" do

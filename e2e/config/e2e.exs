@@ -59,6 +59,7 @@ config :brando, Brando.Images,
       {"small", "700w"}
     ]
   }
+
 config :phoenix, :stacktrace_depth, 60
 
 # Show breakpoint debug in frontend

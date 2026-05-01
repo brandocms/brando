@@ -16,7 +16,10 @@ defmodule E2eProject.Application do
       # Start the Presence system
       E2eProject.Presence,
       # Start the Brando supervisor
-      Brando
+      Brando,
+      # Start rate limiters for API endpoints
+      BrandoJsonApi.RateLimit,
+      BrandoGraphql.RateLimit
       # Start a worker by calling: E2eProject.Worker.start_link(arg)
       # {E2eProject.Worker, arg},
     ]

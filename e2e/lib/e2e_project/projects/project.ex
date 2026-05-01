@@ -9,7 +9,7 @@ defmodule E2eProject.Projects.Project do
     schema: "Project",
     singular: "project",
     plural: "projects",
-    extensions: [BrandoJsonApi.Resource]
+    extensions: [BrandoJsonApi.Resource, BrandoGraphql.Resource]
 
   import Ecto.Query
   alias E2eProject.Projects
@@ -126,7 +126,8 @@ defmodule E2eProject.Projects.Project do
 
           input :introduction, :rich_text,
             label: t("Introduction"),
-            instructions: t("Used for case listings and also the heading for the case detail page"),
+            instructions:
+              t("Used for case listings and also the heading for the case detail page"),
             extensions: ["p", "bold", "link", "color"]
 
           input :project_categories, :multi_select,
@@ -268,6 +269,17 @@ defmodule E2eProject.Projects.Project do
     routes do
       index(:list_projects)
       show(:get_project)
+    end
+
+    hide_fields([:creator_id, :deleted_at, :marked_as_deleted])
+  end
+
+  graphql do
+    type_name(:project)
+
+    queries do
+      list(:list_projects)
+      get(:get_project)
     end
 
     hide_fields([:creator_id, :deleted_at, :marked_as_deleted])

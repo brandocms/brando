@@ -86,7 +86,8 @@ defmodule E2eProject.MixProject do
       # brando
       # {:brando, github: "brandocms/brando"}
       {:brando, path: "../"},
-      {:brando_json_api, path: "../../brando_json_api"}
+      {:brando_json_api, path: "../../brando_json_api"},
+      {:brando_graphql, path: "../../brando_graphql"}
     ]
   end
 
