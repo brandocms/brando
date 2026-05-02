@@ -46,7 +46,7 @@
     },
   });
 
-  let { content, extensions = $bindable(), styles = "[]", onFocus, tiptapInput } = $props();
+  let { content, extensions = $bindable(), styles = "[]", onFocus, onToggleLink, onToggleButton, onEditorCreated, tiptapInput } = $props();
 
   let element = $state();
   let editor = $state();
@@ -375,51 +375,36 @@
 
   const toggleLink = () => {
     let currentHref = "";
+    let currentTarget = null;
+    let currentIdentifierId = null;
 
     if (editor.isActive("link")) {
-      const linkAttributes = editor.getAttributes("link");
-      currentHref = linkAttributes.href;
+      const attrs = editor.getAttributes("link");
+      currentHref = attrs.href || "";
+      currentTarget = attrs.target || null;
+      currentIdentifierId = attrs['data-identifier-id'] || null;
     }
 
-    alertPrompt("URL/Link", currentHref, ({ data }) => {
-      if (!data) {
-        editor.chain().focus().unsetLink().run();
-      } else {
-        let opts = { href: data };
-
-        if (data.startsWith("/") || data.startsWith("#")) {
-          opts = { ...opts, target: null, rel: null };
-        }
-
-        editor.chain().focus().extendMarkRange("link").setLink(opts).run();
-      }
-    });
+    if (onToggleLink) {
+      onToggleLink(currentHref, currentTarget, currentIdentifierId);
+    }
   };
 
   const toggleButton = () => {
     let currentHref = "";
+    let currentTarget = null;
+    let currentIdentifierId = null;
 
     if (editor.isActive("button")) {
-      const buttonAttributes = editor.getAttributes("button");
-      currentHref = buttonAttributes.href;
+      const attrs = editor.getAttributes("button");
+      currentHref = attrs.href || "";
+      currentTarget = attrs.target || null;
+      currentIdentifierId = attrs['data-identifier-id'] || null;
     }
 
-    alertPrompt("URL/Link", currentHref, ({ data }) => {
-      if (!data) {
-        editor.chain().focus().unsetButton().run();
-      } else {
-        let opts = {
-          href: data,
-          class: "action-button",
-        };
-
-        if (data.startsWith("/") || data.startsWith("#")) {
-          opts = { ...opts, target: null, rel: null };
-        }
-
-        editor.chain().focus().extendMarkRange("button").setButton(opts).run();
-      }
-    });
+    if (onToggleButton) {
+      onToggleButton(currentHref, currentTarget, currentIdentifierId);
+    }
   };
 
   onMount(() => {
@@ -434,6 +419,20 @@
       .map((style) => createStyledMarkExtension(style));
 
     const CustomLink = Link.extend({
+      addAttributes() {
+        return {
+          ...this.parent?.(),
+          'data-identifier-id': {
+            default: null,
+            parseHTML: element => element.getAttribute('data-identifier-id'),
+            renderHTML: attributes => {
+              if (!attributes['data-identifier-id']) return {}
+              return { 'data-identifier-id': attributes['data-identifier-id'] }
+            },
+          },
+        }
+      },
+
       parseHTML() {
         return [
           {
@@ -529,6 +528,9 @@
       },
     });
 
+    if (onEditorCreated) {
+      onEditorCreated(editor);
+    }
   });
 
   onDestroy(() => {

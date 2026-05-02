@@ -3,20 +3,18 @@ import { Dom, gsap } from '@brandocms/jupiter'
 export default (app) => ({
   mounted() {
     this.$input = Dom.find(this.el, 'input')
-    const target = this.el.dataset.target
-      ? this.el.dataset.target
-      : '.options-option'
-    this.$options = Dom.all(this.el.nextElementSibling, target)
+    this._target = this.el.dataset.target || '.options-option'
     this.$input.addEventListener('input', (e) => {
       this.filter(this.$input.value.toLowerCase().trim())
     })
   },
 
   filter(value) {
-    const optionsToHide = this.$options.filter((option) => {
+    const $options = Dom.all(this.el.nextElementSibling, this._target)
+    const optionsToHide = $options.filter((option) => {
       return !this.includes(option.dataset.label, value)
     })
-    gsap.set(this.$options, { display: 'flex' })
+    gsap.set($options, { display: 'flex' })
     if (optionsToHide.length) {
       gsap.set(optionsToHide, { display: 'none' })
     }

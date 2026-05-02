@@ -37,6 +37,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.FilePicker
   alias BrandoAdmin.Components.ImagePicker
   alias BrandoAdmin.Components.VideoPicker
+  alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
   alias BrandoAdmin.Images.FolderBrowser
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.Input
@@ -1625,6 +1626,7 @@ defmodule BrandoAdmin.Components.Form do
           <.live_component module={FilePicker} id="file-picker" />
           <.live_component module={ImagePicker} id="image-picker" />
           <.live_component module={VideoPicker} id="video-picker" current_user={@current_user} />
+          <.live_component module={TipTapLinkDialog} id="tiptap-link-dialog" />
 
           <.file_drawer
             file_changeset={@file_changeset}
@@ -2824,6 +2826,23 @@ defmodule BrandoAdmin.Components.Form do
     )
 
     {:noreply, push_event(socket, "b:show_drawer", %{drawer_id: "image-picker"})}
+  end
+
+  def handle_event("tiptap_link_dialog", params, socket) do
+    content_language = socket.assigns.current_user.config.content_language
+
+    send_update(TipTapLinkDialog,
+      id: "tiptap-link-dialog",
+      event: :open,
+      current_href: params["current_href"] || "",
+      current_target: params["current_target"],
+      current_identifier_id: params["current_identifier_id"],
+      mark_type: params["mark_type"] || "link",
+      tiptap_id: params["tiptap_id"],
+      language: content_language
+    )
+
+    {:noreply, socket}
   end
 
   def handle_event("focus", %{"field" => field}, socket) do

@@ -403,6 +403,28 @@ defmodule Brando.Blueprint.Dsl do
         Enum.find(__forms__(), &(&1.name == name))
       end
 
+      def __rich_text_fields__ do
+        case __form__() do
+          %{tabs: tabs} ->
+            for tab <- tabs,
+                fieldset <- tab.fields,
+                field <- fieldset.fields,
+                name <- extract_rich_text_names(field),
+                do: name
+
+          _ ->
+            []
+        end
+      end
+
+      defp extract_rich_text_names(%Brando.Blueprint.Forms.Input{type: :rich_text, name: name}),
+        do: [name]
+
+      defp extract_rich_text_names(%Brando.Blueprint.Forms.Subform{sub_fields: sub_fields}),
+        do: Enum.flat_map(sub_fields, &extract_rich_text_names/1)
+
+      defp extract_rich_text_names(_), do: []
+
       # generate changeset
       def changeset(schema, params \\ %{}, user \\ :system, sequence \\ nil, opts \\ []) do
         params = %Brando.Blueprint.ChangesetParams{

@@ -72,6 +72,11 @@
   .wide & {
     width: 950px;
   }
+
+  .auto & {
+    width: auto;
+    max-width: 90vw;
+  }
 }
 
 .modal-header {
@@ -318,6 +323,43 @@
 
   button.secondary {
     margin-top: 0;
+  }
+}
+
+/* TipTap link dialog */
+#tiptap-link-dialog {
+  .tiptap-link-tabs {
+    position: static;
+    margin-bottom: 20px;
+  }
+
+  .selected-identifier {
+    margin-bottom: 20px;
+  }
+
+  .tiny-toggle-wrapper {
+    margin-top: 15px;
+  }
+
+  .button-group-vertical.tiny {
+    width: 100%;
+  }
+
+  .panels {
+    min-width: 700px;
+  }
+
+  .identifier-options .identifier {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .button-group-vertical.tiny button.secondary {
+    transition: all 0.15s ease;
+  }
+
+  .panels .panel:nth-of-type(1) {
+    border-right: none;
   }
 }
 

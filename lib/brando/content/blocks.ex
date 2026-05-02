@@ -129,7 +129,7 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
-  Return list of all blocks using `identifier_id`
+  Return list of all blocks using `identifier_id` through vars
   """
   def list_block_ids_using_identifier(identifier_id) do
     query =
@@ -137,6 +137,22 @@ defmodule Brando.Content.Blocks do
         select: b.id,
         left_join: v in assoc(b, :vars),
         where: v.identifier_id == ^identifier_id
+
+    Brando.Repo.all(query)
+  end
+
+  @doc """
+  Return list of all blocks containing `data-identifier-id="ID"` in ref data (TipTap inline links)
+  """
+  def list_block_ids_with_identifier_in_refs(identifier_id) do
+    # In JSONB text representation, quotes are escaped as \"
+    search_term = "%data-identifier-id=\\\\\"#{identifier_id}\\\\\"%"
+
+    query =
+      from b in Block,
+        select: b.id,
+        left_join: r in assoc(b, :refs),
+        where: fragment("CAST(? AS TEXT) LIKE ?", r.data, ^search_term)
 
     Brando.Repo.all(query)
   end
@@ -408,14 +424,105 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
-  Render and update all entries with a block with a var with an identifier
+  Update identifier link URLs in refs and re-render all entries referencing the identifier.
+
+  When an identifier's URL changes, this:
+  1. Updates the `href` in all block refs containing `data-identifier-id="ID"`
+  2. Re-renders all entries with blocks referencing the identifier (through vars or inline links)
   """
-  def render_entries_with_identifier(identifier_id) do
-    identifier_id
-    |> list_block_ids_using_identifier()
+  def update_identifier_links_and_rerender(identifier_id, new_url) do
+    update_identifier_links_in_refs(identifier_id, new_url)
+
+    var_block_ids = list_block_ids_using_identifier(identifier_id)
+    ref_block_ids = list_block_ids_with_identifier_in_refs(identifier_id)
+
+    (var_block_ids ++ ref_block_ids)
+    |> Enum.uniq()
     |> list_root_block_ids_by_source()
     |> list_entry_ids_for_root_blocks_by_source()
     |> enqueue_entry_map_for_render()
+  end
+
+  @doc """
+  Update the href of identifier links in all refs that reference the given identifier.
+  """
+  def update_identifier_links_in_refs(identifier_id, new_url) do
+    # In JSONB text representation, quotes are escaped as \"
+    search_term = "%data-identifier-id=\\\\\"#{identifier_id}\\\\\"%"
+
+    query =
+      from r in Brando.Content.Ref,
+        where: fragment("CAST(? AS TEXT) LIKE ?", r.data, ^search_term)
+
+    refs = Brando.Repo.all(query)
+
+    for ref <- refs do
+      update_ref_identifier_link(ref, identifier_id, new_url)
+    end
+  end
+
+  defp update_ref_identifier_link(ref, identifier_id, new_url) do
+    data = ref.data
+
+    case data do
+      %{data: %{text: text}} when is_binary(text) ->
+        case Brando.Villain.update_identifier_url_in_html(text, identifier_id, new_url) do
+          {:updated, new_text} ->
+            new_inner_data = Map.put(data.data, :text, new_text)
+            new_data = Map.put(data, :data, new_inner_data)
+
+            ref
+            |> Ecto.Changeset.change(%{data: new_data})
+            |> Brando.Repo.update()
+
+          :unchanged ->
+            :ok
+        end
+
+      _ ->
+        :ok
+    end
+  end
+
+  @doc """
+  Update identifier link URLs in rich text fields across all schemas.
+
+  Walks all Blueprint schemas that have `:rich_text` form inputs,
+  searches for entries containing `data-identifier-id="ID"` in those fields,
+  and updates the href to the new URL.
+  """
+  def update_identifier_links_in_rich_text_fields(identifier_id, new_url) do
+    for module <- Brando.Content.Identifier.Registry.list_persistent_identifier_modules(:include_brando),
+        field <- rich_text_fields_for(module) do
+      source = module.__schema__(:source)
+      field_str = to_string(field)
+      id_str = to_string(identifier_id)
+
+      # Single UPDATE per table/field using regexp_replace
+      # Pattern: href="..." followed by data-identifier-id="ID"
+      Ecto.Adapters.SQL.query(
+        Brando.repo(),
+        """
+        UPDATE #{source}
+        SET #{field_str} = regexp_replace(
+          #{field_str},
+          '(href=")[^"]*("[^>]*?data-identifier-id="' || $1 || '")',
+          '\\1' || $2 || '\\2',
+          'g'
+        )
+        WHERE #{field_str} LIKE $3
+        """,
+        [id_str, new_url, "%data-identifier-id=\"#{id_str}\"%"]
+      )
+    end
+  end
+
+  defp rich_text_fields_for(module) do
+    if function_exported?(module, :__rich_text_fields__, 0) do
+      module.__rich_text_fields__()
+    else
+      []
+    end
   end
 
   @doc """

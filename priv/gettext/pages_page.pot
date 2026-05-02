@@ -11,172 +11,162 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/pages/page.ex:277
+#: lib/brando/pages/page.ex:279
 #, elixir-autogen, elixir-format
 msgid "Advanced"
 msgstr ""
 
-#: lib/brando/pages/page.ex:155
-#: lib/brando/pages/page.ex:163
+#: lib/brando/pages/page.ex:157
+#: lib/brando/pages/page.ex:165
 #, elixir-autogen, elixir-format
 msgid "Are you sure?"
 msgstr ""
 
-#: lib/brando/pages/page.ex:249
+#: lib/brando/pages/page.ex:251
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr ""
 
-#: lib/brando/pages/page.ex:294
+#: lib/brando/pages/page.ex:296
 #, elixir-autogen, elixir-format
 msgid "CSS classes"
 msgstr ""
 
-#: lib/brando/pages/page.ex:251
+#: lib/brando/pages/page.ex:253
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
 
-#: lib/brando/pages/page.ex:144
+#: lib/brando/pages/page.ex:146
 #, elixir-autogen, elixir-format
 msgid "Create fragment"
 msgstr ""
 
-#: lib/brando/pages/page.ex:143
+#: lib/brando/pages/page.ex:145
 #, elixir-autogen, elixir-format
 msgid "Create subpage"
 msgstr ""
 
-#: lib/brando/pages/page.ex:155
+#: lib/brando/pages/page.ex:157
 #, elixir-autogen, elixir-format
 msgid "Delete fragment"
 msgstr ""
 
-#: lib/brando/pages/page.ex:163
+#: lib/brando/pages/page.ex:165
 #, elixir-autogen, elixir-format
 msgid "Delete sub page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:154
+#: lib/brando/pages/page.ex:156
 #, elixir-autogen, elixir-format
 msgid "Duplicate fragment"
 msgstr ""
 
-#: lib/brando/pages/page.ex:162
+#: lib/brando/pages/page.ex:164
 #, elixir-autogen, elixir-format
 msgid "Duplicate sub page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:153
+#: lib/brando/pages/page.ex:155
 #, elixir-autogen, elixir-format
 msgid "Edit fragment"
 msgstr ""
 
-#: lib/brando/pages/page.ex:161
+#: lib/brando/pages/page.ex:163
 #, elixir-autogen, elixir-format
 msgid "Edit sub page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:286
+#: lib/brando/pages/page.ex:288
 #, elixir-autogen, elixir-format
 msgid "Has URL"
 msgstr ""
 
-#: lib/brando/pages/page.ex:282
+#: lib/brando/pages/page.ex:284
 #, elixir-autogen, elixir-format
 msgid "Homepage"
 msgstr ""
 
-#: lib/brando/pages/page.ex:268
+#: lib/brando/pages/page.ex:270
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
 
-#: lib/brando/pages/page.ex:287
+#: lib/brando/pages/page.ex:289
 #, elixir-autogen, elixir-format
 msgid "Page has an URL and should be included in sitemap"
 msgstr ""
 
-#: lib/brando/pages/page.ex:283
+#: lib/brando/pages/page.ex:285
 #, elixir-autogen, elixir-format
 msgid "Page is loaded at root address"
 msgstr ""
 
-#: lib/brando/pages/page.ex:311
+#: lib/brando/pages/page.ex:314
 #, elixir-autogen, elixir-format
 msgid "Page variables"
 msgstr ""
 
-#: lib/brando/pages/page.ex:273
+#: lib/brando/pages/page.ex:275
 #, elixir-autogen, elixir-format
 msgid "Parent page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:253
+#: lib/brando/pages/page.ex:255
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
 
-#: lib/brando/pages/page.ex:292
+#: lib/brando/pages/page.ex:294
 #, elixir-autogen, elixir-format
 msgid "Template"
 msgstr ""
 
-#: lib/brando/pages/page.ex:141
-#: lib/brando/pages/page.ex:258
+#: lib/brando/pages/page.ex:143
+#: lib/brando/pages/page.ex:260
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/brando/pages/page.ex:140
-#: lib/brando/pages/page.ex:259
+#: lib/brando/pages/page.ex:142
+#: lib/brando/pages/page.ex:261
 #, elixir-autogen, elixir-format
 msgid "URI"
 msgstr ""
 
-#: lib/brando/pages/page.ex:345
+#: lib/brando/pages/page.ex:348
 #, elixir-autogen, elixir-format
 msgid "page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:346
+#: lib/brando/pages/page.ex:349
 #, elixir-autogen, elixir-format
 msgid "pages"
 msgstr ""
 
-#: lib/brando/pages/page.ex:136
+#: lib/brando/pages/page.ex:138
 #, elixir-autogen, elixir-format
 msgid "Default"
 msgstr ""
 
-#: lib/brando/pages/page.ex:137
+#: lib/brando/pages/page.ex:139
 #, elixir-autogen, elixir-format
 msgid "Title &darr;"
 msgstr ""
 
-#: lib/brando/pages/page.ex:138
+#: lib/brando/pages/page.ex:140
 #, elixir-autogen, elixir-format
 msgid "Title &uarr;"
 msgstr ""
 
-#: lib/brando/pages/page.ex:300
+#: lib/brando/pages/page.ex:301
 #, elixir-autogen, elixir-format
 msgid "About Page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:300
+#: lib/brando/pages/page.ex:301
 #, elixir-autogen, elixir-format
 msgid "About the organization"
-msgstr ""
-
-#: lib/brando/pages/page.ex:299
-#, elixir-autogen, elixir-format
-msgid "Article"
-msgstr ""
-
-#: lib/brando/pages/page.ex:299
-#, elixir-autogen, elixir-format
-msgid "Blog posts, news articles"
 msgstr ""
 
 #: lib/brando/pages/page.ex:302
@@ -184,27 +174,27 @@ msgstr ""
 msgid "Collection Page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:301
+#: lib/brando/pages/page.ex:303
 #, elixir-autogen, elixir-format
 msgid "Contact Page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:301
+#: lib/brando/pages/page.ex:303
 #, elixir-autogen, elixir-format
 msgid "Contact information"
 msgstr ""
 
-#: lib/brando/pages/page.ex:298
+#: lib/brando/pages/page.ex:300
 #, elixir-autogen, elixir-format
 msgid "Default. Generic web page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:303
+#: lib/brando/pages/page.ex:305
 #, elixir-autogen, elixir-format
 msgid "Individual item in a collection"
 msgstr ""
 
-#: lib/brando/pages/page.ex:303
+#: lib/brando/pages/page.ex:305
 #, elixir-autogen, elixir-format
 msgid "Item Page"
 msgstr ""
@@ -214,22 +204,42 @@ msgstr ""
 msgid "Listings, archives, indexes"
 msgstr ""
 
-#: lib/brando/pages/page.ex:304
+#: lib/brando/pages/page.ex:306
 #, elixir-autogen, elixir-format
 msgid "Person or user profile"
 msgstr ""
 
-#: lib/brando/pages/page.ex:304
+#: lib/brando/pages/page.ex:306
 #, elixir-autogen, elixir-format
 msgid "Profile Page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:306
+#: lib/brando/pages/page.ex:309
 #, elixir-autogen, elixir-format
 msgid "Structured data type"
 msgstr ""
 
-#: lib/brando/pages/page.ex:298
+#: lib/brando/pages/page.ex:300
 #, elixir-autogen, elixir-format
 msgid "Web Page"
+msgstr ""
+
+#: lib/brando/pages/page.ex:304
+#, elixir-autogen, elixir-format
+msgid "FAQ Page"
+msgstr ""
+
+#: lib/brando/pages/page.ex:304
+#, elixir-autogen, elixir-format
+msgid "Frequently asked questions"
+msgstr ""
+
+#: lib/brando/pages/page.ex:307
+#, elixir-autogen, elixir-format
+msgid "Search Results Page"
+msgstr ""
+
+#: lib/brando/pages/page.ex:307
+#, elixir-autogen, elixir-format
+msgid "Search results"
 msgstr ""

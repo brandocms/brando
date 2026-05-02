@@ -969,6 +969,23 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     |> then(&{:halt, &1})
   end
 
+  def handle_block_event("tiptap_link_dialog", params, socket) do
+    content_language = Brando.Gettext |> Gettext.get_locale()
+
+    send_update(BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog,
+      id: "tiptap-link-dialog",
+      event: :open,
+      current_href: params["current_href"] || "",
+      current_target: params["current_target"],
+      current_identifier_id: params["current_identifier_id"],
+      mark_type: params["mark_type"] || "link",
+      tiptap_id: params["tiptap_id"],
+      language: content_language
+    )
+
+    {:halt, socket}
+  end
+
   # Fallback for any unhandled events
   def handle_block_event(event, params, socket) do
     require Logger

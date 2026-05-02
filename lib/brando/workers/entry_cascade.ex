@@ -32,7 +32,9 @@ defmodule Brando.Worker.EntryCascade do
 
     identifier_block_ids =
       if identifier_id do
-        Brando.Content.Blocks.list_block_ids_using_identifier(identifier_id)
+        var_ids = Brando.Content.Blocks.list_block_ids_using_identifier(identifier_id)
+        ref_ids = Brando.Content.Blocks.list_block_ids_with_identifier_in_refs(identifier_id)
+        Enum.uniq(var_ids ++ ref_ids)
       else
         []
       end

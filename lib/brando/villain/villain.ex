@@ -241,7 +241,10 @@ defmodule Brando.Villain do
   def parse_and_render(html, context) do
     liquex_parser = Brando.config(Brando.Villain)[:liquex_parser] || Brando.Villain.LiquexParser
 
-    html_string = ensure_string(html)
+    html_string =
+      html
+      |> ensure_string()
+      |> strip_identifier_data_attributes()
 
     with {:ok, parsed_doc} <- liquex_parse(html_string, liquex_parser),
          {result, _} <- liquex_render(html_string, [], parsed_doc, context) do
@@ -266,6 +269,33 @@ defmodule Brando.Villain do
 
   defp ensure_string(html) when is_binary(html), do: html
   defp ensure_string(html) when is_list(html), do: IO.iodata_to_binary(html)
+
+  @doc """
+  Update the `href` of all links with `data-identifier-id="ID"` in HTML.
+
+  Used when an identifier's URL changes to update stored HTML
+  in block refs and rich text fields.
+  """
+  def update_identifier_url_in_html(html, identifier_id, new_url)
+      when is_binary(html) and is_integer(identifier_id) do
+    # href always comes before data-identifier-id (we control the attribute order)
+    pattern = ~r/(<a\b[^>]*?\bhref=")([^"]*)("[^>]*?data-identifier-id="#{identifier_id}")/
+
+    if Regex.match?(pattern, html) do
+      {:updated, Regex.replace(pattern, html, "\\1#{new_url}\\3")}
+    else
+      :unchanged
+    end
+  end
+
+  @doc """
+  Strip editor-only `data-identifier-id` attributes from rendered output.
+  """
+  def strip_identifier_data_attributes(html) when is_binary(html) do
+    String.replace(html, ~r/ data-identifier-id="\d+"/, "")
+  end
+
+  def strip_identifier_data_attributes(html), do: html
 
   defp liquex_parse(html, liquex_parser) do
     Liquex.parse(html, liquex_parser)

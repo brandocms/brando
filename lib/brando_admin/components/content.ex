@@ -133,6 +133,7 @@ defmodule BrandoAdmin.Components.Content do
   attr :narrow, :boolean, default: false
   attr :medium, :boolean, default: false
   attr :wide, :boolean, default: false
+  attr :auto, :boolean, default: false
   attr :remember_scroll_position, :boolean, default: false
   attr :close, :any, default: nil
   attr :ok, :any, default: nil
@@ -149,6 +150,7 @@ defmodule BrandoAdmin.Components.Content do
       |> assign_new(:narrow, fn -> false end)
       |> assign_new(:medium, fn -> false end)
       |> assign_new(:wide, fn -> false end)
+      |> assign_new(:auto, fn -> false end)
       |> assign_new(:remember_scroll_position, fn -> false end)
       |> assign_new(:close, fn -> hide_modal("##{assigns.id}") end)
       |> assign_new(:ok, fn -> nil end)
@@ -161,6 +163,7 @@ defmodule BrandoAdmin.Components.Content do
         @narrow && "narrow",
         @medium && "medium",
         @wide && "wide",
+        @auto && "auto",
         @show && "visible"
       ]}
       phx-window-keydown={@close}

@@ -37,6 +37,7 @@ defmodule BrandoAdmin.LiveView.Form do
         on_mount({BrandoAdmin.LiveView.Form, {:hooks_images, unquote(schema)}})
       end
 
+      on_mount({BrandoAdmin.LiveView.Form, {:hooks_tiptap_link, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_videos, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form, {:hooks_video_events, unquote(schema)}})
 
@@ -226,6 +227,10 @@ defmodule BrandoAdmin.LiveView.Form do
        :handle_event,
        &handle_hooks_focus_event/3
      )}
+  end
+
+  def on_mount({:hooks_tiptap_link, _schema}, _params, _session, socket) do
+    {:cont, attach_hook(socket, :b_form_tiptap_link, :handle_info, &handle_hooks_tiptap_link_info/2)}
   end
 
   defp handle_hooks_focal_point_event(
@@ -851,6 +856,12 @@ defmodule BrandoAdmin.LiveView.Form do
       end
     end
   end
+
+  defp handle_hooks_tiptap_link_info({:tiptap_set_link, tiptap_id, link_data}, socket) do
+    {:halt, push_event(socket, "b:tiptap:set_link:#{tiptap_id}", link_data)}
+  end
+
+  defp handle_hooks_tiptap_link_info(_, socket), do: {:cont, socket}
 
   defp handle_hooks_modules_info({_module, [:module, action]}, socket) when action in [:created, :updated] do
     schema = socket.assigns.schema

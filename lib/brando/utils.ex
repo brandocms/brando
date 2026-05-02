@@ -494,7 +494,8 @@ defmodule Brando.Utils do
   """
   @spec hostname() :: binary
   def hostname, do: "#{Brando.endpoint().url()}"
-  @spec hostname(path :: binary) :: binary
+  @spec hostname(path :: binary | nil) :: binary
+  def hostname(nil), do: hostname()
   def hostname(path), do: Path.join(hostname(), path)
 
   @doc """

@@ -10,11 +10,21 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign_new(:field, fn -> nil end)
      |> assign_new(:selected_schema, fn -> nil end)
      |> assign_new(:selected_schema_raw, fn -> nil end)
      |> assign_new(:selected_identifier_id, fn ->
-       changeset = assigns.field.form.source
-       Ecto.Changeset.get_field(changeset, assigns.field.field)
+       case assigns do
+         %{field: %{} = field} ->
+           changeset = field.form.source
+           Ecto.Changeset.get_field(changeset, field.field)
+
+         %{selected_identifier_id: id} ->
+           id
+
+         _ ->
+           nil
+       end
      end)
      |> assign_new(:selected_identifier, fn
        %{selected_identifier_id: nil} -> nil
@@ -24,6 +34,9 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
      |> assign_new(:wanted_schemas, fn -> [] end)
      |> assign_new(:var_key, fn -> nil end)
      |> assign_new(:var_type, fn -> nil end)
+     |> assign_new(:language, fn -> nil end)
+     |> assign_new(:layout, fn -> :default end)
+     |> assign_new(:statuses, fn -> nil end)
      |> assign_available_schemas()
      |> assign_selected_schema()}
   end
@@ -55,50 +68,100 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
   def render(assigns) do
     ~H"""
     <div>
-      <div :if={@selected_identifier} class="selected-identifier">
-        <h2 class="titlecase">{gettext("Current selected identifier")}</h2>
-        <.identifier identifier={@selected_identifier} />
-      </div>
-      <h2 class="titlecase">{gettext("Select content type")}</h2>
-      <div class="button-group-vertical tiny">
-        <button
-          :for={{label, schema} <- @available_schemas}
-          :key={schema}
-          type="button"
-          class={["secondary", @selected_schema_raw == schema && "selected"]}
-          phx-click={JS.push("select_schema", target: @myself)}
-          phx-value-schema={schema}
-        >
-          {label}
-        </button>
-      </div>
-      <%= if @selected_schema do %>
-        <h2 class="titlecase">{gettext("Available entries")}</h2>
-
-        <div id={"#{@id}-select-modal-filter"} class="select-filter" phx-hook="Brando.SelectFilter" data-target=".identifier">
-          <div class="field-wrapper">
-            <div class="label-wrapper">
-              <label for="identifier-filter" class="control-label">
-                <span>{gettext("Filter identifiers")}</span>
-              </label>
+      <%= if @layout == :columns && @selected_schema do %>
+        <div class="panels">
+          <div class="panel">
+            <div :if={@selected_identifier} class="selected-identifier">
+              <h2 class="titlecase">{gettext("Current selected identifier")}</h2>
+              <.identifier identifier={@selected_identifier} />
             </div>
-            <div class="field-base">
-              <input class="text" name="identifier-filter" type="text" value="" />
-            </div>
+            <h2 class="titlecase">{gettext("Select content type")}</h2>
+            <.schema_buttons
+              available_schemas={@available_schemas}
+              selected_schema_raw={@selected_schema_raw}
+              myself={@myself}
+            />
+          </div>
+          <div class="panel">
+            <.entries_list
+              id={@id}
+              identifiers={@identifiers}
+              selected_identifier_id={@selected_identifier_id}
+              myself={@myself}
+            />
           </div>
         </div>
-
-        <div class="identifier-options">
-          <.identifier
-            :for={identifier <- @identifiers}
-            :key={identifier.id}
-            identifier={identifier}
-            selected_identifier_id={@selected_identifier_id}
-            select={JS.push("select_identifier", target: @myself, value: %{id: identifier.id})}
-          />
+      <% else %>
+        <div :if={@selected_identifier} class="selected-identifier">
+          <h2 class="titlecase">{gettext("Current selected identifier")}</h2>
+          <.identifier identifier={@selected_identifier} />
         </div>
+        <h2 class="titlecase">{gettext("Select content type")}</h2>
+        <.schema_buttons
+          available_schemas={@available_schemas}
+          selected_schema_raw={@selected_schema_raw}
+          myself={@myself}
+        />
+
+        <%= if @selected_schema do %>
+          <.entries_list
+            id={@id}
+            identifiers={@identifiers}
+            selected_identifier_id={@selected_identifier_id}
+            myself={@myself}
+          />
+        <% end %>
       <% end %>
-      <Input.input type={:hidden} field={@field} value={@selected_identifier_id} publish />
+
+      <Input.input :if={@field} type={:hidden} field={@field} value={@selected_identifier_id} publish />
+    </div>
+    """
+  end
+
+  defp schema_buttons(assigns) do
+    ~H"""
+    <div class="button-group-vertical tiny">
+      <button
+        :for={{label, schema} <- @available_schemas}
+        :key={schema}
+        type="button"
+        class={["secondary", @selected_schema_raw == schema && "selected"]}
+        phx-click={JS.push("select_schema", target: @myself)}
+        phx-value-schema={schema}
+      >
+        {label}
+      </button>
+    </div>
+    """
+  end
+
+  defp entries_list(assigns) do
+    ~H"""
+    <div>
+      <h2 class="titlecase">{gettext("Available entries")}</h2>
+
+      <div id={"#{@id}-select-modal-filter"} class="select-filter" phx-hook="Brando.SelectFilter" data-target=".identifier">
+        <div class="field-wrapper">
+          <div class="label-wrapper">
+            <label for="identifier-filter" class="control-label">
+              <span>{gettext("Filter identifiers")}</span>
+            </label>
+          </div>
+          <div class="field-base">
+            <input class="text" name="identifier-filter" type="text" value="" />
+          </div>
+        </div>
+      </div>
+
+      <div class="identifier-options">
+        <.identifier
+          :for={identifier <- @identifiers}
+          :key={identifier.id}
+          identifier={identifier}
+          selected_identifier_id={@selected_identifier_id}
+          select={JS.push("select_identifier", target: @myself, value: %{id: identifier.id})}
+        />
+      </div>
     </div>
     """
   end
@@ -161,7 +224,9 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
 
   def handle_event("select_schema", %{"schema" => schema}, socket) do
     schema_module = Module.concat([schema])
-    {:ok, identifiers} = Brando.Blueprint.Identifier.list_entries_for(schema_module, %{})
+
+    {:ok, identifiers} =
+      list_identifiers_for_schema(schema_module, socket.assigns.language, socket.assigns.statuses)
 
     {:noreply,
      socket
@@ -193,5 +258,31 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     |> assign(:selected_identifier, identifier)
     |> assign(:selected_identifier_id, id)
     |> then(&{:noreply, &1})
+  end
+
+  defp list_identifiers_for_schema(schema_module, language, statuses) do
+    import Ecto.Query, only: [from: 2, where: 3]
+
+    query =
+      from(t in Brando.Content.Identifier,
+        where: t.schema == ^schema_module,
+        order_by: [asc: t.language, asc: t.title]
+      )
+
+    query =
+      if language do
+        where(query, [t], t.language == ^language or is_nil(t.language))
+      else
+        query
+      end
+
+    query =
+      if statuses do
+        where(query, [t], t.status in ^statuses)
+      else
+        query
+      end
+
+    {:ok, Brando.Repo.all(query)}
   end
 end

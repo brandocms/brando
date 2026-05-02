@@ -46,6 +46,20 @@ export default Mark.create({
       href: {
         default: null,
       },
+      target: {
+        default: '_blank',
+      },
+      rel: {
+        default: 'noopener noreferrer nofollow',
+      },
+      'data-identifier-id': {
+        default: null,
+        parseHTML: element => element.getAttribute('data-identifier-id'),
+        renderHTML: attributes => {
+          if (!attributes['data-identifier-id']) return {}
+          return { 'data-identifier-id': attributes['data-identifier-id'] }
+        },
+      },
     }
   },
 

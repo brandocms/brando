@@ -1319,4 +1319,135 @@ defmodule Brando.VillainTest do
     # {:ok, pf2} = Brando.Pages.update_fragment(pf1, %{"language" => "no"}, user)
     # assert pf2.html == "<div class=\"paragraph\">\n  NORWEGIAN\n\n</div>"
   end
+
+  describe "update_identifier_url_in_html/3" do
+    test "updates href for matching identifier link" do
+      html =
+        ~s(<a href="/old-url" data-identifier-id="57">Click here</a>)
+
+      assert {:updated, result} =
+               Brando.Villain.update_identifier_url_in_html(html, 57, "/new-url")
+
+      assert result =~ ~s(href="/new-url")
+      refute result =~ "/old-url"
+      assert result =~ ~s(data-identifier-id="57")
+    end
+
+    test "does not update non-matching identifier" do
+      html = ~s(<a href="/some-url" data-identifier-id="99">Link</a>)
+
+      assert :unchanged =
+               Brando.Villain.update_identifier_url_in_html(html, 57, "/new-url")
+    end
+
+    test "html without identifier links returns unchanged" do
+      html = ~s(<a href="https://example.com">Link</a>)
+
+      assert :unchanged =
+               Brando.Villain.update_identifier_url_in_html(html, 57, "/new-url")
+    end
+  end
+
+  describe "strip_identifier_data_attributes/1" do
+    test "strips data-identifier-id from rendered output" do
+      html = ~s(<a href="/page" data-identifier-id="123">Link</a>)
+
+      result = Brando.Villain.strip_identifier_data_attributes(html)
+
+      refute result =~ "data-identifier-id"
+      assert result =~ ~s(href="/page")
+    end
+
+    test "html without data attributes passes through unchanged" do
+      html = ~s(<a href="https://example.com">Link</a>)
+      assert Brando.Villain.strip_identifier_data_attributes(html) == html
+    end
+  end
+
+  describe "list_block_ids_with_identifier_in_refs/1" do
+    test "finds blocks containing identifier link in ref data", %{user: user} do
+      page_params = Factory.params_for(:page, %{uri: "ref-test", title: "Ref Test"})
+      {:ok, page} = Brando.Pages.create_page(page_params, user)
+      {:ok, identifier} = Brando.Content.get_identifier(Brando.Pages.Page, page)
+
+      identifier_link_text =
+        ~s(<a href="#{identifier.url}" data-identifier-id="#{identifier.id}">Test Link</a>)
+
+      module_ref = %Brando.Content.Ref{
+        uid: "test_ref_mod_#{System.unique_integer([:positive])}",
+        active: true,
+        data: %Brando.Villain.Blocks.TextBlock{
+          type: "text",
+          data: %Brando.Villain.Blocks.TextBlock.Data{
+            text: identifier_link_text,
+            extensions: nil,
+            type: "paragraph"
+          }
+        },
+        description: nil,
+        name: "text"
+      }
+
+      module_struct = %Brando.Content.Module{
+        code: "{% ref refs.text %}",
+        name: "IdentifierRefModule",
+        help_text: "Help text",
+        refs: [module_ref],
+        namespace: "all",
+        class: "css class",
+        vars: []
+      }
+
+      {:ok, module} = Brando.Repo.insert(module_struct)
+
+      block_ref = %Brando.Content.Ref{
+        uid: "test_ref_blk_#{System.unique_integer([:positive])}",
+        active: true,
+        data: %Brando.Villain.Blocks.TextBlock{
+          type: "text",
+          data: %Brando.Villain.Blocks.TextBlock.Data{
+            text: identifier_link_text,
+            extensions: nil,
+            type: "paragraph"
+          }
+        },
+        description: nil,
+        name: "text"
+      }
+
+      simple_blocks = [
+        %Brando.Pages.Fragment.Blocks{
+          block: %Brando.Content.Block{
+            type: :module,
+            source: "Elixir.Brando.Pages.Fragment.Blocks",
+            module_id: module.id,
+            uid: Brando.Utils.generate_uid(),
+            refs: [block_ref],
+            vars: []
+          }
+        }
+        |> Ecto.Changeset.change()
+        |> Map.put(:action, :insert)
+      ]
+
+      fragment_params = Factory.params_for(:fragment)
+
+      fragment_cs =
+        Brando.Pages.Fragment.changeset(%Brando.Pages.Fragment{}, fragment_params, user)
+
+      fragment_cs = Ecto.Changeset.put_assoc(fragment_cs, :entry_blocks, simple_blocks)
+      fragment_cs = Map.put(fragment_cs, :action, :insert)
+
+      {:ok, fragment} = Brando.Pages.create_fragment(fragment_cs, user)
+      block_id = hd(fragment.entry_blocks).block.id
+
+      result = Brando.Content.Blocks.list_block_ids_with_identifier_in_refs(identifier.id)
+      assert block_id in result
+    end
+
+    test "does not find blocks without identifier link in refs" do
+      result = Brando.Content.Blocks.list_block_ids_with_identifier_in_refs(999_999)
+      assert result == []
+    end
+  end
 end

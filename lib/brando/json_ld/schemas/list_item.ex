@@ -6,6 +6,13 @@ defmodule Brando.JSONLD.Schema.ListItem do
             name: nil,
             item: nil
 
+  def build(position, name, nil) do
+    %__MODULE__{
+      position: position,
+      name: name
+    }
+  end
+
   def build(position, name, item) do
     %__MODULE__{
       position: position,
