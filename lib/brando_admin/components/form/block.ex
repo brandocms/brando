@@ -95,6 +95,90 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
+  # Outline: reorder a child within this parent
+  def update(%{event: "outline_reorder_child", child_uid: uid, old: old_idx, new: new_idx}, socket) do
+    block_list = socket.assigns.block_list
+    changesets = socket.assigns.changesets
+
+    new_block_list =
+      block_list
+      |> List.delete_at(old_idx)
+      |> List.insert_at(new_idx, uid)
+
+    new_changesets =
+      Enum.map(new_block_list, fn block_uid ->
+        Enum.find(changesets, fn
+          {^block_uid, _} -> true
+          _ -> false
+        end)
+      end)
+
+    new_forms =
+      Enum.map(new_block_list, fn block_uid ->
+        Enum.find(socket.assigns.children_forms, fn form ->
+          Changeset.get_field(form.source, :uid) == block_uid
+        end)
+      end)
+
+    socket
+    |> assign(:children_forms, new_forms)
+    |> assign(:block_list, new_block_list)
+    |> assign(:changesets, new_changesets)
+    |> reset_position_response_tracker()
+    |> send_child_position_update(new_block_list)
+    |> then(&{:ok, &1})
+  end
+
+  # Outline: extract a child for cross-parent move
+  def update(
+        %{event: "extract_child", child_uid: uid, target_parent_uid: target_uid, target_sequence: seq},
+        socket
+      ) do
+    block_list = socket.assigns.block_list
+    changesets = socket.assigns.changesets
+    children_forms = socket.assigns.children_forms
+
+    # Get the child changeset from the form (changesets list may have nil values)
+    child_changeset =
+      Enum.find_value(children_forms, fn form ->
+        if Changeset.get_field(form.source, :uid) == uid, do: form.source
+      end)
+
+    # Remove from lists
+    new_block_list = List.delete(block_list, uid)
+
+    new_changesets =
+      Enum.reject(changesets, fn
+        {^uid, _} -> true
+        _ -> false
+      end)
+
+    new_forms =
+      Enum.reject(children_forms, fn form ->
+        Changeset.get_field(form.source, :uid) == uid
+      end)
+
+    has_children? = new_block_list !== []
+
+    # Send the child to BlockField for relay to target parent
+    send_to_ref(socket.assigns.parent_ref, %{
+      event: "insert_extracted_child",
+      target_parent_uid: target_uid,
+      child_changeset: child_changeset,
+      sequence: seq
+    })
+
+    socket
+    |> assign(:block_list, new_block_list)
+    |> assign(:changesets, new_changesets)
+    |> assign(:children_forms, new_forms)
+    |> assign(:has_children?, has_children?)
+    |> assign(:block_count, length(new_block_list))
+    |> reset_position_response_tracker()
+    |> send_child_position_update(new_block_list)
+    |> then(&{:ok, &1})
+  end
+
   # duplicate block (that is not an entry block)
   # event is received in the parent block (multi or container)
   # this is received when the block is done gathering all its children changesets

@@ -25,6 +25,7 @@
 @import "./components/ImageEditor.css";
 @import "./components/Form.css";
 @import "./components/Form/BlockEditor.css";
+@import "./components/Form/BlockFieldOutline.css";
 @import "./components/Form/FieldBase.css";
 @import "./components/Form/Subform.css";
 @import "./components/Form/Tab.css";

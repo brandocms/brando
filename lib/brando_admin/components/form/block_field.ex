@@ -6,10 +6,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   alias Brando.Content.Blocks, as: ContentBlocks
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
+  alias BrandoAdmin.Components.Form.BlockField.Outline
   alias Ecto.Changeset
 
   def mount(socket) do
-    {:ok, socket}
+    {:ok, assign(socket, :outline_items, [])}
   end
 
   # duplicate block (that is an entry block)
@@ -223,6 +224,21 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
       {:ok, assign(socket, :root_changesets, updated_root_changesets)}
     end
+  end
+
+  # Outline: relay extracted child to target parent
+  def update(
+        %{event: "insert_extracted_child", target_parent_uid: target_uid, child_changeset: cs, sequence: seq},
+        socket
+      ) do
+    send_update(Block,
+      id: "block-#{target_uid}",
+      event: "insert_pasted_block",
+      block_cs: cs,
+      sequence: seq
+    )
+
+    {:ok, rebuild_outline_items(socket)}
   end
 
   # INSERT ROOT BLOCK
@@ -769,6 +785,100 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:noreply, paste_root_block(socket, socket.assigns.block_count)}
   end
 
+  # Outline: rebuild items when drawer opens
+  def handle_event("rebuild_outline", _, socket) do
+    {:noreply, rebuild_outline_items(socket)}
+  end
+
+  # Outline: root block reorder
+  def handle_event("outline_root_reposition", %{"new" => new_idx, "old" => old_idx}, socket)
+      when new_idx == old_idx do
+    {:noreply, socket}
+  end
+
+  def handle_event("outline_root_reposition", %{"uid" => id, "new" => new_idx, "old" => old_idx}, socket) do
+    block_list = socket.assigns.block_list
+    root_changesets = socket.assigns.root_changesets
+
+    new_block_list =
+      block_list
+      |> List.delete_at(old_idx)
+      |> List.insert_at(new_idx, id)
+
+    new_root_changesets =
+      Enum.map(new_block_list, fn uid ->
+        Enum.find(root_changesets, fn
+          {^uid, _} -> true
+          _ -> false
+        end)
+      end)
+
+    new_forms =
+      Enum.map(new_block_list, fn uid ->
+        Enum.find(socket.assigns.entry_blocks_forms, &(get_form_block_uid(&1) == uid))
+      end)
+
+    # Broadcast to other users
+    if topic = socket.assigns[:blocks_topic] do
+      Phoenix.PubSub.broadcast(
+        Brando.pubsub(),
+        topic,
+        {:blocks_reordered, %{block_list: new_block_list, user_id: socket.assigns.current_user.id}}
+      )
+    end
+
+    socket
+    |> assign(:entry_blocks_forms, new_forms)
+    |> assign(:block_list, new_block_list)
+    |> assign(:root_changesets, new_root_changesets)
+    |> reset_position_response_tracker()
+    |> send_block_entry_position_update(new_block_list)
+    |> rebuild_outline_items()
+    |> then(&{:noreply, &1})
+  end
+
+  # Outline: click to scroll to block
+  def handle_event("outline_scroll_to", %{"uid" => uid}, socket) do
+    selector = "[data-block-uid=\"#{uid}\"]"
+    {:noreply, push_event(socket, "b:scroll_to", %{selector: selector})}
+  end
+
+  # Outline: child reorder or cross-parent move
+  def handle_event("outline_reposition", %{"new" => new_idx, "old" => old_idx}, socket)
+      when new_idx == old_idx do
+    {:noreply, socket}
+  end
+
+  def handle_event("outline_reposition", params, socket) do
+    from_parent_uid = get_in(params, ["from", "parentUid"])
+    to_parent_uid = get_in(params, ["to", "parentUid"])
+    uid = params["uid"]
+    old_idx = params["old"]
+    new_idx = params["new"]
+
+    if from_parent_uid == to_parent_uid do
+      # Same parent: reorder children
+      send_update(Block,
+        id: "block-#{from_parent_uid}",
+        event: "outline_reorder_child",
+        child_uid: uid,
+        old: old_idx,
+        new: new_idx
+      )
+    else
+      # Cross-parent: extract from source, insert into target
+      send_update(Block,
+        id: "block-#{from_parent_uid}",
+        event: "extract_child",
+        child_uid: uid,
+        target_parent_uid: to_parent_uid,
+        target_sequence: new_idx
+      )
+    end
+
+    {:noreply, rebuild_outline_items(socket)}
+  end
+
   def handle_event("show_block_picker", _, socket) do
     # message block picker
     block_picker_id = "block-field-#{socket.assigns.block_field}-module-picker"
@@ -915,13 +1025,42 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       class="blocks-wrapper"
       data-block-field={"#{@form_name}[#{@block_field}]"}
     >
-      <div class="label-wrapper ">
+      <div class="label-wrapper">
         <label class="control-label" data-field-presence={"#{@form_name}[#{@block_field}]"}>
           <span>{gettext("Blocks")}</span>
           <div class="field-presence" phx-update="ignore" id={"#{@form_name}[#{@block_field}]-field-presence"}></div>
         </label>
       </div>
       <div class="blocks-content">
+        <div :if={@block_count > 0} class="blocks-actions">
+          <div class="block-field-dropdown">
+            <button
+              type="button"
+              class="block-field-dropdown-toggle"
+              phx-click={toggle_dropdown("#block-field-#{@block_field}-actions-dropdown")}
+              phx-click-away={hide_dropdown("#block-field-#{@block_field}-actions-dropdown")}
+            >
+              <.icon name="hero-ellipsis-horizontal-circle" />
+            </button>
+            <ul
+              class="block-field-dropdown-content hidden"
+              id={"block-field-#{@block_field}-actions-dropdown"}
+            >
+              <li>
+                <button
+                  type="button"
+                  phx-click={
+                    JS.push("rebuild_outline", target: @myself)
+                    |> toggle_drawer("#block-field-#{@block_field}-outline")
+                    |> hide_dropdown("#block-field-#{@block_field}-actions-dropdown")
+                  }
+                >
+                  <.icon name="hero-bars-3-bottom-left" /> {gettext("Block outline")}
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
         <.live_component
           module={BrandoAdmin.Components.Form.BlockField.ModulePicker}
           id={"block-field-#{@block_field}-module-picker"}
@@ -992,6 +1131,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           paste_click={JS.push("paste_block_at_end", target: @myself)}
         />
       </div>
+      <Outline.outline_drawer
+        id={"block-field-#{@block_field}-outline"}
+        outline_items={@outline_items}
+        block_field={@block_field}
+        target={@myself}
+      />
     </div>
     """
   end
@@ -1086,6 +1231,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       vars: [],
       refs: []
     })
+  end
+
+  defp rebuild_outline_items(socket) do
+    assign(socket, :outline_items, Outline.build_outline_items(socket.assigns.entry_blocks_forms))
   end
 
   defp get_module(module_id), do: Brando.Content.fetch_module(module_id)

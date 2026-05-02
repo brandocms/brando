@@ -4,6 +4,26 @@
 
 #### Features
 
+- **Block outline drawer** (#2667): Add a "Block outline" option to the block field dropdown
+  that opens a side drawer with a condensed tree view of all blocks. Supports click-to-scroll
+  navigation, drag-and-drop reordering at all levels, cross-container child moves, and
+  cross-compatible-multi entry moves (same `module_id` only).
+
+- **Real-time collaboration for block editor**: Multiple users can edit the same entry
+  simultaneously with presence indicators on active fields and blocks.
+
+- **Link to identifiers in TipTap editor** (#2527): TipTap text editor now supports
+  linking to content identifiers directly.
+
+- **Video upload providers (Mux and Bunny)**: Added support for Mux and Bunny as video
+  upload and streaming providers.
+
+- **Drag-and-drop media folders**: Media browser folders can now be reordered via
+  drag and drop.
+
+- **Spark DSL extensions**: Forward `extensions` option to Spark DSL for external
+  blueprint extensions.
+
 - **JSON-LD `@graph` output**: All JSON-LD entities (identity, website, webpage, breadcrumbs,
   content) are now combined into a single connected `@graph` document instead of separate
   `<script>` tags. This follows Google's recommended approach and matches implementations
@@ -33,6 +53,24 @@
 - **`@id` on content entities**: Content entities extracted via the blueprint DSL now
   automatically get an `@id` based on the current URL and entity type.
 
+#### Improvements
+
+- **Villain render pipeline**: Use iodata lists instead of string concatenation for
+  improved rendering performance.
+
+- **Extract Content.Blocks from Villain**: Clean rendering boundary separating content
+  block management from the Villain rendering pipeline.
+
+- **Imagequant for dominant color**: Replaced previous dominant color extraction with
+  imagequant for more accurate results.
+
+- **Live preview optimizations**: Fixed cache bugs, added compile-time assets, and
+  general cleanup for better live preview performance.
+
+- **SameSite/Secure cookies**: Set `SameSite` and `Secure` attributes on cookies.
+
+- **CI matrix**: Drop OTP 26, add Elixir 1.19/1.20 + OTP 28/29.
+
 #### Bug Fixes
 
 - Fixed `@context` inconsistency (`http` vs `https://schema.org`).
@@ -40,6 +78,8 @@
 - Fixed `PostalAddress.addressRegion` incorrectly mapping to `city` instead of `region`.
 - Fixed `CreativeWork.build/1` stub that logged errors and returned empty struct.
 - Added `image` field to Page's `json_ld_schema` using `meta_image`.
+- Fixed block recovery triggering on fresh navigation.
+- Transfer content when deleting user instead of leaving orphaned records.
 
 #### Documentation
 
