@@ -790,6 +790,24 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:noreply, rebuild_outline_items(socket)}
   end
 
+  # Collapse/expand: root blocks only
+  def handle_event("collapse_root_blocks", _, socket) do
+    {:noreply, set_root_blocks_collapsed(socket, true)}
+  end
+
+  def handle_event("expand_root_blocks", _, socket) do
+    {:noreply, set_root_blocks_collapsed(socket, false)}
+  end
+
+  # Collapse/expand: multi block children only
+  def handle_event("collapse_multi_children", _, socket) do
+    {:noreply, set_multi_children_collapsed(socket, true)}
+  end
+
+  def handle_event("expand_multi_children", _, socket) do
+    {:noreply, set_multi_children_collapsed(socket, false)}
+  end
+
   # Outline: root block reorder
   def handle_event("outline_root_reposition", %{"new" => new_idx, "old" => old_idx}, socket)
       when new_idx == old_idx do
@@ -1058,6 +1076,51 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                   <.icon name="hero-bars-3-bottom-left" /> {gettext("Block outline")}
                 </button>
               </li>
+              <li class="dropdown-separator"></li>
+              <li>
+                <button
+                  type="button"
+                  phx-click={
+                    JS.push("collapse_root_blocks", target: @myself)
+                    |> hide_dropdown("#block-field-#{@block_field}-actions-dropdown")
+                  }
+                >
+                  <.icon name="hero-eye-slash" /> {gettext("Collapse root blocks")}
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  phx-click={
+                    JS.push("expand_root_blocks", target: @myself)
+                    |> hide_dropdown("#block-field-#{@block_field}-actions-dropdown")
+                  }
+                >
+                  <.icon name="hero-eye" /> {gettext("Expand root blocks")}
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  phx-click={
+                    JS.push("collapse_multi_children", target: @myself)
+                    |> hide_dropdown("#block-field-#{@block_field}-actions-dropdown")
+                  }
+                >
+                  <.icon name="hero-eye-slash" /> {gettext("Collapse multi blocks")}
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  phx-click={
+                    JS.push("expand_multi_children", target: @myself)
+                    |> hide_dropdown("#block-field-#{@block_field}-actions-dropdown")
+                  }
+                >
+                  <.icon name="hero-eye" /> {gettext("Expand multi blocks")}
+                </button>
+              </li>
             </ul>
           </div>
         </div>
@@ -1235,6 +1298,38 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp rebuild_outline_items(socket) do
     assign(socket, :outline_items, Outline.build_outline_items(socket.assigns.entry_blocks_forms))
+  end
+
+  defp set_root_blocks_collapsed(socket, collapsed) do
+    for block_uid <- socket.assigns.block_list do
+      send_update(Block, id: "block-#{block_uid}", event: "set_collapsed", collapsed: collapsed)
+    end
+
+    socket
+  end
+
+  defp set_multi_children_collapsed(socket, collapsed) do
+    for form <- socket.assigns.entry_blocks_forms do
+      block_cs = Changeset.get_assoc(form.source, :block)
+      block_uid = Changeset.get_field(block_cs, :uid)
+      module_id = Changeset.get_field(block_cs, :module_id)
+
+      if module_id do
+        case Brando.Content.fetch_module(module_id) do
+          %{multi: true} ->
+            send_update(Block,
+              id: "block-#{block_uid}",
+              event: "set_children_collapsed",
+              collapsed: collapsed
+            )
+
+          _ ->
+            :ok
+        end
+      end
+    end
+
+    socket
   end
 
   defp get_module(module_id), do: Brando.Content.fetch_module(module_id)

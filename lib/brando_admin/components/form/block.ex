@@ -26,6 +26,45 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   # fetch_for_shipping — collect current changeset and send to BlockField for broadcasting
+  # set_collapsed — explicitly set the collapsed state (used by bulk collapse/expand)
+  def update(%{event: "set_collapsed", collapsed: collapsed}, socket) do
+    changeset = socket.assigns.form.source
+    uid = socket.assigns.uid
+    belongs_to = socket.assigns.belongs_to
+
+    updated_changeset =
+      if belongs_to == :root do
+        block_cs = Changeset.get_assoc(changeset, :block)
+        updated_block_cs = Changeset.put_change(block_cs, :collapsed, collapsed)
+        Changeset.put_assoc(changeset, :block, updated_block_cs)
+      else
+        Changeset.put_change(changeset, :collapsed, collapsed)
+      end
+
+    new_form = build_form_from_changeset(updated_changeset, uid, belongs_to)
+
+    socket
+    |> assign(:form, new_form)
+    |> assign(:collapsed, collapsed)
+    |> then(&{:ok, &1})
+  end
+
+  # set_children_collapsed — forward collapse state to all children of a multi/container block
+  def update(%{event: "set_children_collapsed", collapsed: collapsed}, socket) do
+    parent_id = socket.assigns.id
+    block_list = socket.assigns.block_list
+
+    for block_uid <- block_list do
+      send_update(__MODULE__,
+        id: "#{parent_id}-child-#{block_uid}",
+        event: "set_collapsed",
+        collapsed: collapsed
+      )
+    end
+
+    {:ok, socket}
+  end
+
   def update(%{event: "fetch_for_shipping"}, socket) do
     changeset = socket.assigns.form.source
 

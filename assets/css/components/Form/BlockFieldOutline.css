@@ -8,6 +8,15 @@
 .block-field-dropdown {
   position: relative;
   display: flex;
+
+  > .block-field-dropdown-toggle span {
+    transition: transform 0.3s ease;
+    transform: rotate(90deg);
+  }
+
+  &:has(.block-field-dropdown-content:not(.hidden)) > .block-field-dropdown-toggle span {
+    transform: rotate(180deg);
+  }
 }
 
 .block-field-dropdown-toggle {
@@ -23,7 +32,7 @@
   color: #9ca3af;
   padding: 0;
 
-  svg {
+  span {
     width: 18px;
     height: 18px;
   }
@@ -39,7 +48,7 @@
   top: 30px;
   right: 0;
   z-index: 10;
-  min-width: 180px;
+  min-width: 220px;
   border-radius: 6px;
   overflow: clip;
   border: 1px solid var(--brando-color-dark);
@@ -48,6 +57,11 @@
 
   li {
     list-style: none;
+
+    &.dropdown-separator {
+      border-top: 1px solid color-mix(in srgb, var(--brando-color-dark) 15%, transparent);
+      margin: 2px 0;
+    }
 
     button {
       @font mono;
@@ -62,10 +76,12 @@
       text-transform: uppercase;
       cursor: pointer;
       color: inherit;
+      white-space: nowrap;
 
       span {
         width: 14px;
         height: 14px;
+        flex-shrink: 0;
       }
 
       &:hover {
