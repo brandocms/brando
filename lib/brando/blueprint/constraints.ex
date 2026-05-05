@@ -15,8 +15,25 @@ defmodule Brando.Blueprint.Constraints do
       - `format` - see `Ecto.Changeset.validate_format/4`
       - `acceptance` - see `Ecto.Changeset.validate_acceptance/3`
       - `confirmation` - see `Ecto.Changeset.validate_confirmation/3`
+
+  ## Block field constraints
+
+      - `require_blocks` - list of module classes that must be present in the block field
+
+  ### Example
+
+      relations do
+        relation :blocks, :has_many,
+          module: :blocks,
+          constraints: [require_blocks: ["header"]]
+      end
+
+  This validates that at least one block using a module with class `"header"` is present
+  when the block field is saved. Validation is skipped for drafts and when blocks are not
+  being cast (i.e., when only other fields are being updated).
   """
   import Ecto.Changeset
+  import Ecto.Query
 
   def run_validations(changeset, _module, attributes) do
     attributes
@@ -74,4 +91,67 @@ defmodule Brando.Blueprint.Constraints do
 
   defp run_validation({:confirmation, true}, validated_changeset, %{name: name}),
     do: validate_confirmation(validated_changeset, name)
+
+  defp run_validation({:require_blocks, required_classes}, changeset, %{name: name, opts: %{module: :blocks}}) do
+    # Skip validation for drafts
+    if Ecto.Changeset.get_field(changeset, :status) == :draft do
+      changeset
+    else
+      assoc_field = :"entry_#{name}"
+      validate_required_blocks(changeset, assoc_field, required_classes)
+    end
+  end
+
+  defp validate_required_blocks(changeset, assoc_field, required_classes) do
+    case Ecto.Changeset.get_change(changeset, assoc_field) do
+      nil ->
+        # Blocks not being changed, skip validation
+        changeset
+
+      entry_block_changesets ->
+        module_ids = extract_block_module_ids(entry_block_changesets)
+
+        if module_ids == [] and required_classes != [] do
+          Enum.reduce(required_classes, changeset, fn required_class, cs ->
+            add_error(cs, assoc_field, "is missing required block: %{class}",
+              class: required_class,
+              validation: :require_blocks
+            )
+          end)
+        else
+          classes =
+            Brando.repo().all(
+              from m in Brando.Content.Module,
+                where: m.id in ^module_ids,
+                select: m.class
+            )
+
+          Enum.reduce(required_classes, changeset, fn required_class, cs ->
+            if required_class in classes do
+              cs
+            else
+              add_error(cs, assoc_field, "is missing required block: %{class}",
+                class: required_class,
+                validation: :require_blocks
+              )
+            end
+          end)
+        end
+    end
+  end
+
+  defp extract_block_module_ids(entry_block_changesets) do
+    entry_block_changesets
+    |> Enum.reject(&(&1.action == :delete))
+    |> Enum.map(fn eb_cs ->
+      case Ecto.Changeset.get_field(eb_cs, :block) do
+        %Ecto.Association.NotLoaded{} -> nil
+        nil -> nil
+        %{active: false} -> nil
+        %{module_id: module_id} -> module_id
+      end
+    end)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+  end
 end

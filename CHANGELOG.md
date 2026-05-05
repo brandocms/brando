@@ -4,6 +4,18 @@
 
 #### Features
 
+- **Validation rules for block fields** (#2573): Add `require_blocks` constraint for block field
+  relations. Validates that blocks using specific module classes are present when saving.
+  Skips validation for drafts and when blocks are not being cast.
+
+  ```elixir
+  relations do
+    relation :blocks, :has_many,
+      module: :blocks,
+      constraints: [require_blocks: ["header"]]
+  end
+  ```
+
 - **Block outline drawer** (#2667): Add a "Block outline" option to the block field dropdown
   that opens a side drawer with a condensed tree view of all blocks. Supports click-to-scroll
   navigation, drag-and-drop reordering at all levels, cross-container child moves, and
