@@ -231,6 +231,93 @@ defmodule BrandoAdmin.LiveView.Listing do
             {:halt, socket}
         end
 
+      "translate_entry_to_language",
+      %{"id" => entry_id, "language" => language},
+      %{assigns: %{current_user: user, schema: schema}} = socket ->
+        singular = schema.__naming__().singular
+        context = schema.__modules__().context
+        list_id = "content_listing_#{schema}_default"
+
+        # Open the dialog immediately
+        send_update(BrandoAdmin.Components.Content.List,
+          id: list_id,
+          action: :translation_progress,
+          translation_dialog: %{step: :duplicating, entry_url: nil}
+        )
+
+        # Duplicate entry — change language and suffix slug fields to avoid unique constraint
+        slug_change_fields =
+          schema.__slug_fields__()
+          |> Enum.map(fn slug_field ->
+            {slug_field.name,
+             fn _entry, current_value ->
+               Brando.Utils.slugify("#{current_value}-#{language}")
+             end}
+          end)
+
+        override_opts = [
+          change_fields: [{:language, String.to_existing_atom(language)} | slug_change_fields]
+        ]
+
+        case apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts]) do
+          {:ok, duped_entry} ->
+            if schema.has_alternates?() do
+              _ = Module.concat([schema, Alternate]).add(entry_id, duped_entry.id)
+            end
+
+            entry_url = schema.__admin_route__(:update, [duped_entry.id])
+
+            # Get source language from original entry
+            {:ok, original} = apply(context, :"get_#{singular}", [entry_id])
+            source_lang = to_string(original.language)
+
+            # Spawn translation Task
+            lv_pid = self()
+
+            Task.start(fn ->
+              progress_fn = fn step ->
+                send(lv_pid, {:translation_progress, schema, %{step: step, entry_url: entry_url}})
+              end
+
+              case Brando.AI.Translation.translate_entry(
+                     schema,
+                     duped_entry.id,
+                     source_lang,
+                     language,
+                     progress_fn
+                   ) do
+                {:ok, _} ->
+                  send(
+                    lv_pid,
+                    {:translation_progress, schema, %{step: :complete, entry_url: entry_url, language: language}}
+                  )
+
+                  BrandoAdmin.LiveView.Listing.update_list_entries(schema)
+
+                {:error, reason} ->
+                  # Roll back: delete the duplicated entry
+                  apply(context, :"delete_#{singular}", [duped_entry.id, user])
+                  BrandoAdmin.LiveView.Listing.update_list_entries(schema)
+
+                  send(
+                    lv_pid,
+                    {:translation_progress, schema, %{step: {:error, inspect(reason)}, entry_url: nil}}
+                  )
+              end
+            end)
+
+            {:halt, socket}
+
+          {:error, _changeset} ->
+            send_update(BrandoAdmin.Components.Content.List,
+              id: list_id,
+              action: :translation_progress,
+              translation_dialog: %{step: {:error, "Duplication failed"}, entry_url: nil}
+            )
+
+            {:halt, socket}
+        end
+
       "rerender_entry", %{"id" => entry_id}, socket ->
         case Brando.Content.Blocks.render_entry(schema, entry_id) do
           {:ok, _entry} ->
@@ -298,6 +385,15 @@ defmodule BrandoAdmin.LiveView.Listing do
         send_update(BrandoAdmin.Components.Content.List,
           id: "content_listing_#{schema}_default",
           action: :update_entries
+        )
+
+        {:halt, socket}
+
+      {:translation_progress, schema, dialog_state}, socket ->
+        send_update(BrandoAdmin.Components.Content.List,
+          id: "content_listing_#{schema}_default",
+          action: :translation_progress,
+          translation_dialog: dialog_state
         )
 
         {:halt, socket}

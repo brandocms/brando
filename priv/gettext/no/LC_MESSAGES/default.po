@@ -3751,3 +3751,63 @@ msgstr "Bruk"
 #, elixir-autogen, elixir-format
 msgid "Remove link"
 msgstr "Fjern lenke"
+
+#: lib/brando_admin/components/content/list/row.ex
+#, elixir-autogen, elixir-format
+msgid "Translate to"
+msgstr "Oversett til"
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Translating entry"
+msgstr "Oversetter oppføring"
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Translation complete!"
+msgstr "Oversettelse fullført!"
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicating entry..."
+msgstr "Dupliserer oppføring..."
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Fetching entry..."
+msgstr "Henter oppføring..."
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Collecting content..."
+msgstr "Samler innhold..."
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Translating content..."
+msgstr "Oversetter innhold..."
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Applying translations..."
+msgstr "Legger inn oversettelser..."
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Re-rendering entry..."
+msgstr "Gjengir oppføring på nytt..."
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Complete!"
+msgstr "Fullført!"
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Translation failed:"
+msgstr "Oversettelse feilet:"
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Open translated entry"
+msgstr "Åpne oversatt oppføring"

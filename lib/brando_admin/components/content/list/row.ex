@@ -229,6 +229,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       assigns.schema.has_trait(Brando.Trait.Translatable) && has_duplicate_fn? &&
         Enum.count(Brando.config(:languages)) > 1
 
+    ai_configured? = Brando.AI.configured?()
+
     assigns =
       assigns
       |> assign(:language, language)
@@ -238,6 +240,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       |> assign(:has_duplicate_fn?, has_duplicate_fn?)
       |> assign(:has_blocks?, has_blocks?)
       |> assign(:duplicate_langs?, duplicate_langs?)
+      |> assign(:ai_configured?, ai_configured?)
       |> assign(:translated_singular, translated_singular)
       |> assign(
         :duplicate_langs,
@@ -283,6 +286,18 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           event="duplicate_entry_to_language"
         >
           {gettext("Duplicate to")} [{String.upcase(lang)}]
+        </.action_button>
+        <.action_button
+          :for={lang <- @duplicate_langs}
+          :if={@duplicate_langs? and @ai_configured?}
+          :key={"translate_#{lang}"}
+          id={"action_#{@listing.name}_translate_entry_to_lang_#{@entry.id}_lang_#{lang}"}
+          entry_id={@entry.id}
+          language={lang}
+          event="translate_entry_to_language"
+          extra_attrs={[class: "ai-translate-action"]}
+        >
+          {gettext("Translate to")} [{String.upcase(lang)}] <.icon name="hero-sparkles" />
         </.action_button>
         <.action_button
           :if={@has_blocks?}

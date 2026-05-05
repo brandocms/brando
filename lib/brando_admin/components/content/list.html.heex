@@ -74,4 +74,10 @@
     selection_actions={@listing.selection_actions ++ @extra_selection_actions}
     target={@myself}
   />
+
+  <.translation_dialog
+    :if={@translation_dialog}
+    dialog={@translation_dialog}
+    target={@myself}
+  />
 </div>

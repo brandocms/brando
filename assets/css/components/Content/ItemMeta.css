@@ -179,6 +179,10 @@
 
         .field-base {
           display: flex;
+
+          .input-with-action {
+            flex-grow: 1;
+          }
         }
 
         textarea,

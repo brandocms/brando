@@ -15,7 +15,11 @@ defmodule BrandoAdmin.Components.Content.List do
   NimbleCSV.define(Brando.CSVParser, separator: "\t", escape: "\"")
 
   def mount(socket) do
-    {:ok, socket |> assign(:selected_rows, []) |> assign(:last_selected_row_id, nil)}
+    {:ok,
+     socket
+     |> assign(:selected_rows, [])
+     |> assign(:last_selected_row_id, nil)
+     |> assign(:translation_dialog, nil)}
   end
 
   def update(%{action: :update_entries} = assigns, socket) do
@@ -24,6 +28,10 @@ defmodule BrandoAdmin.Components.Content.List do
 
   def update(%{action: :clear_selection}, socket) do
     {:ok, socket |> assign(:selected_rows, []) |> assign(:last_selected_row_id, nil)}
+  end
+
+  def update(%{action: :translation_progress, translation_dialog: dialog}, socket) do
+    {:ok, assign(socket, :translation_dialog, dialog)}
   end
 
   def update(assigns, socket) do
@@ -56,6 +64,10 @@ defmodule BrandoAdmin.Components.Content.List do
       end
 
     push_patch(socket, to: to)
+  end
+
+  def handle_event("close_translation_dialog", _, socket) do
+    {:noreply, assign(socket, :translation_dialog, nil)}
   end
 
   def handle_event("export", %{"name" => export_name}, socket) do
@@ -1206,6 +1218,110 @@ defmodule BrandoAdmin.Components.Content.List do
       </div>
     </div>
     """
+  end
+
+  @translation_steps [:duplicating, :fetching, :collecting, :translating, :applying, :rendering, :complete]
+
+  attr :dialog, :map, required: true
+  attr :target, :any, required: true
+
+  def translation_dialog(assigns) do
+    current_step = assigns.dialog.step
+    entry_url = assigns.dialog.entry_url
+    language = Map.get(assigns.dialog, :language)
+
+    error =
+      case current_step do
+        {:error, reason} -> reason
+        _ -> nil
+      end
+
+    step_atom =
+      case current_step do
+        {:translating, _, _} -> :translating
+        {:error, _} -> :error
+        atom -> atom
+      end
+
+    steps =
+      Enum.map(@translation_steps, fn step ->
+        status =
+          cond do
+            error && step_reached?(step, step_atom) -> :done
+            error && step == step_atom -> :error
+            step == step_atom && step == :complete -> :done
+            step == step_atom -> :active
+            step_reached?(step, step_atom) -> :done
+            true -> :pending
+          end
+
+        {step, status}
+      end)
+
+    assigns =
+      assigns
+      |> assign(:steps, steps)
+      |> assign(:error, error)
+      |> assign(:entry_url, entry_url)
+      |> assign(:language, language)
+      |> assign(:complete?, step_atom == :complete)
+
+    ~H"""
+    <div class="translation-dialog-backdrop">
+      <div class="translation-dialog">
+        <header class="translation-dialog-header">
+          <.icon name="hero-sparkles" />
+          <%= if @complete? do %>
+            {gettext("Translation complete!")}
+          <% else %>
+            {gettext("Translating entry")}
+          <% end %>
+        </header>
+        <div class="translation-dialog-steps">
+          <div :for={{step, status} <- @steps} :key={step} class={["translation-step", "step-#{status}"]}>
+            <span class="translation-step-icon">
+              <%= case status do %>
+                <% :done -> %>
+                  <.icon name="hero-check-circle" />
+                <% :active -> %>
+                  <span class="spinner" />
+                <% :error -> %>
+                  <.icon name="hero-x-circle" />
+                <% :pending -> %>
+                  <span class="pending-dot" />
+              <% end %>
+            </span>
+            <span class="translation-step-label">{step_label(step)}</span>
+          </div>
+        </div>
+        <div :if={@error} class="translation-dialog-error">
+          {gettext("Translation failed:")} {@error}
+        </div>
+        <footer class="translation-dialog-footer">
+          <a :if={@complete? and @entry_url} href={@entry_url} class="translation-dialog-link">
+            {gettext("Open translated entry")} &rarr;
+          </a>
+          <button type="button" phx-click="close_translation_dialog" phx-target={@target}>
+            {gettext("Close")}
+          </button>
+        </footer>
+      </div>
+    </div>
+    """
+  end
+
+  defp step_label(:duplicating), do: gettext("Duplicating entry...")
+  defp step_label(:fetching), do: gettext("Fetching entry...")
+  defp step_label(:collecting), do: gettext("Collecting content...")
+  defp step_label(:translating), do: gettext("Translating content...")
+  defp step_label(:applying), do: gettext("Applying translations...")
+  defp step_label(:rendering), do: gettext("Re-rendering entry...")
+  defp step_label(:complete), do: gettext("Complete!")
+
+  defp step_reached?(step, current) do
+    step_idx = Enum.find_index(@translation_steps, &(&1 == step))
+    current_idx = Enum.find_index(@translation_steps, &(&1 == current))
+    step_idx != nil and current_idx != nil and step_idx < current_idx
   end
 
   defp get_statuses(schema) do

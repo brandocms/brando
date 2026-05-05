@@ -262,8 +262,7 @@ defmodule Brando.Datasource do
   Grab list of entries from database
   """
   def list_results(module_binary, key, vars, language) do
-    atom_key = (is_binary(key) && String.to_existing_atom(key)) || key
-    module = Module.concat([module_binary])
+    {module, atom_key} = resolve_module_and_key(module_binary, key)
     ds = get_datasource(module, :*, atom_key)
     ds.list.(module_binary, language, vars)
   end
@@ -275,8 +274,7 @@ defmodule Brando.Datasource do
   def get_selection(_module_binary, _key, nil), do: {:ok, []}
 
   def get_selection(module_binary, key, ids) do
-    atom_key = (is_binary(key) && String.to_existing_atom(key)) || key
-    module = Module.concat([module_binary])
+    {module, atom_key} = resolve_module_and_key(module_binary, key)
     ds = get_datasource(module, :selection, atom_key)
     {:ok, identifiers} = Brando.Content.list_identifiers(ids)
     ds.get.(identifiers)
@@ -286,8 +284,7 @@ defmodule Brando.Datasource do
   Grab single entry from database
   """
   def get_single(module_binary, key, identifier) do
-    atom_key = (is_binary(key) && String.to_existing_atom(key)) || key
-    module = Module.concat([module_binary])
+    {module, atom_key} = resolve_module_and_key(module_binary, key)
     ds = get_datasource(module, :single, atom_key)
     ds.get.(identifier)
   end
@@ -313,11 +310,11 @@ defmodule Brando.Datasource do
   def datasource?(schema), do: {:__datasource__, 0} in schema.__info__(:functions)
 
   def get_meta(module, type, query) do
-    module
-    |> List.wrap()
-    |> Module.concat()
+    {resolved_module, atom_key} = resolve_module_and_key(List.wrap(module), query)
+
+    resolved_module
     |> Extension.get_entities([:datasources])
-    |> Enum.find(&(&1.type == type && &1.key == String.to_existing_atom(query)))
+    |> Enum.find(&(&1.type == type && &1.key == atom_key))
     |> case do
       nil -> nil
       datasource -> datasource.meta
@@ -352,5 +349,14 @@ defmodule Brando.Datasource do
   @deprecated "selection/3 outside of datasource/1 is deprecated. Wrap inside datasource/1"
   defmacro selection(_key, _list_fun, _get_fun) do
     nil
+  end
+
+  # Resolves a module binary and key string into a loaded module and atom key.
+  # Ensures the module is loaded so its datasource key atoms exist in the atom table.
+  defp resolve_module_and_key(module_binary, key) do
+    module = Module.concat(List.wrap(module_binary))
+    Code.ensure_loaded(module)
+    atom_key = if is_atom(key), do: key, else: String.to_existing_atom(key)
+    {module, atom_key}
   end
 end
