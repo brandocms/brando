@@ -29,7 +29,7 @@ defmodule Brando.Villain.Filters do
 
     function_args =
       arguments
-      |> Enum.map(&Liquex.Argument.eval(&1, context))
+      |> Enum.map(fn arg -> Liquex.Argument.eval(arg, context) |> elem(0) end)
       |> merge_keywords()
 
     mod =
@@ -77,10 +77,13 @@ defmodule Brando.Villain.Filters do
 
       iex> Brando.Villain.Filters.abs("-1.1", %{})
       1.1
+
+      iex> Brando.Villain.Filters.abs("-2abc", %{})
+      2.0
   """
   @spec abs(String.t() | number, any) :: number
   def abs(value, _) when is_binary(value) do
-    {float, ""} = Float.parse(value)
+    {float, _} = Float.parse(value)
     abs(float)
   end
 
@@ -157,10 +160,13 @@ defmodule Brando.Villain.Filters do
 
       iex> Brando.Villain.Filters.ceil("3.5", %{})
       4
+
+      iex> Brando.Villain.Filters.ceil("4.6abc", %{})
+      5
   """
   @spec ceil(number | String.t(), map()) :: number
   def ceil(value, _) when is_binary(value) do
-    {num, ""} = Float.parse(value)
+    {num, _} = Float.parse(value)
     num |> Float.ceil() |> trunc()
   end
 
@@ -665,18 +671,22 @@ defmodule Brando.Villain.Filters do
 
       iex> Brando.Villain.Filters.truncate("Ground control to Major Tom.", 20, "", %{})
       "Ground control to Ma"
+
+      iex> Brando.Villain.Filters.truncate("hello", 0, %{})
+      "..."
   """
   def truncate(value, length, ellipsis \\ "...", _) do
     value = to_string(value)
 
-    if String.length(value) <= length do
-      value
-    else
-      String.slice(
-        value,
-        0,
-        length - String.length(ellipsis)
-      ) <> ellipsis
+    cond do
+      String.length(value) <= length ->
+        value
+
+      length - String.length(ellipsis) <= 0 ->
+        ellipsis
+
+      true ->
+        String.slice(value, 0, length - String.length(ellipsis)) <> ellipsis
     end
   end
 

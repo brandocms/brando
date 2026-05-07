@@ -20,7 +20,7 @@ defmodule Brando.Villain.Tags.Link do
 
   @impl true
   def render([link: link], context) do
-    evaled_link = Liquex.Argument.eval(link, context)
+    {evaled_link, _context} = Liquex.Argument.eval(link, context)
 
     link_text = Brando.Villain.Filters.link_text(evaled_link, context)
     link_url = Brando.Villain.Filters.link_url(evaled_link, context)

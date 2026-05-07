@@ -30,7 +30,7 @@ defmodule Brando.Villain.Tags.RouteI18n do
 
   @impl true
   def render([locale: locale, function: function, action: action, args: args], context) do
-    evaled_locale = Liquex.Argument.eval(locale, context)
+    {evaled_locale, _context} = Liquex.Argument.eval(locale, context)
     evaled_args = prepare_args(args, context, function, action)
 
     rendered_route =
@@ -49,7 +49,7 @@ defmodule Brando.Villain.Tags.RouteI18n do
   end
 
   def render([locale: locale, function: function, action: action], context) do
-    evaled_locale = Liquex.Argument.eval(locale, context)
+    {evaled_locale, _context} = Liquex.Argument.eval(locale, context)
 
     rendered_route =
       if function == "page_path" do
@@ -69,7 +69,7 @@ defmodule Brando.Villain.Tags.RouteI18n do
   defp prepare_args(args, context, function, action) do
     evaled_args =
       args
-      |> Enum.map(&Liquex.Argument.eval(&1, context))
+      |> Enum.map(fn arg -> Liquex.Argument.eval(arg, context) |> elem(0) end)
       |> Enum.reject(&(&1 == nil))
 
     if function == "page_path" and action == "show" do

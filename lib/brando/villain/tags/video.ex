@@ -40,12 +40,12 @@ defmodule Brando.Villain.Tags.Video do
     # Force load them
     _ = allowed_atoms
 
-    evaled_source = Liquex.Argument.eval(source, context)
+    {evaled_source, _context} = Liquex.Argument.eval(source, context)
 
     evaled_args =
       args
       |> Enum.map(fn arg ->
-        {key, val} = Liquex.Argument.eval(arg, context)
+        {{key, val}, _context} = Liquex.Argument.eval(arg, context)
         {String.to_existing_atom(key), val}
       end)
 

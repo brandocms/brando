@@ -30,11 +30,11 @@ defmodule Brando.Villain.Tags.Picture do
 
   @impl true
   def render([source: source, args: args], context) do
-    evaled_source = Liquex.Argument.eval(source, context)
+    {evaled_source, _context} = Liquex.Argument.eval(source, context)
 
     evaled_args =
       Enum.map(args, fn arg ->
-        {key, val} = Liquex.Argument.eval(arg, context)
+        {{key, val}, _context} = Liquex.Argument.eval(arg, context)
         {String.to_existing_atom(key), val}
       end)
 

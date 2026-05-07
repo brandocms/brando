@@ -107,8 +107,9 @@ defmodule Brando.Mixfile do
       {:hashids, "~> 2.0"},
 
       # Liquid templates
-      {:liquex, "~> 0.13"},
-      {:html_sanitize_ex, "~> 1.4"},
+      {:liquex, "~> 0.15.0"},
+      {:html_entities, "~> 0.5"},
+      {:html_sanitize_ex, "~> 1.4.0"},
 
       # Misc
       {:req_llm, "~> 1.6"},
@@ -126,10 +127,12 @@ defmodule Brando.Mixfile do
       {:opentelemetry_api, "~> 1.4"},
 
       # Dev dependencies
-      {:credo, "~> 1.5", only: :dev, runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:ex_slop, "~> 0.1", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       {:igniter, "~> 0.7.0", only: [:dev, :test]},
+      {:recompile_buster, "~> 0.1.0", only: [:dev, :test], runtime: false},
 
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test, runtime: false},

@@ -26,7 +26,7 @@ defmodule Brando.Villain.Tags.Ref do
   def render([ref: ref], context) do
     {:field, [_ | [{:key, ref_name}]]} = ref
     brando_render_for_admin = Access.get(context, :brando_render_for_admin)
-    evaled_ref = Liquex.Argument.eval(ref, context)
+    {evaled_ref, _context} = Liquex.Argument.eval(ref, context)
 
     {:ok, modules} = Content.list_modules(@module_cache_ttl)
     {:ok, containers} = Content.list_containers(@container_cache_ttl)

@@ -26,7 +26,7 @@ defmodule Brando.Villain.Tags.Route do
 
   @impl true
   def render([function: function, action: action, args: args], context) do
-    evaled_args = Enum.map(args, &Liquex.Argument.eval(&1, context))
+    evaled_args = Enum.map(args, fn arg -> Liquex.Argument.eval(arg, context) |> elem(0) end)
 
     evaled_args =
       if function == "page_path" and action == "show", do: [evaled_args], else: evaled_args

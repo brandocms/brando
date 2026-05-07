@@ -22,7 +22,7 @@ defmodule Brando.Villain.Tags.Inspect do
 
   @impl true
   def render([source: source], context) do
-    evaled_source = Liquex.Argument.eval(source, context)
+    {evaled_source, _context} = Liquex.Argument.eval(source, context)
 
     assigns = %{src: evaled_source}
 

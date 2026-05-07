@@ -250,7 +250,7 @@ defmodule Brando.Villain do
          {result, _} <- liquex_render(html_string, [], parsed_doc, context) do
       Enum.join(result)
     else
-      {:error, "expected end of string", err} ->
+      {:error, reason, line} ->
         require Logger
 
         Logger.error("""
@@ -259,7 +259,7 @@ defmodule Brando.Villain do
 
         #{inspect(html, pretty: true)}
 
-        --> Expected end of string on line #{inspect(err)}
+        --> #{reason} (line #{line})
 
         """)
 
