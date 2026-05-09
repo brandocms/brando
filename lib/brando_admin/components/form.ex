@@ -1045,62 +1045,33 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp maybe_assign_block_map(socket) do
-    schema = socket.assigns.schema
-    form_blueprint = socket.assigns.form_blueprint
-    blocks = form_blueprint.blocks
-    entry = socket.assigns.entry
+    blocks = socket.assigns.form_blueprint.blocks
 
     socket
-    |> assign_new(:block_map, fn ->
-      case socket.assigns.has_blocks? do
-        true ->
-          Enum.map(
-            blocks,
-            &{
-              &1.name,
-              Module.concat(schema, &1.name |> to_string() |> Macro.camelize()),
-              Map.get(entry, :"entry_#{&1.name}"),
-              &1.opts
-            }
-          )
-
-        false ->
-          []
-      end
-    end)
-    |> assign_new(:block_changesets, fn ->
-      Map.new(blocks, &{&1.name, nil})
-    end)
+    |> assign_new(:block_map, fn -> build_block_map(socket) end)
+    |> assign_new(:block_changesets, fn -> Map.new(blocks, &{&1.name, nil}) end)
   end
 
   defp assign_block_map(socket) do
-    schema = socket.assigns.schema
-    form_blueprint = socket.assigns.form_blueprint
-    blocks = form_blueprint.blocks
-    entry = socket.assigns.entry
-
-    block_map =
-      case socket.assigns.has_blocks? do
-        true ->
-          Enum.map(
-            blocks,
-            &{
-              &1.name,
-              Module.concat(schema, &1.name |> to_string() |> Macro.camelize()),
-              Map.get(entry, :"entry_#{&1.name}"),
-              &1.opts
-            }
-          )
-
-        false ->
-          []
-      end
-
-    block_changesets = Map.new(blocks, &{&1.name, nil})
+    blocks = socket.assigns.form_blueprint.blocks
 
     socket
-    |> assign(:block_map, block_map)
-    |> assign(:block_changesets, block_changesets)
+    |> assign(:block_map, build_block_map(socket))
+    |> assign(:block_changesets, Map.new(blocks, &{&1.name, nil}))
+  end
+
+  defp build_block_map(%{assigns: %{has_blocks?: false}}), do: []
+
+  defp build_block_map(%{assigns: %{schema: schema, form_blueprint: form_blueprint, entry: entry}}) do
+    Enum.map(
+      form_blueprint.blocks,
+      &{
+        &1.name,
+        Module.concat(schema, &1.name |> to_string() |> Macro.camelize()),
+        Map.get(entry, :"entry_#{&1.name}"),
+        &1.opts
+      }
+    )
   end
 
   defp add_preloads(query_params, schema, %{query: nil}) do
@@ -2782,7 +2753,7 @@ defmodule BrandoAdmin.Components.Form do
           try do
             String.to_existing_atom(name)
           rescue
-            _ -> nil
+            ArgumentError -> nil
           end
 
         name ->
@@ -5488,19 +5459,10 @@ defmodule BrandoAdmin.Components.Form do
       |> assign(:label, label)
       |> assign(:raw_instructions, assigns[:instructions])
 
-    f_id =
-      if assigns[:uid] do
-        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field.id}"
-      else
-        "#{assigns.field.id}"
-      end
-
-    f_name = assigns[:field] && assigns[:field].name
-
     assigns =
       assigns
-      |> assign(:f_id, f_id)
-      |> assign(:f_name, f_name)
+      |> assign(:f_id, field_id(assigns))
+      |> assign(:f_name, assigns[:field] && assigns[:field].name)
 
     ~H"""
     <div
@@ -5931,6 +5893,12 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
+  defp field_id(%{uid: uid} = assigns) when not is_nil(uid) do
+    "f-#{uid}-#{assigns[:id_prefix]}-#{assigns.field.id}"
+  end
+
+  defp field_id(assigns), do: "#{assigns.field.id}"
+
   @doc """
   Translates an error message using gettext.
   """
@@ -5983,14 +5951,7 @@ defmodule BrandoAdmin.Components.Form do
         assigns
       end
 
-    f_id =
-      if assigns[:uid] do
-        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field.id}"
-      else
-        "#{assigns.field.id}"
-      end
-
-    assigns = assign(assigns, :f_id, f_id)
+    assigns = assign(assigns, :f_id, field_id(assigns))
 
     ~H"""
     <span :for={error <- @errors} id={"#{@f_id}-error"} class="field-error">
@@ -6010,19 +5971,10 @@ defmodule BrandoAdmin.Components.Form do
   slot :inner_block
 
   def label(assigns) do
-    f_id =
-      if assigns.uid do
-        "f-#{assigns.uid}-#{assigns.id_prefix}-#{assigns.field.id}"
-      else
-        "#{assigns.field.id}"
-      end
-
-    f_name = assigns[:field] && assigns[:field].name
-
     assigns =
       assigns
-      |> assign(:f_id, f_id)
-      |> assign(:f_name, f_name)
+      |> assign(:f_id, field_id(assigns))
+      |> assign(:f_name, assigns[:field] && assigns[:field].name)
 
     ~H"""
     <label class={@class} for={@f_id} data-popover={@popover} phx-click={@click} data-field-presence={@f_name}>
