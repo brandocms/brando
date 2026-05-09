@@ -81,14 +81,11 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     assigns =
       assign_new(assigns, :palette_colors, fn ->
-        if assigns.palette_id not in [nil, ""] do
-          case Brando.Content.get_palette(assigns.palette_id) do
-            {:ok, palette} ->
-              palette.colors
-              |> Enum.map(& &1.hex_value)
-              |> Enum.uniq()
-              |> Enum.join(",")
-          end
+        with palette_id when palette_id not in [nil, ""] <- assigns.palette_id,
+             {:ok, palette} <- Brando.Content.get_palette(palette_id) do
+          palette.colors |> Enum.map(& &1.hex_value) |> Enum.uniq() |> Enum.join(",")
+        else
+          _ -> nil
         end
       end)
 
@@ -530,26 +527,6 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <textarea type={@type} name={@name} id={@id} {@rest}><%= @value %></textarea>
-    """
-  end
-
-  def input(%{type: :i18n} = assigns) do
-    assigns =
-      assign_new(
-        assigns,
-        :value,
-        fn -> maybe_html_escape(assigns.field.value) end
-      )
-
-    assigns =
-      assigns
-      |> assign(:id, assigns.id || assigns.field.id)
-      |> assign(:name, assigns.name || assigns.field.name)
-      |> assign(:hook, (assigns.publish && "Brando.PublishInput") || nil)
-      |> process_input_id()
-
-    ~H"""
-    <input type={@type} name={@name} id={@id} value={@value} phx-hook={@hook} {@rest} />
     """
   end
 
