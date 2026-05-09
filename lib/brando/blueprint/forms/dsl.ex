@@ -103,7 +103,7 @@ defmodule Brando.Blueprint.Forms.Dsl do
         doc: "Cardinality"
       ],
       style: [
-        type: {:in, [:regular, :inline, {:transformer, :atom}]},
+        type: {:in, [:regular, :inline, {:transformer, :atom}, {:transformer, {:list, :atom}}]},
         required: false,
         default: :regular,
         doc: "Style"

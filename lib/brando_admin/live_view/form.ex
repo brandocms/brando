@@ -276,24 +276,33 @@ defmodule BrandoAdmin.LiveView.Form do
 
         image = Map.put(image, :status, :unprocessed)
 
-        # Only send update_entry_relation if the path is a valid struct field path.
-        # Paths containing only integers are metadata (IDs) and should be handled
-        # by the specific LiveView's handle_info, not by this generic hook.
-        if valid_struct_path?(full_path) do
-          send_update(BrandoAdmin.Components.Form,
-            id: target_id,
-            event: "update_entry_relation",
-            updated_relation: image,
-            path: full_path,
-            force_validation: true
-          )
+        case full_path do
+          [:transformer, relation_key | _] ->
+            relation_atom = String.to_existing_atom(relation_key)
+            transformer_id = "#{target_id}-transformer-#{relation_atom}"
 
-          {:halt, socket}
-        else
-          # not a struct field path, so nothing we need to send to the form.
-          # we will pass it on though, in case this is something that needs
-          # to be handled by the specific LiveView.
-          {:cont, socket}
+            send_update(BrandoAdmin.Components.Form.Transformer,
+              id: transformer_id,
+              event: "image_updated",
+              image: image
+            )
+
+            {:halt, socket}
+
+          _ ->
+            if valid_struct_path?(full_path) do
+              send_update(BrandoAdmin.Components.Form,
+                id: target_id,
+                event: "update_entry_relation",
+                updated_relation: image,
+                path: full_path,
+                force_validation: true
+              )
+
+              {:halt, socket}
+            else
+              {:cont, socket}
+            end
         end
 
       ["gallery", _schema, field_name] ->
@@ -347,24 +356,35 @@ defmodule BrandoAdmin.LiveView.Form do
           image_id: image.id
         )
 
-        # Only send update_entry_relation if the path is a valid struct field path.
-        # Paths containing only integers are metadata (IDs) and should be handled
-        # by the specific LiveView's handle_info, not by this generic hook.
-        if valid_struct_path?(full_path) do
-          send_update(BrandoAdmin.Components.Form,
-            id: target_id,
-            event: "update_entry_relation",
-            updated_relation: image,
-            path: full_path,
-            force_validation: true
-          )
+        # Route transformer image updates to the Transformer component
+        case full_path do
+          [:transformer, relation_key | _] ->
+            relation_atom = String.to_existing_atom(relation_key)
+            transformer_id = "#{target_id}-transformer-#{relation_atom}"
 
-          {:halt, socket}
-        else
-          # not a struct field path, so nothing we need to send to the form.
-          # we will pass it on though, in case this is something that needs
-          # to be handled by the specific LiveView.
-          {:cont, socket}
+            send_update(BrandoAdmin.Components.Form.Transformer,
+              id: transformer_id,
+              event: "image_updated",
+              image: image
+            )
+
+            {:halt, socket}
+
+          _ ->
+            # Only send update_entry_relation if the path is a valid struct field path.
+            if valid_struct_path?(full_path) do
+              send_update(BrandoAdmin.Components.Form,
+                id: target_id,
+                event: "update_entry_relation",
+                updated_relation: image,
+                path: full_path,
+                force_validation: true
+              )
+
+              {:halt, socket}
+            else
+              {:cont, socket}
+            end
         end
 
       ["gallery", _schema, field_name] ->
@@ -505,6 +525,44 @@ defmodule BrandoAdmin.LiveView.Form do
             path: full_path,
             force_validation: true
           )
+
+          {:halt, socket}
+        else
+          {:cont, socket}
+        end
+
+      _ ->
+        {:cont, socket}
+    end
+  end
+
+  # 2-tuple video updates (from webhook PubSub, no path) — route to Transformer components
+  defp handle_hooks_video_info({video, [:video, :updated]}, socket) do
+    case String.split(video.config_target || "", ":") do
+      ["video", video_schema_binary, _field_name] ->
+        schema = socket.assigns.schema
+        video_schema = Module.concat([video_schema_binary])
+
+        if video_schema != schema do
+          # Video belongs to a relation module — route to all Transformer components.
+          # Each component checks internally if it owns this video.
+          singular = schema.__naming__().singular
+          form_id = "#{singular}_form"
+
+          # Look up which relations use this module
+          relations = schema.__relations__()
+
+          for rel <- relations,
+              rel.type == :has_many,
+              get_in(rel.opts, [:module]) == video_schema do
+            transformer_id = "#{form_id}-transformer-#{rel.name}"
+
+            send_update(BrandoAdmin.Components.Form.Transformer,
+              id: transformer_id,
+              event: "video_updated",
+              video: video
+            )
+          end
 
           {:halt, socket}
         else

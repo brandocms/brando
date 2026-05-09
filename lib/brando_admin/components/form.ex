@@ -76,7 +76,6 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:active_video_tab, "upload")
      |> assign(:processing_images, [])
      |> assign(:presences, %{})
-     |> assign(:transformer_defaults, %{})
      |> assign(:has_meta?, false)
      |> assign(:status_revisions, :closed)
      |> assign(:processing, false)
@@ -604,24 +603,12 @@ defmodule BrandoAdmin.Components.Form do
     fields_demanding_full_live_preview_rerender =
       socket.assigns.fields_demanding_full_live_preview_rerender
 
-    is_transformer? = match?([:transformer | _], path)
-
-    # 1. Transformer changeset update FIRST (so updated_entry_assocs can read from it)
-    socket =
-      case path do
-        [:transformer, relation_key, asset_key, image_id] when force_validation? ->
-          update_transformer_changeset(socket, relation_key, asset_key, image_id, updated_relation)
-
-        _ ->
-          socket
-      end
-
-    # 2. Always update updated_entry_assocs (for live preview)
+    # 1. Always update updated_entry_assocs (for live preview)
     socket = update_entry_assocs(socket, path, updated_relation)
 
-    # 3. Optionally update entry (not for transformer paths — those update the changeset)
+    # 2. Optionally update entry
     socket =
-      if (update_entry? or force_validation?) and not is_transformer? do
+      if update_entry? or force_validation? do
         update_entry_with_relation(socket, path, updated_relation)
       else
         socket
@@ -725,6 +712,19 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:block_changesets, updated_block_changesets)
+     |> event_tag_received(tag)}
+  end
+
+  # got transformer data from a Transformer component
+  def update(
+        %{event: "provide_transformer_data", transformer_field: field, transformer_data: data, tag: tag},
+        socket
+      ) do
+    updated = Map.put(socket.assigns.transformer_changesets, field, data)
+
+    {:ok,
+     socket
+     |> assign(:transformer_changesets, updated)
      |> event_tag_received(tag)}
   end
 
@@ -957,47 +957,12 @@ defmodule BrandoAdmin.Components.Form do
 
   # -- Helpers for unified update_entry_relation handler --
 
-  # For transformer paths, read the full relation from the already-updated changeset.
-  defp update_entry_assocs(socket, [:transformer, relation_key | _], _updated_relation) do
-    changeset = socket.assigns.form.source
-    entries = get_field(changeset, relation_key)
-
-    if entries do
-      access_path = Brando.Utils.build_access_path([relation_key])
-      assign(socket, :updated_entry_assocs, put_in(socket.assigns.updated_entry_assocs, access_path, entries))
-    else
-      socket
-    end
-  end
-
   defp update_entry_assocs(socket, path, updated_relation) do
     access_path = Brando.Utils.build_access_path(path)
     assign(socket, :updated_entry_assocs, put_in(socket.assigns.updated_entry_assocs, access_path, updated_relation))
   end
 
-  # Updates nested asset in form changeset for transformer paths
-  defp update_transformer_changeset(socket, relation_key, asset_key, image_id, updated_relation) do
-    schema = socket.assigns.schema
-    changeset = socket.assigns.form.source
-    entries = get_field(changeset, relation_key)
-    assoc_type = Brando.Blueprint.Relations.__relation__(schema, relation_key).type
-
-    case Enum.find_index(entries, &(Map.get(&1, :"#{asset_key}_id") == image_id)) do
-      nil ->
-        socket
-
-      idx ->
-        updated_entries =
-          put_in(entries, [Access.at(idx), Access.key(asset_key)], updated_relation)
-
-        updated_changeset =
-          if assoc_type == :has_many,
-            do: put_assoc(changeset, relation_key, updated_entries),
-            else: put_embed(changeset, relation_key, updated_entries)
-
-        assign(socket, :form, to_form(updated_changeset, []))
-    end
-  end
+  # Transformer changeset updates are now handled by the Transformer component
 
   defp update_entry_with_relation(socket, path, updated_relation) do
     entry = socket.assigns.entry || struct(socket.assigns.schema)
@@ -1005,8 +970,6 @@ defmodule BrandoAdmin.Components.Form do
     assign(socket, :entry, put_in(entry, access_path, updated_relation))
   end
 
-  # Strip :transformer prefix for live preview path matching
-  defp live_preview_path([:transformer, relation_key | _]), do: [relation_key]
   defp live_preview_path(path), do: path
 
   defp maybe_force_live_preview_update(socket, true, _) do
@@ -1092,14 +1055,21 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp assign_addon_statuses(%{assigns: %{schema: schema, entry: entry}} = socket) do
+    transformers = extract_transformers(socket.assigns.form_blueprint)
+
     # TODO: turn each into an assign_new
+    has_transformers? = transformers != []
+
     assign(socket,
       has_blocks?: schema.has_trait(Brando.Trait.Blocks),
+      has_transformers?: has_transformers?,
+      all_transformers_received?: !has_transformers?,
       has_meta?: schema.has_trait(Brando.Trait.Meta),
       has_revisioning?: schema.has_trait(Brando.Trait.Revisioned),
       has_scheduled_publishing?: schema.has_trait(Brando.Trait.ScheduledPublishing),
       has_alternates?: (schema.has_trait(Brando.Trait.Translatable) and schema.has_alternates?()) && entry.id,
-      has_live_preview?: check_live_preview(schema)
+      has_live_preview?: check_live_preview(schema),
+      transformer_changesets: Map.new(transformers, fn {name, _, _} -> {name, nil} end)
     )
   end
 
@@ -1247,14 +1217,18 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def event_tag_received(socket, :save) do
-    block_changesets = socket.assigns.block_changesets
+    blocks_ready? = !Enum.any?(Map.values(socket.assigns.block_changesets), &is_nil/1)
+    transformers_ready? = !Enum.any?(Map.values(socket.assigns.transformer_changesets), &is_nil/1)
 
-    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
-      socket
-    else
+    if blocks_ready? && transformers_ready? do
       socket
       |> assign(:all_blocks_received?, true)
+      |> assign(:all_transformers_received?, true)
       |> push_event("b:submit", %{})
+    else
+      socket
+      |> then(fn s -> if blocks_ready?, do: assign(s, :all_blocks_received?, true), else: s end)
+      |> then(fn s -> if transformers_ready?, do: assign(s, :all_transformers_received?, true), else: s end)
     end
   end
 
@@ -2528,7 +2502,6 @@ defmodule BrandoAdmin.Components.Form do
     gallery_fields = schema.__gallery_fields__()
     file_fields = schema.__file_fields__()
     video_fields = schema.__video_fields__()
-    transformers = extract_transformers(socket.assigns.form_blueprint)
     # since LV changed to not allow us to set the :uploads assigns to [] or nil,
     # we need to set a "fake" upload key to not error when passing @uploads to
     # child components :(
@@ -2626,35 +2599,8 @@ defmodule BrandoAdmin.Components.Form do
         )
       end)
 
-    socket_with_transformers =
-      Enum.reduce(transformers, socket_with_video_uploads, fn
-        {relation_key, field, default}, updated_socket ->
-          relation = Brando.Blueprint.Relations.__relation__(schema, relation_key)
-          relation_module = get_in(relation, [Access.key(:opts), Access.key(:module)])
-          img_field = Brando.Blueprint.Assets.__asset__(relation_module, field)
-          max_size = Brando.Utils.try_path(img_field, [:opts, :cfg, :size_limit]) || 4_000_000
-          key = :"#{relation_key}|#{field}"
-          transformer_key = :"#{relation_key}|#{field}|transformer"
-
-          updated_socket
-          |> update(:transformer_defaults, &Map.put(&1, key, default))
-          |> allow_upload(key,
-            accept: ~w(.jpg .jpeg .png .gif .webp .svg),
-            max_file_size: max_size,
-            auto_upload: true,
-            progress: &__MODULE__.handle_image_progress/3
-          )
-          |> allow_upload(transformer_key,
-            accept: ~w(.jpg .jpeg .png .gif .webp .svg),
-            max_entries: 50,
-            max_file_size: max_size,
-            chunk_timeout: 60_000,
-            auto_upload: true,
-            progress: &__MODULE__.handle_transformer_progress/3
-          )
-      end)
-
-    socket_with_transformers
+    # Transformer uploads are now managed by the Transformer component itself
+    socket_with_video_uploads
   end
 
   defp presign_upload(entry, socket, cfg) do
@@ -2884,7 +2830,11 @@ defmodule BrandoAdmin.Components.Form do
      })}
   end
 
-  def handle_event("save", params, %{assigns: %{has_blocks?: true, all_blocks_received?: true}} = socket) do
+  def handle_event(
+        "save",
+        params,
+        %{assigns: %{has_blocks?: true, all_blocks_received?: true, all_transformers_received?: true}} = socket
+      ) do
     schema = socket.assigns.schema
     entry = socket.assigns.entry
     current_user = socket.assigns.current_user
@@ -2923,7 +2873,11 @@ defmodule BrandoAdmin.Components.Form do
 
     send(self(), {:progress_popup, "Associating block fields..."})
 
-    new_changeset = assoc_all_block_fields(block_changesets, changeset)
+    new_changeset =
+      block_changesets
+      |> assoc_all_block_fields(changeset)
+      |> then(&assoc_all_transformer_fields(socket.assigns.transformer_changesets, &1))
+
     entry_for_blocks = build_entry_for_blocks(new_changeset, block_map)
 
     send(self(), {:progress_popup, "Rendering blocks for entry..."})
@@ -2966,6 +2920,7 @@ defmodule BrandoAdmin.Components.Form do
                 socket
                 |> assign(:processing, false)
                 |> assign(:all_blocks_received?, false)
+                |> reset_transformer_changesets()
                 |> assign(:entry_id, entry.id)
                 |> assign_refreshed_entry()
                 |> assign_refreshed_form()
@@ -2984,6 +2939,7 @@ defmodule BrandoAdmin.Components.Form do
                 socket
                 |> assign(:processing, false)
                 |> assign(:all_blocks_received?, false)
+                |> reset_transformer_changesets()
                 |> assign(:entry_id, entry.id)
                 |> assign_refreshed_entry()
                 |> assign_refreshed_form()
@@ -3020,6 +2976,7 @@ defmodule BrandoAdmin.Components.Form do
     # Force-ship the currently focused block before collecting for save
     send(self(), :force_ship_focused_block)
     fetch_root_blocks(socket, :save, 150)
+    fetch_transformer_data(socket, :save)
     send(self(), {:progress_popup, "Saving..."})
 
     {:noreply,
@@ -3028,7 +2985,18 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:processing, true)}
   end
 
-  def handle_event("save", params, %{assigns: %{has_blocks?: false}} = socket) do
+  def handle_event("save", _params, %{assigns: %{has_transformers?: true, all_transformers_received?: false}} = socket) do
+    # no blocks, but has transformers that haven't been collected yet
+    fetch_transformer_data(socket, :save)
+    send(self(), {:progress_popup, "Saving..."})
+
+    {:noreply,
+     socket
+     |> ship_all_field_changes()
+     |> assign(:processing, true)}
+  end
+
+  def handle_event("save", params, %{assigns: %{has_blocks?: false, all_transformers_received?: true}} = socket) do
     socket = ship_all_field_changes(socket)
     schema = socket.assigns.schema
     entry = socket.assigns.entry
@@ -3045,6 +3013,7 @@ defmodule BrandoAdmin.Components.Form do
       |> schema.changeset(entry_params, current_user)
       |> Brando.Utils.set_action()
       |> Brando.Trait.run_trait_before_save_callbacks(schema, current_user)
+      |> assoc_all_transformer_fields(socket.assigns.transformer_changesets)
 
     singular = schema.__naming__().singular
     context = schema.__modules__().context
@@ -4037,6 +4006,37 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
+  defp assoc_all_transformer_fields(changeset, transformer_changesets) do
+    Enum.reduce(transformer_changesets, changeset, fn
+      {_field_name, nil}, acc -> acc
+      {field_name, data}, acc -> Ecto.Changeset.put_assoc(acc, field_name, data)
+    end)
+  end
+
+  defp fetch_transformer_data(socket, tag) do
+    transformers = extract_transformers(socket.assigns.form_blueprint)
+
+    for {relation_key, _field, _default} <- transformers do
+      transformer_id = "#{socket.assigns.form.id}-transformer-#{relation_key}"
+
+      send_update_after(
+        BrandoAdmin.Components.Form.Transformer,
+        [id: transformer_id, event: "fetch_transformer_data", tag: tag],
+        150
+      )
+    end
+
+    socket
+  end
+
+  defp reset_transformer_changesets(socket) do
+    transformers = extract_transformers(socket.assigns.form_blueprint)
+
+    socket
+    |> assign(:all_transformers_received?, transformers == [])
+    |> assign(:transformer_changesets, Map.new(transformers, fn {name, _, _} -> {name, nil} end))
+  end
+
   defp loaded_image?(nil), do: false
   defp loaded_image?(%Ecto.Association.NotLoaded{}), do: false
   defp loaded_image?(%Brando.Images.Image{}), do: true
@@ -4746,120 +4746,12 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  def handle_transformer_progress(key, upload_entry, socket) do
-    current_user = socket.assigns.current_user
-    schema = socket.assigns.schema
-    socket = assign(socket, :processing, upload_entry.progress)
-
-    if upload_entry.done? do
-      entries = get_in(socket.assigns.uploads, [key, Access.key(:entries)])
-      all_done? = Enum.all?(entries, &(&1.progress == 100))
-
-      [relation_key, asset_key, _] = String.split(to_string(key), "|")
-      original_key = key
-      key = [relation_key, asset_key] |> Enum.join("|") |> String.to_existing_atom()
-
-      relation =
-        Brando.Blueprint.Relations.__relation__(schema, String.to_existing_atom(relation_key))
-
-      relation_module = get_in(relation, [Access.key(:opts), Access.key(:module)])
-
-      %{cfg: cfg} =
-        Brando.Blueprint.Assets.__asset_opts__(
-          relation_module,
-          String.to_existing_atom(asset_key)
-        )
-
-      config_target = "image:#{inspect(relation_module)}:#{asset_key}"
-
-      case consume_uploaded_entry(
-             socket,
-             upload_entry,
-             fn meta ->
-               safe_handle_upload(
-                 Map.put(meta, :config_target, config_target),
-                 upload_entry,
-                 cfg,
-                 current_user
-               )
-             end
-           ) do
-        {:upload_error, reason} ->
-          upload_error_noreply(socket, :image, reason)
-
-        image ->
-          socket =
-            case uploaded_entries(socket, original_key) do
-              {[_ | _], []} ->
-                assign(socket, :processing, false)
-
-              {[_ | _], [_ | _]} ->
-                assign(socket, :processing, true)
-
-              {[], [_ | _]} ->
-                assign(socket, :processing, true)
-            end
-
-          Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
-
-          Brando.Images.Processing.queue_processing(
-            image,
-            current_user,
-            {:transformer, relation_key, asset_key, image.id}
-          )
-
-          # get the default struct for the transformer
-          transformer_defaults = socket.assigns.transformer_defaults
-
-          default =
-            case Map.get(transformer_defaults, key) do
-              fun when is_function(fun) ->
-                fun.(socket.assigns.entry, image)
-
-              default ->
-                default
-            end
-
-          asset_relation_key = String.to_existing_atom("#{asset_key}_id")
-          default_with_asset = Map.put(default, asset_relation_key, image.id)
-          changeset = socket.assigns.form.source
-          relation_atom = String.to_existing_atom(relation_key)
-
-          updated_field =
-            changeset
-            |> get_change_or_field(relation_atom)
-            |> Kernel.++([default_with_asset])
-
-          updated_changeset =
-            case relation.type do
-              :has_many -> put_assoc(changeset, relation_atom, updated_field)
-              _ -> put_embed(changeset, relation_atom, updated_field)
-            end
-
-          if all_done? do
-            # hmm
-          end
-
-          {:noreply,
-           socket
-           |> update(:processing_images, &[image.id | &1])
-           |> assign(:form, to_form(updated_changeset, []))}
-      end
-    else
-      {:noreply, socket}
-    end
-  end
+  # Transformer upload handling has been moved to the Transformer component
 
   defp sequence(gallery_images) do
     gallery_images
     |> Enum.with_index()
     |> Enum.map(fn {gi, idx} -> Map.put(gi, :sequence, idx) end)
-  end
-
-  defp get_change_or_field(changeset, field) do
-    with nil <- get_change(changeset, field) do
-      get_field(changeset, field, [])
-    end
   end
 
   def handle_file_progress(

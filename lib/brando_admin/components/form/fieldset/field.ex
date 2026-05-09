@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
 
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Subform
+  alias BrandoAdmin.Components.Form.Transformer
   alias Brando.Blueprint.Forms.Input, as: BlueprintInput
   alias Phoenix.HTML.FormField
 
@@ -46,20 +47,34 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
             opts={[]}
           />
         <% else %>
-          <.live_component
-            module={Subform}
-            id={"#{@form.id}-subform-#{@input.name}"}
-            field={@form[@input.name]}
-            parent_uploads={@parent_uploads}
-            subform={@input}
-            label={@label}
-            relations={@relations}
-            instructions={@instructions}
-            placeholder={@placeholder}
-            current_user={@current_user}
-            form_cid={@form_cid}
-            form_id={@form_id}
-          />
+          <%= if match?({:transformer, _}, @input.style) do %>
+            <.live_component
+              module={Transformer}
+              id={"#{@form.id}-transformer-#{@input.name}"}
+              field={@form[@input.name]}
+              subform={@input}
+              label={@label}
+              instructions={@instructions}
+              current_user={@current_user}
+              form_cid={@form_cid}
+              form_id={@form_id}
+            />
+          <% else %>
+            <.live_component
+              module={Subform}
+              id={"#{@form.id}-subform-#{@input.name}"}
+              field={@form[@input.name]}
+              parent_uploads={@parent_uploads}
+              subform={@input}
+              label={@label}
+              relations={@relations}
+              instructions={@instructions}
+              placeholder={@placeholder}
+              current_user={@current_user}
+              form_cid={@form_cid}
+              form_id={@form_id}
+            />
+          <% end %>
         <% end %>
       <% else %>
         <Form.input

@@ -108,77 +108,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
     {:ok, socket}
   end
 
-  def render(%{subform: %{style: {:transformer, transform_field}}} = assigns) do
-    upload_key = :"#{assigns.subform.name}|#{transform_field}|transformer"
-    _ = :"#{assigns.subform.name}|#{transform_field}_id"
-    upload_field = Map.get(assigns.parent_uploads, upload_key)
-
-    assigns =
-      assigns
-      |> assign(:upload_field, upload_field)
-      |> assign(:transform_field, transform_field)
-
-    ~H"""
-    <fieldset>
-      <Form.field_base
-        :if={@subform.cardinality == :many}
-        field={@field}
-        label={@label}
-        instructions={@instructions}
-        class="subform"
-        meta_top
-      >
-        <div id={"#{@field.id}-sortable"} data-embeds={@embeds?} phx-hook={@sequenced? && "Brando.SortableEmbeds"}>
-          <.empty_subform :if={@empty_subform_fields} field={@field} />
-          <.inputs_for :let={sub_form} field={@field} skip_hidden>
-            <div
-              class={[
-                "subform-entry",
-                "group",
-                sub_form.index not in @open_entries && "listing"
-              ]}
-              data-id={sub_form.index}
-            >
-              <input type="hidden" name={sub_form[:id].name} value={sub_form[:id].value} />
-              <input type="hidden" name={sub_form[:_persistent_id].name} value={sub_form.index} />
-              <input type="hidden" name={"#{@field.form.name}[#{@sort_param}][]"} value={sub_form.index} />
-              <div class="subform-tools">
-                <.subentry_edit
-                  on_click={JS.push("edit_subentry", value: %{index: sub_form.index}, target: @myself)}
-                  open={sub_form.index in @open_entries}
-                />
-                <.subentry_sequence :if={@sequenced?} />
-                <.subentry_remove name={"#{@field.form.name}[#{@drop_param}][]"} index={sub_form.index} />
-              </div>
-              <.listing subform={sub_form} subform_config={@subform} />
-              <div class="subform-fields">
-                <Input.hidden :if={@sequenced? and !@embeds?} field={sub_form[:sequence]} value={sub_form.index} />
-                <Subform.Field.render
-                  :for={input <- @subform.sub_fields}
-                  cardinality={:many}
-                  sub_form={sub_form}
-                  input={input}
-                  path={@path ++ [sub_form.index]}
-                  parent_uploads={@parent_uploads}
-                  parent_form_id={@parent_form_id}
-                  subform_id={@id}
-                  current_user={@current_user}
-                />
-              </div>
-            </div>
-          </.inputs_for>
-        </div>
-        <div class="actions">
-          <.subentry_add on_click={JS.push("add_subentry", target: @myself)} />
-          <.transformer_upload upload_field={@upload_field} />
-          <.sort_by_filename on_click={
-            JS.push("sort_by_filename", value: %{transform_field: @transform_field}, target: @myself)
-          } />
-        </div>
-      </Form.field_base>
-    </fieldset>
-    """
-  end
+  # Transformer rendering has been moved to BrandoAdmin.Components.Form.Transformer
 
   # inline
   def render(%{subform: _} = assigns) do
@@ -258,27 +188,6 @@ defmodule BrandoAdmin.Components.Form.Subform do
         <.subentry_add on_click={JS.push("add_subentry", target: @myself)} />
       </Form.field_base>
     </fieldset>
-    """
-  end
-
-  def transformer_upload(assigns) do
-    ~H"""
-    <label class="upload-button">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="1.5"
-        stroke="currentColor"
-        class="w-6 h-6"
-      >
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-      </svg>
-      {gettext("Pick files")}
-      <.live_file_input upload={@upload_field} />
-    </label>
     """
   end
 
@@ -386,37 +295,6 @@ defmodule BrandoAdmin.Components.Form.Subform do
     """
   end
 
-  def listing(assigns) do
-    {:transformer, image_field_atom} = assigns.subform_config.style
-
-    assigns =
-      assigns
-      |> assign(:image_field, assigns.subform[image_field_atom])
-      |> assign(:entry, Ecto.Changeset.apply_changes(assigns.subform.source))
-
-    ~H"""
-    <div class="subform-listing">
-      <.live_component
-        module={Input.Image}
-        id={"#{@subform.id}-image_field"}
-        field={@image_field}
-        parent_uploads={[]}
-        form={@subform}
-        label={:hidden}
-        editable={false}
-        square
-      />
-      <div class="subform-listing-row">
-        {Phoenix.LiveView.TagEngine.component(
-          @subform_config.listing,
-          [entry: @entry],
-          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-        )}
-      </div>
-    </div>
-    """
-  end
-
   def handle_event("focus", _, socket) do
     {:noreply, socket}
   end
@@ -512,47 +390,6 @@ defmodule BrandoAdmin.Components.Form.Subform do
     {:noreply, push_event(socket, "b:validate", %{})}
   end
 
-  def handle_event("sort_by_filename", %{"transform_field" => transform_field}, socket) do
-    field_name = socket.assigns.subform.name
-    changeset = socket.assigns.field.form.source
-    module = changeset.data.__struct__
-    %{type: rel_type} = Brando.Blueprint.Relations.__relation__(module, field_name)
-    form_id = "#{module.__naming__().singular}_form"
-
-    # TODO: change to Ecto.Changeset.get_assoc(changeset, field_name)
-    # then we can skip the .change in extract_path too maybe?
-    related_entries = get_change_or_field(changeset, field_name)
-
-    order_indices =
-      related_entries
-      |> Enum.map(&extract_path(&1, transform_field))
-      |> Enum.with_index()
-      |> Enum.sort()
-      |> Enum.map(fn {_, idx} -> idx end)
-
-    sorted_related_entries =
-      order_indices
-      |> Enum.map(&Enum.at(related_entries, &1))
-      |> Enum.with_index()
-      |> Enum.map(fn {entry, idx} -> Ecto.Changeset.change(entry, %{sequence: idx}) end)
-
-    updated_changeset =
-      if rel_type == :embeds_many do
-        Ecto.Changeset.put_embed(changeset, field_name, sorted_related_entries)
-      else
-        Ecto.Changeset.put_assoc(changeset, field_name, sorted_related_entries)
-      end
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset,
-      force_validation: false
-    )
-
-    {:noreply, socket}
-  end
-
   def handle_event("sequenced_subform", %{"ids" => order_indices} = event_params, socket) do
     field_name = socket.assigns.subform.name
     changeset = socket.assigns.field.form.source
@@ -594,14 +431,5 @@ defmodule BrandoAdmin.Components.Form.Subform do
     with nil <- Ecto.Changeset.get_change(changeset, field) do
       Ecto.Changeset.get_field(changeset, field, [])
     end
-  end
-
-  defp extract_path(entry, transform_field) do
-    field_map =
-      entry
-      |> Ecto.Changeset.change()
-      |> Ecto.Changeset.get_field(String.to_existing_atom(transform_field), %{path: ""})
-
-    (is_map(field_map) && Brando.Utils.try_path(field_map, [:path])) || ""
   end
 end
