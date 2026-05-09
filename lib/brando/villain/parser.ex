@@ -1208,7 +1208,7 @@ defmodule Brando.Villain.Parser do
 
   defp process_refs(nil), do: %{}
 
-  defp process_refs(refs), do: Enum.map(refs, &process_ref(&1)) |> Enum.into(%{})
+  defp process_refs(refs), do: Map.new(refs, &process_ref(&1))
 
   defp process_ref(%{name: ref_name} = ref_block) do
     # Build the processed ref by combining data with referenced entities
