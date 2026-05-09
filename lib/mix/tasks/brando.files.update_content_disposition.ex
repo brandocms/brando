@@ -97,47 +97,47 @@ defmodule Mix.Tasks.Brando.Files.UpdateContentDisposition do
 
     Mix.shell().info("Found #{length(files)} files to update\n")
 
-    if length(files) == 0 do
+    if files == [] do
       Mix.shell().info("No files to update.")
     else
-      for file <- files do
-        s3_key = Path.join(["media", config.upload_path, file.filename])
-
-        case bucket |> S3.head_object(s3_key) |> ExAws.request(s3_config) do
-          {:error, _} ->
-            Mix.shell().error("  [SKIP] Key not found: #{s3_key}\n")
-
-          {:ok, _} ->
-            disposition_value =
-              case disposition do
-                :inline -> "inline"
-                :attachment -> "attachment; filename=\"#{file.filename}\""
-              end
-
-            Mix.shell().info("  Updating: #{s3_key}")
-            Mix.shell().info("    -> Content-Disposition: #{disposition_value}")
-
-            unless dry_run? do
-              bucket
-              |> S3.put_object_copy(s3_key, bucket, s3_key,
-                metadata_directive: :REPLACE,
-                content_disposition: disposition_value,
-                content_type: file.mime_type,
-                acl: :public_read
-              )
-              |> ExAws.request(s3_config)
-              |> case do
-                {:ok, _} ->
-                  Mix.shell().info([:green, "    [OK]\n"])
-
-                {:error, err} ->
-                  Mix.shell().error("    [ERROR] #{inspect(err)}\n")
-              end
-            end
-        end
-      end
-
+      Enum.each(files, &update_file(&1, config, bucket, disposition, dry_run?, s3_config))
       Mix.shell().info("\nDone!")
+    end
+  end
+
+  defp update_file(file, config, bucket, disposition, dry_run?, s3_config) do
+    s3_key = Path.join(["media", config.upload_path, file.filename])
+
+    case bucket |> S3.head_object(s3_key) |> ExAws.request(s3_config) do
+      {:error, _} ->
+        Mix.shell().error("  [SKIP] Key not found: #{s3_key}\n")
+
+      {:ok, _} ->
+        disposition_value = disposition_value(disposition, file.filename)
+        Mix.shell().info("  Updating: #{s3_key}")
+        Mix.shell().info("    -> Content-Disposition: #{disposition_value}")
+
+        unless dry_run? do
+          copy_with_disposition(bucket, s3_key, disposition_value, file.mime_type, s3_config)
+        end
+    end
+  end
+
+  defp disposition_value(:inline, _filename), do: "inline"
+  defp disposition_value(:attachment, filename), do: "attachment; filename=\"#{filename}\""
+
+  defp copy_with_disposition(bucket, s3_key, disposition_value, mime_type, s3_config) do
+    bucket
+    |> S3.put_object_copy(s3_key, bucket, s3_key,
+      metadata_directive: :REPLACE,
+      content_disposition: disposition_value,
+      content_type: mime_type,
+      acl: :public_read
+    )
+    |> ExAws.request(s3_config)
+    |> case do
+      {:ok, _} -> Mix.shell().info([:green, "    [OK]\n"])
+      {:error, err} -> Mix.shell().error("    [ERROR] #{inspect(err)}\n")
     end
   end
 end
