@@ -57,14 +57,8 @@ defmodule Brando.Worker.ImageProcessor do
 
   defp maybe_run_completed_callback(image, config, user) do
     case config.completed_callback do
-      nil ->
-        {:ok, image}
-
-      completed_callback ->
-        case completed_callback.(image, user) do
-          {:ok, image} -> {:ok, image}
-          {:error, reason} -> {:error, reason}
-        end
+      nil -> {:ok, image}
+      completed_callback -> completed_callback.(image, user)
     end
   end
 
