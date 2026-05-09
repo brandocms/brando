@@ -191,49 +191,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
 
   defp compute_display_values_from_form(nil, _), do: %{title: nil, alt: nil, credits: nil}
 
-  defp compute_display_values_from_form(obj, nil) do
-    # No override form, use base values
-    cond do
-      loaded_assoc?(obj, :image) ->
-        %{
-          title: obj.image.title,
-          alt: obj.image.alt,
-          credits: obj.image.credits
-        }
-
-      loaded_assoc?(obj, :video) ->
-        %{
-          title: obj.video.title,
-          alt: nil,
-          credits: nil
-        }
-
-      true ->
-        %{title: nil, alt: nil, credits: nil}
-    end
-  end
+  defp compute_display_values_from_form(obj, nil), do: base_display_values(obj)
 
   defp compute_display_values_from_form(obj, override) do
-    # Get base values
-    base_values =
-      cond do
-        loaded_assoc?(obj, :image) ->
-          %{
-            title: obj.image.title,
-            alt: obj.image.alt,
-            credits: obj.image.credits
-          }
-
-        loaded_assoc?(obj, :video) ->
-          %{
-            title: obj.video.title,
-            alt: nil,
-            credits: nil
-          }
-
-        true ->
-          %{title: nil, alt: nil, credits: nil}
-      end
+    base_values = base_display_values(obj)
 
     # Extract override values whether it's a changeset or struct
     {use_default_title, use_default_credits, use_default_alt, title, credits, alt} =
@@ -327,6 +288,19 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
         <p>{gettext("Caption overrides not available - no override data")}</p>
       </div>
       """
+    end
+  end
+
+  defp base_display_values(obj) do
+    cond do
+      loaded_assoc?(obj, :image) ->
+        %{title: obj.image.title, alt: obj.image.alt, credits: obj.image.credits}
+
+      loaded_assoc?(obj, :video) ->
+        %{title: obj.video.title, alt: nil, credits: nil}
+
+      true ->
+        %{title: nil, alt: nil, credits: nil}
     end
   end
 end
