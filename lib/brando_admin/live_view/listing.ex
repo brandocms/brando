@@ -483,7 +483,8 @@ defmodule BrandoAdmin.LiveView.Listing do
       try do
         schema.__admin_route__(:create, [])
       rescue
-        _ -> nil
+        UndefinedFunctionError -> nil
+        FunctionClauseError -> nil
       end
     end)
   end
