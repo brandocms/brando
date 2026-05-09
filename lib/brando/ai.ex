@@ -199,7 +199,9 @@ defmodule Brando.AI do
 
   defp get_provider_api_key(nil), do: nil
   defp get_provider_api_key(config) when is_list(config), do: Keyword.get(config, :api_key)
-  defp get_provider_api_key(config) when is_map(config), do: Map.get(config, :api_key) || Map.get(config, "api_key")
+  defp get_provider_api_key(%{api_key: api_key}), do: api_key
+  defp get_provider_api_key(%{"api_key" => api_key}), do: api_key
+  defp get_provider_api_key(config) when is_map(config), do: nil
   defp get_provider_api_key(_), do: nil
 
   defp fallback_req_llm_key(provider) do
