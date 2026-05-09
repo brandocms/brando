@@ -411,7 +411,7 @@ defmodule Brando.Query.MutationsTest do
       assert length(original_block.table_rows) == 2
 
       original_row = hd(original_block.table_rows)
-      assert length(original_row.vars) >= 1
+      assert original_row.vars != []
       original_var_ids = Enum.map(original_row.vars, & &1.id)
       assert Enum.all?(original_var_ids, &(not is_nil(&1)))
 
@@ -435,7 +435,7 @@ defmodule Brando.Query.MutationsTest do
         assert dup_row.id != nil
 
         # Vars should be duplicated with new IDs
-        assert length(dup_row.vars) >= 1
+        assert dup_row.vars != []
 
         for var <- dup_row.vars do
           assert var.id != nil
