@@ -3,6 +3,7 @@ defmodule Brando.JSONLD.Schema.CreativeWork do
   CreativeWork schema
   """
   @derive Jason.Encoder
+  # credo:disable-for-next-line Credo.Check.Warning.StructFieldAmount
   defstruct "@context": "https://schema.org",
             "@type": "CreativeWork",
             about: nil,

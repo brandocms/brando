@@ -449,6 +449,7 @@ defmodule Mix.Tasks.Brando.Install do
     {:copy, "assets/frontend/js/config/HEADER.js", "assets/frontend/js/config/HEADER.js"}
   ]
 
+  # credo:disable-for-next-line ExSlop.Check.Warning.PathExpandPriv
   @root Path.expand("../../../priv", __DIR__)
 
   for {format, source, _} <- @new ++ @static do
