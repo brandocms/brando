@@ -40,4 +40,24 @@ defmodule BrandoAdmin.Components.Form.BlockChangesetList do
     block_list = socket.assigns.block_list
     assign(socket, :position_response_tracker, Enum.map(block_list, &{&1, false}))
   end
+
+  @doc """
+  Marks `uid` as responded in the position tracker. When all have responded,
+  triggers a live preview update.
+  """
+  def handle_position_response(socket, uid) do
+    form_id = socket.assigns.form_id
+
+    position_response_tracker =
+      Enum.map(socket.assigns.position_response_tracker, fn
+        {^uid, _} -> {uid, true}
+        item -> item
+      end)
+
+    unless Enum.any?(position_response_tracker, &(elem(&1, 1) == false)) do
+      Phoenix.LiveView.send_update(BrandoAdmin.Components.Form, id: form_id, event: "update_live_preview")
+    end
+
+    {:ok, assign(socket, :position_response_tracker, position_response_tracker)}
+  end
 end

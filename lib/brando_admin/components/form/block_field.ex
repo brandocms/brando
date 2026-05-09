@@ -445,21 +445,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   def update(%{event: "signal_position_update", uid: uid}, socket) do
-    form_id = socket.assigns.form_id
-    position_response_tracker = socket.assigns.position_response_tracker
-
-    position_response_tracker =
-      Enum.map(position_response_tracker, fn
-        {^uid, _} -> {uid, true}
-        item -> item
-      end)
-
-    if Enum.any?(position_response_tracker, &(elem(&1, 1) == false)) do
-      {:ok, assign(socket, :position_response_tracker, position_response_tracker)}
-    else
-      send_update(BrandoAdmin.Components.Form, id: form_id, event: "update_live_preview")
-      {:ok, assign(socket, :position_response_tracker, position_response_tracker)}
-    end
+    BrandoAdmin.Components.Form.BlockChangesetList.handle_position_response(socket, uid)
   end
 
   def update(%{event: "enable_live_preview", cache_key: cache_key}, socket) do

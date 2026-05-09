@@ -381,26 +381,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     if !Enum.any?(updated_changesets, &(elem(&1, 1) == nil)) do
       updated_changesets_list = Enum.map(updated_changesets, &elem(&1, 1))
 
-      # if the changeset struct is a block we put it directly,
-      # but if it's an entry block we need to put it under the block association
-      updated_changeset =
-        if changeset.data.__struct__ == Brando.Content.Block do
-          Changeset.put_assoc(
-            changeset,
-            :children,
-            Enum.map(updated_changesets_list, &Brando.Utils.set_action/1)
-          )
-        else
-          updated_block_changeset =
-            changeset
-            |> Changeset.get_assoc(:block)
-            |> Changeset.put_assoc(
-              :children,
-              Enum.map(updated_changesets_list, &Brando.Utils.set_action/1)
-            )
-
-          Changeset.put_assoc(changeset, :block, updated_block_changeset)
-        end
+      updated_changeset = put_children(changeset, updated_changesets_list)
 
       if root_uid == this_uid do
         # Terminal: send populated changeset to parent for duplication or copy
@@ -575,21 +556,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def update(%{event: "signal_position_update", uid: uid}, socket) do
-    form_id = socket.assigns.form_id
-    position_response_tracker = socket.assigns.position_response_tracker
-
-    position_response_tracker =
-      Enum.map(position_response_tracker, fn
-        {^uid, _} -> {uid, true}
-        item -> item
-      end)
-
-    if Enum.any?(position_response_tracker, &(elem(&1, 1) == false)) do
-      {:ok, assign(socket, :position_response_tracker, position_response_tracker)}
-    else
-      send_update(BrandoAdmin.Components.Form, id: form_id, event: "update_live_preview")
-      {:ok, assign(socket, :position_response_tracker, position_response_tracker)}
-    end
+    BrandoAdmin.Components.Form.BlockChangesetList.handle_position_response(socket, uid)
   end
 
   def update(%{event: "clear_changesets"}, socket) do
@@ -717,26 +684,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     if !Enum.any?(updated_changesets, &(elem(&1, 1) == nil)) do
       updated_changesets_list = Enum.map(updated_changesets, &elem(&1, 1))
 
-      # if the changeset struct is a block we put it directly,
-      # but if it's an entry block we need to put it under the block association
-      updated_changeset =
-        if changeset.data.__struct__ == Brando.Content.Block do
-          Changeset.put_assoc(
-            changeset,
-            :children,
-            Enum.map(updated_changesets_list, &Brando.Utils.set_action/1)
-          )
-        else
-          updated_block_changeset =
-            changeset
-            |> Changeset.get_assoc(:block)
-            |> Changeset.put_assoc(
-              :children,
-              Enum.map(updated_changesets_list, &Brando.Utils.set_action/1)
-            )
-
-          Changeset.put_assoc(changeset, :block, updated_block_changeset)
-        end
+      updated_changeset = put_children(changeset, updated_changesets_list)
 
       if level == 0 do
         if tag == :save do
@@ -1551,6 +1499,7 @@ defmodule BrandoAdmin.Components.Form.Block do
             module_code
           )
         rescue
+          # credo:disable-for-next-line ExSlop.Check.Warning.RescueWithoutReraise
           e ->
             require Logger
             Logger.warning("Failed to compile HEEx module template: #{Exception.message(e)}")
@@ -1690,6 +1639,21 @@ defmodule BrandoAdmin.Components.Form.Block do
   defdelegate delete_child_changeset(changesets, uid),
     to: BrandoAdmin.Components.Form.BlockChangesetList,
     as: :delete_changeset
+
+  defp put_children(changeset, children_list) do
+    actioned_children = Enum.map(children_list, &Brando.Utils.set_action/1)
+
+    if changeset.data.__struct__ == Brando.Content.Block do
+      Changeset.put_assoc(changeset, :children, actioned_children)
+    else
+      updated_block_changeset =
+        changeset
+        |> Changeset.get_assoc(:block)
+        |> Changeset.put_assoc(:children, actioned_children)
+
+      Changeset.put_assoc(changeset, :block, updated_block_changeset)
+    end
+  end
 
   ## Render delegation
   ## All render/1 clauses and function components live in Block.Render.
