@@ -78,7 +78,7 @@ defmodule Brando.Plug.LivePreview do
           """
 
           [page | rest] = String.split(initial_html, "</body>")
-          html = page <> inject_html <> Enum.join(["</body>" | rest], "")
+          html = page <> inject_html <> Enum.join(["</body>" | rest])
 
           conn
           |> put_resp_content_type("text/html")

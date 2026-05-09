@@ -319,8 +319,6 @@ defmodule Brando.LivePreview do
         end
 
       err ->
-        Logger.error("Livepreview Initialization failed: #{Exception.format(:error, err, __STACKTRACE__)}")
-
         error_message = Map.get(err, :message, inspect(err))
         {:error, "Initialization failed.\r\n\r\n#{error_message}"}
     end
