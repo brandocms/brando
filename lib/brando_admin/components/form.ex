@@ -2876,7 +2876,7 @@ defmodule BrandoAdmin.Components.Form do
     new_changeset =
       block_changesets
       |> assoc_all_block_fields(changeset)
-      |> then(&assoc_all_transformer_fields(socket.assigns.transformer_changesets, &1))
+      |> then(&assoc_all_transformer_fields(&1, socket.assigns.transformer_changesets))
 
     entry_for_blocks = build_entry_for_blocks(new_changeset, block_map)
 

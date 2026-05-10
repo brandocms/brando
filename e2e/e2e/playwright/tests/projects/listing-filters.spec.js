@@ -39,15 +39,20 @@ test.describe('Listing Filters', () => {
     await editor.pressSequentially('Full case intro', { delay: 10 })
     await editor.evaluate(el => el.blur())
     await syncLV(page)
-    // Select client
+    // Select client — single select auto-closes on option click
     await page.locator('#project_client_id-field-base').getByRole('button', { name: 'Select' }).click()
-    await page.getByRole('button', { name: 'Test Client' }).click()
+    await syncLV(page)
+    const selectModal = page.locator('#select-project_client_id-modal')
+    await expect(selectModal).toBeVisible({ timeout: 5000 })
+    await selectModal.getByText('Test Client').click()
+    await syncLV(page)
+
     await page.getByTestId('submit').click()
 
     // Verify we're back on listing and project was created
-    await expect(page).toHaveURL(/\/admin\/projects\/projects/)
+    await expect(page).toHaveURL(/\/admin\/projects\/projects/, { timeout: 10000 })
     await syncLV(page)
-    await expect(page.locator('.content-list').getByText('Full Case Project')).toBeVisible()
+    await expect(page.locator('.content-list').getByText('Full Case Project')).toBeVisible({ timeout: 10000 })
   })
 
   test('shows advanced filters bar with boolean and select filters', async ({ page }) => {
