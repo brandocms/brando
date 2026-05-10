@@ -83,9 +83,8 @@ defmodule Brando.Videos.Uploaders.Mux do
 
   @impl true
   def complete_upload(video, %{"asset_id" => asset_id} = _provider_data) do
-    with {:ok, asset} <- get_asset(asset_id),
-         {:ok, updated_video} <- update_video_with_asset(video, asset) do
-      {:ok, updated_video}
+    with {:ok, asset} <- get_asset(asset_id) do
+      update_video_with_asset(video, asset)
     end
   end
 
@@ -265,8 +264,7 @@ defmodule Brando.Videos.Uploaders.Mux do
     params =
       opts
       |> Enum.filter(fn {key, _} -> key in [:max_resolution, :min_resolution, :rendition_order] end)
-      |> Enum.map(fn {key, value} -> "#{key}=#{value}" end)
-      |> Enum.join("&")
+      |> Enum.map_join("&", fn {key, value} -> "#{key}=#{value}" end)
 
     if params == "" do
       base_url

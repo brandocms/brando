@@ -162,8 +162,6 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
   defp map_vars(%Ecto.Association.NotLoaded{}), do: %{}
 
   defp map_vars(vars) do
-    Enum.reduce(vars, %{}, fn var, acc ->
-      Map.put(acc, var.key, var.value)
-    end)
+    Map.new(vars, fn var -> {var.key, var.value} end)
   end
 end

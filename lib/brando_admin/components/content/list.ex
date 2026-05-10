@@ -432,8 +432,8 @@ defmodule BrandoAdmin.Components.Content.List do
 
   defp sanitize_list_opts(%{filter: filters} = list_opts) do
     sanitized_filters =
-      Enum.reduce(filters, %{}, fn {k, v}, acc ->
-        Map.put(acc, k, Brando.Query.sanitize_ilike_pattern(v))
+      Map.new(filters, fn {k, v} ->
+        {k, Brando.Query.sanitize_ilike_pattern(v)}
       end)
 
     Map.put(list_opts, :filter, sanitized_filters)

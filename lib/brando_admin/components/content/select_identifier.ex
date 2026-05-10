@@ -56,9 +56,8 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     end)
   end
 
-  def assign_selected_schema(%{assigns: %{available_schemas: available_schemas}} = socket)
-      when length(available_schemas) == 1 do
-    assign_new(socket, :selected_schema, fn -> List.first(available_schemas) end)
+  def assign_selected_schema(%{assigns: %{available_schemas: [schema]}} = socket) do
+    assign_new(socket, :selected_schema, fn -> schema end)
   end
 
   def assign_selected_schema(socket) do

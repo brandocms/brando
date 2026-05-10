@@ -180,7 +180,7 @@ defmodule Brando.Content do
             ]}
 
   def duplicate_module_name(entry, _) do
-    Enum.reduce(entry.name, %{}, fn {k, v}, acc -> Map.put(acc, k, "#{v}_dupl") end)
+    Map.new(entry.name, fn {k, v} -> {k, "#{v}_dupl"} end)
   end
 
   def duplicate_vars(entry, _) do

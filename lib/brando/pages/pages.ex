@@ -425,7 +425,7 @@ defmodule Brando.Pages do
 
   def get_fragments(opts) when is_map(opts) do
     {:ok, fragments} = list_fragments(opts)
-    {:ok, Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)}
+    {:ok, Map.new(fragments, fn x -> {x.key, x} end)}
   end
 
   @doc """
@@ -486,7 +486,7 @@ defmodule Brando.Pages do
       |> exclude_deleted()
       |> Brando.Repo.all()
 
-    Enum.reduce(fragments, %{}, fn x, acc -> Map.put(acc, x.key, x) end)
+    Map.new(fragments, fn x -> {x.key, x} end)
   end
 
   @doc """

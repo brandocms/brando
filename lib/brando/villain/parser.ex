@@ -1140,7 +1140,7 @@ defmodule Brando.Villain.Parser do
   # ...
   defp process_vars(nil), do: %{}
   defp process_vars(%Ecto.Association.NotLoaded{}), do: []
-  defp process_vars(vars), do: Enum.map(vars, &process_var(&1)) |> Enum.into(%{})
+  defp process_vars(vars), do: Map.new(vars, &process_var(&1))
 
   defp process_var(
          %Brando.Content.Var{

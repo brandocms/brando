@@ -196,9 +196,8 @@ defmodule Brando.Users do
   """
   @spec delete_user_with_transfer(integer(), integer(), user()) :: {:ok, User.t()} | {:error, any()}
   def delete_user_with_transfer(user_id, transfer_to_user_id, current_user) do
-    with {:ok, _counts} <- transfer_user_content(user_id, transfer_to_user_id),
-         {:ok, deleted_user} <- delete_user(user_id, current_user) do
-      {:ok, deleted_user}
+    with {:ok, _counts} <- transfer_user_content(user_id, transfer_to_user_id) do
+      delete_user(user_id, current_user)
     end
   end
 

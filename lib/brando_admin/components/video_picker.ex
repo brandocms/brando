@@ -369,9 +369,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
       {:error, changeset} ->
         error_msg =
-          changeset.errors
-          |> Enum.map(fn {field, {msg, _}} -> "#{field}: #{msg}" end)
-          |> Enum.join(", ")
+          Enum.map_join(changeset.errors, ", ", fn {field, {msg, _}} -> "#{field}: #{msg}" end)
 
         require Logger
         Logger.warning("Video changeset error: #{error_msg}")

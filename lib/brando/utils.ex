@@ -303,9 +303,7 @@ defmodule Brando.Utils do
   def stringify_keys(%{} = struct) when is_struct(struct), do: struct
 
   def stringify_keys(%{} = map) do
-    map
-    |> Enum.map(fn {k, v} -> {stringify_key(k), stringify_keys(v)} end)
-    |> Enum.into(%{})
+    Map.new(map, fn {k, v} -> {stringify_key(k), stringify_keys(v)} end)
   end
 
   # Walk the list and stringify the keys of
@@ -316,9 +314,7 @@ defmodule Brando.Utils do
   defp stringify_key(key), do: key
 
   def snake_case(map) when is_map(map) do
-    map
-    |> Enum.map(fn {k, v} -> {Macro.underscore(k), snake_case(v)} end)
-    |> Enum.into(%{})
+    Map.new(map, fn {k, v} -> {Macro.underscore(k), snake_case(v)} end)
   end
 
   def snake_case([head | rest]) do
@@ -548,14 +544,12 @@ defmodule Brando.Utils do
 
     file_path = Path.join([config.upload_path, file.filename])
 
-    case Brando.CDN.enabled?(Brando.Files) && file.cdn do
-      true ->
-        s3_cfg = Brando.CDN.config(Brando.Files, :s3)
-        bucket = Brando.CDN.config(Brando.Files, :bucket)
-        "#{s3_cfg.scheme}#{s3_cfg.host}/#{bucket}/media/#{file_path}"
-
-      false ->
-        media_url(file_path)
+    if Brando.CDN.enabled?(Brando.Files) && file.cdn do
+      s3_cfg = Brando.CDN.config(Brando.Files, :s3)
+      bucket = Brando.CDN.config(Brando.Files, :bucket)
+      "#{s3_cfg.scheme}#{s3_cfg.host}/#{bucket}/media/#{file_path}"
+    else
+      media_url(file_path)
     end
   end
 

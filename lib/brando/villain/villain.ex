@@ -342,13 +342,8 @@ defmodule Brando.Villain do
     html_string
     |> String.split("\n")
     |> Enum.with_index(1)
-    |> Enum.flat_map(fn {line, idx} ->
-      if String.contains?(line, "{% for") do
-        [{idx, String.trim(line)}]
-      else
-        []
-      end
-    end)
+    |> Enum.filter(fn {line, _idx} -> String.contains?(line, "{% for") end)
+    |> Enum.map(fn {line, idx} -> {idx, String.trim(line)} end)
     |> Enum.map_join("\n", fn {idx, line} -> "  line #{idx}: #{line}" end)
     |> case do
       "" -> "  (none found)"
@@ -368,10 +363,7 @@ defmodule Brando.Villain do
   """
   def map_images(images) do
     Enum.map(images, fn image ->
-      sizes =
-        image.sizes
-        |> Enum.map(&{elem(&1, 0), Utils.media_url(elem(&1, 1))})
-        |> Enum.into(%{})
+      sizes = Map.new(image.sizes, fn {k, v} -> {k, Utils.media_url(v)} end)
 
       %{
         src: Utils.media_url(image.path),

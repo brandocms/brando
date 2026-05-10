@@ -5082,8 +5082,7 @@ defmodule BrandoAdmin.Components.Form do
         Ecto.Changeset.get_field(rendered_changeset, rendered_field_name)
     end)
     |> Enum.reject(&(&1 in [nil, ""]))
-    |> Enum.map(&HtmlSanitizeEx.strip_tags/1)
-    |> Enum.join("\n\n")
+    |> Enum.map_join("\n\n", &HtmlSanitizeEx.strip_tags/1)
     |> String.trim()
   end
 

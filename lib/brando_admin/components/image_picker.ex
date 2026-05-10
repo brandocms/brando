@@ -753,9 +753,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
         "-"
 
       values ->
-        values
-        |> Enum.map(&to_string/1)
-        |> Enum.join(", ")
+        Enum.map_join(values, ", ", &to_string/1)
     end
   end
 

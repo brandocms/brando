@@ -205,10 +205,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
       "title" => title
     }
 
-    case api_request(:post, "/library/#{library_id}/videos", body) do
-      {:ok, data} -> {:ok, data}
-      error -> error
-    end
+    api_request(:post, "/library/#{library_id}/videos", body)
   end
 
   defp generate_tus_auth(video_guid) do

@@ -35,9 +35,8 @@ if Code.ensure_loaded?(Igniter) do
                  {:ok, zipper} <- rewrite_slug_source(zipper),
                  {:ok, zipper} <- rewrite_json_ld_field(zipper),
                  {:ok, zipper} <- rewrite_meta_field(zipper),
-                 {:ok, zipper} <- rewrite_villain(zipper, module),
-                 {:ok, zipper} <- add_villain_relations(zipper, module) do
-              {:ok, zipper}
+                 {:ok, zipper} <- rewrite_villain(zipper, module) do
+              add_villain_relations(zipper, module)
             end
           end)
         end)
