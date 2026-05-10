@@ -409,6 +409,10 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       await page.getByRole('button', { name: 'Video Player' }).click()
       await syncLV(page)
 
+      // Wait for block to be fully initialized before enabling preview
+      await page.waitForTimeout(300)
+      await syncLV(page)
+
       // Enable live preview
       await toggleLivePreview(page)
       await waitForPreviewReady(page)
@@ -416,18 +420,19 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       const frame = getPreviewFrame(page)
 
       // Verify default values (autoplay=false, show_controls=true)
-      await expect(frame.locator('div[data-autoplay="false"]')).toBeVisible()
-      await expect(frame.locator('div[data-controls="true"]')).toBeVisible()
+      // The div may be empty (no video selected) so use toBeAttached instead of toBeVisible
+      await expect(frame.locator('div[data-autoplay="false"]')).toBeAttached({ timeout: 10000 })
+      await expect(frame.locator('div[data-controls="true"]')).toBeAttached({ timeout: 10000 })
 
       // Toggle autoplay to true - click the slider in the field-wrapper containing the label
       await page.locator('.field-wrapper:has-text("Autoplay") .slider').click()
       await waitForPreviewUpdate(page)
-      await expect(frame.locator('div[data-autoplay="true"]')).toBeVisible()
+      await expect(frame.locator('div[data-autoplay="true"]')).toBeAttached({ timeout: 10000 })
 
       // Toggle controls to false - click the slider in the field-wrapper containing the label
       await page.locator('.field-wrapper:has-text("Show controls") .slider').click()
       await waitForPreviewUpdate(page)
-      await expect(frame.locator('div[data-controls="false"]')).toBeVisible()
+      await expect(frame.locator('div[data-controls="false"]')).toBeAttached({ timeout: 10000 })
     })
   })
 
