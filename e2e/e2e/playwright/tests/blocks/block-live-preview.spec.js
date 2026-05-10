@@ -95,11 +95,14 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Get a fresh frame reference (iframe was recreated)
       const restoredFrame = getPreviewFrame(page)
 
+      // Wait for preview to fully restore with block content after reconnect
+      await expect(restoredFrame.locator('header[b-tpl="styled-header"] h1')).toContainText('Header Text', { timeout: 10000 })
+
       // Make a change and verify the preview still updates
       const headerTextarea = page.locator('.header-block textarea')
       await headerTextarea.fill('After Reconnect')
       await waitForPreviewUpdate(page)
-      await expect(restoredFrame.locator('header[b-tpl="styled-header"] h1')).toContainText('After Reconnect')
+      await expect(restoredFrame.locator('header[b-tpl="styled-header"] h1')).toContainText('After Reconnect', { timeout: 10000 })
     })
 
     test('device size buttons work (desktop/tablet/mobile)', async ({ page }) => {
