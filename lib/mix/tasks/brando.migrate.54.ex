@@ -241,16 +241,17 @@ if Code.ensure_loaded?(Igniter) do
             {:ok, Igniter.Code.Common.add_code(zipper, code)}
 
           {:ok, zipper} ->
-            with {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper) do
-              code =
-                """
-                #{Enum.map_join(villains_for_this_module, "\n", fn villain -> """
-                  relation #{inspect(villain)}, :has_many, module: :blocks
-                  """ end)}
-                """
+            case Igniter.Code.Common.move_to_do_block(zipper) do
+              {:ok, zipper} ->
+                code =
+                  """
+                  #{Enum.map_join(villains_for_this_module, "\n", fn villain -> """
+                    relation #{inspect(villain)}, :has_many, module: :blocks
+                    """ end)}
+                  """
 
-              {:ok, Igniter.Code.Common.add_code(zipper, code)}
-            else
+                {:ok, Igniter.Code.Common.add_code(zipper, code)}
+
               _ ->
                 {:ok, zipper}
             end
@@ -374,30 +375,31 @@ if Code.ensure_loaded?(Igniter) do
         zipper,
         &input_slug?(&1),
         fn zipper ->
-          with {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 2) do
-            keyword_list_node = Sourceror.Zipper.node(zipper)
+          case Igniter.Code.Function.move_to_nth_argument(zipper, 2) do
+            {:ok, zipper} ->
+              keyword_list_node = Sourceror.Zipper.node(zipper)
 
-            new_keyword_list =
-              Enum.map(keyword_list_node, fn
-                # Match keyword tuples where key is wrapped in a :__block__
-                {{:__block__, meta_key, [:for]}, value_ast} ->
-                  new_key_ast = {:__block__, meta_key, [:source]}
-                  {new_key_ast, value_ast}
+              new_keyword_list =
+                Enum.map(keyword_list_node, fn
+                  # Match keyword tuples where key is wrapped in a :__block__
+                  {{:__block__, meta_key, [:for]}, value_ast} ->
+                    new_key_ast = {:__block__, meta_key, [:source]}
+                    {new_key_ast, value_ast}
 
-                # Handle other possible structures (e.g., keys with metadata)
-                {{:__block__, meta_key, [:for]}, meta_value, value_ast} ->
-                  new_key_ast = {:__block__, meta_key, [:source]}
-                  {new_key_ast, meta_value, value_ast}
+                  # Handle other possible structures (e.g., keys with metadata)
+                  {{:__block__, meta_key, [:for]}, meta_value, value_ast} ->
+                    new_key_ast = {:__block__, meta_key, [:source]}
+                    {new_key_ast, meta_value, value_ast}
 
-                other ->
-                  other
-              end)
+                  other ->
+                    other
+                end)
 
-            zipper
-            |> Sourceror.Zipper.replace(new_keyword_list)
-            |> Sourceror.Zipper.up()
-            |> then(&{:ok, &1})
-          else
+              zipper
+              |> Sourceror.Zipper.replace(new_keyword_list)
+              |> Sourceror.Zipper.up()
+              |> then(&{:ok, &1})
+
             :error ->
               {:ok, zipper}
           end
@@ -410,30 +412,31 @@ if Code.ensure_loaded?(Igniter) do
         zipper,
         &input_entries?(&1),
         fn zipper ->
-          with {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 2) do
-            keyword_list_node = Sourceror.Zipper.node(zipper)
+          case Igniter.Code.Function.move_to_nth_argument(zipper, 2) do
+            {:ok, zipper} ->
+              keyword_list_node = Sourceror.Zipper.node(zipper)
 
-            new_keyword_list =
-              Enum.map(keyword_list_node, fn
-                # Match keyword tuples where key is wrapped in a :__block__
-                {{:__block__, meta_key, [:for]}, value_ast} ->
-                  new_key_ast = {:__block__, meta_key, [:sources]}
-                  {new_key_ast, value_ast}
+              new_keyword_list =
+                Enum.map(keyword_list_node, fn
+                  # Match keyword tuples where key is wrapped in a :__block__
+                  {{:__block__, meta_key, [:for]}, value_ast} ->
+                    new_key_ast = {:__block__, meta_key, [:sources]}
+                    {new_key_ast, value_ast}
 
-                # Handle other possible structures (e.g., keys with metadata)
-                {{:__block__, meta_key, [:for]}, meta_value, value_ast} ->
-                  new_key_ast = {:__block__, meta_key, [:sources]}
-                  {new_key_ast, meta_value, value_ast}
+                  # Handle other possible structures (e.g., keys with metadata)
+                  {{:__block__, meta_key, [:for]}, meta_value, value_ast} ->
+                    new_key_ast = {:__block__, meta_key, [:sources]}
+                    {new_key_ast, meta_value, value_ast}
 
-                other ->
-                  other
-              end)
+                  other ->
+                    other
+                end)
 
-            zipper
-            |> Sourceror.Zipper.replace(new_keyword_list)
-            |> Sourceror.Zipper.up()
-            |> then(&{:ok, &1})
-          else
+              zipper
+              |> Sourceror.Zipper.replace(new_keyword_list)
+              |> Sourceror.Zipper.up()
+              |> then(&{:ok, &1})
+
             :error ->
               {:ok, zipper}
           end
@@ -507,20 +510,21 @@ if Code.ensure_loaded?(Igniter) do
         zipper,
         &forms_with_keyword_lists?(&1),
         fn zipper ->
-          with {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 0) do
-            macros = extract_macros(zipper)
-            zipper = Sourceror.Zipper.remove(zipper)
-            {:ok, zipper} = Igniter.Code.Common.move_to_do_block(zipper)
-            zipper = Igniter.Code.Common.add_code(zipper, macros, placement: :before)
+          case Igniter.Code.Function.move_to_nth_argument(zipper, 0) do
+            {:ok, zipper} ->
+              macros = extract_macros(zipper)
+              zipper = Sourceror.Zipper.remove(zipper)
+              {:ok, zipper} = Igniter.Code.Common.move_to_do_block(zipper)
+              zipper = Igniter.Code.Common.add_code(zipper, macros, placement: :before)
 
-            fs =
-              zipper
-              |> Sourceror.Zipper.up()
-              |> Sourceror.Zipper.up()
-              |> Sourceror.Zipper.up()
+              fs =
+                zipper
+                |> Sourceror.Zipper.up()
+                |> Sourceror.Zipper.up()
+                |> Sourceror.Zipper.up()
 
-            {:ok, fs}
-          else
+              {:ok, fs}
+
             :error ->
               {:ok, zipper}
           end

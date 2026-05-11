@@ -270,36 +270,39 @@ defmodule BrandoAdmin.Components.ImagePicker do
   end
 
   def handle_event("delete_image_from_picker", %{"id" => id}, socket) do
-    with {:ok, image_id} <- parse_item_id(id) do
-      _ = Brando.Images.delete_images([image_id])
+    case parse_item_id(id) do
+      {:ok, image_id} ->
+        _ = Brando.Images.delete_images([image_id])
 
-      send(self(), {:toast, gettext("Image deleted")})
+        send(self(), {:toast, gettext("Image deleted")})
 
-      {:noreply,
-       socket
-       |> assign(:selected_images, Enum.reject(socket.assigns.selected_images, &same_item_id?(&1, image_id)))
-       |> assign_images()
-       |> assign_folder_state(socket.assigns.current_folder)
-       |> sync_picker_upload_folder()
-       |> push_selection_state()}
-    else
+        {:noreply,
+         socket
+         |> assign(:selected_images, Enum.reject(socket.assigns.selected_images, &same_item_id?(&1, image_id)))
+         |> assign_images()
+         |> assign_folder_state(socket.assigns.current_folder)
+         |> sync_picker_upload_folder()
+         |> push_selection_state()}
+
       _ ->
         {:noreply, socket}
     end
   end
 
   def handle_event("organize_select_image", %{"id" => id} = params, socket) do
-    with {:ok, parsed_id} <- parse_item_id(id) do
-      meta? = truthy?(params["meta"])
+    case parse_item_id(id) do
+      {:ok, parsed_id} ->
+        meta? = truthy?(params["meta"])
 
-      socket =
-        if meta?,
-          do: organize_select_range(socket, parsed_id),
-          else: organize_select_toggle(socket, parsed_id)
+        socket =
+          if meta?,
+            do: organize_select_range(socket, parsed_id),
+            else: organize_select_toggle(socket, parsed_id)
 
-      {:noreply, push_selection_state(socket)}
-    else
-      _ -> {:noreply, socket}
+        {:noreply, push_selection_state(socket)}
+
+      _ ->
+        {:noreply, socket}
     end
   end
 

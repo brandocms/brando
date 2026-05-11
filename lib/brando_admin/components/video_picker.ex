@@ -218,17 +218,19 @@ defmodule BrandoAdmin.Components.VideoPicker do
   # -- Video-specific event handlers --
 
   def handle_event("organize_select_video", %{"id" => id} = params, socket) do
-    with {:ok, parsed_id} <- parse_item_id(id) do
-      meta? = truthy?(params["meta"])
+    case parse_item_id(id) do
+      {:ok, parsed_id} ->
+        meta? = truthy?(params["meta"])
 
-      socket =
-        if meta?,
-          do: organize_select_range(socket, parsed_id),
-          else: organize_select_toggle(socket, parsed_id)
+        socket =
+          if meta?,
+            do: organize_select_range(socket, parsed_id),
+            else: organize_select_toggle(socket, parsed_id)
 
-      {:noreply, push_selection_state(socket)}
-    else
-      _ -> {:noreply, socket}
+        {:noreply, push_selection_state(socket)}
+
+      _ ->
+        {:noreply, socket}
     end
   end
 
@@ -450,21 +452,22 @@ defmodule BrandoAdmin.Components.VideoPicker do
   end
 
   def handle_event("delete_video_from_picker", %{"id" => id}, socket) do
-    with {:ok, video_id} <- parse_item_id(id) do
-      _ = Brando.Videos.delete_video(video_id, socket.assigns.current_user)
+    case parse_item_id(id) do
+      {:ok, video_id} ->
+        _ = Brando.Videos.delete_video(video_id, socket.assigns.current_user)
 
-      send(self(), {:toast, gettext("Video deleted")})
+        send(self(), {:toast, gettext("Video deleted")})
 
-      {:noreply,
-       socket
-       |> assign(
-         :selected_videos,
-         Enum.reject(socket.assigns.selected_videos, &same_item_id?(&1, video_id))
-       )
-       |> assign_videos()
-       |> assign_folder_state(socket.assigns.current_folder)
-       |> push_selection_state()}
-    else
+        {:noreply,
+         socket
+         |> assign(
+           :selected_videos,
+           Enum.reject(socket.assigns.selected_videos, &same_item_id?(&1, video_id))
+         )
+         |> assign_videos()
+         |> assign_folder_state(socket.assigns.current_folder)
+         |> push_selection_state()}
+
       _ ->
         {:noreply, socket}
     end
