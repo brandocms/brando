@@ -2026,57 +2026,58 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> String.split(".")
       |> Enum.map(&String.to_existing_atom/1)
 
-    if path = Brando.Utils.try_path(entry, var_path ++ [:path]) do
-      Brando.Utils.media_url(path)
-    else
-      ""
+    case Brando.Utils.try_path(entry, var_path ++ [:path]) do
+      nil -> ""
+      path -> Brando.Utils.media_url(path)
     end
   end
 
   defp liquid_render_module_picture_src(var_name, vars) do
-    if var_cs = Enum.find(vars, &(Changeset.get_field(&1, :key) == var_name)) do
-      image_id = Changeset.get_field(var_cs, :image_id)
-      image = Changeset.get_field(var_cs, :image)
+    case Enum.find(vars, &(Changeset.get_field(&1, :key) == var_name)) do
+      nil ->
+        ""
 
-      cond do
-        image_id == nil ->
-          ""
+      var_cs ->
+        image_id = Changeset.get_field(var_cs, :image_id)
+        image = Changeset.get_field(var_cs, :image)
 
-        image == %Ecto.Association.NotLoaded{} ->
-          image_id = Changeset.get_field(var_cs, :image_id)
+        cond do
+          image_id == nil ->
+            ""
 
-          case Brando.Cache.get("var_image_#{image_id}") do
-            nil ->
-              image = Brando.Images.get_image!(image_id)
-              media_path = Brando.Utils.media_url(image.path)
-              Brando.Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
-              media_path
+          image == %Ecto.Association.NotLoaded{} ->
+            image_id = Changeset.get_field(var_cs, :image_id)
 
-            media_path ->
-              media_path
-          end
+            case Brando.Cache.get("var_image_#{image_id}") do
+              nil ->
+                image = Brando.Images.get_image!(image_id)
+                media_path = Brando.Utils.media_url(image.path)
+                Brando.Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
+                media_path
 
-        is_struct(image, Brando.Images.Image) ->
-          path = image.path
-          media_path = Brando.Utils.media_url(path)
-          Brando.Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
-          media_path
+              media_path ->
+                media_path
+            end
 
-        true ->
-          require Logger
+          is_struct(image, Brando.Images.Image) ->
+            path = image.path
+            media_path = Brando.Utils.media_url(path)
+            Brando.Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
+            media_path
 
-          Logger.error("""
+          true ->
+            require Logger
 
-          other:
-          #{inspect(image_id, pretty: true)}
-          #{inspect(image, pretty: true)}
+            Logger.error("""
 
-          """)
+            other:
+            #{inspect(image_id, pretty: true)}
+            #{inspect(image, pretty: true)}
 
-          ""
-      end
-    else
-      ""
+            """)
+
+            ""
+        end
     end
   end
 
