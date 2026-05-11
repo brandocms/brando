@@ -346,19 +346,7 @@ defmodule BrandoAdmin.Images.FolderBrowser do
         nil ->
           attrs = %{scope: scope, name: segment, path: folder_path, parent_id: parent && parent.id}
 
-          case %Folder{} |> Folder.changeset(attrs) |> Repo.insert() do
-            {:ok, folder} ->
-              {:cont, {:ok, folder, folder_path}}
-
-            {:error, _changeset} ->
-              case get_folder(scope, folder_path) do
-                %Folder{} = folder ->
-                  {:cont, {:ok, folder, folder_path}}
-
-                nil ->
-                  {:halt, {:error, :create_failed}}
-              end
-          end
+          insert_or_get_folder(scope, attrs, folder_path)
       end
     end)
     |> case do
@@ -372,6 +360,19 @@ defmodule BrandoAdmin.Images.FolderBrowser do
     |> where([f], f.scope == ^scope and f.path == ^path)
     |> limit(1)
     |> Repo.one()
+  end
+
+  defp insert_or_get_folder(scope, attrs, folder_path) do
+    case %Folder{} |> Folder.changeset(attrs) |> Repo.insert() do
+      {:ok, folder} ->
+        {:cont, {:ok, folder, folder_path}}
+
+      {:error, _changeset} ->
+        case get_folder(scope, folder_path) do
+          %Folder{} = folder -> {:cont, {:ok, folder, folder_path}}
+          nil -> {:halt, {:error, :create_failed}}
+        end
+    end
   end
 
   defp parse_folder_id(folder_id) when is_integer(folder_id), do: folder_id

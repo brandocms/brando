@@ -386,11 +386,13 @@ defmodule BrandoAdmin.Components.Content.List do
 
         is_map(param_order) ->
           # find matching sort
+          parsed_order =
+            Map.new(param_order, fn {k, v} ->
+              {String.to_existing_atom(k), String.to_existing_atom(v)}
+            end)
+
           Enum.find(sorts, default_sort, fn sort ->
-            Brando.Query.order_string_to_list(sort.order) ==
-              Enum.map(Map.to_list(param_order), fn {k, v} ->
-                {String.to_existing_atom(k), String.to_existing_atom(v)}
-              end)
+            Brando.Query.order_string_to_list(sort.order) == Map.to_list(parsed_order)
           end)
       end
     end)

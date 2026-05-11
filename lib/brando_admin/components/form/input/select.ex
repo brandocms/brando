@@ -559,15 +559,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       on_change = socket.assigns.on_change
       {update_field, fetcher_fn} = update_relation
 
-      fetched_relation =
-        if is_nil(value) do
-          nil
-        else
-          case fetcher_fn.(value) do
-            {:ok, fetched_relation} -> fetched_relation
-            _ -> nil
-          end
-        end
+      fetched_relation = fetch_relation(value, fetcher_fn)
 
       on_change.(%{
         event: "update_entry_relation",
@@ -612,6 +604,15 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   defp maybe_register_mutation_listener(socket) do
     socket
+  end
+
+  defp fetch_relation(nil, _fetcher_fn), do: nil
+
+  defp fetch_relation(value, fetcher_fn) do
+    case fetcher_fn.(value) do
+      {:ok, fetched_relation} -> fetched_relation
+      _ -> nil
+    end
   end
 
   defp assign_relation_schema(socket, field) do

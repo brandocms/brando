@@ -83,20 +83,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       {_, schema_module, list_opts} = List.first(available_schemas)
       field_opts = socket.assigns.opts
 
-      list_opts =
-        if Keyword.get(field_opts, :filter_language, false) do
-          form = socket.assigns.field.form
-          language = form[:language]
-
-          if language do
-            language_atom = String.to_existing_atom(language.value)
-            Map.put(list_opts, :language, language_atom)
-          else
-            list_opts
-          end
-        else
-          list_opts
-        end
+      list_opts = maybe_filter_by_language(list_opts, field_opts, socket)
 
       {:ok, identifiers} = Identifier.list_entries_for(schema_module, list_opts)
       identifiers
@@ -108,6 +95,31 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     |> assign_new(:selected_schema, fn -> nil end)
     |> assign_new(:available_identifiers, fn %{selected_identifiers: selected_identifiers} ->
       selected_identifiers
+    end)
+  end
+
+  defp maybe_filter_by_language(list_opts, field_opts, socket) do
+    if Keyword.get(field_opts, :filter_language, false) do
+      language = socket.assigns.field.form[:language]
+
+      if language do
+        Map.put(list_opts, :language, String.to_existing_atom(language.value))
+      else
+        list_opts
+      end
+    else
+      list_opts
+    end
+  end
+
+  defp restore_replaced_identifier(assoc_identifiers, replaced_changeset, identifier_id) do
+    Enum.map(assoc_identifiers, fn assoc_identifier ->
+      if Changeset.get_field(assoc_identifier, :identifier_id) == identifier_id do
+        action = (Changeset.get_field(assoc_identifier, :id) == nil && :insert) || nil
+        Map.put(replaced_changeset, :action, action)
+      else
+        assoc_identifier
+      end
     end)
   end
 
@@ -223,14 +235,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           insert_identifier(assoc_identifiers, identifier_id, assoc_schema)
 
         %{action: :replace} = replaced_changeset ->
-          Enum.map(assoc_identifiers, fn assoc_identifier ->
-            if Changeset.get_field(assoc_identifier, :identifier_id) == identifier_id do
-              action = (Changeset.get_field(assoc_identifier, :id) == nil && :insert) || nil
-              Map.put(replaced_changeset, :action, action)
-            else
-              assoc_identifier
-            end
-          end)
+          restore_replaced_identifier(assoc_identifiers, replaced_changeset, identifier_id)
 
         _ ->
           remove_identifier(assoc_identifiers, identifier_id)

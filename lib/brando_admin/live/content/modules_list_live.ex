@@ -93,11 +93,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     current_user = socket.assigns.current_user
 
     # Import modules in a transaction to ensure atomicity
-    case Brando.Repo.transaction(fn ->
-           for mod <- socket.assigns.imported_modules do
-             Brando.Content.import_module_with_children(mod, current_user)
-           end
-         end) do
+    case import_modules_in_transaction(socket.assigns.imported_modules, current_user) do
       {:ok, _} ->
         send(self(), {:toast, gettext("Modules imported")})
         BrandoAdmin.LiveView.Listing.update_list_entries(socket.assigns.schema)
@@ -159,5 +155,13 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       |> Brando.Content.serialize_modules()
 
     {:noreply, assign(socket, :base64_modules, base64_modules)}
+  end
+
+  defp import_modules_in_transaction(modules, current_user) do
+    Brando.Repo.transaction(fn ->
+      for mod <- modules do
+        Brando.Content.import_module_with_children(mod, current_user)
+      end
+    end)
   end
 end
