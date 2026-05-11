@@ -32,19 +32,13 @@ defmodule Brando.Blueprint.Meta do
         []
 
       meta_data ->
-        Enum.reduce(meta_data.fields, [], fn
-          %{targets: targets, value_fn: mutator}, acc ->
-            targets = (is_list(targets) && targets) || List.wrap(targets)
+        Enum.flat_map(meta_data.fields, fn %{targets: targets, value_fn: mutator} ->
+          targets = (is_list(targets) && targets) || List.wrap(targets)
 
-            case safe_apply(mutator, data) do
-              nil ->
-                acc
-
-              result ->
-                Enum.reduce(targets, acc, fn target, acc ->
-                  acc ++ [{target, result}]
-                end)
-            end
+          case safe_apply(mutator, data) do
+            nil -> []
+            result -> Enum.map(targets, fn target -> {target, result} end)
+          end
         end)
     end
   end

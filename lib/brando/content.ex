@@ -759,20 +759,16 @@ defmodule Brando.Content do
 
       url_changed? = Ecto.Changeset.get_change(changeset, :url)
 
-      case Brando.Repo.update(changeset) do
-        {:ok, updated_identifier} ->
-          Brando.Cache.Query.evict({:ok, updated_identifier})
+      with {:ok, updated_identifier} <- Brando.Repo.update(changeset) do
+        Brando.Cache.Query.evict({:ok, updated_identifier})
 
-          if url_changed? do
-            new_url = updated_identifier.url || "#"
-            Brando.Content.Blocks.update_identifier_links_in_refs(updated_identifier.id, new_url)
-            Brando.Content.Blocks.update_identifier_links_in_rich_text_fields(updated_identifier.id, new_url)
-          end
+        if url_changed? do
+          new_url = updated_identifier.url || "#"
+          Brando.Content.Blocks.update_identifier_links_in_refs(updated_identifier.id, new_url)
+          Brando.Content.Blocks.update_identifier_links_in_rich_text_fields(updated_identifier.id, new_url)
+        end
 
-          {:ok, updated_identifier}
-
-        {:error, changeset} ->
-          {:error, changeset}
+        {:ok, updated_identifier}
       end
     else
       {:error, {:identifier, :not_found}} ->

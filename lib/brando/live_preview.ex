@@ -222,22 +222,10 @@ defmodule Brando.LivePreview do
               """
 
           1 ->
-            case get_var(cache_key, key) do
-              :not_set ->
-                {key, set_var(cache_key, key, value_fn.(entry))}
-
-              value ->
-                {key, value}
-            end
+            resolve_cached_var(cache_key, key, fn -> value_fn.(entry) end)
 
           2 ->
-            case get_var(cache_key, key) do
-              :not_set ->
-                {key, set_var(cache_key, key, value_fn.(entry, language))}
-
-              value ->
-                {key, value}
-            end
+            resolve_cached_var(cache_key, key, fn -> value_fn.(entry, language) end)
         end
     end)
   end
@@ -379,6 +367,13 @@ defmodule Brando.LivePreview do
     |> Oban.insert()
 
     {:ok, Brando.Sites.Preview.__absolute_url__(preview), expiry_days}
+  end
+
+  defp resolve_cached_var(cache_key, key, value_fn) do
+    case get_var(cache_key, key) do
+      :not_set -> {key, set_var(cache_key, key, value_fn.())}
+      value -> {key, value}
+    end
   end
 
   def get_var(cache_key, key) do

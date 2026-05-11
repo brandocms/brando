@@ -671,35 +671,30 @@ defmodule Brando.Utils do
 
     {url, current_path} =
       if List.last(chunks) == "*" do
-        url_without_star =
-          chunks
-          |> List.delete_at(Enum.count(chunks) - 1)
-          |> Enum.reject(&(&1 == ""))
-
-        chunks_count = Enum.count(url_without_star)
-
-        split_current_path =
-          current_path
-          |> String.split("/")
-          |> Enum.reject(&(&1 == ""))
-
-        shortened_path =
-          for {path, x} <- Enum.with_index(split_current_path) do
-            if x < chunks_count do
-              path
-            else
-              ""
-            end
-          end
-          |> Enum.reject(&(&1 == ""))
-          |> Enum.join("/")
-
-        {Enum.join(url_without_star, "/"), shortened_path}
+        normalize_wildcard_paths(chunks, current_path)
       else
         {url_to_match, current_path}
       end
 
     current_path == url
+  end
+
+  defp normalize_wildcard_paths(chunks, current_path) do
+    url_without_star =
+      chunks
+      |> List.delete_at(Enum.count(chunks) - 1)
+      |> Enum.reject(&(&1 == ""))
+
+    chunks_count = Enum.count(url_without_star)
+
+    shortened_path =
+      current_path
+      |> String.split("/")
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.take(chunks_count)
+      |> Enum.join("/")
+
+    {Enum.join(url_without_star, "/"), shortened_path}
   end
 
   @doc """
@@ -828,20 +823,7 @@ defmodule Brando.Utils do
 
   defp build_prefix(%Brando.Files.File{} = file_field, prefix) do
     if file_field.cdn do
-      # check if we have a cdn config for the field
-      cdn_config = get_cdn_config(file_field)
-
-      if cdn_config do
-        cdn_prefix = Brando.CDN.get_prefix(cdn_config) || ""
-        (prefix && Path.join([cdn_prefix, prefix])) || cdn_prefix
-      else
-        if Brando.CDN.enabled?(Brando.Files) do
-          cdn_prefix = Brando.CDN.get_prefix(Brando.Files) || ""
-          (prefix && Path.join([cdn_prefix, prefix])) || cdn_prefix
-        else
-          prefix
-        end
-      end
+      resolve_cdn_prefix(file_field, Brando.Files, prefix)
     else
       prefix
     end
@@ -849,22 +831,25 @@ defmodule Brando.Utils do
 
   defp build_prefix(image_field, prefix) do
     if image_field.cdn do
-      # check if we have a cdn config for the field
-      cdn_config = get_cdn_config(image_field)
-
-      if cdn_config do
-        cdn_prefix = Brando.CDN.get_prefix(cdn_config)
-        (prefix && Path.join([cdn_prefix, prefix])) || cdn_prefix
-      else
-        if Brando.CDN.enabled?(Brando.Images) do
-          cdn_prefix = Brando.CDN.get_prefix(Brando.Images)
-          (prefix && Path.join([cdn_prefix, prefix])) || cdn_prefix
-        else
-          prefix
-        end
-      end
+      resolve_cdn_prefix(image_field, Brando.Images, prefix)
     else
       prefix
+    end
+  end
+
+  defp resolve_cdn_prefix(field, fallback_module, prefix) do
+    cdn_config = get_cdn_config(field)
+
+    cdn_prefix =
+      cond do
+        cdn_config -> Brando.CDN.get_prefix(cdn_config)
+        Brando.CDN.enabled?(fallback_module) -> Brando.CDN.get_prefix(fallback_module)
+        true -> nil
+      end
+
+    case cdn_prefix do
+      nil -> prefix
+      cdn_prefix -> (prefix && Path.join([cdn_prefix, prefix])) || cdn_prefix
     end
   end
 

@@ -30,13 +30,7 @@ defmodule Brando.Worker.ImageUploader do
       if any_remaining_jobs?(image_id, job_id) do
         {:ok, s3_key}
       else
-        BrandoAdmin.Progress.hide(user_id)
-        {:ok, image} = Images.get_image(image_id)
-
-        case Images.update_image(image, %{cdn: true}, %{id: user_id}) do
-          {:ok, image} -> broadcast_status(image, field_full_path, :updated)
-          err -> err
-        end
+        finalize_image_upload(image_id, user_id, field_full_path)
       end
     else
       err ->
@@ -46,6 +40,16 @@ defmodule Brando.Worker.ImageUploader do
 
   @impl Oban.Worker
   def timeout(_job), do: :timer.seconds(180)
+
+  defp finalize_image_upload(image_id, user_id, field_full_path) do
+    BrandoAdmin.Progress.hide(user_id)
+    {:ok, image} = Images.get_image(image_id)
+
+    case Images.update_image(image, %{cdn: true}, %{id: user_id}) do
+      {:ok, image} -> broadcast_status(image, field_full_path, :updated)
+      err -> err
+    end
+  end
 
   defp any_remaining_jobs?(image_id, job_id) do
     query =

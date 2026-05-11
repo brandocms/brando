@@ -167,27 +167,32 @@ defmodule Brando.Users do
       refs = get_user_foreign_key_references()
 
       Enum.reduce(refs, %{}, fn {table, column}, acc ->
-        if table == "users_tokens" do
-          %{num_rows: num_rows} =
-            Ecto.Adapters.SQL.query!(
-              Brando.repo(),
-              "DELETE FROM users_tokens WHERE user_id = $1",
-              [from_user_id]
-            )
-
-          Map.put(acc, table, num_rows)
-        else
-          %{num_rows: num_rows} =
-            Ecto.Adapters.SQL.query!(
-              Brando.repo(),
-              "UPDATE #{table} SET #{column} = $1 WHERE #{column} = $2",
-              [to_user_id, from_user_id]
-            )
-
-          Map.put(acc, table, num_rows)
-        end
+        num_rows = transfer_or_delete_ref(table, column, from_user_id, to_user_id)
+        Map.put(acc, table, num_rows)
       end)
     end)
+  end
+
+  defp transfer_or_delete_ref("users_tokens", _column, from_user_id, _to_user_id) do
+    %{num_rows: num_rows} =
+      Ecto.Adapters.SQL.query!(
+        Brando.repo(),
+        "DELETE FROM users_tokens WHERE user_id = $1",
+        [from_user_id]
+      )
+
+    num_rows
+  end
+
+  defp transfer_or_delete_ref(table, column, from_user_id, to_user_id) do
+    %{num_rows: num_rows} =
+      Ecto.Adapters.SQL.query!(
+        Brando.repo(),
+        "UPDATE #{table} SET #{column} = $1 WHERE #{column} = $2",
+        [to_user_id, from_user_id]
+      )
+
+    num_rows
   end
 
   @doc """

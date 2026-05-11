@@ -408,21 +408,20 @@ defmodule Brando.Query do
     order_string
     |> String.split(",")
     |> Enum.map(fn e ->
-      String.trim(e)
-      |> String.split(" ")
-      |> Enum.map(fn val ->
-        case String.split(val, ".") do
-          [v1, v2, v3] -> {String.to_atom(v1), String.to_atom(v2), String.to_atom(v3)}
-          [v1, v2] -> {String.to_atom(v1), String.to_atom(v2)}
-          [val] -> String.to_atom(val)
-        end
-      end)
-      |> List.to_tuple()
+      e |> String.trim() |> String.split(" ") |> Enum.map(&parse_order_segment/1) |> List.to_tuple()
     end)
   end
 
   def order_string_to_list(order_list) when is_list(order_list) do
     order_list
+  end
+
+  defp parse_order_segment(val) do
+    case String.split(val, ".") do
+      [v1, v2, v3] -> {String.to_atom(v1), String.to_atom(v2), String.to_atom(v3)}
+      [v1, v2] -> {String.to_atom(v1), String.to_atom(v2)}
+      [val] -> String.to_atom(val)
+    end
   end
 
   def with_select(query, {:map, fields}), do: from(q in query, select: map(q, ^fields))

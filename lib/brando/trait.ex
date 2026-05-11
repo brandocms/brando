@@ -101,11 +101,8 @@ defmodule Brando.Trait do
 
   def get_trait_ai_field_opts(schema, field_name) when is_atom(schema) and is_atom(field_name) do
     if function_exported?(schema, :__traits__, 0) do
-      schema.__traits__()
-      |> Enum.find_value([], fn {trait, trait_opts} ->
-        opts = trait.ai_field_opts(schema, normalize_trait_opts(trait_opts), field_name)
-
-        case opts do
+      Enum.find_value(schema.__traits__(), [], fn {trait, trait_opts} ->
+        case trait.ai_field_opts(schema, normalize_trait_opts(trait_opts), field_name) do
           nil -> nil
           [] -> nil
           opts -> opts

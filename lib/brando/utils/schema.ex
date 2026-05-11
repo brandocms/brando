@@ -110,25 +110,25 @@ defmodule Brando.Utils.Schema do
   def do_avoid_field_collision(fields, changeset, src) do
     Changeset.prepare_changes(changeset, fn cs ->
       Enum.reduce(fields, cs, fn field, new_cs ->
-        field_val = Changeset.get_change(new_cs, field)
-
-        if field_val do
-          case get_unique_field_value(new_cs, src, field, field_val, 0) do
-            {:ok, unique_value} ->
-              Changeset.put_change(new_cs, field, unique_value)
-
-            {:error, :too_many_attempts} ->
-              Changeset.add_error(
-                new_cs,
-                field,
-                "Could not find available field value"
-              )
-          end
-        else
-          new_cs
-        end
+        ensure_unique_field(new_cs, src, field)
       end)
     end)
+  end
+
+  defp ensure_unique_field(changeset, src, field) do
+    case Changeset.get_change(changeset, field) do
+      nil ->
+        changeset
+
+      field_val ->
+        case get_unique_field_value(changeset, src, field, field_val, 0) do
+          {:ok, unique_value} ->
+            Changeset.put_change(changeset, field, unique_value)
+
+          {:error, :too_many_attempts} ->
+            Changeset.add_error(changeset, field, "Could not find available field value")
+        end
+    end
   end
 
   defp get_unique_field_value(cs, src, field, field_val, attempts) when attempts < @field_val_collision_attemps do

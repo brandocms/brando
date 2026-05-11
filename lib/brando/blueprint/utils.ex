@@ -98,16 +98,18 @@ defmodule Brando.Blueprint.Utils do
           String.capitalize(to_string(error_key))
 
         field ->
-          msgid =
-            if field.__struct__ == Brando.Blueprint.Forms.Subform do
-              Map.get(field, :label) || String.capitalize(to_string(field.name))
-            else
-              Keyword.get(field.opts, :label, String.capitalize(to_string(error_key)))
-            end
-
+          msgid = field_label(field, error_key)
           Gettext.dgettext(gettext_module, gettext_domain, msgid)
       end
     end
+  end
+
+  defp field_label(%{__struct__: Brando.Blueprint.Forms.Subform} = field, _error_key) do
+    Map.get(field, :label) || String.capitalize(to_string(field.name))
+  end
+
+  defp field_label(field, error_key) do
+    Keyword.get(field.opts, :label, String.capitalize(to_string(error_key)))
   end
 
   @doc """

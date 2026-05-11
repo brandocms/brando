@@ -127,16 +127,20 @@ defmodule Brando.Blueprint.Constraints do
             )
 
           Enum.reduce(required_classes, changeset, fn required_class, cs ->
-            if required_class in classes do
-              cs
-            else
-              add_error(cs, assoc_field, "is missing required block: %{class}",
-                class: required_class,
-                validation: :require_blocks
-              )
-            end
+            validate_required_class(cs, assoc_field, required_class, classes)
           end)
         end
+    end
+  end
+
+  defp validate_required_class(changeset, assoc_field, required_class, classes) do
+    if required_class in classes do
+      changeset
+    else
+      add_error(changeset, assoc_field, "is missing required block: %{class}",
+        class: required_class,
+        validation: :require_blocks
+      )
     end
   end
 

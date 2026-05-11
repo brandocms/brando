@@ -115,31 +115,21 @@ defmodule Brando.Galleries do
   to identify the parent schema and FK field, then queries that table.
   """
   def list_gallery_asset_usage(gallery_id) do
-    case Brando.Repo.get(Gallery, gallery_id) do
-      nil ->
-        %{}
+    with %Gallery{} = gallery <- Brando.Repo.get(Gallery, gallery_id),
+         {:ok, schema, field} <- parse_config_target(gallery.config_target) do
+      field_atom = String.to_existing_atom("#{field}_id")
 
-      gallery ->
-        case parse_config_target(gallery.config_target) do
-          {:ok, schema, field} ->
-            field_atom = String.to_existing_atom("#{field}_id")
+      query =
+        from e in schema,
+          where: field(e, ^field_atom) == ^gallery_id,
+          select: e.id
 
-            query =
-              from e in schema,
-                where: field(e, ^field_atom) == ^gallery_id,
-                select: e.id
-
-            entry_ids = Brando.Repo.all(query)
-
-            if entry_ids == [] do
-              %{}
-            else
-              %{schema => entry_ids}
-            end
-
-          :error ->
-            %{}
-        end
+      case Brando.Repo.all(query) do
+        [] -> %{}
+        entry_ids -> %{schema => entry_ids}
+      end
+    else
+      _ -> %{}
     end
   end
 

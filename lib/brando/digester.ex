@@ -177,31 +177,7 @@ defmodule Brando.Digester do
     compressors = Application.fetch_env!(:phoenix, :static_compressors)
 
     Enum.each(compressors, fn compressor ->
-      [file_extension | _] = compressor.file_extensions()
-
-      compressed_digested_result =
-        compressor.compress_file(file.digested_filename, file.digested_content)
-
-      with {:ok, compressed_digested} <- compressed_digested_result do
-        File.write!(
-          Path.join(path, file.digested_filename <> file_extension),
-          compressed_digested
-        )
-      end
-
-      if file.filename != file.digested_filename do
-        compress_result =
-          if file.digested_content == file.content,
-            do: compressed_digested_result,
-            else: compressor.compress_file(file.filename, file.content)
-
-        with {:ok, compressed} <- compress_result do
-          File.write!(
-            Path.join(path, file.filename <> file_extension),
-            compressed
-          )
-        end
-      end
+      write_compressed_files(compressor, file, path)
     end)
 
     File.write!(Path.join(path, file.digested_filename), file.digested_content)
@@ -211,6 +187,28 @@ defmodule Brando.Digester do
     end
 
     file
+  end
+
+  defp write_compressed_files(compressor, file, path) do
+    [file_extension | _] = compressor.file_extensions()
+
+    compressed_digested_result =
+      compressor.compress_file(file.digested_filename, file.digested_content)
+
+    with {:ok, compressed_digested} <- compressed_digested_result do
+      File.write!(Path.join(path, file.digested_filename <> file_extension), compressed_digested)
+    end
+
+    if file.filename != file.digested_filename do
+      compress_result =
+        if file.digested_content == file.content,
+          do: compressed_digested_result,
+          else: compressor.compress_file(file.filename, file.content)
+
+      with {:ok, compressed} <- compress_result do
+        File.write!(Path.join(path, file.filename <> file_extension), compressed)
+      end
+    end
   end
 
   defp digested_contents(file, latest, with_vsn?) do
@@ -326,7 +324,7 @@ defmodule Brando.Digester do
 
       files =
         for {_, versions} <- grouped_digests,
-            file <- Enum.map(versions, fn {path, _attrs} -> path end),
+            {file, _attrs} <- versions,
             do: file
 
       remove_files(files, path)

@@ -804,22 +804,24 @@ defmodule Brando.Content.Blocks do
             preload: [:vars, :module]
           })
 
-        for block <- blocks do
-          rendered_block = Villain.render_block(block, entry)
-
-          changes = %{
-            rendered_html: rendered_block,
-            rendered_at: DateTime.truncate(DateTime.utc_now(), :second)
-          }
-
-          block
-          |> Changeset.change(changes)
-          |> Brando.Repo.update()
-        end
+        Enum.each(blocks, &render_and_update_block(&1, entry))
       end
     end
 
     source_map
+  end
+
+  defp render_and_update_block(block, entry) do
+    rendered_block = Villain.render_block(block, entry)
+
+    changes = %{
+      rendered_html: rendered_block,
+      rendered_at: DateTime.truncate(DateTime.utc_now(), :second)
+    }
+
+    block
+    |> Changeset.change(changes)
+    |> Brando.Repo.update()
   end
 
   def reapply_refs(module, module_refs, refs) do
