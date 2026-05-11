@@ -145,7 +145,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Relation.Add do
         :nilify_all
 
       # Join tables should cascade delete
-      is_join_table?(owner_module) ->
+      join_table?(owner_module) ->
         :delete_all
 
       # Safe default
@@ -160,7 +160,7 @@ defmodule Brando.Blueprint.Migrations.Operations.Relation.Add do
   # - Exactly 2 belongs_to relations
   # - Minimal other attributes (only sequence, timestamps, etc.)
   # - Often has @allow_mark_as_deleted = true
-  defp is_join_table?(module) do
+  defp join_table?(module) do
     alias Brando.Blueprint.{Attributes, Relations}
 
     # Get all relations using the Blueprint API

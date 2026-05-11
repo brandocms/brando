@@ -631,8 +631,7 @@ defmodule Brando.VillainTest do
     # sort the ids
     sorted_resulting_ids =
       resulting_ids
-      |> Enum.map(fn {k, v} -> {k, Enum.sort(v)} end)
-      |> Enum.into(%{})
+      |> Map.new(fn {k, v} -> {k, Enum.sort(v)} end)
 
     assert sorted_resulting_ids === %{Brando.Pages.Fragment => [pf1.id, pf4.id]}
   end

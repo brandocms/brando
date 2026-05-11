@@ -210,7 +210,7 @@ defmodule Brando.Villain do
   end
 
   def add_to_context(context, "links" = key, %{links: links}) do
-    links = Enum.map(links, &{String.downcase(&1.name), &1}) |> Enum.into(%{})
+    links = Map.new(links, &{String.downcase(&1.name), &1})
     Context.assign(context, key, links)
   end
 
@@ -220,16 +220,10 @@ defmodule Brando.Villain do
 
   def add_to_context(context, "globals" = key, global_sets) do
     parsed_globals =
-      global_sets
-      |> Enum.map(fn {g_key, g_category} ->
-        cat_globs =
-          g_category
-          |> Enum.map(fn {key, %{value: value}} -> {key, value} end)
-          |> Enum.into(%{})
-
+      Map.new(global_sets, fn {g_key, g_category} ->
+        cat_globs = Map.new(g_category, fn {key, %{value: value}} -> {key, value} end)
         {g_key, cat_globs}
       end)
-      |> Enum.into(%{})
 
     Context.assign(context, key, parsed_globals)
   end

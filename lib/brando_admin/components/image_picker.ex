@@ -774,9 +774,10 @@ defmodule BrandoAdmin.Components.ImagePicker do
 
   defp dispatch_upload_click(js, upload_name, drop_target) do
     selector =
-      cond do
-        is_binary(drop_target) and drop_target != "" -> "##{drop_target}"
-        true -> ~s(#image-drawer-form input[name="#{upload_name}"])
+      if is_binary(drop_target) and drop_target != "" do
+        "##{drop_target}"
+      else
+        ~s(#image-drawer-form input[name="#{upload_name}"])
       end
 
     JS.dispatch(js, "click", to: selector)

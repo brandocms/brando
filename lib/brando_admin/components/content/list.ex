@@ -177,8 +177,8 @@ defmodule BrandoAdmin.Components.Content.List do
     advanced = Enum.filter(filters, &(&1.type in [:boolean, :select]))
 
     filter_params =
-      Enum.reduce(advanced, %{}, fn f, acc ->
-        Map.put(acc, "filter:#{f.key}", "")
+      Map.new(advanced, fn f ->
+        {"filter:#{f.key}", ""}
       end)
 
     {:noreply, push_query_params(socket, filter_params)}

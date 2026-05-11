@@ -43,7 +43,7 @@ defmodule Brando.Health do
       {0, 0, 0, 0, 0, 0, 0, 1} -> true
       # IPv4-mapped IPv6 localhost (::ffff:127.0.0.1)
       # 127.0.0.1 maps to: 127*256+0=32512, 0*256+1=1
-      {0, 0, 0, 0, 0, 65535, 32512, 1} -> true
+      {0, 0, 0, 0, 0, 65_535, 32_512, 1} -> true
       _ -> false
     end
   end

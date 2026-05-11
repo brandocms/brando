@@ -111,9 +111,6 @@ defmodule Brando.Query.Mutations do
       else
         {:ok, entry}
       end
-    else
-      err ->
-        err
     end
   end
 

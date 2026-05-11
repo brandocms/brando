@@ -192,15 +192,13 @@ defmodule BrandoAdmin.Images.FolderBrowser do
     scope = scope_for(upload_root)
     relative = relative_folder(folder, scope) |> normalize_folder()
 
-    cond do
-      is_nil(relative) ->
-        {:error, :invalid_folder}
-
-      true ->
-        case ensure_folder(scope, relative) do
-          {:ok, _folder} -> {:ok, absolute_folder(relative, scope)}
-          {:error, reason} -> {:error, reason}
-        end
+    if is_nil(relative) do
+      {:error, :invalid_folder}
+    else
+      case ensure_folder(scope, relative) do
+        {:ok, _folder} -> {:ok, absolute_folder(relative, scope)}
+        {:error, reason} -> {:error, reason}
+      end
     end
   end
 
