@@ -1,9 +1,53 @@
 defmodule Brando.Villain.Block do
   @moduledoc """
-  Use to set module as a Villain block
+  Use to set module as a Villain block.
   """
   @callback protected_attrs() :: [atom()]
   @callback apply_ref(module(), map(), map()) :: map()
+
+  @doc """
+  Merge ref source data into the target changeset, respecting protected attrs.
+
+  Used by the default `apply_ref/3` — reads data from `ref_src.data.data`.
+  """
+  def merge_ref(ref_src, ref_target_changeset, protected_attrs) do
+    merge_data(ref_src.data.data, ref_target_changeset, protected_attrs)
+  end
+
+  @doc """
+  Merge template data from a specific field on the ref source into the target changeset.
+
+  Used by blocks that need a MediaBlock-specific `apply_ref/3` clause,
+  e.g. PictureBlock reads from `ref_src.data.data.template_picture`.
+  """
+  def merge_ref_template(template_field, ref_src, ref_target_changeset, protected_attrs) do
+    tpl_src = Map.get(ref_src.data.data, template_field)
+    merge_data(tpl_src, ref_target_changeset, protected_attrs)
+  end
+
+  defp merge_data(source_data, ref_target_changeset, protected_attrs) do
+    import Ecto.Changeset
+
+    current_data = get_field(ref_target_changeset, :data)
+
+    data_changeset =
+      case current_data do
+        %Ecto.Changeset{} = cs -> cs
+        data -> change(data)
+      end
+
+    src_attrs = Map.from_struct(source_data)
+    overwritten_attrs = Map.keys(src_attrs) -- protected_attrs
+    new_attrs = Map.take(src_attrs, overwritten_attrs)
+
+    current_block_data = get_field(data_changeset, :data)
+    merged_data = struct(current_block_data, new_attrs)
+
+    current_block = apply_changes(data_changeset)
+    updated_block = %{current_block | data: merged_data}
+
+    put_change(ref_target_changeset, :data, updated_block)
+  end
 
   defmacro __using__(opts) do
     type = Keyword.fetch!(opts, :type)
@@ -40,35 +84,8 @@ defmodule Brando.Villain.Block do
       def protected_attrs, do: []
       defoverridable protected_attrs: 0
 
-      # ref_src = %Ref struct, ref_target_changeset = changeset
-      def apply_ref(src_type, ref_src, ref_target_changeset) do
-        protected_attrs = __MODULE__.protected_attrs()
-
-        # Get the current data from the ref changeset - it might be a struct or changeset
-        current_data = get_field(ref_target_changeset, :data)
-
-        # Ensure we have a changeset for the data
-        data_changeset =
-          case current_data do
-            %Ecto.Changeset{} = cs -> cs
-            data -> change(data)
-          end
-
-        # Extract the source attributes from ref_src.data.data (which is the block data)
-        src_attrs = Map.from_struct(ref_src.data.data)
-        overwritten_attrs = Map.keys(src_attrs) -- protected_attrs
-        new_attrs = Map.take(src_attrs, overwritten_attrs)
-
-        # Get the current block data and merge with new attributes
-        current_block_data = get_field(data_changeset, :data)
-        merged_data = struct(current_block_data, new_attrs)
-
-        # Build the updated block struct with the merged data
-        current_block = apply_changes(data_changeset)
-        updated_block = %{current_block | data: merged_data}
-
-        # Return the updated ref changeset with the applied block data
-        put_change(ref_target_changeset, :data, updated_block)
+      def apply_ref(_src_type, ref_src, ref_target_changeset) do
+        Brando.Villain.Block.merge_ref(ref_src, ref_target_changeset, protected_attrs())
       end
 
       defoverridable apply_ref: 3
