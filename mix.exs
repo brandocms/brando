@@ -83,7 +83,7 @@ defmodule Brando.Mixfile do
       {:spark, "~> 2.4"},
 
       # monitoring
-      {:sentry, "~> 11.0"},
+      {:sentry, "~> 13.0"},
 
       # cache
       {:cachex, "~> 4.0"},
@@ -98,9 +98,8 @@ defmodule Brando.Mixfile do
       {:image, "~> 0.64"},
 
       # AWS
-      {:ex_aws, "~> 2.0"},
+      {:ex_aws, "~> 2.7"},
       {:ex_aws_s3, "~> 2.0"},
-      {:hackney, "~> 1.9"},
       {:sweet_xml, "~> 0.6"},
 
       # Hashing
@@ -120,7 +119,7 @@ defmodule Brando.Mixfile do
       {:slugify, "~> 1.3.1"},
       {:ecto_nested_changeset, "~> 1.0.0"},
       {:nimble_csv, "~> 1.2"},
-      {:tzdata, "~> 1.1"},
+      {:tz, "~> 0.28"},
       {:polymorphic_embed, "~> 5.0.1"},
 
       # tracing

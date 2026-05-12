@@ -15,7 +15,6 @@ defmodule Mix.Tasks.Brando.Static.Deploy do
     :erlang.system_flag(:backtrace_depth, 20)
 
     Application.ensure_all_started(:ex_aws)
-    Application.ensure_all_started(:hackney)
     Application.ensure_all_started(:sweet_xml)
 
     Mix.shell().info("=> Preparing bucket")

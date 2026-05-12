@@ -15,7 +15,7 @@ defmodule Brando.Supervisor do
 
   def init([]) do
     Brando.Telemetry.attach()
-    Calendar.put_time_zone_database(Tzdata.TimeZoneDatabase)
+    Calendar.put_time_zone_database(Tz.TimeZoneDatabase)
     Brando.Villain.HeexRenderer.init_cache()
 
     children = [
