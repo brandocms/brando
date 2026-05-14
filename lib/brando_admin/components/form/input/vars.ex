@@ -127,25 +127,7 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
   end
 
   def handle_event("remove_subentry", %{"index" => index}, socket) do
-    field_name = socket.assigns.subform.name
-    changeset = socket.assigns.field.form.source
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    updated_entries =
-      changeset
-      |> Ecto.Changeset.get_field(field_name, [])
-      |> List.delete_at(String.to_integer(index))
-
-    updated_changeset = Ecto.Changeset.put_change(changeset, field_name, updated_entries)
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
-
-    {:noreply, socket}
+    BrandoAdmin.Components.Form.Input.SubformHelpers.remove_subentry(socket, index)
   end
 
   def handle_event("force_validate", _, socket) do
@@ -154,22 +136,6 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
   end
 
   def handle_event("sequenced_subform", %{"ids" => order_indices}, socket) do
-    field_name = socket.assigns.subform.name
-    changeset = socket.assigns.field.form.source
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    entries = Ecto.Changeset.get_field(changeset, field_name)
-    sorted_entries = Enum.map(order_indices, &Enum.at(entries, &1))
-
-    updated_changeset = Ecto.Changeset.put_change(changeset, field_name, sorted_entries)
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
-
-    {:noreply, socket}
+    BrandoAdmin.Components.Form.Input.SubformHelpers.sequenced_subform(socket, order_indices)
   end
 end
