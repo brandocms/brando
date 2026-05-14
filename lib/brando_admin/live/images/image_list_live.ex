@@ -10,6 +10,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
   alias BrandoAdmin.Images.FolderBrowser
   alias Brando.Images
   alias Brando.Images.Image
+  alias BrandoAdmin.LiveView.AssetListHelpers
 
   @impl true
   def mount(_params, _session, socket) do
@@ -57,33 +58,22 @@ defmodule BrandoAdmin.Images.ImageListLive do
   end
 
   def handle_event("assets_go_root", _, socket) do
-    {:noreply, patch_folder_filter(socket, nil)}
+    {:noreply, AssetListHelpers.patch_folder_filter(socket, nil)}
   end
 
   def handle_event("assets_go_folder", %{"folder" => folder}, socket) do
     folder_id = FolderBrowser.folder_id_for(folder, socket.assigns.upload_root)
-    {:noreply, patch_folder_filter(socket, folder_id)}
-  end
-
-  def handle_event("assets_go_parent", _, %{assigns: %{current_folder: ""}} = socket) do
-    {:noreply, socket}
+    {:noreply, AssetListHelpers.patch_folder_filter(socket, folder_id)}
   end
 
   def handle_event("assets_go_parent", _, socket) do
-    parent =
-      socket.assigns.current_folder
-      |> String.split("/", trim: true)
-      |> Enum.drop(-1)
-      |> Enum.join("/")
-
-    folder_id = FolderBrowser.folder_id_for(parent, socket.assigns.upload_root)
-    {:noreply, patch_folder_filter(socket, folder_id)}
+    {:noreply, AssetListHelpers.go_parent(socket)}
   end
 
   def handle_event("assets_go_recent", %{"folder" => folder}, socket) do
     relative = FolderBrowser.relative_folder(folder, socket.assigns.upload_root)
     folder_id = FolderBrowser.folder_id_for(relative, socket.assigns.upload_root)
-    {:noreply, patch_folder_filter(socket, folder_id)}
+    {:noreply, AssetListHelpers.patch_folder_filter(socket, folder_id)}
   end
 
   def handle_event("assets_show_new_folder_form", _, socket) do
@@ -98,56 +88,29 @@ defmodule BrandoAdmin.Images.ImageListLive do
   end
 
   def handle_event("assets_create_folder", %{"folder" => %{"name" => folder_name}}, socket) do
-    cleaned = FolderBrowser.normalize_folder(folder_name)
-
-    if cleaned do
-      absolute =
-        if socket.assigns.current_folder in ["", nil] do
-          cleaned
-        else
-          Path.join(socket.assigns.current_folder, cleaned)
-        end
-        |> FolderBrowser.normalize_folder()
-
-      case FolderBrowser.create_folder(absolute, socket.assigns.upload_root) do
-        {:ok, _folder} ->
-          folder_id = FolderBrowser.folder_id_for(absolute, socket.assigns.upload_root)
-
-          {:noreply,
-           socket
-           |> assign(:custom_folders, Enum.uniq([absolute | socket.assigns.custom_folders]))
-           |> assign(:show_new_folder_form, false)
-           |> assign(:new_folder, "")
-           |> patch_folder_filter(folder_id)}
-
-        {:error, _reason} ->
-          {:noreply, socket}
-      end
-    else
-      {:noreply, socket}
-    end
+    {:noreply, AssetListHelpers.create_folder(socket, folder_name)}
   end
 
   def handle_event("assets_move_selected_to_folder", %{"folder" => folder, "ids" => ids}, socket) do
-    ids = parse_selected_ids(ids)
+    ids = AssetListHelpers.parse_selected_ids(ids)
     absolute_folder = FolderBrowser.absolute_folder(folder, socket.assigns.upload_root)
 
     cond do
       ids == [] ->
         {:noreply, socket}
 
-      not folder_under_root?(absolute_folder, socket.assigns.upload_root) ->
+      not AssetListHelpers.folder_under_root?(absolute_folder, socket.assigns.upload_root) ->
         {:noreply, socket}
 
       true ->
         folder_id = FolderBrowser.folder_id_for(folder, socket.assigns.upload_root)
-        move_entries_to_folder(Image, ids, folder_id)
-        update_list_entries(socket.assigns.schema)
+        AssetListHelpers.move_entries_to_folder(Image, ids, folder_id)
+        AssetListHelpers.update_list_entries(socket.assigns.schema)
 
         send(self(), {:toast, gettext("Moved %{count} images", count: length(ids))})
 
         send_update(Content.List,
-          id: listing_id(socket.assigns.schema),
+          id: AssetListHelpers.listing_id(socket.assigns.schema),
           action: :clear_selection
         )
 
@@ -157,7 +120,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
 
   @impl true
   def handle_event("assets_cut_selected", %{"ids" => ids}, socket) do
-    ids = parse_selected_ids(ids)
+    ids = AssetListHelpers.parse_selected_ids(ids)
 
     if ids == [] do
       {:noreply, socket}
@@ -165,7 +128,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
       send(self(), {:toast, gettext("Cut %{count} images", count: length(ids))})
 
       send_update(Content.List,
-        id: listing_id(socket.assigns.schema),
+        id: AssetListHelpers.listing_id(socket.assigns.schema),
         action: :clear_selection
       )
 
@@ -183,8 +146,8 @@ defmodule BrandoAdmin.Images.ImageListLive do
     folder_id = FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root)
     ids = socket.assigns.clipboard_ids
 
-    move_entries_to_folder(Image, ids, folder_id)
-    update_list_entries(socket.assigns.schema)
+    AssetListHelpers.move_entries_to_folder(Image, ids, folder_id)
+    AssetListHelpers.update_list_entries(socket.assigns.schema)
 
     send(
       self(),
@@ -232,16 +195,11 @@ defmodule BrandoAdmin.Images.ImageListLive do
 
         _image ->
           send(self(), {:toast, gettext("Image uploaded successfully")})
-          update_list_entries(socket.assigns.schema)
+          AssetListHelpers.update_list_entries(socket.assigns.schema)
       end
     end
 
     {:noreply, socket}
-  end
-
-  defp update_list_entries(schema) do
-    topic = "brando:listing:content_listing_#{schema}_default"
-    Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {schema, [:entries, :updated], []})
   end
 
   @impl true
@@ -314,7 +272,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
         schema={@schema}
         current_user={@current_user}
         uri={@uri}
-        params={list_params(@params)}
+        params={AssetListHelpers.list_params(@params)}
         listing={:default}
         extra_selection_actions={[
           %{event: "assets_cut_selected", label: gettext("Cut selected")}
@@ -337,7 +295,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
       |> Enum.uniq()
       |> Enum.sort()
 
-    current_folder = resolve_current_folder(folder_filter, socket.assigns.upload_root)
+    current_folder = AssetListHelpers.resolve_current_folder(folder_filter, socket.assigns.upload_root)
     current_folder = if current_folder in folders, do: current_folder, else: ""
 
     current_folder_abs =
@@ -370,28 +328,6 @@ defmodule BrandoAdmin.Images.ImageListLive do
     |> assign(:recent_folders, recent_folders)
     |> assign(:visible_image_count, length(visible_images))
     |> assign(:current_folder_config_target, current_folder_config_target)
-  end
-
-  defp patch_folder_filter(socket, folder) do
-    uri = socket.assigns.uri
-    current_params = URI.decode_query(uri.query || "")
-    folder_filter = if is_nil(folder), do: "root", else: to_string(folder)
-
-    new_params =
-      current_params
-      |> Map.drop(["filter:path", "page"])
-      |> Map.put("filter:folder_id", folder_filter)
-      |> Enum.reject(fn {_k, v} -> v in [nil, ""] end)
-      |> URI.encode_query()
-
-    to =
-      if new_params == "" do
-        uri.path
-      else
-        uri.path <> "?" <> new_params
-      end
-
-    push_patch(socket, to: to)
   end
 
   defp maybe_override_image_upload_path(cfg, nil), do: cfg
@@ -488,76 +424,6 @@ defmodule BrandoAdmin.Images.ImageListLive do
   end
 
   defp normalize_config_target(_), do: nil
-
-  defp resolve_current_folder(folder_filter, upload_root) do
-    cond do
-      is_nil(folder_filter) or folder_filter in ["", "root"] ->
-        ""
-
-      is_integer(folder_filter) ->
-        FolderBrowser.folder_path_for_id(folder_filter, upload_root)
-
-      is_binary(folder_filter) ->
-        case Integer.parse(folder_filter) do
-          {folder_id, ""} ->
-            FolderBrowser.folder_path_for_id(folder_id, upload_root)
-
-          _ ->
-            FolderBrowser.relative_folder(folder_filter, upload_root) || ""
-        end
-
-      true ->
-        ""
-    end
-  end
-
-  defp parse_selected_ids(ids) when is_list(ids) do
-    ids
-    |> Enum.map(&parse_int/1)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.uniq()
-  end
-
-  defp parse_selected_ids(ids) when is_binary(ids) do
-    case Jason.decode(ids) do
-      {:ok, parsed} -> parse_selected_ids(parsed)
-      _ -> []
-    end
-  end
-
-  defp parse_selected_ids(_), do: []
-
-  defp parse_int(value) when is_integer(value), do: value
-
-  defp parse_int(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {id, ""} -> id
-      _ -> nil
-    end
-  end
-
-  defp parse_int(_), do: nil
-
-  defp folder_under_root?(folder, upload_root) do
-    normalized_folder = FolderBrowser.normalize_folder(folder)
-    normalized_root = FolderBrowser.normalize_folder(upload_root)
-
-    normalized_folder == normalized_root ||
-      String.starts_with?(normalized_folder || "", (normalized_root || "") <> "/")
-  end
-
-  defp move_entries_to_folder(schema_module, ids, folder_id) when is_list(ids) do
-    timestamp = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-
-    from(entry in schema_module, where: entry.id in ^ids)
-    |> Brando.Repo.update_all(set: [folder_id: folder_id, updated_at: timestamp])
-  end
-
-  defp listing_id(schema), do: "content_listing_#{schema}_default"
-
-  defp list_params(params) when is_map(params) do
-    Map.put_new(params, "filter:folder_id", "root")
-  end
 
   # Keeps folder browsing correct for legacy assets by assigning folder_id
   # from existing image paths the first time we encounter unassigned entries.

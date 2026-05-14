@@ -44,15 +44,7 @@ defmodule BrandoAdmin.Components.ChildrenButton do
     """
   end
 
-  def handle_event("toggle", _, %{assigns: %{fields: child_fields, singular: singular, entry: %{id: id}}} = socket) do
-    id = "list-row-#{singular}-#{id}"
-
-    send_update(BrandoAdmin.Components.Content.List.Row,
-      id: id,
-      show_children: !socket.assigns.active,
-      child_fields: child_fields
-    )
-
-    {:noreply, assign(socket, :active, !socket.assigns.active)}
+  def handle_event("toggle", _, socket) do
+    {:noreply, BrandoAdmin.LiveView.AssetListHelpers.toggle_children_row(socket)}
   end
 end
