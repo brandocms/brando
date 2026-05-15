@@ -63,7 +63,7 @@ defmodule Brando.Mixfile do
 
   defp deps do
     [
-      {:phoenix, "1.8.5"},
+      {:phoenix, "1.8.7"},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_view, "~> 2.0", optional: true},
       {:postgrex, "~> 0.20"},
@@ -71,7 +71,7 @@ defmodule Brando.Mixfile do
       {:ecto_sql, "~> 3.13.0"},
 
       # liveview
-      {:phoenix_live_view, "~> 1.1.26"},
+      {:phoenix_live_view, "1.1.30"},
       {:phoenix_html, "~> 4.0"},
 
       # hashing/passwords
@@ -108,7 +108,7 @@ defmodule Brando.Mixfile do
       # Liquid templates
       {:liquex, "~> 0.15.0"},
       {:html_entities, "~> 0.5"},
-      {:html_sanitize_ex, "~> 1.4.0"},
+      {:html_sanitize_ex, "~> 1.5.0"},
 
       # Misc
       {:req_llm, "~> 1.6"},
@@ -130,7 +130,7 @@ defmodule Brando.Mixfile do
       {:ex_slop, "~> 0.1", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
-      {:igniter, "~> 0.7.0", only: [:dev, :test]},
+      {:igniter, "~> 0.8.0", only: [:dev, :test]},
       {:recompile_buster, "~> 0.1.0", only: [:dev, :test], runtime: false},
 
       # Test dependencies
