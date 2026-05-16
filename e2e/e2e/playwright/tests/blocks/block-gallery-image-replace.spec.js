@@ -56,13 +56,12 @@ test.describe('Gallery block image replacement', () => {
 
     // Save the page — this is the operation that previously failed
     await page.getByRole('button', { name: 'Save' }).click()
+
+    // Wait for save + image processing to complete and redirect away from create page
+    await expect(page).not.toHaveURL(/\/create$/, { timeout: 30000 })
     await syncLV(page)
 
     // Verify save succeeded — no error alert should appear
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
-
-    // Verify the page was saved by checking we're no longer on the create page
-    // (redirects to edit page on successful save)
-    await expect(page).not.toHaveURL(/\/create$/, { timeout: 5000 })
   })
 })

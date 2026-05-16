@@ -279,7 +279,9 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // The gallery block has class .gallery-block with a .file-input inside
       await page.locator('.gallery-block .file-input').setInputFiles(['./fixtures/image.jpg', './fixtures/image2.jpg'])
       await syncLV(page)
-      // Wait for both image objects to appear in gallery (replaces hardcoded timeout)
+      // Allow time for upload processing
+      await page.waitForTimeout(3000)
+      // Wait for both image objects to appear in gallery
       await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(2, { timeout: 15000 })
 
       await waitForPreviewUpdate(page)

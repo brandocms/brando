@@ -166,6 +166,8 @@ test.describe('Block Identifier Selection', () => {
 
     // Close modal by clicking the X button
     await page.locator('[id^="select-entries-"] .modal-close').click()
+    // Wait for the select-entries modal to fully close (has 300-400ms animation)
+    await expect(page.locator('.modal[id^="select-entries-"]')).not.toBeVisible({ timeout: 5000 })
     await syncLV(page)
 
     // Verify 3 entries again (Alpha should be at the end)

@@ -33,6 +33,7 @@ test.describe('Listing Filters', () => {
     await syncLV(page)
     // Enable full case toggle
     await page.locator('#project_full_case-field-base div').click()
+    await syncLV(page)
     // Fill introduction
     const editor = page.locator('.tiptap-wrapper [contenteditable="true"]').first()
     await editor.click()
@@ -45,7 +46,9 @@ test.describe('Listing Filters', () => {
     const selectModal = page.locator('#select-project_client_id-modal')
     await expect(selectModal).toBeVisible({ timeout: 5000 })
     await selectModal.getByText('Test Client').click()
-    await syncLV(page)
+    // Wait for single-select modal to auto-close and client to appear in form
+    await expect(selectModal).not.toBeVisible({ timeout: 5000 })
+    await expect(page.locator('#project_client_id-field-base')).toContainText('Test Client', { timeout: 10000 })
 
     await page.getByTestId('submit').click()
 
