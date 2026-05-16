@@ -66,129 +66,16 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         "#{module.__naming__().singular}_form"
       end)
 
+    changeset = assigns.field.form.source
     relation_field_atom = String.to_existing_atom("#{assigns.field.field}_id")
     relation_field = assigns.field.form[relation_field_atom]
-    changeset = assigns.field.form.source
-
+    image_id = changeset |> get_field(relation_field_atom) |> try_force_int()
+    image_from_changeset = get_field(changeset, assigns.field.field)
     full_path_fk = socket.assigns.path ++ [relation_field_atom]
 
-    image_id =
-      changeset
-      |> get_field(relation_field_atom)
-      |> try_force_int()
-
-    image_from_changeset = get_field(changeset, assigns.field.field)
-    image = socket.assigns.image
-
-    {socket, image} =
-      cond do
-        is_nil(image) && image_id ->
-          # we have an image_id in the changeset, but no loaded image
-          case Brando.Images.get_image(image_id) do
-            {:ok, image} ->
-              {socket
-               |> assign(:image, image)
-               |> assign(:image_id, image_id)
-               |> assign(:focal, {image.focal.x, image.focal.y}), image}
-
-            {:error, _} ->
-              # Image not found, keep current state
-              {socket, nil}
-          end
-
-        image && to_string(image.id) != to_string(image_id) && image_id != nil ->
-          # we have a loaded image, but it does not match the changeset image
-          # load the changeset image
-          case Brando.Images.get_image(image_id) do
-            {:ok, image} ->
-              {socket
-               |> assign(:image, image)
-               |> assign(:image_id, image_id)
-               |> assign(:focal, {image.focal.x, image.focal.y}), image}
-
-            {:error, _} ->
-              # Image not found, keep current state
-              {socket, nil}
-          end
-
-        image && image.id == nil && image_id == nil ->
-          # no loaded image, no image_id in changeset
-          # try to fetch by path?
-
-          image_id =
-            changeset
-            |> EctoNestedChangeset.get_at(full_path_fk)
-            |> try_force_int()
-
-          case Brando.Images.get_image(image_id) do
-            {:ok, image} ->
-              {socket
-               |> assign(:image, image)
-               |> assign(:image_id, image_id), image}
-
-            {:error, _} ->
-              # Image not found, keep current state
-              {socket, nil}
-          end
-
-        image_id == nil && image != nil ->
-          # reset image to nil
-          {socket
-           |> assign(:focal, {nil, nil})
-           |> assign(:image_id, nil)
-           |> assign(:image, nil), nil}
-
-        image_id != socket.assigns.image_id ->
-          {assign(socket, :image_id, image_id), image}
-
-        image && socket.assigns.focal != {nil, nil} &&
-            socket.assigns.focal != {image.focal.x, image.focal.y} ->
-          {:ok, image} = Brando.Images.get_image(image_id)
-
-          {socket
-           |> assign(:image, image)
-           |> assign(:focal, {image.focal.x, image.focal.y}), image}
-
-        image && image_from_changeset && socket.assigns.focal != {nil, nil} &&
-            {image_from_changeset.focal.x, image_from_changeset.focal.y} != socket.assigns.focal ->
-          # we have an image, and an image from the changeset where the changeset image
-          # has an updated focal value. lets just grab the image from changeset
-          {socket
-           |> assign(:image, image_from_changeset)
-           |> assign(:focal, {image_from_changeset.focal.x, image_from_changeset.focal.y}), image}
-
-        # we have an image, and an image from the changeset, but the title, credits or alt has changed
-        image && image_from_changeset &&
-            (image.title != image_from_changeset.title ||
-               image.credits != image_from_changeset.credits ||
-               image.alt != image_from_changeset.alt) ->
-          {assign(socket, :image, image_from_changeset), image_from_changeset}
-
-        # image replaced in place (same ID, different dimensions or status — e.g., after crop)
-        image && image_from_changeset &&
-          image.id == image_from_changeset.id &&
-            (image.width != image_from_changeset.width ||
-               image.height != image_from_changeset.height ||
-               image.status != image_from_changeset.status) ->
-          {socket
-           |> assign(:image, image_from_changeset)
-           |> assign(:focal, {image_from_changeset.focal.x, image_from_changeset.focal.y}), image_from_changeset}
-
-        true ->
-          if image && image.status == :unprocessed do
-            # if the image is unprocessed, we can try to reload and see if it's done.
-            {:ok, image} = Brando.Images.get_image(image_id)
-
-            {socket
-             |> assign(:image, image)
-             |> assign(:focal, {image.focal.x, image.focal.y}), image}
-          else
-            {socket, image}
-          end
-      end
+    {socket, image} = resolve_image(socket, image_id, image_from_changeset, full_path_fk)
 
     file_name = if is_map(image) && image.path, do: Path.basename(image.path)
-
     form_path = Brando.Utils.get_path_from_field_name(assigns.field.form.name)
     upload_name = upload_name(form_path, assigns.field.field)
 
@@ -203,6 +90,96 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      |> assign_new(:editable, fn -> Keyword.get(socket.assigns.opts, :editable, true) end)
      |> assign(:upload_field, upload_field)
      |> assign_new(:relation_field, fn -> relation_field end)}
+  end
+
+  # Resolves which image to display by comparing the changeset FK, the cached
+  # image in assigns, and the image association from the changeset. Returns
+  # {updated_socket, image_or_nil}.
+  defp resolve_image(socket, image_id, image_from_changeset, full_path_fk) do
+    %{image: image, image_id: prev_image_id, focal: focal} = socket.assigns
+
+    cond do
+      # Nested form edge case: image struct has no ID and FK is nil.
+      # Try resolving via the nested changeset path.
+      not is_nil(image) and is_nil(image.id) and is_nil(image_id) ->
+        fetch_image_by_path(socket, full_path_fk)
+
+      # FK cleared — discard the currently loaded image
+      is_nil(image_id) and not is_nil(image) ->
+        {socket |> assign(:focal, {nil, nil}) |> assign(:image_id, nil) |> assign(:image, nil), nil}
+
+      # Image not loaded yet, or FK now points to a different image — fetch from DB
+      image_id_needs_fetch?(image, image_id) ->
+        fetch_image(socket, image_id)
+
+      # Cached image's focal diverged from tracked focal — refetch latest from DB
+      not is_nil(image) and focal != {nil, nil} and focal != {image.focal.x, image.focal.y} ->
+        fetch_image(socket, image_id)
+
+      # Changeset carries a fresher version of the image's display attributes
+      not is_nil(image) and not is_nil(image_from_changeset) and
+          image_display_changed?(image, image_from_changeset, focal) ->
+        {socket
+         |> assign(:image, image_from_changeset)
+         |> assign(:focal, {image_from_changeset.focal.x, image_from_changeset.focal.y}), image_from_changeset}
+
+      # FK value updated but no fetch needed (image already matches)
+      image_id != prev_image_id ->
+        {assign(socket, :image_id, image_id), image}
+
+      # Image still processing — poll DB for updated status
+      not is_nil(image) and image.status == :unprocessed ->
+        fetch_image(socket, image_id)
+
+      true ->
+        {socket, image}
+    end
+  end
+
+  defp image_id_needs_fetch?(nil, image_id), do: not is_nil(image_id)
+
+  defp image_id_needs_fetch?(image, image_id),
+    do: not is_nil(image_id) and to_string(image.id) != to_string(image_id)
+
+  defp image_display_changed?(image, from_changeset, focal) do
+    (focal != {nil, nil} and {from_changeset.focal.x, from_changeset.focal.y} != focal) or
+      image.title != from_changeset.title or
+      image.credits != from_changeset.credits or
+      image.alt != from_changeset.alt or
+      (image.id == from_changeset.id and
+         (image.width != from_changeset.width or
+            image.height != from_changeset.height or
+            image.status != from_changeset.status))
+  end
+
+  defp fetch_image(socket, image_id) do
+    case Brando.Images.get_image(image_id) do
+      {:ok, image} ->
+        {socket
+         |> assign(:image, image)
+         |> assign(:image_id, image_id)
+         |> assign(:focal, {image.focal.x, image.focal.y}), image}
+
+      {:error, _} ->
+        {socket, nil}
+    end
+  end
+
+  defp fetch_image_by_path(socket, full_path_fk) do
+    changeset = socket.assigns.field.form.source
+
+    image_id =
+      changeset
+      |> EctoNestedChangeset.get_at(full_path_fk)
+      |> try_force_int()
+
+    case Brando.Images.get_image(image_id) do
+      {:ok, image} ->
+        {socket |> assign(:image, image) |> assign(:image_id, image_id), image}
+
+      {:error, _} ->
+        {socket, nil}
+    end
   end
 
   def try_force_int(str) when is_binary(str), do: String.to_integer(str)
