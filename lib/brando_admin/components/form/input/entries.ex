@@ -75,12 +75,11 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     end)
   end
 
-  def assign_selected_schema(%{assigns: %{available_schemas: available_schemas}} = socket)
-      when length(available_schemas) == 1 do
+  def assign_selected_schema(%{assigns: %{available_schemas: [single_schema]}} = socket) do
     socket
-    |> assign_new(:selected_schema, fn -> List.first(available_schemas) end)
+    |> assign_new(:selected_schema, fn -> single_schema end)
     |> assign_new(:available_identifiers, fn ->
-      {_, schema_module, list_opts} = List.first(available_schemas)
+      {_, schema_module, list_opts} = single_schema
       field_opts = socket.assigns.opts
 
       list_opts = maybe_filter_by_language(list_opts, field_opts, socket)

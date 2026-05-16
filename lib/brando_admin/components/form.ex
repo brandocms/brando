@@ -3573,7 +3573,7 @@ defmodule BrandoAdmin.Components.Form do
       Brando.Images.Processing.queue_processing(updated_image, current_user, field_full_path)
     end
 
-    target_field_name = Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")], "")
+    target_field_name = Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")])
 
     {:noreply,
      socket
@@ -3654,7 +3654,7 @@ defmodule BrandoAdmin.Components.Form do
     access_field_full_path = Brando.Utils.build_access_path(field_full_path)
     updated_entry = put_in(entry_or_default, access_field_full_path, updated_video)
 
-    target_field_name = Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")], "")
+    target_field_name = Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")])
 
     {:noreply,
      socket
