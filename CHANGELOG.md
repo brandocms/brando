@@ -249,6 +249,17 @@
 
 - **Image processing backend update**: Replaced `sharp-cli` usage with Image/Vix processors. If you had custom sharp-based processing setup, migrate to Image/Vix-based processing.
 
+- **`hackney` removed (Swoosh api_client)**: `hackney`/`tzdata` were dropped in favour of `tz` and
+  `req`. Swoosh defaults its API client to hackney, so apps will fail to boot with
+  `Could not find hackney dependency` / `missing hackney dependency`. Point Swoosh at the
+  Req-based client (`req` is already a dependency) in `config/config.exs`:
+
+  ```elixir
+  config :swoosh, :api_client, Swoosh.ApiClient.Req
+  ```
+
+  (Your `config/test.exs` likely already sets `config :swoosh, :api_client, false`.)
+
 Before running the migration script, you must fix some `form` syntax in your blueprints.
 If you're passing parameters to the `form` macro, they must be moved to their own functions.
 For instance, if you have:
