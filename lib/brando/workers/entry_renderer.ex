@@ -3,7 +3,7 @@ defmodule Brando.Worker.EntryRenderer do
   use Oban.Worker,
     queue: :default,
     max_attempts: 5,
-    unique: [keys: [:schema, :entry_id], period: 5, states: [:available, :scheduled]]
+    unique: [keys: [:schema, :entry_id], period: 5, states: :incomplete]
 
   require Logger
 

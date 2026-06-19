@@ -474,7 +474,7 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   attr :rest, :global,
     include:
-      ~w(class phx-hook phx-debounce rows phx-update data-slug-for data-slug-type data-autosize autocorrect spellcheck readonly)
+      ~w(class placeholder phx-hook phx-debounce rows phx-update data-slug-for data-slug-type data-autosize autocorrect spellcheck readonly)
 
   attr :field, FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
@@ -869,8 +869,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           phx-target={@target}
           phx-value-field={to_string(field.field)}
           phx-value-default={to_string(default_val || false)}
-        >
-        </button>
+        ></button>
         <span class="override-toggle-label">{label}</span>
         <button
           :if={field.value != nil && field.value != (default_val || false)}

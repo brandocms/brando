@@ -109,6 +109,22 @@ defmodule BrandoAdmin.Components.Form.InputTest do
     assert html =~ ~s(phx-value-field_name="page[body]")
   end
 
+  test "text input renders the placeholder attribute" do
+    form =
+      %TestEntry{}
+      |> cast(%{}, [:title])
+      |> to_form(as: :page)
+
+    html =
+      render_component(&Input.text/1, %{
+        field: form[:title],
+        label: "Title",
+        placeholder: "Enter a title"
+      })
+
+    assert html =~ ~s(placeholder="Enter a title")
+  end
+
   defp restore_env(app, key, nil), do: Application.delete_env(app, key)
   defp restore_env(app, key, value), do: Application.put_env(app, key, value)
 end

@@ -9,7 +9,7 @@ defmodule Brando.Worker.EntryCascade do
   use Oban.Worker,
     queue: :default,
     max_attempts: 3,
-    unique: [keys: [:schema, :entry_id], period: 5, states: [:available, :scheduled]]
+    unique: [keys: [:schema, :entry_id], period: 5, states: :incomplete]
 
   require Logger
 
