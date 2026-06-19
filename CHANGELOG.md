@@ -119,6 +119,7 @@
 
 - `brando_150`: Adds `type_config` (jsonb) to `sites_identities`.
 - `brando_151`: Adds `json_ld_type` (string, default "WebPage") to `pages`.
+- `brando_152`: Adds `breadcrumbs` (jsonb, default `[]`) to `pages`.
 - `brando_153`: Upgrades the Oban schema to v14 (required by Oban 2.23). Run
   `mix brando.upgrade && mix ecto.migrate` to bring in the migration.
 
