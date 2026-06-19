@@ -54,7 +54,7 @@ defmodule E2eProject.MixProject do
       {:tidewave, "~> 0.1"},
       {:igniter, "~> 0.6"},
       # phoenix
-      {:phoenix, "1.8.7"},
+      {:phoenix, "1.8.8"},
       {:phoenix_pubsub, "~> 2.0"},
       {:bandit, "~> 1.0"},
       {:phoenix_ecto, "~> 4.1"},
@@ -68,7 +68,7 @@ defmodule E2eProject.MixProject do
       # {:exsync, "~> 0.2", only: :dev},
 
       # live view
-      {:phoenix_live_view, "1.1.30"},
+      {:phoenix_live_view, "1.2.3"},
       {:floki, ">= 0.27.0", only: :test},
 
       # general deps
