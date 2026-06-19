@@ -46,6 +46,45 @@ defmodule Brando.Villain.ParserTest do
              "<div class=\"video-wrapper video-embed\" data-orientation=\"landscape\" style=\"--aspect-ratio: 0.562\">\n         <iframe src=\"//player.vimeo.com/video/asdf1234?dnt=1\"\n                 width=\"500\"\n                 height=\"281\"\n                 frameborder=\"0\"\n                 webkitallowfullscreen\n                 mozallowfullscreen\n                 allowfullscreen>\n         </iframe>\n       </div>"
   end
 
+  test "video/2 youtube keeps start time from url" do
+    html =
+      video(
+        %{
+          remote_id: "asdf1234",
+          type: :youtube,
+          autoplay: false,
+          url: "https://www.youtube.com/watch?v=asdf1234&t=2m45s"
+        },
+        []
+      )
+
+    assert html =~ "&start=165"
+  end
+
+  test "video/2 youtube omits start when url has no t param" do
+    html =
+      video(
+        %{remote_id: "asdf1234", type: :youtube, autoplay: false, url: "https://youtu.be/asdf1234"},
+        []
+      )
+
+    refute html =~ "&start="
+  end
+
+  test "video/2 vimeo falls back on nil dimensions without crashing" do
+    html = video(%{remote_id: "asdf1234", type: :vimeo, width: nil, height: nil}, [])
+
+    assert html =~ ~s(width="500")
+    assert html =~ ~s(height="281")
+  end
+
+  test "video/2 vimeo parses string dimensions to integers" do
+    html = video(%{remote_id: "asdf1234", type: :vimeo, width: "640", height: "360"}, [])
+
+    assert html =~ ~s(width="640")
+    assert html =~ ~s(height="360")
+  end
+
   test "video/2 file" do
     assert video(
              %{
