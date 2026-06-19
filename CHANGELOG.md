@@ -123,6 +123,18 @@
 - `brando_153`: Upgrades the Oban schema to v14 (required by Oban 2.23). Run
   `mix brando.upgrade && mix ecto.migrate` to bring in the migration.
 
+  **BREAKING (only if you deploy with the bundled `fabfile.py` / Fabric):** the v14
+  Oban migration runs `ALTER TYPE oban_job_state ...`, which Postgres only permits the
+  *owner* of the type to do. If your database objects were created by a different role
+  than the one running migrations (the common case when deploying with the bundled
+  `fabfile.py`, where `postgres` owns the objects and the app role runs migrations), the
+  migration fails with `ERROR 42501 (insufficient_privilege) must be owner of type
+  oban_job_state`. The `grant_db` task in `fabfile.py` has been updated to also reassign
+  ownership of enum types (it previously only covered tables, sequences, functions, and
+  views). If you use Fabric, update your project's `fabfile.py` to match and run
+  `fab <env> grant_db` before migrating. Otherwise, run once as a superuser:
+  `ALTER TYPE public.oban_job_state OWNER TO <your_app_db_user>;`
+
 - **HEEx support for `identifier` and `absolute_url`**: Both macros now accept `~H` templates
   as an alternative to Liquex templates.
 
