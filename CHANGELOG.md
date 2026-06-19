@@ -83,6 +83,18 @@
 
 - **CI matrix**: Drop OTP 26, add Elixir 1.19/1.20 + OTP 28/29.
 
+#### Dependencies
+
+- Bumped `phoenix` to `1.8.8` and `phoenix_live_view` to `1.2.3`. Both are pinned exactly,
+  so when upgrading also pin `phoenix_live_view` to `1.2.3` in your `assets/package.json`
+  (and rebuild your backend assets) — LiveView warns when the JS client and server versions
+  differ.
+- Bumped `oban` to `~> 2.23`. The schema is upgraded to v14 via `brando_153` (see Migrations).
+- Bumped `image` (0.69), `req` (0.6), `req_llm` (1.16), `sentry` (13.2), and `spark`, `tz`,
+  `earmark`, `floki`, `html_sanitize_ex`, `credo`, `ex_doc`, `igniter`.
+- Held `ecto`/`ecto_sql` at `3.13`: Ecto `3.14` requires `decimal ~> 3.0`, which `liquex 0.15`
+  does not yet support.
+
 #### Bug Fixes
 
 - Fixed `@context` inconsistency (`http` vs `https://schema.org`).
@@ -92,6 +104,11 @@
 - Added `image` field to Page's `json_ld_schema` using `meta_image`.
 - Fixed block recovery triggering on fresh navigation.
 - Transfer content when deleting user instead of leaving orphaned records.
+- Form inputs now render their `placeholder` attribute. It was silently dropped because
+  `placeholder` was missing from the `:global` include list on the shared input component.
+- Oban workers `EntryRenderer` and `EntryCascade` now use the `:incomplete` unique state group.
+  The previous `[:available, :scheduled]` list left lifecycle gaps that silently failed to
+  deduplicate in-flight jobs (Oban 2.23 now warns about this at compile time).
 
 #### Documentation
 
@@ -102,6 +119,8 @@
 
 - `brando_150`: Adds `type_config` (jsonb) to `sites_identities`.
 - `brando_151`: Adds `json_ld_type` (string, default "WebPage") to `pages`.
+- `brando_153`: Upgrades the Oban schema to v14 (required by Oban 2.23). Run
+  `mix brando.upgrade && mix ecto.migrate` to bring in the migration.
 
 - **HEEx support for `identifier` and `absolute_url`**: Both macros now accept `~H` templates
   as an alternative to Liquex templates.
