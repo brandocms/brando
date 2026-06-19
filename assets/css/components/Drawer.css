@@ -150,6 +150,32 @@ figcaption.tiny {
     max-width: 1200px;
   }
 
+  /* Left-anchored drawer (e.g. the block outline) — sits beside the sidenav
+     so it can stay open alongside the right-hand live preview. */
+  &.left {
+    /* Tracks the current left edge of the content area. Defaults to the
+       sidenav width, but collapses to 0 when the sidenav is hidden (see below)
+       — e.g. when live preview minimizes it — so the drawer follows the
+       content instead of stranding mid-screen. */
+    --drawer-left-offset: var(--navigation-width, 0px);
+    right: auto;
+    left: var(--drawer-left-offset);
+    border-right: 1px solid color-mix(in srgb, var(--brando-color-dark) 15%, transparent);
+    transition: left 0.4s;
+  }
+
+  /* toggle_drawer slides via .x-100 (translateX(100%), off the right edge).
+     For a left drawer we flip it to slide off the left edge instead. */
+  &.left.x-100 {
+    transform: translateX(calc(-100% - var(--drawer-left-offset)));
+  }
+
+  /* When the sidenav is collapsed (fullscreen toggle or live preview),
+     the content slides to the viewport edge — follow it. */
+  body:has(#sidebar.hidden) &.left {
+    --drawer-left-offset: 0px;
+  }
+
   > .inner {
     display: block;
     @space padding-y 15px;

@@ -23,6 +23,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Outline do
       close={toggle_drawer("##{@id}")}
       narrow
       light
+      left
     >
       <div class="outline-tree">
         <%= if @outline_items == [] do %>

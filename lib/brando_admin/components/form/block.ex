@@ -818,6 +818,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> assign(:form, new_form)
+    |> send_form_to_parent()
     |> maybe_update_live_preview_block()
     |> then(&{:ok, &1})
   end

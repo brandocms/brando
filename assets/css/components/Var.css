@@ -38,6 +38,58 @@
     @space margin-top 15px;
   }
 
+  .file-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    max-width: 400px;
+    padding: 16px;
+    border: 1px solid var(--brando-color-dark);
+    border-radius: 12px;
+    color: var(--brando-color-dark);
+    text-decoration: none;
+    transition: background-color 150ms ease;
+
+    &:hover {
+      background-color: var(--brando-color-peach);
+    }
+
+    .file-card__icon {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+
+      svg {
+        width: 40px;
+        height: 40px;
+        fill: currentColor;
+      }
+    }
+
+    .file-card__meta {
+      min-width: 0;
+    }
+
+    .file-card__name {
+      @fontsize 15px;
+      font-weight: 500;
+      word-break: break-all;
+      margin-bottom: 4px;
+    }
+
+    .file-card__sub {
+      display: flex;
+      gap: 10px;
+      @font mono;
+      @fontsize 12px;
+      text-transform: uppercase;
+      opacity: 0.6;
+    }
+  }
+
   .image-picker-images {
     display: grid;
     grid-gap: 1vw;

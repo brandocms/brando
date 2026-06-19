@@ -873,10 +873,26 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       <div class="panels">
         <div class="panel">
           <%= if @file && @file.filename do %>
-            <div class="file-info">
-              URL: {Utils.file_url(@file, prefix: Utils.media_url())}<br /> Path: {@file.filename}<br />
-              Size: {@file.filesize} bytes
-            </div>
+            <a
+              class="file-card"
+              href={Utils.file_url(@file, prefix: Utils.media_url())}
+              target="_blank"
+              rel="noopener"
+            >
+              <div class="file-card__icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="none" d="M0 0h24v24H0z" />
+                  <path d="M21 8v12.993A1 1 0 0 1 20.007 22H3.993A.993.993 0 0 1 3 21.008V2.992C3 2.444 3.445 2 3.993 2H15l6 6zm-2 1h-5V4H5v16h14V9z" />
+                </svg>
+              </div>
+              <div class="file-card__meta">
+                <div class="file-card__name">{Path.basename(@file.filename)}</div>
+                <div class="file-card__sub">
+                  <span class="file-card__type">{@file.mime_type}</span>
+                  <span class="file-card__size">{Utils.human_size(@file.filesize)}</span>
+                </div>
+              </div>
+            </a>
           <% end %>
           <%= if !@file do %>
             <div

@@ -92,8 +92,8 @@ test.describe('Render var uploads', () => {
     await fileInput.setInputFiles('./fixtures/test.pdf')
 
     // Wait for upload and processing to complete
-    // The upload canvas should disappear and be replaced by file info
-    await expect(fileModal.locator('.file-info')).toBeVisible({ timeout: 20000 })
+    // The upload canvas should disappear and be replaced by the file card
+    await expect(fileModal.locator('.file-card')).toBeVisible({ timeout: 20000 })
 
     // Close the modal
     await fileModal.locator('button.modal-close').click()
@@ -180,7 +180,7 @@ test.describe('Render var uploads', () => {
     const fileModal = page.locator('[id$="file-config"]:visible')
     await expect(fileModal).toBeVisible({ timeout: 5000 })
     await fileModal.locator('input[type="file"].file-input').setInputFiles('./fixtures/test.pdf')
-    await expect(fileModal.locator('.file-info')).toBeVisible({ timeout: 20000 })
+    await expect(fileModal.locator('.file-card')).toBeVisible({ timeout: 20000 })
 
     // Click "Reset file" button in the modal
     await fileModal.getByRole('button', { name: 'Reset file' }).click()

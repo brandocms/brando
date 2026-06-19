@@ -4392,6 +4392,15 @@ defmodule BrandoAdmin.Components.Form do
               upload_error_noreply(socket, :file, reason)
 
             file ->
+              # Files have no async processing step, so signal "processed"
+              # immediately — otherwise the JS hook stays stuck in its
+              # "Processing" overlay (it only hides on block:upload_processed).
+              Brando.endpoint().broadcast!(
+                "user:#{current_user.id}",
+                "block:upload_processed",
+                %{upload_name: to_string(upload_name)}
+              )
+
               send(self(), {:var_upload_complete, upload_name, :file, file})
               {:noreply, socket}
           end
@@ -5308,8 +5317,7 @@ defmodule BrandoAdmin.Components.Form do
             </div>
           </div>
           <div class="live-preview-iframe-wrapper">
-            <iframe data-live-preview-device={@live_preview_target} src={"/__livepreview?key=#{@live_preview_cache_key}"}>
-            </iframe>
+            <iframe data-live-preview-device={@live_preview_target} src={"/__livepreview?key=#{@live_preview_cache_key}"}></iframe>
           </div>
         </div>
       </div>

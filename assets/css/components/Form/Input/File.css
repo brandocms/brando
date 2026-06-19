@@ -29,13 +29,19 @@
   }
 
   .img-placeholder {
-    background-color: var(--brando-color-input);
+    @color bg peach;
     width: 90px;
     height: 90px;
     min-width: auto;
+    border-radius: 6px;
+    color: var(--brando-color-dark);
     display: flex;
     align-items: center;
     justify-content: center;
+
+    svg {
+      opacity: 0.7;
+    }
 
     .shaded & {
       @color bg white;
