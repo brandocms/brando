@@ -355,11 +355,56 @@ defmodule Brando.Villain.Parser do
 
   # Extract dimension data with defaults
   defp extract_video_dimensions(data, default_width, default_height) do
-    width = Map.get(data, :width, default_width)
-    height = Map.get(data, :height, default_height)
+    width = Map.get(data, :width) || default_width
+    height = Map.get(data, :height) || default_height
     orientation = (width > height && "landscape") || "portrait"
 
     %{width: width, height: height, orientation: orientation}
+  end
+
+  defp to_integer(val, _default) when is_integer(val), do: val
+
+  defp to_integer(val, default) when is_binary(val) do
+    case Integer.parse(val) do
+      {int, _} -> int
+      :error -> default
+    end
+  end
+
+  defp to_integer(_, default), do: default
+
+  # Extract start time (in seconds) from a YouTube URL's `t` parameter.
+  # Handles `t=165s`, `t=165`, `t=2m45s` formats. Returns nil if not present.
+  defp extract_youtube_start_time(nil), do: nil
+
+  defp extract_youtube_start_time(url) do
+    case URI.parse(url) do
+      %{query: query} when is_binary(query) ->
+        query
+        |> URI.decode_query()
+        |> Map.get("t")
+        |> parse_youtube_time()
+
+      _ ->
+        nil
+    end
+  end
+
+  defp parse_youtube_time(nil), do: nil
+
+  defp parse_youtube_time(t) do
+    cond do
+      # e.g. "2m45s"
+      Regex.match?(~r/^\d+m\d+s$/, t) ->
+        [m, s] = Regex.run(~r/^(\d+)m(\d+)s$/, t, capture: :all_but_first)
+        String.to_integer(m) * 60 + String.to_integer(s)
+
+      # e.g. "165s" or "165"
+      true ->
+        t |> String.trim_trailing("s") |> String.to_integer()
+    end
+  rescue
+    _ -> nil
   end
 
   # Calculate aspect ratio with fallback
@@ -406,6 +451,12 @@ defmodule Brando.Villain.Parser do
     aspect_ratio = calculate_aspect_ratio(video_fields.width, video_fields.height)
     params = "autoplay=#{(autoplay && 1) || 0}&controls=0&showinfo=0&rel=0"
 
+    params =
+      case extract_youtube_start_time(Map.get(data, :url)) do
+        nil -> params
+        start -> "#{params}&start=#{start}"
+      end
+
     render_iframe_video(
       video_fields.width,
       video_fields.height,
@@ -419,8 +470,8 @@ defmodule Brando.Villain.Parser do
     video_fields = extract_video_dimensions(data, 500, 281)
 
     # Ensure values are integers
-    width = (is_integer(video_fields.width) && video_fields.width) || String.to_integer(video_fields.width)
-    height = (is_integer(video_fields.height) && video_fields.height) || String.to_integer(video_fields.height)
+    width = to_integer(video_fields.width, 500)
+    height = to_integer(video_fields.height, 281)
 
     aspect_ratio = calculate_aspect_ratio(width, height)
 
