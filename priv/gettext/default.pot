@@ -612,6 +612,17 @@ msgstr ""
 msgid "Picture"
 msgstr ""
 
+#: lib/brando_admin/components/form.ex:5301
+#: lib/brando_admin/components/form.ex:5304
+#, elixir-autogen, elixir-format
+msgid "Refresh"
+msgstr ""
+
+#: lib/brando_admin/components/form.ex:3742
+#, elixir-autogen, elixir-format
+msgid "Refreshing Live Preview..."
+msgstr ""
+
 #: lib/brando_admin/live/config/scheduled_publishing_live.ex:67
 #, elixir-autogen, elixir-format
 msgid "Refresh job queue"

@@ -613,6 +613,17 @@ msgstr "Paletter"
 msgid "Picture"
 msgstr "Bilde"
 
+#: lib/brando_admin/components/form.ex:5301
+#: lib/brando_admin/components/form.ex:5304
+#, elixir-autogen, elixir-format
+msgid "Refresh"
+msgstr "Oppdater"
+
+#: lib/brando_admin/components/form.ex:3742
+#, elixir-autogen, elixir-format
+msgid "Refreshing Live Preview..."
+msgstr "Oppdaterer live-forhåndsvisning …"
+
 #: lib/brando_admin/live/config/scheduled_publishing_live.ex:67
 #, elixir-autogen, elixir-format
 msgid "Refresh job queue"

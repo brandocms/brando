@@ -111,6 +111,14 @@
         justify-content: center;
       }
 
+      .live-preview-refresh {
+        position: absolute;
+        top: 5px;
+        right: 7px;
+        flex-direction: row !important;
+        gap: 4px;
+      }
+
       button {
         border: none;
         z-index: 99;

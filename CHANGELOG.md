@@ -4,6 +4,11 @@
 
 #### Features
 
+- **Live preview refresh button**: Add a "Refresh" button to the top-right corner of the
+  live preview drawer header that re-ships a fresh live preview on demand while the drawer
+  stays open. The breakpoint debug indicator/logo overlay in the admin is now gated behind
+  the `:show_breakpoint_debug` config (off by default).
+
 - **Validation rules for block fields** (#2573): Add `require_blocks` constraint for block field
   relations. Validates that blocks using specific module classes are present when saving.
   Skips validation for drafts and when blocks are not being cast.
@@ -94,6 +99,19 @@
   `earmark`, `floki`, `html_sanitize_ex`, `credo`, `ex_doc`, `igniter`.
 - Held `ecto`/`ecto_sql` at `3.13`: Ecto `3.14` requires `decimal ~> 3.0`, which `liquex 0.15`
   does not yet support.
+- **`hackney` is no longer pulled in transitively.** `ex_aws` (now `~> 2.7`) only declares
+  `hackney` as an *optional* dependency, and `fastimage` (which required `hackney`) has been
+  dropped in favour of `image` + `vex`. If anything in your app relied on `hackney` being
+  present, add it explicitly.
+
+  In particular, **Swoosh** defaults to the Hackney API client and will now crash at boot
+  with `(RuntimeError) missing hackney dependency`. Point Swoosh at Req instead (Req is
+  already a dependency):
+
+  ```elixir
+  # config/config.exs
+  config :swoosh, :api_client, Swoosh.ApiClient.Req
+  ```
 
 #### Bug Fixes
 
@@ -109,6 +127,15 @@
 - Oban workers `EntryRenderer` and `EntryCascade` now use the `:incomplete` unique state group.
   The previous `[:available, :scheduled]` list left lifecycle gaps that silently failed to
   deduplicate in-flight jobs (Oban 2.23 now warns about this at compile time).
+- A freshly picked picture or video ref no longer disappears from the live preview when another
+  part of the same block is edited. After a `validate_block` rebuild the ref's `image`/`video`
+  association comes back as `%Ecto.Association.NotLoaded{}` (the `image_id`/`video_id` is
+  preserved). The Villain parser only used the association when it was a loaded struct, so the
+  `NotLoaded` case fell through to the "has media" branch and rendered nothing. Both the picture
+  and video clauses now normalize `NotLoaded` to `nil` and refetch by id, mirroring
+  `resolve_gallery_assoc/2`.
+- Picture ref's empty-state "Pick an existing image" button now opens the image drawer directly
+  instead of opening the config modal first.
 
 #### Documentation
 

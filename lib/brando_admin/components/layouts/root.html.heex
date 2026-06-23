@@ -33,7 +33,9 @@
     </div>
 
     {@inner_content}
-    <Brando.HTML.breakpoint_debug_tag />
-    <Brando.HTML.grid_debug_tag />
+    <%= if Application.get_env(Brando.otp_app(), :show_breakpoint_debug) do %>
+      <Brando.HTML.breakpoint_debug_tag />
+      <Brando.HTML.grid_debug_tag />
+    <% end %>
   </body>
 </html>

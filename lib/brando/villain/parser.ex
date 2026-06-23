@@ -1272,8 +1272,18 @@ defmodule Brando.Villain.Parser do
   end
 
   defp merge_ref_associations(%{data: %{type: "picture"}} = ref) do
+    # A not-yet-preloaded association (e.g. after a validate rebuild of a freshly
+    # picked image) arrives as %NotLoaded{}, which is truthy and would fall through
+    # to the "we have an image" branch below and break rendering. Normalize it to
+    # nil so the image_id refetch branch handles it, mirroring resolve_gallery_assoc/2.
+    image =
+      case Map.get(ref, :image) do
+        %Ecto.Association.NotLoaded{} -> nil
+        image -> image
+      end
+
     merged_data =
-      case {Map.get(ref, :image), Map.get(ref, :image_id)} do
+      case {image, Map.get(ref, :image_id)} do
         {nil, nil} ->
           # No image association and no image_id, return the block data as-is
           ref.data.data
@@ -1342,33 +1352,31 @@ defmodule Brando.Villain.Parser do
   end
 
   defp merge_ref_associations(%{data: %{type: "video"}} = ref) do
-    merged_data =
+    # Same as the picture clause: a freshly picked video comes back as %NotLoaded{}
+    # after a validate rebuild (video_id preserved). Normalize to nil and refetch by
+    # video_id so it keeps rendering in the live preview, mirroring resolve_gallery_assoc/2.
+    video =
       case Map.get(ref, :video) do
-        nil ->
-          # No video association, return the block data as-is
+        %Ecto.Association.NotLoaded{} -> nil
+        video -> video
+      end
+
+    merged_data =
+      case {video, Map.get(ref, :video_id)} do
+        {nil, nil} ->
+          # No video association and no video_id, return the block data as-is
           ref.data.data
 
-        video ->
+        {nil, video_id} when is_integer(video_id) ->
+          # No video association but we have video_id, load the video
+          case fetch_video_assoc(video_id) do
+            nil -> ref.data.data
+            video -> merge_video_overrides(video, ref)
+          end
+
+        {video, _} ->
           # We have a video, so we should return the video data with overrides
-          # from the block data
-          override_data = Map.from_struct(ref.data.data || %{})
-
-          override_attrs =
-            Map.take(override_data, [
-              :title,
-              :poster,
-              :autoplay,
-              :opacity,
-              :preload,
-              :play_button,
-              :controls,
-              :cover,
-              :aspect_ratio,
-              :cover_image
-            ])
-
-          # Merge into the video struct, nil values = use video default
-          Brando.Content.OverrideResolver.merge_overrides(video, override_attrs)
+          merge_video_overrides(video, ref)
       end
 
     # Return the ref structure with merged data, including active status
@@ -1442,6 +1450,34 @@ defmodule Brando.Villain.Parser do
       active: Map.get(ref, :active, true),
       collapsed: Map.get(ref, :collapsed, false)
     }
+  end
+
+  defp merge_video_overrides(video, ref) do
+    override_data = Map.from_struct(ref.data.data || %{})
+
+    override_attrs =
+      Map.take(override_data, [
+        :title,
+        :poster,
+        :autoplay,
+        :opacity,
+        :preload,
+        :play_button,
+        :controls,
+        :cover,
+        :aspect_ratio,
+        :cover_image
+      ])
+
+    # Merge into the video struct, nil values = use video default
+    Brando.Content.OverrideResolver.merge_overrides(video, override_attrs)
+  end
+
+  defp fetch_video_assoc(video_id) do
+    case Brando.Repo.get(Brando.Videos.Video, video_id) do
+      nil -> nil
+      video -> Brando.Repo.preload(video, [:thumbnail, :file])
+    end
   end
 
   defp resolve_gallery_assoc(%Ecto.Association.NotLoaded{}, gallery_id), do: fetch_gallery_assoc(gallery_id)
