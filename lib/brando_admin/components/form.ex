@@ -3737,6 +3737,12 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, socket}
   end
 
+  # manually re-ship a fresh live preview while the drawer stays open
+  def handle_event("refresh_live_preview", _, %{assigns: %{live_preview_active?: true}} = socket) do
+    send(self(), {:toast, gettext("Refreshing Live Preview...")})
+    {:noreply, maybe_full_rerender_live_preview(socket, true)}
+  end
+
   # close live_preview
   def handle_event("open_live_preview", _, %{assigns: %{live_preview_active?: true}} = socket) do
     Brando.LivePreview.cleanup_cache(socket.assigns.live_preview_cache_key)
@@ -5287,6 +5293,16 @@ defmodule BrandoAdmin.Components.Form do
         <div class="live-preview">
           <div class="live-preview-targets">
             <div class="live-preview-divider"></div>
+            <button
+              type="button"
+              class="tiny live-preview-refresh"
+              phx-click="refresh_live_preview"
+              phx-target={@target}
+              title={gettext("Refresh")}
+            >
+              <.icon name="hero-arrow-path" />
+              <span>{gettext("Refresh")}</span>
+            </button>
             <button
               type="button"
               class="tiny live-preview-blank"
