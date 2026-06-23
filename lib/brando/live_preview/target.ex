@@ -64,10 +64,11 @@ defmodule Brando.LivePreview.Target do
       doc: "Reassign on change"
     ],
     schema_preloads: [
-      type: {:list, :atom},
+      type: {:list, :any},
       required: false,
       default: [],
-      doc: "Preloads"
+      doc:
+        "Preloads passed to `Repo.preload/2`. Accepts nested preloads, e.g. `[related_cases: :identifier]`"
     ],
     assigns: [
       type: {:list, {:tuple, [:atom, {:or, [{:fun, 1}, {:fun, 2}]}]}},

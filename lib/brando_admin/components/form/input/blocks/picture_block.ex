@@ -170,7 +170,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       ref_data: new_block_data,
       ref_name: ref_name,
       image_id: image.id,
-      force_render: true
+      force_render: true,
+      # propagate so the parent's cached form keeps the image_id; otherwise a later
+      # block insert/delete re-inits this block from the stale cache and wipes it.
+      # See CLAUDE.md "Block Editor: changeset propagation".
+      propagate: true
     )
 
     extracted_path = Map.get(image, :path)
@@ -450,7 +454,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       ref_data: new_data,
       ref_name: ref_name,
       image_id: nil,
-      force_render: true
+      force_render: true,
+      # propagate the cleared FK to the parent cache (see CLAUDE.md
+      # "Block Editor: changeset propagation")
+      propagate: true
     )
 
     # Clear the image assigns immediately
@@ -484,7 +491,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       event: "update_ref_data",
       ref_data: new_block_data,
       ref_name: ref_name,
-      image_id: image.id
+      image_id: image.id,
+      # propagate so the picked image_id survives a later block insert/delete
+      # (see CLAUDE.md "Block Editor: changeset propagation")
+      propagate: true
     )
 
     # Update the image assigns immediately

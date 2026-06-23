@@ -48,6 +48,29 @@
 - **CID Stability**: When a component remounts, its `@myself` CID changes. Any stored references to the old CID become invalid.
 - **Constant Options in Templates**: Never call functions that return constant lists directly in HEEx templates (e.g., `opts={[options: my_options()]}`). Instead, assign constants once in `mount/1` using `assign_new/3` and reference via assigns (e.g., `opts={[options: @my_options]}`). This avoids re-evaluating the function on every render.
 
+### Block Editor: changeset propagation (`send_form_to_parent` / the `propagate` flag)
+
+Each block is its own `live_component` holding its own `form.source`. The parent
+(`BlockField`) caches every child's form in `entry_blocks_forms`. `send_form_to_parent`
+sends `{event: "update_block", form: ...}` up; the parent does `replace_form_by_uid` and
+re-assigns — which **re-renders the whole block list and pushes the cached forms back
+DOWN to every sibling**, and the generic child `update(assigns, socket)` then adopts
+`assigns.form` (overwriting its own `form.source`).
+
+- **DO NOT propagate on every change.** Propagating on each validate/keystroke makes the
+  parent push its cache down to all siblings, **clobbering any sibling's un-propagated
+  local edits** and disrupting focus/cursor. This is a recurring, painful bug — keep
+  propagation OPT-IN. (`update_ref_data` takes `propagate?` defaulting to `false` for
+  exactly this reason; it was added in `bfbeda9f8` "Move gallery blocks to live upload".)
+- **DO propagate at discrete media-commit points.** When a picker/upload/image-editor
+  sets a ref's `image_id`/`video_id`/`file_id`/`gallery_id` out-of-band, it MUST pass
+  `propagate: true` to `update_ref_data`. Otherwise the parent cache stays stale, and the
+  next block-list change (insert/delete) re-initializes the block from that stale cache and
+  **silently wipes the just-set FK** — the live preview (and a save right after) lose the
+  media. These are safe to propagate because they're one-shot commits, not active typing.
+  All media setters in `picture_block` / `video_block` / `gallery_block` / `map_block`
+  (upload-complete, select, reset, image-editor) should pass `propagate: true`.
+
 ### Ecto Changeset Patterns
 - **put_assoc handles FK automatically**: Don't mix `put_change(:gallery_id, nil)` with `put_assoc(:gallery, ...)`. Let `put_assoc` manage the foreign key.
 - **on_replace for belongs_to**: Use `:nilify` when you need to disassociate (set FK to nil). Default `:raise` prevents any association changes.

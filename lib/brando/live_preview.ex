@@ -86,6 +86,13 @@ defmodule Brando.LivePreview do
   def render(schema_module, entry, cache_key, render_opts \\ []) do
     opts = Brando.LivePreview.get_target_config(schema_module)
     language = Map.get(entry, :language, Brando.config(:default_language))
+
+    # Preload before processing assigns so that both the assign value_fns and the
+    # template prop receive a fully preloaded entry. `mutate_data` is still applied
+    # further down, after `process_assigns`, to preserve the existing semantics where
+    # value_fns see un-mutated data.
+    entry = maybe_preload(entry, opts.schema_preloads)
+
     processed_assigns = process_assigns(opts.assigns, entry, language, cache_key)
 
     {tpl_module, template} =
@@ -111,11 +118,8 @@ defmodule Brando.LivePreview do
         opts.template_css_classes
       end
 
-    # preloads
-    entry =
-      entry
-      |> maybe_preload(opts.schema_preloads)
-      |> maybe_mutate(opts.mutate_data)
+    # `schema_preloads` is applied above, before `process_assigns`.
+    entry = maybe_mutate(entry, opts.mutate_data)
 
     atom_prop =
       if opts.template_prop !== nil,

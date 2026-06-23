@@ -1018,7 +1018,35 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       send_update(Block, id: "block-#{block_uid}", event: "update_sequence", sequence: idx)
     end
 
-    socket
+    # Re-stamp the parent's cached `entry_blocks_forms` sequences to match the new
+    # order. The render passes these forms down to the block components (form=...),
+    # so if they keep stale sequences they clobber the `update_sequence` above on the
+    # next re-render — and a subsequent insert then reads a stale sequence off the
+    # clicked block and lands at the wrong index.
+    index_by_uid = block_list |> Enum.with_index() |> Map.new()
+
+    update(socket, :entry_blocks_forms, fn forms ->
+      Enum.map(forms, fn form ->
+        case Map.fetch(index_by_uid, get_form_block_uid(form)) do
+          {:ok, idx} -> restamp_entry_block_sequence(form, idx)
+          :error -> form
+        end
+      end)
+    end)
+  end
+
+  defp restamp_entry_block_sequence(form, idx) do
+    changeset = form.source
+
+    block_cs =
+      changeset
+      |> Changeset.get_assoc(:block)
+      |> Changeset.put_change(:sequence, idx)
+
+    changeset
+    |> Changeset.put_assoc(:block, block_cs)
+    |> Changeset.put_change(:sequence, idx)
+    |> to_form(as: "entry_block", id: form.id)
   end
 
   def render(assigns) do
