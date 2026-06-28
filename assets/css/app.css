@@ -311,9 +311,21 @@ code {
     display: flex;
 
     > .avatar {
-      box-shadow: 0 0 0 0.01px var(--presence-color, transparent);
-      will-change: box-shadow;
-      animation: pulsate 2s ease-in-out infinite alternate;
+      position: relative;
+
+      /* Animate opacity of a pseudo-element glow (GPU-composited) rather than
+         box-shadow on the avatar (repaints on the main thread every frame). */
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        box-shadow: 0 0 7px 1px var(--presence-color, transparent);
+        opacity: 0;
+        pointer-events: none;
+        will-change: opacity;
+        animation: presence-pulse 2s ease-in-out infinite alternate;
+      }
     }
 
     &:nth-child(6n+1) { --presence-color: rgba(77, 144, 254, 0.6); }

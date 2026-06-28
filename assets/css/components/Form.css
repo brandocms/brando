@@ -687,9 +687,20 @@
       border: 1px solid var(--brando-color-dark);
       border-radius: 50%;
       transform: translateY(1px);
-      box-shadow: 0 0 0 0.01px var(--presence-color, rgba(77, 144, 254, 0.6));
-      will-change: box-shadow;
-      animation: pulsate 2s ease-in-out infinite alternate;
+
+      /* Pulsing glow on a pseudo-element so we animate opacity (GPU-composited)
+         instead of box-shadow (forces a main-thread repaint every frame). */
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        box-shadow: 0 0 7px 1px var(--presence-color, rgba(77, 144, 254, 0.6));
+        opacity: 0;
+        pointer-events: none;
+        will-change: opacity;
+        animation: presence-pulse 2s ease-in-out infinite alternate;
+      }
 
       .image-content {
         display: flex;
@@ -710,14 +721,9 @@
   }
 }
 
-@keyframes pulsate {
-  0% {
-    box-shadow: 0 0 0 0.01px var(--presence-color, rgba(77, 144, 254, 0.6));
-  }
-  50% {
-    box-shadow: 0 0 7px 1px var(--presence-color, rgba(77, 144, 254, 0.6));
-  }
-  100% {
-    box-shadow: 0 0 0 0.01px var(--presence-color, rgba(77, 144, 254, 0.6));
-  }
+/* Compositable presence pulse: fade a pre-rasterized glow layer in/out.
+   Used by all presence indicators (avatars + block glow). */
+@keyframes presence-pulse {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

@@ -1930,16 +1930,24 @@ CodeMirror template by Jan T. Sott (https://github.com/idleberg), adapted by Bra
   }
 }
 
-/* Block presence glow — shows when another user is editing a block */
+/* Block presence glow — shows when another user is editing a block.
+   Static 2px ring stays on the block; the pulsing outer glow lives on a
+   pseudo-element and animates opacity (GPU-composited) rather than box-shadow,
+   which would force a full-block main-thread repaint every frame. */
 .block.block-presence-active {
   box-shadow: 0 0 0 2px var(--presence-color, rgba(77, 144, 254, 0.6));
-  animation: block-pulsate 2s ease-in-out infinite alternate;
-}
 
-@keyframes block-pulsate {
-  0% { box-shadow: 0 0 0 2px var(--presence-color, rgba(77, 144, 254, 0.6)); }
-  50% { box-shadow: 0 0 7px 2px var(--presence-color-strong, rgba(77, 144, 254, 0.8)); }
-  100% { box-shadow: 0 0 0 2px var(--presence-color, rgba(77, 144, 254, 0.6)); }
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: 0 0 7px 2px var(--presence-color-strong, rgba(77, 144, 254, 0.8));
+    opacity: 0;
+    pointer-events: none;
+    will-change: opacity;
+    animation: presence-pulse 2s ease-in-out infinite alternate;
+  }
 }
 
 /* Block locked — another user is actively editing */
