@@ -314,8 +314,9 @@ code {
       position: relative;
 
       /* Animate opacity of a pseudo-element glow (GPU-composited) rather than
-         box-shadow on the avatar (repaints on the main thread every frame). */
-      &::after {
+         box-shadow on the avatar (repaints on the main thread every frame).
+         Use ::before — ::after is the online-status dot (see chrome.css). */
+      &::before {
         content: "";
         position: absolute;
         inset: 0;
