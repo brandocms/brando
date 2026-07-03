@@ -342,6 +342,29 @@ defmodule Brando.LivePreview do
   end
 
   @doc """
+  Refresh the cached HTML for `cache_key` and tell the iframe to reload itself.
+
+  Used when a change introduces new content whose frontend players must be
+  JS-mounted (a newly selected video/gallery/image). A morphdom `rerender` can
+  swap the DOM but can't run the host frontend's boot for new media, so it would
+  leave a gray box. Reloading the iframe re-fetches the (now refreshed) cached
+  HTML and lets the frontend mount the player — exactly like opening the preview.
+
+  Critically this keeps the SAME `cache_key`: minting a new one would desync the
+  key held by every block component and break subsequent morphdom updates.
+  """
+  def reload(_schema, _changeset, nil), do: nil
+
+  def reload(schema, changeset, cache_key, updated_entry_assocs \\ %{}) do
+    schema_module = Module.concat([schema])
+    entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
+    wrapper_html = render(schema_module, entry_struct, cache_key)
+    store_cache(cache_key, wrapper_html)
+    Brando.endpoint().broadcast("live_preview:#{cache_key}", "reload", %{})
+    cache_key
+  end
+
+  @doc """
   Renders the entry, stores in DB and returns URL
   """
   def share(schema_module, changeset, user, updated_entry_assocs \\ %{}) do

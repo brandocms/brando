@@ -130,13 +130,8 @@ defmodule Brando.Videos do
     config =
       case String.split(config_target, ":") do
         [type, schema, field_name] when type in ["video"] ->
-          schema_module = Module.concat([schema])
-
-          field_name_atom = String.to_atom(field_name)
-
-          schema_module
-          |> Brando.Blueprint.Assets.__asset_opts__(field_name_atom)
-          |> Map.get(:cfg)
+          Module.concat([schema])
+          |> video_field_cfg(field_name)
 
         ["default"] ->
           Brando.config(Brando.Videos)[:default_config]
@@ -151,6 +146,60 @@ defmodule Brando.Videos do
 
   def get_config_for(_) do
     get_config_for(%{config_target: "default"})
+  end
+
+  @doc """
+  Whether direct (in-CMS) video upload is actually usable for the given strategy —
+  i.e. the provider's credentials are configured. Used to decide whether to offer
+  the "Upload file" button (otherwise it's a dead end).
+
+  Defaults to the configured `default_video_upload_strategy`.
+  """
+  def upload_available?(strategy \\ Brando.default_video_upload_strategy())
+
+  def upload_available?(:mux) do
+    cfg = Application.get_env(:brando, Brando.Videos.Uploaders.Mux, [])
+    present?(cfg[:access_token_id]) and present?(cfg[:access_token_secret])
+  end
+
+  def upload_available?(:bunny) do
+    cfg = Application.get_env(:brando, Brando.Videos.Uploaders.Bunny, [])
+    present?(cfg[:api_key]) and present?(cfg[:library_id])
+  end
+
+  # :local uses the traditional upload flow (not this direct-upload button);
+  # :cloudflare / :s3 are not implemented.
+  def upload_available?(_strategy), do: false
+
+  defp present?(nil), do: false
+  defp present?(""), do: false
+  defp present?(_), do: true
+
+  # Resolve the `:cfg` for a "video:Schema:field" config target, tolerating fields
+  # that aren't registered schema assets (e.g. block media refs) — returns nil
+  # instead of crashing.
+  defp video_field_cfg(schema_module, field_name) do
+    with {:ok, field_atom} <- existing_atom(field_name),
+         %{} = asset <- Brando.Blueprint.Assets.__asset__(schema_module, field_atom),
+         opts when is_map(opts) <- Map.get(asset, :opts),
+         %{} = cfg <- Map.get(opts, :cfg) do
+      cfg
+    else
+      # Not a registered schema video asset (e.g. a block media ref) — fall back to
+      # the default video config so block videos still upload via the default strategy.
+      _ -> default_video_config()
+    end
+  end
+
+  defp default_video_config do
+    Brando.config(Brando.Videos)[:default_config] ||
+      %{upload_strategy: Brando.default_video_upload_strategy()}
+  end
+
+  defp existing_atom(string) do
+    {:ok, String.to_existing_atom(string)}
+  rescue
+    ArgumentError -> :error
   end
 
   defp normalize_folder_id(nil), do: nil

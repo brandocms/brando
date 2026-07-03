@@ -9,6 +9,10 @@ defmodule Brando.Content.OverrideResolver do
   Merge block data overrides into media struct, skipping nil values.
   nil values mean "use the default from the media record".
   """
+  # No media to merge into (e.g. an unresolved/not-yet-loaded association) — nothing
+  # to override, so return nil instead of crashing on `Map.from_struct(nil)`.
+  def merge_overrides(nil, _override_attrs), do: nil
+
   def merge_overrides(media_struct, override_attrs) when is_map(override_attrs) do
     non_nil_overrides =
       override_attrs

@@ -827,6 +827,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     ref_data = Map.get(params, :ref_data)
     force_render? = Map.get(params, :force_render, false)
     propagate? = Map.get(params, :propagate, false)
+    media_ref? = media_ref_change?(params)
     form = socket.assigns.form
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
@@ -981,7 +982,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     if propagate?, do: send_form_to_parent(socket)
 
     socket
-    |> maybe_update_live_preview_block()
+    |> maybe_reload_or_update_live_preview(media_ref?)
     |> then(&{:ok, &1})
   end
 
@@ -1713,6 +1714,46 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
   end
 
+  # A media association on a ref changed (image/video/gallery/file selected, swapped
+  # or cleared). The new player must be mounted by the host frontend's JS, which a
+  # block-level morphdom can't do — it would swap in inert markup and leave a gray
+  # box. So fall back to a full live-preview reload (the form re-mints the cache key,
+  # the iframe reloads, the frontend boots the player) — the same path used on open.
+  # Non-media ref edits (captions, text) stay on the cheap block-level morphdom path.
+  defp maybe_reload_or_update_live_preview(%{assigns: %{live_preview_active?: true}} = socket, true) do
+    send_update(BrandoAdmin.Components.Form,
+      id: socket.assigns.form_id,
+      event: "reload_live_preview"
+    )
+
+    socket
+  end
+
+  defp maybe_reload_or_update_live_preview(socket, _media_ref?) do
+    maybe_update_live_preview_block(socket)
+  end
+
+  # Keys in an update_ref_data payload that introduce, swap or remove a media
+  # association whose frontend player must be JS-mounted (video/gallery/image/file).
+  defp media_ref_change?(params) do
+    Enum.any?(
+      [
+        :image_id,
+        :video_id,
+        :gallery_id,
+        :file_id,
+        :video_data,
+        :add_gallery_image_id,
+        :add_gallery_video_id,
+        :remove_gallery_image_id,
+        :remove_gallery_video_id,
+        :replace_gallery_image,
+        :replace_gallery_image_id
+      ],
+      &Map.has_key?(params, &1)
+    )
+  end
+
   def maybe_update_live_preview_block(%{assigns: %{live_preview_active?: true}} = socket) do
     %{
       form: %{source: changeset},
@@ -2204,9 +2245,24 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   defp put_change_if_key_exists(changeset, key, params) do
     if Map.has_key?(params, key) do
-      Changeset.put_change(changeset, key, params[key])
+      Changeset.put_change(changeset, key, normalize_media_id(params[key]))
     else
       changeset
+    end
+  end
+
+  # Media id keys (image_id/video_id/gallery_id/file_id) are `:id` fields, but these
+  # values arrive straight from the client (e.g. a picker) as strings and are written
+  # with `put_change`, which does NOT cast — so a string id reaches Ecto and blows up
+  # on insert. Coerce to an integer here; "" / nil mean "clear the association".
+  defp normalize_media_id(nil), do: nil
+  defp normalize_media_id(""), do: nil
+  defp normalize_media_id(id) when is_integer(id), do: id
+
+  defp normalize_media_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {int, ""} -> int
+      _ -> nil
     end
   end
 

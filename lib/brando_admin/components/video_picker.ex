@@ -18,7 +18,12 @@ defmodule BrandoAdmin.Components.VideoPicker do
   end
 
   def update(
-        %{config_target: config_target, event_target: event_target, multi: multi, selected_videos: selected_videos} =
+        %{
+          config_target: config_target,
+          event_target: event_target,
+          multi: multi,
+          selected_videos: selected_videos
+        } =
           assigns,
         socket
       ) do
@@ -28,13 +33,17 @@ defmodule BrandoAdmin.Components.VideoPicker do
      |> assign(:event_target, event_target)
      |> assign(:multi, multi)
      |> assign(:selected_videos, selected_videos)
-     |> assign(:upload_strategy, assigns[:upload_strategy] || Brando.default_video_upload_strategy())
+     |> assign(
+       :upload_strategy,
+       assigns[:upload_strategy] || Brando.default_video_upload_strategy()
+     )
      |> assign(:new_folder, "")
      |> assign(:show_new_folder_form, false)
      |> assign_new(:current_user, fn -> assigns[:current_user] end)
      |> assign_new(:upload_progress, fn -> nil end)
      |> assign_videos()
      |> assign_folder_state(nil)
+     |> assign_video_upload_available()
      |> push_selection_state()}
   end
 
@@ -60,7 +69,18 @@ defmodule BrandoAdmin.Components.VideoPicker do
     {:ok,
      socket
      |> assign_defaults()
-     |> assign(assigns)}
+     |> assign(assigns)
+     |> assign_video_upload_available()}
+  end
+
+  # Whether to offer the direct "Upload file" button — computed once per update
+  # (not in the template) from the resolved upload strategy + provider credentials.
+  defp assign_video_upload_available(socket) do
+    assign(
+      socket,
+      :video_upload_available?,
+      Brando.Videos.upload_available?(socket.assigns.upload_strategy)
+    )
   end
 
   defp assign_videos(socket) do
@@ -297,7 +317,11 @@ defmodule BrandoAdmin.Components.VideoPicker do
      |> push_selection_state()}
   end
 
-  def handle_event("play_video", %{"video-id" => video_id, "source-url" => source_url, "type" => type}, socket) do
+  def handle_event(
+        "play_video",
+        %{"video-id" => video_id, "source-url" => source_url, "type" => type},
+        socket
+      ) do
     video_data = Enum.find(socket.assigns.videos, &(&1.id == String.to_integer(video_id)))
 
     video = %{
@@ -478,7 +502,14 @@ defmodule BrandoAdmin.Components.VideoPicker do
   def render(assigns) do
     ~H"""
     <div>
-      <Content.drawer id={@id} title={gettext("Select video")} close={toggle_drawer("##{@id}")} z={@z_index} wide light>
+      <Content.drawer
+        id={@id}
+        title={gettext("Select video")}
+        close={toggle_drawer("##{@id}")}
+        z={@z_index}
+        wide
+        light
+      >
         <:info>
           <.live_component
             module={FileBrowser}
@@ -508,7 +539,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                   </button>
 
                   <div
-                    :if={@upload_strategy != :local}
+                    :if={@video_upload_available?}
                     phx-hook={video_uploader_hook(@upload_strategy)}
                     id={"video-uploader-#{@id}"}
                     data-target={@myself}
@@ -688,8 +719,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowfullscreen
                   class="video-embed"
-                >
-                </iframe>
+                ></iframe>
               <% :vimeo -> %>
                 <iframe
                   id={"vimeo-player-#{@playing_video.unique_id}"}
@@ -698,10 +728,14 @@ defmodule BrandoAdmin.Components.VideoPicker do
                   allow="autoplay; fullscreen; picture-in-picture"
                   allowfullscreen
                   class="video-embed"
-                >
-                </iframe>
+                ></iframe>
               <% :external_file -> %>
-                <video id={"video-player-#{@playing_video.unique_id}"} controls autoplay class="video-embed">
+                <video
+                  id={"video-player-#{@playing_video.unique_id}"}
+                  controls
+                  autoplay
+                  class="video-embed"
+                >
                   <source src={@playing_video.source_url} />
                   {gettext("Your browser does not support the video tag.")}
                 </video>
@@ -997,6 +1031,9 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   defp normalize_video_config_target(nil), do: nil
   defp normalize_video_config_target(ct) when is_binary(ct), do: ct
-  defp normalize_video_config_target({"video", schema, field}), do: "video:#{inspect(schema)}:#{field}"
+
+  defp normalize_video_config_target({"video", schema, field}),
+    do: "video:#{inspect(schema)}:#{field}"
+
   defp normalize_video_config_target(_), do: nil
 end

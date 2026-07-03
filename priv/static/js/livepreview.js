@@ -123,8 +123,17 @@ function initializeLazyVideos(target = document) {
 function getMorphdomConfig(childrenOnly = true) {
   return {
     skipFromChildren(fromEl, toEl) {
-      // Preserve playing video internals when source hasn't changed
-      if (fromEl.hasAttribute('data-smart-video') && fromEl.hasAttribute('data-booted') &&
+      // Preserve a live video player's internals when its source is unchanged.
+      // A container counts as booted if EITHER the live-preview stub (data-booted)
+      // OR the host frontend's real player (data-view-type, set by SmartVideo on
+      // init) has claimed it. The frontend boots on full load and marks the
+      // container with data-view-type — NOT data-booted — so a full-body rerender
+      // that only checked data-booted would re-morph the container, tear out the
+      // mounted player, and leave a gray box. Checking both markers keeps booted
+      // videos intact across rerender while still re-rendering ones whose source
+      // actually changed.
+      if (fromEl.hasAttribute('data-smart-video') &&
+          (fromEl.hasAttribute('data-booted') || fromEl.hasAttribute('data-view-type')) &&
           fromEl.getAttribute('data-src') === toEl.getAttribute('data-src')) {
         return true
       }
@@ -138,6 +147,20 @@ function getMorphdomConfig(childrenOnly = true) {
     onBeforeElUpdated(fromEl, toEl) {
       // Skip update if nodes are identical
       if (fromEl.isEqualNode(toEl)) {
+        return false
+      }
+
+      // Preserve a live video player ENTIRELY when its source is unchanged.
+      // The host frontend mounts Vidstack on full load and marks the container
+      // with data-view-type (the stub marks it data-booted). Morphing the
+      // container at all — even just its attributes — detaches the player and
+      // strips the data-view-type marker, leaving a gray box. So a booted player
+      // whose source hasn't changed must be a no-op for both the element and its
+      // subtree. A genuine source change has no marker match (different data-src)
+      // and falls through to re-render normally.
+      if (fromEl.hasAttribute('data-smart-video') &&
+          (fromEl.hasAttribute('data-booted') || fromEl.hasAttribute('data-view-type')) &&
+          fromEl.getAttribute('data-src') === toEl.getAttribute('data-src')) {
         return false
       }
 
@@ -430,6 +453,19 @@ channel.on('rerender', function (payload) {
   rebuildContentBlockRegistry()
 
   body.classList.remove('unloaded')
+})
+
+/**
+ * Handle a full iframe reload request.
+ *
+ * Used when a change introduces new media (a freshly selected video/gallery) whose
+ * player must be mounted by the host frontend's JS boot. morphdom can swap the DOM
+ * but never runs that boot, so we reload the iframe: it re-fetches the (already
+ * refreshed) cached HTML for the same key and the frontend mounts the player —
+ * exactly like opening the preview.
+ */
+channel.on('reload', function () {
+  window.location.reload()
 })
 
 /**

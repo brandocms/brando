@@ -149,7 +149,10 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # edit_file
-  def update(%{action: :update_edit_file, file: file}, %{assigns: %{edit_file: edit_file}} = socket) do
+  def update(
+        %{action: :update_edit_file, file: file},
+        %{assigns: %{edit_file: edit_file}} = socket
+      ) do
     updated_edit_file = Map.merge(edit_file, %{file: file, id: file.id})
     file_changeset = change(file)
 
@@ -183,7 +186,10 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # edit_image
-  def update(%{action: :update_edit_image, image: image}, %{assigns: %{edit_image: edit_image}} = socket) do
+  def update(
+        %{action: :update_edit_image, image: image},
+        %{assigns: %{edit_image: edit_image}} = socket
+      ) do
     updated_edit_image = Map.merge(edit_image, %{image: image, id: image.id})
     image_changeset = change(image)
 
@@ -219,7 +225,10 @@ defmodule BrandoAdmin.Components.Form do
      |> assign_drawer_recovery_state()}
   end
 
-  def update(%{action: :open_image_editor_from_picker, image: image}, %{assigns: %{edit_image: edit_image}} = socket) do
+  def update(
+        %{action: :open_image_editor_from_picker, image: image},
+        %{assigns: %{edit_image: edit_image}} = socket
+      ) do
     updated_edit_image = Map.merge(edit_image, %{image: image, id: image.id})
     image_changeset = change(image)
 
@@ -247,7 +256,10 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # edit_video
-  def update(%{action: :update_edit_video, video: video}, %{assigns: %{edit_video: edit_video}} = socket) do
+  def update(
+        %{action: :update_edit_video, video: video},
+        %{assigns: %{edit_video: edit_video}} = socket
+      ) do
     updated_edit_video = Map.merge(edit_video, %{video: video, id: video.id})
     video_changeset = change(video)
 
@@ -284,12 +296,16 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # Open video drawer with context awareness
-  def update(%{action: :open_video_drawer, video_context: context, edit_video: edit_video}, socket) do
+  def update(
+        %{action: :open_video_drawer, video_context: context, edit_video: edit_video},
+        socket
+      ) do
     video_changeset =
       if edit_video.video do
         # Apply defaults if this is a new video for :asset context
         video_with_defaults =
-          if context == :asset && edit_video.defaults && edit_video.defaults != %{} && is_nil(edit_video.video.id) do
+          if context == :asset && edit_video.defaults && edit_video.defaults != %{} &&
+               is_nil(edit_video.video.id) do
             Map.merge(edit_video.video, edit_video.defaults)
           else
             edit_video.video
@@ -324,8 +340,9 @@ defmodule BrandoAdmin.Components.Form do
     field = edit_video.field
     user = socket.assigns.current_user
 
-    # Get video config - this determines the upload strategy
-    %{cfg: _cfg} = Brando.Blueprint.Assets.__asset_opts__(schema, field)
+    # The upload strategy + provider settings come from `get_config_for/1` below.
+    # `field` may be a block media ref (not a registered schema asset), so we don't
+    # look up `__asset_opts__` here — that would crash for blocks.
     config_target = "video:#{inspect(schema)}:#{field}"
 
     case Brando.Videos.get_config_for(config_target) do
@@ -366,7 +383,11 @@ defmodule BrandoAdmin.Components.Form do
             error_message = extract_video_error_message(reason)
 
             # Push error event to JavaScript hook
-            {:ok, push_event(socket, "video_upload_url_error", %{error: error_message, filename: filename})}
+            {:ok,
+             push_event(socket, "video_upload_url_error", %{
+               error: error_message,
+               filename: filename
+             })}
         end
 
       {:error, reason} ->
@@ -375,7 +396,8 @@ defmodule BrandoAdmin.Components.Form do
         error_message = extract_video_error_message(reason)
 
         # Push error event to JavaScript hook
-        {:ok, push_event(socket, "video_upload_url_error", %{error: error_message, filename: filename})}
+        {:ok,
+         push_event(socket, "video_upload_url_error", %{error: error_message, filename: filename})}
     end
   end
 
@@ -399,7 +421,10 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  def update(%{action: :video_upload_progress, video_id: _video_id, percentage: percentage}, socket) do
+  def update(
+        %{action: :video_upload_progress, video_id: _video_id, percentage: percentage},
+        socket
+      ) do
     # Update processing indicator
     {:ok, assign(socket, :processing, percentage)}
   end
@@ -412,7 +437,12 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(
-        %{event: "update_live_preview_block", rendered_html: rendered_html, uid: uid, has_children?: has_children?},
+        %{
+          event: "update_live_preview_block",
+          rendered_html: rendered_html,
+          uid: uid,
+          has_children?: has_children?
+        },
         socket
       ) do
     cache_key = socket.assigns.live_preview_cache_key
@@ -439,6 +469,16 @@ defmodule BrandoAdmin.Components.Form do
   def update(%{event: "update_live_preview"}, %{assigns: %{live_preview_active?: true}} = socket) do
     # update entire live preview (when deleting or inserting blocks)
     {:ok, fetch_root_blocks(socket, :live_preview_update, 0)}
+  end
+
+  def update(%{event: "reload_live_preview"}, %{assigns: %{live_preview_active?: true}} = socket) do
+    # a media association changed — reload the iframe so the host frontend re-mounts
+    # the new player (morphdom can't run the frontend's JS boot for new media)
+    {:ok, fetch_root_blocks(socket, :live_preview_reload, 0)}
+  end
+
+  def update(%{event: "reload_live_preview"}, socket) do
+    {:ok, socket}
   end
 
   def update(%{event: "update_live_preview"}, %{assigns: %{live_preview_active?: false}} = socket) do
@@ -564,7 +604,12 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(
-        %{event: "var_upload_complete", upload_name: upload_name, asset_type: asset_type, asset: asset},
+        %{
+          event: "var_upload_complete",
+          upload_name: upload_name,
+          asset_type: asset_type,
+          asset: asset
+        },
         socket
       ) do
     var_uploads = Map.get(socket.assigns, :var_uploads, %{})
@@ -592,7 +637,10 @@ defmodule BrandoAdmin.Components.Form do
   #   update_entry: false       - also update socket.assigns.entry
   #   force_validation: false   - also push b:validate + svelte remounts (implies update_entry)
   #   force_live_preview_update: false - force immediate live preview update
-  def update(%{event: "update_entry_relation", path: path, updated_relation: updated_relation} = params, socket) do
+  def update(
+        %{event: "update_entry_relation", path: path, updated_relation: updated_relation} = params,
+        socket
+      ) do
     update_entry? = Map.get(params, :update_entry, false)
     force_validation? = Map.get(params, :force_validation, false)
     live_preview_active? = socket.assigns.live_preview_active?
@@ -638,7 +686,9 @@ defmodule BrandoAdmin.Components.Form do
 
   # Deprecation wrapper — delegates to the unified event handler
   def update(%{action: :update_entry_relation} = params, socket) do
-    IO.warn("send_update with action: :update_entry_relation is deprecated, use event: \"update_entry_relation\"")
+    IO.warn(
+      "send_update with action: :update_entry_relation is deprecated, use event: \"update_entry_relation\""
+    )
 
     params
     |> Map.delete(:action)
@@ -675,7 +725,10 @@ defmodule BrandoAdmin.Components.Form do
      |> force_svelte_remounts()}
   end
 
-  def update(%{updated_entry: updated_entry}, %{assigns: %{schema: schema, current_user: current_user}} = socket) do
+  def update(
+        %{updated_entry: updated_entry},
+        %{assigns: %{schema: schema, current_user: current_user}} = socket
+      ) do
     raise "DEPRECATE form.ex:updated_entry —— use action: :update_entry instead"
     new_changeset = schema.changeset(updated_entry, %{}, current_user)
 
@@ -694,7 +747,12 @@ defmodule BrandoAdmin.Components.Form do
 
   # got all root changesets for the block field
   def update(
-        %{event: "provide_root_blocks", root_changesets: root_changesets, block_field: block_field, tag: tag},
+        %{
+          event: "provide_root_blocks",
+          root_changesets: root_changesets,
+          block_field: block_field,
+          tag: tag
+        },
         socket
       ) do
     block_changesets = socket.assigns.block_changesets
@@ -717,7 +775,12 @@ defmodule BrandoAdmin.Components.Form do
 
   # got transformer data from a Transformer component
   def update(
-        %{event: "provide_transformer_data", transformer_field: field, transformer_data: data, tag: tag},
+        %{
+          event: "provide_transformer_data",
+          transformer_field: field,
+          transformer_data: data,
+          tag: tag
+        },
         socket
       ) do
     updated = Map.put(socket.assigns.transformer_changesets, field, data)
@@ -732,7 +795,10 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, event_tag_received(socket, tag)}
   end
 
-  def update(%{action: :update_changeset, changeset: updated_changeset, force_validation: true}, socket) do
+  def update(
+        %{action: :update_changeset, changeset: updated_changeset, force_validation: true},
+        socket
+      ) do
     {:ok,
      socket
      |> assign(:form, to_form(updated_changeset, []))
@@ -959,7 +1025,12 @@ defmodule BrandoAdmin.Components.Form do
 
   defp update_entry_assocs(socket, path, updated_relation) do
     access_path = Brando.Utils.build_access_path(path)
-    assign(socket, :updated_entry_assocs, put_in(socket.assigns.updated_entry_assocs, access_path, updated_relation))
+
+    assign(
+      socket,
+      :updated_entry_assocs,
+      put_in(socket.assigns.updated_entry_assocs, access_path, updated_relation)
+    )
   end
 
   # Transformer changeset updates are now handled by the Transformer component
@@ -985,7 +1056,10 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
-  defp maybe_full_rerender_live_preview(%{assigns: %{has_blocks?: false, live_preview_active?: true}} = socket, true) do
+  defp maybe_full_rerender_live_preview(
+         %{assigns: %{has_blocks?: false, live_preview_active?: true}} = socket,
+         true
+       ) do
     # For non-block schemas, update the live preview without changing cache_key
     # This broadcasts to the Phoenix channel which triggers morphdom in the iframe
     changeset = socket.assigns.form.source
@@ -1025,7 +1099,9 @@ defmodule BrandoAdmin.Components.Form do
 
   defp build_block_map(%{assigns: %{has_blocks?: false}}), do: []
 
-  defp build_block_map(%{assigns: %{schema: schema, form_blueprint: form_blueprint, entry: entry}}) do
+  defp build_block_map(%{
+         assigns: %{schema: schema, form_blueprint: form_blueprint, entry: entry}
+       }) do
     Enum.map(
       form_blueprint.blocks,
       &{
@@ -1067,7 +1143,8 @@ defmodule BrandoAdmin.Components.Form do
       has_meta?: schema.has_trait(Brando.Trait.Meta),
       has_revisioning?: schema.has_trait(Brando.Trait.Revisioned),
       has_scheduled_publishing?: schema.has_trait(Brando.Trait.ScheduledPublishing),
-      has_alternates?: (schema.has_trait(Brando.Trait.Translatable) and schema.has_alternates?()) && entry.id,
+      has_alternates?:
+        (schema.has_trait(Brando.Trait.Translatable) and schema.has_alternates?()) && entry.id,
       has_live_preview?: check_live_preview(schema),
       transformer_changesets: Map.new(transformers, fn {name, _, _} -> {name, nil} end)
     )
@@ -1083,7 +1160,9 @@ defmodule BrandoAdmin.Components.Form do
     assign_new(socket, :default_params, fn -> initial_params end)
   end
 
-  defp assign_default_params(%{assigns: %{form_blueprint: %{default_params: default_params}}} = socket)
+  defp assign_default_params(
+         %{assigns: %{form_blueprint: %{default_params: default_params}}} = socket
+       )
        when is_map(default_params) and map_size(default_params) > 0 do
     assign_new(socket, :default_params, fn -> default_params end)
   end
@@ -1106,12 +1185,14 @@ defmodule BrandoAdmin.Components.Form do
   defp build_asset_fk_map(schema) do
     image_fields =
       if function_exported?(schema, :__image_fields__, 0),
-        do: Enum.map(schema.__image_fields__(), &{:"#{&1.name}_id", {&1.name, Brando.Images.Image}}),
+        do:
+          Enum.map(schema.__image_fields__(), &{:"#{&1.name}_id", {&1.name, Brando.Images.Image}}),
         else: []
 
     video_fields =
       if function_exported?(schema, :__video_fields__, 0),
-        do: Enum.map(schema.__video_fields__(), &{:"#{&1.name}_id", {&1.name, Brando.Videos.Video}}),
+        do:
+          Enum.map(schema.__video_fields__(), &{:"#{&1.name}_id", {&1.name, Brando.Videos.Video}}),
         else: []
 
     file_fields =
@@ -1228,7 +1309,9 @@ defmodule BrandoAdmin.Components.Form do
     else
       socket
       |> then(fn s -> if blocks_ready?, do: assign(s, :all_blocks_received?, true), else: s end)
-      |> then(fn s -> if transformers_ready?, do: assign(s, :all_transformers_received?, true), else: s end)
+      |> then(fn s ->
+        if transformers_ready?, do: assign(s, :all_transformers_received?, true), else: s
+      end)
     end
   end
 
@@ -1424,6 +1507,30 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  # A media association changed — refresh the cached HTML for the SAME cache key and
+  # tell the iframe to reload itself, letting the host frontend re-initialize and
+  # mount the new video/gallery player. A morphdom rerender can't run the frontend's
+  # JS boot for newly introduced media, so it would leave a gray box.
+  #
+  # We deliberately keep the same cache key: minting a new one (via `initialize`)
+  # would desync the key held by every block component and break all subsequent
+  # morphdom updates until live preview is toggled off and on again.
+  def event_tag_received(socket, :live_preview_reload) do
+    block_changesets = socket.assigns.block_changesets
+    changeset = socket.assigns.form.source
+    cache_key = socket.assigns.live_preview_cache_key
+    updated_entry_assocs = socket.assigns.updated_entry_assocs
+
+    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
+      socket
+    else
+      schema = socket.assigns.schema
+      changeset = assoc_all_block_fields(block_changesets, changeset)
+      Brando.LivePreview.reload(schema, changeset, cache_key, updated_entry_assocs)
+      clear_blocks_root_changesets(socket)
+    end
+  end
+
   # when inserting or deleting blocks we want a full rerender of the live preview.
   def event_tag_received(socket, :live_preview_update) do
     block_changesets = socket.assigns.block_changesets
@@ -1522,8 +1629,18 @@ defmodule BrandoAdmin.Components.Form do
                 </svg>
                 <span class="tab-text">{gettext("Scheduled publishing")}</span>
               </button>
-              <button :if={@has_alternates?} phx-click={toggle_drawer("##{@id}-alternates-drawer")} type="button">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+              <button
+                :if={@has_alternates?}
+                phx-click={toggle_drawer("##{@id}-alternates-drawer")}
+                type="button"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
                   <path d="M7.75 2.75a.75.75 0 00-1.5 0v1.258a32.987 32.987 0 00-3.599.278.75.75 0 10.198 1.487A31.545 31.545 0 018.7 5.545 19.381 19.381 0 017 9.56a19.418 19.418 0 01-1.002-2.05.75.75 0 00-1.384.577 20.935 20.935 0 001.492 2.91 19.613 19.613 0 01-3.828 4.154.75.75 0 10.945 1.164A21.116 21.116 0 007 12.331c.095.132.192.262.29.391a.75.75 0 001.194-.91c-.204-.266-.4-.538-.59-.815a20.888 20.888 0 002.333-5.332c.31.031.618.068.924.108a.75.75 0 00.198-1.487 32.832 32.832 0 00-3.599-.278V2.75z" />
                   <path
                     fill-rule="evenodd"
@@ -1542,7 +1659,11 @@ defmodule BrandoAdmin.Components.Form do
                   <path fill="none" d="M0 0h24v24H0z" /><path d="M12 3c5.392 0 9.878 3.88 10.819 9-.94 5.12-5.427 9-10.819 9-5.392 0-9.878-3.88-10.819-9C2.121 6.88 6.608 3 12 3zm0 16a9.005 9.005 0 0 0 8.777-7 9.005 9.005 0 0 0-17.554 0A9.005 9.005 0 0 0 12 19zm0-2.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
                 </svg>
               </button>
-              <button :if={@has_live_preview?} phx-click={JS.push("share_link", target: @myself)} type="button">
+              <button
+                :if={@has_live_preview?}
+                phx-click={JS.push("share_link", target: @myself)}
+                type="button"
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
                   <path fill="none" d="M0 0h24v24H0z" /><path d="M11 2.05v2.012A8.001 8.001 0 0 0 12 20a8.001 8.001 0 0 0 7.938-7h2.013c-.502 5.053-4.766 9-9.951 9-5.523 0-10-4.477-10-10 0-5.185 3.947-9.449 9-9.95zm9 3.364l-8 8L10.586 12l8-8H14V2h8v8h-2V5.414z" />
                 </svg>
@@ -1554,7 +1675,10 @@ defmodule BrandoAdmin.Components.Form do
                   </svg>
                 </button>
                 <SplitDropdown.render id="save-dropdown">
-                  <Button.dropdown value={false} event={JS.push("push_submit_redirect", target: @myself)}>
+                  <Button.dropdown
+                    value={false}
+                    event={JS.push("push_submit_redirect", target: @myself)}
+                  >
                     {gettext("Save")}<span class="shortcut">⇧⌘S</span>
                   </Button.dropdown>
                   <Button.dropdown value={false} event={JS.push("push_submit", target: @myself)}>
@@ -1619,7 +1743,14 @@ defmodule BrandoAdmin.Components.Form do
             <input type="hidden" name="drawer[form_id]" value={@id} />
           </form>
 
-          <.form id={"#{@id}_form"} class="main-form" for={@form} phx-target={@myself} phx-submit="save" phx-change="validate">
+          <.form
+            id={"#{@id}_form"}
+            class="main-form"
+            for={@form}
+            phx-target={@myself}
+            phx-submit="save"
+            phx-change="validate"
+          >
             <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
             <div :if={map_size(Map.get(assigns, :block_uploads, %{})) > 0} style="display:none">
               <.live_file_input
@@ -1711,7 +1842,12 @@ defmodule BrandoAdmin.Components.Form do
             form_id={@id}
           />
 
-          <.submit_button processing={@processing} form_id={@id} label={gettext("Save (⌘S)")} class="primary submit-button" />
+          <.submit_button
+            processing={@processing}
+            form_id={@id}
+            label={gettext("Save (⌘S)")}
+            class="primary submit-button"
+          />
 
           <div :if={@footer} class="form-footer">
             {render_slot(@footer)}
@@ -1734,7 +1870,12 @@ defmodule BrandoAdmin.Components.Form do
   def form_presences(assigns) do
     ~H"""
     <div class="page-presences">
-      <div :for={{_, user} <- @presences} :key={user.id} class="user-presence visible" data-presence-user-id={user.id}>
+      <div
+        :for={{_, user} <- @presences}
+        :key={user.id}
+        class="user-presence visible"
+        data-presence-user-id={user.id}
+      >
         <div class="avatar" data-popover={user.name}>
           <Content.image image={user.avatar} size={:thumb} />
         </div>
@@ -1917,7 +2058,9 @@ defmodule BrandoAdmin.Components.Form do
           upload
       end
 
-    upload_target_name = to_string((upload_field && upload_field.name) || assigns.edit_image.field)
+    upload_target_name =
+      to_string((upload_field && upload_field.name) || assigns.edit_image.field)
+
     upload_dom_id = upload_target_dom_id(upload_target_name)
 
     assigns =
@@ -1964,7 +2107,9 @@ defmodule BrandoAdmin.Components.Form do
               <img
                 width={@edit_image.image.width}
                 height={@edit_image.image.height}
-                src={Brando.Utils.img_url(@edit_image.image, :original, prefix: Brando.Utils.media_url())}
+                src={
+                  Brando.Utils.img_url(@edit_image.image, :original, prefix: Brando.Utils.media_url())
+                }
               />
             </figure>
             <figcaption class="tiny">{@edit_image.image.path}</figcaption>
@@ -2024,7 +2169,12 @@ defmodule BrandoAdmin.Components.Form do
             {gettext("Edit/Crop image")}
           </button>
 
-          <button :if={@edit_image.image} class="secondary" type="button" phx-click={duplicate_image(@edit_image, @myself)}>
+          <button
+            :if={@edit_image.image}
+            class="secondary"
+            type="button"
+            phx-click={duplicate_image(@edit_image, @myself)}
+          >
             {gettext("Duplicate image")}
           </button>
 
@@ -2203,7 +2353,9 @@ defmodule BrandoAdmin.Components.Form do
       <div class="label-wrapper">
         <label class="control-label"><span>{gettext("Video Settings (Defaults)")}</span></label>
       </div>
-      <p class="section-help">{gettext("These settings will be used as defaults when this video is displayed.")}</p>
+      <p class="section-help">
+        {gettext("These settings will be used as defaults when this video is displayed.")}
+      </p>
 
       <div class="settings-grid">
         <Input.toggle field={@video_form[:autoplay]} label={gettext("Autoplay")} tiny={true} />
@@ -2211,7 +2363,11 @@ defmodule BrandoAdmin.Components.Form do
         <Input.toggle field={@video_form[:controls]} label={gettext("Show controls")} tiny={true} />
         <Input.toggle field={@video_form[:loop]} label={gettext("Loop")} tiny={true} />
         <Input.toggle field={@video_form[:preload]} label={gettext("Preload")} tiny={true} />
-        <Input.toggle field={@video_form[:playsinline]} label={gettext("Plays inline (mobile)")} tiny={true} />
+        <Input.toggle
+          field={@video_form[:playsinline]}
+          label={gettext("Plays inline (mobile)")}
+          tiny={true}
+        />
       </div>
     </div>
     """
@@ -2276,7 +2432,12 @@ defmodule BrandoAdmin.Components.Form do
       >
         <Tab.tabs active_tab={@active_video_tab}>
           <:buttons>
-            <Tab.tab_button id="upload" label={gettext("Upload / File")} active_tab={@active_video_tab} target={@myself} />
+            <Tab.tab_button
+              id="upload"
+              label={gettext("Upload / File")}
+              active_tab={@active_video_tab}
+              target={@myself}
+            />
             <Tab.tab_button
               id="external"
               label={gettext("External (Vimeo/YouTube)")}
@@ -2330,7 +2491,9 @@ defmodule BrandoAdmin.Components.Form do
                     <div><strong>{gettext("Filename")}:</strong> {@video_filename}</div>
                   <% end %>
                   <%= if @edit_video.video.width && @edit_video.video.height do %>
-                    <div><strong>{gettext("Dimensions")}:</strong> {@edit_video.video.width}×{@edit_video.video.height}</div>
+                    <div>
+                      <strong>{gettext("Dimensions")}:</strong> {@edit_video.video.width}×{@edit_video.video.height}
+                    </div>
                   <% end %>
                 </div>
               <% end %>
@@ -2384,7 +2547,9 @@ defmodule BrandoAdmin.Components.Form do
                   <div><strong>{gettext("Remote ID")}:</strong> {@edit_video.video.remote_id}</div>
                   <div><strong>{gettext("Type")}:</strong> {@edit_video.video.type}</div>
                   <%= if @edit_video.video.width && @edit_video.video.height do %>
-                    <div><strong>{gettext("Dimensions")}:</strong> {@edit_video.video.width}×{@edit_video.video.height}</div>
+                    <div>
+                      <strong>{gettext("Dimensions")}:</strong> {@edit_video.video.width}×{@edit_video.video.height}
+                    </div>
                   <% end %>
                 </div>
               <% end %>
@@ -2623,9 +2788,14 @@ defmodule BrandoAdmin.Components.Form do
 
     sign_opts =
       case Map.get(cfg, :content_disposition) do
-        nil -> sign_opts
-        :inline -> sign_opts ++ [content_disposition: "inline"]
-        :attachment -> sign_opts ++ [content_disposition: "attachment; filename=\"#{entry.client_name}\""]
+        nil ->
+          sign_opts
+
+        :inline ->
+          sign_opts ++ [content_disposition: "inline"]
+
+        :attachment ->
+          sign_opts ++ [content_disposition: "attachment; filename=\"#{entry.client_name}\""]
       end
 
     {:ok, fields} = Brando.SimpleS3Upload.sign_form_upload(s3_config, bucket, sign_opts)
@@ -2833,7 +3003,13 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event(
         "save",
         params,
-        %{assigns: %{has_blocks?: true, all_blocks_received?: true, all_transformers_received?: true}} = socket
+        %{
+          assigns: %{
+            has_blocks?: true,
+            all_blocks_received?: true,
+            all_transformers_received?: true
+          }
+        } = socket
       ) do
     schema = socket.assigns.schema
     entry = socket.assigns.entry
@@ -2985,7 +3161,11 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:processing, true)}
   end
 
-  def handle_event("save", _params, %{assigns: %{has_transformers?: true, all_transformers_received?: false}} = socket) do
+  def handle_event(
+        "save",
+        _params,
+        %{assigns: %{has_transformers?: true, all_transformers_received?: false}} = socket
+      ) do
     # no blocks, but has transformers that haven't been collected yet
     fetch_transformer_data(socket, :save)
     send(self(), {:progress_popup, "Saving..."})
@@ -2996,7 +3176,11 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:processing, true)}
   end
 
-  def handle_event("save", params, %{assigns: %{has_blocks?: false, all_transformers_received?: true}} = socket) do
+  def handle_event(
+        "save",
+        params,
+        %{assigns: %{has_blocks?: false, all_transformers_received?: true}} = socket
+      ) do
     socket = ship_all_field_changes(socket)
     schema = socket.assigns.schema
     entry = socket.assigns.entry
@@ -3134,7 +3318,10 @@ defmodule BrandoAdmin.Components.Form do
 
         changeset =
           image
-          |> Brando.Images.Image.changeset(%{focal: %{x: x, y: y}, status: :unprocessed}, current_user)
+          |> Brando.Images.Image.changeset(
+            %{focal: %{x: x, y: y}, status: :unprocessed},
+            current_user
+          )
           |> Map.put(:action, :update)
 
         {:ok, img} = Brando.Repo.update(changeset)
@@ -3309,7 +3496,8 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event(
         "reset_image_field",
         _,
-        %{assigns: %{form: form, edit_image: edit_image, entry: entry, singular: singular}} = socket
+        %{assigns: %{form: form, edit_image: edit_image, entry: entry, singular: singular}} =
+          socket
       ) do
     changeset = form.source
     relation_key = relation_field_key(edit_image.relation_field, edit_image.field)
@@ -3333,11 +3521,17 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, socket}
   end
 
-  def handle_event("ai_generate_input", %{"field_name" => field_name, "field_key" => field_key}, socket) do
+  def handle_event(
+        "ai_generate_input",
+        %{"field_name" => field_name, "field_key" => field_key},
+        socket
+      ) do
     with {:ok, field_atom} <- safe_to_existing_atom(field_key),
-         {:ok, ai_opts} <- fetch_field_ai_opts(socket.assigns.form_blueprint, field_atom, socket.assigns.schema),
+         {:ok, ai_opts} <-
+           fetch_field_ai_opts(socket.assigns.form_blueprint, field_atom, socket.assigns.schema),
          {:ok, prompt} <- build_ai_prompt(socket, ai_opts),
-         {:ok, path, key, string_path} <- parse_form_field_name(field_name, socket.assigns.singular),
+         {:ok, path, key, string_path} <-
+           parse_form_field_name(field_name, socket.assigns.singular),
          {:ok, %{text: generated_text}} <- Brando.AI.generate_text(prompt, ai_opts) do
       updated_socket =
         socket
@@ -3364,7 +3558,8 @@ defmodule BrandoAdmin.Components.Form do
             entry: entry,
             schema: schema,
             singular: singular,
-            edit_file: %{file: file, path: path, field: field, relation_field: relation_field} = edit_file,
+            edit_file:
+              %{file: file, path: path, field: field, relation_field: relation_field} = edit_file,
             current_user: current_user
           }
         } = socket
@@ -3489,7 +3684,13 @@ defmodule BrandoAdmin.Components.Form do
     if block_target do
       {module, id} = block_target
       old_image_id = Map.get(socket.assigns.edit_image, :old_image_id)
-      send_update(module, id: id, event: "image_editor_new_copy", new_image: new_image, old_image_id: old_image_id)
+
+      send_update(module,
+        id: id,
+        event: "image_editor_new_copy",
+        new_image: new_image,
+        old_image_id: old_image_id
+      )
     end
 
     send(self(), {:toast, gettext("New image created.")})
@@ -3509,7 +3710,9 @@ defmodule BrandoAdmin.Components.Form do
             entry: entry,
             schema: schema,
             singular: singular,
-            edit_image: %{image: image, path: path, field: field, relation_field: relation_field} = edit_image,
+            edit_image:
+              %{image: image, path: path, field: field, relation_field: relation_field} =
+                edit_image,
             current_user: current_user
           }
         } = socket
@@ -3573,7 +3776,8 @@ defmodule BrandoAdmin.Components.Form do
       Brando.Images.Processing.queue_processing(updated_image, current_user, field_full_path)
     end
 
-    target_field_name = Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")])
+    target_field_name =
+      Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")])
 
     {:noreply,
      socket
@@ -3615,7 +3819,9 @@ defmodule BrandoAdmin.Components.Form do
             entry: entry,
             schema: schema,
             singular: singular,
-            edit_video: %{video: video, path: path, field: field, relation_field: relation_field} = edit_video,
+            edit_video:
+              %{video: video, path: path, field: field, relation_field: relation_field} =
+                edit_video,
             current_user: current_user
           }
         } = socket
@@ -3654,7 +3860,8 @@ defmodule BrandoAdmin.Components.Form do
     access_field_full_path = Brando.Utils.build_access_path(field_full_path)
     updated_entry = put_in(entry_or_default, access_field_full_path, updated_video)
 
-    target_field_name = Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")])
+    target_field_name =
+      Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")])
 
     {:noreply,
      socket
@@ -3756,11 +3963,19 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # try to open live_preview for schema without blocks
-  def handle_event("open_live_preview", _, %{assigns: %{has_blocks?: false, live_preview_active?: false}} = socket) do
+  def handle_event(
+        "open_live_preview",
+        _,
+        %{assigns: %{has_blocks?: false, live_preview_active?: false}} = socket
+      ) do
     send(self(), {:toast, gettext("Starting Live Preview...")})
 
     # Send update to self (the Form component) to trigger live preview initialization
-    send_update_after(__MODULE__, [id: socket.assigns.id, action: :event_tag_received, tag: :live_preview], 100)
+    send_update_after(
+      __MODULE__,
+      [id: socket.assigns.id, action: :event_tag_received, tag: :live_preview],
+      100
+    )
 
     socket =
       socket
@@ -3830,9 +4045,12 @@ defmodule BrandoAdmin.Components.Form do
       error_title = gettext("Notice")
 
       error_msg =
-        gettext("To create and administrate revisions, the entry must be saved at least one time first.")
+        gettext(
+          "To create and administrate revisions, the entry must be saved at least one time first."
+        )
 
-      {:noreply, push_event(socket, "b:alert", %{title: error_title, message: error_msg, type: "error"})}
+      {:noreply,
+       push_event(socket, "b:alert", %{title: error_title, message: error_msg, type: "error"})}
     end
   end
 
@@ -3853,7 +4071,8 @@ defmodule BrandoAdmin.Components.Form do
   defp maybe_invalidate_live_preview_assign(socket, path, path_type \\ :atom_path)
 
   defp maybe_invalidate_live_preview_assign(
-         %{assigns: %{live_preview_active?: true, fields_demanding_live_preview_reassign: fdlpr}} = socket,
+         %{assigns: %{live_preview_active?: true, fields_demanding_live_preview_reassign: fdlpr}} =
+           socket,
          path,
          path_type
        )
@@ -4052,7 +4271,9 @@ defmodule BrandoAdmin.Components.Form do
 
     error_notice =
       if env == :save do
-        gettext("Error while saving form. Please correct marked fields and resubmit<br><br>Fields marked invalid:")
+        gettext(
+          "Error while saving form. Please correct marked fields and resubmit<br><br>Fields marked invalid:"
+        )
       else
         gettext(
           "Cannot open Live Preview with errors in form. Please correct marked fields and try again<br><br>Fields marked invalid:"
@@ -4296,7 +4517,8 @@ defmodule BrandoAdmin.Components.Form do
                 send(
                   self(),
                   {:register_pending_block_image, image.id,
-                   {BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock, "#{block_uid}-gallery"}, upload_name}
+                   {BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock,
+                    "#{block_uid}-gallery"}, upload_name}
                 )
 
               _picture ->
@@ -4305,7 +4527,8 @@ defmodule BrandoAdmin.Components.Form do
                 send(
                   self(),
                   {:register_pending_block_image, image.id,
-                   {BrandoAdmin.Components.Form.Input.Blocks.PictureBlock, "#{block_uid}-picture"}, upload_name}
+                   {BrandoAdmin.Components.Form.Input.Blocks.PictureBlock,
+                    "#{block_uid}-picture"}, upload_name}
                 )
             end
           end
@@ -4485,7 +4708,9 @@ defmodule BrandoAdmin.Components.Form do
                 # Non-block path
                 relation_key = String.to_existing_atom("#{edit_image.field}_id")
                 image_changeset = change(updated_image)
-                updated_edit_image = Map.merge(edit_image, %{id: updated_image.id, image: updated_image})
+
+                updated_edit_image =
+                  Map.merge(edit_image, %{id: updated_image.id, image: updated_image})
 
                 {:noreply,
                  socket
@@ -4542,8 +4767,12 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp normalize_upload_config_target(nil), do: nil
-  defp normalize_upload_config_target(config_target) when is_binary(config_target), do: config_target
-  defp normalize_upload_config_target(%{config_target: config_target}), do: normalize_upload_config_target(config_target)
+
+  defp normalize_upload_config_target(config_target) when is_binary(config_target),
+    do: config_target
+
+  defp normalize_upload_config_target(%{config_target: config_target}),
+    do: normalize_upload_config_target(config_target)
 
   defp normalize_upload_config_target({type, schema, :function, function_name}) do
     "#{type}:#{inspect(schema)}:function:#{function_name}"
@@ -4575,7 +4804,8 @@ defmodule BrandoAdmin.Components.Form do
         }
       )
 
-    {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+    {:noreply,
+     push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
   end
 
   defp upload_error_noreply(socket, _kind, %Ecto.Changeset{} = changeset) do
@@ -4725,12 +4955,16 @@ defmodule BrandoAdmin.Components.Form do
 
           unloaded_image_ids =
             current_gallery_images
-            |> Enum.filter(&(&1.image != nil && &1.image.__struct__ == Ecto.Association.NotLoaded))
+            |> Enum.filter(
+              &(&1.image != nil && &1.image.__struct__ == Ecto.Association.NotLoaded)
+            )
             |> Enum.map(& &1.image_id)
 
           loaded_image_ids =
             current_gallery_images
-            |> Enum.filter(&(&1.image != nil && &1.image.__struct__ != Ecto.Association.NotLoaded))
+            |> Enum.filter(
+              &(&1.image != nil && &1.image.__struct__ != Ecto.Association.NotLoaded)
+            )
             |> Enum.map(& &1.image_id)
 
           selected_images = loaded_image_ids ++ unloaded_image_ids ++ [image.id]
@@ -4889,7 +5123,9 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
-  def assign_form(%{assigns: %{entry: entry, schema: schema, current_user: current_user}} = socket) do
+  def assign_form(
+        %{assigns: %{entry: entry, schema: schema, current_user: current_user}} = socket
+      ) do
     assign_new(socket, :form, fn ->
       entry
       |> schema.changeset(%{}, current_user)
@@ -4898,7 +5134,9 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
-  def assign_refreshed_form(%{assigns: %{entry: entry, schema: schema, current_user: current_user}} = socket) do
+  def assign_refreshed_form(
+        %{assigns: %{entry: entry, schema: schema, current_user: current_user}} = socket
+      ) do
     updated_changeset =
       entry
       |> schema.changeset(%{}, current_user)
@@ -4949,7 +5187,8 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def render_blocks_for_entry(block_map, changeset, entry) do
-    Enum.reduce(block_map, changeset, fn {block_field_name, _schema, _entry_blocks, _opts}, updated_changeset ->
+    Enum.reduce(block_map, changeset, fn {block_field_name, _schema, _entry_blocks, _opts},
+                                         updated_changeset ->
       entry_field_name = :"entry_#{block_field_name}"
       rendered_field_name = :"rendered_#{block_field_name}"
       rendered_at_field_name = :"rendered_#{block_field_name}_at"
@@ -5102,7 +5341,10 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp format_ai_context_value(nil), do: nil
-  defp format_ai_context_value(value) when is_binary(value), do: value |> HtmlSanitizeEx.strip_tags() |> String.trim()
+
+  defp format_ai_context_value(value) when is_binary(value),
+    do: value |> HtmlSanitizeEx.strip_tags() |> String.trim()
+
   defp format_ai_context_value(value) when is_integer(value), do: Integer.to_string(value)
   defp format_ai_context_value(value) when is_float(value), do: to_string(value)
   defp format_ai_context_value(value) when is_boolean(value), do: to_string(value)
@@ -5160,8 +5402,12 @@ defmodule BrandoAdmin.Components.Form do
     ArgumentError -> {:error, :invalid_field_segment}
   end
 
-  defp maybe_send_ai_update_to_blocks(%{assigns: %{has_blocks?: false}} = socket, _string_path, _generated_text),
-    do: socket
+  defp maybe_send_ai_update_to_blocks(
+         %{assigns: %{has_blocks?: false}} = socket,
+         _string_path,
+         _generated_text
+       ),
+       do: socket
 
   defp maybe_send_ai_update_to_blocks(socket, string_path, generated_text) do
     if string_path == ["__force_change"] do
@@ -5179,13 +5425,20 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp ai_error_message(:missing_field), do: gettext("Could not resolve AI settings for this field")
-  defp ai_error_message(:missing_ai_config), do: gettext("No AI configuration was found for this field")
+  defp ai_error_message(:missing_field),
+    do: gettext("Could not resolve AI settings for this field")
+
+  defp ai_error_message(:missing_ai_config),
+    do: gettext("No AI configuration was found for this field")
+
   defp ai_error_message(:missing_prompt), do: gettext("Missing AI prompt configuration")
   defp ai_error_message(:missing_model), do: gettext("Missing AI model configuration")
   defp ai_error_message(:missing_api_key), do: gettext("Missing API key for selected AI provider")
   defp ai_error_message(:empty_response), do: gettext("AI returned an empty response")
-  defp ai_error_message(:invalid_field_name), do: gettext("Could not update this field from AI response")
+
+  defp ai_error_message(:invalid_field_name),
+    do: gettext("Could not update this field from AI response")
+
   defp ai_error_message(_), do: gettext("Failed to generate text with AI")
 
   defp safe_to_existing_atom(value) when is_atom(value), do: {:ok, value}
@@ -5289,7 +5542,12 @@ defmodule BrandoAdmin.Components.Form do
       <input type="hidden" name="live_preview[cache_key]" value={@live_preview_cache_key} />
     </form>
     <%= if @live_preview_active? do %>
-      <div class="live-preview-wrapper" phx-update="ignore" id="live-preview" phx-hook="Brando.LivePreview">
+      <div
+        class="live-preview-wrapper"
+        phx-update="ignore"
+        id="live-preview"
+        phx-hook="Brando.LivePreview"
+      >
         <div class="live-preview">
           <div class="live-preview-targets">
             <div class="live-preview-divider"></div>
@@ -5333,7 +5591,10 @@ defmodule BrandoAdmin.Components.Form do
             </div>
           </div>
           <div class="live-preview-iframe-wrapper">
-            <iframe data-live-preview-device={@live_preview_target} src={"/__livepreview?key=#{@live_preview_cache_key}"}></iframe>
+            <iframe
+              data-live-preview-device={@live_preview_target}
+              src={"/__livepreview?key=#{@live_preview_cache_key}"}
+            ></iframe>
           </div>
         </div>
       </div>
@@ -5392,9 +5653,21 @@ defmodule BrandoAdmin.Components.Form do
           data-field-presence={!@skip_presence && @f_name}
         >
           <span>{@label}</span>
-          <div :if={!@skip_presence} class="field-presence" phx-update="ignore" id={"#{@f_id}-field-presence"}></div>
+          <div
+            :if={!@skip_presence}
+            class="field-presence"
+            phx-update="ignore"
+            id={"#{@f_id}-field-presence"}
+          >
+          </div>
         </label>
-        <.error_tag :if={@field} field={@field} relation={@relation} id_prefix={@id_prefix} uid={@uid} />
+        <.error_tag
+          :if={@field}
+          field={@field}
+          relation={@relation}
+          id_prefix={@id_prefix}
+          uid={@uid}
+        />
         <div :if={@header != []} class="field-wrapper-header">
           {render_slot(@header)}
         </div>
@@ -5503,7 +5776,12 @@ defmodule BrandoAdmin.Components.Form do
         )}
       </div>
     <% else %>
-      <div class="brando-input" data-component={inspect(@type)} data-compact={@compact} data-size={@size}>
+      <div
+        class="brando-input"
+        data-component={inspect(@type)}
+        data-compact={@compact}
+        data-size={@size}
+      >
         <.live_component
           module={@component_target}
           id={@component_id}
@@ -5519,7 +5797,9 @@ defmodule BrandoAdmin.Components.Form do
           opts={@opts}
           current_user={@current_user}
           form_id={@form_id}
-          on_change={if @form_id, do: fn params -> send_update(__MODULE__, Map.put(params, :id, @form_id)) end}
+          on_change={
+            if @form_id, do: fn params -> send_update(__MODULE__, Map.put(params, :id, @form_id)) end
+          }
         />
       </div>
     <% end %>
@@ -5796,7 +6076,13 @@ defmodule BrandoAdmin.Components.Form do
     >
       <%= if @processing do %>
         <div class="processing">
-          <svg class="spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+          <svg
+            class="spin"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+          >
             <path fill="none" d="M0 0h24v24H0z" /><path d="M5.463 4.433A9.961 9.961 0 0 1 12 2c5.523 0 10 4.477 10 10 0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228l-.997-1.795zm13.074 15.134A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772l.997 1.795z" />
           </svg>
           {gettext("Processing. Please wait...")}
@@ -5892,21 +6178,35 @@ defmodule BrandoAdmin.Components.Form do
       |> assign(:f_name, assigns[:field] && assigns[:field].name)
 
     ~H"""
-    <label class={@class} for={@f_id} data-popover={@popover} phx-click={@click} data-field-presence={@f_name}>
+    <label
+      class={@class}
+      for={@f_id}
+      data-popover={@popover}
+      phx-click={@click}
+      data-field-presence={@f_name}
+    >
       {render_slot(@inner_block)}
-      <div :if={!@skip_presence} class="field-presence" phx-update="ignore" id={"#{@f_id}-field-presence"}></div>
+      <div
+        :if={!@skip_presence}
+        class="field-presence"
+        phx-update="ignore"
+        id={"#{@f_id}-field-presence"}
+      >
+      </div>
     </label>
     """
   end
 
   # Extract user-friendly error message from various video provider error formats
   # Supports: Mux, Cloudflare, S3, Bunny, Vimeo, etc.
-  defp extract_video_error_message(%{"error" => %{"messages" => messages}}) when is_list(messages) do
+  defp extract_video_error_message(%{"error" => %{"messages" => messages}})
+       when is_list(messages) do
     # Mux format: %{"error" => %{"messages" => [...]}}
     Enum.join(messages, ". ")
   end
 
-  defp extract_video_error_message(%{"error" => %{"message" => message}}) when is_binary(message) do
+  defp extract_video_error_message(%{"error" => %{"message" => message}})
+       when is_binary(message) do
     # Generic format: %{"error" => %{"message" => "..."}}
     message
   end
@@ -5925,7 +6225,8 @@ defmodule BrandoAdmin.Components.Form do
     inspect(error)
   end
 
-  defp relation_field_key(%{field: relation_key}, _field) when not is_nil(relation_key), do: relation_key
+  defp relation_field_key(%{field: relation_key}, _field) when not is_nil(relation_key),
+    do: relation_key
 
   defp relation_field_key(_relation_field, field) when is_atom(field) do
     candidate = "#{field}_id"
@@ -6056,7 +6357,8 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:editing_schema, schema && to_string(schema))
   end
 
-  defp upload_target_dom_id(value) when is_atom(value), do: value |> Atom.to_string() |> upload_target_dom_id()
+  defp upload_target_dom_id(value) when is_atom(value),
+    do: value |> Atom.to_string() |> upload_target_dom_id()
 
   defp upload_target_dom_id(value) when is_binary(value) do
     value

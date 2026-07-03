@@ -85,7 +85,9 @@ defmodule Brando.Villain.Parser do
       def datasource(_, _) do
         require Logger
 
-        Logger.error("==> parser: datasource/2 is deprecated. Use module with datasource instead.")
+        Logger.error(
+          "==> parser: datasource/2 is deprecated. Use module with datasource instead."
+        )
 
         ""
       end
@@ -299,7 +301,15 @@ defmodule Brando.Villain.Parser do
         |> put_in([Access.key(:refs)], process_refs(entry.refs))
       end)
 
-    adapter.render_multi_module(module, block, base_vars, base_refs, children, IO.iodata_to_binary(content), opts)
+    adapter.render_multi_module(
+      module,
+      block,
+      base_vars,
+      base_refs,
+      children,
+      IO.iodata_to_binary(content),
+      opts
+    )
     |> maybe_annotate(block.uid, opts)
     |> maybe_format(opts)
   end
@@ -954,7 +964,9 @@ defmodule Brando.Villain.Parser do
 
     case Content.find_palette(palettes, palette_id) do
       {:ok, palette} ->
-        colors = palette.colors |> Enum.map(&"--#{&1.key}: #{&1.hex_value}") |> Enum.intersperse(";")
+        colors =
+          palette.colors |> Enum.map(&"--#{&1.key}: #{&1.hex_value}") |> Enum.intersperse(";")
+
         palette_vars = " style=\"#{colors}\""
 
         """
@@ -1113,7 +1125,11 @@ defmodule Brando.Villain.Parser do
           |> Brando.Pages.render_fragment(key, language)
           |> Phoenix.HTML.safe_to_string()
 
-        String.replace(updated_html, "{% fragment #{parent_key} #{key} #{language} %}", rendered_fragment)
+        String.replace(
+          updated_html,
+          "{% fragment #{parent_key} #{key} #{language} %}",
+          rendered_fragment
+        )
       end)
     else
       html
@@ -1361,22 +1377,25 @@ defmodule Brando.Villain.Parser do
         video -> video
       end
 
-    merged_data =
-      case {video, Map.get(ref, :video_id)} do
-        {nil, nil} ->
-          # No video association and no video_id, return the block data as-is
-          ref.data.data
+    # video_id may arrive as an integer or as a string (freshly picked, before cast).
+    video_id = normalize_ref_id(Map.get(ref, :video_id))
 
-        {nil, video_id} when is_integer(video_id) ->
-          # No video association but we have video_id, load the video
+    merged_data =
+      cond do
+        # We have a loaded video — render it with the block-data overrides.
+        not is_nil(video) ->
+          merge_video_overrides(video, ref)
+
+        # No association but a usable id — load it, then merge.
+        is_integer(video_id) ->
           case fetch_video_assoc(video_id) do
             nil -> ref.data.data
-            video -> merge_video_overrides(video, ref)
+            loaded -> merge_video_overrides(loaded, ref)
           end
 
-        {video, _} ->
-          # We have a video, so we should return the video data with overrides
-          merge_video_overrides(video, ref)
+        # No video and no usable id — render the block data as-is.
+        true ->
+          ref.data.data
       end
 
     # Return the ref structure with merged data, including active status
@@ -1480,7 +1499,22 @@ defmodule Brando.Villain.Parser do
     end
   end
 
-  defp resolve_gallery_assoc(%Ecto.Association.NotLoaded{}, gallery_id), do: fetch_gallery_assoc(gallery_id)
+  # A ref's *_id may arrive as an integer or as a string (freshly picked, before the
+  # changeset is cast). Coerce to an integer id, or nil if it isn't a usable id.
+  defp normalize_ref_id(id) when is_integer(id), do: id
+
+  defp normalize_ref_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {int, ""} -> int
+      _ -> nil
+    end
+  end
+
+  defp normalize_ref_id(_), do: nil
+
+  defp resolve_gallery_assoc(%Ecto.Association.NotLoaded{}, gallery_id),
+    do: fetch_gallery_assoc(gallery_id)
+
   defp resolve_gallery_assoc(nil, _gallery_id), do: nil
   defp resolve_gallery_assoc(gallery, _gallery_id), do: gallery
 
@@ -1577,7 +1611,9 @@ defmodule Brando.Villain.Parser do
   end
 
   defp maybe_put_loaded_assoc(gallery_object, _assoc, nil), do: gallery_object
-  defp maybe_put_loaded_assoc(gallery_object, assoc, loaded), do: Map.put(gallery_object, assoc, loaded)
+
+  defp maybe_put_loaded_assoc(gallery_object, assoc, loaded),
+    do: Map.put(gallery_object, assoc, loaded)
 
   defp stale_gallery_image?(%Brando.Images.Image{id: loaded_id, sizes: sizes}, image_id) do
     id_mismatch? = not is_nil(image_id) and to_string(loaded_id) != to_string(image_id)
