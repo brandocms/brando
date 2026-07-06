@@ -130,10 +130,27 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   defp assemble_socket({assigns, socket}, lookups) do
     socket
-    |> assign_new(:image, fn -> lookup_asset(lookups.images, assigns.id) end)
-    |> assign_new(:file, fn -> lookup_asset(lookups.files, assigns.id) end)
+    |> refresh_asset_assign(:image, :image_id, lookups.images, assigns)
+    |> refresh_asset_assign(:file, :file_id, lookups.files, assigns)
     |> assign(:identifier, lookup_asset(lookups.identifiers, assigns.id))
     |> assign_var_fields(assigns)
+  end
+
+  # Keep @image/@file in sync with the changeset FK. `assign_new` would strand a
+  # stale nil after an upload/select changed the FK (blank card); a plain `assign`
+  # would re-fetch a fresh struct every render and loop. So only (re)assign when
+  # the changeset's *_id differs from the currently-displayed asset — this refreshes
+  # the card on an actual change and stays stable (no re-fetch, no loop) otherwise.
+  defp refresh_asset_assign(socket, key, fk_field, lookup, assigns) do
+    changeset_id = get_field(assigns.var.source, fk_field)
+    current = Map.get(socket.assigns, key, :unset)
+    current_id = if is_struct(current), do: current.id, else: nil
+
+    if current != :unset and changeset_id == current_id do
+      socket
+    else
+      assign(socket, key, changeset_id && lookup_asset(lookup, assigns.id))
+    end
   end
 
   defp lookup_asset({asset_map, component_map}, component_id) do
@@ -177,37 +194,6 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign(:instructions, get_field(changeset, :instructions))
     |> assign(:placeholder, get_field(changeset, :placeholder))
     |> assign(:var, var)
-    |> maybe_register_var_upload(type, assigns)
-  end
-
-  defp maybe_register_var_upload(socket, type, assigns) when type in [:image, :file] do
-    form_id = Map.get(assigns, :form_id)
-
-    if form_id && !socket.assigns[:upload_registered] do
-      var_id = assigns.var[:key].value || assigns.var.index
-      upload_name = :"var_#{var_id}_#{type}"
-
-      send_update(BrandoAdmin.Components.Form,
-        id: form_id,
-        event: "register_var_upload",
-        upload_name: upload_name,
-        var_type: type,
-        component_id: assigns.id,
-        config_target: assigns.var[:config_target].value || "default"
-      )
-
-      assign(socket, upload_registered: true, upload_name: upload_name)
-    else
-      socket
-      |> assign_new(:upload_registered, fn -> false end)
-      |> assign_new(:upload_name, fn -> nil end)
-    end
-  end
-
-  defp maybe_register_var_upload(socket, _type, _assigns) do
-    socket
-    |> assign_new(:upload_registered, fn -> false end)
-    |> assign_new(:upload_name, fn -> nil end)
   end
 
   defp extract_value(:image, changeset), do: get_field(changeset, :image_id)
@@ -339,7 +325,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 target={@myself}
                 publish={@publish}
                 on_change={@on_change}
-                upload_name={@upload_name}
+                component_id={@id}
+                var_key={@key}
               />
 
               <%= case @type do %>
@@ -428,7 +415,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               target={@myself}
               publish={@publish}
               on_change={@on_change}
-              upload_name={@upload_name}
+              component_id={@id}
+              var_key={@key}
             />
           </div>
         <% end %>
@@ -456,7 +444,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   attr :target, :any
   attr :publish, :any
   attr :on_change, :any
-  attr :upload_name, :any, default: nil
+  attr :component_id, :any, default: nil
+  attr :var_key, :any, default: nil
 
   def render_value_inputs(%{type: nil} = assigns) do
     ~H"""
@@ -570,7 +559,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             file_name={@image && @image.path && Path.basename(@image.path)}
             publish
           />
-          <.image_modal field={@var} image={@image} target={@target} upload_name={@upload_name} />
+          <.image_modal field={@var} image={@image} target={@target} component_id={@component_id} var_key={@var_key} />
         </div>
       </Form.field_base>
       <div :if={@edit} class="brando-input">
@@ -599,7 +588,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             click={show_modal("#var-#{@var.id}-file-config")}
             file_name={@file && @file.filename && Path.basename(@file.filename)}
           />
-          <.file_modal field={@var} file={@file} target={@target} upload_name={@upload_name} />
+          <.file_modal field={@var} file={@file} target={@target} component_id={@component_id} var_key={@var_key} />
         </div>
       </Form.field_base>
       <div :if={@edit} class="brando-input">
@@ -662,7 +651,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <%= if @value not in [nil, ""] do %>
             <dl>
               <dt>{gettext("URL")}=</dt>
-              <dd>{raw(@value)}</dd>
+              <dd>{@value}</dd>
             </dl>
           <% else %>
             <dl>
@@ -681,10 +670,16 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     ""
   end
 
+  # Returns a safe tuple: each URL segment is escaped, only the <wbr /> tags
+  # we add here render as markup.
   defp split_url_with_wbr(url) do
     url
     |> String.split("/")
-    |> Enum.map_join("/", &"#{&1}<wbr />")
+    |> Enum.map_join("/", fn segment ->
+      escaped = segment |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+      "#{escaped}<wbr />"
+    end)
+    |> Phoenix.HTML.raw()
   end
 
   attr :link_text, :string, default: nil
@@ -810,19 +805,16 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             <div
               id={"#{@field.id}-var-uploader"}
               class="input-image"
-              phx-hook="Brando.BlockUpload"
-              data-upload-name={@upload_name}
+              phx-hook="Brando.UploadTrigger"
+              data-kind="block_var"
+              data-component-id={@component_id}
+              data-var-key={@var_key}
+              data-asset-type="image"
               data-config-target={@field[:config_target].value || "default"}
               data-folder-browser="true"
-              data-upload-mode="single"
-              data-label-uploading={gettext("Uploading")}
-              data-label-processing={gettext("Processing image...")}
+              data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
             >
               <input type="file" class="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" style="display:none" />
-              <div class="upload-progress" style="display:none">
-                <progress value="0" max="100">0%</progress>
-                <div class="upload-progress-label"></div>
-              </div>
               <div class="img-placeholder empty upload-canvas">
                 <div class="placeholder-wrapper">
                   <div class="svg-wrapper">
@@ -898,19 +890,14 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             <div
               id={"#{@field.id}-var-uploader"}
               class="input-image"
-              phx-hook="Brando.BlockUpload"
-              data-upload-name={@upload_name}
+              phx-hook="Brando.UploadTrigger"
+              data-kind="block_var"
+              data-component-id={@component_id}
+              data-var-key={@var_key}
+              data-asset-type="file"
               data-config-target={@field[:config_target].value || "default"}
-              data-folder-browser="false"
-              data-upload-mode="single"
-              data-label-uploading={gettext("Uploading")}
-              data-label-processing={gettext("Processing...")}
             >
               <input type="file" class="file-input" style="display:none" />
-              <div class="upload-progress" style="display:none">
-                <progress value="0" max="100">0%</progress>
-                <div class="upload-progress-label"></div>
-              </div>
               <div class="img-placeholder empty upload-canvas">
                 <div class="placeholder-wrapper">
                   <div class="svg-wrapper">

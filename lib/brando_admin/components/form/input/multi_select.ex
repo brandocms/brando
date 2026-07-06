@@ -18,7 +18,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   # prop instructions, :string
   # prop opts, :list, default: []
   # prop current_user, :map
-  # prop parent_uploads, :map
   # prop parent_form_id, :string # might not be needed?
   # prop subform_id, :string
 
@@ -197,7 +196,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                   <Fieldset.render
                     :for={fieldset <- tab.fields}
                     form={entry_form}
-                    parent_uploads={%{}}
                     relations={%{}}
                     current_user={@current_user}
                     form_cid={nil}

@@ -127,7 +127,6 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
      socket
      |> prepare_input_component()
      |> assign_new(:editable, fn -> Keyword.get(socket.assigns.opts, :editable, true) end)
-     |> assign_new(:upload_field, fn -> socket.assigns.parent_uploads[assigns.field.field] end)
      |> assign_new(:relation_field, fn -> relation_field end)}
   end
 

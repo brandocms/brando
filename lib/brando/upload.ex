@@ -26,6 +26,7 @@ defmodule Brando.Upload do
   alias Brando.Images
   alias Brando.Type.FileConfig
   alias Brando.Type.ImageConfig
+  alias Brando.Type.VideoConfig
 
   @doc """
   Initiate the upload handling.
@@ -120,6 +121,35 @@ defmodule Brando.Upload do
     }
 
     Files.create_file(file_params, user)
+  end
+
+  # A local (:upload type) video wraps a File record (`Video` has
+  # `asset :file, :file`) — store the file first, then the Video pointing at
+  # it. The file keeps the video's config_target so its URL resolves through
+  # the video asset's cfg (see Files.get_config_for/1 "video:" handling).
+  def handle_upload_type(%{cfg: %VideoConfig{}} = upload, user) do
+    file_params = %{
+      title: upload.upload_entry.client_name,
+      mime_type: upload.upload_entry.client_type,
+      filesize: upload.upload_entry.client_size,
+      filename: upload.meta.filename,
+      config_target: upload.meta.config_target,
+      cdn: false,
+      folder_id: upload.meta[:folder_id]
+    }
+
+    with {:ok, file} <- Files.create_file(file_params, user) do
+      Brando.Videos.create_video(
+        %{
+          type: :upload,
+          status: :ready,
+          title: upload.upload_entry.client_name,
+          file_id: file.id,
+          config_target: upload.meta.config_target
+        },
+        user
+      )
+    end
   end
 
   def handle_upload_type(%{meta: meta, upload_entry: _upload_entry, cfg: _cfg}, user) do

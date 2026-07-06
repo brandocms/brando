@@ -11,7 +11,6 @@ defmodule BrandoAdmin.Components.Form.Subform do
   # prop subform, :any
   # prop form, :any
   # prop blueprint, :any
-  # prop parent_uploads, :any
   # prop current_user, :map
   # prop label, :string
   # prop instructions, :string
@@ -135,7 +134,6 @@ defmodule BrandoAdmin.Components.Form.Subform do
               placeholder={@placeholder}
               input={input}
               path={@path}
-              parent_uploads={@parent_uploads}
               parent_form_id={@parent_form_id}
               subform_id={@id}
               current_user={@current_user}
@@ -175,7 +173,6 @@ defmodule BrandoAdmin.Components.Form.Subform do
                   sub_form={sub_form}
                   input={input}
                   path={@path ++ [sub_form.index]}
-                  parent_uploads={@parent_uploads}
                   parent_form_id={@parent_form_id}
                   subform_id={@id}
                   current_user={@current_user}

@@ -192,6 +192,21 @@ The upload flow:
 3. Video record is created and associated with the block
 4. Provider webhooks update the video status when processing completes
 
+### Videos in Galleries
+
+Gallery fields (`asset :my_gallery, :gallery`) hold both images and videos. Videos
+can be added to a gallery in three ways:
+
+1. **Select existing videos** — the "Select videos" button opens the video picker.
+2. **Add from URL** — the video picker accepts YouTube, Vimeo and direct video URLs.
+3. **Upload video files**:
+   - With the default `:local` strategy, the gallery input shows an
+     "Upload videos" button that uploads through the unified upload manager and
+     appends the video to the gallery.
+   - With a provider strategy (`:mux`/`:bunny`), upload through the video picker's
+     "Upload file" button instead — the uploaded video is selected into the
+     gallery automatically.
+
 ### Video Config Options
 
 Full list of `Brando.Type.VideoConfig` options:

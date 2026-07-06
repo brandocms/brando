@@ -4,6 +4,28 @@
 
 #### Features
 
+- **Unified upload manager**: All uploads (block vars, block refs, entry fields —
+  images, files, videos, galleries) now route through a single sticky
+  `BrandoAdmin.UploadManager` LiveView with its own queue and drawer UI. Upload
+  progress no longer re-renders the form/block tree, which fixes stalled uploads
+  and render storms on large entries (a 4 MB upload on a 115-block entry went from
+  ~106s to ~7s). Includes drag-and-drop `UploadTrigger` drop zones with
+  folder-browser integration, configurable transfer concurrency
+  (`config :brando, Brando.Uploads, max_concurrent_transfers: 3`), opt-in
+  client-direct S3/Spaces file uploads via presigned PUT
+  (`cdn: %Brando.CDN.Config{enabled: true, direct: true}` on `Brando.Files`), and
+  Mux/Bunny video upload visibility in the manager drawer. Local video uploads now
+  store correctly as `Video{type: :upload}` records wrapping a `File`. See
+  `docs/UPLOADER.md` for the full design and migration notes.
+
+- **Gallery video uploads**: Gallery entry fields accept direct video file uploads
+  via an "Upload videos" button (shown when the default video upload strategy is
+  `:local`; Mux/Bunny sites upload through the video picker's provider hooks
+  instead). Uploaded videos are appended to the gallery as video gallery objects.
+  The gallery input's action row was normalized (real uniform buttons instead of a
+  styled div), and the entire input is now a drag-and-drop zone for image uploads,
+  matching the block gallery.
+
 - **Live preview refresh button**: Add a "Refresh" button to the top-right corner of the
   live preview drawer header that re-ships a fresh live preview on demand while the drawer
   stays open. The breakpoint debug indicator/logo overlay in the admin is now gated behind

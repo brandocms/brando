@@ -9,7 +9,6 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
   # prop fieldset, :any
   # prop form, :any
   # prop translations, :any
-  # prop parent_uploads, :any
   # prop form_cid, :any
 
   def render(assigns) do
@@ -25,7 +24,6 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
         form={@form}
         relations={@relations}
         input={input}
-        parent_uploads={@parent_uploads}
         current_user={@current_user}
         form_cid={@form_cid}
         form_id={@form_id}

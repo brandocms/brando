@@ -43,9 +43,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      assign(socket,
        available_images: [],
        show_only_selected?: false,
-       form_id: nil,
-       upload_registered: false,
-       upload_name: nil
+       form_id: nil
      )}
   end
 
@@ -70,16 +68,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     # is already available here for matching.
     gallery_objects = socket.assigns[:gallery_objects] || []
 
-    gallery_objects =
-      Enum.map(gallery_objects, fn obj ->
-        if obj.image_id == image.id, do: Map.put(obj, :image, image), else: obj
-      end)
+    if Enum.any?(gallery_objects, &(&1.image_id == image.id)) do
+      gallery_objects =
+        Enum.map(gallery_objects, fn obj ->
+          if obj.image_id == image.id, do: Map.put(obj, :image, image), else: obj
+        end)
 
-    {:ok,
-     socket
-     |> assign(:gallery_objects, gallery_objects)
-     |> assign(:indexed_objects, Enum.with_index(gallery_objects))
-     |> assign(:has_objects?, !Enum.empty?(gallery_objects))}
+      {:ok,
+       socket
+       |> assign(:gallery_objects, gallery_objects)
+       |> assign(:indexed_objects, Enum.with_index(gallery_objects))
+       |> assign(:has_objects?, !Enum.empty?(gallery_objects))}
+    else
+      # The image isn't in our local list yet — processing finished before the
+      # add's re-render reached this component (inline/fast queue). Do NOT
+      # reassign the stale list (it would pin an outdated gallery over the
+      # parent's incoming refresh); the Block-side replace above still ran.
+      {:ok, socket}
+    end
   end
 
   def update(%{event: "live_upload_complete", image_id: image_id}, socket) do
@@ -202,22 +208,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     updated_block_data_cs = Block.get_block_data_changeset(updated_block)
 
     uid = assigns.ref_form[:uid].value
-    upload_name = :"block_#{uid}_image"
-
-    # Register upload on the Form component (only once).
-    # The Form owns the upload so that LiveView channel events route correctly.
     form_id = assigns[:form_id] || socket.assigns[:form_id] || BrandoAdmin.Utils.derive_form_id(assigns.ref_form.name)
-
-    if !socket.assigns.upload_registered && form_id do
-      send_update(BrandoAdmin.Components.Form,
-        id: form_id,
-        event: "register_block_upload",
-        upload_name: upload_name,
-        block_uid: uid,
-        block_type: :gallery,
-        config_target: (gallery && Map.get(gallery, :config_target)) || "default"
-      )
-    end
 
     {:ok,
      socket
@@ -233,9 +224,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(:has_objects?, !Enum.empty?(gallery_objects))
      |> assign(:block, updated_block)
      |> assign(:uid, uid)
-     |> assign(:upload_name, upload_name)
      |> assign(:config_target, (gallery && Map.get(gallery, :config_target)) || "default")
-     |> assign(:upload_registered, form_id != nil)
      |> assign(:override_data, precompute_override_data(gallery_objects, updated_block_data_cs))}
   end
 
@@ -260,13 +249,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
           <div
             id={"block-#{@uid}-upload"}
-            phx-hook="Brando.BlockUpload"
-            data-upload-name={@upload_name}
+            phx-hook="Brando.UploadTrigger"
+            data-kind="block_ref_gallery"
+            data-component-id={"#{@uid}-gallery"}
+            data-asset-type="image"
             data-config-target={@config_target}
             data-folder-browser="true"
-            data-upload-mode="multi"
-            data-label-uploading={gettext("Uploading")}
-            data-label-processing={gettext("Processing image sizes...")}
+            data-click-mode="trigger"
+            data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
             class="gallery-upload-wrapper"
           >
             <input
@@ -276,10 +266,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               multiple
               style="display:none"
             />
-            <div id={"block-#{@uid}-upload-progress"} class="upload-progress" style="display:none" phx-update="ignore">
-              <progress value="0" max="100">0%</progress>
-              <div class="upload-progress-label"></div>
-            </div>
 
             <div class="gallery-buttons">
               <button type="button" class="tiny upload-trigger">

@@ -45,7 +45,6 @@ defmodule Brando.Villain.Components do
       assigns
       |> assign(:ref_name, ref_name)
       |> assign(:refs_field, ctx.refs_field)
-      |> assign(:parent_uploads, ctx.parent_uploads)
       |> assign(:target, ctx.target)
       |> assign(:target_ref, ctx.target_ref)
       |> assign(:form_id, ctx.form_id)
@@ -54,7 +53,6 @@ defmodule Brando.Villain.Components do
     <BrandoAdmin.Components.Form.Block.ref
       ref_name={@ref_name}
       refs_field={@refs_field}
-      parent_uploads={@parent_uploads}
       target={@target}
       target_ref={@target_ref}
       form_id={@form_id}

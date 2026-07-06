@@ -33,7 +33,10 @@
     </div>
 
     {@inner_content}
-    <%= if Application.get_env(Brando.otp_app(), :show_breakpoint_debug) do %>
+    <%!-- the admin defaults to NO breakpoint/grid debug — opt in with
+         `config :my_app, show_breakpoint_debug_admin: true` (the plain
+         :show_breakpoint_debug key only affects the frontend) --%>
+    <%= if Application.get_env(Brando.otp_app(), :show_breakpoint_debug_admin, false) do %>
       <Brando.HTML.breakpoint_debug_tag />
       <Brando.HTML.grid_debug_tag />
     <% end %>

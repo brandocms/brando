@@ -25,7 +25,6 @@ defmodule BrandoAdmin.Components.Form.Input.File do
   # data focal, :any
   # data file, :any
   # data file_name, :any
-  # data upload_field, :any
   # data relation_field, FormField
 
   def mount(socket) do
@@ -65,7 +64,6 @@ defmodule BrandoAdmin.Components.Form.Input.File do
      |> assign(:file, file)
      |> assign(:file_id, file_id)
      |> assign(:file_name, file_name)
-     |> assign(:upload_field, assigns.parent_uploads[assigns.field.field])
      |> assign(:relation_field, relation_field)}
   end
 

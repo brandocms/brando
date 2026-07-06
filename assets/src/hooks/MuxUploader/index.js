@@ -78,6 +78,9 @@ export default (app) => ({
 
       const { upload_url, video_id } = response
 
+      // Surface this upload in the sticky UploadManager drawer (visibility only)
+      const trackRef = window.BrandoUploads?.trackExternal?.(file.name, file.size)
+
       // Upload using UpChunk for chunked upload with progress
       const upload = UpChunk.createUpload({
         endpoint: upload_url,
@@ -97,11 +100,13 @@ export default (app) => ({
           total_mb: totalMB,
           percentage: percentage
         })
+        window.BrandoUploads?.externalProgress?.(trackRef, percentage)
       })
 
       // Handle successful upload
       upload.on('success', () => {
         this.pushEvent('video_upload_complete', { video_id })
+        window.BrandoUploads?.externalComplete?.(trackRef)
       })
 
       // Handle upload errors
@@ -111,6 +116,7 @@ export default (app) => ({
           filename: file.name,
           error: error.detail?.message || 'Upload failed'
         })
+        window.BrandoUploads?.externalError?.(trackRef, error.detail?.message || 'Upload failed')
       })
 
     } catch (error) {

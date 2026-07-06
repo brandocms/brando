@@ -23,7 +23,6 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   # prop instructions, :string
   # prop opts, :list, default: []
   # prop current_user, :map
-  # prop parent_uploads, :map
 
   # data class, :string
   # data monospace, :boolean
@@ -105,19 +104,18 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:ok, add_gallery_media(socket, :video, to_string(video_id), notify_picker: false)}
   end
 
+  def update(
+        %{new_video: new_video, selected_videos: selected_videos},
+        %{assigns: %{gallery_objects: gallery_objects}} = socket
+      ) do
+    {:ok,
+     socket
+     |> assign(:gallery_objects, gallery_objects ++ [new_video])
+     |> assign(:selected_videos, selected_videos)}
+  end
+
   def update(assigns, socket) do
     schema = assigns.field.form.data.__struct__
-
-    if assigns.parent_uploads[assigns.field.field] == nil do
-      raise Brando.Exception.BlueprintError,
-        message: """
-        Gallery input not found.
-
-        Form input name for gallery was given as `#{assigns.field.field}` — but no such asset was found.
-        Ensure that your input name matches your asset name in your blueprint.
-
-        """
-    end
 
     {:ok,
      socket
@@ -126,6 +124,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
      |> assign(:preview_layout, assigns.opts[:layout] || :grid)
      |> assign(:schema, schema)
      |> assign_new(:config_modal, fn -> nil end)
+     |> assign_new(:video_upload_enabled?, fn -> Brando.default_video_upload_strategy() == :local end)
      |> assign_value()}
   end
 
@@ -156,96 +155,102 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     <div>
       <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
         <div class="gallery-input">
-          <div class="actions">
-            <button type="button" class="tiny upload-button">
-              {gettext("Upload images")}
-              <.live_file_input upload={@parent_uploads[@field.field]} />
-            </button>
-            <button
-              phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
-              type="button"
-              class="tiny"
-            >
-              {gettext("Select images")}
-            </button>
-            <button
-              phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
-              type="button"
-              class="tiny"
-            >
-              {gettext("Select videos")}
-            </button>
-          </div>
+          <div
+            id={"#{@field.id}-gallery-upload-trigger"}
+            class="gallery-upload-wrapper"
+            phx-hook="Brando.UploadTrigger"
+            data-kind="entry_field_gallery"
+            data-asset-type="image"
+            data-field={@field.field}
+            data-path="[]"
+            data-config-target={"gallery:#{inspect(@schema)}:#{@field.field}"}
+            data-folder-browser="true"
+            data-click-mode="trigger"
+            data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
+          >
+            <input type="file" class="file-input" multiple style="display:none" />
 
-          <%= for entry <- @parent_uploads[@field.field].entries do %>
-            <progress value={entry.progress} max="100">{entry.progress}%</progress>
-            <%= for err <- upload_errors(@parent_uploads[@field.field], entry) do %>
-              <.alert type={:danger}>
-                <:icon>
-                  <.icon name="hero-exclamation-triangle" />
-                </:icon>
-                <:close>
-                  <button
-                    type="button"
-                    phx-click="cancel_upload"
-                    phx-value-ref={entry.ref}
-                    phx-value-field_name={@field.field}
-                    phx-target={@form_cid}
-                    aria-label="cancel"
-                  >
-                    <.icon name="hero-x-circle" />
-                  </button>
-                </:close>
-                <strong>{Brando.Upload.error_to_string(err)}</strong>
-                <br /><br />
-                {gettext("Filename")} {entry.client_name}<br />
-                {gettext("Filesize")} {Brando.Utils.human_size(entry.client_size)}
-              </.alert>
-            <% end %>
-          <% end %>
-          <%= if @gallery_objects == [] do %>
-            <small>
-              {gettext("No associated gallery")}
-            </small>
-          <% else %>
-            <div
-              id="sortable-gallery-objects"
-              phx-hook="Brando.SortableAssocs"
-              data-target={@myself}
-              data-sortable-id="sortable-gallery"
-              data-sortable-handle=".sort-handle"
-              data-sortable-selector=".gallery-object"
-              class={"gallery-objects gallery-objects--#{@preview_layout}"}
-            >
-              <.inputs_for :let={gallery_form} field={@field}>
-                <Input.input type={:hidden} field={gallery_form[:config_target]} />
-
-                <.inputs_for :let={gallery_object} field={gallery_form[:gallery_objects]}>
-                  <figure
-                    class="gallery-object sort-handle draggable"
-                    data-id={gallery_object[:image_id].value || gallery_object[:video_id].value}
-                  >
-                    <.gallery_object
-                      gallery_objects={@gallery_objects}
-                      gallery_object_field={gallery_object}
-                      parent_form_name={gallery_form.name}
-                      preview_layout={@preview_layout}
-                      myself={@myself}
-                    />
-                    <input
-                      type="hidden"
-                      name={"#{gallery_form.name}[sort_gallery_object_ids][]"}
-                      value={gallery_object.index}
-                    />
-                  </figure>
-                  <Input.input type={:hidden} field={gallery_object[:image_id]} />
-                  <Input.input type={:hidden} field={gallery_object[:video_id]} />
-                  <Input.input type={:hidden} field={gallery_object[:gallery_id]} />
-                  <.config_hidden_fields field={gallery_object[:config]} />
-                </.inputs_for>
-              </.inputs_for>
+            <div class="actions">
+              <button type="button" class="tiny upload-trigger">
+                {gettext("Upload images")}
+              </button>
+              <div
+                :if={@video_upload_enabled?}
+                id={"#{@field.id}-gallery-video-upload-trigger"}
+                phx-hook="Brando.UploadTrigger"
+                data-kind="entry_field_gallery"
+                data-asset-type="video"
+                data-field={@field.field}
+                data-path="[]"
+                data-config-target={"gallery:#{inspect(@schema)}:#{@field.field}"}
+                data-click-mode="trigger"
+                data-accept=".mp4,.webm,.mov,.avi,.ogv"
+              >
+                <button type="button" class="tiny upload-trigger">
+                  {gettext("Upload videos")}
+                </button>
+                <input type="file" class="file-input" multiple style="display:none" />
+              </div>
+              <button
+                phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
+                type="button"
+                class="tiny"
+              >
+                {gettext("Select images")}
+              </button>
+              <button
+                phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
+                type="button"
+                class="tiny"
+              >
+                {gettext("Select videos")}
+              </button>
             </div>
-          <% end %>
+
+            <%= if @gallery_objects == [] do %>
+              <small>
+                {gettext("No associated gallery")}
+              </small>
+            <% else %>
+              <div
+                id="sortable-gallery-objects"
+                phx-hook="Brando.SortableAssocs"
+                data-target={@myself}
+                data-sortable-id="sortable-gallery"
+                data-sortable-handle=".sort-handle"
+                data-sortable-selector=".gallery-object"
+                class={"gallery-objects gallery-objects--#{@preview_layout}"}
+              >
+                <.inputs_for :let={gallery_form} field={@field}>
+                  <Input.input type={:hidden} field={gallery_form[:config_target]} />
+
+                  <.inputs_for :let={gallery_object} field={gallery_form[:gallery_objects]}>
+                    <figure
+                      class="gallery-object sort-handle draggable"
+                      data-id={gallery_object[:image_id].value || gallery_object[:video_id].value}
+                    >
+                      <.gallery_object
+                        gallery_objects={@gallery_objects}
+                        gallery_object_field={gallery_object}
+                        parent_form_name={gallery_form.name}
+                        preview_layout={@preview_layout}
+                        myself={@myself}
+                      />
+                      <input
+                        type="hidden"
+                        name={"#{gallery_form.name}[sort_gallery_object_ids][]"}
+                        value={gallery_object.index}
+                      />
+                    </figure>
+                    <Input.input type={:hidden} field={gallery_object[:image_id]} />
+                    <Input.input type={:hidden} field={gallery_object[:video_id]} />
+                    <Input.input type={:hidden} field={gallery_object[:gallery_id]} />
+                    <.config_hidden_fields field={gallery_object[:config]} />
+                  </.inputs_for>
+                </.inputs_for>
+              </div>
+            <% end %>
+          </div>
 
           <Content.modal
             id="gallery-object-config-modal"

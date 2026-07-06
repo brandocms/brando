@@ -3,7 +3,6 @@ import AdminHook from './hooks/Admin'
 import AssetFolderDropHook from './hooks/AssetFolderDrop'
 import BlockFieldHook from './hooks/BlockField'
 import BlockHook from './hooks/Block'
-import BlockUploadHook from './hooks/BlockUpload'
 import CodeEditorHook from './hooks/CodeEditor'
 import ColorPickerHook from './hooks/ColorPicker'
 import ConfirmClickHook from './hooks/ConfirmClick'
@@ -39,6 +38,8 @@ import SubFormSortableHook from './hooks/SubFormSortable'
 import SubmitHook from './hooks/Submit'
 import SVGDropHook from './hooks/SVGDrop'
 import TipTapHook from './hooks/TipTap'
+import UploadManagerHook from './hooks/UploadManager'
+import UploadTriggerHook from './hooks/UploadTrigger'
 import VideoPickerGridHook from './hooks/VideoPickerGrid'
 import VideoURLParserHook from './hooks/VideoURLParser'
 
@@ -49,7 +50,6 @@ export default (app) => {
     'Brando.AssetFolderDrop': AssetFolderDropHook(app),
     'Brando.BlockField': BlockFieldHook(app),
     'Brando.Block': BlockHook(app),
-    'Brando.BlockUpload': BlockUploadHook(app),
     'Brando.CodeEditor': CodeEditorHook(app),
     'Brando.ColorPicker': ColorPickerHook(app),
     'Brando.ConfirmClick': ConfirmClickHook(app),
@@ -85,6 +85,8 @@ export default (app) => {
     'Brando.Submit': SubmitHook(app),
     'Brando.SVGDrop': SVGDropHook(app),
     'Brando.TipTap': TipTapHook(app),
+    'Brando.UploadManager': UploadManagerHook(app),
+    'Brando.UploadTrigger': UploadTriggerHook(app),
     'Brando.VideoPickerGrid': VideoPickerGridHook(app),
     'Brando.VideoURLParser': VideoURLParserHook(app),
   }

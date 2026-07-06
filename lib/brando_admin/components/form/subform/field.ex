@@ -7,7 +7,6 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
 
   # prop input, :map
   # prop sub_form, :form
-  # prop parent_uploads, :any
   # prop current_user, :any
   # prop label, :string
   # prop instructions, :string
@@ -29,7 +28,6 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
       label={@label}
       instructions={@instructions}
       placeholder={@placeholder}
-      parent_uploads={@parent_uploads}
       parent_form_id={@parent_form_id}
       subform_id={@subform_id}
       path={@path}

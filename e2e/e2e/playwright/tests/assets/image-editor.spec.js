@@ -53,7 +53,7 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }) => {
 
   // Step 3: Upload an image via the listing_image field
   await page.getByRole('button', { name: 'Add image' }).click()
-  await page.locator('input[name="listing_image"]').setInputFiles('./fixtures/image.jpg')
+  await page.locator('#image-drawer-upload-input').setInputFiles('./fixtures/image.jpg')
 
   // Wait for upload to complete — image should appear in the drawer
   await expect(page.locator('#image-drawer img')).toBeVisible({ timeout: 30000 })

@@ -1273,6 +1273,11 @@ msgstr "Velg bilder"
 msgid "Upload images"
 msgstr "Last opp bilder"
 
+#: lib/brando_admin/components/form/input/gallery.ex:196
+#, elixir-autogen, elixir-format
+msgid "Upload videos"
+msgstr "Last opp videoer"
+
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex:294
 #, elixir-autogen, elixir-format
 msgid "Pick an existing image"

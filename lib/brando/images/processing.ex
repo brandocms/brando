@@ -19,12 +19,13 @@ defmodule Brando.Images.Processing do
   @doc """
   Queue an image for processing
   """
-  def queue_processing(image, user, field_full_path \\ []) do
+  def queue_processing(image, user, field_full_path \\ [], opts \\ []) do
     args = %{
       image_id: image.id,
       config_target: image.config_target,
       user_id: user.id,
-      field_full_path: field_full_path
+      field_full_path: field_full_path,
+      silent: Keyword.get(opts, :silent, false)
     }
 
     Brando.Repo.delete_all(

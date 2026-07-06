@@ -160,7 +160,7 @@ test('creates meta information', async ({ page }) => {
 
   // Add SEO image
   await page.getByRole('button', { name: 'Add image' }).click()
-  await page.locator('input[name="meta_image"]').setInputFiles('./fixtures/image.jpg')
+  await page.locator('#image-drawer-upload-input').setInputFiles('./fixtures/image.jpg')
   // Wait for upload to complete - the image should appear in the drawer
   await expect(page.locator('#image-drawer img')).toBeVisible({ timeout: 30000 })
   // Close drawer - this should save the image selection

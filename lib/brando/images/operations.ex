@@ -75,15 +75,27 @@ defmodule Brando.Images.Operations do
   @doc """
   Perform list of image operations
   """
-  @spec perform([operation], user) :: {:ok, map}
-  def perform([], _) do
+  @spec perform([operation], user, keyword) :: {:ok, map}
+  def perform(operations, user, opts \\ [])
+
+  def perform([], _, _opts) do
     {:ok, %{}}
   end
 
-  def perform(operations, user) do
+  def perform(operations, user, opts) do
     max_concurrency = Application.get_env(:brando, :concurrent_image_jobs) || 1
+    silent? = Keyword.get(opts, :silent, false)
 
-    Progress.show(user.id)
+    # Silent runs (UploadManager-driven processing) skip the legacy Progress
+    # popup — the manager drawer already shows a processing state.
+    operations =
+      if silent? do
+        Enum.map(operations, &%{&1 | user_id: nil})
+      else
+        operations
+      end
+
+    if !silent?, do: Progress.show(user.id)
     start_msec = :os.system_time(:millisecond)
 
     operation_results =
@@ -107,7 +119,7 @@ defmodule Brando.Images.Operations do
 
     Logger.debug("==> Brando.Images.Operations: Finished in #{seconds_lapsed} seconds..")
 
-    Progress.hide(user.id)
+    if !silent?, do: Progress.hide(user.id)
 
     {:ok, operation_results}
   end

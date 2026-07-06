@@ -9,22 +9,22 @@ defmodule Brando.Videos.Uploader do
 
   - `:local` - Traditional server upload (returns error, use standard upload flow)
   - `:mux` - Routes to `Brando.Videos.Uploaders.Mux`
+  - `:bunny` - Routes to `Brando.Videos.Uploaders.Bunny`
   - `:cloudflare` - Routes to Cloudflare Stream uploader (not yet implemented)
   - `:s3` - Routes to AWS S3 uploader (not yet implemented)
-  - `:bunny` - Routes to Bunny.net uploader (not yet implemented)
 
   ## Implementing Upload Providers
 
   Providers implement this behavior to handle video uploads to their service.
   Currently supported providers:
   - Mux (lib/brando/videos/uploaders/mux.ex)
+  - Bunny.net (lib/brando/videos/uploaders/bunny.ex)
 
   Future providers:
   - Vimeo
   - Cloudflare Stream
   - YouTube (upload API)
   - AWS S3
-  - Bunny.net
   """
 
   @type video :: Brando.Videos.Video.t()

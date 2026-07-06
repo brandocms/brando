@@ -9,13 +9,16 @@ defmodule Brando.Worker.ImageProcessor do
 
   @impl Oban.Worker
   def perform(%Oban.Job{
-        args: %{
-          "image_id" => image_id,
-          "config_target" => config_target,
-          "user_id" => user_id,
-          "field_full_path" => field_full_path
-        }
+        args:
+          %{
+            "image_id" => image_id,
+            "config_target" => config_target,
+            "user_id" => user_id,
+            "field_full_path" => field_full_path
+          } = args
       }) do
+    silent? = Map.get(args, "silent", false)
+
     field_full_path =
       Enum.map(field_full_path, fn
         segment when is_binary(segment) -> String.to_existing_atom(segment)
@@ -28,7 +31,7 @@ defmodule Brando.Worker.ImageProcessor do
          {:ok, user} <- Users.get_user(user_id),
          {:ok, config} <- Images.get_config_for(config_target),
          {:ok, operations} <- Images.Operations.create(image, config, user),
-         {:ok, process_map} <- Images.Operations.perform(operations, user) do
+         {:ok, process_map} <- Images.Operations.perform(operations, user, silent: silent?) do
       result = Map.get(process_map, image_id)
 
       image_params = %{

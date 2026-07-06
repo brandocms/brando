@@ -416,6 +416,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
     |> update_changeset_data_block_var(var_key, var_type, data)
     |> update_liquex_block_var(var_key, var_type, data)
+    |> maybe_propagate_block_var(var_type)
     |> then(&{:ok, &1})
   end
 
@@ -1083,13 +1084,30 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
   end
 
+  # File/image/link var commits are discrete one-shot events (upload complete,
+  # picker select, reset) — NOT per-keystroke. Propagate the updated form to the
+  # parent so its cached copy carries the new FK. Without this the parent keeps a
+  # stale form (file_id=nil) and pushes it back down on the next re-render,
+  # blanking the hidden input so validate/save submits "" and wipes the file.
+  # (Text/color vars must NOT propagate here — that would clobber siblings and
+  # cause the per-keystroke fan-out.)
+  defp maybe_propagate_block_var(socket, var_type) when var_type in [:file, :image, :link] do
+    send_form_to_parent(socket)
+  end
+
+  defp maybe_propagate_block_var(socket, _var_type), do: socket
+
   def update_changeset_data_block_var(socket, var_key, type, data) when type in [:file, :image] do
-    assoc_data = Map.get(data, :type)
+    # Write the foreign key (:file_id / :image_id) — the field the input renders
+    # from (extract_value/2) and the changeset persists. The payload has no :type
+    # key, so the old `Map.get(data, :type)` always wrote nil and the var reset.
+    fk = :"#{type}_id"
+    asset_id = Map.get(data, fk)
     uid = socket.assigns.uid
     changeset = socket.assigns.form.source
     belongs_to = socket.assigns.belongs_to
 
-    update_var_in_changeset(socket, var_key, belongs_to, changeset, uid, type, assoc_data)
+    update_var_in_changeset(socket, var_key, belongs_to, changeset, uid, fk, asset_id)
   end
 
   def update_changeset_data_block_var(socket, var_key, :link, data) do
@@ -1103,6 +1121,11 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def update_changeset_data_block_var(socket, _, _, _), do: socket
 
+  # The commit must land in the changeset's CHANGES (nested put_assoc), not in
+  # changeset.data — a data write renders correctly (hidden inputs pick it up)
+  # but Repo.update never persists it, so an upload/pick followed directly by
+  # save was silently lost. It only "worked" when a later edit in the same
+  # block re-submitted the hidden input as a real change.
   defp update_var_in_changeset(socket, var_key, belongs_to, changeset, uid, data_key, data_value) do
     load_path = get_vars_path(belongs_to)
 
@@ -1111,8 +1134,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     loaded? = not is_nil(vars) and Ecto.assoc_loaded?(vars)
 
     if loaded? do
-      access_path = get_var_access_path(belongs_to, var_key, data_key)
-      updated_changeset = put_in(changeset, access_path, data_value)
+      updated_changeset = put_var_change(changeset, belongs_to, var_key, data_key, data_value)
 
       updated_form =
         build_form_from_changeset(
@@ -1130,23 +1152,46 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp get_vars_path(:root), do: [:data, :block, :vars]
   defp get_vars_path(_), do: [:data, :vars]
 
-  defp get_var_access_path(:root, var_key, data_key) do
-    [
-      Access.key(:data),
-      Access.key(:block),
-      Access.key(:vars),
-      Access.filter(&(&1.key == var_key)),
-      Access.key(data_key)
-    ]
+  defp put_var_change(changeset, :root, var_key, data_key, data_value) do
+    block_cs =
+      Changeset.get_change(changeset, :block) ||
+        Changeset.change(Changeset.get_field(changeset, :block))
+
+    Changeset.put_assoc(changeset, :block, put_var_change_on_block(block_cs, var_key, data_key, data_value))
   end
 
-  defp get_var_access_path(_, var_key, data_key) do
-    [
-      Access.key(:data),
-      Access.key(:vars),
-      Access.filter(&(&1.key == var_key)),
-      Access.key(data_key)
-    ]
+  defp put_var_change(changeset, _belongs_to, var_key, data_key, data_value) do
+    put_var_change_on_block(changeset, var_key, data_key, data_value)
+  end
+
+  defp put_var_change_on_block(block_cs, var_key, data_key, data_value) do
+    # Reuse pending var changesets when present — flattening them via get_field
+    # would demote other in-flight var edits from changes to data and lose them.
+    var_changesets =
+      case Changeset.get_change(block_cs, :vars) do
+        nil -> block_cs |> Changeset.get_field(:vars) |> Kernel.||([]) |> Enum.map(&Changeset.change/1)
+        changesets -> changesets
+      end
+
+    updated_var_changesets =
+      Enum.map(var_changesets, fn var_cs ->
+        if Changeset.get_field(var_cs, :key) == var_key do
+          put_var_value(var_cs, data_key, data_value)
+        else
+          var_cs
+        end
+      end)
+
+    Changeset.put_assoc(block_cs, :vars, updated_var_changesets)
+  end
+
+  # Link vars store the identifier struct for display, but the FK is what persists.
+  defp put_var_value(var_cs, :identifier, identifier) do
+    Changeset.put_change(var_cs, :identifier_id, identifier && identifier.id)
+  end
+
+  defp put_var_value(var_cs, data_key, data_value) do
+    Changeset.put_change(var_cs, data_key, data_value)
   end
 
   def maybe_get_live_preview_status(%{assigns: %{form_is_new: true, block_initialized: false}} = socket) do

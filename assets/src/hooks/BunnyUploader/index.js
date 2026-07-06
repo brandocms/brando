@@ -88,6 +88,9 @@ export default (app) => ({
 
       const { upload_url, video_id, tus_auth } = response
 
+      // Surface this upload in the sticky UploadManager drawer (visibility only)
+      const trackRef = window.BrandoUploads?.trackExternal?.(file.name, file.size)
+
       // Create TUS upload with resumable support
       this.currentUpload = new tus.Upload(file, {
         endpoint: upload_url,
@@ -108,6 +111,7 @@ export default (app) => ({
             filename: file.name,
             error: error.message || 'Upload failed'
           })
+          window.BrandoUploads?.externalError?.(trackRef, error.message || 'Upload failed')
           this.currentUpload = null
         },
         onProgress: (bytesUploaded, bytesTotal) => {
@@ -121,10 +125,12 @@ export default (app) => ({
             total_mb: totalMB,
             percentage: percentage
           })
+          window.BrandoUploads?.externalProgress?.(trackRef, percentage)
         },
         onSuccess: () => {
           this.currentUpload = null
           this.pushEvent('video_upload_complete', { video_id })
+          window.BrandoUploads?.externalComplete?.(trackRef)
         }
       })
 

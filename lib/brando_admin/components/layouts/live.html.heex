@@ -1,5 +1,6 @@
 <%= if @current_user do %>
   {live_render(@socket, BrandoAdmin.Chrome, id: "brando-chrome", sticky: true)}
+  {live_render(@socket, BrandoAdmin.UploadManager, id: "brando-upload-manager-lv", sticky: true)}
   {live_render(@socket, BrandoAdmin.Nav,
     id: "brando-nav",
     session: %{"current_url" => @uri && @uri.path},

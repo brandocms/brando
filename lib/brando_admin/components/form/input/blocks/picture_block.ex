@@ -50,7 +50,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     socket
     |> assign(:images, [])
     |> assign(:form_id, nil)
-    |> assign(:upload_registered, false)
     |> then(&{:ok, &1})
   end
 
@@ -83,29 +82,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     block_data_cs = Block.get_block_data_changeset(assigns.block)
     block_data = Changeset.apply_changes(block_data_cs)
     uid = assigns.ref_form[:uid].value
-    upload_name = :"block_#{uid}_image"
-
-    # Register upload on the Form component (only once).
-    # The Form owns the upload so that LiveView channel events route correctly.
     form_id = assigns[:form_id] || socket.assigns[:form_id] || BrandoAdmin.Utils.derive_form_id(assigns.ref_form.name)
-
-    if !socket.assigns.upload_registered && form_id do
-      send_update(BrandoAdmin.Components.Form,
-        id: form_id,
-        event: "register_block_upload",
-        upload_name: upload_name,
-        block_uid: uid,
-        block_type: :picture,
-        config_target: Map.get(block_data, :config_target, "default") || "default"
-      )
-    end
 
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:uid, uid)
-     |> assign(:upload_name, upload_name)
-     |> assign(:upload_registered, form_id != nil)
      |> assign(:block_data, block_data)
      |> assign(:form_id, form_id)
      |> assign_new(:compact, fn -> true end)
@@ -246,7 +228,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                         <%= if @block_data.title in [nil, ""] do %>
                           {gettext("<no caption>")}
                         <% else %>
-                          {raw(@block_data.title)}
+                          {@block_data.title |> HtmlSanitizeEx.basic_html() |> raw()}
                         <% end %>
                       </div>
                       <div id={"block-#{@uid}-figcaption-alt"}>
@@ -264,19 +246,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
             <div
               id={"block-#{@uid}-upload"}
-              phx-hook="Brando.BlockUpload"
-              data-upload-name={@upload_name}
+              phx-hook="Brando.UploadTrigger"
+              data-kind="block_ref_picture"
+              data-component-id={"#{@uid}-picture"}
+              data-asset-type="image"
               data-config-target={@block_data.config_target || "default"}
               data-folder-browser="true"
-              data-label-uploading={gettext("Uploading")}
-              data-label-processing={gettext("Processing image sizes...")}
+              data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
               class={["empty", "upload-canvas", @extracted_path && "hidden"]}
             >
               <input type="file" class="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" style="display:none" />
-              <div class="upload-progress" style="display:none">
-                <progress value="0" max="100">0%</progress>
-                <div class="upload-progress-label"></div>
-              </div>
               <figure>
                 <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                   <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none" />
@@ -312,19 +291,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                   <div
                     :if={!@extracted_path}
                     id={"block-#{@uid}-modal-upload"}
-                    phx-hook="Brando.BlockUpload"
-                    data-upload-name={@upload_name}
+                    phx-hook="Brando.UploadTrigger"
+                    data-kind="block_ref_picture"
+                    data-component-id={"#{@uid}-picture"}
+                    data-asset-type="image"
                     data-config-target={@block_data.config_target || "default"}
                     data-folder-browser="true"
-                    data-label-uploading={gettext("Uploading")}
-                    data-label-processing={gettext("Processing image sizes...")}
+                    data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
                     class="img-placeholder empty upload-canvas"
                   >
                     <input type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" style="display:none" />
-                    <div class="upload-progress" style="display:none">
-                      <progress value="0" max="100">0%</progress>
-                      <div class="upload-progress-label"></div>
-                    </div>
                     <div class="placeholder-wrapper">
                       <div class="svg-wrapper">
                         <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">

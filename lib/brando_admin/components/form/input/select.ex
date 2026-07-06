@@ -197,7 +197,6 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                             <Fieldset.render
                               translations={@form_translations}
                               form={entry_form}
-                              parent_uploads={[]}
                               fieldset={fieldset}
                             />
                           <% end %>

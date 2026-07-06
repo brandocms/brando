@@ -54,7 +54,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         block_module={@block_module}
         vars={@vars}
         liquid_splits={@liquid_splits}
-        parent_uploads={@parent_uploads}
         target={@myself}
         target_ref={{Block, @id}}
         form_id={@form_id}
@@ -105,7 +104,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               parent_ref={{Block, @id}}
               parent_uid={@uid}
               parent_path={@path}
-              parent_uploads={@parent_uploads}
               parent_module_id={@module_id}
               module_set={@module_set}
               form={child_block_form}
@@ -133,7 +131,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         level={@level}
         belongs_to={@belongs_to}
         deleted={@deleted}
-        parent_uploads={@parent_uploads}
         is_datasource?={@is_datasource?}
         has_table_template?={@has_table_template?}
         table_template_name={@table_template_name}
@@ -173,7 +170,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         level={@level}
         belongs_to={@belongs_to}
         deleted={@deleted}
-        parent_uploads={@parent_uploads}
         is_datasource?={@is_datasource?}
         has_table_template?={@has_table_template?}
         table_template_name={@table_template_name}
@@ -255,7 +251,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               parent_ref={{Block, @id}}
               parent_uid={@uid}
               parent_path={@path}
-              parent_uploads={@parent_uploads}
               module_set={@module_set}
               entry={@entry}
               form={child_block_form}
@@ -561,7 +556,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :module_class, :string, default: nil
   attr :block_module, :atom
   attr :vars, :list, default: []
-  attr :parent_uploads, :list, default: []
   attr :target, :any
   attr :target_ref, :any, default: nil
   attr :has_children?, :boolean, default: false
@@ -658,7 +652,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 module_class={@module_class}
                 module_type={@module_type}
                 heex_compiled_module={assigns[:heex_compiled_module]}
-                parent_uploads={@parent_uploads}
                 has_table_template?={@has_table_template?}
                 table_template_name={@table_template_name}
                 target={@target}
@@ -706,7 +699,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               heex_compiled_module={assigns[:heex_compiled_module]}
               has_table_template?={@has_table_template?}
               table_template_name={@table_template_name}
-              parent_uploads={@parent_uploads}
               target={@target}
               target_ref={@target_ref}
               form_id={@form_id}
@@ -829,7 +821,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <%= case split do %>
               <% {:ref, ref} -> %>
                 <.ref
-                  parent_uploads={@parent_uploads}
                   refs_field={@block_form[:refs]}
                   ref_name={ref}
                   target={@target}
@@ -1074,7 +1065,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
   attr :ref_name, :string, required: true
   attr :refs_field, :any, required: true
-  attr :parent_uploads, :any, required: true
   attr :target, :any, required: true
   attr :target_ref, :any, default: nil
   attr :form_id, :any, default: nil
@@ -1103,7 +1093,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 ref_description={ref_form[:description].value}
                 ref_form={ref_form}
                 block={block}
-                parent_uploads={@parent_uploads}
                 target={@target}
                 target_ref={@target_ref}
                 form_id={@form_id}
@@ -1232,7 +1221,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         ref_form={@ref_form}
         insert_module={@insert_module}
         duplicate_block={@duplicate_block}
-        parent_uploads={@parent_uploads}
         target={@target}
         target_ref={@target_ref}
         form_id={@form_id}
@@ -2282,7 +2270,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       target: assigns[:target],
       target_ref: assigns[:target_ref],
       form_id: assigns[:form_id],
-      parent_uploads: assigns[:parent_uploads]
     }
 
     base = %{

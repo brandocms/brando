@@ -27,7 +27,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   # data focal, :any
   # data image, :any
   # data file_name, :any
-  # data upload_field, :any
   # data relation_field, :atom
 
   def mount(socket) do
@@ -76,19 +75,12 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     {socket, image} = resolve_image(socket, image_id, image_from_changeset, full_path_fk)
 
     file_name = if is_map(image) && image.path, do: Path.basename(image.path)
-    form_path = Brando.Utils.get_path_from_field_name(assigns.field.form.name)
-    upload_name = upload_name(form_path, assigns.field.field)
-
-    upload_field =
-      Map.get(socket.assigns.parent_uploads || %{}, upload_name) ||
-        Map.get(socket.assigns.parent_uploads || %{}, assigns.field.field)
 
     {:ok,
      socket
      |> prepare_input_component()
      |> assign(:file_name, file_name)
      |> assign_new(:editable, fn -> Keyword.get(socket.assigns.opts, :editable, true) end)
-     |> assign(:upload_field, upload_field)
      |> assign_new(:relation_field, fn -> relation_field end)}
   end
 
@@ -274,9 +266,9 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
     form_id = "#{module.__naming__().singular}_form"
 
-    upload_name = upload_name(path, field_name)
-    drop_target = upload_ref(socket.assigns.parent_uploads, upload_name, socket.assigns.upload_field)
-
+    # No per-field LiveView upload anymore (uploads go through the sticky
+    # UploadManager) — the picker hides its field-upload button when
+    # upload_name is nil.
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
       config_target: {"image", form.data.__struct__, field_name},
@@ -284,8 +276,8 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       multi: false,
       selected_images: if(image_id, do: [image_id], else: []),
       form_id: form_id,
-      upload_name: upload_name,
-      drop_target: drop_target
+      upload_name: nil,
+      drop_target: nil
     )
 
     edit_image = %{
@@ -333,28 +325,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     end
 
     {:noreply, socket}
-  end
-
-  defp upload_name(path, field_name) do
-    if Enum.count(path) > 1 do
-      [sub | _] = path
-      :"#{to_string(sub)}|#{to_string(field_name)}"
-    else
-      field_name
-    end
-  end
-
-  defp upload_ref(parent_uploads, upload_name, fallback_upload_field) do
-    case Map.get(parent_uploads || %{}, upload_name) do
-      %{ref: ref} when is_binary(ref) ->
-        ref
-
-      _ ->
-        case fallback_upload_field do
-          %{ref: ref} when is_binary(ref) -> ref
-          _ -> nil
-        end
-    end
   end
 
   @doc """

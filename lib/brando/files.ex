@@ -105,12 +105,14 @@ defmodule Brando.Files do
   def get_config_for(%{config_target: config_target}) when is_binary(config_target) do
     config =
       case String.split(config_target, ":") do
-        [type, schema, "function", fn_string] when type in ["file"] ->
+        [type, schema, "function", fn_string] when type in ["file", "video"] ->
           schema_module = Module.concat([schema])
           fn_atom = String.to_atom(fn_string)
           apply(schema_module, fn_atom, [])
 
-        [type, schema, field_name] when type in ["file"] ->
+        # "video:" — files wrapped by :upload videos resolve their path
+        # through the owning video asset's cfg (VideoConfig has upload_path)
+        [type, schema, field_name] when type in ["file", "video"] ->
           schema_module = Module.concat([schema])
           field_name_atom = String.to_atom(field_name)
 

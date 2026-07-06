@@ -42,7 +42,11 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> assign(:recent_folders, recent_folders)
      |> assign(:config_target, config_target)
      |> assign_images()
-     |> assign_folder_state(assigns[:initial_folder])}
+     |> assign_folder_state(assigns[:initial_folder])
+     # Show the drawer from HERE (not the Form handler) so the event rides the
+     # same diff as this component's re-render — pushed from the Form it races
+     # the picker's patch, which resets the class list and re-hides the drawer.
+     |> push_event("b:show_drawer", %{drawer_id: "image-picker"})}
   end
 
   def update(

@@ -1183,7 +1183,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                   block_module={@block_module}
                   block_field={@block_field}
                   children={block[:children].value}
-                  parent_uploads={@parent_uploads}
                   parent_ref={{__MODULE__, @id}}
                   parent_uid={}
                   parent_path={[]}

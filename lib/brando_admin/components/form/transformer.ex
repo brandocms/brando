@@ -281,7 +281,6 @@ defmodule BrandoAdmin.Components.Form.Transformer do
                   image_field={@image_field}
                   video_field={@video_field}
                   myself={@myself}
-                  parent_uploads={%{}}
                   current_user={@current_user}
                 />
               </div>
@@ -449,7 +448,6 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         label={nil}
         instructions={nil}
         placeholder={nil}
-        parent_uploads={@parent_uploads}
         opts={input.opts}
         type={input.type}
         current_user={@current_user}

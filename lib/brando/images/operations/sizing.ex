@@ -419,7 +419,12 @@ defmodule Brando.Images.Operations.Sizing do
 
   @doc """
   Set progress for user
+
+  A nil user_id silences progress reporting (uploads driven by the
+  UploadManager show their own processing state in the drawer).
   """
+  def set_progress(conversion_parameters, _progress, _filename, nil), do: conversion_parameters
+
   def set_progress(
         %{size_key: size_key, image_id: image_id, format: format} = conversion_parameters,
         progress,

@@ -322,22 +322,20 @@
     background-color: #f9ff84;
   }
 
-  .actions {
-    .upload-button {
-      position: relative;
-      cursor: pointer;
+  .gallery-upload-wrapper {
+    &.dragging {
+      background-color: #cde7ec;
+      border-radius: 8px;
+      cursor: cell;
+    }
+  }
 
-      input[type="file"] {
-        display: inline-block;
-        position: absolute;
-        z-index: 1;
-        width: 100%;
-        height: 100%;
-        top: 0;
-        left: 0;
-        opacity: 0;
-        cursor: pointer;
-      }
+  .actions {
+    display: flex;
+    gap: 5px;
+
+    > div {
+      display: flex;
     }
   }
 }
