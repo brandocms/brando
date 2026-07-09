@@ -257,7 +257,8 @@ end
   namespace: %{"en" => "01 HEADERS", "no" => "01 HEADINGER"},
   help_text: %{"en" => "Large text", "no" => "Stor tekst"},
   class: "header",
-  code: "<article b-tpl=\"{{ block.class }}\">\n  <div class=\"inner\">\n    {% ref refs.h2 %}\n  </div>\n</article>",
+  code:
+    "<article b-tpl=\"{{ block.class }}\">\n  <div class=\"inner\">\n    {% ref refs.h2 %}\n  </div>\n</article>",
   svg: nil,
   multi: false,
   datasource: false,
@@ -297,7 +298,8 @@ end
   namespace: %{"en" => "02 MEDIA", "no" => "02 MEDIA"},
   help_text: %{"en" => "Full width image or video", "no" => "Fullbredde bilde eller video"},
   class: "asset",
-  code: "<article b-tpl=\"asset\">\n  <div class=\"inner\">\n    {% ref refs.media %}\n  </div>\n</article>",
+  code:
+    "<article b-tpl=\"asset\">\n  <div class=\"inner\">\n    {% ref refs.media %}\n  </div>\n</article>",
   svg: nil,
   multi: false,
   datasource: false,
@@ -484,7 +486,10 @@ table_template =
   type: :liquid,
   name: %{"en" => "Single Image with Caption", "no" => "Enkelt bilde med bildetekst"},
   namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
-  help_text: %{"en" => "Picture ref with caption variable", "no" => "Bilderef med bildetekstvariabel"},
+  help_text: %{
+    "en" => "Picture ref with caption variable",
+    "no" => "Bilderef med bildetekstvariabel"
+  },
   class: "single-image-caption",
   code: """
   <figure b-tpl="single-image" {% if show_border %}data-border="true"{% endif %}>
@@ -908,7 +913,8 @@ team_section =
   namespace: %{"en" => "06 COPY PASTE TEST", "no" => "06 COPY PASTE TEST"},
   help_text: %{"en" => "A single team member", "no" => "Enkelt teammedlem"},
   class: "team-member",
-  code: "<div b-tpl=\"team-member\">\n  <h3>{{ member_name }}</h3>\n  <p>{{ member_role }}</p>\n</div>",
+  code:
+    "<div b-tpl=\"team-member\">\n  <h3>{{ member_name }}</h3>\n  <p>{{ member_role }}</p>\n</div>",
   svg: nil,
   multi: false,
   datasource: false,
@@ -945,7 +951,10 @@ team_section =
   type: :liquid,
   name: %{"en" => "Image and File Vars", "no" => "Bilde- og filvariabler"},
   namespace: %{"en" => "07 VAR UPLOAD TEST", "no" => "07 VAR UPLOAD TEST"},
-  help_text: %{"en" => "Module with image and file variable types", "no" => "Modul med bilde- og filvariabler"},
+  help_text: %{
+    "en" => "Module with image and file variable types",
+    "no" => "Modul med bilde- og filvariabler"
+  },
   class: "image-file-vars",
   code: """
   <div b-tpl="image-file-vars">
@@ -978,6 +987,16 @@ team_section =
       important: true,
       sequence: 1,
       width: :half,
+      creator_id: user.id
+    },
+    %Brando.Content.Var{
+      type: :string,
+      label: "Notes",
+      key: "var_notes",
+      important: true,
+      value: "",
+      sequence: 2,
+      width: :full,
       creator_id: user.id
     }
   ]

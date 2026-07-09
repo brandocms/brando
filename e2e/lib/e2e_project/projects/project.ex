@@ -78,6 +78,12 @@ defmodule E2eProject.Projects.Project do
         upload_path: Path.join(["videos", "projects", "cover_videos"])
       }
 
+    asset :cover_file, :file,
+      cfg: %{
+        allowed_mimetypes: ["application/pdf"],
+        upload_path: Path.join(["files", "projects", "cover_files"])
+      }
+
     asset :project_gallery, :gallery,
       cfg: %{
         upload_path: Path.join(["images", "projects", "project_gallery"]),
@@ -156,6 +162,10 @@ defmodule E2eProject.Projects.Project do
           input :cover_video, :video,
             label: t("Cover video"),
             instructions: t("Video for the project's cover")
+
+          input :cover_file, :file,
+            label: t("Cover file"),
+            instructions: t("PDF for the project's cover")
 
           input :project_gallery, :gallery,
             label: t("Project gallery"),

@@ -184,6 +184,9 @@ test('creates project', async ({ page }) => {
     timeout: 20000,
   })
 
+  // The listing image must also have persisted (image entry_field delivery).
+  await expect(page.getByRole('button', { name: 'Edit image' })).toBeVisible({ timeout: 20000 })
+
   // Upload a video FILE straight into the gallery via the "Upload videos"
   // trigger (entry_field_gallery + asset_type: video; only rendered when the
   // default video upload strategy is :local).
@@ -238,6 +241,39 @@ test('creates project', async ({ page }) => {
     .click()
   await syncLV(page)
   await expect(page.getByRole('button', { name: 'Edit video' })).toBeVisible({ timeout: 20000 })
+  await expect(page.locator('#sortable-gallery-objects .gallery-object')).toHaveCount(4, {
+    timeout: 20000,
+  })
+
+  // Upload a file to the cover_file field via the file drawer (entry_field +
+  // asset_type: file → EctoNestedChangeset FK write).
+  await page.getByRole('button', { name: 'Add file' }).click()
+  await syncLV(page)
+  await page.locator('#file-drawer-upload-input').setInputFiles('./fixtures/test.pdf')
+  await syncLV(page)
+  await page.waitForTimeout(1000) // upload + delivery
+  await syncLV(page)
+
+  await page.locator('#file-drawer').getByRole('button', { name: 'Close' }).click()
+  await page.waitForSelector('#file-drawer', { state: 'hidden' })
+  await syncLV(page)
+
+  await expect(page.getByRole('button', { name: 'Edit file' })).toBeVisible({ timeout: 20000 })
+
+  // Save + reopen — EVERY entry-field asset must persist together: file,
+  // video, listing image and the 4 gallery objects.
+  await page.getByTestId('submit').click()
+  await expect(page).toHaveURL('/admin/projects/projects')
+  await syncLV(page)
+  await page
+    .locator('.content-list .list-row')
+    .nth(0)
+    .getByRole('link', { name: 'Microsoft' })
+    .click()
+  await syncLV(page)
+  await expect(page.getByRole('button', { name: 'Edit file' })).toBeVisible({ timeout: 20000 })
+  await expect(page.getByRole('button', { name: 'Edit video' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Edit image' })).toBeVisible()
   await expect(page.locator('#sortable-gallery-objects .gallery-object')).toHaveCount(4, {
     timeout: 20000,
   })

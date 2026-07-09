@@ -124,6 +124,96 @@ test.describe('Block media save persistence', () => {
     await expect(page.locator('.header-block')).not.toBeVisible()
   })
 
+  test('editing other vars in the same block keeps uploaded media vars', async ({ page }) => {
+    test.setTimeout(180000)
+
+    await createPage(page, 'Persist Intra Var Test', 'persist-intra-var-test')
+
+    // Module with image var + file var + string var in ONE block
+    await page.getByRole('button', { name: 'Add block' }).last().click()
+    await page.getByRole('button', { name: '07 VAR UPLOAD TEST' }).click()
+    await page.getByRole('button', { name: 'Image and File Vars' }).click()
+    await syncLV(page)
+
+    // Upload the image var
+    await page.getByRole('button', { name: 'Add image' }).click()
+    const imageModal = page.locator('[id$="image-config"]:visible')
+    await expect(imageModal).toBeVisible({ timeout: 5000 })
+    await imageModal.locator('input[type="file"].file-input').setInputFiles('./fixtures/image.jpg')
+    await expect(imageModal.locator('img')).toBeVisible({ timeout: 20000 })
+    await imageModal.locator('button.modal-close').click()
+    await syncLV(page)
+    await expect(page.getByRole('button', { name: 'Edit image' })).toBeVisible({ timeout: 5000 })
+
+    // Upload the file var — a SECOND media commit in the same block; its
+    // propagation must not lose the image var's just-set FK.
+    await page.getByRole('button', { name: 'Add file' }).click()
+    const fileModal = page.locator('[id$="file-config"]:visible')
+    await expect(fileModal).toBeVisible({ timeout: 5000 })
+    await fileModal.locator('input[type="file"].file-input').setInputFiles('./fixtures/test.pdf')
+    await expect(fileModal.locator('.file-card')).toBeVisible({ timeout: 20000 })
+    await fileModal.locator('button.modal-close').click()
+    await syncLV(page)
+    await expect(page.getByRole('button', { name: 'Edit file' })).toBeVisible({ timeout: 5000 })
+    await expect(page.getByRole('button', { name: 'Edit image' })).toBeVisible()
+
+    // Edit the string var in the same block — the validate rebuild of the
+    // block's changeset must not wipe either media var (the historical
+    // update_var_in_changeset data-vs-changes shape).
+    await page.locator('.block-vars').getByLabel('Notes').fill('Intra-block var edit')
+    await page.waitForTimeout(400) // debounce
+    await syncLV(page)
+
+    await expect(page.getByRole('button', { name: 'Edit image' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Edit file' })).toBeVisible()
+
+    await saveAndReopen(page, 'Persist Intra Var Test')
+
+    await expect(page.getByRole('button', { name: 'Edit image' })).toBeVisible({ timeout: 20000 })
+    await expect(page.getByRole('button', { name: 'Edit file' })).toBeVisible()
+    await expect(page.locator('.block-vars').getByLabel('Notes')).toHaveValue(
+      'Intra-block var edit'
+    )
+  })
+
+  test('editing a var in the same block as an uploaded ref keeps both', async ({ page }) => {
+    test.setTimeout(180000)
+
+    await createPage(page, 'Persist Ref Var Test', 'persist-ref-var-test')
+
+    // Single Image with Caption: picture REF + caption string var in one block
+    await appendBlock(page, 'Single Image with Caption')
+
+    // Set the caption BEFORE uploading — the upload's propagate: true commit
+    // pushes the parent cache down and must not clobber the unsaved var.
+    await page.locator('.block-vars').getByLabel('Caption').fill('Pre-upload caption')
+    await page.waitForTimeout(400) // debounce
+    await syncLV(page)
+
+    await uploadPicture(page)
+
+    await expect(page.locator('.block-vars').getByLabel('Caption')).toHaveValue(
+      'Pre-upload caption'
+    )
+
+    // Edit the var again AFTER the upload — the block-changeset rebuild must
+    // not wipe the ref's image FK.
+    await page.locator('.block-vars').getByLabel('Caption').fill('Post-upload caption')
+    await page.waitForTimeout(400) // debounce
+    await syncLV(page)
+
+    await expect(page.locator('.picture-block img:visible').first()).toBeVisible()
+
+    await saveAndReopen(page, 'Persist Ref Var Test')
+
+    await expect(page.locator('.picture-block img:visible').first()).toBeVisible({
+      timeout: 20000,
+    })
+    await expect(page.locator('.block-vars').getByLabel('Caption')).toHaveValue(
+      'Post-upload caption'
+    )
+  })
+
   test('upload in one block does not clobber unsaved text in another', async ({ page }) => {
     test.setTimeout(120000)
 
