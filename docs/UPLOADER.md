@@ -99,6 +99,24 @@
 > ~~TODO for Phase 2 go-live: manager consume does not queue `Brando.CDN.queue_upload`
 > for server-transport files on CDN-enabled sites.~~ **Fixed (2026-07-09, audit):**
 > consume now queues the CDN push for non-cdn `File` assets, matching `save_file`.
+> **Post-migration audit (2026-07-09):** full-tree review of the shipped system.
+> Fixed: consume-time storage errors crashing the sticky manager (error shapes now
+> normalized via `Brando.Uploads.store_upload/4`); strict `config_target` resolution
+> (`Brando.Assets.ConfigTarget` — no atom minting, blueprints only); video default-cfg
+> struct coercion; nested entry-field processed-image routing (path now rides into the
+> Oban job); direct-transport `folder_id` parity (finalize reuses `:direct_to_s3`);
+> `direct_complete` idempotency; CDN push parity (above); transfer-slot leaks +
+> upload-error sweep in `validate_queue`; ImageProcessor now broadcasts
+> `[:image, :error]` on final failure (drawer items no longer pin at :processing;
+> :processing items are dismissable); intake rejections render as :error drawer items;
+> per-image PubSub subscriptions unsubscribed after processing; Bunny abort reports to
+> the drawer; entry-field/gallery deliveries refetch already-processed images
+> (inline-Oban race); file drawer resolves nested schemas. Deleted dead code: picker
+> select-mode upload machinery + QueuedUploader/DragDrop hooks, `upload_folder_targets`,
+> `cancel_upload` handlers, `block:upload_processed` plumbing, `:orphaned` status,
+> scoped `.upload-progress` CSS. This doc's stale spec fragments were corrected in the
+> same pass (target descriptor shape, decision keys, sticky id, intent channel and
+> orphan-marking never built).
 > This document is a self-contained spec. It explains *why* the current upload
 > system is broken, *what* to build (a sticky, free-standing `UploadManager` LiveView
 > that owns a queue and every upload mechanic), and *how* to migrate every upload source
@@ -230,7 +248,7 @@ need processing/transcoding.
 ```
 layouts/live.html.heex
   {live_render(@socket, BrandoAdmin.Chrome,         id: "brando-chrome",         sticky: true)}
-  {live_render(@socket, BrandoAdmin.UploadManager,  id: "brando-upload-manager", sticky: true)}  ◀── NEW
+  {live_render(@socket, BrandoAdmin.UploadManager,  id: "brando-upload-manager-lv", sticky: true)}  ◀── NEW
 ```
 
 - Own **process + socket** ⇒ its `@uploads` cannot thread into the form. Progress ticks
@@ -284,20 +302,23 @@ The manager decides transport per queued item by asking the server to **initiate
 ```
 
 **Target descriptor** — a plain, serializable map (no pids in the payload; resolve at
-delivery time). It says *what to set, where*:
+delivery time). It says *what to set, where*. As implemented (string keys — the map
+rides the trigger's dataset through JS):
 
 ```elixir
-@type target :: %{
-  deliver_topic: binary,          # per-form-INSTANCE topic, "form:<uuid>" generated at form mount (§6.3)
-  kind: :entry_field | :block_ref | :block_var,
+%{
+  "deliver_topic" => binary,      # per-form-INSTANCE topic, "form:<uuid>" generated at form mount (§6.3)
+  "kind" => "block_var" | "block_ref_picture" | "block_ref_gallery"
+          | "entry_field" | "entry_field_gallery",
   # identity within the form:
-  block_uid: binary | nil,        # for block_ref / block_var
-  ref_name:  binary | nil,        # for block_ref (villain ref)
-  var_key:   binary | nil,        # for block_var
-  field:     atom   | nil,        # for entry_field (schema field) / path
-  path:      [term] | nil,        # nested changeset path for entry_field
-  asset_type: :file | :image | :video,
-  config_target: binary          # "file:Elixir.Schema:field" | "image:..." | "default"
+  "component_id" => binary,       # live_component id for the block-scoped kinds
+  "var_key" => binary | nil,      # for block_var (label only)
+  "field" => binary | nil,        # for entry_field / entry_field_gallery
+  "path" => [term] | nil,         # nested changeset path for entry_field
+  "asset_type" => "file" | "image" | "video",
+  "config_target" => binary,      # "file:Elixir.Schema:field" | "image:..." | "default"
+  "folder" => binary | nil,       # folder-browser choice (rides the intake)
+  "folder_id" => term | nil
 }
 ```
 
@@ -316,10 +337,10 @@ hidden `<input type=file>` / drop zone:
 
 ```html
 <div phx-hook="Brando.UploadTrigger"
-     data-deliver-topic="form:brand:13"
-     data-kind="block_var" data-block-uid="27UF…" data-var-key="download"
+     data-kind="block_var" data-component-id="…render-var component id…" data-var-key="download"
      data-asset-type="file" data-config-target="file:Elixir.MyApp.Brand:download"
-     data-accept=".pdf,.zip" data-max-size="52428800">
+     data-accept=".pdf,.zip">
+  <!-- deliver_topic resolves from the closest ancestor's data-deliver-topic -->
   <input type="file" hidden />
   … drop canvas …
 </div>
@@ -369,7 +390,7 @@ UploadManager LiveView:
 handle_event("intake", %{files, target}, socket):
   for each file: entry_ref = gen_ref()
     put item in :items (status: :queued, target, transport: :server)   # target stored server-side
-  {:reply, %{decisions: [%{filename, entry_ref, transport: "server"}]}, socket}
+  {:reply, %{decisions: [%{index, ref, transport: "server"}]}, socket}
 
 handle_progress(:queue, entry, socket):
   item = lookup by entry (match on client_name/ref)
@@ -405,7 +426,7 @@ handle_event("intake", %{files, target}, socket):
         # File→S3:   Brando.Files.Uploader.presign_put(filename, cfg)  (NEW, ExAws.S3.presigned_url)
         # Video→Mux: Brando.Videos.Uploader.initiate_upload(...)       (exists, form.ex:337)
     store pending {entry_ref => %{key|video_id, target}}
-  {:reply, %{decisions: [%{entry_ref, transport: "direct", upload_url, extra}]}, socket}
+  {:reply, %{decisions: [%{index, ref, transport: "direct", upload_url}]}, socket}
 
 # JS uploads directly to upload_url, reports:
 handle_event("direct_progress", %{entry_ref, progress}, socket): update item.progress
@@ -423,9 +444,9 @@ its existing Mux/Bunny orchestration, just surfaced in the shared queue.
 ## 6. Server-side pieces to build
 
 ### 6.1 `BrandoAdmin.UploadManager` (sticky LiveView)
-- `mount/3`: assign empty queue; `allow_upload(:queue, …)`; subscribe to
-  `"upload_manager:#{user.id}"` (so *anything* can enqueue by broadcasting an intent, an
-  alternative to the JS bridge for programmatic uploads); get `current_user` from session.
+- `mount/3`: assign empty queue; `allow_upload(:queue, …)`; get `current_user` via
+  on_mount. (The planned `"upload_manager:#{user.id}"` PubSub intent channel for
+  programmatic enqueueing was NOT built — the JS bridge is the only intake today.)
 - `handle_event("intake", …)`, `handle_progress/3`, `handle_event("direct_progress"/"direct_complete"/"cancel"/"retry"/"dismiss", …)`.
 - `render/1`: the drawer (queue rows + progress + status + target label + cancel) **plus the
   hidden `<.live_file_input upload={@uploads.queue} />`** (required by `this.upload`, §4.1).
@@ -474,12 +495,13 @@ end
 - Navigate away mid-upload → the originating form process may be gone; the broadcast lands
   on no subscriber; **no crash** (PubSub broadcast to an empty topic is a no-op).
 - If the form is *still* mounted but the specific block was deleted, the form-side
-  `handle_info` must **no-op gracefully** when the block/var/field can't be found (guard, log
-  at debug, mark item `:orphaned`), never raise.
+  `handle_info` no-ops gracefully when the block/var/field can't be found (send_update to a
+  missing component logs a miss), never raises. (Note: the originally planned `:orphaned`
+  item status and drawer "recent uploads — click to copy/select" list were NOT built —
+  delivery is fire-and-forget with no feedback channel, so the manager can't know a
+  delivery missed. The guarantees below still hold.)
 - The asset is always in the library (it's a real `File`/`Image`/`Video` row), so nothing is
   lost — the user can select it later via the picker.
-- Manager keeps a short **recent** list (this session) surfaced in the drawer: "uploaded, not
-  attached — click to copy/select".
 
 Failure isolation: a delivery crash must never take down the sticky manager. Wrap
 `handle_info`/delivery in try/rescue at the form side; the manager only broadcasts.
@@ -584,8 +606,8 @@ the editor never re-renders for an upload again.
 ## 11. Resolved decisions (review, 2026-07-04)
 
 1. **Intake:** JS `window.BrandoUploads.enqueue` bridge for user uploads (real drag-drop needs
-   `File` object hand-off) **+** the PubSub intent channel `"upload_manager:#{user.id}"` for
-   programmatic/test enqueueing. Both kept.
+   `File` object hand-off). (The PubSub intent channel for programmatic/test enqueueing was
+   decided for but never implemented; add it if a programmatic caller shows up.)
 2. **entry_ref ↔ entry matching:** **filename tagging** — the bridge wraps each file as
    `new File([file], "#{entry_ref}::#{name}")`; the server splits `entry.client_name` on
    `"::"` and strips the prefix before `build_meta` (§5.1). Order- or name/size-based

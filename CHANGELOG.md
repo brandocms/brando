@@ -149,6 +149,22 @@
 
 #### Bug Fixes
 
+- **Upload manager audit fixes**: consume-time storage errors (e.g. mimetype
+  rejections) no longer crash the sticky manager and kill in-flight uploads;
+  server-transport files on CDN-enabled sites are queued for CDN push at consume
+  (parity with `save_file`); nested (subform) image fields receive their
+  processed-image updates again; client-direct uploads honor the folder browser's
+  `folder_id` and a replayed completion can't create duplicate `File` rows;
+  local-video uploads no longer break when the configured video `default_config`
+  is a plain map; rejected files show an error item in the drawer instead of
+  disappearing silently; transfer slots can no longer leak (wedging the queue);
+  failed image processing marks the drawer item as errored instead of pinning it
+  at "Processing…"; the file drawer resolves the correct config for
+  nested/subform file fields.
+- **Known limitation (upload manager)**: dynamic `upload_path` (function form) in
+  gallery asset opts is not honored by the manager upload path — the old
+  per-field handler resolved it, the manager stores under the config's static
+  `upload_path` (see docs/UPLOADER.md).
 - Fixed `@context` inconsistency (`http` vs `https://schema.org`).
 - Breadcrumb URLs are now absolute (via `hostname/1`).
 - Fixed `PostalAddress.addressRegion` incorrectly mapping to `city` instead of `region`.

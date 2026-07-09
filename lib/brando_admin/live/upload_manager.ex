@@ -276,7 +276,7 @@ defmodule BrandoAdmin.UploadManager do
   def handle_event("dismiss_finished", _params, socket) do
     finished =
       socket.assigns.items
-      |> Enum.filter(fn {_ref, item} -> item.status in [:done, :error, :orphaned] end)
+      |> Enum.filter(fn {_ref, item} -> item.status in [:done, :error] end)
       |> Enum.map(&elem(&1, 0))
 
     {:noreply, Enum.reduce(finished, socket, &drop_item(&2, &1))}
@@ -461,7 +461,7 @@ defmodule BrandoAdmin.UploadManager do
                 <span class="hero-x-mark-mini"></span>
               </button>
               <button
-                :if={item.status in [:error, :orphaned, :processing]}
+                :if={item.status in [:error, :processing]}
                 type="button"
                 class="icon-button"
                 phx-click="dismiss_item"
@@ -603,7 +603,7 @@ defmodule BrandoAdmin.UploadManager do
   end
 
   defp finished_count(items) do
-    Enum.count(items, fn {_ref, item} -> item.status in [:done, :error, :orphaned] end)
+    Enum.count(items, fn {_ref, item} -> item.status in [:done, :error] end)
   end
 
   defp target_label(%{"var_key" => var_key}) when is_binary(var_key), do: var_key
