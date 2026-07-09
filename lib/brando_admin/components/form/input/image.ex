@@ -266,18 +266,15 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
     form_id = "#{module.__naming__().singular}_form"
 
-    # No per-field LiveView upload anymore (uploads go through the sticky
-    # UploadManager) — the picker hides its field-upload button when
-    # upload_name is nil.
+    # No per-field LiveView upload anymore — uploads go through the sticky
+    # UploadManager; the picker is browse/select only.
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
       config_target: {"image", form.data.__struct__, field_name},
       event_target: myself,
       multi: false,
       selected_images: if(image_id, do: [image_id], else: []),
-      form_id: form_id,
-      upload_name: nil,
-      drop_target: nil
+      form_id: form_id
     )
 
     edit_image = %{

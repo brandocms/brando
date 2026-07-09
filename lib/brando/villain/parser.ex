@@ -85,9 +85,7 @@ defmodule Brando.Villain.Parser do
       def datasource(_, _) do
         require Logger
 
-        Logger.error(
-          "==> parser: datasource/2 is deprecated. Use module with datasource instead."
-        )
+        Logger.error("==> parser: datasource/2 is deprecated. Use module with datasource instead.")
 
         ""
       end

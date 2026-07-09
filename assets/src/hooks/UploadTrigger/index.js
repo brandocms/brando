@@ -23,7 +23,7 @@
  *        data-asset-type="file|image"
  *        data-config-target="..."
  *        data-accept=".pdf,.zip">
- *     <input type="file" class="file-input" style="display:none" />
+ *     <input type="file" class="file-input" />
  *     … canvas …
  *   </div>
  */
@@ -70,6 +70,9 @@ export default (app) => ({
 
     this.el.addEventListener('dragleave', (e) => {
       e.stopPropagation()
+      // Ignore leaves into our own children — only clear when actually
+      // exiting the drop zone (prevents highlight flicker).
+      if (e.relatedTarget && this.el.contains(e.relatedTarget)) return
       this.el.classList.remove('dragging')
     })
 
@@ -143,7 +146,6 @@ export default (app) => ({
     window.BrandoUploads.enqueue(files, {
       kind: ds.kind,
       component_id: ds.componentId,
-      block_uid: ds.blockUid,
       var_key: ds.varKey,
       field: ds.field || null,
       path,

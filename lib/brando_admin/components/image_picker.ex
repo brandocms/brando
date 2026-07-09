@@ -32,13 +32,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> assign(:pending_file_count, assigns[:file_count] || 0)
      |> assign(:new_folder, "")
      |> assign(:show_new_folder_form, false)
-     |> assign(:upload_uploading, false)
-     |> assign(:upload_progress, 0)
-     |> assign(:upload_total_files, 0)
-     |> assign(:upload_completed_files, 0)
      |> assign(:form_id, assigns[:form_id] || socket.assigns.form_id)
-     |> assign(:upload_name, nil)
-     |> assign(:drop_target, nil)
      |> assign(:recent_folders, recent_folders)
      |> assign(:config_target, config_target)
      |> assign_images()
@@ -61,20 +55,13 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> assign(:pending_file_count, 0)
      |> assign(:new_folder, "")
      |> assign(:show_new_folder_form, false)
-     |> assign(:upload_uploading, false)
-     |> assign(:upload_progress, 0)
-     |> assign(:upload_total_files, 0)
-     |> assign(:upload_completed_files, 0)
      |> assign(:form_id, params[:form_id] || socket.assigns.form_id)
-     |> assign(:upload_name, params[:upload_name] || socket.assigns.upload_name)
-     |> assign(:drop_target, params[:drop_target] || socket.assigns.drop_target)
      |> assign(:config_target, config_target)
      |> assign(:event_target, event_target)
      |> assign(:multi, multi)
      |> assign(:selected_images, selected_images)
      |> assign_images()
      |> assign_folder_state(nil)
-     |> sync_picker_upload_folder()
      |> push_selection_state()}
   end
 
@@ -85,28 +72,6 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> push_selection_state()}
   end
 
-  def update(%{event: "picker_upload_progress"} = assigns, socket) do
-    incoming_upload_name = normalize_upload_name(assigns[:upload_name])
-    current_upload_name = normalize_upload_name(socket.assigns.upload_name)
-
-    socket =
-      if is_nil(current_upload_name) or current_upload_name == incoming_upload_name do
-        upload_progress = Map.get(assigns, :upload_progress, socket.assigns.upload_progress || 0)
-
-        if (socket.assigns.upload_total_files || 0) > 0 do
-          assign(socket, :upload_progress, upload_progress)
-        else
-          socket
-          |> assign(:upload_uploading, Map.get(assigns, :upload_uploading, false))
-          |> assign(:upload_progress, upload_progress)
-        end
-      else
-        socket
-      end
-
-    {:ok, socket}
-  end
-
   def update(%{refresh_images: true} = assigns, socket) do
     requested_folder = Map.get(assigns, :requested_folder)
 
@@ -115,7 +80,6 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> assign_defaults()
      |> assign_images()
      |> assign_folder_state(requested_folder || socket.assigns.current_folder)
-     |> sync_picker_upload_folder()
      |> push_selection_state()}
   end
 
@@ -159,18 +123,6 @@ defmodule BrandoAdmin.Components.ImagePicker do
     upload_name = socket.assigns.pending_upload_name
     absolute_folder = FolderBrowser.absolute_folder(socket.assigns.current_folder, socket.assigns.upload_root)
     folder_id = FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root)
-    config_target = socket.assigns.config_target || "default"
-
-    if socket.assigns.form_id && upload_name do
-      send_update(BrandoAdmin.Components.Form,
-        id: socket.assigns.form_id,
-        event: "set_block_upload_folder",
-        upload_name: upload_name,
-        folder: absolute_folder,
-        folder_id: folder_id,
-        config_target: config_target
-      )
-    end
 
     {:noreply,
      socket
@@ -180,82 +132,6 @@ defmodule BrandoAdmin.Components.ImagePicker do
        folder: absolute_folder,
        folder_id: folder_id
      })}
-  end
-
-  def handle_event("prepare_picker_upload", _, socket) do
-    absolute_folder = FolderBrowser.absolute_folder(socket.assigns.current_folder, socket.assigns.upload_root)
-
-    {:noreply,
-     socket
-     |> remember_folder(absolute_folder)
-     |> sync_picker_upload_folder()}
-  end
-
-  def handle_event("picker_upload_started", %{"upload_name" => upload_name} = params, socket) do
-    if normalize_upload_name(upload_name) == normalize_upload_name(socket.assigns.upload_name) do
-      total_files = parse_nonnegative_int(Map.get(params, "total_files"), socket.assigns.upload_total_files || 1)
-      completed_files = parse_nonnegative_int(Map.get(params, "completed_files"), 0)
-      normalized_total = max(1, total_files)
-      normalized_completed = min(completed_files, normalized_total)
-
-      {:noreply,
-       socket
-       |> assign(:upload_uploading, true)
-       |> assign(:upload_total_files, normalized_total)
-       |> assign(:upload_completed_files, normalized_completed)
-       |> assign(:upload_progress, 0)}
-    else
-      {:noreply, socket}
-    end
-  end
-
-  def handle_event("picker_upload_file_complete", %{"upload_name" => upload_name} = params, socket) do
-    if normalize_upload_name(upload_name) == normalize_upload_name(socket.assigns.upload_name) do
-      total_files =
-        parse_nonnegative_int(
-          Map.get(params, "total_files"),
-          max(1, socket.assigns.upload_total_files || 1)
-        )
-
-      completed_files =
-        parse_nonnegative_int(
-          Map.get(params, "completed_files"),
-          (socket.assigns.upload_completed_files || 0) + 1
-        )
-
-      {:noreply,
-       socket
-       |> assign(:upload_total_files, total_files)
-       |> assign(:upload_completed_files, min(completed_files, total_files))
-       |> assign(:upload_progress, 100)}
-    else
-      {:noreply, socket}
-    end
-  end
-
-  def handle_event("picker_upload_finished", %{"upload_name" => upload_name} = params, socket) do
-    if normalize_upload_name(upload_name) == normalize_upload_name(socket.assigns.upload_name) do
-      total_files =
-        parse_nonnegative_int(
-          Map.get(params, "total_files"),
-          max(1, socket.assigns.upload_total_files || 1)
-        )
-
-      completed_files =
-        parse_nonnegative_int(
-          Map.get(params, "completed_files"),
-          total_files
-        )
-
-      {:noreply,
-       socket
-       |> assign(:upload_uploading, false)
-       |> assign(:upload_total_files, total_files)
-       |> assign(:upload_completed_files, min(completed_files, total_files))
-       |> assign(:upload_progress, 100)}
-    else
-      {:noreply, socket}
-    end
   end
 
   def handle_event("edit_image_from_picker", %{"id" => id}, socket) do
@@ -285,7 +161,6 @@ defmodule BrandoAdmin.Components.ImagePicker do
          |> assign(:selected_images, Enum.reject(socket.assigns.selected_images, &same_item_id?(&1, image_id)))
          |> assign_images()
          |> assign_folder_state(socket.assigns.current_folder)
-         |> sync_picker_upload_folder()
          |> push_selection_state()}
 
       _ ->
@@ -426,35 +301,6 @@ defmodule BrandoAdmin.Components.ImagePicker do
                 <span>
                   {ngettext("%{count} image", "%{count} images", @image_count, count: @image_count)}
                 </span>
-
-                <div
-                  :if={@upload_uploading}
-                  class="picker-upload-progress"
-                  role="status"
-                  aria-live="polite"
-                  data-label-current-file={gettext("Current file")}
-                >
-                  <span class="picker-upload-count">
-                    {gettext("Uploaded %{uploaded}/%{total}",
-                      uploaded: @upload_completed_files,
-                      total: @upload_total_files
-                    )}
-                  </span>
-                  <span class="picker-upload-current">{gettext("Current file")} {@upload_progress}%</span>
-                  <progress value={@upload_progress} max="100">{@upload_progress}%</progress>
-                </div>
-
-                <button
-                  :if={@picker_mode == :select && @upload_name}
-                  type="button"
-                  class="folder-action"
-                  phx-click={
-                    JS.push("prepare_picker_upload", target: @myself)
-                    |> dispatch_upload_click(@upload_name, @drop_target)
-                  }
-                >
-                  {gettext("Upload")}
-                </button>
               </div>
             </div>
           </:main_header>
@@ -462,35 +308,10 @@ defmodule BrandoAdmin.Components.ImagePicker do
           <div
             id={"image-picker-drawer-#{@id}"}
             class="image-picker list"
-            phx-hook="Brando.QueuedUploader"
-            data-upload-target={if @picker_mode == :select && @upload_name, do: to_string(@upload_name), else: ""}
-            data-upload-form="#image-drawer-form"
-            data-progress-target={if @picker_mode == :select && @upload_name, do: "#image-picker-main-#{@id}", else: ""}
-            data-progress-listener="true"
-            data-listen-document-change={if @picker_mode == :select && @upload_name, do: "true", else: "false"}
-            data-enable-drop={if @picker_mode == :select && @upload_name, do: "true", else: "false"}
-            data-max-concurrency="1"
           >
-            <div :if={@picker_mode == :select && @upload_name} class="folder-drop-indicator">
-              <.icon name="hero-photo" />
-              <span>{gettext("Drop files to upload into")}</span>
-              <strong>{folder_label_for_display(@current_folder, @upload_root)}</strong>
-            </div>
-
             <%= if @image_count == 0 do %>
               <div class="image-picker-empty">
-                <button
-                  :if={@picker_mode == :select && @upload_name}
-                  type="button"
-                  class="empty-upload-trigger"
-                  phx-click={
-                    JS.push("prepare_picker_upload", target: @myself)
-                    |> dispatch_upload_click(@upload_name, @drop_target)
-                  }
-                >
-                  <.icon name="hero-photo" />
-                </button>
-                <.icon :if={!(@picker_mode == :select && @upload_name)} name="hero-photo" />
+                <.icon name="hero-photo" />
                 <h4>{gettext("No images in this folder")}</h4>
                 <p>{gettext("Upload files here or choose another folder")}</p>
               </div>
@@ -644,8 +465,6 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign_new(:pending_upload_name, fn -> nil end)
     |> assign_new(:pending_file_count, fn -> 0 end)
     |> assign_new(:form_id, fn -> nil end)
-    |> assign_new(:upload_name, fn -> nil end)
-    |> assign_new(:drop_target, fn -> nil end)
     |> assign_new(:folders, fn -> [""] end)
     |> assign_new(:custom_folders, fn -> [] end)
     |> assign_new(:child_folders, fn -> [] end)
@@ -656,10 +475,6 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign_new(:upload_root, fn -> "images/default" end)
     |> assign_new(:recent_folders, fn -> [] end)
     |> assign_new(:recent_folders_for_root, fn -> [] end)
-    |> assign_new(:upload_uploading, fn -> false end)
-    |> assign_new(:upload_progress, fn -> 0 end)
-    |> assign_new(:upload_total_files, fn -> 0 end)
-    |> assign_new(:upload_completed_files, fn -> 0 end)
     |> assign_new(:organize_selected, fn -> [] end)
     |> assign_new(:last_organize_selected_id, fn -> nil end)
     |> assign_new(:image_count, fn -> 0 end)
@@ -725,9 +540,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
   # -- PickerHelpers callbacks --
 
   defp on_folder_change(socket) do
-    socket
-    |> sync_picker_upload_folder()
-    |> push_selection_state()
+    push_selection_state(socket)
   end
 
   defp push_selection_state(socket) do
@@ -775,42 +588,6 @@ defmodule BrandoAdmin.Components.ImagePicker do
 
   defp image_status(status) when is_binary(status), do: status
   defp image_status(_status), do: "-"
-
-  defp dispatch_upload_click(js, upload_name, drop_target) do
-    selector =
-      if is_binary(drop_target) and drop_target != "" do
-        "##{drop_target}"
-      else
-        ~s(#image-drawer-form input[name="#{upload_name}"])
-      end
-
-    JS.dispatch(js, "click", to: selector)
-  end
-
-  defp sync_picker_upload_folder(%{assigns: %{picker_mode: :select}} = socket) do
-    upload_name = socket.assigns.upload_name
-    form_id = socket.assigns.form_id
-    current_folder = socket.assigns.current_folder
-    upload_root = socket.assigns.upload_root
-
-    folder = FolderBrowser.absolute_folder(current_folder, upload_root)
-    folder_id = FolderBrowser.folder_id_for(current_folder, upload_root)
-
-    if upload_name && form_id do
-      send_update(Form,
-        id: form_id,
-        event: "set_block_upload_folder",
-        upload_name: upload_name,
-        folder: folder,
-        folder_id: folder_id,
-        config_target: socket.assigns.config_target || "default"
-      )
-    end
-
-    socket
-  end
-
-  defp sync_picker_upload_folder(socket), do: socket
 
   defp image_menu_id(image_id), do: "image-picker-image-menu-#{image_id}"
 

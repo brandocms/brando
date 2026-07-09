@@ -416,11 +416,6 @@ defmodule BrandoAdmin.LiveView.Form do
           {nil, _} ->
             {:cont, socket}
 
-          {%{target: {module, id}, upload_name: upload_name}, remaining} ->
-            send_update(module, id: id, event: "image_processed", image: image)
-            maybe_broadcast_block_upload_processed(socket, upload_name)
-            {:halt, assign(socket, :pending_block_image_updates, remaining)}
-
           {{module, id}, remaining} ->
             send_update(module, id: id, event: "image_processed", image: image)
             {:halt, assign(socket, :pending_block_image_updates, remaining)}
@@ -435,25 +430,8 @@ defmodule BrandoAdmin.LiveView.Form do
     end
   end
 
-  defp handle_hooks_image_info(
-         {:register_pending_block_image, image_id, block_target, upload_name},
-         socket
-       ) do
-    case block_target do
-      {module, id} ->
-        pending_entry = %{target: {module, id}, upload_name: to_string(upload_name)}
-        {:halt, update(socket, :pending_block_image_updates, &Map.put(&1, image_id, pending_entry))}
-
-      _ ->
-        require Logger
-        Logger.warning("Ignoring register_pending_block_image with non-stable target: #{inspect(block_target)}")
-        {:halt, socket}
-    end
-  end
-
   defp handle_hooks_image_info({:register_pending_block_image, image_id, {module, id}}, socket) do
-    pending_entry = %{target: {module, id}, upload_name: nil}
-    {:halt, update(socket, :pending_block_image_updates, &Map.put(&1, image_id, pending_entry))}
+    {:halt, update(socket, :pending_block_image_updates, &Map.put(&1, image_id, {module, id}))}
   end
 
   defp handle_hooks_image_info({:register_pending_block_image, _image_id, invalid_target}, socket) do
@@ -768,16 +746,6 @@ defmodule BrandoAdmin.LiveView.Form do
   end
 
   defp handle_hooks_video_info(_, socket), do: {:cont, socket}
-
-  defp maybe_broadcast_block_upload_processed(_socket, nil), do: :ok
-
-  defp maybe_broadcast_block_upload_processed(socket, upload_name) do
-    Brando.endpoint().broadcast!(
-      "user:#{socket.assigns.current_user.id}",
-      "block:upload_processed",
-      %{upload_name: upload_name}
-    )
-  end
 
   # Port exit hooks - catch normal exits from image processing ports (ImageMagick, etc.)
   defp handle_hooks_port_exits({:EXIT, _port, :normal}, socket), do: {:halt, socket}

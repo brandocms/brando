@@ -93,7 +93,6 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:blocks_ready_for_sharing, false)
      |> assign(:fields_demanding_full_live_preview_rerender, [])
      |> assign(:fields_demanding_live_preview_reassign, [])
-     |> assign(:upload_folder_targets, %{})
      |> assign_new(:footer, fn -> [] end)
      |> assign(:editing_drawer_type, nil)
      |> assign(:editing_resource_id, nil)
@@ -492,30 +491,6 @@ defmodule BrandoAdmin.Components.Form do
 
   def update(%{event: "register_block_wanting_entry", block_ref: block_ref}, socket) do
     {:ok, update(socket, :blocks_wanting_entry, &Enum.uniq(&1 ++ [block_ref]))}
-  end
-
-  def update(
-        %{event: "set_block_upload_folder", upload_name: upload_name} = params,
-        socket
-      ) do
-    folder = Map.get(params, :folder)
-    folder_id = Map.get(params, :folder_id)
-
-    config_target =
-      params
-      |> Map.get(:config_target)
-      |> normalize_upload_config_target()
-
-    upload_folder_targets = Map.get(socket.assigns, :upload_folder_targets, %{})
-
-    updated_targets =
-      Map.put(upload_folder_targets, upload_name, %{
-        folder: folder,
-        folder_id: folder_id,
-        config_target: config_target || "default"
-      })
-
-    {:ok, assign(socket, :upload_folder_targets, updated_targets)}
   end
 
   # Asset delivery from the sticky UploadManager for entry schema fields
@@ -2079,7 +2054,7 @@ defmodule BrandoAdmin.Components.Form do
           }
           class="file-drawer-preview"
         >
-          <input id="file-drawer-upload-input" type="file" class="file-input" style="display:none" />
+          <input id="file-drawer-upload-input" type="file" class="file-input" />
 
           <div class="img-placeholder">
             <div class="placeholder-wrapper">
@@ -2163,7 +2138,7 @@ defmodule BrandoAdmin.Components.Form do
           data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
           class="image-drawer-preview"
         >
-          <input id="image-drawer-upload-input" type="file" class="file-input" style="display:none" />
+          <input id="image-drawer-upload-input" type="file" class="file-input" />
           <%= if @edit_image.image do %>
             <figure class="grid-overlay">
               <div class="drop-indicator">
@@ -2529,7 +2504,7 @@ defmodule BrandoAdmin.Components.Form do
                     <span class="label">
                       {gettext("Upload video file")}
                     </span>
-                    <input type="file" class="file-input" style="display:none" />
+                    <input type="file" class="file-input" />
                   </div>
                 <% end %>
 
@@ -3388,11 +3363,6 @@ defmodule BrandoAdmin.Components.Form do
     # Placeholder for thumbnail extraction functionality
     send(self(), {:toast, gettext("Thumbnail extraction not yet implemented")})
     {:noreply, socket}
-  end
-
-  def handle_event("cancel_upload", %{"ref" => ref, "field_name" => field_name}, socket) do
-    field_name_atom = String.to_existing_atom(field_name)
-    {:noreply, cancel_upload(socket, field_name_atom, ref)}
   end
 
   def handle_event("change_preview_target", %{"target" => target}, socket) do

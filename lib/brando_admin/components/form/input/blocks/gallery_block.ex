@@ -264,7 +264,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               class="file-input"
               accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
               multiple
-              style="display:none"
             />
 
             <div class="gallery-buttons">

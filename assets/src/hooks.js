@@ -8,7 +8,6 @@ import ColorPickerHook from './hooks/ColorPicker'
 import ConfirmClickHook from './hooks/ConfirmClick'
 import DatePickerHook from './hooks/DatePicker'
 import DateTimePickerHook from './hooks/DateTimePicker'
-import DragDropHook from './hooks/DragDrop'
 import FieldBaseHook from './hooks/FieldBase'
 import FocalPointHook from './hooks/FocalPoint'
 import ImageEditorHook from './hooks/ImageEditor'
@@ -24,7 +23,6 @@ import BunnyUploaderHook from './hooks/BunnyUploader'
 import NavigationHook from './hooks/Navigation'
 import PublishClosestInputHook from './hooks/PublishClosestInput'
 import PublishInputHook from './hooks/PublishInput'
-import QueuedUploaderHook from './hooks/QueuedUploader'
 import RememberScrollPositionHook from './hooks/RememberScrollPosition'
 import SelectFilterHook from './hooks/SelectFilter'
 import SchedulerHook from './hooks/Scheduler'
@@ -55,7 +53,6 @@ export default (app) => {
     'Brando.ConfirmClick': ConfirmClickHook(app),
     'Brando.DatePicker': DatePickerHook(app),
     'Brando.DateTimePicker': DateTimePickerHook(app),
-    'Brando.DragDrop': DragDropHook(app),
     'Brando.FieldBase': FieldBaseHook(app),
     'Brando.FocalPoint': FocalPointHook(app),
     'Brando.Form': FormHook(app),
@@ -71,7 +68,6 @@ export default (app) => {
     'Brando.Navigation': NavigationHook(app),
     'Brando.PublishClosestInput': PublishClosestInputHook(app),
     'Brando.PublishInput': PublishInputHook(app),
-    'Brando.QueuedUploader': QueuedUploaderHook(app),
     'Brando.RememberScrollPosition': RememberScrollPositionHook(app),
     'Brando.SelectFilter': SelectFilterHook(app),
     'Brando.Scheduler': SchedulerHook(app),

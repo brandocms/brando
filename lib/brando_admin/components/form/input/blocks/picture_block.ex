@@ -255,7 +255,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
               class={["empty", "upload-canvas", @extracted_path && "hidden"]}
             >
-              <input type="file" class="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" style="display:none" />
+              <input type="file" class="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" />
               <figure>
                 <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                   <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none" />
@@ -300,7 +300,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                     data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
                     class="img-placeholder empty upload-canvas"
                   >
-                    <input type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" style="display:none" />
+                    <input type="file" class="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" />
                     <div class="placeholder-wrapper">
                       <div class="svg-wrapper">
                         <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">

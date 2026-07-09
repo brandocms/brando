@@ -123,6 +123,11 @@ html.moonwalk [data-moonwalk-run].moonwalked {
   cursor: wait;
 }
 
+/* Hidden native file inputs driven by UploadTrigger / picker hooks */
+.file-input {
+  display: none;
+}
+
 [data-env="e2e"] {
   * {
     animation-duration: 1ms !important;

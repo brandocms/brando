@@ -1773,8 +1773,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 class="circle tiny"
                 style={"background-color:#{color.hex_value}"}
                 data-popover={"#{color.name}"}
-              >
-              </span>
+              ></span>
             </div>
             <div :if={@block[:anchor].value} class="container-target">
               &nbsp;|&nbsp;#{@block[:anchor].value}
@@ -2269,7 +2268,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       refs_field: block_form[:refs],
       target: assigns[:target],
       target_ref: assigns[:target_ref],
-      form_id: assigns[:form_id],
+      form_id: assigns[:form_id]
     }
 
     base = %{

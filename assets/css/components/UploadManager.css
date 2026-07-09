@@ -1,3 +1,8 @@
+/* Hidden form hosting the live_file_input the JS upload API targets */
+.upload-manager-queue-form {
+  display: none;
+}
+
 .upload-manager-drawer {
   position: fixed;
   right: 15px;
@@ -47,7 +52,7 @@
     padding: 8px 12px;
 
     + .upload-item {
-      border-top: 1px solid rgba(0, 0, 0, 0.1);
+      border-top: 1px solid var(--brando-input-border, #e0e0e0);
     }
 
     .meta {
@@ -71,7 +76,7 @@
       .done-label {
         display: flex;
         align-items: center;
-        color: var(--brando-color-status-published, green);
+        color: #2e7d32;
         flex-shrink: 0;
 
         [class^='hero-'] {
@@ -108,7 +113,7 @@
     }
 
     .error-label {
-      color: var(--brando-color-danger, #c00);
+      color: #c00;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;

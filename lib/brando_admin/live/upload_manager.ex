@@ -435,7 +435,7 @@ defmodule BrandoAdmin.UploadManager do
       phx-hook="Brando.UploadManager"
       data-max-concurrent-transfers={Uploads.max_concurrent_transfers()}
     >
-      <form phx-change="validate_queue" style="display: none">
+      <form phx-change="validate_queue" class="upload-manager-queue-form">
         <.live_file_input upload={@uploads.queue} />
       </form>
 

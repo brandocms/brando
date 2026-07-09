@@ -168,7 +168,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
             data-click-mode="trigger"
             data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
           >
-            <input type="file" class="file-input" multiple style="display:none" />
+            <input type="file" class="file-input" multiple />
 
             <div class="actions">
               <button type="button" class="tiny upload-trigger">
@@ -189,7 +189,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                 <button type="button" class="tiny upload-trigger">
                   {gettext("Upload videos")}
                 </button>
-                <input type="file" class="file-input" multiple style="display:none" />
+                <input type="file" class="file-input" multiple />
               </div>
               <button
                 phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
@@ -615,10 +615,6 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
        image_id: image.id,
        crop_groups: crop_groups
      })}
-  end
-
-  def handle_event("cancel_upload", %{"ref" => ref, "field_name" => field_name}, socket) do
-    {:noreply, cancel_upload(socket, field_name, ref)}
   end
 
   def handle_event("reposition", _, socket) do
