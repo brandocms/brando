@@ -699,10 +699,17 @@ defmodule BrandoAdmin.Components.Form do
       selected_images: selected_images
     )
 
-    {:ok,
-     socket
-     |> update(:processing_images, &[image.id | &1])
-     |> assign(:form, to_form(updated_changeset, []))}
+    # Already-processed deliveries (inline-Oban race) get no later [:image,
+    # :updated] broadcast — an unconditional add would leave a stale
+    # never-cleared processing_images entry.
+    socket =
+      if image.status != :processed do
+        update(socket, :processing_images, &[image.id | &1])
+      else
+        socket
+      end
+
+    {:ok, assign(socket, :form, to_form(updated_changeset, []))}
   end
 
   # Gallery entry fields: append the delivered video to the gallery assoc.
@@ -2066,7 +2073,10 @@ defmodule BrandoAdmin.Components.Form do
           data-asset-type="file"
           data-field={@edit_file.field}
           data-path={Jason.encode!(@edit_file.path || [])}
-          data-config-target={@edit_file.field && "file:#{inspect(@schema)}:#{@edit_file.field}"}
+          data-config-target={
+            @edit_file.field &&
+              "file:#{inspect(Map.get(@edit_file, :schema) || @schema)}:#{@edit_file.field}"
+          }
           class="file-drawer-preview"
         >
           <input id="file-drawer-upload-input" type="file" class="file-input" style="display:none" />

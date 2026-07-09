@@ -96,9 +96,9 @@
 > gallery: the hook wrapper (`data-click-mode="trigger"`) wraps the whole input as
 > a drop zone with real `button.tiny` actions inside (the old markup was an
 > unstyled div, rendered off-row).
-> TODO for Phase 2 go-live: manager consume does not queue `Brando.CDN.queue_upload`
-> for server-transport files on CDN-enabled sites (parity gap shared with the old
-> var flow; `save_file` queues it, delivery does not).
+> ~~TODO for Phase 2 go-live: manager consume does not queue `Brando.CDN.queue_upload`
+> for server-transport files on CDN-enabled sites.~~ **Fixed (2026-07-09, audit):**
+> consume now queues the CDN push for non-cdn `File` assets, matching `save_file`.
 > This document is a self-contained spec. It explains *why* the current upload
 > system is broken, *what* to build (a sticky, free-standing `UploadManager` LiveView
 > that owns a queue and every upload mechanic), and *how* to migrate every upload source

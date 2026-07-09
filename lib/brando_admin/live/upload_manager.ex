@@ -358,6 +358,10 @@ defmodule BrandoAdmin.UploadManager do
             Brando.Images.Processing.queue_processing(asset, user, image_field_path(item.target), silent: true)
             update_item(socket, item.ref, %{status: :processing, progress: 100, asset_id: asset.id})
           else
+            # Parity with save_file: server-transport files on CDN-enabled
+            # sites must still be pushed to the CDN (images push from the
+            # processing worker; direct transport is already in the bucket).
+            maybe_queue_cdn_upload(asset, user)
             Process.send_after(self(), {:auto_dismiss_item, item.ref}, @auto_dismiss_ms)
             update_item(socket, item.ref, %{status: :done, progress: 100, asset_id: asset.id})
           end
@@ -570,6 +574,14 @@ defmodule BrandoAdmin.UploadManager do
       end
     end)
   end
+
+  defp maybe_queue_cdn_upload(%Brando.Files.File{cdn: cdn} = file, user) when cdn != true do
+    if Brando.CDN.enabled?(Brando.Files) do
+      Brando.CDN.queue_upload(file, user, [])
+    end
+  end
+
+  defp maybe_queue_cdn_upload(_asset, _user), do: :ok
 
   defp mark_item_error(socket, nil, _message), do: socket
   defp mark_item_error(socket, ref, message), do: update_item(socket, ref, %{status: :error, error: message})

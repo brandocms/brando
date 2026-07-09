@@ -600,6 +600,12 @@ defmodule BrandoAdmin.LiveView.Form do
       Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{asset.id}")
     end
 
+    # Inline-Oban / fast-queue race (same recovery block refs get via
+    # maybe_forward_already_processed): processing may complete before this
+    # delivery runs, and the broadcast fired before we subscribed — refetch so
+    # the processed struct lands in the changeset, not the :unprocessed one.
+    asset = refresh_processed_image(asset)
+
     path =
       (target["path"] || [])
       |> Enum.map(fn
@@ -632,7 +638,7 @@ defmodule BrandoAdmin.LiveView.Form do
       event: "entry_field_upload_complete",
       asset_type: :gallery,
       field: String.to_existing_atom(field),
-      asset: image
+      asset: refresh_processed_image(image)
     )
   end
 
@@ -666,6 +672,15 @@ defmodule BrandoAdmin.LiveView.Form do
   # win the race in prod too) — the [:image, :updated] broadcast is then
   # already gone. Re-read the image and forward image_processed directly if
   # it is already done.
+  defp refresh_processed_image(%Brando.Images.Image{} = image) do
+    case Brando.Images.get_image(image.id) do
+      {:ok, fresh} -> fresh
+      _ -> image
+    end
+  end
+
+  defp refresh_processed_image(asset), do: asset
+
   defp maybe_forward_already_processed(image, module, component_id) do
     case Brando.Images.get_image(image.id) do
       {:ok, %{status: :processed} = processed_image} ->

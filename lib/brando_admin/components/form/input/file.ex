@@ -125,6 +125,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
         path: path,
         field: field.field,
         relation_field: relation_field,
+        schema: field.form.data.__struct__,
         file: file
       }
     )
