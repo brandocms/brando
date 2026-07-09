@@ -112,16 +112,19 @@ defmodule Brando.Uploads do
     cdn_config = file_cdn_config(cfg)
 
     if Brando.CDN.key_exists?(key, %{cdn: cdn_config}) do
-      file_params = %{
-        title: params[:title],
-        mime_type: params[:mime_type],
-        filesize: params[:filesize],
-        filename: Path.basename(key),
-        config_target: resolved_target,
-        cdn: true
+      # Reuse the storage layer's :direct_to_s3 record creation so both
+      # transports produce identical File rows (incl. folder_id).
+      upload = %{
+        cfg: cfg,
+        meta: %{key: key, config_target: resolved_target, folder_id: params[:folder_id]},
+        upload_entry: %{
+          client_name: params[:title],
+          client_type: params[:mime_type],
+          client_size: params[:filesize]
+        }
       }
 
-      Brando.Files.create_file(file_params, user)
+      Brando.Upload.handle_upload_type(upload, user, :direct_to_s3)
     else
       {:error, "Uploaded object not found in bucket (#{key})"}
     end
@@ -293,72 +296,62 @@ defmodule Brando.Uploads do
   Falls back to the default image config (and `"default"` target) when the
   target has no registered config.
   """
-  def resolve_image_config(config_target) do
-    resolved_target = normalize_config_target(config_target) || "default"
-
-    case safe_get_config(Brando.Images, resolved_target) do
-      {:ok, cfg} ->
-        {cfg, resolved_target}
-
-      _ ->
-        default_config =
-          Brando.config(Brando.Images)[:default_config] ||
-            Brando.Type.ImageConfig.default_config()
-
-        cfg =
-          case default_config do
-            %Brando.Type.ImageConfig{} = c -> c
-            config -> struct(Brando.Type.ImageConfig, config)
-          end
-
-        {cfg, "default"}
-    end
-  end
+  def resolve_image_config(config_target), do: resolve_config(Brando.Images, Brando.Type.ImageConfig, config_target)
 
   @doc """
   Resolve a video config target to `{cfg, resolved_target}`.
 
-  Falls back to the default video config when unresolvable.
+  Falls back to the default video config when unresolvable. The resolved cfg
+  is guaranteed to be a `%Brando.Type.VideoConfig{}` — a plain-map cfg would
+  miss the VideoConfig clause in `Brando.Upload.handle_upload_type/2` and fall
+  into the generic image path.
   """
-  def resolve_video_config(config_target) do
-    resolved_target = normalize_config_target(config_target) || "default"
-
-    case safe_get_config(Brando.Videos, resolved_target) do
-      {:ok, %Brando.Type.VideoConfig{} = cfg} ->
-        {cfg, resolved_target}
-
-      _ ->
-        {Brando.config(Brando.Videos)[:default_config] || %Brando.Type.VideoConfig{}, "default"}
-    end
-  end
+  def resolve_video_config(config_target), do: resolve_config(Brando.Videos, Brando.Type.VideoConfig, config_target)
 
   @doc """
   Resolve a file config target to `{cfg, resolved_target}`.
 
   Falls back to the default file config (and `"default"` target) when the
-  target has no registered config.
+  target has no registered config. Note the resolved cfg may be a
+  `%Brando.Type.VideoConfig{}` for `"video:"` targets (files wrapped by
+  `:upload` videos resolve through the owning video asset's cfg).
   """
-  def resolve_file_config(config_target) do
+  def resolve_file_config(config_target), do: resolve_config(Brando.Files, Brando.Type.FileConfig, config_target)
+
+  # Videos require the exact config struct (see resolve_video_config/1);
+  # file targets may legitimately resolve to another cfg struct type.
+  defp resolve_config(Brando.Videos = context, struct_mod, config_target) do
     resolved_target = normalize_config_target(config_target) || "default"
 
-    case safe_get_config(Brando.Files, resolved_target) do
-      {:ok, cfg} ->
-        {cfg, resolved_target}
-
-      _ ->
-        default_config =
-          Brando.config(Brando.Files)[:default_config] ||
-            Brando.Type.FileConfig.default_config()
-
-        cfg =
-          case default_config do
-            %Brando.Type.FileConfig{} = c -> c
-            config -> struct(Brando.Type.FileConfig, config)
-          end
-
-        {cfg, "default"}
+    case safe_get_config(context, resolved_target) do
+      {:ok, cfg} when is_struct(cfg, struct_mod) -> {cfg, resolved_target}
+      _ -> {default_config(context, struct_mod), "default"}
     end
   end
+
+  defp resolve_config(context, struct_mod, config_target) do
+    resolved_target = normalize_config_target(config_target) || "default"
+
+    case safe_get_config(context, resolved_target) do
+      {:ok, cfg} when not is_nil(cfg) -> {cfg, resolved_target}
+      _ -> {default_config(context, struct_mod), "default"}
+    end
+  end
+
+  defp default_config(context, struct_mod) do
+    case base_default_config(context) do
+      cfg when is_struct(cfg, struct_mod) -> cfg
+      cfg -> struct(struct_mod, cfg)
+    end
+  end
+
+  defp base_default_config(Brando.Images),
+    do: Brando.config(Brando.Images)[:default_config] || Brando.Type.ImageConfig.default_config()
+
+  defp base_default_config(Brando.Files),
+    do: Brando.config(Brando.Files)[:default_config] || Brando.Type.FileConfig.default_config()
+
+  defp base_default_config(Brando.Videos), do: Brando.config(Brando.Videos)[:default_config] || %{}
 
   # get_config_for raises on unknown target shapes — the upload manager must
   # never crash mid-consume over a config target, so treat any raise as

@@ -119,14 +119,23 @@ defmodule BrandoAdmin.UploadManager do
     user = socket.assigns.current_user
 
     case Map.get(socket.assigns.items, ref) do
+      # A replayed complete for an already-finalized ref must not create a
+      # duplicate asset row.
+      %{transport: :direct, status: :done} ->
+        {:noreply, socket}
+
       %{transport: :direct, direct: direct} = item ->
-        finalize_params = %{
-          key: direct.key,
-          resolved_target: direct.resolved_target,
-          title: item.filename,
-          mime_type: direct.mime_type,
-          filesize: item.size
-        }
+        finalize_params =
+          maybe_put_folder_id(
+            %{
+              key: direct.key,
+              resolved_target: direct.resolved_target,
+              title: item.filename,
+              mime_type: direct.mime_type,
+              filesize: item.size
+            },
+            item.target["folder_id"]
+          )
 
         case Uploads.finalize_direct(item.asset_type, finalize_params, user) do
           {:ok, asset} ->
@@ -301,7 +310,7 @@ defmodule BrandoAdmin.UploadManager do
         socket =
           if item.asset_type == :image do
             Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{asset.id}")
-            Brando.Images.Processing.queue_processing(asset, user, [], silent: true)
+            Brando.Images.Processing.queue_processing(asset, user, image_field_path(item.target), silent: true)
             update_item(socket, item.ref, %{status: :processing, progress: 100, asset_id: asset.id})
           else
             Process.send_after(self(), {:auto_dismiss_item, item.ref}, @auto_dismiss_ms)
@@ -434,6 +443,13 @@ defmodule BrandoAdmin.UploadManager do
   end
 
   defp maybe_put_folder_id(meta, _), do: meta
+
+  # Entry-field images must carry their (possibly nested) field path into the
+  # Oban job — the [:image, :updated] broadcast routes by it, and an empty
+  # path never reaches nested (subform) fields. The worker converts string
+  # segments back through existing atoms only.
+  defp image_field_path(%{"kind" => "entry_field", "path" => path}) when is_list(path), do: path
+  defp image_field_path(_target), do: []
 
   defp resolve_config(:image, config_target), do: Uploads.resolve_image_config(config_target)
   defp resolve_config(:file, config_target), do: Uploads.resolve_file_config(config_target)

@@ -72,6 +72,17 @@ defmodule Brando.UploadsTest do
     end
   end
 
+  describe "resolve_video_config/1" do
+    # Regression: the fallback returned the raw configured default, which can
+    # be a plain map — a non-struct cfg misses handle_upload_type's
+    # VideoConfig clause and local video uploads fall into the generic image
+    # path ("Failed to read image dimensions").
+    test "always resolves to a VideoConfig struct" do
+      assert {%Brando.Type.VideoConfig{}, "default"} = Uploads.resolve_video_config("bogus-target")
+      assert {%Brando.Type.VideoConfig{}, "default"} = Uploads.resolve_video_config(nil)
+    end
+  end
+
   describe "store_upload/4" do
     # Regression: handle_upload/4 leaks 3/4-tuple errors ({:error, :content_type,
     # type, allowed} etc.) — an unnormalized shape crashed the sticky manager
