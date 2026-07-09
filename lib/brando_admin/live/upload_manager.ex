@@ -276,9 +276,11 @@ defmodule BrandoAdmin.UploadManager do
           |> Map.put(:config_target, config_target)
           |> maybe_put_folder_id(item.target["folder_id"])
 
-        case Brando.Upload.handle_upload(meta, clean_entry, cfg, user) do
+        # Always {:ok, _} so the entry is consumed (and its temp file cleaned)
+        # even on storage failure; store_upload normalizes every error shape.
+        case Uploads.store_upload(meta, clean_entry, cfg, user) do
           {:ok, asset} -> {:ok, asset}
-          {:error, reason} -> {:ok, {:upload_error, reason}}
+          {:error, message} -> {:ok, {:upload_error, message}}
         end
       end)
 
@@ -287,9 +289,8 @@ defmodule BrandoAdmin.UploadManager do
     socket = push_event(socket, "b:uploads:released", %{ref: item.ref})
 
     case result do
-      {:upload_error, reason} ->
-        Logger.error("==> UploadManager: upload failed: #{inspect(reason)}")
-        {:noreply, update_item(socket, item.ref, %{status: :error, error: format_error(reason)})}
+      {:upload_error, message} ->
+        {:noreply, update_item(socket, item.ref, %{status: :error, error: message})}
 
       asset ->
         # Deliver BEFORE queueing processing — with Oban testing: :inline the
@@ -503,12 +504,9 @@ defmodule BrandoAdmin.UploadManager do
   defp target_label(%{"var_key" => var_key}) when is_binary(var_key), do: var_key
   defp target_label(_), do: nil
 
-  defp format_error({:content_type, rejected_type, allowed_types}) do
-    gettext("Rejected type [%{rejected}]. Allowed: %{allowed}", %{
-      rejected: rejected_type,
-      allowed: inspect(allowed_types)
-    })
-  end
+  # Used by the direct-transport finalize path; server-transport errors are
+  # normalized to user-safe messages by `Brando.Uploads.store_upload/4`.
+  defp format_error(message) when is_binary(message), do: message
 
   defp format_error(%Ecto.Changeset{} = changeset) do
     Logger.error("==> UploadManager: changeset errors: #{inspect(changeset.errors, pretty: true)}")

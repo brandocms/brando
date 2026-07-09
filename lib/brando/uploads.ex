@@ -25,6 +25,10 @@ defmodule Brando.Uploads do
   `Brando.Upload.check_mimetype` — for `:direct` it runs at intake.
   """
 
+  use Gettext, backend: Brando.Gettext
+
+  require Logger
+
   @image_exts ~w(.jpg .jpeg .png .gif .webp .svg)
   @max_file_size 50_000_000
   @presign_expiry_seconds 600
@@ -54,6 +58,46 @@ defmodule Brando.Uploads do
     with :ok <- validate_intake(asset_type, name, size) do
       {:ok, :server}
     end
+  end
+
+  @doc """
+  Store a consumed server-transport upload, normalizing every error shape.
+
+  `Brando.Upload.handle_upload/4` leaks mixed error shapes from its `with`
+  chain (`{:error, reason}`, `{:error, :mkdir, reason}`,
+  `{:error, :content_type, type, allowed}`, ...). The upload manager consumes
+  in a singleton sticky LiveView — an unmatched error shape there would crash
+  the manager and kill every in-flight upload — so this facade guarantees
+  `{:ok, asset} | {:error, message}` where `message` is safe to show the user.
+  """
+  def store_upload(meta, entry, cfg, user) do
+    case Brando.Upload.handle_upload(meta, entry, cfg, user) do
+      {:ok, asset} ->
+        {:ok, asset}
+
+      error ->
+        Logger.error("==> Uploads: store_upload failed: #{inspect(error)}")
+        {:error, format_upload_error(error)}
+    end
+  end
+
+  defp format_upload_error({:error, :content_type, rejected_type, allowed_types}) do
+    gettext("Rejected type [%{rejected}]. Allowed: %{allowed}", %{
+      rejected: rejected_type,
+      allowed: inspect(allowed_types)
+    })
+  end
+
+  defp format_upload_error({:error, :mkdir, _} = error), do: upload_error_message(error)
+  defp format_upload_error({:error, :cp, _} = error), do: upload_error_message(error)
+  defp format_upload_error({:error, :empty_filename}), do: gettext("Empty filename")
+  defp format_upload_error({:error, %Ecto.Changeset{}}), do: gettext("Could not store uploaded file")
+  defp format_upload_error({:error, message}) when is_binary(message), do: message
+  defp format_upload_error(error), do: inspect(error)
+
+  defp upload_error_message(error) do
+    {:error, message} = Brando.Upload.handle_upload_error(error)
+    message
   end
 
   @doc """
@@ -115,7 +159,6 @@ defmodule Brando.Uploads do
           {:ok, {:direct, %{upload_url: upload_url, key: key, filename: filename, resolved_target: resolved_target}}}
 
         {:error, reason} ->
-          require Logger
           Logger.error("==> Uploads: presign failed for #{key}: #{inspect(reason)}")
           {:error, "Could not presign upload"}
       end

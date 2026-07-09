@@ -72,6 +72,33 @@ defmodule Brando.UploadsTest do
     end
   end
 
+  describe "store_upload/4" do
+    # Regression: handle_upload/4 leaks 3/4-tuple errors ({:error, :content_type,
+    # type, allowed} etc.) — an unnormalized shape crashed the sticky manager
+    # mid-consume, killing every in-flight upload.
+    test "normalizes a consume-time mimetype rejection to {:error, message}" do
+      cfg =
+        struct(Brando.Type.FileConfig, %{
+          upload_path: Path.join("files", "tests"),
+          allowed_mimetypes: ["application/pdf"]
+        })
+
+      meta = %{path: "/nonexistent/never-copied.exe", config_target: "default"}
+      entry = %{client_name: "evil.exe", client_type: "application/x-msdownload", client_size: 4}
+
+      assert {:error, message} = Uploads.store_upload(meta, entry, cfg, nil)
+      assert message =~ "Rejected type [application/x-msdownload]"
+    end
+
+    test "normalizes an empty filename to {:error, message}" do
+      cfg = struct(Brando.Type.FileConfig, %{upload_path: Path.join("files", "tests")})
+      meta = %{path: "/nonexistent", config_target: "default"}
+      entry = %{client_name: "", client_type: "application/pdf", client_size: 4}
+
+      assert {:error, "Empty filename"} = Uploads.store_upload(meta, entry, cfg, nil)
+    end
+  end
+
   describe "presign_put/2" do
     test "generates a signed short-lived PUT URL with public-read acl" do
       cfg = direct_cfg()
