@@ -10,6 +10,7 @@ defmodule Brando.Files do
 
   import Ecto.Query
 
+  alias Brando.Assets.ConfigTarget
   alias Brando.Files.File
   alias Brando.Type.FileConfig
   alias Brando.Users.User
@@ -106,15 +107,13 @@ defmodule Brando.Files do
     config =
       case String.split(config_target, ":") do
         [type, schema, "function", fn_string] when type in ["file", "video"] ->
-          schema_module = Module.concat([schema])
-          fn_atom = String.to_atom(fn_string)
-          apply(schema_module, fn_atom, [])
+          ConfigTarget.config_function!(schema, fn_string)
 
         # "video:" — files wrapped by :upload videos resolve their path
         # through the owning video asset's cfg (VideoConfig has upload_path)
         [type, schema, field_name] when type in ["file", "video"] ->
-          schema_module = Module.concat([schema])
-          field_name_atom = String.to_atom(field_name)
+          schema_module = ConfigTarget.schema_module!(schema)
+          field_name_atom = ConfigTarget.field_atom!(schema, field_name)
 
           schema_module
           |> Brando.Blueprint.Assets.__asset_opts__(field_name_atom)

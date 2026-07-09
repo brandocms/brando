@@ -135,6 +135,18 @@
   config :swoosh, :api_client, Swoosh.ApiClient.Req
   ```
 
+#### Security
+
+- `config_target` strings are now resolved strictly (`Brando.Assets.ConfigTarget`):
+  schema segments resolve through existing atoms only and must name a Brando
+  blueprint module, and `<type>:<schema>:function:<fn>` targets only call
+  functions the blueprint actually exports with arity 0. Previously a crafted
+  target reaching `get_config_for/1` (e.g. via the upload manager's client
+  `intake` event) could execute arbitrary zero-arity functions
+  (`"file:System:function:halt"`) and mint unbounded atoms. **Breaking edge
+  case:** config-function targets must now live on a blueprint schema module —
+  plain helper modules are rejected.
+
 #### Bug Fixes
 
 - Fixed `@context` inconsistency (`http` vs `https://schema.org`).

@@ -130,8 +130,10 @@ defmodule Brando.Videos do
     config =
       case String.split(config_target, ":") do
         [type, schema, field_name] when type in ["video"] ->
-          Module.concat([schema])
-          |> video_field_cfg(field_name)
+          case Brando.Assets.ConfigTarget.schema_module(schema) do
+            {:ok, schema_module} -> video_field_cfg(schema_module, field_name)
+            :error -> default_video_config()
+          end
 
         ["default"] ->
           Brando.config(Brando.Videos)[:default_config]

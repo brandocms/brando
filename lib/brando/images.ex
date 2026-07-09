@@ -24,6 +24,7 @@ defmodule Brando.Images do
 
   import Ecto.Query
 
+  alias Brando.Assets.ConfigTarget
   alias Brando.Images.Image
   alias Brando.Images
   alias Brando.Users.User
@@ -140,30 +141,27 @@ defmodule Brando.Images do
     config =
       case String.split(config_target, ":") do
         [type, schema, "function", fn_string] when type in ["image", "gallery"] ->
-          schema_module = Module.concat([schema])
-          fn_atom = String.to_atom(fn_string)
-          apply(schema_module, fn_atom, [])
+          ConfigTarget.config_function!(schema, fn_string)
 
         [type, schema, field_name] when type in ["image", "gallery"] ->
-          schema_module = Module.concat([schema])
+          case ConfigTarget.schema_module(schema) do
+            {:ok, schema_module} ->
+              field_name_atom = ConfigTarget.field_atom!(schema, field_name)
 
-          # check if schema_module exists
-          if Code.ensure_loaded?(schema_module) do
-            field_name_atom = String.to_atom(field_name)
+              schema_module
+              |> Brando.Blueprint.Assets.__asset_opts__(field_name_atom)
+              |> Map.get(:cfg)
 
-            schema_module
-            |> Brando.Blueprint.Assets.__asset_opts__(field_name_atom)
-            |> Map.get(:cfg)
-          else
-            IO.warn("""
+            :error ->
+              IO.warn("""
 
-            Missing schema module #{inspect(schema_module)} for config_target #{inspect(config_target)}
+              Missing schema module #{inspect(schema)} for config_target #{inspect(config_target)}
 
-            #{inspect(data, pretty: true)}
+              #{inspect(data, pretty: true)}
 
-            """)
+              """)
 
-            Brando.Type.ImageConfig.default_config()
+              Brando.Type.ImageConfig.default_config()
           end
 
         ["default"] ->
