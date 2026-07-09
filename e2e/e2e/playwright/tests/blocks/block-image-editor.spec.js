@@ -23,7 +23,7 @@ test.describe('Image Editor from Blocks', () => {
     await syncLV(page)
 
     // Upload image to the picture block
-    await page.locator('.picture-block .file-input').setInputFiles('./fixtures/image.jpg')
+    await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
     await syncLV(page)
     await page.waitForTimeout(2000)
 
@@ -86,7 +86,7 @@ test.describe('Image Editor from Blocks', () => {
     await syncLV(page)
 
     // Upload image to the picture block
-    await page.locator('.picture-block .file-input').setInputFiles('./fixtures/image.jpg')
+    await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
     await syncLV(page)
     await page.waitForTimeout(2000)
 
@@ -449,7 +449,7 @@ test.describe('Image Editor from Blocks', () => {
     await syncLV(page)
 
     // Upload image to the picture block
-    await page.locator('.picture-block .file-input').setInputFiles('./fixtures/image.jpg')
+    await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
     await syncLV(page)
     await page.waitForTimeout(2000)
 
@@ -588,7 +588,7 @@ test.describe('Image Editor from Blocks', () => {
     await syncLV(page)
 
     // Upload image to the picture block
-    await page.locator('.picture-block .file-input').setInputFiles('./fixtures/image.jpg')
+    await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
     await syncLV(page)
     await page.waitForTimeout(2000)
 

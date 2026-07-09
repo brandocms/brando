@@ -57,6 +57,15 @@ test.describe('Render var uploads', () => {
     // Verify save succeeded
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
     await expect(page).not.toHaveURL(/\/create$/, { timeout: 5000 })
+
+    // Reopen the entry — the image var must have PERSISTED. (Regression: an
+    // upload followed directly by save was silently lost when the var commit
+    // wrote to changeset data instead of changes.)
+    await page.getByRole('link', { name: 'Var Upload Test →' }).click()
+    await syncLV(page)
+    await expect(page.getByRole('button', { name: 'Edit image' })).toBeVisible({
+      timeout: 20000,
+    })
   })
 
   test('can upload a file through a file var and save', async ({ page }) => {
@@ -109,6 +118,13 @@ test.describe('Render var uploads', () => {
     // Verify save succeeded
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
     await expect(page).not.toHaveURL(/\/create$/, { timeout: 5000 })
+
+    // Reopen the entry — the file var must have PERSISTED.
+    await page.getByRole('link', { name: 'Var File Upload Test →' }).click()
+    await syncLV(page)
+    await expect(page.getByRole('button', { name: 'Edit file' })).toBeVisible({
+      timeout: 20000,
+    })
   })
 
   test('can reset an uploaded image var', async ({ page }) => {

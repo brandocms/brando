@@ -1,5 +1,7 @@
 defmodule Brando.UploadsTest do
-  use ExUnit.Case, async: true
+  # sync: the max_concurrent_transfers tests mutate global Application env,
+  # which would race concurrent readers under async: true.
+  use ExUnit.Case, async: false
 
   alias Brando.Uploads
 

@@ -177,7 +177,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
       // Upload an image to the picture ref
       // The picture block has class .picture-block with a .file-input inside
-      await page.locator('.picture-block .file-input').setInputFiles('./fixtures/image.jpg')
+      await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
       await syncLV(page)
       await page.waitForTimeout(2000) // Wait for upload to complete
 

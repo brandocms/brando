@@ -153,6 +153,10 @@ defmodule E2eProject.Projects.Project do
             label: t("Listing image"),
             instructions: t("Image for the project's listing page")
 
+          input :cover_video, :video,
+            label: t("Cover video"),
+            instructions: t("Video for the project's cover")
+
           input :project_gallery, :gallery,
             label: t("Project gallery"),
             instructions: t("Images are cropped to 3/2")

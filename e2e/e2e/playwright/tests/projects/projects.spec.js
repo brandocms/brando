@@ -88,7 +88,7 @@ test('creates project', async ({ page }) => {
   await syncLV(page)
 
   await page
-    .locator('.gallery-input .upload-trigger input[type="file"]')
+    .locator('.gallery-input .gallery-upload-wrapper > input.file-input')
     .setInputFiles(['./fixtures/image2.jpg', './fixtures/image.jpg'])
 
   // Wait for progress bars to complete (image uploads can take a while)
@@ -171,4 +171,74 @@ test('creates project', async ({ page }) => {
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL('/admin/projects/projects')
   await expect(page.locator('.content-list .list-row').nth(0)).toContainText('Microsoft')
+
+  // Reopen the project — the gallery objects (2 images + 1 video) must have
+  // PERSISTED through the save, not just rendered in the editor.
+  await page
+    .locator('.content-list .list-row')
+    .nth(0)
+    .getByRole('link', { name: 'Microsoft' })
+    .click()
+  await syncLV(page)
+  await expect(page.locator('#sortable-gallery-objects .gallery-object')).toHaveCount(3, {
+    timeout: 20000,
+  })
+
+  // Upload a video FILE straight into the gallery via the "Upload videos"
+  // trigger (entry_field_gallery + asset_type: video; only rendered when the
+  // default video upload strategy is :local).
+  await page
+    .locator('.gallery-input [data-asset-type="video"] input[type="file"]')
+    .setInputFiles('./fixtures/video.mp4')
+  await syncLV(page)
+  await expect(page.locator('#sortable-gallery-objects .gallery-object')).toHaveCount(4, {
+    timeout: 20000,
+  })
+
+  // Save + reopen — the uploaded gallery video must persist as a video_id
+  // gallery object.
+  await page.getByTestId('submit').click()
+  await expect(page).toHaveURL('/admin/projects/projects')
+  await syncLV(page)
+  await page
+    .locator('.content-list .list-row')
+    .nth(0)
+    .getByRole('link', { name: 'Microsoft' })
+    .click()
+  await syncLV(page)
+  await expect(page.locator('#sortable-gallery-objects .gallery-object')).toHaveCount(4, {
+    timeout: 20000,
+  })
+
+  // Upload a LOCAL video file to the cover_video field via the video drawer
+  // (entry_field + asset_type: video → Video{type: :upload} wrapping a File).
+  await page.getByRole('button', { name: 'Add video' }).click()
+  await syncLV(page)
+  await page
+    .locator('#video-drawer-upload-trigger input[type="file"]')
+    .setInputFiles('./fixtures/video.mp4')
+  await syncLV(page)
+  await page.waitForTimeout(2000) // upload + delivery
+  await syncLV(page)
+
+  await page.locator('#video-drawer').getByRole('button', { name: 'Close' }).click()
+  await page.waitForSelector('#video-drawer', { state: 'hidden' })
+  await syncLV(page)
+
+  await expect(page.getByRole('button', { name: 'Edit video' })).toBeVisible({ timeout: 20000 })
+
+  // Save + reopen — the video field must persist.
+  await page.getByTestId('submit').click()
+  await expect(page).toHaveURL('/admin/projects/projects')
+  await syncLV(page)
+  await page
+    .locator('.content-list .list-row')
+    .nth(0)
+    .getByRole('link', { name: 'Microsoft' })
+    .click()
+  await syncLV(page)
+  await expect(page.getByRole('button', { name: 'Edit video' })).toBeVisible({ timeout: 20000 })
+  await expect(page.locator('#sortable-gallery-objects .gallery-object')).toHaveCount(4, {
+    timeout: 20000,
+  })
 })
