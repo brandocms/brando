@@ -496,62 +496,28 @@ defmodule BrandoAdmin.Components.Form do
   # Asset delivery from the sticky UploadManager for entry schema fields
   # (docs/UPLOADER.md Phase 4). Mirrors the old handle_file_progress success
   # branch: set the FK at the field's path and refresh the drawer state.
+  # Each clause is commit_entry_field_asset/4 plus its drawer-state assigns —
+  # the editing_*? guard must be cleared or the main save is rejected with
+  # "close the drawer first".
   def update(
         %{event: "entry_field_upload_complete", asset_type: :file, field: field, path: path, asset: file},
         socket
       ) do
-    relation_key = String.to_existing_atom("#{field}_id")
-    file_changeset = change(file)
     edit_file = Map.merge(socket.assigns.edit_file, %{id: file.id, file: file, field: field, path: path})
-    full_path = path ++ [relation_key]
-
-    # Commit exactly like handle_event("save_file") does: write the FK into a
-    # fresh changeset (so the main save's cast against the entry still diffs),
-    # put the file struct on the entry assoc only (NOT the _id column), and
-    # push a targeted b:validate that sets the hidden input's DOM value —
-    # Input.File renders it from the assoc, so a put_change alone never
-    # reaches the submit params.
-    updated_changeset =
-      socket.assigns.form.source
-      |> apply_changes()
-      |> change()
-      |> EctoNestedChangeset.update_at(full_path, fn _ -> file.id end)
-
-    entry_or_default = socket.assigns.entry || struct(socket.assigns.schema)
-    updated_entry = Map.put(entry_or_default, field, file)
 
     {:ok,
      socket
-     |> assign(:entry, updated_entry)
-     |> assign(:form, to_form(updated_changeset, []))
+     |> commit_entry_field_asset(field, path, file)
      |> assign(:edit_file, edit_file)
-     |> assign(:file_changeset, file_changeset)
-     # the upload is fully committed — clear the drawer-editing guard so the
-     # main save isn't rejected with "close the file drawer first"
-     |> assign(:editing_file?, false)
-     |> push_event("b:validate", %{
-       target: "#{socket.assigns.singular}[#{relation_key}]",
-       value: file.id
-     })}
+     |> assign(:file_changeset, change(file))
+     |> assign(:editing_file?, false)}
   end
 
   def update(
         %{event: "entry_field_upload_complete", asset_type: :image, field: field, path: path, asset: image},
         socket
       ) do
-    relation_key = String.to_existing_atom("#{field}_id")
-    image_changeset = change(image)
     edit_image = Map.merge(socket.assigns.edit_image, %{id: image.id, image: image, field: field, path: path})
-    full_path = path ++ [relation_key]
-
-    updated_changeset =
-      socket.assigns.form.source
-      |> apply_changes()
-      |> change()
-      |> EctoNestedChangeset.update_at(full_path, fn _ -> image.id end)
-
-    entry_or_default = socket.assigns.entry || struct(socket.assigns.schema)
-    updated_entry = Map.put(entry_or_default, field, image)
 
     socket =
       if image.status != :processed do
@@ -564,46 +530,24 @@ defmodule BrandoAdmin.Components.Form do
 
     {:ok,
      socket
-     |> assign(:entry, updated_entry)
-     |> assign(:form, to_form(updated_changeset, []))
+     |> commit_entry_field_asset(field, path, image)
      |> assign(:edit_image, edit_image)
-     |> assign(:image_changeset, image_changeset)
-     |> assign(:editing_image?, false)
-     |> push_event("b:validate", %{
-       target: "#{socket.assigns.singular}[#{relation_key}]",
-       value: image.id
-     })}
+     |> assign(:image_changeset, change(image))
+     |> assign(:editing_image?, false)}
   end
 
   def update(
         %{event: "entry_field_upload_complete", asset_type: :video, field: field, path: path, asset: video},
         socket
       ) do
-    relation_key = String.to_existing_atom("#{field}_id")
-    video_changeset = change(video)
     edit_video = Map.merge(socket.assigns.edit_video, %{id: video.id, video: video, field: field, path: path})
-    full_path = path ++ [relation_key]
-
-    updated_changeset =
-      socket.assigns.form.source
-      |> apply_changes()
-      |> change()
-      |> EctoNestedChangeset.update_at(full_path, fn _ -> video.id end)
-
-    entry_or_default = socket.assigns.entry || struct(socket.assigns.schema)
-    updated_entry = Map.put(entry_or_default, field, video)
 
     {:ok,
      socket
-     |> assign(:entry, updated_entry)
-     |> assign(:form, to_form(updated_changeset, []))
+     |> commit_entry_field_asset(field, path, video)
      |> assign(:edit_video, edit_video)
-     |> assign(:video_changeset, video_changeset)
-     |> assign(:editing_video?, false)
-     |> push_event("b:validate", %{
-       target: "#{socket.assigns.singular}[#{relation_key}]",
-       value: video.id
-     })}
+     |> assign(:video_changeset, change(video))
+     |> assign(:editing_video?, false)}
   end
 
   # Gallery entry fields: append the delivered image to the gallery assoc
@@ -612,43 +556,14 @@ defmodule BrandoAdmin.Components.Form do
         %{event: "entry_field_upload_complete", asset_type: :gallery, field: key, asset: image},
         socket
       ) do
-    schema = socket.assigns.schema
-    current_user = socket.assigns.current_user
-    changeset = socket.assigns.form.source
-    gallery = get_field(changeset, key)
-
-    current_gallery_images =
-      if gallery do
-        Enum.map(
-          gallery.gallery_objects || [],
-          &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
-        )
-      else
-        []
-      end
+    gallery = get_field(socket.assigns.form.source, key)
 
     new_gallery_image = %{
       image_id: image.id,
-      creator_id: current_user.id,
+      creator_id: socket.assigns.current_user.id,
       gallery_id: gallery && gallery.id,
       image: image
     }
-
-    new_gallery_images = current_gallery_images ++ [new_gallery_image]
-
-    new_gallery =
-      if gallery do
-        %{
-          id: gallery.id,
-          config_target: gallery.config_target,
-          gallery_objects: sequence(new_gallery_images)
-        }
-      else
-        %{
-          config_target: "gallery:#{inspect(schema)}:#{key}",
-          gallery_objects: sequence(new_gallery_images)
-        }
-      end
 
     current_gallery_objects = (gallery && gallery.gallery_objects) || []
 
@@ -666,8 +581,6 @@ defmodule BrandoAdmin.Components.Form do
 
     send_update(ImagePicker, id: "image-picker", selected_images: selected_images)
 
-    updated_changeset = put_assoc(changeset, key, new_gallery)
-
     send_update(BrandoAdmin.Components.Form.Input.Gallery,
       id: "#{socket.assigns.singular}_#{key}",
       new_image: %{image_id: image.id, image: image},
@@ -684,7 +597,7 @@ defmodule BrandoAdmin.Components.Form do
         socket
       end
 
-    {:ok, assign(socket, :form, to_form(updated_changeset, []))}
+    {:ok, append_gallery_object(socket, key, new_gallery_image)}
   end
 
   # Gallery entry fields: append the delivered video to the gallery assoc.
@@ -692,43 +605,14 @@ defmodule BrandoAdmin.Components.Form do
         %{event: "entry_field_upload_complete", asset_type: :gallery_video, field: key, asset: video},
         socket
       ) do
-    schema = socket.assigns.schema
-    current_user = socket.assigns.current_user
-    changeset = socket.assigns.form.source
-    gallery = get_field(changeset, key)
-
-    current_gallery_objects =
-      if gallery do
-        Enum.map(
-          gallery.gallery_objects || [],
-          &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
-        )
-      else
-        []
-      end
+    gallery = get_field(socket.assigns.form.source, key)
 
     new_gallery_video = %{
       video_id: video.id,
-      creator_id: current_user.id,
+      creator_id: socket.assigns.current_user.id,
       gallery_id: gallery && gallery.id,
       video: video
     }
-
-    new_gallery_objects = current_gallery_objects ++ [new_gallery_video]
-
-    new_gallery =
-      if gallery do
-        %{
-          id: gallery.id,
-          config_target: gallery.config_target,
-          gallery_objects: sequence(new_gallery_objects)
-        }
-      else
-        %{
-          config_target: "gallery:#{inspect(schema)}:#{key}",
-          gallery_objects: sequence(new_gallery_objects)
-        }
-      end
 
     selected_videos =
       ((gallery && gallery.gallery_objects) || [])
@@ -738,15 +622,13 @@ defmodule BrandoAdmin.Components.Form do
 
     send_update(VideoPicker, id: "video-picker", selected_videos: selected_videos)
 
-    updated_changeset = put_assoc(changeset, key, new_gallery)
-
     send_update(BrandoAdmin.Components.Form.Input.Gallery,
       id: "#{socket.assigns.singular}_#{key}",
       new_video: %{video_id: video.id, video: video},
       selected_videos: selected_videos
     )
 
-    {:ok, assign(socket, :form, to_form(updated_changeset, []))}
+    {:ok, append_gallery_object(socket, key, new_gallery_video)}
   end
 
   # Unified handler for updating entry relations.
@@ -1065,6 +947,68 @@ defmodule BrandoAdmin.Components.Form do
      |> maybe_assign_block_map()
      |> maybe_assign_entry_for_blocks()
      |> assign(:initial_update, false)}
+  end
+
+  # Commit exactly like handle_event("save_file") does: write the FK into a
+  # fresh changeset (so the main save's cast against the entry still diffs),
+  # put the asset struct on the entry assoc only (NOT the _id column), and
+  # push a targeted b:validate that sets the hidden input's DOM value —
+  # Input.File/Image/Video render it from the assoc, so a put_change alone
+  # never reaches the submit params.
+  defp commit_entry_field_asset(socket, field, path, asset) do
+    relation_key = String.to_existing_atom("#{field}_id")
+    full_path = path ++ [relation_key]
+
+    updated_changeset =
+      socket.assigns.form.source
+      |> apply_changes()
+      |> change()
+      |> EctoNestedChangeset.update_at(full_path, fn _ -> asset.id end)
+
+    entry_or_default = socket.assigns.entry || struct(socket.assigns.schema)
+    updated_entry = Map.put(entry_or_default, field, asset)
+
+    socket
+    |> assign(:entry, updated_entry)
+    |> assign(:form, to_form(updated_changeset, []))
+    |> push_event("b:validate", %{
+      target: "#{socket.assigns.singular}[#{relation_key}]",
+      value: asset.id
+    })
+  end
+
+  # Append a delivered asset to the gallery assoc: existing objects are
+  # slimmed to plain maps (put_assoc with mixed nil-ID structs would raise
+  # duplicate-PK — see CLAUDE.md "put_assoc with multiple new records"),
+  # the new object rides along with its loaded struct, and the whole list is
+  # re-sequenced. The gallery is created on first upload.
+  defp append_gallery_object(socket, key, new_object) do
+    changeset = socket.assigns.form.source
+    gallery = get_field(changeset, key)
+
+    slimmed_objects =
+      if gallery do
+        Enum.map(
+          gallery.gallery_objects || [],
+          &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
+        )
+      else
+        []
+      end
+
+    gallery_objects = sequence(slimmed_objects ++ [new_object])
+
+    new_gallery =
+      if gallery do
+        %{id: gallery.id, config_target: gallery.config_target, gallery_objects: gallery_objects}
+      else
+        %{
+          config_target: "gallery:#{inspect(socket.assigns.schema)}:#{key}",
+          gallery_objects: gallery_objects
+        }
+      end
+
+    assign(socket, :form, to_form(put_assoc(changeset, key, new_gallery), []))
   end
 
   defp assign_entry(%{assigns: %{initial_update: false}} = socket) do
