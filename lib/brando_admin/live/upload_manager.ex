@@ -92,14 +92,46 @@ defmodule BrandoAdmin.UploadManager do
             {%{index: index, ref: item.ref, transport: "direct", upload_url: upload_url}, socket}
 
           {:error, message} ->
-            {%{index: index, error: message}, socket}
+            # Keep a visible :error item — a silently dropped file looks like
+            # a broken drop zone to the user.
+            {item, socket} =
+              put_intake_item(socket, name, size, asset_type, target,
+                transport: :server,
+                status: :error,
+                error: message
+              )
+
+            {%{index: index, ref: item.ref, error: message}, socket}
         end
       end)
 
     {:reply, %{decisions: decisions}, assign(socket, :open?, true)}
   end
 
+  # Entries that error without ever completing (validation backstop, transport
+  # failure) never reach handle_progress — sweep them here or their transfer
+  # slots stay wedged and the drawer row sticks at :uploading.
   def handle_event("validate_queue", _params, socket) do
+    queue = socket.assigns.uploads.queue
+
+    socket =
+      Enum.reduce(queue.errors, socket, fn {entry_ref, reason}, socket ->
+        # Config-level errors carry the upload config's ref, not an entry's —
+        # nothing to cancel for those.
+        case Enum.find(queue.entries, &(&1.ref == entry_ref)) do
+          nil ->
+            socket
+
+          entry ->
+            item_ref = ref_from_entry(entry)
+
+            socket
+            |> cancel_upload(:queue, entry.ref)
+            |> push_released(item_ref)
+            |> mark_item_error(item_ref, upload_error_label(reason))
+        end
+      end)
+
     {:noreply, socket}
   end
 
@@ -163,6 +195,13 @@ defmodule BrandoAdmin.UploadManager do
   ## visibility only; the provider hooks own the transfer and delivery.
 
   def handle_event("external_track", _params, %{assigns: %{current_user: nil}} = socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("external_track", %{"ref" => ref}, socket)
+      when is_map_key(socket.assigns.items, ref) do
+    # Never clobber an existing item (a tracked intake item holds the
+    # delivery target — overwriting it would break that upload's delivery).
     {:noreply, socket}
   end
 
@@ -255,9 +294,15 @@ defmodule BrandoAdmin.UploadManager do
   defp handle_progress(:queue, entry, socket) do
     case Map.get(socket.assigns.items, ref_from_entry(entry)) do
       nil ->
-        # Untracked entry (shouldn't happen) — free the slot when finished.
+        # Untracked entry (shouldn't happen) — free both the LiveView slot
+        # and the JS scheduler slot when finished.
         if entry.done? do
-          {:noreply, cancel_upload(socket, :queue, entry.ref)}
+          socket =
+            socket
+            |> cancel_upload(:queue, entry.ref)
+            |> push_released(ref_from_entry(entry))
+
+          {:noreply, socket}
         else
           {:noreply, socket}
         end
@@ -295,7 +340,7 @@ defmodule BrandoAdmin.UploadManager do
 
     # The transfer slot is free either way — let the JS scheduler start the
     # next queued file.
-    socket = push_event(socket, "b:uploads:released", %{ref: item.ref})
+    socket = push_released(socket, item.ref)
 
     case result do
       {:upload_error, message} ->
@@ -342,6 +387,25 @@ defmodule BrandoAdmin.UploadManager do
         Process.send_after(self(), {:auto_dismiss_item, ref}, @auto_dismiss_ms)
         update_item(socket, ref, %{status: :done})
       end)
+
+    # Per-image subscriptions would otherwise accumulate for the whole admin
+    # session — the manager is sticky and never dies on navigation.
+    Phoenix.PubSub.unsubscribe(Brando.pubsub(), "brando:image:#{id}")
+
+    {:noreply, socket}
+  end
+
+  # ImageProcessor broadcasts [:image, :error] when its final attempt fails —
+  # without it the drawer item pins at :processing forever.
+  def handle_info({%Brando.Images.Image{id: id}, [:image, :error], _path}, socket) do
+    socket =
+      socket.assigns.items
+      |> Enum.filter(fn {_ref, item} -> item.asset_id == id and item.status == :processing end)
+      |> Enum.reduce(socket, fn {ref, _item}, socket ->
+        update_item(socket, ref, %{status: :error, error: gettext("Image processing failed")})
+      end)
+
+    Phoenix.PubSub.unsubscribe(Brando.pubsub(), "brando:image:#{id}")
 
     {:noreply, socket}
   end
@@ -393,7 +457,7 @@ defmodule BrandoAdmin.UploadManager do
                 <span class="hero-x-mark-mini"></span>
               </button>
               <button
-                :if={item.status in [:error, :orphaned]}
+                :if={item.status in [:error, :orphaned, :processing]}
                 type="button"
                 class="icon-button"
                 phx-click="dismiss_item"
@@ -483,9 +547,9 @@ defmodule BrandoAdmin.UploadManager do
       asset_type: asset_type,
       transport: Keyword.fetch!(opts, :transport),
       direct: Keyword.get(opts, :direct),
-      status: :queued,
+      status: Keyword.get(opts, :status, :queued),
       progress: 0,
-      error: nil,
+      error: Keyword.get(opts, :error),
       target: target,
       asset_id: nil
     }
@@ -506,6 +570,19 @@ defmodule BrandoAdmin.UploadManager do
       end
     end)
   end
+
+  defp mark_item_error(socket, nil, _message), do: socket
+  defp mark_item_error(socket, ref, message), do: update_item(socket, ref, %{status: :error, error: message})
+
+  # Frees the JS scheduler's transfer slot (b:uploads:released is its only
+  # release signal for server-transport files).
+  defp push_released(socket, nil), do: socket
+  defp push_released(socket, ref), do: push_event(socket, "b:uploads:released", %{ref: ref})
+
+  defp upload_error_label(reason) when reason in [:too_large, :too_many_files, :not_accepted],
+    do: Brando.Upload.error_to_string(reason)
+
+  defp upload_error_label(reason), do: inspect(reason)
 
   defp drop_item(socket, ref) do
     socket

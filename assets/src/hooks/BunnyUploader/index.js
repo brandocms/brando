@@ -51,10 +51,14 @@ export default (app) => ({
   },
 
   destroyed() {
-    // Abort any in-progress upload when hook is destroyed
+    // Abort any in-progress upload when hook is destroyed. Tell the manager
+    // drawer too — external items have no cancel/dismiss affordance, so a
+    // silent abort would pin the item at :uploading forever.
     if (this.currentUpload) {
       this.currentUpload.abort()
       this.currentUpload = null
+      window.BrandoUploads?.externalError?.(this._trackRef, 'Upload aborted')
+      this._trackRef = null
     }
   },
 
@@ -90,6 +94,7 @@ export default (app) => ({
 
       // Surface this upload in the sticky UploadManager drawer (visibility only)
       const trackRef = window.BrandoUploads?.trackExternal?.(file.name, file.size)
+      this._trackRef = trackRef
 
       // Create TUS upload with resumable support
       this.currentUpload = new tus.Upload(file, {

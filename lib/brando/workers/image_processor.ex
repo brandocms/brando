@@ -8,15 +8,17 @@ defmodule Brando.Worker.ImageProcessor do
   require Logger
 
   @impl Oban.Worker
-  def perform(%Oban.Job{
-        args:
-          %{
-            "image_id" => image_id,
-            "config_target" => config_target,
-            "user_id" => user_id,
-            "field_full_path" => field_full_path
-          } = args
-      }) do
+  def perform(
+        %Oban.Job{
+          args:
+            %{
+              "image_id" => image_id,
+              "config_target" => config_target,
+              "user_id" => user_id,
+              "field_full_path" => field_full_path
+            } = args
+        } = job
+      ) do
     silent? = Map.get(args, "silent", false)
 
     field_full_path =
@@ -51,6 +53,16 @@ defmodule Brando.Worker.ImageProcessor do
       end
     else
       err ->
+        # Success is broadcast above; without a terminal failure broadcast,
+        # subscribers (the upload manager drawer) pin at :processing forever.
+        # Only signal on the final attempt — earlier attempts may still succeed.
+        if job.attempt >= job.max_attempts do
+          case Images.get_image(image_id) do
+            {:ok, image} -> broadcast_status(image, field_full_path, :error)
+            _ -> :noop
+          end
+        end
+
         {:error, err}
     end
   end
