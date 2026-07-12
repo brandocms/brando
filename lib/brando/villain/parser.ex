@@ -361,6 +361,10 @@ defmodule Brando.Villain.Parser do
        </div>)
   end
 
+  # unconfigured map block (no embed committed yet) renders nothing —
+  # without this clause the editor's validate-time render crashes the form LV
+  def map(_, _), do: ""
+
   # Extract dimension data with defaults
   defp extract_video_dimensions(data, default_width, default_height) do
     width = Map.get(data, :width) || default_width

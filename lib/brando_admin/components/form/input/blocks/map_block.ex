@@ -78,8 +78,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
                       frameborder="0"
                       style="border:0"
                       allowfullscreen
-                    >
-                    </iframe>
+                    ></iframe>
                   </div>
               <% end %>
             <% else %>
@@ -113,7 +112,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
     }
 
     updated_data = update_block_data(socket, new_data)
-    send_update(module, id: id, event: "update_ref_data", ref_data: updated_data, ref_name: ref_name)
+
+    # propagate the committed embed_url to the parent cache — otherwise a later
+    # block insert/delete re-inits this block from the stale cache and the map
+    # is lost (see CLAUDE.md "Block Editor: changeset propagation")
+    send_update(module,
+      id: id,
+      event: "update_ref_data",
+      ref_data: updated_data,
+      ref_name: ref_name,
+      propagate: true
+    )
 
     {:noreply, socket}
   end

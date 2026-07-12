@@ -257,8 +257,7 @@ end
   namespace: %{"en" => "01 HEADERS", "no" => "01 HEADINGER"},
   help_text: %{"en" => "Large text", "no" => "Stor tekst"},
   class: "header",
-  code:
-    "<article b-tpl=\"{{ block.class }}\">\n  <div class=\"inner\">\n    {% ref refs.h2 %}\n  </div>\n</article>",
+  code: "<article b-tpl=\"{{ block.class }}\">\n  <div class=\"inner\">\n    {% ref refs.h2 %}\n  </div>\n</article>",
   svg: nil,
   multi: false,
   datasource: false,
@@ -298,8 +297,7 @@ end
   namespace: %{"en" => "02 MEDIA", "no" => "02 MEDIA"},
   help_text: %{"en" => "Full width image or video", "no" => "Fullbredde bilde eller video"},
   class: "asset",
-  code:
-    "<article b-tpl=\"asset\">\n  <div class=\"inner\">\n    {% ref refs.media %}\n  </div>\n</article>",
+  code: "<article b-tpl=\"asset\">\n  <div class=\"inner\">\n    {% ref refs.media %}\n  </div>\n</article>",
   svg: nil,
   multi: false,
   datasource: false,
@@ -870,6 +868,44 @@ table_template =
 }
 |> E2eProject.Repo.insert!()
 
+# Module 7: Map Embed (map ref) — regression coverage for the map block's
+# out-of-band embed_url commit (update_ref_data + propagate)
+%Brando.Content.Module{
+  type: :liquid,
+  name: %{"en" => "Map Embed", "no" => "Kartinnbygging"},
+  namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
+  help_text: %{
+    "en" => "Map ref for embed URL persistence tests",
+    "no" => "Kartref for testing av embed-URL-persistens"
+  },
+  class: "map-embed",
+  code: """
+  <div b-tpl="map-embed">
+    {% ref refs.map %}
+  </div>
+  """,
+  svg: nil,
+  multi: false,
+  datasource: false,
+  sequence: 26,
+  deleted_at: nil,
+  table_template_id: nil,
+  parent_id: nil,
+  refs: [
+    %Brando.Content.Ref{
+      name: "map",
+      description: "Map content",
+      uid: Brando.Utils.generate_uid(),
+      data: %Brando.Villain.Blocks.MapBlock{
+        type: "map",
+        data: %Brando.Villain.Blocks.MapBlock.Data{}
+      }
+    }
+  ],
+  vars: []
+}
+|> E2eProject.Repo.insert!()
+
 # ============================================================================
 # COPY/PASTE TEST MODULES
 # ============================================================================
@@ -913,8 +949,7 @@ team_section =
   namespace: %{"en" => "06 COPY PASTE TEST", "no" => "06 COPY PASTE TEST"},
   help_text: %{"en" => "A single team member", "no" => "Enkelt teammedlem"},
   class: "team-member",
-  code:
-    "<div b-tpl=\"team-member\">\n  <h3>{{ member_name }}</h3>\n  <p>{{ member_role }}</p>\n</div>",
+  code: "<div b-tpl=\"team-member\">\n  <h3>{{ member_name }}</h3>\n  <p>{{ member_role }}</p>\n</div>",
   svg: nil,
   multi: false,
   datasource: false,
@@ -1020,6 +1055,7 @@ team_section =
 %Brando.Videos.Video{
   title: "Test Video",
   type: :youtube,
+  config_target: "default",
   source_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
   remote_id: "dQw4w9WgXcQ",
   width: 1920,

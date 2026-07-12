@@ -89,7 +89,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       ref_data: ref_data,
       video_data: assigns.video_data,
       form: ref_form,
-      force_render: true
+      force_render: true,
+      # propagate so the created video's FK survives a later block insert/delete
+      # (see CLAUDE.md "Block Editor: changeset propagation")
+      propagate: true
     )
 
     # Update assigns for immediate display
@@ -330,8 +333,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                     label={gettext("Aspect ratio override")}
                     placeholder="16:9"
                   />
-                  
-    <!-- playsinline is always true for better UX -->
+
+                  <!-- playsinline is always true for better UX -->
                   <Input.input type={:hidden} field={block_data[:playsinline]} value="true" />
 
                   <fieldset class="override-toggle-group">
@@ -409,8 +412,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                     width="580"
                     height="320"
                     frameborder="0"
-                  >
-                  </iframe>
+                  ></iframe>
                 </div>
               <% :youtube -> %>
                 <div class="video-content">
@@ -419,8 +421,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                     width="580"
                     height="320"
                     frameborder="0"
-                  >
-                  </iframe>
+                  ></iframe>
                 </div>
               <% _ -> %>
                 <div class="preview compact" id={"block-#{@uid}-videoSize"}>
@@ -542,7 +543,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       event: "update_ref_data",
       ref_data: ref_data,
       ref_name: ref_name,
-      force_render: true
+      force_render: true,
+      propagate: true
     )
 
     {:noreply, socket}
@@ -567,7 +569,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       event: "update_ref_data",
       ref_data: ref_data,
       ref_name: ref_name,
-      force_render: true
+      force_render: true,
+      propagate: true
     )
 
     {:noreply, socket}
@@ -604,7 +607,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       |> Map.take(@video_override_fields)
       |> Map.put(:cover_image, nil)
 
-    send_update(module, id: id, event: "update_ref_data", ref_data: new_block_data, ref_name: ref_name)
+    # propagate the cleared cover image to the parent cache (see CLAUDE.md
+    # "Block Editor: changeset propagation")
+    send_update(module,
+      id: id,
+      event: "update_ref_data",
+      ref_data: new_block_data,
+      ref_name: ref_name,
+      propagate: true
+    )
 
     {:noreply, assign(socket, :cover_image, nil)}
   end
@@ -623,7 +634,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       ref_data: new_block_data,
       ref_name: ref_name,
       video_id: nil,
-      force_render: true
+      force_render: true,
+      # propagate the cleared FK to the parent cache — otherwise a later block
+      # insert/delete re-inits this block from the stale cache and the video
+      # comes back (see CLAUDE.md "Block Editor: changeset propagation")
+      propagate: true
     )
 
     # Clear video assigns immediately for block editor display
@@ -658,7 +673,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       |> Map.take(@video_override_fields)
       |> Map.put(:cover_image, picture_data)
 
-    send_update(module, id: target_id, event: "update_ref_data", ref_data: new_block_data, ref_name: ref_name)
+    # propagate so the picked cover image survives a later block insert/delete
+    # (see CLAUDE.md "Block Editor: changeset propagation")
+    send_update(module,
+      id: target_id,
+      event: "update_ref_data",
+      ref_data: new_block_data,
+      ref_name: ref_name,
+      propagate: true
+    )
 
     {:noreply, assign(socket, :cover_image, picture_data)}
   end
@@ -710,7 +733,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
           ref_data: ref_data,
           video_id: video_id,
           form: ref_form,
-          force_render: true
+          force_render: true,
+          # propagate so the picked video_id survives a later block insert/delete
+          # (see CLAUDE.md "Block Editor: changeset propagation")
+          propagate: true
         )
 
         video_data = Map.from_struct(video)
