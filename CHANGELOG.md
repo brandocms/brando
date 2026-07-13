@@ -234,10 +234,15 @@
   `secondUserPage` (seeded second superuser) sharing the same sandbox — enabling
   true multi-user specs. New `block-multiuser-sync.spec.js` verifies the core sync
   guarantee end-to-end: user A's blurred block edit ships as an op snapshot, merges
-  into user B's store, and B's untouched save persists A's edit. Known limitation
-  surfaced: block sync only arms on a fresh mount of an existing entry — after
-  create + save-and-continue (`push_patch`), the parent LV has no `entry_id`, so
-  shipping/presence stay disarmed until reload.
+  into user B's store, and B's untouched save persists A's edit — covered both from
+  a fresh mount and directly after create + save-and-continue.
+
+- **Collaboration arms on freshly created entries**: After create + save-and-continue
+  (`push_patch` to the update route), the parent LiveView never assigned `entry_id`
+  and the block field had no sync topic — presence, field sync and block sync stayed
+  silently disarmed until a full reload. The entry scope now arms via a
+  `handle_params` hook when the patched URL first carries an `entry_id`, and the
+  block field subscribes its sync topic as soon as a persisted entry lands.
 
 - **E2E harness: parallel preloads escaped the SQL sandbox**: In the sandboxed e2e
   server (`:auto` mode), Ecto's parallel preload Tasks are separate processes that

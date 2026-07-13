@@ -562,9 +562,22 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> assign(assigns)
     |> initialize_blocks(assigns)
+    |> maybe_arm_blocks_topic()
     |> assign_module_set()
     |> then(&{:ok, &1})
   end
+
+  # Create forms initialize with a nil-id entry, so no sync topic exists.
+  # Arm it as soon as a persisted entry lands (post-create-save re-render) —
+  # otherwise multi-user block sync stays disarmed until a full reload.
+  defp maybe_arm_blocks_topic(%{assigns: %{blocks_topic: nil, entry: %{id: entry_id}}} = socket)
+       when not is_nil(entry_id) do
+    topic = "brando:blocks:#{entry_id}:#{socket.assigns.block_field}"
+    Phoenix.PubSub.subscribe(Brando.pubsub(), topic)
+    assign(socket, :blocks_topic, topic)
+  end
+
+  defp maybe_arm_blocks_topic(socket), do: socket
 
   defp initialize_blocks(%{assigns: %{blocks_initialized: true}} = socket, _assigns), do: socket
 

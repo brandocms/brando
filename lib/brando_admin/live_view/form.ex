@@ -81,6 +81,12 @@ defmodule BrandoAdmin.LiveView.Form do
         |> assign_entry_id(nil)
         |> assign_title()
         |> assign(:mutation_listeners, %{})
+        |> assign(:current_focused_block_uid, nil)
+        # create + save-and-continue push_patches to the update route without
+        # remounting — arm entry-scoped collaboration (entry_id + presence/
+        # sync topics) when the patched params first carry an entry_id, or
+        # block sync/presence stay silently disarmed until a full reload
+        |> attach_hook(:b_form_arm_entry, :handle_params, &maybe_arm_entry_scope/3)
 
       {:cont, socket}
     else
@@ -237,6 +243,20 @@ defmodule BrandoAdmin.LiveView.Form do
   def on_mount({:hooks_tiptap_link, _schema}, _params, _session, socket) do
     {:cont, attach_hook(socket, :b_form_tiptap_link, :handle_info, &handle_hooks_tiptap_link_info/2)}
   end
+
+  defp maybe_arm_entry_scope(%{"entry_id" => entry_id}, _uri, %{assigns: %{entry_id: nil}} = socket) do
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:dirty_fields:#{entry_id}")
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:active_field:#{entry_id}")
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:block_presence:#{entry_id}")
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:field_sync:#{entry_id}")
+
+    {:cont,
+     socket
+     |> assign_action(:update)
+     |> assign_entry_id(entry_id)}
+  end
+
+  defp maybe_arm_entry_scope(_params, _uri, socket), do: {:cont, socket}
 
   defp handle_hooks_focal_point_event(
          "update_focal_point",

@@ -12,18 +12,14 @@ import { syncLV } from '../../utils'
 test.describe('Multi-user block sync', () => {
   test.setTimeout(120000)
 
-  test("user B's save preserves user A's shipped block edit", async ({
-    page,
-    secondUserPage,
-  }) => {
-    // --- user A creates an entry with two header blocks and persists it
+  const createEntryWithTwoHeaders = async (page, title, uri) => {
     await page.goto('/admin')
     await page.getByRole('link', { name: 'Pages & Sections' }).click()
     await syncLV(page)
     await page.getByRole('link', { name: 'Create page' }).click()
     await syncLV(page)
-    await page.getByLabel('Title', { exact: true }).fill('Multiuser Sync Test')
-    await page.getByLabel('URI').fill('multiuser-sync-test')
+    await page.getByLabel('Title', { exact: true }).fill(title)
+    await page.getByLabel('URI').fill(uri)
 
     const addHeader = async (textIndex, text) => {
       await page.getByRole('button', { name: 'Add block' }).last().click()
@@ -39,39 +35,31 @@ test.describe('Multi-user block sync', () => {
     await addHeader(0, 'Alpha')
     await addHeader(1, 'Beta')
 
-    // save and continue editing (A stays on the update form)
+    // save and continue editing (A stays on the patched create form)
     await page.getByTestId('split-dropdown-button').click()
     await page.getByRole('button', { name: /Save and continue editing/ }).click()
     await expect(page).toHaveURL(/\/update\//, { timeout: 30000 })
     await syncLV(page)
     await page.waitForTimeout(750)
 
-    const entryUrl = new URL(page.url()).pathname
+    return new URL(page.url()).pathname
+  }
 
-    // Save-and-continue lands on a PATCHED create form where the parent LV
-    // never assigned entry_id — block sync (presence topic + shipping) only
-    // arms on a fresh mount of an existing entry. Reload A onto the real
-    // update route, matching the two-editors-open-an-entry scenario.
-    await page.goto(entryUrl)
-    await syncLV(page)
-    await expect(page.locator('.header-block textarea').nth(0)).toHaveValue('Alpha')
-
-    // --- user B opens the same entry
-    await secondUserPage.goto(entryUrl)
-    await syncLV(secondUserPage)
-    await expect(secondUserPage.locator('.header-block textarea').nth(0)).toHaveValue('Alpha')
-
-    // --- A edits block 1, then clicks into block 2 → block 1's ops ship to B
-    // (real pointer interaction — the presence hook listens on
-    // focusin/pointerdown; programmatic .focus() does not reach it)
+  // A edits block 1, then clicks into block 2 → block 1's ops ship to B.
+  // Real pointer interaction is required — the presence hook listens on
+  // focusin/pointerdown; programmatic .focus() does not reach it.
+  const editBlockOneAndBlur = async (page) => {
     const blockOne = page.locator('.header-block textarea').nth(0)
     await blockOne.click()
     await blockOne.fill('Alpha edited by A')
     await page.waitForTimeout(600) // debounce flush → op emitted
     await page.locator('.header-block textarea').nth(1).click()
     await page.waitForTimeout(1200) // blur → snapshot ships → B merges
+  }
 
-    // --- B saves WITHOUT having touched anything
+  // B saves WITHOUT having touched anything, then reload must show A's edit
+  // (the receiver's save must include shipped edits, not its stale copy)
+  const saveAsBAndVerify = async (secondUserPage) => {
     await secondUserPage.getByTestId('split-dropdown-button').click()
     await secondUserPage
       .getByRole('button', { name: /Save and continue editing/ })
@@ -80,12 +68,50 @@ test.describe('Multi-user block sync', () => {
     await expect(secondUserPage.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
     await secondUserPage.waitForTimeout(750)
 
-    // --- the persisted truth must contain A's edit, not B's stale copy
     await secondUserPage.reload()
     await syncLV(secondUserPage)
     await expect(secondUserPage.locator('.header-block textarea').nth(0)).toHaveValue(
       'Alpha edited by A'
     )
     await expect(secondUserPage.locator('.header-block textarea').nth(1)).toHaveValue('Beta')
+  }
+
+  test("user B's save preserves user A's shipped block edit", async ({
+    page,
+    secondUserPage,
+  }) => {
+    const entryUrl = await createEntryWithTwoHeaders(page, 'Multiuser Sync Test', 'multiuser-sync-test')
+
+    // A on a fresh mount of the update route
+    await page.goto(entryUrl)
+    await syncLV(page)
+    await expect(page.locator('.header-block textarea').nth(0)).toHaveValue('Alpha')
+
+    await secondUserPage.goto(entryUrl)
+    await syncLV(secondUserPage)
+    await expect(secondUserPage.locator('.header-block textarea').nth(0)).toHaveValue('Alpha')
+
+    await editBlockOneAndBlur(page)
+    await saveAsBAndVerify(secondUserPage)
+  })
+
+  test('sync is armed right after create + save-and-continue (no reload)', async ({
+    page,
+    secondUserPage,
+  }) => {
+    // A stays on the PATCHED create form — entry scope (entry_id + topics)
+    // must arm via handle_params on the push_patch, without a full reload
+    const entryUrl = await createEntryWithTwoHeaders(
+      page,
+      'Multiuser Fresh Test',
+      'multiuser-fresh-test'
+    )
+
+    await secondUserPage.goto(entryUrl)
+    await syncLV(secondUserPage)
+    await expect(secondUserPage.locator('.header-block textarea').nth(0)).toHaveValue('Alpha')
+
+    await editBlockOneAndBlur(page)
+    await saveAsBAndVerify(secondUserPage)
   })
 })
