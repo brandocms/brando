@@ -104,11 +104,6 @@ defmodule Brando.Villain do
     opts_map = Enum.into(opts, %{})
     parser = Brando.config(Brando.Villain)[:parser]
 
-    {:ok, modules} = Content.list_modules(@module_cache_ttl)
-    {:ok, containers} = Content.list_containers(@container_cache_ttl)
-    {:ok, palettes} = Content.list_palettes(@palette_cache_ttl)
-    {:ok, fragments} = Pages.list_fragments(@fragment_cache_ttl)
-
     entry = maybe_put_timestamps(entry)
 
     context =
@@ -120,10 +115,7 @@ defmodule Brando.Villain do
     opts_map =
       opts_map
       |> Map.put(:context, context)
-      |> Map.put(:modules, modules)
-      |> Map.put(:containers, containers)
-      |> Map.put(:palettes, palettes)
-      |> Map.put(:fragments, fragments)
+      |> put_render_sources(block)
 
     parser
     |> parse_node(block, opts_map)
@@ -132,6 +124,38 @@ defmodule Brando.Villain do
 
   def render_block(%{block: block} = _entry_block, entry, opts) do
     render_block(block, entry, opts)
+  end
+
+  # Cachex gets deep-copy each cached list (modules with full var/ref preloads,
+  # fragments with rendered HTML) into the calling process — only copy the
+  # lists this block type's parser callbacks actually read. The parser only
+  # consumes: modules for module rendering (incl. multi children), containers +
+  # palettes for container blocks, fragments for fragment blocks. The
+  # `{% fragment %}` liquid tag fetches its own fragment and does not use opts.
+  defp put_render_sources(opts_map, %{type: type}) when type in [:module, :module_entry] do
+    {:ok, modules} = Content.list_modules(@module_cache_ttl)
+
+    Map.merge(opts_map, %{modules: modules, containers: [], palettes: [], fragments: []})
+  end
+
+  defp put_render_sources(opts_map, %{type: :fragment}) do
+    {:ok, fragments} = Pages.list_fragments(@fragment_cache_ttl)
+
+    Map.merge(opts_map, %{modules: [], containers: [], palettes: [], fragments: fragments})
+  end
+
+  defp put_render_sources(opts_map, _block) do
+    {:ok, modules} = Content.list_modules(@module_cache_ttl)
+    {:ok, containers} = Content.list_containers(@container_cache_ttl)
+    {:ok, palettes} = Content.list_palettes(@palette_cache_ttl)
+    {:ok, fragments} = Pages.list_fragments(@fragment_cache_ttl)
+
+    Map.merge(opts_map, %{
+      modules: modules,
+      containers: containers,
+      palettes: palettes,
+      fragments: fragments
+    })
   end
 
   defp add_request_to_context(ctx, %{conn: conn}) do
@@ -240,25 +264,89 @@ defmodule Brando.Villain do
       |> ensure_string()
       |> strip_identifier_data_attributes()
 
-    with {:ok, parsed_doc} <- liquex_parse(html_string, liquex_parser),
-         {result, _} <- liquex_render(html_string, [], parsed_doc, context) do
-      Enum.join(result)
-    else
-      {:error, reason, line} ->
-        require Logger
-
-        Logger.error("""
-
-        >>> Error parsing liquex template <<<
-
-        #{inspect(html, pretty: true)}
-
-        --> #{reason} (line #{line})
-
-        """)
-
-        "!!! Error parsing liquex template !!!"
+    case liquex_parse(html_string, liquex_parser) do
+      {:ok, parsed_doc} -> render_parsed_doc(html_string, parsed_doc, context)
+      error -> log_liquex_parse_error(html, error)
     end
+  end
+
+  @liquex_parse_cache :brando_liquex_parse_cache
+
+  @doc false
+  def init_parse_cache do
+    :ets.new(@liquex_parse_cache, [:named_table, :public, :set, read_concurrency: true])
+    :ok
+  end
+
+  @doc """
+  Like `parse_and_render/2`, but caches the parsed Liquex document in ETS.
+
+  Only for templates that are constant per code version (module/container
+  code) — the cache is keyed by a hash of the template string and is never
+  evicted, so passing per-render varying strings would grow it unboundedly.
+  """
+  def parse_and_render_cached(template, context) do
+    liquex_parser = Brando.config(Brando.Villain)[:liquex_parser] || Brando.Villain.LiquexParser
+
+    html_string =
+      template
+      |> ensure_string()
+      |> strip_identifier_data_attributes()
+
+    key = :erlang.phash2({html_string, liquex_parser})
+
+    case fetch_cached_doc(key) do
+      {:ok, parsed_doc} ->
+        render_parsed_doc(html_string, parsed_doc, context)
+
+      :miss ->
+        case liquex_parse(html_string, liquex_parser) do
+          {:ok, parsed_doc} ->
+            put_cached_doc(key, parsed_doc)
+            render_parsed_doc(html_string, parsed_doc, context)
+
+          error ->
+            log_liquex_parse_error(template, error)
+        end
+    end
+  end
+
+  defp render_parsed_doc(html_string, parsed_doc, context) do
+    {result, _} = liquex_render(html_string, [], parsed_doc, context)
+    Enum.join(result)
+  end
+
+  defp log_liquex_parse_error(html, {:error, reason, line}) do
+    require Logger
+
+    Logger.error("""
+
+    >>> Error parsing liquex template <<<
+
+    #{inspect(html, pretty: true)}
+
+    --> #{reason} (line #{line})
+
+    """)
+
+    "!!! Error parsing liquex template !!!"
+  end
+
+  # the table is created at application start; fall back to uncached parsing
+  # if it is unavailable (e.g. library used without the Brando supervisor)
+  defp fetch_cached_doc(key) do
+    case :ets.lookup(@liquex_parse_cache, key) do
+      [{^key, parsed_doc}] -> {:ok, parsed_doc}
+      [] -> :miss
+    end
+  rescue
+    ArgumentError -> :miss
+  end
+
+  defp put_cached_doc(key, parsed_doc) do
+    :ets.insert(@liquex_parse_cache, {key, parsed_doc})
+  rescue
+    ArgumentError -> false
   end
 
   defp ensure_string(html) when is_binary(html), do: html

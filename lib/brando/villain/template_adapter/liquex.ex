@@ -26,7 +26,7 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
       |> add_block_to_context(module, block)
 
     module.code
-    |> Villain.parse_and_render(context)
+    |> Villain.parse_and_render_cached(context)
   end
 
   @impl true
@@ -45,7 +45,7 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
       |> Context.assign("content", content)
 
     module.code
-    |> Villain.parse_and_render(context)
+    |> Villain.parse_and_render_cached(context)
   end
 
   @impl true
@@ -62,7 +62,7 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
       |> add_block_to_context(child_module, child_block)
       |> Context.assign("forloop", forloop)
 
-    Villain.parse_and_render(child_module.code, context)
+    Villain.parse_and_render_cached(child_module.code, context)
   end
 
   @impl true

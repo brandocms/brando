@@ -767,7 +767,13 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       block_for_changeset
       |> Brando.Content.Block.block_changeset(params, current_user_id)
       |> Map.put(:action, :validate)
-      |> Block.render_and_update_block_changeset(entry, has_vars?, has_table_rows?)
+      |> Block.render_and_update_block_changeset(
+        entry,
+        has_vars?,
+        has_table_rows?,
+        false,
+        socket.assigns.live_preview_active?
+      )
 
     updated_form =
       to_form(updated_changeset,
@@ -867,7 +873,8 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
         entry,
         has_vars?,
         has_table_rows?,
-        force_render?
+        force_render?,
+        socket.assigns.live_preview_active?
       )
       |> Block.maybe_put_empty_children(has_children?)
 

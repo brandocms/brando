@@ -1008,6 +1008,51 @@ defmodule Brando.Content.Blocks do
     |> Enum.reverse()
   end
 
+  @doc """
+  Strip editor-only render artifacts from block changesets before save.
+
+  While live preview is open, the editor stamps annotated `rendered_html` +
+  `rendered_at` into every block changeset. Nothing reads the persisted
+  column back — the frontend serves the entry's own `rendered_*` fields —
+  but the stray changes make every block row dirty, turning a one-block
+  edit into an UPDATE per block. Deleting the changes lets `put_assoc`
+  skip untouched blocks entirely.
+  """
+  def strip_render_artifacts(block_changesets, root \\ true)
+  def strip_render_artifacts([], _root), do: []
+  def strip_render_artifacts(nil, _root), do: []
+
+  def strip_render_artifacts(block_changesets, root) when is_list(block_changesets) do
+    Enum.map(block_changesets, fn block_cs ->
+      if root do
+        case Changeset.get_change(block_cs, :block) do
+          nil ->
+            block_cs
+
+          sub_cs ->
+            Changeset.put_assoc(block_cs, :block, strip_block_render_changes(sub_cs))
+        end
+      else
+        strip_block_render_changes(block_cs)
+      end
+    end)
+  end
+
+  defp strip_block_render_changes(block_cs) do
+    block_cs =
+      block_cs
+      |> Changeset.delete_change(:rendered_html)
+      |> Changeset.delete_change(:rendered_at)
+
+    case Changeset.get_change(block_cs, :children) do
+      nil ->
+        block_cs
+
+      children ->
+        Changeset.put_assoc(block_cs, :children, strip_render_artifacts(children, false))
+    end
+  end
+
   # --- Preload Strategy ---
 
   @doc """
@@ -1015,76 +1060,9 @@ defmodule Brando.Content.Blocks do
   """
   def preloads_for(schema) do
     if schema.has_trait(Brando.Trait.Blocks) do
-      vars_query =
-        from v in Var,
-          order_by: [asc: :sequence],
-          preload: [:file, :image, :palette, :identifier, :menu_item]
-
-      table_row_query =
-        from tr in TableRow,
-          order_by: [asc: :sequence],
-          preload: [vars: ^vars_query]
-
-      refs_query =
-        from r in Ref,
-          order_by: [asc: :sequence],
-          preload: [
-            :image,
-            :file,
-            video: [:thumbnail, :file],
-            gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]
-          ]
-
-      sub_sub_children_query =
-        from b in Block,
-          preload: [
-            :palette,
-            :container,
-            :module,
-            :children,
-            block_identifiers: :identifier,
-            vars: ^vars_query,
-            refs: ^refs_query,
-            table_rows: ^table_row_query
-          ],
-          order_by: [asc: :sequence]
-
-      sub_children_query =
-        from b in Block,
-          preload: [
-            :palette,
-            :container,
-            :module,
-            block_identifiers: :identifier,
-            vars: ^vars_query,
-            refs: ^refs_query,
-            table_rows: ^table_row_query,
-            children: ^sub_sub_children_query
-          ],
-          order_by: [asc: :sequence]
-
-      children_query =
-        from b in Block,
-          preload: [
-            :palette,
-            :container,
-            :module,
-            vars: ^vars_query,
-            refs: ^refs_query,
-            table_rows: ^table_row_query,
-            block_identifiers: :identifier,
-            children: [
-              :palette,
-              :container,
-              :module,
-              block_identifiers: :identifier,
-              vars: ^vars_query,
-              refs: ^refs_query,
-              table_rows: ^table_row_query,
-              children: ^sub_children_query
-            ]
-          ],
-          order_by: [asc: :sequence]
+      vars_query = block_vars_query()
+      table_row_query = block_table_rows_query()
+      refs_query = block_refs_query()
 
       Enum.reduce(schema.__blocks_fields__(), [], fn %{name: assoc_name}, acc ->
         field_as_module =
@@ -1111,7 +1089,7 @@ defmodule Brando.Content.Blocks do
                    vars: ^vars_query,
                    refs: ^refs_query,
                    table_rows: ^table_row_query,
-                   children: ^children_query
+                   children: ^(&Brando.Content.Blocks.preload_child_trees/1)
                  ]
                ]
              )}
@@ -1120,6 +1098,86 @@ defmodule Brando.Content.Blocks do
     else
       []
     end
+  end
+
+  @doc """
+  Function preload for a block's `children` association.
+
+  Fetches the entire descendant tree in one recursive-CTE query plus one
+  batched preload pass across all levels, replacing the previous per-level
+  nested preloads (~25 queries per nesting level, hard-capped at 4 levels).
+  Returns direct children — Ecto distributes them by `parent_id` — with each
+  child's own subtree stitched into `children`.
+  """
+  def preload_child_trees([]), do: []
+
+  def preload_child_trees(parent_ids) do
+    initial = from(b in Block, where: b.parent_id in ^parent_ids)
+
+    recursion =
+      from(b in Block,
+        inner_join: d in "block_descendants",
+        on: b.parent_id == d.id
+      )
+
+    descendants_query = union_all(initial, ^recursion)
+
+    descendants =
+      {"block_descendants", Block}
+      |> recursive_ctes(true)
+      |> with_cte("block_descendants", as: ^descendants_query)
+      |> Brando.Repo.all()
+      |> Brando.Repo.preload([
+        :palette,
+        :container,
+        :module,
+        block_identifiers: :identifier,
+        vars: block_vars_query(),
+        refs: block_refs_query(),
+        table_rows: block_table_rows_query()
+      ])
+
+    by_parent = Enum.group_by(descendants, & &1.parent_id)
+
+    parent_ids
+    |> Enum.flat_map(&Map.get(by_parent, &1, []))
+    |> Enum.sort_by(& &1.sequence)
+    |> Enum.map(&attach_child_tree(&1, by_parent))
+  end
+
+  defp attach_child_tree(block, by_parent) do
+    children =
+      by_parent
+      |> Map.get(block.id, [])
+      |> Enum.sort_by(& &1.sequence)
+      |> Enum.map(&attach_child_tree(&1, by_parent))
+
+    %{block | children: children}
+  end
+
+  defp block_vars_query do
+    from v in Var,
+      order_by: [asc: :sequence],
+      preload: [:file, :image, :palette, :identifier, :menu_item]
+  end
+
+  defp block_table_rows_query do
+    vars_query = block_vars_query()
+
+    from tr in TableRow,
+      order_by: [asc: :sequence],
+      preload: [vars: ^vars_query]
+  end
+
+  defp block_refs_query do
+    from r in Ref,
+      order_by: [asc: :sequence],
+      preload: [
+        :image,
+        :file,
+        video: [:thumbnail, :file],
+        gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]
+      ]
   end
 
   # --- Block Duplication ---

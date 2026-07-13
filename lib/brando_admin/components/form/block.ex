@@ -799,15 +799,17 @@ defmodule BrandoAdmin.Components.Form.Block do
           end
       end)
 
+    render_html? = socket.assigns.live_preview_active?
+
     updated_changeset =
       if belongs_to == :root do
         block_changeset = Changeset.get_assoc(changeset, :block)
         updated_block_changeset = Changeset.put_assoc(block_changeset, :refs, new_refs)
         changeset = Changeset.put_assoc(changeset, :block, updated_block_changeset)
-        render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?)
+        render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?, false, render_html?)
       else
         changeset = Changeset.put_assoc(changeset, :refs, new_refs)
-        render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)
+        render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?, false, render_html?)
       end
 
     new_form =
@@ -961,15 +963,17 @@ defmodule BrandoAdmin.Components.Form.Block do
           end
       end)
 
+    render_html? = socket.assigns.live_preview_active?
+
     updated_changeset =
       if belongs_to == :root do
         block_changeset = Changeset.get_assoc(changeset, :block)
         updated_block_changeset = Changeset.put_assoc(block_changeset, :refs, new_refs)
         changeset = Changeset.put_assoc(changeset, :block, updated_block_changeset)
-        render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render?)
+        render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render?, render_html?)
       else
         changeset = Changeset.put_assoc(changeset, :refs, new_refs)
-        render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render?)
+        render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render?, render_html?)
       end
 
     new_form =
@@ -1210,6 +1214,9 @@ defmodule BrandoAdmin.Components.Form.Block do
   def maybe_get_live_preview_status(socket) do
     socket
   end
+
+  # rendering only feeds live preview — skip the full module render when closed
+  def render_module(%{assigns: %{live_preview_active?: false}} = socket), do: socket
 
   def render_module(%{assigns: %{belongs_to: belongs_to}} = socket) do
     changeset = socket.assigns.form.source
@@ -1835,7 +1842,24 @@ defmodule BrandoAdmin.Components.Form.Block do
   defdelegate get_container(id), to: Brando.Content, as: :fetch_container
   defdelegate get_module(id), to: Brando.Content, as: :fetch_module
 
-  def render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render? \\ false) do
+  # `render_html?: false` skips the Villain render entirely — the output is only
+  # consumed by live preview, and both preview-open and save re-render from
+  # scratch, so there is no point paying a full Liquid render per validate
+  # while the preview is closed.
+  def render_and_update_entry_block_changeset(
+        changeset,
+        entry,
+        has_vars?,
+        has_table_rows?,
+        force_render? \\ false,
+        render_html? \\ true
+      )
+
+  def render_and_update_entry_block_changeset(changeset, _entry, _has_vars?, _has_table_rows?, _force_render?, false) do
+    changeset
+  end
+
+  def render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render?, true) do
     skip_children =
       if force_render? do
         :force_render
@@ -1854,7 +1878,20 @@ defmodule BrandoAdmin.Components.Form.Block do
     Changeset.put_assoc(changeset, :block, updated_block_changeset)
   end
 
-  def render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render? \\ false) do
+  def render_and_update_block_changeset(
+        changeset,
+        entry,
+        has_vars?,
+        has_table_rows?,
+        force_render? \\ false,
+        render_html? \\ true
+      )
+
+  def render_and_update_block_changeset(changeset, _entry, _has_vars?, _has_table_rows?, _force_render?, false) do
+    changeset
+  end
+
+  def render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render?, true) do
     skip_children = if force_render?, do: :force_render, else: true
     rendered_html = render_block_html(changeset, entry, has_vars?, has_table_rows?, false, skip_children)
 
@@ -1871,7 +1908,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> ensure_gallery_associations_loaded(is_root)
     |> Brando.Villain.render_block(entry,
       skip_children: skip_children,
-      format_html: true,
       annotate_blocks: true
     )
   end

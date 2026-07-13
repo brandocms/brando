@@ -661,8 +661,26 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:module_picker_id, "#block-field-#{assigns.block_field}-module-picker")
     |> assign(:clipboard_meta, nil)
     |> assign(:blocks_topic, blocks_topic)
-    |> send_block_entry_position_update(block_list)
+    |> maybe_sequence_initial_blocks(entry_blocks, block_list)
     |> assign(:blocks_initialized, true)
+  end
+
+  # Saved blocks already carry index-based sequences, so the O(n)
+  # update_sequence round-trip + full form restamp is pure overhead on first
+  # mount. Only fire the handshake when stored sequences disagree with list
+  # order (gaps/duplicates from external writes), where blocks must be
+  # restamped before insert-at-position can be trusted.
+  defp maybe_sequence_initial_blocks(socket, entry_blocks, block_list) do
+    sequences_match_index? =
+      entry_blocks
+      |> Enum.with_index()
+      |> Enum.all?(fn {entry_block, idx} -> Map.get(entry_block, :sequence) == idx end)
+
+    if sequences_match_index? do
+      socket
+    else
+      send_block_entry_position_update(socket, block_list)
+    end
   end
 
   defp reload_all_blocks(socket) do

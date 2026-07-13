@@ -4064,6 +4064,7 @@ defmodule BrandoAdmin.Components.Form do
       updated_block_cs =
         block_cs
         |> Brando.Content.Blocks.reject_deleted(true)
+        |> Brando.Content.Blocks.strip_render_artifacts()
         |> Brando.Utils.set_action()
 
       Ecto.Changeset.put_assoc(updated_changeset, :"entry_#{field_name}", updated_block_cs)
