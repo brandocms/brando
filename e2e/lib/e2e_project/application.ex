@@ -49,6 +49,12 @@ defmodule E2eProject.Application do
         # Test serving mode: Set sandbox to auto mode so initialization queries
         # can run without explicit checkout. The per-test sandbox sessions will
         # override this with their own connections.
+        #
+        # CAVEAT: in :auto mode, processes spawned mid-request (e.g. Ecto's
+        # parallel preload Tasks) get fresh connections OUTSIDE the test's
+        # sandbox transaction and silently read stale data. Brando's repo
+        # facade therefore forces `in_parallel: false` on preloads when
+        # `config :brando, :sql_sandbox_serial_preloads` is set (e2e.exs).
         Ecto.Adapters.SQL.Sandbox.mode(E2eProject.Repo, :auto)
         Brando.System.initialize()
       end

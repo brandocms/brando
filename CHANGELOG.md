@@ -229,6 +229,15 @@
 
 #### Bug Fixes
 
+- **E2E harness: parallel preloads escaped the SQL sandbox**: In the sandboxed e2e
+  server (`:auto` mode), Ecto's parallel preload Tasks are separate processes that
+  silently get fresh connections outside the per-test transaction — preloads of
+  just-written rows (e.g. a saved block's children) came back empty while the rows
+  existed. `Brando.Repo` now forces `in_parallel: false` on reads when
+  `config :brando, :sql_sandbox_serial_preloads` is set (e2e only; no-op in dev/prod).
+  New `block-nested-child-persistence.spec.js` drives nested-child insert/edit/delete
+  through the UI with save + reload (2 specs; blocks suite now 58).
+
 - **Nested child blocks at save (three compounding bugs)**: A new DB-level regression
   suite for the materialized save path (insert/edit/delete/cross-parent-move of nested
   children through a real save) uncovered a chain of latent bugs: (1) the save cast ran

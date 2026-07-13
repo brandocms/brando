@@ -3,6 +3,10 @@ import Config
 import_config "test.exs"
 # Use :warning to reduce log noise, change to :debug for troubleshooting
 config :logger, level: :warning
+
+# In the sandboxed e2e server, Ecto's parallel preload Tasks would escape the
+# per-test sandbox transaction (see application.ex) — run preloads serially.
+config :brando, :sql_sandbox_serial_preloads, true
 config :e2e_project, sql_sandbox: true
 
 # Override pool settings for e2e tests - need more connections for
