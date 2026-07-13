@@ -387,53 +387,59 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   # === Block Sync: Data Shipping ===
 
-  # Fetch a block's changeset for shipping to other users on blur
+  # Ship a blurred block's content to other editors as a subtree diff
+  # snapshot straight from the op store — no component round-trip, no
+  # changesets over PubSub, and child blocks ship too (the old
+  # changeset-shipping path only ever covered root blocks).
   def update(%{event: "fetch_block_for_shipping", uid: uid}, socket) do
-    block_list = socket.assigns.block_list
-
-    if uid in block_list do
-      send_update(Block, id: "block-#{uid}", event: "fetch_for_shipping")
-    end
-
-    {:ok, socket}
-  end
-
-  # Block responded with its changeset — broadcast to others
-  def update(%{event: "ship_block_data", uid: uid, changeset: changeset}, socket) do
     topic = socket.assigns[:blocks_topic]
+    ops = socket.assigns.block_ops
 
-    if topic do
+    if topic && Ops.known?(ops, uid) do
       Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {
-        :block_data_shipped,
-        %{uid: uid, entry_block_cs: changeset, user_id: socket.assigns.current_user.id}
+        :block_ops_shipped,
+        %{uid: uid, snapshot: Ops.subtree_snapshot(ops, uid), user_id: socket.assigns.current_user.id}
       })
     end
 
     {:ok, socket}
   end
 
-  # Apply block data received from another user
-  def update(%{event: "apply_remote_block_data", uid: uid, entry_block_cs: cs}, socket) do
-    block_list = socket.assigns.block_list
+  # Apply a remote editor's subtree snapshot: merge it into the op store,
+  # re-materialize the affected root and hand the fresh form to the mounted
+  # component via the replace_form cascade (blocks own their forms — a seed
+  # swap alone would never reach them). The remount_block push re-boots
+  # Jupiter JS widgets inside the block.
+  def update(%{event: "apply_remote_block_ops", uid: uid, snapshot: snapshot}, socket) do
+    ops = socket.assigns.block_ops
 
-    if uid in block_list do
-      # Convert the remote changeset directly to a form — don't re-cast through
-      # block_module.changeset (which would lose changes with empty params)
+    with {:ok, updated_ops} <- Ops.apply_remote_snapshot(ops, uid, snapshot),
+         root_uid = Ops.root_of(updated_ops, uid),
+         {:ok, params} <- Ops.materialize_root(updated_ops, root_uid) do
+      block_module = socket.assigns.block_module
+      user_id = socket.assigns.current_user.id
+
       new_form =
-        to_form(cs,
-          as: "entry_block",
-          id: "entry_block_form-#{uid}"
-        )
+        socket
+        |> materialize_base_struct(root_uid)
+        |> block_module.changeset(params, user_id)
+        |> to_form(as: "entry_block", id: "entry_block_form-#{root_uid}")
 
-      updated_forms = replace_form_by_uid(socket.assigns.entry_blocks_forms, uid, new_form)
+      send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: new_form)
 
       {:ok,
        socket
-       |> assign(:entry_blocks_forms, updated_forms)
-       |> apply_block_op({:update, uid, Ops.block_diff_params(cs)})
-       |> push_event("b:component:remount_block", %{uid: uid})}
+       |> assign(:block_ops, updated_ops)
+       |> assign(:entry_blocks_forms, replace_form_by_uid(socket.assigns.entry_blocks_forms, root_uid, new_form))
+       |> push_event("b:component:remount_block", %{uid: root_uid})}
     else
-      {:ok, socket}
+      {:error, reason} ->
+        Logger.warning(
+          "BlockField (#{socket.assigns.block_field}) could not apply remote block ops " <>
+            "for #{uid}: #{inspect(reason)}"
+        )
+
+        {:ok, socket}
     end
   end
 
@@ -521,7 +527,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> assign(assigns)
     |> initialize_blocks(assigns)
-    |> assign_templates()
     |> assign_module_set()
     |> then(&{:ok, &1})
   end
@@ -1031,17 +1036,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         <%= if @block_count == 0 do %>
           <div class="blocks-empty-instructions">
             {gettext("Click the plus to start adding content blocks")}
-            <%= if @templates && @templates != [] do %>
-              <br />{gettext("or get started with a prefab'ed template")}:<br />
-              <div class="blocks-templates">
-                <%= for template <- @templates do %>
-                  <button type="button" phx-click={JS.push("use_template", target: @myself)} phx-value-id={template.id}>
-                    {template.name}<br />
-                    <small>{template.instructions}</small>
-                  </button>
-                <% end %>
-              </div>
-            <% end %>
           </div>
         <% end %>
 
@@ -1234,14 +1228,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   defp get_module(module_id), do: Brando.Content.fetch_module(module_id)
-
-  defp assign_templates(socket) do
-    assign_new(socket, :templates, fn ->
-      if template_namespace = socket.assigns.opts[:template_namespace] do
-        Brando.Content.list_templates!(%{filter: %{namespace: template_namespace}})
-      end
-    end)
-  end
 
   defp assign_module_set(socket) do
     assign_new(socket, :module_set, fn ->

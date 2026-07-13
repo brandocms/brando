@@ -105,6 +105,15 @@
   historical "sibling edit/FK wiped by a stale cached form" bug class is now
   structurally unrepresentable.
 
+- **Block editor multi-user sync ships op snapshots**: When an editor blurs a block,
+  its subtree diff snapshot (param diffs + structure — never changesets) is broadcast
+  straight from the op store and merged into other editors' stores, then handed to
+  their mounted components via the `replace_form` cascade. Child-block edits now sync
+  too (the old changeset-shipping path only ever covered root blocks), remotely
+  inserted children attach on receive, and a received edit can no longer be lost by
+  the receiver's next save. The dead prefab-template button in the empty-blocks state
+  (its handler never existed) was removed.
+
 - **Block editor op layer (strangler phase)**: Every structural/content mutation in
   the block editor (insert, duplicate, paste, delete, reorder, content commits, remote
   sync, reconnect recovery) is now mirrored through named operations applied by a pure

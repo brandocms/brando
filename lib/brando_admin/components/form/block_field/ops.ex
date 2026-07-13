@@ -272,6 +272,89 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   end
 
   @doc """
+  Whether `uid` is a block the state knows about (any nesting level).
+  """
+  @spec known?(t(), uid()) :: boolean()
+  def known?(%__MODULE__{} = state, uid), do: Map.has_key?(state.statuses, uid)
+
+  @doc """
+  The root uid of the tree `uid` belongs to (`uid` itself for roots).
+  """
+  @spec root_of(t(), uid()) :: uid()
+  def root_of(%__MODULE__{} = state, uid) do
+    case Map.get(state.parents, uid) do
+      nil -> uid
+      parent_uid -> root_of(state, parent_uid)
+    end
+  end
+
+  @doc """
+  A self-contained content+structure snapshot of `uid`'s subtree, for
+  shipping to other editors over PubSub.
+
+  Carries param diffs (never changesets/forms — payloads stay tiny and
+  node-portable), the parent links and per-parent child order for the
+  subtree, plus the DFS uid order so receivers can apply parents before
+  children. Apply with `apply_remote_snapshot/3`.
+  """
+  @spec subtree_snapshot(t(), uid()) :: map()
+  def subtree_snapshot(%__MODULE__{} = state, uid) do
+    uids = [uid | descendants(state, uid)]
+
+    %{
+      uids: uids,
+      diffs: Map.take(state.diffs, uids),
+      parents: Map.take(state.parents, uids),
+      child_order: Map.take(state.child_order, uids)
+    }
+  end
+
+  @doc """
+  Apply a remote editor's `subtree_snapshot/2` to this state.
+
+  Known uids get their diffs replaced; unknown uids are attached under
+  their shipped parent (this is how remotely inserted children reach
+  editors that never received a structural broadcast for them); shipped
+  child orders are applied last. The snapshot's top uid must be known
+  unless it arrives with a known parent — remote ROOT inserts travel as
+  structural broadcasts before any content ships for them.
+  """
+  @spec apply_remote_snapshot(t(), uid(), map()) :: {:ok, t()} | {:error, term()}
+  def apply_remote_snapshot(%__MODULE__{} = state, _uid, %{uids: uids} = snapshot) do
+    diffs = Map.get(snapshot, :diffs, %{})
+    parents = Map.get(snapshot, :parents, %{})
+    child_order = Map.get(snapshot, :child_order, %{})
+
+    uids
+    |> Enum.reduce_while({:ok, state}, fn u, {:ok, state} ->
+      diff = Map.get(diffs, u, %{})
+
+      result =
+        cond do
+          known?(state, u) -> apply_op(state, {:update, u, diff})
+          parents[u] && known?(state, parents[u]) -> apply_op(state, {:insert_child, parents[u], u, :end, diff})
+          true -> {:error, {:unknown_uid, u}}
+        end
+
+      case result do
+        {:ok, state} -> {:cont, {:ok, state}}
+        {:error, _} = error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, state} ->
+        child_order
+        |> Enum.filter(fn {parent_uid, _} -> known?(state, parent_uid) end)
+        |> Enum.reduce({:ok, state}, fn {parent_uid, order}, {:ok, state} ->
+          apply_op(state, {:reorder_children, parent_uid, order})
+        end)
+
+      error ->
+        error
+    end
+  end
+
+  @doc """
   Materialize save-ready entry-block params for one root uid.
 
   The tree is authoritative: `"sequence"` comes from list position,
@@ -416,8 +499,6 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   end
 
   ## State plumbing
-
-  defp known?(state, uid), do: Map.has_key?(state.statuses, uid)
 
   defp valid_position?(:end), do: true
   defp valid_position?(at), do: is_integer(at) and at >= 0

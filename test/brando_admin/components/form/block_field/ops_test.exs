@@ -241,6 +241,65 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
     end
   end
 
+  describe "remote sync snapshots" do
+    defp sync_state do
+      Ops.from_entry_blocks([
+        entry_block("a", 1, 10, [child("a1", 11), child("a2", 12, [child("a2x", 13)])]),
+        entry_block("b", 2, 20)
+      ])
+    end
+
+    test "root_of/2 walks to the root" do
+      state = sync_state()
+      assert Ops.root_of(state, "a2x") == "a"
+      assert Ops.root_of(state, "b") == "b"
+    end
+
+    test "subtree_snapshot/2 carries diffs, structure and DFS order" do
+      state =
+        sync_state()
+        |> apply!({:update, "a2", %{"type" => "module"}})
+        |> apply!({:update, "a2x", %{"uid" => "a2x"}})
+
+      snapshot = Ops.subtree_snapshot(state, "a2")
+
+      assert snapshot.uids == ["a2", "a2x"]
+      assert snapshot.diffs == %{"a2" => %{"type" => "module"}, "a2x" => %{"uid" => "a2x"}}
+      assert snapshot.parents == %{"a2" => "a", "a2x" => "a2"}
+      assert snapshot.child_order == %{"a2" => ["a2x"]}
+    end
+
+    test "apply_remote_snapshot/3 updates known uids" do
+      sender = apply!(sync_state(), {:update, "a2", %{"type" => "module"}})
+      snapshot = Ops.subtree_snapshot(sender, "a2")
+
+      assert {:ok, receiver} = Ops.apply_remote_snapshot(sync_state(), "a2", snapshot)
+      assert receiver.diffs["a2"] == %{"type" => "module"}
+      assert receiver.order == sync_state().order
+    end
+
+    test "apply_remote_snapshot/3 attaches unknown children under their shipped parent" do
+      sender =
+        sync_state()
+        |> apply!({:insert_child, "a", "new1", 1, %{"uid" => "new1", "type" => "module"}})
+        |> apply!({:update, "a", %{"block" => %{"description" => "edited"}}})
+
+      snapshot = Ops.subtree_snapshot(sender, "a")
+
+      assert {:ok, receiver} = Ops.apply_remote_snapshot(sync_state(), "a", snapshot)
+      assert receiver.parents["new1"] == "a"
+      assert receiver.statuses["new1"] == :inserted
+      # shipped child order applied, so the remote insert lands at position 1
+      assert receiver.child_order["a"] == ["a1", "new1", "a2"]
+      assert receiver.diffs["new1"]["type"] == "module"
+    end
+
+    test "apply_remote_snapshot/3 rejects a fully unknown subtree" do
+      snapshot = %{uids: ["ghost"], diffs: %{}, parents: %{}, child_order: %{}}
+      assert {:error, {:unknown_uid, "ghost"}} = Ops.apply_remote_snapshot(sync_state(), "ghost", snapshot)
+    end
+  end
+
   describe "materialize_root/2" do
     test "unknown root is rejected" do
       assert {:error, {:unknown_uid, "x"}} = Ops.materialize_root(Ops.new([]), "x")

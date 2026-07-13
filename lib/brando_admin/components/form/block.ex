@@ -25,7 +25,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
-  # fetch_for_shipping — collect current changeset and send to BlockField for broadcasting
   # set_collapsed — explicitly set the collapsed state (used by bulk collapse/expand)
   def update(%{event: "set_collapsed", collapsed: collapsed}, socket) do
     changeset = socket.assigns.form.source
@@ -61,18 +60,6 @@ defmodule BrandoAdmin.Components.Form.Block do
         collapsed: collapsed
       )
     end
-
-    {:ok, socket}
-  end
-
-  def update(%{event: "fetch_for_shipping"}, socket) do
-    changeset = socket.assigns.form.source
-
-    send_to_ref(socket.assigns.parent_ref, %{
-      event: "ship_block_data",
-      uid: socket.assigns.uid,
-      changeset: changeset
-    })
 
     {:ok, socket}
   end
