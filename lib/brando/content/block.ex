@@ -151,21 +151,25 @@ defmodule Brando.Content.Block do
   end
 
   def block_changeset(block, attrs, user) do
-    changeset =
-      block
-      |> cast(attrs, @block_attrs)
-      |> unique_constraint(:uid)
-      |> cast_table_rows(user)
-      |> cast_block_identifiers(user)
-      |> cast_assoc(:vars,
-        with: &var_changeset(&1, &2, &3, user),
-        sort_param: :sort_var_ids,
-        drop_param: :drop_var_ids
-      )
-      |> cast_assoc(:refs, with: &ref_changeset(&1, &2, user))
+    block
+    |> cast(attrs, @block_attrs)
+    |> unique_constraint(:uid)
+    |> cast_table_rows(user)
+    |> cast_block_identifiers(user)
+    |> cast_assoc(:vars,
+      with: &var_changeset(&1, &2, &3, user),
+      sort_param: :sort_var_ids,
+      drop_param: :drop_var_ids
+    )
+    |> cast_assoc(:refs, with: &ref_changeset(&1, &2, user))
+    |> finalize_new_block(block)
+  end
 
-    # Filter out :replace changesets from refs to prevent update issues
-    # Handle both struct and changeset inputs
+  # New (nil-id) blocks: strip :replace refs/vars changesets (they cause
+  # update issues on insert) and FORCE action :insert — without it, a cast
+  # over a built base struct keeps Ecto's computed :update action, and the
+  # repo raises NoPrimaryKeyValueError trying to update a pk-less row.
+  defp finalize_new_block(changeset, block) do
     block_id =
       case block do
         %Ecto.Changeset{data: data} -> data.id
@@ -173,22 +177,18 @@ defmodule Brando.Content.Block do
         _ -> nil
       end
 
-    changeset =
-      if is_nil(block_id) do
-        changeset
-        |> Ecto.Changeset.update_change(:refs, fn ref_changesets ->
-          Enum.reject(ref_changesets, &(&1.action == :replace))
-        end)
-        |> Ecto.Changeset.update_change(:vars, fn var_changesets ->
-          Enum.reject(var_changesets, &(&1.action == :replace))
-        end)
-        # Force insert action for new blocks
-        |> Map.put(:action, :insert)
-      else
-        changeset
-      end
-
-    changeset
+    if is_nil(block_id) do
+      changeset
+      |> Ecto.Changeset.update_change(:refs, fn ref_changesets ->
+        Enum.reject(ref_changesets, &(&1.action == :replace))
+      end)
+      |> Ecto.Changeset.update_change(:vars, fn var_changesets ->
+        Enum.reject(var_changesets, &(&1.action == :replace))
+      end)
+      |> Map.put(:action, :insert)
+    else
+      changeset
+    end
   end
 
   def recursive_block_changeset(block, attrs, user) do
@@ -204,6 +204,7 @@ defmodule Brando.Content.Block do
     )
     |> cast_assoc(:refs, with: &ref_changeset(&1, &2, user))
     |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user))
+    |> finalize_new_block(block)
   end
 
   defp cast_block_identifiers(changeset, user) do

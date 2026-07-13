@@ -1049,7 +1049,15 @@ defmodule Brando.Content.Blocks do
         block_cs
 
       children ->
-        Changeset.put_assoc(block_cs, :children, strip_render_artifacts(children, false))
+        # :replace/:delete entries must not be fed back to put_assoc (Ecto
+        # raises) — their absence from the new list is what expresses the
+        # deletion; Ecto re-derives the replaces from data.
+        kept =
+          children
+          |> Enum.reject(&(&1.action in [:replace, :delete]))
+          |> strip_render_artifacts(false)
+
+        Changeset.put_assoc(block_cs, :children, kept)
     end
   end
 
@@ -1127,6 +1135,10 @@ defmodule Brando.Content.Blocks do
       |> recursive_ctes(true)
       |> with_cte("block_descendants", as: ^descendants_query)
       |> Brando.Repo.all()
+      # rows loaded through the CTE carry __meta__.source "block_descendants";
+      # left as-is, an on_replace delete at save issues
+      # DELETE FROM "block_descendants" — a nonexistent table
+      |> Enum.map(&put_in(&1.__meta__.source, "content_blocks"))
       |> Brando.Repo.preload([
         :palette,
         :container,

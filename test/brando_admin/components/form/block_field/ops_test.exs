@@ -309,7 +309,14 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       state = Ops.from_entry_blocks([entry_block("a", 1, 10), entry_block("b", 2, 20)])
 
       assert {:ok, params} = Ops.materialize_root(state, "b")
-      assert params == %{"id" => 2, "sequence" => 1, "block" => %{"id" => 20, "uid" => "b", "sequence" => 1}}
+
+      # "children" is ALWAYS present — dropping it when empty silently kept
+      # rows alive (last-child deletes / cross-parent moves never persisted)
+      assert params == %{
+               "id" => 2,
+               "sequence" => 1,
+               "block" => %{"id" => 20, "uid" => "b", "sequence" => 1, "children" => []}
+             }
     end
 
     test "diffs merge with tree-derived children, sequence and db ids" do

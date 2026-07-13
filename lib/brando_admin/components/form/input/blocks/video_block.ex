@@ -258,6 +258,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                     <button type="button" class="danger" phx-click={JS.push("reset_image", target: @myself)}>
                       {gettext("Reset cover image")}
                     </button>
+                    <button type="button" class="danger" phx-click={JS.push("reset_video", target: @myself)}>
+                      {gettext("Reset video")}
+                    </button>
                   </div>
 
                   <Input.input type={:hidden} field={block_data[:poster]} />

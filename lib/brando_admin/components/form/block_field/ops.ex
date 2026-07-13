@@ -414,10 +414,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     |> put_new_id(block_id)
   end
 
-  # only include a "children" key when the tree has children — a bare
-  # "children" => [] in cast params would delete children the store simply
-  # never knew about
-  defp put_children(params, []), do: Map.delete(params, "children")
+  # ALWAYS emit "children" — the tree is authoritative, including emptiness
+  # (`from_entry_blocks`/insert registration know every child). Dropping the
+  # key when empty silently kept rows alive: deleting a parent's last child
+  # never persisted, and a child moved to another parent stayed (duplicated)
+  # under the old one. An empty list over loaded-empty data is a no-op cast.
   defp put_children(params, children), do: Map.put(params, "children", children)
 
   defp put_new_id(params, nil), do: params

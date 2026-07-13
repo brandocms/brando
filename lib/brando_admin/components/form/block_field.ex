@@ -372,9 +372,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     root_changesets =
       Enum.map(ops.order, fn uid ->
         # a materialization failure here must fail loudly — dropping a block
-        # silently is worse than any crash
+        # silently is worse than any crash. recursive?: true is load-bearing —
+        # the default block cast drops "children" params entirely.
         {:ok, params} = Ops.materialize_root(ops, uid)
-        {uid, block_module.changeset(materialize_base_struct(socket, uid), params, user_id)}
+        {uid, block_module.changeset(materialize_base_struct(socket, uid), params, user_id, true)}
       end)
 
     send_update(BrandoAdmin.Components.Form,
@@ -456,7 +457,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       new_form =
         socket
         |> materialize_base_struct(root_uid)
-        |> block_module.changeset(params, user_id)
+        |> block_module.changeset(params, user_id, true)
         |> to_form(as: "entry_block", id: "entry_block_form-#{root_uid}")
 
       send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: new_form)

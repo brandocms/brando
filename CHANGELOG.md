@@ -229,6 +229,25 @@
 
 #### Bug Fixes
 
+- **Nested child blocks at save (three compounding bugs)**: A new DB-level regression
+  suite for the materialized save path (insert/edit/delete/cross-parent-move of nested
+  children through a real save) uncovered a chain of latent bugs: (1) the save cast ran
+  the non-recursive block changeset, which silently drops all `children` params — edits
+  to nested blocks did not persist; (2) `recursive_block_changeset` never forced
+  `:insert` for new (nil-id) blocks, so fixing (1) made every new-block save crash with
+  `NoPrimaryKeyValueError` (both changeset variants now share the new-block
+  finalization); (3) children loaded through the recursive-CTE tree preload kept
+  `__meta__.source: "block_descendants"`, so deleting one issued a DELETE against a
+  nonexistent table; (4) materialization dropped the `"children"` key when a parent's
+  child list became empty, so deleting a parent's last child (or moving its only child
+  elsewhere) never persisted — the tree is authoritative and now always emits
+  `children`. `strip_render_artifacts` also no longer feeds `:replace`/`:delete`
+  children back into `put_assoc` (Ecto raises).
+
+- **Video block reset button**: The `reset_video` handler (reset to the ref's template
+  defaults) existed but no button invoked it — wired into the video block's action
+  button group alongside the cover-image reset.
+
 - **Video/map block media loss**: several video block commits (`select_video`,
   `video_created_from_url`, cover-image select/reset, override resets) and the map
   block's embed-URL commit did not propagate to the parent's cached form, so a

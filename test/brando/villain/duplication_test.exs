@@ -224,7 +224,7 @@ defmodule Brando.Villain.DuplicationTest do
   end
 
   describe "recursive_block_changeset/3" do
-    test "new block (nil id) does NOT set action to :insert", %{user: user} do
+    test "new block (nil id) sets action to :insert, same as block_changeset", %{user: user} do
       block = %Block{
         vars: [build_var(%{id: nil, block_id: nil})],
         refs: [build_ref(%{id: nil, block_id: nil, module_id: nil})],
@@ -242,11 +242,12 @@ defmodule Brando.Villain.DuplicationTest do
 
       changeset = Block.recursive_block_changeset(block, attrs, user)
 
-      # recursive_block_changeset does NOT set :insert action —
-      # this is fine because it's used in the save path where action
-      # is managed by the parent cast_assoc
-      assert is_nil(changeset.action),
-             "recursive_block_changeset leaves action as nil (managed by parent)"
+      # This used to assert the opposite ("action is managed by the parent
+      # cast_assoc") — but a parent belongs_to cast over a BUILT base struct
+      # computes :update for a pk-less row, and the repo raises
+      # NoPrimaryKeyValueError. Since save materialization casts through the
+      # recursive path, new blocks must force :insert here too.
+      assert changeset.action == :insert
     end
   end
 
