@@ -229,6 +229,16 @@
 
 #### Bug Fixes
 
+- **E2E harness: two-user sessions + multi-user sync spec**: The Playwright auth
+  fixture now exposes the per-test sandbox session as its own fixture plus a lazy
+  `secondUserPage` (seeded second superuser) sharing the same sandbox — enabling
+  true multi-user specs. New `block-multiuser-sync.spec.js` verifies the core sync
+  guarantee end-to-end: user A's blurred block edit ships as an op snapshot, merges
+  into user B's store, and B's untouched save persists A's edit. Known limitation
+  surfaced: block sync only arms on a fresh mount of an existing entry — after
+  create + save-and-continue (`push_patch`), the parent LV has no `entry_id`, so
+  shipping/presence stay disarmed until reload.
+
 - **E2E harness: parallel preloads escaped the SQL sandbox**: In the sandboxed e2e
   server (`:auto` mode), Ecto's parallel preload Tasks are separate processes that
   silently get fresh connections outside the per-test transaction — preloads of

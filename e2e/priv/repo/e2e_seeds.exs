@@ -28,6 +28,24 @@ user =
   }
   |> E2eProject.Repo.insert!()
 
+# Second superuser for multi-user collaboration specs (two browser contexts
+# editing the same entry — block sync filters out same-user broadcasts)
+%Brando.Users.User{
+  name: "Second Editor",
+  email: "editor@brandocms.com",
+  password: Bcrypt.hash_pwd_salt("brandocms"),
+  avatar: nil,
+  role: :superuser,
+  language: :en,
+  config: %{
+    prefers_reduced_motion: false,
+    reset_password_on_first_login: false,
+    show_mutation_notifications: true,
+    content_language: :en
+  }
+}
+|> E2eProject.Repo.insert!()
+
 languages = Brando.config(:languages) |> Enum.map(&String.to_existing_atom(&1[:value]))
 
 # Create an identity for each language

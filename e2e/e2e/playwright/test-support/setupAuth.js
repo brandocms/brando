@@ -1,14 +1,52 @@
 // setup.js
 import { test as baseTest, expect } from '@playwright/test'
 
+// Log a user in and build a browser context bound to the given sandbox
+// user-agent. Every context sharing the same user-agent shares the same
+// per-test SQL sandbox session — this is what makes multi-user specs
+// possible (see the `secondUserPage` fixture).
+async function buildUserPage(browser, userAgentString, email) {
+  const authResponse = await fetch(`http://localhost:4444/e2e/login/${email}`, {
+    method: 'POST',
+    headers: {
+      'user-agent': userAgentString,
+    },
+  })
+
+  const context = await browser.newContext({
+    baseURL: 'http://localhost:4444',
+    userAgent: userAgentString,
+  })
+
+  const setCookieHeader = authResponse.headers.get('set-cookie')
+
+  if (setCookieHeader) {
+    const cookies = parseSetCookieHeader(setCookieHeader)
+    await context.addCookies(cookies)
+  }
+
+  // Hide toast notifications so they don't intercept pointer events in tests
+  await context.addInitScript(() => {
+    const style = document.createElement('style')
+    style.textContent = '.iziToast-wrapper { display: none !important; }'
+    const inject = () => document.head?.appendChild(style.cloneNode(true))
+    if (document.head) inject()
+    else document.addEventListener('DOMContentLoaded', inject)
+  })
+
+  const page = await context.newPage()
+  return { context, page }
+}
+
 export const test = baseTest.extend({
   // We put this placeholder here so that we can use it in the page fixture
   // In test files, we replace with the actual scenario name
   // via `test.use({ scenario: 'scenario-name' })`
   scenario: '',
-  page: async ({ browser, scenario }, use) => {
-    // IMPORTANT: Checkout sandbox FIRST to get the user-agent string
-    // All subsequent requests must use this user-agent for sandbox isolation
+
+  // Per-test SQL sandbox session. All contexts created with this user-agent
+  // share one sandbox transaction, rolled back at test end.
+  sandboxUserAgent: async ({}, use) => {
     const sandboxResp = await fetch('http://localhost:4444/sandbox', {
       method: 'POST',
     })
@@ -23,55 +61,8 @@ export const test = baseTest.extend({
       throw new Error(`Invalid sandbox response: ${userAgentString}`)
     }
 
-    // Login WITH the sandbox user-agent so the request uses the sandbox connection
-    const authResponse = await fetch(
-      'http://localhost:4444/e2e/login/admin@brandocms.com',
-      {
-        method: 'POST',
-        headers: {
-          'user-agent': userAgentString,
-        },
-      }
-    )
-
-    // We setup a new browser context with the user agent string
-    // This allows the database to be sandboxed and provides isolation
-    const context = await browser.newContext({
-      baseURL: 'http://localhost:4444',
-      userAgent: userAgentString,
-    })
-
-    // Extract and set cookies
-    const setCookieHeader = authResponse.headers.get('set-cookie')
-
-    if (setCookieHeader) {
-      const cookies = parseSetCookieHeader(setCookieHeader)
-      await context.addCookies(cookies)
-    }
-
-    const page = await context.newPage()
-
-    // Hide toast notifications so they don't intercept pointer events in tests
-    await context.addInitScript(() => {
-      const style = document.createElement('style')
-      style.textContent = '.iziToast-wrapper { display: none !important; }'
-      const inject = () => document.head?.appendChild(style.cloneNode(true))
-      if (document.head) inject()
-      else document.addEventListener('DOMContentLoaded', inject)
-    })
-
-    // page.request allows us to execute a HTTP call in the actual browser context
-    // It's used for setting up fixtures in the database
-    // and will also allow the created user to be logged in
-    // via a cookie returned in the response
-    // await page.request.post(`http://localhost:4444/e2e/setup_fixtures/${scenario}`, {
-    //   headers: {
-    //     'user-agent': userAgentString
-    //   }
-    // })
-
     try {
-      await use(page)
+      await use(userAgentString)
     } finally {
       // Ensure sandbox is always cleaned up, even if the test fails.
       // Without this, failed tests leak sandbox connections, causing
@@ -82,6 +73,28 @@ export const test = baseTest.extend({
           'user-agent': userAgentString,
         },
       })
+    }
+  },
+
+  page: async ({ browser, sandboxUserAgent, scenario }, use) => {
+    const { context, page } = await buildUserPage(browser, sandboxUserAgent, 'admin@brandocms.com')
+
+    try {
+      await use(page)
+    } finally {
+      await context.close()
+    }
+  },
+
+  // A SECOND logged-in user (seeded "editor@brandocms.com") sharing the same
+  // sandbox session as `page` — for multi-user collaboration specs. Lazy:
+  // only set up when a test declares it.
+  secondUserPage: async ({ browser, sandboxUserAgent }, use) => {
+    const { context, page } = await buildUserPage(browser, sandboxUserAgent, 'editor@brandocms.com')
+
+    try {
+      await use(page)
+    } finally {
       await context.close()
     }
   },
