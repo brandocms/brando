@@ -43,15 +43,9 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   def handle_block_event("paste_block", _, socket) do
     parent_ref = socket.assigns.parent_ref
 
-    sequence =
-      case socket.assigns.form[:sequence].value do
-        v when is_integer(v) -> v
-        v when is_binary(v) -> String.to_integer(v)
-      end
-
     send_to_ref(parent_ref, %{
       event: "paste_block",
-      sequence: sequence
+      sequence: socket.assigns.list_index
     })
 
     {:halt, socket}
@@ -218,7 +212,6 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
     socket
     |> Block.assign_block_form(new_form)
-    |> Block.send_form_to_parent()
     |> Block.render_module()
     |> Block.maybe_update_live_preview_block()
     |> then(&{:halt, &1})
@@ -580,7 +573,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
     {parent_ref, sequence} =
       (Map.get(value, "container") && {{Block, socket.assigns.id}, block_count}) ||
-        {socket.assigns.parent_ref, socket.assigns.form[:sequence].value}
+        {socket.assigns.parent_ref, socket.assigns.list_index}
 
     send_update(ModulePicker,
       id: block_picker_id,
@@ -599,7 +592,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     block_picker_id = "block-field-#{socket.assigns.block_field}-module-picker"
     parent_ref = (Map.get(value, "multi") && {Block, socket.assigns.id}) || socket.assigns.parent_ref
     block_count = socket.assigns.block_count
-    sequence = (Map.get(value, "multi") && block_count) || socket.assigns.form[:sequence].value
+    sequence = (Map.get(value, "multi") && block_count) || socket.assigns.list_index
 
     module_id =
       if socket.assigns.parent_module_id do
@@ -666,8 +659,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     |> assign(:block_list, new_block_list)
     |> assign(:changesets, new_changesets)
     |> Block.emit_block_op({:reorder_children, socket.assigns.uid, new_block_list})
-    |> Block.reset_position_response_tracker()
-    |> Block.send_child_position_update(new_block_list)
+    |> Block.refresh_live_preview()
     |> then(&{:halt, &1})
   end
 
@@ -764,7 +756,6 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     socket
     |> Block.assign_block_form(updated_form)
     |> assign(:form_has_changes, updated_form.source.changes !== %{})
-    |> Block.send_form_to_parent()
     |> Block.maybe_update_liquex_block_var(params_target, params)
     |> Block.maybe_update_live_preview_block()
     |> then(&{:halt, &1})
@@ -871,7 +862,6 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     |> Block.maybe_update_container(params_target)
     |> Block.maybe_update_fragment(params_target)
     |> Block.maybe_update_live_preview_block()
-    |> Block.send_form_to_parent()
     |> then(&{:halt, &1})
   end
 

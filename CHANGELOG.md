@@ -94,6 +94,17 @@
 
 #### Improvements
 
+- **Block editor single-owner state (the clobber class is gone)**: Each block
+  live_component now owns its editing state exclusively. After first mount, parent
+  re-renders can no longer overwrite a block's form (`update/2` drops incoming
+  `form`/`children` assigns), forms never travel between components (the
+  `send_form_to_parent`/`update_block` push-up/push-down protocol and the `propagate`
+  flag are deleted), and the O(n) position-ack handshake is gone — sequence derives
+  from list order at save materialization, blocks receive their current position as a
+  `list_index` prop, and structural changes refresh the live preview directly. The
+  historical "sibling edit/FK wiped by a stale cached form" bug class is now
+  structurally unrepresentable.
+
 - **Block editor op layer (strangler phase)**: Every structural/content mutation in
   the block editor (insert, duplicate, paste, delete, reorder, content commits, remote
   sync, reconnect recovery) is now mirrored through named operations applied by a pure

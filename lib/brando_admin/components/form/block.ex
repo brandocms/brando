@@ -17,7 +17,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:initial_render, false)
     |> assign(:dom_id, nil)
     |> assign(:children_forms, [])
-    |> assign(:position_response_tracker, [])
     |> assign(:source, nil)
     |> assign(:live_preview_active?, false)
     |> assign(:live_preview_cache_key, nil)
@@ -130,8 +129,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:changesets, updated_changesets)
     |> update(:block_count, &(&1 + 1))
     |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(block_cs)})
-    |> reset_position_response_tracker()
-    |> send_child_position_update(new_block_list)
+    |> refresh_live_preview()
     |> push_event("b:scroll_to", %{selector: selector})
     |> then(&{:ok, &1})
   end
@@ -166,8 +164,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:block_list, new_block_list)
     |> assign(:changesets, new_changesets)
     |> emit_block_op({:reorder_children, socket.assigns.uid, new_block_list})
-    |> reset_position_response_tracker()
-    |> send_child_position_update(new_block_list)
+    |> refresh_live_preview()
     |> then(&{:ok, &1})
   end
 
@@ -216,8 +213,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:children_forms, new_forms)
     |> assign(:has_children?, has_children?)
     |> assign(:block_count, length(new_block_list))
-    |> reset_position_response_tracker()
-    |> send_child_position_update(new_block_list)
+    |> refresh_live_preview()
     |> then(&{:ok, &1})
   end
 
@@ -254,8 +250,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:changesets, updated_changesets)
     |> update(:block_count, &(&1 + 1))
     |> emit_block_op({:insert_child, socket.assigns.uid, new_uid, new_sequence, Ops.block_diff_params(updated_block_cs)})
-    |> reset_position_response_tracker()
-    |> send_child_position_update(new_block_list)
+    |> refresh_live_preview()
     |> push_event("b:scroll_to", %{selector: selector})
     |> reset_changesets(uid)
     |> then(&{:ok, &1})
@@ -309,8 +304,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> assign(:changesets, updated_changesets)
       |> update(:block_count, &(&1 + 1))
       |> emit_block_op({:insert_child, socket.assigns.uid, new_uid, sequence, Ops.block_diff_params(updated_block_cs)})
-      |> reset_position_response_tracker()
-      |> send_child_position_update(new_block_list)
+      |> refresh_live_preview()
       |> push_event("b:scroll_to", %{selector: selector})
       |> then(&{:ok, &1})
     end
@@ -421,7 +415,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
     |> update_changeset_data_block_var(var_key, var_type, data)
     |> update_liquex_block_var(var_key, var_type, data)
-    |> maybe_propagate_block_var(var_type)
     |> then(&{:ok, &1})
   end
 
@@ -521,53 +514,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     end)
     |> update(:block_count, &(&1 - 1))
     |> emit_block_op({:delete, uid})
-    |> reset_position_response_tracker()
-    |> send_child_position_update(new_block_list)
-    |> update_live_preview_on_empty_block_list()
+    |> refresh_live_preview()
     |> then(&{:ok, &1})
-  end
-
-  def update(%{event: "update_sequence", sequence: sequence}, socket) do
-    belongs_to = socket.assigns.belongs_to
-    parent_ref = socket.assigns.parent_ref
-    changeset = socket.assigns.form.source
-    uid = socket.assigns.uid
-
-    updated_block_cs =
-      changeset
-      |> get_block_changeset(belongs_to)
-      |> Changeset.put_change(:sequence, sequence)
-
-    updated_form =
-      if belongs_to == :root do
-        updated_changeset =
-          changeset
-          |> Changeset.put_assoc(:block, updated_block_cs)
-          |> Changeset.put_change(:sequence, sequence)
-
-        to_form(
-          updated_changeset,
-          as: "entry_block",
-          id: "entry_block_form-#{uid}"
-        )
-      else
-        to_form(
-          updated_block_cs,
-          as: "child_block",
-          id: "child_block_form-#{uid}"
-        )
-      end
-
-    send_to_ref(parent_ref, %{event: "signal_position_update", uid: uid})
-
-    {:ok,
-     socket
-     |> assign(:form_has_changes, updated_form.source.changes !== %{})
-     |> assign(:form, updated_form)}
-  end
-
-  def update(%{event: "signal_position_update", uid: uid}, socket) do
-    BrandoAdmin.Components.Form.BlockChangesetList.handle_position_response(socket, uid)
   end
 
   def update(%{event: "clear_changesets"}, socket) do
@@ -725,17 +673,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     {:ok, assign(socket, :changesets, updated_changesets)}
   end
 
-  def update(%{event: "update_block", form: form}, socket) do
-    uid = Changeset.get_field(form.source, :uid)
-
-    updated =
-      Enum.map(socket.assigns.children_forms, fn child_form ->
-        if Changeset.get_field(child_form.source, :uid) == uid, do: form, else: child_form
-      end)
-
-    {:ok, assign(socket, :children_forms, updated)}
-  end
-
   def update(%{event: "insert_block", sequence: sequence, module_id: module_id, type: type}, socket) do
     module_id = String.to_integer(module_id)
     user_id = socket.assigns.current_user_id
@@ -768,8 +705,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:changesets, updated_changesets)
     |> update(:block_count, &(&1 + 1))
     |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(empty_block_cs)})
-    |> reset_position_response_tracker()
-    |> send_child_position_update(updated_block_list)
+    |> refresh_live_preview()
     |> push_event("b:scroll_to", %{selector: selector})
     |> then(&{:ok, &1})
   end
@@ -832,7 +768,6 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> assign_block_form(new_form)
-    |> send_form_to_parent()
     |> maybe_update_live_preview_block()
     |> then(&{:ok, &1})
   end
@@ -840,7 +775,6 @@ defmodule BrandoAdmin.Components.Form.Block do
   def update(%{event: "update_ref_data", ref_name: ref_name} = params, socket) do
     ref_data = Map.get(params, :ref_data)
     force_render? = Map.get(params, :force_render, false)
-    propagate? = Map.get(params, :propagate, false)
     media_ref? = media_ref_change?(params)
     form = socket.assigns.form
     changeset = form.source
@@ -995,7 +929,6 @@ defmodule BrandoAdmin.Components.Form.Block do
       )
 
     socket = assign_block_form(socket, new_form)
-    if propagate?, do: send_form_to_parent(socket)
 
     socket
     |> maybe_reload_or_update_live_preview(media_ref?)
@@ -1016,8 +949,20 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def update(assigns, socket) do
-    changeset = assigns.form.source
-    belongs_to = assigns.belongs_to
+    # After first mount this block owns its form exclusively — a parent
+    # re-render must never overwrite local editing state with the parent's
+    # seed copy (the historical clobber/FK-wipe class). Structural and shared
+    # assigns (list_index, entry, clipboard_meta, ...) still flow through.
+    assigns =
+      if socket.assigns[:block_initialized] do
+        Map.drop(assigns, [:form, :children])
+      else
+        assigns
+      end
+
+    form = assigns[:form] || socket.assigns.form
+    changeset = form.source
+    belongs_to = assigns[:belongs_to] || socket.assigns.belongs_to
     block_cs = get_block_changeset(changeset, belongs_to)
 
     socket
@@ -1098,19 +1043,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     send_update(__MODULE__, id: block_id, event: "clear_changesets")
     socket
   end
-
-  # File/image/link var commits are discrete one-shot events (upload complete,
-  # picker select, reset) — NOT per-keystroke. Propagate the updated form to the
-  # parent so its cached copy carries the new FK. Without this the parent keeps a
-  # stale form (file_id=nil) and pushes it back down on the next re-render,
-  # blanking the hidden input so validate/save submits "" and wipes the file.
-  # (Text/color vars must NOT propagate here — that would clobber siblings and
-  # cause the per-keystroke fan-out.)
-  defp maybe_propagate_block_var(socket, var_type) when var_type in [:file, :image, :link] do
-    send_form_to_parent(socket)
-  end
-
-  defp maybe_propagate_block_var(socket, _var_type), do: socket
 
   def update_changeset_data_block_var(socket, var_key, type, data) when type in [:file, :image] do
     # Write the foreign key (:file_id / :image_id) — the field the input renders
@@ -1604,18 +1536,19 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp assoc_is_loaded(%Ecto.Association.NotLoaded{}), do: false
   defp assoc_is_loaded(_), do: true
 
-  defdelegate reset_position_response_tracker(socket),
-    to: BrandoAdmin.Components.Form.BlockChangesetList
+  @doc """
+  Ask the Form to refresh the live preview after a structural change.
 
-  # after we've sent messages to block asking for position updates, if we have deleted the
-  # last child block, we refresh the live preview
-  defp update_live_preview_on_empty_block_list(%{assigns: %{block_list: []}} = socket) do
-    form_id = socket.assigns.form_id
-    send_update(BrandoAdmin.Components.Form, id: form_id, event: "update_live_preview")
-    socket
-  end
+  Sequence is derived from list order at materialization, so structural
+  changes no longer fan out per-block sequence restamps or wait for an ack
+  barrier before refreshing.
+  """
+  def refresh_live_preview(socket) do
+    send_update(BrandoAdmin.Components.Form,
+      id: socket.assigns.form_id,
+      event: "update_live_preview"
+    )
 
-  defp update_live_preview_on_empty_block_list(socket) do
     socket
   end
 
@@ -1679,18 +1612,6 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   defp extract_uid(%Ecto.Changeset{} = cs) do
     Ecto.Changeset.get_field(cs, :uid)
-  end
-
-  def send_child_position_update(socket, block_list) do
-    # send_update to all components in block_list
-    parent_id = socket.assigns.id
-
-    for {block_uid, idx} <- Enum.with_index(block_list) do
-      id = "#{parent_id}-child-#{block_uid}"
-      send_update(__MODULE__, id: id, event: "update_sequence", sequence: idx)
-    end
-
-    socket
   end
 
   defdelegate update_child_changeset(changesets, uid, new_changeset),
@@ -1768,29 +1689,18 @@ defmodule BrandoAdmin.Components.Form.Block do
     changeset
   end
 
-  def send_form_to_parent(socket) do
-    parent_ref = socket.assigns.parent_ref
-    level = socket.assigns.level
-    form = socket.assigns.form
-
-    send_to_ref(parent_ref, %{event: "update_block", level: level, form: form})
-    socket
-  end
-
   @doc """
   Assign a rebuilt block form AND mirror its changes into the BlockField op
   state (Phase 3 single-owner refactor).
 
   This is the chokepoint for content commits: every handler that rebuilds
   this block's form must assign it through here so the uid-keyed diff store
-  stays save-complete — including local-only updates that never propagate a
-  form to the parent (resets, var edits, table rows). Ops carry param diffs,
-  never forms, so emitting on every commit cannot clobber sibling state.
+  stays save-complete. Forms never travel between components — each block
+  owns its form exclusively; the parent only sees param-diff ops.
 
   Exceptions that intentionally assign `:form` directly: live-preview
   render stamping (`rendered_html`/`rendered_at` only — materialization
-  strips render artifacts anyway) and sequence restamps (order lives in
-  BlockField's op state).
+  strips render artifacts anyway).
   """
   def assign_block_form(socket, form) do
     socket
