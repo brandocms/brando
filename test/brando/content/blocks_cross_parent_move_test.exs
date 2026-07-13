@@ -248,6 +248,131 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert [%{block: %{uid: "newroot"}}] = preloaded_entry_blocks(page.id)
   end
 
+  test "a UI-shaped child insert (build_block diff) persists through save" do
+    user = Factory.insert(:random_user)
+
+    {:ok, module} =
+      Brando.Content.create_module(
+        %{
+          name: %{"en" => "Member"},
+          namespace: %{"en" => "test"},
+          help_text: %{"en" => "help"},
+          class: "member",
+          code: "<div>{% ref refs.text %} {{ title }}</div>",
+          refs: [
+            %{
+              name: "text",
+              uid: "testref01",
+              description: "text ref",
+              data: %{
+                type: "text",
+                data: %{text: "Default text", type: "paragraph"}
+              }
+            }
+          ],
+          vars: [
+            %{
+              type: :string,
+              label: "Title",
+              key: "title",
+              value: "Default title",
+              important: true,
+              width: :full
+            }
+          ]
+        },
+        user
+      )
+
+    {page, _} = insert_page_with_containers(user)
+    entry_blocks = preloaded_entry_blocks(page.id)
+    ops = Ops.from_entry_blocks(entry_blocks)
+
+    # exactly what Block's insert_block handler emits for a new child
+    empty_block_cs =
+      BrandoAdmin.Components.Form.BlockField.build_block(
+        module.id,
+        user.id,
+        nil,
+        "Elixir.Brando.Pages.Page.Blocks",
+        :module
+      )
+
+    child_uid = Changeset.get_field(empty_block_cs, :uid)
+    diff = Ops.block_diff_params(empty_block_cs)
+    {:ok, ops} = Ops.apply_op(ops, {:insert_child, "containerB", child_uid, 0, diff})
+
+    assert {:ok, _} = save_from_ops(page, entry_blocks, ops, user)
+
+    reloaded = preloaded_entry_blocks(page.id)
+    assert [_, %{block: %{uid: "containerB", children: [inserted]}}] = reloaded
+    assert inserted.uid == child_uid
+    assert inserted.module_id == module.id
+    assert length(inserted.refs) == 1
+    assert length(inserted.vars) == 1
+  end
+
+  test "CREATE flow: new entry + new root + new child in one insert cascade" do
+    user = Factory.insert(:random_user)
+
+    # new multi root with a new child — the create-form flow (nothing persisted)
+    ops = Ops.new([])
+
+    {:ok, ops} =
+      Ops.apply_op(
+        ops,
+        {:insert, "newmulti", 0,
+         %{
+           "block" => %{
+             "uid" => "newmulti",
+             "type" => "module",
+             "multi" => true,
+             "active" => true,
+             "creator_id" => user.id,
+             "source" => "Elixir.Brando.Pages.Page.Blocks"
+           }
+         }}
+      )
+
+    {:ok, ops} =
+      Ops.apply_op(
+        ops,
+        {:insert_child, "newmulti", "newkid", 0,
+         %{
+           "uid" => "newkid",
+           "type" => "module",
+           "active" => true,
+           "creator_id" => user.id,
+           "description" => "brand new child",
+           "source" => "Elixir.Brando.Pages.Page.Blocks"
+         }}
+      )
+
+    {:ok, params} = Ops.materialize_root(ops, "newmulti")
+
+    base_block = %Brando.Content.Block{vars: [], refs: [], table_rows: [], children: [], block_identifiers: []}
+    base = %Brando.Pages.Page.Blocks{} |> Map.put(:block, base_block)
+    cs = Brando.Pages.Page.Blocks.changeset(base, params, user.id, true)
+
+    updated =
+      [cs]
+      |> ContentBlocks.reject_deleted(true)
+      |> ContentBlocks.strip_render_artifacts()
+      |> Enum.map(&Brando.Utils.set_action/1)
+
+    page_params = Factory.params_for(:page) |> Map.put(:creator_id, user.id)
+
+    assert {:ok, page} =
+             %Brando.Pages.Page{}
+             |> Brando.Pages.Page.changeset(page_params, user)
+             |> Changeset.put_assoc(:entry_blocks, updated)
+             |> Brando.Repo.insert()
+
+    assert [%{block: %{uid: "newmulti", children: [kid]}}] = preloaded_entry_blocks(page.id)
+    assert kid.uid == "newkid"
+    assert kid.description == "brand new child"
+  end
+
   test "a second save after the move is a no-op for the moved child" do
     user = Factory.insert(:random_user)
     {page, _} = insert_page_with_containers(user)

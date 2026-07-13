@@ -572,6 +572,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     block_module = assigns.block_module
     user_id = assigns.current_user.id
     entry_blocks = assigns.entry_blocks || []
+
     entry_blocks_forms = Enum.map(entry_blocks, &to_change_form(block_module, &1, %{}, user_id))
     block_list = Enum.map(entry_blocks, & &1.block.uid)
 
@@ -637,6 +638,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     user_id = socket.assigns.current_user.id
     block_module = socket.assigns.block_module
     entry_blocks = socket.assigns.entry_blocks || []
+
     entry_blocks_forms = Enum.map(entry_blocks, &to_change_form(block_module, &1, %{}, user_id))
     block_list = Enum.map(entry_blocks, & &1.block.uid)
 
