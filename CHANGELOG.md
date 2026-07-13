@@ -94,6 +94,34 @@
 
 #### Improvements
 
+- **Block editor typing latency**: Validating a block no longer runs a full Villain
+  render (plus an HTML-formatter pass) per debounced keystroke while live preview is
+  closed — rendering is gated on the preview being open, and pretty-printing was
+  dropped from the editor path entirely. Entry-field keystrokes likewise no longer
+  re-render entry-consuming blocks with the preview closed.
+
+- **Liquex parse cache**: Parsed Liquid documents for module/container templates are
+  cached in ETS keyed by template hash (mirroring the HEEx renderer's compile cache),
+  so constant templates parse once per code version instead of on every render.
+  `Villain.render_block/3` also now copies only the cached lists the block type
+  actually consumes out of Cachex (one list for module blocks instead of four).
+
+- **Block tree loading**: The hand-unrolled per-level `children` preloads (~25 queries
+  per nesting level, hard-capped at 4 levels) were replaced with a recursive-CTE
+  function preload plus one batched preload pass — fewer queries on every form open
+  and post-save reload, and no more nesting-depth cap.
+
+- **Save write amplification**: Editor-stamped `rendered_html`/`rendered_at` changes
+  are stripped from block changesets at save assembly. Opening live preview previously
+  dirtied every block row, turning a one-block edit into an UPDATE per block.
+
+- **Block editor shared helpers**: One-shot media commits (select / reset /
+  upload-complete / image-editor) now route through `Block.commit_ref_data/2`, which
+  hardwires the required cache propagation so it can no longer be forgotten by
+  copy-paste. The duplicated block-data-map, media-resolution, crop-group, and
+  image-editor-open logic across picture/video/gallery/map blocks was extracted into
+  shared `Block`/`Form` helpers (net ~230 lines removed).
+
 - **Villain render pipeline**: Use iodata lists instead of string concatenation for
   improved rendering performance.
 
@@ -148,6 +176,17 @@
   plain helper modules are rejected.
 
 #### Bug Fixes
+
+- **Video/map block media loss**: several video block commits (`select_video`,
+  `video_created_from_url`, cover-image select/reset, override resets) and the map
+  block's embed-URL commit did not propagate to the parent's cached form, so a
+  subsequent block insert/delete silently wiped the just-set `video_id` / embed URL.
+  All media commits now propagate (and route through `Block.commit_ref_data/2`).
+
+- **Map block crashed the form**: inserting a map block crashed the entire form
+  LiveView — `Villain.Parser.map/2` had no clause for an unconfigured map (no embed
+  URL yet) and the editor's validate-time render hit it immediately. An empty
+  fallback clause was added, matching the other media parsers.
 
 - **Upload manager audit fixes**: consume-time storage errors (e.g. mimetype
   rejections) no longer crash the sticky manager and kill in-flight uploads;

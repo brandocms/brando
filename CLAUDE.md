@@ -62,14 +62,18 @@ DOWN to every sibling**, and the generic child `update(assigns, socket)` then ad
   local edits** and disrupting focus/cursor. This is a recurring, painful bug — keep
   propagation OPT-IN. (`update_ref_data` takes `propagate?` defaulting to `false` for
   exactly this reason; it was added in `bfbeda9f8` "Move gallery blocks to live upload".)
-- **DO propagate at discrete media-commit points.** When a picker/upload/image-editor
-  sets a ref's `image_id`/`video_id`/`file_id`/`gallery_id` out-of-band, it MUST pass
-  `propagate: true` to `update_ref_data`. Otherwise the parent cache stays stale, and the
-  next block-list change (insert/delete) re-initializes the block from that stale cache and
-  **silently wipes the just-set FK** — the live preview (and a save right after) lose the
-  media. These are safe to propagate because they're one-shot commits, not active typing.
-  All media setters in `picture_block` / `video_block` / `gallery_block` / `map_block`
-  (upload-complete, select, reset, image-editor) should pass `propagate: true`.
+- **DO propagate at discrete media-commit points — via `Block.commit_ref_data/2`.** When
+  a picker/upload/image-editor sets a ref's `image_id`/`video_id`/`file_id`/`gallery_id`
+  out-of-band, the commit MUST reach the parent cache. Otherwise the cache stays stale, and
+  the next block-list change (insert/delete) re-initializes the block from that stale cache
+  and **silently wipes the just-set FK** — the live preview (and a save right after) lose
+  the media. These are safe to propagate because they're one-shot commits, not active
+  typing. **Never call `send_update(..., event: "update_ref_data", ...)` directly for a
+  commit** — use `Block.commit_ref_data(socket, opts)`, which hardwires `propagate: true`
+  so forgetting it is impossible (that exact omission caused repeated FK-wipe bugs in
+  `video_block`/`map_block`). Related helpers: `Block.current_block_data_map/3` for
+  building `ref_data` payloads, `Block.resolve_ref_association/4` for display-media
+  resolution, `Block.push_image_editor_init/3` for opening the image editor from blocks.
 
 ### Ecto Changeset Patterns
 - **put_assoc handles FK automatically**: Don't mix `put_change(:gallery_id, nil)` with `put_assoc(:gallery, ...)`. Let `put_assoc` manage the foreign key.

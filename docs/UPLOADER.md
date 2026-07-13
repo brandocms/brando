@@ -470,7 +470,8 @@ its existing Mux/Bunny orchestration, just surfaced in the shared queue.
   - `:block_var` → the existing `update_block_var` path (today's `:type`→`file_id` +
     `send_form_to_parent` propagation fixes apply here — keep them).
   - `:block_ref` → set the ref's `image_id`/`file_id`/`video_id` (existing `update_ref_data`,
-    `propagate: true`).
+    `propagate: true` — now wrapped by `Block.commit_ref_data/2`, which hardwires the
+    propagation; new delivery code should call the helper, not raw `send_update`).
   - `:entry_field` → `EctoNestedChangeset.update_at(path, id)` (as `save_file` does today,
     `form.ex:3594-3601`).
 - **This is the only place the form re-renders per upload — once, on completion.**
