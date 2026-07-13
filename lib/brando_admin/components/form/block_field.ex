@@ -6,8 +6,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   alias Brando.Content.Blocks, as: ContentBlocks
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
+  alias BrandoAdmin.Components.Form.BlockField.Ops
   alias BrandoAdmin.Components.Form.BlockField.Outline
   alias Ecto.Changeset
+
+  require Logger
 
   def mount(socket) do
     {:ok, assign(socket, :outline_items, [])}
@@ -54,6 +57,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_list, new_block_list)
     |> assign(:root_changesets, updated_root_changesets)
     |> update(:block_count, &(&1 + 1))
+    |> apply_block_op({:insert, new_uid, new_sequence, Ops.changes_to_params(entry_block_cs)})
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
     |> then(&{:ok, &1})
@@ -118,6 +122,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       |> assign(:block_list, new_block_list)
       |> assign(:root_changesets, updated_root_changesets)
       |> update(:block_count, &(&1 + 1))
+      |> apply_block_op({:insert, new_uid, new_sequence, Ops.changes_to_params(entry_block_cs)})
       |> reset_position_response_tracker()
       |> send_block_entry_position_update(new_block_list)
       |> then(&{:ok, &1})
@@ -196,13 +201,21 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     uid = get_form_block_uid(entry_block_form)
     updated = replace_form_by_uid(socket.assigns.entry_blocks_forms, uid, entry_block_form)
-    {:ok, assign(socket, :entry_blocks_forms, updated)}
+
+    socket
+    |> assign(:entry_blocks_forms, updated)
+    |> apply_block_op({:update, uid, Ops.changes_to_params(entry_block_form.source)})
+    |> then(&{:ok, &1})
   end
 
   def update(%{event: "update_block", level: _level, form: form}, socket) do
     uid = get_form_block_uid(form)
     updated = replace_form_by_uid(socket.assigns.entry_blocks_forms, uid, form)
-    {:ok, assign(socket, :entry_blocks_forms, updated)}
+
+    socket
+    |> assign(:entry_blocks_forms, updated)
+    |> apply_block_op({:update, uid, Ops.changes_to_params(form.source)})
+    |> then(&{:ok, &1})
   end
 
   def update(%{event: "provide_root_block", changeset: changeset, uid: uid, tag: tag}, socket) do
@@ -291,6 +304,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_list, new_block_list)
     |> assign(:root_changesets, updated_root_changesets)
     |> update(:block_count, &(&1 + 1))
+    |> apply_block_op({:insert, uid, sequence, Ops.changes_to_params(entry_block_cs)})
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
     |> push_event("b:scroll_to", %{selector: selector})
@@ -333,6 +347,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_list, new_block_list)
     |> update(:block_count, &(&1 + 1))
     |> assign(:root_changesets, updated_root_changesets)
+    |> apply_block_op({:insert, uid, sequence, Ops.changes_to_params(entry_block_cs)})
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
     |> then(&{:ok, &1})
@@ -374,6 +389,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_list, new_block_list)
     |> assign(:root_changesets, updated_root_changesets)
     |> update(:block_count, &(&1 + 1))
+    |> apply_block_op({:insert, uid, sequence, Ops.changes_to_params(entry_block_cs)})
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
     |> then(&{:ok, &1})
@@ -524,6 +540,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       {:ok,
        socket
        |> assign(:entry_blocks_forms, updated_forms)
+       |> apply_block_op({:update, uid, Ops.changes_to_params(cs)})
        |> push_event("b:component:remount_block", %{uid: uid})}
     else
       {:ok, socket}
@@ -583,6 +600,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       |> assign(:block_list, new_block_list)
       |> assign(:root_changesets, updated_root_changesets)
       |> update(:block_count, &(&1 + 1))
+      |> apply_block_op({:insert, remote_uid, clamped_sequence, Ops.changes_to_params(entry_block_cs)})
       |> reset_position_response_tracker()
       |> send_block_entry_position_update(new_block_list)
       |> then(&{:ok, &1})
@@ -621,6 +639,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:entry_blocks_forms, new_forms)
     |> assign(:block_list, remote_block_list)
     |> assign(:root_changesets, new_root_changesets)
+    |> apply_block_op({:reorder, remote_block_list})
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(remote_block_list)
     |> then(&{:ok, &1})
@@ -658,11 +677,31 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_list, block_list)
     |> assign(:block_count, length(block_list))
     |> assign(:root_changesets, Enum.map(entry_blocks, &{&1.block.uid, nil}))
+    |> assign(:block_ops, Ops.new(block_list))
     |> assign(:module_picker_id, "#block-field-#{assigns.block_field}-module-picker")
     |> assign(:clipboard_meta, nil)
     |> assign(:blocks_topic, blocks_topic)
     |> maybe_sequence_initial_blocks(entry_blocks, block_list)
     |> assign(:blocks_initialized, true)
+  end
+
+  # Strangler-phase op application (see `Ops` moduledoc): every mutation the
+  # legacy cache performs is mirrored into the op state. A rejected op means
+  # the op state and the cache have drifted — log it loudly, keep the socket
+  # usable.
+  defp apply_block_op(socket, op) do
+    case Ops.apply_op(socket.assigns.block_ops, op) do
+      {:ok, ops_state} ->
+        assign(socket, :block_ops, ops_state)
+
+      {:error, reason} ->
+        Logger.error(
+          "BlockField (#{socket.assigns.block_field}) rejected block op " <>
+            "#{inspect(elem(op, 0))}: #{inspect(reason)}"
+        )
+
+        socket
+    end
   end
 
   # Saved blocks already carry index-based sequences, so the O(n)
@@ -695,6 +734,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_list, block_list)
     |> assign(:block_count, length(block_list))
     |> assign(:root_changesets, Enum.map(entry_blocks, &{&1.block.uid, nil}))
+    |> assign(:block_ops, Ops.new(block_list))
   end
 
   defp remove_block_from_state(socket, uid) do
@@ -710,6 +750,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       Enum.reject(forms, &(get_form_block_uid(&1) == uid))
     end)
     |> update(:block_count, &(&1 - 1))
+    |> apply_block_op({:delete, uid})
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
   end
@@ -717,6 +758,21 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp get_form_block_uid(form) do
     block_cs = Changeset.get_assoc(form.source, :block)
     Changeset.get_field(block_cs, :uid)
+  end
+
+  # Recovered blocks were never persisted (the fresh LV process re-initialized
+  # from the DB, so anything missing from the render was unsaved) — they enter
+  # the op state as inserts, then one reorder restores the pre-disconnect order.
+  defp apply_recovered_block_ops(socket, merged_forms, merged_uids, missing_set) do
+    forms_by_uid = Map.new(merged_forms, &{get_form_block_uid(&1), &1})
+
+    merged_uids
+    |> Enum.filter(&MapSet.member?(missing_set, &1))
+    |> Enum.reduce(socket, fn uid, acc ->
+      params = Ops.changes_to_params(forms_by_uid[uid].source)
+      apply_block_op(acc, {:insert, uid, :end, params})
+    end)
+    |> apply_block_op({:reorder, merged_uids})
   end
 
   defp replace_form_by_uid(forms, target_uid, new_form) do
@@ -780,6 +836,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:entry_blocks_forms, new_forms)
     |> assign(:block_list, new_block_list)
     |> assign(:root_changesets, new_root_changesets)
+    |> apply_block_op({:reorder, new_block_list})
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
     |> then(&{:noreply, &1})
@@ -853,6 +910,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:entry_blocks_forms, new_forms)
     |> assign(:block_list, new_block_list)
     |> assign(:root_changesets, new_root_changesets)
+    |> apply_block_op({:reorder, new_block_list})
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
     |> rebuild_outline_items()
@@ -1021,6 +1079,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> assign(:block_list, merged_uids)
         |> assign(:block_count, length(merged_uids))
         |> assign(:root_changesets, Enum.map(merged_uids, &{&1, nil}))
+        |> apply_recovered_block_ops(merged_forms, merged_uids, missing_set)
         |> reset_position_response_tracker()
         |> send_block_entry_position_update(merged_uids)
         |> then(&{:noreply, &1})
@@ -1470,6 +1529,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_list, new_block_list)
     |> assign(:root_changesets, updated_root_changesets)
     |> update(:block_count, &(&1 + 1))
+    |> apply_block_op({:insert, new_uid, sequence, Ops.changes_to_params(entry_block_cs)})
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
     |> push_event("b:scroll_to", %{selector: selector})

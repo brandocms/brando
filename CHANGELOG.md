@@ -94,6 +94,13 @@
 
 #### Improvements
 
+- **Block editor op layer (strangler phase)**: Every structural/content mutation in
+  `BlockField` (insert, duplicate, paste, delete, reorder, content commits, remote sync,
+  reconnect recovery) is now mirrored through named operations applied by a pure reducer
+  (`BlockField.Ops`) holding a uid order list and a uid-keyed param-diff store. The
+  reducer is fully unit-tested; the legacy `entry_blocks_forms` cache still drives
+  rendering/save until save-time materialization lands in the next step.
+
 - **Block editor keyed block list**: The root block list is now rendered with a keyed
   `:for` comprehension (`:key` on block uid), matching the already-keyed child lists.
   LiveView diffs blocks by identity instead of list index, so inserting, deleting or
