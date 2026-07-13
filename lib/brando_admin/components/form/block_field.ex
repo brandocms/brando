@@ -1187,35 +1187,39 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           data-sortable-handle=".sort-handle"
           data-sortable-selector=".block"
         >
-          <%= for entry_block_form <- @entry_blocks_forms do %>
-            <.inputs_for :let={block} field={entry_block_form[:block]} skip_hidden>
-              <div
-                id={"base-#{block[:uid].value}"}
-                data-id={entry_block_form[:id].value}
-                data-uid={block[:uid].value}
-                class="entry-block draggable"
-              >
-                <.live_component
-                  module={Block}
-                  id={"block-#{block[:uid].value}"}
-                  block_module={@block_module}
-                  block_field={@block_field}
-                  children={block[:children].value}
-                  parent_ref={{__MODULE__, @id}}
-                  parent_uid={}
-                  parent_path={[]}
-                  module_set={@module_set}
-                  entry={@entry}
-                  form={entry_block_form}
-                  form_id={@form_id}
-                  current_user_id={@current_user.id}
-                  belongs_to={:root}
-                  clipboard_meta={@clipboard_meta}
-                  level={0}
-                />
-              </div>
-            </.inputs_for>
-          <% end %>
+          <.inputs_for
+            :let={block}
+            :for={entry_block_form <- @entry_blocks_forms}
+            :key={get_form_block_uid(entry_block_form)}
+            field={entry_block_form[:block]}
+            skip_hidden
+          >
+            <div
+              id={"base-#{block[:uid].value}"}
+              data-id={entry_block_form[:id].value}
+              data-uid={block[:uid].value}
+              class="entry-block draggable"
+            >
+              <.live_component
+                module={Block}
+                id={"block-#{block[:uid].value}"}
+                block_module={@block_module}
+                block_field={@block_field}
+                children={block[:children].value}
+                parent_ref={{__MODULE__, @id}}
+                parent_uid={}
+                parent_path={[]}
+                module_set={@module_set}
+                entry={@entry}
+                form={entry_block_form}
+                form_id={@form_id}
+                current_user_id={@current_user.id}
+                belongs_to={:root}
+                clipboard_meta={@clipboard_meta}
+                level={0}
+              />
+            </div>
+          </.inputs_for>
         </div>
 
         <Block.plus

@@ -94,6 +94,14 @@
 
 #### Improvements
 
+- **Block editor keyed block list**: The root block list is now rendered with a keyed
+  `:for` comprehension (`:key` on block uid), matching the already-keyed child lists.
+  LiveView diffs blocks by identity instead of list index, so inserting, deleting or
+  reordering blocks no longer forces a re-render of every index-shifted sibling.
+  Root-block drag reordering switched to SortableJS fallback dragging
+  (`forceFallback: true`, like every other sortable in the admin) and gained e2e
+  regression specs — reorder + preview refresh + persistence were previously uncovered.
+
 - **Block editor typing latency**: Validating a block no longer runs a full Villain
   render (plus an HTML-formatter pass) per debounced keystroke while live preview is
   closed — rendering is gated on the preview being open, and pretty-printing was

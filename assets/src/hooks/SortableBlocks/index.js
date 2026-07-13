@@ -16,6 +16,9 @@ export default app => ({
       handle: handle,
       dragClass: 'drag-item',
       ghostClass: 'is-sorting',
+      // Fallback (synthetic mouse) dragging like the other sortable hooks —
+      // native HTML5 DnD can't be driven by Playwright in the e2e suite.
+      forceFallback: true,
 
       onStart: e => (isDragging = true), // prevent phx-blur from firing while dragging
       onEnd: e => {
