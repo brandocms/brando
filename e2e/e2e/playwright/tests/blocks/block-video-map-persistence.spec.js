@@ -25,9 +25,24 @@ test.describe('Video and map block save persistence', () => {
 
   // The bottom "Add block" (append) button and per-block gap "+" share the
   // same label; the append button is last in the DOM.
+  //
+  // Opening the picker right after a heavy re-render (the map iframe
+  // mounting) can lose the click's push event when morphdom replaces the
+  // button mid-click — the modal never opens and the spec used to hang until
+  // the test timeout (the recurring flake in this file). Retry the open until
+  // the picker content is actually on screen.
   const appendBlock = async (page, moduleName) => {
-    await page.getByRole('button', { name: 'Add block' }).last().click()
-    await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    const addBlock = page.getByRole('button', { name: 'Add block' }).last()
+    const category = page.getByRole('button', { name: '05 LIVE PREVIEW TEST' })
+
+    await expect(async () => {
+      if (!(await category.isVisible())) {
+        await addBlock.click({ timeout: 2000 })
+      }
+      await expect(category).toBeVisible({ timeout: 2000 })
+    }).toPass({ timeout: 20000 })
+
+    await category.click()
     await page.getByRole('button', { name: moduleName }).click()
     await syncLV(page)
   }
