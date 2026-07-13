@@ -105,6 +105,13 @@
   historical "sibling edit/FK wiped by a stale cached form" bug class is now
   structurally unrepresentable.
 
+- **Block editor docs truth pass**: New `guides/block_editor.md` (wiring blocks into a
+  blueprint, frontend rendering, modules/refs/vars/containers, editor state model and
+  debugging notes). CLAUDE.md's obsolete changeset-propagation section replaced with
+  the single-owner/ops architecture rules; UPLOADER.md delivery targets updated to the
+  op model; real `@moduledoc`s on `BlockField` and `Block` documenting state ownership;
+  `Block.commit_ref_data/2` no longer sends the dead `propagate` flag.
+
 - **Block editor multi-user sync ships op snapshots**: When an editor blurs a block,
   its subtree diff snapshot (param diffs + structure — never changesets) is broadcast
   straight from the op store and merged into other editors' stores, then handed to

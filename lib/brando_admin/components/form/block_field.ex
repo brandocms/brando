@@ -1,5 +1,39 @@
 defmodule BrandoAdmin.Components.Form.BlockField do
-  @moduledoc false
+  @moduledoc """
+  The owner of a block field's tree state: root order, nesting structure and
+  the uid-keyed param-diff store (`BlockField.Ops`).
+
+  ## State ownership (Phase 3 single-owner architecture)
+
+  * **This component owns**: the op store (`@block_ops` — order, parents,
+    child order, diffs, statuses, db ids, deleted list), the root block list,
+    clipboard meta, and the outline drawer.
+  * **Each `Block` live_component owns its editing state exclusively** —
+    forms never travel between components after mount. This component's
+    `@entry_blocks_forms` are *mount-time seeds only*; they are never pushed
+    back down to reconcile with mounted blocks.
+  * **Mutations arrive as named ops** (`update/2` clause for `"block_op"`),
+    emitted by blocks at every commit point via `Block.emit_block_op/2`, or
+    applied directly here for root-level structure (insert/delete/reorder/
+    paste/duplicate). `apply_block_op/2` runs the pure reducer; a rejected op
+    logs an error — that's a drift signal, investigate it.
+
+  ## Save / preview / share
+
+  `fetch_root_blocks` materializes every root changeset from the op store in
+  one pass (`Ops.materialize_root/2`) and answers the Form — there is no
+  gather protocol. After a completed save, `reload_all_blocks/1` re-seeds
+  every mounted block through the `replace_form` cascade (fresh db ids), the
+  only sanctioned parent→child form handoff after mount.
+
+  ## Multi-user sync
+
+  Blur ships `Ops.subtree_snapshot/2` over PubSub; receiving fields merge via
+  `Ops.apply_remote_snapshot/3`, re-materialize the affected root and hand
+  the fresh form to the mounted component (`apply_remote_block_ops` clause).
+  Structural broadcasts (add/delete/reorder) are mirrored into both the
+  legacy list assigns and the op store.
+  """
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 

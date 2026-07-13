@@ -48,32 +48,45 @@
 - **CID Stability**: When a component remounts, its `@myself` CID changes. Any stored references to the old CID become invalid.
 - **Constant Options in Templates**: Never call functions that return constant lists directly in HEEx templates (e.g., `opts={[options: my_options()]}`). Instead, assign constants once in `mount/1` using `assign_new/3` and reference via assigns (e.g., `opts={[options: @my_options]}`). This avoids re-evaluating the function on every render.
 
-### Block Editor: changeset propagation (`send_form_to_parent` / the `propagate` flag)
+### Block Editor: single-owner state & ops (Phase 3 architecture)
 
-Each block is its own `live_component` holding its own `form.source`. The parent
-(`BlockField`) caches every child's form in `entry_blocks_forms`. `send_form_to_parent`
-sends `{event: "update_block", form: ...}` up; the parent does `replace_form_by_uid` and
-re-assigns — which **re-renders the whole block list and pushes the cached forms back
-DOWN to every sibling**, and the generic child `update(assigns, socket)` then adopts
-`assigns.form` (overwriting its own `form.source`).
+Each block is its own `live_component` and **owns its editing state exclusively** —
+after first mount, a parent re-render can never overwrite a block's form (`Block.update/2`
+drops incoming `:form`/`:children` assigns once initialized). Forms never travel between
+components. The parent (`BlockField`) owns **order + structure + a uid-keyed param-diff
+store** (`BlockField.Ops` — a pure, unit-tested reducer over
+`{order, parents, child_order, diffs, statuses, db_ids, deleted}`).
 
-- **DO NOT propagate on every change.** Propagating on each validate/keystroke makes the
-  parent push its cache down to all siblings, **clobbering any sibling's un-propagated
-  local edits** and disrupting focus/cursor. This is a recurring, painful bug — keep
-  propagation OPT-IN. (`update_ref_data` takes `propagate?` defaulting to `false` for
-  exactly this reason; it was added in `bfbeda9f8` "Move gallery blocks to live upload".)
-- **DO propagate at discrete media-commit points — via `Block.commit_ref_data/2`.** When
-  a picker/upload/image-editor sets a ref's `image_id`/`video_id`/`file_id`/`gallery_id`
-  out-of-band, the commit MUST reach the parent cache. Otherwise the cache stays stale, and
-  the next block-list change (insert/delete) re-initializes the block from that stale cache
-  and **silently wipes the just-set FK** — the live preview (and a save right after) lose
-  the media. These are safe to propagate because they're one-shot commits, not active
-  typing. **Never call `send_update(..., event: "update_ref_data", ...)` directly for a
-  commit** — use `Block.commit_ref_data(socket, opts)`, which hardwires `propagate: true`
-  so forgetting it is impossible (that exact omission caused repeated FK-wipe bugs in
-  `video_block`/`map_block`). Related helpers: `Block.current_block_data_map/3` for
-  building `ref_data` payloads, `Block.resolve_ref_association/4` for display-media
-  resolution, `Block.push_image_editor_init/3` for opening the image editor from blocks.
+- **Every mutation is a named op applied by the reducer.** Children emit
+  `{:update, uid, params_diff}`, `{:insert_child, parent, uid, at, params}`,
+  `{:reorder_children, parent, uids}`, `{:delete, uid}` etc. via `Block.emit_block_op/2`;
+  BlockField applies its own ops for root-level structure. Ops carry **param diffs, never
+  changesets or forms** (`Ops.block_diff_params/1`: persisted records diff by changes, NEW
+  records snapshot full applied state — builders pre-populate changeset *data*, so a
+  changes-only diff would drop `module_id`/vars/refs).
+- **The chokepoint: `Block.assign_block_form/2`.** Every handler that rebuilds a block's
+  form MUST assign it through this helper — it assigns `:form` AND emits the
+  `{:update, uid, diff}` op, keeping the store save-complete. Assigning `:form` directly
+  is reserved for render-artifact stamping (`rendered_html`/`rendered_at`).
+- **Save/preview/share materialize from the store** (`Ops.materialize_root/2`): sequence
+  derives from list order (never from diff `"sequence"` keys), db ids re-attach so
+  `cast_assoc` matches rows, untouched blocks reduce to id-only params (no SQL), render
+  artifacts are stripped. There is NO gather protocol, NO propagate flag, NO position-ack
+  handshake — do not reintroduce them.
+- **Blocks receive their position as the `list_index` prop** from the keyed `:for`
+  (`:key` on uid). Read `socket.assigns.list_index` for insert-at/paste-at positions —
+  never a form's `sequence` field (stale by design).
+- **The ONLY sanctioned parent→child form handoff after mount is `replace_form`**
+  (cascades down the tree): used post-save (re-seed with fresh db ids) and on remote-sync
+  apply. Anything else re-introduces the historical clobber/FK-wipe class.
+- **Media commits: use `Block.commit_ref_data/2`** for one-shot ref commits
+  (picker select / reset / upload-complete / image-editor) — never raw
+  `send_update(..., event: "update_ref_data", ...)`. Not for per-keystroke updates.
+  Related helpers: `Block.current_block_data_map/3` (ref_data payloads),
+  `Block.resolve_ref_association/4` (display-media resolution),
+  `Block.push_image_editor_init/3` (image editor from blocks).
+- **Multi-user sync ships op snapshots** (`Ops.subtree_snapshot/2` on blur →
+  `Ops.apply_remote_snapshot/3` on receive), never changesets.
 
 ### Ecto Changeset Patterns
 - **put_assoc handles FK automatically**: Don't mix `put_change(:gallery_id, nil)` with `put_assoc(:gallery, ...)`. Let `put_assoc` manage the foreign key.

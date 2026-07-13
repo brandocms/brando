@@ -467,11 +467,12 @@ its existing Mux/Bunny orchestration, just surfaced in the shared queue.
   editing the same entry must not share a topic, and a random topic is unguessable so a
   client can't address another user's form.)
 - `handle_info({:asset_ready, target, asset}, socket)`: route by `target.kind`:
-  - `:block_var` → the existing `update_block_var` path (today's `:type`→`file_id` +
-    `send_form_to_parent` propagation fixes apply here — keep them).
-  - `:block_ref` → set the ref's `image_id`/`file_id`/`video_id` (existing `update_ref_data`,
-    `propagate: true` — now wrapped by `Block.commit_ref_data/2`, which hardwires the
-    propagation; new delivery code should call the helper, not raw `send_update`).
+  - `:block_var` → the existing `update_block_var` path (the `:type`→`file_id` fix
+    applies here — keep it; the commit reaches the BlockField op store via the
+    `assign_block_form` chokepoint, no propagation step exists anymore).
+  - `:block_ref` → set the ref's `image_id`/`file_id`/`video_id` via
+    `Block.commit_ref_data/2` (never raw `send_update` — the helper routes the commit
+    through `update_ref_data`, and the block's form rebuild lands in the op store).
   - `:entry_field` → `EctoNestedChangeset.update_at(path, id)` (as `save_file` does today,
     `form.ex:3594-3601`).
 - **This is the only place the form re-renders per upload — once, on completion.**
@@ -518,7 +519,8 @@ descriptor differs.
   `kind: :entry_field`, `path` from `get_path_from_field_name(form.name)` (as `file.ex:107-110`
   already derives), `config_target: "file:#{schema}:#{field}"`.
 - **Block refs (villain)** (`block/render.ex`, `input/image.ex`/`gallery.ex` inside refs):
-  target `kind: :block_ref`, `block_uid`, `ref_name`; delivery via `update_ref_data`.
+  target `kind: :block_ref`, `block_uid`, `ref_name`; delivery via
+  `Block.commit_ref_data/2` (`update_ref_data` under the hood).
 - **Block vars** (`render_var.ex`): target `kind: :block_var`, `block_uid`, `var_key`,
   `config_target` from `@var[:config_target].value`; delivery via `update_block_var`.
   Keep the existing **"select existing"** browser path (`set_file_target`/`select_file`,
@@ -550,8 +552,10 @@ descriptor differs.
 ## 10. Migration plan (phased, each independently shippable)
 
 **Phase 0 — keep today's correctness fixes.** Retain in `block.ex`:
-`update_changeset_data_block_var` writing `file_id`/`image_id` (the `:type` bug fix) and
-`maybe_propagate_block_var` (propagation). These are how delivery lands for vars.
+`update_changeset_data_block_var` writing `file_id`/`image_id` (the `:type` bug fix).
+This is how delivery lands for vars. (The propagation half of the old fix —
+`maybe_propagate_block_var` — was removed in the Phase 3 single-owner refactor: var
+commits reach the BlockField op store through `assign_block_form`, nothing to propagate.)
 
 **Phase 1 — build the manager (server-upload only), migrate block file+image *vars*.**
 - Add `UploadManager` sticky LiveView + `UploadTrigger`/`UploadManager` JS hooks + the
@@ -573,7 +577,7 @@ browser `PUT` from the admin origin (§9).
 
 **Phase 3 — migrate block *refs* (image/gallery) onto the manager.** Remove
 `register_block_upload`/`handle_block_image_progress`/`:block_uploads`
-(`form.ex:500, 4456, 1755-1762`). Delivery via `update_ref_data`.
+(`form.ex:500, 4456, 1755-1762`). Delivery via `Block.commit_ref_data/2`.
 
 **Phase 4 — migrate *entry schema fields*.** Remove per-field `allow_uploads/1` inline
 progress + the field drawers' `live_file_input`; keep the drawers as *pickers*. Delivery via

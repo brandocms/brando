@@ -1,5 +1,39 @@
 defmodule BrandoAdmin.Components.Form.Block do
-  @moduledoc false
+  @moduledoc """
+  A single block in the block editor — the exclusive owner of its editing
+  state (changeset + form), at any nesting level (root, container or multi
+  child).
+
+  ## State ownership (Phase 3 single-owner architecture)
+
+  After first mount, the generic `update/2` clause **drops incoming
+  `:form`/`:children` assigns** — a parent re-render can never overwrite
+  local editing state with its seed copy. Structural/shared assigns
+  (`list_index`, `entry`, `clipboard_meta`, live-preview flags, …) still flow
+  through. The two exceptions that replace a mounted block's form:
+
+  * `replace_form` — post-save re-seed / remote-sync apply, cascades down
+    the child tree (sent by `BlockField`).
+  * The block's own handlers, which MUST go through the
+    `assign_block_form/2` chokepoint: it assigns `:form` and emits an
+    `{:update, uid, diff}` op to the owning `BlockField`, keeping the op
+    store save-complete. Only render-artifact stamping
+    (`rendered_html`/`rendered_at`) may assign `:form` directly.
+
+  ## Position
+
+  Blocks receive their current list position as the `list_index` prop from
+  the parent's keyed `:for` — use it for insert-at/paste-at, never a form's
+  `sequence` field (sequence derives from list order at materialization).
+
+  ## Media commits
+
+  One-shot ref commits (picker select / reset / upload-complete / image
+  editor) go through `commit_ref_data/2`. Helpers:
+  `current_block_data_map/3` (ref_data payloads),
+  `resolve_ref_association/4` (display media), `push_image_editor_init/3`
+  (image editor).
+  """
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
   alias Ecto.Changeset
@@ -2150,14 +2184,13 @@ defmodule BrandoAdmin.Components.Form.Block do
   @doc """
   Commit a one-shot ref-data change to the owning block component.
 
-  Sends `update_ref_data` with `propagate: true` ALWAYS. Out-of-band media
-  commits (select / reset / upload-complete / image-editor) must reach the
-  parent's cached form — otherwise the next block insert/delete re-inits the
-  block from the stale cache and silently wipes the change (see CLAUDE.md
-  "Block Editor: changeset propagation"). Using this helper instead of a raw
-  `send_update` makes forgetting propagation impossible.
+  Sends `update_ref_data` to the block, which rebuilds its form through the
+  `assign_block_form/2` chokepoint — the change lands in the BlockField op
+  store automatically, so it is save-complete the moment it commits (see
+  CLAUDE.md "Block Editor: single-owner state & ops").
 
-  Do NOT use for per-keystroke updates — discrete commits only.
+  Do NOT use for per-keystroke updates — discrete commits only (select /
+  reset / upload-complete / image-editor).
 
   Expects `target_ref` (`{module, id}`) and `ref_name` in the caller's assigns;
   `opts` carries the payload (`ref_data`, `image_id`, `video_id`, `force_render`…).
@@ -2168,7 +2201,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     Phoenix.LiveView.send_update(
       module,
-      Keyword.merge([id: id, event: "update_ref_data", ref_name: ref_name, propagate: true], opts)
+      Keyword.merge([id: id, event: "update_ref_data", ref_name: ref_name], opts)
     )
 
     socket
