@@ -223,8 +223,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     block_field = socket.assigns.block_field
     updated_root_changesets = update_root_changeset(root_changesets, uid, changeset)
 
-    if tag == :save, do: shadow_compare_materialized(socket, uid, changeset)
-
     if Enum.any?(updated_root_changesets, &(elem(&1, 1) == nil)) do
       {:ok, assign(socket, :root_changesets, updated_root_changesets)}
     else
@@ -396,16 +394,42 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> then(&{:ok, &1})
   end
 
+  # Save no longer gathers changesets from the component tree — the op store
+  # is save-complete (every commit point emits a diff op), so ONE
+  # materialization pass builds all root changesets right here. Live
+  # preview/share tags still gather below until they read the store too.
+  def update(%{event: "fetch_root_blocks", tag: :save}, socket) do
+    send(self(), {:progress_popup, "Materializing blocks..."})
+
+    ops = socket.assigns.block_ops
+    block_module = socket.assigns.block_module
+    user_id = socket.assigns.current_user.id
+
+    root_changesets =
+      Enum.map(ops.order, fn uid ->
+        # a materialization failure here must fail the save loudly — dropping
+        # a block silently is worse than any crash
+        {:ok, params} = Ops.materialize_root(ops, uid)
+        {uid, block_module.changeset(materialize_base_struct(socket, uid), params, user_id)}
+      end)
+
+    send_update(BrandoAdmin.Components.Form,
+      id: socket.assigns.form_id,
+      event: "provide_root_blocks",
+      root_changesets: root_changesets,
+      block_field: socket.assigns.block_field,
+      tag: :save
+    )
+
+    {:ok, socket}
+  end
+
   def update(%{event: "fetch_root_blocks", tag: tag}, socket) do
     block_list = socket.assigns.block_list
     block_field = socket.assigns.block_field
     form_id = socket.assigns.form_id
 
     if block_list == [] do
-      if tag == :save do
-        send(self(), {:progress_popup, "Providing root blocks..."})
-      end
-
       send_update(BrandoAdmin.Components.Form,
         id: form_id,
         event: "provide_root_blocks",
@@ -686,60 +710,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:blocks_initialized, true)
   end
 
-  # --- Phase 3 shadow mode --------------------------------------------------
-  # At save, each root block's materialized params (from the op store) are
-  # cast over the persisted data and compared against the gathered changeset.
-  # Mismatches are logged, never applied — this validates the diff store
-  # end-to-end before materialization replaces the gather protocol. Delete
-  # this section when save flips.
-
-  defp shadow_compare_materialized(socket, uid, gathered_cs) do
-    do_shadow_compare(socket, uid, gathered_cs)
-  rescue
-    # the shadow run must never take the save down with it
-    exception ->
-      Logger.warning(
-        "BlockField shadow-compare CRASHED for block #{uid}: " <>
-          Exception.format(:error, exception, __STACKTRACE__)
-      )
-
-      :ok
-  end
-
-  defp do_shadow_compare(socket, uid, gathered_cs) do
-    block_module = socket.assigns.block_module
-    user_id = socket.assigns.current_user.id
-
-    case Ops.materialize_root(socket.assigns.block_ops, uid) do
-      {:ok, params} ->
-        materialized =
-          socket
-          |> shadow_base_struct(uid)
-          |> block_module.changeset(params, user_id)
-          |> Changeset.apply_changes()
-          |> shadow_normalize()
-
-        gathered = gathered_cs |> Changeset.apply_changes() |> shadow_normalize()
-
-        case shadow_diff(gathered, materialized, "entry_block") do
-          [] ->
-            Logger.debug("BlockField shadow-compare OK for block #{uid}")
-
-          diffs ->
-            Logger.warning(
-              "BlockField shadow-compare MISMATCH for block #{uid} (gathered vs materialized):\n" <>
-                Enum.join(diffs, "\n")
-            )
-        end
-
-      {:error, reason} ->
-        Logger.warning("BlockField shadow-compare could not materialize #{uid}: #{inspect(reason)}")
-    end
-
-    :ok
-  end
-
-  defp shadow_base_struct(socket, uid) do
+  # The changeset base for materializing a root block: its persisted entry
+  # block when it exists, otherwise a fresh struct with an empty (loaded)
+  # block so cast_assoc has something to cast against.
+  defp materialize_base_struct(socket, uid) do
     case Enum.find(socket.assigns.entry_blocks || [], &(&1.block.uid == uid)) do
       nil ->
         base_block = %Brando.Content.Block{vars: [], refs: [], table_rows: [], children: [], block_identifiers: []}
@@ -749,70 +723,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         entry_block
     end
   end
-
-  # editor-only artifacts + noise fields that legitimately differ between the
-  # gathered and materialized changesets
-  @shadow_skip_fields [
-    :__meta__,
-    :inserted_at,
-    :updated_at,
-    :deleted_at,
-    :rendered_html,
-    :rendered_at,
-    :marked_as_deleted
-  ]
-
-  # nested block state we DO want compared — every other association is
-  # dropped (belongs_to preloads differ by load state, not by content)
-  @shadow_keep_assocs [:block, :children, :vars, :refs, :table_rows, :block_identifiers]
-
-  defp shadow_normalize(%Ecto.Association.NotLoaded{}), do: :not_loaded
-
-  # the legacy pipeline stores nested changesets as plain values (e.g. ref
-  # data) — apply them before comparing
-  defp shadow_normalize(%Changeset{} = cs), do: cs |> Changeset.apply_changes() |> shadow_normalize()
-
-  defp shadow_normalize(%mod{} = struct) do
-    if function_exported?(mod, :__schema__, 1) do
-      drop_assocs = mod.__schema__(:associations) -- @shadow_keep_assocs
-
-      struct
-      |> Map.from_struct()
-      |> Map.drop(@shadow_skip_fields ++ drop_assocs)
-      |> Map.new(fn {k, v} -> {k, shadow_normalize(v)} end)
-    else
-      struct
-    end
-  end
-
-  defp shadow_normalize(list) when is_list(list), do: Enum.map(list, &shadow_normalize/1)
-  defp shadow_normalize(%{} = map), do: Map.new(map, fn {k, v} -> {k, shadow_normalize(v)} end)
-  defp shadow_normalize(other), do: other
-
-  defp shadow_diff(a, b, path) when is_map(a) and is_map(b) and not is_struct(a) and not is_struct(b) do
-    (Map.keys(a) ++ Map.keys(b))
-    |> Enum.uniq()
-    |> Enum.flat_map(&shadow_diff(Map.get(a, &1), Map.get(b, &1), "#{path}.#{&1}"))
-  end
-
-  defp shadow_diff(a, b, path) when is_list(a) and is_list(b) do
-    if length(a) == length(b) do
-      a
-      |> Enum.zip(b)
-      |> Enum.with_index()
-      |> Enum.flat_map(fn {{x, y}, i} -> shadow_diff(x, y, "#{path}[#{i}]") end)
-    else
-      ["#{path}: list length #{length(a)} vs #{length(b)}"]
-    end
-  end
-
-  defp shadow_diff(a, a, _path), do: []
-
-  defp shadow_diff(a, b, path) do
-    ["#{path}: #{inspect(a, limit: 5, printable_limit: 120)} vs #{inspect(b, limit: 5, printable_limit: 120)}"]
-  end
-
-  # --- end shadow mode -------------------------------------------------------
 
   # Strangler-phase op application (see `Ops` moduledoc): every mutation the
   # legacy cache performs is mirrored into the op state. A rejected op means
