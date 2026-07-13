@@ -3989,16 +3989,12 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  # Reset the per-field accumulator between provide_root_blocks rounds.
+  # (BlockFields materialize their answer from the op store, so there is no
+  # per-component gather state left to clear.)
   defp clear_blocks_root_changesets(socket) do
-    block_map = socket.assigns.block_map
-    id = socket.assigns.id
-
-    for {block_field_name, _schema, _entry_blocks, _opts} <- block_map do
-      block_field_id = "#{id}-blocks-#{block_field_name}"
-      send_update(BlockField, id: block_field_id, event: "clear_root_changesets")
-    end
-
-    socket
+    blocks = socket.assigns.form_blueprint.blocks
+    assign(socket, :block_changesets, Map.new(blocks, &{&1.name, nil}))
   end
 
   defp reload_all_blocks(socket) do

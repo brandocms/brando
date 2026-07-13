@@ -112,13 +112,15 @@
   structure, and a uid-keyed param-diff store. Blocks at any nesting level emit ops
   directly to their owning BlockField at every commit point (the `assign_block_form`
   chokepoint), so the store stays save-complete without form propagation.
-  **Save now materializes from the op store**: one pass over the store builds every
-  root changeset directly in BlockField — no more recursive fetch/provide gathering
-  across the component tree at save time (the shadow-compare phase validated the store
-  against gathered changesets, 34/34 identical, before the flip). Live preview and
-  share still gather until they read the store too. The legacy `entry_blocks_forms`
-  cache still drives rendering. Also fixes a bug where deleting a child block rebuilt
-  the parent's form with the deleted child's uid in the form id.
+  **Save, live preview and share all materialize from the op store**: one pass over
+  the store builds every root changeset directly in BlockField — the recursive
+  fetch/provide gather protocol across the component tree is deleted entirely (the
+  shadow-compare phase validated the store against gathered changesets, 34/34
+  identical, before the flip). After a save, a `replace_form` cascade re-seeds every
+  mounted block with the freshly persisted data (new db ids) — the only sanctioned
+  parent→child form handoff after mount, covered by a new save-and-continue e2e spec.
+  Also fixes a bug where deleting a child block rebuilt the parent's form with the
+  deleted child's uid in the form id.
 
 - **Block editor keyed block list**: The root block list is now rendered with a keyed
   `:for` comprehension (`:key` on block uid), matching the already-keyed child lists.

@@ -541,136 +541,43 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  def update(%{event: "fetch_root_block", tag: tag}, socket) do
-    # a message we will receive from the block field
+  # Post-save re-seed from BlockField — the ONLY sanctioned parent→child form
+  # handoff after mount. Rebuilds this block's editing state from freshly
+  # persisted data (new db ids for rows the save inserted) and cascades down
+  # the child tree. No op is emitted: the op store was just re-initialized
+  # from the same persisted data, so diffs are empty by definition.
+  def update(%{event: "replace_form", form: form}, socket) do
+    belongs_to = socket.assigns.belongs_to
+    current_user_id = socket.assigns.current_user_id
     id = socket.assigns.id
-    parent_ref = socket.assigns.parent_ref
-    changeset = socket.assigns.form.source
-    uid = socket.assigns.uid
-    has_children? = socket.assigns.has_children?
-    changesets = socket.assigns.changesets
+    changeset = form.source
+    block_cs = get_block_changeset(changeset, belongs_to)
 
-    if socket.assigns.deleted do
-      # if the block is deleted, we don't message the children.
-      if tag == :save do
-        send(self(), {:progress_popup, "Providing block #{uid}..."})
+    children =
+      case Changeset.get_field(block_cs, :children) do
+        children when is_list(children) -> children
+        _not_loaded -> []
       end
 
-      send_to_ref(parent_ref, %{
-        event: "provide_root_block",
-        changeset: nil,
-        uid: uid,
-        tag: tag
-      })
-    else
-      # if the block has children we message them to gather their changesets
-      if has_children? do
-        for {block_uid, _} <- changesets do
-          id = "#{id}-child-#{block_uid}"
+    children_forms = Enum.map(children, &to_change_form(&1, %{}, current_user_id))
 
-          send_update(__MODULE__,
-            id: id,
-            event: "fetch_child_block",
-            uid: block_uid,
-            tag: tag
-          )
-        end
-      else
-        # if the block has no children we send the current changeset back to the parent
-        if tag == :save do
-          send(self(), {:progress_popup, "Providing root block #{uid}..."})
-        end
-
-        send_to_ref(parent_ref, %{
-          event: "provide_root_block",
-          changeset: changeset,
-          uid: uid,
-          tag: tag
-        })
-      end
+    for child_form <- children_forms do
+      child_uid = Changeset.get_field(child_form.source, :uid)
+      send_update(__MODULE__, id: "#{id}-child-#{child_uid}", event: "replace_form", form: child_form)
     end
 
-    {:ok, socket}
-  end
-
-  def update(%{event: "fetch_child_block", tag: tag}, socket) do
-    # a message we will receive from parent block
-    id = socket.assigns.id
-    parent_ref = socket.assigns.parent_ref
-    changeset = socket.assigns.form.source
-    uid = socket.assigns.uid
-    has_children? = socket.assigns.has_children?
-    changesets = socket.assigns.changesets
-
-    # if the block has children we message them to gather their changesets
-    if has_children? do
-      for {block_uid, _} <- changesets do
-        id = "#{id}-child-#{block_uid}"
-
-        send_update(__MODULE__,
-          id: id,
-          event: "fetch_child_block",
-          uid: block_uid,
-          tag: tag
-        )
-      end
-    else
-      # if the block has no children we send the current changeset back to the parent
-      if tag == :save do
-        send(self(), {:progress_popup, "Providing block #{uid}..."})
-      end
-
-      send_to_ref(parent_ref, %{
-        event: "provide_child_block",
-        changeset: changeset,
-        uid: uid,
-        tag: tag
-      })
-    end
-
-    {:ok, socket}
-  end
-
-  def update(%{event: "provide_child_block", changeset: child_changeset, uid: uid, tag: tag}, socket) do
-    parent_uid = socket.assigns.uid
-    parent_ref = socket.assigns.parent_ref
-    level = socket.assigns.level
-    changeset = socket.assigns.form.source
-
-    changesets = socket.assigns.changesets
-    updated_changesets = update_child_changeset(changesets, uid, child_changeset)
-
-    if !Enum.any?(updated_changesets, &(elem(&1, 1) == nil)) do
-      updated_changesets_list = Enum.map(updated_changesets, &elem(&1, 1))
-
-      updated_changeset = put_children(changeset, updated_changesets_list)
-
-      if level == 0 do
-        if tag == :save do
-          send(self(), {:progress_popup, "Providing root block #{uid}..."})
-        end
-
-        send_to_ref(parent_ref, %{
-          event: "provide_root_block",
-          changeset: updated_changeset,
-          uid: parent_uid,
-          tag: tag
-        })
-      else
-        if tag == :save do
-          send(self(), {:progress_popup, "Providing block #{uid}..."})
-        end
-
-        send_to_ref(parent_ref, %{
-          event: "provide_child_block",
-          changeset: updated_changeset,
-          uid: parent_uid,
-          tag: tag
-        })
-      end
-    end
-
-    {:ok, assign(socket, :changesets, updated_changesets)}
+    socket
+    |> assign(:form, form)
+    |> assign(:form_is_new, false)
+    |> assign(:form_has_changes, false)
+    |> assign(:active, Changeset.get_field(changeset, :active))
+    |> assign(:deleted, Changeset.get_field(changeset, :marked_as_deleted))
+    |> assign(:children_forms, children_forms)
+    |> assign(:block_list, Enum.map(children, & &1.uid))
+    |> assign(:changesets, Enum.map(children, &{&1.uid, nil}))
+    |> assign(:block_count, length(children))
+    |> assign(:has_children?, children != [])
+    |> then(&{:ok, &1})
   end
 
   def update(%{event: "insert_block", sequence: sequence, module_id: module_id, type: type}, socket) do

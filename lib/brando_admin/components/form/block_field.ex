@@ -22,7 +22,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     block_module = socket.assigns.block_module
     block_cs = Changeset.get_assoc(changeset, :block)
     block_list = socket.assigns.block_list
-    root_changesets = socket.assigns.root_changesets
     sequence = Enum.find_index(block_list, &(&1 == uid))
     new_sequence = sequence + 1
     current_user_id = socket.assigns.current_user.id
@@ -50,12 +49,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         current_user_id
       )
 
-    updated_root_changesets = insert_root_changeset(root_changesets, new_uid, new_sequence)
-
     socket
     |> update(:entry_blocks_forms, &List.insert_at(&1, new_sequence, entry_block_form))
     |> assign(:block_list, new_block_list)
-    |> assign(:root_changesets, updated_root_changesets)
     |> update(:block_count, &(&1 + 1))
     |> apply_block_op({:insert, new_uid, new_sequence, Ops.block_diff_params(entry_block_cs)})
     |> refresh_live_preview()
@@ -65,7 +61,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   def update(%{event: "duplicate_block", uid: uid, changeset: changeset, children: children}, socket) do
     block_module = socket.assigns.block_module
     block_list = socket.assigns.block_list
-    root_changesets = socket.assigns.root_changesets
     sequence = Enum.find_index(block_list, &(&1 == uid))
     new_sequence = sequence + 1
     current_user_id = socket.assigns.current_user.id
@@ -114,12 +109,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           current_user_id
         )
 
-      updated_root_changesets = insert_root_changeset(root_changesets, new_uid, new_sequence)
-
       socket
       |> update(:entry_blocks_forms, &List.insert_at(&1, new_sequence, entry_block_form))
       |> assign(:block_list, new_block_list)
-      |> assign(:root_changesets, updated_root_changesets)
       |> update(:block_count, &(&1 + 1))
       |> apply_block_op({:insert, new_uid, new_sequence, Ops.block_diff_params(entry_block_cs)})
       |> refresh_live_preview()
@@ -193,27 +185,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, apply_block_op(socket, op)}
   end
 
-  def update(%{event: "provide_root_block", changeset: changeset, uid: uid, tag: tag}, socket) do
-    root_changesets = socket.assigns.root_changesets
-    form_id = socket.assigns.form_id
-    block_field = socket.assigns.block_field
-    updated_root_changesets = update_root_changeset(root_changesets, uid, changeset)
-
-    if Enum.any?(updated_root_changesets, &(elem(&1, 1) == nil)) do
-      {:ok, assign(socket, :root_changesets, updated_root_changesets)}
-    else
-      send_update(BrandoAdmin.Components.Form,
-        id: form_id,
-        event: "provide_root_blocks",
-        root_changesets: updated_root_changesets,
-        block_field: block_field,
-        tag: tag
-      )
-
-      {:ok, assign(socket, :root_changesets, updated_root_changesets)}
-    end
-  end
-
   # Outline: relay extracted child to target parent
   def update(
         %{event: "insert_extracted_child", target_parent_uid: target_uid, child_changeset: cs, sequence: seq},
@@ -232,7 +203,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # INSERT ROOT BLOCK
   def update(%{event: "insert_block", sequence: sequence, module_id: module_id}, socket) do
     module_id = String.to_integer(module_id)
-    root_changesets = socket.assigns.root_changesets
     block_module = socket.assigns.block_module
     user_id = socket.assigns.current_user.id
     parent_id = nil
@@ -261,8 +231,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         id: "entry_block_form-#{uid}"
       )
 
-    updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
-
     selector = "[data-block-uid=\"#{uid}\"]"
 
     # Broadcast to other users
@@ -277,7 +245,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> update(:entry_blocks_forms, &List.insert_at(&1, sequence, entry_block_form))
     |> assign(:block_list, new_block_list)
-    |> assign(:root_changesets, updated_root_changesets)
     |> update(:block_count, &(&1 + 1))
     |> apply_block_op({:insert, uid, sequence, Ops.block_diff_params(entry_block_cs)})
     |> refresh_live_preview()
@@ -286,7 +253,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   def update(%{event: "insert_container", sequence: sequence}, socket) do
-    root_changesets = socket.assigns.root_changesets
     block_module = socket.assigns.block_module
     user_id = socket.assigns.current_user.id
     parent_id = nil
@@ -314,20 +280,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         socket.assigns.current_user.id
       )
 
-    updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
-
     socket
     |> update(:entry_blocks_forms, &List.insert_at(&1, sequence, entry_block_form))
     |> assign(:block_list, new_block_list)
     |> update(:block_count, &(&1 + 1))
-    |> assign(:root_changesets, updated_root_changesets)
     |> apply_block_op({:insert, uid, sequence, Ops.block_diff_params(entry_block_cs)})
     |> refresh_live_preview()
     |> then(&{:ok, &1})
   end
 
   def update(%{event: "insert_fragment", sequence: sequence}, socket) do
-    root_changesets = socket.assigns.root_changesets
     block_module = socket.assigns.block_module
     user_id = socket.assigns.current_user.id
     parent_id = nil
@@ -355,33 +317,28 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         id: "entry_block_form-#{uid}"
       )
 
-    updated_root_changesets = insert_root_changeset(root_changesets, uid, sequence)
-
     socket
     |> update(:entry_blocks_forms, &List.insert_at(&1, sequence, entry_block_form))
     |> assign(:block_list, new_block_list)
-    |> assign(:root_changesets, updated_root_changesets)
     |> update(:block_count, &(&1 + 1))
     |> apply_block_op({:insert, uid, sequence, Ops.block_diff_params(entry_block_cs)})
     |> refresh_live_preview()
     |> then(&{:ok, &1})
   end
 
-  # Save no longer gathers changesets from the component tree — the op store
-  # is save-complete (every commit point emits a diff op), so ONE
-  # materialization pass builds all root changesets right here. Live
-  # preview/share tags still gather below until they read the store too.
-  def update(%{event: "fetch_root_blocks", tag: :save}, socket) do
-    send(self(), {:progress_popup, "Materializing blocks..."})
-
+  # Save, live preview and share all read the op store — the store is
+  # commit-complete (every commit point emits a diff op), so ONE
+  # materialization pass builds all root changesets for any tag. The old
+  # recursive fetch/provide gather across the component tree is gone.
+  def update(%{event: "fetch_root_blocks", tag: tag}, socket) do
     ops = socket.assigns.block_ops
     block_module = socket.assigns.block_module
     user_id = socket.assigns.current_user.id
 
     root_changesets =
       Enum.map(ops.order, fn uid ->
-        # a materialization failure here must fail the save loudly — dropping
-        # a block silently is worse than any crash
+        # a materialization failure here must fail loudly — dropping a block
+        # silently is worse than any crash
         {:ok, params} = Ops.materialize_root(ops, uid)
         {uid, block_module.changeset(materialize_base_struct(socket, uid), params, user_id)}
       end)
@@ -391,71 +348,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       event: "provide_root_blocks",
       root_changesets: root_changesets,
       block_field: socket.assigns.block_field,
-      tag: :save
+      tag: tag
     )
 
     {:ok, socket}
-  end
-
-  def update(%{event: "fetch_root_blocks", tag: tag}, socket) do
-    block_list = socket.assigns.block_list
-    block_field = socket.assigns.block_field
-    form_id = socket.assigns.form_id
-
-    if block_list == [] do
-      send_update(BrandoAdmin.Components.Form,
-        id: form_id,
-        event: "provide_root_blocks",
-        root_changesets: [],
-        block_field: block_field,
-        tag: tag
-      )
-    else
-      # for each root block in block_list, send_update requesting their changeset
-      for block_uid <- block_list do
-        send_update(
-          Block,
-          id: "block-#{block_uid}",
-          event: "fetch_root_block",
-          tag: tag
-        )
-      end
-    end
-
-    {:ok, socket}
-  end
-
-  def update(%{event: "fetch_root_renders"}, socket) do
-    block_list = socket.assigns.block_list
-    block_field = socket.assigns.block_field
-    form_id = socket.assigns.form_id
-
-    if block_list == [] do
-      send_update(BrandoAdmin.Components.Form,
-        id: form_id,
-        event: "provide_root_renders",
-        renders: [],
-        block_field: block_field
-      )
-    else
-      # for each root block in block_list, send_update requesting their rendered_html
-      for block_uid <- block_list do
-        send_update(Block, id: "block-#{block_uid}", event: "fetch_root_render")
-      end
-    end
-
-    then(socket, &{:ok, &1})
-  end
-
-  def update(%{event: "clear_root_changesets"}, socket) do
-    block_list = socket.assigns.block_list
-    # for each root block in block_list, send_update to clear their (child) changesets
-    for block_uid <- block_list do
-      send_update(Block, id: "block-#{block_uid}", event: "clear_changesets")
-    end
-
-    cleared_root_changesets = Enum.map(socket.assigns.root_changesets, &{elem(&1, 0), nil})
-    {:ok, assign(socket, :root_changesets, cleared_root_changesets)}
   end
 
   def update(%{event: "enable_live_preview", cache_key: cache_key}, socket) do
@@ -560,7 +456,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     if remote_uid in block_list do
       {:ok, socket}
     else
-      root_changesets = socket.assigns.root_changesets
       block_module = socket.assigns.block_module
       source = socket.assigns.block_module
 
@@ -587,12 +482,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           id: "entry_block_form-#{remote_uid}"
         )
 
-      updated_root_changesets = insert_root_changeset(root_changesets, remote_uid, clamped_sequence)
-
       socket
       |> update(:entry_blocks_forms, &List.insert_at(&1, clamped_sequence, entry_block_form))
       |> assign(:block_list, new_block_list)
-      |> assign(:root_changesets, updated_root_changesets)
       |> update(:block_count, &(&1 + 1))
       |> apply_block_op({:insert, remote_uid, clamped_sequence, Ops.block_diff_params(entry_block_cs)})
       |> refresh_live_preview()
@@ -611,17 +503,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   # Remote user reordered blocks
   def update(%{event: "remote_blocks_reordered", block_list: remote_block_list}, socket) do
-    root_changesets = socket.assigns.root_changesets
-
-    new_root_changesets =
-      Enum.map(remote_block_list, fn uid ->
-        Enum.find(root_changesets, fn
-          {^uid, _} -> true
-          _ -> false
-        end)
-      end)
-      |> Enum.reject(&is_nil/1)
-
     new_forms =
       Enum.map(remote_block_list, fn uid ->
         Enum.find(socket.assigns.entry_blocks_forms, &(get_form_block_uid(&1) == uid))
@@ -631,7 +512,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> assign(:entry_blocks_forms, new_forms)
     |> assign(:block_list, remote_block_list)
-    |> assign(:root_changesets, new_root_changesets)
     |> apply_block_op({:reorder, remote_block_list})
     |> refresh_live_preview()
     |> then(&{:ok, &1})
@@ -667,7 +547,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:entry_blocks_forms, entry_blocks_forms)
     |> assign(:block_list, block_list)
     |> assign(:block_count, length(block_list))
-    |> assign(:root_changesets, Enum.map(entry_blocks, &{&1.block.uid, nil}))
     |> assign(:block_ops, Ops.from_entry_blocks(entry_blocks))
     |> assign(:module_picker_id, "#block-field-#{assigns.block_field}-module-picker")
     |> assign(:clipboard_meta, nil)
@@ -708,6 +587,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
+  # Post-save re-seed. Blocks own their forms, so refreshed persisted data
+  # (fresh db ids for rows inserted by the save) must be handed to each
+  # mounted component explicitly — `replace_form` is the ONLY sanctioned
+  # parent→child form handoff after mount, and it cascades down the tree.
+  # Without it, a save-and-continue-editing session would keep diffing
+  # against pre-save nil-id data and churn child rows on the next save.
   defp reload_all_blocks(socket) do
     user_id = socket.assigns.current_user.id
     block_module = socket.assigns.block_module
@@ -715,22 +600,22 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     entry_blocks_forms = Enum.map(entry_blocks, &to_change_form(block_module, &1, %{}, user_id))
     block_list = Enum.map(entry_blocks, & &1.block.uid)
 
+    for form <- entry_blocks_forms do
+      send_update(Block, id: "block-#{get_form_block_uid(form)}", event: "replace_form", form: form)
+    end
+
     socket
     |> assign(:entry_blocks_forms, entry_blocks_forms)
     |> assign(:block_list, block_list)
     |> assign(:block_count, length(block_list))
-    |> assign(:root_changesets, Enum.map(entry_blocks, &{&1.block.uid, nil}))
     |> assign(:block_ops, Ops.from_entry_blocks(entry_blocks))
   end
 
   defp remove_block_from_state(socket, uid) do
-    root_changesets = socket.assigns.root_changesets
     block_list = socket.assigns.block_list
-    updated_root_changesets = delete_root_changeset(root_changesets, uid)
     new_block_list = List.delete(block_list, uid)
 
     socket
-    |> assign(:root_changesets, updated_root_changesets)
     |> assign(:block_list, new_block_list)
     |> update(:entry_blocks_forms, fn forms ->
       Enum.reject(forms, &(get_form_block_uid(&1) == uid))
@@ -766,18 +651,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end)
   end
 
-  defdelegate update_root_changeset(root_changesets, uid, new_changeset),
-    to: BrandoAdmin.Components.Form.BlockChangesetList,
-    as: :update_changeset
-
-  defdelegate insert_root_changeset(root_changesets, uid, position),
-    to: BrandoAdmin.Components.Form.BlockChangesetList,
-    as: :insert_changeset
-
-  defdelegate delete_root_changeset(root_changesets, uid),
-    to: BrandoAdmin.Components.Form.BlockChangesetList,
-    as: :delete_changeset
-
   # reposition a main block
   def handle_event("reposition", %{"new" => new_idx, "old" => old_idx}, socket) when new_idx == old_idx do
     # same index, no move needed
@@ -786,21 +659,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def handle_event("reposition", %{"uid" => id, "new" => new_idx, "old" => old_idx}, socket) do
     block_list = socket.assigns.block_list
-    root_changesets = socket.assigns.root_changesets
 
     new_block_list =
       block_list
       |> List.delete_at(old_idx)
       |> List.insert_at(new_idx, id)
-
-    # we must reposition the root_changesets list according to the new block_list
-    new_root_changesets =
-      Enum.map(new_block_list, fn uid ->
-        Enum.find(root_changesets, fn
-          {^uid, _} -> true
-          _ -> false
-        end)
-      end)
 
     # reorder entry_blocks_forms to match new block_list order
     new_forms =
@@ -820,7 +683,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> assign(:entry_blocks_forms, new_forms)
     |> assign(:block_list, new_block_list)
-    |> assign(:root_changesets, new_root_changesets)
     |> apply_block_op({:reorder, new_block_list})
     |> refresh_live_preview()
     |> then(&{:noreply, &1})
@@ -861,20 +723,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def handle_event("outline_root_reposition", %{"uid" => id, "new" => new_idx, "old" => old_idx}, socket) do
     block_list = socket.assigns.block_list
-    root_changesets = socket.assigns.root_changesets
 
     new_block_list =
       block_list
       |> List.delete_at(old_idx)
       |> List.insert_at(new_idx, id)
-
-    new_root_changesets =
-      Enum.map(new_block_list, fn uid ->
-        Enum.find(root_changesets, fn
-          {^uid, _} -> true
-          _ -> false
-        end)
-      end)
 
     new_forms =
       Enum.map(new_block_list, fn uid ->
@@ -893,7 +746,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> assign(:entry_blocks_forms, new_forms)
     |> assign(:block_list, new_block_list)
-    |> assign(:root_changesets, new_root_changesets)
     |> apply_block_op({:reorder, new_block_list})
     |> refresh_live_preview()
     |> rebuild_outline_items()
@@ -1061,7 +913,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> assign(:entry_blocks_forms, merged_forms)
         |> assign(:block_list, merged_uids)
         |> assign(:block_count, length(merged_uids))
-        |> assign(:root_changesets, Enum.map(merged_uids, &{&1, nil}))
         |> apply_recovered_block_ops(merged_forms, merged_uids, missing_set)
         |> refresh_live_preview()
         |> then(&{:noreply, &1})
@@ -1466,7 +1317,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     # insert the new block uid into the block_list
     block_list = socket.assigns.block_list
-    root_changesets = socket.assigns.root_changesets
     new_block_list = List.insert_at(block_list, sequence, new_uid)
 
     entry_block_form =
@@ -1477,13 +1327,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         current_user_id
       )
 
-    updated_root_changesets = insert_root_changeset(root_changesets, new_uid, sequence)
     selector = "[data-block-uid=\"#{new_uid}\"]"
 
     socket
     |> update(:entry_blocks_forms, &List.insert_at(&1, sequence, entry_block_form))
     |> assign(:block_list, new_block_list)
-    |> assign(:root_changesets, updated_root_changesets)
     |> update(:block_count, &(&1 + 1))
     |> apply_block_op({:insert, new_uid, sequence, Ops.block_diff_params(entry_block_cs)})
     |> refresh_live_preview()
