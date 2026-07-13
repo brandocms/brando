@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   use Gettext, backend: Brando.Gettext
   alias Ecto.Changeset
   alias BrandoAdmin.Components.Form.BlockField
+  alias BrandoAdmin.Components.Form.BlockField.Ops
   alias BrandoAdmin.Components.Form.Block.Events
   alias Brando.Content.Blocks, as: ContentBlocks
 
@@ -44,7 +45,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     new_form = build_form_from_changeset(updated_changeset, uid, belongs_to)
 
     socket
-    |> assign(:form, new_form)
+    |> assign_block_form(new_form)
     |> assign(:collapsed, collapsed)
     |> then(&{:ok, &1})
   end
@@ -128,6 +129,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:block_list, new_block_list)
     |> assign(:changesets, updated_changesets)
     |> update(:block_count, &(&1 + 1))
+    |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(block_cs)})
     |> reset_position_response_tracker()
     |> send_child_position_update(new_block_list)
     |> push_event("b:scroll_to", %{selector: selector})
@@ -163,6 +165,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:children_forms, new_forms)
     |> assign(:block_list, new_block_list)
     |> assign(:changesets, new_changesets)
+    |> emit_block_op({:reorder_children, socket.assigns.uid, new_block_list})
     |> reset_position_response_tracker()
     |> send_child_position_update(new_block_list)
     |> then(&{:ok, &1})
@@ -250,6 +253,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:block_list, new_block_list)
     |> assign(:changesets, updated_changesets)
     |> update(:block_count, &(&1 + 1))
+    |> emit_block_op({:insert_child, socket.assigns.uid, new_uid, new_sequence, Ops.block_diff_params(updated_block_cs)})
     |> reset_position_response_tracker()
     |> send_child_position_update(new_block_list)
     |> push_event("b:scroll_to", %{selector: selector})
@@ -304,6 +308,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> assign(:block_list, new_block_list)
       |> assign(:changesets, updated_changesets)
       |> update(:block_count, &(&1 + 1))
+      |> emit_block_op({:insert_child, socket.assigns.uid, new_uid, sequence, Ops.block_diff_params(updated_block_cs)})
       |> reset_position_response_tracker()
       |> send_child_position_update(new_block_list)
       |> push_event("b:scroll_to", %{selector: selector})
@@ -485,6 +490,10 @@ defmodule BrandoAdmin.Components.Form.Block do
         Changeset.put_assoc(block_cs, :children, [])
       end
 
+    # NOTE: the form id must use this block's own uid — it previously used
+    # the deleted child's uid, changing the parent form's id on every delete
+    own_uid = socket.assigns.uid
+
     updated_form =
       if belongs_to == :root do
         updated_changeset = Changeset.put_assoc(changeset, :block, updated_block_cs)
@@ -492,13 +501,13 @@ defmodule BrandoAdmin.Components.Form.Block do
         to_form(
           updated_changeset,
           as: "entry_block",
-          id: "entry_block_form-#{uid}"
+          id: "entry_block_form-#{own_uid}"
         )
       else
         to_form(
           updated_block_cs,
           as: "child_block",
-          id: "child_block_form-#{uid}"
+          id: "child_block_form-#{own_uid}"
         )
       end
 
@@ -506,11 +515,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:changesets, updated_changesets)
     |> assign(:block_list, new_block_list)
     |> assign(:has_children?, has_children?)
-    |> assign(:form, updated_form)
+    |> assign_block_form(updated_form)
     |> update(:children_forms, fn forms ->
       Enum.reject(forms, &(Changeset.get_field(&1.source, :uid) == uid))
     end)
     |> update(:block_count, &(&1 - 1))
+    |> emit_block_op({:delete, uid})
     |> reset_position_response_tracker()
     |> send_child_position_update(new_block_list)
     |> update_live_preview_on_empty_block_list()
@@ -757,6 +767,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:block_list, updated_block_list)
     |> assign(:changesets, updated_changesets)
     |> update(:block_count, &(&1 + 1))
+    |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(empty_block_cs)})
     |> reset_position_response_tracker()
     |> send_child_position_update(updated_block_list)
     |> push_event("b:scroll_to", %{selector: selector})
@@ -820,7 +831,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       )
 
     socket
-    |> assign(:form, new_form)
+    |> assign_block_form(new_form)
     |> send_form_to_parent()
     |> maybe_update_live_preview_block()
     |> then(&{:ok, &1})
@@ -983,7 +994,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         belongs_to
       )
 
-    socket = assign(socket, :form, new_form)
+    socket = assign_block_form(socket, new_form)
     if propagate?, do: send_form_to_parent(socket)
 
     socket
@@ -1147,7 +1158,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           belongs_to
         )
 
-      assign(socket, :form, updated_form)
+      assign_block_form(socket, updated_form)
     else
       socket
     end
@@ -1763,6 +1774,43 @@ defmodule BrandoAdmin.Components.Form.Block do
     form = socket.assigns.form
 
     send_to_ref(parent_ref, %{event: "update_block", level: level, form: form})
+    socket
+  end
+
+  @doc """
+  Assign a rebuilt block form AND mirror its changes into the BlockField op
+  state (Phase 3 single-owner refactor).
+
+  This is the chokepoint for content commits: every handler that rebuilds
+  this block's form must assign it through here so the uid-keyed diff store
+  stays save-complete — including local-only updates that never propagate a
+  form to the parent (resets, var edits, table rows). Ops carry param diffs,
+  never forms, so emitting on every commit cannot clobber sibling state.
+
+  Exceptions that intentionally assign `:form` directly: live-preview
+  render stamping (`rendered_html`/`rendered_at` only — materialization
+  strips render artifacts anyway) and sequence restamps (order lives in
+  BlockField's op state).
+  """
+  def assign_block_form(socket, form) do
+    socket
+    |> assign(:form, form)
+    |> emit_block_op({:update, socket.assigns.uid, Ops.block_diff_params(form.source)})
+  end
+
+  @doc """
+  Send a block op to the owning BlockField's reducer (see `Ops.apply_op/2`).
+
+  Works from any nesting level — the BlockField component id is derived from
+  `form_id` + `block_field`, which every block receives.
+  """
+  def emit_block_op(socket, op) do
+    send_update(BlockField,
+      id: "#{socket.assigns.form_id}-blocks-#{socket.assigns.block_field}",
+      event: "block_op",
+      op: op
+    )
+
     socket
   end
 

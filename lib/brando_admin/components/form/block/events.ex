@@ -217,7 +217,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       end
 
     socket
-    |> assign(:form, new_form)
+    |> Block.assign_block_form(new_form)
     |> Block.send_form_to_parent()
     |> Block.render_module()
     |> Block.maybe_update_live_preview_block()
@@ -278,7 +278,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       )
 
     socket
-    |> assign(:form, new_form)
+    |> Block.assign_block_form(new_form)
     |> then(&{:halt, &1})
   end
 
@@ -337,7 +337,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       )
 
     socket
-    |> assign(:form, new_form)
+    |> Block.assign_block_form(new_form)
     |> then(&{:halt, &1})
   end
 
@@ -373,7 +373,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       )
 
     socket
-    |> assign(:form, new_form)
+    |> Block.assign_block_form(new_form)
     |> then(&{:halt, &1})
   end
 
@@ -426,7 +426,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       )
 
     socket
-    |> assign(:form, new_form)
+    |> Block.assign_block_form(new_form)
     |> then(&{:halt, &1})
   end
 
@@ -463,7 +463,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       )
 
     socket
-    |> assign(:form, new_form)
+    |> Block.assign_block_form(new_form)
     |> then(&{:halt, &1})
   end
 
@@ -520,7 +520,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       )
 
     socket
-    |> assign(:form, new_form)
+    |> Block.assign_block_form(new_form)
     |> then(&{:halt, &1})
   end
 
@@ -568,7 +568,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       )
 
     socket
-    |> assign(:form, new_form)
+    |> Block.assign_block_form(new_form)
     |> then(&{:halt, &1})
   end
 
@@ -665,6 +665,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     |> assign(:children_forms, new_forms)
     |> assign(:block_list, new_block_list)
     |> assign(:changesets, new_changesets)
+    |> Block.emit_block_op({:reorder_children, socket.assigns.uid, new_block_list})
     |> Block.reset_position_response_tracker()
     |> Block.send_child_position_update(new_block_list)
     |> then(&{:halt, &1})
@@ -761,7 +762,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       )
 
     socket
-    |> assign(:form, updated_form)
+    |> Block.assign_block_form(updated_form)
     |> assign(:form_has_changes, updated_form.source.changes !== %{})
     |> Block.send_form_to_parent()
     |> Block.maybe_update_liquex_block_var(params_target, params)
@@ -864,7 +865,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       )
 
     socket
-    |> assign(:form, updated_form)
+    |> Block.assign_block_form(updated_form)
     |> assign(:form_has_changes, updated_form.source.changes !== %{})
     |> Block.maybe_update_liquex_block_var(params_target, params)
     |> Block.maybe_update_container(params_target)
@@ -950,7 +951,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       end
 
     socket
-    |> assign(:form, updated_form)
+    |> Block.assign_block_form(updated_form)
     |> assign(:has_table_rows?, true)
     |> then(&{:halt, &1})
   end

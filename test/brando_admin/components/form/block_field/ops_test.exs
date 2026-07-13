@@ -129,6 +129,180 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
     end
   end
 
+  describe "tree: from_entry_blocks/1" do
+    defp entry_block(uid, entry_block_id, block_id, children \\ []) do
+      %{id: entry_block_id, block: %{uid: uid, id: block_id, children: children}}
+    end
+
+    defp child(uid, block_id, children \\ []), do: %{uid: uid, id: block_id, children: children}
+
+    test "registers roots, nesting, statuses and db ids" do
+      state =
+        Ops.from_entry_blocks([
+          entry_block("a", 1, 10, [child("a1", 11), child("a2", 12, [child("a2x", 13)])]),
+          entry_block("b", 2, 20)
+        ])
+
+      assert state.order == ["a", "b"]
+      assert state.parents == %{"a1" => "a", "a2" => "a", "a2x" => "a2"}
+      assert state.child_order == %{"a" => ["a1", "a2"], "a2" => ["a2x"]}
+      assert state.statuses["a2x"] == :persisted
+      assert state.db_ids["a"] == {1, 10}
+      assert state.db_ids["a1"] == {nil, 11}
+    end
+
+    test "tolerates not-loaded children" do
+      state = Ops.from_entry_blocks([%{id: 1, block: %{uid: "a", id: 10, children: %Ecto.Association.NotLoaded{}}}])
+      assert state.order == ["a"]
+      assert state.child_order == %{}
+    end
+  end
+
+  describe "tree: child ops" do
+    defp tree_state do
+      Ops.from_entry_blocks([
+        entry_block("a", 1, 10, [child("a1", 11), child("a2", 12)]),
+        entry_block("b", 2, 20)
+      ])
+    end
+
+    test "insert_child attaches under parent with :inserted status" do
+      state = apply!(tree_state(), {:insert_child, "a", "x", 1, %{"uid" => "x"}})
+
+      assert state.child_order["a"] == ["a1", "x", "a2"]
+      assert state.parents["x"] == "a"
+      assert state.statuses["x"] == :inserted
+      assert state.diffs["x"]["uid"] == "x"
+    end
+
+    test "insert_child with a known uid reparents (cross-parent move) and refreshes the diff" do
+      state = apply!(tree_state(), {:insert_child, "b", "a1", 0, %{"uid" => "a1", "type" => "module"}})
+
+      assert state.child_order["a"] == ["a2"]
+      assert state.child_order["b"] == ["a1"]
+      assert state.parents["a1"] == "b"
+      assert state.statuses["a1"] == :persisted
+      assert state.diffs["a1"]["type"] == "module"
+    end
+
+    test "insert_child under unknown parent is rejected" do
+      assert {:error, {:unknown_uid, "ghost"}} = Ops.apply_op(tree_state(), {:insert_child, "ghost", "x", 0, %{}})
+    end
+
+    test "reorder_children sanitizes against the parent's children" do
+      state = apply!(tree_state(), {:reorder_children, "a", ["a2", "ghost", "a1"]})
+      assert state.child_order["a"] == ["a2", "a1"]
+    end
+
+    test "move_to_parent refuses cycles" do
+      state = apply!(tree_state(), {:insert_child, "a1", "deep", 0, %{}})
+      assert {:error, {:cyclic_move, "a"}} = Ops.apply_op(state, {:move_to_parent, "a", "deep", 0})
+    end
+
+    test "update accepts child uids" do
+      state = apply!(tree_state(), {:update, "a1", %{"type" => "module"}})
+      assert state.diffs["a1"] == %{"type" => "module"}
+    end
+
+    test "deleting a parent cascades to descendants" do
+      state =
+        tree_state()
+        |> apply!({:insert_child, "a2", "a2x", 0, %{}})
+        |> apply!({:delete, "a"})
+
+      assert state.order == ["b"]
+      assert state.parents == %{}
+      assert state.child_order == %{}
+      # a2x was :inserted — only persisted blocks are tracked for deletion
+      assert Enum.sort(state.deleted) == ["a", "a1", "a2"]
+      refute Map.has_key?(state.statuses, "a2x")
+    end
+
+    test "insert params carrying a children subtree register per-uid diffs" do
+      params = %{
+        "entry_id" => 1,
+        "block" => %{
+          "uid" => "dup",
+          "children" => [
+            %{"uid" => "dup1", "type" => "module"},
+            %{"uid" => "dup2", "children" => [%{"uid" => "dup2x"}]}
+          ]
+        }
+      }
+
+      state = apply!(Ops.new([]), {:insert, "dup", 0, params})
+
+      assert state.order == ["dup"]
+      assert state.child_order == %{"dup" => ["dup1", "dup2"], "dup2" => ["dup2x"]}
+      assert state.statuses["dup2x"] == :inserted
+      assert state.diffs["dup1"] == %{"uid" => "dup1", "type" => "module"}
+      # the stored root diff no longer carries the children subtree
+      refute Map.has_key?(state.diffs["dup"]["block"], "children")
+    end
+  end
+
+  describe "materialize_root/2" do
+    test "unknown root is rejected" do
+      assert {:error, {:unknown_uid, "x"}} = Ops.materialize_root(Ops.new([]), "x")
+    end
+
+    test "untouched persisted blocks materialize as id+sequence-only params" do
+      state = Ops.from_entry_blocks([entry_block("a", 1, 10), entry_block("b", 2, 20)])
+
+      assert {:ok, params} = Ops.materialize_root(state, "b")
+      assert params == %{"id" => 2, "sequence" => 1, "block" => %{"id" => 20, "uid" => "b", "sequence" => 1}}
+    end
+
+    test "diffs merge with tree-derived children, sequence and db ids" do
+      state =
+        [entry_block("a", 1, 10, [child("a1", 11), child("a2", 12)])]
+        |> Ops.from_entry_blocks()
+        |> apply!({:update, "a", %{"block" => %{"description" => "Edited"}}})
+        |> apply!({:update, "a1", %{"type" => "module"}})
+        |> apply!({:reorder_children, "a", ["a2", "a1"]})
+
+      assert {:ok, params} = Ops.materialize_root(state, "a")
+
+      assert params["id"] == 1
+      assert params["sequence"] == 0
+      assert params["block"]["id"] == 10
+      assert params["block"]["description"] == "Edited"
+
+      assert [a2, a1] = params["block"]["children"]
+      assert %{"uid" => "a2", "id" => 12, "sequence" => 0} = a2
+      assert %{"uid" => "a1", "id" => 11, "sequence" => 1, "type" => "module"} = a1
+    end
+
+    test "render artifacts and stale sequence/children keys in diffs are discarded" do
+      state =
+        [entry_block("a", 1, 10, [child("a1", 11)])]
+        |> Ops.from_entry_blocks()
+        |> apply!(
+          {:update, "a",
+           %{"block" => %{"rendered_html" => "<h1>", "rendered_at" => "now", "sequence" => 99, "children" => []}}}
+        )
+
+      assert {:ok, params} = Ops.materialize_root(state, "a")
+
+      refute Map.has_key?(params["block"], "rendered_html")
+      refute Map.has_key?(params["block"], "rendered_at")
+      # the stale sequence 99 is replaced by the tree-derived index
+      assert params["block"]["sequence"] == 0
+      # the tree still knows a1 even though the stale diff said children: []
+      assert [%{"uid" => "a1"}] = params["block"]["children"]
+    end
+
+    test "inserted blocks materialize without ids" do
+      state = apply!(Ops.new([]), {:insert, "x", 0, %{"entry_id" => 7, "block" => %{"uid" => "x", "type" => "module"}}})
+
+      assert {:ok, params} = Ops.materialize_root(state, "x")
+      refute Map.has_key?(params, "id")
+      assert params["entry_id"] == 7
+      assert params["sequence"] == 0
+      assert params["block"]["type"] == "module"
+    end
+  end
+
   describe "op sequences" do
     test "insert → update → move → delete round trip" do
       state =

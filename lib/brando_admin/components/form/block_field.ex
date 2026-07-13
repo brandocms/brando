@@ -57,7 +57,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_list, new_block_list)
     |> assign(:root_changesets, updated_root_changesets)
     |> update(:block_count, &(&1 + 1))
-    |> apply_block_op({:insert, new_uid, new_sequence, Ops.changes_to_params(entry_block_cs)})
+    |> apply_block_op({:insert, new_uid, new_sequence, Ops.block_diff_params(entry_block_cs)})
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
     |> then(&{:ok, &1})
@@ -122,7 +122,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       |> assign(:block_list, new_block_list)
       |> assign(:root_changesets, updated_root_changesets)
       |> update(:block_count, &(&1 + 1))
-      |> apply_block_op({:insert, new_uid, new_sequence, Ops.changes_to_params(entry_block_cs)})
+      |> apply_block_op({:insert, new_uid, new_sequence, Ops.block_diff_params(entry_block_cs)})
       |> reset_position_response_tracker()
       |> send_block_entry_position_update(new_block_list)
       |> then(&{:ok, &1})
@@ -201,21 +201,20 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     uid = get_form_block_uid(entry_block_form)
     updated = replace_form_by_uid(socket.assigns.entry_blocks_forms, uid, entry_block_form)
+    {:ok, assign(socket, :entry_blocks_forms, updated)}
+  end
 
-    socket
-    |> assign(:entry_blocks_forms, updated)
-    |> apply_block_op({:update, uid, Ops.changes_to_params(entry_block_form.source)})
-    |> then(&{:ok, &1})
+  # blocks (any level) emit their content/structural ops directly — see
+  # Block.emit_block_op/2. The op state mirrors the legacy cache updates
+  # performed by the sibling clauses in this module.
+  def update(%{event: "block_op", op: op}, socket) do
+    {:ok, apply_block_op(socket, op)}
   end
 
   def update(%{event: "update_block", level: _level, form: form}, socket) do
     uid = get_form_block_uid(form)
     updated = replace_form_by_uid(socket.assigns.entry_blocks_forms, uid, form)
-
-    socket
-    |> assign(:entry_blocks_forms, updated)
-    |> apply_block_op({:update, uid, Ops.changes_to_params(form.source)})
-    |> then(&{:ok, &1})
+    {:ok, assign(socket, :entry_blocks_forms, updated)}
   end
 
   def update(%{event: "provide_root_block", changeset: changeset, uid: uid, tag: tag}, socket) do
@@ -223,6 +222,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     form_id = socket.assigns.form_id
     block_field = socket.assigns.block_field
     updated_root_changesets = update_root_changeset(root_changesets, uid, changeset)
+
+    if tag == :save, do: shadow_compare_materialized(socket, uid, changeset)
 
     if Enum.any?(updated_root_changesets, &(elem(&1, 1) == nil)) do
       {:ok, assign(socket, :root_changesets, updated_root_changesets)}
@@ -304,7 +305,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_list, new_block_list)
     |> assign(:root_changesets, updated_root_changesets)
     |> update(:block_count, &(&1 + 1))
-    |> apply_block_op({:insert, uid, sequence, Ops.changes_to_params(entry_block_cs)})
+    |> apply_block_op({:insert, uid, sequence, Ops.block_diff_params(entry_block_cs)})
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
     |> push_event("b:scroll_to", %{selector: selector})
@@ -347,7 +348,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_list, new_block_list)
     |> update(:block_count, &(&1 + 1))
     |> assign(:root_changesets, updated_root_changesets)
-    |> apply_block_op({:insert, uid, sequence, Ops.changes_to_params(entry_block_cs)})
+    |> apply_block_op({:insert, uid, sequence, Ops.block_diff_params(entry_block_cs)})
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
     |> then(&{:ok, &1})
@@ -389,7 +390,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_list, new_block_list)
     |> assign(:root_changesets, updated_root_changesets)
     |> update(:block_count, &(&1 + 1))
-    |> apply_block_op({:insert, uid, sequence, Ops.changes_to_params(entry_block_cs)})
+    |> apply_block_op({:insert, uid, sequence, Ops.block_diff_params(entry_block_cs)})
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
     |> then(&{:ok, &1})
@@ -540,7 +541,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       {:ok,
        socket
        |> assign(:entry_blocks_forms, updated_forms)
-       |> apply_block_op({:update, uid, Ops.changes_to_params(cs)})
+       |> apply_block_op({:update, uid, Ops.block_diff_params(cs)})
        |> push_event("b:component:remount_block", %{uid: uid})}
     else
       {:ok, socket}
@@ -600,7 +601,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       |> assign(:block_list, new_block_list)
       |> assign(:root_changesets, updated_root_changesets)
       |> update(:block_count, &(&1 + 1))
-      |> apply_block_op({:insert, remote_uid, clamped_sequence, Ops.changes_to_params(entry_block_cs)})
+      |> apply_block_op({:insert, remote_uid, clamped_sequence, Ops.block_diff_params(entry_block_cs)})
       |> reset_position_response_tracker()
       |> send_block_entry_position_update(new_block_list)
       |> then(&{:ok, &1})
@@ -677,13 +678,141 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_list, block_list)
     |> assign(:block_count, length(block_list))
     |> assign(:root_changesets, Enum.map(entry_blocks, &{&1.block.uid, nil}))
-    |> assign(:block_ops, Ops.new(block_list))
+    |> assign(:block_ops, Ops.from_entry_blocks(entry_blocks))
     |> assign(:module_picker_id, "#block-field-#{assigns.block_field}-module-picker")
     |> assign(:clipboard_meta, nil)
     |> assign(:blocks_topic, blocks_topic)
     |> maybe_sequence_initial_blocks(entry_blocks, block_list)
     |> assign(:blocks_initialized, true)
   end
+
+  # --- Phase 3 shadow mode --------------------------------------------------
+  # At save, each root block's materialized params (from the op store) are
+  # cast over the persisted data and compared against the gathered changeset.
+  # Mismatches are logged, never applied — this validates the diff store
+  # end-to-end before materialization replaces the gather protocol. Delete
+  # this section when save flips.
+
+  defp shadow_compare_materialized(socket, uid, gathered_cs) do
+    do_shadow_compare(socket, uid, gathered_cs)
+  rescue
+    # the shadow run must never take the save down with it
+    exception ->
+      Logger.warning(
+        "BlockField shadow-compare CRASHED for block #{uid}: " <>
+          Exception.format(:error, exception, __STACKTRACE__)
+      )
+
+      :ok
+  end
+
+  defp do_shadow_compare(socket, uid, gathered_cs) do
+    block_module = socket.assigns.block_module
+    user_id = socket.assigns.current_user.id
+
+    case Ops.materialize_root(socket.assigns.block_ops, uid) do
+      {:ok, params} ->
+        materialized =
+          socket
+          |> shadow_base_struct(uid)
+          |> block_module.changeset(params, user_id)
+          |> Changeset.apply_changes()
+          |> shadow_normalize()
+
+        gathered = gathered_cs |> Changeset.apply_changes() |> shadow_normalize()
+
+        case shadow_diff(gathered, materialized, "entry_block") do
+          [] ->
+            Logger.debug("BlockField shadow-compare OK for block #{uid}")
+
+          diffs ->
+            Logger.warning(
+              "BlockField shadow-compare MISMATCH for block #{uid} (gathered vs materialized):\n" <>
+                Enum.join(diffs, "\n")
+            )
+        end
+
+      {:error, reason} ->
+        Logger.warning("BlockField shadow-compare could not materialize #{uid}: #{inspect(reason)}")
+    end
+
+    :ok
+  end
+
+  defp shadow_base_struct(socket, uid) do
+    case Enum.find(socket.assigns.entry_blocks || [], &(&1.block.uid == uid)) do
+      nil ->
+        base_block = %Brando.Content.Block{vars: [], refs: [], table_rows: [], children: [], block_identifiers: []}
+        socket.assigns.block_module |> struct(%{}) |> Map.put(:block, base_block)
+
+      entry_block ->
+        entry_block
+    end
+  end
+
+  # editor-only artifacts + noise fields that legitimately differ between the
+  # gathered and materialized changesets
+  @shadow_skip_fields [
+    :__meta__,
+    :inserted_at,
+    :updated_at,
+    :deleted_at,
+    :rendered_html,
+    :rendered_at,
+    :marked_as_deleted
+  ]
+
+  # nested block state we DO want compared — every other association is
+  # dropped (belongs_to preloads differ by load state, not by content)
+  @shadow_keep_assocs [:block, :children, :vars, :refs, :table_rows, :block_identifiers]
+
+  defp shadow_normalize(%Ecto.Association.NotLoaded{}), do: :not_loaded
+
+  # the legacy pipeline stores nested changesets as plain values (e.g. ref
+  # data) — apply them before comparing
+  defp shadow_normalize(%Changeset{} = cs), do: cs |> Changeset.apply_changes() |> shadow_normalize()
+
+  defp shadow_normalize(%mod{} = struct) do
+    if function_exported?(mod, :__schema__, 1) do
+      drop_assocs = mod.__schema__(:associations) -- @shadow_keep_assocs
+
+      struct
+      |> Map.from_struct()
+      |> Map.drop(@shadow_skip_fields ++ drop_assocs)
+      |> Map.new(fn {k, v} -> {k, shadow_normalize(v)} end)
+    else
+      struct
+    end
+  end
+
+  defp shadow_normalize(list) when is_list(list), do: Enum.map(list, &shadow_normalize/1)
+  defp shadow_normalize(%{} = map), do: Map.new(map, fn {k, v} -> {k, shadow_normalize(v)} end)
+  defp shadow_normalize(other), do: other
+
+  defp shadow_diff(a, b, path) when is_map(a) and is_map(b) and not is_struct(a) and not is_struct(b) do
+    (Map.keys(a) ++ Map.keys(b))
+    |> Enum.uniq()
+    |> Enum.flat_map(&shadow_diff(Map.get(a, &1), Map.get(b, &1), "#{path}.#{&1}"))
+  end
+
+  defp shadow_diff(a, b, path) when is_list(a) and is_list(b) do
+    if length(a) == length(b) do
+      a
+      |> Enum.zip(b)
+      |> Enum.with_index()
+      |> Enum.flat_map(fn {{x, y}, i} -> shadow_diff(x, y, "#{path}[#{i}]") end)
+    else
+      ["#{path}: list length #{length(a)} vs #{length(b)}"]
+    end
+  end
+
+  defp shadow_diff(a, a, _path), do: []
+
+  defp shadow_diff(a, b, path) do
+    ["#{path}: #{inspect(a, limit: 5, printable_limit: 120)} vs #{inspect(b, limit: 5, printable_limit: 120)}"]
+  end
+
+  # --- end shadow mode -------------------------------------------------------
 
   # Strangler-phase op application (see `Ops` moduledoc): every mutation the
   # legacy cache performs is mirrored into the op state. A rejected op means
@@ -734,7 +863,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_list, block_list)
     |> assign(:block_count, length(block_list))
     |> assign(:root_changesets, Enum.map(entry_blocks, &{&1.block.uid, nil}))
-    |> assign(:block_ops, Ops.new(block_list))
+    |> assign(:block_ops, Ops.from_entry_blocks(entry_blocks))
   end
 
   defp remove_block_from_state(socket, uid) do
@@ -769,7 +898,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     merged_uids
     |> Enum.filter(&MapSet.member?(missing_set, &1))
     |> Enum.reduce(socket, fn uid, acc ->
-      params = Ops.changes_to_params(forms_by_uid[uid].source)
+      params = Ops.block_diff_params(forms_by_uid[uid].source)
       apply_block_op(acc, {:insert, uid, :end, params})
     end)
     |> apply_block_op({:reorder, merged_uids})
@@ -1529,7 +1658,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_list, new_block_list)
     |> assign(:root_changesets, updated_root_changesets)
     |> update(:block_count, &(&1 + 1))
-    |> apply_block_op({:insert, new_uid, sequence, Ops.changes_to_params(entry_block_cs)})
+    |> apply_block_op({:insert, new_uid, sequence, Ops.block_diff_params(entry_block_cs)})
     |> reset_position_response_tracker()
     |> send_block_entry_position_update(new_block_list)
     |> push_event("b:scroll_to", %{selector: selector})
