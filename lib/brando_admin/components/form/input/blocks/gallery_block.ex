@@ -48,18 +48,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   def update(%{event: "image_processed", image: image}, socket) do
-    {module, id} = socket.assigns.target_ref
-
     # Keep the parent ref changeset in sync so live preview sees the processed image
     # without waiting for another block mutation (e.g. drag-and-drop reorder).
-    send_update(module,
-      id: id,
-      event: "update_ref_data",
-      ref_name: socket.assigns.ref_name,
-      replace_gallery_image: {image.id, image},
-      force_render: true,
-      propagate: true
-    )
+    Block.commit_ref_data(socket, replace_gallery_image: {image.id, image}, force_render: true)
 
     # Use locally tracked gallery_objects instead of re-reading from form.
     # After image_editor_new_copy, propagation may not have completed yet,
@@ -89,26 +80,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   def update(%{event: "live_upload_complete", image_id: image_id}, socket) do
-    {module, id} = socket.assigns.target_ref
-
-    send_update(module,
-      id: id,
-      event: "update_ref_data",
-      ref_name: socket.assigns.ref_name,
-      add_gallery_image_id: image_id,
-      propagate: true
-    )
-
-    {:ok, socket}
+    socket
+    |> Block.commit_ref_data(add_gallery_image_id: image_id)
+    |> then(&{:ok, &1})
   end
 
   def update(%{event: "image_editor_new_copy", new_image: new_image, old_image_id: old_image_id}, socket) do
-    {module, id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
-
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    block_data = Changeset.apply_changes(block_data_cs)
-    new_block_data = Map.from_struct(block_data)
+    new_block_data = Block.current_block_data_map(socket.assigns.block)
 
     # Update gallery_objects locally so image_processed can match on the new
     # image_id immediately, even before the propagation cascade completes.
@@ -129,53 +107,29 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         gallery_objects ++ [new_obj]
       end
 
-    if old_image_id do
-      send_update(module,
-        id: id,
-        event: "update_ref_data",
-        ref_data: new_block_data,
-        ref_name: ref_name,
-        replace_gallery_image: {old_image_id, new_image},
-        propagate: true
-      )
-    else
-      send_update(module,
-        id: id,
-        event: "update_ref_data",
-        ref_data: new_block_data,
-        ref_name: ref_name,
-        add_gallery_image_id: new_image.id,
-        propagate: true
-      )
-    end
+    gallery_action =
+      if old_image_id do
+        {:replace_gallery_image, {old_image_id, new_image}}
+      else
+        {:add_gallery_image_id, new_image.id}
+      end
 
-    {:ok,
-     socket
-     |> assign(:gallery_objects, updated_gallery_objects)
-     |> assign(:indexed_objects, Enum.with_index(updated_gallery_objects))
-     |> assign(:has_objects?, !Enum.empty?(updated_gallery_objects))}
+    socket
+    |> Block.commit_ref_data([ref_data: new_block_data] ++ [gallery_action])
+    |> assign(:gallery_objects, updated_gallery_objects)
+    |> assign(:indexed_objects, Enum.with_index(updated_gallery_objects))
+    |> assign(:has_objects?, !Enum.empty?(updated_gallery_objects))
+    |> then(&{:ok, &1})
   end
 
   def update(%{event: "video_created_from_url", video_data: %{id: video_id}}, socket) do
     # Video was already created by VideoPicker — add it to gallery like select_video does
-    {module, target_id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
-
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    block_data = Changeset.apply_changes(block_data_cs)
-    new_block_data = Map.from_struct(block_data)
-
-    send_update(
-      module,
-      id: target_id,
-      event: "update_ref_data",
-      ref_data: new_block_data,
-      ref_name: ref_name,
-      add_gallery_video_id: video_id,
-      propagate: true
+    socket
+    |> Block.commit_ref_data(
+      ref_data: Block.current_block_data_map(socket.assigns.block),
+      add_gallery_video_id: video_id
     )
-
-    {:ok, socket}
+    |> then(&{:ok, &1})
   end
 
   def update(assigns, socket) do
@@ -387,14 +341,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   def handle_event("select_image", %{"id" => id}, socket) do
-    {module, target_id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
     {:ok, image} = Brando.Images.get_image(id)
-
-    # Get current block data for gallery settings
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    block_data = Changeset.apply_changes(block_data_cs)
-    new_block_data = Map.from_struct(block_data)
 
     already_selected? = image.id in current_selected_image_ids(socket)
 
@@ -405,16 +352,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         {:add_gallery_image_id, current_selected_image_ids(socket) ++ [image.id]}
       end
 
-    send_update(
-      module,
-      [
-        {:id, target_id},
-        {:event, "update_ref_data"},
-        {:ref_data, new_block_data},
-        {:ref_name, ref_name},
-        {action_key, image.id},
-        {:propagate, true}
-      ]
+    Block.commit_ref_data(
+      socket,
+      Keyword.put([ref_data: Block.current_block_data_map(socket.assigns.block)], action_key, image.id)
     )
 
     send_update(BrandoAdmin.Components.ImagePicker,
@@ -467,13 +407,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   def handle_event("select_video", %{"id" => id}, socket) do
-    {module, target_id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
     video_id = String.to_integer(id)
-
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    block_data = Changeset.apply_changes(block_data_cs)
-    new_block_data = Map.from_struct(block_data)
 
     current_video_ids =
       socket.assigns.gallery_objects
@@ -482,16 +416,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     action_key = if video_id in current_video_ids, do: :remove_gallery_video_id, else: :add_gallery_video_id
 
-    send_update(
-      module,
-      [
-        {:id, target_id},
-        {:event, "update_ref_data"},
-        {:ref_data, new_block_data},
-        {:ref_name, ref_name},
-        {action_key, video_id},
-        {:propagate, true}
-      ]
+    Block.commit_ref_data(
+      socket,
+      Keyword.put([ref_data: Block.current_block_data_map(socket.assigns.block)], action_key, video_id)
     )
 
     {:noreply, socket}
@@ -500,30 +427,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   def handle_event("open_image_editor", %{"image_id" => image_id}, socket) do
     {:ok, image} = Brando.Images.get_image(image_id)
 
-    # Set edit_image on Form so the save handler knows which image to update
-    send_update(BrandoAdmin.Components.Form,
-      id: socket.assigns.form_id,
-      action: :set_edit_image_from_block,
-      image: image,
-      block_target: {__MODULE__, socket.assigns.id},
-      old_image_id: image.id
-    )
-
-    # Push the init event directly from this component (same render cycle, no race)
-    crop_groups = build_crop_groups_for(image)
-
     {:noreply,
-     push_event(socket, "b:image_editor:init", %{
-       image_src: Brando.Utils.img_url(image, :original, prefix: Brando.Utils.media_url()),
-       image_width: image.width,
-       image_height: image.height,
-       image_id: image.id,
-       focal_x: (image.focal && image.focal.x) || 50,
-       focal_y: (image.focal && image.focal.y) || 50,
-       crop_groups: crop_groups,
-       from_block: true,
-       config_target: image.config_target
-     })}
+     Block.push_image_editor_init(socket, image,
+       block_target: {__MODULE__, socket.assigns.id},
+       old_image_id: image.id
+     )}
   end
 
   ## Function components
@@ -905,11 +813,4 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   defp extract_override_object_id(_), do: nil
-
-  defp build_crop_groups_for(image) do
-    case Brando.Images.get_config_for(image) do
-      {:ok, config} -> Form.build_crop_groups(config.sizes)
-      _ -> []
-    end
-  end
 end

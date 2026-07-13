@@ -13,7 +13,10 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
   ##
   ## Block events
-  def handle_block_event("copy_block", _, socket) do
+
+  # copy and duplicate both ship the block's changeset (+ children refs) up to
+  # the parent — only the event name forwarded differs
+  def handle_block_event(event, _, socket) when event in ["copy_block", "duplicate_block"] do
     changeset = socket.assigns.form.source
     changesets = socket.assigns.changesets
     has_children? = socket.assigns.has_children?
@@ -28,7 +31,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       end
 
     send_to_ref(parent_ref, %{
-      event: "copy_block",
+      event: event,
       changeset: changeset,
       children: children,
       uid: uid
@@ -62,30 +65,6 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       event: "paste_child_block",
       parent_ref: {Block, socket.assigns.id},
       sequence: block_count
-    })
-
-    {:halt, socket}
-  end
-
-  def handle_block_event("duplicate_block", _, socket) do
-    changeset = socket.assigns.form.source
-    changesets = socket.assigns.changesets
-    has_children? = socket.assigns.has_children?
-    uid = socket.assigns.uid
-    parent_ref = socket.assigns.parent_ref
-    id = socket.assigns.id
-
-    children =
-      if has_children? do
-        prefix = "#{id}-child"
-        Enum.map(changesets, fn {block_uid, _} -> {"#{prefix}-#{block_uid}", block_uid} end)
-      end
-
-    send_to_ref(parent_ref, %{
-      event: "duplicate_block",
-      changeset: changeset,
-      children: children,
-      uid: uid
     })
 
     {:halt, socket}

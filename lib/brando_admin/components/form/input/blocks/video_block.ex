@@ -1,8 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   @moduledoc false
   use BrandoAdmin, :live_component
-  # use Phoenix.HTML
-
   use Gettext, backend: Brando.Gettext
 
   import BrandoAdmin.Components.Content.List.Checklist
@@ -67,43 +65,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
   def update(%{event: "video_created_from_url"} = assigns, socket) do
     # Handle the video creation event from VideoPicker
-    {module, id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
-    ref_form = socket.assigns.ref_form
-
-    # Get the current block data to use as ref_data
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    current_block_data = Changeset.apply_changes(block_data_cs)
-
-    # Create ref_data with the video block overrides
-    ref_data =
-      current_block_data
-      |> Map.from_struct()
-      |> Map.take(@video_override_fields)
-
-    # Send the update to the parent with both ref_data and video_data
-    send_update(module,
-      id: id,
-      event: "update_ref_data",
-      ref_name: ref_name,
-      ref_data: ref_data,
+    socket
+    |> Block.commit_ref_data(
+      ref_data: Block.current_block_data_map(socket.assigns.block, @video_override_fields),
       video_data: assigns.video_data,
-      form: ref_form,
-      force_render: true,
-      # propagate so the created video's FK survives a later block insert/delete
-      # (see CLAUDE.md "Block Editor: changeset propagation")
-      propagate: true
+      form: socket.assigns.ref_form,
+      force_render: true
     )
-
-    # Update assigns for immediate display
-    socket =
-      socket
-      |> assign(:video_data, assigns.video_data)
-      |> assign(:type, Map.get(assigns.video_data, :type, :file))
-      |> assign(:cover_image, nil)
-      |> assign(:video, struct(Brando.Videos.Video, assigns.video_data))
-
-    {:ok, socket}
+    |> assign(:video_data, assigns.video_data)
+    |> assign(:type, Map.get(assigns.video_data, :type, :file))
+    |> assign(:cover_image, nil)
+    |> assign(:video, struct(Brando.Videos.Video, assigns.video_data))
+    |> then(&{:ok, &1})
   end
 
   def update(assigns, socket) do
@@ -124,29 +97,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
      end)
      |> assign_new(:video, fn ->
        # Always get video from ref_form since we only use refs now
-       if assigns[:ref_form] do
-         ref_cs = assigns.ref_form.source
-
-         case Changeset.get_field(ref_cs, :video) do
-           nil ->
-             # If no video preloaded, try to fetch via video_id
-             case Changeset.get_field(ref_cs, :video_id) do
-               nil ->
-                 nil
-
-               video_id ->
-                 case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}) do
-                   {:ok, video} -> video
-                   _ -> nil
-                 end
-             end
-
-           video ->
-             video
-         end
-       else
-         nil
-       end
+       Block.resolve_ref_association(assigns[:ref_form], :video, :video_id, fn video_id ->
+         Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]})
+       end)
      end)
      |> assign_new(:video_data, fn %{video: video} -> if video, do: Map.from_struct(video), else: %{} end)
      |> assign_new(:type, fn %{video_data: video_data} -> Map.get(video_data, :type, :file) end)
@@ -494,86 +447,44 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   end
 
   def handle_event("toggle_override", %{"field" => field_name, "default" => default_str}, socket) do
-    {module, id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
     field_atom = String.to_existing_atom(field_name)
     default_val = default_str == "true"
 
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    current_block_data = Changeset.apply_changes(block_data_cs)
-    current_value = Map.get(current_block_data, field_atom)
+    current_value =
+      socket.assigns.block
+      |> Block.get_block_data_changeset()
+      |> Changeset.get_field(field_atom)
 
     visual_state = if is_nil(current_value), do: default_val, else: current_value
-    new_value = !visual_state
 
     ref_data =
-      current_block_data
-      |> Map.from_struct()
-      |> Map.take(@video_override_fields)
-      |> Map.put(field_atom, new_value)
+      Block.current_block_data_map(socket.assigns.block, @video_override_fields, %{field_atom => !visual_state})
 
-    send_update(module,
-      id: id,
-      event: "update_ref_data",
-      ref_data: ref_data,
-      ref_name: ref_name,
-      force_render: true,
-      propagate: true
-    )
-
-    {:noreply, socket}
+    socket
+    |> Block.commit_ref_data(ref_data: ref_data, force_render: true)
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("reset_override", %{"field" => field_name}, socket) do
-    {module, id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
     field_atom = String.to_existing_atom(field_name)
+    ref_data = Block.current_block_data_map(socket.assigns.block, @video_override_fields, %{field_atom => nil})
 
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    current_block_data = Changeset.apply_changes(block_data_cs)
-
-    ref_data =
-      current_block_data
-      |> Map.from_struct()
-      |> Map.take(@video_override_fields)
-      |> Map.put(field_atom, nil)
-
-    send_update(module,
-      id: id,
-      event: "update_ref_data",
-      ref_data: ref_data,
-      ref_name: ref_name,
-      force_render: true,
-      propagate: true
-    )
-
-    {:noreply, socket}
+    socket
+    |> Block.commit_ref_data(ref_data: ref_data, force_render: true)
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("reset_override_group", %{"fields" => fields_str}, socket) do
-    {module, id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
-    field_atoms = fields_str |> String.split(",") |> Enum.map(&String.to_existing_atom/1)
+    overrides =
+      fields_str
+      |> String.split(",")
+      |> Map.new(&{String.to_existing_atom(&1), nil})
 
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    current_block_data = Changeset.apply_changes(block_data_cs)
+    ref_data = Block.current_block_data_map(socket.assigns.block, @video_override_fields, overrides)
 
-    ref_data =
-      current_block_data
-      |> Map.from_struct()
-      |> Map.take(@video_override_fields)
-      |> then(fn data -> Enum.reduce(field_atoms, data, &Map.put(&2, &1, nil)) end)
-
-    send_update(module,
-      id: id,
-      event: "update_ref_data",
-      ref_data: ref_data,
-      ref_name: ref_name,
-      force_render: true,
-      propagate: true
-    )
-
-    {:noreply, socket}
+    socket
+    |> Block.commit_ref_data(ref_data: ref_data, force_render: true)
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("set_target", _, socket) do
@@ -594,67 +505,31 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   end
 
   def handle_event("reset_image", _, socket) do
-    {module, id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
+    ref_data = Block.current_block_data_map(socket.assigns.block, @video_override_fields, %{cover_image: nil})
 
-    # Get current block data and only update cover_image override field
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    current_block_data = Changeset.apply_changes(block_data_cs)
-
-    new_block_data =
-      current_block_data
-      |> Map.from_struct()
-      |> Map.take(@video_override_fields)
-      |> Map.put(:cover_image, nil)
-
-    # propagate the cleared cover image to the parent cache (see CLAUDE.md
-    # "Block Editor: changeset propagation")
-    send_update(module,
-      id: id,
-      event: "update_ref_data",
-      ref_data: new_block_data,
-      ref_name: ref_name,
-      propagate: true
-    )
-
-    {:noreply, assign(socket, :cover_image, nil)}
+    socket
+    |> Block.commit_ref_data(ref_data: ref_data)
+    |> assign(:cover_image, nil)
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("reset_video", _, socket) do
-    {module, id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
-
     # Reset to the ref's template defaults (captured on first mount)
     # instead of a blank struct with all-false values
-    new_block_data = socket.assigns.initial_override_defaults
-
-    send_update(module,
-      id: id,
-      event: "update_ref_data",
-      ref_data: new_block_data,
-      ref_name: ref_name,
+    socket
+    |> Block.commit_ref_data(
+      ref_data: socket.assigns.initial_override_defaults,
       video_id: nil,
-      force_render: true,
-      # propagate the cleared FK to the parent cache — otherwise a later block
-      # insert/delete re-inits this block from the stale cache and the video
-      # comes back (see CLAUDE.md "Block Editor: changeset propagation")
-      propagate: true
+      force_render: true
     )
-
-    # Clear video assigns immediately for block editor display
-    socket =
-      socket
-      |> assign(:video, nil)
-      |> assign(:video_data, %{})
-      |> assign(:type, :file)
-      |> assign(:cover_image, nil)
-
-    {:noreply, socket}
+    |> assign(:video, nil)
+    |> assign(:video_data, %{})
+    |> assign(:type, :file)
+    |> assign(:cover_image, nil)
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("select_image", %{"id" => id}, socket) do
-    {module, target_id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
     {:ok, image} = Brando.Images.get_image(id)
 
     # For cover images, we still embed the picture data in the video block
@@ -663,27 +538,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       |> Map.from_struct()
       |> Map.take(@picture_fields_to_take)
 
-    # Get current block data and update cover_image
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    current_block_data = Changeset.apply_changes(block_data_cs)
+    ref_data =
+      Block.current_block_data_map(socket.assigns.block, @video_override_fields, %{cover_image: picture_data})
 
-    new_block_data =
-      current_block_data
-      |> Map.from_struct()
-      |> Map.take(@video_override_fields)
-      |> Map.put(:cover_image, picture_data)
-
-    # propagate so the picked cover image survives a later block insert/delete
-    # (see CLAUDE.md "Block Editor: changeset propagation")
-    send_update(module,
-      id: target_id,
-      event: "update_ref_data",
-      ref_data: new_block_data,
-      ref_name: ref_name,
-      propagate: true
-    )
-
-    {:noreply, assign(socket, :cover_image, picture_data)}
+    socket
+    |> Block.commit_ref_data(ref_data: ref_data)
+    |> assign(:cover_image, picture_data)
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("open_video_picker", _, socket) do
@@ -710,45 +571,23 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   end
 
   def handle_event("select_video", %{"id" => video_id}, socket) do
-    {module, id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
-    ref_form = socket.assigns.ref_form
-
-    # Get the current block data to preserve override fields
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    current_block_data = Changeset.apply_changes(block_data_cs)
-
-    ref_data =
-      current_block_data
-      |> Map.from_struct()
-      |> Map.take(@video_override_fields)
-
     case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}) do
       {:ok, video} ->
-        # Update the ref to point to the selected video
-        send_update(module,
-          id: id,
-          event: "update_ref_data",
-          ref_name: ref_name,
-          ref_data: ref_data,
-          video_id: video_id,
-          form: ref_form,
-          force_render: true,
-          # propagate so the picked video_id survives a later block insert/delete
-          # (see CLAUDE.md "Block Editor: changeset propagation")
-          propagate: true
-        )
-
         video_data = Map.from_struct(video)
 
-        socket =
-          socket
-          |> assign(:video, video)
-          |> assign(:video_data, video_data)
-          |> assign(:type, Map.get(video_data, :type, :file))
-          |> assign(:cover_image, Map.get(video_data, :thumbnail))
-
-        {:noreply, socket}
+        socket
+        |> Block.commit_ref_data(
+          # preserve override fields; the video itself goes to the association
+          ref_data: Block.current_block_data_map(socket.assigns.block, @video_override_fields),
+          video_id: video_id,
+          form: socket.assigns.ref_form,
+          force_render: true
+        )
+        |> assign(:video, video)
+        |> assign(:video_data, video_data)
+        |> assign(:type, Map.get(video_data, :type, :file))
+        |> assign(:cover_image, Map.get(video_data, :thumbnail))
+        |> then(&{:noreply, &1})
 
       {:error, _} ->
         {:noreply, socket}

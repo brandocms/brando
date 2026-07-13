@@ -2280,6 +2280,112 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   @doc """
+  Fetches the current block data (with pending changeset changes applied) as
+  a plain map, optionally restricted to `fields` and merged with `overrides`.
+
+  This is the canonical way for per-type block components to build the
+  `ref_data` payload for `update_ref_data` commits.
+  """
+  def current_block_data_map(block, fields \\ nil, overrides \\ %{}) do
+    block
+    |> get_block_data_changeset()
+    |> Changeset.apply_changes()
+    |> Map.from_struct()
+    |> then(&if fields, do: Map.take(&1, fields), else: &1)
+    |> Map.merge(overrides)
+  end
+
+  @doc """
+  Commit a one-shot ref-data change to the owning block component.
+
+  Sends `update_ref_data` with `propagate: true` ALWAYS. Out-of-band media
+  commits (select / reset / upload-complete / image-editor) must reach the
+  parent's cached form — otherwise the next block insert/delete re-inits the
+  block from the stale cache and silently wipes the change (see CLAUDE.md
+  "Block Editor: changeset propagation"). Using this helper instead of a raw
+  `send_update` makes forgetting propagation impossible.
+
+  Do NOT use for per-keystroke updates — discrete commits only.
+
+  Expects `target_ref` (`{module, id}`) and `ref_name` in the caller's assigns;
+  `opts` carries the payload (`ref_data`, `image_id`, `video_id`, `force_render`…).
+  """
+  def commit_ref_data(socket, opts) do
+    {module, id} = socket.assigns.target_ref
+    ref_name = socket.assigns.ref_name
+
+    Phoenix.LiveView.send_update(
+      module,
+      Keyword.merge([id: id, event: "update_ref_data", ref_name: ref_name, propagate: true], opts)
+    )
+
+    socket
+  end
+
+  @doc """
+  Open the image editor for `image` from a block component.
+
+  Registers the edit target on the parent Form, then pushes the editor init
+  event from the calling component in the same render cycle (no race).
+
+  Options:
+    * `:block_target` — `{module, id}` of the editing component (required)
+    * `:old_image_id` — pass when the edit replaces an existing image ref
+  """
+  def push_image_editor_init(socket, image, opts) do
+    form_update =
+      [
+        id: socket.assigns.form_id,
+        action: :set_edit_image_from_block,
+        image: image,
+        block_target: Keyword.fetch!(opts, :block_target)
+      ] ++ Keyword.take(opts, [:old_image_id])
+
+    Phoenix.LiveView.send_update(BrandoAdmin.Components.Form, form_update)
+
+    Phoenix.LiveView.push_event(socket, "b:image_editor:init", %{
+      image_src: Brando.Utils.img_url(image, :original, prefix: Brando.Utils.media_url()),
+      image_width: image.width,
+      image_height: image.height,
+      image_id: image.id,
+      focal_x: (image.focal && image.focal.x) || 50,
+      focal_y: (image.focal && image.focal.y) || 50,
+      crop_groups: BrandoAdmin.Components.Form.build_crop_groups_for(image),
+      from_block: true,
+      config_target: image.config_target
+    })
+  end
+
+  @doc """
+  Resolve a ref's media association: preloaded value, else fetch by FK, else nil.
+
+  Shared shape for picture (`:image`/`:image_id`) and video (`:video`/`:video_id`)
+  components resolving their display media from the ref form.
+  """
+  def resolve_ref_association(nil, _assoc_field, _id_field, _fetch), do: nil
+
+  def resolve_ref_association(ref_form, assoc_field, id_field, fetch) do
+    ref_cs = ref_form.source
+
+    case Changeset.get_field(ref_cs, assoc_field) do
+      nil ->
+        case Changeset.get_field(ref_cs, id_field) do
+          nil ->
+            nil
+
+          id ->
+            case fetch.(id) do
+              {:ok, value} -> value
+              _ -> nil
+            end
+        end
+
+      value ->
+        value
+    end
+  end
+
+  @doc """
   Gets the block changeset depending on whether it belongs to the root or not.
   """
   def get_block_changeset(changeset, :root), do: Changeset.get_assoc(changeset, :block)

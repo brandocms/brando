@@ -5697,6 +5697,19 @@ defmodule BrandoAdmin.Components.Form do
 
   def build_crop_groups(_), do: []
 
+  @doc """
+  Build crop groups from an image's resolved config.
+
+  Convenience over `build_crop_groups/1` for call sites that hold an image
+  struct rather than a size config.
+  """
+  def build_crop_groups_for(image) do
+    case Brando.Images.get_config_for(image) do
+      {:ok, config} -> build_crop_groups(config.sizes)
+      _ -> []
+    end
+  end
+
   defp rationalize(ratio) when is_float(ratio) do
     # Try common ratios first
     common_ratios = [

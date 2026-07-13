@@ -1,4 +1,3 @@
-# TODO: REWRITE with new form logic?
 defmodule BrandoAdmin.Components.Form.Input.Blocks.Utils do
   def form_for_map(field, opts \\ []) do
     id = field.id

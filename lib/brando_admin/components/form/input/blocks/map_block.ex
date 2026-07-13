@@ -1,13 +1,10 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
   @moduledoc false
   use BrandoAdmin, :live_component
-  # use Phoenix.HTML
-
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
-  alias Ecto.Changeset
 
   # prop base_form, :any
   # prop data_field, :atom
@@ -103,35 +100,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
   end
 
   def handle_event("url", %{"source" => source, "embedUrl" => embed_url}, socket) do
-    {module, id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
+    ref_data =
+      Block.current_block_data_map(socket.assigns.block, nil, %{
+        embed_url: embed_url,
+        source: String.to_existing_atom(source)
+      })
 
-    new_data = %{
-      embed_url: embed_url,
-      source: String.to_existing_atom(source)
-    }
-
-    updated_data = update_block_data(socket, new_data)
-
-    # propagate the committed embed_url to the parent cache — otherwise a later
-    # block insert/delete re-inits this block from the stale cache and the map
-    # is lost (see CLAUDE.md "Block Editor: changeset propagation")
-    send_update(module,
-      id: id,
-      event: "update_ref_data",
-      ref_data: updated_data,
-      ref_name: ref_name,
-      propagate: true
-    )
-
-    {:noreply, socket}
-  end
-
-  defp update_block_data(socket, new_data) do
-    block = socket.assigns.block
-    block_data_cs = Block.get_block_data_changeset(block)
-    block_data = Changeset.apply_changes(block_data_cs)
-    data_map = Map.from_struct(block_data)
-    Map.merge(data_map, new_data)
+    socket
+    |> Block.commit_ref_data(ref_data: ref_data)
+    |> then(&{:noreply, &1})
   end
 end

@@ -5,7 +5,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   alias Brando.Villain.Blocks.PictureBlock
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias Ecto.Changeset
@@ -58,24 +57,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   def update(%{event: "image_editor_new_copy", new_image: new_image}, socket) do
-    {module, id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
-
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    current_block_data = Changeset.apply_changes(block_data_cs)
-    new_block_data = current_block_data |> Map.from_struct() |> Map.take(@override_fields)
-
-    send_update(module,
-      id: id,
-      event: "update_ref_data",
-      ref_data: new_block_data,
-      ref_name: ref_name,
+    socket
+    |> Block.commit_ref_data(
+      ref_data: Block.current_block_data_map(socket.assigns.block, @override_fields),
       image_id: new_image.id,
-      force_render: true,
-      propagate: true
+      force_render: true
     )
-
-    {:ok, assign(socket, :image, new_image)}
+    |> assign(:image, new_image)
+    |> then(&{:ok, &1})
   end
 
   def update(assigns, socket) do
@@ -84,83 +73,38 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     uid = assigns.ref_form[:uid].value
     form_id = assigns[:form_id] || socket.assigns[:form_id] || BrandoAdmin.Utils.derive_form_id(assigns.ref_form.name)
 
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(:uid, uid)
-     |> assign(:block_data, block_data)
-     |> assign(:form_id, form_id)
-     |> assign_new(:compact, fn -> true end)
-     |> assign_new(:image, fn ->
-       if assigns[:ref_form] do
-         ref_cs = assigns.ref_form.source
+    socket =
+      socket
+      |> assign(assigns)
+      |> assign(:uid, uid)
+      |> assign(:block_data, block_data)
+      |> assign(:form_id, form_id)
+      |> assign_new(:compact, fn -> true end)
+      |> assign_new(:image, fn ->
+        Block.resolve_ref_association(assigns[:ref_form], :image, :image_id, &Brando.Images.get_image/1)
+      end)
 
-         case Changeset.get_field(ref_cs, :image) do
-           nil ->
-             case Changeset.get_field(ref_cs, :image_id) do
-               nil ->
-                 nil
-
-               image_id ->
-                 case Brando.Images.get_image(image_id) do
-                   {:ok, image} -> image
-                   _ -> nil
-                 end
-             end
-
-           image ->
-             image
-         end
-       else
-         nil
-       end
-     end)
-     |> assign_new(:extracted_path, fn %{image: image} ->
-       if is_map(image), do: Map.get(image, :path), else: nil
-     end)
-     |> assign_new(:extracted_filename, fn %{extracted_path: extracted_path} ->
-       if extracted_path, do: Path.basename(extracted_path), else: nil
-     end)
-     |> assign_new(:file_name, fn %{extracted_filename: extracted_filename} -> extracted_filename end)
-     |> assign_new(:upload_formats, fn %{image: image} ->
-       if is_map(image) do
-         case Map.get(image, :formats) do
-           formats when is_list(formats) -> Enum.join(formats, ",")
-           _ -> ""
-         end
-       else
-         ""
-       end
-     end)}
+    {:ok, assign(socket, image_display_assigns(socket.assigns.image))}
   end
 
   defp handle_image_complete(socket, image) do
-    {module, id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
-
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    current_block_data = Changeset.apply_changes(block_data_cs)
-
-    new_block_data =
-      current_block_data
-      |> Map.from_struct()
-      |> Map.take(@override_fields)
-
-    send_update(module,
-      id: id,
-      event: "update_ref_data",
-      ref_data: new_block_data,
-      ref_name: ref_name,
+    socket
+    |> Block.commit_ref_data(
+      ref_data: Block.current_block_data_map(socket.assigns.block, @override_fields),
       image_id: image.id,
-      force_render: true,
-      # propagate so the parent's cached form keeps the image_id; otherwise a later
-      # block insert/delete re-inits this block from the stale cache and wipes it.
-      # See CLAUDE.md "Block Editor: changeset propagation".
-      propagate: true
+      force_render: true
     )
+    |> assign(:image, image)
+    |> assign(image_display_assigns(image))
+  end
 
+  defp image_display_assigns(nil) do
+    %{extracted_path: nil, extracted_filename: nil, file_name: nil, upload_formats: ""}
+  end
+
+  defp image_display_assigns(image) do
     extracted_path = Map.get(image, :path)
-    extracted_filename = if extracted_path, do: Path.basename(extracted_path), else: nil
+    extracted_filename = extracted_path && Path.basename(extracted_path)
 
     upload_formats =
       case Map.get(image, :formats) do
@@ -168,12 +112,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
         _ -> ""
       end
 
-    socket
-    |> assign(:image, image)
-    |> assign(:extracted_path, extracted_path)
-    |> assign(:extracted_filename, extracted_filename)
-    |> assign(:file_name, extracted_filename)
-    |> assign(:upload_formats, upload_formats)
+    %{
+      extracted_path: extracted_path,
+      extracted_filename: extracted_filename,
+      file_name: extracted_filename,
+      upload_formats: upload_formats
+    }
   end
 
   def render(assigns) do
@@ -414,123 +358,41 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   def handle_event("reset_image", _, socket) do
-    {module, id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
-
     # Reset to empty picture block data with no image association
     new_data =
       %PictureBlock.Data{}
       |> Map.from_struct()
       |> Map.take(@override_fields)
 
-    # Send the update with nil image_id to clear the association
-    send_update(module,
-      id: id,
-      event: "update_ref_data",
-      ref_data: new_data,
-      ref_name: ref_name,
-      image_id: nil,
-      force_render: true,
-      # propagate the cleared FK to the parent cache (see CLAUDE.md
-      # "Block Editor: changeset propagation")
-      propagate: true
-    )
-
-    # Clear the image assigns immediately
-    {:noreply,
-     socket
-     |> assign(:image, nil)
-     |> assign(:extracted_path, nil)
-     |> assign(:extracted_filename, nil)
-     |> assign(:file_name, nil)
-     |> assign(:upload_formats, "")}
+    socket
+    |> Block.commit_ref_data(ref_data: new_data, image_id: nil, force_render: true)
+    |> assign(:image, nil)
+    |> assign(image_display_assigns(nil))
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("select_image", %{"id" => id}, socket) do
     {:ok, image} = Brando.Images.get_image(id)
 
-    {module, target_id} = socket.assigns.target_ref
-    ref_name = socket.assigns.ref_name
-
-    # Get current block data to preserve any existing overrides
-    block_data_cs = Block.get_block_data_changeset(socket.assigns.block)
-    current_block_data = Changeset.apply_changes(block_data_cs)
-
-    # Only keep override fields in block data, image data goes to association
-    new_block_data =
-      current_block_data
-      |> Map.from_struct()
-      |> Map.take(@override_fields)
-
-    send_update(module,
-      id: target_id,
-      event: "update_ref_data",
-      ref_data: new_block_data,
-      ref_name: ref_name,
-      image_id: image.id,
-      # propagate so the picked image_id survives a later block insert/delete
-      # (see CLAUDE.md "Block Editor: changeset propagation")
-      propagate: true
+    socket
+    |> Block.commit_ref_data(
+      # Only keep override fields in block data, image data goes to association
+      ref_data: Block.current_block_data_map(socket.assigns.block, @override_fields),
+      image_id: image.id
     )
-
-    # Update the image assigns immediately
-    extracted_path = Map.get(image, :path)
-    extracted_filename = if extracted_path, do: Path.basename(extracted_path), else: nil
-
-    upload_formats =
-      case Map.get(image, :formats) do
-        formats when is_list(formats) -> Enum.join(formats, ",")
-        _ -> ""
-      end
-
-    socket =
-      socket
-      |> assign(:image, image)
-      |> assign(:extracted_path, extracted_path)
-      |> assign(:extracted_filename, extracted_filename)
-      |> assign(:file_name, extracted_filename)
-      |> assign(:upload_formats, upload_formats)
-
-    {:noreply, socket}
+    |> assign(:image, image)
+    |> assign(image_display_assigns(image))
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("open_image_editor", _, socket) do
     image = socket.assigns.image
 
-    # Set edit_image on Form so the save handler knows which image to update
-    send_update(BrandoAdmin.Components.Form,
-      id: socket.assigns.form_id,
-      action: :set_edit_image_from_block,
-      image: image,
-      block_target: {__MODULE__, socket.assigns.id}
-    )
-
-    # Push the init event directly from this component (same render cycle, no race)
-    crop_groups = build_crop_groups_for(image)
-
-    {:noreply,
-     push_event(socket, "b:image_editor:init", %{
-       image_src: Brando.Utils.img_url(image, :original, prefix: Brando.Utils.media_url()),
-       image_width: image.width,
-       image_height: image.height,
-       image_id: image.id,
-       focal_x: (image.focal && image.focal.x) || 50,
-       focal_y: (image.focal && image.focal.y) || 50,
-       crop_groups: crop_groups,
-       from_block: true,
-       config_target: image.config_target
-     })}
+    {:noreply, Block.push_image_editor_init(socket, image, block_target: {__MODULE__, socket.assigns.id})}
   end
 
   def handle_event("show_image_picker", _, socket) do
     {:ok, images} = Brando.Images.list_images()
     {:noreply, assign(socket, :images, images)}
-  end
-
-  defp build_crop_groups_for(image) do
-    case Brando.Images.get_config_for(image) do
-      {:ok, config} -> Form.build_crop_groups(config.sizes)
-      _ -> []
-    end
   end
 end
