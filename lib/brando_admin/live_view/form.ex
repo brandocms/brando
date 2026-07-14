@@ -1075,7 +1075,10 @@ defmodule BrandoAdmin.LiveView.Form do
   # A late joiner asks connected editors for their unsaved state. Blocks
   # replay from the op store; unsaved ENTRY FIELD changes (title, slug, ...)
   # ship through the regular field-sync path — without this, a joiner only
-  # sees fields as they were in the database.
+  # sees fields as they were in the database. Our current block focus is
+  # re-broadcast too: lock indicators are event-driven, so a joiner would
+  # otherwise not see the block we're editing as locked until our next
+  # focus event happens to fire.
   defp handle_hooks_block_sync_info({:blocks_sync_request, %{user_id: user_id} = msg}, socket) do
     if user_id != socket.assigns.current_user.id do
       send_to_block_fields(socket,
@@ -1089,6 +1092,17 @@ defmodule BrandoAdmin.LiveView.Form do
         send_update(BrandoAdmin.Components.Form,
           id: "#{singular}_form",
           event: "ship_field_changes"
+        )
+      end
+
+      focused_uid = socket.assigns[:current_focused_block_uid]
+      entry_id = socket.assigns[:entry_id]
+
+      if focused_uid && entry_id do
+        Phoenix.PubSub.broadcast(
+          Brando.pubsub(),
+          "brando:block_presence:#{entry_id}",
+          {:block_focus, %{uid: focused_uid, user_id: socket.assigns.current_user.id}}
         )
       end
     end

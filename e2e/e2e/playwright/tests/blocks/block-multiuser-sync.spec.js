@@ -273,6 +273,46 @@ test.describe('Multi-user block sync', () => {
     )
   })
 
+  test('block locks appear for late joiners, survive remote applies, clear on blur', async ({
+    page,
+    secondUserPage,
+  }) => {
+    const entryUrl = await createEntryWithTwoHeaders(page, 'Multiuser Lock Test', 'multiuser-lock-test')
+
+    await page.goto(entryUrl)
+    await syncLV(page)
+
+    // A focuses block 1 and stays in it
+    const ta = page.locator('.header-block textarea').nth(0)
+    await ta.click()
+
+    // B joins late — A's focus replays via the join sync request, so the
+    // block must show locked WITHOUT waiting for A's next focus event
+    await secondUserPage.goto(entryUrl)
+    await syncLV(secondUserPage)
+    const bBlockOne = secondUserPage.locator('.entry-block').nth(0).locator('.block').first()
+    await expect(bBlockOne).toHaveClass(/block-locked/, { timeout: 5000 })
+
+    // A edits, then clicks elsewhere INSIDE the same block — content ships
+    // (still_inside), B's locked block re-renders from the applied snapshot.
+    // The patch resets classes to server truth; the lock must be re-asserted,
+    // not flicker away (this was the flaky-lock class of bugs).
+    await ta.fill('Alpha locked edit')
+    await page.waitForTimeout(600)
+    await page.locator('.entry-block').nth(0).locator('.block-description').first().click()
+    await page.waitForTimeout(1500)
+
+    await expect(secondUserPage.locator('.header-block textarea').nth(0)).toHaveValue(
+      'Alpha locked edit',
+      { timeout: 5000 }
+    )
+    await expect(bBlockOne).toHaveClass(/block-locked/)
+
+    // A leaves the block entirely → the lock must clear on B
+    await page.getByLabel('Title', { exact: true }).click()
+    await expect(bBlockOne).not.toHaveClass(/block-locked/, { timeout: 5000 })
+  })
+
   test("A's child delete syncs to B immediately, no blur needed", async ({
     page,
     secondUserPage,

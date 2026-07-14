@@ -16,7 +16,10 @@
   arriving while you're editing the same block is deferred and applied when you
   leave the block instead of being dropped — and an untouched block never
   re-ships stale state over newer remote edits. Block presence locks no longer
-  flap when clicking non-focusable UI (toggles, handles) inside a block.
+  flap: lock state lives in a client-side store re-asserted after every
+  LiveView patch (patches used to wipe the lock styling until the owner's next
+  focus event), locks replay to late joiners, and clicking non-focusable UI
+  (toggles, handles) inside a block no longer drops the lock.
 
 - **Block editor internals: render from the op store**: Block shells now render
   straight from the op store's order (roots) and each parent's `block_list`
