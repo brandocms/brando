@@ -839,7 +839,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> block_module.changeset(params, user_id, true)
         |> to_form(as: "entry_block", id: "entry_block_form-#{root_uid}")
 
-      send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: new_form)
+      # remount_js: the Block pushes the widget-remount event itself so it
+      # rides the SAME diff frame as the form patch — pushed from here it
+      # dispatches before the patch and widgets re-boot with stale content
+      send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: new_form, remount_js: true)
 
       socket
       |> assign_ops(updated_ops)
@@ -848,7 +851,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       |> assign(:blocks_changed?, true)
       |> put_seed_form(root_uid, new_form)
       |> record_synced_snapshot(root_uid, Ops.subtree_snapshot(updated_ops, root_uid))
-      |> push_event("b:component:remount_block", %{uid: root_uid})
     else
       {:error, reason} ->
         Logger.warning(
@@ -905,8 +907,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
             socket
 
           {:child, _parent_uid, _at} ->
-            send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: new_form)
-            push_event(socket, "b:component:remount_block", %{uid: root_uid})
+            send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: new_form, remount_js: true)
+            socket
         end
 
       {:ok, refresh_live_preview(socket)}

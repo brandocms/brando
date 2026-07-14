@@ -1072,13 +1072,25 @@ defmodule BrandoAdmin.LiveView.Form do
     {:halt, socket}
   end
 
-  # A late joiner asks connected editors for their unsaved block state
+  # A late joiner asks connected editors for their unsaved state. Blocks
+  # replay from the op store; unsaved ENTRY FIELD changes (title, slug, ...)
+  # ship through the regular field-sync path — without this, a joiner only
+  # sees fields as they were in the database.
   defp handle_hooks_block_sync_info({:blocks_sync_request, %{user_id: user_id} = msg}, socket) do
     if user_id != socket.assigns.current_user.id do
       send_to_block_fields(socket,
         event: "remote_sync_requested",
         origin_block_field: msg.block_field
       )
+
+      if schema = socket.assigns[:schema] do
+        singular = schema.__naming__().singular
+
+        send_update(BrandoAdmin.Components.Form,
+          id: "#{singular}_form",
+          event: "ship_field_changes"
+        )
+      end
     end
 
     {:halt, socket}

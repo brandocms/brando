@@ -551,7 +551,14 @@ defmodule BrandoAdmin.Components.Form.Block do
   # persisted data (new db ids for rows the save inserted) and cascades down
   # the child tree. No op is emitted: the op store was just re-initialized
   # from the same persisted data, so diffs are empty by definition.
-  def update(%{event: "replace_form", form: form}, socket) do
+  #
+  # `remount_js: true` (remote-sync/undo applies) re-boots JS widgets inside
+  # the block AFTER this update's patch. The event MUST be pushed from here,
+  # not from BlockField: BlockField's push_event rides ITS OWN diff frame,
+  # which the client processes BEFORE this queued update — widgets would
+  # re-read their inputs while the DOM still holds the old content (this is
+  # exactly how remote tiptap edits stayed invisible).
+  def update(%{event: "replace_form", form: form} = msg, socket) do
     belongs_to = socket.assigns.belongs_to
     current_user_id = socket.assigns.current_user_id
     id = socket.assigns.id
@@ -581,6 +588,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:block_list, Enum.map(children, & &1.uid))
     |> assign(:changesets, Enum.map(children, &{&1.uid, nil}))
     |> assign(:has_children?, children != [])
+    |> maybe_push_remount(msg)
     |> then(&{:ok, &1})
   end
 
@@ -946,6 +954,14 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:block_initialized, true)
     |> then(&{:ok, &1})
   end
+
+  # remount_js on a replace_form: re-boot JS widgets after THIS update's
+  # patch — pushed from the Block so the event and the patch share one frame
+  defp maybe_push_remount(socket, %{remount_js: true}) do
+    push_event(socket, "b:component:remount_block", %{uid: socket.assigns.uid})
+  end
+
+  defp maybe_push_remount(socket, _msg), do: socket
 
   defp reset_changesets(socket, block_uid) do
     id = socket.assigns.id

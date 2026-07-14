@@ -23,7 +23,10 @@ export default app => ({
 
     if (!this._isRefBlock) {
       this._lastPresencePush = 0
+      this._lastPointerInside = 0
       this._handleBlockPresence = () => {
+        this._lastPointerInside = Date.now()
+
         const now = Date.now()
         if (now - this._lastPresencePush < PRESENCE_THROTTLE_MS) return
         this._lastPresencePush = now
@@ -41,6 +44,9 @@ export default app => ({
       // form LV only fires when ANOTHER block is focused, which left edits
       // unshipped on plain blur and on ref-to-ref moves inside one block.
       // `still_inside` tells the server whether to also drop presence.
+      // Clicking non-focusable UI inside the block (toggles, drag handles,
+      // dropdowns) parks focus on <body> — the recent pointer-inside check
+      // keeps presence from flapping while the editor is clearly still here.
       this._handleBlockShip = () => {
         clearTimeout(this._shipTimer)
         const uid = this.el.getAttribute('data-block-uid')
@@ -48,8 +54,9 @@ export default app => ({
 
         this._shipTimer = setTimeout(() => {
           const active = document.activeElement
-          const stillInside = !!(active && active !== document.body && this.el.contains(active))
-          this.pushEvent('block_blurred', { uid, still_inside: stillInside })
+          const focusInside = !!(active && active !== document.body && this.el.contains(active))
+          const pointerInside = Date.now() - this._lastPointerInside < SHIP_SETTLE_MS * 2
+          this.pushEvent('block_blurred', { uid, still_inside: focusInside || pointerInside })
         }, SHIP_SETTLE_MS)
       }
       this.el.addEventListener('focusout', this._handleBlockShip)

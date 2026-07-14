@@ -50,7 +50,11 @@ export default (app) => ({
     this._instance = mount(TipTap, {
       target: Dom.find(this.el, '.tiptap-target'),
       props: {
-        content: $input.getAttribute('value') || '',
+        // read the property, not getAttribute — LiveView patches update an
+        // input's value PROPERTY while the attribute keeps its initial
+        // render value, so attribute reads re-boot remounts with stale
+        // content (remote-sync applies were invisible in tiptap blocks)
+        content: $input.value || '',
         extensions: this.el.getAttribute('data-tiptap-extensions'),
         styles: this.el.getAttribute('data-tiptap-styles'),
         onFocus: reportFocus,

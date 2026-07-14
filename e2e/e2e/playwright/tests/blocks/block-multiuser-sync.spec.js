@@ -172,6 +172,107 @@ test.describe('Multi-user block sync', () => {
     )
   })
 
+  // A page with one Rich Text Article (TipTap text ref), persisted via
+  // save-and-continue so A stays on the armed update form.
+  const createEntryWithTextBlock = async (page, title, uri) => {
+    await page.goto('/admin')
+    await page.getByRole('link', { name: 'Pages & Sections' }).click()
+    await syncLV(page)
+    await page.getByRole('link', { name: 'Create page' }).click()
+    await syncLV(page)
+    await page.getByLabel('Title', { exact: true }).fill(title)
+    await page.getByLabel('URI').fill(uri)
+
+    await page.getByRole('button', { name: 'Add block' }).last().click()
+    await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+    await page.getByRole('button', { name: 'Rich Text Article' }).click()
+    await syncLV(page)
+
+    await page.getByTestId('split-dropdown-button').click()
+    await page.getByRole('button', { name: /Save and continue editing/ }).click()
+    await expect(page).toHaveURL(/\/update\//, { timeout: 30000 })
+    await syncLV(page)
+    await page.waitForTimeout(750)
+
+    return new URL(page.url()).pathname
+  }
+
+  const editTipTap = async (page, text) => {
+    const editor = page.locator('[data-tiptap-type="block"] .tiptap-target [contenteditable]').first()
+    await editor.click()
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.type(text)
+    await page.waitForTimeout(600) // tiptap → hidden input mirror → debounce flush → op
+  }
+
+  test("A's tiptap edit is VISIBLE for a connected B after plain blur", async ({
+    page,
+    secondUserPage,
+  }) => {
+    const entryUrl = await createEntryWithTextBlock(page, 'Multiuser TipTap Live', 'multiuser-tiptap-live')
+
+    await page.goto(entryUrl)
+    await syncLV(page)
+    await secondUserPage.goto(entryUrl)
+    await syncLV(secondUserPage)
+    await expect(secondUserPage.locator('[data-tiptap-type="block"] .tiptap-target [contenteditable]').first()).toContainText(
+      'Article content goes here'
+    )
+
+    await editTipTap(page, 'Rewritten live by A')
+    // stage 1: A's editor mirrored into A's hidden input (op committed)
+    await expect(page.locator('[data-tiptap-type="block"] .tiptap-text').first()).toHaveValue(/Rewritten live by A/, {
+      timeout: 3000,
+    })
+
+    // blur to something outside the blocks
+    await page.getByLabel('Title', { exact: true }).click()
+    await page.waitForTimeout(1500) // settle → ship → B applies + remounts
+
+    // stage 2: the ship reached B's store and patched B's hidden input
+    await expect(secondUserPage.locator('[data-tiptap-type="block"] .tiptap-text').first()).toHaveValue(
+      /Rewritten live by A/,
+      { timeout: 5000 }
+    )
+
+    // stage 3: B's editor re-booted with the new content (visible)
+    await expect(secondUserPage.locator('[data-tiptap-type="block"] .tiptap-target [contenteditable]').first()).toContainText(
+      'Rewritten live by A',
+      { timeout: 5000 }
+    )
+  })
+
+  test('late joiner receives tiptap content AND entry field changes', async ({
+    page,
+    secondUserPage,
+  }) => {
+    const entryUrl = await createEntryWithTextBlock(page, 'Multiuser TipTap Late', 'multiuser-tiptap-late')
+
+    await page.goto(entryUrl)
+    await syncLV(page)
+
+    await editTipTap(page, 'Written before B joined')
+    // edit an ENTRY FIELD too (field sync, not block sync)
+    const title = page.getByLabel('Title', { exact: true })
+    await title.click()
+    await title.fill('Title changed by A')
+    // focus another field so the field-change ships / block settle fires
+    await page.getByLabel('URI').click()
+    await page.waitForTimeout(1500)
+
+    await secondUserPage.goto(entryUrl)
+    await syncLV(secondUserPage)
+
+    await expect(secondUserPage.locator('[data-tiptap-type="block"] .tiptap-target [contenteditable]').first()).toContainText(
+      'Written before B joined',
+      { timeout: 5000 }
+    )
+    await expect(secondUserPage.getByLabel('Title', { exact: true })).toHaveValue(
+      'Title changed by A',
+      { timeout: 5000 }
+    )
+  })
+
   test("A's child delete syncs to B immediately, no blur needed", async ({
     page,
     secondUserPage,

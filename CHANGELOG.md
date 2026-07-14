@@ -7,12 +7,16 @@
 - **Multi-user block sync fixes**: edits now ship when a block's editing session
   settles — plain blur is enough (previously another block had to receive focus
   before anything shipped, so edits routinely never reached other editors). Late
-  joiners receive other editors' unsaved changes on mount, child structural
-  changes (insert/delete/reorder) sync immediately instead of waiting for a blur,
-  and received edits are visible right away (header textareas refresh on remote
-  apply). A snapshot arriving while you're editing the same block is deferred and
-  applied when you leave the block instead of being dropped — and an untouched
-  block never re-ships stale state over newer remote edits.
+  joiners receive other editors' unsaved changes on mount — blocks AND entry
+  fields (title, slug, …). Child structural changes (insert/delete/reorder) sync
+  immediately instead of waiting for a blur, and received edits are visible right
+  away: header textareas refresh on remote apply, and rich-text (TipTap) blocks
+  re-boot AFTER the content patch lands (they previously re-read the DOM before
+  the patch and stayed visibly stale, even though the data synced). A snapshot
+  arriving while you're editing the same block is deferred and applied when you
+  leave the block instead of being dropped — and an untouched block never
+  re-ships stale state over newer remote edits. Block presence locks no longer
+  flap when clicking non-focusable UI (toggles, handles) inside a block.
 
 - **Block editor internals: render from the op store**: Block shells now render
   straight from the op store's order (roots) and each parent's `block_list`
