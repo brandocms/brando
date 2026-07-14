@@ -137,25 +137,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.Outline do
   defp type_label(_, _), do: ""
 
   @doc """
-  Builds a list of outline item maps from entry_blocks_forms.
-  """
-  def build_outline_items(entry_blocks_forms) when is_list(entry_blocks_forms) do
-    Enum.map(entry_blocks_forms, &build_outline_item_from_form/1)
-  end
-
-  def build_outline_items(_), do: []
-
-  defp build_outline_item_from_form(entry_block_form) do
-    entry_block_cs = entry_block_form.source
-    block = Ecto.Changeset.get_field(entry_block_cs, :block)
-
-    build_outline_item_from_struct(block)
-  end
-
-  @doc """
   Builds a single outline item map from a `%Brando.Content.Block{}` struct.
 
-  Recursively processes children blocks.
+  Recursively processes children blocks. BlockField materializes each root
+  from the op store and applies it before calling this — the outline always
+  reflects live structure, not mount-time seeds.
   """
   def build_outline_item_from_struct(%Brando.Content.Block{} = block) do
     {module_name, module_color, multi} = resolve_module(block.module_id)

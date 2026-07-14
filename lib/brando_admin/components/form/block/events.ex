@@ -53,12 +53,11 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
   def handle_block_event("paste_child_block", _, socket) do
     parent_ref = socket.assigns.parent_ref
-    block_count = socket.assigns.block_count
 
     send_to_ref(parent_ref, %{
       event: "paste_child_block",
       parent_ref: {Block, socket.assigns.id},
-      sequence: block_count
+      sequence: length(socket.assigns.block_list)
     })
 
     {:halt, socket}
@@ -568,11 +567,10 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   def handle_block_event("insert_block", value, socket) do
     # message block picker —— special case for empty container.
     block_picker_id = "block-field-#{socket.assigns.block_field}-module-picker"
-    block_count = socket.assigns.block_count
     module_set = socket.assigns.module_set
 
     {parent_ref, sequence} =
-      (Map.get(value, "container") && {{Block, socket.assigns.id}, block_count}) ||
+      (Map.get(value, "container") && {{Block, socket.assigns.id}, length(socket.assigns.block_list)}) ||
         {socket.assigns.parent_ref, socket.assigns.list_index}
 
     send_update(ModulePicker,
@@ -591,8 +589,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   def handle_block_event("insert_block_entry", value, socket) do
     block_picker_id = "block-field-#{socket.assigns.block_field}-module-picker"
     parent_ref = (Map.get(value, "multi") && {Block, socket.assigns.id}) || socket.assigns.parent_ref
-    block_count = socket.assigns.block_count
-    sequence = (Map.get(value, "multi") && block_count) || socket.assigns.list_index
+    sequence = (Map.get(value, "multi") && length(socket.assigns.block_list)) || socket.assigns.list_index
 
     module_id =
       if socket.assigns.parent_module_id do
@@ -646,16 +643,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
         end)
       end)
 
-    # reorder children_forms to match new block_list order
-    new_forms =
-      Enum.map(new_block_list, fn block_uid ->
-        Enum.find(socket.assigns.children_forms, fn form ->
-          Changeset.get_field(form.source, :uid) == block_uid
-        end)
-      end)
-
     socket
-    |> assign(:children_forms, new_forms)
     |> assign(:block_list, new_block_list)
     |> assign(:changesets, new_changesets)
     |> Block.emit_block_op({:reorder_children, socket.assigns.uid, new_block_list})

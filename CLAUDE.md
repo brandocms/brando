@@ -76,6 +76,12 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
 - **Blocks receive their position as the `list_index` prop** from the keyed `:for`
   (`:key` on uid). Read `socket.assigns.list_index` for insert-at/paste-at positions —
   never a form's `sequence` field (stale by design).
+- **Rendering derives from the store, seed forms are maps.** BlockField's keyed `:for`
+  iterates `@root_order` (the store's projection, assigned ONLY via `assign_ops/2`);
+  parent blocks iterate their `@block_list`. `@seed_forms`/`@children_forms` are
+  uid-keyed maps read once at a component's first mount — put on insert, drop on
+  delete, never reordered, never reconciled. There is no parallel ordered form list —
+  do not reintroduce one.
 - **The ONLY sanctioned parent→child form handoff after mount is `replace_form`**
   (cascades down the tree): used post-save (re-seed with fresh db ids) and on remote-sync
   apply. Anything else re-introduces the historical clobber/FK-wipe class.

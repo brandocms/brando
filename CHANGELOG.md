@@ -4,6 +4,13 @@
 
 #### Features
 
+- **Block editor internals: render from the op store**: Block shells now render
+  straight from the op store's order (roots) and each parent's `block_list`
+  (children); seed forms became uid-keyed mount-only maps. This removes the parallel
+  ordered form lists that every structural mutation had to keep in sync — a whole
+  drift bug class — and makes the block outline drawer reflect live structure and
+  content (it previously showed mount-time children).
+
 - **Undo for block deletes (restorable bin)**: Deleting a block (root or nested child)
   now shows an undo toast at the bottom of the block field. Undo restores the whole
   subtree — content, structure and database identity — so a restored persisted block

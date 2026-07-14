@@ -83,8 +83,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           data-sortable-selector=".block"
         >
           <div
-            :for={{child_block_form, list_index} <- Enum.with_index(@children_forms)}
-            :key={child_block_form[:uid].value}
+            :for={{child_uid, child_block_form, list_index} <- Block.child_shells(@block_list, @children_forms)}
+            :key={child_uid}
             id={"child-#{child_block_form[:uid].value}"}
             data-id={child_block_form.data.id}
             data-uid={child_block_form[:uid].value}
@@ -231,8 +231,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           data-sortable-selector=".block"
         >
           <div
-            :for={{child_block_form, list_index} <- Enum.with_index(@children_forms)}
-            :key={child_block_form[:uid].value}
+            :for={{child_uid, child_block_form, list_index} <- Block.child_shells(@block_list, @children_forms)}
+            :key={child_uid}
             id={"child-#{child_block_form[:uid].value}"}
             data-id={child_block_form[:id].value}
             data-uid={child_block_form[:uid].value}

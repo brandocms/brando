@@ -9,12 +9,12 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   exclusively through `apply_op/2`. Being pure, every structural/content
   mutation the LiveView layer performs becomes unit-testable here.
 
-  ## Strangler phase
-
-  While the legacy `entry_blocks_forms` cache still exists, BlockField applies
-  ops *alongside* the cache updates. `materialize_root/2` builds save-ready
-  params from the store; during the transition it runs in shadow mode against
-  the gathered changesets before replacing them.
+  The store is the ONLY structural state: BlockField renders root shells
+  straight from `order` (via its `root_order` projection) and parent blocks
+  render children from their `block_list` (mirrored here via child ops);
+  seed forms are uid-keyed mount-time snapshots, never an order source.
+  `materialize_root/2` builds save-ready params from the store for save,
+  preview, share, remote sync, restore and the outline alike.
 
   ## Semantics
 

@@ -3,16 +3,6 @@ defmodule BrandoAdmin.Components.Form.BlockField.OutlineTest do
 
   alias BrandoAdmin.Components.Form.BlockField.Outline
 
-  describe "build_outline_items/1" do
-    test "returns empty list for nil" do
-      assert Outline.build_outline_items(nil) == []
-    end
-
-    test "returns empty list for empty list" do
-      assert Outline.build_outline_items([]) == []
-    end
-  end
-
   describe "build_outline_item_from_struct/1" do
     test "builds item from a Block struct" do
       block = %Brando.Content.Block{

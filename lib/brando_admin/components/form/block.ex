@@ -20,11 +20,17 @@ defmodule BrandoAdmin.Components.Form.Block do
     store save-complete. Only render-artifact stamping
     (`rendered_html`/`rendered_at`) may assign `:form` directly.
 
-  ## Position
+  ## Position and children
 
   Blocks receive their current list position as the `list_index` prop from
   the parent's keyed `:for` — use it for insert-at/paste-at, never a form's
   `sequence` field (sequence derives from list order at materialization).
+
+  A parent block renders its children from `child_shells/2`: `@block_list`
+  is the one order truth (mirrored to the owning BlockField's op store via
+  `reorder_children` ops), `@children_forms` is a uid-keyed map of mount
+  seeds — put on insert, dropped on delete, read once at a child's first
+  mount, never reordered or reconciled.
 
   ## Media commits
 
@@ -50,7 +56,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:entry_template, nil)
     |> assign(:initial_render, false)
     |> assign(:dom_id, nil)
-    |> assign(:children_forms, [])
+    |> assign(:children_forms, %{})
     |> assign(:source, nil)
     |> assign(:live_preview_active?, false)
     |> assign(:live_preview_cache_key, nil)
@@ -144,11 +150,10 @@ defmodule BrandoAdmin.Components.Form.Block do
     selector = "[data-block-uid=\"#{uid}\"]"
 
     socket
-    |> update(:children_forms, &List.insert_at(&1, sequence, block_form))
+    |> put_child_seed_form(uid, block_form)
     |> assign(:has_children?, true)
     |> assign(:block_list, new_block_list)
     |> assign(:changesets, updated_changesets)
-    |> update(:block_count, &(&1 + 1))
     |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(block_cs)})
     |> refresh_live_preview()
     |> push_event("b:scroll_to", %{selector: selector})
@@ -173,15 +178,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         end)
       end)
 
-    new_forms =
-      Enum.map(new_block_list, fn block_uid ->
-        Enum.find(socket.assigns.children_forms, fn form ->
-          Changeset.get_field(form.source, :uid) == block_uid
-        end)
-      end)
-
     socket
-    |> assign(:children_forms, new_forms)
     |> assign(:block_list, new_block_list)
     |> assign(:changesets, new_changesets)
     |> emit_block_op({:reorder_children, socket.assigns.uid, new_block_list})
@@ -198,11 +195,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     changesets = socket.assigns.changesets
     children_forms = socket.assigns.children_forms
 
-    # Get the child changeset from the form (changesets list may have nil values)
-    child_changeset =
-      Enum.find_value(children_forms, fn form ->
-        if Changeset.get_field(form.source, :uid) == uid, do: form.source
-      end)
+    # Get the child changeset from the seed form (changesets list may have nil values)
+    child_form = Map.get(children_forms, uid)
+    child_changeset = child_form && child_form.source
 
     # Remove from lists
     new_block_list = List.delete(block_list, uid)
@@ -211,11 +206,6 @@ defmodule BrandoAdmin.Components.Form.Block do
       Enum.reject(changesets, fn
         {^uid, _} -> true
         _ -> false
-      end)
-
-    new_forms =
-      Enum.reject(children_forms, fn form ->
-        Changeset.get_field(form.source, :uid) == uid
       end)
 
     has_children? = new_block_list !== []
@@ -231,9 +221,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
     |> assign(:block_list, new_block_list)
     |> assign(:changesets, new_changesets)
-    |> assign(:children_forms, new_forms)
+    |> assign(:children_forms, Map.delete(children_forms, uid))
     |> assign(:has_children?, has_children?)
-    |> assign(:block_count, length(new_block_list))
     |> refresh_live_preview()
     |> then(&{:ok, &1})
   end
@@ -265,11 +254,10 @@ defmodule BrandoAdmin.Components.Form.Block do
     selector = "[data-block-uid=\"#{new_uid}\"]"
 
     socket
-    |> update(:children_forms, &List.insert_at(&1, new_sequence, block_form))
+    |> put_child_seed_form(new_uid, block_form)
     |> assign(:has_children?, true)
     |> assign(:block_list, new_block_list)
     |> assign(:changesets, updated_changesets)
-    |> update(:block_count, &(&1 + 1))
     |> emit_block_op({:insert_child, socket.assigns.uid, new_uid, new_sequence, Ops.block_diff_params(updated_block_cs)})
     |> refresh_live_preview()
     |> push_event("b:scroll_to", %{selector: selector})
@@ -319,11 +307,10 @@ defmodule BrandoAdmin.Components.Form.Block do
       selector = "[data-block-uid=\"#{new_uid}\"]"
 
       socket
-      |> update(:children_forms, &List.insert_at(&1, sequence, block_form))
+      |> put_child_seed_form(new_uid, block_form)
       |> assign(:has_children?, true)
       |> assign(:block_list, new_block_list)
       |> assign(:changesets, updated_changesets)
-      |> update(:block_count, &(&1 + 1))
       |> emit_block_op({:insert_child, socket.assigns.uid, new_uid, sequence, Ops.block_diff_params(updated_block_cs)})
       |> refresh_live_preview()
       |> push_event("b:scroll_to", %{selector: selector})
@@ -530,10 +517,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:block_list, new_block_list)
     |> assign(:has_children?, has_children?)
     |> assign_block_form(updated_form)
-    |> update(:children_forms, fn forms ->
-      Enum.reject(forms, &(Changeset.get_field(&1.source, :uid) == uid))
-    end)
-    |> update(:block_count, &(&1 - 1))
+    |> update(:children_forms, &Map.delete(&1, uid))
     |> emit_block_op({:delete, uid})
     |> refresh_live_preview()
     |> then(&{:ok, &1})
@@ -593,10 +577,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:form_has_changes, false)
     |> assign(:active, Changeset.get_field(changeset, :active))
     |> assign(:deleted, Changeset.get_field(changeset, :marked_as_deleted))
-    |> assign(:children_forms, children_forms)
+    |> assign(:children_forms, Map.new(children_forms, &{Changeset.get_field(&1.source, :uid), &1}))
     |> assign(:block_list, Enum.map(children, & &1.uid))
     |> assign(:changesets, Enum.map(children, &{&1.uid, nil}))
-    |> assign(:block_count, length(children))
     |> assign(:has_children?, children != [])
     |> then(&{:ok, &1})
   end
@@ -627,11 +610,10 @@ defmodule BrandoAdmin.Components.Form.Block do
     selector = "[data-block-uid=\"#{uid}\"]"
 
     socket
-    |> update(:children_forms, &List.insert_at(&1, sequence, block_form))
+    |> put_child_seed_form(uid, block_form)
     |> assign(:has_children?, true)
     |> assign(:block_list, updated_block_list)
     |> assign(:changesets, updated_changesets)
-    |> update(:block_count, &(&1 + 1))
     |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(empty_block_cs)})
     |> refresh_live_preview()
     |> push_event("b:scroll_to", %{selector: selector})
@@ -1503,8 +1485,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
     |> assign_new(:block_list, fn -> [] end)
     |> assign_new(:changesets, fn -> [] end)
-    |> assign_new(:block_count, fn -> 0 end)
-    |> assign(:children_forms, [])
+    |> assign(:children_forms, %{})
   end
 
   def maybe_assign_children(%{assigns: %{type: :container}} = socket),
@@ -1515,7 +1496,6 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def maybe_assign_children(socket) do
     socket
-    |> assign_new(:block_count, fn -> 0 end)
     |> assign_new(:block_list, fn -> [] end)
     |> assign_new(:changesets, fn -> [] end)
   end
@@ -1524,14 +1504,10 @@ defmodule BrandoAdmin.Components.Form.Block do
     current_user_id = socket.assigns.current_user_id
 
     children_forms =
-      Enum.map(
-        children,
-        &to_change_form(&1, %{}, current_user_id)
-      )
+      Map.new(children, &{extract_uid(&1), to_change_form(&1, %{}, current_user_id)})
 
     socket
     |> assign(:children_forms, children_forms)
-    |> assign_new(:block_count, fn -> Enum.count(children) end)
     |> assign_new(:changesets, fn -> Enum.map(children, &{extract_uid(&1), nil}) end)
     |> assign_new(:block_list, fn -> Enum.map(children, &extract_uid(&1)) end)
   end
@@ -1540,6 +1516,24 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   defp extract_uid(%Ecto.Changeset{} = cs) do
     Ecto.Changeset.get_field(cs, :uid)
+  end
+
+  # Child seed forms mirror BlockField's seed_forms: put on insert, drop on
+  # delete, read once at a child's first mount — never reordered (block_list
+  # is the one order truth) and never reconciled with mounted children.
+  defp put_child_seed_form(socket, uid, form) do
+    update(socket, :children_forms, &Map.put(&1, uid, form))
+  end
+
+  @doc """
+  The shells a parent's keyed `:for` renders its children from: order from
+  `block_list`, form from the `children_forms` seed map. Fails loudly on a
+  missing seed — every child insert path must seed before emitting its op.
+  """
+  def child_shells(block_list, children_forms) do
+    block_list
+    |> Enum.with_index()
+    |> Enum.map(fn {uid, list_index} -> {uid, Map.fetch!(children_forms, uid), list_index} end)
   end
 
   defdelegate update_child_changeset(changesets, uid, new_changeset),
