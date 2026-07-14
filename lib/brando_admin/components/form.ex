@@ -73,6 +73,9 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:image_changeset, nil)
      |> assign(:video_changeset, nil)
      |> assign(:initial_update, true)
+     |> assign(:entry_loading?, false)
+     |> assign(:blocks_ready?, true)
+     |> assign(:entry_load_status, nil)
      |> assign(:dirty_fields, [])
      |> assign(:editing_image?, false)
      |> assign(:editing_file?, false)
@@ -911,61 +914,200 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, assign(socket, :form, updated_form)}
   end
 
+  # Async entry-load progress, reported from the loading task via
+  # send_update/3 — keeps the loading overlay's status current.
+  def update(%{action: :entry_load_progress, status: status}, socket) do
+    {:ok, assign(socket, :entry_load_status, status)}
+  end
+
+  # Second phase of the async load: the entry + form fields rendered in the
+  # previous cycle, now let the block components mount. Deferred one render
+  # cycle (send_update_after) so the "building block editor" status actually
+  # paints before the server spends seconds rendering a large block tree.
+  def update(%{action: :render_blocks}, socket) do
+    {:ok, assign(socket, :blocks_ready?, true)}
+  end
+
   def update(assigns, socket) do
     form_name = assigns[:name] || :default
 
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign_new(:entry_id, fn -> nil end)
-     |> assign_new(:singular, fn -> assigns.schema.__naming__().singular end)
-     |> assign_new(:context, fn -> assigns.schema.__modules__().context end)
-     |> assign_new(:form_blueprint, fn ->
-       case assigns.schema.__form__(form_name) do
-         nil ->
-           raise Brando.Exception.BlueprintError,
-             message: "Missing `#{form_name}` form declaration for `#{inspect(assigns.schema)}`"
+    socket =
+      socket
+      |> assign(assigns)
+      |> assign_new(:entry_id, fn -> nil end)
+      |> assign_new(:singular, fn -> assigns.schema.__naming__().singular end)
+      |> assign_new(:context, fn -> assigns.schema.__modules__().context end)
+      |> assign_new(:form_blueprint, fn ->
+        case assigns.schema.__form__(form_name) do
+          nil ->
+            raise Brando.Exception.BlueprintError,
+              message: "Missing `#{form_name}` form declaration for `#{inspect(assigns.schema)}`"
 
-         form ->
-           form
-       end
-     end)
-     |> assign_new(:header, fn ->
-       IO.warn("""
+          form ->
+            form
+        end
+      end)
+      |> assign_new(:header, fn ->
+        IO.warn("""
 
-       No <:header> slot is defined for form component with schema `#{inspect(assigns.schema)}`.
+        No <:header> slot is defined for form component with schema `#{inspect(assigns.schema)}`.
 
-       It is recommended to use this instead of a standalone `<Content.header>` component
-       for better integration with Live Previews!
+        It is recommended to use this instead of a standalone `<Content.header>` component
+        for better integration with Live Previews!
 
-       Example:
+        Example:
 
-           <.live_component module={Form}
-             id="page_form"
-             entry_id={@entry_id}
-             current_user={@current_user}
-             schema={@schema}>
-             <:header>
-               <%= gettext("Edit page") %>
-             </:header>
-           </.live_component>
+            <.live_component module={Form}
+              id="page_form"
+              entry_id={@entry_id}
+              current_user={@current_user}
+              schema={@schema}>
+              <:header>
+                <%= gettext("Edit page") %>
+              </:header>
+            </.live_component>
 
-       """)
+        """)
 
-       nil
-     end)
-     |> assign_new(:instructions, fn -> [] end)
-     |> assign_new(:active_video_tab, fn -> "upload" end)
-     |> assign_new(:video_context, fn -> :asset end)
-     |> assign_entry()
-     |> assign_addon_statuses()
-     |> assign_default_params()
-     |> extract_tab_names()
-     |> assign_form()
-     |> maybe_assign_uploads()
-     |> maybe_assign_block_map()
-     |> maybe_assign_entry_for_blocks()
-     |> assign(:initial_update, false)}
+        nil
+      end)
+      |> assign_new(:instructions, fn -> [] end)
+      |> assign_new(:active_video_tab, fn -> "upload" end)
+      |> assign_new(:video_context, fn -> :asset end)
+
+    cond do
+      # async load in flight — parent re-rendered (presence etc.); the new
+      # props are assigned above, nothing to build until the entry lands
+      socket.assigns.entry_loading? ->
+        {:ok, socket}
+
+      # editing an existing entry: load it off-process so the form shell and
+      # loading overlay paint immediately instead of blocking on the query
+      socket.assigns.initial_update && socket.assigns.entry_id ->
+        {:ok, start_entry_load(socket)}
+
+      true ->
+        {:ok, socket |> assign_entry() |> finish_form_update()}
+    end
+  end
+
+  # The tail of the update pipeline — expects :entry to be assigned. Runs
+  # synchronously for create forms and subsequent parent updates, and from
+  # handle_async/3 once the async-loaded entry arrives.
+  defp finish_form_update(socket) do
+    socket
+    |> assign_addon_statuses()
+    |> assign_default_params()
+    |> extract_tab_names()
+    |> assign_form()
+    |> maybe_assign_uploads()
+    |> maybe_assign_block_map()
+    |> maybe_assign_entry_for_blocks()
+    |> assign(:initial_update, false)
+  end
+
+  defp start_entry_load(socket) do
+    %{
+      schema: schema,
+      form_blueprint: form_blueprint,
+      entry_id: entry_id,
+      singular: singular,
+      context: context,
+      id: form_id
+    } = socket.assigns
+
+    if Application.get_env(Brando.config(:otp_app), :sql_sandbox) do
+      # Sandboxed e2e runs use ownership :auto mode, where the async task's
+      # fresh connection escapes the per-test sandbox transaction and cannot
+      # see test-created entries (same class of problem as
+      # :sql_sandbox_serial_preloads) — load in-process instead.
+      entry = load_entry_with_progress(nil, form_id, schema, form_blueprint, entry_id, singular, context)
+
+      socket
+      |> assign(:entry, entry)
+      |> finish_form_update()
+    else
+      lv_pid = self()
+      has_blocks? = schema.has_trait(Brando.Trait.Blocks)
+
+      socket
+      |> assign(:entry_loading?, true)
+      |> assign(:blocks_ready?, false)
+      |> assign(:entry_load_status, %{phase: :entry, blocks?: has_blocks?, block_count: nil})
+      |> start_async(:entry_load, fn ->
+        load_entry_with_progress(lv_pid, form_id, schema, form_blueprint, entry_id, singular, context)
+      end)
+    end
+  end
+
+  # Runs inside the async task. Splits the load in two so we can report real
+  # progress: the entry itself (fast) first, then the heavy recursive block
+  # preloads — with a cheap count in between so the overlay can say how many
+  # blocks are coming. Custom form queries pass through untouched (we can't
+  # split preloads we don't own), so they load in one step.
+  defp load_entry_with_progress(lv_pid, form_id, schema, form_blueprint, entry_id, singular, context) do
+    has_blocks? = schema.has_trait(Brando.Trait.Blocks)
+    split_blocks? = has_blocks? && is_nil(form_blueprint.query)
+
+    query_params =
+      entry_id
+      |> maybe_query(form_blueprint)
+      |> add_preloads(schema, form_blueprint, skip_blocks: split_blocks?)
+      |> Map.put(:with_deleted, true)
+
+    entry =
+      case apply(context, :"get_#{singular}", [query_params]) do
+        {:ok, entry} -> entry
+        {:error, _err} -> raise Brando.Exception.EntryNotFoundError
+      end
+
+    if split_blocks? do
+      if lv_pid do
+        block_count = Brando.Content.Blocks.count_entry_blocks(schema, entry_id)
+
+        send_update(lv_pid, __MODULE__,
+          id: form_id,
+          action: :entry_load_progress,
+          status: %{phase: :blocks, blocks?: true, block_count: block_count}
+        )
+      end
+
+      Brando.Repo.preload(entry, Brando.Content.Blocks.preloads_for(schema))
+    else
+      entry
+    end
+  end
+
+  def handle_async(:entry_load, {:ok, entry}, socket) do
+    socket =
+      socket
+      |> assign(:entry, entry)
+      |> assign(:entry_loading?, false)
+      |> finish_form_update()
+
+    socket =
+      if socket.assigns.has_blocks? do
+        # let this cycle's diff (form fields + updated status) reach the
+        # client before the expensive block render pass starts
+        send_update_after(__MODULE__, [id: socket.assigns.id, action: :render_blocks], 50)
+
+        update(socket, :entry_load_status, fn
+          %{} = status -> %{status | phase: :rendering}
+          nil -> nil
+        end)
+      else
+        assign(socket, :blocks_ready?, true)
+      end
+
+    {:noreply, socket}
+  end
+
+  def handle_async(:entry_load, {:exit, reason}, _socket) do
+    # surface load failures exactly like the old synchronous load did
+    case reason do
+      {exception, stacktrace} when is_exception(exception) -> reraise(exception, stacktrace)
+      other -> exit(other)
+    end
   end
 
   # Commit exactly like handle_event("save_file") does: write the FK into a
@@ -1040,30 +1182,9 @@ defmodule BrandoAdmin.Components.Form do
     assign(socket, :entry, prepare_empty_entry(schema, current_user))
   end
 
-  defp assign_entry(socket) do
-    schema = socket.assigns.schema
-    form_blueprint = socket.assigns.form_blueprint
-    entry_id = socket.assigns.entry_id
-    singular = socket.assigns.singular
-    context = socket.assigns.context
-
-    query_params =
-      entry_id
-      |> maybe_query(form_blueprint)
-      |> add_preloads(schema, form_blueprint)
-      |> Map.put(:with_deleted, true)
-
-    entry =
-      case apply(context, :"get_#{singular}", [query_params]) do
-        {:ok, entry} ->
-          entry
-
-        {:error, _err} ->
-          raise Brando.Exception.EntryNotFoundError
-      end
-
-    assign(socket, :entry, entry)
-  end
+  # Editing an existing entry never reaches this far — the update-form path
+  # loads the entry asynchronously (start_entry_load/1) before the pipeline
+  # runs, so only the skip- and create-clauses above remain.
 
   defp assign_refreshed_entry(
          %{
@@ -1193,9 +1314,11 @@ defmodule BrandoAdmin.Components.Form do
     )
   end
 
-  defp add_preloads(query_params, schema, %{query: nil}) do
+  defp add_preloads(query_params, schema, form_blueprint, opts \\ [])
+
+  defp add_preloads(query_params, schema, %{query: nil}, opts) do
     default_preloads = Map.get(query_params, :preload, [])
-    schema_preloads = Brando.Blueprint.preloads_for(schema)
+    schema_preloads = Brando.Blueprint.preloads_for(schema, opts)
     preloads = Enum.uniq(schema_preloads ++ default_preloads)
 
     Map.put(
@@ -1206,7 +1329,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # if we have a custom form_query, just pass it through.
-  defp add_preloads(query_params, _schema, _form) do
+  defp add_preloads(query_params, _schema, _form, _opts) do
     query_params
   end
 
@@ -1643,9 +1766,31 @@ defmodule BrandoAdmin.Components.Form do
     assign(socket, :fields_demanding_live_preview_reassign, lp_opts.reassign_on_change)
   end
 
+  # Loading shell while the async entry load is in flight. Deliberately a
+  # separate DOM id without the Brando.Form hook — the hook's mounted()
+  # expects the real form markup, and hooks only mount when their element
+  # enters the DOM, so the real form must arrive as a fresh element.
+  def render(%{entry_loading?: true} = assigns) do
+    ~H"""
+    <div>
+      <div id={"#{@id}-loading"} class="brando-form form-loading">
+        <div class="form-content">
+          <div :if={@header} class="form-header">
+            <h1>
+              {render_slot(@header)}
+            </h1>
+          </div>
+        </div>
+        <.entry_loader id={"#{@id}-loader-shell"} status={@entry_load_status} entering />
+      </div>
+    </div>
+    """
+  end
+
   def render(assigns) do
     ~H"""
     <div>
+      <.entry_loader :if={!@blocks_ready?} id={"#{@id}-loader"} status={@entry_load_status} />
       <div id={"#{@id}-el"} class="brando-form" phx-hook="Brando.Form" data-deliver-topic={@deliver_topic}>
         <div class="form-content">
           <div :if={@header} class="form-header">
@@ -1884,7 +2029,7 @@ defmodule BrandoAdmin.Components.Form do
 
           <.live_component
             :for={{block_field, block_module, entry_blocks, field_opts} <- @block_map}
-            :if={@has_blocks?}
+            :if={@has_blocks? && @blocks_ready?}
             :key={block_field}
             module={BlockField}
             block_module={block_module}
@@ -1919,6 +2064,63 @@ defmodule BrandoAdmin.Components.Form do
       </div>
     </div>
     """
+  end
+
+  attr :status, :map, default: nil
+  attr :id, :string, required: true
+  attr :entering, :boolean, default: false
+
+  # Full-viewport overlay shown while an entry loads and while its block
+  # tree renders. The phase steps give the user a sense of scale ("ah, 132
+  # blocks — that's why it takes a moment") instead of a frozen screen.
+  #
+  # Two instances exist across the load: the loading shell's (delayed
+  # fade-in via `entering`, so fast loads never flash it) and the main
+  # render's continuation (instantly opaque — the shell's overlay is
+  # discarded in the same patch — fading out via phx-remove when done).
+  def entry_loader(assigns) do
+    ~H"""
+    <div
+      class={["form-loader", @entering && "entering"]}
+      id={@id}
+      phx-remove={JS.hide(transition: {"form-loader-out", "opacity-100", "opacity-0"}, time: 200)}
+    >
+      <div class="form-loader-card">
+        <div class="form-loader-spinner"></div>
+        <div class="form-loader-title">
+          {gettext("Opening entry")}
+        </div>
+        <ol :if={@status} class="form-loader-steps">
+          <li class={entry_loader_step(@status.phase, :entry)}>
+            {gettext("Fetching content")}
+          </li>
+          <li :if={@status.blocks?} class={entry_loader_step(@status.phase, :blocks)}>
+            <%= if @status.block_count do %>
+              {ngettext("Loading %{count} block", "Loading %{count} blocks", @status.block_count)}
+            <% else %>
+              {gettext("Loading blocks")}
+            <% end %>
+          </li>
+          <li :if={@status.blocks?} class={entry_loader_step(@status.phase, :rendering)}>
+            {gettext("Building block editor")}
+          </li>
+        </ol>
+      </div>
+    </div>
+    """
+  end
+
+  @entry_load_phases [:entry, :blocks, :rendering]
+
+  defp entry_loader_step(current_phase, step) do
+    current_idx = Enum.find_index(@entry_load_phases, &(&1 == current_phase)) || 0
+    step_idx = Enum.find_index(@entry_load_phases, &(&1 == step))
+
+    cond do
+      step_idx < current_idx -> "done"
+      step_idx == current_idx -> "active"
+      true -> "pending"
+    end
   end
 
   attr :presences, :list

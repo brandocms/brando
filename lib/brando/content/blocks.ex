@@ -1064,6 +1064,31 @@ defmodule Brando.Content.Blocks do
   # --- Preload Strategy ---
 
   @doc """
+  Count the root blocks attached to an entry across all of the schema's
+  block fields.
+
+  A fast aggregate over the entry↔block join schemas — used by the form's
+  loading overlay to tell the user how many blocks are on their way before
+  the heavy preload pass runs.
+  """
+  def count_entry_blocks(schema, entry_id) do
+    if schema.has_trait(Brando.Trait.Blocks) do
+      Enum.reduce(schema.__blocks_fields__(), 0, fn %{name: assoc_name}, acc ->
+        field_as_module =
+          assoc_name
+          |> to_string
+          |> Macro.camelize()
+          |> then(&:"#{&1}")
+
+        join_schema = Module.concat([schema, field_as_module])
+        acc + Brando.Repo.aggregate(from(j in join_schema, where: j.entry_id == ^entry_id), :count)
+      end)
+    else
+      0
+    end
+  end
+
+  @doc """
   Returns a list of preloads for a schema if it has the Blocks trait
   """
   def preloads_for(schema) do

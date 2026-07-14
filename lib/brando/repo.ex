@@ -40,6 +40,10 @@ defmodule Brando.Repo do
     repo().one(queryable, maybe_serialize_preloads(opts))
   end
 
+  def aggregate(queryable, aggregate, opts \\ []) do
+    repo().aggregate(queryable, aggregate, opts)
+  end
+
   def one!(queryable, opts \\ []) do
     repo().one!(queryable, maybe_serialize_preloads(opts))
   end
