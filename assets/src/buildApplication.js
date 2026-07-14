@@ -129,6 +129,14 @@ export default (hooks, enableDebug = false) => {
     }
   })
 
+  // Optimistic (non-sticky) class toggle for select option rows. Dispatched
+  // via JS.dispatch so the class is a plain mutation that morphdom reconciles
+  // to server truth on the next patch — JS.toggle_class would putSticky the
+  // class and fight the server render (e.g. deselect re-appearing as selected).
+  window.addEventListener('b:option:toggle-selected', (e) => {
+    e.target.classList.toggle('option-selected')
+  })
+
   window.addEventListener('phx:b:component:remount', () => {
     app.components.forEach((cmp) => cmp.remount())
   })

@@ -12,25 +12,47 @@ h2.titlecase + .button-group-vertical button:first-of-type {
 }
 
 .select-modal-wrapper {
-  @row 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 20px;
 
-  .select-modal-selecteds {
-    color: red;
-  }
-
-  .selected-labels,
   .select-modal {
-    @column 6/12;
-  }
-
-  .select-modal {
-    border-right: 1px solid #f0f0f2;
+    border-right: 1px solid var(--brando-input-border);
     padding-right: 20px;
   }
 
   .selected-labels {
     padding-left: 5px;
+
+    /* Inside the modal, selected labels mirror the option rows on the left
+       (.options-option) instead of the compact pill used under the field */
+    .selected-label {
+      width: 100%;
+      align-items: center;
+      margin-bottom: 2px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background-color: color-mix(in srgb, var(--brando-color-dark) 7%, transparent);
+      @font mono;
+
+      &:hover {
+        background-color: color-mix(in srgb, var(--brando-color-dark) 11%, transparent);
+      }
+
+      .selected-label-text {
+        flex: 1;
+        font-size: 13px;
+        font-weight: 500;
+
+        svg {
+          margin-right: 9px;
+        }
+      }
+
+      button.delete.tiny {
+        margin-left: auto;
+      }
+    }
   }
 
   form {
@@ -43,9 +65,22 @@ h2.titlecase + .button-group-vertical button:first-of-type {
 
   &[data-sequenced] {
     .selected-label {
-      cursor: move;
-      &:hover {
-        background-color: lightgoldenrodyellow;
+      cursor: grab;
+
+      &::before {
+        content: '';
+        flex: none;
+        align-self: center;
+        width: 7px;
+        height: 11px;
+        margin-right: 6px;
+        background-image: radial-gradient(circle, currentColor 1px, transparent 1.1px);
+        background-size: 4px 4px;
+        opacity: 0.35;
+      }
+
+      &:active {
+        cursor: grabbing;
       }
     }
   }
@@ -53,6 +88,7 @@ h2.titlecase + .button-group-vertical button:first-of-type {
   &.wrapped {
     display: flex;
     flex-wrap: wrap;
+    gap: 2px;
   }
 
   .selected-label {
@@ -60,12 +96,27 @@ h2.titlecase + .button-group-vertical button:first-of-type {
     align-items: baseline;
     user-select: none;
     width: fit-content;
-    margin-left: -5px;
-    padding: 3px 10px 3px 5px;
-    border-radius: 16px;
+    padding: 3px 10px 3px 8px;
+    margin-bottom: 2px;
+    border-radius: 4px;
+    background-color: color-mix(in srgb, var(--brando-color-dark) 4%, transparent);
+    transition: opacity 0.08s ease, background-color 0.08s ease;
 
-    .modal-body & {
-      @space padding-y 5px;
+    &:hover {
+      background-color: color-mix(in srgb, var(--brando-color-dark) 8%, transparent);
+    }
+
+    button.delete.tiny {
+      flex: none;
+
+      &:hover {
+        background-color: var(--brando-color-dark);
+      }
+    }
+
+    &.removing {
+      opacity: 0.4;
+      pointer-events: none;
     }
 
     &-text {
@@ -106,6 +157,11 @@ h2.titlecase + .button-group-vertical button:first-of-type {
 
 .multiselect {
   @fontsize input/1;
+
+  .modal-footer .button-group {
+    align-items: center;
+    gap: 16px;
+  }
   height: 44px;
   display: flex;
   justify-content: space-between;
@@ -186,47 +242,71 @@ h2.titlecase + .button-group-vertical button:first-of-type {
 
   .options {
     max-height: 350px;
-    overflow-y: scroll;
+    overflow-y: auto;
+
+    h2.titlecase {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      margin-top: 0;
+      margin-bottom: 0;
+      padding-top: 15px;
+      padding-bottom: 8px;
+      background-color: var(--brando-color-content-background);
+    }
 
     .options-option {
+      position: relative;
       display: flex;
       align-items: center;
       cursor: pointer;
       color: var(--brando-color-dark);
-      background-color: #fff;
+      background-color: var(--brando-color-input);
       user-select: none;
-      padding: 12px 14px;
+      padding: 12px 36px 12px 14px;
       width: 100%;
       border: none;
-      border-bottom: 1px solid #f2f2f4;
+      border-radius: 8px;
+      margin-bottom: 2px;
       text-align: left;
       font-size: 13px;
       @font mono;
-      transition: background-color 0.15s ease;
-
-      &:last-of-type {
-        border-bottom: none;
-      }
-
-      &.option-selected {
-        background-color: var(--brando-color-dark);
-        color: white;
-      }
-
-      &.option-highlight {
-        background-color: var(--brando-color-dark);
-        color: white;
-      }
+      transition: background-color 0.08s ease, color 0.08s ease;
 
       &:hover {
         color: var(--brando-color-dark);
         background-color: #f5f5f8;
       }
 
-      &.option-selected:hover,
-      &.option-highlight:hover {
-        background-color: var(--brando-color-dark);
-        color: white;
+      &.option-selected {
+        background-color: color-mix(in srgb, var(--brando-color-dark) 7%, transparent);
+        color: var(--brando-color-dark);
+        font-weight: 500;
+
+        &::after {
+          content: '';
+          position: absolute;
+          right: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 13px;
+          height: 13px;
+          background-color: currentColor;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2.5 8.5l4 4 7-9' fill='none' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E") no-repeat center / contain;
+        }
+
+        &:hover {
+          background-color: color-mix(in srgb, var(--brando-color-dark) 11%, transparent);
+        }
+      }
+
+      &:active {
+        transform: scale(0.99);
+        filter: brightness(0.96);
+      }
+
+      &.filter-hidden {
+        display: none;
       }
 
       .option-label-wrap {
@@ -240,6 +320,18 @@ h2.titlecase + .button-group-vertical button:first-of-type {
           margin-top: 3px;
           font-family: 'Main';
         }
+      }
+    }
+
+    .no-results {
+      display: none;
+      padding: 12px 14px;
+      font-size: 13px;
+      opacity: 0.6;
+      @font mono;
+
+      &.visible {
+        display: block;
       }
     }
   }
@@ -309,7 +401,7 @@ h2.titlecase + .button-group-vertical button:first-of-type {
   right: 0;
   border-radius: 10px;
   overflow: clip;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--brando-input-border);
   box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04);
   color: var(--brando-color-dark);
   z-index: 2;
@@ -326,7 +418,7 @@ h2.titlecase + .button-group-vertical button:first-of-type {
     align-items: center;
     gap: 0.5em;
     border: none;
-    background-color: #fff;
+    background-color: var(--brando-color-input);
     width: max-content;
     min-width: 250px;
     padding: 8px 10px;
@@ -345,7 +437,72 @@ h2.titlecase + .button-group-vertical button:first-of-type {
 }
 
 .select-filter {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--brando-color-content-background);
   margin-bottom: 15px;
+
+  .filter-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    .filter-icon {
+      position: absolute;
+      left: 12px;
+      width: 14px;
+      height: 14px;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    input.text {
+      width: 100%;
+      padding-left: 34px;
+      padding-right: 34px;
+    }
+
+    .filter-clear {
+      position: absolute;
+      right: 8px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      padding: 4px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: opacity 0.08s ease;
+
+      &:hover {
+        opacity: 1;
+      }
+
+      &.visible {
+        display: flex;
+      }
+
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+    }
+  }
+}
+
+.count-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background-color: color-mix(in srgb, var(--brando-color-dark) 7%, transparent);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .invalid-options-warning {

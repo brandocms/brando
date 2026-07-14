@@ -107,15 +107,40 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               <% end %>
             </:header>
             <%= if @show_filter && !Enum.empty?(@input_options) && @open do %>
-              <div class="select-filter" id={"#{@field.id}-select-modal-filter"} phx-hook="Brando.SelectFilter">
+              <div
+                class="select-filter"
+                id={"#{@field.id}-select-modal-filter"}
+                phx-hook="Brando.SelectFilter"
+                data-filter-target={"##{@field.id}-options"}
+              >
                 <div class="field-wrapper">
                   <div class="label-wrapper">
-                    <label for="select-modal-search" class="control-label">
+                    <label for={"#{@field.id}-select-modal-search"} class="control-label">
                       <span>{gettext("Filter options")}</span>
                     </label>
                   </div>
                   <div class="field-base">
-                    <input class="text" name="select-modal-search" type="text" value={@filter_string} />
+                    <div class="filter-input-wrapper">
+                      <svg class="filter-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5" />
+                        <line x1="10.75" y1="10.75" x2="14.5" y2="14.5" stroke="currentColor" stroke-width="1.5" />
+                      </svg>
+                      <input
+                        class="text"
+                        id={"#{@field.id}-select-modal-search"}
+                        name="select-modal-search"
+                        type="text"
+                        value={@filter_string}
+                        placeholder={gettext("Filter options…")}
+                        autocomplete="off"
+                      />
+                      <button type="button" class="filter-clear" aria-label={gettext("Clear filter")} tabindex="-1">
+                        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" />
+                          <line x1="2" y1="14" x2="14" y2="2" stroke="currentColor" stroke-width="1.5" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -129,18 +154,23 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                     <%= if Enum.empty?(@input_options) do %>
                       {gettext("No options found")}
                     <% end %>
+                    <div class="no-results">{gettext("No matching options")}</div>
+                    <%!-- NOTE: no :key here — LV 1.2 keyed :for does not re-render an
+                    existing item when only external assigns (@selected_values) change,
+                    which broke selected-state updates while the modal stays open. --%>
                     <.option_button
                       :for={opt <- @input_options}
                       opt={opt}
-                      click={JS.push("select_option", target: @myself)}
-                      selected_options={@selected_options}
-                      relation_type={@relation_type}
-                      relation_key={@relation_key}
+                      selected?={option_selected?(opt, @selected_values)}
+                      click={JS.dispatch("b:option:toggle-selected") |> JS.push("select_option", target: @myself)}
                     />
                   </div>
                 </div>
                 <div class="selected-labels">
-                  <h2 class="titlecase">{gettext("Currently selected")}</h2>
+                  <h2 class="titlecase">
+                    {gettext("Currently selected")}
+                    <span :if={@selected_options != []} class="count-badge">{@count_label |> raw}</span>
+                  </h2>
                   <.labels
                     :let={opt}
                     selected_options={@selected_options}
@@ -154,19 +184,17 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               <% end %>
             </div>
             <:footer>
-              <div class="flex-h">
+              <div class="button-group">
+                <button :if={@resetable} type="button" class="tertiary" phx-click={JS.push("reset", target: @myself)}>
+                  {gettext("Reset value")}
+                </button>
                 <button
                   type="button"
-                  class="primary"
+                  class="primary small"
                   phx-click={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}
                 >
                   OK
                 </button>
-                <div :if={@resetable} class="reset">
-                  <button type="button" class="tertiary" phx-click={JS.push("reset", target: @myself)}>
-                    {gettext("Reset value")}
-                  </button>
-                </div>
               </div>
             </:footer>
           </Content.modal>
@@ -271,7 +299,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           |> Map.put(:action, :insert)
           |> maybe_change_sequence?(idx, sequenced?)
 
-        assoc_data = Enum.find(input_options, &(to_string(&1.id) == id))
+        assoc_data = find_option_entry(input_options, id)
 
         struct =
           new_rel
@@ -568,6 +596,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         options
     end
     |> Enum.map(&ensure_string_values/1)
+    |> Enum.map(&precompute_option/1)
   end
 
   defp ensure_string_values(%{label: label, value: value}) when not is_binary(value) do
@@ -576,12 +605,66 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp ensure_string_values(map), do: map
 
+  # Pre-shape entry-shaped options once at assignment time so render doesn't
+  # call `__identifier__` per option on every patch. Label/value options pass
+  # through untouched; selected-changeset lookup paths still receive raw
+  # entries, so the raw-entry clauses in `get_label`/`extract_label` remain.
+  defp precompute_option(%{label: _, value: _} = opt), do: opt
+
+  defp precompute_option(%{__struct__: module} = entry) do
+    if function_exported?(module, :__identifier__, 2) do
+      identifier = module.__identifier__(entry, skip_cover: true)
+      %{value: to_string(entry.id), label: identifier.title, status: identifier.status, entry: entry}
+    else
+      entry
+    end
+  end
+
+  defp precompute_option(opt), do: opt
+
+  defp option_value(opt), do: to_string(extract_value(opt))
+
+  defp option_selected?(opt, selected_values), do: MapSet.member?(selected_values, option_value(opt))
+
+  # Resolve the raw entry for an option value — used for relation data on
+  # newly built association changesets (live preview needs the full struct).
+  defp find_option_entry(input_options, value) do
+    value = to_string(value)
+
+    case Enum.find(input_options, &(option_value(&1) == value)) do
+      %{entry: entry} -> entry
+      other -> other
+    end
+  end
+
   def assign_label(%{assigns: %{input_options: input_options, selected_options: selected_options}} = socket) do
-    assign(
-      socket,
+    socket
+    |> assign(
       :count_label,
       get_count_label(input_options, selected_options, socket.assigns.relation_type)
     )
+    |> assign_selected_values()
+  end
+
+  # Precomputed MapSet of selected option values (as strings), excluding
+  # tombstoned changesets — replaces the per-option linear scans over
+  # `selected_options` during render. Kept in sync by piggybacking on
+  # `assign_label/1`, which every selection mutation already calls.
+  defp assign_selected_values(socket) do
+    %{selected_options: selected_options, relation_key: relation_key, relation_type: relation_type} = socket.assigns
+
+    assign(socket, :selected_values, compute_selected_values(selected_options, relation_key, relation_type))
+  end
+
+  defp compute_selected_values(selected_options, relation_key, relation_type)
+       when relation_type in [:has_many, {:subform, :has_many}] do
+    selected_options
+    |> Enum.reject(&(Ecto.Changeset.get_change(&1, :marked_as_deleted) == true))
+    |> MapSet.new(&to_string(Ecto.Changeset.get_field(&1, relation_key)))
+  end
+
+  defp compute_selected_values(selected_options, _relation_key, _relation_type) do
+    MapSet.new(selected_options, &option_value/1)
   end
 
   defp assign_invalid_options(socket) do
@@ -738,16 +821,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   def option_button(assigns) do
-    opt = assigns.opt
-    selected_options = assigns.selected_options
-    relation_key = assigns.relation_key
-    relation_type = assigns.relation_type
-
     assigns =
       assigns
-      |> assign(:selected?, selected?(opt, selected_options, relation_key, relation_type))
-      |> assign(:label, extract_label(opt))
-      |> assign(:value, extract_value(opt))
+      |> assign(:label, extract_label(assigns.opt))
+      |> assign(:value, extract_value(assigns.opt))
 
     ~H"""
     <button
@@ -816,8 +893,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp get_opt(changeset, opts, relation_key, relation_type)
        when relation_type in [:has_many, {:subform, :has_many}] do
-    wanted_id = Ecto.Changeset.get_field(changeset, relation_key)
-    Enum.find(opts, &(to_string(&1.id) == to_string(wanted_id)))
+    wanted_id = to_string(Ecto.Changeset.get_field(changeset, relation_key))
+    Enum.find(opts, &(option_value(&1) == wanted_id))
   end
 
   defp get_opt(opt, opts, _relation_key, _) do
@@ -827,38 +904,40 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     end)
   end
 
-  defp selected?(%{id: id}, selected_opts, relation_key, relation_type)
-       when relation_type in [:has_many, {:subform, :has_many}] do
-    Enum.find_index(
-      selected_opts,
-      &(to_string(Ecto.Changeset.get_field(&1, relation_key)) == to_string(id) &&
-          Ecto.Changeset.get_change(&1, :marked_as_deleted) != true)
-    ) != nil
-  end
-
-  defp selected?(%{id: id}, opts, _, _) do
-    Enum.find_index(opts, &(&1.id == id)) != nil
-  end
-
-  defp selected?(%{value: value}, opts, _, _), do: value in opts
-
   defp extract_value(%Ecto.Changeset{data: %{id: id}}), do: id
   defp extract_value(%{value: value}), do: value
   defp extract_value(%{id: value}), do: value
   defp extract_value(value), do: value
-
-  defp extract_label(%{opt: %{label: label}}), do: label
-
-  defp extract_label(%{opt: entry}) do
-    identifier = entry.__struct__.__identifier__(entry, skip_cover: true)
-    identifier.title
-  end
 
   defp extract_label(%{label: label}), do: label
 
   defp extract_label(entry) do
     identifier = entry.__struct__.__identifier__(entry, skip_cover: true)
     identifier.title
+  end
+
+  defp get_label(%{opt: %{entry: _, status: _}} = assigns) do
+    assigns =
+      assigns
+      |> assign_new(:deletable, fn -> false end)
+      |> assign_new(:target, fn -> nil end)
+
+    ~H"""
+    <.status_circle status={@opt.status} /> {@opt.label}
+    <%= if @deletable do %>
+      <button
+        class="delete tiny"
+        type="button"
+        value={@opt.value}
+        phx-click={JS.add_class("removing", to: {:closest, ".selected-label"}) |> JS.push("select_option", target: @target)}
+      >
+        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="1.35355" y1="0.646447" x2="15.4957" y2="14.7886" stroke="#333333" />
+          <line x1="0.576134" y1="14.7168" x2="14.7183" y2="0.574624" stroke="#333333" />
+        </svg>
+      </button>
+    <% end %>
+    """
   end
 
   defp get_label(%{opt: %{label: _}} = assigns) do
@@ -889,7 +968,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     ~H"""
     <.status_circle status={@identifier.status} /> {@identifier.title}
     <%= if @deletable do %>
-      <button class="delete tiny" type="button" value={@entry_id} phx-click={JS.push("select_option", target: @target)}>
+      <button
+        class="delete tiny"
+        type="button"
+        value={@entry_id}
+        phx-click={JS.add_class("removing", to: {:closest, ".selected-label"}) |> JS.push("select_option", target: @target)}
+      >
         <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
           <line x1="1.35355" y1="0.646447" x2="15.4957" y2="14.7886" stroke="#333333" />
           <line x1="0.576134" y1="14.7168" x2="14.7183" y2="0.574624" stroke="#333333" />
@@ -912,7 +996,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     ~H"""
     <.status_circle status={@identifier.status} /> {@identifier.title}
     <%= if @deletable do %>
-      <button class="delete tiny" type="button" value={@entry_id} phx-click={JS.push("select_option", target: @target)}>
+      <button
+        class="delete tiny"
+        type="button"
+        value={@entry_id}
+        phx-click={JS.add_class("removing", to: {:closest, ".selected-label"}) |> JS.push("select_option", target: @target)}
+      >
         <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
           <line x1="1.35355" y1="0.646447" x2="15.4957" y2="14.7886" stroke="#333333" />
           <line x1="0.576134" y1="14.7168" x2="14.7183" y2="0.574624" stroke="#333333" />
@@ -1148,7 +1237,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           |> maybe_change_sequence?(sequence_count, sequenced?)
 
         input_options = socket.assigns.input_options
-        assoc_data = Enum.find(input_options, &(to_string(&1.id) == value))
+        assoc_data = find_option_entry(input_options, value)
 
         selected_option_struct =
           new_rel
@@ -1195,6 +1284,30 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     updated = Enum.filter(selected, &(not is_nil(get_opt(&1, opts, rk, rt))))
 
     {:noreply, socket |> assign(:selected_options, updated) |> assign(:invalid_options, []) |> assign_label()}
+  end
+
+  def handle_event("reset", _, %{assigns: %{relation_type: relation_type}} = socket)
+      when relation_type in [:has_many, {:subform, :has_many}] do
+    # Reset must go through the form changeset — select_option rebuilds its list
+    # from the changeset, so only clearing the local assigns brings everything back.
+    %{field: field} = socket.assigns
+    selected_options = get_selected_options(field.form.source, field, relation_type)
+
+    updated_selected_options =
+      Enum.reduce(selected_options, [], fn opt, acc ->
+        cond do
+          Ecto.Changeset.get_change(opt, :marked_as_deleted) == true ->
+            acc ++ [opt]
+
+          opt.data.id ->
+            acc ++ [opt |> Ecto.Changeset.change(marked_as_deleted: true) |> Map.put(:action, :delete)]
+
+          true ->
+            acc
+        end
+      end)
+
+    {:noreply, propagate_has_many_update(socket, updated_selected_options, [])}
   end
 
   def handle_event("reset", _, %{assigns: %{input_options: input_options}} = socket) do

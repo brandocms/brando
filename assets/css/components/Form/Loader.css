@@ -31,22 +31,12 @@
 .form-loader-card {
   background-color: var(--brando-color-white);
   border-radius: 14px;
-  padding: 40px 50px;
-  min-width: 340px;
+  padding: 36px 28px;
+  width: 300px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-}
-
-.form-loader-spinner {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 3px solid var(--brando-color-peach);
-  border-top-color: var(--brando-color-dark);
-  animation: spin 0.8s linear infinite;
-  margin-bottom: 18px;
 }
 
 .form-loader-title {
@@ -56,7 +46,7 @@
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-bottom: 20px;
+  margin-bottom: 26px;
 }
 
 .form-loader-steps {
@@ -65,19 +55,27 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
 
   li {
     @fontsize 14px;
+    position: relative;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 9px;
+    justify-content: space-between;
+    gap: 24px;
+    text-align: left;
     color: var(--brando-color-dark);
     transition: opacity 0.2s ease;
 
-    &::before {
+    & + li {
+      border-top: 1px solid color-mix(in srgb, var(--brando-color-dark) 8%, transparent);
+      padding-top: 10px;
+    }
+
+    /* step indicator, right-aligned */
+    &::after {
       content: '';
       width: 7px;
       height: 7px;
@@ -90,14 +88,40 @@
       opacity: 0.35;
     }
 
-    &.active::before {
-      animation: form-loader-pulse 1s ease-in-out infinite;
+    &.active {
+      padding-bottom: 13px;
+
+      &::after {
+        width: 12px;
+        height: 12px;
+        background-color: transparent;
+        border: 2px solid color-mix(in srgb, var(--brando-color-dark) 20%, transparent);
+        border-top-color: var(--brando-color-dark);
+        animation: spin 0.8s linear infinite;
+      }
+
+      /* indeterminate progress bar — block rendering is one monolithic
+         render pass, so there is no real percentage to report */
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 3px;
+        border-radius: 3px;
+        background-color: color-mix(in srgb, var(--brando-color-dark) 8%, transparent);
+        background-image: linear-gradient(90deg, transparent, var(--brando-color-blue), transparent);
+        background-size: 40% 100%;
+        background-repeat: no-repeat;
+        animation: form-loader-indeterminate 1.2s ease-in-out infinite;
+      }
     }
 
     &.done {
       opacity: 0.6;
 
-      &::before {
+      &::after {
         content: '✓';
         width: auto;
         height: auto;
@@ -110,13 +134,12 @@
   }
 }
 
-@keyframes form-loader-pulse {
-  0%,
-  100% {
-    opacity: 1;
+@keyframes form-loader-indeterminate {
+  0% {
+    background-position: -40% 0;
   }
 
-  50% {
-    opacity: 0.25;
+  100% {
+    background-position: 140% 0;
   }
 }

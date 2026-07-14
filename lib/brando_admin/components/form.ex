@@ -2086,7 +2086,6 @@ defmodule BrandoAdmin.Components.Form do
       phx-remove={JS.hide(transition: {"form-loader-out", "opacity-100", "opacity-0"}, time: 200)}
     >
       <div class="form-loader-card">
-        <div class="form-loader-spinner"></div>
         <div class="form-loader-title">
           {gettext("Opening entry")}
         </div>

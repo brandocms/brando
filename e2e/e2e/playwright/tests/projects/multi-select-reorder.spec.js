@@ -177,4 +177,108 @@ test.describe('Multi-select reordering', () => {
     await expect(persistedLabels.nth(1)).toContainText('Category A')
     await expect(persistedLabels.nth(2)).toContainText('Category B')
   })
+
+  test('reset value clears selection from the changeset, not just the UI', async ({ page }) => {
+    // Regression: after "Reset value", selecting a single option brought back
+    // every previously selected option (reset only cleared local assigns,
+    // while select_option rebuilds its list from the form changeset)
+    await page.getByRole('link', { name: 'Projects' }).click()
+    await expect(page).toHaveURL(/\/projects\/projects/)
+    await syncLV(page)
+    await page.getByRole('link', { name: 'Create new' }).click()
+    await syncLV(page)
+
+    // Fill required fields
+    await page.locator('label').filter({ hasText: 'Published' }).click()
+    const titleField = page.getByRole('textbox', { name: 'Title' })
+    await fillSlugSource(titleField, 'Reset Test Project')
+    await syncLV(page)
+    const slugField = page.locator('input[name="project[slug]"]')
+    await expect(slugField).toHaveValue(/reset-test-project/, { timeout: 10000 })
+
+    const editor = page.locator('.tiptap-wrapper [contenteditable="true"]').first()
+    await expect(editor).toBeVisible()
+    await editor.click()
+    await editor.pressSequentially('Test introduction', { delay: 10 })
+    await page.waitForTimeout(100)
+    await editor.evaluate(el => el.blur())
+    await page.waitForTimeout(200)
+    await syncLV(page)
+
+    // Select client
+    await page
+      .locator('#project_client_id-field-base')
+      .getByRole('button', { name: 'Select' })
+      .click()
+    await page.getByRole('button', { name: 'Test Client' }).click()
+    await syncLV(page)
+
+    // Open multi-select modal and select all three categories
+    await page
+      .locator('#project_project_categories-field-base')
+      .getByRole('button', { name: 'Select' })
+      .click()
+    await syncLV(page)
+    await page.getByRole('button', { name: 'Category A' }).click()
+    await syncLV(page)
+    await page.getByRole('button', { name: 'Category B' }).click()
+    await syncLV(page)
+    await page.getByRole('button', { name: 'Category C' }).click()
+    await syncLV(page)
+
+    // Reset the value, then select ONE option
+    await page.getByRole('button', { name: 'Reset value' }).click()
+    await syncLV(page)
+    await page.getByRole('button', { name: 'Category B' }).click()
+    await syncLV(page)
+
+    // Close modal — only Category B should remain selected
+    await page.getByRole('button', { name: 'OK' }).click()
+    await syncLV(page)
+
+    const selectedLabels = page.locator(
+      '#project_project_categories-selected-options .selected-label'
+    )
+    await expect(selectedLabels).toHaveCount(1)
+    await expect(selectedLabels.first()).toContainText('Category B')
+
+    // Save and re-open to verify only Category B persisted
+    await page.getByTestId('submit').click()
+    await expect(page).toHaveURL(/\/admin\/projects\/projects/)
+    await syncLV(page)
+    await page.getByRole('link', { name: 'Reset Test Project' }).click()
+    await syncLV(page)
+
+    const persisted = page.locator(
+      '#project_project_categories-selected-options .selected-label'
+    )
+    await expect(persisted).toHaveCount(1)
+    await expect(persisted.first()).toContainText('Category B')
+
+    // Now reset PERSISTED rows (must be marked deleted, not just dropped),
+    // pick a different one and verify the swap survives a save
+    await page
+      .locator('#project_project_categories-field-base')
+      .getByRole('button', { name: 'Select' })
+      .click()
+    await syncLV(page)
+    await page.getByRole('button', { name: 'Reset value' }).click()
+    await syncLV(page)
+    await page.getByRole('button', { name: 'Category C' }).click()
+    await syncLV(page)
+    await page.getByRole('button', { name: 'OK' }).click()
+    await syncLV(page)
+
+    await page.getByTestId('submit').click()
+    await expect(page).toHaveURL(/\/admin\/projects\/projects/)
+    await syncLV(page)
+    await page.getByRole('link', { name: 'Reset Test Project' }).click()
+    await syncLV(page)
+
+    const swapped = page.locator(
+      '#project_project_categories-selected-options .selected-label'
+    )
+    await expect(swapped).toHaveCount(1)
+    await expect(swapped.first()).toContainText('Category C')
+  })
 })

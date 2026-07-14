@@ -135,15 +135,15 @@ defmodule BrandoAdmin.Utils do
     )
     |> JS.show(
       to: "#{modal_id} .modal-backdrop",
-      transition: {"transition ease-out duration-300", "opacity-0", "opacity-100"},
+      transition: {"transition ease-out duration-200", "opacity-0", "opacity-100"},
       blocking: false,
-      time: 300
+      time: 200
     )
     |> JS.show(
       to: "#{modal_id} .modal-dialog",
       blocking: false,
-      transition: {"transition ease-out delay-300 duration-300", "opacity-0 y-100", "opacity-100 y-0"},
-      time: 600
+      transition: {"transition ease-out duration-200", "opacity-0 y-100", "opacity-100 y-0"},
+      time: 200
     )
   end
 
@@ -157,15 +157,15 @@ defmodule BrandoAdmin.Utils do
     )
     |> JS.hide(
       to: "#{modal_id} .modal-backdrop",
-      transition: {"transition ease-in delay-100 duration-300", "opacity-100", "opacity-0"},
+      transition: {"transition ease-in duration-100", "opacity-100", "opacity-0"},
       blocking: false,
-      time: 400
+      time: 100
     )
     |> JS.hide(
       to: "#{modal_id}",
       transition: {"transition", "opacity-100", "opacity-100"},
       blocking: false,
-      time: 400
+      time: 100
     )
   end
 

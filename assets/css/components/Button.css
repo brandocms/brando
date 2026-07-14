@@ -10,6 +10,7 @@ button.delete.tiny {
   height: 18px;
   border-radius: 50%;
   background-color: var(--brando-color-peach);
+  transition: background-color 0.08s ease;
 
   &:hover {
     svg {
@@ -23,6 +24,10 @@ button.delete.tiny {
     width: 6px;
     height: 6px;
     margin-left: -1px;
+
+    line {
+      transition: stroke 0.08s ease;
+    }
   }
 }
 

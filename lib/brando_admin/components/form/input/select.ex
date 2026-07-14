@@ -85,22 +85,22 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
             <% end %>
           </button>
           <div :if={@open && @inline} class="inline-options">
-            <%= for opt <- @input_options do %>
-              <button
-                type="button"
-                class={[
-                  "options-option"
-                ]}
-                data-label={extract_label(opt)}
-                value={extract_value(opt)}
-                phx-click={
-                  JS.push("select_option", target: @myself)
-                  |> JS.push("toggle_inline_options", target: @myself)
-                }
-              >
-                <.get_label opt={opt} />
-              </button>
-            <% end %>
+            <button
+              :for={opt <- @input_options}
+              type="button"
+              class={[
+                "options-option"
+              ]}
+              data-label={extract_label(opt)}
+              value={extract_value(opt)}
+              phx-click={
+                JS.add_class("option-selected")
+                |> JS.push("select_option", target: @myself)
+                |> JS.push("toggle_inline_options", target: @myself)
+              }
+            >
+              <.get_label opt={opt} />
+            </button>
           </div>
           <Content.modal
             :if={!@inline}
@@ -112,44 +112,72 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
             <%= if @open do %>
               <div class="select-modal">
                 <%= if @show_filter && !Enum.empty?(@input_options) do %>
-                  <div id={"#{@field.id}-select-modal-filter"} class="select-filter" phx-hook="Brando.SelectFilter">
+                  <div
+                    id={"#{@field.id}-select-modal-filter"}
+                    class="select-filter"
+                    phx-hook="Brando.SelectFilter"
+                    data-filter-target={"##{@field.id}-options"}
+                  >
                     <div class="field-wrapper">
                       <div class="label-wrapper">
-                        <label for="select-modal-search" class="control-label">
+                        <label for={"#{@field.id}-select-modal-search"} class="control-label">
                           <span>{gettext("Filter options")}</span>
                         </label>
                       </div>
                       <div class="field-base">
-                        <input class="text" name="select-modal-search" type="text" value={@filter_string} />
+                        <div class="filter-input-wrapper">
+                          <svg class="filter-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5" />
+                            <line x1="10.75" y1="10.75" x2="14.5" y2="14.5" stroke="currentColor" stroke-width="1.5" />
+                          </svg>
+                          <input
+                            class="text"
+                            id={"#{@field.id}-select-modal-search"}
+                            name="select-modal-search"
+                            type="text"
+                            value={@filter_string}
+                            placeholder={gettext("Filter options…")}
+                            autocomplete="off"
+                          />
+                          <button type="button" class="filter-clear" aria-label={gettext("Clear filter")} tabindex="-1">
+                            <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" />
+                              <line x1="2" y1="14" x2="14" y2="2" stroke="currentColor" stroke-width="1.5" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 <% end %>
 
-                <div class="options">
+                <div id={"#{@field.id}-options"} class="options">
                   <h2 class="titlecase">{gettext("Available options")}</h2>
                   <%= if Enum.empty?(@input_options) do %>
                     {gettext("No options found")}
                   <% end %>
-                  <%= for opt <- @input_options do %>
-                    <button
-                      type="button"
-                      class={[
-                        "options-option",
-                        selected?(opt, @selected_option) && "option-selected"
-                      ]}
-                      data-label={extract_label(opt)}
-                      value={extract_value(opt)}
-                      phx-click={
-                        JS.push("select_option", target: @myself)
-                        |> JS.push("toggle_modal", target: @myself)
-                        |> hide_modal("##{@modal_id}")
-                      }
-                    >
-                      <%!-- TODO: get rid of selected? --%>
-                      <.get_label opt={opt} />
-                    </button>
-                  <% end %>
+                  <div class="no-results">{gettext("No matching options")}</div>
+                  <%!-- NOTE: no :key here — LV 1.2 keyed :for does not re-render an
+                  existing item when only @selected_option changes (footer "Reset value"
+                  pushes select_option while the modal stays open). --%>
+                  <button
+                    :for={opt <- @input_options}
+                    type="button"
+                    class={[
+                      "options-option",
+                      option_value(opt) == @selected_option && "option-selected"
+                    ]}
+                    data-label={extract_label(opt)}
+                    value={extract_value(opt)}
+                    phx-click={
+                      JS.add_class("option-selected")
+                      |> JS.push("select_option", target: @myself)
+                      |> JS.push("toggle_modal", target: @myself)
+                      |> hide_modal("##{@modal_id}")
+                    }
+                  >
+                    <.get_label opt={opt} />
+                  </button>
                 </div>
 
                 <%= if @allow_custom do %>
@@ -184,12 +212,6 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 <%= if @select_form do %>
                   <.form :let={entry_form} for={@select_changeset} phx-change={JS.push("validate_new_entry", target: @myself)}>
                     {gettext("Create entry")}
-                    <code style="font-family: monospace; font-size: 11px">
-                      <pre>
-                    <%= inspect @select_changeset, pretty: true %>
-                    </pre>
-                    </code>
-                    <br />
                     <%= for tab <- @select_form.tabs do %>
                       <div class="form-tab active" data-tab-name={tab.name}>
                         <div class="row">
@@ -211,21 +233,23 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
               </div>
             <% end %>
             <:footer>
-              <div class="flex-h">
+              <div class="button-group">
+                <button
+                  :if={@resetable}
+                  type="button"
+                  class="tertiary"
+                  value={nil}
+                  phx-click={JS.push("select_option", target: @myself)}
+                >
+                  {gettext("Reset value")}
+                </button>
                 <button
                   type="button"
-                  class="primary"
+                  class="primary small"
                   phx-click={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}
                 >
                   OK
                 </button>
-                <%= if @resetable do %>
-                  <div class="reset">
-                    <button type="button" class="tertiary" value={nil} phx-click={JS.push("select_option", target: @myself)}>
-                      {gettext("Reset value")}
-                    </button>
-                  </div>
-                <% end %>
               </div>
             </:footer>
           </Content.modal>
@@ -331,7 +355,26 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     end
     |> Enum.map(&ensure_string_values/1)
     |> Enum.reject(&is_nil/1)
+    |> Enum.map(&precompute_option/1)
   end
+
+  # Pre-shape entry-shaped options once at assignment time so render doesn't
+  # call `__identifier__` per option on every patch. Label/value options pass
+  # through untouched.
+  defp precompute_option(%{label: _, value: _} = opt), do: opt
+
+  defp precompute_option(%{__struct__: module} = entry) do
+    if function_exported?(module, :__identifier__, 2) do
+      identifier = module.__identifier__(entry, skip_cover: true)
+      %{value: to_string(entry.id), label: identifier.title, status: identifier.status, entry: entry}
+    else
+      entry
+    end
+  end
+
+  defp precompute_option(opt), do: opt
+
+  defp option_value(opt), do: to_string(extract_value(opt))
 
   defp ensure_string_values(%{label: _label, value: value} = opt) when not is_binary(value) do
     %{opt | value: to_string(value)}
@@ -381,21 +424,6 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     |> assign(:module, module)
   end
 
-  defp selected?(%{value: value}, opt) do
-    value == opt
-  end
-
-  defp selected?(%{id: id}, opt) do
-    to_string(id) == opt
-  end
-
-  defp extract_label(%{opt: %{label: label}}), do: label
-
-  defp extract_label(%{opt: entry}) do
-    identifier = entry.__struct__.__identifier__(entry, skip_cover: true)
-    identifier.title
-  end
-
   defp extract_label(%Brando.Content.Var.Option{label: label}), do: label
 
   defp extract_label(%{__struct__: _} = entry) do
@@ -413,6 +441,14 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   defp extract_value(%{value: value}), do: value
   defp extract_value(%{id: value}), do: value
+
+  defp get_label(%{opt: %{entry: _, status: _}} = assigns) do
+    assigns = assign_new(assigns, :deletable, fn -> false end)
+
+    ~H"""
+    <.status_circle status={@opt.status} /> {@opt.label}
+    """
+  end
 
   defp get_label(%{opt: %{label: _}} = assigns) do
     assigns =
@@ -458,6 +494,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     """
   end
 
+  # Returns the HTML string rendered (via `raw`) as the field's select label.
+  # Developer-authored `%{label: ...}` options may deliberately contain markup
+  # and pass through untouched; entry titles and custom values are user input
+  # and must be escaped before they reach `raw`.
   defp get_label(input_options, selected_option, allow_custom) do
     case Enum.find(input_options, fn
            %{value: value} -> value == selected_option
@@ -465,14 +505,24 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
          end) do
       nil ->
         if allow_custom && selected_option && selected_option != "" do
-          selected_option
+          escape_label(selected_option)
         else
           gettext("No selection")
         end
 
-      opt ->
+      %{entry: _} = opt ->
+        opt |> extract_label() |> escape_label()
+
+      %{label: _} = opt ->
         extract_label(opt)
+
+      opt ->
+        opt |> extract_label() |> escape_label()
     end
+  end
+
+  defp escape_label(value) do
+    value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
   end
 
   defp assign_custom_input_value(
