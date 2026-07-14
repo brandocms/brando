@@ -300,6 +300,120 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
     end
   end
 
+  describe "restorable bin snapshots" do
+    defp bin_state do
+      Ops.from_entry_blocks([
+        entry_block("a", 1, 10, [child("a1", 11), child("a2", 12, [child("a2x", 13)])]),
+        entry_block("b", 2, 20)
+      ])
+    end
+
+    test "bin_snapshot/2 records location, statuses and db ids for the subtree" do
+      snapshot = Ops.bin_snapshot(bin_state(), "a2")
+
+      assert snapshot.location == {:child, "a", 1}
+      assert snapshot.uids == ["a2", "a2x"]
+      assert snapshot.statuses == %{"a2" => :persisted, "a2x" => :persisted}
+      assert snapshot.db_ids == %{"a2" => {nil, 12}, "a2x" => {nil, 13}}
+    end
+
+    test "root delete → restore round-trips the entire state" do
+      state = apply!(bin_state(), {:update, "a1", %{"type" => "module"}})
+      snapshot = Ops.bin_snapshot(state, "a")
+
+      deleted_state = apply!(state, {:delete, "a"})
+      assert Enum.sort(deleted_state.deleted) == ["a", "a1", "a2", "a2x"]
+
+      assert {:ok, restored} = Ops.restore_snapshot(deleted_state, snapshot)
+      assert restored == state
+    end
+
+    test "restored roots materialize identically to before the delete" do
+      state = apply!(bin_state(), {:update, "a", %{"block" => %{"description" => "Edited"}}})
+      assert {:ok, before_params} = Ops.materialize_root(state, "a")
+
+      snapshot = Ops.bin_snapshot(state, "a")
+
+      {:ok, restored} =
+        state
+        |> apply!({:delete, "a"})
+        |> Ops.restore_snapshot(snapshot)
+
+      assert {:ok, after_params} = Ops.materialize_root(restored, "a")
+      assert after_params == before_params
+    end
+
+    test "child delete → restore reattaches under the parent at position" do
+      state = bin_state()
+      snapshot = Ops.bin_snapshot(state, "a1")
+
+      {:ok, restored} =
+        state
+        |> apply!({:delete, "a1"})
+        |> Ops.restore_snapshot(snapshot)
+
+      assert restored == state
+    end
+
+    test "restore positions clamp when the tree shrank in the meantime" do
+      state = Ops.new(["a", "b", "c"])
+      snapshot = Ops.bin_snapshot(state, "c")
+
+      {:ok, restored} =
+        state
+        |> apply!({:delete, "c"})
+        |> apply!({:delete, "a"})
+        |> Ops.restore_snapshot(snapshot)
+
+      assert restored.order == ["b", "c"]
+    end
+
+    test "restoring an already-known uid is rejected" do
+      state = bin_state()
+      snapshot = Ops.bin_snapshot(state, "b")
+      assert {:error, {:duplicate_uid, "b"}} = Ops.restore_snapshot(state, snapshot)
+    end
+
+    test "restoring a child whose parent is gone is rejected" do
+      state = bin_state()
+      snapshot = Ops.bin_snapshot(state, "a1")
+
+      deleted_state =
+        state
+        |> apply!({:delete, "a1"})
+        |> apply!({:delete, "a"})
+
+      assert {:error, {:unknown_parent, "a"}} = Ops.restore_snapshot(deleted_state, snapshot)
+    end
+
+    test "newest-first restore brings back a child deleted before its parent" do
+      state = bin_state()
+      child_snapshot = Ops.bin_snapshot(state, "a1")
+      state = apply!(state, {:delete, "a1"})
+      parent_snapshot = Ops.bin_snapshot(state, "a")
+      state = apply!(state, {:delete, "a"})
+
+      {:ok, state} = Ops.restore_snapshot(state, parent_snapshot)
+      assert {:ok, restored} = Ops.restore_snapshot(state, child_snapshot)
+
+      assert restored == bin_state()
+    end
+
+    test "restoring an inserted (never persisted) block keeps :inserted status without ids" do
+      state = apply!(Ops.new([]), {:insert, "x", 0, %{"block" => %{"uid" => "x"}}})
+      snapshot = Ops.bin_snapshot(state, "x")
+
+      {:ok, restored} =
+        state
+        |> apply!({:delete, "x"})
+        |> Ops.restore_snapshot(snapshot)
+
+      assert restored.statuses["x"] == :inserted
+      assert restored.deleted == []
+      assert restored.diffs["x"] == %{"block" => %{"uid" => "x"}}
+    end
+  end
+
   describe "materialize_root/2" do
     test "unknown root is rejected" do
       assert {:error, {:unknown_uid, "x"}} = Ops.materialize_root(Ops.new([]), "x")

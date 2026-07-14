@@ -31,7 +31,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     recovery); `apply_op/2` splits it into per-uid diffs and registers the
     structure, keeping the one-diff-per-uid invariant.
   * Deleting a `:persisted` block records it (and its persisted descendants)
-    in `deleted`; `:inserted` blocks just drop.
+    in `deleted`; `:inserted` blocks just drop. `bin_snapshot/2` captured
+    before the delete + `restore_snapshot/2` undo one, subtree and all.
   """
 
   alias Ecto.Changeset
@@ -352,6 +353,108 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       error ->
         error
     end
+  end
+
+  @doc """
+  A restorable-bin snapshot of `uid`'s subtree — capture BEFORE applying
+  `{:delete, uid}`, restore with `restore_snapshot/2`.
+
+  Extends `subtree_snapshot/2` with everything a delete destroys that a
+  remote-sync snapshot doesn't need: per-uid statuses and db ids (so a
+  restored persisted block keeps matching its rows at save instead of
+  re-inserting them) and the block's location — `{:root, index}` or
+  `{:child, parent_uid, index}` — so the restore can reattach it where
+  it was.
+
+  Snapshots don't survive a save: the save deletes the underlying rows,
+  so the captured db ids go stale (drop the bin when the store re-seeds).
+  """
+  @spec bin_snapshot(t(), uid()) :: map()
+  def bin_snapshot(%__MODULE__{} = state, uid) do
+    uids = [uid | descendants(state, uid)]
+
+    location =
+      case Map.get(state.parents, uid) do
+        nil ->
+          {:root, Enum.find_index(state.order, &(&1 == uid)) || length(state.order)}
+
+        parent_uid ->
+          siblings = Map.get(state.child_order, parent_uid, [])
+          {:child, parent_uid, Enum.find_index(siblings, &(&1 == uid)) || length(siblings)}
+      end
+
+    state
+    |> subtree_snapshot(uid)
+    |> Map.merge(%{
+      location: location,
+      statuses: Map.take(state.statuses, uids),
+      db_ids: Map.take(state.db_ids, uids)
+    })
+  end
+
+  @doc """
+  Undo a delete by re-applying a `bin_snapshot/2`.
+
+  The whole subtree comes back exactly as captured — structure, diffs,
+  statuses, db ids — reattached at its original (clamped) position, and its
+  persisted uids leave the `deleted` list. Errors if any snapshot uid is
+  already known (already restored, or resurrected by another editor) or if
+  a child snapshot's parent is gone — restore newest-first and parents
+  reappear before their children's snapshots apply.
+
+  ## Examples
+
+      iex> alias BrandoAdmin.Components.Form.BlockField.Ops
+      iex> state = Ops.new(["a", "b"])
+      iex> snapshot = Ops.bin_snapshot(state, "a")
+      iex> {:ok, state} = Ops.apply_op(state, {:delete, "a"})
+      iex> state.deleted
+      ["a"]
+      iex> {:ok, restored} = Ops.restore_snapshot(state, snapshot)
+      iex> {restored.order, restored.deleted}
+      {["a", "b"], []}
+
+  """
+  @spec restore_snapshot(t(), map()) :: {:ok, t()} | {:error, term()}
+  def restore_snapshot(%__MODULE__{} = state, %{uids: [uid | _] = uids, location: location} = snapshot) do
+    cond do
+      Enum.any?(uids, &known?(state, &1)) ->
+        {:error, {:duplicate_uid, uid}}
+
+      not location_known?(state, location) ->
+        {:child, parent_uid, _} = location
+        {:error, {:unknown_parent, parent_uid}}
+
+      true ->
+        state = %{
+          state
+          | parents: Map.merge(state.parents, snapshot.parents),
+            child_order: Map.merge(state.child_order, snapshot.child_order),
+            diffs: Map.merge(state.diffs, snapshot.diffs),
+            statuses: Map.merge(state.statuses, snapshot.statuses),
+            db_ids: Map.merge(state.db_ids, snapshot.db_ids),
+            deleted: Enum.reject(state.deleted, &(&1 in uids))
+        }
+
+        {:ok, reattach(state, uid, location)}
+    end
+  end
+
+  defp location_known?(_state, {:root, _at}), do: true
+  defp location_known?(state, {:child, parent_uid, _at}), do: known?(state, parent_uid)
+
+  defp reattach(state, uid, {:root, at}) do
+    %{state | order: List.insert_at(state.order, clamp(at, state.order), uid)}
+  end
+
+  defp reattach(state, uid, {:child, parent_uid, at}) do
+    siblings = Map.get(state.child_order, parent_uid, [])
+
+    %{
+      state
+      | parents: Map.put(state.parents, uid, parent_uid),
+        child_order: Map.put(state.child_order, parent_uid, List.insert_at(siblings, clamp(at, siblings), uid))
+    }
   end
 
   @doc """

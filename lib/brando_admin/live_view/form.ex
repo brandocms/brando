@@ -1035,6 +1035,18 @@ defmodule BrandoAdmin.LiveView.Form do
     {:halt, socket}
   end
 
+  defp handle_hooks_block_sync_info({:block_restored, %{user_id: user_id} = msg}, socket) do
+    if user_id != socket.assigns.current_user.id do
+      send_to_block_fields(socket,
+        event: "remote_block_restored",
+        snapshot: msg.snapshot,
+        origin_block_field: msg.block_field
+      )
+    end
+
+    {:halt, socket}
+  end
+
   defp handle_hooks_block_sync_info({:blocks_reordered, %{user_id: user_id} = msg}, socket) do
     if user_id != socket.assigns.current_user.id do
       send_to_block_fields(socket, event: "remote_blocks_reordered", block_list: msg.block_list)

@@ -33,6 +33,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   the fresh form to the mounted component (`apply_remote_block_ops` clause).
   Structural broadcasts (add/delete/reorder) are mirrored into both the
   legacy list assigns and the op store.
+
+  ## Restorable bin (delete undo)
+
+  Every local delete stashes an `Ops.bin_snapshot/2` in `@block_bin` before
+  the delete op runs; an undo toast offers LIFO restore. Restoring replays
+  the snapshot into the store (`Ops.restore_snapshot/2`), then re-mounts a
+  root from its re-materialized seed form or hands a child's root the
+  `replace_form` cascade. Restores broadcast so other editors' stores
+  resurrect the block too. The bin clears on save — the save deletes the
+  underlying rows, so stashed db ids go stale.
   """
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
@@ -209,12 +219,18 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       )
     end
 
-    {:ok, remove_block_from_state(socket, uid)}
+    {:ok, socket |> stash_in_bin(uid) |> remove_block_from_state(uid)}
   end
 
   # blocks (any level) emit their content/structural ops directly — see
   # Block.emit_block_op/2. Forms never travel up; the seed forms in
   # entry_blocks_forms are only read at child mount.
+  # Child deletes pass through the bin first — the op tears the subtree out
+  # of the store, so the undo snapshot must be captured here.
+  def update(%{event: "block_op", op: {:delete, uid} = op}, socket) do
+    {:ok, socket |> stash_in_bin(uid) |> apply_block_op(op)}
+  end
+
   def update(%{event: "block_op", op: op}, socket) do
     {:ok, apply_block_op(socket, op)}
   end
@@ -533,10 +549,33 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
-  # Remote user deleted a block
+  # Remote user deleted a block. No bin stash — the undo toast belongs to
+  # the deleting editor; their restore broadcasts back to us.
   def update(%{event: "remote_block_deleted", uid: uid}, socket) do
     if uid in socket.assigns.block_list do
       {:ok, remove_block_from_state(socket, uid)}
+    else
+      {:ok, socket}
+    end
+  end
+
+  # Remote user undid a delete — replay their bin snapshot against our store.
+  # The origin field guard matters: the Form fans sync events out to every
+  # block field, and a root restore against the wrong field's store would
+  # succeed (all uids unknown there) and duplicate the block.
+  def update(%{event: "remote_block_restored", snapshot: snapshot, origin_block_field: origin}, socket) do
+    if origin == socket.assigns.block_field do
+      case restore_from_snapshot(socket, snapshot) do
+        {:ok, socket} ->
+          {:ok, socket}
+
+        {:error, reason} ->
+          Logger.warning(
+            "BlockField (#{socket.assigns.block_field}) could not apply remote block restore: #{inspect(reason)}"
+          )
+
+          {:ok, socket}
+      end
     else
       {:ok, socket}
     end
@@ -604,6 +643,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_ops, Ops.from_entry_blocks(entry_blocks))
     |> assign(:module_picker_id, "#block-field-#{assigns.block_field}-module-picker")
     |> assign(:clipboard_meta, nil)
+    |> assign(:block_bin, [])
     |> assign(:blocks_topic, blocks_topic)
     |> assign(:blocks_initialized, true)
   end
@@ -664,6 +704,65 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:block_list, block_list)
     |> assign(:block_count, length(block_list))
     |> assign(:block_ops, Ops.from_entry_blocks(entry_blocks))
+    # bin snapshots don't survive a save — the save deleted the underlying
+    # rows, so their captured db ids are stale
+    |> assign(:block_bin, [])
+  end
+
+  # Capture the doomed subtree for undo BEFORE the delete tears it down.
+  # Local deletes only — the deleting editor gets the undo toast; restoring
+  # broadcasts so every editor's store resurrects the block (leaving a uid in
+  # a remote `deleted` list would kill the rows again on their next save).
+  defp stash_in_bin(socket, uid) do
+    ops = socket.assigns.block_ops
+
+    if Ops.known?(ops, uid) do
+      update(socket, :block_bin, &[Ops.bin_snapshot(ops, uid) | &1])
+    else
+      socket
+    end
+  end
+
+  # Undo a delete: replay the bin snapshot into the op store, then bring the
+  # block back on screen. A restored ROOT mounts a fresh component from its
+  # re-materialized seed form (the keyed :for picks it up); a restored CHILD
+  # lives inside a mounted parent that owns its form, so the root gets the
+  # `replace_form` cascade + remount push — the same path remote-sync applies
+  # use (the only sanctioned post-mount form handoff).
+  defp restore_from_snapshot(socket, %{uids: [uid | _], location: location} = snapshot) do
+    with {:ok, updated_ops} <- Ops.restore_snapshot(socket.assigns.block_ops, snapshot) do
+      root_uid = Ops.root_of(updated_ops, uid)
+      # a materialization failure here must fail loudly — see fetch_root_blocks
+      {:ok, params} = Ops.materialize_root(updated_ops, root_uid)
+
+      new_form =
+        socket
+        |> materialize_base_struct(root_uid)
+        |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
+        |> to_form(as: "entry_block", id: "entry_block_form-#{root_uid}")
+
+      socket = assign(socket, :block_ops, updated_ops)
+
+      socket =
+        case location do
+          {:root, _at} ->
+            index = Enum.find_index(updated_ops.order, &(&1 == uid))
+
+            socket
+            |> update(:entry_blocks_forms, &List.insert_at(&1, index, new_form))
+            |> assign(:block_list, updated_ops.order)
+            |> update(:block_count, &(&1 + 1))
+
+          {:child, _parent_uid, _at} ->
+            send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: new_form)
+
+            socket
+            |> assign(:entry_blocks_forms, replace_form_by_uid(socket.assigns.entry_blocks_forms, root_uid, new_form))
+            |> push_event("b:component:remount_block", %{uid: root_uid})
+        end
+
+      {:ok, refresh_live_preview(socket)}
+    end
   end
 
   defp remove_block_from_state(socket, uid) do
@@ -745,6 +844,48 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def handle_event("paste_block_at_end", _, socket) do
     {:noreply, paste_root_block(socket, socket.assigns.block_count)}
+  end
+
+  # Undo the most recent delete (LIFO — a parent deleted after its child
+  # restores first, so the child's snapshot finds its parent again).
+  def handle_event("restore_block", _, socket) do
+    case socket.assigns.block_bin do
+      [] ->
+        {:noreply, socket}
+
+      [snapshot | rest] ->
+        socket = assign(socket, :block_bin, rest)
+
+        case restore_from_snapshot(socket, snapshot) do
+          {:ok, socket} ->
+            if topic = socket.assigns[:blocks_topic] do
+              Phoenix.PubSub.broadcast(
+                Brando.pubsub(),
+                topic,
+                {:block_restored,
+                 %{
+                   snapshot: snapshot,
+                   block_field: socket.assigns.block_field,
+                   user_id: socket.assigns.current_user.id
+                 }}
+              )
+            end
+
+            uid = hd(snapshot.uids)
+            {:noreply, push_event(socket, "b:scroll_to", %{selector: "[data-block-uid=\"#{uid}\"]"})}
+
+          {:error, reason} ->
+            Logger.warning(
+              "BlockField (#{socket.assigns.block_field}) could not restore deleted block: #{inspect(reason)}"
+            )
+
+            {:noreply, socket}
+        end
+    end
+  end
+
+  def handle_event("clear_block_bin", _, socket) do
+    {:noreply, assign(socket, :block_bin, [])}
   end
 
   # Outline: rebuild items when drawer opens
@@ -1138,6 +1279,23 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           paste_context={:root}
           paste_click={JS.push("paste_block_at_end", target: @myself)}
         />
+        <div :if={@block_bin != []} id={"block-field-#{@block_field}-bin"} class="block-bin-toast" data-testid="block-bin">
+          <span class="block-bin-message">
+            {ngettext("Block deleted", "%{count} blocks deleted", length(@block_bin))}
+          </span>
+          <button type="button" class="block-bin-undo" phx-click="restore_block" phx-target={@myself}>
+            {gettext("Undo")}
+          </button>
+          <button
+            type="button"
+            class="block-bin-dismiss"
+            phx-click="clear_block_bin"
+            phx-target={@myself}
+            aria-label={gettext("Dismiss")}
+          >
+            <.icon name="hero-x-mark" />
+          </button>
+        </div>
       </div>
       <Outline.outline_drawer
         id={"block-field-#{@block_field}-outline"}

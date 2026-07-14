@@ -4,6 +4,12 @@
 
 #### Features
 
+- **Undo for block deletes (restorable bin)**: Deleting a block (root or nested child)
+  now shows an undo toast at the bottom of the block field. Undo restores the whole
+  subtree — content, structure and database identity — so a restored persisted block
+  updates its existing rows at save instead of re-inserting them. Deletes stack (LIFO
+  undo), the bin clears on save, and restores sync to other editors in real time.
+
 - **Unified upload manager**: All uploads (block vars, block refs, entry fields —
   images, files, videos, galleries) now route through a single sticky
   `BrandoAdmin.UploadManager` LiveView with its own queue and drawer UI. Upload

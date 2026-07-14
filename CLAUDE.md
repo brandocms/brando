@@ -87,6 +87,12 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   `Block.push_image_editor_init/3` (image editor from blocks).
 - **Multi-user sync ships op snapshots** (`Ops.subtree_snapshot/2` on blur →
   `Ops.apply_remote_snapshot/3` on receive), never changesets.
+- **Delete undo is store replay**: local deletes stash `Ops.bin_snapshot/2` (structure +
+  diffs + statuses + db ids + location) BEFORE the delete op; undo replays it via
+  `Ops.restore_snapshot/2` — restored roots mount fresh from a re-materialized seed form,
+  restored children reach their mounted root via the `replace_form` cascade. Restores
+  broadcast `{:block_restored, ...}` (a uid left in a remote `deleted` list would kill the
+  rows again on that editor's save); the bin clears on save (stashed db ids go stale).
 
 ### Ecto Changeset Patterns
 - **put_assoc handles FK automatically**: Don't mix `put_change(:gallery_id, nil)` with `put_assoc(:gallery, ...)`. Let `put_assoc` manage the foreign key.
