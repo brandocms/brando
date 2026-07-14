@@ -43,7 +43,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
             diffs: %{},
             statuses: %{},
             db_ids: %{},
-            deleted: []
+            deleted: [],
+            deleted_roots: []
 
   @type uid :: String.t()
   @type params :: %{optional(String.t()) => term()}
@@ -56,7 +57,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
           diffs: %{optional(uid()) => params()},
           statuses: %{optional(uid()) => status()},
           db_ids: %{optional(uid()) => {entry_block_id :: term() | nil, block_id :: term() | nil}},
-          deleted: [uid()]
+          deleted: [uid()],
+          deleted_roots: [uid()]
         }
 
   @type op ::
@@ -243,6 +245,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     if known?(state, uid) do
       doomed = [uid | descendants(state, uid)]
       newly_deleted = Enum.filter(doomed, &(state.statuses[&1] == :persisted))
+      # roots are tracked separately: late-join sync replays root deletes as
+      # structural broadcasts, while child deletes travel as snapshot tombstones
+      newly_deleted_roots = Enum.filter(newly_deleted, &(&1 in state.order))
 
       state = detach(state, uid)
 
@@ -254,7 +259,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
            diffs: Map.drop(state.diffs, doomed),
            statuses: Map.drop(state.statuses, doomed),
            db_ids: Map.drop(state.db_ids, doomed),
-           deleted: state.deleted ++ newly_deleted
+           deleted: state.deleted ++ newly_deleted,
+           deleted_roots: state.deleted_roots ++ newly_deleted_roots
        }}
     else
       {:error, {:unknown_uid, uid}}
@@ -296,7 +302,10 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   Carries param diffs (never changesets/forms — payloads stay tiny and
   node-portable), the parent links and per-parent child order for the
   subtree, plus the DFS uid order so receivers can apply parents before
-  children. Apply with `apply_remote_snapshot/3`.
+  children. Also ships the sender's `deleted` tombstones — snapshots can
+  attach remotely inserted children but could never express a remote CHILD
+  delete without them (root deletes travel as structural broadcasts).
+  Apply with `apply_remote_snapshot/3`.
   """
   @spec subtree_snapshot(t(), uid()) :: map()
   def subtree_snapshot(%__MODULE__{} = state, uid) do
@@ -306,7 +315,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       uids: uids,
       diffs: Map.take(state.diffs, uids),
       parents: Map.take(state.parents, uids),
-      child_order: Map.take(state.child_order, uids)
+      child_order: Map.take(state.child_order, uids),
+      deleted: state.deleted
     }
   end
 
@@ -316,15 +326,20 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   Known uids get their diffs replaced; unknown uids are attached under
   their shipped parent (this is how remotely inserted children reach
   editors that never received a structural broadcast for them); shipped
-  child orders are applied last. The snapshot's top uid must be known
-  unless it arrives with a known parent — remote ROOT inserts travel as
-  structural broadcasts before any content ships for them.
+  child orders are applied next; finally the sender's `deleted` tombstones
+  remove any of OUR known children the sender deleted. Tombstones only
+  apply to child uids — root deletes travel as structural broadcasts, and
+  a stale tombstone must never kill a root the remote editor undeleted.
+  The snapshot's top uid must be known unless it arrives with a known
+  parent — remote ROOT inserts travel as structural broadcasts before any
+  content ships for them.
   """
   @spec apply_remote_snapshot(t(), uid(), map()) :: {:ok, t()} | {:error, term()}
   def apply_remote_snapshot(%__MODULE__{} = state, _uid, %{uids: uids} = snapshot) do
     diffs = Map.get(snapshot, :diffs, %{})
     parents = Map.get(snapshot, :parents, %{})
     child_order = Map.get(snapshot, :child_order, %{})
+    tombstones = Map.get(snapshot, :deleted, [])
 
     uids
     |> Enum.reduce_while({:ok, state}, fn u, {:ok, state} ->
@@ -353,6 +368,21 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       error ->
         error
     end
+    |> case do
+      {:ok, state} -> {:ok, apply_child_tombstones(state, tombstones)}
+      error -> error
+    end
+  end
+
+  defp apply_child_tombstones(state, tombstones) do
+    Enum.reduce(tombstones, state, fn u, state ->
+      if known?(state, u) and Map.has_key?(state.parents, u) do
+        {:ok, state} = apply_op(state, {:delete, u})
+        state
+      else
+        state
+      end
+    end)
   end
 
   @doc """
@@ -433,7 +463,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
             diffs: Map.merge(state.diffs, snapshot.diffs),
             statuses: Map.merge(state.statuses, snapshot.statuses),
             db_ids: Map.merge(state.db_ids, snapshot.db_ids),
-            deleted: Enum.reject(state.deleted, &(&1 in uids))
+            deleted: Enum.reject(state.deleted, &(&1 in uids)),
+            deleted_roots: Enum.reject(state.deleted_roots, &(&1 in uids))
         }
 
         {:ok, reattach(state, uid, location)}

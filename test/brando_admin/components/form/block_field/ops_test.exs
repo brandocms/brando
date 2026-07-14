@@ -298,6 +298,49 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       snapshot = %{uids: ["ghost"], diffs: %{}, parents: %{}, child_order: %{}}
       assert {:error, {:unknown_uid, "ghost"}} = Ops.apply_remote_snapshot(sync_state(), "ghost", snapshot)
     end
+
+    test "snapshot tombstones remove children the sender deleted" do
+      sender = apply!(sync_state(), {:delete, "a1"})
+      snapshot = Ops.subtree_snapshot(sender, "a")
+
+      assert snapshot.deleted == ["a1"]
+      assert {:ok, receiver} = Ops.apply_remote_snapshot(sync_state(), "a", snapshot)
+      refute Ops.known?(receiver, "a1")
+      assert receiver.child_order["a"] == ["a2"]
+      # the delete is recorded locally too — the receiver's save must kill the rows
+      assert "a1" in receiver.deleted
+    end
+
+    test "tombstones cascade through a deleted child's own subtree" do
+      sender = apply!(sync_state(), {:delete, "a2"})
+      snapshot = Ops.subtree_snapshot(sender, "a")
+
+      assert {:ok, receiver} = Ops.apply_remote_snapshot(sync_state(), "a", snapshot)
+      refute Ops.known?(receiver, "a2")
+      refute Ops.known?(receiver, "a2x")
+    end
+
+    test "tombstones never touch roots or unknown uids" do
+      snapshot =
+        sync_state()
+        |> Ops.subtree_snapshot("a")
+        |> Map.put(:deleted, ["b", "ghost"])
+
+      assert {:ok, receiver} = Ops.apply_remote_snapshot(sync_state(), "a", snapshot)
+      # root "b" survives — root deletes travel as structural broadcasts only
+      assert Ops.known?(receiver, "b")
+      assert receiver.order == ["a", "b"]
+    end
+
+    test "delete tracks roots separately from children" do
+      state =
+        sync_state()
+        |> apply!({:delete, "a1"})
+        |> apply!({:delete, "b"})
+
+      assert Enum.sort(state.deleted) == ["a1", "b"]
+      assert state.deleted_roots == ["b"]
+    end
   end
 
   describe "restorable bin snapshots" do

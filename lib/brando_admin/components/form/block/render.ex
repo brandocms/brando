@@ -1517,13 +1517,17 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <Input.text field={block_data[:link]} label="Link" />
           </:config>
           <div class="header-block">
+            <%!-- NOT phx-update="ignore": remote-sync applies must reach the
+            textarea's DOM value. LV's focused-input protection covers local
+            typing, and the block owns its form (single-owner), so a parent
+            re-render can never patch in stale content anymore — the ignore
+            was a workaround from the propagate/clobber era. --%>
             <Input.input
               type={:textarea}
               field={block_data[:text]}
               class={"h#{block_data[:level].value}"}
               phx-debounce={300}
               data-autosize={true}
-              phx-update="ignore"
               rows={1}
             />
             <Input.input type={:hidden} field={block_data[:class]} />

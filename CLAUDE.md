@@ -91,8 +91,16 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   Related helpers: `Block.current_block_data_map/3` (ref_data payloads),
   `Block.resolve_ref_association/4` (display-media resolution),
   `Block.push_image_editor_init/3` (image editor from blocks).
-- **Multi-user sync ships op snapshots** (`Ops.subtree_snapshot/2` on blur →
-  `Ops.apply_remote_snapshot/3` on receive), never changesets.
+- **Multi-user sync ships op snapshots** (`Ops.subtree_snapshot/2` →
+  `Ops.apply_remote_snapshot/3`), never changesets. Ships fire on focus-settle
+  (any focusout, via the Block JS hook), focus switch, pre-save force-ship and
+  immediately on child structural ops; snapshots carry delete tombstones (child
+  deletes have no structural broadcast of their own). Receivers DEFER a snapshot
+  for the root they're editing (`pending_remote_snapshots`, applied on blur) —
+  never drop it — and `ship_or_flush/2` suppresses unchanged re-broadcasts
+  (`last_synced_snapshots`) so stale state can't clobber newer remote edits.
+  Late joiners broadcast `{:blocks_sync_request, ...}`; diverged editors
+  (`blocks_changed?`) replay state as the standard sync messages.
 - **Delete undo is store replay**: local deletes stash `Ops.bin_snapshot/2` (structure +
   diffs + statuses + db ids + location) BEFORE the delete op; undo replays it via
   `Ops.restore_snapshot/2` — restored roots mount fresh from a re-materialized seed form,
