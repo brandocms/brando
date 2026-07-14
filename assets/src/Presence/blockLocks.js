@@ -1,11 +1,12 @@
-// Shared block-lock presence state.
+// Shared block-lock presence helpers.
 //
-// Lock state lives in this map; the DOM classes are just its projection.
-// LiveView patches reset a block's class attribute to server truth, wiping
-// imperatively added lock decorations — locks used to flicker off whenever
-// a locked block re-rendered (e.g. when its owner's shipped edit applied on
-// the receiver). The Form hook maintains the map from presence events; the
-// Block hook re-asserts its own lock in updated() after every patch.
+// Lock decorations go through LiveView's sticky JS commands (`hook.js()` —
+// addClass/setAttribute et al funnel into DOM.putSticky), so the patcher
+// itself re-applies them after every morphdom pass. No client-side lock
+// store and no updated()-re-assert needed: DOM state IS the lock state.
+// The presence color and the lock icon are pure CSS, keyed off the sticky
+// `data-presence-color-index` attribute (inline styles and injected child
+// nodes are not covered by the sticky mechanism).
 
 const PRESENCE_COLORS = [
   ['77, 144, 254', 'blue'],     // blue
@@ -15,8 +16,6 @@ const PRESENCE_COLORS = [
   ['239, 68, 68', 'red'],       // red
   ['20, 184, 166', 'teal'],     // teal
 ]
-
-export const blockLocks = new Map()
 
 export function getPresenceColorIndex(userId) {
   const els = document.querySelectorAll('.page-presences [data-presence-user-id]')
@@ -30,80 +29,37 @@ export function getPresenceColor(userId, alpha = 0.6) {
   return `rgba(${rgb}, ${alpha})`
 }
 
-export function clearBlockPresence(el) {
-  el.classList.remove('block-presence-active', 'block-locked')
-  el.removeAttribute('data-block-presence-user')
-  el.removeAttribute('data-presence-color-index')
-  el.style.removeProperty('--presence-color')
-  el.style.removeProperty('--presence-color-strong')
-  const lockIcon = el.querySelector('.block-lock-icon')
-  if (lockIcon) lockIcon.remove()
+function lockEl(uid) {
+  return document.querySelector(`[data-block-uid="${uid}"] > .block`)
 }
 
-// Idempotent: locks + glows a block for a user.
-export function applyBlockLock(uid, userId) {
-  const colorIdx = getPresenceColorIndex(userId)
-  const color = getPresenceColor(userId)
+function unlock(js, el) {
+  js.removeClass(el, ['block-presence-active', 'block-locked'])
+  js.removeAttribute(el, 'data-block-presence-user')
+  js.removeAttribute(el, 'data-presence-color-index')
+}
 
-  const block = document.querySelector(`[data-block-uid="${uid}"] > .block`)
+export function setBlockLock(js, uid, userId) {
+  // one lock per user — clear their previous block first
+  clearUserBlockLocks(js, userId)
+
+  const block = lockEl(uid)
   if (!block) return
 
-  block.classList.add('block-presence-active', 'block-locked')
-  block.setAttribute('data-block-presence-user', userId)
-  block.setAttribute('data-presence-color-index', colorIdx)
-  block.style.setProperty('--presence-color', color)
-  block.style.setProperty('--presence-color-strong', getPresenceColor(userId, 0.8))
-
-  // Add lock icon to block description if not present
-  if (!block.querySelector('.block-lock-icon')) {
-    const desc = block.querySelector('.block-description')
-    if (desc) {
-      const lock = document.createElement('div')
-      lock.className = 'block-lock-icon'
-      lock.style.color = color
-      lock.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clip-rule="evenodd" /></svg>'
-      desc.prepend(lock)
-    }
-  }
+  js.addClass(block, ['block-presence-active', 'block-locked'])
+  js.setAttribute(block, 'data-block-presence-user', String(userId))
+  js.setAttribute(block, 'data-presence-color-index', String(getPresenceColorIndex(userId)))
 }
 
-export function setBlockLock(uid, userId) {
-  // one lock per user — clear their previous block first
-  for (const [lockedUid, lockedUserId] of blockLocks) {
-    if (String(lockedUserId) === String(userId)) blockLocks.delete(lockedUid)
-  }
-  document
-    .querySelectorAll(`[data-block-presence-user="${userId}"]`)
-    .forEach(clearBlockPresence)
-
-  blockLocks.set(uid, userId)
-  applyBlockLock(uid, userId)
-}
-
-export function clearBlockLock(uid, userId) {
-  if (String(blockLocks.get(uid)) === String(userId)) {
-    blockLocks.delete(uid)
-  }
-
-  const block = document.querySelector(`[data-block-uid="${uid}"] > .block`)
+export function clearBlockLock(js, uid, userId) {
+  const block = lockEl(uid)
   if (block && block.getAttribute('data-block-presence-user') === String(userId)) {
-    clearBlockPresence(block)
+    unlock(js, block)
   }
 }
 
-export function clearUserBlockLocks(userId) {
-  for (const [lockedUid, lockedUserId] of blockLocks) {
-    if (String(lockedUserId) === String(userId)) blockLocks.delete(lockedUid)
-  }
+export function clearUserBlockLocks(js, userId) {
   document
     .querySelectorAll(`[data-block-presence-user="${userId}"]`)
-    .forEach(clearBlockPresence)
-}
-
-// Re-assert a single block's lock (called from the Block hook's updated()
-// after LiveView patched the element and reset its classes)
-export function reassertBlockLock(uid) {
-  if (blockLocks.has(uid)) {
-    applyBlockLock(uid, blockLocks.get(uid))
-  }
+    .forEach(el => unlock(js, el))
 }

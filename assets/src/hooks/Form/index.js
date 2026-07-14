@@ -1,8 +1,6 @@
 import { Dom, Events, gsap } from '@brandocms/jupiter'
 import tippy from 'tippy.js'
 import {
-  blockLocks,
-  applyBlockLock,
   setBlockLock,
   clearBlockLock,
   clearUserBlockLocks,
@@ -43,18 +41,16 @@ export default (app) => ({
       }
     })
 
-    // Lock state lives in the shared blockLocks map, DOM classes are just
-    // its projection — LiveView patches reset a block's class attribute to
-    // server truth, wiping imperatively added lock decorations (locks used
-    // to flicker off whenever a locked block re-rendered, e.g. when its
-    // owner's shipped edit applied). The Block hook re-asserts its own lock
-    // from the map after every patch.
+    // Lock decorations go through LiveView's sticky JS commands (this.js())
+    // so the patcher itself re-applies them after every morphdom pass —
+    // plain classList mutations get wiped whenever a locked block
+    // re-renders (e.g. when its owner's shipped edit applies here).
     this.handleEvent('b:set_active_block', ({ uid, user_id }) => {
-      setBlockLock(uid, user_id)
+      setBlockLock(this.js(), uid, user_id)
     })
 
     this.handleEvent('b:clear_block_lock', ({ uid, user_id }) => {
-      clearBlockLock(uid, user_id)
+      clearBlockLock(this.js(), uid, user_id)
     })
 
     this.handleEvent('b:clear_user_presence', ({ user_id }) => {
@@ -69,7 +65,7 @@ export default (app) => ({
         })
 
       // Remove block presence/lock for this user
-      clearUserBlockLocks(user_id)
+      clearUserBlockLocks(this.js(), user_id)
     })
 
     this.handleEvent('b:set_active_field', (opts) => {
@@ -127,14 +123,6 @@ export default (app) => ({
         }
       }
     })
-  },
-
-  updated() {
-    // Re-assert block locks after form-level patches; block-component
-    // patches (which don't bubble here) re-assert in the Block hook
-    for (const [uid, userId] of blockLocks) {
-      applyBlockLock(uid, userId)
-    }
   },
 
   destroyed() {

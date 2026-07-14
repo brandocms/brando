@@ -1,6 +1,5 @@
 import autosize from 'autosize'
 import { gsap } from '@brandocms/jupiter'
-import { reassertBlockLock } from '../../Presence/blockLocks'
 
 const PRESENCE_THROTTLE_MS = 500
 // Focus-settle delay before shipping on focusout — long enough for the
@@ -71,11 +70,6 @@ export default app => ({
 
   updated() {
     this.autosizeElements()
-
-    // LiveView just reset this element's classes to server truth — restore
-    // the lock decoration if another editor holds this block
-    const uid = this.el.getAttribute('data-block-uid')
-    if (uid) reassertBlockLock(uid)
   },
 
   destroyed() {

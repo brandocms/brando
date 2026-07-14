@@ -1950,6 +1950,40 @@ CodeMirror template by Jan T. Sott (https://github.com/idleberg), adapted by Bra
   }
 }
 
+/* Presence palette — keyed off the sticky data-presence-color-index
+   attribute set through LiveView's JS commands (inline styles are not
+   covered by the sticky mechanism, attributes are). Order matches
+   PRESENCE_COLORS in assets/src/Presence/blockLocks.js. */
+.block[data-presence-color-index="0"] {
+  --presence-color: rgba(77, 144, 254, 0.6);
+  --presence-color-strong: rgba(77, 144, 254, 0.8);
+}
+
+.block[data-presence-color-index="1"] {
+  --presence-color: rgba(72, 199, 142, 0.6);
+  --presence-color-strong: rgba(72, 199, 142, 0.8);
+}
+
+.block[data-presence-color-index="2"] {
+  --presence-color: rgba(245, 166, 35, 0.6);
+  --presence-color-strong: rgba(245, 166, 35, 0.8);
+}
+
+.block[data-presence-color-index="3"] {
+  --presence-color: rgba(168, 85, 247, 0.6);
+  --presence-color-strong: rgba(168, 85, 247, 0.8);
+}
+
+.block[data-presence-color-index="4"] {
+  --presence-color: rgba(239, 68, 68, 0.6);
+  --presence-color-strong: rgba(239, 68, 68, 0.8);
+}
+
+.block[data-presence-color-index="5"] {
+  --presence-color: rgba(20, 184, 166, 0.6);
+  --presence-color-strong: rgba(20, 184, 166, 0.8);
+}
+
 /* Block locked — another user is actively editing */
 .block.block-locked {
   .block-content {
@@ -1960,11 +1994,21 @@ CodeMirror template by Jan T. Sott (https://github.com/idleberg), adapted by Bra
   .block-toolbar {
     pointer-events: auto;
   }
-}
 
-.block-lock-icon {
-  display: flex;
-  align-items: center;
-  margin-right: 7px;
-  margin-top: -2px;
+  /* lock icon lives in CSS (an injected DOM node would be discarded by
+     LiveView patches), colored via the presence custom property */
+  .block-description::before {
+    content: "";
+    display: inline-block;
+    vertical-align: -2px;
+    width: 14px;
+    height: 14px;
+    margin-right: 7px;
+    flex-shrink: 0;
+    background-color: var(--presence-color, rgba(77, 144, 254, 0.6));
+    mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clip-rule="evenodd"/></svg>');
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+  }
 }
