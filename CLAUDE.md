@@ -47,6 +47,14 @@
 - **Form Index for DOM IDs**: Use `form.index` (not database ID) for DOM element identification in nested forms. New records don't have database IDs yet.
 - **CID Stability**: When a component remounts, its `@myself` CID changes. Any stored references to the old CID become invalid.
 - **Constant Options in Templates**: Never call functions that return constant lists directly in HEEx templates (e.g., `opts={[options: my_options()]}`). Instead, assign constants once in `mount/1` using `assign_new/3` and reference via assigns (e.g., `opts={[options: @my_options]}`). This avoids re-evaluating the function on every render.
+- **Sticky JS for persistent client-side decorations**: DOM state that must survive
+  LiveView patches (presence locks, etc.) MUST go through the hook's `this.js()`
+  commands (`addClass`/`setAttribute`/… → `DOM.putSticky`) — plain
+  `classList`/`setAttribute` mutations are wiped on the next morphdom pass of that
+  element. Inline styles and injected child nodes are NOT sticky-covered: express
+  them in CSS keyed on a sticky data attribute (see `assets/src/Presence/blockLocks.js`
+  + the presence palette in `Block.css`). Transient state (drag hover, dropdown open)
+  is fine as plain mutations.
 
 ### Block Editor: single-owner state & ops (Phase 3 architecture)
 
