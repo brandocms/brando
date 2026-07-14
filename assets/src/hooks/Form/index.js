@@ -59,7 +59,7 @@ export default (app) => ({
         .forEach(el => {
           const fieldWrapper = el.closest('.field-wrapper')
           if (fieldWrapper) {
-            fieldWrapper.classList.remove('field-locked')
+            this.js().removeClass(fieldWrapper, 'field-locked')
           }
           el.remove()
         })
@@ -91,7 +91,7 @@ export default (app) => ({
           // Unlock the old field
           const oldFieldWrapper = otherFieldPresence.closest('.field-wrapper')
           if (oldFieldWrapper) {
-            oldFieldWrapper.classList.remove('field-locked')
+            this.js().removeClass(oldFieldWrapper, 'field-locked')
           }
           otherFieldPresence.remove()
         }
@@ -116,10 +116,11 @@ export default (app) => ({
           })
         }
 
-        // Lock the field wrapper
+        // Lock the field wrapper — sticky: the form re-renders on every
+        // validate and a plain classList.add would be wiped by the patch
         const fieldWrapper = fieldPresence.closest('.field-wrapper')
         if (fieldWrapper) {
-          fieldWrapper.classList.add('field-locked')
+          this.js().addClass(fieldWrapper, 'field-locked')
         }
       }
     })

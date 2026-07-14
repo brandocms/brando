@@ -107,6 +107,25 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, ship_all_field_changes(socket)}
   end
 
+  # Re-broadcast our focused field for a late joiner — field presence
+  # indicators are event-driven, so a joiner would otherwise not see the
+  # field we're editing as locked (triggered from the blocks_sync_request
+  # handler in LiveView.Form alongside ship_field_changes)
+  def update(%{event: "reship_active_field"}, socket) do
+    entry = socket.assigns[:entry]
+    field = socket.assigns[:focused_field]
+
+    if field && entry && entry.id do
+      Phoenix.PubSub.broadcast(
+        Brando.pubsub(),
+        "brando:active_field:#{entry.id}",
+        {:active_field, field, socket.assigns.current_user.id}
+      )
+    end
+
+    {:ok, socket}
+  end
+
   # Apply field changes received from another user
   def update(%{event: "apply_remote_field_changes", changes: changes}, socket) do
     changeset = socket.assigns.form.source

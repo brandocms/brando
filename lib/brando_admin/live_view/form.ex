@@ -1093,6 +1093,11 @@ defmodule BrandoAdmin.LiveView.Form do
           id: "#{singular}_form",
           event: "ship_field_changes"
         )
+
+        send_update(BrandoAdmin.Components.Form,
+          id: "#{singular}_form",
+          event: "reship_active_field"
+        )
       end
 
       focused_uid = socket.assigns[:current_focused_block_uid]

@@ -313,6 +313,37 @@ test.describe('Multi-user block sync', () => {
     await expect(bBlockOne).not.toHaveClass(/block-locked/, { timeout: 5000 })
   })
 
+  test('field locks appear for late joiners and survive form patches', async ({
+    page,
+    secondUserPage,
+  }) => {
+    const entryUrl = await createEntryWithTwoHeaders(page, 'Multiuser Field Lock', 'multiuser-field-lock')
+
+    await page.goto(entryUrl)
+    await syncLV(page)
+
+    // A focuses the Title entry field and stays there
+    await page.getByLabel('Title', { exact: true }).click()
+
+    // B joins late — A's active field replays via the join sync request
+    await secondUserPage.goto(entryUrl)
+    await syncLV(secondUserPage)
+    const lockedWrapper = secondUserPage.locator('.field-wrapper.field-locked')
+    await expect(lockedWrapper).toHaveCount(1, { timeout: 5000 })
+    await expect(lockedWrapper.getByLabel('Title', { exact: true })).toBeAttached()
+
+    // B edits another field — every keystroke re-renders B's form; the
+    // sticky lock class must survive the patches (a plain classList.add
+    // used to get wiped here)
+    const uri = secondUserPage.getByLabel('URI')
+    await uri.click()
+    await uri.fill('multiuser-field-lock-x')
+    await secondUserPage.waitForTimeout(800)
+
+    await expect(secondUserPage.locator('.field-wrapper.field-locked')).toHaveCount(1)
+    await expect(lockedWrapper.getByLabel('Title', { exact: true })).toBeAttached()
+  })
+
   test("A's child delete syncs to B immediately, no blur needed", async ({
     page,
     secondUserPage,
