@@ -230,7 +230,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
     current_gallery_objects =
       Enum.map(
         gallery_objects,
-        &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
+        &Brando.Galleries.slim_gallery_object/1
       )
 
     new_gallery_object_slim = %{id_field => media_id, creator_id: current_user.id}
@@ -266,7 +266,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
     slimmed_objects =
       Enum.map(
         updated_gallery_objects,
-        &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
+        &Brando.Galleries.slim_gallery_object/1
       )
 
     updated_changeset =

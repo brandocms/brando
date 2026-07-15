@@ -45,7 +45,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       gallery.gallery_objects
       |> Enum.with_index()
       |> Enum.map(fn {obj, i} ->
-        obj_map = Map.take(obj, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id, :config])
+        obj_map = Brando.Galleries.slim_gallery_object(obj)
         if i == index, do: Map.put(obj_map, :config, config), else: obj_map
       end)
 
@@ -722,7 +722,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       if gallery do
         Enum.map(
           gallery.gallery_objects || [],
-          &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id, :config])
+          &Brando.Galleries.slim_gallery_object/1
         )
       else
         []
@@ -767,7 +767,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     slimmed_objects =
       Enum.map(
         updated_gallery_objects,
-        &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id, :config])
+        &Brando.Galleries.slim_gallery_object/1
       )
 
     new_gallery = %{

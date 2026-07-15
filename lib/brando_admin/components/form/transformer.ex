@@ -335,7 +335,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     <div
       id={"#{@id}-video-uploader"}
       phx-hook={video_uploader_hook(@upload_strategy)}
-      phx-target={@myself}
+      data-target={@myself}
     >
       <label class="upload-button">
         <svg

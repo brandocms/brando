@@ -157,7 +157,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
     assigns = assign(assigns, :block_type, assigns.block[:type].value)
 
     ~H"""
-    <div id={"block-#{@uid}-#{@block_type}-wrapper"} data-block-uid={@uid} style="display: none;">
+    <div id={"block-#{@uid}-#{@block_type}-wrapper"} data-block-uid={@uid} hidden>
       <!-- MediaBlock being replaced by <%= @block_type %> -->
     </div>
     """

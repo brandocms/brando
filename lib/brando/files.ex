@@ -97,10 +97,13 @@ defmodule Brando.Files do
   Returns its configuration or the default configuration if none is found
   """
   def get_config_for(%{config_target: nil}) do
-    maybe_struct(
-      FileConfig,
-      Brando.config(Brando.Files)[:default_config] || FileConfig.default_config()
-    )
+    config =
+      maybe_struct(
+        FileConfig,
+        Brando.config(Brando.Files)[:default_config] || FileConfig.default_config()
+      )
+
+    {:ok, config}
   end
 
   def get_config_for(%{config_target: config_target}) when is_binary(config_target) do

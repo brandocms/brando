@@ -64,6 +64,20 @@ defmodule Brando.Galleries do
     |> Brando.Repo.insert()
   end
 
+  @gallery_object_fields [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id, :config]
+
+  @doc """
+  Slim a gallery object (struct or map) to the params `put_assoc` needs.
+
+  Existing objects must be passed as plain maps when mixing in new (nil-ID)
+  objects on a gallery's `gallery_objects` — `put_assoc` with multiple nil-ID
+  structs raises duplicate-PK errors. This field list is canonical: every
+  slimming site must use this helper, so per-object `:config` overrides
+  survive all mutation paths (add/remove/append/reorder) instead of being
+  silently dropped by a hand-rolled `Map.take` that forgot a field.
+  """
+  def slim_gallery_object(object), do: Map.take(object, @gallery_object_fields)
+
   @doc """
   Get gallery.
   Raises on failure

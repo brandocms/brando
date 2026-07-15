@@ -18,9 +18,9 @@
  * Expected markup:
  *
  *   <div phx-hook="Brando.UploadTrigger"
- *        data-kind="block_var|block_ref_picture|block_ref_gallery"
+ *        data-kind="block_var|block_ref_picture|block_ref_gallery|entry_field|entry_field_gallery"
  *        data-component-id="..."
- *        data-asset-type="file|image"
+ *        data-asset-type="file|image|video"
  *        data-config-target="..."
  *        data-accept=".pdf,.zip">
  *     <input type="file" class="file-input" />
@@ -60,6 +60,7 @@ export default (app) => ({
     this.el.addEventListener('dragenter', (e) => {
       e.preventDefault()
       e.stopPropagation()
+      this.el.classList.add('dragging')
     })
 
     this.el.addEventListener('dragover', (e) => {

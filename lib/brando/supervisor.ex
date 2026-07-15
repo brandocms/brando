@@ -44,6 +44,9 @@ defmodule Brando.Supervisor do
     Supervisor.init(children, strategy: :one_for_one)
   end
 
+  # NOTE: an app-level `config :brando, Oban` REPLACES this entire default —
+  # queues AND the cron jobs below are lost, not merged. Apps overriding it
+  # must re-declare any default workers they still want scheduled.
   defp oban_config do
     Application.get_env(:brando, Oban) ||
       [
@@ -61,7 +64,9 @@ defmodule Brando.Supervisor do
                # Clean up soft deleted entries every night at 03:00 UTC
                {"0 3 * * *", Brando.Worker.SoftDeletePurger},
                # Purge inactive/unprotected revisions older than 14 days
-               {"0 4 * * *", Brando.Worker.RevisionPurger}
+               {"0 4 * * *", Brando.Worker.RevisionPurger},
+               # Mark video rows stuck in :uploading as errored (abandoned external uploads)
+               {"30 4 * * *", Brando.Worker.VideoUploadReaper}
              ] ++ extra_oban_cron_jobs(),
            timezone: "Etc/UTC"},
           {Oban.Plugins.Pruner, max_age: 300},

@@ -455,6 +455,15 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, assign(socket, :processing, percentage)}
   end
 
+  def update(%{action: :video_upload_error, error: error} = assigns, socket) do
+    require Logger
+    Logger.error("==> video upload failed for #{inspect(assigns[:filename])}: #{inspect(error)}")
+
+    send(self(), {:toast, gettext("Video upload failed: %{error}", error: error)})
+
+    {:ok, assign(socket, :processing, false)}
+  end
+
   def update(
         %{event: "update_live_preview_block"},
         %{assigns: %{live_preview_cache_key: nil}} = socket
@@ -1132,6 +1141,9 @@ defmodule BrandoAdmin.Components.Form do
     socket
     |> assign(:entry, updated_entry)
     |> assign(:form, to_form(updated_changeset, []))
+    # Ship while the FK is still a change — the drawer-save path re-bakes the
+    # changeset (apply_changes/change), after which there is nothing to ship.
+    |> ship_all_field_changes()
     |> push_event("b:validate", %{
       target: "#{socket.assigns.singular}[#{relation_key}]",
       value: asset.id
@@ -1151,7 +1163,7 @@ defmodule BrandoAdmin.Components.Form do
       if gallery do
         Enum.map(
           gallery.gallery_objects || [],
-          &Map.take(&1, [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id])
+          &Brando.Galleries.slim_gallery_object/1
         )
       else
         []
@@ -2647,7 +2659,6 @@ defmodule BrandoAdmin.Components.Form do
                       type="file"
                       accept=".mp4,.webm,.mov,.avi"
                       phx-hook={@video_uploader_hook}
-                      data-upload-target={@edit_video.field}
                     />
                   </div>
                 <% else %>
@@ -2796,10 +2807,6 @@ defmodule BrandoAdmin.Components.Form do
     js
     |> JS.dispatch("submit", to: "#image-drawer-form", detail: %{bubbles: true, cancelable: true})
     |> toggle_drawer("#image-drawer")
-  end
-
-  def duplicate_video(js \\ %JS{}, edit_video, target) do
-    JS.push(js, "duplicate_video", value: %{video_id: edit_video.video.id}, target: target)
   end
 
   def reset_video_field(js \\ %JS{}, target) do
@@ -3471,25 +3478,6 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:image_editor_config_target, config_target)}
   end
 
-  def handle_event(
-        "duplicate_video",
-        %{"video_id" => video_id},
-        %{assigns: %{singular: singular}} = socket
-      ) do
-    # For now, just get the existing video since we don't have duplicate_video implemented yet
-    {:ok, video} = Brando.Videos.get_video(video_id)
-
-    send_update(__MODULE__,
-      id: "#{singular}_form",
-      action: :update_edit_video,
-      video: video
-    )
-
-    send(self(), {:toast, gettext("Video selected")})
-
-    {:noreply, socket}
-  end
-
   def handle_event("reset_video_field", _, socket) do
     edit_video = socket.assigns.edit_video
 
@@ -3504,16 +3492,29 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event("reset_video_thumbnail", _, socket) do
     edit_video = socket.assigns.edit_video
 
-    if edit_video.video do
-      # Remove thumbnail from video
-      updated_video = %{edit_video.video | thumbnail: nil, thumbnail_id: nil}
-      updated_edit_video = %{edit_video | video: updated_video}
+    case edit_video.video do
+      # Persist immediately — save_video rebuilds its changeset from the
+      # struct, so an in-memory-only reset would silently never reach the DB.
+      %{id: id} = video when not is_nil(id) ->
+        changeset =
+          video
+          |> change(%{thumbnail_id: nil})
+          |> Map.put(:action, :update)
 
-      {:noreply,
-       socket
-       |> assign(:edit_video, updated_edit_video)}
-    else
-      {:noreply, socket}
+        case Brando.Videos.update_video(changeset, socket.assigns.current_user) do
+          {:ok, updated_video} ->
+            updated_video = %{updated_video | thumbnail: nil}
+            {:noreply, assign(socket, :edit_video, %{edit_video | video: updated_video})}
+
+          {:error, %Ecto.Changeset{} = failed_changeset} ->
+            require Logger
+            Logger.error("==> reset_video_thumbnail failed: #{inspect(failed_changeset.errors)}")
+            send(self(), {:toast, gettext("Could not reset video thumbnail")})
+            {:noreply, socket}
+        end
+
+      _ ->
+        {:noreply, socket}
     end
   end
 
@@ -3580,6 +3581,17 @@ defmodule BrandoAdmin.Components.Form do
      })}
   end
 
+  def handle_event("validate_file", %{"file" => file_params}, socket) do
+    file = socket.assigns.edit_file.file || %Brando.Files.File{}
+
+    file_changeset =
+      file
+      |> Brando.Files.File.changeset(file_params, socket.assigns.current_user)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :file_changeset, file_changeset)}
+  end
+
   def handle_event("validate_file", _, socket) do
     {:noreply, socket}
   end
@@ -3640,7 +3652,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, updated_file} = Brando.Files.update_file(validated_changeset, current_user)
 
     Brando.Trait.run_trait_after_save_callbacks(
-      Brando.Images.Image,
+      Brando.Files.File,
       updated_file,
       validated_changeset,
       current_user
@@ -3673,6 +3685,9 @@ defmodule BrandoAdmin.Components.Form do
 
     {:noreply,
      socket
+     # ship BEFORE the re-bake below — apply_changes/change() bakes pending
+     # changes into data, leaving nothing for ship_all_field_changes to see
+     |> ship_all_field_changes()
      |> assign(:entry, updated_entry)
      |> assign(:form, to_form(updated_changeset, []))
      |> assign(:file_changeset, validated_changeset)
@@ -3843,12 +3858,14 @@ defmodule BrandoAdmin.Components.Form do
 
     {:noreply,
      socket
+     # ship BEFORE the re-bake below — apply_changes/change() bakes pending
+     # changes into data, leaving nothing for ship_all_field_changes to see
+     |> ship_all_field_changes()
      |> assign(:entry, updated_entry)
      |> assign(:form, to_form(updated_changeset, []))
      |> assign(:image_changeset, validated_changeset)
      |> assign(:edit_image, edit_image)
      |> assign(:editing_image?, false)
-     |> ship_all_field_changes()
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
        target: target_field_name,
@@ -3866,6 +3883,17 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:editing_image?, false)
      |> ship_all_field_changes()
      |> assign_drawer_recovery_state()}
+  end
+
+  def handle_event("validate_video", %{"video" => video_params}, socket) do
+    video = socket.assigns.edit_video.video || %Brando.Videos.Video{}
+
+    video_changeset =
+      video
+      |> Brando.Videos.Video.changeset(video_params, socket.assigns.current_user)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :video_changeset, video_changeset)}
   end
 
   def handle_event("validate_video", _, socket) do
@@ -3927,12 +3955,14 @@ defmodule BrandoAdmin.Components.Form do
 
     {:noreply,
      socket
+     # ship BEFORE the re-bake below — apply_changes/change() bakes pending
+     # changes into data, leaving nothing for ship_all_field_changes to see
+     |> ship_all_field_changes()
      |> assign(:entry, updated_entry)
      |> assign(:form, to_form(updated_changeset, []))
      |> assign(:video_changeset, validated_changeset)
      |> assign(:edit_video, edit_video)
      |> assign(:editing_video?, false)
-     |> ship_all_field_changes()
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
        target: target_field_name,

@@ -32,9 +32,22 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   def update_many(assigns_sockets) do
-    {upload_events, var_updates} =
+    {upload_events, rest} =
       Enum.split_with(assigns_sockets, fn {assigns, _socket} ->
         Map.has_key?(assigns, :event) && assigns.event == "upload_complete"
+      end)
+
+    # Entry-level link vars route SelectIdentifier picks back here (no owning
+    # block to receive "update_block_var") — apply them through on_change/2 so
+    # the nil-on_change clause syncs the FK into the parent form.
+    {var_change_events, var_updates} =
+      Enum.split_with(rest, fn {assigns, _socket} ->
+        Map.has_key?(assigns, :event) && assigns.event == "update_block_var"
+      end)
+
+    var_change_results =
+      Enum.map(var_change_events, fn {assigns, socket} ->
+        on_change(socket, assigns.data)
       end)
 
     # Handle upload_complete events directly (no DB lookups needed)
@@ -65,7 +78,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         []
       end
 
-    upload_results ++ var_results
+    upload_results ++ var_change_results ++ var_results
   end
 
   defp collect_asset_ids(assigns_sockets) do
@@ -553,7 +566,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <Input.Image.image_preview
             image={@image}
             field={@var[:image_id]}
-            value={@image_id}
+            value={@image_id || ""}
             relation_field={@var[:image_id]}
             click={show_modal("#var-#{@var.id}-image-config")}
             file_name={@image && @image.path && Path.basename(@image.path)}
@@ -583,7 +596,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             publish
             file={@file}
             field={@var[:file_id]}
-            value={@file_id}
+            value={@file_id || ""}
             relation_field={@var[:file_id]}
             click={show_modal("#var-#{@var.id}-file-config")}
             file_name={@file && @file.filename && Path.basename(@file.filename)}
@@ -608,13 +621,19 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     <div class="brando-input">
       <Form.field_base field={@var[:identifier_id]} label={@label} instructions={@instructions} skip_presence>
         <div class="input-link">
+          <Input.hidden field={@var[:identifier_id]} value={@identifier_id || ""} />
           <.link_preview
             var={@var}
             field={@var[:identifier_id]}
             click={show_modal("#var-#{@var.id}-link-config")}
             identifier={@identifier}
           />
-          <.link_modal field={@var} identifier={@identifier} target={@target} on_change={@on_change} />
+          <.link_modal
+            field={@var}
+            identifier={@identifier}
+            target={@target}
+            on_change={@on_change || fn params -> send_update(@target, params) end}
+          />
         </div>
       </Form.field_base>
     </div>
@@ -814,7 +833,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               data-folder-browser="true"
               data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
             >
-              <input type="file" class="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" style="display:none" />
+              <input type="file" class="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" />
               <div class="img-placeholder empty upload-canvas">
                 <div class="placeholder-wrapper">
                   <div class="svg-wrapper">
@@ -897,7 +916,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               data-asset-type="file"
               data-config-target={@field[:config_target].value || "default"}
             >
-              <input type="file" class="file-input" style="display:none" />
+              <input type="file" class="file-input" />
               <div class="img-placeholder empty upload-canvas">
                 <div class="placeholder-wrapper">
                   <div class="svg-wrapper">
@@ -1014,25 +1033,23 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     {:noreply, update(socket, :visible, &(!&1))}
   end
 
-  def handle_event("update_var", %{"_target" => target} = params, socket) do
-    var_key = socket.assigns.key
-    var_type = socket.assigns.type
-    on_change = socket.assigns.on_change
-    value = get_in(params, target)
+  # Entry-level vars have no owning block component (`on_change` unset) — their
+  # FKs live in the parent entry form's changeset. Sync the picked/reset value
+  # by driving the hidden FK input through the `b:validate` client contract
+  # (set value + dispatch input): a silent local assign would strand resets
+  # (the hidden input falls back to the stale changeset value on the next
+  # patch) and defer picks until an unrelated validate happens to fire.
+  def on_change(%{assigns: %{on_change: nil}} = socket, data) do
+    case var_fk_change(data) do
+      {field, value} ->
+        push_event(socket, "b:validate", %{
+          target: socket.assigns.var[field].name,
+          value: value || ""
+        })
 
-    params = %{
-      event: "update_block_var",
-      var_key: var_key,
-      var_type: var_type,
-      data: %{value: value}
-    }
-
-    on_change.(params)
-    {:noreply, socket}
-  end
-
-  def on_change(%{assigns: %{on_change: nil}} = socket, _) do
-    socket
+      nil ->
+        socket
+    end
   end
 
   def on_change(%{assigns: %{on_change: on_change}} = socket, data) do
@@ -1049,4 +1066,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     on_change.(params)
     socket
   end
+
+  defp var_fk_change(%{image_id: image_id}), do: {:image_id, image_id}
+  defp var_fk_change(%{file_id: file_id}), do: {:file_id, file_id}
+  defp var_fk_change(%{identifier: identifier}), do: {:identifier_id, identifier && identifier.id}
+  defp var_fk_change(_), do: nil
 end

@@ -1,5 +1,3 @@
-import { Dom } from '@brandocms/jupiter'
-
 export default app => ({
   mounted() {
     this.target = this.el.dataset.target
@@ -7,10 +5,14 @@ export default app => ({
   },
 
   bindDrop() {
-    this.el.addEventListener('dragenter', () => {
+    this.el.addEventListener('dragenter', event => {
+      event.preventDefault()
       this.el.classList.add('dragging')
     })
-    this.el.addEventListener('dragover', () => {
+    this.el.addEventListener('dragover', event => {
+      // preventDefault marks the element as a valid drop target — without it
+      // the browser never fires `drop` (it opens the file instead)
+      event.preventDefault()
       this.el.classList.add('dragging')
     })
     this.el.addEventListener('dragleave', () => {
@@ -19,14 +21,19 @@ export default app => ({
 
     this.el.addEventListener('drop', event => {
       event.preventDefault()
-      const files = event.dataTransfer.files
+      this.el.classList.remove('dragging')
 
-      if (files.length > 1) {
-        console.log('too many files!')
-        return false
+      const files = event.dataTransfer.files
+      if (!files.length) {
+        return
       }
 
       const f = files.item(0)
+      if (!f.name.toLowerCase().endsWith('.svg') && f.type !== 'image/svg+xml') {
+        console.warn('SVGDrop: ignoring non-SVG file', f.name)
+        return
+      }
+
       this.upload(f)
     })
   },
@@ -37,5 +44,5 @@ export default app => ({
       this.pushEventTo(this.target, 'drop_svg', { code: event.target.result })
     }
     reader.readAsText(f)
-  }
+  },
 })

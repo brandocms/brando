@@ -20,8 +20,6 @@ export default (app) => ({
   currentUpload: null,
 
   async mounted() {
-    this.uploadTargetName = this.el.dataset.uploadTarget || 'video'
-
     // File selection handler
     this.el.addEventListener('input', async (event) => {
       event.preventDefault()
@@ -50,6 +48,18 @@ export default (app) => ({
     })
   },
 
+  // Route events to the owning component (video picker / transformer set
+  // data-target={@myself}); without a target they go to the form LiveView,
+  // which relays to the Form component (the drawer flow).
+  pushVideoEvent(event, payload) {
+    const target = this.el.dataset.target
+    if (target) {
+      this.pushEventTo(target, event, payload)
+    } else {
+      this.pushEvent(event, payload)
+    }
+  },
+
   destroyed() {
     // Abort any in-progress upload when hook is destroyed. Tell the manager
     // drawer too — external items have no cancel/dismiss affordance, so a
@@ -62,28 +72,37 @@ export default (app) => ({
     }
   },
 
+  // The URL handshake must be able to fail — a server that never answers
+  // (or answers for a different filename) would otherwise hang the upload
+  // silently forever.
+  waitForUploadUrl(timeoutMs = 30000) {
+    let timer
+    return new Promise((resolve, reject) => {
+      this.resolveUploadUrl = resolve
+      this.rejectUploadUrl = reject
+      timer = setTimeout(() => reject(new Error('Timed out waiting for upload URL')), timeoutMs)
+    }).finally(() => {
+      clearTimeout(timer)
+      this.resolveUploadUrl = null
+      this.rejectUploadUrl = null
+    })
+  },
+
   async uploadToBunny(file) {
     try {
       // Store file for when we get the response
       this.pendingFile = file
 
-      // Create promise for async upload URL response
-      this.uploadUrlPromise = new Promise((resolve, reject) => {
-        this.resolveUploadUrl = resolve
-        this.rejectUploadUrl = reject
-      })
-
-      // Request upload credentials from server
-      this.pushEvent('get_video_upload_url', {
+      // Request upload credentials from server, then wait for the push-back
+      const urlPromise = this.waitForUploadUrl()
+      this.pushVideoEvent('get_video_upload_url', {
         filename: file.name
       })
-
-      // Wait for server to push event back
-      const response = await this.uploadUrlPromise
+      const response = await urlPromise
 
       if (response.error) {
         console.error('Failed to get upload credentials:', response.error)
-        this.pushEvent('upload_error', {
+        this.pushVideoEvent('upload_error', {
           filename: file.name,
           error: response.error
         })
@@ -112,7 +131,7 @@ export default (app) => ({
         },
         onError: (error) => {
           console.error('TUS upload error:', error)
-          this.pushEvent('upload_error', {
+          this.pushVideoEvent('upload_error', {
             filename: file.name,
             error: error.message || 'Upload failed'
           })
@@ -124,7 +143,7 @@ export default (app) => ({
           const totalMB = (bytesTotal / 1024 / 1024).toFixed(1)
           const uploadedMB = (bytesUploaded / 1024 / 1024).toFixed(1)
 
-          this.pushEvent('video_upload_progress', {
+          this.pushVideoEvent('video_upload_progress', {
             video_id: video_id,
             uploaded_mb: uploadedMB,
             total_mb: totalMB,
@@ -134,7 +153,7 @@ export default (app) => ({
         },
         onSuccess: () => {
           this.currentUpload = null
-          this.pushEvent('video_upload_complete', { video_id })
+          this.pushVideoEvent('video_upload_complete', { video_id })
           window.BrandoUploads?.externalComplete?.(trackRef)
         }
       })
@@ -142,7 +161,6 @@ export default (app) => ({
       // Check for previous uploads to resume
       this.currentUpload.findPreviousUploads().then((previousUploads) => {
         if (previousUploads.length) {
-          console.log('Resuming previous Bunny upload...')
           this.currentUpload.resumeFromPreviousUpload(previousUploads[0])
         }
         // Start the upload
@@ -151,7 +169,7 @@ export default (app) => ({
 
     } catch (error) {
       console.error('Bunny upload error:', error)
-      this.pushEvent('upload_error', {
+      this.pushVideoEvent('upload_error', {
         filename: file.name,
         error: error.message
       })

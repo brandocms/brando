@@ -1,6 +1,5 @@
 import { LiveSocket } from 'phoenix_live_view'
 import { Socket } from 'phoenix'
-import Uploaders from './uploaders'
 
 export default (hooks) => {
   let csrfToken = document
@@ -10,7 +9,6 @@ export default (hooks) => {
     hooks: hooks,
     params: { _csrf_token: csrfToken },
     timeout: 70000,
-    uploaders: Uploaders,
     metadata: {
       click: (e, el) => {
         return {

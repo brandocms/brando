@@ -123,12 +123,15 @@ defmodule Brando.Videos do
   end
 
   def get_config_for(%{config_target: nil}) do
-    Brando.config(Brando.Videos)[:default_config]
+    {:ok, default_video_config()}
   end
 
   def get_config_for(%{config_target: config_target}) when is_binary(config_target) do
     config =
       case String.split(config_target, ":") do
+        [type, schema, "function", fn_string] when type in ["video"] ->
+          Brando.Assets.ConfigTarget.config_function!(schema, fn_string)
+
         [type, schema, field_name] when type in ["video"] ->
           case Brando.Assets.ConfigTarget.schema_module(schema) do
             {:ok, schema_module} -> video_field_cfg(schema_module, field_name)
@@ -136,7 +139,7 @@ defmodule Brando.Videos do
           end
 
         ["default"] ->
-          Brando.config(Brando.Videos)[:default_config]
+          default_video_config()
       end
 
     {:ok, config}

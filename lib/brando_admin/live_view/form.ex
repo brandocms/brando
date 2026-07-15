@@ -515,9 +515,17 @@ defmodule BrandoAdmin.LiveView.Form do
       )
   end
 
-  defp deliver_asset(%{"kind" => "block_var", "component_id" => component_id} = target, asset, _socket)
-       when is_binary(component_id) do
-    asset_type = (target["asset_type"] == "image" && :image) || :file
+  # Vars only hold image/file FKs — classify by struct (the target's
+  # "asset_type" string can lie for e.g. self-hosted video), and refuse
+  # anything else rather than writing a foreign id into file_id.
+  defp deliver_asset(%{"kind" => "block_var", "component_id" => component_id}, asset, _socket)
+       when is_binary(component_id) and
+              (is_struct(asset, Brando.Images.Image) or is_struct(asset, Brando.Files.File)) do
+    asset_type =
+      case asset do
+        %Brando.Images.Image{} -> :image
+        %Brando.Files.File{} -> :file
+      end
 
     # Mirror the old var upload flow: track processing updates for the image
     # so the picker/pending flows keep working once the Oban worker finishes.
@@ -774,11 +782,6 @@ defmodule BrandoAdmin.LiveView.Form do
   # Video event hooks - handle generic video uploader events
   # These work with any upload strategy (Mux, Cloudflare, S3, Bunny, Vimeo, etc.)
 
-  defp handle_hooks_video_event("files_selected", %{"files" => _files}, socket) do
-    # Files selected, tell hook to start uploading
-    {:halt, push_event(socket, "start_upload_queue", %{})}
-  end
-
   # Generic event for getting upload URL - works with any strategy
   # The hook can be named MuxUploader, CloudflareUploader, S3Uploader, etc.
   # but they all send generic events with no provider name
@@ -824,6 +827,24 @@ defmodule BrandoAdmin.LiveView.Form do
       action: :video_upload_progress,
       video_id: video_id,
       percentage: percentage
+    )
+
+    {:halt, socket}
+  end
+
+  # Provider failures (Mux/Bunny hooks push this untargeted) — route to the
+  # Form component; without a clause here the event falls through to a
+  # LiveView with no handle_event and crashes the whole form view.
+  defp handle_hooks_video_event("upload_error", %{"error" => error} = params, socket) do
+    schema = socket.assigns.schema
+    singular = schema.__naming__().singular
+    form_id = "#{singular}_form"
+
+    send_update(BrandoAdmin.Components.Form,
+      id: form_id,
+      action: :video_upload_error,
+      filename: params["filename"],
+      error: error
     )
 
     {:halt, socket}

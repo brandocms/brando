@@ -31,6 +31,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
      |> assign(:uid, assigns.ref_form[:uid].value)}
   end
 
+  def handle_event("drop_svg", %{"code" => code}, socket) do
+    new_data = Block.current_block_data_map(socket.assigns.block, nil, %{code: code})
+
+    socket
+    |> Block.commit_ref_data(ref_data: new_data, force_render: true)
+    |> then(&{:noreply, &1})
+  end
+
   def render(assigns) do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>

@@ -1980,6 +1980,15 @@ defmodule BrandoAdmin.Components.Form.Block do
     update_liquid_split_var(socket, var_key, media_path)
   end
 
+  # Link vars commit an identifier struct, not a bare value — the generic
+  # clause's `Map.get(data, :value)` would blank the liquid split.
+  def update_liquex_block_var(socket, var_key, :link, %{identifier: identifier} = data) do
+    case identifier do
+      %{url: url, title: title} -> update_liquid_split_var(socket, var_key, url || title)
+      _ -> update_liquid_split_var(socket, var_key, Map.get(data, :value))
+    end
+  end
+
   def update_liquex_block_var(socket, var_key, _var_type, data) do
     update_liquid_split_var(socket, var_key, Map.get(data, :value))
   end

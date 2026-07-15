@@ -4,12 +4,6 @@ export default app => ({
     this.dropFolder = this.el.dataset.dropFolder || ''
     this.dropTarget = this.el.dataset.dropTarget || null
 
-    console.log('[AssetFolderDrop] mounted', {
-      folder: this.dropFolder,
-      target: this.dropTarget,
-      event: this.dropEvent,
-    })
-
     this.handleDragEnter = this.handleDragEnter.bind(this)
     this.handleDragOver = this.handleDragOver.bind(this)
     this.handleDragLeave = this.handleDragLeave.bind(this)
@@ -32,7 +26,6 @@ export default app => ({
   handleDragEnter(e) {
     if (!this.isSelectionDrag(e)) return
     e.preventDefault()
-    console.log('[AssetFolderDrop] dragenter', this.dropFolder)
     this.el.classList.add('drop-active')
   },
 
@@ -40,14 +33,12 @@ export default app => ({
     if (!this.isSelectionDrag(e)) return
     e.preventDefault()
     if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
-    console.log('[AssetFolderDrop] dragover', this.dropFolder)
     this.el.classList.add('drop-active')
   },
 
   handleDragLeave(e) {
     if (!this.isSelectionDrag(e)) return
     e.preventDefault()
-    console.log('[AssetFolderDrop] dragleave', this.dropFolder)
     this.el.classList.remove('drop-active')
   },
 
@@ -58,10 +49,8 @@ export default app => ({
 
     const ids = this.getDraggedSelectedIds(e)
     if (!Array.isArray(ids) || ids.length === 0) {
-      console.log('[AssetFolderDrop] drop ignored, no ids')
       return
     }
-    console.log('[AssetFolderDrop] drop', { folder: this.dropFolder, ids })
 
     const eventPayload = {
       folder: this.dropFolder,
@@ -69,10 +58,8 @@ export default app => ({
     }
 
     if (this.dropTarget) {
-      console.log('[AssetFolderDrop] pushEventTo', this.dropTarget, this.dropEvent)
       this.pushEventTo(this.dropTarget, this.dropEvent, eventPayload)
     } else {
-      console.log('[AssetFolderDrop] pushEvent', this.dropEvent)
       this.pushEvent(this.dropEvent, eventPayload)
     }
   },

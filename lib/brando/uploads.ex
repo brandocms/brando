@@ -19,8 +19,9 @@ defmodule Brando.Uploads do
     bucket CORS must allow `PUT` from the admin origin.
 
   Intake validation happens here, *before* any bytes are transferred.
-  Limits mirror what the old form-registered uploads enforced (50 MB,
-  image extension allowlist); for `:server` transport, mimetype validation
+  The size ceiling is the resolved field config's `:size_limit`, falling
+  back to a global 50 MB default (plus an image extension allowlist);
+  for `:server` transport, mimetype validation
   against the resolved config still runs at consume time via
   `Brando.Upload.check_mimetype` — for `:direct` it runs at intake.
   """
@@ -43,14 +44,30 @@ defmodule Brando.Uploads do
   - `{:error, message}` — reject before any bytes move
   """
   def initiate(:file, config_target, %{name: name, size: size} = file_meta, _user) do
-    with :ok <- validate_intake(:file, name, size) do
-      {cfg, resolved_target} = resolve_file_config(config_target)
+    {cfg, resolved_target} = resolve_file_config(config_target)
 
+    with :ok <- validate_intake(:file, name, size, size_limit(cfg)) do
       if direct_transport?(cfg) do
         initiate_direct_file(cfg, resolved_target, file_meta)
       else
         {:ok, :server}
       end
+    end
+  end
+
+  def initiate(:image, config_target, %{name: name, size: size}, _user) do
+    {cfg, _} = resolve_image_config(config_target)
+
+    with :ok <- validate_intake(:image, name, size, size_limit(cfg)) do
+      {:ok, :server}
+    end
+  end
+
+  def initiate(:video, config_target, %{name: name, size: size}, _user) do
+    {cfg, _} = resolve_video_config(config_target)
+
+    with :ok <- validate_intake(:video, name, size, size_limit(cfg)) do
+      {:ok, :server}
     end
   end
 
@@ -258,15 +275,20 @@ defmodule Brando.Uploads do
   @doc """
   Validate an intake request for a single file before any bytes move.
 
+  `size_limit` comes from the resolved field config's `:size_limit` (see
+  `Brando.Blueprint.Assets`), falling back to the global
+  #{@max_file_size} byte ceiling when the config doesn't set one.
+
   Returns `:ok` or `{:error, message}` (message is safe to show the user).
   """
-  def validate_intake(asset_type, filename, size)
+  def validate_intake(asset_type, filename, size, size_limit \\ @max_file_size)
 
-  def validate_intake(_asset_type, _filename, size) when is_integer(size) and size > @max_file_size do
-    {:error, "File is too large (max #{Brando.Utils.human_size(@max_file_size)})"}
+  def validate_intake(_asset_type, _filename, size, size_limit)
+      when is_integer(size) and is_integer(size_limit) and size > size_limit do
+    {:error, "File is too large (max #{Brando.Utils.human_size(size_limit)})"}
   end
 
-  def validate_intake(:image, filename, _size) do
+  def validate_intake(:image, filename, _size, _size_limit) do
     ext = filename |> Path.extname() |> String.downcase()
 
     if ext in @image_exts do
@@ -276,9 +298,9 @@ defmodule Brando.Uploads do
     end
   end
 
-  def validate_intake(:file, _filename, _size), do: :ok
+  def validate_intake(:file, _filename, _size, _size_limit), do: :ok
 
-  def validate_intake(:video, filename, _size) do
+  def validate_intake(:video, filename, _size, _size_limit) do
     ext = filename |> Path.extname() |> String.downcase()
 
     if ext in ~w(.mp4 .webm .mov .avi .ogv) do
@@ -288,7 +310,14 @@ defmodule Brando.Uploads do
     end
   end
 
-  def validate_intake(_asset_type, _filename, _size), do: {:error, "Unsupported asset type"}
+  def validate_intake(_asset_type, _filename, _size, _size_limit), do: {:error, "Unsupported asset type"}
+
+  defp size_limit(cfg) do
+    case Map.get(cfg, :size_limit) do
+      limit when is_integer(limit) and limit > 0 -> limit
+      _ -> @max_file_size
+    end
+  end
 
   @doc """
   Resolve an image config target to `{cfg, resolved_target}`.

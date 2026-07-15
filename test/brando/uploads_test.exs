@@ -37,10 +37,17 @@ defmodule Brando.UploadsTest do
     )
   end
 
-  describe "validate_intake/3" do
-    test "rejects files over the max size" do
+  describe "validate_intake/4" do
+    test "rejects files over the global max when no config limit is given" do
       assert {:error, "File is too large" <> _} =
                Uploads.validate_intake(:file, "big.pdf", Uploads.max_file_size() + 1)
+    end
+
+    test "rejects files over an explicit config size_limit" do
+      assert {:error, message} = Uploads.validate_intake(:file, "big.pdf", 5_000_001, 5_000_000)
+      assert message =~ "File is too large"
+
+      assert :ok = Uploads.validate_intake(:file, "small.pdf", 4_999_999, 5_000_000)
     end
 
     test "rejects unknown image extensions" do
@@ -63,12 +70,36 @@ defmodule Brando.UploadsTest do
       assert {:ok, :server} = Uploads.initiate(:file, "default", %{name: "a.pdf", size: 1, type: "application/pdf"}, nil)
     end
 
-    test "oversize files are rejected before transport decision" do
-      assert {:error, _} =
+    test "enforces the resolved image config's size_limit at intake" do
+      limit = Brando.config(Brando.Images)[:default_config][:size_limit]
+      assert is_integer(limit)
+
+      assert {:error, "File is too large" <> _} =
+               Uploads.initiate(:image, "default", %{name: "big.jpg", size: limit + 1, type: "image/jpeg"}, nil)
+
+      assert {:ok, :server} =
+               Uploads.initiate(:image, "default", %{name: "ok.jpg", size: limit, type: "image/jpeg"}, nil)
+    end
+
+    test "enforces the resolved file config's size_limit at intake" do
+      # no file default_config in test env → FileConfig.default_config() applies
+      limit = Brando.Type.FileConfig.default_config().size_limit
+      assert is_integer(limit) and limit > Uploads.max_file_size()
+
+      assert {:error, "File is too large" <> _} =
                Uploads.initiate(
                  :file,
                  "default",
-                 %{name: "a.pdf", size: Uploads.max_file_size() + 1, type: "application/pdf"},
+                 %{name: "big.pdf", size: limit + 1, type: "application/pdf"},
+                 nil
+               )
+
+      # config limit wins over the lower global default ceiling
+      assert {:ok, :server} =
+               Uploads.initiate(
+                 :file,
+                 "default",
+                 %{name: "ok.pdf", size: Uploads.max_file_size() + 1, type: "application/pdf"},
                  nil
                )
     end
