@@ -396,10 +396,10 @@ defmodule BrandoAdmin.Components.ImagePicker do
       }
       phx-value-id={@image.id}
     >
-      <Content.image image={@image} size={:smallest} />
-      <span class="image-picker__selected-indicator">
+      <span class="image-picker__selected-indicator" aria-hidden="true">
         <.icon name="hero-check-mini" />
       </span>
+      <Content.image image={@image} size={:smallest} />
       <div class="image-picker__info">
         <div class="image-picker__name">
           <div class="image-picker__filename">{image_filename(@image.path)}</div>
@@ -407,7 +407,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
         </div>
         <div class="image-picker__meta">{@image.width}&times;{@image.height}</div>
         <div class="image-picker__meta">{image_formats(@image.formats)}</div>
-        <div class="image-picker__status">{image_status(@image.status)}</div>
+        <div class="image-picker__status" data-status={@image.status}>{image_status(@image.status)}</div>
         <div :if={@picker_mode == :select} class="image-picker__actions">
           <button
             type="button"

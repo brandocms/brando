@@ -1,15 +1,16 @@
 .image-picker-top {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.7rem;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--brando-color-dark) 16%, transparent);
+  gap: 0.45rem;
+  padding: 0.62rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--brando-color-dark) 12%, transparent);
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--brando-color-peach) 11%, white),
-    color-mix(in srgb, var(--brando-color-peach) 5%, white)
+    color-mix(in srgb, white 94%, var(--brando-color-peach)),
+    color-mix(in srgb, white 88%, var(--brando-color-peach))
   );
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-color-dark) 5%, transparent);
 
   .image-picker-upload-callout {
     display: flex;
@@ -26,7 +27,7 @@
 
   .image-picker-toolbar {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 0.5rem;
     flex-wrap: nowrap;
     justify-content: space-between;
@@ -78,18 +79,18 @@
     margin-left: auto;
     flex-shrink: 0;
     display: inline-flex;
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 26%, transparent);
-    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 20%, transparent);
+    border-radius: 8px;
     overflow: hidden;
     background: color-mix(in srgb, white 74%, transparent);
 
     .view-toggle {
       border: none;
       margin: 0;
-      min-width: 84px;
-      height: 30px;
-      line-height: 30px;
-      padding: 0 0.85rem;
+      min-width: 72px;
+      height: 28px;
+      line-height: 28px;
+      padding: 0 0.7rem;
       background: transparent;
       color: color-mix(in srgb, var(--brando-color-dark) 84%, white);
       font-size: 12px;
@@ -162,15 +163,16 @@
 
 .image-picker-browser {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  gap: 1rem;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 0.85rem;
   min-height: 60vh;
 
   .image-picker-folders {
-    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 16%, transparent);
-    border-radius: 12px;
-    padding: 0.9rem;
-    background: color-mix(in srgb, white 72%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 12%, transparent);
+    border-radius: 10px;
+    padding: 0.75rem;
+    background: color-mix(in srgb, white 88%, transparent);
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--brando-color-dark) 5%, transparent);
     display: flex;
     flex-direction: column;
     align-self: flex-start;
@@ -659,15 +661,17 @@
     position: absolute;
     right: 0.48rem;
     top: 0.48rem;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     color: white;
     background: color-mix(in srgb, var(--brando-color-blue) 88%, #0f2d59);
     border-radius: 999px;
     display: none;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 0 0 1px color-mix(in srgb, white 70%, transparent);
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, white 88%, transparent),
+      0 1px 3px color-mix(in srgb, var(--brando-color-dark) 18%, transparent);
 
     [data-icon] {
       width: 0.74rem;
@@ -787,38 +791,61 @@
 
   &.list {
     .image-picker__image {
-      @space margin-bottom 10px;
+      @space margin-bottom 7px;
       display: grid;
-      grid-template-columns: 72px minmax(0, 1fr);
-      column-gap: 0.78rem;
+      grid-template-columns: 22px 64px minmax(0, 1fr);
+      column-gap: 0.65rem;
       align-items: center;
       position: relative;
       cursor: pointer;
-      border: 1px solid color-mix(in srgb, var(--brando-color-dark) 17%, transparent);
-      border-radius: 10px;
-      padding: 0.45rem 0.55rem;
-      background: color-mix(in srgb, white 78%, transparent);
+      min-height: 64px;
+      border: 1px solid color-mix(in srgb, var(--brando-color-dark) 12%, transparent);
+      border-radius: 8px;
+      padding: 0.4rem 0.5rem;
+      background: color-mix(in srgb, white 92%, transparent);
+      box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-color-dark) 4%, transparent);
       transition:
         border-color 150ms ease,
         background-color 150ms ease,
         box-shadow 150ms ease;
 
       img {
-        width: 72px;
-        max-width: 72px;
+        display: block;
+        width: 64px;
+        height: 48px;
+        max-width: 64px;
         min-width: auto;
-        border-radius: 6px;
+        border-radius: 5px;
         margin: 0;
+        object-fit: cover;
+        background: color-mix(in srgb, var(--brando-color-dark) 5%, white);
+      }
+
+      .image-picker__selected-indicator {
+        position: static;
+        display: inline-flex;
+        justify-self: center;
+        visibility: hidden;
+        opacity: 0;
+        transform: none;
+        transition: opacity 120ms ease;
       }
 
       &.selected {
-        border-color: color-mix(in srgb, var(--brando-color-blue) 62%, white);
-        background: color-mix(in srgb, var(--brando-color-blue) 7%, white);
-        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brando-color-blue) 22%, white);
+        border-color: color-mix(in srgb, var(--brando-color-blue) 54%, white);
+        background: color-mix(in srgb, var(--brando-color-blue) 5%, white);
+        box-shadow:
+          inset 3px 0 0 color-mix(in srgb, var(--brando-color-blue) 82%, #0f2d59),
+          0 1px 3px color-mix(in srgb, var(--brando-color-blue) 10%, transparent);
+
+        .image-picker__selected-indicator {
+          visibility: visible;
+          opacity: 1;
+        }
 
         &:hover {
-          border-color: color-mix(in srgb, var(--brando-color-blue) 78%, white);
-          background: color-mix(in srgb, var(--brando-color-blue) 10%, white);
+          border-color: color-mix(in srgb, var(--brando-color-blue) 68%, white);
+          background: color-mix(in srgb, var(--brando-color-blue) 7%, white);
         }
       }
 
@@ -839,13 +866,14 @@
       }
 
       &:hover {
-        border-color: color-mix(in srgb, var(--brando-color-dark) 34%, transparent);
-        background: color-mix(in srgb, var(--brando-color-peach) 15%, white);
+        border-color: color-mix(in srgb, var(--brando-color-dark) 24%, transparent);
+        background: color-mix(in srgb, var(--brando-color-peach) 9%, white);
+        box-shadow: 0 2px 6px color-mix(in srgb, var(--brando-color-dark) 7%, transparent);
       }
 
       .image-picker__info {
         display: grid;
-        grid-template-columns: minmax(0, 2fr) 95px minmax(120px, 1.2fr) 100px 34px;
+        grid-template-columns: minmax(0, 2fr) 92px minmax(110px, 1.1fr) 96px 30px;
         align-items: center;
         gap: 0.75rem;
         min-width: 0;
@@ -857,7 +885,7 @@
 
         .image-picker__filename {
           font-size: 13px;
-          font-weight: 500;
+          font-weight: 600;
           color: var(--brando-color-dark);
           overflow: hidden;
           text-overflow: ellipsis;
@@ -883,10 +911,16 @@
 
         .image-picker__status {
           justify-self: start;
-          border: 1px solid color-mix(in srgb, var(--brando-color-dark) 20%, transparent);
+          border: 1px solid color-mix(in srgb, var(--brando-color-dark) 14%, transparent);
           border-radius: 999px;
           padding: 0.2rem 0.45rem;
-          background: color-mix(in srgb, white 88%, transparent);
+          background: color-mix(in srgb, var(--brando-color-dark) 3%, white);
+        }
+
+        .image-picker__status[data-status="processed"] {
+          color: color-mix(in srgb, #176b48 88%, var(--brando-color-dark));
+          border-color: color-mix(in srgb, #2b8a60 22%, transparent);
+          background: color-mix(in srgb, #dff4e9 58%, white);
         }
 
         .image-picker__actions {

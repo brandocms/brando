@@ -259,9 +259,18 @@ defmodule BrandoAdmin.Components.FilePicker do
       phx-value-id={@file.id}
       phx-value-selected={to_string(@selected)}
     >
+      <span class="file-picker__selected-indicator" aria-hidden="true">
+        <.icon name="hero-check-mini" />
+      </span>
+      <span class="file-picker__icon" aria-hidden="true">
+        <.icon name="hero-document" />
+      </span>
       <div class="file-picker__info">
-        <div class="file-picker__filename">#{@file.id} {Utils.file_url(@file)}</div>
-        <div class="file-picker__size">({Brando.Utils.human_size(@file.filesize)})</div>
+        <div class="file-picker__name">
+          <div class="file-picker__filename">{@file.filename}</div>
+          <div class="file-picker__path">#{@file.id} {Utils.file_url(@file)}</div>
+        </div>
+        <div class="file-picker__size">{Brando.Utils.human_size(@file.filesize)}</div>
       </div>
     </button>
     """

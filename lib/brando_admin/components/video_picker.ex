@@ -777,10 +777,10 @@ defmodule BrandoAdmin.Components.VideoPicker do
       }
       phx-value-id={@video.id}
     >
-      <.video_preview video={@video} myself={@myself} />
-      <span class="video-picker__selected-indicator">
+      <span class="video-picker__selected-indicator" aria-hidden="true">
         <.icon name="hero-check-mini" />
       </span>
+      <.video_preview video={@video} myself={@myself} />
       <div class="video-picker__info">
         <div class="video-picker__name">
           <%= if @editing do %>
