@@ -160,6 +160,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     updated_block = update_block_with_overrides(assigns.block, initialized_overrides)
     updated_block_data_cs = Block.get_block_data_changeset(updated_block)
+    gallery_config_target = gallery && Map.get(gallery, :config_target)
 
     uid = assigns.ref_form[:uid].value
     form_id = assigns[:form_id] || socket.assigns[:form_id] || BrandoAdmin.Utils.derive_form_id(assigns.ref_form.name)
@@ -178,9 +179,26 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
      |> assign(:has_objects?, !Enum.empty?(gallery_objects))
      |> assign(:block, updated_block)
      |> assign(:uid, uid)
-     |> assign(:config_target, (gallery && Map.get(gallery, :config_target)) || "default")
+     |> assign(
+       :image_config_target,
+       Changeset.get_field(block_data_cs, :image_config_target) ||
+         compatible_gallery_target(gallery_config_target, :image)
+     )
+     |> assign(
+       :video_config_target,
+       Changeset.get_field(block_data_cs, :video_config_target) ||
+         compatible_gallery_target(gallery_config_target, :video)
+     )
+     |> assign(:allowed_types, Changeset.get_field(block_data_cs, :allowed_types) || [:image, :video])
      |> assign(:override_data, precompute_override_data(gallery_objects, updated_block_data_cs))}
   end
+
+  defp compatible_gallery_target(nil, _type), do: "default"
+  defp compatible_gallery_target("default", _type), do: "default"
+  defp compatible_gallery_target("gallery:" <> _ = target, _type), do: target
+  defp compatible_gallery_target("image:" <> _ = target, :image), do: target
+  defp compatible_gallery_target("video:" <> _ = target, :video), do: target
+  defp compatible_gallery_target(_target, _type), do: "default"
 
   def render(assigns) do
     ~H"""
@@ -207,7 +225,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             data-kind="block_ref_gallery"
             data-component-id={"#{@uid}-gallery"}
             data-asset-type="image"
-            data-config-target={@config_target}
+            data-config-target={@image_config_target}
             data-folder-browser="true"
             data-click-mode="trigger"
             data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
@@ -221,10 +239,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             />
 
             <div class="gallery-buttons">
-              <button type="button" class="tiny upload-trigger">
+              <button :if={:image in @allowed_types} type="button" class="tiny upload-trigger">
                 {gettext("Upload images")}
               </button>
               <button
+                :if={:image in @allowed_types}
                 type="button"
                 class="tiny"
                 phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
@@ -232,6 +251,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                 {gettext("Select images")}
               </button>
               <button
+                :if={:video in @allowed_types}
                 type="button"
                 class="tiny"
                 phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
@@ -239,52 +259,52 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
                 {gettext("Select videos")}
               </button>
             </div>
+          </div>
 
-            <%= if @gallery do %>
-              <.inputs_for :let={gallery_form} field={@ref_form[:gallery]}>
-                <Input.input type={:hidden} field={gallery_form[:id]} />
-                <Input.input type={:hidden} field={gallery_form[:config_target]} />
-                <div
-                  id={"sortable-#{block_data.id}-gallery-objects"}
-                  class={[
-                    "images",
-                    (@display == :grid && "images-grid") || "images-list"
-                  ]}
-                  phx-hook="Brando.SortableAssocs"
-                  data-target={@myself}
-                  data-sortable-id={"sortable-#{block_data.id}-gallery"}
-                  data-sortable-handle=".sort-handle-gallery-object"
-                  data-sortable-selector=".gallery-object"
-                  data-sortable-dispatch-event="true"
+          <%= if @gallery do %>
+            <.inputs_for :let={gallery_form} field={@ref_form[:gallery]}>
+              <Input.input type={:hidden} field={gallery_form[:id]} />
+              <Input.input type={:hidden} field={gallery_form[:config_target]} />
+              <div
+                id={"sortable-#{block_data.id}-gallery-objects"}
+                class={[
+                  "images",
+                  (@display == :grid && "images-grid") || "images-list"
+                ]}
+                phx-hook="Brando.SortableAssocs"
+                data-target={@myself}
+                data-sortable-id={"sortable-#{block_data.id}-gallery"}
+                data-sortable-handle=".sort-handle-gallery-object"
+                data-sortable-selector=".gallery-object"
+                data-sortable-dispatch-event="true"
+              >
+                <.inputs_for
+                  :let={gallery_object_form}
+                  field={gallery_form[:gallery_objects]}
+                  skip_hidden
                 >
-                  <.inputs_for
-                    :let={gallery_object_form}
-                    field={gallery_form[:gallery_objects]}
-                    skip_hidden
-                  >
-                    <Object.render
-                      gallery_object_form={gallery_object_form}
-                      gallery_objects={@gallery_objects}
-                      display={@display}
-                      myself={@myself}
-                      uid={@uid}
-                      gallery_form={gallery_form}
-                      override_data={@override_data}
-                      block_data={block_data}
-                      form_id={@form_id}
-                    />
-                  </.inputs_for>
-                </div>
-                <input type="hidden" name={"#{gallery_form.name}[drop_gallery_object_ids][]"} />
-              </.inputs_for>
-            <% end %>
-
-            <div :if={!@has_objects?} class="upload-canvas empty">
-              <div class="alert">
-                {gettext(
-                  "No objects currently in block. Click one of the buttons above to get started, or drag and drop media here."
-                )}
+                  <Object.render
+                    gallery_object_form={gallery_object_form}
+                    gallery_objects={@gallery_objects}
+                    display={@display}
+                    myself={@myself}
+                    uid={@uid}
+                    gallery_form={gallery_form}
+                    override_data={@override_data}
+                    block_data={block_data}
+                    form_id={@form_id}
+                  />
+                </.inputs_for>
               </div>
+              <input type="hidden" name={"#{gallery_form.name}[drop_gallery_object_ids][]"} />
+            </.inputs_for>
+          <% end %>
+
+          <div :if={!@has_objects?} class="upload-canvas empty">
+            <div class="alert">
+              {gettext(
+                "No objects currently in block. Click one of the buttons above to get started, or drag and drop media here."
+              )}
             </div>
           </div>
 
@@ -377,7 +397,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",
-      config_target: socket.assigns.config_target,
+      config_target: socket.assigns.image_config_target,
       event_target: myself,
       multi: true,
       selected_images: selected_images
@@ -397,7 +417,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     send_update(BrandoAdmin.Components.VideoPicker,
       id: "video-picker",
-      config_target: nil,
+      config_target: socket.assigns.video_config_target,
       event_target: myself,
       multi: true,
       selected_videos: selected_videos

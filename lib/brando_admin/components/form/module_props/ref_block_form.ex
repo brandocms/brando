@@ -217,6 +217,25 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
     """
   end
 
+  def block_form(%{type: "file"} = assigns) do
+    ~H"""
+    <Form.inputs_for_block :let={block_data} field={@ref_data[:data]}>
+      <Input.text field={block_data[:title]} label={gettext("Title override")} />
+      <Input.text field={block_data[:label]} label={gettext("Link label")} />
+      <Input.textarea field={block_data[:description]} label={gettext("Description")} />
+      <Input.text field={block_data[:class]} label={gettext("CSS class(es)")} />
+      <Input.toggle field={block_data[:target_blank]} label={gettext("Open in new window/tab")} />
+      <Input.toggle field={block_data[:download]} label={gettext("Download instead of open")} />
+      <Input.text
+        field={block_data[:config_target]}
+        label={gettext("Config target")}
+        instructions={gettext("i.e: `file:Elixir.MyApp.Schema:function:fn_name`")}
+        monospace
+      />
+    </Form.inputs_for_block>
+    """
+  end
+
   def block_form(%{type: "gallery"} = assigns) do
     assigns =
       assigns
@@ -244,6 +263,15 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
         opts={[options: @gallery_placeholder_options]}
       />
       <ModuleProps.format_checkboxes field={block_data[:formats]} />
+      <.live_component
+        module={Input.MultiSelect}
+        id={"#{@form_id}-ref-#{@key}-#{@ref_name}-gallery-allowed-types"}
+        field={block_data[:allowed_types]}
+        label={gettext("Allowed media")}
+        opts={[options: [%{label: gettext("Images"), value: :image}, %{label: gettext("Videos"), value: :video}]]}
+      />
+      <Input.text field={block_data[:image_config_target]} label={gettext("Image config target")} monospace />
+      <Input.text field={block_data[:video_config_target]} label={gettext("Video config target")} monospace />
     </Form.inputs_for_block>
     """
   end
@@ -452,6 +480,15 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
         opts={[options: @gallery_placeholder_options]}
       />
       <ModuleProps.format_checkboxes field={tpl_data[:formats]} />
+      <.live_component
+        module={Input.MultiSelect}
+        id={"#{@field.id}-gallery-allowed-types"}
+        field={tpl_data[:allowed_types]}
+        label={gettext("Allowed media")}
+        opts={[options: [%{label: gettext("Images"), value: :image}, %{label: gettext("Videos"), value: :video}]]}
+      />
+      <Input.text field={tpl_data[:image_config_target]} label={gettext("Image config target")} monospace />
+      <Input.text field={tpl_data[:video_config_target]} label={gettext("Video config target")} monospace />
     </.inputs_for>
     """
   end

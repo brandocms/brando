@@ -116,6 +116,9 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
   def update(assigns, socket) do
     schema = assigns.field.form.data.__struct__
+    path = Brando.Utils.get_path_from_field_name(assigns.field.form.name)
+    config_target = Brando.Assets.ConfigTarget.serialize({"gallery", schema, assigns.field.field})
+    {video_config, _resolved_target} = Brando.Uploads.resolve_video_config(config_target)
 
     {:ok,
      socket
@@ -123,8 +126,10 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
      |> prepare_input_component()
      |> assign(:preview_layout, assigns.opts[:layout] || :grid)
      |> assign(:schema, schema)
+     |> assign(:path, path)
+     |> assign(:config_target, config_target)
      |> assign_new(:config_modal, fn -> nil end)
-     |> assign_new(:video_upload_enabled?, fn -> Brando.default_video_upload_strategy() == :local end)
+     |> assign(:video_upload_enabled?, video_config.upload_strategy == :local)
      |> assign_value()}
   end
 
@@ -160,10 +165,11 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
             class="gallery-upload-wrapper"
             phx-hook="Brando.UploadTrigger"
             data-kind="entry_field_gallery"
+            data-component-id={@id}
             data-asset-type="image"
             data-field={@field.field}
-            data-path="[]"
-            data-config-target={"gallery:#{inspect(@schema)}:#{@field.field}"}
+            data-path={Jason.encode!(@path)}
+            data-config-target={@config_target}
             data-folder-browser="true"
             data-click-mode="trigger"
             data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
@@ -179,10 +185,11 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                 id={"#{@field.id}-gallery-video-upload-trigger"}
                 phx-hook="Brando.UploadTrigger"
                 data-kind="entry_field_gallery"
+                data-component-id={@id}
                 data-asset-type="video"
                 data-field={@field.field}
-                data-path="[]"
-                data-config-target={"gallery:#{inspect(@schema)}:#{@field.field}"}
+                data-path={Jason.encode!(@path)}
+                data-config-target={@config_target}
                 data-click-mode="trigger"
                 data-accept=".mp4,.webm,.mov,.avi,.ogv"
               >
@@ -206,51 +213,51 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                 {gettext("Select videos")}
               </button>
             </div>
-
-            <%= if @gallery_objects == [] do %>
-              <small>
-                {gettext("No associated gallery")}
-              </small>
-            <% else %>
-              <div
-                id="sortable-gallery-objects"
-                phx-hook="Brando.SortableAssocs"
-                data-target={@myself}
-                data-sortable-id="sortable-gallery"
-                data-sortable-handle=".sort-handle"
-                data-sortable-selector=".gallery-object"
-                class={"gallery-objects gallery-objects--#{@preview_layout}"}
-              >
-                <.inputs_for :let={gallery_form} field={@field}>
-                  <Input.input type={:hidden} field={gallery_form[:config_target]} />
-
-                  <.inputs_for :let={gallery_object} field={gallery_form[:gallery_objects]}>
-                    <figure
-                      class="gallery-object sort-handle draggable"
-                      data-id={gallery_object[:image_id].value || gallery_object[:video_id].value}
-                    >
-                      <.gallery_object
-                        gallery_objects={@gallery_objects}
-                        gallery_object_field={gallery_object}
-                        parent_form_name={gallery_form.name}
-                        preview_layout={@preview_layout}
-                        myself={@myself}
-                      />
-                      <input
-                        type="hidden"
-                        name={"#{gallery_form.name}[sort_gallery_object_ids][]"}
-                        value={gallery_object.index}
-                      />
-                    </figure>
-                    <Input.input type={:hidden} field={gallery_object[:image_id]} />
-                    <Input.input type={:hidden} field={gallery_object[:video_id]} />
-                    <Input.input type={:hidden} field={gallery_object[:gallery_id]} />
-                    <.config_hidden_fields field={gallery_object[:config]} />
-                  </.inputs_for>
-                </.inputs_for>
-              </div>
-            <% end %>
           </div>
+
+          <%= if @gallery_objects == [] do %>
+            <small>
+              {gettext("No associated gallery")}
+            </small>
+          <% else %>
+            <div
+              id={"#{@field.id}-sortable-gallery-objects"}
+              phx-hook="Brando.SortableAssocs"
+              data-target={@myself}
+              data-sortable-id={"#{@field.id}-sortable-gallery"}
+              data-sortable-handle=".sort-handle"
+              data-sortable-selector=".gallery-object"
+              class={"gallery-objects gallery-objects--#{@preview_layout}"}
+            >
+              <.inputs_for :let={gallery_form} field={@field}>
+                <Input.input type={:hidden} field={gallery_form[:config_target]} />
+
+                <.inputs_for :let={gallery_object} field={gallery_form[:gallery_objects]}>
+                  <figure
+                    class="gallery-object sort-handle draggable"
+                    data-id={gallery_object[:image_id].value || gallery_object[:video_id].value}
+                  >
+                    <.gallery_object
+                      gallery_objects={@gallery_objects}
+                      gallery_object_field={gallery_object}
+                      parent_form_name={gallery_form.name}
+                      preview_layout={@preview_layout}
+                      myself={@myself}
+                    />
+                    <input
+                      type="hidden"
+                      name={"#{gallery_form.name}[sort_gallery_object_ids][]"}
+                      value={gallery_object.index}
+                    />
+                  </figure>
+                  <Input.input type={:hidden} field={gallery_object[:image_id]} />
+                  <Input.input type={:hidden} field={gallery_object[:video_id]} />
+                  <Input.input type={:hidden} field={gallery_object[:gallery_id]} />
+                  <.config_hidden_fields field={gallery_object[:config]} />
+                </.inputs_for>
+              </.inputs_for>
+            </div>
+          <% end %>
 
           <Content.modal
             id="gallery-object-config-modal"
@@ -630,7 +637,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
     send_update(ImagePicker,
       id: "image-picker",
-      config_target: {"gallery", schema, field_name},
+      config_target: Brando.Assets.ConfigTarget.serialize({"gallery", schema, field_name}),
       event_target: myself,
       multi: true,
       selected_images: selected_images
@@ -650,9 +657,12 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   end
 
   def handle_event("open_video_picker", _, socket) do
+    {_video_config, video_config_target} =
+      Brando.Uploads.resolve_video_config(socket.assigns.config_target)
+
     send_update(VideoPicker,
       id: "video-picker",
-      config_target: nil,
+      config_target: video_config_target,
       event_target: socket.assigns.myself,
       multi: true,
       selected_videos: socket.assigns.selected_videos
@@ -735,7 +745,10 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       if gallery do
         %{id: gallery.id, config_target: gallery.config_target, gallery_objects: sequence(slimmed_objects)}
       else
-        %{config_target: "gallery:#{inspect(schema)}:#{field_name}", gallery_objects: sequence(slimmed_objects)}
+        %{
+          config_target: Brando.Assets.ConfigTarget.serialize({"gallery", schema, field_name}),
+          gallery_objects: sequence(slimmed_objects)
+        }
       end
 
     new_gallery_object = %GalleryObject{creator_id: current_user.id}

@@ -203,6 +203,70 @@ defmodule Brando.Villain.RefRenderingTest do
       refute parsed =~ "iframe"
     end
 
+    test "renders file refs with usage overrides", %{user: user} do
+      {:ok, file} =
+        Brando.Files.create_file(
+          %{
+            title: "Canonical title",
+            filename: "files/reports/report.pdf",
+            mime_type: "application/pdf",
+            filesize: 42_000,
+            config_target: "default"
+          },
+          user
+        )
+
+      module_params =
+        Factory.params_for(:module, %{
+          code: "Download: {% ref refs.report %}",
+          refs: [
+            %{
+              name: "report",
+              file_id: file.id,
+              uid: Brando.Utils.generate_uid(),
+              data: %{type: "file", data: %{label: "Default report"}}
+            }
+          ]
+        })
+
+      {:ok, module} = Content.create_module(module_params, user)
+
+      block = %{
+        block: %{
+          type: :module,
+          module_id: module.id,
+          refs: [
+            %{
+              name: "report",
+              description: nil,
+              file_id: file.id,
+              file: file,
+              uid: Brando.Utils.generate_uid(),
+              data: %Brando.Villain.Blocks.FileBlock{
+                type: "file",
+                data: %Brando.Villain.Blocks.FileBlock.Data{
+                  label: "Annual report",
+                  description: "Audited figures",
+                  target_blank: true,
+                  download: false
+                }
+              }
+            }
+          ],
+          uid: Brando.Utils.generate_uid(),
+          vars: []
+        }
+      }
+
+      parsed = Brando.Villain.parse([block], %Brando.Pages.Page{})
+
+      assert parsed =~ "Download:"
+      assert parsed =~ "Annual report"
+      assert parsed =~ "Audited figures"
+      assert parsed =~ "report.pdf"
+      assert parsed =~ ~s(target="_blank")
+    end
+
     test "handles missing refs gracefully", %{user: user} do
       module_params =
         Factory.params_for(:module, %{

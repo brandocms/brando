@@ -51,7 +51,8 @@ defmodule Brando.UploadsTest do
     end
 
     test "rejects unknown image extensions" do
-      assert {:error, "Unsupported image type" <> _} = Uploads.validate_intake(:image, "evil.exe", 100)
+      assert {:error, "Unsupported image type" <> _} =
+               Uploads.validate_intake(:image, "evil.exe", 100)
     end
 
     test "accepts allowed image extensions and any file type" do
@@ -60,14 +61,49 @@ defmodule Brando.UploadsTest do
     end
   end
 
+  describe "manager_max_file_size/0" do
+    test "is a transport envelope above the fallback intake limit" do
+      assert Uploads.manager_max_file_size() > Uploads.max_file_size()
+      assert Uploads.manager_max_file_size() >= Brando.Type.FileConfig.default_config().size_limit
+
+      assert Uploads.manager_max_file_size() >=
+               Brando.Type.VideoConfig.default_config().size_limit
+    end
+
+    test "can be raised for installations with unusually large source media" do
+      previous = Application.get_env(:brando, Brando.Uploads)
+      Application.put_env(:brando, Brando.Uploads, manager_max_file_size: 12_000_000_000)
+
+      on_exit(fn ->
+        if previous,
+          do: Application.put_env(:brando, Brando.Uploads, previous),
+          else: Application.delete_env(:brando, Brando.Uploads)
+      end)
+
+      assert Uploads.manager_max_file_size() == 12_000_000_000
+    end
+  end
+
   describe "initiate/4" do
     test "images are always server transport" do
-      assert {:ok, :server} = Uploads.initiate(:image, "default", %{name: "a.jpg", size: 1, type: "image/jpeg"}, nil)
+      assert {:ok, :server} =
+               Uploads.initiate(
+                 :image,
+                 "default",
+                 %{name: "a.jpg", size: 1, type: "image/jpeg"},
+                 nil
+               )
     end
 
     test "files with non-direct config are server transport" do
       # test env has no direct: true file CDN config
-      assert {:ok, :server} = Uploads.initiate(:file, "default", %{name: "a.pdf", size: 1, type: "application/pdf"}, nil)
+      assert {:ok, :server} =
+               Uploads.initiate(
+                 :file,
+                 "default",
+                 %{name: "a.pdf", size: 1, type: "application/pdf"},
+                 nil
+               )
     end
 
     test "enforces the resolved image config's size_limit at intake" do
@@ -75,10 +111,20 @@ defmodule Brando.UploadsTest do
       assert is_integer(limit)
 
       assert {:error, "File is too large" <> _} =
-               Uploads.initiate(:image, "default", %{name: "big.jpg", size: limit + 1, type: "image/jpeg"}, nil)
+               Uploads.initiate(
+                 :image,
+                 "default",
+                 %{name: "big.jpg", size: limit + 1, type: "image/jpeg"},
+                 nil
+               )
 
       assert {:ok, :server} =
-               Uploads.initiate(:image, "default", %{name: "ok.jpg", size: limit, type: "image/jpeg"}, nil)
+               Uploads.initiate(
+                 :image,
+                 "default",
+                 %{name: "ok.jpg", size: limit, type: "image/jpeg"},
+                 nil
+               )
     end
 
     test "enforces the resolved file config's size_limit at intake" do
@@ -111,7 +157,9 @@ defmodule Brando.UploadsTest do
     # VideoConfig clause and local video uploads fall into the generic image
     # path ("Failed to read image dimensions").
     test "always resolves to a VideoConfig struct" do
-      assert {%Brando.Type.VideoConfig{}, "default"} = Uploads.resolve_video_config("bogus-target")
+      assert {%Brando.Type.VideoConfig{}, "default"} =
+               Uploads.resolve_video_config("bogus-target")
+
       assert {%Brando.Type.VideoConfig{}, "default"} = Uploads.resolve_video_config(nil)
     end
   end

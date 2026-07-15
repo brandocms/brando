@@ -117,6 +117,14 @@
 > scoped `.upload-progress` CSS. This doc's stale spec fragments were corrected in the
 > same pass (target descriptor shape, decision keys, sticky id, intent channel and
 > orphan-marking never built).
+> **Asset-browser + intent audit (2026-07-15):** upload targets now pass through the
+> canonical `Brando.Uploads.AssetIntent` boundary; malformed kinds, destinations,
+> paths, topics and config targets are rejected before transfer. File fields and file
+> refs share the folder-aware `FileBrowser`; file refs and video/gallery vars are
+> supported. Populated refs/vars open their contextual editor first, with the browser
+> used explicitly for select/replace/add. Gallery blueprint configs can define separate
+> `image:` and `video:` configs (legacy flat configs remain image configs), and gallery
+> refs/vars expose allowed media plus per-media config-target overrides.
 > This document is a self-contained spec. It explains *why* the current upload
 > system is broken, *what* to build (a sticky, free-standing `UploadManager` LiveView
 > that owns a queue and every upload mechanic), and *how* to migrate every upload source
@@ -308,13 +316,15 @@ rides the trigger's dataset through JS):
 ```elixir
 %{
   "deliver_topic" => binary,      # per-form-INSTANCE topic, "form:<uuid>" generated at form mount (§6.3)
-  "kind" => "block_var" | "block_ref_picture" | "block_ref_gallery"
+  "kind" => "block_var" | "block_var_gallery"
+          | "block_ref_picture" | "block_ref_file" | "block_ref_video" | "block_ref_gallery"
+          | "entry_var" | "entry_var_gallery"
           | "entry_field" | "entry_field_gallery",
   # identity within the form:
   "component_id" => binary,       # live_component id for the block-scoped kinds
-  "var_key" => binary | nil,      # for block_var (label only)
+  "var_key" => binary | nil,      # for block/entry var targets
   "field" => binary | nil,        # for entry_field / entry_field_gallery
-  "path" => [term] | nil,         # nested changeset path for entry_field
+  "path" => [atom | integer],      # validated nested changeset path
   "asset_type" => "file" | "image" | "video",
   "config_target" => binary,      # "file:Elixir.Schema:field" | "image:..." | "default"
   "folder" => binary | nil,       # folder-browser choice (rides the intake)

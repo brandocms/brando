@@ -52,9 +52,9 @@ or the `render_data/1` component.
 A **module** (`Brando.Content.Module`) is a Liquid-ish template with:
 
 - **refs** — named slots holding a block primitive (header, text, picture,
-  video, gallery, map, …). Templates reference them as `{% ref refs.name %}`.
+  file, video, gallery, map, …). Templates reference them as `{% ref refs.name %}`.
 - **vars** — typed variables (`text`, `string`, `color`, `select`, `boolean`,
-  `image`, `file`, `link`, …) referenced bare by key:
+  `image`, `file`, `video`, `gallery`, `link`, …) referenced bare by key:
   `style="color: {{ text_color }}"`.
 - **multi modules** — a module whose template contains `{{ content }}`
   renders nested child blocks there (each an instance of a child module).

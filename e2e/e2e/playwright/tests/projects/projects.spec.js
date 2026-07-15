@@ -1,7 +1,9 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, dragAndDrop, fillSlugSource } from '../../utils'
+import { syncLV, dragAndDrop, fillSlugSource, confirmUploadFolder } from '../../utils'
 
 test('creates project', async ({ page }) => {
+  test.setTimeout(120000)
+
   await page.goto('/admin')
   await page.getByRole('link', { name: 'Clients' }).click()
   await page.getByRole('link', { name: 'Create new' }).click()
@@ -80,6 +82,7 @@ test('creates project', async ({ page }) => {
   // Add image
   await page.getByRole('button', { name: 'Add image' }).click()
   await page.locator('#image-drawer-upload-input').setInputFiles('./fixtures/image.jpg')
+  await confirmUploadFolder(page)
   // Wait for upload to complete - the image should appear in the drawer
   await expect(page.locator('#image-drawer img')).toBeVisible({ timeout: 30000 })
   // Close drawer - this should save the image selection
@@ -87,19 +90,20 @@ test('creates project', async ({ page }) => {
   await page.waitForSelector('#image-drawer', { state: 'hidden' })
   await syncLV(page)
 
-  await page
-    .locator('.gallery-input .gallery-upload-wrapper > input.file-input')
-    .setInputFiles(['./fixtures/image2.jpg', './fixtures/image.jpg'])
+  const galleryFileChooser = page.waitForEvent('filechooser')
+  await page.locator('.gallery-input').getByRole('button', { name: 'Upload images' }).click()
+  await (await galleryFileChooser).setFiles(['./fixtures/image2.jpg', './fixtures/image.jpg'])
+  await confirmUploadFolder(page)
 
   // Wait for progress bars to complete (image uploads can take a while)
   await expect(page.locator('progress')).toHaveCount(0, { timeout: 15000 })
 
   // Wait for both gallery images to be visible
   const firstGalleryObjectImg = page
-    .locator('#sortable-gallery-objects .gallery-object img')
+    .locator('[id$="-sortable-gallery-objects"] .gallery-object img')
     .first()
   const secondGalleryObjectImg = page
-    .locator('#sortable-gallery-objects .gallery-object img')
+    .locator('[id$="-sortable-gallery-objects"] .gallery-object img')
     .nth(1)
 
   await expect(firstGalleryObjectImg).toBeVisible()
@@ -127,8 +131,14 @@ test('creates project', async ({ page }) => {
   const videoPicker = page.locator('#video-picker')
   await expect(videoPicker).toBeVisible()
 
-  // Select seeded video
-  await videoPicker.locator('.video-picker__video').first().click()
+  // This gallery has its own video config target, so its library starts empty.
+  // Create a compatible direct video in that context; creation selects it and
+  // adds it to the gallery through the same picker event contract.
+  await videoPicker.getByRole('button', { name: 'Add from URL' }).click()
+  await videoPicker
+    .getByPlaceholder('Paste YouTube, Vimeo or direct video URL')
+    .fill('https://example.com/project-gallery-video.mp4')
+  await videoPicker.getByRole('button', { name: 'Create video' }).click()
   await syncLV(page)
 
   // Close the video picker drawer
@@ -136,15 +146,15 @@ test('creates project', async ({ page }) => {
   await page.waitForSelector('#video-picker', { state: 'hidden' })
 
   // Verify video appears in gallery grid (2 images + 1 video)
-  const galleryObjects = page.locator('#sortable-gallery-objects .gallery-object')
+  const galleryObjects = page.locator('[id$="-sortable-gallery-objects"] .gallery-object')
   await expect(galleryObjects).toHaveCount(3)
 
   const firstGalleryObjectHandle = page
-    .locator('#sortable-gallery-objects .gallery-object')
+    .locator('[id$="-sortable-gallery-objects"] .gallery-object')
     .first()
 
   const secondGalleryObjectHandle = page
-    .locator('#sortable-gallery-objects .gallery-object')
+    .locator('[id$="-sortable-gallery-objects"] .gallery-object')
     .nth(1)
 
   // await firstGalleryObjectHandle.hover()
@@ -180,7 +190,7 @@ test('creates project', async ({ page }) => {
     .getByRole('link', { name: 'Microsoft' })
     .click()
   await syncLV(page)
-  await expect(page.locator('#sortable-gallery-objects .gallery-object')).toHaveCount(3, {
+  await expect(page.locator('[id$="-sortable-gallery-objects"] .gallery-object')).toHaveCount(3, {
     timeout: 20000,
   })
 
@@ -194,7 +204,7 @@ test('creates project', async ({ page }) => {
     .locator('.gallery-input [data-asset-type="video"] input[type="file"]')
     .setInputFiles('./fixtures/video.mp4')
   await syncLV(page)
-  await expect(page.locator('#sortable-gallery-objects .gallery-object')).toHaveCount(4, {
+  await expect(page.locator('[id$="-sortable-gallery-objects"] .gallery-object')).toHaveCount(4, {
     timeout: 20000,
   })
 
@@ -209,7 +219,7 @@ test('creates project', async ({ page }) => {
     .getByRole('link', { name: 'Microsoft' })
     .click()
   await syncLV(page)
-  await expect(page.locator('#sortable-gallery-objects .gallery-object')).toHaveCount(4, {
+  await expect(page.locator('[id$="-sortable-gallery-objects"] .gallery-object')).toHaveCount(4, {
     timeout: 20000,
   })
 
@@ -241,7 +251,7 @@ test('creates project', async ({ page }) => {
     .click()
   await syncLV(page)
   await expect(page.getByRole('button', { name: 'Edit video' })).toBeVisible({ timeout: 20000 })
-  await expect(page.locator('#sortable-gallery-objects .gallery-object')).toHaveCount(4, {
+  await expect(page.locator('[id$="-sortable-gallery-objects"] .gallery-object')).toHaveCount(4, {
     timeout: 20000,
   })
 
@@ -274,7 +284,7 @@ test('creates project', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Edit file' })).toBeVisible({ timeout: 20000 })
   await expect(page.getByRole('button', { name: 'Edit video' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Edit image' })).toBeVisible()
-  await expect(page.locator('#sortable-gallery-objects .gallery-object')).toHaveCount(4, {
+  await expect(page.locator('[id$="-sortable-gallery-objects"] .gallery-object')).toHaveCount(4, {
     timeout: 20000,
   })
 })

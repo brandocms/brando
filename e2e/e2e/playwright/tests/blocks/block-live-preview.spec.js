@@ -5,7 +5,8 @@ import {
   getPreviewFrame,
   waitForPreviewReady,
   waitForPreviewUpdate,
-  setPreviewDevice
+  setPreviewDevice,
+  confirmUploadFolder
 } from '../../utils'
 
 test.describe('Live Preview with Blocks, Vars and Refs', () => {
@@ -178,6 +179,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Upload an image to the picture ref
       // The picture block has class .picture-block with a .file-input inside
       await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
+      await confirmUploadFolder(page)
       await syncLV(page)
       await page.waitForTimeout(2000) // Wait for upload to complete
 
@@ -278,6 +280,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Upload images to gallery
       // The gallery block has class .gallery-block with a .file-input inside
       await page.locator('.gallery-block .file-input').setInputFiles(['./fixtures/image.jpg', './fixtures/image2.jpg'])
+      await confirmUploadFolder(page)
       await syncLV(page)
       // Allow time for upload processing
       await page.waitForTimeout(3000)
@@ -705,6 +708,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
       // Upload image via file input in the modal
       await imageModal.locator('input[type="file"].file-input').setInputFiles('./fixtures/image.jpg')
+      await confirmUploadFolder(page)
 
       // Wait for image to process
       await expect(imageModal.locator('img')).toBeVisible({ timeout: 20000 })

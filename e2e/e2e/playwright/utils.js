@@ -158,6 +158,17 @@ const fillSlugSource = async (locator, text) => {
   await locator.blur()
 }
 
+// Image uploads first open the asset browser so the user can confirm the
+// destination folder. Keep upload specs aligned with that browser-first flow.
+const confirmUploadFolder = async page => {
+  const confirm = page.getByRole('button', { name: 'Upload here' })
+  const opened = await confirm.waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false)
+  if (!opened) return
+
+  await confirm.click()
+  await expect(confirm).not.toBeVisible({ timeout: 10000 })
+}
+
 module.exports = {
   randomString,
   syncLV,
@@ -170,5 +181,6 @@ module.exports = {
   waitForPreviewReady,
   waitForPreviewUpdate,
   setPreviewDevice,
-  fillSlugSource
+  fillSlugSource,
+  confirmUploadFolder
 }

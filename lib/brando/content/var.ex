@@ -31,6 +31,8 @@ defmodule Brando.Content.Var do
         :text,
         :html,
         :image,
+        :video,
+        :gallery,
         :datetime,
         :color,
         :select,
@@ -48,6 +50,12 @@ defmodule Brando.Content.Var do
     attribute :instructions, :string
     attribute :value, :text
     attribute :config_target, :text
+    attribute :gallery_image_config_target, :text
+    attribute :gallery_video_config_target, :text
+
+    attribute :gallery_allowed_types, {:array, Ecto.Enum},
+      values: [:image, :video],
+      default: [:image, :video]
 
     # boolean
     attribute :value_boolean, :boolean, default: false
@@ -83,6 +91,8 @@ defmodule Brando.Content.Var do
     relation :palette, :belongs_to, module: Brando.Content.Palette
     relation :image, :belongs_to, module: Brando.Images.Image
     relation :file, :belongs_to, module: Brando.Files.File
+    relation :video, :belongs_to, module: Brando.Videos.Video
+    relation :gallery, :belongs_to, module: Brando.Galleries.Gallery
     relation :identifier, :belongs_to, module: Brando.Content.Identifier
 
     # a var can belong to a page, a block, a module, a table template or row,
@@ -94,6 +104,18 @@ defmodule Brando.Content.Var do
     relation :table_row, :belongs_to, module: Brando.Content.TableRow
     relation :global_set, :belongs_to, module: Brando.Sites.GlobalSet
     relation :menu_item, :belongs_to, module: Brando.Navigation.Item
+  end
+
+  def preloads do
+    [
+      :file,
+      :image,
+      :palette,
+      :identifier,
+      :menu_item,
+      video: [:thumbnail, :file],
+      gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]
+    ]
   end
 
   defimpl String.Chars do

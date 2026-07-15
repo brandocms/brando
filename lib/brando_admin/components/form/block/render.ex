@@ -646,7 +646,12 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 </:description>
               </.toolbar>
 
-              <.module_config uid={@uid} block_form={block_form} target={@target} form_id={@form_id} />
+              <.module_config
+                uid={@uid}
+                block_form={block_form}
+                target={@target}
+                form_id={@form_id}
+              />
               <.module_content
                 uid={@uid}
                 block_form={block_form}
@@ -691,7 +696,12 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               </:description>
             </.toolbar>
 
-            <.module_config uid={@uid} block_form={@form} target={@target} form_id={@form_id} />
+            <.module_config
+              uid={@uid}
+              block_form={@form}
+              target={@target}
+              form_id={@form_id}
+            />
             <.module_content
               uid={@uid}
               block_form={@form}
@@ -756,7 +766,13 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     ~H"""
     <div class="block-content">
       <div b-editor-tpl={@module_class}>
-        <.vars vars={@block_form[:vars]} uid={@uid} target={@target} form_id={@form_id} />
+        <.vars
+          vars={@block_form[:vars]}
+          uid={@uid}
+          target={@target}
+          form_id={@form_id}
+          current_user_id={@block_form[:creator_id].value}
+        />
         <.datasource
           :if={@is_datasource?}
           block_data={@block_form}
@@ -796,7 +812,13 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     ~H"""
     <div class="block-content">
       <div b-editor-tpl={@module_class}>
-        <.vars vars={@block_form[:vars]} uid={@uid} target={@target} form_id={@form_id} />
+        <.vars
+          vars={@block_form[:vars]}
+          uid={@uid}
+          target={@target}
+          form_id={@form_id}
+          current_user_id={@block_form[:creator_id].value}
+        />
         <.datasource
           :if={@is_datasource?}
           block_data={@block_form}
@@ -901,7 +923,14 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             instructions={gettext("Helpful for collapsed blocks")}
           />
           <Input.text field={@block_form[:anchor]} instructions={gettext("Anchor available to block.")} />
-          <.vars vars={@block_form[:vars]} uid={@uid} important={false} target={@target} form_id={@form_id} />
+          <.vars
+            vars={@block_form[:vars]}
+            uid={@uid}
+            important={false}
+            target={@target}
+            form_id={@form_id}
+            current_user_id={@block_form[:creator_id].value}
+          />
           <div>
             UID: <span class="text-mono">{@uid}</span>
           </div>
@@ -1659,6 +1688,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :important, :boolean, default: true
   attr :target, :any
   attr :form_id, :any, default: nil
+  attr :current_user_id, :any, default: nil
 
   def vars(assigns) do
     changeset = assigns.vars.form.source
@@ -1691,6 +1721,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             render={(@important && :only_important) || :only_regular}
             on_change={fn params -> send_update(@target, params) end}
             form_id={@form_id}
+            current_user_id={@current_user_id}
             publish
           />
         </.inputs_for>
@@ -2254,6 +2285,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 :boolean -> var.value_boolean
                 :image -> var.image
                 :file -> var.file
+                :video -> var.video
+                :gallery -> var.gallery
                 :link -> var
                 _ -> var.value
               end

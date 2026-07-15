@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, confirmUploadFolder } from '../../utils'
 
 test.describe('Render var uploads', () => {
   test.describe.configure({ mode: 'serial' })
@@ -35,6 +35,7 @@ test.describe('Render var uploads', () => {
     // Upload an image via the file input in the modal
     const imageFileInput = imageModal.locator('input[type="file"].file-input')
     await imageFileInput.setInputFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
 
     // Wait for upload and processing to complete
     // The upload canvas should disappear and be replaced by an img element
@@ -153,6 +154,7 @@ test.describe('Render var uploads', () => {
     const imageModal = page.locator('[id$="image-config"]:visible')
     await expect(imageModal).toBeVisible({ timeout: 5000 })
     await imageModal.locator('input[type="file"].file-input').setInputFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
     await expect(imageModal.locator('img')).toBeVisible({ timeout: 20000 })
 
     // Click "Reset image" button in the modal

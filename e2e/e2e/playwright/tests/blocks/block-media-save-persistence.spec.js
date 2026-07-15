@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, confirmUploadFolder } from '../../utils'
 
 // Save → reload persistence guards for block media.
 //
@@ -34,6 +34,7 @@ test.describe('Block media save persistence', () => {
 
   const uploadPicture = async (page) => {
     await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
     await syncLV(page)
     // upload + processing; the block swaps the upload canvas for the image
     await expect(page.locator('.picture-block img:visible').first()).toBeVisible({ timeout: 20000 })
@@ -140,6 +141,7 @@ test.describe('Block media save persistence', () => {
     const imageModal = page.locator('[id$="image-config"]:visible')
     await expect(imageModal).toBeVisible({ timeout: 5000 })
     await imageModal.locator('input[type="file"].file-input').setInputFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
     await expect(imageModal.locator('img')).toBeVisible({ timeout: 20000 })
     await imageModal.locator('button.modal-close').click()
     await syncLV(page)

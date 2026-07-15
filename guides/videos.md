@@ -207,6 +207,24 @@ can be added to a gallery in three ways:
      "Upload file" button instead — the uploaded video is selected into the
      gallery automatically.
 
+Gallery assets can override image and video upload behavior independently:
+
+```elixir
+asset :my_gallery, :gallery,
+  cfg: %{
+    image: %{upload_path: "images/projects/gallery"},
+    video: %{
+      upload_path: "videos/projects/gallery",
+      upload_strategy: :mux,
+      size_limit: 500_000_000
+    }
+  }
+```
+
+A legacy flat gallery `cfg` is still treated as the image configuration. Module
+gallery refs and gallery vars can further override the image/video config targets
+and restrict the allowed media types in their contextual configuration.
+
 ### Video Config Options
 
 Full list of `Brando.Type.VideoConfig` options:

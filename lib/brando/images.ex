@@ -140,17 +140,23 @@ defmodule Brando.Images do
   def get_config_for(%{config_target: config_target} = data) when is_binary(config_target) do
     config =
       case String.split(config_target, ":") do
-        [type, schema, "function", fn_string] when type in ["image", "gallery"] ->
+        ["image", schema, "function", fn_string] ->
           ConfigTarget.config_function!(schema, fn_string)
+
+        ["gallery", schema, "function", fn_string] ->
+          schema
+          |> ConfigTarget.config_function!(fn_string)
+          |> gallery_image_config()
 
         [type, schema, field_name] when type in ["image", "gallery"] ->
           case ConfigTarget.schema_module(schema) do
             {:ok, schema_module} ->
-              field_name_atom = ConfigTarget.field_atom!(schema, field_name)
+              cfg =
+                schema_module
+                |> Brando.Blueprint.Assets.__asset_opts__(ConfigTarget.field_atom!(schema, field_name))
+                |> Map.get(:cfg)
 
-              schema_module
-              |> Brando.Blueprint.Assets.__asset_opts__(field_name_atom)
-              |> Map.get(:cfg)
+              if type == "gallery", do: gallery_image_config(cfg), else: cfg
 
             :error ->
               IO.warn("""
@@ -182,6 +188,9 @@ defmodule Brando.Images do
   def get_config_for(_) do
     get_config_for(%{config_target: "default"})
   end
+
+  defp gallery_image_config(%{image: image}), do: image
+  defp gallery_image_config(config), do: config
 
   def get_processed_formats(path, nil) do
     original_type = Images.Utils.image_type(path)

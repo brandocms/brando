@@ -15,6 +15,14 @@ defmodule Brando.Villain.Parser do
   @doc "Parses video"
   @callback video(data :: map, opts :: map) :: iodata
 
+  @doc "Parses file"
+  @callback file(data :: map, opts :: map) :: iodata
+
+  # Added after the original parser behaviour. Keep direct `@behaviour`
+  # implementations source-compatible; modules using this parser get the
+  # default through `use Brando.Villain.Parser`.
+  @optional_callbacks file: 2
+
   @doc "Parses media"
   @callback media(data :: map, opts :: map) :: iodata
 
@@ -109,6 +117,9 @@ defmodule Brando.Villain.Parser do
 
       def video(data, opts), do: Brando.Villain.Parser.video(data, opts)
       defoverridable video: 2
+
+      def file(data, opts), do: Brando.Villain.Parser.file(data, opts)
+      defoverridable file: 2
 
       @doc """
       A media block, means that the user did not pick a media type -- so just return empty
@@ -524,6 +535,36 @@ defmodule Brando.Villain.Parser do
   end
 
   def video(_, _), do: ""
+
+  def file(%{file: %Brando.Files.File{} = file} = data, _) do
+    assigns = %{
+      url: Brando.Utils.file_url(file),
+      label: data[:label] || data[:title] || file.title || file.filename,
+      description: data[:description],
+      class: data[:class],
+      target_blank: data[:target_blank],
+      download: data[:download]
+    }
+
+    ~H"""
+    <div class="file-block">
+      <a
+        href={@url}
+        class={@class}
+        target={@target_blank && "_blank"}
+        rel={@target_blank && "noopener"}
+        download={@download}
+      >
+        {@label}
+      </a>
+      <p :if={@description not in [nil, ""]}>{@description}</p>
+    </div>
+    """
+    |> Phoenix.LiveViewTest.rendered_to_string()
+  end
+
+  def file(_, _), do: ""
+
   def media(_, _), do: ""
 
   def picture(%{url: ""}, _), do: ""
@@ -1267,6 +1308,22 @@ defmodule Brando.Villain.Parser do
     {key, file}
   end
 
+  defp process_var(%Brando.Content.Var{type: :video, key: key, video: %Ecto.Association.NotLoaded{}} = var) do
+    %{video: video} = Brando.Repo.preload(var, video: [:thumbnail, :file])
+    {key, video}
+  end
+
+  defp process_var(%Brando.Content.Var{type: :video, key: key, video: video}), do: {key, video}
+
+  defp process_var(%Brando.Content.Var{type: :gallery, key: key, gallery: %Ecto.Association.NotLoaded{}} = var) do
+    %{gallery: gallery} =
+      Brando.Repo.preload(var, gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]])
+
+    {key, gallery}
+  end
+
+  defp process_var(%Brando.Content.Var{type: :gallery, key: key, gallery: gallery}), do: {key, gallery}
+
   defp process_var(%{key: key, label: _, type: :boolean, value_boolean: value_boolean}),
     do: {key, value_boolean}
 
@@ -1403,6 +1460,42 @@ defmodule Brando.Villain.Parser do
     # Return the ref structure with merged data, including active status
     %{
       data: %{data: merged_data, type: "video"},
+      name: ref.name,
+      description: ref.description,
+      active: Map.get(ref, :active, true),
+      collapsed: Map.get(ref, :collapsed, false)
+    }
+  end
+
+  defp merge_ref_associations(%{data: %{type: "file"}} = ref) do
+    file =
+      case Map.get(ref, :file) do
+        %Ecto.Association.NotLoaded{} -> nil
+        file -> file
+      end
+
+    file_id = normalize_ref_id(Map.get(ref, :file_id))
+
+    file =
+      cond do
+        not is_nil(file) -> file
+        is_integer(file_id) -> Brando.Repo.get(Brando.Files.File, file_id)
+        true -> nil
+      end
+
+    data = Map.from_struct(ref.data.data || %Brando.Villain.Blocks.FileBlock.Data{})
+
+    merged_data =
+      data
+      |> Map.put(:file, file)
+      |> Map.put(:title, data.title || (file && file.title))
+      |> Map.put(:filename, file && file.filename)
+      |> Map.put(:filesize, file && file.filesize)
+      |> Map.put(:mime_type, file && file.mime_type)
+
+    %{
+      data: %{data: merged_data, type: "file"},
+      file: file,
       name: ref.name,
       description: ref.description,
       active: Map.get(ref, :active, true),

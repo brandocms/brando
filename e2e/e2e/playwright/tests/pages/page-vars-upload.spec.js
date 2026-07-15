@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, confirmUploadFolder } from '../../utils'
 
 // Entry-level vars (page variables under the Advanced tab) have no owning
 // block component — their FK commits ride the `b:validate` contract into the
@@ -43,6 +43,7 @@ test.describe('Entry-level page var uploads', () => {
     const imageModal = page.locator('[id$="image-config"]:visible')
     await expect(imageModal).toBeVisible({ timeout: 5000 })
     await imageModal.locator('input[type="file"].file-input').setInputFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
     await expect(imageModal.locator('img')).toBeVisible({ timeout: 20000 })
 
     return { entry, imageModal }

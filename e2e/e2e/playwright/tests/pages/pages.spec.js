@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, confirmUploadFolder } from '../../utils'
 
 test('creates a simple page', async ({ page }) => {
   await page.goto('/admin')
@@ -19,8 +19,8 @@ test('creates a simple page', async ({ page }) => {
   await page.getByRole('button', { name: 'Heading Large text' }).click()
   await expect(page.locator('#block-field-blocks-module-picker')).not.toBeVisible()
   await expect(page.getByText('Module | Heading')).toBeVisible()
-  await page.getByText('Text').click()
-  await page.getByText('Text').fill('About Brando CMS')
+  await page.getByText('Text', { exact: true }).click()
+  await page.getByText('Text', { exact: true }).fill('About Brando CMS')
 
   // add media block
   await page.getByRole('button', { name: 'Add block' }).nth(1).click()
@@ -150,8 +150,8 @@ test('creates meta information', async ({ page }) => {
   await page.getByRole('button', { name: 'Heading Large text' }).click()
   await expect(page.locator('#block-field-blocks-module-picker')).not.toBeVisible()
   await expect(page.getByText('Module | Heading')).toBeVisible()
-  await page.getByText('Text').click()
-  await page.getByText('Text').fill('Hello!')
+  await page.getByText('Text', { exact: true }).click()
+  await page.getByText('Text', { exact: true }).fill('Hello!')
 
   // open meta drawer
   await page.getByRole('button', { name: 'Meta' }).click()
@@ -161,6 +161,7 @@ test('creates meta information', async ({ page }) => {
   // Add SEO image
   await page.getByRole('button', { name: 'Add image' }).click()
   await page.locator('#image-drawer-upload-input').setInputFiles('./fixtures/image.jpg')
+  await confirmUploadFolder(page)
   // Wait for upload to complete - the image should appear in the drawer
   await expect(page.locator('#image-drawer img')).toBeVisible({ timeout: 30000 })
   // Close drawer - this should save the image selection

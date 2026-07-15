@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, confirmUploadFolder } from '../../utils'
 
 test.describe('Image Editor from Blocks', () => {
 
@@ -24,6 +24,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload image to the picture block
     await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
     await syncLV(page)
     await page.waitForTimeout(2000)
 
@@ -87,6 +88,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload image to the picture block
     await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
     await syncLV(page)
     await page.waitForTimeout(2000)
 
@@ -147,6 +149,7 @@ test.describe('Image Editor from Blocks', () => {
     await page
       .locator('.gallery-block .file-input')
       .setInputFiles(['./fixtures/image.jpg', './fixtures/image2.jpg'])
+    await confirmUploadFolder(page)
     await syncLV(page)
     await page.waitForTimeout(3000)
 
@@ -207,6 +210,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload 1 image to the gallery block
     await page.locator('.gallery-block .file-input').setInputFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
     await syncLV(page)
     await page.waitForTimeout(3000)
 
@@ -275,6 +279,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload 1 image to the gallery block
     await page.locator('.gallery-block .file-input').setInputFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
     await syncLV(page)
     await page.waitForTimeout(3000)
 
@@ -356,6 +361,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload an image
     await page.locator('.gallery-block .file-input').setInputFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
     await syncLV(page)
     await page.waitForTimeout(3000)
 
@@ -412,6 +418,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload an image first so we have something to compare
     await page.locator('.gallery-block .file-input').setInputFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
     await syncLV(page)
     await page.waitForTimeout(2000)
 
@@ -450,6 +457,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload image to the picture block
     await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
     await syncLV(page)
     await page.waitForTimeout(2000)
 
@@ -522,6 +530,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload 1 image to the gallery block
     await page.locator('.gallery-block .file-input').setInputFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
     await syncLV(page)
     await page.waitForTimeout(3000)
 
@@ -589,6 +598,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload image to the picture block
     await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
     await syncLV(page)
     await page.waitForTimeout(2000)
 

@@ -32,6 +32,11 @@ defmodule Brando.Uploads do
 
   @image_exts ~w(.jpg .jpeg .png .gif .webp .svg)
   @max_file_size 50_000_000
+  # This is the Phoenix transport envelope, not the per-asset authorization
+  # limit. Intake resolves the target config and applies its size_limit before
+  # any bytes move. Keep the envelope comfortably above normal media configs;
+  # installations accepting larger source files can raise it explicitly.
+  @manager_max_file_size 5_000_000_000
   @presign_expiry_seconds 600
 
   @doc """
@@ -108,7 +113,10 @@ defmodule Brando.Uploads do
   defp format_upload_error({:error, :mkdir, _} = error), do: upload_error_message(error)
   defp format_upload_error({:error, :cp, _} = error), do: upload_error_message(error)
   defp format_upload_error({:error, :empty_filename}), do: gettext("Empty filename")
-  defp format_upload_error({:error, %Ecto.Changeset{}}), do: gettext("Could not store uploaded file")
+
+  defp format_upload_error({:error, %Ecto.Changeset{}}),
+    do: gettext("Could not store uploaded file")
+
   defp format_upload_error({:error, message}) when is_binary(message), do: message
   defp format_upload_error(error), do: inspect(error)
 
@@ -176,7 +184,14 @@ defmodule Brando.Uploads do
 
       case presign_put(key, cfg) do
         {:ok, upload_url} ->
-          {:ok, {:direct, %{upload_url: upload_url, key: key, filename: filename, resolved_target: resolved_target}}}
+          {:ok,
+           {:direct,
+            %{
+              upload_url: upload_url,
+              key: key,
+              filename: filename,
+              resolved_target: resolved_target
+            }}}
 
         {:error, reason} ->
           Logger.error("==> Uploads: presign failed for #{key}: #{inspect(reason)}")
@@ -249,6 +264,20 @@ defmodule Brando.Uploads do
   def max_file_size, do: @max_file_size
 
   @doc """
+  Maximum payload accepted by the UploadManager's Phoenix transport.
+
+  This is only a transport backstop. `initiate/4` remains authoritative and
+  enforces the resolved image/file/video config's `size_limit` first.
+
+      config :brando, Brando.Uploads,
+        manager_max_file_size: 10_000_000_000
+  """
+  def manager_max_file_size do
+    config = Application.get_env(:brando, __MODULE__) || []
+    Keyword.get(config, :manager_max_file_size, @manager_max_file_size)
+  end
+
+  @doc """
   Max number of files transferring simultaneously (per client).
 
   Enforced by the UploadManager JS hook for both server uploads and
@@ -310,7 +339,8 @@ defmodule Brando.Uploads do
     end
   end
 
-  def validate_intake(_asset_type, _filename, _size, _size_limit), do: {:error, "Unsupported asset type"}
+  def validate_intake(_asset_type, _filename, _size, _size_limit),
+    do: {:error, "Unsupported asset type"}
 
   defp size_limit(cfg) do
     case Map.get(cfg, :size_limit) do
@@ -325,7 +355,8 @@ defmodule Brando.Uploads do
   Falls back to the default image config (and `"default"` target) when the
   target has no registered config.
   """
-  def resolve_image_config(config_target), do: resolve_config(Brando.Images, Brando.Type.ImageConfig, config_target)
+  def resolve_image_config(config_target),
+    do: resolve_config(Brando.Images, Brando.Type.ImageConfig, config_target)
 
   @doc """
   Resolve a video config target to `{cfg, resolved_target}`.
@@ -335,7 +366,8 @@ defmodule Brando.Uploads do
   miss the VideoConfig clause in `Brando.Upload.handle_upload_type/2` and fall
   into the generic image path.
   """
-  def resolve_video_config(config_target), do: resolve_config(Brando.Videos, Brando.Type.VideoConfig, config_target)
+  def resolve_video_config(config_target),
+    do: resolve_config(Brando.Videos, Brando.Type.VideoConfig, config_target)
 
   @doc """
   Resolve a file config target to `{cfg, resolved_target}`.
@@ -345,7 +377,8 @@ defmodule Brando.Uploads do
   `%Brando.Type.VideoConfig{}` for `"video:"` targets (files wrapped by
   `:upload` videos resolve through the owning video asset's cfg).
   """
-  def resolve_file_config(config_target), do: resolve_config(Brando.Files, Brando.Type.FileConfig, config_target)
+  def resolve_file_config(config_target),
+    do: resolve_config(Brando.Files, Brando.Type.FileConfig, config_target)
 
   # Videos require the exact config struct (see resolve_video_config/1);
   # file targets may legitimately resolve to another cfg struct type.
@@ -380,7 +413,8 @@ defmodule Brando.Uploads do
   defp base_default_config(Brando.Files),
     do: Brando.config(Brando.Files)[:default_config] || Brando.Type.FileConfig.default_config()
 
-  defp base_default_config(Brando.Videos), do: Brando.config(Brando.Videos)[:default_config] || %{}
+  defp base_default_config(Brando.Videos),
+    do: Brando.config(Brando.Videos)[:default_config] || %{}
 
   # get_config_for raises on unknown target shapes — the upload manager must
   # never crash mid-consume over a config target, so treat any raise as
@@ -391,8 +425,9 @@ defmodule Brando.Uploads do
     _ -> :error
   end
 
-  defp normalize_config_target(nil), do: nil
-  defp normalize_config_target(config_target) when is_binary(config_target), do: config_target
-  defp normalize_config_target(%{config_target: config_target}), do: normalize_config_target(config_target)
-  defp normalize_config_target(_), do: nil
+  defp normalize_config_target(config_target) do
+    Brando.Assets.ConfigTarget.serialize(config_target)
+  rescue
+    ArgumentError -> nil
+  end
 end

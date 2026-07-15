@@ -3,6 +3,8 @@ defmodule BrandoAdmin.Components.Form.Input.File do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  import Ecto.Changeset
+
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
 
@@ -36,14 +38,34 @@ defmodule BrandoAdmin.Components.Form.Input.File do
      |> assign_new(:previous_file_id, fn -> nil end)
      |> assign_new(:label, fn -> nil end)
      |> assign_new(:instructions, fn -> nil end)
+     |> assign_new(:path, fn -> [] end)
+     |> assign_new(:form_id, fn -> nil end)
      |> assign_new(:placeholder, fn -> nil end)}
   end
 
   def update(assigns, socket) do
     relation_field_atom = String.to_existing_atom("#{assigns.field.field}_id")
     relation_field = assigns.field.form[relation_field_atom]
-    file_id = try_force_int(assigns.field.value)
-    file = assigns.field.value
+    changeset = assigns.field.form.source
+    file_from_changeset = get_field(changeset, assigns.field.field)
+
+    file_id =
+      changeset
+      |> get_field(relation_field_atom)
+      |> try_force_int()
+
+    file = resolve_file(file_from_changeset, file_id)
+    path = Brando.Utils.get_path_from_field_name(assigns.field.form.name)
+    module_from_form = changeset.data.__struct__
+
+    module =
+      if path == [] do
+        module_from_form
+      else
+        Brando.Utils.get_parent_module_from_field_name(assigns.field.form.name, module_from_form)
+      end
+
+    form_id = "#{module.__naming__().singular}_form"
 
     file_name =
       cond do
@@ -64,7 +86,26 @@ defmodule BrandoAdmin.Components.Form.Input.File do
      |> assign(:file, file)
      |> assign(:file_id, file_id)
      |> assign(:file_name, file_name)
-     |> assign(:relation_field, relation_field)}
+     |> assign(:relation_field, relation_field)
+     |> assign(:path, path)
+     |> assign(:form_id, form_id)
+     |> assign(:editable, Keyword.get(assigns.opts, :editable, true))}
+  end
+
+  defp resolve_file(%Brando.Files.File{} = file, _file_id), do: file
+  defp resolve_file(%Ecto.Changeset{} = changeset, _file_id), do: apply_changes(changeset)
+
+  defp resolve_file(%Ecto.Association.NotLoaded{}, file_id), do: fetch_file(file_id)
+  defp resolve_file(nil, file_id), do: fetch_file(file_id)
+  defp resolve_file(file, _file_id), do: file
+
+  defp fetch_file(nil), do: nil
+
+  defp fetch_file(file_id) do
+    case Brando.Files.get_file(file_id) do
+      {:ok, file} -> file
+      _ -> nil
+    end
   end
 
   def try_force_int(str) when is_binary(str), do: String.to_integer(str)
@@ -74,15 +115,24 @@ defmodule BrandoAdmin.Components.Form.Input.File do
   def render(assigns) do
     ~H"""
     <div>
-      <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} relation>
+      <Form.field_base
+        field={@field}
+        label={@label}
+        instructions={@instructions}
+        class={@class}
+        compact={@compact}
+        relation
+      >
         <div>
           <div class="input-file">
             <.file_preview
               file={@file}
               field={@field}
               relation_field={@relation_field}
-              click={open_file(@myself)}
+              click={@editable && open_file(@myself)}
               file_name={@file_name}
+              editable={@editable}
+              compact={@compact}
             />
           </div>
         </div>
@@ -100,25 +150,28 @@ defmodule BrandoAdmin.Components.Form.Input.File do
   def handle_event(
         "open_file",
         _,
-        %{assigns: %{field: field, relation_field: relation_field, file_id: file_id, file: file, myself: myself}} = socket
+        %{
+          assigns: %{
+            field: field,
+            relation_field: relation_field,
+            file_id: file_id,
+            file: file,
+            myself: myself,
+            path: path,
+            form_id: form_id
+          }
+        } = socket
       ) do
-    path =
-      ~r/\[(\w+)\]/
-      |> Regex.scan(field.form.name, capture: :all_but_first)
-      |> Enum.map(&(&1 |> List.first() |> String.to_existing_atom()))
-
-    module = field.form.source.data.__struct__
-
     send_update(BrandoAdmin.Components.FilePicker,
       id: "file-picker",
       config_target: {"file", field.form.data.__struct__, field.field},
       event_target: myself,
       multi: false,
-      selected_files: []
+      selected_files: if(file_id, do: [file_id], else: [])
     )
 
     send_update(BrandoAdmin.Components.Form,
-      id: "#{module.__naming__().singular}_form",
+      id: form_id,
       action: :update_edit_file,
       edit_file: %{
         id: file_id,
@@ -133,12 +186,11 @@ defmodule BrandoAdmin.Components.Form.Input.File do
     {:noreply, socket}
   end
 
-  def handle_event("select_file", %{"id" => selected_file_id}, %{assigns: %{field: field}} = socket) do
+  def handle_event("select_file", %{"id" => selected_file_id}, socket) do
     {:ok, file} = Brando.Files.get_file(selected_file_id)
-    module = field.form.source.data.__struct__
 
     send_update(BrandoAdmin.Components.Form,
-      id: "#{module.__naming__().singular}_form",
+      id: socket.assigns.form_id,
       action: :update_edit_file,
       file: file
     )
@@ -154,6 +206,8 @@ defmodule BrandoAdmin.Components.Form.Input.File do
       assigns
       |> assign_new(:value, fn -> nil end)
       |> assign_new(:publish, fn -> false end)
+      |> assign_new(:editable, fn -> true end)
+      |> assign_new(:compact, fn -> false end)
       |> assign_new(:file_id, fn ->
         if assigns[:file] do
           assigns[:file].id
@@ -162,7 +216,13 @@ defmodule BrandoAdmin.Components.Form.Input.File do
 
     ~H"""
     <div class="file-preview">
-      <Input.input type={:hidden} field={@relation_field} value={@value || @file_id} publish={@publish} />
+      <Input.input
+        :if={@editable}
+        type={:hidden}
+        field={@relation_field}
+        value={@value || @file_id}
+        publish={@publish}
+      />
 
       <%= if @file do %>
         <div class="img-placeholder">
@@ -170,12 +230,12 @@ defmodule BrandoAdmin.Components.Form.Input.File do
             <path fill="none" d="M0 0h24v24H0z" /><path d="M20 22H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1zm-1-2V4H5v16h14zM8 7h8v2H8V7zm0 4h8v2H8v-2zm0 4h5v2H8v-2z" />
           </svg>
         </div>
-        <div class="file-info">
+        <div :if={@editable} class="file-info">
           <div>
             <div class="name">
               {@file_name} ({Brando.Utils.human_size(@file.filesize)})
             </div>
-            <div class="updated">
+            <div :if={!@compact} class="updated">
               {gettext("Last updated")}: {Brando.Utils.Datetime.format_datetime(@file.updated_at, "%d/%m/%y, %H:%M")}
             </div>
           </div>
@@ -189,8 +249,8 @@ defmodule BrandoAdmin.Components.Form.Input.File do
             <path fill="none" d="M0 0h24v24H0z" /><path d="M20 22H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1zm-1-2V4H5v16h14zM8 7h8v2H8V7zm0 4h8v2H8v-2zm0 4h5v2H8v-2z" />
           </svg>
         </div>
-        <div class="file-info">
-          {gettext("No file associated with field")}
+        <div :if={@editable} class="file-info">
+          <span :if={!@compact}>{gettext("No file associated with field")}</span>
           <button class="tiny" type="button" phx-click={@click} phx-value-id={"edit-file-#{@field.id}"}>
             {gettext("Add file")}
           </button>

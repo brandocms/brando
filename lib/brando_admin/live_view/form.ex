@@ -515,16 +515,19 @@ defmodule BrandoAdmin.LiveView.Form do
       )
   end
 
-  # Vars only hold image/file FKs — classify by struct (the target's
+  # Scalar vars hold image/file/video FKs — classify by struct (the target's
   # "asset_type" string can lie for e.g. self-hosted video), and refuse
   # anything else rather than writing a foreign id into file_id.
-  defp deliver_asset(%{"kind" => "block_var", "component_id" => component_id}, asset, _socket)
-       when is_binary(component_id) and
-              (is_struct(asset, Brando.Images.Image) or is_struct(asset, Brando.Files.File)) do
+  defp deliver_asset(%{"kind" => kind, "component_id" => component_id}, asset, _socket)
+       when kind in ["block_var", "entry_var"] and
+              is_binary(component_id) and
+              (is_struct(asset, Brando.Images.Image) or is_struct(asset, Brando.Files.File) or
+                 is_struct(asset, Brando.Videos.Video)) do
     asset_type =
       case asset do
         %Brando.Images.Image{} -> :image
         %Brando.Files.File{} -> :file
+        %Brando.Videos.Video{} -> :video
       end
 
     # Mirror the old var upload flow: track processing updates for the image
@@ -558,6 +561,19 @@ defmodule BrandoAdmin.LiveView.Form do
     )
 
     maybe_forward_already_processed(image, BrandoAdmin.Components.Form.Input.Blocks.PictureBlock, component_id)
+  end
+
+  defp deliver_asset(
+         %{"kind" => "block_ref_file", "component_id" => component_id},
+         %Brando.Files.File{} = file,
+         _socket
+       )
+       when is_binary(component_id) do
+    send_update(BrandoAdmin.Components.Form.Input.Blocks.FileBlock,
+      id: component_id,
+      event: "live_upload_complete",
+      file: file
+    )
   end
 
   # Gallery refs add the image_id immediately (placeholder renders while
@@ -612,12 +628,7 @@ defmodule BrandoAdmin.LiveView.Form do
     # the processed struct lands in the changeset, not the :unprocessed one.
     asset = refresh_processed_image(asset)
 
-    path =
-      (target["path"] || [])
-      |> Enum.map(fn
-        seg when is_integer(seg) -> seg
-        seg when is_binary(seg) -> String.to_existing_atom(seg)
-      end)
+    path = target_path(target)
 
     send_update(BrandoAdmin.Components.Form,
       id: "#{singular}_form",
@@ -630,7 +641,7 @@ defmodule BrandoAdmin.LiveView.Form do
   end
 
   defp deliver_asset(
-         %{"kind" => "entry_field_gallery", "field" => field},
+         %{"kind" => "entry_field_gallery", "field" => field} = target,
          %Brando.Images.Image{} = image,
          socket
        )
@@ -644,12 +655,15 @@ defmodule BrandoAdmin.LiveView.Form do
       event: "entry_field_upload_complete",
       asset_type: :gallery,
       field: String.to_existing_atom(field),
+      path: target_path(target),
+      component_id: target["component_id"],
+      config_target: target["config_target"],
       asset: refresh_processed_image(image)
     )
   end
 
   defp deliver_asset(
-         %{"kind" => "entry_field_gallery", "field" => field},
+         %{"kind" => "entry_field_gallery", "field" => field} = target,
          %Brando.Videos.Video{} = video,
          socket
        )
@@ -661,6 +675,9 @@ defmodule BrandoAdmin.LiveView.Form do
       event: "entry_field_upload_complete",
       asset_type: :gallery_video,
       field: String.to_existing_atom(field),
+      path: target_path(target),
+      component_id: target["component_id"],
+      config_target: target["config_target"],
       asset: video
     )
   end
@@ -671,6 +688,14 @@ defmodule BrandoAdmin.LiveView.Form do
     Logger.debug(
       "==> asset_ready: no deliverable target (#{inspect(target)}) — asset ##{asset.id} remains in the library"
     )
+  end
+
+  defp target_path(target) do
+    (target["path"] || [])
+    |> Enum.map(fn
+      segment when is_integer(segment) -> segment
+      segment when is_binary(segment) -> String.to_existing_atom(segment)
+    end)
   end
 
   # Processing can finish before this LV handles :asset_ready (Oban

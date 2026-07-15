@@ -20,6 +20,12 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
     attributes do
       attribute :class, :string
       attribute :lightbox, :boolean, default: false
+      attribute :image_config_target, :string
+      attribute :video_config_target, :string
+
+      attribute :allowed_types, {:array, Ecto.Enum},
+        values: [:image, :video],
+        default: [:image, :video]
 
       attribute :placeholder, :enum,
         values: [:svg, :dominant_color, :dominant_color_faded, :micro, :none],

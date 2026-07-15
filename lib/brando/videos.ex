@@ -41,6 +41,9 @@ defmodule Brando.Videos do
         target_string = "default"
         from t in query, where: t.config_target == ^target_string
 
+      {:config_target, target_string}, query when is_binary(target_string) ->
+        from t in query, where: t.config_target == ^target_string
+
       {:config_target, {type, schema, field}}, query ->
         target_string = "#{type}:#{inspect(schema)}:#{field}"
         from t in query, where: t.config_target == ^target_string
@@ -129,13 +132,22 @@ defmodule Brando.Videos do
   def get_config_for(%{config_target: config_target}) when is_binary(config_target) do
     config =
       case String.split(config_target, ":") do
-        [type, schema, "function", fn_string] when type in ["video"] ->
+        ["video", schema, "function", fn_string] ->
           Brando.Assets.ConfigTarget.config_function!(schema, fn_string)
 
-        [type, schema, field_name] when type in ["video"] ->
+        ["gallery", schema, "function", fn_string] ->
+          schema
+          |> Brando.Assets.ConfigTarget.config_function!(fn_string)
+          |> gallery_video_config()
+
+        [type, schema, field_name] when type in ["video", "gallery"] ->
           case Brando.Assets.ConfigTarget.schema_module(schema) do
-            {:ok, schema_module} -> video_field_cfg(schema_module, field_name)
-            :error -> default_video_config()
+            {:ok, schema_module} ->
+              cfg = video_field_cfg(schema_module, field_name)
+              if type == "gallery", do: gallery_video_config(cfg), else: cfg
+
+            :error ->
+              default_video_config()
           end
 
         ["default"] ->
@@ -152,6 +164,9 @@ defmodule Brando.Videos do
   def get_config_for(_) do
     get_config_for(%{config_target: "default"})
   end
+
+  defp gallery_video_config(%{video: video}), do: video
+  defp gallery_video_config(_), do: default_video_config()
 
   @doc """
   Whether direct (in-CMS) video upload is actually usable for the given strategy —

@@ -19,6 +19,41 @@ defmodule Brando.Assets.ConfigTarget do
   (`Brando.Uploads.resolve_*_config/1`); pipeline callers surface the raise.
   """
 
+  @asset_types ~w(image file video gallery)
+
+  @doc """
+  Serialize a config target into the canonical string stored on assets and
+  passed through upload contracts.
+
+  Form inputs commonly use tuples internally so they can retain the schema
+  module and field atom. Browser/provider boundaries must not guess how to
+  stringify those tuples: a provider video created with the wrong target is
+  subsequently invisible to the originating picker and loses its field-level
+  configuration.
+  """
+  def serialize(nil), do: nil
+  def serialize(target) when is_binary(target), do: target
+
+  def serialize({type, schema, field}) do
+    type = asset_type!(type)
+    schema = schema_name!(schema)
+    field = segment!(field, :field)
+    "#{type}:#{schema}:#{field}"
+  end
+
+  def serialize({type, schema, :function, function}) do
+    type = asset_type!(type)
+    schema = schema_name!(schema)
+    function = segment!(function, :function)
+    "#{type}:#{schema}:function:#{function}"
+  end
+
+  def serialize(%{config_target: target}), do: serialize(target)
+
+  def serialize(target) do
+    raise ArgumentError, "invalid config_target #{inspect(target)}"
+  end
+
   @doc """
   Resolve a schema segment to an existing, loaded blueprint module.
 
@@ -80,7 +115,8 @@ defmodule Brando.Assets.ConfigTarget do
         atom
 
       :error ->
-        raise ArgumentError, "invalid config_target field #{inspect(field_name)} for #{inspect(schema)}"
+        raise ArgumentError,
+              "invalid config_target field #{inspect(field_name)} for #{inspect(schema)}"
     end
   end
 
@@ -88,5 +124,38 @@ defmodule Brando.Assets.ConfigTarget do
     {:ok, String.to_existing_atom(string)}
   rescue
     ArgumentError -> :error
+  end
+
+  defp asset_type!(type) when is_atom(type), do: asset_type!(Atom.to_string(type))
+
+  defp asset_type!(type) when type in @asset_types, do: type
+
+  defp asset_type!(type) do
+    raise ArgumentError, "invalid config_target asset type #{inspect(type)}"
+  end
+
+  defp schema_name!(schema) when is_atom(schema) do
+    if Code.ensure_loaded?(schema) and Brando.Blueprint.blueprint?(schema) do
+      inspect(schema)
+    else
+      raise ArgumentError,
+            "invalid config_target schema #{inspect(schema)} — must be a loaded Brando blueprint module"
+    end
+  end
+
+  defp schema_name!(schema) when is_binary(schema) do
+    schema_module!(schema) |> inspect()
+  end
+
+  defp schema_name!(schema) do
+    raise ArgumentError, "invalid config_target schema #{inspect(schema)}"
+  end
+
+  defp segment!(segment, _kind) when is_atom(segment), do: Atom.to_string(segment)
+
+  defp segment!(segment, _kind) when is_binary(segment) and segment != "", do: segment
+
+  defp segment!(segment, kind) do
+    raise ArgumentError, "invalid config_target #{kind} #{inspect(segment)}"
   end
 end

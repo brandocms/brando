@@ -46,6 +46,31 @@ defmodule Brando.Assets.ConfigTargetTest do
     end
   end
 
+  describe "serialize/1" do
+    test "serializes field and function targets canonically" do
+      assert ConfigTarget.serialize({"image", Brando.Pages.Page, :cover}) ==
+               "image:Brando.Pages.Page:cover"
+
+      assert ConfigTarget.serialize({:video, Brando.Pages.Page, :function, :video_cfg}) ==
+               "video:Brando.Pages.Page:function:video_cfg"
+    end
+
+    test "passes strings through and unwraps target maps" do
+      assert ConfigTarget.serialize("default") == "default"
+
+      assert ConfigTarget.serialize(%{config_target: "file:Brando.Pages.Page:document"}) ==
+               "file:Brando.Pages.Page:document"
+    end
+
+    test "rejects unsupported types and non-blueprint modules" do
+      assert_raise ArgumentError, fn ->
+        ConfigTarget.serialize({:audio, Brando.Pages.Page, :track})
+      end
+
+      assert_raise ArgumentError, fn -> ConfigTarget.serialize({:image, System, :cover}) end
+    end
+  end
+
   describe "hostile config_target through the upload facade" do
     test "falls back to the default config instead of executing" do
       assert {%Brando.Type.FileConfig{}, "default"} =

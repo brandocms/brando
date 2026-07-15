@@ -14,6 +14,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   @ref_types [
     %{value: "text", label: "Text"},
     %{value: "header", label: "Header"},
+    %{value: "file", label: "File"},
     %{value: "picture", label: "Picture"},
     %{value: "gallery", label: "Gallery"},
     %{value: "video", label: "Video"},
@@ -30,6 +31,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     %{value: "string", label: "String"},
     %{value: "image", label: "Image"},
     %{value: "file", label: "File"},
+    %{value: "video", label: "Video"},
+    %{value: "gallery", label: "Gallery"},
     %{value: "boolean", label: "Boolean"},
     %{value: "select", label: "Select"},
     %{value: "link", label: "Link"},

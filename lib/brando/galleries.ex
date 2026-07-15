@@ -29,6 +29,9 @@ defmodule Brando.Galleries do
 
   filters Gallery do
     fn
+      {:ids, ids}, query when is_list(ids) ->
+        from t in query, where: t.id in ^ids
+
       {:config_target, nil}, query ->
         from(t in query)
 

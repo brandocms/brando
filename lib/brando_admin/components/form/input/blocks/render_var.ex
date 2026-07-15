@@ -40,14 +40,33 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     # Entry-level link vars route SelectIdentifier picks back here (no owning
     # block to receive "update_block_var") — apply them through on_change/2 so
     # the nil-on_change clause syncs the FK into the parent form.
-    {var_change_events, var_updates} =
+    {var_change_events, remaining_updates} =
       Enum.split_with(rest, fn {assigns, _socket} ->
         Map.has_key?(assigns, :event) && assigns.event == "update_block_var"
+      end)
+
+    {video_created_events, var_updates} =
+      Enum.split_with(remaining_updates, fn {assigns, _socket} ->
+        Map.has_key?(assigns, :event) && assigns.event == "video_created_from_url"
       end)
 
     var_change_results =
       Enum.map(var_change_events, fn {assigns, socket} ->
         on_change(socket, assigns.data)
+      end)
+
+    video_created_results =
+      Enum.map(video_created_events, fn {assigns, socket} ->
+        {:ok, video} =
+          Brando.Videos.get_video(%{
+            matches: %{id: assigns.video_data.id},
+            preload: [:thumbnail, :file]
+          })
+
+        socket
+        |> assign(:video, video)
+        |> assign(:video_id, video.id)
+        |> on_change(%{video: video, video_id: video.id})
       end)
 
     # Handle upload_complete events directly (no DB lookups needed)
@@ -65,6 +84,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             |> assign(:file, assigns.asset)
             |> assign(:file_id, assigns.asset.id)
             |> on_change(%{file: assigns.asset, file_id: assigns.asset.id})
+
+          :video ->
+            socket
+            |> assign(:video, assigns.asset)
+            |> assign(:video_id, assigns.asset.id)
+            |> on_change(%{video: assigns.asset, video_id: assigns.asset.id})
         end
       end)
 
@@ -78,11 +103,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         []
       end
 
-    upload_results ++ var_change_results ++ var_results
+    upload_results ++ var_change_results ++ video_created_results ++ var_results
   end
 
   defp collect_asset_ids(assigns_sockets) do
-    Enum.reduce(assigns_sockets, %{images: [], files: [], identifiers: []}, fn
+    Enum.reduce(assigns_sockets, %{images: [], files: [], videos: [], galleries: [], identifiers: []}, fn
       {%{id: id, var: %{source: changeset}}, _socket}, acc ->
         collect_asset_id_for_type(get_field(changeset, :type), changeset, id, acc)
     end)
@@ -98,6 +123,16 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     %{acc | files: [{id, file_id} | acc.files]}
   end
 
+  defp collect_asset_id_for_type(:video, changeset, id, acc) do
+    video_id = get_field(changeset, :video_id)
+    %{acc | videos: [{id, video_id} | acc.videos]}
+  end
+
+  defp collect_asset_id_for_type(:gallery, changeset, id, acc) do
+    gallery_id = get_field(changeset, :gallery_id)
+    %{acc | galleries: [{id, gallery_id} | acc.galleries]}
+  end
+
   defp collect_asset_id_for_type(:link, changeset, id, acc) do
     case get_field(changeset, :identifier_id) do
       nil -> acc
@@ -111,6 +146,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     %{
       images: fetch_and_map_assets(asset_ids.images, &fetch_images/1),
       files: fetch_and_map_assets(asset_ids.files, &fetch_files/1),
+      videos: fetch_and_map_assets(asset_ids.videos, &fetch_videos/1),
+      galleries: fetch_and_map_assets(asset_ids.galleries, &fetch_galleries/1),
       identifiers: fetch_and_map_assets(asset_ids.identifiers, &fetch_identifiers/1)
     }
   end
@@ -133,6 +170,17 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     Brando.Files.list_files(%{filter: %{ids: ids}, cache: {:ttl, :timer.minutes(5)}})
   end
 
+  defp fetch_videos(ids) do
+    Brando.Videos.list_videos(%{filter: %{ids: ids}, preload: [:thumbnail, :file]})
+  end
+
+  defp fetch_galleries(ids) do
+    Brando.Galleries.list_galleries(%{
+      filter: %{ids: ids},
+      preload: [gallery_objects: [:image, video: [:thumbnail, :file]]]
+    })
+  end
+
   defp fetch_identifiers(ids) do
     Brando.Content.list_identifiers(%{
       filter: %{ids: ids},
@@ -145,6 +193,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     socket
     |> refresh_asset_assign(:image, :image_id, lookups.images, assigns)
     |> refresh_asset_assign(:file, :file_id, lookups.files, assigns)
+    |> refresh_asset_assign(:video, :video_id, lookups.videos, assigns)
+    |> refresh_asset_assign(:gallery, :gallery_id, lookups.galleries, assigns)
     |> assign(:identifier, lookup_asset(lookups.identifiers, assigns.id))
     |> assign_var_fields(assigns)
   end
@@ -183,6 +233,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign(assigns)
     |> assign(:id, assigns.id)
     |> assign(:edit, Map.get(assigns, :edit, false))
+    |> assign(:upload_kind, if(Map.get(assigns, :on_change), do: "block_var", else: "entry_var"))
     |> assign(:target, Map.get(assigns, :target, nil))
     |> assign(:should_render?, should_render?(Map.get(assigns, :render, :all), important))
     |> assign(:important, important)
@@ -195,14 +246,19 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       Enum.map(schemas, &%{label: &1.__naming__().singular, value: &1})
     end)
     |> assign_new(:form_id, fn -> nil end)
+    |> assign_new(:current_user_id, fn -> get_field(changeset, :creator_id) end)
     |> assign_new(:on_change, fn -> nil end)
     |> assign_new(:images, fn -> nil end)
     |> assign_new(:files, fn -> nil end)
+    |> assign_new(:videos, fn -> nil end)
+    |> assign_new(:galleries, fn -> nil end)
     |> assign_new(:inner_block, fn -> nil end)
     |> assign_new(:identifiers, fn -> nil end)
     |> assign_new(:value_id, fn -> value end)
     |> assign_new(:image_id, fn -> if type == :image, do: value end)
     |> assign_new(:file_id, fn -> if type == :file, do: value end)
+    |> assign_new(:video_id, fn -> if type == :video, do: value end)
+    |> assign_new(:gallery_id, fn -> if type == :gallery, do: value end)
     |> assign(:identifier_id, get_field(changeset, :identifier_id))
     |> assign(:instructions, get_field(changeset, :instructions))
     |> assign(:placeholder, get_field(changeset, :placeholder))
@@ -211,6 +267,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   defp extract_value(:image, changeset), do: get_field(changeset, :image_id)
   defp extract_value(:file, changeset), do: get_field(changeset, :file_id)
+  defp extract_value(:video, changeset), do: get_field(changeset, :video_id)
+  defp extract_value(:gallery, changeset), do: get_field(changeset, :gallery_id)
   defp extract_value(:boolean, changeset), do: get_field(changeset, :value_boolean)
   defp extract_value(_type, changeset), do: get_field(changeset, :value)
 
@@ -249,6 +307,14 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   defp control_value(:file, value) when is_binary(value), do: nil
   defp control_value(:file, value) when is_boolean(value), do: nil
   defp control_value(:file, value), do: value
+
+  defp control_value(:video, value) when is_binary(value), do: nil
+  defp control_value(:video, value) when is_boolean(value), do: nil
+  defp control_value(:video, value), do: value
+
+  defp control_value(:gallery, value) when is_binary(value), do: nil
+  defp control_value(:gallery, value) when is_boolean(value), do: nil
+  defp control_value(:gallery, value), do: value
 
   defp control_value(:link, value) when is_binary(value), do: nil
   defp control_value(:link, value) when is_boolean(value), do: nil
@@ -292,12 +358,14 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                     %{label: "Color", value: "color"},
                     %{label: "Datetime", value: "datetime"},
                     %{label: "File", value: "file"},
+                    %{label: "Gallery", value: "gallery"},
                     %{label: "Html", value: "html"},
                     %{label: "Image", value: "image"},
                     %{label: "Link", value: "link"},
                     %{label: "String", value: "string"},
                     %{label: "Select", value: "select"},
-                    %{label: "Text", value: "text"}
+                    %{label: "Text", value: "text"},
+                    %{label: "Video", value: "video"}
                   ]
                 ]}
                 publish={@publish}
@@ -327,10 +395,16 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 images={@images}
                 file={@file}
                 files={@files}
+                video={@video}
+                videos={@videos}
+                gallery={@gallery}
+                galleries={@galleries}
                 label={@label}
                 value_id={@value_id}
                 image_id={@image_id}
                 file_id={@file_id}
+                video_id={@video_id}
+                gallery_id={@gallery_id}
                 identifier={@identifier}
                 identifier_id={@identifier_id}
                 placeholder={@placeholder}
@@ -340,6 +414,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                 on_change={@on_change}
                 component_id={@id}
                 var_key={@key}
+                upload_kind={@upload_kind}
               />
 
               <%= case @type do %>
@@ -417,10 +492,16 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               images={@images}
               file={@file}
               files={@files}
+              video={@video}
+              videos={@videos}
+              gallery={@gallery}
+              galleries={@galleries}
               label={@label}
               value_id={@value_id}
               image_id={@image_id}
               file_id={@file_id}
+              video_id={@video_id}
+              gallery_id={@gallery_id}
               identifier={@identifier}
               identifier_id={@identifier_id}
               placeholder={@placeholder}
@@ -430,6 +511,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               on_change={@on_change}
               component_id={@id}
               var_key={@key}
+              upload_kind={@upload_kind}
             />
           </div>
         <% end %>
@@ -438,27 +520,34 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     """
   end
 
-  attr :edit, :boolean, default: false
-  attr :id, :any
-  attr :type, :any
-  attr :var, :any
-  attr :identifier, :any
-  attr :image, :any
-  attr :images, :any
-  attr :file, :any
-  attr :files, :any
-  attr :label, :any
-  attr :value_id, :any
-  attr :image_id, :any
-  attr :file_id, :any
-  attr :identifier_id, :any
-  attr :placeholder, :any
-  attr :instructions, :any
-  attr :target, :any
-  attr :publish, :any
-  attr :on_change, :any
-  attr :component_id, :any, default: nil
-  attr :var_key, :any, default: nil
+  attr(:edit, :boolean, default: false)
+  attr(:id, :any)
+  attr(:type, :any)
+  attr(:var, :any)
+  attr(:identifier, :any)
+  attr(:image, :any)
+  attr(:images, :any)
+  attr(:file, :any)
+  attr(:files, :any)
+  attr(:video, :any)
+  attr(:videos, :any)
+  attr(:gallery, :any)
+  attr(:galleries, :any)
+  attr(:label, :any)
+  attr(:value_id, :any)
+  attr(:image_id, :any)
+  attr(:file_id, :any)
+  attr(:video_id, :any)
+  attr(:gallery_id, :any)
+  attr(:identifier_id, :any)
+  attr(:placeholder, :any)
+  attr(:instructions, :any)
+  attr(:target, :any)
+  attr(:publish, :any)
+  attr(:on_change, :any)
+  attr(:component_id, :any, default: nil)
+  attr(:var_key, :any, default: nil)
+  attr(:upload_kind, :string, default: "entry_var")
 
   def render_value_inputs(%{type: nil} = assigns) do
     ~H"""
@@ -572,7 +661,14 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             file_name={@image && @image.path && Path.basename(@image.path)}
             publish
           />
-          <.image_modal field={@var} image={@image} target={@target} component_id={@component_id} var_key={@var_key} />
+          <.image_modal
+            field={@var}
+            image={@image}
+            target={@target}
+            component_id={@component_id}
+            var_key={@var_key}
+            upload_kind={@upload_kind}
+          />
         </div>
       </Form.field_base>
       <div :if={@edit} class="brando-input">
@@ -601,7 +697,14 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             click={show_modal("#var-#{@var.id}-file-config")}
             file_name={@file && @file.filename && Path.basename(@file.filename)}
           />
-          <.file_modal field={@var} file={@file} target={@target} component_id={@component_id} var_key={@var_key} />
+          <.file_modal
+            field={@var}
+            file={@file}
+            target={@target}
+            component_id={@component_id}
+            var_key={@var_key}
+            upload_kind={@upload_kind}
+          />
         </div>
       </Form.field_base>
       <div :if={@edit} class="brando-input">
@@ -611,6 +714,75 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           instructions={gettext("i.e: `file:Elixir.MyApp.Schema:function:fn_name`")}
           monospace
         />
+      </div>
+    </div>
+    """
+  end
+
+  def render_value_inputs(%{type: :video} = assigns) do
+    ~H"""
+    <div class="brando-input">
+      <Form.field_base field={@var[:video_id]} label={@label} instructions={@instructions} skip_presence>
+        <Input.hidden field={@var[:video_id]} value={@video_id || ""} />
+        <button
+          type="button"
+          class="file-card"
+          phx-click={show_modal("#var-#{@var.id}-video-config")}
+        >
+          <div class="file-card__icon"><.icon name="hero-play-circle" /></div>
+          <div class="file-card__meta">
+            <div class="file-card__name">
+              {(@video && (@video.title || @video.remote_id || @video.source_url)) || gettext("Select video")}
+            </div>
+            <div :if={@video} class="file-card__sub">{@video.type}</div>
+          </div>
+        </button>
+        <.video_modal field={@var} video={@video} target={@target} />
+      </Form.field_base>
+      <div :if={@edit} class="brando-input">
+        <Input.text
+          field={@var[:config_target]}
+          label={gettext("Config target")}
+          instructions={gettext("i.e: `video:Elixir.MyApp.Schema:function:fn_name`")}
+          monospace
+        />
+      </div>
+    </div>
+    """
+  end
+
+  def render_value_inputs(%{type: :gallery} = assigns) do
+    assigns = assign(assigns, :gallery_objects, gallery_objects(assigns.gallery))
+
+    ~H"""
+    <div class="brando-input">
+      <Form.field_base field={@var[:gallery_id]} label={@label} instructions={@instructions} skip_presence>
+        <Input.hidden field={@var[:gallery_id]} value={@gallery_id || ""} />
+        <button
+          type="button"
+          class="file-card"
+          phx-click={show_modal("#var-#{@var.id}-gallery-config")}
+        >
+          <div class="file-card__icon"><.icon name="hero-photo" /></div>
+          <div class="file-card__meta">
+            <div class="file-card__name">{gettext("Gallery")}</div>
+            <div class="file-card__sub">
+              {ngettext("%{count} asset", "%{count} assets", length(@gallery_objects))}
+            </div>
+          </div>
+        </button>
+        <.gallery_modal field={@var} gallery={@gallery} target={@target} />
+      </Form.field_base>
+      <div :if={@edit} class="brando-input">
+        <.live_component
+          module={Input.MultiSelect}
+          id={"#{@var.id}-gallery-allowed-types"}
+          field={@var[:gallery_allowed_types]}
+          label={gettext("Allowed media")}
+          opts={[options: [%{label: gettext("Images"), value: :image}, %{label: gettext("Videos"), value: :video}]]}
+        />
+        <Input.text field={@var[:gallery_image_config_target]} label={gettext("Image config target")} monospace />
+        <Input.text field={@var[:gallery_video_config_target]} label={gettext("Video config target")} monospace />
       </div>
     </div>
     """
@@ -701,8 +873,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> Phoenix.HTML.raw()
   end
 
-  attr :link_text, :string, default: nil
-  attr :identifier, :any, default: nil
+  attr(:link_text, :string, default: nil)
+  attr(:identifier, :any, default: nil)
 
   def link_identifier(assigns) do
     identifier = assigns.identifier
@@ -825,7 +997,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               id={"#{@field.id}-var-uploader"}
               class="input-image"
               phx-hook="Brando.UploadTrigger"
-              data-kind="block_var"
+              data-kind={@upload_kind}
               data-component-id={@component_id}
               data-var-key={@var_key}
               data-asset-type="image"
@@ -910,7 +1082,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               id={"#{@field.id}-var-uploader"}
               class="input-image"
               phx-hook="Brando.UploadTrigger"
-              data-kind="block_var"
+              data-kind={@upload_kind}
               data-component-id={@component_id}
               data-var-key={@var_key}
               data-asset-type="file"
@@ -961,6 +1133,113 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     """
   end
 
+  def video_modal(assigns) do
+    ~H"""
+    <Content.modal title={gettext("Video")} id={"var-#{@field.id}-video-config"}>
+      <div class="panels">
+        <div class="panel">
+          <%= if @video do %>
+            <img
+              :if={@video.thumbnail}
+              src={Utils.img_url(@video.thumbnail, :small, prefix: Utils.media_url())}
+              alt=""
+            />
+            <div class="image-info">
+              {@video.title || gettext("Untitled video")}<br />
+              <span :if={@video.caption}>{@video.caption}</span>
+            </div>
+          <% else %>
+            <p>{gettext("No video selected.")}</p>
+          <% end %>
+        </div>
+        <div class="panel">
+          <div class="button-group-vertical">
+            <button
+              type="button"
+              class="secondary"
+              phx-click={JS.push("set_video_target", target: @target) |> toggle_drawer("#video-picker")}
+            >
+              {if @video, do: gettext("Replace video"), else: gettext("Select video")}
+            </button>
+            <button :if={@video} type="button" class="danger" phx-click={JS.push("reset_video", target: @target)}>
+              {gettext("Reset video")}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Content.modal>
+    """
+  end
+
+  def gallery_modal(assigns) do
+    objects = gallery_objects(assigns.gallery)
+    allowed_types = assigns.field[:gallery_allowed_types].value || [:image, :video]
+
+    assigns =
+      assigns
+      |> assign(:objects, objects)
+      |> assign(:allowed_types, allowed_types)
+
+    ~H"""
+    <Content.modal title={gettext("Gallery")} id={"var-#{@field.id}-gallery-config"} wide>
+      <div class="gallery-input">
+        <div :if={@objects == []} class="empty">{gettext("No assets in this gallery.")}</div>
+        <div :if={@objects != []} class="gallery-objects gallery-objects--grid">
+          <div :for={object <- @objects} class="gallery-object">
+            <img
+              :if={object.image}
+              src={Utils.img_url(object.image, :small, prefix: Utils.media_url())}
+              alt=""
+            />
+            <div :if={object.video} class="file-card">
+              <div class="file-card__icon"><.icon name="hero-play-circle" /></div>
+              <div class="file-card__meta">{object.video.title || gettext("Untitled video")}</div>
+            </div>
+            <button
+              type="button"
+              class="tiny danger"
+              phx-click={JS.push("remove_gallery_object", target: @target, value: %{id: object.id})}
+            >
+              {gettext("Remove")}
+            </button>
+          </div>
+        </div>
+        <div class="actions">
+          <button
+            :if={:image in @allowed_types}
+            type="button"
+            class="secondary"
+            phx-click={JS.push("set_gallery_image_target", target: @target) |> toggle_drawer("#image-picker")}
+          >
+            {gettext("Add images")}
+          </button>
+          <button
+            :if={:video in @allowed_types}
+            type="button"
+            class="secondary"
+            phx-click={JS.push("set_gallery_video_target", target: @target) |> toggle_drawer("#video-picker")}
+          >
+            {gettext("Add videos")}
+          </button>
+          <button
+            :if={@gallery}
+            type="button"
+            class="danger"
+            phx-click={JS.push("reset_gallery", target: @target)}
+          >
+            {gettext("Reset gallery")}
+          </button>
+        </div>
+      </div>
+    </Content.modal>
+    """
+  end
+
+  defp gallery_objects(nil), do: []
+  defp gallery_objects(%{gallery_objects: %Ecto.Association.NotLoaded{}}), do: []
+  defp gallery_objects(%{gallery_objects: objects}) when is_list(objects), do: objects
+  defp gallery_objects(_), do: []
+
   def handle_event("focus", _, socket) do
     {:noreply, socket}
   end
@@ -981,13 +1260,59 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   def handle_event("set_file_target", _, %{assigns: %{myself: myself}} = socket) do
+    config_target = socket.assigns.var[:config_target].value || "default"
+
     send_update(
       BrandoAdmin.Components.FilePicker,
       id: "file-picker",
-      config_target: "default",
+      config_target: config_target,
       event_target: myself,
       multi: false,
-      selected_files: []
+      selected_files: if(socket.assigns.file_id, do: [socket.assigns.file_id], else: [])
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("set_video_target", _, %{assigns: %{myself: myself}} = socket) do
+    config_target = socket.assigns.var[:config_target].value || "default"
+
+    send_update(BrandoAdmin.Components.VideoPicker,
+      id: "video-picker",
+      config_target: config_target,
+      event_target: myself,
+      multi: false,
+      current_user: current_user(socket.assigns.current_user_id),
+      selected_videos: if(socket.assigns.video_id, do: [socket.assigns.video_id], else: [])
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("set_gallery_image_target", _, %{assigns: %{myself: myself}} = socket) do
+    gallery = socket.assigns.gallery
+
+    send_update(BrandoAdmin.Components.ImagePicker,
+      id: "image-picker",
+      config_target: socket.assigns.var[:gallery_image_config_target].value || "default",
+      event_target: myself,
+      multi: true,
+      selected_images: gallery_media_ids(gallery, :image_id)
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("set_gallery_video_target", _, %{assigns: %{myself: myself}} = socket) do
+    gallery = socket.assigns.gallery
+
+    send_update(BrandoAdmin.Components.VideoPicker,
+      id: "video-picker",
+      config_target: socket.assigns.var[:gallery_video_config_target].value || "default",
+      event_target: myself,
+      multi: true,
+      current_user: current_user(socket.assigns.current_user_id),
+      selected_videos: gallery_media_ids(gallery, :video_id)
     )
 
     {:noreply, socket}
@@ -1009,7 +1334,23 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> then(&{:noreply, &1})
   end
 
-  def handle_event("select_image", %{"id" => image_id}, socket) do
+  def handle_event("reset_video", _, socket) do
+    socket
+    |> assign(:video, nil)
+    |> assign(:video_id, nil)
+    |> on_change(%{video: nil, video_id: nil})
+    |> then(&{:noreply, &1})
+  end
+
+  def handle_event("reset_gallery", _, socket) do
+    socket
+    |> assign(:gallery, nil)
+    |> assign(:gallery_id, nil)
+    |> on_change(%{gallery: nil, gallery_id: nil})
+    |> then(&{:noreply, &1})
+  end
+
+  def handle_event("select_image", %{"id" => image_id}, %{assigns: %{type: :image}} = socket) do
     image = Brando.Images.get_image!(image_id)
 
     socket
@@ -1029,9 +1370,126 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> then(&{:noreply, &1})
   end
 
+  def handle_event("select_video", %{"id" => video_id}, %{assigns: %{type: :video}} = socket) do
+    {:ok, video} =
+      Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]})
+
+    socket
+    |> assign(:video_id, video.id)
+    |> assign(:video, video)
+    |> on_change(%{video: video, video_id: video.id})
+    |> then(&{:noreply, &1})
+  end
+
+  def handle_event("select_image", %{"id" => image_id}, %{assigns: %{type: :gallery}} = socket) do
+    {:noreply, toggle_gallery_media(socket, :image, image_id)}
+  end
+
+  def handle_event("select_video", %{"id" => video_id}, %{assigns: %{type: :gallery}} = socket) do
+    {:noreply, toggle_gallery_media(socket, :video, video_id)}
+  end
+
+  def handle_event("remove_gallery_object", %{"id" => object_id}, socket) do
+    {:noreply, remove_gallery_object(socket, object_id)}
+  end
+
   def handle_event("toggle_visible", _, socket) do
     {:noreply, update(socket, :visible, &(!&1))}
   end
+
+  defp toggle_gallery_media(socket, media_type, media_id) do
+    media_id = normalize_id(media_id)
+    id_field = if media_type == :image, do: :image_id, else: :video_id
+    objects = gallery_objects(socket.assigns.gallery)
+
+    updated_objects =
+      if Enum.any?(objects, &(Map.get(&1, id_field) == media_id)) do
+        Enum.reject(objects, &(Map.get(&1, id_field) == media_id))
+      else
+        objects ++ [%{id_field => media_id, creator_id: socket.assigns.current_user_id}]
+      end
+
+    persist_gallery(socket, updated_objects)
+  end
+
+  defp remove_gallery_object(socket, object_id) do
+    object_id = normalize_id(object_id)
+    objects = Enum.reject(gallery_objects(socket.assigns.gallery), &(&1.id == object_id))
+    persist_gallery(socket, objects)
+  end
+
+  defp persist_gallery(socket, objects) do
+    gallery = socket.assigns.gallery
+    current_user_id = socket.assigns.current_user_id
+
+    params = %{
+      config_target:
+        (gallery && gallery.config_target) ||
+          Brando.Assets.ConfigTarget.serialize({"gallery", Brando.Content.Var, :gallery}),
+      gallery_objects:
+        objects
+        |> Enum.map(&Brando.Galleries.slim_gallery_object/1)
+        |> Enum.with_index()
+        |> Enum.map(fn {object, sequence} ->
+          object
+          |> Map.put(:sequence, sequence)
+          |> Map.update(:creator_id, current_user_id, &(&1 || current_user_id))
+        end)
+    }
+
+    result =
+      (gallery || %Brando.Galleries.Gallery{})
+      |> Brando.Galleries.Gallery.changeset(params, current_user_id)
+      |> then(fn changeset ->
+        if gallery, do: Brando.Repo.update(changeset), else: Brando.Repo.insert(changeset)
+      end)
+
+    case result do
+      {:ok, saved_gallery} ->
+        saved_gallery =
+          Brando.Repo.preload(
+            saved_gallery,
+            [gallery_objects: [:image, video: [:thumbnail, :file]]],
+            force: true
+          )
+
+        Brando.Content.Blocks.render_entries_with_gallery_id(saved_gallery.id)
+        notify_gallery_pickers(saved_gallery)
+
+        socket
+        |> assign(:gallery, saved_gallery)
+        |> assign(:gallery_id, saved_gallery.id)
+        |> on_change(%{gallery: saved_gallery, gallery_id: saved_gallery.id})
+
+      {:error, changeset} ->
+        put_flash(socket, :error, gettext("Could not update gallery: %{error}", error: inspect(changeset.errors)))
+    end
+  end
+
+  defp notify_gallery_pickers(gallery) do
+    send_update(BrandoAdmin.Components.ImagePicker,
+      id: "image-picker",
+      selected_images: gallery_media_ids(gallery, :image_id)
+    )
+
+    send_update(BrandoAdmin.Components.VideoPicker,
+      id: "video-picker",
+      selected_videos: gallery_media_ids(gallery, :video_id)
+    )
+  end
+
+  defp gallery_media_ids(gallery, id_field) do
+    gallery
+    |> gallery_objects()
+    |> Enum.map(&Map.get(&1, id_field))
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp normalize_id(id) when is_integer(id), do: id
+  defp normalize_id(id) when is_binary(id), do: String.to_integer(id)
+
+  defp current_user(nil), do: nil
+  defp current_user(user_id), do: Brando.Repo.get(Brando.Users.User, user_id)
 
   # Entry-level vars have no owning block component (`on_change` unset) — their
   # FKs live in the parent entry form's changeset. Sync the picked/reset value
@@ -1069,6 +1527,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   defp var_fk_change(%{image_id: image_id}), do: {:image_id, image_id}
   defp var_fk_change(%{file_id: file_id}), do: {:file_id, file_id}
+  defp var_fk_change(%{video_id: video_id}), do: {:video_id, video_id}
+  defp var_fk_change(%{gallery_id: gallery_id}), do: {:gallery_id, gallery_id}
   defp var_fk_change(%{identifier: identifier}), do: {:identifier_id, identifier && identifier.id}
   defp var_fk_change(_), do: nil
 end

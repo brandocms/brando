@@ -170,9 +170,7 @@ defmodule Brando.Blueprint.Assets.Dsl do
 
   def transform(%{type: :gallery} = asset) do
     opts_map = Map.merge(Enum.into(asset.opts, %{}), %{module: Brando.Galleries.Gallery})
-    default_image_config = Brando.config(Brando.Images)[:default_config] || %{}
-    default_video_config = Brando.config(Brando.Videos)[:default_config] || %{}
-    default_config = %{video: default_video_config, image: default_image_config}
+    default_config = gallery_default_config()
 
     cfg =
       case Map.get(opts_map, :cfg) do
@@ -190,15 +188,13 @@ defmodule Brando.Blueprint.Assets.Dsl do
           default_config
 
         fun when is_function(fun) ->
-          fun.()
+          normalize_gallery_config(fun.(), default_config)
 
         map when is_map(map) ->
-          map = Brando.Utils.deep_merge(default_config, map)
-          struct(Brando.Type.ImageConfig, map)
+          normalize_gallery_config(map, default_config)
 
         kwlist when is_list(kwlist) ->
-          kwlist = Brando.Utils.deep_merge(default_config, Enum.into(kwlist, %{}))
-          struct(Brando.Type.ImageConfig, kwlist)
+          normalize_gallery_config(Enum.into(kwlist, %{}), default_config)
       end
 
     opts_map = Map.put(opts_map, :cfg, cfg)
@@ -209,6 +205,61 @@ defmodule Brando.Blueprint.Assets.Dsl do
   def transform(asset) do
     {:ok, %{asset | opts: Enum.into(asset.opts, %{})}}
   end
+
+  defp gallery_default_config do
+    %{
+      image:
+        normalize_asset_config(
+          Brando.Type.ImageConfig,
+          Brando.config(Brando.Images)[:default_config] || Brando.Type.ImageConfig.default_config()
+        ),
+      video:
+        normalize_asset_config(
+          Brando.Type.VideoConfig,
+          Brando.config(Brando.Videos)[:default_config] || Brando.Type.VideoConfig.default_config()
+        )
+    }
+  end
+
+  # A flat gallery cfg is the long-standing image-only syntax. Preserve it,
+  # while allowing `%{image: ..., video: ...}` to configure both media types.
+  defp normalize_gallery_config(%{image: image, video: video}, defaults) do
+    %{
+      image: merge_config(Brando.Type.ImageConfig, defaults.image, image),
+      video: merge_config(Brando.Type.VideoConfig, defaults.video, video)
+    }
+  end
+
+  defp normalize_gallery_config(%{image: image} = config, defaults) do
+    %{
+      image: merge_config(Brando.Type.ImageConfig, defaults.image, image),
+      video: merge_config(Brando.Type.VideoConfig, defaults.video, Map.get(config, :video, %{}))
+    }
+  end
+
+  defp normalize_gallery_config(%{video: video} = config, defaults) do
+    image_overrides = Map.delete(config, :video)
+
+    %{
+      image: merge_config(Brando.Type.ImageConfig, defaults.image, image_overrides),
+      video: merge_config(Brando.Type.VideoConfig, defaults.video, video)
+    }
+  end
+
+  defp normalize_gallery_config(config, defaults) do
+    %{defaults | image: merge_config(Brando.Type.ImageConfig, defaults.image, config)}
+  end
+
+  defp merge_config(module, default, overrides) do
+    default_map = if is_struct(default), do: Map.from_struct(default), else: Map.new(default)
+    override_map = if is_struct(overrides), do: Map.from_struct(overrides), else: Map.new(overrides)
+
+    module
+    |> struct(Brando.Utils.deep_merge(default_map, override_map))
+  end
+
+  defp normalize_asset_config(module, config) when is_struct(config, module), do: config
+  defp normalize_asset_config(module, config), do: struct(module, config)
 
   # Deep merges default_config into override, but replaces :sizes wholly
   # if the override provides its own sizes rather than merging individual

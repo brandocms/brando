@@ -16,8 +16,8 @@ test('pages have JSON-LD breadcrumbs', async ({ page }) => {
   await page.getByRole('button', { name: 'HEADERS' }).click()
   await page.getByRole('button', { name: 'Heading Large text' }).click()
   await expect(page.locator('#block-field-blocks-module-picker')).not.toBeVisible()
-  await page.getByText('Text').click()
-  await page.getByText('Text').fill('Our Services')
+  await page.getByText('Text', { exact: true }).click()
+  await page.getByText('Text', { exact: true }).fill('Our Services')
 
   await syncLV(page)
   await page.getByTestId('submit').click()
@@ -46,8 +46,8 @@ test('pages have JSON-LD breadcrumbs', async ({ page }) => {
   await page.getByRole('button', { name: 'HEADERS' }).click()
   await page.getByRole('button', { name: 'Heading Large text' }).click()
   await expect(page.locator('#block-field-blocks-module-picker')).not.toBeVisible()
-  await page.getByText('Text').click()
-  await page.getByText('Text').fill('Design Services')
+  await page.getByText('Text', { exact: true }).click()
+  await page.getByText('Text', { exact: true }).fill('Design Services')
 
   await syncLV(page)
   await page.getByTestId('submit').click()

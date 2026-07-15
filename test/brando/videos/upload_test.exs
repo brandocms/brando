@@ -52,4 +52,14 @@ defmodule Brando.Videos.UploadTest do
                Brando.Upload.handle_upload(meta, entry, @cfg, user)
     end
   end
+
+  test "video browser filtering accepts canonical string config targets" do
+    user = Factory.insert(:random_user)
+    target = "gallery:Elixir.Brando.GalleryConfigTest.Schema:media"
+    matching = Factory.insert(:video, creator: user, config_target: target)
+    _other = Factory.insert(:video, creator: user, config_target: "default")
+
+    assert {:ok, videos} = Brando.Videos.list_videos(%{filter: %{config_target: target}})
+    assert Enum.map(videos, & &1.id) == [matching.id]
+  end
 end

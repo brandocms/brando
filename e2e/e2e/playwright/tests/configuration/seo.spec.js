@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, confirmUploadFolder } from '../../utils'
 
 test('seo changes affect the frontpage', async ({ page }) => {
   await page.goto('/admin')
@@ -17,6 +17,7 @@ test('seo changes affect the frontpage', async ({ page }) => {
   // Add SEO image
   await page.getByRole('button', { name: 'Add image' }).click()
   await page.locator('#image-drawer-upload-input').setInputFiles('./fixtures/image.jpg')
+  await confirmUploadFolder(page)
   // Wait for upload to complete - the image should appear in the drawer
   await expect(page.locator('#image-drawer img')).toBeVisible({ timeout: 30000 })
   // Close drawer - this should save the image selection

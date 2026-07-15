@@ -18,7 +18,7 @@
  * Expected markup:
  *
  *   <div phx-hook="Brando.UploadTrigger"
- *        data-kind="block_var|block_ref_picture|block_ref_gallery|entry_field|entry_field_gallery"
+ *        data-kind="block_var|block_var_gallery|block_ref_picture|block_ref_file|block_ref_video|block_ref_gallery|entry_var|entry_var_gallery|entry_field|entry_field_gallery"
  *        data-component-id="..."
  *        data-asset-type="file|image|video"
  *        data-config-target="..."
@@ -29,31 +29,35 @@
  */
 export default (app) => ({
   mounted() {
-    const input = this.el.querySelector('input[type="file"]')
     this._pendingFiles = []
+    this._confirmedFolder = null
+    this.configureInput()
 
-    if (input) {
-      const accept = this.el.dataset.accept
-      if (accept) input.setAttribute('accept', accept)
-
-      input.addEventListener('change', (e) => {
-        e.stopPropagation()
-        if (e.target.files && e.target.files.length > 0) {
-          this.intake(Array.from(e.target.files), { viaDrop: false })
-        }
-        input.value = ''
-      })
+    // Delegate from the stable hook root. LiveView may replace the actual
+    // file input while patching gallery objects, but `change` still bubbles.
+    this._onInputChange = (e) => {
+      if (e.target !== this.el.querySelector(':scope > input[type="file"]')) return
+      this.handleInputChange(e)
     }
+    this.el.addEventListener('change', this._onInputChange)
 
     this.el.addEventListener('click', (e) => {
       if (e.target.closest('.upload-trigger')) {
         e.stopPropagation()
-        if (input) input.click()
+        const input = this.el.querySelector('input[type="file"]')
+        if (input) {
+          // Arm the current input itself. Nested LiveComponents can replace or
+          // retain hook roots in an order where a delegated listener is briefly
+          // unavailable; the user-triggered chooser must still always upload.
+          input.addEventListener('change', (event) => this.handleInputChange(event), { once: true })
+          input.click()
+        }
         return
       }
       if (e.target.closest('button') || e.target.closest('a')) return
       if (this.el.dataset.clickMode === 'trigger') return
       e.stopPropagation()
+      const input = this.el.querySelector('input[type="file"]')
       if (input) input.click()
     })
 
@@ -82,7 +86,7 @@ export default (app) => ({
       e.stopPropagation()
       this.el.classList.remove('dragging')
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-        this.intake(Array.from(e.dataTransfer.files), { viaDrop: true })
+        this.intake(Array.from(e.dataTransfer.files))
       }
     })
 
@@ -91,6 +95,7 @@ export default (app) => ({
         if (upload_name !== this.el.id) return
         if (!this._pendingFiles.length) return
 
+        this._confirmedFolder = { folder, folder_id }
         this.storeRecentFolder(folder)
         const files = this._pendingFiles.splice(0)
         this.enqueue(files, { folder, folder_id })
@@ -98,11 +103,44 @@ export default (app) => ({
     }
   },
 
-  // The folder browser only opens for DROPPED files (matching the old
-  // BlockUpload behavior) — file-dialog selections upload straight to the
-  // target's default/config folder.
-  intake(files, { viaDrop } = { viaDrop: false }) {
-    if (viaDrop && this.el.dataset.folderBrowser === 'true') {
+  updated() {
+    // Some nested component patches tear down the DOM listener while keeping
+    // the hook instance. Re-attach idempotently on every update.
+    this.el.removeEventListener('change', this._onInputChange)
+    this.el.addEventListener('change', this._onInputChange)
+    this.configureInput()
+  },
+
+  configureInput() {
+    const input = this.el.querySelector(':scope > input[type="file"]')
+    if (!input) return
+
+    const accept = this.el.dataset.accept
+    if (accept) input.setAttribute('accept', accept)
+  },
+
+  handleInputChange(e) {
+    e.stopPropagation()
+    if (e.target.files && e.target.files.length > 0) {
+      this.intake(Array.from(e.target.files))
+    }
+    e.target.value = ''
+  },
+
+  // Folder behavior belongs to the target context, not the input gesture.
+  // A click-selected file and a dropped file must therefore follow the same
+  // configured-folder/current-folder/default-folder precedence.
+  intake(files) {
+    const configTarget = this.el.dataset.configTarget || 'default'
+
+    // A concrete form/ref/var target already owns its destination through its
+    // upload config. Ask for a folder only when the target is truly default.
+    if (this.el.dataset.folderBrowser === 'true' && configTarget === 'default') {
+      if (this._confirmedFolder) {
+        this.enqueue(files, this._confirmedFolder)
+        return
+      }
+
       this._pendingFiles = files
       this.openFolderBrowser(files.length)
     } else {

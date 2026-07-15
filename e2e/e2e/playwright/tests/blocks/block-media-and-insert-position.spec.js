@@ -4,7 +4,8 @@ import {
   toggleLivePreview,
   getPreviewFrame,
   waitForPreviewReady,
-  waitForPreviewUpdate
+  waitForPreviewUpdate,
+  confirmUploadFolder
 } from '../../utils'
 
 // Regression guards for two block-editor bugs:
@@ -58,6 +59,7 @@ test.describe('Block regressions: media persistence + insert position', () => {
 
     // Upload an image and confirm it renders in the preview
     await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
     await syncLV(page)
     await page.waitForTimeout(2000) // upload + processing
     await waitForPreviewUpdate(page)

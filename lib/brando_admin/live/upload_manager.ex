@@ -21,6 +21,7 @@ defmodule BrandoAdmin.UploadManager do
   require Logger
 
   alias Brando.Uploads
+  alias Brando.Uploads.AssetIntent
 
   # Finished items clear themselves; errors stay until dismissed.
   @auto_dismiss_ms 4_000
@@ -44,7 +45,10 @@ defmodule BrandoAdmin.UploadManager do
      |> allow_upload(:queue,
        accept: :any,
        max_entries: 20,
-       max_file_size: Uploads.max_file_size(),
+       # Intake has already applied the resolved target config's size_limit.
+       # This larger value is the Phoenix transport backstop; using the 50 MB
+       # fallback here rejected otherwise-valid 100 MB+ file/video configs.
+       max_file_size: Uploads.manager_max_file_size(),
        auto_upload: true,
        progress: &handle_progress/3
      )}
@@ -59,53 +63,10 @@ defmodule BrandoAdmin.UploadManager do
   end
 
   def handle_event("intake", %{"files" => files, "target" => target}, socket) do
-    asset_type = parse_asset_type(target["asset_type"])
-    user = socket.assigns.current_user
-
-    {decisions, socket} =
-      Enum.map_reduce(files, socket, fn file, socket ->
-        name = Map.get(file, "name", "")
-        size = Map.get(file, "size", 0)
-        mime_type = Map.get(file, "type", "")
-        index = Map.get(file, "index", 0)
-
-        file_meta = %{name: name, size: size, type: mime_type}
-
-        case Uploads.initiate(asset_type, target["config_target"], file_meta, user) do
-          {:ok, :server} ->
-            {item, socket} = put_intake_item(socket, name, size, asset_type, target, transport: :server)
-            {%{index: index, ref: item.ref, transport: "server"}, socket}
-
-          {:ok, {:direct, %{upload_url: upload_url} = direct}} ->
-            # key/resolved_target stay server-side on the item — finalize never
-            # trusts client-provided keys.
-            {item, socket} =
-              put_intake_item(socket, name, size, asset_type, target,
-                transport: :direct,
-                direct: %{
-                  key: direct.key,
-                  resolved_target: direct.resolved_target,
-                  mime_type: mime_type
-                }
-              )
-
-            {%{index: index, ref: item.ref, transport: "direct", upload_url: upload_url}, socket}
-
-          {:error, message} ->
-            # Keep a visible :error item — a silently dropped file looks like
-            # a broken drop zone to the user.
-            {item, socket} =
-              put_intake_item(socket, name, size, asset_type, target,
-                transport: :server,
-                status: :error,
-                error: message
-              )
-
-            {%{index: index, ref: item.ref, error: message}, socket}
-        end
-      end)
-
-    {:reply, %{decisions: decisions}, assign(socket, :open?, true)}
+    case AssetIntent.normalize(target) do
+      {:ok, target} -> accept_intake(files, target, socket)
+      {:error, message} -> reject_intake(files, target, message, socket)
+    end
   end
 
   # Entries that error without ever completing (validation backstop, transport
@@ -173,6 +134,7 @@ defmodule BrandoAdmin.UploadManager do
           {:ok, asset} ->
             deliver(item, asset)
             Process.send_after(self(), {:auto_dismiss_item, ref}, @auto_dismiss_ms)
+
             {:noreply, update_item(socket, ref, %{status: :done, progress: 100, asset_id: asset.id})}
 
           {:error, reason} ->
@@ -289,6 +251,85 @@ defmodule BrandoAdmin.UploadManager do
     {:noreply, socket}
   end
 
+  defp accept_intake(files, target, socket) do
+    asset_type = parse_asset_type(target["asset_type"])
+    user = socket.assigns.current_user
+
+    {decisions, socket} =
+      Enum.map_reduce(files, socket, fn file, socket ->
+        name = Map.get(file, "name", "")
+        size = Map.get(file, "size", 0)
+        mime_type = Map.get(file, "type", "")
+        index = Map.get(file, "index", 0)
+
+        file_meta = %{name: name, size: size, type: mime_type}
+
+        case Uploads.initiate(asset_type, target["config_target"], file_meta, user) do
+          {:ok, :server} ->
+            {item, socket} =
+              put_intake_item(socket, name, size, asset_type, target, transport: :server)
+
+            {%{index: index, ref: item.ref, transport: "server"}, socket}
+
+          {:ok, {:direct, %{upload_url: upload_url} = direct}} ->
+            # key/resolved_target stay server-side on the item — finalize never
+            # trusts client-provided keys.
+            {item, socket} =
+              put_intake_item(socket, name, size, asset_type, target,
+                transport: :direct,
+                direct: %{
+                  key: direct.key,
+                  resolved_target: direct.resolved_target,
+                  mime_type: mime_type
+                }
+              )
+
+            {%{index: index, ref: item.ref, transport: "direct", upload_url: upload_url}, socket}
+
+          {:error, message} ->
+            # Keep a visible :error item — a silently dropped file looks like
+            # a broken drop zone to the user.
+            {item, socket} =
+              put_intake_item(socket, name, size, asset_type, target,
+                transport: :server,
+                status: :error,
+                error: message
+              )
+
+            {%{index: index, ref: item.ref, error: message}, socket}
+        end
+      end)
+
+    {:reply, %{decisions: decisions}, assign(socket, :open?, true)}
+  end
+
+  defp reject_intake(files, target, message, socket) do
+    asset_type_value =
+      if is_map(target),
+        do: Map.get(target, "asset_type", Map.get(target, :asset_type)),
+        else: nil
+
+    asset_type = parse_asset_type(asset_type_value)
+
+    {decisions, socket} =
+      Enum.map_reduce(files, socket, fn file, socket ->
+        name = Map.get(file, "name", "")
+        size = Map.get(file, "size", 0)
+        index = Map.get(file, "index", 0)
+
+        {item, socket} =
+          put_intake_item(socket, name, size, asset_type, target,
+            transport: :server,
+            status: :error,
+            error: message
+          )
+
+        {%{index: index, ref: item.ref, error: message}, socket}
+      end)
+
+    {:reply, %{decisions: decisions}, assign(socket, :open?, true)}
+  end
+
   ## Progress — runs in the manager's own process; only the drawer re-renders.
 
   defp handle_progress(:queue, entry, socket) do
@@ -355,8 +396,14 @@ defmodule BrandoAdmin.UploadManager do
         socket =
           if item.asset_type == :image do
             Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{asset.id}")
+
             Brando.Images.Processing.queue_processing(asset, user, image_field_path(item.target), silent: true)
-            update_item(socket, item.ref, %{status: :processing, progress: 100, asset_id: asset.id})
+
+            update_item(socket, item.ref, %{
+              status: :processing,
+              progress: 100,
+              asset_id: asset.id
+            })
           else
             # Parity with save_file: server-transport files on CDN-enabled
             # sites must still be pushed to the CDN (images push from the
@@ -378,6 +425,7 @@ defmodule BrandoAdmin.UploadManager do
 
   defp deliver(item, asset) do
     Logger.debug("==> UploadManager: no deliver_topic for item #{item.ref}; asset ##{asset.id} kept in library")
+
     :ok
   end
 
@@ -501,7 +549,8 @@ defmodule BrandoAdmin.UploadManager do
 
   defp maybe_override_upload_path(cfg, _asset_type, _folder), do: cfg
 
-  defp maybe_put_folder_id(meta, folder_id) when is_integer(folder_id), do: Map.put(meta, :folder_id, folder_id)
+  defp maybe_put_folder_id(meta, folder_id) when is_integer(folder_id),
+    do: Map.put(meta, :folder_id, folder_id)
 
   defp maybe_put_folder_id(meta, folder_id) when is_binary(folder_id) do
     case Integer.parse(folder_id) do
@@ -584,7 +633,9 @@ defmodule BrandoAdmin.UploadManager do
   defp maybe_queue_cdn_upload(_asset, _user), do: :ok
 
   defp mark_item_error(socket, nil, _message), do: socket
-  defp mark_item_error(socket, ref, message), do: update_item(socket, ref, %{status: :error, error: message})
+
+  defp mark_item_error(socket, ref, message),
+    do: update_item(socket, ref, %{status: :error, error: message})
 
   # Frees the JS scheduler's transfer slot (b:uploads:released is its only
   # release signal for server-transport files).
@@ -615,6 +666,7 @@ defmodule BrandoAdmin.UploadManager do
 
   defp format_error(%Ecto.Changeset{} = changeset) do
     Logger.error("==> UploadManager: changeset errors: #{inspect(changeset.errors, pretty: true)}")
+
     gettext("Could not store uploaded file")
   end
 

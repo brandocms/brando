@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, confirmUploadFolder } from '../../utils'
 
 test.describe('Gallery block image replacement', () => {
   test.describe.configure({ mode: 'serial' })
@@ -27,6 +27,7 @@ test.describe('Gallery block image replacement', () => {
     await page
       .locator('.gallery-block .file-input')
       .setInputFiles(['./fixtures/image.jpg', './fixtures/image2.jpg'])
+    await confirmUploadFolder(page)
     await syncLV(page)
     await page.waitForTimeout(3000)
 
@@ -45,7 +46,10 @@ test.describe('Gallery block image replacement', () => {
     })
 
     // Upload a new image to replace the removed one
-    await page.locator('.gallery-block .file-input').setInputFiles('./fixtures/image.jpg')
+    const fileChooser = page.waitForEvent('filechooser')
+    await page.getByRole('button', { name: 'Upload images' }).click()
+    await (await fileChooser).setFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
     await syncLV(page)
     await page.waitForTimeout(3000)
 

@@ -27,15 +27,17 @@ defmodule BrandoAdmin.Components.VideoPicker do
           assigns,
         socket
       ) do
+    {resolved_config, resolved_target} = Brando.Uploads.resolve_video_config(config_target)
+
     {:ok,
      socket
-     |> assign(:config_target, config_target)
+     |> assign(:config_target, resolved_target)
      |> assign(:event_target, event_target)
      |> assign(:multi, multi)
      |> assign(:selected_videos, selected_videos)
      |> assign(
        :upload_strategy,
-       assigns[:upload_strategy] || Brando.default_video_upload_strategy()
+       assigns[:upload_strategy] || resolved_config.upload_strategy
      )
      |> assign(:new_folder, "")
      |> assign(:show_new_folder_form, false)
@@ -404,16 +406,19 @@ defmodule BrandoAdmin.Components.VideoPicker do
   end
 
   def handle_event("get_video_upload_url", %{"filename" => filename}, socket) do
-    strategy = socket.assigns.upload_strategy
     user = socket.assigns.current_user
 
-    video_config = %Brando.Type.VideoConfig{
-      upload_strategy: strategy
-    }
+    {video_config, config_target} =
+      Brando.Uploads.resolve_video_config(socket.assigns.config_target)
+
+    # The picker may receive a tuple target from form inputs. Resolve and
+    # serialize it once so provider-created rows retain the same config target
+    # used for filtering, metadata, limits, and upload strategy.
+    video_config = %{video_config | upload_strategy: socket.assigns.upload_strategy}
 
     case Brando.Videos.Uploader.initiate_upload(filename, user,
            config: video_config,
-           config_target: "default"
+           config_target: config_target
          ) do
       {:ok, %{upload_url: upload_url, video: video} = result} ->
         event_payload = %{

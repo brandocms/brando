@@ -970,7 +970,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
   end
 
-  def update_changeset_data_block_var(socket, var_key, type, data) when type in [:file, :image] do
+  def update_changeset_data_block_var(socket, var_key, type, data)
+      when type in [:file, :image, :video, :gallery] do
     # Write the foreign key (:file_id / :image_id) — the field the input renders
     # from (extract_value/2) and the changeset persists. The payload has no :type
     # key, so the old `Map.get(data, :type)` always wrote nil and the var reset.
@@ -1278,10 +1279,12 @@ defmodule BrandoAdmin.Components.Form.Block do
           table_template_id = module.table_template_id
 
           if table_template_id do
+            var_preloads = Brando.Content.Var.preloads()
+
             {:ok, table_template} =
               Brando.Content.get_table_template(%{
                 matches: %{id: table_template_id},
-                preload: [vars: [:file, :image, :palette, :identifier, :menu_item]]
+                preload: [vars: var_preloads]
               })
 
             table_template
@@ -1978,6 +1981,16 @@ defmodule BrandoAdmin.Components.Form.Block do
     path = get_in(data, [:image, Access.key(:path)])
     media_path = Brando.Utils.media_url(path)
     update_liquid_split_var(socket, var_key, media_path)
+  end
+
+  def update_liquex_block_var(socket, var_key, :video, data) do
+    video = Map.get(data, :video)
+    source = video && (video.source_url || video.remote_id)
+    update_liquid_split_var(socket, var_key, source)
+  end
+
+  def update_liquex_block_var(socket, var_key, :gallery, data) do
+    update_liquid_split_var(socket, var_key, Map.get(data, :gallery_id))
   end
 
   # Link vars commit an identifier struct, not a bare value — the generic

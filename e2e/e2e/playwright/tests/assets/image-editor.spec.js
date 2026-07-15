@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, fillSlugSource } from '../../utils'
+import { syncLV, fillSlugSource, confirmUploadFolder } from '../../utils'
 
 test('opens image editor, adjusts focal point, and saves', async ({ page }) => {
   test.setTimeout(120000)
@@ -54,6 +54,7 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }) => {
   // Step 3: Upload an image via the listing_image field
   await page.getByRole('button', { name: 'Add image' }).click()
   await page.locator('#image-drawer-upload-input').setInputFiles('./fixtures/image.jpg')
+  await confirmUploadFolder(page)
 
   // Wait for upload to complete — image should appear in the drawer
   await expect(page.locator('#image-drawer img')).toBeVisible({ timeout: 30000 })

@@ -869,6 +869,8 @@ defmodule Brando.Content.Blocks do
     :image_id,
     :palette_id,
     :file_id,
+    :video_id,
+    :gallery_id,
     :identifier_id,
     :page_id,
     :block_id,
@@ -886,6 +888,8 @@ defmodule Brando.Content.Blocks do
     :creator_id,
     :file,
     :image,
+    :video,
+    :gallery,
     :palette,
     :identifier,
     :page,
@@ -1195,7 +1199,7 @@ defmodule Brando.Content.Blocks do
   defp block_vars_query do
     from v in Var,
       order_by: [asc: :sequence],
-      preload: [:file, :image, :palette, :identifier, :menu_item]
+      preload: ^Var.preloads()
   end
 
   defp block_table_rows_query do

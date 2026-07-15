@@ -584,10 +584,13 @@ defmodule BrandoAdmin.Components.Form do
   # Gallery entry fields: append the delivered image to the gallery assoc
   # (lifted from the old handle_gallery_progress success branch).
   def update(
-        %{event: "entry_field_upload_complete", asset_type: :gallery, field: key, asset: image},
+        %{event: "entry_field_upload_complete", asset_type: :gallery, field: key, asset: image} = params,
         socket
       ) do
-    gallery = get_field(socket.assigns.form.source, key)
+    path = Map.get(params, :path, [])
+    component_id = Map.get(params, :component_id) || "#{socket.assigns.singular}_#{key}"
+    config_target = Map.get(params, :config_target)
+    gallery = gallery_at(socket.assigns.form.source, path, key)
 
     new_gallery_image = %{
       image_id: image.id,
@@ -613,7 +616,7 @@ defmodule BrandoAdmin.Components.Form do
     send_update(ImagePicker, id: "image-picker", selected_images: selected_images)
 
     send_update(BrandoAdmin.Components.Form.Input.Gallery,
-      id: "#{socket.assigns.singular}_#{key}",
+      id: component_id,
       new_image: %{image_id: image.id, image: image},
       selected_images: selected_images
     )
@@ -628,15 +631,18 @@ defmodule BrandoAdmin.Components.Form do
         socket
       end
 
-    {:ok, append_gallery_object(socket, key, new_gallery_image)}
+    {:ok, append_gallery_object(socket, path, key, new_gallery_image, config_target)}
   end
 
   # Gallery entry fields: append the delivered video to the gallery assoc.
   def update(
-        %{event: "entry_field_upload_complete", asset_type: :gallery_video, field: key, asset: video},
+        %{event: "entry_field_upload_complete", asset_type: :gallery_video, field: key, asset: video} = params,
         socket
       ) do
-    gallery = get_field(socket.assigns.form.source, key)
+    path = Map.get(params, :path, [])
+    component_id = Map.get(params, :component_id) || "#{socket.assigns.singular}_#{key}"
+    config_target = Map.get(params, :config_target)
+    gallery = gallery_at(socket.assigns.form.source, path, key)
 
     new_gallery_video = %{
       video_id: video.id,
@@ -654,12 +660,12 @@ defmodule BrandoAdmin.Components.Form do
     send_update(VideoPicker, id: "video-picker", selected_videos: selected_videos)
 
     send_update(BrandoAdmin.Components.Form.Input.Gallery,
-      id: "#{socket.assigns.singular}_#{key}",
+      id: component_id,
       new_video: %{video_id: video.id, video: video},
       selected_videos: selected_videos
     )
 
-    {:ok, append_gallery_object(socket, key, new_gallery_video)}
+    {:ok, append_gallery_object(socket, path, key, new_gallery_video, config_target)}
   end
 
   # Unified handler for updating entry relations.
@@ -1155,9 +1161,9 @@ defmodule BrandoAdmin.Components.Form do
   # duplicate-PK — see CLAUDE.md "put_assoc with multiple new records"),
   # the new object rides along with its loaded struct, and the whole list is
   # re-sequenced. The gallery is created on first upload.
-  defp append_gallery_object(socket, key, new_object) do
+  defp append_gallery_object(socket, path, key, new_object, config_target) do
     changeset = socket.assigns.form.source
-    gallery = get_field(changeset, key)
+    gallery = gallery_at(changeset, path, key)
 
     slimmed_objects =
       if gallery do
@@ -1176,13 +1182,30 @@ defmodule BrandoAdmin.Components.Form do
         %{id: gallery.id, config_target: gallery.config_target, gallery_objects: gallery_objects}
       else
         %{
-          config_target: "gallery:#{inspect(socket.assigns.schema)}:#{key}",
+          config_target:
+            config_target ||
+              Brando.Assets.ConfigTarget.serialize({"gallery", socket.assigns.schema, key}),
           gallery_objects: gallery_objects
         }
       end
 
-    assign(socket, :form, to_form(put_assoc(changeset, key, new_gallery), []))
+    gallery_changeset =
+      (gallery || %Brando.Galleries.Gallery{})
+      |> change(%{config_target: new_gallery.config_target})
+      |> put_assoc(:gallery_objects, new_gallery.gallery_objects)
+
+    updated_changeset =
+      if path == [] do
+        put_assoc(changeset, key, gallery_changeset)
+      else
+        EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> gallery_changeset end)
+      end
+
+    assign(socket, :form, to_form(updated_changeset, []))
   end
+
+  defp gallery_at(changeset, [], key), do: get_field(changeset, key)
+  defp gallery_at(changeset, path, key), do: EctoNestedChangeset.get_at(changeset, path ++ [key])
 
   defp assign_entry(%{assigns: %{initial_update: false}} = socket) do
     socket
@@ -2226,7 +2249,7 @@ defmodule BrandoAdmin.Components.Form do
           data-path={Jason.encode!(@edit_file.path || [])}
           data-config-target={
             @edit_file.field &&
-              "file:#{inspect(Map.get(@edit_file, :schema) || @schema)}:#{@edit_file.field}"
+              Brando.Assets.ConfigTarget.serialize({"file", Map.get(@edit_file, :schema) || @schema, @edit_file.field})
           }
           class="file-drawer-preview"
         >
@@ -2308,7 +2331,7 @@ defmodule BrandoAdmin.Components.Form do
           data-path={Jason.encode!(@edit_image.path || [])}
           data-config-target={
             @edit_image.field &&
-              "image:#{inspect(Map.get(@edit_image, :schema) || @schema)}:#{@edit_image.field}"
+              Brando.Assets.ConfigTarget.serialize({"image", Map.get(@edit_image, :schema) || @schema, @edit_image.field})
           }
           data-folder-browser="true"
           data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
@@ -2672,7 +2695,9 @@ defmodule BrandoAdmin.Components.Form do
                     data-path={Jason.encode!(@edit_video.path || [])}
                     data-config-target={
                       @edit_video.field &&
-                        "video:#{inspect(Map.get(@edit_video, :schema) || @schema)}:#{@edit_video.field}"
+                        Brando.Assets.ConfigTarget.serialize(
+                          {"video", Map.get(@edit_video, :schema) || @schema, @edit_video.field}
+                        )
                     }
                     data-accept=".mp4,.webm,.mov,.avi,.ogv"
                   >
