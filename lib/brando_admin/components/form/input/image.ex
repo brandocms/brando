@@ -303,6 +303,14 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     on_change = socket.assigns.on_change
     {:ok, image} = Brando.Images.get_image(selected_image_id)
 
+    # The picker stays mounted while its drawer is hidden. Keep its selection
+    # aligned with the image currently shown in the (still unsaved) field
+    # drawer, rather than leaving the originally persisted image marked.
+    send_update(BrandoAdmin.Components.ImagePicker,
+      id: "image-picker",
+      selected_images: [image.id]
+    )
+
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
       action: :update_edit_image,

@@ -90,6 +90,19 @@ test('creates project', async ({ page }) => {
   await page.waitForSelector('#image-drawer', { state: 'hidden' })
   await syncLV(page)
 
+  // Upload a second image to the same field context. This leaves the first
+  // image available in the compatible library so we can exercise replacing
+  // an already-selected image below.
+  await page.getByRole('button', { name: 'Edit image' }).click()
+  await page.locator('#image-drawer-upload-input').setInputFiles('./fixtures/image2.jpg')
+  await confirmUploadFolder(page)
+  await expect(page.locator('#image-drawer img')).toBeVisible({
+    timeout: 30000,
+  })
+  await page.locator('#image-drawer').getByRole('button', { name: 'Close' }).click()
+  await page.waitForSelector('#image-drawer', { state: 'hidden' })
+  await syncLV(page)
+
   const galleryFileChooser = page.waitForEvent('filechooser')
   await page.locator('.gallery-input').getByRole('button', { name: 'Upload images' }).click()
   await (await galleryFileChooser).setFiles(['./fixtures/image2.jpg', './fixtures/image.jpg'])
@@ -196,6 +209,42 @@ test('creates project', async ({ page }) => {
 
   // The listing image must also have persisted (image entry_field delivery).
   await expect(page.getByRole('button', { name: 'Edit image' })).toBeVisible({ timeout: 20000 })
+
+  // The picker selection follows the current unsaved drawer preview. It must
+  // not fall back to whichever image was persisted when the drawer opened.
+  await page.getByRole('button', { name: 'Edit image' }).click()
+  const imageDrawer = page.locator('#image-drawer')
+  await imageDrawer.getByRole('button', { name: 'Select existing image' }).click()
+  await syncLV(page)
+
+  const imagePicker = page.locator('#image-picker')
+  await expect(imagePicker).toBeVisible()
+  const initiallySelectedImage = imagePicker.locator('.image-picker__image.selected')
+  await expect(initiallySelectedImage).toHaveCount(1)
+  const initiallySelectedId = await initiallySelectedImage.getAttribute('data-id')
+
+  const replacementImages = imagePicker.locator('.image-picker__image:not(.selected)')
+  await expect(replacementImages.first()).toBeVisible()
+  const replacementId = await replacementImages.first().getAttribute('data-id')
+  await replacementImages.first().click()
+  await page.waitForSelector('#image-picker', { state: 'hidden' })
+  await expect(imageDrawer.locator('img')).toBeVisible()
+
+  await imageDrawer.getByRole('button', { name: 'Select existing image' }).click()
+  await syncLV(page)
+
+  await expect(imagePicker.locator(`.image-picker__image[data-id="${replacementId}"]`)).toHaveClass(
+    /selected/
+  )
+  await expect(
+    imagePicker.locator(`.image-picker__image[data-id="${initiallySelectedId}"]`)
+  ).not.toHaveClass(/selected/)
+
+  await imagePicker.getByRole('button', { name: 'Close' }).click()
+  await page.waitForSelector('#image-picker', { state: 'hidden' })
+  await imageDrawer.getByRole('button', { name: 'Close' }).click()
+  await page.waitForSelector('#image-drawer', { state: 'hidden' })
+  await syncLV(page)
 
   // Upload a video FILE straight into the gallery via the "Upload videos"
   // trigger (entry_field_gallery + asset_type: video; only rendered when the

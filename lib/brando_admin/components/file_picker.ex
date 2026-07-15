@@ -33,7 +33,10 @@ defmodule BrandoAdmin.Components.FilePicker do
   end
 
   def update(%{selected_files: selected_files}, socket) do
-    {:ok, assign(socket, :selected_files, selected_files)}
+    {:ok,
+     socket
+     |> assign(:selected_files, selected_files)
+     |> assign_folder_state(socket.assigns.current_folder)}
   end
 
   def update(%{refresh_files: true}, socket) do

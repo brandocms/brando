@@ -189,6 +189,11 @@ defmodule BrandoAdmin.Components.Form.Input.File do
   def handle_event("select_file", %{"id" => selected_file_id}, socket) do
     {:ok, file} = Brando.Files.get_file(selected_file_id)
 
+    send_update(BrandoAdmin.Components.FilePicker,
+      id: "file-picker",
+      selected_files: [file.id]
+    )
+
     send_update(BrandoAdmin.Components.Form,
       id: socket.assigns.form_id,
       action: :update_edit_file,

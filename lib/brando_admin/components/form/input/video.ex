@@ -212,7 +212,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
       config_target: {"video", form.data.__struct__, field_name},
       event_target: myself,
       multi: false,
-      selected_videos: []
+      selected_videos: if(video_id, do: [video_id], else: [])
     )
 
     form_id = "#{module.__naming__().singular}_form"
@@ -244,6 +244,11 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
   def handle_event("select_video", %{"id" => selected_video_id}, %{assigns: %{form_id: form_id}} = socket) do
     on_change = socket.assigns.on_change
     {:ok, video} = Brando.Videos.get_video(%{matches: %{id: selected_video_id}, preload: [:thumbnail, :file]})
+
+    send_update(BrandoAdmin.Components.VideoPicker,
+      id: "video-picker",
+      selected_videos: [video.id]
+    )
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
