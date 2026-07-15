@@ -8,7 +8,6 @@ defmodule Brando.Revisions.Revision do
     plural: "revisions",
     gettext_module: Brando.Gettext
 
-  trait Brando.Trait.Creator
   trait Brando.Trait.Timestamped
 
   table "revisions"
@@ -21,11 +20,16 @@ defmodule Brando.Revisions.Revision do
     attribute :active, :boolean, default: false
     attribute :entry_id, :integer, required: true
     attribute :entry_type, :string, required: true
-    attribute :encoded_entry, :string, required: true
+    attribute :encoded_entry, :binary, required: true
     attribute :metadata, :map, required: true
     attribute :revision, :integer, required: true
     attribute :description, :text
     attribute :protected, :boolean, default: false
+    attribute :scheduled, :boolean, default: false
     attribute :schema_version, :integer, default: 0, required: true
+  end
+
+  relations do
+    relation :creator, :belongs_to, module: Brando.Users.User
   end
 end

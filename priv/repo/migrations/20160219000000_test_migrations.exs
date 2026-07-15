@@ -515,7 +515,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     end
 
     create table(:revisions, primary_key: false) do
-      add :active, :boolean, default: false
+      add :active, :boolean, default: false, null: false
       add :entry_id, :integer, null: false
       add :entry_type, :string, null: false
       add :encoded_entry, :binary, null: false
@@ -523,12 +523,18 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :description, :string
       add :metadata, :map, null: false
       add :revision, :integer, null: false
-      add :protected, :boolean, default: false
-      add :schema_version, :integer, default: 0
+      add :protected, :boolean, default: false, null: false
+      add :scheduled, :boolean, default: false, null: false
+      add :schema_version, :integer, default: 0, null: false
       timestamps()
     end
 
     create unique_index(:revisions, [:entry_type, :entry_id, :revision])
+
+    create unique_index(:revisions, [:entry_type, :entry_id],
+             name: :revisions_one_active_per_entry_index,
+             where: "active = true"
+           )
 
     create table(:content_vars) do
       add :type, :text

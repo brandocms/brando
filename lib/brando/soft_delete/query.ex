@@ -3,6 +3,7 @@ defmodule Brando.SoftDelete.Query do
   Query tools for Soft deletion
   """
   import Ecto.Query
+  alias Brando.Repo
   alias Brando.Trait
 
   @doc """
@@ -39,7 +40,7 @@ defmodule Brando.SoftDelete.Query do
 
     counts =
       union_query
-      |> Brando.Repo.all()
+      |> Repo.all()
       |> Enum.reverse()
 
     Enum.zip(schemas, counts)
@@ -58,7 +59,7 @@ defmodule Brando.SoftDelete.Query do
   """
   def list_soft_deleted_entries(schema) do
     query = from t in schema, where: not is_nil(t.deleted_at), order_by: [desc: t.deleted_at]
-    Brando.Repo.all(query)
+    Repo.all(query)
   end
 
   @doc """
@@ -74,7 +75,7 @@ defmodule Brando.SoftDelete.Query do
 
     # Fetch videos to delete remotely first
     # Check timing per video since different videos may have different providers
-    videos = Brando.Repo.all(query)
+    videos = Repo.all(query)
 
     for video <- videos do
       if Brando.Videos.Uploader.get_delete_timing(video) == :on_purge do
@@ -82,7 +83,7 @@ defmodule Brando.SoftDelete.Query do
       end
     end
 
-    Brando.Repo.delete_all(query)
+    Repo.delete_all(query)
   end
 
   defp clean_up_schema(schema) do
@@ -90,6 +91,15 @@ defmodule Brando.SoftDelete.Query do
       from t in schema,
         where: fragment("? < current_timestamp - interval '30 day'", t.deleted_at)
 
-    Brando.Repo.delete_all(query)
+    Repo.transaction(fn ->
+      if schema.__trait__(Brando.Trait.Revisioned) do
+        query
+        |> select([t], t.id)
+        |> Repo.all()
+        |> Enum.each(&Brando.Revisions.delete_entry_revisions(schema, &1))
+      end
+
+      Repo.delete_all(query)
+    end)
   end
 end

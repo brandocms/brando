@@ -445,9 +445,26 @@ figcaption.tiny {
   }
 
   .revisions-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
     padding: 20px;
     text-align: center;
     color: #e53e3e;
+  }
+
+  .revision-preview-notice,
+  .revisions-empty {
+    border: 1px solid azure;
+    margin: 12px 0;
+    padding: 12px;
+    font-size: 13px;
+  }
+
+  .revision-preview-notice {
+    background-color: azure;
+    color: #052753;
   }
 
   .current-schema-version {
@@ -475,10 +492,19 @@ figcaption.tiny {
 
   .revisions-table {
     width: 100%;
+    margin-top: 12px;
+    border-collapse: collapse;
+
+    th {
+      @font mono;
+      padding: 6px 10px;
+      border: 1px solid azure;
+      font-size: 11px;
+      text-align: left;
+      text-transform: uppercase;
+    }
 
     .revisions-line {
-      cursor: pointer;
-
       &.active {
         td {
           background-color: azure;
@@ -591,6 +617,33 @@ figcaption.tiny {
           @font main;
         }
 
+        &.status,
+        &.protected,
+        &.scheduled {
+          text-align: center;
+        }
+
+        .revision-preview-button {
+          border: 0;
+          padding: 2px 4px;
+          color: inherit;
+          text-decoration: underline;
+          text-underline-offset: 2px;
+
+          &:hover,
+          &:focus-visible {
+            text-decoration-thickness: 2px;
+          }
+        }
+
+        .revision-scheduled-badge {
+          display: inline-block;
+          padding: 2px 5px;
+          border: 1px solid currentcolor;
+          font-size: 10px;
+          text-transform: uppercase;
+        }
+
         .circle-dropdown {
           .main-circle {
             stroke: azure;
@@ -612,6 +665,10 @@ figcaption.tiny {
         }
       }
     }
+  }
+
+  .revisions-load-more {
+    margin-top: 12px;
   }
 
   .section-help {

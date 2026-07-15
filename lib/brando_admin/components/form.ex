@@ -1548,6 +1548,25 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  def event_tag_received(socket, :store_revision) do
+    blocks_ready? = !Enum.any?(Map.values(socket.assigns.block_changesets), &is_nil/1)
+    transformers_ready? = !Enum.any?(Map.values(socket.assigns.transformer_changesets), &is_nil/1)
+
+    if blocks_ready? && transformers_ready? do
+      changeset =
+        socket.assigns.block_changesets
+        |> assoc_all_block_fields(socket.assigns.form.source)
+        |> assoc_all_transformer_fields(socket.assigns.transformer_changesets)
+
+      socket
+      |> store_revision(changeset)
+      |> clear_blocks_root_changesets()
+      |> reset_transformer_changesets()
+    else
+      socket
+    end
+  end
+
   def event_tag_received(socket, :share) do
     changeset = socket.assigns.form.source
     block_changesets = socket.assigns.block_changesets
@@ -2027,6 +2046,7 @@ defmodule BrandoAdmin.Components.Form do
               current_user={@current_user}
               entry_id={@entry_id}
               form={@form}
+              form_cid={@myself}
               form_id={@id}
               status={@status_revisions}
               close={
@@ -4029,6 +4049,20 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, socket}
   end
 
+  def handle_event("store_revision", _, socket) do
+    send(self(), :force_ship_focused_block)
+    send(self(), {:toast, gettext("Saving a revision...")})
+
+    socket =
+      socket
+      |> clear_blocks_root_changesets()
+      |> reset_transformer_changesets()
+
+    fetch_transformer_data(socket, :store_revision)
+
+    {:noreply, fetch_root_blocks(socket, :store_revision, 150)}
+  end
+
   # restore live preview after reconnect via form recovery
   def handle_event(
         "recover_live_preview_state",
@@ -4347,6 +4381,46 @@ defmodule BrandoAdmin.Components.Form do
       {_field_name, nil}, acc -> acc
       {field_name, data}, acc -> Ecto.Changeset.put_assoc(acc, field_name, data)
     end)
+  end
+
+  defp store_revision(socket, changeset) do
+    case Ecto.Changeset.apply_action(changeset, :update) do
+      {:ok, entry} ->
+        case Brando.Revisions.create_revision(entry, socket.assigns.current_user, false) do
+          {:ok, _revision} ->
+            send(self(), {:toast, gettext("Revision saved")})
+
+            send_update(RevisionsDrawer,
+              id: "#{socket.assigns.id}-revisions-drawer",
+              action: :refresh_revisions
+            )
+
+            socket
+
+          {:error, reason} ->
+            revision_error(socket, reason)
+        end
+
+      {:error, invalid_changeset} ->
+        socket
+        |> assign(:form, to_form(invalid_changeset, []))
+        |> push_errors(
+          invalid_changeset,
+          socket.assigns.form_blueprint,
+          socket.assigns.schema
+        )
+    end
+  end
+
+  defp revision_error(socket, reason) do
+    require Logger
+    Logger.error("Could not store revision: #{inspect(reason)}")
+
+    push_event(socket, "b:alert", %{
+      title: gettext("Could not save revision"),
+      message: gettext("The revision was not saved. Please try again."),
+      type: "error"
+    })
   end
 
   defp fetch_transformer_data(socket, tag) do

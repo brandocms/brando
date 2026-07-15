@@ -2,13 +2,14 @@ defmodule Brando.Query.Mutations do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Content
+  alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Datasource
   alias Brando.Notifications
   alias Brando.Publisher
   alias Brando.Query
+  alias Brando.Revisions
   alias Brando.Trait
   alias Brando.Utils
-  alias Brando.Content.Blocks, as: ContentBlocks
 
   def create(module, params, user, callback_block, opts) do
     {preloads, opts} = Keyword.pop(opts, :preloads)
@@ -33,9 +34,10 @@ defmodule Brando.Query.Mutations do
         identifier_id = get_identifier_id(identifier_result)
         ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id)
 
-        # Enqueue async revision
+        # Revision capture must happen before another save can replace the
+        # persisted state this mutation represents.
         revisioned? = module.__trait__(Trait.Revisioned)
-        maybe_enqueue_revision(module, entry, user, revisioned?)
+        {:ok, _revision} = maybe_create_revision(entry, user, revisioned?)
         maybe_notify(entry, "created", user, notify?)
         maybe_broadcast(module, entry, :created, pubsub?)
 
@@ -61,9 +63,9 @@ defmodule Brando.Query.Mutations do
       identifier_id = get_identifier_id(identifier_result)
       ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id)
 
-      # Enqueue async revision
+      # Capture the exact state from this mutation synchronously.
       revisioned? = module.__trait__(Trait.Revisioned)
-      maybe_enqueue_revision(module, entry, user, revisioned?)
+      {:ok, _revision} = maybe_create_revision(entry, user, revisioned?)
       maybe_notify(entry, "created", user, notify?)
       maybe_broadcast(module, entry, :created, pubsub?)
 
@@ -102,9 +104,9 @@ defmodule Brando.Query.Mutations do
         identifier_id = get_identifier_id(identifier_result)
         ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id)
 
-        # Enqueue async revision
+        # Capture the exact state from this mutation synchronously.
         revisioned? = module.__trait__(Trait.Revisioned)
-        maybe_enqueue_revision(module, entry, user, revisioned?)
+        {:ok, _revision} = maybe_create_revision(entry, user, revisioned?)
         maybe_notify(entry, "updated", user, notify?)
 
         callback.(entry)
@@ -129,9 +131,9 @@ defmodule Brando.Query.Mutations do
         identifier_id = get_identifier_id(identifier_result)
         ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id)
 
-        # Enqueue async revision
+        # Capture the exact state from this mutation synchronously.
         revisioned? = module.__trait__(Trait.Revisioned)
-        maybe_enqueue_revision(module, entry, user, revisioned?)
+        {:ok, _revision} = maybe_create_revision(entry, user, revisioned?)
         maybe_notify(entry, "updated", user, notify?)
         maybe_broadcast(module, entry, :updated, pubsub?)
 
@@ -328,6 +330,11 @@ defmodule Brando.Query.Mutations do
            ) do
       Content.delete_identifier(module, entry)
       Datasource.update_datasource(module, entry)
+
+      if !soft_deletable? and module.__trait__(Trait.Revisioned) do
+        Revisions.delete_entry_revisions(module, entry.id)
+      end
+
       maybe_notify(entry, "deleted", user, true)
       maybe_broadcast(module, entry, :deleted, true)
 
@@ -341,11 +348,9 @@ defmodule Brando.Query.Mutations do
   # Post-mutation effect helpers with pattern matching to avoid nesting
   # Note: __trait__ returns false if not present, or opts list (possibly []) if present
 
-  defp maybe_enqueue_revision(_module, _entry, _user, false), do: :ok
+  defp maybe_create_revision(_entry, _user, false), do: {:ok, nil}
 
-  defp maybe_enqueue_revision(module, entry, user, _trait_opts) do
-    enqueue_revision(module, entry, user)
-  end
+  defp maybe_create_revision(entry, user, _trait_opts), do: Revisions.create_revision(entry, user)
 
   defp maybe_notify(_entry, _action, _user, false), do: :ok
 
@@ -368,12 +373,4 @@ defmodule Brando.Query.Mutations do
 
   defp get_identifier_id(%Brando.Content.Identifier{id: id}), do: id
   defp get_identifier_id(_), do: nil
-
-  defp enqueue_revision(module, entry, user) do
-    user_id = if user == :system, do: nil, else: user.id
-
-    %{schema: to_string(module), entry_id: entry.id, user_id: user_id}
-    |> Brando.Worker.EntryRevision.new()
-    |> Oban.insert()
-  end
 end

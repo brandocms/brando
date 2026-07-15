@@ -1,9 +1,9 @@
 defmodule Brando.Worker.EntryRevision do
   @moduledoc """
-  Background worker for creating entry revisions.
+  Compatibility worker for revision jobs queued by older releases.
 
-  Moves the expensive revision creation (full preload + binary serialization)
-  out of the synchronous save path.
+  New mutations capture revisions synchronously because an id-only background
+  job cannot recover the exact state of the save that enqueued it.
   """
   use Oban.Worker, queue: :default, max_attempts: 3
 
@@ -13,12 +13,26 @@ defmodule Brando.Worker.EntryRevision do
   def perform(%Oban.Job{args: %{"schema" => schema, "entry_id" => entry_id, "user_id" => user_id}}) do
     schema = Module.concat([schema])
     Logger.info("==> [OBAN] Creating revision for #{inspect(schema)} ##{entry_id}")
-    entry = Brando.Repo.get!(schema, entry_id)
-    user = if user_id, do: Brando.Users.get_user!(user_id), else: :system
-    Brando.Revisions.create_revision(entry, user)
-    :ok
+
+    with %{} = entry <- Brando.Repo.get(schema, entry_id),
+         user <- revision_user(user_id),
+         {:ok, _revision} <- Brando.Revisions.create_revision(entry, user) do
+      :ok
+    else
+      nil -> {:cancel, :entry_not_found}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   @impl Oban.Worker
   def timeout(_job), do: :timer.seconds(60)
+
+  defp revision_user(nil), do: :system
+
+  defp revision_user(user_id) do
+    case Brando.Users.get_user(user_id) do
+      {:ok, user} -> user
+      _ -> :system
+    end
+  end
 end

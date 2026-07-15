@@ -108,6 +108,10 @@ defmodule Brando.Repo do
     repo().transaction(fun, opts)
   end
 
+  def rollback(reason) do
+    repo().rollback(reason)
+  end
+
   def stream(queryable, opts \\ []) do
     repo().stream(queryable, opts)
   end
