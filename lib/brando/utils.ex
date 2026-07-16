@@ -4,6 +4,7 @@ defmodule Brando.Utils do
   """
 
   alias Brando.Cache
+  alias Brando.CDN
   alias Brando.Files
 
   @type changeset :: Ecto.Changeset.t()
@@ -400,33 +401,7 @@ defmodule Brando.Utils do
 
   Supports both atom and string keys
   """
-  def map_to_struct(nil, string_struct), do: struct(string_struct, %{})
-
-  def map_to_struct(source_map, target_struct) when is_map(source_map) do
-    map_from_struct =
-      target_struct
-      |> struct([])
-      |> Map.from_struct()
-
-    atom_keys =
-      map_from_struct
-      |> Map.keys()
-      |> Enum.map(&Atom.to_string/1)
-
-    string_map = Map.take(source_map, atom_keys)
-    atom_map = Map.take(source_map, Map.keys(map_from_struct))
-
-    new_map =
-      Enum.map(
-        Map.merge(string_map, atom_map),
-        fn
-          {key, value} when is_binary(key) -> {String.to_existing_atom(key), value}
-          {key, value} when is_atom(key) -> {key, value}
-        end
-      )
-
-    struct(target_struct, new_map)
-  end
+  defdelegate map_to_struct(source_map, target_struct), to: Brando.Utils.Struct
 
   def camel_case_map(%Date{} = val), do: val
   def camel_case_map(%DateTime{} = val), do: val
@@ -544,9 +519,9 @@ defmodule Brando.Utils do
 
     file_path = Path.join([config.upload_path, file.filename])
 
-    if Brando.CDN.enabled?(Brando.Files) && file.cdn do
-      s3_cfg = Brando.CDN.config(Brando.Files, :s3)
-      bucket = Brando.CDN.config(Brando.Files, :bucket)
+    if CDN.enabled?(Brando.Files) && file.cdn do
+      s3_cfg = CDN.config(Brando.Files, :s3)
+      bucket = CDN.config(Brando.Files, :bucket)
       "#{s3_cfg.scheme}#{s3_cfg.host}/#{bucket}/media/#{file_path}"
     else
       media_url(file_path)
@@ -735,87 +710,10 @@ defmodule Brando.Utils do
   Can also be passed `:original` as `size` to pass unmodified image.
   Returns path to image.
   """
-  def img_url(image_field, size, opts \\ [])
-
-  def img_url(nil, _size, opts) do
-    default = Keyword.get(opts, :default, nil)
-
-    (default && Brando.Images.Utils.get_sized_path(default, :original)) ||
-      "" <> add_cache_string(opts)
-  end
-
-  def img_url("", _size, opts) do
-    default = Keyword.get(opts, :default, nil)
-
-    (default && Brando.Images.Utils.get_sized_path(default, :original)) ||
-      "" <> add_cache_string(opts)
-  end
-
-  def img_url(image_field, "largest", opts) do
-    img_url(image_field, :largest, opts)
-  end
-
-  def img_url(image_field, :largest, opts) do
-    {:ok, cfg} = Brando.Images.get_config_for(image_field)
-
-    {largest_key, _largest_size} =
-      cfg.sizes
-      |> Enum.map(fn {k, %{"size" => size}} -> {k, Integer.parse(size) |> elem(0)} end)
-      |> Enum.sort(&(elem(&1, 1) >= elem(&2, 1)))
-      |> List.first()
-
-    img_url(image_field, largest_key, opts)
-  end
-
-  def img_url(image_field, "smallest", opts) do
-    img_url(image_field, :smallest, opts)
-  end
-
-  def img_url(image_field, :smallest, opts) do
-    {:ok, cfg} = Brando.Images.get_config_for(image_field)
-
-    {smallest, _smallest_size} =
-      cfg.sizes
-      |> Map.drop(["thumb", "micro"])
-      |> Enum.map(fn {k, %{"size" => size}} -> {k, Integer.parse(size) |> elem(0)} end)
-      |> Enum.sort(&(elem(&1, 1) <= elem(&2, 1)))
-      |> List.first()
-
-    img_url(image_field, smallest, opts)
-  end
-
-  def img_url(image_field, "original", opts) do
-    img_url(image_field, :original, opts)
-  end
-
-  def img_url(image_field, :original, opts) do
-    prefix = Keyword.get(opts, :prefix, nil)
-    prefix = build_prefix(image_field, prefix)
-
-    (prefix && Path.join([prefix, image_field.path])) ||
-      image_field.path <> add_cache_string(opts)
-  end
-
-  def img_url(image_field, size, opts) do
-    size = (is_atom(size) && Atom.to_string(size)) || size
-    size_dir = extract_size_dir(image_field, size)
-
-    prefix = Keyword.get(opts, :prefix, nil)
-    prefix = build_prefix(image_field, prefix)
-
-    url = (prefix && Path.join([prefix, size_dir])) || size_dir
-    url <> add_cache_string(opts)
-  end
+  def img_url(image_field, size, opts \\ []), do: Brando.Images.URL.url(image_field, size, opts)
 
   defp get_cdn_config(%Brando.Files.File{} = file_field) do
     case Brando.Files.get_config_for(file_field) do
-      {:ok, %{cdn: %{enabled: true}} = cdn_config} -> cdn_config
-      _ -> nil
-    end
-  end
-
-  defp get_cdn_config(image_field) do
-    case Brando.Images.get_config_for(image_field) do
       {:ok, %{cdn: %{enabled: true}} = cdn_config} -> cdn_config
       _ -> nil
     end
@@ -829,21 +727,13 @@ defmodule Brando.Utils do
     end
   end
 
-  defp build_prefix(image_field, prefix) do
-    if image_field.cdn do
-      resolve_cdn_prefix(image_field, Brando.Images, prefix)
-    else
-      prefix
-    end
-  end
-
   defp resolve_cdn_prefix(field, fallback_module, prefix) do
     cdn_config = get_cdn_config(field)
 
     cdn_prefix =
       cond do
-        cdn_config -> Brando.CDN.get_prefix(cdn_config)
-        Brando.CDN.enabled?(fallback_module) -> Brando.CDN.get_prefix(fallback_module)
+        cdn_config -> CDN.get_prefix(cdn_config)
+        CDN.enabled?(fallback_module) -> CDN.get_prefix(fallback_module)
         true -> nil
       end
 
@@ -873,27 +763,6 @@ defmodule Brando.Utils do
 
     url = (prefix && Path.join([prefix, filename])) || filename
     url <> add_cache_string(opts)
-  end
-
-  defp extract_size_dir(image_field, size) do
-    if is_map(image_field.sizes) && Map.has_key?(image_field.sizes, size) do
-      image_field.sizes[size]
-    else
-      IO.warn("""
-      Wrong size key for img_url function.
-
-      Size `#{size}` does not exist for image struct:
-
-      #{inspect(image_field, pretty: true)})
-      """)
-
-      "non_existing"
-    end
-  rescue
-    KeyError ->
-      if Map.has_key?(image_field["sizes"], size) do
-        image_field["sizes"][size]
-      end
   end
 
   @doc """
@@ -934,8 +803,7 @@ defmodule Brando.Utils do
     do: "#{human_spaced_number(div(ms, @day_time))} days"
 
   @doc """
-  This function takes a string representing a number and intersperses it with spaces every three digits,
-  starting from the right side of the string. This makes it easier to read large numbers.
+  Formats a number with grouped thousands for compact, locale-neutral display.
 
   ## Examples
 

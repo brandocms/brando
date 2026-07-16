@@ -11,7 +11,7 @@ defmodule E2eProject.Projects.Category do
     plural: "categories"
 
   use Gettext, backend: E2eProjectAdmin.Gettext
-  import Brando.Blueprint.Listings.Components
+  import Brando.Blueprint.Listings.Components.Core
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Sequenced

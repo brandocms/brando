@@ -5,7 +5,7 @@ defmodule Brando.Type.Video do
   """
   use Ecto.Type
 
-  alias Brando.Utils
+  alias Brando.Utils.Struct, as: StructUtils
 
   @type t :: %__MODULE__{}
 
@@ -26,7 +26,7 @@ defmodule Brando.Type.Video do
   Cast should return OUR type no matter what the input.
   """
   def cast(%__MODULE__{} = val), do: {:ok, val}
-  def cast(val) when is_map(val), do: {:ok, Utils.map_to_struct(val, %__MODULE__{})}
+  def cast(val) when is_map(val), do: {:ok, StructUtils.map_to_struct(val, %__MODULE__{})}
 
   @doc """
   Integers are never considered blank
@@ -37,7 +37,7 @@ defmodule Brando.Type.Video do
   Load
   """
   def load(val) when is_map(val) do
-    {:ok, Utils.map_to_struct(val, %__MODULE__{})}
+    {:ok, StructUtils.map_to_struct(val, %__MODULE__{})}
   end
 
   @doc """

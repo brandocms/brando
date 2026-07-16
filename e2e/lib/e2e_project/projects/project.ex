@@ -11,7 +11,7 @@ defmodule E2eProject.Projects.Project do
     plural: "projects",
     extensions: [BrandoJsonApi.Resource, BrandoGraphql.Resource]
 
-  import Brando.Blueprint.Listings.Components
+  import Brando.Blueprint.Listings.Components.Core
   import Ecto.Query
 
   alias E2eProject.Projects

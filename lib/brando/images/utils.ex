@@ -121,12 +121,7 @@ defmodule Brando.Images.Utils do
   Returns image type atom.
   """
   @spec image_type(filename :: binary) :: atom | {:error, binary}
-  def image_type(filename) do
-    filename
-    |> Path.extname()
-    |> String.downcase()
-    |> do_image_type()
-  end
+  defdelegate image_type(filename), to: Brando.Images.Metadata, as: :type
 
   def svg_size(file) do
     doc = File.read!(file)
@@ -161,20 +156,6 @@ defmodule Brando.Images.Utils do
       :error -> %{width: 300, height: 150}
     end
   end
-
-  defp do_image_type(".jpg"), do: :jpg
-  defp do_image_type(".jpeg"), do: :jpg
-  defp do_image_type(".png"), do: :png
-  defp do_image_type(".gif"), do: :gif
-  defp do_image_type(".bmp"), do: :bmp
-  defp do_image_type(".tif"), do: :tiff
-  defp do_image_type(".tiff"), do: :tiff
-  defp do_image_type(".psd"), do: :psd
-  defp do_image_type(".svg"), do: :svg
-  defp do_image_type(".crw"), do: :crw
-  defp do_image_type(".webp"), do: :webp
-  defp do_image_type(".avif"), do: :avif
-  defp do_image_type(ext), do: {:error, ext}
 
   @doc """
   Return joined path of `file` and the :media_path config option

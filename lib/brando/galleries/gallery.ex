@@ -11,7 +11,8 @@ defmodule Brando.Galleries.Gallery do
     gettext_module: Brando.Gettext
 
   use Gettext, backend: Brando.Gettext
-  import Brando.Blueprint.Listings.Components
+  import Brando.Blueprint.Listings.Components.Core
+  import Brando.Blueprint.Listings.Components.Cover, only: [cover: 1]
   import Ecto.Query
 
   trait Brando.Trait.Timestamped

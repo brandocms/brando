@@ -11,7 +11,7 @@ defmodule E2eProject.Prices.PriceCategory do
     plural: "price_categories"
 
   use Gettext, backend: E2eProjectAdmin.Gettext
-  import Brando.Blueprint.Listings.Components
+  import Brando.Blueprint.Listings.Components.Core
 
   alias E2eProject.Prices
 

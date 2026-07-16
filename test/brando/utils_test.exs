@@ -1,5 +1,5 @@
 defmodule Brando.UtilsTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   use Brando.ConnCase
 
   import Plug.Test
@@ -203,6 +203,8 @@ defmodule Brando.UtilsTest do
 
     org_cfg = Brando.config(Brando.Images)
 
+    on_exit(fn -> Application.put_env(:brando, Brando.Images, org_cfg) end)
+
     cdn_cfg = %Brando.CDN.Config{
       enabled: true,
       media_url: "https://cdn.com"
@@ -258,8 +260,6 @@ defmodule Brando.UtilsTest do
 
     assert img_url(img_with_cdn_cfg_but_cdn_false, :thumb) ==
              "images/thumb/file.jpg"
-
-    Application.put_env(:brando, Brando.Images, org_cfg)
 
     assert capture_io(:stderr, fn -> img_url(img, :notasize, default: "default.jpg") end) =~
              "Wrong size key for img_url function."

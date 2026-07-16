@@ -22,13 +22,14 @@ instructions.
 
 ### Listings
 
-Blueprints with custom listing rows must explicitly import the reusable row
-components. Blueprints without custom rows should not import them.
+Blueprints with custom listing rows must explicitly import the lightweight core
+components. Import cover images or child-listing actions only when the row uses
+them. Blueprints without custom rows should not import listing components.
 
 #### Example
 
 ```elixir
-  import Brando.Blueprint.Listings.Components
+  import Brando.Blueprint.Listings.Components.Core
 
   listings do
     listing do
@@ -49,6 +50,13 @@ components. Blueprints without custom rows should not import them.
     """
   end
 ```
+
+Rows using `<.cover>` additionally import
+`Brando.Blueprint.Listings.Components.Cover`; rows using `<.children_button>`
+import `Brando.Blueprint.Listings.Components.Children`. Limit either import with
+`only: [cover: 1]` or `only: [children_button: 1]`. The original
+`Brando.Blueprint.Listings.Components` facade remains compatible when gradual
+migration is preferable.
 
 #### Listing Query
 #### Fields

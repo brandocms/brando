@@ -141,6 +141,21 @@
   `Brando.helpers/0`, `Brando.routes/0`, and `Brando.gettext/0` calls remain compatible.
   No application code or database migration is required.
 
+- **Granular Blueprint listing components**: Custom rows can now import the
+  lightweight `Brando.Blueprint.Listings.Components.Core` module and opt into
+  `Cover` or `Children` only when needed. Brando's own schemas use these narrow
+  imports, preventing simple grid/link rows from inheriting image and hierarchical
+  admin component trees. The original `Brando.Blueprint.Listings.Components`
+  import remains fully compatible; migration is optional and no database change
+  is required.
+
+- **Cycle-safe listing image rendering**: Blueprint covers now render through a
+  focused admin image component backed by lightweight image metadata, config-target,
+  and URL resolvers. `Brando.Images`, `Brando.Images.Utils`, `Brando.Utils`, and
+  `BrandoAdmin.Components.Content` retain their existing public APIs as wrappers,
+  while schema compilation no longer traverses the database Images context or the
+  general admin content tree. No application code or database migration is required.
+
 - **Lighter Blueprint listing rendering dependencies**: Listing helpers now use
   focused `Brando.HTML.Icon` and `Brando.HTML.I18n` components instead of depending
   directly on the full `Brando.HTML` module. The existing `Brando.HTML.icon/1` and
@@ -149,13 +164,13 @@
 
 - **Explicit Blueprint listing component imports**: `use Brando.Blueprint` no longer
   imports `Brando.Blueprint.Listings.Components` into every schema. Blueprints with
-  custom listing row functions must add
-  `import Brando.Blueprint.Listings.Components`; schemas without custom rows need no
-  change. This removes an unnecessary dependency from schema compilation to the admin
-  rendering tree. Search for `<.cover>`, `<.url>`, `<.update_link>`, `<.field>`,
-  `<.children_button>`, or `<.i18n>` inside Blueprint modules to identify consumers,
-  add the import directly after `use Brando.Blueprint`, then compile. No database
-  migration is required.
+  custom listing row functions should add
+  `import Brando.Blueprint.Listings.Components.Core`; schemas without custom rows need
+  no change. Add the opt-in `Cover` or `Children` import when the row uses `<.cover>`
+  or `<.children_button>`. Search for `<.cover>`, `<.url>`, `<.update_link>`,
+  `<.field>`, `<.children_button>`, or `<.i18n>` inside Blueprint modules to identify
+  consumers, add the imports directly after `use Brando.Blueprint`, then compile. The
+  compatibility facade remains available. No database migration is required.
 
 - **Block editor single-owner state (the clobber class is gone)**: Each block
   live_component now owns its editing state exclusively. After first mount, parent

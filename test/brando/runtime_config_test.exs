@@ -17,4 +17,9 @@ defmodule Brando.RuntimeConfigTest do
     assert RuntimeConfig.router_helpers() == Brando.routes()
     assert RuntimeConfig.gettext() == Brando.gettext()
   end
+
+  test "reads Images configuration without depending on the Images context" do
+    assert RuntimeConfig.images(:default_config) == Brando.config(Brando.Images, :default_config)
+    assert RuntimeConfig.images(:cdn) == Brando.config(Brando.Images, :cdn)
+  end
 end

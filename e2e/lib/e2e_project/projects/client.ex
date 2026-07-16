@@ -11,7 +11,7 @@ defmodule E2eProject.Projects.Client do
     plural: "clients"
 
   use Gettext, backend: E2eProjectAdmin.Gettext
-  import Brando.Blueprint.Listings.Components
+  import Brando.Blueprint.Listings.Components.Core
 
   alias E2eProject.Projects
 

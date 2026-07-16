@@ -10,6 +10,8 @@ defmodule Brando.Type.ImageConfig do
 
   use Ecto.Type
 
+  alias Brando.Utils.Struct, as: StructUtils
+
   @type cdn_config :: Brando.CDN.Config
   @type t :: %__MODULE__{
           allowed_mimetypes: [binary],
@@ -53,7 +55,7 @@ defmodule Brando.Type.ImageConfig do
   Cast should return OUR type no matter what the input.
   """
   def cast(val) when is_map(val) do
-    struct = Brando.Utils.map_to_struct(val, __MODULE__)
+    struct = StructUtils.map_to_struct(val, __MODULE__)
     formats = Enum.map(struct.formats, &ensure_atom/1)
 
     {:ok, Map.put(struct, :formats, formats)}

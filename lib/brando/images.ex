@@ -24,9 +24,8 @@ defmodule Brando.Images do
 
   import Ecto.Query
 
-  alias Brando.Assets.ConfigTarget
-  alias Brando.Images.Image
   alias Brando.Images
+  alias Brando.Images.Image
   alias Brando.Users.User
 
   @type id :: binary | integer
@@ -115,82 +114,14 @@ defmodule Brando.Images do
     Brando.Repo.soft_delete_all(q)
   end
 
-  def get_image_orientation(width, height) do
-    (width > height && "landscape") || (width == height && "square") ||
-      "portrait"
-  end
+  @doc "Returns the image orientation for dimensions or an image-like map."
+  defdelegate get_image_orientation(width, height), to: Brando.Images.Metadata, as: :orientation
 
-  def get_image_orientation(%{width: width, height: height}) do
-    (width > height && "landscape") || (width == height && "square") ||
-      "portrait"
-  end
+  @doc "Returns the image orientation for an image-like map."
+  defdelegate get_image_orientation(image), to: Brando.Images.Metadata, as: :orientation
 
-  def get_image_orientation(_), do: "unknown"
-
-  def get_config_for(%{config_target: nil}) do
-    config =
-      maybe_struct(
-        Brando.Type.ImageConfig,
-        Brando.config(Brando.Images)[:default_config] || Brando.Type.ImageConfig.default_config()
-      )
-
-    {:ok, config}
-  end
-
-  def get_config_for(%{config_target: config_target} = data) when is_binary(config_target) do
-    config =
-      case String.split(config_target, ":") do
-        ["image", schema, "function", fn_string] ->
-          ConfigTarget.config_function!(schema, fn_string)
-
-        ["gallery", schema, "function", fn_string] ->
-          schema
-          |> ConfigTarget.config_function!(fn_string)
-          |> gallery_image_config()
-
-        [type, schema, field_name] when type in ["image", "gallery"] ->
-          case ConfigTarget.schema_module(schema) do
-            {:ok, schema_module} ->
-              cfg =
-                schema_module
-                |> Brando.Blueprint.Assets.__asset_opts__(ConfigTarget.field_atom!(schema, field_name))
-                |> Map.get(:cfg)
-
-              if type == "gallery", do: gallery_image_config(cfg), else: cfg
-
-            :error ->
-              IO.warn("""
-
-              Missing schema module #{inspect(schema)} for config_target #{inspect(config_target)}
-
-              #{inspect(data, pretty: true)}
-
-              """)
-
-              Brando.Type.ImageConfig.default_config()
-          end
-
-        ["default"] ->
-          maybe_struct(
-            Brando.Type.ImageConfig,
-            Brando.config(Brando.Images)[:default_config] ||
-              Brando.Type.ImageConfig.default_config()
-          )
-      end
-
-    {:ok, config}
-  end
-
-  def get_config_for(config_target) when is_binary(config_target) do
-    get_config_for(%{config_target: config_target})
-  end
-
-  def get_config_for(_) do
-    get_config_for(%{config_target: "default"})
-  end
-
-  defp gallery_image_config(%{image: image}), do: image
-  defp gallery_image_config(config), do: config
+  @doc "Resolves the image configuration for an image or stored config target."
+  defdelegate get_config_for(image_or_target), to: Brando.Images.ConfigResolver, as: :get
 
   def get_processed_formats(path, nil) do
     original_type = Images.Utils.image_type(path)
@@ -253,7 +184,4 @@ defmodule Brando.Images do
   end
 
   defp normalize_folder_id(_), do: nil
-
-  defp maybe_struct(_struct_type, %Brando.Type.ImageConfig{} = config), do: config
-  defp maybe_struct(struct_type, config), do: struct(struct_type, config)
 end

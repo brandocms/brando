@@ -4,20 +4,22 @@ defmodule Brando.Blueprint.Listings do
 
   ### Listing/row component
 
-  Import the reusable row components explicitly, then set your own component
-  for rendering a listing row:
+  Import the lightweight row components explicitly, adding the opt-in cover or
+  children modules only when the row uses them:
 
-      import Brando.Blueprint.Listings.Components
+      import Brando.Blueprint.Listings.Components.Core
+      import Brando.Blueprint.Listings.Components.Cover, only: [cover: 1]
 
       listings do
         listing do
-          component &__MODULE__.list_row/1
+          component &__MODULE__.listing_row/1
           # ...
         end
       end
 
-  The explicit import keeps Blueprints without custom listing rows independent
-  from the admin component tree.
+  The compatibility facade `Brando.Blueprint.Listings.Components` still exposes
+  every component, but granular imports keep ordinary listing rows independent
+  from cover-image and child-listing admin trees.
 
       def listing_row(assigns) do
         ~H\"""

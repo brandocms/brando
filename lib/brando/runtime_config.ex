@@ -7,6 +7,8 @@ defmodule Brando.RuntimeConfig do
   configuration without creating a dependency back to application startup.
   """
 
+  @images_config_key :"Elixir.Brando.Images"
+
   @doc """
   Gets the configuration for `key` under the `:brando` application.
   """
@@ -18,6 +20,13 @@ defmodule Brando.RuntimeConfig do
   """
   @spec get(module(), term()) :: term()
   def get(module, key), do: Keyword.get(Application.get_env(:brando, module), key, nil)
+
+  @doc """
+  Gets `key` from the `Brando.Images` application configuration without adding
+  a code dependency on the database-backed Images context.
+  """
+  @spec images(term()) :: term()
+  def images(key), do: Keyword.get(Application.get_env(:brando, @images_config_key), key, nil)
 
   @doc """
   Resolves a module under the configured parent application module.

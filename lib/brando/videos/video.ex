@@ -11,7 +11,7 @@ defmodule Brando.Videos.Video do
     gettext_module: Brando.Gettext
 
   use Gettext, backend: Brando.Gettext
-  import Brando.Blueprint.Listings.Components
+  import Brando.Blueprint.Listings.Components.Core
 
   trait Brando.Trait.Creator
   trait Brando.Trait.Timestamped

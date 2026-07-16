@@ -13,7 +13,8 @@ defmodule Brando.Users.User do
     gettext_module: Brando.Gettext
 
   use Gettext, backend: Brando.Gettext
-  import Brando.Blueprint.Listings.Components
+  import Brando.Blueprint.Listings.Components.Core
+  import Brando.Blueprint.Listings.Components.Cover, only: [cover: 1]
 
   alias Brando.Users.UserConfig
 

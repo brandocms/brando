@@ -10,7 +10,7 @@ defmodule Brando.Navigation.Menu do
 
   use Gettext, backend: Brando.Gettext
 
-  import Brando.Blueprint.Listings.Components
+  import Brando.Blueprint.Listings.Components.Core
   import Ecto.Query
 
   alias Brando.Content.Var
