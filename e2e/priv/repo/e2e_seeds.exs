@@ -936,8 +936,13 @@ team_section =
     namespace: %{"en" => "06 COPY PASTE TEST", "no" => "06 COPY PASTE TEST"},
     help_text: %{"en" => "Multi block for team members", "no" => "Multiblokk for teammedlemmer"},
     class: "team-section",
-    code:
-      "<section b-tpl=\"team-section\">\n  <div class=\"inner\">\n    {% for child in block.children %}\n      {% render_child child %}\n    {% endfor %}\n  </div>\n</section>",
+    code: """
+    <section b-tpl="team-section">
+      <div class="inner">
+        {{ content }}
+      </div>
+    </section>
+    """,
     svg: nil,
     multi: true,
     datasource: false,

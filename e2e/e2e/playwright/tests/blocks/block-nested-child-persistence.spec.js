@@ -31,6 +31,7 @@ test.describe('Nested child block persistence', () => {
 
     const multiBlock = page.locator('[data-module-multi="true"]')
     await expect(multiBlock).toBeVisible()
+    await expect(multiBlock.locator('.block-liquex-preview .split_content')).toHaveCount(1)
 
     await multiBlock.locator('.block-plus').last().click()
     await page.getByRole('button', { name: 'COPY PASTE TEST' }).click()
