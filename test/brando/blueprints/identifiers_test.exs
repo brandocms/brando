@@ -1,8 +1,9 @@
 defmodule Brando.Blueprint.IdentifiersTest do
   use ExUnit.Case
-  alias Brando.Pages.Page
+
   alias Brando.BlueprintTest.Project
   alias Brando.Content.Var
+  alias Brando.Pages.Page
 
   describe "__has_identifier__/0" do
     test "returns true for schemas with identifier template" do
@@ -34,6 +35,39 @@ defmodule Brando.Blueprint.IdentifiersTest do
     test "extracts relation preloads from Liquex identifier template" do
       # Project identifier is "{{ entry.title }} [{{ entry.id }}]" — no relations
       assert Project.__identifier_preloads__() == []
+    end
+
+    test "extracts deep Liquid relations and ignores unknown paths without creating atoms" do
+      suffix = System.unique_integer([:positive])
+      module = Module.concat(__MODULE__, "UnknownRelation#{suffix}")
+      unknown_relation = "relation_that_does_not_exist_#{suffix}"
+
+      quoted =
+        quote do
+          defmodule unquote(module) do
+            use Brando.Blueprint,
+              application: "Brando",
+              domain: "IdentifierPreloadTest",
+              schema: "UnknownRelation",
+              singular: "unknown_relation",
+              plural: "unknown_relations",
+              gettext_module: Brando.Gettext
+
+            identifier unquote("{{ entry.creator.config.content_language }} {{ entry.#{unknown_relation}.title }}")
+
+            relations do
+              relation :creator, :belongs_to, module: Brando.Users.User
+            end
+          end
+        end
+
+      Code.compile_quoted(quoted)
+
+      assert module.__identifier_preloads__() == [:creator]
+
+      assert_raise ArgumentError, fn ->
+        String.to_existing_atom(unknown_relation)
+      end
     end
   end
 

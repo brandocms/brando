@@ -134,6 +134,12 @@
 
 #### Improvements
 
+- **Safe Blueprint template preload extraction**: Identifier and absolute URL
+  templates now detect arbitrarily deep declared relation paths without converting
+  template text to atoms. Unknown nested paths are ignored instead of potentially
+  failing schema compilation with `ArgumentError`. Existing preload metadata and
+  template APIs are unchanged, and no application or database migration is required.
+
 - **Isolated Blueprint changeset runtime**: Generated schema changesets now execute
   casting, trait mutation, uniqueness, constraint, relation, asset, and block processing
   through the focused `Brando.Blueprint.ChangesetRunner`. This keeps runtime pipeline

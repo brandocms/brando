@@ -30,57 +30,54 @@ defmodule Brando.Blueprint.Dsl do
     extract_template_preloads(type, tpl, relations)
   end
 
-  defp extract_template_preloads(type, tpl, relations) do
-    try_relation = fn name ->
-      relations
-      |> Enum.find(fn rel ->
-        atom_name = (is_atom(name) && name) || String.to_existing_atom(name)
-        rel.name == atom_name
-      end)
-      |> case do
-        nil -> nil
-        rel -> rel.name
-      end
-    end
+  defp extract_template_preloads(nil, _template, _relations), do: []
 
-    case type do
-      :liquid ->
-        ~r/.*?(entry[.a-zA-Z0-9_]+).*?/
-        |> Regex.scan(tpl || "", capture: :all_but_first)
-        |> Enum.map(&String.split(List.first(&1), "."))
-        |> Enum.filter(&(Enum.count(&1) > 1))
-        |> Enum.map(fn
-          [_, rel, _] -> try_relation.(rel)
-          [_, rel] -> try_relation.(rel)
-        end)
-        |> Enum.reject(&is_nil(&1))
-        |> Enum.uniq()
+  defp extract_template_preloads(:liquid, template, relations) do
+    ~r/.*?(entry[.a-zA-Z0-9_]+).*?/
+    |> Regex.scan(template || "", capture: :all_but_first)
+    |> Enum.map(fn [path] -> String.split(path, ".") end)
+    |> Enum.flat_map(fn
+      [_entry, relation | _nested_fields] -> [relation]
+      _direct_field -> []
+    end)
+    |> resolve_relation_names(relations)
+  end
 
-      :i18n ->
-        tpl
-        |> Enum.filter(&(Enum.count(&1) > 1))
-        |> Enum.map(fn
-          [rel, _] -> try_relation.(rel)
-          [rel] -> try_relation.(rel)
-        end)
-        |> Enum.reject(&is_nil(&1))
-        |> Enum.uniq()
+  defp extract_template_preloads(:i18n, template, relations) do
+    template
+    |> Enum.flat_map(fn
+      [relation, _field | _nested_fields] -> [relation]
+      _direct_field -> []
+    end)
+    |> resolve_relation_names(relations)
+  end
 
-      :heex ->
-        ~r/@entry\.([a-zA-Z_]+)/
-        |> Regex.scan(tpl || "", capture: :all_but_first)
-        |> Enum.map(fn [rel] -> try_relation.(rel) end)
-        |> Enum.reject(&is_nil(&1))
-        |> Enum.uniq()
+  defp extract_template_preloads(:heex, template, relations) do
+    ~r/@entry\.([a-zA-Z_]+)/
+    |> Regex.scan(template || "", capture: :all_but_first)
+    |> Enum.map(fn [relation] -> relation end)
+    |> resolve_relation_names(relations)
+  end
 
-      nil ->
-        []
-    end
+  defp resolve_relation_names(names, relations) do
+    names
+    |> Enum.map(&resolve_relation_name(&1, relations))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+  end
+
+  defp resolve_relation_name(name, relations) when is_atom(name) do
+    Enum.find_value(relations, &if(&1.name == name, do: &1.name))
+  end
+
+  defp resolve_relation_name(name, relations) when is_binary(name) do
+    Enum.find_value(relations, &if(Atom.to_string(&1.name) == name, do: &1.name))
   end
 
   @impl Spark.Dsl
   def handle_before_compile(_opts) do
     quote location: :keep, unquote: false do
+      alias Brando.Blueprint
       alias Brando.Exception.BlueprintError
       alias Brando.RuntimeConfig
       alias Spark.Dsl.Extension, as: SDE
@@ -367,7 +364,7 @@ defmodule Brando.Blueprint.Dsl do
       end
 
       if @data_layer == :embedded do
-        Brando.Blueprint.build_embedded_schema(
+        Blueprint.build_embedded_schema(
           __MODULE__,
           @table_name,
           @attrs,
@@ -375,7 +372,7 @@ defmodule Brando.Blueprint.Dsl do
           @assets
         )
       else
-        Brando.Blueprint.build_schema(
+        Blueprint.build_schema(
           __MODULE__,
           @table_name,
           @attrs,
@@ -440,7 +437,7 @@ defmodule Brando.Blueprint.Dsl do
           opts: opts
         }
 
-        Brando.Blueprint.run_changeset(params)
+        Blueprint.run_changeset(params)
       end
 
       for {trait, trait_opts} <- @all_traits do
