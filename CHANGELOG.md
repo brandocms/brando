@@ -134,6 +134,12 @@
 
 #### Improvements
 
+- **Lighter Blueprint listing rendering dependencies**: Listing helpers now use
+  focused `Brando.HTML.Icon` and `Brando.HTML.I18n` components instead of depending
+  directly on the full `Brando.HTML` module. The existing `Brando.HTML.icon/1` and
+  `Brando.HTML.i18n/1` APIs remain as compatibility wrappers, so applications need
+  no code or database migration.
+
 - **Explicit Blueprint listing component imports**: `use Brando.Blueprint` no longer
   imports `Brando.Blueprint.Listings.Components` into every schema. Blueprints with
   custom listing row functions must add

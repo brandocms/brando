@@ -175,11 +175,7 @@ defmodule Brando.HTML do
   attr :name, :string, required: true
   attr :class, :any, default: nil
 
-  def icon(assigns) do
-    ~H"""
-    <span data-icon class={[@name, @class]} />
-    """
-  end
+  def icon(assigns), do: Brando.HTML.Icon.icon(assigns)
 
   @doc """
   Outputs an alternate URL for the current URL in conn
@@ -866,30 +862,8 @@ defmodule Brando.HTML do
 
   attr :map, :any, required: true
 
-  def i18n(%{map: nil} = assigns) do
-    ~H"""
-    """
-  end
-
-  def i18n(assigns) do
-    current_locale = Gettext.get_locale()
-    fallback_locale = Brando.config(:default_language)
-
-    translated_string = assigns.map[current_locale] || assigns.map[fallback_locale] || ""
-
-    translated_string =
-      if translated_string == "" do
-        assigns.map["en"] || ""
-      else
-        translated_string
-      end
-
-    assigns = assign(assigns, :translated_string, translated_string)
-
-    ~H"""
-    {@translated_string}
-    """
-  end
+  @doc "Renders the best available translation from a translated map."
+  def i18n(assigns), do: Brando.HTML.I18n.i18n(assigns)
 
   def render_palettes_css(assigns) do
     assigns = assign(assigns, :palettes_css, Brando.Cache.Palettes.get_css())

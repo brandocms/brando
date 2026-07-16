@@ -180,7 +180,7 @@ defmodule Brando.Pages.Page do
     ~H"""
     <div class="col-1 center">
       <div :if={@entry.is_homepage} class="badge" data-popover={gettext("This page is marked as the homepage.")}>
-        <Brando.HTML.icon name="hero-home" class="s" />
+        <Brando.HTML.Icon.icon name="hero-home" class="s" />
       </div>
     </div>
     <.update_link entry={@entry} columns={7}>
@@ -189,7 +189,7 @@ defmodule Brando.Pages.Page do
         <br />
         <div :if={@entry.has_url} class="badge lowercase no-border">
           <a class="flex-h" href={@url} target="_blank">
-            <Brando.HTML.icon name="hero-globe-alt" class="s mr-1" />
+            <Brando.HTML.Icon.icon name="hero-globe-alt" class="s mr-1" />
             {@url}
           </a>
         </div>
@@ -207,7 +207,7 @@ defmodule Brando.Pages.Page do
       <:outside>
         <br />
         <div class="badge no-border">
-          <Brando.HTML.icon name="hero-key" class="mr-1" /> {@entry.parent_key}/{@entry.key}
+          <Brando.HTML.Icon.icon name="hero-key" class="mr-1" /> {@entry.parent_key}/{@entry.key}
         </div>
       </:outside>
     </.update_link>
@@ -232,7 +232,7 @@ defmodule Brando.Pages.Page do
 
         <div class="badge no-border lowercase">
           <a class="flex-h" href={@url} target="_blank">
-            <Brando.HTML.icon name="hero-globe-alt" class="s mr-1" />
+            <Brando.HTML.Icon.icon name="hero-globe-alt" class="s mr-1" />
             {@url}
           </a>
         </div>

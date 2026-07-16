@@ -61,7 +61,7 @@ defmodule Brando.Blueprint.Listings.Components do
       @offset && "offset-#{@offset}"
     ]}>
       <a :if={@status == :published} href={@href} target="_blank">
-        <Brando.HTML.icon name="hero-link" />
+        <Brando.HTML.Icon.icon name="hero-link" />
       </a>
     </div>
     """
@@ -138,5 +138,5 @@ defmodule Brando.Blueprint.Listings.Components do
   attr :map, :any, required: true
 
   @doc "Renders the current locale's value from a translated map."
-  def i18n(assigns), do: Brando.HTML.i18n(assigns)
+  def i18n(assigns), do: Brando.HTML.I18n.i18n(assigns)
 end
