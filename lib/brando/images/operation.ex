@@ -7,10 +7,10 @@ defmodule Brando.Images.Operation do
             total_operations: nil,
             operation_index: nil,
             processed_formats: nil,
-            image_struct: %Brando.Images.Image{},
+            image_struct: nil,
             filename: nil,
             type: nil,
-            size_cfg: %Brando.Type.ImageConfig{},
+            size_cfg: nil,
             size_key: nil,
             sized_image_dir: nil,
             sized_image_path: nil
