@@ -73,9 +73,7 @@ defmodule Brando.Navigation.Menu do
             input :status, :status, compact: true
             input :key, :text, monospace: true, compact: true, label: t("Key", Item)
 
-            input :link, {:live_component, BrandoAdmin.Components.Form.Input.Link},
-              compact: true,
-              label: t("Link", Item)
+            input :link, :link, compact: true, label: t("Link", Item)
           end
         end
       end
