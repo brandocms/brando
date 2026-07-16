@@ -217,6 +217,13 @@
   applications may opt in by changing only the `use` module. Runtime behavior, routes,
   and database schemas are unchanged, so no database migration is required.
 
+- **Isolated context query compilation**: Generated and built-in Blueprint contexts now
+  use `Brando.Query.Compiler`, which provides query, mutation, reducer, and helper macros
+  without compiling contexts against the runtime query engine. Existing
+  `use Brando.Query` declarations remain supported; applications may opt in by changing
+  only the module passed to `use`. Query behavior and database schemas are unchanged, so
+  no database migration is required.
+
 - **Symbolic built-in subform components**: Blueprint `inputs_for` definitions can now
   use `:vars`, `:gallery_objects`, `:identity_type_config`, or `:page_vars` instead of
   concrete admin LiveComponent modules. Brando's schemas use these tokens, which are

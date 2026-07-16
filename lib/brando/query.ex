@@ -2,6 +2,10 @@ defmodule Brando.Query do
   @moduledoc """
   Query macros to DRY up contexts
 
+  New contexts should use `Brando.Query.Compiler` to keep the runtime query engine
+  out of their compile graph. `use Brando.Query` remains a compatible facade for
+  existing applications, and the runtime query functions in this module are unchanged.
+
   # Mutations
 
       ```
@@ -116,235 +120,36 @@ defmodule Brando.Query do
   import Ecto.Query
 
   alias Brando.Cache
+  alias Brando.Query.Compiler
+  alias Brando.Repo
   alias Brando.Revisions
 
-  @default_callback {:fn, [], [{:->, [], [[{:entry, [], nil}], {:ok, {:entry, [], nil}}]}]}
+  @doc "Imports the focused query compiler and query helper macros."
+  defmacro __using__(_opts), do: Compiler.build_use()
 
-  defmacro __using__(_) do
-    quote do
-      import unquote(__MODULE__)
-      import Brando.Query.Helpers
-    end
+  @doc "Defines list or single-entry query functions for a Blueprint schema."
+  defmacro query(kind, module, do: block) when kind in [:list, :single] do
+    Compiler.build_query(kind, module, block, __CALLER__)
   end
 
-  @doc """
-
-  ## Usage
-
-      query :list, Product do
-        default fn
-          query -> from q in query
-        end
-      end
-
-      filters Product do
-        fn
-          {:title, title}, query -> from q in query, where: ilike(q.title, ^"%\#{title}%")
-          {:name, name}, query -> from q in query, where: ilike(q.name, ^"%\#{name}%")
-        end
-      end
-  """
-  defmacro query(:list, module, do: block) do
-    module = Macro.expand_literals(module, %{__CALLER__ | function: {:query, 3}})
-    query_list(module, block)
+  @doc "Defines generated create, update, delete, or duplicate mutation functions."
+  defmacro mutation(operation, module) when operation in [:create, :update, :delete, :duplicate] do
+    Compiler.build_mutation(operation, module, nil, __CALLER__)
   end
 
-  defmacro query(:single, module, do: block) do
-    module = Macro.expand_literals(module, %{__CALLER__ | function: {:query, 3}})
-    query_single(module, block)
+  defmacro mutation(operation, module, do: callback)
+           when operation in [:create, :update, :delete] do
+    Compiler.build_mutation(operation, module, callback, __CALLER__)
   end
 
-  defmacro mutation(:create, {module, opts}) do
-    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
-    mutation_create({module, opts})
-  end
-
-  defmacro mutation(:create, module) do
-    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
-    mutation_create(Macro.expand(module, __CALLER__))
-  end
-
-  defmacro mutation(:update, {module, opts}) do
-    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
-    mutation_update({module, opts})
-  end
-
-  defmacro mutation(:update, module) do
-    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
-    mutation_update(module)
-  end
-
-  defmacro mutation(:delete, {module, opts}) do
-    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
-    mutation_delete({module, opts})
-  end
-
-  defmacro mutation(:delete, module) do
-    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
-    mutation_delete(module)
-  end
-
-  defmacro mutation(:duplicate, {module, opts}) do
-    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
-    mutation_duplicate({module, opts})
-  end
-
-  defmacro mutation(:duplicate, module) do
-    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
-    mutation_duplicate(module)
-  end
-
-  defmacro mutation(:create, module, do: callback_block) do
-    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
-    mutation_create(module, callback_block)
-  end
-
-  defmacro mutation(:update, {module, opts}, do: callback_block) do
-    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
-    mutation_update({module, opts}, callback_block)
-  end
-
-  defmacro mutation(:update, module, do: callback_block) do
-    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
-    mutation_update(module, callback_block)
-  end
-
-  defmacro mutation(:delete, module, do: callback_block) do
-    module = Macro.expand_literals(module, %{__CALLER__ | function: {:mutation, 2}})
-    mutation_delete(module, callback_block)
-  end
-
+  @doc "Defines a context's list-query filter reducer."
   defmacro filters(module, do: block) do
-    module = Macro.expand_literals(module, %{__CALLER__ | function: {:filters, 2}})
-    filter_query(module, block)
+    Compiler.build_reducer(:filters, module, block, __CALLER__)
   end
 
+  @doc "Defines a context's single-query match reducer."
   defmacro matches(module, do: block) do
-    module = Macro.expand_literals(module, %{__CALLER__ | function: {:matches, 2}})
-    match_query(module, block)
-  end
-
-  defp query_list(module, block) do
-    source = module.__schema__(:source)
-    pluralized_schema = module.__naming__().plural
-
-    quote do
-      def unquote(:"list_#{pluralized_schema}!")(args \\ %{}, stream \\ false) do
-        {:ok, entries} = unquote(:"list_#{pluralized_schema}")(args, stream)
-        entries
-      end
-
-      def unquote(:"list_#{pluralized_schema}")(args \\ %{}, stream \\ false) do
-        initial_query = unquote(block).(unquote(module))
-
-        Brando.Query.handle_list_query(
-          __MODULE__,
-          {:list, unquote(source), args},
-          args,
-          initial_query,
-          unquote(module),
-          stream
-        )
-      end
-    end
-  end
-
-  defp query_single(module, block) do
-    source = module.__schema__(:source)
-    singular_schema = module.__naming__().singular
-    singular_schema_atom = String.to_atom(singular_schema)
-
-    quote do
-      @spec unquote(:"get_#{singular_schema}")(nil | integer | binary | map()) ::
-              {:ok, any} | {:error, {unquote(singular_schema_atom), :not_found}}
-      def unquote(:"get_#{singular_schema}")(nil),
-        do: {:error, {unquote(singular_schema_atom), :not_found}}
-
-      def unquote(:"get_#{singular_schema}")(id) when is_binary(id) or is_integer(id) do
-        query = unquote(block).(unquote(module)) |> where([t], t.id == ^id)
-
-        case Brando.Repo.one(query) do
-          nil -> {:error, {unquote(singular_schema_atom), :not_found}}
-          result -> {:ok, result}
-        end
-      end
-
-      def unquote(:"get_#{singular_schema}")(args) when is_map(args) do
-        Brando.Query.handle_single_query(
-          __MODULE__,
-          {:single, unquote(source), args},
-          args,
-          unquote(module),
-          unquote(block),
-          unquote(singular_schema_atom)
-        )
-      end
-
-      @spec unquote(:"get_#{singular_schema}!")(integer | binary | map()) :: any | no_return
-      def unquote(:"get_#{singular_schema}!")(id) when is_binary(id) or is_integer(id) do
-        unquote(block).(unquote(module))
-        |> where([t], t.id == ^id)
-        |> Brando.Repo.one!()
-      end
-
-      def unquote(:"get_#{singular_schema}!")(args) when is_map(args) do
-        __MODULE__
-        |> run_single_query_reducer(args, unquote(module))
-        |> unquote(block).()
-        |> limit(1)
-        |> Brando.Repo.one!()
-      end
-    end
-  end
-
-  defp filter_query(module, block) do
-    quote do
-      def with_filter(query, unquote(module), filter) do
-        Enum.reduce(filter, query, unquote(block))
-      rescue
-        _e in FunctionClauseError ->
-          reraise Brando.Exception.QueryFilterClauseError,
-                  [
-                    message: """
-
-
-                    Could not find a matching query filter clause
-
-                    Filter: #{inspect(filter)}
-                    Context: #{inspect(unquote(module).__modules__().context)}
-                    """
-                  ],
-                  __STACKTRACE__
-
-        e ->
-          reraise e, __STACKTRACE__
-      end
-    end
-  end
-
-  defp match_query(module, block) do
-    quote do
-      def with_match(query, unquote(module), match) do
-        Enum.reduce(match, query, unquote(block))
-      rescue
-        _e in FunctionClauseError ->
-          reraise Brando.Exception.QueryMatchClauseError,
-                  [
-                    message: """
-
-
-                    Could not find a matching query match clause
-
-                    Matches: #{inspect(match)}
-                    Context: #{inspect(unquote(module).__modules__().context)}
-                    """
-                  ],
-                  __STACKTRACE__
-
-        e ->
-          reraise e, __STACKTRACE__
-      end
-    end
+    Compiler.build_reducer(:matches, module, block, __CALLER__)
   end
 
   def with_order(query, order) when is_list(order) do
@@ -600,204 +405,6 @@ defmodule Brando.Query do
     end
   end
 
-  defp mutation_create(module, callback_block \\ nil)
-
-  defp mutation_create({module, opts}, callback_block) do
-    singular_schema = module.__naming__().singular
-
-    callback_block = callback_block || @default_callback
-    do_mutation_create(module, singular_schema, callback_block, opts)
-  end
-
-  defp mutation_create(module, callback_block) do
-    singular_schema = module.__naming__().singular
-
-    callback_block = callback_block || @default_callback
-    do_mutation_create(module, singular_schema, callback_block)
-  end
-
-  defp do_mutation_create(module, singular_schema, callback_block, opts \\ []) do
-    quote generated: true do
-      def unquote(:"create_#{singular_schema}")(params, user, opts \\ [])
-
-      def unquote(:"create_#{singular_schema}")(%Ecto.Changeset{} = changeset, user, opts) do
-        Brando.Query.Mutations.create_with_changeset(
-          unquote(module),
-          changeset,
-          user,
-          unquote(callback_block),
-          opts ++ unquote(opts)
-        )
-      end
-
-      def unquote(:"create_#{singular_schema}")(params, user, opts) when is_map(params) do
-        Brando.Query.Mutations.create(
-          unquote(module),
-          params,
-          user,
-          unquote(callback_block),
-          opts ++ unquote(opts)
-        )
-      end
-    end
-  end
-
-  defp mutation_update(module, callback_block \\ nil)
-
-  defp mutation_update({module, opts}, callback_block) do
-    singular_schema = module.__naming__().singular
-    callback_block = callback_block || @default_callback
-    do_mutation_update(module, singular_schema, callback_block, opts)
-  end
-
-  defp mutation_update(module, callback_block) do
-    singular_schema = module.__naming__().singular
-    callback_block = callback_block || @default_callback
-    do_mutation_update(module, singular_schema, callback_block)
-  end
-
-  defp do_mutation_update(module, singular_schema, callback_block, opts \\ []) do
-    preloads = Keyword.get(opts, :preload)
-
-    quote do
-      def unquote(:"update_#{singular_schema}")(%Ecto.Changeset{} = changeset, user) do
-        Brando.Query.Mutations.update_with_changeset(
-          unquote(module),
-          changeset,
-          user,
-          unquote(preloads),
-          unquote(callback_block),
-          []
-        )
-      end
-
-      def unquote(:"update_#{singular_schema}")(%Ecto.Changeset{} = changeset, user, opts) do
-        Brando.Query.Mutations.update_with_changeset(
-          unquote(module),
-          changeset,
-          user,
-          unquote(preloads),
-          unquote(callback_block),
-          opts
-        )
-      end
-
-      def unquote(:"update_#{singular_schema}")(%{id: id}, params, user) do
-        Brando.Query.Mutations.update(
-          __MODULE__,
-          unquote(module),
-          unquote(singular_schema),
-          id,
-          params,
-          user: user,
-          preloads: unquote(preloads),
-          callback: unquote(callback_block),
-          changeset: nil,
-          notify?: true
-        )
-      end
-
-      def unquote(:"update_#{singular_schema}")(%{id: id}, params, user, opts) do
-        Brando.Query.Mutations.update(
-          __MODULE__,
-          unquote(module),
-          unquote(singular_schema),
-          id,
-          params,
-          user: user,
-          preloads: unquote(preloads),
-          callback: unquote(callback_block),
-          changeset: Keyword.get(opts, :changeset),
-          notify?: Keyword.get(opts, :show_notification, true)
-        )
-      end
-
-      def unquote(:"update_#{singular_schema}")(id, params, user) do
-        Brando.Query.Mutations.update(
-          __MODULE__,
-          unquote(module),
-          unquote(singular_schema),
-          id,
-          params,
-          user: user,
-          preloads: unquote(preloads),
-          callback: unquote(callback_block),
-          changeset: nil,
-          notify?: true
-        )
-      end
-
-      def unquote(:"update_#{singular_schema}")(id, params, user, opts) do
-        Brando.Query.Mutations.update(
-          __MODULE__,
-          unquote(module),
-          unquote(singular_schema),
-          id,
-          params,
-          user: user,
-          preloads: unquote(preloads),
-          callback: unquote(callback_block),
-          changeset: Keyword.get(opts, :changeset),
-          notify?: Keyword.get(opts, :show_notification, true)
-        )
-      end
-    end
-  end
-
-  defp mutation_duplicate({module, opts}), do: do_mutation_duplicate(module, opts)
-  defp mutation_duplicate(module), do: do_mutation_duplicate(module, [])
-
-  defp do_mutation_duplicate(module, opts) do
-    singular_schema = module.__naming__().singular
-
-    quote do
-      def unquote(:"duplicate_#{singular_schema}")(id, user, override_opts \\ []) do
-        Brando.Query.Mutations.duplicate(
-          __MODULE__,
-          unquote(module),
-          unquote(singular_schema),
-          id,
-          user: user,
-          duplicate_opts: unquote(opts),
-          override_opts: override_opts
-        )
-      end
-    end
-  end
-
-  defp mutation_delete(module, callback_block \\ nil)
-
-  defp mutation_delete({module, opts}, callback_block) do
-    singular_schema = module.__naming__().singular
-    callback_block = callback_block || @default_callback
-    do_mutation_delete(module, singular_schema, callback_block, opts)
-  end
-
-  defp mutation_delete(module, callback_block) do
-    singular_schema = module.__naming__().singular
-    callback_block = callback_block || @default_callback
-
-    do_mutation_delete(module, singular_schema, callback_block)
-  end
-
-  defp do_mutation_delete(module, singular_schema, callback_block, opts \\ []) do
-    preloads = Keyword.get(opts, :preload)
-
-    quote do
-      def unquote(:"delete_#{singular_schema}")(id, user \\ :system) do
-        Brando.Query.Mutations.delete(
-          __MODULE__,
-          unquote(module),
-          unquote(singular_schema),
-          id,
-          user: user,
-          preloads: unquote(preloads),
-          callback: unquote(callback_block)
-        )
-      end
-    end
-  end
-
   # only build pagination_meta if offset & limit is set
   def maybe_build_pagination_meta(query, %{paginate: true, limit: 0}) do
     total_entries = get_total_entries(query)
@@ -857,7 +464,7 @@ defmodule Brando.Query do
       |> exclude(:limit)
       |> exclude(:offset)
       |> aggregate()
-      |> Brando.Repo.one()
+      |> Repo.one()
 
     total_entries || 0
   end
@@ -907,20 +514,20 @@ defmodule Brando.Query do
   def insert(changeset, opts \\ []) do
     changeset
     |> Map.put(:action, :insert)
-    |> Brando.Repo.insert(opts)
+    |> Repo.insert(opts)
     |> Cache.Query.evict()
   end
 
   def update(changeset, opts \\ []) do
     changeset
     |> Map.put(:action, :update)
-    |> Brando.Repo.update(opts)
+    |> Repo.update(opts)
     |> Cache.Query.evict()
   end
 
   def delete(entry) do
     entry
-    |> Brando.Repo.delete()
+    |> Repo.delete()
     |> Cache.Query.evict()
   end
 
@@ -933,13 +540,7 @@ defmodule Brando.Query do
   Check if a JSONB field contains any key that matches the given value
   """
   defmacro jsonb_contains_any_value_ilike(field, value) do
-    quote do
-      fragment(
-        "EXISTS (SELECT 1 FROM jsonb_each_text(?) AS t(key, value) WHERE LOWER(t.value) LIKE LOWER(?))",
-        unquote(field),
-        ^("%" <> unquote(value) <> "%")
-      )
-    end
+    Compiler.build_jsonb_contains(field, value)
   end
 
   @doc """
@@ -965,7 +566,7 @@ defmodule Brando.Query do
             module
           )
 
-        result = Brando.Repo.all(query)
+        result = Repo.all(query)
         Brando.Cache.Query.put(cache_key, result, ttl)
         {:ok, result}
 
@@ -984,9 +585,9 @@ defmodule Brando.Query do
         pagination_meta = maybe_build_pagination_meta(query, args)
 
         if stream do
-          Brando.Repo.stream(query)
+          Repo.stream(query)
         else
-          entries = Brando.Repo.all(query)
+          entries = Repo.all(query)
 
           if pagination_meta do
             {:ok, %{entries: entries, pagination_meta: pagination_meta}}
@@ -1026,7 +627,7 @@ defmodule Brando.Query do
             query
             |> block.()
             |> limit(1)
-            |> Brando.Repo.one()
+            |> Repo.one()
             |> case do
               nil ->
                 {:error, {schema_atom, :not_found}}
@@ -1061,7 +662,7 @@ defmodule Brando.Query do
             query
             |> block.()
             |> limit(1)
-            |> Brando.Repo.one()
+            |> Repo.one()
             |> case do
               nil -> {:error, {schema_atom, :not_found}}
               result -> {:ok, result}

@@ -6,7 +6,7 @@ defmodule Brando.Files do
   """
 
   use BrandoAdmin, :context
-  use Brando.Query
+  use Brando.Query.Compiler
 
   import Ecto.Query
 

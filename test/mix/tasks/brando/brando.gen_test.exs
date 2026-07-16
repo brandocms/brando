@@ -38,6 +38,10 @@ defmodule Mix.Tasks.Brando.Gen.Test do
                  "<.live_component module={Content.List}\n      id={\"content_listing_\#{@schema}_default\"}\n"
       end)
 
+      assert_file("lib/brando/projects.ex", fn file ->
+        assert file =~ "use Brando.Query.Compiler"
+      end)
+
       assert_file("lib/brando_web/controllers/project_html.ex", fn file ->
         assert file =~ "BrandoIntegrationWeb.ProjectHTML"
         assert file =~ "embed_templates \"project_html/*\""

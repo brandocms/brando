@@ -2,7 +2,7 @@ defmodule Brando.Sites do
   @moduledoc """
   Context for Sites
   """
-  use Brando.Query
+  use Brando.Query.Compiler
 
   import Ecto.Query
 

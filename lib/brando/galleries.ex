@@ -4,7 +4,7 @@ defmodule Brando.Galleries do
   Handles gallery objects (images and videos).
   """
   use BrandoAdmin, :context
-  use Brando.Query
+  use Brando.Query.Compiler
 
   import Ecto.Query
 

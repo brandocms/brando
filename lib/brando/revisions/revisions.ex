@@ -8,7 +8,7 @@ defmodule Brando.Revisions do
   later save has committed.
   """
 
-  use Brando.Query
+  use Brando.Query.Compiler
 
   import Ecto.Query
 

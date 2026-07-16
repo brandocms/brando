@@ -10,6 +10,21 @@ Storage changes are managed through versioned snapshots and reviewed Ecto migrat
 [Blueprint migrations](blueprint_migrations.md) for generation, rollback, rename, legacy upgrade, and recovery
 instructions.
 
+#### Context query compilation
+
+Contexts generated for Blueprint schemas use the focused query compiler:
+
+```elixir
+use Brando.Query.Compiler
+```
+
+It provides the existing `query`, `mutation`, `filters`, `matches`, query-helper, and
+JSONB helper macros without making the context compile against the runtime query engine.
+Existing contexts using `use Brando.Query` remain fully supported. Applications may opt
+in incrementally by changing only the module passed to `use`; calls to runtime functions
+such as `Brando.Query.handle_list_query/6` remain on `Brando.Query`. This is a compile-time
+dependency optimization and requires no database migration.
+
 #### Attributes
 
 #### Relations
