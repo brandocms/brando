@@ -1,6 +1,15 @@
 defmodule Brando.Blueprint.AbsoluteURLTest do
   use ExUnit.Case, async: false
+
   alias Brando.Pages.Page
+
+  setup do
+    scope_default_language_routes = Application.fetch_env!(:brando, :scope_default_language_routes)
+
+    on_exit(fn ->
+      Application.put_env(:brando, :scope_default_language_routes, scope_default_language_routes)
+    end)
+  end
 
   describe "__has_absolute_url__/0" do
     test "returns true for schemas with absolute_url defined" do
@@ -64,8 +73,6 @@ defmodule Brando.Blueprint.AbsoluteURLTest do
       assert Page.__absolute_url__(%Page{language: "en", uri: "about"}) == "/about"
       assert Page.__absolute_url__(%Page{language: "no", uri: "index"}) == "/no/"
       assert Page.__absolute_url__(%Page{language: "en", uri: "index"}) == "/"
-
-      Application.put_env(:brando, :scope_default_language_routes, true)
     end
 
     test "generates URL from HEEx route_i18n helper" do

@@ -134,6 +134,13 @@
 
 #### Improvements
 
+- **Blueprint runtime routing boundary**: Generated admin routes, absolute URLs,
+  localized paths, form redirects, and language attribute defaults now resolve
+  configuration through the lightweight `Brando.RuntimeConfig` module instead of
+  depending on the top-level `Brando` application facade. Existing `Brando.endpoint/0`,
+  `Brando.helpers/0`, `Brando.routes/0`, and `Brando.gettext/0` calls remain compatible.
+  No application code or database migration is required.
+
 - **Lighter Blueprint listing rendering dependencies**: Listing helpers now use
   focused `Brando.HTML.Icon` and `Brando.HTML.I18n` components instead of depending
   directly on the full `Brando.HTML` module. The existing `Brando.HTML.icon/1` and

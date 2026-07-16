@@ -50,6 +50,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
       absolute_url false
   """
   alias Brando.Blueprint.TemplateParser
+  alias Brando.RuntimeConfig
   alias Brando.Villain
 
   @doc """
@@ -67,11 +68,11 @@ defmodule Brando.Blueprint.AbsoluteURL do
 
   def route(:page_path, :show, args) do
     prepared = Enum.map(args, &String.split(to_string(&1), "/"))
-    apply(Brando.helpers(), :page_path, [Brando.endpoint(), :show] ++ prepared)
+    apply(RuntimeConfig.router_helpers(), :page_path, [RuntimeConfig.endpoint(), :show] ++ prepared)
   end
 
   def route(fun, action, args) do
-    apply(Brando.helpers(), fun, [Brando.endpoint(), action] ++ args)
+    apply(RuntimeConfig.router_helpers(), fun, [RuntimeConfig.endpoint(), action] ++ args)
   end
 
   @doc """
@@ -95,16 +96,16 @@ defmodule Brando.Blueprint.AbsoluteURL do
       case action do
         :show ->
           prepared = Enum.map(args, &String.split(to_string(&1), "/"))
-          apply(Brando.helpers(), :page_path, [Brando.endpoint(), :show] ++ prepared)
+          apply(RuntimeConfig.router_helpers(), :page_path, [RuntimeConfig.endpoint(), :show] ++ prepared)
 
         _ ->
-          apply(Brando.helpers(), :page_path, [Brando.endpoint(), action] ++ args)
+          apply(RuntimeConfig.router_helpers(), :page_path, [RuntimeConfig.endpoint(), action] ++ args)
       end
 
     locale = to_string(entry.language)
-    default_language = to_string(Brando.config(:default_language))
+    default_language = to_string(RuntimeConfig.get(:default_language))
 
-    if Brando.config(:scope_default_language_routes) == false && default_language == locale do
+    if RuntimeConfig.get(:scope_default_language_routes) == false && default_language == locale do
       path
     else
       "/#{locale}#{path}"
@@ -115,7 +116,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
     Brando.I18n.Helpers.localized_path(
       entry.language,
       fun,
-      [Brando.endpoint(), action] ++ args
+      [RuntimeConfig.endpoint(), action] ++ args
     )
   end
 
@@ -137,8 +138,8 @@ defmodule Brando.Blueprint.AbsoluteURL do
           entry
           |> Villain.get_base_context()
           |> Liquex.Context.assign(:config, %{
-            default_language: to_string(Brando.config(:default_language)),
-            scope_default_language_routes: Brando.config(:scope_default_language_routes)
+            default_language: to_string(Brando.RuntimeConfig.get(:default_language)),
+            scope_default_language_routes: Brando.RuntimeConfig.get(:scope_default_language_routes)
           })
 
         []
@@ -204,13 +205,13 @@ defmodule Brando.Blueprint.AbsoluteURL do
           if Map.has_key?(entry, :language) do
             entry.language
           else
-            Gettext.get_locale(Brando.gettext())
+            Gettext.get_locale(Brando.RuntimeConfig.gettext())
           end
 
         # build args from args_tpl
         args =
           [
-            Brando.endpoint(),
+            Brando.RuntimeConfig.endpoint(),
             unquote(fun_target)
           ] ++
             Enum.map(unquote(args_tpl), fn

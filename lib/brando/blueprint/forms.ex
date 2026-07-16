@@ -41,7 +41,7 @@ defmodule Brando.Blueprint.Forms do
       end
 
       def my_custom_redirect(socket, _entry, _mutation_type) do
-        Brando.routes().admin_live_path(socket, BrandoAdmin.PageListView)
+        Brando.RuntimeConfig.router_helpers().admin_live_path(socket, BrandoAdmin.PageListView)
       end
 
 

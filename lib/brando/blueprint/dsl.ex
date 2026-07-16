@@ -82,6 +82,7 @@ defmodule Brando.Blueprint.Dsl do
   def handle_before_compile(_opts) do
     quote location: :keep, unquote: false do
       alias Brando.Exception.BlueprintError
+      alias Brando.RuntimeConfig
       alias Spark.Dsl.Extension, as: SDE
 
       @required_attrs SDE.get_persisted(__MODULE__, :required_attrs, [])
@@ -199,10 +200,10 @@ defmodule Brando.Blueprint.Dsl do
             :admin_live_path
           end
 
-        base_args = [Brando.endpoint()]
+        base_args = [RuntimeConfig.endpoint()]
 
         apply(
-          Brando.routes(),
+          RuntimeConfig.router_helpers(),
           live_path,
           base_args ++ args
         )
@@ -216,10 +217,10 @@ defmodule Brando.Blueprint.Dsl do
             :"admin_#{@singular}_form_path"
           end
 
-        base_args = [Brando.endpoint()]
+        base_args = [RuntimeConfig.endpoint()]
 
         apply(
-          Brando.routes(),
+          RuntimeConfig.router_helpers(),
           form_path,
           base_args ++ [:create] ++ args
         )
@@ -233,11 +234,11 @@ defmodule Brando.Blueprint.Dsl do
             :"admin_#{@singular}_form_path"
           end
 
-        base_args = [Brando.endpoint()]
+        base_args = [RuntimeConfig.endpoint()]
         full_args = base_args ++ [:update] ++ args
 
         apply(
-          Brando.routes(),
+          RuntimeConfig.router_helpers(),
           form_path,
           full_args
         )

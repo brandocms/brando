@@ -42,7 +42,7 @@ defmodule Brando do
   @doc """
   Gets the parent app's endpoint
   """
-  def endpoint, do: web_module(Endpoint)
+  defdelegate endpoint(), to: Brando.RuntimeConfig
 
   @doc """
   Gets the parent app's live preview module
@@ -62,14 +62,18 @@ defmodule Brando do
   @doc """
   Gets the parent app's gettext module
   """
-  def gettext, do: web_module(Gettext)
+  defdelegate gettext(), to: Brando.RuntimeConfig
+
+  @doc "Gets the parent app's admin Gettext module."
   def gettext_admin, do: admin_module(Gettext)
 
   @doc """
   Gets the parent app's helpers
   """
-  def helpers, do: web_module(Router.Helpers)
-  def routes, do: web_module(Router.Helpers)
+  defdelegate helpers(), to: Brando.RuntimeConfig, as: :router_helpers
+
+  @doc "Gets the parent app's router helpers."
+  defdelegate routes(), to: Brando.RuntimeConfig, as: :router_helpers
 
   @doc """
   Gets the parent app's authorization module
