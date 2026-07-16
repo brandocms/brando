@@ -15,6 +15,7 @@ defmodule Brando.Blueprint.Trait do
   end
 
   defp expand_trait(:creator, _caller), do: built_in_trait("Creator")
+  defp expand_trait(:ensure_uid, _caller), do: built_in_trait("EnsureUID")
   defp expand_trait(:meta, _caller), do: built_in_trait("Meta")
   defp expand_trait(:scheduled_publishing, _caller), do: built_in_trait("ScheduledPublishing")
   defp expand_trait(:sequenced, _caller), do: sequenced_trait()
@@ -22,15 +23,22 @@ defmodule Brando.Blueprint.Trait do
   defp expand_trait(:status, _caller), do: built_in_trait("Status")
   defp expand_trait(:timestamped, _caller), do: built_in_trait("Timestamped")
   defp expand_trait(:translatable, _caller), do: built_in_trait("Translatable")
+  defp expand_trait(:validate_var_keys, _caller), do: built_in_trait("ValidateVarKeys")
   defp expand_trait(name, caller), do: Macro.expand(name, caller)
 
   defp expand_compiler(nil, trait, _caller) do
-    if trait in compiler_traits() do
-      trait
-      |> Module.concat("Compiler")
-      |> ensure_compiler!()
-    else
-      trait
+    cond do
+      trait in compiler_traits() ->
+        trait
+        |> Module.concat("Compiler")
+        |> ensure_compiler!()
+
+      trait in runtime_only_traits() ->
+        built_in_trait("NoopCompiler")
+        |> ensure_compiler!()
+
+      true ->
+        trait
     end
   end
 
@@ -61,6 +69,12 @@ defmodule Brando.Blueprint.Trait do
       built_in_trait("Status"),
       built_in_trait("Timestamped"),
       built_in_trait("Translatable")
+    ]
+
+  defp runtime_only_traits,
+    do: [
+      built_in_trait("EnsureUID"),
+      built_in_trait("ValidateVarKeys")
     ]
 
   defp sequenced_trait, do: Module.concat(["Brando", "Trait", "Sequenced"])

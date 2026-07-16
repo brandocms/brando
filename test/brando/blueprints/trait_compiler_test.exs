@@ -23,6 +23,11 @@ defmodule Brando.Blueprint.TraitCompilerTest.CompilerAwareTrait do
   end
 end
 
+defmodule Brando.Blueprint.TraitCompilerTest.RuntimeOnlyTrait do
+  @moduledoc false
+  use Brando.Trait
+end
+
 defmodule Brando.Blueprint.TraitCompilerTest.Schema do
   @moduledoc false
   use Brando.Blueprint,
@@ -38,10 +43,25 @@ defmodule Brando.Blueprint.TraitCompilerTest.Schema do
     runtime_option: :preserved
 end
 
+defmodule Brando.Blueprint.TraitCompilerTest.RuntimeOnlySchema do
+  @moduledoc false
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "TraitCompilerTest",
+    schema: "RuntimeOnlySchema",
+    singular: "runtime_only_schema",
+    plural: "runtime_only_schemas",
+    gettext_module: Brando.Gettext
+
+  trait Brando.Blueprint.TraitCompilerTest.RuntimeOnlyTrait,
+    compile_with: Brando.Trait.NoopCompiler,
+    runtime_option: :preserved
+end
+
 defmodule Brando.Blueprint.TraitCompilerTest do
   use ExUnit.Case, async: true
 
-  alias Brando.Blueprint.TraitCompilerTest.Schema
+  alias Brando.Blueprint.TraitCompilerTest.{RuntimeOnlySchema, Schema}
 
   test "uses an optional nested compiler without changing the runtime trait" do
     assert Brando.Blueprint.Attributes.__attribute__(Schema, :compiled_field)
@@ -50,6 +70,18 @@ defmodule Brando.Blueprint.TraitCompilerTest do
 
     assert Schema.__trait__(Brando.Blueprint.TraitCompilerTest.CompilerAwareTrait) ==
              [runtime_option: :preserved]
+  end
+
+  test "a runtime-only trait can use the reusable no-op compiler" do
+    assert RuntimeOnlySchema.has_trait(Brando.Blueprint.TraitCompilerTest.RuntimeOnlyTrait)
+
+    assert RuntimeOnlySchema.__trait__(Brando.Blueprint.TraitCompilerTest.RuntimeOnlyTrait) ==
+             [runtime_option: :preserved]
+  end
+
+  test "built-in runtime-only traits retain their runtime registration" do
+    assert Brando.Content.Ref.has_trait(Brando.Trait.EnsureUID)
+    assert Brando.Content.Module.has_trait(Brando.Trait.ValidateVarKeys)
   end
 
   test "the Sequenced compiler preserves its generated Blueprint attribute" do

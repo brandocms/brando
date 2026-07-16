@@ -218,6 +218,13 @@
   existing full module declarations remain supported for incremental adoption. No
   database migration is required.
 
+- **Runtime-only trait compiler boundary**: Traits that inject no Blueprint schema code
+  may use the reusable `Brando.Trait.NoopCompiler` while retaining validation,
+  changeset, and save callbacks. Brando's `EnsureUID` and `ValidateVarKeys` traits select
+  it automatically, and the new `trait :ensure_uid` and `trait :validate_var_keys`
+  shorthands avoid module-body runtime trait dependencies. Existing full module
+  declarations remain compatible and no application or database migration is required.
+
 - **Isolated admin form LiveView compilation**: Generated and built-in admin form
   LiveViews now use `BrandoAdmin.LiveView.Form.Compiler`, a focused setup macro that
   keeps the large runtime form-hook implementation out of their compile graph. Existing

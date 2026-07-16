@@ -56,7 +56,7 @@ defmodule Brando.Content.Module do
   trait :soft_delete
   trait :timestamped
   trait Brando.Trait.CastPolymorphicEmbeds
-  trait Brando.Trait.ValidateVarKeys
+  trait :validate_var_keys
 
   attributes do
     attribute :type, :enum, values: [:liquid, :heex], default: :liquid

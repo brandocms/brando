@@ -96,6 +96,20 @@ own schemas use these forms; applications may adopt them incrementally. The exis
 full module forms remain supported. These are compile-time optimizations and require no
 database migration.
 
+Runtime-only traits that inject no attributes, assets, or relations can use the reusable
+no-op compiler while retaining their validation and changeset/save callbacks:
+
+```elixir
+trait MyApp.Trait.Validated,
+  compile_with: Brando.Trait.NoopCompiler,
+  runtime_option: :preserved
+```
+
+Brando's `EnsureUID` and `ValidateVarKeys` traits select this boundary automatically.
+Use their `trait :ensure_uid` and `trait :validate_var_keys` shorthands to also avoid
+a module-body dependency on the runtime trait. Existing full module declarations remain
+supported and require no application or database migration.
+
 ### Translations
 
 ### Listings
