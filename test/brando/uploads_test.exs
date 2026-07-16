@@ -3,6 +3,8 @@ defmodule Brando.UploadsTest do
   # which would race concurrent readers under async: true.
   use ExUnit.Case, async: false
 
+  import ExUnit.CaptureLog
+
   alias Brando.Uploads
 
   @s3_config %Brando.CDN.S3Config{
@@ -178,8 +180,13 @@ defmodule Brando.UploadsTest do
       meta = %{path: "/nonexistent/never-copied.exe", config_target: "default"}
       entry = %{client_name: "evil.exe", client_type: "application/x-msdownload", client_size: 4}
 
-      assert {:error, message} = Uploads.store_upload(meta, entry, cfg, nil)
-      assert message =~ "Rejected type [application/x-msdownload]"
+      log =
+        capture_log(fn ->
+          assert {:error, message} = Uploads.store_upload(meta, entry, cfg, nil)
+          assert message =~ "Rejected type [application/x-msdownload]"
+        end)
+
+      assert log =~ "store_upload failed"
     end
 
     test "normalizes an empty filename to {:error, message}" do
@@ -187,7 +194,12 @@ defmodule Brando.UploadsTest do
       meta = %{path: "/nonexistent", config_target: "default"}
       entry = %{client_name: "", client_type: "application/pdf", client_size: 4}
 
-      assert {:error, "Empty filename"} = Uploads.store_upload(meta, entry, cfg, nil)
+      log =
+        capture_log(fn ->
+          assert {:error, "Empty filename"} = Uploads.store_upload(meta, entry, cfg, nil)
+        end)
+
+      assert log =~ "store_upload failed"
     end
   end
 

@@ -41,10 +41,8 @@ defmodule Brando.Villain.HeexRenderer do
 
         def render(var!(assigns)) do
           unquote(
-            EEx.compile_string(preprocessed,
-              engine: Phoenix.LiveView.TagEngine,
+            Phoenix.LiveView.TagEngine.compile(preprocessed,
               tag_handler: Phoenix.LiveView.HTMLEngine,
-              source: code_string,
               caller: __ENV__
             )
           )
