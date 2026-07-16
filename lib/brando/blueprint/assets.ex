@@ -98,8 +98,8 @@ defmodule Brando.Blueprint.Assets do
         upload_path: Path.join(["videos", "promos"])
       }
   """
-  alias Brando.Blueprint
   alias Brando.Blueprint.AssetConfigNormalizer
+  alias Brando.Blueprint.Utils
   alias Ecto.Changeset
   alias Spark.Dsl.Extension
 
@@ -156,7 +156,7 @@ defmodule Brando.Blueprint.Assets do
         Changeset.cast_embed(
           changeset,
           name,
-          Blueprint.Utils.to_changeset_opts(:embeds_many, opts)
+          Utils.to_changeset_opts(:embeds_many, opts)
         )
     end
   end
@@ -174,7 +174,7 @@ defmodule Brando.Blueprint.Assets do
         gallery_module = @gallery_module
 
         cast_opts =
-          Blueprint.Utils.to_changeset_opts(:belongs_to, opts)
+          Utils.to_changeset_opts(:belongs_to, opts)
           |> Keyword.put(:with, &gallery_module.changeset(&1, &2, user))
 
         Changeset.cast_assoc(changeset, name, cast_opts)
