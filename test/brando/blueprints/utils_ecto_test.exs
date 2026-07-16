@@ -3,6 +3,20 @@ defmodule Brando.Blueprint.UtilsEctoTest do
 
   alias Brando.Blueprint.Utils
 
+  test "Blueprint attribute types map to their Ecto representations" do
+    assert Utils.to_ecto_type(:text) == :string
+    assert Utils.to_ecto_type(:slug) == :string
+    assert Utils.to_ecto_type(:datetime) == :utc_datetime
+    assert Utils.to_ecto_type(:language) == Ecto.Enum
+    assert Utils.to_ecto_type(:enum) == Ecto.Enum
+    assert Utils.to_ecto_type(:status) == Brando.Type.Status
+    assert Utils.to_ecto_type(:file) == Brando.Type.File
+    assert Utils.to_ecto_type(:image) == Brando.Type.Image
+    assert Utils.to_ecto_type(:video) == Brando.Type.Video
+    assert Utils.to_ecto_type(:i18n_string) == Brando.Type.I18nString
+    assert Utils.to_ecto_type(:decimal) == :decimal
+  end
+
   test "schema options omit Blueprint-only metadata" do
     opts = %{cast: true, module: Example, required: true, on_delete: :delete_all, source: :author_id}
 

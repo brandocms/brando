@@ -10,19 +10,24 @@ defmodule Brando.Blueprint.Utils do
   @strip_ecto_opts [:cast, :module, :required, :unique, :constraints, :sort_param, :drop_param, :rename_from]
   @strip_embeds_opts [:cast, :module, :unique, :constraints]
   @strip_changeset_opts [:cast, :module]
+  @status_type Module.concat(["Brando", "Type", "Status"])
+  @file_type Module.concat(["Brando", "Type", "File"])
+  @image_type Module.concat(["Brando", "Type", "Image"])
+  @video_type Module.concat(["Brando", "Type", "Video"])
+  @i18n_string_type Module.concat(["Brando", "Type", "I18nString"])
 
   @doc """
   Maps a Blueprint attribute type to its Ecto schema type.
   """
   @spec to_ecto_type(term()) :: term()
   def to_ecto_type(:text), do: :string
-  def to_ecto_type(:status), do: Brando.Type.Status
-  def to_ecto_type(:file), do: Brando.Type.File
-  def to_ecto_type(:image), do: Brando.Type.Image
+  def to_ecto_type(:status), do: @status_type
+  def to_ecto_type(:file), do: @file_type
+  def to_ecto_type(:image), do: @image_type
   def to_ecto_type(:language), do: Ecto.Enum
   def to_ecto_type(:enum), do: Ecto.Enum
-  def to_ecto_type(:video), do: Brando.Type.Video
-  def to_ecto_type(:i18n_string), do: Brando.Type.I18nString
+  def to_ecto_type(:video), do: @video_type
+  def to_ecto_type(:i18n_string), do: @i18n_string_type
   def to_ecto_type(:slug), do: :string
   def to_ecto_type(:datetime), do: :utc_datetime
 
