@@ -15,10 +15,11 @@ defmodule Brando.Blueprint.Trait do
   end
 
   defp expand_trait(:sequenced, _caller), do: sequenced_trait()
+  defp expand_trait(:status, _caller), do: built_in_trait("Status")
   defp expand_trait(name, caller), do: Macro.expand(name, caller)
 
   defp expand_compiler(nil, trait, _caller) do
-    if trait == sequenced_trait() do
+    if trait in compiler_traits() do
       trait
       |> Module.concat("Compiler")
       |> ensure_compiler!()
@@ -44,5 +45,7 @@ defmodule Brando.Blueprint.Trait do
     end
   end
 
+  defp compiler_traits, do: [sequenced_trait(), built_in_trait("Status")]
   defp sequenced_trait, do: Module.concat(["Brando", "Trait", "Sequenced"])
+  defp built_in_trait(name), do: Module.concat(["Brando", "Trait", name])
 end

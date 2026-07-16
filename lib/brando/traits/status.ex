@@ -1,19 +1,18 @@
 defmodule Brando.Trait.Status do
   @moduledoc """
-  Adds `deleted_at`
+  Adds a required status field and coordinates status changes with identifiers,
+  content cascades, and query cache eviction.
   """
   use Brando.Trait
 
+  alias Brando.Trait.Status.Compiler
+
   import Ecto.Query
 
-  def generate_code(_, _) do
-    quote do
-      attributes do
-        attribute :status, :status, required: true
-      end
-    end
-  end
+  @impl true
+  def generate_code(module, config), do: Compiler.generate_code(module, config)
 
+  @doc "Updates an entry's status and synchronizes its identifier, content cascade, and query cache."
   def update_status(schema, id, status) do
     entry = Brando.Repo.one(from q in schema, where: q.id == ^id)
 

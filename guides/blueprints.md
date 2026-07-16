@@ -58,9 +58,11 @@ runtime trait options; all other options remain unchanged. Traits without it
 retain the existing behavior. `Brando.Trait.Sequenced` selects its built-in
 compiler automatically. To also avoid making the runtime trait alias a
 module-body compile dependency, use the equivalent `trait :sequenced` shorthand.
-Brando's own schemas use this form; applications may adopt it incrementally, and
-the existing `trait Brando.Trait.Sequenced` syntax remains supported. This is a
-compile-time optimization and requires no database migration.
+Brando's own schemas use this form and the matching `trait :status` shorthand;
+applications may adopt them incrementally. The existing
+`trait Brando.Trait.Sequenced` and `trait Brando.Trait.Status` forms remain
+supported. These are compile-time optimizations and require no database
+migration.
 
 ### Translations
 

@@ -59,4 +59,12 @@ defmodule Brando.Blueprint.TraitCompilerTest do
     assert attribute.opts.default == 0
     assert Brando.Pages.Page.has_trait(Brando.Trait.Sequenced)
   end
+
+  test "the Status compiler preserves its generated Blueprint attribute" do
+    attribute = Brando.Blueprint.Attributes.__attribute__(Brando.Pages.Page, :status)
+
+    assert attribute.type == :status
+    assert attribute.opts.required
+    assert Brando.Pages.Page.has_trait(Brando.Trait.Status)
+  end
 end

@@ -173,6 +173,12 @@
   supported. Custom traits are unchanged unless they opt in; no application code or
   database migration is required.
 
+- **Isolated Status trait compilation**: `Brando.Trait.Status` now uses the focused
+  trait compiler boundary, and Brando's schemas use the equivalent `trait :status`
+  shorthand to avoid pulling identifier and content-cascade runtime dependencies into
+  schema compilation. The full module syntax and public status API remain supported;
+  applications may migrate incrementally, and no database migration is required.
+
 - **Lighter Blueprint listing rendering dependencies**: Listing helpers now use
   focused `Brando.HTML.Icon` and `Brando.HTML.I18n` components instead of depending
   directly on the full `Brando.HTML` module. The existing `Brando.HTML.icon/1` and

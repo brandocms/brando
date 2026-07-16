@@ -23,7 +23,7 @@ defmodule Brando.Content.Palette do
   trait Brando.Trait.Creator
   trait :sequenced
   trait Brando.Trait.SoftDelete
-  trait Brando.Trait.Status
+  trait :status
   trait Brando.Trait.Timestamped
 
   attributes do

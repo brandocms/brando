@@ -48,7 +48,7 @@ defmodule Brando.Pages.Page do
   trait Brando.Trait.ScheduledPublishing
   trait :sequenced, append: true
   trait Brando.Trait.SoftDelete, obfuscated_fields: [:uri]
-  trait Brando.Trait.Status
+  trait :status
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable
   trait Brando.Trait.Blocks
