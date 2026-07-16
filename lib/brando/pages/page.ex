@@ -30,7 +30,7 @@ defmodule Brando.Pages.Page do
   trait Brando.Trait.CastPolymorphicEmbeds
   trait :creator
 
-  trait Brando.Trait.Meta,
+  trait :meta,
     ai: [
       meta_title: [
         prompt:
@@ -45,7 +45,7 @@ defmodule Brando.Pages.Page do
     ]
 
   trait Brando.Trait.Revisioned
-  trait Brando.Trait.ScheduledPublishing
+  trait :scheduled_publishing
   trait :sequenced, append: true
   trait :soft_delete, obfuscated_fields: [:uri]
   trait :status

@@ -203,6 +203,13 @@
   configuration and the existing full module declarations remain supported for
   incremental adoption; no database migration is required.
 
+- **Completed built-in trait compiler boundaries**: `Brando.Trait.Meta` and
+  `Brando.Trait.ScheduledPublishing` now expand schema metadata through focused compiler
+  modules, while AI configuration and publish-time callbacks remain on their runtime
+  traits. Brando's schemas use `trait :meta` and `trait :scheduled_publishing`;
+  existing full module declarations remain supported for incremental adoption. No
+  database migration is required.
+
 - **Symbolic built-in subform components**: Blueprint `inputs_for` definitions can now
   use `:vars`, `:gallery_objects`, `:identity_type_config`, or `:page_vars` instead of
   concrete admin LiveComponent modules. Brando's schemas use these tokens, which are

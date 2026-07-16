@@ -23,7 +23,7 @@ defmodule Brando.Pages.Fragment do
 
   trait :creator
   trait Brando.Trait.Revisioned
-  trait Brando.Trait.ScheduledPublishing
+  trait :scheduled_publishing
   trait :sequenced
   trait :soft_delete
   trait :status

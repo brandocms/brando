@@ -77,6 +77,32 @@ defmodule Brando.Blueprint.TraitCompilerTest do
     assert Brando.Pages.Page.__trait__(Brando.Trait.SoftDelete) == [obfuscated_fields: [:uri]]
   end
 
+  test "the Meta compiler preserves generated fields, assets, and runtime options" do
+    title = Brando.Blueprint.Attributes.__attribute__(Brando.Pages.Page, :meta_title)
+    description = Brando.Blueprint.Attributes.__attribute__(Brando.Pages.Page, :meta_description)
+    image = Brando.Blueprint.Assets.__asset__(Brando.Pages.Page, :meta_image)
+
+    assert title.type == :text
+    assert description.type == :text
+    assert image.type == :image
+    assert Keyword.has_key?(Brando.Pages.Page.__trait__(Brando.Trait.Meta), :ai)
+  end
+
+  test "the ScheduledPublishing compiler preserves its generated Blueprint attribute" do
+    attribute = Brando.Blueprint.Attributes.__attribute__(Brando.Pages.Page, :publish_at)
+
+    assert attribute.type == :datetime
+    assert Brando.Pages.Page.has_trait(Brando.Trait.ScheduledPublishing)
+  end
+
+  test "ScheduledPublishing keeps its runtime publish-time callback" do
+    changeset = Ecto.Changeset.change(%Brando.Pages.Page{}, status: :published)
+
+    updated_changeset = Brando.Trait.ScheduledPublishing.before_save(changeset, nil)
+
+    assert %DateTime{} = Ecto.Changeset.get_change(updated_changeset, :publish_at)
+  end
+
   test "the Status compiler preserves its generated Blueprint attribute" do
     attribute = Brando.Blueprint.Attributes.__attribute__(Brando.Pages.Page, :status)
 

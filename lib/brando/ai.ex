@@ -39,7 +39,7 @@ defmodule Brando.AI do
 
   Note: trait-specific defaults are resolved by traits themselves via
   `Brando.Trait.ai_field_opts/3`. For example, `Brando.Trait.Meta` reads
-  field config from `trait Brando.Trait.Meta, ai: [...]` on the blueprint.
+  field config from `trait :meta, ai: [...]` on the blueprint.
   """
 
   alias ReqLLM.Keys

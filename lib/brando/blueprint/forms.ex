@@ -230,7 +230,7 @@ defmodule Brando.Blueprint.Forms do
     For `Brando.Trait.Meta`, configure `meta_title`/`meta_description` defaults
     on the blueprint:
 
-      trait Brando.Trait.Meta,
+      trait :meta,
         ai: [
           meta_title: [prompt: "Write SEO title from title", context: [:title]],
           meta_description: [prompt: "Write SEO description from title and blocks", context: [:title, :blocks]]
@@ -246,7 +246,7 @@ defmodule Brando.Blueprint.Forms do
   `meta_title` and `meta_description` are rendered in the Meta drawer.
   You can configure AI for these fields either by:
     - declaring form inputs with `ai: [...]`
-    - setting `trait Brando.Trait.Meta, ai: [...]`
+    - setting `trait :meta, ai: [...]`
 
   ### `blocks`: Block editor
 

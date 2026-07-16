@@ -15,6 +15,8 @@ defmodule Brando.Blueprint.Trait do
   end
 
   defp expand_trait(:creator, _caller), do: built_in_trait("Creator")
+  defp expand_trait(:meta, _caller), do: built_in_trait("Meta")
+  defp expand_trait(:scheduled_publishing, _caller), do: built_in_trait("ScheduledPublishing")
   defp expand_trait(:sequenced, _caller), do: sequenced_trait()
   defp expand_trait(:soft_delete, _caller), do: built_in_trait("SoftDelete")
   defp expand_trait(:status, _caller), do: built_in_trait("Status")
@@ -52,6 +54,8 @@ defmodule Brando.Blueprint.Trait do
   defp compiler_traits,
     do: [
       built_in_trait("Creator"),
+      built_in_trait("Meta"),
+      built_in_trait("ScheduledPublishing"),
       sequenced_trait(),
       built_in_trait("SoftDelete"),
       built_in_trait("Status"),

@@ -1,35 +1,15 @@
 defmodule Brando.Trait.Meta do
-  @moduledoc false
+  @moduledoc "Adds SEO metadata fields and exposes per-field AI defaults."
   use Brando.Trait
+
+  alias Brando.Trait.Meta.Compiler
 
   @meta_fields [:meta_title, :meta_description]
 
-  def generate_code(_, _) do
-    quote do
-      attributes do
-        attribute :meta_title, :text
-        attribute :meta_description, :text
-      end
+  @impl true
+  def generate_code(module, config), do: Compiler.generate_code(module, config)
 
-      assets do
-        asset :meta_image, :image,
-          cfg: %{
-            formats: [:jpg],
-            allowed_mimetypes: ["image/jpeg", "image/png"],
-            default_size: "xlarge",
-            upload_path: Path.join(["images", "meta"]),
-            random_filename: true,
-            size_limit: 5_240_000,
-            sizes: %{
-              "micro" => %{"size" => "25", "quality" => 20, "crop" => false},
-              "thumb" => %{"size" => "400x400>", "quality" => 75, "crop" => true},
-              "xlarge" => %{"size" => "2400x1260", "quality" => 75, "crop" => true}
-            }
-          }
-      end
-    end
-  end
-
+  @impl true
   def ai_field_opts(_module, _config, field_name) when field_name not in @meta_fields, do: []
 
   def ai_field_opts(_module, config, field_name) do
