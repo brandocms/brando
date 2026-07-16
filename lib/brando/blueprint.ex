@@ -140,8 +140,8 @@ defmodule Brando.Blueprint do
   alias Brando.Blueprint.Constraints
   alias Brando.Blueprint.Relations
   alias Brando.Blueprint.Unique
-  alias Brando.Blueprint.Upload
   alias Brando.Blueprint.Villain
+  alias Brando.Exception.BlueprintError
   alias Brando.Trait
   alias Ecto.Changeset
 
@@ -212,6 +212,8 @@ defmodule Brando.Blueprint do
       import Phoenix.Component, except: [form: 1]
 
       require PolymorphicEmbed
+
+      @after_compile Brando.Blueprint
 
       @data_layer :database
       @allow_mark_as_deleted false
@@ -310,13 +312,13 @@ defmodule Brando.Blueprint do
               Ecto.Schema.field(:marked_as_deleted, :boolean, default: false, virtual: true)
             end
 
-            @parent_table_name parent_table_name
+            @join_table_name "#{parent_table_name}_#{blocks_rel.name}"
             def changeset(entry_block, attrs, user, recursive? \\ false) do
               entry_block
               |> Ecto.Changeset.cast(attrs, [:entry_id, :block_id, :sequence])
               |> Block.maybe_cast_recursive(recursive?, user)
               |> Ecto.Changeset.unique_constraint([:entry, :block],
-                name: "#{@parent_table_name}_blocks_entry_id_block_id_index"
+                name: "#{@join_table_name}_entry_id_block_id_index"
               )
             end
           end
@@ -607,13 +609,8 @@ defmodule Brando.Blueprint do
     start = System.monotonic_time()
 
     if cp.module != cp.schema.__struct__ do
-      require Logger
-
-      Logger.error(
-        "(!) MISMATCH BETWEEN MODULE AND SCHEMA STRUCT - module which runs the changeset: #{inspect(cp.module)}, schema struct: #{inspect(cp.schema.__struct__)}"
-      )
-
-      Logger.error(inspect(cp.schema, pretty: true))
+      raise BlueprintError,
+        message: "Changeset module/schema mismatch: expected #{inspect(cp.module)}, got #{inspect(cp.schema.__struct__)}"
     end
 
     changeset =
@@ -629,7 +626,6 @@ defmodule Brando.Blueprint do
       |> Constraints.run_validations(cp.module, cp.attributes)
       |> Constraints.run_validations(cp.module, cp.relations)
       |> Constraints.run_fk_constraints(cp.module, cp.relations)
-      |> Upload.run_upload_validations(cp.module, cp.assets, cp.user)
       |> Trait.run_changeset_mutators(cp.module, cp.traits_after_validate_required, cp.user, cp.opts)
       |> maybe_mark_for_deletion(cp.module)
       |> maybe_sequence(cp.module, cp.sequence)
@@ -646,7 +642,7 @@ defmodule Brando.Blueprint do
   end
 
   def maybe_sequence(changeset, module, sequence) do
-    if module.has_trait(Brando.Trait.Sequenced) do
+    if module.has_trait(:sequenced) do
       Changeset.change(changeset, sequence: sequence)
     else
       changeset
@@ -755,8 +751,20 @@ defmodule Brando.Blueprint do
     IO.warn("template/2 is deprecated. use component/1 instead. Migrate with mix brando.migrate.54")
   end
 
-  defmacro __after_compile__(env, _) do
-    # validate traits
-    Enum.each(env.module.__traits__(), &elem(&1, 0).validate(env.module, elem(&1, 1)))
+  def __after_compile__(env, _) do
+    Enum.each(env.module.__traits__(), fn {trait, opts} ->
+      case trait.validate(env.module, opts) do
+        true ->
+          :ok
+
+        :ok ->
+          :ok
+
+        other ->
+          raise BlueprintError,
+            message:
+              "Trait #{inspect(trait)} returned invalid validation result #{inspect(other)} for #{inspect(env.module)}"
+      end
+    end)
   end
 end

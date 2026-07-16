@@ -13,6 +13,12 @@ defmodule Brando.Mixfile do
       package: package(),
       elixirc_paths: elixirc_paths(Mix.env()),
       test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.html": :test,
+        "coveralls.json": :test
+      ],
       description: @description,
       aliases: aliases(),
 
@@ -20,7 +26,8 @@ defmodule Brando.Mixfile do
       name: "Brando",
       docs: [
         source_ref: "v#{@version}",
-        source_url: "https://github.com/brandocms/brando"
+        source_url: "https://github.com/brandocms/brando",
+        extras: ["guides/blueprint_migrations.md"]
       ]
     ]
   end
@@ -51,6 +58,7 @@ defmodule Brando.Mixfile do
         "assets",
         "config",
         "lib",
+        "guides",
         "priv",
         "test",
         "mix.exs",

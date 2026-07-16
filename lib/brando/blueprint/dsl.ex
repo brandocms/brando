@@ -142,6 +142,9 @@ defmodule Brando.Blueprint.Dsl do
 
       for {trait, _trait_opts} <- @all_traits do
         def has_trait(unquote(trait)), do: true
+
+        trait_key = trait |> Module.split() |> List.last() |> Macro.underscore() |> String.to_atom()
+        def has_trait(unquote(trait_key)), do: true
       end
 
       def has_trait(_), do: false
@@ -273,14 +276,7 @@ defmodule Brando.Blueprint.Dsl do
             @schema
           ])
 
-        gettext_module =
-          if @gettext_module,
-            do: @gettext_module,
-            else:
-              Module.concat([
-                admin_module,
-                "Gettext"
-              ])
+        gettext_module = @gettext_module
 
         admin_list_view =
           Module.concat([

@@ -1,505 +1,306 @@
 defmodule Brando.Blueprint.Migrations do
-  @moduledoc false
-  alias Brando.Blueprint.Assets.Asset
-  alias Brando.Blueprint.Attributes.Attribute
-  alias Brando.Blueprint.Migrations.Operations
-  alias Brando.Blueprint.Relations.Relation
+  @moduledoc """
+  Generates reviewed, reversible Ecto migrations from Blueprint storage schemas.
+
+  Migration generation compares normalized storage snapshots rather than live
+  DSL structs. Unsupported table and primary-key changes fail explicitly and
+  must be handled by a hand-written migration.
+  """
+
+  alias Brando.Blueprint.Migrations.{Diff, Renderer, Schema}
   alias Brando.Blueprint.Snapshot
-  alias Brando.Trait.Translatable
+  alias Brando.Exception.BlueprintError
 
   @default_opts [
     migration_path: "priv/repo/migrations",
     snapshot_path: "priv/blueprints/snapshots"
   ]
 
+  @doc """
+  Generates the next migration and stores its Blueprint snapshot.
+
+  Returns `{:ok, metadata}` for a generated migration and `{:noop, metadata}`
+  when the storage schema has not changed. Migration and snapshot creation are
+  serialized per Blueprint and use atomic file replacement.
+  """
+  @spec create_migration(module(), keyword()) :: {:ok | :noop, map()}
   def create_migration(module, opts \\ @default_opts) do
-    current_snapshot = Snapshot.build_snapshot(module)
+    opts = Keyword.merge(@default_opts, opts)
+
+    with_migration_lock(opts, fn ->
+      Snapshot.with_lock(module, opts, fn ->
+        do_create_migration(module, opts)
+      end)
+    end)
+  end
+
+  @doc """
+  Stores the current Blueprint schema as the next snapshot without generating a migration.
+
+  This is an explicit recovery tool for a storage change already implemented by a
+  reviewed hand-written migration. It must only be run after the database migration
+  has been created and tested.
+  """
+  @spec rebaseline_snapshot(module(), keyword()) :: {:ok, map()}
+  def rebaseline_snapshot(module, opts \\ @default_opts) do
+    opts = Keyword.merge(@default_opts, opts)
+
+    Snapshot.with_lock(module, opts, fn ->
+      version = Snapshot.get_snapshot_version(module, opts) + 1
+      snapshot = %{Snapshot.build_snapshot(module, version) | rebaseline?: true}
+      {:ok, filename} = Snapshot.store_snapshot(snapshot, module, opts)
+
+      {:ok, %{module: module, snapshot: filename, snapshot_version: version}}
+    end)
+  end
+
+  @doc """
+  Compares two snapshots using the normalized migration schema.
+  """
+  @spec diff_against(Snapshot.t(), Snapshot.t() | nil) :: {:ok, Diff.t()} | {:error, term()}
+  def diff_against(%Snapshot{schema: current_schema}, nil) do
+    Diff.compare(current_schema, nil)
+  end
+
+  def diff_against(%Snapshot{schema: current_schema}, %Snapshot{schema: previous_schema}) do
+    Diff.compare(current_schema, previous_schema)
+  end
+
+  defp do_create_migration(module, opts) do
     previous_snapshot = Snapshot.get_latest_snapshot(module, opts)
+    ensure_consistent_history!(module, previous_snapshot, migration_files(module, opts))
+    current_schema = Schema.build(module)
 
-    current_snapshot
-    |> diff_against(previous_snapshot)
-    |> do_create_migration(module, opts)
+    case Diff.compare(current_schema, snapshot_schema(previous_snapshot)) do
+      {:ok, diff} ->
+        if Diff.empty?(diff) do
+          upgrade_snapshot_format(module, previous_snapshot, current_schema, opts)
+
+          {:noop,
+           %{
+             module: module,
+             message: "No storage changes necessary",
+             snapshot_version: snapshot_version(previous_snapshot)
+           }}
+        else
+          write_migration_and_snapshot(module, diff, current_schema, previous_snapshot, opts)
+        end
+
+      {:error, reason} ->
+        raise_unsupported_change!(module, reason)
+    end
   end
 
-  def do_create_migration({[], [], [], [], [], []}, _module, _opts) do
-    {nil, "No changes neccessary"}
-  end
-
-  def do_create_migration(
-        {attributes_to_add, attributes_to_remove, assets_to_add, assets_to_remove, relations_to_add, relations_to_remove},
-        module,
-        opts
-      ) do
-    {operation_type, operations} =
-      build_operations(
-        attributes_to_add,
-        attributes_to_remove,
-        assets_to_add,
-        assets_to_remove,
-        relations_to_add,
-        relations_to_remove,
-        module,
-        opts
-      )
-
-    opts =
-      opts
-      |> Keyword.put(:add_alternates, :language in Enum.map(attributes_to_add, & &1.name))
-      |> Keyword.put(:add_entries, Enum.filter(relations_to_add, &(&1.type == :entries)))
-      |> Keyword.put(
-        :add_blocks,
-        Enum.filter(relations_to_add, &(&1.type == :has_many && &1.opts.module == :blocks))
-      )
-
-    up = perform_operations(:up, operations)
-    down = perform_operations(:down, operations)
-
-    up_indexes = perform_operations(:up_indexes, operations)
-    down_indexes = perform_operations(:down_indexes, operations)
-
+  defp write_migration_and_snapshot(module, diff, current_schema, previous_snapshot, opts) do
     sequence = get_sequence(module, opts)
+    snapshot_version = snapshot_version(previous_snapshot) + 1
 
-    {up, down}
-    |> wrap_in_operation_type(
-      {up_indexes, down_indexes},
-      operation_type,
-      module,
-      sequence,
-      opts
-    )
-    |> format_code()
-    |> write_migration(module, sequence, opts)
-    |> Snapshot.store_snapshot(opts)
-  end
+    contents =
+      module
+      |> Renderer.render(sequence, diff, current_schema, snapshot_schema(previous_snapshot))
+      |> format_code()
 
-  defp write_migration(contents, module, sequence, opts) do
-    module
-    |> build_migration_filename(sequence, opts)
-    |> File.write!(contents)
+    migration_filename = build_migration_filename(module, sequence, opts)
+    snapshot = Snapshot.build_snapshot(module, snapshot_version)
 
-    module
-  end
+    atomic_write!(migration_filename, contents)
 
-  defp format_code(content) do
-    Code.format_string!(content, locals_without_parens: locals_without_parens())
-  end
+    try do
+      {:ok, snapshot_filename} = Snapshot.store_snapshot(snapshot, module, opts)
 
-  defp wrap_in_operation_type({up, _}, {up_indexes, down_indexes}, :create, module, sequence, opts) do
-    application = module.__naming__().application
-    domain = module.__naming__().domain
-    schema = module.__naming__().schema
-    table_name = module.__naming__().table_name
-    migration_module = "#{application}.Migrations.#{domain}.#{schema}.Blueprint#{sequence}"
-
-    alternates_source = "#{table_name}_alternates"
-    alternates? = opts[:add_alternates] && module.has_trait(Translatable)
-    entries? = opts[:add_entries] != []
-    blocks? = opts[:add_blocks] != []
-    uuid? = module.__primary_key__() == {:id, :binary_id, autogenerate: true}
-
-    create_table =
-      if uuid? do
-        """
-        create table(:#{table_name}, primary_key: false) do
-          add :id, :uuid, primary_key: true
-          #{up}
-        end
-        """
-      else
-        """
-        create table(:#{table_name}) do
-          #{up}
-        end
-        """
-      end
-
-    {up_alternates, down_alternates} =
-      build_alternates(table_name, alternates_source, alternates?)
-
-    {up_entries, down_entries} =
-      build_entries(table_name, opts, entries?)
-
-    {up_blocks, down_blocks} =
-      build_blocks(table_name, opts, blocks?)
-
-    """
-    defmodule #{migration_module} do
-      use Ecto.Migration
-
-      def up do
-        #{create_table}
-
-        #{up_indexes}
-
-        #{up_alternates}
-
-        #{up_entries}
-
-        #{up_blocks}
-      end
-
-      def down do
-        drop table(:#{table_name})
-
-        #{down_indexes}
-
-        #{down_alternates}
-
-        #{down_entries}
-
-        #{down_blocks}
-      end
-    end
-    """
-  end
-
-  defp wrap_in_operation_type({up, down}, {up_indexes, down_indexes}, :alter, module, sequence, opts) do
-    application = module.__naming__().application
-    domain = module.__naming__().domain
-    schema = module.__naming__().schema
-    table_name = module.__naming__().table_name
-    migration_module = "#{application}.Migrations.#{domain}.#{schema}.Blueprint#{sequence}"
-
-    alternates_source = "#{table_name}_alternates"
-    alternates? = opts[:add_alternates] && module.has_trait(Translatable)
-    entries? = opts[:add_entries] != []
-    blocks? = opts[:add_blocks] != []
-
-    {up_alternates, down_alternates} =
-      build_alternates(table_name, alternates_source, alternates?)
-
-    {up_entries, down_entries} =
-      build_entries(table_name, opts, entries?)
-
-    {up_blocks, down_blocks} =
-      build_blocks(table_name, opts, blocks?)
-
-    """
-    defmodule #{migration_module} do
-      use Ecto.Migration
-
-      def up do
-        alter table(:#{table_name}) do
-          #{up}
-        end
-
-        #{up_indexes}
-
-        #{up_alternates}
-
-        #{up_entries}
-
-        #{up_blocks}
-      end
-
-      def down do
-        alter table(:#{table_name}) do
-          #{down}
-        end
-
-        #{down_indexes}
-
-        #{down_alternates}
-
-        #{down_entries}
-
-        #{down_blocks}
-      end
-    end
-    """
-  end
-
-  defp build_blocks(table_name, opts, blocks?) do
-    if blocks? do
-      for_result =
-        for f <- opts[:add_blocks] do
-          join_source = Enum.join([table_name, f.name], "_")
-
-          """
-          create table(:#{join_source}) do
-            add :entry_id, references(:#{table_name}, on_delete: :delete_all)
-            add :block_id, references(:content_blocks, on_delete: :delete_all)
-            add :sequence, :integer
-          end
-
-          create unique_index(:#{join_source}, [:entry_id, :block_id])
-          """
-        end
-
-      up = Enum.join(for_result, "\r\n\r\n")
-
-      for_result =
-        for f <- opts[:add_blocks] do
-          join_source = Enum.join([table_name, f.name], "_")
-
-          """
-          drop table(:#{join_source})
-          """
-        end
-
-      down = Enum.join(for_result, "\r\n\r\n")
-
-      {up, down}
-    else
-      {"", ""}
+      {:ok,
+       %{
+         module: module,
+         migration: migration_filename,
+         snapshot: snapshot_filename,
+         sequence: sequence,
+         snapshot_version: snapshot_version,
+         destructive_operations: Diff.destructive_operations(diff)
+       }}
+    rescue
+      error ->
+        File.rm(migration_filename)
+        reraise error, __STACKTRACE__
     end
   end
 
-  defp build_entries(table_name, opts, entries?) do
-    if entries? do
-      for_result =
-        for f <- opts[:add_entries] do
-          entries_source = "#{table_name}_#{f.name}_identifiers"
+  defp upgrade_snapshot_format(_module, nil, _current_schema, _opts), do: :ok
 
-          """
-          create table(:#{entries_source}) do
-            add :parent_id, references(:#{table_name}, on_delete: :delete_all)
-            add :identifier_id, references(:content_identifiers, on_delete: :delete_all)
-            add :sequence, :integer
-            timestamps()
-          end
+  defp upgrade_snapshot_format(_module, %Snapshot{migrated_from_format: nil}, _current_schema, _opts), do: :ok
 
-          create unique_index(:#{entries_source}, [:parent_id, :identifier_id])
-          """
-        end
-
-      up = Enum.join(for_result, "\r\n\r\n")
-
-      for_result =
-        for f <- opts[:add_entries] do
-          entries_source = "#{table_name}_#{f.name}_identifiers"
-
-          """
-          drop table(:#{entries_source})
-          """
-        end
-
-      down = Enum.join(for_result, "\r\n\r\n")
-
-      {up, down}
-    else
-      {"", ""}
-    end
-  end
-
-  defp build_alternates(table_name, alternates_source, alternates?) do
-    if alternates? do
-      {"""
-       create table(:#{alternates_source}) do
-         add :entry_id, references(:#{table_name}, on_delete: :delete_all)
-         add :linked_entry_id, references(:#{table_name}, on_delete: :delete_all)
-         timestamps()
-       end
-
-       create unique_index(:#{alternates_source}, [:entry_id, :linked_entry_id])
-       """,
-       """
-       drop table(:#{alternates_source})
-       """}
-    else
-      {"", ""}
-    end
-  end
-
-  def diff_against(current_snapshot, nil) do
-    attributes_to_add = current_snapshot.attributes
-    assets_to_add = current_snapshot.assets
-    relations_to_add = current_snapshot.relations
-    {attributes_to_add, [], assets_to_add, [], relations_to_add, []}
-  end
-
-  def diff_against(current_snapshot, previous_snapshot) do
-    attributes_to_add =
-      Enum.reject(current_snapshot.attributes, fn attribute ->
-        Enum.find(previous_snapshot.attributes, &(&1.name == attribute.name))
-      end)
-
-    attributes_to_remove =
-      Enum.reject(previous_snapshot.attributes, fn attribute ->
-        Enum.find(current_snapshot.attributes, &(&1.name == attribute.name))
-      end)
-
-    assets_to_add =
-      Enum.reject(current_snapshot.assets, fn asset ->
-        Enum.find(Map.get(previous_snapshot, :assets, []), &(&1.name == asset.name))
-      end)
-
-    assets_to_remove =
-      Enum.reject(Map.get(previous_snapshot, :assets, []), fn asset ->
-        Enum.find(current_snapshot.assets, &(&1.name == asset.name))
-      end)
-
-    relations_to_add =
-      Enum.reject(current_snapshot.relations, fn relation ->
-        Enum.find(previous_snapshot.relations, &(&1.name == relation.name))
-      end)
-
-    relations_to_remove =
-      Enum.reject(previous_snapshot.relations, fn relation ->
-        Enum.find(current_snapshot.relations, &(&1.name == relation.name))
-      end)
-
-    {
-      attributes_to_add,
-      attributes_to_remove,
-      assets_to_add,
-      assets_to_remove,
-      relations_to_add,
-      relations_to_remove
+  defp upgrade_snapshot_format(module, previous_snapshot, current_schema, opts) do
+    upgraded = %Snapshot{
+      previous_snapshot
+      | format_version: 2,
+        migrated_from_format: nil,
+        schema: Schema.persistable(current_schema),
+        updated_at: DateTime.utc_now(),
+        attributes: nil,
+        assets: nil,
+        relations: nil,
+        traits: nil
     }
+
+    Snapshot.store_snapshot(upgraded, module, opts)
   end
 
-  def build_operations(
-        attributes_to_add,
-        attributes_to_remove,
-        assets_to_add,
-        assets_to_remove,
-        relations_to_add,
-        relations_to_remove,
-        module,
-        opts
-      ) do
-    # are we creating a table or altering?
-    operation_type = operation_type(module, opts)
-    additive_actions = attributes_to_add ++ assets_to_add ++ relations_to_add
-    additive_operations = Enum.map(additive_actions, &build_operation(:add, &1, module))
+  defp snapshot_schema(nil), do: nil
+  defp snapshot_schema(%Snapshot{schema: schema}), do: schema
 
-    reductive_actions = attributes_to_remove ++ assets_to_remove ++ relations_to_remove
-    reductive_operations = Enum.map(reductive_actions, &build_operation(:remove, &1, module))
-
-    operations = additive_operations ++ reductive_operations
-
-    {operation_type, operations}
-  end
-
-  defp operation_type(module, opts) do
-    # do we have any existing migrations for this?
-    case get_latest_migration(module, opts) do
-      nil -> :create
-      _ -> :alter
-    end
-  end
+  defp snapshot_version(nil), do: 0
+  defp snapshot_version(%Snapshot{version: version}), do: version
 
   defp get_sequence(module, opts) do
-    case get_latest_migration(module, opts) do
-      nil ->
-        pad_sequence(1)
+    module
+    |> migration_files(opts)
+    |> Enum.map(&migration_sequence!/1)
+    |> Enum.max(fn -> 0 end)
+    |> Kernel.+(1)
+    |> pad_sequence()
+  end
 
-      last_migration ->
-        last_migration
-        |> Path.basename(".exs")
-        |> String.split("_")
-        |> List.last()
-        |> String.to_integer()
-        |> Kernel.+(1)
-        |> pad_sequence()
+  defp migration_files(module, opts) do
+    filename_core = build_filename_core(module)
+    migration_path = Keyword.fetch!(opts, :migration_path)
+    Path.wildcard(Path.join(migration_path, "*_#{filename_core}_*.exs"))
+  end
+
+  defp ensure_consistent_history!(_module, nil, []), do: :ok
+  defp ensure_consistent_history!(_module, %Snapshot{}, [_ | _]), do: :ok
+  defp ensure_consistent_history!(_module, %Snapshot{rebaseline?: true}, []), do: :ok
+
+  defp ensure_consistent_history!(module, nil, migration_files) when migration_files != [] do
+    raise BlueprintError,
+      message: """
+      Blueprint migration history for #{inspect(module)} is missing its snapshot.
+
+      Found #{length(migration_files)} migration file(s), but no matching snapshot. Restore
+      the snapshots from version control. If the database already matches the current
+      Blueprint, deliberately re-baseline it as documented in guides/blueprint_migrations.md.
+      """
+  end
+
+  defp ensure_consistent_history!(module, %Snapshot{}, []) do
+    raise BlueprintError,
+      message: """
+      Blueprint migration history for #{inspect(module)} is missing its migration files.
+
+      Restore the migrations from version control or pass the correct `:migration_path`.
+      Generation stopped to avoid emitting an invalid alter migration without its base.
+      """
+  end
+
+  defp migration_sequence!(filename) do
+    filename
+    |> Path.basename(".exs")
+    |> String.split("_")
+    |> List.last()
+    |> Integer.parse()
+    |> case do
+      {sequence, ""} ->
+        sequence
+
+      _ ->
+        raise BlueprintError,
+          message: "Invalid Blueprint migration filename: #{filename}"
     end
   end
 
   defp build_migration_filename(module, sequence, opts) do
-    filename_core = build_filename_core(module)
-    build_migration_path("#{timestamp()}_#{filename_core}_#{sequence}.exs", opts)
-  end
-
-  defp pad_sequence(number) do
-    String.pad_leading(to_string(number), 3, "0")
-  end
-
-  defp timestamp do
-    {{y, m, d}, {hh, mm, ss}} = :calendar.universal_time()
-    "#{y}#{pad(m)}#{pad(d)}#{pad(hh)}#{pad(mm)}#{pad(ss)}"
-  end
-
-  defp pad(i) when i < 10, do: <<?0, ?0 + i>>
-  defp pad(i), do: to_string(i)
-
-  defp build_filename_core(module) do
-    application = module.__naming__().application
-    domain = module.__naming__().domain
-    schema = module.__naming__().schema
-    String.downcase("blueprint_#{application}_#{domain}_#{schema}")
-  end
-
-  defp build_migration_path(file, opts) do
-    migration_path = Keyword.get(opts, :migration_path, "priv/repo/migrations")
+    migration_path = Keyword.fetch!(opts, :migration_path)
     File.mkdir_p!(migration_path)
 
-    Path.join([
+    Path.join(
       migration_path,
-      file
-    ])
+      "#{next_migration_version(opts)}_#{build_filename_core(module)}_#{sequence}.exs"
+    )
   end
 
-  defp get_latest_migration(module, opts) do
-    filename_core = build_filename_core(module)
-    filename_glob = String.downcase("*_#{filename_core}_*.exs")
-    migration_path = build_migration_path(filename_glob, opts)
+  defp build_filename_core(module) do
+    naming = module.__naming__()
+    String.downcase("blueprint_#{naming.application}_#{naming.domain}_#{naming.schema}")
+  end
 
-    case Path.wildcard(migration_path) do
-      [] ->
-        nil
+  defp next_migration_version(opts) do
+    current_version = DateTime.utc_now() |> Calendar.strftime("%Y%m%d%H%M%S") |> String.to_integer()
 
-      migrations ->
-        List.last(migrations)
+    latest_version =
+      opts
+      |> Keyword.fetch!(:migration_path)
+      |> Path.join("*.exs")
+      |> Path.wildcard()
+      |> Enum.map(&ecto_migration_version!/1)
+      |> Enum.max(fn -> 0 end)
+
+    max(current_version, latest_version + 1)
+    |> Integer.to_string()
+    |> String.pad_leading(14, "0")
+  end
+
+  defp ecto_migration_version!(filename) do
+    filename
+    |> Path.basename()
+    |> String.split("_", parts: 2)
+    |> hd()
+    |> Integer.parse()
+    |> case do
+      {version, ""} ->
+        version
+
+      _ ->
+        raise BlueprintError,
+          message: "Invalid Ecto migration filename in Blueprint migration path: #{filename}"
     end
   end
 
-  defp build_operation(:add, %Attribute{} = attr, module) do
-    %Operations.Attribute.Add{
-      attribute: attr,
-      module: module
-    }
+  defp with_migration_lock(opts, fun) do
+    resource = {__MODULE__, Path.expand(Keyword.fetch!(opts, :migration_path))}
+    :global.trans({resource, self()}, fun)
   end
 
-  defp build_operation(:add, %Relation{} = rel, module) do
-    ecto_data = Map.get(module.__changeset__(), rel.name)
+  defp pad_sequence(number), do: number |> to_string() |> String.pad_leading(3, "0")
 
-    %Operations.Relation.Add{
-      relation: rel,
-      module: module,
-      opts: ecto_data
-    }
+  defp format_code(content) do
+    content
+    |> Code.format_string!(locals_without_parens: locals_without_parens())
+    |> IO.iodata_to_binary()
   end
 
-  defp build_operation(:add, %Asset{} = asset, module) do
-    ecto_data = Map.get(module.__changeset__(), asset.name)
+  defp atomic_write!(filename, contents) do
+    temporary = "#{filename}.tmp.#{System.unique_integer([:positive, :monotonic])}"
 
-    %Operations.Asset.Add{
-      asset: asset,
-      module: module,
-      opts: ecto_data
-    }
+    try do
+      File.write!(temporary, contents, [:sync])
+      File.rename!(temporary, filename)
+    after
+      File.rm(temporary)
+    end
   end
 
-  defp build_operation(:remove, %Attribute{} = attr, module) do
-    %Operations.Attribute.Remove{
-      attribute: attr,
-      module: module
-    }
+  defp raise_unsupported_change!(module, {:table_changed, previous, current}) do
+    raise BlueprintError,
+      message: """
+      Blueprint #{inspect(module)} changed its table from #{inspect(previous)} to #{inspect(current)}.
+
+      Generate a hand-written migration that renames the table, then deliberately
+      re-baseline the Blueprint snapshot as documented in guides/blueprint_migrations.md.
+      """
   end
 
-  defp build_operation(:remove, %Relation{} = rel, module) do
-    ecto_data = Map.get(module.__changeset__(), rel.name)
+  defp raise_unsupported_change!(module, {:primary_key_changed, previous, current}) do
+    raise BlueprintError,
+      message: """
+      Blueprint #{inspect(module)} changed its primary key from #{inspect(previous)} to #{inspect(current)}.
 
-    %Operations.Relation.Remove{
-      relation: rel,
-      module: module,
-      opts: ecto_data
-    }
+      Primary-key changes cannot be inferred safely. Create and test a hand-written
+      migration, then deliberately re-baseline the Blueprint snapshot as documented
+      in guides/blueprint_migrations.md.
+      """
   end
 
-  defp build_operation(:remove, %Asset{} = asset, module) do
-    ecto_data = Map.get(module.__changeset__(), asset.name)
-
-    %Operations.Asset.Remove{
-      asset: asset,
-      module: module,
-      opts: ecto_data
-    }
-  end
-
-  def perform_operations(operation, operations) do
-    Enum.map(operations, &apply(&1.__struct__, operation, [&1]))
+  defp raise_unsupported_change!(module, reason) do
+    raise BlueprintError,
+      message: "Cannot generate migration for #{inspect(module)}: #{inspect(reason)}"
   end
 
   defp locals_without_parens do

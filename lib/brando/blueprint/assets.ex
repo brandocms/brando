@@ -105,11 +105,15 @@ defmodule Brando.Blueprint.Assets do
   alias Spark.Dsl.Extension
 
   def __assets__(module) do
-    Extension.get_entities(module, [:assets])
+    module
+    |> Extension.get_entities([:assets])
+    |> Enum.map(&Brando.Blueprint.Assets.Dsl.normalize_runtime_config/1)
   end
 
   def __asset__(module, name) do
-    Extension.get_persisted(module, {:asset, name})
+    module
+    |> Extension.get_persisted({:asset, name})
+    |> Brando.Blueprint.Assets.Dsl.normalize_runtime_config()
   end
 
   def __asset_opts__(module, name) do

@@ -25,6 +25,6 @@ defmodule Brando.Trait.Villain do
         end
     """)
 
-    false
+    :ok
   end
 end

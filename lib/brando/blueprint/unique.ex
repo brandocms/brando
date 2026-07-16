@@ -47,7 +47,7 @@ defmodule Brando.Blueprint.Unique do
 
         case Keyword.get(unique_opts, :with) do
           nil ->
-            nil
+            unique_constraint(new_changeset, f.name, message: message)
 
           with_fields when is_list(with_fields) ->
             unique_constraint(new_changeset, [f.name] ++ with_fields, message: message)
@@ -63,21 +63,22 @@ defmodule Brando.Blueprint.Unique do
     |> Enum.filter(&Map.get(&1.opts, :unique, false))
     |> Enum.reduce(changeset, fn
       %{opts: %{unique: true}} = f, new_changeset ->
-        unique_constraint(new_changeset, f.name)
+        unique_constraint(new_changeset, :"#{f.name}_id")
 
       %{opts: %{unique: unique_opts}} = f, new_changeset ->
         message = Keyword.get(unique_opts, :message, "has already been taken")
 
         case Keyword.get(unique_opts, :with) do
           nil ->
-            nil
+            field = :"#{f.name}_id"
+            unique_constraint(new_changeset, field, message: message)
 
           with_fields when is_list(with_fields) ->
-            field = String.to_existing_atom("#{to_string(f.name)}_id")
+            field = :"#{f.name}_id"
             unique_constraint(new_changeset, [field] ++ with_fields, message: message)
 
           with_field ->
-            field = String.to_existing_atom("#{to_string(f.name)}_id")
+            field = :"#{f.name}_id"
             unique_constraint(new_changeset, [field, with_field], message: message)
         end
     end)

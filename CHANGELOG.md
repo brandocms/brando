@@ -95,6 +95,14 @@
 - **Spark DSL extensions**: Forward `extensions` option to Spark DSL for external
   blueprint extensions.
 
+- **Blueprint migration hardening**: Blueprint migration generation now compares a normalized, versioned storage
+  schema instead of name-only DSL entities. Generated migrations cover type/default/index/foreign-key and auxiliary
+  table changes, use deterministic constraint names, allocate collision-free Ecto versions, and render dependency-safe
+  `up/0` and `down/0` functions. Snapshot reads fail closed, writes are atomic, and divergent migration/snapshot
+  histories stop generation. Use `mix brando.gen.blueprint_migration MyApp.Domain.Schema`; legacy snapshots upgrade on
+  their next successful run. Table or primary-key changes require a hand-written migration followed by the explicit
+  `--rebaseline` workflow. See [Blueprint migrations](guides/blueprint_migrations.md) before upgrading or generating.
+
 - **JSON-LD `@graph` output**: All JSON-LD entities (identity, website, webpage, breadcrumbs,
   content) are now combined into a single connected `@graph` document instead of separate
   `<script>` tags. This follows Google's recommended approach and matches implementations

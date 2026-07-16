@@ -210,3 +210,96 @@ defmodule Brando.MigrationTest.ProjectTag do
     relation :tag, :belongs_to, module: Brando.MigrationTest.Tag
   end
 end
+
+defmodule Brando.MigrationTest.StorageV1 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Storage",
+    schema: "Record",
+    singular: "storage_record",
+    plural: "storage_records",
+    gettext_module: Brando.Gettext
+
+  attributes do
+    attribute :legacy_title, :string
+  end
+end
+
+defmodule Brando.MigrationTest.StorageV2 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Storage",
+    schema: "Record",
+    singular: "storage_record",
+    plural: "storage_records",
+    gettext_module: Brando.Gettext
+
+  attributes do
+    attribute :title, :integer, rename_from: :legacy_title
+  end
+end
+
+defmodule Brando.MigrationTest.StorageTableV2 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Storage",
+    schema: "Record",
+    singular: "storage_record",
+    plural: "storage_records",
+    gettext_module: Brando.Gettext
+
+  table "renamed_storage_records"
+
+  attributes do
+    attribute :legacy_title, :string
+  end
+end
+
+defmodule Brando.MigrationTest.StorageUuidV2 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Storage",
+    schema: "Record",
+    singular: "storage_record",
+    plural: "storage_records",
+    gettext_module: Brando.Gettext
+
+  primary_key :uuid
+
+  attributes do
+    attribute :legacy_title, :string
+  end
+end
+
+defmodule Brando.MigrationTest.ExecutionV1 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationExecution",
+    schema: "Record",
+    singular: "record",
+    plural: "records",
+    gettext_module: Brando.Gettext
+
+  table "blueprint_migration_execution_records"
+
+  attributes do
+    attribute :title, :string
+  end
+end
+
+defmodule Brando.MigrationTest.ExecutionV2 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationExecution",
+    schema: "Record",
+    singular: "record",
+    plural: "records",
+    gettext_module: Brando.Gettext
+
+  table "blueprint_migration_execution_records"
+
+  attributes do
+    attribute :count, :integer, default: 0, unique: true
+    attribute :title, :string
+  end
+end

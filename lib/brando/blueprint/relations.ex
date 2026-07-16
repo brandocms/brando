@@ -147,7 +147,7 @@ defmodule Brando.Blueprint.Relations do
           [with: fn changeset, params -> apply(with_mod, with_fun, [changeset, params, user]) end]
 
         {with_mod, with_fun} ->
-          cast_assoc(changeset, name, with: {with_mod, with_fun, []})
+          [with: fn related_changeset, params -> apply(with_mod, with_fun, [related_changeset, params]) end]
       end
 
     merged_opts = Keyword.merge(to_changeset_opts(:belongs_to, opts), with_opts)
@@ -280,7 +280,7 @@ defmodule Brando.Blueprint.Relations do
 
         sub_preloads = sub_assets ++ sub_rels
 
-        if mod.has_trait(Brando.Trait.Sequenced) do
+        if mod.has_trait(:sequenced) do
           preload_query = from q in mod, order_by: [asc: q.sequence], preload: ^sub_preloads
           {name, preload_query}
         else

@@ -84,7 +84,7 @@ defmodule Brando.Blueprint.Attributes.Dsl do
   @moduledoc false
   use Spark.Dsl.Extension,
     sections: [@root],
-    transformers: [Brando.Blueprint.Attributes.Transformer]
+    transformers: [Brando.Blueprint.Attributes.Transformer, Brando.Blueprint.SemanticValidator]
 
   def transform(%{type: :language} = attr) do
     default_languages =

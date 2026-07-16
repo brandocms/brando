@@ -2,7 +2,7 @@ defmodule Brando.Blueprint.Utils do
   @moduledoc false
   alias Brando.Utils
 
-  @strip_ecto_opts [:cast, :module, :required, :unique, :constraints, :sort_param, :drop_param]
+  @strip_ecto_opts [:cast, :module, :required, :unique, :constraints, :sort_param, :drop_param, :rename_from]
   @strip_embeds_opts [:cast, :module, :unique, :constraints]
 
   def to_ecto_type(:text), do: :string

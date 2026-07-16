@@ -53,119 +53,16 @@ defmodule Brando.Blueprint.Assets.Dsl do
     sections: [@root],
     transformers: [Brando.Blueprint.Assets.Transformer]
 
-  def transform(%{type: :image, opts: [cfg: :db]} = asset) do
-    {:ok, %{asset | opts: %{cfg: :db}}}
-  end
-
   def transform(%{type: :image} = asset) do
-    opts_map = Map.merge(Enum.into(asset.opts, %{}), %{module: Brando.Images.Image})
-    default_config = Brando.config(Brando.Images)[:default_config] || %{}
-
-    cfg =
-      case Map.get(opts_map, :cfg) do
-        nil ->
-          raise Brando.Exception.BlueprintError,
-            message: """
-            Missing :cfg key for image asset `#{inspect(asset.name)}`
-
-                assets do
-                  asset #{inspect(asset.name)}, :image, cfg: [...]
-                end
-            """
-
-        :default ->
-          default_config
-
-        fun when is_function(fun) ->
-          fun.()
-
-        map when is_map(map) ->
-          map = merge_asset_config(default_config, map)
-          struct(Brando.Type.ImageConfig, map)
-
-        kwlist when is_list(kwlist) ->
-          kwlist = merge_asset_config(default_config, Enum.into(kwlist, %{}))
-          struct(Brando.Type.ImageConfig, kwlist)
-      end
-
-    opts_map = Map.put(opts_map, :cfg, cfg)
-
-    {:ok, %{asset | opts: opts_map}}
+    transform_asset(asset, Brando.Images.Image, Brando.Type.ImageConfig, [:db])
   end
 
   def transform(%{type: :video} = asset) do
-    opts_map = Map.merge(Enum.into(asset.opts, %{}), %{module: Brando.Videos.Video})
-    default_config = %{}
-
-    cfg =
-      case Map.get(opts_map, :cfg) do
-        nil ->
-          raise Brando.Exception.BlueprintError,
-            message: """
-            Missing :cfg key for video asset `#{inspect(asset.name)}`
-
-                assets do
-                  asset #{inspect(asset.name)}, :video, cfg: [...]
-                end
-            """
-
-        :default ->
-          default_config
-
-        fun when is_function(fun) ->
-          fun.()
-
-        map when is_map(map) ->
-          map = Brando.Utils.deep_merge(default_config, map)
-          struct(Brando.Type.VideoConfig, map)
-
-        kwlist when is_list(kwlist) ->
-          kwlist = Brando.Utils.deep_merge(default_config, Enum.into(kwlist, %{}))
-          struct(Brando.Type.VideoConfig, kwlist)
-      end
-
-    opts_map = Map.put(opts_map, :cfg, cfg)
-
-    {:ok, %{asset | opts: opts_map}}
+    transform_asset(asset, Brando.Videos.Video, Brando.Type.VideoConfig, [])
   end
 
   def transform(%{type: :file} = asset) do
-    opts_map = Map.merge(Enum.into(asset.opts, %{}), %{module: Brando.Files.File})
-    default_config = %{}
-
-    cfg =
-      case Map.get(opts_map, :cfg) do
-        nil ->
-          raise Brando.Exception.BlueprintError,
-            message: """
-            Missing :cfg key for file asset `#{inspect(asset.name)}`
-
-                assets do
-                  asset #{inspect(asset.name)}, :file, cfg: [...]
-                end
-            """
-
-        :default ->
-          default_config
-
-        :config_target ->
-          :config_target
-
-        fun when is_function(fun) ->
-          fun.()
-
-        map when is_map(map) ->
-          map = Brando.Utils.deep_merge(default_config, map)
-          struct(Brando.Type.FileConfig, map)
-
-        kwlist when is_list(kwlist) ->
-          kwlist = Brando.Utils.deep_merge(default_config, Enum.into(kwlist, %{}))
-          struct(Brando.Type.FileConfig, kwlist)
-      end
-
-    opts_map = Map.put(opts_map, :cfg, cfg)
-
-    {:ok, %{asset | opts: opts_map}}
+    transform_asset(asset, Brando.Files.File, Brando.Type.FileConfig, [:config_target])
   end
 
   def transform(%{type: :gallery} = asset) do
@@ -187,8 +84,8 @@ defmodule Brando.Blueprint.Assets.Dsl do
         :default ->
           default_config
 
-        fun when is_function(fun) ->
-          normalize_gallery_config(fun.(), default_config)
+        fun when is_function(fun, 0) ->
+          fun
 
         map when is_map(map) ->
           normalize_gallery_config(map, default_config)
@@ -206,18 +103,102 @@ defmodule Brando.Blueprint.Assets.Dsl do
     {:ok, %{asset | opts: Enum.into(asset.opts, %{})}}
   end
 
+  @doc false
+  def normalize_runtime_config(%{opts: %{cfg: config}} = asset) when is_function(config, 0) do
+    normalized =
+      case asset.type do
+        :image -> normalize_config(asset, Brando.Type.ImageConfig, config.(), [:db])
+        :video -> normalize_config(asset, Brando.Type.VideoConfig, config.(), [])
+        :file -> normalize_config(asset, Brando.Type.FileConfig, config.(), [:config_target])
+        :gallery -> normalize_gallery_config(config.(), gallery_default_config())
+      end
+
+    %{asset | opts: Map.put(asset.opts, :cfg, normalized)}
+  end
+
+  def normalize_runtime_config(asset), do: asset
+
+  defp transform_asset(asset, association_module, config_module, passthrough_values) do
+    opts = Map.merge(Map.new(asset.opts), %{module: association_module})
+    config = Map.get(opts, :cfg)
+
+    if is_nil(config) do
+      raise_missing_config!(asset)
+    end
+
+    normalized_config = normalize_config(asset, config_module, config, passthrough_values)
+    {:ok, %{asset | opts: Map.put(opts, :cfg, normalized_config)}}
+  end
+
+  defp normalize_config(asset, config_module, config, passthrough_values) do
+    cond do
+      config in passthrough_values ->
+        config
+
+      config == :default ->
+        default_asset_config(asset.type, config_module)
+
+      is_function(config, 0) ->
+        config
+
+      is_struct(config, config_module) ->
+        config
+
+      is_map(config) or (is_list(config) and Keyword.keyword?(config)) ->
+        merge_asset_type_config(asset.type, config_module, config)
+
+      true ->
+        raise Brando.Exception.BlueprintError,
+          message:
+            "Invalid :cfg for #{asset.type} asset #{inspect(asset.name)}: expected :default, a map, a keyword list, or a zero-arity function"
+    end
+  end
+
+  defp merge_asset_type_config(type, config_module, overrides) do
+    default = default_asset_config(type, config_module)
+    default_map = Map.from_struct(default)
+    overrides_map = if is_struct(overrides), do: Map.from_struct(overrides), else: Map.new(overrides)
+
+    merged =
+      if type == :image do
+        merge_asset_config(default_map, overrides_map)
+      else
+        Brando.Utils.deep_merge(default_map, overrides_map)
+      end
+
+    struct(config_module, merged)
+  end
+
+  defp default_asset_config(type, config_module) do
+    configured =
+      case Brando.config(asset_context(type)) do
+        nil -> nil
+        config when is_list(config) -> Keyword.get(config, :default_config)
+        config when is_map(config) -> Map.get(config, :default_config)
+      end
+
+    normalize_asset_config(config_module, configured || config_module.default_config())
+  end
+
+  defp asset_context(:image), do: Brando.Images
+  defp asset_context(:video), do: Brando.Videos
+  defp asset_context(:file), do: Brando.Files
+
+  defp raise_missing_config!(asset) do
+    raise Brando.Exception.BlueprintError,
+      message: """
+      Missing :cfg key for #{asset.type} asset `#{inspect(asset.name)}`
+
+          assets do
+            asset #{inspect(asset.name)}, #{inspect(asset.type)}, cfg: :default
+          end
+      """
+  end
+
   defp gallery_default_config do
     %{
-      image:
-        normalize_asset_config(
-          Brando.Type.ImageConfig,
-          Brando.config(Brando.Images)[:default_config] || Brando.Type.ImageConfig.default_config()
-        ),
-      video:
-        normalize_asset_config(
-          Brando.Type.VideoConfig,
-          Brando.config(Brando.Videos)[:default_config] || Brando.Type.VideoConfig.default_config()
-        )
+      image: default_asset_config(:image, Brando.Type.ImageConfig),
+      video: default_asset_config(:video, Brando.Type.VideoConfig)
     }
   end
 

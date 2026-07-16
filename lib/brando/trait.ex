@@ -15,7 +15,7 @@ defmodule Brando.Trait do
   @type opts :: Keyword.t()
 
   @callback changeset_mutator(module, config, changeset, user, opts) :: changeset
-  @callback validate(module, config) :: true | no_return
+  @callback validate(module, config) :: :ok | true | no_return
   @callback after_save(entry, changeset, user) :: any()
   @callback before_save(changeset, user) :: any()
   @callback generate_code(module, config) :: any()
@@ -29,10 +29,6 @@ defmodule Brando.Trait do
 
     quote location: :keep do
       @behaviour Brando.Trait
-
-      import Brando.Blueprint.Assets
-      import Brando.Blueprint.Relations
-      import Brando.Trait
 
       @before_compile Brando.Trait
       @changeset_phase :after_validate_required
@@ -60,7 +56,7 @@ defmodule Brando.Trait do
       def ai_field_opts(_module, _config, _field_name), do: []
       defoverridable ai_field_opts: 3
 
-      def list_implementations, do: list_implementations(__MODULE__)
+      def list_implementations, do: Brando.Trait.list_implementations(__MODULE__)
     end
   end
 
@@ -83,8 +79,12 @@ defmodule Brando.Trait do
   end
 
   def list_implementations(trait) do
-    {:consolidated, impls} = Module.concat([trait, Implemented]).__protocol__(:impls)
-    impls
+    protocol = Module.concat([trait, Implemented])
+
+    case protocol.__protocol__(:impls) do
+      {:consolidated, implementations} -> implementations
+      :not_consolidated -> Protocol.extract_impls(protocol, :code.get_path())
+    end
   end
 
   def run_trait_before_save_callbacks(changeset, schema, user) do
@@ -101,19 +101,20 @@ defmodule Brando.Trait do
 
   def get_trait_ai_field_opts(schema, field_name) when is_atom(schema) and is_atom(field_name) do
     if function_exported?(schema, :__traits__, 0) do
-      Enum.find_value(schema.__traits__(), [], fn {trait, trait_opts} ->
-        case trait.ai_field_opts(schema, normalize_trait_opts(trait_opts), field_name) do
-          nil -> nil
-          [] -> nil
-          opts -> opts
-        end
-      end)
+      Enum.find_value(schema.__traits__(), [], &trait_ai_field_opts(&1, schema, field_name))
     else
       []
     end
   end
 
   def get_trait_ai_field_opts(_, _), do: []
+
+  defp trait_ai_field_opts({trait, trait_opts}, schema, field_name) do
+    case trait.ai_field_opts(schema, normalize_trait_opts(trait_opts), field_name) do
+      opts when opts in [nil, []] -> nil
+      opts -> opts
+    end
+  end
 
   defp normalize_trait_opts(opts) when is_map(opts), do: opts
   defp normalize_trait_opts(opts) when is_list(opts), do: Map.new(opts)

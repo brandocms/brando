@@ -6,6 +6,10 @@
 
 ### Schema
 
+Storage changes are managed through versioned snapshots and reviewed Ecto migrations. See
+[Blueprint migrations](blueprint_migrations.md) for generation, rollback, rename, legacy upgrade, and recovery
+instructions.
+
 #### Attributes
 
 #### Relations
