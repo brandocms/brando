@@ -314,7 +314,7 @@ defmodule Brando.Pages.Page do
         fieldset do
           inputs_for :vars do
             label t("Page variables")
-            component BrandoAdmin.Components.Form.Input.Vars
+            component :vars
           end
         end
       end

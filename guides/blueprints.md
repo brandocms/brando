@@ -120,6 +120,22 @@ need no event target or migration changes.
 #### Tabs
 #### Fieldsets
 #### Inputs
+
+Custom `inputs_for` renderers accept component modules as before. For Brando's
+built-in renderers, prefer symbolic tokens so schema compilation stays independent
+of the admin component tree:
+
+```elixir
+inputs_for :vars do
+  component :vars
+end
+```
+
+The available built-in tokens are `:vars`, `:gallery_objects`,
+`:identity_type_config`, and `:page_vars`. Existing full module values remain
+supported and can be migrated incrementally. This changes only form metadata and
+requires no database migration.
+
 ##### Input types
 ##### AI input generation
 

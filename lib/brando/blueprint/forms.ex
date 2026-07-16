@@ -74,7 +74,7 @@ defmodule Brando.Blueprint.Forms do
 
       inputs_for :vars do
         label t("Page variables")
-        component BrandoAdmin.Components.Pages.PageVars
+        component :page_vars
 
   Image transformer:
 

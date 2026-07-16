@@ -179,6 +179,13 @@
   schema compilation. The full module syntax and public status API remain supported;
   applications may migrate incrementally, and no database migration is required.
 
+- **Symbolic built-in subform components**: Blueprint `inputs_for` definitions can now
+  use `:vars`, `:gallery_objects`, `:identity_type_config`, or `:page_vars` instead of
+  concrete admin LiveComponent modules. Brando's schemas use these tokens, which are
+  resolved only at the render boundary and keep admin editor trees out of schema
+  compilation. Custom modules and existing full module values remain supported; no
+  database migration is required.
+
 - **Lighter Blueprint listing rendering dependencies**: Listing helpers now use
   focused `Brando.HTML.Icon` and `Brando.HTML.I18n` components instead of depending
   directly on the full `Brando.HTML` module. The existing `Brando.HTML.icon/1` and

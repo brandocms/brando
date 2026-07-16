@@ -3,10 +3,11 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
   use BrandoAdmin, :component
   # use Phoenix.HTML
 
+  alias Brando.Blueprint.Forms.ComponentResolver
+  alias Brando.Blueprint.Forms.Input, as: BlueprintInput
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Subform
   alias BrandoAdmin.Components.Form.Transformer
-  alias Brando.Blueprint.Forms.Input, as: BlueprintInput
   alias Phoenix.HTML.FormField
 
   # prop input, :map
@@ -24,15 +25,16 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
       |> assign(:instructions, nil)
       |> assign(:placeholder, nil)
       |> assign(:hidden, hidden?(assigns.input, assigns.form))
+      |> assign(:custom_component, ComponentResolver.resolve(Map.get(assigns.input, :component)))
       |> assign_new(:form_cid, fn -> nil end)
       |> assign_new(:form_id, fn -> nil end)
 
     ~H"""
     <%= unless @hidden do %>
       <%= if @input.__struct__ == Brando.Blueprint.Forms.Subform do %>
-        <%= if @input.component do %>
+        <%= if @custom_component do %>
           <.live_component
-            module={@input.component}
+            module={@custom_component}
             id={"#{@form.id}-#{@input.name}-custom-component"}
             field={@form[@input.name]}
             label={@label}

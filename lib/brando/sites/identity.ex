@@ -169,7 +169,7 @@ defmodule Brando.Sites.Identity do
             label t("Type-specific settings")
             cardinality :one
             default %Brando.Sites.Identity.TypeConfig{}
-            component BrandoAdmin.Components.Form.Input.IdentityTypeConfig
+            component :identity_type_config
           end
         end
 

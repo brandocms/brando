@@ -49,7 +49,7 @@ defmodule Brando.Content.TableTemplate do
         fieldset do
           inputs_for :vars do
             label t("Columns")
-            component BrandoAdmin.Components.Form.Input.Vars
+            component :vars
           end
         end
       end

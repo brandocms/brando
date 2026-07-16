@@ -60,7 +60,7 @@ defmodule Brando.Galleries.Gallery do
           inputs_for :gallery_objects do
             label t("Gallery objects")
             cardinality :many
-            component BrandoAdmin.Components.Form.Input.GalleryObjects
+            component :gallery_objects
           end
         end
       end
