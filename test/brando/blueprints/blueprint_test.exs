@@ -34,9 +34,18 @@ defmodule Brando.Blueprint.BlueprintTest do
   end
 
   test "modules" do
-    assert Brando.BlueprintTest.Project.__modules__(:application) == Brando
-    assert Brando.BlueprintTest.Project.__modules__(:context) == Brando.Projects
-    assert Brando.BlueprintTest.Project.__modules__(:schema) == Brando.Projects.Project
+    assert Brando.BlueprintTest.Project.__modules__() == %{
+             application: Brando,
+             context: Brando.Projects,
+             schema: Brando.Projects.Project,
+             gettext: Brando.Gettext,
+             admin_list_view: BrandoAdmin.Projects.ProjectListLive,
+             admin_form_view: BrandoAdmin.Projects.ProjectFormLive
+           }
+
+    for {key, module} <- Brando.BlueprintTest.Project.__modules__() do
+      assert Brando.BlueprintTest.Project.__modules__(key) == module
+    end
   end
 
   test "traits" do

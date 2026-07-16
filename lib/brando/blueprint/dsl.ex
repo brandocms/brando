@@ -75,10 +75,33 @@ defmodule Brando.Blueprint.Dsl do
   end
 
   @impl Spark.Dsl
+  @doc false
   def handle_before_compile(_opts) do
+    [
+      generated_state(),
+      generated_preload_metadata(),
+      generated_traits(),
+      generated_blueprint_metadata(),
+      generated_admin_routes(),
+      generated_modules(),
+      generated_asset_fields(),
+      generated_schema_fields(),
+      generated_schema(),
+      generated_forms(),
+      generated_rich_text_fields(),
+      generated_changeset(),
+      generated_trait_implementations()
+    ]
+    |> Enum.flat_map(&generated_expressions/1)
+    |> then(&{:__block__, [], &1})
+  end
+
+  defp generated_expressions({:__block__, _metadata, expressions}), do: expressions
+  defp generated_expressions(expression), do: [expression]
+
+  defp generated_state do
     quote location: :keep, unquote: false do
       alias Brando.Blueprint
-      alias Brando.Exception.BlueprintError
       alias Brando.RuntimeConfig
       alias Spark.Dsl.Extension, as: SDE
 
@@ -106,7 +129,11 @@ defmodule Brando.Blueprint.Dsl do
 
       @datasources SDE.get_entities(__MODULE__, [:datasources])
       @translations SDE.get_persisted(__MODULE__, :translations)
+    end
+  end
 
+  defp generated_preload_metadata do
+    quote location: :keep, unquote: false do
       if @datasources != [] do
         def __datasource__ do
           true
@@ -126,7 +153,11 @@ defmodule Brando.Blueprint.Dsl do
       def __primary_key__ do
         @primary_key
       end
+    end
+  end
 
+  defp generated_traits do
+    quote location: :keep, unquote: false do
       @all_traits Enum.reverse(@traits)
       {traits_before_validate_required, traits_after_validate_required} =
         Brando.Trait.split_traits_by_changeset_phase(@all_traits)
@@ -146,7 +177,11 @@ defmodule Brando.Blueprint.Dsl do
       end
 
       def has_trait(_), do: false
+    end
+  end
 
+  defp generated_blueprint_metadata do
+    quote location: :keep, unquote: false do
       def __required_attrs__ do
         @required_attrs
       end
@@ -186,7 +221,11 @@ defmodule Brando.Blueprint.Dsl do
           id: build_id(@application, @domain, @schema)
         }
       end
+    end
+  end
 
+  defp generated_admin_routes do
+    quote location: :keep, unquote: false do
       def __admin_route__(type, args \\ [])
 
       def __admin_route__(:list, args) do
@@ -240,55 +279,24 @@ defmodule Brando.Blueprint.Dsl do
           full_args
         )
       end
+    end
+  end
 
+  defp generated_modules do
+    quote location: :keep, unquote: false do
       def __modules__ do
-        application_module =
-          Module.concat([
-            @application
-          ])
-
-        admin_module =
-          Module.concat([
-            :"#{@application}Admin"
-          ])
-
-        web_module =
-          if @application == "Brando" do
-            admin_module
-          else
-            Module.concat([
-              :"#{@application}Web"
-            ])
-          end
-
-        context_module =
-          Module.concat([
-            @application,
-            @domain
-          ])
-
-        schema_module =
-          Module.concat([
-            @application,
-            @domain,
-            @schema
-          ])
+        application_module = Module.concat([@application])
+        admin_module = Module.concat([:"#{@application}Admin"])
+        context_module = Module.concat([@application, @domain])
+        schema_module = Module.concat([@application, @domain, @schema])
 
         gettext_module = @gettext_module
 
         admin_list_view =
-          Module.concat([
-            admin_module,
-            @domain,
-            "#{Macro.camelize(@singular)}ListLive"
-          ])
+          Module.concat([admin_module, @domain, "#{Macro.camelize(@singular)}ListLive"])
 
         admin_form_view =
-          Module.concat([
-            admin_module,
-            @domain,
-            "#{Macro.camelize(@singular)}FormLive"
-          ])
+          Module.concat([admin_module, @domain, "#{Macro.camelize(@singular)}FormLive"])
 
         %{
           application: application_module,
@@ -301,7 +309,11 @@ defmodule Brando.Blueprint.Dsl do
       end
 
       def __modules__(type), do: Map.get(__modules__(), type)
+    end
+  end
 
+  defp generated_asset_fields do
+    quote location: :keep, unquote: false do
       @file_fields Enum.filter(@assets, &(&1.type == :file))
       def __file_fields__ do
         @file_fields
@@ -321,7 +333,11 @@ defmodule Brando.Blueprint.Dsl do
       def __gallery_fields__ do
         @gallery_fields
       end
+    end
+  end
 
+  defp generated_schema_fields do
+    quote location: :keep, unquote: false do
       @villain_fields Enum.filter(@relations, &(&1.opts.module == :blocks))
       def __blocks_fields__ do
         @villain_fields
@@ -350,7 +366,11 @@ defmodule Brando.Blueprint.Dsl do
       else
         def has_status?, do: true
       end
+    end
+  end
 
+  defp generated_schema do
+    quote location: :keep, unquote: false do
       def __translations__ do
         run_translations(__MODULE__, @translations)
       end
@@ -380,7 +400,11 @@ defmodule Brando.Blueprint.Dsl do
           @assets
         )
       end
+    end
+  end
 
+  defp generated_forms do
+    quote location: :keep, unquote: false do
       def __listings__ do
         SDE.get_entities(__MODULE__, [:listings])
       end
@@ -396,7 +420,11 @@ defmodule Brando.Blueprint.Dsl do
       def __form__(name) do
         Enum.find(__forms__(), &(&1.name == name))
       end
+    end
+  end
 
+  defp generated_rich_text_fields do
+    quote location: :keep, unquote: false do
       def __rich_text_fields__ do
         case __form__() do
           %{tabs: tabs} ->
@@ -418,8 +446,11 @@ defmodule Brando.Blueprint.Dsl do
         do: Enum.flat_map(sub_fields, &extract_rich_text_names/1)
 
       defp extract_rich_text_names(_), do: []
+    end
+  end
 
-      # generate changeset
+  defp generated_changeset do
+    quote location: :keep, unquote: false do
       def changeset(schema, params \\ %{}, user \\ :system, sequence \\ nil, opts \\ []) do
         params = %Brando.Blueprint.ChangesetParams{
           module: __MODULE__,
@@ -439,7 +470,11 @@ defmodule Brando.Blueprint.Dsl do
 
         Blueprint.run_changeset(params)
       end
+    end
+  end
 
+  defp generated_trait_implementations do
+    quote location: :keep, unquote: false do
       for {trait, trait_opts} <- @all_traits do
         defimpl Module.concat([trait, Implemented]) do
           def implemented(_), do: true

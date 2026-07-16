@@ -134,6 +134,13 @@
 
 #### Improvements
 
+- **Focused Blueprint DSL code generation**: Blueprint schema compilation now
+  composes small, responsibility-specific AST fragments for state, traits, routes,
+  module metadata, fields, schemas, forms, changesets, and trait implementations.
+  This replaces the monolithic compiler quote without changing generated schema
+  APIs, and removes dead generated alias/module setup. The change is internal and
+  requires no application or database migration.
+
 - **Safe Blueprint template preload extraction**: Identifier and absolute URL
   templates now detect arbitrarily deep declared relation paths without converting
   template text to atoms. Unknown nested paths are ignored instead of potentially
