@@ -19,6 +19,7 @@ defmodule Brando.Blueprint.Trait do
   defp expand_trait(:soft_delete, _caller), do: built_in_trait("SoftDelete")
   defp expand_trait(:status, _caller), do: built_in_trait("Status")
   defp expand_trait(:timestamped, _caller), do: built_in_trait("Timestamped")
+  defp expand_trait(:translatable, _caller), do: built_in_trait("Translatable")
   defp expand_trait(name, caller), do: Macro.expand(name, caller)
 
   defp expand_compiler(nil, trait, _caller) do
@@ -54,7 +55,8 @@ defmodule Brando.Blueprint.Trait do
       sequenced_trait(),
       built_in_trait("SoftDelete"),
       built_in_trait("Status"),
-      built_in_trait("Timestamped")
+      built_in_trait("Timestamped"),
+      built_in_trait("Translatable")
     ]
 
   defp sequenced_trait, do: Module.concat(["Brando", "Trait", "Sequenced"])

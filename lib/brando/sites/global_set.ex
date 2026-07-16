@@ -14,7 +14,7 @@ defmodule Brando.Sites.GlobalSet do
   trait :creator
   trait Brando.Trait.CastPolymorphicEmbeds
   trait :timestamped
-  trait Brando.Trait.Translatable, alternates: false
+  trait :translatable, alternates: false
 
   identifier false
   persist_identifier false

@@ -197,6 +197,12 @@
   behavior. Existing full module declarations remain supported for incremental
   adoption; no database migration is required.
 
+- **Isolated Translatable trait compilation**: `Brando.Trait.Translatable` now expands
+  language metadata and optional alternate schemas through a focused compiler module,
+  and Brando's schemas use the equivalent `trait :translatable` shorthand. Alternate
+  configuration and the existing full module declarations remain supported for
+  incremental adoption; no database migration is required.
+
 - **Symbolic built-in subform components**: Blueprint `inputs_for` definitions can now
   use `:vars`, `:gallery_objects`, `:identity_type_config`, or `:page_vars` instead of
   concrete admin LiveComponent modules. Brando's schemas use these tokens, which are

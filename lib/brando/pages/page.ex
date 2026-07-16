@@ -50,7 +50,7 @@ defmodule Brando.Pages.Page do
   trait :soft_delete, obfuscated_fields: [:uri]
   trait :status
   trait :timestamped
-  trait Brando.Trait.Translatable
+  trait :translatable
   trait Brando.Trait.Blocks
 
   # --

@@ -93,4 +93,19 @@ defmodule Brando.Blueprint.TraitCompilerTest do
     assert updated_at.type == :datetime
     assert Brando.Pages.Page.has_trait(Brando.Trait.Timestamped)
   end
+
+  test "the Translatable compiler preserves language and alternate behavior" do
+    language = Brando.Blueprint.Attributes.__attribute__(Brando.Pages.Page, :language)
+    alternates = Brando.Blueprint.Relations.__relation__(Brando.Pages.Page, :alternates)
+
+    assert language.type == :language
+    assert language.opts.required
+    assert alternates.type == :has_many
+    assert Brando.Pages.Page.has_alternates?()
+    assert Brando.Pages.Page.Alternate.__schema__(:source) == "pages_alternates"
+    refute Brando.Pages.Fragment.has_alternates?()
+
+    assert Brando.Pages.Fragment.__trait__(Brando.Trait.Translatable) ==
+             [alternates: false]
+  end
 end

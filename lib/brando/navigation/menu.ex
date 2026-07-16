@@ -19,7 +19,7 @@ defmodule Brando.Navigation.Menu do
   trait :creator
   trait :sequenced
   trait :timestamped
-  trait Brando.Trait.Translatable, alternates: false
+  trait :translatable, alternates: false
   trait :status
 
   identifier false

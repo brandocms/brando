@@ -28,7 +28,7 @@ defmodule Brando.Pages.Fragment do
   trait :soft_delete
   trait :status
   trait :timestamped
-  trait Brando.Trait.Translatable, alternates: false
+  trait :translatable, alternates: false
   trait Brando.Trait.Blocks
   trait Brando.Trait.Blocks.PreventCircularReferences
 
