@@ -65,7 +65,7 @@ defmodule Brando.Blueprint.Datasources.Dsl do
       @datasource
     ],
     imports: [
-      Brando.Datasource
+      Brando.Blueprint.Datasources.Legacy
     ],
     top_level?: false
   }

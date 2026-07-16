@@ -336,5 +336,16 @@ defmodule Brando.DatasourcesTest do
     assert page_with_refed_datasource.id in found_ids
     assert page_with_contained_datasource.id in found_ids
     refute page_with_no_datasource.id in found_ids
+
+    exact_found_ids =
+      {datasource_module, :list, :all_of_them}
+      |> Brando.Content.Blocks.list_block_ids_using_datamodule()
+      |> Brando.Content.Blocks.list_root_block_ids_by_source()
+      |> Brando.Content.Blocks.list_entry_ids_for_root_blocks_by_source()
+      |> Map.get(schema)
+
+    assert page_with_refed_datasource.id in exact_found_ids
+    assert page_with_contained_datasource.id in exact_found_ids
+    refute page_with_no_datasource.id in exact_found_ids
   end
 end

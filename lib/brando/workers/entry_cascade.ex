@@ -13,6 +13,11 @@ defmodule Brando.Worker.EntryCascade do
 
   require Logger
 
+  alias Brando.Content.BlockReferences
+  alias Brando.Content.Blocks
+  alias Brando.Content.RenderQueue
+  alias Brando.Datasource.Registry
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
     schema = Module.concat([args["schema"]])
@@ -24,16 +29,16 @@ defmodule Brando.Worker.EntryCascade do
     Logger.info("==> [OBAN] Running cascade for #{inspect(schema)} ##{entry_id}")
 
     datasource_block_ids =
-      if Brando.Datasource.datasource?(schema) do
-        Brando.Content.Blocks.list_block_ids_using_datamodule(schema)
+      if Registry.datasource?(schema) do
+        BlockReferences.list_block_ids_using_datamodule(schema)
       else
         []
       end
 
     identifier_block_ids =
       if identifier_id do
-        var_ids = Brando.Content.Blocks.list_block_ids_using_identifier(identifier_id)
-        ref_ids = Brando.Content.Blocks.list_block_ids_with_identifier_in_refs(identifier_id)
+        var_ids = Blocks.list_block_ids_using_identifier(identifier_id)
+        ref_ids = Blocks.list_block_ids_with_identifier_in_refs(identifier_id)
         Enum.uniq(var_ids ++ ref_ids)
       else
         []
@@ -45,8 +50,8 @@ defmodule Brando.Worker.EntryCascade do
     # returning a %{schema => [entry_ids]} map ready for enqueue_entry_map_for_render.
     (datasource_block_ids ++ identifier_block_ids)
     |> Enum.uniq()
-    |> Brando.Content.Blocks.reject_blocks_belonging_to_entry(entry)
-    |> Brando.Content.Blocks.enqueue_entry_map_for_render()
+    |> BlockReferences.reject_blocks_belonging_to_entry(entry)
+    |> RenderQueue.enqueue_map()
 
     :ok
   end

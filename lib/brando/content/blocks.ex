@@ -186,99 +186,22 @@ defmodule Brando.Content.Blocks do
   List ids of `schema` records that has a datasource matching schema OR
   a module containing a datasource matching schema.
   """
-  def list_block_ids_using_datamodule(datasource)
+  defdelegate list_block_ids_using_datamodule(datasource), to: Brando.Content.BlockReferences
 
-  def list_block_ids_using_datamodule({datasource_module, datasource_type, datasource_query}) do
-    {:ok, modules} =
-      Content.list_modules(%{
-        filter: %{
-          datasource: true,
-          datasource_module: to_string(datasource_module),
-          datasource_type: to_string(datasource_type),
-          datasource_query: to_string(datasource_query)
-        },
-        select: [:id]
-      })
+  @doc """
+  Lists block ids backed by any module id in `module_ids`.
+  """
+  defdelegate list_block_ids_using_modules(module_ids), to: Brando.Content.BlockReferences
 
-    module_ids = Enum.map(modules, & &1.id)
-    list_block_ids_using_modules(module_ids)
-  end
+  @doc """
+  Resolves root block ids, grouped by join schema, to owning entry ids.
+  """
+  defdelegate list_entry_ids_for_root_blocks_by_source(source_map), to: Brando.Content.BlockReferences
 
-  def list_block_ids_using_datamodule(datasource_module) do
-    {:ok, modules} =
-      Content.list_modules(%{
-        filter: %{
-          datasource: true,
-          datasource_module: to_string(datasource_module)
-        },
-        select: [:id]
-      })
-
-    module_ids = Enum.map(modules, & &1.id)
-    list_block_ids_using_modules(module_ids)
-  end
-
-  def list_block_ids_using_modules(module_ids) when is_list(module_ids) do
-    query = from b in Block, where: b.module_id in ^module_ids, select: b.id
-    Brando.Repo.all(query)
-  end
-
-  def list_entry_ids_for_root_blocks_by_source(source_map) do
-    Enum.reduce(source_map, %{}, fn
-      {nil, _ids}, acc ->
-        acc
-
-      {join_source, ids}, acc ->
-        {:assoc, %{queryable: schema}} = Map.get(join_source.__changeset__(), :entry)
-
-        base_query =
-          from js in join_source,
-            join: e in ^schema,
-            on: e.id == js.entry_id,
-            where: js.block_id in ^ids,
-            select: js.entry_id,
-            distinct: true
-
-        query =
-          if schema.has_trait(Brando.Trait.SoftDelete) do
-            from [js, e] in base_query, where: is_nil(e.deleted_at)
-          else
-            base_query
-          end
-
-        entry_ids = Brando.Repo.all(query)
-        Map.put(acc, schema, entry_ids)
-    end)
-  end
-
-  def list_root_block_ids_by_source(block_ids) when is_list(block_ids) do
-    base_case =
-      from(cb in "content_blocks",
-        select: %{id: cb.id, parent_id: cb.parent_id, source: cb.source},
-        where: cb.id in ^block_ids
-      )
-
-    recursive_case =
-      from(cb in "content_blocks",
-        select: %{id: cb.id, parent_id: cb.parent_id, source: cb.source},
-        join: pb in "parent_blocks",
-        on: pb.parent_id == cb.id
-      )
-
-    query = union_all(base_case, ^recursive_case)
-
-    "parent_blocks"
-    |> recursive_ctes(true)
-    |> with_cte("parent_blocks", as: ^query)
-    |> where([b], is_nil(b.parent_id))
-    |> select([b], %{id: b.id, source: b.source})
-    |> distinct(true)
-    |> Brando.Repo.all()
-    |> Enum.reduce(%{}, fn %{id: id, source: source}, acc ->
-      {:ok, casted_module} = Brando.Type.Module.cast(source)
-      Map.update(acc, casted_module, [id], &(&1 ++ [id]))
-    end)
-  end
+  @doc """
+  Walks parent links and groups the root ids for `block_ids` by join schema.
+  """
+  defdelegate list_root_block_ids_by_source(block_ids), to: Brando.Content.BlockReferences
 
   @doc """
   List all occurences of regex in blocks.
@@ -355,26 +278,7 @@ defmodule Brando.Content.Blocks do
   @doc """
   Remove all blocks matching `ids` that belong to `entry`
   """
-  def reject_blocks_belonging_to_entry([], _), do: %{}
-
-  def reject_blocks_belonging_to_entry(ids, entry) do
-    schema_and_ids =
-      ids
-      |> list_root_block_ids_by_source()
-      |> list_entry_ids_for_root_blocks_by_source()
-
-    if entry do
-      entry_schema = entry.__struct__
-      ids_for_schema = Map.get(schema_and_ids, entry_schema) || []
-      filtered_ids = Enum.reject(ids_for_schema, &(&1 == entry.id))
-
-      if filtered_ids == [],
-        do: Map.delete(schema_and_ids, entry_schema),
-        else: Map.put(schema_and_ids, entry_schema, filtered_ids)
-    else
-      schema_and_ids
-    end
-  end
+  defdelegate reject_blocks_belonging_to_entry(ids, entry), to: Brando.Content.BlockReferences
 
   # --- Cascade Orchestration ---
 
@@ -559,26 +463,20 @@ defmodule Brando.Content.Blocks do
     |> Oban.insert()
   end
 
-  def enqueue_entry_map_for_render(entry_map) do
-    for {schema, ids} <- entry_map, entry_id <- ids do
-      enqueue_entry_for_render(%{schema: schema, entry_id: entry_id})
-    end
-  end
+  @doc """
+  Enqueues every entry in a schema-to-entry-ids map for rendering.
+  """
+  defdelegate enqueue_entry_map_for_render(entry_map), to: Brando.Content.RenderQueue, as: :enqueue_map
 
-  def enqueue_entries_for_render(schema, ids) do
-    for entry_id <- ids do
-      enqueue_entry_for_render(%{schema: schema, entry_id: entry_id})
-    end
-  end
+  @doc """
+  Enqueues all `ids` for `schema` for rendering.
+  """
+  defdelegate enqueue_entries_for_render(schema, ids), to: Brando.Content.RenderQueue, as: :enqueue_many
 
-  def enqueue_entry_for_render(args) do
-    args
-    |> Brando.Worker.EntryRenderer.new(
-      replace_args: true,
-      tags: [:render_entry]
-    )
-    |> Oban.insert()
-  end
+  @doc """
+  Enqueues one entry-rendering job.
+  """
+  defdelegate enqueue_entry_for_render(args), to: Brando.Content.RenderQueue, as: :enqueue
 
   # --- Entry Rendering Orchestration ---
 
@@ -1028,19 +926,17 @@ defmodule Brando.Content.Blocks do
   def strip_render_artifacts(nil, _root), do: []
 
   def strip_render_artifacts(block_changesets, root) when is_list(block_changesets) do
-    Enum.map(block_changesets, fn block_cs ->
-      if root do
-        case Changeset.get_change(block_cs, :block) do
-          nil ->
-            block_cs
+    Enum.map(block_changesets, &strip_render_artifacts_from_changeset(&1, root))
+  end
 
-          sub_cs ->
-            Changeset.put_assoc(block_cs, :block, strip_block_render_changes(sub_cs))
-        end
-      else
-        strip_block_render_changes(block_cs)
-      end
-    end)
+  defp strip_render_artifacts_from_changeset(block_changeset, false),
+    do: strip_block_render_changes(block_changeset)
+
+  defp strip_render_artifacts_from_changeset(block_changeset, true) do
+    case Changeset.get_change(block_changeset, :block) do
+      nil -> block_changeset
+      block -> Changeset.put_assoc(block_changeset, :block, strip_block_render_changes(block))
+    end
   end
 
   defp strip_block_render_changes(block_cs) do

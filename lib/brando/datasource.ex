@@ -194,8 +194,9 @@ defmodule Brando.Datasource do
   OR if you know that all changes to the `:all_areas_with_grants` are coming from `Grantee`
   mutations, you can move the datasource to the `Grantee` schema instead!
   """
-  alias Brando.Content.Blocks, as: ContentBlocks
-  alias Spark.Dsl.Extension
+  alias Brando.Content
+  alias Brando.Datasource.Invalidation
+  alias Brando.Datasource.Registry
 
   @doc """
   List all registered data sources
@@ -207,62 +208,41 @@ defmodule Brando.Datasource do
     end
   end
 
-  def datasources(module) do
-    Extension.get_entities(module, [:datasources])
-  end
+  @doc """
+  Returns all datasources registered by `module`.
+  """
+  @spec datasources(module()) :: [struct()]
+  def datasources(module), do: Registry.all(module)
 
-  def datasources(module, type) do
-    module
-    |> Extension.get_entities([:datasources])
-    |> Enum.filter(&(&1.type == type))
-    |> Enum.map(& &1.key)
-  end
+  @doc """
+  Returns the keys for datasources of `type` registered by `module`.
+  """
+  @spec datasources(module(), atom()) :: [atom()]
+  def datasources(module, type), do: Registry.keys(module, type)
 
-  def get_datasource(module, :*, key) do
-    module
-    |> Extension.get_entities([:datasources])
-    |> Enum.find(&(&1.key == key))
-  end
-
-  def get_datasource(module, type, key) do
-    module
-    |> Extension.get_entities([:datasources])
-    |> Enum.find(&(&1.type == type && &1.key == key))
-  end
+  @doc """
+  Finds a datasource by key, optionally restricting it to `type`.
+  """
+  @spec get_datasource(module(), atom(), atom()) :: struct() | nil
+  def get_datasource(module, type, key), do: Registry.get(module, type, key)
 
   @doc """
   Show all available datasources
   """
-  def list_datasources do
-    {:ok, modules} = :application.get_key(Brando.otp_app(), :modules)
-
-    {:ok,
-     modules
-     |> Enum.filter(&datasource?/1)
-     |> Enum.map(&to_string/1)}
-  end
+  @spec list_datasources() :: {:ok, [String.t()]}
+  def list_datasources, do: Registry.list_modules()
 
   @doc """
   List keys for module
   """
-  def list_datasource_keys(module_binary) do
-    module = Module.concat([module_binary])
-
-    all_datasources = datasources(module)
-
-    splits =
-      Enum.reduce(all_datasources, %{}, fn ds, acc ->
-        Map.update(acc, ds.type, [ds.key], &[ds.key | &1])
-      end)
-
-    {:ok, splits}
-  end
+  @spec list_datasource_keys(module() | String.t()) :: {:ok, %{optional(atom()) => [atom()]}}
+  def list_datasource_keys(module_name), do: Registry.grouped_keys(module_name)
 
   @doc """
   Grab list of entries from database
   """
   def list_results(module_binary, key, vars, language) do
-    {module, atom_key} = resolve_module_and_key(module_binary, key)
+    {module, atom_key} = Registry.resolve(module_binary, key)
     ds = get_datasource(module, :*, atom_key)
     ds.list.(module_binary, language, vars)
   end
@@ -274,9 +254,9 @@ defmodule Brando.Datasource do
   def get_selection(_module_binary, _key, nil), do: {:ok, []}
 
   def get_selection(module_binary, key, ids) do
-    {module, atom_key} = resolve_module_and_key(module_binary, key)
+    {module, atom_key} = Registry.resolve(module_binary, key)
     ds = get_datasource(module, :selection, atom_key)
-    {:ok, identifiers} = Brando.Content.list_identifiers(ids)
+    {:ok, identifiers} = Content.list_identifiers(ids)
     ds.get.(identifiers)
   end
 
@@ -284,7 +264,7 @@ defmodule Brando.Datasource do
   Grab single entry from database
   """
   def get_single(module_binary, key, identifier) do
-    {module, atom_key} = resolve_module_and_key(module_binary, key)
+    {module, atom_key} = Registry.resolve(module_binary, key)
     ds = get_datasource(module, :single, atom_key)
     ds.get.(identifier)
   end
@@ -293,32 +273,21 @@ defmodule Brando.Datasource do
   Look through all villains for datasources using `schema`
   """
   def update_datasource(datasource_module, entry \\ nil) do
-    if datasource?(datasource_module) do
-      datasource_module
-      |> ContentBlocks.list_block_ids_using_datamodule()
-      |> ContentBlocks.reject_blocks_belonging_to_entry(entry)
-      |> ContentBlocks.enqueue_entry_map_for_render()
-    end
-
-    {:ok, entry}
+    Invalidation.update(datasource_module, entry)
   end
 
   @doc """
   Check if `schema` is a datasource
   """
-  def datasource?({schema, _, _}), do: {:__datasource__, 0} in schema.__info__(:functions)
-  def datasource?(schema), do: {:__datasource__, 0} in schema.__info__(:functions)
+  @spec datasource?(module() | {module(), atom(), atom()}) :: boolean()
+  def datasource?(schema), do: Registry.datasource?(schema)
 
+  @doc """
+  Returns datasource editor metadata for `type` and `query`.
+  """
+  @spec get_meta(module() | String.t(), atom(), atom() | String.t()) :: [struct()] | nil
   def get_meta(module, type, query) do
-    {resolved_module, atom_key} = resolve_module_and_key(List.wrap(module), query)
-
-    resolved_module
-    |> Extension.get_entities([:datasources])
-    |> Enum.find(&(&1.type == type && &1.key == atom_key))
-    |> case do
-      nil -> nil
-      datasource -> datasource.meta
-    end
+    Registry.meta(module, type, query)
   end
 
   ## DEPRECATED——REMOVE in 0.55
@@ -349,14 +318,5 @@ defmodule Brando.Datasource do
   @deprecated "selection/3 outside of datasource/1 is deprecated. Wrap inside datasource/1"
   defmacro selection(_key, _list_fun, _get_fun) do
     nil
-  end
-
-  # Resolves a module binary and key string into a loaded module and atom key.
-  # Ensures the module is loaded so its datasource key atoms exist in the atom table.
-  defp resolve_module_and_key(module_binary, key) do
-    module = Module.concat(List.wrap(module_binary))
-    Code.ensure_loaded(module)
-    atom_key = if is_atom(key), do: key, else: String.to_existing_atom(key)
-    {module, atom_key}
   end
 end
