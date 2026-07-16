@@ -5,6 +5,7 @@ defmodule Brando.Utils.SchemaTest do
 
   alias Brando.Factory
   alias Brando.Utils
+  alias Ecto.Changeset
 
   test "update_field/2" do
     user = Factory.insert(:random_user)
@@ -14,6 +15,16 @@ defmodule Brando.Utils.SchemaTest do
 
   test "put_slug pass" do
     assert Utils.Schema.put_slug(%{}) == %{}
+  end
+
+  test "put_slug slugifies the title or requested source field" do
+    title_changeset = Changeset.change(%Brando.BlueprintTest.Project{}, title: "straße")
+    source_changeset = Changeset.change(%Brando.BlueprintTest.Project{}, title: "Custom Source")
+
+    assert %{slug: "strasse"} = title_changeset |> Utils.Schema.put_slug() |> Changeset.apply_changes()
+
+    assert %{slug: "custom-source"} =
+             source_changeset |> Utils.Schema.put_slug(:title) |> Changeset.apply_changes()
   end
 
   test "avoid_field_collision pass" do

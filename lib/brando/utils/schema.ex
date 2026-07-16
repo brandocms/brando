@@ -5,6 +5,7 @@ defmodule Brando.Utils.Schema do
 
   alias Brando.Blueprint.Collision
   alias Ecto.Changeset
+  alias Slug
 
   @type changeset :: Changeset.t()
 
@@ -29,7 +30,7 @@ defmodule Brando.Utils.Schema do
   Put slug in changeset
   """
   def put_slug(%{changes: %{title: title}} = cs) do
-    Changeset.change(cs, %{slug: Brando.Utils.slugify(title)})
+    Changeset.change(cs, %{slug: Slug.slugify(title)})
   end
 
   def put_slug(cs), do: cs
@@ -37,7 +38,7 @@ defmodule Brando.Utils.Schema do
   def put_slug(%{changes: _} = cs, field) do
     case Changeset.get_change(cs, field) do
       nil -> cs
-      to_slug -> Changeset.change(cs, %{slug: Brando.Utils.slugify(to_slug)})
+      to_slug -> Changeset.change(cs, %{slug: Slug.slugify(to_slug)})
     end
   end
 
