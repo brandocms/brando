@@ -257,7 +257,7 @@ defmodule Brando.Blueprint.Dsl do
 
         web_module =
           if @application == "Brando" do
-            BrandoAdmin
+            admin_module
           else
             Module.concat([
               :"#{@application}Web"

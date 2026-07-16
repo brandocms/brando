@@ -36,6 +36,11 @@ defmodule Brando.Blueprints.GalleryConfigTest do
            } = cfg.video
   end
 
+  test "gallery assets generate a deleting gallery association" do
+    assert %{related: Brando.Galleries.Gallery, on_replace: :delete} =
+             Schema.__schema__(:association, :media)
+  end
+
   test "image and video upload resolvers select their side of a gallery config" do
     target = "gallery:Elixir.Brando.GalleryConfigTest.Schema:media"
 

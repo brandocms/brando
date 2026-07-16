@@ -459,32 +459,23 @@ defmodule Brando.Blueprint do
   defmacro build_assets(assets) do
     quote do
       Enum.map(unquote(assets), fn
-        %Asset{type: :file, name: name} ->
-          Ecto.Schema.belongs_to(
-            name,
-            Brando.Files.File,
-            on_replace: :update
-          )
+        %Asset{type: type, name: name} when type in [:file, :video, :image, :gallery] ->
+          referenced_module =
+            type
+            |> case do
+              :file -> ["Brando", "Files", "File"]
+              :video -> ["Brando", "Videos", "Video"]
+              :image -> ["Brando", "Images", "Image"]
+              :gallery -> ["Brando", "Galleries", "Gallery"]
+            end
+            |> Module.concat()
 
-        %Asset{type: :video, name: name} ->
-          Ecto.Schema.belongs_to(
-            name,
-            Brando.Videos.Video,
-            on_replace: :update
-          )
+          on_replace = if type == :gallery, do: :delete, else: :update
 
-        %Asset{type: :image, name: name} ->
           Ecto.Schema.belongs_to(
             name,
-            Brando.Images.Image,
-            on_replace: :update
-          )
-
-        %Asset{type: :gallery, name: name} ->
-          Ecto.Schema.belongs_to(
-            name,
-            Brando.Galleries.Gallery,
-            on_replace: :delete
+            referenced_module,
+            on_replace: on_replace
           )
 
         asset ->

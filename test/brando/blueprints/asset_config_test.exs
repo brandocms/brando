@@ -37,4 +37,15 @@ defmodule Brando.Blueprint.AssetConfigTest do
     assert %{cfg: :db, module: Brando.Images.Image} = assets.database_image.opts
     assert %{cfg: :config_target, module: Brando.Files.File} = assets.target_file.opts
   end
+
+  test "asset types generate associations to their media schemas" do
+    assert %{related: Brando.Images.Image, on_replace: :update} =
+             ConfiguredAssets.__schema__(:association, :default_image)
+
+    assert %{related: Brando.Videos.Video, on_replace: :update} =
+             ConfiguredAssets.__schema__(:association, :default_video)
+
+    assert %{related: Brando.Files.File, on_replace: :update} =
+             ConfiguredAssets.__schema__(:association, :default_file)
+  end
 end
