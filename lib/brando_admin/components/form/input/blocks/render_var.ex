@@ -25,10 +25,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # data publish, :boolean
 
   def mount(socket) do
-    {:ok,
-     socket
-     |> assign(:visible, false)
-     |> assign(:publish, false)}
+    {:ok, assign(socket, :publish, false)}
   end
 
   def update_many(assigns_sockets) do
@@ -231,6 +228,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
     socket
     |> assign(assigns)
+    |> assign_new(:visible, fn -> Map.get(assigns, :initially_open, false) end)
     |> assign(:id, assigns.id)
     |> assign(:edit, Map.get(assigns, :edit, false))
     |> assign(:upload_kind, if(Map.get(assigns, :on_change), do: "block_var", else: "entry_var"))

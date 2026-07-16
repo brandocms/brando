@@ -15,6 +15,7 @@ defmodule Brando.Content.Ref do
   @type t :: %__MODULE__{}
 
   trait Brando.Trait.CastPolymorphicEmbeds
+  trait Brando.Trait.Sequenced
   trait Brando.Trait.Timestamped
   trait Brando.Trait.EnsureUID
 
@@ -24,7 +25,6 @@ defmodule Brando.Content.Ref do
   attributes do
     attribute :name, :text, required: true
     attribute :description, :text
-    attribute :sequence, :integer
     attribute :uid, :string, required: true
     attribute :active, :boolean, default: true
     attribute :collapsed, :boolean, default: false

@@ -12,33 +12,33 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   alias BrandoAdmin.Components.Form.ModuleProps.RefBlockForm
 
   @ref_types [
-    %{value: "text", label: "Text"},
-    %{value: "header", label: "Header"},
-    %{value: "file", label: "File"},
-    %{value: "picture", label: "Picture"},
-    %{value: "gallery", label: "Gallery"},
-    %{value: "video", label: "Video"},
-    %{value: "media", label: "Media"},
-    %{value: "html", label: "HTML"},
-    %{value: "svg", label: "SVG"},
-    %{value: "markdown", label: "Markdown"},
-    %{value: "map", label: "Map"},
-    %{value: "comment", label: "Comment"}
+    %{value: "text", label: "Text", description: "Rich, editable body content"},
+    %{value: "header", label: "Header", description: "A semantic heading"},
+    %{value: "picture", label: "Picture", description: "A configured responsive image"},
+    %{value: "gallery", label: "Gallery", description: "An image or video collection"},
+    %{value: "video", label: "Video", description: "Hosted or remote video"},
+    %{value: "media", label: "Media", description: "Let editors choose the media type"},
+    %{value: "file", label: "File", description: "A downloadable file"},
+    %{value: "html", label: "HTML", description: "Editable HTML content"},
+    %{value: "svg", label: "SVG", description: "Inline vector markup"},
+    %{value: "markdown", label: "Markdown", description: "Markdown content"},
+    %{value: "map", label: "Map", description: "An embedded map"},
+    %{value: "comment", label: "Comment", description: "An editor-only note"}
   ]
 
   @var_types [
-    %{value: "text", label: "Rich text"},
-    %{value: "string", label: "String"},
-    %{value: "image", label: "Image"},
-    %{value: "file", label: "File"},
-    %{value: "video", label: "Video"},
-    %{value: "gallery", label: "Gallery"},
-    %{value: "boolean", label: "Boolean"},
-    %{value: "select", label: "Select"},
-    %{value: "link", label: "Link"},
-    %{value: "datetime", label: "Datetime"},
-    %{value: "color", label: "Color"},
-    %{value: "html", label: "Html"}
+    %{value: "string", label: "String", description: "A short line of text"},
+    %{value: "text", label: "Text", description: "Longer plain text"},
+    %{value: "html", label: "Rich text", description: "Formatted rich text"},
+    %{value: "boolean", label: "Boolean", description: "An on/off choice"},
+    %{value: "select", label: "Select", description: "A choice from predefined options"},
+    %{value: "link", label: "Link", description: "A URL or content link"},
+    %{value: "datetime", label: "Date & time", description: "A date and time value"},
+    %{value: "color", label: "Color", description: "A palette or custom color"},
+    %{value: "image", label: "Image", description: "A reusable image value"},
+    %{value: "video", label: "Video", description: "A reusable video value"},
+    %{value: "file", label: "File", description: "A reusable file value"},
+    %{value: "gallery", label: "Gallery", description: "A reusable media collection"}
   ]
 
   @format_options [
@@ -54,9 +54,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   # prop entry_form, :boolean, default: false
 
   # prop create_ref, :event, required: true
-  # prop delete_ref, :event, required: true
   # prop create_var, :event, required: true
-  # prop delete_var, :event, required: true
   # data open_col_vars, :list
 
   def mount(socket) do
@@ -67,6 +65,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
      |> assign_new(:var_types, fn -> @var_types end)
      |> assign_new(:entry_form, fn -> false end)
      |> assign_new(:key, fn -> "default" end)
+     |> assign_new(:open_item_modal, fn -> nil end)
      |> assign_available_datasources()
      |> assign_available_parents()
      |> assign_available_table_templates()}
@@ -100,112 +99,204 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     ~H"""
     <div class="properties shaded">
       <div class="inner">
-        <Input.radios
-          field={@form[:type]}
-          label={gettext("Type")}
-          opts={[
-            options: [
-              %{label: gettext("Liquid"), value: :liquid},
-              %{label: gettext("Heex"), value: :heex}
-            ]
-          ]}
-        />
-        <Input.i18n_text field={@form[:name]} label={gettext("Name")} />
-        <Input.i18n_text field={@form[:namespace]} label={gettext("Namespace")} />
-        <Input.i18n_textarea field={@form[:help_text]} label={gettext("Help text")} />
-        <Input.text field={@form[:class]} label={gettext("Class")} />
-        <Input.toggle field={@form[:multi]} label={gettext("Multi")} />
-
-        <.live_component
-          module={Input.Select}
-          id={"#{@form.id}-color"}
-          field={@form[:color]}
-          inline={true}
-          opts={[
-            options: [
-              %{label: gettext("Blue"), value: :blue},
-              %{label: gettext("Emerald"), value: :emerald},
-              %{label: gettext("Peach"), value: :peach},
-              %{label: gettext("Pink"), value: :pink}
-            ]
-          ]}
-        />
-
-        <.live_component
-          module={Input.Select}
-          id={"#{@form.id}-parent_id"}
-          field={@form[:parent_id]}
-          opts={[options: @available_parents]}
-        />
-
-        <.live_component
-          module={Input.Select}
-          id={"#{@form.id}-table_template_id"}
-          field={@form[:table_template_id]}
-          inline={true}
-          opts={[options: @available_table_templates]}
-        />
-
-        <%= if !@entry_form do %>
-          <div class="button-group">
-            <button phx-click={show_modal("##{@form.id}-#{@key}-icon")} class="secondary" type="button">
-              Edit icon
-            </button>
+        <section class="module-settings">
+          <div class="module-section-heading">
+            <span>{gettext("Module details")}</span>
+            <small>{gettext("How this module appears to editors")}</small>
           </div>
-        <% end %>
 
-        <Content.modal title="Edit icon" id={"#{@form.id}-#{@key}-icon"}>
+          <Input.i18n_text field={@form[:name]} label={gettext("Name")} />
+          <Input.i18n_text field={@form[:namespace]} label={gettext("Namespace")} />
+          <Input.i18n_textarea field={@form[:help_text]} label={gettext("Help text")} />
+          <Input.text field={@form[:class]} label={gettext("CSS class")} />
+        </section>
+
+        <section class="module-settings">
+          <div class="module-section-heading">
+            <span>{gettext("Behavior")}</span>
+            <small>{gettext("Rendering, nesting and editor presentation")}</small>
+          </div>
+
+          <Input.radios
+            field={@form[:type]}
+            label={gettext("Template language")}
+            opts={[
+              options: [
+                %{label: gettext("Liquid"), value: :liquid},
+                %{label: gettext("Heex"), value: :heex}
+              ]
+            ]}
+          />
+          <Input.toggle field={@form[:multi]} label={gettext("Allow multiple entries")} />
+
+          <.live_component
+            module={Input.Select}
+            id={"#{@form.id}-color"}
+            field={@form[:color]}
+            label={gettext("Editor color")}
+            inline={true}
+            opts={[
+              options: [
+                %{label: gettext("Blue"), value: :blue},
+                %{label: gettext("Emerald"), value: :emerald},
+                %{label: gettext("Peach"), value: :peach},
+                %{label: gettext("Pink"), value: :pink}
+              ]
+            ]}
+          />
+
+          <.live_component
+            module={Input.Select}
+            id={"#{@form.id}-parent_id"}
+            field={@form[:parent_id]}
+            label={gettext("Parent module")}
+            opts={[options: @available_parents]}
+          />
+
+          <.live_component
+            module={Input.Select}
+            id={"#{@form.id}-table_template_id"}
+            field={@form[:table_template_id]}
+            label={gettext("Table template")}
+            inline={true}
+            opts={[options: @available_table_templates]}
+          />
+
+          <button
+            :if={!@entry_form}
+            phx-click={show_modal("##{@form.id}-#{@key}-icon")}
+            class="secondary module-icon-button"
+            type="button"
+          >
+            <.icon name="hero-photo" />
+            {gettext("Edit module icon")}
+          </button>
+        </section>
+
+        <Content.modal title={gettext("Edit module icon")} id={"#{@form.id}-#{@key}-icon"}>
           <Input.code id={"#{@form.id}-svg"} field={@form[:svg]} label={gettext("SVG")} />
+          <:footer>
+            <button type="button" class="primary" phx-click={hide_modal("##{@form.id}-#{@key}-icon")}>
+              {gettext("Done")}
+            </button>
+          </:footer>
         </Content.modal>
 
-        <Content.modal title="Create ref" id={"#{@form.id}-#{@key}-create-ref"} narrow>
+        <Content.modal title={gettext("Add reference")} id={"#{@form.id}-#{@key}-create-ref"} medium>
+          <p class="module-picker-intro">
+            {gettext("References place editable content and media directly in the module template.")}
+          </p>
           <.type_buttons
             types={@ref_types}
             on_click={@create_ref}
             hide_modal_id={"##{@form.id}-#{@key}-create-ref"}
-            show_modal_id={"##{@form.id}-#{@key}-ref-0"}
           />
         </Content.modal>
 
-        <div class="refs">
-          <h2>
-            <div class="header-spread">REFs</div>
-            <button phx-click={show_modal("##{@form.id}-#{@key}-create-ref")} type="button" class="circle">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18">
-                <path fill="none" d="M0 0h24v24H0z" /><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z" />
-              </svg>
+        <section class="module-collection refs">
+          <header class="module-collection-header">
+            <div>
+              <div class="module-collection-title">
+                <h2>{gettext("References")}</h2>
+                <span class="module-count">{Enum.count(@form[:refs].value || [])}</span>
+              </div>
+              <p>{gettext("Editable content and media used by the template.")}</p>
+            </div>
+            <button
+              phx-click={show_modal("##{@form.id}-#{@key}-create-ref")}
+              type="button"
+              class="secondary module-add-button"
+              aria-label={gettext("Add reference")}
+            >
+              <.icon name="hero-plus" />
+              {gettext("Add")}
             </button>
-          </h2>
+          </header>
 
-          <ul>
-            <input type="hidden" name={@form[:refs].name} value="" />
-            <.inputs_for :let={ref} field={@form[:refs]}>
-              <li class="padded">
-                <Form.inputs_for_block :let={ref_data} field={ref[:data]}>
-                  <div>
-                    <span class="text-mono">{ref_data[:type].value}</span>
-                    <span class="text-mono">- %&lcub;{ref[:name].value}&rcub;</span>
-                  </div>
+          <div :if={Enum.empty?(@form[:refs].value || [])} class="module-empty-state">
+            <.icon name="hero-cube-transparent" />
+            <p>{gettext("No references yet")}</p>
+            <span>{gettext("Add one, then insert it in the template with the ref tag.")}</span>
+          </div>
+
+          <ul
+            id={"#{@form.id}-refs-#{@key}-list"}
+            phx-hook="Brando.SortableAssocs"
+            data-sortable-id={"sortable-refs#{@entry_form && "-entry-form" || ""}"}
+            data-sortable-selector=".ref"
+            data-sortable-handle=".sort-handle"
+            data-sortable-dispatch-event="true"
+          >
+            <.inputs_for :let={ref} field={@form[:refs]} skip_hidden>
+              <li class="ref module-item draggable" data-id={ref.index}>
+                <Input.input type={:hidden} field={ref[:id]} />
+                <Input.input type={:hidden} field={ref[:_persistent_id]} value={ref.index} />
+                <input type="hidden" name={"#{@form.name}[sort_ref_ids][]"} value={ref.index} />
+
+                <button
+                  class="module-drag-handle sort-handle"
+                  type="button"
+                  aria-label={gettext("Reorder reference")}
+                  title={gettext("Drag to reorder")}
+                >
+                  <.icon name="hero-bars-2" />
+                </button>
+
+                <Form.inputs_for_block :let={ref_data} field={ref[:data]} skip_hidden>
+                  <button
+                    class="module-item-summary"
+                    type="button"
+                    phx-click={show_modal("##{@form.id}-#{@key}-ref-#{ref.index}")}
+                    aria-label={gettext("Edit reference %{name}", name: ref[:name].value)}
+                  >
+                    <span class="module-item-type">{ref_data[:type].value}</span>
+                    <span class="module-item-identity">
+                      <code>%&lcub;{ref[:name].value}&rcub;</code>
+                      <small>{ref[:description].value || gettext("No description")}</small>
+                    </span>
+                  </button>
 
                   <div class="actions">
-                    <button class="tiny" type="button" phx-click={show_modal("##{@form.id}-#{@key}-ref-#{ref.index}")}>
-                      <.icon name="hero-pencil" />
-                    </button>
-                    <button class="tiny" type="button" phx-click={@duplicate_ref} phx-value-id={ref[:name].value}>
+                    <button
+                      class="tiny"
+                      type="button"
+                      phx-click={@duplicate_ref}
+                      phx-value-index={ref.index}
+                      aria-label={gettext("Duplicate reference %{name}", name: ref[:name].value)}
+                      title={gettext("Duplicate")}
+                    >
                       <.icon name="hero-document-duplicate" />
                     </button>
-                    <button class="tiny" type="button" phx-click={@delete_ref} phx-value-id={ref[:name].value}>
+                    <button
+                      class="tiny module-danger"
+                      type="button"
+                      phx-click={JS.dispatch("change")}
+                      phx-confirm={gettext("Delete reference %{name}?", name: ref[:name].value)}
+                      name={"#{@form.name}[drop_ref_ids][]"}
+                      value={ref.index}
+                      aria-label={gettext("Delete reference %{name}", name: ref[:name].value)}
+                      title={gettext("Delete")}
+                    >
                       <.icon name="hero-x-mark" />
                     </button>
                   </div>
                 </Form.inputs_for_block>
 
-                <Content.modal title="Edit ref" id={"#{@form.id}-#{@key}-ref-#{ref.index}"} wide>
+                <Content.modal
+                  title={gettext("Edit reference")}
+                  id={"#{@form.id}-#{@key}-ref-#{ref.index}"}
+                  show={@open_item_modal == :ref && ref.index == 0}
+                  close={close_item_modal("##{@form.id}-#{@key}-ref-#{ref.index}")}
+                  wide
+                >
                   <Form.inputs_for_block :let={ref_data} field={ref[:data]}>
                     <Input.input type={:hidden} field={ref_data[:type]} />
                     <div class="panels">
                       <div class="panel">
-                        <h2 class="titlecase">Block template</h2>
+                        <div class="module-modal-heading">
+                          <span class="module-item-type">{ref_data[:type].value}</span>
+                          <h2>{gettext("Content defaults")}</h2>
+                        </div>
                         <RefBlockForm.block_form
                           type={ref_data[:type].value}
                           ref_data={ref_data}
@@ -216,9 +307,16 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       </div>
 
                       <div class="panel">
-                        <h2 class="titlecase">Ref config — {ref_data[:type].value}</h2>
-                        <Input.text field={ref[:name]} label={gettext("Name")} />
-                        <Input.text field={ref[:description]} label={gettext("Description")} />
+                        <div class="module-modal-heading">
+                          <h2>{gettext("Reference settings")}</h2>
+                        </div>
+                        <Input.text
+                          field={ref[:name]}
+                          label={gettext("Template name")}
+                          instructions={gettext("Reference it from the template with the ref tag.")}
+                          monospace
+                        />
+                        <Input.textarea field={ref[:description]} label={gettext("Editor description")} />
                         <Input.input type={:hidden} field={ref[:uid]} value={ref[:uid].value || Brando.Utils.generate_uid()} />
                       </div>
                     </div>
@@ -227,13 +325,26 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       block_data={ref_data}
                     />
                   </Form.inputs_for_block>
+                  <:footer>
+                    <button
+                      type="button"
+                      class="primary"
+                      phx-click={close_item_modal("##{@form.id}-#{@key}-ref-#{ref.index}")}
+                    >
+                      {gettext("Done")}
+                    </button>
+                  </:footer>
                 </Content.modal>
               </li>
             </.inputs_for>
+            <input type="hidden" name={"#{@form.name}[drop_ref_ids][]"} />
           </ul>
-        </div>
+        </section>
 
-        <Content.modal title={gettext("Create var")} id={"#{@form.id}-#{@key}-create-var"} narrow>
+        <Content.modal title={gettext("Add variable")} id={"#{@form.id}-#{@key}-create-var"} medium>
+          <p class="module-picker-intro">
+            {gettext("Variables expose reusable values to the template and the block editor.")}
+          </p>
           <.type_buttons
             types={@var_types}
             on_click={@create_var}
@@ -241,15 +352,32 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           />
         </Content.modal>
 
-        <div class="vars">
-          <h2>
-            <div class="header-spread">Vars</div>
-            <button phx-click={show_modal("##{@form.id}-#{@key}-create-var")} type="button" class="circle">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18">
-                <path fill="none" d="M0 0h24v24H0z" /><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z" />
-              </svg>
+        <section class="module-collection vars">
+          <header class="module-collection-header">
+            <div>
+              <div class="module-collection-title">
+                <h2>{gettext("Variables")}</h2>
+                <span class="module-count">{Enum.count(@form[:vars].value || [])}</span>
+              </div>
+              <p>{gettext("Reusable values available directly in the template.")}</p>
+            </div>
+            <button
+              phx-click={show_modal("##{@form.id}-#{@key}-create-var")}
+              type="button"
+              class="secondary module-add-button"
+              aria-label={gettext("Add variable")}
+            >
+              <.icon name="hero-plus" />
+              {gettext("Add")}
             </button>
-          </h2>
+          </header>
+
+          <div :if={Enum.empty?(@form[:vars].value || [])} class="module-empty-state">
+            <.icon name="hero-variable" />
+            <p>{gettext("No variables yet")}</p>
+            <span>{gettext("Add one, then reference its key in the template.")}</span>
+          </div>
+
           <ul
             id={"#{@form.id}-vars-#{@key}-list"}
             phx-hook="Brando.SortableAssocs"
@@ -259,38 +387,79 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             data-sortable-dispatch-event="true"
           >
             <.inputs_for :let={var} field={@form[:vars]} skip_hidden>
-              <Content.modal title={gettext("Edit var")} id={"#{@form.id}-#{@key}-var-#{var.index}"}>
+              <Content.modal
+                title={gettext("Edit variable")}
+                id={"#{@form.id}-#{@key}-var-#{var.index}"}
+                show={@open_item_modal == :var && var.index == 0}
+                close={close_item_modal("##{@form.id}-#{@key}-var-#{var.index}")}
+                wide
+              >
                 <.live_component
                   module={RenderVar}
                   id={"#{@form.id}-#{@key}-render-var-#{var.index}"}
                   var={var}
                   render={:all}
                   target={@myself}
+                  initially_open
                   edit
                 />
-                <!-- ^- had publish -->
+                <:footer>
+                  <button
+                    type="button"
+                    class="primary"
+                    phx-click={close_item_modal("##{@form.id}-#{@key}-var-#{var.index}")}
+                  >
+                    {gettext("Done")}
+                  </button>
+                </:footer>
               </Content.modal>
-              <li class="var padded sort-handle draggable" data-id={var.index}>
+              <li class="var module-item draggable" data-id={var.index}>
                 <Input.input type={:hidden} field={var[:id]} />
                 <Input.input type={:hidden} field={var[:_persistent_id]} value={var.index} />
                 <input type="hidden" name={"#{@form.name}[sort_var_ids][]"} value={var.index} />
 
-                <span class="text-mono">
-                  {var[:type].value} - &lcub;&lcub; {var[:key].value} &rcub;&rcub;
-                </span>
+                <button
+                  class="module-drag-handle sort-handle"
+                  type="button"
+                  aria-label={gettext("Reorder variable")}
+                  title={gettext("Drag to reorder")}
+                >
+                  <.icon name="hero-bars-2" />
+                </button>
+
+                <button
+                  class="module-item-summary"
+                  type="button"
+                  phx-click={show_modal("##{@form.id}-#{@key}-var-#{var.index}")}
+                  aria-label={gettext("Edit variable %{key}", key: var[:key].value)}
+                >
+                  <span class="module-item-type">{var[:type].value}</span>
+                  <span class="module-item-identity">
+                    <code>&lcub;&lcub; {var[:key].value} &rcub;&rcub;</code>
+                    <small>{var[:label].value}</small>
+                  </span>
+                </button>
+
                 <div class="actions">
-                  <button class="tiny" type="button" phx-click={show_modal("##{@form.id}-#{@key}-var-#{var.index}")}>
-                    <.icon name="hero-pencil" />
-                  </button>
-                  <button class="tiny" type="button" phx-click={@duplicate_var} phx-value-id={var[:key].value}>
-                    <.icon name="hero-document-duplicate" />
-                  </button>
                   <button
                     class="tiny"
                     type="button"
+                    phx-click={@duplicate_var}
+                    phx-value-index={var.index}
+                    aria-label={gettext("Duplicate variable %{key}", key: var[:key].value)}
+                    title={gettext("Duplicate")}
+                  >
+                    <.icon name="hero-document-duplicate" />
+                  </button>
+                  <button
+                    class="tiny module-danger"
+                    type="button"
                     phx-click={JS.dispatch("change")}
+                    phx-confirm={gettext("Delete variable %{key}?", key: var[:key].value)}
                     name={"#{@form.name}[drop_var_ids][]"}
                     value={var.index}
+                    aria-label={gettext("Delete variable %{key}", key: var[:key].value)}
+                    title={gettext("Delete")}
                   >
                     <.icon name="hero-x-mark" />
                   </button>
@@ -299,9 +468,13 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
             </.inputs_for>
             <input type="hidden" name={"#{@form.name}[drop_var_ids][]"} />
           </ul>
-        </div>
+        </section>
 
-        <div class="datasource">
+        <section class="module-settings datasource">
+          <div class="module-section-heading">
+            <span>{gettext("Datasource")}</span>
+            <small>{gettext("Optional dynamic content for this module")}</small>
+          </div>
           <Input.toggle field={@form[:datasource]} label={gettext("Datasource")} />
 
           <%= if @datasource do %>
@@ -332,7 +505,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               opts={[options: @available_queries]}
             />
           <% end %>
-        </div>
+        </section>
       </div>
     </div>
     """
@@ -415,31 +588,33 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   attr :types, :list, required: true
   attr :on_click, :any, required: true
   attr :hide_modal_id, :string, default: nil
-  attr :show_modal_id, :string, default: nil
 
   defp type_buttons(assigns) do
     ~H"""
-    <div class="button-group-vertical">
+    <div class="module-type-picker">
       <button
-        :for={%{value: value, label: label} <- @types}
-        :key={value}
+        :for={type <- @types}
+        :key={type.value}
         type="button"
-        phx-click={build_click_action(@on_click, @hide_modal_id, @show_modal_id)}
-        phx-value-type={value}
-        class="secondary"
+        phx-click={build_click_action(@on_click, @hide_modal_id)}
+        phx-value-type={type.value}
+        class="module-type-option"
       >
-        {label}
+        <span>{type.label}</span>
+        <small>{type.description}</small>
+        <.icon name="hero-arrow-right" />
       </button>
     </div>
     """
   end
 
-  defp build_click_action(on_click, nil, nil), do: on_click
-  defp build_click_action(on_click, hide_id, nil), do: on_click |> hide_modal(hide_id)
-  defp build_click_action(on_click, nil, show_id), do: on_click |> show_modal(show_id)
+  defp build_click_action(on_click, nil), do: on_click
+  defp build_click_action(on_click, hide_id), do: on_click |> hide_modal(hide_id)
 
-  defp build_click_action(on_click, hide_id, show_id),
-    do: on_click |> hide_modal(hide_id) |> show_modal(show_id)
+  defp close_item_modal(selector) do
+    JS.push("close_item_modal")
+    |> hide_modal(selector)
+  end
 
   attr :field, :any, required: true
 
