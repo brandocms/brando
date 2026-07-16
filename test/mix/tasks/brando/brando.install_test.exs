@@ -58,6 +58,10 @@ defmodule Mix.Tasks.Brando.GenerateTest do
       assert file =~ "brando Frontend"
     end)
 
+    assert_file("lib/brando_admin/live/dashboard_live.ex", fn file ->
+      assert file =~ "use BrandoAdmin.LiveView.Listing.Compiler, schema: nil"
+    end)
+
     refute File.exists?("assets/css/app.css")
   end
 end

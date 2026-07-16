@@ -32,7 +32,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
 
       assert_file("lib/brando_admin/live/projects/project_list_live.ex", fn file ->
         assert file =~ "BrandoIntegrationAdmin.Projects.ProjectListLive"
-        assert file =~ "use BrandoAdmin.LiveView.Listing, schema: Brando.Projects.Project"
+        assert file =~ "use BrandoAdmin.LiveView.Listing.Compiler, schema: Brando.Projects.Project"
 
         assert file =~
                  "<.live_component module={Content.List}\n      id={\"content_listing_\#{@schema}_default\"}\n"

@@ -86,11 +86,28 @@ database migration.
 
 ### Listings
 
+#### Listing LiveViews
+
+Generated admin listing LiveViews use the focused setup compiler so changes to
+runtime listing hooks do not recompile every listing definition:
+
+```elixir
+use BrandoAdmin.LiveView.Listing.Compiler, schema: MyApp.Projects.Project
+```
+
+Existing `use BrandoAdmin.LiveView.Listing, schema: ...` declarations remain
+supported. Applications may migrate by changing only the module passed to `use`;
+hook behavior, listing APIs, and routes are unchanged. Dashboard LiveViews may use
+the same compiler with `schema: nil`. This is a compile-time dependency optimization
+and requires no database migration.
+
+#### Listing components
+
 Blueprints with custom listing rows must explicitly import the lightweight core
 components. Import cover images or child-listing actions only when the row uses
 them. Blueprints without custom rows should not import listing components.
 
-#### Example
+##### Example
 
 ```elixir
   import Brando.Blueprint.Listings.Components.Core

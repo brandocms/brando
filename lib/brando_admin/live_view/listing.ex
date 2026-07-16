@@ -2,9 +2,12 @@ defmodule BrandoAdmin.LiveView.Listing do
   @moduledoc """
   A module that keeps using definitions for listing live views
 
-  This can be used in your application as:
+  The runtime hook callbacks live here. Listing LiveViews should compile their
+  setup through the focused companion module:
 
-  use BrandoAdmin.LiveView.Listing, schema: MyApp.Projects.Project
+      use BrandoAdmin.LiveView.Listing.Compiler, schema: MyApp.Projects.Project
+
+  The historical `use BrandoAdmin.LiveView.Listing` entry point remains supported.
 
   """
   use Gettext, backend: Brando.Gettext
@@ -12,21 +15,10 @@ defmodule BrandoAdmin.LiveView.Listing do
   import Phoenix.Component
   import Phoenix.LiveView
 
-  defmacro __using__(opts) do
-    schema = Keyword.fetch!(opts, :schema)
+  alias Brando.Utils
 
-    quote do
-      use BrandoAdmin, :live_view
-      # use Phoenix.HTML
-      import Phoenix.Component
-
-      on_mount({__MODULE__, :hooks})
-
-      def on_mount(:hooks, params, assigns, socket) do
-        BrandoAdmin.LiveView.Listing.hooks(params, assigns, socket, unquote(schema))
-      end
-    end
-  end
+  @doc false
+  defmacro __using__(opts), do: BrandoAdmin.LiveView.Listing.Compiler.build(opts)
 
   def hooks(_params, _, socket, schema) do
     if Phoenix.LiveView.connected?(socket) do
@@ -67,7 +59,7 @@ defmodule BrandoAdmin.LiveView.Listing do
         singular = schema.__naming__().singular
         domain = schema.__naming__().domain
         context = schema.__modules__().context
-        msgid = Brando.Utils.humanize(singular, :downcase)
+        msgid = Utils.humanize(singular, :downcase)
 
         gettext_module = schema.__modules__(:gettext)
         gettext_domain = String.downcase("#{domain}_#{singular}")
@@ -102,7 +94,7 @@ defmodule BrandoAdmin.LiveView.Listing do
         singular = schema.__naming__().singular
         domain = schema.__naming__().domain
         context = schema.__modules__().context
-        msgid = Brando.Utils.humanize(singular, :downcase)
+        msgid = Utils.humanize(singular, :downcase)
 
         gettext_module = schema.__modules__(:gettext)
         gettext_domain = String.downcase("#{domain}_#{singular}")
@@ -251,7 +243,7 @@ defmodule BrandoAdmin.LiveView.Listing do
           |> Enum.map(fn slug_field ->
             {slug_field.name,
              fn _entry, current_value ->
-               Brando.Utils.slugify("#{current_value}-#{language}")
+               Utils.slugify("#{current_value}-#{language}")
              end}
           end)
 

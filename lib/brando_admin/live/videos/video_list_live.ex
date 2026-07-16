@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Videos.VideoListLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Listing, schema: Brando.Videos.Video
+  use BrandoAdmin.LiveView.Listing.Compiler, schema: Brando.Videos.Video
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Assets.FileBrowser

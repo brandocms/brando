@@ -217,6 +217,13 @@
   applications may opt in by changing only the `use` module. Runtime behavior, routes,
   and database schemas are unchanged, so no database migration is required.
 
+- **Isolated admin listing LiveView compilation**: Generated and built-in admin
+  listing LiveViews now use `BrandoAdmin.LiveView.Listing.Compiler`, a focused setup
+  macro that keeps runtime listing hooks out of their compile graph. Existing
+  `use BrandoAdmin.LiveView.Listing, schema: ...` declarations remain supported;
+  applications may opt in by changing only the `use` module. Listing behavior, routes,
+  and database schemas are unchanged, so no database migration is required.
+
 - **Isolated context query compilation**: Generated and built-in Blueprint contexts now
   use `Brando.Query.Compiler`, which provides query, mutation, reducer, and helper macros
   without compiling contexts against the runtime query engine. Existing
