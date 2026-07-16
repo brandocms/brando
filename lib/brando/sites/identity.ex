@@ -168,7 +168,7 @@ defmodule Brando.Sites.Identity do
           inputs_for :type_config do
             label t("Type-specific settings")
             cardinality :one
-            default %Brando.Sites.Identity.TypeConfig{}
+            default &__MODULE__.default_type_config/2
             component :identity_type_config
           end
         end
@@ -178,7 +178,7 @@ defmodule Brando.Sites.Identity do
             label t("Links")
             style :inline
             cardinality :many
-            default %Brando.Link{}
+            default &__MODULE__.default_link/2
 
             input :name, :text, label: t("Name", Brando.Link)
             input :url, :text, label: t("URL", Brando.Link)
@@ -190,7 +190,7 @@ defmodule Brando.Sites.Identity do
             label t("Meta properties")
             style :inline
             cardinality :many
-            default %Brando.Meta{}
+            default &__MODULE__.default_meta/2
 
             input :key, :text, label: t("Key", Brando.Meta)
             input :value, :text, label: t("Value", Brando.Meta)
@@ -210,6 +210,15 @@ defmodule Brando.Sites.Identity do
   def redirect(socket, _entry, _) do
     Brando.routes().admin_live_path(socket, BrandoAdmin.Sites.IdentityLive)
   end
+
+  @doc "Builds a default type configuration for the identity form."
+  def default_type_config(_identity, _asset), do: %Brando.Sites.Identity.TypeConfig{}
+
+  @doc "Builds a default link for the identity form."
+  def default_link(_identity, _asset), do: %Brando.Link{}
+
+  @doc "Builds a default metadata entry for the identity form."
+  def default_meta(_identity, _asset), do: %Brando.Meta{}
 
   def query_with_preloads(id) do
     %{matches: %{id: id}, preload: [:logo]}
