@@ -42,7 +42,7 @@ defmodule Brando.Blueprint.Listings.Components do
     assigns =
       assigns
       |> assign(:status, Map.get(assigns.entry, :status))
-      |> assign(:href, Brando.HTML.absolute_url(entry))
+      |> assign(:href, Brando.Blueprint.URL.resolve(entry))
 
     ~H"""
     <div class={[

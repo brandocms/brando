@@ -53,6 +53,8 @@ defmodule Brando.Blueprint.Assets.Dsl do
     sections: [@root],
     transformers: [Brando.Blueprint.Assets.Transformer]
 
+  @config_normalizer Module.concat(["Brando", "Blueprint", "AssetConfigNormalizer"])
+
   def transform(%{type: :image} = asset) do
     transform_asset(asset, Brando.Images.Image, Brando.Type.ImageConfig, [:db])
   end
@@ -104,19 +106,7 @@ defmodule Brando.Blueprint.Assets.Dsl do
   end
 
   @doc false
-  def normalize_runtime_config(%{opts: %{cfg: config}} = asset) when is_function(config, 0) do
-    normalized =
-      case asset.type do
-        :image -> normalize_config(asset, Brando.Type.ImageConfig, config.(), [:db])
-        :video -> normalize_config(asset, Brando.Type.VideoConfig, config.(), [])
-        :file -> normalize_config(asset, Brando.Type.FileConfig, config.(), [:config_target])
-        :gallery -> normalize_gallery_config(config.(), gallery_default_config())
-      end
-
-    %{asset | opts: Map.put(asset.opts, :cfg, normalized)}
-  end
-
-  def normalize_runtime_config(asset), do: asset
+  def normalize_runtime_config(asset), do: @config_normalizer.normalize(asset)
 
   defp transform_asset(asset, association_module, config_module, passthrough_values) do
     opts = Map.merge(Map.new(asset.opts), %{module: association_module})

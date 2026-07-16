@@ -8,6 +8,15 @@ defmodule Brando.Blueprint.BlueprintTest do
     assert Brando.BlueprintTest.Project.__naming__().schema == "Project"
     assert Brando.BlueprintTest.Project.__naming__().singular == "project"
     assert Brando.BlueprintTest.Project.__naming__().plural == "projects"
+    assert Brando.Blueprint.get_singular(Brando.BlueprintTest.Project) == "Project"
+    assert Brando.Blueprint.get_plural(Brando.BlueprintTest.Project) == "Projects"
+  end
+
+  test "lists application and built-in blueprints" do
+    blueprints = Brando.Blueprint.list_blueprints(:include_brando)
+
+    assert Brando.Pages.Page in blueprints
+    assert Brando.Pages.Fragment in blueprints
   end
 
   test "modules" do

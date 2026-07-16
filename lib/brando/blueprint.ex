@@ -671,21 +671,10 @@ defmodule Brando.Blueprint do
   @doc """
   Return a list of preloads for a given schema
   """
-  def preloads_for(schema, opts \\ []) do
-    skip_blocks? = Keyword.get(opts, :skip_blocks, false)
-    blocks_preloads = (skip_blocks? && []) || Brando.Content.Blocks.preloads_for(schema)
-    asset_preloads = Brando.Blueprint.Assets.preloads_for(schema)
-    rel_preloads = Brando.Blueprint.Relations.preloads_for(schema)
-    alternates_preload = Brando.Content.AlternateEntries.preloads_for(schema)
-    identifiers_preloads = Brando.Content.Identifier.preloads_for(schema)
+  @preloads_module Module.concat(["Brando", "Blueprint", "Preloads"])
 
-    Enum.uniq(
-      asset_preloads ++
-        rel_preloads ++
-        blocks_preloads ++
-        alternates_preload ++
-        identifiers_preloads
-    )
+  def preloads_for(schema, opts \\ []) do
+    @preloads_module.for_schema(schema, opts)
   end
 
   def blueprint?(module), do: {:__blueprint__, 0} in module.__info__(:functions)
@@ -695,7 +684,7 @@ defmodule Brando.Blueprint do
   """
   @spec list_blueprints :: [module()]
   def list_blueprints do
-    {:ok, app_modules} = :application.get_key(Brando.otp_app(), :modules)
+    {:ok, app_modules} = :application.get_key(Brando.RuntimeConfig.get(:otp_app), :modules)
 
     app_modules
     |> Enum.uniq()
@@ -703,17 +692,30 @@ defmodule Brando.Blueprint do
   end
 
   def list_blueprints(:include_brando) do
-    list_blueprints() ++ [Brando.Pages.Page, Brando.Pages.Fragment]
+    brando_blueprints = [
+      Module.concat(["Brando", "Pages", "Page"]),
+      Module.concat(["Brando", "Pages", "Fragment"])
+    ]
+
+    list_blueprints() ++ brando_blueprints
   end
 
   def get_singular(module) do
-    singular = Brando.Utils.try_path(module.__translations__(), [:naming, :singular])
+    singular = get_translation(module.__translations__(), [:naming, :singular])
     String.capitalize(singular || module.__naming__().singular)
   end
 
   def get_plural(module) do
-    plural = Brando.Utils.try_path(module.__translations__(), [:naming, :plural])
+    plural = get_translation(module.__translations__(), [:naming, :plural])
     String.capitalize(plural || module.__naming__().plural)
+  end
+
+  defp get_translation(translations, path) do
+    Enum.reduce(path, translations, fn
+      _key, nil -> nil
+      key, map when is_map(map) -> Map.get(map, key)
+      key, keyword when is_list(keyword) -> Keyword.get(keyword, key)
+    end)
   end
 
   # TODO: some deprecated functions — remove before 1.0

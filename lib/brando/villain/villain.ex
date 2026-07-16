@@ -6,10 +6,12 @@ defmodule Brando.Villain do
   All block data management (queries, orchestration, sync, duplication)
   lives in `Brando.Content.Blocks`.
   """
-  alias Brando.Cache
-  alias Brando.Content
-  alias Brando.Pages
-  alias Brando.Utils
+  alias Brando.Blueprint.URL
+  alias Brando.Media.URL, as: MediaURL
+  alias Brando.Pages.FragmentQuery
+  alias Brando.RuntimeConfig
+  alias Brando.Villain.ContextCache
+  alias Brando.Villain.RenderSourceQuery
   alias Liquex.Context
 
   @brando_env Application.compile_env(:brando, :env)
@@ -41,6 +43,7 @@ defmodule Brando.Villain do
                          %{cache: {:ttl, :infinite}, preload: [:palette]}
   @palette_cache_ttl (@brando_env in [:e2e, :test] && %{}) || %{cache: {:ttl, :infinite}}
   @fragment_cache_ttl (@brando_env in [:e2e, :test] && %{}) || %{cache: {:ttl, :infinite}}
+  @block_module Module.concat(["Brando", "Content", "Block"])
 
   @doc """
   Parse blocks
@@ -56,12 +59,12 @@ defmodule Brando.Villain do
   def parse(entry_blocks_list, entry, opts) do
     start = System.monotonic_time()
     opts_map = Enum.into(opts, %{})
-    parser = Brando.config(Brando.Villain)[:parser]
+    parser = RuntimeConfig.get(Brando.Villain)[:parser]
 
-    {:ok, modules} = Content.list_modules(@module_cache_ttl)
-    {:ok, containers} = Content.list_containers(@container_cache_ttl)
-    {:ok, palettes} = Content.list_palettes(@palette_cache_ttl)
-    {:ok, fragments} = Pages.list_fragments(@fragment_cache_ttl)
+    {:ok, modules} = RenderSourceQuery.list_modules(@module_cache_ttl)
+    {:ok, containers} = RenderSourceQuery.list_containers(@container_cache_ttl)
+    {:ok, palettes} = RenderSourceQuery.list_palettes(@palette_cache_ttl)
+    {:ok, fragments} = FragmentQuery.list_for_rendering(@fragment_cache_ttl)
 
     entry = maybe_put_timestamps(entry)
 
@@ -101,9 +104,9 @@ defmodule Brando.Villain do
   def render_block(%{active: false}, _entry, _opts), do: ""
   def render_block(%{marked_as_deleted: true}, _entry, _opts), do: ""
 
-  def render_block(%Content.Block{} = block, entry, opts) do
+  def render_block(%{__struct__: block_module} = block, entry, opts) when block_module == @block_module do
     opts_map = Enum.into(opts, %{})
-    parser = Brando.config(Brando.Villain)[:parser]
+    parser = RuntimeConfig.get(Brando.Villain)[:parser]
 
     entry = maybe_put_timestamps(entry)
 
@@ -134,22 +137,22 @@ defmodule Brando.Villain do
   # palettes for container blocks, fragments for fragment blocks. The
   # `{% fragment %}` liquid tag fetches its own fragment and does not use opts.
   defp put_render_sources(opts_map, %{type: type}) when type in [:module, :module_entry] do
-    {:ok, modules} = Content.list_modules(@module_cache_ttl)
+    {:ok, modules} = RenderSourceQuery.list_modules(@module_cache_ttl)
 
     Map.merge(opts_map, %{modules: modules, containers: [], palettes: [], fragments: []})
   end
 
   defp put_render_sources(opts_map, %{type: :fragment}) do
-    {:ok, fragments} = Pages.list_fragments(@fragment_cache_ttl)
+    {:ok, fragments} = FragmentQuery.list_for_rendering(@fragment_cache_ttl)
 
     Map.merge(opts_map, %{modules: [], containers: [], palettes: [], fragments: fragments})
   end
 
   defp put_render_sources(opts_map, _block) do
-    {:ok, modules} = Content.list_modules(@module_cache_ttl)
-    {:ok, containers} = Content.list_containers(@container_cache_ttl)
-    {:ok, palettes} = Content.list_palettes(@palette_cache_ttl)
-    {:ok, fragments} = Pages.list_fragments(@fragment_cache_ttl)
+    {:ok, modules} = RenderSourceQuery.list_modules(@module_cache_ttl)
+    {:ok, containers} = RenderSourceQuery.list_containers(@container_cache_ttl)
+    {:ok, palettes} = RenderSourceQuery.list_palettes(@palette_cache_ttl)
+    {:ok, fragments} = FragmentQuery.list_for_rendering(@fragment_cache_ttl)
 
     Map.merge(opts_map, %{
       modules: modules,
@@ -171,7 +174,7 @@ defmodule Brando.Villain do
   defp add_request_to_context(ctx, _), do: ctx
 
   defp add_url_to_context(ctx, entry) do
-    add_to_context(ctx, "url", Brando.HTML.absolute_url(entry))
+    add_to_context(ctx, "url", URL.resolve(entry))
   end
 
   defp parse_node(parser, block, opts_map) do
@@ -189,7 +192,7 @@ defmodule Brando.Villain do
   end
 
   def get_base_context do
-    locale = Gettext.get_locale(Brando.gettext())
+    locale = Gettext.get_locale(RuntimeConfig.web_module(Gettext))
 
     do_get_base_context(locale)
     |> add_to_context("language", locale)
@@ -197,7 +200,7 @@ defmodule Brando.Villain do
   end
 
   def get_base_context(%{language: entry_language} = entry) do
-    language = (entry_language in [nil, ""] && Brando.config(:default_language)) || entry_language
+    language = (entry_language in [nil, ""] && RuntimeConfig.get(:default_language)) || entry_language
 
     do_get_base_context(to_string(language))
     |> add_to_context("language", to_string(language))
@@ -206,7 +209,7 @@ defmodule Brando.Villain do
   end
 
   def get_base_context(entry) do
-    locale = Brando.config(:default_language)
+    locale = RuntimeConfig.get(:default_language)
 
     do_get_base_context(locale)
     |> add_to_context("language", locale)
@@ -215,9 +218,9 @@ defmodule Brando.Villain do
   end
 
   defp do_get_base_context(language) do
-    identity = Cache.Identity.get(language)
-    globals = Cache.Globals.get(language)
-    navigation = Cache.Navigation.get()
+    identity = ContextCache.identity(language)
+    globals = ContextCache.globals(language)
+    navigation = ContextCache.navigation()
 
     %{}
     |> create_context()
@@ -230,7 +233,7 @@ defmodule Brando.Villain do
   def create_context(vars) do
     Context.new(
       vars,
-      filter_module: Brando.web_module(Villain.Filters)
+      filter_module: RuntimeConfig.web_module(Villain.Filters)
     )
   end
 
@@ -258,7 +261,7 @@ defmodule Brando.Villain do
   end
 
   def parse_and_render(html, context) do
-    liquex_parser = Brando.config(Brando.Villain)[:liquex_parser] || Brando.Villain.LiquexParser
+    liquex_parser = RuntimeConfig.get(Brando.Villain)[:liquex_parser] || Brando.Villain.LiquexParser
 
     html_string =
       html
@@ -287,7 +290,7 @@ defmodule Brando.Villain do
   evicted, so passing per-render varying strings would grow it unboundedly.
   """
   def parse_and_render_cached(template, context) do
-    liquex_parser = Brando.config(Brando.Villain)[:liquex_parser] || Brando.Villain.LiquexParser
+    liquex_parser = RuntimeConfig.get(Brando.Villain)[:liquex_parser] || Brando.Villain.LiquexParser
 
     html_string =
       template
@@ -446,11 +449,11 @@ defmodule Brando.Villain do
   """
   def map_images(images) do
     Enum.map(images, fn image ->
-      sizes = Map.new(image.sizes, fn {k, v} -> {k, Utils.media_url(v)} end)
+      sizes = Map.new(image.sizes, fn {key, path} -> {key, MediaURL.resolve(path)} end)
 
       %{
-        src: Utils.media_url(image.path),
-        thumb: image |> Utils.img_url(:thumb) |> Utils.media_url(),
+        src: MediaURL.resolve(image.path),
+        thumb: Map.fetch!(sizes, "thumb"),
         sizes: sizes,
         dominant_color: image.dominant_color,
         formats: image.formats,

@@ -91,8 +91,9 @@ defmodule Brando.Blueprint.Relations do
   import Ecto.Changeset
   import Ecto.Query
 
-  alias Brando.Blueprint.Relations
   alias Spark.Dsl.Extension
+
+  @relation_preloads Module.concat(["Brando", "Blueprint", "RelationPreloads"])
 
   def __relations__(module) do
     Extension.get_entities(module, [:relations])
@@ -260,35 +261,6 @@ defmodule Brando.Blueprint.Relations do
   def run_cast_relation(_, changeset, _user), do: changeset
 
   def preloads_for(schema) do
-    schema
-    |> Relations.__relations__()
-    |> Enum.filter(
-      &(&1.type in [:belongs_to, :has_many, :many_to_many] and &1.name != :creator and
-          &1.opts.module != :blocks)
-    )
-    |> Enum.map(fn
-      %{type: :has_many, name: name, opts: %{cast: true, module: mod}} ->
-        sub_assets = Enum.map(Brando.Blueprint.Assets.__assets__(mod), & &1.name)
-
-        # filter out sub_rels where the relation's module matches `schema`
-        sub_rels =
-          for rel <- Relations.__relations__(mod),
-              rel.opts.module != schema,
-              rel.type not in [:embeds_many, :embeds_one] do
-            rel.name
-          end
-
-        sub_preloads = sub_assets ++ sub_rels
-
-        if mod.has_trait(:sequenced) do
-          preload_query = from q in mod, order_by: [asc: q.sequence], preload: ^sub_preloads
-          {name, preload_query}
-        else
-          (sub_preloads == [] && name) || {name, sub_preloads}
-        end
-
-      %{name: name} ->
-        name
-    end)
+    @relation_preloads.for_schema(schema)
   end
 end

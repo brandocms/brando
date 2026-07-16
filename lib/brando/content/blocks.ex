@@ -7,19 +7,20 @@ defmodule Brando.Content.Blocks do
   Content owns data and orchestration, Villain owns rendering.
   """
   import Ecto.Query
-  alias Ecto.Changeset
+
   alias Brando.Content
   alias Brando.Content.Block
+  alias Brando.Content.BlockPreloads
   alias Brando.Content.Ref
   alias Brando.Content.Var
-  alias Brando.Content.TableRow
-  alias Brando.Pages
   alias Brando.Trait
   alias Brando.Utils
   alias Brando.Villain
   alias Brando.Villain.Blocks, as: VillainBlocks
+  alias Ecto.Changeset
 
   @type changeset :: Ecto.Changeset.t()
+  @fragment_module Module.concat(["Brando", "Pages", "Fragment"])
 
   # --- Block Queries ---
 
@@ -613,7 +614,7 @@ defmodule Brando.Content.Blocks do
   @spec render_entry(schema :: module, entry_id :: integer | binary) ::
           {:ok, map} | {:error, changeset}
   def render_entry(schema, id) do
-    case Brando.Query.get_entry(schema, id) do
+    case Brando.Blueprint.EntryQuery.get(schema, id) do
       {:ok, entry} ->
         changeset =
           entry
@@ -621,7 +622,7 @@ defmodule Brando.Content.Blocks do
           |> render_all_block_fields_and_add_to_changeset(schema, entry)
 
         case Brando.Repo.update(changeset) do
-          {:ok, %Pages.Fragment{} = fragment} ->
+          {:ok, %{__struct__: fragment_module} = fragment} when fragment_module == @fragment_module ->
             Brando.Cache.Query.evict({:ok, fragment})
             render_entries_with_fragment_id(fragment.id)
             {:ok, fragment}
@@ -796,7 +797,7 @@ defmodule Brando.Content.Blocks do
       grouped_block_ids = Brando.Repo.all(query)
 
       for {entry_id, block_ids} <- grouped_block_ids do
-        {:ok, entry} = Brando.Query.get_entry(schema, entry_id)
+        {:ok, entry} = Brando.Blueprint.EntryQuery.get(schema, entry_id)
 
         {:ok, blocks} =
           Content.list_blocks(%{
@@ -1093,133 +1094,14 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
-  Returns a list of preloads for a schema if it has the Blocks trait
+  Returns a list of preloads for a schema if it has the Blocks trait.
   """
-  def preloads_for(schema) do
-    if schema.has_trait(Brando.Trait.Blocks) do
-      vars_query = block_vars_query()
-      table_row_query = block_table_rows_query()
-      refs_query = block_refs_query()
-
-      Enum.reduce(schema.__blocks_fields__(), [], fn %{name: assoc_name}, acc ->
-        field_as_module =
-          assoc_name
-          |> to_string
-          |> Macro.camelize()
-          |> then(&:"#{&1}")
-
-        join_schema = Module.concat([schema, field_as_module])
-        entry_assoc_name = :"entry_#{assoc_name}"
-
-        acc ++
-          [
-            {entry_assoc_name,
-             from(j in join_schema,
-               order_by: [asc: :sequence],
-               preload: [
-                 block: [
-                   :parent,
-                   :container,
-                   :module,
-                   :palette,
-                   block_identifiers: :identifier,
-                   vars: ^vars_query,
-                   refs: ^refs_query,
-                   table_rows: ^table_row_query,
-                   children: ^(&Brando.Content.Blocks.preload_child_trees/1)
-                 ]
-               ]
-             )}
-          ]
-      end)
-    else
-      []
-    end
-  end
+  defdelegate preloads_for(schema), to: BlockPreloads, as: :for_schema
 
   @doc """
-  Function preload for a block's `children` association.
-
-  Fetches the entire descendant tree in one recursive-CTE query plus one
-  batched preload pass across all levels, replacing the previous per-level
-  nested preloads (~25 queries per nesting level, hard-capped at 4 levels).
-  Returns direct children — Ecto distributes them by `parent_id` — with each
-  child's own subtree stitched into `children`.
+  Loads and stitches the complete descendant trees for the given parent IDs.
   """
-  def preload_child_trees([]), do: []
-
-  def preload_child_trees(parent_ids) do
-    initial = from(b in Block, where: b.parent_id in ^parent_ids)
-
-    recursion =
-      from(b in Block,
-        inner_join: d in "block_descendants",
-        on: b.parent_id == d.id
-      )
-
-    descendants_query = union_all(initial, ^recursion)
-
-    descendants =
-      {"block_descendants", Block}
-      |> recursive_ctes(true)
-      |> with_cte("block_descendants", as: ^descendants_query)
-      |> Brando.Repo.all()
-      # rows loaded through the CTE carry __meta__.source "block_descendants";
-      # left as-is, an on_replace delete at save issues
-      # DELETE FROM "block_descendants" — a nonexistent table
-      |> Enum.map(&put_in(&1.__meta__.source, "content_blocks"))
-      |> Brando.Repo.preload([
-        :palette,
-        :container,
-        :module,
-        block_identifiers: :identifier,
-        vars: block_vars_query(),
-        refs: block_refs_query(),
-        table_rows: block_table_rows_query()
-      ])
-
-    by_parent = Enum.group_by(descendants, & &1.parent_id)
-
-    parent_ids
-    |> Enum.flat_map(&Map.get(by_parent, &1, []))
-    |> Enum.sort_by(& &1.sequence)
-    |> Enum.map(&attach_child_tree(&1, by_parent))
-  end
-
-  defp attach_child_tree(block, by_parent) do
-    children =
-      by_parent
-      |> Map.get(block.id, [])
-      |> Enum.sort_by(& &1.sequence)
-      |> Enum.map(&attach_child_tree(&1, by_parent))
-
-    %{block | children: children}
-  end
-
-  defp block_vars_query do
-    from v in Var,
-      order_by: [asc: :sequence],
-      preload: ^Var.preloads()
-  end
-
-  defp block_table_rows_query do
-    vars_query = block_vars_query()
-
-    from tr in TableRow,
-      order_by: [asc: :sequence],
-      preload: [vars: ^vars_query]
-  end
-
-  defp block_refs_query do
-    from r in Ref,
-      order_by: [asc: :sequence],
-      preload: [
-        :image,
-        :file,
-        video: [:thumbnail, :file],
-        gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]
-      ]
-  end
+  defdelegate preload_child_trees(parent_ids), to: BlockPreloads
 
   # --- Block Duplication ---
 

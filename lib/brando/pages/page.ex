@@ -173,7 +173,7 @@ defmodule Brando.Pages.Page do
       assign(
         assigns,
         :url,
-        assigns.entry.has_url && (Brando.HTML.absolute_url(assigns.entry) || gettext("<no URL>"))
+        assigns.entry.has_url && (Brando.Blueprint.URL.resolve(assigns.entry) || gettext("<no URL>"))
       )
 
     ~H"""
@@ -220,7 +220,7 @@ defmodule Brando.Pages.Page do
 
   def listing_child_row(assigns) do
     assigns =
-      assign(assigns, :url, Brando.HTML.absolute_url(assigns.entry))
+      assign(assigns, :url, Brando.Blueprint.URL.resolve(assigns.entry))
 
     ~H"""
     <div class="center col-1">⤷</div>

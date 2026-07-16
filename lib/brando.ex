@@ -20,9 +20,9 @@ defmodule Brando do
   Gets the configuration for `key` under :brando,
   as set in config.exs
   """
-  def config(key), do: Application.get_env(:brando, key)
+  defdelegate config(key), to: Brando.RuntimeConfig, as: :get
 
-  def config(module, key), do: Keyword.get(Application.get_env(:brando, module), key, nil)
+  defdelegate config(module, key), to: Brando.RuntimeConfig, as: :get
 
   @doc """
   Gets the parent app's router
@@ -114,15 +114,15 @@ defmodule Brando do
   @doc """
   Concat the configured application module with `module`
   """
-  def app_module(module), do: Module.concat(config(:app_module), module)
+  defdelegate app_module(module), to: Brando.RuntimeConfig
 
   @doc """
   Concat the configured application module with `module`
   """
-  def admin_module(module), do: Module.concat(config(:admin_module), module)
+  defdelegate admin_module(module), to: Brando.RuntimeConfig
 
   @doc """
   Concat the configured web module with `module`
   """
-  def web_module(module), do: Module.concat(config(:web_module), module)
+  defdelegate web_module(module), to: Brando.RuntimeConfig
 end

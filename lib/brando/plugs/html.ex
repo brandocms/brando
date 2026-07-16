@@ -4,6 +4,7 @@ defmodule Brando.Plug.HTML do
   """
   import Plug.Conn
 
+  alias Brando.Blueprint.URL
   alias Brando.JSONLD
   alias Brando.Utils
 
@@ -194,12 +195,12 @@ defmodule Brando.Plug.HTML do
   end
 
   def put_hreflang(conn, %{alternate_entries: alternate_entries} = entry) when is_list(alternate_entries) do
-    canonical = {entry.language, Brando.HTML.absolute_url(entry, :with_host)}
+    canonical = {entry.language, URL.resolve(entry, :with_host)}
 
     hreflangs =
       Enum.reduce(entry.alternate_entries, [], fn
         %{status: :published} = alt, acc ->
-          case Brando.HTML.absolute_url(alt) do
+          case URL.resolve(alt) do
             nil ->
               log_no_valid_hreflang(alt)
               acc
@@ -212,7 +213,7 @@ defmodule Brando.Plug.HTML do
           acc
 
         alt, acc ->
-          case Brando.HTML.absolute_url(alt) do
+          case URL.resolve(alt) do
             nil ->
               log_no_valid_hreflang(alt)
               acc

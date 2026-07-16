@@ -3,7 +3,7 @@ defmodule Brando.Blueprint.Unique do
   import Ecto.Changeset
   import Ecto.Query
 
-  alias Brando.Utils
+  alias Brando.Blueprint.Collision
 
   def run_unique_attribute_constraints(changeset, module, attributes) do
     attributes
@@ -14,19 +14,19 @@ defmodule Brando.Blueprint.Unique do
 
       %{opts: %{unique: [prevent_collision: true]}} = f, new_changeset ->
         new_changeset
-        |> Utils.Schema.avoid_field_collision(module, [f.name], nil)
+        |> Collision.avoid_field_collision(module, [f.name], nil)
         |> unique_constraint(f.name)
 
       %{opts: %{unique: [prevent_collision: filter_fn]}} = f, new_changeset
       when is_function(filter_fn) ->
         new_changeset
-        |> Utils.Schema.avoid_field_collision(module, [f.name], filter_fn)
+        |> Collision.avoid_field_collision(module, [f.name], filter_fn)
         |> unique_constraint(f.name)
 
       %{opts: %{unique: [prevent_collision: filter_fields]}} = f, new_changeset
       when is_list(filter_fields) ->
         new_changeset
-        |> Utils.Schema.avoid_field_collision(
+        |> Collision.avoid_field_collision(
           module,
           [f.name],
           {filter_fields, &filter_by_fields/3}
@@ -35,7 +35,7 @@ defmodule Brando.Blueprint.Unique do
 
       %{opts: %{unique: [prevent_collision: filter_field]}} = f, new_changeset ->
         new_changeset
-        |> Utils.Schema.avoid_field_collision(
+        |> Collision.avoid_field_collision(
           module,
           [f.name],
           {filter_field, &filter_by_field/3}

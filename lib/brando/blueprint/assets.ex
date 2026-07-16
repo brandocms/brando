@@ -98,22 +98,24 @@ defmodule Brando.Blueprint.Assets do
         upload_path: Path.join(["videos", "promos"])
       }
   """
-  import Ecto.Query
-
   alias Brando.Blueprint
+  alias Brando.Blueprint.AssetConfigNormalizer
   alias Ecto.Changeset
   alias Spark.Dsl.Extension
+
+  @asset_preloads Module.concat(["Brando", "Blueprint", "AssetPreloads"])
+  @gallery_module Module.concat(["Brando", "Galleries", "Gallery"])
 
   def __assets__(module) do
     module
     |> Extension.get_entities([:assets])
-    |> Enum.map(&Brando.Blueprint.Assets.Dsl.normalize_runtime_config/1)
+    |> Enum.map(&AssetConfigNormalizer.normalize/1)
   end
 
   def __asset__(module, name) do
     module
     |> Extension.get_persisted({:asset, name})
-    |> Brando.Blueprint.Assets.Dsl.normalize_runtime_config()
+    |> AssetConfigNormalizer.normalize()
   end
 
   def __asset_opts__(module, name) do
@@ -170,7 +172,7 @@ defmodule Brando.Blueprint.Assets do
         end
 
       _ ->
-        gallery_module = Brando.Galleries.Gallery
+        gallery_module = @gallery_module
 
         cast_opts =
           Blueprint.Utils.to_changeset_opts(:belongs_to, opts)
@@ -190,23 +192,6 @@ defmodule Brando.Blueprint.Assets do
   end
 
   def preloads_for(schema) do
-    gallery_objects_query =
-      from go in Brando.Galleries.GalleryObject,
-        order_by: [asc: go.sequence],
-        preload: [:image, :video]
-
-    gallery_query =
-      from g in Brando.Galleries.Gallery,
-        preload: [gallery_objects: ^gallery_objects_query]
-
-    Enum.reduce(Brando.Blueprint.Assets.__assets__(schema), [], fn asset, acc ->
-      case asset.type do
-        :file -> [asset.name | acc]
-        :image -> [asset.name | acc]
-        :video -> [asset.name | acc]
-        :gallery -> [{asset.name, gallery_query} | acc]
-        _ -> acc
-      end
-    end)
+    @asset_preloads.for_schema(schema)
   end
 end

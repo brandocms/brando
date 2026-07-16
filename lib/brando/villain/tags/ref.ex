@@ -2,9 +2,9 @@ defmodule Brando.Villain.Tags.Ref do
   @moduledoc false
   @behaviour Liquex.Tag
 
-  alias Ecto.Changeset
-  alias Brando.Content
   alias Brando.Villain.LiquexParser.TagGrammar
+  alias Brando.Villain.RenderSourceQuery
+  alias Ecto.Changeset
 
   @brando_env Application.compile_env(:brando, :env)
   @module_cache_ttl (@brando_env == :e2e && %{}) || %{cache: {:ttl, :infinite}}
@@ -20,9 +20,9 @@ defmodule Brando.Villain.Tags.Ref do
     brando_render_for_admin = Access.get(context, :brando_render_for_admin)
     {evaled_ref, _context} = Liquex.Argument.eval(ref, context)
 
-    {:ok, modules} = Content.list_modules(@module_cache_ttl)
-    {:ok, containers} = Content.list_containers(@container_cache_ttl)
-    {:ok, palettes} = Content.list_palettes(@palette_cache_ttl)
+    {:ok, modules} = RenderSourceQuery.list_modules(@module_cache_ttl)
+    {:ok, containers} = RenderSourceQuery.list_containers(@container_cache_ttl)
+    {:ok, palettes} = RenderSourceQuery.list_palettes(@palette_cache_ttl)
 
     opts_map =
       %{}

@@ -3,13 +3,10 @@ defmodule Brando.Utils.Schema do
   Common schema utility functions
   """
 
-  import Ecto.Query
-
-  alias Brando.SoftDelete
+  alias Brando.Blueprint.Collision
   alias Ecto.Changeset
 
   @type changeset :: Changeset.t()
-  @field_val_collision_attemps 30
 
   @doc """
   Updates a field on `schema`.
@@ -55,105 +52,8 @@ defmodule Brando.Utils.Schema do
   @doc """
   Precheck field in `cs` to make sure we avoid collisions
   """
-  def avoid_field_collision(%Changeset{valid?: true} = changeset, _module, fields, nil) do
-    case Changeset.get_field(changeset, :status) do
-      :draft ->
-        changeset
-
-      _ ->
-        src = changeset.data.__struct__
-        do_avoid_field_collision(fields, changeset, src)
-    end
-  end
-
-  def avoid_field_collision(%Changeset{valid?: true} = changeset, module, fields, {filter_field, filter_fn}) do
-    case Changeset.get_field(changeset, :status) do
-      :draft ->
-        changeset
-
-      _ ->
-        src = filter_fn.(module, filter_field, changeset)
-        do_avoid_field_collision(fields, changeset, src)
-    end
-  end
-
-  def avoid_field_collision(%Changeset{} = changeset, _, _, _) do
-    changeset
-  end
-
-  def avoid_field_collision(%Changeset{valid?: true} = changeset, fields, filter_fn) when is_list(fields) do
-    case Changeset.get_field(changeset, :status) do
-      :draft ->
-        changeset
-
-      _ ->
-        src = filter_fn.(changeset)
-        do_avoid_field_collision(fields, changeset, src)
-    end
-  end
-
-  def avoid_field_collision(%Changeset{} = changeset, _, _), do: changeset
-
-  def avoid_field_collision(%Changeset{valid?: true} = changeset, fields) when is_list(fields) do
-    case Changeset.get_field(changeset, :status) do
-      :draft ->
-        changeset
-
-      _ ->
-        src = changeset.data.__struct__
-        do_avoid_field_collision(fields, changeset, src)
-    end
-  end
-
-  def avoid_field_collision(changeset, _), do: changeset
-
-  def do_avoid_field_collision(fields, changeset, src) do
-    Changeset.prepare_changes(changeset, fn cs ->
-      Enum.reduce(fields, cs, fn field, new_cs ->
-        ensure_unique_field(new_cs, src, field)
-      end)
-    end)
-  end
-
-  defp ensure_unique_field(changeset, src, field) do
-    case Changeset.get_change(changeset, field) do
-      nil ->
-        changeset
-
-      field_val ->
-        case get_unique_field_value(changeset, src, field, field_val, 0) do
-          {:ok, unique_value} ->
-            Changeset.put_change(changeset, field, unique_value)
-
-          {:error, :too_many_attempts} ->
-            Changeset.add_error(changeset, field, "Could not find available field value")
-        end
-    end
-  end
-
-  defp get_unique_field_value(cs, src, field, field_val, attempts) when attempts < @field_val_collision_attemps do
-    field_val_to_test = construct_field_val(field_val, attempts)
-    test_query = from m in src, where: field(m, ^field) == ^field_val_to_test
-
-    # if schema is soft deleted, only check non deleted entries.
-    test_query =
-      if SoftDelete.Query.soft_delete_schema?(cs.data.__struct__) do
-        from m in test_query, where: is_nil(m.deleted_at)
-      else
-        test_query
-      end
-
-    case Brando.Repo.one(test_query) do
-      nil ->
-        {:ok, field_val_to_test}
-
-      _ ->
-        get_unique_field_value(cs, src, field, field_val, attempts + 1)
-    end
-  end
-
-  defp get_unique_field_value(_, _, _, _, _), do: {:error, :too_many_attempts}
-
-  defp construct_field_val(field_val, 0), do: field_val
-  defp construct_field_val(field_val, attempts), do: "#{field_val}-#{to_string(attempts)}"
+  defdelegate avoid_field_collision(changeset, module, fields, filter), to: Collision
+  defdelegate avoid_field_collision(changeset, fields, filter_fn), to: Collision
+  defdelegate avoid_field_collision(changeset, fields), to: Collision
+  defdelegate do_avoid_field_collision(fields, changeset, source), to: Collision
 end

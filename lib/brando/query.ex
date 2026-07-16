@@ -515,28 +515,13 @@ defmodule Brando.Query do
   @doc """
   Hash query arguments
   """
-  def hash_query({query_type, query_name, _} = query_key) do
-    {query_type, query_name, Base.encode16(<<:erlang.phash2(Jason.encode!(query_key))::size(32)>>)}
-  end
+  defdelegate hash_query(query_key), to: Cache.Query
 
   @doc """
   Check cache for query matching args
   """
   @spec try_cache(any(), any()) :: {:hit, any()} | {:miss, any(), any()} | :no_cache
-  def try_cache(query_key, cache_opts)
-  def try_cache(_query_key, nil), do: :no_cache
-  def try_cache(_query_key, false), do: :no_cache
-
-  def try_cache(query_key, true), do: try_cache(query_key, {:ttl, :timer.minutes(15)})
-
-  def try_cache(query_key, {:ttl, ttl}) do
-    cache_key = hash_query(query_key)
-
-    case Cache.Query.get(cache_key) do
-      nil -> {:miss, cache_key, ttl}
-      result -> {:hit, result}
-    end
-  end
+  defdelegate try_cache(query_key, cache_opts), to: Cache.Query
 
   def run_list_query_reducer(context, args, initial_query, module) do
     args
@@ -942,20 +927,7 @@ defmodule Brando.Query do
   @doc """
   Get entry with all possible preloads
   """
-  def get_entry(schema, id) do
-    ctx = schema.__modules__().context
-    singular = schema.__naming__().singular
-
-    opts =
-      if schema.has_trait(Brando.Trait.SoftDelete) do
-        %{matches: %{id: id}, with_deleted: true}
-      else
-        %{matches: %{id: id}}
-      end
-
-    opts = Map.put(opts, :preload, Brando.Blueprint.preloads_for(schema))
-    apply(ctx, :"get_#{singular}", [opts])
-  end
+  defdelegate get_entry(schema, id), to: Brando.Blueprint.EntryQuery, as: :get
 
   @doc """
   Check if a JSONB field contains any key that matches the given value

@@ -1,0 +1,121 @@
+defmodule Brando.Blueprint.Collision do
+  @moduledoc """
+  Resolves unique-field collisions while preparing Blueprint changesets.
+
+  Collision checks only need the target schema and repository. They live here
+  so Blueprint validation does not depend on the broader schema and
+  soft-deletion maintenance utilities.
+  """
+
+  import Ecto.Query
+
+  alias Brando.Repo
+  alias Ecto.Changeset
+
+  @max_attempts 30
+
+  @doc """
+  Prepares a valid, non-draft changeset to avoid collisions in `fields`.
+
+  The four-argument form optionally receives a query-building filter callback
+  and its field configuration.
+  """
+  def avoid_field_collision(%Changeset{valid?: true} = changeset, _module, fields, nil) do
+    if draft?(changeset) do
+      changeset
+    else
+      do_avoid_field_collision(fields, changeset, changeset.data.__struct__)
+    end
+  end
+
+  def avoid_field_collision(%Changeset{valid?: true} = changeset, module, fields, {filter_field, filter_fn}) do
+    if draft?(changeset) do
+      changeset
+    else
+      source = filter_fn.(module, filter_field, changeset)
+      do_avoid_field_collision(fields, changeset, source)
+    end
+  end
+
+  def avoid_field_collision(%Changeset{} = changeset, _module, _fields, _filter), do: changeset
+
+  @doc """
+  Prepares a valid, non-draft changeset using a custom query callback.
+  """
+  def avoid_field_collision(%Changeset{valid?: true} = changeset, fields, filter_fn) when is_list(fields) do
+    if draft?(changeset) do
+      changeset
+    else
+      do_avoid_field_collision(fields, changeset, filter_fn.(changeset))
+    end
+  end
+
+  def avoid_field_collision(%Changeset{} = changeset, _fields, _filter_fn), do: changeset
+
+  @doc """
+  Prepares a valid, non-draft changeset using its schema as the query source.
+  """
+  def avoid_field_collision(%Changeset{valid?: true} = changeset, fields) when is_list(fields) do
+    if draft?(changeset) do
+      changeset
+    else
+      do_avoid_field_collision(fields, changeset, changeset.data.__struct__)
+    end
+  end
+
+  def avoid_field_collision(changeset, _fields), do: changeset
+
+  @doc false
+  def do_avoid_field_collision(fields, changeset, source) do
+    Changeset.prepare_changes(changeset, fn prepared_changeset ->
+      Enum.reduce(fields, prepared_changeset, fn field, current_changeset ->
+        ensure_unique_field(current_changeset, source, field)
+      end)
+    end)
+  end
+
+  defp draft?(changeset), do: Changeset.get_field(changeset, :status) == :draft
+
+  defp ensure_unique_field(changeset, source, field) do
+    case Changeset.get_change(changeset, field) do
+      nil ->
+        changeset
+
+      field_value ->
+        case get_unique_field_value(changeset, source, field, field_value, 0) do
+          {:ok, unique_value} ->
+            Changeset.put_change(changeset, field, unique_value)
+
+          {:error, :too_many_attempts} ->
+            Changeset.add_error(changeset, field, "Could not find available field value")
+        end
+    end
+  end
+
+  defp get_unique_field_value(changeset, source, field, field_value, attempts) when attempts < @max_attempts do
+    candidate = construct_field_value(field_value, attempts)
+    query = from entry in source, where: field(entry, ^field) == ^candidate
+
+    query =
+      if soft_delete_schema?(changeset.data.__struct__) do
+        from entry in query, where: is_nil(entry.deleted_at)
+      else
+        query
+      end
+
+    case Repo.one(query) do
+      nil -> {:ok, candidate}
+      _entry -> get_unique_field_value(changeset, source, field, field_value, attempts + 1)
+    end
+  end
+
+  defp get_unique_field_value(_changeset, _source, _field, _field_value, _attempts),
+    do: {:error, :too_many_attempts}
+
+  defp soft_delete_schema?(schema) do
+    function_exported?(schema, :has_trait, 1) and schema.has_trait(Brando.Trait.SoftDelete)
+  end
+
+  defp construct_field_value(field_value, 0), do: field_value
+  defp construct_field_value(field_value, attempts), do: "#{field_value}-#{attempts}"
+end

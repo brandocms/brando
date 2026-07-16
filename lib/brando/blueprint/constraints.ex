@@ -35,6 +35,10 @@ defmodule Brando.Blueprint.Constraints do
   import Ecto.Changeset
   import Ecto.Query
 
+  alias Brando.RuntimeConfig
+
+  @content_module Module.concat(["Brando", "Content", "Module"])
+
   def run_validations(changeset, _module, attributes) do
     attributes
     |> Enum.filter(&Map.get(&1.opts, :constraints, false))
@@ -109,39 +113,46 @@ defmodule Brando.Blueprint.Constraints do
         changeset
 
       entry_block_changesets ->
-        module_ids = extract_block_module_ids(entry_block_changesets)
-
-        if module_ids == [] and required_classes != [] do
-          Enum.reduce(required_classes, changeset, fn required_class, cs ->
-            add_error(cs, assoc_field, "is missing required block: %{class}",
-              class: required_class,
-              validation: :require_blocks
-            )
-          end)
-        else
-          classes =
-            Brando.repo().all(
-              from m in Brando.Content.Module,
-                where: m.id in ^module_ids,
-                select: m.class
-            )
-
-          Enum.reduce(required_classes, changeset, fn required_class, cs ->
-            validate_required_class(cs, assoc_field, required_class, classes)
-          end)
-        end
+        entry_block_changesets
+        |> extract_block_module_ids()
+        |> validate_required_modules(changeset, assoc_field, required_classes)
     end
+  end
+
+  defp validate_required_modules([], changeset, assoc_field, required_classes) when required_classes != [] do
+    Enum.reduce(required_classes, changeset, fn required_class, validated_changeset ->
+      add_required_block_error(validated_changeset, assoc_field, required_class)
+    end)
+  end
+
+  defp validate_required_modules(module_ids, changeset, assoc_field, required_classes) do
+    content_module = @content_module
+
+    classes =
+      RuntimeConfig.get(:repo_module).all(
+        from module in content_module,
+          where: module.id in ^module_ids,
+          select: module.class
+      )
+
+    Enum.reduce(required_classes, changeset, fn required_class, validated_changeset ->
+      validate_required_class(validated_changeset, assoc_field, required_class, classes)
+    end)
   end
 
   defp validate_required_class(changeset, assoc_field, required_class, classes) do
     if required_class in classes do
       changeset
     else
-      add_error(changeset, assoc_field, "is missing required block: %{class}",
-        class: required_class,
-        validation: :require_blocks
-      )
+      add_required_block_error(changeset, assoc_field, required_class)
     end
+  end
+
+  defp add_required_block_error(changeset, assoc_field, required_class) do
+    add_error(changeset, assoc_field, "is missing required block: %{class}",
+      class: required_class,
+      validation: :require_blocks
+    )
   end
 
   defp extract_block_module_ids(entry_block_changesets) do

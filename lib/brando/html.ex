@@ -9,6 +9,7 @@ defmodule Brando.HTML do
   import Phoenix.HTML
 
   alias Brando.Assets.Vite
+  alias Brando.Blueprint.URL
   alias Brando.Utils
 
   @type alert_levels :: :default | :primary | :info | :success | :warning | :danger
@@ -840,19 +841,8 @@ defmodule Brando.HTML do
     """
   end
 
-  def absolute_url(%{__struct__: module} = entry, :with_host) do
-    entry
-    |> module.__absolute_url__()
-    |> Brando.Utils.hostname()
-  end
-
-  def absolute_url(_, _), do: ""
-
-  def absolute_url(%{__struct__: module} = entry) do
-    module.__absolute_url__(entry)
-  end
-
-  def absolute_url(_), do: ""
+  defdelegate absolute_url(entry, mode), to: URL, as: :resolve
+  defdelegate absolute_url(entry), to: URL, as: :resolve
 
   def render_classes(list) do
     IO.warn("render_classes/1 is deprecated. use a list of classes instead.")
