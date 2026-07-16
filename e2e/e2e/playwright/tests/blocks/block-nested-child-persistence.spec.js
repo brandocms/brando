@@ -34,7 +34,7 @@ test.describe('Nested child block persistence', () => {
 
     await multiBlock.locator('.block-plus').last().click()
     await page.getByRole('button', { name: 'COPY PASTE TEST' }).click()
-    await page.getByRole('button', { name: 'Team Member' }).click()
+    await page.getByRole('button', { name: /^Team Member\b/ }).click()
     await syncLV(page)
 
     const memberBlock = multiBlock.locator('.block-children [data-uid]').first()

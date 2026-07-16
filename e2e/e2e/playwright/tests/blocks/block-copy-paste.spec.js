@@ -242,7 +242,7 @@ test.describe('Block Copy/Paste', () => {
     // Add a team member entry
     await multiBlock.locator('.block-plus').last().click()
     await page.getByRole('button', { name: 'COPY PASTE TEST' }).click()
-    await page.getByRole('button', { name: 'Team Member' }).click()
+    await page.getByRole('button', { name: /^Team Member\b/ }).click()
     await syncLV(page)
 
     // Edit the team member vars

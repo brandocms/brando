@@ -365,7 +365,7 @@ test.describe('Multi-user block sync', () => {
     const multiBlock = page.locator('[data-module-multi="true"]')
     await multiBlock.locator('.block-plus').last().click()
     await page.getByRole('button', { name: 'COPY PASTE TEST' }).click()
-    await page.getByRole('button', { name: 'Team Member' }).click()
+    await page.getByRole('button', { name: /^Team Member\b/ }).click()
     await syncLV(page)
 
     const member = multiBlock.locator('.block-children [data-uid]').first()
