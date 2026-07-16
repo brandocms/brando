@@ -15,7 +15,7 @@ defmodule Brando.Galleries.Gallery do
   import Brando.Blueprint.Listings.Components.Cover, only: [cover: 1]
   import Ecto.Query
 
-  trait Brando.Trait.Timestamped
+  trait :timestamped
   trait Brando.Trait.SoftDelete
 
   identifier false

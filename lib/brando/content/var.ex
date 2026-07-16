@@ -17,7 +17,7 @@ defmodule Brando.Content.Var do
   trait Brando.Trait.Creator
   trait Brando.Trait.Revisioned
   trait :sequenced
-  trait Brando.Trait.Timestamped
+  trait :timestamped
 
   identifier false
   persist_identifier false

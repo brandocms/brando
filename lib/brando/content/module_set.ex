@@ -20,7 +20,7 @@ defmodule Brando.Content.ModuleSet do
 
   # ++ Traits
   trait Brando.Trait.Creator
-  trait Brando.Trait.Timestamped
+  trait :timestamped
   # --
 
   attributes do

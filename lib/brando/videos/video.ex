@@ -14,7 +14,7 @@ defmodule Brando.Videos.Video do
   import Brando.Blueprint.Listings.Components.Core
 
   trait Brando.Trait.Creator
-  trait Brando.Trait.Timestamped
+  trait :timestamped
   trait Brando.Trait.SoftDelete
 
   @thumbnail_cfg %{

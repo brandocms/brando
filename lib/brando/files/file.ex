@@ -16,7 +16,7 @@ defmodule Brando.Files.File do
 
   trait Brando.Trait.Creator
   trait Brando.Trait.SoftDelete
-  trait Brando.Trait.Timestamped
+  trait :timestamped
 
   identifier false
   persist_identifier false

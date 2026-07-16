@@ -10,7 +10,7 @@ defmodule Brando.Sites.Identity do
 
   use Gettext, backend: Brando.Gettext
 
-  trait Brando.Trait.Timestamped
+  trait :timestamped
   trait Brando.Trait.Translatable, alternates: false
 
   identifier false

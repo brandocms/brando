@@ -26,7 +26,7 @@ defmodule Brando.Content.Container do
 
   trait :sequenced
   trait Brando.Trait.SoftDelete
-  trait Brando.Trait.Timestamped
+  trait :timestamped
 
   attributes do
     attribute :type, :enum, values: [:liquid, :heex], default: :liquid

@@ -17,7 +17,7 @@ defmodule Brando.Images.Image do
   alias Brando.Images.Focal
 
   trait Brando.Trait.Creator
-  trait Brando.Trait.Timestamped
+  trait :timestamped
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Focal
 

@@ -27,7 +27,7 @@ defmodule Brando.Pages.Fragment do
   trait :sequenced
   trait Brando.Trait.SoftDelete
   trait :status
-  trait Brando.Trait.Timestamped
+  trait :timestamped
   trait Brando.Trait.Translatable, alternates: false
   trait Brando.Trait.Blocks
   trait Brando.Trait.Blocks.PreventCircularReferences

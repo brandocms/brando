@@ -8,7 +8,7 @@ defmodule Brando.Revisions.Revision do
     plural: "revisions",
     gettext_module: Brando.Gettext
 
-  trait Brando.Trait.Timestamped
+  trait :timestamped
 
   table "revisions"
   @primary_key false

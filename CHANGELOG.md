@@ -179,6 +179,12 @@
   schema compilation. The full module syntax and public status API remain supported;
   applications may migrate incrementally, and no database migration is required.
 
+- **Isolated Timestamped trait compilation**: `Brando.Trait.Timestamped` now expands
+  schema attributes through a focused compiler module, and Brando's schemas use the
+  equivalent `trait :timestamped` shorthand. Existing full module declarations remain
+  supported, so applications may migrate incrementally. This is a compile-time-only
+  change and requires no database migration.
+
 - **Symbolic built-in subform components**: Blueprint `inputs_for` definitions can now
   use `:vars`, `:gallery_objects`, `:identity_type_config`, or `:page_vars` instead of
   concrete admin LiveComponent modules. Brando's schemas use these tokens, which are

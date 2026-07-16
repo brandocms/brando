@@ -15,7 +15,7 @@ defmodule Brando.Blueprint do
       absolute_url ~H"/projects/{@entry.slug}"
 
       trait :status
-      trait Brando.Trait.Timestamped
+      trait :timestamped
 
       attributes do
         attribute :title, :string, required: true

@@ -13,7 +13,7 @@ defmodule Brando.Navigation.Item do
   trait Brando.Trait.Creator
   trait :sequenced
   trait :status
-  trait Brando.Trait.Timestamped
+  trait :timestamped
 
   identifier false
   persist_identifier false

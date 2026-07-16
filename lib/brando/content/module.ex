@@ -54,7 +54,7 @@ defmodule Brando.Content.Module do
 
   trait :sequenced
   trait Brando.Trait.SoftDelete
-  trait Brando.Trait.Timestamped
+  trait :timestamped
   trait Brando.Trait.CastPolymorphicEmbeds
   trait Brando.Trait.ValidateVarKeys
 

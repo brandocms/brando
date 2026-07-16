@@ -18,7 +18,7 @@ defmodule Brando.Content.TableRow do
   @type t :: %__MODULE__{}
 
   trait :sequenced
-  trait Brando.Trait.Timestamped
+  trait :timestamped
 
   identifier false
   persist_identifier false

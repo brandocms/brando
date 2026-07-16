@@ -49,7 +49,7 @@ defmodule Brando.Pages.Page do
   trait :sequenced, append: true
   trait Brando.Trait.SoftDelete, obfuscated_fields: [:uri]
   trait :status
-  trait Brando.Trait.Timestamped
+  trait :timestamped
   trait Brando.Trait.Translatable
   trait Brando.Trait.Blocks
 

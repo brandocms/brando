@@ -9,7 +9,7 @@ defmodule Brando.Sites.Preview do
     gettext_module: Brando.Gettext
 
   trait Brando.Trait.Creator
-  trait Brando.Trait.Timestamped
+  trait :timestamped
 
   identifier false
   persist_identifier false

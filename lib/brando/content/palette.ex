@@ -24,7 +24,7 @@ defmodule Brando.Content.Palette do
   trait :sequenced
   trait Brando.Trait.SoftDelete
   trait :status
-  trait Brando.Trait.Timestamped
+  trait :timestamped
 
   attributes do
     attribute :name, :string, required: true

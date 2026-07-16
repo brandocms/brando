@@ -16,7 +16,7 @@ defmodule Brando.Galleries.GalleryObject do
 
   trait Brando.Trait.Creator
   trait :sequenced
-  trait Brando.Trait.Timestamped
+  trait :timestamped
 
   identifier false
   persist_identifier false

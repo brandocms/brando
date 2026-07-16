@@ -22,7 +22,7 @@ defmodule Brando.Content.Template do
   trait Brando.Trait.Creator
   trait :sequenced
   trait Brando.Trait.SoftDelete
-  trait Brando.Trait.Timestamped
+  trait :timestamped
   trait Brando.Trait.Blocks
 
   attributes do

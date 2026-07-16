@@ -19,7 +19,7 @@ defmodule Brando.Content.TableTemplate do
   @type t :: %__MODULE__{}
 
   trait Brando.Trait.Creator
-  trait Brando.Trait.Timestamped
+  trait :timestamped
 
   identifier "{{ entry.name }}"
   persist_identifier false

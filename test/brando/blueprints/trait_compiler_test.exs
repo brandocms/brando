@@ -67,4 +67,13 @@ defmodule Brando.Blueprint.TraitCompilerTest do
     assert attribute.opts.required
     assert Brando.Pages.Page.has_trait(Brando.Trait.Status)
   end
+
+  test "the Timestamped compiler preserves its generated Blueprint attributes" do
+    inserted_at = Brando.Blueprint.Attributes.__attribute__(Brando.Pages.Page, :inserted_at)
+    updated_at = Brando.Blueprint.Attributes.__attribute__(Brando.Pages.Page, :updated_at)
+
+    assert inserted_at.type == :datetime
+    assert updated_at.type == :datetime
+    assert Brando.Pages.Page.has_trait(Brando.Trait.Timestamped)
+  end
 end

@@ -20,7 +20,7 @@ defmodule Brando.Content.ModuleSetModule do
   @allow_mark_as_deleted true
 
   # ++ Traits
-  trait Brando.Trait.Timestamped
+  trait :timestamped
   trait :sequenced
   # --
 
