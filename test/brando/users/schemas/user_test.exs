@@ -5,6 +5,12 @@ defmodule BrandoIntegration.UserTest do
 
   alias Brando.Factory
   alias Brando.Users
+  alias Brando.Users.UserConfig
+
+  test "embedded config uses the configured default content language" do
+    assert %UserConfig{content_language: default_language} = %UserConfig{}
+    assert default_language == Brando.RuntimeConfig.get(:default_language)
+  end
 
   test "create/1 and update/1" do
     user = Factory.insert(:random_user)

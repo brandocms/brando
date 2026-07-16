@@ -16,7 +16,7 @@ defmodule Brando.Users.UserConfig do
   data_layer :embedded
 
   attributes do
-    attribute :content_language, :string, default: Brando.config(:default_language)
+    attribute :content_language, :string, default: Brando.RuntimeConfig.get(:default_language)
     attribute :reset_password_on_first_login, :boolean, default: true
     attribute :show_mutation_notifications, :boolean, default: true
     attribute :show_onboarding, :boolean, default: false
