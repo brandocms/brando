@@ -8,21 +8,10 @@ defmodule Brando.Villain.Tags.Route do
   import NimbleParsec
   alias Liquex.Parser.Argument
   alias Liquex.Parser.Literal
-  alias Liquex.Parser.Field
-  alias Liquex.Parser.Tag
+  alias Brando.Villain.LiquexParser.TagGrammar
 
   @impl true
-  def parse() do
-    ignore(Tag.open_tag())
-    |> ignore(string("route"))
-    |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Field.identifier(), :function)
-    |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Field.identifier(), :action)
-    |> ignore(Literal.whitespace())
-    |> optional(tag(braced_args(), :args))
-    |> ignore(Tag.close_tag())
-  end
+  def parse, do: TagGrammar.parse(:route)
 
   @impl true
   def render([function: function, action: action, args: args], context) do

@@ -49,6 +49,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
 
       absolute_url false
   """
+  alias Brando.Blueprint.TemplateParser
   alias Brando.Villain
 
   @doc """
@@ -125,7 +126,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
   end
 
   defmacro absolute_url(tpl) when is_binary(tpl) do
-    {:ok, parsed_absolute_url_tpl} = Liquex.parse(tpl, Villain.LiquexParser)
+    {:ok, parsed_absolute_url_tpl} = TemplateParser.parse(tpl)
 
     quote location: :keep do
       @absolute_url_tpl unquote(tpl)

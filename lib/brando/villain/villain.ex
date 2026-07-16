@@ -6,13 +6,14 @@ defmodule Brando.Villain do
   All block data management (queries, orchestration, sync, duplication)
   lives in `Brando.Content.Blocks`.
   """
-  alias Liquex.Context
   alias Brando.Cache
   alias Brando.Content
   alias Brando.Pages
   alias Brando.Utils
+  alias Liquex.Context
 
-  @module_cache_ttl (Brando.config(:env) in [:e2e, :test] &&
+  @brando_env Application.compile_env(:brando, :env)
+  @module_cache_ttl (@brando_env in [:e2e, :test] &&
                        %{
                          preload: [
                            :vars,
@@ -36,10 +37,10 @@ defmodule Brando.Villain do
                           ]
                         ]
                       }
-  @container_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{preload: [:palette]}) ||
+  @container_cache_ttl (@brando_env in [:e2e, :test] && %{preload: [:palette]}) ||
                          %{cache: {:ttl, :infinite}, preload: [:palette]}
-  @palette_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{}) || %{cache: {:ttl, :infinite}}
-  @fragment_cache_ttl (Brando.config(:env) in [:e2e, :test] && %{}) || %{cache: {:ttl, :infinite}}
+  @palette_cache_ttl (@brando_env in [:e2e, :test] && %{}) || %{cache: {:ttl, :infinite}}
+  @fragment_cache_ttl (@brando_env in [:e2e, :test] && %{}) || %{cache: {:ttl, :infinite}}
 
   @doc """
   Parse blocks

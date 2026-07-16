@@ -4,19 +4,10 @@ defmodule Brando.Villain.Tags.Link do
   """
   @behaviour Liquex.Tag
 
-  import NimbleParsec
-  alias Liquex.Parser.Argument
-  alias Liquex.Parser.Literal
-  alias Liquex.Parser.Tag
+  alias Brando.Villain.LiquexParser.TagGrammar
 
   @impl true
-  def parse() do
-    ignore(Tag.open_tag())
-    |> ignore(string("link"))
-    |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Argument.argument(), :link)
-    |> ignore(Tag.close_tag())
-  end
+  def parse, do: TagGrammar.parse(:link)
 
   @impl true
   def render([link: link], context) do

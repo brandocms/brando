@@ -4,21 +4,12 @@ defmodule Brando.Villain.Tags.Inspect do
   """
   @behaviour Liquex.Tag
 
-  import NimbleParsec
-  alias Liquex.Parser.Argument
-  alias Liquex.Parser.Literal
-  alias Liquex.Parser.Tag
   import Phoenix.Component
 
+  alias Brando.Villain.LiquexParser.TagGrammar
+
   @impl true
-  def parse() do
-    ignore(Tag.open_tag())
-    |> ignore(string("inspect"))
-    |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Argument.argument(), :source)
-    |> ignore(Literal.whitespace())
-    |> ignore(Tag.close_tag())
-  end
+  def parse, do: TagGrammar.parse(:inspect_tag)
 
   @impl true
   def render([source: source], context) do

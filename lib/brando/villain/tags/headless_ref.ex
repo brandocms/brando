@@ -37,19 +37,10 @@ defmodule Brando.Villain.Tags.HeadlessRef do
   """
   @behaviour Liquex.Tag
 
-  import NimbleParsec
-  alias Liquex.Parser.Argument
-  alias Liquex.Parser.Literal
-  alias Liquex.Parser.Tag
+  alias Brando.Villain.LiquexParser.TagGrammar
 
   @impl true
-  def parse() do
-    ignore(Tag.open_tag())
-    |> ignore(string("headless_ref"))
-    |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Argument.argument(), :ref)
-    |> ignore(Tag.close_tag())
-  end
+  def parse, do: TagGrammar.parse(:headless_ref)
 
   @impl true
   def render(_, context) do

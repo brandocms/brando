@@ -4,23 +4,12 @@ defmodule Brando.Villain.Tags.Video do
   """
   @behaviour Liquex.Tag
 
-  import NimbleParsec
-  alias Liquex.Parser.Argument
-  alias Liquex.Parser.Literal
-  alias Liquex.Parser.Object
-  alias Liquex.Parser.Tag
   import Phoenix.Component
 
+  alias Brando.Villain.LiquexParser.TagGrammar
+
   @impl true
-  def parse() do
-    ignore(Tag.open_tag())
-    |> ignore(string("video"))
-    |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Argument.argument(), :source)
-    |> ignore(Literal.whitespace())
-    |> optional(tag(braced_args(), :args))
-    |> ignore(Tag.close_tag())
-  end
+  def parse, do: TagGrammar.parse(:video)
 
   @impl true
   def render([source: source, args: args], context) do
@@ -58,15 +47,5 @@ defmodule Brando.Villain.Tags.Video do
     html = Phoenix.LiveViewTest.rendered_to_string(comp)
 
     {[html], context}
-  end
-
-  defp braced_args(combinator \\ empty()) do
-    combinator
-    |> ignore(string("{ "))
-    |> repeat(
-      lookahead_not(string(" }"))
-      |> Object.arguments()
-    )
-    |> ignore(string(" }"))
   end
 end

@@ -2,17 +2,10 @@ defmodule Brando.Villain.Tags.EndDatasource do
   @moduledoc false
   @behaviour Liquex.Tag
 
-  import NimbleParsec
-  alias Liquex.Parser.Literal
-  alias Liquex.Parser.Tag
+  alias Brando.Villain.LiquexParser.TagGrammar
 
   @impl true
-  def parse() do
-    ignore(Tag.open_tag())
-    |> ignore(string("enddatasource"))
-    |> ignore(Literal.whitespace())
-    |> ignore(Tag.close_tag())
-  end
+  def parse, do: TagGrammar.parse(:end_datasource)
 
   @impl true
   def render(_, context), do: {[""], context}

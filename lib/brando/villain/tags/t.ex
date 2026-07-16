@@ -4,21 +4,10 @@ defmodule Brando.Villain.Tags.T do
   """
   @behaviour Liquex.Tag
 
-  import NimbleParsec
-  alias Liquex.Parser.Literal
-  alias Liquex.Parser.Field
-  alias Liquex.Parser.Tag
+  alias Brando.Villain.LiquexParser.TagGrammar
 
   @impl true
-  def parse() do
-    ignore(Tag.open_tag())
-    |> ignore(string("t"))
-    |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Field.identifier(), :language)
-    |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Literal.quoted_string(), :string)
-    |> ignore(Tag.close_tag())
-  end
+  def parse, do: TagGrammar.parse(:translation)
 
   @impl true
   def render([language: language, string: string], context) do

@@ -30,7 +30,7 @@ defmodule Brando.Blueprint.Identifier.DSL do
       persist_identifier false
   """
 
-  alias Brando.Villain.LiquexParser
+  alias Brando.Blueprint.TemplateParser
 
   @doc """
   Controls whether identifiers are persisted to the database.
@@ -71,7 +71,7 @@ defmodule Brando.Blueprint.Identifier.DSL do
       identifier nil
   """
   defmacro identifier(tpl) when is_binary(tpl) do
-    {:ok, parsed_identifier} = Liquex.parse(tpl, LiquexParser)
+    {:ok, parsed_identifier} = TemplateParser.parse(tpl)
 
     quote location: :keep do
       if @data_layer == :embedded do

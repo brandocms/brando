@@ -10,23 +10,12 @@ defmodule Brando.Villain.Tags.Picture do
   """
   @behaviour Liquex.Tag
 
-  import NimbleParsec
-  alias Liquex.Parser.Argument
-  alias Liquex.Parser.Literal
-  alias Liquex.Parser.Object
-  alias Liquex.Parser.Tag
   import Phoenix.Component
 
+  alias Brando.Villain.LiquexParser.TagGrammar
+
   @impl true
-  def parse() do
-    ignore(Tag.open_tag())
-    |> ignore(string("picture"))
-    |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Argument.argument(), :source)
-    |> ignore(Literal.whitespace())
-    |> optional(tag(braced_args(), :args))
-    |> ignore(Tag.close_tag())
-  end
+  def parse, do: TagGrammar.parse(:picture)
 
   @impl true
   def render([source: source, args: args], context) do
@@ -47,17 +36,5 @@ defmodule Brando.Villain.Tags.Picture do
     html = Phoenix.LiveViewTest.rendered_to_string(comp)
 
     {[html], context}
-  end
-
-  defp braced_args(combinator \\ empty()) do
-    combinator
-    |> ignore(string("{"))
-    |> ignore(Literal.whitespace())
-    |> repeat(
-      lookahead_not(string("}"))
-      |> Object.arguments()
-    )
-    |> ignore(Literal.whitespace())
-    |> ignore(string("}"))
   end
 end

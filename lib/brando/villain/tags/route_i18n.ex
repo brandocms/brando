@@ -5,28 +5,15 @@ defmodule Brando.Villain.Tags.RouteI18n do
   import NimbleParsec
   alias Liquex.Parser.Argument
   alias Liquex.Parser.Literal
-  alias Liquex.Parser.Field
-  alias Liquex.Parser.Tag
 
   alias Brando.I18n
+  alias Brando.Villain.LiquexParser.TagGrammar
 
   # {% route_i18n entry.language page_path list %}
   # {% route_i18n entry.language page_path detail { entry.uri } %}
 
   @impl true
-  def parse() do
-    ignore(Tag.open_tag())
-    |> ignore(string("route_i18n"))
-    |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Argument.argument(), :locale)
-    |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Field.identifier(), :function)
-    |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Field.identifier(), :action)
-    |> ignore(Literal.whitespace())
-    |> optional(tag(braced_args(), :args))
-    |> ignore(Tag.close_tag())
-  end
+  def parse, do: TagGrammar.parse(:route_i18n)
 
   @impl true
   def render([locale: locale, function: function, action: action, args: args], context) do

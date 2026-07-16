@@ -14,7 +14,7 @@ defmodule Brando.Sites.Preview do
   identifier false
   persist_identifier false
 
-  absolute_url "{% route preview_url show { entry.preview_key } %}"
+  absolute_url ~H|{route(:preview_url, :show, [@entry.preview_key])}|
 
   attributes do
     attribute :preview_key, :text, required: true

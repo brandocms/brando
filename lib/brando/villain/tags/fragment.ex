@@ -2,24 +2,11 @@ defmodule Brando.Villain.Tags.Fragment do
   @moduledoc false
   @behaviour Liquex.Tag
 
-  import NimbleParsec
-  alias Liquex.Parser.Literal
-  alias Liquex.Parser.Field
-  alias Liquex.Parser.Tag
   alias Brando.Pages
+  alias Brando.Villain.LiquexParser.TagGrammar
 
   @impl true
-  def parse() do
-    ignore(Tag.open_tag())
-    |> ignore(string("fragment"))
-    |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Field.identifier(), :parent_key)
-    |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Field.identifier(), :key)
-    |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Field.identifier(), :language)
-    |> ignore(Tag.close_tag())
-  end
+  def parse, do: TagGrammar.parse(:fragment)
 
   @impl true
   def render([parent_key: parent_key, key: key, language: language], context) do

@@ -2,25 +2,17 @@ defmodule Brando.Villain.Tags.Ref do
   @moduledoc false
   @behaviour Liquex.Tag
 
-  import NimbleParsec
   alias Ecto.Changeset
-  alias Liquex.Parser.Argument
-  alias Liquex.Parser.Literal
-  alias Liquex.Parser.Tag
   alias Brando.Content
+  alias Brando.Villain.LiquexParser.TagGrammar
 
-  @module_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
-  @container_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
-  @palette_cache_ttl (Brando.config(:env) == :e2e && %{}) || %{cache: {:ttl, :infinite}}
+  @brando_env Application.compile_env(:brando, :env)
+  @module_cache_ttl (@brando_env == :e2e && %{}) || %{cache: {:ttl, :infinite}}
+  @container_cache_ttl (@brando_env == :e2e && %{}) || %{cache: {:ttl, :infinite}}
+  @palette_cache_ttl (@brando_env == :e2e && %{}) || %{cache: {:ttl, :infinite}}
 
   @impl true
-  def parse() do
-    ignore(Tag.open_tag())
-    |> ignore(string("ref"))
-    |> ignore(Literal.whitespace())
-    |> unwrap_and_tag(Argument.argument(), :ref)
-    |> ignore(Tag.close_tag())
-  end
+  def parse, do: TagGrammar.parse(:ref)
 
   @impl true
   def render([ref: ref], context) do
