@@ -141,6 +141,14 @@
   `Brando.helpers/0`, `Brando.routes/0`, and `Brando.gettext/0` calls remain compatible.
   No application code or database migration is required.
 
+- **Cycle-safe Blueprint configuration reads**: Brando's User Blueprint now resolves
+  its compile-time administrator languages through `Brando.RuntimeConfig`, completing
+  the lightweight configuration boundary without pulling the application supervisor
+  into schema compilation. Custom Blueprints that evaluate `Brando.config/1` in DSL
+  declarations may make the same optional replacement with
+  `Brando.RuntimeConfig.get/1`; runtime calls remain compatible and no database
+  migration is required.
+
 - **Granular Blueprint listing components**: Custom rows can now import the
   lightweight `Brando.Blueprint.Listings.Components.Core` module and opt into
   `Cover` or `Children` only when needed. Brando's own schemas use these narrow

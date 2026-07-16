@@ -10,6 +10,20 @@ Storage changes are managed through versioned snapshots and reviewed Ecto migrat
 [Blueprint migrations](blueprint_migrations.md) for generation, rollback, rename, legacy upgrade, and recovery
 instructions.
 
+Blueprint DSL declarations are evaluated while their schema compiles. When a declaration
+needs Brando application configuration, prefer the lightweight runtime configuration
+boundary so the schema does not compile against the application supervisor:
+
+```elixir
+alias Brando.RuntimeConfig
+
+attribute :language, :language, languages: RuntimeConfig.get(:admin_languages)
+```
+
+Existing `Brando.config/1` calls remain supported. Applications can make this optional,
+compile-time-only replacement incrementally; it does not change the stored schema and
+requires no database migration.
+
 #### Context query compilation
 
 Contexts generated for Blueprint schemas use the focused query compiler:

@@ -16,6 +16,7 @@ defmodule Brando.Users.User do
   import Brando.Blueprint.Listings.Components.Core
   import Brando.Blueprint.Listings.Components.Cover, only: [cover: 1]
 
+  alias Brando.RuntimeConfig
   alias Brando.Users.UserConfig
 
   @type t :: %__MODULE__{}
@@ -64,7 +65,7 @@ defmodule Brando.Users.User do
     attribute :role, :enum, values: [:user, :editor, :admin, :superuser], required: true
     attribute :active, :boolean, default: true
     attribute :last_login, :naive_datetime
-    attribute :language, :language, languages: Brando.config(:admin_languages)
+    attribute :language, :language, languages: RuntimeConfig.get(:admin_languages)
 
     attribute :password, :string,
       constraints: [min_length: 6, confirmation: true],
