@@ -25,7 +25,7 @@ defmodule Brando.Content.Container do
   @derive {Jason.Encoder, only: @derived_fields}
 
   trait :sequenced
-  trait Brando.Trait.SoftDelete
+  trait :soft_delete
   trait :timestamped
 
   attributes do

@@ -191,6 +191,12 @@
   shorthand. Existing full module declarations remain supported for incremental
   adoption; no database migration is required.
 
+- **Isolated SoftDelete trait compilation**: `Brando.Trait.SoftDelete` now expands its
+  `deleted_at` attribute through a focused compiler module, and Brando's schemas use the
+  equivalent `trait :soft_delete` shorthand without changing trait options or runtime
+  behavior. Existing full module declarations remain supported for incremental
+  adoption; no database migration is required.
+
 - **Symbolic built-in subform components**: Blueprint `inputs_for` definitions can now
   use `:vars`, `:gallery_objects`, `:identity_type_config`, or `:page_vars` instead of
   concrete admin LiveComponent modules. Brando's schemas use these tokens, which are

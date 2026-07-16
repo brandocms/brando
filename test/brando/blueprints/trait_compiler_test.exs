@@ -69,6 +69,14 @@ defmodule Brando.Blueprint.TraitCompilerTest do
     assert Brando.Pages.Page.has_trait(Brando.Trait.Creator)
   end
 
+  test "the SoftDelete compiler preserves its generated attribute and runtime options" do
+    attribute = Brando.Blueprint.Attributes.__attribute__(Brando.Pages.Page, :deleted_at)
+
+    assert attribute.type == :datetime
+    assert Brando.Pages.Page.has_trait(Brando.Trait.SoftDelete)
+    assert Brando.Pages.Page.__trait__(Brando.Trait.SoftDelete) == [obfuscated_fields: [:uri]]
+  end
+
   test "the Status compiler preserves its generated Blueprint attribute" do
     attribute = Brando.Blueprint.Attributes.__attribute__(Brando.Pages.Page, :status)
 

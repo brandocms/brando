@@ -44,7 +44,7 @@ defmodule Brando.Users.User do
   ]
 
   trait Brando.Trait.Password
-  trait Brando.Trait.SoftDelete
+  trait :soft_delete
   trait :timestamped
   trait Brando.Trait.ProtectRole
   trait Brando.Trait.ProtectPassword

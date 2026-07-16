@@ -15,7 +15,7 @@ defmodule Brando.Videos.Video do
 
   trait :creator
   trait :timestamped
-  trait Brando.Trait.SoftDelete
+  trait :soft_delete
 
   @thumbnail_cfg %{
     formats: [:original, :webp],

@@ -25,7 +25,7 @@ defmodule Brando.Pages.Fragment do
   trait Brando.Trait.Revisioned
   trait Brando.Trait.ScheduledPublishing
   trait :sequenced
-  trait Brando.Trait.SoftDelete
+  trait :soft_delete
   trait :status
   trait :timestamped
   trait Brando.Trait.Translatable, alternates: false

@@ -15,7 +15,7 @@ defmodule Brando.Files.File do
   import Brando.Blueprint.Listings.Components.Core
 
   trait :creator
-  trait Brando.Trait.SoftDelete
+  trait :soft_delete
   trait :timestamped
 
   identifier false

@@ -16,7 +16,7 @@ defmodule Brando.Galleries.Gallery do
   import Ecto.Query
 
   trait :timestamped
-  trait Brando.Trait.SoftDelete
+  trait :soft_delete
 
   identifier false
   persist_identifier false

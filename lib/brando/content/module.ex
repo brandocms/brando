@@ -53,7 +53,7 @@ defmodule Brando.Content.Module do
   @derive {Jason.Encoder, only: @derived_fields}
 
   trait :sequenced
-  trait Brando.Trait.SoftDelete
+  trait :soft_delete
   trait :timestamped
   trait Brando.Trait.CastPolymorphicEmbeds
   trait Brando.Trait.ValidateVarKeys

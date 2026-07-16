@@ -18,7 +18,7 @@ defmodule Brando.Images.Image do
 
   trait :creator
   trait :timestamped
-  trait Brando.Trait.SoftDelete
+  trait :soft_delete
   trait Brando.Trait.Focal
 
   identifier false
