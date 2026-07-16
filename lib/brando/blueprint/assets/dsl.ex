@@ -53,22 +53,33 @@ defmodule Brando.Blueprint.Assets.Dsl do
     sections: [@root],
     transformers: [Brando.Blueprint.Assets.Transformer]
 
-  @config_normalizer Module.concat(["Brando", "Blueprint", "AssetConfigNormalizer"])
+  alias Brando.RuntimeConfig
+
+  @image_schema Module.concat(["Brando", "Images", "Image"])
+  @video_schema Module.concat(["Brando", "Videos", "Video"])
+  @file_schema Module.concat(["Brando", "Files", "File"])
+  @gallery_schema Module.concat(["Brando", "Galleries", "Gallery"])
+  @image_config Module.concat(["Brando", "Type", "ImageConfig"])
+  @video_config Module.concat(["Brando", "Type", "VideoConfig"])
+  @file_config Module.concat(["Brando", "Type", "FileConfig"])
+  @image_context Module.concat(["Brando", "Images"])
+  @video_context Module.concat(["Brando", "Videos"])
+  @file_context Module.concat(["Brando", "Files"])
 
   def transform(%{type: :image} = asset) do
-    transform_asset(asset, Brando.Images.Image, Brando.Type.ImageConfig, [:db])
+    transform_asset(asset, @image_schema, @image_config, [:db])
   end
 
   def transform(%{type: :video} = asset) do
-    transform_asset(asset, Brando.Videos.Video, Brando.Type.VideoConfig, [])
+    transform_asset(asset, @video_schema, @video_config, [])
   end
 
   def transform(%{type: :file} = asset) do
-    transform_asset(asset, Brando.Files.File, Brando.Type.FileConfig, [:config_target])
+    transform_asset(asset, @file_schema, @file_config, [:config_target])
   end
 
   def transform(%{type: :gallery} = asset) do
-    opts_map = Map.merge(Enum.into(asset.opts, %{}), %{module: Brando.Galleries.Gallery})
+    opts_map = Map.merge(Enum.into(asset.opts, %{}), %{module: @gallery_schema})
     default_config = gallery_default_config()
 
     cfg =
@@ -106,7 +117,10 @@ defmodule Brando.Blueprint.Assets.Dsl do
   end
 
   @doc false
-  def normalize_runtime_config(asset), do: @config_normalizer.normalize(asset)
+  def normalize_runtime_config(asset) do
+    config_normalizer = Module.concat(["Brando", "Blueprint", "AssetConfigNormalizer"])
+    config_normalizer.normalize(asset)
+  end
 
   defp transform_asset(asset, association_module, config_module, passthrough_values) do
     opts = Map.merge(Map.new(asset.opts), %{module: association_module})
@@ -153,7 +167,7 @@ defmodule Brando.Blueprint.Assets.Dsl do
       if type == :image do
         merge_asset_config(default_map, overrides_map)
       else
-        Brando.Utils.deep_merge(default_map, overrides_map)
+        deep_merge(default_map, overrides_map)
       end
 
     struct(config_module, merged)
@@ -161,7 +175,7 @@ defmodule Brando.Blueprint.Assets.Dsl do
 
   defp default_asset_config(type, config_module) do
     configured =
-      case Brando.config(asset_context(type)) do
+      case RuntimeConfig.get(asset_context(type)) do
         nil -> nil
         config when is_list(config) -> Keyword.get(config, :default_config)
         config when is_map(config) -> Map.get(config, :default_config)
@@ -170,9 +184,9 @@ defmodule Brando.Blueprint.Assets.Dsl do
     normalize_asset_config(config_module, configured || config_module.default_config())
   end
 
-  defp asset_context(:image), do: Brando.Images
-  defp asset_context(:video), do: Brando.Videos
-  defp asset_context(:file), do: Brando.Files
+  defp asset_context(:image), do: @image_context
+  defp asset_context(:video), do: @video_context
+  defp asset_context(:file), do: @file_context
 
   defp raise_missing_config!(asset) do
     raise Brando.Exception.BlueprintError,
@@ -187,8 +201,8 @@ defmodule Brando.Blueprint.Assets.Dsl do
 
   defp gallery_default_config do
     %{
-      image: default_asset_config(:image, Brando.Type.ImageConfig),
-      video: default_asset_config(:video, Brando.Type.VideoConfig)
+      image: default_asset_config(:image, @image_config),
+      video: default_asset_config(:video, @video_config)
     }
   end
 
@@ -196,15 +210,15 @@ defmodule Brando.Blueprint.Assets.Dsl do
   # while allowing `%{image: ..., video: ...}` to configure both media types.
   defp normalize_gallery_config(%{image: image, video: video}, defaults) do
     %{
-      image: merge_config(Brando.Type.ImageConfig, defaults.image, image),
-      video: merge_config(Brando.Type.VideoConfig, defaults.video, video)
+      image: merge_config(@image_config, defaults.image, image),
+      video: merge_config(@video_config, defaults.video, video)
     }
   end
 
   defp normalize_gallery_config(%{image: image} = config, defaults) do
     %{
-      image: merge_config(Brando.Type.ImageConfig, defaults.image, image),
-      video: merge_config(Brando.Type.VideoConfig, defaults.video, Map.get(config, :video, %{}))
+      image: merge_config(@image_config, defaults.image, image),
+      video: merge_config(@video_config, defaults.video, Map.get(config, :video, %{}))
     }
   end
 
@@ -212,13 +226,13 @@ defmodule Brando.Blueprint.Assets.Dsl do
     image_overrides = Map.delete(config, :video)
 
     %{
-      image: merge_config(Brando.Type.ImageConfig, defaults.image, image_overrides),
-      video: merge_config(Brando.Type.VideoConfig, defaults.video, video)
+      image: merge_config(@image_config, defaults.image, image_overrides),
+      video: merge_config(@video_config, defaults.video, video)
     }
   end
 
   defp normalize_gallery_config(config, defaults) do
-    %{defaults | image: merge_config(Brando.Type.ImageConfig, defaults.image, config)}
+    %{defaults | image: merge_config(@image_config, defaults.image, config)}
   end
 
   defp merge_config(module, default, overrides) do
@@ -226,7 +240,7 @@ defmodule Brando.Blueprint.Assets.Dsl do
     override_map = if is_struct(overrides), do: Map.from_struct(overrides), else: Map.new(overrides)
 
     module
-    |> struct(Brando.Utils.deep_merge(default_map, override_map))
+    |> struct(deep_merge(default_map, override_map))
   end
 
   defp normalize_asset_config(module, config) when is_struct(config, module), do: config
@@ -236,12 +250,22 @@ defmodule Brando.Blueprint.Assets.Dsl do
   # if the override provides its own sizes rather than merging individual
   # size entries from the default config.
   defp merge_asset_config(default_config, override) do
-    merged = Brando.Utils.deep_merge(default_config, override)
+    merged = deep_merge(default_config, override)
 
     if Map.has_key?(override, :sizes) do
       Map.put(merged, :sizes, override.sizes)
     else
       merged
     end
+  end
+
+  defp deep_merge(nil, right), do: right
+  defp deep_merge(left, nil), do: left
+
+  defp deep_merge(left, right) do
+    Map.merge(left, right, fn
+      _key, %{} = left_value, %{} = right_value -> deep_merge(left_value, right_value)
+      _key, _left_value, right_value -> right_value
+    end)
   end
 end
