@@ -63,8 +63,8 @@ defmodule Brando.LivePreview do
 
   require Logger
   alias Brando.Exception.LivePreviewError
-  alias Brando.Worker
   alias Brando.Utils
+  alias Brando.Worker
 
   @preview_coder Hashids.new(
                    alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
@@ -210,28 +210,29 @@ defmodule Brando.LivePreview do
   end
 
   defp process_assigns(assigns, entry, language, cache_key) do
-    Enum.map(assigns, fn
-      %{key: key, value_fn: value_fn} ->
-        case :erlang.fun_info(value_fn)[:arity] do
-          0 ->
-            raise LivePreviewError,
-              message: """
-              assign for #{inspect(key)} was set with a 0 arity function.
+    Enum.map(assigns, &process_assign(&1, entry, language, cache_key))
+  end
 
-              It needs to be a 1 or 2 arity function, e.g:
+  defp process_assign(%{key: key, value_fn: value_fn}, entry, language, cache_key) do
+    case :erlang.fun_info(value_fn)[:arity] do
+      0 ->
+        raise LivePreviewError,
+          message: """
+          assign for #{inspect(key)} was set with a 0 arity function.
 
-                  assign :f, fn _entry, _language ->
-                    # ...
+          It needs to be a 1 or 2 arity function, e.g:
 
-              """
+              assign :f, fn _entry, _language ->
+                # ...
 
-          1 ->
-            resolve_cached_var(cache_key, key, fn -> value_fn.(entry) end)
+          """
 
-          2 ->
-            resolve_cached_var(cache_key, key, fn -> value_fn.(entry, language) end)
-        end
-    end)
+      1 ->
+        resolve_cached_var(cache_key, key, fn -> value_fn.(entry) end)
+
+      2 ->
+        resolve_cached_var(cache_key, key, fn -> value_fn.(entry, language) end)
+    end
   end
 
   defp render_layout(layout_module, layout_tpl, root_assigns) do
@@ -442,23 +443,5 @@ defmodule Brando.LivePreview do
     changeset
     |> Brando.Utils.apply_changes_recursively()
     |> Map.merge(updated_entry_assocs)
-  end
-
-  defmodule Legacy do
-    # This is here to basically support the migration script
-    @deprecated "use layout/1 instead"
-    defmacro layout_module(_) do
-      nil
-    end
-
-    @deprecated "use template/1 instead"
-    defmacro view_module(_) do
-      nil
-    end
-
-    @deprecated "use template/1 instead"
-    defmacro view_template(_) do
-      nil
-    end
   end
 end
