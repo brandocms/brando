@@ -18,6 +18,50 @@ instructions.
 
 ### Traits
 
+Blueprint invokes a trait's `generate_code/2` callback while compiling each
+schema. Runtime-heavy custom traits can keep that compile path small by moving
+the same callback to a focused compiler module:
+
+```elixir
+defmodule MyApp.Trait.Searchable.Compiler do
+  def generate_code(_schema, _opts) do
+    quote do
+      attributes do
+        attribute :search_text, :string
+      end
+    end
+  end
+end
+
+defmodule MyApp.Trait.Searchable do
+  use Brando.Trait
+
+  alias MyApp.Trait.Searchable.Compiler
+
+  @impl true
+  def generate_code(schema, opts), do: Compiler.generate_code(schema, opts)
+
+  # Runtime callbacks and helper functions stay in this module.
+end
+```
+
+Opt into that compiler explicitly at each use site:
+
+```elixir
+trait MyApp.Trait.Searchable,
+  compile_with: MyApp.Trait.Searchable.Compiler,
+  ranking: :weighted
+```
+
+`compile_with:` is consumed by the Blueprint DSL and is not included in the
+runtime trait options; all other options remain unchanged. Traits without it
+retain the existing behavior. `Brando.Trait.Sequenced` selects its built-in
+compiler automatically. To also avoid making the runtime trait alias a
+module-body compile dependency, use the equivalent `trait :sequenced` shorthand.
+Brando's own schemas use this form; applications may adopt it incrementally, and
+the existing `trait Brando.Trait.Sequenced` syntax remains supported. This is a
+compile-time optimization and requires no database migration.
+
 ### Translations
 
 ### Listings

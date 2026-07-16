@@ -17,7 +17,7 @@ defmodule Brando.Navigation.Menu do
   alias Brando.Navigation.Item
 
   trait Brando.Trait.Creator
-  trait Brando.Trait.Sequenced
+  trait :sequenced
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable, alternates: false
   trait Brando.Trait.Status

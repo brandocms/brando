@@ -24,7 +24,7 @@ defmodule Brando.Pages.Fragment do
   trait Brando.Trait.Creator
   trait Brando.Trait.Revisioned
   trait Brando.Trait.ScheduledPublishing
-  trait Brando.Trait.Sequenced
+  trait :sequenced
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Status
   trait Brando.Trait.Timestamped

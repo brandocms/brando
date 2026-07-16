@@ -1,11 +1,48 @@
 defmodule Brando.Blueprint.Trait do
   @moduledoc false
+
   defmacro trait(name, opts \\ []) do
+    trait = expand_trait(name, __CALLER__)
+    {requested_compiler, trait_opts} = Keyword.pop(opts, :compile_with)
+    compiler = expand_compiler(requested_compiler, trait, __CALLER__)
+
     [
-      Macro.expand(name, __CALLER__).generate_code(__CALLER__.module, opts),
+      apply(compiler, :generate_code, [__CALLER__.module, trait_opts]),
       quote location: :keep, generated: true do
-        Module.put_attribute(__MODULE__, :traits, {unquote(name), unquote(opts)})
+        Module.put_attribute(__MODULE__, :traits, {unquote(trait), unquote(trait_opts)})
       end
     ]
   end
+
+  defp expand_trait(:sequenced, _caller), do: sequenced_trait()
+  defp expand_trait(name, caller), do: Macro.expand(name, caller)
+
+  defp expand_compiler(nil, trait, _caller) do
+    if trait == sequenced_trait() do
+      trait
+      |> Module.concat("Compiler")
+      |> ensure_compiler!()
+    else
+      trait
+    end
+  end
+
+  defp expand_compiler(compiler, _trait, caller) do
+    compiler
+    |> Macro.expand(caller)
+    |> ensure_compiler!()
+  end
+
+  defp ensure_compiler!(compiler) do
+    Code.ensure_compiled!(compiler)
+
+    if function_exported?(compiler, :generate_code, 2) do
+      compiler
+    else
+      raise CompileError,
+        description: "#{inspect(compiler)} must define generate_code/2 to compile a Blueprint trait"
+    end
+  end
+
+  defp sequenced_trait, do: Module.concat(["Brando", "Trait", "Sequenced"])
 end

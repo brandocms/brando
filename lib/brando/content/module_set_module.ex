@@ -21,7 +21,7 @@ defmodule Brando.Content.ModuleSetModule do
 
   # ++ Traits
   trait Brando.Trait.Timestamped
-  trait Brando.Trait.Sequenced
+  trait :sequenced
   # --
 
   relations do

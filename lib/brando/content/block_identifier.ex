@@ -9,7 +9,7 @@ defmodule Brando.Content.BlockIdentifier do
     gettext_module: Brando.Gettext
 
   @allow_mark_as_deleted true
-  trait Brando.Trait.Sequenced
+  trait :sequenced
 
   relations do
     relation :block, :belongs_to, module: Brando.Content.Block

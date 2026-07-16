@@ -163,6 +163,16 @@
   patches. Existing helper calls and the legacy internal LiveComponent remain
   compatible; no application code or database migration is required.
 
+- **Isolated trait schema compilation**: Blueprint traits may now use the explicit
+  `compile_with:` option to run `generate_code/2` through a focused compiler module,
+  keeping schema expansion independent of runtime-heavy trait callbacks. The option is
+  removed from the runtime trait configuration. `Brando.Trait.Sequenced` selects its
+  built-in compiler automatically, and the equivalent `trait :sequenced` shorthand
+  avoids a module-body dependency on the runtime trait. Brando's schemas use the new
+  shorthand; the full module syntax, callbacks, and public sequencing functions remain
+  supported. Custom traits are unchanged unless they opt in; no application code or
+  database migration is required.
+
 - **Lighter Blueprint listing rendering dependencies**: Listing helpers now use
   focused `Brando.HTML.Icon` and `Brando.HTML.I18n` components instead of depending
   directly on the full `Brando.HTML` module. The existing `Brando.HTML.icon/1` and

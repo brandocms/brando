@@ -17,18 +17,14 @@ defmodule Brando.Trait.Sequenced do
   use Brando.Trait
   alias Brando.Cache
   alias Brando.Datasource
+  alias Brando.Trait.Sequenced.Compiler
   alias Ecto.Changeset
   import Ecto.Query
 
   @type changeset :: Changeset.t()
 
-  def generate_code(_, _) do
-    quote do
-      attributes do
-        attribute :sequence, :integer, default: 0
-      end
-    end
-  end
+  @impl true
+  def generate_code(module, config), do: Compiler.generate_code(module, config)
 
   @doc """
   Sequences ids or composite keys
@@ -95,6 +91,7 @@ defmodule Brando.Trait.Sequenced do
     Datasource.update_datasource(module)
   end
 
+  @impl true
   def changeset_mutator(module, %{strict: true}, changeset, _user, _opts) do
     Changeset.prepare_changes(changeset, fn
       %{action: :insert} = cs ->

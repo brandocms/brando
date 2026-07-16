@@ -15,7 +15,7 @@ defmodule Brando.Content.Ref do
   @type t :: %__MODULE__{}
 
   trait Brando.Trait.CastPolymorphicEmbeds
-  trait Brando.Trait.Sequenced
+  trait :sequenced
   trait Brando.Trait.Timestamped
   trait Brando.Trait.EnsureUID
 

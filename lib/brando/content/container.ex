@@ -24,7 +24,7 @@ defmodule Brando.Content.Container do
   @derived_fields ~w(id type name sequence namespace help_text code deleted_at)a
   @derive {Jason.Encoder, only: @derived_fields}
 
-  trait Brando.Trait.Sequenced
+  trait :sequenced
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Timestamped
 

@@ -20,7 +20,7 @@ defmodule Brando.Content.Template do
   persist_identifier false
 
   trait Brando.Trait.Creator
-  trait Brando.Trait.Sequenced
+  trait :sequenced
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Blocks

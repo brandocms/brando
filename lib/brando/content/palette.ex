@@ -21,7 +21,7 @@ defmodule Brando.Content.Palette do
   identifier "[{{ entry.namespace }}] {{ entry.name }}"
 
   trait Brando.Trait.Creator
-  trait Brando.Trait.Sequenced
+  trait :sequenced
   trait Brando.Trait.SoftDelete
   trait Brando.Trait.Status
   trait Brando.Trait.Timestamped
