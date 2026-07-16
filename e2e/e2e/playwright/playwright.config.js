@@ -19,7 +19,9 @@ module.exports = defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   timeout: 60000,
-  workers: process.env.CI ? 1 : undefined,
+  // SQL sandboxes isolate rows, but application-wide PubSub and caches can still
+  // leak transient state between workers. Keep every E2E run deterministic.
+  workers: 1,
   retries: process.env.CI ? 2 : 1,
   reporter: process.env.CI ? [['github'], ['html'], ['dot']] : [['list']],
   use: {
