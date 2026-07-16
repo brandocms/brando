@@ -440,7 +440,7 @@ defmodule Brando.Blueprint.Dsl do
           opts: opts
         }
 
-        run_changeset(params)
+        Brando.Blueprint.run_changeset(params)
       end
 
       for {trait, trait_opts} <- @all_traits do

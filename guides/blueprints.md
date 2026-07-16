@@ -24,6 +24,14 @@ Existing `Brando.config/1` calls remain supported. Applications can make this op
 compile-time-only replacement incrementally; it does not change the stored schema and
 requires no database migration.
 
+Generated `changeset/5` functions execute their runtime pipeline through
+`Brando.Blueprint.ChangesetRunner`. Casting and validation implementation changes therefore
+do not make every Blueprint schema compile-connected to the runtime asset, relation, block,
+constraint, uniqueness, and trait modules. This boundary is automatic:
+`Brando.Blueprint.run_changeset/1`, `maybe_sequence/3`, and
+`maybe_validate_required/2` remain compatible, and applications need no code or database
+migration.
+
 #### Context query compilation
 
 Contexts generated for Blueprint schemas use the focused query compiler:

@@ -134,16 +134,8 @@ defmodule Brando.Blueprint do
 
   import Brando.Blueprint.Utils
 
-  alias Brando.Blueprint.Assets
   alias Brando.Blueprint.Assets.Asset
-  alias Brando.Blueprint.ChangesetParams
-  alias Brando.Blueprint.Constraints
-  alias Brando.Blueprint.Relations
-  alias Brando.Blueprint.Unique
-  alias Brando.Blueprint.Villain
   alias Brando.Exception.BlueprintError
-  alias Brando.Trait
-  alias Ecto.Changeset
 
   defstruct naming: %{},
             modules: %{},
@@ -593,67 +585,25 @@ defmodule Brando.Blueprint do
   @doc """
   Runs a changeset with complex validation and processing rules based on blueprint configuration.
   """
-  def run_changeset(%ChangesetParams{} = cp) do
-    start = System.monotonic_time()
-
-    if cp.module != cp.schema.__struct__ do
-      raise BlueprintError,
-        message: "Changeset module/schema mismatch: expected #{inspect(cp.module)}, got #{inspect(cp.schema.__struct__)}"
-    end
-
-    changeset =
-      cp.schema
-      |> Changeset.cast(cp.params, cp.castable_fields)
-      |> Relations.run_cast_relations(cp.relations, cp.user)
-      |> Assets.run_cast_assets(cp.assets, cp.user)
-      |> Villain.maybe_cast_blocks(cp.module, cp.user, cp.opts)
-      |> Trait.run_changeset_mutators(cp.module, cp.traits_before_validate_required, cp.user, cp.opts)
-      |> maybe_validate_required(cp.required_castable_fields)
-      |> Unique.run_unique_attribute_constraints(cp.module, cp.attributes)
-      |> Unique.run_unique_relation_constraints(cp.module, cp.relations)
-      |> Constraints.run_validations(cp.module, cp.attributes)
-      |> Constraints.run_validations(cp.module, cp.relations)
-      |> Constraints.run_fk_constraints(cp.module, cp.relations)
-      |> Trait.run_changeset_mutators(cp.module, cp.traits_after_validate_required, cp.user, cp.opts)
-      |> maybe_mark_for_deletion(cp.module)
-      |> maybe_sequence(cp.module, cp.sequence)
-
-    :telemetry.execute([:brando, :run_changeset], %{duration: System.monotonic_time() - start}, %{
-      schema: changeset.data.__struct__
-    })
-
-    changeset
+  def run_changeset(changeset_params) do
+    runner = changeset_runner()
+    runner.run(changeset_params)
   end
 
-  def maybe_sequence(changeset, _module, nil) do
-    changeset
-  end
-
+  @doc """
+  Applies a sequence when the Blueprint implements the sequenced trait.
+  """
   def maybe_sequence(changeset, module, sequence) do
-    if module.has_trait(:sequenced) do
-      Changeset.change(changeset, sequence: sequence)
-    else
-      changeset
-    end
+    runner = changeset_runner()
+    runner.maybe_sequence(changeset, module, sequence)
   end
 
+  @doc """
+  Validates required fields unless the changeset is a draft.
+  """
   def maybe_validate_required(changeset, all_required_attrs) do
-    case Changeset.get_field(changeset, :status) do
-      :draft -> changeset
-      _ -> Changeset.validate_required(changeset, all_required_attrs)
-    end
-  end
-
-  defp maybe_mark_for_deletion(%Ecto.Changeset{changes: %{marked_as_deleted: true}} = changeset, module) do
-    if module.__allow_mark_as_deleted__() do
-      %{changeset | action: :delete}
-    else
-      changeset
-    end
-  end
-
-  defp maybe_mark_for_deletion(changeset, _) do
-    changeset
+    runner = changeset_runner()
+    runner.maybe_validate_required(changeset, all_required_attrs)
   end
 
   @doc """
@@ -704,6 +654,8 @@ defmodule Brando.Blueprint do
       key, keyword when is_list(keyword) -> Keyword.get(keyword, key)
     end)
   end
+
+  defp changeset_runner, do: Module.concat(["Brando", "Blueprint", "ChangesetRunner"])
 
   # TODO: some deprecated functions — remove before 1.0
   defmacro inputs_for(_, _, _) do

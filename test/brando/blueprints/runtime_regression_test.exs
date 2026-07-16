@@ -1,6 +1,11 @@
 defmodule Brando.Blueprint.RuntimeRegressionTest do
   use ExUnit.Case, async: false
 
+  alias Brando.Blueprint
+  alias Brando.Blueprint.Assets
+  alias Brando.Blueprint.Attributes
+  alias Brando.Blueprint.ChangesetParams
+  alias Brando.Blueprint.Relations
   alias Brando.Exception.BlueprintError
 
   defmodule CustomRelationCast do
@@ -64,6 +69,38 @@ defmodule Brando.Blueprint.RuntimeRegressionTest do
     assert_raise BlueprintError, ~r/module\/schema mismatch/, fn ->
       UniqueMessage.changeset(%CustomRelationCast{}, %{})
     end
+  end
+
+  test "the Blueprint changeset compatibility API delegates to the runtime runner" do
+    attributes = Attributes.__attributes__(UniqueMessage)
+    relations = Relations.__relations__(UniqueMessage)
+    assets = Assets.__assets__(UniqueMessage)
+
+    changeset_params = %ChangesetParams{
+      module: UniqueMessage,
+      schema: %UniqueMessage{},
+      params: %{title: "Runtime boundary"},
+      user: :system,
+      sequence: nil,
+      traits_before_validate_required: UniqueMessage.__traits_before_validate_required__(),
+      traits_after_validate_required: UniqueMessage.__traits_after_validate_required__(),
+      attributes: attributes,
+      relations: relations,
+      assets: assets,
+      castable_fields:
+        UniqueMessage.__required_attrs__() ++
+          UniqueMessage.__optional_attrs__() ++
+          UniqueMessage.__castable_relations__() ++ UniqueMessage.__castable_assets__(),
+      required_castable_fields:
+        UniqueMessage.__required_attrs__() ++
+          UniqueMessage.__required_relations__() ++ UniqueMessage.__required_assets__(),
+      opts: []
+    }
+
+    assert %{title: "Runtime boundary"} =
+             changeset_params
+             |> Blueprint.run_changeset()
+             |> Ecto.Changeset.apply_changes()
   end
 
   test "generated block join constraints use the relation-specific table name" do

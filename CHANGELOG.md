@@ -134,6 +134,14 @@
 
 #### Improvements
 
+- **Isolated Blueprint changeset runtime**: Generated schema changesets now execute
+  casting, trait mutation, uniqueness, constraint, relation, asset, and block processing
+  through the focused `Brando.Blueprint.ChangesetRunner`. This keeps runtime pipeline
+  changes out of the compile-connected `Brando.Blueprint` facade. Existing
+  `Brando.Blueprint.run_changeset/1`, `maybe_sequence/3`, and
+  `maybe_validate_required/2` calls remain compatible. No application code or database
+  migration is required.
+
 - **Blueprint runtime routing boundary**: Generated admin routes, absolute URLs,
   localized paths, form redirects, and language attribute defaults now resolve
   configuration through the lightweight `Brando.RuntimeConfig` module instead of
