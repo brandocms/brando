@@ -8,21 +8,14 @@ import {
   confirmUploadFolder
 } from '../../utils'
 
-// Regression guards for two block-editor bugs:
+// Regression guards for two block-editor invariants:
 //
-//  1. A picked/uploaded picture vanished from the live preview as soon as another
-//     block was inserted. The image_id only lived on the picture block's own
-//     component changeset; it was never propagated to the parent's cached
-//     `entry_blocks_forms`, so the next insert re-initialised the block from the
-//     stale cache and wiped the media. Fixed by `propagate: true` on the
-//     picture block's `update_ref_data` calls.
+//  1. A picked/uploaded picture must remain in the uid-keyed op store when another
+//     block is inserted, so rematerializing the editor/preview cannot wipe it.
 //
-//  2. The gap "+" inserted a block at the wrong position after a prior insert.
-//     After an insert the block components were renumbered, but the stale parent
-//     cache (`entry_blocks_forms`) clobbered them on the next re-render, so a
-//     subsequent insert read a stale sequence and landed above instead of below.
-//     Fixed by re-stamping `entry_blocks_forms` sequences in
-//     `send_block_entry_position_update`.
+//  2. A gap "+" must derive its insertion point from the current keyed list index
+//     after a prior insert; persisted sequence fields are intentionally stale until
+//     materialization.
 test.describe('Block regressions: media persistence + insert position', () => {
   // Serial — opens a preview channel / renders templates; parallel load can time out.
   test.setTimeout(60000)
@@ -86,19 +79,24 @@ test.describe('Block regressions: media persistence + insert position', () => {
 
     // Insert a Styled Header via a specific block's gap "+" (renders above that block),
     // then set its text. `entryIndex` is the .entry-block whose gap "+" we click.
+    const fillHeader = async (textIndex, text) => {
+      const textarea = page.locator('.header-block textarea').nth(textIndex)
+      await textarea.fill(text)
+      await textarea.blur()
+      await syncLV(page)
+    }
+
     const insertHeaderAbove = async (entryIndex, textIndex, text) => {
       await page.locator('.entry-block').nth(entryIndex).locator('.block-plus').first().click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
       await page.getByRole('button', { name: 'Styled Header' }).click()
       await syncLV(page)
-      await page.locator('.header-block textarea').nth(textIndex).fill(text)
-      await syncLV(page)
+      await fillHeader(textIndex, text)
     }
 
     // Start with a single "Anchor" header (appended via the bottom "Add block").
     await addStyledHeader(page)
-    await page.locator('.header-block textarea').last().fill('Anchor')
-    await syncLV(page)
+    await fillHeader(0, 'Anchor')
 
     // Insert "First" above Anchor → [First, Anchor]
     await insertHeaderAbove(0, 0, 'First')
