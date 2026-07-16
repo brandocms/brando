@@ -12,6 +12,7 @@ defmodule Brando.Content.Template do
     gettext_module: Brando.Gettext
 
   use Gettext, backend: Brando.Gettext
+  import Brando.Blueprint.Listings.Components
 
   @type t :: %__MODULE__{}
 

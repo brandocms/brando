@@ -12,6 +12,7 @@ defmodule Brando.Files.File do
     gettext_module: Brando.Gettext
 
   use Gettext, backend: Brando.Gettext
+  import Brando.Blueprint.Listings.Components
 
   trait Brando.Trait.Creator
   trait Brando.Trait.SoftDelete

@@ -1,6 +1,13 @@
 defmodule Brando.Blueprint.Listings.Components do
   @moduledoc """
-  Components to use in listings
+  Reusable components for custom Blueprint listing rows.
+
+  Import this module only in Blueprints that define a custom listing row:
+
+      import Brando.Blueprint.Listings.Components
+
+  Keeping the import local avoids coupling every Blueprint schema to the admin
+  rendering tree.
   """
   use Phoenix.Component
 
@@ -16,6 +23,7 @@ defmodule Brando.Blueprint.Listings.Components do
   attr :offset, :integer, default: nil
   attr :top, :boolean, default: false
 
+  @doc "Renders an image cover cell."
   def cover(assigns) do
     ~H"""
     <div class={[
@@ -36,6 +44,7 @@ defmodule Brando.Blueprint.Listings.Components do
   attr :entry, :map, required: true
   attr :offset, :integer, default: nil
 
+  @doc "Renders a published entry's front-end URL action."
   def url(assigns) do
     entry = assigns.entry
 
@@ -68,6 +77,7 @@ defmodule Brando.Blueprint.Listings.Components do
   slot :before
   slot :outside
 
+  @doc "Renders a listing cell linked to the entry's admin update route."
   def update_link(assigns) do
     schema = assigns.entry.__struct__
     update_url = schema.__admin_route__(:update, [assigns.entry.id])
@@ -93,6 +103,7 @@ defmodule Brando.Blueprint.Listings.Components do
   attr :offset, :integer, default: nil
   slot :inner_block
 
+  @doc "Renders a generic listing grid cell."
   def field(assigns) do
     ~H"""
     <div class={[
@@ -111,6 +122,7 @@ defmodule Brando.Blueprint.Listings.Components do
   attr :columns, :integer, default: 1
   attr :offset, :integer, default: nil
 
+  @doc "Renders the child-listing action for an entry."
   def children_button(assigns) do
     ~H"""
     <div class={[
@@ -123,5 +135,8 @@ defmodule Brando.Blueprint.Listings.Components do
     """
   end
 
+  attr :map, :any, required: true
+
+  @doc "Renders the current locale's value from a translated map."
   def i18n(assigns), do: Brando.HTML.i18n(assigns)
 end

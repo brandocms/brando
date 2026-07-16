@@ -22,17 +22,31 @@ instructions.
 
 ### Listings
 
+Blueprints with custom listing rows must explicitly import the reusable row
+components. Blueprints without custom rows should not import them.
+
 #### Example
 
 ```elixir
+  import Brando.Blueprint.Listings.Components
+
   listings do
     listing do
       query %{status: :published}
-      filter label: t("Title"), filter: "title"
+      filter label: t("Title"), key: "title"
       action label: t("Create subpage"), event: "create_subpage"
       action label: t("Create fragment"), event: "create_fragment"
       component &__MODULE__.listing_row/1
     end
+  end
+
+  def listing_row(assigns) do
+    ~H"""
+    <.update_link entry={@entry} columns={10}>
+      {@entry.title}
+    </.update_link>
+    <.url entry={@entry} />
+    """
   end
 ```
 

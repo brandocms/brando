@@ -19,6 +19,10 @@ defmodule Brando.Blueprint.BlueprintTest do
     assert Brando.Pages.Fragment in blueprints
   end
 
+  test "does not import listing row components into every blueprint" do
+    refute Brando.BlueprintTest.Project.__listing_components_imported__?()
+  end
+
   test "preload compatibility APIs preserve their dedicated implementations" do
     schema = Brando.BlueprintTest.Project
 

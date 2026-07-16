@@ -4,7 +4,10 @@ defmodule Brando.Blueprint.Listings do
 
   ### Listing/row component
 
-  Set your own component for rendering a listing row:
+  Import the reusable row components explicitly, then set your own component
+  for rendering a listing row:
+
+      import Brando.Blueprint.Listings.Components
 
       listings do
         listing do
@@ -12,6 +15,9 @@ defmodule Brando.Blueprint.Listings do
           # ...
         end
       end
+
+  The explicit import keeps Blueprints without custom listing rows independent
+  from the admin component tree.
 
       def listing_row(assigns) do
         ~H\"""
@@ -35,12 +41,12 @@ defmodule Brando.Blueprint.Listings do
 
       listings do
         listing do
-          listing_query %{preload: [fragments: :creator], order: [{:asc, :sequence}]}
+          query %{preload: [fragments: :creator], order: [{:asc, :sequence}]}
           # ...
         end
       end
 
-  This will merge in your listing_query as the starting point for your queries
+  This merges the query map into the starting point for listing queries.
 
   """
 end

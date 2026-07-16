@@ -11,7 +11,9 @@ defmodule E2eProject.Projects.Project do
     plural: "projects",
     extensions: [BrandoJsonApi.Resource, BrandoGraphql.Resource]
 
+  import Brando.Blueprint.Listings.Components
   import Ecto.Query
+
   alias E2eProject.Projects
 
   trait Brando.Trait.Creator
@@ -132,8 +134,7 @@ defmodule E2eProject.Projects.Project do
 
           input :introduction, :rich_text,
             label: t("Introduction"),
-            instructions:
-              t("Used for case listings and also the heading for the case detail page"),
+            instructions: t("Used for case listings and also the heading for the case detail page"),
             extensions: ["p", "bold", "link", "color"]
 
           input :project_categories, :multi_select,

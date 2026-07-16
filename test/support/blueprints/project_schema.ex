@@ -8,6 +8,12 @@ defmodule Brando.BlueprintTest.Project do
     plural: "projects",
     gettext_module: Brando.Gettext
 
+  @listing_components_imported? Enum.any?(__ENV__.functions, fn {module, _functions} ->
+                                  module == Brando.Blueprint.Listings.Components
+                                end)
+
+  def __listing_components_imported__?, do: @listing_components_imported?
+
   @image_cfg [
     allowed_mimetypes: [
       "image/jpeg",

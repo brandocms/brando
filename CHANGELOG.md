@@ -134,6 +134,16 @@
 
 #### Improvements
 
+- **Explicit Blueprint listing component imports**: `use Brando.Blueprint` no longer
+  imports `Brando.Blueprint.Listings.Components` into every schema. Blueprints with
+  custom listing row functions must add
+  `import Brando.Blueprint.Listings.Components`; schemas without custom rows need no
+  change. This removes an unnecessary dependency from schema compilation to the admin
+  rendering tree. Search for `<.cover>`, `<.url>`, `<.update_link>`, `<.field>`,
+  `<.children_button>`, or `<.i18n>` inside Blueprint modules to identify consumers,
+  add the import directly after `use Brando.Blueprint`, then compile. No database
+  migration is required.
+
 - **Block editor single-owner state (the clobber class is gone)**: Each block
   live_component now owns its editing state exclusively. After first mount, parent
   re-renders can no longer overwrite a block's form (`update/2` drops incoming
