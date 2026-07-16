@@ -210,6 +210,13 @@
   existing full module declarations remain supported for incremental adoption. No
   database migration is required.
 
+- **Isolated admin form LiveView compilation**: Generated and built-in admin form
+  LiveViews now use `BrandoAdmin.LiveView.Form.Compiler`, a focused setup macro that
+  keeps the large runtime form-hook implementation out of their compile graph. Existing
+  `use BrandoAdmin.LiveView.Form, schema: ...` declarations remain supported;
+  applications may opt in by changing only the `use` module. Runtime behavior, routes,
+  and database schemas are unchanged, so no database migration is required.
+
 - **Symbolic built-in subform components**: Blueprint `inputs_for` definitions can now
   use `:vars`, `:gallery_objects`, `:identity_type_config`, or `:page_vars` instead of
   concrete admin LiveComponent modules. Brando's schemas use these tokens, which are

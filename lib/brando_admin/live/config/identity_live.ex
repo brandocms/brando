@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Sites.IdentityLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Form, schema: Brando.Sites.Identity
+  use BrandoAdmin.LiveView.Form.Compiler, schema: Brando.Sites.Identity
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Sites

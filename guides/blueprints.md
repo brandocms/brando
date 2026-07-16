@@ -119,6 +119,21 @@ need no event target or migration changes.
 #### Child Listings
 
 ### Forms
+
+#### Form LiveViews
+
+Generated admin form LiveViews use the focused setup compiler so changes to runtime
+form hooks do not recompile every form definition:
+
+```elixir
+use BrandoAdmin.LiveView.Form.Compiler, schema: MyApp.Projects.Project
+```
+
+Existing `use BrandoAdmin.LiveView.Form, schema: ...` declarations remain supported.
+Applications may migrate by changing only the module passed to `use`; hook behavior,
+routes, and form APIs are unchanged, and no database migration is required. The Brando
+generator now emits the focused form.
+
 #### Form options
 #### Tabs
 #### Fieldsets

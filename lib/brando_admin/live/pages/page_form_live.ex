@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Pages.PageFormLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Form, schema: Brando.Pages.Page
+  use BrandoAdmin.LiveView.Form.Compiler, schema: Brando.Pages.Page
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Form

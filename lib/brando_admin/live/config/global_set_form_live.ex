@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Sites.GlobalSetFormLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Form, schema: Brando.Sites.GlobalSet
+  use BrandoAdmin.LiveView.Form.Compiler, schema: Brando.Sites.GlobalSet
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Form

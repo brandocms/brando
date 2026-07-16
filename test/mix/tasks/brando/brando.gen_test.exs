@@ -26,7 +26,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
 
       assert_file("lib/brando_admin/live/projects/project_form_live.ex", fn file ->
         assert file =~ "BrandoIntegrationAdmin.Projects.ProjectFormLive"
-        assert file =~ "use BrandoAdmin.LiveView.Form, schema: Brando.Projects.Project"
+        assert file =~ "use BrandoAdmin.LiveView.Form.Compiler, schema: Brando.Projects.Project"
         assert file =~ "<.live_component module={Form}\n      id=\"project_form\"\n"
       end)
 

@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Galleries.GalleryFormLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Form, schema: Brando.Galleries.Gallery
+  use BrandoAdmin.LiveView.Form.Compiler, schema: Brando.Galleries.Gallery
   use Gettext, backend: Brando.Gettext
 
   import Ecto.Query

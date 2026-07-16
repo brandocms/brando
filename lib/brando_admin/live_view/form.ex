@@ -2,50 +2,22 @@ defmodule BrandoAdmin.LiveView.Form do
   @moduledoc """
   A module that keeps using definitions for form live views
 
-  This can be used in your application as:
+  The runtime hook callbacks live here. Form LiveViews should compile their setup
+  through the focused companion module:
 
-      use BrandoAdmin.LiveView.Form, schema: MyApp.Projects.Project
+      use BrandoAdmin.LiveView.Form.Compiler, schema: MyApp.Projects.Project
+
+  The historical `use BrandoAdmin.LiveView.Form` entry point remains supported.
 
   """
   import Phoenix.LiveView
   import Phoenix.Component
   use Gettext, backend: Brando.Gettext
 
-  defmacro __using__(opts) do
-    schema = Keyword.fetch!(opts, :schema)
-    skip_image_hooks = Keyword.get(opts, :skip_image_hooks, false)
+  alias Phoenix.PubSub
 
-    quote do
-      use BrandoAdmin, :live_view
-
-      on_mount({BrandoAdmin.LiveView.Form, {:setup, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_progress_popup, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_alert, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_content_language, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_dirty_fields, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_active_field, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_block_presence, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_block_sync, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_modules, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_focal_point, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_focus, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_mutations, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_mutation_listener, unquote(schema)}})
-
-      unless unquote(skip_image_hooks) do
-        on_mount({BrandoAdmin.LiveView.Form, {:hooks_images, unquote(schema)}})
-      end
-
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_asset_delivery, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_tiptap_link, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_videos, unquote(schema)}})
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_video_events, unquote(schema)}})
-
-      # Catch port exits from image processing (ImageMagick, etc)
-      on_mount({BrandoAdmin.LiveView.Form, {:hooks_port_exits, unquote(schema)}})
-    end
-  end
+  @doc false
+  defmacro __using__(opts), do: BrandoAdmin.LiveView.Form.Compiler.build(opts)
 
   def on_mount({:setup, schema}, %{"entry_id" => entry_id}, _session, socket) do
     if connected?(socket) do
@@ -59,10 +31,10 @@ defmodule BrandoAdmin.LiveView.Form do
         |> assign_title()
         |> assign(:mutation_listeners, %{})
 
-      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:dirty_fields:#{entry_id}")
-      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:active_field:#{entry_id}")
-      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:block_presence:#{entry_id}")
-      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:field_sync:#{entry_id}")
+      PubSub.subscribe(Brando.pubsub(), "brando:dirty_fields:#{entry_id}")
+      PubSub.subscribe(Brando.pubsub(), "brando:active_field:#{entry_id}")
+      PubSub.subscribe(Brando.pubsub(), "brando:block_presence:#{entry_id}")
+      PubSub.subscribe(Brando.pubsub(), "brando:field_sync:#{entry_id}")
 
       {:cont, assign(socket, :current_focused_block_uid, nil)}
     else
@@ -245,10 +217,10 @@ defmodule BrandoAdmin.LiveView.Form do
   end
 
   defp maybe_arm_entry_scope(%{"entry_id" => entry_id}, _uri, %{assigns: %{entry_id: nil}} = socket) do
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:dirty_fields:#{entry_id}")
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:active_field:#{entry_id}")
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:block_presence:#{entry_id}")
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:field_sync:#{entry_id}")
+    PubSub.subscribe(Brando.pubsub(), "brando:dirty_fields:#{entry_id}")
+    PubSub.subscribe(Brando.pubsub(), "brando:active_field:#{entry_id}")
+    PubSub.subscribe(Brando.pubsub(), "brando:block_presence:#{entry_id}")
+    PubSub.subscribe(Brando.pubsub(), "brando:field_sync:#{entry_id}")
 
     {:cont,
      socket
@@ -533,7 +505,7 @@ defmodule BrandoAdmin.LiveView.Form do
     # Mirror the old var upload flow: track processing updates for the image
     # so the picker/pending flows keep working once the Oban worker finishes.
     if asset_type == :image do
-      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{asset.id}")
+      PubSub.subscribe(Brando.pubsub(), "brando:image:#{asset.id}")
     end
 
     send_update(BrandoAdmin.Components.Form.Input.RenderVar,
@@ -553,7 +525,7 @@ defmodule BrandoAdmin.LiveView.Form do
          _socket
        )
        when is_binary(component_id) do
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
 
     send(
       self(),
@@ -584,7 +556,7 @@ defmodule BrandoAdmin.LiveView.Form do
          _socket
        )
        when is_binary(component_id) do
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
 
     send_update(BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock,
       id: component_id,
@@ -619,7 +591,7 @@ defmodule BrandoAdmin.LiveView.Form do
     # (config_target "image:Schema:field" routes image_processed +
     # update_entry_relation back to the form)
     if asset_type == :image do
-      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{asset.id}")
+      PubSub.subscribe(Brando.pubsub(), "brando:image:#{asset.id}")
     end
 
     # Inline-Oban / fast-queue race (same recovery block refs get via
@@ -648,7 +620,7 @@ defmodule BrandoAdmin.LiveView.Form do
        when is_binary(field) do
     singular = socket.assigns.schema.__naming__().singular
 
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
 
     send_update(BrandoAdmin.Components.Form,
       id: "#{singular}_form",
@@ -1000,7 +972,7 @@ defmodule BrandoAdmin.LiveView.Form do
       if old_uid && old_uid != uid do
         send(self(), {:ship_block_data, old_uid, current_user_id})
 
-        Phoenix.PubSub.broadcast(
+        PubSub.broadcast(
           Brando.pubsub(),
           "brando:block_presence:#{entry_id}",
           {:block_blur, %{uid: old_uid, user_id: current_user_id}}
@@ -1008,7 +980,7 @@ defmodule BrandoAdmin.LiveView.Form do
       end
 
       # Focus new block
-      Phoenix.PubSub.broadcast(
+      PubSub.broadcast(
         Brando.pubsub(),
         "brando:block_presence:#{entry_id}",
         {:block_focus, %{uid: uid, user_id: current_user_id}}
@@ -1033,7 +1005,7 @@ defmodule BrandoAdmin.LiveView.Form do
       send(self(), {:ship_block_data, uid, current_user_id})
 
       unless still_inside do
-        Phoenix.PubSub.broadcast(
+        PubSub.broadcast(
           Brando.pubsub(),
           "brando:block_presence:#{entry_id}",
           {:block_blur, %{uid: uid, user_id: current_user_id}}
@@ -1062,7 +1034,7 @@ defmodule BrandoAdmin.LiveView.Form do
     if current_uid && entry_id do
       send(self(), {:ship_block_data, current_uid, current_user_id})
 
-      Phoenix.PubSub.broadcast(
+      PubSub.broadcast(
         Brando.pubsub(),
         "brando:block_presence:#{entry_id}",
         {:block_blur, %{uid: current_uid, user_id: current_user_id}}
@@ -1150,7 +1122,7 @@ defmodule BrandoAdmin.LiveView.Form do
       entry_id = socket.assigns[:entry_id]
 
       if focused_uid && entry_id do
-        Phoenix.PubSub.broadcast(
+        PubSub.broadcast(
           Brando.pubsub(),
           "brando:block_presence:#{entry_id}",
           {:block_focus, %{uid: focused_uid, user_id: socket.assigns.current_user.id}}
@@ -1258,7 +1230,7 @@ defmodule BrandoAdmin.LiveView.Form do
   defp handle_hooks_modules_info(_, socket), do: {:cont, socket}
 
   defp handle_hooks_mutation_listener_info({:register_mutation_listener, schema, target}, socket) do
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:mutations:#{inspect(schema)}")
+    PubSub.subscribe(Brando.pubsub(), "brando:mutations:#{inspect(schema)}")
 
     {:halt,
      update(socket, :mutation_listeners, fn mls ->
