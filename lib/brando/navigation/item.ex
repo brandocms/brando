@@ -10,7 +10,7 @@ defmodule Brando.Navigation.Item do
 
   use Gettext, backend: Brando.Gettext
 
-  trait Brando.Trait.Creator
+  trait :creator
   trait :sequenced
   trait :status
   trait :timestamped

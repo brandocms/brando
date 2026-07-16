@@ -14,6 +14,7 @@ defmodule Brando.Blueprint.Trait do
     ]
   end
 
+  defp expand_trait(:creator, _caller), do: built_in_trait("Creator")
   defp expand_trait(:sequenced, _caller), do: sequenced_trait()
   defp expand_trait(:status, _caller), do: built_in_trait("Status")
   defp expand_trait(:timestamped, _caller), do: built_in_trait("Timestamped")
@@ -47,7 +48,12 @@ defmodule Brando.Blueprint.Trait do
   end
 
   defp compiler_traits,
-    do: [sequenced_trait(), built_in_trait("Status"), built_in_trait("Timestamped")]
+    do: [
+      built_in_trait("Creator"),
+      sequenced_trait(),
+      built_in_trait("Status"),
+      built_in_trait("Timestamped")
+    ]
 
   defp sequenced_trait, do: Module.concat(["Brando", "Trait", "Sequenced"])
   defp built_in_trait(name), do: Module.concat(["Brando", "Trait", name])

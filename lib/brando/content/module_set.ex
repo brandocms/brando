@@ -19,7 +19,7 @@ defmodule Brando.Content.ModuleSet do
   @type t :: %__MODULE__{}
 
   # ++ Traits
-  trait Brando.Trait.Creator
+  trait :creator
   trait :timestamped
   # --
 

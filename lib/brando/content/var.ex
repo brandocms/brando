@@ -14,7 +14,7 @@ defmodule Brando.Content.Var do
   @type t :: %__MODULE__{}
 
   # ++ Traits
-  trait Brando.Trait.Creator
+  trait :creator
   trait Brando.Trait.Revisioned
   trait :sequenced
   trait :timestamped

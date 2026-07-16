@@ -13,7 +13,7 @@ defmodule Brando.Videos.Video do
   use Gettext, backend: Brando.Gettext
   import Brando.Blueprint.Listings.Components.Core
 
-  trait Brando.Trait.Creator
+  trait :creator
   trait :timestamped
   trait Brando.Trait.SoftDelete
 

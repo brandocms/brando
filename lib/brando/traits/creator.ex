@@ -3,23 +3,21 @@ defmodule Brando.Trait.Creator do
   Automatically sets creator to user
   """
   use Brando.Trait
+
+  alias Brando.Trait.Creator.Compiler
   alias Ecto.Changeset
 
   @type changeset :: Changeset.t()
   @type config :: list()
 
-  def generate_code(_, _) do
-    quote do
-      relations do
-        relation :creator, :belongs_to, module: Brando.Users.User, required: true
-      end
-    end
-  end
+  @impl true
+  def generate_code(module, config), do: Compiler.generate_code(module, config)
 
   @doc """
   Add creator to changeset
   """
   @changeset_phase :before_validate_required
+  @impl true
   def changeset_mutator(_, _cfg, changeset, :system, _), do: changeset
 
   # Skip setting creator for existing records that already have a creator and no changes.

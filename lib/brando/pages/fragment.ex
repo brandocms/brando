@@ -21,7 +21,7 @@ defmodule Brando.Pages.Fragment do
   use Gettext, backend: Brando.Gettext
   alias Brando.Pages
 
-  trait Brando.Trait.Creator
+  trait :creator
   trait Brando.Trait.Revisioned
   trait Brando.Trait.ScheduledPublishing
   trait :sequenced

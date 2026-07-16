@@ -20,7 +20,7 @@ defmodule Brando.Content.Palette do
 
   identifier "[{{ entry.namespace }}] {{ entry.name }}"
 
-  trait Brando.Trait.Creator
+  trait :creator
   trait :sequenced
   trait Brando.Trait.SoftDelete
   trait :status

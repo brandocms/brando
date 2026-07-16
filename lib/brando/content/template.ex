@@ -19,7 +19,7 @@ defmodule Brando.Content.Template do
   identifier false
   persist_identifier false
 
-  trait Brando.Trait.Creator
+  trait :creator
   trait :sequenced
   trait Brando.Trait.SoftDelete
   trait :timestamped

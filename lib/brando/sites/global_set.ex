@@ -11,7 +11,7 @@ defmodule Brando.Sites.GlobalSet do
   use Gettext, backend: Brando.Gettext
   import Brando.Blueprint.Listings.Components.Core
 
-  trait Brando.Trait.Creator
+  trait :creator
   trait Brando.Trait.CastPolymorphicEmbeds
   trait :timestamped
   trait Brando.Trait.Translatable, alternates: false

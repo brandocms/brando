@@ -65,7 +65,7 @@ defmodule Brando.Content.Block do
   ]
 
   # ++ Traits
-  trait Brando.Trait.Creator
+  trait :creator
   trait Brando.Trait.Revisioned
   trait :sequenced
   trait :timestamped

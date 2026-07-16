@@ -8,7 +8,7 @@ defmodule Brando.Sites.Preview do
     plural: "previews",
     gettext_module: Brando.Gettext
 
-  trait Brando.Trait.Creator
+  trait :creator
   trait :timestamped
 
   identifier false

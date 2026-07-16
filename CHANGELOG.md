@@ -185,6 +185,12 @@
   supported, so applications may migrate incrementally. This is a compile-time-only
   change and requires no database migration.
 
+- **Isolated Creator trait compilation**: `Brando.Trait.Creator` now expands its
+  required creator relation through a focused compiler module, while runtime changeset
+  mutation remains on the trait. Brando's schemas use the equivalent `trait :creator`
+  shorthand. Existing full module declarations remain supported for incremental
+  adoption; no database migration is required.
+
 - **Symbolic built-in subform components**: Blueprint `inputs_for` definitions can now
   use `:vars`, `:gallery_objects`, `:identity_type_config`, or `:page_vars` instead of
   concrete admin LiveComponent modules. Brando's schemas use these tokens, which are

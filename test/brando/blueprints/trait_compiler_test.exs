@@ -60,6 +60,15 @@ defmodule Brando.Blueprint.TraitCompilerTest do
     assert Brando.Pages.Page.has_trait(Brando.Trait.Sequenced)
   end
 
+  test "the Creator compiler preserves its generated Blueprint relation" do
+    relation = Brando.Blueprint.Relations.__relation__(Brando.Pages.Page, :creator)
+
+    assert relation.type == :belongs_to
+    assert relation.opts.module == Brando.Users.User
+    assert relation.opts.required
+    assert Brando.Pages.Page.has_trait(Brando.Trait.Creator)
+  end
+
   test "the Status compiler preserves its generated Blueprint attribute" do
     attribute = Brando.Blueprint.Attributes.__attribute__(Brando.Pages.Page, :status)
 

@@ -14,7 +14,7 @@ defmodule Brando.Galleries.GalleryObject do
   alias Brando.Images.Image
   alias Brando.Videos.Video
 
-  trait Brando.Trait.Creator
+  trait :creator
   trait :sequenced
   trait :timestamped
 

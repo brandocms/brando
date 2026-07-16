@@ -55,13 +55,14 @@ trait MyApp.Trait.Searchable,
 
 `compile_with:` is consumed by the Blueprint DSL and is not included in the
 runtime trait options; all other options remain unchanged. Traits without it
-retain the existing behavior. `Brando.Trait.Sequenced`, `Brando.Trait.Status`,
-and `Brando.Trait.Timestamped` select focused built-in compilers automatically.
-To also avoid making the runtime trait alias a module-body compile dependency,
-use their equivalent `trait :sequenced`, `trait :status`, and
-`trait :timestamped` shorthands. Brando's own schemas use these forms;
-applications may adopt them incrementally. The existing full module forms remain
-supported. These are compile-time optimizations and require no database migration.
+retain the existing behavior. `Brando.Trait.Creator`, `Brando.Trait.Sequenced`,
+`Brando.Trait.Status`, and `Brando.Trait.Timestamped` select focused built-in
+compilers automatically. To also avoid making the runtime trait alias a module-body
+compile dependency, use their equivalent `trait :creator`, `trait :sequenced`,
+`trait :status`, and `trait :timestamped` shorthands. Brando's own schemas use
+these forms; applications may adopt them incrementally. The existing full module
+forms remain supported. These are compile-time optimizations and require no database
+migration.
 
 ### Translations
 

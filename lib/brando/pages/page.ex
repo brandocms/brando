@@ -28,7 +28,7 @@ defmodule Brando.Pages.Page do
 
   # ++ Traits
   trait Brando.Trait.CastPolymorphicEmbeds
-  trait Brando.Trait.Creator
+  trait :creator
 
   trait Brando.Trait.Meta,
     ai: [
