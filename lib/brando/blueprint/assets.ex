@@ -103,7 +103,6 @@ defmodule Brando.Blueprint.Assets do
   alias Ecto.Changeset
   alias Spark.Dsl.Extension
 
-  @asset_preloads Module.concat(["Brando", "Blueprint", "AssetPreloads"])
   @gallery_module Module.concat(["Brando", "Galleries", "Gallery"])
 
   def __assets__(module) do
@@ -192,6 +191,7 @@ defmodule Brando.Blueprint.Assets do
   end
 
   def preloads_for(schema) do
-    @asset_preloads.for_schema(schema)
+    asset_preloads = Module.concat(["Brando", "Blueprint", "AssetPreloads"])
+    asset_preloads.for_schema(schema)
   end
 end

@@ -2,6 +2,7 @@ defmodule Brando.Blueprint.Relations.Transformer do
   @moduledoc false
   use Spark.Dsl.Transformer
 
+  alias Brando.Blueprint.AssociationKey
   alias Spark.Dsl.Transformer
 
   @impl true
@@ -31,7 +32,7 @@ defmodule Brando.Blueprint.Relations.Transformer do
         %{required: [], optional: [], castable: [], castable_required: []},
         fn
           rel, acc ->
-            relation_key = Brando.Blueprint.get_relation_key(rel)
+            relation_key = AssociationKey.for(rel)
 
             acc
             |> maybe_add_castable_relation(rel, relation_key)

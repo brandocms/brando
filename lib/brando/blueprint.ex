@@ -540,12 +540,10 @@ defmodule Brando.Blueprint do
     |> Enum.map(fn rel -> :"#{rel.name}_id" end)
   end
 
-  def get_relation_key(%{type: :belongs_to, name: name}), do: :"#{name}_id"
-  def get_relation_key(%{type: :file, name: name}), do: :"#{name}_id"
-  def get_relation_key(%{type: :image, name: name}), do: :"#{name}_id"
-  def get_relation_key(%{type: :video, name: name}), do: :"#{name}_id"
-  def get_relation_key(%{type: :many_to_many, name: name}), do: name
-  def get_relation_key(%{type: _, name: name}), do: name
+  @doc """
+  Returns the persisted field key for a Blueprint relation or asset.
+  """
+  defdelegate get_relation_key(association), to: Brando.Blueprint.AssociationKey, as: :for
 
   def run_translations(module, translations, ctx \\ nil) do
     gettext_module = module.__modules__(:gettext)
@@ -671,10 +669,9 @@ defmodule Brando.Blueprint do
   @doc """
   Return a list of preloads for a given schema
   """
-  @preloads_module Module.concat(["Brando", "Blueprint", "Preloads"])
-
   def preloads_for(schema, opts \\ []) do
-    @preloads_module.for_schema(schema, opts)
+    preloads = Module.concat(["Brando", "Blueprint", "Preloads"])
+    preloads.for_schema(schema, opts)
   end
 
   def blueprint?(module), do: {:__blueprint__, 0} in module.__info__(:functions)

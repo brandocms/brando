@@ -19,6 +19,16 @@ defmodule Brando.Blueprint.BlueprintTest do
     assert Brando.Pages.Fragment in blueprints
   end
 
+  test "preload compatibility APIs preserve their dedicated implementations" do
+    schema = Brando.BlueprintTest.Project
+
+    assert Brando.Blueprint.Assets.preloads_for(schema) == Brando.Blueprint.AssetPreloads.for_schema(schema)
+    assert Brando.Blueprint.Relations.preloads_for(schema) == Brando.Blueprint.RelationPreloads.for_schema(schema)
+
+    assert Brando.Blueprint.preloads_for(schema, skip_blocks: true) ==
+             Brando.Blueprint.Preloads.for_schema(schema, skip_blocks: true)
+  end
+
   test "modules" do
     assert Brando.BlueprintTest.Project.__modules__(:application) == Brando
     assert Brando.BlueprintTest.Project.__modules__(:context) == Brando.Projects

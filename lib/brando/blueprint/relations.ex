@@ -93,8 +93,6 @@ defmodule Brando.Blueprint.Relations do
 
   alias Spark.Dsl.Extension
 
-  @relation_preloads Module.concat(["Brando", "Blueprint", "RelationPreloads"])
-
   def __relations__(module) do
     Extension.get_entities(module, [:relations])
   end
@@ -261,6 +259,7 @@ defmodule Brando.Blueprint.Relations do
   def run_cast_relation(_, changeset, _user), do: changeset
 
   def preloads_for(schema) do
-    @relation_preloads.for_schema(schema)
+    relation_preloads = Module.concat(["Brando", "Blueprint", "RelationPreloads"])
+    relation_preloads.for_schema(schema)
   end
 end
