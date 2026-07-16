@@ -56,7 +56,9 @@ Rows using `<.cover>` additionally import
 import `Brando.Blueprint.Listings.Components.Children`. Limit either import with
 `only: [cover: 1]` or `only: [children_button: 1]`. The original
 `Brando.Blueprint.Listings.Components` facade remains compatible when gradual
-migration is preferable.
+migration is preferable. Child-listing buttons target their owning listing row
+automatically; existing `<.children_button entry={@entry} fields={...} />` calls
+need no event target or migration changes.
 
 #### Listing Query
 #### Fields

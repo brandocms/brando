@@ -4,7 +4,7 @@ defmodule Brando.Blueprint.Listings.Components.Children do
   """
   use Phoenix.Component
 
-  alias BrandoAdmin.Components.ChildrenButton
+  alias BrandoAdmin.Components.ChildListingButton
 
   attr :class, :any, default: nil
   attr :entry, :map, required: true
@@ -14,13 +14,15 @@ defmodule Brando.Blueprint.Listings.Components.Children do
 
   @doc "Renders the child-listing action for an entry."
   def children_button(assigns) do
+    assigns = assign(assigns, :target, "#list-row-#{assigns.entry.id}")
+
     ~H"""
     <div class={[
       @class,
       @columns && "col-#{@columns}",
       @offset && "offset-#{@offset}"
     ]}>
-      <.live_component module={ChildrenButton} id={"#{@entry.id}-children-button"} fields={@fields} entry={@entry} />
+      <ChildListingButton.children_button entry={@entry} fields={@fields} target={@target} />
     </div>
     """
   end

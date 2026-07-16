@@ -13,6 +13,20 @@
 
   button {
     padding-top: 10px;
+
+    .children-button-close {
+      display: none;
+    }
+
+    &.active {
+      .children-button-count {
+        display: none;
+      }
+
+      .children-button-close {
+        display: inline;
+      }
+    }
   }
 
   button, a {

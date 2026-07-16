@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   alias Brando.Blueprint.Identifier
   alias Brando.Trait
   alias BrandoAdmin.Components.Badge
-  alias BrandoAdmin.Components.ChildrenButton
+  alias BrandoAdmin.Components.ChildListingButton
   alias BrandoAdmin.Components.CircleDropdown
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input.Entries
@@ -48,7 +48,8 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       class={[
         "list-row",
         "draggable",
-        @selected? && "selected"
+        @selected? && "selected",
+        @show_children && "children-open"
       ]}
       phx-click={@click_event}
       phx-target={@target}
@@ -66,7 +67,14 @@ defmodule BrandoAdmin.Components.Content.List.Row do
             {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
           )}
         <% else %>
-          <.field :for={field <- @listing.fields} :key={field.name} field={field} entry={@entry} schema={@schema} />
+          <.field
+            :for={field <- @listing.fields}
+            :key={field.name}
+            field={field}
+            entry={@entry}
+            schema={@schema}
+            target={@myself}
+          />
         <% end %>
         <.alternates :if={@alternates?} entry={@entry} target={@myself} schema={@schema} />
         <.creator :if={@creator?} entry={@entry} soft_delete?={@soft_delete?} />
@@ -143,11 +151,10 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         </.column>
       <% :children_button -> %>
         <.column class={@class} columns={@columns} offset={@offset}>
-          <.live_component
-            module={ChildrenButton}
-            id={"#{@entry.id}-children-button"}
+          <ChildListingButton.children_button
             fields={@field.name}
             entry={@entry}
+            target={@target}
             {@field.opts}
           />
         </.column>
@@ -599,13 +606,29 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
         )}
       <% else %>
-        <.field :for={field <- @listing.fields} :key={field.name} field={field} entry={@entry} schema={@schema} />
+        <.field
+          :for={field <- @listing.fields}
+          :key={field.name}
+          field={field}
+          entry={@entry}
+          schema={@schema}
+          target={@target}
+        />
       <% end %>
       <.alternates :if={@alternates?} entry={@entry} target={@target} schema={@schema} />
       <.creator :if={@creator?} entry={@entry} soft_delete?={@soft_delete?} />
       <.entry_menu schema={@schema} entry={@entry} content_language={@content_language} listing={@listing} />
     </div>
     """
+  end
+
+  def handle_event("toggle_children", %{"fields" => fields}, socket) do
+    child_fields = matching_child_fields(socket.assigns.entry, fields)
+
+    {:noreply,
+     socket
+     |> assign(:show_children, !socket.assigns.show_children)
+     |> assign(:child_fields, child_fields)}
   end
 
   def handle_event("update_entry", %{"entry_id" => entry_id, "schema" => schema}, socket) do
@@ -624,6 +647,20 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     )
 
     {:noreply, socket}
+  end
+
+  defp matching_child_fields(entry, fields) do
+    entry_fields = Map.keys(entry)
+
+    fields
+    |> List.wrap()
+    |> Enum.map(fn
+      field when is_atom(field) -> Enum.find(entry_fields, &(&1 == field))
+      field when is_binary(field) -> Enum.find(entry_fields, &(is_atom(&1) and Atom.to_string(&1) == field))
+      _field -> nil
+    end)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
   end
 
   defp statuses do

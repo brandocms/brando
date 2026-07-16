@@ -156,6 +156,13 @@
   while schema compilation no longer traverses the database Images context or the
   general admin content tree. No application code or database migration is required.
 
+- **Cycle-safe child-listing actions**: Blueprint `<.children_button>` helpers now
+  render a lightweight stateless control and target the owning listing row directly.
+  The row validates submitted association names against the entry before toggling,
+  and sticky LiveView JS preserves the button's visual and accessibility state across
+  patches. Existing helper calls and the legacy internal LiveComponent remain
+  compatible; no application code or database migration is required.
+
 - **Lighter Blueprint listing rendering dependencies**: Listing helpers now use
   focused `Brando.HTML.Icon` and `Brando.HTML.I18n` components instead of depending
   directly on the full `Brando.HTML` module. The existing `Brando.HTML.icon/1` and

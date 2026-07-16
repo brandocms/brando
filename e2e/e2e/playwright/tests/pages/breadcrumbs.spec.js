@@ -54,6 +54,15 @@ test('pages have JSON-LD breadcrumbs', async ({ page }) => {
   await expect(page).toHaveURL('/admin/pages')
   await syncLV(page)
 
+  const servicesRow = page.locator('.list-row', { has: page.getByRole('link', { name: 'Services →' }) })
+  const childrenButton = servicesRow.getByTestId('children-button')
+  await expect(childrenButton).toHaveAccessibleName('+ 1')
+  await childrenButton.click()
+  await expect(childrenButton).toHaveAccessibleName('Close')
+  await expect(servicesRow.locator('.child-row').getByText('Design', { exact: true })).toBeVisible()
+  await childrenButton.click()
+  await expect(servicesRow.locator('.child-row')).toHaveCount(0)
+
   // Visit the parent page and verify JSON-LD breadcrumbs
   await page.goto('/services')
   await expect(page.getByRole('heading', { name: 'Our Services' })).toBeVisible()

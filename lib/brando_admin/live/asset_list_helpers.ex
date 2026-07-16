@@ -7,6 +7,7 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
   import Ecto.Query, only: [from: 2]
 
   alias BrandoAdmin.Images.FolderBrowser
+  alias Phoenix.Component
 
   @doc "Navigates to the parent folder by patching the URL filter."
   def go_parent(%{assigns: %{current_folder: ""}} = socket), do: socket
@@ -40,9 +41,9 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
           folder_id = FolderBrowser.folder_id_for(absolute, socket.assigns.upload_root)
 
           socket
-          |> Phoenix.Component.assign(:custom_folders, Enum.uniq([absolute | socket.assigns.custom_folders]))
-          |> Phoenix.Component.assign(:show_new_folder_form, false)
-          |> Phoenix.Component.assign(:new_folder, "")
+          |> Component.assign(:custom_folders, Enum.uniq([absolute | socket.assigns.custom_folders]))
+          |> Component.assign(:show_new_folder_form, false)
+          |> Component.assign(:new_folder, "")
           |> patch_folder_filter(folder_id)
 
         {:error, _reason} ->
@@ -147,7 +148,7 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
     Map.put_new(params, "filter:folder_id", "root")
   end
 
-  @doc "Toggles children row visibility. Shared between ChildrenButton and Nav."
+  @doc "Toggles children row visibility for the navigation component and legacy child buttons."
   def toggle_children_row(socket) do
     %{fields: child_fields, singular: singular, entry: %{id: id}} = socket.assigns
     row_id = "list-row-#{singular}-#{id}"
