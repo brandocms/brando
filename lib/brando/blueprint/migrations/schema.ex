@@ -363,21 +363,25 @@ defmodule Brando.Blueprint.Migrations.Schema do
   end
 
   defp module_primary_key_type(module) do
-    cond do
-      function_exported?(module, :__primary_key__, 0) and
-          match?({:id, :binary_id, _}, module.__primary_key__()) ->
-        :uuid
+    if Code.ensure_loaded?(module) do
+      cond do
+        function_exported?(module, :__primary_key__, 0) and
+            match?({:id, :binary_id, _}, module.__primary_key__()) ->
+          :uuid
 
-      function_exported?(module, :__schema__, 2) and module.__schema__(:type, :id) == :binary_id ->
-        :uuid
+        function_exported?(module, :__schema__, 2) and module.__schema__(:type, :id) == :binary_id ->
+          :uuid
 
-      true ->
-        :id
+        true ->
+          :id
+      end
+    else
+      :id
     end
   end
 
   defp referenced_table!(module) do
-    if function_exported?(module, :__schema__, 1) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :__schema__, 1) do
       module.__schema__(:source)
     else
       raise BlueprintError,

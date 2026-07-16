@@ -141,6 +141,12 @@
   APIs, and removes dead generated alias/module setup. The change is internal and
   requires no application or database migration.
 
+- **Reliable Blueprint migration relation introspection**: Migration generation
+  now loads referenced schema modules before reading their table and primary-key
+  metadata. Fresh Mix processes no longer reject valid unloaded Ecto schemas or
+  silently fall back to integer keys for UUID references. Generated migration APIs
+  are unchanged, and no application or database migration is required.
+
 - **Safe Blueprint template preload extraction**: Identifier and absolute URL
   templates now detect arbitrarily deep declared relation paths without converting
   template text to atoms. Unknown nested paths are ignored instead of potentially

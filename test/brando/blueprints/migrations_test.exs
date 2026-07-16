@@ -82,7 +82,7 @@ defmodule Brando.Blueprint.MigrationsTest do
 
     assert noop.snapshot_version == 1
     assert Path.wildcard("tmp/test_migrations/*.exs") == [generated.migration]
-    assert length(Path.wildcard("tmp/test_snapshots/**/*", match_dot: true)) > 0
+    assert Path.wildcard("tmp/test_snapshots/**/*", match_dot: true) != []
     assert Snapshot.get_snapshot_version(Brando.MigrationTest.Project, @test_opts) == 1
   end
 
@@ -140,7 +140,14 @@ defmodule Brando.Blueprint.MigrationsTest do
   end
 
   test "UUID owners propagate their key type to foreign and auxiliary tables" do
+    on_exit(fn -> Code.ensure_loaded!(Brando.MigrationTest.Profile) end)
+
+    :code.purge(Brando.MigrationTest.Profile)
+    :code.delete(Brando.MigrationTest.Profile)
+    refute Code.loaded?(Brando.MigrationTest.Profile)
+
     assert {:ok, generated} = Migrations.create_migration(Brando.Persons.Person, @test_opts)
+    assert Code.loaded?(Brando.MigrationTest.Profile)
 
     source = File.read!(generated.migration)
 
