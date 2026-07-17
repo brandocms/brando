@@ -373,6 +373,13 @@ carry ignored callbacks, and nested schema modules export `build/1`. Optional
 date and datetime callbacks may return `nil`, and extracting from a Blueprint
 without a JSON-LD schema returns `nil`.
 
+Metadata helpers `fallback/2` and `try_path/2` accept paths that cross mixed
+maps, structs, keyword lists, and indexed lists, for example
+`[:settings, :seo, :images, 0, "url"]`. A step that does not match its current
+container returns `nil` instead of raising, allowing the next fallback path to
+run. `false`, `0`, and `""` are values rather than missing data. This runtime
+behavior uses the existing helper API and requires no migration.
+
 ### Translations
 
 Translation context keys must be unique, as must translation keys inside each

@@ -52,7 +52,11 @@ defmodule Brando.Blueprint.Value do
   def encode_locale(locale), do: locale
 
   @doc """
-  Safely traverses a map, struct, list, or keyword list using `keys`.
+  Safely traverses mixed maps, structs, lists, and keyword lists using `keys`.
+
+  Atom and string keys read maps, atom keys read keyword lists, and integer
+  keys index ordinary lists. Missing keys, invalid indexes, and attempts to
+  continue through a scalar return `nil`.
 
   ## Examples
 
@@ -64,20 +68,37 @@ defmodule Brando.Blueprint.Value do
   """
   @spec try_path(map() | list() | nil, [atom() | String.t() | integer()] | nil) :: term() | nil
   def try_path(_data, nil), do: nil
-  def try_path(nil, _keys), do: nil
+  def try_path(data, keys) when is_list(keys), do: do_try_path(data, keys)
 
-  def try_path(map, keys) when is_map(map) do
-    Enum.reduce(keys, map, fn
-      key, current when is_atom(key) or is_binary(key) -> if current, do: Map.get(current, key)
-      index, current when is_integer(index) -> if current, do: Enum.at(current, index)
-    end)
+  defp do_try_path(data, []), do: data
+  defp do_try_path(nil, _keys), do: nil
+
+  defp do_try_path(map, [key | remaining_keys])
+       when is_map(map) and (is_atom(key) or is_binary(key)) do
+    map
+    |> Map.get(key)
+    |> do_try_path(remaining_keys)
   end
 
-  def try_path(keyword, keys) when is_list(keyword) do
-    Enum.reduce(keys, keyword, fn key, current ->
-      if current, do: Keyword.get(current, key)
-    end)
+  defp do_try_path(list, [index | remaining_keys]) when is_list(list) and is_integer(index) do
+    if Keyword.keyword?(list) do
+      nil
+    else
+      list
+      |> Enum.at(index)
+      |> do_try_path(remaining_keys)
+    end
   end
+
+  defp do_try_path(keyword, [key | remaining_keys]) when is_list(keyword) and is_atom(key) do
+    if Keyword.keyword?(keyword) do
+      keyword
+      |> Keyword.get(key)
+      |> do_try_path(remaining_keys)
+    end
+  end
+
+  defp do_try_path(_data, _keys), do: nil
 
   defp resolve_candidate({:strip_tags, nil}), do: {:cont, nil}
   defp resolve_candidate({:strip_tags, value}), do: {:halt, HtmlSanitizeEx.strip_tags(value)}

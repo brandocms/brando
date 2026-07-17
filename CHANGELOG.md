@@ -134,6 +134,14 @@
 
 #### Improvements
 
+- **Safe mixed-container Blueprint value paths**: `fallback/2` and
+  `try_path/2` now traverse each map, struct, keyword list, and indexed list
+  according to the container at that path step. Mixed paths no longer raise
+  when they enter a keyword list or ordinary list, and incompatible scalar/key
+  combinations return `nil` as documented. False, zero, and empty-string values
+  remain valid results. The existing helper API is unchanged and this runtime
+  correction requires no Igniter upgrade or database migration.
+
 - **Reliable Blueprint form error labels**: Save-error summaries now translate
   configured string labels and safely humanize the actual form field when its
   label is hidden, blank, nil, or otherwise non-text. Foreign-key errors use the
