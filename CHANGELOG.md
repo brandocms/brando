@@ -134,6 +134,20 @@
 
 #### Improvements
 
+- **Blueprint form and transformer validation**: Blueprint compilation now reports
+  unknown form fields, invalid `source`/`hidden` references, duplicate inputs,
+  missing subform relations, relation/cardinality mismatches, invalid nested
+  fields, misconfigured block inputs, and invalid transformer assets. The
+  documented `{:transformer, field}` and mixed-media
+  `{:transformer, [image_field, video_field]}` styles now compile correctly;
+  transformer metadata is computed once by the DSL instead of rescanning the form
+  tree during every admin save flow, missing defaults create the related struct,
+  and uploads use canonical asset config targets. No database migration is
+  required. When upgrading, compile with warnings as errors and fix reported form
+  references; transformer defaults must be a map/struct or an arity-2 function,
+  listings must be arity-1 function components, and transformer relations must be
+  `:has_many`/`:embeds_many` with `cardinality: :many`.
+
 - **Clearer Blueprint metadata extraction**: Meta schema evaluation now separates
   schema lookup, field evaluation, target expansion, and missing-value handling
   into focused functions with an explicit public contract. Single and multi-target

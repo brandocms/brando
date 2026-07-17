@@ -424,7 +424,6 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     item = assigns.item
     data = resolve_item_data(item)
 
-    # Build a simple form struct for the item's fields
     changeset = change(data, item.changes)
     form = Phoenix.HTML.FormData.to_form(changeset, as: "transformer_item")
 
@@ -475,14 +474,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   def handle_event("add_entry", _, socket) do
     subform = socket.assigns.subform
     entry_data = resolve_parent_entry(socket)
-
-    default =
-      case subform.default do
-        fun when is_function(fun) -> fun.(entry_data, nil)
-        struct -> struct
-      end
-
-    default_map = to_insertable_map(default)
+    default_map = build_default(subform, socket.assigns.relation_module, entry_data, nil)
     dom_id = "transformer-item-new-#{System.unique_integer([:positive])}"
 
     item = %{
@@ -596,7 +588,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     relation_module = socket.assigns.relation_module
     video_cfg = socket.assigns.video_cfg
 
-    config_target = "video:#{inspect(relation_module)}:#{video_field}"
+    config_target = Brando.Assets.ConfigTarget.serialize({:video, relation_module, video_field})
 
     case Brando.Videos.Uploader.initiate_upload(filename, user,
            config: video_cfg,
@@ -608,14 +600,13 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         subform = socket.assigns.subform
         entry_data = resolve_parent_entry(socket)
 
-        default =
-          case subform.default do
-            fun when is_function(fun) -> fun.(entry_data, nil)
-            default -> default
-          end
-
         video_id_key = :"#{video_field}_id"
-        default_map = default |> to_insertable_map() |> Map.put(video_id_key, video.id)
+
+        default_map =
+          subform
+          |> build_default(relation_module, entry_data, nil)
+          |> Map.put(video_id_key, video.id)
+
         dom_id = "transformer-item-new-#{System.unique_integer([:positive])}"
 
         item = %{
@@ -705,7 +696,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     image_cfg = socket.assigns.image_cfg
     subform = socket.assigns.subform
 
-    config_target = "image:#{inspect(relation_module)}:#{image_field}"
+    config_target = Brando.Assets.ConfigTarget.serialize({:image, relation_module, image_field})
 
     case consume_uploaded_entry(
            socket,
@@ -740,14 +731,13 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
         entry_data = resolve_parent_entry(socket)
 
-        default =
-          case subform.default do
-            fun when is_function(fun) -> fun.(entry_data, image)
-            default -> default
-          end
-
         image_id_key = :"#{image_field}_id"
-        default_map = default |> to_insertable_map() |> Map.put(image_id_key, image.id)
+
+        default_map =
+          subform
+          |> build_default(relation_module, entry_data, image)
+          |> Map.put(image_id_key, image.id)
+
         dom_id = "transformer-item-new-#{System.unique_integer([:positive])}"
 
         item = %{
@@ -780,6 +770,23 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     Ecto.Changeset.apply_changes(changeset)
   end
 
+  @doc false
+  def build_default(%{default: nil}, relation_module, _entry, _asset) do
+    relation_module
+    |> struct()
+    |> to_insertable_map()
+  end
+
+  def build_default(%{default: default}, _relation_module, entry, asset) when is_function(default, 2) do
+    default
+    |> then(& &1.(entry, asset))
+    |> to_insertable_map()
+  end
+
+  def build_default(%{default: default}, _relation_module, _entry, _asset) do
+    to_insertable_map(default)
+  end
+
   defp to_insertable_map(%{__struct__: _} = struct) do
     struct
     |> Map.from_struct()
@@ -789,6 +796,11 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   end
 
   defp to_insertable_map(map) when is_map(map), do: map
+
+  defp to_insertable_map(default) do
+    raise ArgumentError,
+          "Blueprint transformer default must return a map or struct, got: #{inspect(default)}"
+  end
 
   defp video_uploader_hook(:mux), do: "Brando.MuxUploader"
   defp video_uploader_hook(:bunny), do: "Brando.BunnyUploader"

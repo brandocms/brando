@@ -81,6 +81,18 @@ defmodule Brando.Blueprint.Forms do
   This creates a "dropbox" where you can drop or pick a bunch of images which
   then will be transformed into subforms with all the fields specified.
 
+  Transformer subforms must target a `:has_many` or `:embeds_many` relation whose
+  module is another Blueprint, and must use `cardinality: :many`. The style names
+  one image or video asset on the related Blueprint, or one of each for mixed media:
+
+      style: {:transformer, :logo}
+      style: {:transformer, [:image, :video]}
+
+  Brando validates the relation, nested fields, and asset types after the related
+  schemas compile. A missing `default` creates a fresh related struct. An explicit
+  default can be a map, a struct, or a two-argument callback receiving the parent
+  entry and the uploaded asset (or `nil` when adding an empty entry).
+
   For instance, if you have a `Project` that has many `Client`s, and you wish to upload
   a bunch of their logos before adding the rest of the information, you could start by
   adding a relation to your `Project` blueprint:
@@ -131,9 +143,9 @@ defmodule Brando.Blueprint.Forms do
 
         listing: &__MODULE__.client_listing/1
 
-  `client_listing/1` should then be a function component:
+  `client_listing/1` must be a one-argument function component:
 
-        def asset_listing(assigns) do
+        def client_listing(assigns) do
           ~H\"""
           <div>
             <div>

@@ -73,10 +73,6 @@ defmodule Brando.Blueprint.Forms.Dsl do
     ]
   }
 
-  # TODO: We should add transformers to the form schema through
-  # a Spark transformer when we add an inputs_for with style set as
-  # style: {:transformer, :image} # , and
-  # default: &__MODULE__.default_image/2,
   @inputs_for %Spark.Dsl.Entity{
     name: :inputs_for,
     target: Forms.Subform,
@@ -84,7 +80,6 @@ defmodule Brando.Blueprint.Forms.Dsl do
     entities: [
       sub_fields: [@input]
     ],
-    # transform: {Forms.Subform, :transform, []},
     schema: [
       name: [
         type: :atom,
@@ -103,7 +98,12 @@ defmodule Brando.Blueprint.Forms.Dsl do
         doc: "Cardinality"
       ],
       style: [
-        type: {:in, [:regular, :inline, {:transformer, :atom}, {:transformer, {:list, :atom}}]},
+        type:
+          {:or,
+           [
+             {:in, [:regular, :inline]},
+             {:tagged_tuple, :transformer, {:or, [:atom, {:list, :atom}]}}
+           ]},
         required: false,
         default: :regular,
         doc: "Style"
@@ -115,9 +115,9 @@ defmodule Brando.Blueprint.Forms.Dsl do
         doc: "Size"
       ],
       default: [
-        type: :any,
+        type: {:or, [:struct, {:map, {:or, [:atom, :string]}, :any}, nil, {:fun, 2}]},
         required: false,
-        doc: "Default value"
+        doc: "Default map/struct or a function accepting the parent entry and selected asset"
       ],
       component: [
         type: :atom,
@@ -125,9 +125,9 @@ defmodule Brando.Blueprint.Forms.Dsl do
         doc: "Component to use"
       ],
       listing: [
-        type: :atom,
+        type: {:fun, 1},
         required: false,
-        doc: "Listing to use"
+        doc: "Function component used to render each transformer entry"
       ],
       instructions: [
         type: :string,
@@ -215,6 +215,7 @@ defmodule Brando.Blueprint.Forms.Dsl do
       tabs: [@tab]
     ],
     target: Forms.Form,
+    transform: {__MODULE__, :transform_form, []},
     schema: [
       name: [
         type: :atom,
@@ -256,5 +257,17 @@ defmodule Brando.Blueprint.Forms.Dsl do
   use Spark.Dsl.Extension,
     sections: [@root],
     transformers: [],
+    verifiers: [Brando.Blueprint.Forms.Verifier],
     imports: [Brando.Blueprint.Forms.Legacy]
+
+  @doc false
+  def transform_form(%Forms.Form{tabs: tabs} = form) do
+    transformers =
+      for tab <- tabs,
+          fieldset <- tab.fields,
+          %Forms.Subform{component: nil, style: {:transformer, asset_fields}} = subform <- fieldset.fields,
+          do: {subform.name, asset_fields, subform.default}
+
+    {:ok, %{form | transformers: transformers}}
+  end
 end

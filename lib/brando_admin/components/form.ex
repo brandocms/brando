@@ -2878,32 +2878,7 @@ defmodule BrandoAdmin.Components.Form do
     |> toggle_drawer("#video-drawer")
   end
 
-  defp extract_transformers(%Brando.Blueprint.Forms.Form{tabs: tabs}) do
-    Enum.flat_map(tabs, &extract_from_tab/1)
-  end
-
-  defp extract_from_tab(%Brando.Blueprint.Forms.Tab{fields: fieldsets}) do
-    Enum.flat_map(fieldsets, &extract_from_fieldset/1)
-  end
-
-  defp extract_from_fieldset(%Brando.Blueprint.Forms.Fieldset{fields: fields}) do
-    fields
-    |> Enum.filter(&match_subform_with_transformer/1)
-    |> Enum.map(&extract_subform_data/1)
-  end
-
-  defp match_subform_with_transformer(%Brando.Blueprint.Forms.Subform{style: {:transformer, _}}),
-    do: true
-
-  defp match_subform_with_transformer(_), do: false
-
-  defp extract_subform_data(%Brando.Blueprint.Forms.Subform{
-         name: name,
-         style: {:transformer, key},
-         default: default
-       }) do
-    {name, key, default}
-  end
+  defp extract_transformers(%Brando.Blueprint.Forms.Form{transformers: transformers}), do: transformers
 
   def allow_uploads(socket) do
     # All field/block/var uploads go through the sticky UploadManager

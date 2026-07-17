@@ -69,7 +69,6 @@ defmodule Brando.Navigation.Menu do
             default &__MODULE__.default_item/2
             size :full
 
-            input :language, :hidden
             input :status, :status, compact: true
             input :key, :text, monospace: true, compact: true, label: t("Key", Item)
 

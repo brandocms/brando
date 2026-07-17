@@ -1,6 +1,7 @@
 defmodule Brando.Blueprint.Forms.Subform do
   @moduledoc false
-  defstruct name: nil,
+  defstruct __spark_metadata__: nil,
+            name: nil,
             label: nil,
             instructions: nil,
             cardinality: :one,

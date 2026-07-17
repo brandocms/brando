@@ -19,7 +19,7 @@ defmodule Brando.Blueprint.Relations do
               label: t("Clients"),
               cardinality: :many,
               style: {:transformer, :cover},
-              default: &__MODULE__.default_client/1,
+              default: &__MODULE__.default_client/2,
               listing: &__MODULE__.client_listing/1 do
               input :cover, :image, label: t("Cover", Client)
               input :name, :text, placeholder: "Client Name"
@@ -33,7 +33,7 @@ defmodule Brando.Blueprint.Relations do
         %{matches: %{id: id}, preload: [clients: :cover]}
       end
 
-      def default_client(image) do
+      def default_client(_entry, image) do
         %Client{
           name: Brando.Images.get_image_orientation(image)
         }

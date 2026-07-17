@@ -117,8 +117,6 @@ defmodule Brando.BlueprintTest.Project do
 
   forms do
     form do
-      blocks :blocks
-
       tab "Content" do
         fieldset do
           size :half
@@ -204,6 +202,30 @@ defmodule Brando.TraitTest.Project do
     relation :blocks, :has_many, module: :blocks
     relation :bio_blocks, :has_many, module: :blocks
   end
+
+  forms do
+    form do
+      blocks :blocks, hidden: {:title, "hide"}
+
+      tab "Content" do
+        fieldset do
+          input :title, :text
+        end
+      end
+    end
+
+    form :with_fn do
+      blocks :blocks, hidden: &__MODULE__.hide_blocks?/1
+
+      tab "Content" do
+        fieldset do
+          input :title, :text
+        end
+      end
+    end
+  end
+
+  def hide_blocks?(_form), do: false
 end
 
 defmodule Brando.BlueprintTest.Property do
