@@ -11,31 +11,39 @@ defmodule Brando.Blueprint.RelationPreloads do
   alias Brando.Blueprint.Assets
   alias Brando.Blueprint.Relations
 
+  @preload_relation_types [:belongs_to, :has_many, :has_one, :many_to_many]
+
   @doc """
   Returns preloads for persisted relations on `schema`.
 
   Cast `has_many` relations include their direct assets and non-recursive
-  relations; sequenced children receive an ordered preload query.
+  relations. Their declared `preload_order` is preserved; sequenced children
+  default to ascending sequence when no explicit order is configured.
   """
   @spec for_schema(module()) :: list()
   def for_schema(schema) do
     schema
     |> Relations.__relations__()
     |> Enum.filter(
-      &(&1.type in [:belongs_to, :has_many, :many_to_many] and &1.name != :creator and
+      &(&1.type in @preload_relation_types and &1.name != :creator and
           &1.opts.module != :blocks)
     )
     |> Enum.map(&preload_relation(&1, schema))
   end
 
-  defp preload_relation(%{type: :has_many, name: name, opts: %{cast: true, module: module}}, parent_schema) do
+  defp preload_relation(
+         %{type: :has_many, name: name, opts: %{cast: true, module: module} = opts},
+         parent_schema
+       ) do
     sub_preloads = asset_preloads(module) ++ relation_preloads(module, parent_schema)
 
-    if module.has_trait(:sequenced) do
-      preload_query = from entry in module, order_by: [asc: entry.sequence], preload: ^sub_preloads
-      {name, preload_query}
-    else
-      preload_unsequenced(name, sub_preloads)
+    case preload_order(module, opts) do
+      nil ->
+        preload_unsequenced(name, sub_preloads)
+
+      order ->
+        preload_query = from entry in module, order_by: ^order, preload: ^sub_preloads
+        {name, preload_query}
     end
   end
 
@@ -48,6 +56,16 @@ defmodule Brando.Blueprint.RelationPreloads do
         relation.opts.module != parent_schema,
         relation.type not in [:embeds_many, :embeds_one] do
       relation.name
+    end
+  end
+
+  defp preload_order(module, opts) do
+    Map.get(opts, :preload_order) || sequenced_order(module)
+  end
+
+  defp sequenced_order(module) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :has_trait, 1) and module.has_trait(:sequenced) do
+      [asc: :sequence]
     end
   end
 

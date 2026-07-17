@@ -134,6 +134,14 @@
 
 #### Improvements
 
+- **Complete Blueprint relation preloads**: `Brando.Blueprint.preloads_for/2`
+  now includes direct `has_one` relations, so complete entry loads no longer
+  leave those associations unloaded. Cast `has_many` preload queries also
+  preserve an explicitly declared `preload_order`; sequenced child schemas only
+  fall back to ascending `sequence` when no order is configured. The public
+  preload APIs and declaration syntax are unchanged. This affects query loading
+  only and requires no Igniter upgrade or database migration.
+
 - **Validated Blueprint asset declaration options**: Top-level asset options
   are now checked instead of silently ignoring misspellings such as
   `requried: true`. The stable `cfg` and `required` options remain unchanged;

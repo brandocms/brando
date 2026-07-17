@@ -155,6 +155,13 @@ an empty string to clear the collection. `has_many`, `many_to_many`, and
 This is changeset validation only and does not require an Igniter upgrade or
 database migration.
 
+Complete entry preloads from `Brando.Blueprint.preloads_for/2` include direct
+`has_one` associations as well as the existing belongs-to and collection
+relations. A cast `has_many` relation honors its declared `preload_order`;
+schemas with the sequenced trait default to `[asc: :sequence]` only when the
+relation does not declare an order. These query corrections keep the existing
+API and require no Igniter upgrade or database migration.
+
 These checks require no database migration by themselves. If correcting a
 declaration changes an existing column, foreign key, or index, generate and
 review a Blueprint migration as described in
