@@ -1,6 +1,11 @@
 defmodule Brando.Blueprint.Relations do
   @moduledoc """
-  WIP
+  Runtime casting and metadata access for Blueprint relations.
+
+  Relation declarations are compiled into Ecto associations by the Blueprint
+  DSL. This module applies their casting options consistently when a generated
+  changeset runs, including the empty-value contract used by collection form
+  controls.
 
   ## Has many
 
@@ -93,23 +98,43 @@ defmodule Brando.Blueprint.Relations do
 
   alias Spark.Dsl.Extension
 
+  @doc """
+  Returns the compiled relation declarations for `module`.
+  """
   def __relations__(module) do
     Extension.get_entities(module, [:relations])
   end
 
+  @doc """
+  Returns the compiled relation named `name` for `module`.
+  """
   def __relation__(module, name) do
     Extension.get_persisted(module, {:relation, name})
   end
 
+  @doc """
+  Returns the options for the compiled relation named `name`.
+  """
   def __relation_opts__(module, name) do
     module
     |> __relation__(name)
     |> Map.get(:opts, [])
   end
 
+  @doc """
+  Casts every relation declaration into `changeset` in declaration order.
+  """
   def run_cast_relations(changeset, relations, user) do
     Enum.reduce(relations, changeset, fn rel, cs -> run_cast_relation(rel, cs, user) end)
   end
+
+  @doc """
+  Applies one compiled relation's casting contract to `changeset`.
+
+  Relations without casting enabled leave the changeset unchanged. Empty
+  `has_many`, `many_to_many`, and `entries` values clear optional associations
+  and add a required error for associations declared with `required: true`.
+  """
 
   ##
   ## has_one
@@ -156,13 +181,9 @@ defmodule Brando.Blueprint.Relations do
   ##
   ## many_to_many
   def run_cast_relation(%{type: :many_to_many, name: name, opts: %{cast: true, module: module} = opts}, changeset, _user) do
-    case Map.get(changeset.params, to_string(name)) do
+    case relation_param(changeset, name) do
       "" ->
-        if Map.get(opts, :required) do
-          cast_assoc(changeset, name, required: true)
-        else
-          put_assoc(changeset, name, [])
-        end
+        clear_or_require_assoc(changeset, name, opts)
 
       _ ->
         cast_collection(
@@ -182,9 +203,9 @@ defmodule Brando.Blueprint.Relations do
     required = Map.get(opts, :required, false)
     opts = Map.put(opts, :required, required)
 
-    case Map.get(changeset.params, to_string(name)) do
+    case relation_param(changeset, name) do
       "" ->
-        put_assoc(changeset, name, [])
+        clear_or_require_assoc(changeset, name, opts)
 
       _ ->
         opts = Map.put(opts, :with, &module.changeset(&1, &2, user, &3, []))
@@ -201,7 +222,7 @@ defmodule Brando.Blueprint.Relations do
   ## embeds_one
   def run_cast_relation(%{type: :embeds_one, name: name, opts: opts}, changeset, _user) do
     # A hack to remove an embeds_one, specifically an image
-    case Map.get(changeset.params, to_string(name)) do
+    case relation_param(changeset, name) do
       "" ->
         if Map.get(opts, :required) do
           cast_embed(changeset, name, required: true)
@@ -217,7 +238,7 @@ defmodule Brando.Blueprint.Relations do
   ##
   ## embeds_many
   def run_cast_relation(%{type: :embeds_many, name: name, opts: opts}, changeset, _user) do
-    case Map.get(changeset.params, to_string(name)) do
+    case relation_param(changeset, name) do
       "" ->
         if Map.get(opts, :required) do
           cast_embed(changeset, name, to_changeset_opts(:embeds_many, opts))
@@ -236,9 +257,9 @@ defmodule Brando.Blueprint.Relations do
     required = Map.get(opts, :required, false)
     opts = Map.put(opts, :required, required)
 
-    case Map.get(changeset.params, to_string(name)) do
+    case relation_param(changeset, name) do
       "" ->
-        put_assoc(changeset, name, [])
+        clear_or_require_assoc(changeset, name, opts)
 
       _ ->
         cast_assoc(
@@ -258,6 +279,28 @@ defmodule Brando.Blueprint.Relations do
   ## catch all for non casted relations
   def run_cast_relation(_, changeset, _user), do: changeset
 
+  defp relation_param(%{params: params}, name) when is_map(params) do
+    Map.get(params, to_string(name), Map.get(params, name))
+  end
+
+  defp relation_param(_changeset, _name), do: nil
+
+  defp clear_or_require_assoc(changeset, name, opts) do
+    if Map.get(opts, :required, false) do
+      add_error(
+        changeset,
+        name,
+        Map.get(opts, :required_message, "can't be blank"),
+        validation: :required
+      )
+    else
+      put_assoc(changeset, name, [])
+    end
+  end
+
+  @doc """
+  Returns the association preloads derived from `schema`'s relations.
+  """
   def preloads_for(schema) do
     relation_preloads = Module.concat(["Brando", "Blueprint", "RelationPreloads"])
     relation_preloads.for_schema(schema)

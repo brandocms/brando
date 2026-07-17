@@ -134,6 +134,14 @@
 
 #### Improvements
 
+- **Required Blueprint collection relations**: Cast `has_many`, `many_to_many`,
+  and `entries` relations declared with `required: true` can no longer be
+  cleared through an empty form value while leaving the changeset valid. They
+  now emit the standard required error (including a configured
+  `required_message`); optional collections retain their existing
+  clear-to-empty behavior. This is a runtime validation correction only: no
+  Blueprint API change, Igniter upgrade, or database migration is required.
+
 - **Generated Blueprint schema types**: Blueprint schemas now export the
   conventional `t/0` struct type automatically, eliminating missing-type
   warnings for contexts and media APIs. An application-defined `t/0` remains

@@ -148,6 +148,13 @@ and `prevent_collision:` fields must name columns persisted by the same
 Blueprint; virtual attributes cannot be unique. Invalid declarations are
 reported while the Blueprint compiles.
 
+For cast collection relations, `required: true` also applies when the form sends
+an empty string to clear the collection. `has_many`, `many_to_many`, and
+`entries` reject that value with the standard required error and honor
+`required_message`; optional collections continue to clear to an empty list.
+This is changeset validation only and does not require an Igniter upgrade or
+database migration.
+
 These checks require no database migration by themselves. If correcting a
 declaration changes an existing column, foreign key, or index, generate and
 review a Blueprint migration as described in
