@@ -18,12 +18,17 @@ defmodule Brando.Blueprint.Identifier.TemplateTest do
       assert [{:creator, :name}] in result
     end
 
-    test "handles deeply nested field references (only supports 2 levels)" do
-      # The current implementation only supports entry.field or entry.rel.field patterns
-      # Deeper nesting like entry.a.b.c is not supported and will raise
-      # This is expected - templates should use simple field references
-      assert_raise FunctionClauseError, fn ->
-        Template.extract_fields("{{ entry.category.parent.name }}")
+    test "safely ignores deeply nested field references in the compatibility API" do
+      assert Template.extract_fields("{{ entry.category.parent.name }}") == []
+    end
+
+    test "ignores unknown fields without creating atoms" do
+      unknown_field = "identifier_template_field_#{System.unique_integer([:positive])}"
+
+      assert Template.extract_fields("{{ entry.#{unknown_field} }}") == []
+
+      assert_raise ArgumentError, fn ->
+        String.to_existing_atom(unknown_field)
       end
     end
 

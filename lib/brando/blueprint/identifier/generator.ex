@@ -35,18 +35,17 @@ defmodule Brando.Blueprint.Identifier.Generator do
   def generate(module, entry, parsed_identifier, opts) when is_list(parsed_identifier) do
     context = Villain.get_base_context(entry)
     {result, _} = Liquex.Render.render!([], parsed_identifier, context)
-    title = Enum.join(result)
-    build_identifier(module, entry, title, opts)
+    generate(module, entry, Enum.join(result), opts)
   end
 
   def generate(module, entry, title, opts) when is_binary(title) do
-    build_identifier(module, entry, title, opts)
+    build_identifier(module, entry, String.trim(title), opts)
   end
 
   defp build_identifier(module, entry, title, opts) do
     skip_cover = Keyword.get(opts, :skip_cover, false)
     status = Map.get(entry, :status, nil)
-    language = normalize_language(Map.get(entry, :language, nil))
+    language = normalize_language(module, Map.get(entry, :language, nil))
 
     image_assets = get_ordered_image_assets(module)
     first_image_asset = List.first(image_assets)
@@ -98,37 +97,71 @@ defmodule Brando.Blueprint.Identifier.Generator do
     end
   end
 
-  # Normalizes language to an atom, handling nil, binary, and atom inputs
-  defp normalize_language(nil), do: nil
-  defp normalize_language(language) when is_binary(language), do: String.to_existing_atom(language)
-  defp normalize_language(language) when is_atom(language), do: language
+  defp normalize_language(_module, nil), do: nil
 
-  # Gets image assets ordered with meta_image last (preferred cover images first)
-  defp get_ordered_image_assets(module) do
-    image_assets = Enum.filter(Brando.Blueprint.Assets.__assets__(module), &(&1.type == :image))
-
-    # Move :meta_image to last position if it's first (prefer other images for cover)
-    if image_assets != [] and List.first(image_assets).name == :meta_image do
-      image_assets
-      |> List.delete_at(0)
-      |> List.insert_at(-1, List.first(image_assets))
-    else
-      image_assets
+  defp normalize_language(module, language) do
+    case enum_languages(module) do
+      [] -> normalize_existing_language(module, language)
+      languages -> normalize_enum_language(module, language, languages)
     end
   end
 
-  # Extracts updated_at as UTC datetime
+  defp enum_languages(module) do
+    if function_exported?(module, :__schema__, 1) and
+         match?({:parameterized, {Ecto.Enum, _}}, module.__schema__(:type, :language)) do
+      Ecto.Enum.values(module, :language)
+    else
+      []
+    end
+  end
+
+  defp normalize_enum_language(module, language, languages) when is_binary(language) or is_atom(language) do
+    language_string = to_string(language)
+
+    Enum.find(languages, &(Atom.to_string(&1) == language_string)) ||
+      invalid_language!(module, language, languages)
+  end
+
+  defp normalize_enum_language(module, language, languages), do: invalid_language!(module, language, languages)
+
+  defp normalize_existing_language(_module, language) when is_atom(language), do: language
+
+  defp normalize_existing_language(module, language) when is_binary(language) do
+    String.to_existing_atom(language)
+  rescue
+    ArgumentError -> invalid_language!(module, language, [])
+  end
+
+  defp normalize_existing_language(module, language), do: invalid_language!(module, language, [])
+
+  defp invalid_language!(module, language, []) do
+    raise ArgumentError,
+          "cannot generate identifier for #{inspect(module)} with invalid language #{inspect(language)}"
+  end
+
+  defp invalid_language!(module, language, languages) do
+    raise ArgumentError,
+          "cannot generate identifier for #{inspect(module)} with language #{inspect(language)}; " <>
+            "expected one of #{inspect(languages)}"
+  end
+
+  defp get_ordered_image_assets(module) do
+    image_assets = Enum.filter(Brando.Blueprint.Assets.__assets__(module), &(&1.type == :image))
+    {content_images, meta_images} = Enum.split_with(image_assets, &(&1.name != :meta_image))
+
+    content_images ++ meta_images
+  end
+
   defp extract_updated_at(entry) do
     if Map.has_key?(entry, :updated_at) do
-      Brando.Utils.ensure_utc(entry.updated_at)
+      Utils.ensure_utc(entry.updated_at)
     else
       nil
     end
   end
 
-  # Extracts absolute URL if the schema supports it
   defp extract_url(entry) do
-    if {:__absolute_url__, 1} in entry.__struct__.__info__(:functions) do
+    if function_exported?(entry.__struct__, :__absolute_url__, 1) do
       entry.__struct__.__absolute_url__(entry)
     else
       nil

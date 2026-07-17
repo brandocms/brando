@@ -9,6 +9,8 @@ defmodule Brando.Blueprint.TemplateParser do
   explicitly wait for the custom parser when they are compiled.
   """
 
+  alias Brando.Exception.BlueprintError
+
   @custom_tag_pattern ~r/{%-?\s*(?:
     datasource|enddatasource|endhide|fragment|headless_ref|hide|inspect|link|
     picture|ref|route_i18n|route|t|video
@@ -24,6 +26,27 @@ defmodule Brando.Blueprint.TemplateParser do
     Liquex.parse(template, parser)
   end
 
+  @doc """
+  Parses a Blueprint template and raises a contextual Blueprint error when the
+  Liquid syntax is invalid.
+
+  Use this at DSL compile boundaries where carrying a generic `{:error, ...}`
+  tuple into a pattern match would hide which configuration failed.
+  """
+  @spec parse!(String.t(), :absolute_url | :identifier | :template) :: Liquex.document_t()
+  def parse!(template, kind \\ :template) when is_binary(template) do
+    case parse(template) do
+      {:ok, parsed_template} ->
+        parsed_template
+
+      {:error, reason, line} ->
+        raise BlueprintError,
+          message:
+            "Invalid Blueprint #{template_label(kind)} template at line #{line}: #{reason}\n\n" <>
+              template
+    end
+  end
+
   @doc false
   @spec parser_for(String.t()) :: module()
   def parser_for(template) when is_binary(template) do
@@ -33,4 +56,8 @@ defmodule Brando.Blueprint.TemplateParser do
       Liquex.Parser.Base
     end
   end
+
+  defp template_label(:absolute_url), do: "absolute URL"
+  defp template_label(:identifier), do: "identifier"
+  defp template_label(:template), do: "Liquid"
 end

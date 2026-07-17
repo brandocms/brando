@@ -50,6 +50,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
       absolute_url false
   """
   alias Brando.Blueprint.TemplateParser
+  alias Brando.Exception.BlueprintError
   alias Brando.RuntimeConfig
   alias Brando.Villain
 
@@ -127,7 +128,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
   end
 
   defmacro absolute_url(tpl) when is_binary(tpl) do
-    {:ok, parsed_absolute_url_tpl} = TemplateParser.parse(tpl)
+    parsed_absolute_url_tpl = TemplateParser.parse!(tpl, :absolute_url)
 
     quote location: :keep do
       @absolute_url_tpl unquote(tpl)
@@ -234,5 +235,11 @@ defmodule Brando.Blueprint.AbsoluteURL do
       def __absolute_url_template__, do: unquote(args_tpl)
       def __has_absolute_url__, do: true
     end
+  end
+
+  defmacro absolute_url(value) do
+    raise BlueprintError,
+      message:
+        "absolute_url expects a Liquid string, HEEx template, deprecated i18n tuple, or false, got: #{Macro.to_string(value)}"
   end
 end

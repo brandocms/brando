@@ -134,6 +134,19 @@
 
 #### Improvements
 
+- **Safer Blueprint identifier and URL templates**: Invalid Liquid syntax in
+  `identifier` and `absolute_url` declarations now raises a contextual
+  `BlueprintError` with the setting, parser reason, and line number instead of an
+  opaque match error. Identifier titles now consistently trim outer whitespace,
+  language values are checked against the schema's `Ecto.Enum`, content images
+  reliably take precedence over the SEO `meta_image` fallback, and the legacy
+  identifier field extractor no longer raises or creates atoms for unknown/deep
+  paths. `persist_identifier` also rejects non-boolean values explicitly. No
+  database migration is required. When upgrading, fix any malformed Liquid
+  templates and invalid language values reported during compilation or identifier
+  generation; run `mix brando.identifiers.sync` only if normalized title
+  whitespace should be reflected in already persisted identifiers.
+
 - **Blueprint form and transformer validation**: Blueprint compilation now reports
   unknown form fields, invalid `source`/`hidden` references, duplicate inputs,
   missing subform relations, relation/cardinality mismatches, invalid nested

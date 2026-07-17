@@ -3,6 +3,7 @@ defmodule Brando.Blueprint.IdentifiersTest do
 
   alias Brando.BlueprintTest.Project
   alias Brando.Content.Var
+  alias Brando.Exception.BlueprintError
   alias Brando.Pages.Page
 
   describe "__has_identifier__/0" do
@@ -24,6 +25,41 @@ defmodule Brando.Blueprint.IdentifiersTest do
     test "returns false for schemas with persist_identifier false" do
       assert Var.__persist_identifier__() == false
       assert Brando.Content.Container.__persist_identifier__() == false
+    end
+
+    test "rejects non-boolean configuration with a contextual error" do
+      module = Module.concat(__MODULE__, "InvalidPersistence#{System.unique_integer([:positive])}")
+
+      error =
+        assert_raise BlueprintError, fn ->
+          Code.compile_quoted(
+            quote do
+              defmodule unquote(module) do
+                import Brando.Blueprint.Identifier.DSL
+                persist_identifier :sometimes
+              end
+            end
+          )
+        end
+
+      assert Exception.message(error) == "persist_identifier expects true or false, got: :sometimes"
+    end
+
+    test "accepts booleans stored in compile-time module attributes" do
+      module = Module.concat(__MODULE__, "AttributedPersistence#{System.unique_integer([:positive])}")
+
+      Code.compile_quoted(
+        quote do
+          defmodule unquote(module) do
+            import Brando.Blueprint.Identifier.DSL
+
+            @persist_identifiers false
+            persist_identifier @persist_identifiers
+          end
+        end
+      )
+
+      refute module.__persist_identifier__()
     end
   end
 

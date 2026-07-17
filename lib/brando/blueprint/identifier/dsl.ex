@@ -31,6 +31,7 @@ defmodule Brando.Blueprint.Identifier.DSL do
   """
 
   alias Brando.Blueprint.TemplateParser
+  alias Brando.Exception.BlueprintError
 
   @doc """
   Controls whether identifiers are persisted to the database.
@@ -40,10 +41,19 @@ defmodule Brando.Blueprint.Identifier.DSL do
       persist_identifier true   # Save to database
       persist_identifier false  # Don't persist
   """
-  defmacro persist_identifier(persist?) do
+  defmacro persist_identifier(value) do
+    value_source = Macro.to_string(value)
+
     quote location: :keep do
+      @brando_persist_identifier unquote(value)
+
+      unless is_boolean(@brando_persist_identifier) do
+        raise BlueprintError,
+          message: "persist_identifier expects true or false, got: #{unquote(value_source)}"
+      end
+
       def __persist_identifier__ do
-        unquote(persist?)
+        @brando_persist_identifier
       end
     end
   end
@@ -71,7 +81,7 @@ defmodule Brando.Blueprint.Identifier.DSL do
       identifier nil
   """
   defmacro identifier(tpl) when is_binary(tpl) do
-    {:ok, parsed_identifier} = TemplateParser.parse(tpl)
+    parsed_identifier = TemplateParser.parse!(tpl, :identifier)
 
     quote location: :keep do
       if @data_layer == :embedded do
@@ -141,5 +151,10 @@ defmodule Brando.Blueprint.Identifier.DSL do
     quote location: :keep do
       def __has_identifier__, do: false
     end
+  end
+
+  defmacro identifier(value) do
+    raise BlueprintError,
+      message: "identifier expects a Liquid string, HEEx template, false, or nil, got: #{Macro.to_string(value)}"
   end
 end
