@@ -242,7 +242,7 @@ defmodule Brando.Blueprint do
       if entries_rels != [] do
         for entries_rel <- entries_rels do
           parent_table_name = @table_name
-          parent_module = Module.concat([@application, @domain, @schema])
+          parent_module = unquote(module)
 
           defmodule Module.concat([
                       unquote(module),
@@ -286,7 +286,7 @@ defmodule Brando.Blueprint do
 
       if blocks_rels != [] do
         for blocks_rel <- blocks_rels do
-          parent_module = Module.concat([@application, @domain, @schema])
+          parent_module = unquote(module)
           parent_table_name = @table_name
 
           defmodule Module.concat([

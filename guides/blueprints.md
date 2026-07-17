@@ -29,6 +29,12 @@ use Brando.Blueprint,
 missing required names, malformed values, and non-module extensions fail with a
 contextual Blueprint error before Gettext, Spark, or Ecto setup begins.
 
+The module registry derives conventional context, schema, and admin targets from
+these names; Brando's resource generator relies on that target convention. The
+actual module that calls `use Brando.Blueprint` remains the Ecto owner. Generated
+block and entries join schemas therefore reference the actual owner rather than
+mistaking the convention-derived generator target for the parent schema.
+
 Schema-level storage settings are validated after compile-time expressions have
 been evaluated:
 

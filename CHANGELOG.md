@@ -134,6 +134,13 @@
 
 #### Improvements
 
+- **Correct generated Blueprint join owners**: Generated `:blocks` and
+  `:entries` join schemas now use the actual Blueprint owner module for their
+  Ecto associations instead of the convention-derived schema target retained in
+  `__modules__()` for resource generation. This fixes nested and legacy schema
+  locations without changing module registry conventions or database storage,
+  so no migration is required.
+
 - **Validated Blueprint root configuration**: `use Brando.Blueprint` now rejects
   missing, duplicate, and unknown options plus malformed application/domain/schema
   and singular/plural names before macro setup. The semantic verifier also checks

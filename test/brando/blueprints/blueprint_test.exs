@@ -48,6 +48,41 @@ defmodule Brando.Blueprint.BlueprintTest do
     end
   end
 
+  test "generated join schemas reference the actual Blueprint owner" do
+    module = Module.concat(__MODULE__, "NestedRecord#{System.unique_integer([:positive])}")
+
+    Code.compile_quoted(
+      quote do
+        defmodule unquote(module) do
+          use Brando.Blueprint,
+            application: "Brando",
+            domain: "DeclaredRegistry",
+            schema: "Record",
+            singular: "registry_record",
+            plural: "registry_records",
+            gettext_module: Brando.Gettext
+
+          identifier false
+          persist_identifier false
+
+          relations do
+            relation :related_entries, :entries
+            relation :blocks, :has_many, module: :blocks
+          end
+        end
+      end
+    )
+
+    assert module.__modules__().schema == Brando.DeclaredRegistry.Record
+    assert module.__modules__(:schema) == Brando.DeclaredRegistry.Record
+
+    identifier_join = Module.concat(module, "RelatedEntriesIdentifier")
+    blocks_join = Module.concat(module, "Blocks")
+
+    assert identifier_join.__schema__(:association, :parent).related == module
+    assert blocks_join.__schema__(:association, :entry).related == module
+  end
+
   test "traits" do
     assert Brando.BlueprintTest.Project.__traits__() == [
              {Brando.Trait.Creator, []},
