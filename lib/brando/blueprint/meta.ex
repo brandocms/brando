@@ -24,22 +24,31 @@ defmodule Brando.Blueprint.Meta do
   `encode_locale(language)` converts the locale to a format facebook/opengraph understands.
   """
 
+  @doc """
+  Extracts configured metadata pairs from a Blueprint entry.
+
+  A field is omitted when its value function returns `nil` or reads a missing key.
+  Other exceptions propagate so invalid metadata functions remain visible during
+  development instead of being silently discarded.
+  """
+  @spec extract_meta(module(), term()) :: [{String.t(), term()}]
   def extract_meta(module, data) do
-    case module
-         |> Spark.Dsl.Extension.get_entities(:meta_schemas)
-         |> List.first() do
-      nil ->
-        []
+    module
+    |> Spark.Dsl.Extension.get_entities(:meta_schemas)
+    |> List.first()
+    |> extract_fields(data)
+  end
 
-      meta_data ->
-        Enum.flat_map(meta_data.fields, fn %{targets: targets, value_fn: mutator} ->
-          targets = (is_list(targets) && targets) || List.wrap(targets)
+  defp extract_fields(nil, _data), do: []
 
-          case safe_apply(mutator, data) do
-            nil -> []
-            result -> Enum.map(targets, fn target -> {target, result} end)
-          end
-        end)
+  defp extract_fields(meta_schema, data) do
+    Enum.flat_map(meta_schema.fields, &extract_field(&1, data))
+  end
+
+  defp extract_field(%{targets: targets, value_fn: value_fn}, data) do
+    case safe_apply(value_fn, data) do
+      nil -> []
+      value -> Enum.map(List.wrap(targets), &{&1, value})
     end
   end
 

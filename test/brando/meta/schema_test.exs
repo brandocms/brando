@@ -29,6 +29,8 @@ defmodule Brando.MetaSchemaTest do
       field "mutated_title", fn data -> ">> #{data.title}" end
       field "generated_title", fn _ -> "Generated." end
       field ["description", "og:description"], fn data -> "@ #{data.description}" end
+      field "missing", & &1.missing
+      field "nil", fn _ -> nil end
     end
 
     def mutator_function(data), do: "@ #{data}"
@@ -42,6 +44,12 @@ defmodule Brando.MetaSchemaTest do
     assert List.keyfind(extracted_meta, "title", 0) == {"title", "Our title"}
     assert List.keyfind(extracted_meta, "mutated_title", 0) == {"mutated_title", ">> Our title"}
     assert List.keyfind(extracted_meta, "generated_title", 0) == {"generated_title", "Generated."}
+    refute List.keymember?(extracted_meta, "missing", 0)
+    refute List.keymember?(extracted_meta, "nil", 0)
+  end
+
+  test "extracting from a Blueprint without a meta schema returns no fields" do
+    assert Brando.Blueprint.Meta.extract_meta(Brando.BlueprintTest.Project, @mock_data) == []
   end
 
   test "extract real meta" do

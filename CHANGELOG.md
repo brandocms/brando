@@ -134,6 +134,12 @@
 
 #### Improvements
 
+- **Clearer Blueprint metadata extraction**: Meta schema evaluation now separates
+  schema lookup, field evaluation, target expansion, and missing-value handling
+  into focused functions with an explicit public contract. Single and multi-target
+  fields retain their existing order; nil results and missing-key reads are omitted
+  as before. No application or database migration is required.
+
 - **Focused Blueprint DSL code generation**: Blueprint schema compilation now
   composes small, responsibility-specific AST fragments for state, traits, routes,
   module metadata, fields, schemas, forms, changesets, and trait implementations.
