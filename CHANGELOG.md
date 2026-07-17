@@ -134,6 +134,16 @@
 
 #### Improvements
 
+- **Validated Blueprint asset declaration options**: Top-level asset options
+  are now checked instead of silently ignoring misspellings such as
+  `requried: true`. The stable `cfg` and `required` options remain unchanged;
+  galleries also retain their existing Ecto cast-message and
+  `force_update_on_change` options. Clearing a required gallery now emits the
+  standard required error and honors `required_message` instead of reporting a
+  generic invalid association. This is a compile-time/runtime validation fix:
+  correct any newly reported option typo, but no API rename, Igniter upgrade,
+  or database migration is required.
+
 - **Required Blueprint collection relations**: Cast `has_many`, `many_to_many`,
   and `entries` relations declared with `required: true` can no longer be
   cleared through an empty form value while leaving the changeset valid. They

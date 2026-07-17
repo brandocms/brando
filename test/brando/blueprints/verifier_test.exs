@@ -132,6 +132,28 @@ defmodule Brando.Blueprint.VerifierTest do
     end
   end
 
+  test "rejects unsupported asset options instead of silently ignoring them" do
+    assert_raise Spark.Error.DslError, ~r/unsupported options \[:requried\]/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :cover, :image, cfg: :default, requried: true
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/unsupported options \[:on_replace\]/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :gallery, :gallery, cfg: :default, on_replace: :delete
+          end
+        end
+      )
+    end
+  end
+
   test "rejects uniqueness scopes that are not persisted fields" do
     assert_raise Spark.Error.DslError, ~r/unknown persisted fields \[:missing\]/, fn ->
       compile_blueprint(

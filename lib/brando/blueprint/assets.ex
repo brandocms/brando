@@ -105,27 +105,49 @@ defmodule Brando.Blueprint.Assets do
 
   @gallery_module Module.concat(["Brando", "Galleries", "Gallery"])
 
+  @doc """
+  Returns the compiled and normalized asset declarations for `module`.
+  """
   def __assets__(module) do
     module
     |> Extension.get_entities([:assets])
     |> Enum.map(&AssetConfigNormalizer.normalize/1)
   end
 
+  @doc """
+  Returns the compiled and normalized asset named `name` for `module`.
+  """
   def __asset__(module, name) do
     module
     |> Extension.get_persisted({:asset, name})
     |> AssetConfigNormalizer.normalize()
   end
 
+  @doc """
+  Returns the options for the compiled asset named `name`.
+  """
   def __asset_opts__(module, name) do
     module
     |> __asset__(name)
     |> Map.get(:opts, [])
   end
 
+  @doc """
+  Applies every compiled asset's casting contract to `changeset`.
+  """
   def run_cast_assets(changeset, assets, user) do
-    Enum.reduce(assets, changeset, fn rel, cs -> run_cast_asset(rel, cs, user) end)
+    Enum.reduce(assets, changeset, fn asset, current_changeset ->
+      run_cast_asset(asset, current_changeset, user)
+    end)
   end
+
+  @doc """
+  Applies one compiled asset's casting contract to `changeset`.
+
+  Image, file, and video foreign keys are cast with ordinary Blueprint fields.
+  Galleries cast their nested association so edits and selection changes remain
+  part of the owning entry's changeset.
+  """
 
   ##
   ## image is belongs_to Image
@@ -148,7 +170,7 @@ defmodule Brando.Blueprint.Assets do
   ##
   ## embeds_many
   def run_cast_asset(%{type: :embeds_many, name: name, opts: opts}, changeset, _user) do
-    case Map.get(changeset.params, to_string(name)) do
+    case asset_param(changeset, name) do
       "" ->
         Changeset.put_embed(changeset, name, [])
 
@@ -162,21 +184,17 @@ defmodule Brando.Blueprint.Assets do
   end
 
   def run_cast_asset(%{type: :gallery, name: name, opts: opts}, changeset, user) do
-    case Map.get(changeset.params, to_string(name)) do
+    gallery_module = @gallery_module
+
+    cast_opts =
+      Utils.to_changeset_opts(:belongs_to, opts)
+      |> Keyword.put(:with, &gallery_module.changeset(&1, &2, user))
+
+    case asset_param(changeset, name) do
       "" ->
-        if Map.get(opts, :required) do
-          Changeset.cast_assoc(changeset, name, required: true)
-        else
-          Changeset.put_assoc(changeset, name, nil)
-        end
+        clear_or_require_gallery(changeset, name, opts)
 
       _ ->
-        gallery_module = @gallery_module
-
-        cast_opts =
-          Utils.to_changeset_opts(:belongs_to, opts)
-          |> Keyword.put(:with, &gallery_module.changeset(&1, &2, user))
-
         Changeset.cast_assoc(changeset, name, cast_opts)
     end
   end
@@ -190,6 +208,28 @@ defmodule Brando.Blueprint.Assets do
     changeset
   end
 
+  defp asset_param(%{params: params}, name) when is_map(params) do
+    Map.get(params, to_string(name), Map.get(params, name))
+  end
+
+  defp asset_param(_changeset, _name), do: nil
+
+  defp clear_or_require_gallery(changeset, name, opts) do
+    if Map.get(opts, :required, false) do
+      Changeset.add_error(
+        changeset,
+        name,
+        Map.get(opts, :required_message, "can't be blank"),
+        validation: :required
+      )
+    else
+      Changeset.put_assoc(changeset, name, nil)
+    end
+  end
+
+  @doc """
+  Returns the association preloads derived from `schema`'s assets.
+  """
   def preloads_for(schema) do
     asset_preloads = Module.concat(["Brando", "Blueprint", "AssetPreloads"])
     asset_preloads.for_schema(schema)

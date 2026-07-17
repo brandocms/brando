@@ -171,6 +171,15 @@ formats, video strategies/metadata, file content disposition, and completion
 callbacks. Deferred zero-argument config functions are validated when their
 result is materialized.
 
+At the asset declaration level, the supported options are `cfg` and
+`required`. Galleries additionally accept Ecto's `required_message`,
+`invalid_message`, and `force_update_on_change` cast options. Unknown options
+are rejected during compilation so a typo cannot silently weaken validation.
+When a form clears a required gallery, its `required_message` is used and the
+changeset error retains `validation: :required`; optional galleries continue to
+clear normally. Correct newly reported declaration typos after upgrading. No
+Igniter upgrade or database migration is required.
+
 All three media types share one completion callback contract:
 
 ```elixir

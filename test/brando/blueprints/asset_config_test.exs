@@ -44,6 +44,25 @@ defmodule Brando.Blueprint.AssetConfigTest do
     end
   end
 
+  defmodule GalleryCasting do
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "AssetConfigTest",
+      schema: "GalleryCasting",
+      singular: "gallery_casting",
+      plural: "gallery_castings",
+      gettext_module: Brando.Gettext
+
+    assets do
+      asset :required_gallery, :gallery,
+        cfg: :default,
+        required: true,
+        required_message: "select a gallery"
+
+      asset :optional_gallery, :gallery, cfg: :default
+    end
+  end
+
   test "all materialized asset configs are typed and merged with defaults" do
     assets = Map.new(Assets.__assets__(ConfiguredAssets), &{&1.name, &1})
 
@@ -69,6 +88,25 @@ defmodule Brando.Blueprint.AssetConfigTest do
 
     assert %{related: Brando.Files.File, on_replace: :update} =
              ConfiguredAssets.__schema__(:association, :default_file)
+  end
+
+  test "gallery casting enforces required values and preserves optional clearing" do
+    changeset =
+      GalleryCasting.changeset(
+        %GalleryCasting{},
+        %{
+          "required_gallery" => "",
+          "optional_gallery" => ""
+        }
+      )
+
+    refute changeset.valid?
+
+    assert {"select a gallery", [validation: :required]} =
+             changeset.errors[:required_gallery]
+
+    assert Map.has_key?(changeset.changes, :optional_gallery)
+    assert is_nil(changeset.changes.optional_gallery)
   end
 
   test "rejects invalid static config fields during Blueprint compilation" do
