@@ -259,9 +259,7 @@ defmodule Brando.Blueprint.Assets.Dsl do
     end
   end
 
-  defp deep_merge(nil, right), do: right
-  defp deep_merge(left, nil), do: left
-
+  @spec deep_merge(map(), map()) :: map()
   defp deep_merge(left, right) do
     Map.merge(left, right, fn
       _key, %{} = left_value, %{} = right_value -> deep_merge(left_value, right_value)
