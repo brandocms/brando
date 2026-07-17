@@ -259,6 +259,12 @@ alert :info, &__MODULE__.editor_notice/1
 alert :warning, {MyAppWeb.FormAlerts, :quota_notice, [limit: 10]}
 ```
 
+Form error summaries use a configured string `label` when present. Inputs with
+`label: :hidden`, blank/nil labels, and other non-text labels fall back to a
+humanized field name. Errors attached to generated foreign keys such as
+`:cover_video_id` resolve through the visible `:cover_video` input, so storage
+field names do not leak into the editor message.
+
 These runtime contract corrections do not change storage. No Ecto migration or
 Igniter upgrade script is required; compile after upgrading and correct any
 static query whose `:matches` value is not a map.

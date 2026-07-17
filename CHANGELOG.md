@@ -134,6 +134,14 @@
 
 #### Improvements
 
+- **Reliable Blueprint form error labels**: Save-error summaries now translate
+  configured string labels and safely humanize the actual form field when its
+  label is hidden, blank, nil, or otherwise non-text. Foreign-key errors use the
+  visible relation/asset field name (`Cover video`) instead of leaking generated
+  storage names such as `Cover_video_id`; unknown keys also use normal humanized
+  text. Existing form and translation APIs are unchanged, and no Igniter
+  upgrade or database migration is required.
+
 - **Complete Blueprint relation preloads**: `Brando.Blueprint.preloads_for/2`
   now includes direct `has_one` relations, so complete entry loads no longer
   leave those associations unloaded. Cast `has_many` preload queries also
