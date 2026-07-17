@@ -31,11 +31,22 @@ defmodule Brando.Blueprint.Forms.Verifier do
   defp verify_form(context, form) do
     inputs = form_inputs(form)
 
-    with :ok <- verify_unique_inputs(context, form, inputs),
+    with :ok <- verify_static_query(context, form),
+         :ok <- verify_unique_inputs(context, form, inputs),
          :ok <- validate_entities(inputs, &verify_input(context, form, &1)) do
       validate_entities(form.blocks, &verify_blocks(context, form, &1))
     end
   end
+
+  defp verify_static_query(context, %{query: query} = form) when is_map(query) do
+    case Map.fetch(query, :matches) do
+      :error -> :ok
+      {:ok, matches} when is_map(matches) -> :ok
+      {:ok, matches} -> error(context, form, [form.name], "static query :matches must be a map, got #{inspect(matches)}")
+    end
+  end
+
+  defp verify_static_query(_context, _form), do: :ok
 
   defp verify_unique_inputs(context, form, inputs) do
     case duplicate_name(inputs) do

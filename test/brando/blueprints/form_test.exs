@@ -1,6 +1,55 @@
 defmodule Brando.Blueprint.FormsTest do
   use ExUnit.Case
+  use Phoenix.Component
+
   import Brando.Test.Support, only: [strip_spark_metadata: 1]
+  import Phoenix.LiveViewTest, only: [render_component: 2]
+
+  alias Brando.Blueprint.Forms
+
+  def callback_query(id, status), do: %{matches: %{id: id, status: status}}
+
+  def alert_content(assigns, prefix) do
+    assigns = assign(assigns, :prefix, prefix)
+
+    ~H"""
+    <span>{@prefix}: {@schema}</span>
+    """
+  end
+
+  test "resolves default, static, function, and MFA form queries" do
+    assert Forms.resolve_query(nil, 123) == %{matches: %{id: 123}}
+
+    assert Forms.resolve_query(%{matches: %{status: :draft}, preload: [:creator]}, 123) == %{
+             matches: %{id: 123, status: :draft},
+             preload: [:creator]
+           }
+
+    assert Forms.resolve_query(fn id -> %{matches: %{slug: "entry-#{id}"}} end, 123) == %{
+             matches: %{slug: "entry-123"}
+           }
+
+    assert Forms.resolve_query({__MODULE__, :callback_query, [:published]}, 123) == %{
+             matches: %{id: 123, status: :published}
+           }
+  end
+
+  test "form query callbacks must return maps" do
+    assert_raise ArgumentError, ~r/query callback to return a map/, fn ->
+      Forms.resolve_query(fn _id -> :invalid end, 123)
+    end
+  end
+
+  test "resolves alert function components and MFA components" do
+    function_component = &alert_content(&1, "Function")
+
+    assert render_component(Forms.alert_component(function_component), %{schema: "Project"}) ==
+             "<span>Function: Project</span>"
+
+    assert render_component(Forms.alert_component({__MODULE__, :alert_content, ["MFA"]}), %{
+             schema: "Project"
+           }) == "<span>MFA: Project</span>"
+  end
 
   test "default form" do
     assert strip_spark_metadata(Brando.BlueprintTest.Project.__form__()) ==

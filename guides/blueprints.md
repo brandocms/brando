@@ -153,6 +153,47 @@ schema migration is needed.
 
 #### Assets
 
+#### Forms
+
+An existing entry is loaded with `%{matches: %{id: id}}` by default. Use a
+static query map to add fixed options; Brando always injects the entry ID into
+the map's `:matches`:
+
+```elixir
+forms do
+  form do
+    query %{preload: [:illustrators]}
+  end
+end
+```
+
+Use a callback when the query itself is dynamic. Callback queries replace the
+default and must return the complete query map, including an ID match when one
+is required:
+
+```elixir
+query &__MODULE__.form_query/1
+
+def form_query(id), do: %{matches: %{id: id}, preload: [:illustrators]}
+```
+
+Form `query`, `after_save`, and `redirect_on_save` callbacks accept either the
+documented function arity or `{module, function, extra_args}`. Runtime arguments
+come first and configured arguments are appended.
+
+Alerts accept translated strings and one-argument function components. Alert
+components receive `form`, `schema`, `current_user`, `form_cid`, and `form_id`
+assigns:
+
+```elixir
+alert :info, &__MODULE__.editor_notice/1
+alert :warning, {MyAppWeb.FormAlerts, :quota_notice, [limit: 10]}
+```
+
+These runtime contract corrections do not change storage. No Ecto migration or
+Igniter upgrade script is required; compile after upgrading and correct any
+static query whose `:matches` value is not a map.
+
 ### Traits
 
 Blueprint invokes a trait's `generate_code/2` callback while compiling each

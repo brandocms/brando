@@ -15,7 +15,16 @@ defmodule Brando.Blueprint.Forms do
 
   ## Query
 
-  Default query is `%{matches: %{id: id}}`, but if you to customize:
+  The default query is `%{matches: %{id: id}}`. A static query map adds options
+  while Brando injects the entry ID into `:matches`:
+
+      forms do
+        form do
+          query %{preload: [:illustrators]}
+        end
+      end
+
+  Use a one-argument callback when the query itself depends on the entry ID:
 
       forms do
         form do
@@ -27,13 +36,26 @@ defmodule Brando.Blueprint.Forms do
         %{matches: %{id: id}, preload: [:illustrators]}
       end
 
-  If you override the default query, you must supply ALL preloads -- this includes `alternate_entries`
-  as well as images, videos and files.
+  A callback replaces the default query and must return a map containing any
+  required ID match. Whether using a static map or callback, you must supply ALL
+  custom preloads -- this includes `alternate_entries` as well as images, videos,
+  and files.
 
   `query`, `after_save`, and `redirect_on_save` also accept
   `{module, function, extra_args}` tuples. Brando passes each option's documented
   runtime arguments first and appends `extra_args`. This is useful when a shared
   callback needs fixed configuration without capturing an anonymous function.
+
+
+  ## Alerts
+
+  Alert content can be a translated string or a one-argument function component.
+  The component receives the current `form`, `schema`, `current_user`, `form_cid`,
+  and `form_id` as assigns. MFA callbacks use the same runtime-arguments-first
+  convention:
+
+      alert :info, &__MODULE__.editor_notice/1
+      alert :warning, {MyAppWeb.FormAlerts, :quota_notice, [limit: 10]}
 
 
   ## Redirect after save
@@ -382,7 +404,56 @@ defmodule Brando.Blueprint.Forms do
 
   ### `text`: Standard form element
   """
+  alias Brando.Blueprint.Callback
   alias Brando.Blueprint.Forms
+
+  @doc """
+  Builds the query used to load an existing entry.
+
+  Static query maps retain the URL entry ID in `:matches`. Callback queries
+  receive the ID and replace the default query, allowing deliberately different
+  matching behavior.
+  """
+  @spec resolve_query(nil | map() | Callback.t(), term()) :: map()
+  def resolve_query(nil, id), do: %{matches: %{id: id}}
+
+  def resolve_query(query, id) when is_map(query) do
+    matches =
+      case Map.get(query, :matches, %{}) do
+        matches when is_map(matches) ->
+          Map.put(matches, :id, id)
+
+        invalid_matches ->
+          raise ArgumentError,
+                "expected static Blueprint form query :matches to be a map, got: #{inspect(invalid_matches)}"
+      end
+
+    Map.put(query, :matches, matches)
+  end
+
+  def resolve_query(callback, id) do
+    case Callback.call(callback, [id]) do
+      query when is_map(query) ->
+        query
+
+      invalid_query ->
+        raise ArgumentError,
+              "expected Blueprint form query callback to return a map, got: #{inspect(invalid_query)}"
+    end
+  end
+
+  @doc """
+  Resolves alert content into a one-argument function component.
+
+  Function components are returned unchanged. MFA callbacks receive the
+  component assigns first, followed by their configured extra arguments.
+  """
+  @spec alert_component(Callback.t()) :: (map() -> term())
+  def alert_component(component) when is_function(component, 1), do: component
+
+  def alert_component({_module, _function, _extra_args} = callback) do
+    fn assigns -> Callback.call(callback, [assigns]) end
+  end
 
   @doc """
   Lists every top-level field name in a form.

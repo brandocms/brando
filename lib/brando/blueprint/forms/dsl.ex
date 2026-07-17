@@ -66,9 +66,9 @@ defmodule Brando.Blueprint.Forms.Dsl do
         doc: "Alert type"
       ],
       content: [
-        type: {:or, [:mfa, :string]},
+        type: {:or, [:string, {:mfa_or_fun, 1}]},
         required: true,
-        doc: "Alert content as string or component"
+        doc: "Alert content as a string or one-argument function component"
       ]
     ]
   }
@@ -232,7 +232,7 @@ defmodule Brando.Blueprint.Forms.Dsl do
         type: {:or, [:map, nil, {:mfa_or_fun, 1}]},
         required: false,
         default: nil,
-        doc: "Form query"
+        doc: "Static query options or a callback receiving the entry ID and returning a query map"
       ],
       after_save: [
         type: {:mfa_or_fun, 2},

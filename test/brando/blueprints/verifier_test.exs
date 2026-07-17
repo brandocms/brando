@@ -353,6 +353,19 @@ defmodule Brando.Blueprint.VerifierTest do
     )
   end
 
+  test "reports static form queries with invalid matches" do
+    assert_form_error(
+      quote do
+        forms do
+          form do
+            query %{matches: :invalid}
+          end
+        end
+      end,
+      ~r/static query :matches must be a map/
+    )
+  end
+
   test "reports inputs_for without a relation" do
     assert_form_error(
       quote do

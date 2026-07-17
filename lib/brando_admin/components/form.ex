@@ -1243,11 +1243,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp maybe_query(id, form_blueprint) do
-    if form_blueprint.query do
-      Callback.call(form_blueprint.query, [id])
-    else
-      %{matches: %{id: id}}
-    end
+    BlueprintForms.resolve_query(form_blueprint.query, id)
   end
 
   defp maybe_assign_uploads(socket) do
@@ -2232,7 +2228,21 @@ defmodule BrandoAdmin.Components.Form do
           <:icon>
             <.icon name="hero-exclamation-triangle" />
           </:icon>
-          {g(@form.source.data.__struct__, fieldset.content)}
+          <%= if is_binary(fieldset.content) do %>
+            {g(@form.source.data.__struct__, fieldset.content)}
+          <% else %>
+            {component(
+              BlueprintForms.alert_component(fieldset.content),
+              [
+                form: @form,
+                schema: @schema,
+                current_user: @current_user,
+                form_cid: @form_cid,
+                form_id: @form_id
+              ],
+              {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+            )}
+          <% end %>
         </.alert>
       <% else %>
         <Fieldset.render

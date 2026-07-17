@@ -134,6 +134,15 @@
 
 #### Improvements
 
+- **Reliable Blueprint form runtime contracts**: Static form query maps now work
+  as declared, retain the URL entry ID in `:matches`, and are checked for invalid
+  match shapes; callback queries fail with a clear error when they do not return
+  a map. Form alerts now execute the advertised function-component and MFA forms
+  with documented form context assigns instead of passing callback tuples to the
+  translation layer. This is a runtime and DSL correction only: no Ecto migration
+  or Igniter upgrade script is required. Compile after upgrading, fix any static
+  query whose `:matches` is not a map, and see [Blueprints](guides/blueprints.md).
+
 - **Validated secondary Blueprint DSL contracts**: Datasources now require the
   callbacks their type consumes, execute the function-or-MFA forms advertised by
   Spark, and reject duplicate datasource or metadata keys. Form query/save/redirect
