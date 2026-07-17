@@ -510,16 +510,24 @@ defmodule Brando.Blueprint do
     end
   end
 
-  def get_castable_relation_fields(rels) do
-    rels
+  @doc """
+  Returns persisted foreign-key fields cast directly for belongs-to relations.
+  """
+  @spec get_castable_relation_fields([map()]) :: [atom()]
+  def get_castable_relation_fields(relations) do
+    relations
     |> Enum.filter(&(&1.type == :belongs_to))
-    |> Enum.map(fn rel -> :"#{rel.name}_id" end)
+    |> Enum.map(&Brando.Blueprint.AssociationKey.for/1)
   end
 
-  def get_castable_asset_fields(rels) do
-    rels
-    |> Enum.filter(&(&1.type in [:file, :image, :video, :gallery]))
-    |> Enum.map(fn rel -> :"#{rel.name}_id" end)
+  @doc """
+  Returns persisted foreign-key fields cast directly for singular assets.
+  """
+  @spec get_castable_asset_fields([map()]) :: [atom()]
+  def get_castable_asset_fields(assets) do
+    assets
+    |> Enum.filter(&(&1.type in [:file, :image, :video]))
+    |> Enum.map(&Brando.Blueprint.AssociationKey.for/1)
   end
 
   @doc """

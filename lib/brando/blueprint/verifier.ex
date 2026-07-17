@@ -3,12 +3,45 @@ defmodule Brando.Blueprint.Verifier do
 
   use Spark.Dsl.Verifier
 
+  alias Brando.Blueprint.AssociationKey
   alias Spark.Dsl.Entity
   alias Spark.Dsl.Verifier
   alias Spark.Error.DslError
 
   @attribute_constraint_keys [:acceptance, :confirmation, :format, :length, :max_length, :min_length]
+  @non_string_collision_types [
+    :array,
+    :boolean,
+    :date,
+    :datetime,
+    :decimal,
+    :enum,
+    :file,
+    :float,
+    :i18n_string,
+    :id,
+    :integer,
+    :language,
+    :map,
+    :naive_datetime,
+    :status,
+    :time,
+    :timestamp,
+    :uuid
+  ]
   @relation_constraint_keys [:length, :max_length, :min_length, :require_blocks]
+  @relation_option_scopes [
+    constraint_name: [:belongs_to],
+    define_field: [:belongs_to],
+    foreign_key: [:belongs_to, :has_many, :has_one],
+    join_defaults: [:many_to_many],
+    join_keys: [:many_to_many],
+    join_through: [:many_to_many],
+    join_where: [:many_to_many],
+    references: [:belongs_to, :has_many, :has_one],
+    through: [:has_many],
+    type: [:belongs_to]
+  ]
   @unique_keys [:message, :prevent_collision, :with]
 
   @impl true
@@ -16,35 +49,65 @@ defmodule Brando.Blueprint.Verifier do
     attributes = Verifier.get_entities(dsl_state, [:attributes])
     relations = Verifier.get_entities(dsl_state, [:relations])
     assets = Verifier.get_entities(dsl_state, [:assets])
+    storage_columns = storage_column_names(dsl_state, attributes, relations, assets)
 
-    with :ok <- verify_attributes(dsl_state, attributes),
-         :ok <- verify_relations(dsl_state, relations) do
+    with :ok <- verify_attributes(dsl_state, attributes, storage_columns),
+         :ok <- verify_relations(dsl_state, relations, storage_columns),
+         :ok <- verify_assets(dsl_state, assets) do
       verify_storage_field_collisions(dsl_state, attributes, relations, assets)
     end
   end
 
-  defp verify_attributes(dsl_state, attributes) do
+  defp verify_attributes(dsl_state, attributes, storage_columns) do
     case verify_renames(dsl_state, attributes) do
-      :ok -> validate_entities(attributes, &verify_attribute(dsl_state, &1))
+      :ok -> validate_entities(attributes, &verify_attribute(dsl_state, &1, storage_columns))
       error -> error
     end
   end
 
-  defp verify_relations(dsl_state, relations) do
-    validate_entities(relations, &verify_relation(dsl_state, &1))
+  defp verify_relations(dsl_state, relations, storage_columns) do
+    validate_entities(relations, &verify_relation(dsl_state, &1, storage_columns))
   end
 
-  defp verify_attribute(dsl_state, attribute) do
-    with :ok <- verify_unique(dsl_state, :attribute, attribute) do
+  defp verify_assets(dsl_state, assets) do
+    validate_entities(assets, &verify_boolean_option(dsl_state, :assets, &1, :required))
+  end
+
+  defp verify_attribute(dsl_state, attribute, storage_columns) do
+    with :ok <- verify_attribute_type(dsl_state, attribute),
+         :ok <- verify_boolean_option(dsl_state, :attributes, attribute, :required),
+         :ok <- verify_boolean_option(dsl_state, :attributes, attribute, :virtual),
+         :ok <- verify_unique(dsl_state, :attribute, attribute),
+         :ok <- verify_persisted_unique(dsl_state, :attribute, attribute),
+         :ok <- verify_collision_type(dsl_state, attribute),
+         :ok <- verify_unique_references(dsl_state, :attribute, attribute, storage_columns) do
       verify_constraints(dsl_state, :attribute, attribute)
     end
   end
 
-  defp verify_relation(dsl_state, relation) do
+  defp verify_attribute_type(dsl_state, %{type: :array} = attribute) do
+    error(dsl_state, :attributes, attribute, "bare `:array` is invalid; use `{:array, element_type}`")
+  end
+
+  defp verify_attribute_type(_dsl_state, _attribute), do: :ok
+
+  defp verify_relation(dsl_state, relation, storage_columns) do
     with :ok <- verify_relation_module(dsl_state, relation),
+         :ok <- verify_relation_options(dsl_state, relation),
          :ok <- verify_relation_cast(dsl_state, relation),
-         :ok <- verify_unique(dsl_state, :relation, relation) do
+         :ok <- verify_unique(dsl_state, :relation, relation),
+         :ok <- verify_unique_references(dsl_state, :relation, relation, storage_columns) do
       verify_constraints(dsl_state, :relation, relation)
+    end
+  end
+
+  defp verify_boolean_option(dsl_state, section, %{opts: opts} = entity, option) do
+    case Map.get(opts, option) do
+      value when value in [nil, false, true] ->
+        :ok
+
+      value ->
+        error(dsl_state, section, entity, "`:#{option}` must be a boolean, got: #{inspect(value)}")
     end
   end
 
@@ -95,15 +158,134 @@ defmodule Brando.Blueprint.Verifier do
   end
 
   defp verify_relation_module(dsl_state, %{opts: opts} = relation) do
-    cond do
-      not Map.has_key?(opts, :module) ->
+    with :ok <- verify_relation_module_value(dsl_state, relation),
+         :ok <- verify_special_relation_module(dsl_state, relation) do
+      verify_many_to_many_join(dsl_state, relation, opts)
+    end
+  end
+
+  defp verify_relation_module_value(dsl_state, %{opts: opts} = relation) do
+    case Map.fetch(opts, :module) do
+      :error ->
         error(dsl_state, :relations, relation, "requires a `:module` option")
 
-      relation.type == :many_to_many and not Map.has_key?(opts, :join_through) ->
-        error(dsl_state, :relations, relation, "many-to-many relations require `:join_through`")
-
-      true ->
+      {:ok, module} when is_atom(module) and module not in [nil, false, true] ->
         :ok
+
+      {:ok, _invalid_module} ->
+        error(dsl_state, :relations, relation, "`:module` must be a module atom")
+    end
+  end
+
+  defp verify_special_relation_module(dsl_state, %{type: type, opts: %{module: :blocks}} = relation)
+       when type != :has_many,
+       do: error(dsl_state, :relations, relation, "`:blocks` modules are only valid for has-many relations")
+
+  defp verify_special_relation_module(
+         dsl_state,
+         %{name: name, type: type, opts: %{module: :alternates}} = relation
+       )
+       when type != :has_many or name != :alternates do
+    error(
+      dsl_state,
+      :relations,
+      relation,
+      "`:alternates` is only valid for a has-many relation named `:alternates`"
+    )
+  end
+
+  defp verify_special_relation_module(_dsl_state, _relation), do: :ok
+
+  defp verify_many_to_many_join(dsl_state, %{type: :many_to_many} = relation, opts) do
+    if is_nil(Map.get(opts, :join_through)) do
+      error(dsl_state, :relations, relation, "many-to-many relations require `:join_through`")
+    else
+      :ok
+    end
+  end
+
+  defp verify_many_to_many_join(_dsl_state, _relation, _opts), do: :ok
+
+  defp verify_relation_options(dsl_state, relation) do
+    with :ok <- verify_boolean_option(dsl_state, :relations, relation, :required),
+         :ok <- verify_boolean_option(dsl_state, :relations, relation, :define_field),
+         :ok <- verify_atom_option(dsl_state, relation, :foreign_key),
+         :ok <- verify_atom_option(dsl_state, relation, :references),
+         :ok <- verify_string_option(dsl_state, relation, :constraint_name),
+         :ok <- verify_string_option(dsl_state, relation, :required_message),
+         :ok <- verify_string_option(dsl_state, relation, :invalid_message),
+         :ok <- verify_boolean_option(dsl_state, :relations, relation, :force_update_on_change),
+         :ok <- verify_atom_option(dsl_state, relation, :sort_param),
+         :ok <- verify_atom_option(dsl_state, relation, :drop_param),
+         :ok <- verify_relation_option_scopes(dsl_state, relation),
+         :ok <- verify_through(dsl_state, relation) do
+      verify_join_through(dsl_state, relation)
+    end
+  end
+
+  defp verify_relation_option_scopes(dsl_state, %{type: type, opts: opts} = relation) do
+    case Enum.find(@relation_option_scopes, fn {option, allowed_types} ->
+           Map.has_key?(opts, option) and type not in allowed_types
+         end) do
+      nil ->
+        :ok
+
+      {option, allowed_types} ->
+        error(
+          dsl_state,
+          :relations,
+          relation,
+          "`:#{option}` is only valid for #{format_relation_types(allowed_types)} relations"
+        )
+    end
+  end
+
+  defp format_relation_types([type]), do: inspect(type)
+  defp format_relation_types(types), do: Enum.map_join(types, ", ", &inspect/1)
+
+  defp verify_atom_option(dsl_state, %{opts: opts} = relation, option) do
+    case Map.get(opts, option) do
+      nil -> :ok
+      value when is_atom(value) -> :ok
+      value -> error(dsl_state, :relations, relation, "`:#{option}` must be an atom, got: #{inspect(value)}")
+    end
+  end
+
+  defp verify_string_option(dsl_state, %{opts: opts} = relation, option) do
+    case Map.get(opts, option) do
+      nil -> :ok
+      value when is_binary(value) -> :ok
+      value -> error(dsl_state, :relations, relation, "`:#{option}` must be a string, got: #{inspect(value)}")
+    end
+  end
+
+  defp verify_through(dsl_state, %{opts: opts} = relation) do
+    case Map.get(opts, :through) do
+      nil ->
+        :ok
+
+      through when relation.type == :has_many and is_list(through) and through != [] ->
+        if Enum.all?(through, &is_atom/1) do
+          :ok
+        else
+          error(dsl_state, :relations, relation, "`:through` must contain only relation atoms")
+        end
+
+      _through ->
+        error(dsl_state, :relations, relation, "`:through` must be a non-empty atom list on a has-many relation")
+    end
+  end
+
+  defp verify_join_through(dsl_state, %{opts: opts} = relation) do
+    case Map.get(opts, :join_through) do
+      nil ->
+        :ok
+
+      join_through when is_atom(join_through) or is_binary(join_through) ->
+        :ok
+
+      value ->
+        error(dsl_state, :relations, relation, "`:join_through` must be a module or table name, got: #{inspect(value)}")
     end
   end
 
@@ -144,8 +326,11 @@ defmodule Brando.Blueprint.Verifier do
 
   defp verify_unique(dsl_state, kind, %{opts: opts} = entity) do
     case Map.get(opts, :unique) do
-      unique when unique in [nil, false, true] ->
+      unique when unique in [nil, false] ->
         :ok
+
+      true ->
+        verify_unique_scope(dsl_state, kind, entity, [])
 
       unique when is_list(unique) ->
         verify_unique_options(dsl_state, kind, entity, unique)
@@ -154,6 +339,69 @@ defmodule Brando.Blueprint.Verifier do
         error(dsl_state, section(kind), entity, "`:unique` must be a boolean or keyword list")
     end
   end
+
+  defp verify_persisted_unique(dsl_state, :attribute, %{opts: %{virtual: true, unique: unique}} = entity)
+       when unique not in [nil, false] do
+    error(dsl_state, :attributes, entity, "virtual attributes cannot be unique")
+  end
+
+  defp verify_persisted_unique(_dsl_state, _kind, _entity), do: :ok
+
+  defp verify_collision_type(dsl_state, %{type: type, opts: opts} = attribute) do
+    unique = Map.get(opts, :unique)
+
+    if collision_configured?(unique) and not string_collision_type?(type) do
+      error(
+        dsl_state,
+        :attributes,
+        attribute,
+        "`prevent_collision` requires a string, text, slug, or string-backed custom type"
+      )
+    else
+      :ok
+    end
+  end
+
+  defp collision_configured?(unique) when is_list(unique), do: Keyword.has_key?(unique, :prevent_collision)
+  defp collision_configured?(_unique), do: false
+
+  defp string_collision_type?(type) when type in [:slug, :string, :text], do: true
+
+  defp string_collision_type?(type) do
+    not (type in @non_string_collision_types or match?({:array, _}, type))
+  end
+
+  defp verify_unique_references(dsl_state, kind, %{opts: opts} = entity, storage_columns) do
+    referenced_fields = unique_reference_fields(Map.get(opts, :unique))
+
+    unknown_fields =
+      referenced_fields
+      |> Enum.reject(&MapSet.member?(storage_columns, &1))
+      |> Enum.uniq()
+
+    case unknown_fields do
+      [] ->
+        :ok
+
+      unknown ->
+        error(
+          dsl_state,
+          section(kind),
+          entity,
+          "`:unique` references unknown persisted fields #{inspect(unknown)}"
+        )
+    end
+  end
+
+  defp unique_reference_fields(unique) when is_list(unique) do
+    List.wrap(Keyword.get(unique, :with)) ++ collision_fields(Keyword.get(unique, :prevent_collision))
+  end
+
+  defp unique_reference_fields(_unique), do: []
+
+  defp collision_fields(field) when is_atom(field) and field not in [nil, false, true], do: [field]
+  defp collision_fields(fields) when is_list(fields), do: fields
+  defp collision_fields(_value), do: []
 
   defp verify_unique_options(dsl_state, kind, entity, unique) do
     if Keyword.keyword?(unique) do
@@ -227,7 +475,7 @@ defmodule Brando.Blueprint.Verifier do
         dsl_state,
         section(kind),
         entity,
-        "`prevent_collision` must be true, a field atom, a list of field atoms, or a function"
+        "`prevent_collision` must be true, a field atom, a list of field atoms, or an arity-one function"
       )
     end
   end
@@ -242,7 +490,7 @@ defmodule Brando.Blueprint.Verifier do
   defp valid_collision?(true), do: true
   defp valid_collision?(field) when is_atom(field) and field not in [false, nil], do: true
   defp valid_collision?(fields) when is_list(fields), do: fields != [] and Enum.all?(fields, &is_atom/1)
-  defp valid_collision?(function) when is_function(function), do: true
+  defp valid_collision?(function) when is_function(function, 1), do: true
   defp valid_collision?(_), do: false
 
   defp verify_constraints(dsl_state, kind, %{opts: opts} = entity) do
@@ -287,8 +535,13 @@ defmodule Brando.Blueprint.Verifier do
     end)
   end
 
-  defp valid_constraint?(_, _, {key, value}) when key in [:length, :max_length, :min_length],
+  defp valid_constraint?(:attribute, _, {key, value}) when key in [:length, :max_length, :min_length],
     do: is_integer(value) and value >= 0
+
+  defp valid_constraint?(:relation, %{type: type}, {key, value})
+       when type in [:has_many, :many_to_many, :embeds_many, :entries] and
+              key in [:length, :max_length, :min_length],
+       do: is_integer(value) and value >= 0
 
   defp valid_constraint?(:attribute, _, {:format, %Regex{}}), do: true
   defp valid_constraint?(:attribute, _, {key, true}) when key in [:acceptance, :confirmation], do: true
@@ -305,7 +558,8 @@ defmodule Brando.Blueprint.Verifier do
     fields =
       Enum.map(attributes, &{&1.name, &1}) ++
         Enum.flat_map(relations, &relation_ecto_fields/1) ++
-        Enum.flat_map(assets, &asset_ecto_fields/1)
+        Enum.flat_map(assets, &asset_ecto_fields/1) ++
+        primary_key_field(dsl_state)
 
     frequencies = fields |> Enum.map(&elem(&1, 0)) |> Enum.frequencies()
 
@@ -318,9 +572,12 @@ defmodule Brando.Blueprint.Verifier do
     end
   end
 
-  defp relation_ecto_fields(%{type: :belongs_to, name: name, opts: opts} = relation) do
-    foreign_key = Map.get(opts, :foreign_key, String.to_atom("#{name}_id"))
-    [{name, relation}, {foreign_key, relation}]
+  defp relation_ecto_fields(%{type: :belongs_to, name: name, opts: %{define_field: false}} = relation) do
+    [{name, relation}]
+  end
+
+  defp relation_ecto_fields(%{type: :belongs_to, name: name} = relation) do
+    [{name, relation}, {AssociationKey.for(relation), relation}]
   end
 
   defp relation_ecto_fields(%{type: :has_many, name: name, opts: %{module: :blocks}} = relation) do
@@ -339,6 +596,40 @@ defmodule Brando.Blueprint.Verifier do
 
   defp asset_ecto_fields(%{name: name} = asset),
     do: [{name, asset}, {String.to_atom("#{name}_id"), asset}]
+
+  defp storage_column_names(dsl_state, attributes, relations, assets) do
+    attribute_columns =
+      attributes
+      |> Enum.reject(&(Map.get(&1.opts, :virtual) == true))
+      |> Enum.map(& &1.name)
+
+    relation_columns = Enum.flat_map(relations, &relation_storage_columns/1)
+    asset_columns = Enum.map(assets, &String.to_atom("#{&1.name}_id"))
+    primary_key_columns = Enum.map(primary_key_field(dsl_state), &elem(&1, 0))
+
+    MapSet.new(attribute_columns ++ relation_columns ++ asset_columns ++ primary_key_columns)
+  end
+
+  defp relation_storage_columns(%{type: :belongs_to, opts: %{define_field: false}}), do: []
+  defp relation_storage_columns(%{type: :belongs_to} = relation), do: [AssociationKey.for(relation)]
+
+  defp relation_storage_columns(%{type: type, name: name}) when type in [:embeds_one, :embeds_many],
+    do: [name]
+
+  defp relation_storage_columns(%{type: :has_many, name: name, opts: %{module: :blocks}}),
+    do: [String.to_atom("rendered_#{name}"), String.to_atom("rendered_#{name}_at")]
+
+  defp relation_storage_columns(_relation), do: []
+
+  defp primary_key_field(dsl_state) do
+    module = Verifier.get_persisted(dsl_state, :module)
+
+    case Module.get_attribute(module, :primary_key) do
+      false -> []
+      {name, _type, _opts} when is_atom(name) -> [{name, :primary_key}]
+      _default -> [{:id, :primary_key}]
+    end
+  end
 
   defp entity_section(%Brando.Blueprint.Attributes.Attribute{}), do: :attributes
   defp entity_section(%Brando.Blueprint.Relations.Relation{}), do: :relations

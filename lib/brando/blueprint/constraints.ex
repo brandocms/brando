@@ -35,6 +35,7 @@ defmodule Brando.Blueprint.Constraints do
   import Ecto.Changeset
   import Ecto.Query
 
+  alias Brando.Blueprint.AssociationKey
   alias Brando.RuntimeConfig
 
   @content_module Module.concat(["Brando", "Content", "Module"])
@@ -58,13 +59,24 @@ defmodule Brando.Blueprint.Constraints do
     if module.__schema__(:source) do
       relations
       |> Enum.filter(&(&1.type == :belongs_to))
-      |> Enum.reduce(changeset, fn relation, validated_changeset ->
-        foreign_key_constraint(validated_changeset, :"#{relation.name}_id")
-      end)
+      |> Enum.reduce(changeset, &add_foreign_key_constraint/2)
     else
       changeset
     end
   end
+
+  defp add_foreign_key_constraint(relation, changeset) do
+    foreign_key_constraint(
+      changeset,
+      AssociationKey.for(relation),
+      foreign_key_constraint_opts(relation)
+    )
+  end
+
+  defp foreign_key_constraint_opts(%{opts: %{constraint_name: constraint_name}}),
+    do: [name: constraint_name]
+
+  defp foreign_key_constraint_opts(_relation), do: []
 
   defp run_validation({:min_length, length}, validated_changeset, %{name: name, type: :entries}) do
     validate_length(validated_changeset, name, min: length)

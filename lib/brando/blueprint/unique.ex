@@ -3,6 +3,7 @@ defmodule Brando.Blueprint.Unique do
   import Ecto.Changeset
   import Ecto.Query
 
+  alias Brando.Blueprint.AssociationKey
   alias Brando.Blueprint.Collision
 
   def run_unique_attribute_constraints(changeset, module, attributes) do
@@ -63,22 +64,20 @@ defmodule Brando.Blueprint.Unique do
     |> Enum.filter(&Map.get(&1.opts, :unique, false))
     |> Enum.reduce(changeset, fn
       %{opts: %{unique: true}} = f, new_changeset ->
-        unique_constraint(new_changeset, :"#{f.name}_id")
+        unique_constraint(new_changeset, AssociationKey.for(f))
 
       %{opts: %{unique: unique_opts}} = f, new_changeset ->
         message = Keyword.get(unique_opts, :message, "has already been taken")
+        field = AssociationKey.for(f)
 
         case Keyword.get(unique_opts, :with) do
           nil ->
-            field = :"#{f.name}_id"
             unique_constraint(new_changeset, field, message: message)
 
           with_fields when is_list(with_fields) ->
-            field = :"#{f.name}_id"
             unique_constraint(new_changeset, [field] ++ with_fields, message: message)
 
           with_field ->
-            field = :"#{f.name}_id"
             unique_constraint(new_changeset, [field, with_field], message: message)
         end
     end)

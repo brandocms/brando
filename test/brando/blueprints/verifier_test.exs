@@ -34,6 +34,33 @@ defmodule Brando.Blueprint.VerifierTest do
     end
   end
 
+  test "rejects a bare array type before Ecto schema generation" do
+    assert_raise Spark.Error.DslError, ~r/bare.*array.*invalid/i, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :tags, :array
+          end
+        end
+      )
+    end
+  end
+
+  test "maps Blueprint UUID and timestamp attributes to valid Ecto types" do
+    module =
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :external_id, :uuid
+            attribute :published_at, :timestamp
+          end
+        end
+      )
+
+    assert module.__schema__(:type, :external_id) == Ecto.UUID
+    assert module.__schema__(:type, :published_at) == :naive_datetime
+  end
+
   test "rejects unsupported constraints at compile time" do
     assert_raise Spark.Error.DslError, ~r/unsupported options \[:minimum\]/, fn ->
       compile_blueprint(
@@ -71,6 +98,216 @@ defmodule Brando.Blueprint.VerifierTest do
         end
       )
     end
+  end
+
+  test "rejects non-boolean required and virtual options" do
+    assert_raise Spark.Error.DslError, ~r/`:required` must be a boolean/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :title, :string, required: :yes
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/`:virtual` must be a boolean/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :title, :string, virtual: :yes
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/`:required` must be a boolean/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :cover, :image, cfg: :default, required: "yes"
+          end
+        end
+      )
+    end
+  end
+
+  test "rejects uniqueness scopes that are not persisted fields" do
+    assert_raise Spark.Error.DslError, ~r/unknown persisted fields \[:missing\]/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :title, :string, unique: [with: :missing]
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/unknown persisted fields \[:missing\]/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :slug, :slug, unique: [prevent_collision: :missing]
+          end
+        end
+      )
+    end
+  end
+
+  test "rejects uniqueness configurations that cannot be enforced" do
+    assert_raise Spark.Error.DslError, ~r/virtual attributes cannot be unique/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :temporary, :string, virtual: true, unique: true
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/arity-one function/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :slug, :slug, unique: [prevent_collision: fn -> :invalid end]
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/`prevent_collision` requires a string/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :position, :integer, unique: [prevent_collision: true]
+          end
+        end
+      )
+    end
+  end
+
+  test "rejects fields that collide with the implicit primary key" do
+    assert_raise Spark.Error.DslError, ~r/duplicate Ecto field :id/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :id, :integer
+          end
+        end
+      )
+    end
+  end
+
+  test "validates relation storage options before Ecto schema generation" do
+    media_item = MediaItem
+
+    assert_raise Spark.Error.DslError, ~r/`:module` must be a module atom/, fn ->
+      compile_blueprint(
+        quote do
+          relations do
+            relation :owner, :belongs_to, module: nil
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/`:required` must be a boolean/, fn ->
+      compile_blueprint(
+        quote do
+          relations do
+            relation :owner, :belongs_to,
+              module: unquote(media_item),
+              required: :yes
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/`:foreign_key` must be an atom/, fn ->
+      compile_blueprint(
+        quote do
+          relations do
+            relation :owner, :belongs_to,
+              module: unquote(media_item),
+              foreign_key: "owner_id"
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/`:through` must be a non-empty atom list/, fn ->
+      compile_blueprint(
+        quote do
+          relations do
+            relation :items, :has_many,
+              module: unquote(media_item),
+              through: []
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/`:join_through` is only valid for :many_to_many relations/, fn ->
+      compile_blueprint(
+        quote do
+          relations do
+            relation :items, :has_many,
+              module: unquote(media_item),
+              join_through: "items_join"
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/only belongs-to relations can be unique/, fn ->
+      compile_blueprint(
+        quote do
+          relations do
+            relation :items, :has_many,
+              module: unquote(media_item),
+              unique: true
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/constraint :min_length has an unsupported value/, fn ->
+      compile_blueprint(
+        quote do
+          relations do
+            relation :owner, :belongs_to,
+              module: unquote(media_item),
+              constraints: [min_length: 1]
+          end
+        end
+      )
+    end
+  end
+
+  test "supports manually declared custom foreign-key fields" do
+    media_item = MediaItem
+
+    module =
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :owner_ref, :id
+          end
+
+          relations do
+            relation :owner, :belongs_to,
+              module: unquote(media_item),
+              foreign_key: :owner_ref,
+              define_field: false,
+              required: true
+          end
+        end
+      )
+
+    assert Enum.count(module.__schema__(:fields), &(&1 == :owner_ref)) == 1
+    assert module.__schema__(:association, :owner).owner_key == :owner_ref
+    assert module.__castable_relations__() == [:owner_ref]
+    assert module.__required_relations__() == [:owner_ref]
   end
 
   test "reports form inputs for unknown schema fields" do

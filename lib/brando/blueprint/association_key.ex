@@ -11,7 +11,8 @@ defmodule Brando.Blueprint.AssociationKey do
 
   @doc """
   Returns the foreign-key field for singular associations and the association
-  name for collection-style relations.
+  name for collection-style relations. Custom `belongs_to` foreign keys are
+  respected.
 
   ## Examples
 
@@ -20,8 +21,19 @@ defmodule Brando.Blueprint.AssociationKey do
 
       iex> Brando.Blueprint.AssociationKey.for(%{type: :has_many, name: :items})
       :items
+
+      iex> Brando.Blueprint.AssociationKey.for(%{
+      ...>   type: :belongs_to,
+      ...>   name: :creator,
+      ...>   opts: %{foreign_key: :owner_id}
+      ...> })
+      :owner_id
   """
-  @spec for(%{required(:type) => atom(), required(:name) => atom()}) :: atom()
+  @spec for(%{required(:type) => atom(), required(:name) => atom(), optional(:opts) => map()}) :: atom()
+  def for(%{type: :belongs_to, name: name, opts: opts}) do
+    Map.get(opts, :foreign_key, :"#{name}_id")
+  end
+
   def for(%{type: type, name: name}) when type in @foreign_key_types, do: :"#{name}_id"
   def for(%{name: name}), do: name
 end

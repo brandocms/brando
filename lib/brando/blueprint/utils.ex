@@ -7,9 +7,24 @@ defmodule Brando.Blueprint.Utils do
   focused modules that do not pull their dependencies into schema compilation.
   """
 
-  @strip_ecto_opts [:cast, :module, :required, :unique, :constraints, :sort_param, :drop_param, :rename_from]
-  @strip_embeds_opts [:cast, :module, :unique, :constraints]
-  @strip_changeset_opts [:cast, :module]
+  @changeset_opts [
+    :drop_param,
+    :force_update_on_change,
+    :invalid_message,
+    :required,
+    :required_message,
+    :sort_param,
+    :with
+  ]
+  @strip_ecto_opts @changeset_opts ++
+                     [
+                       :cast,
+                       :constraint_name,
+                       :constraints,
+                       :module,
+                       :rename_from,
+                       :unique
+                     ]
   @status_type Module.concat(["Brando", "Type", "Status"])
   @file_type Module.concat(["Brando", "Type", "File"])
   @image_type Module.concat(["Brando", "Type", "Image"])
@@ -30,6 +45,8 @@ defmodule Brando.Blueprint.Utils do
   def to_ecto_type(:i18n_string), do: @i18n_string_type
   def to_ecto_type(:slug), do: :string
   def to_ecto_type(:datetime), do: :utc_datetime
+  def to_ecto_type(:timestamp), do: :naive_datetime
+  def to_ecto_type(:uuid), do: Ecto.UUID
 
   def to_ecto_type(:villain) do
     IO.puts(":villain type is deprecated. Please move to :blocks")
@@ -87,17 +104,13 @@ defmodule Brando.Blueprint.Utils do
   Removes Blueprint-only metadata and returns options accepted by Ecto cast helpers.
   """
   @spec to_changeset_opts(term(), map()) :: keyword()
-  def to_changeset_opts(:has_one, opts), do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
+  def to_changeset_opts(type, opts)
+      when type in [:belongs_to, :embeds_many, :embeds_one, :has_many, :has_one, :many_to_many] do
+    opts
+    |> Map.take(@changeset_opts)
+    |> Map.to_list()
+  end
 
-  def to_changeset_opts(:belongs_to, opts),
-    do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
-
-  def to_changeset_opts(:many_to_many, opts),
-    do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
-
-  def to_changeset_opts(:has_many, opts), do: opts |> Map.drop(@strip_changeset_opts) |> Map.to_list()
-  def to_changeset_opts(:embeds_one, opts), do: opts |> Map.drop(@strip_embeds_opts) |> Map.to_list()
-  def to_changeset_opts(:embeds_many, opts), do: opts |> Map.drop(@strip_embeds_opts) |> Map.to_list()
   def to_changeset_opts(_type, opts), do: Map.to_list(opts)
 
   @doc """

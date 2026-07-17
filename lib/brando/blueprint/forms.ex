@@ -379,6 +379,10 @@ defmodule Brando.Blueprint.Forms do
   """
   alias Brando.Blueprint.Forms
 
+  @doc """
+  Lists every top-level field name in a form.
+  """
+  @spec list_fields(struct()) :: [atom()]
   def list_fields(%Forms.Form{tabs: tabs}) do
     for tab <- tabs,
         %Forms.Fieldset{fields: inputs} <- tab.fields,
@@ -387,6 +391,10 @@ defmodule Brando.Blueprint.Forms do
     end
   end
 
+  @doc """
+  Lists top-level fields of a specific input type.
+  """
+  @spec list_fields(struct(), :multi_select | :select) :: [atom()]
   def list_fields(%Forms.Form{tabs: tabs}, :select) do
     for tab <- tabs,
         %Forms.Fieldset{fields: inputs} <- tab.fields,
@@ -403,49 +411,52 @@ defmodule Brando.Blueprint.Forms do
     end
   end
 
+  @doc """
+  Returns the tab containing `field`.
+
+  Foreign-key error fields such as `:creator_id` resolve to an input named
+  `:creator`. Exact field names take precedence, and an unknown field falls back
+  to the first tab.
+  """
+  @spec get_tab_for_field(atom() | String.t(), struct()) :: String.t() | nil
   def get_tab_for_field(field, %Forms.Form{tabs: tabs}) do
-    for_result =
-      for tab <- tabs,
-          %Forms.Fieldset{fields: inputs} <- tab.fields do
-        find_field(inputs, field) && tab.name
-      end
-
-    tab =
-      for_result
-      |> Enum.filter(&is_binary(&1))
-      |> List.first()
-
-    tab || tabs |> List.first() |> Map.get(:name)
+    find_tab_for_field(tabs, field) ||
+      find_tab_for_field(tabs, foreign_key_base(field)) ||
+      tabs |> List.first() |> Map.get(:name)
   end
 
+  @doc """
+  Returns the form element for `field`, including foreign-key-normalized fields.
+
+  Exact field names take precedence over stripping a trailing `_id` suffix.
+  """
+  @spec get_field(atom() | String.t(), struct()) :: struct() | nil
   def get_field(field, %Forms.Form{tabs: tabs}) do
-    for_result =
-      for tab <- tabs,
-          %Forms.Fieldset{fields: inputs} <- tab.fields do
-        find_field_normalized(inputs, field)
-      end
-
-    for_result
-    |> Enum.reject(&is_nil(&1))
-    |> List.first()
+    find_form_field(tabs, field) || find_form_field(tabs, foreign_key_base(field))
   end
 
-  defp find_field(inputs, field) do
-    Enum.find(inputs, fn
-      %{name: name, type: :image} -> "#{name}_id" == to_string(field)
-      %{name: name, type: :file} -> "#{name}_id" == to_string(field)
-      %{name: name} -> name == field
-      %{field: subform_field} -> subform_field == field
+  defp find_tab_for_field(tabs, field) do
+    Enum.find_value(tabs, fn tab ->
+      if find_form_field([tab], field), do: tab.name
     end)
   end
 
-  defp find_field_normalized(inputs, field) do
-    Enum.find(inputs, fn
-      %{name: name} ->
-        to_string(name) == String.replace(to_string(field), "_id", "")
-
-      %{field: subform_field} ->
-        to_string(subform_field) == String.replace(to_string(field), "_id", "")
+  defp find_form_field(tabs, field) do
+    Enum.find_value(tabs, fn tab ->
+      Enum.find_value(tab.fields, fn
+        %Forms.Fieldset{fields: inputs} -> Enum.find(inputs, &field_matches?(&1, field))
+        _other -> nil
+      end)
     end)
+  end
+
+  defp field_matches?(%{name: name}, field), do: to_string(name) == to_string(field)
+  defp field_matches?(%{field: subform_field}, field), do: to_string(subform_field) == to_string(field)
+  defp field_matches?(_form_element, _field), do: false
+
+  defp foreign_key_base(field) do
+    field
+    |> to_string()
+    |> String.trim_trailing("_id")
   end
 end

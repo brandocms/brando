@@ -49,7 +49,57 @@ dependency optimization and requires no database migration.
 
 #### Attributes
 
+Array attributes always declare their element type, for example
+`attribute :tags, {:array, :string}`; a bare `:array` is rejected. Blueprint
+`:uuid` fields use `Ecto.UUID`, while the legacy `:timestamp` field maps to
+Ecto's `:naive_datetime` schema type. These mappings affect the runtime schema
+type, while Blueprint migration snapshots retain their database-oriented type.
+
 #### Relations
+
+Blueprint uses the same persisted foreign-key name for Ecto schema generation,
+changeset casting, required validation, unique constraints, database constraints,
+and generated migrations. The default for a `belongs_to` relation is
+`:<relation>_id`; override it explicitly when the database column uses another
+name:
+
+```elixir
+relation :creator, :belongs_to,
+  module: MyApp.Users.User,
+  foreign_key: :owner_id,
+  required: true,
+  unique: [with: :site_id]
+```
+
+If the foreign-key field must be declared as an attribute (for example, to use
+field options not supplied by `belongs_to`), disable Ecto's automatic field and
+declare the exact persisted name once:
+
+```elixir
+attributes do
+  attribute :owner_id, :id
+end
+
+relations do
+  relation :creator, :belongs_to,
+    module: MyApp.Users.User,
+    foreign_key: :owner_id,
+    define_field: false,
+    required: true
+end
+```
+
+`required`, `define_field`, and `virtual` options are booleans. Unique `with:`
+and `prevent_collision:` fields must name columns persisted by the same
+Blueprint; virtual attributes cannot be unique. Invalid declarations are
+reported while the Blueprint compiles.
+
+These checks require no database migration by themselves. If correcting a
+declaration changes an existing column, foreign key, or index, generate and
+review a Blueprint migration as described in
+[Blueprint migrations](blueprint_migrations.md). If the database already uses a
+custom foreign-key column and only the runtime declaration was inconsistent, no
+schema migration is needed.
 
 #### Assets
 

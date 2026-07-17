@@ -38,6 +38,29 @@ defmodule Brando.Blueprint.RuntimeRegressionTest do
     end
   end
 
+  defmodule CustomForeignKey do
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "BlueprintRuntimeRegression",
+      schema: "CustomForeignKey",
+      singular: "custom_foreign_key",
+      plural: "custom_foreign_keys",
+      gettext_module: Brando.Gettext
+
+    attributes do
+      attribute :tenant_id, :integer
+    end
+
+    relations do
+      relation :location, :belongs_to,
+        module: Brando.BlueprintTest.P1.Location,
+        foreign_key: :location_ref,
+        constraint_name: "custom_location_ref_fkey",
+        required: true,
+        unique: [with: :tenant_id]
+    end
+  end
+
   defmodule InvalidTrait do
     use Brando.Trait
 
@@ -63,6 +86,43 @@ defmodule Brando.Blueprint.RuntimeRegressionTest do
     assert Enum.any?(changeset.constraints, fn constraint ->
              constraint.field == :title and constraint.error_message == "must be unique"
            end)
+  end
+
+  test "custom belongs_to foreign keys stay aligned across casting and constraints" do
+    [relation] = Relations.__relations__(CustomForeignKey)
+
+    assert Blueprint.get_relation_key(relation) == :location_ref
+    assert Blueprint.get_castable_relation_fields([relation]) == [:location_ref]
+    assert CustomForeignKey.__castable_relations__() == [:location_ref]
+    assert CustomForeignKey.__required_relations__() == [:location_ref]
+
+    changeset =
+      CustomForeignKey.changeset(%CustomForeignKey{}, %{
+        location_ref: 42,
+        tenant_id: 7
+      })
+
+    assert changeset.changes.location_ref == 42
+    assert changeset.changes.tenant_id == 7
+
+    assert Enum.any?(changeset.constraints, fn constraint ->
+             constraint.type == :unique and constraint.field == :location_ref
+           end)
+
+    assert Enum.any?(changeset.constraints, fn constraint ->
+             constraint.type == :foreign_key and
+               constraint.field == :location_ref and
+               constraint.constraint == "custom_location_ref_fkey"
+           end)
+
+    required_changeset = CustomForeignKey.changeset(%CustomForeignKey{}, %{tenant_id: 7})
+    assert {:location_ref, {"can't be blank", [validation: :required]}} in required_changeset.errors
+
+    storage_schema = Brando.Blueprint.Migrations.Schema.build(CustomForeignKey)
+    location_column = Enum.find(storage_schema.columns, &(&1.name == :location_ref))
+
+    assert location_column.reference.name == "custom_location_ref_fkey"
+    assert Enum.any?(storage_schema.indexes, &(&1.unique and &1.fields == [:location_ref, :tenant_id]))
   end
 
   test "changeset module and data schema must match" do

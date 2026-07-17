@@ -134,6 +134,24 @@
 
 #### Improvements
 
+- **Consistent Blueprint schema and relation validation**: Custom `belongs_to`
+  foreign keys now use one canonical field across casting, required validation,
+  unique constraints, foreign-key constraints, generated schemas, and migration
+  metadata; custom constraint names are also preserved in changesets. Blueprint
+  compilation now rejects non-boolean `required`/`virtual`/`define_field`
+  options, invalid relation storage options, unsupported relation constraints,
+  uniqueness scopes that reference non-persisted fields, unique virtual fields,
+  collision callbacks with the wrong arity, and declarations that collide with
+  the implicit primary key. Bare array attributes are rejected in favor of
+  `{:array, type}`, and Blueprint `:uuid`/`:timestamp` attributes now map to valid
+  Ecto runtime types. Form error lookup now handles all foreign-key-backed inputs
+  while preferring exact `_id` field names. No database migration is required
+  when the existing database already matches the declared custom key.
+  If fixing a reported declaration changes a column, foreign key, or unique
+  index, generate and review a Blueprint migration; see
+  [Blueprint migrations](guides/blueprint_migrations.md) and the relation notes
+  in [Blueprints](guides/blueprints.md).
+
 - **Safer Blueprint identifier and URL templates**: Invalid Liquid syntax in
   `identifier` and `absolute_url` declarations now raises a contextual
   `BlueprintError` with the setting, parser reason, and line number instead of an

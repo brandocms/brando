@@ -3,7 +3,6 @@ defmodule Brando.Blueprint.Attributes.Dsl do
   alias Brando.RuntimeConfig
 
   @valid_attributes [
-    :array,
     :boolean,
     :date,
     :datetime,
