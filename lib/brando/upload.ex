@@ -22,6 +22,7 @@ defmodule Brando.Upload do
   use Gettext, backend: Brando.Gettext
   import Brando.Utils
 
+  alias Brando.Assets.CompletedCallback
   alias Brando.Files
   alias Brando.Images
   alias Brando.Type.FileConfig
@@ -53,18 +54,16 @@ defmodule Brando.Upload do
     end
   end
 
-  def process_upload(%{status: :processed} = image, _, _) do
+  def process_upload(%{status: :processed} = image, _config, _user) do
     {:ok, image}
   end
 
   def process_upload(%{id: image_id} = image, cfg, user) do
     with {:ok, ops} <- Images.Operations.create(image, cfg, user),
          {:ok, %{^image_id => result}} <- Images.Operations.perform(ops, user) do
-      Images.update_image(
-        image,
-        %{sizes: result.sizes, formats: result.formats, status: :processed},
-        user
-      )
+      image
+      |> Images.update_image(%{sizes: result.sizes, formats: result.formats, status: :processed}, user)
+      |> run_completed_callback(cfg, user)
     end
   end
 
@@ -84,7 +83,9 @@ defmodule Brando.Upload do
       folder_id: upload.meta[:folder_id]
     }
 
-    Files.create_file(file_params, user)
+    file_params
+    |> Files.create_file(user)
+    |> run_completed_callback(upload.cfg, user)
   end
 
   def handle_upload_type(
@@ -106,21 +107,15 @@ defmodule Brando.Upload do
       folder_id: upload.meta[:folder_id]
     }
 
-    Images.create_image(image_params, user)
+    image_params
+    |> Images.create_image(user)
+    |> run_completed_callback(upload.cfg, user)
   end
 
   def handle_upload_type(%{cfg: %FileConfig{}} = upload, user) do
-    file_params = %{
-      title: upload.upload_entry.client_name,
-      mime_type: upload.upload_entry.client_type,
-      filesize: upload.upload_entry.client_size,
-      filename: upload.meta.filename,
-      config_target: upload.meta.config_target,
-      cdn: false,
-      folder_id: upload.meta[:folder_id]
-    }
-
-    Files.create_file(file_params, user)
+    upload
+    |> create_local_file(user)
+    |> run_completed_callback(upload.cfg, user)
   end
 
   # A local (:upload type) video wraps a File record (`Video` has
@@ -128,27 +123,20 @@ defmodule Brando.Upload do
   # it. The file keeps the video's config_target so its URL resolves through
   # the video asset's cfg (see Files.get_config_for/1 "video:" handling).
   def handle_upload_type(%{cfg: %VideoConfig{}} = upload, user) do
-    file_params = %{
-      title: upload.upload_entry.client_name,
-      mime_type: upload.upload_entry.client_type,
-      filesize: upload.upload_entry.client_size,
-      filename: upload.meta.filename,
-      config_target: upload.meta.config_target,
-      cdn: false,
-      folder_id: upload.meta[:folder_id]
-    }
-
-    with {:ok, file} <- Files.create_file(file_params, user) do
-      Brando.Videos.create_video(
-        %{
-          type: :upload,
-          status: :ready,
-          title: upload.upload_entry.client_name,
-          file_id: file.id,
-          config_target: upload.meta.config_target
-        },
-        user
-      )
+    with {:ok, file} <- create_local_file(upload, user),
+         {:ok, video} <-
+           Brando.Videos.create_video(
+             %{
+               type: :upload,
+               status: :ready,
+               title: upload.upload_entry.client_name,
+               file_id: file.id,
+               config_target: upload.meta.config_target
+             },
+             user
+           ) do
+      CompletedCallback.run(upload.cfg, video, user)
+      {:ok, video}
     end
   end
 
@@ -328,4 +316,26 @@ defmodule Brando.Upload do
     {_, filename} = Brando.Utils.split_path(key)
     filename
   end
+
+  defp create_local_file(upload, user) do
+    Files.create_file(
+      %{
+        title: upload.upload_entry.client_name,
+        mime_type: upload.upload_entry.client_type,
+        filesize: upload.upload_entry.client_size,
+        filename: upload.meta.filename,
+        config_target: upload.meta.config_target,
+        cdn: false,
+        folder_id: upload.meta[:folder_id]
+      },
+      user
+    )
+  end
+
+  defp run_completed_callback({:ok, asset}, config, user) do
+    CompletedCallback.run(config, asset, user)
+    {:ok, asset}
+  end
+
+  defp run_completed_callback(error, _config, _user), do: error
 end

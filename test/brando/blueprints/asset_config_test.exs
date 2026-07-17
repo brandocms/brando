@@ -2,6 +2,11 @@ defmodule Brando.Blueprint.AssetConfigTest do
   use ExUnit.Case, async: true
 
   alias Brando.Blueprint.Assets
+  alias Brando.Exception.BlueprintError
+
+  def provider_completed(video, user) do
+    send(Process.whereis(__MODULE__), {:provider_completed, video, user})
+  end
 
   defmodule ConfiguredAssets do
     use Brando.Blueprint,
@@ -19,6 +24,23 @@ defmodule Brando.Blueprint.AssetConfigTest do
       asset :default_video, :video, cfg: :default
       asset :default_file, :file, cfg: :default
       asset :target_file, :file, cfg: :config_target
+    end
+  end
+
+  defmodule VideoCallbacks do
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "AssetConfigTest",
+      schema: "VideoCallbacks",
+      singular: "video_callback",
+      plural: "video_callbacks",
+      gettext_module: Brando.Gettext
+
+    assets do
+      asset :clip, :video,
+        cfg: %{
+          completed_callback: &Brando.Blueprint.AssetConfigTest.provider_completed/2
+        }
     end
   end
 
@@ -47,5 +69,93 @@ defmodule Brando.Blueprint.AssetConfigTest do
 
     assert %{related: Brando.Files.File, on_replace: :update} =
              ConfiguredAssets.__schema__(:association, :default_file)
+  end
+
+  test "rejects invalid static config fields during Blueprint compilation" do
+    assert_raise BlueprintError, ~r/:size_limit expected a positive integer/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :document, :file, cfg: %{size_limit: 0}
+          end
+        end
+      )
+    end
+
+    assert_raise BlueprintError, ~r/:completed_callback expected nil, an arity-2 function/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :cover, :image, cfg: %{completed_callback: :invalid}
+          end
+        end
+      )
+    end
+
+    assert_raise BlueprintError, ~r/:sizes expected a non-empty map/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :cover, :image, cfg: %{sizes: %{}}
+          end
+        end
+      )
+    end
+  end
+
+  test "validates deferred config functions when they are materialized" do
+    module =
+      compile_blueprint(
+        quote do
+          def invalid_config, do: %{upload_path: ""}
+
+          assets do
+            asset :clip, :video, cfg: &__MODULE__.invalid_config/0
+          end
+        end
+      )
+
+    assert_raise BlueprintError, ~r/:upload_path expected a non-empty string/, fn ->
+      Assets.__asset__(module, :clip)
+    end
+  end
+
+  test "runs video callbacks only on the first ready transition" do
+    Process.register(self(), __MODULE__)
+
+    config_target = "video:#{inspect(VideoCallbacks)}:clip"
+    video = %Brando.Videos.Video{status: :processing, config_target: config_target}
+    ready_video = %{video | status: :ready}
+    user = %Brando.Users.User{id: 1}
+
+    assert :ok = Brando.Videos.run_completed_callback_on_ready(video, ready_video, user)
+    assert_received {:provider_completed, ^ready_video, ^user}
+
+    assert :ok = Brando.Videos.run_completed_callback_on_ready(ready_video, ready_video, user)
+    refute_received {:provider_completed, _, _}
+  end
+
+  defp compile_blueprint(body) do
+    unique = System.unique_integer([:positive])
+    module = Module.concat(__MODULE__, "Dynamic#{unique}")
+    schema = "Dynamic#{unique}"
+
+    Code.compile_quoted(
+      quote do
+        defmodule unquote(module) do
+          use Brando.Blueprint,
+            application: "Brando",
+            domain: "AssetConfigTest",
+            schema: unquote(schema),
+            singular: "dynamic",
+            plural: "dynamics",
+            gettext_module: Brando.Gettext
+
+          unquote(body)
+        end
+      end
+    )
+
+    module
   end
 end

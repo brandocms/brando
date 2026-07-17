@@ -7,6 +7,7 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
   reads depend on the compile-time Spark DSL extension.
   """
 
+  alias Brando.Blueprint.AssetConfigValidator
   alias Brando.RuntimeConfig
 
   @image_config Module.concat(["Brando", "Type", "ImageConfig"])
@@ -29,6 +30,7 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
         :gallery -> normalize_gallery_config(config.(), gallery_default_config())
       end
 
+    normalized = AssetConfigValidator.validate!(asset, normalized)
     %{asset | opts: Map.put(asset.opts, :cfg, normalized)}
   end
 

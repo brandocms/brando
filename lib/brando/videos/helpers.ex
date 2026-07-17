@@ -62,6 +62,10 @@ defmodule Brando.Videos.Helpers do
     Brando.Videos.Uploaders.Mux.get_playback_url(video)
   end
 
+  def get_playback_url(%Video{type: :bunny} = video) do
+    Brando.Videos.Uploaders.Bunny.get_playback_url(video)
+  end
+
   def get_playback_url(%Video{type: :upload, file: %Brando.Files.File{} = file}) do
     {:ok, Brando.Utils.media_url(file)}
   end
@@ -123,6 +127,19 @@ defmodule Brando.Videos.Helpers do
   end
 
   def thumbnail_url(%Video{}), do: nil
+
+  @doc """
+  Formats a provider duration in seconds as an `HH:MM:SS` string.
+  """
+  @spec format_duration(number()) :: String.t()
+  def format_duration(seconds) when is_number(seconds) do
+    total_seconds = round(seconds)
+    hours = div(total_seconds, 3600)
+    minutes = div(rem(total_seconds, 3600), 60)
+    remaining_seconds = rem(total_seconds, 60)
+
+    Enum.map_join([hours, minutes, remaining_seconds], ":", &String.pad_leading(to_string(&1), 2, "0"))
+  end
 
   @doc """
   Attempt to derive a thumbnail URL from an external file video's source URL

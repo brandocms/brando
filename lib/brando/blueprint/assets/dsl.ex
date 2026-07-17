@@ -1,4 +1,5 @@
 defmodule Brando.Blueprint.Assets.Dsl do
+  alias Brando.Blueprint.AssetConfigValidator
   alias Brando.Blueprint.Assets
 
   @valid_assets [
@@ -107,6 +108,7 @@ defmodule Brando.Blueprint.Assets.Dsl do
           normalize_gallery_config(Enum.into(kwlist, %{}), default_config)
       end
 
+    cfg = AssetConfigValidator.validate!(asset, cfg)
     opts_map = Map.put(opts_map, :cfg, cfg)
 
     {:ok, %{asset | opts: opts_map}}
@@ -130,7 +132,11 @@ defmodule Brando.Blueprint.Assets.Dsl do
       raise_missing_config!(asset)
     end
 
-    normalized_config = normalize_config(asset, config_module, config, passthrough_values)
+    normalized_config =
+      asset
+      |> normalize_config(config_module, config, passthrough_values)
+      |> then(&AssetConfigValidator.validate!(asset, &1))
+
     {:ok, %{asset | opts: Map.put(opts, :cfg, normalized_config)}}
   end
 

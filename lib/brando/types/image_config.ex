@@ -5,6 +5,10 @@ defmodule Brando.Type.ImageConfig do
   ### Options
 
     * random_filename - use filename given at upload, or create a random filename
+    * completed_callback - arity-2 function or `{module, function, extra_args}`
+      called after image processing. Receives `(image, user)` before configured
+      MFA arguments. Completion work may retry, so side effects should be
+      idempotent.
 
   """
 
@@ -12,18 +16,19 @@ defmodule Brando.Type.ImageConfig do
 
   alias Brando.Utils.Struct, as: StructUtils
 
-  @type cdn_config :: Brando.CDN.Config
+  @type cdn_config :: %Brando.CDN.Config{}
   @type t :: %__MODULE__{
-          allowed_mimetypes: [binary],
-          default_size: binary,
-          random_filename: boolean,
-          size_limit: non_neg_integer,
-          sizes: %{optional(binary) => map},
-          srcset: %{optional(binary) => map} | nil,
+          allowed_mimetypes: [String.t()],
+          completed_callback: Brando.Assets.CompletedCallback.t(struct()),
+          default_size: atom() | String.t(),
+          random_filename: boolean(),
+          size_limit: pos_integer(),
+          sizes: %{optional(String.t()) => map()},
+          srcset: map() | list() | nil,
           cdn: cdn_config | nil,
-          formats: [atom],
-          overwrite: boolean,
-          upload_path: binary
+          formats: [atom()],
+          overwrite: boolean(),
+          upload_path: String.t()
         }
 
   @derive Jason.Encoder

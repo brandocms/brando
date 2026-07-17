@@ -30,8 +30,10 @@ defmodule Brando.Type.FileConfig do
       * `:inline` - Display in browser (e.g., PDFs open in browser tab)
       * `:attachment` - Force download with filename
 
-    * `:completed_callback` - Function called after file processing completes.
-      Receives `(file, user)` as arguments. Default: `nil`
+    * `:completed_callback` - Function or `{module, function, extra_args}` called
+      after the upload is stored. Receives `(file, user)` before configured MFA
+      arguments. Completion work may retry, so side effects should be idempotent.
+      Default: `nil`
 
   ## Example
 
@@ -57,7 +59,19 @@ defmodule Brando.Type.FileConfig do
   use Ecto.Type
   import Brando.Utils, only: [stringy_struct: 2]
 
-  @type t :: %__MODULE__{}
+  @type t :: %__MODULE__{
+          accept: term(),
+          allowed_mimetypes: [String.t()],
+          cdn: %Brando.CDN.Config{} | nil,
+          completed_callback: Brando.Assets.CompletedCallback.t(struct()),
+          content_disposition: nil | :attachment | :inline,
+          force_filename: String.t() | nil,
+          overwrite: boolean(),
+          random_filename: boolean(),
+          size_limit: pos_integer(),
+          slugify_filename: boolean(),
+          upload_path: String.t()
+        }
 
   @derive Jason.Encoder
   defstruct accept: :any,

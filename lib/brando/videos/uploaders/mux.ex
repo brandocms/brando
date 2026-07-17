@@ -365,117 +365,87 @@ defmodule Brando.Videos.Uploaders.Mux do
   end
 
   defp update_video_with_asset(video, asset) do
-    # Safely extract playback_id
-    playback_id =
-      case asset["playback_ids"] do
-        [%{"id" => id} | _] when is_binary(id) -> id
-        _ -> nil
-      end
+    playback_id = playback_id(asset)
 
-    unless playback_id do
-      Logger.warning("Mux asset #{asset["id"]} has no playback_id")
-    end
-
-    mux_meta = %{
-      "upload_id" => get_in(video.meta, ["mux", "upload_id"]),
-      "asset_id" => asset["id"]
-    }
-
-    # Only add playback_id if it exists
-    mux_meta =
-      if playback_id do
-        Map.put(mux_meta, "playback_id", playback_id)
-      else
-        mux_meta
-      end
-
-    # Add optional fields if they exist
-    mux_meta =
-      mux_meta
-      |> maybe_put("duration", asset["duration"])
-      |> maybe_put("max_resolution", asset["max_resolution_tier"])
-      |> maybe_put("aspect_ratio", asset["aspect_ratio"])
-      |> maybe_put("status", asset["status"])
-
-    meta =
-      video.meta
-      |> Map.put("provider", "mux")
-      |> Map.put("mux", mux_meta)
-
-    # Determine status based on asset status
-    status =
-      case asset["status"] do
-        "ready" -> :ready
-        "preparing" -> :processing
-        "errored" -> :errored
-        _ -> :processing
-      end
-
-    params = %{
-      meta: meta,
-      status: status
-    }
-
-    # Extract width and height from tracks
     params =
-      case asset["tracks"] do
-        tracks when is_list(tracks) ->
-          video_track = Enum.find(tracks, fn track -> track["type"] == "video" end)
+      %{
+        meta: mux_meta(video, asset, playback_id),
+        status: video_status(asset["status"])
+      }
+      |> put_video_dimensions(asset["tracks"])
+      |> put_aspect_ratio(asset["aspect_ratio"])
+      |> put_duration(asset["duration"])
 
-          case video_track do
-            %{"max_width" => width, "max_height" => height}
-            when is_integer(width) and is_integer(height) ->
-              params
-              |> Map.put(:width, width)
-              |> Map.put(:height, height)
-
-            _ ->
-              params
-          end
-
-        _ ->
-          params
-      end
-
-    # Convert aspect_ratio from "1024:683" to "1024/683" for CSS
-    params =
-      case asset["aspect_ratio"] do
-        aspect_ratio when is_binary(aspect_ratio) ->
-          Map.put(params, :aspect_ratio, String.replace(aspect_ratio, ":", "/"))
-
-        _ ->
-          params
-      end
-
-    # Format duration from seconds to HH:MM:SS
-    params =
-      case asset["duration"] do
-        duration when is_number(duration) ->
-          Map.put(params, :duration, format_duration_string(duration))
-
-        _ ->
-          params
-      end
-
-    # Get the creator to use for the update
     {:ok, creator} = Brando.Users.get_user(video.creator_id)
 
     with {:ok, updated_video} <- Videos.update_video(video, params, creator) do
-      # Broadcast update to LiveView subscribers
+      Videos.run_completed_callback_on_ready(video, updated_video, creator)
       broadcast_video_update(updated_video)
       {:ok, updated_video}
     end
   end
 
+  defp playback_id(%{"playback_ids" => [%{"id" => id} | _]}) when is_binary(id), do: id
+
+  defp playback_id(asset) do
+    Logger.warning("Mux asset #{asset["id"]} has no playback_id")
+    nil
+  end
+
+  defp mux_meta(video, asset, playback_id) do
+    mux_meta =
+      %{
+        "upload_id" => get_in(video.meta, ["mux", "upload_id"]),
+        "asset_id" => asset["id"]
+      }
+      |> maybe_put("playback_id", playback_id)
+      |> maybe_put("duration", asset["duration"])
+      |> maybe_put("max_resolution", asset["max_resolution_tier"])
+      |> maybe_put("aspect_ratio", asset["aspect_ratio"])
+      |> maybe_put("status", asset["status"])
+
+    video.meta
+    |> Map.put("provider", "mux")
+    |> Map.put("mux", mux_meta)
+  end
+
+  defp video_status("ready"), do: :ready
+  defp video_status("errored"), do: :errored
+  defp video_status(_), do: :processing
+
+  defp put_video_dimensions(params, tracks) when is_list(tracks) do
+    case Enum.find(tracks, &(&1["type"] == "video")) do
+      %{"max_width" => width, "max_height" => height}
+      when is_integer(width) and is_integer(height) ->
+        Map.merge(params, %{height: height, width: width})
+
+      _ ->
+        params
+    end
+  end
+
+  defp put_video_dimensions(params, _tracks), do: params
+
+  defp put_aspect_ratio(params, aspect_ratio) when is_binary(aspect_ratio) do
+    Map.put(params, :aspect_ratio, String.replace(aspect_ratio, ":", "/"))
+  end
+
+  defp put_aspect_ratio(params, _aspect_ratio), do: params
+
+  defp put_duration(params, duration) when is_number(duration) do
+    Map.put(params, :duration, Videos.Helpers.format_duration(duration))
+  end
+
+  defp put_duration(params, _duration), do: params
+
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp update_video_status(video, status) do
-    # Get the creator to use for the update
     {:ok, creator} = Brando.Users.get_user(video.creator_id)
 
     with {:ok, updated_video} <- Videos.update_video(video, %{status: status}, creator) do
-      # Broadcast update to LiveView subscribers
+      Videos.run_completed_callback_on_ready(video, updated_video, creator)
       broadcast_video_update(updated_video)
       {:ok, updated_video}
     end
@@ -584,16 +554,4 @@ defmodule Brando.Videos.Uploaders.Mux do
   end
 
   defp valid_mux_id?(_), do: false
-
-  # Format duration from seconds (float) to HH:MM:SS string
-  defp format_duration_string(seconds) when is_number(seconds) do
-    total_seconds = round(seconds)
-    hours = div(total_seconds, 3600)
-    minutes = div(rem(total_seconds, 3600), 60)
-    remaining_seconds = rem(total_seconds, 60)
-
-    "#{String.pad_leading(to_string(hours), 2, "0")}:#{String.pad_leading(to_string(minutes), 2, "0")}:#{String.pad_leading(to_string(remaining_seconds), 2, "0")}"
-  end
-
-  defp format_duration_string(_), do: nil
 end

@@ -15,6 +15,14 @@ defmodule Brando.Type.VideoConfig do
   The `Brando.Videos.Uploader.initiate_upload/3` function automatically routes
   to the appropriate uploader based on this strategy.
 
+  ## Completion callback
+
+  `completed_callback` runs when a local upload is stored or a provider video
+  first becomes ready. It accepts an arity-2 function or
+  `{module, function, extra_args}`; the video and user are passed before the
+  configured arguments. Provider/webhook work may retry, so external side
+  effects should be idempotent.
+
   ## Provider Metadata
 
   The `meta` field allows you to pass provider-specific settings to video upload
@@ -72,7 +80,23 @@ defmodule Brando.Type.VideoConfig do
   use Ecto.Type
   import Brando.Utils, only: [stringy_struct: 2]
 
-  @type t :: %__MODULE__{}
+  @type upload_strategy :: :bunny | :cloudflare | :local | :mux | :s3
+  @type t :: %__MODULE__{
+          accept: term(),
+          allow_external_urls: boolean(),
+          allow_uploads: boolean(),
+          allowed_mimetypes: [String.t()],
+          cdn: %Brando.CDN.Config{} | nil,
+          completed_callback: Brando.Assets.CompletedCallback.t(struct()),
+          force_filename: String.t() | nil,
+          meta: map(),
+          overwrite: boolean(),
+          random_filename: boolean(),
+          size_limit: pos_integer(),
+          slugify_filename: boolean(),
+          upload_path: String.t(),
+          upload_strategy: upload_strategy()
+        }
 
   @derive Jason.Encoder
   defstruct accept: :any,

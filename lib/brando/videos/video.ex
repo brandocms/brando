@@ -46,7 +46,7 @@ defmodule Brando.Videos.Video do
   persist_identifier false
 
   attributes do
-    attribute :type, :enum, values: [:upload, :external_file, :vimeo, :youtube, :mux]
+    attribute :type, :enum, values: [:upload, :external_file, :vimeo, :youtube, :mux, :bunny]
     attribute :title, :text
     attribute :caption, :text
     attribute :aspect_ratio, :string
@@ -98,7 +98,8 @@ defmodule Brando.Videos.Video do
               %{label: "External file", value: :external_file},
               %{label: "Vimeo", value: :vimeo},
               %{label: "YouTube", value: :youtube},
-              %{label: "Mux", value: :mux}
+              %{label: "Mux", value: :mux},
+              %{label: "Bunny", value: :bunny}
             ]
 
           input :source_url, :text, label: t("Source URL"), monospace: true

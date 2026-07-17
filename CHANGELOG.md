@@ -134,6 +134,20 @@
 
 #### Improvements
 
+- **Validated Blueprint asset configuration contracts**: Image, file, video,
+  and per-media gallery configs now reject invalid runtime-critical fields with
+  asset-specific errors, including malformed paths, limits, MIME lists,
+  booleans, image formats, video strategies, and completion callbacks. Deferred
+  config functions are validated when materialized. `completed_callback` now
+  consistently accepts arity-2 functions or MFA tuples and runs when files are
+  stored, images finish processing (including SVG), local videos are stored, or
+  Mux/Bunny videos first become ready; metadata edits no longer re-fire file
+  completion. Bunny is also accepted by the persisted video enum. Completion
+  work may retry, so callbacks with external side effects should be idempotent.
+  This changes no database storage: no Ecto migration or Igniter upgrade script
+  is required. Compile after upgrading, correct reported configs, and see
+  [Blueprints](guides/blueprints.md) and [Uploader](docs/UPLOADER.md).
+
 - **Reliable Blueprint form runtime contracts**: Static form query maps now work
   as declared, retain the URL entry ID in `:matches`, and are checked for invalid
   match shapes; callback queries fail with a clear error when they do not return

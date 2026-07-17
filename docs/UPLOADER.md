@@ -125,6 +125,15 @@
 > used explicitly for select/replace/add. Gallery blueprint configs can define separate
 > `image:` and `video:` configs (legacy flat configs remain image configs), and gallery
 > refs/vars expose allowed media plus per-media config-target overrides.
+> **Blueprint asset-config completion audit (2026-07-16):** image, file, video,
+> and per-media gallery configs now validate runtime-critical fields at their
+> normalization boundary. `completed_callback` has one function-or-MFA contract
+> across media: files invoke it when stored, images after processing (including
+> SVG), local videos when stored, and provider videos on their first ready
+> transition. File callbacks no longer fire again when editing file metadata.
+> Mux/Bunny callbacks resolve through the stored canonical `config_target`, and
+> Bunny is now a valid persisted video enum value. Completion work can retry;
+> callback side effects must be idempotent.
 > This document is a self-contained spec. It explains *why* the current upload
 > system is broken, *what* to build (a sticky, free-standing `UploadManager` LiveView
 > that owns a queue and every upload mechanic), and *how* to migrate every upload source

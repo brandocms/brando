@@ -153,6 +153,41 @@ schema migration is needed.
 
 #### Assets
 
+Blueprint image, file, video, and per-media gallery configs are normalized into
+their typed config structs. Compilation validates the runtime-critical fields:
+upload paths, positive size limits, MIME type lists, booleans, image sizes and
+formats, video strategies/metadata, file content disposition, and completion
+callbacks. Deferred zero-argument config functions are validated when their
+result is materialized.
+
+All three media types share one completion callback contract:
+
+```elixir
+asset :document, :file,
+  cfg: %{
+    completed_callback: &__MODULE__.file_uploaded/2
+  }
+
+asset :clip, :video,
+  cfg: %{
+    completed_callback: {MyApp.MediaCallbacks, :video_ready, [notify: true]}
+  }
+```
+
+Functions receive `(asset, current_user)`. MFA callbacks receive those two
+runtime arguments first, followed by `extra_args`. File callbacks run after the
+file is stored, image callbacks after processing (including SVG), and video
+callbacks after a local upload is stored or a Mux/Bunny video first becomes
+ready. Asynchronous processing and provider webhooks can retry, so callback side
+effects should be idempotent.
+
+Mux and Bunny are valid persisted video types. Cloudflare and S3 remain reserved
+video strategies and currently return `:not_implemented` from the uploader.
+
+These config and callback corrections do not alter database storage. No Ecto
+migration or Igniter upgrade script is required. Compile after upgrading and fix
+any invalid config reported with its asset name and field.
+
 #### Forms
 
 An existing entry is loaded with `%{matches: %{id: id}}` by default. Use a

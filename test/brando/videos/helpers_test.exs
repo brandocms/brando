@@ -32,6 +32,22 @@ defmodule Brando.Videos.HelpersTest do
              Helpers.get_playback_url(video(type: :unknown))
   end
 
+  test "get_playback_url dispatches Bunny records to the Bunny provider" do
+    bunny_video =
+      video(
+        type: :bunny,
+        status: :ready,
+        meta: %{"bunny" => %{"video_guid" => "video-guid"}}
+      )
+
+    assert {:error, :cdn_hostname_not_configured} = Helpers.get_playback_url(bunny_video)
+  end
+
+  test "formats provider durations consistently" do
+    assert Helpers.format_duration(0) == "00:00:00"
+    assert Helpers.format_duration(3723.4) == "01:02:03"
+  end
+
   describe "thumbnail_url/1" do
     test "returns media URL for video with Image thumbnail" do
       result =

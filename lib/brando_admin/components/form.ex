@@ -3689,12 +3689,6 @@ defmodule BrandoAdmin.Components.Form do
       current_user
     )
 
-    file_config = Brando.Utils.try_path(relation_field, [:opts, :cfg])
-
-    if file_config && file_config.completed_callback do
-      file_config.completed_callback.(updated_file, current_user)
-    end
-
     edit_file = Map.put(edit_file, :file, updated_file)
     relation_key = relation_field_key(relation_field, field)
     full_path = path ++ [relation_key]

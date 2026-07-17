@@ -343,16 +343,16 @@ defmodule Brando.Videos.Uploaders.Bunny do
     params =
       case bunny_video["length"] do
         length when is_number(length) and length > 0 ->
-          Map.put(params, :duration, format_duration_string(length))
+          Map.put(params, :duration, Videos.Helpers.format_duration(length))
 
         _ ->
           params
       end
 
-    # Get the creator to use for the update
     {:ok, creator} = Brando.Users.get_user(video.creator_id)
 
     with {:ok, updated_video} <- Videos.update_video(video, params, creator) do
+      Videos.run_completed_callback_on_ready(video, updated_video, creator)
       broadcast_video_update(updated_video)
       {:ok, updated_video}
     end
@@ -362,6 +362,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
     {:ok, creator} = Brando.Users.get_user(video.creator_id)
 
     with {:ok, updated_video} <- Videos.update_video(video, %{status: status}, creator) do
+      Videos.run_completed_callback_on_ready(video, updated_video, creator)
       broadcast_video_update(updated_video)
       {:ok, updated_video}
     end
@@ -450,15 +451,4 @@ defmodule Brando.Videos.Uploaders.Bunny do
   end
 
   defp valid_bunny_id?(_), do: false
-
-  defp format_duration_string(seconds) when is_number(seconds) do
-    total_seconds = round(seconds)
-    hours = div(total_seconds, 3600)
-    minutes = div(rem(total_seconds, 3600), 60)
-    remaining_seconds = rem(total_seconds, 60)
-
-    "#{String.pad_leading(to_string(hours), 2, "0")}:#{String.pad_leading(to_string(minutes), 2, "0")}:#{String.pad_leading(to_string(remaining_seconds), 2, "0")}"
-  end
-
-  defp format_duration_string(_), do: nil
 end

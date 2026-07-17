@@ -10,6 +10,7 @@ defmodule Brando.Videos do
 
   import Ecto.Query
 
+  alias Brando.Assets.{CompletedCallback, ConfigTarget}
   alias Brando.Users.User
   alias Brando.Videos.Video
 
@@ -92,6 +93,22 @@ defmodule Brando.Videos do
   end
 
   @doc """
+  Runs the configured callback when a video first transitions to `:ready`.
+
+  Provider webhooks can repeat ready events. Comparing the persisted state
+  before and after the update prevents successful callbacks from running again
+  for those duplicate deliveries.
+  """
+  @spec run_completed_callback_on_ready(struct(), struct(), user()) :: :ok
+  def run_completed_callback_on_ready(%Video{status: previous_status}, %Video{status: :ready} = video, user)
+      when previous_status != :ready do
+    {:ok, config} = get_config_for(video)
+    CompletedCallback.run(config, video, user)
+  end
+
+  def run_completed_callback_on_ready(%Video{}, %Video{}, _user), do: :ok
+
+  @doc """
   Get video.
   Raises on failure
   """
@@ -130,31 +147,7 @@ defmodule Brando.Videos do
   end
 
   def get_config_for(%{config_target: config_target}) when is_binary(config_target) do
-    config =
-      case String.split(config_target, ":") do
-        ["video", schema, "function", fn_string] ->
-          Brando.Assets.ConfigTarget.config_function!(schema, fn_string)
-
-        ["gallery", schema, "function", fn_string] ->
-          schema
-          |> Brando.Assets.ConfigTarget.config_function!(fn_string)
-          |> gallery_video_config()
-
-        [type, schema, field_name] when type in ["video", "gallery"] ->
-          case Brando.Assets.ConfigTarget.schema_module(schema) do
-            {:ok, schema_module} ->
-              cfg = video_field_cfg(schema_module, field_name)
-              if type == "gallery", do: gallery_video_config(cfg), else: cfg
-
-            :error ->
-              default_video_config()
-          end
-
-        ["default"] ->
-          default_video_config()
-      end
-
-    {:ok, config}
+    {:ok, config_target |> String.split(":") |> resolve_config_target()}
   end
 
   def get_config_for(config_target) when is_binary(config_target) do
@@ -164,6 +157,30 @@ defmodule Brando.Videos do
   def get_config_for(_) do
     get_config_for(%{config_target: "default"})
   end
+
+  defp resolve_config_target(["video", schema, "function", function]) do
+    ConfigTarget.config_function!(schema, function)
+  end
+
+  defp resolve_config_target(["gallery", schema, "function", function]) do
+    schema
+    |> ConfigTarget.config_function!(function)
+    |> gallery_video_config()
+  end
+
+  defp resolve_config_target([type, schema, field_name]) when type in ["gallery", "video"] do
+    case ConfigTarget.schema_module(schema) do
+      {:ok, schema_module} ->
+        config = video_field_cfg(schema_module, field_name)
+        if type == "gallery", do: gallery_video_config(config), else: config
+
+      :error ->
+        default_video_config()
+    end
+  end
+
+  defp resolve_config_target(["default"]), do: default_video_config()
+  defp resolve_config_target(_invalid_target), do: default_video_config()
 
   defp gallery_video_config(%{video: video}), do: video
   defp gallery_video_config(_), do: default_video_config()

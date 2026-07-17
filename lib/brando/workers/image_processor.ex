@@ -2,6 +2,7 @@ defmodule Brando.Worker.ImageProcessor do
   @moduledoc false
   use Oban.Worker, queue: :image_processing, max_attempts: 5
 
+  alias Brando.Assets.CompletedCallback
   alias Brando.Images
   alias Brando.Users
 
@@ -34,46 +35,40 @@ defmodule Brando.Worker.ImageProcessor do
          {:ok, config} <- Images.get_config_for(config_target),
          {:ok, operations} <- Images.Operations.create(image, config, user),
          {:ok, process_map} <- Images.Operations.perform(operations, user, silent: silent?) do
-      result = Map.get(process_map, image_id)
-
-      image_params = %{
-        sizes: result.sizes,
-        formats: result.formats,
-        status: :processed
-      }
-
-      case Images.update_image(image, image_params, user) do
-        {:ok, image} ->
-          maybe_run_completed_callback(image, config, user)
-          Brando.CDN.maybe_upload_image(image, field_full_path, user, config)
-          broadcast_status(image, field_full_path, :updated)
-
-        err ->
-          err
-      end
+      finish_processing(image, Map.fetch!(process_map, image_id), config, user, field_full_path)
     else
       err ->
-        # Success is broadcast above; without a terminal failure broadcast,
-        # subscribers (the upload manager drawer) pin at :processing forever.
-        # Only signal on the final attempt — earlier attempts may still succeed.
-        if job.attempt >= job.max_attempts do
-          case Images.get_image(image_id) do
-            {:ok, image} -> broadcast_status(image, field_full_path, :error)
-            _ -> :noop
-          end
-        end
-
-        {:error, err}
+        handle_processing_error(job, image_id, field_full_path, err)
     end
   end
 
   @impl Oban.Worker
   def timeout(_job), do: :timer.seconds(400)
 
-  defp maybe_run_completed_callback(image, config, user) do
-    case config.completed_callback do
-      nil -> {:ok, image}
-      completed_callback -> completed_callback.(image, user)
+  defp finish_processing(image, result, config, user, field_full_path) do
+    image_params = %{formats: result.formats, sizes: result.sizes, status: :processed}
+
+    with {:ok, image} <- Images.update_image(image, image_params, user) do
+      CompletedCallback.run(config, image, user)
+      Brando.CDN.maybe_upload_image(image, field_full_path, user, config)
+      broadcast_status(image, field_full_path, :updated)
+    end
+  end
+
+  defp handle_processing_error(job, image_id, field_full_path, error) do
+    # Earlier attempts may still succeed; only a terminal broadcast should
+    # release subscribers from their processing state.
+    if job.attempt >= job.max_attempts do
+      broadcast_processing_error(image_id, field_full_path)
+    end
+
+    {:error, error}
+  end
+
+  defp broadcast_processing_error(image_id, field_full_path) do
+    case Images.get_image(image_id) do
+      {:ok, image} -> broadcast_status(image, field_full_path, :error)
+      _error -> :noop
     end
   end
 

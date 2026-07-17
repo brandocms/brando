@@ -17,9 +17,10 @@ defmodule Brando.Pages.Page do
 
   alias Brando.JSONLD
   alias Brando.Pages
-  alias Brando.Pages.Fragment
 
   @type t :: %__MODULE__{}
+
+  @fragment_module Module.concat(["Brando", "Pages", "Fragment"])
 
   # Schema version for revision compatibility
   @schema_version 1
@@ -102,7 +103,7 @@ defmodule Brando.Pages.Page do
   relations do
     relation :parent, :belongs_to, module: __MODULE__
     relation :children, :has_many, module: __MODULE__, foreign_key: :parent_id
-    relation :fragments, :has_many, module: Fragment
+    relation :fragments, :has_many, module: @fragment_module
     relation :blocks, :has_many, module: :blocks
 
     relation :vars, :has_many,
@@ -122,7 +123,7 @@ defmodule Brando.Pages.Page do
         filter: %{parents: true},
         preload: [
           fragments: %{
-            module: Fragment,
+            module: @fragment_module,
             order: [asc: :sequence],
             preload: [creator: :avatar],
             hide_deleted: true
@@ -147,7 +148,7 @@ defmodule Brando.Pages.Page do
       action label: t("Create subpage"), event: "create_subpage"
       action label: t("Create fragment"), event: "create_fragment"
 
-      child_listing name: :fragment_children, schema: Brando.Pages.Fragment
+      child_listing name: :fragment_children, schema: @fragment_module
       child_listing name: :page_children, schema: Brando.Pages.Page
 
       component &__MODULE__.listing_row/1
