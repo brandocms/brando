@@ -134,6 +134,19 @@
 
 #### Improvements
 
+- **Validated Blueprint root configuration**: `use Brando.Blueprint` now rejects
+  missing, duplicate, and unknown options plus malformed application/domain/schema
+  and singular/plural names before macro setup. The semantic verifier also checks
+  table names, data layers, factories, mark-as-deleted flags, naming overrides,
+  and primary-key representations before Ecto schema generation. Blueprint
+  primary keys are explicitly limited to the canonical integer `id`, UUID, or an
+  intentional disabled key because generated relations and migration snapshots do
+  not support arbitrary Ecto primary-key layouts. These checks need no database
+  migration by themselves; fix declarations reported during compilation. If a
+  correction changes an existing table or primary key, deploy a hand-written
+  migration and use the documented rebaseline workflow in
+  [Blueprint migrations](guides/blueprint_migrations.md).
+
 - **Consistent Blueprint schema and relation validation**: Custom `belongs_to`
   foreign keys now use one canonical field across casting, required validation,
   unique constraints, foreign-key constraints, generated schemas, and migration

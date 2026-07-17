@@ -4,6 +4,7 @@ defmodule Brando.Blueprint.Verifier do
   use Spark.Dsl.Verifier
 
   alias Brando.Blueprint.AssociationKey
+  alias Brando.Blueprint.Config
   alias Spark.Dsl.Entity
   alias Spark.Dsl.Verifier
   alias Spark.Error.DslError
@@ -51,10 +52,35 @@ defmodule Brando.Blueprint.Verifier do
     assets = Verifier.get_entities(dsl_state, [:assets])
     storage_columns = storage_column_names(dsl_state, attributes, relations, assets)
 
-    with :ok <- verify_attributes(dsl_state, attributes, storage_columns),
+    with :ok <- verify_blueprint_config(dsl_state),
+         :ok <- verify_attributes(dsl_state, attributes, storage_columns),
          :ok <- verify_relations(dsl_state, relations, storage_columns),
          :ok <- verify_assets(dsl_state, assets) do
       verify_storage_field_collisions(dsl_state, attributes, relations, assets)
+    end
+  end
+
+  defp verify_blueprint_config(dsl_state) do
+    module = Verifier.get_persisted(dsl_state, :module)
+
+    options = [
+      application: Module.get_attribute(module, :application),
+      domain: Module.get_attribute(module, :domain),
+      schema: Module.get_attribute(module, :schema),
+      singular: Module.get_attribute(module, :singular),
+      plural: Module.get_attribute(module, :plural),
+      router_scope: Module.get_attribute(module, :router_scope),
+      gettext_module: Module.get_attribute(module, :gettext_module),
+      data_layer: Module.get_attribute(module, :data_layer),
+      table_name: Module.get_attribute(module, :table_name),
+      primary_key: Module.get_attribute(module, :primary_key),
+      allow_mark_as_deleted: Module.get_attribute(module, :allow_mark_as_deleted),
+      factory: Module.get_attribute(module, :factory)
+    ]
+
+    case Config.validate_compiled_options(options) do
+      :ok -> :ok
+      {:error, message} -> root_error(dsl_state, message)
     end
   end
 
@@ -645,6 +671,15 @@ defmodule Brando.Blueprint.Verifier do
        path: [section, entity.name],
        location: Entity.anno(entity),
        message: "#{inspect(entity.name)} #{message}"
+     )}
+  end
+
+  defp root_error(dsl_state, message) do
+    {:error,
+     DslError.exception(
+       module: Verifier.get_persisted(dsl_state, :module),
+       path: [:blueprint],
+       message: message
      )}
   end
 end

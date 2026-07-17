@@ -135,6 +135,7 @@ defmodule Brando.Blueprint do
   import Brando.Blueprint.Utils
 
   alias Brando.Blueprint.Assets.Asset
+  alias Brando.Blueprint.Config
   alias Brando.Exception.BlueprintError
 
   defstruct naming: %{},
@@ -147,6 +148,8 @@ defmodule Brando.Blueprint do
             traits: []
 
   defmacro __using__(opts) do
+    opts = Config.validate_use_options!(opts, __CALLER__)
+
     Module.register_attribute(__CALLER__.module, :application, accumulate: false)
     Module.put_attribute(__CALLER__.module, :application, Keyword.fetch!(opts, :application))
     Module.register_attribute(__CALLER__.module, :domain, accumulate: false)
@@ -161,7 +164,7 @@ defmodule Brando.Blueprint do
     Module.put_attribute(__CALLER__.module, :router_scope, Keyword.get(opts, :router_scope))
 
     gettext_module =
-      case Macro.expand(Keyword.get(opts, :gettext_module), __CALLER__) do
+      case Keyword.get(opts, :gettext_module) do
         nil ->
           Module.concat([:"#{Keyword.fetch!(opts, :application)}Admin", Gettext])
 

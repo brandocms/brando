@@ -6,6 +6,50 @@
 
 ### Schema
 
+#### Root configuration
+
+Blueprint identity is declared with literal naming values when the schema calls
+`use Brando.Blueprint`:
+
+```elixir
+use Brando.Blueprint,
+  application: "MyApp",
+  domain: "Projects",
+  schema: "Project",
+  singular: "project",
+  plural: "projects",
+  gettext_module: MyApp.Gettext,
+  router_scope: :projects,
+  extensions: [MyApp.BlueprintExtension]
+```
+
+`application`, `domain`, and `schema` are PascalCase module segments;
+`singular` and `plural` are snake_case identifiers. `gettext_module`,
+`router_scope`, and `extensions` are optional. Unknown or duplicate options,
+missing required names, malformed values, and non-module extensions fail with a
+contextual Blueprint error before Gettext, Spark, or Ecto setup begins.
+
+Schema-level storage settings are validated after compile-time expressions have
+been evaluated:
+
+```elixir
+table "projects_projects"
+data_layer :database       # or :embedded
+primary_key :id            # or :uuid
+factory %{status: :draft}
+```
+
+Table and naming values use snake_case database identifiers, factories are plain
+maps, and the supported primary keys are the canonical integer `id` and UUID
+representations used by Blueprint relations and migrations. Schemas that
+intentionally have no generated primary key may set `@primary_key false`.
+
+These validation checks require no database migration. Fix declarations reported
+during compilation. If a correction changes an existing table name or primary
+key, write and deploy the storage migration first, then follow the explicit
+rebaseline workflow in [Blueprint migrations](blueprint_migrations.md); the
+Blueprint generator deliberately does not automate those destructive changes.
+
 Storage changes are managed through versioned snapshots and reviewed Ecto migrations. See
 [Blueprint migrations](blueprint_migrations.md) for generation, rollback, rename, legacy upgrade, and recovery
 instructions.
