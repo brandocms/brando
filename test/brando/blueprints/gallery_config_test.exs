@@ -68,4 +68,16 @@ defmodule Brando.Blueprints.GalleryConfigTest do
     assert %Brando.Type.ImageConfig{upload_path: "images/legacy-gallery"} = cfg.image
     assert %Brando.Type.VideoConfig{} = cfg.video
   end
+
+  test "legacy ImageConfig structs remain valid flat gallery configs" do
+    asset = %Brando.Blueprint.Assets.Asset{
+      name: :legacy_struct_gallery,
+      type: :gallery,
+      opts: [cfg: %Brando.Type.ImageConfig{upload_path: "images/legacy-struct"}]
+    }
+
+    assert {:ok, %{opts: %{cfg: cfg}}} = Brando.Blueprint.Assets.Dsl.transform(asset)
+    assert %Brando.Type.ImageConfig{upload_path: "images/legacy-struct"} = cfg.image
+    assert %Brando.Type.VideoConfig{} = cfg.video
+  end
 end

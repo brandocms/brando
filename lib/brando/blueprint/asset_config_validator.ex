@@ -15,7 +15,7 @@ defmodule Brando.Blueprint.AssetConfigValidator do
   @video_strategies [:bunny, :cloudflare, :local, :mux, :s3]
 
   @doc false
-  @spec validate!(struct(), term()) :: term()
+  @spec validate!(map(), term()) :: term()
   def validate!(_asset, config) when config in [:config_target, :db], do: config
   def validate!(_asset, config) when is_function(config, 0), do: config
 

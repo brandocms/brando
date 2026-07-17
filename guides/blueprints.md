@@ -187,6 +187,13 @@ These config and callback corrections do not alter database storage. No Ecto
 migration or Igniter upgrade script is required. Compile after upgrading and fix
 any invalid config reported with its asset name and field.
 
+Function-based `config_target` values use the same normalization and validation
+boundary as declarations in `assets do`. A partial map is merged into the
+matching typed config before use. Returning `:db`/`:config_target`, returning a
+config struct for another media type, or targeting a field declared as another
+asset type is rejected. Upload-manager intake catches these resolution errors,
+uses the typed default config, and stores the resolved target as `"default"`.
+
 #### Forms
 
 An existing entry is loaded with `%{matches: %{id: id}}` by default. Use a

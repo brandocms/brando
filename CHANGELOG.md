@@ -134,6 +134,15 @@
 
 #### Improvements
 
+- **Unified Blueprint asset config-target resolution**: Static asset DSL
+  declarations, deferred asset functions, and `config_target` functions now
+  share one normalizer and validator. Function targets return typed configs
+  with defaults merged, reject declaration-only sentinels and wrong config
+  structs, and field targets can no longer resolve an asset of a different
+  media type. The upload facade safely falls back to the typed default config
+  and rewrites invalid targets to `"default"`. This is a runtime correctness
+  change only: no Ecto migration or Igniter upgrade script is required.
+
 - **Validated Blueprint asset configuration contracts**: Image, file, video,
   and per-media gallery configs now reject invalid runtime-critical fields with
   asset-specific errors, including malformed paths, limits, MIME lists,

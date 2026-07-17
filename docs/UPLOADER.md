@@ -134,6 +134,10 @@
 > Mux/Bunny callbacks resolve through the stored canonical `config_target`, and
 > Bunny is now a valid persisted video enum value. Completion work can retry;
 > callback side effects must be idempotent.
+> Config-target functions and field targets pass through the same typed
+> Blueprint normalizer as static asset declarations. Invalid function results,
+> declaration-only sentinels, and cross-media field targets fall back to the
+> typed default at upload intake instead of leaking malformed config downstream.
 > This document is a self-contained spec. It explains *why* the current upload
 > system is broken, *what* to build (a sticky, free-standing `UploadManager` LiveView
 > that owns a queue and every upload mechanic), and *how* to migrate every upload source

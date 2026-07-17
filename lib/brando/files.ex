@@ -11,6 +11,7 @@ defmodule Brando.Files do
   import Ecto.Query
 
   alias Brando.Assets.ConfigTarget
+  alias Brando.Blueprint.AssetConfigNormalizer
   alias Brando.Files.File
   alias Brando.Type.FileConfig
   alias Brando.Users.User
@@ -97,37 +98,22 @@ defmodule Brando.Files do
   Returns its configuration or the default configuration if none is found
   """
   def get_config_for(%{config_target: nil}) do
-    config =
-      maybe_struct(
-        FileConfig,
-        Brando.config(Brando.Files)[:default_config] || FileConfig.default_config()
-      )
-
-    {:ok, config}
+    {:ok, default_file_config()}
   end
 
   def get_config_for(%{config_target: config_target}) when is_binary(config_target) do
     config =
       case String.split(config_target, ":") do
         [type, schema, "function", fn_string] when type in ["file", "video"] ->
-          ConfigTarget.config_function!(schema, fn_string)
+          ConfigTarget.resolved_function_config!(config_type(type), schema, fn_string)
 
         # "video:" — files wrapped by :upload videos resolve their path
         # through the owning video asset's cfg (VideoConfig has upload_path)
         [type, schema, field_name] when type in ["file", "video"] ->
-          schema_module = ConfigTarget.schema_module!(schema)
-          field_name_atom = ConfigTarget.field_atom!(schema, field_name)
-
-          schema_module
-          |> Brando.Blueprint.Assets.__asset_opts__(field_name_atom)
-          |> Map.get(:cfg)
+          field_config!(config_type(type), schema, field_name)
 
         ["default"] ->
-          maybe_struct(
-            FileConfig,
-            Brando.config(Brando.Files)[:default_config] ||
-              FileConfig.default_config()
-          )
+          default_file_config()
       end
 
     {:ok, config}
@@ -154,6 +140,29 @@ defmodule Brando.Files do
 
   defp normalize_folder_id(_), do: nil
 
-  defp maybe_struct(_struct_type, %FileConfig{} = config), do: config
-  defp maybe_struct(struct_type, config), do: struct(struct_type, config)
+  defp config_type("file"), do: :file
+  defp config_type("video"), do: :video
+
+  defp field_config!(expected_type, schema, field_name) do
+    case ConfigTarget.blueprint_asset(schema, field_name) do
+      {:ok, %{type: ^expected_type, opts: opts}} ->
+        config = Map.fetch!(opts, :cfg)
+        target = "#{expected_type}:#{schema}:#{field_name}"
+        AssetConfigNormalizer.normalize_resolved_value!(expected_type, target, config)
+
+      {:ok, %{type: actual_type}} ->
+        raise ArgumentError,
+              "config_target field #{inspect(schema)}.#{field_name} has type #{inspect(actual_type)}, " <>
+                "expected #{inspect(expected_type)}"
+
+      :error ->
+        raise ArgumentError,
+              "invalid config_target field #{inspect(field_name)} for Blueprint #{inspect(schema)}"
+    end
+  end
+
+  defp default_file_config do
+    configured = Brando.config(Brando.Files)[:default_config] || FileConfig.default_config()
+    AssetConfigNormalizer.normalize_resolved_value!(:file, "default", configured)
+  end
 end

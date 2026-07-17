@@ -101,6 +101,36 @@ defmodule Brando.Blueprint.AssetConfigTest do
         end
       )
     end
+
+    assert_raise BlueprintError, ~r/unknown file config fields: \[:upload_pat\]/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :document, :file, cfg: %{upload_pat: "files/typo"}
+          end
+        end
+      )
+    end
+
+    assert_raise BlueprintError, ~r/matching config struct/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :cover, :image, cfg: %Brando.Type.FileConfig{}
+          end
+        end
+      )
+    end
+
+    assert_raise BlueprintError, ~r/unknown gallery config fields: \[:upload_pat\]/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :gallery, :gallery, cfg: %{image: %{upload_path: "images/gallery"}, upload_pat: "images/typo"}
+          end
+        end
+      )
+    end
   end
 
   test "validates deferred config functions when they are materialized" do

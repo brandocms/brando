@@ -28,6 +28,8 @@ defmodule Brando.Uploads do
 
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Utils
+
   require Logger
 
   @image_exts ~w(.jpg .jpeg .png .gif .webp .svg)
@@ -206,20 +208,20 @@ defmodule Brando.Uploads do
   defp build_direct_filename(name, cfg) do
     cond do
       Map.get(cfg, :random_filename, false) ->
-        Brando.Utils.random_filename(name)
+        Utils.random_filename(name)
 
       Map.get(cfg, :overwrite, false) ->
         maybe_slugify(name, cfg)
 
       true ->
-        name |> maybe_slugify(cfg) |> Brando.Utils.unique_filename()
+        name |> maybe_slugify(cfg) |> Utils.unique_filename()
     end
-    |> Brando.Utils.ensure_correct_extension()
+    |> Utils.ensure_correct_extension()
   end
 
   defp maybe_slugify(name, cfg) do
     if Map.get(cfg, :slugify_filename, false) do
-      Brando.Utils.slugify_filename(name)
+      Utils.slugify_filename(name)
     else
       name
     end
@@ -314,7 +316,7 @@ defmodule Brando.Uploads do
 
   def validate_intake(_asset_type, _filename, size, size_limit)
       when is_integer(size) and is_integer(size_limit) and size > size_limit do
-    {:error, "File is too large (max #{Brando.Utils.human_size(size_limit)})"}
+    {:error, "File is too large (max #{Utils.human_size(size_limit)})"}
   end
 
   def validate_intake(:image, filename, _size, _size_limit) do
@@ -385,8 +387,8 @@ defmodule Brando.Uploads do
   defp resolve_config(Brando.Videos = context, struct_mod, config_target) do
     resolved_target = normalize_config_target(config_target) || "default"
 
-    case safe_get_config(context, resolved_target) do
-      {:ok, cfg} when is_struct(cfg, struct_mod) -> {cfg, resolved_target}
+    case {valid_video_target_shape?(resolved_target), safe_get_config(context, resolved_target)} do
+      {true, {:ok, cfg}} when is_struct(cfg, struct_mod) -> {cfg, resolved_target}
       _ -> {default_config(context, struct_mod), "default"}
     end
   end
@@ -401,20 +403,11 @@ defmodule Brando.Uploads do
   end
 
   defp default_config(context, struct_mod) do
-    case base_default_config(context) do
-      cfg when is_struct(cfg, struct_mod) -> cfg
-      cfg -> struct(struct_mod, cfg)
+    case safe_get_config(context, "default") do
+      {:ok, cfg} when is_struct(cfg, struct_mod) -> cfg
+      _ -> struct_mod.default_config()
     end
   end
-
-  defp base_default_config(Brando.Images),
-    do: Brando.config(Brando.Images)[:default_config] || Brando.Type.ImageConfig.default_config()
-
-  defp base_default_config(Brando.Files),
-    do: Brando.config(Brando.Files)[:default_config] || Brando.Type.FileConfig.default_config()
-
-  defp base_default_config(Brando.Videos),
-    do: Brando.config(Brando.Videos)[:default_config] || %{}
 
   # get_config_for raises on unknown target shapes — the upload manager must
   # never crash mid-consume over a config target, so treat any raise as
@@ -429,5 +422,20 @@ defmodule Brando.Uploads do
     Brando.Assets.ConfigTarget.serialize(config_target)
   rescue
     ArgumentError -> nil
+  end
+
+  defp valid_video_target_shape?("default"), do: true
+
+  defp valid_video_target_shape?(target) do
+    case String.split(target, ":") do
+      [type, schema, field] when type in ["gallery", "video"] ->
+        schema != "" and field != ""
+
+      [type, schema, "function", function] when type in ["gallery", "video"] ->
+        schema != "" and function != ""
+
+      _ ->
+        false
+    end
   end
 end

@@ -20,6 +20,7 @@ defmodule Brando.Assets.ConfigTarget do
   """
 
   @asset_types ~w(image file video gallery)
+  @asset_type_atoms [:file, :gallery, :image, :video]
 
   @doc """
   Serialize a config target into the canonical string stored on assets and
@@ -104,6 +105,45 @@ defmodule Brando.Assets.ConfigTarget do
                 "the blueprint must export #{fn_string}/0"
     end
   end
+
+  @doc """
+  Resolves and normalizes a config-target function for its declared media type.
+
+  Unlike `config_function!/2`, this is the boundary upload and rendering
+  contexts should use: raw maps are merged into the matching typed config and
+  the complete Blueprint asset-config contract is validated.
+  """
+  @spec resolved_function_config!(atom(), String.t(), String.t()) :: struct() | map()
+  def resolved_function_config!(type, schema, fn_string) when type in @asset_type_atoms do
+    normalizer = Module.concat(["Brando", "Blueprint", "AssetConfigNormalizer"])
+    target = "#{type}:#{schema}:function:#{fn_string}"
+    config = config_function!(schema, fn_string)
+    normalizer.normalize_resolved_value!(type, target, config)
+  end
+
+  def resolved_function_config!(type, _schema, _fn_string) do
+    raise ArgumentError, "invalid config_target asset type #{inspect(type)}"
+  end
+
+  @doc """
+  Resolves a config-target field to its Blueprint asset declaration.
+
+  Returns `:error` for missing schemas, unknown fields, and non-asset fields
+  without creating atoms.
+  """
+  @spec blueprint_asset(String.t(), String.t()) :: {:ok, struct()} | :error
+  def blueprint_asset(schema, field_name) when is_binary(schema) and is_binary(field_name) do
+    with {:ok, module} <- schema_module(schema),
+         {:ok, field} <- existing_atom(field_name),
+         %{type: type} = asset when type in @asset_type_atoms <-
+           Brando.Blueprint.Assets.__asset__(module, field) do
+      {:ok, asset}
+    else
+      _ -> :error
+    end
+  end
+
+  def blueprint_asset(_schema, _field_name), do: :error
 
   @doc """
   Resolve a field segment to an existing atom. Raises `ArgumentError` for

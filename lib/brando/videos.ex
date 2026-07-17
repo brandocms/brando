@@ -11,6 +11,8 @@ defmodule Brando.Videos do
   import Ecto.Query
 
   alias Brando.Assets.{CompletedCallback, ConfigTarget}
+  alias Brando.Blueprint.AssetConfigNormalizer
+  alias Brando.Type.VideoConfig
   alias Brando.Users.User
   alias Brando.Videos.Video
 
@@ -159,24 +161,16 @@ defmodule Brando.Videos do
   end
 
   defp resolve_config_target(["video", schema, "function", function]) do
-    ConfigTarget.config_function!(schema, function)
+    ConfigTarget.resolved_function_config!(:video, schema, function)
   end
 
   defp resolve_config_target(["gallery", schema, "function", function]) do
-    schema
-    |> ConfigTarget.config_function!(function)
+    ConfigTarget.resolved_function_config!(:gallery, schema, function)
     |> gallery_video_config()
   end
 
   defp resolve_config_target([type, schema, field_name]) when type in ["gallery", "video"] do
-    case ConfigTarget.schema_module(schema) do
-      {:ok, schema_module} ->
-        config = video_field_cfg(schema_module, field_name)
-        if type == "gallery", do: gallery_video_config(config), else: config
-
-      :error ->
-        default_video_config()
-    end
+    video_field_cfg(type, schema, field_name)
   end
 
   defp resolve_config_target(["default"]), do: default_video_config()
@@ -212,31 +206,37 @@ defmodule Brando.Videos do
   defp present?(""), do: false
   defp present?(_), do: true
 
-  # Resolve the `:cfg` for a "video:Schema:field" config target, tolerating fields
-  # that aren't registered schema assets (e.g. block media refs) — returns nil
-  # instead of crashing.
-  defp video_field_cfg(schema_module, field_name) do
-    with {:ok, field_atom} <- existing_atom(field_name),
-         %{} = asset <- Brando.Blueprint.Assets.__asset__(schema_module, field_atom),
-         opts when is_map(opts) <- Map.get(asset, :opts),
-         %{} = cfg <- Map.get(opts, :cfg) do
-      cfg
-    else
-      # Not a registered schema video asset (e.g. a block media ref) — fall back to
-      # the default video config so block videos still upload via the default strategy.
-      _ -> default_video_config()
+  # Fields that aren't registered schema assets (for example block media refs)
+  # intentionally fall back so block videos keep using the default strategy.
+  defp video_field_cfg(type, schema, field_name) do
+    expected_type = if type == "gallery", do: :gallery, else: :video
+
+    case ConfigTarget.blueprint_asset(schema, field_name) do
+      {:ok, %{type: ^expected_type, opts: opts}} ->
+        config = Map.fetch!(opts, :cfg)
+
+        if expected_type == :gallery do
+          gallery_video_config(config)
+        else
+          AssetConfigNormalizer.normalize_resolved_value!(:video, "video:#{schema}:#{field_name}", config)
+        end
+
+      {:ok, %{type: actual_type}} ->
+        raise ArgumentError,
+              "config_target field #{inspect(schema)}.#{field_name} has type #{inspect(actual_type)}, " <>
+                "expected #{inspect(expected_type)}"
+
+      :error ->
+        default_video_config()
     end
   end
 
   defp default_video_config do
-    Brando.config(Brando.Videos)[:default_config] ||
-      %{upload_strategy: Brando.default_video_upload_strategy()}
-  end
+    configured =
+      Brando.config(Brando.Videos)[:default_config] ||
+        %VideoConfig{upload_strategy: Brando.default_video_upload_strategy()}
 
-  defp existing_atom(string) do
-    {:ok, String.to_existing_atom(string)}
-  rescue
-    ArgumentError -> :error
+    AssetConfigNormalizer.normalize_resolved_value!(:video, "default", configured)
   end
 
   defp normalize_folder_id(nil), do: nil
