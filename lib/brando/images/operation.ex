@@ -14,4 +14,6 @@ defmodule Brando.Images.Operation do
             size_key: nil,
             sized_image_dir: nil,
             sized_image_path: nil
+
+  @type t :: %__MODULE__{}
 end

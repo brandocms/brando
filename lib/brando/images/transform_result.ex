@@ -7,4 +7,6 @@ defmodule Brando.Images.TransformResult do
             image_path: nil,
             cmd_params: nil,
             format: nil
+
+  @type t :: %__MODULE__{}
 end

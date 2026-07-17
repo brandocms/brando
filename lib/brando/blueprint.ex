@@ -112,6 +112,12 @@ defmodule Brando.Blueprint do
         relation :some_module, :belongs_to, module: SomeModule, type: :binary_id
       end
 
+  ## Schema type
+
+  Blueprint schemas export `t/0` as their Ecto struct type. A schema can define
+  its own `@type t` when it needs a more specific contract; Blueprint preserves
+  the application-defined type.
+
   ## Extra changesets
 
   Add custom changeset functions for processing different subsets of fields:
@@ -509,6 +515,17 @@ defmodule Brando.Blueprint do
         Brando.Blueprint.build_attrs(unquote(attrs))
         Brando.Blueprint.build_assets(unquote(assets))
         Brando.Blueprint.build_relations(unquote(module), unquote(relations))
+      end
+    end
+  end
+
+  @doc false
+  defmacro maybe_define_schema_type do
+    if Module.defines_type?(__CALLER__.module, {:t, 0}) do
+      quote(do: :ok)
+    else
+      quote do
+        @type t :: %__MODULE__{}
       end
     end
   end

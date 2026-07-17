@@ -134,6 +134,13 @@
 
 #### Improvements
 
+- **Generated Blueprint schema types**: Blueprint schemas now export the
+  conventional `t/0` struct type automatically, eliminating missing-type
+  warnings for contexts and media APIs. An application-defined `t/0` remains
+  authoritative and is never replaced. This is a compile-time typing
+  improvement only: no application code change, Igniter upgrade, or database
+  migration is required.
+
 - **Unified Blueprint asset config-target resolution**: Static asset DSL
   declarations, deferred asset functions, and `config_target` functions now
   share one normalizer and validator. Function targets return typed configs

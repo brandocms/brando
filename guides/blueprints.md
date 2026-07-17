@@ -50,6 +50,11 @@ maps, and the supported primary keys are the canonical integer `id` and UUID
 representations used by Blueprint relations and migrations. Schemas that
 intentionally have no generated primary key may set `@primary_key false`.
 
+Every Blueprint schema exports the conventional `t/0` struct type for specs and
+Dialyzer. Applications may still declare a more precise `@type t`; Blueprint
+detects it and leaves it unchanged. This is generated compile-time metadata and
+requires no code migration, Igniter upgrade, or database migration.
+
 These validation checks require no database migration. Fix declarations reported
 during compilation. If a correction changes an existing table name or primary
 key, write and deploy the storage migration first, then follow the explicit

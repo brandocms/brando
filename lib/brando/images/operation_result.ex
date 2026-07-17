@@ -5,4 +5,6 @@ defmodule Brando.Images.OperationResult do
   defstruct image_id: nil,
             sizes: nil,
             formats: nil
+
+  @type t :: %__MODULE__{}
 end

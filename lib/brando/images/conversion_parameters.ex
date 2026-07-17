@@ -26,4 +26,6 @@ defmodule Brando.Images.ConversionParameters do
             resize_values: nil,
             crop_values: nil,
             format: nil
+
+  @type t :: %__MODULE__{}
 end

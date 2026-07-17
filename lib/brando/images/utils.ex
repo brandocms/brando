@@ -5,7 +5,7 @@ defmodule Brando.Images.Utils do
   import Brando.Utils
   import SweetXml
 
-  alias Brando.Image
+  alias Brando.Images.Image
 
   @type id :: binary | integer
   @type image_struct :: Brando.Images.Image.t()

@@ -400,6 +400,8 @@ defmodule Brando.Blueprint.Dsl do
           @assets
         )
       end
+
+      maybe_define_schema_type()
     end
   end
 
