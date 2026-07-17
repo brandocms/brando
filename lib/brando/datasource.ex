@@ -50,10 +50,10 @@ defmodule Brando.Datasource do
     - `module`
       The module the datasource is connected to
 
-      - `language`
+    - `language`
       The language the datasource was requested in
 
-      - `vars`
+    - `vars`
       A map of variables passed on from the datasourced module. If the entry is
       rendered with `<.render_data conn={@conn} entry={@entry} />` you can also
       access the request in this map.
@@ -72,6 +72,18 @@ defmodule Brando.Datasource do
               url: "/en/projects/animation"
             }
           }
+
+  Datasource callbacks may also use an MFA tuple. Brando passes the runtime
+  arguments first and appends the tuple's configured arguments:
+
+      datasource :all_posts do
+        type :list
+        list {MyApp.Posts, :list_for_datasource, [status: :published]}
+      end
+
+      def list_for_datasource(module, language, vars, opts) do
+        # ...
+      end
 
 
   ### Selection
@@ -110,7 +122,6 @@ defmodule Brando.Datasource do
         %{preload: [:categories, :cover, :palette]}
       )
     end
-  end
     ```
 
   ## Example
@@ -141,6 +152,9 @@ defmodule Brando.Datasource do
           end
         end
       end
+
+  `get` also accepts an MFA tuple and follows the same runtime-arguments-first
+  convention.
 
   These data source points are now available through the block editor when you create a Datasource block.
 
@@ -194,6 +208,7 @@ defmodule Brando.Datasource do
   OR if you know that all changes to the `:all_areas_with_grants` are coming from `Grantee`
   mutations, you can move the datasource to the `Grantee` schema instead!
   """
+  alias Brando.Blueprint.Callback
   alias Brando.Content
   alias Brando.Datasource.Invalidation
   alias Brando.Datasource.Registry
@@ -244,7 +259,7 @@ defmodule Brando.Datasource do
   def list_results(module_binary, key, vars, language) do
     {module, atom_key} = Registry.resolve(module_binary, key)
     ds = get_datasource(module, :*, atom_key)
-    ds.list.(module_binary, language, vars)
+    Callback.call(ds.list, [module_binary, language, vars])
   end
 
   @doc """
@@ -257,7 +272,7 @@ defmodule Brando.Datasource do
     {module, atom_key} = Registry.resolve(module_binary, key)
     ds = get_datasource(module, :selection, atom_key)
     {:ok, identifiers} = Content.list_identifiers(ids)
-    ds.get.(identifiers)
+    Callback.call(ds.get, [identifiers])
   end
 
   @doc """
@@ -266,7 +281,7 @@ defmodule Brando.Datasource do
   def get_single(module_binary, key, identifier) do
     {module, atom_key} = Registry.resolve(module_binary, key)
     ds = get_datasource(module, :single, atom_key)
-    ds.get.(identifier)
+    Callback.call(ds.get, [identifier])
   end
 
   @doc """

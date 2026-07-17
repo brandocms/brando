@@ -134,6 +134,20 @@
 
 #### Improvements
 
+- **Validated secondary Blueprint DSL contracts**: Datasources now require the
+  callbacks their type consumes, execute the function-or-MFA forms advertised by
+  Spark, and reject duplicate datasource or metadata keys. Form query/save/redirect
+  MFA callbacks use the same reusable runtime boundary. Metadata and JSON-LD now
+  reject multiple silently ignored schemas; JSON-LD also validates root structs,
+  fields, callback requirements, and nested `build/1` modules while safely handling
+  absent schemas and optional dates. Listings validate runtime-consumed keys,
+  limits, filters, sorts, actions, exports, and child-listing links, and documented
+  active filter defaults now reach the initial query. Translation declarations can no
+  longer silently overwrite duplicate contexts or keys. These are DSL/runtime
+  corrections only: no Ecto migration or Igniter upgrade script is required.
+  Compile after upgrading, fix reported declarations, and review configured listing
+  defaults because they now take effect. See [Blueprints](guides/blueprints.md).
+
 - **Correct generated Blueprint join owners**: Generated `:blocks` and
   `:entries` join schemas now use the actual Blueprint owner module for their
   Ecto associations instead of the convention-derived schema target retained in

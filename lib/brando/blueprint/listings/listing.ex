@@ -1,5 +1,7 @@
 defmodule Brando.Blueprint.Listings.Listing do
   @moduledoc false
+  @type t :: %__MODULE__{}
+
   defstruct __identifier__: nil,
             __spark_metadata__: nil,
             name: nil,

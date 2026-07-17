@@ -11,14 +11,22 @@ defmodule Brando.JSONLD do
 
   Returns a struct populated with field values extracted from `data`.
   Additional fields can be passed via `extra_fields` to supplement
-  the blueprint definition at runtime.
+  the blueprint definition at runtime. Returns `nil` when the Blueprint has no
+  JSON-LD schema.
   """
+  @spec extract_json_ld(module(), term(), [map()]) :: struct() | nil
   def extract_json_ld(module, data, extra_fields \\ []) do
     json_ld_data =
       module
       |> Spark.Dsl.Extension.get_entities(:json_ld_schemas)
       |> List.first()
 
+    extract_json_ld_schema(json_ld_data, data, extra_fields)
+  end
+
+  defp extract_json_ld_schema(nil, _data, _extra_fields), do: nil
+
+  defp extract_json_ld_schema(json_ld_data, data, extra_fields) do
     fields = json_ld_data.fields ++ extra_fields
     schema = json_ld_data.schema
 
@@ -76,7 +84,7 @@ defmodule Brando.JSONLD do
     |> maybe_add_id(data)
   end
 
-  defp maybe_add_id(struct, %{__meta__: %{current_url: url}}) do
+  defp maybe_add_id(struct, %{__meta__: %{current_url: url}}) when is_binary(url) and url != "" do
     type =
       struct
       |> Map.get(:"@type", "")
@@ -165,14 +173,18 @@ defmodule Brando.JSONLD do
   @doc """
   Convert date to ISO friendly string
   """
-  @spec to_date(date :: any) :: binary
+  @spec to_date(Date.t() | nil) :: binary() | nil
+  def to_date(nil), do: nil
   def to_date(date), do: Calendar.strftime(date, "%Y-%m-%d")
 
   @doc """
   Convert datetime to ISO friendly string
   """
-  @spec to_datetime(datetime :: any) :: binary
-  def to_datetime(%NaiveDateTime{} = datetime), do: datetime |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_iso8601()
+  @spec to_datetime(DateTime.t() | NaiveDateTime.t() | nil) :: binary() | nil
+  def to_datetime(nil), do: nil
+
+  def to_datetime(%NaiveDateTime{} = datetime),
+    do: datetime |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_iso8601()
 
   def to_datetime(%DateTime{} = datetime), do: DateTime.to_iso8601(datetime)
 end

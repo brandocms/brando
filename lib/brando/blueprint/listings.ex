@@ -51,4 +51,29 @@ defmodule Brando.Blueprint.Listings do
   This merges the query map into the starting point for listing queries.
 
   """
+
+  @doc """
+  Merges configured filter defaults into listing query options.
+
+  Defaults only fill missing filter keys; explicit values from the listing
+  query take precedence.
+  """
+  @spec merge_filter_defaults(map(), Brando.Blueprint.Listings.Listing.t() | map()) :: map()
+  def merge_filter_defaults(query, listing) do
+    defaults =
+      listing.filters
+      |> Enum.reject(&(&1.default in [nil, false, ""]))
+      |> Map.new(&{String.to_atom(&1.key), &1.default})
+
+    case defaults do
+      empty when map_size(empty) == 0 ->
+        query
+
+      _defaults ->
+        Map.update(query, :filter, defaults, fn
+          filters when is_map(filters) -> Map.merge(defaults, filters)
+          _invalid_filters -> defaults
+        end)
+    end
+  end
 end

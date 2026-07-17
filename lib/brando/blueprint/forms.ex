@@ -30,6 +30,11 @@ defmodule Brando.Blueprint.Forms do
   If you override the default query, you must supply ALL preloads -- this includes `alternate_entries`
   as well as images, videos and files.
 
+  `query`, `after_save`, and `redirect_on_save` also accept
+  `{module, function, extra_args}` tuples. Brando passes each option's documented
+  runtime arguments first and appends `extra_args`. This is useful when a shared
+  callback needs fixed configuration without capturing an anonymous function.
+
 
   ## Redirect after save
 

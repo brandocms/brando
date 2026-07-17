@@ -52,9 +52,9 @@ defmodule Brando.Blueprint.Datasources.Dsl do
         doc: "Function to retrieve all entries. Receives `module`, `language`, `vars`. Return as identifiers"
       ],
       get: [
-        type: {:fun, 1},
+        type: {:mfa_or_fun, 1},
         required: false,
-        doc: "Function to retrieve selected entries from identifiers."
+        doc: "Function to retrieve selected entries from identifiers. Accepts a function or MFA callback."
       ]
     ]
   }

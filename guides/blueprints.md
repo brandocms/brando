@@ -218,9 +218,67 @@ Use their `trait :ensure_uid` and `trait :validate_var_keys` shorthands to also 
 a module-body dependency on the runtime trait. Existing full module declarations remain
 supported and require no application or database migration.
 
+### Datasources
+
+Datasource keys and nested metadata keys must be unique. A `:list` datasource
+requires `list`; `:single` requires `get`; and `:selection` requires both. Brando
+checks those contracts while the Blueprint compiles instead of failing later in
+template rendering or the block editor.
+
+Both callbacks accept an anonymous function or an MFA tuple. Runtime arguments
+come first, followed by configured arguments:
+
+```elixir
+datasources do
+  datasource :published do
+    type :list
+    list {MyApp.Projects, :list_for_datasource, [status: :published]}
+  end
+end
+
+def list_for_datasource(module, language, vars, opts) do
+  # ...
+end
+```
+
+The equivalent runtime call is
+`MyApp.Projects.list_for_datasource(module, language, vars, status: :published)`.
+
+### Metadata and JSON-LD
+
+A Blueprint has at most one `meta_schema` and one `json_ld_schema`; extraction
+returns one metadata definition and one structured-data entity. Use repeated
+`Brando.Plug.HTML.put_json_ld/3` calls when a page needs multiple JSON-LD entities.
+
+Metadata targets must be non-empty strings. JSON-LD validation ensures that the
+root is an available struct, every declared field exists on that struct, field
+names are unique, value-producing types have callbacks, derived types do not
+carry ignored callbacks, and nested schema modules export `build/1`. Optional
+date and datetime callbacks may return `nil`, and extracting from a Blueprint
+without a JSON-LD schema returns `nil`.
+
 ### Translations
 
+Translation context keys must be unique, as must translation keys inside each
+context. Duplicate declarations fail compilation instead of being silently
+overwritten when the DSL is converted to its runtime map.
+
 ### Listings
+
+Listing validation covers non-negative limits, unique filter/sort/export/child
+keys, valid sort orders, complete action events, CSV export contracts, select
+options and defaults, and child-listing references. Static select filters need
+at least one unique option value; dynamic selects use an arity-one callback.
+Active filter defaults are merged into the initial query, while `nil`, `false`,
+and empty defaults remain inactive and explicit values in `listing.query` take
+precedence.
+
+These datasource, metadata, JSON-LD, translation, and listing checks do not alter
+database storage and require neither an Ecto migration nor an Igniter upgrade
+script. Compile the application after upgrading and correct any rejected DSL
+declarations. Review listing filter defaults because they now perform their
+documented runtime function; removing an unintended default is an application
+configuration change, not a database migration.
 
 #### Listing LiveViews
 

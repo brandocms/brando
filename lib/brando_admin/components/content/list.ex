@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Components.Content.List do
   use BrandoAdmin.Translator
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Blueprint.Listings
   alias Brando.Trait.Creator
   alias Brando.Trait.Sequenced
   alias Brando.Trait.SoftDelete
@@ -448,6 +449,7 @@ defmodule BrandoAdmin.Components.Content.List do
   defp build_list_opts(listing, schema, content_language) do
     %{paginate: true, limit: listing.limit}
     |> maybe_merge_listing_query(listing)
+    |> Listings.merge_filter_defaults(listing)
     |> maybe_merge_content_language(schema, content_language)
     |> maybe_preload_creator(schema)
     |> maybe_preload_alternates(schema)

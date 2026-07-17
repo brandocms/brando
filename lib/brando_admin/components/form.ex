@@ -29,6 +29,7 @@ defmodule BrandoAdmin.Components.Form do
   import Ecto.Changeset
   import Phoenix.LiveView.TagEngine
 
+  alias Brando.Blueprint.Callback
   alias Brando.Blueprint.Forms, as: BlueprintForms
   alias Brando.Villain
   alias BrandoAdmin.Components.Button
@@ -1243,7 +1244,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp maybe_query(id, form_blueprint) do
     if form_blueprint.query do
-      form_blueprint.query.(id)
+      Callback.call(form_blueprint.query, [id])
     else
       %{matches: %{id: id}}
     end
@@ -3221,7 +3222,7 @@ defmodule BrandoAdmin.Components.Form do
               end
 
             :listing ->
-              push_navigate(socket, to: redirect_fn.(socket, entry, mutation_type))
+              push_navigate(socket, to: Callback.call(redirect_fn, [socket, entry, mutation_type]))
 
             :new ->
               push_navigate(socket, to: redirect_new_fn.(socket, entry, mutation_type))
@@ -3338,7 +3339,7 @@ defmodule BrandoAdmin.Components.Form do
               end
 
             :listing ->
-              push_navigate(socket, to: redirect_fn.(socket, entry, mutation_type))
+              push_navigate(socket, to: Callback.call(redirect_fn, [socket, entry, mutation_type]))
 
             :new ->
               push_navigate(socket, to: redirect_new_fn.(socket, entry, mutation_type))
@@ -4330,7 +4331,7 @@ defmodule BrandoAdmin.Components.Form do
   defp maybe_run_form_after_save(%{after_save: nil}, _, _), do: nil
 
   defp maybe_run_form_after_save(%{after_save: after_save}, entry, current_user) do
-    after_save.(entry, current_user)
+    Callback.call(after_save, [entry, current_user])
   end
 
   defp validate(schema, entry, params, user) do

@@ -5,8 +5,10 @@ defmodule Brando.Blueprint.SemanticValidator do
 
   @impl true
   def transform(dsl_state) do
-    case Brando.Blueprint.Verifier.verify(dsl_state) do
-      :ok -> {:ok, dsl_state}
+    with :ok <- Brando.Blueprint.Verifier.verify(dsl_state),
+         :ok <- Brando.Blueprint.SecondaryVerifier.verify(dsl_state) do
+      {:ok, dsl_state}
+    else
       {:error, error} -> {:error, error}
     end
   end
