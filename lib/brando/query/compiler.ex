@@ -1,16 +1,16 @@
 defmodule Brando.Query.Compiler do
   @moduledoc """
-  Compiles query and mutation functions into Brando contexts without depending on
-  the runtime query engine.
+  Internal compiler for the public `Brando.Query` API. It expands query and mutation
+  functions into Brando contexts without depending on the runtime query engine.
 
-  Use this module in context definitions:
+  Context definitions keep using the public entry point:
 
-      use Brando.Query.Compiler
+      use Brando.Query
   """
 
   @default_callback {:fn, [], [{:->, [], [[{:entry, [], nil}], {:ok, {:entry, [], nil}}]}]}
 
-  @doc "Imports the focused query compiler and query helper macros."
+  @doc false
   defmacro __using__(_opts), do: build_use()
 
   @doc "Defines list or single-entry query functions for a Blueprint schema."
@@ -37,15 +37,15 @@ defmodule Brando.Query.Compiler do
   @doc "Builds an Ecto fragment that matches any JSON object value case-insensitively."
   defmacro jsonb_contains_any_value_ilike(field, value), do: build_jsonb_contains(field, value)
 
-  @doc "Builds the imports used by the focused and compatibility `use` macros."
+  @doc "Builds the imports expanded by the public `Brando.Query` entry point."
   def build_use do
     quote do
-      import Brando.Query.Compiler
+      import Brando.Query
       import Brando.Query.Helpers
     end
   end
 
-  @doc "Builds a generated list or single-entry query for compatibility macros."
+  @doc "Builds a generated list or single-entry query for the public macros."
   def build_query(kind, module, block, caller) do
     module = expand_module(module, caller, {:query, 3})
 
@@ -55,7 +55,7 @@ defmodule Brando.Query.Compiler do
     end
   end
 
-  @doc "Builds a generated context mutation for compatibility macros."
+  @doc "Builds a generated context mutation for the public macros."
   def build_mutation(operation, {module, opts}, callback, caller) do
     module = expand_module(module, caller, {:mutation, 2})
     build_mutation_ast(operation, {module, opts}, callback)
@@ -66,7 +66,7 @@ defmodule Brando.Query.Compiler do
     build_mutation_ast(operation, module, callback)
   end
 
-  @doc "Builds a generated filter or match reducer for compatibility macros."
+  @doc "Builds a generated filter or match reducer for the public macros."
   def build_reducer(kind, module, block, caller) do
     module = expand_module(module, caller, {kind, 2})
 
@@ -76,7 +76,7 @@ defmodule Brando.Query.Compiler do
     end
   end
 
-  @doc "Builds the JSONB value-matching fragment for compatibility macros."
+  @doc "Builds the JSONB value-matching fragment for the public macro."
   def build_jsonb_contains(field, value) do
     quote do
       fragment(

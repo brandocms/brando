@@ -3,7 +3,7 @@ defmodule Brando.Users do
   Context for Users.
   """
   use BrandoAdmin, :context
-  use Brando.Query.Compiler
+  use Brando.Query
   use Gettext, backend: Brando.Gettext
 
   import Ecto.Query

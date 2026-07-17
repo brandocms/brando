@@ -30,7 +30,7 @@ defmodule Brando.Navigation do
       </nav>
 
   """
-  import Brando.Query.Compiler
+  import Brando.Query
   import Ecto.Query
 
   alias Brando.Cache

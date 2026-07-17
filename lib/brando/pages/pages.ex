@@ -3,7 +3,7 @@ defmodule Brando.Pages do
   Context for pages
   """
   use BrandoAdmin, :context
-  use Brando.Query.Compiler
+  use Brando.Query
 
   import Ecto.Query
 

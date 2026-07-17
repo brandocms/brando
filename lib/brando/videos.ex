@@ -6,7 +6,7 @@ defmodule Brando.Videos do
   """
 
   use BrandoAdmin, :context
-  use Brando.Query.Compiler
+  use Brando.Query
 
   import Ecto.Query
 

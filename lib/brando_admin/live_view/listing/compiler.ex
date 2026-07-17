@@ -1,16 +1,16 @@
 defmodule BrandoAdmin.LiveView.Listing.Compiler do
   @moduledoc """
-  Compiles the shared admin listing LiveView setup without depending on the
-  runtime listing hook implementation.
+  Internal compiler for the public `BrandoAdmin.LiveView.Listing` API. It expands the
+  shared LiveView setup without depending on the runtime listing hook implementation.
 
-  Use this module when defining listing LiveViews:
+  Listing LiveViews keep using the public entry point:
 
-      use BrandoAdmin.LiveView.Listing.Compiler, schema: MyApp.Projects.Project
+      use BrandoAdmin.LiveView.Listing, schema: MyApp.Projects.Project
   """
 
   defmacro __using__(opts), do: build(opts)
 
-  @doc "Builds the listing LiveView setup used by focused and compatibility macros."
+  @doc "Builds the setup expanded by the public listing LiveView API."
   def build(opts) do
     schema = Keyword.fetch!(opts, :schema)
 
@@ -21,7 +21,7 @@ defmodule BrandoAdmin.LiveView.Listing.Compiler do
       on_mount({__MODULE__, :hooks})
 
       def on_mount(:hooks, params, assigns, socket) do
-        BrandoAdmin.LiveView.Listing.hooks(params, assigns, socket, unquote(schema))
+        BrandoAdmin.LiveView.Listing.Hooks.hooks(params, assigns, socket, unquote(schema))
       end
     end
   end

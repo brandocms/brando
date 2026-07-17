@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Content.PaletteFormLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Form.Compiler, schema: Brando.Content.Palette
+  use BrandoAdmin.LiveView.Form, schema: Brando.Content.Palette
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Form

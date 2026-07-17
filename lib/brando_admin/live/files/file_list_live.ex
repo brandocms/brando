@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Files.FileListLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Listing.Compiler, schema: Brando.Files.File
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Files.File
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Assets.FileBrowser

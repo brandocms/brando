@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Sites.GlobalSetListLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Listing.Compiler, schema: Brando.Sites.GlobalSet
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Sites.GlobalSet
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Content

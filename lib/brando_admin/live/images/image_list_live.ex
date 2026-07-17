@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Images.ImageListLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Listing.Compiler, schema: Brando.Images.Image
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Images.Image
   use Gettext, backend: Brando.Gettext
 
   import Ecto.Query

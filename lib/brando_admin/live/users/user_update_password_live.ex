@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Users.UserUpdatePasswordLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Form.Compiler, schema: Brando.Users.User
+  use BrandoAdmin.LiveView.Form, schema: Brando.Users.User
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Form

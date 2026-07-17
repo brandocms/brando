@@ -360,26 +360,26 @@
   shorthands avoid module-body runtime trait dependencies. Existing full module
   declarations remain compatible and no application or database migration is required.
 
-- **Isolated admin form LiveView compilation**: Generated and built-in admin form
-  LiveViews now use `BrandoAdmin.LiveView.Form.Compiler`, a focused setup macro that
-  keeps the large runtime form-hook implementation out of their compile graph. Existing
-  `use BrandoAdmin.LiveView.Form, schema: ...` declarations remain supported;
-  applications may opt in by changing only the `use` module. Runtime behavior, routes,
-  and database schemas are unchanged, so no database migration is required.
+- **Isolated admin form LiveView compilation**: `BrandoAdmin.LiveView.Form` now delegates
+  setup to focused internal compiler and hook modules, keeping the large runtime hook
+  implementation out of application compile graphs. The public
+  `use BrandoAdmin.LiveView.Form, schema: ...` declaration is unchanged. Runtime
+  behavior, routes, and database schemas are unchanged, so no code migration, Igniter
+  upgrade, or database migration is required.
 
-- **Isolated admin listing LiveView compilation**: Generated and built-in admin
-  listing LiveViews now use `BrandoAdmin.LiveView.Listing.Compiler`, a focused setup
-  macro that keeps runtime listing hooks out of their compile graph. Existing
-  `use BrandoAdmin.LiveView.Listing, schema: ...` declarations remain supported;
-  applications may opt in by changing only the `use` module. Listing behavior, routes,
-  and database schemas are unchanged, so no database migration is required.
+- **Isolated admin listing LiveView compilation**: `BrandoAdmin.LiveView.Listing` now
+  delegates setup to focused internal compiler and hook modules, keeping runtime listing
+  hooks out of application compile graphs. The public
+  `use BrandoAdmin.LiveView.Listing, schema: ...` declaration is unchanged. Listing
+  behavior, routes, and database schemas are unchanged, so no code migration, Igniter
+  upgrade, or database migration is required.
 
-- **Isolated context query compilation**: Generated and built-in Blueprint contexts now
-  use `Brando.Query.Compiler`, which provides query, mutation, reducer, and helper macros
-  without compiling contexts against the runtime query engine. Existing
-  `use Brando.Query` declarations remain supported; applications may opt in by changing
-  only the module passed to `use`. Query behavior and database schemas are unchanged, so
-  no database migration is required.
+- **Isolated context query compilation**: `Brando.Query` now delegates macro expansion
+  and query execution to focused internal compiler and runtime modules, so Blueprint
+  contexts do not compile against the runtime query engine. The public
+  `use Brando.Query` declaration and runtime functions are unchanged. Query behavior and
+  database schemas are unchanged, so no code migration, Igniter upgrade, or database
+  migration is required.
 
 - **Symbolic built-in subform components**: Blueprint `inputs_for` definitions can now
   use `:vars`, `:gallery_objects`, `:identity_type_config`, or `:page_vars` instead of

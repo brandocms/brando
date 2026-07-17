@@ -26,20 +26,20 @@ defmodule Mix.Tasks.Brando.Gen.Test do
 
       assert_file("lib/brando_admin/live/projects/project_form_live.ex", fn file ->
         assert file =~ "BrandoIntegrationAdmin.Projects.ProjectFormLive"
-        assert file =~ "use BrandoAdmin.LiveView.Form.Compiler, schema: Brando.Projects.Project"
+        assert file =~ "use BrandoAdmin.LiveView.Form, schema: Brando.Projects.Project"
         assert file =~ "<.live_component module={Form}\n      id=\"project_form\"\n"
       end)
 
       assert_file("lib/brando_admin/live/projects/project_list_live.ex", fn file ->
         assert file =~ "BrandoIntegrationAdmin.Projects.ProjectListLive"
-        assert file =~ "use BrandoAdmin.LiveView.Listing.Compiler, schema: Brando.Projects.Project"
+        assert file =~ "use BrandoAdmin.LiveView.Listing, schema: Brando.Projects.Project"
 
         assert file =~
                  "<.live_component module={Content.List}\n      id={\"content_listing_\#{@schema}_default\"}\n"
       end)
 
       assert_file("lib/brando/projects.ex", fn file ->
-        assert file =~ "use Brando.Query.Compiler"
+        assert file =~ "use Brando.Query"
       end)
 
       assert_file("lib/brando_web/controllers/project_html.ex", fn file ->

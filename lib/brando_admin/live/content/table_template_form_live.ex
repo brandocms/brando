@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Content.TableTemplateFormLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Form.Compiler, schema: Brando.Content.TableTemplate
+  use BrandoAdmin.LiveView.Form, schema: Brando.Content.TableTemplate
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Form

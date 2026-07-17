@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Videos.VideoFormLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Form.Compiler, schema: Brando.Videos.Video
+  use BrandoAdmin.LiveView.Form, schema: Brando.Videos.Video
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Form

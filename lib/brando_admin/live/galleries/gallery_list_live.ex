@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Galleries.GalleryListLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Listing.Compiler, schema: Brando.Galleries.Gallery
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Galleries.Gallery
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Content

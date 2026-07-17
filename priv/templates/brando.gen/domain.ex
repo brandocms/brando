@@ -9,7 +9,7 @@ defmodule <%= app_module %>.<%= domain %> do
   @type user :: Brando.Users.User.t()
   # __types
 
-  use Brando.Query.Compiler
+  use Brando.Query
   import Ecto.Query
 
   # ++header

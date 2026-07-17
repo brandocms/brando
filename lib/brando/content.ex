@@ -27,7 +27,7 @@ defmodule Brando.Content do
     of entries in the for loop
 
   """
-  use Brando.Query.Compiler
+  use Brando.Query
   import Ecto.Query
 
   alias Brando.Content.Block

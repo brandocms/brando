@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Content.PaletteListLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Listing.Compiler, schema: Brando.Content.Palette
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Content.Palette
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Content

@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Navigation.MenuListLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Listing.Compiler, schema: Brando.Navigation.Menu
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Navigation.Menu
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Content

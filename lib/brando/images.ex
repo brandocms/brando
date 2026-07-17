@@ -20,7 +20,7 @@ defmodule Brando.Images do
       end
   """
   use BrandoAdmin, :context
-  use Brando.Query.Compiler
+  use Brando.Query
 
   import Ecto.Query
 

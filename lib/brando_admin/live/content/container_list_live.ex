@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Content.ContainerListLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Listing.Compiler, schema: Brando.Content.Container
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Content.Container
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Content

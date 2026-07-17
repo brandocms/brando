@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Content.ModuleSetListLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Listing.Compiler, schema: Brando.Content.ModuleSet
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Content.ModuleSet
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Content

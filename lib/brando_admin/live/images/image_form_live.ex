@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Images.ImageFormLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Form.Compiler, schema: Brando.Images.Image
+  use BrandoAdmin.LiveView.Form, schema: Brando.Images.Image
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Form

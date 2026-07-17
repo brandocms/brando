@@ -47,7 +47,7 @@ defmodule BrandoWeb do
 
   def context do
     quote do
-      import Brando.Query.Compiler
+      import Brando.Query
       import Brando.SoftDelete.Query
     end
   end

@@ -84,18 +84,17 @@ migration.
 
 #### Context query compilation
 
-Contexts generated for Blueprint schemas use the focused query compiler:
+Contexts generated for Blueprint schemas keep using the public query API:
 
 ```elixir
-use Brando.Query.Compiler
+use Brando.Query
 ```
 
 It provides the existing `query`, `mutation`, `filters`, `matches`, query-helper, and
 JSONB helper macros without making the context compile against the runtime query engine.
-Existing contexts using `use Brando.Query` remain fully supported. Applications may opt
-in incrementally by changing only the module passed to `use`; calls to runtime functions
-such as `Brando.Query.handle_list_query/6` remain on `Brando.Query`. This is a compile-time
-dependency optimization and requires no database migration.
+The compiler/runtime split is internal: existing contexts and runtime calls such as
+`Brando.Query.handle_list_query/6` remain unchanged. This compile-time dependency
+optimization requires no code migration, Igniter upgrade, or database migration.
 
 #### Attributes
 
@@ -358,18 +357,18 @@ configuration change, not a database migration.
 
 #### Listing LiveViews
 
-Generated admin listing LiveViews use the focused setup compiler so changes to
-runtime listing hooks do not recompile every listing definition:
+Generated admin listing LiveViews keep using the public setup API. Internally, setup
+compilation is isolated so changes to runtime listing hooks do not recompile every
+listing definition:
 
 ```elixir
-use BrandoAdmin.LiveView.Listing.Compiler, schema: MyApp.Projects.Project
+use BrandoAdmin.LiveView.Listing, schema: MyApp.Projects.Project
 ```
 
-Existing `use BrandoAdmin.LiveView.Listing, schema: ...` declarations remain
-supported. Applications may migrate by changing only the module passed to `use`;
-hook behavior, listing APIs, and routes are unchanged. Dashboard LiveViews may use
-the same compiler with `schema: nil`. This is a compile-time dependency optimization
-and requires no database migration.
+Existing `use BrandoAdmin.LiveView.Listing, schema: ...` declarations, hook behavior,
+listing APIs, and routes are unchanged. Dashboard LiveViews may use the same public API
+with `schema: nil`. This compile-time dependency optimization requires no code
+migration, Igniter upgrade, or database migration.
 
 #### Listing components
 
@@ -424,17 +423,17 @@ need no event target or migration changes.
 
 #### Form LiveViews
 
-Generated admin form LiveViews use the focused setup compiler so changes to runtime
-form hooks do not recompile every form definition:
+Generated admin form LiveViews keep using the public setup API. Internally, setup
+compilation is isolated so changes to runtime form hooks do not recompile every form
+definition:
 
 ```elixir
-use BrandoAdmin.LiveView.Form.Compiler, schema: MyApp.Projects.Project
+use BrandoAdmin.LiveView.Form, schema: MyApp.Projects.Project
 ```
 
-Existing `use BrandoAdmin.LiveView.Form, schema: ...` declarations remain supported.
-Applications may migrate by changing only the module passed to `use`; hook behavior,
-routes, and form APIs are unchanged, and no database migration is required. The Brando
-generator now emits the focused form.
+Existing `use BrandoAdmin.LiveView.Form, schema: ...` declarations, hook behavior,
+routes, and form APIs are unchanged. The Brando generator emits this same public API.
+No code migration, Igniter upgrade, or database migration is required.
 
 #### Form options
 #### Tabs

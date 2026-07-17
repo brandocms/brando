@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Pages.PageListLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Listing.Compiler, schema: Brando.Pages.Page
+  use BrandoAdmin.LiveView.Listing, schema: Brando.Pages.Page
 
   alias Brando.Pages
   alias BrandoAdmin.Components.Content
