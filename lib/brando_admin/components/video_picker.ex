@@ -39,6 +39,9 @@ defmodule BrandoAdmin.Components.VideoPicker do
        :upload_strategy,
        assigns[:upload_strategy] || resolved_config.upload_strategy
      )
+     |> assign(:allow_uploads?, resolved_config.allow_uploads)
+     |> assign(:allow_external_urls?, resolved_config.allow_external_urls)
+     |> assign(:video_config, resolved_config)
      |> assign(:new_folder, "")
      |> assign(:show_new_folder_form, false)
      |> assign_new(:current_user, fn -> assigns[:current_user] end)
@@ -53,6 +56,17 @@ defmodule BrandoAdmin.Components.VideoPicker do
     {:ok,
      socket
      |> assign(:selected_videos, selected_videos)
+     |> push_selection_state()}
+  end
+
+  def update(%{event: "upload_complete", asset: %Brando.Videos.Video{} = video}, socket) do
+    send_update(socket.assigns.event_target, %{event: "select_video", id: video.id})
+
+    {:ok,
+     socket
+     |> assign(:upload_progress, nil)
+     |> assign_videos()
+     |> assign_folder_state(socket.assigns.current_folder)
      |> push_selection_state()}
   end
 
@@ -81,7 +95,10 @@ defmodule BrandoAdmin.Components.VideoPicker do
     assign(
       socket,
       :video_upload_available?,
-      Brando.Videos.upload_available?(socket.assigns.upload_strategy)
+      Brando.Uploads.video_upload_available?(%{
+        socket.assigns.video_config
+        | upload_strategy: socket.assigns.upload_strategy
+      })
     )
   end
 
@@ -90,7 +107,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
       Brando.Videos.list_videos(%{
         filter: %{config_target: socket.assigns.config_target},
         order: "desc id",
-        preload: [:thumbnail]
+        preload: [:thumbnail, :file]
       })
 
     assign(socket, :videos, videos)
@@ -105,6 +122,9 @@ defmodule BrandoAdmin.Components.VideoPicker do
     |> assign_new(:selected_videos, fn -> [] end)
     |> assign_new(:current_user, fn -> nil end)
     |> assign_new(:upload_strategy, fn -> Brando.default_video_upload_strategy() end)
+    |> assign_new(:allow_uploads?, fn -> true end)
+    |> assign_new(:allow_external_urls?, fn -> true end)
+    |> assign_new(:video_config, fn -> Brando.Type.VideoConfig.default_config() end)
     |> assign_new(:upload_progress, fn -> nil end)
     |> assign_new(:show_url_input, fn -> false end)
     |> assign_new(:url_input, fn -> "" end)
@@ -291,6 +311,10 @@ defmodule BrandoAdmin.Components.VideoPicker do
     end
   end
 
+  def handle_event("toggle_url_input", _, %{assigns: %{allow_external_urls?: false}} = socket) do
+    {:noreply, assign(socket, :show_url_input, false)}
+  end
+
   def handle_event("toggle_url_input", _, socket) do
     {:noreply, assign(socket, :show_url_input, !socket.assigns.show_url_input)}
   end
@@ -321,15 +345,22 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   def handle_event(
         "play_video",
-        %{"video-id" => video_id, "source-url" => source_url, "type" => type},
+        %{"video-id" => video_id, "type" => type} = params,
         socket
       ) do
     video_data = Enum.find(socket.assigns.videos, &(&1.id == String.to_integer(video_id)))
+    source_url = Map.get(params, "source-url", "")
+
+    {preview_type, playback_url} =
+      case Brando.Videos.Helpers.get_playback_url(video_data) do
+        {:ok, url} when video_data.type not in [:youtube, :vimeo] -> {:external_file, url}
+        _ -> {video_data.type, source_url}
+      end
 
     video = %{
       id: video_id,
-      source_url: source_url,
-      type: String.to_existing_atom(type),
+      source_url: playback_url,
+      type: preview_type || String.to_existing_atom(type),
       unique_id: System.unique_integer([:positive]),
       width: video_data && video_data.width,
       height: video_data && video_data.height
@@ -340,6 +371,10 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   def handle_event("close_video_player", _, socket) do
     {:noreply, assign(socket, :playing_video, nil)}
+  end
+
+  def handle_event("url", _params, %{assigns: %{allow_external_urls?: false}} = socket) do
+    {:noreply, assign(socket, :creating_video, false)}
   end
 
   def handle_event("url", params, socket) do
@@ -405,7 +440,16 @@ defmodule BrandoAdmin.Components.VideoPicker do
     end
   end
 
-  def handle_event("get_video_upload_url", %{"filename" => filename}, socket) do
+  def handle_event(
+        "get_video_upload_url",
+        %{
+          "request_ref" => request_ref,
+          "filename" => filename,
+          "size" => size,
+          "mime_type" => mime_type
+        },
+        socket
+      ) do
     user = socket.assigns.current_user
 
     {video_config, config_target} =
@@ -418,13 +462,15 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
     case Brando.Videos.Uploader.initiate_upload(filename, user,
            config: video_config,
-           config_target: config_target
+           config_target: config_target,
+           file_meta: %{name: filename, size: size, type: mime_type}
          ) do
       {:ok, %{upload_url: upload_url, video: video} = result} ->
         event_payload = %{
           upload_url: upload_url,
           video_id: video.id,
-          filename: filename
+          filename: filename,
+          request_ref: request_ref
         }
 
         event_payload =
@@ -439,14 +485,26 @@ defmodule BrandoAdmin.Components.VideoPicker do
         {:noreply,
          push_event(socket, "video_upload_url_error", %{
            error: inspect(reason),
-           filename: filename
+           filename: filename,
+           request_ref: request_ref
          })}
     end
   end
 
+  def handle_event("get_video_upload_url", params, socket) do
+    {:noreply,
+     push_event(socket, "video_upload_url_error", %{
+       error: "Invalid video upload request",
+       filename: Map.get(params, "filename", ""),
+       request_ref: Map.get(params, "request_ref", "")
+     })}
+  end
+
   def handle_event("video_upload_complete", %{"video_id" => video_id}, socket) do
     case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}) do
-      {:ok, _video} ->
+      {:ok, video} ->
+        {:ok, _video} = Brando.Videos.Uploader.complete_client_upload(video)
+
         send_update(socket.assigns.event_target, %{
           event: "select_video",
           id: video_id
@@ -531,6 +589,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
               <div class="video-picker-url-section">
                 <div class="video-picker-add-actions">
                   <button
+                    :if={@allow_external_urls?}
                     type="button"
                     class="video-picker-add-btn"
                     phx-click={JS.push("toggle_url_input", target: @myself)}
@@ -544,9 +603,30 @@ defmodule BrandoAdmin.Components.VideoPicker do
                   </button>
 
                   <div
-                    :if={@video_upload_available?}
-                    phx-hook={video_uploader_hook(@upload_strategy)}
+                    :if={@video_upload_available? && @upload_strategy in [:local, :s3]}
+                    phx-hook="Brando.UploadTrigger"
                     id={"video-uploader-#{@id}"}
+                    data-kind="video_picker"
+                    data-component-id={@id}
+                    data-asset-type="video"
+                    data-config-target={@config_target}
+                    data-click-mode="trigger"
+                    data-accept=".mp4,.webm,.mov,.avi,.ogv"
+                  >
+                    <button
+                      type="button"
+                      class="video-picker-add-btn upload-trigger"
+                    >
+                      <.icon name="hero-arrow-up-tray" />
+                      {gettext("Upload file")}
+                    </button>
+                    <input type="file" accept="video/*" class="video-picker-file-input" />
+                  </div>
+
+                  <div
+                    :if={@video_upload_available? && @upload_strategy not in [:local, :s3]}
+                    phx-hook={video_uploader_hook(@upload_strategy)}
+                    id={"video-provider-uploader-#{@id}"}
                     data-target={@myself}
                   >
                     <button
@@ -561,7 +641,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                   </div>
                 </div>
 
-                <div :if={@show_url_input} class="video-picker-url-input">
+                <div :if={@allow_external_urls? && @show_url_input} class="video-picker-url-input">
                   <div
                     class="video-url-parser"
                     phx-hook="Brando.VideoURLParser"
@@ -1018,9 +1098,10 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   defp calculate_aspect_ratio(_, _), do: "16:9"
 
-  defp video_uploader_hook(strategy) do
-    "Brando.#{strategy |> to_string() |> String.capitalize()}Uploader"
-  end
+  defp video_uploader_hook(:mux), do: "Brando.MuxUploader"
+  defp video_uploader_hook(:bunny), do: "Brando.BunnyUploader"
+  defp video_uploader_hook(:cloudflare), do: "Brando.CloudflareUploader"
+  defp video_uploader_hook(_strategy), do: nil
 
   defp video_upload_root(config_target) do
     resolved_target = normalize_video_config_target(config_target) || "default"

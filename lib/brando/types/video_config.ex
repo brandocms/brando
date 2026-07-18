@@ -7,10 +7,10 @@ defmodule Brando.Type.VideoConfig do
   The `upload_strategy` field determines where videos are uploaded:
 
   - `:local` (default) - Traditional server upload, files stored on server/CDN
+  - `:s3` - Direct upload of the original file to S3-compatible storage
   - `:mux` - Direct upload to Mux for streaming
-  - `:cloudflare` - Direct upload to Cloudflare Stream
-  - `:s3` - Direct upload to AWS S3
   - `:bunny` - Direct upload to Bunny.net storage
+  - `:cloudflare` - Resumable direct upload to Cloudflare Stream
 
   The `Brando.Videos.Uploader.initiate_upload/3` function automatically routes
   to the appropriate uploader based on this strategy.
@@ -45,13 +45,12 @@ defmodule Brando.Type.VideoConfig do
     - `"2160p"` - Transcode up to 4K
     - Not set - Mux decides based on source
 
-  - `"playback_policy"` - Who can view the video
-    - `["public"]` - Anyone with the URL (default)
-    - `["signed"]` - Requires signed URLs for playback
+  - `"playback_policies"` - Who can view the video
+    - `["public"]` - Anyone with the URL. Signed playback is rejected until
+      Brando has a configured token-signing boundary.
 
-  - `"mp4_support"` - Whether to generate MP4 files
-    - `"none"` - No MP4 files (default, HLS only)
-    - `"standard"` - Generate MP4 files for download
+  - `"static_renditions"` - Optional downloadable MP4/M4A renditions using
+    Mux's current static rendition API.
 
   ### Example Configuration
 
@@ -64,8 +63,8 @@ defmodule Brando.Type.VideoConfig do
           meta: %{
             mux: %{
               "max_resolution_tier" => "1080p",
-              "playback_policy" => ["public"],
-              "mp4_support" => "none"
+              "playback_policies" => ["public"],
+              "static_renditions" => [%{"resolution" => "highest"}]
             }
           }
         }

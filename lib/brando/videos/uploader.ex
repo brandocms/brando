@@ -10,8 +10,7 @@ defmodule Brando.Videos.Uploader do
   - `:local` - Traditional server upload (returns error, use standard upload flow)
   - `:mux` - Routes to `Brando.Videos.Uploaders.Mux`
   - `:bunny` - Routes to `Brando.Videos.Uploaders.Bunny`
-  - `:cloudflare` - Routes to Cloudflare Stream uploader (not yet implemented)
-  - `:s3` - Routes to AWS S3 uploader (not yet implemented)
+  - `:cloudflare` - Routes to `Brando.Videos.Uploaders.Cloudflare`
 
   ## Implementing Upload Providers
 
@@ -19,12 +18,10 @@ defmodule Brando.Videos.Uploader do
   Currently supported providers:
   - Mux (lib/brando/videos/uploaders/mux.ex)
   - Bunny.net (lib/brando/videos/uploaders/bunny.ex)
+  - Cloudflare Stream (lib/brando/videos/uploaders/cloudflare.ex)
 
-  Future providers:
-  - Vimeo
-  - Cloudflare Stream
-  - YouTube (upload API)
-  - AWS S3
+  Unsupported strategies are rejected during Blueprint configuration rather
+  than producing dead upload controls at runtime.
   """
 
   @type video :: Brando.Videos.Video.t()
@@ -142,34 +139,45 @@ defmodule Brando.Videos.Uploader do
   ## Upload Strategies
 
   - `:mux` - Direct upload to Mux
-  - `:cloudflare` - Direct upload to Cloudflare Stream (not yet implemented)
-  - `:s3` - Direct upload to AWS S3 (not yet implemented)
-  - `:bunny` - Direct upload to Bunny.net (not yet implemented)
+  - `:bunny` - Direct upload to Bunny.net
   - `:local` - Returns error, use traditional upload flow instead
   """
   def initiate_upload(filename, user, opts) when is_list(opts) do
     config = Keyword.fetch!(opts, :config)
+    file_meta = Keyword.get(opts, :file_meta)
 
-    case config.upload_strategy do
-      :mux ->
-        Brando.Videos.Uploaders.Mux.initiate_upload(filename, user, opts)
+    with :ok <- Brando.Uploads.validate_provider_video_intake(config, file_meta) do
+      case config.upload_strategy do
+        :mux ->
+          Brando.Videos.Uploaders.Mux.initiate_upload(filename, user, opts)
 
-      :cloudflare ->
-        {:error, :not_implemented}
+        :bunny ->
+          Brando.Videos.Uploaders.Bunny.initiate_upload(filename, user, opts)
 
-      :s3 ->
-        {:error, :not_implemented}
+        :cloudflare ->
+          Brando.Videos.Uploaders.Cloudflare.initiate_upload(filename, user, opts)
 
-      :bunny ->
-        Brando.Videos.Uploaders.Bunny.initiate_upload(filename, user, opts)
+        strategy when strategy in [:local, :s3] ->
+          {:error, :use_traditional_upload}
 
-      :local ->
-        {:error, :use_traditional_upload}
-
-      strategy ->
-        {:error, {:unknown_strategy, strategy}}
+        strategy ->
+          {:error, {:unknown_strategy, strategy}}
+      end
     end
   end
+
+  @doc """
+  Records that the browser finished transferring a provider upload.
+
+  Cloudflare webhooks are terminal-only, so this moves its row from
+  `:uploading` to `:processing` while encoding is underway. Other providers
+  already expose intermediate webhook states and are left unchanged.
+  """
+  def complete_client_upload(%Brando.Videos.Video{type: :cloudflare} = video) do
+    Brando.Videos.Uploaders.Cloudflare.complete_upload(video, %{})
+  end
+
+  def complete_client_upload(%Brando.Videos.Video{} = video), do: {:ok, video}
 
   @doc """
   Router function that dispatches delete_remote to the appropriate uploader.
@@ -192,6 +200,9 @@ defmodule Brando.Videos.Uploader do
       :bunny ->
         Brando.Videos.Uploaders.Bunny.delete_remote(video)
 
+      :cloudflare ->
+        Brando.Videos.Uploaders.Cloudflare.delete_remote(video)
+
       _ ->
         :ok
     end
@@ -210,6 +221,7 @@ defmodule Brando.Videos.Uploader do
       case get_provider(video) do
         :mux -> Brando.Videos.Uploaders.Mux
         :bunny -> Brando.Videos.Uploaders.Bunny
+        :cloudflare -> Brando.Videos.Uploaders.Cloudflare
         _ -> nil
       end
 
@@ -223,5 +235,6 @@ defmodule Brando.Videos.Uploader do
 
   defp get_provider(%{type: :mux}), do: :mux
   defp get_provider(%{type: :bunny}), do: :bunny
+  defp get_provider(%{type: :cloudflare}), do: :cloudflare
   defp get_provider(_), do: nil
 end

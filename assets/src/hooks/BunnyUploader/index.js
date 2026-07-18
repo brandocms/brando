@@ -1,56 +1,32 @@
 /**
- * BunnyUploader Hook
- *
- * Handles direct upload to Bunny Stream for video files using TUS resumable uploads.
- * This hook is used for video assets with upload_strategy: :bunny
- *
- * Events sent to server:
- * - get_video_upload_url: Request upload credentials from server
- * - video_upload_progress: Progress updates during upload
- * - video_upload_complete: Upload finished successfully
- * - upload_error: Upload failed
- *
- * Events received from server:
- * - video_upload_url_ready: Server provides TUS auth credentials
- * - video_upload_url_error: Server failed to get upload credentials
+ * Direct Bunny Stream TUS uploads with request-scoped credential correlation.
  */
 import * as tus from 'tus-js-client'
 
 export default (app) => ({
-  currentUpload: null,
-
   async mounted() {
-    // File selection handler
-    this.el.addEventListener('input', async (event) => {
+    this.pendingRequests = new Map()
+    this.activeUploads = new Map()
+
+    this.el.addEventListener('input', (event) => {
       event.preventDefault()
 
       if (event.target instanceof HTMLInputElement && event.target.files) {
         const file = event.target.files[0]
-        if (file) {
-          this.uploadToBunny(file)
-        }
+        if (file) this.uploadToBunny(file)
       }
     })
 
-    // Listen for video upload URL response from server
-    this.handleEvent('video_upload_url_ready', ({ upload_url, video_id, tus_auth, filename }) => {
-      if (this.resolveUploadUrl && this.pendingFile && this.pendingFile.name === filename) {
-        this.resolveUploadUrl({ upload_url, video_id, tus_auth })
-      }
+    this.handleEvent('video_upload_url_ready', (payload) => {
+      this.pendingRequests.get(payload.request_ref)?.resolve(payload)
     })
 
-    // Listen for video upload URL error from server
-    this.handleEvent('video_upload_url_error', ({ error, filename }) => {
-      console.error('Video upload URL error:', { error, filename })
-      if (this.resolveUploadUrl && this.pendingFile && this.pendingFile.name === filename) {
-        this.resolveUploadUrl({ error })
-      }
+    this.handleEvent('video_upload_url_error', (payload) => {
+      console.error('Video upload URL error:', payload)
+      this.pendingRequests.get(payload.request_ref)?.resolve(payload)
     })
   },
 
-  // Route events to the owning component (video picker / transformer set
-  // data-target={@myself}); without a target they go to the form LiveView,
-  // which relays to the Form component (the drawer flow).
   pushVideoEvent(event, payload) {
     const target = this.el.dataset.target
     if (target) {
@@ -61,82 +37,88 @@ export default (app) => ({
   },
 
   destroyed() {
-    // Abort any in-progress upload when hook is destroyed. Tell the manager
-    // drawer too — external items have no cancel/dismiss affordance, so a
-    // silent abort would pin the item at :uploading forever.
-    if (this.currentUpload) {
-      this.currentUpload.abort()
-      this.currentUpload = null
-      window.BrandoUploads?.externalError?.(this._trackRef, 'Upload aborted')
-      this._trackRef = null
-    }
+    this.pendingRequests.forEach(({ reject }, requestRef) => {
+      reject(new Error('Upload aborted'))
+      window.BrandoUploads?.externalError?.(requestRef, 'Upload aborted')
+    })
+    this.pendingRequests.clear()
+
+    this.activeUploads.forEach((upload, requestRef) => {
+      upload.abort()
+      window.BrandoUploads?.externalError?.(requestRef, 'Upload aborted')
+    })
+    this.activeUploads.clear()
   },
 
-  // The URL handshake must be able to fail — a server that never answers
-  // (or answers for a different filename) would otherwise hang the upload
-  // silently forever.
-  waitForUploadUrl(timeoutMs = 30000) {
-    let timer
+  requestRef() {
+    const id = window.crypto?.randomUUID?.() || Math.random().toString(36).slice(2, 14)
+    return `video-${id}`
+  },
+
+  mimeType(file) {
+    if (file.type) return file.type
+    const extension = file.name.split('.').pop()?.toLowerCase()
+    return {
+      mp4: 'video/mp4',
+      webm: 'video/webm',
+      mov: 'video/quicktime',
+      avi: 'video/x-msvideo',
+      ogv: 'video/ogg',
+    }[extension] || 'application/octet-stream'
+  },
+
+  waitForUploadUrl(requestRef, timeoutMs = 30000) {
     return new Promise((resolve, reject) => {
-      this.resolveUploadUrl = resolve
-      this.rejectUploadUrl = reject
-      timer = setTimeout(() => reject(new Error('Timed out waiting for upload URL')), timeoutMs)
-    }).finally(() => {
-      clearTimeout(timer)
-      this.resolveUploadUrl = null
-      this.rejectUploadUrl = null
-    })
+      const timer = setTimeout(() => reject(new Error('Timed out waiting for upload credentials')), timeoutMs)
+
+      this.pendingRequests.set(requestRef, {
+        resolve: (payload) => {
+          clearTimeout(timer)
+          resolve(payload)
+        },
+        reject: (error) => {
+          clearTimeout(timer)
+          reject(error)
+        },
+      })
+    }).finally(() => this.pendingRequests.delete(requestRef))
   },
 
   async uploadToBunny(file) {
-    try {
-      // Store file for when we get the response
-      this.pendingFile = file
+    const requestRef = this.requestRef()
+    window.BrandoUploads?.trackExternal?.(file.name, file.size, requestRef)
 
-      // Request upload credentials from server, then wait for the push-back
-      const urlPromise = this.waitForUploadUrl()
+    try {
+      const urlPromise = this.waitForUploadUrl(requestRef)
       this.pushVideoEvent('get_video_upload_url', {
-        filename: file.name
+        request_ref: requestRef,
+        filename: file.name,
+        size: file.size,
+        mime_type: this.mimeType(file),
       })
       const response = await urlPromise
 
-      if (response.error) {
-        console.error('Failed to get upload credentials:', response.error)
-        this.pushVideoEvent('upload_error', {
-          filename: file.name,
-          error: response.error
-        })
-        return
-      }
+      if (response.error) throw new Error(response.error)
 
       const { upload_url, video_id, tus_auth } = response
-
-      // Surface this upload in the sticky UploadManager drawer (visibility only)
-      const trackRef = window.BrandoUploads?.trackExternal?.(file.name, file.size)
-      this._trackRef = trackRef
-
-      // Create TUS upload with resumable support
-      this.currentUpload = new tus.Upload(file, {
+      const upload = new tus.Upload(file, {
         endpoint: upload_url,
         retryDelays: [0, 3000, 5000, 10000, 20000, 60000, 60000],
         headers: {
-          'AuthorizationSignature': tus_auth.signature,
-          'AuthorizationExpire': tus_auth.expire_time.toString(),
-          'VideoId': tus_auth.video_id,
-          'LibraryId': tus_auth.library_id.toString()
+          AuthorizationSignature: tus_auth.signature,
+          AuthorizationExpire: tus_auth.expire_time.toString(),
+          VideoId: tus_auth.video_id,
+          LibraryId: tus_auth.library_id.toString(),
         },
         metadata: {
-          filetype: file.type,
-          title: file.name
+          filetype: this.mimeType(file),
+          title: file.name,
         },
         onError: (error) => {
-          console.error('TUS upload error:', error)
-          this.pushVideoEvent('upload_error', {
-            filename: file.name,
-            error: error.message || 'Upload failed'
-          })
-          window.BrandoUploads?.externalError?.(trackRef, error.message || 'Upload failed')
-          this.currentUpload = null
+          const message = error.message || 'Upload failed'
+          this.activeUploads.delete(requestRef)
+          this.pushVideoEvent('upload_error', { request_ref: requestRef, filename: file.name, error: message })
+          window.BrandoUploads?.externalError?.(requestRef, message)
         },
         onProgress: (bytesUploaded, bytesTotal) => {
           const percentage = Math.round((bytesUploaded / bytesTotal) * 100)
@@ -144,36 +126,32 @@ export default (app) => ({
           const uploadedMB = (bytesUploaded / 1024 / 1024).toFixed(1)
 
           this.pushVideoEvent('video_upload_progress', {
-            video_id: video_id,
+            request_ref: requestRef,
+            video_id,
             uploaded_mb: uploadedMB,
             total_mb: totalMB,
-            percentage: percentage
+            percentage,
           })
-          window.BrandoUploads?.externalProgress?.(trackRef, percentage)
+          window.BrandoUploads?.externalProgress?.(requestRef, percentage)
         },
         onSuccess: () => {
-          this.currentUpload = null
-          this.pushVideoEvent('video_upload_complete', { video_id })
-          window.BrandoUploads?.externalComplete?.(trackRef)
-        }
+          this.activeUploads.delete(requestRef)
+          this.pushVideoEvent('video_upload_complete', { request_ref: requestRef, video_id })
+          window.BrandoUploads?.externalComplete?.(requestRef)
+        },
       })
+      this.activeUploads.set(requestRef, upload)
 
-      // Check for previous uploads to resume
-      this.currentUpload.findPreviousUploads().then((previousUploads) => {
-        if (previousUploads.length) {
-          this.currentUpload.resumeFromPreviousUpload(previousUploads[0])
-        }
-        // Start the upload
-        this.currentUpload.start()
-      })
-
+      const previousUploads = await upload.findPreviousUploads()
+      if (previousUploads.length) upload.resumeFromPreviousUpload(previousUploads[0])
+      upload.start()
     } catch (error) {
+      const message = error.message || 'Upload failed'
       console.error('Bunny upload error:', error)
-      this.pushVideoEvent('upload_error', {
-        filename: file.name,
-        error: error.message
-      })
-      this.currentUpload = null
+      this.activeUploads.get(requestRef)?.abort()
+      this.activeUploads.delete(requestRef)
+      this.pushVideoEvent('upload_error', { request_ref: requestRef, filename: file.name, error: message })
+      window.BrandoUploads?.externalError?.(requestRef, message)
     }
-  }
+  },
 })

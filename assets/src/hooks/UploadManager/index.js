@@ -43,13 +43,13 @@ if (!window.BrandoUploads) {
       if (this._hook === hook) this._hook = null
     },
 
-    // External transports (Mux/Bunny provider hooks) — track in the drawer for
+    // External transports (Mux/Bunny/Cloudflare provider hooks) — track in the drawer for
     // visibility. Returns a ref, or null when the manager isn't mounted
     // (callers must guard).
-    trackExternal(filename, size) {
-      if (!this._hook) return null
-      const ref = `ext-${Math.random().toString(36).slice(2, 10)}`
-      this._hook.pushEvent('external_track', { ref, filename, size: size || 0 })
+    trackExternal(filename, size, requestRef = null) {
+      const generatedRef = window.crypto?.randomUUID?.() || Math.random().toString(36).slice(2, 12)
+      const ref = requestRef || `ext-${generatedRef}`
+      if (this._hook) this._hook.pushEvent('external_track', { ref, filename, size: size || 0 })
       return ref
     },
 
@@ -157,11 +157,11 @@ export default (app) => ({
     }
   },
 
-  // Client-direct transport: PUT the bytes straight to the presigned URL.
-  // Only Content-Type rides along — it is not part of the presign signature,
-  // and the acl is a signed query param, so no custom-header CORS surface.
+  // Client-direct transport: PUT the bytes straight to the presigned URL with
+  // exactly the headers the server signed. This includes Content-Type and may
+  // include x-amz-acl for S3-compatible providers configured to use ACLs.
   directUpload(file, decision) {
-    const { ref, upload_url } = decision
+    const { ref, upload_url, upload_headers = {} } = decision
     const xhr = new XMLHttpRequest()
     this._directXhrs[ref] = xhr
 
@@ -193,7 +193,7 @@ export default (app) => ({
     })
 
     xhr.open('PUT', upload_url)
-    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
+    Object.entries(upload_headers).forEach(([header, value]) => xhr.setRequestHeader(header, value))
     xhr.send(file)
   },
 })

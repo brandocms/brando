@@ -74,6 +74,10 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     update_item_asset(socket, socket.assigns.video_field, video)
   end
 
+  def update(%{event: "upload_complete", asset: %Brando.Videos.Video{} = video}, socket) do
+    {:ok, append_video_item(socket, video)}
+  end
+
   def update(assigns, socket) do
     socket = assign(socket, assigns)
 
@@ -156,6 +160,10 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         nil
       end
 
+    video_upload_available? =
+      video_cfg &&
+        Brando.Uploads.video_upload_available?(%{video_cfg | upload_strategy: upload_strategy})
+
     {:ok,
      socket
      |> assign(:initialized?, true)
@@ -170,6 +178,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
      |> assign(:relation_type, relation.type)
      |> assign(:sequenced?, sequenced?(relation, relation_module))
      |> assign(:upload_strategy, upload_strategy)
+     |> assign(:video_upload_available?, video_upload_available?)
      |> stream(:transformer_items, stream_entries)
      |> maybe_allow_image_upload(image_field, image_max_size)
      |> maybe_allow_video_upload(video_field)}
@@ -291,8 +300,9 @@ defmodule BrandoAdmin.Components.Form.Transformer do
           <Subform.subentry_add on_click={JS.push("add_entry", target: @myself)} />
           <.image_upload_button :if={@image_field} upload={@uploads.transformer_images} />
           <.video_upload_button
-            :if={@video_field && @upload_strategy && @upload_strategy != :local}
+            :if={@video_field && @video_upload_available?}
             upload_strategy={@upload_strategy}
+            config_target={Brando.Assets.ConfigTarget.serialize({:video, @relation_module, @video_field})}
             id={@id}
             myself={@myself}
           />
@@ -333,6 +343,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   defp video_upload_button(assigns) do
     ~H"""
     <div
+      :if={@upload_strategy not in [:local, :s3]}
       id={"#{@id}-video-uploader"}
       phx-hook={video_uploader_hook(@upload_strategy)}
       data-target={@myself}
@@ -356,6 +367,23 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         {gettext("Pick videos")}
         <input type="file" accept="video/*" class="video-picker-file-input hidden" />
       </label>
+    </div>
+    <div
+      :if={@upload_strategy in [:local, :s3]}
+      id={"#{@id}-video-upload-trigger"}
+      phx-hook="Brando.UploadTrigger"
+      data-kind="transformer_video"
+      data-component-id={@id}
+      data-asset-type="video"
+      data-config-target={@config_target}
+      data-click-mode="trigger"
+      data-accept=".mp4,.webm,.mov,.avi,.ogv"
+    >
+      <button type="button" class="upload-button upload-trigger">
+        <.icon name="hero-plus" />
+        {gettext("Pick videos")}
+      </button>
+      <input type="file" accept="video/*" class="video-picker-file-input hidden" multiple />
     </div>
     """
   end
@@ -582,7 +610,16 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
   # --- Video upload events (from MuxUploader/BunnyUploader JS hooks) ---
 
-  def handle_event("get_video_upload_url", %{"filename" => filename}, socket) do
+  def handle_event(
+        "get_video_upload_url",
+        %{
+          "request_ref" => request_ref,
+          "filename" => filename,
+          "size" => size,
+          "mime_type" => mime_type
+        },
+        socket
+      ) do
     user = socket.assigns.current_user
     video_field = socket.assigns.video_field
     relation_module = socket.assigns.relation_module
@@ -592,7 +629,8 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
     case Brando.Videos.Uploader.initiate_upload(filename, user,
            config: video_cfg,
-           config_target: config_target
+           config_target: config_target,
+           file_meta: %{name: filename, size: size, type: mime_type}
          ) do
       {:ok, %{upload_url: url, video: video} = result} ->
         Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:video:#{video.id}", link: true)
@@ -617,7 +655,12 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         }
 
         event_payload =
-          %{upload_url: url, video_id: video.id, filename: filename}
+          %{
+            upload_url: url,
+            video_id: video.id,
+            filename: filename,
+            request_ref: request_ref
+          }
           |> maybe_add_tus_auth(result)
 
         {:noreply,
@@ -633,14 +676,28 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         {:noreply,
          push_event(socket, "video_upload_url_error", %{
            error: "Failed to initiate video upload",
-           filename: filename
+           filename: filename,
+           request_ref: request_ref
          })}
     end
   end
 
-  def handle_event("video_upload_complete", %{"video_id" => _video_id}, socket) do
+  def handle_event("get_video_upload_url", params, socket) do
+    {:noreply,
+     push_event(socket, "video_upload_url_error", %{
+       error: "Invalid video upload request",
+       filename: Map.get(params, "filename", ""),
+       request_ref: Map.get(params, "request_ref", "")
+     })}
+  end
+
+  def handle_event("video_upload_complete", %{"video_id" => video_id}, socket) do
     # Video uploaded to provider. The MediaItem was already created in get_video_upload_url.
     # Status updates will come via PubSub when the webhook fires.
+    with {:ok, video} <- Brando.Videos.get_video(video_id) do
+      Brando.Videos.Uploader.complete_client_upload(video)
+    end
+
     {:noreply, assign(socket, :upload_progress, nil)}
   end
 
@@ -770,6 +827,31 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     Ecto.Changeset.apply_changes(changeset)
   end
 
+  defp append_video_item(socket, video) do
+    video_field = socket.assigns.video_field
+    video_id_key = :"#{video_field}_id"
+
+    default_map =
+      socket.assigns.subform
+      |> build_default(
+        socket.assigns.relation_module,
+        resolve_parent_entry(socket),
+        video
+      )
+      |> Map.put(video_id_key, video.id)
+
+    item = %{
+      dom_id: "transformer-item-new-#{System.unique_integer([:positive])}",
+      source: default_map,
+      changes: %{},
+      is_new: true
+    }
+
+    socket
+    |> update(:items, &(&1 ++ [item]))
+    |> stream_insert(:transformer_items, stream_entry(item))
+  end
+
   @doc false
   def build_default(%{default: nil}, relation_module, _entry, _asset) do
     relation_module
@@ -804,10 +886,17 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
   defp video_uploader_hook(:mux), do: "Brando.MuxUploader"
   defp video_uploader_hook(:bunny), do: "Brando.BunnyUploader"
-  defp video_uploader_hook(strategy), do: "Brando.#{strategy |> to_string() |> String.capitalize()}Uploader"
+  defp video_uploader_hook(:cloudflare), do: "Brando.CloudflareUploader"
+  defp video_uploader_hook(_strategy), do: nil
+
+  defp video_thumbnail_url(%{meta: %{"mux" => %{"playback_policy" => "signed"}}}), do: nil
 
   defp video_thumbnail_url(%{meta: %{"mux" => %{"playback_id" => playback_id}}}) do
     "https://image.mux.com/#{playback_id}/thumbnail.jpg?width=120&height=120&fit_mode=smartcrop"
+  end
+
+  defp video_thumbnail_url(%Brando.Videos.Video{} = video) do
+    Brando.Videos.Helpers.thumbnail_url(video)
   end
 
   defp video_thumbnail_url(%{thumbnail: %Brando.Images.Image{} = thumb}) do

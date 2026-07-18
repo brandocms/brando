@@ -9,6 +9,9 @@ defmodule BrandoWeb.Plugs.BunnyWebhook do
       plug BrandoWeb.Plugs.BunnyWebhook,
         mount: ["api", "videos", "bunny", "webhook"]
 
+  Configure `:webhook_secret` with the Bunny library's Read-Only API key.
+  Requests without Bunny's valid `v1` HMAC signature are rejected.
+
   ## Webhook Payload
 
   Bunny sends webhooks with the following structure:
@@ -50,7 +53,8 @@ defmodule BrandoWeb.Plugs.BunnyWebhook do
   def handle_bunny_webhook(conn, _options) do
     {:ok, body, conn} = read_body(conn)
 
-    with {:ok, params} <- Jason.decode(body),
+    with :ok <- verify_signature(conn, body, get_webhook_secret()),
+         {:ok, params} <- Jason.decode(body),
          :ok <- validate_payload(params),
          {:ok, video} <- Brando.Videos.Uploaders.Bunny.handle_webhook(params) do
       Logger.info("Bunny webhook processed successfully for video #{video.id}")
@@ -66,6 +70,14 @@ defmodule BrandoWeb.Plugs.BunnyWebhook do
         conn
         |> put_resp_content_type("application/json")
         |> send_resp(200, Jason.encode!(%{status: "ignored"}))
+        |> halt
+
+      {:error, :invalid_signature} ->
+        Logger.warning("Bunny webhook signature verification failed")
+
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(401, Jason.encode!(%{error: "Invalid signature"}))
         |> halt
 
       {:error, :invalid_payload} ->
@@ -104,4 +116,34 @@ defmodule BrandoWeb.Plugs.BunnyWebhook do
   end
 
   defp validate_payload(_), do: {:error, :invalid_payload}
+
+  @doc false
+  def verify_signature(conn, body, webhook_secret) do
+    signature = conn |> get_req_header("x-bunnystream-signature") |> List.first()
+    version = conn |> get_req_header("x-bunnystream-signature-version") |> List.first()
+    algorithm = conn |> get_req_header("x-bunnystream-signature-algorithm") |> List.first()
+
+    with "v1" <- version,
+         "hmac-sha256" <- algorithm,
+         secret when is_binary(secret) and secret != "" <- webhook_secret,
+         signature when is_binary(signature) <- signature,
+         true <- byte_size(signature) == 64 and String.match?(signature, ~r/\A[0-9a-f]{64}\z/) do
+      expected_signature =
+        :crypto.mac(:hmac, :sha256, secret, body)
+        |> Base.encode16(case: :lower)
+
+      if Plug.Crypto.secure_compare(expected_signature, signature) do
+        :ok
+      else
+        {:error, :invalid_signature}
+      end
+    else
+      _ -> {:error, :invalid_signature}
+    end
+  end
+
+  defp get_webhook_secret do
+    config = Application.get_env(:brando, Brando.Videos.Uploaders.Bunny, [])
+    Keyword.get(config, :webhook_secret) || Keyword.get(config, :read_only_api_key)
+  end
 end

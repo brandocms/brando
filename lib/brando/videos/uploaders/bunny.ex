@@ -10,6 +10,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
 
       config :brando, Brando.Videos.Uploaders.Bunny,
         api_key: System.get_env("BUNNY_API_KEY"),
+        webhook_secret: System.get_env("BUNNY_READ_ONLY_API_KEY"),
         library_id: System.get_env("BUNNY_LIBRARY_ID"),
         cdn_hostname: System.get_env("BUNNY_CDN_HOSTNAME"),
         delete_remote_on: :on_purge
@@ -25,9 +26,9 @@ defmodule Brando.Videos.Uploaders.Bunny do
   - `false` - Never delete from Bunny
 
   ## Bunny Documentation
-  - Create Video: https://docs.bunny.net/reference/video_createvideo
-  - TUS Uploads: https://docs.bunny.net/docs/stream-tus-resumable-uploads
-  - Webhooks: https://docs.bunny.net/docs/stream-webhook
+  - Create Video: https://docs.bunny.net/api-reference/stream/manage-videos/create-video
+  - TUS Uploads: https://docs.bunny.net/stream/tus-resumable-uploads
+  - Webhooks: https://docs.bunny.net/stream/webhooks
   """
 
   @behaviour Brando.Videos.Uploader
@@ -260,8 +261,14 @@ defmodule Brando.Videos.Uploaders.Bunny do
     Videos.create_video(params)
   end
 
+  defp process_status_update(%Videos.Video{status: :errored} = video, _status), do: {:ok, video}
+
   defp process_status_update(video, status) when status in [@status_queued, @status_processing, @status_encoding] do
-    update_video_status(video, :processing)
+    if video.status in [:ready, :errored] do
+      {:ok, video}
+    else
+      update_video_status(video, :processing)
+    end
   end
 
   defp process_status_update(video, @status_finished) do
@@ -285,7 +292,11 @@ defmodule Brando.Videos.Uploaders.Bunny do
   end
 
   defp process_status_update(video, @status_failed) do
-    update_video_status(video, :errored)
+    if video.status == :ready do
+      {:ok, video}
+    else
+      update_video_status(video, :errored)
+    end
   end
 
   defp process_status_update(video, status) when status in 6..10 do

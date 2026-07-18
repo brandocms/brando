@@ -25,8 +25,8 @@ defmodule Brando.Videos.Uploaders.Mux do
   - `false` - Never delete from Mux
 
   ## Mux Documentation
-  - Direct Uploads: https://docs.mux.com/guides/video/upload-files-directly
-  - Webhooks: https://docs.mux.com/guides/video/listen-for-webhooks
+  - Direct Uploads: https://www.mux.com/docs/guides/upload-files-directly
+  - Webhooks: https://www.mux.com/docs/core/listen-for-webhooks
   """
 
   @behaviour Brando.Videos.Uploader
@@ -45,8 +45,9 @@ defmodule Brando.Videos.Uploaders.Mux do
 
   - `:config` - VideoConfig struct containing provider metadata in `config.meta.mux`
   - `:cors_origin` - CORS origin for upload (default: "*")
-  - `:playback_policy` - Override config default (e.g., ["public"], ["signed"])
-  - `:mp4_support` - Override config default (e.g., "none", "standard")
+  - `:playback_policies` - Override config default. Only `["public"]` is
+    supported until Brando has a token-signing boundary.
+  - `:static_renditions` - Optional current Mux static rendition settings
   - `:max_resolution_tier` - Override config default (e.g., "1080p", "2160p")
 
   ## Configuration via meta
@@ -58,8 +59,8 @@ defmodule Brando.Videos.Uploaders.Mux do
           meta: %{
             mux: %{
               "max_resolution_tier" => "1080p",
-              "playback_policy" => ["public"],
-              "mp4_support" => "none"
+              "playback_policies" => ["public"],
+              "static_renditions" => [%{"resolution" => "highest"}]
             }
           }
         }
@@ -239,6 +240,13 @@ defmodule Brando.Videos.Uploaders.Mux do
   def get_playback_url(video, opts \\ [])
 
   def get_playback_url(
+        %Videos.Video{meta: %{"mux" => %{"playback_policy" => "signed"}}},
+        _opts
+      ) do
+    {:error, :signed_playback_not_supported}
+  end
+
+  def get_playback_url(
         %Videos.Video{
           meta: %{"mux" => %{"playback_id" => playback_id}},
           status: :ready
@@ -276,49 +284,84 @@ defmodule Brando.Videos.Uploaders.Mux do
   # Private helper functions
 
   defp create_direct_upload(opts) do
-    # Start with uploader defaults
+    with {:ok, new_asset_settings} <- build_asset_settings(opts) do
+      body = %{
+        "cors_origin" => Keyword.get(opts, :cors_origin, "*"),
+        "new_asset_settings" => new_asset_settings
+      }
+
+      case api_request(:post, "/uploads", body) do
+        {:ok, %{"data" => data}} -> {:ok, data}
+        error -> error
+      end
+    end
+  end
+
+  @doc false
+  def build_asset_settings(opts) do
     defaults = %{
-      "playback_policy" => ["public"],
-      "mp4_support" => "none",
+      "playback_policies" => ["public"],
       "max_resolution_tier" => "1080p"
     }
 
-    # Extract config.meta.mux if config is provided
     config_meta =
       case Keyword.get(opts, :config) do
-        %{meta: %{mux: mux_settings}} when is_map(mux_settings) ->
-          mux_settings
-
-        _ ->
-          %{}
+        %{meta: %{mux: mux_settings}} when is_map(mux_settings) -> mux_settings
+        %{meta: %{"mux" => mux_settings}} when is_map(mux_settings) -> mux_settings
+        _ -> %{}
       end
 
-    # Merge settings with priority: direct opts > config.meta.mux > defaults
-    # Convert atom keys from opts to strings for consistency
     direct_opts =
       opts
-      |> Keyword.take([:playback_policy, :mp4_support, :max_resolution_tier])
-      |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)
+      |> Keyword.take([
+        :playback_policies,
+        :static_renditions,
+        :max_resolution_tier,
+        :playback_policy,
+        :mp4_support
+      ])
+      |> Map.new(fn {key, value} -> {Atom.to_string(key), value} end)
 
-    new_asset_settings =
+    settings =
       defaults
-      |> Map.merge(config_meta)
-      |> Map.merge(direct_opts)
-      # Remove nil values (e.g., if max_resolution_tier is explicitly set to nil)
-      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-      |> Enum.into(%{})
+      |> Map.merge(config_meta |> stringify_keys() |> normalize_deprecated_settings())
+      |> Map.merge(normalize_deprecated_settings(direct_opts))
+      |> Map.reject(fn {_key, value} -> is_nil(value) end)
 
-    cors_origin = Keyword.get(opts, :cors_origin, "*")
-
-    body = %{
-      "cors_origin" => cors_origin,
-      "new_asset_settings" => new_asset_settings
-    }
-
-    case api_request(:post, "/uploads", body) do
-      {:ok, %{"data" => data}} -> {:ok, data}
-      error -> error
+    case Map.get(settings, "playback_policies") do
+      ["public"] -> {:ok, settings}
+      ["signed"] -> {:error, :signed_playback_not_supported}
+      policies -> {:error, {:invalid_playback_policies, policies}}
     end
+  end
+
+  defp stringify_keys(settings) do
+    Map.new(settings, fn
+      {key, value} when is_atom(key) -> {Atom.to_string(key), value}
+      entry -> entry
+    end)
+  end
+
+  defp normalize_deprecated_settings(settings) do
+    settings =
+      case {Map.get(settings, "playback_policy"), Map.has_key?(settings, "playback_policies")} do
+        {legacy_policy, false} when is_list(legacy_policy) ->
+          Map.put(settings, "playback_policies", legacy_policy)
+
+        _ ->
+          settings
+      end
+
+    settings =
+      case {Map.get(settings, "mp4_support"), Map.has_key?(settings, "static_renditions")} do
+        {"standard", false} ->
+          Map.put(settings, "static_renditions", [%{"resolution" => "highest"}])
+
+        _ ->
+          settings
+      end
+
+    Map.drop(settings, ["playback_policy", "mp4_support"])
   end
 
   defp get_asset(asset_id) do
@@ -365,11 +408,11 @@ defmodule Brando.Videos.Uploaders.Mux do
   end
 
   defp update_video_with_asset(video, asset) do
-    playback_id = playback_id(asset)
+    {playback_id, playback_policy} = playback_info(asset)
 
     params =
       %{
-        meta: mux_meta(video, asset, playback_id),
+        meta: mux_meta(video, asset, playback_id, playback_policy),
         status: video_status(asset["status"])
       }
       |> put_video_dimensions(asset["tracks"])
@@ -385,20 +428,30 @@ defmodule Brando.Videos.Uploaders.Mux do
     end
   end
 
-  defp playback_id(%{"playback_ids" => [%{"id" => id} | _]}) when is_binary(id), do: id
+  defp playback_info(%{"playback_ids" => playback_ids}) when is_list(playback_ids) do
+    playback =
+      Enum.find(playback_ids, &(&1["policy"] in [nil, "public"])) ||
+        List.first(playback_ids)
 
-  defp playback_id(asset) do
-    Logger.warning("Mux asset #{asset["id"]} has no playback_id")
-    nil
+    case playback do
+      %{"id" => id} when is_binary(id) -> {id, Map.get(playback, "policy", "public")}
+      _ -> {nil, nil}
+    end
   end
 
-  defp mux_meta(video, asset, playback_id) do
+  defp playback_info(asset) do
+    Logger.warning("Mux asset #{asset["id"]} has no playback_id")
+    {nil, nil}
+  end
+
+  defp mux_meta(video, asset, playback_id, playback_policy) do
     mux_meta =
       %{
         "upload_id" => get_in(video.meta, ["mux", "upload_id"]),
         "asset_id" => asset["id"]
       }
       |> maybe_put("playback_id", playback_id)
+      |> maybe_put("playback_policy", playback_policy)
       |> maybe_put("duration", asset["duration"])
       |> maybe_put("max_resolution", asset["max_resolution_tier"])
       |> maybe_put("aspect_ratio", asset["aspect_ratio"])

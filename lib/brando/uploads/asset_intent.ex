@@ -24,6 +24,8 @@ defmodule Brando.Uploads.AssetIntent do
     entry_var_gallery
     entry_field
     entry_field_gallery
+    transformer_video
+    video_picker
   )
 
   @known_keys ~w(
@@ -81,6 +83,9 @@ defmodule Brando.Uploads.AssetIntent do
           asset_type == "file"
 
         "block_ref_video" ->
+          asset_type == "video"
+
+        kind when kind in ["transformer_video", "video_picker"] ->
           asset_type == "video"
 
         kind when kind in ["block_ref_gallery", "block_var_gallery", "entry_var_gallery", "entry_field_gallery"] ->

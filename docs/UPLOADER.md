@@ -11,6 +11,10 @@
 > `Brando.Files`. Not yet live-verified — needs prod-like S3 credentials
 > (`Brando.CDN.S3Config`) and the bucket CORS PUT rule (§9). Configs with
 > `content_disposition` stay on server transport by design.
+> Direct PUTs sign `Content-Type`. ACLs are disabled by default; Spaces setups
+> that require object ACLs must set `direct_acl: "public-read"` and allow the
+> `x-amz-acl` request header in CORS. Modern AWS buckets should use a bucket
+> policy and leave `direct_acl` nil.
 > Phase 3 (block refs: picture + gallery) implemented 2026-07-05 — `UploadTrigger`
 > everywhere, `register_block_upload`/`handle_block_image_progress`/`:block_uploads`/the
 > `BlockUpload` JS hook deleted. The folder browser is wired into the manager path
@@ -134,6 +138,15 @@
 > Mux/Bunny callbacks resolve through the stored canonical `config_target`, and
 > Bunny is now a valid persisted video enum value. Completion work can retry;
 > callback side effects must be idempotent.
+> **S3 video + Cloudflare Stream audit (2026-07-18):** `:s3` now uses the
+> manager's direct transport for original video files: policy validation,
+> signed `Content-Type` PUT, bucket HEAD size/type verification, then a
+> `Video{type: :upload, status: :ready}` wrapping a CDN-backed `File`.
+> `:cloudflare` provisions one-time direct-user tus resources, tracks encoding
+> from `:uploading` to `:processing`, verifies raw-body Stream webhook HMACs,
+> persists terminal playback/thumbnail/dimension/duration data, renders HLS,
+> and participates in provider deletion. Picker, block, gallery, field, and
+> transformer uploads all use their canonical owning-context delivery adapter.
 > Config-target functions and field targets pass through the same typed
 > Blueprint normalizer as static asset declarations. Invalid function results,
 > declaration-only sentinels, and cross-media field targets fall back to the
@@ -168,8 +181,8 @@
   *(asset type × storage backend)*:
   - **Server-upload** (bytes through the manager LiveView → server): **images (always)**,
     **local files**, **local video**.
-  - **Client-direct** (bytes bypass the server): **files → S3/Spaces (presigned PUT)**,
-    **video → Mux (UpChunk) / Bunny (tus)**, video → S3 (future).
+  - **Client-direct** (bytes bypass the server): **files/videos → S3/Spaces
+    (presigned PUT)**, **video → Mux (UpChunk) / Bunny or Cloudflare (tus)**.
 
 ---
 
@@ -222,10 +235,11 @@ direct-video routes are already isolated and are the models we generalize from.
 
 CDN = DigitalOcean **Spaces** via `ExAws.S3` (`cdn/cdn.ex:56-57`, host
 `ams3.digitaloceanspaces.com`, bucket from `BRANDO_CDN_FILES_BUCKET`).
-`ExAws.S3.presigned_url/4` is available (currently unused) → **files can be uploaded
-client-direct to Spaces**, then the server creates the record from the key (reusing the
-existing `:direct_to_s3` path). Images/videos cannot skip the server/provider because they
-need processing/transcoding.
+`ExAws.S3.presigned_url/4` powers **client-direct file uploads to Spaces/S3**. The
+presign includes the exact `Content-Type` header and an optional configured ACL
+header; finalize HEADs the object and verifies size/type before creating the record
+from the key. Images/videos cannot use this file transport because they need
+processing/transcoding.
 
 ### 2.4 Prior art already in the tree
 
@@ -243,7 +257,7 @@ need processing/transcoding.
 
 **Goals**
 1. **One** upload system for every source (fields, block refs, block vars) and every backend
-   (local, Spaces/S3, Mux, Bunny).
+   (local, Spaces/S3, Mux, Bunny, Cloudflare Stream).
 2. **Isolation:** upload progress must never re-render the editor form. (Process boundary.)
 3. **Idiomatic:** keep LiveView native uploads where the bytes go through the server; keep
    direct-to-provider where they don't. No hand-rolled chunking.
@@ -295,7 +309,12 @@ layouts/live.html.heex
 | Video | local | **server-upload** | `Uploader :local` = standard flow (`videos/uploader.ex:10,166`) |
 | **Video** | **Mux** | **client-direct** (UpChunk) | provider transcodes |
 | **Video** | **Bunny** | **client-direct** (tus) | provider transcodes |
-| Video | S3 | client-direct presigned (future; `uploader.ex:13` "not yet implemented") | — |
+| **Video** | **Cloudflare Stream** | **client-direct** (tus) | provider transcodes; signed terminal webhook |
+| **Video** | **Spaces/S3** | **client-direct presigned PUT** → HEAD verify → create File + Video | original-file storage; no transcoding |
+
+Unknown video strategies are rejected at Blueprint compilation time. Cloudflare
+and S3 are first-class strategies; signed Mux/Cloudflare playback remains rejected
+until an application token signer is configured.
 
 The manager decides transport per queued item by asking the server to **initiate** the item
 (see 6.2). The queue UI is identical regardless of transport.
@@ -332,7 +351,8 @@ rides the trigger's dataset through JS):
   "kind" => "block_var" | "block_var_gallery"
           | "block_ref_picture" | "block_ref_file" | "block_ref_video" | "block_ref_gallery"
           | "entry_var" | "entry_var_gallery"
-          | "entry_field" | "entry_field_gallery",
+          | "entry_field" | "entry_field_gallery"
+          | "video_picker" | "transformer_video",
   # identity within the form:
   "component_id" => binary,       # live_component id for the block-scoped kinds
   "var_key" => binary | nil,      # for block/entry var targets
@@ -439,7 +459,7 @@ image/file *list* LiveViews — do not copy it into the manager.)
 **Slot hygiene:** `cancel_upload/3` every failed/cancelled entry and prune dismissed items,
 or the shared `max_entries: 20` fills with dead entries and blocks new uploads.
 
-### 5.3 Client-direct path (files→S3, video→Mux/Bunny)
+### 5.3 Client-direct path (files/videos→S3, video→Mux/Bunny/Cloudflare)
 
 ```
 handle_event("intake", %{files, target}, socket):
@@ -449,7 +469,7 @@ handle_event("intake", %{files, target}, socket):
         # File→S3:   Brando.Files.Uploader.presign_put(filename, cfg)  (NEW, ExAws.S3.presigned_url)
         # Video→Mux: Brando.Videos.Uploader.initiate_upload(...)       (exists, form.ex:337)
     store pending {entry_ref => %{key|video_id, target}}
-  {:reply, %{decisions: [%{index, ref, transport: "direct", upload_url}]}, socket}
+  {:reply, %{decisions: [%{index, ref, transport: "direct", upload_url, upload_headers}]}, socket}
 
 # JS uploads directly to upload_url, reports:
 handle_event("direct_progress", %{entry_ref, progress}, socket): update item.progress
@@ -458,9 +478,12 @@ handle_event("direct_complete", %{entry_ref}, socket):
   deliver(item, asset)
 ```
 
-For files→S3 this reuses `handle_upload_type(:direct_to_s3)` (`upload.ex:75-87`): the record
-is created from the object **key** with `cdn: true`, no bytes through the server. Video keeps
-its existing Mux/Bunny orchestration, just surfaced in the shared queue.
+For files→S3 this sends the exact signed headers, HEAD-verifies object size/type,
+then reuses `handle_upload_type(:direct_to_s3)` (`upload.ex:75-87`): the record is
+created from the object **key** with `cdn: true`, no bytes through the server.
+Provider video keeps its Mux/Bunny/Cloudflare orchestration, surfaced in the
+shared queue. S3 video instead uses the manager's presigned-PUT finalization and
+the same owning-context delivery path as local video.
 
 ---
 
@@ -481,7 +504,8 @@ its existing Mux/Bunny orchestration, just surfaced in the shared queue.
 - `finalize_direct(asset_type, key|provider_id, meta, user) :: {:ok, asset}`
   - File→S3: `Files.create_file(%{cdn: true, filename: from_key, config_target, ...}, user)`.
   - Video: existing webhook/status path.
-- `Brando.Files.Uploader.presign_put/2` (NEW): `ExAws.S3.presigned_url(:put, bucket, key, expires_in: …)`.
+- `Brando.Uploads.presign_put/3`: returns the short-lived URL plus the signed
+  request headers. `direct_acl` is opt-in; AWS bucket-policy access needs no ACL.
 
 ### 6.3 Delivery — form-side handler (added to `BrandFormLive` / `Components.Form`)
 - On mount, the form generates a **per-form-instance topic** `"form:#{Ecto.UUID.generate()}"`,
@@ -595,8 +619,8 @@ commits reach the BlockField op store through `assign_block_form`, nothing to pr
 
 **Phase 2 — file → Spaces client-direct.** Add `Files.Uploader.presign_put/2` + the
 `Brando.Uploads.initiate/finalize_direct` direct branch + JS presigned-PUT uploader. Files with
-S3 config skip the server entirely. **Ops prerequisite:** Spaces bucket CORS must allow
-browser `PUT` from the admin origin (§9).
+S3 config skip the server entirely. **Ops prerequisite:** the bucket CORS policy
+must allow browser `PUT`, `Content-Type`, and `x-amz-acl` when `direct_acl` is set.
 
 **Phase 3 — migrate block *refs* (image/gallery) onto the manager.** Remove
 `register_block_upload`/`handle_block_image_progress`/`:block_uploads`
@@ -625,9 +649,8 @@ the editor never re-renders for an upload again.
 - `live_view/form.ex`: `{:var_upload_complete, …}` forwarder (480-497).
 - JS: retire `BlockUpload` var usage; add `UploadManager` + `UploadTrigger`; refactor
   `MuxUploader`/`BunnyUploader` to report into the manager.
-- `videos/uploader.ex:12-14` moduledoc: **stale** — it lists Bunny as "not yet implemented",
-  but `Brando.Videos.Uploaders.Bunny` exists and is routed (`uploader.ex:164-165`, plus
-  `bunny_webhook.ex`). Fix the doc lines (only `:cloudflare` and `:s3` are unimplemented).
+- `videos/uploader.ex` documents only implemented strategies; unsupported video
+  strategies are rejected by the Blueprint validator.
 
 ---
 

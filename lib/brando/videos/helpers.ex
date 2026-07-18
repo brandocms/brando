@@ -66,6 +66,10 @@ defmodule Brando.Videos.Helpers do
     Brando.Videos.Uploaders.Bunny.get_playback_url(video)
   end
 
+  def get_playback_url(%Video{type: :cloudflare} = video) do
+    Brando.Videos.Uploaders.Cloudflare.get_playback_url(video)
+  end
+
   def get_playback_url(%Video{type: :upload, file: %Brando.Files.File{} = file}) do
     {:ok, Brando.Utils.media_url(file)}
   end
@@ -110,6 +114,8 @@ defmodule Brando.Videos.Helpers do
     Brando.Utils.media_url(img.path)
   end
 
+  def thumbnail_url(%Video{type: :mux, meta: %{"mux" => %{"playback_policy" => "signed"}}}), do: nil
+
   def thumbnail_url(%Video{type: :mux, meta: %{"mux" => %{"playback_id" => playback_id}}})
       when is_binary(playback_id) do
     "https://image.mux.com/#{playback_id}/thumbnail.jpg"
@@ -125,6 +131,13 @@ defmodule Brando.Videos.Helpers do
       nil
     end
   end
+
+  def thumbnail_url(%Video{type: :cloudflare, meta: %{"cloudflare" => %{"require_signed_urls" => true}}}),
+    do: nil
+
+  def thumbnail_url(%Video{type: :cloudflare, meta: %{"cloudflare" => %{"thumbnail_url" => url}}})
+      when is_binary(url),
+      do: url
 
   def thumbnail_url(%Video{}), do: nil
 

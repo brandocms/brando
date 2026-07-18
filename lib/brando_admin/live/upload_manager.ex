@@ -153,7 +153,7 @@ defmodule BrandoAdmin.UploadManager do
     {:noreply, update_item(socket, ref, %{status: :error, error: message})}
   end
 
-  ## External transports (Mux/Bunny provider hooks) — tracked in the drawer for
+  ## External transports (Mux/Bunny/Cloudflare provider hooks) — tracked in the drawer for
   ## visibility only; the provider hooks own the transfer and delivery.
 
   def handle_event("external_track", _params, %{assigns: %{current_user: nil}} = socket) do
@@ -284,7 +284,13 @@ defmodule BrandoAdmin.UploadManager do
                 }
               )
 
-            {%{index: index, ref: item.ref, transport: "direct", upload_url: upload_url}, socket}
+            {%{
+               index: index,
+               ref: item.ref,
+               transport: "direct",
+               upload_url: upload_url,
+               upload_headers: direct.upload_headers
+             }, socket}
 
           {:error, message} ->
             # Keep a visible :error item — a silently dropped file looks like

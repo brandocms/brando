@@ -379,6 +379,17 @@ defmodule Brando.CDN do
   end
 
   def key_exists?(object_key, field_cfg) do
+    match?({:ok, _}, head_object(object_key, field_cfg))
+  end
+
+  @doc """
+  Fetch object metadata from the configured S3-compatible bucket.
+
+  The raw ExAws response is returned so callers can validate headers such as
+  `content-length` and `content-type` before trusting a client-side completion
+  signal.
+  """
+  def head_object(object_key, field_cfg) do
     s3_config = get_s3_config(field_cfg, as: :keyword_list)
     cdn_config = Map.get(field_cfg, :cdn)
     bucket = cdn_config.bucket
@@ -386,10 +397,6 @@ defmodule Brando.CDN do
     bucket
     |> ExAws.S3.head_object(object_key)
     |> ExAws.request(s3_config)
-    |> case do
-      {:ok, _} -> true
-      _ -> false
-    end
   end
 
   @doc """

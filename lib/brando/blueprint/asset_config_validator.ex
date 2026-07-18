@@ -75,6 +75,67 @@ defmodule Brando.Blueprint.AssetConfigValidator do
     end
 
     validate_map!(asset, :video, config, :meta)
+    validate_mux_playback_policies!(asset, config)
+    validate_cloudflare_settings!(asset, config)
+  end
+
+  defp validate_mux_playback_policies!(asset, config) do
+    meta = Map.get(config, :meta, %{})
+    mux = Map.get(meta, :mux) || Map.get(meta, "mux") || %{}
+
+    policies =
+      Map.get(mux, :playback_policies) || Map.get(mux, "playback_policies") ||
+        Map.get(mux, :playback_policy) || Map.get(mux, "playback_policy")
+
+    case policies do
+      nil -> :ok
+      ["public"] -> :ok
+      value -> invalid!(asset, :video, :meta, "Mux playback_policies must be [\"public\"], got: #{inspect(value)}")
+    end
+  end
+
+  defp validate_cloudflare_settings!(asset, config) do
+    meta = Map.get(config, :meta, %{})
+    cloudflare = Map.get(meta, :cloudflare) || Map.get(meta, "cloudflare") || %{}
+
+    unless is_map(cloudflare) do
+      invalid!(asset, :video, :meta, "Cloudflare settings must be a map")
+    end
+
+    signed? =
+      Map.get(cloudflare, :require_signed_urls) || Map.get(cloudflare, "require_signed_urls") ||
+        Map.get(cloudflare, :requiresignedurls) || Map.get(cloudflare, "requiresignedurls")
+
+    if signed? in [nil, false] do
+      :ok
+    else
+      invalid!(
+        asset,
+        :video,
+        :meta,
+        "Cloudflare signed playback is not supported without an application token signer"
+      )
+    end
+
+    max_duration_seconds =
+      Map.get(cloudflare, :max_duration_seconds) ||
+        Map.get(cloudflare, "max_duration_seconds")
+
+    case max_duration_seconds do
+      nil ->
+        :ok
+
+      value when is_integer(value) and value > 0 ->
+        :ok
+
+      value ->
+        invalid!(
+          asset,
+          :video,
+          :meta,
+          "Cloudflare max_duration_seconds must be a positive integer, got: #{inspect(value)}"
+        )
+    end
   end
 
   defp validate_non_empty_string!(asset, type, config, field) do

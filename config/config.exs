@@ -59,8 +59,15 @@ config :brando,
 # config :brando, Brando.Videos.Uploaders.Mux,
 #   access_token_id: System.get_env("MUX_TOKEN_ID"),
 #   access_token_secret: System.get_env("MUX_TOKEN_SECRET"),
-#   # Webhook signature verification (optional but recommended)
+#   # Required: unsigned Mux webhooks are rejected
 #   webhook_secret: System.get_env("MUX_WEBHOOK_SECRET")
+
+# Cloudflare Stream video upload configuration
+# The webhook secret is returned when registering the account's Stream webhook.
+# config :brando, Brando.Videos.Uploaders.Cloudflare,
+#   account_id: System.get_env("CLOUDFLARE_ACCOUNT_ID"),
+#   api_token: System.get_env("CLOUDFLARE_STREAM_API_TOKEN"),
+#   webhook_secret: System.get_env("CLOUDFLARE_STREAM_WEBHOOK_SECRET")
 
 config :phoenix, :json_library, Jason
 

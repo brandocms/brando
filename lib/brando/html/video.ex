@@ -201,6 +201,12 @@ defmodule Brando.HTML.Video do
     """
   end
 
+  def video(%{video: %Video{type: :mux, meta: %{"mux" => %{"playback_policy" => "signed"}}}} = assigns) do
+    ~H"""
+    <!-- signed Mux playback requires an application token signer -->
+    """
+  end
+
   def video(%{video: %Video{type: :mux, meta: meta, status: :ready} = video, opts: opts} = assigns) do
     playback_id = get_in(meta, ["mux", "playback_id"])
     mux_meta = get_in(meta, ["mux"]) || %{}
@@ -332,6 +338,19 @@ defmodule Brando.HTML.Video do
     src = get_upload_video_url(video)
     poster = get_video_thumbnail(video)
     render_file_video(assigns, video, src, poster, opts)
+  end
+
+  def video(%{video: %Video{type: :cloudflare, status: :ready} = video, opts: opts} = assigns) do
+    with {:ok, src} <- Brando.Videos.Helpers.get_playback_url(video) do
+      poster = Brando.Videos.Helpers.thumbnail_url(video)
+      render_file_video(assigns, video, src, poster, opts)
+    else
+      _ -> ~H"<!-- Cloudflare Stream playback is unavailable -->"
+    end
+  end
+
+  def video(%{video: %Video{type: :cloudflare}} = assigns) do
+    ~H"<!-- Cloudflare Stream video is not ready -->"
   end
 
   def video(%{video: %Video{type: :external_file} = video, opts: opts} = assigns) do

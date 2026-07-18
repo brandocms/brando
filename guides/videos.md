@@ -16,7 +16,7 @@ assets do
       meta: %{
         mux: %{
           "max_resolution_tier" => "1080p",
-          "playback_policy" => ["public"]
+          "playback_policies" => ["public"]
         }
       }
     }
@@ -45,6 +45,15 @@ plug BrandoWeb.Plugs.BunnyWebhook,
 plug Plug.Parsers, #...
 ```
 
+#### Cloudflare Stream
+
+```elixir
+plug BrandoWeb.Plugs.CloudflareStreamWebhook,
+  mount: ["api", "videos", "cloudflare", "webhook"]
+
+plug Plug.Parsers, #...
+```
+
 ### Upload Strategies
 
 The `upload_strategy` determines where videos are uploaded:
@@ -52,10 +61,14 @@ The `upload_strategy` determines where videos are uploaded:
 | Strategy      | Description |
 |---------------|-------------|
 | `:local`      | Traditional server upload, files stored on server/CDN (default) |
+| `:s3`         | Direct original-file upload to S3-compatible storage; no transcoding |
 | `:mux`        | Direct upload to Mux for streaming |
 | `:bunny`      | Direct upload to Bunny Stream with TUS resumable uploads |
-| `:cloudflare` | Direct upload to Cloudflare Stream (not yet implemented) |
-| `:s3`         | Direct upload to AWS S3 (not yet implemented) |
+| `:cloudflare` | Direct resumable upload to Cloudflare Stream |
+
+Only implemented strategies are accepted during Blueprint compilation. S3 stores
+the original video and creates a normal `:upload` Video; use Mux, Bunny, or
+Cloudflare when adaptive streaming/transcoding is required.
 
 ### Global Default Strategy
 
@@ -91,8 +104,12 @@ Available settings via `meta.mux`:
 | Setting | Description | Values |
 |---------|-------------|--------|
 | `max_resolution_tier` | Maximum transcoding resolution | `"1080p"`, `"2160p"` |
-| `playback_policy` | Who can view the video | `["public"]`, `["signed"]` |
-| `mp4_support` | Generate MP4 files | `"none"`, `"standard"` |
+| `playback_policies` | Who can view the video | `["public"]` |
+| `static_renditions` | Generate downloadable renditions | `[%{"resolution" => "highest"}]` |
+
+Signed Mux playback is rejected until the application provides a token-signing
+boundary. Legacy `playback_policy` and `mp4_support` settings are translated to
+the current Mux request fields, but new configuration should use the fields above.
 
 ### Bunny Stream Configuration
 
@@ -102,6 +119,7 @@ For Bunny Stream uploads, configure your credentials:
 # config/runtime.exs
 config :brando, Brando.Videos.Uploaders.Bunny,
   api_key: System.get_env("BUNNY_API_KEY"),
+  webhook_secret: System.get_env("BUNNY_READ_ONLY_API_KEY"),
   library_id: System.get_env("BUNNY_LIBRARY_ID"),
   cdn_hostname: System.get_env("BUNNY_CDN_HOSTNAME")
 ```
@@ -111,6 +129,7 @@ config :brando, Brando.Videos.Uploaders.Bunny,
 | Variable | Description |
 |----------|-------------|
 | `BUNNY_API_KEY` | Your Bunny Stream Library API key |
+| `BUNNY_READ_ONLY_API_KEY` | Read-Only API key used to verify Bunny webhook signatures |
 | `BUNNY_LIBRARY_ID` | Your Video Library ID (numeric) |
 | `BUNNY_CDN_HOSTNAME` | CDN hostname for HLS playback (e.g., `vz-abc123.b-cdn.net`) |
 
@@ -122,7 +141,9 @@ Configure the webhook URL in your Bunny Stream dashboard:
 https://yoursite.com/api/videos/bunny/webhook
 ```
 
-Bunny will send status updates when videos finish encoding.
+Bunny will send status updates when videos finish encoding. The webhook plug
+rejects requests unless the `v1` HMAC signature validates against
+`webhook_secret` (the library Read-Only API key).
 
 #### Bunny Blueprint Example
 
@@ -151,9 +172,68 @@ Bunny videos are served via HLS streaming:
 # => "https://iframe.mediadelivery.net/embed/{library_id}/{video_guid}"
 ```
 
+### Cloudflare Stream Configuration
+
+```elixir
+# config/runtime.exs
+config :brando, Brando.Videos.Uploaders.Cloudflare,
+  account_id: System.get_env("CLOUDFLARE_ACCOUNT_ID"),
+  api_token: System.get_env("CLOUDFLARE_STREAM_API_TOKEN"),
+  webhook_secret: System.get_env("CLOUDFLARE_STREAM_WEBHOOK_SECRET"),
+  delete_remote_on: :on_purge
+```
+
+The API token needs Stream write access. Register the public webhook URL once
+for the Cloudflare account; Cloudflare returns the signing secret used above.
+The plug verifies `Webhook-Signature` against the exact raw body and rejects
+stale timestamps. Cloudflare permits one Stream webhook subscription per
+account.
+
+```elixir
+asset :video, :video,
+  cfg: %{
+    upload_strategy: :cloudflare,
+    size_limit: 2_000_000_000,
+    meta: %{cloudflare: %{"max_duration_seconds" => 3_600}}
+  }
+```
+
+Cloudflare signed playback is intentionally rejected until the application has
+a token-signing boundary. Brando stores the HLS/DASH and thumbnail URLs from the
+signed processing webhook rather than constructing a customer hostname.
+
+### S3-compatible Original Video Storage
+
+`:s3` requires an explicit direct CDN config on the video config. `media_url`
+must be the public origin for the bucket; bucket CORS must allow `PUT` from the
+admin origin and allow the signed `Content-Type` header (plus `x-amz-acl` only
+when `direct_acl` is configured).
+
+```elixir
+asset :video, :video,
+  cfg: %{
+    upload_strategy: :s3,
+    upload_path: "videos/projects",
+    size_limit: 2_000_000_000,
+    cdn: %Brando.CDN.Config{
+      enabled: true,
+      direct: true,
+      bucket: System.fetch_env!("VIDEO_BUCKET"),
+      media_url: System.fetch_env!("VIDEO_MEDIA_URL"),
+      s3: :default
+    }
+  }
+```
+
+The server signs the exact content type. After the browser PUT completes, it
+HEADs the server-owned key and verifies `Content-Length` and `Content-Type`
+before creating the CDN-backed File and ready Video rows. Modern AWS buckets
+should use bucket policies/Object Ownership and leave `direct_acl` unset; set it
+only for compatible services that explicitly require an object ACL.
+
 ### Remote Video Deletion
 
-When videos are deleted from the Brando admin, you can optionally delete the source video from the provider (Mux/Bunny). Configure this per-uploader:
+When videos are deleted from the Brando admin, you can optionally delete the source video from the provider (Mux/Bunny/Cloudflare). Configure this per-uploader:
 
 #### Configuration
 
@@ -164,6 +244,10 @@ config :brando, Brando.Videos.Uploaders.Mux,
   delete_remote_on: :on_purge
 
 config :brando, Brando.Videos.Uploaders.Bunny,
+  # ... existing config ...
+  delete_remote_on: :on_purge
+
+config :brando, Brando.Videos.Uploaders.Cloudflare,
   # ... existing config ...
   delete_remote_on: :on_purge
 ```
@@ -178,7 +262,7 @@ config :brando, Brando.Videos.Uploaders.Bunny,
 
 #### Behavior
 
-- **`:on_delete`**: When a user deletes a video in the admin, it's immediately removed from Mux/Bunny. The video cannot be restored from the provider.
+- **`:on_delete`**: When a user deletes a video in the admin, it's immediately removed from its provider. The video cannot be restored from the provider.
 - **`:on_purge`** (default): Videos are soft-deleted locally first. After 30 days, when the soft-delete purger runs, the video is permanently deleted from both the database and the provider. This allows video restoration during the grace period.
 - **`false`**: Videos are only deleted locally. Provider videos remain and must be manually cleaned up.
 
@@ -200,10 +284,10 @@ can be added to a gallery in three ways:
 1. **Select existing videos** — the "Select videos" button opens the video picker.
 2. **Add from URL** — the video picker accepts YouTube, Vimeo and direct video URLs.
 3. **Upload video files**:
-   - With the default `:local` strategy, the gallery input shows an
+   - With `:local` or a configured `:s3` strategy, the gallery input shows an
      "Upload videos" button that uploads through the unified upload manager and
      appends the video to the gallery.
-   - With a provider strategy (`:mux`/`:bunny`), upload through the video picker's
+   - With a provider strategy (`:mux`/`:bunny`/`:cloudflare`), upload through the video picker's
      "Upload file" button instead — the uploaded video is selected into the
      gallery automatically.
 
@@ -233,6 +317,7 @@ Full list of `Brando.Type.VideoConfig` options:
 |--------|------|---------|-------------|
 | `upload_strategy` | atom | `:local` | Where to upload videos |
 | `upload_path` | string | `"videos/default"` | Path for local uploads |
+| `cdn` | `Brando.CDN.Config` or nil | `nil` | Required enabled/direct config for `:s3` |
 | `allowed_mimetypes` | list | `["video/mp4", ...]` | Accepted video formats |
 | `size_limit` | integer | `100_000_000` | Max file size in bytes |
 | `allow_uploads` | boolean | `true` | Enable file uploads |

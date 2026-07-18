@@ -413,12 +413,13 @@ asset :clip, :video,
 Functions receive `(asset, current_user)`. MFA callbacks receive those two
 runtime arguments first, followed by `extra_args`. File callbacks run after the
 file is stored, image callbacks after processing (including SVG), and video
-callbacks after a local upload is stored or a Mux/Bunny video first becomes
+callbacks after a local/S3 upload is stored or a Mux/Bunny/Cloudflare video first becomes
 ready. Asynchronous processing and provider webhooks can retry, so callback side
 effects should be idempotent.
 
-Mux and Bunny are valid persisted video types. Cloudflare and S3 remain reserved
-video strategies and currently return `:not_implemented` from the uploader.
+Mux, Bunny, and Cloudflare are valid persisted video types. Unknown video strategies
+are rejected during Blueprint compilation so they
+cannot render dead upload controls.
 
 These config and callback corrections do not alter database storage. No Ecto
 migration or Igniter upgrade script is required. Compile after upgrading and fix

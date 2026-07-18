@@ -362,7 +362,18 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # Video upload actions - generic, works with any upload strategy
-  def update(%{action: :get_video_upload_url, filename: filename}, socket) do
+  def update(
+        %{
+          action: :get_video_upload_url,
+          upload_request: %{
+            "request_ref" => request_ref,
+            "filename" => filename,
+            "size" => size,
+            "mime_type" => mime_type
+          }
+        },
+        socket
+      ) do
     schema = socket.assigns.schema
     edit_video = socket.assigns.edit_video
     field = edit_video.field
@@ -375,11 +386,10 @@ defmodule BrandoAdmin.Components.Form do
 
     case Brando.Videos.get_config_for(config_target) do
       {:ok, video_config} ->
-        # The uploader will use the strategy specified in video_config
-        # Could be :mux, :cloudflare, :s3, :bunny, :vimeo, etc.
         case Brando.Videos.Uploader.initiate_upload(filename, user,
                config: video_config,
-               config_target: config_target
+               config_target: config_target,
+               file_meta: %{name: filename, size: size, type: mime_type}
              ) do
           {:ok, %{upload_url: url, video: video} = result} ->
             # Subscribe to video updates
@@ -390,7 +400,12 @@ defmodule BrandoAdmin.Components.Form do
             video_changeset = change(video)
 
             # Build event payload - include tus_auth for Bunny uploads
-            event_payload = %{upload_url: url, video_id: video.id, filename: filename}
+            event_payload = %{
+              upload_url: url,
+              video_id: video.id,
+              filename: filename,
+              request_ref: request_ref
+            }
 
             event_payload =
               case Map.get(result, :tus_auth) do
@@ -414,7 +429,8 @@ defmodule BrandoAdmin.Components.Form do
             {:ok,
              push_event(socket, "video_upload_url_error", %{
                error: error_message,
-               filename: filename
+               filename: filename,
+               request_ref: request_ref
              })}
         end
 
@@ -424,8 +440,22 @@ defmodule BrandoAdmin.Components.Form do
         error_message = extract_video_error_message(reason)
 
         # Push error event to JavaScript hook
-        {:ok, push_event(socket, "video_upload_url_error", %{error: error_message, filename: filename})}
+        {:ok,
+         push_event(socket, "video_upload_url_error", %{
+           error: error_message,
+           filename: filename,
+           request_ref: request_ref
+         })}
     end
+  end
+
+  def update(%{action: :get_video_upload_url, upload_request: params}, socket) do
+    {:ok,
+     push_event(socket, "video_upload_url_error", %{
+       error: "Invalid video upload request",
+       filename: Map.get(params, "filename", ""),
+       request_ref: Map.get(params, "request_ref", "")
+     })}
   end
 
   def update(%{action: :video_upload_complete, video_id: video_id}, socket) do
@@ -433,6 +463,7 @@ defmodule BrandoAdmin.Components.Form do
     # Reload video to get latest data
     case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}) do
       {:ok, video} ->
+        {:ok, video} = Brando.Videos.Uploader.complete_client_upload(video)
         edit_video = Map.put(socket.assigns.edit_video, :video, video)
         video_changeset = change(video)
         relation_key = String.to_existing_atom("#{socket.assigns.edit_video.field}_id")
@@ -2636,22 +2667,34 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def video_drawer(assigns) do
-    # Get upload strategy from video field config
-    upload_strategy =
+    cfg =
       if assigns.edit_video[:schema] && assigns.edit_video[:field] do
         schema = assigns.edit_video.schema
         field = assigns.edit_video.field
         %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(schema, field)
-        Map.get(cfg, :upload_strategy, :local)
+        cfg
       else
-        :local
+        Brando.Type.VideoConfig.default_config()
       end
 
-    # Generate hook name for non-local upload strategies (Mux, Cloudflare, etc.)
+    upload_strategy = Map.get(cfg, :upload_strategy, :local)
+    allow_uploads? = Map.get(cfg, :allow_uploads, true)
+    allow_external_urls? = Map.get(cfg, :allow_external_urls, true)
+
     video_uploader_hook =
-      if upload_strategy != :local do
-        "Brando.#{upload_strategy |> to_string() |> String.capitalize()}Uploader"
+      case {allow_uploads?, upload_strategy} do
+        {true, :mux} -> "Brando.MuxUploader"
+        {true, :bunny} -> "Brando.BunnyUploader"
+        {true, :cloudflare} -> "Brando.CloudflareUploader"
+        _ -> nil
       end
+
+    video_cfg =
+      if is_struct(cfg, Brando.Type.VideoConfig),
+        do: cfg,
+        else: struct(Brando.Type.VideoConfig, cfg)
+
+    video_upload_available? = Brando.Uploads.video_upload_available?(video_cfg)
 
     video_filename =
       case assigns.edit_video do
@@ -2663,6 +2706,8 @@ defmodule BrandoAdmin.Components.Form do
       assigns
       |> assign(:upload_strategy, upload_strategy)
       |> assign(:video_uploader_hook, video_uploader_hook)
+      |> assign(:video_upload_available?, video_upload_available?)
+      |> assign(:allow_external_urls?, allow_external_urls?)
       |> assign(:video_filename, video_filename)
 
     ~H"""
@@ -2679,12 +2724,14 @@ defmodule BrandoAdmin.Components.Form do
         <Tab.tabs active_tab={@active_video_tab}>
           <:buttons>
             <Tab.tab_button
+              :if={@video_upload_available?}
               id="upload"
               label={gettext("Upload / File")}
               active_tab={@active_video_tab}
               target={@myself}
             />
             <Tab.tab_button
+              :if={@allow_external_urls?}
               id="external"
               label={gettext("External (Vimeo/YouTube)")}
               active_tab={@active_video_tab}
@@ -2693,7 +2740,7 @@ defmodule BrandoAdmin.Components.Form do
           </:buttons>
 
           <:tabs>
-            <Tab.tab_content id="upload" active_tab={@active_video_tab}>
+            <Tab.tab_content :if={@video_upload_available?} id="upload" active_tab={@active_video_tab}>
               <Input.input
                 type={:hidden}
                 field={video_form[:type]}
@@ -2768,7 +2815,7 @@ defmodule BrandoAdmin.Components.Form do
               <% end %>
             </Tab.tab_content>
 
-            <Tab.tab_content id="external" active_tab={@active_video_tab}>
+            <Tab.tab_content :if={@allow_external_urls?} id="external" active_tab={@active_video_tab}>
               <div class="brando-input">
                 <.input
                   type={:select}
@@ -2919,7 +2966,7 @@ defmodule BrandoAdmin.Components.Form do
       socket_with_gallery_uploads
 
     # Video fields upload through the sticky UploadManager (docs/UPLOADER.md
-    # Phase 5); Mux/Bunny strategies keep their provider hooks.
+    # Phase 5); Mux/Bunny/Cloudflare strategies keep their provider hooks.
     socket_with_video_uploads = socket_with_file_uploads
 
     # Transformer uploads are now managed by the Transformer component itself
@@ -3925,8 +3972,17 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, socket}
   end
 
+  def handle_event("save_video", %{"video" => video_params} = params, socket) do
+    if external_video_params?(video_params) and not external_video_urls_allowed?(socket) do
+      send(self(), {:toast, gettext("External video URLs are disabled for this field")})
+      {:noreply, socket}
+    else
+      handle_event("save_video_authorized", params, assign(socket, :video_save_authorized?, true))
+    end
+  end
+
   def handle_event(
-        "save_video",
+        "save_video_authorized",
         %{"video" => video_params},
         %{
           assigns: %{
@@ -3937,10 +3993,12 @@ defmodule BrandoAdmin.Components.Form do
             edit_video:
               %{video: video, path: path, field: field, relation_field: relation_field} =
                 edit_video,
-            current_user: current_user
+            current_user: current_user,
+            video_save_authorized?: true
           }
         } = socket
       ) do
+    socket = assign(socket, :video_save_authorized?, false)
     entry_or_default = entry || struct(schema)
 
     validated_changeset =
@@ -4002,6 +4060,8 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:editing_video?, false)
      |> assign_drawer_recovery_state()}
   end
+
+  def handle_event("save_video_authorized", _params, socket), do: {:noreply, socket}
 
   def handle_event("noop", _params, socket) do
     {:noreply, socket}
@@ -4194,6 +4254,23 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("save_redirect_target", _, socket) do
     {:noreply, assign(socket, :save_redirect_target, :self)}
+  end
+
+  defp external_video_params?(%{"type" => type}) when type in ["external_file", "vimeo", "youtube"], do: true
+  defp external_video_params?(%{type: type}) when type in [:external_file, :vimeo, :youtube], do: true
+  defp external_video_params?(_params), do: false
+
+  defp external_video_urls_allowed?(socket) do
+    case socket.assigns.edit_video do
+      %{schema: schema, field: field} when is_atom(schema) and is_atom(field) ->
+        %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(schema, field)
+        Map.get(cfg, :allow_external_urls, true)
+
+      _ ->
+        true
+    end
+  rescue
+    _ -> false
   end
 
   defp maybe_invalidate_live_preview_assign(socket, path, path_type \\ :atom_path)

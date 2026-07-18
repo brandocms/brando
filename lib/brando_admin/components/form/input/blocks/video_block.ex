@@ -79,6 +79,29 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     |> then(&{:ok, &1})
   end
 
+  def update(%{event: "select_video", video_id: video_id}, socket) do
+    case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}) do
+      {:ok, video} ->
+        video_data = Map.from_struct(video)
+
+        socket
+        |> Block.commit_ref_data(
+          ref_data: Block.current_block_data_map(socket.assigns.block, @video_override_fields),
+          video_id: video_id,
+          form: socket.assigns.ref_form,
+          force_render: true
+        )
+        |> assign(:video, video)
+        |> assign(:video_data, video_data)
+        |> assign(:type, Map.get(video_data, :type, :file))
+        |> assign(:cover_image, Map.get(video_data, :thumbnail))
+        |> then(&{:ok, &1})
+
+      {:error, _reason} ->
+        {:ok, socket}
+    end
+  end
+
   def update(assigns, socket) do
     block_cs = assigns.block.source
     block_data = Changeset.get_field(block_cs, :data)

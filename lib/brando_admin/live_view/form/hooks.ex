@@ -537,6 +537,45 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     )
   end
 
+  defp deliver_asset(
+         %{"kind" => "block_ref_video", "component_id" => component_id},
+         %Brando.Videos.Video{} = video,
+         _socket
+       )
+       when is_binary(component_id) do
+    send_update(BrandoAdmin.Components.Form.Input.Blocks.VideoBlock,
+      id: component_id,
+      event: "select_video",
+      video_id: video.id
+    )
+  end
+
+  defp deliver_asset(
+         %{"kind" => "video_picker", "component_id" => component_id},
+         %Brando.Videos.Video{} = video,
+         _socket
+       )
+       when is_binary(component_id) do
+    send_update(BrandoAdmin.Components.VideoPicker,
+      id: component_id,
+      event: "upload_complete",
+      asset: video
+    )
+  end
+
+  defp deliver_asset(
+         %{"kind" => "transformer_video", "component_id" => component_id},
+         %Brando.Videos.Video{} = video,
+         _socket
+       )
+       when is_binary(component_id) do
+    send_update(BrandoAdmin.Components.Form.Transformer,
+      id: component_id,
+      event: "upload_complete",
+      asset: video
+    )
+  end
+
   # Gallery refs add the image_id immediately (placeholder renders while
   # processing), then the pending registration swaps in the processed struct.
   defp deliver_asset(
@@ -766,12 +805,12 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   defp handle_hooks_port_exits(_, socket), do: {:cont, socket}
 
   # Video event hooks - handle generic video uploader events
-  # These work with any upload strategy (Mux, Cloudflare, S3, Bunny, Vimeo, etc.)
+  # These work with the supported direct provider strategies (Mux, Bunny, and Cloudflare).
 
-  # Generic event for getting upload URL - works with any strategy
-  # The hook can be named MuxUploader, CloudflareUploader, S3Uploader, etc.
-  # but they all send generic events with no provider name
-  defp handle_hooks_video_event("get_video_upload_url", %{"filename" => filename}, socket) do
+  # Generic event for getting an upload URL. Keep the complete request intact:
+  # its opaque ref is the response correlation key, while size/type feed the
+  # server-side provider intake policy.
+  defp handle_hooks_video_event("get_video_upload_url", params, socket) when is_map(params) do
     schema = socket.assigns.schema
     singular = schema.__naming__().singular
     form_id = "#{singular}_form"
@@ -780,7 +819,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
       action: :get_video_upload_url,
-      filename: filename
+      upload_request: params
     )
 
     # Halt so the event doesn't propagate to LiveView-specific handlers
@@ -818,7 +857,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     {:halt, socket}
   end
 
-  # Provider failures (Mux/Bunny hooks push this untargeted) — route to the
+  # Provider failures (Mux/Bunny/Cloudflare hooks push this untargeted) — route to the
   # Form component; without a clause here the event falls through to a
   # LiveView with no handle_event and crashes the whole form view.
   defp handle_hooks_video_event("upload_error", %{"error" => error} = params, socket) do

@@ -43,6 +43,19 @@ defmodule Brando.Videos.HelpersTest do
     assert {:error, :cdn_hostname_not_configured} = Helpers.get_playback_url(bunny_video)
   end
 
+  test "get_playback_url dispatches ready Cloudflare records" do
+    url = "https://customer.example.com/video-id/manifest/video.m3u8"
+
+    cloudflare_video =
+      video(
+        type: :cloudflare,
+        status: :ready,
+        meta: %{"cloudflare" => %{"uid" => "video-id", "playback_hls" => url}}
+      )
+
+    assert {:ok, ^url} = Helpers.get_playback_url(cloudflare_video)
+  end
+
   test "formats provider durations consistently" do
     assert Helpers.format_duration(0) == "00:00:00"
     assert Helpers.format_duration(3723.4) == "01:02:03"
@@ -70,6 +83,12 @@ defmodule Brando.Videos.HelpersTest do
 
     test "returns nil for Mux video without playback_id" do
       assert Helpers.thumbnail_url(video(type: :mux, meta: %{"mux" => %{}})) == nil
+    end
+
+    test "returns Cloudflare's webhook thumbnail URL" do
+      url = "https://customer.example.com/video-id/thumbnails/thumbnail.jpg"
+
+      assert Helpers.thumbnail_url(video(type: :cloudflare, meta: %{"cloudflare" => %{"thumbnail_url" => url}})) == url
     end
 
     test "returns nil for YouTube video" do

@@ -1,12 +1,12 @@
 /**
- * Direct Mux uploads with request-scoped URL correlation and UploadManager
- * visibility. Every request keeps its own resolver and transfer instance so
- * equal filenames and overlapping component uploads cannot cross wires.
+ * Direct Cloudflare Stream uploads. The server provisions the tus resource and
+ * returns its one-time Location; the browser only PATCHes that URL and never
+ * receives the account API token.
  */
-import * as UpChunk from '@mux/upchunk'
+import * as tus from 'tus-js-client'
 
 export default (app) => ({
-  async mounted() {
+  mounted() {
     this.pendingRequests = new Map()
     this.activeUploads = new Map()
 
@@ -15,7 +15,7 @@ export default (app) => ({
 
       if (event.target instanceof HTMLInputElement && event.target.files) {
         const file = event.target.files[0]
-        if (file) this.uploadToMux(file)
+        if (file) this.uploadToCloudflare(file)
       }
     })
 
@@ -24,7 +24,6 @@ export default (app) => ({
     })
 
     this.handleEvent('video_upload_url_error', (payload) => {
-      console.error('Video upload URL error:', payload)
       this.pendingRequests.get(payload.request_ref)?.resolve(payload)
     })
   },
@@ -71,7 +70,7 @@ export default (app) => ({
 
   waitForUploadUrl(requestRef, timeoutMs = 30000) {
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('Timed out waiting for upload URL')), timeoutMs)
+      const timer = setTimeout(() => reject(new Error('Timed out waiting for upload credentials')), timeoutMs)
 
       this.pendingRequests.set(requestRef, {
         resolve: (payload) => {
@@ -86,7 +85,7 @@ export default (app) => ({
     }).finally(() => this.pendingRequests.delete(requestRef))
   },
 
-  async uploadToMux(file) {
+  async uploadToCloudflare(file) {
     const requestRef = this.requestRef()
     window.BrandoUploads?.trackExternal?.(file.name, file.size, requestRef)
 
@@ -103,43 +102,45 @@ export default (app) => ({
       if (response.error) throw new Error(response.error)
 
       const { upload_url, video_id } = response
-      const upload = UpChunk.createUpload({
-        endpoint: upload_url,
-        file,
-        chunkSize: 15360,
+      const upload = new tus.Upload(file, {
+        uploadUrl: upload_url,
+        uploadSize: file.size,
+        chunkSize: 50 * 1024 * 1024,
+        retryDelays: [0, 3000, 5000, 10000, 20000, 60000],
+        removeFingerprintOnSuccess: true,
+        onError: (error) => {
+          const message = error.message || 'Upload failed'
+          this.activeUploads.delete(requestRef)
+          this.pushVideoEvent('upload_error', { request_ref: requestRef, filename: file.name, error: message })
+          window.BrandoUploads?.externalError?.(requestRef, message)
+        },
+        onProgress: (bytesUploaded, bytesTotal) => {
+          const percentage = Math.round((bytesUploaded / bytesTotal) * 100)
+          const totalMB = (bytesTotal / 1024 / 1024).toFixed(1)
+          const uploadedMB = (bytesUploaded / 1024 / 1024).toFixed(1)
+
+          this.pushVideoEvent('video_upload_progress', {
+            request_ref: requestRef,
+            video_id,
+            uploaded_mb: uploadedMB,
+            total_mb: totalMB,
+            percentage,
+          })
+          window.BrandoUploads?.externalProgress?.(requestRef, percentage)
+        },
+        onSuccess: () => {
+          this.activeUploads.delete(requestRef)
+          this.pushVideoEvent('video_upload_complete', { request_ref: requestRef, video_id })
+          window.BrandoUploads?.externalComplete?.(requestRef)
+        },
       })
+
       this.activeUploads.set(requestRef, upload)
-
-      upload.on('progress', (progressEvent) => {
-        const percentage = Math.round(progressEvent.detail || 0)
-        const totalMB = (file.size / 1024 / 1024).toFixed(1)
-        const uploadedMB = ((percentage / 100) * file.size / 1024 / 1024).toFixed(1)
-
-        this.pushVideoEvent('video_upload_progress', {
-          request_ref: requestRef,
-          video_id,
-          uploaded_mb: uploadedMB,
-          total_mb: totalMB,
-          percentage,
-        })
-        window.BrandoUploads?.externalProgress?.(requestRef, percentage)
-      })
-
-      upload.on('success', () => {
-        this.activeUploads.delete(requestRef)
-        this.pushVideoEvent('video_upload_complete', { request_ref: requestRef, video_id })
-        window.BrandoUploads?.externalComplete?.(requestRef)
-      })
-
-      upload.on('error', (error) => {
-        const message = error.detail?.message || 'Upload failed'
-        this.activeUploads.delete(requestRef)
-        this.pushVideoEvent('upload_error', { request_ref: requestRef, filename: file.name, error: message })
-        window.BrandoUploads?.externalError?.(requestRef, message)
-      })
+      upload.start()
     } catch (error) {
       const message = error.message || 'Upload failed'
-      console.error('Mux upload error:', error)
+      console.error('Cloudflare Stream upload error:', error)
+      this.activeUploads.get(requestRef)?.abort()
       this.activeUploads.delete(requestRef)
       this.pushVideoEvent('upload_error', { request_ref: requestRef, filename: file.name, error: message })
       window.BrandoUploads?.externalError?.(requestRef, message)

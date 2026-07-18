@@ -64,4 +64,27 @@ defmodule Brando.Uploads.AssetIntentTest do
                deliver_topic: @topic
              })
   end
+
+  test "accepts video-only picker and transformer delivery targets" do
+    for kind <- ["video_picker", "transformer_video"] do
+      assert {:ok, target} =
+               AssetIntent.normalize(%{
+                 kind: kind,
+                 component_id: "video-target",
+                 asset_type: "video",
+                 config_target: "default",
+                 deliver_topic: @topic
+               })
+
+      assert target["kind"] == kind
+
+      assert {:error, "Asset type is not valid" <> _} =
+               AssetIntent.normalize(%{
+                 kind: kind,
+                 component_id: "video-target",
+                 asset_type: "image",
+                 deliver_topic: @topic
+               })
+    end
+  end
 end

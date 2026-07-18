@@ -289,15 +289,17 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
           assigns[:video].id
         end
       end)
+      |> assign_new(:provider_thumbnail_url, fn ->
+        if assigns[:video], do: Brando.Videos.Helpers.thumbnail_url(assigns[:video])
+      end)
 
     ~H"""
     <div class="video-wrapper-compact">
       <Input.input :if={@editable} type={:hidden} field={@relation_field} value={@video_id} publish={@publish} />
       <%= if @video do %>
         <%= if @video.status == :ready do %>
-          <%= if @video.type == :mux && get_in(@video.meta, ["mux", "playback_id"]) do %>
-            <% playback_id = get_in(@video.meta, ["mux", "playback_id"]) %>
-            <img src={"https://image.mux.com/#{playback_id}/thumbnail.jpg"} alt={@video.title || "Video thumbnail"} />
+          <%= if @provider_thumbnail_url do %>
+            <img src={@provider_thumbnail_url} alt={@video.title || "Video thumbnail"} />
           <% else %>
             <%= if @video.thumbnail do %>
               <Content.image image={@video.thumbnail} size={:thumb} />
@@ -314,6 +316,10 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
               <%= case @video.type do %>
                 <% :mux -> %>
                   Mux
+                <% :bunny -> %>
+                  Bunny Stream
+                <% :cloudflare -> %>
+                  Cloudflare Stream
                 <% :upload -> %>
                   Upload
                 <% :vimeo -> %>

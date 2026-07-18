@@ -160,6 +160,57 @@ defmodule Brando.Blueprint.AssetConfigTest do
       )
     end
 
+    for strategy <- [:s3, :cloudflare] do
+      module =
+        compile_blueprint(
+          quote do
+            assets do
+              asset :clip, :video, cfg: %{upload_strategy: unquote(strategy)}
+            end
+          end
+        )
+
+      assert %{upload_strategy: ^strategy} = Assets.__asset__(module, :clip).opts.cfg
+    end
+
+    assert_raise BlueprintError, ~r/Mux playback_policies must be \["public"\]/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :clip, :video, cfg: %{upload_strategy: :mux, meta: %{mux: %{"playback_policies" => ["signed"]}}}
+          end
+        end
+      )
+    end
+
+    assert_raise BlueprintError, ~r/Cloudflare signed playback is not supported/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :clip, :video,
+              cfg: %{
+                upload_strategy: :cloudflare,
+                meta: %{cloudflare: %{"require_signed_urls" => true}}
+              }
+          end
+        end
+      )
+    end
+
+    assert_raise BlueprintError, ~r/Cloudflare max_duration_seconds must be a positive integer/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :clip, :video,
+              cfg: %{
+                upload_strategy: :cloudflare,
+                meta: %{cloudflare: %{"max_duration_seconds" => 0}}
+              }
+          end
+        end
+      )
+    end
+
     assert_raise BlueprintError, ~r/unknown gallery config fields: \[:upload_pat\]/, fn ->
       compile_blueprint(
         quote do

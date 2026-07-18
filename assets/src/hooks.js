@@ -18,6 +18,7 @@ import LivePreviewHook from './hooks/LivePreview'
 import MapURLParserHook from './hooks/MapURLParser'
 import MuxUploaderHook from './hooks/MuxUploader'
 import BunnyUploaderHook from './hooks/BunnyUploader'
+import CloudflareUploaderHook from './hooks/CloudflareUploader'
 import NavigationHook from './hooks/Navigation'
 import PublishClosestInputHook from './hooks/PublishClosestInput'
 import PublishInputHook from './hooks/PublishInput'
@@ -61,6 +62,7 @@ export default (app) => {
     'Brando.MapURLParser': MapURLParserHook(app),
     'Brando.MuxUploader': MuxUploaderHook(app),
     'Brando.BunnyUploader': BunnyUploaderHook(app),
+    'Brando.CloudflareUploader': CloudflareUploaderHook(app),
     'Brando.Navigation': NavigationHook(app),
     'Brando.PublishClosestInput': PublishClosestInputHook(app),
     'Brando.PublishInput': PublishInputHook(app),

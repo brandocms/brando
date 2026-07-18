@@ -190,16 +190,28 @@ defmodule Brando.Videos do
 
   def upload_available?(:mux) do
     cfg = Application.get_env(:brando, Brando.Videos.Uploaders.Mux, [])
-    present?(cfg[:access_token_id]) and present?(cfg[:access_token_secret])
+
+    present?(cfg[:access_token_id]) and present?(cfg[:access_token_secret]) and
+      present?(cfg[:webhook_secret])
   end
 
   def upload_available?(:bunny) do
     cfg = Application.get_env(:brando, Brando.Videos.Uploaders.Bunny, [])
-    present?(cfg[:api_key]) and present?(cfg[:library_id])
+    webhook_secret = cfg[:webhook_secret] || cfg[:read_only_api_key]
+
+    present?(cfg[:api_key]) and present?(cfg[:library_id]) and present?(cfg[:cdn_hostname]) and
+      present?(webhook_secret)
+  end
+
+  def upload_available?(:cloudflare) do
+    cfg = Application.get_env(:brando, Brando.Videos.Uploaders.Cloudflare, [])
+
+    present?(cfg[:account_id]) and present?(cfg[:api_token]) and
+      present?(cfg[:webhook_secret])
   end
 
   # :local uses the traditional upload flow (not this direct-upload button);
-  # :cloudflare / :s3 are not implemented.
+  # unsupported strategies are rejected by Blueprint config validation.
   def upload_available?(_strategy), do: false
 
   defp present?(nil), do: false

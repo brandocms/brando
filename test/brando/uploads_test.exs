@@ -39,6 +39,31 @@ defmodule Brando.UploadsTest do
     )
   end
 
+  defp direct_video_cfg(overrides \\ %{}) do
+    cdn = %Brando.CDN.Config{
+      enabled: true,
+      direct: true,
+      bucket: "testbucket",
+      media_url: "https://testbucket.ams3.digitaloceanspaces.com",
+      s3: @s3_config
+    }
+
+    struct(
+      Brando.Type.VideoConfig,
+      Map.merge(
+        %{
+          cdn: cdn,
+          upload_strategy: :s3,
+          upload_path: Path.join("videos", "tests"),
+          allowed_mimetypes: ["video/mp4"],
+          random_filename: false,
+          slugify_filename: true
+        },
+        overrides
+      )
+    )
+  end
+
   describe "validate_intake/4" do
     test "rejects files over the global max when no config limit is given" do
       assert {:error, "File is too large" <> _} =
@@ -153,6 +178,73 @@ defmodule Brando.UploadsTest do
     end
   end
 
+  describe "validate_provider_video_intake/2" do
+    test "enforces upload gate, strategy, size, extension, and MIME type" do
+      cfg = %Brando.Type.VideoConfig{
+        upload_strategy: :mux,
+        allow_uploads: true,
+        size_limit: 10_000,
+        allowed_mimetypes: ["video/mp4"]
+      }
+
+      assert :ok =
+               Uploads.validate_provider_video_intake(cfg, %{
+                 name: "clip.mp4",
+                 size: 9_000,
+                 type: "video/mp4"
+               })
+
+      assert {:error, "File is too large" <> _} =
+               Uploads.validate_provider_video_intake(cfg, %{
+                 name: "clip.mp4",
+                 size: 10_001,
+                 type: "video/mp4"
+               })
+
+      assert {:error, "Rejected file type" <> _} =
+               Uploads.validate_provider_video_intake(cfg, %{
+                 name: "clip.mp4",
+                 size: 9_000,
+                 type: "application/pdf"
+               })
+
+      assert {:error, "Unsupported video type" <> _} =
+               Uploads.validate_provider_video_intake(cfg, %{
+                 name: "clip.exe",
+                 size: 9_000,
+                 type: "video/mp4"
+               })
+
+      assert {:error, "Video uploads are disabled" <> _} =
+               Uploads.validate_provider_video_intake(%{cfg | allow_uploads: false}, %{
+                 name: "clip.mp4",
+                 size: 9_000,
+                 type: "video/mp4"
+               })
+
+      assert {:error, "Video upload strategy" <> _} =
+               Uploads.validate_provider_video_intake(%{cfg | upload_strategy: :local}, %{
+                 name: "clip.mp4",
+                 size: 9_000,
+                 type: "video/mp4"
+               })
+    end
+
+    test "infers the standard MIME type when the browser leaves it blank" do
+      cfg = %Brando.Type.VideoConfig{
+        upload_strategy: :bunny,
+        allowed_mimetypes: ["video/quicktime"]
+      }
+
+      assert :ok =
+               Uploads.validate_provider_video_intake(cfg, %{
+                 name: "clip.mov",
+                 size: 100,
+                 type: ""
+               })
+    end
+  end
+
   describe "resolve_video_config/1" do
     # Regression: the fallback returned the raw configured default, which can
     # be a plain map — a non-struct cfg misses handle_upload_type's
@@ -204,10 +296,11 @@ defmodule Brando.UploadsTest do
   end
 
   describe "presign_put/2" do
-    test "generates a signed short-lived PUT URL with public-read acl" do
+    test "signs Content-Type and omits ACLs by default" do
       cfg = direct_cfg()
 
-      assert {:ok, url} = Uploads.presign_put("media/files/tests/doc.pdf", cfg)
+      assert {:ok, %{upload_url: url, headers: headers}} =
+               Uploads.presign_put("media/files/tests/doc.pdf", cfg, mime_type: "application/pdf")
 
       uri = URI.parse(url)
       query = URI.decode_query(uri.query)
@@ -215,10 +308,49 @@ defmodule Brando.UploadsTest do
       assert uri.host =~ "digitaloceanspaces.com"
       assert uri.path =~ "testbucket"
       assert uri.path =~ "media/files/tests/doc.pdf"
-      assert query["x-amz-acl"] == "public-read"
+      assert headers == %{"content-type" => "application/pdf"}
+      assert query["X-Amz-SignedHeaders"] =~ "content-type"
+      refute query["X-Amz-SignedHeaders"] =~ "x-amz-acl"
       assert query["X-Amz-Expires"] == "600"
       assert query["X-Amz-Signature"]
       assert query["X-Amz-Credential"] =~ "TESTKEY"
+    end
+
+    test "signs an ACL header only when explicitly configured" do
+      cfg = direct_cfg()
+      cfg = %{cfg | cdn: %{cfg.cdn | direct_acl: "public-read"}}
+
+      assert {:ok, %{upload_url: url, headers: headers}} =
+               Uploads.presign_put("media/files/tests/doc.pdf", cfg, mime_type: "application/pdf")
+
+      query = url |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+
+      assert headers["x-amz-acl"] == "public-read"
+      assert query["X-Amz-SignedHeaders"] =~ "x-amz-acl"
+      refute Map.has_key?(query, "x-amz-acl")
+    end
+  end
+
+  describe "validate_direct_object/3" do
+    test "accepts matching HEAD metadata" do
+      response = %{
+        headers: [
+          {"Content-Length", "1234"},
+          {"Content-Type", "application/pdf; charset=binary"}
+        ]
+      }
+
+      assert :ok = Uploads.validate_direct_object(response, 1234, "application/pdf")
+    end
+
+    test "rejects size and content type mismatches" do
+      response = %{headers: [{"content-length", "1234"}, {"content-type", "application/pdf"}]}
+
+      assert {:error, "Uploaded object size mismatch" <> _} =
+               Uploads.validate_direct_object(response, 999, "application/pdf")
+
+      assert {:error, "Uploaded object type mismatch" <> _} =
+               Uploads.validate_direct_object(response, 1234, "text/plain")
     end
   end
 
@@ -254,6 +386,34 @@ defmodule Brando.UploadsTest do
 
     test "false when content_disposition is set (header can't ride an unsigned presign)" do
       refute Uploads.direct_transport?(direct_cfg(%{content_disposition: :attachment}))
+    end
+  end
+
+  describe "direct_video_transport?/1" do
+    test "requires the explicit S3 strategy and an enabled direct video CDN" do
+      cfg = direct_video_cfg()
+      assert Uploads.direct_video_transport?(cfg)
+      assert Uploads.video_upload_available?(cfg)
+
+      refute Uploads.direct_video_transport?(%{cfg | upload_strategy: :local})
+      refute Uploads.direct_video_transport?(%{cfg | cdn: %{cfg.cdn | direct: false}})
+      refute Uploads.direct_video_transport?(%{cfg | cdn: %{cfg.cdn | enabled: false}})
+      refute Uploads.direct_video_transport?(%{cfg | cdn: %{cfg.cdn | bucket: nil}})
+      refute Uploads.direct_video_transport?(%{cfg | cdn: %{cfg.cdn | media_url: nil}})
+    end
+
+    test "presigns video Content-Type against the video config's bucket" do
+      cfg = direct_video_cfg()
+
+      assert {:ok, %{upload_url: url, headers: headers}} =
+               Uploads.presign_put("media/videos/tests/clip.mp4", cfg, mime_type: "video/mp4")
+
+      query = url |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+
+      assert headers == %{"content-type" => "video/mp4"}
+      assert query["X-Amz-SignedHeaders"] =~ "content-type"
+      assert url =~ "testbucket"
+      assert url =~ "media/videos/tests/clip.mp4"
     end
   end
 end

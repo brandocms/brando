@@ -88,6 +88,35 @@ defmodule Brando.Upload do
     |> run_completed_callback(upload.cfg, user)
   end
 
+  def handle_upload_type(%{cfg: %VideoConfig{}} = upload, user, :direct_to_s3) do
+    file_params = %{
+      title: upload.upload_entry.client_name,
+      mime_type: upload.upload_entry.client_type,
+      filesize: upload.upload_entry.client_size,
+      filename: extract_filename_from_key(upload.meta.key),
+      config_target: upload.meta.config_target,
+      cdn: true,
+      folder_id: upload.meta[:folder_id]
+    }
+
+    with {:ok, file} <- Files.create_file(file_params, user),
+         {:ok, video} <-
+           Brando.Videos.create_video(
+             %{
+               type: :upload,
+               status: :ready,
+               title: upload.upload_entry.client_name,
+               file_id: file.id,
+               folder_id: upload.meta[:folder_id],
+               config_target: upload.meta.config_target
+             },
+             user
+           ) do
+      CompletedCallback.run(upload.cfg, video, user)
+      {:ok, video}
+    end
+  end
+
   def handle_upload_type(
         %{cfg: %ImageConfig{}, upload_entry: %{client_type: "image/svg+xml"}} = upload,
         user

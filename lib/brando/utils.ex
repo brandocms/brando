@@ -518,17 +518,28 @@ defmodule Brando.Utils do
     {:ok, config} = Brando.Files.get_config_for(file.config_target)
 
     file_path = Path.join([config.upload_path, file.filename])
+    field_cdn = Map.get(config, :cdn)
 
-    if CDN.enabled?(Brando.Files) && file.cdn do
-      s3_cfg = CDN.config(Brando.Files, :s3)
-      bucket = CDN.config(Brando.Files, :bucket)
-      "#{s3_cfg.scheme}#{s3_cfg.host}/#{bucket}/media/#{file_path}"
-    else
-      media_url(file_path)
+    cond do
+      file.cdn and is_map(field_cdn) and Map.get(field_cdn, :enabled) == true and
+          is_binary(Map.get(field_cdn, :media_url)) ->
+        join_url(Map.fetch!(field_cdn, :media_url), Path.join("media", file_path))
+
+      file.cdn and CDN.enabled?(Brando.Files) ->
+        s3_cfg = CDN.config(Brando.Files, :s3)
+        bucket = CDN.config(Brando.Files, :bucket)
+        "#{s3_cfg.scheme}#{s3_cfg.host}/#{bucket}/media/#{file_path}"
+
+      true ->
+        media_url(file_path)
     end
   end
 
   def media_url(path), do: Path.join([Brando.config(:media_url), path])
+
+  defp join_url(prefix, path) when is_binary(prefix) do
+    String.trim_trailing(prefix, "/") <> "/" <> String.trim_leading(path, "/")
+  end
 
   @doc """
   Get title assign from `conn`

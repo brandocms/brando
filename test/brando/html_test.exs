@@ -206,6 +206,38 @@ defmodule Brando.HTMLTest do
     assert result =~ "video-wrapper"
   end
 
+  test "video component with a ready Cloudflare Stream video" do
+    hls_url = "https://customer.example.com/video-id/manifest/video.m3u8"
+    thumbnail_url = "https://customer.example.com/video-id/thumbnails/thumbnail.jpg"
+
+    video_struct = %Brando.Videos.Video{
+      type: :cloudflare,
+      status: :ready,
+      width: 1920,
+      height: 1080,
+      aspect_ratio: "1920/1080",
+      controls: true,
+      meta: %{
+        "cloudflare" => %{
+          "uid" => "video-id",
+          "playback_hls" => hls_url,
+          "thumbnail_url" => thumbnail_url
+        }
+      }
+    }
+
+    assigns = %{video_struct: video_struct, opts: []}
+
+    result =
+      rendered_to_string(~H"""
+      <.video video={@video_struct} opts={@opts} />
+      """)
+
+    assert result =~ hls_url
+    assert result =~ thumbnail_url
+    assert result =~ "video-wrapper video-file"
+  end
+
   test "picture_tag" do
     user = Factory.build(:user)
     srcset = {Brando.Users.User, :avatar}

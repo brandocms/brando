@@ -129,7 +129,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
      |> assign(:path, path)
      |> assign(:config_target, config_target)
      |> assign_new(:config_modal, fn -> nil end)
-     |> assign(:video_upload_enabled?, video_config.upload_strategy == :local)
+     |> assign(:video_upload_enabled?, Brando.Uploads.video_upload_available?(video_config))
      |> assign_value()}
   end
 
