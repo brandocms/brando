@@ -72,6 +72,8 @@ Generate templates:
 
 ## Documentation
 
+- [Migrating to Brando 0.54](guides/migrating_to_054.md) — ordered source,
+  database, derived-data, and Gettext upgrade workflow.
 - [Blueprint system](guides/blueprints.md) — schema, validation, relations,
   assets, traits, listings, forms, and compile-time boundaries.
 - [Blueprint migrations](guides/blueprint_migrations.md) — generation,

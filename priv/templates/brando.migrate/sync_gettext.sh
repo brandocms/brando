@@ -1,62 +1,77 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Directory containing .po files
-DIRECTORY="${1:-.}"
+set -euo pipefail
 
-# Loop over all .po files in the specified directory
-for file in "$DIRECTORY"/*.po; do
-    echo "Processing file: $file..."
+directory="${1:-.}"
 
-    # Use awk to find all msgid entries with an empty msgstr after
-    awk -v file="$file" '
-        /^msgid / { msgid_line = NR; msgid = $0 }
-        /^msgstr ""$/ {
-            empty_msgstr_line = NR
-            msgid_text = msgid
-            # Remove msgid " and trailing quote
-            gsub(/^msgid "/, "", msgid_text)
-            gsub(/"$/, "", msgid_text)
-            print empty_msgstr_line ":" msgid_text
+if [[ ! -d "$directory" ]]; then
+  printf 'Gettext directory does not exist: %s\n' "$directory" >&2
+  exit 1
+fi
+
+shopt -s nullglob
+po_files=("$directory"/*.po)
+
+if (( ${#po_files[@]} == 0 )); then
+  printf 'No .po files found in %s\n' "$directory"
+  exit 0
+fi
+
+for file in "${po_files[@]}"; do
+  printf 'Processing %s...\n' "$file"
+
+  while IFS=: read -r empty_msgstr_line msgid; do
+    found_msgstr=""
+    found_in=""
+
+    for other_file in "${po_files[@]}"; do
+      [[ "$other_file" == "$file" ]] && continue
+
+      found_msgstr=$(awk -v msgid="$msgid" '
+        $0 == "msgid \"" msgid "\"" { found = 1; next }
+        found && /^msgstr / {
+          if ($0 != "msgstr \"\"") {
+            sub(/^msgstr "/, "")
+            sub(/"$/, "")
+            print
+            exit
+          }
+
+          found = 0
         }
-    ' "$file" | while IFS=: read -r empty_msgstr_line msgid; do
-        echo "Empty msgstr found for msgid \"$msgid\" at line $empty_msgstr_line in $file."
+      ' "$other_file")
 
-        # Loop over other .po files to find a non-empty msgstr for this msgid
-        found_msgstr=""
-        for other_file in "$DIRECTORY"/*.po; do
-            # Skip the current file
-            [ "$other_file" == "$file" ] && continue
-
-            # Look for the same msgid in the other file
-            found_msgstr=$(awk -v msgid="$msgid" '
-                BEGIN { found = 0 }
-                $0 == "msgid \"" msgid "\"" { found = 1; next }
-                found && /^msgstr / {
-                    if ($0 != "msgstr \"\"") {
-                        gsub(/^msgstr "/, "", $0);
-                        gsub(/"$/, "", $0);
-                        print $0;
-                        exit
-                    }
-                    found = 0
-                }
-            ' "$other_file")
-
-            # If a non-empty msgstr is found, replace it in the original file
-            if [ -n "$found_msgstr" ]; then
-                # Escape any & characters in found_msgstr
-                safe_msgstr=$(echo "$found_msgstr" | sed 's/&/\\&/g')
-                echo "Found translation for \"$msgid\" in $other_file: \"$safe_msgstr\""
-                gsed -i "${empty_msgstr_line}s/msgstr \"\"/msgstr \"$safe_msgstr\"/" "$file"
-                break
-            fi
-        done
-
-        # Message if no translation was found in other files
-        if [ -z "$found_msgstr" ]; then
-            echo "No translation found for \"$msgid\" in other files."
-        fi
+      if [[ -n "$found_msgstr" ]]; then
+        found_in="$other_file"
+        break
+      fi
     done
+
+    if [[ -z "$found_msgstr" ]]; then
+      printf 'No sibling translation found for "%s" in %s.\n' "$msgid" "$file"
+      continue
+    fi
+
+    escaped_msgstr=$(printf '%s' "$found_msgstr" | sed 's/[\\&|]/\\&/g')
+    temporary_file=$(mktemp "${file}.XXXXXX")
+    sed "${empty_msgstr_line}s|^msgstr \"\"$|msgstr \"${escaped_msgstr}\"|" "$file" > "$temporary_file"
+    cat "$temporary_file" > "$file"
+    rm -f "$temporary_file"
+
+    printf 'Copied "%s" from %s.\n' "$msgid" "$found_in"
+  done < <(
+    awk '
+      /^msgid "/ {
+        msgid = $0
+        sub(/^msgid "/, "", msgid)
+        sub(/"$/, "", msgid)
+      }
+
+      /^msgstr ""$/ && msgid != "" {
+        print NR ":" msgid
+      }
+    ' "$file"
+  )
 done
 
-echo "Translation copy complete."
+printf 'Translation copy complete. Review the catalog diff before committing.\n'

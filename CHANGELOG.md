@@ -1008,34 +1008,26 @@
 
   (Your `config/test.exs` likely already sets `config :swoosh, :api_client, false`.)
 
-Before running the migration script, you must fix some `form` syntax in your blueprints.
-If you're passing parameters to the `form` macro, they must be moved to their own functions.
-For instance, if you have:
+#### 0.54 upgrade checklist
 
-```elixir
-form default_params: %{"status" => "draft"} do
-  # ...
-end
-```
+Follow the complete [Migrating to Brando 0.54](guides/migrating_to_054.md)
+guide. The required order is:
 
-You must change this to:
+1. Commit the existing application and back up the database and Gettext catalogs.
+2. Update Brando, then run `mix brando.migrate54`. The task now rewrites legacy
+   unnamed and named `form` options itself and is safe to rerun.
+3. Review, format, compile, and test the source diff.
+4. Run `mix brando.upgrade`, then generate or deliberately rebaseline each
+   application's Blueprint storage history as documented in
+   [Blueprint migrations](guides/blueprint_migrations.md).
+5. Review and exercise every migration backward and forward before running
+   `mix ecto.migrate`.
+6. After migration, run `mix brando.entries.resave` and
+   `mix brando.identifiers.sync`, then reconcile backed-up Gettext catalogs.
 
-```elixir
-form do
-  default_params %{"status" => "draft"}
-  # ...
-end
-```
-
-Then pull down migration changes with `mix brando.upgrade`.
-
-Commit all changes before running the migration script with `mix brando.migrate54`
-
-Then run migrations with `mix ecto.migrate`
-
-Finally resave entries with `mix brando.entries.resave`, sync identifiers with `mix brando.identifiers.sync`
-then sync translations with `chmod +x scripts/sync_gettext.sh` then `./scripts/sync_gettext.sh priv/gettext/backend/no/LC_MESSAGES`
-if your translations are in `priv/gettext/backend/no/LC_MESSAGES`.
+Do not use `--rebaseline` to avoid a required database migration. Existing
+tables without Blueprint snapshots must be verified against the live database
+before establishing their first baseline.
 
 * BREAKING: Refs have been split out to their own table. Run `mix brando.upgrade` to get migrations.
   The refs structure has changed significantly:
