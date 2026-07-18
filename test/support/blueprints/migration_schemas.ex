@@ -404,6 +404,7 @@ defmodule Brando.MigrationTest.PhysicalSources do
     relation :owner, :belongs_to,
       module: Brando.Users.User,
       source: :owner_ref,
+      null: false,
       unique: [with: :tenant_id]
 
     relation :related_entries, :entries
@@ -476,5 +477,55 @@ defmodule Brando.MigrationTest.NoPrimaryKey do
 
   attributes do
     attribute :key, :string
+  end
+end
+
+defmodule Brando.MigrationTest.FieldOptions do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationFields",
+    schema: "FieldOptions",
+    singular: "field_options",
+    plural: "field_options",
+    gettext_module: Brando.Gettext
+
+  attributes do
+    attribute :visibility, :enum,
+      values: [public: "public", private: "private"],
+      default: :private,
+      null: false
+
+    attribute :priority, Ecto.Enum,
+      values: [low: 1, high: 2],
+      default: :low,
+      null: false
+
+    attribute :formats, {:array, :enum},
+      values: [:jpg, :png],
+      default: [:jpg],
+      null: false
+
+    attribute :native_formats, {:array, Ecto.Enum},
+      values: [:jpg, :png],
+      default: [:png],
+      null: false
+
+    attribute :amount, :decimal,
+      default: Decimal.new("1.2500"),
+      null: false,
+      precision: 12,
+      scale: 4
+
+    attribute :module_name, Brando.Type.Module,
+      default: __MODULE__,
+      null: false
+
+    attribute :payload, Brando.Type.Json,
+      default: %{},
+      null: false
+
+    attribute :published_on, :date,
+      default: ~D[2026-01-02],
+      null: false
   end
 end

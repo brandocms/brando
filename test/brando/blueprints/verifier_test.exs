@@ -61,6 +61,91 @@ defmodule Brando.Blueprint.VerifierTest do
     assert module.__schema__(:type, :published_at) == :naive_datetime
   end
 
+  test "maps scalar and array enum declarations to their configured Ecto storage types" do
+    module =
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :visibility, :enum, values: [public: "public", private: "private"], default: :private
+            attribute :priority, Ecto.Enum, values: [low: 1, high: 2], default: :low
+            attribute :formats, {:array, :enum}, values: [:jpg, :png], default: [:jpg]
+          end
+        end
+      )
+
+    assert module.__schema__(:type, :visibility) |> Ecto.Type.type() == :string
+    assert module.__schema__(:type, :priority) |> Ecto.Type.type() == :integer
+    assert module.__schema__(:type, :formats) |> Ecto.Type.type() == {:array, :string}
+    assert Ecto.Enum.values(module, :formats) == [:jpg, :png]
+
+    assert struct(module) |> Map.take([:visibility, :priority, :formats]) == %{
+             visibility: :private,
+             priority: :low,
+             formats: [:jpg]
+           }
+  end
+
+  test "keeps migration-only column options out of Ecto schema field options" do
+    module =
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :amount, :decimal, null: false, precision: 12, scale: 4
+          end
+
+          relations do
+            relation :owner, :belongs_to, module: unquote(MediaItem), null: false
+          end
+        end
+      )
+
+    assert module.__schema__(:type, :amount) == :decimal
+    assert module.__schema__(:type, :owner_id) == :id
+  end
+
+  test "rejects malformed and misplaced attribute field options contextually" do
+    invalid_declarations = [
+      {quote(do: attribute(:title, :string, requried: true)), ~r/unsupported options \[:requried\]/},
+      {quote(do: attribute(:title, :string, null: :no)), ~r/`:null` must be a boolean/},
+      {quote(do: attribute(:title, :string, precision: 12)), ~r/only valid for decimal attributes/},
+      {quote(do: attribute(:amount, :decimal, scale: 2)), ~r/`:scale` requires `:precision`/},
+      {quote(do: attribute(:amount, :decimal, precision: 2, scale: 3)), ~r/exceeds `:precision`/},
+      {quote(do: attribute(:status, :enum, values: [])), ~r/`:values` must be a non-empty/},
+      {quote(do: attribute(:status, :enum, values: [:one, :one])), ~r/`:values` must be a non-empty/},
+      {quote(do: attribute(:status, :enum, values: [one: 1, two: "2"])), ~r/`:values` must be a non-empty/},
+      {quote(do: attribute(:status, :enum, values: [:one], embed_as: :atoms)), ~r/`:embed_as` must be/},
+      {quote(do: attribute(:title, :string, values: [:one])), ~r/unsupported options \[:values\]/},
+      {quote(do: attribute(:title, :string, writable: :sometimes)), ~r/`:writable` must be/},
+      {quote(do: attribute(:inserted_at, :datetime, null: false)), ~r/timestamp attributes do not support/},
+      {quote(do: attribute(:scratch, :string, virtual: true, null: false)), ~r/virtual attributes do not support/},
+      {quote(do: attribute(:id, :integer, primary_key: true)), ~r/unsupported options \[:primary_key\]/}
+    ]
+
+    for {declaration, message} <- invalid_declarations do
+      assert_raise Spark.Error.DslError, message, fn ->
+        compile_blueprint(
+          quote do
+            attributes do
+              unquote(declaration)
+            end
+          end
+        )
+      end
+    end
+  end
+
+  test "rejects malformed language configuration before Ecto enum initialization" do
+    assert_raise Spark.Error.DslError, ~r/language attribute `:languages` must be a list/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :language, :language, languages: [[value: "en"]]
+          end
+        end
+      )
+    end
+  end
+
   test "rejects unsupported constraints at compile time" do
     assert_raise Spark.Error.DslError, ~r/unsupported options \[:minimum\]/, fn ->
       compile_blueprint(
@@ -323,6 +408,18 @@ defmodule Brando.Blueprint.VerifierTest do
       )
     end
 
+    assert_raise Spark.Error.DslError, ~r/`:null` must be a boolean/, fn ->
+      compile_blueprint(
+        quote do
+          relations do
+            relation :owner, :belongs_to,
+              module: unquote(media_item),
+              null: :no
+          end
+        end
+      )
+    end
+
     assert_raise Spark.Error.DslError, ~r/`:foreign_key` must be an atom/, fn ->
       compile_blueprint(
         quote do
@@ -421,6 +518,29 @@ defmodule Brando.Blueprint.VerifierTest do
               module: unquote(media_item),
               foreign_key: :owner_ref,
               define_field: false
+          end
+        end
+      )
+    end
+  end
+
+  test "requires manual foreign-key storage options on the declared attribute" do
+    media_item = MediaItem
+
+    assert_raise Spark.Error.DslError, ~r/configure \[:null, :source\] on foreign-key attribute :owner_ref/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :owner_ref, :id, source: :owner_column, null: false
+          end
+
+          relations do
+            relation :owner, :belongs_to,
+              module: unquote(media_item),
+              foreign_key: :owner_ref,
+              define_field: false,
+              source: :owner_column,
+              null: false
           end
         end
       )

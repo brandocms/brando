@@ -17,6 +17,8 @@ defmodule Brando.Blueprint.UtilsEctoTest do
     assert Utils.to_ecto_type(:video) == Brando.Type.Video
     assert Utils.to_ecto_type(:i18n_string) == Brando.Type.I18nString
     assert Utils.to_ecto_type(:decimal) == :decimal
+    assert Utils.to_ecto_type({:array, :enum}) == {:array, Ecto.Enum}
+    assert Utils.to_ecto_type({:array, Ecto.Enum}) == {:array, Ecto.Enum}
   end
 
   test "schema options omit Blueprint-only metadata" do
@@ -24,12 +26,22 @@ defmodule Brando.Blueprint.UtilsEctoTest do
       cast: true,
       constraint_name: "custom_author_fkey",
       module: Example,
+      null: false,
       required: true,
       on_delete: :delete_all,
       source: :author_id
     }
 
     assert Utils.to_ecto_opts(:belongs_to, opts) == [source: :author_id]
+
+    assert Utils.to_ecto_opts(:integer, %{null: false, precision: 10, scale: 2, default: 0}) ==
+             [default: 0]
+
+    assert Utils.to_ecto_opts(:language, %{
+             languages: [[value: "en", text: "English"]],
+             required: true,
+             values: [:en]
+           }) == [values: [:en]]
   end
 
   test "embed defaults are applied without overwriting explicit configuration" do

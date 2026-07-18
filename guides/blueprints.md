@@ -130,6 +130,52 @@ timestamp attributes cannot declare a source. See
 [Blueprint migrations](blueprint_migrations.md#physical-ecto-sources) before
 adding or correcting a source on an existing table.
 
+Built-in attributes validate their option names and option scopes before Ecto
+schema generation. The storage-relevant options are `default:`, `null:`,
+`precision:`, `scale:`, `source:`, and `rename_from:`; Blueprint also supports
+its validation options (`required:`, `unique:`, and `constraints:`) and Ecto's
+schema-only field options such as `autogenerate:`, `read_after_writes:`,
+`load_in_query:`, `redact:`, `skip_default_validation:`, and `writable:`.
+Migration-only options are removed before calling `Ecto.Schema.field/3`, while
+schema-only options are excluded from migration snapshots. Use the root
+`primary_key` declaration rather than `primary_key: true` on an attribute.
+
+`null: false` is a database constraint; `required: true` is changeset
+validation. They are intentionally independent so drafts and staged data can
+retain the existing Blueprint validation behavior. Decimal precision and scale
+are declared together:
+
+```elixir
+attribute :amount, :decimal, precision: 12, scale: 4, null: false
+```
+
+Enums require a non-empty set of unique values. Plain atom lists and
+atom-to-string mappings use text storage; atom-to-integer mappings use integer
+storage. Both supported array spellings compile to the same Ecto and migration
+types:
+
+```elixir
+attribute :visibility, :enum,
+  values: [public: "public", private: "private"],
+  default: :private
+
+attribute :priority, :enum,
+  values: [low: 1, high: 2],
+  default: :low
+
+attribute :formats, {:array, :enum},
+  values: [:jpg, :png],
+  default: [:jpg]
+```
+
+Defaults remain application values in the Ecto struct. Migration snapshots
+store the value dumped by the Ecto type, so the examples above use database
+defaults `"private"`, `1`, and `["jpg"]`. Custom `Ecto.Type` and
+`Ecto.ParameterizedType` attributes likewise generate their primitive database
+type and dumped default instead of treating the Elixir module name as a
+PostgreSQL type. Custom parameterized types retain their own type-specific
+options.
+
 #### Relations
 
 Blueprint uses the same persisted foreign-key name for Ecto schema generation,
@@ -142,6 +188,7 @@ name:
 relation :creator, :belongs_to,
   module: MyApp.Users.User,
   foreign_key: :owner_id,
+  null: false,
   required: true,
   unique: [with: :site_id]
 ```
@@ -176,6 +223,12 @@ Blueprint. Scope fields must be distinct and cannot repeat the field or foreign
 key being made unique; otherwise the generated Ecto constraint and database
 index would contain duplicate columns. Virtual attributes cannot be unique.
 Invalid declarations are reported while the Blueprint compiles.
+
+Like attributes, `null: false` on a generated belongs-to field is a migration
+constraint and `required: true` is changeset validation. With
+`define_field: false`, put `source:` and `null:` on the separately declared
+foreign-key attribute; declaring them on the relation is rejected so one field
+cannot have two competing storage contracts.
 
 `unique: [prevent_collision: scope]` reevaluates the unique value when either
 that value or one of its scope fields changes. An arity-one collision callback

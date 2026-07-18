@@ -4,6 +4,7 @@ defmodule Brando.Blueprint.Verifier do
   use Spark.Dsl.Verifier
 
   alias Brando.Blueprint.AssociationKey
+  alias Brando.Blueprint.AttributeOptions
   alias Brando.Blueprint.Config
   alias Brando.Blueprint.DatabaseIdentifier
   alias Brando.Blueprint.UniqueFields
@@ -43,6 +44,7 @@ defmodule Brando.Blueprint.Verifier do
     join_keys: [:many_to_many],
     join_through: [:many_to_many],
     join_where: [:many_to_many],
+    null: [:belongs_to],
     references: [:belongs_to, :has_many, :has_one],
     source: [:belongs_to, :embeds_many, :embeds_one],
     through: [:has_many],
@@ -136,7 +138,8 @@ defmodule Brando.Blueprint.Verifier do
   defp verify_gallery_asset_options(_dsl_state, _asset), do: :ok
 
   defp verify_attribute(dsl_state, attribute, storage_columns) do
-    with :ok <- verify_attribute_type(dsl_state, attribute),
+    with :ok <- verify_attribute_options(dsl_state, attribute),
+         :ok <- verify_attribute_type(dsl_state, attribute),
          :ok <- verify_attribute_source(dsl_state, attribute),
          :ok <- verify_boolean_option(dsl_state, :attributes, attribute, :required),
          :ok <- verify_boolean_option(dsl_state, :attributes, attribute, :virtual),
@@ -153,6 +156,13 @@ defmodule Brando.Blueprint.Verifier do
   end
 
   defp verify_attribute_type(_dsl_state, _attribute), do: :ok
+
+  defp verify_attribute_options(dsl_state, attribute) do
+    case AttributeOptions.validate(attribute) do
+      :ok -> :ok
+      {:error, message} -> error(dsl_state, :attributes, attribute, message)
+    end
+  end
 
   defp verify_attribute_source(_dsl_state, %{opts: opts} = _attribute)
        when not is_map_key(opts, :source),
@@ -196,16 +206,27 @@ defmodule Brando.Blueprint.Verifier do
          storage_columns
        ) do
     field = Map.get(opts, :foreign_key, :"#{name}_id")
+    misplaced_options = opts |> Map.keys() |> Enum.filter(&(&1 in [:null, :source])) |> Enum.sort()
 
-    if MapSet.member?(storage_columns, field) do
-      :ok
-    else
-      error(
-        dsl_state,
-        :relations,
-        relation,
-        "uses `define_field: false` but no persisted field #{inspect(field)} is declared"
-      )
+    cond do
+      misplaced_options != [] ->
+        error(
+          dsl_state,
+          :relations,
+          relation,
+          "uses `define_field: false`; configure #{inspect(misplaced_options)} on foreign-key attribute #{inspect(field)}"
+        )
+
+      MapSet.member?(storage_columns, field) ->
+        :ok
+
+      true ->
+        error(
+          dsl_state,
+          :relations,
+          relation,
+          "uses `define_field: false` but no persisted field #{inspect(field)} is declared"
+        )
     end
   end
 
@@ -323,6 +344,7 @@ defmodule Brando.Blueprint.Verifier do
   defp verify_relation_options(dsl_state, relation) do
     with :ok <- verify_boolean_option(dsl_state, :relations, relation, :required),
          :ok <- verify_boolean_option(dsl_state, :relations, relation, :define_field),
+         :ok <- verify_boolean_option(dsl_state, :relations, relation, :null),
          :ok <- verify_atom_option(dsl_state, relation, :foreign_key),
          :ok <- verify_atom_option(dsl_state, relation, :references),
          :ok <- verify_atom_option(dsl_state, relation, :source),

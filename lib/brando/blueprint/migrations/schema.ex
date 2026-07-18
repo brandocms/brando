@@ -8,6 +8,7 @@ defmodule Brando.Blueprint.Migrations.Schema do
 
   @format_version 3
   @column_opts [:default, :null, :precision, :scale]
+  @reference_column_opts [:null]
 
   @type column :: %{
           required(:name) => atom(),
@@ -388,11 +389,12 @@ defmodule Brando.Blueprint.Migrations.Schema do
   end
 
   defp attribute_column(attribute, module) do
-    opts = Map.take(attribute.opts, @column_opts)
+    context = [field: attribute.name, schema: module]
+    opts = Types.migration_opts(attribute.type, attribute.opts, context)
 
     column = %{
       name: field_source(module, attribute.name),
-      type: Types.migration_type(attribute.type),
+      type: Types.migration_type(attribute.type, attribute.opts, context),
       opts: opts,
       reference: nil
     }
@@ -437,7 +439,7 @@ defmodule Brando.Blueprint.Migrations.Schema do
       %{
         name: column_name,
         type: reference_type,
-        opts: Map.take(opts, @column_opts),
+        opts: Map.take(opts, @reference_column_opts),
         reference:
           reference(
             owner_table,

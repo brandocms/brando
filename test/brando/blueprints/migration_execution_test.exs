@@ -222,6 +222,75 @@ defmodule Brando.Blueprint.MigrationExecutionTest do
              )
   end
 
+  test "field options execute with dumped defaults and primitive custom types", %{prefix: prefix} do
+    opts = [migration_path: @migration_path, snapshot_path: @snapshot_path]
+    module = Brando.MigrationTest.FieldOptions
+    table = module.__schema__(:source)
+
+    assert {:ok, generated} = Migrations.create_migration(module, opts)
+    version = migration_version(generated.migration)
+    migration_source = [{version, compile_migration!(generated.migration)}]
+
+    assert [^version] =
+             Ecto.Migrator.run(MigrationRepo, migration_source, :up,
+               all: true,
+               prefix: prefix,
+               log: false
+             )
+
+    column_types =
+      MigrationRepo
+      |> Ecto.Adapters.SQL.query!(
+        """
+        SELECT column_name, data_type, udt_name, is_nullable
+        FROM information_schema.columns
+        WHERE table_schema = $1 AND table_name = $2 AND column_name != 'id'
+        """,
+        [prefix, table]
+      )
+      |> Map.fetch!(:rows)
+      |> Map.new(fn [name, data_type, udt_name, nullable] ->
+        {name, {data_type, udt_name, nullable}}
+      end)
+
+    assert column_types["visibility"] == {"text", "text", "NO"}
+    assert column_types["priority"] == {"integer", "int4", "NO"}
+    assert column_types["formats"] == {"ARRAY", "_text", "NO"}
+    assert column_types["native_formats"] == {"ARRAY", "_text", "NO"}
+    assert column_types["amount"] == {"numeric", "numeric", "NO"}
+    assert column_types["module_name"] == {"character varying", "varchar", "NO"}
+    assert column_types["payload"] == {"jsonb", "jsonb", "NO"}
+    assert column_types["published_on"] == {"date", "date", "NO"}
+
+    assert %{rows: [[12, 4]]} =
+             Ecto.Adapters.SQL.query!(
+               MigrationRepo,
+               """
+               SELECT numeric_precision, numeric_scale
+               FROM information_schema.columns
+               WHERE table_schema = $1 AND table_name = $2 AND column_name = 'amount'
+               """,
+               [prefix, table]
+             )
+
+    assert %{rows: [["private", 1, ["jpg"], ["png"], amount, module_name, %{}, ~D[2026-01-02]]]} =
+             Ecto.Adapters.SQL.query!(
+               MigrationRepo,
+               ~s|INSERT INTO "#{prefix}"."#{table}" DEFAULT VALUES RETURNING visibility, priority, formats, native_formats, amount, module_name, payload, published_on|,
+               []
+             )
+
+    assert Decimal.equal?(amount, Decimal.new("1.2500"))
+    assert module_name == Atom.to_string(module)
+
+    assert [^version] =
+             Ecto.Migrator.run(MigrationRepo, migration_source, :down,
+               all: true,
+               prefix: prefix,
+               log: false
+             )
+  end
+
   defp migration_version(filename) do
     filename
     |> Path.basename()

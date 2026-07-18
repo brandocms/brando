@@ -100,18 +100,39 @@ defmodule Brando.Blueprint.Attributes.Dsl do
           supplied_langs
       end
 
-    languages =
-      Enum.map(default_languages, fn [value: lang_code, text: _] -> String.to_atom(lang_code) end)
+    case normalize_languages(default_languages) do
+      {:ok, languages} ->
+        new_opts =
+          attr.opts
+          |> Keyword.put(:values, languages)
+          |> Keyword.put(:required, true)
 
-    new_opts =
-      attr.opts
-      |> Keyword.put(:values, languages)
-      |> Keyword.put(:required, true)
+        {:ok, %{attr | opts: Enum.into(new_opts, %{})}}
 
-    {:ok, %{attr | opts: Enum.into(new_opts, %{})}}
+      :error ->
+        {:error, "language attribute `:languages` must be a list of `[value: \"code\", text: \"Label\"]` options"}
+    end
   end
 
   def transform(attr) do
     {:ok, %{attr | opts: Enum.into(attr.opts, %{})}}
   end
+
+  defp normalize_languages(languages) when is_list(languages) do
+    Enum.reduce_while(languages, {:ok, []}, fn language, {:ok, normalized} ->
+      with true <- Keyword.keyword?(language),
+           {:ok, code} when is_binary(code) and code != "" <- Keyword.fetch(language, :value),
+           {:ok, label} when is_binary(label) and label != "" <- Keyword.fetch(language, :text) do
+        {:cont, {:ok, [String.to_atom(code) | normalized]}}
+      else
+        _invalid -> {:halt, :error}
+      end
+    end)
+    |> case do
+      {:ok, normalized} -> {:ok, Enum.reverse(normalized)}
+      :error -> :error
+    end
+  end
+
+  defp normalize_languages(_languages), do: :error
 end

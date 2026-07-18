@@ -141,6 +141,56 @@ Do not delete a snapshot to make a physical-source mismatch disappear. Igniter
 cannot inspect deployed schemas or decide whether a column should be renamed or
 re-baselined, so this upgrade is intentionally guided rather than automatic.
 
+## Field types, options, and defaults
+
+The migration schema uses the database representation of each Ecto field:
+
+- string-backed enums use text, integer-backed enums use integers, and enum
+  arrays use arrays of that primitive type;
+- custom `Ecto.Type` and `Ecto.ParameterizedType` modules resolve to their
+  primitive storage type;
+- application defaults are dumped through the configured Ecto type before they
+  are stored in a snapshot or rendered as database defaults;
+- `null:`, and decimal `precision:`/`scale:`, affect migrations but are not
+  passed to `Ecto.Schema.field/3`;
+- Ecto schema-only options do not create migration churn.
+
+This distinction is important for enum defaults. The application-facing default
+remains an atom, but the database receives its string or integer mapping:
+
+```elixir
+attribute :priority, :enum,
+  values: [low: 1, high: 2],
+  default: :low,
+  null: false
+```
+
+For a new table, generate normally. When upgrading an existing generated
+history, review the next diff according to the live database:
+
+- A string-backed enum remains text, but a stored atom default may be replaced
+  with its executable string default. Run the reviewed generated migration if
+  the live default is missing or wrong. If the database was already corrected
+  by hand, verify it and rebaseline instead of applying a fictional change.
+- An integer-mapped enum, enum array, or custom Ecto type may have an older
+  snapshot containing text, `Ecto.Enum`, or an Elixir module as its database
+  type. Those old generated declarations could not represent the runtime
+  storage contract reliably. Do not apply an automatic type conversion to
+  production data without inspection. Write an explicit migration (including
+  PostgreSQL `USING` conversion when needed), test it backward and forward,
+  then use `--rebaseline`. If the live database already has the correct
+  primitive type because it was maintained by hand, verify and rebaseline it
+  directly.
+
+New `null:` and decimal precision/scale declarations use the normal generated
+migration workflow. Before adding `null: false`, resolve existing null rows and
+decide on a data backfill. A relation with `define_field: false` takes these
+options from its separately declared foreign-key attribute.
+
+Igniter does not rewrite field declarations or generate these migrations: it
+cannot inspect enum data conversions, custom type implementations, live
+defaults, or null rows.
+
 ## Scoping a custom collision callback
 
 An arity-one `prevent_collision` callback controls the candidate query. When that query scopes uniqueness by

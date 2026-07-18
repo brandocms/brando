@@ -134,6 +134,25 @@
 
 #### Improvements
 
+- **Database-aligned Blueprint field options and types**: Migration-only
+  `null:`, `precision:`, and `scale:` options no longer leak into Ecto schema
+  macros, while schema-only field options stay out of snapshots. Both
+  `{:array, :enum}` and `{:array, Ecto.Enum}` compile consistently;
+  string/integer enum mappings, enum arrays, custom `Ecto.Type` modules, and
+  parameterized types now generate their primitive database types. Defaults are
+  dumped through the Ecto type before rendering, so atom enum defaults become
+  their string or integer database values and date/decimal/custom defaults are
+  executable. Built-in attribute option typos, invalid enum mappings,
+  malformed language choices, misplaced timestamp/virtual options, invalid
+  decimal precision/scale, and conflicting `define_field: false` storage
+  options now fail contextually at compile time. Public Blueprint declarations
+  remain compatible. Existing enum/custom-type histories require inspection:
+  run a reviewed generated default/null migration when it describes the live
+  change, or use a hand-written type conversion plus `--rebaseline`; rebaseline
+  directly only after verifying a database already maintained with the correct
+  primitive types. Igniter cannot infer live types or data conversions. See
+  [Field types, options, and defaults](guides/blueprint_migrations.md#field-types-options-and-defaults).
+
 - **Physical-source-aligned Blueprint migrations**: Persisted attribute,
   belongs-to, embed, referenced-key, and primary-key `source:` values now flow
   through generated columns, composite indexes, constraint names, auxiliary

@@ -149,6 +149,7 @@ defmodule Brando.Blueprint.MigrationsTest do
     assert Enum.all?(schema.indexes, &MapSet.member?(runtime_constraint_names, &1.name))
 
     owner_column = Enum.find(schema.columns, &(&1.name == :owner_ref))
+    assert owner_column.opts == %{null: false}
     assert MapSet.member?(runtime_constraint_names, owner_column.reference.name)
 
     [related_entries] = schema.auxiliary_tables
@@ -167,6 +168,59 @@ defmodule Brando.Blueprint.MigrationsTest do
     assert source =~ "column: :record_pk"
     refute source =~ "add :title,"
     refute source =~ "add :owner_id,"
+  end
+
+  test "migration schemas dump enum defaults and custom types to database representations" do
+    module = Brando.MigrationTest.FieldOptions
+    schema = MigrationSchema.build(module)
+    columns = Map.new(schema.columns, &{&1.name, &1})
+
+    assert columns.visibility.type == :text
+    assert columns.visibility.opts == %{default: "private", null: false}
+    assert columns.priority.type == :integer
+    assert columns.priority.opts == %{default: 1, null: false}
+    assert columns.formats.type == {:array, :text}
+    assert columns.formats.opts == %{default: ["jpg"], null: false}
+    assert columns.native_formats.type == {:array, :text}
+    assert columns.native_formats.opts == %{default: ["png"], null: false}
+
+    assert columns.amount.type == :decimal
+    assert columns.amount.opts == %{default: "1.2500", null: false, precision: 12, scale: 4}
+    assert columns.module_name.type == :string
+    assert columns.module_name.opts.default == Atom.to_string(module)
+    assert columns.payload.type == :map
+    assert columns.payload.opts.default == %{}
+    assert columns.published_on.type == :date
+    assert columns.published_on.opts.default == "2026-01-02"
+
+    assert {:ok, generated} = Migrations.create_migration(module, @test_opts)
+    source = File.read!(generated.migration)
+
+    assert source =~ "add :visibility, :text"
+    assert source =~ ~s(default: "private")
+    assert source =~ "add :priority, :integer"
+    assert source =~ "add :formats, {:array, :text}"
+    assert source =~ "add :amount, :decimal"
+    assert source =~ "precision: 12"
+    assert source =~ "scale: 4"
+    assert source =~ "add :module_name, :string"
+    assert source =~ "add :payload, :map"
+    refute source =~ "Ecto.Enum"
+    refute source =~ "Brando.Type.Module"
+    refute source =~ "Brando.Type.Json"
+  end
+
+  test "migration schemas reduce existing parameterized and custom Ecto types" do
+    ref_schema = MigrationSchema.build(Brando.Content.Ref)
+    ref_data = Enum.find(ref_schema.columns, &(&1.name == :data))
+    assert ref_data.type == :map
+
+    block_schema = MigrationSchema.build(Brando.Content.Block)
+    source = Enum.find(block_schema.columns, &(&1.name == :source))
+    identifier_metas = Enum.find(block_schema.columns, &(&1.name == :identifier_metas))
+
+    assert source.type == :string
+    assert identifier_metas.type == :map
   end
 
   test "define_field false attaches a foreign key to its declared physical column" do
