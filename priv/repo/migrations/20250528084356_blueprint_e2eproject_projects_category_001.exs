@@ -25,11 +25,7 @@ defmodule E2eProject.Migrations.Projects.Category.Blueprint001 do
   end
 
   def down do
-    drop table(:projects_categories)
-
-    drop index(:projects_categories, [:language])
-    drop unique_index(:projects_categories, [:slug])
-
     drop table(:projects_categories_alternates)
+    drop table(:projects_categories)
   end
 end

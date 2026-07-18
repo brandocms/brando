@@ -37,6 +37,19 @@ mix ecto.migrate
 mix test
 ```
 
+In the Brando repository, the full E2E reset also rolls every migration after
+the monolithic test baseline back and runs it forward again before seeding:
+
+```shell
+cd e2e
+source .envrc
+./test_e2e.sh --reset
+```
+
+This makes reversibility part of the normal E2E gate for checked-in Blueprint
+migration fixtures; it does not replace testing a generated application
+migration against that application's own schema and data.
+
 Deployment still uses the application's normal Ecto migration command. The Blueprint task generates source files; it
 does not connect to or mutate a database.
 

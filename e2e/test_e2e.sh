@@ -27,6 +27,10 @@ if [ "$RESET_DB" = true ]; then
   # Force recompile to ensure sandbox plug is included (compile_env is evaluated at compile time)
   MIX_ENV=e2e mix compile --force
   MIX_ENV=e2e mix do ecto.drop, ecto.create, ecto.migrate
+  echo "Validating post-baseline migration rollback and forward execution..."
+  # `--to` is inclusive, so target the first migration after the monolithic baseline.
+  MIX_ENV=e2e mix ecto.rollback --to 20250528084352
+  MIX_ENV=e2e mix ecto.migrate
   BRANDO_SEEDING=true MIX_ENV=e2e mix run priv/repo/e2e_seeds.exs
 elif ! MIX_ENV=e2e mix ecto.migrate; then
   echo "Running seed data for fresh database..."

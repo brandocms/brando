@@ -24,11 +24,7 @@ defmodule E2eProject.Migrations.Projects.Client.Blueprint001 do
   end
 
   def down do
-    drop table(:projects_clients)
-
-    drop index(:projects_clients, [:language])
-    drop unique_index(:projects_clients, [:slug])
-
     drop table(:projects_clients_alternates)
+    drop table(:projects_clients)
   end
 end

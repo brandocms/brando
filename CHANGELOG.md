@@ -134,6 +134,13 @@
 
 #### Improvements
 
+- **Reversible Blueprint E2E migration fixtures**: The checked-in Client,
+  Category, and Project Blueprint migrations now drop dependent auxiliary
+  tables before their owner tables, target the tables they actually created,
+  and spell long PostgreSQL identifiers explicitly. A full E2E reset now rolls
+  every post-baseline migration back and forward before seeding, so fixture
+  reversibility and migration-name warnings are continuously covered.
+
 - **PostgreSQL-safe Blueprint constraint names**: Generated index and foreign-key
   names now use PostgreSQL's stored 63-byte identifier form in migrations,
   snapshots, and runtime changeset constraints. Long unique and foreign-key

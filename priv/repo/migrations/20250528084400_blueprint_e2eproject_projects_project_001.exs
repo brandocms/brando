@@ -39,12 +39,20 @@ defmodule E2eProject.Migrations.Projects.Project.Blueprint001 do
 
     create table(:projects_projects_related_entries_identifiers) do
       add :parent_id, references(:projects_projects, on_delete: :delete_all)
-      add :identifier_id, references(:content_identifiers, on_delete: :delete_all)
+
+      add :identifier_id,
+          references(:content_identifiers,
+            name: :projects_projects_related_entries_identifiers_identifier_id_fke,
+            on_delete: :delete_all
+          )
+
       add :sequence, :integer
       timestamps()
     end
 
-    create unique_index(:projects_projects_related_entries_identifiers, [:parent_id, :identifier_id])
+    create unique_index(:projects_projects_related_entries_identifiers, [:parent_id, :identifier_id],
+             name: :projects_projects_related_entries_identifiers_parent_id_identif
+           )
 
     create table(:projects_projects_blocks) do
       add :entry_id, references(:projects_projects, on_delete: :delete_all)
@@ -56,11 +64,9 @@ defmodule E2eProject.Migrations.Projects.Project.Blueprint001 do
   end
 
   def down do
-    drop table(:projects_projects)
-    drop index(:projects_projects, [:language])
-    drop unique_index(:projects_projects, [:slug])
-    drop table(:projects_projects_alternates)
-    drop table(:projects_projects_related_entries_identifiers)
     drop table(:projects_projects_blocks)
+    drop table(:projects_projects_related_entries_identifiers)
+    drop table(:projects_alternates)
+    drop table(:projects_projects)
   end
 end
