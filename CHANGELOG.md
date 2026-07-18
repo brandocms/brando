@@ -134,6 +134,17 @@
 
 #### Improvements
 
+- **Database-aligned callback collision scopes**: Arity-one Blueprint
+  `prevent_collision` callbacks may now be combined with `with:` and `message:`.
+  Persisted `with:` fields constrain the callback query, Ecto unique constraint,
+  and generated database index together. Callback-only declarations remain
+  globally unique. Message-only uniqueness and `prevent_collision: true` now
+  generate valid single-column indexes, and `nil` composite scopes no longer
+  raise while building a changeset. Existing callbacks that narrow candidates
+  by persisted columns should add those columns to `with:` and run
+  `mix brando.gen.blueprint_migration MyApp.Schema`; Igniter cannot infer the
+  intended database scope.
+
 - **Reliable Blueprint nested deletion**: Generated Blueprint changesets now
   short-circuit irrelevant validation when an opted-in schema receives
   `marked_as_deleted: true`. Persisted nested entries are deleted even if other

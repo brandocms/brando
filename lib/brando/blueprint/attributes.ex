@@ -29,14 +29,17 @@ defmodule Brando.Blueprint.Attributes do
   `%{slug: "test", language: "dk"}` without erroring.
 
   For custom scopes, pass an arity-one callback that receives the changeset and
-  returns the query used to check candidates:
+  returns the query used to check candidates. Declare every persisted database
+  scope field with `:with` so the callback query, Ecto constraint, and generated
+  unique index enforce the same contract:
 
       attribute :slug,
         unique: [
           prevent_collision: fn changeset ->
             language = Ecto.Changeset.get_field(changeset, :language)
             from entry in MyApp.Content.Entry, where: entry.language == ^language
-          end
+          end,
+          with: :language
         ]
 
   """

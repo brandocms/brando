@@ -2,6 +2,7 @@ defmodule Brando.Blueprint.Migrations.Schema do
   @moduledoc false
 
   alias Brando.Blueprint.Migrations.Types
+  alias Brando.Blueprint.UniqueFields
   alias Brando.Exception.BlueprintError
 
   @format_version 2
@@ -387,21 +388,7 @@ defmodule Brando.Blueprint.Migrations.Schema do
     end)
   end
 
-  defp unique_fields(field, true), do: [field]
-
-  defp unique_fields(field, opts) when is_list(opts) do
-    additional_fields =
-      cond do
-        Keyword.has_key?(opts, :with) -> List.wrap(Keyword.fetch!(opts, :with))
-        is_atom(Keyword.get(opts, :prevent_collision)) -> [Keyword.fetch!(opts, :prevent_collision)]
-        is_list(Keyword.get(opts, :prevent_collision)) -> Keyword.fetch!(opts, :prevent_collision)
-        true -> []
-      end
-
-    [field | additional_fields]
-  end
-
-  defp unique_fields(field, _), do: [field]
+  defp unique_fields(field, unique), do: UniqueFields.fields(field, unique)
 
   defp auxiliary_tables(%{type: :has_many, name: name, opts: %{module: :blocks}}, owner_table, owner_key_type) do
     table = "#{owner_table}_#{name}"

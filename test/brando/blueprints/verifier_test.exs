@@ -254,6 +254,38 @@ defmodule Brando.Blueprint.VerifierTest do
     end
   end
 
+  test "only collision callbacks may combine persisted scopes and messages" do
+    module =
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :language, :language
+
+            attribute :slug, :slug,
+              unique: [
+                prevent_collision: fn _changeset -> __MODULE__ end,
+                with: :language,
+                message: "must be unique in this language"
+              ]
+          end
+        end
+      )
+
+    assert %{opts: %{unique: unique_opts}} = Brando.Blueprint.Attributes.__attribute__(module, :slug)
+    assert Keyword.get(unique_opts, :with) == :language
+    assert is_function(Keyword.get(unique_opts, :prevent_collision), 1)
+
+    assert_raise Spark.Error.DslError, ~r/can only be combined.*arity-one callback/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :slug, :slug, unique: [prevent_collision: true, message: "must be unique"]
+          end
+        end
+      )
+    end
+  end
+
   test "rejects fields that collide with the implicit primary key" do
     assert_raise Spark.Error.DslError, ~r/duplicate Ecto field :id/, fn ->
       compile_blueprint(

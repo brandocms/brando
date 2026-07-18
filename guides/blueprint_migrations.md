@@ -69,6 +69,35 @@ The generator emits a column rename in `up/0` and the inverse rename in `down/0`
 change on the renamed column. Do not declare both `:title` and `:headline`; the semantic validator rejects that
 ambiguous state. The hint may remain in the Blueprint after the migration; once the new column exists it is a no-op.
 
+## Scoping a custom collision callback
+
+An arity-one `prevent_collision` callback controls the candidate query. When that query scopes uniqueness by
+persisted fields, declare the same fields with `with:` so the runtime constraint and generated database index agree:
+
+```elixir
+attribute :slug,
+  :slug,
+  unique: [
+    prevent_collision: fn changeset ->
+      language = Ecto.Changeset.get_field(changeset, :language)
+      from entry in MyApp.Content.Entry, where: entry.language == ^language
+    end,
+    with: :language
+  ]
+```
+
+Callback-only declarations remain globally unique in the database. If an existing callback already narrows
+candidates by one or more persisted columns, add those columns to `with:` and run the normal Blueprint migration
+generator:
+
+```shell
+mix brando.gen.blueprint_migration MyApp.Content.Entry
+```
+
+Review the generated replacement of the global unique index with the composite index, then run the rollback/forward
+checks from the normal workflow. This source decision cannot be inferred safely by Igniter, so the upgrade task does
+not add `with:` or generate the migration automatically.
+
 ## Changes that require a hand-written migration
 
 Table and primary-key changes are deliberately refused. Their safe implementation depends on deployed data, foreign

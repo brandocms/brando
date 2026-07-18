@@ -160,10 +160,13 @@ Invalid declarations are reported while the Blueprint compiles.
 `unique: [prevent_collision: scope]` reevaluates the unique value when either
 that value or one of its scope fields changes. An arity-one collision callback
 receives the current changeset and must return the Ecto query used to search for
-candidates. Persisted entries are excluded from their own collision query, so
-an update cannot suffix a value merely because it already belongs to that row.
-These are changeset corrections behind the existing DSL and require no Igniter
-upgrade or database migration.
+candidates. If the callback scopes uniqueness by persisted columns, list those
+columns in `with:`. Brando applies them to the callback query, Ecto constraint,
+and generated unique index. Persisted entries are excluded from their own
+collision query, so an update cannot suffix a value merely because it already
+belongs to that row. Callback-only declarations remain globally unique at the
+database layer. If any composite scope value is `nil`, collision suffixing is
+skipped to match PostgreSQL's default unique-index handling of `NULL` values.
 
 For cast collection relations, `required: true` also applies when a form or API
 sends `nil`, an empty string/list/map, or a list containing only blank ID

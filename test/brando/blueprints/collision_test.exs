@@ -54,6 +54,86 @@ defmodule Brando.Blueprint.CollisionTest do
     assert updated_page.uri == "shared-scope-1"
   end
 
+  test "callback collision scopes align the query and database constraint" do
+    user = Factory.insert(:random_user)
+    _english_page = Factory.insert(:page, creator: user, language: :en, uri: "callback-with-scope")
+
+    collision_source = fn _changeset -> Page end
+
+    attribute = %{
+      name: :uri,
+      opts: %{
+        unique: [
+          prevent_collision: collision_source,
+          with: :language,
+          message: "must be unique in this language"
+        ]
+      }
+    }
+
+    norwegian_changeset =
+      %Page{}
+      |> Changeset.change(%{
+        creator_id: user.id,
+        language: :no,
+        status: :published,
+        template: "default.html",
+        title: "Norwegian callback scope",
+        uri: "callback-with-scope"
+      })
+      |> Unique.run_unique_attribute_constraints(Page, [attribute])
+
+    assert Enum.any?(norwegian_changeset.constraints, fn constraint ->
+             constraint.constraint == "pages_uri_language_index" and
+               constraint.error_message == "must be unique in this language"
+           end)
+
+    assert {:ok, norwegian_page} = Brando.Repo.insert(norwegian_changeset)
+    assert norwegian_page.uri == "callback-with-scope"
+
+    english_changeset =
+      %Page{}
+      |> Changeset.change(%{
+        creator_id: user.id,
+        language: :en,
+        status: :published,
+        template: "default.html",
+        title: "English callback scope",
+        uri: "callback-with-scope"
+      })
+      |> Unique.run_unique_attribute_constraints(Page, [attribute])
+
+    assert {:ok, english_page} = Brando.Repo.insert(english_changeset)
+    assert english_page.uri == "callback-with-scope-1"
+  end
+
+  test "composite constraints surface their configured error message" do
+    user = Factory.insert(:random_user)
+    _existing_page = Factory.insert(:page, creator: user, language: :en, uri: "constraint-message")
+
+    attribute = %{
+      name: :uri,
+      opts: %{unique: [with: :language, message: "must be unique in this language"]}
+    }
+
+    changeset =
+      %Page{}
+      |> Changeset.change(%{
+        creator_id: user.id,
+        language: :en,
+        status: :published,
+        template: "default.html",
+        title: "Constraint message",
+        uri: "constraint-message"
+      })
+      |> Unique.run_unique_attribute_constraints(Page, [attribute])
+
+    assert {:error, failed_changeset} = Brando.Repo.insert(changeset)
+
+    assert {"must be unique in this language", [constraint: :unique, constraint_name: "pages_uri_language_index"]} =
+             Keyword.fetch!(failed_changeset.errors, :uri)
+  end
+
   test "a persisted entry does not collide with itself" do
     page = Factory.insert(:page)
 

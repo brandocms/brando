@@ -5,6 +5,7 @@ defmodule Brando.Blueprint.Verifier do
 
   alias Brando.Blueprint.AssociationKey
   alias Brando.Blueprint.Config
+  alias Brando.Blueprint.UniqueFields
   alias Spark.Dsl.Entity
   alias Spark.Dsl.Verifier
   alias Spark.Error.DslError
@@ -482,14 +483,10 @@ defmodule Brando.Blueprint.Verifier do
   defp unique_base_field(:relation, relation), do: AssociationKey.for(relation)
 
   defp unique_reference_fields(unique) when is_list(unique) do
-    List.wrap(Keyword.get(unique, :with)) ++ collision_fields(Keyword.get(unique, :prevent_collision))
+    UniqueFields.scope(unique, Keyword.get(unique, :prevent_collision))
   end
 
   defp unique_reference_fields(_unique), do: []
-
-  defp collision_fields(field) when is_atom(field) and field not in [nil, false, true], do: [field]
-  defp collision_fields(fields) when is_list(fields), do: fields
-  defp collision_fields(_value), do: []
 
   defp verify_unique_options(dsl_state, kind, entity, unique) do
     if Keyword.keyword?(unique) do
@@ -530,12 +527,30 @@ defmodule Brando.Blueprint.Verifier do
   defp verify_unique_scope(_dsl_state, _kind, _entity, _unique), do: :ok
 
   defp verify_collision_combination(dsl_state, kind, entity, unique) do
-    keys = Keyword.keys(unique)
+    case Keyword.fetch(unique, :prevent_collision) do
+      {:ok, collision_callback} when is_function(collision_callback, 1) ->
+        verify_collision_keys(dsl_state, kind, entity, unique, [:prevent_collision, :with, :message])
 
-    if Keyword.has_key?(unique, :prevent_collision) and keys != [:prevent_collision] do
-      error(dsl_state, section(kind), entity, "`prevent_collision` cannot be combined with other unique options")
-    else
-      :ok
+      {:ok, _collision_scope} ->
+        verify_collision_keys(dsl_state, kind, entity, unique, [:prevent_collision])
+
+      :error ->
+        :ok
+    end
+  end
+
+  defp verify_collision_keys(dsl_state, kind, entity, unique, allowed_keys) do
+    case Keyword.keys(unique) -- allowed_keys do
+      [] ->
+        :ok
+
+      _unsupported ->
+        error(
+          dsl_state,
+          section(kind),
+          entity,
+          "`prevent_collision` can only be combined with `:with` and `:message` for an arity-one callback"
+        )
     end
   end
 
