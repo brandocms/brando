@@ -134,6 +134,15 @@
 
 #### Improvements
 
+- **PostgreSQL-safe Blueprint constraint names**: Generated index and foreign-key
+  names now use PostgreSQL's stored 63-byte identifier form in migrations,
+  snapshots, and runtime changeset constraints. Long unique and foreign-key
+  violations are therefore returned as changeset errors instead of raising an
+  unmatched constraint exception. Existing databases need no migration:
+  PostgreSQL already truncated these names when it created them, and Brando
+  canonicalizes older Blueprint snapshots in memory without generating index or
+  constraint churn.
+
 - **Database-aligned callback collision scopes**: Arity-one Blueprint
   `prevent_collision` callbacks may now be combined with `with:` and `message:`.
   Persisted `with:` fields constrain the callback query, Ecto unique constraint,

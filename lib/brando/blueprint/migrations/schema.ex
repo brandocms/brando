@@ -1,6 +1,7 @@
 defmodule Brando.Blueprint.Migrations.Schema do
   @moduledoc false
 
+  alias Brando.Blueprint.DatabaseIdentifier
   alias Brando.Blueprint.Migrations.Types
   alias Brando.Blueprint.UniqueFields
   alias Brando.Exception.BlueprintError
@@ -80,6 +81,22 @@ defmodule Brando.Blueprint.Migrations.Schema do
   @spec persistable(t()) :: t()
   def persistable(schema) do
     update_in(schema.columns, &Enum.map(&1, fn column -> Map.delete(column, :rename_from) end))
+  end
+
+  @doc """
+  Canonicalizes stored index and reference names to PostgreSQL identifiers.
+
+  This is also applied while reading older snapshots so PostgreSQL's implicit
+  truncation does not appear as a Blueprint storage change.
+  """
+  @spec canonicalize_database_identifiers(t()) :: t()
+  def canonicalize_database_identifiers(schema) do
+    %{
+      schema
+      | columns: Enum.map(schema.columns, &canonicalize_column_identifier/1),
+        indexes: Enum.map(schema.indexes, &canonicalize_index_identifier/1),
+        auxiliary_tables: Enum.map(schema.auxiliary_tables, &canonicalize_auxiliary_identifiers/1)
+    }
   end
 
   @doc """
@@ -461,16 +478,38 @@ defmodule Brando.Blueprint.Migrations.Schema do
       type: type,
       column: referenced_column,
       on_delete: on_delete,
-      name: constraint_name || "#{owner_table}_#{column}_fkey"
+      name:
+        if(constraint_name,
+          do: DatabaseIdentifier.normalize(constraint_name),
+          else: DatabaseIdentifier.foreign_key_name(owner_table, column)
+        )
     }
   end
 
   defp index(table, fields, unique) do
     %{
-      name: "#{table}_#{Enum.join(fields, "_")}_index",
+      name: DatabaseIdentifier.index_name(table, fields),
       table: table,
       fields: fields,
       unique: unique
+    }
+  end
+
+  defp canonicalize_column_identifier(%{reference: nil} = column), do: column
+
+  defp canonicalize_column_identifier(%{reference: reference} = column) do
+    %{column | reference: %{reference | name: DatabaseIdentifier.normalize(reference.name)}}
+  end
+
+  defp canonicalize_index_identifier(index) do
+    %{index | name: DatabaseIdentifier.normalize(index.name)}
+  end
+
+  defp canonicalize_auxiliary_identifiers(table) do
+    %{
+      table
+      | columns: Enum.map(table.columns, &canonicalize_column_identifier/1),
+        indexes: Enum.map(table.indexes, &canonicalize_index_identifier/1)
     }
   end
 

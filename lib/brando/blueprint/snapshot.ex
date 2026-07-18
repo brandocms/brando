@@ -191,7 +191,10 @@ defmodule Brando.Blueprint.Snapshot do
       |> Plug.Crypto.non_executable_binary_to_term()
       |> migrate_snapshot(module)
 
-    validate_snapshot!(snapshot, expected_version, filename)
+    snapshot
+    |> validate_snapshot!(expected_version, filename)
+    |> canonicalize_database_identifiers()
+    |> validate_snapshot!(expected_version, filename)
   rescue
     error in [ArgumentError, ErlangError, KeyError] ->
       reraise BlueprintError.exception(
@@ -206,6 +209,10 @@ defmodule Brando.Blueprint.Snapshot do
                 """
               ),
               __STACKTRACE__
+  end
+
+  defp canonicalize_database_identifiers(snapshot) do
+    %{snapshot | schema: Schema.canonicalize_database_identifiers(snapshot.schema)}
   end
 
   defp migrate_snapshot(%{__struct__: Snapshot} = snapshot, module) do

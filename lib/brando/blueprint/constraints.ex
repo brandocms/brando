@@ -36,6 +36,7 @@ defmodule Brando.Blueprint.Constraints do
   import Ecto.Query
 
   alias Brando.Blueprint.AssociationKey
+  alias Brando.Blueprint.DatabaseIdentifier
   alias Brando.RuntimeConfig
 
   @content_module Module.concat(["Brando", "Content", "Module"])
@@ -66,17 +67,29 @@ defmodule Brando.Blueprint.Constraints do
   end
 
   defp add_foreign_key_constraint(relation, changeset) do
+    field = AssociationKey.for(relation)
+
     foreign_key_constraint(
       changeset,
-      AssociationKey.for(relation),
-      foreign_key_constraint_opts(relation)
+      field,
+      foreign_key_constraint_opts(relation, changeset, field)
     )
   end
 
-  defp foreign_key_constraint_opts(%{opts: %{constraint_name: constraint_name}}),
-    do: [name: constraint_name]
+  defp foreign_key_constraint_opts(%{opts: %{constraint_name: constraint_name}}, _changeset, _field),
+    do: [name: DatabaseIdentifier.normalize(constraint_name)]
 
-  defp foreign_key_constraint_opts(_relation), do: []
+  defp foreign_key_constraint_opts(
+         _relation,
+         %Ecto.Changeset{data: %{__meta__: %{source: source}, __struct__: schema}},
+         field
+       )
+       when is_binary(source) do
+    field_source = schema.__schema__(:field_source, field) || field
+    [name: DatabaseIdentifier.foreign_key_name(source, field_source)]
+  end
+
+  defp foreign_key_constraint_opts(_relation, _changeset, _field), do: []
 
   defp run_validation({:min_length, length}, validated_changeset, %{name: name, type: :entries}) do
     validate_length(validated_changeset, name, min: length)

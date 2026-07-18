@@ -303,3 +303,28 @@ defmodule Brando.MigrationTest.ExecutionV2 do
     attribute :title, :string
   end
 end
+
+defmodule Brando.MigrationTest.LongIdentifiers do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationIdentifiers",
+    schema: "Record",
+    singular: "record",
+    plural: "records",
+    gettext_module: Brando.Gettext
+
+  table "blueprint_runtime_constraint_records"
+
+  attributes do
+    attribute :tenant_reference_identifier, :integer
+
+    attribute :uniqueness_value, :string,
+      unique: [with: :tenant_reference_identifier, message: "has already been used for this tenant"]
+  end
+
+  relations do
+    relation :owner, :belongs_to,
+      module: Brando.Users.User,
+      foreign_key: :owner_reference_identifier_id
+  end
+end

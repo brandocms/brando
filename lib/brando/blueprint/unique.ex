@@ -12,6 +12,7 @@ defmodule Brando.Blueprint.Unique do
 
   alias Brando.Blueprint.AssociationKey
   alias Brando.Blueprint.Collision
+  alias Brando.Blueprint.DatabaseIdentifier
   alias Brando.Blueprint.UniqueFields
   alias Ecto.Changeset
 
@@ -104,7 +105,7 @@ defmodule Brando.Blueprint.Unique do
     do: add_unique_constraint(changeset, field, unique, nil)
 
   defp add_unique_constraint(changeset, field, true, _collision_scope) do
-    Changeset.unique_constraint(changeset, field)
+    Changeset.unique_constraint(changeset, field, constraint_name_opts(changeset, field))
   end
 
   defp add_unique_constraint(changeset, field, unique_opts, collision_scope) do
@@ -116,8 +117,21 @@ defmodule Brando.Blueprint.Unique do
 
     message = Keyword.get(unique_opts, :message, "has already been taken")
 
-    Changeset.unique_constraint(changeset, field_or_fields, message: message)
+    opts = [message: message] ++ constraint_name_opts(changeset, field_or_fields)
+    Changeset.unique_constraint(changeset, field_or_fields, opts)
   end
+
+  defp constraint_name_opts(%Changeset{data: %{__meta__: %{source: source}, __struct__: schema}}, fields)
+       when is_binary(source) do
+    field_sources =
+      fields
+      |> List.wrap()
+      |> Enum.map(&(schema.__schema__(:field_source, &1) || &1))
+
+    [name: DatabaseIdentifier.index_name(source, field_sources)]
+  end
+
+  defp constraint_name_opts(_changeset, _fields), do: []
 
   defp filter_by_fields(queryable, fields, changeset) do
     fields_with_values =

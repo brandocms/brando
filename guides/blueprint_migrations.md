@@ -98,6 +98,22 @@ Review the generated replacement of the global unique index with the composite i
 checks from the normal workflow. This source decision cannot be inferred safely by Igniter, so the upgrade task does
 not add `with:` or generate the migration automatically.
 
+## Long index and foreign-key names
+
+PostgreSQL stores at most 63 bytes for an identifier and silently truncates
+longer index and constraint names. Blueprint migrations, snapshots, and Ecto
+changeset constraints use that stored form consistently, including names built
+from long tables, fields, composite unique scopes, and custom
+`constraint_name:` values.
+
+No database migration or Igniter step is required when upgrading. PostgreSQL
+already stored existing overlong names in truncated form. Brando canonicalizes
+older Blueprint snapshots while loading them, so running
+`mix brando.gen.blueprint_migration MyApp.Content.Entry` does not emit a
+drop/recreate migration solely because of this correction. Continue to review
+the generator output normally; any operations it does emit represent other
+storage changes.
+
 ## Changes that require a hand-written migration
 
 Table and primary-key changes are deliberately refused. Their safe implementation depends on deployed data, foreign

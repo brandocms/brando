@@ -1,6 +1,7 @@
 defmodule Brando.Blueprint.MigrationsTest do
   use ExUnit.Case, async: false
 
+  alias Brando.Blueprint.DatabaseIdentifier
   alias Brando.Blueprint.Migrations
   alias Brando.Blueprint.Snapshot
   alias Brando.Exception.BlueprintError
@@ -84,6 +85,44 @@ defmodule Brando.Blueprint.MigrationsTest do
     assert Path.wildcard("tmp/test_migrations/*.exs") == [generated.migration]
     assert Path.wildcard("tmp/test_snapshots/**/*", match_dot: true) != []
     assert Snapshot.get_snapshot_version(Brando.MigrationTest.Project, @test_opts) == 1
+  end
+
+  test "canonicalizes overlong names in existing snapshots without migration churn" do
+    module = Brando.MigrationTest.LongIdentifiers
+    assert {:ok, generated} = Migrations.create_migration(module, @test_opts)
+
+    snapshot = generated.snapshot |> File.read!() |> :erlang.binary_to_term()
+    table = snapshot.schema.table
+    full_unique_name = "#{table}_uniqueness_value_tenant_reference_identifier_index"
+    full_foreign_key_name = "#{table}_owner_reference_identifier_id_fkey"
+
+    indexes =
+      Enum.map(snapshot.schema.indexes, fn
+        %{unique: true} = index -> %{index | name: full_unique_name}
+        index -> index
+      end)
+
+    columns =
+      Enum.map(snapshot.schema.columns, fn
+        %{name: :owner_reference_identifier_id, reference: reference} = column ->
+          %{column | reference: %{reference | name: full_foreign_key_name}}
+
+        column ->
+          column
+      end)
+
+    overlong_snapshot = %{snapshot | schema: %{snapshot.schema | indexes: indexes, columns: columns}}
+    File.write!(generated.snapshot, :erlang.term_to_binary(overlong_snapshot, compressed: 6))
+
+    assert {:noop, %{snapshot_version: 1}} = Migrations.create_migration(module, @test_opts)
+    assert Path.wildcard("tmp/test_migrations/*.exs") == [generated.migration]
+
+    canonical_snapshot = Snapshot.get_latest_snapshot(module, @test_opts)
+    unique_index = Enum.find(canonical_snapshot.schema.indexes, & &1.unique)
+    owner_column = Enum.find(canonical_snapshot.schema.columns, &(&1.name == :owner_reference_identifier_id))
+
+    assert unique_index.name == DatabaseIdentifier.normalize(full_unique_name)
+    assert owner_column.reference.name == DatabaseIdentifier.normalize(full_foreign_key_name)
   end
 
   test "serializes concurrent generators across a migration directory" do
