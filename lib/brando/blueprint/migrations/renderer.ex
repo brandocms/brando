@@ -81,8 +81,17 @@ defmodule Brando.Blueprint.Migrations.Renderer do
 
     {table_opts, primary_key_line} =
       case schema.primary_key do
-        :uuid -> {", primary_key: false", "add :id, :uuid, primary_key: true"}
-        :id -> {"", nil}
+        false ->
+          {", primary_key: false", nil}
+
+        %{name: :id, type: :id} ->
+          {"", nil}
+
+        %{name: name, type: :id} ->
+          {", primary_key: false", "add #{inspect(name)}, :bigserial, primary_key: true"}
+
+        %{name: name, type: :uuid} ->
+          {", primary_key: false", "add #{inspect(name)}, :uuid, primary_key: true"}
       end
 
     lines =

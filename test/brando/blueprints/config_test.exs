@@ -66,6 +66,7 @@ defmodule Brando.Blueprint.ConfigTest do
       {quote(do: table("Invalid-Table")), ~r/`:table_name` must be a snake_case identifier/},
       {quote(do: primary_key(:serial)), ~r/`:primary_key` must use the default/},
       {quote(do: primary_key({:uuid, Ecto.UUID, autogenerate: true})), ~r/`:primary_key` must use the default/},
+      {quote(do: primary_key({:id, :id, source: "record_pk"})), ~r/`:primary_key` source must be an atom/},
       {quote(do: factory(title: "invalid")), ~r/`:factory` must be a plain map/},
       {quote(do: factory(%URI{})), ~r/`:factory` must be a plain map/},
       {quote(do: @allow_mark_as_deleted(:sometimes)), ~r/`:allow_mark_as_deleted` must be a boolean/},

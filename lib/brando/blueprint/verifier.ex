@@ -5,6 +5,7 @@ defmodule Brando.Blueprint.Verifier do
 
   alias Brando.Blueprint.AssociationKey
   alias Brando.Blueprint.Config
+  alias Brando.Blueprint.DatabaseIdentifier
   alias Brando.Blueprint.UniqueFields
   alias Spark.Dsl.Entity
   alias Spark.Dsl.Verifier
@@ -43,6 +44,7 @@ defmodule Brando.Blueprint.Verifier do
     join_through: [:many_to_many],
     join_where: [:many_to_many],
     references: [:belongs_to, :has_many, :has_one],
+    source: [:belongs_to, :embeds_many, :embeds_one],
     through: [:has_many],
     type: [:belongs_to]
   ]
@@ -58,8 +60,9 @@ defmodule Brando.Blueprint.Verifier do
     with :ok <- verify_blueprint_config(dsl_state),
          :ok <- verify_attributes(dsl_state, attributes, storage_columns),
          :ok <- verify_relations(dsl_state, relations, storage_columns),
-         :ok <- verify_assets(dsl_state, assets) do
-      verify_storage_field_collisions(dsl_state, attributes, relations, assets)
+         :ok <- verify_assets(dsl_state, assets),
+         :ok <- verify_storage_field_collisions(dsl_state, attributes, relations, assets) do
+      verify_storage_source_collisions(dsl_state, attributes, relations, assets)
     end
   end
 
@@ -134,6 +137,7 @@ defmodule Brando.Blueprint.Verifier do
 
   defp verify_attribute(dsl_state, attribute, storage_columns) do
     with :ok <- verify_attribute_type(dsl_state, attribute),
+         :ok <- verify_attribute_source(dsl_state, attribute),
          :ok <- verify_boolean_option(dsl_state, :attributes, attribute, :required),
          :ok <- verify_boolean_option(dsl_state, :attributes, attribute, :virtual),
          :ok <- verify_unique(dsl_state, :attribute, attribute),
@@ -150,15 +154,62 @@ defmodule Brando.Blueprint.Verifier do
 
   defp verify_attribute_type(_dsl_state, _attribute), do: :ok
 
+  defp verify_attribute_source(_dsl_state, %{opts: opts} = _attribute)
+       when not is_map_key(opts, :source),
+       do: :ok
+
+  defp verify_attribute_source(_dsl_state, %{opts: %{source: nil}}), do: :ok
+
+  defp verify_attribute_source(dsl_state, %{name: name, opts: %{source: _source}} = attribute)
+       when name in [:inserted_at, :updated_at] do
+    error(dsl_state, :attributes, attribute, "timestamp attributes do not support `:source`")
+  end
+
+  defp verify_attribute_source(dsl_state, %{opts: %{source: _source, virtual: true}} = attribute) do
+    error(dsl_state, :attributes, attribute, "virtual attributes cannot declare a database `:source`")
+  end
+
+  defp verify_attribute_source(_dsl_state, %{opts: %{source: source}}) when is_atom(source), do: :ok
+
+  defp verify_attribute_source(dsl_state, %{opts: %{source: source}} = attribute) do
+    error(dsl_state, :attributes, attribute, "`:source` must be an atom, got: #{inspect(source)}")
+  end
+
   defp verify_relation(dsl_state, relation, storage_columns) do
     with :ok <- verify_relation_module(dsl_state, relation),
          :ok <- verify_relation_options(dsl_state, relation),
+         :ok <- verify_manual_belongs_to_field(dsl_state, relation, storage_columns),
          :ok <- verify_relation_cast(dsl_state, relation),
          :ok <- verify_unique(dsl_state, :relation, relation),
          :ok <- verify_unique_references(dsl_state, :relation, relation, storage_columns) do
       verify_constraints(dsl_state, :relation, relation)
     end
   end
+
+  defp verify_manual_belongs_to_field(
+         dsl_state,
+         %Brando.Blueprint.Relations.Relation{
+           name: name,
+           type: :belongs_to,
+           opts: %{define_field: false} = opts
+         } = relation,
+         storage_columns
+       ) do
+    field = Map.get(opts, :foreign_key, :"#{name}_id")
+
+    if MapSet.member?(storage_columns, field) do
+      :ok
+    else
+      error(
+        dsl_state,
+        :relations,
+        relation,
+        "uses `define_field: false` but no persisted field #{inspect(field)} is declared"
+      )
+    end
+  end
+
+  defp verify_manual_belongs_to_field(_dsl_state, _relation, _storage_columns), do: :ok
 
   defp verify_boolean_option(dsl_state, section, %{opts: opts} = entity, option) do
     case Map.get(opts, option) do
@@ -181,38 +232,42 @@ defmodule Brando.Blueprint.Verifier do
 
   defp verify_renames(dsl_state, attributes) do
     renamed = Enum.filter(attributes, &Map.has_key?(&1.opts, :rename_from))
-    names = MapSet.new(attributes, & &1.name)
 
-    Enum.reduce_while(renamed, MapSet.new(), fn attribute, sources ->
-      source = attribute.opts.rename_from
+    storage_names =
+      MapSet.new(attributes, fn attribute -> Map.get(attribute.opts, :source) || attribute.name end)
 
-      cond do
-        not is_atom(source) ->
-          {:halt, error(dsl_state, :attributes, attribute, "`:rename_from` must be an atom")}
-
-        source == attribute.name ->
-          {:halt, error(dsl_state, :attributes, attribute, "`:rename_from` cannot equal the attribute name")}
-
-        MapSet.member?(names, source) ->
-          {:halt,
-           error(
-             dsl_state,
-             :attributes,
-             attribute,
-             "`:rename_from` points at declared attribute #{inspect(source)}; remove the old declaration when renaming"
-           )}
-
-        MapSet.member?(sources, source) ->
-          {:halt,
-           error(dsl_state, :attributes, attribute, "multiple attributes rename the same column #{inspect(source)}")}
-
-        true ->
-          {:cont, MapSet.put(sources, source)}
-      end
-    end)
+    Enum.reduce_while(renamed, MapSet.new(), &verify_rename(dsl_state, &1, &2, storage_names))
     |> case do
       %MapSet{} -> :ok
       error -> error
+    end
+  end
+
+  defp verify_rename(dsl_state, attribute, sources, storage_names) do
+    source = attribute.opts.rename_from
+    target = Map.get(attribute.opts, :source) || attribute.name
+
+    cond do
+      not is_atom(source) ->
+        {:halt, error(dsl_state, :attributes, attribute, "`:rename_from` must be an atom")}
+
+      source == target ->
+        {:halt, error(dsl_state, :attributes, attribute, "`:rename_from` cannot equal the database column name")}
+
+      MapSet.member?(storage_names, source) ->
+        {:halt,
+         error(
+           dsl_state,
+           :attributes,
+           attribute,
+           "`:rename_from` points at declared attribute #{inspect(source)}; remove the old declaration when renaming"
+         )}
+
+      MapSet.member?(sources, source) ->
+        {:halt, error(dsl_state, :attributes, attribute, "multiple attributes rename the same column #{inspect(source)}")}
+
+      true ->
+        {:cont, MapSet.put(sources, source)}
     end
   end
 
@@ -270,6 +325,7 @@ defmodule Brando.Blueprint.Verifier do
          :ok <- verify_boolean_option(dsl_state, :relations, relation, :define_field),
          :ok <- verify_atom_option(dsl_state, relation, :foreign_key),
          :ok <- verify_atom_option(dsl_state, relation, :references),
+         :ok <- verify_atom_option(dsl_state, relation, :source),
          :ok <- verify_string_option(dsl_state, relation, :constraint_name),
          :ok <- verify_string_option(dsl_state, relation, :required_message),
          :ok <- verify_string_option(dsl_state, relation, :invalid_message),
@@ -670,8 +726,77 @@ defmodule Brando.Blueprint.Verifier do
       nil ->
         :ok
 
+      {name, :primary_key} ->
+        root_error(
+          dsl_state,
+          "the primary key declares duplicate database source #{inspect(DatabaseIdentifier.normalize(name))}"
+        )
+
       {name, entity} ->
         error(dsl_state, entity_section(entity), entity, "declares duplicate Ecto field #{inspect(name)}")
+    end
+  end
+
+  defp verify_storage_source_collisions(dsl_state, attributes, relations, assets) do
+    columns =
+      attribute_database_columns(attributes) ++
+        relation_database_columns(relations) ++
+        Enum.map(assets, &{:"#{&1.name}_id", &1}) ++
+        primary_key_database_column(dsl_state)
+
+    frequencies =
+      columns
+      |> Enum.map(fn {name, _entity} -> DatabaseIdentifier.normalize(name) end)
+      |> Enum.frequencies()
+
+    case Enum.find(columns, fn {name, _entity} ->
+           Map.fetch!(frequencies, DatabaseIdentifier.normalize(name)) > 1
+         end) do
+      nil ->
+        :ok
+
+      {name, entity} ->
+        error(
+          dsl_state,
+          entity_section(entity),
+          entity,
+          "declares duplicate database source #{inspect(DatabaseIdentifier.normalize(name))}"
+        )
+    end
+  end
+
+  defp attribute_database_columns(attributes) do
+    attributes
+    |> Enum.reject(&(Map.get(&1.opts, :virtual) == true))
+    |> Enum.map(&{Map.get(&1.opts, :source) || &1.name, &1})
+  end
+
+  defp relation_database_columns(relations) do
+    Enum.flat_map(relations, fn
+      %{type: :belongs_to, opts: %{define_field: false}} ->
+        []
+
+      %{type: :belongs_to, opts: opts} = relation ->
+        [{Map.get(opts, :source) || AssociationKey.for(relation), relation}]
+
+      %{type: type, name: name, opts: opts} = relation when type in [:embeds_one, :embeds_many] ->
+        [{Map.get(opts, :source) || name, relation}]
+
+      %{type: :has_many, name: name, opts: %{module: :blocks}} = relation ->
+        [{:"rendered_#{name}", relation}, {:"rendered_#{name}_at", relation}]
+
+      _relation ->
+        []
+    end)
+  end
+
+  defp primary_key_database_column(dsl_state) do
+    module = Verifier.get_persisted(dsl_state, :module)
+
+    case Module.get_attribute(module, :primary_key) do
+      false -> []
+      {name, _type, opts} -> [{Keyword.get(opts, :source) || name, :primary_key}]
+      _default -> [{:id, :primary_key}]
     end
   end
 

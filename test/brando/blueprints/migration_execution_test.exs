@@ -137,6 +137,91 @@ defmodule Brando.Blueprint.MigrationExecutionTest do
              )
   end
 
+  test "physical field sources execute with matching keys, indexes, and references", %{prefix: prefix} do
+    opts = [migration_path: @migration_path, snapshot_path: @snapshot_path]
+    module = Brando.MigrationTest.PhysicalSources
+    table = module.__schema__(:source)
+
+    Ecto.Adapters.SQL.query!(
+      MigrationRepo,
+      ~s|CREATE TABLE "#{prefix}".users (id bigserial PRIMARY KEY)|,
+      []
+    )
+
+    Ecto.Adapters.SQL.query!(
+      MigrationRepo,
+      ~s|CREATE TABLE "#{prefix}".content_identifiers (id bigserial PRIMARY KEY)|,
+      []
+    )
+
+    assert {:ok, generated} = Migrations.create_migration(module, opts)
+    version = migration_version(generated.migration)
+    migration_source = [{version, compile_migration!(generated.migration)}]
+
+    assert [^version] =
+             Ecto.Migrator.run(MigrationRepo, migration_source, :up,
+               all: true,
+               prefix: prefix,
+               log: false
+             )
+
+    assert %{rows: [["account_ref"], ["headline"], ["owner_ref"], ["payload"], ["record_pk"]]} =
+             Ecto.Adapters.SQL.query!(
+               MigrationRepo,
+               """
+               SELECT column_name
+               FROM information_schema.columns
+               WHERE table_schema = $1 AND table_name = $2
+               ORDER BY column_name
+               """,
+               [prefix, table]
+             )
+
+    assert %{rows: [[2]]} =
+             Ecto.Adapters.SQL.query!(
+               MigrationRepo,
+               """
+               SELECT count(*)
+               FROM pg_indexes
+               WHERE schemaname = $1
+                 AND tablename = $2
+                 AND indexdef LIKE 'CREATE UNIQUE INDEX%'
+                 AND (indexdef LIKE '%(headline, account_ref)%'
+                      OR indexdef LIKE '%(owner_ref, account_ref)%')
+               """,
+               [prefix, table]
+             )
+
+    auxiliary_table = "#{table}_related_entries_identifiers"
+
+    assert %{rows: [["record_pk"]]} =
+             Ecto.Adapters.SQL.query!(
+               MigrationRepo,
+               """
+               SELECT target_column.attname
+               FROM pg_constraint AS con
+               JOIN pg_class AS owner_table ON owner_table.oid = con.conrelid
+               JOIN pg_namespace AS namespace ON namespace.oid = owner_table.relnamespace
+               JOIN pg_class AS target_table ON target_table.oid = con.confrelid
+               JOIN pg_attribute AS target_column
+                 ON target_column.attrelid = target_table.oid
+                AND target_column.attnum = con.confkey[1]
+               WHERE namespace.nspname = $1
+                 AND owner_table.relname = $2
+                 AND con.contype = 'f'
+                 AND target_table.relname = $3
+               """,
+               [prefix, auxiliary_table, table]
+             )
+
+    assert [^version] =
+             Ecto.Migrator.run(MigrationRepo, migration_source, :down,
+               all: true,
+               prefix: prefix,
+               log: false
+             )
+  end
+
   defp migration_version(filename) do
     filename
     |> Path.basename()

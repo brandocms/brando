@@ -131,7 +131,7 @@ defmodule Brando.Blueprint.Migrations do
   defp upgrade_snapshot_format(module, previous_snapshot, current_schema, opts) do
     upgraded = %Snapshot{
       previous_snapshot
-      | format_version: 2,
+      | format_version: 3,
         migrated_from_format: nil,
         schema: Schema.persistable(current_schema),
         updated_at: DateTime.utc_now(),

@@ -116,6 +116,20 @@ Array attributes always declare their element type, for example
 Ecto's `:naive_datetime` schema type. These mappings affect the runtime schema
 type, while Blueprint migration snapshots retain their database-oriented type.
 
+Persisted attributes may keep a stable Elixir field name while mapping to a
+different physical database column with Ecto's `source:` option:
+
+```elixir
+attribute :title, :string, source: :headline
+```
+
+Forms, changesets, and queries use `:title`; generated migrations, indexes, and
+constraints use `:headline`. Physical sources must be atoms and must remain
+unique after PostgreSQL's 63-byte identifier normalization. Virtual and
+timestamp attributes cannot declare a source. See
+[Blueprint migrations](blueprint_migrations.md#physical-ecto-sources) before
+adding or correcting a source on an existing table.
+
 #### Relations
 
 Blueprint uses the same persisted foreign-key name for Ecto schema generation,
@@ -149,6 +163,12 @@ relations do
     required: true
 end
 ```
+
+Use `source:` when the logical foreign-key field should remain conventional but
+the physical column differs, for example `relation :creator, :belongs_to,
+module: MyApp.Users.User, source: :owner_ref`. Embedded one/many relations also
+accept a physical JSONB source. Other relation types reject `source:` because
+they do not define an owner-table field.
 
 `required`, `define_field`, and `virtual` options are booleans. Unique `with:`
 and `prevent_collision:` fields must name columns persisted by the same

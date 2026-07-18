@@ -127,6 +127,111 @@ defmodule Brando.Blueprint.MigrationsTest do
     assert owner_column.reference.name == DatabaseIdentifier.normalize(full_foreign_key_name)
   end
 
+  test "migration schemas use Ecto physical sources throughout the storage contract" do
+    module = Brando.MigrationTest.PhysicalSources
+    schema = MigrationSchema.build(module)
+
+    assert module.__schema__(:field_source, :id) == :record_pk
+    assert module.__schema__(:field_source, :title) == :headline
+    assert module.__schema__(:field_source, :tenant_id) == :account_ref
+    assert module.__schema__(:field_source, :owner_id) == :owner_ref
+    assert module.__schema__(:field_source, :metadata) == :payload
+
+    assert schema.primary_key == %{name: :record_pk, type: :id}
+    assert Enum.map(schema.columns, & &1.name) == [:account_ref, :headline, :owner_ref, :payload]
+
+    assert Enum.any?(schema.indexes, &(&1.fields == [:headline, :account_ref] and &1.unique))
+    assert Enum.any?(schema.indexes, &(&1.fields == [:owner_ref, :account_ref] and &1.unique))
+
+    changeset = module.changeset(struct(module), %{})
+    runtime_constraint_names = MapSet.new(changeset.constraints, & &1.constraint)
+
+    assert Enum.all?(schema.indexes, &MapSet.member?(runtime_constraint_names, &1.name))
+
+    owner_column = Enum.find(schema.columns, &(&1.name == :owner_ref))
+    assert MapSet.member?(runtime_constraint_names, owner_column.reference.name)
+
+    [related_entries] = schema.auxiliary_tables
+    parent_column = Enum.find(related_entries.columns, &(&1.name == :parent_id))
+    assert parent_column.reference.column == :record_pk
+
+    assert {:ok, generated} = Migrations.create_migration(module, @test_opts)
+    source = File.read!(generated.migration)
+
+    assert source =~ "create table(:#{schema.table}, primary_key: false)"
+    assert source =~ "add :record_pk, :bigserial, primary_key: true"
+    assert source =~ "add :headline, :text"
+    assert source =~ "add :owner_ref,"
+    assert source =~ "references(:users,"
+    assert source =~ "add :payload, :jsonb"
+    assert source =~ "column: :record_pk"
+    refute source =~ "add :title,"
+    refute source =~ "add :owner_id,"
+  end
+
+  test "define_field false attaches a foreign key to its declared physical column" do
+    schema = MigrationSchema.build(Brando.MigrationTest.ManualPhysicalForeignKey)
+
+    assert [column] = schema.columns
+    assert column.name == :owner_ref
+    assert column.reference.table == "users"
+
+    assert column.reference.name ==
+             DatabaseIdentifier.foreign_key_name(schema.table, :owner_ref)
+  end
+
+  test "primary_key false creates a table without an implicit id" do
+    module = Brando.MigrationTest.NoPrimaryKey
+    assert MigrationSchema.build(module).primary_key == false
+    assert {:ok, generated} = Migrations.create_migration(module, @test_opts)
+
+    source = File.read!(generated.migration)
+    assert source =~ "create table(:#{module.__schema__(:source)}, primary_key: false)"
+    refute source =~ "add :id,"
+  end
+
+  test "physical source changes use rename_from as a database column hint" do
+    assert {:ok, _initial} = Migrations.create_migration(Brando.MigrationTest.PhysicalSourceV1, @test_opts)
+    assert {:ok, update} = Migrations.create_migration(Brando.MigrationTest.PhysicalSourceV2, @test_opts)
+
+    source = File.read!(update.migration)
+    assert source =~ "rename table(:blueprint_physical_source_renames), :title, to: :headline"
+    assert source =~ "rename table(:blueprint_physical_source_renames), :headline, to: :title"
+    assert source =~ "blueprint_physical_source_renames_headline_index"
+  end
+
+  test "format-2 snapshots upgrade without migration churn" do
+    module = Brando.MigrationTest.Project
+    current = Snapshot.build_snapshot(module, 1)
+
+    format_2_schema = %{
+      current.schema
+      | format_version: 2,
+        primary_key: current.schema.primary_key.type
+    }
+
+    format_2_snapshot = %{
+      current
+      | format_version: 2,
+        schema: format_2_schema
+    }
+
+    write_snapshot(module, 1, format_2_snapshot)
+    File.mkdir_p!(@test_opts[:migration_path])
+
+    File.write!(
+      Path.join(@test_opts[:migration_path], "20260101000000_blueprint_brando_projects_project_001.exs"),
+      "# matching format-2 migration"
+    )
+
+    assert {:noop, %{snapshot_version: 1}} = Migrations.create_migration(module, @test_opts)
+
+    upgraded = snapshot_filename(module, 1) |> File.read!() |> :erlang.binary_to_term([:safe])
+    assert upgraded.format_version == 3
+    assert upgraded.migrated_from_format == nil
+    assert upgraded.schema.primary_key == %{name: :id, type: :id}
+  end
+
   test "a unique language attribute emits one unique index" do
     module = Brando.MigrationTest.UniqueLanguage
     schema = MigrationSchema.build(module)
@@ -338,10 +443,10 @@ defmodule Brando.Blueprint.MigrationsTest do
 
   test "unsupported snapshot formats stop generation" do
     module = Brando.MigrationTest.Project
-    snapshot = %{Snapshot.build_snapshot(module, 1) | format_version: 3}
+    snapshot = %{Snapshot.build_snapshot(module, 1) | format_version: 4}
     filename = write_snapshot(module, 1, snapshot)
 
-    assert_raise BlueprintError, ~r/Unsupported Blueprint snapshot format: 3/, fn ->
+    assert_raise BlueprintError, ~r/Unsupported Blueprint snapshot format: 4/, fn ->
       Snapshot.get_latest_snapshot(module, @test_opts)
     end
 
@@ -351,7 +456,7 @@ defmodule Brando.Blueprint.MigrationsTest do
 
   test "malformed normalized snapshot schemas stop generation" do
     module = Brando.MigrationTest.Project
-    snapshot = %{Snapshot.build_snapshot(module, 1) | schema: %{format_version: 2}}
+    snapshot = %{Snapshot.build_snapshot(module, 1) | schema: %{format_version: 3}}
     write_snapshot(module, 1, snapshot)
 
     assert_raise BlueprintError, ~r/Invalid Blueprint snapshot.*missing_field.*table/s, fn ->
@@ -406,6 +511,19 @@ defmodule Brando.Blueprint.MigrationsTest do
     refute File.exists?(snapshot_filename(module, 1))
   end
 
+  test "prepared snapshots reject columns that collide with generated timestamps" do
+    module = Brando.MigrationTest.Project
+    snapshot = Snapshot.build_snapshot(module, 1)
+    [column | columns] = snapshot.schema.columns
+    invalid_snapshot = put_in(snapshot.schema.columns, [%{column | name: :inserted_at} | columns])
+
+    assert_raise BlueprintError, ~r/duplicate_names.*columns.*inserted_at/s, fn ->
+      Snapshot.store_snapshot(invalid_snapshot, module, @test_opts)
+    end
+
+    refute File.exists?(snapshot_filename(module, 1))
+  end
+
   test "explicit re-baselining records current state without inventing a migration" do
     assert {:ok, metadata} = Migrations.rebaseline_snapshot(Brando.MigrationTest.Project, @test_opts)
 
@@ -443,7 +561,7 @@ defmodule Brando.Blueprint.MigrationsTest do
     assert {:noop, _} = Migrations.create_migration(module, @test_opts)
 
     upgraded = snapshot_filename |> File.read!() |> :erlang.binary_to_term([:safe])
-    assert upgraded.format_version == 2
+    assert upgraded.format_version == 3
     assert upgraded.migrated_from_format == nil
     assert is_map(upgraded.schema)
     assert upgraded.attributes == nil
@@ -451,7 +569,7 @@ defmodule Brando.Blueprint.MigrationsTest do
 
   test "source-controlled legacy snapshots with retired declaration atoms remain readable" do
     assert %Snapshot{
-             format_version: 2,
+             format_version: 3,
              migrated_from_format: 1,
              version: 1
            } =

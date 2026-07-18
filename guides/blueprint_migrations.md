@@ -55,10 +55,10 @@ does not connect to or mutate a database.
 
 ## What the snapshot tracks
 
-Snapshot format 2 records the database contract rather than the complete DSL:
+Snapshot format 3 records the database contract rather than the complete DSL:
 
-- table and primary-key type;
-- persisted attribute names, database types, defaults, nullability, precision, and scale;
+- table plus the physical primary-key column and type;
+- persisted physical column names, database types, defaults, nullability, precision, and scale;
 - asset and belongs-to foreign keys, including referenced table, key type, delete action, and constraint name;
 - embedded JSON columns;
 - unique and language indexes with deterministic names;
@@ -81,6 +81,65 @@ end
 The generator emits a column rename in `up/0` and the inverse rename in `down/0`. It also handles a type or option
 change on the renamed column. Do not declare both `:title` and `:headline`; the semantic validator rejects that
 ambiguous state. The hint may remain in the Blueprint after the migration; once the new column exists it is a no-op.
+
+## Physical Ecto sources
+
+Blueprint field names remain the application-facing Ecto names. A `source:`
+option gives a persisted field a different physical database column:
+
+```elixir
+primary_key {:id, :id, autogenerate: true, source: :record_pk}
+
+attributes do
+  attribute :title, :string,
+    source: :headline,
+    unique: [with: :tenant_id]
+
+  attribute :tenant_id, :id, source: :account_ref
+end
+
+relations do
+  relation :owner, :belongs_to,
+    module: MyApp.Users.User,
+    source: :owner_ref,
+    unique: [with: :tenant_id]
+
+  relation :metadata, :embeds_one,
+    module: MyApp.Content.Metadata,
+    source: :payload
+end
+```
+
+The generator now uses `record_pk`, `headline`, `account_ref`, `owner_ref`, and
+`payload` everywhere in the database contract: columns, references, auxiliary
+relations, indexes, constraint names, and snapshots. Runtime constraint names
+use the same physical sources, while changesets and application code continue
+to use `:id`, `:title`, `:tenant_id`, `:owner_id`, and `:metadata`.
+
+No special step is needed for a new table. For an existing Blueprint created by
+an older generator, first establish which columns the database actually has:
+
+- If the database still has an attribute's old logical column, add the physical
+  source and keep the old database name as `rename_from:`. For example,
+  `attribute :title, :string, source: :headline, rename_from: :title` generates
+  a reversible `title` to `headline` rename. Review and run the normal generated
+  migration.
+- If the database already has the physical columns because its migrations were
+  maintained by hand, do not apply a generated remove/add migration for the
+  stale snapshot. Verify the live schema, indexes, and foreign keys against the
+  Blueprint, then use `--rebaseline` to record the known-good physical state.
+- Changes to a primary-key source, or source corrections for relations and
+  embeds that cannot use an attribute `rename_from:`, require a reviewed
+  hand-written migration followed by `--rebaseline`. Primary-key migrations
+  must also update every referencing foreign key deliberately.
+
+A belongs-to relation with `define_field: false` gets its physical source from
+the separately declared foreign-key attribute. The generator attaches the
+reference to that one column and rejects a missing or type-incompatible field.
+
+Do not delete a snapshot to make a physical-source mismatch disappear. Igniter
+cannot inspect deployed schemas or decide whether a column should be renamed or
+re-baselined, so this upgrade is intentionally guided rather than automatic.
 
 ## Scoping a custom collision callback
 
@@ -190,9 +249,11 @@ Re-baseline only when restoration is impossible and you have independently confi
 
 ## Upgrading legacy snapshots
 
-Existing external-term snapshots are decoded as legacy format 1 and normalized in memory. The next successful
-generation writes format 2; an unchanged Blueprint upgrades the existing snapshot atomically without creating a
-migration.
+Existing external-term snapshots are decoded as legacy format 1 and normalized in memory. Format 2 snapshots with a
+conventional `id` primary key are also upgraded in memory. The next successful generation writes format 3; an
+unchanged Blueprint upgrades the existing snapshot atomically without creating a migration. A physical primary-key
+source is a real identity change relative to format 2 and follows the hand-written migration or verified rebaseline
+workflow above.
 
 Snapshot files are source-controlled migration history and must be reviewed like migration source. Brando accepts
 retired declaration and field-name atoms in legacy snapshots while rejecting executable terms and validating the

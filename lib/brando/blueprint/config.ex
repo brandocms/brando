@@ -134,7 +134,7 @@ defmodule Brando.Blueprint.Config do
   defp validate_compiled_option(:primary_key, {:id, type, opts})
        when type in [:id, :binary_id] and is_list(opts) do
     if Keyword.keyword?(opts) do
-      :ok
+      validate_primary_key_source(opts)
     else
       invalid_primary_key({:id, type, opts})
     end
@@ -203,6 +203,16 @@ defmodule Brando.Blueprint.Config do
 
   defp invalid_primary_key(value) do
     {:error, "`:primary_key` must use the default, false, `:id`, or `:uuid` representation, got: #{inspect(value)}"}
+  end
+
+  defp validate_primary_key_source(opts) do
+    case Keyword.get(opts, :source) do
+      source when is_nil(source) or is_atom(source) ->
+        :ok
+
+      source ->
+        {:error, "`:primary_key` source must be an atom, got: #{inspect(source)}"}
+    end
   end
 
   defp config_error!(module, message) do

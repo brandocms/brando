@@ -6,7 +6,7 @@ defmodule Brando.Blueprint.Migrations.Schema do
   alias Brando.Blueprint.UniqueFields
   alias Brando.Exception.BlueprintError
 
-  @format_version 2
+  @format_version 3
   @column_opts [:default, :null, :precision, :scale]
 
   @type column :: %{
@@ -24,6 +24,8 @@ defmodule Brando.Blueprint.Migrations.Schema do
           unique: boolean()
         }
 
+  @type primary_key :: false | %{name: atom(), type: :id | :uuid}
+
   @type auxiliary_table :: %{
           name: String.t(),
           columns: [column()],
@@ -34,7 +36,7 @@ defmodule Brando.Blueprint.Migrations.Schema do
   @type t :: %{
           format_version: pos_integer(),
           table: String.t(),
-          primary_key: :id | :uuid,
+          primary_key: primary_key(),
           columns: [column()],
           indexes: [index()],
           auxiliary_tables: [auxiliary_table()],
@@ -73,6 +75,19 @@ defmodule Brando.Blueprint.Migrations.Schema do
       Map.get(snapshot, :assets, []) || [],
       Map.get(snapshot, :relations, []) || []
     )
+  end
+
+  @doc """
+  Upgrades a format-2 storage schema to the current normalized representation.
+
+  Format 2 stored only the primary-key type and therefore implicitly described
+  the conventional `id` database column.
+  """
+  @spec from_v2(map()) :: t()
+  def from_v2(schema) when is_map(schema) do
+    schema
+    |> Map.put(:format_version, @format_version)
+    |> Map.update(:primary_key, nil, fn type -> %{name: :id, type: type} end)
   end
 
   @doc """
@@ -117,13 +132,26 @@ defmodule Brando.Blueprint.Migrations.Schema do
   def validate(schema) when is_map(schema) do
     with :ok <- validate_value(schema, :format_version, &(&1 == @format_version)),
          :ok <- validate_value(schema, :table, &non_empty_string?/1),
-         :ok <- validate_value(schema, :primary_key, &(&1 in [:id, :uuid])),
+         :ok <- validate_value(schema, :primary_key, &valid_primary_key?/1),
          :ok <- validate_value(schema, :timestamps, &is_boolean/1),
          :ok <- validate_collection(schema, :columns, &validate_column/1),
          :ok <- validate_collection(schema, :indexes, &validate_index(&1, schema.table)),
          :ok <- validate_collection(schema, :auxiliary_tables, &validate_auxiliary_table/1),
-         :ok <- validate_unique_names(schema.columns, :columns),
-         :ok <- validate_unique_names(schema.auxiliary_tables, :auxiliary_tables),
+         :ok <-
+           validate_unique_database_names(
+             columns_with_timestamps(schema.columns, schema.timestamps),
+             :columns
+           ),
+         :ok <-
+           validate_unique_database_names(
+             [%{name: schema.table} | schema.auxiliary_tables],
+             :database_tables
+           ),
+         :ok <-
+           validate_primary_key_name(
+             schema.primary_key,
+             columns_with_timestamps(schema.columns, schema.timestamps)
+           ),
          :ok <- validate_unique_reference_names(schema.table, schema.columns) do
       validate_unique_database_index_names(schema)
     end
@@ -196,7 +224,11 @@ defmodule Brando.Blueprint.Migrations.Schema do
          :ok <- validate_value(table, :timestamps, &is_boolean/1),
          :ok <- validate_collection(table, :columns, &validate_column/1),
          :ok <- validate_collection(table, :indexes, &validate_index(&1, table.name)),
-         :ok <- validate_unique_names(table.columns, :columns),
+         :ok <-
+           validate_unique_database_names(
+             columns_with_timestamps(table.columns, table.timestamps),
+             :columns
+           ),
          :ok <- validate_unique_names(table.indexes, :indexes) do
       validate_unique_reference_names(table.name, table.columns)
     end
@@ -215,6 +247,24 @@ defmodule Brando.Blueprint.Migrations.Schema do
       |> Enum.sort()
 
     if duplicates == [], do: :ok, else: {:error, {:duplicate_names, key, duplicates}}
+  end
+
+  defp validate_unique_database_names(entries, key) do
+    entries
+    |> Enum.map(&%{name: DatabaseIdentifier.normalize(Map.get(&1, :name))})
+    |> validate_unique_names(key)
+  end
+
+  defp validate_primary_key_name(false, _columns), do: :ok
+
+  defp validate_primary_key_name(%{name: name}, columns) do
+    validate_unique_database_names([%{name: name} | columns], :primary_key_and_columns)
+  end
+
+  defp columns_with_timestamps(columns, false), do: columns
+
+  defp columns_with_timestamps(columns, true) do
+    [%{name: :inserted_at}, %{name: :updated_at} | columns]
   end
 
   defp validate_unique_reference_names(table, columns) do
@@ -242,6 +292,13 @@ defmodule Brando.Blueprint.Migrations.Schema do
   defp non_empty_string?(value), do: is_binary(value) and value != ""
   defp valid_atom?(value), do: is_atom(value) and not is_nil(value)
   defp valid_fields?(fields), do: is_list(fields) and fields != [] and Enum.all?(fields, &valid_atom?/1)
+  defp valid_primary_key?(false), do: true
+
+  defp valid_primary_key?(%{name: name, type: type}) do
+    valid_atom?(name) and type in [:id, :uuid]
+  end
+
+  defp valid_primary_key?(_primary_key), do: false
 
   defp valid_migration_type?(type) do
     (is_atom(type) or is_tuple(type)) and valid_storage_term?(type)
@@ -273,21 +330,24 @@ defmodule Brando.Blueprint.Migrations.Schema do
 
   defp build_from(module, attributes, assets, relations) do
     table = module.__naming__().table_name
-    primary_key = primary_key_type(module)
+    primary_key = primary_key(module)
     timestamps? = timestamped?(attributes)
 
     attribute_columns =
       attributes
       |> Enum.reject(&(timestamp_attribute?(&1) or Map.get(&1.opts, :virtual, false) == true))
-      |> Enum.map(&attribute_column/1)
+      |> Enum.map(&attribute_column(&1, module))
 
     asset_columns = Enum.map(assets, &asset_column(&1, table))
     relation_columns = Enum.flat_map(relations, &relation_columns(&1, module, table))
 
-    columns = Enum.sort_by(attribute_columns ++ asset_columns ++ relation_columns, & &1.name)
+    columns =
+      (attribute_columns ++ asset_columns ++ relation_columns)
+      |> apply_manual_relation_references(relations, module, table)
+      |> Enum.sort_by(& &1.name)
 
     indexes =
-      (attribute_indexes(attributes, table) ++ relation_indexes(relations, table))
+      (attribute_indexes(attributes, module, table) ++ relation_indexes(relations, module, table))
       |> Enum.sort_by(& &1.name)
 
     auxiliary_tables =
@@ -327,18 +387,18 @@ defmodule Brando.Blueprint.Migrations.Schema do
     end
   end
 
-  defp attribute_column(attribute) do
+  defp attribute_column(attribute, module) do
     opts = Map.take(attribute.opts, @column_opts)
 
     column = %{
-      name: attribute.name,
+      name: field_source(module, attribute.name),
       type: Types.migration_type(attribute.type),
       opts: opts,
       reference: nil
     }
 
     case Map.get(attribute.opts, :rename_from) do
-      rename_from when is_atom(rename_from) -> Map.put(column, :rename_from, rename_from)
+      rename_from when is_atom(rename_from) and not is_nil(rename_from) -> Map.put(column, :rename_from, rename_from)
       _ -> column
     end
   end
@@ -362,12 +422,16 @@ defmodule Brando.Blueprint.Migrations.Schema do
     }
   end
 
+  defp relation_columns(%{type: :belongs_to, opts: %{define_field: false}}, _owner_module, _owner_table), do: []
+
   defp relation_columns(%{type: :belongs_to, name: name, opts: opts}, owner_module, owner_table) do
     referenced_module = Map.fetch!(opts, :module)
     referenced_table = referenced_table!(referenced_module)
-    column_name = Map.get(opts, :foreign_key, :"#{name}_id")
+    field = Map.get(opts, :foreign_key, :"#{name}_id")
+    column_name = field_source(owner_module, field)
     reference_type = referenced_primary_key_type(referenced_module, opts)
     on_delete = on_delete_strategy(opts, name, owner_module)
+    referenced_column = Map.get(opts, :references, :id)
 
     [
       %{
@@ -381,16 +445,16 @@ defmodule Brando.Blueprint.Migrations.Schema do
             referenced_table,
             reference_type,
             on_delete,
-            Map.get(opts, :references, :id),
+            field_source(referenced_module, referenced_column),
             Map.get(opts, :constraint_name)
           )
       }
     ]
   end
 
-  defp relation_columns(%{type: type, name: name}, _owner_module, _owner_table)
+  defp relation_columns(%{type: type, name: name}, owner_module, _owner_table)
        when type in [:embeds_one, :embeds_many, :image] do
-    [%{name: name, type: :jsonb, opts: %{}, reference: nil}]
+    [%{name: field_source(owner_module, name), type: :jsonb, opts: %{}, reference: nil}]
   end
 
   defp relation_columns(%{type: :has_many, name: name, opts: %{module: :blocks}}, _owner_module, _owner_table) do
@@ -402,33 +466,91 @@ defmodule Brando.Blueprint.Migrations.Schema do
 
   defp relation_columns(_relation, _owner_module, _owner_table), do: []
 
-  defp attribute_indexes(attributes, table) do
+  defp apply_manual_relation_references(columns, relations, owner_module, owner_table) do
+    Enum.reduce(relations, columns, fn
+      %{type: :belongs_to, name: name, opts: %{define_field: false} = opts}, current_columns ->
+        field = Map.get(opts, :foreign_key, :"#{name}_id")
+        column_name = field_source(owner_module, field)
+        referenced_module = Map.fetch!(opts, :module)
+        referenced_column = Map.get(opts, :references, :id)
+
+        reference =
+          reference(
+            owner_table,
+            column_name,
+            referenced_table!(referenced_module),
+            referenced_primary_key_type(referenced_module, opts),
+            on_delete_strategy(opts, name, owner_module),
+            field_source(referenced_module, referenced_column),
+            Map.get(opts, :constraint_name)
+          )
+
+        put_manual_reference!(current_columns, column_name, reference, owner_module, name)
+
+      _relation, current_columns ->
+        current_columns
+    end)
+  end
+
+  defp put_manual_reference!(columns, column_name, reference, owner_module, relation_name) do
+    case Enum.split_with(columns, &(&1.name == column_name)) do
+      {[%{reference: nil, type: type} = column], remaining_columns} when type == reference.type ->
+        [%{column | reference: reference} | remaining_columns]
+
+      {[%{reference: nil, type: type}], _remaining_columns} ->
+        raise BlueprintError,
+          message:
+            "Cannot generate migration reference for #{inspect(owner_module)}.#{relation_name}: " <>
+              "database column #{inspect(column_name)} has type #{inspect(type)}, " <>
+              "expected #{inspect(reference.type)}"
+
+      {[], _remaining_columns} ->
+        raise BlueprintError,
+          message:
+            "Cannot generate migration reference for #{inspect(owner_module)}.#{relation_name}: " <>
+              "`define_field: false` requires a persisted field for #{inspect(column_name)}"
+
+      {_columns, _remaining_columns} ->
+        raise BlueprintError,
+          message:
+            "Cannot generate migration reference for #{inspect(owner_module)}.#{relation_name}: " <>
+              "database column #{inspect(column_name)} is declared more than once"
+    end
+  end
+
+  defp attribute_indexes(attributes, module, table) do
     Enum.flat_map(attributes, fn attribute ->
       language_index =
         if attribute.type == :language and !Map.get(attribute.opts, :virtual, false) and
              !unique?(attribute) do
-          [index(table, [attribute.name], false)]
+          [index(table, [field_source(module, attribute.name)], false)]
         else
           []
         end
 
-      language_index ++ unique_attribute_index(attribute, table)
+      language_index ++ unique_attribute_index(attribute, module, table)
     end)
   end
 
-  defp unique_attribute_index(%{opts: %{virtual: true}}, _table), do: []
+  defp unique_attribute_index(%{opts: %{virtual: true}}, _module, _table), do: []
 
-  defp unique_attribute_index(attribute, table) do
+  defp unique_attribute_index(attribute, module, table) do
     case Map.get(attribute.opts, :unique, false) do
-      false -> []
-      nil -> []
-      unique -> [index(table, unique_fields(attribute.name, unique), true)]
+      false ->
+        []
+
+      nil ->
+        []
+
+      unique ->
+        fields = attribute.name |> unique_fields(unique) |> Enum.map(&field_source(module, &1))
+        [index(table, fields, true)]
     end
   end
 
   defp unique?(attribute), do: Map.get(attribute.opts, :unique, false) not in [false, nil]
 
-  defp relation_indexes(relations, table) do
+  defp relation_indexes(relations, module, table) do
     Enum.flat_map(relations, fn
       %{type: :belongs_to, name: name, opts: opts} ->
         case Map.get(opts, :unique, false) do
@@ -440,7 +562,8 @@ defmodule Brando.Blueprint.Migrations.Schema do
 
           unique ->
             foreign_key = Map.get(opts, :foreign_key, :"#{name}_id")
-            [index(table, unique_fields(foreign_key, unique), true)]
+            fields = foreign_key |> unique_fields(unique) |> Enum.map(&field_source(module, &1))
+            [index(table, fields, true)]
         end
 
       _ ->
@@ -450,14 +573,14 @@ defmodule Brando.Blueprint.Migrations.Schema do
 
   defp unique_fields(field, unique), do: UniqueFields.fields(field, unique)
 
-  defp auxiliary_tables(%{type: :has_many, name: name, opts: %{module: :blocks}}, owner_table, owner_key_type) do
+  defp auxiliary_tables(%{type: :has_many, name: name, opts: %{module: :blocks}}, owner_table, owner_key) do
     table = "#{owner_table}_#{name}"
 
     [
       %{
         name: table,
         columns: [
-          reference_column(table, :entry_id, owner_table, owner_key_type, :delete_all),
+          reference_column(table, :entry_id, owner_table, owner_key, :delete_all),
           reference_column(table, :block_id, "content_blocks", :id, :delete_all),
           %{name: :sequence, type: :integer, opts: %{}, reference: nil}
         ],
@@ -467,14 +590,14 @@ defmodule Brando.Blueprint.Migrations.Schema do
     ]
   end
 
-  defp auxiliary_tables(%{type: :entries, name: name}, owner_table, owner_key_type) do
+  defp auxiliary_tables(%{type: :entries, name: name}, owner_table, owner_key) do
     table = "#{owner_table}_#{name}_identifiers"
 
     [
       %{
         name: table,
         columns: [
-          reference_column(table, :parent_id, owner_table, owner_key_type, :delete_all),
+          reference_column(table, :parent_id, owner_table, owner_key, :delete_all),
           reference_column(table, :identifier_id, "content_identifiers", :id, :delete_all),
           %{name: :sequence, type: :integer, opts: %{}, reference: nil}
         ],
@@ -487,7 +610,7 @@ defmodule Brando.Blueprint.Migrations.Schema do
   defp auxiliary_tables(
          %{type: :has_many, name: :alternates, opts: %{module: :alternates}},
          owner_table,
-         owner_key_type
+         owner_key
        ) do
     table = "#{owner_table}_alternates"
 
@@ -495,8 +618,8 @@ defmodule Brando.Blueprint.Migrations.Schema do
       %{
         name: table,
         columns: [
-          reference_column(table, :entry_id, owner_table, owner_key_type, :delete_all),
-          reference_column(table, :linked_entry_id, owner_table, owner_key_type, :delete_all)
+          reference_column(table, :entry_id, owner_table, owner_key, :delete_all),
+          reference_column(table, :linked_entry_id, owner_table, owner_key, :delete_all)
         ],
         indexes: [index(table, [:entry_id, :linked_entry_id], true)],
         timestamps: true
@@ -506,13 +629,22 @@ defmodule Brando.Blueprint.Migrations.Schema do
 
   defp auxiliary_tables(_relation, _owner_table, _owner_key_type), do: []
 
-  defp reference_column(owner_table, name, referenced_table, type, on_delete) do
+  defp reference_column(owner_table, name, referenced_table, %{name: referenced_column, type: type}, on_delete) do
     %{
       name: name,
       type: type,
       opts: %{},
-      reference: reference(owner_table, name, referenced_table, type, on_delete)
+      reference: reference(owner_table, name, referenced_table, type, on_delete, referenced_column)
     }
+  end
+
+  defp reference_column(_owner_table, _name, referenced_table, false, _on_delete) do
+    raise BlueprintError,
+      message: "Cannot generate an auxiliary table reference to #{inspect(referenced_table)} without a primary key"
+  end
+
+  defp reference_column(owner_table, name, referenced_table, type, on_delete) do
+    reference_column(owner_table, name, referenced_table, %{name: :id, type: type}, on_delete)
   end
 
   defp reference(owner_table, column, table, type, on_delete, referenced_column \\ :id, constraint_name \\ nil) do
@@ -556,10 +688,19 @@ defmodule Brando.Blueprint.Migrations.Schema do
     }
   end
 
-  defp primary_key_type(module) do
+  defp primary_key(module) do
     case module.__primary_key__() do
-      {:id, :binary_id, _opts} -> :uuid
-      _ -> :id
+      false ->
+        false
+
+      {name, :binary_id, _opts} ->
+        %{name: field_source(module, name), type: :uuid}
+
+      {name, _type, _opts} ->
+        %{name: field_source(module, name), type: :id}
+
+      _default ->
+        %{name: field_source(module, :id), type: :id}
     end
   end
 
@@ -595,6 +736,14 @@ defmodule Brando.Blueprint.Migrations.Schema do
     else
       raise BlueprintError,
         message: "Cannot generate migration reference for #{inspect(module)}: module is not an Ecto schema"
+    end
+  end
+
+  defp field_source(module, field) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :__schema__, 2) do
+      module.__schema__(:field_source, field) || field
+    else
+      field
     end
   end
 

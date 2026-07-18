@@ -379,3 +379,102 @@ defmodule Brando.MigrationTest.CollidingForeignKeyNames do
       constraint_name: "duplicate_owner_fkey"
   end
 end
+
+defmodule Brando.MigrationTest.PhysicalSources do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationSources",
+    schema: "PhysicalSources",
+    singular: "physical_source",
+    plural: "physical_sources",
+    gettext_module: Brando.Gettext
+
+  primary_key {:id, :id, autogenerate: true, source: :record_pk}
+
+  attributes do
+    attribute :tenant_id, :integer, source: :account_ref
+    attribute :title, :string, source: :headline, unique: [with: :tenant_id]
+  end
+
+  relations do
+    relation :metadata, :embeds_one,
+      module: Brando.MigrationTest.Property,
+      source: :payload
+
+    relation :owner, :belongs_to,
+      module: Brando.Users.User,
+      source: :owner_ref,
+      unique: [with: :tenant_id]
+
+    relation :related_entries, :entries
+  end
+end
+
+defmodule Brando.MigrationTest.ManualPhysicalForeignKey do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationSources",
+    schema: "ManualPhysicalForeignKey",
+    singular: "manual_physical_foreign_key",
+    plural: "manual_physical_foreign_keys",
+    gettext_module: Brando.Gettext
+
+  attributes do
+    attribute :owner_id, :id, source: :owner_ref
+  end
+
+  relations do
+    relation :owner, :belongs_to,
+      module: Brando.Users.User,
+      foreign_key: :owner_id,
+      define_field: false
+  end
+end
+
+defmodule Brando.MigrationTest.PhysicalSourceV1 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationSources",
+    schema: "PhysicalSourceRename",
+    singular: "physical_source_rename",
+    plural: "physical_source_renames",
+    gettext_module: Brando.Gettext
+
+  table "blueprint_physical_source_renames"
+
+  attributes do
+    attribute :title, :string, unique: true
+  end
+end
+
+defmodule Brando.MigrationTest.PhysicalSourceV2 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationSources",
+    schema: "PhysicalSourceRename",
+    singular: "physical_source_rename",
+    plural: "physical_source_renames",
+    gettext_module: Brando.Gettext
+
+  table "blueprint_physical_source_renames"
+
+  attributes do
+    attribute :title, :string, source: :headline, rename_from: :title, unique: true
+  end
+end
+
+defmodule Brando.MigrationTest.NoPrimaryKey do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationSources",
+    schema: "NoPrimaryKey",
+    singular: "no_primary_key",
+    plural: "no_primary_keys",
+    gettext_module: Brando.Gettext
+
+  primary_key false
+
+  attributes do
+    attribute :key, :string
+  end
+end

@@ -410,6 +410,136 @@ defmodule Brando.Blueprint.VerifierTest do
     assert module.__required_relations__() == [:owner_ref]
   end
 
+  test "rejects define_field false without a persisted foreign-key field" do
+    media_item = MediaItem
+
+    assert_raise Spark.Error.DslError, ~r/no persisted field :owner_ref is declared/, fn ->
+      compile_blueprint(
+        quote do
+          relations do
+            relation :owner, :belongs_to,
+              module: unquote(media_item),
+              foreign_key: :owner_ref,
+              define_field: false
+          end
+        end
+      )
+    end
+  end
+
+  test "validates and preserves physical field sources" do
+    media_item = MediaItem
+
+    module =
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :title, :string, source: :headline
+          end
+
+          relations do
+            relation :owner, :belongs_to, module: unquote(media_item), source: :owner_ref
+            relation :metadata, :embeds_one, module: unquote(media_item), source: :payload
+          end
+        end
+      )
+
+    assert module.__schema__(:field_source, :title) == :headline
+    assert module.__schema__(:field_source, :owner_id) == :owner_ref
+    assert module.__schema__(:field_source, :metadata) == :payload
+
+    assert_raise Spark.Error.DslError, ~r/`:source` must be an atom/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :title, :string, source: "headline"
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/virtual attributes cannot declare a database `:source`/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :temporary, :string, virtual: true, source: :stored_temporary
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/timestamp attributes do not support `:source`/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :inserted_at, :datetime, source: :created_at
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/`:source` is only valid for/, fn ->
+      compile_blueprint(
+        quote do
+          relations do
+            relation :items, :has_many, module: unquote(media_item), source: :stored_items
+          end
+        end
+      )
+    end
+  end
+
+  test "rejects physical source collisions before Ecto schema generation" do
+    assert_raise Spark.Error.DslError, ~r/duplicate database source "shared_column"/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :title, :string, source: :shared_column
+            attribute :subtitle, :string, source: :shared_column
+          end
+        end
+      )
+    end
+
+    shared_prefix = String.to_atom(String.duplicate("a", 63) <> "first")
+    colliding_prefix = String.to_atom(String.duplicate("a", 63) <> "second")
+
+    assert_raise Spark.Error.DslError, ~r/duplicate database source/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :title, :string, source: unquote(shared_prefix)
+            attribute :subtitle, :string, source: unquote(colliding_prefix)
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/duplicate database source "shared_primary_key"/, fn ->
+      compile_blueprint(
+        quote do
+          primary_key {:id, :id, source: :shared_primary_key}
+
+          attributes do
+            attribute :title, :string, source: :shared_primary_key
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/duplicate database source "inserted_at"/, fn ->
+      compile_blueprint(
+        quote do
+          trait Brando.Trait.Timestamped
+
+          attributes do
+            attribute :created_by_import, :datetime, source: :inserted_at
+          end
+        end
+      )
+    end
+  end
+
   test "reports form inputs for unknown schema fields" do
     assert_form_error(
       quote do

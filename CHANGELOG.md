@@ -134,6 +134,22 @@
 
 #### Improvements
 
+- **Physical-source-aligned Blueprint migrations**: Persisted attribute,
+  belongs-to, embed, referenced-key, and primary-key `source:` values now flow
+  through generated columns, composite indexes, constraint names, auxiliary
+  relations, and format 3 snapshots. `define_field: false` attaches its foreign
+  key to the separately declared physical column, `primary_key false` no longer
+  creates an implicit `id`, and compile-time validation rejects invalid sources
+  and physical collisions (including generated timestamps and PostgreSQL's
+  63-byte identifier form). Existing public Blueprint APIs are unchanged. New
+  tables need no special upgrade step. For existing source-mapped tables,
+  inspect the live schema before generating: use `rename_from:` for an
+  attribute whose old logical column still exists; use a reviewed hand-written
+  migration plus `--rebaseline` for primary keys or relation/embed renames; or
+  rebaseline directly only when the database is already verified to use the
+  physical columns. Igniter cannot safely choose among those cases. See
+  [Physical Ecto sources](guides/blueprint_migrations.md#physical-ecto-sources).
+
 - **Fail-closed Blueprint database-name collisions**: Migration schemas no
   longer silently discard indexes when two generated names are equal, including
   equality caused by PostgreSQL's 63-byte identifier limit. Index names are

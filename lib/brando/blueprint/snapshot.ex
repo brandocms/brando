@@ -2,16 +2,16 @@ defmodule Brando.Blueprint.Snapshot do
   @moduledoc """
   Versioned Blueprint storage snapshots used by migration generation.
 
-  Snapshot format 2 stores a normalized, storage-only schema. Legacy snapshots
-  are upgraded in memory when read and replaced with format 2 on the next
-  successful migration generation.
+  Snapshot format 3 stores a normalized, storage-only schema, including the
+  physical primary-key column. Older snapshots are upgraded in memory and
+  replaced with format 3 on the next successful migration generation.
   """
 
   alias Brando.Blueprint.Migrations.Schema
   alias Brando.Blueprint.Snapshot
   alias Brando.Exception.BlueprintError
 
-  @format_version 2
+  @format_version 3
   @default_opts [snapshot_path: "priv/blueprints/snapshots"]
 
   defstruct format_version: @format_version,
@@ -219,6 +219,14 @@ defmodule Brando.Blueprint.Snapshot do
     case {Map.get(snapshot, :format_version), Map.get(snapshot, :schema)} do
       {@format_version, schema} when is_map(schema) ->
         struct(Snapshot, Map.from_struct(snapshot))
+
+      {2, schema} when is_map(schema) ->
+        %Snapshot{
+          struct(Snapshot, Map.from_struct(snapshot))
+          | format_version: @format_version,
+            migrated_from_format: 2,
+            schema: Schema.from_v2(schema)
+        }
 
       {legacy_version, _legacy_schema} when legacy_version in [nil, 1] ->
         validate_legacy_snapshot!(snapshot)
