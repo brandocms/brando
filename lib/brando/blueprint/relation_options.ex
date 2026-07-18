@@ -29,6 +29,7 @@ defmodule Brando.Blueprint.RelationOptions do
     on_delete: [:belongs_to, :has_many, :has_one, :many_to_many],
     on_replace: @association_types ++ @embed_types,
     preload_order: @has_types ++ [:many_to_many],
+    primary_key: [:belongs_to],
     references: [:belongs_to | @has_types],
     required: @relation_types,
     required_message: @relation_types,
@@ -52,7 +53,7 @@ defmodule Brando.Blueprint.RelationOptions do
   @embed_one_on_replace [:update | @embed_many_on_replace]
   @preload_directions [:asc, :asc_nulls_first, :asc_nulls_last, :desc, :desc_nulls_first, :desc_nulls_last]
 
-  @doc false
+  @doc "Validates the options stored on a compiled Blueprint relation."
   @spec validate(Relation.t()) :: :ok | {:error, String.t()}
   def validate(%Relation{type: type, opts: opts}) do
     with :ok <- validate_known_options(opts),
@@ -80,6 +81,10 @@ defmodule Brando.Blueprint.RelationOptions do
       validate_through_cast(type, opts)
     end
   end
+
+  @doc "Returns each relation option and the relation types that accept it."
+  @spec option_scopes() :: %{atom() => [atom()]}
+  def option_scopes, do: Map.new(@option_scopes)
 
   defp validate_known_options(opts) do
     case opts |> Map.keys() |> Enum.sort() |> Kernel.--(@known_options) do

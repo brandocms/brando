@@ -7,8 +7,8 @@ defmodule Brando.Blueprint.Migrations.Schema do
   alias Brando.Exception.BlueprintError
 
   @format_version 3
-  @column_opts [:default, :null, :precision, :scale]
-  @reference_column_opts [:null]
+  @column_opts [:default, :null, :precision, :primary_key, :scale]
+  @reference_column_opts [:null, :primary_key]
 
   @type column :: %{
           required(:name) => atom(),
@@ -306,10 +306,23 @@ defmodule Brando.Blueprint.Migrations.Schema do
   end
 
   defp valid_column_opts?(opts) when is_map(opts) do
-    Enum.all?(Map.keys(opts), &(&1 in @column_opts)) and valid_storage_term?(opts)
+    Enum.all?(Map.keys(opts), &(&1 in @column_opts)) and
+      valid_storage_term?(opts) and
+      valid_optional_boolean?(Map.get(opts, :null)) and
+      valid_optional_boolean?(Map.get(opts, :primary_key)) and
+      valid_optional_positive_integer?(Map.get(opts, :precision)) and
+      valid_optional_non_negative_integer?(Map.get(opts, :scale))
   end
 
   defp valid_column_opts?(_opts), do: false
+
+  defp valid_optional_boolean?(value), do: is_nil(value) or is_boolean(value)
+
+  defp valid_optional_positive_integer?(value),
+    do: is_nil(value) or (is_integer(value) and value > 0)
+
+  defp valid_optional_non_negative_integer?(value),
+    do: is_nil(value) or (is_integer(value) and value >= 0)
 
   defp valid_storage_term?(term)
        when is_atom(term) or is_number(term) or is_bitstring(term),

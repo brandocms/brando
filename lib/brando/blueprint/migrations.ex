@@ -298,6 +298,17 @@ defmodule Brando.Blueprint.Migrations do
       """
   end
 
+  defp raise_unsupported_change!(module, {:column_primary_keys_changed, previous, current}) do
+    raise BlueprintError,
+      message: """
+      Blueprint #{inspect(module)} changed its relation primary-key columns from #{inspect(previous)} to #{inspect(current)}.
+
+      Composite primary-key changes cannot be inferred safely. Create and test a
+      hand-written migration, then deliberately re-baseline the Blueprint snapshot
+      as documented in guides/blueprint_migrations.md.
+      """
+  end
+
   defp raise_unsupported_change!(module, reason) do
     raise BlueprintError,
       message: "Cannot generate migration for #{inspect(module)}: #{inspect(reason)}"

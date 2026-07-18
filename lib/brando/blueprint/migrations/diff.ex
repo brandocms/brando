@@ -48,6 +48,7 @@ defmodule Brando.Blueprint.Migrations.Diff do
 
   def compare(current, previous) do
     with :ok <- unchanged_identity(current, previous),
+         :ok <- unchanged_column_primary_keys(current, previous),
          {:ok, rename_columns, matched_previous_names} <- collect_renames(current.columns, previous.columns) do
       {:ok, build_diff(current, previous, rename_columns, matched_previous_names)}
     end
@@ -93,6 +94,24 @@ defmodule Brando.Blueprint.Migrations.Diff do
       true ->
         :ok
     end
+  end
+
+  defp unchanged_column_primary_keys(current, previous) do
+    current_keys = column_primary_keys(current.columns)
+    previous_keys = column_primary_keys(previous.columns)
+
+    if current_keys == previous_keys do
+      :ok
+    else
+      {:error, {:column_primary_keys_changed, previous_keys, current_keys}}
+    end
+  end
+
+  defp column_primary_keys(columns) do
+    columns
+    |> Enum.filter(&(Map.get(&1.opts, :primary_key, false) == true))
+    |> Enum.map(& &1.name)
+    |> Enum.sort()
   end
 
   defp collect_renames(current_columns, previous_columns) do

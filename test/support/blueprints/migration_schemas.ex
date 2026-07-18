@@ -650,3 +650,46 @@ defmodule Brando.MigrationTest.TimestampMatrixV3 do
     attribute :label, :string
   end
 end
+
+defmodule Brando.MigrationTest.RelationPrimaryKeyV1 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationOperations",
+    schema: "RelationPrimaryKey",
+    singular: "relation_primary_key",
+    plural: "relation_primary_keys",
+    gettext_module: Brando.Gettext
+
+  table "blueprint_relation_primary_keys"
+  primary_key false
+
+  relations do
+    relation :owner, :belongs_to,
+      module: Brando.Users.User,
+      null: false,
+      on_delete: :restrict,
+      primary_key: true,
+      source: :owner_ref
+  end
+end
+
+defmodule Brando.MigrationTest.RelationPrimaryKeyV2 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationOperations",
+    schema: "RelationPrimaryKey",
+    singular: "relation_primary_key",
+    plural: "relation_primary_keys",
+    gettext_module: Brando.Gettext
+
+  table "blueprint_relation_primary_keys"
+  primary_key false
+
+  relations do
+    relation :owner, :belongs_to,
+      module: Brando.Users.User,
+      null: false,
+      on_delete: :restrict,
+      source: :owner_ref
+  end
+end

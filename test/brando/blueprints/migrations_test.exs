@@ -212,6 +212,21 @@ defmodule Brando.Blueprint.MigrationsTest do
     refute source =~ "Brando.Type.Json"
   end
 
+  test "relation primary-key shape changes require a hand-written migration" do
+    assert {:ok, generated} =
+             Migrations.create_migration(Brando.MigrationTest.RelationPrimaryKeyV1, @test_opts)
+
+    source = File.read!(generated.migration)
+    assert source =~ "add :owner_ref"
+    assert source =~ "references(:users"
+    assert source =~ "null: false"
+    assert source =~ "primary_key: true"
+
+    assert_raise BlueprintError, ~r/changed its relation primary-key columns from \[:owner_ref\] to \[\]/, fn ->
+      Migrations.create_migration(Brando.MigrationTest.RelationPrimaryKeyV2, @test_opts)
+    end
+  end
+
   test "migration schemas reduce existing parameterized and custom Ecto types" do
     ref_schema = MigrationSchema.build(Brando.Content.Ref)
     ref_data = Enum.find(ref_schema.columns, &(&1.name == :data))
@@ -553,18 +568,27 @@ defmodule Brando.Blueprint.MigrationsTest do
     assert Path.wildcard("tmp/test_migrations/*.exs") == []
   end
 
-  test "prepared snapshots reject non-storage column options before writing" do
+  test "prepared snapshots reject invalid storage column options before writing" do
     module = Brando.MigrationTest.Project
     snapshot = Snapshot.build_snapshot(module, 1)
     [column | columns] = snapshot.schema.columns
-    invalid_column = put_in(column, [:opts, :default], fn -> :not_allowed end)
-    invalid_snapshot = put_in(snapshot.schema.columns, [invalid_column | columns])
 
-    assert_raise BlueprintError, ~r/invalid_field.*opts/s, fn ->
-      Snapshot.store_snapshot(invalid_snapshot, module, @test_opts)
+    for {option, value} <- [
+          default: fn -> :not_allowed end,
+          null: :yes,
+          precision: 0,
+          primary_key: :yes,
+          scale: -1
+        ] do
+      invalid_column = put_in(column, [:opts, option], value)
+      invalid_snapshot = put_in(snapshot.schema.columns, [invalid_column | columns])
+
+      assert_raise BlueprintError, ~r/invalid_field.*opts/s, fn ->
+        Snapshot.store_snapshot(invalid_snapshot, module, @test_opts)
+      end
+
+      refute File.exists?(snapshot_filename(module, 1))
     end
-
-    refute File.exists?(snapshot_filename(module, 1))
   end
 
   test "prepared snapshots reject columns that collide with generated timestamps" do

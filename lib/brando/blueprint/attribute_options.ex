@@ -37,7 +37,7 @@ defmodule Brando.Blueprint.AttributeOptions do
   ]
   @virtual_storage_options [:null, :precision, :rename_from, :scale]
 
-  @doc false
+  @doc "Validates the options stored on a compiled Blueprint attribute."
   @spec validate(Attribute.t()) :: :ok | {:error, String.t()}
   def validate(%Attribute{type: type, opts: opts} = attribute) do
     with :ok <- validate_known_options(type, opts),
@@ -48,17 +48,22 @@ defmodule Brando.Blueprint.AttributeOptions do
     end
   end
 
-  defp validate_known_options(type, opts) do
-    allowed_options =
-      @common_options ++
-        if(enum_type?(type), do: [:embed_as, :values], else: []) ++
-        if(type == :language, do: [:languages], else: [])
+  @doc "Returns the option keys recognized before value and scope validation for an attribute type."
+  @spec known_options(term()) :: [atom()]
+  def known_options(type) do
+    (@common_options ++
+       if(enum_type?(type), do: [:embed_as, :values], else: []) ++
+       if(type == :language, do: [:languages], else: []))
+    |> Enum.uniq()
+    |> Enum.sort()
+  end
 
+  defp validate_known_options(type, opts) do
     unknown_options =
       if custom_parameterized_type?(type) do
         []
       else
-        opts |> Map.keys() |> Enum.sort() |> Kernel.--(allowed_options)
+        opts |> Map.keys() |> Enum.sort() |> Kernel.--(known_options(type))
       end
 
     case unknown_options do

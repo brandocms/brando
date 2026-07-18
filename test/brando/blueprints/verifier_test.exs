@@ -494,8 +494,8 @@ defmodule Brando.Blueprint.VerifierTest do
        ~r/`:on_delete` must be one of/},
       {quote(do: relation(:owner, :belongs_to, module: unquote(media_item), on_replace: :truncate)),
        ~r/`:on_replace` must be one of/},
-      {quote(do: relation(:owner, :belongs_to, module: unquote(media_item), primary_key: true)),
-       ~r/unsupported options \[:primary_key\]/},
+      {quote(do: relation(:owner, :belongs_to, module: unquote(media_item), primary_key: :yes)),
+       ~r/`:primary_key` must be a boolean/},
       {quote(do: relation(:items, :has_many, module: unquote(media_item), where: %{})),
        ~r/`:where` must be a keyword list/},
       {quote(

@@ -14,8 +14,6 @@ defmodule Brando.Blueprint.Verifier do
   alias Spark.Error.DslError
 
   @attribute_constraint_keys [:acceptance, :confirmation, :format, :length, :max_length, :min_length]
-  @asset_option_keys [:cfg, :module, :required]
-  @gallery_asset_option_keys [:force_update_on_change, :invalid_message, :required_message]
   @non_string_collision_types [
     :array,
     :boolean,
@@ -95,34 +93,11 @@ defmodule Brando.Blueprint.Verifier do
   end
 
   defp verify_asset(dsl_state, asset) do
-    with :ok <- verify_asset_options(dsl_state, asset),
-         :ok <- verify_boolean_option(dsl_state, :assets, asset, :required) do
-      verify_gallery_asset_options(dsl_state, asset)
+    case Brando.Blueprint.AssetOptions.validate(asset) do
+      :ok -> :ok
+      {:error, message} -> error(dsl_state, :assets, asset, message)
     end
   end
-
-  defp verify_asset_options(dsl_state, %{type: type, opts: opts} = asset) do
-    allowed_options =
-      if type == :gallery do
-        @asset_option_keys ++ @gallery_asset_option_keys
-      else
-        @asset_option_keys
-      end
-
-    case opts |> Map.keys() |> Enum.sort() |> Kernel.--(allowed_options) do
-      [] -> :ok
-      unknown -> error(dsl_state, :assets, asset, "contains unsupported options #{inspect(unknown)}")
-    end
-  end
-
-  defp verify_gallery_asset_options(dsl_state, %{type: :gallery} = asset) do
-    with :ok <- verify_boolean_option(dsl_state, :assets, asset, :force_update_on_change),
-         :ok <- verify_string_option(dsl_state, :assets, asset, :required_message) do
-      verify_string_option(dsl_state, :assets, asset, :invalid_message)
-    end
-  end
-
-  defp verify_gallery_asset_options(_dsl_state, _asset), do: :ok
 
   defp verify_attribute(dsl_state, attribute, storage_columns) do
     with :ok <- verify_attribute_options(dsl_state, attribute),
@@ -193,7 +168,7 @@ defmodule Brando.Blueprint.Verifier do
          storage_columns
        ) do
     field = Map.get(opts, :foreign_key, :"#{name}_id")
-    misplaced_options = opts |> Map.keys() |> Enum.filter(&(&1 in [:null, :source])) |> Enum.sort()
+    misplaced_options = opts |> Map.keys() |> Enum.filter(&(&1 in [:null, :primary_key, :source])) |> Enum.sort()
 
     cond do
       misplaced_options != [] ->
@@ -332,14 +307,6 @@ defmodule Brando.Blueprint.Verifier do
     case RelationOptions.validate(relation) do
       :ok -> :ok
       {:error, message} -> error(dsl_state, :relations, relation, message)
-    end
-  end
-
-  defp verify_string_option(dsl_state, section, %{opts: opts} = entity, option) do
-    case Map.get(opts, option) do
-      nil -> :ok
-      value when is_binary(value) -> :ok
-      value -> error(dsl_state, section, entity, "`:#{option}` must be a string, got: #{inspect(value)}")
     end
   end
 

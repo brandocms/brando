@@ -2,6 +2,7 @@ defmodule Brando.Blueprint.MigrationExecutionTest do
   use ExUnit.Case, async: false
 
   alias Brando.Blueprint.Migrations
+  alias Brando.Blueprint.Migrations.Schema, as: MigrationSchema
 
   defmodule MigrationRepo do
     use Ecto.Repo,
@@ -465,6 +466,32 @@ defmodule Brando.Blueprint.MigrationExecutionTest do
       assert [^version] = run_migration(prefix, version, migration, :down)
       refute table_exists?(prefix, module.__schema__(:source))
     end)
+  end
+
+  test "belongs-to primary keys stay aligned across Ecto and PostgreSQL", %{prefix: prefix} do
+    opts = [migration_path: @migration_path, snapshot_path: @snapshot_path]
+    module = Brando.MigrationTest.RelationPrimaryKeyV1
+    table = module.__schema__(:source)
+
+    create_dependency_tables!(prefix, ["users"])
+
+    assert module.__schema__(:primary_key) == [:owner_id]
+    assert module.__schema__(:field_source, :owner_id) == :owner_ref
+
+    [owner_column] = MigrationSchema.build(module).columns
+    assert owner_column.name == :owner_ref
+    assert owner_column.opts == %{null: false, primary_key: true}
+
+    assert {:ok, generated} = Migrations.create_migration(module, opts)
+    {version, migration} = compiled_migration(generated.migration)
+
+    assert [^version] = run_migration(prefix, version, migration, :up)
+    assert column_names(prefix, table) == ["owner_ref"]
+    assert primary_key_columns(prefix, table) == ["owner_ref"]
+    assert foreign_key(prefix, table, "#{table}_owner_ref_fkey") == ["users", "RESTRICT"]
+
+    assert [^version] = run_migration(prefix, version, migration, :down)
+    refute table_exists?(prefix, table)
   end
 
   defp migration_version(filename) do
