@@ -156,12 +156,14 @@ an update cannot suffix a value merely because it already belongs to that row.
 These are changeset corrections behind the existing DSL and require no Igniter
 upgrade or database migration.
 
-For cast collection relations, `required: true` also applies when the form sends
-an empty string to clear the collection. `has_many`, `many_to_many`, and
-`entries` reject that value with the standard required error and honor
-`required_message`; optional collections continue to clear to an empty list.
-This is changeset validation only and does not require an Igniter upgrade or
-database migration.
+For cast collection relations, `required: true` also applies when a form or API
+sends `nil`, an empty string/list/map, or a list containing only blank ID
+sentinels. `has_many`, `many_to_many`, and `entries` reject those values with the
+standard required error and honor `required_message`; optional collections
+continue to clear to an empty list. Many-to-many ID params may use string or
+atom keys. Malformed IDs and IDs the configured lookup cannot resolve add a
+cast error instead of raising or being silently discarded. This is changeset
+validation only and does not require an Igniter upgrade or database migration.
 
 Complete entry preloads from `Brando.Blueprint.preloads_for/2` include direct
 `has_one` associations as well as the existing belongs-to and collection

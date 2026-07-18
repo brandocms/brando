@@ -134,6 +134,14 @@
 
 #### Improvements
 
+- **Consistent Blueprint collection relation casting**: Required `has_many`,
+  `many_to_many`, and `entries` relations now reject every supported empty form
+  or API representation instead of only the empty string. Optional collections
+  still clear normally. Many-to-many helpers accept atom- or string-keyed
+  params and turn malformed or unresolved IDs into changeset errors rather than
+  crashes or silent data loss. Blueprint declarations and changeset APIs are
+  unchanged; no Igniter or database migration is required.
+
 - **Fail-closed Blueprint and revision snapshots**: Migration snapshots now
   reject unknown future formats, malformed normalized storage schemas, invalid
   metadata, and filename/embedded-version mismatches before diffing. Revision

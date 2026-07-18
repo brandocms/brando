@@ -116,6 +116,13 @@ defmodule Brando.Blueprint.RelationsTest do
     assert required_relations == [:location_id, :creator_id]
   end
 
+  test "relation option lookup returns an empty list for an unknown relation" do
+    assert Relations.__relation_opts__(Brando.Persons.Person, :related_entries)[:module] ==
+             Brando.Persons.Person.RelatedEntriesIdentifier
+
+    assert Relations.__relation_opts__(Brando.Persons.Person, :missing) == []
+  end
+
   describe "required collection casting" do
     test "an empty has-many value cannot bypass required validation" do
       relation = %Relation{
@@ -128,17 +135,19 @@ defmodule Brando.Blueprint.RelationsTest do
         }
       }
 
-      changeset =
-        Changeset.cast(
-          %Brando.BlueprintTest.P1{},
-          %{"project_contributors" => ""},
-          []
-        )
+      for empty_value <- [nil, "", [], [nil, ""], %{}] do
+        changeset =
+          Changeset.cast(
+            %Brando.BlueprintTest.P1{},
+            %{"project_contributors" => empty_value},
+            []
+          )
 
-      result = Relations.run_cast_relation(relation, changeset, nil)
+        result = Relations.run_cast_relation(relation, changeset, nil)
 
-      refute result.valid?
-      assert {"can't be blank", [validation: :required]} = result.errors[:project_contributors]
+        refute result.valid?
+        assert {"can't be blank", [validation: :required]} = result.errors[:project_contributors]
+      end
     end
 
     test "an empty entries value cannot bypass required validation" do
@@ -151,17 +160,19 @@ defmodule Brando.Blueprint.RelationsTest do
           |> Map.put(:required_message, "select at least one entry")
         end)
 
-      changeset =
-        Changeset.cast(
-          %Brando.Persons.Person{},
-          %{"related_entries" => ""},
-          []
-        )
+      for empty_value <- [nil, "", [], [nil, ""], %{}] do
+        changeset =
+          Changeset.cast(
+            %Brando.Persons.Person{},
+            %{"related_entries" => empty_value},
+            []
+          )
 
-      result = Relations.run_cast_relation(relation, changeset, nil)
+        result = Relations.run_cast_relation(relation, changeset, nil)
 
-      refute result.valid?
-      assert {"select at least one entry", [validation: :required]} = result.errors[:related_entries]
+        refute result.valid?
+        assert {"select at least one entry", [validation: :required]} = result.errors[:related_entries]
+      end
     end
 
     test "empty optional collections still clear existing associations" do
@@ -176,29 +187,31 @@ defmodule Brando.Blueprint.RelationsTest do
 
       entries_relation = Relations.__relation__(Brando.Persons.Person, :related_entries)
 
-      has_many_changeset =
-        Changeset.cast(
-          %Brando.BlueprintTest.P1{},
-          %{"project_contributors" => ""},
-          []
-        )
+      for empty_value <- [nil, "", [], [nil, ""], %{}] do
+        has_many_changeset =
+          Changeset.cast(
+            %Brando.BlueprintTest.P1{},
+            %{"project_contributors" => empty_value},
+            []
+          )
 
-      entries_changeset =
-        Changeset.cast(
-          %Brando.Persons.Person{},
-          %{"related_entries" => ""},
-          []
-        )
+        entries_changeset =
+          Changeset.cast(
+            %Brando.Persons.Person{},
+            %{"related_entries" => empty_value},
+            []
+          )
 
-      assert [] ==
-               has_many_changeset
-               |> then(&Relations.run_cast_relation(has_many_relation, &1, nil))
-               |> Changeset.get_change(:project_contributors)
+        assert [] ==
+                 has_many_changeset
+                 |> then(&Relations.run_cast_relation(has_many_relation, &1, nil))
+                 |> Changeset.get_change(:project_contributors)
 
-      assert [] ==
-               entries_changeset
-               |> then(&Relations.run_cast_relation(entries_relation, &1, nil))
-               |> Changeset.get_change(:related_entries)
+        assert [] ==
+                 entries_changeset
+                 |> then(&Relations.run_cast_relation(entries_relation, &1, nil))
+                 |> Changeset.get_change(:related_entries)
+      end
     end
 
     test "an empty many-to-many value uses the same required contract" do
@@ -213,11 +226,28 @@ defmodule Brando.Blueprint.RelationsTest do
         }
       }
 
-      changeset = Changeset.cast(%Owner{}, %{"tags" => ""}, [])
-      result = Relations.run_cast_relation(relation, changeset, nil)
+      for empty_value <- [nil, "", [], [nil, ""], %{}] do
+        changeset = Changeset.cast(%Owner{}, %{"tags" => empty_value}, [])
+        result = Relations.run_cast_relation(relation, changeset, nil)
 
-      refute result.valid?
-      assert {"select at least one tag", [validation: :required]} = result.errors[:tags]
+        refute result.valid?
+        assert {"select at least one tag", [validation: :required]} = result.errors[:tags]
+      end
+    end
+
+    test "empty optional collection variants clear associations consistently" do
+      relation = %Relation{
+        name: :tags,
+        type: :many_to_many,
+        opts: %{cast: true, module: Tag}
+      }
+
+      for empty_value <- [nil, "", [], [nil, ""], %{}] do
+        changeset = Changeset.cast(%Owner{}, %{tags: empty_value}, [])
+        result = Relations.run_cast_relation(relation, changeset, nil)
+
+        assert Changeset.get_change(result, :tags) == []
+      end
     end
   end
 end
