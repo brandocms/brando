@@ -3,6 +3,10 @@ on: [push, pull_request]
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   mix_test:
     name: mix test (OTP ${{matrix.otp}} | Elixir ${{matrix.elixir}})
@@ -64,8 +68,146 @@ jobs:
       - name: Remove compiled application files
         run: mix clean
 
+      - name: Compile without warnings
+        run: mix compile --warnings-as-errors
+
       - name: Reset db
         run: mix ecto.reset
 
       - name: Run Tests
-        run: mix test
+        run: mix test --warnings-as-errors
+
+  quality:
+    name: Blueprint quality gates
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
+
+    steps:
+      - uses: actions/checkout@v6.0.3
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: 1.20.0
+          otp-version: 28.0
+
+      - name: Restore deps and _build cache
+        uses: actions/cache@v5.0.5
+        with:
+          path: |
+            deps
+            _build
+          key: quality-${{ runner.os }}-28.0-1.20.0-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            quality-${{ runner.os }}-28.0-1.20.0
+
+      - name: Install dependencies
+        run: mix deps.get --only test
+
+      - name: Check formatting
+        run: mix format --check-formatted
+
+      - name: Compile without warnings
+        run: mix compile --warnings-as-errors
+
+      - name: Run strict Blueprint code analysis
+        run: mix credo --strict lib/brando/blueprint.ex lib/brando/blueprint
+
+      - name: Reject compile-connected dependency cycles
+        run: mix xref graph --format cycles --label compile-connected --fail-above 0
+
+  e2e:
+    name: Serial E2E (PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      db:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: e2e_project_dev
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out Brando
+        uses: actions/checkout@v6.0.3
+        with:
+          path: brando
+
+      - name: Check out JSON API integration
+        uses: actions/checkout@v6.0.3
+        with:
+          repository: brandocms/brando_json_api
+          path: brando_json_api
+
+      - name: Check out GraphQL integration
+        uses: actions/checkout@v6.0.3
+        with:
+          repository: brandocms/brando_graphql
+          path: brando_graphql
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: 1.20.0
+          otp-version: 28.0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Elixir dependencies
+        working-directory: brando/e2e
+        run: source .envrc && MIX_ENV=e2e mix deps.get
+
+      - name: Install Brando asset dependencies
+        working-directory: brando/assets
+        run: pnpm install --frozen-lockfile
+
+      - name: Build backend assets through the E2E consumer
+        working-directory: brando/e2e/assets/backend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Build frontend assets
+        working-directory: brando/e2e/assets/frontend
+        run: |
+          corepack enable
+          yarn install --frozen-lockfile
+          yarn build
+
+      - name: Install Playwright
+        working-directory: brando/e2e/e2e/playwright
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+
+      - name: Run serial E2E suite
+        working-directory: brando/e2e
+        run: ./test_e2e.sh --reset
+
+      - name: Upload E2E failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failure-artifacts
+          path: |
+            brando/e2e/e2e/playwright/playwright-report
+            brando/e2e/e2e/playwright/test-results
+          if-no-files-found: ignore
+          retention-days: 7

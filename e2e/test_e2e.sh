@@ -1,5 +1,5 @@
-#!/bin/zsh
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 source .envrc
 
 # Default test command
@@ -25,7 +25,7 @@ MIX_ENV=e2e mix do ecto.create, ecto.migrate
 if [ "$RESET_DB" = true ]; then
   echo "Resetting database with seed data..."
   # Force recompile to ensure sandbox plug is included (compile_env is evaluated at compile time)
-  MIX_ENV=e2e mix compile --force
+  MIX_ENV=e2e mix compile --force --warnings-as-errors
   MIX_ENV=e2e mix do ecto.drop, ecto.create, ecto.migrate
   echo "Validating post-baseline migration rollback and forward execution..."
   # `--to` is inclusive, so target the first migration after the monolithic baseline.
@@ -38,4 +38,4 @@ elif ! MIX_ENV=e2e mix ecto.migrate; then
 fi
 
 unset NO_COLOR
-cd e2e/playwright && pnpm $TEST_COMMAND "${EXTRA_ARGS[@]}"
+cd e2e/playwright && pnpm "$TEST_COMMAND" "${EXTRA_ARGS[@]}"

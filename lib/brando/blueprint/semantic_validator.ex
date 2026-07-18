@@ -8,8 +8,6 @@ defmodule Brando.Blueprint.SemanticValidator do
     with :ok <- Brando.Blueprint.Verifier.verify(dsl_state),
          :ok <- Brando.Blueprint.SecondaryVerifier.verify(dsl_state) do
       {:ok, dsl_state}
-    else
-      {:error, error} -> {:error, error}
     end
   end
 

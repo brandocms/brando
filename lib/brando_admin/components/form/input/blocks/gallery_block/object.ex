@@ -58,15 +58,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
       <Input.input type={:hidden} field={@gallery_object_form[:image_id]} />
       <Input.input type={:hidden} field={@gallery_object_form[:video_id]} />
       <Input.input type={:hidden} field={@gallery_object_form[:creator_id]} />
-      
-    <!-- Hidden inputs for sorting -->
+
+      <!-- Hidden inputs for sorting -->
       <input
         type="hidden"
         name={"#{@gallery_form.name}[sort_gallery_object_ids][]"}
         value={@gallery_object_form.index}
       />
-      
-    <!-- Media type badge -->
+
+      <!-- Media type badge -->
       <div class="badge mini media-type-badge">
         <%= if @gallery_object_form[:image_id].value do %>
           <.icon name="hero-photo" />
@@ -132,8 +132,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
           {@display_values.alt || "{ #{gettext("No alt text")} }"}
         </div>
       </figcaption>
-      
-    <!-- Individual modal for this gallery object (inside the div) -->
+
+      <!-- Individual modal for this gallery object (inside the div) -->
       <Content.modal title={gettext("Edit captions")} id={@object_modal_id} data-sortable-filter>
         <div class="panels">
           <div class="panel">

@@ -139,7 +139,6 @@ defmodule Brando.Mixfile do
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       {:igniter, "~> 0.8.0", only: [:dev, :test]},
-      {:recompile_buster, "~> 0.1.0", only: [:dev, :test], runtime: false},
 
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test, runtime: false},

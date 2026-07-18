@@ -40,8 +40,7 @@ defmodule Brando.HTML.Video do
       webkitallowfullscreen
       mozallowfullscreen
       allowfullscreen
-    >
-    </iframe>
+    >{"\n"}</iframe>
     """
   end
 
@@ -70,8 +69,7 @@ defmodule Brando.HTML.Video do
       webkitallowfullscreen
       mozallowfullscreen
       allowfullscreen
-    >
-    </iframe>
+    >{"\n"}</iframe>
     """
   end
 
@@ -180,8 +178,8 @@ defmodule Brando.HTML.Video do
           <source src={@src} type="application/x-mpegURL" />
         </video>
       </noscript>
-      
-    <!-- play button -->
+
+      <!-- play button -->
       {get_play_button(@play_button)}
       <!-- /play button -->
 
@@ -307,8 +305,8 @@ defmodule Brando.HTML.Video do
           <source src={@src} type="application/x-mpegURL" />
         </video>
       </noscript>
-      
-    <!-- play button -->
+
+      <!-- play button -->
       {get_play_button(@play_button)}
       <!-- /play button -->
 
@@ -426,8 +424,7 @@ defmodule Brando.HTML.Video do
         style={@aspect_ratio}
         data-src={@preload && @src}
         src={!@preload && @src}
-      >
-      </video>
+      >{"\n  "}</video>
 
       <noscript>
         <video
@@ -440,8 +437,7 @@ defmodule Brando.HTML.Video do
           loop={@loop}
           playsinline
           src={@src}
-        >
-        </video>
+        >{"\n    "}</video>
       </noscript>
 
       {get_play_button(@play_button)}

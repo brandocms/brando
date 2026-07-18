@@ -67,8 +67,7 @@ defmodule Brando.LivePreview.Target do
       type: {:list, :any},
       required: false,
       default: [],
-      doc:
-        "Preloads passed to `Repo.preload/2`. Accepts nested preloads, e.g. `[related_cases: :identifier]`"
+      doc: "Preloads passed to `Repo.preload/2`. Accepts nested preloads, e.g. `[related_cases: :identifier]`"
     ],
     assigns: [
       type: {:list, {:tuple, [:atom, {:or, [{:fun, 1}, {:fun, 2}]}]}},
