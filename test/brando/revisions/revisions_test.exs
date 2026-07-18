@@ -274,6 +274,26 @@ defmodule Brando.Revisions.RevisionsTest do
     assert Brando.Repo.get!(Page, page.id).title == page.title
   end
 
+  test "rejects a revision blob belonging to another entry", %{user: user} do
+    page = Factory.insert(:page, creator: user, title: "Original entry")
+    other_page = Factory.insert(:page, creator: user, title: "Other entry")
+    assert {:ok, revision} = Revisions.create_revision(page, user)
+
+    from(r in Revision,
+      where: r.entry_type == ^to_string(Page) and r.entry_id == ^page.id,
+      update: [set: [encoded_entry: ^Brando.Utils.term_to_binary(other_page)]]
+    )
+    |> Brando.Repo.update_all([])
+
+    assert {:error, {:revision, :invalid_snapshot}} =
+             Revisions.get_revision(Page, page.id, revision.revision)
+
+    assert {:error, {:revision, :invalid_snapshot}} =
+             Revisions.set_entry_to_revision(Page, page.id, revision.revision, user)
+
+    assert Brando.Repo.get!(Page, page.id).title == "Original entry"
+  end
+
   test "scheduled revisions are retained, cancellable, and publish as active", %{user: user} do
     {:ok, original} =
       Pages.create_page(Factory.params_for(:page, title: "Scheduled original", vars: []), user)

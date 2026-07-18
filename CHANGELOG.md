@@ -134,6 +134,16 @@
 
 #### Improvements
 
+- **Fail-closed Blueprint and revision snapshots**: Migration snapshots now
+  reject unknown future formats, malformed normalized storage schemas, invalid
+  metadata, and filename/embedded-version mismatches before diffing. Revision
+  blobs must decode to the recorded Blueprint type and entry ID before preview
+  or restore, preventing a swapped blob from applying another entry's data. Old
+  source-controlled Blueprint snapshots remain readable when they contain
+  retired declaration or field-name atoms, but executable terms are rejected.
+  Public APIs are unchanged, and this integrity hardening requires no Igniter
+  upgrade or database migration.
+
 - **Reliable scoped Blueprint collision handling**: Arity-one
   `prevent_collision` callbacks now receive the changeset and supply the
   candidate query as documented instead of being silently bypassed. Scoped

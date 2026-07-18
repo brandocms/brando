@@ -85,8 +85,9 @@ is not a shortcut for a missing database migration. Use it only after a reviewed
 database has been verified to match the current Blueprint.
 
 The generator also stops if it finds migrations without snapshots, snapshots without migrations, an unreadable
-snapshot, an invalid rename source, or another history inconsistency. Restore the missing file from version control
-first. Re-baseline only when restoration is impossible and you have independently confirmed the live database schema.
+snapshot, an unsupported snapshot format, a filename/embedded-version mismatch, a malformed normalized storage schema,
+an invalid rename source, or another history inconsistency. Restore the missing file from version control first.
+Re-baseline only when restoration is impossible and you have independently confirmed the live database schema.
 
 ## Upgrading legacy snapshots
 
@@ -94,14 +95,18 @@ Existing external-term snapshots are decoded as legacy format 1 and normalized i
 generation writes format 2; an unchanged Blueprint upgrades the existing snapshot atomically without creating a
 migration.
 
+Snapshot files are source-controlled migration history and must be reviewed like migration source. Brando accepts
+retired declaration and field-name atoms in legacy snapshots while rejecting executable terms and validating the
+decoded structure. Do not copy snapshots from an untrusted source into the repository.
+
 Before upgrading Brando:
 
 1. Commit every existing Blueprint migration and snapshot.
 2. Run the task once for each Blueprint that uses generated migrations.
 3. Review and commit any upgraded snapshots together.
 
-If safe decoding reports a corrupt or incompatible legacy snapshot, do not delete it and rerun the generator—that
-would make the current Blueprint look like a brand-new table. Restore a valid copy from version control. If none exists,
+If decoding reports a corrupt or incompatible legacy snapshot, do not delete it and rerun the generator—that would
+make the current Blueprint look like a brand-new table. Restore a valid copy from version control. If none exists,
 compare the Blueprint with the database manually and use `--rebaseline` only after they are known to match.
 
 ## Umbrella and custom paths

@@ -191,6 +191,89 @@ defmodule Brando.Blueprint.MigrationsTest do
     assert Path.wildcard("tmp/test_migrations/*.exs") == []
   end
 
+  test "executable snapshot terms stop generation" do
+    module = Brando.MigrationTest.Project
+    filename = snapshot_filename(module, 1)
+    File.mkdir_p!(Path.dirname(filename))
+    File.write!(filename, :erlang.term_to_binary(fn -> :not_allowed end))
+
+    assert_raise BlueprintError, ~r/Could not decode Blueprint snapshot/, fn ->
+      Migrations.create_migration(module, @test_opts)
+    end
+
+    assert Path.wildcard("tmp/test_migrations/*.exs") == []
+  end
+
+  test "unsupported snapshot formats stop generation" do
+    module = Brando.MigrationTest.Project
+    snapshot = %{Snapshot.build_snapshot(module, 1) | format_version: 3}
+    filename = write_snapshot(module, 1, snapshot)
+
+    assert_raise BlueprintError, ~r/Unsupported Blueprint snapshot format: 3/, fn ->
+      Snapshot.get_latest_snapshot(module, @test_opts)
+    end
+
+    assert File.exists?(filename)
+    assert Path.wildcard("tmp/test_migrations/*.exs") == []
+  end
+
+  test "malformed normalized snapshot schemas stop generation" do
+    module = Brando.MigrationTest.Project
+    snapshot = %{Snapshot.build_snapshot(module, 1) | schema: %{format_version: 2}}
+    write_snapshot(module, 1, snapshot)
+
+    assert_raise BlueprintError, ~r/Invalid Blueprint snapshot.*missing_field.*table/s, fn ->
+      Migrations.create_migration(module, @test_opts)
+    end
+
+    assert Path.wildcard("tmp/test_migrations/*.exs") == []
+  end
+
+  test "snapshot filenames and embedded versions must agree" do
+    module = Brando.MigrationTest.Project
+    snapshot = Snapshot.build_snapshot(module, 1)
+    write_snapshot(module, 2, snapshot)
+
+    assert_raise BlueprintError, ~r/snapshot_version_mismatch.*2.*1/s, fn ->
+      Snapshot.get_latest_snapshot(module, @test_opts)
+    end
+  end
+
+  test "invalid normalized snapshot metadata stops generation" do
+    module = Brando.MigrationTest.Project
+
+    for {field, value, expected_error} <- [
+          {:rebaseline?, :yes, "invalid_rebaseline"},
+          {:migrated_from_format, 0, "invalid_migrated_from_format"},
+          {:updated_at, nil, "invalid_updated_at"}
+        ] do
+      snapshot = module |> Snapshot.build_snapshot(1) |> Map.put(field, value)
+      filename = write_snapshot(module, 1, snapshot)
+
+      assert_raise BlueprintError, ~r/#{expected_error}/, fn ->
+        Migrations.create_migration(module, @test_opts)
+      end
+
+      File.rm!(filename)
+    end
+
+    assert Path.wildcard("tmp/test_migrations/*.exs") == []
+  end
+
+  test "prepared snapshots reject non-storage column options before writing" do
+    module = Brando.MigrationTest.Project
+    snapshot = Snapshot.build_snapshot(module, 1)
+    [column | columns] = snapshot.schema.columns
+    invalid_column = put_in(column, [:opts, :default], fn -> :not_allowed end)
+    invalid_snapshot = put_in(snapshot.schema.columns, [invalid_column | columns])
+
+    assert_raise BlueprintError, ~r/invalid_field.*opts/s, fn ->
+      Snapshot.store_snapshot(invalid_snapshot, module, @test_opts)
+    end
+
+    refute File.exists?(snapshot_filename(module, 1))
+  end
+
   test "explicit re-baselining records current state without inventing a migration" do
     assert {:ok, metadata} = Migrations.rebaseline_snapshot(Brando.MigrationTest.Project, @test_opts)
 
@@ -234,6 +317,17 @@ defmodule Brando.Blueprint.MigrationsTest do
     assert upgraded.attributes == nil
   end
 
+  test "source-controlled legacy snapshots with retired declaration atoms remain readable" do
+    assert %Snapshot{
+             format_version: 2,
+             migrated_from_format: 1,
+             version: 1
+           } =
+             Snapshot.get_latest_snapshot(Brando.Videos.Video,
+               snapshot_path: "priv/blueprints/snapshots"
+             )
+  end
+
   test "table and primary-key changes require a hand-written migration" do
     assert {:ok, _} = Migrations.create_migration(Brando.MigrationTest.StorageV1, @test_opts)
 
@@ -259,5 +353,17 @@ defmodule Brando.Blueprint.MigrationsTest do
     source
     |> String.split("def down")
     |> List.last()
+  end
+
+  defp write_snapshot(module, version, snapshot) do
+    filename = snapshot_filename(module, version)
+    File.mkdir_p!(Path.dirname(filename))
+    File.write!(filename, :erlang.term_to_binary(snapshot))
+    filename
+  end
+
+  defp snapshot_filename(module, version) do
+    directory = Snapshot.build_path(module, @test_opts)
+    Path.join(directory, "#{String.pad_leading(to_string(version), 3, "0")}.snapshot")
   end
 end

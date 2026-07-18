@@ -442,7 +442,7 @@ defmodule Brando.Revisions do
   end
 
   defp decode_result(revision) do
-    case safe_decode(revision.encoded_entry) do
+    case decode_revision(revision) do
       {:ok, entry} -> {:ok, {revision, {revision.revision, entry}}}
       {:error, reason} -> {:error, {:revision, reason}}
     end
@@ -454,8 +454,23 @@ defmodule Brando.Revisions do
     _ -> {:error, :invalid_snapshot}
   end
 
+  defp decode_revision(revision) do
+    with {:ok, entry} <- safe_decode(revision.encoded_entry),
+         true <- valid_revision_entry?(entry, revision) do
+      {:ok, entry}
+    else
+      _ -> {:error, :invalid_snapshot}
+    end
+  end
+
+  defp valid_revision_entry?(%{__struct__: entry_schema, id: entry_id}, revision) do
+    to_string(entry_schema) == revision.entry_type and entry_id == revision.entry_id
+  end
+
+  defp valid_revision_entry?(_entry, _revision), do: false
+
   defp decode_revision!(revision) do
-    case safe_decode(revision.encoded_entry) do
+    case decode_revision(revision) do
       {:ok, entry} -> entry
       {:error, reason} -> Repo.rollback({:revision, reason})
     end

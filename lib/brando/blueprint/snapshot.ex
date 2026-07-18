@@ -73,7 +73,7 @@ defmodule Brando.Blueprint.Snapshot do
     filename = build_filename(module, version, opts)
 
     case File.read(filename) do
-      {:ok, binary} -> decode_snapshot!(binary, filename, module)
+      {:ok, binary} -> decode_snapshot!(binary, filename, module, version)
       {:error, :enoent} -> nil
       {:error, reason} -> raise_snapshot_error!(filename, reason)
     end
@@ -106,6 +106,7 @@ defmodule Brando.Blueprint.Snapshot do
   """
   @spec store_snapshot(t(), module(), keyword()) :: {:ok, String.t()}
   def store_snapshot(%Snapshot{} = snapshot, module, opts) do
+    validate_snapshot!(snapshot, snapshot.version, inspect(module))
     filename = build_filename(module, snapshot.version, opts)
     File.mkdir_p!(Path.dirname(filename))
     atomic_write!(filename, :erlang.term_to_binary(snapshot, compressed: 6))
@@ -180,10 +181,17 @@ defmodule Brando.Blueprint.Snapshot do
     Path.join(build_path(module, opts), filename)
   end
 
-  defp decode_snapshot!(binary, filename, module) do
-    binary
-    |> :erlang.binary_to_term([:safe])
-    |> migrate_snapshot(module)
+  defp decode_snapshot!(binary, filename, module, expected_version) do
+    snapshot =
+      binary
+      # Legacy snapshots contain declaration and field-name atoms that may no
+      # longer exist in the current code. `binary_to_term(..., [:safe])` cannot
+      # decode those atoms, so use Plug's non-executable decoder for this
+      # source-controlled migration input and validate the complete shape below.
+      |> Plug.Crypto.non_executable_binary_to_term()
+      |> migrate_snapshot(module)
+
+    validate_snapshot!(snapshot, expected_version, filename)
   rescue
     error in [ArgumentError, ErlangError, KeyError] ->
       reraise BlueprintError.exception(
@@ -205,7 +213,9 @@ defmodule Brando.Blueprint.Snapshot do
       {@format_version, schema} when is_map(schema) ->
         struct(Snapshot, Map.from_struct(snapshot))
 
-      {legacy_version, _legacy_schema} ->
+      {legacy_version, _legacy_schema} when legacy_version in [nil, 1] ->
+        validate_legacy_snapshot!(snapshot)
+
         %Snapshot{
           format_version: @format_version,
           migrated_from_format: legacy_version || 1,
@@ -213,12 +223,71 @@ defmodule Brando.Blueprint.Snapshot do
           version: Map.get(snapshot, :version, 0),
           updated_at: Map.get(snapshot, :updated_at)
         }
+
+      {@format_version, invalid_schema} ->
+        raise BlueprintError,
+          message: "Blueprint snapshot format #{@format_version} has an invalid schema: #{inspect(invalid_schema)}"
+
+      {unsupported_format, _schema} ->
+        raise BlueprintError,
+          message: "Unsupported Blueprint snapshot format: #{inspect(unsupported_format)}"
     end
   end
 
   defp migrate_snapshot(other, _module) do
     raise BlueprintError,
       message: "Expected a Brando.Blueprint.Snapshot, got: #{inspect(other, limit: 5)}"
+  end
+
+  defp validate_snapshot!(%Snapshot{} = snapshot, expected_version, source) do
+    with :ok <- validate_snapshot_version(snapshot.version, expected_version),
+         :ok <- validate_snapshot_metadata(snapshot),
+         :ok <- Schema.validate(snapshot.schema) do
+      snapshot
+    else
+      {:error, reason} ->
+        raise BlueprintError,
+          message: "Invalid Blueprint snapshot #{source}: #{inspect(reason, limit: 20)}"
+    end
+  end
+
+  defp validate_snapshot_version(version, expected_version)
+       when is_integer(version) and version > 0 and version == expected_version,
+       do: :ok
+
+  defp validate_snapshot_version(version, expected_version),
+    do: {:error, {:snapshot_version_mismatch, expected_version, version}}
+
+  defp validate_snapshot_metadata(snapshot) do
+    cond do
+      snapshot.format_version != @format_version ->
+        {:error, {:unsupported_format, snapshot.format_version}}
+
+      not is_boolean(snapshot.rebaseline?) ->
+        {:error, {:invalid_rebaseline, snapshot.rebaseline?}}
+
+      not (is_nil(snapshot.migrated_from_format) or
+               (is_integer(snapshot.migrated_from_format) and snapshot.migrated_from_format > 0)) ->
+        {:error, {:invalid_migrated_from_format, snapshot.migrated_from_format}}
+
+      not match?(%DateTime{}, snapshot.updated_at) ->
+        {:error, {:invalid_updated_at, snapshot.updated_at}}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp validate_legacy_snapshot!(snapshot) do
+    invalid_field =
+      Enum.find([:attributes, :assets, :relations, :traits], fn field ->
+        not is_list(Map.get(snapshot, field))
+      end)
+
+    if invalid_field do
+      raise BlueprintError,
+        message: "Invalid legacy Blueprint snapshot field: #{inspect(invalid_field)}"
+    end
   end
 
   defp snapshot_version!(filename) do

@@ -89,6 +89,146 @@ defmodule Brando.Blueprint.Migrations.Schema do
     Map.delete(left, :rename_from) == Map.delete(right, :rename_from)
   end
 
+  @doc """
+  Validates a normalized storage schema loaded from a Blueprint snapshot.
+
+  Validation is intentionally structural and fail-closed so malformed stored
+  terms cannot be interpreted as column, index, or auxiliary-table removals.
+  """
+  @spec validate(term()) :: :ok | {:error, term()}
+  def validate(schema) when is_map(schema) do
+    with :ok <- validate_value(schema, :format_version, &(&1 == @format_version)),
+         :ok <- validate_value(schema, :table, &non_empty_string?/1),
+         :ok <- validate_value(schema, :primary_key, &(&1 in [:id, :uuid])),
+         :ok <- validate_value(schema, :timestamps, &is_boolean/1),
+         :ok <- validate_collection(schema, :columns, &validate_column/1),
+         :ok <- validate_collection(schema, :indexes, &validate_index(&1, schema.table)),
+         :ok <- validate_collection(schema, :auxiliary_tables, &validate_auxiliary_table/1),
+         :ok <- validate_unique_names(schema.columns, :columns),
+         :ok <- validate_unique_names(schema.indexes, :indexes) do
+      validate_unique_names(schema.auxiliary_tables, :auxiliary_tables)
+    end
+  end
+
+  def validate(schema), do: {:error, {:invalid_schema, schema}}
+
+  defp validate_value(map, key, validator) do
+    case Map.fetch(map, key) do
+      {:ok, value} -> if validator.(value), do: :ok, else: {:error, {:invalid_field, key, value}}
+      :error -> {:error, {:missing_field, key}}
+    end
+  end
+
+  defp validate_collection(map, key, validator) do
+    case Map.fetch(map, key) do
+      {:ok, entries} when is_list(entries) -> validate_entries(entries, key, validator)
+      {:ok, entries} -> {:error, {:invalid_field, key, entries}}
+      :error -> {:error, {:missing_field, key}}
+    end
+  end
+
+  defp validate_entries(entries, key, validator) do
+    entries
+    |> Enum.with_index()
+    |> Enum.reduce_while(:ok, fn {entry, index}, :ok ->
+      case validator.(entry) do
+        :ok -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, {key, index, reason}}}
+      end
+    end)
+  end
+
+  defp validate_column(column) when is_map(column) do
+    with :ok <- validate_value(column, :name, &valid_atom?/1),
+         :ok <- validate_value(column, :type, &valid_migration_type?/1),
+         :ok <- validate_value(column, :opts, &valid_column_opts?/1),
+         :ok <- validate_reference(Map.get(column, :reference)) do
+      validate_optional_atom(column, :rename_from)
+    end
+  end
+
+  defp validate_column(column), do: {:error, {:invalid_column, column}}
+
+  defp validate_reference(nil), do: :ok
+
+  defp validate_reference(reference) when is_map(reference) do
+    with :ok <- validate_value(reference, :table, &non_empty_string?/1),
+         :ok <- validate_value(reference, :type, &valid_migration_type?/1),
+         :ok <- validate_value(reference, :column, &valid_atom?/1),
+         :ok <- validate_value(reference, :on_delete, &valid_atom?/1) do
+      validate_value(reference, :name, &non_empty_string?/1)
+    end
+  end
+
+  defp validate_reference(reference), do: {:error, {:invalid_reference, reference}}
+
+  defp validate_index(index, expected_table) when is_map(index) do
+    with :ok <- validate_value(index, :name, &non_empty_string?/1),
+         :ok <- validate_value(index, :table, &(&1 == expected_table)),
+         :ok <- validate_value(index, :unique, &is_boolean/1) do
+      validate_value(index, :fields, &valid_fields?/1)
+    end
+  end
+
+  defp validate_index(index, _expected_table), do: {:error, {:invalid_index, index}}
+
+  defp validate_auxiliary_table(table) when is_map(table) do
+    with :ok <- validate_value(table, :name, &non_empty_string?/1),
+         :ok <- validate_value(table, :timestamps, &is_boolean/1),
+         :ok <- validate_collection(table, :columns, &validate_column/1),
+         :ok <- validate_collection(table, :indexes, &validate_index(&1, table.name)),
+         :ok <- validate_unique_names(table.columns, :columns) do
+      validate_unique_names(table.indexes, :indexes)
+    end
+  end
+
+  defp validate_auxiliary_table(table), do: {:error, {:invalid_auxiliary_table, table}}
+
+  defp validate_unique_names(entries, key) do
+    names = Enum.map(entries, &Map.get(&1, :name))
+    if length(names) == MapSet.size(MapSet.new(names)), do: :ok, else: {:error, {:duplicate_names, key}}
+  end
+
+  defp validate_optional_atom(map, key) do
+    case Map.fetch(map, key) do
+      :error -> :ok
+      {:ok, nil} -> :ok
+      {:ok, value} -> if valid_atom?(value), do: :ok, else: {:error, {:invalid_field, key, value}}
+    end
+  end
+
+  defp non_empty_string?(value), do: is_binary(value) and value != ""
+  defp valid_atom?(value), do: is_atom(value) and not is_nil(value)
+  defp valid_fields?(fields), do: is_list(fields) and fields != [] and Enum.all?(fields, &valid_atom?/1)
+
+  defp valid_migration_type?(type) do
+    (is_atom(type) or is_tuple(type)) and valid_storage_term?(type)
+  end
+
+  defp valid_column_opts?(opts) when is_map(opts) do
+    Enum.all?(Map.keys(opts), &(&1 in @column_opts)) and valid_storage_term?(opts)
+  end
+
+  defp valid_column_opts?(_opts), do: false
+
+  defp valid_storage_term?(term)
+       when is_atom(term) or is_number(term) or is_bitstring(term),
+       do: true
+
+  defp valid_storage_term?(term) when is_list(term), do: Enum.all?(term, &valid_storage_term?/1)
+
+  defp valid_storage_term?(term) when is_tuple(term) do
+    term |> Tuple.to_list() |> Enum.all?(&valid_storage_term?/1)
+  end
+
+  defp valid_storage_term?(term) when is_map(term) do
+    term
+    |> Map.to_list()
+    |> Enum.all?(fn {key, value} -> valid_storage_term?(key) and valid_storage_term?(value) end)
+  end
+
+  defp valid_storage_term?(_term), do: false
+
   defp build_from(module, attributes, assets, relations) do
     table = module.__naming__().table_name
     primary_key = primary_key_type(module)
