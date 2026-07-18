@@ -1021,7 +1021,12 @@ guide. The required order is:
    configuration and is safe to rerun. It warns about the video-data, template,
    related-entry, Vite, custom admin-view, head, navigation, dependency-client,
    secure config-target, and Fabric/Oban changes that require manual
-   application-specific decisions.
+   application-specific decisions. When both legacy `deployment.cfg` and
+   `fabfile.py` exist, it also creates a non-secret `florist.config.exs` without
+   overwriting any existing Florist or Fabric files. Review the generated
+   single/nginx deployment, password environment variables, persistent media
+   symlink cutover, service configuration, backups, and rclone caveats in the
+   migration guide before using it.
 3. Review, format, compile, and test the source diff.
 4. Run `mix brando.upgrade`, then generate or deliberately rebaseline each
    application's Blueprint storage history as documented in

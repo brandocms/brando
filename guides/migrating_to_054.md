@@ -42,7 +42,23 @@ The task:
   API client to `Swoosh.ApiClient.Req`;
 - updates Gettext source declarations through `igniter.update_gettext`;
 - copies the current `mix brando.upgrade` task and
-  `scripts/sync_gettext.sh` helper into the application.
+  `scripts/sync_gettext.sh` helper into the application;
+- creates `florist.config.exs` when both legacy `deployment.cfg` and
+  `fabfile.py` exist and no Florist configuration is already present.
+
+The Florist conversion reads only deterministic literal settings; it never
+evaluates Python. It carries over the project/module, production and staging
+targets, SSH endpoint, remote paths and names, database names/users, Docker
+host/file, domains, and pgbackup intent where they can be inferred. It retains
+the legacy `:single` deployment and nginx topology. Existing
+`florist.config.exs`, `deployment.cfg`, and `fabfile.py` files are never
+overwritten or removed.
+
+Passwords are deliberately omitted. Before loading the generated configuration,
+export `FLORIST_DB_PASSWORD_PROD` and, when generated,
+`FLORIST_DB_PASSWORD_STAGING`. Florist uses the SSH agent by default; do not
+copy `SSH_PASS` into source control. The task warns and uses a documented
+fallback for any Python expression it cannot convert safely.
 
 It does not connect to the database, generate application Blueprint migrations,
 choose identifier persistence, migrate data, or resolve production constraints.
@@ -85,6 +101,38 @@ mix test --warnings-as-errors
 
 Rerunning `mix brando.migrate54` is safe; a second run should produce no source
 diff.
+
+### Review a generated Florist configuration
+
+Treat switching deployment tools as its own rehearsed migration. Before the
+first Florist command:
+
+1. Compare every generated target with its `GLUE_SETTINGS` and target function
+   in `fabfile.py`, especially domain, base directory, process name, database,
+   Docker host, and Dockerfile. The converter emits the bundled Fabric ports
+   (`8055` for production and `8060` for staging); verify each one against the
+   corresponding `.envrc.<flavor>` `PORT` and legacy nginx upstream. Florist
+   names the single-deployment application port `blue_port`.
+2. Keep `deployment type: :single` and `webserver type: :nginx` for the initial
+   cutover. Moving to blue/green changes services, ports, proxying, and release
+   directories and should be tested separately.
+3. Protect persistent media deliberately. The bundled Fabric media operations
+   and Florist both use `<base>/<project>/media`, but Florist changes releases
+   to versioned directories and creates a `current/media` symlink. Verify any
+   project-specific media path before cutover, back it up, and confirm the
+   symlink points at the existing persistent directory.
+4. Compare the legacy `etc/` systemd, nginx, logrotate, pgbackup, cron, and env
+   files with Florist's generated/bootstrap behavior. Do not run bootstrap over
+   a production service until the resulting paths and units have been reviewed.
+   The generated staging target retains the bundled nginx `noindex` behavior.
+5. Configure rclone manually if the fabfile used it. Its prompted credentials
+   and deployment-specific bucket paths are intentionally not migrated.
+6. Verify the Docker image contains the standard Mix release tarball at the
+   path expected by Florist's `release_builder: :elixir`, then rehearse build,
+   copy, upload, unpack, migrate, restart, and rollback on staging.
+
+The legacy files remain available as an audit trail. Remove them only in a later
+commit after the Florist deployment has been proven.
 
 ## 3. Generate and review database migrations
 

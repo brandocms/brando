@@ -12,6 +12,9 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
   @config_path "config/config.exs"
   @dockerfile_path "Dockerfile"
   @fonts_path "assets/front/css/fonts.css"
+  @deployment_config_path "deployment.cfg"
+  @fabfile_path "fabfile.py"
+  @florist_config_path "florist.config.exs"
 
   @legacy_blueprint """
   defmodule LegacyApp.Projects.Project do
@@ -138,6 +141,37 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
   .hero { background-image: url('/images/hero.png?vsn=d'); }
   """
 
+  @deployment_config """
+  [DEPLOYMENT]
+  PROJECT_MODULE = LegacyApp
+  PROJECT_NAME = legacy_app
+  PROD_URL = https://example.com
+  DB_PASS = legacy-secret
+  DOCKER_HOST =
+  SSH_USER = deploy
+  SSH_PASS = legacy-ssh-secret
+  SSH_HOST = example.com
+  SSH_PORT = 2222
+  """
+
+  @fabfile """
+  GLUE_SETTINGS = {
+      'project_name': PROJECT_NAME,
+      'project_group': 'web',
+      'prod': {
+          'project_base': '/sites/prod',
+          'process_name': '%s_prod' % PROJECT_NAME,
+          'db_name': '%s_prod' % PROJECT_NAME,
+          'db_user': PROJECT_NAME,
+      }
+  }
+
+  def prod():
+      env.flavor = 'prod'
+      env.mix_env = 'prod'
+      env.dockerfile = 'Dockerfile'
+  """
+
   test "rewrites the complete legacy Blueprint surface without changing unrelated calls" do
     igniter = migrate(@legacy_blueprint, @legacy_live_preview)
     blueprint = source(igniter, @blueprint_path)
@@ -218,6 +252,47 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert source(igniter, @fonts_path) =~ "/fonts/legacy.woff2'"
     refute source(igniter, @fonts_path) =~ "/fonts/legacy.woff2?vsn=d"
     assert source(igniter, @fonts_path) =~ "/images/hero.png?vsn=d"
+
+    assert_creates(igniter, @florist_config_path, fn config ->
+      assert {:ok, _ast} = Code.string_to_quoted(config)
+      assert config =~ "project_name(\"legacy_app\")"
+      assert config =~ "project_module(LegacyApp)"
+      assert config =~ "set(:type, :single)"
+      assert config =~ "set(:type, :nginx)"
+      assert config =~ "set(:blue_port, 8055)"
+      refute config =~ "legacy-secret"
+      refute config =~ "legacy-ssh-secret"
+    end)
+  end
+
+  test "preserves an existing Florist configuration" do
+    existing_config = "use Florist.DSL\nproject_name \"already_configured\"\n"
+
+    igniter =
+      [
+        app_name: :legacy_app,
+        files: %{
+          @deployment_config_path => @deployment_config,
+          @fabfile_path => @fabfile,
+          @florist_config_path => existing_config
+        }
+      ]
+      |> test_project()
+      |> Igniter.include_existing_file(@florist_config_path)
+      |> Migrate54.igniter()
+
+    assert source(igniter, @florist_config_path) == existing_config
+    assert_unchanged(igniter, @florist_config_path)
+  end
+
+  test "warns without creating a Florist configuration from an incomplete legacy pair" do
+    igniter =
+      [app_name: :legacy_app, files: %{@deployment_config_path => @deployment_config}]
+      |> test_project()
+      |> Migrate54.igniter()
+
+    refute Map.has_key?(igniter.rewrite.sources, @florist_config_path)
+    assert_has_warning(igniter, &String.contains?(&1, "both legacy `deployment.cfg` and `fabfile.py` are required"))
   end
 
   test "preserves an explicitly configured Swoosh client" do
@@ -271,6 +346,8 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert_has_warning(igniter, &String.contains?(&1, "phoenix_live_view"))
     assert_has_warning(igniter, &String.contains?(&1, "config_target"))
     assert_has_warning(igniter, &String.contains?(&1, "oban_job_state"))
+    assert_has_warning(igniter, &String.contains?(&1, "Database passwords are intentionally not written"))
+    assert_has_notice(igniter, &String.contains?(&1, "Created `florist.config.exs`"))
   end
 
   test "copied Gettext helper fills single-line translations portably" do
@@ -302,7 +379,9 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
         @brando_config_path => @brando_config,
         @config_path => @config,
         @dockerfile_path => @dockerfile,
-        @fonts_path => @fonts
+        @fonts_path => @fonts,
+        @deployment_config_path => @deployment_config,
+        @fabfile_path => @fabfile
       }
       |> Map.merge(overrides)
       |> maybe_put(@live_preview_path, live_preview)

@@ -2,6 +2,7 @@ if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.Brando.Migrate54 do
     use Igniter.Mix.Task
 
+    alias Brando.Migration.FloristConfig
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Project.Config
@@ -44,6 +45,7 @@ if Code.ensure_loaded?(Igniter) do
       |> rewrite_dockerfiles()
       |> rewrite_font_urls()
       |> rewrite_preview_targets()
+      |> create_florist_config()
       |> copy_gettext_script()
       |> copy_updated_migration_script()
       |> Igniter.add_task("igniter.update_gettext")
@@ -826,17 +828,25 @@ if Code.ensure_loaded?(Igniter) do
       Repo configuration when exactly one Ecto Repo is available and adds Req
       as Swoosh's API client when no client is configured.
 
+      When both legacy `deployment.cfg` and `fabfile.py` exist and no Florist
+      configuration exists, the task also creates a reviewable
+      `florist.config.exs`. It preserves the legacy single-release/nginx model,
+      does not copy passwords, and leaves the legacy files untouched.
+
       Continue in this order:
 
         1. Review the complete Igniter diff, then run `mix format` and
            `mix compile --warnings-as-errors`.
-        2. Run `mix brando.upgrade` to copy missing Brando Ecto migrations.
-        3. For every application Blueprint with generated migration history,
+        2. If `florist.config.exs` was created, set its required password
+           environment variables and complete the deployment review in the
+           migration guide before running Florist.
+        3. Run `mix brando.upgrade` to copy missing Brando Ecto migrations.
+        4. For every application Blueprint with generated migration history,
            run `mix brando.gen.blueprint_migration MyApp.Domain.Schema`.
-        4. Review every generated `up/0` and `down/0`, test rollback/forward,
+        5. Review every generated `up/0` and `down/0`, test rollback/forward,
            and commit the source, migrations, and snapshots together.
-        5. Run `mix ecto.migrate` only after that review.
-        6. After the database migration, run `mix brando.entries.resave` and
+        6. Run `mix ecto.migrate` only after that review.
+        7. After the database migration, run `mix brando.entries.resave` and
            `mix brando.identifiers.sync`.
 
       See `guides/migrating_to_054.md` and `guides/blueprint_migrations.md` in
@@ -877,6 +887,12 @@ if Code.ensure_loaded?(Igniter) do
         * Fabric deployments must ensure the application database role owns the
           `oban_job_state` enum before `brando_153` upgrades Oban to v14. Follow
           the changelog's updated `grant_db`/`ALTER TYPE ... OWNER TO` procedure.
+        * A generated Florist configuration deliberately retains `:single`
+          deployment with nginx. Validate domains, Docker/release paths, remote
+          directories, systemd/nginx behavior, the persistent media symlink, and
+          database backups before replacing Fabric. Opt into blue/green only as
+          a separately rehearsed deployment change. Legacy rclone credentials
+          and bucket paths are never inferred.
         * Back up Gettext catalogs before attempting recovery. After extracting
           the backend and frontend catalogs, run the copied helper explicitly
           with Bash, for example:
@@ -886,6 +902,62 @@ if Code.ensure_loaded?(Igniter) do
           Review its diff; it only fills empty single-line translations from
           sibling `.po` files and cannot decide plural or contextual translations.
       """)
+    end
+
+    defp create_florist_config(igniter) do
+      florist_config? = Igniter.exists?(igniter, "florist.config.exs")
+      deployment_config? = Igniter.exists?(igniter, "deployment.cfg")
+      fabfile? = Igniter.exists?(igniter, "fabfile.py")
+
+      case {florist_config?, deployment_config?, fabfile?} do
+        {true, _, _} ->
+          igniter
+
+        {false, true, true} ->
+          generate_florist_config(igniter)
+
+        {false, false, false} ->
+          igniter
+
+        {false, _, _} ->
+          Igniter.add_warning(
+            igniter,
+            "Skipped Florist conversion because both legacy `deployment.cfg` and `fabfile.py` are required."
+          )
+      end
+    end
+
+    defp generate_florist_config(igniter) do
+      igniter =
+        igniter
+        |> Igniter.include_existing_file("deployment.cfg", required?: true)
+        |> Igniter.include_existing_file("fabfile.py", required?: true)
+
+      deployment_config = source_content(igniter, "deployment.cfg")
+      fabfile = source_content(igniter, "fabfile.py")
+
+      case FloristConfig.generate(deployment_config, fabfile) do
+        {:ok, content, warnings} ->
+          igniter
+          |> Igniter.create_new_file("florist.config.exs", content, on_exists: :skip)
+          |> add_florist_warnings(warnings)
+          |> Igniter.add_notice(
+            "Created `florist.config.exs` from the legacy Fabric files. Review it before use; the source files were retained."
+          )
+
+        {:error, reason} ->
+          Igniter.add_warning(igniter, "Could not create `florist.config.exs`: #{reason}")
+      end
+    end
+
+    defp source_content(igniter, path) do
+      igniter.rewrite
+      |> Rewrite.source!(path)
+      |> Source.get(:content)
+    end
+
+    defp add_florist_warnings(igniter, warnings) do
+      Enum.reduce(warnings, igniter, &Igniter.add_warning(&2, "Florist migration: #{&1}"))
     end
 
     defp copy_gettext_script(igniter) do
