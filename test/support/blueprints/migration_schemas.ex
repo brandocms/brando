@@ -530,3 +530,123 @@ defmodule Brando.MigrationTest.FieldOptions do
       null: false
   end
 end
+
+defmodule Brando.MigrationTest.OperationMatrixV1 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationOperations",
+    schema: "OperationMatrix",
+    singular: "operation_matrix",
+    plural: "operation_matrices",
+    gettext_module: Brando.Gettext
+
+  table "blueprint_migration_ops"
+
+  trait Brando.Trait.Timestamped
+
+  attributes do
+    attribute :legacy_title, :string
+    attribute :amount, :integer, default: 1, null: false
+    attribute :obsolete, :text
+    attribute :tenant_id, :integer
+    attribute :code, :string, unique: [with: :tenant_id]
+  end
+
+  assets do
+    asset :cover, :image, cfg: :default
+  end
+
+  relations do
+    relation :owner, :belongs_to,
+      module: Brando.Users.User,
+      null: false,
+      on_delete: :restrict
+
+    relation :legacy_entries, :entries
+  end
+end
+
+defmodule Brando.MigrationTest.OperationMatrixV2 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationOperations",
+    schema: "OperationMatrix",
+    singular: "operation_matrix",
+    plural: "operation_matrices",
+    gettext_module: Brando.Gettext
+
+  table "blueprint_migration_ops"
+
+  trait Brando.Trait.Timestamped
+
+  attributes do
+    attribute :headline, :string, rename_from: :legacy_title
+    attribute :amount, :float, default: 2.5, null: false
+    attribute :added, :boolean, default: false, null: false
+    attribute :tenant_id, :integer
+    attribute :code, :string, unique: true
+  end
+
+  assets do
+    asset :cover, :file, cfg: :default
+  end
+
+  relations do
+    relation :owner, :belongs_to,
+      module: Brando.Users.User,
+      null: true,
+      on_delete: :delete_all
+
+    relation :current_entries, :entries
+  end
+end
+
+defmodule Brando.MigrationTest.TimestampMatrixV1 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationOperations",
+    schema: "TimestampMatrix",
+    singular: "timestamp_matrix",
+    plural: "timestamp_matrices",
+    gettext_module: Brando.Gettext
+
+  table "blueprint_migration_timestamp_matrix"
+
+  attributes do
+    attribute :label, :string
+  end
+end
+
+defmodule Brando.MigrationTest.TimestampMatrixV2 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationOperations",
+    schema: "TimestampMatrix",
+    singular: "timestamp_matrix",
+    plural: "timestamp_matrices",
+    gettext_module: Brando.Gettext
+
+  table "blueprint_migration_timestamp_matrix"
+
+  trait Brando.Trait.Timestamped
+
+  attributes do
+    attribute :label, :string
+  end
+end
+
+defmodule Brando.MigrationTest.TimestampMatrixV3 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationOperations",
+    schema: "TimestampMatrix",
+    singular: "timestamp_matrix",
+    plural: "timestamp_matrices",
+    gettext_module: Brando.Gettext
+
+  table "blueprint_migration_timestamp_matrix"
+
+  attributes do
+    attribute :label, :string
+  end
+end
