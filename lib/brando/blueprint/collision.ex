@@ -33,7 +33,13 @@ defmodule Brando.Blueprint.Collision do
       changeset
     else
       source = filter_fn.(module, filter_field, changeset)
-      do_avoid_field_collision(fields, changeset, source)
+
+      do_avoid_field_collision(
+        fields,
+        changeset,
+        source,
+        scope_changed?(changeset, filter_field)
+      )
     end
   end
 
@@ -46,7 +52,7 @@ defmodule Brando.Blueprint.Collision do
     if draft?(changeset) do
       changeset
     else
-      do_avoid_field_collision(fields, changeset, filter_fn.(changeset))
+      do_avoid_field_collision(fields, changeset, filter_fn.(changeset), true)
     end
   end
 
@@ -67,17 +73,26 @@ defmodule Brando.Blueprint.Collision do
 
   @doc false
   def do_avoid_field_collision(fields, changeset, source) do
+    do_avoid_field_collision(fields, changeset, source, false)
+  end
+
+  defp do_avoid_field_collision(fields, changeset, source, check_unchanged?) do
     Changeset.prepare_changes(changeset, fn prepared_changeset ->
       Enum.reduce(fields, prepared_changeset, fn field, current_changeset ->
-        ensure_unique_field(current_changeset, source, field)
+        ensure_unique_field(current_changeset, source, field, check_unchanged?)
       end)
     end)
   end
 
   defp draft?(changeset), do: Changeset.get_field(changeset, :status) == :draft
 
-  defp ensure_unique_field(changeset, source, field) do
-    case Changeset.get_change(changeset, field) do
+  defp ensure_unique_field(changeset, source, field, check_unchanged?) do
+    field_change = Changeset.get_change(changeset, field)
+
+    field_value =
+      if is_nil(field_change) and check_unchanged?, do: Changeset.get_field(changeset, field), else: field_change
+
+    case field_value do
       nil ->
         changeset
 
@@ -95,6 +110,7 @@ defmodule Brando.Blueprint.Collision do
   defp get_unique_field_value(changeset, source, field, field_value, attempts) when attempts < @max_attempts do
     candidate = construct_field_value(field_value, attempts)
     query = from entry in source, where: field(entry, ^field) == ^candidate
+    query = exclude_current_entry(query, changeset)
 
     query =
       if soft_delete_schema?(changeset.data.__struct__) do
@@ -114,6 +130,28 @@ defmodule Brando.Blueprint.Collision do
 
   defp soft_delete_schema?(schema) do
     function_exported?(schema, :has_trait, 1) and schema.has_trait(Brando.Trait.SoftDelete)
+  end
+
+  defp exclude_current_entry(query, %Changeset{data: data}) do
+    primary_key = Ecto.primary_key(data)
+
+    if primary_key != [] and Enum.all?(primary_key, fn {_field, value} -> not is_nil(value) end) do
+      current_entry =
+        Enum.reduce(primary_key, dynamic(true), fn {primary_key_field, value}, current_entry ->
+          dynamic([entry], ^current_entry and field(entry, ^primary_key_field) == ^value)
+        end)
+
+      not_current_entry = dynamic([_entry], not (^current_entry))
+      where(query, ^not_current_entry)
+    else
+      query
+    end
+  end
+
+  defp scope_changed?(changeset, fields) do
+    fields
+    |> List.wrap()
+    |> Enum.any?(&Changeset.changed?(changeset, &1))
   end
 
   defp construct_field_value(field_value, 0), do: field_value

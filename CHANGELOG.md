@@ -134,6 +134,14 @@
 
 #### Improvements
 
+- **Reliable scoped Blueprint collision handling**: Arity-one
+  `prevent_collision` callbacks now receive the changeset and supply the
+  candidate query as documented instead of being silently bypassed. Scoped
+  collision checks also rerun when only a scope field changes, while persisted
+  entries are excluded from colliding with themselves. The Blueprint DSL and
+  changeset helper APIs are unchanged, and this correction requires no Igniter
+  upgrade or database migration.
+
 - **Safe mixed-container Blueprint value paths**: `fallback/2` and
   `try_path/2` now traverse each map, struct, keyword list, and indexed list
   according to the container at that path step. Mixed paths no longer raise

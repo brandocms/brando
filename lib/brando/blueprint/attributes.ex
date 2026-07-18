@@ -28,6 +28,17 @@ defmodule Brando.Blueprint.Attributes do
   This allows you to have `%{slug: "test", language: "en"}` and
   `%{slug: "test", language: "dk"}` without erroring.
 
+  For custom scopes, pass an arity-one callback that receives the changeset and
+  returns the query used to check candidates:
+
+      attribute :slug,
+        unique: [
+          prevent_collision: fn changeset ->
+            language = Ecto.Changeset.get_field(changeset, :language)
+            from entry in MyApp.Content.Entry, where: entry.language == ^language
+          end
+        ]
+
   """
 
   alias Spark.Dsl.Extension

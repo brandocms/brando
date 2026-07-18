@@ -148,6 +148,14 @@ and `prevent_collision:` fields must name columns persisted by the same
 Blueprint; virtual attributes cannot be unique. Invalid declarations are
 reported while the Blueprint compiles.
 
+`unique: [prevent_collision: scope]` reevaluates the unique value when either
+that value or one of its scope fields changes. An arity-one collision callback
+receives the current changeset and must return the Ecto query used to search for
+candidates. Persisted entries are excluded from their own collision query, so
+an update cannot suffix a value merely because it already belongs to that row.
+These are changeset corrections behind the existing DSL and require no Igniter
+upgrade or database migration.
+
 For cast collection relations, `required: true` also applies when the form sends
 an empty string to clear the collection. `has_many`, `many_to_many`, and
 `entries` reject that value with the standard required error and honor

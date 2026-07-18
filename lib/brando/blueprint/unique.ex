@@ -21,7 +21,7 @@ defmodule Brando.Blueprint.Unique do
       %{opts: %{unique: [prevent_collision: filter_fn]}} = f, new_changeset
       when is_function(filter_fn) ->
         new_changeset
-        |> Collision.avoid_field_collision(module, [f.name], filter_fn)
+        |> Collision.avoid_field_collision([f.name], filter_fn)
         |> unique_constraint(f.name)
 
       %{opts: %{unique: [prevent_collision: filter_fields]}} = f, new_changeset
