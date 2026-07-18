@@ -3,6 +3,7 @@ defmodule Brando.Blueprint.MigrationsTest do
 
   alias Brando.Blueprint.DatabaseIdentifier
   alias Brando.Blueprint.Migrations
+  alias Brando.Blueprint.Migrations.Schema, as: MigrationSchema
   alias Brando.Blueprint.Snapshot
   alias Brando.Exception.BlueprintError
 
@@ -31,6 +32,7 @@ defmodule Brando.Blueprint.MigrationsTest do
 
     assert initial_source =~ "create table(:projects)"
     assert initial_source =~ "add :sequence, :integer, default: 0"
+    assert initial_source =~ "create index(:projects, [:language]"
     assert initial_source =~ ~s(name: "projects_slug_language_index")
 
     assert appears_before?(
@@ -123,6 +125,97 @@ defmodule Brando.Blueprint.MigrationsTest do
 
     assert unique_index.name == DatabaseIdentifier.normalize(full_unique_name)
     assert owner_column.reference.name == DatabaseIdentifier.normalize(full_foreign_key_name)
+  end
+
+  test "a unique language attribute emits one unique index" do
+    module = Brando.MigrationTest.UniqueLanguage
+    schema = MigrationSchema.build(module)
+
+    assert [%{fields: [:language], unique: true}] = schema.indexes
+    assert {:ok, generated} = Migrations.create_migration(module, @test_opts)
+
+    source = File.read!(generated.migration)
+    assert length(Regex.scan(~r/create unique_index\([^\n]+\[:language\]/, source)) == 1
+    refute source =~ "create index("
+  end
+
+  test "generated index names that collide after PostgreSQL normalization stop generation" do
+    module = Brando.MigrationTest.CollidingIndexNames
+    table = module.__schema__(:source)
+
+    alpha_name = DatabaseIdentifier.index_name(table, [:extremely_long_shared_prefix_alpha])
+    beta_name = DatabaseIdentifier.index_name(table, [:extremely_long_shared_prefix_beta])
+
+    assert alpha_name == beta_name
+
+    assert_raise BlueprintError, ~r/duplicate_names.*database_indexes.*#{alpha_name}/s, fn ->
+      Migrations.create_migration(module, @test_opts)
+    end
+
+    assert Path.wildcard("tmp/test_migrations/*.exs") == []
+    assert Path.wildcard("tmp/test_snapshots/**/*.snapshot") == []
+  end
+
+  test "duplicate foreign-key constraint names stop generation" do
+    module = Brando.MigrationTest.CollidingForeignKeyNames
+
+    assert_raise BlueprintError, ~r/duplicate_names.*references.*duplicate_owner_fkey/s, fn ->
+      Migrations.create_migration(module, @test_opts)
+    end
+
+    assert Path.wildcard("tmp/test_migrations/*.exs") == []
+    assert Path.wildcard("tmp/test_snapshots/**/*.snapshot") == []
+  end
+
+  test "stored snapshots reject colliding database index names across tables" do
+    module = Brando.MigrationTest.Project
+    snapshot = Snapshot.build_snapshot(module, 1)
+    [owner_index | _] = snapshot.schema.indexes
+    [auxiliary_table | remaining_tables] = snapshot.schema.auxiliary_tables
+    [auxiliary_index | remaining_indexes] = auxiliary_table.indexes
+
+    colliding_auxiliary_index = %{auxiliary_index | name: owner_index.name}
+
+    colliding_table = %{
+      auxiliary_table
+      | indexes: [colliding_auxiliary_index | remaining_indexes]
+    }
+
+    colliding_schema = %{
+      snapshot.schema
+      | auxiliary_tables: [colliding_table | remaining_tables]
+    }
+
+    write_snapshot(module, 1, %{snapshot | schema: colliding_schema})
+
+    assert_raise BlueprintError, ~r/duplicate_names.*database_indexes.*#{owner_index.name}/s, fn ->
+      Snapshot.get_latest_snapshot(module, @test_opts)
+    end
+  end
+
+  test "stored snapshots reject duplicate foreign-key names within a table" do
+    module = Brando.MigrationTest.Project
+    snapshot = Snapshot.build_snapshot(module, 1)
+
+    [first_reference, second_reference | _] =
+      snapshot.schema.columns
+      |> Enum.filter(& &1.reference)
+      |> Enum.map(& &1.reference)
+
+    columns =
+      Enum.map(snapshot.schema.columns, fn
+        %{reference: %{name: name} = reference} = column when name == second_reference.name ->
+          %{column | reference: %{reference | name: first_reference.name}}
+
+        column ->
+          column
+      end)
+
+    write_snapshot(module, 1, %{snapshot | schema: %{snapshot.schema | columns: columns}})
+
+    assert_raise BlueprintError, ~r/duplicate_names.*references.*#{first_reference.name}/s, fn ->
+      Snapshot.get_latest_snapshot(module, @test_opts)
+    end
   end
 
   test "serializes concurrent generators across a migration directory" do

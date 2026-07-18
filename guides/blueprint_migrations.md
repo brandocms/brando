@@ -127,6 +127,46 @@ drop/recreate migration solely because of this correction. Continue to review
 the generator output normally; any operations it does emit represent other
 storage changes.
 
+### Collisions after identifier normalization
+
+Different generated names can share the same first 63 bytes. PostgreSQL cannot
+create both indexes in one schema, and it cannot create two constraints with
+the same name on one table. Blueprint generation therefore stops before
+writing a migration or snapshot when it detects:
+
+- duplicate persisted column or auxiliary-table names;
+- duplicate index names across the owner table and its auxiliary tables;
+- duplicate foreign-key constraint names within one table;
+- any of those index or constraint collisions after 63-byte normalization.
+
+The error includes the stored name that collided. Shorten the table or field
+names, remove an unintended duplicate uniqueness declaration, or give
+belongs-to relations distinct `constraint_name:` values, then run the normal
+generator again. Do not re-baseline a collision: that would record a contract
+the database cannot represent.
+
+### Unique language attributes
+
+Earlier generators could silently retain the ordinary language lookup index
+and discard the unique index when a Blueprint explicitly combined the two:
+
+```elixir
+attribute :language, :language, unique: true
+```
+
+The generator now emits one unique index, which also serves normal language
+lookups. Applications with this declaration must run:
+
+```shell
+mix brando.gen.blueprint_migration MyApp.Content.Entry
+```
+
+Review the generated replacement of the non-unique index, then run it backward
+and forward using the normal workflow. Existing rows must already be unique;
+resolve duplicates deliberately before applying the migration. Igniter does
+not generate this migration because it cannot safely enumerate application
+Blueprints, snapshots, or deployed data.
+
 ## Changes that require a hand-written migration
 
 Table and primary-key changes are deliberately refused. Their safe implementation depends on deployed data, foreign
@@ -144,7 +184,8 @@ database has been verified to match the current Blueprint.
 
 The generator also stops if it finds migrations without snapshots, snapshots without migrations, an unreadable
 snapshot, an unsupported snapshot format, a filename/embedded-version mismatch, a malformed normalized storage schema,
-an invalid rename source, or another history inconsistency. Restore the missing file from version control first.
+an invalid rename source, colliding database identifiers, or another history inconsistency. Restore the missing file
+from version control first.
 Re-baseline only when restoration is impossible and you have independently confirmed the live database schema.
 
 ## Upgrading legacy snapshots

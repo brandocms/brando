@@ -123,8 +123,9 @@ defmodule Brando.Blueprint.Migrations.Schema do
          :ok <- validate_collection(schema, :indexes, &validate_index(&1, schema.table)),
          :ok <- validate_collection(schema, :auxiliary_tables, &validate_auxiliary_table/1),
          :ok <- validate_unique_names(schema.columns, :columns),
-         :ok <- validate_unique_names(schema.indexes, :indexes) do
-      validate_unique_names(schema.auxiliary_tables, :auxiliary_tables)
+         :ok <- validate_unique_names(schema.auxiliary_tables, :auxiliary_tables),
+         :ok <- validate_unique_reference_names(schema.table, schema.columns) do
+      validate_unique_database_index_names(schema)
     end
   end
 
@@ -195,8 +196,9 @@ defmodule Brando.Blueprint.Migrations.Schema do
          :ok <- validate_value(table, :timestamps, &is_boolean/1),
          :ok <- validate_collection(table, :columns, &validate_column/1),
          :ok <- validate_collection(table, :indexes, &validate_index(&1, table.name)),
-         :ok <- validate_unique_names(table.columns, :columns) do
-      validate_unique_names(table.indexes, :indexes)
+         :ok <- validate_unique_names(table.columns, :columns),
+         :ok <- validate_unique_names(table.indexes, :indexes) do
+      validate_unique_reference_names(table.name, table.columns)
     end
   end
 
@@ -204,7 +206,29 @@ defmodule Brando.Blueprint.Migrations.Schema do
 
   defp validate_unique_names(entries, key) do
     names = Enum.map(entries, &Map.get(&1, :name))
-    if length(names) == MapSet.size(MapSet.new(names)), do: :ok, else: {:error, {:duplicate_names, key}}
+
+    duplicates =
+      names
+      |> Enum.frequencies()
+      |> Enum.filter(fn {_name, count} -> count > 1 end)
+      |> Enum.map(&elem(&1, 0))
+      |> Enum.sort()
+
+    if duplicates == [], do: :ok, else: {:error, {:duplicate_names, key, duplicates}}
+  end
+
+  defp validate_unique_reference_names(table, columns) do
+    references =
+      columns
+      |> Enum.map(&Map.get(&1, :reference))
+      |> Enum.reject(&is_nil/1)
+
+    validate_unique_names(references, {:references, table})
+  end
+
+  defp validate_unique_database_index_names(schema) do
+    indexes = schema.indexes ++ Enum.flat_map(schema.auxiliary_tables, & &1.indexes)
+    validate_unique_names(indexes, :database_indexes)
   end
 
   defp validate_optional_atom(map, key) do
@@ -260,23 +284,18 @@ defmodule Brando.Blueprint.Migrations.Schema do
     asset_columns = Enum.map(assets, &asset_column(&1, table))
     relation_columns = Enum.flat_map(relations, &relation_columns(&1, module, table))
 
-    columns =
-      (attribute_columns ++ asset_columns ++ relation_columns)
-      |> Enum.uniq_by(& &1.name)
-      |> Enum.sort_by(& &1.name)
+    columns = Enum.sort_by(attribute_columns ++ asset_columns ++ relation_columns, & &1.name)
 
     indexes =
       (attribute_indexes(attributes, table) ++ relation_indexes(relations, table))
-      |> Enum.uniq_by(& &1.name)
       |> Enum.sort_by(& &1.name)
 
     auxiliary_tables =
       relations
       |> Enum.flat_map(&auxiliary_tables(&1, table, primary_key))
-      |> Enum.uniq_by(& &1.name)
       |> Enum.sort_by(& &1.name)
 
-    %{
+    schema = %{
       format_version: @format_version,
       table: table,
       primary_key: primary_key,
@@ -285,6 +304,27 @@ defmodule Brando.Blueprint.Migrations.Schema do
       auxiliary_tables: auxiliary_tables,
       timestamps: timestamps?
     }
+
+    validate_built_schema!(schema, module)
+  end
+
+  defp validate_built_schema!(schema, module) do
+    case validate(schema) do
+      :ok ->
+        schema
+
+      {:error, reason} ->
+        raise BlueprintError,
+          message: """
+          Cannot build a Blueprint migration schema for #{inspect(module)}: #{inspect(reason)}.
+
+          Persisted Blueprint columns, auxiliary tables, foreign-key constraints, and
+          PostgreSQL index names must be distinct. PostgreSQL stores at most 63 bytes
+          of an identifier, so otherwise different generated names can collide after
+          normalization. Shorten the table or field names, or give belongs-to
+          relations distinct `:constraint_name` values.
+          """
+    end
   end
 
   defp attribute_column(attribute) do
@@ -365,7 +405,8 @@ defmodule Brando.Blueprint.Migrations.Schema do
   defp attribute_indexes(attributes, table) do
     Enum.flat_map(attributes, fn attribute ->
       language_index =
-        if attribute.type == :language and !Map.get(attribute.opts, :virtual, false) do
+        if attribute.type == :language and !Map.get(attribute.opts, :virtual, false) and
+             !unique?(attribute) do
           [index(table, [attribute.name], false)]
         else
           []
@@ -384,6 +425,8 @@ defmodule Brando.Blueprint.Migrations.Schema do
       unique -> [index(table, unique_fields(attribute.name, unique), true)]
     end
   end
+
+  defp unique?(attribute), do: Map.get(attribute.opts, :unique, false) not in [false, nil]
 
   defp relation_indexes(relations, table) do
     Enum.flat_map(relations, fn

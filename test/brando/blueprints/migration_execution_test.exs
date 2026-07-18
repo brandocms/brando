@@ -99,6 +99,44 @@ defmodule Brando.Blueprint.MigrationExecutionTest do
              )
   end
 
+  test "unique language attributes create a real unique PostgreSQL index", %{prefix: prefix} do
+    opts = [migration_path: @migration_path, snapshot_path: @snapshot_path]
+    module = Brando.MigrationTest.UniqueLanguage
+    table = module.__schema__(:source)
+
+    assert {:ok, generated} = Migrations.create_migration(module, opts)
+    version = migration_version(generated.migration)
+    migration_source = [{version, compile_migration!(generated.migration)}]
+
+    assert [^version] =
+             Ecto.Migrator.run(MigrationRepo, migration_source, :up,
+               all: true,
+               prefix: prefix,
+               log: false
+             )
+
+    assert %{rows: [[1]]} =
+             Ecto.Adapters.SQL.query!(
+               MigrationRepo,
+               """
+               SELECT count(*)
+               FROM pg_indexes
+               WHERE schemaname = $1
+                 AND tablename = $2
+                 AND indexdef LIKE 'CREATE UNIQUE INDEX%'
+                 AND indexdef LIKE '%(language)%'
+               """,
+               [prefix, table]
+             )
+
+    assert [^version] =
+             Ecto.Migrator.run(MigrationRepo, migration_source, :down,
+               all: true,
+               prefix: prefix,
+               log: false
+             )
+  end
+
   defp migration_version(filename) do
     filename
     |> Path.basename()

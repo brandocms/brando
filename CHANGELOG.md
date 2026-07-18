@@ -134,6 +134,17 @@
 
 #### Improvements
 
+- **Fail-closed Blueprint database-name collisions**: Migration schemas no
+  longer silently discard indexes when two generated names are equal, including
+  equality caused by PostgreSQL's 63-byte identifier limit. Index names are
+  checked across owner and auxiliary tables, foreign-key names are checked per
+  table, and stored snapshots reject the same invalid states. A unique
+  `:language` attribute now emits the intended unique index instead of first
+  generating a non-unique language index with the same name. Applications that
+  declare `attribute :language, :language, unique: true` should generate,
+  review, and run a Blueprint migration; no Igniter step can safely enumerate
+  application Blueprints and their migration histories.
+
 - **Quiet E2E startup probes**: Playwright now checks the admin login route
   instead of making its readiness probe depend on the separately built
   frontend bundle. The runner also removes the inherited `NO_COLOR` variable

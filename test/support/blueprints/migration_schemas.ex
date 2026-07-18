@@ -328,3 +328,54 @@ defmodule Brando.MigrationTest.LongIdentifiers do
       foreign_key: :owner_reference_identifier_id
   end
 end
+
+defmodule Brando.MigrationTest.UniqueLanguage do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationConstraints",
+    schema: "UniqueLanguage",
+    singular: "unique_language",
+    plural: "unique_languages",
+    gettext_module: Brando.Gettext
+
+  attributes do
+    attribute :language, :language, unique: true
+  end
+end
+
+defmodule Brando.MigrationTest.CollidingIndexNames do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationConstraints",
+    schema: "CollidingIndexNames",
+    singular: "colliding_index_names",
+    plural: "colliding_index_names",
+    gettext_module: Brando.Gettext
+
+  table "blueprint_constraint_collision_records"
+
+  attributes do
+    attribute :extremely_long_shared_prefix_alpha, :string, unique: true
+    attribute :extremely_long_shared_prefix_beta, :string, unique: true
+  end
+end
+
+defmodule Brando.MigrationTest.CollidingForeignKeyNames do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationConstraints",
+    schema: "CollidingForeignKeyNames",
+    singular: "colliding_foreign_key_names",
+    plural: "colliding_foreign_key_names",
+    gettext_module: Brando.Gettext
+
+  relations do
+    relation :primary_owner, :belongs_to,
+      module: Brando.Users.User,
+      constraint_name: "duplicate_owner_fkey"
+
+    relation :secondary_owner, :belongs_to,
+      module: Brando.Users.User,
+      constraint_name: "duplicate_owner_fkey"
+  end
+end
