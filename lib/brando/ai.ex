@@ -37,8 +37,8 @@ defmodule Brando.AI do
   `:frequency_penalty`, `:tool_choice`, `:tools`, `:system_prompt`,
   `:provider_options`, `:receive_timeout`, `:thinking_timeout`.
 
-  Note: trait-specific defaults are resolved by traits themselves via
-  `Brando.Trait.ai_field_opts/3`. For example, `Brando.Trait.Meta` reads
+  Note: trait-specific defaults are resolved by each trait through the
+  `c:Brando.Trait.ai_field_opts/3` callback. For example, `Brando.Trait.Meta` reads
   field config from `trait :meta, ai: [...]` on the blueprint.
   """
 

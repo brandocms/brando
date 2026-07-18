@@ -22,7 +22,7 @@ defmodule Brando.LivePreview do
   is used in Vue. For instance, if in Vue it is a `project`, but you want `entry`, then
   set `template_prop :entry`
 
-    - `schema_preloads` - List of atoms to preload on `entry``
+    - `schema_preloads` - List of atoms to preload on `entry`
     - `mutate_data` - function to mutate entry data `entry`
           mutate_data fn entry -> %{entry | title: "custom"} end
     - `layout` - The layout template we want to use for rendering
@@ -50,7 +50,7 @@ defmodule Brando.LivePreview do
         MyApp.Articles.list_articles!(%{
           filter: %{featured: false, language: language},
           preload: [:category],
-          order: "asc sequence,
+          order: "asc sequence",
           limit: 4
         })
       end

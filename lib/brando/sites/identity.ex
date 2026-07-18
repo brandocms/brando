@@ -1,5 +1,10 @@
 defmodule Brando.Sites.Identity do
-  @moduledoc false
+  @moduledoc """
+  Site identity and organization metadata for one language.
+
+  Identity entries provide branding, contact details, links, structured-data
+  configuration, and the logo used by Brando's site metadata helpers.
+  """
   use Brando.Blueprint,
     application: "Brando",
     domain: "Sites",

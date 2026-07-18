@@ -1,5 +1,10 @@
 defmodule Brando.Revisions.Revision do
-  @moduledoc false
+  @moduledoc """
+  Metadata and encoded entry state for one immutable content revision.
+
+  Use the public `Brando.Revisions` context to list, create, or restore
+  revisions.
+  """
   use Brando.Blueprint,
     application: "Brando",
     domain: "Revisions",

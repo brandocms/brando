@@ -117,6 +117,37 @@ jobs:
       - name: Reject compile-connected dependency cycles
         run: mix xref graph --format cycles --label compile-connected --fail-above 0
 
+  docs:
+    name: Published documentation
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: docs
+
+    steps:
+      - uses: actions/checkout@v6.0.3
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: 1.20.0
+          otp-version: 28.0
+
+      - name: Restore docs dependencies and build cache
+        uses: actions/cache@v5.0.5
+        with:
+          path: |
+            deps
+            _build
+          key: docs-${{ runner.os }}-28.0-1.20.0-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            docs-${{ runner.os }}-28.0-1.20.0
+
+      - name: Install documentation dependencies
+        run: mix deps.get --only docs
+
+      - name: Build published documentation without warnings
+        run: mix docs --warnings-as-errors
+
   e2e:
     name: Serial E2E (PostgreSQL)
     runs-on: ubuntu-latest

@@ -1,5 +1,10 @@
 defmodule Brando.Sites.GlobalSet do
-  @moduledoc false
+  @moduledoc """
+  A translatable, named collection of global content variables.
+
+  Global sets expose reusable values to templates without tying them to a
+  specific page or content entry.
+  """
   use Brando.Blueprint,
     application: "Brando",
     domain: "Sites",

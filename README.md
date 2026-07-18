@@ -70,6 +70,14 @@ Generate templates:
 
     $ mix brando.gen
 
+## Documentation
+
+- [Blueprint system](guides/blueprints.md) — schema, validation, relations,
+  assets, traits, listings, forms, and compile-time boundaries.
+- [Blueprint migrations](guides/blueprint_migrations.md) — generation,
+  rollback, storage options, legacy snapshots, hand-written migrations, and
+  rebaselining.
+
 
 ## Serve static from DO Spaces
 

@@ -194,7 +194,7 @@ defmodule Brando.Router do
     end
   end
 
-  @spec put_extra_secure_browser_headers(Plug.Conn.t(), Map.t()) :: Plug.Conn.t()
+  @spec put_extra_secure_browser_headers(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def put_extra_secure_browser_headers(conn, extra_headers \\ %{}) do
     if Brando.env() == :prod do
       conn

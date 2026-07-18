@@ -1,12 +1,69 @@
-## Blueprints
+# Blueprints
 
-### Identifier
+A Blueprint is the compile-time contract for one Brando content type. It owns
+the Ecto schema and changeset, storage migrations, identifiers and URLs,
+relations and assets, admin listings and forms, traits, datasources, metadata,
+and translations. Brando validates this contract while the schema compiles so
+invalid or ignored configuration fails before it reaches a request or a
+production migration.
 
-### Absolute URL
+Generate a new resource with `mix brando.gen.blueprint`, then keep its Blueprint,
+generated Ecto migrations, and migration snapshots under version control. Read
+[Blueprint migrations](blueprint_migrations.md) before changing persisted
+fields, relations, indexes, table identity, or primary keys.
 
-### Schema
+The public entry points remain the conventional APIs shown in this guide:
+`use Brando.Blueprint`, `use Brando.Query`,
+`use BrandoAdmin.LiveView.Listing`, and `use BrandoAdmin.LiveView.Form`.
+Compiler/runtime boundaries behind those APIs are internal implementation
+details and do not require application rewrites.
 
-#### Root configuration
+## Identifier
+
+An identifier is the human-readable representation Brando uses in selectors,
+entry relations, and persisted identifier records. HEEx is preferred; Liquex
+templates remain supported:
+
+```elixir
+identifier ~H"{@entry.title} [{@entry.category.name}]"
+# or: identifier "{{ entry.title }} [{{ entry.category.name }}]"
+```
+
+The template receives the entry as `@entry` in HEEx or `entry` in Liquex.
+Association paths are extracted into `__identifier_preloads__/0`, so declare the
+association normally and let Brando preload it. Disable identifier generation
+with `identifier false`. Database-backed Blueprints persist identifiers by
+default; use `persist_identifier false` when they should only be generated at
+runtime. Embedded Blueprints must disable identifiers.
+
+Invalid template syntax and unsupported values fail during compilation with the
+Blueprint setting and parser location instead of failing during rendering.
+
+## Absolute URL
+
+Absolute URL templates drive admin preview links, SEO, sitemaps, and identifier
+URLs. Prefer HEEx and the Blueprint route helpers:
+
+```elixir
+# Localized route for a translatable entry
+absolute_url ~H|{route_i18n(@entry, :project_path, :detail, [@entry.slug])}|
+
+# Non-localized route
+absolute_url ~H|{route(:project_path, :detail, [@entry.slug])}|
+
+# Static path
+absolute_url ~H"/projects/{@entry.slug}"
+```
+
+Use `route_i18n/4` when the entry has a language and the route should be scoped;
+use `route/3` otherwise. Liquex strings remain supported for legacy Blueprints.
+As with identifiers, Brando extracts association paths into
+`__absolute_url_preloads__/0`. Use `absolute_url false` for entries without a
+public URL. Invalid templates fail during compilation.
+
+## Schema
+
+### Root configuration
 
 Blueprint identity is declared with literal naming values when the schema calls
 `use Brando.Blueprint`:
@@ -94,7 +151,7 @@ unsaved entries are ignored. Deletion intent bypasses field and association vali
 values on an entry being removed cannot make its parent changeset invalid. The flag is
 virtual and does not require a database column.
 
-#### Context query compilation
+### Context query compilation
 
 Contexts generated for Blueprint schemas keep using the public query API:
 
@@ -108,7 +165,7 @@ The compiler/runtime split is internal: existing contexts and runtime calls such
 `Brando.Query.handle_list_query/6` remain unchanged. This compile-time dependency
 optimization requires no code migration, Igniter upgrade, or database migration.
 
-#### Attributes
+### Attributes
 
 Array attributes always declare their element type, for example
 `attribute :tags, {:array, :string}`; a bare `:array` is rejected. Blueprint
@@ -176,7 +233,7 @@ type and dumped default instead of treating the Elixir module name as a
 PostgreSQL type. Custom parameterized types retain their own type-specific
 options.
 
-#### Relations
+### Relations
 
 Blueprint uses the same persisted foreign-key name for Ecto schema generation,
 changeset casting, required validation, unique constraints, database constraints,
@@ -227,9 +284,10 @@ Invalid declarations are reported while the Blueprint compiles.
 
 Like attributes, `null: false` on a generated belongs-to field is a migration
 constraint and `required: true` is changeset validation. With
-`define_field: false`, put `source:` and `null:` on the separately declared
-foreign-key attribute; declaring them on the relation is rejected so one field
-cannot have two competing storage contracts.
+`define_field: false`, put `source:`, `null:`, and any primary-key declaration on
+the separately declared foreign-key attribute or root schema; declaring them on
+the relation is rejected so one field cannot have two competing storage
+contracts.
 
 Relation options are validated against the relation type before Ecto schema
 generation. The public `relation` declaration remains unchanged; the main
@@ -244,7 +302,7 @@ option scopes are:
 | `preload_order:` | direct has-one, has-many, many-to-many |
 | `load_in_query:` | embeds-one, embeds-many |
 | `sort_param:`, `drop_param:` | embeds-many and cast has-many |
-| `null:`, `constraint_name:`, `define_field:`, `type:` | belongs-to |
+| `null:`, `constraint_name:`, `define_field:`, `primary_key:`, `type:` | belongs-to |
 
 Has-one and has-many `through:` declarations retain `module:` as Blueprint
 metadata but compile to Ecto through associations without passing that module
@@ -264,9 +322,15 @@ index or Blueprint migration snapshot change.
 
 Many-to-many `join_defaults:` require a join schema module in `join_through:`;
 Ecto cannot apply join defaults when `join_through:` is only a table name.
-Blueprint relations cannot declare `primary_key: true`: use the root
-`primary_key` declaration because migration snapshots represent one owner key,
-not a composite association key.
+
+A generated belongs-to field may declare `primary_key: true`. This is useful for
+an associative schema whose foreign keys form its key; pair it with
+`primary_key false` at the Blueprint root when there should be no generated
+`id`. Initial migration generation records and creates the relation key. Adding,
+removing, or changing column-level primary-key membership after a snapshot
+exists is deliberately refused: write and verify the primary-key migration,
+then rebaseline as described in
+[Changes that require a hand-written migration](blueprint_migrations.md#changes-that-require-a-hand-written-migration).
 
 Misspelled options, invalid `on_replace:`/`on_delete:` values, malformed join
 keys, and options that Ecto or Blueprint would ignore now fail at Blueprint
@@ -314,7 +378,7 @@ review a Blueprint migration as described in
 custom foreign-key column and only the runtime declaration was inconsistent, no
 schema migration is needed.
 
-#### Assets
+### Assets
 
 Blueprint image, file, video, and per-media gallery configs are normalized into
 their typed config structs. Compilation validates the runtime-critical fields:
@@ -367,7 +431,7 @@ config struct for another media type, or targeting a field declared as another
 asset type is rejected. Upload-manager intake catches these resolution errors,
 uses the typed default config, and stores the resolved target as `"default"`.
 
-#### Forms
+### Form loading and callbacks
 
 An existing entry is loaded with `%{matches: %{id: id}}` by default. Use a
 static query map to add fixed options; Brando always injects the entry ID into
@@ -414,7 +478,7 @@ These runtime contract corrections do not change storage. No Ecto migration or
 Igniter upgrade script is required; compile after upgrading and correct any
 static query whose `:matches` value is not a map.
 
-### Traits
+## Traits
 
 Blueprint invokes a trait's `generate_code/2` callback while compiling each
 schema. Runtime-heavy custom traits can keep that compile path small by moving
@@ -479,7 +543,7 @@ Use their `trait :ensure_uid` and `trait :validate_var_keys` shorthands to also 
 a module-body dependency on the runtime trait. Existing full module declarations remain
 supported and require no application or database migration.
 
-### Datasources
+## Datasources
 
 Datasource keys and nested metadata keys must be unique. A `:list` datasource
 requires `list`; `:single` requires `get`; and `:selection` requires both. Brando
@@ -505,7 +569,7 @@ end
 The equivalent runtime call is
 `MyApp.Projects.list_for_datasource(module, language, vars, status: :published)`.
 
-### Metadata and JSON-LD
+## Metadata and JSON-LD
 
 A Blueprint has at most one `meta_schema` and one `json_ld_schema`; extraction
 returns one metadata definition and one structured-data entity. Use repeated
@@ -525,13 +589,13 @@ container returns `nil` instead of raising, allowing the next fallback path to
 run. `false`, `0`, and `""` are values rather than missing data. This runtime
 behavior uses the existing helper API and requires no migration.
 
-### Translations
+## Translations
 
 Translation context keys must be unique, as must translation keys inside each
 context. Duplicate declarations fail compilation instead of being silently
 overwritten when the DSL is converted to its runtime map.
 
-### Listings
+## Listings
 
 Listing validation covers non-negative limits, unique filter/sort/export/child
 keys, valid sort orders, complete action events, CSV export contracts, select
@@ -548,7 +612,7 @@ declarations. Review listing filter defaults because they now perform their
 documented runtime function; removing an unintended default is an application
 configuration change, not a database migration.
 
-#### Listing LiveViews
+### Listing LiveViews
 
 Generated admin listing LiveViews keep using the public setup API. Internally, setup
 compilation is isolated so changes to runtime listing hooks do not recompile every
@@ -563,13 +627,13 @@ listing APIs, and routes are unchanged. Dashboard LiveViews may use the same pub
 with `schema: nil`. This compile-time dependency optimization requires no code
 migration, Igniter upgrade, or database migration.
 
-#### Listing components
+### Listing components
 
 Blueprints with custom listing rows must explicitly import the lightweight core
 components. Import cover images or child-listing actions only when the row uses
 them. Blueprints without custom rows should not import listing components.
 
-##### Example
+#### Example
 
 ```elixir
   import Brando.Blueprint.Listings.Components.Core
@@ -603,18 +667,79 @@ migration is preferable. Child-listing buttons target their owning listing row
 automatically; existing `<.children_button entry={@entry} fields={...} />` calls
 need no event target or migration changes.
 
-#### Listing Query
-#### Fields
-##### Field types
-##### Templates
-#### Filters
-#### Actions
-#### Selection Actions
-#### Child Listings
+### Listing query
 
-### Forms
+`query` is the initial map passed to the normal Brando query pipeline. Use it for
+preloads, ordering, status, and other fixed query options. Filter defaults fill
+only missing filter keys; an explicit value in `query.filter` wins.
 
-#### Form LiveViews
+```elixir
+listing do
+  query %{preload: [:creator], order: [{:desc, :inserted_at}]}
+  limit 50
+  sortable true
+end
+```
+
+### Filters and sorts
+
+Filters require unique string keys and support `:text`, `:boolean`, and
+`:select`. Select filters use either nested static `option` declarations or an
+arity-one options callback receiving `%{language: language}`. Static values must
+be unique. A non-empty `default` becomes part of the initial query only when the
+query does not already provide that filter.
+
+```elixir
+filter label: t("Title"), key: "title"
+
+filter do
+  label t("Status")
+  key "status"
+  type :select
+  option t("Published"), "published"
+  option t("Draft"), "draft"
+end
+
+sort :newest, label: t("Newest"), order: [{:desc, :inserted_at}]
+```
+
+### Actions and exports
+
+`action` adds a row-level action and `selection_action` adds an action for the
+current selection. Each action needs a label and event; row actions may add a
+boolean or string `confirm`. `default_actions false` removes Brando's built-in
+row actions. CSV exports require a unique name, label, and list of fields and may
+provide a dedicated query and description.
+
+```elixir
+action label: t("Duplicate"), event: "duplicate", confirm: true
+selection_action label: t("Publish"), event: "publish_selected"
+
+export :editorial do
+  label t("Editorial export")
+  fields [:title, :status, :inserted_at]
+  query %{order: [{:asc, :title}]}
+end
+```
+
+### Child listings
+
+A child listing connects a named child-listing route to its schema. Names and
+schema references must be unique and valid. Render the trigger with
+`<.children_button>` from
+`Brando.Blueprint.Listings.Components.Children`; the component targets its
+owning row automatically.
+
+```elixir
+child_listing do
+  name :chapters
+  schema MyApp.Books.Chapter
+end
+```
+
+## Forms
+
+### Form LiveViews
 
 Generated admin form LiveViews keep using the public setup API. Internally, setup
 compilation is isolated so changes to runtime form hooks do not recompile every form
@@ -628,10 +753,53 @@ Existing `use BrandoAdmin.LiveView.Form, schema: ...` declarations, hook behavio
 routes, and form APIs are unchanged. The Brando generator emits this same public API.
 No code migration, Igniter upgrade, or database migration is required.
 
-#### Form options
-#### Tabs
-#### Fieldsets
-#### Inputs
+### Form options
+
+Forms are named; the default form uses `:default`, and additional forms use
+`form :name`. `default_params` initializes new entries. `query`, `after_save`,
+and `redirect_on_save` accept their documented function arity or an MFA tuple
+whose configured arguments are appended after runtime arguments.
+
+```elixir
+form do
+  default_params %{"status" => "draft"}
+  query %{preload: [:creator]}
+  after_save &__MODULE__.after_save/2
+end
+```
+
+### Tabs, alerts, and fieldsets
+
+A form contains tabs; each tab contains alerts and fieldsets. Fieldsets control
+layout with `size`, `align`, `shaded`, and `style`. Alerts use `:info`,
+`:warning`, or `:error` and accept a string or one-argument function component.
+
+```elixir
+tab t("Content") do
+  alert :info, &__MODULE__.editor_notice/1
+
+  fieldset do
+    size :half
+    align :start
+    shaded false
+    input :title, :text, label: t("Title")
+  end
+end
+```
+
+### Inputs
+
+An `input` targets an attribute, asset, relation, or explicitly managed form
+field and selects the admin renderer by type. Common renderers include `:text`,
+`:textarea`, `:rich_text`, `:toggle`, `:status`, `:slug`, `:select`,
+`:multi_select`, `:entries`, `:image`, `:video`, `:file`, `:gallery`, and
+`:hidden`. Options are renderer-specific. The form verifier rejects inputs that
+cannot be reconciled with their Blueprint field or relation rather than allowing
+a broken form to reach runtime.
+
+Use `blocks :blocks, ...` for a block editor field. Inputs may be hidden with a
+boolean, `{field, expected_value}`, or one-argument form predicate. Constant
+option lists should be assigned by the LiveView rather than rebuilt in HEEx.
 
 Custom `inputs_for` renderers accept component modules as before. For Brando's
 built-in renderers, prefer symbolic tokens so schema compilation stays independent
@@ -648,8 +816,7 @@ The available built-in tokens are `:vars`, `:gallery_objects`,
 supported and can be migrated incrementally. This changes only form metadata and
 requires no database migration.
 
-##### Input types
-##### AI input generation
+#### AI input generation
 
 Add `ai: [...]` to `:text`, `:textarea`, and `:rich_text` inputs to show an AI action button in the admin.
 Clicking the button performs server-side generation and replaces the field value.
@@ -701,5 +868,26 @@ input :meta_description, :textarea,
   ]
 ```
 
-##### Inputs for (subforms)
-##### Inputs for (custom components)
+### Subforms and custom components
+
+`inputs_for` renders a `:has_many`, `:embeds_many`, `:has_one`, or `:embeds_one`
+relation as a nested form. Set `cardinality`, `style`, `size`, and an optional
+default map, struct, or two-argument callback. Transformer styles turn selected
+image/video assets into related entries and are compile-checked against the
+related Blueprint's asset fields.
+
+```elixir
+inputs_for :items do
+  cardinality :many
+  style :inline
+  default %{}
+
+  input :title, :text
+  input :enabled, :toggle
+end
+```
+
+For a custom built-in renderer, set `component` to `:vars`,
+`:gallery_objects`, `:identity_type_config`, or `:page_vars`. Existing component
+modules remain supported. Transformer entries may supply a one-argument
+`listing` function component.

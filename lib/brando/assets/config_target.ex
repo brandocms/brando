@@ -15,8 +15,10 @@ defmodule Brando.Assets.ConfigTarget do
     as atoms at compile time)
 
   Resolution failures raise `ArgumentError` with a descriptive message —
-  upload-manager callers rescue and fall back to the default config
-  (`Brando.Uploads.resolve_*_config/1`); pipeline callers surface the raise.
+  upload-manager callers rescue and fall back through
+  `Brando.Uploads.resolve_image_config/1`,
+  `Brando.Uploads.resolve_video_config/1`, or
+  `Brando.Uploads.resolve_file_config/1`; pipeline callers surface the raise.
   """
 
   @asset_types ~w(image file video gallery)

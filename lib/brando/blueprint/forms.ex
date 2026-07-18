@@ -8,7 +8,7 @@ defmodule Brando.Blueprint.Forms do
   prepopulated with your own defaults when creating a new entry:
 
       form do
-        default_params: %{status: :draft}
+        default_params %{status: :draft}
         # ...
       end
 

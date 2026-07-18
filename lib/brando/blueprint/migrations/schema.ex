@@ -1,5 +1,11 @@
 defmodule Brando.Blueprint.Migrations.Schema do
-  @moduledoc false
+  @moduledoc """
+  The normalized database contract derived from a Blueprint.
+
+  It contains only storage-relevant fields, constraints, indexes, references,
+  timestamps, and auxiliary tables so form and presentation changes cannot
+  create migration churn.
+  """
 
   alias Brando.Blueprint.DatabaseIdentifier
   alias Brando.Blueprint.Migrations.Types

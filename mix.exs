@@ -27,7 +27,16 @@ defmodule Brando.Mixfile do
       docs: [
         source_ref: "v#{@version}",
         source_url: "https://github.com/brandocms/brando",
-        extras: ["guides/blueprint_migrations.md"]
+        extras: [
+          "guides/blueprints.md",
+          "guides/blueprint_migrations.md"
+        ],
+        groups_for_extras: [
+          "Blueprint system": [
+            "guides/blueprints.md",
+            "guides/blueprint_migrations.md"
+          ]
+        ]
       ]
     ]
   end

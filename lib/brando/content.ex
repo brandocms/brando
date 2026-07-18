@@ -6,7 +6,7 @@ defmodule Brando.Content do
 
     - `{{ entry.<key> }}`
     Gets `<key>` from currently rendering entry. So if we are rendering a `%Page{}` and we
-    want the `meta_description` we can do `{{ entry.meta_description }}
+    want the `meta_description` we can do `{{ entry.meta_description }}`.
 
     - `{{ links.<key> }}`
     Gets `<key>` from list of links in the Identity configuration.

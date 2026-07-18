@@ -56,5 +56,7 @@ defmodule Brando.Utils.Schema do
   defdelegate avoid_field_collision(changeset, module, fields, filter), to: Collision
   defdelegate avoid_field_collision(changeset, fields, filter_fn), to: Collision
   defdelegate avoid_field_collision(changeset, fields), to: Collision
+
+  @doc false
   defdelegate do_avoid_field_collision(fields, changeset, source), to: Collision
 end

@@ -5,7 +5,7 @@ defmodule Brando.CDN do
   ## Configure
 
   Setting the `s3` config key to `:default` will use the s3 config
-  setting from `Brando.CDN.S3Config`
+  setting from `Brando.CDN.S3Config`.
 
   Example configuration (in runtime.exs):
 
@@ -47,6 +47,8 @@ defmodule Brando.CDN do
       bucket: System.get_env("BRANDO_CDN_FILES_BUCKET"),
       s3: :default
     }
+
+  ```
 
   """
   require Logger

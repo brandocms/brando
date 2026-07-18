@@ -3,7 +3,7 @@ defmodule Brando.Blueprint.Identifier.Template do
   Backwards-compatible extraction of direct and one-level field references from
   Liquid identifier templates.
 
-  Blueprint compilation uses `Brando.Blueprint.Dsl` for preload extraction; that
+  Blueprint compilation uses its internal DSL verifier for preload extraction; that
   path supports arbitrary nesting and resolves only declared relations. This
   module retains the older public return shape without creating atoms or raising
   on unknown/deep paths.

@@ -58,7 +58,8 @@ does not connect to or mutate a database.
 Snapshot format 3 records the database contract rather than the complete DSL:
 
 - table plus the physical primary-key column and type;
-- persisted physical column names, database types, defaults, nullability, precision, and scale;
+- persisted physical column names, database types, defaults, nullability,
+  precision, scale, and column-level primary-key membership;
 - asset and belongs-to foreign keys, including referenced table, key type, delete action, and constraint name;
 - embedded JSON columns;
 - unique and language indexes with deterministic names;
@@ -221,6 +222,31 @@ foreign-key definitions and rebaseline rather than applying a fictional
 change. Igniter intentionally does not rewrite relation declarations or select
 delete rules because it cannot inspect deployed constraints, dependent data,
 or application ownership semantics.
+
+`primary_key: true` is supported on a generated belongs-to field. For an
+associative schema, disable the root key and mark the participating relations:
+
+```elixir
+primary_key false
+
+relations do
+  relation :project, :belongs_to,
+    module: MyApp.Projects.Project,
+    primary_key: true
+
+  relation :category, :belongs_to,
+    module: MyApp.Projects.Category,
+    primary_key: true
+end
+```
+
+The generator creates those keys when establishing the initial storage
+contract. Once a snapshot exists, changing which columns participate in the
+primary key is refused because PostgreSQL primary-key replacement can affect
+foreign keys and deployed data. Write and verify a hand-written migration, then
+use the rebaseline workflow below. With `define_field: false`, primary-key
+membership belongs to the separately declared field/root contract rather than
+the relation.
 
 ## Scoping a custom collision callback
 

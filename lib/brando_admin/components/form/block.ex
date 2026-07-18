@@ -1587,8 +1587,14 @@ defmodule BrandoAdmin.Components.Form.Block do
   ## Externally-used components are delegated below for backwards compatibility.
 
   defdelegate render(assigns), to: __MODULE__.Render
+
+  @doc "Renders the block insertion control."
   defdelegate plus(assigns), to: __MODULE__.Render
+
+  @doc "Renders a block editor block."
   defdelegate block(assigns), to: __MODULE__.Render
+
+  @doc "Renders a block reference field."
   defdelegate ref(assigns), to: __MODULE__.Render
 
   def should_force_live_preview_update?(changeset, updated_changeset, :root) do

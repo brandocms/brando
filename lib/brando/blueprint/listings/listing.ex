@@ -1,5 +1,10 @@
 defmodule Brando.Blueprint.Listings.Listing do
-  @moduledoc false
+  @moduledoc """
+  Compiled metadata for one Blueprint admin listing.
+
+  Values are produced by the `listings` DSL and consumed by listing LiveViews;
+  applications normally declare them rather than constructing this struct.
+  """
   @type t :: %__MODULE__{}
 
   defstruct __identifier__: nil,

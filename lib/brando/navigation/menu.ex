@@ -1,5 +1,10 @@
 defmodule Brando.Navigation.Menu do
-  @moduledoc false
+  @moduledoc """
+  A translatable navigation menu and its ordered items.
+
+  Menus are addressed by key and rendered through the helpers in
+  `Brando.Navigation`.
+  """
   use Brando.Blueprint,
     application: "Brando",
     domain: "Navigation",

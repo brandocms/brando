@@ -1,5 +1,11 @@
 defmodule Brando.Blueprint.Migrations.Diff do
-  @moduledoc false
+  @moduledoc """
+  A normalized set of operations between two Blueprint storage schemas.
+
+  The migration generator renders this structure into reversible Ecto
+  migrations after rejecting storage identity changes that require manual
+  handling.
+  """
 
   alias Brando.Blueprint.Migrations.Schema
 
