@@ -443,7 +443,7 @@ defmodule Brando.Blueprint.Verifier do
 
     case unknown_fields do
       [] ->
-        :ok
+        verify_unique_field_repetition(dsl_state, kind, entity, referenced_fields)
 
       unknown ->
         error(
@@ -454,6 +454,32 @@ defmodule Brando.Blueprint.Verifier do
         )
     end
   end
+
+  defp verify_unique_field_repetition(dsl_state, kind, entity, referenced_fields) do
+    repeated_fields =
+      [unique_base_field(kind, entity) | referenced_fields]
+      |> Enum.frequencies()
+      |> Enum.filter(fn {_field, count} -> count > 1 end)
+      |> Enum.map(&elem(&1, 0))
+      |> Enum.sort()
+
+    case repeated_fields do
+      [] ->
+        :ok
+
+      repeated ->
+        error(
+          dsl_state,
+          section(kind),
+          entity,
+          "`:unique` repeats persisted fields #{inspect(repeated)}; " <>
+            "scope fields must be distinct and cannot repeat the unique field"
+        )
+    end
+  end
+
+  defp unique_base_field(:attribute, %{name: name}), do: name
+  defp unique_base_field(:relation, relation), do: AssociationKey.for(relation)
 
   defp unique_reference_fields(unique) when is_list(unique) do
     List.wrap(Keyword.get(unique, :with)) ++ collision_fields(Keyword.get(unique, :prevent_collision))

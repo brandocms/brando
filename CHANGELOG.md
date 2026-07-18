@@ -134,6 +134,13 @@
 
 #### Improvements
 
+- **Valid Blueprint uniqueness scopes**: `unique: [with: ...]` and
+  `unique: [prevent_collision: ...]` now reject repeated scope columns and a
+  scope that repeats the attribute or relation foreign key being made unique.
+  This prevents invalid duplicate-column Ecto constraints and generated
+  indexes. Valid Blueprint declarations and runtime APIs are unchanged; no
+  Igniter or database migration is required.
+
 - **Consistent Blueprint collection relation casting**: Required `has_many`,
   `many_to_many`, and `entries` relations now reject every supported empty form
   or API representation instead of only the empty string. Optional collections

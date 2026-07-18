@@ -145,8 +145,10 @@ end
 
 `required`, `define_field`, and `virtual` options are booleans. Unique `with:`
 and `prevent_collision:` fields must name columns persisted by the same
-Blueprint; virtual attributes cannot be unique. Invalid declarations are
-reported while the Blueprint compiles.
+Blueprint. Scope fields must be distinct and cannot repeat the field or foreign
+key being made unique; otherwise the generated Ecto constraint and database
+index would contain duplicate columns. Virtual attributes cannot be unique.
+Invalid declarations are reported while the Blueprint compiles.
 
 `unique: [prevent_collision: scope]` reevaluates the unique value when either
 that value or one of its scope fields changes. An arity-one collision callback

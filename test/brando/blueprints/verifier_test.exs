@@ -176,6 +176,52 @@ defmodule Brando.Blueprint.VerifierTest do
     end
   end
 
+  test "rejects uniqueness scopes that repeat persisted fields" do
+    assert_raise Spark.Error.DslError, ~r/repeats persisted fields \[:title\]/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :title, :string, unique: [with: :title]
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/repeats persisted fields \[:tenant_id\]/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :tenant_id, :integer
+            attribute :title, :string, unique: [with: [:tenant_id, :tenant_id]]
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/repeats persisted fields \[:slug\]/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :slug, :slug, unique: [prevent_collision: :slug]
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/repeats persisted fields \[:location_ref\]/, fn ->
+      compile_blueprint(
+        quote do
+          relations do
+            relation :location, :belongs_to,
+              module: Brando.BlueprintTest.P1.Location,
+              foreign_key: :location_ref,
+              unique: [with: :location_ref]
+          end
+        end
+      )
+    end
+  end
+
   test "rejects uniqueness configurations that cannot be enforced" do
     assert_raise Spark.Error.DslError, ~r/virtual attributes cannot be unique/, fn ->
       compile_blueprint(
