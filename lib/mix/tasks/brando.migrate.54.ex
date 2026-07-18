@@ -80,219 +80,127 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp rewrite_list_datasources(zipper) do
-      Igniter.Code.Common.update_all_matches(
+      Common.update_all_matches(
         zipper,
         &list_datasource?(&1),
         fn zipper ->
-          {:ok, key_zipper} = Igniter.Code.Function.move_to_nth_argument(zipper, 0)
-          key_zipper_node = Sourceror.Zipper.node(key_zipper)
-          [key] = Sourceror.get_args(key_zipper_node)
-
-          {:ok, list_fn_zipper} = Igniter.Code.Function.move_to_nth_argument(zipper, 1)
-          list_fn_zipper_node = Sourceror.Zipper.node(list_fn_zipper)
+          [key, list_callback] = zipper |> Zipper.node() |> Sourceror.get_args()
 
           new_datasource =
             quote do
               datasource unquote(key) do
                 type :list
-                list unquote(list_fn_zipper_node)
+                list unquote(list_callback)
               end
             end
 
-          updated_zipper = Igniter.Code.Common.replace_code(zipper, new_datasource)
-
-          {:ok, updated_zipper}
+          {:ok, Common.replace_code(zipper, new_datasource)}
         end
       )
     end
 
     defp rewrite_selection_datasources(zipper) do
-      Igniter.Code.Common.update_all_matches(
+      Common.update_all_matches(
         zipper,
         &selection_datasource?(&1),
         fn zipper ->
-          {:ok, key_zipper} = Igniter.Code.Function.move_to_nth_argument(zipper, 0)
-          key_zipper_node = Sourceror.Zipper.node(key_zipper)
-          [key] = Sourceror.get_args(key_zipper_node)
-
-          {:ok, list_fn_zipper} = Igniter.Code.Function.move_to_nth_argument(zipper, 1)
-          list_fn_zipper_node = Sourceror.Zipper.node(list_fn_zipper)
-
-          {:ok, get_fn_zipper} = Igniter.Code.Function.move_to_nth_argument(zipper, 2)
-          get_fn_zipper_node = Sourceror.Zipper.node(get_fn_zipper)
+          [key, list_callback, get_callback] = zipper |> Zipper.node() |> Sourceror.get_args()
 
           new_datasource =
             quote do
               datasource unquote(key) do
                 type :selection
-                list unquote(list_fn_zipper_node)
-                get unquote(get_fn_zipper_node)
+                list unquote(list_callback)
+                get unquote(get_callback)
               end
             end
 
-          updated_zipper = Igniter.Code.Common.replace_code(zipper, new_datasource)
-
-          {:ok, updated_zipper}
+          {:ok, Common.replace_code(zipper, new_datasource)}
         end
       )
     end
 
     defp remove_use_datasource(zipper) do
-      {:ok, Igniter.Code.Common.remove_all_matches(zipper, &use_datasource?(&1))}
+      {:ok, Common.remove_all_matches(zipper, &use_datasource?(&1))}
     end
 
-    defp rewrite_listing_filters(zipper) do
-      Igniter.Code.Common.update_all_matches(
+    defp rewrite_listing_filters(zipper), do: rewrite_keyword_collection(zipper, :filters, :filter)
+    defp rewrite_listing_actions(zipper), do: rewrite_keyword_collection(zipper, :actions, :action)
+
+    defp rewrite_keyword_collection(zipper, collection_name, item_name) do
+      Common.update_all_matches(
         zipper,
-        &filters?(&1),
+        &CodeFunction.function_call?(&1, collection_name, 1),
         fn zipper ->
-          node = Sourceror.Zipper.node(zipper)
-
-          zipper =
-            case node do
-              {:filters, meta_filters, [args]} ->
-                case args do
-                  {:__block__, _meta_args_block, [keyword_list_blocks]}
-                  when is_list(keyword_list_blocks) ->
-                    # Transform each keyword list into a `:filter` call
-                    new_filter_calls =
-                      Enum.map_join(keyword_list_blocks, "\n", fn keyword_list_block ->
-                        {:__block__, _meta_keyword_list, [keyword_tuples]} = keyword_list_block
-
-                        # Reconstruct the keyword list
-                        keywords =
-                          Enum.map(keyword_tuples, fn
-                            {{:__block__, meta_key, [key]}, value_ast} ->
-                              # Reconstruct the key with its metadata
-                              key_ast = {:__block__, meta_key, [key]}
-                              {key_ast, value_ast}
-                          end)
-
-                        # Create a new `:filter` function call1
-                        Sourceror.to_string({:filter, meta_filters, [keywords]})
-                      end)
-
-                    Igniter.Code.Common.replace_code(zipper, new_filter_calls)
-
-                  _ ->
-                    # Unexpected structure; continue traversal
-                    require Logger
-                    Logger.error("——————— :filters with unexpected structure")
-                    zipper
-                end
-
-              _ ->
-                # Not a `:filters` function call; continue traversal
-                zipper
-            end
-
-          {:ok, zipper}
+          {:ok, rewrite_keyword_collection_call(zipper, item_name)}
         end
       )
     end
 
-    defp rewrite_listing_actions(zipper) do
-      Igniter.Code.Common.update_all_matches(
-        zipper,
-        &actions?(&1),
-        fn zipper ->
-          node = Sourceror.Zipper.node(zipper)
+    defp rewrite_keyword_collection_call(zipper, item_name) do
+      case Zipper.node(zipper) do
+        {_collection_name, metadata, [{:__block__, _, [items]}]} when is_list(items) ->
+          replacement = Enum.map_join(items, "\n", &keyword_item_call(&1, item_name, metadata))
+          Common.replace_code(zipper, replacement)
 
-          zipper =
-            case node do
-              {:actions, meta_actions, [args]} ->
-                case args do
-                  {:__block__, _meta_args_block, [keyword_list_blocks]}
-                  when is_list(keyword_list_blocks) ->
-                    # Transform each keyword list into a `:action` call
-                    new_action_calls =
-                      Enum.map_join(keyword_list_blocks, "\n", fn keyword_list_block ->
-                        {:__block__, _meta_keyword_list, [keyword_tuples]} = keyword_list_block
+        _other ->
+          zipper
+      end
+    end
 
-                        # Reconstruct the keyword list
-                        keywords =
-                          Enum.map(keyword_tuples, fn
-                            {{:__block__, meta_key, [key]}, value_ast} ->
-                              # Reconstruct the key with its metadata
-                              key_ast = {:__block__, meta_key, [key]}
-                              {key_ast, value_ast}
-                          end)
-
-                        # Create a new `:action` function call
-                        Sourceror.to_string({:action, meta_actions, [keywords]})
-                      end)
-
-                    Igniter.Code.Common.replace_code(zipper, new_action_calls)
-
-                  _ ->
-                    # Unexpected structure; continue traversal
-                    require Logger
-                    Logger.error("——————— :actions with unexpected structure")
-                    zipper
-                end
-
-              _ ->
-                # Not a `:actions` function call; continue traversal
-                zipper
-            end
-
-          {:ok, zipper}
-        end
-      )
+    defp keyword_item_call({:__block__, _, [keyword_tuples]}, item_name, metadata)
+         when is_list(keyword_tuples) do
+      Sourceror.to_string({item_name, metadata, [keyword_tuples]})
     end
 
     defp add_villain_relations(zipper, villain_fields) do
       missing_fields = Enum.reject(villain_fields, &relation_declared?(zipper, &1))
+      add_missing_relations(zipper, missing_fields)
+    end
 
-      if missing_fields != [] do
-        case Igniter.Code.Function.move_to_function_call_in_current_scope(
-               zipper,
-               :relations,
-               1
-             ) do
-          :error ->
-            code =
-              """
-              relations do
-                #{Enum.map_join(missing_fields, "\n", fn field -> """
-                relation #{inspect(field)}, :has_many, module: :blocks
-                """ end)}
-              end
-              """
+    defp add_missing_relations(zipper, []), do: {:ok, zipper}
 
-            {:ok, Igniter.Code.Common.add_code(zipper, code)}
+    defp add_missing_relations(zipper, missing_fields) do
+      case CodeFunction.move_to_function_call_in_current_scope(zipper, :relations, 1) do
+        :error ->
+          add_relations_block(zipper, missing_fields)
 
-          {:ok, zipper} ->
-            case Igniter.Code.Common.move_to_do_block(zipper) do
-              {:ok, zipper} ->
-                code =
-                  """
-                  #{Enum.map_join(missing_fields, "\n", fn field -> """
-                    relation #{inspect(field)}, :has_many, module: :blocks
-                    """ end)}
-                  """
-
-                {:ok, Igniter.Code.Common.add_code(zipper, code)}
-
-              _ ->
-                {:ok, zipper}
-            end
-        end
-      else
-        {:ok, zipper}
+        {:ok, relations_zipper} ->
+          add_to_relations_block(relations_zipper, missing_fields)
       end
     end
 
+    defp add_relations_block(zipper, fields) do
+      code = "relations do\n#{villain_relations_code(fields)}\nend\n"
+      {:ok, Common.add_code(zipper, code)}
+    end
+
+    defp add_to_relations_block(relations_zipper, fields) do
+      case Common.move_to_do_block(relations_zipper) do
+        {:ok, block_zipper} ->
+          {:ok, Common.add_code(block_zipper, villain_relations_code(fields))}
+
+        _error ->
+          {:ok, relations_zipper}
+      end
+    end
+
+    defp villain_relations_code(fields) do
+      Enum.map_join(fields, "\n", fn field ->
+        "relation #{inspect(field)}, :has_many, module: :blocks"
+      end)
+    end
+
     defp remove_villain_attributes(zipper) do
-      {:ok, Igniter.Code.Common.remove_all_matches(zipper, &villain_attribute?(&1))}
+      {:ok, Common.remove_all_matches(zipper, &villain_attribute?(&1))}
     end
 
     defp collect_villain_fields(zipper) do
       zipper
-      |> Igniter.Code.Common.find_all(&villain_attribute?(&1))
+      |> Common.find_all(&villain_attribute?(&1))
       |> Enum.map(fn attribute_zipper ->
         attribute_zipper
-        |> Sourceror.Zipper.node()
+        |> Zipper.node()
         |> Sourceror.get_args()
         |> List.first()
         |> literal_atom!()
@@ -318,23 +226,23 @@ if Code.ensure_loaded?(Igniter) do
 
     defp relation_declared?(zipper, field) do
       zipper
-      |> Igniter.Code.Common.find_all(fn relation_zipper ->
-        Igniter.Code.Function.function_call?(relation_zipper, :relation) and
-          Igniter.Code.Function.argument_equals?(relation_zipper, 0, field)
+      |> Common.find_all(fn relation_zipper ->
+        CodeFunction.function_call?(relation_zipper, :relation) and
+          CodeFunction.argument_equals?(relation_zipper, 0, field)
       end)
       |> Enum.any?()
     end
 
     defp rewrite_meta_field(zipper) do
-      Igniter.Code.Common.update_all_matches(
+      Common.update_all_matches(
         zipper,
         &meta_field?(&1),
         fn zipper ->
           zipper =
-            case Sourceror.Zipper.node(zipper) do
+            case Zipper.node(zipper) do
               {:meta_field, metadata, arguments} ->
                 new_node = {:field, metadata, arguments}
-                Sourceror.Zipper.replace(zipper, new_node)
+                Zipper.replace(zipper, new_node)
 
               _ ->
                 zipper
@@ -346,15 +254,15 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp rewrite_json_ld_field(zipper) do
-      Igniter.Code.Common.update_all_matches(
+      Common.update_all_matches(
         zipper,
         &json_ld_field?(&1),
         fn zipper ->
           zipper =
-            case Sourceror.Zipper.node(zipper) do
+            case Zipper.node(zipper) do
               {:json_ld_field, metadata, arguments} ->
                 new_node = {:field, metadata, arguments}
-                Sourceror.Zipper.replace(zipper, new_node)
+                Zipper.replace(zipper, new_node)
 
               _ ->
                 zipper
@@ -366,15 +274,15 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp rewrite_listing_query(zipper) do
-      Igniter.Code.Common.update_all_matches(
+      Common.update_all_matches(
         zipper,
         &listing_query?(&1),
         fn zipper ->
           zipper =
-            case Sourceror.Zipper.node(zipper) do
+            case Zipper.node(zipper) do
               {:listing_query, metadata, arguments} ->
                 new_node = {:query, metadata, arguments}
-                Sourceror.Zipper.replace(zipper, new_node)
+                Zipper.replace(zipper, new_node)
 
               _ ->
                 zipper
@@ -386,15 +294,15 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp rewrite_form_query(zipper) do
-      Igniter.Code.Common.update_all_matches(
+      Common.update_all_matches(
         zipper,
         &form_query?(&1),
         fn zipper ->
           zipper =
-            case Sourceror.Zipper.node(zipper) do
+            case Zipper.node(zipper) do
               {:form_query, metadata, arguments} ->
                 new_node = {:query, metadata, arguments}
-                Sourceror.Zipper.replace(zipper, new_node)
+                Zipper.replace(zipper, new_node)
 
               _ ->
                 zipper
@@ -405,95 +313,57 @@ if Code.ensure_loaded?(Igniter) do
       )
     end
 
-    defp rewrite_slug_source(zipper) do
-      Igniter.Code.Common.update_all_matches(
-        zipper,
-        &input_slug?(&1),
-        fn zipper ->
-          case Igniter.Code.Function.move_to_nth_argument(zipper, 2) do
-            {:ok, zipper} ->
-              keyword_list_node = Sourceror.Zipper.node(zipper)
-
-              new_keyword_list =
-                Enum.map(keyword_list_node, fn
-                  # Match keyword tuples where key is wrapped in a :__block__
-                  {{:__block__, meta_key, [:for]}, value_ast} ->
-                    new_key_ast = {:__block__, meta_key, [:source]}
-                    {new_key_ast, value_ast}
-
-                  # Handle other possible structures (e.g., keys with metadata)
-                  {{:__block__, meta_key, [:for]}, meta_value, value_ast} ->
-                    new_key_ast = {:__block__, meta_key, [:source]}
-                    {new_key_ast, meta_value, value_ast}
-
-                  other ->
-                    other
-                end)
-
-              zipper
-              |> Sourceror.Zipper.replace(new_keyword_list)
-              |> Sourceror.Zipper.up()
-              |> then(&{:ok, &1})
-
-            :error ->
-              {:ok, zipper}
-          end
-        end
-      )
-    end
+    defp rewrite_slug_source(zipper), do: rewrite_input_for_option(zipper, &input_slug?/1, :source)
 
     defp rewrite_entries_sources(zipper) do
-      Igniter.Code.Common.update_all_matches(
-        zipper,
-        &input_entries?(&1),
-        fn zipper ->
-          case Igniter.Code.Function.move_to_nth_argument(zipper, 2) do
-            {:ok, zipper} ->
-              keyword_list_node = Sourceror.Zipper.node(zipper)
-
-              new_keyword_list =
-                Enum.map(keyword_list_node, fn
-                  # Match keyword tuples where key is wrapped in a :__block__
-                  {{:__block__, meta_key, [:for]}, value_ast} ->
-                    new_key_ast = {:__block__, meta_key, [:sources]}
-                    {new_key_ast, value_ast}
-
-                  # Handle other possible structures (e.g., keys with metadata)
-                  {{:__block__, meta_key, [:for]}, meta_value, value_ast} ->
-                    new_key_ast = {:__block__, meta_key, [:sources]}
-                    {new_key_ast, meta_value, value_ast}
-
-                  other ->
-                    other
-                end)
-
-              zipper
-              |> Sourceror.Zipper.replace(new_keyword_list)
-              |> Sourceror.Zipper.up()
-              |> then(&{:ok, &1})
-
-            :error ->
-              {:ok, zipper}
-          end
-        end
-      )
+      rewrite_input_for_option(zipper, &input_entries?/1, :sources)
     end
 
+    defp rewrite_input_for_option(zipper, predicate, replacement_key) do
+      Common.update_all_matches(zipper, predicate, fn zipper ->
+        case CodeFunction.move_to_nth_argument(zipper, 2) do
+          {:ok, options_zipper} ->
+            options =
+              options_zipper
+              |> Zipper.node()
+              |> Enum.map(&rename_for_option(&1, replacement_key))
+
+            {:ok, options_zipper |> Zipper.replace(options) |> Zipper.up()}
+
+          :error ->
+            {:ok, zipper}
+        end
+      end)
+    end
+
+    defp rename_for_option({{:__block__, metadata, [:for]}, value}, replacement_key) do
+      {{:__block__, metadata, [replacement_key]}, value}
+    end
+
+    defp rename_for_option(
+           {{:__block__, metadata, [:for]}, value_metadata, value},
+           replacement_key
+         ) do
+      {{:__block__, metadata, [replacement_key]}, value_metadata, value}
+    end
+
+    defp rename_for_option(other, _replacement_key), do: other
+
     defp rewrite_inputs_for(zipper) do
-      Igniter.Code.Common.update_all_matches(
+      Common.update_all_matches(
         zipper,
         &inputs_for_with_three_arity?(&1),
         fn zipper ->
-          with {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 1),
+          with {:ok, zipper} <- CodeFunction.move_to_nth_argument(zipper, 1),
                macros <- extract_macros(zipper),
-               zipper <- Sourceror.Zipper.remove(zipper),
-               {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
-               zipper <- Igniter.Code.Common.add_code(zipper, macros, placement: :before) do
+               zipper <- Zipper.remove(zipper),
+               {:ok, zipper} <- Common.move_to_do_block(zipper),
+               zipper <- Common.add_code(zipper, macros, placement: :before) do
             fs =
               zipper
-              |> Sourceror.Zipper.up()
-              |> Sourceror.Zipper.up()
-              |> Sourceror.Zipper.up()
+              |> Zipper.up()
+              |> Zipper.up()
+              |> Zipper.up()
 
             {:ok, fs}
           else
@@ -505,20 +375,20 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp rewrite_fieldsets(zipper) do
-      Igniter.Code.Common.update_all_matches(
+      Common.update_all_matches(
         zipper,
         &fieldset_with_two_arity?(&1),
         fn zipper ->
-          with {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 0),
+          with {:ok, zipper} <- CodeFunction.move_to_nth_argument(zipper, 0),
                macros <- extract_macros(zipper),
-               zipper <- Sourceror.Zipper.remove(zipper),
-               {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
-               zipper <- Igniter.Code.Common.add_code(zipper, macros, placement: :before) do
+               zipper <- Zipper.remove(zipper),
+               {:ok, zipper} <- Common.move_to_do_block(zipper),
+               zipper <- Common.add_code(zipper, macros, placement: :before) do
             fs =
               zipper
-              |> Sourceror.Zipper.up()
-              |> Sourceror.Zipper.up()
-              |> Sourceror.Zipper.up()
+              |> Zipper.up()
+              |> Zipper.up()
+              |> Zipper.up()
 
             {:ok, fs}
           else
@@ -530,38 +400,38 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp rewrite_traits(zipper) do
-      Igniter.Code.Common.update_all_matches(
+      Common.update_all_matches(
         zipper,
         &trait_villain?(&1),
         fn zipper ->
           new_trait = "trait Brando.Trait.Blocks"
-          {:ok, Igniter.Code.Common.replace_code(zipper, new_trait)}
+          {:ok, Common.replace_code(zipper, new_trait)}
         end
       )
     end
 
     defp rewrite_forms(zipper) do
-      Igniter.Code.Common.update_all_matches(
+      Common.update_all_matches(
         zipper,
         &forms_with_keyword_lists?(&1),
         fn zipper ->
           option_index =
-            if Igniter.Code.Function.function_call?(zipper, :form, 3),
+            if CodeFunction.function_call?(zipper, :form, 3),
               do: 1,
               else: 0
 
-          case Igniter.Code.Function.move_to_nth_argument(zipper, option_index) do
+          case CodeFunction.move_to_nth_argument(zipper, option_index) do
             {:ok, zipper} ->
               macros = extract_macros(zipper)
-              zipper = Sourceror.Zipper.remove(zipper)
-              {:ok, zipper} = Igniter.Code.Common.move_to_do_block(zipper)
-              zipper = Igniter.Code.Common.add_code(zipper, macros, placement: :before)
+              zipper = Zipper.remove(zipper)
+              {:ok, zipper} = Common.move_to_do_block(zipper)
+              zipper = Common.add_code(zipper, macros, placement: :before)
 
               fs =
                 zipper
-                |> Sourceror.Zipper.up()
-                |> Sourceror.Zipper.up()
-                |> Sourceror.Zipper.up()
+                |> Zipper.up()
+                |> Zipper.up()
+                |> Zipper.up()
 
               {:ok, fs}
 
@@ -574,7 +444,7 @@ if Code.ensure_loaded?(Igniter) do
 
     defp extract_macros(zipper) do
       zipper
-      |> Sourceror.Zipper.node()
+      |> Zipper.node()
       |> keyword_entries()
       |> Enum.map_join("\n", fn
         {{:__block__, _, [key]}, {:__block__, _, [value]}}
@@ -602,103 +472,100 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp fieldset_with_two_arity?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :fieldset, 2)
+      CodeFunction.function_call?(zipper, :fieldset, 2)
     end
 
     defp inputs_for_with_three_arity?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :inputs_for, 3)
+      CodeFunction.function_call?(zipper, :inputs_for, 3)
     end
 
     defp forms_with_keyword_lists?(zipper) do
-      (Igniter.Code.Function.function_call?(zipper, :form, 2) and
-         Igniter.Code.Function.argument_matches_predicate?(zipper, 0, fn argument_zipper ->
+      (CodeFunction.function_call?(zipper, :form, 2) and
+         CodeFunction.argument_matches_predicate?(zipper, 0, fn argument_zipper ->
            Igniter.Code.List.list?(argument_zipper)
          end)) or
-        (Igniter.Code.Function.function_call?(zipper, :form, 3) and
-           Igniter.Code.Function.argument_matches_predicate?(zipper, 1, fn argument_zipper ->
+        (CodeFunction.function_call?(zipper, :form, 3) and
+           CodeFunction.argument_matches_predicate?(zipper, 1, fn argument_zipper ->
              Igniter.Code.List.list?(argument_zipper)
            end))
     end
 
     defp input_entries?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :input, 3) &&
-        Igniter.Code.Function.argument_equals?(zipper, 1, :entries) &&
-        Igniter.Code.Function.argument_matches_predicate?(zipper, 2, fn argument_zipper ->
+      CodeFunction.function_call?(zipper, :input, 3) &&
+        CodeFunction.argument_equals?(zipper, 1, :entries) &&
+        CodeFunction.argument_matches_predicate?(zipper, 2, fn argument_zipper ->
           Igniter.Code.Keyword.keyword_has_path?(argument_zipper, [:for])
         end)
     end
 
-    defp filters?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :filters, 1)
-    end
-
-    defp actions?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :actions, 1)
-    end
-
     defp json_ld_field?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :json_ld_field, 2) ||
-        Igniter.Code.Function.function_call?(zipper, :json_ld_field, 3)
+      CodeFunction.function_call?(zipper, :json_ld_field, 2) ||
+        CodeFunction.function_call?(zipper, :json_ld_field, 3)
     end
 
     defp listing_query?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :listing_query, 1)
+      CodeFunction.function_call?(zipper, :listing_query, 1)
     end
 
     defp form_query?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :form_query, 1)
+      CodeFunction.function_call?(zipper, :form_query, 1)
     end
 
     defp meta_field?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :meta_field, 2) ||
-        Igniter.Code.Function.function_call?(zipper, :meta_field, 3)
+      CodeFunction.function_call?(zipper, :meta_field, 2) ||
+        CodeFunction.function_call?(zipper, :meta_field, 3)
     end
 
     defp input_slug?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :input, 3) &&
-        Igniter.Code.Function.argument_equals?(zipper, 1, :slug) &&
-        Igniter.Code.Function.argument_matches_predicate?(zipper, 2, fn argument_zipper ->
+      CodeFunction.function_call?(zipper, :input, 3) &&
+        CodeFunction.argument_equals?(zipper, 1, :slug) &&
+        CodeFunction.argument_matches_predicate?(zipper, 2, fn argument_zipper ->
           Igniter.Code.Keyword.keyword_has_path?(argument_zipper, [:for])
         end)
     end
 
     defp villain_attribute?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :attribute, 2) &&
-        Igniter.Code.Function.argument_equals?(zipper, 1, :villain)
+      CodeFunction.function_call?(zipper, :attribute, 2) &&
+        CodeFunction.argument_equals?(zipper, 1, :villain)
     end
 
     defp trait_villain?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :trait) &&
-        Igniter.Code.Function.argument_equals?(zipper, 0, Brando.Trait.Villain)
+      CodeFunction.function_call?(zipper, :trait) &&
+        CodeFunction.argument_equals?(zipper, 0, Brando.Trait.Villain)
     end
 
     defp use_datasource?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :use) &&
-        Igniter.Code.Function.argument_equals?(zipper, 0, Brando.Datasource)
+      CodeFunction.function_call?(zipper, :use) &&
+        CodeFunction.argument_equals?(zipper, 0, Brando.Datasource)
     end
 
     defp uses_legacy_datasource?(zipper) do
       zipper
-      |> Igniter.Code.Common.find_all(&use_datasource?(&1))
+      |> Common.find_all(&use_datasource?(&1))
       |> Enum.any?()
     end
 
     defp list_datasource?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :list, 2) and
+      CodeFunction.function_call?(zipper, :list, 2) and
         datasource_arguments?(zipper, 2)
     end
 
     defp selection_datasource?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :selection, 3) and
+      CodeFunction.function_call?(zipper, :selection, 3) and
         datasource_arguments?(zipper, 3)
     end
 
     defp datasource_arguments?(zipper, arity) do
-      case zipper |> Sourceror.Zipper.node() |> Sourceror.get_args() do
-        [key | callbacks] when length(callbacks) == arity - 1 ->
-          literal_atom?(key) and Enum.all?(callbacks, &callback_ast?/1)
+      arguments = zipper |> Zipper.node() |> Sourceror.get_args()
 
-        _ ->
+      case {arity, arguments} do
+        {2, [key, callback]} ->
+          literal_atom?(key) and callback_ast?(callback)
+
+        {3, [key, list_callback, get_callback]} ->
+          literal_atom?(key) and callback_ast?(list_callback) and callback_ast?(get_callback)
+
+        _other ->
           false
       end
     end
@@ -724,118 +591,104 @@ if Code.ensure_loaded?(Igniter) do
     defp rewrite_preview_targets(igniter) do
       rewriting_module = Igniter.Libs.Phoenix.web_module_name(igniter, LivePreview)
 
-      case Igniter.Project.Module.find_and_update_module(igniter, rewriting_module, fn zipper ->
-             Igniter.Code.Common.update_all_matches(
-               zipper,
-               &preview_target_call?(&1),
-               fn target_zipper ->
-                 {:ok, target_zipper} = replace_layout_modules(target_zipper)
-                 view_module = collect_view_module(target_zipper)
-                 {:ok, target_zipper} = replace_view_templates(target_zipper, view_module)
-                 remove_view_modules(target_zipper)
-               end
-             )
-           end) do
+      case Igniter.Project.Module.find_and_update_module(igniter, rewriting_module, &rewrite_preview_module/1) do
         {:ok, igniter} -> igniter
         {:error, igniter} -> igniter
       end
     end
 
-    defp replace_layout_modules(zipper) do
-      Igniter.Code.Common.update_all_matches(
-        zipper,
-        &layout_module_call?(&1),
-        fn zipper ->
-          node = Sourceror.Zipper.node(zipper)
-
-          case node do
-            {:layout_module, _metadata, [module_arg]} ->
-              new_code =
-                quote do
-                  layout {unquote(module_arg), :app}
-                end
-
-              # Replace code and return the updated zipper
-              updated_zipper = Igniter.Code.Common.replace_code(zipper, new_code)
-              {:ok, updated_zipper}
-
-            _ ->
-              # Fallback case if the node structure is unexpected
-              {:ok, zipper}
-          end
-        end
-      )
+    defp rewrite_preview_module(zipper) do
+      Common.update_all_matches(zipper, &preview_target_call?/1, &rewrite_preview_target/1)
     end
 
-    defp replace_view_templates(zipper, view_module) do
-      Igniter.Code.Common.update_all_matches(
-        zipper,
-        &view_template_call?(&1),
-        fn zipper ->
-          if is_nil(view_module) do
+    defp rewrite_preview_target(target_zipper) do
+      with {:ok, target_zipper} <- replace_layout_modules(target_zipper),
+           view_module = collect_view_module(target_zipper),
+           {:ok, target_zipper} <- replace_view_templates(target_zipper, view_module) do
+        remove_view_modules(target_zipper)
+      end
+    end
+
+    defp replace_layout_modules(zipper) do
+      Common.update_all_matches(zipper, &layout_module_call?/1, fn zipper ->
+        case Zipper.node(zipper) do
+          {:layout_module, _metadata, [module_arg]} ->
+            new_code =
+              quote do
+                layout {unquote(module_arg), :app}
+              end
+
+            {:ok, Common.replace_code(zipper, new_code)}
+
+          _other ->
             {:ok, zipper}
-          else
-            node = Sourceror.Zipper.node(zipper)
+        end
+      end)
+    end
 
-            case node do
-              {:view_template, _metadata, [template_arg]} ->
-                new_code =
-                  if callback_ast?(template_arg) do
-                    quote do
-                      template fn entry ->
-                        {unquote(view_module), unquote(template_arg).(entry)}
-                      end
-                    end
-                  else
-                    quote do
-                      template {unquote(view_module), unquote(template_arg)}
-                    end
-                  end
+    defp replace_view_templates(zipper, nil), do: {:ok, zipper}
 
-                # Replace code and return the updated zipper
-                updated_zipper = Igniter.Code.Common.replace_code(zipper, new_code)
-                {:ok, updated_zipper}
+    defp replace_view_templates(zipper, view_module) do
+      Common.update_all_matches(zipper, &view_template_call?/1, fn zipper ->
+        replace_view_template(zipper, view_module)
+      end)
+    end
 
-              _ ->
-                # Fallback case if the node structure is unexpected
-                {:ok, zipper}
-            end
+    defp replace_view_template(zipper, view_module) do
+      case Zipper.node(zipper) do
+        {:view_template, _metadata, [template_arg]} ->
+          {:ok, Common.replace_code(zipper, view_template_code(view_module, template_arg))}
+
+        _other ->
+          {:ok, zipper}
+      end
+    end
+
+    defp view_template_code(view_module, template_arg) do
+      if callback_ast?(template_arg) do
+        quote do
+          template fn entry ->
+            {unquote(view_module), unquote(template_arg).(entry)}
           end
         end
-      )
+      else
+        quote do
+          template {unquote(view_module), unquote(template_arg)}
+        end
+      end
     end
 
     defp collect_view_module(zipper) do
       zipper
-      |> Igniter.Code.Common.find_all(&view_module_call?(&1))
+      |> Common.find_all(&view_module_call?(&1))
       |> List.first()
       |> case do
         nil -> nil
-        view_module_zipper -> view_module_zipper |> Sourceror.Zipper.node() |> Sourceror.get_args() |> List.first()
+        view_module_zipper -> view_module_zipper |> Zipper.node() |> Sourceror.get_args() |> List.first()
       end
     end
 
     defp remove_view_modules(zipper) do
       # Remove all view_module calls
-      Igniter.Code.Common.remove_all_matches(zipper, &view_module_call?(&1))
+      Common.remove_all_matches(zipper, &view_module_call?(&1))
       |> then(&{:ok, &1})
     end
 
     defp layout_module_call?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :layout_module, 1)
+      CodeFunction.function_call?(zipper, :layout_module, 1)
     end
 
     defp view_module_call?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :view_module, 1)
+      CodeFunction.function_call?(zipper, :view_module, 1)
     end
 
     defp view_template_call?(zipper) do
       # Could be `view_template "some_string"` or `view_template fn e -> e.template end`
-      Igniter.Code.Function.function_call?(zipper, :view_template, 1)
+      CodeFunction.function_call?(zipper, :view_template, 1)
     end
 
     defp preview_target_call?(zipper) do
-      Igniter.Code.Function.function_call?(zipper, :preview_target, 2)
+      CodeFunction.function_call?(zipper, :preview_target, 2)
     end
 
     defp add_notices(igniter) do

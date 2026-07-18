@@ -3,6 +3,7 @@ defmodule Mix.Tasks.Brando.UpgradeTemplateTest do
 
   import ExUnit.CaptureIO
 
+  @compile {:no_warn_undefined, Mix.Tasks.Brando.Upgrade}
   @template_path "priv/templates/brando.install/lib/mix/brando.upgrade.ex"
 
   setup_all do
@@ -43,7 +44,7 @@ defmodule Mix.Tasks.Brando.UpgradeTemplateTest do
 
   defp run_upgrade(tmp_dir) do
     capture_io(fn ->
-      File.cd!(tmp_dir, fn -> apply(Mix.Tasks.Brando.Upgrade, :run, [[]]) end)
+      File.cd!(tmp_dir, fn -> Mix.Tasks.Brando.Upgrade.run([]) end)
     end)
   end
 

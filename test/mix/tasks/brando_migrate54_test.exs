@@ -192,7 +192,7 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     msgstr "Hei & velkommen"
     """)
 
-    script = Path.expand("priv/templates/brando.migrate/sync_gettext.sh")
+    script = Application.app_dir(:brando, ["priv", "templates", "brando.migrate", "sync_gettext.sh"])
     assert {output, 0} = System.cmd("bash", [script, directory], stderr_to_stdout: true)
     assert output =~ "Translation copy complete"
     assert File.read!(Path.join(directory, "backend.po")) =~ ~s(msgstr "Hei & velkommen")
