@@ -29,7 +29,6 @@ defmodule Brando.Blueprint.RelationOptions do
     on_delete: [:belongs_to, :has_many, :has_one, :many_to_many],
     on_replace: @association_types ++ @embed_types,
     preload_order: @has_types ++ [:many_to_many],
-    primary_key: [:belongs_to],
     references: [:belongs_to | @has_types],
     required: @relation_types,
     required_message: @relation_types,
@@ -66,6 +65,7 @@ defmodule Brando.Blueprint.RelationOptions do
          :ok <- validate_on_replace(type, Map.get(opts, :on_replace)),
          :ok <- validate_through(type, Map.get(opts, :through)),
          :ok <- validate_join_through(Map.get(opts, :join_through)),
+         :ok <- validate_join_defaults_target(opts),
          :ok <- validate_join_keys(Map.get(opts, :join_keys)),
          :ok <- validate_keyword_option(opts, :where),
          :ok <- validate_keyword_option(opts, :join_where),
@@ -207,6 +207,13 @@ defmodule Brando.Blueprint.RelationOptions do
 
   defp validate_join_through(value),
     do: {:error, "`:join_through` must be a module or non-empty table name, got: #{inspect(value)}"}
+
+  defp validate_join_defaults_target(%{join_defaults: _defaults, join_through: join_through})
+       when is_binary(join_through) do
+    {:error, "`:join_defaults` requires a schema module in `:join_through`, not a table name"}
+  end
+
+  defp validate_join_defaults_target(_opts), do: :ok
 
   defp validate_join_keys(nil), do: :ok
 

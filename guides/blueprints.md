@@ -262,6 +262,12 @@ index documented below. On a many-to-many relation it is Ecto's boolean
 association option for checking duplicate entries; it creates no owner-table
 index or Blueprint migration snapshot change.
 
+Many-to-many `join_defaults:` require a join schema module in `join_through:`;
+Ecto cannot apply join defaults when `join_through:` is only a table name.
+Blueprint relations cannot declare `primary_key: true`: use the root
+`primary_key` declaration because migration snapshots represent one owner key,
+not a composite association key.
+
 Misspelled options, invalid `on_replace:`/`on_delete:` values, malformed join
 keys, and options that Ecto or Blueprint would ignore now fail at Blueprint
 compile time. Fixing only one of those declarations, enabling many-to-many
