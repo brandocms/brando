@@ -37,4 +37,5 @@ elif ! MIX_ENV=e2e mix ecto.migrate; then
   BRANDO_SEEDING=true MIX_ENV=e2e mix run priv/repo/e2e_seeds.exs
 fi
 
+unset NO_COLOR
 cd e2e/playwright && pnpm $TEST_COMMAND "${EXTRA_ARGS[@]}"

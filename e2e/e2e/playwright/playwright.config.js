@@ -9,11 +9,12 @@ module.exports = defineConfig({
   webServer: {
     cwd: '../../',
     command: 'env MIX_ENV=e2e PORT=4444 mix phx.server',
-    url: 'http://localhost:4444/',
+    url: 'http://localhost:4444/admin/login',
     stdout: 'pipe',
     stderr: 'pipe',
     wait: { stdout: /Running.*Endpoint.*at/ },
     reuseExistingServer: !process.env.CI,
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 5000 },
   },
   testDir: './tests',
   fullyParallel: false,

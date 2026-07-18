@@ -134,6 +134,13 @@
 
 #### Improvements
 
+- **Quiet E2E startup probes**: Playwright now checks the admin login route
+  instead of making its readiness probe depend on the separately built
+  frontend bundle. The runner also removes the inherited `NO_COLOR` variable
+  before Playwright deliberately enables color and asks Phoenix to shut down
+  gracefully, eliminating recurring runner noise without changing test
+  behavior.
+
 - **Reversible Blueprint E2E migration fixtures**: The checked-in Client,
   Category, and Project Blueprint migrations now drop dependent auxiliary
   tables before their owner tables, target the tables they actually created,
