@@ -32,14 +32,41 @@ The task:
 
 - rewrites legacy Blueprint datasource, trait, villain/block, form, listing,
   input, metadata, and JSON-LD syntax;
+- renames legacy listing `filter:` keys and `list_villains/0` calls on
+  `Brando.Villain`;
 - rewrites every legacy LivePreview target with its own layout and template
   module;
+- replaces `mix phx.digest` in a root Dockerfile, removes `?vsn=d` from font
+  URLs in application styles/templates, adds a missing single-Repo
+  `config :brando, repo_module:` setting, and defaults an unconfigured Swoosh
+  API client to `Swoosh.ApiClient.Req`;
 - updates Gettext source declarations through `igniter.update_gettext`;
 - copies the current `mix brando.upgrade` task and
   `scripts/sync_gettext.sh` helper into the application.
 
 It does not connect to the database, generate application Blueprint migrations,
 choose identifier persistence, migrate data, or resolve production constraints.
+
+The following 0.54 changelog items remain manual because their correct rewrite
+depends on application semantics:
+
+- converting legacy `Brando.Type.Video` embedded values to
+  `Brando.Videos.Video` records and migrating their data;
+- updating source-controlled Liquid/HEEx ref paths and `gallery_images` access
+  (Brando-owned migrations handle database-stored module/fragment code);
+- updating code that traverses generated `*_identifiers` associations for
+  `:entries` relations, whose join entries are now exposed directly;
+- changing a Vite manifest only when that application actually uses Vite 5+;
+- replacing custom Sharp processing, consolidating custom Create/Update
+  LiveViews, adopting `<.head>`, and updating custom navigation markup;
+- pinning the consumer `phoenix_live_view` JavaScript package to the changelog's
+  server version and retaining Hackney explicitly if application code uses it;
+- moving function-based asset `config_target` callbacks from helper modules to
+  the relevant Blueprint schema;
+- transferring ownership of PostgreSQL's `oban_job_state` enum before the Oban
+  v14 migration when deploying through the bundled Fabric workflow.
+
+The task reports these items as warnings so they cannot be missed in the review.
 
 Review every source change. In particular, decide which Blueprints should not
 persist identifiers:

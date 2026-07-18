@@ -4,7 +4,14 @@ if Code.ensure_loaded?(Igniter) do
 
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
+    alias Igniter.Project.Config
+    alias Igniter.Refactors.Rename
+    alias Rewrite.Source
     alias Sourceror.Zipper
+
+    @font_source_extensions ~w(.css .eex .ex .exs .heex .leex .pcss .sass .scss)
+    @font_vsn_regex ~r/(\.(?:woff2?|ttf|otf|eot))\?vsn=d\b/
+    @phx_digest_regex ~r/\bmix[\t ]+phx\.digest(?=[\t ]|$)/m
 
     @shortdoc "Migrates application source to Brando 0.54"
     @moduledoc """
@@ -25,12 +32,17 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     def igniter(igniter) do
+      igniter = rewrite_legacy_function_calls(igniter)
       {igniter, modules} = find_blueprints(igniter)
 
       igniter =
         Enum.reduce(modules, igniter, &rewrite_blueprint/2)
 
       igniter
+      |> configure_repo_module()
+      |> configure_swoosh_client()
+      |> rewrite_dockerfiles()
+      |> rewrite_font_urls()
       |> rewrite_preview_targets()
       |> copy_gettext_script()
       |> copy_updated_migration_script()
@@ -52,6 +64,7 @@ if Code.ensure_loaded?(Igniter) do
            {:ok, zipper} <- rewrite_inputs_for(zipper),
            {:ok, zipper} <- rewrite_forms(zipper),
            {:ok, zipper} <- rewrite_listing_filters(zipper),
+           {:ok, zipper} <- rewrite_listing_filter_keys(zipper),
            {:ok, zipper} <- rewrite_listing_actions(zipper),
            {:ok, zipper} <- rewrite_listing_query(zipper),
            {:ok, zipper} <- rewrite_form_query(zipper),
@@ -126,6 +139,38 @@ if Code.ensure_loaded?(Igniter) do
 
     defp rewrite_listing_filters(zipper), do: rewrite_keyword_collection(zipper, :filters, :filter)
     defp rewrite_listing_actions(zipper), do: rewrite_keyword_collection(zipper, :actions, :action)
+
+    defp rewrite_listing_filter_keys(zipper) do
+      Common.update_all_matches(zipper, &listing_filter_with_legacy_key?/1, fn zipper ->
+        case CodeFunction.move_to_nth_argument(zipper, 0) do
+          {:ok, options_zipper} ->
+            options = options_zipper |> Zipper.node() |> normalize_filter_key()
+            {:ok, options_zipper |> Zipper.replace(options) |> Zipper.up()}
+
+          :error ->
+            {:ok, zipper}
+        end
+      end)
+    end
+
+    defp rename_filter_key({{:__block__, metadata, [:filter]}, value}) do
+      {{:__block__, metadata, [:key]}, value}
+    end
+
+    defp rename_filter_key({:filter, value}), do: {:key, value}
+    defp rename_filter_key(other), do: other
+
+    defp normalize_filter_key(options) do
+      if Enum.any?(options, &keyword_key?(&1, :key)) do
+        Enum.reject(options, &keyword_key?(&1, :filter))
+      else
+        Enum.map(options, &rename_filter_key/1)
+      end
+    end
+
+    defp keyword_key?({{:__block__, _, [key]}, _value}, key), do: true
+    defp keyword_key?({key, _value}, key), do: true
+    defp keyword_key?(_option, _key), do: false
 
     defp rewrite_keyword_collection(zipper, collection_name, item_name) do
       Common.update_all_matches(
@@ -498,6 +543,13 @@ if Code.ensure_loaded?(Igniter) do
         end)
     end
 
+    defp listing_filter_with_legacy_key?(zipper) do
+      CodeFunction.function_call?(zipper, :filter, 1) and
+        CodeFunction.argument_matches_predicate?(zipper, 0, fn argument_zipper ->
+          Igniter.Code.Keyword.keyword_has_path?(argument_zipper, [:filter])
+        end)
+    end
+
     defp json_ld_field?(zipper) do
       CodeFunction.function_call?(zipper, :json_ld_field, 2) ||
         CodeFunction.function_call?(zipper, :json_ld_field, 3)
@@ -587,6 +639,79 @@ if Code.ensure_loaded?(Igniter) do
 
     defp literal_list?({:__block__, _, [value]}), do: is_list(value)
     defp literal_list?(value), do: is_list(value)
+
+    defp rewrite_legacy_function_calls(igniter) do
+      Rename.rename_function(
+        igniter,
+        {Brando.Villain, :list_villains},
+        {Brando.Villain, :list_blocks},
+        arity: 0
+      )
+    end
+
+    defp configure_repo_module(igniter) do
+      case Igniter.Libs.Ecto.list_repos(igniter) do
+        {igniter, [repo]} ->
+          Config.configure_new(igniter, "brando.exs", :brando, [:repo_module], repo)
+
+        {igniter, []} ->
+          Igniter.add_warning(igniter, "Could not infer `config :brando, repo_module:` because no Ecto Repo was found.")
+
+        {igniter, repos} ->
+          Igniter.add_warning(
+            igniter,
+            "Could not infer `config :brando, repo_module:` because multiple Ecto Repos were found: #{inspect(repos)}"
+          )
+      end
+    end
+
+    defp configure_swoosh_client(igniter) do
+      Config.configure_new(
+        igniter,
+        "config.exs",
+        :swoosh,
+        [:api_client],
+        Swoosh.ApiClient.Req
+      )
+    end
+
+    defp rewrite_dockerfiles(igniter) do
+      igniter
+      |> Igniter.include_glob(Path.expand("Dockerfile*"))
+      |> rewrite_matching_sources(&dockerfile?/1, fn content ->
+        Regex.replace(@phx_digest_regex, content, "mix brando.digest")
+      end)
+    end
+
+    defp rewrite_font_urls(igniter) do
+      igniter
+      |> Igniter.include_glob(Path.expand("assets/**/*.{css,pcss,sass,scss}"))
+      |> Igniter.include_glob(Path.expand("lib/**/*.{eex,ex,exs,heex,leex}"))
+      |> rewrite_matching_sources(&font_source?/1, fn content ->
+        Regex.replace(@font_vsn_regex, content, "\\1")
+      end)
+    end
+
+    defp rewrite_matching_sources(igniter, path_predicate, content_updater) do
+      igniter.rewrite
+      |> Rewrite.sources()
+      |> Enum.map(&Source.get(&1, :path))
+      |> Enum.filter(path_predicate)
+      |> Enum.reduce(igniter, fn path, igniter ->
+        Igniter.update_file(igniter, path, fn source ->
+          Source.update(source, :content, content_updater)
+        end)
+      end)
+    end
+
+    defp dockerfile?(path) do
+      Path.dirname(path) == "." and String.starts_with?(Path.basename(path), "Dockerfile")
+    end
+
+    defp font_source?(path) do
+      (String.starts_with?(path, "assets/") or String.starts_with?(path, "lib/")) and
+        Path.extname(path) in @font_source_extensions
+    end
 
     defp rewrite_preview_targets(igniter) do
       rewriting_module = Igniter.Libs.Phoenix.web_module_name(igniter, LivePreview)
@@ -695,6 +820,12 @@ if Code.ensure_loaded?(Igniter) do
       Igniter.add_notice(igniter, """
       Brando 0.54 source migration prepared.
 
+      In addition to the Blueprint and LivePreview rewrites, the task updates
+      `Brando.Villain.list_villains/0`, legacy listing `filter:` keys, root
+      Docker digest commands, and font cache suffixes. It also adds the Brando
+      Repo configuration when exactly one Ecto Repo is available and adds Req
+      as Swoosh's API client when no client is configured.
+
       Continue in this order:
 
         1. Review the complete Igniter diff, then run `mix format` and
@@ -722,6 +853,30 @@ if Code.ensure_loaded?(Igniter) do
         * Table, primary-key, and existing column-level primary-key changes are
           never inferred. Write the Ecto migration, verify the live schema, then
           use the documented Blueprint `--rebaseline` workflow.
+        * Search for `Brando.Type.Video` and legacy embedded video values. Moving
+          them to `Brando.Videos.Video` requires an application-specific schema
+          and data migration; a module-name substitution would corrupt storage.
+        * Review application templates for legacy ref paths such as
+          `refs.name.data.data.path` and `gallery_images`. Brando migrations
+          update database-stored module and fragment code, but cannot identify
+          the semantics of every source-controlled template.
+        * Update code that traverses generated `*_identifiers` associations for
+          `:entries` relations. The relation now exposes its join entries
+          directly, and application query/preload intent cannot be inferred.
+        * Vite 5 manifest configuration, custom Sharp-based processing, merged
+          admin Create/Update LiveViews, `<.head>` adoption, and navigation markup
+          depend on the application's frontend and custom code. Apply the
+          corresponding 0.54 changelog instructions manually where relevant.
+        * Pin the consumer application's `phoenix_live_view` JavaScript package
+          to the server version documented in the changelog and rebuild assets.
+          If application code directly uses Hackney, add it explicitly; the Req
+          Swoosh default added by this task only replaces Swoosh's client.
+        * Move function-based asset `config_target` callbacks from helper modules
+          onto their Blueprint schema. The hardened resolver rejects plain helper
+          modules and there is no safe target schema the task can choose.
+        * Fabric deployments must ensure the application database role owns the
+          `oban_job_state` enum before `brando_153` upgrades Oban to v14. Follow
+          the changelog's updated `grant_db`/`ALTER TYPE ... OWNER TO` procedure.
         * Back up Gettext catalogs before attempting recovery. After extracting
           the backend and frontend catalogs, run the copied helper explicitly
           with Bash, for example:

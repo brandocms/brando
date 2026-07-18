@@ -1014,8 +1014,14 @@ Follow the complete [Migrating to Brando 0.54](guides/migrating_to_054.md)
 guide. The required order is:
 
 1. Commit the existing application and back up the database and Gettext catalogs.
-2. Update Brando, then run `mix brando.migrate54`. The task now rewrites legacy
-   unnamed and named `form` options itself and is safe to rerun.
+2. Update Brando, then run `mix brando.migrate54`. The task rewrites legacy
+   unnamed and named `form` options, listing `filter:` keys,
+   `Brando.Villain.list_villains/0`, root Docker digest commands, and font cache
+   suffixes. It also fills missing single-Repo Brando and Swoosh Req
+   configuration and is safe to rerun. It warns about the video-data, template,
+   related-entry, Vite, custom admin-view, head, navigation, dependency-client,
+   secure config-target, and Fabric/Oban changes that require manual
+   application-specific decisions.
 3. Review, format, compile, and test the source diff.
 4. Run `mix brando.upgrade`, then generate or deliberately rebaseline each
    application's Blueprint storage history as documented in

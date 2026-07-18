@@ -7,6 +7,11 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
 
   @blueprint_path "lib/legacy_app/projects/project.ex"
   @live_preview_path "lib/legacy_app_web/live_preview.ex"
+  @repo_path "lib/legacy_app/repo.ex"
+  @brando_config_path "config/brando.exs"
+  @config_path "config/config.exs"
+  @dockerfile_path "Dockerfile"
+  @fonts_path "assets/front/css/fonts.css"
 
   @legacy_blueprint """
   defmodule LegacyApp.Projects.Project do
@@ -35,7 +40,9 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     listings do
       listing do
         listing_query %{order: "asc title"}
-        filters [[label: "Title", key: "title"], [label: "Status", key: "status"]]
+        filters [[label: "Title", filter: "title"], [label: "Status", key: "status"]]
+        filter label: "Direct legacy", filter: "direct"
+        filter label: "Already keyed", filter: "obsolete", key: "authoritative"
         actions [[label: "Duplicate", event: "duplicate"]]
       end
     end
@@ -73,6 +80,8 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     def list_all(_module, _language, _vars), do: []
     def list_featured(_module, _language, _vars), do: []
     def get_featured(identifiers), do: identifiers
+    def villains, do: Brando.Villain.list_villains()
+    def villains_fun, do: &Brando.Villain.list_villains/0
   end
   """
 
@@ -94,6 +103,41 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
   end
   """
 
+  @repo """
+  defmodule LegacyApp.Repo do
+    use Ecto.Repo,
+      otp_app: :legacy_app,
+      adapter: Ecto.Adapters.Postgres
+  end
+  """
+
+  @brando_config """
+  import Config
+
+  config :brando,
+    otp_app: :legacy_app
+  """
+
+  @config """
+  import Config
+
+  config :legacy_app, ecto_repos: [LegacyApp.Repo]
+  """
+
+  @dockerfile """
+  FROM hexpm/elixir:1.18-erlang-27
+  RUN mix phx.digest
+  RUN mix phx.digest.clean --all
+  """
+
+  @fonts """
+  @font-face {
+    src: url('/fonts/legacy.woff2?vsn=d') format('woff2');
+  }
+
+  .hero { background-image: url('/images/hero.png?vsn=d'); }
+  """
+
   test "rewrites the complete legacy Blueprint surface without changing unrelated calls" do
     igniter = migrate(@legacy_blueprint, @legacy_live_preview)
     blueprint = source(igniter, @blueprint_path)
@@ -110,9 +154,15 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert blueprint =~ "datasource(:featured) do"
     assert blueprint =~ "type(:selection)"
     assert blueprint =~ "def list(left, right), do: {left, right}"
+    assert blueprint =~ "Brando.Villain.list_blocks()"
+    refute blueprint =~ "list_villains"
 
     assert blueprint =~ "query(%{order: \"asc title\"})"
     assert blueprint =~ "filter(label: \"Title\", key: \"title\")"
+    assert blueprint =~ "filter(label: \"Direct legacy\", key: \"direct\")"
+    assert blueprint =~ "filter(label: \"Already keyed\", key: \"authoritative\")"
+    refute blueprint =~ "obsolete"
+    refute blueprint =~ "filter: \""
     assert blueprint =~ "action(label: \"Duplicate\", event: \"duplicate\")"
     assert blueprint =~ "query(%{preload: [:creator]})"
     assert blueprint =~ "input(:slug, :slug, source: :title)"
@@ -158,6 +208,45 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert source(igniter, @blueprint_path) =~ "trait(Brando.Trait.Blocks)"
   end
 
+  test "applies deterministic non-Blueprint changes from the 0.54 changelog" do
+    igniter = migrate(@legacy_blueprint, @legacy_live_preview)
+
+    assert source(igniter, @brando_config_path) =~ "repo_module: LegacyApp.Repo"
+    assert source(igniter, @config_path) =~ "config :swoosh, api_client: Swoosh.ApiClient.Req"
+    assert source(igniter, @dockerfile_path) =~ "RUN mix brando.digest"
+    assert source(igniter, @dockerfile_path) =~ "RUN mix phx.digest.clean --all"
+    assert source(igniter, @fonts_path) =~ "/fonts/legacy.woff2'"
+    refute source(igniter, @fonts_path) =~ "/fonts/legacy.woff2?vsn=d"
+    assert source(igniter, @fonts_path) =~ "/images/hero.png?vsn=d"
+  end
+
+  test "preserves an explicitly configured Swoosh client" do
+    existing_config = """
+    import Config
+
+    config :legacy_app, ecto_repos: [LegacyApp.Repo]
+    config :swoosh, api_client: false
+    """
+
+    igniter = migrate(@legacy_blueprint, nil, %{@config_path => existing_config})
+    config = source(igniter, @config_path)
+
+    assert config =~ "config :swoosh, api_client: false"
+    refute config =~ "Swoosh.ApiClient.Req"
+  end
+
+  test "warns instead of guessing when no Ecto Repo can be inferred" do
+    files = %{
+      @blueprint_path => @legacy_blueprint,
+      @brando_config_path => @brando_config,
+      @config_path => "import Config\n"
+    }
+
+    igniter = [app_name: :legacy_app, files: files] |> test_project() |> Migrate54.igniter()
+
+    assert_has_warning(igniter, &String.contains?(&1, "no Ecto Repo was found"))
+  end
+
   test "copies current helpers and reports the ordered manual workflow" do
     igniter = migrate(@legacy_blueprint, nil)
 
@@ -175,6 +264,13 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert_has_task(igniter, "igniter.update_gettext", [])
     assert_has_notice(igniter, &String.contains?(&1, "Continue in this order"))
     assert_has_warning(igniter, &String.contains?(&1, "Manual 0.54 decisions remain"))
+    assert_has_warning(igniter, &String.contains?(&1, "Brando.Type.Video"))
+    assert_has_warning(igniter, &String.contains?(&1, "legacy ref paths"))
+    assert_has_warning(igniter, &String.contains?(&1, "Vite 5 manifest"))
+    assert_has_warning(igniter, &String.contains?(&1, "*_identifiers"))
+    assert_has_warning(igniter, &String.contains?(&1, "phoenix_live_view"))
+    assert_has_warning(igniter, &String.contains?(&1, "config_target"))
+    assert_has_warning(igniter, &String.contains?(&1, "oban_job_state"))
   end
 
   test "copied Gettext helper fills single-line translations portably" do
@@ -198,9 +294,17 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert File.read!(Path.join(directory, "backend.po")) =~ ~s(msgstr "Hei & velkommen")
   end
 
-  defp migrate(blueprint, live_preview) do
+  defp migrate(blueprint, live_preview, overrides \\ %{}) do
     files =
-      %{@blueprint_path => blueprint}
+      %{
+        @blueprint_path => blueprint,
+        @repo_path => @repo,
+        @brando_config_path => @brando_config,
+        @config_path => @config,
+        @dockerfile_path => @dockerfile,
+        @fonts_path => @fonts
+      }
+      |> Map.merge(overrides)
       |> maybe_put(@live_preview_path, live_preview)
 
     [app_name: :legacy_app, files: files]
