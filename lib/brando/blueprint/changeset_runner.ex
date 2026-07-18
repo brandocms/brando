@@ -33,35 +33,49 @@ defmodule Brando.Blueprint.ChangesetRunner do
     changeset =
       changeset_params.schema
       |> Changeset.cast(changeset_params.params, changeset_params.castable_fields)
-      |> Relations.run_cast_relations(changeset_params.relations, changeset_params.user)
-      |> Assets.run_cast_assets(changeset_params.assets, changeset_params.user)
-      |> Villain.maybe_cast_blocks(changeset_params.module, changeset_params.user, changeset_params.opts)
-      |> Trait.run_changeset_mutators(
-        changeset_params.module,
-        changeset_params.traits_before_validate_required,
-        changeset_params.user,
-        changeset_params.opts
-      )
-      |> maybe_validate_required(changeset_params.required_castable_fields)
-      |> Unique.run_unique_attribute_constraints(changeset_params.module, changeset_params.attributes)
-      |> Unique.run_unique_relation_constraints(changeset_params.module, changeset_params.relations)
-      |> Constraints.run_validations(changeset_params.module, changeset_params.attributes)
-      |> Constraints.run_validations(changeset_params.module, changeset_params.relations)
-      |> Constraints.run_fk_constraints(changeset_params.module, changeset_params.relations)
-      |> Trait.run_changeset_mutators(
-        changeset_params.module,
-        changeset_params.traits_after_validate_required,
-        changeset_params.user,
-        changeset_params.opts
-      )
-      |> maybe_mark_for_deletion(changeset_params.module)
-      |> maybe_sequence(changeset_params.module, changeset_params.sequence)
+      |> run_pipeline(changeset_params)
 
     :telemetry.execute([:brando, :run_changeset], %{duration: System.monotonic_time() - start}, %{
       schema: changeset.data.__struct__
     })
 
     changeset
+  end
+
+  defp run_pipeline(%Changeset{changes: %{marked_as_deleted: true}} = changeset, changeset_params) do
+    if changeset_params.module.__allow_mark_as_deleted__() do
+      mark_for_deletion(changeset)
+    else
+      run_validations(changeset, changeset_params)
+    end
+  end
+
+  defp run_pipeline(changeset, changeset_params), do: run_validations(changeset, changeset_params)
+
+  defp run_validations(changeset, changeset_params) do
+    changeset
+    |> Relations.run_cast_relations(changeset_params.relations, changeset_params.user)
+    |> Assets.run_cast_assets(changeset_params.assets, changeset_params.user)
+    |> Villain.maybe_cast_blocks(changeset_params.module, changeset_params.user, changeset_params.opts)
+    |> Trait.run_changeset_mutators(
+      changeset_params.module,
+      changeset_params.traits_before_validate_required,
+      changeset_params.user,
+      changeset_params.opts
+    )
+    |> maybe_validate_required(changeset_params.required_castable_fields)
+    |> Unique.run_unique_attribute_constraints(changeset_params.module, changeset_params.attributes)
+    |> Unique.run_unique_relation_constraints(changeset_params.module, changeset_params.relations)
+    |> Constraints.run_validations(changeset_params.module, changeset_params.attributes)
+    |> Constraints.run_validations(changeset_params.module, changeset_params.relations)
+    |> Constraints.run_fk_constraints(changeset_params.module, changeset_params.relations)
+    |> Trait.run_changeset_mutators(
+      changeset_params.module,
+      changeset_params.traits_after_validate_required,
+      changeset_params.user,
+      changeset_params.opts
+    )
+    |> maybe_sequence(changeset_params.module, changeset_params.sequence)
   end
 
   @doc """
@@ -89,13 +103,32 @@ defmodule Brando.Blueprint.ChangesetRunner do
     end
   end
 
-  defp maybe_mark_for_deletion(%Changeset{changes: %{marked_as_deleted: true}} = changeset, module) do
-    if module.__allow_mark_as_deleted__() do
-      %{changeset | action: :delete}
-    else
+  defp mark_for_deletion(changeset) do
+    %{
       changeset
+      | action: deletion_action(changeset.data),
+        changes: %{marked_as_deleted: true},
+        errors: [],
+        valid?: true
+    }
+  end
+
+  defp deletion_action(%{__meta__: %{state: :built}} = entry) do
+    if primary_key_present?(entry), do: :delete, else: :ignore
+  end
+
+  defp deletion_action(%{__meta__: _metadata}), do: :delete
+
+  defp deletion_action(entry) do
+    if primary_key_fields(entry) == [] or primary_key_present?(entry), do: :delete, else: :ignore
+  end
+
+  defp primary_key_present?(entry) do
+    case primary_key_fields(entry) do
+      [] -> false
+      fields -> Enum.all?(fields, &(not is_nil(Map.get(entry, &1))))
     end
   end
 
-  defp maybe_mark_for_deletion(changeset, _module), do: changeset
+  defp primary_key_fields(entry), do: entry.__struct__.__schema__(:primary_key)
 end

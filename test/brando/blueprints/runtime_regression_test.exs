@@ -61,6 +61,58 @@ defmodule Brando.Blueprint.RuntimeRegressionTest do
     end
   end
 
+  defmodule DeletableChild do
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "BlueprintRuntimeRegression",
+      schema: "DeletableChild",
+      singular: "deletable_child",
+      plural: "deletable_children",
+      gettext_module: Brando.Gettext
+
+    @allow_mark_as_deleted true
+
+    attributes do
+      attribute :name, :string, required: true
+    end
+
+    relations do
+      relation :parent, :belongs_to, module: Brando.Blueprint.RuntimeRegressionTest.DeletionParent
+    end
+  end
+
+  defmodule DeletionParent do
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "BlueprintRuntimeRegression",
+      schema: "DeletionParent",
+      singular: "deletion_parent",
+      plural: "deletion_parents",
+      gettext_module: Brando.Gettext
+
+    relations do
+      relation :children, :has_many,
+        module: Brando.Blueprint.RuntimeRegressionTest.DeletableChild,
+        cast: true,
+        on_replace: :delete_if_exists
+    end
+  end
+
+  defmodule DeletionDenied do
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "BlueprintRuntimeRegression",
+      schema: "DeletionDenied",
+      singular: "deletion_denied",
+      plural: "deletion_denied_entries",
+      gettext_module: Brando.Gettext
+
+    attributes do
+      attribute :name, :string, required: true
+      attribute :marked_as_deleted, :boolean, virtual: true
+    end
+  end
+
   defmodule InvalidTrait do
     use Brando.Trait
 
@@ -129,6 +181,157 @@ defmodule Brando.Blueprint.RuntimeRegressionTest do
     assert_raise BlueprintError, ~r/module\/schema mismatch/, fn ->
       UniqueMessage.changeset(%CustomRelationCast{}, %{})
     end
+  end
+
+  test "allowed deletion bypasses irrelevant validation for persisted entries" do
+    child =
+      DeletableChild
+      |> struct(id: 1, name: "Existing", parent_id: 1)
+      |> Ecto.put_meta(state: :loaded)
+
+    changeset =
+      DeletableChild.changeset(
+        child,
+        %{name: "", marked_as_deleted: true},
+        :system,
+        7
+      )
+
+    assert changeset.valid?
+    assert changeset.action == :delete
+    assert changeset.errors == []
+    assert changeset.changes == %{marked_as_deleted: true}
+  end
+
+  test "allowed deletion ignores unsaved entries instead of asking Ecto to delete them" do
+    changeset =
+      DeletableChild.changeset(
+        %DeletableChild{},
+        %{"name" => "", "marked_as_deleted" => "true"}
+      )
+
+    assert changeset.valid?
+    assert changeset.action == :ignore
+    assert changeset.errors == []
+    assert changeset.changes == %{marked_as_deleted: true}
+  end
+
+  test "deletion requires an explicit schema opt-in" do
+    changeset =
+      DeletionDenied.changeset(
+        %DeletionDenied{},
+        %{name: "", marked_as_deleted: true}
+      )
+
+    refute changeset.valid?
+    assert changeset.action == nil
+    assert {:name, {"can't be blank", [validation: :required]}} in changeset.errors
+    assert changeset.changes == %{marked_as_deleted: true}
+  end
+
+  test "embedded deletion distinguishes entries by their generated identity" do
+    meta_id = Ecto.UUID.generate()
+
+    unsaved_changeset =
+      Brando.Meta.changeset(
+        %Brando.Meta{},
+        %{key: "", value: "", marked_as_deleted: true}
+      )
+
+    persisted_changeset =
+      Brando.Meta.changeset(
+        %Brando.Meta{id: meta_id},
+        %{key: "", value: "", marked_as_deleted: true}
+      )
+
+    assert unsaved_changeset.valid?
+    assert unsaved_changeset.action == :ignore
+    assert persisted_changeset.valid?
+    assert persisted_changeset.action == :delete
+
+    identity =
+      %Brando.Sites.Identity{
+        id: 1,
+        language: "en",
+        name: "Test",
+        type: :organization,
+        metas: [%Brando.Meta{id: meta_id, key: "old", value: "old"}]
+      }
+      |> Ecto.put_meta(state: :loaded)
+
+    identity_changeset =
+      Brando.Sites.Identity.changeset(identity, %{
+        "language" => "en",
+        "name" => "Test",
+        "type" => "organization",
+        "metas" => %{
+          "0" => %{
+            "id" => meta_id,
+            "key" => "",
+            "value" => "",
+            "marked_as_deleted" => "true"
+          }
+        }
+      })
+
+    assert identity_changeset.valid?
+    assert [%{action: :delete, valid?: true, errors: []}] = identity_changeset.changes.metas
+  end
+
+  test "nested deletion keeps the parent valid and discards unsaved children" do
+    child =
+      DeletableChild
+      |> struct(id: 1, name: "Existing", parent_id: 1)
+      |> Ecto.put_meta(state: :loaded)
+
+    parent =
+      DeletionParent
+      |> struct(id: 1, children: [child])
+      |> Ecto.put_meta(state: :loaded)
+
+    persisted_deletion =
+      DeletionParent.changeset(parent, %{
+        "children" => %{
+          "0" => %{
+            "id" => "1",
+            "name" => "",
+            "marked_as_deleted" => "true"
+          }
+        }
+      })
+
+    assert persisted_deletion.valid?
+    assert [%{action: :delete, valid?: true, errors: []}] = persisted_deletion.changes.children
+
+    unsaved_deletion =
+      DeletionParent.changeset(%DeletionParent{}, %{
+        "children" => %{
+          "0" => %{
+            "name" => "",
+            "marked_as_deleted" => "true"
+          }
+        }
+      })
+
+    assert unsaved_deletion.valid?
+    assert Ecto.Changeset.get_change(unsaved_deletion, :children, []) == []
+  end
+
+  test "sequence overrides only apply to sequenced Blueprints" do
+    contributor_module = Brando.BlueprintTest.P1.Contributor
+
+    sequenced_changeset =
+      contributor_module.changeset(struct(contributor_module), %{name: "Child"}, :system, 4)
+
+    assert Ecto.Changeset.get_change(sequenced_changeset, :sequence) == 4
+
+    unchanged =
+      %UniqueMessage{}
+      |> Ecto.Changeset.change()
+      |> Blueprint.maybe_sequence(UniqueMessage, 4)
+
+    assert unchanged.changes == %{}
+    assert Blueprint.maybe_sequence(unchanged, UniqueMessage, nil) == unchanged
   end
 
   test "the Blueprint changeset compatibility API delegates to the runtime runner" do

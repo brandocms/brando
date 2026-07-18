@@ -87,6 +87,13 @@ constraint, uniqueness, and trait modules. This boundary is automatic:
 `maybe_validate_required/2` remain compatible, and applications need no code or database
 migration.
 
+Schemas used as deletable nested associations can opt in with
+`@allow_mark_as_deleted true`. When their generated changeset receives
+`marked_as_deleted: true`, persisted entries are marked with Ecto's `:delete` action and
+unsaved entries are ignored. Deletion intent bypasses field and association validation:
+values on an entry being removed cannot make its parent changeset invalid. The flag is
+virtual and does not require a database column.
+
 #### Context query compilation
 
 Contexts generated for Blueprint schemas keep using the public query API:

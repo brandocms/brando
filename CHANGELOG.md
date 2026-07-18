@@ -134,6 +134,13 @@
 
 #### Improvements
 
+- **Reliable Blueprint nested deletion**: Generated Blueprint changesets now
+  short-circuit irrelevant validation when an opted-in schema receives
+  `marked_as_deleted: true`. Persisted nested entries are deleted even if other
+  submitted fields are invalid, while unsaved entries are ignored instead of
+  causing Ecto to raise. The `changeset/5` API and stored schemas are unchanged;
+  no Igniter or database migration is required.
+
 - **Valid Blueprint uniqueness scopes**: `unique: [with: ...]` and
   `unique: [prevent_collision: ...]` now reject repeated scope columns and a
   scope that repeats the attribute or relation foreign key being made unique.
