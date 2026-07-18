@@ -52,6 +52,11 @@ defmodule Brando.Blueprint.UniqueTest do
         module: Brando.BlueprintTest.P1.Location,
         foreign_key: :reviewer_ref,
         unique: [with: [:tenant_id, :locale]]
+
+      relation :locations, :many_to_many,
+        module: Brando.BlueprintTest.P1.Location,
+        join_through: "unique_contract_locations",
+        unique: true
     end
   end
 
@@ -106,6 +111,20 @@ defmodule Brando.Blueprint.UniqueTest do
              prevent_collision: fn _changeset -> ConstraintSchema end,
              with: [:language, :tenant_id]
            ) == [:slug, :language, :tenant_id]
+  end
+
+  test "many-to-many uniqueness remains an Ecto association option only" do
+    association = ConstraintSchema.__schema__(:association, :locations)
+    assert association.unique
+
+    changeset = ConstraintSchema.changeset(%ConstraintSchema{}, %{})
+
+    refute Enum.any?(changeset.constraints, fn constraint ->
+             constraint.type == :unique and constraint.field == :locations
+           end)
+
+    storage_schema = MigrationSchema.build(ConstraintSchema)
+    refute Enum.any?(storage_schema.indexes, &(:locations in &1.fields))
   end
 
   test "a callback is not invoked when a persisted scope is nil" do

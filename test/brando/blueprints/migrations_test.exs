@@ -150,6 +150,7 @@ defmodule Brando.Blueprint.MigrationsTest do
 
     owner_column = Enum.find(schema.columns, &(&1.name == :owner_ref))
     assert owner_column.opts == %{null: false}
+    assert owner_column.reference.on_delete == :restrict
     assert MapSet.member?(runtime_constraint_names, owner_column.reference.name)
 
     [related_entries] = schema.auxiliary_tables
@@ -164,6 +165,7 @@ defmodule Brando.Blueprint.MigrationsTest do
     assert source =~ "add :headline, :text"
     assert source =~ "add :owner_ref,"
     assert source =~ "references(:users,"
+    assert source =~ "on_delete: :restrict"
     assert source =~ "add :payload, :jsonb"
     assert source =~ "column: :record_pk"
     refute source =~ "add :title,"

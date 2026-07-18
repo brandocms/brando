@@ -7,6 +7,7 @@ defmodule Brando.Blueprint.Verifier do
   alias Brando.Blueprint.AttributeOptions
   alias Brando.Blueprint.Config
   alias Brando.Blueprint.DatabaseIdentifier
+  alias Brando.Blueprint.RelationOptions
   alias Brando.Blueprint.UniqueFields
   alias Spark.Dsl.Entity
   alias Spark.Dsl.Verifier
@@ -36,20 +37,6 @@ defmodule Brando.Blueprint.Verifier do
     :uuid
   ]
   @relation_constraint_keys [:length, :max_length, :min_length, :require_blocks]
-  @relation_option_scopes [
-    constraint_name: [:belongs_to],
-    define_field: [:belongs_to],
-    foreign_key: [:belongs_to, :has_many, :has_one],
-    join_defaults: [:many_to_many],
-    join_keys: [:many_to_many],
-    join_through: [:many_to_many],
-    join_where: [:many_to_many],
-    null: [:belongs_to],
-    references: [:belongs_to, :has_many, :has_one],
-    source: [:belongs_to, :embeds_many, :embeds_one],
-    through: [:has_many],
-    type: [:belongs_to]
-  ]
   @unique_keys [:message, :prevent_collision, :with]
 
   @impl true
@@ -190,8 +177,8 @@ defmodule Brando.Blueprint.Verifier do
          :ok <- verify_relation_options(dsl_state, relation),
          :ok <- verify_manual_belongs_to_field(dsl_state, relation, storage_columns),
          :ok <- verify_relation_cast(dsl_state, relation),
-         :ok <- verify_unique(dsl_state, :relation, relation),
-         :ok <- verify_unique_references(dsl_state, :relation, relation, storage_columns) do
+         :ok <- verify_relation_unique(dsl_state, relation),
+         :ok <- verify_relation_unique_references(dsl_state, relation, storage_columns) do
       verify_constraints(dsl_state, :relation, relation)
     end
   end
@@ -342,54 +329,10 @@ defmodule Brando.Blueprint.Verifier do
   defp verify_many_to_many_join(_dsl_state, _relation, _opts), do: :ok
 
   defp verify_relation_options(dsl_state, relation) do
-    with :ok <- verify_boolean_option(dsl_state, :relations, relation, :required),
-         :ok <- verify_boolean_option(dsl_state, :relations, relation, :define_field),
-         :ok <- verify_boolean_option(dsl_state, :relations, relation, :null),
-         :ok <- verify_atom_option(dsl_state, relation, :foreign_key),
-         :ok <- verify_atom_option(dsl_state, relation, :references),
-         :ok <- verify_atom_option(dsl_state, relation, :source),
-         :ok <- verify_string_option(dsl_state, relation, :constraint_name),
-         :ok <- verify_string_option(dsl_state, relation, :required_message),
-         :ok <- verify_string_option(dsl_state, relation, :invalid_message),
-         :ok <- verify_boolean_option(dsl_state, :relations, relation, :force_update_on_change),
-         :ok <- verify_atom_option(dsl_state, relation, :sort_param),
-         :ok <- verify_atom_option(dsl_state, relation, :drop_param),
-         :ok <- verify_relation_option_scopes(dsl_state, relation),
-         :ok <- verify_through(dsl_state, relation) do
-      verify_join_through(dsl_state, relation)
+    case RelationOptions.validate(relation) do
+      :ok -> :ok
+      {:error, message} -> error(dsl_state, :relations, relation, message)
     end
-  end
-
-  defp verify_relation_option_scopes(dsl_state, %{type: type, opts: opts} = relation) do
-    case Enum.find(@relation_option_scopes, fn {option, allowed_types} ->
-           Map.has_key?(opts, option) and type not in allowed_types
-         end) do
-      nil ->
-        :ok
-
-      {option, allowed_types} ->
-        error(
-          dsl_state,
-          :relations,
-          relation,
-          "`:#{option}` is only valid for #{format_relation_types(allowed_types)} relations"
-        )
-    end
-  end
-
-  defp format_relation_types([type]), do: inspect(type)
-  defp format_relation_types(types), do: Enum.map_join(types, ", ", &inspect/1)
-
-  defp verify_atom_option(dsl_state, %{opts: opts} = relation, option) do
-    case Map.get(opts, option) do
-      nil -> :ok
-      value when is_atom(value) -> :ok
-      value -> error(dsl_state, :relations, relation, "`:#{option}` must be an atom, got: #{inspect(value)}")
-    end
-  end
-
-  defp verify_string_option(dsl_state, relation, option) do
-    verify_string_option(dsl_state, :relations, relation, option)
   end
 
   defp verify_string_option(dsl_state, section, %{opts: opts} = entity, option) do
@@ -397,36 +340,6 @@ defmodule Brando.Blueprint.Verifier do
       nil -> :ok
       value when is_binary(value) -> :ok
       value -> error(dsl_state, section, entity, "`:#{option}` must be a string, got: #{inspect(value)}")
-    end
-  end
-
-  defp verify_through(dsl_state, %{opts: opts} = relation) do
-    case Map.get(opts, :through) do
-      nil ->
-        :ok
-
-      through when relation.type == :has_many and is_list(through) and through != [] ->
-        if Enum.all?(through, &is_atom/1) do
-          :ok
-        else
-          error(dsl_state, :relations, relation, "`:through` must contain only relation atoms")
-        end
-
-      _through ->
-        error(dsl_state, :relations, relation, "`:through` must be a non-empty atom list on a has-many relation")
-    end
-  end
-
-  defp verify_join_through(dsl_state, %{opts: opts} = relation) do
-    case Map.get(opts, :join_through) do
-      nil ->
-        :ok
-
-      join_through when is_atom(join_through) or is_binary(join_through) ->
-        :ok
-
-      value ->
-        error(dsl_state, :relations, relation, "`:join_through` must be a module or table name, got: #{inspect(value)}")
     end
   end
 
@@ -463,6 +376,15 @@ defmodule Brando.Blueprint.Verifier do
       relation,
       "has an unsupported `:cast` option; use a boolean or a belongs-to `with: {Module, :function}` callback"
     )
+  end
+
+  defp verify_relation_unique(_dsl_state, %{type: :many_to_many}), do: :ok
+  defp verify_relation_unique(dsl_state, relation), do: verify_unique(dsl_state, :relation, relation)
+
+  defp verify_relation_unique_references(_dsl_state, %{type: :many_to_many}, _storage_columns), do: :ok
+
+  defp verify_relation_unique_references(dsl_state, relation, storage_columns) do
+    verify_unique_references(dsl_state, :relation, relation, storage_columns)
   end
 
   defp verify_unique(dsl_state, kind, %{opts: opts} = entity) do
@@ -558,7 +480,9 @@ defmodule Brando.Blueprint.Verifier do
   end
 
   defp unique_base_field(:attribute, %{name: name}), do: name
-  defp unique_base_field(:relation, relation), do: AssociationKey.for(relation)
+
+  defp unique_base_field(:relation, %{type: type, name: name, opts: opts}) when is_atom(type),
+    do: AssociationKey.for(%{type: type, name: name, opts: opts})
 
   defp unique_reference_fields(unique) when is_list(unique) do
     UniqueFields.scope(unique, Keyword.get(unique, :prevent_collision))

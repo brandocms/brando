@@ -192,6 +192,18 @@ defmodule Brando.Blueprint.MigrationExecutionTest do
                [prefix, table]
              )
 
+    assert %{rows: [["RESTRICT"]]} =
+             Ecto.Adapters.SQL.query!(
+               MigrationRepo,
+               """
+               SELECT delete_rule
+               FROM information_schema.referential_constraints
+               WHERE constraint_schema = $1
+                 AND constraint_name = $2
+               """,
+               [prefix, "#{table}_owner_ref_fkey"]
+             )
+
     auxiliary_table = "#{table}_related_entries_identifiers"
 
     assert %{rows: [["record_pk"]]} =

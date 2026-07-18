@@ -127,8 +127,7 @@ defmodule Brando.Content.Block do
 
     relation :identifiers, :has_many,
       module: Brando.Content.Identifier,
-      through: [:block_identifiers, :identifier],
-      preload_order: [asc: :sequence]
+      through: [:block_identifiers, :identifier]
   end
 
   absolute_url ""

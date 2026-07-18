@@ -20,7 +20,7 @@ defmodule Brando.Blueprint.Utils do
   @attribute_strip_opts @migration_opts ++ [:constraints, :rename_from, :required, :unique]
   @relation_strip_opts @changeset_opts ++
                          @migration_opts ++
-                         [:cast, :constraint_name, :constraints, :module, :rename_from, :unique]
+                         [:cast, :constraint_name, :constraints, :module, :rename_from]
   @status_type Module.concat(["Brando", "Type", "Status"])
   @file_type Module.concat(["Brando", "Type", "File"])
   @image_type Module.concat(["Brando", "Type", "Image"])
@@ -63,23 +63,23 @@ defmodule Brando.Blueprint.Utils do
   end
 
   def to_ecto_opts(:belongs_to, opts),
-    do: opts |> Map.drop(@relation_strip_opts ++ [:on_delete]) |> Map.to_list()
+    do: opts |> Map.drop(@relation_strip_opts ++ [:on_delete, :unique]) |> Map.to_list()
 
-  def to_ecto_opts(:has_one, opts), do: opts |> Map.drop(@relation_strip_opts) |> Map.to_list()
+  def to_ecto_opts(:has_one, opts), do: opts |> Map.drop([:unique | @relation_strip_opts]) |> Map.to_list()
   def to_ecto_opts(:many_to_many, opts), do: opts |> Map.drop(@relation_strip_opts) |> Map.to_list()
-  def to_ecto_opts(:has_many, opts), do: opts |> Map.drop(@relation_strip_opts) |> Map.to_list()
+  def to_ecto_opts(:has_many, opts), do: opts |> Map.drop([:unique | @relation_strip_opts]) |> Map.to_list()
 
   def to_ecto_opts(:embeds_one, opts) do
     opts
     |> Map.put_new(:on_replace, :update)
-    |> Map.drop(@relation_strip_opts)
+    |> Map.drop([:unique | @relation_strip_opts])
     |> Map.to_list()
   end
 
   def to_ecto_opts(:embeds_many, opts) do
     opts
     |> Map.put_new(:on_replace, :delete)
-    |> Map.drop(@relation_strip_opts)
+    |> Map.drop([:unique | @relation_strip_opts])
     |> Map.to_list()
   end
 

@@ -456,7 +456,7 @@ defmodule Brando.Blueprint.VerifierTest do
       )
     end
 
-    assert_raise Spark.Error.DslError, ~r/only belongs-to relations can be unique/, fn ->
+    assert_raise Spark.Error.DslError, ~r/`:unique` is only valid for :belongs_to, :many_to_many relations/, fn ->
       compile_blueprint(
         quote do
           relations do
@@ -479,6 +479,93 @@ defmodule Brando.Blueprint.VerifierTest do
         end
       )
     end
+  end
+
+  test "rejects unknown, misplaced, and ineffective relation options contextually" do
+    media_item = MediaItem
+
+    invalid_declarations = [
+      {quote(do: relation(:items, :has_many, module: unquote(media_item), prelod_order: [:id])),
+       ~r/unsupported options \[:prelod_order\]/},
+      {quote(do: relation(:config, :embeds_one, module: unquote(media_item), cast: true)), ~r/`:cast` is only valid/},
+      {quote(do: relation(:config, :embeds_one, module: unquote(media_item), sort_param: :sort_config)),
+       ~r/`:sort_param` is only valid/},
+      {quote(do: relation(:owner, :belongs_to, module: unquote(media_item), on_delete: :cascade)),
+       ~r/`:on_delete` must be one of/},
+      {quote(do: relation(:owner, :belongs_to, module: unquote(media_item), on_replace: :truncate)),
+       ~r/`:on_replace` must be one of/},
+      {quote(do: relation(:items, :has_many, module: unquote(media_item), where: %{})),
+       ~r/`:where` must be a keyword list/},
+      {quote(
+         do:
+           relation(:items, :many_to_many,
+             module: unquote(media_item),
+             join_through: "owners_items",
+             join_keys: [owner_id: :id]
+           )
+       ), ~r/`:join_keys` must contain exactly two/},
+      {quote(
+         do:
+           relation(:items, :many_to_many,
+             module: unquote(media_item),
+             join_through: "owners_items",
+             unique: [with: :tenant_id]
+           )
+       ), ~r/`:unique` must be a boolean for many-to-many/},
+      {quote(do: relation(:item, :has_one, module: unquote(media_item), required: true)),
+       ~r/`:required` on :has_one requires `cast: true`/},
+      {quote(
+         do:
+           relation(:items, :has_many,
+             module: unquote(media_item),
+             through: [:owner, :items],
+             cast: true
+           )
+       ), ~r/`:through` relations cannot use `cast: true`/},
+      {quote(
+         do:
+           relation(:items, :has_many,
+             module: unquote(media_item),
+             through: [:owner, :items],
+             preload_order: [asc: :id]
+           )
+       ), ~r/`:through` relations do not support ignored Ecto options \[:preload_order\]/},
+      {quote(do: relation(:items, :has_many, module: unquote(media_item), preload_order: [sideways: :id])),
+       ~r/`:preload_order` must be/}
+    ]
+
+    for {declaration, message} <- invalid_declarations do
+      assert_raise Spark.Error.DslError, message, fn ->
+        compile_blueprint(
+          quote do
+            relations do
+              unquote(declaration)
+            end
+          end
+        )
+      end
+    end
+  end
+
+  test "supports has-one through associations without leaking Blueprint metadata to Ecto" do
+    media_item = MediaItem
+
+    module =
+      compile_blueprint(
+        quote do
+          relations do
+            relation :media_item, :belongs_to, module: unquote(media_item)
+
+            relation :cover, :has_one,
+              module: Brando.Images.Image,
+              through: [:media_item, :cover]
+          end
+        end
+      )
+
+    association = module.__schema__(:association, :cover)
+    assert association.__struct__ == Ecto.Association.HasThrough
+    assert association.through == [:media_item, :cover]
   end
 
   test "supports manually declared custom foreign-key fields" do

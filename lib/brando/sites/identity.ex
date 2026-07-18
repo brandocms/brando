@@ -66,9 +66,7 @@ defmodule Brando.Sites.Identity do
 
     relation :configs, :embeds_one,
       module: Brando.Config,
-      on_replace: :delete,
-      drop_param: :drop_configs_ids,
-      sort_param: :sort_configs_ids
+      on_replace: :delete
 
     relation :type_config, :embeds_one,
       module: Brando.Sites.Identity.TypeConfig,

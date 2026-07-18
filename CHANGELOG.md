@@ -134,6 +134,23 @@
 
 #### Improvements
 
+- **Validated Blueprint relation option contracts**: Relation declarations now
+  reject unknown, misplaced, malformed, and silently ineffective options before
+  Ecto schema generation. Has-one `through:` associations compile through the
+  existing public `relation` DSL; Ecto's boolean many-to-many `unique:` option
+  is preserved without creating a Blueprint database constraint; belongs-to
+  delete rules are validated through generated migrations; and casting retains
+  configured required/invalid messages for many-to-many and empty embeds-one
+  values. Cardinality-one sort/drop options that Ecto cannot execute were
+  removed from Brando's identity config. Public declarations remain unchanged.
+  Most declaration corrections, many-to-many uniqueness, and has-one through
+  associations need no database migration. Corrections to belongs-to storage or
+  `on_delete:` require a reviewed generated migration with rollback/forward
+  verification; rebaseline only when the live constraint was already corrected
+  by hand. Igniter cannot infer deployed constraints or safe delete semantics.
+  See
+  [Relation option corrections](guides/blueprint_migrations.md#relation-option-corrections).
+
 - **Database-aligned Blueprint field options and types**: Migration-only
   `null:`, `precision:`, and `scale:` options no longer leak into Ecto schema
   macros, while schema-only field options stay out of snapshots. Both

@@ -191,6 +191,37 @@ Igniter does not rewrite field declarations or generate these migrations: it
 cannot inspect enum data conversions, custom type implementations, live
 defaults, or null rows.
 
+## Relation option corrections
+
+Blueprint validates relation option names, types, and scopes before generating
+Ecto associations. Most corrections are runtime/schema metadata only and do
+not change a Blueprint migration snapshot:
+
+- removing an ignored or misspelled option;
+- enabling Ecto's boolean `unique: true` on a many-to-many association;
+- changing cast messages, collection sort/drop params, preload order, defaults,
+  `where:`/`join_where:`, or `on_replace:`;
+- expressing a has-one association with `through:`.
+
+No migration or Igniter task is needed for those changes. Compile and test the
+affected forms and queries. In particular, `sort_param:` and `drop_param:` are
+valid only for cardinality-many casting; remove them from embeds-one or
+has-one declarations instead of preserving options Ecto cannot execute.
+
+Belongs-to storage options are different. A correction to `source:`, `null:`,
+`type:`, `references:`, `foreign_key:`, `constraint_name:`, or `on_delete:` can
+change a column or foreign-key constraint. Generate the normal Blueprint
+migration, inspect the exact constraint replacement, and run its rollback and
+forward paths. Before adding `null: false`, backfill null rows. Before changing
+`on_delete:`, verify that both the new deletion behavior and the reverse
+migration are safe for production data.
+
+If the live database was already corrected by hand, verify the column and
+foreign-key definitions and rebaseline rather than applying a fictional
+change. Igniter intentionally does not rewrite relation declarations or select
+delete rules because it cannot inspect deployed constraints, dependent data,
+or application ownership semantics.
+
 ## Scoping a custom collision callback
 
 An arity-one `prevent_collision` callback controls the candidate query. When that query scopes uniqueness by

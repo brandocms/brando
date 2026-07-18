@@ -92,8 +92,7 @@ defmodule Brando.BlueprintTest.P1 do
 
     relation :contributors, :has_many,
       module: __MODULE__.Contributor,
-      through: [:project_contributors, :contributor],
-      preload_order: [asc: :sequence]
+      through: [:project_contributors, :contributor]
 
     relation :property, :embeds_one, module: __MODULE__.Property
     relation :properties, :embeds_many, module: __MODULE__.Property

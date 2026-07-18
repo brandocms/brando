@@ -77,8 +77,7 @@ defmodule Brando.Blueprint.Relations do
 
       relation :contributors, :has_many,
         module: Articles.Contributor,
-        through: [:article_contributors, :contributor],
-        preload_order: [asc: :sequence]
+        through: [:article_contributors, :contributor]
 
   This enables us to use other fields from the join table, such as `sequence` in the example above.
 
@@ -92,7 +91,6 @@ defmodule Brando.Blueprint.Relations do
   """
 
   import Brando.Blueprint.Utils
-  import Brando.M2M
   import Ecto.Changeset
   import Ecto.Query
 
@@ -192,13 +190,14 @@ defmodule Brando.Blueprint.Relations do
     if empty_collection_param?(relation_param(changeset, name)) do
       clear_or_require_assoc(changeset, name, opts)
     else
-      cast_collection(
+      Brando.M2M.cast_collection(
         changeset,
         name,
         fn ids ->
           Brando.Repo.all(from m in module, where: m.id in ^ids)
         end,
-        Map.get(opts, :required, false)
+        Map.get(opts, :required, false),
+        to_changeset_opts(:many_to_many, opts)
       )
     end
   end
@@ -229,7 +228,12 @@ defmodule Brando.Blueprint.Relations do
     case relation_param(changeset, name) do
       {:ok, ""} ->
         if Map.get(opts, :required) do
-          cast_embed(changeset, name, required: true)
+          add_error(
+            changeset,
+            name,
+            Map.get(opts, :required_message, "can't be blank"),
+            validation: :required
+          )
         else
           put_embed(changeset, name, nil)
         end

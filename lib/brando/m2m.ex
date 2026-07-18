@@ -24,23 +24,36 @@ defmodule Brando.M2M do
   @type lookup :: ([id()] -> [struct()])
 
   @doc ~S"""
-  Cast a collection of IDs into a many_to_many association.
+  Casts a collection of IDs into a many-to-many association.
 
-  This function assumes:
+  The repo/module variant assumes the associated table uses an `id` column.
+  A custom lookup function can instead be paired with options; the supported
+  `:required_message` and `:invalid_message` values override the default
+  changeset messages.
 
-    - The column on your associated table is called `id`.
-
-  ## Example
+  ## Examples
 
       def changeset(struct, params \\ %{}) do
         struct
         |> cast(params, ~w())
         |> Brando.M2M.cast_collection(:tags, App.Repo, App.Tag, false)
       end
+
+      Brando.M2M.cast_collection(changeset, :tags, lookup_fn, true,
+        required_message: "choose at least one tag",
+        invalid_message: "choose valid tags"
+      )
   """
   @spec cast_collection(Changeset.t(), atom(), module(), module(), boolean()) :: Changeset.t()
-  def cast_collection(set, assoc, repo, mod, required) do
-    perform_cast(set, assoc, &all(&1, repo, mod), required)
+  @spec cast_collection(Changeset.t(), atom(), lookup(), boolean(), keyword()) :: Changeset.t()
+  def cast_collection(set, assoc, lookup_fn, required, opts)
+      when is_function(lookup_fn) and is_boolean(required) and is_list(opts) do
+    perform_cast(set, assoc, lookup_fn, required, opts)
+  end
+
+  def cast_collection(set, assoc, repo, mod, required)
+      when is_atom(repo) and is_atom(mod) and is_boolean(required) do
+    perform_cast(set, assoc, &all(&1, repo, mod), required, [])
   end
 
   @doc ~S"""
@@ -70,20 +83,27 @@ defmodule Brando.M2M do
   """
   @spec cast_collection(Changeset.t(), atom(), lookup(), boolean()) :: Changeset.t()
   def cast_collection(set, assoc, lookup_fn, required) when is_function(lookup_fn) do
-    perform_cast(set, assoc, lookup_fn, required)
+    perform_cast(set, assoc, lookup_fn, required, [])
   end
 
   defp all(ids, repo, mod) do
     repo.all(from m in mod, where: m.id in ^ids)
   end
 
-  defp perform_cast(set, assoc, lookup_fn, required) do
+  defp perform_cast(set, assoc, lookup_fn, required, opts) do
     case fetch_param(set.params, assoc) do
       {:ok, ids} ->
-        cast_ids(set, assoc, ids, lookup_fn, required)
+        cast_ids(set, assoc, ids, lookup_fn, required, opts)
 
       :error ->
-        if required, do: cast_assoc(set, assoc, required: true), else: set
+        if required do
+          cast_assoc(set, assoc,
+            required: true,
+            required_message: Keyword.get(opts, :required_message, "can't be blank")
+          )
+        else
+          set
+        end
     end
   end
 
@@ -99,30 +119,30 @@ defmodule Brando.M2M do
 
   defp fetch_param(_params, _assoc), do: :error
 
-  defp cast_ids(set, assoc, ids, lookup_fn, required) do
+  defp cast_ids(set, assoc, ids, lookup_fn, required, opts) do
     case normalize_ids(ids) do
       {:ok, []} when required ->
-        add_error(set, assoc, "can't be blank", validation: :required)
+        add_error(set, assoc, Keyword.get(opts, :required_message, "can't be blank"), validation: :required)
 
       {:ok, normalized_ids} ->
         records = lookup_fn.(normalized_ids)
-        put_resolved_records(set, assoc, normalized_ids, records)
+        put_resolved_records(set, assoc, normalized_ids, records, opts)
 
       :error ->
-        add_error(set, assoc, "is invalid", validation: :cast)
+        add_error(set, assoc, Keyword.get(opts, :invalid_message, "is invalid"), validation: :cast)
     end
   end
 
-  defp put_resolved_records(set, assoc, ids, records) when is_list(records) do
+  defp put_resolved_records(set, assoc, ids, records, opts) when is_list(records) do
     if length(records) == length(ids) do
       put_assoc(set, assoc, Enum.map(records, &change/1))
     else
-      add_error(set, assoc, "is invalid", validation: :cast)
+      add_error(set, assoc, Keyword.get(opts, :invalid_message, "is invalid"), validation: :cast)
     end
   end
 
-  defp put_resolved_records(set, assoc, _ids, _records) do
-    add_error(set, assoc, "is invalid", validation: :cast)
+  defp put_resolved_records(set, assoc, _ids, _records, opts) do
+    add_error(set, assoc, Keyword.get(opts, :invalid_message, "is invalid"), validation: :cast)
   end
 
   defp normalize_ids(ids) when ids in [nil, ""], do: {:ok, []}

@@ -235,6 +235,63 @@ defmodule Brando.Blueprint.RelationsTest do
       end
     end
 
+    test "many-to-many casting preserves custom messages for missing and malformed values" do
+      relation = %Relation{
+        name: :tags,
+        type: :many_to_many,
+        opts: %{
+          cast: true,
+          invalid_message: "choose valid tags",
+          module: Tag,
+          required: true,
+          required_message: "choose at least one tag"
+        }
+      }
+
+      missing_result =
+        %Owner{}
+        |> Changeset.cast(%{}, [])
+        |> then(&Relations.run_cast_relation(relation, &1, nil))
+
+      refute missing_result.valid?
+      assert {"choose at least one tag", [validation: :required]} = missing_result.errors[:tags]
+
+      existing_result =
+        %Owner{tags: [%Tag{id: 1}]}
+        |> Changeset.cast(%{}, [])
+        |> then(&Relations.run_cast_relation(relation, &1, nil))
+
+      assert existing_result.valid?
+      refute Keyword.has_key?(existing_result.errors, :tags)
+
+      invalid_result =
+        %Owner{}
+        |> Changeset.cast(%{"tags" => 123}, [])
+        |> then(&Relations.run_cast_relation(relation, &1, nil))
+
+      refute invalid_result.valid?
+      assert {"choose valid tags", [validation: :cast]} = invalid_result.errors[:tags]
+    end
+
+    test "required embeds-one empty values preserve the declared message" do
+      relation =
+        Brando.BlueprintTest.P1
+        |> Relations.__relation__(:property)
+        |> update_in([Access.key(:opts)], fn opts ->
+          opts
+          |> Map.put(:required, true)
+          |> Map.put(:required_message, "add a property")
+        end)
+
+      result =
+        %Brando.BlueprintTest.P1{}
+        |> Changeset.cast(%{"property" => ""}, [])
+        |> then(&Relations.run_cast_relation(relation, &1, nil))
+
+      refute result.valid?
+      assert {"add a property", [validation: :required]} = result.errors[:property]
+    end
+
     test "empty optional collection variants clear associations consistently" do
       relation = %Relation{
         name: :tags,

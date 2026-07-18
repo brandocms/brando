@@ -358,6 +358,12 @@ defmodule Brando.Blueprint do
             to_ecto_opts(:belongs_to, opts)
           )
 
+        %{type: :has_one, name: name, opts: %{through: _through} = opts} ->
+          Ecto.Schema.has_one(
+            name,
+            to_ecto_opts(:has_one, opts)
+          )
+
         %{type: :has_one, name: name, opts: opts} ->
           referenced_module = Map.fetch!(opts, :module)
 

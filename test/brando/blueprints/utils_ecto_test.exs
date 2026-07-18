@@ -42,6 +42,16 @@ defmodule Brando.Blueprint.UtilsEctoTest do
              required: true,
              values: [:en]
            }) == [values: [:en]]
+
+    assert Utils.to_ecto_opts(:many_to_many, %{
+             cast: true,
+             join_through: "owners_items",
+             module: Example,
+             unique: true
+           })
+           |> Map.new() == %{join_through: "owners_items", unique: true}
+
+    refute :unique in Keyword.keys(Utils.to_ecto_opts(:has_many, %{unique: true}))
   end
 
   test "embed defaults are applied without overwriting explicit configuration" do

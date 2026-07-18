@@ -405,6 +405,7 @@ defmodule Brando.MigrationTest.PhysicalSources do
       module: Brando.Users.User,
       source: :owner_ref,
       null: false,
+      on_delete: :restrict,
       unique: [with: :tenant_id]
 
     relation :related_entries, :entries

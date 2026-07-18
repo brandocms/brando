@@ -34,7 +34,7 @@ defmodule Brando.Blueprint.Unique do
   @spec run_unique_relation_constraints(Changeset.t(), module(), [map()]) :: Changeset.t()
   def run_unique_relation_constraints(changeset, _module, relations) do
     relations
-    |> Enum.filter(&Map.get(&1.opts, :unique, false))
+    |> Enum.filter(&(&1.type == :belongs_to and Map.get(&1.opts, :unique, false)))
     |> Enum.reduce(changeset, fn relation, current_changeset ->
       add_unique_constraint(
         current_changeset,

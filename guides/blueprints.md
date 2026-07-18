@@ -217,8 +217,9 @@ module: MyApp.Users.User, source: :owner_ref`. Embedded one/many relations also
 accept a physical JSONB source. Other relation types reject `source:` because
 they do not define an owner-table field.
 
-`required`, `define_field`, and `virtual` options are booleans. Unique `with:`
-and `prevent_collision:` fields must name columns persisted by the same
+`required` is a boolean for every relation, while `define_field` is a
+belongs-to-only boolean. Unique `with:` and `prevent_collision:` fields must
+name columns persisted by the same
 Blueprint. Scope fields must be distinct and cannot repeat the field or foreign
 key being made unique; otherwise the generated Ecto constraint and database
 index would contain duplicate columns. Virtual attributes cannot be unique.
@@ -229,6 +230,49 @@ constraint and `required: true` is changeset validation. With
 `define_field: false`, put `source:` and `null:` on the separately declared
 foreign-key attribute; declaring them on the relation is rejected so one field
 cannot have two competing storage contracts.
+
+Relation options are validated against the relation type before Ecto schema
+generation. The public `relation` declaration remains unchanged; the main
+option scopes are:
+
+| Concern | Relation types |
+| --- | --- |
+| `foreign_key:`, `references:` | belongs-to, has-one, has-many |
+| `source:` | belongs-to, embeds-one, embeds-many |
+| `through:` | has-one, has-many |
+| `join_through:`, `join_keys:`, `join_where:`, `join_defaults:` | many-to-many |
+| `preload_order:` | direct has-one, has-many, many-to-many |
+| `load_in_query:` | embeds-one, embeds-many |
+| `sort_param:`, `drop_param:` | embeds-many and cast has-many |
+| `null:`, `constraint_name:`, `define_field:`, `type:` | belongs-to |
+
+Has-one and has-many `through:` declarations retain `module:` as Blueprint
+metadata but compile to Ecto through associations without passing that module
+as a queryable. Through associations cannot use `cast: true`, because Ecto
+cannot cast through an association. Configure ordering, filtering, defaults,
+and replacement/deletion behavior on the underlying associations; Ecto ignores
+those options on the through declaration itself. Has-one, has-many, and many-to-many
+relations require `cast: true` when `required:` or cast-helper messages/options
+must be applied. Embeds and `entries` relations are cast by their dedicated
+Blueprint adapters and do not accept a redundant `cast:` option.
+
+`unique:` has two intentionally different relation-specific meanings. On a
+belongs-to relation it declares the runtime constraint and generated database
+index documented below. On a many-to-many relation it is Ecto's boolean
+association option for checking duplicate entries; it creates no owner-table
+index or Blueprint migration snapshot change.
+
+Misspelled options, invalid `on_replace:`/`on_delete:` values, malformed join
+keys, and options that Ecto or Blueprint would ignore now fail at Blueprint
+compile time. Fixing only one of those declarations, enabling many-to-many
+`unique: true`, or adopting has-one `through:` requires no database migration.
+If the correction changes belongs-to storage (`source:`, `null:`, `type:`,
+`references:`, `foreign_key:`, `constraint_name:`, or `on_delete:`), generate
+and review a Blueprint migration; delete-rule changes affect a foreign-key
+constraint and must be checked in both directions. Igniter cannot choose a
+production delete rule or infer whether deployed data satisfies a new
+constraint. See
+[Relation option corrections](blueprint_migrations.md#relation-option-corrections).
 
 `unique: [prevent_collision: scope]` reevaluates the unique value when either
 that value or one of its scope fields changes. An arity-one collision callback
