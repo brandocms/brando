@@ -38,4 +38,11 @@ elif ! MIX_ENV=e2e mix ecto.migrate; then
 fi
 
 unset NO_COLOR
-cd e2e/playwright && pnpm "$TEST_COMMAND" "${EXTRA_ARGS[@]}"
+cd e2e/playwright
+
+# Bash 3 treats an empty array expansion as unbound under `set -u`.
+if [ "${#EXTRA_ARGS[@]}" -eq 0 ]; then
+  pnpm "$TEST_COMMAND"
+else
+  pnpm "$TEST_COMMAND" "${EXTRA_ARGS[@]}"
+fi
