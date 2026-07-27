@@ -86,23 +86,56 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
-  List all "orphaned" blocks, i.e. blocks that are not associated with any entry
+  Lists root blocks no entry links to any more.
+
+  A block is reachable only through the join schema named in its `source`, and
+  only at the root: nested blocks hang off `parent_id` and are owned by their
+  root, never by a join row of their own. So the check runs per source table,
+  over roots only.
+
+  > #### Diagnostic, not a cleanup list {: .warning}
+  >
+  > These blocks are retained on purpose. Removing a block from an entry drops
+  > the join row and keeps the block so that restoring an older revision can
+  > re-link it — see `Brando.Revisions.restore_revision/4`, which aborts the
+  > whole restore with `{:missing_block, id}` if the block is gone. Deleting
+  > what this returns breaks revision restore for any revision still holding
+  > that block, and `protected`/`scheduled` revisions are never purged.
   """
   def list_orphaned_blocks do
-    blocks_query =
-      from(b in Block,
-        as: :block,
-        select: %{id: b.id, source: b.source},
-        where:
-          not exists(
-            from(j in "pages_blocks",
-              select: [:block_id],
-              where: j.block_id == parent_as(:block).id
-            )
-          )
-      )
+    from(b in Block, where: is_nil(b.parent_id), select: %{id: b.id, source: b.source})
+    |> Brando.Repo.all()
+    |> Enum.group_by(& &1.source, & &1.id)
+    |> Enum.flat_map(fn {source, ids} -> reject_linked_blocks(source, ids) end)
+  end
 
-    Brando.Repo.all(blocks_query)
+  # A block whose `source` names no loadable schema has nothing that could link
+  # it, so every one of them is unreachable by definition.
+  defp reject_linked_blocks(source, ids) do
+    case join_table(source) do
+      nil ->
+        Enum.map(ids, &%{id: &1, source: source})
+
+      table ->
+        linked =
+          from(j in table, where: j.block_id in ^ids, select: j.block_id)
+          |> Brando.Repo.all()
+          |> MapSet.new()
+
+        ids
+        |> Enum.reject(&MapSet.member?(linked, &1))
+        |> Enum.map(&%{id: &1, source: source})
+    end
+  end
+
+  defp join_table(nil), do: nil
+
+  defp join_table(source) do
+    schema = Module.concat([source])
+
+    if Code.ensure_loaded?(schema) and function_exported?(schema, :__schema__, 1) do
+      schema.__schema__(:source)
+    end
   end
 
   @doc """
