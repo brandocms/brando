@@ -408,3 +408,65 @@ When building maps for `put_assoc`, drop association keys (`:block`, `:module`, 
 - **`onEnd`**: Pushes `reposition` event with `{old: oldIndex, new: newIndex, ...item.dataset}`
 - Prevents `phx-blur` from firing during drag (`focusout` stopImmediatePropagation)
 - Optional grouping via `data-blocks-wrapper-type` for cross-container drag
+
+---
+
+## Block Editor: single-owner state & ops (Phase 3 architecture)
+
+Each block is its own `live_component` and **owns its editing state exclusively** —
+after first mount, a parent re-render can never overwrite a block's form (`Block.update/2`
+drops incoming `:form`/`:children` assigns once initialized). Forms never travel between
+components. The parent (`BlockField`) owns **order + structure + a uid-keyed param-diff
+store** (`BlockField.Ops` — a pure, unit-tested reducer over
+`{order, parents, child_order, diffs, statuses, db_ids, deleted}`).
+
+- **Every mutation is a named op applied by the reducer.** Children emit
+  `{:update, uid, params_diff}`, `{:insert_child, parent, uid, at, params}`,
+  `{:reorder_children, parent, uids}`, `{:delete, uid}` etc. via `Block.emit_block_op/2`;
+  BlockField applies its own ops for root-level structure. Ops carry **param diffs, never
+  changesets or forms** (`Ops.block_diff_params/1`: persisted records diff by changes, NEW
+  records snapshot full applied state — builders pre-populate changeset *data*, so a
+  changes-only diff would drop `module_id`/vars/refs).
+- **The chokepoint: `Block.assign_block_form/2`.** Every handler that rebuilds a block's
+  form MUST assign it through this helper — it assigns `:form` AND emits the
+  `{:update, uid, diff}` op, keeping the store save-complete. Assigning `:form` directly
+  is reserved for render-artifact stamping (`rendered_html`/`rendered_at`).
+- **Save/preview/share materialize from the store** (`Ops.materialize_root/2`): sequence
+  derives from list order (never from diff `"sequence"` keys), db ids re-attach so
+  `cast_assoc` matches rows, untouched blocks reduce to id-only params (no SQL), render
+  artifacts are stripped. There is NO gather protocol, NO propagate flag, NO position-ack
+  handshake — do not reintroduce them.
+- **Blocks receive their position as the `list_index` prop** from the keyed `:for`
+  (`:key` on uid). Read `socket.assigns.list_index` for insert-at/paste-at positions —
+  never a form's `sequence` field (stale by design).
+- **Rendering derives from the store, seed forms are maps.** BlockField's keyed `:for`
+  iterates `@root_order` (the store's projection, assigned ONLY via `assign_ops/2`);
+  parent blocks iterate their `@block_list`. `@seed_forms`/`@children_forms` are
+  uid-keyed maps read once at a component's first mount — put on insert, drop on
+  delete, never reordered, never reconciled. There is no parallel ordered form list —
+  do not reintroduce one.
+- **The ONLY sanctioned parent→child form handoff after mount is `replace_form`**
+  (cascades down the tree): used post-save (re-seed with fresh db ids) and on remote-sync
+  apply. Anything else re-introduces the historical clobber/FK-wipe class.
+- **Media commits: use `Block.commit_ref_data/2`** for one-shot ref commits
+  (picker select / reset / upload-complete / image-editor) — never raw
+  `send_update(..., event: "update_ref_data", ...)`. Not for per-keystroke updates.
+  Related helpers: `Block.current_block_data_map/3` (ref_data payloads),
+  `Block.resolve_ref_association/4` (display-media resolution),
+  `Block.push_image_editor_init/3` (image editor from blocks).
+- **Multi-user sync ships op snapshots** (`Ops.subtree_snapshot/2` →
+  `Ops.apply_remote_snapshot/3`), never changesets. Ships fire on focus-settle
+  (any focusout, via the Block JS hook), focus switch, pre-save force-ship and
+  immediately on child structural ops; snapshots carry delete tombstones (child
+  deletes have no structural broadcast of their own). Receivers DEFER a snapshot
+  for the root they're editing (`pending_remote_snapshots`, applied on blur) —
+  never drop it — and `ship_or_flush/2` suppresses unchanged re-broadcasts
+  (`last_synced_snapshots`) so stale state can't clobber newer remote edits.
+  Late joiners broadcast `{:blocks_sync_request, ...}`; diverged editors
+  (`blocks_changed?`) replay state as the standard sync messages.
+- **Delete undo is store replay**: local deletes stash `Ops.bin_snapshot/2` (structure +
+  diffs + statuses + db ids + location) BEFORE the delete op; undo replays it via
+  `Ops.restore_snapshot/2` — restored roots mount fresh from a re-materialized seed form,
+  restored children reach their mounted root via the `replace_form` cascade. Restores
+  broadcast `{:block_restored, ...}` (a uid left in a remote `deleted` list would kill the
+  rows again on that editor's save); the bin clears on save (stashed db ids go stale).
