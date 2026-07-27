@@ -12,7 +12,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   alias BrandoAdmin.Components.Form.Input
 
   # prop var, :any
-  # prop render, :atom, values: [:all, :only_important, :only_regular], default: :all
+  # prop render, :atom, values: [:all, :content, :config], default: :all
   # prop edit, :boolean, default: false
 
   # data should_render?, :boolean
@@ -223,7 +223,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     var = assigns.var
     changeset = var.source
     type = get_field(changeset, :type)
-    important = get_field(changeset, :important)
+    placement = get_field(changeset, :placement) || :content
     value = type |> extract_value(changeset) |> then(&control_value(type, &1))
 
     socket
@@ -233,12 +233,13 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign(:edit, Map.get(assigns, :edit, false))
     |> assign(:upload_kind, if(Map.get(assigns, :on_change), do: "block_var", else: "entry_var"))
     |> assign(:target, Map.get(assigns, :target, nil))
-    |> assign(:should_render?, should_render?(Map.get(assigns, :render, :all), important))
-    |> assign(:important, important)
+    |> assign(:should_render?, should_render?(Map.get(assigns, :render, :all), placement))
+    |> assign(:placement, placement)
     |> assign(:label, get_field(changeset, :label))
     |> assign(:key, var[:key].value)
     |> assign(:type, type)
     |> assign(:value, value)
+    |> assign_new(:width_options, fn -> width_options() end)
     |> assign_new(:blueprint_schema_opts, fn ->
       schemas = Brando.Blueprint.list_blueprints()
       Enum.map(schemas, &%{label: &1.__naming__().singular, value: &1})
@@ -263,6 +264,22 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign(:var, var)
   end
 
+  defp type_settings_heading(:color), do: gettext("Color settings")
+  defp type_settings_heading(:link), do: gettext("Link settings")
+  defp type_settings_heading(:select), do: gettext("Choices")
+  defp type_settings_heading(_type), do: gettext("Settings")
+
+  defp width_options do
+    [
+      %{label: gettext("Full row"), value: "full"},
+      %{label: gettext("Half — 6 units"), value: "half"},
+      %{label: gettext("Third — 4 units"), value: "third"},
+      %{label: gettext("Quarter — 3 units"), value: "fourth"},
+      %{label: gettext("Auto — fits its content"), value: "auto"},
+      %{label: gettext("Fill — takes what is left"), value: "fill"}
+    ]
+  end
+
   defp extract_value(:image, changeset), do: get_field(changeset, :image_id)
   defp extract_value(:file, changeset), do: get_field(changeset, :file_id)
   defp extract_value(:video, changeset), do: get_field(changeset, :video_id)
@@ -270,10 +287,14 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   defp extract_value(:boolean, changeset), do: get_field(changeset, :value_boolean)
   defp extract_value(_type, changeset), do: get_field(changeset, :value)
 
-  defp should_render?(:all, _important), do: true
-  defp should_render?(:only_important, true), do: true
-  defp should_render?(:only_regular, false), do: true
-  defp should_render?(_render, _important), do: false
+  # `:all` is the authoring render — the module editor's edit modal — and has to
+  # include `:hidden` vars: it is where placement is changed, and a var whose
+  # inputs leave the form loses its params on the next submit. The surface
+  # renders are the consumption side, and there `:hidden` shows nothing.
+  defp should_render?(:all, _placement), do: true
+  defp should_render?(_render, :hidden), do: false
+  defp should_render?(placement, placement), do: true
+  defp should_render?(_render, _placement), do: false
 
   defp control_value(nil, nil), do: ""
   defp control_value(:string, value) when is_binary(value), do: value
@@ -326,149 +347,210 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       <% end %>
       <%= if @should_render? do %>
         <%= if @edit do %>
-          <div id={"#{@var.id}-edit"}>
+          <div id={"#{@var.id}-edit"} class="variable-editor">
+            <%!-- Still a disclosure: the entry-var editor (Input.Vars) stacks
+                  several of these and opens them one at a time. In a modal
+                  `initially_open` makes it moot. --%>
             <div class="variable-header" phx-click={JS.push("toggle_visible", target: @myself)}>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                <path fill="none" d="M0 0h24v24H0z" /><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-2.29-2.333A17.9 17.9 0 0 1 8.027 13H4.062a8.008 8.008 0 0 0 5.648 6.667zM10.03 13c.151 2.439.848 4.73 1.97 6.752A15.905 15.905 0 0 0 13.97 13h-3.94zm9.908 0h-3.965a17.9 17.9 0 0 1-1.683 6.667A8.008 8.008 0 0 0 19.938 13zM4.062 11h3.965A17.9 17.9 0 0 1 9.71 4.333 8.008 8.008 0 0 0 4.062 11zm5.969 0h3.938A15.905 15.905 0 0 0 12 4.248 15.905 15.905 0 0 0 10.03 11zm4.259-6.667A17.9 17.9 0 0 1 15.973 11h3.965a8.008 8.008 0 0 0-5.648-6.667z" />
-              </svg>
+              <span class="variable-type">{@var[:type].value}</span>
               <div class="variable-key">
-                {@var[:key].value}
-                <span>{@var[:type].value}</span>
+                <code>&lcub;&lcub; {@var[:key].value} &rcub;&rcub;</code>
+                <span>{@var[:label].value || gettext("No label")}</span>
               </div>
+              <span class={["variable-chevron", @visible && "is-open"]} aria-hidden="true">
+                <.icon name="hero-chevron-down" />
+              </span>
             </div>
 
             <div class={["variable-content", !@visible && "hidden"]}>
-              <Input.toggle field={@var[:marked_as_deleted]} label={gettext("Marked as deleted")} />
-              <Input.toggle field={@var[:important]} label={gettext("Important")} />
-              <Input.text field={@var[:key]} label={gettext("Key")} />
-              <Input.text field={@var[:label]} label={gettext("Label")} />
-              <Input.text field={@var[:instructions]} label={gettext("Instructions")} />
-              <Input.text field={@var[:placeholder]} label={gettext("Placeholder")} />
-
-              <.live_component
-                module={Input.Select}
-                id={"#{@var.id}-select-type"}
-                label={gettext("Type")}
-                field={@var[:type]}
-                opts={[
-                  options: [
-                    %{label: "Boolean", value: "boolean"},
-                    %{label: "Color", value: "color"},
-                    %{label: "Datetime", value: "datetime"},
-                    %{label: "File", value: "file"},
-                    %{label: "Gallery", value: "gallery"},
-                    %{label: "Html", value: "html"},
-                    %{label: "Image", value: "image"},
-                    %{label: "Link", value: "link"},
-                    %{label: "String", value: "string"},
-                    %{label: "Select", value: "select"},
-                    %{label: "Text", value: "text"},
-                    %{label: "Video", value: "video"}
-                  ]
-                ]}
-                publish={@publish}
-              />
-
-              <.live_component
-                module={Input.Select}
-                id={"#{@var.id}-select-width"}
-                label={gettext("Width")}
-                field={@var[:width]}
-                opts={[
-                  options: [
-                    %{label: "100%", value: "full"},
-                    %{label: "50%", value: "half"},
-                    %{label: "33%", value: "third"}
-                  ]
-                ]}
-                publish={@publish}
-              />
-
-              <.render_value_inputs
-                edit
-                id={@id}
-                type={@type}
-                var={@var}
-                image={@image}
-                images={@images}
-                file={@file}
-                files={@files}
-                video={@video}
-                videos={@videos}
-                gallery={@gallery}
-                galleries={@galleries}
-                label={@label}
-                value_id={@value_id}
-                image_id={@image_id}
-                file_id={@file_id}
-                video_id={@video_id}
-                gallery_id={@gallery_id}
-                identifier={@identifier}
-                identifier_id={@identifier_id}
-                placeholder={@placeholder}
-                instructions={@instructions}
-                target={@myself}
-                publish={@publish}
-                on_change={@on_change}
-                component_id={@id}
-                var_key={@key}
-                upload_kind={@upload_kind}
-              />
-
-              <%= case @type do %>
-                <% :color -> %>
-                  <Input.toggle field={@var[:color_picker]} label={gettext("Allow picking custom colors")} />
-                  <Input.toggle field={@var[:color_opacity]} label={gettext("Allow setting opacity")} />
-                  <Input.number field={@var[:palette_id]} label={gettext("ID of palette to choose colors from")} />
-                <% :link -> %>
-                  <.live_component
-                    module={Input.MultiSelect}
-                    id={"#{@var.id}-select-link-schemas"}
-                    label={gettext("Allowed identifier schemas")}
-                    field={@var[:link_identifier_schemas]}
-                    opts={[options: @blueprint_schema_opts]}
+              <section class="variable-section">
+                <h3>{gettext("Naming")}</h3>
+                <div class="variable-grid">
+                  <Input.text
+                    field={@var[:key]}
+                    label={gettext("Key")}
+                    instructions={gettext("How the template refers to it")}
                   />
-                  <Input.toggle field={@var[:link_allow_custom_text]} label={gettext("Allow setting custom link text")} />
-                <% :select -> %>
-                  <hr />
-                  <div
-                    phx-hook="Brando.SortableEmbeds"
-                    id={"#{@var.id}-variable-options"}
-                    data-target={@myself}
-                    data-sortable-id={"sortable-#{@var.id}-variable-options"}
-                    data-sortable-handle=".sort-handle"
-                    data-sortable-selector=".input-group"
-                  >
-                    <Form.field_base field={@var[:options]} label={gettext("Options")} left_justify_meta skip_presence>
-                      <.inputs_for :let={opt} field={@var[:options]}>
-                        <div class="input-group draggable drag-item mt-1">
-                          <Input.text field={opt[:label]} label={gettext("Label")} />
-                          <Input.text field={opt[:value]} label={gettext("Value")} />
+                  <Input.text
+                    field={@var[:label]}
+                    label={gettext("Label")}
+                    instructions={gettext("What the editor sees above the field")}
+                  />
+                </div>
+                <div class="variable-grid">
+                  <Input.text field={@var[:instructions]} label={gettext("Instructions")} />
+                  <Input.text field={@var[:placeholder]} label={gettext("Placeholder")} />
+                </div>
+              </section>
 
-                          <input type="hidden" name={"#{@var.name}[sort_option_ids][]"} value={opt.index} />
-                          <button
-                            class="tiny"
-                            type="button"
-                            name={"#{@var.name}[drop_option_ids][]"}
-                            value={opt.index}
-                            phx-click={JS.dispatch("change")}
-                          >
-                            {gettext("Delete")}
-                          </button>
-                        </div>
-                      </.inputs_for>
+              <section class="variable-section">
+                <h3>{gettext("Type and placement")}</h3>
+                <div class="variable-grid">
+                  <.live_component
+                    module={Input.Select}
+                    id={"#{@var.id}-select-type"}
+                    label={gettext("Type")}
+                    field={@var[:type]}
+                    opts={[
+                      options: [
+                        %{label: "Boolean", value: "boolean"},
+                        %{label: "Color", value: "color"},
+                        %{label: "Datetime", value: "datetime"},
+                        %{label: "File", value: "file"},
+                        %{label: "Gallery", value: "gallery"},
+                        %{label: "Html", value: "html"},
+                        %{label: "Image", value: "image"},
+                        %{label: "Link", value: "link"},
+                        %{label: "String", value: "string"},
+                        %{label: "Select", value: "select"},
+                        %{label: "Text", value: "text"},
+                        %{label: "Video", value: "video"}
+                      ]
+                    ]}
+                    publish={@publish}
+                  />
 
-                      <button
-                        type="button"
-                        class="secondary"
-                        phx-click={JS.push("add_select_var_option", value: %{var_key: @key}, target: @target)}
-                      >
-                        {gettext("Add option")}
-                      </button>
-                    </Form.field_base>
-                  </div>
-                <% _ -> %>
-              <% end %>
+                  <.live_component
+                    module={Input.Select}
+                    id={"#{@var.id}-select-placement"}
+                    label={gettext("Shown")}
+                    field={@var[:placement]}
+                    opts={[
+                      options: [
+                        %{label: gettext("In the block"), value: "content"},
+                        %{label: gettext("Configure modal"), value: "config"},
+                        %{label: gettext("Hidden from editors"), value: "hidden"}
+                      ]
+                    ]}
+                    publish={@publish}
+                  />
+                </div>
+
+                <div class="variable-grid">
+                  <.live_component
+                    module={Input.Select}
+                    id={"#{@var.id}-select-width"}
+                    label={gettext("Width")}
+                    field={@var[:width]}
+                    opts={[options: @width_options]}
+                    publish={@publish}
+                  />
+
+                  <Input.toggle field={@var[:new_row]} label={gettext("Start a new row")} />
+                </div>
+
+                <p class="variable-note">
+                  {gettext("Width and row breaks are easier to judge on the layout canvas.")}
+                </p>
+              </section>
+
+              <section class="variable-section">
+                <h3>{gettext("Default value")}</h3>
+
+                <.render_value_inputs
+                  edit
+                  id={@id}
+                  type={@type}
+                  var={@var}
+                  image={@image}
+                  images={@images}
+                  file={@file}
+                  files={@files}
+                  video={@video}
+                  videos={@videos}
+                  gallery={@gallery}
+                  galleries={@galleries}
+                  label={@label}
+                  value_id={@value_id}
+                  image_id={@image_id}
+                  file_id={@file_id}
+                  video_id={@video_id}
+                  gallery_id={@gallery_id}
+                  identifier={@identifier}
+                  identifier_id={@identifier_id}
+                  placeholder={@placeholder}
+                  instructions={@instructions}
+                  target={@myself}
+                  publish={@publish}
+                  on_change={@on_change}
+                  component_id={@id}
+                  var_key={@key}
+                  upload_kind={@upload_kind}
+                />
+              </section>
+
+              <section :if={@type in [:color, :link, :select]} class="variable-section">
+                <h3>{type_settings_heading(@type)}</h3>
+
+                <%= case @type do %>
+                  <% :color -> %>
+                    <Input.toggle field={@var[:color_picker]} label={gettext("Allow picking custom colors")} />
+                    <Input.toggle field={@var[:color_opacity]} label={gettext("Allow setting opacity")} />
+                    <Input.number field={@var[:palette_id]} label={gettext("ID of palette to choose colors from")} />
+                  <% :link -> %>
+                    <.live_component
+                      module={Input.MultiSelect}
+                      id={"#{@var.id}-select-link-schemas"}
+                      label={gettext("Allowed identifier schemas")}
+                      field={@var[:link_identifier_schemas]}
+                      opts={[options: @blueprint_schema_opts]}
+                    />
+                    <Input.toggle field={@var[:link_allow_custom_text]} label={gettext("Allow setting custom link text")} />
+                  <% :select -> %>
+                    <div
+                      phx-hook="Brando.SortableEmbeds"
+                      id={"#{@var.id}-variable-options"}
+                      data-target={@myself}
+                      data-sortable-id={"sortable-#{@var.id}-variable-options"}
+                      data-sortable-handle=".sort-handle"
+                      data-sortable-selector=".input-group"
+                    >
+                      <Form.field_base field={@var[:options]} label={gettext("Options")} left_justify_meta skip_presence>
+                        <.inputs_for :let={opt} field={@var[:options]}>
+                          <%!-- `.input-group` is the hook's sortable selector and
+                                `.sort-handle` the handle it looks for — there was
+                                no handle, so options could not be reordered. --%>
+                          <div class="input-group variable-option draggable drag-item">
+                            <button
+                              type="button"
+                              class="sort-handle"
+                              aria-label={gettext("Reorder option")}
+                              title={gettext("Drag to reorder")}
+                            >
+                              <span class="drag-grip" aria-hidden="true"></span>
+                            </button>
+
+                            <Input.text field={opt[:label]} label={gettext("Label")} />
+                            <Input.text field={opt[:value]} label={gettext("Value")} />
+
+                            <input type="hidden" name={"#{@var.name}[sort_option_ids][]"} value={opt.index} />
+                            <button
+                              class="module-item-action module-danger"
+                              type="button"
+                              name={"#{@var.name}[drop_option_ids][]"}
+                              value={opt.index}
+                              aria-label={gettext("Delete option")}
+                              title={gettext("Delete")}
+                              phx-click={JS.dispatch("change")}
+                            >
+                              <.icon name="hero-x-mark" />
+                            </button>
+                          </div>
+                        </.inputs_for>
+
+                        <button
+                          type="button"
+                          class="module-add-button"
+                          phx-click={JS.push("add_select_var_option", value: %{var_key: @key}, target: @target)}
+                        >
+                          <.icon name="hero-plus" />
+                          {gettext("Add option")}
+                        </button>
+                      </Form.field_base>
+                    </div>
+                  <% _ -> %>
+                <% end %>
+              </section>
             </div>
           </div>
         <% else %>
@@ -478,7 +560,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             <Input.input type={:hidden} field={@var[:key]} />
             <Input.input type={:hidden} field={@var[:label]} />
             <Input.input type={:hidden} field={@var[:type]} />
-            <Input.input type={:hidden} field={@var[:important]} />
+            <Input.input type={:hidden} field={@var[:placement]} />
+            <Input.input type={:hidden} field={@var[:new_row]} />
             <Input.input type={:hidden} field={@var[:instructions]} />
             <Input.input type={:hidden} field={@var[:placeholder]} />
             <Input.input type={:hidden} field={@var[:width]} />
@@ -577,10 +660,24 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     """
   end
 
+  # The switch sits inside a control box the same height as a text input so a
+  # toggle and a text field placed on the same row share a baseline. The
+  # instructions are demoted to a tooltip — that, plus narrow widths, is what
+  # lets several toggles stack where one used to sit.
   def render_value_inputs(%{type: :boolean} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Input.toggle field={@var[:value_boolean]} label={@label} instructions={@instructions} />
+      <Form.field_base field={@var[:value_boolean]} label={@label} left_justify_meta>
+        <div class="boolean-control">
+          <Form.label field={@var[:value_boolean]} class="switch small" skip_presence>
+            <Input.input type={:checkbox} field={@var[:value_boolean]} />
+            <div class="slider round"></div>
+          </Form.label>
+          <span :if={@instructions} class="boolean-instructions" title={@instructions}>
+            <.icon name="hero-information-circle" />
+          </span>
+        </div>
+      </Form.field_base>
     </div>
     """
   end

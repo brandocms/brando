@@ -1,0 +1,652 @@
+/* ===========================================================
+   Module editor · variable layout canvas
+
+   Rows are packed server-side by `Brando.Content.Var.Layout`, so nothing here
+   decides layout — it only draws what the server derived, beside a live
+   preview built from the block editor's own components.
+   =========================================================== */
+
+/* The Variables tab is these two cards: the canvas you compose in, and a live
+   render of what the editor will end up seeing. */
+.var-layout-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(430px, 0.8fr);
+  gap: 25px;
+  align-items: start;
+
+  @responsive $sm {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.var-layout-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: 14px;
+  background-color: var(--brando-color-white);
+  box-shadow: 0 1px 2px rgba(5, 39, 82, 0.05), 0 0 0 1px rgba(5, 39, 82, 0.06);
+  overflow: hidden;
+}
+
+.var-layout-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid #f1ebe9;
+
+  h2 {
+    font-size: 18px;
+    font-weight: 400;
+  }
+}
+
+.var-layout-sub {
+  margin-top: 4px;
+  max-width: 62ch;
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.6;
+}
+
+.var-layout-panel-body {
+  padding: 18px 20px 20px;
+}
+
+.var-layout-surfaces {
+  display: flex;
+  flex: none;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid #f1ebe9;
+  border-radius: 22px;
+  background-color: #fcfcfd;
+
+  button {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 22px;
+    background-color: transparent;
+    font-size: 13px;
+    white-space: nowrap;
+    opacity: 0.6;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+
+    &:hover {
+      opacity: 0.9;
+    }
+
+    &.active {
+      background-color: var(--brando-color-white);
+      box-shadow: 0 1px 2px rgba(5, 39, 82, 0.08);
+      font-weight: 500;
+      opacity: 1;
+    }
+  }
+}
+
+/* ── canvas ─────────────────────────────────────────────── */
+
+/* The ruler is the only place the 12-unit grid is drawn. Repeating it behind
+   every row put three sets of lines on screen at once. Left padding matches
+   the row gutter so a tick lines up with a chip edge. */
+.var-layout-ruler {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  margin-bottom: 8px;
+  padding: 0 9px 0 34px;
+
+  span {
+    padding-bottom: 5px;
+    border-bottom: 1px solid #f1ebe9;
+    @font mono;
+    font-size: 9px;
+    text-align: center;
+    opacity: 0.45;
+  }
+}
+
+.var-layout-rows-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.var-layout-row {
+  position: relative;
+  display: flex;
+  min-height: 80px;
+  padding: 8px 8px 8px 34px;
+  border-radius: 10px;
+  background-color: #fbf8f7;
+
+  &.is-sorting {
+    opacity: 0.4;
+  }
+}
+
+.var-layout-gutter {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 28px;
+  height: 100%;
+  @font mono;
+  font-size: 9px;
+}
+
+.var-row-handle {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background-color: transparent;
+  color: #cfc5c1;
+  cursor: grab;
+  transition: color 120ms ease, background-color 120ms ease;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  [data-icon] {
+    width: 12px;
+    height: 12px;
+    background-color: currentColor;
+  }
+}
+
+.var-layout-row:hover .var-row-handle {
+  background-color: #f1eae7;
+  color: #8d827d;
+}
+
+/* used units over total, stacked like a written fraction */
+.var-row-meter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.25;
+  opacity: 0.75;
+  cursor: help;
+
+  b {
+    font-weight: 400;
+
+    &.full {
+      color: theme(colors.status.published);
+    }
+  }
+
+  .rule {
+    display: block;
+    width: 13px;
+    height: 1px;
+    margin: 2px 0;
+    background-color: currentColor;
+    opacity: 0.35;
+  }
+
+  .flex-mark {
+    display: block;
+    margin-top: 5px;
+    color: var(--brando-color-blue);
+
+    [data-icon] {
+      width: 11px;
+      height: 11px;
+      background-color: currentColor;
+    }
+  }
+}
+
+.var-layout-slots {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+}
+
+.var-layout-slots:empty::after {
+  content: "";
+  flex: 1;
+}
+
+/* ── chips ──────────────────────────────────────────────── */
+
+.var-chip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  padding: 8px 9px 7px;
+  border: 1px solid #e6dedb;
+  border-radius: 8px;
+  background-color: var(--brando-color-white);
+  cursor: grab;
+  transition: box-shadow 120ms ease, border-color 120ms ease, opacity 120ms ease;
+
+  &:hover {
+    border-color: #d8ceca;
+    box-shadow: 0 1px 3px rgba(5, 39, 82, 0.08);
+  }
+
+  &.is-sorting {
+    opacity: 0.35;
+    cursor: grabbing;
+  }
+
+  /* Fixed widths hold their exact measure so chips line up with the ruler.
+     Row gap is 6px. Only `fill` grows. */
+  &[data-width="full"] {
+    flex: 0 0 100%;
+  }
+
+  &[data-width="half"] {
+    flex: 0 0 calc(50% - 3px);
+  }
+
+  &[data-width="third"] {
+    flex: 0 0 calc(33.333% - 4px);
+  }
+
+  &[data-width="fourth"] {
+    flex: 0 0 calc(25% - 4.5px);
+  }
+
+  &[data-width="auto"] {
+    flex: 0 0 auto;
+  }
+
+  &[data-width="fill"] {
+    flex: 1 1 0;
+  }
+
+  /* A flexible chip is as wide as its own controls, not as wide as it will
+     render — dashed sides say "measured at render time, see the preview". */
+  &[data-width="auto"],
+  &[data-width="fill"] {
+    border-left-style: dashed;
+    border-right-style: dashed;
+  }
+}
+
+.var-chip-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Decoration, not a hit area — the whole chip drags. */
+.var-chip-grip {
+  flex: none;
+  width: 9px;
+  height: 14px;
+  background-image: radial-gradient(#cfc5c1 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+.var-chip-key {
+  overflow: hidden;
+  @font mono;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.var-chip-type {
+  flex: none;
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background-color: #f5f1ef;
+  @font mono;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
+}
+
+/* the actions overlay this corner, so get out of the way */
+.var-chip:hover .var-chip-type,
+.var-chip:focus-within .var-chip-type {
+  opacity: 0;
+}
+
+/* The label is the chip's edit affordance — the whole line is the hit area. */
+.var-chip-label {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  overflow: hidden;
+  font-size: 12.5px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.65;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 1;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}
+
+.var-chip-actions {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  /* They sit over the chip's header, which is also the drag handle. Opacity
+     alone leaves them hit-testable, so an invisible button would swallow both
+     the grab and any click aimed at the key beneath it. Keyboard focus is
+     unaffected, and `:focus-within` below restores hit-testing when tabbed to. */
+  pointer-events: none;
+  transition: opacity 120ms ease;
+
+  /* Four actions have to clear a quarter-width chip, so they run small. */
+  button {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 5px;
+    background-color: #f5f1ef;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: #e2dad6;
+    }
+
+    [data-icon] {
+      width: 13px;
+      height: 13px;
+      background-color: var(--brando-color-dark);
+    }
+
+    &.var-chip-danger:hover {
+      background-color: #f6dcd8;
+
+      [data-icon] {
+        background-color: #8c2b1c;
+      }
+    }
+  }
+}
+
+.var-chip:hover .var-chip-actions,
+.var-chip:focus-within .var-chip-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.var-chip-widths {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: auto;
+}
+
+.var-width-group {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid #f1ebe9;
+  border-radius: 5px;
+
+  button {
+    padding: 2px 4px;
+    border: none;
+    border-right: 1px solid #f1ebe9;
+    background-color: var(--brando-color-white);
+    @font mono;
+    font-size: 9.5px;
+    opacity: 0.55;
+    transition: background-color 100ms ease, opacity 100ms ease;
+
+    &:last-child {
+      border-right: 0;
+    }
+
+    &:hover {
+      background-color: var(--brando-color-peach);
+      opacity: 0.9;
+    }
+
+    &.on {
+      background-color: #33506f;
+      color: var(--brando-color-white);
+      opacity: 1;
+    }
+  }
+}
+
+/* ── new row zone + tray ────────────────────────────────── */
+
+.var-layout-new-row {
+  display: grid;
+  place-items: center;
+  min-height: 46px;
+  margin-top: 8px;
+  padding: 14px;
+  border: 1px dashed #d8ceca;
+  border-radius: 10px;
+  font-size: 12.5px;
+  opacity: 0.6;
+  transition: border-color 120ms ease, background-color 120ms ease, opacity 120ms ease;
+
+  .var-chip {
+    width: 100%;
+  }
+}
+
+.var-layout-foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    [data-icon] {
+      width: 14px;
+      height: 14px;
+      background-color: currentColor;
+    }
+  }
+}
+
+.var-layout-note {
+  font-size: 12.5px;
+  opacity: 0.6;
+}
+
+.var-layout-tray {
+  margin-top: 18px;
+  padding: 14px 16px 16px;
+  border-radius: 10px;
+  background-color: var(--brando-color-shaded);
+  box-shadow: var(--brando-card-shadow);
+}
+
+.var-layout-tray-head {
+  h3 {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  p {
+    margin-top: 3px;
+    font-size: 12px;
+    opacity: 0.55;
+  }
+}
+
+.var-layout-tray-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 11px;
+
+  .empty {
+    font-size: 12px;
+    opacity: 0.5;
+  }
+}
+
+.var-tray-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px 5px 11px;
+  border: 1px solid #f1ebe9;
+  border-radius: 999px;
+  background-color: var(--brando-color-white);
+  @font mono;
+  font-size: 11.5px;
+
+  button {
+    padding: 3px 9px;
+    border: none;
+    border-radius: 999px;
+    background-color: #f5f1ef;
+    font-family: inherit;
+    font-size: 11px;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: #e2dad6;
+    }
+  }
+}
+
+/* ── preview ────────────────────────────────────────────── */
+
+/* The preview sits on the editor's own ground so the card inside it reads as a
+   block on a page, not as another panel. */
+.var-layout-preview-scroll {
+  padding: 18px;
+  background-color: var(--brando-color-background);
+}
+
+/* Everything inside is the block editor's own markup, so Block.css styles it —
+   including the mono field labels. Only the frame is ours. */
+.var-preview-block {
+  border-radius: 10px;
+  overflow: hidden;
+
+  .block-toolbar {
+    gap: 10px;
+    justify-content: flex-start;
+    padding: 9px 12px;
+  }
+
+  /* The preview's fieldset stands in for the block editor's plain div. */
+  fieldset.block-vars {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+}
+
+/* A stand-in for the block's publish switch — the block editor's own chrome,
+   drawn flat so nobody mistakes it for something they can toggle. */
+.var-preview-switch {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 26px;
+  height: 14px;
+  border-radius: 999px;
+  background-color: #23b26a;
+
+  i {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--brando-color-white);
+  }
+}
+
+.var-preview-type {
+  @font mono;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+/* Hatched, because nothing here can render the template — it stands in for the
+   output so the variables are seen in the place they will actually sit. */
+.var-preview-stub {
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: repeating-linear-gradient(-45deg, #fcfcfd 0 6px, #f7f7f7 6px 12px);
+  font-size: 12px;
+  opacity: 0.5;
+}
+
+.preview-empty {
+  padding: 24px;
+  border: 1px dashed #d8ceca;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: center;
+  opacity: 0.55;
+}
+
+/* ── compact boolean (shared with the block editor) ─────── */
+
+.boolean-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+
+  .boolean-instructions {
+    display: inline-grid;
+    place-items: center;
+    cursor: help;
+    opacity: 0.45;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 0.8;
+    }
+
+    [data-icon] {
+      width: 15px;
+      height: 15px;
+      background-color: var(--brando-color-dark);
+    }
+  }
+}

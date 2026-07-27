@@ -97,7 +97,7 @@ for lang <- languages do
           creator_id: user.id,
           link_text: "Brando CMS",
           link_target_blank: true,
-          important: true,
+          placement: :content,
           label: "Link",
           key: "link",
           value: "https://brandocms.com"
@@ -113,7 +113,7 @@ for lang <- languages do
           creator_id: user.id,
           link_text: "API Documentation",
           link_target_blank: true,
-          important: true,
+          placement: :content,
           label: "Link",
           key: "link",
           value: "https://hexdocs.pm/brando"
@@ -129,7 +129,7 @@ for lang <- languages do
           creator_id: user.id,
           link_text: "Guides",
           link_target_blank: true,
-          important: true,
+          placement: :content,
           label: "Link",
           key: "link",
           value: "https://brandocms.com/guides"
@@ -373,7 +373,7 @@ end
       type: :string,
       label: "String label",
       key: "string_label",
-      important: true,
+      placement: :content,
       value: "test value for string label"
     }
   ]
@@ -427,7 +427,7 @@ table_template =
         type: :string,
         label: "Name",
         key: "name",
-        important: true,
+        placement: :content,
         sequence: 0,
         width: :half,
         creator_id: user.id
@@ -436,7 +436,7 @@ table_template =
         type: :string,
         label: "Role",
         key: "role",
-        important: false,
+        placement: :config,
         sequence: 1,
         width: :half,
         creator_id: user.id
@@ -549,7 +549,7 @@ table_template =
       type: :string,
       label: "Caption",
       key: "caption",
-      important: true,
+      placement: :content,
       value: "Default caption text",
       sequence: 0,
       width: :full
@@ -558,7 +558,7 @@ table_template =
       type: :boolean,
       label: "Show border",
       key: "show_border",
-      important: true,
+      placement: :content,
       value_boolean: false,
       sequence: 1,
       width: :half
@@ -613,7 +613,7 @@ table_template =
       type: :string,
       label: "Title",
       key: "title",
-      important: true,
+      placement: :content,
       value: "Gallery Title",
       sequence: 0,
       width: :full
@@ -622,7 +622,7 @@ table_template =
       type: :select,
       label: "Layout",
       key: "layout",
-      important: true,
+      placement: :content,
       value: "grid",
       sequence: 1,
       width: :half,
@@ -636,7 +636,7 @@ table_template =
       type: :boolean,
       label: "Stagger animation",
       key: "stagger",
-      important: true,
+      placement: :content,
       value_boolean: false,
       sequence: 2,
       width: :half
@@ -690,7 +690,7 @@ table_template =
       type: :color,
       label: "Text color",
       key: "text_color",
-      important: true,
+      placement: :content,
       value: "#333333",
       sequence: 0,
       width: :half,
@@ -701,7 +701,7 @@ table_template =
       type: :select,
       label: "Alignment",
       key: "alignment",
-      important: true,
+      placement: :content,
       value: "left",
       sequence: 1,
       width: :half,
@@ -758,7 +758,7 @@ table_template =
       type: :html,
       label: "Intro text",
       key: "intro",
-      important: true,
+      placement: :content,
       value: "<p>Introduction paragraph</p>",
       sequence: 0,
       width: :full
@@ -767,7 +767,7 @@ table_template =
       type: :boolean,
       label: "Show intro",
       key: "show_intro",
-      important: true,
+      placement: :content,
       value_boolean: true,
       sequence: 1,
       width: :half
@@ -824,7 +824,7 @@ table_template =
       type: :boolean,
       label: "Autoplay",
       key: "autoplay",
-      important: true,
+      placement: :content,
       value_boolean: false,
       sequence: 0,
       width: :half
@@ -833,7 +833,7 @@ table_template =
       type: :boolean,
       label: "Show controls",
       key: "show_controls",
-      important: true,
+      placement: :content,
       value_boolean: true,
       sequence: 1,
       width: :half
@@ -877,7 +877,7 @@ table_template =
       type: :string,
       label: "Label",
       key: "label",
-      important: true,
+      placement: :content,
       value: "Initial label",
       sequence: 0,
       width: :full
@@ -956,7 +956,7 @@ team_section =
         type: :string,
         label: "Section title",
         key: "section_title",
-        important: true,
+        placement: :content,
         value: "Our Team",
         sequence: 0,
         width: :full
@@ -986,7 +986,7 @@ team_section =
       type: :string,
       label: "Name",
       key: "member_name",
-      important: true,
+      placement: :content,
       value: "John Doe",
       sequence: 0,
       width: :half
@@ -995,7 +995,7 @@ team_section =
       type: :string,
       label: "Role",
       key: "member_role",
-      important: true,
+      placement: :content,
       value: "Developer",
       sequence: 1,
       width: :half
@@ -1033,7 +1033,7 @@ team_section =
       type: :image,
       label: "My image",
       key: "my_image",
-      important: true,
+      placement: :content,
       sequence: 0,
       width: :half,
       creator_id: user.id
@@ -1042,7 +1042,7 @@ team_section =
       type: :file,
       label: "My file",
       key: "my_file",
-      important: true,
+      placement: :content,
       sequence: 1,
       width: :half,
       creator_id: user.id
@@ -1051,7 +1051,7 @@ team_section =
       type: :string,
       label: "Notes",
       key: "var_notes",
-      important: true,
+      placement: :content,
       value: "",
       sequence: 2,
       width: :full,

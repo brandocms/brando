@@ -4,6 +4,22 @@
 
 #### Features
 
+- **Block variable layout** (#2522): module variables now carry a `width`
+  (`1/1`, `1/2`, `1/3`, `1/4`, `auto`, `fill`), a `new_row` break and a
+  `placement` (in the block / configure modal / hidden from editors), replacing
+  the old `important` boolean. The block editor packs them into rows of twelve
+  units — several short fields now share a line instead of each claiming one.
+
+  The module editor gained a tab bar (Template · Overview · Variables ·
+  References · Datasource), and the Variables tab is a drag-and-drop layout
+  canvas beside a live preview rendered with the block editor's own components,
+  so the layout is composed against what editors will actually see. Chips are
+  the variable list: drag to arrange, click to edit, duplicate, delete, move
+  between surfaces. `placement: :hidden` is new — a template-only constant that
+  never renders an input.
+
+  Layout set on a module propagates to existing blocks through `reapply_vars/3`.
+
 - **Multi-user block sync fixes**: edits now ship when a block's editing session
   settles — plain blur is enough (previously another block had to receive focus
   before anything shipped, so edits routinely never reached other editors). Late
@@ -850,6 +866,12 @@
   views). If you use Fabric, update your project's `fabfile.py` to match and run
   `fab <env> grant_db` before migrating. Otherwise, run once as a superuser:
   `ALTER TYPE public.oban_job_state OWNER TO <your_app_db_user>;`
+
+- `brando_156`: Adds `new_row` (boolean) and `placement` (string) to `content_vars`
+  and drops `important`. Existing vars are migrated by value — `important: true`
+  becomes `placement: "content"`, everything else `placement: "config"` — and every
+  var gets `new_row: true`, which reproduces the old one-var-per-row rendering.
+  No layout is lost; rows are opt-in from there.
 
 - **HEEx support for `identifier` and `absolute_url`**: Both macros now accept `~H` templates
   as an alternative to Liquex templates.

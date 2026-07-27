@@ -27,7 +27,7 @@ for lang <- languages do
           creator_id: user.id,
           link_text: "Brando CMS",
           link_target_blank: true,
-          important: true,
+          placement: :content,
           label: "Link",
           key: "link",
           value: "https://brandocms.com"
@@ -43,7 +43,7 @@ for lang <- languages do
           creator_id: user.id,
           link_text: "API Documentation",
           link_target_blank: true,
-          important: true,
+          placement: :content,
           label: "Link",
           key: "link",
           value: "https://hexdocs.pm/brando"
@@ -59,7 +59,7 @@ for lang <- languages do
           creator_id: user.id,
           link_text: "Guides",
           link_target_blank: true,
-          important: true,
+          placement: :content,
           label: "Link",
           key: "link",
           value: "https://brandocms.com/guides"

@@ -46,7 +46,6 @@ defmodule Brando.Content.Var do
     attribute :label, :string, required: true
     attribute :placeholder, :string
     attribute :key, :string, required: true
-    attribute :important, :boolean, default: false
     attribute :instructions, :string
     attribute :value, :text
     attribute :config_target, :text
@@ -71,14 +70,33 @@ defmodule Brando.Content.Var do
     attribute :link_target_blank, :boolean, default: false
     attribute :link_allow_custom_text, :boolean, default: true
 
-    # layout
+    # layout — see `Brando.Content.Var.Layout`. Rows in the block editor are
+    # derived by packing `width` into 12 units in `sequence` order, breaking
+    # wherever `new_row` is set. No row index is stored.
     attribute :width, :enum,
       values: [
         :full,
         :half,
-        :third
+        :third,
+        :fourth,
+        :auto,
+        :fill
       ],
       default: :full
+
+    attribute :new_row, :boolean, default: false
+
+    # which editing surface the var appears on:
+    #   :content — inline in the block, alongside the rendered template
+    #   :config  — behind the block's Configure modal
+    #   :hidden  — never shown to editors, template-only constant
+    attribute :placement, :enum,
+      values: [
+        :content,
+        :config,
+        :hidden
+      ],
+      default: :content
   end
 
   relations do

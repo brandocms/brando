@@ -16,6 +16,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
   alias BrandoAdmin.Components.Form.Input.Entries
+  alias Brando.Content.Var.Layout
   alias BrandoAdmin.Components.Form.Input.RenderVar
 
   def render(%{module_not_found: true} = assigns) do
@@ -926,7 +927,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           <.vars
             vars={@block_form[:vars]}
             uid={@uid}
-            important={false}
+            placement={:config}
             target={@target}
             form_id={@form_id}
             current_user_id={@block_form[:creator_id].value}
@@ -1685,24 +1686,43 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
   attr :uid, :string, required: true
   attr :vars, :any, required: true
-  attr :important, :boolean, default: true
+  attr :placement, :atom, default: :content, values: [:content, :config]
   attr :target, :any
   attr :form_id, :any, default: nil
   attr :current_user_id, :any, default: nil
 
+  @doc """
+  Renders the vars belonging to one editing surface.
+
+  Rows are derived from `sequence` + `new_row` by `Brando.Content.Var.Layout` —
+  the same packing the module editor's layout canvas previews — so what the
+  author composed is what the editor sees, in that order.
+
+  The `:config` surface additionally carries `:hidden` vars as bare hidden
+  inputs. They have no UI, but their params still have to reach `cast_assoc`
+  or the association would be dropped on the next validate.
+  """
   def vars(assigns) do
-    changeset = assigns.vars.form.source
+    all_forms = var_forms(assigns.vars)
 
-    vars_to_render =
-      changeset
-      |> Changeset.get_assoc(:vars)
-      |> Enum.filter(&(Changeset.get_field(&1, :important) == assigns.important))
+    rows =
+      all_forms
+      |> Enum.filter(&(&1.placement == assigns.placement))
+      |> Layout.pack()
 
-    assigns = assign(assigns, :vars_to_render, vars_to_render)
+    hidden_forms =
+      if assigns.placement == :config,
+        do: Enum.filter(all_forms, &(&1.placement == :hidden)),
+        else: []
+
+    assigns =
+      assigns
+      |> assign(:rows, rows)
+      |> assign(:hidden_forms, hidden_forms)
 
     ~H"""
-    <div :if={@vars_to_render != []} class="block-vars-wrapper">
-      <div class="vars-info" phx-click="show_vars_instructions" phx-target={@target}>
+    <div :if={@rows != [] or @hidden_forms != []} class="block-vars-wrapper">
+      <div :if={@rows != []} class="vars-info" phx-click="show_vars_instructions" phx-target={@target}>
         <div class="icon">
           <span class="hero-variable-mini"></span>
         </div>
@@ -1712,22 +1732,59 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           </span>
         </div>
       </div>
-      <div class="block-vars">
-        <.inputs_for :let={var} field={@vars} skip_hidden>
+      <div :if={@rows != []} class="block-vars">
+        <div :for={row <- @rows} class="block-vars-row">
           <.live_component
+            :for={entry <- row}
             module={RenderVar}
-            id={"block-#{@uid}-render-var-#{@important && "important" || "regular"}-#{var.id}"}
-            var={var}
-            render={(@important && :only_important) || :only_regular}
+            id={"block-#{@uid}-render-var-#{@placement}-#{entry.form.id}"}
+            var={entry.form}
+            render={@placement}
             on_change={fn params -> send_update(@target, params) end}
             form_id={@form_id}
             current_user_id={@current_user_id}
             publish
           />
-        </.inputs_for>
+        </div>
+      </div>
+      <div :for={entry <- @hidden_forms} class="block-vars-carried" hidden>
+        <.carried_var var={entry.form} />
       </div>
     </div>
     """
+  end
+
+  attr :var, :any, required: true
+
+  # A `:hidden` var never gets an input the editor can reach, so without this its
+  # params would be absent on submit and `cast_assoc` would drop the association.
+  # Only the identity has to round-trip — `cast_assoc` matches on it and leaves
+  # every field the params don't mention alone, so re-emitting values here would
+  # only risk writing back a stale copy.
+  defp carried_var(assigns) do
+    ~H"""
+    <input type="hidden" name={@var[:id].name} value={@var[:id].value} />
+    <input type="hidden" name={@var[:_persistent_id].name} value={@var.index} />
+    """
+  end
+
+  # Builds the same sub-forms `<.inputs_for>` would, then decorates each with
+  # the layout facts so `Layout.pack/1` can group them without re-reading the
+  # changeset for every comparison.
+  defp var_forms(field) do
+    field.form.source
+    |> then(&field.form.impl.to_form(&1, field.form, field.field, []))
+    |> Enum.map(fn form ->
+      %{
+        form: form,
+        key: Changeset.get_field(form.source, :key),
+        width: Changeset.get_field(form.source, :width) || :full,
+        new_row: Changeset.get_field(form.source, :new_row) == true,
+        placement: Changeset.get_field(form.source, :placement) || :content,
+        sequence: Changeset.get_field(form.source, :sequence) || 0
+      }
+    end)
+    |> Enum.sort_by(& &1.sequence)
   end
 
   attr :uid, :string, required: true

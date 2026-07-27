@@ -30,6 +30,7 @@
 @import "./components/Form/Loader.css";
 @import "./components/Form/Subform.css";
 @import "./components/Form/Tab.css";
+@import "./components/Form/VarLayout.css";
 @import "./components/Form/Input/CodeEditor.css";
 @import "./components/Form/Input/ColorPicker.css";
 @import "./components/Form/Input/CustomCheckbox.css";
@@ -608,12 +609,10 @@ h3 {
   }
 }
 
+/* Authoring form for one variable — the "Edit variable" modal, and one per
+   entry in the entry-var editor. Grouped into sections rather than one long
+   stack: a variable is named, then typed and placed, then given a default. */
 .variable-content {
-  border-radius: 12px;
-  padding: 1vw;
-  margin-top: 1vw;
-  background-color: var(--brando-color-peach-darker);
-
   &.hidden {
     display: none;
   }
@@ -621,28 +620,105 @@ h3 {
 
 .variable-header {
   display: flex;
-  @space padding-y 0.5vw;
-  @space padding-x 1vw;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background-color: #fcfcfd;
+  box-shadow: 0 0 0 1px rgba(5, 39, 82, 0.06);
 
   &:hover {
-    background-color: var(--brando-color-peach-darker);
+    background-color: #f7f4f2;
     cursor: pointer;
   }
 
-  svg {
-    width: 25px;
-    margin-right: 1vw;
+  .variable-type {
+    flex: none;
+    padding: 4px 7px;
+    border-radius: 5px;
+    background-color: var(--brando-color-peach);
+    @font mono;
+    font-size: 10px;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
   .variable-key {
-    @font mono;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+
+    code {
+      @font mono;
+      font-size: 13px;
+    }
 
     span {
-      @font main;
-      @fontsize 14px;
-      display: block;
+      font-size: 12.5px;
+      opacity: 0.6;
     }
   }
+
+  .variable-chevron {
+    display: grid;
+    place-items: center;
+    margin-left: auto;
+    transition: transform 140ms ease;
+
+    [data-icon] {
+      width: 14px;
+      height: 14px;
+      background-color: currentColor;
+      opacity: 0.5;
+    }
+
+    &.is-open {
+      transform: rotate(180deg);
+    }
+  }
+}
+
+.variable-section {
+  padding-top: 22px;
+  margin-top: 22px;
+  border-top: 1px solid rgba(5, 39, 82, 0.08);
+
+  &:first-child {
+    padding-top: 18px;
+    margin-top: 4px;
+    border-top: 0;
+  }
+
+  > h3 {
+    margin-bottom: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    opacity: 0.5;
+  }
+}
+
+/* Paired fields: two short ones read better side by side than stacked, and it
+   halves the scroll in a modal that already has four sections. */
+.variable-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 20px;
+  align-items: start;
+
+  @responsive $sm {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.variable-note {
+  margin-top: 2px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  opacity: 0.5;
 }
 
 .pos-relative {

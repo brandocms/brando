@@ -104,7 +104,7 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
         label: "Label",
         key: "key",
         value: "Value",
-        important: true
+        placement: :content
       })
       |> Map.put(:action, :insert)
 

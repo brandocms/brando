@@ -21,6 +21,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
        |> assign(:socket_connected, true)
        |> assign(:save_redirect_target, :listing)
        |> assign(:open_item_modal, nil)
+       |> assign(:active_tab, :template)
        |> assign_entry(entry_id)
        |> assign_current_user(token)
        |> assign_form()
@@ -42,20 +43,30 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
     <div id="module_form-el" phx-hook="Brando.Form" data-skip-keydown>
       <.form for={@form} class="main-form" phx-change="validate" phx-submit="save">
         <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
-        <div class="block-editor">
-          <div class="code">
-            <Input.code field={@form[:code]} label={gettext("Code")} />
-            <div class="module-code-help">
-              <p>{gettext("Use references for editable content and variables for reusable values.")}</p>
-              <code>&lcub;% ref refs.name %&rcub;</code>
-              <code>&lcub;&lcub; variable_key &rcub;&rcub;</code>
+
+        <.tab_bar active_tab={@active_tab} form={@form} />
+
+        <%!-- Every panel stays in the DOM and is hidden with CSS. Rendering only
+              the active one would drop the other panels' inputs from the form
+              params, and would tear down and rebuild the code editor — losing
+              its undo history — on every tab switch. --%>
+        <div class="module-editor-panels">
+          <section class={["module-panel", @active_tab == :template && "is-active"]} data-tab="template">
+            <div class="code">
+              <Input.code field={@form[:code]} label={gettext("Code")} />
+              <div class="module-code-help">
+                <p>{gettext("Use references for editable content and variables for reusable values.")}</p>
+                <code>&lcub;% ref refs.name %&rcub;</code>
+                <code>&lcub;&lcub; variable_key &rcub;&rcub;</code>
+              </div>
             </div>
-          </div>
+          </section>
 
           <.live_component
             module={ModuleProps}
             id="module-props"
             form={@form}
+            active_tab={@active_tab}
             open_item_modal={@open_item_modal}
             create_ref={JS.push("create_ref")}
             duplicate_ref={JS.push("duplicate_ref")}
@@ -63,6 +74,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
             duplicate_var={JS.push("duplicate_var")}
           />
         </div>
+
         <div class="button-group module-editor-actions">
           <Form.submit_button
             processing={false}
@@ -73,6 +85,40 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
         </div>
       </.form>
     </div>
+    """
+  end
+
+  @tabs ~w(template overview variables references datasource)a
+
+  defp to_tab(tab), do: Enum.find(@tabs, :template, &(to_string(&1) == tab))
+
+  attr :active_tab, :atom, required: true
+  attr :form, :any, required: true
+
+  defp tab_bar(assigns) do
+    assigns =
+      assign(assigns, :tabs, [
+        {:template, gettext("Template"), nil},
+        {:overview, gettext("Overview"), nil},
+        {:variables, gettext("Variables"), length(assigns.form[:vars].value || [])},
+        {:references, gettext("References"), length(assigns.form[:refs].value || [])},
+        {:datasource, gettext("Datasource"), nil}
+      ])
+
+    ~H"""
+    <nav class="module-editor-tabs" role="tablist" aria-label={gettext("Module editor sections")}>
+      <button
+        :for={{tab, label, count} <- @tabs}
+        type="button"
+        role="tab"
+        class={["module-editor-tab", @active_tab == tab && "is-active"]}
+        aria-selected={to_string(@active_tab == tab)}
+        phx-click={JS.push("select_tab")}
+        phx-value-tab={tab}
+      >
+        {label}<span :if={count && count > 0} class="module-editor-tab-count">{count}</span>
+      </button>
+    </nav>
     """
   end
 
@@ -87,6 +133,10 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
   def handle_event("focus", _, socket), do: {:noreply, socket}
   def handle_event("blur", _, socket), do: {:noreply, socket}
+
+  def handle_event("select_tab", %{"tab" => tab}, socket) do
+    {:noreply, assign(socket, :active_tab, to_tab(tab))}
+  end
 
   def handle_event("save_redirect_target", _, socket) do
     {:noreply, assign(socket, :save_redirect_target, :self)}
@@ -317,6 +367,13 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
         |> assign(:form, form)
         |> then(&{:noreply, &1})
     end
+  end
+
+  # Applies a layout change composed in the variable layout canvas. The canvas
+  # is a live component but the module changeset lives here, so it hands back a
+  # whole changeset rather than trying to reach into ours.
+  def handle_info({:var_layout_changeset, changeset}, socket) do
+    {:noreply, assign(socket, :form, to_form(changeset, []))}
   end
 
   def handle_info({:add_select_var_option, var_key}, %{assigns: %{form: form}} = socket) do

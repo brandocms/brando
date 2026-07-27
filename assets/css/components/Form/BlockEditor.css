@@ -1,30 +1,224 @@
-.entry-template {
-  @space margin-top 50px;
+/* One bar of tabs across the top of the module editor. Each tab shows one
+   panel; the panels themselves all stay in the DOM (their inputs are part of
+   one form) and are hidden here rather than by unmounting them. */
+.module-editor-tabs {
+  position: sticky;
+  top: 5px;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 25px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background-color: #fcfcfd;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.03);
 
-  > h2 {
-    @space margin-top 25px;
-    @space margin-bottom 10px;
+  .module-editor-tab {
+    @font main;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-right: 8px;
+    padding: 7px 14px;
+    border: 0;
+    border-radius: 8px;
+    background-color: var(--brando-color-white);
+    color: var(--brando-color-dark);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
+
+    &:hover {
+      background-color: #f5f1ef;
+    }
+
+    &.is-active,
+    &.is-active:hover {
+      background-color: #edf1ff;
+      color: #1a3f9e;
+    }
   }
 
-  > p {
-    max-width: 40ch;
+  .module-editor-tab-count {
+    padding: 1px 6px;
+    border-radius: 999px;
+    background-color: #f5f1ef;
+    @font mono;
+    font-size: 10px;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.75;
   }
 
-  > .block-editor {
-    @space margin-top 35px;
+  .module-editor-tab.is-active .module-editor-tab-count {
+    background-color: rgba(26, 63, 158, 0.1);
+    opacity: 0.85;
   }
 }
 
-.block-editor {
+/* Small icon button for row-level actions — reference rows, select options.
+   `.icon` renders a mask <span>, not an <svg>, and paints itself with
+   `currentColor`, so `color` is what makes the glyph visible. It has to be set
+   explicitly on hover: a generic button hover rule elsewhere (`button.tiny`)
+   otherwise recolours the icon to the background and the control vanishes. */
+.module-item-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--brando-color-dark);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+
+  &:hover {
+    border-color: #00000018;
+    background: #00000008;
+    color: var(--brando-color-dark);
+  }
+
+  &.module-danger:hover {
+    border-color: #ef444438;
+    background: #ef444414;
+    color: #b3261e;
+  }
+
+  [data-icon] {
+    width: 17px;
+    height: 17px;
+    background-color: currentColor;
+  }
+}
+
+/* One choice of a select variable: handle, label, value, delete — on one line.
+   Stacked full-width in a dashed box, three options filled the whole modal.
+   Selector carries `.input-group` too, to beat that class's generic dashed
+   border rather than depend on stylesheet order. */
+.variable-option.input-group {
   display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(360px, 1fr);
-  gap: clamp(24px, 3vw, 52px);
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
   align-items: start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(5, 39, 82, 0.08);
+  border-radius: 9px;
+  background-color: var(--brando-color-white);
+
+  + .variable-option {
+    margin-top: 7px;
+  }
+
+  .field-wrapper {
+    margin-bottom: 0;
+  }
+
+  > .sort-handle {
+    display: inline-flex;
+    align-items: center;
+    align-self: stretch;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    &:hover .drag-grip {
+      opacity: 0.9;
+    }
+  }
+
+  > .module-item-action {
+    align-self: center;
+  }
+
+  @responsive $sm {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+
+    .field-wrapper:nth-of-type(2) {
+      grid-column: 2 / 4;
+    }
+  }
+}
+
+/* The dot-grid grab affordance — no heroicon reads as "drag me". */
+.drag-grip {
+  display: block;
+  width: 10px;
+  height: 16px;
+  background-image: radial-gradient(#00000059 1px, transparent 1px);
+  background-size: 5px 5px;
+  opacity: 0.5;
+  transition: opacity 120ms ease;
+}
+
+/* Soft "add another one of these" affordance, shared by the References list and
+   the layout canvas. Deliberately quieter than a `.secondary` button: it sits
+   under a list it extends, not beside a heading it competes with. */
+.module-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  width: auto;
+  padding: 9px 15px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background-color: #f5f1ef;
+  color: var(--brando-color-dark);
+  font-size: 13px;
+  line-height: 1;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+
+  &:hover {
+    border-color: #e6dedb;
+    background-color: #efe9e6;
+  }
+
+  [data-icon] {
+    width: 15px;
+    height: 15px;
+    background-color: currentColor;
+  }
+}
+
+.module-editor-panels {
   width: 100%;
 
+  .module-panel {
+    display: none;
+
+    &.is-active {
+      display: block;
+    }
+  }
+
+  /* `.shaded` pads by 16px and `.inner` by up to 28px. That was tolerable when
+     `.properties` was a narrow sidebar; at full panel width the two frames read
+     as one very deep one. `.inner` owns the padding here. */
+  .properties.shaded {
+    padding: 0;
+  }
+
   .code {
-    position: sticky;
-    top: 20px;
     min-width: 0;
 
     .cm-editor {
@@ -61,8 +255,11 @@
     }
   }
 
+  /* Panels are full width now that each one owns the page, but a form field
+     stretched across a 1600px viewport is unreadable — cap the measure. */
   .properties {
     min-width: 0;
+    max-width: 860px;
     border: 1px solid #0000000d;
     border-radius: 14px;
     overflow: hidden;
@@ -92,12 +289,13 @@
         font-size: 15px;
       }
 
+      /* Dividers belong between sections, never above the first one — each
+         panel now starts with whichever section its tab owns. */
       .module-settings {
         padding-bottom: 24px;
 
         + .module-settings,
-        + .module-collection,
-        &.datasource {
+        + .module-collection {
           padding-top: 24px;
           border-top: 1px solid #00000012;
         }
@@ -136,11 +334,11 @@
       }
 
       .module-collection {
-        padding: 24px 0;
-        border-top: 1px solid #00000012;
+        padding-bottom: 24px;
 
         + .module-collection,
         + .module-settings {
+          padding-top: 24px;
           border-top: 1px solid #00000012;
         }
       }
@@ -189,20 +387,9 @@
         }
       }
 
-      .module-add-button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 5px;
-        flex: 0 0 auto;
-        width: auto !important;
-        min-width: 74px;
-        padding: 7px 10px;
-
-        svg {
-          width: 15px;
-          height: 15px;
-        }
+      .module-collection-foot {
+        display: flex;
+        margin-top: 10px;
       }
 
       .module-empty-state {
@@ -214,10 +401,11 @@
         border-radius: 10px;
         text-align: center;
 
-        svg {
+        [data-icon] {
           width: 24px;
           height: 24px;
           margin-bottom: 8px;
+          background-color: currentColor;
           opacity: 0.45;
         }
 
@@ -246,12 +434,13 @@
       .module-item {
         display: flex;
         align-items: center;
+        gap: 4px;
         min-width: 0;
-        min-height: 58px;
+        min-height: 64px;
         margin: 0;
-        padding: 5px 6px;
+        padding: 10px 12px;
         border: 1px solid #00000014;
-        border-radius: 9px;
+        border-radius: 10px;
         background: white;
         list-style: none;
         transition:
@@ -271,34 +460,9 @@
 
         .actions {
           display: flex;
-          gap: 3px;
+          gap: 4px;
           flex: 0 0 auto;
 
-          button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 30px;
-            height: 30px;
-            padding: 0;
-            border-color: transparent;
-            border-radius: 6px;
-
-            &:hover {
-              border-color: #00000024;
-              background: #00000008;
-            }
-
-            &.module-danger:hover {
-              background: #ef444414;
-              border-color: #ef444438;
-            }
-
-            svg {
-              width: 15px;
-              height: 15px;
-            }
-          }
         }
       }
 
@@ -307,26 +471,20 @@
         align-items: center;
         justify-content: center;
         flex: 0 0 auto;
-        width: 24px;
-        height: 38px;
-        margin-right: 2px;
+        width: 26px;
+        height: 40px;
+        margin-right: 4px;
         padding: 0;
         border: 0;
         background: transparent;
         cursor: grab;
-        opacity: 0.35;
 
         &:active {
           cursor: grabbing;
         }
 
-        &:hover {
-          opacity: 0.75;
-        }
-
-        svg {
-          width: 16px;
-          height: 16px;
+        &:hover .drag-grip {
+          opacity: 0.9;
         }
       }
 
@@ -385,77 +543,91 @@
       }
     }
 
-    .module-picker-intro {
-      max-width: 58ch;
-      margin: 0 0 18px;
-      line-height: 1.45;
-      opacity: 0.68;
+  }
+}
+
+/* The "Add variable"/"Add reference" pickers. Top level, not nested under
+   `.properties`: these live in modals, which are siblings of the panel body. */
+/* Helper text, not a heading — the modal body's own font size is ~23px, so this
+   has to be set explicitly. The gap below lives on the grid instead of here: a
+   global `p:last-of-type { margin-bottom: 0 !important }` (app.css) would win,
+   and this is the only <p> in the modal. */
+.module-picker-intro {
+  max-width: 58ch;
+  font-size: 14px;
+  line-height: 1.55;
+  opacity: 0.6;
+}
+
+.module-type-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 20px;
+
+  @responsive $sm {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .module-type-option {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: 72px;
+    padding: 13px 38px 13px 14px;
+    border: 1px solid #0000001c;
+    border-radius: 9px;
+    background: white;
+    color: inherit;
+    text-align: left;
+    transition:
+      border-color 120ms ease,
+      background 120ms ease,
+      transform 120ms ease;
+
+    &:hover {
+      transform: translateY(-1px);
+      border-color: var(--brando-color-dark);
+      background: var(--brando-color-peach);
     }
 
-    .module-type-picker {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-
-      .module-type-option {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        min-height: 72px;
-        padding: 13px 38px 13px 14px;
-        border: 1px solid #0000001c;
-        border-radius: 9px;
-        background: white;
-        color: inherit;
-        text-align: left;
-        transition:
-          border-color 120ms ease,
-          background 120ms ease,
-          transform 120ms ease;
-
-        &:hover {
-          transform: translateY(-1px);
-          border-color: var(--brando-color-dark);
-          background: var(--brando-color-peach);
-        }
-
-        span {
-          font-size: 14px;
-          font-weight: 600;
-        }
-
-        small {
-          margin-top: 4px;
-          font-size: 11px;
-          line-height: 1.35;
-          opacity: 0.58;
-        }
-
-        svg {
-          position: absolute;
-          top: 50%;
-          right: 12px;
-          width: 16px;
-          height: 16px;
-          transform: translateY(-50%);
-          opacity: 0.42;
-        }
-      }
+    span {
+      font-size: 14px;
+      font-weight: 600;
     }
 
-    .module-modal-heading {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      min-height: 28px;
-      margin-bottom: 16px;
-
-      h2 {
-        margin: 0;
-        font-size: 16px;
-      }
+    small {
+      margin-top: 4px;
+      font-size: 11px;
+      line-height: 1.35;
+      opacity: 0.58;
     }
+
+    /* `.icon` is a mask <span>, never an <svg> — see `.module-item-action`. */
+    [data-icon] {
+      position: absolute;
+      top: 50%;
+      right: 12px;
+      width: 16px;
+      height: 16px;
+      transform: translateY(-50%);
+      background-color: currentColor;
+      opacity: 0.42;
+    }
+  }
+}
+
+.module-modal-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 28px;
+  margin-bottom: 16px;
+
+  h2 {
+    margin: 0;
+    font-size: 16px;
   }
 }
 
@@ -468,32 +640,36 @@
   margin-top: 28px;
   padding: 14px 0;
   background: linear-gradient(to bottom, transparent, white 28%);
+  /* The bar spans the full width and floats over the content, so without this
+     its mostly-transparent gutter swallows clicks and drags aimed at whatever
+     scrolled underneath it. Only the button itself should be hit-testable. */
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
 }
 
 @media (max-width: 1180px) {
-  .block-editor {
-    grid-template-columns: 1fr;
-
-    .code {
-      position: static;
-
-      .cm-editor {
-        min-height: 420px;
-      }
+  .module-editor-panels {
+    .code .cm-editor {
+      min-height: 420px;
     }
   }
 }
 
 @media (max-width: 680px) {
-  .block-editor {
-    .properties {
-      .module-type-picker {
-        grid-template-columns: 1fr;
-      }
+  .module-editor-tabs {
+    .module-editor-tab {
+      margin-right: 5px;
+      padding: 7px 10px;
+      font-size: 12.5px;
+    }
+  }
 
-      .inner .module-item-type {
-        display: none;
-      }
+  .module-editor-panels {
+    .properties .inner .module-item-type {
+      display: none;
     }
   }
 }

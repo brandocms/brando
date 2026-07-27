@@ -58,7 +58,7 @@ defmodule BrandoAdmin.Components.Form.Input.Link do
           label: "Link",
           key: "link",
           value: nil,
-          important: true,
+          placement: :content,
           link_type: :url
         })
         |> Map.put(:action, :insert)

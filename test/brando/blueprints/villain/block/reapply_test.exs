@@ -136,7 +136,7 @@ defmodule Brando.Villain.Block.PictureBlockTest do
       vars: [
         %Var{
           type: :boolean,
-          important: true,
+          placement: :content,
           instructions: nil,
           key: "wide",
           label: "Is it wide?",
@@ -145,7 +145,7 @@ defmodule Brando.Villain.Block.PictureBlockTest do
         },
         %Var{
           type: :color,
-          important: true,
+          placement: :content,
           instructions: nil,
           key: "bg_color",
           label: "Background color",
@@ -206,7 +206,7 @@ defmodule Brando.Villain.Block.PictureBlockTest do
           label: "Wide?",
           type: :boolean,
           value_boolean: true,
-          important: true,
+          placement: :content,
           instructions: nil,
           placeholder: nil
         },
@@ -219,7 +219,7 @@ defmodule Brando.Villain.Block.PictureBlockTest do
           color_opacity: false,
           color_picker: true,
           palette_id: nil,
-          important: true,
+          placement: :content,
           instructions: nil,
           placeholder: nil
         }

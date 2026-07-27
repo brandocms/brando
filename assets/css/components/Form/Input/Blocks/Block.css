@@ -634,13 +634,23 @@ button.btn-palette {
     padding: 15px 10px;
   }
 
+  /* Rows are authored in the module editor and derived server-side from
+     `sequence` + `new_row`. The old `grid-auto-flow: dense` packed vars
+     itself, which could float a narrow var backwards past a wider one — the
+     rendered order stopped matching the authored order. */
   .block-vars {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 10px;
-    grid-auto-flow: dense;
-    grid-template-columns: repeat(12, 1fr);
+
+    .block-vars-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
 
     .variable {
+      min-width: 0;
       color: var(--brando-color-foreground);
       box-shadow: 0px 0px 1px #ccc;
       border-radius: 8px;
@@ -648,26 +658,32 @@ button.btn-palette {
       padding-top: 13px;
       padding-bottom: 12px;
       padding-right: 15px;
-
-      &.start-row {
-        border-left: none;
-        padding-left: 0;
-      }
     }
 
+    /* Fixed widths hold their exact measure so a lone half-width var reads as
+       half a row. Only `fill` grows. Gap is 10px. */
     .variable[data-size="full"] {
-      grid-column: span 12;
+      flex: 0 0 100%;
     }
 
     .variable[data-size="half"] {
-      grid-column: span 6;
+      flex: 0 0 calc(50% - 5px);
     }
 
     .variable[data-size="third"] {
-      grid-column: span 4;
+      flex: 0 0 calc(33.333% - 6.667px);
     }
+
     .variable[data-size="fourth"] {
-      grid-column: span 3;
+      flex: 0 0 calc(25% - 7.5px);
+    }
+
+    .variable[data-size="auto"] {
+      flex: 0 0 auto;
+    }
+
+    .variable[data-size="fill"] {
+      flex: 1 1 0;
     }
 
     .variable .field-wrapper {

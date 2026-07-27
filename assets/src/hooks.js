@@ -37,6 +37,7 @@ import SVGDropHook from './hooks/SVGDrop'
 import TipTapHook from './hooks/TipTap'
 import UploadManagerHook from './hooks/UploadManager'
 import UploadTriggerHook from './hooks/UploadTrigger'
+import VarLayoutHook from './hooks/VarLayout'
 import VideoPickerGridHook from './hooks/VideoPickerGrid'
 import VideoURLParserHook from './hooks/VideoURLParser'
 
@@ -81,6 +82,7 @@ export default (app) => {
     'Brando.TipTap': TipTapHook(app),
     'Brando.UploadManager': UploadManagerHook(app),
     'Brando.UploadTrigger': UploadTriggerHook(app),
+    'Brando.VarLayout': VarLayoutHook(app),
     'Brando.VideoPickerGrid': VideoPickerGridHook(app),
     'Brando.VideoURLParser': VideoURLParserHook(app),
   }

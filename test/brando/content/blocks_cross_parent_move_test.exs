@@ -276,7 +276,7 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
               label: "Title",
               key: "title",
               value: "Default title",
-              important: true,
+              placement: :content,
               width: :full
             }
           ]
