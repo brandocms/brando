@@ -13,21 +13,21 @@ either delivered, or prefixed **WON'T DO** for something decided against, with t
 would reopen it. Nothing decided against is left unchecked — an unchecked box here means somebody
 should still do it.
 
-## Where we stand (all measured 2026-07-28, 115 root blocks unless noted)
+## Where we stand (measured 2026-07-28/29, 115 root blocks unless noted)
 
 | Metric | Phase 0 baseline | Now | Target | |
 |---|---|---|---|---|
-| Mount, inbound | 6 271 KB | 4 313 KB | ≤ 1 500 KB | ✗ −31 % |
+| Mount, inbound | 6 271 KB | 3 823 KB | ≤ 1 500 KB | ✗ −39 % |
 | Mount, wall clock | 4 849 ms | 4 501 ms | ≤ 2 500 ms | ✗ −7 % |
 | **Retained session memory** | ~16 MB* | **4.31 MB** | ≤ 8 MB | ✅ |
-| **Save, inbound** | never measured | **74 KB** | — | was 1 082 KB |
-| Single edit, inbound | 23.0 KB | 12.5 KB | ≤ 11 KB (P2) | −46 % |
+| **Save, inbound** | never measured | **65 KB** | — | was 1 082 KB |
+| Single edit, inbound | 23.0 KB | 11.1 KB | ≤ 11 KB (P2) | ~at gate, −52 % |
 | Single edit, outbound | 5.6 KB | 5.0 KB | ≤ 3 KB (P2) | −11 % |
 | Insert, latency | 1 128 ms | 827 ms | ≤ 400 ms (P3) | −27 % |
 | Insert, inbound | 83.1 KB | 67.4 KB | ≤ 40 KB (P3) | −19 % |
-| Mount @40, inbound | — | 1 631 KB | ≤ 1 500 KB | ~at gate |
-| Mount @5, inbound | — | 333 KB | — | |
-| Nested mount, inbound | 3 334 KB | 2 127 KB | — | −36 % |
+| Mount @40, inbound | — | **1 409 KB** | ≤ 1 500 KB | ✅ under |
+| Mount @5, inbound | — | 312 KB | — | |
+| Nested mount, inbound | 3 334 KB | 1 723 KB | — | −48 % |
 
 \* The ~16 MB baseline was taken with the single-GC version of `measure_lv_memory.exs` and is
 probably overstated — see the measurement note below. The 4.31 MB figure is settled and
@@ -242,6 +242,27 @@ that blocks the mount target.
 
 ## Phase 3 — Structural-op latency and tree-wide re-render triggers
 
+**Two of these were measured on 2026-07-29 and the plan had them backwards.**
+`bench/tree-triggers.spec.js` covers both, since neither happens during a
+mount/edit/insert/save cycle:
+
+  * **Copy a block: 930 KB, 2.7 s @115 blocks.** The concern was real. `clipboard_meta` is
+    threaded to every block so each paste button can decide whether to show, and changing it
+    re-renders all 139 components. Converting the button from `:if` to an always-rendered
+    `hidden` node recovered only 53 KB and cost 14 KB of mount, so it was reverted — the
+    paste button is not the bulk. This is the same structural re-render as the old save
+    frame, and unlike `entry` we cannot simply stop passing it. A real fix takes clipboard
+    state out of the block tree entirely (ancestor attribute + CSS), which is a design
+    change, not a tweak.
+  * **Open the outline drawer: 45 KB, 1.0 s @115 blocks.** The opposite of what was assumed —
+    the payload is small; the cost is a second of *server* time rebuilding every root
+    changeset. The item below still stands, but as a latency fix, not a payload one.
+
+**Measurement gotcha:** a copy reaches BlockField through a `send_update`, so its diff lands
+after `syncLV` returns. Measured without an explicit wait, that traffic is billed to whatever
+runs next — which first made this look like a 1 MB outline drawer and a free copy.
+
+
 Insert latency measured at 387 ms @5 → 457 ms @40 → 1 128 ms @115 blocks. Payload is flat
 (79–83 KB), so this is server-side render work, not transport.
 
@@ -250,10 +271,12 @@ Insert latency measured at 387 ms @5 → 457 ms @40 → 1 128 ms @115 blocks. Pa
       re-evaluating and calling `update/2` on every root Block, or the op-store reduce.
 - [ ] `[liveview]` The 79 KB insert payload has a single 57 KB frame — identify it (likely the
       ModulePicker re-render) and make it not ride the insert.
-- [ ] `[liveview]` Stop clipboard copy from re-rendering the whole tree. `clipboard_meta` is read
-      inside the root comprehension body (`block_field.ex:1355`) and forwarded to children
-      (`render.ex:117`, `:266`), so copying one block re-renders every block at every level.
-      Move it to a lookup the blocks read on demand.
+- [ ] `[liveview]` Stop clipboard copy from re-rendering the whole tree — **confirmed at 930 KB
+      per copy**, see above. "Move it to a lookup the blocks read on demand" does not work:
+      every paste button genuinely needs the value, so any per-block assign changes. The
+      viable shape is to stop passing it to blocks at all and drive paste-button visibility
+      from a single ancestor attribute in CSS. The `{:multi, module_id}` paste context cannot
+      be expressed in CSS alone, so that case needs a different mechanism.
 - [ ] `[liveview]` Bound the entry-field fan-out. Typing in the entry title `send_update`s every
       entry-consuming block (`form.ex:3007`), each re-running
       `update_liquid_splits_entry_variables/2` + `render_module/1`. Debounce/coalesce it, or skip
@@ -263,9 +286,10 @@ Insert latency measured at 387 ms @5 → 457 ms @40 → 1 128 ms @115 blocks. Pa
       entry assign at all (`may_read_entry?/2`), so the fan-out now reaches only genuine consumers
       instead of every block. What remains is the cost *per consumer*, which is what this item is
       really about.
-- [ ] `[liveview]` Make the outline drawer cheap. `rebuild_outline_items/1`
-      (`block_field.ex:1499`) materializes and casts **every root changeset from scratch** on each
-      open. It can read the op store projection instead.
+- [ ] `[liveview]` Make the outline drawer cheap — **1.0 s of server time at 115 blocks**,
+      payload is only 45 KB. `rebuild_outline_items/1` materializes and casts every root
+      changeset from scratch on each open, to read eight fields off it. It can read the op
+      store projection instead. Note it is also called on structural ops, not just on open.
 - [ ] Re-measure insert at 115 blocks. Gate: ≤ 400 ms.
 
 ## Phase 4 — Close the test gap
@@ -282,10 +306,13 @@ anything near the sizes that produced the worst numbers in this repo's history.
       the property the whole architecture decision rests on.
 - [ ] `[test]` Nested-child coverage beyond the current 2 specs. `dffc72e79` noted every blocks
       e2e persistence spec is root-blocks-only, which is exactly why those bugs survived.
-- [ ] `[docs]` Fix `.claude/skills/brando-blocks/SKILL.md` — sections 5–10 still document the
-      deleted pre-refactor architecture (`send_form_to_parent`, gather protocol,
-      `position_response_tracker`) that the Phase 3 section at the bottom of the same file says was
-      removed. Two contradictory architectures in one reference is a live trap for future work.
+- [x] `[docs]` Fix `.claude/skills/brando-blocks/SKILL.md` — **done 2026-07-29.** Sections 5, 7
+      and 8 documented the deleted pre-refactor architecture (`send_form_to_parent`, the save
+      gather cascade, `position_response_tracker`, `signal_position_update`) while the section at
+      the end of the same file said those were removed. Verified none of those functions exist in
+      `lib/` any more, then rewrote the lifecycle, event-flow and parent/child sections against
+      the current single-owner + op-store design, with an explicit "these do not exist" note so
+      the old names cannot be reintroduced by search.
 
 ## Phase 5 — Targeted Svelte islands (conditional)
 

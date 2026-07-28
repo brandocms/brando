@@ -151,24 +151,26 @@ end
 ## 5. Component Lifecycle
 
 ### BlockField
-1. `mount/1` — minimal (just `{:ok, socket}`)
-2. `update(assigns, socket)` — catch-all:
-   - `assign(assigns)` → `initialize_blocks(assigns)` → `assign_templates()` → `assign_module_set()` → `reset_position_response_tracker()`
-3. `initialize_blocks` — guarded by `blocks_initialized` assign:
-   - Maps `entry_blocks` to forms via `to_change_form/4`
-   - Creates `block_list` (list of UIDs), `root_changesets` (list of `{uid, nil}` tuples)
-   - Sends initial position updates to all blocks
+1. `mount/1` — `{:ok, assign(socket, :outline_items, [])}`
+2. `update(assigns, socket)` — catch-all: `initialize_blocks/2`, guarded so it runs once
+3. `initialize_blocks` — builds `@seed_forms` (a uid-keyed map of mount-time seeds) and
+   the op store via `assign_ops(Ops.from_entry_blocks(entry_blocks))`. `@root_order` is the
+   store's render projection and is assigned **only** through `assign_ops/2`.
 
 ### Block
-1. `mount/1` — sets `block_initialized: false`, empty `children_forms`, `position_response_tracker`, etc. Attaches `Events.attach_block_events/1` hook.
-2. `update(assigns, socket)` — catch-all (runs on every update):
-   - Assigns from parent, computes `uid`, `type`, `multi`, `has_vars?`, `has_table_rows?`, `has_children?`
-   - Uses `assign_new` extensively — values set once on first render are NOT overwritten on subsequent updates
-   - Calls `maybe_assign_children()`, `maybe_assign_module()`, `maybe_assign_container()`, `maybe_assign_fragment()`
-   - `maybe_parse_module()` → `maybe_render_module()` → `maybe_get_live_preview_status()`
+1. `mount/1` — attaches `Events.attach_block_events/1`
+2. `update(assigns, socket)` — catch-all, runs on every parent re-render:
+   - After first mount it **drops `:form` and `:children`** from incoming assigns — the
+     block owns its form exclusively from then on. It also drops `:entry` for blocks whose
+     module never reads it (`may_read_entry?/2`), so a replaced entry struct does not
+     re-render the whole tree.
+   - `assign_new` for uid/type/multi/has_vars? etc — set once, never overwritten
+   - `maybe_assign_children` → `maybe_assign_module` → `maybe_parse_module` →
+     `maybe_render_module`
    - Sets `block_initialized: true`
 
-**Key guard**: `assign_new` prevents re-initialization on validate. Changing a var triggers `validate_block` → new form → `update` → but `assign_new` preserves original values.
+**Key guard**: `assign_new` plus the `Map.drop` above are what stop a parent re-render from
+clobbering local editing state — the historical clobber/FK-wipe class of bug.
 
 ---
 
@@ -208,14 +210,14 @@ For new blocks (nil ID): filters out `:replace` action from refs/vars, forces `:
 3. Restore `original_block_identifiers` from socket assigns
 4. Clear vars/refs for new blocks (nil ID) to avoid duplicate PK warnings
 5. `Block.block_changeset(block_for_changeset, params, user_id)`
-6. `render_and_update_block_changeset` → `send_form_to_parent`
+6. `render_and_update_block_changeset` → `Block.assign_block_form/2` (assigns `:form`, emits the update op)
 
 **Entry block** (`"entry_block"` params):
 1. Use `changeset.data` (original DB values) as base — NOT `apply_changes`
 2. Same filtering: persisted table_rows, original block_identifiers, clear vars/refs for new
 3. `block_module.changeset(block_for_changeset, params, user_id)` — runs full pipeline including `cast_assoc(:block)`
 4. Check for container active status flip → force render
-5. `render_and_update_entry_block_changeset` → `send_form_to_parent`
+5. `render_and_update_entry_block_changeset` → `Block.assign_block_form/2` (assigns `:form`, emits the update op)
 
 **Critical difference**: entry_block uses `changeset.data` as base; child_block uses `apply_changes`. This is because `cast_assoc` for entry_blocks compares params against `data` — using `apply_changes` would bake in previous edits and `cast_assoc` wouldn't detect them.
 
@@ -225,68 +227,68 @@ For new blocks (nil ID): filters out `:replace` action from refs/vars, forces `:
 
 ### Validation Flow
 ```
-User types in block form
-  → phx-change="validate_block" (target: block's @myself)
+User types in a block form
+  → phx-change="validate_block" (target: the block's @myself)
   → Events.handle_block_event("validate_block", params, socket)
-  → Build changeset from params
-  → render_and_update_*_changeset (renders Liquex template if module)
-  → assign(:form, updated_form)
-  → send_form_to_parent()  →  send_update(parent_cid, %{event: "update_block", form: form})
-  → Parent (BlockField or Block) replaces form in entry_blocks_forms/children_forms by UID
+  → build the changeset from params
+  → Block.assign_block_form/2   ← the chokepoint: assigns :form AND emits
+                                   {:update, uid, diff} to BlockField's reducer
   → maybe_update_live_preview_block()
 ```
+There is no form handoff to the parent. The block keeps its form; the parent gets a param
+diff. See "Block Editor: single-owner state & ops" at the end of this file for why.
 
-### Save Flow (Changeset Collection Cascade)
+### Save Flow
 ```
 Form sends: send_update(BlockField, event: "fetch_root_blocks", tag: :save)
-  → BlockField: for each block_uid in block_list:
-      send_update(Block, id: "block-#{uid}", event: "fetch_root_block", tag: :save)
-        → Block (if has children): for each child:
-            send_update(Block, id: "#{id}-child-#{uid}", event: "fetch_child_block")
-              → Leaf Block: send_update(parent_cid, event: "provide_child_block", changeset: ...)
-        → Block (if no children): send_update(parent_cid, event: "provide_root_block", changeset: ...)
-  → provide_child_block: collects all child changesets, puts them via put_assoc(:children, ...)
-    → When all collected: sends provide_root_block to BlockField
-  → provide_root_block: BlockField collects into root_changesets
-    → When all collected: sends provide_root_blocks to Form (via form_cid)
-  → Form receives root_changesets, puts them into the main changeset for save
+  → BlockField materializes every root from the op store in ONE pass
+    (Ops.materialize_root/2) — no messages to blocks, no collection cascade
+  → send_update(form_cid, event: "provide_root_blocks", ...)
 ```
+After the save completes, `reload_all_blocks/1` hands every mounted root a fresh form via
+the `replace_form` cascade, so blocks stop diffing against pre-save nil-id data.
 
 ### Duplication Flow
 ```
 Events.handle_block_event("duplicate_block")
-  → If has children: send "fetch_changeset_for_duplication" to each child
-    → Children cascade down, collecting changesets
-    → When populated: parent receives "duplicate_block" with populated: true
-  → duplicate_block (populated or no children):
-    → apply_changes → clear IDs → generate new UID
-    → Villain.duplicate_vars/duplicate_table_rows/duplicate_refs/duplicate_children
-    → Insert into entry_blocks_forms/children_forms at sequence + 1
+  → has children: send "fetch_changeset_for_duplication" to each child, which reply with
+    "provide_changeset_for_duplication" until the parent is `populated: true`
+  → then: duplicate via ContentBlocks.duplicate_block/2, put a seed form, and apply an
+    {:insert, uid, sequence, diff} op
 ```
+Duplication is the one place a changeset still travels between components, because a copy
+needs the whole materialized subtree.
 
-### Insert/Delete/Reposition
-- **Insert**: `build_block`/`build_container`/`build_fragment` → insert into `block_list` and `entry_blocks_forms`/`children_forms` at sequence
-- **Delete**: remove from `block_list`, reject from forms, update `root_changesets`/`changesets`
-- **Reposition**: SortableJS fires `reposition` event → reorder `block_list`, `root_changesets`/`changesets`, forms to match new order → send position updates to all blocks
+### Insert / Delete / Reorder
+All are **ops applied to the store**, not list surgery:
+`{:insert, uid, seq, diff}`, `{:delete, uid}`, `{:reorder_children, parent, uids}`. Root-level
+structure is applied by BlockField directly; everything else arrives from blocks through
+`Block.emit_block_op/2`. Blocks read their position from the `list_index` prop supplied by
+the keyed `:for` — never from a form's `sequence` field, which is stale by design.
 
 ---
 
 ## 8. Parent-Child Communication
 
 ### Upward (Child → Parent)
-- **`send_form_to_parent(socket)`** — after validate_block, sends updated form to parent via `send_update(parent_cid, %{event: "update_block", level: level, form: form})`
-- **`provide_child_block`** / **`provide_root_block`** — during save cascade, child sends its changeset to parent
-- **`signal_position_update`** — child confirms it received a position update
+- **`block_op`** — the main channel. Carries a named op with **param diffs, never changesets
+  or forms** (`Ops.block_diff_params/1`).
+- **`provide_changeset_for_duplication`** — duplication only, as above.
+- **`register_block_wanting_entry`** — a block whose module reads `entry.*` registers for the
+  targeted entry fan-out.
 
 ### Downward (Parent → Child)
-- **`send_update(Block, id: ..., event: ...)`** — parent messages children for:
-  - `fetch_root_block` / `fetch_child_block` (save cascade)
-  - `update_sequence` (after reposition)
-  - `enable_live_preview` / `disable_live_preview`
-  - `clear_changesets`
+- **`replace_form`** — the ONLY sanctioned form handoff after mount. Used post-save and on
+  remote-sync apply, and it cascades down the tree. Anything else re-introduces the clobber
+  class.
+- Structural and UI messages: `set_collapsed`, `set_children_collapsed`, `insert_block`,
+  `insert_pasted_block`, `paste_block`, `paste_child_block`, `outline_reorder_child`,
+  `extract_child`, `update_ref`, `update_ref_data`, `update_block_var`,
+  `update_entry_field`, `enable_live_preview` / `disable_live_preview`.
 
-### Position Response Tracker
-Both BlockField and Block maintain a `position_response_tracker` — a list of `{uid, boolean}` tuples. After sending position updates to all children, it waits for all `signal_position_update` responses before triggering `update_live_preview` on the form.
+> There is **no** position-response tracker, no `send_form_to_parent`, and no
+> `signal_position_update`. Those belonged to the pre-2026-07 architecture and were removed
+> with it — see "Block Editor: single-owner state & ops" at the end of this file.
 
 ---
 
