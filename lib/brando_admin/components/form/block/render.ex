@@ -357,7 +357,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         modal={@module_picker_id}
         clipboard_meta={@clipboard_meta}
         paste_context={:root}
-        paste_click={JS.push("paste_block", target: @target)}
+        paste_event="paste_block"
+        paste_target={@target}
       />
 
       <div
@@ -478,7 +479,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         modal={@module_picker_id}
         clipboard_meta={@clipboard_meta}
         paste_context={:root}
-        paste_click={JS.push("paste_block", target: @target)}
+        paste_event="paste_block"
+        paste_target={@target}
       />
 
       <div
@@ -535,7 +537,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             modal={@module_picker_id}
             clipboard_meta={@clipboard_meta}
             paste_context={:container}
-            paste_click={JS.push("paste_child_block", target: @target)}
+            paste_event="paste_child_block"
+            paste_target={@target}
           />
         <% else %>
           <div class="blocks-empty-instructions">
@@ -546,7 +549,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             modal={@module_picker_id}
             clipboard_meta={@clipboard_meta}
             paste_context={:container}
-            paste_click={JS.push("paste_child_block", target: @target)}
+            paste_event="paste_child_block"
+            paste_target={@target}
           />
         <% end %>
       </div>
@@ -621,7 +625,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         modal={@module_picker_id}
         clipboard_meta={@clipboard_meta}
         paste_context={@paste_context}
-        paste_click={JS.push("paste_block", target: @target)}
+        paste_event="paste_block"
+        paste_target={@target}
       />
 
       <div
@@ -745,7 +750,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             modal={@module_picker_id}
             clipboard_meta={@clipboard_meta}
             paste_context={{:multi, @module_id}}
-            paste_click={JS.push("paste_child_block", target: @target)}
+            paste_event="paste_child_block"
+            paste_target={@target}
           />
         <% else %>
           <%= if @multi do %>
@@ -757,7 +763,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               modal={@module_picker_id}
               clipboard_meta={@clipboard_meta}
               paste_context={{:multi, @module_id}}
-              paste_click={JS.push("paste_child_block", target: @target)}
+              paste_event="paste_child_block"
+              paste_target={@target}
             />
           <% end %>
         <% end %>
@@ -1826,7 +1833,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :click, :any, required: true
   attr :clipboard_meta, :map, default: nil
   attr :paste_context, :any, default: nil
-  attr :paste_click, :any, default: nil
+  attr :paste_event, :string, default: nil
+  attr :paste_target, :any, default: nil
   # The module picker is one shared modal, so opening it is a plain id rather
   # than an inlined `show_modal/1` — see `assets/src/uiCommands.js`. A plus sits
   # above every block at every level, which made this one of the most-repeated
@@ -1851,7 +1859,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         :if={@show_paste}
         class="block-paste"
         type="button"
-        phx-click={@paste_click}
+        phx-click={@paste_event}
+        phx-target={@paste_target}
       >
         <.icon name="hero-clipboard-document-check" />
       </button>

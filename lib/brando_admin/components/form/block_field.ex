@@ -1362,7 +1362,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           modal={@module_picker_id}
           clipboard_meta={@clipboard_meta}
           paste_context={:root}
-          paste_click={JS.push("paste_block_at_end", target: @myself)}
+          paste_event="paste_block_at_end"
+          paste_target={@myself}
         />
         <div :if={@block_bin != []} id={"block-field-#{@block_field}-bin"} class="block-bin-toast" data-testid="block-bin">
           <span class="block-bin-message">
