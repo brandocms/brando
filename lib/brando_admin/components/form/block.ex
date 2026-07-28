@@ -2011,25 +2011,47 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   # if the target param updated is a var and it's not an image or file, we extract the value
   # and update the liquex block var
-  def maybe_update_liquex_block_var(socket, [_block_type, "vars", _idx, "value"] = params_target, params) do
+  def maybe_update_liquex_block_var(socket, [_block_type, "vars", idx, "value"] = params_target, params) do
     var_target =
       params_target
       |> List.delete_at(0)
       |> List.delete_at(-1)
 
-    var_params = get_in(params, var_target)
-    value = Map.get(var_params, "value")
-    var_key = Map.get(var_params, "key")
+    value = params |> get_in(var_target) |> Map.get("value")
 
-    var_type =
-      var_params
-      |> Map.get("type")
-      |> String.to_existing_atom()
-
-    update_liquex_block_var(socket, var_key, var_type, %{value: value})
+    # `key` and `type` describe the var's *definition*, which this screen never
+    # edits — only `value` changes here. Read them from the changeset rather
+    # than the submitted params: requiring the DOM to round-trip a var's whole
+    # definition on every keystroke is what made these hidden inputs 227 KB of
+    # a 115-block mount, and reading them from params meant dropping one input
+    # crashed the preview with `binary_to_existing_atom(nil)` instead of just
+    # skipping an update.
+    case var_definition(socket, idx) do
+      {nil, _} -> socket
+      {_, nil} -> socket
+      {var_key, var_type} -> update_liquex_block_var(socket, var_key, var_type, %{value: value})
+    end
   end
 
   def maybe_update_liquex_block_var(socket, _, _), do: socket
+
+  # The var changesets are in the same order the form rendered them, so the
+  # params index addresses the same var. Returns nils rather than raising if it
+  # cannot be resolved — a missed live-preview refresh is recoverable, a crashed
+  # editor process is not.
+  defp var_definition(socket, idx) when is_binary(idx) do
+    case Integer.parse(idx) do
+      {index, ""} -> var_definition(socket, index)
+      _ -> {nil, nil}
+    end
+  end
+
+  defp var_definition(socket, index) when is_integer(index) do
+    case socket |> block_vars() |> Enum.at(index) do
+      nil -> {nil, nil}
+      var_cs -> {Changeset.get_field(var_cs, :key), Changeset.get_field(var_cs, :type)}
+    end
+  end
 
   def update_liquex_block_var(socket, var_key, :image, data) do
     path = get_in(data, [:image, Access.key(:path)])

@@ -234,6 +234,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign(:upload_kind, if(Map.get(assigns, :on_change), do: "block_var", else: "entry_var"))
     |> assign(:target, Map.get(assigns, :target, nil))
     |> assign(:should_render?, should_render?(Map.get(assigns, :render, :all), placement))
+    # Blank, not just nil: after a validate round trip the id comes back as the
+    # "" this component's own hidden input submitted. See `Render.carried_var/1`,
+    # which carries the same distinction for vars with no UI at all.
+    |> assign(:unsaved_var?, var[:id].value in [nil, ""])
     |> assign(:placement, placement)
     |> assign(:label, get_field(changeset, :label))
     |> assign(:key, var[:key].value)
@@ -557,14 +561,25 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <div id={"#{@var.id}-value"}>
             <Input.input type={:hidden} field={@var[:id]} />
             <Input.input type={:hidden} field={@var[:_persistent_id]} value={@var.index} />
-            <Input.input type={:hidden} field={@var[:key]} />
-            <Input.input type={:hidden} field={@var[:label]} />
-            <Input.input type={:hidden} field={@var[:type]} />
-            <Input.input type={:hidden} field={@var[:placement]} />
-            <Input.input type={:hidden} field={@var[:new_row]} />
-            <Input.input type={:hidden} field={@var[:instructions]} />
-            <Input.input type={:hidden} field={@var[:placeholder]} />
-            <Input.input type={:hidden} field={@var[:width]} />
+            <%!-- A var's *definition* — key, label, type, placement, layout —
+                  is copied from the module and never edited here; this screen
+                  only edits `value`. It has to round-trip anyway while the var
+                  is unsaved, because `cast_assoc` matches by primary key and
+                  rebuilds a pk-less record from whatever params arrive. Once
+                  the var has an id, cast matches it and leaves every field the
+                  params don't mention alone — so eight inputs per var stop
+                  being emitted for the entries editors actually open.
+                  Measured: 227 KB of a 4 313 KB mount at 115 blocks. --%>
+            <%= if @unsaved_var? do %>
+              <Input.input type={:hidden} field={@var[:key]} />
+              <Input.input type={:hidden} field={@var[:label]} />
+              <Input.input type={:hidden} field={@var[:type]} />
+              <Input.input type={:hidden} field={@var[:placement]} />
+              <Input.input type={:hidden} field={@var[:new_row]} />
+              <Input.input type={:hidden} field={@var[:instructions]} />
+              <Input.input type={:hidden} field={@var[:placeholder]} />
+              <Input.input type={:hidden} field={@var[:width]} />
+            <% end %>
 
             <.render_value_inputs
               type={@type}
