@@ -1223,16 +1223,22 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 form_id={@form_id}
               />
             </.polymorphic_embed_inputs_for>
-            <!-- ref assocs -->
-            <Input.input type={:hidden} field={ref_form[:description]} />
-            <Input.input type={:hidden} field={ref_form[:name]} />
-            <Input.input type={:hidden} field={ref_form[:uid]} />
+            <%!-- Ref identity and media associations. Same rule as vars: once
+                  the ref has a primary key, `cast_assoc` matches on it and
+                  leaves the fields the params don't mention alone, so only the
+                  identity needs to round-trip. An unsaved ref has nothing to
+                  match on, so it carries everything. --%>
             <Input.input type={:hidden} field={ref_form[:id]} />
             <Input.input type={:hidden} field={ref_form[:_persistent_id]} value={ref_form.index} />
-            <Input.input type={:hidden} field={ref_form[:image_id]} />
-            <Input.input type={:hidden} field={ref_form[:video_id]} />
-            <Input.input type={:hidden} field={ref_form[:gallery_id]} />
-            <Input.input type={:hidden} field={ref_form[:file_id]} />
+            <%= if ref_form[:id].value in [nil, ""] do %>
+              <Input.input type={:hidden} field={ref_form[:description]} />
+              <Input.input type={:hidden} field={ref_form[:name]} />
+              <Input.input type={:hidden} field={ref_form[:uid]} />
+              <Input.input type={:hidden} field={ref_form[:image_id]} />
+              <Input.input type={:hidden} field={ref_form[:video_id]} />
+              <Input.input type={:hidden} field={ref_form[:gallery_id]} />
+              <Input.input type={:hidden} field={ref_form[:file_id]} />
+            <% end %>
           </section>
         <% end %>
       </.inputs_for>
