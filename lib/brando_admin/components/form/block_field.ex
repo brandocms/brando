@@ -660,7 +660,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> assign(:seed_forms, Map.new(entry_blocks_forms, &{get_form_block_uid(&1), &1}))
     |> assign_ops(Ops.from_entry_blocks(entry_blocks))
-    |> assign(:module_picker_id, "#block-field-#{assigns.block_field}-module-picker")
+    # Bare id, not a selector — consumed by `data-ui-modal-show`.
+    |> assign(:module_picker_id, "block-field-#{assigns.block_field}-module-picker")
     |> assign(:clipboard_meta, nil)
     |> assign(:block_bin, [])
     |> assign(:pending_remote_snapshots, %{})
@@ -1241,8 +1242,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
             <button
               type="button"
               class="block-field-dropdown-toggle"
-              phx-click={toggle_dropdown("#block-field-#{@block_field}-actions-dropdown")}
-              phx-click-away={hide_dropdown("#block-field-#{@block_field}-actions-dropdown")}
+              data-ui-dropdown-toggle={"block-field-#{@block_field}-actions-dropdown"}
             >
               <.icon name="hero-ellipsis-horizontal-circle" />
             </button>
@@ -1256,7 +1256,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                   phx-click={
                     JS.push("rebuild_outline", target: @myself)
                     |> toggle_drawer("#block-field-#{@block_field}-outline")
-                    |> hide_dropdown("#block-field-#{@block_field}-actions-dropdown")
                   }
                 >
                   <.icon name="hero-bars-3-bottom-left" /> {gettext("Block outline")}
@@ -1266,10 +1265,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
               <li>
                 <button
                   type="button"
-                  phx-click={
-                    JS.push("collapse_root_blocks", target: @myself)
-                    |> hide_dropdown("#block-field-#{@block_field}-actions-dropdown")
-                  }
+                  phx-click="collapse_root_blocks"
+                  phx-target={@myself}
                 >
                   <.icon name="hero-eye-slash" /> {gettext("Collapse root blocks")}
                 </button>
@@ -1277,10 +1274,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
               <li>
                 <button
                   type="button"
-                  phx-click={
-                    JS.push("expand_root_blocks", target: @myself)
-                    |> hide_dropdown("#block-field-#{@block_field}-actions-dropdown")
-                  }
+                  phx-click="expand_root_blocks"
+                  phx-target={@myself}
                 >
                   <.icon name="hero-eye" /> {gettext("Expand root blocks")}
                 </button>
@@ -1288,10 +1283,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
               <li>
                 <button
                   type="button"
-                  phx-click={
-                    JS.push("collapse_multi_children", target: @myself)
-                    |> hide_dropdown("#block-field-#{@block_field}-actions-dropdown")
-                  }
+                  phx-click="collapse_multi_children"
+                  phx-target={@myself}
                 >
                   <.icon name="hero-eye-slash" /> {gettext("Collapse multi blocks")}
                 </button>
@@ -1299,10 +1292,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
               <li>
                 <button
                   type="button"
-                  phx-click={
-                    JS.push("expand_multi_children", target: @myself)
-                    |> hide_dropdown("#block-field-#{@block_field}-actions-dropdown")
-                  }
+                  phx-click="expand_multi_children"
+                  phx-target={@myself}
                 >
                   <.icon name="hero-eye" /> {gettext("Expand multi blocks")}
                 </button>
@@ -1367,7 +1358,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         </div>
 
         <Block.plus
-          click={JS.push("show_block_picker", target: @myself) |> show_modal(@module_picker_id)}
+          click={JS.push("show_block_picker", target: @myself)}
+          modal={@module_picker_id}
           clipboard_meta={@clipboard_meta}
           paste_context={:root}
           paste_click={JS.push("paste_block_at_end", target: @myself)}

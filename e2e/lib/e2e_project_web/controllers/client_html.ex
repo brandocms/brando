@@ -1,7 +1,6 @@
 defmodule E2eProjectWeb.ClientHTML do
   use BrandoWeb, :html
   # use Gettext, backend: E2eProjectWeb.Gettext
-  use Phoenix.Component
   embed_templates "client_html/*"
 
   def list_clients(assigns) do

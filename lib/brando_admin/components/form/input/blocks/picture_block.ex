@@ -135,6 +135,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             multi={false}
             target={@target}
             ref_form={@ref_form}
+            config_open={@config_open}
           >
             <:description>
               <%= if @ref_description not in ["", nil] do %>
@@ -146,7 +147,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             <div
               :if={@extracted_path}
               class={["preview", (@compact && "compact") || "classic"]}
-              phx-click={!@compact && show_modal("#block-#{@uid}_config")}
+              phx-click={!@compact && "open_block_config"}
+              phx-value-uid={@uid}
+              phx-target={@target}
             >
               <div class="image-wrapper">
                 <Content.image image={@image} size={:largest} />
@@ -162,7 +165,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                 </button>
               </div>
               <div class="image-info">
-                <figcaption phx-click={!@compact && show_modal("#block-#{@uid}_config")}>
+                <figcaption
+                  phx-click={!@compact && "open_block_config"}
+                  phx-value-uid={@uid}
+                  phx-target={@target}
+                >
                   <div class="info-wrapper">
                     <div class="filename">{@file_name}</div>
                     <div class="title-and-alt">
@@ -181,7 +188,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                       </div>
                     </div>
                   </div>
-                  <button class="tiny" type="button" phx-click={show_modal("#block-#{@uid}_config")}>
+                  <button class="tiny" type="button" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
                     {gettext("Edit image")}
                   </button>
                 </figcaption>
@@ -217,7 +224,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               <div class="instructions">
                 <span>{gettext("Click or drag an image &uarr; to upload") |> raw()}</span>
                 <br />
-                <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")}>
+                <button type="button" class="tiny" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
                   {gettext("Pick an existing image")}
                 </button>
               </div>
@@ -281,7 +288,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                       type="button"
                       class="secondary"
                       phx-click={
-                        hide_modal("#block-#{@uid}_config")
+                        JS.push("close_block_config", target: @target)
                         |> JS.push("open_image_editor", target: @myself)
                         |> toggle_drawer("#image-editor-drawer")
                       }

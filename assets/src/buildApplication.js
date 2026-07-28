@@ -8,6 +8,7 @@ import Toast from './Toast'
 
 import brandoHooks from './hooks'
 import initializeLiveSocket from './initializeLiveSocket'
+import installUICommands from './uiCommands'
 import configureFader from './config/FADER'
 import { alertError } from './alerts'
 
@@ -78,6 +79,7 @@ export default (hooks, enableDebug = false) => {
     if (enableDebug) {
       app.liveSocket.enableDebug()
     }
+    installUICommands(app)
     // if login screen, do some animations
     const el = Dom.find('#application-login')
     if (el) {

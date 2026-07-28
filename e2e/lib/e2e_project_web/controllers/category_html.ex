@@ -1,7 +1,6 @@
 defmodule E2eProjectWeb.CategoryHTML do
   use BrandoWeb, :html
   # use Gettext, backend: E2eProjectWeb.Gettext
-  use Phoenix.Component
   embed_templates "category_html/*"
 
   def list_categories(assigns) do

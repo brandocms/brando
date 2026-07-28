@@ -38,6 +38,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
           multi={false}
           target={@target}
           ref_form={@ref_form}
+          config_open={@config_open}
         >
           <:description>{block_data[:source].value}</:description>
           <:config>
@@ -86,7 +87,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
                   </svg>
                 </figure>
                 <div class="instructions">
-                  <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")}>
+                  <button type="button" class="tiny" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
                     {gettext("Configure map block")}
                   </button>
                 </div>

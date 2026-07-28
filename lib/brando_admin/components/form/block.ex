@@ -870,10 +870,19 @@ defmodule BrandoAdmin.Components.Form.Block do
     # After first mount this block owns its form exclusively — a parent
     # re-render must never overwrite local editing state with the parent's
     # seed copy (the historical clobber/FK-wipe class). Structural and shared
-    # assigns (list_index, entry, clipboard_meta, ...) still flow through.
+    # assigns (list_index, clipboard_meta, ...) still flow through.
+    #
+    # `:entry` is dropped for blocks whose module never reads it. The entry
+    # struct is replaced wholesale on every save and on every entry-field
+    # edit, and letting that reach a block re-renders its entire subtree —
+    # measured at 115 root blocks, that alone was **1 040 KB of the 1 062 KB
+    # save frame**, re-sending form markup whose values had not changed. The
+    # blocks that do read entry are exactly the ones that registered for it in
+    # `maybe_register_block_wanting_entry/1`, and they keep receiving it
+    # through the targeted `send_update` fan-out that registration exists for.
     assigns =
       if socket.assigns[:block_initialized] do
-        Map.drop(assigns, [:form, :children])
+        Map.drop(assigns, drop_on_reentry(socket))
       else
         assigns
       end
@@ -940,9 +949,15 @@ defmodule BrandoAdmin.Components.Form.Block do
         identifiers -> identifiers
       end
     end)
+    # Bare id, not a selector — it is handed to `data-ui-modal-show`, which the
+    # delegated handler in `assets/src/uiCommands.js` resolves.
     |> assign_new(:module_picker_id, fn ->
-      "#block-field-#{assigns.block_field}-module-picker"
+      "block-field-#{assigns.block_field}-module-picker"
     end)
+    # uid of the block or ref whose config modal is open, or nil. A block can
+    # own several ref configs, so this is an id rather than a boolean. Config
+    # chrome renders only for the open one — see `Render.module_config/1`.
+    |> assign_new(:config_open, fn -> nil end)
     |> maybe_assign_children()
     |> maybe_assign_module()
     |> maybe_assign_container()
@@ -1309,7 +1324,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     form_id = socket.assigns.form_id
 
     register_block_wanting_entry(block_ref, form_id)
-    socket
+    assign(socket, :consumes_entry?, true)
   end
 
   def maybe_register_block_wanting_entry(%{assigns: %{block_initialized: false}} = socket) do
@@ -1317,6 +1332,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     # assign statements, or in the module code itself
     module_code = socket.assigns.module_code
 
+    # Registration is unchanged — this has always been the criterion for the
+    # targeted entry fan-out.
     if Regex.run(~r/(?:entry\.|@entry\.)[\w]+/, module_code) do
       block_ref = {__MODULE__, socket.assigns.id}
       form_id = socket.assigns.form_id
@@ -1324,10 +1341,37 @@ defmodule BrandoAdmin.Components.Form.Block do
       register_block_wanting_entry(block_ref, form_id)
     end
 
-    socket
+    assign(socket, :consumes_entry?, may_read_entry?(socket, module_code))
   end
 
   def maybe_register_block_wanting_entry(socket), do: socket
+
+  # Deliberately a *wider* test than the registration regex above, because the
+  # two failure modes are not symmetric. Getting this wrong in the permissive
+  # direction costs a re-render on entry change — the behaviour before `:entry`
+  # was ever dropped. Getting it wrong in the restrictive direction means a
+  # block renders stale entry data forever, silently.
+  #
+  # So the registration regex is not reusable here: it only catches a literal
+  # `entry.<field>`, and misses aliasing (`{% assign e = entry %}` … `{{ e.x }}`)
+  # — which the comment above acknowledges the check is supposed to cover. Any
+  # mention of the word at all keeps the block on the old behaviour, and a HEEx
+  # module always does: it receives `entry` through its render context
+  # (`Render.heex_assigns/1`), where no regex over the source would find it.
+  defp may_read_entry?(socket, module_code) do
+    socket.assigns.module_type == :heex or Regex.match?(~r/\bentry\b/, module_code)
+  end
+
+  # `consumes_entry?` is only set once a module has been resolved, so a block
+  # without one (containers, fragments) keeps the old behaviour of accepting
+  # every entry update — nil is deliberately not treated as false.
+  defp drop_on_reentry(socket) do
+    if socket.assigns[:consumes_entry?] == false do
+      [:form, :children, :entry]
+    else
+      [:form, :children]
+    end
+  end
 
   defp maybe_parse_module(%{assigns: %{module_not_found: true}} = socket), do: socket
 
@@ -1394,7 +1438,6 @@ defmodule BrandoAdmin.Components.Form.Block do
 
       socket
       |> assign(:liquid_splits, splits)
-      |> assign(:vars, vars)
     end
   end
 
@@ -1404,20 +1447,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     if block_initialized do
       socket
     else
-      belongs_to = socket.assigns.belongs_to
-      changeset = socket.assigns.form.source
-      changeset = maybe_preload_changeset_data(changeset, :vars, belongs_to)
-
-      vars =
-        if belongs_to == :root do
-          changeset
-          |> Changeset.get_field(:block)
-          |> Changeset.change()
-          |> Changeset.get_assoc(:vars)
-        else
-          Changeset.get_assoc(changeset, :vars)
-        end
-
       heex_compiled_module =
         try do
           Brando.Villain.HeexRenderer.get_or_compile!(
@@ -1434,13 +1463,12 @@ defmodule BrandoAdmin.Components.Form.Block do
 
       socket
       |> assign(:liquid_splits, [])
-      |> assign(:vars, vars)
       |> assign(:heex_compiled_module, heex_compiled_module)
     end
   end
 
   defp maybe_parse_module(socket) do
-    assign(socket, liquid_splits: [], vars: [])
+    assign(socket, liquid_splits: [])
   end
 
   # if the assoc is not preloaded, meaning it is an %Ecto.Association.NotLoaded{} struct,
@@ -1490,11 +1518,31 @@ defmodule BrandoAdmin.Components.Form.Block do
       Brando.Datasource.list_results(
         module,
         query,
-        socket.assigns.vars,
+        block_vars(socket),
         Map.get(entry, :language)
       )
 
     assign(socket, :available_identifiers, available_identifiers)
+  end
+
+  # The var changesets, built when asked for rather than held for the
+  # component's lifetime. Retaining them cost 40.3% of a Block component's
+  # memory (~18 KB of 45.8 KB) across every block in an entry, to serve one
+  # caller: the datasource identifier query on datasource blocks only. The
+  # editing surfaces build their own forms from `@form[:vars]` and never read
+  # this.
+  defp block_vars(%{assigns: %{belongs_to: :root}} = socket) do
+    socket.assigns.form.source
+    |> maybe_preload_changeset_data(:vars, :root)
+    |> Changeset.get_field(:block)
+    |> Changeset.change()
+    |> Changeset.get_assoc(:vars)
+  end
+
+  defp block_vars(socket) do
+    socket.assigns.form.source
+    |> maybe_preload_changeset_data(:vars, socket.assigns.belongs_to)
+    |> Changeset.get_assoc(:vars)
   end
 
   # we don't touch children_forms if the block is already initialized

@@ -1,3 +1,27 @@
+/* A server-gated modal (block config) has no chrome in the DOM until it opens,
+   so it cannot fade in via LiveView's JS transitions the way a pre-rendered one
+   does — it simply arrives visible. These keyframes give it the same 200ms
+   entrance the JS `show_modal/1` command used to. */
+@keyframes modal-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .modal {
   position: fixed;
   top: 0;
@@ -17,11 +41,13 @@
     .modal-backdrop {
       opacity: 1 !important;
       display: block !important;
+      animation: modal-backdrop-in 200ms ease-out;
     }
 
     .modal-dialog {
       opacity: 1 !important;
       display: flex !important;
+      animation: modal-dialog-in 200ms ease-out;
     }
   }
 

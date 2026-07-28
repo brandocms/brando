@@ -16,6 +16,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
   alias BrandoAdmin.Components.Form.Input.Entries
+  alias Brando.Content.Block, as: ContentBlock
   alias Brando.Content.Var.Layout
   alias BrandoAdmin.Components.Form.Input.RenderVar
 
@@ -53,24 +54,16 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         module_type={@module_type}
         heex_compiled_module={@heex_compiled_module}
         block_module={@block_module}
-        vars={@vars}
         liquid_splits={@liquid_splits}
         target={@myself}
         target_ref={{Block, @id}}
         form_id={@form_id}
         entry={@entry}
-        insert_block={
-          JS.push("insert_block", target: @myself)
-          |> show_modal(@module_picker_id)
-        }
-        insert_multi_block={
-          JS.push("insert_block_entry", value: %{multi: true}, target: @myself)
-          |> show_modal(@module_picker_id)
-        }
-        insert_child_block={
-          JS.push("insert_block", value: %{multi: true}, target: @myself)
-          |> show_modal(@module_picker_id)
-        }
+        insert_block={JS.push("insert_block", target: @myself)}
+        insert_multi_block={JS.push("insert_block_entry", value: %{multi: true}, target: @myself)}
+        insert_child_block={JS.push("insert_block", value: %{multi: true}, target: @myself)}
+        module_picker_id={@module_picker_id}
+        config_open={@config_open}
         has_children?={@has_children?}
         clipboard_meta={@clipboard_meta}
       >
@@ -143,10 +136,11 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         module_type={@module_type}
         heex_compiled_module={@heex_compiled_module}
         block_module={@block_module}
-        vars={@vars}
         liquid_splits={@liquid_splits}
         entry={@entry}
-        insert_block={JS.push("insert_block", target: @myself) |> show_modal(@module_picker_id)}
+        insert_block={JS.push("insert_block", target: @myself)}
+        module_picker_id={@module_picker_id}
+        config_open={@config_open}
         has_children?={false}
         module_name={@module_name}
         module_color={@module_color}
@@ -182,10 +176,11 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         module_type={@module_type}
         heex_compiled_module={@heex_compiled_module}
         block_module={@block_module}
-        vars={@vars}
         liquid_splits={@liquid_splits}
         entry={@entry}
-        insert_block={JS.push("insert_block_entry", target: @myself) |> show_modal(@module_picker_id)}
+        insert_block={JS.push("insert_block_entry", target: @myself)}
+        module_picker_id={@module_picker_id}
+        config_open={@config_open}
         has_children?={false}
         module_name={@module_name}
         module_color={@module_color}
@@ -211,14 +206,10 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         palette_options={@palette_options}
         container={@container}
         containers={@containers}
-        insert_block={
-          JS.push("insert_block", target: @myself)
-          |> show_modal(@module_picker_id)
-        }
-        insert_child_block={
-          JS.push("insert_block", value: %{container: true}, target: @myself)
-          |> show_modal(@module_picker_id)
-        }
+        insert_block={JS.push("insert_block", target: @myself)}
+        insert_child_block={JS.push("insert_block", value: %{container: true}, target: @myself)}
+        module_picker_id={@module_picker_id}
+        config_open={@config_open}
         has_children?={@has_children?}
         clipboard_meta={@clipboard_meta}
       >
@@ -282,7 +273,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         fragment={@fragment}
         fragments={@fragments}
         belongs_to={@belongs_to}
-        insert_block={JS.push("insert_block", target: @myself) |> show_modal(@module_picker_id)}
+        insert_block={JS.push("insert_block", target: @myself)}
+        module_picker_id={@module_picker_id}
+        config_open={@config_open}
         deleted={@deleted}
         target={@myself}
         block_module={@block_module}
@@ -323,6 +316,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :target, :any
   attr :block_module, :any
   attr :insert_block, :any
+  attr :module_picker_id, :string, default: nil
+  attr :config_open, :string, default: nil
   attr :fragment, :any, default: nil
   attr :fragments, :list, default: []
   attr :clipboard_meta, :map, default: nil
@@ -359,6 +354,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     >
       <.plus
         click={@insert_block}
+        modal={@module_picker_id}
         clipboard_meta={@clipboard_meta}
         paste_context={:root}
         paste_click={JS.push("paste_block", target: @target)}
@@ -398,7 +394,14 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                   <% end %>
                 </:description>
               </.toolbar>
-              <.fragment_config uid={@uid} block={block_form} target={@target} fragment={@fragment} fragments={@fragments} />
+              <.fragment_config
+                uid={@uid}
+                block={block_form}
+                target={@target}
+                fragment={@fragment}
+                fragments={@fragments}
+                open={@config_open == @uid}
+              />
               <div class="block-content">
                 <div class="block-fragment-wrapper">
                   <div class="fragment-info" phx-click="show_fragment_instructions" phx-target={@target}>
@@ -416,7 +419,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                     <p>
                       {gettext("This block embeds a fragment as a block, but no fragment is currently selected.")}
                     </p>
-                    <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")} phx-target={@target}>
+                    <button type="button" class="tiny" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
                       {gettext("Add fragment")}
                     </button>
                   </div>
@@ -472,6 +475,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     >
       <.plus
         click={@insert_block}
+        modal={@module_picker_id}
         clipboard_meta={@clipboard_meta}
         paste_context={:root}
         paste_click={JS.push("paste_block", target: @target)}
@@ -508,6 +512,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 has_children?={@has_children?}
               />
               <.container_config
+                open={@config_open == @uid}
                 uid={@uid}
                 block={block_form}
                 target={@target}
@@ -527,6 +532,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           {render_slot(@inner_block)}
           <.plus
             click={@insert_child_block}
+            modal={@module_picker_id}
             clipboard_meta={@clipboard_meta}
             paste_context={:container}
             paste_click={JS.push("paste_child_block", target: @target)}
@@ -537,6 +543,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           </div>
           <.plus
             click={@insert_child_block}
+            modal={@module_picker_id}
             clipboard_meta={@clipboard_meta}
             paste_context={:container}
             paste_click={JS.push("paste_child_block", target: @target)}
@@ -558,7 +565,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :table_template_name, :string
   attr :module_class, :string, default: nil
   attr :block_module, :atom
-  attr :vars, :list, default: []
   attr :target, :any
   attr :target_ref, :any, default: nil
   attr :has_children?, :boolean, default: false
@@ -567,6 +573,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :insert_block, :any, default: nil
   attr :insert_child_block, :any, default: nil
   attr :insert_multi_block, :any, default: nil
+  attr :module_picker_id, :string, default: nil
+  attr :config_open, :string, default: nil
   attr :module_name, :string, default: nil
   attr :module_color, :string, default: nil
   attr :module_datasource_module_label, :string, default: ""
@@ -610,6 +618,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     >
       <.plus
         click={@insert_block}
+        modal={@module_picker_id}
         clipboard_meta={@clipboard_meta}
         paste_context={@paste_context}
         paste_click={JS.push("paste_block", target: @target)}
@@ -648,12 +657,14 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               </.toolbar>
 
               <.module_config
+                open={@config_open == @uid}
                 uid={@uid}
                 block_form={block_form}
                 target={@target}
                 form_id={@form_id}
               />
               <.module_content
+                config_open={@config_open}
                 uid={@uid}
                 block_form={block_form}
                 liquid_splits={@liquid_splits}
@@ -672,7 +683,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 module_datasource_query={@module_datasource_query}
                 available_identifiers={@available_identifiers}
                 block_identifiers={block_form[:block_identifiers]}
-                vars={@vars}
                 entry={@entry}
               />
             </.inputs_for>
@@ -698,12 +708,14 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             </.toolbar>
 
             <.module_config
+              open={@config_open == @uid}
               uid={@uid}
               block_form={@form}
               target={@target}
               form_id={@form_id}
             />
             <.module_content
+              config_open={@config_open}
               uid={@uid}
               block_form={@form}
               liquid_splits={@liquid_splits}
@@ -722,7 +734,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               module_datasource_query={@module_datasource_query}
               available_identifiers={@available_identifiers}
               block_identifiers={@form[:block_identifiers]}
-              vars={@vars}
               entry={@entry}
             />
           <% end %>
@@ -731,6 +742,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           {render_slot(@inner_block)}
           <.plus
             click={@insert_multi_block}
+            modal={@module_picker_id}
             clipboard_meta={@clipboard_meta}
             paste_context={{:multi, @module_id}}
             paste_click={JS.push("paste_child_block", target: @target)}
@@ -742,6 +754,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             </div>
             <.plus
               click={@insert_multi_block}
+              modal={@module_picker_id}
               clipboard_meta={@clipboard_meta}
               paste_context={{:multi, @module_id}}
               paste_click={JS.push("paste_child_block", target: @target)}
@@ -848,6 +861,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 <.ref
                   refs_field={@block_form[:refs]}
                   ref_name={ref}
+                  config_open={@config_open}
                   target={@target}
                   target_ref={@target_ref}
                   form_id={@form_id}
@@ -912,10 +926,62 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :block_form, :any, required: true
   attr :target, :any, required: true
   attr :form_id, :any, default: nil
+  attr :open, :boolean, default: false
 
+  @doc """
+  The block's configure surface.
+
+  Rendered eagerly this was 115 full modal subtrees nobody had opened. The
+  chrome — panels, labels, buttons, and the `RenderVar` live_components — now
+  renders only while open.
+
+  What cannot be deferred is the *params surface*. This modal sits inside
+  `<.form phx-change="validate_block">`, so its inputs are submitted on every
+  validate; drop them wholesale and the `cast_assoc(:vars)` list shortens and
+  Ecto **deletes** the config-placement and `:hidden` vars — the hazard already
+  documented at `vars/1` and in the `vars/1` moduledoc. Block recovery reads DOM
+  `FormData` too (`assets/src/hooks/BlockField/index.js`), so an absent input is
+  also an unsaved value lost on reconnect.
+
+  So while closed the var inputs are still rendered in full, just inside a
+  hidden container. Reducing them to identity-only hidden inputs — the obvious
+  saving, and what `carried_var/1` does for `:hidden` vars — is **not** safe
+  here: `cast_assoc` matches params to existing records by primary key, so an
+  unsaved var has nothing to match on and Ecto rebuilds it from the params
+  alone, blanking `key`, `placement` and every other field. Blocks are created
+  with unsaved vars, so that is the common case, not an edge one.
+
+  `description` is a plain field on the block rather than an assoc, so a hidden
+  input does carry it safely — `cast` leaves fields the params don't mention
+  alone.
+
+  > #### Known gap {: .warning}
+  >
+  > `:hidden` vars still round-trip through `carried_var/1` and so still get
+  > blanked on an unsaved block. That predates this split and is unchanged by
+  > it; fixing it needs identity that survives before the first save.
+  """
   def module_config(assigns) do
     ~H"""
-    <Content.modal title={gettext("Configure")} id={"block-#{@uid}_config"} wide={true}>
+    <div :if={!@open} class="block-config-carried" hidden>
+      <input type="hidden" name={@block_form[:description].name} value={@block_form[:description].value} />
+      <.vars
+        vars={@block_form[:vars]}
+        uid={@uid}
+        placement={:config}
+        target={@target}
+        form_id={@form_id}
+        current_user_id={@block_form[:creator_id].value}
+      />
+    </div>
+    <Content.modal
+      :if={@open}
+      title={gettext("Configure")}
+      id={"block-#{@uid}_config"}
+      show={true}
+      close={JS.push("close_block_config", target: @target)}
+      wide={true}
+    >
       <div class="panels">
         <div class="panel">
           <Input.text
@@ -1001,7 +1067,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         </div>
       </div>
       <:footer>
-        <button type="button" class="primary" phx-click={hide_modal("#block-#{@uid}_config")}>
+        <button type="button" class="primary" phx-click="close_block_config" phx-target={@target}>
           {gettext("Close")}
         </button>
       </:footer>
@@ -1014,10 +1080,22 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :fragment, :any, default: nil
   attr :fragments, :list, default: []
   attr :target, :any, required: true
+  attr :open, :boolean, default: false
 
   def fragment_config(assigns) do
     ~H"""
-    <Content.modal title={gettext("Configure")} id={"block-#{@uid}_config"} wide={true}>
+    <div :if={!@open} class="block-config-carried" hidden>
+      <input type="hidden" name={@block[:fragment_id].name} value={@block[:fragment_id].value} />
+      <input type="hidden" name={@block[:description].name} value={@block[:description].value} />
+    </div>
+    <Content.modal
+      :if={@open}
+      title={gettext("Configure")}
+      id={"block-#{@uid}_config"}
+      show={true}
+      close={JS.push("close_block_config", target: @target)}
+      wide={true}
+    >
       <div class="panels">
         <div class="panel">
           <.live_component
@@ -1037,7 +1115,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         </div>
       </div>
       <:footer>
-        <button type="button" class="primary" phx-click={hide_modal("#block-#{@uid}_config")}>
+        <button type="button" class="primary" phx-click="close_block_config" phx-target={@target}>
           {gettext("Close")}
         </button>
       </:footer>
@@ -1052,10 +1130,23 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :containers, :list, default: []
   attr :palette_options, :any, default: []
   attr :target, :any, required: true
+  attr :open, :boolean, default: false
 
   def container_config(assigns) do
     ~H"""
-    <Content.modal title={gettext("Configure")} id={"block-#{@uid}_config"} wide={true}>
+    <div :if={!@open} class="block-config-carried" hidden>
+      <input type="hidden" name={@block[:container_id].name} value={@block[:container_id].value} />
+      <input type="hidden" name={@block[:palette_id].name} value={@block[:palette_id].value} />
+      <input type="hidden" name={@block[:description].name} value={@block[:description].value} />
+    </div>
+    <Content.modal
+      :if={@open}
+      title={gettext("Configure")}
+      id={"block-#{@uid}_config"}
+      show={true}
+      close={JS.push("close_block_config", target: @target)}
+      wide={true}
+    >
       <div class="panels">
         <div class="panel">
           <.live_component
@@ -1087,7 +1178,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         </div>
       </div>
       <:footer>
-        <button type="button" class="primary" phx-click={hide_modal("#block-#{@uid}_config")}>
+        <button type="button" class="primary" phx-click="close_block_config" phx-target={@target}>
           {gettext("Close")}
         </button>
       </:footer>
@@ -1100,6 +1191,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :target, :any, required: true
   attr :target_ref, :any, default: nil
   attr :form_id, :any, default: nil
+  attr :config_open, :string, default: nil
 
   def ref(assigns) do
     refs = Changeset.get_assoc(assigns.refs_field.form.source, :refs, :struct)
@@ -1120,6 +1212,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               <.dynamic_block
                 id={"#{ref_form[:uid].value}-#{block[:type].value}"}
                 block_id={ref_form[:uid].value}
+                config_open={@config_open}
                 is_ref?={true}
                 ref_name={ref_form[:name].value}
                 ref_description={ref_form[:description].value}
@@ -1175,6 +1268,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       |> assign_new(:ref_name, fn -> nil end)
       |> assign_new(:ref_description, fn -> nil end)
       |> assign_new(:ref_form, fn -> nil end)
+      |> assign_new(:config_open, fn -> nil end)
       |> assign_new(:form_id, fn -> nil end)
       |> assign_new(:target_ref, fn -> nil end)
       |> assign_new(:block_id, fn ->
@@ -1245,6 +1339,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         module={@component_target}
         id={@id}
         block={@block}
+        config_open={@config_open}
         is_ref?={@is_ref?}
         opts={@opts}
         belongs_to={@belongs_to}
@@ -1274,6 +1369,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :datasource, :any
   attr :bg_color, :string, default: nil
   attr :uid, :any
+  attr :config_open, :string, default: nil
 
   slot :inner_block
   slot :config
@@ -1311,6 +1407,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       |> assign(:collapsed, collapsed)
       |> assign(:marked_as_deleted, Changeset.get_field(block_cs, :marked_as_deleted))
 
+    assigns = assign(assigns, :config_open?, assigns.config_open == uid)
+
     ~H"""
     <div
       id={"base-block-#{@uid}"}
@@ -1323,12 +1421,30 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         !@active && "disabled"
       ]}
     >
-      <Content.modal title={gettext("Configure")} id={"block-#{@uid}_config"} wide={@wide_config}>
+      <%!-- Measured, not assumed: dropping the config slot while closed blanks
+            the ref's `data` fields on the next validate. A polymorphic embed
+            rebuilds from params the same way the block's `has_many` vars do, so
+            "cast leaves unmentioned fields alone" does not hold here either.
+            The slot therefore always renders; only the modal chrome is gated.
+            Pinned by `blocks/block-ref-config-persistence.spec.js`. --%>
+      <div :if={!@config_open?} class="block-config-carried" hidden>
+        <%= if @config do %>
+          {render_slot(@config)}
+        <% end %>
+      </div>
+      <Content.modal
+        :if={@config_open?}
+        title={gettext("Configure")}
+        id={"block-#{@uid}_config"}
+        show={true}
+        close={JS.push("close_block_config", target: @target)}
+        wide={@wide_config}
+      >
         <%= if @config do %>
           {render_slot(@config)}
         <% end %>
         <:footer>
-          <button type="button" class="primary" phx-click={hide_modal("#block-#{@uid}_config")}>
+          <button type="button" class="primary" phx-click="close_block_config" phx-target={@target}>
             {gettext("Close")}
           </button>
           <%= if @config_footer do %>
@@ -1388,7 +1504,15 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
+        <.block
+          id={"block-#{@uid}-base"}
+          block={@block}
+          is_ref?={true}
+          ref_form={@ref_form}
+          config_open={@config_open}
+          multi={false}
+          target={@target}
+        >
           <:description>
             <%= if @ref_description not in ["", nil] do %>
               {@ref_description}
@@ -1416,7 +1540,15 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
+        <.block
+          id={"block-#{@uid}-base"}
+          block={@block}
+          is_ref?={true}
+          ref_form={@ref_form}
+          config_open={@config_open}
+          multi={false}
+          target={@target}
+        >
           <:description>
             <%= if @ref_description not in ["", nil] do %>
               {@ref_description}
@@ -1449,7 +1581,15 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
+        <.block
+          id={"block-#{@uid}-base"}
+          block={@block}
+          is_ref?={true}
+          ref_form={@ref_form}
+          config_open={@config_open}
+          multi={false}
+          target={@target}
+        >
           <:description>
             {gettext("Comment — not shown on frontend.")}
           </:description>
@@ -1482,7 +1622,15 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
+        <.block
+          id={"block-#{@uid}-base"}
+          block={@block}
+          is_ref?={true}
+          ref_form={@ref_form}
+          config_open={@config_open}
+          multi={false}
+          target={@target}
+        >
           <:description>
             <%= if @ref_description not in ["", nil] do %>
               {@ref_description}
@@ -1519,7 +1667,15 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     ~H"""
     <div id={"block-#{@uid}-wrapper"} data-block-uid={@uid}>
       <.inputs_for :let={block_data} field={@block[:data]}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
+        <.block
+          id={"block-#{@uid}-base"}
+          block={@block}
+          is_ref?={true}
+          ref_form={@ref_form}
+          config_open={@config_open}
+          multi={false}
+          target={@target}
+        >
           <:description>
             (H{block_data[:level].value})<%= if @ref_description do %>
               {@ref_description}
@@ -1602,7 +1758,15 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     ~H"""
     <.inputs_for :let={text_block_data} field={@block[:data]}>
       <div id={"ref-#{@uid}-wrapper"} data-block-uid={@uid}>
-        <.block id={"block-#{@uid}-base"} block={@block} is_ref?={true} ref_form={@ref_form} multi={false} target={@target}>
+        <.block
+          id={"block-#{@uid}-base"}
+          block={@block}
+          is_ref?={true}
+          ref_form={@ref_form}
+          config_open={@config_open}
+          multi={false}
+          target={@target}
+        >
           <:description>
             <%= if @ref_description not in [nil, ""] do %>
               {@ref_description}
@@ -1657,13 +1821,24 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :clipboard_meta, :map, default: nil
   attr :paste_context, :any, default: nil
   attr :paste_click, :any, default: nil
+  # The module picker is one shared modal, so opening it is a plain id rather
+  # than an inlined `show_modal/1` — see `assets/src/uiCommands.js`. A plus sits
+  # above every block at every level, which made this one of the most-repeated
+  # 749-byte attributes in the mount payload.
+  attr :modal, :string, default: nil
 
   def plus(assigns) do
     assigns = assign(assigns, :show_paste, can_paste?(assigns.clipboard_meta, assigns.paste_context))
 
     ~H"""
     <div class="block-plus-wrapper">
-      <button class="block-plus" type="button" phx-click={@click} aria-label={gettext("Add block")}>
+      <button
+        class="block-plus"
+        type="button"
+        phx-click={@click}
+        data-ui-modal-show={@modal}
+        aria-label={gettext("Add block")}
+      >
         <.icon name="hero-plus" />
       </button>
       <button
@@ -1756,15 +1931,58 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
   attr :var, :any, required: true
 
-  # A `:hidden` var never gets an input the editor can reach, so without this its
-  # params would be absent on submit and `cast_assoc` would drop the association.
-  # Only the identity has to round-trip — `cast_assoc` matches on it and leaves
-  # every field the params don't mention alone, so re-emitting values here would
-  # only risk writing back a stale copy.
-  defp carried_var(assigns) do
+  @doc """
+  Params-only round trip for a var with no editable UI (`:hidden` placement).
+
+  Without it the var's params are absent on submit and `cast_assoc` drops the
+  association entirely.
+
+  For a **persisted** var the identity is enough: `cast_assoc` matches on the
+  primary key and leaves every field the params don't mention alone, so
+  re-emitting values would only risk writing back a stale copy.
+
+  For an **unsaved** var there is no identity to match on. `Relation.pop_current/2`
+  keys the existing records by primary key, so every pk-less var collides on
+  `[nil]` and Ecto builds a brand new record out of whatever params arrived —
+  identity alone yields a var with `key`, `placement` and `value` all nil, which
+  is silent data loss on the first save of any block. So an unsaved var carries
+  its full cast surface, driven off `Brando.Content.Block.var_attrs/0` so the two
+  cannot drift. This is bounded and temporary: after the first save the var has
+  an id and drops back to identity-only.
+  """
+  def carried_var(assigns) do
+    # Blank, not just nil: once a validate round trip has happened the id comes
+    # back as the "" that this component's own hidden input submitted, and
+    # treating that as persisted is what made the fix stop working after the
+    # first keystroke.
+    assigns = assign(assigns, :unsaved?, assigns.var[:id].value in [nil, ""])
+
     ~H"""
     <input type="hidden" name={@var[:id].name} value={@var[:id].value} />
     <input type="hidden" name={@var[:_persistent_id].name} value={@var.index} />
+    <%= if @unsaved? do %>
+      <.carried_var_field :for={field <- ContentBlock.var_attrs()} field={@var[field]} />
+      <.inputs_for :let={option} field={@var[:options]}>
+        <input type="hidden" name={option[:label].name} value={option[:label].value} />
+        <input type="hidden" name={option[:value].name} value={option[:value].value} />
+      </.inputs_for>
+    <% end %>
+    """
+  end
+
+  attr :field, :any, required: true
+
+  # An array field needs one `name[]` input per element — a single input would
+  # arrive as a string and fail the cast.
+  defp carried_var_field(%{field: %{value: value}} = assigns) when is_list(value) do
+    ~H"""
+    <input :for={v <- @field.value} type="hidden" name={"#{@field.name}[]"} value={v} />
+    """
+  end
+
+  defp carried_var_field(assigns) do
+    ~H"""
+    <input type="hidden" name={@field.name} value={@field.value} />
     """
   end
 
@@ -1857,7 +2075,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           <% end %>
           <%= if @palette do %>
             <div class="arrow">&rarr;</div>
-            <button type="button" class="btn-palette" phx-click={show_modal("#block-#{@uid}_config")}>
+            <button type="button" class="btn-palette" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
               {@palette.name}
             </button>
             <div class="circle-stack">
@@ -1874,7 +2092,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             </div>
           <% else %>
             <div class="arrow">&rarr;</div>
-            <button type="button" class="btn-palette" phx-click={show_modal("#block-#{@uid}_config")}>
+            <button type="button" class="btn-palette" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
               {gettext("<No palette>")}
             </button>
           <% end %>
@@ -1903,7 +2121,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         <div
           :if={@is_ref? && @instructions}
           class="block-action help"
-          phx-click={JS.push("toggle_help", target: @target)}
+          phx-click="toggle_help"
+          phx-target={@target}
           data-popover={gettext("Show instructions")}
         >
           <.icon name="hero-question-mark-circle" />
@@ -1912,7 +2131,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           :if={@is_ref? && @config}
           type="button"
           class="block-action config"
-          phx-click={show_modal("#block-#{@uid}_config")}
+          phx-click="open_block_config"
+          phx-value-uid={@uid}
+          phx-target={@target}
           data-popover={gettext("Configure block")}
         >
           <.icon name="hero-cog-8-tooth" />
@@ -1931,7 +2152,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           :if={!@is_ref?}
           class="dirty block-action toggler"
           data-popover={gettext("Block has changes")}
-          phx-click={JS.push("show_dirty", target: @target)}
+          phx-click="show_dirty"
+          phx-target={@target}
         >
           ●
         </div>
@@ -1945,6 +2167,13 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :instructions, :string, default: nil
   attr :config, :boolean, default: false
 
+  # Every attribute here is emitted once per block at every nesting level, so
+  # the encoded JS commands this used to carry (`toggle_dropdown` 443 B,
+  # `show_modal |> hide_dropdown` 1 022 B, and four more) dominated the mount
+  # payload. The triggers vary only by id, so they now name the id and let the
+  # delegated handler in `assets/src/uiCommands.js` rebuild the command. The
+  # handler also closes the open dropdown on any outside click, which is what
+  # the removed `phx-click-away` and the per-item `hide_dropdown` did.
   defp block_actions_dropdown(assigns) do
     dropdown_id = "block-#{assigns.uid}-dropdown"
     assigns = assign(assigns, :dropdown_id, dropdown_id)
@@ -1954,53 +2183,36 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       <button
         type="button"
         class="block-action"
-        phx-click={toggle_dropdown("##{@dropdown_id}")}
-        phx-click-away={hide_dropdown("##{@dropdown_id}")}
+        data-ui-dropdown-toggle={@dropdown_id}
         data-popover={gettext("More actions")}
       >
         <.icon name="hero-ellipsis-horizontal-circle" />
       </button>
       <ul class="block-action-dropdown-content hidden" id={@dropdown_id}>
         <li :if={@instructions}>
-          <button
-            type="button"
-            phx-click={JS.push("toggle_help", target: @target) |> hide_dropdown("##{@dropdown_id}")}
-          >
+          <button type="button" phx-click="toggle_help" phx-target={@target}>
             <.icon name="hero-question-mark-circle" /> {gettext("Instructions")}
           </button>
         </li>
         <li :if={@config}>
-          <button
-            type="button"
-            phx-click={show_modal("#block-#{@uid}_config") |> hide_dropdown("##{@dropdown_id}")}
-          >
+          <button type="button" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
             <.icon name="hero-cog-8-tooth" /> {gettext("Configure")}
           </button>
         </li>
         <li>
-          <button
-            type="button"
-            phx-click={
-              JS.push("duplicate_block", target: @target, value: %{block_uid: @uid})
-              |> hide_dropdown("##{@dropdown_id}")
-            }
-          >
+          <%!-- `handle_block_event/3` reads the uid off the component's own assigns, so
+               the old `value: %{block_uid: @uid}` never reached anything. --%>
+          <button type="button" phx-click="duplicate_block" phx-target={@target}>
             <.icon name="hero-document-duplicate" /> {gettext("Duplicate")}
           </button>
         </li>
         <li>
-          <button
-            type="button"
-            phx-click={JS.push("copy_block", target: @target) |> hide_dropdown("##{@dropdown_id}")}
-          >
+          <button type="button" phx-click="copy_block" phx-target={@target}>
             <.icon name="hero-clipboard-document" /> {gettext("Copy")}
           </button>
         </li>
         <li>
-          <button
-            type="button"
-            phx-click={JS.push("delete_block", target: @target) |> hide_dropdown("##{@dropdown_id}")}
-          >
+          <button type="button" phx-click="delete_block" phx-target={@target}>
             <.icon name="hero-trash" /> {gettext("Delete")}
           </button>
         </li>
@@ -2223,11 +2435,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           <button
             class="tiny select-button"
             type="button"
-            phx-click={
-              "assign_available_identifiers"
-              |> JS.push(target: @target)
-              |> show_modal("#select-entries-#{@uid}")
-            }
+            phx-click="assign_available_identifiers"
+            phx-target={@target}
+            data-ui-modal-show={"select-entries-#{@uid}"}
           >
             {gettext("Select entries")}
           </button>

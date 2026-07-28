@@ -211,6 +211,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
           multi={false}
           target={@target}
           ref_form={@ref_form}
+          config_open={@config_open}
         >
           <:description>
             {block_data[:type].value}

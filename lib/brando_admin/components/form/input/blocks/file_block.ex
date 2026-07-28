@@ -43,6 +43,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FileBlock do
           multi={false}
           target={@target}
           ref_form={@ref_form}
+          config_open={@config_open}
         >
           <:description>
             {@ref_description || (@file && (@block_data.label || @block_data.title || @file.title || @file.filename)) ||
@@ -53,7 +54,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FileBlock do
             :if={@file}
             type="button"
             class="file-card"
-            phx-click={show_modal("#block-#{@uid}_config")}
+            phx-click="open_block_config"
+            phx-value-uid={@uid}
+            phx-target={@target}
           >
             <.icon name="hero-document" />
             <span class="file-card__meta">
@@ -74,7 +77,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FileBlock do
               >
                 {gettext("Browse files")}
               </button>
-              <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")}>
+              <button type="button" class="tiny" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
                 {gettext("Upload a new file")}
               </button>
             </div>

@@ -152,6 +152,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
           multi={false}
           target={@target}
           ref_form={@ref_form}
+          config_open={@config_open}
         >
           <:description>
             <%= case @type do %>
@@ -454,7 +455,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                           </.checklist>
                         </div>
                       </div>
-                      <button class="tiny mt-1" type="button" phx-click={show_modal("#block-#{@uid}_config")}>
+                      <button
+                        class="tiny mt-1"
+                        type="button"
+                        phx-click="open_block_config"
+                        phx-value-uid={@uid}
+                        phx-target={@target}
+                      >
                         {gettext("Edit video")}
                       </button>
                     </figcaption>

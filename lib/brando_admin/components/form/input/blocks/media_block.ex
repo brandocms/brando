@@ -125,6 +125,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
           multi={false}
           target={@target}
           ref_form={@ref_form}
+          config_open={@config_open}
         >
           <:description>
             <%= if @ref_description not in ["", nil] do %>

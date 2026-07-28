@@ -50,6 +50,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
           multi={false}
           target={@target}
           ref_form={@ref_form}
+          config_open={@config_open}
         >
           <:description>
             <%= if @ref_description not in ["", nil] do %>
@@ -73,7 +74,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
                   </svg>
                 </figure>
                 <div class="instructions">
-                  <button type="button" class="tiny" phx-click={show_modal("#block-#{@uid}_config")}>
+                  <button type="button" class="tiny" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
                     {gettext("Configure SVG block")}
                   </button>
                 </div>

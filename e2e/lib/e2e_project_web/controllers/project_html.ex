@@ -1,7 +1,6 @@
 defmodule E2eProjectWeb.ProjectHTML do
   use BrandoWeb, :html
   # use Gettext, backend: E2eProjectWeb.Gettext
-  use Phoenix.Component
   embed_templates "project_html/*"
 
   def list_projects(assigns) do

@@ -20,15 +20,20 @@ export default app => ({
   bindInput() {
     this.$button = Dom.find(this.el, 'button')
     this.$input = Dom.find(this.el, 'textarea')
-    this.$modalButton = this.el
-      .closest('.modal-content')
-      .querySelector('.modal-footer button.primary')
+    if (!this.$button || !this.$input) return
+
     this.$button.addEventListener('click', () => {
       this.handleInput(this.$input.value)
       if (this.source && this.embedUrl) {
         this.pushEventTo(this.target, 'url', { source: this.source, embedUrl: this.embedUrl })
-        if (this.$modalButton) {
-          this.$modalButton.click()
+        // Resolved on click, not at mount: block config chrome is rendered
+        // lazily, so this hook first mounts inside the closed block's hidden
+        // input container where there is no surrounding modal at all.
+        const $modalButton = this.el
+          .closest('.modal-content')
+          ?.querySelector('.modal-footer button.primary')
+        if ($modalButton) {
+          $modalButton.click()
         }
       } else {
         alertError(

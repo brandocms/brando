@@ -246,6 +246,15 @@ defmodule Brando.Content.Block do
     |> change(sequence: position)
   end
 
+  @doc """
+  The var fields `var_changeset/3,4` casts.
+
+  Exposed because a var whose editing UI is not rendered has to round-trip
+  these through the DOM to survive `cast_assoc/3` — see `Render.carried_var/1`.
+  Driving that off this list keeps the two from drifting apart.
+  """
+  def var_attrs, do: @var_attrs
+
   def var_changeset(var, attrs, position, _user) when is_integer(position) do
     var
     |> cast(attrs, @var_attrs)

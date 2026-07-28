@@ -275,7 +275,8 @@ end
   namespace: %{"en" => "01 HEADERS", "no" => "01 HEADINGER"},
   help_text: %{"en" => "Large text", "no" => "Stor tekst"},
   class: "header",
-  code: "<article b-tpl=\"{{ block.class }}\">\n  <div class=\"inner\">\n    {% ref refs.h2 %}\n  </div>\n</article>",
+  code:
+    "<article b-tpl=\"{{ block.class }}\">\n  <div class=\"inner\">\n    {% ref refs.h2 %}\n  </div>\n</article>",
   svg: nil,
   multi: false,
   datasource: false,
@@ -315,7 +316,8 @@ end
   namespace: %{"en" => "02 MEDIA", "no" => "02 MEDIA"},
   help_text: %{"en" => "Full width image or video", "no" => "Fullbredde bilde eller video"},
   class: "asset",
-  code: "<article b-tpl=\"asset\">\n  <div class=\"inner\">\n    {% ref refs.media %}\n  </div>\n</article>",
+  code:
+    "<article b-tpl=\"asset\">\n  <div class=\"inner\">\n    {% ref refs.media %}\n  </div>\n</article>",
   svg: nil,
   multi: false,
   datasource: false,
@@ -972,7 +974,8 @@ team_section =
   namespace: %{"en" => "06 COPY PASTE TEST", "no" => "06 COPY PASTE TEST"},
   help_text: %{"en" => "A single team member", "no" => "Enkelt teammedlem"},
   class: "team-member",
-  code: "<div b-tpl=\"team-member\">\n  <h3>{{ member_name }}</h3>\n  <p>{{ member_role }}</p>\n</div>",
+  code:
+    "<div b-tpl=\"team-member\">\n  <h3>{{ member_name }}</h3>\n  <p>{{ member_role }}</p>\n</div>",
   svg: nil,
   multi: false,
   datasource: false,
@@ -1053,6 +1056,68 @@ team_section =
       key: "var_notes",
       placement: :content,
       value: "",
+      sequence: 2,
+      width: :full,
+      creator_id: user.id
+    }
+  ]
+}
+|> E2eProject.Repo.insert!()
+
+# Module carrying both config- and hidden-placement vars alongside a content
+# var. Config vars only have inputs while the config modal is open, so this is
+# what pins the rule that a closed modal must still round-trip their identity —
+# without it, `cast_assoc(:vars)` sees a shorter list and deletes them.
+%Brando.Content.Module{
+  type: :liquid,
+  name: %{"en" => "Config Vars", "no" => "Konfigvariabler"},
+  namespace: %{"en" => "08 CONFIG VAR TEST", "no" => "08 CONFIG VAR TEST"},
+  help_text: %{
+    "en" => "Module with content, config and hidden placement vars",
+    "no" => "Modul med innholds-, konfig- og skjulte variabler"
+  },
+  class: "config-vars",
+  code: """
+  <div b-tpl="config-vars" data-tracking="{{ tracking_id }}">
+    <span class="body-text">{{ body_text }}</span>
+    <span class="config-note">{{ config_note }}</span>
+  </div>
+  """,
+  svg: nil,
+  multi: false,
+  datasource: false,
+  sequence: 41,
+  deleted_at: nil,
+  table_template_id: nil,
+  parent_id: nil,
+  refs: [],
+  vars: [
+    %Brando.Content.Var{
+      type: :string,
+      label: "Body text",
+      key: "body_text",
+      placement: :content,
+      value: "Body default",
+      sequence: 0,
+      width: :full,
+      creator_id: user.id
+    },
+    %Brando.Content.Var{
+      type: :string,
+      label: "Config note",
+      key: "config_note",
+      placement: :config,
+      value: "Config default",
+      sequence: 1,
+      width: :full,
+      creator_id: user.id
+    },
+    %Brando.Content.Var{
+      type: :string,
+      label: "Tracking id",
+      key: "tracking_id",
+      placement: :hidden,
+      value: "trk-000",
       sequence: 2,
       width: :full,
       creator_id: user.id
