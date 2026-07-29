@@ -140,19 +140,19 @@ const measureEntry = async (page, label, entryId, expectedBlocks) => {
   return row
 }
 
-// Budgets, not targets. Each is ~10% above what was measured on 2026-07-28
-// after the Phase 1 payload work, so ordinary noise passes and a real
-// regression fails. Raising one is a deliberate act — record why in
+// Budgets, not targets. Each is ~10% above what was measured on 2026-07-29,
+// on fixtures that now carry config- and hidden-placement vars, so ordinary
+// noise passes and a real regression fails. Raising one is a deliberate act — record why in
 // `.claude/plans/block-editor-architecture/plan.md`.
 //
 // Mount is the number that matters: it is what an editor waits through when
 // opening an entry, and it is the one that scales with block count.
 const BUDGETS = {
-  'flat-5': { mount: 380_000, edit: 15_000, save: 70_000 },
-  'flat-40': { mount: 1_760_000, edit: 15_000, save: 75_000 },
-  'flat-115': { mount: 4_790_000, edit: 15_000, save: 85_000 },
+  'flat-5': { mount: 360_000, edit: 13_000, save: 60_000 },
+  'flat-40': { mount: 1_650_000, edit: 13_000, save: 65_000 },
+  'flat-115': { mount: 4_380_000, edit: 13_000, save: 75_000 },
   // Nested mount swings ~9% run to run, so its headroom is wider on purpose.
-  nested: { mount: 2_350_000, edit: 3_200, save: 235_000 },
+  nested: { mount: 2_150_000, edit: 3_200, save: 235_000 },
 }
 
 const assertBudget = (row) => {

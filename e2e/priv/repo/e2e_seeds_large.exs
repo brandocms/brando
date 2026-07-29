@@ -44,6 +44,61 @@ fetch_module = fn name ->
   )
 end
 
+# Config- and hidden-placement vars, injected here rather than added to the
+# shared seed modules so the regression suite keeps the fixtures it expects.
+#
+# They exist so the benchmark can answer what a config surface actually costs.
+# Without them every bench block had `placement: :content` vars only, and any
+# question about config vars could only be answered with "unknown in real
+# projects". Deliberately NOT referenced from module code: their payload cost is
+# their form inputs, which is what is being measured, and leaving the rendered
+# output alone keeps this comparable to earlier runs.
+#
+# Three of the five module types carry them, so roughly 60% of blocks in a flat
+# fixture have a config surface — a deliberately ordinary ratio, not a worst case.
+modules_with_config = ["Styled Header", "Rich Text Article", "Video Player"]
+
+extra_vars = fn module, creator_id ->
+  module_name = module.name["en"] || module.name
+
+  if module_name in modules_with_config do
+    [
+      %Brando.Content.Var{
+        type: :string,
+        label: "Anchor id",
+        key: "bench_anchor_id",
+        placement: :config,
+        value: "section-#{:erlang.unique_integer([:positive])}",
+        sequence: 90,
+        width: :half,
+        creator_id: creator_id
+      },
+      %Brando.Content.Var{
+        type: :boolean,
+        label: "Full bleed",
+        key: "bench_full_bleed",
+        placement: :config,
+        value_boolean: false,
+        sequence: 91,
+        width: :half,
+        creator_id: creator_id
+      },
+      %Brando.Content.Var{
+        type: :string,
+        label: "Tracking id",
+        key: "bench_tracking_id",
+        placement: :hidden,
+        value: "trk-bench",
+        sequence: 92,
+        width: :full,
+        creator_id: creator_id
+      }
+    ]
+  else
+    []
+  end
+end
+
 # Mirror of BlockField.build_block/5 — fresh uids on refs, PKs stripped from
 # both refs and vars so each block owns its own copies.
 build_block = fn module, type, sequence ->
@@ -69,7 +124,7 @@ build_block = fn module, type, sequence ->
     multi: module.multi,
     sequence: sequence,
     refs: refs,
-    vars: Blocks.remove_pk_from_vars(module.vars || []),
+    vars: Blocks.remove_pk_from_vars(module.vars || []) ++ extra_vars.(module, user.id),
     table_rows: [],
     block_identifiers: [],
     children: []

@@ -976,6 +976,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         vars={@block_form[:vars]}
         uid={@uid}
         placement={:config}
+        carry_persisted
         target={@target}
         form_id={@form_id}
         current_user_id={@block_form[:creator_id].value}
@@ -1877,6 +1878,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :uid, :string, required: true
   attr :vars, :any, required: true
   attr :placement, :atom, default: :content, values: [:content, :config]
+  attr :carry_persisted, :boolean, default: false
   attr :target, :any
   attr :form_id, :any, default: nil
   attr :current_user_id, :any, default: nil
@@ -1895,15 +1897,25 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   def vars(assigns) do
     all_forms = var_forms(assigns.vars)
 
-    rows =
+    # `carry_persisted` is the closed config surface: a var that already has a
+    # primary key only needs its identity to round-trip, because `cast_assoc`
+    # matches on it and leaves `value` alone. Rendering its editing widget into
+    # a hidden container instead cost 546 KB of a 115-block mount, measured on
+    # a fixture where three of five module types carry config vars. An unsaved
+    # var still renders in full — it has no key to match on.
+    {carried, visible} =
       all_forms
       |> Enum.filter(&(&1.placement == assigns.placement))
-      |> Layout.pack()
+      |> then(fn forms ->
+        if assigns.carry_persisted, do: Enum.split_with(forms, &persisted_var?/1), else: {[], forms}
+      end)
+
+    rows = Layout.pack(visible)
 
     hidden_forms =
       if assigns.placement == :config,
-        do: Enum.filter(all_forms, &(&1.placement == :hidden)),
-        else: []
+        do: carried ++ Enum.filter(all_forms, &(&1.placement == :hidden)),
+        else: carried
 
     assigns =
       assigns
@@ -1938,13 +1950,27 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         </div>
       </div>
       <div :for={entry <- @hidden_forms} class="block-vars-carried" hidden>
-        <.carried_var var={entry.form} />
+        <.carried_var :if={entry.placement == :hidden} var={entry.form} />
+        <.carried_var_value :if={entry.placement != :hidden} var={entry.form} type={entry.type} />
       </div>
     </div>
     """
   end
 
   attr :var, :any, required: true
+  attr :type, :any, default: nil
+
+  # A persisted var whose editing surface is not on screen: identity plus the
+  # value it stores, and nothing else.
+  defp carried_var_value(assigns) do
+    assigns = assign(assigns, :fields, value_fields(assigns.type))
+
+    ~H"""
+    <input type="hidden" name={@var[:id].name} value={@var[:id].value} />
+    <input type="hidden" name={@var[:_persistent_id].name} value={@var.index} />
+    <input :for={field <- @fields} type="hidden" name={@var[field].name} value={@var[field].value} />
+    """
+  end
 
   @doc """
   Params-only round trip for a var with no editable UI (`:hidden` placement).
@@ -1965,6 +1991,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   cannot drift. This is bounded and temporary: after the first save the var has
   an id and drops back to identity-only.
   """
+  attr :var, :any, required: true
+
   def carried_var(assigns) do
     # Blank, not just nil: once a validate round trip has happened the id comes
     # back as the "" that this component's own hidden input submitted, and
@@ -2001,6 +2029,23 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     """
   end
 
+  defp persisted_var?(%{form: form}), do: form[:id].value not in [nil, ""]
+
+  # The fields a var actually stores its value in, by type. A carried var still
+  # has to round-trip these: an edit made while the config modal was open lives
+  # in the changeset's *changes*, and `validate_block` rebuilds entry blocks
+  # from `changeset.data` — so a value missing from the params is an edit lost,
+  # not an edit preserved. Everything around them (label, field wrapper, the
+  # widget itself) is what gets dropped.
+  defp value_fields(:boolean), do: [:value_boolean]
+  defp value_fields(:image), do: [:value, :image_id]
+  defp value_fields(:file), do: [:value, :file_id]
+  defp value_fields(:video), do: [:value, :video_id]
+  defp value_fields(:gallery), do: [:value, :gallery_id]
+  defp value_fields(:link), do: [:value, :identifier_id, :link_text, :link_type, :link_target_blank]
+  defp value_fields(:color), do: [:value, :palette_id]
+  defp value_fields(_), do: [:value]
+
   # Builds the same sub-forms `<.inputs_for>` would, then decorates each with
   # the layout facts so `Layout.pack/1` can group them without re-reading the
   # changeset for every comparison.
@@ -2011,6 +2056,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       %{
         form: form,
         key: Changeset.get_field(form.source, :key),
+        type: Changeset.get_field(form.source, :type),
         width: Changeset.get_field(form.source, :width) || :full,
         new_row: Changeset.get_field(form.source, :new_row) == true,
         placement: Changeset.get_field(form.source, :placement) || :content,
