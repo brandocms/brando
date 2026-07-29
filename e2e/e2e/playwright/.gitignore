@@ -11,3 +11,6 @@ bench/fixture-ids.json
 # artifacts, regenerate them rather than commit them
 bench/mount-frame.json
 bench/save-frame.json
+bench/copy-frame.json
+bench/outline-frame.json
+bench/shot-*.png

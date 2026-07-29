@@ -11,105 +11,152 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
        active_namespace: nil,
        module_set: "all",
        show: false,
+       query: "",
        modules_by_namespace: []
      )}
   end
 
   def render(assigns) do
+    groups = visible_groups(assigns)
+
+    # Counts come from the unfiltered set so the sidebar stays a stable map of
+    # what exists, rather than flickering as you type.
+    namespace_counts =
+      for {translated_namespace, _map, modules} <- assigns.modules_by_namespace,
+          translated_namespace not in [nil, ""],
+          do: {translated_namespace, length(modules)}
+
+    total_count =
+      Enum.reduce(assigns.modules_by_namespace, 0, fn {_, _, modules}, acc -> acc + length(modules) end)
+
+    assigns =
+      assigns
+      |> assign(:groups, groups)
+      |> assign(:namespace_counts, namespace_counts)
+      |> assign(:total_count, total_count)
+
     ~H"""
     <div>
       <Content.modal
         title={gettext("Add content block")}
         id={@id}
-        medium
+        wide
         close={JS.push("close_modal", target: @myself) |> hide_modal("##{@id}")}
       >
-        <div :if={@show} class="module-picker-inner">
-          <div class="modules-header">
-            <div class="module-info">
-              {gettext("Select a module")}
-            </div>
-            <div class="other-buttons">
-              <%= if !@hide_fragments do %>
-                <button type="button" phx-click={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@id}")}>
-                  <.icon name="hero-puzzle-piece" />
-                  {gettext("Insert fragment")}
-                </button>
-              <% end %>
-              <%= if !@hide_sections do %>
-                <button type="button" phx-click={JS.push("insert_container", target: @myself) |> hide_modal("##{@id}")}>
-                  <.icon name="hero-window" />
-                  {gettext("Insert container")}
-                </button>
-              <% end %>
-            </div>
+        <div :if={@show} class="module-picker">
+          <div class="module-picker-search">
+            <.icon name="hero-magnifying-glass" />
+            <input
+              type="text"
+              name="q"
+              value={@query}
+              phx-keyup="search"
+              phx-target={@myself}
+              phx-debounce="120"
+              phx-mounted={JS.focus()}
+              autocomplete="off"
+              spellcheck="false"
+              placeholder={gettext("Search modules")}
+              aria-label={gettext("Search modules")}
+            />
+            <button
+              :if={@query != ""}
+              type="button"
+              class="module-picker-clear"
+              phx-click="clear_search"
+              phx-target={@myself}
+              aria-label={gettext("Clear search")}
+            >
+              <.icon name="hero-x-mark" />
+            </button>
           </div>
-          <div class="modules" id={"#{@id}-modules"}>
-            <%= for {translated_namespace, namespace_map, modules} <- @modules_by_namespace do %>
-              <%= if namespace_map != nil && translated_namespace not in ["", nil] do %>
-                <button
-                  type="button"
-                  class={[
-                    "namespace-button",
-                    @active_namespace == translated_namespace && "active"
-                  ]}
-                  phx-click="toggle_namespace"
-                  phx-target={@myself}
-                  phx-value-id={translated_namespace}
-                >
-                  <figure>
-                    &rarr;
-                  </figure>
-                  <div class="info">
-                    <div class="name">{translated_namespace}</div>
-                  </div>
-                </button>
-                <div class={[
-                  "namespace-modules",
-                  @active_namespace == translated_namespace && "active"
-                ]}>
-                  <%= for module <- modules do %>
-                    <button
-                      type="button"
-                      class="module-button"
-                      phx-click={JS.push("insert_module", target: @myself) |> hide_modal("##{@id}")}
-                      phx-value-module-id={module.id}
-                    >
-                      <figure class={!module.svg && "empty-preview"}>
-                        <%= if module.svg do %>
-                          <img src={"data:image/svg+xml;base64,#{module.svg}"} />
-                        <% end %>
-                      </figure>
-                      <div class="info">
-                        <div class="name"><.i18n map={module.name} /></div>
-                        <div class="instructions"><.i18n map={module.help_text} /></div>
-                      </div>
-                    </button>
-                  <% end %>
+
+          <div class="module-picker-body">
+            <nav
+              :if={@namespace_counts != []}
+              class={["module-picker-namespaces", @query != "" && "is-searching"]}
+              aria-label={gettext("Module groups")}
+            >
+              <button
+                type="button"
+                class={["module-picker-namespace", (@query == "" and is_nil(@active_namespace)) && "active"]}
+                phx-click="toggle_namespace"
+                phx-target={@myself}
+                phx-value-id=""
+              >
+                <span class="label">{gettext("Everything")}</span>
+                <span class="count">{@total_count}</span>
+              </button>
+              <button
+                :for={{namespace, count} <- @namespace_counts}
+                :key={namespace}
+                type="button"
+                class={["module-picker-namespace", (@query == "" and @active_namespace == namespace) && "active"]}
+                phx-click="toggle_namespace"
+                phx-target={@myself}
+                phx-value-id={namespace}
+              >
+                <span class="label">{namespace}</span>
+                <span class="count">{count}</span>
+              </button>
+            </nav>
+
+            <div class="module-picker-results">
+              <section :for={{namespace, modules} <- @groups} :key={namespace || "-"} class="module-picker-group">
+                <h3 :if={namespace not in [nil, ""]} class="module-picker-group-title">{namespace}</h3>
+                <div class="module-picker-grid">
+                  <button
+                    :for={module <- modules}
+                    :key={module.id}
+                    type="button"
+                    class={["module-card", module.svg && "has-preview"]}
+                    data-color={module.color}
+                    aria-label={translate(module.name)}
+                    phx-click={JS.push("insert_module", target: @myself) |> hide_modal("##{@id}")}
+                    phx-value-module-id={module.id}
+                  >
+                    <%!-- Only modules that actually ship an SVG get a preview
+                          box. Rendering an empty 16:9 placeholder for the rest
+                          made every card mostly dead space, which is the common
+                          case — most modules have no svg. --%>
+                    <figure :if={module.svg} class="module-card-preview">
+                      <img src={"data:image/svg+xml;base64,#{module.svg}"} alt="" />
+                    </figure>
+                    <span class="module-card-body">
+                      <span class="module-card-name">{translate(module.name)}</span>
+                      <span :if={translate(module.help_text) != ""} class="module-card-help">
+                        {translate(module.help_text)}
+                      </span>
+                    </span>
+                  </button>
                 </div>
-              <% end %>
-            <% end %>
-            <%= for {_, namespace_map, modules} <- @modules_by_namespace do %>
-              <%= if namespace_map == nil do %>
-                <button
-                  :for={module <- modules}
-                  :key={module.id}
-                  type="button"
-                  class="module-button"
-                  phx-click={JS.push("insert_module", target: @myself) |> hide_modal("##{@id}")}
-                  phx-value-module-id={module.id}
-                >
-                  <figure class={!module.svg && "empty-preview"}>
-                    {module.svg |> raw}
-                  </figure>
-                  <div class="info">
-                    <div class="name"><.i18n map={module.name} /></div>
-                    <div class="instructions"><.i18n map={module.help_text} /></div>
-                  </div>
-                </button>
-              <% end %>
-            <% end %>
+              </section>
+
+              <p :if={@groups == []} class="module-picker-empty">
+                {gettext("No modules match \"%{query}\"", query: @query)}
+              </p>
+            </div>
           </div>
+
+          <footer :if={!@hide_fragments or !@hide_sections} class="module-picker-extras">
+            <span class="module-picker-extras-label">{gettext("Or insert")}</span>
+            <button
+              :if={!@hide_sections}
+              type="button"
+              phx-click={JS.push("insert_container", target: @myself) |> hide_modal("##{@id}")}
+            >
+              <.icon name="hero-window" />
+              {gettext("Container")}
+            </button>
+            <button
+              :if={!@hide_fragments}
+              type="button"
+              phx-click={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@id}")}
+            >
+              <.icon name="hero-puzzle-piece" />
+              {gettext("Fragment")}
+            </button>
+          </footer>
         </div>
       </Content.modal>
     </div>
@@ -203,8 +250,14 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
     socket
     |> assign(:show, false)
     |> assign(:active_namespace, nil)
+    |> assign(:query, "")
     |> assign(:filter, %{parent_id: nil, namespace: module_set})
     |> then(&{:noreply, &1})
+  end
+
+  # "" is the "Everything" entry — clearing the filter rather than naming a group.
+  def handle_event("toggle_namespace", %{"id" => ""}, socket) do
+    {:noreply, assign(socket, :active_namespace, nil)}
   end
 
   def handle_event("toggle_namespace", %{"id" => namespace}, socket) do
@@ -213,6 +266,14 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
     socket
     |> assign(active_namespace: active_namespace != namespace && namespace)
     |> then(&{:noreply, &1})
+  end
+
+  def handle_event("search", %{"value" => query}, socket) do
+    {:noreply, assign(socket, :query, query)}
+  end
+
+  def handle_event("clear_search", _, socket) do
+    {:noreply, assign(socket, :query, "")}
   end
 
   def handle_event("insert_module", %{"module-id" => module_id}, socket) do
@@ -230,6 +291,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
     socket
     |> assign(:show, false)
     |> assign(:active_namespace, nil)
+    |> assign(:query, "")
     |> then(&{:noreply, &1})
   end
 
@@ -247,6 +309,52 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
 
     send_to_ref(parent_ref, %{event: "insert_fragment", sequence: sequence})
     {:noreply, assign(socket, :show, false)}
+  end
+
+  @doc false
+  # What the grid shows: `{namespace, modules}` pairs, already filtered by the
+  # search box and the selected group. Searching deliberately ignores the group
+  # selection — typing a name you remember should find it wherever it lives.
+  def visible_groups(assigns) do
+    query = String.trim(assigns[:query] || "")
+
+    assigns.modules_by_namespace
+    |> Enum.map(fn {translated_namespace, _namespace_map, modules} ->
+      {presentable_namespace(translated_namespace), modules}
+    end)
+    |> then(fn groups ->
+      if query == "" and assigns[:active_namespace],
+        do: Enum.filter(groups, fn {ns, _} -> ns == assigns.active_namespace end),
+        else: groups
+    end)
+    |> Enum.map(fn {ns, modules} -> {ns, Enum.filter(modules, &matches?(&1, query))} end)
+    |> Enum.reject(fn {_ns, modules} -> modules == [] end)
+  end
+
+  defp presentable_namespace(namespace) when namespace in [nil, ""], do: nil
+  defp presentable_namespace(namespace), do: namespace
+
+  defp matches?(_module, ""), do: true
+
+  defp matches?(module, query) do
+    haystack = String.downcase("#{translate(module.name)} #{translate(module.help_text)}")
+    String.contains?(haystack, String.downcase(query))
+  end
+
+  # `Brando.HTML.i18n/1` renders a localised map into markup; the picker also
+  # needs it as a plain string, for `aria-label` and for search.
+  def translate(nil), do: ""
+  def translate(value) when is_binary(value), do: value
+
+  def translate(map) when is_map(map) do
+    locale = Gettext.get_locale()
+    fallback = Brando.config(:default_language)
+
+    case map[locale] || map[fallback] || map["en"] do
+      nil -> ""
+      "" -> map["en"] || ""
+      translated -> translated
+    end
   end
 
   def sort_namespace({namespace, modules}) do

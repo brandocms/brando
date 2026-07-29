@@ -5,39 +5,6 @@
     border-radius: 12px;
   }
 
-  .modules-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 10px;
-
-    .module-info {
-      font-size: 12px;
-      transform: translateY(-5px);
-    }
-
-    .other-buttons {
-      display: flex;
-      width: fit-content;
-      column-gap: 10px;
-      margin-left: auto;
-
-      button {
-        border: none;
-        display: flex;
-        column-gap: 10px;
-        align-items: center;
-        font-size: 12px;
-        padding: 5px 10px;
-
-        &:hover {
-          background-color: var(--brando-color-peach);
-          text-decoration: underline;
-        }
-      }
-    }
-  }
-
   .modules {
     @space margin-bottom 15px;
   }
@@ -196,136 +163,367 @@ section.alert.danger {
   }
 }
 
-.namespace-button {
-  background-color: var(--brando-color-peach);
-  border: none;
-  border-top: 3px solid white !important;
-  border-bottom: 3px solid white !important;
-  transition: background-color 350ms ease;
 
-  &.active {
-    background-color: var(--brando-color-peach-darker);
-    figure {
-      transform: rotate(90deg);
-      transform-origin: center center;
-    }
-  }
 
-  &:hover {
-    background-color: var(--brando-color-peach-darker);
-  }
+/* ---------------------------------------------------------------- module picker
 
-  figure {
-    min-width: 35px;
-    transition: transform 350ms ease;
-  }
+   Replaces the peach accordion. Three things drove the redesign:
 
-  .info .name {
-    @font mono;
-    font-size: 14px;
-    text-transform: uppercase;
-  }
+   * you could not see what existed without opening groups one at a time
+   * there was no way to search, so finding a module meant remembering its group
+   * a full-width row per module wasted the modal's horizontal space
+
+   So: a persistent group rail, a search field that spans every group, and a
+   card grid that gives each module's preview room to be recognisable.
+   Colours are all theme tokens, so this follows dark mode like everything else. */
+
+.module-picker {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: min(72vh, 720px);
 }
 
-.builtin-button {
-  @fontsize button;
-  border: 1px solid #666;
-  padding: 15px;
+.module-picker-search {
+  position: relative;
   display: flex;
-  justify-content: center;
   align-items: center;
-  width: 100%;
-
-  &:hover {
-    background-color: var(--brando-color-peach);
-  }
+  flex: 0 0 auto;
 
   svg {
-    width: 20px;
-    height: auto;
-    margin-right: 12px;
-    margin-top: -4px;
+    position: absolute;
+    left: 14px;
+    width: 17px;
+    height: 17px;
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
+  input {
+    width: 100%;
+    padding: 13px 42px;
+    border: 1px solid var(--brando-color-gray-light);
+    border-radius: 10px;
+    background-color: var(--brando-color-input);
+    color: var(--brando-color-foreground);
+    font-size: 15px;
+    transition: border-color 200ms ease, box-shadow 200ms ease;
+
+    &::placeholder {
+      color: var(--brando-color-gray);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--brando-color-blue);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--brando-color-blue) 18%, transparent);
+    }
   }
 }
 
-.namespace-modules + .namespace-button {
-  margin-top: -1px;
-}
-
-.namespace-modules + .module-button {
-  margin-top: -1px;
-}
-
-.module-button,
-.namespace-button {
-  @fontsize button;
-  padding: 15px;
+.module-picker-clear {
+  position: absolute;
+  right: 8px;
   display: flex;
   align-items: center;
-  width: 100%;
+  justify-content: center;
+  padding: 6px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--brando-color-gray);
+  cursor: pointer;
+  transition: background-color 200ms ease, color 200ms ease;
 
-  + .module-button {
-    margin-top: -1px;
+  svg {
+    position: static;
+    width: 15px;
+    height: 15px;
+    opacity: 1;
   }
 
-  + .namespace-button {
-    margin-top: -1px;
-  }
-
-  + .namespace-modules {
-    margin-top: -1px;
-  }
-
-  .info {
-    @space margin-left 15px;
-    text-align: left;
-
-    .name {
-      @font mono;
-      font-size: 14px;
-    }
-
-    .instructions {
-      @space padding-top 3px;
-      @fontsize sm;
-    }
+  &:hover {
+    background-color: var(--brando-color-peach);
+    color: var(--brando-color-foreground);
   }
 }
 
-.module-button {
+.module-picker-body {
+  display: grid;
+  grid-template-columns: minmax(150px, 200px) 1fr;
+  gap: 24px;
+  min-height: 0;
+  margin-top: 20px;
+  flex: 1 1 auto;
+}
+
+/* The group rail. Always visible, so the shape of the module library is
+   readable at a glance instead of discovered by clicking. */
+.module-picker-namespaces {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.module-picker-namespace {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
   border: none;
-  border-bottom: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--brando-color-foreground);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 180ms ease;
 
-  figure {
-    min-width: 115px;
-
-    &.empty-preview {
-      min-width: 35px;
-    }
-
-    img {
-      width: 115px;
-      height: auto;
-    }
+  .label {
+    @font mono;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .info {
-    .name {
-      font-weight: bold;
-      font-size: 18px;
-      @font main;
-    }
+  .count {
+    @font mono;
+    font-size: 11px;
+    flex: 0 0 auto;
+    padding: 1px 7px;
+    border-radius: 20px;
+    background-color: var(--brando-color-peach);
+    color: var(--brando-color-foreground);
+    opacity: 0.75;
   }
 
   &:hover {
     background-color: var(--brando-color-peach);
   }
-}
-
-.namespace-modules {
-  display: none;
 
   &.active {
-    display: block;
+    background-color: var(--brando-color-foreground);
+    color: var(--brando-color-background);
+
+    .count {
+      background-color: color-mix(in srgb, var(--brando-color-background) 22%, transparent);
+      color: var(--brando-color-background);
+      opacity: 1;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brando-color-blue);
+    outline-offset: 2px;
+  }
+}
+
+/* While a search is running it spans every group, so the rail's selection is
+   not what is being shown. Fade it rather than leave a lit row lying about
+   filtering that is not happening. */
+.module-picker-namespaces.is-searching {
+  opacity: 0.45;
+}
+
+.module-picker-results {
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.module-picker-group + .module-picker-group {
+  margin-top: 26px;
+}
+
+.module-picker-group-title {
+  @font mono;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0 0 12px;
+  padding: 4px 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brando-color-gray);
+  background-color: var(--brando-color-content-background);
+}
+
+.module-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
+  gap: 12px;
+}
+
+/* One card per module. The module's colour is the same one its block wears in
+   the editor, so the card previews what you are about to get. */
+.module-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border: 1px solid var(--brando-color-gray-light);
+  border-radius: 12px;
+  background-color: var(--brando-color-content-background);
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+
+  /* colour rail, matching the block editor's per-module colours */
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background-color: #dbeafe;
+  }
+
+  &[data-color="pink"]::before {
+    background-color: #fbcfe8;
+  }
+
+  &[data-color="emerald"]::before {
+    background-color: #a7f3d0;
+  }
+
+  &[data-color="peach"]::before {
+    background-color: #fed7aa;
+  }
+
+  &:hover {
+    border-color: var(--brando-color-foreground);
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--brando-color-foreground) 10%, transparent);
+    transform: translateY(-2px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brando-color-blue);
+    outline-offset: 2px;
+  }
+}
+
+.module-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 13px 15px 14px 17px;
+}
+
+.module-card-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+  margin: 0;
+  padding: 10px;
+  background-color: var(--brando-color-shaded);
+  border-bottom: 1px solid var(--brando-color-gray-light);
+
+  img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+  }
+}
+
+.module-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--brando-color-foreground);
+}
+
+.module-card-help {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--brando-color-gray);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.module-picker-empty {
+  padding: 40px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--brando-color-gray);
+}
+
+/* Containers and fragments are not modules — they are a different kind of
+   insert. Separating them stops them competing with the library above. */
+.module-picker-extras {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--brando-color-gray-light);
+
+  .module-picker-extras-label {
+    @font mono;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--brando-color-gray);
+    margin-right: 2px;
+  }
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border: 1px solid var(--brando-color-gray-light);
+    border-radius: 20px;
+    background-color: transparent;
+    color: var(--brando-color-foreground);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color 200ms ease, border-color 200ms ease;
+
+    svg {
+      width: 15px;
+      height: 15px;
+      opacity: 0.6;
+    }
+
+    &:hover {
+      background-color: var(--brando-color-peach);
+      border-color: var(--brando-color-peach);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brando-color-blue);
+      outline-offset: 2px;
+    }
+  }
+}
+
+@media (max-width: 720px) {
+  .module-picker-body {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .module-picker-namespaces {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .module-picker-namespace {
+    width: auto;
+    flex: 0 0 auto;
   }
 }
