@@ -17,7 +17,7 @@ should still do it.
 
 | Metric | Phase 0 baseline | Now | Target | |
 |---|---|---|---|---|
-| Mount, inbound | 6 271 KB | 3 823 KB | ≤ 1 500 KB | ✗ −39 % |
+| Mount, inbound | 6 271 KB | 3 887 KB* | ≤ 1 500 KB | ✗ −38 % |
 | Mount, wall clock | 4 849 ms | 4 501 ms | ≤ 2 500 ms | ✗ −7 % |
 | **Retained session memory** | ~16 MB* | **4.31 MB** | ≤ 8 MB | ✅ |
 | **Save, inbound** | never measured | **65 KB** | — | was 1 082 KB |
@@ -25,9 +25,13 @@ should still do it.
 | Single edit, outbound | 5.6 KB | 5.0 KB | ≤ 3 KB (P2) | −11 % |
 | Insert, latency | 1 128 ms | 827 ms | ≤ 400 ms (P3) | −27 % |
 | Insert, inbound | 83.1 KB | 67.4 KB | ≤ 40 KB (P3) | −19 % |
-| Mount @40, inbound | — | **1 409 KB** | ≤ 1 500 KB | ✅ under |
-| Mount @5, inbound | — | 312 KB | — | |
+| Mount @40, inbound | — | **1 460 KB*** | ≤ 1 500 KB | ✅ under |
+| Mount @5, inbound | — | 317 KB* | — | |
 | Nested mount, inbound | 3 334 KB | 1 723 KB | — | −48 % |
+
+\* Mount figures from 2026-07-29 onward are measured on **harder fixtures** than the Phase 0
+baseline: three of five bench module types now carry config and hidden vars, which the original
+fixtures had none of. Like-for-like the improvement is larger than the table's percentage.
 
 \* The ~16 MB baseline was taken with the single-GC version of `measure_lv_memory.exs` and is
 probably overstated — see the measurement note below. The 4.31 MB figure is settled and
@@ -198,19 +202,38 @@ to be nearer 1 200 KB once field wrappers are counted, which is why the target w
       mount is already at the gate at 40 blocks and 333 KB at 5.
       *Reopen if:* 115-block entries turn out to be a real workload rather than an outlier.
 
-## Cross-cutting — the params contract (identified, unscheduled)
+## Cross-cutting — the params contract — ✅ ANSWERED, not worth doing
 
-Not a Phase 1 leftover and **not** decided against: never attempted, and it gates several items
-below.
+This is the "risky change" the plan circled for two sessions: have the block
+changeset merge unsubmitted children from existing data instead of rebuilding them from
+whatever params arrived, so the DOM would not have to carry every child on every keystroke.
 
-- [ ] `[refactor]` Ecto's `cast_assoc`/`cast_embed` rebuild any child whose params are thin,
-      matching strictly by primary key (`Relation.pop_current/2`), so an unsaved child cannot be
-      carried by identity. Having the block changeset merge unsubmitted children from existing data
-      instead would remove the reason the mandatory-input surface has to stay in the DOM — which is
-      what blocks the mount target, the collapsed-shell item and Phase 2's remaining gap, and is the
-      root cause behind all three blanking bugs found in Phase 1.
-      **Highest leverage left in the plan, and the highest risk in it** — it changes how every block
-      edit casts. Wants its own spec suite before anyone trusts it.
+**It was never scoped with a number, because the bench fixtures had no config vars.** Every
+estimate of its value came out as "unknown in real projects". That was a measurement gap, not
+a genuine unknown — fixed 2026-07-29 by seeding two config vars and one hidden var into three
+of the five bench module types (138 config + 69 hidden vars across 115 root blocks).
+
+With that in place the answer is concrete:
+
+| | bytes @115 blocks |
+|---|---|
+| What a config surface costs at mount | **546 KB** (14 % of the frame, none of it on screen) |
+| Recovered by carrying persisted vars by identity + value | **493 KB** |
+| **Left for the risky refactor** | **~65 KB** |
+
+- [x] **WON'T DO** — `[refactor]` the params contract. The prize is ~65 KB, not the ~650 KB it
+      was estimated at, because the cheap rule — a persisted record needs only its identity —
+      took 90 % of it with no change to how casting works.
+      *Reopen if:* a future need makes it necessary for correctness rather than payload.
+
+**The 65 KB that cannot be dropped, and why.** A var's *value* must round-trip even when its
+editing surface is off screen. An edit made while the config modal was open lives in the
+changeset's `changes`, and `validate_block` rebuilds entry blocks from `changeset.data` — the
+original database values, deliberately, so `cast_assoc` can detect changes. Omit `value` from
+the params and that edit is silently reverted by the next keystroke anywhere else in the block.
+`block-config-vars-persistence.spec.js` caught exactly this on the first attempt: "Config two"
+came back as "Config one". The distinction that matters is not saved-vs-unsaved *record* but
+edited-vs-never-edited *field*: definitions are never edited here and can go; values cannot.
 
 ## Phase 2 — Reclaim the per-edit payload
 
