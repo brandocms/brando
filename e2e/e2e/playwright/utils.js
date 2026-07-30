@@ -145,11 +145,65 @@ const waitForPreviewReady = async page => {
     .waitFor({ state: 'attached', timeout: 30000 })
 }
 
-// Wait for preview update after making a change
+// Wait for preview update after making a change.
+//
+// `syncLV` only settles the parent LiveView, which is the side that *broadcasts*
+// on the preview channel. The iframe then has to receive that over its own
+// socket and morphdom it in, and this used to be covered by a flat 500ms sleep —
+// the same bet on machine speed that made the reconnect test fail on CI.
+//
+// There is no completion signal to wait on: `channel.on('update')` sets
+// `is-updated-live-preview` on the first update and never clears it, so it
+// cannot distinguish one update from the next. Wait for the frame's DOM to go
+// quiet instead — that covers morphdom regardless of how long the round trip
+// takes, and returns as soon as it is done rather than always burning 500ms.
+//
+// Resolves rather than throws if nothing arrives, so a genuine failure surfaces
+// as the caller's own assertion with its own message, not an opaque timeout here.
 const waitForPreviewUpdate = async page => {
   await syncLV(page)
-  // Wait for morphdom to apply changes (needs more time under load)
-  await page.waitForTimeout(500)
+
+  await page
+    .frameLocator('.live-preview-wrapper iframe')
+    .locator('body')
+    .evaluate(
+      body =>
+        new Promise(resolve => {
+          const QUIET_MS = 250
+          // The morph often lands while `syncLV` is still settling, i.e. before
+          // this observer attaches, in which case there is nothing left to see.
+          // Keep that path close to the 500ms this replaced rather than burning
+          // a long timeout on every such call; when mutations *are* still
+          // arriving the quiet timer extends the wait for as long as it needs.
+          const FIRST_MUTATION_MS = 750
+
+          let quietTimer = null
+          const observer = new MutationObserver(() => {
+            clearTimeout(quietTimer)
+            clearTimeout(giveUp)
+            quietTimer = setTimeout(finish, QUIET_MS)
+          })
+
+          const finish = () => {
+            observer.disconnect()
+            clearTimeout(quietTimer)
+            clearTimeout(giveUp)
+            resolve()
+          }
+
+          // Nothing morphed in: let the caller's assertion do the complaining.
+          const giveUp = setTimeout(finish, FIRST_MUTATION_MS)
+
+          observer.observe(body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            characterData: true
+          })
+        }),
+      undefined,
+      { timeout: 30000 }
+    )
 }
 
 // Click a device size button in live preview (desktop, tablet, mobile)
