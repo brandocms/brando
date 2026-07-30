@@ -132,8 +132,17 @@ const getPreviewFrame = page => {
 // Wait for preview to be ready after enabling
 const waitForPreviewReady = async page => {
   await page.locator('.live-preview-wrapper iframe').waitFor({ state: 'visible', timeout: 30000 })
-  // Wait for initial render
-  await page.waitForTimeout(300)
+
+  // The iframe is visible well before the preview has rendered into it, so wait
+  // for actual content rather than sleeping. The fixed 300ms this replaced was
+  // tuned on a dev machine and ran out on a slower CI runner — after a
+  // LiveSocket reconnect the iframe is recreated and re-rendered from scratch,
+  // and the assertion that followed would find an empty document.
+  await page
+    .frameLocator('.live-preview-wrapper iframe')
+    .locator('body *')
+    .first()
+    .waitFor({ state: 'attached', timeout: 30000 })
 }
 
 // Wait for preview update after making a change

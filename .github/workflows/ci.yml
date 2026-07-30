@@ -158,6 +158,12 @@ jobs:
     name: Serial E2E (PostgreSQL)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Pull requests only. The suite is serial by design (`workers: 1`) and runs
+    # for the better part of ten minutes before the asset builds and Playwright
+    # install are counted, which is too slow to sit on every push. The workflow
+    # triggers on both push and pull_request, so without this it would also run
+    # twice for any PR raised from a branch in this repo.
+    if: github.event_name == 'pull_request'
     # Non-blocking until it has a track record. This job was added on
     # 2026-07-18 and had never once run to completion — it died at the first
     # step, checking out a then-private repo — so its CI pass rate is entirely
