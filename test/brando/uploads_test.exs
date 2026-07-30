@@ -157,7 +157,7 @@ defmodule Brando.UploadsTest do
     test "enforces the resolved file config's size_limit at intake" do
       # no file default_config in test env → FileConfig.default_config() applies
       limit = Brando.Type.FileConfig.default_config().size_limit
-      assert is_integer(limit) and limit > Uploads.max_file_size()
+      assert limit > Uploads.max_file_size()
 
       assert {:error, "File is too large" <> _} =
                Uploads.initiate(

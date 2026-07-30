@@ -128,7 +128,7 @@ defmodule Brando.Blueprint.Migrations do
 
   defp upgrade_snapshot_format(_module, %Snapshot{migrated_from_format: nil}, _current_schema, _opts), do: :ok
 
-  defp upgrade_snapshot_format(module, previous_snapshot, current_schema, opts) do
+  defp upgrade_snapshot_format(module, %Snapshot{} = previous_snapshot, current_schema, opts) do
     upgraded = %Snapshot{
       previous_snapshot
       | format_version: 3,

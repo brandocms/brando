@@ -221,8 +221,12 @@ defmodule Brando.Blueprint.Snapshot do
         struct(Snapshot, Map.from_struct(snapshot))
 
       {2, schema} when is_map(schema) ->
+        # Bound and matched rather than updated inline: `struct/2` returns a
+        # dynamic term, which cannot be the subject of a struct update.
+        %Snapshot{} = base = struct(Snapshot, Map.from_struct(snapshot))
+
         %Snapshot{
-          struct(Snapshot, Map.from_struct(snapshot))
+          base
           | format_version: @format_version,
             migrated_from_format: 2,
             schema: Schema.from_v2(schema)

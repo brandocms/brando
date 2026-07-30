@@ -136,14 +136,19 @@ defmodule BrandoAdmin.Components.PickerHelpers do
         end
       end
 
-      defp folder_under_root?(folder, nil), do: not is_nil(FolderBrowser.normalize_folder(folder))
-
+      # One clause rather than a `nil` head: FilePicker's upload root is always a
+      # binary, so a separate nil clause is dead code there and the compiler says
+      # so. Image and video pickers can still pass nil, hence the branch.
       defp folder_under_root?(folder, root) do
-        normalized_folder = FolderBrowser.normalize_folder(folder)
-        normalized_root = FolderBrowser.normalize_folder(root)
+        if is_nil(root) do
+          not is_nil(FolderBrowser.normalize_folder(folder))
+        else
+          normalized_folder = FolderBrowser.normalize_folder(folder)
+          normalized_root = FolderBrowser.normalize_folder(root)
 
-        normalized_folder == normalized_root ||
-          String.starts_with?(normalized_folder || "", (normalized_root || "") <> "/")
+          normalized_folder == normalized_root ||
+            String.starts_with?(normalized_folder || "", (normalized_root || "") <> "/")
+        end
       end
 
       # -- Organize selection helpers --

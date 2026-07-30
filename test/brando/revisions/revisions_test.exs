@@ -262,9 +262,11 @@ defmodule Brando.Revisions.RevisionsTest do
     page = Factory.insert(:page, creator: user)
     assert {:ok, revision} = Revisions.create_revision(page, user)
 
+    corrupt = <<0, 1, 2>>
+
     from(r in Revision,
       where: r.entry_type == ^to_string(Page) and r.entry_id == ^page.id,
-      update: [set: [encoded_entry: <<0, 1, 2>>]]
+      update: [set: [encoded_entry: ^corrupt]]
     )
     |> Brando.Repo.update_all([])
 
@@ -380,9 +382,11 @@ defmodule Brando.Revisions.RevisionsTest do
     {:ok, changed} = Pages.update_page(original.id, %{title: "Later title"}, user)
     assert {1, _} = Revisions.mark_revision_scheduled(Page, changed.id, 0, true)
 
+    corrupt = <<0, 1, 2>>
+
     from(r in Revision,
       where: r.entry_type == ^to_string(Page) and r.entry_id == ^changed.id and r.revision == 0,
-      update: [set: [encoded_entry: <<0, 1, 2>>]]
+      update: [set: [encoded_entry: ^corrupt]]
     )
     |> Brando.Repo.update_all([])
 

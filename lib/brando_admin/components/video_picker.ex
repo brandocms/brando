@@ -362,8 +362,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
       source_url: playback_url,
       type: preview_type || String.to_existing_atom(type),
       unique_id: System.unique_integer([:positive]),
-      width: video_data && video_data.width,
-      height: video_data && video_data.height
+      width: video_data.width,
+      height: video_data.height
     }
 
     {:noreply, assign(socket, :playing_video, video)}

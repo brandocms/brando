@@ -159,12 +159,14 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
     }
   end
 
+  # No `:video` key here — the clause above matched every config that has one,
+  # so the lookup this used to do could only ever return its default.
   defp normalize_gallery_config(asset, %{image: image} = config, defaults) do
     ensure_gallery_keys!(asset, config)
 
     %{
       image: merge_config(asset, :image, @image_config, defaults.image, image),
-      video: merge_config(asset, :video, @video_config, defaults.video, Map.get(config, :video, %{}))
+      video: merge_config(asset, :video, @video_config, defaults.video, %{})
     }
   end
 

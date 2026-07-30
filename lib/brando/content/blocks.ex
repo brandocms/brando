@@ -97,7 +97,7 @@ defmodule Brando.Content.Blocks do
   >
   > These blocks are retained on purpose. Removing a block from an entry drops
   > the join row and keeps the block so that restoring an older revision can
-  > re-link it — see `Brando.Revisions.restore_revision/4`, which aborts the
+  > re-link it — see `Brando.Revisions.set_entry_to_revision/5`, which aborts the
   > whole restore with `{:missing_block, id}` if the block is gone. Deleting
   > what this returns breaks revision restore for any revision still holding
   > that block, and `protected`/`scheduled` revisions are never purged.
