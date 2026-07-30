@@ -4121,6 +4121,26 @@ defmodule BrandoAdmin.Components.Form do
       |> push_event("b:live_preview", %{cache_key: cache_key})
       |> push_event("js-exec", %{to: "#sidebar", attr: "data-js-hide"})
 
+    # Repopulate the cache before re-enabling the blocks.
+    #
+    # `enable_live_preview_in_blocks/1` only makes each block broadcast
+    # `update_block`, and the client resolves those against a registry built
+    # from the boundary markers already in the preview DOM. After a reconnect
+    # the iframe reloads and fetches this cache: if it is empty the reloaded
+    # page has an empty `<main>`, so there are no markers, the registry is
+    # empty, and every `update_block` is dropped with nothing but a
+    # `console.warn`. Nothing retries, so the preview stays blank for good.
+    #
+    # Rendering the whole entry into the cache first means the reload has real
+    # content and real markers whichever way the race falls — before the blocks
+    # broadcast, or after.
+    Brando.LivePreview.update_cache(
+      cache_key,
+      schema,
+      socket.assigns.form.source,
+      socket.assigns.updated_entry_assocs
+    )
+
     socket =
       if socket.assigns.has_blocks? do
         enable_live_preview_in_blocks(socket)
