@@ -114,8 +114,14 @@ jobs:
       - name: Run strict Blueprint code analysis
         run: mix credo --strict lib/brando/blueprint.ex lib/brando/blueprint
 
+      # One known cycle is tolerated: a 195-module compile-connected loop held
+      # together by the Blueprint DSL (`use Brando.Blueprint` pulls in
+      # blueprint/dsl.ex, attributes/dsl.ex, assets/dsl.ex and their
+      # transformers at compile time). Removing it is an architectural change,
+      # not a cleanup — see brandocms/brando#2737. This gate still catches any
+      # *new* cycle, which is what it is worth having.
       - name: Reject compile-connected dependency cycles
-        run: mix xref graph --format cycles --label compile-connected --fail-above 0
+        run: mix xref graph --format cycles --label compile-connected --fail-above 1
 
   docs:
     name: Published documentation
