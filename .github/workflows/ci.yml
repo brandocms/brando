@@ -1,5 +1,10 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  # Lets the E2E job be run on demand without raising a PR — it is skipped on
+  # push because it is slow, so this is the only other way to exercise it.
+  workflow_dispatch:
 permissions:
   contents: read
 
@@ -163,7 +168,7 @@ jobs:
     # install are counted, which is too slow to sit on every push. The workflow
     # triggers on both push and pull_request, so without this it would also run
     # twice for any PR raised from a branch in this repo.
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     # Non-blocking until it has a track record. This job was added on
     # 2026-07-18 and had never once run to completion — it died at the first
     # step, checking out a then-private repo — so its CI pass rate is entirely
