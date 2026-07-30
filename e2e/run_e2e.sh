@@ -15,11 +15,16 @@ elif ! MIX_ENV=test mix ecto.migrate; then
   MIX_ENV=test mix run priv/repo/e2e_seeds.exs
 fi
 
-# build static assets
+# Build static assets. Each build runs in a subshell so a failure aborts the
+# script (set -e) instead of leaving us in the asset directory — previously a
+# failed `cd X && ... && cd ../../` chain skipped the final cd, and the server
+# then started from assets/frontend and died with "no mix.exs was found".
+# The two projects use different package managers: backend is pnpm
+# (pnpm-lock.yaml), frontend is yarn (yarn.lock + "packageManager": "yarn@…").
 echo "Building static assets [backend]"
-cd assets/backend && pnpm install && pnpm build && cd ../../
+(cd assets/backend && pnpm install && pnpm build)
 echo "Building static assets [frontend]"
-cd assets/frontend && pnpm install && pnpm build && cd ../../
+(cd assets/frontend && yarn install && yarn build)
 
 echo "Starting E2E project server"
 MIX_ENV=test PORT=4444 iex -S mix phx.server

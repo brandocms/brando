@@ -190,7 +190,10 @@ section.alert.danger {
   align-items: center;
   flex: 0 0 auto;
 
-  svg {
+  /* `<.icon>` renders `<span data-icon>`, not an <svg> — match both so the
+     magnifier actually sits inside the input rather than inline beside it. */
+  > [data-icon],
+  > svg {
     position: absolute;
     left: 14px;
     width: 17px;
@@ -235,6 +238,7 @@ section.alert.danger {
   cursor: pointer;
   transition: background-color 200ms ease, color 200ms ease;
 
+  [data-icon],
   svg {
     position: static;
     width: 15px;
@@ -461,18 +465,17 @@ section.alert.danger {
 
 /* Containers and fragments are not modules — they are a different kind of
    insert. Separating them stops them competing with the library above. */
+/* Lives in the modal header (right-aligned, next to the close button) rather
+   than the footer, where a full-width bordered bar over-emphasised it. */
 .module-picker-extras {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex: 0 0 auto;
-  margin-top: 20px;
-  padding-top: 18px;
-  border-top: 1px solid var(--brando-color-gray-light);
+  gap: 6px;
+  margin-right: 12px;
 
   .module-picker-extras-label {
     @font mono;
-    font-size: 11px;
+    font-size: 10px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--brando-color-gray);
@@ -482,19 +485,20 @@ section.alert.danger {
   button {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 14px;
+    gap: 6px;
+    padding: 5px 11px;
     border: 1px solid var(--brando-color-gray-light);
     border-radius: 20px;
     background-color: transparent;
     color: var(--brando-color-foreground);
-    font-size: 13px;
+    font-size: 12px;
     cursor: pointer;
     transition: background-color 200ms ease, border-color 200ms ease;
 
+    [data-icon],
     svg {
-      width: 15px;
-      height: 15px;
+      width: 13px;
+      height: 13px;
       opacity: 0.6;
     }
 

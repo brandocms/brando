@@ -187,7 +187,7 @@ test('creates project', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Add block' }).click()
   await page.getByRole('button', { name: 'HEADERS' }).click()
-  await page.getByRole('button', { name: 'Heading Large text' }).click()
+  await page.getByRole('button', { name: 'Heading', exact: true }).click()
 
   await syncLV(page)
 

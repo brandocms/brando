@@ -204,6 +204,11 @@
     .folder-actions {
       display: inline-flex;
       align-self: flex-start;
+      /* Never shrink: this is a flex item next to the heading, and shrinking it
+         below its content width made `overflow: hidden` clip the right padding
+         off the last button ("ROOT" ran into the pill's rounded edge). The
+         heading block wraps instead. */
+      flex: none;
       border: 1px solid color-mix(in srgb, var(--brando-color-dark) 28%, transparent);
       border-radius: 999px;
       overflow: hidden;
@@ -238,6 +243,7 @@
     font-size: 10px;
     font-family: "Mono";
     text-transform: uppercase;
+    white-space: nowrap;
     color: var(--brando-color-dark);
     min-width: auto;
     transition:

@@ -159,10 +159,10 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     ~H"""
     <div>
       <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
-        <div class="gallery-input">
+        <div class="asset-field gallery-input">
           <div
             id={"#{@field.id}-gallery-upload-trigger"}
-            class="gallery-upload-wrapper"
+            class={["gallery-upload-wrapper", @gallery_objects == [] && "asset-field--single"]}
             phx-hook="Brando.UploadTrigger"
             data-kind="entry_field_gallery"
             data-component-id={@id}
@@ -176,50 +176,36 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           >
             <input type="file" class="file-input" multiple />
 
-            <div class="actions">
-              <button type="button" class="tiny upload-trigger">
-                {gettext("Upload images")}
-              </button>
-              <div
-                :if={@video_upload_enabled?}
-                id={"#{@field.id}-gallery-video-upload-trigger"}
-                phx-hook="Brando.UploadTrigger"
-                data-kind="entry_field_gallery"
-                data-component-id={@id}
-                data-asset-type="video"
-                data-field={@field.field}
-                data-path={Jason.encode!(@path)}
-                data-config-target={@config_target}
-                data-click-mode="trigger"
-                data-accept=".mp4,.webm,.mov,.avi,.ogv"
-              >
-                <button type="button" class="tiny upload-trigger">
-                  {gettext("Upload videos")}
-                </button>
-                <input type="file" class="file-input" multiple />
+            <%= if @gallery_objects == [] do %>
+              <div class="img-placeholder">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                  <path fill="none" d="M0 0h24v24H0z" /><path d="M4.828 21l-.02.02-.021-.02H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3h18.016c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H4.828zM20 15V5H4v14L14 9l6 6zm0 2.828l-6-6L6.828 19H20v-1.172zM8 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
+                </svg>
               </div>
-              <button
-                phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
-                type="button"
-                class="tiny"
-              >
-                {gettext("Select images")}
-              </button>
-              <button
-                phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
-                type="button"
-                class="tiny"
-              >
-                {gettext("Select videos")}
-              </button>
-            </div>
+              <div class="gallery-info">
+                <span>{gettext("No associated gallery")}</span>
+                <.gallery_actions
+                  field={@field}
+                  id={@id}
+                  path={@path}
+                  config_target={@config_target}
+                  video_upload_enabled?={@video_upload_enabled?}
+                  myself={@myself}
+                />
+              </div>
+            <% else %>
+              <.gallery_actions
+                field={@field}
+                id={@id}
+                path={@path}
+                config_target={@config_target}
+                video_upload_enabled?={@video_upload_enabled?}
+                myself={@myself}
+              />
+            <% end %>
           </div>
 
-          <%= if @gallery_objects == [] do %>
-            <small>
-              {gettext("No associated gallery")}
-            </small>
-          <% else %>
+          <%= if @gallery_objects != [] do %>
             <div
               id={"#{@field.id}-sortable-gallery-objects"}
               phx-hook="Brando.SortableAssocs"
@@ -297,6 +283,59 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           </Content.modal>
         </div>
       </Form.field_base>
+    </div>
+    """
+  end
+
+  attr :field, :any, required: true
+  attr :id, :any, required: true
+  attr :path, :any, required: true
+  attr :config_target, :any, required: true
+  attr :video_upload_enabled?, :boolean, required: true
+  attr :myself, :any, required: true
+
+  defp gallery_actions(assigns) do
+    ~H"""
+    <div class="actions">
+      <div class="segmented-buttons">
+        <button type="button" class="tiny upload-trigger">
+          {gettext("Upload images")}
+        </button>
+        <div
+          :if={@video_upload_enabled?}
+          id={"#{@field.id}-gallery-video-upload-trigger"}
+          phx-hook="Brando.UploadTrigger"
+          data-kind="entry_field_gallery"
+          data-component-id={@id}
+          data-asset-type="video"
+          data-field={@field.field}
+          data-path={Jason.encode!(@path)}
+          data-config-target={@config_target}
+          data-click-mode="trigger"
+          data-accept=".mp4,.webm,.mov,.avi,.ogv"
+        >
+          <button type="button" class="tiny upload-trigger">
+            {gettext("Upload videos")}
+          </button>
+          <input type="file" class="file-input" multiple />
+        </div>
+      </div>
+      <div class="segmented-buttons">
+        <button
+          phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
+          type="button"
+          class="tiny"
+        >
+          {gettext("Select images")}
+        </button>
+        <button
+          phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
+          type="button"
+          class="tiny"
+        >
+          {gettext("Select videos")}
+        </button>
+      </div>
     </div>
     """
   end

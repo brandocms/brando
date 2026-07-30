@@ -87,19 +87,22 @@
   width: 750px;
   overflow-y: initial !important;
 
-  .narrow & {
+  /* Direct child only. As descendant selectors these leaked into modals
+     nested inside another modal — e.g. the select modals rendered inside the
+     wide block config picked up 950px instead of their own size. */
+  .narrow > & {
     width: 400px;
   }
 
-  .medium & {
+  .medium > & {
     width: 550px;
   }
 
-  .wide & {
+  .wide > & {
     width: 950px;
   }
 
-  .auto & {
+  .auto > & {
     width: auto;
     max-width: 90vw;
   }
@@ -184,6 +187,10 @@
   border-radius: 14px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.08);
   height: 100%;
+  /* `.modal-dialog` is a flex container, so without this the content box
+     shrink-wraps its children and the narrow/medium/wide widths behave as
+     max-widths — a modal with little content collapses to a sliver. */
+  width: 100%;
   /* min-height: 80vh; */
 
   .field-wrapper {
@@ -316,6 +323,18 @@
         @space padding-left 0;
         @space margin-left 0;
         border-right: 1px solid;
+      }
+
+      /* The 6/12 + border-right above describes the two-panel layout. A lone
+         panel must span the modal instead, or it renders squeezed into the
+         left half with a stray divider down the middle. Has to come after
+         :nth-of-type(1) — equal specificity, so source order decides. */
+      &:only-of-type {
+        @column 12/12;
+        @space padding-left 0;
+        @space padding-right 0;
+        @space margin-left 0;
+        border-right: none;
       }
 
       .information {

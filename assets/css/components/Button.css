@@ -280,6 +280,47 @@ a.tiny {
   }
 }
 
+/**
+ * Segmented group of `.tiny` buttons — the members sit flush against each
+ * other, sharing borders, with only the outer corners rounded.
+ *
+ * Note: distinct from `.button-group` (app.css), which is a plain 8px-gapped
+ * flex row used by portal forms, drawers and modal footers.
+ *
+ * Members may be the buttons themselves or a wrapper element around one (the
+ * gallery's video upload trigger needs its own `phx-hook` element), so the
+ * corner rules match both the direct child and a `.tiny` inside it.
+ */
+.segmented-buttons {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  width: fit-content;
+  gap: 0;
+
+  > * {
+    display: flex;
+  }
+
+  .tiny {
+    margin-top: 0;
+    border-radius: 0;
+    border-right-width: 0;
+  }
+
+  > :first-child,
+  > :first-child .tiny {
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+  }
+
+  > :last-child,
+  > :last-child .tiny {
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border-right-width: 1px;
+  }
+}
+
 .submit-button {
   @space margin-top 30px;
   width: fit-content;

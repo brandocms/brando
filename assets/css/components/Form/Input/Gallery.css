@@ -302,27 +302,24 @@
   }
 }
 
+/* Shell comes from AssetField.css (`.asset-field`). When the gallery is empty
+   the upload wrapper additionally carries `.asset-field--single`, so the empty
+   state renders as thumbnail + info column exactly like the image field. */
 .gallery-input {
-  border: 1px dashed #3b3b3b;
-  border-radius: 8px;
-  padding: 4px 8px 8px;
-
-  small {
-    background-color: #ffffff;
-    padding: 20px;
-    display: block;
-    margin-top: 10px;
-    text-align: center;
-    font-family: "Mono";
-    font-size: 13px;
-    border-radius: 4px;
-  }
+  /* The drop target should span the field, not shrink to its contents — this
+     overrides the `width: fit-content` that `.asset-field--single` would
+     otherwise impose on the empty state. */
+  width: 100%;
 
   .alert {
     background-color: #f9ff84;
   }
 
   .gallery-upload-wrapper {
+    &.asset-field--single {
+      width: 100%;
+    }
+
     &.dragging {
       background-color: #cde7ec;
       border-radius: 8px;
@@ -333,6 +330,7 @@
   .actions {
     display: flex;
     gap: 5px;
+    flex-wrap: wrap;
 
     > div {
       display: flex;

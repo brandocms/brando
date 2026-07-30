@@ -323,7 +323,6 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
     ~H"""
     <div class="var-chip" data-key={@entry.key} data-width={@entry.width}>
       <div class="var-chip-top">
-        <span class="var-chip-grip" aria-hidden="true"></span>
         <span class="var-chip-key" title={@entry.key}>{@entry.key}</span>
         <span class="var-chip-type">{@entry.type}</span>
       </div>
@@ -340,77 +339,83 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
         {@entry.label}
       </button>
 
-      <div class="var-chip-actions">
-        <button
-          type="button"
-          title={move_hint(@surface)}
-          aria-label={move_hint(@surface)}
-          phx-click={JS.push("move_var", target: @target)}
-          phx-value-key={@entry.key}
-        >
-          <.icon name={(@surface == :content && "hero-arrow-right") || "hero-arrow-left"} />
-        </button>
-        <button
-          type="button"
-          title={gettext("Hide from editors — template only")}
-          aria-label={gettext("Hide from editors — template only")}
-          phx-click={JS.push("hide_var", target: @target)}
-          phx-value-key={@entry.key}
-        >
-          <.icon name="hero-eye-slash" />
-        </button>
-        <button
-          type="button"
-          title={gettext("Duplicate")}
-          aria-label={gettext("Duplicate variable %{key}", key: @entry.key)}
-          phx-click={JS.push("duplicate_var")}
-          phx-value-index={@entry.index}
-        >
-          <.icon name="hero-document-duplicate" />
-        </button>
-        <%!-- Ecto's `drop_param`: the button's own name/value is what removes the
-              var, so this has to be a submit-time param rather than an event. --%>
-        <button
-          type="button"
-          class="var-chip-danger"
-          title={gettext("Delete")}
-          aria-label={gettext("Delete variable %{key}", key: @entry.key)}
-          phx-click={JS.dispatch("change")}
-          phx-confirm={gettext("Delete variable %{key}?", key: @entry.key)}
-          name={"#{@form.name}[drop_var_ids][]"}
-          value={@entry.index}
-        >
-          <.icon name="hero-x-mark" />
-        </button>
-      </div>
-
-      <div class="var-chip-widths">
-        <div class="var-width-group">
-          <button
-            :for={choice <- @width_choices}
-            :if={choice.value in [:full, :half, :third, :fourth]}
-            type="button"
-            class={choice.value == @entry.width && "on"}
-            title={choice.hint}
-            phx-click={JS.push("set_var_width", target: @target)}
-            phx-value-key={@entry.key}
-            phx-value-width={choice.value}
-          >
-            {choice.label}
-          </button>
+      <%!-- Widths and actions share one footer toolbar. They used to be two
+            stacked rows, which read as a stray strip of icons under the label;
+            side by side they scan as one control bar and save a row. On a
+            quarter-width chip there is not room for both, so the group wraps. --%>
+      <div class="var-chip-footer">
+        <div class="var-chip-widths">
+          <div class="var-width-group">
+            <button
+              :for={choice <- @width_choices}
+              :if={choice.value in [:full, :half, :third, :fourth]}
+              type="button"
+              class={choice.value == @entry.width && "on"}
+              title={choice.hint}
+              phx-click={JS.push("set_var_width", target: @target)}
+              phx-value-key={@entry.key}
+              phx-value-width={choice.value}
+            >
+              {choice.label}
+            </button>
+          </div>
+          <div class="var-width-group">
+            <button
+              :for={choice <- @width_choices}
+              :if={choice.value in [:auto, :fill]}
+              type="button"
+              class={choice.value == @entry.width && "on"}
+              title={choice.hint}
+              phx-click={JS.push("set_var_width", target: @target)}
+              phx-value-key={@entry.key}
+              phx-value-width={choice.value}
+            >
+              {choice.label}
+            </button>
+          </div>
         </div>
-        <div class="var-width-group">
+
+        <div class="var-chip-actions">
           <button
-            :for={choice <- @width_choices}
-            :if={choice.value in [:auto, :fill]}
             type="button"
-            class={choice.value == @entry.width && "on"}
-            title={choice.hint}
-            phx-click={JS.push("set_var_width", target: @target)}
+            title={move_hint(@surface)}
+            aria-label={move_hint(@surface)}
+            phx-click={JS.push("move_var", target: @target)}
             phx-value-key={@entry.key}
-            phx-value-width={choice.value}
           >
-            {choice.label}
+            <.icon name={(@surface == :content && "hero-arrow-right") || "hero-arrow-left"} />
+          </button>
+          <button
+            type="button"
+            title={gettext("Hide from editors — template only")}
+            aria-label={gettext("Hide from editors — template only")}
+            phx-click={JS.push("hide_var", target: @target)}
+            phx-value-key={@entry.key}
+          >
+            <.icon name="hero-eye-slash" />
+          </button>
+          <button
+            type="button"
+            title={gettext("Duplicate")}
+            aria-label={gettext("Duplicate variable %{key}", key: @entry.key)}
+            phx-click={JS.push("duplicate_var")}
+            phx-value-index={@entry.index}
+          >
+            <.icon name="hero-document-duplicate" />
+          </button>
+          <%!-- Ecto's `drop_param`: the button's own name/value is what removes the
+              var, so this has to be a submit-time param rather than an event. --%>
+          <button
+            type="button"
+            class="var-chip-danger"
+            title={gettext("Delete")}
+            aria-label={gettext("Delete variable %{key}", key: @entry.key)}
+            phx-click={JS.dispatch("change")}
+            phx-confirm={gettext("Delete variable %{key}?", key: @entry.key)}
+            name={"#{@form.name}[drop_var_ids][]"}
+            value={@entry.index}
+          >
+            <.icon name="hero-x-mark" />
           </button>
         </div>
       </div>

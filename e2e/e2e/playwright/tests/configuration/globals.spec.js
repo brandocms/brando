@@ -16,12 +16,8 @@ async function addGlobalVar(
   // Click on "Add entry"
   await page.getByRole('button', { name: 'Add entry' }).click()
 
-  // Expand the newly added entry
-  await page
-    .locator(`#global_set_vars_${index}-edit div`)
-    .filter({ hasText: 'key string' })
-    .first()
-    .click()
+  // Expand the newly added entry by clicking its disclosure header
+  await page.locator(`#global_set_vars_${index}-edit .variable-header`).click()
 
   // Fill in the key and label
   await page.locator(`#global_set_vars_${index}_key`).fill(key)
@@ -36,12 +32,12 @@ async function addGlobalVar(
     await page.getByRole('button', { name: type }).click()
   }
 
-  // Select 50% width
+  // Select half width
   await page
     .locator(`#global_set_vars_${index}_width-field-base`)
     .getByRole('button', { name: 'Select' })
     .click()
-  await page.getByRole('button', { name: '50%' }).click()
+  await page.getByRole('button', { name: /^Half/ }).click()
 
   if (instructions) {
     await page
@@ -58,11 +54,7 @@ async function addGlobalVar(
   }
 
   // Close the entry
-  await page
-    .locator(`#global_set_vars_${index}-edit div`)
-    .filter({ hasText: `${key} ${type.toLowerCase()}` })
-    .first()
-    .click()
+  await page.locator(`#global_set_vars_${index}-edit .variable-header`).click()
 }
 
 test('add global string', async ({ page }) => {

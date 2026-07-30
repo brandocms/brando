@@ -1,24 +1,6 @@
+/* Shell, thumbnail well and info column come from AssetField.css
+   (`.asset-field` / `.asset-field--single`). Only file-specific bits live here. */
 .file-preview {
-  display: flex;
-  border: 1px dashed var(--brando-color-dark);
-  border-radius: 8px;
-  padding: 8px 25px 8px 8px;
-  width: fit-content;
-
-  .file-info {
-    @font mono;
-    font-size: 13px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding-left: 12px;
-
-    .tiny {
-      width: fit-content;
-      margin-top: 5px;
-    }
-  }
-
   .name {
     @fontsize 13px;
   }
@@ -26,25 +8,5 @@
   .updated {
     font-size: 10px;
     opacity: 0.8;
-  }
-
-  .img-placeholder {
-    @color bg peach;
-    width: 90px;
-    height: 90px;
-    min-width: auto;
-    border-radius: 6px;
-    color: var(--brando-color-dark);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    svg {
-      opacity: 0.7;
-    }
-
-    .shaded & {
-      @color bg white;
-    }
   }
 }

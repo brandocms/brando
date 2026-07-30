@@ -43,6 +43,27 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
         wide
         close={JS.push("close_modal", target: @myself) |> hide_modal("##{@id}")}
       >
+        <:header :if={@show and (!@hide_fragments or !@hide_sections)}>
+          <div class="module-picker-extras">
+            <span class="module-picker-extras-label">{gettext("Or insert")}</span>
+            <button
+              :if={!@hide_sections}
+              type="button"
+              phx-click={JS.push("insert_container", target: @myself) |> hide_modal("##{@id}")}
+            >
+              <.icon name="hero-window" />
+              {gettext("Container")}
+            </button>
+            <button
+              :if={!@hide_fragments}
+              type="button"
+              phx-click={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@id}")}
+            >
+              <.icon name="hero-puzzle-piece" />
+              {gettext("Fragment")}
+            </button>
+          </div>
+        </:header>
         <div :if={@show} class="module-picker">
           <div class="module-picker-search">
             <.icon name="hero-magnifying-glass" />
@@ -137,26 +158,6 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
               </p>
             </div>
           </div>
-
-          <footer :if={!@hide_fragments or !@hide_sections} class="module-picker-extras">
-            <span class="module-picker-extras-label">{gettext("Or insert")}</span>
-            <button
-              :if={!@hide_sections}
-              type="button"
-              phx-click={JS.push("insert_container", target: @myself) |> hide_modal("##{@id}")}
-            >
-              <.icon name="hero-window" />
-              {gettext("Container")}
-            </button>
-            <button
-              :if={!@hide_fragments}
-              type="button"
-              phx-click={JS.push("insert_fragment", target: @myself) |> hide_modal("##{@id}")}
-            >
-              <.icon name="hero-puzzle-piece" />
-              {gettext("Fragment")}
-            </button>
-          </footer>
         </div>
       </Content.modal>
     </div>

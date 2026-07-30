@@ -294,7 +294,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
       end)
 
     ~H"""
-    <div class="video-wrapper-compact">
+    <div class="asset-field asset-field--single video-wrapper-compact">
       <Input.input :if={@editable} type={:hidden} field={@relation_field} value={@video_id} publish={@publish} />
       <%= if @video do %>
         <%= if @video.status == :ready do %>
@@ -346,7 +346,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
       <% else %>
         <.video_placeholder />
         <div :if={@editable} class="video-info">
-          {gettext("No video associated with field")}
+          <span>{gettext("No video associated with field")}</span>
           <button class="tiny" type="button" phx-click={@click} phx-value-id={"edit-video-#{@field.id}"}>
             {gettext("Add video")}
           </button>

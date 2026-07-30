@@ -8,7 +8,40 @@ async function openNewModule(page) {
   await expect(page.getByRole('heading', { name: 'Edit module' })).toBeVisible()
 }
 
+// The module editor splits its form across tabs; a panel's fields are hidden
+// until its tab is selected.
+// Retry until the tab is genuinely selected: a click that lands while the
+// LiveView is patching (e.g. right after a var delete re-renders the form) is
+// swallowed, and `to_tab/1` silently falls back to :template.
+async function openModuleTab(page, name) {
+  const tab = page.getByRole('tab', { name: new RegExp(`^${name}`) })
+  await expect(async () => {
+    await tab.click()
+    await expect(tab).toHaveAttribute('aria-selected', 'true')
+  }).toPass({ timeout: 15000 })
+  await syncLV(page)
+}
+
+// Var chips expose their actions only on hover: `.var-chip-actions` is
+// `opacity: 0; pointer-events: none` until `.var-chip:hover`. If :hover is not
+// active at the instant of the click, the click passes straight through to the
+// chip body and nothing happens — silently, with no error. So verify the
+// outcome and retry, checking first each round so a click that did land is
+// never repeated (re-running a duplicate would create theme_copy_copy).
+async function clickVarChipAction(page, label, outcome) {
+  const button = page.getByRole('button', { name: label, exact: true })
+  const chip = page.locator('.var-chip').filter({ has: button })
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (await outcome().then(() => true, () => false)) return
+    await chip.hover()
+    await button.click().catch(() => {})
+    await page.waitForTimeout(400)
+  }
+  await outcome()
+}
+
 async function replaceModuleCode(page, code) {
+  await openModuleTab(page, 'Template')
   await page.click('.cm-editor')
   await page.keyboard.down('ControlOrMeta')
   await page.keyboard.press('A')
@@ -20,10 +53,12 @@ async function replaceModuleCode(page, code) {
 test('create a simple text module', async ({ page }) => {
   await openNewModule(page)
 
+  await openModuleTab(page, 'Overview')
   await page.locator('input[name="module[name][en]"]').fill('New text module')
   await page.locator('input[name="module[namespace][en]"]').fill('general')
   await page.locator('textarea[name="module[help_text][en]"]').fill('Helpful text')
 
+  await openModuleTab(page, 'References')
   await page.getByRole('button', { name: 'Add reference' }).click()
   await page.getByRole('button', { name: 'Text Rich, editable body content' }).click()
 
@@ -45,6 +80,7 @@ test('create a simple text module', async ({ page }) => {
 test('create, edit, duplicate, persist and delete refs and vars', async ({ page }) => {
   await openNewModule(page)
 
+  await openModuleTab(page, 'Variables')
   await page.getByRole('button', { name: 'Add variable' }).click()
   await page
     .getByRole('button', { name: 'Select A choice from predefined options' })
@@ -65,7 +101,11 @@ test('create, edit, duplicate, persist and delete refs and vars', async ({ page 
     .fill('dark')
   await varModal.getByRole('button', { name: 'Done' }).click()
 
-  await page.getByRole('button', { name: 'Duplicate variable theme' }).click()
+  await clickVarChipAction(page, 'Duplicate variable theme', async () => {
+    await expect(
+      page.getByRole('button', { name: 'Edit variable theme_copy', exact: true })
+    ).toHaveCount(1, { timeout: 2000 })
+  })
   varModal = page.locator('#module-default-var-0')
   await expect(varModal.getByLabel('Key', { exact: true })).toHaveValue('theme_copy')
   await expect(
@@ -76,6 +116,7 @@ test('create, edit, duplicate, persist and delete refs and vars', async ({ page 
   ).toHaveValue('dark')
   await varModal.getByRole('button', { name: 'Done' }).click()
 
+  await openModuleTab(page, 'References')
   await page.getByRole('button', { name: 'Add reference' }).click()
   await page.getByRole('button', { name: 'Text Rich, editable body content' }).click()
 
@@ -98,14 +139,22 @@ test('create, edit, duplicate, persist and delete refs and vars', async ({ page 
   await page.getByRole('link', { name: 'New module →' }).click()
   await syncLV(page)
 
+  await openModuleTab(page, 'Variables')
   await expect(page.getByRole('button', { name: 'Edit variable theme', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Edit variable theme_copy', exact: true })).toBeVisible()
+  await openModuleTab(page, 'References')
   await expect(page.getByRole('button', { name: 'Edit reference intro_text', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Edit reference intro_text_copy', exact: true })).toBeVisible()
 
-  page.once('dialog', (dialog) => dialog.accept())
-  await page.getByRole('button', { name: 'Delete variable theme_copy', exact: true }).click()
-  page.once('dialog', (dialog) => dialog.accept())
+  await openModuleTab(page, 'Variables')
+  page.on('dialog', (dialog) => dialog.accept())
+  await clickVarChipAction(page, 'Delete variable theme_copy', async () => {
+    await expect(
+      page.getByRole('button', { name: 'Edit variable theme_copy', exact: true })
+    ).toHaveCount(0, { timeout: 2000 })
+  })
+  // The `page.on` handler above stays registered and covers this confirm too.
+  await openModuleTab(page, 'References')
   await page.getByRole('button', { name: 'Delete reference intro_text_copy', exact: true }).click()
 
   await page.getByTestId('submit').click()
@@ -113,8 +162,10 @@ test('create, edit, duplicate, persist and delete refs and vars', async ({ page 
   await page.getByRole('link', { name: 'New module →' }).click()
   await syncLV(page)
 
+  await openModuleTab(page, 'Variables')
   await expect(page.getByRole('button', { name: 'Edit variable theme', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Edit variable theme_copy', exact: true })).toHaveCount(0)
+  await openModuleTab(page, 'References')
   await expect(page.getByRole('button', { name: 'Edit reference intro_text', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Edit reference intro_text_copy', exact: true })).toHaveCount(0)
 })

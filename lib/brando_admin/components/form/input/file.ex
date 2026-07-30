@@ -220,7 +220,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
       end)
 
     ~H"""
-    <div class="file-preview">
+    <div class="asset-field asset-field--single file-preview">
       <Input.input
         :if={@editable}
         type={:hidden}
@@ -236,7 +236,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
           </svg>
         </div>
         <div :if={@editable} class="file-info">
-          <div>
+          <div class="info-wrapper">
             <div class="name">
               {@file_name} ({Brando.Utils.human_size(@file.filesize)})
             </div>
@@ -244,7 +244,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
               {gettext("Last updated")}: {Brando.Utils.Datetime.format_datetime(@file.updated_at, "%d/%m/%y, %H:%M")}
             </div>
           </div>
-          <button class="btn tiny mt-1" type="button" phx-click={@click}>
+          <button class="tiny" type="button" phx-click={@click}>
             {gettext("Edit file")}
           </button>
         </div>

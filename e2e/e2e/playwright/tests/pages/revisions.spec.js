@@ -14,7 +14,7 @@ test.describe('Entry revisions', () => {
     await page.getByLabel('URI').fill('revision-system-test')
     await page.getByRole('button', { name: 'Add block' }).last().click()
     await page.getByRole('button', { name: 'HEADERS' }).click()
-    await page.getByRole('button', { name: 'Heading Large text' }).click()
+    await page.getByRole('button', { name: 'Heading', exact: true }).click()
     await syncLV(page)
 
     await page.locator('.entry-block textarea').first().fill('Base block')

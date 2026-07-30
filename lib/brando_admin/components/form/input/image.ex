@@ -356,7 +356,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       end)
 
     ~H"""
-    <div class="image-wrapper-compact">
+    <div class="asset-field asset-field--single image-wrapper-compact">
       <Input.input :if={@editable} type={:hidden} field={@relation_field} value={@value || @image_id} publish={@publish} />
       <%= if @image do %>
         <%= if @image.status == :processed do %>

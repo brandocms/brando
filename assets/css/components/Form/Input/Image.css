@@ -174,71 +174,10 @@
     }
   }
 
+  /* `.image-wrapper-compact` — shell, thumbnail well and info column now come
+     from AssetField.css (`.asset-field` / `.asset-field--single`). */
   .image-wrapper {
     position: relative;
-
-    &-compact {
-      display: flex;
-      background-color: var(--brando-color-input);
-      border: 1px solid var(--brando-input-border);
-      border-radius: var(--brando-input-radius);
-      box-shadow: var(--brando-input-shadow);
-      padding: 3px;
-      width: fit-content;
-
-      .shaded &,
-      .subform & {
-        background-color: transparent;
-      }
-
-      .image-content {
-        border-radius: 5px;
-        overflow: clip;
-      }
-
-      img {
-        width: 90px;
-        height: 90px;
-        min-width: auto;
-      }
-
-      .img-placeholder {
-        background-color: #f5f5f7;
-        border-radius: 5px;
-        width: 90px;
-        height: 90px;
-        min-width: auto;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        .shaded &,
-        .subform & {
-          background-color: #f5f5f7;
-        }
-      }
-
-      .image-info {
-        @font mono;
-        font-size: 12px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        padding-left: 12px;
-        padding-top: 5px;
-        padding-bottom: 5px;
-        padding-right: 20px;
-
-        .title {
-          @font main;
-        }
-
-        .tiny {
-          width: fit-content;
-          margin-top: 5px;
-        }
-      }
-    }
   }
 }
 

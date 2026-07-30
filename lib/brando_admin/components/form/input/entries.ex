@@ -126,28 +126,29 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     ~H"""
     <div>
       <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
-        <%= if !@has_entries do %>
-          <div class="empty-list">
-            {gettext("No selected entries")}
-            <input type="hidden" name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} />
-          </div>
-        <% else %>
-          <div
-            id={"sortable-#{@field.id}-identifiers"}
-            class="selected-entries"
-            phx-hook="Brando.SortableAssocs"
-            data-target={@myself}
-            data-sortable-id={"sortable-#{@field.id}-identifiers"}
-            data-sortable-handle=".identifier"
-            data-sortable-selector=".identifier"
-            data-sortable-dispatch-event="true"
-            data-sortable-dispatch-event-target-id={@field.id}
-            data-sortable-filter=".remove button"
-          >
-            <input type="hidden" name={@field.name} id={@field.id} />
-            <.inputs_for :let={identifier_form} field={@field}>
-              <.assoc_identifier assoc_identifier={identifier_form} available_identifiers={@selected_identifiers}>
-                <%!-- <input
+        <div class="asset-field entries-input">
+          <%= if !@has_entries do %>
+            <div class="empty-list">
+              {gettext("No selected entries")}
+              <input type="hidden" name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} />
+            </div>
+          <% else %>
+            <div
+              id={"sortable-#{@field.id}-identifiers"}
+              class="selected-entries"
+              phx-hook="Brando.SortableAssocs"
+              data-target={@myself}
+              data-sortable-id={"sortable-#{@field.id}-identifiers"}
+              data-sortable-handle=".identifier"
+              data-sortable-selector=".identifier"
+              data-sortable-dispatch-event="true"
+              data-sortable-dispatch-event-target-id={@field.id}
+              data-sortable-filter=".remove button"
+            >
+              <input type="hidden" name={@field.name} id={@field.id} />
+              <.inputs_for :let={identifier_form} field={@field}>
+                <.assoc_identifier assoc_identifier={identifier_form} available_identifiers={@selected_identifiers}>
+                  <%!-- <input
                   type="hidden"
                   name={identifier_form[:id].name}
                   value={identifier_form[:id].value}
@@ -157,26 +158,31 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
                   name={identifier_form[:_persistent_id].name}
                   value={identifier_form.index}
                 /> --%>
-                <:delete>
-                  <input type="hidden" name={"#{@field.form.name}[sort_#{@field.field}_ids][]"} value={identifier_form.index} />
-                  <button
-                    type="button"
-                    name={"#{@field.form.name}[drop_#{@field.field}_ids][]"}
-                    value={identifier_form.index}
-                    phx-click={JS.dispatch("change")}
-                  >
-                    <.icon name="hero-x-circle" />
-                  </button>
-                </:delete>
-              </.assoc_identifier>
-            </.inputs_for>
-            <input type="hidden" name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} />
-          </div>
-        <% end %>
+                  <:delete>
+                    <input
+                      type="hidden"
+                      name={"#{@field.form.name}[sort_#{@field.field}_ids][]"}
+                      value={identifier_form.index}
+                    />
+                    <button
+                      type="button"
+                      name={"#{@field.form.name}[drop_#{@field.field}_ids][]"}
+                      value={identifier_form.index}
+                      phx-click={JS.dispatch("change")}
+                    >
+                      <.icon name="hero-x-circle" />
+                    </button>
+                  </:delete>
+                </.assoc_identifier>
+              </.inputs_for>
+              <input type="hidden" name={"#{@field.form.name}[drop_#{@field.field}_ids][]"} />
+            </div>
+          <% end %>
 
-        <button type="button" class="tiny" phx-click={show_modal("##{@field.id}-select-entries")}>
-          {gettext("Select entries")}
-        </button>
+          <button type="button" class="tiny" phx-click={show_modal("##{@field.id}-select-entries")}>
+            {gettext("Select entries")}
+          </button>
+        </div>
 
         <Content.modal title={gettext("Select entries")} id={"#{@field.id}-select-entries"} narrow>
           <h2 :if={!@selected_schema} class="titlecase">{gettext("Select content type")}</h2>

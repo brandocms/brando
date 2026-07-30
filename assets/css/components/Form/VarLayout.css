@@ -289,14 +289,9 @@
   min-width: 0;
 }
 
-/* Decoration, not a hit area — the whole chip drags. */
-.var-chip-grip {
-  flex: none;
-  width: 9px;
-  height: 14px;
-  background-image: radial-gradient(#cfc5c1 1px, transparent 1px);
-  background-size: 4px 4px;
-}
+/* No grip on a chip: the whole card is the drag surface, so a handle only
+   implied a hit area that did not exist. Rows keep theirs — a row is a band of
+   whitespace with no obvious grab point of its own. */
 
 .var-chip-key {
   overflow: hidden;
@@ -320,11 +315,8 @@
   transition: opacity 120ms ease;
 }
 
-/* the actions overlay this corner, so get out of the way */
-.var-chip:hover .var-chip-type,
-.var-chip:focus-within .var-chip-type {
-  opacity: 0;
-}
+/* The actions no longer overlay this corner, so the type badge stays put —
+   it used to vanish on hover purely to clear room for them. */
 
 /* The label is the chip's edit affordance — the whole line is the hit area. */
 .var-chip-label {
@@ -350,18 +342,29 @@
   }
 }
 
-.var-chip-actions {
-  position: absolute;
-  top: 5px;
-  right: 5px;
+/* Widths on the left, actions on the right, as one control bar. */
+.var-chip-footer {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: auto;
+}
+
+.var-chip-actions {
+  /* Laid out and hit-testable at all times, merely dimmed until the chip is
+     hovered or focused. These were once absolutely positioned over the chip
+     header — which doubles as the drag surface — and hidden with
+     `opacity: 0; pointer-events: none`. That made them silently unclickable
+     whenever `:hover` was not active at the instant of the click (the click
+     fell through to the chip body, no error), and unreachable entirely on
+     touch, where there is no hover. */
+  display: flex;
+  flex: none;
   gap: 2px;
-  opacity: 0;
-  /* They sit over the chip's header, which is also the drag handle. Opacity
-     alone leaves them hit-testable, so an invisible button would swallow both
-     the grab and any click aimed at the key beneath it. Keyboard focus is
-     unaffected, and `:focus-within` below restores hit-testing when tabbed to. */
-  pointer-events: none;
+  margin-left: auto;
+  opacity: 0.55;
   transition: opacity 120ms ease;
 
   /* Four actions have to clear a quarter-width chip, so they run small. */
@@ -399,7 +402,6 @@
 .var-chip:hover .var-chip-actions,
 .var-chip:focus-within .var-chip-actions {
   opacity: 1;
-  pointer-events: auto;
 }
 
 .var-chip-widths {
@@ -407,9 +409,11 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 5px;
-  margin-top: auto;
 }
 
+/* Same palette as the chip tab switchers: a soft blue selected state instead of
+   a solid navy fill, which read as the loudest thing on the canvas despite
+   being the least important control on the chip. */
 .var-width-group {
   display: flex;
   overflow: hidden;
@@ -417,27 +421,30 @@
   border-radius: 5px;
 
   button {
+    /* Snug on purpose: widths + actions have to share one row down to a
+       quarter-width chip before the footer wraps. */
     padding: 2px 4px;
     border: none;
     border-right: 1px solid #f1ebe9;
-    background-color: var(--brando-color-white);
+    background-color: transparent;
+    color: var(--brando-color-dark);
     @font mono;
     font-size: 9.5px;
     opacity: 0.55;
-    transition: background-color 100ms ease, opacity 100ms ease;
+    transition: background-color 120ms ease, color 120ms ease, opacity 120ms ease;
 
     &:last-child {
       border-right: 0;
     }
 
     &:hover {
-      background-color: var(--brando-color-peach);
+      background-color: var(--brando-chip-hover-bg);
       opacity: 0.9;
     }
 
     &.on {
-      background-color: #33506f;
-      color: var(--brando-color-white);
+      background-color: var(--brando-chip-active-bg);
+      color: var(--brando-chip-active-fg);
       opacity: 1;
     }
   }

@@ -92,6 +92,27 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
   defp to_tab(tab), do: Enum.find(@tabs, :template, &(to_string(&1) == tab))
 
+  # Count from the changeset, not from `form[field].value`.
+  #
+  # That value is a list of structs only while it comes from the changeset data;
+  # after a change event has cast the assoc it is an index-keyed params map
+  # (`%{"0" => %{...}}`). `length/1` raised on that shape, killing the LiveView
+  # mid-render of the tab bar — the client then silently remounted and discarded
+  # any unsaved edits, so a just-deleted variable reappeared. The params map is
+  # also wrong to count: it still carries entries dropped via `drop_*_ids`.
+  # `get_field/2` applies the changes, so it matches what the panels render.
+  defp assoc_count(%Phoenix.HTML.Form{source: %Ecto.Changeset{} = changeset}, field) do
+    changeset
+    |> Ecto.Changeset.get_field(field)
+    |> case do
+      nil -> 0
+      list when is_list(list) -> length(list)
+      _ -> 0
+    end
+  end
+
+  defp assoc_count(_form, _field), do: 0
+
   attr :active_tab, :atom, required: true
   attr :form, :any, required: true
 
@@ -100,8 +121,8 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
       assign(assigns, :tabs, [
         {:template, gettext("Template"), nil},
         {:overview, gettext("Overview"), nil},
-        {:variables, gettext("Variables"), length(assigns.form[:vars].value || [])},
-        {:references, gettext("References"), length(assigns.form[:refs].value || [])},
+        {:variables, gettext("Variables"), assoc_count(assigns.form, :vars)},
+        {:references, gettext("References"), assoc_count(assigns.form, :refs)},
         {:datasource, gettext("Datasource"), nil}
       ])
 

@@ -31,6 +31,7 @@
 @import "./components/Form/Subform.css";
 @import "./components/Form/Tab.css";
 @import "./components/Form/VarLayout.css";
+@import "./components/Form/Input/AssetField.css";
 @import "./components/Form/Input/CodeEditor.css";
 @import "./components/Form/Input/ColorPicker.css";
 @import "./components/Form/Input/CustomCheckbox.css";
@@ -433,6 +434,17 @@ body {
   --brando-input-focus-shadow: 0 0 0 2.5px rgba(0,71,255,0.12);
   --brando-card-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.03);
   --brando-card-radius: 12px;
+
+  /* Chip tab switchers — the module editor tabs and the entry form's tab bar.
+     Kept as tokens so the two bars cannot drift apart again. */
+  --brando-tabbar-radius: 14px;
+  --brando-tabbar-bg: #fcfcfd;
+  --brando-tabbar-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.03);
+  --brando-chip-radius: 8px;
+  --brando-chip-padding: 7px 14px;
+  --brando-chip-hover-bg: #f5f1ef;
+  --brando-chip-active-bg: #edf1ff;
+  --brando-chip-active-fg: #1a3f9e;
 
   background-color: var(--brando-color-background);
   color: var(--brando-color-foreground);

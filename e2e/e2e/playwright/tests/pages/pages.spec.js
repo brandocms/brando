@@ -16,7 +16,7 @@ test('creates a simple page', async ({ page }) => {
   // add heading block
   await page.getByRole('button', { name: 'Add block' }).click()
   await page.getByRole('button', { name: 'HEADERS' }).click()
-  await page.getByRole('button', { name: 'Heading Large text' }).click()
+  await page.getByRole('button', { name: 'Heading', exact: true }).click()
   await expect(page.locator('#block-field-blocks-module-picker')).not.toBeVisible()
   await expect(page.getByText('Module | Heading')).toBeVisible()
   await page.getByText('Text', { exact: true }).click()
@@ -25,7 +25,7 @@ test('creates a simple page', async ({ page }) => {
   // add media block
   await page.getByRole('button', { name: 'Add block' }).nth(1).click()
   await page.getByRole('button', { name: 'MEDIA' }).click()
-  await page.getByRole('button', { name: 'Single Asset Full width image' }).click()
+  await page.getByRole('button', { name: 'Single Asset', exact: true }).click()
   await expect(page.locator('#block-field-blocks-module-picker')).not.toBeVisible()
   await expect(page.getByText('Module | Single asset')).toBeVisible()
 
@@ -71,7 +71,7 @@ test('creates a simple page', async ({ page }) => {
   // add text block
   await page.getByRole('button', { name: 'Add block' }).nth(2).click()
   await page.getByRole('button', { name: 'general' }).click()
-  await page.getByRole('button', { name: 'Example module Used for the' }).click()
+  await page.getByRole('button', { name: 'Example module', exact: true }).click()
   await expect(page.locator('#block-field-blocks-module-picker')).not.toBeVisible()
   await expect(page.getByText('Module | Example module')).toBeVisible()
   const exampleBlock = page.locator('.entry-block').nth(2)
@@ -121,7 +121,7 @@ test('duplicates to other language', async ({ page }) => {
   await page.getByLabel('URI').fill('clients')
   await page.getByRole('button', { name: 'Add block' }).click()
   await page.getByRole('button', { name: 'HEADERS' }).click()
-  await page.getByRole('button', { name: 'Heading Large text' }).click()
+  await page.getByRole('button', { name: 'Heading', exact: true }).click()
   await page.locator('textarea').filter({ hasText: 'Text' }).first().fill('Heading')
   await page.getByTestId('submit').click()
   await expect(page.getByRole('link', { name: 'Clients →' })).toBeVisible()
@@ -147,7 +147,7 @@ test('creates meta information', async ({ page }) => {
   // add heading block
   await page.getByRole('button', { name: 'Add block' }).click()
   await page.getByRole('button', { name: 'HEADERS' }).click()
-  await page.getByRole('button', { name: 'Heading Large text' }).click()
+  await page.getByRole('button', { name: 'Heading', exact: true }).click()
   await expect(page.locator('#block-field-blocks-module-picker')).not.toBeVisible()
   await expect(page.getByText('Module | Heading')).toBeVisible()
   await page.getByText('Text', { exact: true }).click()
