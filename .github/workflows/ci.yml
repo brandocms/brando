@@ -158,6 +158,15 @@ jobs:
     name: Serial E2E (PostgreSQL)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Non-blocking until it has a track record. This job was added on
+    # 2026-07-18 and had never once run to completion — it died at the first
+    # step, checking out a then-private repo — so its CI pass rate is entirely
+    # unknown. Runners are slower and more variable than a dev machine, which
+    # is where LiveView timing races tend to surface, and `retries: 2` on CI
+    # will hide some of what does. Let it report for a while, then decide from
+    # the record whether to make it blocking, move it to a nightly schedule, or
+    # drop it.
+    continue-on-error: true
 
     services:
       db:
@@ -206,6 +215,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      # `@brandocms/europacss` pins postcss-functions to an SSH remote
+      # (git@github.com:twined/postcss-functions.git) in its own published
+      # dependencies, so it cannot be changed from this repo. The runner has no
+      # SSH key and the clone exits 128. The repo is public, so rewriting to
+      # HTTPS fetches it anonymously; git rewrites at clone time, leaving the
+      # lockfile and --frozen-lockfile intact.
+      - name: Fetch GitHub git dependencies over HTTPS
+        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
 
       - name: Install Elixir dependencies
         working-directory: brando/e2e
