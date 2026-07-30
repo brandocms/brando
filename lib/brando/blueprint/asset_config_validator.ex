@@ -79,13 +79,17 @@ defmodule Brando.Blueprint.AssetConfigValidator do
     validate_cloudflare_settings!(asset, config)
   end
 
-  defp validate_mux_playback_policies!(asset, config) do
-    meta = Map.get(config, :meta, %{})
-    mux = Map.get(meta, :mux) || Map.get(meta, "mux") || %{}
+  # `meta` reaches us with atom keys from a blueprint and string keys from
+  # decoded JSON. Normalize once on the way in rather than probing both spellings
+  # at every lookup.
+  defp string_keyed(map) when is_map(map), do: Map.new(map, fn {key, value} -> {to_string(key), value} end)
+  defp string_keyed(other), do: other
 
-    policies =
-      Map.get(mux, :playback_policies) || Map.get(mux, "playback_policies") ||
-        Map.get(mux, :playback_policy) || Map.get(mux, "playback_policy")
+  defp validate_mux_playback_policies!(asset, config) do
+    meta = string_keyed(Map.get(config, :meta, %{}))
+    mux = string_keyed(Map.get(meta, "mux") || %{})
+
+    policies = Map.get(mux, "playback_policies") || Map.get(mux, "playback_policy")
 
     case policies do
       nil -> :ok
@@ -95,16 +99,21 @@ defmodule Brando.Blueprint.AssetConfigValidator do
   end
 
   defp validate_cloudflare_settings!(asset, config) do
-    meta = Map.get(config, :meta, %{})
-    cloudflare = Map.get(meta, :cloudflare) || Map.get(meta, "cloudflare") || %{}
+    meta = string_keyed(Map.get(config, :meta, %{}))
+    cloudflare = Map.get(meta, "cloudflare") || %{}
 
     unless is_map(cloudflare) do
       invalid!(asset, :video, :meta, "Cloudflare settings must be a map")
     end
 
-    signed? =
-      Map.get(cloudflare, :require_signed_urls) || Map.get(cloudflare, "require_signed_urls") ||
-        Map.get(cloudflare, :requiresignedurls) || Map.get(cloudflare, "requiresignedurls")
+    cloudflare = string_keyed(cloudflare)
+
+    validate_cloudflare_signing!(asset, cloudflare)
+    validate_cloudflare_max_duration!(asset, cloudflare)
+  end
+
+  defp validate_cloudflare_signing!(asset, cloudflare) do
+    signed? = Map.get(cloudflare, "require_signed_urls") || Map.get(cloudflare, "requiresignedurls")
 
     if signed? in [nil, false] do
       :ok
@@ -116,12 +125,10 @@ defmodule Brando.Blueprint.AssetConfigValidator do
         "Cloudflare signed playback is not supported without an application token signer"
       )
     end
+  end
 
-    max_duration_seconds =
-      Map.get(cloudflare, :max_duration_seconds) ||
-        Map.get(cloudflare, "max_duration_seconds")
-
-    case max_duration_seconds do
+  defp validate_cloudflare_max_duration!(asset, cloudflare) do
+    case Map.get(cloudflare, "max_duration_seconds") do
       nil ->
         :ok
 
