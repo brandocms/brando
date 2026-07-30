@@ -94,10 +94,12 @@ defmodule Brando.Uploads do
     end
   end
 
+  # Catch-all. The clauses above claim every asset type `validate_intake/3` can
+  # answer `:ok` for, so this one is only ever reached with a type it rejects —
+  # there is no success path left to guard, and the error it returns is the
+  # single source of that message.
   def initiate(asset_type, _config_target, %{name: name, size: size}, _user) do
-    with :ok <- validate_intake(asset_type, name, size) do
-      {:ok, :server}
-    end
+    validate_intake(asset_type, name, size)
   end
 
   @doc """

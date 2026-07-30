@@ -840,10 +840,15 @@ defmodule Brando.Villain.Filters do
   def date("now", format, context), do: date(DateTime.utc_now(), format, context)
   def date("today", format, context), do: date(Date.utc_today(), format, context)
 
-  def date(value, format, _) when is_binary(value) do
-    value
-    |> DateTime.from_iso8601()
-    |> Utils.Datetime.format_datetime(format, nil)
+  # `DateTime.from_iso8601/1` answers `{:ok, datetime, offset}` or
+  # `{:error, reason}`, neither of which `format_datetime/3` accepts — this
+  # raised a FunctionClauseError for every ISO8601 string. Unparseable input
+  # renders as-is rather than taking down the whole template.
+  def date(value, format, context) when is_binary(value) do
+    case DateTime.from_iso8601(value) do
+      {:ok, datetime, _offset} -> date(datetime, format, context)
+      {:error, _reason} -> value
+    end
   end
 
   # {{ entry.inserted_at | date:"%-d. %B %Y","no" }}

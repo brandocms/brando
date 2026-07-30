@@ -204,12 +204,15 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
           </div>
         </div>
       </Form.field_base>
+      <%!-- `click={false}`: this branch only renders when `@editable` is false,
+            so the old `@editable && open_image(...)` could never be anything
+            else. --%>
       <div :if={!@editable} class={["input-image", @small && "small", @square && "square", @compact && "compact"]}>
         <.image_preview
           image={@image}
           field={@field}
           relation_field={@relation_field}
-          click={@editable && open_image(@myself)}
+          click={false}
           editable={@editable}
           file_name={@file_name}
           compact={@compact}

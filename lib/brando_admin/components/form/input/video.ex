@@ -160,12 +160,15 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
           </div>
         </div>
       </Form.field_base>
+      <%!-- `click={false}`: this branch only renders when `@editable` is false,
+            so the old `@editable && open_video(...)` could never be anything
+            else. --%>
       <div :if={!@editable} class="input-video">
         <.video_preview
           video={@video}
           field={@field}
           relation_field={@relation_field}
-          click={@editable && open_video(@myself)}
+          click={false}
           editable={@editable}
         />
       </div>

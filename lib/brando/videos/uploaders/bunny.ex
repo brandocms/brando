@@ -456,10 +456,10 @@ defmodule Brando.Videos.Uploaders.Bunny do
 
   defp sanitize_filename(_), do: "untitled"
 
+  # Its one caller already matches `when is_binary(video_guid)`, so a non-binary
+  # clause here is unreachable.
   defp valid_bunny_id?(id) when is_binary(id) do
     # Bunny GUIDs are standard UUIDs
     String.match?(id, ~r/^[a-zA-Z0-9-]+$/) and byte_size(id) < 256
   end
-
-  defp valid_bunny_id?(_), do: false
 end

@@ -268,10 +268,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign(:var, var)
   end
 
+  # Only ever called from the section guarded by `@type in [:color, :link,
+  # :select]`, so there is no other type to fall back for.
   defp type_settings_heading(:color), do: gettext("Color settings")
   defp type_settings_heading(:link), do: gettext("Link settings")
   defp type_settings_heading(:select), do: gettext("Choices")
-  defp type_settings_heading(_type), do: gettext("Settings")
 
   defp width_options do
     [
@@ -552,7 +553,6 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                         </button>
                       </Form.field_base>
                     </div>
-                  <% _ -> %>
                 <% end %>
               </section>
             </div>
