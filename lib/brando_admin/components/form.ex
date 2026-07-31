@@ -2974,6 +2974,10 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def handle_event("validate", params, socket) do
+    # This is also the recovery event for the main form, and it is what
+    # rebuilds the entry from the recovered params — see
+    # `maybe_finish_live_preview_recovery/1`.
+    socket = assign(socket, :form_recovered?, true)
     schema = socket.assigns.schema
     entry = socket.assigns.entry
     current_user = socket.assigns.current_user
@@ -3018,10 +3022,11 @@ defmodule BrandoAdmin.Components.Form do
         |> assign(:form, new_form)
         |> maybe_invalidate_live_preview_assign(rest, :string_path)
         |> maybe_fetch_root_blocks(:live_preview_update, 0)
+        |> maybe_finish_live_preview_recovery()
         |> then(&{:noreply, &1})
 
       [_] ->
-        {:noreply, socket}
+        {:noreply, maybe_finish_live_preview_recovery(socket)}
     end
   end
 
@@ -4128,20 +4133,19 @@ defmodule BrandoAdmin.Components.Form do
         socket
       end
 
-    # Recovery is two independent `phx-auto-recover` forms — this one and the
-    # main form's `validate` — and LiveView orders them however it likes. They
-    # land about a millisecond apart, and everything here quietly depended on
-    # `validate` winning: it is what restores the blocks, so if this handler
-    # goes first the entry has no blocks yet and anything rendered from
-    # `form.source` is an empty page. A slower machine flips the order, the
-    # preview reloads blank, and nothing ever refills it.
+    # Do not render the preview here. Recovery is two independent
+    # `phx-auto-recover` forms — this one and the main form's `validate` — and
+    # LiveView orders them however it likes; measured locally they land about a
+    # millisecond apart. `validate` is what rebuilds the entry from the
+    # recovered params, so rendering from this handler produces an empty page
+    # whenever it happens to go first.
     #
-    # So do not render from the changeset as it stands now. Go through the same
-    # debounced full-rerender the refresh button uses: it asks the block
-    # components for their current state rather than reading a changeset that
-    # may not be populated yet, which makes this independent of who recovers
-    # first.
-    {:noreply, maybe_full_rerender_live_preview(socket, true)}
+    # Instead both sides mark their half done and whichever finishes last does
+    # the render. See `maybe_finish_live_preview_recovery/1`.
+    socket
+    |> assign(:live_preview_recovery_pending?, true)
+    |> maybe_finish_live_preview_recovery()
+    |> then(&{:noreply, &1})
   end
 
   def handle_event("recover_live_preview_state", _params, socket) do
@@ -4337,6 +4341,27 @@ defmodule BrandoAdmin.Components.Form do
   defp build_lc_ids(fields, singular) do
     Enum.map(fields, fn field -> "#{singular}_#{field}" end)
   end
+
+  # Rendezvous between the two halves of a live preview recovery.
+  #
+  # `recover_live_preview_state` knows the cache key and that the preview was
+  # open; `validate` is what rebuilds the entry from the recovered form params.
+  # Neither can render alone — the first to arrive would render an entry the
+  # other has not restored yet — and LiveView does not order them. So each
+  # marks its half done and the second one through renders.
+  #
+  # Previously nothing coordinated them and it worked only because a validate
+  # usually happened to arrive after the preview handler. When it did not, the
+  # preview stayed blank until the editor toggled it off and on.
+  defp maybe_finish_live_preview_recovery(
+         %{assigns: %{live_preview_recovery_pending?: true, form_recovered?: true}} = socket
+       ) do
+    socket
+    |> assign(:live_preview_recovery_pending?, false)
+    |> maybe_full_rerender_live_preview(true)
+  end
+
+  defp maybe_finish_live_preview_recovery(socket), do: socket
 
   defp maybe_fetch_root_blocks(%{assigns: %{live_preview_active?: true}} = socket, event, delay) do
     fetch_root_blocks(socket, event, delay)
