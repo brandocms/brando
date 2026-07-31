@@ -4121,26 +4121,6 @@ defmodule BrandoAdmin.Components.Form do
       |> push_event("b:live_preview", %{cache_key: cache_key})
       |> push_event("js-exec", %{to: "#sidebar", attr: "data-js-hide"})
 
-    # Repopulate the cache before re-enabling the blocks.
-    #
-    # `enable_live_preview_in_blocks/1` only makes each block broadcast
-    # `update_block`, and the client resolves those against a registry built
-    # from the boundary markers already in the preview DOM. After a reconnect
-    # the iframe reloads and fetches this cache: if it is empty the reloaded
-    # page has an empty `<main>`, so there are no markers, the registry is
-    # empty, and every `update_block` is dropped with nothing but a
-    # `console.warn`. Nothing retries, so the preview stays blank for good.
-    #
-    # Rendering the whole entry into the cache first means the reload has real
-    # content and real markers whichever way the race falls — before the blocks
-    # broadcast, or after.
-    Brando.LivePreview.update_cache(
-      cache_key,
-      schema,
-      socket.assigns.form.source,
-      socket.assigns.updated_entry_assocs
-    )
-
     socket =
       if socket.assigns.has_blocks? do
         enable_live_preview_in_blocks(socket)
@@ -4148,7 +4128,20 @@ defmodule BrandoAdmin.Components.Form do
         socket
       end
 
-    {:noreply, socket}
+    # Recovery is two independent `phx-auto-recover` forms — this one and the
+    # main form's `validate` — and LiveView orders them however it likes. They
+    # land about a millisecond apart, and everything here quietly depended on
+    # `validate` winning: it is what restores the blocks, so if this handler
+    # goes first the entry has no blocks yet and anything rendered from
+    # `form.source` is an empty page. A slower machine flips the order, the
+    # preview reloads blank, and nothing ever refills it.
+    #
+    # So do not render from the changeset as it stands now. Go through the same
+    # debounced full-rerender the refresh button uses: it asks the block
+    # components for their current state rather than reading a changeset that
+    # may not be populated yet, which makes this independent of who recovers
+    # first.
+    {:noreply, maybe_full_rerender_live_preview(socket, true)}
   end
 
   def handle_event("recover_live_preview_state", _params, socket) do
