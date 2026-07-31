@@ -39,7 +39,12 @@ test('pages have JSON-LD breadcrumbs', async ({ page }) => {
   const selectModal = page.locator('#select-page_parent_id-modal')
   await expect(selectModal).toBeVisible()
   await selectModal.getByText('Services', { exact: true }).click()
-  await selectModal.getByRole('button', { name: 'OK' }).click()
+  // Picking an option dismisses the modal on its own — the option's phx-click
+  // pushes select_option and then hide_modal. There is no OK to press, and
+  // clicking one raced the 100ms hide transition: land inside it and the click
+  // worked, miss it and the button was already hidden and the test sat there
+  // for its full 60s timeout. Wait for the dismissal instead.
+  await expect(selectModal).toBeHidden()
   await syncLV(page)
 
   await page.getByRole('button', { name: 'Add block' }).click()
