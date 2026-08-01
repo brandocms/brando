@@ -54,7 +54,7 @@ defmodule E2eProject.MixProject do
       {:tidewave, "~> 0.1"},
       {:igniter, "~> 0.6"},
       # phoenix
-      {:phoenix, "1.8.8"},
+      {:phoenix, "1.8.9"},
       {:phoenix_pubsub, "~> 2.0"},
       {:bandit, "~> 1.0"},
       {:phoenix_ecto, "~> 4.1"},

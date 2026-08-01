@@ -114,8 +114,8 @@ importers:
         specifier: ^2.7.8
         version: 2.7.8
       phoenix:
-        specifier: 1.8.8
-        version: 1.8.8
+        specifier: 1.8.9
+        version: 1.8.9
       phoenix_html:
         specifier: ^4.3.0
         version: 4.3.0
@@ -1147,8 +1147,8 @@ packages:
     resolution: {integrity: sha512-AVbw3UJ2e9bq64vSaS9Am0fje1Pa8pbGqTTsmXfaIiMpnr5DlDhfJOuLj9Sf95ZPVDAUerDfEk88MPmPe7UCQg==}
     engines: {node: '>=0.10.0'}
 
-  phoenix@1.8.8:
-    resolution: {integrity: sha512-dHbnj+eERgKqDu1dACsJNp4JWxtWO+598STHaGPhzA5DqNG4jeq5WmkjXsaMYsDMFEsygtFovdrhVtDHTN7V+A==}
+  phoenix@1.8.9:
+    resolution: {integrity: sha512-/2qzAZB3P2s08fFAYaG65lqaNFmVXUSlXdY4/JDdDKIC81y2cFWkPwI8gycy4VLpv197JwZ5PpBf3VhoG32yGA==}
 
   phoenix_html@4.3.0:
     resolution: {integrity: sha512-6vnR2Y7KxEPX1DdN59AuO98TTFtsYBqfUiUOo3NY6vyVp3o94RTawdaKtELFOKfiUD7LCEclBcpCltJM2GWuKw==}
@@ -2367,7 +2367,7 @@ snapshots:
 
   path-is-absolute@1.0.1: {}
 
-  phoenix@1.8.8: {}
+  phoenix@1.8.9: {}
 
   phoenix_html@4.3.0: {}
 
