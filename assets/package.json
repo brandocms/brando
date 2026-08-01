@@ -45,7 +45,7 @@
     "morphdom": "^2.7.8",
     "phoenix": "1.8.8",
     "phoenix_html": "^4.3.0",
-    "phoenix_live_view": "1.2.3",
+    "phoenix_live_view": "1.2.8",
     "prosemirror-inputrules": "^1.4.0",
     "prosemirror-state": "^1.4.3",
     "slugify": "^1.6.9",

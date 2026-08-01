@@ -68,7 +68,7 @@ defmodule E2eProject.MixProject do
       # {:exsync, "~> 0.2", only: :dev},
 
       # live view
-      {:phoenix_live_view, "1.2.3"},
+      {:phoenix_live_view, "1.2.8"},
       {:floki, ">= 0.27.0", only: :test},
 
       # general deps
