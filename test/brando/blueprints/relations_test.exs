@@ -35,7 +35,6 @@ defmodule Brando.Blueprint.RelationsTest do
                 field: :creator,
                 on_cast: nil,
                 on_replace: :raise,
-                ordered: false,
                 owner: Brando.BlueprintTest.P1,
                 owner_key: :creator_id,
                 queryable: Brando.Users.User,
@@ -67,7 +66,6 @@ defmodule Brando.Blueprint.RelationsTest do
                 unique: true,
                 defaults: [],
                 relationship: :child,
-                ordered: false,
                 preload_order: [asc: :sequence]
               }}
   end
