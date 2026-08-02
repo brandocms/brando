@@ -13,12 +13,6 @@ defmodule Brando.Mixfile do
       package: package(),
       elixirc_paths: elixirc_paths(Mix.env()),
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [
-        coveralls: :test,
-        "coveralls.detail": :test,
-        "coveralls.html": :test,
-        "coveralls.json": :test
-      ],
       description: @description,
       aliases: aliases(),
 
@@ -41,6 +35,17 @@ defmodule Brando.Mixfile do
             "guides/blueprint_migrations.md"
           ]
         ]
+      ]
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.html": :test,
+        "coveralls.json": :test
       ]
     ]
   end
