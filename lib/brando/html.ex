@@ -545,13 +545,20 @@ defmodule Brando.HTML do
   def nl2br(text), do: String.replace(text, "\n", "<br>")
 
   @doc """
-  Calculate image ratio
+  Calculate image ratio, as a percentage rounded to four decimal places.
+
+  Non-terminating divisions are rounded rather than carried to the full
+  precision of the current `Decimal.Context`, which would emit dozens of
+  digits into markup for no visual difference.
 
       iex> ratio(%{height: nil, width: 200})
       0
 
       iex> ratio(%{height: 1000, width: 500})
-      Decimal.new(\"200\")
+      Decimal.new(\"200.0000\")
+
+      iex> ratio(%{height: 1000, width: 300})
+      Decimal.new(\"333.3333\")
 
       iex> ratio(nil)
       0
@@ -563,6 +570,7 @@ defmodule Brando.HTML do
     |> Decimal.new()
     |> Decimal.div(Decimal.new(width))
     |> Decimal.mult(Decimal.new(100))
+    |> Decimal.round(4)
   end
 
   def ratio(nil), do: 0
