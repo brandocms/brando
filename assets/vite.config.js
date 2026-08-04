@@ -12,7 +12,7 @@ export default defineConfig({
   build: {
     manifest: false,
     emptyOutDir: false,
-    target: 'modules',
+    target: 'baseline-widely-available',
     outDir: '../../priv/static', // <- Phoenix expects our files here
     sourcemap: true, // we want to debug our code in production
     rollupOptions: {
