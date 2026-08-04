@@ -340,7 +340,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
                     on_click={JS.push("toggle_entry", value: %{dom_id: dom_id}, target: @myself)}
                     open={dom_id in @open_entries}
                   />
-                    <button
+                  <button
                     type="button"
                     class="subform-delete"
                     phx-click={JS.push("remove_entry", value: %{dom_id: dom_id}, target: @myself)}

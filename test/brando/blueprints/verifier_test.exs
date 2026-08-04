@@ -164,8 +164,7 @@ defmodule Brando.Blueprint.VerifierTest do
       compile_blueprint(
         quote do
           attributes do
-            attribute :title, :string,
-              constraints: [one_of: [:title, :subtitle], one_of_message: "need one"]
+            attribute :title, :string, constraints: [one_of: [:title, :subtitle], one_of_message: "need one"]
 
             attribute :subtitle, :string
           end

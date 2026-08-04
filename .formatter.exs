@@ -1,6 +1,7 @@
 spark_locals_without_parens = [
   action: 0,
   action: 1,
+  add_entry: 1,
   after_save: 1,
   alert: 1,
   alert: 2,

@@ -129,10 +129,8 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
     test "collapses a one_of set into a single entry" do
       {items, consumed} =
         grouped([
-          {:meta_image_id, "requires one of: %{fields}",
-           [validation: :one_of, one_of: [:meta_image, :title]]},
-          {:title, "requires one of: %{fields}",
-           [validation: :one_of, one_of: [:meta_image, :title]]}
+          {:meta_image_id, "requires one of: %{fields}", [validation: :one_of, one_of: [:meta_image, :title]]},
+          {:title, "requires one of: %{fields}", [validation: :one_of, one_of: [:meta_image, :title]]}
         ])
 
       assert length(items) == 1
