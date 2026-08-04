@@ -36,6 +36,17 @@ end
 ```
 
 #### Assets  
+`required: true` makes a single asset mandatory. When either of two assets will
+do use `constraints: [one_of: [...]]`, and when exactly one must be set use
+`exactly_one_of`. Pair the latter with `check:` to declare the matching database
+constraint — see the Blueprints guide:
+
+```elixir
+asset :listing_image, :image,
+  constraints: [one_of: [:listing_image, :listing_video]],
+  cfg: :default
+```
+
 Configure file and image uploads with module attributes:
 ```elixir
 @image_cfg [

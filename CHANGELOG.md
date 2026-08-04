@@ -4,6 +4,95 @@
 
 #### Features
 
+- **`one_of` / `exactly_one_of` constraints for "either of these fields"**: an entry that is valid
+  with either of two fields filled in — a listing needing an image *or* a video —
+  could not be expressed before, since `required: true` is per field and either
+  one alone is enough.
+
+      asset :listing_image, :image,
+        constraints: [one_of: [:listing_image, :listing_video]],
+        cfg: :default
+
+  The error attaches to the field carrying the constraint. Assets count as
+  present whether set as an association or as their `_id` column, so both the
+  picker and the upload path satisfy it; `one_of_message` overrides the wording.
+  Assets now run through `Brando.Blueprint.Constraints` at all — previously only
+  attributes and relations did — so `constraints:` is accepted on any asset type.
+
+  `exactly_one_of` is the exclusive form, for fields that are alternatives rather
+  than a fallback chain (an image *or* a video, never both).
+
+  A validation only covers writes that go through the changeset, so `check:` was
+  added alongside it to declare the matching database constraint —
+  `check: [must_have_one_media_type: "requires either an image or a video"]`.
+  Nothing in Blueprint called `Ecto.Changeset.check_constraint/3` before, so a
+  race or a direct `Repo.insert` raised `Ecto.ConstraintError` instead of
+  returning an invalid changeset. `check:` also takes a bare atom or a list of
+  them, falling back to `check_message`.
+
+  All three are accepted on attributes, relations and assets, and are verified at
+  compile time. Asset constraints were not verified at all before this — only
+  attributes and relations were — so a typo in an asset's `constraints:` survived
+  compilation and raised from the changeset instead.
+
+#### Fixes
+
+- **Admin login no longer flashes before animating**: the login screen appeared
+  fully assembled, vanished, then faded in. Three causes. The initial hide was an
+  inline `opacity: 0` set by JS on `#application-login` — but that element is a
+  LiveView, and the connected mount patched it back to server truth, deleting the
+  style and exposing the form (~287ms). The reveal was then gated on a blind
+  `setTimeout(…, 500)`, which re-hid the box (~703ms) before finally animating at
+  ~1.2s. Meanwhile the fader lifted at ~204ms, so all of it happened in the open.
+
+  The hide is now a stylesheet rule in the critical inline CSS
+  (`html.moonwalk:not(.login-revealed) #application-login`), which a patch cannot
+  strip; `login-revealed` lands on `<html>`, which LiveView never touches, and is
+  added as the reveal begins so a later patch can never strand the form invisible.
+  The reveal is triggered by the element's own `phx-mounted` instead of a fixed
+  delay (with a timer as a fallback for dead renders), and the fader holds until
+  the reveal announces itself. Settles in ~1.3s with no flash, down from ~1.7s
+  with one.
+
+#### Features
+
+- **Transformer: mixed drop, ordered queue, inline asset picking**: a transformer
+  subform is now a drop zone for images *and* videos at once. Drop a mixed pile
+  (or use either picker — both gestures take the same path) and each file is
+  routed to its own transport: images through LiveView's upload, videos straight
+  to Mux/Bunny/Cloudflare, or into the sticky UploadManager for `:local`/`:s3`.
+
+  The batch is sorted by filename and registered up front, so every file gets a
+  placeholder card immediately, in order, with its own progress and error state —
+  the resulting entries no longer land in whatever order the uploads happened to
+  finish. Placeholders are skipped when the form saves (with a warning if any are
+  still running), removing one aborts its transfer, and files the browser rejects
+  (wrong type, over the config's `size_limit`) are listed by name instead of
+  vanishing. Provider video uploads accept multiple files and queue sequentially;
+  they previously took `files[0]` and ignored the rest. `Brando.Uploads.AssetIntent`
+  gained an optional opaque `ref` so UploadManager deliveries can be correlated
+  back to the placeholder that is waiting for them.
+
+  Expanding an entry now offers a picker row per asset field — select, swap for an
+  already uploaded asset, or remove, without re-uploading. Uploaded and picked
+  assets also render their thumbnail immediately; new entries previously showed a
+  grey placeholder until the page was reloaded.
+
+  Drag and drop now advertises itself: the transformer carries a permanent
+  dashed drop target rather than a hint that only appeared once you were already
+  dragging, and clicking it opens a combined picker. Mixed-media transformers
+  gained an "Upload files" button alongside the per-type ones.
+
+  New subform option `layout` arranges entries as rows (`:list`, the default) or
+  cards (`:grid` — media on top, the `listing:` component beneath, tools on
+  hover). `add_entry: false` hides the "Add entry" button, for schemas where a
+  blank entry can never be valid (a `NOT NULL` asset column, or a check
+  constraint like "exactly one of image_id/video_id").
+
+  Mux, Bunny and Cloudflare hooks now share `providerVideoUploader`, which owns
+  queueing, request correlation and teardown; each provider supplies only its
+  transfer.
+
 - **Block variable layout** (#2522): module variables now carry a `width`
   (`1/1`, `1/2`, `1/3`, `1/4`, `auto`, `fill`), a `new_row` break and a
   `placement` (in the block / configure modal / hidden from editors), replacing

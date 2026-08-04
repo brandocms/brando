@@ -158,6 +158,82 @@ defmodule Brando.Blueprint.VerifierTest do
     end
   end
 
+  test "accepts cross-field constraints on attributes and assets" do
+    # The verifier runs during compilation, so compiling at all is the assertion.
+    module =
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :title, :string,
+              constraints: [one_of: [:title, :subtitle], one_of_message: "need one"]
+
+            attribute :subtitle, :string
+          end
+
+          assets do
+            asset :cover, :image,
+              constraints: [
+                exactly_one_of: [:cover, :clip],
+                check: [one_media_type: "image or video"]
+              ],
+              cfg: :default
+
+            asset :clip, :video, cfg: :default
+          end
+        end
+      )
+
+    assert module.__schema__(:type, :cover_id) == :id
+  end
+
+  test "rejects a typo in an asset constraint at compile time" do
+    # Assets were not run through constraint verification at all, so a typo
+    # here used to survive compilation and raise from the changeset instead.
+    assert_raise Spark.Error.DslError, ~r/unsupported options \[:one_off\]/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :cover, :image, constraints: [one_off: [:cover]], cfg: :default
+          end
+        end
+      )
+    end
+  end
+
+  test "rejects length constraints on assets, which have no length" do
+    assert_raise Spark.Error.DslError, ~r/unsupported options \[:min_length\]/, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :cover, :image, constraints: [min_length: 2], cfg: :default
+          end
+        end
+      )
+    end
+  end
+
+  test "rejects malformed constraint values" do
+    assert_raise Spark.Error.DslError, ~r/unsupported value/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :title, :string, constraints: [one_of: "not a list"]
+          end
+        end
+      )
+    end
+
+    assert_raise Spark.Error.DslError, ~r/unsupported value/, fn ->
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :title, :string, constraints: [check: [bad_message: :not_a_string]]
+          end
+        end
+      )
+    end
+  end
+
   test "rejects cast callbacks the changeset runner cannot execute" do
     assert_raise Spark.Error.DslError, ~r/unsupported `:cast` option/, fn ->
       compile_blueprint(
@@ -941,6 +1017,77 @@ defmodule Brando.Blueprint.VerifierTest do
              module.__form__().tabs |> hd() |> Map.fetch!(:fields) |> hd() |> Map.fetch!(:fields) |> hd()
 
     assert module.__form__().transformers == [{:items, [:cover, :video], %{}}]
+  end
+
+  test "transformers default to offering an add entry button" do
+    media_item = MediaItem
+
+    module =
+      compile_blueprint(
+        quote do
+          relations do
+            relation :items, :has_many, module: unquote(media_item)
+          end
+
+          forms do
+            form do
+              tab "Content" do
+                fieldset do
+                  inputs_for :items do
+                    cardinality :many
+                    style {:transformer, [:cover, :video]}
+
+                    input :cover, :image
+                  end
+                end
+              end
+            end
+          end
+        end
+      )
+
+    assert %{add_entry: true} = first_subform(module)
+  end
+
+  test "accepts a transformer that suppresses the add entry button" do
+    media_item = MediaItem
+
+    module =
+      compile_blueprint(
+        quote do
+          relations do
+            relation :items, :has_many, module: unquote(media_item)
+          end
+
+          forms do
+            form do
+              tab "Content" do
+                fieldset do
+                  inputs_for :items do
+                    cardinality :many
+                    style {:transformer, [:cover, :video]}
+                    add_entry false
+
+                    input :cover, :image
+                  end
+                end
+              end
+            end
+          end
+        end
+      )
+
+    assert %{add_entry: false} = first_subform(module)
+    assert :ok = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+  end
+
+  defp first_subform(module) do
+    module.__form__().tabs
+    |> hd()
+    |> Map.fetch!(:fields)
+    |> hd()
+    |> Map.fetch!(:fields)
+    |> hd()
   end
 
   defp assert_form_error(body, message_pattern) do

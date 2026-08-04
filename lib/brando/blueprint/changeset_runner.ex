@@ -68,6 +68,7 @@ defmodule Brando.Blueprint.ChangesetRunner do
     |> Unique.run_unique_relation_constraints(changeset_params.module, changeset_params.relations)
     |> Constraints.run_validations(changeset_params.module, changeset_params.attributes)
     |> Constraints.run_validations(changeset_params.module, changeset_params.relations)
+    |> Constraints.run_validations(changeset_params.module, changeset_params.assets)
     |> Constraints.run_fk_constraints(changeset_params.module, changeset_params.relations)
     |> Trait.run_changeset_mutators(
       changeset_params.module,

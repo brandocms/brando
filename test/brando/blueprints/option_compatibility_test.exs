@@ -116,6 +116,7 @@ defmodule Brando.Blueprint.OptionCompatibilityTest do
 
   @asset_option_scopes %{
     cfg: [:file, :gallery, :image, :video],
+    constraints: [:file, :gallery, :image, :video],
     force_update_on_change: [:gallery],
     invalid_message: [:gallery],
     module: [:file, :gallery, :image, :video],
@@ -290,6 +291,7 @@ defmodule Brando.Blueprint.OptionCompatibilityTest do
                type: :gallery,
                opts: %{
                  cfg: :default,
+                 constraints: [one_of: [:cover, :gallery]],
                  force_update_on_change: true,
                  invalid_message: "invalid gallery",
                  module: Brando.Galleries.Gallery,

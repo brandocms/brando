@@ -4,6 +4,7 @@ defmodule Brando.Blueprint.AssetOptions do
   @asset_types [:file, :gallery, :image, :video]
   @option_scopes %{
     cfg: @asset_types,
+    constraints: @asset_types,
     force_update_on_change: [:gallery],
     invalid_message: [:gallery],
     module: @asset_types,

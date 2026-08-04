@@ -13,7 +13,19 @@ defmodule Brando.Blueprint.Verifier do
   alias Spark.Dsl.Verifier
   alias Spark.Error.DslError
 
-  @attribute_constraint_keys [:acceptance, :confirmation, :format, :length, :max_length, :min_length]
+  # Cross-field constraints are not tied to a storage type, so every entity kind
+  # accepts them.
+  @shared_constraint_keys [
+    :check,
+    :check_message,
+    :exactly_one_of,
+    :exactly_one_of_message,
+    :one_of,
+    :one_of_message
+  ]
+
+  @attribute_constraint_keys [:acceptance, :confirmation, :format, :length, :max_length, :min_length] ++
+                               @shared_constraint_keys
   @non_string_collision_types [
     :array,
     :boolean,
@@ -34,7 +46,12 @@ defmodule Brando.Blueprint.Verifier do
     :timestamp,
     :uuid
   ]
-  @relation_constraint_keys [:length, :max_length, :min_length, :require_blocks]
+  @relation_constraint_keys [:length, :max_length, :min_length, :require_blocks] ++
+                              @shared_constraint_keys
+
+  # Assets have no length or format to constrain; only the cross-field rules
+  # apply to them.
+  @asset_constraint_keys @shared_constraint_keys
   @unique_keys [:message, :prevent_collision, :with]
 
   @impl true
@@ -94,7 +111,7 @@ defmodule Brando.Blueprint.Verifier do
 
   defp verify_asset(dsl_state, asset) do
     case Brando.Blueprint.AssetOptions.validate(asset) do
-      :ok -> :ok
+      :ok -> verify_constraints(dsl_state, :asset, asset)
       {:error, message} -> error(dsl_state, :assets, asset, message)
     end
   end
@@ -587,7 +604,7 @@ defmodule Brando.Blueprint.Verifier do
   end
 
   defp do_verify_constraint_options(dsl_state, kind, entity, constraints) do
-    allowed = if kind == :attribute, do: @attribute_constraint_keys, else: @relation_constraint_keys
+    allowed = constraint_keys_for(kind)
     unknown = Keyword.keys(constraints) -- allowed
 
     if unknown == [] do
@@ -596,6 +613,10 @@ defmodule Brando.Blueprint.Verifier do
       error(dsl_state, section(kind), entity, "`:constraints` contains unsupported options #{inspect(unknown)}")
     end
   end
+
+  defp constraint_keys_for(:attribute), do: @attribute_constraint_keys
+  defp constraint_keys_for(:asset), do: @asset_constraint_keys
+  defp constraint_keys_for(_relation), do: @relation_constraint_keys
 
   defp verify_constraint_values(dsl_state, kind, entity, constraints) do
     Enum.reduce_while(constraints, :ok, fn constraint, :ok ->
@@ -620,6 +641,23 @@ defmodule Brando.Blueprint.Verifier do
 
   defp valid_constraint?(:relation, %{opts: %{module: :blocks}}, {:require_blocks, classes}),
     do: is_list(classes) and Enum.all?(classes, &is_binary/1)
+
+  defp valid_constraint?(_, _, {key, fields}) when key in [:one_of, :exactly_one_of],
+    do: is_list(fields) and fields != [] and Enum.all?(fields, &is_atom/1)
+
+  defp valid_constraint?(_, _, {key, message})
+       when key in [:one_of_message, :exactly_one_of_message, :check_message],
+       do: is_binary(message)
+
+  defp valid_constraint?(_, _, {:check, name}) when is_atom(name) and not is_nil(name), do: true
+
+  defp valid_constraint?(_, _, {:check, checks}) when is_list(checks) and checks != [] do
+    if Keyword.keyword?(checks) do
+      Enum.all?(checks, fn {name, message} -> is_atom(name) and is_binary(message) end)
+    else
+      Enum.all?(checks, &is_atom/1)
+    end
+  end
 
   defp valid_constraint?(_, _, _), do: false
 
@@ -778,6 +816,7 @@ defmodule Brando.Blueprint.Verifier do
 
   defp section(:attribute), do: :attributes
   defp section(:relation), do: :relations
+  defp section(:asset), do: :assets
 
   defp error(dsl_state, section, entity, message) do
     {:error,

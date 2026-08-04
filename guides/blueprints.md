@@ -387,14 +387,72 @@ formats, video strategies/metadata, file content disposition, and completion
 callbacks. Deferred zero-argument config functions are validated when their
 result is materialized.
 
-At the asset declaration level, the supported options are `cfg` and
-`required`. Galleries additionally accept Ecto's `required_message`,
+At the asset declaration level, the supported options are `cfg`, `required`,
+and `constraints`. Galleries additionally accept Ecto's `required_message`,
 `invalid_message`, and `force_update_on_change` cast options. Unknown options
 are rejected during compilation so a typo cannot silently weaken validation.
 When a form clears a required gallery, its `required_message` is used and the
 changeset error retains `validation: :required`; optional galleries continue to
 clear normally. Correct newly reported declaration typos after upgrading. No
 Igniter upgrade or database migration is required.
+
+#### Requiring one of several assets
+
+`required: true` marks a single asset as mandatory. When an entry is valid with
+*either* of two assets — a listing that needs an image or a video — neither can
+be required on its own. Use the `one_of` constraint instead:
+
+```elixir
+assets do
+  asset :listing_image, :image,
+    constraints: [one_of: [:listing_image, :listing_video]],
+    cfg: :default
+
+  asset :listing_video, :video, cfg: :default
+end
+```
+
+The error attaches to the asset carrying the constraint, so declare it on the
+one whose input should show the message, and drop `required: true` from both —
+otherwise the form marks a field as mandatory that a sibling can satisfy. An
+asset counts as present whether it was set as an association or as its `_id`
+column, so both the picker and upload paths satisfy it.
+
+Use `exactly_one_of` when the fields are alternatives rather than a fallback —
+a media item holding an image *or* a video, never both:
+
+```elixir
+asset :image, :image,
+  constraints: [
+    exactly_one_of: [:image, :video],
+    exactly_one_of_message: "requires either an image or a video"
+  ],
+  cfg: :default
+```
+
+That is normally paired with a database check constraint. The constraint remains
+the guarantee, and the validation covers writes that go through the changeset —
+but a race between two requests, or a direct `Repo.insert`, still reaches the
+database. An undeclared constraint raises `Ecto.ConstraintError` there instead of
+returning an invalid changeset, so declare it too:
+
+```elixir
+asset :image, :image,
+  constraints: [
+    exactly_one_of: [:image, :video],
+    check: [must_have_one_media_type: "requires either an image or a video"]
+  ],
+  cfg: :default
+```
+
+The name must match the database constraint exactly. `check:` also accepts a
+bare atom or a list of them, which use `check_message` — or `"is invalid"` when
+that is unset.
+
+Message overrides are declared alongside the constraint they belong to, inside
+the same `constraints:` list. All three — `one_of`, `exactly_one_of` and
+`check` — work on attributes and relations as well as assets, and unknown or
+malformed constraint keys are rejected at compile time for every entity kind.
 
 All three media types share one completion callback contract:
 

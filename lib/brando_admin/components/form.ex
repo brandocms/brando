@@ -4570,7 +4570,12 @@ defmodule BrandoAdmin.Components.Form do
       |> List.first()
       |> Brando.Blueprint.Forms.get_tab_for_field(form)
 
-    translated_error_keys = Brando.Blueprint.Utils.translate_error_keys(error_keys, form, schema)
+    {group_items, grouped_keys} = group_constraint_items(changeset, form, schema)
+
+    translated_error_keys =
+      (error_keys -- grouped_keys)
+      |> Brando.Blueprint.Utils.translate_error_keys(form, schema)
+      |> Kernel.++(group_items)
 
     # Include nested association errors as "parent → child → field" paths
     nested_error_paths = flatten_nested_errors(traversed_errors)
@@ -4603,6 +4608,36 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:active_tab, tab_with_first_error)
     |> push_event("b:alert", %{title: error_title, message: error_msg, type: "error"})
     |> push_event("b:scroll_to_first_error", %{})
+  end
+
+  @doc false
+  # `one_of`/`exactly_one_of` mark every field in the set, which would list each
+  # of them separately — reading as "all of these are wrong" when the point is
+  # that one of them will do. Collapse each set into a single entry.
+  #
+  # Returns `{items, consumed_keys}`; the caller subtracts the consumed keys so
+  # the grouped fields are not also listed individually.
+  def group_constraint_items(changeset, form, schema) do
+    changeset.errors
+    |> Enum.flat_map(fn {_key, {_msg, opts}} ->
+      case opts[:one_of] || opts[:exactly_one_of] do
+        nil -> []
+        fields -> [fields]
+      end
+    end)
+    |> Enum.uniq()
+    |> Enum.reduce({[], []}, fn fields, {items, keys} ->
+      labels = Brando.Blueprint.Utils.translate_error_keys(fields, form, schema)
+      item = Enum.join(labels, " #{gettext("or")} ")
+
+      {items ++ [item], keys ++ Enum.map(fields, &group_error_key(changeset, &1))}
+    end)
+  end
+
+  # Mirrors Brando.Blueprint.Constraints: an asset's error lives on its _id.
+  defp group_error_key(changeset, field) do
+    relation_key = :"#{field}_id"
+    if Map.has_key?(changeset.data, relation_key), do: relation_key, else: field
   end
 
   defp flatten_nested_errors(errors, prefix \\ []) do
@@ -5422,12 +5457,13 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp has_error(field, true) do
-    relation_field = :"#{field.field}_id"
+    # Gate on used_input? exactly as error_tag/1 does. Reading form.errors
+    # directly flagged asset labels the moment the form rendered — red dots on a
+    # blank create form, with no message to explain them, while a plain required
+    # field alongside stayed quiet.
+    relation_field = field.form[:"#{field.field}_id"]
 
-    case Keyword.get_values(field.form.errors, relation_field) do
-      [] -> false
-      _ -> true
-    end
+    Phoenix.Component.used_input?(relation_field) and relation_field.errors != []
   end
 
   defp has_error(%{errors: []}, _), do: false
@@ -5839,7 +5875,17 @@ defmodule BrandoAdmin.Components.Form do
   attr :uid, :string
 
   def error_tag(assigns) do
-    errors = if Phoenix.Component.used_input?(assigns.field), do: assigns.field.errors, else: []
+    # A relation/asset field is two things in the form: the association, and the
+    # `<field>_id` hidden input that actually carries a value. `used_input?`
+    # only ever returns true for the latter, so reading errors off the
+    # association alone silently drops every message an asset field produces.
+    # Collect from both and let whichever was used supply them.
+    errors =
+      [assigns.field | relation_field(assigns)]
+      |> Enum.filter(&Phoenix.Component.used_input?/1)
+      |> Enum.flat_map(& &1.errors)
+      |> Enum.uniq()
+      |> Enum.map(&label_group_fields(&1, assigns.field))
 
     assigns =
       assigns
@@ -5864,6 +5910,29 @@ defmodule BrandoAdmin.Components.Form do
       {@translate_fn.(error)}
     </span>
     """
+  end
+
+  defp relation_field(%{relation: true, field: field}), do: [field.form[:"#{field.field}_id"]]
+  defp relation_field(_assigns), do: []
+
+  # Group constraints (`one_of`, `exactly_one_of`) name the other fields in the
+  # set. The changeset only knows them as atoms; here we have the schema, and so
+  # the labels the editor actually sees on those inputs.
+  defp label_group_fields({msg, opts} = error, field) do
+    case opts[:one_of] || opts[:exactly_one_of] do
+      nil -> error
+      fields -> {msg, Keyword.put(opts, :fields, field_labels(fields, field))}
+    end
+  end
+
+  defp field_labels(fields, field) do
+    schema = field.form.data.__struct__
+
+    fields
+    |> Brando.Blueprint.Utils.translate_error_keys(schema.__form__(), schema)
+    |> Enum.join(", ")
+  rescue
+    _error -> Enum.map_join(fields, ", ", &to_string/1)
   end
 
   attr :form, :any
