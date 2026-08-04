@@ -7,7 +7,11 @@ defmodule BrandoAdmin.UserLoginLive do
 
   def render(assigns) do
     ~H"""
-    <div class="login" id="application-login">
+    <div
+      class="login"
+      id="application-login"
+      phx-mounted={JS.dispatch("brando:login-mounted")}
+    >
       <div class="brando-versioning">
         <svg
           version="1.1"

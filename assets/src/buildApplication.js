@@ -67,11 +67,9 @@ export default (hooks, enableDebug = false) => {
   app.registerCallback(Events.APPLICATION_PRELUDIUM, () => {
     app.presence = new Presence(app)
     app.toast = new Toast(app)
-
-    const el = Dom.find('#application-login')
-    if (el) {
-      gsap.set(el, { opacity: 0 })
-    }
+    // The login screen starts hidden by a stylesheet rule (see auth.html.heex),
+    // not by an inline style set here — LiveView's connected mount patch would
+    // strip an inline style straight back off again.
   })
 
   app.registerCallback(Events.APPLICATION_READY, () => {
@@ -87,8 +85,19 @@ export default (hooks, enableDebug = false) => {
       const loginBox = Dom.find('#application-login .login-box')
       const figureWrapper = Dom.find('#application-login .figure-wrapper')
 
-      setTimeout(() => {
-        gsap.set(el, { opacity: 1 })
+      // Run once, whichever trigger arrives first. The reveal is driven by the
+      // element's own mount rather than a fixed delay, so it starts as soon as
+      // LiveView has finished patching instead of racing it. The timer is only a
+      // safety net: on a dead render — or if the socket never connects —
+      // phx-mounted never fires, and the form must not stay invisible.
+      let revealed = false
+
+      const revealLogin = () => {
+        if (revealed) return
+        revealed = true
+
+        // Hide the pieces before lifting the rule, so the container never paints
+        // fully assembled for a frame on its way to the animation.
         gsap.set(loginBox, { opacity: 0 })
         gsap.set(figureWrapper, { opacity: 0 })
 
@@ -100,6 +109,17 @@ export default (hooks, enableDebug = false) => {
         gsap.set(['.field-wrapper', '.primary', '.title'], { x: -15 })
         gsap.set('.figure-wrapper', { x: -10 })
         gsap.set('.brando-versioning', { xPercent: -200 })
+
+        // Hand the container from the stylesheet rule to an inline opacity
+        // before lifting the rule, so the timeline's opening beat still fades it
+        // in rather than finding it already opaque and idling for half a second.
+        // From here visibility is GSAP's inline style, so a patch that strips it
+        // leaves the form visible rather than blank.
+        gsap.set(el, { opacity: 0 })
+        document.documentElement.classList.add('login-revealed')
+
+        // Only now is there something worth looking at — tell the fader to lift.
+        window.dispatchEvent(new CustomEvent('brando:login-revealing'))
 
         timeline
           .to(el, { opacity: 1, duration: 0.5, ease: 'none' })
@@ -127,7 +147,10 @@ export default (hooks, enableDebug = false) => {
           )
           .to('.brando-versioning', { opacity: 1, ease: 'none' })
           .to('.brando-versioning', { xPercent: 0, ease: 'circ.out' })
-      }, 500)
+      }
+
+      window.addEventListener('brando:login-mounted', revealLogin, { once: true })
+      setTimeout(revealLogin, 1200)
     }
   })
 
