@@ -24,6 +24,7 @@ defmodule Brando.Uploads.AssetIntent do
     entry_var_gallery
     entry_field
     entry_field_gallery
+    transformer_image
     transformer_video
     video_picker
   )
@@ -39,7 +40,14 @@ defmodule Brando.Uploads.AssetIntent do
     deliver_topic
     folder
     folder_id
+    ref
   )
+
+  # Opaque client-generated correlation token. It is echoed back to the owning
+  # component so a delivery can be matched to the placeholder the client
+  # registered for that file. Never interpolated into a query or an atom, but
+  # kept to a conservative charset since it does reach the DOM as an id.
+  @ref_format ~r/^[A-Za-z0-9_-]{1,64}$/
 
   @doc """
   Normalize a client target into the canonical string-keyed wire map.
@@ -52,6 +60,7 @@ defmodule Brando.Uploads.AssetIntent do
          :ok <- validate_compatibility(kind, asset_type),
          {:ok, topic} <- deliver_topic(target["deliver_topic"]),
          {:ok, path} <- path(target["path"]),
+         {:ok, ref} <- ref(target["ref"]),
          :ok <- validate_destination(kind, target) do
       {:ok,
        target
@@ -59,7 +68,8 @@ defmodule Brando.Uploads.AssetIntent do
        |> Map.put("asset_type", asset_type)
        |> Map.put("config_target", config_target(target["config_target"]))
        |> Map.put("deliver_topic", topic)
-       |> Map.put("path", path)}
+       |> Map.put("path", path)
+       |> Map.put("ref", ref)}
     end
   rescue
     ArgumentError -> {:error, "Invalid upload configuration target"}
@@ -84,6 +94,9 @@ defmodule Brando.Uploads.AssetIntent do
 
         "block_ref_video" ->
           asset_type == "video"
+
+        "transformer_image" ->
+          asset_type == "image"
 
         kind when kind in ["transformer_video", "video_picker"] ->
           asset_type == "video"
@@ -159,6 +172,15 @@ defmodule Brando.Uploads.AssetIntent do
   end
 
   defp path(_), do: {:error, "Invalid upload path"}
+
+  defp ref(nil), do: {:ok, nil}
+  defp ref(""), do: {:ok, nil}
+
+  defp ref(ref) when is_binary(ref) do
+    if Regex.match?(@ref_format, ref), do: {:ok, ref}, else: {:error, "Invalid upload ref"}
+  end
+
+  defp ref(_), do: {:error, "Invalid upload ref"}
 
   defp config_target(nil), do: "default"
   defp config_target(target), do: Brando.Assets.ConfigTarget.serialize(target)

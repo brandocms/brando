@@ -129,6 +129,18 @@ defmodule Brando.Blueprint.Forms.Dsl do
         required: false,
         doc: "Function component used to render each transformer entry"
       ],
+      layout: [
+        type: {:in, [:list, :grid]},
+        required: false,
+        default: :list,
+        doc: "Transformer entry layout — :list rows, or :grid cards"
+      ],
+      add_entry: [
+        type: :boolean,
+        required: false,
+        default: true,
+        doc: "Render the \"Add entry\" button. Set false when every entry must carry an asset"
+      ],
       instructions: [
         type: :string,
         required: false,

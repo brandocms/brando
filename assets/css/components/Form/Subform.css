@@ -275,3 +275,389 @@
     }
   }
 }
+
+/* Transformer — mixed image/video drop zone and its queued placeholder cards */
+.transformer-uploader {
+  position: relative;
+  border: 1px dashed transparent;
+  border-radius: 10px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+
+  &.dragging {
+    border-color: var(--brando-color-dark);
+    background-color: #fff;
+
+    .transformer-dropzone-hint {
+      opacity: 1;
+    }
+  }
+
+  /* A permanent, clickable drop target. Drag and drop advertises itself here —
+     a hover-only hint is invisible until you are already dragging. */
+  .transformer-dropzone {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    column-gap: 8px;
+    margin-top: 12px;
+    padding: 18px;
+    border: 1px dashed #d8d8dd;
+    border-radius: 10px;
+    background-color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+
+    [data-icon] {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      border-color: var(--brando-color-dark);
+    }
+  }
+
+  &.dragging .transformer-dropzone {
+    border-color: var(--brando-color-dark);
+    border-style: solid;
+    background-color: var(--brando-color-peach, #fdf3ef);
+  }
+
+  /* Grid layout — entries become cards: media on top, content beneath, tools
+     floating over the corner. */
+  .transformer-entries.layout-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 16px;
+
+    .transformer-entry {
+      position: relative;
+      flex-direction: column;
+      margin-bottom: 0;
+      padding: 0;
+      overflow: hidden;
+      border-radius: 10px;
+
+      .subform-tools {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        z-index: 2;
+        display: flex;
+        column-gap: 4px;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 6px;
+        padding: 2px;
+      }
+
+      &:hover .subform-tools,
+      &.pending .subform-tools {
+        opacity: 1;
+      }
+
+      /* The tool icons are inline <svg stroke="currentColor">, so the hover
+         state has to move `color` — setting only a background leaves a dark
+         icon on a dark chip. */
+      .subform-tools button {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border: none;
+        border-radius: 5px;
+        background: none;
+        color: var(--brando-color-dark);
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease;
+
+        svg {
+          width: 15px;
+          height: 15px;
+          stroke: currentColor;
+        }
+
+        &:hover {
+          background-color: var(--brando-color-dark);
+          color: var(--brando-color-peach);
+        }
+      }
+
+      .subform-listing {
+        flex-direction: column;
+        align-items: stretch;
+        column-gap: 0;
+
+        .img-sq {
+          width: 100%;
+          aspect-ratio: 1;
+          margin: 0;
+
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          /* An entry with no asset, or one still processing, fills the same
+             square as a thumbnail would — otherwise the card collapses to a
+             stray icon in the corner. The icon needs an explicit size because
+             heroicons are masks, and because the actions-row rule above sizes
+             every [data-icon] in this component down to 15px. */
+          .img-placeholder {
+            display: grid;
+            place-items: center;
+            width: 100%;
+            height: 100%;
+            background-color: color-mix(in srgb, var(--brando-color-dark) 5%, transparent);
+
+            [data-icon] {
+              width: 28px;
+              height: 28px;
+              opacity: 0.35;
+            }
+          }
+        }
+
+        .subform-listing-row {
+          flex-direction: column;
+          padding: 10px 12px 12px;
+        }
+      }
+
+      .subform-fields {
+        padding: 0 12px 12px;
+      }
+    }
+  }
+
+  /* Heroicon spans are CSS masks: without an explicit size and a
+     background-color they render as nothing. The neighbouring .add-entry-button
+     uses inline <svg>, so both have to be normalised here or the row is a
+     mixture of icon sizes and missing glyphs. */
+  [data-icon] {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    background-color: currentColor;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 8px;
+    margin-top: 12px;
+
+    /* One shape for every action, whichever markup it came from. */
+    .add-entry-button,
+    .upload-button {
+      margin-top: 0;
+      height: 36px;
+      padding: 0 14px;
+      column-gap: 8px;
+      font-size: 13px;
+      line-height: 1;
+      border-radius: 8px;
+      border: 1px solid var(--brando-color-dark);
+      background: none;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background-color 0.2s ease, color 0.2s ease;
+
+      svg {
+        width: 15px;
+        height: 15px;
+        margin-right: 0;
+      }
+
+      &:hover {
+        background-color: var(--brando-color-dark);
+        color: var(--brando-color-peach);
+      }
+    }
+
+    /* The combined upload is the primary action — it is what most drops and
+       most clicks actually want. */
+    .upload-button[data-pick="files"] {
+      background-color: var(--brando-color-dark);
+      color: var(--brando-color-peach);
+
+      &:hover {
+        background-color: transparent;
+        color: var(--brando-color-dark);
+      }
+    }
+
+    /* Reordering is a utility, not a peer of the upload actions. */
+    .add-entry-button:last-child {
+      margin-left: auto;
+    }
+  }
+
+  /* The whole card is the drag surface. Thumbnails must opt out of the
+     browser's own image drag, or grabbing a card hands you a copy-an-image
+     drag instead of a reorder. */
+  .transformer-entries[data-sortable="true"] .transformer-entry {
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    img {
+      -webkit-user-drag: none;
+      user-drag: none;
+    }
+
+    /* Controls inside a card are excluded from dragging via Sortable's filter;
+       give them a pointer so they don't read as part of the drag surface. */
+    button,
+    a,
+    input,
+    textarea,
+    select {
+      cursor: pointer;
+    }
+  }
+
+  .transformer-entry.is-sorting {
+    opacity: 0.4;
+  }
+
+  .transformer-entry.drag-item {
+    cursor: grabbing;
+  }
+
+  .transformer-entry.pending {
+    opacity: 0.85;
+
+    .pending-listing {
+      display: flex;
+      align-items: center;
+      @space column-gap 1;
+      width: 100%;
+    }
+
+    .pending-filename {
+      font-size: 14px;
+      word-break: break-all;
+    }
+
+    .pending-progress {
+      display: flex;
+      align-items: center;
+      column-gap: 10px;
+      margin-top: 4px;
+
+      .progress-bar {
+        position: relative;
+        flex-grow: 1;
+        height: 3px;
+        border-radius: 2px;
+        background-color: #f0f0f2;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background-color: var(--brando-color-dark);
+        transition: width 0.2s ease;
+      }
+    }
+
+    &.failed {
+      opacity: 1;
+
+      .img-sq .img-placeholder {
+        color: var(--brando-color-red, #c53030);
+      }
+    }
+
+    .pending-error {
+      font-size: 13px;
+      margin-top: 4px;
+      color: var(--brando-color-red, #c53030);
+    }
+  }
+
+  .transformer-assets {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 24px;
+    row-gap: 8px;
+    margin-bottom: 12px;
+
+    .transformer-asset {
+      display: flex;
+      align-items: center;
+      column-gap: 10px;
+    }
+
+    .transformer-asset-label {
+      font-size: 13px;
+      opacity: 0.7;
+    }
+
+    .transformer-asset-actions {
+      display: flex;
+      column-gap: 6px;
+
+      /* These sit in a flex row that would otherwise stretch them; size them to
+         their label so "Remove" doesn't span the dialog. */
+      button {
+        flex: 0 0 auto;
+      }
+
+      /* Destructive, but a sibling of Replace — tinted rather than a full
+         secondary button, which carries its own much larger metrics. */
+      .asset-remove {
+        color: var(--media-badge-missing, #a33a3a);
+        border-color: color-mix(in srgb, var(--media-badge-missing, #a33a3a) 40%, transparent);
+
+        &:hover {
+          background-color: var(--media-badge-missing, #a33a3a);
+          border-color: var(--media-badge-missing, #a33a3a);
+          color: #fff;
+        }
+      }
+    }
+  }
+
+  /* item_fields inside the modal — same component as the inline list editor,
+     but with room to lay out properly. */
+  .modal .transformer-assets {
+    flex-direction: column;
+    align-items: flex-start;
+    row-gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .transformer-upload-errors {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background-color: #fff;
+    border: 1px solid var(--brando-color-red, #c53030);
+    font-size: 13px;
+
+    .transformer-upload-error {
+      display: flex;
+      align-items: center;
+      column-gap: 8px;
+      padding: 2px 0;
+
+      .filename {
+        font-weight: 500;
+        word-break: break-all;
+      }
+
+      .reason {
+        opacity: 0.75;
+      }
+    }
+  }
+}

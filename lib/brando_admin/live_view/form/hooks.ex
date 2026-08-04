@@ -369,7 +369,9 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
               {:halt, socket}
             else
-              {:cont, socket}
+              # A manager upload carries no struct path — its destination lives
+              # in the pending registry instead.
+              deliver_pending_image(socket, image)
             end
         end
 
@@ -389,25 +391,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         {:halt, socket}
 
       _ ->
-        # Check if this is a pending block image update (e.g. block upload or
-        # "save as new copy" from a block). Uses stable {module, id} tuples.
-        pending = Map.get(socket.assigns, :pending_block_image_updates, %{})
-
-        case Map.pop(pending, image.id) do
-          {nil, _} ->
-            {:cont, socket}
-
-          {{module, id}, remaining} ->
-            send_update(module, id: id, event: "image_processed", image: image)
-            {:halt, assign(socket, :pending_block_image_updates, remaining)}
-
-          {unexpected_target, remaining} ->
-            require Logger
-
-            Logger.warning("Dropping pending block image update with unexpected target: #{inspect(unexpected_target)}")
-
-            {:halt, assign(socket, :pending_block_image_updates, remaining)}
-        end
+        deliver_pending_image(socket, image)
     end
   end
 
@@ -422,6 +406,36 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   defp handle_hooks_image_info(_, socket), do: {:cont, socket}
+
+  # Check if this is a pending block image update (e.g. block upload or "save as
+  # new copy" from a block). Uses stable {module, id} tuples.
+  defp deliver_pending_image(socket, image) do
+    pending = Map.get(socket.assigns, :pending_block_image_updates, %{})
+
+    case Map.fetch(pending, image.id) do
+      :error ->
+        {:cont, socket}
+
+      {:ok, {module, id}} ->
+        send_update(module, id: id, event: "image_processed", image: image)
+
+        # An image row is broadcast as :updated before its sizes exist, so
+        # consuming the registration on that first update throws away the one
+        # that matters and leaves the card stuck on "Processing" forever.
+        if image.status == :processed do
+          {:halt, assign(socket, :pending_block_image_updates, Map.delete(pending, image.id))}
+        else
+          {:halt, socket}
+        end
+
+      {:ok, unexpected_target} ->
+        require Logger
+
+        Logger.warning("Dropping pending block image update with unexpected target: #{inspect(unexpected_target)}")
+
+        {:halt, assign(socket, :pending_block_image_updates, Map.delete(pending, image.id))}
+    end
+  end
 
   # Asset delivery from the sticky UploadManager (docs/UPLOADER.md §6.3/§7).
   # Orphan-safe: the asset is already persisted when this fires; if the target
@@ -564,7 +578,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   defp deliver_asset(
-         %{"kind" => "transformer_video", "component_id" => component_id},
+         %{"kind" => "transformer_video", "component_id" => component_id} = target,
          %Brando.Videos.Video{} = video,
          _socket
        )
@@ -572,7 +586,34 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     send_update(BrandoAdmin.Components.Form.Transformer,
       id: component_id,
       event: "upload_complete",
-      asset: video
+      asset: video,
+      ref: Map.get(target, "ref")
+    )
+  end
+
+  # The transformer takes the image id immediately — the card renders its
+  # placeholder while processing — and the "brando:image:<id>" machinery swaps in
+  # the processed struct when the sizes are done.
+  defp deliver_asset(
+         %{"kind" => "transformer_image", "component_id" => component_id} = target,
+         %Brando.Images.Image{} = image,
+         _socket
+       )
+       when is_binary(component_id) do
+    PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+
+    send_update(BrandoAdmin.Components.Form.Transformer,
+      id: component_id,
+      event: "upload_complete",
+      asset: image,
+      ref: Map.get(target, "ref")
+    )
+
+    # Subscribing is only half of it — the processed struct still needs somewhere
+    # to go, or the card sits on "Processing" forever with no thumbnail.
+    send(
+      self(),
+      {:register_pending_block_image, image.id, {BrandoAdmin.Components.Form.Transformer, component_id}}
     )
   end
 

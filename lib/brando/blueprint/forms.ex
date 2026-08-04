@@ -82,13 +82,14 @@ defmodule Brando.Blueprint.Forms do
 
       fieldset do
         size :full
-        inputs_for :items, [
-          label: t("Items"),
-          style: :inline,
-          cardinality: :many,
-          size: :full,
-          default: %Item{}
-        ] do
+
+        inputs_for :items do
+          label t("Items")
+          style :inline
+          cardinality :many
+          size :full
+          default %Item{}
+
           input :status, :status, compact: true, label: :hidden
           input :title, :text, label: t("Title", Item)
           input :key, :text, monospace: true, label: t("Key", Item)
@@ -102,6 +103,7 @@ defmodule Brando.Blueprint.Forms do
       inputs_for :vars do
         label t("Page variables")
         component :page_vars
+      end
 
   Image transformer:
 
@@ -119,6 +121,34 @@ defmodule Brando.Blueprint.Forms do
   schemas compile. A missing `default` creates a fresh related struct. An explicit
   default can be a map, a struct, or a two-argument callback receiving the parent
   entry and the uploaded asset (or `nil` when adding an empty entry).
+
+  A mixed batch can be dropped anywhere on the transformer, or picked with the
+  buttons — images and videos are split by media type and routed to their own
+  transport. The batch is ordered by filename and every file gets a placeholder
+  entry up front, so the entries appear in a predictable order regardless of which
+  upload finishes first. Placeholders are skipped when the form saves.
+
+  `layout` picks how entries are arranged. The default `:list` gives a row per
+  entry; `:grid` gives cards — media on top, the `listing:` component's content
+  beneath, tools on hover:
+
+      layout :grid
+
+  Expanding an entry offers a picker row for each asset field, so an image or
+  video can be selected, swapped for an already uploaded one, or removed without
+  re-uploading.
+
+  Set `add_entry: false` to drop the "Add entry" button on schemas where a blank
+  entry is never valid — a `NOT NULL` asset column, or a check constraint like
+  "exactly one of image_id/video_id" — so an editor cannot create a row that
+  fails at save:
+
+      inputs_for :media_items do
+        cardinality :many
+        style {:transformer, [:image, :video]}
+        add_entry false
+        # ...
+      end
 
   For instance, if you have a `Project` that has many `Client`s, and you wish to upload
   a bunch of their logos before adding the rest of the information, you could start by
@@ -141,11 +171,13 @@ defmodule Brando.Blueprint.Forms do
           # ...
           fieldset do
             size :full
-            inputs_for :clients,
-              label: t("Clients"),
-              cardinality: :many,
-              style: {:transformer, :logo},
-              default: %Client{} do
+
+            inputs_for :clients do
+              label t("Clients")
+              cardinality :many
+              style {:transformer, :logo}
+              default %Client{}
+
               # add the Client schemas attributes
               input :logo, :image
               input :name, :text, placeholder: "Client Name"
@@ -159,7 +191,7 @@ defmodule Brando.Blueprint.Forms do
 
   You can also specify a callback function for the `default` key:
 
-        default: &__MODULE__.default_client/2
+        default &__MODULE__.default_client/2
 
         def default_client(_entry, image) do
           orientation = Brando.Images.get_image_orientation(image)
@@ -168,15 +200,17 @@ defmodule Brando.Blueprint.Forms do
 
   As well as a custom listing:
 
-        listing: &__MODULE__.client_listing/1
+        listing &__MODULE__.client_listing/1
 
-  `client_listing/1` must be a one-argument function component:
+  `client_listing/1` must be a one-argument function component. Its `@entry` is
+  always a struct of the related schema with the entry's assets attached, whether
+  the entry came from the database or was uploaded a second ago:
 
         def client_listing(assigns) do
           ~H\"""
           <div>
             <div>
-              Name: <%= @entry.name %>
+              Name: {@entry.name}
             </div>
           </div>
           \"""

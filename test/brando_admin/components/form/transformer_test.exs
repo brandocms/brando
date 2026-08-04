@@ -44,4 +44,59 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
       Transformer.build_default(subform, Item, %{}, nil)
     end
   end
+
+  # Every item goes through the same render and the same save collection, so a
+  # constructor that omits a key does not fail where it is written — it fails
+  # later, inside render, as a KeyError with no obvious link to the upload that
+  # produced it.
+  describe "item shape" do
+    @item_keys [:assets, :changes, :dom_id, :is_new, :pending, :source]
+
+    test "a new item carries every key" do
+      item = Transformer.new_item("transformer-item-new-1", %{})
+
+      assert item |> Map.keys() |> Enum.sort() == @item_keys
+      assert item.is_new
+      assert item.assets == %{}
+      refute item.pending
+    end
+
+    test "an existing row carries every key" do
+      item = Transformer.new_item("transformer-item-1", %Item{}, is_new: false)
+
+      assert item |> Map.keys() |> Enum.sort() == @item_keys
+      refute item.is_new
+    end
+
+    test "an upload placeholder carries every key" do
+      file = %{"ref" => "tf-abc123", "filename" => "photo.jpg", "size" => 1024, "kind" => "image"}
+      item = Transformer.build_placeholder(file, %Subform{}, Item, %{})
+
+      assert item |> Map.keys() |> Enum.sort() == @item_keys
+      assert item.assets == %{}
+      assert item.pending.ref == "tf-abc123"
+      assert item.pending.kind == :image
+      assert item.pending.status == :waiting
+      assert item.pending.size == 1024
+    end
+
+    test "a video placeholder is tagged as video" do
+      file = %{"ref" => "tf-abc124", "filename" => "clip.mp4", "size" => 2048, "kind" => "video"}
+
+      assert Transformer.build_placeholder(file, %Subform{}, Item, %{}).pending.kind == :video
+    end
+  end
+
+  describe "placeholder rejection" do
+    test "refuses a ref that could not safely become a DOM id" do
+      file = %{"ref" => "../../etc", "filename" => "x.jpg", "size" => 1, "kind" => "image"}
+
+      refute Transformer.build_placeholder(file, %Subform{}, Item, %{})
+    end
+
+    test "refuses malformed entries rather than raising" do
+      refute Transformer.build_placeholder(%{}, %Subform{}, Item, %{})
+      refute Transformer.build_placeholder(%{"ref" => 1}, %Subform{}, Item, %{})
+    end
+  end
 end

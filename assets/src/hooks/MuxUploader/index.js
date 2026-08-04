@@ -2,147 +2,31 @@
  * Direct Mux uploads with request-scoped URL correlation and UploadManager
  * visibility. Every request keeps its own resolver and transfer instance so
  * equal filenames and overlapping component uploads cannot cross wires.
+ *
+ * Queueing, correlation and teardown live in providerVideoUploader — this file
+ * only knows how to move bytes to Mux.
  */
 import * as UpChunk from '@mux/upchunk'
+import providerVideoUploader from '../shared/providerVideoUploader'
 
-export default (app) => ({
-  async mounted() {
-    this.pendingRequests = new Map()
-    this.activeUploads = new Map()
-
-    this.el.addEventListener('input', (event) => {
-      event.preventDefault()
-
-      if (event.target instanceof HTMLInputElement && event.target.files) {
-        const file = event.target.files[0]
-        if (file) this.uploadToMux(file)
-      }
+export default providerVideoUploader({
+  label: 'Mux',
+  startTransfer({ file, response, onProgress, onSuccess, onError }) {
+    const upload = UpChunk.createUpload({
+      endpoint: response.upload_url,
+      file,
+      chunkSize: 15360,
     })
 
-    this.handleEvent('video_upload_url_ready', (payload) => {
-      this.pendingRequests.get(payload.request_ref)?.resolve(payload)
+    // UpChunk reports a percentage, not byte counts.
+    upload.on('progress', (event) => {
+      const percentage = Math.round(event.detail || 0)
+      onProgress((percentage / 100) * file.size, file.size)
     })
 
-    this.handleEvent('video_upload_url_error', (payload) => {
-      console.error('Video upload URL error:', payload)
-      this.pendingRequests.get(payload.request_ref)?.resolve(payload)
-    })
-  },
+    upload.on('success', () => onSuccess())
+    upload.on('error', (error) => onError(error.detail?.message || 'Upload failed'))
 
-  pushVideoEvent(event, payload) {
-    const target = this.el.dataset.target
-    if (target) {
-      this.pushEventTo(target, event, payload)
-    } else {
-      this.pushEvent(event, payload)
-    }
-  },
-
-  destroyed() {
-    this.pendingRequests.forEach(({ reject }, requestRef) => {
-      reject(new Error('Upload aborted'))
-      window.BrandoUploads?.externalError?.(requestRef, 'Upload aborted')
-    })
-    this.pendingRequests.clear()
-
-    this.activeUploads.forEach((upload, requestRef) => {
-      upload.abort()
-      window.BrandoUploads?.externalError?.(requestRef, 'Upload aborted')
-    })
-    this.activeUploads.clear()
-  },
-
-  requestRef() {
-    const id = window.crypto?.randomUUID?.() || Math.random().toString(36).slice(2, 14)
-    return `video-${id}`
-  },
-
-  mimeType(file) {
-    if (file.type) return file.type
-    const extension = file.name.split('.').pop()?.toLowerCase()
-    return {
-      mp4: 'video/mp4',
-      webm: 'video/webm',
-      mov: 'video/quicktime',
-      avi: 'video/x-msvideo',
-      ogv: 'video/ogg',
-    }[extension] || 'application/octet-stream'
-  },
-
-  waitForUploadUrl(requestRef, timeoutMs = 30000) {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('Timed out waiting for upload URL')), timeoutMs)
-
-      this.pendingRequests.set(requestRef, {
-        resolve: (payload) => {
-          clearTimeout(timer)
-          resolve(payload)
-        },
-        reject: (error) => {
-          clearTimeout(timer)
-          reject(error)
-        },
-      })
-    }).finally(() => this.pendingRequests.delete(requestRef))
-  },
-
-  async uploadToMux(file) {
-    const requestRef = this.requestRef()
-    window.BrandoUploads?.trackExternal?.(file.name, file.size, requestRef)
-
-    try {
-      const urlPromise = this.waitForUploadUrl(requestRef)
-      this.pushVideoEvent('get_video_upload_url', {
-        request_ref: requestRef,
-        filename: file.name,
-        size: file.size,
-        mime_type: this.mimeType(file),
-      })
-      const response = await urlPromise
-
-      if (response.error) throw new Error(response.error)
-
-      const { upload_url, video_id } = response
-      const upload = UpChunk.createUpload({
-        endpoint: upload_url,
-        file,
-        chunkSize: 15360,
-      })
-      this.activeUploads.set(requestRef, upload)
-
-      upload.on('progress', (progressEvent) => {
-        const percentage = Math.round(progressEvent.detail || 0)
-        const totalMB = (file.size / 1024 / 1024).toFixed(1)
-        const uploadedMB = ((percentage / 100) * file.size / 1024 / 1024).toFixed(1)
-
-        this.pushVideoEvent('video_upload_progress', {
-          request_ref: requestRef,
-          video_id,
-          uploaded_mb: uploadedMB,
-          total_mb: totalMB,
-          percentage,
-        })
-        window.BrandoUploads?.externalProgress?.(requestRef, percentage)
-      })
-
-      upload.on('success', () => {
-        this.activeUploads.delete(requestRef)
-        this.pushVideoEvent('video_upload_complete', { request_ref: requestRef, video_id })
-        window.BrandoUploads?.externalComplete?.(requestRef)
-      })
-
-      upload.on('error', (error) => {
-        const message = error.detail?.message || 'Upload failed'
-        this.activeUploads.delete(requestRef)
-        this.pushVideoEvent('upload_error', { request_ref: requestRef, filename: file.name, error: message })
-        window.BrandoUploads?.externalError?.(requestRef, message)
-      })
-    } catch (error) {
-      const message = error.message || 'Upload failed'
-      console.error('Mux upload error:', error)
-      this.activeUploads.delete(requestRef)
-      this.pushVideoEvent('upload_error', { request_ref: requestRef, filename: file.name, error: message })
-      window.BrandoUploads?.externalError?.(requestRef, message)
-    }
+    return upload
   },
 })

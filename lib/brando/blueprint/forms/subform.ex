@@ -9,5 +9,7 @@ defmodule Brando.Blueprint.Forms.Subform do
             style: :regular,
             default: nil,
             listing: nil,
+            layout: :list,
+            add_entry: true,
             component: nil
 end
