@@ -148,9 +148,14 @@ const measureEntry = async (page, label, entryId, expectedBlocks) => {
 // Mount is the number that matters: it is what an editor waits through when
 // opening an entry, and it is the one that scales with block count.
 const BUDGETS = {
-  'flat-5': { mount: 360_000, edit: 13_000, save: 60_000 },
-  'flat-40': { mount: 1_650_000, edit: 13_000, save: 65_000 },
-  'flat-115': { mount: 4_380_000, edit: 13_000, save: 75_000 },
+  // `edit` tightened 13_000 -> 11_800 on 2026-08-05: the block's identity
+  // inputs (uid/type/anchor/multi/module_id/parent_id/creator_id/
+  // marked_as_deleted/source) now render from a tracked assign instead of
+  // from the form, so they leave the diff entirely on an edit that does not
+  // change them. Measured 12_233 -> 10_707 B at 115 blocks.
+  'flat-5': { mount: 360_000, edit: 11_800, save: 60_000 },
+  'flat-40': { mount: 1_650_000, edit: 11_800, save: 65_000 },
+  'flat-115': { mount: 4_380_000, edit: 11_800, save: 75_000 },
   // Nested mount swings ~9% run to run, so its headroom is wider on purpose.
   nested: { mount: 2_150_000, edit: 3_200, save: 235_000 },
 }

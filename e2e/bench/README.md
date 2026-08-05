@@ -59,6 +59,51 @@ Reports the `PageFormLive` process and its socket handler, before and after a
 forced GC. **The post-GC number is the one that matters** — right after mount the
 heap is full of render garbage that would be collected anyway.
 
+## 4. Where the time goes (server vs browser)
+
+Wall clock conflates three things with different fixes, so measure them apart:
+
+- **Server round trip** — first frame sent to last frame received.
+- **Browser main thread** — `PerformanceObserver` on `longtask` (blocks over 50 ms).
+- The remainder is Playwright actionability and idle waits.
+
+`bench/insert-breakdown.spec.js` does this for the three clicks that make up an
+insert. It is what showed insert latency at 115 blocks is browser layout, not
+server render work: the round trip is flat in block count (~95 ms at every
+size) while the main thread is not (0 → 52 → 776 ms).
+
+`bench/insert-client-cost.spec.js` separates layout from morphdom: it repeats
+the operation with the block list `display: none`, leaving the DOM exactly as
+large but out of layout. 258 ms → 0 ms at 20 999 unchanged nodes.
+
+`bench/tree-triggers.spec.js` reports the same split for copy, the outline
+drawer and the entry-field fan-out, and asserts budgets for the first and last.
+
+## 5. Server-side profiling
+
+`e2e/bench/profile_op.exs` attaches `:eprof` to the LiveView process for the
+duration of one operation. The operation has to be driven from a real client
+while the profiler is already attached, so the two coordinate through flag
+files. Start the server as a named node (see above), then in one shell:
+
+```sh
+cd e2e/e2e/playwright
+BENCH_PROFILE=1 BENCH_OP=insert BENCH_ENTRY=115 pnpm playwright test \
+  --config bench/playwright.bench.config.js bench/profile-op.spec.js
+```
+
+and in another, at the same time:
+
+```sh
+cd e2e/bench
+BENCH_OP=insert BENCH_ENTRY=115 elixir --sname profile --cookie benchcookie profile_op.exs
+```
+
+`BENCH_OP` is `insert`, `outline` or `copy`. The report is written to
+`bench/profile-<op>-<entry>.txt` and echoed. Without `BENCH_PROFILE=1` the spec
+skips itself, so a plain sweep of `bench/` does not block on a flag file nobody
+is going to raise.
+
 ## Gotchas
 
 - Playwright's `actionTimeout` defaults to unlimited and the repo config doesn't
@@ -68,3 +113,15 @@ heap is full of render garbage that would be collected anyway.
 - `evalLV` in `e2e/e2e/playwright/utils.js` is dead — no `sandbox:eval` handler
   exists anywhere in the codebase. That's why memory is measured over
   distribution instead.
+- `:eprof` lives in OTP's `tools` app, which a Mix project does not put on the
+  code path — `:eprof.start/0` comes back `:undef` on the server node.
+  `profile_op.exs` adds `tools-*/ebin` from the node's own `:code.root_dir/0`.
+  It also redirects the report through `:eprof.log/1`, because `analyze/2`
+  otherwise prints through the *server's* group leader.
+- **A fixture that does not contain the thing being measured reports success.**
+  None of the flat/nested modules mention `entry`, so `Block.may_read_entry?/2`
+  excluded every one of them and the entry-field fan-out measured 7 KB — while
+  it was in fact shipping `nil` to every block and blanking `{{ entry.title }}`
+  everywhere. `/bench-entry-consumers` exists for that measurement, and the
+  spec asserts the rendered output, not just the byte count. Same failure shape
+  as the bench save that reported a latency for a save that never succeeded.

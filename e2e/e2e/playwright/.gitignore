@@ -13,4 +13,12 @@ bench/mount-frame.json
 bench/save-frame.json
 bench/copy-frame.json
 bench/outline-frame.json
+bench/edit-frames.json
+bench/entry-fanout-frames.json
+bench/insert-*.json
 bench/shot-*.png
+
+# eprof reports written by e2e/bench/profile_op.exs, and the flag files it and
+# bench/profile-op.spec.js hand off through
+bench/profile-*.txt
+bench/op-*.flag

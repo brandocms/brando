@@ -2,7 +2,7 @@
 
 **Decision:** keep LiveView as the owner of block state. See `assessment.md` for the evidence.
 
-**Status: Phases 0 and 1 are DONE (2026-07-28). Phases 2–5 are open.**
+**Status: Phases 0–3 are DONE (Phase 3 closed 2026-08-05). Phases 4 and 5 are open.**
 The architecture decision stands — Phase 0 proved per-edit cost is flat in block count, and
 Phase 1 cut mount by a third, per-edit by half, save by 93% and memory by ~73% without moving any
 state to the client. The one target missed is mount at 115 blocks, and the reason is now understood
@@ -13,7 +13,7 @@ either delivered, or prefixed **WON'T DO** for something decided against, with t
 would reopen it. Nothing decided against is left unchecked — an unchecked box here means somebody
 should still do it.
 
-## Where we stand (measured 2026-07-28/29, 115 root blocks unless noted)
+## Where we stand (measured 2026-08-05, 115 root blocks unless noted)
 
 | Metric | Phase 0 baseline | Now | Target | |
 |---|---|---|---|---|
@@ -21,10 +21,12 @@ should still do it.
 | Mount, wall clock | 4 849 ms | 4 501 ms | ≤ 2 500 ms | ✗ −7 % |
 | **Retained session memory** | ~16 MB* | **4.31 MB** | ≤ 8 MB | ✅ |
 | **Save, inbound** | never measured | **65 KB** | — | was 1 082 KB |
-| Single edit, inbound | 23.0 KB | 11.1 KB | ≤ 11 KB (P2) | ~at gate, −52 % |
-| Single edit, outbound | 5.6 KB | 5.0 KB | ≤ 3 KB (P2) | −11 % |
-| Insert, latency | 1 128 ms | 827 ms | ≤ 400 ms (P3) | −27 % |
-| Insert, inbound | 83.1 KB | 67.4 KB | ≤ 40 KB (P3) | −19 % |
+| **Single edit, inbound** | 23.0 KB | **10.7 KB** | ≤ 11 KB (P2) | ✅ −53 % |
+| Single edit, outbound | 5.6 KB | 4.4 KB | ≤ 3 KB (P2) | target predates the fixtures — see P2 |
+| Insert, latency | 1 128 ms | 1 169 ms | ≤ 400 ms (P3) | of which **95 ms is the server** — see P3 |
+| Insert, inbound | 83.1 KB | 76.1 KB | ≤ 40 KB (P3) | −8 %; the frame *is* the new block |
+| **Copy a block, inbound** | — | **413 B** | — | was 849 780 B ✅ |
+| Entry-field edit, unread field | — | 7.3 KB | — | was 276 KB (all consumers) |
 | Mount @40, inbound | — | **1 460 KB*** | ≤ 1 500 KB | ✅ under |
 | Mount @5, inbound | — | 317 KB* | — | |
 | Nested mount, inbound | 3 334 KB | 1 723 KB | — | −48 % |
@@ -235,7 +237,7 @@ the params and that edit is silently reverted by the next keystroke anywhere els
 came back as "Config one". The distinction that matters is not saved-vs-unsaved *record* but
 edited-vs-never-edited *field*: definitions are never edited here and can go; values cannot.
 
-## Phase 2 — Reclaim the per-edit payload
+## Phase 2 — Reclaim the per-edit payload — ✅ DONE 2026-08-05 (inbound gate met, outbound gate retired)
 
 **Partly banked by Phase 1 already: the edit diff is 23.0 → 12.5 KB (−46 %), outbound 5.6 → 5.0 KB.**
 The `phx-click` JS-command attrs that were 46.9 % of the old 23 KB diff are gone (delegated
@@ -256,64 +258,143 @@ that blocks the mount target.
 - [x] `[liveview]` Hoist the static JS commands out of the per-edit render path — **done in Phase 1.**
       The dropdown carries data attributes instead of serialised commands, and the config modal is
       no longer always-rendered.
-- [ ] `[liveview]` Reduce the re-sent hidden-input surface. `entry_block[block][uid|type|multi|
-      module_id|parent_id|creator_id|source|marked_as_deleted]` are re-serialized on every
-      keystroke in both directions and never change during an edit session.
-- [ ] Re-measure. Gate: inbound ≤ 11 KB, outbound ≤ 3 KB, no e2e regressions.
+- [x] `[liveview]` Reduce the re-sent hidden-input surface — **done 2026-08-05, inbound only.**
+      `Block.assign_hidden_block_fields/1` precomputes the nine identity inputs
+      (`uid|type|anchor|multi|module_id|parent_id|creator_id|marked_as_deleted|source`) as a
+      `{name, id, value}` list and `Render.hidden_block_fields/1` renders straight from it.
+      **Measured @115: single edit 12 233 → 10 707 B inbound (−12.5 %).** Markup is byte-identical,
+      params are byte-identical (4 219 B, same nine pairs), 71/71 blocks e2e pass, 1 099 unit
+      tests pass.
+      **Why it was being re-sent at all:** the root path renders inside `<.inputs_for>`, whose body
+      is a comprehension, and `Diff.process_keyed/5` re-renders every dynamic that depends on one
+      of the entry's own vars. `block_form` is a fresh struct on every validate, so all of them
+      did — including nine inputs whose values cannot change during an edit. Assigns-level
+      tracking *does* reach inside a comprehension (`render.(vars_changed, changed?)`), so reading
+      one tracked assign instead of the entry var takes them out of the diff. **This is a general
+      lever, not a one-off: anything under `<.inputs_for>` that does not depend on the form can be
+      moved behind an assign the same way.**
+- [x] Re-measure — **done 2026-08-05. Inbound gate MET (10 707 B ≤ 11 000). Outbound gate NOT met
+      (4 413 B vs 3 000) and unreachable in this phase — the target predates the fixtures.**
+      Composition of the 4 219 B of form params:
+
+      | | raw bytes @115 |
+      |---|---|
+      | block vars (config + hidden) | **~1 660** |
+      | block refs (content surface) | ~1 598 |
+      | block identity (this task's nine fields) | ~455 |
+      | other block scalars | ~354 |
+      | LiveView `_unused_` markers | ~152 |
+      | *of which pure URL-encoding of `[`/`]`* | *1 133 (27 %)* |
+
+      The config/hidden vars are the ~1 660 B that the 2026-07-29 fixture change added — subtract
+      them and outbound is 2 753 B, i.e. **the ≤3 KB target is the pre-config-var number**, the
+      same way the ≤1 500 KB mount target was (see Phase 1). Nothing was tuned to reach it.
+
+      **The nine identity fields cannot leave the DOM**, so the ~455 B they cost outbound is not
+      recoverable — and even recovering all of it lands at 3 958 B, still over the gate.
+      `validate_block` bases the new changeset on `changeset.data` (`events.ex:781`), and for an
+      **unsaved** block that data struct is a blank `%Brando.Content.Block{}` — `build_block/5`
+      puts uid/type/module_id/creator_id/source into the changeset's *changes*, never its data.
+      Drop the params and a new block loses its identity on the first keystroke. This is the same
+      wall the three Phase 1 mount attempts hit, in its scalar-field form.
+      *Reopen the outbound gate if:* the params contract is reopened for correctness reasons, or
+      the target is re-derived against fixtures that actually carry config vars.
 - [x] `[test]` Add the payload budget as an e2e assertion — **done in Phase 1.** `BUDGETS` in
       `bench/block-editor.spec.js` asserts mount, single-edit and save at every fixture size.
 
-## Phase 3 — Structural-op latency and tree-wide re-render triggers
+## Phase 3 — Structural-op latency and tree-wide re-render triggers — ✅ DONE 2026-08-05
 
-**Two of these were measured on 2026-07-29 and the plan had them backwards.**
-`bench/tree-triggers.spec.js` covers both, since neither happens during a
-mount/edit/insert/save cycle:
+**The measurement method changed, and it changed three of the six answers.** Wall clock conflates
+three things with different fixes, so every op is now split into **server round trip**, **browser
+main thread** (PerformanceObserver `longtask`) and the remainder. Two new harnesses:
 
-  * **Copy a block: 930 KB, 2.7 s @115 blocks.** The concern was real. `clipboard_meta` is
-    threaded to every block so each paste button can decide whether to show, and changing it
-    re-renders all 139 components. Converting the button from `:if` to an always-rendered
-    `hidden` node recovered only 53 KB and cost 14 KB of mount, so it was reverted — the
-    paste button is not the bulk. This is the same structural re-render as the old save
-    frame, and unlike `entry` we cannot simply stop passing it. A real fix takes clipboard
-    state out of the block tree entirely (ancestor attribute + CSS), which is a design
-    change, not a tweak.
-  * **Open the outline drawer: 45 KB, 1.0 s @115 blocks.** The opposite of what was assumed —
-    the payload is small; the cost is a second of *server* time rebuilding every root
-    changeset. The item below still stands, but as a latency fix, not a payload one.
+  * `e2e/bench/profile_op.exs` — attaches `:eprof` to the LiveView process for the duration of one
+    operation, coordinated with `bench/profile-op.spec.js` through flag files (the op has to be
+    driven from a real client while the profiler is already attached). `:eprof` lives in OTP's
+    `tools` app, which a Mix project does not put on the code path, so the script adds its ebin
+    from the node's own OTP root.
+  * `bench/insert-breakdown.spec.js` — splits the bench's single "insert" number into its three
+    clicks, each with its own round trip / main-thread / payload split.
 
-**Measurement gotcha:** a copy reaches BlockField through a `send_update`, so its diff lands
-after `syncLV` returns. Measured without an explicit wait, that traffic is billed to whatever
-runs next — which first made this look like a 1 MB outline drawer and a free copy.
+### The headline: insert latency is browser layout, not server work
 
+| @115 blocks | server round trip | browser main thread |
+|---|---|---|
+| open picker | 39 ms | 249 ms |
+| pick module set | 24 ms | 0 ms |
+| pick module | 55 ms | 313 ms |
 
-Insert latency measured at 387 ms @5 → 457 ms @40 → 1 128 ms @115 blocks. Payload is flat
-(79–83 KB), so this is server-side render work, not transport.
+Server round trip is **flat in block count** (93 ms @5, 87 @40, 95 @115); browser main thread is
+not (0 → 52 → 776 ms). An `:eprof` over the whole insert reads **23 ms of LiveView CPU**.
 
-- [ ] `[liveview]` Profile a root insert at 115 blocks. Confirm whether the cost is the
-      `:for` comprehension over `root_shells(@root_order, @seed_forms)` (`block_field.ex:1338`)
-      re-evaluating and calling `update/2` on every root Block, or the op-store reduce.
-- [ ] `[liveview]` The 79 KB insert payload has a single 57 KB frame — identify it (likely the
-      ModulePicker re-render) and make it not ride the insert.
-- [ ] `[liveview]` Stop clipboard copy from re-rendering the whole tree — **confirmed at 930 KB
-      per copy**, see above. "Move it to a lookup the blocks read on demand" does not work:
-      every paste button genuinely needs the value, so any per-block assign changes. The
-      viable shape is to stop passing it to blocks at all and drive paste-button visibility
-      from a single ancestor attribute in CSS. The `{:multi, module_id}` paste context cannot
-      be expressed in CSS alone, so that case needs a different mechanism.
-- [ ] `[liveview]` Bound the entry-field fan-out. Typing in the entry title `send_update`s every
-      entry-consuming block (`form.ex:3007`), each re-running
-      `update_liquid_splits_entry_variables/2` + `render_module/1`. Debounce/coalesce it, or skip
-      it entirely while live preview is closed (the same gating that fixed per-keystroke Villain
-      renders).
-      **Narrowed in Phase 1:** blocks whose module never mentions `entry` no longer receive the
-      entry assign at all (`may_read_entry?/2`), so the fan-out now reaches only genuine consumers
-      instead of every block. What remains is the cost *per consumer*, which is what this item is
-      really about.
-- [ ] `[liveview]` Make the outline drawer cheap — **1.0 s of server time at 115 blocks**,
-      payload is only 45 KB. `rebuild_outline_items/1` materializes and casts every root
-      changeset from scratch on each open, to read eight fields off it. It can read the op
-      store projection instead. Note it is also called on structural ops, not just on open.
-- [ ] Re-measure insert at 115 blocks. Gate: ≤ 400 ms.
+`bench/insert-client-cost.spec.js` settles what the browser is doing: repeat the operation with
+`.entry-block { display: none }`, which leaves all **20 999** DOM nodes in place but takes them out
+of layout. Main thread goes **258 ms → 0 ms**, node count unchanged. So it is style/layout over a
+21 000-node document, not morphdom, and **no server-side change can reach the ≤400 ms gate** — the
+server is already at ~95 ms. The only lever is rendering fewer nodes, which is viewport mounting,
+closed in Phase 1.
+
+- [x] `[liveview]` Profile a root insert at 115 blocks — **done. Neither hypothesis was right.**
+      Not the `root_shells/2` comprehension and not the op-store reduce: the LiveView process
+      spends 23 ms of CPU on an insert that takes 1 200 ms of wall clock. See the table above.
+- [x] `[liveview]` The 79 KB insert payload has a single 57 KB frame — **identified, and it is not
+      the ModulePicker.** The big frame is the **new block itself**: 49 973 B carrying 5 components,
+      of which the new `Block` is 30 438 B. That is one block's worth of markup, consistent with
+      mount (3 988 KB / 115 ≈ 35 KB per block) — it is the mount problem, not an insert problem,
+      and it cannot "not ride the insert" because it *is* the insert. The ModulePicker is a separate
+      24 154 B frame on opening the picker, constant at every fixture size.
+- [x] `[liveview]` Stop clipboard copy from re-rendering the whole tree — **done 2026-08-05.
+      849 780 B → 413 B (−99.95 %), largest frame 849 468 → 101 B.**
+      Bisected first (pin `clipboard_meta={nil}` in the three `render/1` clauses → 849 KB → 15 KB),
+      then built properly:
+        * `BlockField` renders `data-paste-allow` once on its own root (`Render.paste_allow/1`);
+        * every `.plus` always renders its paste button carrying `data-paste-ctx`;
+        * `Block.css` shows the button when an ancestor allows that context.
+      No block takes clipboard state as an assign any more, so a copy re-renders nothing.
+      **The `{:multi, module_id}` case stayed server-side**, as the plan predicted: it is an
+      equality test between the copied entry's parent module and the block's own, and CSS cannot
+      compare two attribute values. It rides a *scalar* `paste_multi_module_id` which is nil unless
+      the clipboard holds a `module_entry` — so copying anything else changes no block assign at
+      all. Copying a `module_entry` still re-renders the tree; that is the residue, and it is the
+      rarer action.
+      Pinned by `bench/tree-triggers.spec.js` (budget 20 000 B, asserted) and the 6 existing
+      copy/paste e2e specs, whose "no paste buttons exist" assertion became "none are visible" —
+      the property a user actually sees, now that visibility is CSS rather than `:if`.
+- [x] `[bug]` **The entry-field fan-out was shipping `nil` to every block.** Found by making the
+      benchmark assert the effect rather than the byte count.
+      `form.ex` read the change as `get_in(params, rest)`, but `rest` is the path *below* the
+      singular and `params` is `%{"page" => %{"title" => …}}` — so `change` was always nil. Every
+      block rendering `{{ entry.title }}` **blanked** the moment you typed in the title, and stayed
+      blank until reload. Now `get_in(entry_params, rest)`.
+      It survived because no fixture had a module that reads the entry: `may_read_entry?/2`
+      excluded every bench module, so the fan-out measured 7 KB whether it worked or not — the
+      same shape as the Phase 0 bench save that reported a latency for a failing save.
+      New fixture `/bench-entry-consumers` (115 blocks, module reads `{{ entry.title }}`) plus an
+      assertion that the block's rendered output actually contains what was typed.
+- [x] `[liveview]` Bound the entry-field fan-out — **done 2026-08-05.** With the fan-out actually
+      delivering, the honest worst case is **276 KB across 117 frames and ~320 ms of server time**
+      for one settled keystroke at 115 consuming blocks.
+      Registration now carries **which entry fields the module reads**
+      (`Block.entry_fields_read/2`), and `send_updated_entry_field_to_blocks/4` skips blocks that
+      cannot be affected by the field that changed. Typing in a field nothing reads: **7 334 B, 2
+      frames, 7 ms** — asserted as a budget. Datasource blocks and HEEx modules register `:all`,
+      keeping the deliberate fail-open asymmetry `may_read_entry?/2` is built around.
+      **The per-consumer cost is structural and stays.** `@entry` is consumed inside `<.form>`, and
+      `Phoenix.Component.form/1` rebuilds its assigns above its own `~H` — so a changed slot
+      re-emits the entire block subtree (2.4 KB for a module whose only change is a short string).
+      Fixing that means moving the liquid preview out of the form, which is a design pass.
+      *Reopen if:* real projects turn out to have many blocks reading the same frequently-typed
+      entry field.
+- [x] `[liveview]` Make the outline drawer cheap — **WON'T DO: the premise was wrong.** Measured
+      2026-08-05: **35 ms of server round trip and 33 ms of LiveView CPU** (`:eprof`), not 1.0 s.
+      The old "1.0 s" was wall clock including the spec's own settle wait, attributed to the server
+      without splitting it. `rebuild_outline_items/1` does materialize every root changeset, and it
+      does show up in the profile (`materialize_base_struct/2` 6 670 calls, `Cachex.Actions.read/2`
+      22.9 % of a 33 ms total) — it is simply not expensive enough to be worth the risk.
+      *Reopen if:* the split ever shows outline server time above ~200 ms.
+- [x] Re-measure insert at 115 blocks — **done. Gate ≤400 ms NOT met (1 169 ms) and not reachable
+      server-side**, see the table above: 95 ms of that is the server. Recorded as a browser-layout
+      bound, not an open task.
 
 ## Phase 4 — Close the test gap
 

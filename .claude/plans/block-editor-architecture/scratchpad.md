@@ -107,3 +107,31 @@ a per-test SQL sandbox. Working harness preserved as `bench-payload.spec.js.refe
   cheap. It does nothing about the Liquid editor-layout parser, HEEx runtime compilation,
   Plug-based live preview, the upload delivery chain, the collaboration op-sync, or the fact that
   the block editor has no authorization layer at all today.
+
+## Phase 2/3 notes (2026-08-05)
+
+- **Change tracking DOES reach inside `<.inputs_for>`.** The comprehension entry's render
+  function takes `(vars_changed, track_changes?)` and `Diff.process_keyed/5` forwards the
+  assigns-level `changed?` — so a dynamic that depends only on a tracked `@assign` is skipped
+  even inside a comprehension. What is *not* tracked is anything depending on the entry's own
+  vars (`block_form`), which is a fresh struct on every validate. Moving values behind an
+  ordinary assign is therefore a general lever for anything rendered inside `inputs_for`.
+- **The opposite trap:** a changed assign consumed *anywhere inside* `<.form>`'s slot re-renders
+  the whole form subtree, because `Phoenix.Component.form/1` (and `inputs_for/1`) rebuild their
+  assigns above their own `~H`. That is why an entry-field change costs 2.4 KB per block when
+  only a short string changed, and it is not fixable without moving the consumer out of the form.
+- **DEAD END: reading `can_paste?` state out of a CSS attribute for the `{:multi, module_id}`
+  case.** CSS has no operator that compares two attribute values, and every workaround
+  (class-per-id, `~=` tokens, `:has()`) needs one rule per module id. Left server-side on a
+  scalar assign that is nil unless a `module_entry` is on the clipboard.
+- **eprof is not on a Mix project's code path.** `:eprof.start/0` is `:undef` on the server node;
+  `tools-*/ebin` has to be added from the node's own `:code.root_dir/0`.
+- **Wall clock hid three different problems.** Splitting every op into server round trip /
+  browser main thread / remainder flipped three Phase 3 answers: insert is browser layout (not
+  server render), the 57 KB insert frame is the new block (not the ModulePicker), and the outline
+  drawer costs 35 ms (not 1.0 s). `display:none` on the block list with the DOM unchanged is the
+  decisive test for layout-vs-morphdom: 258 ms → 0 ms at 20 999 unchanged nodes.
+- **A benchmark that cannot see the feature reports success.** The entry-field fan-out shipped
+  `nil` to every block — every `{{ entry.title }}` blanked on the first keystroke — and measured
+  7 KB, because no bench module read the entry at all. Same failure shape as the Phase 0 bench
+  save. Fixtures must contain the thing being measured, and specs must assert the effect.

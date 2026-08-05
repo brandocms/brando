@@ -12,6 +12,13 @@
 #                  this repo's history (see the assessment doc).
 #   /bench-nested  40 root containers x 1 multi block x 2 entries = 160 blocks
 #                  across 3 nesting levels
+#   /bench-entry-consumers  115 blocks whose module reads `{{ entry.title }}`,
+#                  so the entry-field fan-out is visible. None of the other
+#                  fixtures' modules mention `entry`, which means
+#                  `Block.may_read_entry?/2` excludes every one of them and a
+#                  fan-out measurement taken there reads zero no matter how
+#                  expensive the fan-out is. Kept separate so the mount/edit
+#                  budgets above stay comparable across runs.
 #
 # Blocks mirror their module's refs/vars the same way
 # `BlockField.build_block/5` does, so they are shaped exactly like blocks the
@@ -236,6 +243,70 @@ nested_blocks =
     %Brando.Pages.Page.Blocks{block: root, sequence: i}
   end
 
+# ------------------------------------------------- bench-entry-consumers
+#
+# Typing in the entry title `send_update`s every block whose module reads the
+# entry, and each one re-runs `update_liquid_splits_entry_variables/2`. Phase 1
+# narrowed that fan-out to genuine consumers via `Block.may_read_entry?/2` —
+# which means it is invisible on a fixture where nothing consumes the entry, and
+# none of the modules above do. This page makes the cost measurable by making
+# every block a consumer: the honest worst case, not a typical page.
+
+delete_page.("bench-entry-consumers")
+
+entry_consumer_attrs = %{
+  type: :liquid,
+  name: %{"en" => "Bench Entry Consumer"},
+  namespace: %{"en" => "bench"},
+  help_text: %{"en" => "Reads entry.title so the entry-field fan-out is measurable"},
+  class: "bench-entry-consumer",
+  # Exactly one entry field on purpose: the bench also asserts that typing in a
+  # field this module does NOT read reaches no block at all.
+  code: "<div b-tpl=\"bench-entry-consumer\">{{ entry.title }}</div>",
+  refs: [],
+  vars: []
+}
+
+entry_consumer_module =
+  case Repo.one(
+         from(m in ContentModule,
+           where: fragment("?->>'en' = ?", m.name, ^"Bench Entry Consumer"),
+           limit: 1
+         )
+       ) do
+    nil ->
+      Repo.insert!(struct(ContentModule, entry_consumer_attrs))
+
+    existing ->
+      existing
+      |> Ecto.Changeset.change(Map.take(entry_consumer_attrs, [:code, :help_text]))
+      |> Repo.update!()
+  end
+
+entry_consumer_module = Repo.preload(entry_consumer_module, [:vars, :refs])
+
+entry_consumer_page =
+  Repo.insert!(%Page{
+    creator_id: user.id,
+    title: "Bench — entry consumers",
+    uri: "bench-entry-consumers",
+    language: language,
+    template: "default.html",
+    status: :published,
+    is_homepage: false,
+    breadcrumbs: [],
+    fragments: [],
+    entry_blocks:
+      for i <- 0..114 do
+        %Brando.Pages.Page.Blocks{
+          block: build_block.(entry_consumer_module, :module, i),
+          sequence: i
+        }
+      end
+  })
+
+Logger.info("seeded /bench-entry-consumers with 115 entry-reading root blocks")
+
 nested_page =
   Repo.insert!(%Page{
     creator_id: user.id,
@@ -263,7 +334,8 @@ File.write!(
   Jason.encode!(
     %{
       flat: Map.new(flat_pages, fn {count, id} -> {Integer.to_string(count), id} end),
-      nested: nested_page.id
+      nested: nested_page.id,
+      entry_consumers: entry_consumer_page.id
     },
     pretty: true
   )
