@@ -105,6 +105,17 @@ defmodule Brando.Galleries do
   `updated_at` rather than by "which side happens to be loaded": picking the
   loaded one would let a stale-but-loaded changeset copy silently revert a
   just-processed image.
+
+  A tie keeps the *previously-loaded* copy, and that direction is load-bearing:
+  `updated_at` is `Ecto.Schema.timestamps()`' default `:naive_datetime`, i.e.
+  second precision. Upload → process → refresh routinely completes inside one
+  second, so the refreshed image and the changeset's snapshot of it compare
+  equal. Requiring a strict `:gt` there discarded the refresh and left the
+  thumbnail stuck on its spinner (`e2e tests/projects/projects.spec.js`, two
+  gallery uploads in the same second: the first object reverted to
+  `status: :unprocessed` the moment the second was delivered). A tie is no
+  evidence the changeset snapshot is newer, and the previously-loaded copy is
+  the only side that receives in-place refreshes.
   """
   def merge_loaded_media(objects, previous) when is_list(objects) and is_list(previous) do
     Enum.map(objects, fn object ->
@@ -148,14 +159,16 @@ defmodule Brando.Galleries do
   end
 
   # An absent or unloaded current side is always older. Equal timestamps keep
-  # the object's own copy, so a no-op update cannot churn the assign.
+  # the *candidate* (the previously-loaded copy) — see the second-precision note
+  # on `merge_loaded_media/2`. A tie writes back an equal term, so it still
+  # cannot churn the assign.
   defp fresher?(_candidate, %Ecto.Association.NotLoaded{}), do: true
   defp fresher?(_candidate, nil), do: true
   defp fresher?(%{updated_at: nil}, _current), do: false
   defp fresher?(_candidate, %{updated_at: nil}), do: true
 
   defp fresher?(%{updated_at: candidate}, %{updated_at: current}),
-    do: NaiveDateTime.compare(candidate, current) == :gt
+    do: NaiveDateTime.compare(candidate, current) != :lt
 
   defp fresher?(_candidate, _current), do: false
 

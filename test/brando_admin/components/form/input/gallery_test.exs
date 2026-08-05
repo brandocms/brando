@@ -255,14 +255,34 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
       assert kept.status == :processed
     end
 
-    test "equal timestamps keep the changeset's copy, so a no-op cannot churn" do
-      a = %Brando.Images.Image{id: 1, title: "changeset", updated_at: at(0)}
-      b = %Brando.Images.Image{id: 1, title: "cache", updated_at: at(0)}
+    test "a tie keeps the cached copy — timestamps are only second-precise" do
+      # The e2e regression (`tests/projects/projects.spec.js`). `updated_at` is
+      # `Ecto.Schema.timestamps()`' default `:naive_datetime`, so upload →
+      # process → refresh routinely lands inside one second and the refreshed
+      # image compares EQUAL to the changeset's snapshot of it. Requiring a
+      # strict `:gt` threw the refresh away: uploading two images to a gallery
+      # reverted the first to `:unprocessed` the moment the second was
+      # delivered, and its thumbnail stayed a spinner instead of an `<img>`.
+      snapshot = %Brando.Images.Image{id: 1, status: :unprocessed, updated_at: at(0)}
+      refreshed = %Brando.Images.Image{id: 1, status: :processed, updated_at: at(0)}
 
       assert [%{image: kept}] =
-               Galleries.merge_loaded_media([object_with_image(a)], [object_with_image(b)])
+               Galleries.merge_loaded_media(
+                 [object_with_image(snapshot)],
+                 [object_with_image(refreshed)]
+               )
 
-      assert kept.title == "changeset"
+      assert kept.status == :processed
+    end
+
+    test "a tie writes back an equal term, so it still cannot churn the assign" do
+      # The property the old strict-`:gt` tie-break was protecting. It survives
+      # the change: when both sides hold the same media, keeping the cached one
+      # yields a term equal to the object that went in.
+      image = %Brando.Images.Image{id: 1, title: "same", updated_at: at(0)}
+      object = object_with_image(image)
+
+      assert Galleries.merge_loaded_media([object], [object_with_image(image)]) == [object]
     end
 
     test "an unloaded changeset object still borrows the cached media" do
@@ -320,6 +340,134 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
                Gallery.update(%{new_image: new_image, selected_images: [ctx.image.id]}, socket)
 
       assert length(socket.assigns.gallery_objects) == 1
+    end
+  end
+
+  describe "put_gallery_at/4 — unsaved objects have no identity to match on" do
+    # `gallery_at/3` reads the APPLIED gallery, so objects the editor added but
+    # has not saved sit in `data` with `id: nil`. `put_assoc` keys that data by
+    # primary key to match the incoming params against it
+    # (`Ecto.Changeset.Relation.process_current/3`), and every nil-id object
+    # keys on `[nil]` — so all but the last shadow each other and each nil-id
+    # param is then matched against whichever object happened to survive.
+    #
+    # It came out right only because `slim_gallery_object/1` pins every writable
+    # field, so the mismatched base contributed nothing. That is an accident of
+    # the param shape, not a guarantee, and Ecto says so out loud.
+    defp deliver_gallery_image(socket, image) do
+      {:ok, socket} =
+        Form.update(
+          %{
+            event: "entry_field_upload_complete",
+            asset_type: :gallery,
+            field: :photos,
+            path: [],
+            asset: image,
+            component_id: "project_photos"
+          },
+          socket
+        )
+
+      socket
+    end
+
+    defp entry_form_socket(ctx) do
+      %Phoenix.LiveView.Socket{}
+      |> Component.assign(:form, to_form(Changeset.change(%ProjectUpdate1{})))
+      |> Component.assign(:schema, ProjectUpdate1)
+      |> Component.assign(:singular, "project")
+      |> Component.assign(:current_user, ctx.user)
+      |> Component.assign(:processing_images, [])
+    end
+
+    test "a third delivery does not log a duplicate-primary-key warning", ctx do
+      # The test env pins `config :logger, level: :error`, which drops Ecto's
+      # warning at the primary filter before any capture handler sees it — so
+      # this assertion is vacuous unless the level is lowered for its duration.
+      previous_level = Logger.level()
+      Logger.configure(level: :warning)
+      on_exit(fn -> Logger.configure(level: previous_level) end)
+
+      second = Factory.insert(:image, creator: ctx.user)
+      third = Factory.insert(:image, creator: ctx.user)
+
+      socket =
+        ctx
+        |> entry_form_socket()
+        |> deliver_gallery_image(ctx.image)
+        |> deliver_gallery_image(second)
+
+      # Two unsaved objects are now in the applied gallery. The next write is
+      # what hands Ecto a `current` list it cannot key.
+      {socket, log} =
+        ExUnit.CaptureLog.with_log(fn -> deliver_gallery_image(socket, third) end)
+
+      refute log =~ "duplicate primary keys"
+
+      gallery = Changeset.get_field(socket.assigns.form.source, :photos)
+
+      assert Enum.map(gallery.gallery_objects, & &1.image_id) ==
+               [ctx.image.id, second.id, third.id]
+    end
+
+    test "every delivered object is a distinct insert", ctx do
+      # No unit-test schema owns a migrated gallery FK, so the save round trip
+      # lives in e2e (`tests/projects/projects.spec.js` reopens the entry and
+      # asserts three objects). What is assertable here is the shape that
+      # decides it: three separate inserts, none of them matched onto another
+      # object's struct.
+      second = Factory.insert(:image, creator: ctx.user)
+      third = Factory.insert(:image, creator: ctx.user)
+
+      socket =
+        ctx
+        |> entry_form_socket()
+        |> deliver_gallery_image(ctx.image)
+        |> deliver_gallery_image(second)
+        |> deliver_gallery_image(third)
+
+      objects = Changeset.get_change(socket.assigns.form.source, :photos).changes.gallery_objects
+
+      assert Enum.map(objects, & &1.action) == [:insert, :insert, :insert]
+
+      assert Enum.map(objects, &Changeset.get_field(&1, :image_id)) ==
+               [ctx.image.id, second.id, third.id]
+
+      # Each insert must build on a blank struct, not on a sibling's data —
+      # that is what the duplicate-primary-key warning was reporting.
+      assert Enum.all?(objects, &is_nil(&1.data.image_id))
+    end
+
+    test "an object that already has an id still matches instead of duplicating", ctx do
+      # The other half of the invariant: dropping unsaved objects from the base
+      # must not stop persisted ones from being matched and updated in place.
+      persisted =
+        Ecto.put_meta(%GalleryObject{id: 42, image_id: ctx.image.id, sequence: 0}, state: :loaded)
+
+      gallery =
+        Ecto.put_meta(
+          %Brando.Galleries.Gallery{
+            id: 7,
+            config_target: "gallery:Brando.MigrationTest.ProjectUpdate1:photos",
+            gallery_objects: [persisted]
+          },
+          state: :loaded
+        )
+
+      socket =
+        %Phoenix.LiveView.Socket{}
+        |> Component.assign(:form, to_form(Changeset.change(%ProjectUpdate1{photos: gallery})))
+        |> Component.assign(:schema, ProjectUpdate1)
+        |> Component.assign(:singular, "project")
+        |> Component.assign(:current_user, ctx.user)
+        |> Component.assign(:processing_images, [])
+
+      second = Factory.insert(:image, creator: ctx.user)
+      socket = deliver_gallery_image(socket, second)
+
+      objects = Changeset.get_change(socket.assigns.form.source, :photos).changes.gallery_objects
+
+      assert [%{action: :update, data: %{id: 42}}, %{action: :insert}] = objects
     end
   end
 end

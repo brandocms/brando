@@ -1244,6 +1244,7 @@ defmodule BrandoAdmin.Components.Form do
 
     gallery_changeset =
       current_gallery
+      |> forget_unsaved_objects()
       |> change(%{config_target: new_gallery.config_target})
       |> put_assoc(:gallery_objects, new_gallery.gallery_objects)
 
@@ -1256,6 +1257,25 @@ defmodule BrandoAdmin.Components.Form do
 
     assign(socket, :form, to_form(updated_changeset, []))
   end
+
+  # `gallery_at/3` reads the *applied* gallery, so objects the editor added but
+  # has not saved sit in `data` with `id: nil`. `put_assoc` then keys that data
+  # by primary key to match the incoming params against it
+  # (`Ecto.Changeset.Relation.process_current/3`), and every nil-id object keys
+  # on `[nil]` — so all but the last silently shadow each other, Ecto logs
+  # "found duplicate primary keys for association/embed :gallery_objects", and
+  # each nil-id param is matched against whichever object happened to survive.
+  #
+  # The result comes out right today only because `slim_gallery_object/1` pins
+  # every writable field, so the mismatched base contributes nothing — an
+  # accident, not a guarantee. An unsaved object has no identity to match on, so
+  # drop it from the base and let it be the plain insert it already is. Objects
+  # that carry a real id still match, and still update rather than duplicate.
+  defp forget_unsaved_objects(%{gallery_objects: objects} = gallery) when is_list(objects) do
+    %{gallery | gallery_objects: Enum.filter(objects, &(Map.get(&1, :id) != nil))}
+  end
+
+  defp forget_unsaved_objects(gallery), do: gallery
 
   defp gallery_at(changeset, [], key), do: get_field(changeset, key)
   defp gallery_at(changeset, path, key), do: EctoNestedChangeset.get_at(changeset, path ++ [key])
