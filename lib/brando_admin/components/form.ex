@@ -93,7 +93,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:live_preview_ready?, false)
      |> assign(:live_preview_active?, false)
      |> assign(:live_preview_cache_key, nil)
-     |> assign(:blocks_wanting_entry, [])
+     |> assign(:blocks_wanting_entry, %{})
      |> assign(:blocks_ready_for_sharing, false)
      |> assign(:fields_demanding_full_live_preview_rerender, [])
      |> assign(:fields_demanding_live_preview_reassign, [])
@@ -555,8 +555,13 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, socket}
   end
 
-  def update(%{event: "register_block_wanting_entry", block_ref: block_ref}, socket) do
-    {:ok, update(socket, :blocks_wanting_entry, &Enum.uniq(&1 ++ [block_ref]))}
+  # `fields` is the list of entry fields the block's module reads, or `:all`
+  # when that cannot be determined from the source (datasource blocks, HEEx
+  # modules — see `Block.entry_fields_read/2`). Keyed by block_ref so a
+  # re-registering block replaces rather than duplicates its entry.
+  def update(%{event: "register_block_wanting_entry", block_ref: block_ref} = msg, socket) do
+    fields = Map.get(msg, :fields, :all)
+    {:ok, update(socket, :blocks_wanting_entry, &Map.put(&1, block_ref, fields))}
   end
 
   # Asset delivery from the sticky UploadManager for entry schema fields
@@ -3028,9 +3033,20 @@ defmodule BrandoAdmin.Components.Form do
     case Map.get(params, "_target") do
       [^singular | rest] ->
         if has_blocks? && rest != ["__force_change"] do
+          # `rest` is the path *below* the singular, so it has to be read out of
+          # `entry_params`, not out of the top-level params map — `params` is
+          # `%{"page" => %{"title" => …}}`, so `get_in(params, ["title"])` is
+          # always nil. Every block rendering `{{ entry.title }}` therefore blanked
+          # its entry variables the moment you typed in that field, and stayed
+          # blank until reload. Invisible until a fixture had a module that reads
+          # the entry — see `/bench-entry-consumers`.
+          #
+          # The two representations differ on purpose: `path` walks the entry
+          # *struct* (list indices as `Access.at/1`), `rest` walks the params
+          # *map* (list indices as "0" keys).
           path = string_path_to_access_path(rest)
-          change = get_in(params, rest)
-          send_updated_entry_field_to_blocks(socket, path, change)
+          change = get_in(entry_params, rest)
+          send_updated_entry_field_to_blocks(socket, path, change, hd(rest))
         end
 
         if rest == ["language"] do
@@ -4959,11 +4975,18 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
-  defp send_updated_entry_field_to_blocks(socket, path, change) do
-    blocks_wanting_entry = socket.assigns.blocks_wanting_entry
-
-    Enum.each(blocks_wanting_entry, fn {mod, id} ->
-      send_update(mod, id: id, event: "update_entry_field", path: path, change: change)
+  defp send_updated_entry_field_to_blocks(socket, path, change, field) do
+    # Delivering an entry change re-renders the receiving block's whole form
+    # subtree — `@entry` is consumed inside `<.form>`, which rebuilds its
+    # assigns above its own `~H`, so a changed slot re-emits everything under
+    # it. At 115 blocks all reading `entry.title` that is 290 KB and 339 ms for
+    # a single settled keystroke, one frame per block. Skipping the blocks
+    # whose module cannot read the field that changed is what keeps typing in
+    # one entry field from waking every block that reads a different one.
+    Enum.each(socket.assigns.blocks_wanting_entry, fn {{mod, id}, fields} ->
+      if fields == :all or field in fields do
+        send_update(mod, id: id, event: "update_entry_field", path: path, change: change)
+      end
     end)
 
     socket
@@ -5171,7 +5194,7 @@ defmodule BrandoAdmin.Components.Form do
       socket
     else
       access_path = string_path_to_access_path(string_path)
-      send_updated_entry_field_to_blocks(socket, access_path, generated_text)
+      send_updated_entry_field_to_blocks(socket, access_path, generated_text, hd(string_path))
     end
   end
 

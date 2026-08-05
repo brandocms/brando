@@ -689,6 +689,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     # Bare id, not a selector — consumed by `data-ui-modal-show`.
     |> assign(:module_picker_id, "block-field-#{assigns.block_field}-module-picker")
     |> assign(:clipboard_meta, nil)
+    |> assign(:paste_multi_module_id, nil)
     |> assign(:block_bin, [])
     |> assign(:pending_remote_snapshots, %{})
     |> assign(:last_synced_snapshots, %{})
@@ -1305,6 +1306,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       phx-hook="Brando.BlockField"
       class="blocks-wrapper"
       data-block-field={"#{@form_name}[#{@block_field}]"}
+      data-paste-allow={Block.Render.paste_allow(@clipboard_meta)}
     >
       <div class="label-wrapper">
         <label class="control-label" data-field-presence={"#{@form_name}[#{@block_field}]"}>
@@ -1426,7 +1428,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                 form_id={@form_id}
                 current_user_id={@current_user.id}
                 belongs_to={:root}
-                clipboard_meta={@clipboard_meta}
+                paste_multi_module_id={@paste_multi_module_id}
                 level={0}
               />
             </div>
@@ -1436,7 +1438,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         <Block.plus
           click={JS.push("show_block_picker", target: @myself)}
           modal={@module_picker_id}
-          clipboard_meta={@clipboard_meta}
           paste_context={:root}
           paste_event="paste_block_at_end"
           paste_target={@myself}
@@ -1652,10 +1653,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     clipboard = %{changeset: changeset, type: type, parent_module_id: parent_mid}
     Brando.Cache.put({:block_clipboard, user_id}, clipboard)
 
-    clipboard_meta = %{type: type, parent_module_id: parent_mid}
-
     socket
-    |> assign(:clipboard_meta, clipboard_meta)
+    |> assign(:clipboard_meta, %{type: type, parent_module_id: parent_mid})
+    # Only a copied `module_entry` can change what a `{:multi, module_id}` paste
+    # button decides, and that decision is an id comparison CSS cannot make. So
+    # it is the one piece of clipboard state that still reaches the block tree —
+    # as a scalar, so copying anything else leaves it nil and re-renders nothing.
+    |> assign(:paste_multi_module_id, (type == :module_entry && parent_mid) || nil)
     |> then(&{:ok, &1})
   end
 

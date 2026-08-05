@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   After first mount, the generic `update/2` clause **drops incoming
   `:form`/`:children` assigns** — a parent re-render can never overwrite
   local editing state with its seed copy. Structural/shared assigns
-  (`list_index`, `entry`, `clipboard_meta`, live-preview flags, …) still flow
+  (`list_index`, `entry`, `paste_multi_module_id`, live-preview flags, …) still flow
   through. The two exceptions that replace a mounted block's form:
 
   * `replace_form` — post-save re-seed / remote-sync apply, cascades down
@@ -60,7 +60,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:source, nil)
     |> assign(:live_preview_active?, false)
     |> assign(:live_preview_cache_key, nil)
-    |> assign_new(:clipboard_meta, fn -> nil end)
+    |> assign_new(:paste_multi_module_id, fn -> nil end)
     |> Events.attach_block_events()
     |> then(&{:ok, &1})
   end
@@ -580,6 +580,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> assign(:form, form)
+    |> assign_hidden_block_fields()
     |> assign(:form_is_new, false)
     |> assign(:form_has_changes, false)
     |> assign(:active, Changeset.get_field(changeset, :active))
@@ -870,7 +871,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     # After first mount this block owns its form exclusively — a parent
     # re-render must never overwrite local editing state with the parent's
     # seed copy (the historical clobber/FK-wipe class). Structural and shared
-    # assigns (list_index, clipboard_meta, ...) still flow through.
+    # assigns (list_index, paste_multi_module_id, ...) still flow through.
     #
     # `:entry` is dropped for blocks whose module never reads it. The entry
     # struct is replaced wholesale on every save and on every entry-field
@@ -966,9 +967,88 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> maybe_parse_module()
     |> maybe_render_module()
     |> maybe_get_live_preview_status()
+    |> assign_hidden_block_fields()
     |> assign(:block_initialized, true)
     |> then(&{:ok, &1})
   end
+
+  # The block's identity inputs — uid/type/anchor/multi/module_id/parent_id/
+  # creator_id/marked_as_deleted/source. They have to be in the DOM on every
+  # keystroke (the params contract: `validate_block` rebuilds every child from
+  # whatever params arrive), but their *values* are invariant across an edit
+  # session, so re-sending their markup in every diff is pure waste — measured
+  # at 115 root blocks it was 1 191 B of the 12 233 B a single keystroke cost.
+  #
+  # Rendering them straight off `block_form` made them untrackable: the root
+  # path renders inside `<.inputs_for>`, whose body is a comprehension, and a
+  # comprehension entry re-renders every dynamic that depends on one of its
+  # own vars. `block_form` is a fresh struct on every validate, so all of them
+  # did. Precomputing here puts them behind an ordinary assign instead, and
+  # `assign/3` is a no-op when the new value compares equal — an edit that
+  # does not touch them now sends nothing.
+  #
+  # The markup is deliberately byte-identical to what `Input.hidden` emitted,
+  # `f--` prefix and all (`Input.input` interpolates a nil `id_prefix`). This
+  # is a payload change, not a markup change.
+  @hidden_block_fields [
+    :uid,
+    :type,
+    :anchor,
+    :multi,
+    :module_id,
+    :parent_id,
+    :creator_id,
+    :marked_as_deleted
+  ]
+
+  defp assign_hidden_block_fields(socket) do
+    case block_form_for_hidden_fields(socket) do
+      nil ->
+        assign(socket, :hidden_block_fields, [])
+
+      block_form ->
+        fields =
+          Enum.map(@hidden_block_fields, fn name ->
+            field = block_form[name]
+            {field.name, "f--" <> field.id, hidden_field_value(field.value)}
+          end)
+
+        # `source` is rendered through `Input.input` without an `id_prefix`, so
+        # unlike the others it keeps the bare field id.
+        source = block_form[:source]
+
+        assign(
+          socket,
+          :hidden_block_fields,
+          fields ++ [{source.name, source.id, socket.assigns[:block_module]}]
+        )
+    end
+  end
+
+  # Root blocks render their identity inputs inside `<.inputs_for field={@form[:block]}>`,
+  # so the names and ids have to match the form that `inputs_for` builds —
+  # including the `_<persistent_id>` suffix it appends to the id. Child blocks
+  # hold the block changeset directly.
+  defp block_form_for_hidden_fields(%{assigns: %{belongs_to: :root, form: form}}) do
+    case Phoenix.HTML.FormData.to_form(form.source, form, :block, []) do
+      [block_form | _] ->
+        persistent_id = Map.get(block_form.params, "_persistent_id", "0")
+        %{block_form | id: "#{form.id}_block_#{persistent_id}"}
+
+      _ ->
+        nil
+    end
+  end
+
+  defp block_form_for_hidden_fields(%{assigns: %{form: form}}), do: form
+  defp block_form_for_hidden_fields(_socket), do: nil
+
+  # Mirrors `Input.input`'s `maybe_html_escape/1` so the rendered value is
+  # unchanged. `nil` stays `nil`, which HEEx drops the attribute for — same as
+  # before, and the browser submits an empty string either way.
+  defp hidden_field_value(true), do: "true"
+  defp hidden_field_value(false), do: "false"
+  defp hidden_field_value(value), do: value
 
   # remount_js on a replace_form: re-boot JS widgets after THIS update's
   # patch — pushed from the Block so the event and the patch share one frame
@@ -1168,11 +1248,12 @@ defmodule BrandoAdmin.Components.Form.Block do
     assign(socket, :form, new_form)
   end
 
-  def register_block_wanting_entry(block_ref, form_id) do
+  def register_block_wanting_entry(block_ref, form_id, fields) do
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
       event: "register_block_wanting_entry",
-      block_ref: block_ref
+      block_ref: block_ref,
+      fields: fields
     )
   end
 
@@ -1323,7 +1404,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     block_ref = {__MODULE__, socket.assigns.id}
     form_id = socket.assigns.form_id
 
-    register_block_wanting_entry(block_ref, form_id)
+    # A datasource block's query can read anything off the entry, so it takes
+    # every field.
+    register_block_wanting_entry(block_ref, form_id, :all)
     assign(socket, :consumes_entry?, true)
   end
 
@@ -1332,19 +1415,51 @@ defmodule BrandoAdmin.Components.Form.Block do
     # assign statements, or in the module code itself
     module_code = socket.assigns.module_code
 
-    # Registration is unchanged — this has always been the criterion for the
-    # targeted entry fan-out.
-    if Regex.run(~r/(?:entry\.|@entry\.)[\w]+/, module_code) do
-      block_ref = {__MODULE__, socket.assigns.id}
-      form_id = socket.assigns.form_id
+    # Registration criterion is unchanged — this has always been what put a
+    # block on the targeted entry fan-out.
+    case entry_fields_read(socket, module_code) do
+      [] ->
+        :ok
 
-      register_block_wanting_entry(block_ref, form_id)
+      fields ->
+        block_ref = {__MODULE__, socket.assigns.id}
+        form_id = socket.assigns.form_id
+
+        register_block_wanting_entry(block_ref, form_id, fields)
     end
 
     assign(socket, :consumes_entry?, may_read_entry?(socket, module_code))
   end
 
   def maybe_register_block_wanting_entry(socket), do: socket
+
+  # Which entry fields this module actually reads, so the fan-out can skip
+  # blocks a given field cannot affect.
+  #
+  # Delivering an entry change re-renders the whole block form — `@entry` is
+  # consumed inside `<.form>`, and `Phoenix.Component.form/1` rebuilds its
+  # assigns above its own `~H`, so a changed slot re-emits the entire subtree.
+  # Measured at 115 blocks that all read `entry.title`: **290 KB and 339 ms of
+  # server time for one settled keystroke**, one frame per block. That worst
+  # case is structural and stays; what this removes is the far more common
+  # shape — typing in `meta_description` waking every block that only reads
+  # `entry.title`.
+  #
+  # HEEx modules take `:all`. They receive the entry through the render context
+  # (`Render.heex_assigns/1`) rather than through a source-visible `entry.x`,
+  # so no regex over the source can enumerate what they read. Failing open here
+  # costs a re-render; failing closed renders stale entry data forever,
+  # silently — the same asymmetry `may_read_entry?/2` is built around.
+  defp entry_fields_read(%{assigns: %{module_type: :heex}}, module_code) do
+    if Regex.run(~r/(?:entry\.|@entry\.)[\w]+/, module_code), do: :all, else: []
+  end
+
+  defp entry_fields_read(_socket, module_code) do
+    ~r/(?:entry\.|@entry\.)([\w]+)/
+    |> Regex.scan(module_code, capture: :all_but_first)
+    |> Enum.map(&hd/1)
+    |> Enum.uniq()
+  end
 
   # Deliberately a *wider* test than the registration regex above, because the
   # two failure modes are not symmetric. Getting this wrong in the permissive
@@ -1700,6 +1815,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   def assign_block_form(socket, form) do
     socket
     |> assign(:form, form)
+    |> assign_hidden_block_fields()
     |> emit_block_op({:update, socket.assigns.uid, Ops.block_diff_params(form.source)})
   end
 

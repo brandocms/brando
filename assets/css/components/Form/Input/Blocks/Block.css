@@ -107,6 +107,25 @@
   }
 }
 
+/* Paste buttons for the `root` and `container` contexts are always in the DOM
+   and shown from here, keyed on `data-paste-allow` — which `BlockField`
+   renders once on its own root. They used to be `:if`-gated on a
+   `clipboard_meta` assign that every block received, so a single copy
+   re-rendered all 139 components: 849 KB in one frame at 115 root blocks.
+
+   `multi` is not in this rule set. It compares the copied entry's parent
+   module with the block's own, which CSS cannot express, so those buttons stay
+   server-rendered — see `Render.multi_paste_context/2`. */
+.block-paste[data-paste-ctx="root"],
+.block-paste[data-paste-ctx="container"] {
+  display: none;
+}
+
+[data-paste-allow~="root"] .block-paste[data-paste-ctx="root"],
+[data-paste-allow~="container"] .block-paste[data-paste-ctx="container"] {
+  display: flex;
+}
+
 .base-block.disabled .block-paste,
 .base-block.collapsed .block-paste,
 .drag-element .block-paste {

@@ -65,7 +65,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         module_picker_id={@module_picker_id}
         config_open={@config_open}
         has_children?={@has_children?}
-        clipboard_meta={@clipboard_meta}
+        paste_multi_module_id={@paste_multi_module_id}
+        hidden_block_fields={@hidden_block_fields}
       >
         <div
           :if={@has_children?}
@@ -106,7 +107,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               entry={@entry}
               current_user_id={@current_user_id}
               belongs_to={:multi}
-              clipboard_meta={@clipboard_meta}
+              paste_multi_module_id={@paste_multi_module_id}
               level={@level + 1}
             />
           </div>
@@ -149,7 +150,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         module_datasource_query={@module_datasource_query}
         datasource_meta={@datasource_meta}
         available_identifiers={@available_identifiers}
-        clipboard_meta={@clipboard_meta}
+        paste_multi_module_id={@paste_multi_module_id}
+        hidden_block_fields={@hidden_block_fields}
         paste_context={if @belongs_to == :container, do: :container, else: :root}
       />
     </div>
@@ -184,8 +186,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         has_children?={false}
         module_name={@module_name}
         module_color={@module_color}
-        clipboard_meta={@clipboard_meta}
-        paste_context={{:multi, @parent_module_id}}
+        paste_multi_module_id={@paste_multi_module_id}
+        hidden_block_fields={@hidden_block_fields}
+        paste_context={multi_paste_context(@paste_multi_module_id, @parent_module_id)}
       />
     </div>
     """
@@ -211,7 +214,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         module_picker_id={@module_picker_id}
         config_open={@config_open}
         has_children?={@has_children?}
-        clipboard_meta={@clipboard_meta}
+        paste_multi_module_id={@paste_multi_module_id}
+        hidden_block_fields={@hidden_block_fields}
       >
         <div
           :if={@has_children?}
@@ -251,7 +255,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               form_id={@form_id}
               current_user_id={@current_user_id}
               belongs_to={:container}
-              clipboard_meta={@clipboard_meta}
+              paste_multi_module_id={@paste_multi_module_id}
               level={@level + 1}
             >
             </.live_component>
@@ -279,7 +283,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         deleted={@deleted}
         target={@myself}
         block_module={@block_module}
-        clipboard_meta={@clipboard_meta}
+        paste_multi_module_id={@paste_multi_module_id}
+        hidden_block_fields={@hidden_block_fields}
       />
     </div>
     """
@@ -320,7 +325,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :config_open, :string, default: nil
   attr :fragment, :any, default: nil
   attr :fragments, :list, default: []
-  attr :clipboard_meta, :map, default: nil
+  attr :paste_multi_module_id, :any, default: nil
+  attr :hidden_block_fields, :list, default: []
 
   def fragment_block(assigns) do
     changeset = assigns.form.source
@@ -355,7 +361,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       <.plus
         click={@insert_block}
         modal={@module_picker_id}
-        clipboard_meta={@clipboard_meta}
         paste_context={:root}
         paste_event="paste_block"
         paste_target={@target}
@@ -374,7 +379,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <Input.hidden field={@form[:sequence]} />
             <Input.hidden field={@form[:marked_as_deleted]} />
             <.inputs_for :let={block_form} field={@form[:block]}>
-              <.hidden_block_fields block_form={block_form} block_module={@block_module} />
+              <.hidden_block_fields fields={@hidden_block_fields} />
               <.toolbar
                 uid={@uid}
                 collapsed={@collapsed}
@@ -477,7 +482,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       <.plus
         click={@insert_block}
         modal={@module_picker_id}
-        clipboard_meta={@clipboard_meta}
         paste_context={:root}
         paste_event="paste_block"
         paste_target={@target}
@@ -497,7 +501,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <Input.hidden field={@form[:sequence]} />
             <Input.hidden field={@form[:marked_as_deleted]} />
             <.inputs_for :let={block_form} field={@form[:block]}>
-              <.hidden_block_fields block_form={block_form} block_module={@block_module} />
+              <.hidden_block_fields fields={@hidden_block_fields} />
               <.toolbar
                 uid={@uid}
                 collapsed={@collapsed}
@@ -535,7 +539,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           <.plus
             click={@insert_child_block}
             modal={@module_picker_id}
-            clipboard_meta={@clipboard_meta}
             paste_context={:container}
             paste_event="paste_child_block"
             paste_target={@target}
@@ -547,7 +550,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           <.plus
             click={@insert_child_block}
             modal={@module_picker_id}
-            clipboard_meta={@clipboard_meta}
             paste_context={:container}
             paste_event="paste_child_block"
             paste_target={@target}
@@ -586,12 +588,13 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :module_datasource_query, :string, default: ""
   attr :datasource_meta, :any, default: nil
   attr :available_identifiers, :any, default: []
-  attr :clipboard_meta, :map, default: nil
+  attr :paste_multi_module_id, :any, default: nil
   attr :paste_context, :any, default: :root
   attr :form_id, :any, default: nil
   attr :module_type, :atom, default: :liquid
   attr :heex_compiled_module, :any, default: nil
   attr :entry, :any, default: nil
+  attr :hidden_block_fields, :list, default: []
   slot :inner_block
 
   def module(assigns) do
@@ -623,7 +626,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       <.plus
         click={@insert_block}
         modal={@module_picker_id}
-        clipboard_meta={@clipboard_meta}
         paste_context={@paste_context}
         paste_event="paste_block"
         paste_target={@target}
@@ -643,7 +645,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <Input.hidden field={@form[:sequence]} />
             <Input.hidden field={@form[:marked_as_deleted]} />
             <.inputs_for :let={block_form} field={@form[:block]}>
-              <.hidden_block_fields block_form={block_form} block_module={@block_module} />
+              <.hidden_block_fields fields={@hidden_block_fields} />
               <.toolbar
                 uid={@uid}
                 collapsed={@collapsed}
@@ -694,7 +696,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           <% else %>
             <Input.hidden field={@form[:sequence]} />
             <input type="hidden" name={@form[:id].name} value={@form[:id].value} />
-            <.hidden_block_fields block_form={@form} block_module={@block_module} />
+            <.hidden_block_fields fields={@hidden_block_fields} />
 
             <.toolbar
               uid={@uid}
@@ -748,8 +750,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           <.plus
             click={@insert_multi_block}
             modal={@module_picker_id}
-            clipboard_meta={@clipboard_meta}
-            paste_context={{:multi, @module_id}}
+            paste_context={multi_paste_context(@paste_multi_module_id, @module_id)}
             paste_event="paste_child_block"
             paste_target={@target}
           />
@@ -761,8 +762,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <.plus
               click={@insert_multi_block}
               modal={@module_picker_id}
-              clipboard_meta={@clipboard_meta}
-              paste_context={{:multi, @module_id}}
+              paste_context={multi_paste_context(@paste_multi_module_id, @module_id)}
               paste_event="paste_child_block"
               paste_target={@target}
             />
@@ -914,18 +914,22 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     """
   end
 
+  @doc """
+  The block's identity inputs.
+
+  Rendered from a precomputed `{name, id, value}` list rather than from the
+  block form, because the root path renders inside `<.inputs_for>` and a
+  comprehension entry re-renders every dynamic that depends on one of its own
+  vars — and `block_form` is a fresh struct on every validate. Reading a
+  single tracked assign instead keeps these out of the diff on any edit that
+  does not change them. See `Block.assign_hidden_block_fields/1`.
+  """
+  attr :fields, :list, required: true
+
   def hidden_block_fields(assigns) do
     ~H"""
     <div class="hidden-block-fields">
-      <Input.hidden field={@block_form[:uid]} />
-      <Input.hidden field={@block_form[:type]} />
-      <Input.hidden field={@block_form[:anchor]} />
-      <Input.hidden field={@block_form[:multi]} />
-      <Input.hidden field={@block_form[:module_id]} />
-      <Input.hidden field={@block_form[:parent_id]} />
-      <Input.hidden field={@block_form[:creator_id]} />
-      <Input.hidden field={@block_form[:marked_as_deleted]} />
-      <Input.input type={:hidden} field={@block_form[:source]} value={@block_module} />
+      <input :for={{name, id, value} <- @fields} type="hidden" name={name} id={id} value={value} />
     </div>
     """
   end
@@ -1885,7 +1889,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   end
 
   attr :click, :any, required: true
-  attr :clipboard_meta, :map, default: nil
   attr :paste_context, :any, default: nil
   attr :paste_event, :string, default: nil
   attr :paste_target, :any, default: nil
@@ -1895,8 +1898,29 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   # 749-byte attributes in the mount payload.
   attr :modal, :string, default: nil
 
+  @doc """
+  The insert affordance above a block: add, and — when something compatible is
+  on the clipboard — paste.
+
+  Paste visibility used to be `:if={can_paste?(@clipboard_meta, ...)}`, which
+  meant every block in the tree took `clipboard_meta` as an assign. Copying one
+  block then changed an assign on all 139 components and re-rendered every one
+  of them: **849 KB in a single frame at 115 root blocks, 1.2 s of server round
+  trip** — by far the largest frame left in the editor, for a change that
+  toggles a handful of buttons.
+
+  The `:root` and `:container` contexts are now decided in CSS instead, from a
+  `data-paste-allow` attribute that `BlockField` renders once on its own root
+  (see `Block.css`). No block needs the clipboard to know whether its own
+  paste button applies, so nothing re-renders.
+
+  `{:multi, module_id}` cannot go the same way: it is an equality test between
+  the copied block's parent module and this block's, and CSS has no way to
+  compare two attribute values. Those buttons stay server-decided, driven by
+  the scalar `paste_multi_module_id` — see `multi_paste_context/2`.
+  """
   def plus(assigns) do
-    assigns = assign(assigns, :show_paste, can_paste?(assigns.clipboard_meta, assigns.paste_context))
+    assigns = assign(assigns, :paste_ctx, paste_ctx(assigns.paste_context))
 
     ~H"""
     <div class="block-plus-wrapper">
@@ -1910,8 +1934,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         <.icon name="hero-plus" />
       </button>
       <button
-        :if={@show_paste}
+        :if={@paste_ctx}
         class="block-paste"
+        data-paste-ctx={@paste_ctx}
         type="button"
         phx-click={@paste_event}
         phx-target={@paste_target}
@@ -1922,11 +1947,37 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     """
   end
 
-  defp can_paste?(nil, _), do: false
-  defp can_paste?(%{type: t}, :root) when t in [:module, :container, :fragment], do: true
-  defp can_paste?(%{type: :module}, :container), do: true
-  defp can_paste?(%{type: :module_entry, parent_module_id: pmid}, {:multi, mid}), do: pmid == mid
-  defp can_paste?(_, _), do: false
+  # `{:multi, _}` arrives already resolved: the block only passes that context
+  # when its own `paste_multi_module_id` matched, so there is nothing left to
+  # compare here.
+  defp paste_ctx(:root), do: "root"
+  defp paste_ctx(:container), do: "container"
+  defp paste_ctx({:multi, _module_id}), do: "multi"
+  defp paste_ctx(_), do: nil
+
+  @doc """
+  The `{:multi, module_id}` paste context, or nil.
+
+  This is the one `can_paste?` rule that cannot move to CSS: it compares the
+  copied entry's parent module with this block's, and CSS has no operator for
+  comparing two attribute values. `paste_multi_module_id` is nil unless the
+  clipboard holds a `module_entry`, so copying anything else leaves every
+  block's assigns untouched.
+  """
+  def multi_paste_context(module_id, module_id) when not is_nil(module_id), do: {:multi, module_id}
+  def multi_paste_context(_paste_multi_module_id, _module_id), do: nil
+
+  @doc """
+  The `data-paste-allow` token list for the block field root.
+
+  CSS shows a `.block-paste[data-paste-ctx="x"]` only when an ancestor's
+  `data-paste-allow` contains `x`, so this is the whole `can_paste?` rule for
+  the two contexts that are expressible as a type check.
+  """
+  def paste_allow(nil), do: nil
+  def paste_allow(%{type: :module}), do: "root container"
+  def paste_allow(%{type: type}) when type in [:container, :fragment], do: "root"
+  def paste_allow(_), do: nil
 
   attr :uid, :string, required: true
   attr :vars, :any, required: true

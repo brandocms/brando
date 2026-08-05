@@ -35,15 +35,19 @@ test.describe('Block Copy/Paste', () => {
     const blocks = page.locator('.entry-block')
     await expect(blocks).toHaveCount(1)
 
-    // Verify no paste buttons exist initially
-    await expect(page.locator('.block-paste')).toHaveCount(0)
+    // No paste target is offered before anything is copied. Root and container
+    // paste buttons are always in the DOM and shown by CSS from the block
+    // field's `data-paste-allow` — threading `clipboard_meta` to every block
+    // instead cost 849 KB per copy at 115 blocks — so this asserts on
+    // visibility, which is the property the user actually sees.
+    await expect(page.locator('.block-paste').first()).toBeHidden()
 
     // Click the Copy button via the block toolbar dropdown
     await copyBlock(page.locator('.entry-block').first())
     await syncLV(page)
 
     // After copying, paste buttons should appear at root-compatible positions
-    const pasteButtons = page.locator('.block-paste')
+    const pasteButtons = page.locator('.block-paste:visible')
     await expect(pasteButtons.first()).toBeVisible()
 
     // Click the paste button (the one above the first block)
@@ -258,8 +262,11 @@ test.describe('Block Copy/Paste', () => {
     await copyBlock(memberBlock)
     await syncLV(page)
 
-    // Paste button should appear inside the multi-block (matching parent_module_id)
-    const multiPaste = multiBlock.locator('.block-plus-wrapper .block-paste')
+    // Paste button should appear inside the multi-block (matching parent_module_id).
+    // Scoped by `data-paste-ctx` because the multi block also carries a
+    // root-context paste button above itself, which stays in the DOM and is
+    // hidden by CSS — a `.first()` here would pick that one up.
+    const multiPaste = multiBlock.locator('.block-paste[data-paste-ctx="multi"]')
     await expect(multiPaste.first()).toBeVisible()
 
     // Paste the entry
