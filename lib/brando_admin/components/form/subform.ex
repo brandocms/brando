@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias BrandoAdmin.Components.Form.Subform
 
   use Gettext, backend: Brando.Gettext
@@ -24,15 +25,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
     related_entries =
       changeset
-      |> Ecto.Changeset.get_field(field_name)
+      |> SubformHelpers.current_entries(field_name)
       |> List.replace_at(index, updated_changeset)
 
-    updated_master_changeset =
-      if socket.assigns.embeds? do
-        Ecto.Changeset.put_embed(changeset, field_name, related_entries)
-      else
-        Ecto.Changeset.put_assoc(changeset, field_name, related_entries)
-      end
+    updated_master_changeset = SubformHelpers.put_entries(changeset, field_name, related_entries)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
@@ -331,19 +327,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
     updated_field =
       changeset
-      |> Ecto.Changeset.get_field(field_name)
+      |> SubformHelpers.current_entries(field_name)
       |> Kernel.++([default])
 
-    updated_changeset =
-      case Enum.find(socket.assigns.relations, &(&1.name == field_name)) do
-        %{type: :has_many} ->
-          # assoc
-          Ecto.Changeset.put_assoc(changeset, field_name, updated_field)
-
-        _ ->
-          # embed
-          Ecto.Changeset.put_embed(changeset, field_name, updated_field)
-      end
+    updated_changeset = SubformHelpers.put_entries(changeset, field_name, updated_field)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
@@ -363,15 +350,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
     related_entries =
       changeset
-      |> Ecto.Changeset.get_field(field_name)
+      |> SubformHelpers.current_entries(field_name)
       |> List.delete_at(index)
 
-    updated_changeset =
-      if socket.assigns.embeds? do
-        Ecto.Changeset.put_embed(changeset, field_name, related_entries)
-      else
-        Ecto.Changeset.put_assoc(changeset, field_name, related_entries)
-      end
+    updated_changeset = SubformHelpers.put_entries(changeset, field_name, related_entries)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,

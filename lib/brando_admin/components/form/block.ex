@@ -195,10 +195,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     changesets = socket.assigns.changesets
     children_forms = socket.assigns.children_forms
 
-    # Get the child changeset from the seed form (changesets list may have nil values)
-    child_form = Map.get(children_forms, uid)
-    child_changeset = child_form && child_form.source
-
     # Remove from lists
     new_block_list = List.delete(block_list, uid)
 
@@ -210,11 +206,15 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     has_children? = new_block_list !== []
 
-    # Send the child to BlockField for relay to target parent
+    # Only the uid travels. This used to ship `children_forms[uid].source` — but
+    # that map is a mount-time seed by design, so a child the user had edited
+    # moved as its ORIGINAL content and the target re-registered that stale diff,
+    # discarding every edit. BlockField rebuilds the child from the op store,
+    # which is the one place holding its current state.
     send_to_ref(socket.assigns.parent_ref, %{
       event: "insert_extracted_child",
       target_parent_uid: target_uid,
-      child_changeset: child_changeset,
+      child_uid: uid,
       sequence: seq
     })
 

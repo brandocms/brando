@@ -118,8 +118,11 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert child.uid == "childC"
     original_child_id = child.id
 
-    # the outline move lands as insert_child with a known uid (reparent);
-    # the diff ships the child's current content, as the extract path does
+    # The outline move lands as insert_child with a known uid (reparent). The
+    # diff below stands in for the child's CURRENT content — which is what the
+    # extract path ships now that it materializes from the op store rather than
+    # from the parent's mount-time seed form. See "a child edited before an
+    # outline move keeps its edits" for the case where the two differ.
     ops = Ops.from_entry_blocks(entry_blocks)
 
     child_diff = %{
@@ -371,6 +374,47 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert [%{block: %{uid: "newmulti", children: [kid]}}] = preloaded_entry_blocks(page.id)
     assert kid.uid == "newkid"
     assert kid.description == "brand new child"
+  end
+
+  # B3: the outline used to ship `children_forms[uid].source` — a mount-time
+  # seed — as the moved child's content, so the target re-registered that stale
+  # diff and every edit made before the move was discarded. The move now
+  # materializes the child from the op store instead.
+  test "a child edited before an outline move keeps its edits" do
+    user = Factory.insert(:random_user)
+    {page, _} = insert_page_with_containers(user)
+
+    entry_blocks = preloaded_entry_blocks(page.id)
+    ops = Ops.from_entry_blocks(entry_blocks)
+
+    # the user edits the child while it still sits under containerA
+    {:ok, ops} = Ops.apply_op(ops, {:update, "childC", %{"description" => "edited before moving"}})
+
+    # ... then drags it to containerB. The move ships what the store holds now,
+    # which is what `Ops.materialize_child/2` returns.
+    assert {:ok, moved_params} = Ops.materialize_child(ops, "childC")
+    assert moved_params["description"] == "edited before moving"
+
+    {:ok, ops} = Ops.apply_op(ops, {:insert_child, "containerB", "childC", 0, moved_params})
+
+    assert {:ok, _} = save_from_ops(page, entry_blocks, ops, user)
+
+    reloaded = preloaded_entry_blocks(page.id)
+    assert [%{block: %{children: []}}, %{block: %{uid: "containerB", children: [moved]}}] = reloaded
+    assert moved.uid == "childC"
+
+    assert moved.description == "edited before moving",
+           "the edit made before the move must survive it"
+  end
+
+  test "materialize_child rejects roots and unknown uids" do
+    user = Factory.insert(:random_user)
+    {page, _} = insert_page_with_containers(user)
+    ops = Ops.from_entry_blocks(preloaded_entry_blocks(page.id))
+
+    assert {:error, {:unknown_uid, "containerA"}} = Ops.materialize_child(ops, "containerA")
+    assert {:error, {:unknown_uid, "nope"}} = Ops.materialize_child(ops, "nope")
+    assert {:ok, _} = Ops.materialize_child(ops, "childC")
   end
 
   test "a second save after the move is a no-op for the moved child" do

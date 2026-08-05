@@ -58,11 +58,21 @@ defmodule Brando.Content.Block do
     :page_id,
     :block_id,
     :palette_id,
-    :image_id,
-    :file_id,
     :identifier_id,
     :global_set_id,
-    :table_template_id
+    :table_template_id,
+    # Media a var can carry. The editor renders and commits all four
+    # (`render_var.ex`, `block.ex`'s `commit_var_data`), so omitting any of them
+    # here means the cast silently drops it and the value never reaches the DB.
+    :image_id,
+    :file_id,
+    :video_id,
+    :gallery_id,
+    # Upload/picker configuration for media vars, set through the var's config UI
+    :config_target,
+    :gallery_image_config_target,
+    :gallery_video_config_target,
+    :gallery_allowed_types
   ]
 
   # ++ Traits
@@ -277,9 +287,15 @@ defmodule Brando.Content.Block do
       :sequence,
       :active,
       :collapsed,
+      # All four media FKs, matching what the picker/drawer commits through
+      # `update_ref_data`. `:gallery_id` was missing, so a gallery picked on a
+      # ref was dropped by the cast — the same omission as the var list above.
+      # Casting the FK alongside `cast_assoc(:gallery, ...)` is safe: params
+      # carry one or the other, and the relation is `on_replace: :nilify`.
       :image_id,
       :video_id,
-      :file_id
+      :file_id,
+      :gallery_id
     ])
     |> unique_constraint(:uid)
     |> PolymorphicEmbed.cast_polymorphic_embed(:data)

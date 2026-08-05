@@ -51,13 +51,58 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
   end
 
   describe "update" do
-    test "replaces the diff wholesale" do
+    # Roots rebase on `changeset.data`, so each diff is already cumulative vs.
+    # the DB — replacing is correct. Merging them would resurrect a value the
+    # user had edited and then reverted.
+    test "replaces a ROOT diff wholesale" do
       state =
         Ops.new(["a"])
         |> apply!({:update, "a", %{"block" => %{"refs" => [%{"name" => "p"}]}}})
         |> apply!({:update, "a", %{"block" => %{"uid" => "a"}}})
 
       assert state.diffs["a"] == %{"block" => %{"uid" => "a"}}
+    end
+
+    # Children rebase on `apply_changes/1`, so each diff is only the delta since
+    # the last validate — they must accumulate or earlier edits are lost (B2).
+    test "merges a CHILD diff onto the stored one" do
+      state =
+        Ops.new(["p"])
+        |> apply!({:insert_child, "p", "c", 0, %{"uid" => "c"}})
+        |> apply!({:update, "c", %{"description" => "abc"}})
+        |> apply!({:update, "c", %{"anchor" => "z"}})
+
+      assert state.diffs["c"] == %{"uid" => "c", "description" => "abc", "anchor" => "z"}
+    end
+
+    test "a later CHILD edit still overwrites the same key" do
+      state =
+        Ops.new(["p"])
+        |> apply!({:insert_child, "p", "c", 0, %{"uid" => "c"}})
+        |> apply!({:update, "c", %{"description" => "abc"}})
+        |> apply!({:update, "c", %{"description" => "xyz"}})
+
+      assert state.diffs["c"]["description"] == "xyz"
+    end
+
+    test "CHILD merge is deep — a diff touching one ref keeps the other" do
+      state =
+        Ops.new(["p"])
+        |> apply!({:insert_child, "p", "c", 0, %{"uid" => "c"}})
+        |> apply!({:update, "c", %{"refs" => %{"0" => %{"image_id" => 1}}}})
+        |> apply!({:update, "c", %{"refs" => %{"1" => %{"image_id" => 2}}}})
+
+      assert state.diffs["c"]["refs"] == %{"0" => %{"image_id" => 1}, "1" => %{"image_id" => 2}}
+    end
+
+    test "CHILD merge replaces lists wholesale rather than zipping them" do
+      state =
+        Ops.new(["p"])
+        |> apply!({:insert_child, "p", "c", 0, %{"uid" => "c"}})
+        |> apply!({:update, "c", %{"table_rows" => [%{"a" => 1}, %{"b" => 2}]}})
+        |> apply!({:update, "c", %{"table_rows" => [%{"c" => 3}]}})
+
+      assert state.diffs["c"]["table_rows"] == [%{"c" => 3}]
     end
 
     test "does not change status" do

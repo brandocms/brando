@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
 
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.RenderVar
+  alias BrandoAdmin.Components.Form.Input.SubformHelpers
 
   # prop form, :form
   # prop subform, :form
@@ -115,8 +116,6 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
   end
 
   def handle_event("add_subentry", _, socket) do
-    changeset = socket.assigns.field.form.source
-
     default = %Brando.Content.Var{
       type: :boolean,
       label: "Label",
@@ -124,22 +123,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
       value: true
     }
 
-    field_name = socket.assigns.subform.name
-
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    current_entries = Ecto.Changeset.get_field(changeset, field_name) || []
-    updated_field = current_entries ++ List.wrap(default)
-    updated_changeset = Ecto.Changeset.put_change(changeset, field_name, updated_field)
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
-
-    {:noreply, socket}
+    SubformHelpers.append_subentries(socket, default)
   end
 
   def handle_event("remove_subentry", %{"index" => index}, socket) do
@@ -158,19 +142,10 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
     module = changeset.data.__struct__
     form_id = "#{module.__naming__().singular}_form"
 
-    entries = Ecto.Changeset.get_field(changeset, field_name)
+    entries = SubformHelpers.current_entries(changeset, field_name)
     sorted_entries = Enum.map(order_indices, &Enum.at(entries, &1))
 
-    updated_changeset =
-      case Enum.find(socket.assigns.blueprint.relations, &(&1.name == field_name)) do
-        %{type: :has_many} ->
-          # assoc
-          Ecto.Changeset.put_assoc(changeset, field_name, sorted_entries)
-
-        _ ->
-          # embed
-          Ecto.Changeset.put_embed(changeset, field_name, sorted_entries)
-      end
+    updated_changeset = SubformHelpers.put_entries(changeset, field_name, sorted_entries)
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,

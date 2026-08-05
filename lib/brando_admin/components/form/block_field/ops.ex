@@ -22,11 +22,18 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     for sequence and nesting. Diffs may carry stale `"sequence"`/`"children"`
     keys (children restamp forms after reorders; roots stamp `children: []`);
     both are ignored at materialization — the tree wins.
-  * `diffs` hold the latest params snapshot of a block's *changes vs. its
-    persisted data* (see `changes_to_params/1`) — `Ecto.Changeset.cast/4`
-    skips absent keys, so untouched fields never travel. Root diffs are
-    entry-block shaped (`%{"block" => ...}`), child diffs are block shaped.
-    An `{:update, ...}` replaces the previous diff wholesale.
+  * `diffs` hold a block's *changes vs. its persisted data* as params (see
+    `changes_to_params/1`) — `Ecto.Changeset.cast/4` skips absent keys, so
+    untouched fields never travel. Root diffs are entry-block shaped
+    (`%{"block" => ...}`), child diffs are block shaped.
+  * `{:update, ...}` stores roots and children differently, because the two
+    `validate_block` clauses produce differently-scoped diffs. A ROOT rebases
+    on `changeset.data`, so its diff is cumulative vs. the DB and REPLACES the
+    stored one. A CHILD rebases on `apply_changes/1`, so its diff is only the
+    delta since the previous validate and is deep-MERGED onto the stored one.
+    Getting this backwards loses data either way: replacing child diffs drops
+    every edit but the newest, and merging root diffs resurrects values the
+    user has since reverted.
   * Inserted params may carry a nested children tree (duplicate/paste/
     recovery); `apply_op/2` splits it into per-uid diffs and registers the
     structure, keeping the one-diff-per-uid invariant.
@@ -184,12 +191,13 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     end
   end
 
+  # Roots and children carry different diff semantics, so `:update` stores them
+  # differently — see `register_params/5`.
   def apply_op(%__MODULE__{} = state, {:update, uid, params}) when is_map(params) do
-    if known?(state, uid) do
-      shape = if uid in state.order, do: :entry_block, else: :block
-      {:ok, register_params(state, uid, params, shape)}
-    else
-      {:error, {:unknown_uid, uid}}
+    cond do
+      not known?(state, uid) -> {:error, {:unknown_uid, uid}}
+      uid in state.order -> {:ok, register_params(state, uid, params, :entry_block)}
+      true -> {:ok, register_params(state, uid, params, :block, merge?: true)}
     end
   end
 
@@ -525,6 +533,35 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     end
   end
 
+  @doc """
+  Materialize block-shaped params for one CHILD uid, subtree included.
+
+  The child equivalent of `materialize_root/2`. Used by the outline's
+  cross-parent move, which has to rebuild the moved child under its new
+  parent: the store is the only place that holds the child's *current*
+  content, since the source parent only ever keeps a mount-time seed form
+  (`@children_forms`) and the child's own live_component is destroyed by the
+  move (its id embeds the parent's id, so a new parent means a new CID).
+
+  Returns `{:error, {:unknown_uid, uid}}` for uids the store doesn't know,
+  and for roots — those go through `materialize_root/2`.
+  """
+  @spec materialize_child(t(), uid()) :: {:ok, params()} | {:error, term()}
+  def materialize_child(%__MODULE__{} = state, uid) do
+    if known?(state, uid) and uid not in state.order do
+      {_entry_block_id, block_id} = Map.get(state.db_ids, uid, {nil, nil})
+
+      params =
+        state.diffs
+        |> Map.get(uid, %{})
+        |> materialize_block(state, uid, block_id)
+
+      {:ok, params}
+    else
+      {:error, {:unknown_uid, uid}}
+    end
+  end
+
   defp materialize_block(block_diff, state, uid, block_id) do
     children =
       state.child_order
@@ -681,7 +718,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # (duplicate/paste/recovery inserts carry whole subtrees) into per-uid
   # diffs + registered structure. The stored diff keeps its "children" key
   # only as dead weight for :update ops — materialization ignores it.
-  defp register_params(state, uid, params, shape) do
+  defp register_params(state, uid, params, shape, opts \\ []) do
     {block_params, put_back} =
       case shape do
         :entry_block -> {Map.get(params, "block", %{}), &Map.put(params, "block", &1)}
@@ -689,10 +726,47 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       end
 
     {children_params, block_params} = pop_children(block_params)
+
+    block_params =
+      if Keyword.get(opts, :merge?, false) do
+        deep_merge_params(stored_block_params(state, uid, shape), block_params)
+      else
+        block_params
+      end
+
     state = %{state | diffs: Map.put(state.diffs, uid, put_back.(block_params))}
 
     register_children_params(state, uid, children_params)
   end
+
+  defp stored_block_params(state, uid, shape) do
+    case {Map.get(state.diffs, uid), shape} do
+      {nil, _} -> %{}
+      {stored, :entry_block} -> Map.get(stored, "block", %{})
+      {stored, :block} -> stored
+    end
+  end
+
+  # A child block's `validate_block` clause rebases on `apply_changes/1`, so the
+  # diff it emits is a DELTA since the previous validate — not a cumulative diff
+  # vs. the persisted row. Replacing the stored diff wholesale therefore dropped
+  # every earlier edit: type in `description`, then in `anchor`, and the
+  # description silently reverted at save.
+  #
+  # Roots keep replace semantics deliberately. They rebase on `changeset.data`,
+  # so their diffs are already cumulative vs. the DB, and merging them would be a
+  # bug in the other direction — a field the user edited and then reverted back
+  # to its stored value emits no change at all, so the stale value would be
+  # resurrected from the previous diff.
+  #
+  # Maps merge recursively (a later diff touching ref 1 must not wipe an earlier
+  # one touching ref 0); lists are replaced wholesale, since they are
+  # order-bearing and a partial list has no meaning here.
+  defp deep_merge_params(old, new) when is_map(old) and is_map(new) do
+    Map.merge(old, new, fn _key, old_value, new_value -> deep_merge_params(old_value, new_value) end)
+  end
+
+  defp deep_merge_params(_old, new), do: new
 
   defp pop_children(params) when is_map(params) do
     case Map.pop(params, "children") do

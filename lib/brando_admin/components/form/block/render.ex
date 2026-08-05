@@ -907,6 +907,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 {raw(split)}
             <% end %>
           <% end %>
+          <.carried_refs refs_field={@block_form[:refs]} liquid_splits={@liquid_splits} />
         </div>
       </div>
     </div>
@@ -1194,6 +1195,51 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     """
   end
 
+  attr :refs_field, :any, required: true
+  attr :liquid_splits, :list, required: true
+
+  @doc """
+  Hidden identity inputs for refs the module code does not render.
+
+  `liquid_strip_logic/1` removes `{% if %}` / `{% for %}` / `{% hide %}` regions
+  before the code is split into ref slots, so a `{% ref refs.x %}` inside one
+  produces no inputs at all. `refs` is `on_replace: :delete_if_exists`, so once
+  *any* ref renders, the params carry a shortened list and `cast_assoc(:refs)`
+  **deletes** every ref missing from it — on the first keystroke, silently.
+
+  Carrying identity is enough for a persisted ref: `cast_assoc` matches on the
+  primary key and leaves fields the params don't mention alone. This is the same
+  trick `ref/1` relies on for persisted refs, and the ref-side counterpart of
+  `carried_var/1`.
+
+  > #### Known gap {: .warning}
+  >
+  > An UNSAVED ref inside a stripped region is still dropped. Identity-only
+  > carrying cannot save it — with no primary key to match on, Ecto rebuilds the
+  > record from the params alone and blanks every field, which is exactly why
+  > `module_config/1` refuses the same shortcut for unsaved vars. Carrying it in
+  > full is not possible either: `data` is a polymorphic embed whose shape is the
+  > whole nested block editor. Reachable by adding a module ref inside `{% if %}`
+  > and running "fetch missing refs" on an already-saved block.
+  """
+  def carried_refs(assigns) do
+    rendered_names =
+      for {:ref, name} <- assigns.liquid_splits, do: name
+
+    assigns = assign(assigns, :rendered_names, rendered_names)
+
+    ~H"""
+    <div class="block-carried-refs" hidden>
+      <.inputs_for :let={ref_form} field={@refs_field} skip_hidden>
+        <%= if ref_form[:name].value not in @rendered_names and ref_form[:id].value not in [nil, ""] do %>
+          <Input.input type={:hidden} field={ref_form[:id]} />
+          <Input.input type={:hidden} field={ref_form[:_persistent_id]} value={ref_form.index} />
+        <% end %>
+      </.inputs_for>
+    </div>
+    """
+  end
+
   attr :ref_name, :string, required: true
   attr :refs_field, :any, required: true
   attr :target, :any, required: true
@@ -1231,22 +1277,29 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 form_id={@form_id}
               />
             </.polymorphic_embed_inputs_for>
-            <%!-- Ref identity and media associations. Same rule as vars: once
-                  the ref has a primary key, `cast_assoc` matches on it and
-                  leaves the fields the params don't mention alone, so only the
-                  identity needs to round-trip. An unsaved ref has nothing to
-                  match on, so it carries everything. --%>
+            <%!-- Ref identity. Same rule as vars: once the ref has a primary key,
+                  `cast_assoc` matches on it and leaves the fields the params
+                  don't mention alone, so only the identity needs to round-trip.
+                  An unsaved ref has nothing to match on, so it carries everything. --%>
             <Input.input type={:hidden} field={ref_form[:id]} />
             <Input.input type={:hidden} field={ref_form[:_persistent_id]} value={ref_form.index} />
             <%= if ref_form[:id].value in [nil, ""] do %>
               <Input.input type={:hidden} field={ref_form[:description]} />
               <Input.input type={:hidden} field={ref_form[:name]} />
               <Input.input type={:hidden} field={ref_form[:uid]} />
-              <Input.input type={:hidden} field={ref_form[:image_id]} />
-              <Input.input type={:hidden} field={ref_form[:video_id]} />
-              <Input.input type={:hidden} field={ref_form[:gallery_id]} />
-              <Input.input type={:hidden} field={ref_form[:file_id]} />
             <% end %>
+            <%!-- The media FKs are the exception, and they always round-trip.
+                  They are set programmatically (picker/drawer → `commit_ref_data`),
+                  so unlike every other field here they can hold a value that is in
+                  the changeset but not yet in the DB — leaving them out of the DOM
+                  means LiveView's form recovery has nothing to replay and the pick
+                  dies with the process. Four fields per ref is the price of that.
+                  The steady-state half of this lives in
+                  `events.ex`'s `merge_programmatic_ref_media/2`. --%>
+            <Input.input type={:hidden} field={ref_form[:image_id]} />
+            <Input.input type={:hidden} field={ref_form[:video_id]} />
+            <Input.input type={:hidden} field={ref_form[:gallery_id]} />
+            <Input.input type={:hidden} field={ref_form[:file_id]} />
           </section>
         <% end %>
       </.inputs_for>

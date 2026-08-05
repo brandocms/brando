@@ -254,19 +254,42 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, apply_block_op(socket, op)}
   end
 
-  # Outline: relay extracted child to target parent
+  # Outline: relay extracted child to target parent.
+  #
+  # The child's changeset is rebuilt HERE, from the op store, rather than
+  # accepted from the source parent — that parent only holds a mount-time seed
+  # form, so a moved child used to arrive with its original content and wipe the
+  # user's edits when the target re-registered its diff.
   def update(
-        %{event: "insert_extracted_child", target_parent_uid: target_uid, child_changeset: cs, sequence: seq},
+        %{event: "insert_extracted_child", target_parent_uid: target_uid, child_uid: uid, sequence: seq},
         socket
       ) do
-    send_update(Block,
-      id: "block-#{target_uid}",
-      event: "insert_pasted_block",
-      block_cs: cs,
-      sequence: seq
-    )
+    case Ops.materialize_child(socket.assigns.block_ops, uid) do
+      {:ok, params} ->
+        cs =
+          socket
+          |> child_base_struct(uid)
+          |> Brando.Content.Block.recursive_block_changeset(params, socket.assigns.current_user.id)
 
-    {:ok, rebuild_outline_items(socket)}
+        send_update(Block,
+          id: "block-#{target_uid}",
+          event: "insert_pasted_block",
+          block_cs: cs,
+          sequence: seq
+        )
+
+        {:ok, rebuild_outline_items(socket)}
+
+      {:error, reason} ->
+        require Logger
+
+        Logger.error("""
+        [BlockField] cross-parent move of #{inspect(uid)} aborted: #{inspect(reason)}.
+        The block stays under its original parent.
+        """)
+
+        {:ok, rebuild_outline_items(socket)}
+    end
   end
 
   # INSERT ROOT BLOCK
@@ -675,6 +698,28 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # The changeset base for materializing a root block: its persisted entry
   # block when it exists, otherwise a fresh struct with an empty (loaded)
   # block so cast_assoc has something to cast against.
+  # The persisted row a moved child should cast over, so `cast_assoc` matches
+  # existing ids instead of inserting duplicates. Children live anywhere in the
+  # tree, hence the walk; an unsaved child has no row and gets a fresh base.
+  defp child_base_struct(socket, uid) do
+    socket.assigns.entry_blocks
+    |> List.wrap()
+    |> Enum.map(& &1.block)
+    |> find_block_by_uid(uid)
+    |> case do
+      nil -> %Brando.Content.Block{vars: [], refs: [], table_rows: [], children: [], block_identifiers: []}
+      block -> block
+    end
+  end
+
+  defp find_block_by_uid(blocks, uid) do
+    Enum.find_value(blocks, fn
+      %{uid: ^uid} = block -> block
+      %{children: children} when is_list(children) -> find_block_by_uid(children, uid)
+      _ -> nil
+    end)
+  end
+
   defp materialize_base_struct(socket, uid) do
     case Enum.find(socket.assigns.entry_blocks || [], &(&1.block.uid == uid)) do
       nil ->

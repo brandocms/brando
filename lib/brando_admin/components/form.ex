@@ -188,6 +188,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:edit_file, updated_edit_file)
      |> assign(:file_changeset, file_changeset)
+     |> commit_selected_asset(updated_edit_file, file)
      |> assign_drawer_recovery_state()}
   end
 
@@ -225,6 +226,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:edit_image, updated_edit_image)
      |> assign(:image_changeset, image_changeset)
+     |> commit_selected_asset(updated_edit_image, image)
      |> assign_drawer_recovery_state()}
   end
 
@@ -295,6 +297,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:edit_video, updated_edit_video)
      |> assign(:video_changeset, video_changeset)
+     |> commit_selected_asset(updated_edit_video, video)
      |> assign_drawer_recovery_state()}
   end
 
@@ -1163,6 +1166,24 @@ defmodule BrandoAdmin.Components.Form do
   # push a targeted b:validate that sets the hidden input's DOM value —
   # Input.File/Image/Video render it from the assoc, so a put_change alone
   # never reaches the submit params.
+  # A picker SELECT has to commit the FK exactly like an upload does. It used to
+  # only assign `edit_image`/`image_changeset`, leaving the id to reach the
+  # changeset through the drawer's form submit — which is dispatched by the close
+  # BUTTON (`close_image/1`). Dismissing the drawer any other way (Esc, backdrop,
+  # navigating away) therefore lost the selection silently.
+  #
+  # Block-level picks are excluded: they carry a `block_target` and commit
+  # through `Block.commit_ref_data/2` instead, and `field` is nil for them.
+  defp commit_selected_asset(socket, %{field: field} = edit_asset, asset) when not is_nil(field) do
+    if Map.get(edit_asset, :block_target) do
+      socket
+    else
+      commit_entry_field_asset(socket, field, Map.get(edit_asset, :path) || [], asset)
+    end
+  end
+
+  defp commit_selected_asset(socket, _edit_asset, _asset), do: socket
+
   defp commit_entry_field_asset(socket, field, path, asset) do
     relation_key = String.to_existing_atom("#{field}_id")
     full_path = path ++ [relation_key]

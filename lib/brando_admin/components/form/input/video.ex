@@ -61,22 +61,12 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
       cond do
         is_nil(video) && video_id ->
           # we have a video in the changeset, but no loaded video
-          {:ok, video} = Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]})
-
-          socket
-          |> assign(:video, video)
-          |> assign(:video_id, video_id)
-          |> maybe_subscribe(video_id)
+          fetch_video(socket, video_id)
 
         video && to_string(video.id) != to_string(video_id) && video_id != nil ->
           # we have a loaded video, but it does not match the changeset video
           # load the changeset video
-          {:ok, video} = Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]})
-
-          socket
-          |> assign(:video, video)
-          |> assign(:video_id, video_id)
-          |> maybe_subscribe(video_id)
+          fetch_video(socket, video_id)
 
         video && video.id == nil && video_id == nil ->
           # no loaded video, no video_id in changeset
@@ -87,12 +77,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
             |> EctoNestedChangeset.get_at(full_path_fk)
             |> try_force_int()
 
-          {:ok, video} = Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]})
-
-          socket
-          |> assign(:video, video)
-          |> assign(:video_id, video_id)
-          |> maybe_subscribe(video_id)
+          fetch_video(socket, video_id)
 
         video_id == nil && video != nil ->
           # reset video to nil
@@ -114,10 +99,11 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
         true ->
           if video && video.status != :ready do
             # if the video is not ready, we can try to reload and see if it's done.
-            {:ok, video} = Brando.Videos.get_video(video_id)
-
-            socket
-            |> assign(:video, video)
+            # A failed reload keeps the video we already have — it is only a refresh.
+            case Brando.Videos.get_video(video_id) do
+              {:ok, reloaded_video} -> assign(socket, :video, reloaded_video)
+              {:error, _} -> socket
+            end
           else
             socket
           end
@@ -128,6 +114,25 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
      |> prepare_input_component()
      |> assign_new(:editable, fn -> Keyword.get(socket.assigns.opts, :editable, true) end)
      |> assign_new(:relation_field, fn -> relation_field end)}
+  end
+
+  # Mirrors `input/image.ex`'s `fetch_image/2`: a referenced video may have been
+  # hard-deleted, and `video_id` can legitimately be nil on the path lookup. A
+  # hard match here raised MatchError and destroyed the whole entry form process
+  # along with every unsaved change in it. Fall back to the empty picker state.
+  defp fetch_video(socket, video_id) do
+    case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}) do
+      {:ok, video} ->
+        socket
+        |> assign(:video, video)
+        |> assign(:video_id, video_id)
+        |> maybe_subscribe(video_id)
+
+      {:error, _} ->
+        socket
+        |> assign(:video, nil)
+        |> assign(:video_id, nil)
+    end
   end
 
   defp maybe_subscribe(socket, video_id) when is_integer(video_id) do

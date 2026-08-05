@@ -249,9 +249,9 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       if belongs_to == :root do
         changeset
         |> Changeset.get_assoc(:block)
-        |> Changeset.get_embed(:refs)
+        |> get_assoc_list(:refs)
       else
-        Changeset.get_embed(changeset, :refs)
+        get_assoc_list(changeset, :refs)
       end
 
     current_ref_names = Enum.map(current_refs, &Changeset.get_field(&1, :name))
@@ -268,10 +268,10 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     updated_changeset =
       if belongs_to == :root do
         block_changeset = Changeset.get_assoc(changeset, :block)
-        updated_block_changeset = Changeset.put_embed(block_changeset, :refs, new_refs)
+        updated_block_changeset = Changeset.put_assoc(block_changeset, :refs, new_refs)
         Changeset.put_assoc(changeset, :block, updated_block_changeset)
       else
-        Changeset.put_embed(changeset, :refs, new_refs)
+        Changeset.put_assoc(changeset, :refs, new_refs)
       end
 
     new_form =
@@ -308,9 +308,9 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       if belongs_to == :root do
         changeset
         |> Changeset.get_assoc(:block)
-        |> Changeset.get_embed(:refs)
+        |> get_assoc_list(:refs)
       else
-        Changeset.get_embed(changeset, :refs)
+        get_assoc_list(changeset, :refs)
       end
 
     prepared_refs =
@@ -327,10 +327,10 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     updated_changeset =
       if belongs_to == :root do
         block_changeset = Changeset.get_assoc(changeset, :block)
-        updated_block_changeset = Changeset.put_embed(block_changeset, :refs, prepared_refs)
+        updated_block_changeset = Changeset.put_assoc(block_changeset, :refs, prepared_refs)
         Changeset.put_assoc(changeset, :block, updated_block_changeset)
       else
-        Changeset.put_embed(changeset, :refs, prepared_refs)
+        Changeset.put_assoc(changeset, :refs, prepared_refs)
       end
 
     new_form =
@@ -363,10 +363,10 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     updated_changeset =
       if belongs_to == :root do
         block_changeset = Changeset.get_assoc(changeset, :block)
-        updated_block_changeset = Changeset.put_embed(block_changeset, :refs, prepared_refs)
+        updated_block_changeset = Changeset.put_assoc(block_changeset, :refs, prepared_refs)
         Changeset.put_assoc(changeset, :block, updated_block_changeset)
       else
-        Changeset.put_embed(changeset, :refs, prepared_refs)
+        Changeset.put_assoc(changeset, :refs, prepared_refs)
       end
 
     new_form =
@@ -735,6 +735,8 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
         end
       end)
 
+    params = restore_programmatic_ref_media(params, applied_block)
+
     updated_changeset =
       block_for_changeset
       |> Brando.Content.Block.block_changeset(params, current_user_id)
@@ -774,8 +776,9 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
     # Use changeset.data (original DB values) as the base for the new changeset.
     # The params from the form contain ALL current field values, so cast will detect changes properly.
-    # We use apply_changes only for specific fields that are set programmatically (like image_id)
-    # and aren't in params.
+    # `applied_block` is the current in-memory state. It is used for two things:
+    # the NotLoaded fallback below, and `restore_programmatic_ref_media/2`, which
+    # feeds ref media FKs that params don't mention back through params (see there).
     original_data = changeset.data
     applied_block = Changeset.apply_changes(changeset)
 
@@ -785,9 +788,8 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
     block_for_changeset =
       if Map.has_key?(original_data, :block) do
-        # Entry block wrapper with nested block
-        # Use original_data but preserve any programmatic changes from applied_block
-        # that aren't covered by params (like image_id set via drawer)
+        # Entry block wrapper with nested block. The base is the DB state;
+        # programmatic changes are restored via params, not merged in here.
         inner_block = original_data.block
 
         # Handle NotLoaded - if block is not loaded, use applied_block
@@ -830,8 +832,11 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
         end
       end
 
+    params = restore_root_ref_media(params, applied_block)
+
     updated_changeset =
-      block_module.changeset(block_for_changeset, params, current_user_id)
+      block_for_changeset
+      |> block_module.changeset(params, current_user_id)
       |> Map.put(:action, :validate)
 
     # if this is a container and it's flipped from active = false to true,
@@ -1003,6 +1008,63 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   end
 
   defp var_struct_to_map(var) when is_map(var), do: var
+
+  # A ref's media FKs are set programmatically — `Block.commit_ref_data/2` is a
+  # pure `send_update`, and `update_ref_data` writes the id straight into the ref
+  # changeset's `changes`. There is no DB write, so rebasing the cast on
+  # `changeset.data` would silently revert the pick on the very next keystroke —
+  # no disconnect needed.
+  #
+  # They are restored through *params* rather than merged onto the base struct.
+  # Merging onto the base would be worse than useless: the value would show up in
+  # `apply_changes` (so the UI looks right) but produce no entry in `changes`, and
+  # `Ops.block_diff_params` reads `changes` — so the save would drop it anyway.
+  # Going through params makes the cast emit a real change on both paths.
+  #
+  # Params always win when present: a value already in the DOM is the newer one.
+  @ref_media_fk_params ["image_id", "video_id", "gallery_id", "file_id"]
+
+  defp restore_programmatic_ref_media(%{"refs" => refs_params} = params, %{refs: applied_refs})
+       when is_map(refs_params) and is_list(applied_refs) do
+    applied_by_id =
+      applied_refs
+      |> Enum.filter(& &1.id)
+      |> Map.new(&{to_string(&1.id), &1})
+
+    restored =
+      Map.new(refs_params, fn {index, ref_params} ->
+        {index, restore_ref_media_params(ref_params, applied_by_id)}
+      end)
+
+    Map.put(params, "refs", restored)
+  end
+
+  defp restore_programmatic_ref_media(params, _applied_block), do: params
+
+  # Root params nest the block one level down; children are block-shaped already.
+  defp restore_root_ref_media(%{"block" => block_params} = params, %{block: applied_inner})
+       when is_map(block_params) do
+    Map.put(params, "block", restore_programmatic_ref_media(block_params, applied_inner))
+  end
+
+  defp restore_root_ref_media(params, _applied_block), do: params
+
+  defp restore_ref_media_params(%{"id" => id} = ref_params, applied_by_id) when is_map(ref_params) do
+    case Map.get(applied_by_id, to_string(id)) do
+      nil ->
+        ref_params
+
+      applied ->
+        # put_new: params already carrying the FK are newer and must win
+        Enum.reduce(
+          @ref_media_fk_params,
+          ref_params,
+          &Map.put_new(&2, &1, Map.get(applied, String.to_existing_atom(&1)))
+        )
+    end
+  end
+
+  defp restore_ref_media_params(ref_params, _applied_by_id), do: ref_params
 
   defp get_assoc_list(changeset, field) do
     case Ecto.Changeset.get_assoc(changeset, field) do
