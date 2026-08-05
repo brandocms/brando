@@ -103,6 +103,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:editing_field, nil)
      |> assign(:editing_path, [])
      |> assign(:editing_schema, nil)
+     |> assign(:editing_drawer_changes, "{}")
      |> assign(:deliver_topic, deliver_topic)}
   end
 
@@ -2069,6 +2070,7 @@ defmodule BrandoAdmin.Components.Form do
             <input type="hidden" name="drawer[path]" value={Jason.encode!(@editing_path || [])} />
             <input type="hidden" name="drawer[schema]" value={@editing_schema} />
             <input type="hidden" name="drawer[form_id]" value={@id} />
+            <input type="hidden" name="drawer[changes]" value={@editing_drawer_changes} />
           </form>
 
           <.form
@@ -4120,6 +4122,20 @@ defmodule BrandoAdmin.Components.Form do
       %{"type" => "file", "resource_id" => id} when id != "" ->
         restore_file_drawer(socket, drawer_params)
 
+      # A drawer was open but carried no resource id — recovery cannot rebuild
+      # it, and any edits inside it are gone. Rare, but it used to be entirely
+      # invisible; the clause below is the ordinary "no drawer was open" case
+      # and is correctly silent.
+      %{"type" => type} when type not in [nil, ""] ->
+        require Logger
+
+        Logger.warning(
+          "Form (#{socket.assigns.id}) could not recover an open #{type} drawer: " <>
+            "no resource_id in the recovery params. In-progress edits in that drawer are lost."
+        )
+
+        {:noreply, socket}
+
       _ ->
         {:noreply, socket}
     end
@@ -6058,6 +6074,15 @@ defmodule BrandoAdmin.Components.Form do
 
   defp relation_field_key(_relation_field, field), do: field
 
+  # The fields each drawer lets you type into. These are the values that used to
+  # be lost: the drawer's own edit form is `:if={@image_changeset}`-gated, so on
+  # reconnect it exists in neither the old nor the new DOM when LiveView's
+  # recovery diff runs, and LiveView only recovers forms it can see. The
+  # always-rendered recovery form below carries them instead.
+  @image_drawer_fields [:title, :credits, :alt]
+  @video_drawer_fields [:source_url, :type]
+  @file_drawer_fields [:title]
+
   defp restore_image_drawer(socket, params) do
     resource_id = String.to_integer(params["resource_id"])
 
@@ -6077,7 +6102,7 @@ defmodule BrandoAdmin.Components.Form do
          socket
          |> assign(:edit_image, edit_image)
          |> assign(:editing_image?, true)
-         |> assign(:image_changeset, Ecto.Changeset.change(image))
+         |> assign(:image_changeset, replay_drawer_changes(image, params, @image_drawer_fields))
          |> assign_drawer_recovery_state()
          |> push_event("b:show_drawer", %{drawer_id: "image-drawer"})}
 
@@ -6105,7 +6130,7 @@ defmodule BrandoAdmin.Components.Form do
          socket
          |> assign(:edit_video, edit_video)
          |> assign(:editing_video?, true)
-         |> assign(:video_changeset, Ecto.Changeset.change(video))
+         |> assign(:video_changeset, replay_drawer_changes(video, params, @video_drawer_fields))
          |> assign_drawer_recovery_state()
          |> push_event("b:show_drawer", %{drawer_id: "video-drawer"})}
 
@@ -6133,7 +6158,7 @@ defmodule BrandoAdmin.Components.Form do
          socket
          |> assign(:edit_file, edit_file)
          |> assign(:editing_file?, true)
-         |> assign(:file_changeset, Ecto.Changeset.change(file))
+         |> assign(:file_changeset, replay_drawer_changes(file, params, @file_drawer_fields))
          |> assign_drawer_recovery_state()
          |> push_event("b:show_drawer", %{drawer_id: "file-drawer"})}
 
@@ -6141,6 +6166,31 @@ defmodule BrandoAdmin.Components.Form do
         {:noreply, socket}
     end
   end
+
+  defp drawer_fields("image"), do: @image_drawer_fields
+  defp drawer_fields("video"), do: @video_drawer_fields
+  defp drawer_fields("file"), do: @file_drawer_fields
+  defp drawer_fields(_type), do: []
+
+  # Replay the drawer edits that were in flight when the process died, on top of
+  # the freshly loaded resource. `cast/3` rather than `change/2` on purpose: the
+  # values arrive as strings from a hidden input, and `type` on a video is an
+  # enum that `change/2` would happily store unconverted.
+  defp replay_drawer_changes(resource, params, allowed_fields) do
+    case decode_drawer_changes(params["changes"]) do
+      changes when map_size(changes) == 0 -> Ecto.Changeset.change(resource)
+      changes -> Ecto.Changeset.cast(resource, changes, allowed_fields)
+    end
+  end
+
+  defp decode_drawer_changes(json) when is_binary(json) and json != "" do
+    case Jason.decode(json) do
+      {:ok, %{} = changes} -> changes
+      _ -> %{}
+    end
+  end
+
+  defp decode_drawer_changes(_json), do: %{}
 
   defp assign_drawer_recovery_state(socket) do
     %{
@@ -6152,19 +6202,21 @@ defmodule BrandoAdmin.Components.Form do
       edit_file: edit_file
     } = socket.assigns
 
-    {type, resource_id, field, path, schema} =
+    {type, resource_id, field, path, schema, changeset} =
       cond do
         editing_image? and edit_image[:id] ->
-          {"image", edit_image.id, edit_image[:field], edit_image[:path], edit_image[:schema]}
+          {"image", edit_image.id, edit_image[:field], edit_image[:path], edit_image[:schema],
+           socket.assigns[:image_changeset]}
 
         editing_video? and edit_video[:id] ->
-          {"video", edit_video.id, edit_video[:field], edit_video[:path], edit_video[:schema]}
+          {"video", edit_video.id, edit_video[:field], edit_video[:path], edit_video[:schema],
+           socket.assigns[:video_changeset]}
 
         editing_file? and edit_file[:id] ->
-          {"file", edit_file.id, edit_file[:field], edit_file[:path], edit_file[:schema]}
+          {"file", edit_file.id, edit_file[:field], edit_file[:path], edit_file[:schema], socket.assigns[:file_changeset]}
 
         true ->
-          {nil, nil, nil, [], nil}
+          {nil, nil, nil, [], nil, nil}
       end
 
     socket
@@ -6173,7 +6225,19 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:editing_field, field && to_string(field))
     |> assign(:editing_path, path || [])
     |> assign(:editing_schema, schema && to_string(schema))
+    |> assign(:editing_drawer_changes, encode_drawer_changes(type, changeset))
   end
+
+  # Only what the user actually changed, and only the text fields — everything
+  # else in a drawer changeset either is not JSON-encodable or is not something
+  # the drawer can edit. An empty map is the common case and encodes to "{}".
+  defp encode_drawer_changes(type, %Ecto.Changeset{changes: changes}) do
+    changes
+    |> Map.take(drawer_fields(type))
+    |> Jason.encode!()
+  end
+
+  defp encode_drawer_changes(_type, _changeset), do: "{}"
 
   defp upload_target_dom_id(value) when is_atom(value),
     do: value |> Atom.to_string() |> upload_target_dom_id()

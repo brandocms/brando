@@ -294,20 +294,39 @@ the keyed `:for` — never from a form's `sequence` field, which is stale by des
 
 ## 9. Recovery Mechanism
 
+### Scope — what this mechanism is *for*
+
+Bespoke recovery exists for the one case LiveView's own form recovery structurally
+cannot reach: **brand-new root blocks that were never persisted.** Everything else
+is already covered — the main entry form and every block form carry a stable `id`
+plus `phx-change`, so LiveView replays their DOM params through `validate` /
+`validate_block` on reconnect, rebased on a freshly DB-loaded changeset. (Absence
+of `phx-auto-recover` means *default* recovery, not none.)
+
+The corollary is the thing to remember: **recovery replays the DOM.** State held
+only in changeset `changes` or in component assigns, with no input backing it, is
+not recoverable here — and is usually already lost by the next keystroke,
+disconnect or not.
+
 ### JS Hook (`BlockField/index.js`)
-1. **`disconnected()`**: Captures all block form data from DOM (`FormData` → nested params) and root UIDs to `sessionStorage` keyed by `brando:block-recovery:{element-id}`
-2. **`mounted()` / `reconnected()`**: Reads from sessionStorage, compares stored UIDs vs current DOM UIDs, sends `recover_blocks` event with missing UIDs + their form data
+1. **`disconnected()`**: Captures all block form data from DOM (`FormData` → nested params), root UIDs, and `childOrder` (parent uid → ordered child uids, read off the `data-parent_uid` wrappers) to `sessionStorage`, with a `savedAt` stamp
+2. **`reconnected()`**: Reads from sessionStorage, compares stored UIDs vs current DOM UIDs, sends `recover_blocks` with the missing roots **and their whole child subtree**. `mounted()` is deliberately a no-op — recovery is a reconnect concern, not a mount concern
+3. Storage key is `brando:block-recovery:{entry-id}:{element-id}`; snapshots older than the TTL are discarded unread
+4. The snapshot is removed **only** after the server replies, never before the push — it is the sole copy of blocks that exist nowhere else
 
 ### Server Handler (`block_field.ex: handle_event("recover_blocks")`)
-1. Receives `rootUids`, `missingUids`, `forms` (params keyed by form ID)
+1. Receives `rootUids`, `missingUids`, `forms` (params keyed by form ID), `childOrder`
 2. For each missing UID:
    - Creates base struct with empty associations (vars, refs, table_rows, children, block_identifiers)
-   - Runs `block_module.changeset(base_struct, params_with_entry, user_id)` — full changeset pipeline
+   - Grafts the captured child subtree onto the block params from `childOrder`, preserving order (sequence is derived from list position)
+   - Runs `block_module.changeset(base_struct, params_with_entry, user_id, true)` — the **recursive** cast. The 3-arity variant has no `cast_assoc(:children)` and drops the subtree silently
    - Sets `action: :insert`
 3. Merges recovered forms with existing forms in original root_uids order
-4. Reassigns `entry_blocks_forms`, `block_list`, `root_changesets`
+4. Replies `%{recovered: uids}` so the client can drop its snapshot
 
-This preserves ALL form field values (not just structure) because the recovered params go through the same changeset pipeline as normal validation.
+Form field values — vars, refs, table_rows — are preserved because the recovered
+params go through the same changeset pipeline as normal validation. What is *not*
+preserved is anything that had no DOM input to capture in the first place.
 
 ---
 
@@ -394,10 +413,11 @@ When building maps for `put_assoc`, drop association keys (`:block`, `:module`, 
 ## 13. JS Hooks
 
 ### `Brando.BlockField` (`assets/src/hooks/BlockField/index.js`)
-- **Purpose**: Block recovery after WebSocket disconnect
-- **`disconnected()`**: Serializes all block forms' `FormData` + root UID order to `sessionStorage`
-- **`mounted()` / `reconnected()`**: Compares stored UIDs vs current DOM, sends `recover_blocks` with missing block data
-- Storage key: `brando:block-recovery:{wrapper-element-id}`
+- **Purpose**: Recovery of never-persisted root blocks after the LiveView process dies (see §9 for what this does *not* cover)
+- **`disconnected()`**: Serializes all block forms' `FormData`, root UID order and `childOrder` to `sessionStorage`
+- **`reconnected()`**: Compares stored UIDs vs current DOM, sends `recover_blocks` with the missing roots and their descendants. `mounted()` is a no-op
+- Storage key: `brando:block-recovery:{entry-id}:{wrapper-element-id}`, TTL-stamped
+- The snapshot is cleared on the server's reply, not before the push
 
 ### `Brando.Block` (`assets/src/hooks/Block/index.js`)
 - **Purpose**: Auto-resize textareas

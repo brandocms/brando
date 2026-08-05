@@ -1211,14 +1211,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   rendered and sends any missing blocks here for reconstruction.
 
   The recovered form params are run through the normal changeset pipeline
-  (`block_module.changeset`), so all form field values — vars, refs,
-  table_rows — are properly cast and restored, not just the block structure.
+  (`block_module.changeset/4` with `recursive?: true`), so all form field values
+  — vars, refs, table_rows — and the block's whole child subtree are properly
+  cast and restored, not just the root block's own fields.
   """
   def handle_event("recover_blocks", params, socket) do
     %{"rootUids" => root_uids, "missingUids" => missing_uids, "forms" => forms} = params
+    child_order = Map.get(params, "childOrder", %{})
+    missing_uids = recoverable_uids(missing_uids, socket)
 
     if missing_uids == [] do
-      {:noreply, socket}
+      {:reply, %{recovered: []}, socket}
     else
       block_module = socket.assigns.block_module
       user_id = socket.assigns.current_user.id
@@ -1233,10 +1236,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
             form_data = forms[form_id]
 
             if form_data do
-              entry_block_params = form_data["entry_block"] || %{}
+              entry_block_params =
+                form_data
+                |> Map.get("entry_block", %{})
+                |> sanitize_recovered_params(uid, block_module, user_id)
 
               # Create base struct with an empty block so cast_assoc has
-              # a loaded association to work with (not NotLoaded)
+              # a loaded association to work with (not NotLoaded). Nested
+              # children are built by Ecto from the params below, exactly as
+              # on the save path (`materialize_base_struct/2`).
               base_block = %Brando.Content.Block{
                 vars: [],
                 refs: [],
@@ -1248,29 +1256,40 @@ defmodule BrandoAdmin.Components.Form.BlockField do
               base_struct = block_module |> struct(%{}) |> Map.put(:block, base_block)
 
               # Include entry_id in params (no hidden field for it in the form)
-              params_with_entry = Map.put(entry_block_params, "entry_id", to_string(entry_id))
+              params_with_entry =
+                entry_block_params
+                |> Map.put("entry_id", to_string(entry_id))
+                |> put_recovered_children(uid, forms, child_order, %{
+                  block_module: block_module,
+                  user_id: user_id
+                })
 
+              # `recursive?: true` is load-bearing — the non-recursive block
+              # cast has no `cast_assoc(:children)` and drops the subtree
+              # assembled just above without a word.
               entry_block_cs =
-                block_module.changeset(base_struct, params_with_entry, user_id)
+                base_struct
+                |> block_module.changeset(params_with_entry, user_id, true)
                 |> Map.put(:action, :insert)
 
-              block_cs = Changeset.get_assoc(entry_block_cs, :block)
-              recovered_uid = Changeset.get_field(block_cs, :uid)
-
+              # Keyed by the uid the server vetted, never by one read back out of
+              # the client's params — otherwise a payload whose `missingUids`
+              # and whose form body disagree could land under a uid that was
+              # never checked, clobbering a live block's seed form.
               entry_block_form =
                 to_form(entry_block_cs,
                   as: "entry_block",
-                  id: "entry_block_form-#{recovered_uid}"
+                  id: "entry_block_form-#{uid}"
                 )
 
-              Map.put(acc, recovered_uid, entry_block_form)
+              Map.put(acc, uid, entry_block_form)
             else
               acc
             end
         end
 
       if recovered_forms == %{} do
-        {:noreply, socket}
+        {:reply, %{recovered: []}, socket}
       else
         # Merge recovered seeds in, then let ONE reorder to the client's
         # pre-disconnect root order set structure — sequence derives from
@@ -1278,12 +1297,145 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         seed_forms = Map.merge(socket.assigns.seed_forms, recovered_forms)
         merged_uids = Enum.filter(root_uids, &Map.has_key?(seed_forms, &1))
 
+        # The reply is what lets the client drop its sessionStorage snapshot.
+        # Until it lands, the client keeps the only copy of these never-persisted
+        # blocks — see `maybeRecoverBlocks` in the BlockField hook.
         socket
         |> assign(:seed_forms, seed_forms)
         |> apply_recovered_block_ops(recovered_forms, merged_uids)
         |> refresh_live_preview()
-        |> then(&{:noreply, &1})
+        |> then(&{:reply, %{recovered: Map.keys(recovered_forms)}, &1})
       end
+    end
+  end
+
+  # ── Recovery is a client-authored write path ────────────────────────────────
+  #
+  # `recover_blocks` is the one place where a raw params tree from the browser is
+  # cast straight into new DB rows. Everything else the editor sends is a
+  # `validate` against a changeset the server already built. So the params are
+  # narrowed here before they reach `changeset/4`:
+  #
+  #   * the entry_block level is whitelisted, which drops `block_id` — casting it
+  #     would attach this entry to an existing block row belonging to another
+  #     entry (`blueprint.ex:318` casts it, `entry_id` alone does not protect it)
+  #   * the block level is whitelisted from `@block_attrs` minus the fields that
+  #     are server authority: `creator_id`, `parent_id`, `source`
+  #   * `creator_id` and `source` are then *forced*, and `uid` is forced to the
+  #     uid the server vetted
+  #   * the same scrub runs over every nested relation — a var or ref carries
+  #     `creator_id`, `block_id` and `page_id` of its own
+  #
+  # Fields left castable (`module_id`, `container_id`, `palette_id`,
+  # `fragment_id`) are not a boundary: every admin can already pick any of them
+  # from the pickers. The boundary is ownership and identity.
+
+  @recoverable_entry_block_params ~w(sequence)
+  # `children` is deliberately absent: the subtree only ever arrives through the
+  # vetted `childOrder` graft below, where each child is sanitized in its own
+  # right. Accepting it here would be a way to smuggle in blocks that never got
+  # a uid or a creator forced onto them.
+  @recoverable_block_params ~w(
+    uid type active collapsed anchor description multi sequence
+    module_id container_id fragment_id palette_id identifier_metas
+    vars refs table_rows block_identifiers
+  )
+  # Stripped wherever they appear in the tree, at any depth.
+  @forged_params ~w(id block_id parent_id creator_id source entry_id page_id)
+
+  defp sanitize_recovered_params(entry_block_params, uid, block_module, user_id) do
+    block_params =
+      entry_block_params
+      |> Map.get("block", %{})
+      |> sanitize_recovered_block(uid, block_module, user_id)
+
+    entry_block_params
+    |> Map.take(@recoverable_entry_block_params)
+    |> Map.put("block", block_params)
+  end
+
+  defp sanitize_recovered_block(block_params, uid, block_module, user_id) when is_map(block_params) do
+    block_params
+    |> Map.take(@recoverable_block_params)
+    |> Map.new(fn {key, value} -> {key, scrub_forged(value)} end)
+    |> Map.put("uid", uid)
+    |> Map.put("creator_id", to_string(user_id))
+    |> Map.put("source", to_string(block_module))
+  end
+
+  defp sanitize_recovered_block(_block_params, uid, block_module, user_id),
+    do: sanitize_recovered_block(%{}, uid, block_module, user_id)
+
+  # Recursive scrub for the nested relations, whose field sets are large and
+  # mostly legitimate — only the ownership/identity keys are removed.
+  defp scrub_forged(%{} = params) do
+    params
+    |> Map.drop(@forged_params)
+    |> Map.new(fn {key, value} -> {key, scrub_forged(value)} end)
+  end
+
+  defp scrub_forged(params) when is_list(params), do: Enum.map(params, &scrub_forged/1)
+  defp scrub_forged(params), do: params
+
+  # A uid is recoverable only if this process does not already have it. The
+  # client decides what *looks* missing by diffing the DOM; the server is the
+  # only side that knows what it actually holds, and it must not let a replayed
+  # or forged payload overwrite a block that is alive right now.
+  defp recoverable_uids(missing_uids, socket) when is_list(missing_uids) do
+    known = MapSet.new(socket.assigns.block_ops.order)
+    seeded = socket.assigns.seed_forms
+
+    Enum.filter(missing_uids, fn uid ->
+      is_binary(uid) and not MapSet.member?(known, uid) and not Map.has_key?(seeded, uid)
+    end)
+  end
+
+  defp recoverable_uids(_missing_uids, _socket), do: []
+
+  # Graft the captured child subtree onto a recovered root's block params.
+  #
+  # The client captures every block form on disconnect, but children live in
+  # their own `child_block_form-<uid>` forms with no structural link to the
+  # parent in the params themselves — the nesting is only in the DOM. So the
+  # hook also sends `childOrder`, a parent-uid → ordered-child-uids map read off
+  # the `data-parent_uid` wrappers, and the tree is rebuilt here.
+  #
+  # Order is preserved because sequence is derived from list position at
+  # materialization; a set would silently reshuffle the block's children.
+  defp put_recovered_children(entry_block_params, uid, forms, child_order, ctx) do
+    case recovered_children(uid, forms, child_order, ctx) do
+      [] ->
+        entry_block_params
+
+      children ->
+        block_params = Map.get(entry_block_params, "block", %{})
+        Map.put(entry_block_params, "block", Map.put(block_params, "children", children))
+    end
+  end
+
+  defp recovered_children(uid, forms, child_order, ctx) do
+    child_order
+    |> Map.get(uid, [])
+    |> Enum.map(&recovered_child_params(&1, forms, child_order, ctx))
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp recovered_child_params(child_uid, forms, child_order, ctx) do
+    %{block_module: block_module, user_id: user_id} = ctx
+
+    case forms["child_block_form-#{child_uid}"] do
+      %{"child_block" => child_params} when is_map(child_params) ->
+        # Children go through the same narrowing as the root — a nested block is
+        # no less client-authored than the one wrapping it.
+        sanitized = sanitize_recovered_block(child_params, child_uid, block_module, user_id)
+
+        case recovered_children(child_uid, forms, child_order, ctx) do
+          [] -> sanitized
+          grandchildren -> Map.put(sanitized, "children", grandchildren)
+        end
+
+      _ ->
+        nil
     end
   end
 
@@ -1306,6 +1458,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       phx-hook="Brando.BlockField"
       class="blocks-wrapper"
       data-block-field={"#{@form_name}[#{@block_field}]"}
+      data-entry-id={@entry.id}
       data-paste-allow={Block.Render.paste_allow(@clipboard_meta)}
     >
       <div class="label-wrapper">

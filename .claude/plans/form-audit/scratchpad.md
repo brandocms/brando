@@ -134,4 +134,51 @@ nothing is deleted. The bug needs at least one ref outside the logic and one ins
 - `polymorphic_embed`'s `cast/1` behaviour with raw changesets (`vars.ex:118`, `link.ex:69`,
   `subform_helpers.ex:18,39`). Three consistent sites suggests intentional; unverified.
 
+## Phase 1 implementation notes (2026-08-05)
+
+Phase 1 shipped complete (C1–C6). What the plan did not predict:
+
+1. **A second crash, found by writing C6's test.** `var_struct_to_map/1` (`events.ex`) hand-pruned
+   `Var`'s associations and the list predated the `:video` and `:gallery` relations, so both
+   reached `put_assoc(:vars, …)` as `%NotLoaded{}` → `UndefinedFunctionError` on `__changeset__/0`
+   → dead editor LiveView. Reachable from the "reset var" / "reset vars" buttons on **any** module
+   with vars. Same omission shape as B4, and the same fix shape: derive the list from
+   `__schema__(:associations)` so the next relation cannot reintroduce it.
+   *Lesson: a hand-maintained list of schema fields is a bug waiting for the next migration.
+   B4 and this are the same defect twice — grep for the rest.*
+
+2. **C4 could not be reproduced, and the static read says why.** The snapshot is only written by
+   `disconnected()` and only read by `reconnected()`; a hook that *mounts* after a reconnect runs
+   `mounted()`, which is a deliberate no-op. So the cross-entry leak needs the same hook element
+   to survive an entry change — a `push_patch` within one LiveView, not the `push_navigate` used
+   between entries. Fix shipped anyway (entry-scoped key), as the plan directed. **Recorded as
+   unconfirmed, not as absent** — this is a reading of the lifecycle, not a runtime probe.
+
+3. **C3's fix needed a server change the plan did not mention.** "Move `removeItem` after a
+   server-confirmed recovery" only works if the server actually replies — all three
+   `recover_blocks` paths had to move from `{:noreply, …}` to `{:reply, …}`. (Verified a
+   LiveComponent may reply: `channel.ex:804`.)
+
+4. **C5 was two whitelists, not one.** The grafted child subtree from C1 initially bypassed the
+   sanitizer entirely — worth remembering that adding a new params path (C1) silently widened the
+   attack surface a sibling finding (C5) was closing, *in the same phase*. Also picked up W3 from
+   the Phase 0 review here as planned: `creator_id` is now derived in `var_changeset/3,4` from
+   the user argument that was being threaded in and ignored, which closes creator spoofing on
+   every path rather than one DOM surface at a time.
+
+5. **Two plan line references had drifted** despite the mechanical rebase onto `683ef6944`:
+   C2's "silent no-op at `form.ex:4102-4104`" is now the paramless `save_video` clause (the real
+   one is the `_ ->` fallthrough in `recover_drawer_state`), and C5's `block_field.ex:1175` is
+   `:1251`. The rebase note said the shift was mechanical and un-re-audited; that was accurate,
+   and checking each reference before acting on it was worth the minutes.
+
+6. **AGENTS.md violation fixed in passing:** `carried_var/1` called `ContentBlock.var_attrs()`
+   directly inside HEEx. LiveView cannot change-track a function call, so the whole comprehension
+   was re-evaluated and re-sent on every diff. Now a compile-time module attribute assigned into
+   the template. Pre-existing, not introduced by this phase — but it was the line being edited.
+
+**The unifying insight still holds, in its Phase 0 sharpened form** ("will it produce a change?").
+C2 is the newest instance: replaying drawer edits via `change/2` would have put them in `data`
+and never emitted SQL — the test asserts they land in `changes`, not merely that they render.
+
 ### [13:01] WARN: liveview-architect stopped mid-investigation without writing reviews/liveview.md (turn exhaustion, ~20 tool uses). Resuming the agent to have it write findings; if that fails, the LiveView angle of this review is UNCOVERED and must not be reported as clean.

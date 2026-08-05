@@ -8,6 +8,12 @@
 
 const STORAGE_PREFIX = 'brando:block-recovery:'
 
+// Snapshots older than this are discarded unread. Recovery is meant to bridge a
+// reconnect, which takes seconds; anything surviving an hour is from a session
+// the user has long moved on from, and replaying it over a since-changed entry
+// is worse than losing it.
+const SNAPSHOT_TTL_MS = 60 * 60 * 1000
+
 /**
  * Convert a form's FormData into a nested params object matching
  * Phoenix's parameter parsing convention.
@@ -57,6 +63,20 @@ export default app => ({
   },
 
   /**
+   * sessionStorage key for this field's snapshot.
+   *
+   * The element id is only `"#{singular}_form-…"` — schema-scoped, not
+   * entry-scoped — so without the entry id a snapshot taken on entry A would be
+   * offered to entry B when navigating between two entries of the same schema
+   * without a full page load. Unsaved entries share the `new` bucket; that is
+   * strictly narrower than the previous behaviour, where every entry collided.
+   */
+  storageKey() {
+    const entryId = this.el.dataset.entryId || 'new'
+    return `${STORAGE_PREFIX}${entryId}:${this.el.id}`
+  },
+
+  /**
    * Capture all block form data and store in sessionStorage.
    */
   captureBlockForms() {
@@ -76,8 +96,41 @@ export default app => ({
       forms[form.id] = formDataToParams(form)
     })
 
-    const key = STORAGE_PREFIX + this.el.id
-    sessionStorage.setItem(key, JSON.stringify({ rootUids, forms }))
+    // Parent uid → ordered child uids, for every nesting level. Child wrappers
+    // carry `data-parent_uid` (block/render.ex), and querySelectorAll returns
+    // document order, so this reconstructs both the tree and each level's
+    // sequence — which the server needs, since a block's sequence is derived
+    // from its position in the children list, not stored per form.
+    const childOrder = {}
+    sortableEl.querySelectorAll('[data-parent_uid][data-uid]').forEach(el => {
+      const parentUid = el.dataset.parent_uid
+      if (!parentUid) return
+      if (!childOrder[parentUid]) childOrder[parentUid] = []
+      childOrder[parentUid].push(el.dataset.uid)
+    })
+
+    sessionStorage.setItem(
+      this.storageKey(),
+      JSON.stringify({ rootUids, forms, childOrder, savedAt: Date.now() })
+    )
+  },
+
+  /**
+   * Every uid below `rootUid`, at any depth, in the captured tree.
+   */
+  descendantUids(childOrder, rootUid) {
+    const found = []
+    const stack = [rootUid]
+
+    while (stack.length > 0) {
+      const uid = stack.pop()
+      for (const childUid of childOrder[uid] || []) {
+        found.push(childUid)
+        stack.push(childUid)
+      }
+    }
+
+    return found
   },
 
   /**
@@ -88,43 +141,71 @@ export default app => ({
    * the LV process died), sends only the missing ones for reconstruction.
    */
   maybeRecoverBlocks() {
-    const key = STORAGE_PREFIX + this.el.id
+    const key = this.storageKey()
     const stored = sessionStorage.getItem(key)
     if (!stored) return
 
     const sortableEl = this.el.querySelector('[data-sortable-id="sortable-blocks"]')
     if (!sortableEl) return
 
-    sessionStorage.removeItem(key)
-
     try {
       const data = JSON.parse(stored)
+
+      if (!data.savedAt || Date.now() - data.savedAt > SNAPSHOT_TTL_MS) {
+        sessionStorage.removeItem(key)
+        return
+      }
+
       const currentBlocks = sortableEl.querySelectorAll(':scope > .entry-block[data-uid]')
       const currentUids = new Set(Array.from(currentBlocks).map(el => el.dataset.uid))
 
       // Find UIDs that were in the old DOM but aren't in the new render
       const missingUids = data.rootUids.filter(uid => !currentUids.has(uid))
 
-      if (missingUids.length === 0) return
+      // Everything survived — the snapshot has no work left in it.
+      if (missingUids.length === 0) {
+        sessionStorage.removeItem(key)
+        return
+      }
 
-      // Filter forms to only include missing blocks' data
+      // Filter forms down to the missing roots AND everything nested under
+      // them. Children were always captured, but only root forms were ever
+      // forwarded, so a new unsaved root came back stripped of its children.
+      const childOrder = data.childOrder || {}
       const missingForms = {}
-      for (const [formId, formData] of Object.entries(data.forms)) {
-        for (const uid of missingUids) {
-          if (formId === `entry_block_form-${uid}`) {
-            missingForms[formId] = formData
-          }
+
+      for (const uid of missingUids) {
+        const rootFormId = `entry_block_form-${uid}`
+        if (data.forms[rootFormId]) missingForms[rootFormId] = data.forms[rootFormId]
+
+        for (const childUid of this.descendantUids(childOrder, uid)) {
+          const childFormId = `child_block_form-${childUid}`
+          if (data.forms[childFormId]) missingForms[childFormId] = data.forms[childFormId]
         }
       }
 
-      // Send the full root UID order (for correct positioning) plus missing data
-      this.pushEventTo(this.el, 'recover_blocks', {
-        rootUids: data.rootUids,
-        currentUids: Array.from(currentUids),
-        missingUids,
-        forms: missingForms
-      })
+      // Send the full root UID order (for correct positioning) plus missing data.
+      //
+      // The snapshot is dropped in the reply callback, never before the push:
+      // this is the only copy of blocks that were never persisted, and a push
+      // that throws downstream or never lands would otherwise destroy them.
+      // If no reply arrives the snapshot simply survives to the next reconnect,
+      // and the TTL above expires it eventually.
+      this.pushEventTo(
+        this.el,
+        'recover_blocks',
+        {
+          rootUids: data.rootUids,
+          currentUids: Array.from(currentUids),
+          missingUids,
+          forms: missingForms,
+          childOrder
+        },
+        () => sessionStorage.removeItem(key)
+      )
     } catch (e) {
+      // A snapshot we cannot parse is never going to recover anything.
+      sessionStorage.removeItem(key)
       console.warn('Block recovery failed:', e)
     }
   }

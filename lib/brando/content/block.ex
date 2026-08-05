@@ -265,20 +265,64 @@ defmodule Brando.Content.Block do
   """
   def var_attrs, do: @var_attrs
 
-  def var_changeset(var, attrs, position, _user) when is_integer(position) do
+  @doc """
+  The subset of `var_attrs/0` that `Render.carried_var/1` round-trips through
+  hidden inputs for an **unsaved** var.
+
+  Every attribute rendered there is one a user can hand-edit before submitting,
+  so ownership and parentage are excluded: `creator_id` is forced server-side by
+  `var_changeset/4`, and the owner FKs (`block_id`, `page_id`, `module_id`,
+  `global_set_id`, `table_template_id`) are set by whichever schema's
+  `cast_assoc(:vars, …)` is building the var. Carrying them from the DOM adds no
+  information and lets a payload point a var at another entry's block.
+
+  `palette_id` and `identifier_id` stay: for a palette or identifier var those
+  *are* the value.
+  """
+  @var_owner_attrs [:creator_id, :module_id, :page_id, :block_id, :global_set_id, :table_template_id]
+
+  def carried_var_attrs, do: @var_attrs -- @var_owner_attrs
+
+  def var_changeset(var, attrs, position, user) when is_integer(position) do
     var
     |> cast(attrs, @var_attrs)
+    |> put_var_creator(user)
     |> cast_embed(:options)
     |> change(sequence: position)
     |> validate_media_fks()
   end
 
-  def var_changeset(var, attrs, _user) do
+  def var_changeset(var, attrs, user) do
     var
     |> cast(attrs, @var_attrs)
+    |> put_var_creator(user)
     |> cast_embed(:options)
     |> validate_media_fks()
   end
+
+  # `Brando.Trait.Creator` sets this on the blueprint-generated changeset, but
+  # these hand-written casts never run the trait pipeline — so until now
+  # `creator_id` came from the client, via the hidden inputs `carried_var/1`
+  # emits for an unsaved var's whole cast surface. The user was already threaded
+  # in here and simply ignored. Deriving it server-side closes creator spoofing
+  # on every path at once (carried vars, block recovery, ordinary validate)
+  # rather than one DOM surface at a time.
+  #
+  # A client-sent `creator_id` is always discarded. It is only *set* for a var
+  # that does not have one yet, so an existing var keeps its original creator
+  # rather than flipping to whoever edited the block last.
+  defp put_var_creator(changeset, user) do
+    changeset = delete_change(changeset, :creator_id)
+
+    case {changeset.data.creator_id, user_id(user)} do
+      {nil, user_id} when not is_nil(user_id) -> put_change(changeset, :creator_id, user_id)
+      _ -> changeset
+    end
+  end
+
+  defp user_id(%{id: id}), do: id
+  defp user_id(id) when is_integer(id), do: id
+  defp user_id(_), do: nil
 
   # These FKs are castable from params — a var's whole cast surface round-trips
   # through hidden inputs while its editing UI is unrendered (`carried_var/1`),

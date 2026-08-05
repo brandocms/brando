@@ -319,6 +319,18 @@ the changeset solely via drawer submit, which is wired to the close button (`for
 
 With the corrected picture, these are the genuine holes.
 
+> **STATUS: COMPLETE (2026-08-05).** C1–C6 all shipped. Gates: `mix test` **1141 pass / 0 fail**
+> (32 new tests, +42 net over the 1099 Phase-0 baseline), `mix format --check-formatted` clean,
+> `mix compile --warnings-as-errors` clean, `mix credo --strict` **644 findings with and without
+> the diff** — no new findings. **E2E full suite: 105 passed / 0 failed** (`./test_e2e.sh
+> --reset`, 9.0m, assets rebuilt for the hook change). Every fix was verified to fail before the
+> change by temporarily reverting it; the exact pre-fix failure counts are recorded per finding.
+>
+> Two things were found by the work rather than by the reports, and one plan line reference had
+> drifted — all three are recorded inline below. Two checkboxes remain open on purpose: the C4
+> repro (not reproducible by static reading; the fix shipped regardless, as the plan directed)
+> and C1's E2E (needs the Phase 4 harness).
+
 ### C1. Children of a new unsaved root block are never recovered `[liveview]`
 
 `assets/src/hooks/BlockField/index.js:74` captures all forms including `child_block_form-*`,
@@ -327,10 +339,31 @@ rebuild hardcodes `children: []` (`block_field.ex:1164-1172`). It also calls the
 changeset, which is non-recursive — no `cast_assoc(:children)` — while the save path documents
 `recursive?: true` as load-bearing (`block_field.ex:394`).
 
-- [ ] Capture and forward `child_block_form-*` payloads keyed to their parent uid
-- [ ] Rebuild children server-side via the recursive changeset
-- [ ] Correct `.claude/skills/brando-blocks/SKILL.md` §9 — "preserves ALL form field values" is false
-- [ ] E2E: add a root block with children, kill the process, assert children return
+- [x] Capture and forward `child_block_form-*` payloads keyed to their parent uid — the hook now
+      also captures `childOrder`, a parent-uid → **ordered** child-uid map read off the
+      `data-parent_uid` wrappers that `block/render.ex:87` already emitted. Order, not just
+      parentage, is required: a block's sequence is derived from its position in the children
+      list at materialization, so a set would silently reshuffle the user's blocks. Recovery
+      forwards each missing root plus every descendant, at any depth
+- [x] Rebuild children server-side via the recursive changeset — `put_recovered_children/4`
+      grafts the subtree onto the block params, and the cast switched to
+      `block_module.changeset(…, user_id, true)`. Both halves were needed: with the 3-arity cast
+      the assembled params are dropped silently (no `cast_assoc(:children)`), which is the same
+      trap the save path documents at `block_field.ex:418`
+- [x] Correct `.claude/skills/brando-blocks/SKILL.md` §9 — "preserves ALL form field values" is false
+      — rewritten. §9 now leads with the mechanism's actual *scope* (never-persisted roots only;
+      everything else rides LiveView's default recovery) and states the corollary that recovery
+      replays the DOM, so state living only in `changes` or assigns is out of reach. §13's hook
+      summary updated to match (key format, TTL, reply-gated delete, `mounted()` is a no-op)
+- [x] Test: `test/brando_admin/components/form/block/recover_children_test.exs` — 6 tests
+      (children recovered, order preserved, grandchildren, no-children control, unknown uid
+      skipped, and a real `Repo.insert` round-trip materialized from the op store). 5 of 6 fail
+      pre-fix; the no-children case is the control. Existing `block-recovery.spec.js` re-run
+      green after the JS change (2/2, assets rebuilt)
+- [ ] E2E: add a root block with children, kill the process, assert children return —
+      **deferred, needs the Phase 4 harness.** Today's spec does a cooperative
+      `liveSocket.disconnect()/connect()`, so the server process never dies and this path is
+      not exercised end to end
 
 ### C2. Drawer field edits are lost while the drawer is open `[liveview]`
 
@@ -339,18 +372,42 @@ so it exists in neither the old nor the new DOM when LV's recovery diff runs —
 problem, not missing plumbing. `recover_drawer_state` restores the *selection*; the title/credits/alt
 edits inside are lost. Note `form.ex:4102-4104` silently no-ops when `resource_id` is empty.
 
-- [ ] Extend the always-rendered `#{@id}-drawer-recovery` form (`form.ex:2038-2051`) to carry the
-      in-progress drawer field values as hidden inputs
-- [ ] Replay them in `recover_drawer_state` when rebuilding `image_changeset`
-- [ ] Remove the silent no-op at `form.ex:4102-4104`, or log it
+- [x] Extend the always-rendered `#{@id}-drawer-recovery` form to carry the in-progress drawer
+      field values as hidden inputs — one `drawer[changes]` input carrying the changeset's
+      *pending changes*, JSON-encoded, narrowed to each drawer's editable field set
+      (image: `title`/`credits`/`alt`, video: `source_url`/`type`, file: `title`). Computed in
+      `assign_drawer_recovery_state/1`, which every drawer mutation already funnels through, so
+      no new call sites
+- [x] Replay them in `recover_drawer_state` when rebuilding `image_changeset` — all three
+      `restore_*_drawer` functions, via `replay_drawer_changes/3`. Uses `cast/3`, not `change/2`:
+      the values come back as strings from a hidden input, and a video's `type` is an enum that
+      `change/2` would store unconverted. `cast/3` also makes the whitelist enforceable, which
+      matters because the payload is hand-editable before submit
+- [x] Remove the silent no-op at `form.ex:4102-4104`, or log it — **the plan's line reference had
+      drifted**: `:4102-4104` is now the paramless `save_video` clause. The actual silent drop is
+      the `_ ->` fallthrough in `recover_drawer_state`. Split it: a drawer that was open but
+      carries no `resource_id` now logs a warning naming what was lost, while the ordinary "no
+      drawer was open" case stays silent, which it should — that clause fires on every reconnect
+- [x] Test: `test/brando_admin/components/form/drawer_recovery_test.exs` — 6 tests (edits
+      replayed *as changes* not merely applied into `data`, no-pending-edits control, four
+      malformed payload shapes, non-drawer fields rejected, the warning, and silence when no
+      drawer was open). 3 of 6 fail pre-fix; the other 3 are controls
 
 ### C3. Recovery snapshot deleted before the push is confirmed `[liveview]`
 
 `BlockField/index.js:98` calls `sessionStorage.removeItem(key)` before `pushEventTo`. Any
 downstream throw, or a push that never lands, loses the snapshot permanently.
 
-- [ ] Move `removeItem` to after a server-confirmed recovery (ack event or a reply handler)
-- [ ] Add a TTL/generation stamp so stale snapshots self-expire
+- [x] Move `removeItem` to after a server-confirmed recovery (ack event or a reply handler) —
+      used the `pushEventTo/4` reply callback. This required the server side to actually reply:
+      all three `recover_blocks` return paths now emit `{:reply, %{recovered: uids}, socket}`
+      instead of `{:noreply, …}` (verified `{:reply, …}` is supported from a **LiveComponent**
+      `handle_event` — `deps/phoenix_live_view/lib/phoenix_live_view/channel.ex:804`). If no
+      reply arrives the snapshot survives to the next reconnect rather than being destroyed
+- [x] Add a TTL/generation stamp so stale snapshots self-expire — `savedAt` stamped on capture,
+      1h TTL checked before read. The two other paths that can safely drop the key without a
+      server round-trip (nothing missing, unparseable snapshot) do so explicitly, so the deferral
+      is scoped to the one case where data could be lost
 
 ### C4. Recovery key is schema-scoped, not entry-scoped `[liveview]` — **verify first**
 
@@ -359,7 +416,16 @@ In principle a stale snapshot from entry A could inject blocks into entry B. The
 path via `push_navigate` is **unconfirmed**.
 
 - [ ] Reproduce: create unsaved blocks on entry A, navigate to entry B without saving, reconnect
-- [ ] Regardless of repro, include `entry_id` in the storage key (cheap, strictly correct)
+      — **not reproduced, and the static read says it is hard to reach.** The snapshot is only
+      written by `disconnected()`, and only `reconnected()` reads it — a hook that *mounts* after
+      the reconnect runs `mounted()`, which is deliberately a no-op. So the leak needs the same
+      hook element to survive an entry change, i.e. a `push_patch` within one LiveView rather
+      than the `push_navigate` used between entries. Recorded as unconfirmed, not as absent:
+      this is a reading of the hook lifecycle, not a runtime probe
+- [x] Regardless of repro, include `entry_id` in the storage key (cheap, strictly correct) —
+      key is now `brando:block-recovery:<entry_id>:<el.id>`, fed by a new `data-entry-id` on the
+      hook element. Unsaved entries share a `new` bucket, which is still strictly narrower than
+      the previous behaviour where every entry of a schema collided
 
 ### C5. `recover_blocks` trusts client-supplied params `[security][liveview]`
 
@@ -374,10 +440,41 @@ form. The DOM surface and the submitted params are byte-identical, so the vulner
 unchanged; what moved is *where* the markup is produced. Any whitelist added here must not
 assume those inputs are still emitted by `Render.hidden_block_fields/1` reading `@block_form`.
 
-- [ ] Whitelist recoverable fields; reject client-supplied `block_id`, `parent_id`, `creator_id`, `source`
-- [ ] Force `creator_id` from `current_user`
-- [ ] Accept only uids the server itself determined to be missing
-- [ ] Test: forged `recover_blocks` payload referencing another entry's block is rejected
+- [x] Whitelist recoverable fields; reject client-supplied `block_id`, `parent_id`, `creator_id`, `source`
+      — `sanitize_recovered_params/4`. The entry_block level is whitelisted (dropping `block_id`,
+      which `entry_id` alone never protected); the block level is whitelisted from `@block_attrs`
+      minus the server-authority fields; nested relations are scrubbed recursively of
+      `id`/`block_id`/`parent_id`/`creator_id`/`source`/`entry_id`/`page_id`. `module_id`,
+      `container_id`, `palette_id` and `fragment_id` stay castable — every admin can already pick
+      any of them from the pickers, so they are not a boundary. **The `683ef6944` note above held:**
+      the whitelist is applied to the params, not to whatever emits the markup, so it is
+      indifferent to `hidden_block_fields/1` having moved
+- [x] Force `creator_id` from `current_user` — forced on the root, and on every child, since the
+      grafted subtree was initially bypassing the sanitizer entirely
+- [x] Accept only uids the server itself determined to be missing — `recoverable_uids/2`. The
+      client decides what *looks* missing by diffing the DOM; the server is the only side that
+      knows what it actually holds, so any uid already in `block_ops.order` or `seed_forms` is
+      refused. The recovered form is also keyed by the vetted uid rather than one read back out
+      of the client's params, which could otherwise land under a uid that was never checked
+- [x] Test: forged `recover_blocks` payload referencing another entry's block is rejected —
+      `test/brando_admin/components/form/block/recover_blocks_security_test.exs`, 10 tests
+      (forged `block_id`, `creator_id`, `parent_id`, `source`, uid divergence, uid already held,
+      uid already seeded, nested var scrubbing, children smuggled outside `childOrder`, children
+      via `childOrder` sanitized). **All 10 fail pre-fix**
+- [x] **W3 from the Phase 0 review, deferred here on purpose** — `carried_var/1` round-tripped an
+      unsaved var's *whole* cast surface through hidden inputs, so all 38 `@var_attrs` were
+      hand-editable before submit, `config_target` and the five owner FKs included. Now driven off
+      a new `carried_var_attrs/0` (= `var_attrs/0` minus `creator_id` and the owner FKs), and
+      `var_changeset/3,4` derives `creator_id` server-side instead of ignoring the user argument it
+      was already being handed — which closes creator spoofing on *every* path, not just this DOM
+      surface. Scoped deliberately: a client-sent `creator_id` is always discarded, but it is only
+      *set* when absent, so an existing var keeps its original creator rather than flipping to
+      whoever edited last. 4 further tests
+- [x] **Fixed while here (AGENTS.md violation, pre-existing):** the carried-field list was called
+      as a function directly in HEEx (`ContentBlock.var_attrs()`), which LiveView cannot
+      change-track — it re-evaluates and re-sends the whole comprehension on every diff. Now a
+      compile-time `@carried_var_fields` module attribute assigned into the template. Only such
+      site in `brando_admin/`
 
 ### C6. Root config actions rebuild the form with `uid = nil`, breaking recovery keying `[liveview]`
 
@@ -386,8 +483,23 @@ which has no such field (probe: `nil`). The form id becomes `entry_block_form-`,
 re-created, and the JS hook — which keys on `entry_block_form-${uid}` — can no longer recover
 that block.
 
-- [ ] Use `socket.assigns.uid` at all seven sites
-- [ ] Assert non-nil form ids in a block component test
+- [x] Use `socket.assigns.uid` at all seven sites — all seven read the identical line, replaced
+      wholesale, with one comment above the first handler explaining why the changeset is the
+      wrong source. Confirmed child blocks were never affected (their changeset *is* the block
+      changeset), so the bug was root-only
+- [x] Assert non-nil form ids in a block component test —
+      `test/brando_admin/components/form/block/config_event_uid_test.exs`, 14 tests (7 handlers ×
+      root/child). All 7 root cases fail pre-fix with `"entry_block_form-"`
+- [x] **Found while writing that test: a second, unrelated crash in the same file.**
+      `var_struct_to_map/1` (`events.ex:980`) hand-pruned `Var`'s associations, and the list
+      predates the `:video` and `:gallery` relations added by `46485e5fc` — so both reached
+      `put_assoc(:vars, …)` as `%Ecto.Association.NotLoaded{}`, raising
+      `UndefinedFunctionError` on `__changeset__/0` and killing the editor LiveView with every
+      unsaved change in it. Reachable from the "reset var" / "reset vars" buttons
+      (`render.ex:1027,1069`) on **any** module with vars, not just media ones. Pre-existing, same
+      class as A1/A2. Fixed by deriving the drop list from `Var.__schema__(:associations)` so the
+      next relation can't reintroduce it; `:options` is an embed and is deliberately kept.
+      Covered by 2 further tests in the same file
 
 ---
 

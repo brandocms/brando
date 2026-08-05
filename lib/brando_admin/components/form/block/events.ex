@@ -233,13 +233,21 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     {:halt, assign(socket, :collapsed, !socket.assigns.collapsed)}
   end
 
+  # The uid comes from `socket.assigns`, never from `changeset`. For a root the
+  # changeset is the *entry_block*, whose schema has no `:uid` — the block and
+  # its uid sit on the nested `:block` assoc, and `get_field/2` would quietly
+  # return its default. The uid is load-bearing in the rebuilt form's DOM id:
+  # the BlockField JS hook keys its recovery snapshot on
+  # `entry_block_form-${uid}`, so a nil there makes the block unrecoverable.
+  # Applies to every handler below that rebuilds the form.
+
   # fetch all module refs and add any that are missing to the block
   def handle_block_event("fetch_missing_refs", _, socket) do
     form = socket.assigns.form
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
     module_id = socket.assigns.module_id
-    uid = Changeset.get_field(changeset, :uid)
+    uid = socket.assigns.uid
     module = Block.get_module(module_id)
 
     module_refs = module.refs
@@ -292,7 +300,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
     module_id = socket.assigns.module_id
-    uid = Changeset.get_field(changeset, :uid)
+    uid = socket.assigns.uid
     module = Block.get_module(module_id)
 
     module_refs = module.refs
@@ -350,7 +358,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
     module_id = socket.assigns.module_id
-    uid = Changeset.get_field(changeset, :uid)
+    uid = socket.assigns.uid
     module = Block.get_module(module_id)
 
     module_refs = module.refs
@@ -387,7 +395,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
     module_id = socket.assigns.module_id
-    uid = Changeset.get_field(changeset, :uid)
+    uid = socket.assigns.uid
     module = Block.get_module(module_id)
 
     module_vars = module.vars
@@ -440,7 +448,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
     module_id = socket.assigns.module_id
-    uid = Changeset.get_field(changeset, :uid)
+    uid = socket.assigns.uid
     module = Block.get_module(module_id)
 
     module_vars = module.vars
@@ -477,7 +485,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
     module_id = socket.assigns.module_id
-    uid = Changeset.get_field(changeset, :uid)
+    uid = socket.assigns.uid
     module = Block.get_module(module_id)
 
     module_vars = module.vars
@@ -533,7 +541,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     form = socket.assigns.form
     changeset = form.source
     belongs_to = socket.assigns.belongs_to
-    uid = Changeset.get_field(changeset, :uid)
+    uid = socket.assigns.uid
 
     current_vars =
       if belongs_to == :root do
@@ -977,34 +985,34 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
   ## Private helpers for table row handling
 
+  # The associations are derived from the schema rather than listed by hand.
+  # The hand-written list predated `Var`'s `:video` and `:gallery` relations and
+  # was never extended, so both leaked through as `%Ecto.Association.NotLoaded{}`
+  # — and `put_assoc(:vars, [map])` calls `__changeset__/0` on whatever a
+  # relation key holds, raising `UndefinedFunctionError` and taking the editor
+  # LiveView down with every unsaved change in it. Reachable from the "reset
+  # var" and "reset vars" buttons (`block/render.ex`) on any module with vars.
+  #
+  # `:options` is an *embed*, not an association, and is a real var value — it
+  # is deliberately kept.
+  @var_owner_fks [
+    :module_id,
+    :block_id,
+    :table_template_id,
+    :table_row_id,
+    :page_id,
+    :global_set_id,
+    :menu_item_id
+  ]
+
   defp var_struct_to_map(%Brando.Content.Var{} = var) do
+    drop =
+      [:__meta__, :id, :inserted_at, :updated_at] ++
+        @var_owner_fks ++ Brando.Content.Var.__schema__(:associations)
+
     var
     |> Map.from_struct()
-    |> Map.drop([
-      :__meta__,
-      :id,
-      :creator,
-      :palette,
-      :image,
-      :file,
-      :identifier,
-      :page,
-      :block,
-      :module,
-      :table_template,
-      :table_row,
-      :global_set,
-      :menu_item,
-      :inserted_at,
-      :updated_at,
-      :module_id,
-      :block_id,
-      :table_template_id,
-      :table_row_id,
-      :page_id,
-      :global_set_id,
-      :menu_item_id
-    ])
+    |> Map.drop(drop)
   end
 
   defp var_struct_to_map(var) when is_map(var), do: var

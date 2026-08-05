@@ -2091,24 +2091,37 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   `[nil]` and Ecto builds a brand new record out of whatever params arrived —
   identity alone yields a var with `key`, `placement` and `value` all nil, which
   is silent data loss on the first save of any block. So an unsaved var carries
-  its full cast surface, driven off `Brando.Content.Block.var_attrs/0` so the two
-  cannot drift. This is bounded and temporary: after the first save the var has
-  an id and drops back to identity-only.
+  its cast surface, driven off `Brando.Content.Block.carried_var_attrs/0` so the
+  two cannot drift. This is bounded and temporary: after the first save the var
+  has an id and drops back to identity-only.
+
+  What it does *not* carry is ownership and parentage — `creator_id` and the
+  owner FKs. Every input here is hand-editable before submit, and those fields
+  are server authority: `creator_id` is forced in `var_changeset/4`, and the
+  owner FK is set by whichever schema's `cast_assoc(:vars, …)` builds the var.
   """
   attr :var, :any, required: true
+
+  # Resolved at compile time, not per render. A function call in the template
+  # cannot be change-tracked — LiveView has no way to know the list is constant,
+  # so it re-evaluates and re-sends the whole comprehension on every diff.
+  @carried_var_fields ContentBlock.carried_var_attrs()
 
   def carried_var(assigns) do
     # Blank, not just nil: once a validate round trip has happened the id comes
     # back as the "" that this component's own hidden input submitted, and
     # treating that as persisted is what made the fix stop working after the
     # first keystroke.
-    assigns = assign(assigns, :unsaved?, assigns.var[:id].value in [nil, ""])
+    assigns =
+      assigns
+      |> assign(:unsaved?, assigns.var[:id].value in [nil, ""])
+      |> assign(:carried_fields, @carried_var_fields)
 
     ~H"""
     <input type="hidden" name={@var[:id].name} value={@var[:id].value} />
     <input type="hidden" name={@var[:_persistent_id].name} value={@var.index} />
     <%= if @unsaved? do %>
-      <.carried_var_field :for={field <- ContentBlock.var_attrs()} field={@var[field]} />
+      <.carried_var_field :for={field <- @carried_fields} field={@var[field]} />
       <.inputs_for :let={option} field={@var[:options]}>
         <input type="hidden" name={option[:label].name} value={option[:label].value} />
         <input type="hidden" name={option[:value].name} value={option[:value].value} />
