@@ -35,7 +35,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> assign(:form_id, assigns[:form_id] || socket.assigns.form_id)
      |> assign(:recent_folders, recent_folders)
      |> assign(:config_target, config_target)
-     |> assign_images()
+     |> assign_config_target()
      |> assign_folder_state(assigns[:initial_folder])
      # Show the drawer from HERE (not the Form handler) so the event rides the
      # same diff as this component's re-render — pushed from the Form it races
@@ -60,7 +60,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> assign(:event_target, event_target)
      |> assign(:multi, multi)
      |> assign(:selected_images, selected_images)
-     |> assign_images()
+     |> assign_config_target()
      |> assign_folder_state(nil)
      |> push_selection_state()}
   end
@@ -78,7 +78,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
     {:ok,
      socket
      |> assign_defaults()
-     |> assign_images()
+     |> assign_config_target()
      |> assign_folder_state(requested_folder || socket.assigns.current_folder)
      |> push_selection_state()}
   end
@@ -90,9 +90,28 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> assign(assigns)}
   end
 
-  def assign_images(socket) do
-    config_target = resolve_config_target(socket.assigns.config_target)
+  # Resolves the config target only — it no longer assigns the library, hence
+  # the name. The whole config-target library used to be RETAINED in
+  # `socket.assigns.images`: one copy of every image row per connected admin,
+  # for the life of the session, walked by LiveView change tracking on every
+  # diff, when the only consumer is `assign_folder_state/2` and the rendered
+  # list is already a stream.
+  #
+  # The tradeoff, stated plainly: folder navigation (`PickerHelpers` →
+  # `assign_folder_state/2`) used to filter that cached list and now re-queries.
+  # It is the same query the picker already runs on every open, and the five
+  # other call sites re-queried anyway. What this does NOT do is bound the query
+  # itself — see E6 in the form-audit plan for why per-folder scoping is a
+  # bigger change: the folder tree is derived from the entries.
+  #
+  # (`VideoPicker`'s `:videos` assign looks identical but is NOT the same case —
+  # there `assign_folder_state/2` is reached from a dozen places that do not
+  # reload, so the assign is a real cache.)
+  def assign_config_target(socket) do
+    assign(socket, :config_target, resolve_config_target(socket.assigns.config_target))
+  end
 
+  defp list_images(config_target) do
     {:ok, images} =
       Brando.Images.list_images(%{
         select: [:id, :width, :height, :formats, :status, :path, :sizes, :cdn, :config_target, :folder_id, :focal],
@@ -100,9 +119,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
         order: "desc id"
       })
 
-    socket
-    |> assign(:config_target, config_target)
-    |> assign(:images, images)
+    images
   end
 
   # Resolve the config_target to the actual target used when storing images.
@@ -159,7 +176,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
         {:noreply,
          socket
          |> assign(:selected_images, Enum.reject(socket.assigns.selected_images, &same_item_id?(&1, image_id)))
-         |> assign_images()
+         |> assign_config_target()
          |> assign_folder_state(socket.assigns.current_folder)
          |> push_selection_state()}
 
@@ -214,7 +231,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
          socket
          |> assign(:organize_selected, [])
          |> assign(:last_organize_selected_id, nil)
-         |> assign_images()
+         |> assign_config_target()
          |> assign_folder_state(socket.assigns.current_folder)
          |> push_selection_state()}
     end
@@ -457,7 +474,6 @@ defmodule BrandoAdmin.Components.ImagePicker do
   defp assign_defaults(socket) do
     socket
     |> assign_new(:multi, fn -> false end)
-    |> assign_new(:images, fn -> [] end)
     |> assign_new(:config_target, fn -> nil end)
     |> assign_new(:event_target, fn -> nil end)
     |> assign_new(:selected_images, fn -> [] end)
@@ -483,9 +499,10 @@ defmodule BrandoAdmin.Components.ImagePicker do
 
   defp assign_folder_state(socket, requested_folder) do
     upload_root = FolderBrowser.upload_root(socket.assigns.config_target)
+    images = list_images(socket.assigns.config_target)
 
     folders =
-      FolderBrowser.folders_from_entries(socket.assigns.images, upload_root)
+      FolderBrowser.folders_from_entries(images, upload_root)
       |> Kernel.++(socket.assigns.custom_folders)
       |> Enum.map(&(FolderBrowser.normalize_folder(&1) || ""))
       |> Enum.uniq()
@@ -507,12 +524,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
         ""
       end
 
-    visible_images =
-      FolderBrowser.entries_in_folder(
-        socket.assigns.images,
-        current_folder,
-        upload_root
-      )
+    visible_images = FolderBrowser.entries_in_folder(images, current_folder, upload_root)
 
     child_folders = FolderBrowser.child_folders(folders, current_folder)
     breadcrumbs = FolderBrowser.breadcrumbs(current_folder)

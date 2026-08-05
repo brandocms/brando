@@ -547,14 +547,13 @@
       background-color: var(--brando-chip-hover-bg);
     }
 
+    /* The icons here are `<.icon>` mask spans (`background-color: currentColor`),
+       so they follow this `color` on their own — the `svg path:nth-of-type(2)`
+       fill override that used to live here went dead with the inline SVGs. */
     &.active,
     &.active:hover {
       background-color: var(--brando-chip-active-bg);
       color: var(--brando-chip-active-fg);
-
-      svg path:nth-of-type(2) {
-        fill: var(--brando-chip-active-fg);
-      }
     }
   }
 

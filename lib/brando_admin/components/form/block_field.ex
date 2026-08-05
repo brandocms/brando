@@ -641,7 +641,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp maybe_arm_blocks_topic(%{assigns: %{blocks_topic: nil, entry: %{id: entry_id}}} = socket)
        when not is_nil(entry_id) do
     topic = "brando:blocks:#{entry_id}:#{socket.assigns.block_field}"
-    Phoenix.PubSub.subscribe(Brando.pubsub(), topic)
+    subscribe_to_blocks(socket, topic)
 
     socket
     |> assign(:blocks_topic, topic)
@@ -650,15 +650,32 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp maybe_arm_blocks_topic(socket), do: socket
 
+  # The dead render subscribes a process that is about to be discarded, so the
+  # subscription can never deliver anything. The topic is still assigned either
+  # way — the connected mount runs `initialize_blocks/2` again in a fresh
+  # process and subscribes there, which is the subscription that matters.
+  defp subscribe_to_blocks(socket, topic) do
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(Brando.pubsub(), topic)
+    end
+
+    socket
+  end
+
   # Late-joiner catch-up: ask already-connected editors for their unsaved
   # state. We initialize from the database, but another editor's uncommitted
   # edits live only in their op store — without this, a joiner sees stale
   # content until the next blur-ship happens to arrive.
+  #
+  # Gated on `connected?/1`: from the dead render this asks every OTHER
+  # connected editor to gather and broadcast its unsaved op-store state, for a
+  # listener that is discarded microseconds later. That is the expensive half —
+  # the waste lands in other processes, once per page load, per editor.
   defp request_blocks_sync(socket) do
-    if topic = socket.assigns[:blocks_topic] do
+    if socket.assigns[:blocks_topic] && connected?(socket) do
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
-        topic,
+        socket.assigns.blocks_topic,
         {:blocks_sync_request, %{block_field: socket.assigns.block_field, user_id: socket.assigns.current_user.id}}
       )
     end
@@ -680,7 +697,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     blocks_topic = entry_id && "brando:blocks:#{entry_id}:#{assigns.block_field}"
 
     if blocks_topic do
-      Phoenix.PubSub.subscribe(Brando.pubsub(), blocks_topic)
+      subscribe_to_blocks(socket, blocks_topic)
     end
 
     socket

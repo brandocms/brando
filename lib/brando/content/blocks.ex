@@ -917,10 +917,11 @@ defmodule Brando.Content.Blocks do
 
   def reject_deleted(block_changesets, root \\ true) when is_list(block_changesets) do
     Enum.reduce(block_changesets, [], fn
+      # `marked_as_deleted` needs no clause of its own: `ChangesetRunner`
+      # rewrites it to `action: :delete` (or `:ignore`, which `put_assoc` skips)
+      # before this runs. The clause that used to sit here spelled it
+      # `mark_as_deleted` and so never matched anything.
       %{action: :delete}, acc ->
-        acc
-
-      %{changes: %{mark_as_deleted: true}}, acc ->
         acc
 
       %{action: :replace}, acc ->

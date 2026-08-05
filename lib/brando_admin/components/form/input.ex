@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
   alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Input.Options
 
   # prop current_user, :any
   # prop form, :any
@@ -284,16 +285,8 @@ defmodule BrandoAdmin.Components.Form.Input do
   def radios(assigns) do
     input_options =
       case Keyword.get(assigns.opts, :options) do
-        :languages ->
-          languages = Brando.config(:languages)
-          Enum.map(languages, fn [{:value, val}, {:text, text}] -> %{label: text, value: val} end)
-
-        :admin_languages ->
-          admin_languages = Brando.config(:admin_languages)
-
-          Enum.map(admin_languages, fn [{:value, val}, {:text, text}] ->
-            %{label: text, value: val}
-          end)
+        token when token in [:languages, :admin_languages] ->
+          Options.expand(token)
 
         nil ->
           []

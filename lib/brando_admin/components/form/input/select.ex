@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.Options
 
   # prop form, :form
   # prop field, :atom
@@ -333,16 +334,8 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   defp get_input_options(field, opts) do
     case Keyword.get(opts, :options) do
-      :languages ->
-        languages = Brando.config(:languages)
-        Enum.map(languages, fn [{:value, val}, {:text, text}] -> %{label: text, value: val} end)
-
-      :admin_languages ->
-        admin_languages = Brando.config(:admin_languages)
-
-        Enum.map(admin_languages, fn [{:value, val}, {:text, text}] ->
-          %{label: text, value: val}
-        end)
+      token when token in [:languages, :admin_languages] ->
+        Options.expand(token)
 
       nil ->
         []

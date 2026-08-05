@@ -3,7 +3,6 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
   use BrandoAdmin, :component
   # use Phoenix.HTML
 
-  alias Brando.Blueprint.Forms.ComponentResolver
   alias Brando.Blueprint.Forms.Input, as: BlueprintInput
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Subform
@@ -25,7 +24,8 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
       |> assign(:instructions, nil)
       |> assign(:placeholder, nil)
       |> assign(:hidden, hidden?(assigns.input, assigns.form))
-      |> assign(:custom_component, ComponentResolver.resolve(Map.get(assigns.input, :component)))
+      # Already resolved at Blueprint compile time by `Forms.Dsl.transform_form/1`.
+      |> assign(:custom_component, Map.get(assigns.input, :component))
       |> assign_new(:form_cid, fn -> nil end)
       |> assign_new(:form_id, fn -> nil end)
 

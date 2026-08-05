@@ -318,6 +318,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   defp handle_hooks_image_info({image, [:image, :updated], path}, socket) do
+    maybe_unsubscribe_from_image(image)
     send_update(BrandoAdmin.Components.ImagePicker, id: "image-picker", refresh_images: true)
 
     case String.split(image.config_target, ":") do
@@ -395,6 +396,14 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     end
   end
 
+  # ImageProcessor's final attempt failed. Nothing more will arrive on this
+  # topic, so drop the subscription; `{:cont, socket}` because this hook has no
+  # UI to update for it.
+  defp handle_hooks_image_info({%Brando.Images.Image{id: id}, [:image, :error], _path}, socket) do
+    PubSub.unsubscribe(Brando.pubsub(), "brando:image:#{id}")
+    {:cont, socket}
+  end
+
   defp handle_hooks_image_info({:register_pending_block_image, image_id, {module, id}}, socket) do
     {:halt, update(socket, :pending_block_image_updates, &Map.put(&1, image_id, {module, id}))}
   end
@@ -406,6 +415,22 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   defp handle_hooks_image_info(_, socket), do: {:cont, socket}
+
+  # Every form-side subscribe sits immediately before a processing round is
+  # queued (`form.ex` ×3, `deliver_asset/3` ×5), so the subscription can be
+  # dropped once that round finishes — a later round re-subscribes itself.
+  # Without this they accumulated for the life of the form: one per uploaded or
+  # re-cropped image, each still delivering to a process that has already
+  # updated. The sticky `UploadManager` has always got this right.
+  #
+  # It must be `:processed`, not merely `[:image, :updated]` — `ImageUploader`
+  # broadcasts `:updated` for the freshly uploaded, still-UNPROCESSED image, and
+  # unsubscribing there would drop the notification the form is waiting for.
+  defp maybe_unsubscribe_from_image(%{id: id, status: :processed}) do
+    PubSub.unsubscribe(Brando.pubsub(), "brando:image:#{id}")
+  end
+
+  defp maybe_unsubscribe_from_image(_image), do: :ok
 
   # Check if this is a pending block image update (e.g. block upload or "save as
   # new copy" from a block). Uses stable {module, id} tuples.

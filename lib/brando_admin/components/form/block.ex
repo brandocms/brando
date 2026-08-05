@@ -924,17 +924,37 @@ defmodule BrandoAdmin.Components.Form.Block do
     end)
     |> assign_new(:parent_id, fn -> Changeset.get_field(block_cs, :parent_id) end)
     |> assign_new(:parent_module_id, fn -> nil end)
-    |> assign_new(:containers, fn ->
-      Brando.Content.list_containers!(%{
-        order: "desc namespace, asc sequence",
-        cache: {:ttl, :infinite}
-      })
+    # Both lists come out of an ETS-cached query, and an ETS read copies the
+    # whole term onto the reading process's heap — so this was one copy per
+    # block component, all inside the single LiveView process. Scope them to the
+    # blocks that actually render the markup:
+    #
+    #   * `@fragments` only reaches `fragment_block` / `fragment_config`
+    #     (`block/render.ex:278,408`), i.e. fragment blocks;
+    #   * `@containers` reaches `container_block` (`:211`) and the
+    #     `container_config` that every ROOT block renders (`:528`) — but never
+    #     a child block that is not itself a container.
+    #
+    # Anything else was carrying a list it had no template for.
+    |> assign_new(:containers, fn %{type: type} ->
+      if type == :container or belongs_to == :root do
+        Brando.Content.list_containers!(%{
+          order: "desc namespace, asc sequence",
+          cache: {:ttl, :infinite}
+        })
+      else
+        []
+      end
     end)
-    |> assign_new(:fragments, fn ->
-      Brando.Pages.list_fragments!(%{
-        order: "asc language, asc title",
-        cache: {:ttl, :infinite}
-      })
+    |> assign_new(:fragments, fn %{type: type} ->
+      if type == :fragment do
+        Brando.Pages.list_fragments!(%{
+          order: "asc language, asc title",
+          cache: {:ttl, :infinite}
+        })
+      else
+        []
+      end
     end)
     |> assign_new(:collapsed, fn -> Changeset.get_field(changeset, :collapsed) end)
     |> assign_new(:module_id, fn -> Changeset.get_field(block_cs, :module_id) end)
@@ -1257,11 +1277,22 @@ defmodule BrandoAdmin.Components.Form.Block do
     )
   end
 
+  # Same scoping as `:containers` in `update/2`: the palette select is rendered
+  # by the container toolbar (`block/render.ex:209`) and by the
+  # `container_config` every root block carries (`:527`). Every other block was
+  # copying the whole palette list off ETS for a template it never reaches.
+  defp renders_palette_options?(%{type: type, belongs_to: belongs_to}),
+    do: type == :container or belongs_to == :root
+
   def maybe_assign_container(%{assigns: %{container_id: nil}} = socket) do
     socket
     |> assign_new(:container, fn -> nil end)
-    |> assign_new(:palette_options, fn ->
-      Brando.Content.list_palettes!(%{cache: {:ttl, :infinite}})
+    |> assign_new(:palette_options, fn assigns ->
+      if renders_palette_options?(assigns) do
+        Brando.Content.list_palettes!(%{cache: {:ttl, :infinite}})
+      else
+        []
+      end
     end)
   end
 
@@ -1273,8 +1304,8 @@ defmodule BrandoAdmin.Components.Form.Block do
       container ->
         socket
         |> assign_new(:container, fn -> container end)
-        |> assign_new(:palette_options, fn ->
-          if container.allow_custom_palette do
+        |> assign_new(:palette_options, fn assigns ->
+          if container.allow_custom_palette and renders_palette_options?(assigns) do
             opts =
               if container.palette_namespace do
                 %{

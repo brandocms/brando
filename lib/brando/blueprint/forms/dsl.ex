@@ -269,17 +269,42 @@ defmodule Brando.Blueprint.Forms.Dsl do
   use Spark.Dsl.Extension,
     sections: [@root],
     transformers: [],
-    verifiers: [Brando.Blueprint.Forms.Verifier],
-    imports: [Brando.Blueprint.Forms.Legacy]
+    verifiers: [Brando.Blueprint.Forms.Verifier]
 
   @doc false
   def transform_form(%Forms.Form{tabs: tabs} = form) do
+    # Resolve the symbolic component tokens ONCE, here, at compile time.
+    # `ComponentResolver` exists so a Blueprint can name an admin LiveComponent
+    # without compile-depending on it, but it was being called from
+    # `Fieldset.Field.render/1` — so every field of every form paid a
+    # `Module.concat/1` (a binary build plus `String.to_atom`) on every diff,
+    # for a value that is fixed at Blueprint compile time.
+    #
+    # Resolving here also promotes an unknown token from a render-time raise to
+    # a compile-time one, which is where it belongs.
+    tabs = Enum.map(tabs, &resolve_tab_components/1)
+
     transformers =
       for tab <- tabs,
           fieldset <- tab.fields,
           %Forms.Subform{component: nil, style: {:transformer, asset_fields}} = subform <- fieldset.fields,
           do: {subform.name, asset_fields, subform.default}
 
-    {:ok, %{form | transformers: transformers}}
+    {:ok, %{form | tabs: tabs, transformers: transformers}}
   end
+
+  defp resolve_tab_components(%Forms.Tab{fields: fieldsets} = tab) do
+    %{tab | fields: Enum.map(fieldsets, &resolve_fieldset_components/1)}
+  end
+
+  defp resolve_fieldset_components(%Forms.Fieldset{fields: fields} = fieldset) do
+    %{fieldset | fields: Enum.map(fields, &resolve_field_component/1)}
+  end
+
+  # A fieldset holds `input` and `inputs_for` entities, and both carry
+  # `:component`. The catch-all keeps a future entity type from crashing here.
+  defp resolve_field_component(%{component: component} = field),
+    do: %{field | component: Forms.ComponentResolver.resolve(component)}
+
+  defp resolve_field_component(field), do: field
 end

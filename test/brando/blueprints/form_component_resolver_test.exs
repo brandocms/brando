@@ -23,10 +23,18 @@ defmodule Brando.Blueprint.FormComponentResolverTest do
     end
   end
 
-  test "Blueprint form metadata stores the lightweight token" do
+  test "Blueprint form metadata stores the RESOLVED module, without depending on it" do
+    # This used to assert the stored value was still the `:vars` token. The
+    # token exists so a Blueprint need not compile-depend on an admin
+    # LiveComponent — but resolving it in `Forms.Dsl.transform_form/1` keeps
+    # that property, because `Module.concat/1` yields a plain atom and the
+    # compiler records no dependency edge for it. Verified with
+    # `mix xref graph --sink .../input/vars.ex --label compile`, which lists
+    # nothing. What the token bought at RENDER time was a `Module.concat/1` per
+    # field per diff, which is what E3 in the form audit removed.
     [_name_fieldset, vars_fieldset] = TableTemplate.__form__().tabs |> hd() |> Map.fetch!(:fields)
     [vars_subform] = vars_fieldset.fields
 
-    assert vars_subform.component == :vars
+    assert vars_subform.component == BrandoAdmin.Components.Form.Input.Vars
   end
 end
