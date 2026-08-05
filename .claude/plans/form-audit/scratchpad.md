@@ -260,3 +260,72 @@ Phase 2 shipped D1, D3–D7 and D-dup. D2 is blocked on a measurement the user r
   unifying means changing video's config *resolution* path, which deserves its own check.
 - **A successful direct-upload finalize test.** Needs the S3 mock boundary that is Phase 4's
   job. The tests pin that the completion now *reaches* finalize, not that finalize succeeds.
+
+## [22:5x] HANDOFF — Phase 2 e2e: one open failure, one revert
+
+### State
+
+Committed on `next`, unit suite **1194 / 0**, format clean, credo at baseline:
+`cfb3639fc` (D3–D7, D-dup) · `d852ec7ef` (D1) · `a3f8a7d35` (docs) ·
+`3694b9769` (review B1/B2/W1/W7) · `f303564f5` (review W2–W6/W8) ·
+`3f11b8e3a` (review disposition) · `6da10b844` (D2 revert)
+
+**e2e: 104 passed / 1 failed.**
+
+### OPEN — `tests/projects/projects.spec.js:4 "creates project"`
+
+Line 123: uploads **two** images to `project_gallery`
+(`./fixtures/image2.jpg`, `./fixtures/image.jpg`), then expects two
+`[id$="-sortable-gallery-objects"] .gallery-object img`. Only **one** renders.
+
+**Reproduces in isolation** (`./test_e2e.sh --reset tests/projects/projects.spec.js`),
+so it is not full-suite load flake.
+
+Confusing evidence — do not skip this: it **passed in the first full run**,
+which had every commit through `3f11b8e3a` including D2. It then failed in the
+next two full runs and in isolation. So "D2 caused it" is ruled out, and the
+run-1 pass is unexplained. Establish causation against `65e90b831` (the
+pre-Phase-2 commit) BEFORE assuming it is ours — that is the step I skipped
+twice today and was wrong both times.
+
+Narrowed candidates, in order, all from this phase and all on the two-object path:
+1. `Brando.Galleries.append_unique_media/2` (review B2). Dedupes by media id;
+   two distinct images should both append. Verify `same_media?/2` cannot match
+   two different ids — and that the delivered `new_image` map really carries
+   `image_id` (gallery delivery builds it in `form.ex`'s `:gallery` clause).
+2. `Brando.Galleries.merge_loaded_media/2` (D5 + review B1). Maps over the
+   changeset's objects and never drops, so it should not lose one — confirm.
+3. `Form.put_gallery_at/4` / `append_gallery_object/5` (D4 refactor). Two
+   sequential deliveries must accumulate; check the second reads the first's
+   write back out of the changeset.
+
+Fastest discriminator: the gallery component has three writers for
+`gallery_objects` and the review already flagged their ordering (B2). Log the
+list length at each writer for a two-file upload.
+
+### REVERTED — D2's client-owned delivery topic (`6da10b844`)
+
+Broke `block-multiuser-sync.spec.js:245`. Bisected one variable per run:
+full handshake → 1 failed; no `claimDeliverTopic()` → 9/9; sticky
+`setAttribute` but no `pushEventTo` → 9/9. **The sticky DOM write is innocent;
+the round trip is the cause.** Moving the claim to a non-rendered assign did
+NOT fix it, so the re-render is not the whole story — handling *any* event on
+the Form LiveComponent during its two-phase block mount (`blocks_ready?` is
+deferred by `send_update_after`) disturbs block sync, mechanism unknown.
+
+The underlying bug is real and measured (`form:a852c2d1-…` then
+`form:dae79cd2-…` across two mounts; `put_intake_item/6` captures the topic at
+intake and never updates it). Re-land it away from the Form mount path — most
+likely the sticky `UploadManager` owning the entry→topic mapping, since it
+already survives navigation and has no block tree to disturb.
+
+Kept from D2: `data-entry-id` on the form element,
+`AssetIntent.validate_deliver_topic/1` public, truncated topic logging.
+
+### Process note
+
+Two wrong calls today, same shape both times: I explained a failure from the
+most available story instead of measuring. First "that spec is flaky" (the plan
+says so — it reproduced 2/2). Then "it's the re-render" (survived one bisect,
+failed the full suite, and shipped a second regression). **The bisect narrowed
+the component, not the mechanism; I treated it as if it had done both.**
