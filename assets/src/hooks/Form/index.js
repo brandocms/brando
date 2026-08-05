@@ -157,9 +157,15 @@ export default (app) => ({
 
     // Set it locally first: the upload triggers resolve their delivery target
     // by reading this attribute off the closest ancestor, so it has to be right
-    // before any upload can start — not one round-trip later. The server
-    // assigns the same value back, so the next patch re-renders it unchanged.
-    this.el.dataset.deliverTopic = topic
+    // before any upload can start — not one round-trip later.
+    //
+    // Through this.js(), NOT this.el.dataset: a plain mutation is wiped by the
+    // next morphdom pass (see CLAUDE.md), and this component re-renders often
+    // — Presence diffs alone are enough. A revert inside the window before the
+    // server adopts the topic would hand an upload trigger the stale
+    // mount-time topic, which is the exact bug this whole mechanism exists to
+    // prevent. The server assigns the same value back, so the two converge.
+    this.js().setAttribute(this.el, 'data-deliver-topic', topic)
     // pushEventTo, not pushEvent: the handler lives on the Form LiveComponent,
     // and a bare pushEvent would go to the parent LiveView. Same pattern as
     // BlockField's recover_blocks.

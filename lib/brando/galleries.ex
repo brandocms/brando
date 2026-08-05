@@ -97,21 +97,67 @@ defmodule Brando.Galleries do
   the list back through `put_assoc`. So an object that arrives without its
   media borrows it from the previous list by media id, instead of costing a
   query per render.
+
+  The changeset decides *which* objects the gallery holds. It does not
+  necessarily hold the freshest copy of the media itself — the editor refreshes
+  an image in place when Oban finishes processing it, and that refresh only
+  reaches the previously-loaded list. So the two copies are compared by
+  `updated_at` rather than by "which side happens to be loaded": picking the
+  loaded one would let a stale-but-loaded changeset copy silently revert a
+  just-processed image.
   """
   def merge_loaded_media(objects, previous) when is_list(objects) and is_list(previous) do
     Enum.map(objects, fn object ->
-      if loaded_media?(object) do
-        object
-      else
-        Enum.find(previous, &same_media?(&1, object)) || object
+      case Enum.find(previous, &same_media?(&1, object)) do
+        nil -> object
+        cached -> keep_fresher_media(object, cached)
       end
     end)
   end
 
-  defp loaded_media?(object) do
-    (Map.get(object, :image_id) && Brando.Utils.loaded_assoc?(object, :image)) ||
-      (Map.get(object, :video_id) && Brando.Utils.loaded_assoc?(object, :video)) || false
+  @doc """
+  Append a gallery object unless one for the same media is already present.
+
+  The upload-delivery path writes this list directly *and* updates the entry
+  changeset, which reaches the same component again through
+  `merge_loaded_media/2` — two writers, one event, no guaranteed ordering
+  between them. A plain `++` duplicates the object whenever the direct write
+  lands second.
+  """
+  def append_unique_media(gallery_objects, object) do
+    if Enum.any?(gallery_objects, &same_media?(&1, object)) do
+      gallery_objects
+    else
+      gallery_objects ++ [object]
+    end
   end
+
+  defp keep_fresher_media(object, cached) do
+    object
+    |> keep_fresher_media(cached, :image)
+    |> keep_fresher_media(cached, :video)
+  end
+
+  defp keep_fresher_media(object, cached, key) do
+    if Brando.Utils.loaded_assoc?(cached, key) and
+         fresher?(Map.get(cached, key), Map.get(object, key)) do
+      Map.put(object, key, Map.get(cached, key))
+    else
+      object
+    end
+  end
+
+  # An absent or unloaded current side is always older. Equal timestamps keep
+  # the object's own copy, so a no-op update cannot churn the assign.
+  defp fresher?(_candidate, %Ecto.Association.NotLoaded{}), do: true
+  defp fresher?(_candidate, nil), do: true
+  defp fresher?(%{updated_at: nil}, _current), do: false
+  defp fresher?(_candidate, %{updated_at: nil}), do: true
+
+  defp fresher?(%{updated_at: candidate}, %{updated_at: current}),
+    do: NaiveDateTime.compare(candidate, current) == :gt
+
+  defp fresher?(_candidate, _current), do: false
 
   defp same_media?(left, right) do
     matches?(left, right, :image_id) or matches?(left, right, :video_id)

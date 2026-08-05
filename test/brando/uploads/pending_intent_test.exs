@@ -19,6 +19,10 @@ defmodule Brando.Uploads.PendingIntentTest do
   alias Brando.Uploads.PendingIntent
   alias Phoenix.Component
 
+  import ExUnit.CaptureLog
+
+  require Logger
+
   setup do
     {:ok, user: Factory.insert(:random_user)}
   end
@@ -181,6 +185,16 @@ defmodule Brando.Uploads.PendingIntentTest do
     # `finalize_direct/3` cannot be driven to success here. What these assert is
     # the part that was actually broken: the completion now REACHES finalize via
     # the persisted intent instead of falling into a silent `_ -> {:noreply}`.
+    # config/test.exs pins the logger at :error, so the info/warning lines these
+    # tests assert on never reach a handler. `async: false` throughout, so
+    # changing it for the block is safe.
+    setup do
+      previous = Logger.level()
+      Logger.configure(level: :info)
+      on_exit(fn -> Logger.configure(level: previous) end)
+      :ok
+    end
+
     defp remounted_manager(user) do
       %Phoenix.LiveView.Socket{}
       |> Component.assign(:items, %{})
@@ -190,27 +204,42 @@ defmodule Brando.Uploads.PendingIntentTest do
 
     test "an unknown ref is refused without crashing the sticky manager", ctx do
       socket = remounted_manager(ctx.user)
+      ref = Ecto.UUID.generate()
 
-      assert {:noreply, socket} =
-               BrandoAdmin.UploadManager.handle_event(
-                 "direct_complete",
-                 %{"ref" => Ecto.UUID.generate()},
-                 socket
-               )
+      log =
+        capture_log(fn ->
+          assert {:noreply, socket} =
+                   BrandoAdmin.UploadManager.handle_event("direct_complete", %{"ref" => ref}, socket)
 
-      assert socket.assigns.items == %{}
+          assert socket.assigns.items == %{}
+        end)
+
+      # The log is the assertion, not decoration: the PRE-FIX code was a bare
+      # `_ -> {:noreply, socket}`, which returns an identical socket and would
+      # satisfy every other check here. Only the log distinguishes the two.
+      assert log =~ "direct_complete for unknown ref"
     end
 
     test "a known ref is recovered from its intent, and kept if finalize fails", ctx do
       ref = Ecto.UUID.generate()
       {:ok, _} = Uploads.create_pending_intent(attrs(%{ref: ref, creator_id: ctx.user.id}))
 
-      assert {:noreply, _socket} =
-               BrandoAdmin.UploadManager.handle_event(
-                 "direct_complete",
-                 %{"ref" => ref},
-                 remounted_manager(ctx.user)
-               )
+      log =
+        capture_log(fn ->
+          assert {:noreply, _socket} =
+                   BrandoAdmin.UploadManager.handle_event(
+                     "direct_complete",
+                     %{"ref" => ref},
+                     remounted_manager(ctx.user)
+                   )
+        end)
+
+      # These two lines are what separate the fix from the bare `_ -> {:noreply}`
+      # it replaced. Without an S3 mock, finalize fails either way, so "the
+      # intent survives" and "nothing crashed" are ALSO true of the pre-fix
+      # code — the log is the only observable difference.
+      assert log =~ "recovering direct_complete for ref"
+      assert log =~ "recovering direct_complete failed"
 
       # Finalize could not verify the object (no bucket in tests), so the intent
       # survives — only the reaper is allowed to decide a transfer is abandoned.
@@ -220,12 +249,18 @@ defmodule Brando.Uploads.PendingIntentTest do
     test "a forged ref cannot finalize anything", ctx do
       # No intent was ever written for this ref, so there is no server-side key
       # or target to work from and nothing can be created.
-      assert {:noreply, _socket} =
-               BrandoAdmin.UploadManager.handle_event(
-                 "direct_complete",
-                 %{"ref" => "not-even-a-uuid"},
-                 remounted_manager(ctx.user)
-               )
+      log =
+        capture_log(fn ->
+          assert {:noreply, _socket} =
+                   BrandoAdmin.UploadManager.handle_event(
+                     "direct_complete",
+                     %{"ref" => "not-even-a-uuid"},
+                     remounted_manager(ctx.user)
+                   )
+        end)
+
+      assert log =~ "direct_complete for unknown ref"
+      refute log =~ "recovering"
     end
   end
 

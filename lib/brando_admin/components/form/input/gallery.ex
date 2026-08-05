@@ -70,13 +70,17 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:ok, assign(socket, :config_modal, nil)}
   end
 
+  # Upload delivery writes this list directly AND updates the entry changeset,
+  # which reaches this component again through `assign_value/1` — two writers,
+  # one event, no guaranteed ordering. Appending unconditionally duplicated the
+  # object whenever this clause ran second.
   def update(
         %{new_image: new_image, selected_images: selected_images},
         %{assigns: %{gallery_objects: gallery_objects}} = socket
       ) do
     {:ok,
      socket
-     |> assign(:gallery_objects, gallery_objects ++ [new_image])
+     |> assign(:gallery_objects, Brando.Galleries.append_unique_media(gallery_objects, new_image))
      |> assign(:selected_images, selected_images)}
   end
 
@@ -106,7 +110,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       ) do
     {:ok,
      socket
-     |> assign(:gallery_objects, gallery_objects ++ [new_video])
+     |> assign(:gallery_objects, Brando.Galleries.append_unique_media(gallery_objects, new_video))
      |> assign(:selected_videos, selected_videos)}
   end
 
