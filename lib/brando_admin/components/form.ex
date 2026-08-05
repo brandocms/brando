@@ -3173,38 +3173,6 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, assign(socket, :focused_field, nil)}
   end
 
-  # The client owns the delivery topic so it survives a remount.
-  #
-  # `mount/1` mints one per MOUNT, which meant an upload in flight across a form
-  # remount broadcast its finished asset to a topic nobody listened on any more
-  # — silently, since a PubSub broadcast to an empty topic is `:ok`. The sticky
-  # UploadManager keeps transferring across live navigation, so this was
-  # reachable by ordinary use. Measured: two mounts of one form gave
-  # `form:a852c2d1-…` then `form:dae79cd2-…`.
-  #
-  # The hook keeps a per-tab, per-ENTRY topic in sessionStorage and replays it
-  # here. Validated with the same rule intake applies — a client free to name
-  # any topic could subscribe its form to another form's deliveries.
-  def handle_event("set_deliver_topic", %{"topic" => topic}, socket) do
-    case Brando.Uploads.AssetIntent.validate_deliver_topic(topic) do
-      {:ok, ^topic} when topic == socket.assigns.deliver_topic ->
-        {:noreply, socket}
-
-      {:ok, topic} ->
-        # The mount-time topic covers only the window before this arrives; drop
-        # it so a form does not accumulate subscriptions across remounts.
-        Phoenix.PubSub.unsubscribe(Brando.pubsub(), socket.assigns.deliver_topic)
-        Phoenix.PubSub.subscribe(Brando.pubsub(), topic)
-        Logger.info("==> Form: listening for asset delivery on #{topic_ref(topic)}")
-
-        {:noreply, assign(socket, :deliver_topic, topic)}
-
-      {:error, reason} ->
-        Logger.warning("==> Form: refused deliver_topic #{inspect(topic_ref(topic))}: #{reason}")
-        {:noreply, socket}
-    end
-  end
-
   def handle_event("save", _params, %{assigns: %{editing_image?: true}} = socket) do
     {:noreply,
      push_event(socket, "b:alert", %{
