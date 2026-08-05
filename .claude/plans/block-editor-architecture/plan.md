@@ -3,6 +3,14 @@
 **Decision:** keep LiveView as the owner of block state. See `assessment.md` for the evidence.
 
 **Status: Phases 0–3 are DONE (Phase 3 closed 2026-08-05). Phases 4 and 5 are open.**
+
+> **Sibling plan, same files:** `.claude/plans/form-audit/plan.md` (created 2026-08-05, 29 of
+> 91 items done) works `form.ex`, `block.ex`, `block/render.ex` and `block_field.ex` too, from
+> a correctness angle rather than a payload one. The two are independent — this plan's P3-T4
+> lives in `form.ex` only because that is where the entry's `validate` handler is — but a
+> change here shifts its line references, so re-run the rebase note at the top of that file
+> after landing anything in those four. `683ef6944` has already been accounted for there.
+
 The architecture decision stands — Phase 0 proved per-edit cost is flat in block count, and
 Phase 1 cut mount by a third, per-edit by half, save by 93% and memory by ~73% without moving any
 state to the client. The one target missed is mount at 115 blocks, and the reason is now understood

@@ -5,6 +5,26 @@
 **Research:** `.claude/plans/form-audit/research/01..06-*.md` (six specialist reports)
 **Stack:** Phoenix 1.8.9, phoenix_live_view 1.2.8, Ecto 3.14
 
+> **Rebased on `683ef6944` (2026-08-05).** A session working the *sibling* plan,
+> `.claude/plans/block-editor-architecture/plan.md` (Phases 2–3), landed changes in
+> `form.ex`, `block.ex`, `block/render.ex` and `block_field.ex` — the same four files most
+> of this plan's findings sit in. Every `file.ex:NNN` reference below has been shifted to
+> match, mechanically, from that commit's diff hunks; the shift preserves whatever each
+> reference pointed at before, and nothing beyond the shift was re-audited. **One finding
+> changed in substance, not just position: C5** — see the **↻ 683ef6944** note there.
+>
+> Function signatures that moved in those files, in case a finding you pick up sits on one:
+>
+> | before | after |
+> |---|---|
+> | `Render.can_paste?/2` (private) | deleted — `root`/`container` paste visibility is CSS off `data-paste-allow`; `Render.paste_allow/1` + `Render.multi_paste_context/2` |
+> | `Block.register_block_wanting_entry/2` | `/3` — takes the entry fields the module reads |
+> | `Form.send_updated_entry_field_to_blocks/3` | `/4` — takes the changed field |
+> | `@blocks_wanting_entry` (list of refs) | map of `block_ref => fields \| :all` |
+> | `Render.hidden_block_fields/1` took `block_form` | takes a precomputed `fields` list from `Block.assign_hidden_block_fields/1` |
+>
+> The two plans overlap by file, not by scope.
+
 ---
 
 ## Executive summary
@@ -13,7 +33,7 @@ The recovery architecture is **healthier than it looks from the outside**, and t
 first pass got it wrong before correcting itself. Worth stating up front so we don't rebuild
 working machinery:
 
-- The main entry form (`form.ex:2048-2055`) and every block form (`block/render.ex:372`)
+- The main entry form (`form.ex:2053-2060`) and every block form (`block/render.ex:377`)
   carry a stable `id` + `phx-change`, so they receive **LiveView's default form recovery** —
   on reconnect LV replays the DOM params through `validate` / `validate_block`, which rebase
   on a freshly DB-loaded changeset. Absence of `phx-auto-recover` means *default* recovery,
@@ -59,7 +79,7 @@ These need no disconnect to bite. Highest priority.
 `refs` is `relation :refs, :has_many` (`lib/brando/content/block.ex:111`), but the ref events
 drive it with embed APIs at `block/events.ex:252,254,271,274,311,313,330,333,366,369`.
 `Changeset.get_embed/2` raises `expected refs to be an embed, got: assoc`. Reachable from
-three live buttons (`block/render.ex:1046,1055,1058`), taking the editor LiveView down and
+three live buttons (`block/render.ex:1050,1059,1062`), taking the editor LiveView down and
 discarding all unsaved work in that process.
 
 - [x] Replace `get_embed(:refs)` → `get_assoc(:refs)` and `put_embed(:refs, …)` → `put_assoc(:refs, …)` at all ten sites — reads route through the file's existing `get_assoc_list/2` (`events.ex:1007`), which the vars path already used; it absorbs `NotLoaded`/`nil`
@@ -84,11 +104,11 @@ and destroys the entry form process with everything unsaved in it.
 
 The chain, verified end to end:
 
-1. `Block.commit_ref_data/2` (`block.ex:2306-2316`) is a pure `send_update` — in-memory only,
+1. `Block.commit_ref_data/2` (`block.ex:2422-2432`) is a pure `send_update` — in-memory only,
    no DB write.
 2. `update_ref_data` writes the FK into the ref changeset's **changes** (`block.ex:~748-756`,
    `put_change_if_key_exists(:image_id, params)` and siblings).
-3. `render.ex:1241-1249` deliberately suppresses the `image_id` / `video_id` / `gallery_id` /
+3. `render.ex:1245-1253` deliberately suppresses the `image_id` / `video_id` / `gallery_id` /
    `file_id` hidden inputs once the ref has a primary key (perf commit `6ee6e93a2`, "carry only
    ref identity once a ref is persisted"). So the FK has **no DOM representation**.
 4. On the next `validate_block`, `block_for_changeset` is built from `original_data` — the DB
@@ -160,7 +180,7 @@ and the first reverts. Roots are safe (they rebase on `changeset.data`, `events.
 ### B3. Outline cross-parent move ships the mount seed, wiping child edits `[liveview]`
 
 `block.ex:199-219` reads `children_forms`, which is a mount-time seed map by design
-(`block.ex:1588`). The move target re-registers that stale diff (`block.ex:157` → `ops.ex:177`),
+(`block.ex:1703`). The move target re-registers that stale diff (`block.ex:157` → `ops.ex:177`),
 discarding the child's accumulated edits.
 `test/brando/content/blocks_cross_parent_move_test.exs:118` currently assumes the opposite.
 
@@ -185,7 +205,7 @@ discarding the child's accumulated edits.
 
 `lib/brando/content/block.ex:37-66` lists `image_id` and `file_id` but **not** `video_id`,
 `gallery_id`, `config_target`, or the `gallery_*` fields — although the editor renders and
-commits them (`render_var.ex:836,870`, `block.ex:988`). Verified by direct read. Any such var
+commits them (`render_var.ex:836,870`, `block.ex:1068`). Verified by direct read. Any such var
 value is silently dropped by the cast.
 
 - [x] Add the missing attrs to `@var_attrs` — `video_id`, `gallery_id`, `config_target`,
@@ -204,8 +224,8 @@ value is silently dropped by the cast.
 
 ### B5. Refs inside `{% if %}` / `{% for %}` may be deleted on first keystroke `[ecto]` — **verify first**
 
-`liquid_strip_logic` (`block.ex:2130`) removes those regions, so no ref inputs are rendered
-(`render.ex:1204-1252`), and `cast_assoc` with `on_replace: :delete_if_exists` (`content/block.ex:111`)
+`liquid_strip_logic` (`block.ex:2246`) removes those regions, so no ref inputs are rendered
+(`render.ex:1208-1256`), and `cast_assoc` with `on_replace: :delete_if_exists` (`content/block.ex:111`)
 would then delete them. **Inferred, not probe-verified.**
 
 - [x] **Verify with a repro before fixing** — **CONFIRMED, with one important qualifier.**
@@ -274,9 +294,9 @@ Same root cause as B1 — a value in `data` rather than `changes` never reaches 
 
 ### B7. Picker *select* and *upload* have different durability `[liveview]`
 
-Upload commits the FK immediately (`form.ex:1166` `commit_entry_field_asset`). **Select** only
+Upload commits the FK immediately (`form.ex:1171` `commit_entry_field_asset`). **Select** only
 assigns `edit_image` / `image_changeset` (`input/image.ex:305` → `form.ex:217`); the FK reaches
-the changeset solely via drawer submit, which is wired to the close button (`form.ex:2909`
+the changeset solely via drawer submit, which is wired to the close button (`form.ex:2914`
 `close_image`). Dismissing the drawer any other way (Esc, backdrop, navigation) loses the pick.
 
 - [x] Route `select_image` / `select_video` / `select_file` through `commit_entry_field_asset/4`
@@ -303,7 +323,7 @@ With the corrected picture, these are the genuine holes.
 
 `assets/src/hooks/BlockField/index.js:74` captures all forms including `child_block_form-*`,
 but the recovery filter at `:110-118` only matches `entry_block_form-${uid}`, and the server
-rebuild hardcodes `children: []` (`block_field.ex:1163-1171`). It also calls the 3-arity
+rebuild hardcodes `children: []` (`block_field.ex:1164-1172`). It also calls the 3-arity
 changeset, which is non-recursive — no `cast_assoc(:children)` — while the save path documents
 `recursive?: true` as load-bearing (`block_field.ex:394`).
 
@@ -314,15 +334,15 @@ changeset, which is non-recursive — no `cast_assoc(:children)` — while the s
 
 ### C2. Drawer field edits are lost while the drawer is open `[liveview]`
 
-The drawer's edit form (`form.ex:2376-2490`, `id="image-drawer-form"`) is `:if={@image_changeset}`-gated,
+The drawer's edit form (`form.ex:2381-2495`, `id="image-drawer-form"`) is `:if={@image_changeset}`-gated,
 so it exists in neither the old nor the new DOM when LV's recovery diff runs — a chicken-and-egg
 problem, not missing plumbing. `recover_drawer_state` restores the *selection*; the title/credits/alt
-edits inside are lost. Note `form.ex:4086-4088` silently no-ops when `resource_id` is empty.
+edits inside are lost. Note `form.ex:4102-4104` silently no-ops when `resource_id` is empty.
 
-- [ ] Extend the always-rendered `#{@id}-drawer-recovery` form (`form.ex:2033-2046`) to carry the
+- [ ] Extend the always-rendered `#{@id}-drawer-recovery` form (`form.ex:2038-2051`) to carry the
       in-progress drawer field values as hidden inputs
 - [ ] Replay them in `recover_drawer_state` when rebuilding `image_changeset`
-- [ ] Remove the silent no-op at `form.ex:4086-4088`, or log it
+- [ ] Remove the silent no-op at `form.ex:4102-4104`, or log it
 
 ### C3. Recovery snapshot deleted before the push is confirmed `[liveview]`
 
@@ -343,10 +363,16 @@ path via `push_navigate` is **unconfirmed**.
 
 ### C5. `recover_blocks` trusts client-supplied params `[security][liveview]`
 
-`block_field.ex:1174` forces only `entry_id`. `blueprint.ex:318` casts `block_id` (letting a
+`block_field.ex:1175` forces only `entry_id`. `blueprint.ex:318` casts `block_id` (letting a
 client attach another entry's block row), and `@block_attrs` casts `parent_id`, `creator_id`,
 `module_id`, `source` — enabling cross-entry child injection and creator spoofing. The recovered
 uid is taken from params rather than from the server-checked `missingUids`.
+
+**↻ 683ef6944** — `parent_id`, `creator_id` and `source` are three of the nine identity inputs
+that now render from `Block.assign_hidden_block_fields/1` rather than straight off the block
+form. The DOM surface and the submitted params are byte-identical, so the vulnerability is
+unchanged; what moved is *where* the markup is produced. Any whitelist added here must not
+assume those inputs are still emitted by `Render.hidden_block_fields/1` reading `@block_form`.
 
 - [ ] Whitelist recoverable fields; reject client-supplied `block_id`, `parent_id`, `creator_id`, `source`
 - [ ] Force `creator_id` from `current_user`
@@ -391,7 +417,7 @@ object in the bucket with no `File` row, no log, and no reaper — videos have
 ### D3. Video config target hand-built with the wrong schema `[liveview]`
 
 `form.ex:385` builds `"video:#{inspect(schema)}:#{field}"` from the **entry** schema, while the
-sibling trigger at `form.ex:2774` correctly uses `edit_video.schema` + `ConfigTarget.serialize/1`.
+sibling trigger at `form.ex:2779` correctly uses `edit_video.schema` + `ConfigTarget.serialize/1`.
 Provider (Mux/Bunny/Cloudflare) upload is therefore broken for nested video fields, and this
 violates the "use the canonical boundaries" contract in the uploads skill.
 
@@ -402,7 +428,7 @@ violates the "use the canonical boundaries" contract in the uploads skill.
 
 `input/gallery.ex:863-866` derives `form_id` from `changeset.data.__struct__`, which for a nested
 gallery names a component that does not exist, so picker selections go nowhere. The upload path
-gets this right via `path` (`form.ex:1196`). Same defect duplicated in `gallery_objects.ex`.
+gets this right via `path` (`form.ex:1201`). Same defect duplicated in `gallery_objects.ex`.
 
 - [ ] Derive the target from `path`, as the upload path does
 - [ ] Fix both copies (see D-dup below)
@@ -425,7 +451,7 @@ pickers all read the changeset correctly (`image.ex:71`, `file.ex:52`, `video.ex
 
 ### D7. Drawer close re-queues image processing; upload-complete defeats drawer recovery `[oban][liveview]`
 
-`form.ex:3929` re-queues Oban image processing on **every** drawer close, and `form.ex:599` clears
+`form.ex:3945` re-queues Oban image processing on **every** drawer close, and `form.ex:604` clears
 `editing_image?` on upload-complete, undermining the `recover_drawer_state` form.
 
 - [ ] Queue processing only when the image actually changed
@@ -445,11 +471,11 @@ pickers all read the changeset correctly (`image.ex:71`, `file.ex:52`, `video.ex
 
 ### E. Performance
 
-- [ ] `form.ex:1399-1421` `assign_addon_statuses/1` recomputes static per-schema data (5× `has_trait`,
+- [ ] `form.ex:1404-1426` `assign_addon_statuses/1` recomputes static per-schema data (5× `has_trait`,
       `Code.ensure_compiled!`, transformer changeset map) with `assign/2` on **every** `send_update`,
       including high-frequency Presence diffs (`page_form_live.ex:23`). Switch to `assign_new` —
       sibling helpers in the same pipeline already do. **Cheapest win in the audit.** `[liveview]`
-- [ ] `block.ex:926-937,1179-1185` — every block ETS-copies all containers/fragments/palettes,
+- [ ] `block.ex:927-938,1260-1266` — every block ETS-copies all containers/fragments/palettes,
       though only container/fragment blocks render that markup. Cheapest **mount** win. `[liveview]`
 - [ ] `fieldset/field.ex:28` calls `ComponentResolver.resolve/1` every render on a value that is
       static per Blueprint compile. Resolve once in `Dsl.transform_form/1`, store on the struct
@@ -471,15 +497,15 @@ pickers all read the changeset correctly (`image.ex:71`, `file.ex:52`, `video.ex
       not this component. It is also the last unguarded `put_embed` on a dynamic field name and
       carries the B6 `get_field` bug, so deleting it closes both without a separate fix
 - [ ] Remove the dead `mark_as_deleted` typo at `lib/brando/content/blocks.ex:923`
-- [ ] Drop the forced `Map.put(:action, :validate)` in `assign_form/1` (`form.ex:4847-4874`),
+- [ ] Drop the forced `Map.put(:action, :validate)` in `assign_form/1` (`form.ex:4863-4890`),
       `assign_refreshed_form/1` (`:4876-4883`), `refresh_entry` (`:924-933`) — `error_tag`/`has_error`
       already gate on `used_input?/1`, so it achieves nothing
-- [ ] Replace inline hand-rolled `<svg>` in `form.ex:1906-1972` with the `<.icon>` convention
+- [ ] Replace inline hand-rolled `<svg>` in `form.ex:1911-1977` with the `<.icon>` convention
 - [ ] Fix SKILL.md drift: §9 recovery claim (C1), §10's removed position-response tracker,
       `ops.ex:26-28` (B2)
 - [ ] `form/tab.ex:44-49` uses `:if` (full unmount) for the video drawer's Upload/External-URL
-      sub-tabs (`form.ex:2743,2818`), so switching mid-edit can drop an unflushed `source_url`.
-      Main form tabs correctly use CSS toggling (`form.ex:2231-2233`). Narrow blast radius: 2 fields
+      sub-tabs (`form.ex:2748,2823`), so switching mid-edit can drop an unflushed `source_url`.
+      Main form tabs correctly use CSS toggling (`form.ex:2236-2238`). Narrow blast radius: 2 fields
 - [ ] Verify `vars.ex:118`, `link.ex:69`, `subform_helpers.ex:18,39` `put_change/3` usage against
       `polymorphic_embed`'s `cast/1` — consistent 3-site pattern, likely intentional, **unverified**
 
