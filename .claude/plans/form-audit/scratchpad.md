@@ -182,3 +182,81 @@ C2 is the newest instance: replaying drawer edits via `change/2` would have put 
 and never emitted SQL — the test asserts they land in `changes`, not merely that they render.
 
 ### [13:01] WARN: liveview-architect stopped mid-investigation without writing reviews/liveview.md (turn exhaustion, ~20 tool uses). Resuming the agent to have it write findings; if that fails, the LiveView angle of this review is UNCOVERED and must not be reported as clean.
+
+## Phase 2 implementation notes (2026-08-05)
+
+Phase 2 shipped D1, D3–D7 and D-dup. D2 is blocked on a measurement the user runs
+(`d2-repro.md`). What the plan did not predict:
+
+1. **The dominant defect class in this phase was not the one the audit named.** Phase 0/1's
+   unifying insight was "a value in `data` rather than `changes`". Phase 2's is **"library
+   clients raise, they don't only return"** — three instances, each capable of killing a
+   long-lived process holding unsaved work:
+   - `Mux.api_request/3` raises `RuntimeError` on missing credentials → dead entry form
+   - `Brando.CDN.get_s3_config/2` raises on a missing CDN config, reached via
+     `finalize_direct/3` → dead **sticky** manager, taking every other in-flight upload
+   - `ConfigTarget.serialize/1` raises on a non-blueprint schema or empty field segment
+
+   All three were found by *writing the test*, not by reading. Same class as A2. **There is
+   almost certainly more of this — a deliberate sweep is warranted.**
+
+2. **`nil` is an atom.** `ConfigTarget.serialize({"video", Schema, nil})` happily produced
+   `"video:Schema:"` because `segment!/2`'s `is_atom` clause accepted it. Any guard of the
+   form "is this a valid segment" needs an explicit nil check, not a type check.
+
+3. **A schema's form NAME and its blueprint `singular` are not the same thing.**
+   `Phoenix.Naming.resource_name(Brando.MigrationTest.ProjectUpdate1)` is `"project_update1"`;
+   its `__naming__().singular` is `"project"`. They coincide for real schemas, which is why the
+   old `"#{singular}_form"` derivation looked correct. **`@form_id`, threaded down by
+   `Form.input/1`, is the only authoritative source** — it is the id the live view actually
+   mounted the component under. Discovered by a test failing on the *right* thing for the
+   wrong reason.
+
+4. **`assign_new` was load-bearing, not lazy (D5).** The obvious fix — swap it for `assign` so
+   the gallery tracks the changeset — would have blanked every thumbnail, because the objects
+   only carry a preloaded `:image`/`:video` while they come straight from the DB and
+   `slim_gallery_object/1` strips them on the way back through `put_assoc`. The cache existed
+   for a reason; the fix had to keep the reason (`merge_loaded_media/2`) and drop only the
+   staleness. *Lesson: before removing a cache, work out what it was caching.*
+
+5. **A workaround comment can be load-bearing for the wrong reason (D7).** The comment saying
+   `editing_image?` "must be cleared or the main save is rejected" was true, but the real bug
+   was that `reset_image_field`/`reset_file_field` closed their drawer *without* clearing it —
+   `reset_video_field` always did. The asymmetry is what made the workaround look deliberate.
+   *When a comment justifies something that looks wrong, check whether it is compensating for a
+   third thing.*
+
+6. **Three of the plan's own findings were wrong as written**, all in the same direction — the
+   audit inferred a symmetry that was not there. D6 assumed `video_block` knew the image id
+   (its `cover_image` embed has no id field at all); D-dup assumed `gallery_objects.ex` shared
+   D4's bug (it only ever mounts where the hardcoded id is correct); D7's "every drawer close"
+   was already guarded. In each case the *finding* was still real, just not where or why the
+   plan said. **Check the premise before the fix — it cost minutes each time and would have
+   cost hours as a wrong fix.**
+
+7. **Deduping found a bug on its own (D-dup).** The two gallery thumbnails were byte-identical
+   markup with *different* lookups: one guarded empty strings, the other did not, so
+   `to_string(nil) == to_string("")` could render a different object's thumbnail. This is the
+   concrete cost the D-dup finding was asserting in the abstract.
+
+8. **An audit finding can smuggle in a guarantee the system never made.** D2 asked for an ACK,
+   a bounded retry and an editor-visible error on delivery failure — which reads as reasonable
+   until you notice `docs/UPLOADER.md:176-178` already declares delivery *best-effort and
+   orphan-safe*: "Navigate away mid-upload → the upload still finishes, the asset still exists,
+   we just skip the (now-gone) UI update." There is nothing to retry to when no one is
+   listening, and no editor to show an error in. I carried "delivery can be missed" as an open
+   gap for several messages; the user pushed back with "makes sense that it doesn't land in the
+   form if the form isn't there" and was right. **The real defect was narrower: a form that WAS
+   mounted and WAS the right form still missed its delivery, because the topic changed
+   underneath it.** *Check a finding against the documented contract before treating its framing
+   as the spec.*
+
+### Deliberately not done, and why
+- **The `video_block` cover-image defect** (D6 note): `@picture_fields_to_take` ∩ `Image` ∩
+  `PictureBlock.Data` is `[:formats, :fetchpriority]`, so picking a cover image stores nothing
+  usable. That is a schema decision (give `Data` an FK, or move the cover to a ref), not a
+  Phase 2 line edit.
+- **`file_picker`/`video_picker` upload-root helpers.** Share a shape, not an implementation;
+  unifying means changing video's config *resolution* path, which deserves its own check.
+- **A successful direct-upload finalize test.** Needs the S3 mock boundary that is Phase 4's
+  job. The tests pin that the completion now *reaches* finalize, not that finalize succeeds.

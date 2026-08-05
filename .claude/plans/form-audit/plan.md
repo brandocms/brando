@@ -505,6 +505,25 @@ that block.
 
 ## Phase 2 — Upload and delivery robustness
 
+> **STATUS: COMPLETE (2026-08-05).** All of D1–D7 and D-dup shipped. Gates: `mix test` **1188 pass /
+> 0 fail** (47 new tests over the phase), `mix format --check-formatted` clean, `mix compile
+> --warnings-as-errors` clean, `mix credo --strict` **identical to baseline in every category**
+> (2 warnings / 118 refactor / 152 readability / 12 design, with and without the diff). Every fix was
+> verified to fail before the change; the exact pre-fix failure counts are recorded per finding.
+> D2's JS change was verified in the browser against the running e2e server (devtools); the e2e
+> consumer bundle was rebuilt. **The e2e spec suite was not run** — worth doing before merge.
+>
+> **Three findings were materially wrong as written, and one was wrong in the audit's favour:**
+> D6 assumed `video_block` knew the current image id (it does not), D-dup assumed `gallery_objects.ex`
+> had D4's bug (it does not), D7's "re-queues on every drawer close" was already guarded — but that
+> guard turned out to be wrong in the *other* direction too, missing focal-point changes entirely.
+> Details inline.
+>
+> **A recurring shape worth naming: library clients raise, they don't only return.** Three separate
+> instances surfaced this phase — `Mux.api_request/3` (D3), `Brando.CDN.get_s3_config/2` via
+> `finalize_direct/3` (D1), and `ConfigTarget.serialize/1` (D3) — each of which would have taken down
+> a long-lived process holding unsaved work. Same class as Phase 0's A2. Worth a sweep of its own.
+
 ### D1. Direct-S3 completion after a manager remount is silently dropped `[liveview]`
 
 `upload_manager.ex:145` is a bare `_ -> {:noreply, socket}` catch-all, and `mount` hard-assigns
@@ -512,9 +531,48 @@ that block.
 object in the bucket with no `File` row, no log, and no reaper — videos have
 `workers/video_upload_reaper.ex`; files and images do not.
 
-- [ ] Log the unmatched `direct_complete` instead of swallowing it
-- [ ] Persist pending-direct intents so they survive a manager remount
-- [ ] Add an S3 sweeper mirroring `VideoUploadReaper` `[oban]`
+- [x] Log the unmatched `direct_complete` instead of swallowing it — the bare `_ ->` split into an
+      explicit `nil ->` (no item: the manager remounted mid-transfer, which is the case that loses
+      the object) and a wrong-transport clause. The log names the consequence, and says outright
+      that the object will not be reaped, so it is diagnosable from production logs today
+- [x] Persist pending-direct intents so they survive a manager remount — new
+      `Brando.Uploads.PendingIntent` + `uploads_pending_intents` table. UPLOADER.md recorded the
+      "intent channel and orphan-marking never built" (line 123), so this is the channel. Written at
+      presign, removed on finalize / `direct_error` / `cancel_item`. A `direct_complete` with no
+      matching item now rehydrates the intent into the same shape a live item has and runs the same
+      `finalize_item/2`, so a recovered completion cannot drift from an in-process one. Both
+      transports keep the rule that finalize trusts **only** server-side key + target
+- [x] Add an S3 sweeper mirroring `VideoUploadReaper` `[oban]` — `Brando.Worker.UploadIntentReaper`,
+      cron `45 4 * * *`, 24h cutoff (well clear of the 10-minute presign lifetime, so a slow transfer
+      is never reaped out from under itself). **Deliberately unlike `VideoUploadReaper`, it deletes
+      for real** — in the bucket via new `Brando.CDN.delete_object/2`, and the row. That reaper only
+      marks `:errored` because a provider webhook can still arrive for a row it reaped; here the only
+      actor that could still complete the upload is a browser holding an expired URL. A bucket that
+      refuses the delete still drops the row, or the sweep retries the same failure nightly forever
+- [x] **Chosen over the alternative on purpose:** creating the asset row up front and reaping what
+      stays pending (the VideoUploadReaper pattern) would need a `status` on `Brando.Files.File`
+      plus relaxing its required `filesize`/`filename` — which changes asset semantics everywhere,
+      since every list and query would then have to exclude pending rows. A dedicated intents table
+      keeps transport bookkeeping out of the content schemas
+- [x] **Found while testing: `finalize_direct/3` raises, it doesn't only return.**
+      `Brando.CDN.get_s3_config/2` blows up on a missing/malformed CDN config, and this runs in the
+      **sticky** manager — one misconfigured target would take every other in-flight upload down
+      with it. The module already has a catch-all `handle_event/3` for exactly this reason; the
+      finalize path now honours it too. Third instance of this shape in Phase 2 (see D3's Mux note)
+- [x] Test: `test/brando/uploads/pending_intent_test.exs`, 15 tests — round-trip incl. the whole
+      delivery target, ref uniqueness, required key/target, **malformed ref returns nil rather than
+      raising `Ecto.Query.CastError`** (the ref is client-supplied), idempotent delete, the staleness
+      window from both sides, the reaper, and three `direct_complete`-after-remount cases driving the
+      real `UploadManager.handle_event/3` with `items: %{}`
+- [x] Migration in both places, per repo convention: `priv/repo/migrations/20260805000000_*` (the
+      monolithic test migration is for the original schema; recent changes are dated files, and
+      `e2e/priv/repo/migrations` symlinks here) and
+      `priv/templates/brando.upgrade/migrations/brando_157_*` for consuming applications
+
+> **Not covered, and it is the honest limit here:** no test drives a *successful* finalize, because
+> there is no S3 mock boundary in the repo — that is Phase 4's "behaviour + Mox boundary for the
+> S3/Mux/Bunny clients". What the tests do pin is the part that was broken: the completion now
+> reaches finalize through the persisted intent instead of hitting a silent `_ -> {:noreply}`.
 
 ### D2. Delivery has no ACK and the topic is remount-scoped `[liveview]` — **verify first**
 
@@ -522,9 +580,62 @@ object in the bucket with no `File` row, no log, and no reaper — videos have
 `deliver_topic` (`form.ex:59`), so an asset delivered to a dead form vanishes with only a
 `:debug` log. Interaction with mid-upload reconnect is **unverified**.
 
-- [ ] Verify the reconnect behaviour empirically before designing the fix
-- [ ] Make `deliver_topic` stable across remount (derive from entry identity, not process)
-- [ ] Add an ACK + bounded retry; surface an editor-visible error when delivery finally fails
+- [x] Verify the reconnect behaviour empirically before designing the fix — **DONE (2026-08-05, e2e).**
+      Two successive mounts of a project form yielded `form:a852c2d1-…` and `form:dae79cd2-…`:
+      the topic is per-mount, as read straight off `data-deliver-topic` (`form.ex:1897`) — no logs
+      needed. A delivery in the same session logged
+      `delivering asset #40 to form:dae79cd2-…`, i.e. the *current* form's topic, which is the happy
+      path (no navigation mid-upload). **The mismatch itself was not observed and does not need to
+      be:** the topic being per-mount is measured, `put_intake_item/6` capturing `deliver_topic` at
+      intake and never updating it is certain from code, and the manager is `sticky: true`
+      (`layouts/live.html.heex:3`) so it keeps transferring while the form is destroyed. Those three
+      compose to the bug.
+- [x] **The repro's first trigger was wrong and is corrected in `d2-repro.md`:** `liveSocket.disconnect()`
+      tears down the whole LiveView tree *including sticky children*, so it kills the upload and lands
+      in D1's territory rather than D2's. **Live navigation** is the trigger — manager alive, form
+      replaced — and is also the realistic user story
+- [x] **Correction to the finding, from reading the code:** the audit says a delivery to a dead form
+      "vanishes with only a `:debug` log". It vanishes with **no log at all** — `deliver/2`'s debug
+      line only fires for an item carrying *no* `deliver_topic`; a broadcast to a live-but-unlistened
+      topic returns `:ok` silently. Both sides now log their topic (`UploadManager: delivering asset
+      #N to <topic>` / `Form: listening for asset delivery on <topic>`), which is what makes the
+      repro conclusive and is worth keeping in production regardless of the fix
+- [x] Make `deliver_topic` stable across remount — **the client owns it now**, not the server.
+      `Brando.Form`'s hook keeps a topic in `sessionStorage` and replays it on every mount;
+      `handle_event("set_deliver_topic", …)` validates and resubscribes, dropping the mount-time
+      subscription so a form cannot accumulate one per remount. Deriving from entry identity alone
+      would have failed the mount comment's second constraint — `sessionStorage` is per-tab, which
+      answers it exactly, and `"new"` covers create forms
+- [x] **The key is scoped by ENTRY, not just by `el.id`** — this was nearly a repeat of C4. `el.id`
+      is `project_form-el` for *every* project, so a tab-wide topic keyed on it alone would have
+      handed project A's in-flight upload to project B's form: worse than losing it. Same scoping as
+      `BlockField`'s recovery key (`${entryId}:${el.id}`), and `data-entry-id` was added to the form
+      element to feed it
+- [x] Validate the claimed topic with **the same rule intake applies** — `AssetIntent`'s private
+      `deliver_topic/1` is now public `validate_deliver_topic/1` and both sides call it. A client
+      free to name any topic could otherwise subscribe its form to another form's deliveries, or to
+      an unrelated PubSub channel
+- [x] Test: `test/brando_admin/components/form/deliver_topic_test.exs`, 4 tests — adopts and
+      subscribes, drops the old subscription (asserted by broadcasting to it and refuting receipt),
+      no-op on re-claim, and six malformed topics all refused with the current topic kept
+- [x] **Verified in the browser (2026-08-05, devtools on the running e2e server).** Project 1 →
+      `form:a50aa0e4…`, project 2 → `form:3c0b7a58…`, back to project 1 → `form:a50aa0e4…`. Then a
+      forced server re-render (typing into `meta_title`) left the attribute unchanged — which is the
+      part that proves the **server** adopted the client's topic instead of patching its own back
+      over it. `sessionStorage` held one key per entry, as intended
+- [x] Add an ACK + bounded retry; surface an editor-visible error when delivery finally fails —
+      **WON'T DO. The premise is wrong.** `docs/UPLOADER.md:176-178` states the contract this would
+      be fighting: *"Delivery is orphan-safe: the asset record is always created and stored;
+      notifying the originating block/field is a best-effort PubSub broadcast. Navigate away
+      mid-upload → the upload still finishes, the asset still exists, we just skip the (now-gone) UI
+      update."* Delivery landing while no form is mounted is the design working, not a gap.
+      An ACK has nothing to retry *to* when there is no subscriber, and an "editor-visible error"
+      has no editor to appear in.
+      **The actual defect was narrower than the finding stated:** a form that *was* mounted and
+      *was* the right form still missed its delivery, because the topic changed underneath it
+      between intake and completion. That is the remount case, and it is fixed above.
+      *(Caught by the user pushing back on this being framed as a gap — worth recording that the
+      audit's D2 wording implied a delivery guarantee the system never claimed.)*
 
 ### D3. Video config target hand-built with the wrong schema `[liveview]`
 
@@ -533,8 +644,29 @@ sibling trigger at `form.ex:2779` correctly uses `edit_video.schema` + `ConfigTa
 Provider (Mux/Bunny/Cloudflare) upload is therefore broken for nested video fields, and this
 violates the "use the canonical boundaries" contract in the uploads skill.
 
-- [ ] Use `Brando.Assets.ConfigTarget.serialize/1` at `form.ex:385`
-- [ ] Grep for any remaining hand-built target strings and route them through the constructor
+- [x] Use `Brando.Assets.ConfigTarget.serialize/1` at `form.ex:385` — **confirmed** (the line had
+      drifted to `:389`). New `video_config_target/2` prefers `edit_video.schema` over the entry
+      schema, exactly as the sibling trigger does, and serializes through the constructor. The
+      handler body moved to `start_provider_video_upload/3` so the new failure branch didn't
+      re-indent 60 lines. **`nil` is an atom**, so `serialize/1` accepted a nil field and emitted a
+      trailing-colon target resolving to nothing — guarded explicitly rather than via the rescue
+- [x] Grep for any remaining hand-built target strings and route them through the constructor —
+      two found. `video_picker.ex:1121` had a second, divergent tuple stringifier
+      (`normalize_video_config_target/1`); `videos.ex:233` rebuilt the target for the config
+      normalizer from the raw caller spelling. Both now call `serialize/1`, which also canonicalizes
+      `"Elixir.MyApp.Page"` → `"MyApp.Page"`. `gallery_block.ex:198-200` only prefix-matches, so it
+      stays
+- [x] Test: `test/brando_admin/components/form/video_upload_target_test.exs`, 4 tests. Two blueprints
+      whose configs fail intake with *distinct* deterministic messages make the resolved target
+      observable with no provider call. 2 of 4 fail with only the schema source reverted; the other
+      two failed outright before the guards existed (see below)
+- [x] **Found while writing that test: provider clients raise, they don't all return.**
+      `Mux.api_request/3` raises a bare `RuntimeError` when the site has no Mux credentials, so an
+      unconfigured site lost the entire entry form process — and every unsaved change in it — on any
+      Mux video upload attempt. Same class as A2. `initiate_provider_upload/5` now rescues, logs the
+      formatted stacktrace (so a real bug stays diagnosable) and converts to the existing error push.
+      The rescue is deliberately broad: three provider clients with three failure vocabularies sit
+      behind that one call
 
 ### D4. Nested gallery pickers silently no-op `[liveview]`
 
@@ -542,16 +674,50 @@ violates the "use the canonical boundaries" contract in the uploads skill.
 gallery names a component that does not exist, so picker selections go nowhere. The upload path
 gets this right via `path` (`form.ex:1201`). Same defect duplicated in `gallery_objects.ex`.
 
-- [ ] Derive the target from `path`, as the upload path does
-- [ ] Fix both copies (see D-dup below)
+- [x] Derive the target from `path`, as the upload path does — **and the id from `@form_id`, which
+      turned out to already be threaded.** `Form.input/1` passes `form_id={@id}` (the entry form
+      component's own id) down through `Fieldset` → `Field` → the input's `live_component`, so no
+      derivation is needed at all; the component was simply ignoring it. Fallback for a gallery
+      rendered outside that pipeline reads the ROOT of the form name (`"page[items][0]"` → `"page"`),
+      which is the entry's and never the owner's
+- [x] Fix the payload too, not just the target — the component was shipping a replacement changeset
+      for the *nested* record via `:update_changeset`. Had the id ever matched, that would have
+      overwritten the entry changeset with a subrecord's. New `Form.update(%{action: :put_gallery,
+      path:, key:, gallery:})` writes at the path instead, and `append_gallery_object/5` (the upload
+      path that never had the bug) was refactored onto the same `put_gallery_at/4`, so there is now
+      one write point
+- [x] Fix both copies — **the plan's "same defect duplicated in `gallery_objects.ex`" does not hold.**
+      That component only ever renders inside the `Gallery` blueprint's own form
+      (`galleries/gallery.ex:63`, `component :gallery_objects`), so its changeset *is* the entry
+      changeset and `"gallery_form"` was correct. De-hardcoded the id anyway so a second mounting
+      context can't silently address a component that isn't there
+- [x] Test: `test/brando_admin/components/form/input/gallery_test.exs` (shared with D5), 4 D4 tests.
+      10 of the file's 11 fail against the pre-fix code
+
+> **Worth knowing for any future "derive the form id" code:** a schema's form *name*
+> (`Phoenix.Naming.resource_name/1`, e.g. `"project_update1"`) and its blueprint
+> `__naming__().singular` (`"project"`) are **not** always the same. They coincide for real
+> schemas, which is why the old derivation looked right. `@form_id` is the only authoritative
+> source — it is the id the live view actually mounted the component under.
 
 ### D5. Gallery objects and selections are never re-derived from the changeset `[liveview]`
 
 `input/gallery.ex:149-155` and `gallery_objects.ex:38-42` use `assign_new` for state that must
 track the changeset, so it goes stale after any external mutation.
 
-- [ ] Move to `update/2`-derived assigns
-- [ ] Test: mutate the gallery outside the component, assert the UI reflects it
+- [x] Move to `update/2`-derived assigns — all three assigns (`gallery_objects`, `selected_images`,
+      `selected_videos`) now re-derive from the changeset on every update, in both components
+- [x] **A straight `assign_new` → `assign` swap would have broken the UI, and that is the whole
+      reason the cache existed.** The objects only carry a preloaded `:image`/`:video` while they
+      come straight from the DB; `slim_gallery_object/1` strips the associations the moment anything
+      writes the list back through `put_assoc`. Deriving alone blanks every thumbnail. New
+      `Brando.Galleries.merge_loaded_media/2` lets the changeset decide *membership* while an object
+      arriving without its media borrows it from the previous list by media id — no extra query
+- [x] Test: mutate the gallery outside the component, assert the UI reflects it —
+      `test/brando_admin/components/form/input/gallery_test.exs`, 5 `merge_loaded_media/2` cases
+      (including "a removed object does not linger", which is the whole point) plus 2 component
+      cases: an externally added object appears on the next update, and a slimmed object keeps the
+      media the component had already loaded
 
 ### D6. Two pickers ignore current editing state `[liveview]`
 
@@ -559,23 +725,101 @@ track the changeset, so it goes stale after any external mutation.
 knowing the current id — violating the skill's "selection means current editing state". Entry-field
 pickers all read the changeset correctly (`image.ex:71`, `file.ex:52`, `video.ex:52`).
 
-- [ ] Pass the current id at both sites
+- [x] Pass the current id at both sites — `render_var` now sends
+      `List.wrap(socket.assigns.image_id)`, matching its own `set_file_target` sibling one function
+      below. **`video_block` did not in fact know the id**, contrary to the finding: its
+      `cover_image` assign is either the video's preloaded `thumbnail` (an `Image`, which has one)
+      or the stripped `picture_data` map built by `select_image`, which does not. Added a
+      `cover_image_id` assign tracked alongside it — set on select, derived from the thumbnail on
+      mount, cleared by both reset paths — so the picker marks the cover the editor is showing
+      whether or not it was just picked
+- [x] Test: `test/brando_admin/components/form/block/picker_current_selection_test.exs`, 4 tests.
+      `send_update/2` outside a LiveView process is a message to `self()`, so the picker payload is
+      directly assertable. 2 of 4 fail pre-fix; the empty-selection case and the `set_file_target`
+      reference implementation are the controls
+
+> **Adjacent defect found while verifying video_block's half — NOT fixed here, needs its own scope.**
+> `@picture_fields_to_take` (`video_block.ex:45-64`) takes 17 fields off the selected `Image` and
+> casts them into `cover_image`, an `embeds_one Brando.Villain.Blocks.PictureBlock.Data`. Verified
+> at runtime: only `formats` and `fetchpriority` exist on *both* sides. `PictureBlock.Data` carries
+> override fields only — no `path`, `width`, `height`, `sizes`, `cdn`, `dominant_color`, `focal`,
+> and no id — because a real picture block keeps its image as an FK on the *ref*, not in the embed.
+> So picking a cover image on a video block stores essentially nothing durable; the current session
+> looks correct only because the template renders the pre-cast `@cover_image` assign. Same class as
+> B4 (a cast silently dropping media fields). Fixing it means either giving `Data` an image FK or
+> moving the cover to a ref — a schema decision, not a Phase 2 line edit.
 
 ### D7. Drawer close re-queues image processing; upload-complete defeats drawer recovery `[oban][liveview]`
 
 `form.ex:3945` re-queues Oban image processing on **every** drawer close, and `form.ex:604` clears
 `editing_image?` on upload-complete, undermining the `recover_drawer_state` form.
 
-- [ ] Queue processing only when the image actually changed
-- [ ] Stop clearing `editing_image?` on upload-complete
+- [x] Queue processing only when the image actually changed — **the "every drawer close" claim was
+      already false**: a `status !== :processed` guard was in place. But that gate is wrong in *both*
+      directions, which the plan missed:
+      - it **misses** a focal-point change on an already-processed image. The drawer renders
+        `FocalPoint` bound to the same form (`form.ex:2409-2415`), so `:focal` arrives in these
+        params — and no re-queue meant every crop stayed stale;
+      - it **over-fires** on an unprocessed image the user only retitled, and
+        `queue_processing/4` *deletes* matching jobs before inserting, so closing the drawer while
+        the first pass is executing discards that job's row and starts a second pass over the same
+        derivative files.
+      Now gated on `@processing_inputs` (`:focal`, `:path`, `:formats`, `:config_target`) actually
+      changing, falling back to "unprocessed **and** nothing already in flight" via new
+      `Brando.Images.Processing.processing_queued?/1` — which keeps the drawer's recover-a-stuck-
+      upload role without the restart
+- [x] Stop clearing `editing_image?` on upload-complete — done for image, video and file. An upload
+      started *inside* a drawer leaves that drawer open, and `assign_drawer_recovery_state/1` gates
+      on exactly these flags, so clearing one dropped the recovery snapshot mid-edit *and* let a save
+      through while the image was still processing. All three clauses now call
+      `assign_drawer_recovery_state/1` instead, so the snapshot follows the newly uploaded asset
+- [x] **The in-code comment claiming the clear was mandatory turned out to be a workaround for a
+      different bug.** `reset_image_field` and `reset_file_field` close their drawer (`toggle_drawer`)
+      without clearing the flag, so "Reset image field" stranded the entry behind *"close the image
+      drawer before saving"* with no drawer left to close — permanently, until reload.
+      `reset_video_field` always did it correctly, which is what made the asymmetry look deliberate.
+      Both now clear the flag and refresh the recovery state, so `editing_*?` is finally truthful in
+      both directions and the upload-complete clear is no longer load-bearing
+- [x] Test: `test/brando_admin/components/form/drawer_close_test.exs`, 9 tests. **All 9 fail against
+      the pre-fix code.** Oban runs `testing: :inline`, so the `processing_queued?/1` cases insert the
+      job row directly — otherwise `queue_processing/4` executes it and there is nothing to detect
 
 ### D-dup. Collapse the duplicated gallery components `[refactor]`
 
 `input/gallery.ex` and `input/gallery_objects.ex` are near-duplicates carrying identical bugs
 (D4, D5). Also: 3× entry-field delivery clauses, 3× folder→upload-path helpers.
 
-- [ ] Extract the shared gallery logic after D4/D5 land (fix first, then dedupe)
-- [ ] Collapse the delivery clauses and path helpers
+- [x] Extract the shared gallery logic after D4/D5 land (fix first, then dedupe) — two new modules:
+      `Gallery.Media` (add/remove/slim/sequence/fetch/id+assoc+selection keys/notify_picker/parse_id)
+      and `Gallery.Thumb` (the grid thumbnail, which was byte-identical in both). Each component
+      keeps only its own *write*, which is the one thing that genuinely differs: `Input.Gallery` has
+      to reach an entry form that owns the gallery at a path, `Input.GalleryObjects` edits the entry
+      changeset directly. **878 → 733** and **318 → 198** lines; 1196 → 1122 including both new
+      modules and their docs
+- [x] **The dedupe surfaced a third instance of the D4/D5 pattern.** The two thumbnail lookups were
+      not quite identical: `Input.GalleryObjects` matched on truthiness where `Input.Gallery` guarded
+      with `present?/1`, so an empty-string `image_id` compared equal to a nil one
+      (`to_string(nil) == to_string("")`) and could render a *different* object's thumbnail. The
+      shared `Thumb.find/1` uses the guarded version. This is exactly the cost the finding named —
+      a fix landing in one copy saying nothing about the other
+- [x] **Deleted the dead `handle_event("delete_selected", …)`** (`gallery.ex`), as Phase 3's F section
+      flagged. Re-confirmed dead: the only `delete_selected` in a template is `content/list.ex:1212`,
+      which targets the listing hook (`live_view/listing/hooks.ex:111`). It also carried the broken
+      `__naming__().singular` form id, the B6 `get_field` bug, and the last unguarded `put_embed` on
+      a dynamic field name — deleting it closed all three
+- [x] Collapse the delivery clauses — the three single-asset `entry_field_upload_complete` clauses
+      differed only in which pair of assigns they wrote, and that duplication is precisely what let
+      the `editing_*?` handling drift apart between them (D7). Now one
+      `deliver_entry_field_asset/5`. The two gallery clauses stay separate: they append to an assoc
+      rather than setting an FK, which is a different operation, not a different spelling
+- [ ] Path helpers — **not collapsed, and the finding's "3×" is really 2×.** `file_picker`'s
+      `file_upload_root/1` and `video_picker`'s `video_upload_root/1` share only the
+      normalize-then-typed-default *shape*; they resolve config through different APIs
+      (`Uploads.resolve_file_config/1` returning a tuple vs `Videos.get_config_for/1` returning
+      `{:ok, cfg}`, plus target normalization). `image_picker` has no equivalent at all — it takes
+      `assign_new(:upload_root, fn -> "images/default" end)`. Unifying means moving `video_picker`
+      onto `Uploads.resolve_video_config/1`, which is a change to config *resolution*, not to
+      duplication — worth doing, but it belongs with a check that the two agree, not bundled here
 
 ---
 
