@@ -4,6 +4,11 @@
 **Agents:** elixir, liveview, security, testing, ecto, oban, requirements, verification (8)
 **Date:** 2026-08-05
 
+> **RESOLVED 2026-08-05** in `3694b9769` (B1, B2, W1, W7) and `f303564f5`
+> (W2–W6, W8, suggestions). Every finding is either fixed or explicitly deferred
+> with a reason — see "Disposition" at the foot of this file. Final gates: 1198
+> tests / 0 failures, credo unchanged from baseline, e2e re-migrated and compiling.
+
 ## Verdict: REQUIRES CHANGES
 
 Not because the phase is wrong — the requirements check came back **20 MET / 0 PARTIAL /
@@ -179,3 +184,53 @@ Recording these so they are not re-litigated:
   beyond W6.
 - `iron-law-judge` was not spawned — `elixir-reviewer` overlaps it and Phases 0/1 have
   `iron-laws.md` / `iron-laws-2.md` on this code.
+
+---
+
+## Disposition (2026-08-05)
+
+| # | finding | outcome |
+|---|---|---|
+| B1 | merge reverted a freshly-processed image | **fixed** — compares `updated_at`, ties prefer the changeset |
+| B2 | delivery could duplicate a gallery object | **fixed** — `Galleries.append_unique_media/2` |
+| W1 | topic written to the DOM non-stickily | **fixed** — `this.js().setAttribute` |
+| W2 | reaper's `max_attempts` was dead code | **fixed** — `perform/1` returns `{:error, _}` on failure |
+| W3 | failed reap left no durable trace | **fixed** — the row is kept, which is what makes W2 work |
+| W4 | reaper shared `:default` with interactive uploads | **fixed** — own `:upload_reaping` queue, 500-row batches |
+| W5 | orphan finalize misattributed the creator | **fixed** — refuses on `creator_id` mismatch |
+| W6 | topic unguessability the only cross-entry guard | **partly fixed** — see below |
+| W7 | three D1 tests did not pin the defect | **fixed** — assert on logs; 3/3 fail pre-fix |
+| W8 | `PendingIntent` timestamps off-convention | **fixed** — `:utc_datetime_usec` in schema + both migrations |
+| S1 | `AssetIntent.get/2` eager `String.to_existing_atom/1` | **fixed** |
+| S2 | TOCTOU in ref-based `delete_pending_intent/1` | **not fixed** — accepted; see below |
+| S3 | `processing_queued?/1` not GIN-indexed | **not fixed** — accepted, Oban's partial index narrows first |
+| S4 | `form.ex` `component_id` fallback style | **not fixed** — accepted, harmless |
+| S5 | comment gaps / dead branch | **fixed** for `direct_cdn_config/2` |
+
+### W6 — what was and was not done
+
+**Done:** stopped logging topics whole. A topic is a bearer token — presenting
+it subscribes a form to another form's deliveries — and the instrumentation
+added earlier in this phase had put a replayable credential into every log
+aggregator. That was a leak vector *introduced by this phase*, so removing it
+beats adding machinery to tolerate it. Logs now carry an 8-character prefix,
+enough to pair the two sides of one delivery.
+
+**Not done:** the redundant ownership check on receipt. It needs entry identity
+carried in the upload target, which is a protocol change touching the
+entry-field, block, var and gallery upload paths. Doing that unverified at the
+end of a long session is how the two blockers above got written in the first
+place. It wants its own change and its own e2e pass.
+
+### S2 — why the TOCTOU is accepted
+
+`delete_pending_intent/1`'s ref clause does get-then-delete. Both call sites are
+inside a single LiveView process handling one event, so there is no concurrent
+deleter; and the failure mode of losing the race is a `Ecto.StaleEntryError` on
+a row that is already gone, i.e. the desired end state. Not worth a
+`delete_all` rewrite.
+
+### Still not run
+
+The e2e Playwright suite. No JS behaviour changed since the bundle was last
+rebuilt except `this.js().setAttribute`, but it should run before merge.
