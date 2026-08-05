@@ -885,43 +885,126 @@ pickers all read the changeset correctly (`image.ex:71`, `file.ex:52`, `video.ex
 
 ### E. Performance
 
-- [ ] `form.ex:1404-1426` `assign_addon_statuses/1` recomputes static per-schema data (5× `has_trait`,
-      `Code.ensure_compiled!`, transformer changeset map) with `assign/2` on **every** `send_update`,
-      including high-frequency Presence diffs (`page_form_live.ex:23`). Switch to `assign_new` —
-      sibling helpers in the same pipeline already do. **Cheapest win in the audit.** `[liveview]`
-- [ ] `block.ex:927-938,1260-1266` — every block ETS-copies all containers/fragments/palettes,
-      though only container/fragment blocks render that markup. Cheapest **mount** win. `[liveview]`
-- [ ] `fieldset/field.ex:28` calls `ComponentResolver.resolve/1` every render on a value that is
-      static per Blueprint compile. Resolve once in `Dsl.transform_form/1`, store on the struct
-- [ ] `input.ex:286-296` (`radios/1`) recomputes `:languages` every render; `select.ex:336-345` and
-      `multi_select.ex:578-587` already cache via `assign_new`. Extract one shared helper
-- [ ] `block_field.ex:656,672` subscribes to PubSub and broadcasts on the **dead** render — gate on `connected?`
-- [ ] `image_picker.ex:93` / `video_picker.ex:104` load the entire library for a config target into
-      assigns on every open/refresh/folder change — paginate or stream
-- [ ] Form-side `"brando:image:<id>"` subscriptions are never unsubscribed
-      (`hooks.ex:511,531,603,628,663,692`); the manager unsubscribes correctly at `:451`
+> **STATUS: COMPLETE (2026-08-06)**, with E6 partially deferred and its reason recorded.
+
+- [x] `assign_addon_statuses/1` → `assign_new` — done, with **two exceptions that would have been
+      bugs.** `has_meta?` is seeded `false` by `mount/1` (the async-load branch returns before this
+      pipeline runs, so the loading render needs it), and `assign_new` would have pinned it to
+      `false` forever; `has_alternates?` reads `entry.id`, which is nil until a create form saves.
+      Both stay plain assigns — each is a single generated `has_trait/1` call, so neither is the cost.
+      **Found while doing it:** `all_transformers_received?` and `transformer_changesets` are *state*
+      owned by `reset_transformer_changesets/1`, and re-initialising them here discarded any
+      changeset a transformer had already reported if a re-render landed mid-collection. Same
+      "an unrelated update reverts your work" shape as Phase 0. Split into
+      `assign_transformer_statuses/1`, which initialises once
+- [x] Test: `test/brando_admin/components/form/addon_statuses_test.exs`, 4 tests — the transformer
+      case fails pre-fix. `Form.mount/1` turns out to be callable on a bare socket, which makes the
+      generic `update/2` path reachable in ExUnit without the Phase 4 harness
+- [x] `block.ex` container/fragment/palette copies — scoped. Each list is an ETS read, and an ETS
+      read copies the term onto the reading process's heap, so this was one copy per block component
+      inside the single LiveView process. `@fragments` now loads only for fragment blocks;
+      `@containers` and `@palette_options` only for container blocks and **roots** — verified against
+      the templates: `container_config` is rendered by every root block (`render.ex:528`), not just
+      containers, so scoping to `type == :container` alone would have broken the container select
+- [x] `ComponentResolver.resolve/1` moved to `Dsl.transform_form/1` — resolved once at Blueprint
+      compile time instead of per field per diff. **Verified the property the token existed for is
+      intact**: `mix xref graph --sink .../input/vars.ex --label compile` lists nothing, so no
+      Blueprint compile-depends on an admin component. An unknown token is now a compile-time raise
+- [x] Test: `test/brando/blueprint/forms/component_resolution_test.exs`, plus
+      `form_component_resolver_test.exs`'s third test **rewritten** — it asserted the stored value is
+      still the `:vars` token, which is exactly what this changes. It now asserts the resolved module
+      and records the xref check that shows the no-dependency property survived
+- [x] `:languages` / `:admin_languages` → one shared `Input.Options.expand/1`, replacing three
+      byte-identical `case` arms. Deliberately **not** memoized: `Brando.RuntimeConfig` can change
+      the lists at runtime, so a cache would go stale — pinned by a test that mutates the config
+- [x] `block_field.ex` PubSub gated on `connected?` — both the subscribe and, more importantly,
+      `request_blocks_sync/1`: from the dead render that asked every *other* connected editor to
+      gather and broadcast its unsaved op-store state, for a listener discarded microseconds later.
+      The expensive half landed in other processes
+- [x] `image_picker.ex` no longer retains the whole config-target library in
+      `socket.assigns.images` — one copy of every image row per connected admin, for the session,
+      walked by change tracking on every diff, when the only consumer is `assign_folder_state/2` and
+      the rendered list is **already a stream**. Renamed `assign_images/1` → `assign_config_target/1`
+      since it no longer assigns images. **Tradeoff stated in the code**: folder navigation used to
+      filter that cached list and now re-queries — the same query the picker already runs on open
+- [ ] `image_picker` / `video_picker`: bound the query itself — **NOT done, and the two are not the
+      same case.** `VideoPicker`'s `:videos` assign *is* a real cache: `assign_folder_state/2` is
+      reached from a dozen call sites there that do not reload, so dropping it would add queries
+      rather than remove them. Real pagination needs the folder tree to stop being derived from the
+      entries (`FolderBrowser.folders_from_entries/2`), which is a design change, not a line edit
+- [x] Form-side `"brando:image:<id>"` subscriptions now unsubscribe — on `[:image, :error]`, and on
+      `[:image, :updated]` **only when the image is `:processed`**. That distinction is load-bearing:
+      `ImageUploader` also broadcasts `:updated`, for the freshly uploaded and still-unprocessed
+      image, and unsubscribing there would drop the notification the form is waiting for. Safe
+      because all eight form-side subscribes sit immediately before a processing round is queued, so
+      a later round re-subscribes itself. No unit test — process-level PubSub state inside a
+      LiveView is Phase 4 harness territory
 
 ### F. Dead code and drift
 
-- [ ] Delete `lib/brando/blueprint/forms/legacy.ex` (no-op macro, zero call sites) and its import
-      at `dsl.ex:273`
-- [ ] Delete the dead `handle_event("delete_selected", ...)` in `input/gallery.ex:727-750`
-      (**found during Phase 0's A1 audit**) — the only `delete_selected` in a template is
-      `content/list.ex:1212`, which targets the listing hook (`live_view/listing/hooks.ex:111`),
-      not this component. It is also the last unguarded `put_embed` on a dynamic field name and
-      carries the B6 `get_field` bug, so deleting it closes both without a separate fix
-- [ ] Remove the dead `mark_as_deleted` typo at `lib/brando/content/blocks.ex:923`
-- [ ] Drop the forced `Map.put(:action, :validate)` in `assign_form/1` (`form.ex:4863-4890`),
-      `assign_refreshed_form/1` (`:4876-4883`), `refresh_entry` (`:924-933`) — `error_tag`/`has_error`
-      already gate on `used_input?/1`, so it achieves nothing
-- [ ] Replace inline hand-rolled `<svg>` in `form.ex:1911-1977` with the `<.icon>` convention
-- [ ] Fix SKILL.md drift: §9 recovery claim (C1), §10's removed position-response tracker,
-      `ops.ex:26-28` (B2)
-- [ ] `form/tab.ex:44-49` uses `:if` (full unmount) for the video drawer's Upload/External-URL
-      sub-tabs (`form.ex:2748,2823`), so switching mid-edit can drop an unflushed `source_url`.
-      Main form tabs correctly use CSS toggling (`form.ex:2236-2238`). Narrow blast radius: 2 fields
-- [ ] Verify `vars.ex:118`, `link.ex:69`, `subform_helpers.ex:18,39` `put_change/3` usage against
-      `polymorphic_embed`'s `cast/1` — consistent 3-site pattern, likely intentional, **unverified**
+> **STATUS: 7 of 8 shipped (2026-08-06); the `form/tab.ex` item was attempted and reverted —
+> see its entry for the evidence.**
+
+- [x] Deleted `lib/brando/blueprint/forms/legacy.ex` and its `imports:` entry in `dsl.ex`. Verified
+      with a full `mix compile --force --warnings-as-errors` (600 files) — the no-op `fieldset/2`
+      it exported was shadowed by Spark's own entity macro anyway. Note for consumers: an app still
+      calling the deprecated 2-arity form now gets a compile error instead of silently losing a
+      fieldset, which is the better failure
+- [x] The dead `handle_event("delete_selected", ...)` in `input/gallery.ex` — **already deleted in
+      Phase 2's D-dup**, which re-confirmed it dead and noted it closed three defects at once
+- [x] Removed the dead `mark_as_deleted` typo in `blocks.ex`. **Deleted rather than fixed, and the
+      premise was checked**: `ChangesetRunner.run_pipeline/2` rewrites `marked_as_deleted: true` to
+      `action: :delete` (or `:ignore`, which `put_assoc` skips) before `reject_deleted/2` runs, so
+      the first clause already covers the real case. The typo'd clause was dead *and* redundant
+- [x] Dropped the forced `Map.put(:action, :validate)` from `assign_form/1`,
+      `assign_refreshed_form/1` and `refresh_entry`. **The premise was verified, not assumed**:
+      `Phoenix.Component.used_input?/1` reads `form.params` and nothing else
+      (`phoenix_component.ex:1753`), so no field of an empty-params form can surface an error with
+      or without an action. Checked that nothing branches on the top-level action either — every
+      `.action` read in the tree is on nested changesets testing `:replace`/`:delete`
+- [x] Test: `test/brando_admin/components/form/empty_params_errors_test.exs`, 5 tests. Written
+      because **there is no e2e coverage of validation-error display at all**, so the suites could
+      not have caught a regression here. Includes the control: a field the user *did* touch still
+      surfaces its error
+- [x] Replaced the seven inline `<svg>` in the form toolbar with `<.icon>`. All seven target classes
+      were checked against `assets/css/heroicons.css` before use, and the mask sets
+      `background-color: currentColor`, so the live-preview toggle's `.active` colour now follows
+      the button automatically — the `svg path:nth-of-type(2)` fill override in `Form.css` went dead
+      and was removed. **The icon set changed, since heroicons has no equivalent for two of them:**
+      Meta `tag`, Revisions `clock` (was a git-branch), Scheduled publishing `calendar-days`,
+      Alternates `language`, Live preview `eye`, Share `arrow-top-right-on-square`, Save
+      `arrow-down-tray` (was a floppy disk). Functionally exercised by e2e (meta, revisions and save
+      are all clicked); **not visually verified — flag any of the seven and it is a one-line swap**
+- [x] SKILL.md drift — §9 (C1) and `ops.ex:26-28` (B2) were fixed in their own phases. §10's
+      "Position Response Tracker" is now corrected: that machinery no longer exists anywhere in
+      `lib/` or `assets/src/`, because reorder under the single-owner op store is one store mutation
+      with no per-block confirmations to await
+- [ ] `form/tab.ex`'s `:if` on the video drawer's Upload/External-URL sub-tabs — **ATTEMPTED, then
+      REVERTED. The finding is real; its proposed fix is not a line edit, and the plan's "narrow
+      blast radius: 2 fields" is wrong.**
+      Switching those panels to a class toggle (matching `Form.form_tabs/1`) broke
+      `e2e tests/projects/projects.spec.js:290`: after uploading a local video, no "Edit video"
+      button appeared. Causation established both ways — the change in, spec fails on both attempts;
+      the change out, spec passes.
+      The mechanism found by reading: **the two panels bind the same field.** The upload panel
+      carries a hidden `video[type]` of `:upload`; the external panel binds `video[type]` to a
+      Vimeo/YouTube select. Mount both and two inputs share that name. But wrapping the inactive
+      panel in a `<fieldset disabled>` — which excludes its inputs from submission while keeping
+      their DOM values, and would have delivered the finding's intent exactly — **did not fix it
+      either**, so duplicate-name serialization is at most part of the story and the rest is
+      unidentified.
+      Left as `:if`, with the reasoning and the failing spec line recorded in a comment above
+      `tab_content/1` so the next reader does not repeat it. A real fix means the drawer modelling
+      upload-vs-external as one `type` decision rather than two widgets for one field — its own
+      scope, and it needs the e2e video path to verify
+- [x] The `polymorphic_embed` / `put_change/3` question — **resolved, no change needed, and two of
+      its three sites no longer exist.** B6 already replaced `subform_helpers.ex` and `vars.ex` with
+      `current_entries/2` / `put_entries/3`. The one remaining site, `link.ex`, writes
+      `Menu.Item.link` — a plain `has_one` to `Brando.Content.Var` (`navigation/item.ex:35`), not a
+      polymorphic embed — so `put_change/3` routes through `Relation.change/3` and handles the
+      changeset correctly. The only polymorphic embeds in the tree are block `:data` and the
+      `CastPolymorphicEmbeds` trait. The finding's "consistent 3-site pattern" was never about
+      polymorphic embeds at all
 
 ### G. Structure — `form.ex` is 6257 lines
 

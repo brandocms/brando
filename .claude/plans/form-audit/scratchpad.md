@@ -432,3 +432,61 @@ instead of measuring". I then did the adjacent version of it: I explained an ano
 away with the most available *reassurance* ("the test passes, so it is benign") and
 filed it as out of scope. Both are the same failure — accepting a story instead of
 reading the code. It cost one exchange because the user caught it.
+
+## Phase 3 E + F implementation notes (2026-08-06)
+
+Shipped all of E (E6 partially) and 7 of 8 in F. What the plan did not predict:
+
+1. **`assign_new` is not always the safe direction (E1).** Two of the seven addon statuses
+   could not become `assign_new`: `mount/1` seeds `has_meta?: false` so the async-load
+   render has it, and `assign_new` would have pinned it to `false` for the life of the
+   component; `has_alternates?` reads `entry.id`, which is nil until a create form saves.
+   *Check what `mount/1` already seeded before converting anything to `assign_new`.*
+
+2. **The real find in E1 was not the perf.** `all_transformers_received?` and
+   `transformer_changesets` are STATE — `reset_transformer_changesets/1` owns them — and
+   re-initialising them on every parent re-render discarded whatever a transformer had
+   already reported if a diff landed mid-collection. Same shape as Phase 0's data loss,
+   found by asking "is this value derived, or is it state?" while converting it.
+
+3. **A finding can name the wrong two files (E6).** `image_picker` and `video_picker` look
+   identical and are not: every one of ImagePicker's `assign_folder_state/2` call sites
+   re-queries first, so its retained `:images` was pure waste; VideoPicker's
+   `assign_folder_state/2` is reached from a dozen sites that do NOT reload, so its
+   `:videos` is a real cache and dropping it would add queries. Same code shape, opposite
+   correct action.
+
+4. **A test can pin the thing you are about to change (E3).**
+   `form_component_resolver_test.exs` asserted the Blueprint stores the `:vars` *token*.
+   The property worth keeping was "no compile dependency on admin modules", which I
+   verified survives (`mix xref graph --sink ... --label compile` lists nothing) before
+   rewriting the assertion. *When a test fails on a deliberate change, find the property
+   it was defending before you edit it.*
+
+5. **`capture_log` asserts nothing in this suite by default** — `config/test.exs` pins
+   `config :logger, level: :error`, so warnings never reach the capture handler. Already
+   recorded under the gallery work; it bit twice.
+
+### The one that did not land: `form/tab.ex`
+
+The plan wanted the video drawer's Upload/External-URL sub-tabs switched from `:if` to a
+CSS toggle, calling it "narrow blast radius: 2 fields". It is not narrow. **The two panels
+bind the same field** — a hidden `video[type]` of `:upload` in one, a Vimeo/YouTube select
+bound to `video[type]` in the other — so mounting both puts two inputs of that name in the
+form. The spec that catches it is `projects.spec.js:290` (upload a local video, expect an
+"Edit video" button).
+
+Two attempts, both reverted:
+- plain class toggle → spec fails (both attempts)
+- class toggle + `<fieldset disabled>` around the inactive panel, which excludes its inputs
+  from submission while keeping their DOM values → **still fails**
+
+So the duplicate-name theory explains at most part of it, and I stopped rather than run a
+third guess. Causation was established both directions before reverting. The underlying
+defect (switching sub-tabs mid-edit drops an unflushed `source_url`) is real and now
+documented in a comment above `tab_content/1`, together with the failing spec line.
+
+*Process note, and it is the same one as the gallery work: I formed a mechanism from
+reading, built a fix on it, and only the e2e run told me the mechanism was incomplete. The
+difference this time is that I stopped after the second attempt and reverted, instead of
+shipping a third theory.*

@@ -349,8 +349,13 @@ Form → BlockField (event: "enable_live_preview", cache_key: ...) →
 ### Update Trigger
 After validate_block: `maybe_update_live_preview_block()` sends rendered HTML to the form, which pushes it to the client.
 
-### Position Response Tracker
-After reposition, waits for all blocks to confirm their new sequence before triggering a preview update. Prevents partial/stale renders during reorder.
+### Reorder and preview
+There is **no position-response tracker.** Earlier versions waited for every
+block to confirm its new sequence before triggering a preview update; that
+machinery is gone (no `position_response`/`pending_positions` anywhere in
+`lib/` or `assets/src/`). Under the single-owner op store, reorder is a store
+mutation the BlockField applies in one place, so there is no fan-out of
+per-block confirmations left to await.
 
 ---
 
