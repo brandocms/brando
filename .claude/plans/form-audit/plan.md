@@ -505,24 +505,30 @@ that block.
 
 ## Phase 2 — Upload and delivery robustness
 
-> **STATUS: COMPLETE (2026-08-05).** All of D1–D7 and D-dup shipped. Gates: `mix test` **1188 pass /
-> 0 fail** (47 new tests over the phase), `mix format --check-formatted` clean, `mix compile
+> **STATUS: 7 of 8 findings shipped; D2 REVERTED; one e2e regression OPEN (2026-08-05).**
+>
+> Shipped and verified: **D1, D3, D4, D5, D6, D7, D-dup**, plus all 15 findings from the
+> `/phx:review` pass (dispositions in `reviews/phase-2-review.md`).
+>
+> **Reverted: D2's stable-topic fix** (`6da10b844`) — it broke multi-user block sync. See D2 below.
+>
+> **Open: `tests/projects/projects.spec.js:4`** — two gallery uploads, only one object renders.
+> Reproduces in isolation. Evidence and the three candidate call sites are in `scratchpad.md`
+> under "HANDOFF". **Read that before touching the gallery code** — it records the contradictory
+> evidence too (it passed in the first full e2e run).
+>
+> Gates: `mix test` **1194 pass / 0 fail**, `mix format --check-formatted` clean, `mix compile
 > --warnings-as-errors` clean, `mix credo --strict` **identical to baseline in every category**
-> (2 warnings / 118 refactor / 152 readability / 12 design, with and without the diff). Every fix was
-> verified to fail before the change; the exact pre-fix failure counts are recorded per finding.
-> D2's JS change was verified in the browser against the running e2e server (devtools); the e2e
-> consumer bundle was rebuilt. **The e2e spec suite was not run** — worth doing before merge.
+> (2 / 118 / 152 / 12). **e2e: 104 passed / 1 failed.**
 >
-> **Three findings were materially wrong as written, and one was wrong in the audit's favour:**
-> D6 assumed `video_block` knew the current image id (it does not), D-dup assumed `gallery_objects.ex`
-> had D4's bug (it does not), D7's "re-queues on every drawer close" was already guarded — but that
-> guard turned out to be wrong in the *other* direction too, missing focal-point changes entirely.
-> Details inline.
+> **Three findings were wrong as written** — D6 assumed `video_block` knew the image id, D-dup
+> assumed `gallery_objects.ex` shared D4's bug, D7's "re-queues on every drawer close" was already
+> guarded (but wrong in the *other* direction). Details inline.
 >
-> **A recurring shape worth naming: library clients raise, they don't only return.** Three separate
-> instances surfaced this phase — `Mux.api_request/3` (D3), `Brando.CDN.get_s3_config/2` via
-> `finalize_direct/3` (D1), and `ConfigTarget.serialize/1` (D3) — each of which would have taken down
-> a long-lived process holding unsaved work. Same class as Phase 0's A2. Worth a sweep of its own.
+> **A recurring shape worth naming: library clients raise, they don't only return.** Three
+> instances this phase — `Mux.api_request/3` (D3), `CDN.get_s3_config/2` via `finalize_direct/3`
+> (D1), `ConfigTarget.serialize/1` (D3) — each able to kill a long-lived process holding unsaved
+> work. Same class as Phase 0's A2. Worth a sweep of its own.
 
 ### D1. Direct-S3 completion after a manager remount is silently dropped `[liveview]`
 
@@ -600,29 +606,27 @@ object in the bucket with no `File` row, no log, and no reaper — videos have
       topic returns `:ok` silently. Both sides now log their topic (`UploadManager: delivering asset
       #N to <topic>` / `Form: listening for asset delivery on <topic>`), which is what makes the
       repro conclusive and is worth keeping in production regardless of the fix
-- [x] Make `deliver_topic` stable across remount — **the client owns it now**, not the server.
-      `Brando.Form`'s hook keeps a topic in `sessionStorage` and replays it on every mount;
-      `handle_event("set_deliver_topic", …)` validates and resubscribes, dropping the mount-time
-      subscription so a form cannot accumulate one per remount. Deriving from entry identity alone
-      would have failed the mount comment's second constraint — `sessionStorage` is per-tab, which
-      answers it exactly, and `"new"` covers create forms
-- [x] **The key is scoped by ENTRY, not just by `el.id`** — this was nearly a repeat of C4. `el.id`
-      is `project_form-el` for *every* project, so a tab-wide topic keyed on it alone would have
-      handed project A's in-flight upload to project B's form: worse than losing it. Same scoping as
-      `BlockField`'s recovery key (`${entryId}:${el.id}`), and `data-entry-id` was added to the form
-      element to feed it
-- [x] Validate the claimed topic with **the same rule intake applies** — `AssetIntent`'s private
-      `deliver_topic/1` is now public `validate_deliver_topic/1` and both sides call it. A client
-      free to name any topic could otherwise subscribe its form to another form's deliveries, or to
-      an unrelated PubSub channel
-- [x] Test: `test/brando_admin/components/form/deliver_topic_test.exs`, 4 tests — adopts and
-      subscribes, drops the old subscription (asserted by broadcasting to it and refuting receipt),
-      no-op on re-claim, and six malformed topics all refused with the current topic kept
-- [x] **Verified in the browser (2026-08-05, devtools on the running e2e server).** Project 1 →
-      `form:a50aa0e4…`, project 2 → `form:3c0b7a58…`, back to project 1 → `form:a50aa0e4…`. Then a
-      forced server re-render (typing into `meta_title`) left the attribute unchanged — which is the
-      part that proves the **server** adopted the client's topic instead of patching its own back
-      over it. `sessionStorage` held one key per entry, as intended
+- [ ] Make `deliver_topic` stable across remount — **BUILT, THEN REVERTED (`6da10b844`).**
+      The client owned the topic in `sessionStorage` (per tab, per entry) and replayed it via
+      `pushEventTo('set_deliver_topic')`; the server validated and resubscribed. It verified
+      correctly in the browser — project 1 → `form:a50aa0e4…`, project 2 → `form:3c0b7a58…`, back
+      to project 1 → `form:a50aa0e4…` — **and still broke `block-multiuser-sync.spec.js:245`**
+      (a late joiner saw the seed content instead of the edit already made).
+      Bisected, one variable per run: full handshake → 1 failed; no `claimDeliverTopic()` → 9/9;
+      sticky `setAttribute` but no `pushEventTo` → 9/9. **The sticky DOM write is innocent; the
+      round trip is the cause.** Moving the claim to a non-rendered assign did NOT fix it, so the
+      re-render is not the whole story — handling *any* event on the Form LiveComponent during its
+      two-phase block mount (`blocks_ready?` is deferred by `send_update_after`) disturbs block
+      sync, and the mechanism is still unknown.
+      **Re-land it away from the Form's mount path** — most likely the sticky `UploadManager`
+      owning the entry→topic mapping, since it already survives navigation and has no block tree
+      to disturb. That is a design change, not a patch, and needs its own e2e pass.
+- [x] **Kept from the reverted work**, all harmless and useful when it is re-landed:
+      `data-entry-id` on the form element; `AssetIntent.validate_deliver_topic/1` made public
+      (the subscribe side must apply the same rule intake does); and **truncated topic logging** —
+      a topic is a bearer token, and logging it whole put a replayable credential into every log
+      aggregator. `test/brando_admin/components/form/deliver_topic_test.exs` was removed with the
+      handler it tested
 - [x] Add an ACK + bounded retry; surface an editor-visible error when delivery finally fails —
       **WON'T DO. The premise is wrong.** `docs/UPLOADER.md:176-178` states the contract this would
       be fighting: *"Delivery is orphan-safe: the asset record is always created and stored;
