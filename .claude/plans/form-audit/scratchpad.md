@@ -272,7 +272,13 @@ Committed on `next`, unit suite **1194 / 0**, format clean, credo at baseline:
 
 **e2e: 104 passed / 1 failed.**
 
-### OPEN — `tests/projects/projects.spec.js:4 "creates project"`
+### ✅ CLOSED — `tests/projects/projects.spec.js:4` (see "Phase 2 e2e resolution" at the end)
+
+The handoff below is kept as written, because its *process note* was right and its
+*three candidate call sites were all wrong*. Everything under "Narrowed candidates"
+chases a lost object; nothing was ever lost. Read the resolution section instead.
+
+### OPEN (as handed off) — `tests/projects/projects.spec.js:4 "creates project"`
 
 Line 123: uploads **two** images to `project_gallery`
 (`./fixtures/image2.jpg`, `./fixtures/image.jpg`), then expects two
@@ -329,3 +335,100 @@ most available story instead of measuring. First "that spec is flaky" (the plan
 says so — it reproduced 2/2). Then "it's the re-render" (survived one bisect,
 failed the full suite, and shipped a second regression). **The bisect narrowed
 the component, not the mechanism; I treated it as if it had done both.**
+
+## Phase 2 e2e resolution (2026-08-05) — `projects.spec.js`
+
+**Fixed.** One-line change in `Brando.Galleries`: `fresher?/2`'s timestamp comparison
+went from `== :gt` to `!= :lt`, i.e. a tie now keeps the previously-loaded copy.
+
+### What it actually was
+
+`updated_at` is `Ecto.Schema.timestamps()`' default `:naive_datetime` — **second
+precision**. Upload → Oban process → in-place refresh completes inside one second,
+so the refreshed `:processed` image and the changeset's `:unprocessed` snapshot of
+the same image compare **equal**. `merge_loaded_media/2` required a strict `:gt` to
+prefer the cached copy, so the refresh was discarded on the next `assign_value` —
+which the *second* upload's delivery triggers. `Thumb` then renders the spinner
+placeholder instead of an `<img>`, so one of two objects had no `img`.
+
+Nothing was ever lost: both objects were in the changeset, both carried loaded
+media. Only the **refresh** was lost.
+
+### Process, since the handoff's own note was about process
+
+1. **Causation first, and it paid.** Spec passes at `65e90b831`, fails on `next`.
+   Two runs, ~4 min. The handoff was right that this step had been skipped twice.
+2. **My first hypothesis was wrong and the probe killed it in one run.** I read the
+   `assign_new` → `merge_loaded_media` diff, saw `append_unique_media/2` skip an
+   already-present object, and concluded it was dropping the delivery's loaded
+   media. The probe showed both objects arriving *with* media. Cost: one e2e run,
+   because I probed instead of fixing.
+3. **The handoff's three candidate call sites were all wrong** — all three assume a
+   lost object (`append_unique_media`, `merge_loaded_media` dropping, `put_gallery_at`
+   not accumulating). The failing assertion (`.nth(1)` of `.gallery-object img`)
+   reads as "an object is missing" but is equally satisfied by "an object rendered
+   without an `<img>`". The post-failure DOM snapshot showed *two* figures with two
+   `img`s, which is what broke the framing: the second thumbnail was late, not absent.
+   *An assertion on a rendered child is not an assertion on the parent's existence.*
+4. **The run-1 pass the handoff called unexplained is explained**: it is a
+   second-boundary race. If the two uploads straddle a second tick, the timestamps
+   differ, `:gt` holds, and the refresh survives. Nothing to do with D2.
+
+### Lesson, in the shape the rest of this scratchpad uses
+
+Phase 0/1's insight was *"a value in `data` rather than `changes`"*. Phase 2's was
+*"library clients raise, they don't only return"*. This one is:
+
+> **A timestamp comparison is only as good as the timestamp's precision.** Ecto's
+> default `timestamps()` is second-granular, so any "is this copy newer?" test
+> between two writes in the same request is a coin flip. Tie-break deliberately,
+> toward whichever side is the one that actually receives updates.
+
+Worth a grep: any other `NaiveDateTime.compare(...) == :gt` deciding between two
+in-memory copies of the same row has the same latent bug.
+
+### The duplicate-primary-key warning — fixed, and I was wrong to shelve it
+
+I first reported `found duplicate primary keys for association/embed :gallery_objects`
+as "benign, needs its own scope", on the evidence that the spec passed including its
+reopen-after-save `toHaveCount(3)`. The user pushed back — correctly — that a passing
+test is not a diagnosis. Tracing it through Ecto showed it was worse than noise:
+
+- `gallery_at/3` reads the **applied** gallery, so unsaved objects sit in `data` with
+  `id: nil`.
+- `process_current/3` (`deps/ecto/lib/ecto/changeset/relation.ex:540`) keys `current`
+  by primary key. Every nil-id object keys on `[nil]`, so all but the last are
+  silently shadowed — that is what the warning reports.
+- `map_changes/9` → `pop_current/2` then matches each nil-id **param** against
+  whichever struct survived, and calls `Changeset.change(that_struct, params)`.
+  **Image A's params were being applied on top of image B's struct.**
+
+The rows came out right only because `slim_gallery_object/1` pins every writable
+field, so the mismatched base contributed nothing to the result. That is an accident
+of the param shape. Anything that ever slims a subset — or any `put_assoc` here that
+does not go through `slim_gallery_object/1` — turns it into real cross-contamination.
+
+Fix: `forget_unsaved_objects/1` in `put_gallery_at/4`. An unsaved object has no
+identity to match on, so it is dropped from the base and remains the plain insert it
+already is. Objects with a real id still match and still update.
+
+Two things worth carrying forward:
+
+1. **The other gallery writer was already safe, for the reason that explains the
+   bug.** `Input.GalleryObjects` puts onto the *entry changeset*, whose `data` holds
+   only persisted objects — unsaved ones live in `changes`. Only `put_gallery_at/4`
+   read an applied struct back in as its base. *`get_field` moves changes into data;
+   anything that then treats that data as identity is suspect.*
+2. **`capture_log` asserts nothing here by default.** `config/test.exs` pins
+   `config :logger, level: :error`, which drops Ecto's warning at the primary filter
+   before any capture handler sees it. My first version of the log test passed against
+   the *broken* code. The structural assertion is the real one; the log assertion only
+   works with the level lowered for its duration.
+
+### Process note to go with the one already in the handoff above
+
+The handoff's own lesson was "I explained a failure from the most available story
+instead of measuring". I then did the adjacent version of it: I explained an anomaly
+away with the most available *reassurance* ("the test passes, so it is benign") and
+filed it as out of scope. Both are the same failure — accepting a story instead of
+reading the code. It cost one exchange because the user caught it.

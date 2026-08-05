@@ -505,21 +505,21 @@ that block.
 
 ## Phase 2 — Upload and delivery robustness
 
-> **STATUS: 7 of 8 findings shipped; D2 REVERTED; one e2e regression OPEN (2026-08-05).**
+> **STATUS: 7 of 8 findings shipped; D2 REVERTED; the e2e regression is FIXED (2026-08-05).**
 >
 > Shipped and verified: **D1, D3, D4, D5, D6, D7, D-dup**, plus all 15 findings from the
 > `/phx:review` pass (dispositions in `reviews/phase-2-review.md`).
 >
 > **Reverted: D2's stable-topic fix** (`6da10b844`) — it broke multi-user block sync. See D2 below.
 >
-> **Open: `tests/projects/projects.spec.js:4`** — two gallery uploads, only one object renders.
-> Reproduces in isolation. Evidence and the three candidate call sites are in `scratchpad.md`
-> under "HANDOFF". **Read that before touching the gallery code** — it records the contradictory
-> evidence too (it passed in the first full e2e run).
+> **Closed: `tests/projects/projects.spec.js:4`** — see **D5-tie** below. Causation was
+> established first this time (the step the handoff said had been skipped twice): the spec
+> **passes at `65e90b831`** and **fails on `next`**, so it was ours. Root cause measured, not
+> inferred — see D5-tie for the probe output.
 >
-> Gates: `mix test` **1194 pass / 0 fail**, `mix format --check-formatted` clean, `mix compile
+> Gates: `mix test` **1198 pass / 0 fail**, `mix format --check-formatted` clean, `mix compile
 > --warnings-as-errors` clean, `mix credo --strict` **identical to baseline in every category**
-> (2 / 118 / 152 / 12). **e2e: 104 passed / 1 failed.**
+> (2 / 118 / 152 / 12). **e2e: 105 passed / 0 failed.**
 >
 > **Three findings were wrong as written** — D6 assumed `video_block` knew the image id, D-dup
 > assumed `gallery_objects.ex` shared D4's bug, D7's "re-queues on every drawer close" was already
@@ -722,6 +722,60 @@ track the changeset, so it goes stale after any external mutation.
       (including "a removed object does not linger", which is the whole point) plus 2 component
       cases: an externally added object appears on the next update, and a slimmed object keeps the
       media the component had already loaded
+
+### D5-tie. `merge_loaded_media/2` discarded the refresh it was written to protect `[liveview]`
+
+**The open e2e failure handed off from the previous session.** `tests/projects/projects.spec.js:123`
+uploads two images to `project_gallery` and expects two `.gallery-object img`; only one rendered.
+
+- [x] Establish causation against `65e90b831` **before** assuming it was ours — spec **passes**
+      at the pre-Phase-2 commit, **fails on `next`** (both attempts, and in isolation). Confirmed
+      a Phase 2 regression. No asset or spec changes between the two commits, so the comparison is
+      clean
+- [x] Measure the mechanism rather than infer it — probes on all three writers. **My first
+      hypothesis (`append_unique_media/2` skipping the delivery's loaded media) was wrong**: both
+      objects reach the assign carrying their media. The probe:
+
+      update_image  id=3 status=processed          → after= 3:processed@21:19:29
+      assign_value  changeset= 3:unprocessed@21:19:29 | 4:unprocessed@21:19:29
+                    previous = 3:processed@21:19:29
+                    result   = 3:unprocessed@21:19:29 | 4:unprocessed@21:19:29   ← refresh gone
+      update_image  id=4 status=processed          → after= 3:unprocessed | 4:processed@21:19:30
+
+- [x] Root cause: **`updated_at` is second-precise.** `Ecto.Schema.timestamps()` defaults to
+      `:naive_datetime`, and upload → process → refresh completes well inside one second, so the
+      refreshed image and the changeset's snapshot of it compare **equal**. `fresher?/2` required a
+      strict `:gt`, so image 3's `:processed` refresh was thrown away the moment image 4 was
+      delivered. `Thumb` then renders the spinner placeholder instead of an `<img>` — the object was
+      never lost, only its *refresh*. Not a lost object, which is what the handoff's three candidate
+      call sites were all chasing
+- [x] Fix: the tie now keeps the **previously-loaded** copy (`!= :lt`). That is the only side that
+      receives in-place refreshes; a tie is no evidence the changeset snapshot is newer. The
+      property the old tie-break claimed to protect survives — when both sides hold the same media,
+      keeping the cached one writes back an equal term, so it still cannot churn the assign
+- [x] Test: `gallery_test.exs` — replaced *"equal timestamps keep the changeset's copy"*, which
+      pinned exactly this bug, with the second-precision case (verified failing against the old
+      `== :gt`) plus a no-churn case that keeps the old test's intent. **e2e spec now passes**
+- [x] **Found while verifying, and fixed — do not read "the test passes" as "this is fine".** The
+      passing run emitted `found duplicate primary keys for association/embed :gallery_objects`,
+      which the passing pre-Phase-2 run did not. Traced through Ecto rather than waved off:
+      `gallery_at/3` reads the **applied** gallery, so unsaved objects sit in `data` with `id: nil`;
+      `process_current/3` (`deps/ecto/lib/ecto/changeset/relation.ex:540`) keys that data by primary
+      key, and every nil-id object keys on `[nil]`, so all but the last shadow each other. Each
+      nil-id param is then matched against whichever object survived
+      (`map_changes/9` → `pop_current/2` → `Changeset.change(that_struct, params)`), i.e. **image A's
+      params were being applied on top of image B's struct.**
+      It came out right only because `slim_gallery_object/1` pins every writable field, so the
+      mismatched base contributed nothing — an accident of the param shape, not a guarantee. Fixed
+      by `forget_unsaved_objects/1`: an unsaved object has no identity to match on, so it is dropped
+      from the base and stays the plain insert it already is. Objects with a real id still match and
+      still update rather than duplicate
+- [x] Test: 3 tests in `gallery_test.exs`. Two fail pre-fix — one reproduces the warning verbatim,
+      one asserts each delivery builds on a blank struct (`data.image_id` nil) instead of a
+      sibling's. **The log assertion needed the test env's `config :logger, level: :error` lowered
+      for its duration, or it silently asserts nothing** — worth knowing for any future
+      `capture_log` here. The persisted-object case is the control. No unit-test schema owns a
+      migrated gallery FK, so the save round trip stays in e2e
 
 ### D6. Two pickers ignore current editing state `[liveview]`
 
