@@ -179,6 +179,77 @@ defmodule BrandoAdmin.Components.Form.Block.ChildDiffTest do
     assert saved.anchor == "z"
   end
 
+  # The case the hand-written ops_test fixture missed: relation diffs come out of
+  # `changes_to_params/1` as LISTS, so a merge that only recursed into maps
+  # replaced the whole ref list and dropped the earlier round's media pick.
+  # Derives its params from real changesets rather than asserting a shape.
+  test "media picked on two different refs of a child both survive", ctx do
+    %{entry_block: entry_block, user: user} = ctx
+
+    image_a = Factory.insert(:image, creator: user)
+    image_b = Factory.insert(:image, creator: user)
+
+    child =
+      %Brando.Content.Block{}
+      |> Changeset.change(%{
+        uid: "childRefs",
+        type: :module,
+        active: true,
+        source: "Elixir.Brando.Pages.Page.Blocks",
+        creator_id: user.id,
+        parent_id: entry_block.block.id,
+        sequence: 1
+      })
+      |> Changeset.put_assoc(:refs, [
+        %{name: "one", uid: "crefone001", description: "d1", sequence: 0},
+        %{name: "two", uid: "creftwo001", description: "d2", sequence: 1}
+      ])
+      |> Brando.Repo.insert!()
+      |> Brando.Repo.preload([:refs, :vars, :table_rows, :block_identifiers, :children])
+
+    [r1, r2] = Enum.sort_by(child.refs, & &1.name)
+
+    # round 1: pick an image on ref "one" (a programmatic commit_ref_data pick)
+    cs1 =
+      child
+      |> Changeset.change()
+      |> Changeset.put_assoc(:refs, [
+        Changeset.change(r1, %{image_id: image_a.id}),
+        Changeset.change(r2)
+      ])
+
+    op1 = {:update, "childRefs", Ops.block_diff_params(cs1)}
+
+    # round 2: pick an image on ref "two", rebased on the applied state exactly
+    # as the child validate clause does
+    applied = Changeset.apply_changes(cs1)
+    [a1, a2] = Enum.sort_by(applied.refs, & &1.name)
+
+    cs2 =
+      applied
+      |> Changeset.change()
+      |> Changeset.put_assoc(:refs, [Changeset.change(a1), Changeset.change(a2, %{image_id: image_b.id})])
+
+    op2 = {:update, "childRefs", Ops.block_diff_params(cs2)}
+
+    ops =
+      Ops.new([])
+      |> apply_op!({:insert, "containerX", 0, %{"block" => %{"uid" => "containerX"}}})
+      |> apply_op!({:insert_child, "containerX", "childRefs", 0, %{"uid" => "childRefs"}})
+      |> apply_op!(op1)
+      |> apply_op!(op2)
+
+    stored_ids =
+      ops.diffs["childRefs"]["refs"]
+      |> Enum.map(&{&1["id"], &1["image_id"]})
+      |> Map.new()
+
+    assert stored_ids[r1.id] == image_a.id,
+           "the first ref's image must not be dropped by the second round's diff"
+
+    assert stored_ids[r2.id] == image_b.id
+  end
+
   defp preloaded_entry_blocks(page_id) do
     import Ecto.Query
 

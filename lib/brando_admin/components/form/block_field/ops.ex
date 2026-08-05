@@ -729,7 +729,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
     block_params =
       if Keyword.get(opts, :merge?, false) do
-        deep_merge_params(stored_block_params(state, uid, shape), block_params)
+        deep_merge_params(stored_block_params(state, uid), block_params)
       else
         block_params
       end
@@ -739,13 +739,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     register_children_params(state, uid, children_params)
   end
 
-  defp stored_block_params(state, uid, shape) do
-    case {Map.get(state.diffs, uid), shape} do
-      {nil, _} -> %{}
-      {stored, :entry_block} -> Map.get(stored, "block", %{})
-      {stored, :block} -> stored
-    end
-  end
+  # Only ever called for `:block` (merging is child-only — see below), so the
+  # stored diff is already block-shaped and needs no unwrapping.
+  defp stored_block_params(state, uid), do: Map.get(state.diffs, uid, %{})
 
   # A child block's `validate_block` clause rebases on `apply_changes/1`, so the
   # diff it emits is a DELTA since the previous validate — not a cumulative diff
@@ -759,14 +755,59 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # to its stored value emits no change at all, so the stale value would be
   # resurrected from the previous diff.
   #
-  # Maps merge recursively (a later diff touching ref 1 must not wipe an earlier
-  # one touching ref 0); lists are replaced wholesale, since they are
-  # order-bearing and a partial list has no meaning here.
+  # Maps merge recursively. Relation lists (refs/vars/table_rows) merge ELEMENTWISE
+  # BY IDENTITY, which is the case that matters most and the one that is easy to
+  # get wrong: `changes_to_params/1` emits nested relations as LISTS, not
+  # index-keyed maps (`change_value/1` on a list), so a naive "maps recurse,
+  # everything else replaces" merge silently drops the earlier round's edits for
+  # exactly the fields most likely to hold programmatic state. Pick an image on
+  # ref A, then on ref B, and A's image would be gone before it reached SQL.
+  #
+  # Identity is `"id"` for persisted rows and `"uid"` for unsaved ones.
+  #
+  # The NEW list alone defines membership; the old one only contributes field
+  # history for rows that appear in both. That asymmetry is deliberate and the
+  # subtle part: when a relation key is present at all, its list is COMPLETE —
+  # `change_value/1` maps every element — and a row the user deleted is dropped
+  # from it (`:replace`/`:delete` changesets become `:drop`). Carrying old-only
+  # rows over would therefore resurrect deleted refs, which is the same class of
+  # bug in the opposite direction. A row with no identity on either side can't be
+  # correlated, so it is taken from the new list as-is.
   defp deep_merge_params(old, new) when is_map(old) and is_map(new) do
     Map.merge(old, new, fn _key, old_value, new_value -> deep_merge_params(old_value, new_value) end)
   end
 
+  defp deep_merge_params(old, new) when is_list(old) and is_list(new) do
+    old_by_identity =
+      old
+      |> Enum.filter(&is_map/1)
+      |> Enum.reduce(%{}, fn element, acc ->
+        case relation_identity(element) do
+          nil -> acc
+          identity -> Map.put(acc, identity, element)
+        end
+      end)
+
+    Enum.map(new, fn element ->
+      with true <- is_map(element),
+           identity when not is_nil(identity) <- relation_identity(element),
+           stored when not is_nil(stored) <- Map.get(old_by_identity, identity) do
+        deep_merge_params(stored, element)
+      else
+        _ -> element
+      end
+    end)
+  end
+
   defp deep_merge_params(_old, new), do: new
+
+  defp relation_identity(element) when is_map(element) do
+    case {Map.get(element, "id"), Map.get(element, "uid")} do
+      {id, _} when id not in [nil, ""] -> {:id, to_string(id)}
+      {_, uid} when uid not in [nil, ""] -> {:uid, to_string(uid)}
+      _ -> nil
+    end
+  end
 
   defp pop_children(params) when is_map(params) do
     case Map.pop(params, "children") do
@@ -797,9 +838,12 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   defp change_value(%Changeset{action: action}) when action in [:replace, :delete], do: :drop
 
-  # embedded-schema changesets (no __meta__, e.g. polymorphic ref data) can't
-  # be partially cast by id-matching — snapshot their full applied state
+  # A real schema changeset (has __meta__) can be partially cast by id-matching,
+  # so ship only its changes plus the pk to match on.
   defp change_value(%Changeset{data: %{__meta__: _}} = cs), do: cs |> changes_to_params() |> put_data_pk(cs)
+
+  # Embedded-schema changesets (no __meta__, e.g. polymorphic ref data) have no
+  # pk to match on — snapshot their full applied state instead.
   defp change_value(%Changeset{} = cs), do: snapshot_params(cs)
 
   defp change_value(list) when is_list(list) do

@@ -85,24 +85,57 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       assert state.diffs["c"]["description"] == "xyz"
     end
 
+    # `changes_to_params/1` emits nested relations as LISTS, not index-keyed maps.
+    # An earlier version of this test hand-wrote `%{"refs" => %{"0" => ...}}` — a
+    # shape the real code never produces — and so passed against a merge that
+    # actually replaced ref lists wholesale. Use the real emitter.
     test "CHILD merge is deep — a diff touching one ref keeps the other" do
+      round1 = %{"refs" => [%{"id" => "11", "image_id" => 1}, %{"id" => "22"}]}
+      round2 = %{"refs" => [%{"id" => "11"}, %{"id" => "22", "image_id" => 2}]}
+
       state =
         Ops.new(["p"])
         |> apply!({:insert_child, "p", "c", 0, %{"uid" => "c"}})
-        |> apply!({:update, "c", %{"refs" => %{"0" => %{"image_id" => 1}}}})
-        |> apply!({:update, "c", %{"refs" => %{"1" => %{"image_id" => 2}}}})
+        |> apply!({:update, "c", round1})
+        |> apply!({:update, "c", round2})
 
-      assert state.diffs["c"]["refs"] == %{"0" => %{"image_id" => 1}, "1" => %{"image_id" => 2}}
+      assert [%{"id" => "11", "image_id" => 1}, %{"id" => "22", "image_id" => 2}] =
+               state.diffs["c"]["refs"]
     end
 
-    test "CHILD merge replaces lists wholesale rather than zipping them" do
+    test "CHILD merge correlates unsaved relation rows by uid" do
       state =
         Ops.new(["p"])
         |> apply!({:insert_child, "p", "c", 0, %{"uid" => "c"}})
-        |> apply!({:update, "c", %{"table_rows" => [%{"a" => 1}, %{"b" => 2}]}})
-        |> apply!({:update, "c", %{"table_rows" => [%{"c" => 3}]}})
+        |> apply!({:update, "c", %{"vars" => [%{"uid" => "v1", "value" => "a"}]}})
+        |> apply!({:update, "c", %{"vars" => [%{"uid" => "v1", "label" => "L"}]}})
 
-      assert state.diffs["c"]["table_rows"] == [%{"c" => 3}]
+      assert [%{"uid" => "v1", "value" => "a", "label" => "L"}] = state.diffs["c"]["vars"]
+    end
+
+    # The NEW list defines membership. `change_value/1` drops :replace/:delete
+    # changesets, so a row missing from the newer diff was DELETED — carrying it
+    # over from the stored diff would resurrect it, which is this bug's mirror.
+    test "CHILD merge does not resurrect a relation row the newer diff dropped" do
+      state =
+        Ops.new(["p"])
+        |> apply!({:insert_child, "p", "c", 0, %{"uid" => "c"}})
+        |> apply!({:update, "c", %{"refs" => [%{"id" => "11", "image_id" => 1}, %{"id" => "22"}]}})
+        |> apply!({:update, "c", %{"refs" => [%{"id" => "22", "image_id" => 2}]}})
+
+      refs = state.diffs["c"]["refs"]
+      assert [%{"id" => "22", "image_id" => 2}] = refs
+      refute Enum.any?(refs, &(&1["id"] == "11"))
+    end
+
+    test "CHILD merge takes identity-less rows from the newer list as-is" do
+      state =
+        Ops.new(["p"])
+        |> apply!({:insert_child, "p", "c", 0, %{"uid" => "c"}})
+        |> apply!({:update, "c", %{"table_rows" => [%{"a" => 1}]}})
+        |> apply!({:update, "c", %{"table_rows" => [%{"b" => 2}]}})
+
+      assert state.diffs["c"]["table_rows"] == [%{"b" => 2}]
     end
 
     test "does not change status" do

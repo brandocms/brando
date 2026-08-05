@@ -270,12 +270,33 @@ defmodule Brando.Content.Block do
     |> cast(attrs, @var_attrs)
     |> cast_embed(:options)
     |> change(sequence: position)
+    |> validate_media_fks()
   end
 
   def var_changeset(var, attrs, _user) do
     var
     |> cast(attrs, @var_attrs)
     |> cast_embed(:options)
+    |> validate_media_fks()
+  end
+
+  # These FKs are castable from params — a var's whole cast surface round-trips
+  # through hidden inputs while its editing UI is unrendered (`carried_var/1`),
+  # and refs carry theirs so a picker selection survives. Without a declared
+  # constraint, a stale or hand-edited id raises `Ecto.ConstraintError` out of
+  # the repo instead of returning an invalid changeset — which in the editor
+  # means the LiveView dies and takes every unsaved change with it. That is the
+  # same crash-loses-your-work failure this audit's A2 fixed.
+  @media_fks [:image_id, :video_id, :file_id, :gallery_id]
+
+  defp validate_media_fks(changeset) do
+    Enum.reduce(@media_fks, changeset, fn fk, acc ->
+      if fk in acc.data.__struct__.__schema__(:fields) do
+        foreign_key_constraint(acc, fk)
+      else
+        acc
+      end
+    end)
   end
 
   def ref_changeset(ref, attrs, user) do
@@ -298,6 +319,7 @@ defmodule Brando.Content.Block do
       :gallery_id
     ])
     |> unique_constraint(:uid)
+    |> validate_media_fks()
     |> PolymorphicEmbed.cast_polymorphic_embed(:data)
     |> cast_assoc(:gallery, with: &Brando.Galleries.Gallery.changeset(&1, &2, user))
   end

@@ -136,23 +136,12 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
     {:noreply, push_event(socket, "b:validate:#{event_id}", %{})}
   end
 
+  # Was reading `socket.assigns.form.source`, but this component is rendered by
+  # `fieldset/field.ex` with a `field=` prop and no `form=` — so that assign does
+  # not exist and every drag-reorder raised KeyError, killing the LiveView. The
+  # shared helper reads `field.form.source`, which is what the sibling handlers
+  # here already use.
   def handle_event("sequenced_subform", %{"ids" => order_indices}, socket) do
-    field_name = socket.assigns.subform.name
-    changeset = socket.assigns.form.source
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
-
-    entries = SubformHelpers.current_entries(changeset, field_name)
-    sorted_entries = Enum.map(order_indices, &Enum.at(entries, &1))
-
-    updated_changeset = SubformHelpers.put_entries(changeset, field_name, sorted_entries)
-
-    send_update(BrandoAdmin.Components.Form,
-      id: form_id,
-      action: :update_changeset,
-      changeset: updated_changeset
-    )
-
-    {:noreply, socket}
+    SubformHelpers.sequenced_subform(socket, order_indices)
   end
 end

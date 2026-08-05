@@ -264,13 +264,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         %{event: "insert_extracted_child", target_parent_uid: target_uid, child_uid: uid, sequence: seq},
         socket
       ) do
-    case Ops.materialize_child(socket.assigns.block_ops, uid) do
-      {:ok, params} ->
-        cs =
-          socket
-          |> child_base_struct(uid)
-          |> Brando.Content.Block.recursive_block_changeset(params, socket.assigns.current_user.id)
-
+    # `outline_reposition` already proved this materializes before it told the
+    # source parent to let go, so a failure here means the store changed
+    # underneath us. The source has by now dropped the child from its own
+    # `block_list`, and `rebuild_outline_items/1` only reflects the canonical
+    # store — so simply returning would leave the block invisible on the canvas
+    # while still alive server-side. Reload instead: the store is authoritative
+    # and re-mounting the roots from it restores a consistent view.
+    case build_child_changeset(socket, uid) do
+      {:ok, cs} ->
         send_update(Block,
           id: "block-#{target_uid}",
           event: "insert_pasted_block",
@@ -284,11 +286,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         require Logger
 
         Logger.error("""
-        [BlockField] cross-parent move of #{inspect(uid)} aborted: #{inspect(reason)}.
-        The block stays under its original parent.
+        [BlockField] cross-parent move of #{inspect(uid)} failed AFTER the source parent \
+        released it: #{inspect(reason)}. Reloading blocks from the op store to avoid \
+        stranding it off-canvas.
         """)
 
-        {:ok, rebuild_outline_items(socket)}
+        {:ok, socket |> reload_all_blocks() |> rebuild_outline_items()}
     end
   end
 
@@ -698,6 +701,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # The changeset base for materializing a root block: its persisted entry
   # block when it exists, otherwise a fresh struct with an empty (loaded)
   # block so cast_assoc has something to cast against.
+  # Rebuild a child's changeset from the op store — the only holder of its
+  # current content once its own component has been destroyed by a move.
+  defp build_child_changeset(socket, uid) do
+    with {:ok, params} <- Ops.materialize_child(socket.assigns.block_ops, uid) do
+      {:ok,
+       socket
+       |> child_base_struct(uid)
+       |> Brando.Content.Block.recursive_block_changeset(params, socket.assigns.current_user.id)}
+    end
+  end
+
   # The persisted row a moved child should cast over, so `cast_assoc` matches
   # existing ids instead of inserting duplicates. Children live anywhere in the
   # tree, hence the walk; an unsaved child has no row and gets a fresh base.
@@ -1140,14 +1154,31 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         new: new_idx
       )
     else
-      # Cross-parent: extract from source, insert into target
-      send_update(Block,
-        id: "block-#{from_parent_uid}",
-        event: "extract_child",
-        child_uid: uid,
-        target_parent_uid: to_parent_uid,
-        target_sequence: new_idx
-      )
+      # Cross-parent: extract from source, insert into target.
+      #
+      # Pre-flight the rebuild BEFORE telling the source to release the child.
+      # `extract_child` drops it from the source's `block_list`/`changesets`
+      # unconditionally, so discovering a problem afterwards leaves the block
+      # off-canvas with no rollback path. Failing here instead is a clean no-op:
+      # nothing has moved yet.
+      case build_child_changeset(socket, uid) do
+        {:ok, _cs} ->
+          send_update(Block,
+            id: "block-#{from_parent_uid}",
+            event: "extract_child",
+            child_uid: uid,
+            target_parent_uid: to_parent_uid,
+            target_sequence: new_idx
+          )
+
+        {:error, reason} ->
+          require Logger
+
+          Logger.error("""
+          [BlockField] refusing cross-parent move of #{inspect(uid)}: #{inspect(reason)}. \
+          The block stays under its original parent.
+          """)
+      end
     end
 
     {:noreply, rebuild_outline_items(socket)}

@@ -160,6 +160,86 @@ defmodule Brando.Content.BlockMediaAttrsTest do
     end
   end
 
+  describe "media FK constraints" do
+    # These FKs are client-castable (a var's whole cast surface round-trips
+    # through hidden inputs while its editing UI is unrendered). Without a
+    # declared constraint a stale id raises Ecto.ConstraintError out of the repo,
+    # which in the editor kills the LiveView and every unsaved change with it.
+    for {kind, key} <- [{"var", :video_id}, {"var", :gallery_id}, {"var", :image_id}, {"var", :file_id}] do
+      test "a dangling #{key} on a #{kind} is an invalid changeset, not a raise", ctx do
+        %{page: page, user: user} = ctx
+        key = unquote(key)
+
+        params =
+          var_params("bad", :string, %{to_string(key) => 999_999_999})
+
+        assert {:error, changeset} =
+                 save_block_expecting_error(page, user, %{"vars" => %{"0" => params}})
+
+        assert key in error_fields(changeset),
+               "expected a #{key} constraint error, got: #{inspect(error_fields(changeset))}"
+      end
+    end
+
+    test "a dangling gallery_id on a ref is an invalid changeset, not a raise", ctx do
+      %{page: page, user: user} = ctx
+      params = ref_params("bad", %{"gallery_id" => 999_999_999})
+
+      assert {:error, changeset} =
+               save_block_expecting_error(page, user, %{"refs" => %{"0" => params}})
+
+      assert :gallery_id in error_fields(changeset)
+    end
+
+    # The fields carrying errors, however deeply nested under entry_blocks →
+    # block → vars/refs. A key whose value holds no further errors is a leaf.
+    defp error_fields(%Ecto.Changeset{} = changeset) do
+      changeset |> Ecto.Changeset.traverse_errors(& &1) |> error_fields()
+    end
+
+    defp error_fields(errors) when is_map(errors) do
+      Enum.flat_map(errors, fn {key, value} ->
+        case error_fields(value) do
+          [] -> [key]
+          nested -> nested
+        end
+      end)
+    end
+
+    defp error_fields(errors) when is_list(errors), do: Enum.flat_map(errors, &error_fields/1)
+    defp error_fields(_leaf), do: []
+
+    defp save_block_expecting_error(page, user, block_params) do
+      params =
+        Map.merge(
+          %{
+            "uid" => "badfkblock",
+            "type" => "module",
+            "active" => true,
+            "source" => "Elixir.Brando.Pages.Page.Blocks",
+            "creator_id" => user.id
+          },
+          block_params
+        )
+
+      entry_block_cs =
+        %Brando.Pages.Page.Blocks{}
+        |> Map.put(:block, %Block{vars: [], refs: [], table_rows: [], children: [], block_identifiers: []})
+        |> Brando.Pages.Page.Blocks.changeset(
+          %{"entry_id" => page.id, "sequence" => 0, "block" => params},
+          user.id,
+          true
+        )
+        |> Brando.Utils.set_action()
+
+      page
+      |> Brando.Repo.preload(:entry_blocks)
+      |> Changeset.change()
+      |> Changeset.put_assoc(:entry_blocks, [entry_block_cs])
+      |> Brando.Repo.update()
+    end
+  end
+
   defp var_params(key, type, extra) do
     Map.merge(
       %{"type" => to_string(type), "key" => key, "label" => key, "placement" => "content", "width" => "full"},

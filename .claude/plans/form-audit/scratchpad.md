@@ -133,3 +133,5 @@ nothing is deleted. The bug needs at least one ref outside the logic and one ins
 - D2 — mid-upload reconnect ack/retry semantics were never verified. Measure before designing.
 - `polymorphic_embed`'s `cast/1` behaviour with raw changesets (`vars.ex:118`, `link.ex:69`,
   `subform_helpers.ex:18,39`). Three consistent sites suggests intentional; unverified.
+
+### [13:01] WARN: liveview-architect stopped mid-investigation without writing reviews/liveview.md (turn exhaustion, ~20 tool uses). Resuming the agent to have it write findings; if that fails, the LiveView angle of this review is UNCOVERED and must not be reported as clean.

@@ -115,6 +115,28 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpersTest do
     assert persisted_values(updated)["one"] == "PENDING"
   end
 
+  # `PageVars` is rendered by `fieldset/field.ex` with a `field=` prop and no
+  # `form=`, so a handler reading `socket.assigns.form` raises KeyError and takes
+  # the LiveView down. Every subform handler must read through `:field`.
+  test "subform handlers read the changeset from :field, never :form", %{block: block} do
+    socket =
+      %Phoenix.LiveView.Socket{}
+      |> Phoenix.Component.assign(:field, Phoenix.Component.to_form(Changeset.change(block), as: "block")[:vars])
+      |> Phoenix.Component.assign(:subform, %{name: :vars})
+
+    refute Map.has_key?(socket.assigns, :form),
+           "fixture must mirror the real component, which has no :form assign"
+
+    assert {:noreply, _} = SubformHelpers.sequenced_subform(socket, [1, 0])
+    assert {:noreply, _} = SubformHelpers.remove_subentry(socket, "0")
+
+    assert {:noreply, _} =
+             SubformHelpers.append_subentries(
+               socket,
+               Changeset.change(%Var{type: :string, key: "n", label: "N", placement: :content})
+             )
+  end
+
   test "the old get_field/put_change path is what loses the edit", %{pending: pending} do
     # documents the exact defect, so a regression is unambiguous
     entries = Changeset.get_field(pending, :vars)
