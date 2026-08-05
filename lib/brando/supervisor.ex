@@ -66,7 +66,9 @@ defmodule Brando.Supervisor do
                # Purge inactive/unprotected revisions older than 14 days
                {"0 4 * * *", Brando.Worker.RevisionPurger},
                # Mark video rows stuck in :uploading as errored (abandoned external uploads)
-               {"30 4 * * *", Brando.Worker.VideoUploadReaper}
+               {"30 4 * * *", Brando.Worker.VideoUploadReaper},
+               # Delete bucket objects of client-direct uploads that never finalized
+               {"45 4 * * *", Brando.Worker.UploadIntentReaper}
              ] ++ extra_oban_cron_jobs(),
            timezone: "Etc/UTC"},
           {Oban.Plugins.Pruner, max_age: 300},

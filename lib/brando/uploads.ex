@@ -29,6 +29,9 @@ defmodule Brando.Uploads do
 
   use Gettext, backend: Brando.Gettext
 
+  import Ecto.Query, only: [from: 2]
+
+  alias Brando.Uploads.PendingIntent
   alias Brando.Utils
 
   require Logger
@@ -144,6 +147,102 @@ defmodule Brando.Uploads do
     {:error, message} = Brando.Upload.handle_upload_error(error)
     message
   end
+
+  @doc """
+  Record an authorized client-direct upload so it can be finalized even if the
+  upload manager's process does not survive the transfer.
+
+  Called at intake, right after presigning. See `Brando.Uploads.PendingIntent`
+  for why the manager's in-memory item is not enough on its own.
+  """
+  def create_pending_intent(attrs) do
+    attrs
+    |> PendingIntent.changeset()
+    |> Brando.Repo.repo().insert()
+  end
+
+  @doc """
+  Fetch an authorized client-direct upload by the manager's item ref.
+
+  Returns `nil` for an unknown or malformed ref — a `direct_complete` carries a
+  client-supplied ref, so this must not raise on garbage.
+  """
+  def get_pending_intent(ref) when is_binary(ref) do
+    case Ecto.UUID.cast(ref) do
+      {:ok, ref} -> Brando.Repo.repo().get_by(PendingIntent, ref: ref)
+      :error -> nil
+    end
+  end
+
+  def get_pending_intent(_ref), do: nil
+
+  @doc """
+  Forget an authorized client-direct upload.
+
+  Called once it has been finalized, cancelled, or failed — after which the
+  object either has an asset row pointing at it or is the reaper's problem.
+  """
+  def delete_pending_intent(%PendingIntent{} = intent) do
+    Brando.Repo.repo().delete(intent)
+  end
+
+  def delete_pending_intent(ref) do
+    case get_pending_intent(ref) do
+      nil -> {:ok, :not_found}
+      intent -> delete_pending_intent(intent)
+    end
+  end
+
+  @doc """
+  Authorized client-direct uploads older than `hours` that were never finalized.
+
+  Used by `Brando.Worker.UploadIntentReaper`. The cutoff has to clear the
+  presigned URL's own lifetime (#{@presign_expiry_seconds}s) by a wide margin,
+  or a transfer that is merely slow gets reaped out from under itself.
+  """
+  def list_stale_pending_intents(hours) when is_integer(hours) do
+    cutoff = NaiveDateTime.add(NaiveDateTime.utc_now(), -hours * 3600, :second)
+
+    Brando.Repo.all(from i in PendingIntent, where: i.inserted_at < ^cutoff)
+  end
+
+  @doc """
+  Remove the bucket object behind an abandoned client-direct upload.
+
+  Resolves the same CDN config the presign used, so the object is deleted from
+  the bucket it was actually written to. Returns `:ok` or `{:error, reason}` —
+  a missing key is `:ok`, since S3 `DELETE` is idempotent and the transfer may
+  have died before its first byte.
+  """
+  def delete_direct_object(asset_type, resolved_target, key) do
+    with {:ok, cdn_config} <- direct_cdn_config(asset_type, resolved_target) do
+      case Brando.CDN.delete_object(key, %{cdn: cdn_config}) do
+        {:ok, _response} -> :ok
+        {:error, reason} -> {:error, reason}
+      end
+    end
+  rescue
+    # `get_s3_config/2` raises when a site references a config that has since
+    # been removed. A nightly sweep must not die on one misconfigured target.
+    exception -> {:error, Exception.message(exception)}
+  end
+
+  defp direct_cdn_config(:file, resolved_target) do
+    {cfg, _} = resolve_file_config(resolved_target)
+    {:ok, file_cdn_config(cfg)}
+  end
+
+  defp direct_cdn_config(:video, resolved_target) do
+    {cfg, _} = resolve_video_config(resolved_target)
+
+    case video_cdn_config(cfg) do
+      nil -> {:error, "no video CDN config for #{resolved_target}"}
+      cdn_config -> {:ok, cdn_config}
+    end
+  end
+
+  defp direct_cdn_config(asset_type, _resolved_target),
+    do: {:error, "#{asset_type} has no client-direct transport"}
 
   @doc """
   Create the asset record for a completed client-direct upload.

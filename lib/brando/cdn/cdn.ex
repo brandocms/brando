@@ -400,6 +400,25 @@ defmodule Brando.CDN do
   end
 
   @doc """
+  Delete an object from the field's bucket.
+
+  Used to reap the objects of client-direct uploads that never finalized
+  (`Brando.Worker.UploadIntentReaper`) — those have no asset row, so no
+  row-driven cleanup path can ever reach them.
+
+  S3 `DELETE` is idempotent: removing a key that was never written succeeds.
+  """
+  def delete_object(object_key, field_cfg) do
+    s3_config = get_s3_config(field_cfg, as: :keyword_list)
+    cdn_config = Map.get(field_cfg, :cdn)
+    bucket = cdn_config.bucket
+
+    bucket
+    |> ExAws.S3.delete_object(object_key)
+    |> ExAws.request(s3_config)
+  end
+
+  @doc """
   Check if we use CDN for the module
   """
   @spec enabled?(module) :: boolean

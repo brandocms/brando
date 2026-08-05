@@ -117,22 +117,10 @@ defmodule BrandoAdmin.UploadManager do
       %{transport: :direct, status: :done} ->
         {:noreply, socket}
 
-      %{transport: :direct, direct: direct} = item ->
-        finalize_params =
-          maybe_put_folder_id(
-            %{
-              key: direct.key,
-              resolved_target: direct.resolved_target,
-              title: item.filename,
-              mime_type: direct.mime_type,
-              filesize: item.size
-            },
-            item.target["folder_id"]
-          )
-
-        case Uploads.finalize_direct(item.asset_type, finalize_params, user) do
+      %{transport: :direct} = item ->
+        case finalize_item(item, user) do
           {:ok, asset} ->
-            deliver(item, asset)
+            Uploads.delete_pending_intent(ref)
             Process.send_after(self(), {:auto_dismiss_item, ref}, @auto_dismiss_ms)
 
             {:noreply, update_item(socket, ref, %{status: :done, progress: 100, asset_id: asset.id})}
@@ -142,7 +130,25 @@ defmodule BrandoAdmin.UploadManager do
             {:noreply, update_item(socket, ref, %{status: :error, error: format_error(reason)})}
         end
 
-      _ ->
+      # No item under this ref: this process was not the one that authorized the
+      # upload. `mount/1` hard-assigns `items: %{}`, so a manager that remounted
+      # mid-transfer (reconnect, or navigation that rebuilt the Chrome) has no
+      # memory of it — while the bytes ARE already in the bucket. This used to
+      # be a silent no-op, leaving an object with no asset row.
+      #
+      # The intent recorded at presign carries everything finalize needs, so
+      # recover from it. There is no drawer row to update — that UI died with
+      # the old process — but the asset lands in the library either way, which
+      # is the same orphan-safe contract delivery already has.
+      nil ->
+        {:noreply, finalize_orphaned_complete(socket, ref, user)}
+
+      item ->
+        Logger.error(
+          "==> UploadManager: direct_complete for ref #{inspect(ref)} with " <>
+            "transport #{inspect(item.transport)}, expected :direct — ignoring."
+        )
+
         {:noreply, socket}
     end
   end
@@ -150,6 +156,13 @@ defmodule BrandoAdmin.UploadManager do
   def handle_event("direct_error", %{"ref" => ref} = params, socket) do
     message = Map.get(params, "message", "Upload failed")
     Logger.error("==> UploadManager: direct upload failed: #{message}")
+
+    # The transfer will not complete, so the intent has nothing left to recover.
+    # Any partial object in the bucket is the reaper's to clean up — dropping
+    # the intent here only stops a later forged `direct_complete` from
+    # finalizing a half-written object.
+    Uploads.delete_pending_intent(ref)
+
     {:noreply, update_item(socket, ref, %{status: :error, error: message})}
   end
 
@@ -215,6 +228,8 @@ defmodule BrandoAdmin.UploadManager do
     socket =
       case Map.get(socket.assigns.items, ref) do
         %{transport: :direct} ->
+          # A cancelled transfer must not stay finalizable — see direct_error.
+          Uploads.delete_pending_intent(ref)
           # the hook aborts the in-flight XHR (and frees the transfer slot)
           push_event(socket, "b:uploads:cancel", %{ref: ref})
 
@@ -283,6 +298,10 @@ defmodule BrandoAdmin.UploadManager do
                   mime_type: mime_type
                 }
               )
+
+            # ...and are also written down, because this process may not be here
+            # when the browser reports back (see `Uploads.PendingIntent`).
+            record_pending_intent(item, direct, mime_type, user)
 
             {%{
                index: index,
@@ -423,9 +442,132 @@ defmodule BrandoAdmin.UploadManager do
     end
   end
 
+  defp record_pending_intent(item, direct, mime_type, user) do
+    attrs = %{
+      ref: item.ref,
+      key: direct.key,
+      resolved_target: direct.resolved_target,
+      asset_type: item.asset_type,
+      mime_type: mime_type,
+      filename: item.filename,
+      filesize: item.size,
+      target: item.target,
+      creator_id: user && user.id
+    }
+
+    case Uploads.create_pending_intent(attrs) do
+      {:ok, _intent} ->
+        :ok
+
+      {:error, changeset} ->
+        # Non-fatal: the in-process item still finalizes normally. What is lost
+        # is only the ability to recover this one upload across a remount, and
+        # failing intake over it would be a worse trade.
+        Logger.error("==> UploadManager: could not record pending intent: #{inspect(changeset.errors)}")
+
+        :ok
+    end
+  end
+
+  # One finalize for both paths, so a recovered completion cannot drift from an
+  # in-process one. Everything it reads is server-side: the key and target come
+  # from intake, never from the completion event.
+  defp finalize_item(item, user) do
+    finalize_params =
+      maybe_put_folder_id(
+        %{
+          key: item.direct.key,
+          resolved_target: item.direct.resolved_target,
+          title: item.filename,
+          mime_type: item.direct.mime_type,
+          filesize: item.size
+        },
+        item.target["folder_id"]
+      )
+
+    with {:ok, asset} <- Uploads.finalize_direct(item.asset_type, finalize_params, user) do
+      deliver(item, asset)
+      {:ok, asset}
+    end
+  rescue
+    # `Brando.CDN.get_s3_config/2` raises outright when a target's CDN config
+    # has gone missing or malformed — and this runs in the STICKY manager, so
+    # an exception here takes every other in-flight upload down with it. The
+    # module's catch-all `handle_event/3` exists for exactly this reason; the
+    # finalize path has to honour it too.
+    exception ->
+      Logger.error(
+        "==> UploadManager: finalize raised for #{inspect(item.direct.key)}: " <>
+          Exception.format(:error, exception, __STACKTRACE__)
+      )
+
+      {:error, Exception.message(exception)}
+  end
+
+  defp finalize_orphaned_complete(socket, ref, user) do
+    case Uploads.get_pending_intent(ref) do
+      nil ->
+        # Either a forged/stale ref, or an intent the reaper already swept. Both
+        # are safe to ignore: nothing was authorized under this ref that we still
+        # believe in, and finalize would have nothing trustworthy to work from.
+        Logger.warning("==> UploadManager: direct_complete for unknown ref #{inspect(ref)} — no pending intent")
+
+        socket
+
+      intent ->
+        Logger.info(
+          "==> UploadManager: recovering direct_complete for ref #{inspect(ref)} " <>
+            "from its pending intent — the authorizing manager is gone"
+        )
+
+        case finalize_item(item_from_intent(intent), user) do
+          {:ok, asset} ->
+            Uploads.delete_pending_intent(intent)
+            Logger.info("==> UploadManager: recovered upload as asset ##{asset.id}")
+
+            socket
+
+          {:error, reason} ->
+            # Keep the intent: the object may still be there, and the reaper is
+            # the one allowed to decide it is abandoned.
+            Logger.error("==> UploadManager: recovering direct_complete failed: #{inspect(reason)}")
+
+            socket
+        end
+    end
+  end
+
+  # The persisted intent rehydrated into the same shape `finalize_item/2` reads
+  # off a live item.
+  defp item_from_intent(intent) do
+    %{
+      ref: intent.ref,
+      filename: intent.filename,
+      size: intent.filesize,
+      asset_type: intent.asset_type,
+      transport: :direct,
+      direct: %{
+        key: intent.key,
+        resolved_target: intent.resolved_target,
+        mime_type: intent.mime_type
+      },
+      target: intent.target || %{}
+    }
+  end
+
   # Delivery is best-effort and orphan-safe: the asset is already persisted;
   # broadcasting to a topic nobody subscribes to is a no-op.
+  #
+  # Which is also the problem, and why this logs the topic. `deliver_topic` is
+  # minted per form MOUNT (`form.ex`, `"form:" <> Ecto.UUID.generate()`), while
+  # the item captured its copy at intake — so a form that remounted mid-upload
+  # is listening on a different topic than the one this broadcasts to, and the
+  # asset lands in the library while the field it was uploaded for never hears
+  # about it. Nothing distinguished that from a successful delivery in the logs.
+  # Pair this line with the one `form.ex` logs at mount: same topic means the
+  # delivery could land, different means it could not. See D2.
   defp deliver(%{target: %{"deliver_topic" => topic} = target}, asset) when is_binary(topic) do
+    Logger.info("==> UploadManager: delivering asset ##{asset.id} to #{topic}")
     Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {:asset_ready, target, asset})
   end
 
