@@ -1118,8 +1118,15 @@ defmodule BrandoAdmin.Components.VideoPicker do
   defp normalize_video_config_target(nil), do: nil
   defp normalize_video_config_target(ct) when is_binary(ct), do: ct
 
-  defp normalize_video_config_target({"video", schema, field}),
-    do: "video:#{inspect(schema)}:#{field}"
+  # Route tuples through the canonical constructor rather than restringifying
+  # them here — a second, divergent stringifier is how a provider video ends up
+  # with a target the originating picker can't match (see `ConfigTarget`).
+  # An unresolvable schema keeps the existing "unknown target" contract below.
+  defp normalize_video_config_target({"video", _schema, _field} = target) do
+    Brando.Assets.ConfigTarget.serialize(target)
+  rescue
+    ArgumentError -> nil
+  end
 
   defp normalize_video_config_target(_), do: nil
 end

@@ -75,6 +75,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     |> assign(:video_data, assigns.video_data)
     |> assign(:type, Map.get(assigns.video_data, :type, :file))
     |> assign(:cover_image, nil)
+    |> assign(:cover_image_id, nil)
     |> assign(:video, struct(Brando.Videos.Video, assigns.video_data))
     |> then(&{:ok, &1})
   end
@@ -95,6 +96,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
         |> assign(:video_data, video_data)
         |> assign(:type, Map.get(video_data, :type, :file))
         |> assign(:cover_image, Map.get(video_data, :thumbnail))
+        |> assign(:cover_image_id, cover_image_id(Map.get(video_data, :thumbnail)))
         |> then(&{:ok, &1})
 
       {:error, _reason} ->
@@ -127,6 +129,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
      |> assign_new(:video_data, fn %{video: video} -> if video, do: Map.from_struct(video), else: %{} end)
      |> assign_new(:type, fn %{video_data: video_data} -> Map.get(video_data, :type, :file) end)
      |> assign_new(:cover_image, fn %{video_data: video_data} -> Map.get(video_data, :thumbnail) end)
+     |> assign_new(:cover_image_id, fn %{cover_image: cover_image} -> cover_image_id(cover_image) end)
      |> assign_new(:video_upload_strategy, fn ->
        config_target = Map.get(block_data, :config_target)
 
@@ -531,7 +534,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       config_target: config_target,
       event_target: myself,
       multi: false,
-      selected_images: []
+      # "Selection means current editing state" (uploads skill) — the picker has
+      # to mark the cover the block is showing right now, saved or not.
+      selected_images: List.wrap(socket.assigns.cover_image_id)
     )
 
     {:noreply, socket}
@@ -543,6 +548,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     socket
     |> Block.commit_ref_data(ref_data: ref_data)
     |> assign(:cover_image, nil)
+    |> assign(:cover_image_id, nil)
     |> then(&{:noreply, &1})
   end
 
@@ -559,6 +565,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     |> assign(:video_data, %{})
     |> assign(:type, :file)
     |> assign(:cover_image, nil)
+    |> assign(:cover_image_id, nil)
     |> then(&{:noreply, &1})
   end
 
@@ -577,6 +584,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     socket
     |> Block.commit_ref_data(ref_data: ref_data)
     |> assign(:cover_image, picture_data)
+    |> assign(:cover_image_id, image.id)
     |> then(&{:noreply, &1})
   end
 
@@ -620,10 +628,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
         |> assign(:video_data, video_data)
         |> assign(:type, Map.get(video_data, :type, :file))
         |> assign(:cover_image, Map.get(video_data, :thumbnail))
+        |> assign(:cover_image_id, cover_image_id(Map.get(video_data, :thumbnail)))
         |> then(&{:noreply, &1})
 
       {:error, _} ->
         {:noreply, socket}
     end
   end
+
+  # The cover image reaches this component two ways: as the video's preloaded
+  # `thumbnail` (a `Brando.Images.Image`, so it has an id) or as the stripped
+  # `picture_data` map that `select_image` builds — which has none, because
+  # `@picture_fields_to_take` omits `:id` and the `PictureBlock.Data` embed it
+  # is cast into has no field that could hold one. `cover_image_id` is therefore
+  # tracked alongside the data rather than read back out of it.
+  defp cover_image_id(%{id: id}) when not is_nil(id), do: id
+  defp cover_image_id(_cover_image), do: nil
 end

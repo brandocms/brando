@@ -26,8 +26,11 @@ defmodule BrandoAdmin.Components.Form do
   use BrandoAdmin.Translator
 
   use Gettext, backend: Brando.Gettext
+
   import Ecto.Changeset
   import Phoenix.LiveView.TagEngine
+
+  require Logger
 
   alias Brando.Blueprint.Callback
   alias Brando.Blueprint.Forms, as: BlueprintForms
@@ -61,6 +64,13 @@ defmodule BrandoAdmin.Components.Form do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:modules")
       Phoenix.PubSub.subscribe(Brando.pubsub(), deliver_topic)
+
+      # Pairs with the UploadManager's "delivering asset ## to <topic>" line.
+      # Because this is minted per MOUNT, a form that remounts mid-upload starts
+      # listening on a NEW topic while the in-flight item still carries the old
+      # one — and the mismatch was previously invisible. See D2 in
+      # `.claude/plans/form-audit/plan.md`.
+      Logger.info("==> Form: listening for asset delivery on #{deliver_topic}")
     end
 
     # TODO: maybe check oban queue for :processing_images?
@@ -378,78 +388,26 @@ defmodule BrandoAdmin.Components.Form do
         },
         socket
       ) do
-    schema = socket.assigns.schema
     edit_video = socket.assigns.edit_video
-    field = edit_video.field
-    user = socket.assigns.current_user
 
-    # The upload strategy + provider settings come from `get_config_for/1` below.
-    # `field` may be a block media ref (not a registered schema asset), so we don't
-    # look up `__asset_opts__` here — that would crash for blocks.
-    config_target = "video:#{inspect(schema)}:#{field}"
+    case video_config_target(edit_video, socket.assigns.schema) do
+      nil ->
+        Logger.error("Failed to build video config target for #{inspect(edit_video[:field])}")
 
-    case Brando.Videos.get_config_for(config_target) do
-      {:ok, video_config} ->
-        case Brando.Videos.Uploader.initiate_upload(filename, user,
-               config: video_config,
-               config_target: config_target,
-               file_meta: %{name: filename, size: size, type: mime_type}
-             ) do
-          {:ok, %{upload_url: url, video: video} = result} ->
-            # Subscribe to video updates
-            Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:video:#{video.id}", link: true)
-
-            # Update edit_video with the created video
-            edit_video = Map.put(edit_video, :video, video)
-            video_changeset = change(video)
-
-            # Build event payload - include tus_auth for Bunny uploads
-            event_payload = %{
-              upload_url: url,
-              video_id: video.id,
-              filename: filename,
-              request_ref: request_ref
-            }
-
-            event_payload =
-              case Map.get(result, :tus_auth) do
-                nil -> event_payload
-                tus_auth -> Map.put(event_payload, :tus_auth, tus_auth)
-              end
-
-            # Push event to JavaScript hook with upload URL
-            {:ok,
-             socket
-             |> assign(:edit_video, edit_video)
-             |> assign(:video_changeset, video_changeset)
-             |> push_event("video_upload_url_ready", event_payload)}
-
-          {:error, reason} ->
-            require Logger
-            Logger.error("Failed to get video upload URL: #{inspect(reason)}")
-            error_message = extract_video_error_message(reason)
-
-            # Push error event to JavaScript hook
-            {:ok,
-             push_event(socket, "video_upload_url_error", %{
-               error: error_message,
-               filename: filename,
-               request_ref: request_ref
-             })}
-        end
-
-      {:error, reason} ->
-        require Logger
-        Logger.error("Failed to get video config: #{inspect(reason)}")
-        error_message = extract_video_error_message(reason)
-
-        # Push error event to JavaScript hook
         {:ok,
          push_event(socket, "video_upload_url_error", %{
-           error: error_message,
+           error: gettext("Invalid video upload target"),
            filename: filename,
            request_ref: request_ref
          })}
+
+      config_target ->
+        start_provider_video_upload(socket, config_target, %{
+          filename: filename,
+          size: size,
+          mime_type: mime_type,
+          request_ref: request_ref
+        })
     end
   end
 
@@ -568,29 +526,29 @@ defmodule BrandoAdmin.Components.Form do
   # Asset delivery from the sticky UploadManager for entry schema fields
   # (docs/UPLOADER.md Phase 4). Mirrors the old handle_file_progress success
   # branch: set the FK at the field's path and refresh the drawer state.
-  # Each clause is commit_entry_field_asset/4 plus its drawer-state assigns —
-  # the editing_*? guard must be cleared or the main save is rejected with
-  # "close the drawer first".
+  # Each clause is commit_entry_field_asset/4 plus its drawer-state assigns.
+  #
+  # These clauses used to force `editing_*?` to false so the main save was not
+  # rejected with "close the drawer first". That was a workaround for the real
+  # bug — `reset_image_field` / `reset_file_field` closed their drawer without
+  # clearing the flag, stranding the save guard (`reset_video_field` always did
+  # it correctly). Both now clear it, so the flag can stay truthful here.
+  #
+  # It has to: an upload started *inside* a drawer leaves that drawer open, and
+  # `assign_drawer_recovery_state/1` gates on exactly these flags — clearing one
+  # dropped the drawer's recovery snapshot mid-edit, and let a save through
+  # while an image was still processing, which is what the guard exists to stop.
   def update(
         %{event: "entry_field_upload_complete", asset_type: :file, field: field, path: path, asset: file},
         socket
       ) do
-    edit_file = Map.merge(socket.assigns.edit_file, %{id: file.id, file: file, field: field, path: path})
-
-    {:ok,
-     socket
-     |> commit_entry_field_asset(field, path, file)
-     |> assign(:edit_file, edit_file)
-     |> assign(:file_changeset, change(file))
-     |> assign(:editing_file?, false)}
+    {:ok, deliver_entry_field_asset(socket, :file, field, path, file)}
   end
 
   def update(
         %{event: "entry_field_upload_complete", asset_type: :image, field: field, path: path, asset: image},
         socket
       ) do
-    edit_image = Map.merge(socket.assigns.edit_image, %{id: image.id, image: image, field: field, path: path})
-
     socket =
       if image.status != :processed do
         update(socket, :processing_images, &[image.id | &1])
@@ -600,26 +558,14 @@ defmodule BrandoAdmin.Components.Form do
 
     send_update(ImagePicker, id: "image-picker", refresh_images: true)
 
-    {:ok,
-     socket
-     |> commit_entry_field_asset(field, path, image)
-     |> assign(:edit_image, edit_image)
-     |> assign(:image_changeset, change(image))
-     |> assign(:editing_image?, false)}
+    {:ok, deliver_entry_field_asset(socket, :image, field, path, image)}
   end
 
   def update(
         %{event: "entry_field_upload_complete", asset_type: :video, field: field, path: path, asset: video},
         socket
       ) do
-    edit_video = Map.merge(socket.assigns.edit_video, %{id: video.id, video: video, field: field, path: path})
-
-    {:ok,
-     socket
-     |> commit_entry_field_asset(field, path, video)
-     |> assign(:edit_video, edit_video)
-     |> assign(:video_changeset, change(video))
-     |> assign(:editing_video?, false)}
+    {:ok, deliver_entry_field_asset(socket, :video, field, path, video)}
   end
 
   # Gallery entry fields: append the delivered image to the gallery assoc
@@ -887,6 +833,25 @@ defmodule BrandoAdmin.Components.Form do
     updated_form = to_form(updated_changeset, [])
 
     {:ok, assign(socket, :form, updated_form)}
+  end
+
+  # Gallery picker writes. The gallery components hand back a replacement
+  # gallery — `%{config_target:, gallery_objects:}` — and the PATH it lives at,
+  # rather than a rebuilt entry changeset.
+  #
+  # They cannot build one: the changeset they hold belongs to whatever schema
+  # OWNS the gallery, which for a nested gallery is not the entry. Sending that
+  # through `:update_changeset` addressed `"<nested singular>_form"`, a
+  # component that does not exist, so nested gallery picker selections silently
+  # went nowhere; had the id matched, it would have replaced the entry changeset
+  # with a subrecord's. This mirrors how uploads already deliver
+  # (`append_gallery_object/5`), which is why that path never had the bug.
+  def update(%{action: :put_gallery, path: path, key: key, gallery: new_gallery}, socket) do
+    {:ok,
+     socket
+     |> put_gallery_at(path, key, new_gallery)
+     |> push_event("b:validate", %{})
+     |> force_svelte_remounts()}
   end
 
   def update(
@@ -1190,6 +1155,32 @@ defmodule BrandoAdmin.Components.Form do
 
   defp commit_selected_asset(socket, _edit_asset, _asset), do: socket
 
+  # Delivery for the three single-asset entry fields. They differed only in
+  # which pair of assigns they wrote (`edit_image`/`image_changeset` and so on),
+  # and keeping three copies is what let the `editing_*?` handling drift apart
+  # between them (see D7). Galleries are genuinely different — they append to an
+  # assoc — and stay on their own clauses.
+  defp deliver_entry_field_asset(socket, asset_type, field, path, asset) do
+    edit_key = :"edit_#{asset_type}"
+    changeset_key = :"#{asset_type}_changeset"
+
+    edit_asset =
+      Map.merge(socket.assigns[edit_key], %{
+        :id => asset.id,
+        :field => field,
+        :path => path,
+        asset_type => asset
+      })
+
+    socket
+    |> commit_entry_field_asset(field, path, asset)
+    |> assign(edit_key, edit_asset)
+    |> assign(changeset_key, change(asset))
+    # NOT `editing_*? = false`: an upload started inside a drawer leaves it
+    # open, and this is what the drawer's recovery snapshot is built from.
+    |> assign_drawer_recovery_state()
+  end
+
   defp commit_entry_field_asset(socket, field, path, asset) do
     relation_key = String.to_existing_atom("#{field}_id")
     full_path = path ++ [relation_key]
@@ -1234,22 +1225,25 @@ defmodule BrandoAdmin.Components.Form do
         []
       end
 
-    gallery_objects = sequence(slimmed_objects ++ [new_object])
+    new_gallery = %{
+      config_target:
+        (gallery && gallery.config_target) || config_target ||
+          Brando.Assets.ConfigTarget.serialize({"gallery", socket.assigns.schema, key}),
+      gallery_objects: sequence(slimmed_objects ++ [new_object])
+    }
 
-    new_gallery =
-      if gallery do
-        %{id: gallery.id, config_target: gallery.config_target, gallery_objects: gallery_objects}
-      else
-        %{
-          config_target:
-            config_target ||
-              Brando.Assets.ConfigTarget.serialize({"gallery", socket.assigns.schema, key}),
-          gallery_objects: gallery_objects
-        }
-      end
+    put_gallery_at(socket, path, key, new_gallery)
+  end
+
+  # The single write point for a gallery living anywhere in the entry
+  # changeset. `path == []` is the entry's own field; anything deeper is a
+  # gallery on a nested (subform) record, which only `update_at/3` can reach.
+  defp put_gallery_at(socket, path, key, new_gallery) do
+    changeset = socket.assigns.form.source
+    current_gallery = gallery_at(changeset, path, key) || %Brando.Galleries.Gallery{}
 
     gallery_changeset =
-      (gallery || %Brando.Galleries.Gallery{})
+      current_gallery
       |> change(%{config_target: new_gallery.config_target})
       |> put_assoc(:gallery_objects, new_gallery.gallery_objects)
 
@@ -1900,7 +1894,13 @@ defmodule BrandoAdmin.Components.Form do
     ~H"""
     <div>
       <.entry_loader :if={!@blocks_ready?} id={"#{@id}-loader"} status={@entry_load_status} />
-      <div id={"#{@id}-el"} class="brando-form" phx-hook="Brando.Form" data-deliver-topic={@deliver_topic}>
+      <div
+        id={"#{@id}-el"}
+        class="brando-form"
+        phx-hook="Brando.Form"
+        data-deliver-topic={@deliver_topic}
+        data-entry-id={@entry_id}
+      >
         <div class="form-content">
           <div :if={@header} class="form-header">
             <h1>
@@ -3173,6 +3173,38 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, assign(socket, :focused_field, nil)}
   end
 
+  # The client owns the delivery topic so it survives a remount.
+  #
+  # `mount/1` mints one per MOUNT, which meant an upload in flight across a form
+  # remount broadcast its finished asset to a topic nobody listened on any more
+  # — silently, since a PubSub broadcast to an empty topic is `:ok`. The sticky
+  # UploadManager keeps transferring across live navigation, so this was
+  # reachable by ordinary use. Measured: two mounts of one form gave
+  # `form:a852c2d1-…` then `form:dae79cd2-…`.
+  #
+  # The hook keeps a per-tab, per-ENTRY topic in sessionStorage and replays it
+  # here. Validated with the same rule intake applies — a client free to name
+  # any topic could subscribe its form to another form's deliveries.
+  def handle_event("set_deliver_topic", %{"topic" => topic}, socket) do
+    case Brando.Uploads.AssetIntent.validate_deliver_topic(topic) do
+      {:ok, ^topic} when topic == socket.assigns.deliver_topic ->
+        {:noreply, socket}
+
+      {:ok, topic} ->
+        # The mount-time topic covers only the window before this arrives; drop
+        # it so a form does not accumulate subscriptions across remounts.
+        Phoenix.PubSub.unsubscribe(Brando.pubsub(), socket.assigns.deliver_topic)
+        Phoenix.PubSub.subscribe(Brando.pubsub(), topic)
+        Logger.info("==> Form: listening for asset delivery on #{topic}")
+
+        {:noreply, assign(socket, :deliver_topic, topic)}
+
+      {:error, reason} ->
+        Logger.warning("==> Form: refused deliver_topic #{inspect(topic)}: #{reason}")
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("save", _params, %{assigns: %{editing_image?: true}} = socket) do
     {:noreply,
      push_event(socket, "b:alert", %{
@@ -3671,8 +3703,13 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:entry, Map.put(entry, edit_file.field, nil))
      |> assign(:file_changeset, nil)
+     # `reset_file_field/2` closes the drawer (`toggle_drawer`), so the flag has
+     # to come down with it — leaving it set stranded the main save behind
+     # "close the file drawer before saving" with no drawer to close.
+     |> assign(:editing_file?, false)
      |> assign(:edit_file, updated_edit_file)
      |> assign(:form, to_form(updated_changeset, []))
+     |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
        target: "#{singular}[#{relation_key}]",
        value: ""
@@ -3695,8 +3732,12 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:entry, Map.put(entry, edit_image.field, nil))
      |> assign(:image_changeset, nil)
+     # Same as reset_file_field above — this closes the image drawer, so the
+     # guard flag must come down or the entry can never be saved again.
+     |> assign(:editing_image?, false)
      |> assign(:edit_image, updated_edit_image)
      |> assign(:form, to_form(updated_changeset, []))
+     |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
        target: "#{singular}[#{relation_key}]",
        value: ""
@@ -3964,8 +4005,7 @@ defmodule BrandoAdmin.Components.Form do
     # Subscribe parent live view to changes to this image
     Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
 
-    # Only queue processing for fresh uploads
-    if updated_image.status !== :processed do
+    if requeue_processing?(validated_changeset, updated_image) do
       Brando.Images.Processing.queue_processing(updated_image, current_user, field_full_path)
     end
 
@@ -6057,6 +6097,155 @@ defmodule BrandoAdmin.Components.Form do
 
   defp extract_video_error_message(error) do
     inspect(error)
+  end
+
+  # Inputs the image pipeline actually derives its output from. The drawer's
+  # other fields (title / credits / alt) are metadata — the sizes on disk do
+  # not depend on them.
+  @processing_inputs [:focal, :path, :formats, :config_target]
+
+  # The old gate was `status !== :processed`, which is wrong in both directions:
+  #
+  #   * it MISSES a focal-point change on an already-processed image — the
+  #     drawer renders `FocalPoint` bound to this same form, so `:focal` arrives
+  #     in these params, and without a re-queue every crop stays stale;
+  #   * it FIRES on an unprocessed image even when the user only touched the alt
+  #     text, and `queue_processing/4` deletes any matching job before inserting
+  #     a new one, so closing the drawer twice while the first job is still
+  #     running discards it and starts a second pass over the same files.
+  defp requeue_processing?(%Ecto.Changeset{changes: changes}, image) do
+    if Enum.any?(@processing_inputs, &Map.has_key?(changes, &1)) do
+      true
+    else
+      # Nothing processing-relevant changed. Still queue an unprocessed image —
+      # the upload that created it may never have processed, and the drawer is
+      # the only place the editor can recover that from — but not if a pass is
+      # already in flight, which is the case the old gate kept restarting.
+      image.status != :processed and not Brando.Images.Processing.processing_queued?(image)
+    end
+  end
+
+  # `socket.assigns.schema` is the ENTRY schema. A nested video field — or a
+  # block media ref — belongs to a different one, which the drawer carries on
+  # `edit_video.schema`; the sibling upload trigger in `video_drawer/1` already
+  # reads it that way. Hand-building `"video:<entry schema>:<field>"` here sent
+  # provider (Mux/Bunny/Cloudflare) uploads to the entry's config instead of the
+  # field's, so the resulting video was invisible to the originating picker and
+  # lost its field-level configuration.
+  #
+  # The upload strategy + provider settings come from `get_config_for/1`;
+  # `field` may be a block media ref (not a registered schema asset), so we
+  # still don't look up `__asset_opts__` — that would crash for blocks.
+  defp video_config_target(edit_video, entry_schema) do
+    schema = Map.get(edit_video, :schema) || entry_schema
+
+    # `nil` is an atom, so `serialize/1` accepts it as a field segment and emits
+    # a trailing-colon target that resolves to nothing. Guard it here rather
+    # than relying on the rescue.
+    case Map.get(edit_video, :field) do
+      field when field in [nil, ""] -> nil
+      field -> Brando.Assets.ConfigTarget.serialize({"video", schema, field})
+    end
+  rescue
+    # serialize/1 raises on a non-blueprint schema. A hard match here would take
+    # the whole entry form down with it (see A2).
+    ArgumentError -> nil
+  end
+
+  # Provider clients raise rather than return on some configuration failures —
+  # `Mux.api_request/3` raises a bare RuntimeError when the site has no Mux
+  # credentials, and that exception would take the whole entry form process down
+  # along with every unsaved change in it (the same class as A2). Found while
+  # writing the D3 regression test, not reported by the audit.
+  defp initiate_provider_upload(video_config, config_target, filename, user, file_meta) do
+    Brando.Videos.Uploader.initiate_upload(filename, user,
+      config: video_config,
+      config_target: config_target,
+      file_meta: file_meta
+    )
+  rescue
+    exception ->
+      # Deliberately broad: three provider clients with three failure vocabularies
+      # sit behind this call. The stacktrace is logged so a genuine bug here is
+      # still diagnosable rather than reduced to a toast.
+      Logger.error(
+        "Video provider upload raised: " <>
+          Exception.format(:error, exception, __STACKTRACE__)
+      )
+
+      {:error, Exception.message(exception)}
+  end
+
+  defp start_provider_video_upload(socket, config_target, %{
+         filename: filename,
+         size: size,
+         mime_type: mime_type,
+         request_ref: request_ref
+       }) do
+    edit_video = socket.assigns.edit_video
+    user = socket.assigns.current_user
+
+    case Brando.Videos.get_config_for(config_target) do
+      {:ok, video_config} ->
+        case initiate_provider_upload(video_config, config_target, filename, user, %{
+               name: filename,
+               size: size,
+               type: mime_type
+             }) do
+          {:ok, %{upload_url: url, video: video} = result} ->
+            # Subscribe to video updates
+            Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:video:#{video.id}", link: true)
+
+            # Update edit_video with the created video
+            edit_video = Map.put(edit_video, :video, video)
+            video_changeset = change(video)
+
+            # Build event payload - include tus_auth for Bunny uploads
+            event_payload = %{
+              upload_url: url,
+              video_id: video.id,
+              filename: filename,
+              request_ref: request_ref
+            }
+
+            event_payload =
+              case Map.get(result, :tus_auth) do
+                nil -> event_payload
+                tus_auth -> Map.put(event_payload, :tus_auth, tus_auth)
+              end
+
+            # Push event to JavaScript hook with upload URL
+            {:ok,
+             socket
+             |> assign(:edit_video, edit_video)
+             |> assign(:video_changeset, video_changeset)
+             |> push_event("video_upload_url_ready", event_payload)}
+
+          {:error, reason} ->
+            Logger.error("Failed to get video upload URL: #{inspect(reason)}")
+            error_message = extract_video_error_message(reason)
+
+            # Push error event to JavaScript hook
+            {:ok,
+             push_event(socket, "video_upload_url_error", %{
+               error: error_message,
+               filename: filename,
+               request_ref: request_ref
+             })}
+        end
+
+      {:error, reason} ->
+        Logger.error("Failed to get video config: #{inspect(reason)}")
+        error_message = extract_video_error_message(reason)
+
+        # Push error event to JavaScript hook
+        {:ok,
+         push_event(socket, "video_upload_url_error", %{
+           error: error_message,
+           filename: filename,
+           request_ref: request_ref
+         })}
+    end
   end
 
   defp relation_field_key(%{field: relation_key}, _field) when not is_nil(relation_key),

@@ -38,6 +38,37 @@ defmodule Brando.Images.Processing do
     |> Oban.insert()
   end
 
+  @unfinished_states ~w(available scheduled executing retryable)
+
+  @doc """
+  Is an `ImageProcessor` job already queued or running for this image?
+
+  For callers that re-queue *opportunistically* rather than because something
+  changed — the image drawer re-queues on close. `queue_processing/4` deletes
+  every matching job before inserting, which for a job in `executing` discards
+  its row instead of deduping against it, leaving two passes writing the same
+  derivative files. Ask this first and skip the re-queue.
+
+  Matches on `image_id` alone: a job queued under a different
+  `field_full_path` is still a pass over the same image.
+  """
+  def processing_queued?(%{id: image_id}) when not is_nil(image_id) do
+    worker = Oban.Worker.to_string(Worker.ImageProcessor)
+
+    query =
+      from j in Oban.Job,
+        where:
+          j.worker == ^worker and
+            j.state in ^@unfinished_states and
+            fragment("? @> ?", j.args, ^%{image_id: image_id}),
+        select: true,
+        limit: 1
+
+    Brando.Repo.one(query) == true
+  end
+
+  def processing_queued?(_image), do: false
+
   @doc """
   Recreate all transforms for a single image
   """

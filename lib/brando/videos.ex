@@ -230,7 +230,15 @@ defmodule Brando.Videos do
         if expected_type == :gallery do
           gallery_video_config(config)
         else
-          AssetConfigNormalizer.normalize_resolved_value!(:video, "video:#{schema}:#{field_name}", config)
+          AssetConfigNormalizer.normalize_resolved_value!(
+            :video,
+            # `blueprint_asset/2` above already resolved the schema, so
+            # serializing here cannot raise — and it canonicalizes the segment
+            # ("Elixir.MyApp.Page" -> "MyApp.Page") instead of re-emitting
+            # whatever spelling the caller happened to pass.
+            ConfigTarget.serialize({"video", schema, field_name}),
+            config
+          )
         end
 
       {:ok, %{type: actual_type}} ->

@@ -14,6 +14,8 @@ export default (app) => ({
     this.$input = this.$form.querySelector('input')
     this.submitListenerEvent = this.submitListener.bind(this)
 
+    this.claimDeliverTopic()
+
     if (!this.skipKeydown) {
       window.addEventListener('keydown', this.submitListenerEvent, false)
     }
@@ -124,6 +126,44 @@ export default (app) => ({
         }
       }
     })
+  },
+
+  /**
+   * Own the asset-delivery topic on the client so it survives a form remount.
+   *
+   * The server mints `deliver_topic` in `mount/1`, so every remount produced a
+   * NEW topic while an upload already in flight kept the OLD one — the sticky
+   * UploadManager survives live navigation, so it would broadcast the finished
+   * asset to a topic nobody was listening on any more, silently. Measured:
+   * two mounts of the same form gave `form:a852c2d1-…` and `form:dae79cd2-…`.
+   *
+   * The key is scoped by ENTRY, not just by `el.id`. `el.id` is
+   * `project_form-el` for every project, so a tab-wide topic keyed on it alone
+   * would hand project A's upload to project B's form — the same cross-entry
+   * leak as the block-recovery key (see BlockField, which scopes the same way).
+   * `sessionStorage` is per-tab, which is exactly the other constraint: two
+   * tabs editing one entry must not share a topic.
+   */
+  claimDeliverTopic() {
+    const entryId = this.el.dataset.entryId || 'new'
+    const key = `brando:deliver-topic:${entryId}:${this.el.id}`
+
+    let topic = sessionStorage.getItem(key)
+
+    if (!topic) {
+      topic = `form:${crypto.randomUUID()}`
+      sessionStorage.setItem(key, topic)
+    }
+
+    // Set it locally first: the upload triggers resolve their delivery target
+    // by reading this attribute off the closest ancestor, so it has to be right
+    // before any upload can start — not one round-trip later. The server
+    // assigns the same value back, so the next patch re-renders it unchanged.
+    this.el.dataset.deliverTopic = topic
+    // pushEventTo, not pushEvent: the handler lives on the Form LiveComponent,
+    // and a bare pushEvent would go to the parent LiveView. Same pattern as
+    // BlockField's recover_blocks.
+    this.pushEventTo(this.el, 'set_deliver_topic', { topic })
   },
 
   destroyed() {

@@ -1363,7 +1363,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       config_target: config_target,
       event_target: myself,
       multi: false,
-      selected_images: []
+      # "Selection means current editing state" (uploads skill) — reopening the
+      # picker must mark what the var currently holds, saved or not. The sibling
+      # `set_file_target` below already did this; images did not.
+      selected_images: List.wrap(socket.assigns.image_id)
     )
 
     {:noreply, socket}

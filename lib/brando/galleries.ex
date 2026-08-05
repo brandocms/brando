@@ -82,6 +82,51 @@ defmodule Brando.Galleries do
   def slim_gallery_object(object), do: Map.take(object, @gallery_object_fields)
 
   @doc """
+  Reconcile a gallery's objects as the changeset now holds them with the
+  previously-loaded media the editor already had.
+
+  The changeset is the source of truth for *which* objects a gallery holds, so
+  the gallery components must re-derive from it on every update — caching the
+  list in `assign_new` meant an external mutation (an upload delivered to the
+  entry form, a revision restore, a picker on a sibling component) never
+  reached the UI.
+
+  But re-deriving alone would blank every thumbnail: the objects only carry a
+  preloaded `:image` / `:video` while they come straight from the DB, and
+  `slim_gallery_object/1` strips the associations the moment anything writes
+  the list back through `put_assoc`. So an object that arrives without its
+  media borrows it from the previous list by media id, instead of costing a
+  query per render.
+  """
+  def merge_loaded_media(objects, previous) when is_list(objects) and is_list(previous) do
+    Enum.map(objects, fn object ->
+      if loaded_media?(object) do
+        object
+      else
+        Enum.find(previous, &same_media?(&1, object)) || object
+      end
+    end)
+  end
+
+  defp loaded_media?(object) do
+    (Map.get(object, :image_id) && Brando.Utils.loaded_assoc?(object, :image)) ||
+      (Map.get(object, :video_id) && Brando.Utils.loaded_assoc?(object, :video)) || false
+  end
+
+  defp same_media?(left, right) do
+    matches?(left, right, :image_id) or matches?(left, right, :video_id)
+  end
+
+  defp matches?(left, right, key) do
+    case {Map.get(left, key), Map.get(right, key)} do
+      {nil, _} -> false
+      {_, nil} -> false
+      {same, same} -> true
+      _ -> false
+    end
+  end
+
+  @doc """
   Get gallery.
   Raises on failure
   """

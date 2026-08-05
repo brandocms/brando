@@ -138,14 +138,24 @@ defmodule Brando.Uploads.AssetIntent do
   defp required_binary(value, _label) when is_binary(value) and value != "", do: :ok
   defp required_binary(_value, label), do: {:error, "Missing #{label}"}
 
-  defp deliver_topic("form:" <> uuid = topic) do
+  defp deliver_topic(topic), do: validate_deliver_topic(topic)
+
+  @doc """
+  Validate an asset-delivery topic.
+
+  Public because the form claims its own topic from the client now (so it
+  survives a remount — see `BrandoAdmin.Components.Form`), and the *subscribe*
+  side has to apply exactly the same rule as the intake side. A client that
+  could name any topic could subscribe its form to another form's deliveries.
+  """
+  def validate_deliver_topic("form:" <> uuid = topic) do
     case Ecto.UUID.cast(uuid) do
       {:ok, _uuid} -> {:ok, topic}
       :error -> {:error, "Invalid upload delivery topic"}
     end
   end
 
-  defp deliver_topic(_), do: {:error, "Invalid upload delivery topic"}
+  def validate_deliver_topic(_), do: {:error, "Invalid upload delivery topic"}
 
   defp path(nil), do: {:ok, []}
 
