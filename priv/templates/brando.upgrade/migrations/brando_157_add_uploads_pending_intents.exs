@@ -30,7 +30,7 @@ defmodule Brando.Repo.Migrations.AddUploadsPendingIntents do
       add :filesize, :bigint
       add :target, :jsonb, default: "{}"
       add :creator_id, references(:users, on_delete: :nilify_all)
-      timestamps()
+      timestamps(type: :utc_datetime_usec)
     end
 
     # The manager's item ref is the only handle a `direct_complete` carries.

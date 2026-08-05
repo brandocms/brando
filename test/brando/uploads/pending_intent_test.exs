@@ -103,11 +103,9 @@ defmodule Brando.Uploads.PendingIntentTest do
 
   describe "list_stale_pending_intents/1" do
     defp backdate(ref, hours) do
-      intent = Uploads.get_pending_intent(ref)
-      at = NaiveDateTime.add(NaiveDateTime.utc_now(), -hours * 3600, :second)
-
-      intent
-      |> Ecto.Changeset.change(inserted_at: NaiveDateTime.truncate(at, :second))
+      ref
+      |> Uploads.get_pending_intent()
+      |> Ecto.Changeset.change(inserted_at: DateTime.add(DateTime.utc_now(), -hours * 3600, :second))
       |> Brando.Repo.repo().update!()
     end
 
@@ -132,33 +130,35 @@ defmodule Brando.Uploads.PendingIntentTest do
   end
 
   describe "the reaper" do
-    test "removes stale intents and leaves fresh ones", _ctx do
+    test "only touches intents past the cutoff", _ctx do
+      # Without an S3 mock (a Phase 4 task) the delete always fails here, so the
+      # SUCCESS path — delete object, drop row — is not reachable from a test
+      # and is deliberately not asserted. What is observable is the age filter:
+      # the reaper reports exactly one failure, not two, so it never considered
+      # the fresh intent at all, and the fresh row is untouched afterwards.
       stale_ref = Ecto.UUID.generate()
       fresh_ref = Ecto.UUID.generate()
 
       {:ok, _} = Uploads.create_pending_intent(attrs(%{ref: stale_ref}))
       {:ok, _} = Uploads.create_pending_intent(attrs(%{ref: fresh_ref}))
 
-      stale = Uploads.get_pending_intent(stale_ref)
-
-      stale
-      |> Ecto.Changeset.change(
-        inserted_at: NaiveDateTime.truncate(NaiveDateTime.add(NaiveDateTime.utc_now(), -48 * 3600), :second)
-      )
+      stale_ref
+      |> Uploads.get_pending_intent()
+      |> Ecto.Changeset.change(inserted_at: DateTime.add(DateTime.utc_now(), -48 * 3600, :second))
       |> Brando.Repo.repo().update!()
 
-      assert :ok = Brando.Worker.UploadIntentReaper.perform(%Oban.Job{args: %{}})
+      assert {:error, message} = Brando.Worker.UploadIntentReaper.perform(%Oban.Job{args: %{}})
+      assert message =~ "could not delete 1 "
 
-      # Deleted for real, not soft-deleted: a row the reaper "kept" would be
-      # swept again every night, and it is the object that matters here.
-      refute Uploads.get_pending_intent(stale_ref)
       assert Uploads.get_pending_intent(fresh_ref)
     end
 
-    test "a bucket that refuses the delete still drops the row" do
-      # This target has no CDN configured at all, so `delete_direct_object/3`
-      # errors. Leaving the row would make the sweep retry the same failure
-      # nightly forever.
+    test "a bucket that refuses the delete KEEPS the row and reports failure" do
+      # Review finding W2/W3. Dropping the row here was the original behaviour
+      # and it destroyed the only durable record that an orphaned object exists
+      # — the object has no asset row, so nothing else can ever find it again.
+      # It also made `max_attempts: 2` dead code, since perform/1 always
+      # returned :ok. This target has no CDN configured, so the delete errors.
       ref = Ecto.UUID.generate()
 
       {:ok, _} =
@@ -166,14 +166,31 @@ defmodule Brando.Uploads.PendingIntentTest do
           attrs(%{ref: ref, asset_type: :image, resolved_target: "image:Brando.Pages.Page:meta_image"})
         )
 
-      Uploads.get_pending_intent(ref)
-      |> Ecto.Changeset.change(
-        inserted_at: NaiveDateTime.truncate(NaiveDateTime.add(NaiveDateTime.utc_now(), -48 * 3600), :second)
-      )
+      ref
+      |> Uploads.get_pending_intent()
+      |> Ecto.Changeset.change(inserted_at: DateTime.add(DateTime.utc_now(), -48 * 3600, :second))
       |> Brando.Repo.repo().update!()
 
-      assert :ok = Brando.Worker.UploadIntentReaper.perform(%Oban.Job{args: %{}})
-      refute Uploads.get_pending_intent(ref)
+      assert {:error, message} = Brando.Worker.UploadIntentReaper.perform(%Oban.Job{args: %{}})
+      assert message =~ "intents retained"
+
+      # Retained, so the retry and the next nightly run both see it again.
+      assert Uploads.get_pending_intent(ref)
+    end
+
+    test "a batch is bounded so a backlog cannot fill one job" do
+      for _ <- 1..3 do
+        ref = Ecto.UUID.generate()
+        {:ok, _} = Uploads.create_pending_intent(attrs(%{ref: ref}))
+
+        ref
+        |> Uploads.get_pending_intent()
+        |> Ecto.Changeset.change(inserted_at: DateTime.add(DateTime.utc_now(), -48 * 3600, :second))
+        |> Brando.Repo.repo().update!()
+      end
+
+      assert length(Uploads.list_stale_pending_intents(24, 2)) == 2
+      assert length(Uploads.list_stale_pending_intents(24, 100)) == 3
     end
   end
 
@@ -243,6 +260,31 @@ defmodule Brando.Uploads.PendingIntentTest do
 
       # Finalize could not verify the object (no bucket in tests), so the intent
       # survives — only the reaper is allowed to decide a transfer is abandoned.
+      assert Uploads.get_pending_intent(ref)
+    end
+
+    test "refuses an intent belonging to another user", ctx do
+      # Review finding W5. `finalize_orphaned_complete/3` used the CALLING
+      # socket's user, so an intent recovered under someone else's session would
+      # have attributed the asset to whoever sent the ref.
+      other = Factory.insert(:random_user)
+      ref = Ecto.UUID.generate()
+      {:ok, _} = Uploads.create_pending_intent(attrs(%{ref: ref, creator_id: other.id}))
+
+      log =
+        capture_log(fn ->
+          assert {:noreply, _socket} =
+                   BrandoAdmin.UploadManager.handle_event(
+                     "direct_complete",
+                     %{"ref" => ref},
+                     remounted_manager(ctx.user)
+                   )
+        end)
+
+      assert log =~ "refusing direct_complete"
+      refute log =~ "recovering direct_complete for ref"
+
+      # Kept: it is still the rightful owner's upload, and the reaper decides.
       assert Uploads.get_pending_intent(ref)
     end
 

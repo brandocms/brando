@@ -77,7 +77,20 @@ defmodule Brando.Uploads.AssetIntent do
 
   def normalize(_), do: {:error, "Invalid upload target"}
 
-  defp get(params, key), do: Map.get(params, key, Map.get(params, String.to_existing_atom(key)))
+  # Targets arrive with string keys from the browser and atom keys from
+  # server-side callers. `Map.get/3`'s default is evaluated eagerly, so the old
+  # one-liner minted-or-looked-up an atom on EVERY call, including the common
+  # one where the string key is already there — safe only because these
+  # particular atoms happen to exist. Only reach for the atom if we have to.
+  defp get(params, key) do
+    case Map.fetch(params, key) do
+      {:ok, value} -> value
+      :error -> Map.get(params, String.to_existing_atom(key))
+    end
+  rescue
+    # An unknown key is simply absent; `normalize/1` reports it as missing.
+    ArgumentError -> nil
+  end
 
   defp enum(value, allowed, label) do
     if value in allowed, do: {:ok, value}, else: {:error, "Unsupported #{label}"}

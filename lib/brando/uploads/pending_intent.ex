@@ -24,6 +24,8 @@ defmodule Brando.Uploads.PendingIntent do
   """
   use Ecto.Schema
 
+  @timestamps_opts [type: :utc_datetime_usec]
+
   import Ecto.Changeset
 
   @type t :: %__MODULE__{}

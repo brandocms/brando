@@ -200,10 +200,15 @@ defmodule Brando.Uploads do
   presigned URL's own lifetime (#{@presign_expiry_seconds}s) by a wide margin,
   or a transfer that is merely slow gets reaped out from under itself.
   """
-  def list_stale_pending_intents(hours) when is_integer(hours) do
-    cutoff = NaiveDateTime.add(NaiveDateTime.utc_now(), -hours * 3600, :second)
+  def list_stale_pending_intents(hours, limit \\ 500) when is_integer(hours) do
+    cutoff = DateTime.add(DateTime.utc_now(), -hours * 3600, :second)
 
-    Brando.Repo.all(from i in PendingIntent, where: i.inserted_at < ^cutoff)
+    Brando.Repo.all(
+      from i in PendingIntent,
+        where: i.inserted_at < ^cutoff,
+        order_by: [asc: i.inserted_at],
+        limit: ^limit
+    )
   end
 
   @doc """
@@ -241,6 +246,9 @@ defmodule Brando.Uploads do
     end
   end
 
+  # `:image` is the only other asset type, and images always take the server
+  # transport — so this is the reaper being told about an intent that should
+  # never have been written. Report rather than crash the nightly sweep.
   defp direct_cdn_config(asset_type, _resolved_target),
     do: {:error, "#{asset_type} has no client-direct transport"}
 

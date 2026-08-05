@@ -53,7 +53,12 @@ defmodule Brando.Supervisor do
         repo: Brando.Repo.repo(),
         queues: [
           default: [limit: 1],
-          image_processing: [limit: 1]
+          image_processing: [limit: 1],
+          # Its own queue on purpose. :default has limit: 1 and also carries the
+          # interactive FileUploader/ImageUploader, so a reaper sweep doing one
+          # network round trip per abandoned object would block user-facing
+          # uploads for as long as it ran.
+          upload_reaping: [limit: 1]
         ],
         plugins: [
           {Oban.Plugins.Cron,

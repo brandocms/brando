@@ -70,7 +70,7 @@ defmodule BrandoAdmin.Components.Form do
       # listening on a NEW topic while the in-flight item still carries the old
       # one — and the mismatch was previously invisible. See D2 in
       # `.claude/plans/form-audit/plan.md`.
-      Logger.info("==> Form: listening for asset delivery on #{deliver_topic}")
+      Logger.info("==> Form: listening for asset delivery on #{topic_ref(deliver_topic)}")
     end
 
     # TODO: maybe check oban queue for :processing_images?
@@ -3195,12 +3195,12 @@ defmodule BrandoAdmin.Components.Form do
         # it so a form does not accumulate subscriptions across remounts.
         Phoenix.PubSub.unsubscribe(Brando.pubsub(), socket.assigns.deliver_topic)
         Phoenix.PubSub.subscribe(Brando.pubsub(), topic)
-        Logger.info("==> Form: listening for asset delivery on #{topic}")
+        Logger.info("==> Form: listening for asset delivery on #{topic_ref(topic)}")
 
         {:noreply, assign(socket, :deliver_topic, topic)}
 
       {:error, reason} ->
-        Logger.warning("==> Form: refused deliver_topic #{inspect(topic)}: #{reason}")
+        Logger.warning("==> Form: refused deliver_topic #{inspect(topic_ref(topic))}: #{reason}")
         {:noreply, socket}
     end
   end
@@ -6098,6 +6098,14 @@ defmodule BrandoAdmin.Components.Form do
   defp extract_video_error_message(error) do
     inspect(error)
   end
+
+  # A delivery topic is a bearer token: anyone who can present it can subscribe
+  # a form to another form's asset deliveries, and unguessability is the only
+  # thing stopping them. So logs get enough to correlate the two sides of one
+  # delivery and no more — printing it whole put a replayable credential into
+  # every log aggregator.
+  defp topic_ref("form:" <> uuid), do: "form:" <> String.slice(uuid, 0, 8) <> "…"
+  defp topic_ref(other), do: inspect(other)
 
   # Inputs the image pipeline actually derives its output from. The drawer's
   # other fields (title / credits / alt) are metadata — the sizes on disk do

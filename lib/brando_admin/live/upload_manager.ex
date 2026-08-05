@@ -514,6 +514,19 @@ defmodule BrandoAdmin.UploadManager do
 
         socket
 
+      %{creator_id: creator_id} when is_integer(creator_id) and creator_id != user.id ->
+        # The intent records who authorized the upload. Finalizing with the
+        # CALLING socket's user instead would misattribute the asset to whoever
+        # happened to send the ref — so refuse rather than guess. The two can
+        # only differ if a ref leaked between sessions; the reaper cleans up
+        # whatever is left in the bucket.
+        Logger.warning(
+          "==> UploadManager: refusing direct_complete for ref #{inspect(ref)} — " <>
+            "intent belongs to user ##{creator_id}, not ##{user.id}"
+        )
+
+        socket
+
       intent ->
         Logger.info(
           "==> UploadManager: recovering direct_complete for ref #{inspect(ref)} " <>
@@ -567,7 +580,7 @@ defmodule BrandoAdmin.UploadManager do
   # Pair this line with the one `form.ex` logs at mount: same topic means the
   # delivery could land, different means it could not. See D2.
   defp deliver(%{target: %{"deliver_topic" => topic} = target}, asset) when is_binary(topic) do
-    Logger.info("==> UploadManager: delivering asset ##{asset.id} to #{topic}")
+    Logger.info("==> UploadManager: delivering asset ##{asset.id} to #{topic_ref(topic)}")
     Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {:asset_ready, target, asset})
   end
 
@@ -807,6 +820,11 @@ defmodule BrandoAdmin.UploadManager do
 
   defp target_label(%{"var_key" => var_key}) when is_binary(var_key), do: var_key
   defp target_label(_), do: nil
+
+  # Enough to pair this line with the form's "listening on" line, not enough to
+  # replay. See the matching helper in `BrandoAdmin.Components.Form`.
+  defp topic_ref("form:" <> uuid), do: "form:" <> String.slice(uuid, 0, 8) <> "…"
+  defp topic_ref(other), do: inspect(other)
 
   # Used by the direct-transport finalize path; server-transport errors are
   # normalized to user-safe messages by `Brando.Uploads.store_upload/4`.
