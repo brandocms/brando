@@ -25,7 +25,7 @@ defmodule Brando.LiveCase do
 
   ## Killing the LiveView
 
-  `kill_live/1` takes a view down the way a deploy or a crash would, and waits
+  `kill_live/2` takes a view down the way a deploy or a crash would, and waits
   for the exit rather than sleeping on it. Use it with
   `Phoenix.LiveViewTest.live/2` again to model a reconnect: LiveView's own form
   recovery replays the DOM params against a changeset freshly loaded from the
@@ -91,8 +91,18 @@ defmodule Brando.LiveCase do
   Deliberately not `:normal` — a normal exit is not what the recovery path is
   written for, and it would let the caller assert against a process that is
   still shutting down.
+
+  `role` is the caller declaring what this view is to `live/2`'s client proxy.
+  There is no default, because the two roles want genuinely different
+  behaviour and a default would silently give a child view the root path:
+
+    * `:root` — killing the view stops its proxy (`client_proxy.ex:542-545`),
+      so an exit signal is on its way and is awaited. A proxy that never
+      delivers one is a hang, and is flunked rather than waited out.
+    * `:child` — shares the root's proxy, which stays alive. Nothing is in
+      flight, so nothing is awaited: no race, and no pointless half-second.
   """
-  def kill_live(view) do
+  def kill_live(view, role) when role in [:root, :child] do
     pid = view.pid
     {_ref, _topic, proxy_pid} = view.proxy
     ref = Process.monitor(pid)
@@ -103,8 +113,8 @@ defmodule Brando.LiveCase do
     # The flag is captured and restored rather than just set: leaving it on
     # changes how every *later* line in the same test process reacts to a
     # crash, so a test could pass against a LiveView that died on it. Capture
-    # /restore is nested-safe — a second `kill_live/1` sees `prior_trap?` as
-    # `true` and hands the flag back on.
+    # /restore composes across *repeated* calls — a second `kill_live/2` sees
+    # `prior_trap?` as `true` and hands the flag back on.
     prior_trap? = Process.flag(:trap_exit, true)
 
     Process.exit(pid, :kill)
@@ -115,29 +125,28 @@ defmodule Brando.LiveCase do
       1_000 -> flunk("LiveView #{inspect(pid)} did not exit within 1s")
     end
 
-    await_proxy_exit(proxy_pid)
+    if role == :root, do: await_proxy_exit(proxy_pid)
     Process.flag(:trap_exit, prior_trap?)
     :ok
   end
 
-  # Drains the exit of the one process `live/2` linked us to, and nothing else.
-  # This used to drain *every* `{:EXIT, _, _}` for 50ms, which swallows an
-  # unrelated linked process failing — the test then carries on and can pass on
-  # a crash it never observed.
+  # Receives the exit of the one process `live/2` linked us to, and nothing
+  # else. Any other `{:EXIT, _, _}` in the mailbox is left there
+  # **deliberately** — it belongs to the test, which should be able to observe
+  # it. Disposing of unrelated exits is precisely what the old `flush_exits/0`
+  # did wrong: it drained every exit for 50ms, so a test carried on past a
+  # crash it never saw.
   #
-  # Killing a root view stops its proxy (`client_proxy.ex:542-545`), so the exit
-  # is expected and arrives in single-digit ms. A child view shares the root's
-  # proxy, which stays alive; there is no signal in flight and nothing to drain.
+  # Only reached for a `:root` view, whose proxy the kill stops
+  # (`client_proxy.ex:542-545`), so the exit is expected and arrives in
+  # single-digit ms. Not arriving means the proxy is hung, and that is a
+  # failure — this used to return `:ok` whenever the proxy was still alive,
+  # which made a hung root indistinguishable from a healthy child.
   defp await_proxy_exit(proxy_pid) do
     receive do
       {:EXIT, ^proxy_pid, _reason} -> :ok
     after
-      500 ->
-        if Process.alive?(proxy_pid) do
-          :ok
-        else
-          flunk("client proxy #{inspect(proxy_pid)} died without delivering an exit signal")
-        end
+      500 -> flunk("client proxy #{inspect(proxy_pid)} did not exit within 500ms")
     end
   end
 
