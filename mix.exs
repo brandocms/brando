@@ -72,22 +72,32 @@ defmodule Brando.Mixfile do
     [
       maintainers: ["Univers TM"],
       licenses: ["MIT"],
-      # `config` and `test` are deliberately absent. Neither was ever reachable
-      # from a consuming application: Mix compiles dependencies in `:prod`, so
+      # Required by Hex: without it `mix hex.build` stops with "Missing metadata
+      # fields: links" and the package cannot be published. Same URL the docs
+      # config already uses.
+      links: %{"GitHub" => "https://github.com/brandocms/brando"},
+      # `config` and `test` are deliberately absent, and nothing in a consuming
+      # application can reach them: Mix compiles dependencies in `:prod`, so
       # `elixirc_paths(:test)` never fires for a dep and `test/support` is never
       # compiled (verified against the e2e project's `MIX_ENV=test` build — no
       # `Elixir.Brando.ConnCase.beam`), and Elixir has not loaded dependency
-      # config files for many versions.
-      #
-      # So they were shipped and never evaluated, which is reason enough on its
-      # own. Dropping them also takes the test fixtures out of the tarball.
+      # config files for many versions. Excluding them also keeps the test
+      # fixtures out of the tarball.
       #
       # Not claimed here: that shipping placeholder credentials is itself the
       # risk. `priv/` still ships several on purpose — `brando.install`'s
       # `deployment.cfg`, `fabfile.py`, `.envrc.prod` — because a scaffold has
       # to hand the operator something to fill in.
+      # `assets/` is absent on purpose. The admin frontend reaches consuming
+      # applications through Yalc (`@brandocms/brandojs`), never through this
+      # tarball, and the generator templates a consumer does need live under
+      # `priv/templates/`, not here.
+      #
+      # Naming the directory was also actively harmful: Hex globs the
+      # filesystem and does not read `.gitignore`, so `"assets"` swept in
+      # `assets/node_modules/` — gitignored, 120 MB, and 10_976 of the 11_194
+      # `assets/` entries it produced.
       files: [
-        "assets",
         "lib",
         "guides",
         "priv",

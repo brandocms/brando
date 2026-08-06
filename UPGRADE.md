@@ -795,6 +795,10 @@ end
   - remove `@univers-agency/kurtz`
   - add `"brandojs": "file:../../deps/brando/assets/brandojs",`
     - (if developing on brandojs, yalc it.)
+    - **Note, from a later version:** this path no longer exists. The Hex
+      package stopped shipping `assets/` entirely, and the admin frontend is
+      distributed as `@brandocms/brandojs` via Yalc. Kept as the historical
+      0.44.0 step; do not follow it on a current upgrade.
 * Switch out `kurtz` with `brandojs`:
   ```
   gsed -i "s=@univers-agency\/kurtz=brandojs=" assets/backend/src/**/*.js && \
