@@ -67,6 +67,22 @@ test.describe('Multi-user block sync', () => {
   // B saves WITHOUT having touched anything, then reload must show A's edit
   // (the receiver's save must include shipped edits, not its stale copy)
   const saveAsBAndVerify = async (secondUserPage) => {
+    // Wait for B to have RECEIVED the ship before saving. `awaitBlockShip` in
+    // `editBlockOneAndBlur` only establishes that A *sent* it; the broadcast,
+    // B's server-side apply and B's diff are all still in flight at that point.
+    // Without this, B could save its stale copy, the assertion below would fail,
+    // and the failure would read as "the receiver clobbered A's edit" — the
+    // exact bug this test exists to catch — when the real cause was the test
+    // saving too early. A spec that reports the right failure for the wrong
+    // reason is worse than a flaky one.
+    //
+    // Removing `waitForTimeout` did not make this correct; it made the window
+    // narrower. This closes it on an event instead: the value in B's DOM.
+    await expect(secondUserPage.locator('.header-block textarea').nth(0)).toHaveValue(
+      'Alpha edited by A',
+      { timeout: 15000 }
+    )
+
     await secondUserPage.getByTestId('split-dropdown-button').click()
     await secondUserPage
       .getByRole('button', { name: /Save and continue editing/ })

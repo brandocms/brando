@@ -40,7 +40,14 @@ defmodule Brando.Blueprint.ErrorTranslatorTest do
       end)
 
     assert_receive {:translated, ["Missing field"]}
-    assert log =~ "Could not get field `:missing_field` from form"
+    assert log =~ "Could not get field :missing_field from form"
+
+    # The log used to `inspect/2` the whole `Forms.Form` — over a hundred lines
+    # per occurrence, and four occurrences in this suite alone. What a developer
+    # needs is the key that was missing and the keys that were available, so
+    # pin that the fields list is there and the struct dump is not.
+    assert log =~ "Fields in this form: []"
+    refute log =~ "%Brando.Blueprint.Forms.Form{"
   end
 
   defp form_with_fields(fields) do

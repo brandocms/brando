@@ -54,11 +54,15 @@ defmodule Brando.Blueprint.ErrorTranslator do
 
   defp humanize(field), do: field |> to_string() |> Phoenix.Naming.humanize()
 
-  defp log_missing_field(error_key, form) do
-    Logger.error("""
-    (!) Could not get field `#{inspect(error_key)}` from form:
-
-    #{inspect(form, pretty: true)}
-    """)
+  # Names the form and the fields it does have, rather than inspecting the whole
+  # struct. A `Forms.Form` is tabs → fieldsets → inputs deep and runs to well
+  # over a hundred lines pretty-printed, which buried the one line that matters
+  # and flooded the test suite's stdout every time an error key had no input.
+  # The field list is the thing you actually compare the missing key against.
+  defp log_missing_field(error_key, %Forms.Form{name: name} = form) do
+    Logger.error(
+      "(!) Could not get field #{inspect(error_key)} from form #{inspect(name)}. " <>
+        "Fields in this form: #{inspect(Forms.list_fields(form))}"
+    )
   end
 end
