@@ -890,3 +890,363 @@ load-bearing, not noise.
   adding the precedence test, which is Mux-only. The extracted helper is shared,
   so the rule is covered once — but Cloudflare's request construction is not
   covered anywhere.
+
+---
+
+# Phase 7 planning — 2026-08-06
+
+Plan: `.claude/plans/form-audit/phase-7-plan.md`. From
+`reviews/phase-6-triage.md` (14 approved, 0 skipped, 0 deferred). No research
+agents — the review findings are the research.
+
+## What re-reading the code changed about four findings
+
+### 1. B1's real child already exists
+`lib/brando_admin/components/layouts/live.html.heex:2-4` renders three sticky
+children (`brando-chrome`, `brando-upload-manager-lv`, nav) on every admin page.
+So `live_form/2` + `find_live_child(view, "brando-chrome")` is a real nested
+child with no new fixture. B1-prove is ~10 lines, not a fixture project.
+
+### 2. The reading was re-done, agrees, and changes nothing about the task
+Against `phoenix_live_view 1.2.8` (`mix.lock:87`), in `client_proxy.ex`:
+`put_view/3` monitors (`:849`) and registers in `state.pids` (`:856`) for every
+view with no root/child distinction; children reach it at `:1001`;
+`{:DOWN,…}` → `fetch_view_by_pid` → `{:stop,…}` (`:543-545`, `:909-912`).
+So the reading predicts the proxy dies on a child kill.
+
+Deliberately did **not** let this substitute for B1-prove. Twice in this audit a
+`file:line` reading was shipped as a result and was wrong. Reading it a third
+time is not the check.
+
+### 3. Nothing passes `:child` except the test of the `:child` branch
+Real sites — `form_recovery_test.exs:36, 48, 151, 174, 198` — are all `:root`.
+Only `:75` passes `:child`, against a stub. Collapsing to `kill_live/1` deletes
+one test and rewrites five one-word call sites.
+
+### 4. W-5's open question resolves in the direction that clears it
+`build_direct_filename/2` (`uploads.ex:419-434`) uniquifies **unconditionally**;
+`build_upload_key/2` uniquifies only when `key_available?/2` says taken. The
+direct path uses the stricter guard, so `finalize_direct/3`'s bare
+`head_object/2` calls (`:266`, `:292`) verify a completed upload — they are not a
+missing collision check. W-5 is not a live upload defect and does not need its
+own phase. 7C confirms this rather than re-deriving it, and escalates if it
+does not hold.
+
+## New, not from the review — flagged, not actioned
+`build_upload_key/2` calls `key_available?/2` unconditionally, so
+`overwrite: true` + `force_filename` (honoured at `utils.ex:1196-1199`) still
+gets a `unique_filename/1` suffix on collision, defeating the `overwrite` it
+just honoured. Downstream-consumer surface only. Recorded for a decision in 7C;
+this phase's remit is claims, not behaviour.
+
+## S-7 upgraded from "check" to "expect a fix"
+`assets/node_modules/` is **120 MB**, gitignored (`.gitignore:10`), and Hex globs
+the filesystem — it does not read `.gitignore`. `mix.exs:89-98` ships `"assets"`
+whole. Brando's frontend reaches consumers via Yalc, not the tarball, so the
+open question is what the tarball needs `assets/` for at all.
+
+## Phase 7 implementation — B1-prove result (2026-08-06)
+
+**Measured: the proxy dies.** The `:child` branch's premise is false.
+
+`live_form(conn, "/admin/pages/update/#{id}")` → `find_live_child(view, "brando-chrome")`
+→ `Process.exit(child.pid, :kill)`. Within the same 500 ms window
+`await_proxy_exit/1` allows, the root's proxy pid delivers `:DOWN`.
+
+Causation was established, not assumed — the plan's standard, and it was worth
+the extra run:
+- `assert Process.alive?(proxy_pid)` before the kill: passes.
+- A control test that mounts, finds the child, and **kills nothing** asserts
+  `:proxy_survived` after 500 ms: passes. Also asserts `child.pid != view.pid`,
+  so the child is a genuinely distinct process and not the root under another
+  name. Deleted after it did its job.
+
+So the reading recorded above ("§2 the reading was re-done, agrees") was right,
+and *running it was still the check* — a stub could never have shown this,
+because the stub is the claim wearing a `spawn/1`.
+
+**Consequence for B1-fix:** take the "proxy dies" branch. `kill_live/2`'s
+`:root`/`:child` distinction is not real; collapse to `kill_live/1`.
+
+## Phase 7 implementation — W-5-investigate result (2026-08-06)
+
+**The conclusion holds; the plan's wording for it does not.** The plan said
+`build_direct_filename/2` "uniquifies **unconditionally**". It does not — it has
+three branches, and the plan's sentence describes only the third. Checked
+branch by branch against `build_upload_key/2` (`utils.ex:1174`), which is what
+the comparison was actually for:
+
+| config | `build_upload_key/2` | `build_direct_filename/2` |
+|---|---|---|
+| default | slugify, uniquify **only if the key is taken** | slugify, uniquify **always** |
+| `random_filename: true` | `random_filename/1` | `random_filename/1` — identical |
+| `overwrite: true` | slugify, **and still uniquify if taken** | slugify, no uniquify |
+| `overwrite: true` + `force_filename` | forced name, **and still uniquify if taken** | slugify; `force_filename` not honoured |
+
+So in every branch where collision-safety is *wanted*, the direct path is at
+least as strict as `build_upload_key/2`, and in the default branch strictly
+stricter. In the `overwrite` branch it does not uniquify — which is the
+requested behaviour, and the row where `build_upload_key/2` is the one getting
+it wrong (see the `overwrite`/`force_filename` observation below).
+
+`random_filename/1` was checked rather than assumed: `random_string/1`
+(`utils.ex:182-192`) hashes `{seed, :os.timestamp()}`, so it is time-varying
+and not a deterministic function of the filename. A deterministic one would
+have been a real collision bug in both paths.
+
+**`finalize_direct/3`'s `head_object/2` calls (`uploads.ex:266`, `:292`) are
+verification, not a missing guard.** They run *after* the client has PUT to the
+presigned key, and feed `validate_direct_object/3`'s size and content-type
+checks. Collision detection at that point is not merely absent, it is
+impossible — the object is already written. The only place a guard could sit is
+key construction, in `initiate_direct_asset/3` (`:395-398`), and that is what
+`build_direct_filename/2` is.
+
+**W-5 is not a live upload defect.** No escalation; 7C absorbs it as planned.
+
+## Phase 7 — the `overwrite:` observation, sharpened (2026-08-06) — AWAITING DECISION
+
+The plan flagged this as "`overwrite: true` + `force_filename` still collects a
+`unique_filename/1` suffix". Checking it made it **broader**, and gave it a
+structural counterpart in this same repo.
+
+**`build_upload_key/2` (`utils.ex:1174-1182`) never honours `overwrite:` at
+all** — with or without `force_filename`:
+
+```elixir
+key = concat_with_upload_path(filename, file_cfg)
+if Brando.CDN.key_available?(key, file_cfg), do: key, else: unique_filename(key)
+```
+
+There is no `overwrite` branch on that `if`. `overwrite: true` only changes
+*which name is chosen* (it is what lets `get_valid_filename/2`'s
+`force_filename` clause match at `:1196`); the suffix is then applied to
+whatever name came out, whenever the key is taken.
+
+**The local filesystem path gets this right, and its shape is the fix.**
+`upload.ex:321-327`:
+
+```elixir
+dest =
+  if Map.get(cfg, :overwrite) do
+    joined_dest
+  else
+    (File.exists?(joined_dest) && Path.join(ul_path, unique_filename(fname))) || joined_dest
+  end
+```
+
+Same decision, one `if` more. So the two transports disagree on a documented
+option: `file_config.ex:22` declares `:overwrite` as "Allow overwriting existing
+files with the same name", and the CDN key path silently does not.
+`build_direct_filename/2` (`uploads.ex:427`) also honours it correctly — so
+`build_upload_key/2` is the odd one of three.
+
+**Fixed** (user's call, after being surfaced rather than actioned silently).
+`build_upload_key/2` now short-circuits on `overwrite` and skips the bucket
+check entirely in that branch — one fewer `HEAD` per upload, and the option
+finally does what `Brando.Type.FileConfig` says it does.
+
+The mutation is the part worth keeping: removing the branch made both new tests
+fail with `Mox.UnexpectedCallError — no expectation defined for head_object/3`.
+That is a stronger RED than an equality assertion, because *the call itself* is
+the defect — the test asserts the bucket is never consulted by declining to
+stub it. Same trick is reusable anywhere "must not do X" is the requirement.
+
+Same class as Phase 5's S1: a declared contract the write path does not
+implement.
+
+## Phase 7 implementation notes (2026-08-06)
+
+Phase 7 shipped complete — all 19 tasks, closing all 14 triage items. Gates:
+`mix test` **1280 + 135 doctests / 0** (+7 net: +5 ReqOptions, +2 provider
+mirrors, +1 B1-prove, −1 deleted `:child` test), credo **284** (unchanged),
+format and compile clean, unit-suite output **43 lines stdout / 27 non-dot /
+0 stderr**,
+E2E **107 / 0** on a full `--reset` (8.9m) — measured this round, not carried.
+That closes the plan's one knowingly-carried assumption; the 107/0 the last
+three phases inherited is now a number with a run behind it.
+
+### 1. The plan's four "corrections to the triage" were themselves 50% wrong
+
+The plan opened by re-verifying four findings and correcting them. Two of those
+corrections were right (B1's real child exists; nothing passes `:child`). Two
+were not:
+
+- **Correction 2 predicted the proxy dies, and it does — but the plan was right
+  that reading it a third time was not the check.** B1-prove ran, and the value
+  of running it was not the answer, it was the *control*. Asserting "the proxy
+  died after I killed the child" is satisfied by a proxy that was going to die
+  anyway. The control test (mount, find the child, kill nothing, assert the
+  proxy survives 500ms) is what makes it causal, and it cost one extra run.
+- **Correction 4 said `build_direct_filename/2` uniquifies "unconditionally".**
+  It does not — three branches, and the sentence describes the third. The
+  *conclusion* survived, but only after checking the other two.
+
+*This is now the audit's most durable lesson, in its fourth form: an agent
+finding is a hypothesis with a `file:line`, and so is a plan's correction to
+one. The plan said "reading it a second time is not the check. Running it is."
+That applied to its own prose too.*
+
+### 2. Two estimates were off by an order of magnitude, both in the same shape
+
+S-6 was scoped as "two of the 76 baseline lines". It was **33** — each
+deprecation warning carries a ~16-line stacktrace, and the finding counted the
+`warning:` line only. S-7 was scoped as "very likely live"; it was live and
+`node_modules/` was **98% of the tarball's `assets/` entries**.
+
+Both under-estimates come from counting the thing named rather than the thing
+emitted. Worth carrying: a line-count baseline is only meaningful if you know
+whether the lines are self-contained.
+
+Related, and worth fixing in the next baseline: **the output-line metric is
+partly wrap-noise.** 1413 progress dots wrap into a variable number of lines,
+so a test-count change moves the number without any output changing. The stable
+figure is **non-dot lines: 29 on stdout, 0 on stderr.** Use that in Phase 8.
+
+### 3. `mix hex.build` could not complete at all
+
+Found by doing S-7 rather than reasoning about it: the build stops with
+`Missing metadata fields: links`, so the package was unpublishable — a state no
+amount of arguing about `files:` would have surfaced. The file list still
+prints before the failure, which is why the audit was possible at all.
+
+### 4. The `overwrite:` observation got broader on contact
+
+The plan flagged `overwrite: true` + `force_filename`. Checking it showed
+`build_upload_key/2` never honours `overwrite:` in any form, and that the local
+filesystem path (`upload.ex:321-327`) already has the exact `if` it is missing.
+Recorded above; **not actioned, decision pending.**
+
+### 5. Both reserved decisions went the other way, and both were right to ask
+
+The plan fenced two items as "surface, don't action". Asked, and the user took
+the fix in both cases:
+
+- **The `overwrite:` bug** — fixed, with the Mox-no-expectation RED above.
+- **`assets/` in the tarball** — dropped entirely rather than narrowed.
+  Final tarball **1388 files / 1.3 MB**, from 11_194 `assets/` entries alone.
+
+Worth noting what asking bought beyond permission: writing the question forced
+the check that `UPGRADE.md:796` is in the *0.44.0* section, i.e. a historical
+record rather than current guidance. The plan's own phrasing ("strike the stale
+line") would have falsified what 0.44.0 required. It got a dated note instead.
+
+### Deliberately not done, and why
+- **The missing-credential disagreement** (Mux/Bunny raise, Cloudflare returns
+  `{:error, :not_configured}`). Fourth recording. Still pre-existing, still
+  unasked-for by any finding.
+- **`Brando.CDN.get_s3_config/2`'s other four `Map.from_struct/1` sites**
+  (`:97, 107, 210, 348`). None warn; only `:119` ever receives a non-struct.
+
+## Sequencing rationale
+7A (harness) first for the Phase 5/6 reason — it rewrites the instrument every
+later RED run is read off, and B1-fix decides whether two of S-3's four comment
+sites still exist. 7B/7C/7D are mutually independent. 7E last because S-6 moves
+the output-line baseline (76 → 74 expected), and measuring before it lands gives
+a number Phase 8 cannot reproduce.
+
+## Phase 8 planning decisions (2026-08-06)
+
+Planned directly from `reviews/phase-7-review.md` — no research agents. The
+findings are the research; the three highest-severity ones were re-verified
+against the vendored deps during the review itself.
+
+**Two decisions taken before writing tasks**, both because either answer would
+have produced materially different work:
+
+1. **S-3 vs B1-fix → rewrite both narration blocks in present tense.** Neither
+   standard is amended. S-3's ban stands; B1-fix's argument survives but stops
+   being told as history. Rejected: deleting the argument (loses a real
+   why-not-the-obvious explanation), and amending S-3 (weakens the standard for
+   one hard case).
+
+2. **Bunny `AccessKey` cross-host forwarding → fix in Phase 8**, not defer, not
+   prove-first. Unlike B1 there is nothing to observe:
+   `remove_credentials_if_untrusted/3` (`req/steps.ex:1573-1582`) deletes
+   exactly `authorization` and `:auth`, and Bunny sends neither. The fix goes in
+   `built_opts` rather than as a documented default specifically because
+   `Keyword.merge(configured || [], built_opts)` makes it config-proof.
+
+**The framing that drove 8A.** The blocker is not three wrong numbers — it is
+that S-2, the task whose job was re-verifying them, moved a correct citation to
+a wrong one and recorded the move as a correction (`phase-7-plan.md:147`). Third
+instance of the same shape in three phases. The structural answer is to stop
+citing interior line numbers where a function head will do, not to read more
+carefully.
+
+## Phase 8 implementation notes (2026-08-06)
+
+Phase 8 shipped complete — all tasks across 8A–8G. Gates: `mix test`
+**1281 + 135 doctests / 0** (+1 net), credo **284** (unchanged), format and
+compile clean, unit-suite output **43 stdout / 27 non-dot / 0 stderr** — exactly
+the corrected baseline. Every one of the five per-test mutations was run and
+watched go RED.
+
+**E2E — measured 2026-08-06: 107 passed / 0 failed, 8.8m**, full `--reset` (DB
+drop → rollback-to-baseline → forward → reseed), 1 worker, Google Chrome. Run
+against this phase's tree, which includes the Bunny `redirect: false` transport
+change. Recorded here rather than only in a verification table, per 8G — the
+Phase 7 number was correct but had no artifact anyone could point at, which is
+what made the review mark it UNCLEAR. This one has a run behind it and a date on
+it.
+
+### 1. All five B1 citations verified, and the plan's table was exactly right
+
+Rare enough in this audit to record. Against the vendored 1.2.8: `:848` builds
+the struct and `Process.monitor(pid)` is `:849`; `:856` writes `state.views`
+while `pids:` is `:857`; `fetch_view_by_pid/2` is `:909-913` with `:908` blank;
+`:1001` and `:542-545` hold. Replaced with function heads (`put_view/3` `:846`,
+the `handle_info({:DOWN, …}, state)` clause `:542`, `fetch_view_by_pid/2`
+`:909`) plus `recursive_detect_added_or_removed_children/4` by name.
+
+### 2. W-1 was right that the doc was stale and wrong about what replaces it
+
+The review said to swap the `Map.from_struct/1` clause for "the config error S-6
+raises". Measured, that raise is **not** what a CDN-less caller hits.
+`%Brando.CDN.Config{}` defaults `:s3` to a populated `%S3Config{}`, so the
+fallback clause *succeeds* and hands back a keyword list of nil credentials. The
+raise arrives one line later at `cdn_config.bucket` — a `BadMapError` on `nil`.
+`get_s3_config/2`'s own raise needs `:cdn` present **and** carrying an explicit
+`s3: nil`.
+
+*Fifth instance of the audit's most durable lesson, and the first where the
+correction offered by the finding was itself the wrong replacement.* The doc's
+conclusion — raises before any network call, so callers must check first —
+survived unchanged; only the mechanism was wrong.
+
+### 3. S-1's premise does not hold, so it became a comment
+
+The review cited `uploads.ex:385-389` as proof that a keyword-list config
+reaches `Map.from_struct/1`. That code normalizes a keyword-list **CDN** config,
+which is a different thing from a keyword-list **`:s3`** sub-config. Measured
+all four shapes: a keyword-list CDN config raises `BadMapError` in `config/2`'s
+`Map.get/3` long before the guard, so widening the guard could not catch it. The
+shape that *does* slip past is a keyword-list `:s3`, which nothing in this repo,
+its docs or its tests writes — and which the unguarded sibling clause would
+still raise on. Recorded in the comment; no behaviour change.
+
+### 4. A blanket mutation claim covering five tests was one test and four assumptions
+
+W-4c was right. Only the merge-order flip reddens the precedence test. The
+others need: a `Keyword.take` allowlist (pass-through, and the new `:auth`
+round-trip), dropping the `|| []` (stored-nil), and dropping the `[]` default
+from `get_env` (unset provider). Writing them down found an error in my own
+comment: dropping the `|| []` reddens **both** nil tests, because an absent key
+also yields `nil` from `Keyword.get([], :req_options)`. Only the `get_env`
+mutation distinguishes them. *A per-test mutation comment is itself a claim, and
+running it is what makes it true.*
+
+### 5. The Bunny leak reproduced exactly as read
+
+No observation was needed to justify the fix (per Decision 2), but the test
+still measured it: with `redirect: false` removed, the stub receives
+`{:request, "evil.example.com", ["bunny-key"]}`. The credential arrives at the
+other host verbatim. `Req.TooManyRedirectsError` after ten hops, each carrying
+the key.
+
+### Deliberately not done, and why
+- **Suppressing the Mux 422 log** already in the baseline. Pre-existing, and
+  narrowing scope to my own new line kept the baseline comparison honest.
+- **The missing-credential disagreement** (Mux/Bunny raise, Cloudflare returns
+  `{:error, :not_configured}`). **Fifth recording.** Phase 9 decides or stops
+  recording it, per the Phase 8 plan's own instruction.

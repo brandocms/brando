@@ -114,6 +114,34 @@ defmodule Brando.CDN do
   def get_s3_config(_, as: type) do
     s3_config = config(Brando.Images, :s3)
 
+    # The field config carries no `:cdn`, so this is the fallback — and it is
+    # allowed to be missing, which makes `s3_config` `nil`. `Map.from_struct/1`
+    # accepts an atom as a module and would take that clause (deprecated since
+    # Elixir 1.20), warn, and then fail on `nil.__struct__/0` — a message that
+    # says nothing about the config that is actually absent. Same shape as the
+    # `s3: :default` clause above.
+    #
+    # Reaching this at all needs `:cdn` present *and* carrying an explicit
+    # `s3: nil`: `%Brando.CDN.Config{}` defaults `:s3` to a populated
+    # `%Brando.CDN.S3Config{}`, so a CDN-less app falls through here and
+    # succeeds with nil credentials rather than raising. See `key_available?/2`.
+    #
+    # Deliberately `!s3_config` and not a wider guard. A **keyword-list** config
+    # cannot arrive here: given `cdn: [enabled: true, s3: …]`, `config/2` above
+    # calls `Map.get/3` on that list and raises `BadMapError` at `:72`, long
+    # before this clause. (`Brando.Uploads`' `normalize_cdn_config/1` does accept
+    # a keyword-list CDN config, but it `struct/2`s it into a `%Config{}` first
+    # and is a different entry point.) The shape that *does* slip past this
+    # guard is a keyword-list `:s3` **sub**-config, which then fails on
+    # `Map.from_struct/1` below — and equally at `:107` in the clause above,
+    # which has no guard at all. Nothing in this repo, its docs or its tests
+    # writes that shape; every one uses `%S3Config{}` or `:default`. Guarding it
+    # in one of the two clauses would buy a better message on a config nobody
+    # writes, while leaving the other clause to raise the old one.
+    if !s3_config do
+      raise "Missing S3 config. The field config has no `:cdn`, and there is no fallback `s3` config under `Brando.Images`. Either give the field its own `:cdn` config, or set one under `Brando.Images`. See `Brando.CDN` moduledocs for more info"
+    end
+
     if type == :keyword_list do
       s3_config
       |> Map.from_struct()
@@ -393,6 +421,23 @@ defmodule Brando.CDN do
   provider 404 on an absent key? DigitalOcean Spaces does. A provider that
   answers some other way gets a suffix on every upload — functional, but the
   collision-avoidance name appears where it need not.
+
+  One outcome is not on that scale: a `field_cfg` with no `:cdn` **raises**
+  rather than returning either answer. `head_object/2` needs both an S3 config
+  and a bucket, and with `:cdn` absent it is the **bucket** that fails — not
+  the S3 config, which is the intuitive answer and the wrong one.
+
+  Measured rather than read: `get_s3_config/2` falls through to the
+  `Brando.Images` `:s3` fallback, and because `%Brando.CDN.Config{}` defaults
+  `:s3` to a populated `%Brando.CDN.S3Config{}`, that fallback ordinarily
+  **succeeds**, handing back a keyword list whose credentials are `nil`. The
+  raise arrives one line later at `cdn_config.bucket` (`:429`), where
+  `Map.get(field_cfg, :cdn)` returned `nil` — a `BadMapError`.
+
+  The config error `get_s3_config/2` raises is the narrower case: it needs
+  `:cdn` to be present *and* to carry an explicit `s3: nil`. Either way nothing
+  reaches the network, so callers on a possibly-CDN-less config must still
+  check first — which is the part that matters here, and it is unchanged.
   """
   def key_available?(object_key, field_cfg) do
     head_object(object_key, field_cfg) == {:error, :not_found}

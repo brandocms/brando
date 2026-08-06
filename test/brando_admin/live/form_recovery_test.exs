@@ -28,53 +28,119 @@ defmodule BrandoAdmin.FormRecoveryTest do
       assert params["page"]["uri"] == page.uri
     end
 
-    test "kill_live/2 takes the process down and waits for it", %{conn: conn, page: page} do
+    test "kill_live/1 takes the process down and waits for it", %{conn: conn, page: page} do
       {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
       pid = view.pid
 
       assert Process.alive?(pid)
-      assert kill_live(view, :root) == :ok
+      assert kill_live(view) == :ok
       refute Process.alive?(pid)
     end
 
-    # `kill_live/2` has to trap exits to survive the proxy dying with the view.
+    # `kill_live/1` has to trap exits to survive the proxy dying with the view.
     # If it left the flag on, every later line in the test process would quietly
     # stop being killed by a crash — including the assertions this file exists
     # to make.
-    test "kill_live/2 leaves trap_exit as it found it", %{conn: conn, page: page} do
+    test "kill_live/1 leaves trap_exit as it found it", %{conn: conn, page: page} do
       {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
 
       refute Process.info(self(), :trap_exit) == {:trap_exit, true}
-      kill_live(view, :root)
+      kill_live(view)
       assert Process.info(self(), :trap_exit) == {:trap_exit, false}
     end
 
-    # `await_proxy_exit/1` used to return `:ok` whenever the proxy was still
-    # alive after 500ms — which is exactly what a healthy `:child` looks like,
-    # so a genuinely hung **root** proxy was reported as a clean kill. Taking
-    # the role from the caller is what makes the two distinguishable; these two
-    # tests pin both halves of that, since the ambiguity is only removed if
-    # each branch actually does its own thing.
-    test "kill_live/2 flunks when a root's proxy outlives the view" do
+    # `await_proxy_exit/1` returns `:ok` only on a real exit. A proxy still
+    # alive when the window closes is a hang, and hangs are reported.
+    test "kill_live/1 flunks when the proxy outlives the view" do
       {view, proxy} = stub_view_with_live_proxy()
 
       assert_raise ExUnit.AssertionError, ~r/did not exit within 500ms/, fn ->
-        kill_live(view, :root)
+        kill_live(view)
       end
 
-      refute_received {:EXIT, ^proxy, _}
-      restore_trap_exit()
+      # Subject assertion: reaching the proxy wait at all means `kill_live/1`
+      # killed the view and observed its `:DOWN` first. Goes RED if the two
+      # waits are ever reordered, or if the flunk moves ahead of the kill —
+      # both of which leave the `assert_raise` above still passing.
+      refute Process.alive?(view.pid)
+
+      # Fixture premise, not a subject assertion — kept, and labelled as one.
+      # `kill_live/1` never touches the proxy and the stub is an unlinked
+      # infinite sleeper, so this line cannot go RED for *any* change to the
+      # subject; its RED comes only from mutating the fixture. It stays because
+      # the flunk asserted above is a claim *about the proxy*, and a reader is
+      # owed the evidence that the claim was true rather than a coincidence.
+      # Asserted on the process rather than on this mailbox for a related
+      # reason: `kill_live/1` only ever `receive`s, so no `{:EXIT, …}` can
+      # arrive here and a refutation about one would hold whatever the code did.
+      assert Process.alive?(proxy)
+
+      # `kill_live/1` restores `trap_exit` from an `after`, so the flunk path
+      # hands the flag back too. Without that, a caught flunk leaks it into
+      # every later line of this test process.
+      assert Process.info(self(), :trap_exit) == {:trap_exit, false}
     end
 
-    # The branch the role argument exists for, and the one nothing exercised
-    # before: a child shares the root's proxy, so there is no exit in flight.
-    # Waiting for one is a guaranteed 500ms of nothing.
-    test "kill_live/2 does not wait on a proxy when the view is a child" do
-      {view, _proxy} = stub_view_with_live_proxy()
+    # Establishes that a child view's death stops the **root's** proxy, which
+    # is why `kill_live/1` awaits the proxy for every view and takes no role
+    # from the caller. The child is a real one: every admin page renders three
+    # sticky children (`layouts/live.html.heex:2-4`), so no fixture is needed.
+    #
+    # Asserts on **proxy liveness** rather than on elapsed time because the
+    # competing reading — a child shares a proxy that outlives it — predicts
+    # the same elapsed time and is satisfied by any wall-clock assertion. Only
+    # the proxy's own `:DOWN` separates them. A stub proxy cannot see this at
+    # all, because a stub *is* the claim wearing a `spawn/1`.
+    test "killing a real child view stops the root's proxy", %{conn: conn, page: page} do
+      {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
+      {_ref, _topic, proxy_pid} = view.proxy
+      child = find_live_child(view, "brando-chrome")
 
-      {elapsed_us, :ok} = :timer.tc(fn -> kill_live(view, :child) end)
+      assert child, "no `brando-chrome` child mounted — the layout no longer renders one"
 
-      assert elapsed_us < 400_000, "`:child` waited #{div(elapsed_us, 1000)}ms on a live proxy"
+      # The three premises that make the result causal. Without them the
+      # assertion below is satisfied by any death of the root view inside the
+      # window — including one that had nothing to do with the child.
+      #
+      #   * the child is a genuinely distinct process, not the root under
+      #     another name;
+      #   * the root is alive going in, so its proxy is not already stopping;
+      #   * the proxy is alive going in, so there is something left to stop.
+      assert child.pid != view.pid
+      assert Process.alive?(view.pid)
+      assert Process.alive?(proxy_pid)
+
+      # `live/2` links the test process to the proxy, so if the proxy does go
+      # down with the child, an untrapped test dies with it.
+      prior_trap? = Process.flag(:trap_exit, true)
+
+      try do
+        proxy_ref = Process.monitor(proxy_pid)
+        child_ref = Process.monitor(child.pid)
+
+        Process.exit(child.pid, :kill)
+        assert_receive {:DOWN, ^child_ref, :process, _, :killed}, 1_000
+
+        # The same window `await_proxy_exit/1` allows. The reason is asserted,
+        # not matched with `_`: the proxy stops by propagating the *child's*
+        # exit, so `:killed` is the causal link. A proxy that went down for any
+        # other reason — the root crashing on its own, a sandbox teardown —
+        # reports a different reason and reddens this line, where `_` would
+        # have accepted it as a pass.
+        outcome =
+          receive do
+            {:DOWN, ^proxy_ref, :process, ^proxy_pid, reason} -> {:proxy_stopped, reason}
+          after
+            500 -> :proxy_survived
+          end
+
+        assert outcome == {:proxy_stopped, :killed}
+
+        Process.demonitor(proxy_ref, [:flush])
+        Process.demonitor(child_ref, [:flush])
+      after
+        Process.flag(:trap_exit, prior_trap?)
+      end
     end
 
     # `recovery_target/2` mirrors `pushFormRecovery` in LiveView's own JS
@@ -148,7 +214,7 @@ defmodule BrandoAdmin.FormRecoveryTest do
       type_title(view, html, "Edited title")
       assert render(view) =~ "Edited title"
 
-      kill_live(view, :root)
+      kill_live(view)
 
       {_view, html} = live_form(conn, "/admin/pages/update/#{page.id}")
       assert form_params(html, "#page_form_form")["page"]["title"] == "Stored title"
@@ -171,7 +237,7 @@ defmodule BrandoAdmin.FormRecoveryTest do
 
       assert captured["page"]["title"] == "Edited title"
 
-      kill_live(view, :root)
+      kill_live(view)
 
       {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
       recovered = view |> element("#page_form_form") |> render_change(captured)
@@ -195,7 +261,7 @@ defmodule BrandoAdmin.FormRecoveryTest do
       # ever changes: the target is not under the entry's singular.
       assert captured["_target"] == ["image_editor_upload"]
 
-      kill_live(view, :root)
+      kill_live(view)
 
       {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
       recovered = render_change(view |> element("#page_form_form"), captured)
@@ -285,9 +351,18 @@ defmodule BrandoAdmin.FormRecoveryTest do
     view |> element("#page_form_form") |> render_change(params)
   end
 
-  # Not a real `%Phoenix.LiveViewTest.View{}`: `kill_live/2` reads `.pid` and
+  # Not a real `%Phoenix.LiveViewTest.View{}`: `kill_live/1` reads `.pid` and
   # `.proxy`, and what the harness tests need is a proxy that stays alive and
   # sends the test process nothing — a root proxy that ignored the kill.
+  #
+  # That makes this a **duck type of a struct this repo does not own**. If
+  # LiveView renames `:proxy`, changes its tuple shape, or starts reading a
+  # field this map lacks, `kill_live/1` breaks against real views while every
+  # test using this stub keeps passing — the failure lands in consumers, not
+  # here. The version assertion above ("the recovery target mirrors a known
+  # LiveView version") is the tripwire for that too: it covers this coupling
+  # for the same reason it covers the `view.ts` mirror, and a bump is the
+  # moment to re-check `%View{}`'s shape as well as `pushFormRecovery`.
   defp stub_view_with_live_proxy do
     proxy = spawn(fn -> Process.sleep(:infinity) end)
     view_pid = spawn(fn -> Process.sleep(:infinity) end)
@@ -295,9 +370,4 @@ defmodule BrandoAdmin.FormRecoveryTest do
 
     {%{pid: view_pid, proxy: {make_ref(), "lv:stub", proxy}}, proxy}
   end
-
-  # `kill_live/2` flunks before it restores the flag. That only matters where
-  # the flunk is deliberately caught — a real failure ends the test process and
-  # the flag with it.
-  defp restore_trap_exit, do: Process.flag(:trap_exit, false)
 end
