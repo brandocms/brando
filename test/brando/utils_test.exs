@@ -5,6 +5,7 @@ defmodule Brando.UtilsTest do
   import Plug.Test
   import Brando.Utils
   import ExUnit.CaptureIO
+  import Mox
 
   alias Brando.Factory
   alias Brando.Files
@@ -508,6 +509,63 @@ defmodule Brando.UtilsTest do
 
     test "returns false for missing key" do
       refute loaded_assoc?(%{}, :image)
+    end
+  end
+
+  # `build_upload_key/2` decides whether an upload writes to the key it wants or
+  # to a renamed one, and it decides on a `HEAD` against a live bucket. The
+  # question that matters is not what it does when the bucket answers cleanly —
+  # it is what it does when the bucket answers something it cannot read.
+  #
+  # A 403 is the realistic case: a bucket without `s3:ListBucket` masks 404 as
+  # 403, so "absent" and "forbidden" are indistinguishable on the wire. Treating
+  # that as "free" writes new bytes underneath an existing asset's row. Treating
+  # it as "taken" costs a suffix. Only `{:error, :not_found}` is definitive.
+  describe "build_upload_key/2 and the overwrite guard" do
+    @field_cfg %{
+      upload_path: Path.join(["images", "site", "logo"]),
+      cdn: %{
+        enabled: true,
+        bucket: "testbucket",
+        s3: %Brando.CDN.S3Config{
+          access_key_id: "TESTKEY",
+          secret_access_key: "TESTSECRET",
+          scheme: "https://",
+          host: "ams3.digitaloceanspaces.com",
+          region: "ams3"
+        }
+      }
+    }
+
+    @wanted_key "media/images/site/logo/logo.jpg"
+
+    setup :verify_on_exit!
+
+    test "an absent key is written to as-is" do
+      expect(Brando.CDN.Client.Mock, :head_object, fn "testbucket", @wanted_key, _cfg ->
+        {:error, :not_found}
+      end)
+
+      assert build_upload_key("logo.jpg", @field_cfg) == @wanted_key
+    end
+
+    test "an occupied key is renamed" do
+      expect(Brando.CDN.Client.Mock, :head_object, fn _bucket, _key, _cfg ->
+        {:ok, %{status_code: 200, headers: []}}
+      end)
+
+      assert build_upload_key("logo.jpg", @field_cfg) != @wanted_key
+    end
+
+    test "a key the bucket will not answer for is renamed, not overwritten" do
+      expect(Brando.CDN.Client.Mock, :head_object, fn _bucket, _key, _cfg ->
+        {:error, {:http_error, 403, %{status_code: 403, body: ""}}}
+      end)
+
+      key = build_upload_key("logo.jpg", @field_cfg)
+
+      refute key == @wanted_key
+      assert key =~ ~r|^media/images/site/logo/logo-[a-z0-9]+\.jpg$|
     end
   end
 end

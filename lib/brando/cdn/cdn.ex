@@ -378,8 +378,24 @@ defmodule Brando.CDN do
     {:ok, {:bucket, :exists}}
   end
 
-  def key_exists?(object_key, field_cfg) do
-    match?({:ok, _}, head_object(object_key, field_cfg))
+  @doc """
+  Whether `object_key` is free to write to.
+
+  Only a definitive `{:error, :not_found}` frees the key. A hit, or an error we
+  cannot interpret — a 403 from a bucket that masks 404 without `s3:ListBucket`,
+  a timeout, a signature failure — reads as **occupied**, because the caller
+  uses a `true` here to justify writing to that key. Guessing "free" overwrites
+  a live asset's bytes underneath its existing row; guessing "taken" costs one
+  unnecessary `unique_filename/1` suffix. Nothing is blocked either way.
+
+  This is expressible only because `Brando.CDN.Client.ExAws` maps 404 — and
+  nothing else — to `:not_found`. It therefore reduces to: does the configured
+  provider 404 on an absent key? DigitalOcean Spaces does. A provider that
+  answers some other way gets a suffix on every upload — functional, but the
+  collision-avoidance name appears where it need not.
+  """
+  def key_available?(object_key, field_cfg) do
+    head_object(object_key, field_cfg) == {:error, :not_found}
   end
 
   @doc """

@@ -1179,11 +1179,7 @@ defmodule Brando.Utils do
 
     key = concat_with_upload_path(filename, file_cfg)
 
-    if Brando.CDN.key_exists?(key, file_cfg) do
-      unique_filename(key)
-    else
-      key
-    end
+    if Brando.CDN.key_available?(key, file_cfg), do: key, else: unique_filename(key)
   end
 
   defp concat_with_upload_path(filename, file_cfg) do
