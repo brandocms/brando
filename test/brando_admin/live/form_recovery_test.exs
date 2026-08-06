@@ -36,6 +36,78 @@ defmodule BrandoAdmin.FormRecoveryTest do
       assert kill_live(view) == :ok
       refute Process.alive?(pid)
     end
+
+    # `kill_live/1` has to trap exits to survive the proxy dying with the view.
+    # If it left the flag on, every later line in the test process would quietly
+    # stop being killed by a crash — including the assertions this file exists
+    # to make.
+    test "kill_live/1 leaves trap_exit as it found it", %{conn: conn, page: page} do
+      {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
+
+      refute Process.info(self(), :trap_exit) == {:trap_exit, true}
+      kill_live(view)
+      assert Process.info(self(), :trap_exit) == {:trap_exit, false}
+    end
+
+    # `recovery_target/2` mirrors `pushFormRecovery` in LiveView's own JS
+    # (`view.ts:2434-2450`). Nothing in Elixir-land makes that mirror break when
+    # the JS changes, so pin the version it was read against: a bump surfaces
+    # here as a prompt to re-read the source, instead of as a test that still
+    # passes while modelling a client that no longer exists.
+    test "the recovery target mirrors a known LiveView version" do
+      assert to_string(Application.spec(:phoenix_live_view, :vsn)) == "1.2.8",
+             """
+             phoenix_live_view moved. Re-read `pushFormRecovery`
+             (assets/js/phoenix_live_view/view.ts) and confirm
+             `Brando.LiveCase.recovery_target/2` still mirrors it — then update
+             this version and the docstring that names it.
+             """
+    end
+  end
+
+  # `form_params/2` only earns its keep if it serializes the way a browser does.
+  # Where it does not, every recovery assertion built on it is replaying params
+  # no real reconnect would ever send.
+  describe "form_params/2 serializes the way a browser submits" do
+    test "a single-select with no selected option submits its first option" do
+      html = """
+      <form id="f">
+        <select name="page[status]">
+          <option value="draft">Draft</option>
+          <option value="published">Published</option>
+        </select>
+      </form>
+      """
+
+      assert form_params(html, "#f")["page"]["status"] == "draft"
+    end
+
+    test "an explicit selected option still wins" do
+      html = """
+      <form id="f">
+        <select name="page[status]">
+          <option value="draft">Draft</option>
+          <option value="published" selected>Published</option>
+        </select>
+      </form>
+      """
+
+      assert form_params(html, "#f")["page"]["status"] == "published"
+    end
+
+    # The one case where "nothing selected" really does mean "submit nothing".
+    test "a multi-select with nothing selected submits nothing" do
+      html = """
+      <form id="f">
+        <select name="page[tags][]" multiple>
+          <option value="a">A</option>
+          <option value="b">B</option>
+        </select>
+      </form>
+      """
+
+      assert form_params(html, "#f") == %{}
+    end
   end
 
   describe "form recovery" do

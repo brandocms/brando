@@ -94,11 +94,19 @@ defmodule Brando.LiveCase do
   """
   def kill_live(view) do
     pid = view.pid
+    {_ref, _topic, proxy_pid} = view.proxy
     ref = Process.monitor(pid)
 
     # `live/2` links the test process to the client proxy, which in turn dies
     # with the LiveView. Without trapping, killing the view kills the test.
-    Process.flag(:trap_exit, true)
+    #
+    # The flag is captured and restored rather than just set: leaving it on
+    # changes how every *later* line in the same test process reacts to a
+    # crash, so a test could pass against a LiveView that died on it. Capture
+    # /restore is nested-safe — a second `kill_live/1` sees `prior_trap?` as
+    # `true` and hands the flag back on.
+    prior_trap? = Process.flag(:trap_exit, true)
+
     Process.exit(pid, :kill)
 
     receive do
@@ -107,15 +115,29 @@ defmodule Brando.LiveCase do
       1_000 -> flunk("LiveView #{inspect(pid)} did not exit within 1s")
     end
 
-    flush_exits()
+    await_proxy_exit(proxy_pid)
+    Process.flag(:trap_exit, prior_trap?)
     :ok
   end
 
-  defp flush_exits do
+  # Drains the exit of the one process `live/2` linked us to, and nothing else.
+  # This used to drain *every* `{:EXIT, _, _}` for 50ms, which swallows an
+  # unrelated linked process failing — the test then carries on and can pass on
+  # a crash it never observed.
+  #
+  # Killing a root view stops its proxy (`client_proxy.ex:542-545`), so the exit
+  # is expected and arrives in single-digit ms. A child view shares the root's
+  # proxy, which stays alive; there is no signal in flight and nothing to drain.
+  defp await_proxy_exit(proxy_pid) do
     receive do
-      {:EXIT, _pid, _reason} -> flush_exits()
+      {:EXIT, ^proxy_pid, _reason} -> :ok
     after
-      50 -> :ok
+      500 ->
+        if Process.alive?(proxy_pid) do
+          :ok
+        else
+          flunk("client proxy #{inspect(proxy_pid)} died without delivering an exit signal")
+        end
     end
   end
 
@@ -207,7 +229,9 @@ defmodule Brando.LiveCase do
   end
 
   defp field_value("textarea", _attrs, children, name), do: [{name, Floki.text(children)}]
-  defp field_value("select", _attrs, children, name), do: selected_option(children, name)
+
+  defp field_value("select", attrs, children, name),
+    do: selected_option(children, name, Map.has_key?(attrs, "multiple"))
 
   defp field_value(_tag, %{"type" => type} = attrs, _children, name)
        when type in ["checkbox", "radio"] do
@@ -216,15 +240,23 @@ defmodule Brando.LiveCase do
 
   defp field_value(_tag, attrs, _children, name), do: [{name, Map.get(attrs, "value", "")}]
 
-  defp selected_option(children, name) do
-    children
-    |> Floki.find("option")
-    |> Enum.find(fn {_, attrs, _} -> List.keymember?(attrs, "selected", 0) end)
-    |> case do
-      nil -> []
-      {_, attrs, text} -> [{name, Map.new(attrs)["value"] || Floki.text(text)}]
+  # A single-select with no `selected` option is not an empty field: the browser
+  # shows the first option and submits *that*. Returning `[]` here made recovery
+  # params differ from the ones a real reconnect would send, in the harness
+  # written to prove recovery works. A multi-select genuinely submits nothing
+  # when nothing is selected, so the fallback is gated on `multiple`.
+  defp selected_option(children, name, multiple?) do
+    options = Floki.find(children, "option")
+
+    case Enum.find(options, fn {_, attrs, _} -> List.keymember?(attrs, "selected", 0) end) do
+      nil when multiple? -> []
+      nil -> options |> List.first() |> option_pair(name)
+      option -> option_pair(option, name)
     end
   end
+
+  defp option_pair(nil, _name), do: []
+  defp option_pair({_, attrs, text}, name), do: [{name, Map.new(attrs)["value"] || Floki.text(text)}]
 
   @doc """
   Serializes a form the way LiveView's *recovery* would push it — `form_params/2`
@@ -247,8 +279,13 @@ defmodule Brando.LiveCase do
   @doc """
   The `_target` key path LiveView's form recovery would send for this form.
 
-  Mirrors `pushFormRecovery` (`deps/phoenix_live_view/assets/js/phoenix_live_view/view.ts:2434-2450`):
-  form-associated, named, no `phx-change` of its own, first non-hidden one wins.
+  Mirrors `pushFormRecovery` (`deps/phoenix_live_view/assets/js/phoenix_live_view/view.ts:2434-2450`)
+  as of **phoenix_live_view 1.2.8**: form-associated, named, no `phx-change` of
+  its own, first non-hidden one wins.
+
+  A mirror of somebody else's source drifts silently on a dependency bump, so
+  `form_recovery_test.exs` asserts the version this was read against. If that
+  assertion fails, re-read `pushFormRecovery` before bumping the number.
   """
   def recovery_target(html, form_selector) do
     html
