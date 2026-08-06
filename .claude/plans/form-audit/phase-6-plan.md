@@ -193,7 +193,9 @@ full `mix test` still 1265/0.
 - [x] **W3-verify — the mutation has to be watched** `[testing]` — **RED confirmed**
       *Three cases in `utils_test.exs`. Reverting to the fail-open predicate
       returned the bare key on a 403, exactly as predicted.*
-      This is a production upload path, so the standard applies at full strength.
+      This is an upload path a **downstream consumer** runs in production —
+      `build_upload_key/2` has no caller in this tree — so the standard applies
+      at full strength and the unit test is the only test there can be.
       Drive `build_upload_key/2` with a `Client.Mock` returning
       `{:error, {:http_error, 403, _}}` and assert the key comes back **renamed**.
       Then revert `key_available?` to `match?({:ok, _}, …)` and confirm the test

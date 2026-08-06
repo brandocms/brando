@@ -1,10 +1,9 @@
 defmodule Brando.Plug.LockdownTest do
   # Not `async: true`: every test here mutates `:brando, :lockdown` and
-  # `:lockdown_until`, which are global application env. Phase 5 gave the
-  # restore a correct implementation (`put_test_env/2`) without making the
-  # concurrency correct — nothing else reads those keys today, so it does not
-  # bite, but the next test that does inherits a flake that reads as a bug in
-  # itself.
+  # `:lockdown_until`, which are global application env. `put_test_env/2`
+  # restores them, but a restore is not isolation — nothing else reads those
+  # keys today, and the first test that does would inherit a flake that reads
+  # as a bug in itself.
   use ExUnit.Case, async: false
   use RouterHelper
 
