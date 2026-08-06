@@ -18,6 +18,7 @@ defmodule BrandoAdmin.Components.Form.EmptyParamsErrorsTest do
   alias Brando.Factory
   alias Brando.Pages.Page
   alias Ecto.Changeset
+  alias Phoenix.Component
 
   setup do
     {:ok, user: Factory.insert(:random_user)}
@@ -73,19 +74,37 @@ defmodule BrandoAdmin.Components.Form.EmptyParamsErrorsTest do
     refute Phoenix.Component.used_input?(form[:slug])
   end
 
+  defp bare_socket(ctx, entry) do
+    %Phoenix.LiveView.Socket{}
+    |> Component.assign(:entry, entry)
+    |> Component.assign(:schema, Page)
+    |> Component.assign(:current_user, ctx.user)
+  end
+
   test "assign_refreshed_form/1 builds a form with empty params", ctx do
     page = Factory.insert(:page, creator: ctx.user)
-
-    socket =
-      %Phoenix.LiveView.Socket{}
-      |> Phoenix.Component.assign(:entry, page)
-      |> Phoenix.Component.assign(:schema, Page)
-      |> Phoenix.Component.assign(:current_user, ctx.user)
-
-    socket = BrandoAdmin.Components.Form.assign_refreshed_form(socket)
+    socket = BrandoAdmin.Components.Form.assign_refreshed_form(bare_socket(ctx, page))
 
     assert socket.assigns.form.params == %{}
     assert %Changeset{} = socket.assigns.form.source
     refute Phoenix.Component.used_input?(socket.assigns.form[:title])
+  end
+
+  # The assertions above hold with or without the forced action, so on their own
+  # they would pass against the pre-fix code. These two are the ones that fail if
+  # `Map.put(:action, :validate)` comes back — they are the point of the file.
+  test "assign_refreshed_form/1 leaves the changeset action unset", ctx do
+    page = Factory.insert(:page, creator: ctx.user)
+    socket = BrandoAdmin.Components.Form.assign_refreshed_form(bare_socket(ctx, page))
+
+    assert socket.assigns.form.source.action == nil
+  end
+
+  test "assign_form/1 leaves the changeset action unset", ctx do
+    page = Factory.insert(:page, creator: ctx.user)
+    socket = BrandoAdmin.Components.Form.assign_form(bare_socket(ctx, page))
+
+    assert socket.assigns.form.source.action == nil
+    assert socket.assigns.form.params == %{}
   end
 end

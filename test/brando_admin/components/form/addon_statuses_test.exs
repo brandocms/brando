@@ -61,36 +61,43 @@ defmodule BrandoAdmin.Components.Form.AddonStatusesTest do
   test "a re-render does not discard transformer changesets already collected", ctx do
     socket = mounted_form(ctx)
 
-    # A transformer reports its changeset (see the `:transformer_changeset`
-    # clause of update/2 — modelled directly here so the test does not need a
-    # blueprint that declares transformers).
-    collected = %{cover: :some_changeset}
+    # Mid-collection: one transformer has reported, one has not (see the
+    # `:transformer_changeset` clause of update/2 — modelled directly here so the
+    # test does not need a blueprint that declares transformers).
+    #
+    # `all_transformers_received?` must be `false` for this to assert anything.
+    # `Page` declares no transformers, so `assign_transformer_statuses/1` would
+    # compute `transformers == []` → `true`; asserting `true` would pass against
+    # the pre-fix code that recomputed on every update.
+    collected = %{cover: :some_changeset, hero: nil}
 
     socket = Phoenix.Component.assign(socket, :transformer_changesets, collected)
-    socket = Phoenix.Component.assign(socket, :all_transformers_received?, true)
+    socket = Phoenix.Component.assign(socket, :all_transformers_received?, false)
 
     socket = re_render(socket, ctx)
 
     assert socket.assigns.transformer_changesets == collected
-    assert socket.assigns.all_transformers_received? == true
+    refute socket.assigns.all_transformers_received?
   end
 
   test "the static per-schema statuses survive a re-render unchanged", ctx do
     socket = mounted_form(ctx)
 
-    before =
-      Map.take(socket.assigns, [
-        :has_blocks?,
-        :has_meta?,
-        :has_revisioning?,
-        :has_scheduled_publishing?,
-        :has_live_preview?,
-        :has_transformers?
-      ])
+    # Asserted against the schema rather than against a snapshot of the socket:
+    # comparing the socket to itself passes even if `assign_addon_statuses/1` is
+    # deleted outright, since mount's seeds would simply persist.
+    expected = %{
+      has_blocks?: Brando.Pages.Page.has_trait(Brando.Trait.Blocks),
+      has_meta?: Brando.Pages.Page.has_trait(Brando.Trait.Meta),
+      has_revisioning?: Brando.Pages.Page.has_trait(Brando.Trait.Revisioned),
+      has_scheduled_publishing?: Brando.Pages.Page.has_trait(Brando.Trait.ScheduledPublishing)
+    }
+
+    assert Map.take(socket.assigns, Map.keys(expected)) == expected
 
     socket = re_render(socket, ctx)
 
-    assert Map.take(socket.assigns, Map.keys(before)) == before
+    assert Map.take(socket.assigns, Map.keys(expected)) == expected
   end
 
   test "has_meta? is still derived from the schema, not left at mount's false", ctx do

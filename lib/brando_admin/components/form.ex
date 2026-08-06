@@ -4944,12 +4944,19 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # No `Map.put(:action, :validate)` on any of these three: they all build from
-  # EMPTY params, and both error gates in this file (`error_tag/1` and
-  # `has_relation_error?/1`) go through `Phoenix.Component.used_input?/1`, which
-  # reads `form.params` alone — so no field of an empty-params form can ever
-  # surface an error, action or no action. Forcing the action only made
-  # `Phoenix.HTML.FormData` copy `changeset.errors` onto a form nothing reads
-  # them from, while implying to the next reader that it was load-bearing.
+  # EMPTY params, and the error gate that actually fires here goes through
+  # `Phoenix.Component.used_input?/1`, which reads `form.params` alone — so no
+  # field of an empty-params form can surface an error, action or no action.
+  # Forcing the action only made `Phoenix.HTML.FormData` copy `changeset.errors`
+  # onto a form nothing reads them from, while implying to the next reader that
+  # it was load-bearing.
+  #
+  # Note the qualifier: only `has_error/2`'s `true` clause gates on
+  # `used_input?`. Its fallback clauses (`:5562-5563`) read `field.errors` raw.
+  # They are not reached for an empty-params form, which is why this is safe —
+  # but "every gate routes through `used_input?`" would be false, and is not the
+  # reason to keep it.
+  # Pinned by `test/brando_admin/components/form/empty_params_errors_test.exs`.
   def assign_form(%{assigns: %{entry: entry, schema: schema, current_user: current_user}} = socket) do
     assign_new(socket, :form, fn ->
       entry

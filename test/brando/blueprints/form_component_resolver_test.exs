@@ -23,18 +23,43 @@ defmodule Brando.Blueprint.FormComponentResolverTest do
     end
   end
 
-  test "Blueprint form metadata stores the RESOLVED module, without depending on it" do
-    # This used to assert the stored value was still the `:vars` token. The
-    # token exists so a Blueprint need not compile-depend on an admin
-    # LiveComponent — but resolving it in `Forms.Dsl.transform_form/1` keeps
-    # that property, because `Module.concat/1` yields a plain atom and the
-    # compiler records no dependency edge for it. Verified with
-    # `mix xref graph --sink .../input/vars.ex --label compile`, which lists
-    # nothing. What the token bought at RENDER time was a `Module.concat/1` per
-    # field per diff, which is what E3 in the form audit removed.
+  test "Blueprint form metadata stores the RESOLVED module" do
+    # This used to assert the stored value was still the `:vars` token, which is
+    # exactly what E3 in the form audit changed: `Forms.Dsl.transform_form/1`
+    # now resolves it once at Blueprint compile time instead of per field per
+    # diff. The property the token existed for is asserted separately below.
     [_name_fieldset, vars_fieldset] = TableTemplate.__form__().tabs |> hd() |> Map.fetch!(:fields)
     [vars_subform] = vars_fieldset.fields
 
     assert vars_subform.component == BrandoAdmin.Components.Form.Input.Vars
+  end
+
+  @sink "lib/brando_admin/components/form/input/vars.ex"
+
+  test "and no Blueprint compile-depends on the admin component it names" do
+    # THE property the `:vars` token bought — a Blueprint must not drag an admin
+    # LiveComponent into its compile-time dependency graph. Resolving the token
+    # preserves it because `Module.concat/1` yields a plain atom and the compiler
+    # records no edge for it, but nothing in the type system says so, so assert
+    # it rather than leave it to a one-off `mix xref` run in a comment.
+    #
+    # An empty graph is only meaningful if the sink actually exists — `--sink` on
+    # a missing path prints nothing and would pass vacuously after a rename.
+    assert File.exists?(@sink), "#{@sink} moved — update @sink or this test asserts nothing"
+
+    {output, 0} =
+      System.cmd("mix", ["xref", "graph", "--sink", @sink, "--label", "compile"],
+        env: [{"MIX_ENV", "test"}],
+        stderr_to_stdout: true
+      )
+
+    assert String.trim(output) == "",
+           """
+           A compile-time dependency on #{@sink} appeared. A Blueprint that \
+           compile-depends on an admin LiveComponent recompiles the whole \
+           Blueprint tree whenever that component changes.
+
+           #{output}
+           """
   end
 end

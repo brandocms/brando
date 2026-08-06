@@ -399,6 +399,11 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   # ImageProcessor's final attempt failed. Nothing more will arrive on this
   # topic, so drop the subscription; `{:cont, socket}` because this hook has no
   # UI to update for it.
+  #
+  # "Final" is guaranteed by the producer, not assumed here:
+  # `ImageProcessor.handle_processing_error/4` broadcasts `:error` only when
+  # `job.attempt >= job.max_attempts`, so an intermediate attempt that later
+  # succeeds never reaches this clause.
   defp handle_hooks_image_info({%Brando.Images.Image{id: id}, [:image, :error], _path}, socket) do
     PubSub.unsubscribe(Brando.pubsub(), "brando:image:#{id}")
     {:cont, socket}
@@ -416,12 +421,23 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
   defp handle_hooks_image_info(_, socket), do: {:cont, socket}
 
-  # Every form-side subscribe sits immediately before a processing round is
-  # queued (`form.ex` ×3, `deliver_asset/3` ×5), so the subscription can be
-  # dropped once that round finishes — a later round re-subscribes itself.
-  # Without this they accumulated for the life of the form: one per uploaded or
-  # re-cropped image, each still delivering to a process that has already
-  # updated. The sticky `UploadManager` has always got this right.
+  # All NINE form-side subscribes sit immediately before a processing round is
+  # queued — `form.ex:3550,3993,4785` (upload, focal re-crop, block re-crop) and
+  # `deliver_asset/3` ×6 (`:536,556,628,653,688,717`, each on upload completion
+  # for one freshly uploaded image). So the subscription can be dropped once that
+  # round finishes: a later LOCALLY started round re-subscribes itself before
+  # queueing. Without this they accumulated for the life of the form, one per
+  # uploaded or re-cropped image, each still delivering to a process that had
+  # already updated. The sticky `UploadManager` has always got this right.
+  #
+  # Note the qualifier: this scopes the form's interest to rounds IT starts. A
+  # round started elsewhere — another admin re-cropping, a re-process from the
+  # image list — no longer reaches this form, where the session-long
+  # subscription used to deliver it. That is the deliberate trade; if a form
+  # ever needs to follow an image it did not touch, this is the line to revisit.
+  # (`form.ex:3993` subscribes and only conditionally requeues, so it can leave
+  # a subscription with no round pending. Harmless — it is dropped by whichever
+  # round completes next.)
   #
   # It must be `:processed`, not merely `[:image, :updated]` — `ImageUploader`
   # broadcasts `:updated` for the freshly uploaded, still-UNPROCESSED image, and
