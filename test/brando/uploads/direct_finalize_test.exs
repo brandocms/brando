@@ -38,9 +38,7 @@ defmodule Brando.Uploads.DirectFinalizeTest do
   setup :verify_on_exit!
 
   setup do
-    original = Application.get_env(:brando, Brando.Files)
-
-    Application.put_env(:brando, Brando.Files,
+    put_test_env(Brando.Files,
       cdn: [enabled: true],
       default_config: %{
         upload_path: Path.join(["files", "direct"]),
@@ -55,8 +53,6 @@ defmodule Brando.Uploads.DirectFinalizeTest do
         }
       }
     )
-
-    on_exit(fn -> Application.put_env(:brando, Brando.Files, original) end)
 
     {:ok, user: Factory.insert(:random_user)}
   end
@@ -133,5 +129,55 @@ defmodule Brando.Uploads.DirectFinalizeTest do
     assert {:error, message} = Uploads.finalize_direct(:file, params(), ctx.user)
     assert message =~ @key
     assert Brando.Repo.all(Brando.Files.File) == []
+  end
+
+  # The test above proves the *branch* works when something hands it
+  # `:not_found`. For a while nothing did: `Client.ExAws` returned ExAws's
+  # `{:http_error, 404, _}` verbatim, so the mock was the only producer of the
+  # contract and the branch was unreachable in production while green in CI.
+  #
+  # This covers the translation itself, against the real implementation and the
+  # real ExAws response pipeline — only the socket is replaced.
+  describe "Client.ExAws meets the behaviour's contract" do
+    defmodule StatusStub do
+      @moduledoc false
+      @behaviour ExAws.Request.HttpClient
+
+      @impl true
+      def request(_method, _url, _body, _headers, http_opts) do
+        {:ok, %{status_code: Keyword.fetch!(http_opts, :stub_status), headers: [], body: ""}}
+      end
+    end
+
+    defp stub_config(status) do
+      [
+        access_key_id: "TESTKEY",
+        secret_access_key: "TESTSECRET",
+        scheme: "https://",
+        host: "ams3.digitaloceanspaces.com",
+        region: "ams3",
+        http_client: StatusStub,
+        http_opts: [stub_status: status],
+        retries: [max_attempts: 1]
+      ]
+    end
+
+    test "a 404 becomes {:error, :not_found}" do
+      assert Client.ExAws.head_object("testbucket", "files/missing.pdf", stub_config(404)) ==
+               {:error, :not_found}
+    end
+
+    # Only the 404 is translated. Everything else has to stay recognisable, or
+    # an operator loses the difference between "the object is not there" and
+    # "the bucket refused us".
+    test "other errors are passed through untranslated" do
+      assert {:error, {:http_error, 403, _}} =
+               Client.ExAws.head_object("testbucket", "files/denied.pdf", stub_config(403))
+    end
+
+    test "a 200 is passed through as {:ok, response}" do
+      assert {:ok, %{status_code: 200}} =
+               Client.ExAws.head_object("testbucket", "files/there.pdf", stub_config(200))
+    end
   end
 end

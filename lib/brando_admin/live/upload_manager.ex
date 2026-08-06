@@ -647,8 +647,18 @@ defmodule BrandoAdmin.UploadManager do
       <%!-- The id is what makes this form eligible for LiveView's form recovery
             (`getFormsForRecovery()` skips any form without one) — and this
             manager is sticky, so it is exactly the form that outlives a
-            reconnect. --%>
-      <form id="upload-manager-queue-form" phx-change="validate_queue" class="upload-manager-queue-form">
+            reconnect.
+
+            `brando-` prefixed, like the wrapper above: ids are global, and this
+            is a library rendering into somebody else's page. An unprefixed
+            `upload-manager-queue-form` is a name a host application could
+            plausibly pick, and a duplicate id would break recovery for both.
+            Styling hangs off the class, so the prefix costs nothing. --%>
+      <form
+        id="brando-upload-manager-queue-form"
+        phx-change="validate_queue"
+        class="upload-manager-queue-form"
+      >
         <.live_file_input upload={@uploads.queue} />
       </form>
 

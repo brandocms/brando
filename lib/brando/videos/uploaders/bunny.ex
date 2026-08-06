@@ -430,7 +430,11 @@ defmodule Brando.Videos.Uploaders.Bunny do
     # `:req_options` is the transport seam, matching Cloudflare's. A test points
     # it at a `Req.Test` stub so the request this builds can be asserted without
     # a network — see `test/brando/videos/provider_client_test.exs`.
-    request_opts = Keyword.merge(request_opts, req_options())
+    #
+    # Built values win the merge. The other direction lets a `:req_options`
+    # entry silently replace the authorization header, the URL or the method —
+    # a config seam that can unset credentials is a config seam that will.
+    request_opts = Keyword.merge(req_options(), request_opts)
 
     case Req.request(request_opts) do
       {:ok, %{status: status, body: body}} when status in 200..299 ->

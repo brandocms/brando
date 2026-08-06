@@ -41,7 +41,14 @@ defmodule Brando.CDN.Client do
   @typedoc "An `ExAws` keyword-list config, as built by `Brando.CDN.get_s3_config/2`"
   @type s3_config :: keyword
 
-  @doc "Fetch object metadata. `{:error, :not_found}` when the key is absent."
+  @doc """
+  Fetch object metadata. `{:error, :not_found}` when the key is absent.
+
+  `:not_found` is the contract, not an ExAws detail: `Brando.Uploads.finalize_direct/3`
+  branches on it to tell an operator "Uploaded object not found in bucket" rather
+  than surfacing a transport tuple. An implementation that passes ExAws's
+  `{:http_error, 404, _}` straight through leaves that branch unreachable.
+  """
   @callback head_object(bucket :: binary, key :: binary, s3_config) ::
               {:ok, map} | {:error, term}
 
@@ -60,10 +67,23 @@ end
 
 defmodule Brando.CDN.Client.ExAws do
   @moduledoc """
-  The real `Brando.CDN.Client` — a thin pass-through to `ExAws`.
+  The real `Brando.CDN.Client` — a near-pass-through to `ExAws`.
 
-  Thin on purpose: anything with logic in it would be logic no test exercises,
-  since this is the module that gets swapped out.
+  Thin on purpose: this is the module that gets swapped out, so logic living
+  here is logic the mock never runs.
+
+  The one exception is translating ExAws's 404 into the behaviour's
+  `{:error, :not_found}`, and it earns its place precisely *because* this is the
+  swap point. The contract is defined on `Brando.CDN.Client`; if the real
+  implementation does not meet it, the mock is the only thing that ever does and
+  every caller branching on `:not_found` is dead code in production while
+  passing in tests. That is the defect this translation exists to close, so it
+  is covered directly (`direct_finalize_test.exs`) rather than only through its
+  effect.
+
+  Known limit: only a 404 is translated. Some S3-compatible providers answer a
+  HEAD for a missing key with 403 when the caller lacks `s3:ListBucket`, and
+  that still falls through as a transport error.
   """
   @behaviour Brando.CDN.Client
 
@@ -72,6 +92,10 @@ defmodule Brando.CDN.Client.ExAws do
     bucket
     |> ExAws.S3.head_object(key)
     |> ExAws.request(s3_config)
+    |> case do
+      {:error, {:http_error, 404, _}} -> {:error, :not_found}
+      other -> other
+    end
   end
 
   @impl true

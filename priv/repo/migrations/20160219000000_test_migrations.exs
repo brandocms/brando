@@ -293,6 +293,18 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     end
 
     create table(:content_blocks) do
+      # Deliberately nullable, and it matches production. Phase 4 shipped
+      # `validate_required(:uid)`, which raises the obvious question of whether
+      # the column should be `null: false` too — it should not. Neither
+      # `brando_103` (install) nor any upgrade migration constrains it; the only
+      # thing production adds is `brando_123`'s unique index, which
+      # `20260806000001_unique_block_uid_in_test_schema.exs` mirrors here.
+      # Tightening the fixture past the shipped schema makes every test written
+      # on it assert behaviour real apps do not have — the same class of defect
+      # Phase 4 found twice, just pointing the other way.
+      #
+      # (`content_refs.uid` below IS `null: false`, because `brando_137` makes
+      # it so. That asymmetry is production's, not the fixture's.)
       add :uid, :text
       add :type, :text
       add :active, :boolean
