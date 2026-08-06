@@ -163,6 +163,7 @@ defmodule Brando.Content.Block do
   def block_changeset(block, attrs, user) do
     block
     |> cast(attrs, @block_attrs)
+    |> validate_required(:uid)
     |> unique_constraint(:uid)
     |> cast_table_rows(user)
     |> cast_block_identifiers(user)
@@ -204,6 +205,7 @@ defmodule Brando.Content.Block do
   def recursive_block_changeset(block, attrs, user) do
     block
     |> cast(attrs, @block_attrs)
+    |> validate_required(:uid)
     |> unique_constraint(:uid)
     |> cast_table_rows(user)
     |> cast_block_identifiers(user)
