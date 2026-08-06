@@ -886,6 +886,12 @@ pickers all read the changeset correctly (`image.ex:71`, `file.ex:52`, `video.ex
 ### E. Performance
 
 > **STATUS: COMPLETE (2026-08-06)**, with E6 partially deferred and its reason recorded.
+>
+> **REVIEWED 2026-08-06** — see `reviews/phase-3-review.md`. Verdict PASS WITH WARNINGS;
+> all findings now fixed and dispositioned. Two claims in the entries below were wrong and
+> have been corrected in place: the container/palette scoping premise (E2) and the count of
+> form-side image subscribes (nine, not eight). Gates after the fixes: 1222 tests / 0
+> failures, credo at baseline, e2e 105/105.
 
 - [x] `assign_addon_statuses/1` → `assign_new` — done, with **two exceptions that would have been
       bugs.** `has_meta?` is seeded `false` by `mount/1` (the async-load branch returns before this
@@ -902,10 +908,19 @@ pickers all read the changeset correctly (`image.ex:71`, `file.ex:52`, `video.ex
       generic `update/2` path reachable in ExUnit without the Phase 4 harness
 - [x] `block.ex` container/fragment/palette copies — scoped. Each list is an ETS read, and an ETS
       read copies the term onto the reading process's heap, so this was one copy per block component
-      inside the single LiveView process. `@fragments` now loads only for fragment blocks;
-      `@containers` and `@palette_options` only for container blocks and **roots** — verified against
-      the templates: `container_config` is rendered by every root block (`render.ex:528`), not just
-      containers, so scoping to `type == :container` alone would have broken the container select
+      inside the single LiveView process. `@fragments` loads only for fragment blocks;
+      `@containers` and `@palette_options` only for **container blocks**.
+      **CORRECTED 2026-08-06 by the Phase 3 review — the original entry here was wrong.** It read
+      "container blocks and roots — verified against the templates: `container_config` is rendered
+      by every root block (`render.ex:528`)". That is false, and it was recorded as a *verified*
+      fact. `container_config` (`render.ex:526`) sits inside `container/1` (`:451`), whose only
+      caller is `render(%{type: :container})` (`:197,200`) — so container blocks and nothing else.
+      The `or belongs_to == :root` disjunct was redundant, and every root module block was still
+      copying both lists, i.e. the item delivered almost none of its intended win until the review
+      caught it. Now `type == :container` alone, pinned by
+      `test/brando_admin/components/form/block/container_scoping_test.exs`.
+      *Lesson: "verified against the templates" meant reading the template that renders the assign,
+      not the call chain that reaches that template.*
 - [x] `ComponentResolver.resolve/1` moved to `Dsl.transform_form/1` — resolved once at Blueprint
       compile time instead of per field per diff. **Verified the property the token existed for is
       intact**: `mix xref graph --sink .../input/vars.ex --label compile` lists nothing, so no

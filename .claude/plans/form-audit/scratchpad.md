@@ -490,3 +490,42 @@ documented in a comment above `tab_content/1`, together with the failing spec li
 reading, built a fix on it, and only the e2e run told me the mechanism was incomplete. The
 difference this time is that I stopped after the second attempt and reverted, instead of
 shipping a third theory.*
+
+[10:14] Phase 3 review started — 6 agents (elixir, liveview, testing, requirements, verification, iron-laws) on `git diff HEAD~5`
+[10:17] WARN: phx:liveview-architect did not write .claude/plans/form-audit/reviews/liveview-p3.md — turn exhaustion, return message empty. Resuming agent to dump findings.
+[10:21] Phase 3 review complete — PASS WITH WARNINGS. 0 blockers (2 filed, both disproved as pre-existing vs HEAD~5), 7 warnings, 3 suggestions, 5 pre-existing. Written to reviews/phase-3-review.md
+
+## Phase 3 review fixes (2026-08-06)
+
+All 7 warnings, 3 suggestions and 4 of 5 pre-existing items fixed. Three things
+worth carrying forward:
+
+1. **Two agents' BLOCKERs were not regressions.** Both filed against `block.ex`
+   `palette_options`. Checking the same lines in `HEAD~5` showed them byte-identical
+   — real latent bugs, but not this diff's. *A finding's severity depends on when the
+   code arrived, and the agent that reads only the current tree cannot tell you.*
+   Fixed them anyway, labelled pre-existing.
+
+2. **Mutation-verify a test written to catch a revert.** W2/W3 were both "this test
+   passes against the broken code". Writing a better assertion and watching it go
+   green proves nothing — it has to be watched going RED. Reverted each fix, confirmed
+   the failure, restored. `assert action == nil` caught it; so did modelling the
+   transformer collection as *partial* (`all_transformers_received?: false`), because
+   `Page` has no transformers and any assertion of `true` is satisfied by the bug.
+
+3. **The new test found a defect the review missed.** Writing coverage for the
+   `fragment_not_found` branch showed it is unreachable: `get_fragment/1` used
+   `get_fragment!`, so a deleted fragment raised `Ecto.NoResultsError` mid-render
+   instead of returning nil — editor down, unsaved edits gone. `get_container/1` next
+   to it already used the non-raising fetch. *Two functions written to the same
+   contract, one bang apart; the test for the branch is what exposed it.*
+
+Not done: `block.ex:906` `try/rescue` as control flow (pre-existing, behavioural
+refactor). S2's picker guard is partial — opened-then-closed needs a server-side
+close signal that does not exist, and inventing one is the `tab.ex` trap again.
+
+**e2e (2026-08-06, after the review fixes):** 105/105 passing, 8.9m, full `--reset`
+(DB drop → migration rollback-to-baseline → forward → reseed) against rebuilt
+consumer assets. Includes `projects.spec.js`, the spec that blocked the `tab.ex`
+item — so the two new `render/1` clauses, the `nil`-not-`[]` palette contract and
+the non-raising `get_fragment/1` all clear the real browser path.
