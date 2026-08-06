@@ -1,6 +1,8 @@
 defmodule Brando.Plug.LockdownTest do
   use ExUnit.Case, async: true
   use RouterHelper
+
+  import Brando.Test.Support, only: [put_test_env: 2]
   import Plug.Conn
 
   defmodule LockdownPlug do
@@ -95,7 +97,7 @@ defmodule Brando.Plug.LockdownTest do
   end
 
   test "lockdown" do
-    Application.put_env(:brando, :lockdown, true)
+    put_test_env(:lockdown, true)
 
     conn =
       :get
@@ -105,6 +107,12 @@ defmodule Brando.Plug.LockdownTest do
     assert conn.status == 302
     assert List.keyfind(conn.resp_headers, "location", 0) == {"location", "/coming-soon"}
 
+    # A mid-test toggle, not a teardown — the off branch is the other half of
+    # what this test asserts. `put_test_env/2` above still deletes the key on
+    # exit, which is what these tests used to get wrong: they "restored"
+    # `:lockdown` to `false` and `:lockdown_until` to `nil`, neither of which is
+    # the absent key they started from, and both only if no assertion failed
+    # first.
     Application.put_env(:brando, :lockdown, false)
 
     conn =
@@ -116,7 +124,7 @@ defmodule Brando.Plug.LockdownTest do
   end
 
   test "lockdown with auth" do
-    Application.put_env(:brando, :lockdown, true)
+    put_test_env(:lockdown, true)
 
     conn =
       :get
@@ -133,13 +141,11 @@ defmodule Brando.Plug.LockdownTest do
     assert conn.status == 302
 
     assert List.keyfind(conn.resp_headers, "location", 0) == {"location", "/coming-soon"}
-
-    Application.put_env(:brando, :lockdown, false)
   end
 
   test "lockdown pass with lockdown_authorized" do
-    Application.put_env(:brando, :lockdown, true)
-    Application.put_env(:brando, :lockdown_password, "my_pass")
+    put_test_env(:lockdown, true)
+    put_test_env(:lockdown_password, "my_pass")
 
     conn =
       :get
@@ -154,13 +160,11 @@ defmodule Brando.Plug.LockdownTest do
       |> LockdownPlugAuth.call([])
 
     assert conn.status == nil
-
-    Application.put_env(:brando, :lockdown, false)
   end
 
   test "lockdown pass with expired target date" do
-    Application.put_env(:brando, :lockdown, true)
-    Application.put_env(:brando, :lockdown_until, ~U[2015-01-13 10:00:00Z])
+    put_test_env(:lockdown, true)
+    put_test_env(:lockdown_until, ~U[2015-01-13 10:00:00Z])
 
     conn =
       :get
@@ -168,14 +172,11 @@ defmodule Brando.Plug.LockdownTest do
       |> LockdownPlug.call([])
 
     assert conn.status == nil
-
-    Application.put_env(:brando, :lockdown, false)
-    Application.put_env(:brando, :lockdown_until, nil)
   end
 
   test "lockdown pass with future target date" do
-    Application.put_env(:brando, :lockdown, true)
-    Application.put_env(:brando, :lockdown_until, ~U[2060-01-13 10:00:00Z])
+    put_test_env(:lockdown, true)
+    put_test_env(:lockdown_until, ~U[2060-01-13 10:00:00Z])
 
     conn =
       :get
@@ -183,8 +184,5 @@ defmodule Brando.Plug.LockdownTest do
       |> LockdownPlug.call([])
 
     assert conn.status == 302
-
-    Application.put_env(:brando, :lockdown, false)
-    Application.put_env(:brando, :lockdown_until, nil)
   end
 end

@@ -1105,7 +1105,11 @@ defmodule Brando.HTMLTest do
   end
 
   test "render_data" do
-    Application.put_env(:brando, Brando.Villain, parser: Brando.Villain.ParserTest.Parser)
+    # Was a bare `put_env` with no restore at all, which is worse than the
+    # `put_env(key, nil)` shape elsewhere: `config/test.exs:48-49` configures
+    # `Brando.Villain` with both `extra_blocks` and `parser`, and a whole-key
+    # overwrite drops `extra_blocks` for every test that runs after this one.
+    put_test_env(Brando.Villain, parser: Brando.Villain.ParserTest.Parser)
     conn = %{request_path: "/projects/all", path_params: %{"category_slug" => "all"}}
 
     module_params =

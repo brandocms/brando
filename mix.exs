@@ -72,13 +72,22 @@ defmodule Brando.Mixfile do
     [
       maintainers: ["Univers TM"],
       licenses: ["MIT"],
+      # `config` and `test` are deliberately absent. Neither was ever reachable
+      # from a consuming application: Mix compiles dependencies in `:prod`, so
+      # `elixirc_paths(:test)` never fires for a dep and `test/support` is never
+      # compiled (verified against the e2e project's `MIX_ENV=test` build — no
+      # `Elixir.Brando.ConnCase.beam`), and Elixir has not loaded dependency
+      # config files for many versions.
+      #
+      # So they were shipped, never evaluated, and full of placeholder
+      # credentials — which is a standing invitation for a real key to be added
+      # to a file nobody thinks of as published. Dropping them also takes the
+      # test fixtures out of the tarball.
       files: [
         "assets",
-        "config",
         "lib",
         "guides",
         "priv",
-        "test",
         "mix.exs",
         "README.md",
         "CHANGELOG.md",

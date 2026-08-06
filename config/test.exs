@@ -4,8 +4,17 @@ config :bcrypt_elixir, log_rounds: 1
 
 config :brando, Brando.Files, cdn: [enabled: false]
 
-# Every runtime S3 call goes through `Brando.CDN.Client`; in test that is a Mox
-# mock, so an un-stubbed call fails loudly instead of reaching a bucket.
+# `head_object` and `delete_object` go through `Brando.CDN.Client`; in test that
+# is a Mox mock, so an un-stubbed call fails loudly instead of reaching a bucket.
+# Those two are what the direct-upload path (presign → verify → finalize → reap)
+# needs, which is why they are the ones behind the seam.
+#
+# It is NOT every S3 call. `cdn.ex:311,354,362` — `s3_upload/7`,
+# `ensure_bucket_exists/1` — still reach `ExAws.request` directly, deliberately:
+# they move real bytes and create real buckets, so a stub proves nothing about
+# them and would hide exactly the integration failures worth catching
+# (`client.ex:11-22`). Presigning is outside the seam for a different reason —
+# it is an HMAC over local credentials, not a network call at all.
 config :brando, :cdn_client, Brando.CDN.Client.Mock
 
 config :brando, Brando.Images,

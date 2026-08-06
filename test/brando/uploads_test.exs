@@ -3,6 +3,7 @@ defmodule Brando.UploadsTest do
   # which would race concurrent readers under async: true.
   use ExUnit.Case, async: false
 
+  import Brando.Test.Support, only: [put_test_env: 2]
   import ExUnit.CaptureLog
 
   alias Brando.Uploads
@@ -360,8 +361,7 @@ defmodule Brando.UploadsTest do
     end
 
     test "reads from config" do
-      Application.put_env(:brando, Brando.Uploads, max_concurrent_transfers: 1)
-      on_exit(fn -> Application.delete_env(:brando, Brando.Uploads) end)
+      put_test_env(Brando.Uploads, max_concurrent_transfers: 1)
 
       assert Uploads.max_concurrent_transfers() == 1
     end

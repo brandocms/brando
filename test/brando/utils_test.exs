@@ -203,15 +203,12 @@ defmodule Brando.UtilsTest do
 
     org_cfg = Brando.config(Brando.Images)
 
-    on_exit(fn -> Application.put_env(:brando, Brando.Images, org_cfg) end)
-
     cdn_cfg = %Brando.CDN.Config{
       enabled: true,
       media_url: "https://cdn.com"
     }
 
-    new_cfg = Keyword.put(org_cfg, :cdn, cdn_cfg)
-    Application.put_env(:brando, Brando.Images, new_cfg)
+    put_test_env(Brando.Images, Keyword.put(org_cfg, :cdn, cdn_cfg))
 
     assert img_url(%{img | cdn: true}, :thumb, prefix: "prefix") ==
              "https://cdn.com/prefix/images/thumb/file.jpg"

@@ -21,8 +21,6 @@ defmodule Brando.Uploads.PendingIntentTest do
 
   import ExUnit.CaptureLog
 
-  require Logger
-
   setup do
     {:ok, user: Factory.insert(:random_user)}
   end

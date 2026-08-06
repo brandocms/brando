@@ -208,17 +208,9 @@ defmodule Brando.Videos.UploadTest do
     mux = Brando.Videos.Uploaders.Mux
     bunny = Brando.Videos.Uploaders.Bunny
     cloudflare = Brando.Videos.Uploaders.Cloudflare
-    previous_mux = Application.get_env(:brando, mux)
-    previous_bunny = Application.get_env(:brando, bunny)
-    previous_cloudflare = Application.get_env(:brando, cloudflare)
-
-    on_exit(fn ->
-      restore_env(mux, previous_mux)
-      restore_env(bunny, previous_bunny)
-      restore_env(cloudflare, previous_cloudflare)
-    end)
-
-    Application.put_env(:brando, mux, access_token_id: "id", access_token_secret: "secret")
+    put_test_env(mux, access_token_id: "id", access_token_secret: "secret")
+    put_test_env(bunny, [])
+    put_test_env(cloudflare, [])
     refute Brando.Videos.upload_available?(:mux)
 
     Application.put_env(:brando, mux,
@@ -261,7 +253,4 @@ defmodule Brando.Videos.UploadTest do
 
     assert Brando.Videos.upload_available?(:cloudflare)
   end
-
-  defp restore_env(module, nil), do: Application.delete_env(:brando, module)
-  defp restore_env(module, value), do: Application.put_env(:brando, module, value)
 end
