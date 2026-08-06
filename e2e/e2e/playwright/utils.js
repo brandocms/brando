@@ -26,9 +26,13 @@ const BLOCK_SHIP_SETTLE_MS = 400 // SHIP_SETTLE_MS — focusout → ship
 
 // Wait until a block edit has been debounced, pushed, and answered.
 //
-// Replaces a flat `waitForTimeout(600)`. `syncLV` alone is not enough: while the
-// debounce is still counting down nothing is in flight, so it returns
-// immediately and the caller races the push.
+// The sleep is not removed — it is narrowed to the one interval that has to be
+// slept through, named after the timer it mirrors, and followed by `syncLV`.
+// Callers used to sit on a flat `waitForTimeout(600)` covering both the
+// debounce and the round trip; only the first of those is un-observable.
+// `syncLV` alone is not enough either: while the debounce is still counting
+// down nothing is in flight, so it returns immediately and the caller races the
+// push.
 const awaitBlockDebounce = async page => {
   await page.waitForTimeout(BLOCK_DEBOUNCE_MS + 50)
   await syncLV(page)

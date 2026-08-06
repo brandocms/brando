@@ -79,10 +79,13 @@ defmodule Brando.Mixfile do
       # `Elixir.Brando.ConnCase.beam`), and Elixir has not loaded dependency
       # config files for many versions.
       #
-      # So they were shipped, never evaluated, and full of placeholder
-      # credentials — which is a standing invitation for a real key to be added
-      # to a file nobody thinks of as published. Dropping them also takes the
-      # test fixtures out of the tarball.
+      # So they were shipped and never evaluated, which is reason enough on its
+      # own. Dropping them also takes the test fixtures out of the tarball.
+      #
+      # Not claimed here: that shipping placeholder credentials is itself the
+      # risk. `priv/` still ships several on purpose — `brando.install`'s
+      # `deployment.cfg`, `fabfile.py`, `.envrc.prod` — because a scaffold has
+      # to hand the operator something to fill in.
       files: [
         "assets",
         "lib",
