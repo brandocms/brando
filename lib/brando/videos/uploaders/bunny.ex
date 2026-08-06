@@ -416,16 +416,34 @@ defmodule Brando.Videos.Uploaders.Bunny do
       {"content-type", "application/json"}
     ]
 
+    # `redirect: false` is a credential guard, not a preference.
+    #
+    # Req strips credentials on a cross-host redirect by deleting exactly two
+    # things: the `authorization` header and the `:auth` option
+    # (`remove_credentials_if_untrusted/3`, `req/steps.ex:1573-1582`). Bunny's
+    # credential is neither — it is the `AccessKey` header above — so a 302 to
+    # another host would forward the library API key verbatim, on stock
+    # defaults with no config involved. Mux and Cloudflare need no equivalent:
+    # both authenticate with `authorization`, which Req strips itself.
+    #
+    # It belongs in the built options rather than in a documented default
+    # because `ReqOptions.merge/2` is `Keyword.merge(configured || [], built)`
+    # — built wins, so this cannot be switched back on from `runtime.exs`.
+    #
+    # No call here follows redirects today: all three are JSON REST calls
+    # against `@base_url` (`https://video.bunnycdn.com`), and a 3xx now surfaces
+    # as `{:error, body}` through the status clause below rather than being
+    # chased.
     request_opts =
       case method do
         :get ->
-          [method: :get, url: url, headers: headers]
+          [method: :get, url: url, headers: headers, redirect: false]
 
         :post ->
-          [method: :post, url: url, headers: headers, json: body]
+          [method: :post, url: url, headers: headers, json: body, redirect: false]
 
         :delete ->
-          [method: :delete, url: url, headers: headers]
+          [method: :delete, url: url, headers: headers, redirect: false]
       end
 
     request_opts = ReqOptions.merge(__MODULE__, request_opts)

@@ -23,8 +23,11 @@ defmodule Brando.Videos.ProviderClientTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
+  import ExUnit.CaptureLog
+
   alias Brando.Factory
   alias Brando.Videos.Uploaders.Bunny
+  alias Brando.Videos.Uploaders.Cloudflare
   alias Brando.Videos.Uploaders.Mux
 
   defp with_config(module, config) do
@@ -157,6 +160,50 @@ defmodule Brando.Videos.ProviderClientTest do
         Bunny.initiate_upload("clip.mp4", Factory.insert(:random_user))
       end
     end
+
+    # Req strips credentials across a redirect by deleting the `authorization`
+    # header and the `:auth` option, and nothing else
+    # (`remove_credentials_if_untrusted/3`, `req/steps.ex:1573-1582`). Bunny
+    # authenticates with an `AccessKey` header, so it is covered by neither —
+    # which made a 302 to any other host forward the library API key, on stock
+    # defaults with no config involved. `redirect: false` in the built options
+    # is the fix, and it is config-proof because built options outrank
+    # configured ones.
+    #
+    # RED: remove `redirect: false` from `api_request/3` and the counter reaches
+    # 2 with `accesskey` present on the second request. That mutation is the
+    # defect itself, which is the strongest form this assertion can take.
+    test "a redirect to another host does not forward the AccessKey credential" do
+      test_pid = self()
+
+      Req.Test.stub(Bunny, fn conn ->
+        send(test_pid, {:request, conn.host, Plug.Conn.get_req_header(conn, "accesskey")})
+
+        conn
+        |> Plug.Conn.put_resp_header("location", "https://evil.example.com/library/4242/videos")
+        |> Plug.Conn.send_resp(302, "")
+      end)
+
+      with_config(Bunny,
+        api_key: "bunny-key",
+        library_id: "4242",
+        cdn_hostname: "vz-test.b-cdn.net",
+        req_options: [plug: {Req.Test, Bunny}]
+      )
+
+      # The 302 is surfaced as an error rather than chased, so the upload fails
+      # loudly instead of leaking quietly. Captured because that error path
+      # logs, and the unit suite's stdout is a tracked baseline in this audit —
+      # a test that adds a line to it every run makes the next phase's number
+      # unreproducible.
+      assert capture_log(fn ->
+               assert {:error, _} =
+                        Bunny.initiate_upload("clip.mp4", Factory.insert(:random_user))
+             end) =~ "302"
+
+      assert_received {:request, "video.bunnycdn.com", ["bunny-key"]}
+      refute_received {:request, "evil.example.com", _}
+    end
   end
 
   # All three providers put their configured `:req_options` *underneath* the
@@ -192,6 +239,55 @@ defmodule Brando.Videos.ProviderClientTest do
       )
 
       assert {:ok, _} = Mux.initiate_upload("clip.mp4", Factory.insert(:random_user))
+    end
+
+    # One owner, three call sites. The Mux test above covers the rule; these
+    # two cover that Bunny and Cloudflare still *call* it — a re-inlined merge
+    # in either would be invisible to everything else in this file, for the
+    # same reason the Mux test had to be written in the first place.
+    test "a :req_options entry cannot replace the AccessKey header Bunny built" do
+      Req.Test.stub(Bunny, fn conn ->
+        assert Plug.Conn.get_req_header(conn, "accesskey") == ["bunny-key"]
+
+        Req.Test.json(conn, %{"guid" => "guid-123"})
+      end)
+
+      with_config(Bunny,
+        api_key: "bunny-key",
+        library_id: "4242",
+        cdn_hostname: "vz-test.b-cdn.net",
+        req_options: [
+          plug: {Req.Test, Bunny},
+          headers: [{"AccessKey", "hijacked"}]
+        ]
+      )
+
+      assert {:ok, _} = Bunny.initiate_upload("clip.mp4", Factory.insert(:random_user))
+    end
+
+    test "a :req_options entry cannot replace the Bearer header Cloudflare built" do
+      Req.Test.stub(Cloudflare, fn conn ->
+        assert Plug.Conn.get_req_header(conn, "authorization") == ["Bearer api-token"]
+
+        conn
+        |> Plug.Conn.put_resp_header("location", "https://upload.videodelivery.net/tus/cf-uid")
+        |> Plug.Conn.put_resp_header("stream-media-id", "cf-uid")
+        |> Plug.Conn.send_resp(201, "")
+      end)
+
+      with_config(Cloudflare,
+        account_id: "account-id",
+        api_token: "api-token",
+        req_options: [
+          plug: {Req.Test, Cloudflare},
+          headers: [{"authorization", "Bearer hijacked"}]
+        ]
+      )
+
+      assert {:ok, _} =
+               Cloudflare.initiate_upload("clip.mp4", Factory.insert(:random_user),
+                 file_meta: %{name: "clip.mp4", size: 12_345, type: "video/mp4"}
+               )
     end
   end
 end

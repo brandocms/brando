@@ -2,6 +2,35 @@
 
 ### Unreleased
 
+#### Breaking
+
+- **`Brando.CDN.key_exists?/2` is removed, replaced by `Brando.CDN.key_available?/2`
+  — and the sense is inverted.** `key_exists?/2` returned `true` when the key was
+  **taken**; `key_available?/2` returns `true` when the key is **free**. A consumer
+  that swaps the name without also inverting the branch turns "skip, something is
+  there" into "go ahead, write" and overwrites live objects.
+
+      # before
+      if Brando.CDN.key_exists?(key, cfg), do: rename(key), else: key
+
+      # after
+      if Brando.CDN.key_available?(key, cfg), do: key, else: rename(key)
+
+  The error semantics changed with it, deliberately. `key_exists?/2` was
+  `match?({:ok, _}, head_object(…))`, so anything that was not a clean hit —
+  a timeout, a signature failure, a 403 from a bucket that masks 404 without
+  `s3:ListBucket` — read as "absent" and let the write proceed.
+  `key_available?/2` frees the key only on a definitive `{:error, :not_found}`,
+  so an unreadable answer now reads as **occupied**. The cost of guessing wrong
+  in that direction is one unnecessary `unique_filename/1` suffix; the cost in
+  the old direction was new bytes underneath an existing asset's row.
+
+  **No `key_exists?/2` shim is provided, on purpose.** `not key_available?(k, cfg)`
+  is *not* the old function: on an uninterpretable error it returns `true` where
+  `key_exists?/2` returned `false`. A shim would look like a compatibility layer
+  while silently changing behaviour on exactly the path this change was about, so
+  the call sites are better updated by hand.
+
 #### Features
 
 - **`one_of` / `exactly_one_of` constraints for "either of these fields"**: an entry that is valid
@@ -36,6 +65,39 @@
   compilation and raised from the changeset instead.
 
 #### Fixes
+
+- **The Bunny video provider no longer forwards its API key across a redirect.**
+  `Req` strips credentials when a redirect crosses to another host, but it does
+  so by deleting exactly two things: the `authorization` header and the `:auth`
+  option. Bunny authenticates with an `AccessKey` header, which is neither — so
+  a `302` from `video.bunnycdn.com` to any other host sent the library API key
+  along with the follow-up request. This needed no configuration to reach: it
+  was the behaviour on **stock defaults**.
+
+  All three Bunny API calls now build `redirect: false`, so a 3xx is returned as
+  an ordinary non-2xx error rather than chased. None of them relied on following
+  redirects — they are JSON REST calls against a fixed host.
+
+  It is set in the *built* options rather than as a documented default on
+  purpose: the provider merge is `Keyword.merge(configured, built)`, so built
+  options outrank configured ones and this **cannot be switched back on** from
+  `runtime.exs`.
+
+  Mux and Cloudflare are unaffected and need no equivalent — both authenticate
+  with `authorization`, which `Req` strips itself.
+
+- **`overwrite: true` now actually overwrites on the CDN path.**
+  `Brando.Utils.build_upload_key/2` tested the key for availability
+  unconditionally and appended a `unique_filename/1` suffix whenever it was
+  taken — so a config asking to overwrite got a renamed object instead, which is
+  the one outcome the option exists to prevent. It now short-circuits on
+  `overwrite`, and does not consult the bucket at all in that case (one fewer
+  `HEAD` per upload). `force_filename` is affected the same way: it was honoured
+  when the name was chosen, then defeated by the suffix.
+
+  The two sibling paths already branched correctly — `Brando.Upload`'s
+  filesystem writer and the client-direct filename builder — so this was the odd
+  one of three against a documented option.
 
 - **Admin login no longer flashes before animating**: the login screen appeared
   fully assembled, vanished, then faded in. Three causes. The initial hide was an
