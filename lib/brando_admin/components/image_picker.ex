@@ -28,6 +28,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
     {:ok,
      socket
      |> assign(:picker_mode, :block_upload)
+     |> assign(:opened?, true)
      |> assign(:pending_upload_name, assigns[:upload_name])
      |> assign(:pending_file_count, assigns[:file_count] || 0)
      |> assign(:new_folder, "")
@@ -51,6 +52,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
     {:ok,
      socket
      |> assign(:picker_mode, :select)
+     |> assign(:opened?, true)
      |> assign(:pending_upload_name, nil)
      |> assign(:pending_file_count, 0)
      |> assign(:new_folder, "")
@@ -72,15 +74,30 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> push_selection_state()}
   end
 
+  # Fired from `hooks.ex` on every `[:image, :updated]` — once per image during a
+  # bulk upload, and `assign_folder_state/2` runs a full `list_images/1` each
+  # time. A picker that has never been opened has nothing on screen to refresh,
+  # and both open clauses call `assign_folder_state/2` themselves, so skipping
+  # here cannot show stale data.
+  #
+  # This does NOT cover opened-then-closed: the drawer's closed state lives
+  # entirely client-side (`b:show_drawer` has no server-side counterpart), so
+  # knowing it would mean new client→server plumbing rather than a guard. N
+  # uploads still cost N queries once the picker has been opened.
   def update(%{refresh_images: true} = assigns, socket) do
-    requested_folder = Map.get(assigns, :requested_folder)
+    socket = assign_defaults(socket)
 
-    {:ok,
-     socket
-     |> assign_defaults()
-     |> assign_config_target()
-     |> assign_folder_state(requested_folder || socket.assigns.current_folder)
-     |> push_selection_state()}
+    if socket.assigns.opened? do
+      requested_folder = Map.get(assigns, :requested_folder)
+
+      {:ok,
+       socket
+       |> assign_config_target()
+       |> assign_folder_state(requested_folder || socket.assigns.current_folder)
+       |> push_selection_state()}
+    else
+      {:ok, socket}
+    end
   end
 
   def update(assigns, socket) do
@@ -478,6 +495,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign_new(:event_target, fn -> nil end)
     |> assign_new(:selected_images, fn -> [] end)
     |> assign_new(:picker_mode, fn -> :select end)
+    |> assign_new(:opened?, fn -> false end)
     |> assign_new(:pending_upload_name, fn -> nil end)
     |> assign_new(:pending_file_count, fn -> 0 end)
     |> assign_new(:form_id, fn -> nil end)

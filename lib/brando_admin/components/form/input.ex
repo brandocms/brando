@@ -284,15 +284,9 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   def radios(assigns) do
     input_options =
-      case Keyword.get(assigns.opts, :options) do
-        token when token in [:languages, :admin_languages] ->
-          Options.expand(token)
-
-        nil ->
-          []
-
-        options ->
-          options
+      case assigns.opts |> Keyword.get(:options) |> Options.expand() do
+        nil -> []
+        options -> options
       end
 
     assigns =

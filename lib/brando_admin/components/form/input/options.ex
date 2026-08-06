@@ -28,4 +28,6 @@ defmodule BrandoAdmin.Components.Form.Input.Options do
     |> Brando.config()
     |> Enum.map(fn [{:value, value}, {:text, text}] -> %{label: text, value: value} end)
   end
+
+  def expand(other), do: other
 end

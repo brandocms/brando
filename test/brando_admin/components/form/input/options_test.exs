@@ -2,7 +2,10 @@ defmodule BrandoAdmin.Components.Form.Input.OptionsTest do
   # Phase 3 / E4 in the form audit. The `:languages` / `:admin_languages`
   # expansion existed as three byte-identical `case` arms in `Input.radios/1`,
   # `Input.Select` and `Input.MultiSelect`.
-  use ExUnit.Case, async: true
+  # `async: false`: the memoization test below mutates
+  # `Application.put_env(:brando, :languages, ...)`, which is global. Nothing
+  # reads it concurrently today, but an async test that did would see "Testish".
+  use ExUnit.Case, async: false
 
   alias BrandoAdmin.Components.Form.Input.Options
 
@@ -40,8 +43,17 @@ defmodule BrandoAdmin.Components.Form.Input.OptionsTest do
     assert Options.expand(:languages) == Options.expand(:languages)
   end
 
-  test "tokens/0 lists exactly what expand/1 accepts" do
-    assert Options.tokens() == [:languages, :admin_languages]
-    for token <- Options.tokens(), do: assert(is_list(Options.expand(token)))
+  # `expand/1` is total so the three callers (`Input.radios/1`, `Input.Select`,
+  # `Input.MultiSelect`) never name the tokens themselves — they pipe everything
+  # through and pattern-match the result. That only works if a non-token comes
+  # back byte-identical, so pin each shape a caller branches on.
+  test "passes every non-token value through untouched" do
+    options_fun = fn _form, _opts -> [] end
+    list = [%{label: "One", value: "1"}]
+
+    assert Options.expand(nil) == nil
+    assert Options.expand(options_fun) == options_fun
+    assert Options.expand(list) == list
+    assert Options.expand(:not_a_token) == :not_a_token
   end
 end

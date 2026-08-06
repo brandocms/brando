@@ -333,10 +333,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   end
 
   defp get_input_options(field, opts) do
-    case Keyword.get(opts, :options) do
-      token when token in [:languages, :admin_languages] ->
-        Options.expand(token)
-
+    case opts |> Keyword.get(:options) |> Options.expand() do
       nil ->
         []
 
