@@ -394,9 +394,7 @@ defmodule Brando.CDN do
     cdn_config = Map.get(field_cfg, :cdn)
     bucket = cdn_config.bucket
 
-    bucket
-    |> ExAws.S3.head_object(object_key)
-    |> ExAws.request(s3_config)
+    Brando.CDN.Client.impl().head_object(bucket, object_key, s3_config)
   end
 
   @doc """
@@ -413,9 +411,7 @@ defmodule Brando.CDN do
     cdn_config = Map.get(field_cfg, :cdn)
     bucket = cdn_config.bucket
 
-    bucket
-    |> ExAws.S3.delete_object(object_key)
-    |> ExAws.request(s3_config)
+    Brando.CDN.Client.impl().delete_object(bucket, object_key, s3_config)
   end
 
   @doc """

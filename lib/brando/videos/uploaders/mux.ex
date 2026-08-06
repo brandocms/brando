@@ -569,6 +569,11 @@ defmodule Brando.Videos.Uploaders.Mux do
           [method: :delete, url: url, headers: headers]
       end
 
+    # `:req_options` is the transport seam, matching Cloudflare's. A test points
+    # it at a `Req.Test` stub so the request this builds can be asserted without
+    # a network — see `test/brando/videos/provider_client_test.exs`.
+    request_opts = Keyword.merge(request_opts, req_options())
+
     case Req.request(request_opts) do
       {:ok, %{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
@@ -582,6 +587,8 @@ defmodule Brando.Videos.Uploaders.Mux do
         {:error, reason}
     end
   end
+
+  defp req_options, do: get_config(:req_options) || []
 
   defp get_config(key) do
     :brando
