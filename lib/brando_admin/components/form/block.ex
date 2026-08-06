@@ -52,6 +52,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
     |> assign(:block_initialized, false)
     |> assign(:container_not_found, false)
+    |> assign(:fragment_not_found, false)
     |> assign(:module_not_found, false)
     |> assign(:entry_template, nil)
     |> assign(:initial_render, false)
@@ -931,13 +932,15 @@ defmodule BrandoAdmin.Components.Form.Block do
     #
     #   * `@fragments` only reaches `fragment_block` / `fragment_config`
     #     (`block/render.ex:278,408`), i.e. fragment blocks;
-    #   * `@containers` reaches `container_block` (`:211`) and the
-    #     `container_config` that every ROOT block renders (`:528`) — but never
-    #     a child block that is not itself a container.
+    #   * `@containers` reaches `container_block` (`:209`) and `container_config`
+    #     (`:526`). Both sit inside `container/1` (`:451`), whose only call site
+    #     is `render(%{type: :container})` (`:197,200`) — so container blocks
+    #     and nothing else. `belongs_to == :root` is NOT a reader: a root
+    #     `:module` or `:fragment` block never reaches either template.
     #
     # Anything else was carrying a list it had no template for.
     |> assign_new(:containers, fn %{type: type} ->
-      if type == :container or belongs_to == :root do
+      if type == :container do
         Brando.Content.list_containers!(%{
           order: "desc namespace, asc sequence",
           cache: {:ttl, :infinite}
@@ -1277,48 +1280,51 @@ defmodule BrandoAdmin.Components.Form.Block do
     )
   end
 
-  # Same scoping as `:containers` in `update/2`: the palette select is rendered
-  # by the container toolbar (`block/render.ex:209`) and by the
-  # `container_config` every root block carries (`:527`). Every other block was
-  # copying the whole palette list off ETS for a template it never reaches.
-  defp renders_palette_options?(%{type: type, belongs_to: belongs_to}),
-    do: type == :container or belongs_to == :root
+  # Same scoping as `:containers` in `update/2`, and for the same reason: the
+  # palette select lives in `container_config` (`block/render.ex:526`), which is
+  # only ever reached through `container/1` from `render(%{type: :container})`.
+  # Every other block was copying the whole palette list off ETS for a template
+  # it never reaches.
+  defp renders_palette_options?(%{type: type}), do: type == :container
+
+  # `nil`, not `[]`. `container_config` (`block/render.ex:1173`) branches on
+  # `if @palette_options` to decide select-vs-hidden-input, and `[]` is truthy —
+  # returning it renders a `<select>` with no options, which submits nothing for
+  # `block[palette_id]` and drops an already-set palette on the next validate.
+  defp palette_options_for(assigns, opts_fun) do
+    if renders_palette_options?(assigns), do: Brando.Content.list_palettes!(opts_fun.()), else: nil
+  end
+
+  defp palette_query_opts(%{palette_namespace: nil}), do: %{cache: {:ttl, :infinite}}
+
+  defp palette_query_opts(%{palette_namespace: namespace}),
+    do: %{filter: %{namespace: namespace}, cache: {:ttl, :timer.minutes(5)}}
 
   def maybe_assign_container(%{assigns: %{container_id: nil}} = socket) do
     socket
     |> assign_new(:container, fn -> nil end)
     |> assign_new(:palette_options, fn assigns ->
-      if renders_palette_options?(assigns) do
-        Brando.Content.list_palettes!(%{cache: {:ttl, :infinite}})
-      else
-        []
-      end
+      palette_options_for(assigns, fn -> %{cache: {:ttl, :infinite}} end)
     end)
   end
 
   def maybe_assign_container(%{assigns: %{container_id: container_id}} = socket) do
     case get_container(container_id) do
       nil ->
-        assign(socket, :container_not_found, true)
+        # Still assign both, or `render(%{type: :container})` — which has no
+        # `container_not_found` clause of its own until the one in `render.ex`
+        # matches — would read unassigned keys and take the whole editor down.
+        socket
+        |> assign(:container_not_found, true)
+        |> assign_new(:container, fn -> nil end)
+        |> assign_new(:palette_options, fn -> nil end)
 
       container ->
         socket
         |> assign_new(:container, fn -> container end)
         |> assign_new(:palette_options, fn assigns ->
-          if container.allow_custom_palette and renders_palette_options?(assigns) do
-            opts =
-              if container.palette_namespace do
-                %{
-                  filter: %{namespace: container.palette_namespace},
-                  cache: {:ttl, :timer.minutes(5)}
-                }
-              else
-                %{cache: {:ttl, :infinite}}
-              end
-
-            Brando.Content.list_palettes!(opts)
-          else
-            []
+          if container.allow_custom_palette do
+            palette_options_for(assigns, fn -> palette_query_opts(container) end)
           end
         end)
     end
@@ -1330,8 +1336,15 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def maybe_assign_fragment(%{assigns: %{fragment_id: fragment_id}} = socket) do
     case get_fragment(fragment_id) do
-      nil -> assign(socket, :fragment_not_found, true)
-      fragment -> assign_new(socket, :fragment, fn -> fragment end)
+      nil ->
+        # As in `maybe_assign_container/1`: `render(%{type: :fragment})` reads
+        # `@fragment` (`render.ex:277`), so the flag alone is not enough.
+        socket
+        |> assign(:fragment_not_found, true)
+        |> assign_new(:fragment, fn -> nil end)
+
+      fragment ->
+        assign_new(socket, :fragment, fn -> fragment end)
     end
   end
 
@@ -1933,10 +1946,16 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def get_fragment(nil), do: nil
 
+  # Non-raising, to match `get_container/1`. The bang version meant a block
+  # referencing a DELETED fragment raised `Ecto.NoResultsError` mid-render and
+  # took the editor LiveView down with every unsaved block edit — and it made
+  # `maybe_assign_fragment/1`'s `nil ->` branch unreachable, so the
+  # `fragment_not_found` chrome could never render.
   def get_fragment(id) do
-    Brando.Pages.get_fragment!(%{
-      matches: %{id: id}
-    })
+    case Brando.Pages.get_fragment(%{matches: %{id: id}}) do
+      {:ok, fragment} -> fragment
+      {:error, {:fragment, :not_found}} -> nil
+    end
   end
 
   defdelegate get_container(id), to: Brando.Content, as: :fetch_container
@@ -2142,7 +2161,20 @@ defmodule BrandoAdmin.Components.Form.Block do
     changeset = socket.assigns.form.source
     block_cs = Changeset.get_assoc(changeset, :block)
     container_id = Changeset.get_field(block_cs, :container_id)
-    assign(socket, :container, get_container(container_id))
+    container = get_container(container_id)
+
+    # `:palette_options` is derived from the container's `allow_custom_palette`
+    # and `palette_namespace`, so it has to move with it. Re-assigning only
+    # `:container` left the palette select showing the *previous* container's
+    # options — `assign_new` in `maybe_assign_container/1` will not re-run.
+    palette_options =
+      if container && container.allow_custom_palette do
+        palette_options_for(socket.assigns, fn -> palette_query_opts(container) end)
+      end
+
+    socket
+    |> assign(:container, container)
+    |> assign(:palette_options, palette_options)
   end
 
   def maybe_update_container(socket, _), do: socket

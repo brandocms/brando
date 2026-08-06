@@ -34,6 +34,42 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     """
   end
 
+  # Without these two, a block referencing a deleted container/fragment falls
+  # through to `render(%{type: :container})` / `render(%{type: :fragment})`,
+  # which read `@container` / `@palette_options` / `@fragment`. Those are now
+  # always assigned (see `Block.maybe_assign_container/1`), but rendering the
+  # normal chrome for a target that no longer exists is still wrong — say so,
+  # and offer the same escape hatch as `module_not_found`.
+  def render(%{container_not_found: true} = assigns) do
+    ~H"""
+    <div class="alert danger text-mono">
+      <div>
+        Missing container — #{inspect(assigns.container_id)}.<br /><br />
+        If this is a mistake, you can hopefully undelete the container.<br /><br />
+        If you're sure the container is gone, you can
+        <button type="button" phx-click="delete_block" phx-target={@myself}>
+          delete this block.
+        </button>
+      </div>
+    </div>
+    """
+  end
+
+  def render(%{fragment_not_found: true} = assigns) do
+    ~H"""
+    <div class="alert danger text-mono">
+      <div>
+        Missing fragment — #{inspect(assigns.fragment_id)}.<br /><br />
+        If this is a mistake, you can hopefully undelete the fragment.<br /><br />
+        If you're sure the fragment is gone, you can
+        <button type="button" phx-click="delete_block" phx-target={@myself}>
+          delete this block.
+        </button>
+      </div>
+    </div>
+    """
+  end
+
   def render(%{type: :module, multi: true} = assigns) do
     ~H"""
     <div data-module-multi="true">
@@ -292,7 +328,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
   def render(assigns) do
     ~H"""
-    <div style="font-family: Mono; font-size: 11px;">
+    <div class="block-unknown-type">
       <code>
         <pre>
       ERROR: Unknown block type
@@ -1141,7 +1177,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :palette, :any, required: true
   attr :container, :any, default: nil
   attr :containers, :list, default: []
-  attr :palette_options, :any, default: []
+  # `nil` means "no palette select" — see the branch at `:1173`. Defaulting to
+  # `[]` would be truthy and render an empty `<select>`.
+  attr :palette_options, :any, default: nil
   attr :target, :any, required: true
   attr :open, :boolean, default: false
 

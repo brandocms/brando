@@ -673,3 +673,10 @@
     }
   }
 }
+
+/* Debug render for a block whose `type` matched no `render/1` clause — see
+   `Block.Render.render/1`'s catch-all. */
+.block-unknown-type {
+  font-family: Mono, monospace;
+  font-size: 11px;
+}
