@@ -26,7 +26,7 @@ defmodule Brando.CDN.Client do
   test transport (`Req.Test`). Wrapping them in a behaviour would be inventing a
   seam the library already provides, and a behaviour mock cannot assert what
   those clients actually get wrong — the request they build. They are stubbed at
-  the transport instead; see `Brando.Videos.Uploaders.Mux.req_options/0`.
+  the transport instead; see `Brando.Videos.Uploaders.ReqOptions`.
 
   ExAws has no equivalent, and these calls are semantic rather than
   request-shaped, so they get a behaviour.

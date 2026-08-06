@@ -34,6 +34,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
   @behaviour Brando.Videos.Uploader
 
   alias Brando.Videos
+  alias Brando.Videos.Uploaders.ReqOptions
 
   require Logger
 
@@ -427,14 +428,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
           [method: :delete, url: url, headers: headers]
       end
 
-    # `:req_options` is the transport seam, matching Cloudflare's. A test points
-    # it at a `Req.Test` stub so the request this builds can be asserted without
-    # a network — see `test/brando/videos/provider_client_test.exs`.
-    #
-    # Built values win the merge. The other direction lets a `:req_options`
-    # entry silently replace the authorization header, the URL or the method —
-    # a config seam that can unset credentials is a config seam that will.
-    request_opts = Keyword.merge(req_options(), request_opts)
+    request_opts = ReqOptions.merge(__MODULE__, request_opts)
 
     case Req.request(request_opts) do
       {:ok, %{status: status, body: body}} when status in 200..299 ->
@@ -449,8 +443,6 @@ defmodule Brando.Videos.Uploaders.Bunny do
         {:error, reason}
     end
   end
-
-  defp req_options, do: get_config(:req_options) || []
 
   defp get_config(key) do
     :brando

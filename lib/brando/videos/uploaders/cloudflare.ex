@@ -20,6 +20,7 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
   @behaviour Brando.Videos.Uploader
 
   alias Brando.Videos
+  alias Brando.Videos.Uploaders.ReqOptions
   alias Brando.Videos.Video
 
   require Logger
@@ -277,12 +278,9 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
         [{"authorization", "Bearer #{api_token}"}, {"accept", "application/json"}] ++
           extra_headers
 
-      # Built values win the merge. The other direction lets a `:req_options`
-      # entry silently replace the authorization header, the URL or the method —
-      # a config seam that can unset credentials is a config seam that will.
       request_opts =
-        Keyword.merge(
-          get_config(:req_options) || [],
+        ReqOptions.merge(
+          __MODULE__,
           [method: method, url: url, headers: headers] |> maybe_put_json(body)
         )
 

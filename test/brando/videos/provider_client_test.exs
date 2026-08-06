@@ -158,4 +158,40 @@ defmodule Brando.Videos.ProviderClientTest do
       end
     end
   end
+
+  # All three providers put their configured `:req_options` *underneath* the
+  # request they built, and that one line was byte-identical in all three — so
+  # it is the line that could drift in one of them unnoticed. It now has a
+  # single owner (`Brando.Videos.Uploaders.ReqOptions`), and this is what makes
+  # the direction of that merge falsifiable.
+  #
+  # Nothing above can see it: the stub is installed through `:req_options`
+  # (`plug:`), which does not collide with any key the providers build, so the
+  # merge produces the same keyword list either way round. The collision has to
+  # be deliberate, and the header is the one worth testing — the comment on the
+  # rule says a config seam that can unset credentials is a config seam that
+  # will.
+  describe "req_options precedence" do
+    test "a :req_options entry cannot replace the auth header the provider built" do
+      Req.Test.stub(Mux, fn conn ->
+        assert ["Basic " <> encoded] = Plug.Conn.get_req_header(conn, "authorization")
+        assert Base.decode64!(encoded) == "id:secret"
+
+        Req.Test.json(conn, %{
+          "data" => %{"id" => "upload-123", "url" => "https://storage.mux.com/x", "timeout" => 1}
+        })
+      end)
+
+      with_config(Mux,
+        access_token_id: "id",
+        access_token_secret: "secret",
+        req_options: [
+          plug: {Req.Test, Mux},
+          headers: [{"authorization", "Basic #{Base.encode64("hijacked:hijacked")}"}]
+        ]
+      )
+
+      assert {:ok, _} = Mux.initiate_upload("clip.mp4", Factory.insert(:random_user))
+    end
+  end
 end
