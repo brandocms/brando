@@ -15,6 +15,66 @@ const syncLV = async (page, timeout = 15000) => {
   return Promise.all(promises)
 }
 
+// The two client-side timers the block editor runs before it talks to the
+// server. Both are plain `setTimeout`s in `assets/src/hooks/Block/index.js` with
+// nothing observable to wait on, so a test cannot avoid sleeping past them —
+// but it can sleep past *only* them and let `syncLV` cover everything after,
+// which is the part that actually varies with machine speed. Keep these in step
+// with the hook.
+const BLOCK_DEBOUNCE_MS = 300 // phx-debounce on block inputs
+const BLOCK_SHIP_SETTLE_MS = 400 // SHIP_SETTLE_MS — focusout → ship
+
+// Wait until a block edit has been debounced, pushed, and answered.
+//
+// Replaces a flat `waitForTimeout(600)`. `syncLV` alone is not enough: while the
+// debounce is still counting down nothing is in flight, so it returns
+// immediately and the caller races the push.
+const awaitBlockDebounce = async page => {
+  await page.waitForTimeout(BLOCK_DEBOUNCE_MS + 50)
+  await syncLV(page)
+}
+
+// Wait until a blur has shipped the block's ops to the other editors.
+//
+// Replaces flat 1200–1500ms sleeps. The receiving side is not covered here on
+// purpose — assert it with a retrying `expect` on the *other* page, which is
+// event-driven by construction and reports what was actually there when it gave
+// up, instead of a sleep that says only "still not equal".
+const awaitBlockShip = async page => {
+  await page.waitForTimeout(BLOCK_SHIP_SETTLE_MS + 50)
+  await syncLV(page)
+}
+
+// Cut the network under the browser, the way a lost connection does.
+//
+// Two steps, and both are needed:
+//
+//  1. `setOffline` stops new requests, so LiveSocket's reconnect attempts fail
+//     for as long as we stay offline — the partition is real, not simulated by
+//     asking the client to hold still.
+//  2. An *established* websocket does not notice `setOffline` at all. It dies on
+//     the next missed heartbeat, 30 seconds out, which is far too slow for a
+//     spec. Closing the transport directly makes the drop land immediately.
+//
+// Step 2 is deliberately NOT `liveSocket.disconnect()`, which is the whole
+// difference from the cooperative test: `disconnect()` is the client agreeing
+// to stop, and it disarms auto-reconnect. Closing `conn` is the socket dying
+// underneath LiveSocket with reconnection still armed — LiveSocket discovers
+// the loss, fires `disconnected()` on every hook, and starts retrying into a
+// network that is not there.
+const goOffline = async page => {
+  await page.context().setOffline(true)
+  await page.evaluate(() => window.liveSocket.getSocket().conn.close())
+  await expect(page.locator('.phx-connected').first()).toBeHidden({ timeout: 15000 })
+}
+
+// Let the retries through. LiveSocket reconnects on its own schedule — nothing
+// here tells it to, which is what makes the round trip a real one.
+const goOnline = async page => {
+  await page.context().setOffline(false)
+  await syncLV(page, 30000)
+}
+
 // this function executes the given code inside the liveview that is responsible
 // for the given selector; it uses private phoenix live view js functions, so it could
 // break in the future
@@ -235,6 +295,10 @@ const confirmUploadFolder = async page => {
 module.exports = {
   randomString,
   syncLV,
+  awaitBlockDebounce,
+  awaitBlockShip,
+  goOffline,
+  goOnline,
   evalLV,
   evalPlug,
   attributeMutations,

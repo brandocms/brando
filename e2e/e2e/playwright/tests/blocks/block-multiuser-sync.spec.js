@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, awaitBlockDebounce, awaitBlockShip } from '../../utils'
 
 // Multi-user block sync: two logged-in users (two browser contexts sharing
 // one sandbox session) editing the same entry.
@@ -42,7 +42,12 @@ test.describe('Multi-user block sync', () => {
     await page.getByRole('button', { name: /Save and continue editing/ }).click()
     await expect(page).toHaveURL(/\/update\//, { timeout: 30000 })
     await syncLV(page)
-    await page.waitForTimeout(750)
+    // The block editor is deferred a tick past the entry load, so `syncLV` alone
+    // returns while the blocks are still a loader shell. Wait for the blocks
+    // themselves rather than for 750ms.
+    await expect(page.locator('.header-block textarea').nth(1)).toHaveValue('Beta', {
+      timeout: 15000,
+    })
 
     return new URL(page.url()).pathname
   }
@@ -54,9 +59,9 @@ test.describe('Multi-user block sync', () => {
     const blockOne = page.locator('.header-block textarea').nth(0)
     await blockOne.click()
     await blockOne.fill('Alpha edited by A')
-    await page.waitForTimeout(600) // debounce flush → op emitted
+    await awaitBlockDebounce(page)
     await page.locator('.header-block textarea').nth(1).click()
-    await page.waitForTimeout(1200) // blur → snapshot ships → B merges
+    await awaitBlockShip(page)
   }
 
   // B saves WITHOUT having touched anything, then reload must show A's edit
@@ -68,7 +73,8 @@ test.describe('Multi-user block sync', () => {
       .click()
     await syncLV(secondUserPage)
     await expect(secondUserPage.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
-    await secondUserPage.waitForTimeout(750)
+    // The save redirects/patches; wait for that rather than for 750ms.
+    await expect(secondUserPage).toHaveURL(/\/update\//, { timeout: 30000 })
 
     await secondUserPage.reload()
     await syncLV(secondUserPage)
@@ -132,12 +138,12 @@ test.describe('Multi-user block sync', () => {
     const ta = page.locator('.header-block textarea').nth(0)
     await ta.click()
     await ta.fill('Alpha blurred by A')
-    await page.waitForTimeout(600) // debounce flush → op emitted
+    await awaitBlockDebounce(page)
 
     // blur to something OUTSIDE the blocks — the old trigger only shipped
     // when ANOTHER block got focused
     await page.getByLabel('Title', { exact: true }).click()
-    await page.waitForTimeout(1500) // focus settle (400ms) → ship → B applies
+    await awaitBlockShip(page)
 
     await expect(secondUserPage.locator('.header-block textarea').nth(0)).toHaveValue(
       'Alpha blurred by A',
@@ -158,9 +164,9 @@ test.describe('Multi-user block sync', () => {
     const ta = page.locator('.header-block textarea').nth(0)
     await ta.click()
     await ta.fill('Alpha before B joined')
-    await page.waitForTimeout(600)
+    await awaitBlockDebounce(page)
     await page.getByLabel('Title', { exact: true }).click()
-    await page.waitForTimeout(1500)
+    await awaitBlockShip(page)
 
     // B joins AFTER the edit — its join sync request must replay A's state
     await secondUserPage.goto(entryUrl)
@@ -192,7 +198,9 @@ test.describe('Multi-user block sync', () => {
     await page.getByRole('button', { name: /Save and continue editing/ }).click()
     await expect(page).toHaveURL(/\/update\//, { timeout: 30000 })
     await syncLV(page)
-    await page.waitForTimeout(750)
+    await expect(
+      page.locator('[data-tiptap-type="block"] .tiptap-target [contenteditable]').first()
+    ).toBeVisible({ timeout: 15000 })
 
     return new URL(page.url()).pathname
   }
@@ -202,7 +210,7 @@ test.describe('Multi-user block sync', () => {
     await editor.click()
     await page.keyboard.press('ControlOrMeta+a')
     await page.keyboard.type(text)
-    await page.waitForTimeout(600) // tiptap → hidden input mirror → debounce flush → op
+    await awaitBlockDebounce(page) // tiptap → hidden input mirror → debounce flush → op
   }
 
   test("A's tiptap edit is VISIBLE for a connected B after plain blur", async ({
@@ -227,7 +235,7 @@ test.describe('Multi-user block sync', () => {
 
     // blur to something outside the blocks
     await page.getByLabel('Title', { exact: true }).click()
-    await page.waitForTimeout(1500) // settle → ship → B applies + remounts
+    await awaitBlockShip(page) // settle → ship → B applies + remounts
 
     // stage 2: the ship reached B's store and patched B's hidden input
     await expect(secondUserPage.locator('[data-tiptap-type="block"] .tiptap-text').first()).toHaveValue(
@@ -258,7 +266,7 @@ test.describe('Multi-user block sync', () => {
     await title.fill('Title changed by A')
     // focus another field so the field-change ships / block settle fires
     await page.getByLabel('URI').click()
-    await page.waitForTimeout(1500)
+    await awaitBlockShip(page)
 
     await secondUserPage.goto(entryUrl)
     await syncLV(secondUserPage)
@@ -298,9 +306,9 @@ test.describe('Multi-user block sync', () => {
     // The patch resets classes to server truth; the lock must be re-asserted,
     // not flicker away (this was the flaky-lock class of bugs).
     await ta.fill('Alpha locked edit')
-    await page.waitForTimeout(600)
+    await awaitBlockDebounce(page)
     await page.locator('.entry-block').nth(0).locator('.block-description').first().click()
-    await page.waitForTimeout(1500)
+    await awaitBlockShip(page)
 
     await expect(secondUserPage.locator('.header-block textarea').nth(0)).toHaveValue(
       'Alpha locked edit',
@@ -338,7 +346,7 @@ test.describe('Multi-user block sync', () => {
     const uri = secondUserPage.getByLabel('URI')
     await uri.click()
     await uri.fill('multiuser-field-lock-x')
-    await secondUserPage.waitForTimeout(800)
+    await awaitBlockDebounce(secondUserPage)
 
     await expect(secondUserPage.locator('.field-wrapper.field-locked')).toHaveCount(1)
     await expect(lockedWrapper.getByLabel('Title', { exact: true })).toBeAttached()
@@ -370,14 +378,15 @@ test.describe('Multi-user block sync', () => {
 
     const member = multiBlock.locator('.block-children [data-uid]').first()
     await member.locator('.block-vars').getByLabel('Name').fill('Doomed Member')
-    await page.waitForTimeout(400)
-    await syncLV(page)
+    await awaitBlockDebounce(page)
 
     await page.getByTestId('split-dropdown-button').click()
     await page.getByRole('button', { name: /Save and continue editing/ }).click()
     await expect(page).toHaveURL(/\/update\//, { timeout: 30000 })
     await syncLV(page)
-    await page.waitForTimeout(750)
+    await expect(
+      page.locator('[data-module-multi="true"] .block-children [data-uid]').first()
+    ).toBeVisible({ timeout: 15000 })
 
     const entryUrl = new URL(page.url()).pathname
 
