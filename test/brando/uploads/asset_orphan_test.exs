@@ -45,34 +45,60 @@ defmodule Brando.Uploads.AssetOrphanTest do
     # The documented tradeoff, stated as a test. An upload creates its row before
     # anything is delivered anywhere, so abandoning the form leaves that row in
     # the library forever — retrievable through the picker, collected by nothing.
-    test "survives with no entry referencing it, and nothing collects it" do
+    #
+    # The control row is what makes this an assertion rather than a sentence. On
+    # its own, "an image with `deleted_at == nil` survives a purge" is satisfied
+    # by a `clean_up_soft_deletions/0` that does nothing at all — including one
+    # broken into a no-op. Purging a genuinely stale row in the same call proves
+    # the collector ran and still declined to take the orphan.
+    test "survives a purge that collects everything it is supposed to" do
       user = Factory.insert(:random_user)
-      image = Factory.insert(:image, creator: user)
+      orphan = Factory.insert(:image, creator: user)
+      stale = Factory.insert(:image, creator: user)
 
+      soft_delete(stale, 60)
       Query.clean_up_soft_deletions()
 
-      assert Brando.Repo.get(Image, image.id)
-      assert Brando.Repo.get(Image, image.id).deleted_at == nil
+      refute Brando.Repo.get(Image, stale.id), "the purge did not run"
+      assert Brando.Repo.get(Image, orphan.id)
+      assert Brando.Repo.get(Image, orphan.id).deleted_at == nil
     end
 
     # The save failing is not a signal to destroy the upload: the user's next
     # move is usually to fix the validation error and save again, with the same
     # image still picked.
+    #
+    # Driven through `Page.changeset/5` rather than a `validate_required/2` the
+    # test bolts on. The earlier version invented its own failing changeset, so
+    # it asserted only that Ecto does not delete unrelated rows when an insert
+    # fails — true of any schema in any application, and unable to go red for
+    # anything in this repo. `uri` is `required: true` on the blueprint
+    # (`page.ex:94`), so this is the validation a user actually hits.
     test "survives a failed entry save" do
       user = Factory.insert(:random_user)
       image = Factory.insert(:image, creator: user)
 
-      # `uri` is required, so this insert cannot succeed.
-      {:error, _changeset} =
+      {:error, changeset} =
         %Page{}
-        |> Changeset.change(%{
-          title: "No uri",
-          language: "en",
-          meta_image_id: image.id,
-          creator_id: user.id
-        })
-        |> Changeset.validate_required([:uri])
+        |> Page.changeset(
+          %{
+            title: "No uri",
+            template: "default.html",
+            language: "en",
+            status: :published,
+            meta_image_id: image.id
+          },
+          user
+        )
         |> Brando.Repo.insert()
+
+      # Pin the premise: the save failed for the reason the test claims — the
+      # missing `uri` and nothing else — and the entry really was carrying the
+      # image when it did. Asserting the whole error list rather than `:uri in`
+      # it matters: `language` and `status` are required too, so a weaker
+      # assertion passes while the test is failing for a reason it never names.
+      assert Keyword.keys(changeset.errors) == [:uri]
+      assert Changeset.get_field(changeset, :meta_image_id) == image.id
 
       assert Brando.Repo.get(Image, image.id)
     end

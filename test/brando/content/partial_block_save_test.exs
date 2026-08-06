@@ -17,6 +17,9 @@ defmodule Brando.Content.PartialBlockSaveTest do
   alias Brando.Pages.Page
   alias Ecto.Changeset
 
+  # `Page` is used for its real changeset, not just as a struct — see the
+  # "an invalid entry with valid blocks" describe block.
+
   defp block_params(uid, user, extra \\ %{}) do
     Map.merge(
       %{
@@ -61,12 +64,18 @@ defmodule Brando.Content.PartialBlockSaveTest do
     Block |> Brando.Repo.all() |> Enum.map(& &1.uid) |> Enum.sort()
   end
 
+  # `[]` means "this block was cast and has no errors". A *missing* `:block`
+  # change means the block vanished from the returned changeset entirely, which
+  # is the data-loss shape this whole file exists to catch — so it gets its own
+  # value. Collapsing both to `[]` (as this did) made every assertion below
+  # satisfiable by the defect: `[[], [:type], []]` passed just as happily when
+  # rootA and rootC had been dropped as when they were intact.
   defp block_errors(changeset) do
     changeset
     |> Changeset.get_change(:entry_blocks, [])
     |> Enum.map(fn entry_block ->
       case Changeset.get_change(entry_block, :block) do
-        nil -> []
+        nil -> :no_block_change
         block_cs -> Keyword.keys(block_cs.errors)
       end
     end)
@@ -200,10 +209,19 @@ defmodule Brando.Content.PartialBlockSaveTest do
     # The realistic version: every block is fine, the user just left a required
     # entry field empty. The blocks must not persist ahead of the entry, and
     # they must survive in the changeset so the form can re-render them.
+    #
+    # The invalidity comes from `Page.changeset/5` — `uri` is `required: true`
+    # on the blueprint (`page.ex:94`) — and not from a `validate_required/2` the
+    # test bolts on. That distinction is the whole point of the rewrite: the
+    # earlier version invented both the error and the changeset, so it asserted
+    # Ecto's guarantee that `put_assoc` changes survive an invalid parent. Ecto
+    # is not the thing under test here; Brando's entry changeset is, and if it
+    # ever stopped surfacing the missing `uri`, or dropped `entry_blocks` while
+    # rebuilding, this now goes red.
     test "persists no blocks and keeps them in the changeset", %{user: user, page: page} do
       changesets = [
-        Brando.Pages.Page.Blocks.changeset(
-          %Brando.Pages.Page.Blocks{},
+        %Brando.Pages.Page.Blocks{}
+        |> Brando.Pages.Page.Blocks.changeset(
           %{"entry_id" => page.id, "sequence" => 0, "block" => block_params("rootA", user)},
           user.id,
           true
@@ -214,14 +232,12 @@ defmodule Brando.Content.PartialBlockSaveTest do
       {:error, changeset} =
         page
         |> Brando.Repo.preload(:entry_blocks)
-        |> Changeset.change()
+        |> Page.changeset(%{title: "Still titled", uri: nil, template: "default.html"}, user)
         |> Changeset.put_assoc(:entry_blocks, changesets)
-        |> Changeset.change(%{uri: nil})
-        |> Changeset.validate_required([:uri])
         |> Brando.Repo.update()
 
       assert persisted_uids() == []
-      assert Keyword.keys(changeset.errors) == [:uri]
+      assert :uri in Keyword.keys(changeset.errors)
       assert length(Changeset.get_change(changeset, :entry_blocks)) == 1
     end
   end
