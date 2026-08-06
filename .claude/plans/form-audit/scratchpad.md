@@ -729,3 +729,164 @@ and full of placeholder credentials.
 - **`lockdown_test.exs` is `async: true` while mutating global app env.**
   `put_test_env/2` makes the restore correct, but the concurrency is still
   wrong in principle. No other file reads `:lockdown`, so it does not bite.
+
+## Phase 5 review (2026-08-06)
+
+Diff base `HEAD~6` (5ed8aa885 = Phase 4 docs commit). 29 files, 894 insertions.
+Panel: elixir, testing, security, iron-laws, verification, requirements —
+6 agents, one pass each. Requirements source: `phase-5-plan.md`.
+
+**Result: PASS WITH WARNINGS.** 0 blockers. Requirements 18 MET / 0 UNMET / 1
+PARTIAL / 2 UNCLEAR — the PARTIAL and UNCLEAR are all "RED/GREEN evidence is not
+visible in a diff snapshot", which §2–4 above record. Gates re-run by the panel:
+1265 tests + 135 doctests / 0, credo 284, compile + format clean.
+
+Findings in `reviews/phase-5-review.md`. The one that matters:
+`await_proxy_exit/1` returns `:ok` on timeout whenever the proxy is alive, so a
+hung **root** proxy is indistinguishable from the benign **child** case — and no
+test exercises the child branch it exists for. Same shape as the `trap_exit` leak
+5A was written to remove.
+
+Two corrections to claims recorded above:
+- Unit-suite stdout measured **76** lines, not 89. Better than claimed; the 89
+  was not measured either.
+- The security agent's open item ("did a real key ever ship in `config/test.exs`?")
+  is **closed**: across all 84 commits touching the file, the only real-looking
+  value is a Guardian JWT `secret_key` for issuer `BrandoTesting`, added
+  2016-11-05 (`3054445f7`), removed 2018-04-19 (`ebbebc006`). Nothing to rotate.
+
+### Phase 5 triage — 8 approved, 0 skipped, 0 deferred
+`reviews/phase-5-triage.md`. Two decisions worth carrying:
+- **W1:** `kill_live/2` takes `:root | :child` from the caller; flunk on timeout
+  in both. Inference between "child proxy shared" and "root proxy hung" is
+  removed rather than tested around.
+- **W3 (`key_exists?`):** fail **closed** — only `{:error, :not_found}` means
+  absent. Accepted consequence: a transiently-erroring bucket now blocks an
+  upload that used to proceed. A blocked upload is recoverable; an overwritten
+  live asset is not. This is production behaviour, pre-existing, and only
+  expressible because 5B's W1 introduced the `:not_found` contract.
+
+## Phase 6 plan (2026-08-06)
+
+`phase-6-plan.md` — 12 tasks, 4 phases, all 8 triaged findings mapped. No
+research agents: the review was the research.
+
+**Reading the code to plan the fixes re-shaped three of the eight findings.**
+Recorded in the plan rather than folded in silently:
+
+1. **W3's accepted consequence was false.** `key_exists?/2` has one caller
+   (`utils.ex:1182`) whose `true` branch calls `unique_filename/1` — it
+   *renames*, it does not block. Failing closed costs an occasional
+   unnecessary rename, not a blocked upload. The trade recorded in the triage
+   was worse than the real one.
+2. **W2 is a comment fix.** Leaving unrelated `{:EXIT, …}` queued is correct —
+   swallowing them is exactly what the old `flush_exits/0` did wrong. Only the
+   sentence claiming the function "drains" them is inaccurate.
+3. **S3 is narrower than the finding.** `utils.js` never calls the sending-side
+   helpers event-driven; it disclaims them and reserves the term for the
+   retrying `expect`. The loose claim is `awaitBlockDebounce`'s "Replaces a flat
+   waitForTimeout(600)", which reads as removing a sleep it actually renames.
+
+*Generalisation, and the third time this audit has hit it: an agent finding is a
+hypothesis with a file:line attached. Two of these three would have shipped as
+written — one of them buying a production behaviour trade that was never on the
+table.*
+
+Design calls worth keeping:
+- **W1 `:child` skips the proxy wait entirely** rather than waiting 500 ms then
+  deciding. Root stops its proxy; a child shares the root's, so there is nothing
+  in flight to await. Kills the race and a pointless half-second. No default arg
+  — a default reintroduces the implicitness the fix removes.
+- **W4 is scoped to the merge line, not `api_request/3`.** The three bodies
+  genuinely differ (Basic / AccessKey / Bearer, different URL construction,
+  arity 3 vs 4). Only `Keyword.merge(get_config(:req_options) || [], built)` is
+  byte-identical, and that is what drifted.
+
+### Found while planning, out of scope
+The three uploaders disagree on missing-credential behaviour: Mux and Bunny
+**raise**, Cloudflare returns `{:error, :not_configured}`. A caller cannot
+handle both with one branch. Pre-existing; no finding asked for it.
+
+## Phase 6 implementation notes (2026-08-06)
+
+Phase 6 shipped complete — all 12 tasks, closing all 8 triaged findings. Gates:
+`mix test` **1271 + 135 doctests / 0** (+6 new), credo **284** (unchanged),
+format and compile clean, unit-suite stdout **76 lines** (exactly the baseline),
+e2e **107 / 0** on a full `--reset` (8.9m). Every baseline held; nothing moved
+that needed explaining.
+
+The plan's three re-shaped findings all held up against the code. What the plan
+did *not* predict:
+
+### 1. W4-verify's warning was the finding
+
+The plan said a green run on `provider_client_test.exs` "is not sufficient; the
+RED is". It was right, and stronger than it knew: **all four pre-existing tests
+passed with the merge order flipped.** The reason is worth keeping — the tests
+install their transport stub *through* `:req_options` (`plug: {Req.Test, name}`),
+and `plug:` collides with nothing the providers build (`method`, `url`,
+`headers`, `json`). With no key overlap, `Keyword.merge/2` is order-insensitive,
+so the suite could not see the direction of the very line it was meant to cover.
+
+The extraction had therefore moved an untested defect, exactly as the plan
+feared. The new test makes the collision deliberate: a `:req_options` entry
+carrying its own `authorization` header. Flipped, the stub sees
+`hijacked:hijacked`; correct, it sees `id:secret` — which is the concrete form
+of the rule's own comment, *"a config seam that can unset credentials is a
+config seam that will."*
+
+*Generalisation: a seam used only for injection is not exercised by injection.
+If the test harness reaches the code through the same option it is testing, the
+option's semantics are invisible to it.*
+
+### 2. W1-verify needed two mutations, and the second one is the branch nobody had
+
+The Phase 5 review's actual complaint was two-part: `await_proxy_exit/1` cannot
+tell a hung root from a healthy child, **and no test exercises the child branch
+it exists for**. Only mutating the `flunk` covers the first half. Mutating
+`if role == :root` to `if role in [:root, :child]` covers the second, and it
+went RED at 500ms — which is the pointless half-second the plan predicted the
+`:child` path would otherwise spend.
+
+Both tests are kept, on the 5A precedent. They need a stub view, not a real one:
+`kill_live/2` reads only `.pid` and `.proxy`, so a plain map with a spawned
+never-dying proxy is the whole fixture.
+
+One wart worth knowing: `kill_live/2` flunks *before* restoring `trap_exit`.
+That is harmless in real use — a flunk ends the test process and the flag with
+it — but a test that deliberately catches the flunk has to put the flag back
+itself. `restore_trap_exit/0` does that, with the reason next to it.
+
+### 3. The plan's three corrections were all confirmed against the tree
+
+Recorded because the plan asked for the check to be the deliverable:
+
+- **W3.** `key_exists?/2` had exactly one caller, no `@doc`, and no reference in
+  `guides/`, `CHANGELOG.md` or `priv/` — grep confirms. The `true` branch
+  renames; nothing is blocked. Removing it outright was as low-risk as claimed.
+- **W1 call sites.** All five kill views obtained from `live_form/3`, which is
+  `Phoenix.LiveViewTest.live/2` — root mounts, so `:root` at all five.
+- **S2.** `priv/`'s credential-shaped placeholders re-verified before writing
+  the replacement comment: `deployment.cfg:8` (`DB_PASS = prod_database_password`),
+  `.envrc.prod:3` (`BRANDO_SECRET_KEY_BASE`), `fabfile.py`'s `SSH_PASS`. The
+  general secrets argument really does contradict what `priv/` must ship.
+
+### 4. `nil` is still not the same as absent — third time in this audit
+
+`ReqOptions.merge/2` keeps `Keyword.get(:req_options) || []` rather than
+`Keyword.get(:req_options, [])`. The default only covers an *absent* key;
+Phase 4 note 7 and `provider_client_test.exs`'s own `with_config/2` comment both
+record a stored `nil` beating a default and raising downstream. The `|| []` is
+load-bearing, not noise.
+
+### Deliberately not done, and why
+- **Collapsing `api_request/3` itself.** Scoped out by the plan and the scoping
+  holds: Basic vs `AccessKey` vs Bearer, two URL shapes, arity 3 vs 4, and two
+  different answers to missing credentials.
+- **The missing-credential disagreement** (Mux/Bunny raise, Cloudflare returns
+  `{:error, :not_configured}`). Still open, still pre-existing, still not asked
+  for by any finding.
+- **Cloudflare has no `provider_client_test.exs` coverage at all.** Noticed while
+  adding the precedence test, which is Mux-only. The extracted helper is shared,
+  so the rule is covered once — but Cloudflare's request construction is not
+  covered anywhere.
