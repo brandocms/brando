@@ -1040,18 +1040,181 @@ Recovery is covered only by `e2e/.../blocks/block-recovery.spec.js`, which does 
 `liveSocket.disconnect()/connect()` — the server process never dies, so it does not exercise the
 case that actually loses data.
 
-- [ ] Add the first `Phoenix.LiveViewTest.live/2` form test — mount, kill the LV pid, remount,
+> **STATUS: COMPLETE (2026-08-06).** All 7 items shipped. Gates: `mix test` **1257 pass / 0 fail**
+> (35 new tests, +35 over the 1222 Phase-3 baseline), `mix format --check-formatted` clean,
+> `mix compile --warnings-as-errors` clean, `mix credo --strict` **284 findings, identical to
+> baseline**. **E2E full suite: 108 passed / 0 failed** (`./test_e2e.sh --reset`, 9.0m).
+> New deps: `{:lazy_html, ">= 0.1.0", only: :test}` (required by LiveViewTest) and
+> `{:mox, "~> 1.2", only: :test}`; `mix.lock` gained only those and `fine`.
+>
+> **Three of the seven items were wrong as written, and the harness found four defects.**
+> Two items asked for guarantees the system does not make (asset cleanup; recovery after a hard
+> reload) and one asked for a boundary the wrong shape (one Mox seam for three HTTP clients that
+> already have `Req.Test`). The defects: the entry form dropping everything default recovery
+> handed it, a `validate` with no `_target` killing the form, `uid` required-but-unenforced, and
+> block recovery not firing on a real connection loss at all. Two migrations were needed to make
+> the test DB match what shipped apps have — the fixture had been under-specifying constraints,
+> which is its own recurring finding. Details inline per item.
+>
+> The three checkboxes deferred from Phases 0–1 to "the Phase 4 harness" (B1's E2E, B5's E2E,
+> C1's E2E) are addressed by the harness's existence rather than individually: `Brando.LiveCase`
+> is what those needed, and `form_recovery_test.exs` covers B1/C1/C2's mechanism at the level
+> that actually distinguishes them. They stay unchecked in their own phases, deliberately.
+
+- [x] Add the first `Phoenix.LiveViewTest.live/2` form test — mount, kill the LV pid, remount,
       assert recovery. Unblocks B1/C1/C2 regression tests. Confirm a content-module factory exists `[testing]`
-- [ ] Playwright: **positive** sessionStorage-recovery assertion via hard `page.reload()`, not just
+      — `test/support/live_case.ex` + `test/brando_admin/live/form_recovery_test.exs` (9 tests).
+      Four pieces had to be wired before `live/2` worked at all, none of which existed: the test
+      endpoint never plugged `BrandoIntegrationWeb.Router`, had no `:live_view` signing salt and a
+      `secret_key_base` under the cookie store's 64-byte minimum, `BrandoIntegration.Presence` was
+      defined but never started (`Hooks.handle_params/3` tracks every admin mount), and there was no
+      `<admin_module>.Menus`. Added `{:lazy_html, ">= 0.1.0", only: :test}`; `mix.lock` gained only
+      it and `fine`. Factories confirmed present (`:page`, `:module`, `:module_with_refs`, `:ref`).
+      `kill_live/1` traps exits — `live/2` links the test to the client proxy, so an untrapped kill
+      takes the test down with the view.
+- [x] **The harness found a live data-loss bug on its first real assertion, and it is the one this
+      whole audit is about.** `Form.handle_event("validate", …)` assigned the recomputed form
+      *inside* the `[^singular | rest]` branch of its `_target` case. But form recovery has no
+      originating element, so `pushFormRecovery` names **the first non-hidden input in the form**
+      (`view.ts:2450`) — and on the entry form that is the `image_editor_upload` file input at
+      `form.ex:2105`, two elements in. The server turns that into `_target: ["image_editor_upload"]`
+      (`channel.ex:848-853`), which falls to the `[_]` clause: the recovered params were cast into a
+      changeset and then **dropped**. Every reconnect recovered nothing, silently.
+      This sharpens the scratchpad's retraction #1 rather than reversing it — default recovery *does*
+      fire for plain fields, as recorded; the handler discarded its result. Fixed by assigning the
+      form before the branch. Same edit closed a second hole: the case had no fallback, so a
+      `validate` carrying no `_target` raised `CaseClauseError` and killed the form with every
+      unsaved edit in it. Both pinned by tests verified failing pre-fix
+- [x] **Fixed while here:** the sticky upload manager's queue form had `phx-change` with no `id`
+      (`upload_manager.ex:647`), so `getFormsForRecovery()` skipped it — LiveViewTest warns about
+      exactly this, which is how it surfaced. It is the one form that outlives a reconnect by design
+- [x] Playwright: **positive** sessionStorage-recovery assertion via hard `page.reload()`, not just
       a socket toggle `[testing]`
-- [ ] Playwright: true network partition (`context.setOffline` / CDP) vs today's cooperative disconnect `[testing]`
-- [ ] DataCase upload/asset orphan test mirroring `orphaned_blocks_test.exs` — nothing currently
+      — **there is no positive assertion to make, and that is by design.** The hook captures in
+      `disconnected()` and replays in `reconnected()`; `mounted()` is an explicit no-op ("No recovery
+      on fresh mount"). A reload tears the page down without a disconnect and brings it back as a
+      fresh mount, so neither half runs. Wrote the assertion that *is* meaningful instead —
+      sessionStorage survives a reload within the tab, so the snapshot is still sitting on the new
+      page; the test pins that a reload starts clean and does not replay it. If recovery ever moved
+      to `mounted()`, abandoned blocks would resurrect on an unrelated page, and this catches it
+- [x] Playwright: true network partition (`context.setOffline` / CDP) vs today's cooperative disconnect `[testing]`
+      — **and it found the gap Phase 4 suspected was hiding behind the cooperative test.**
+      `goOffline`/`goOnline` in `utils.js`: `setOffline` so LiveSocket's reconnects genuinely fail,
+      plus closing the transport directly, because an established websocket does not notice
+      `setOffline` at all — it dies on the next missed heartbeat, 30s out. Deliberately **not**
+      `liveSocket.disconnect()`: that is the client agreeing to stop, and it disarms auto-reconnect.
+- [x] **Measured, not inferred — block recovery does not fire on a real connection loss.**
+      The probe: `disconnected()` fires and the snapshot is written correctly (root uid + its form
+      both present). But when the network returns, LiveView cannot rejoin the view it lost and does a
+      **full page reload** — so the hook runs `mounted()`, the no-op, and the snapshot is never read.
+      It sits there until the 1h TTL. Recovery therefore covers `liveSocket.disconnect()` →
+      `connect()`, a path only a test or the dev console takes, and not the connection loss it was
+      written for. Confirmed by probe output: title empty, `.entry-block` count 0, snapshot key still
+      in storage, one `PAGE LOAD` event.
+      **Not fixed here, and the obvious patch does not work.** Moving recovery into `mounted()` would
+      replay one abandoned create form's blocks into the next one — every unsaved entry shares the
+      `new` bucket (C4), which is exactly what the "stale sessionStorage" test forbids. A real fix
+      needs an identity that survives a reload without colliding across create forms: a design change,
+      not a line edit, and the `tab.ex` item is the cautionary precedent. The spec asserts the current
+      behaviour explicitly so the gap is visible and a future fix flips the test
+- [x] DataCase upload/asset orphan test mirroring `orphaned_blocks_test.exs` — nothing currently
       verifies uploaded rows are cleaned up on a failed or reset save `[testing]`
-- [ ] Introduce a behaviour + Mox boundary for the S3/Mux/Bunny clients — no mock boundary exists
+      — **the framing was wrong and the premise check is the finding.** They are not cleaned up,
+      deliberately: `docs/UPLOADER.md:529` separates asset creation from delivery, and
+      `research/03-uploads.md:88` already recorded it as an *accepted-by-design orphan* — "the asset
+      row is permanent… there is no GC for unreferenced assets". A cleanup test would have asserted a
+      guarantee the system never made, which is D2's mistake exactly. `test/brando/uploads/asset_orphan_test.exs`
+      instead pins the contract that does hold, both ways: an asset survives a failed save, a cleared
+      field and a deleted entry (it is shared library content — a sibling entry pointing at the same
+      image proves why deleting would be wrong), while the *references* give way when the asset is
+      purged. Gallery objects are the opposite case and asserted as such: join rows with no life of
+      their own, `delete_all` on both FKs. 9 tests
+- [x] **Found by writing it: `clean_up_soft_deletions/0` could be wedged by one referenced image.**
+      Seven asset FKs in the monolithic test migration were bare `references(:images)`/`references(:files)`,
+      i.e. Postgres `NO ACTION`, where every consuming app gets `on_delete: :nilify_all` from
+      `brando_80_extract_embeds_one_image_fields` / `brando_92_extract_files_embeds_one`. Purging a
+      soft-deleted image that any page still referenced raised `foreign_key_violation` on
+      `pages_meta_image_id_fkey` — and since `clean_up_soft_deletions/0` maps over the soft-delete
+      schemas in order, every schema after `Image` was then never purged. **Fixture drift, not a
+      production bug** — checked against the shipped templates before concluding, and the shipped
+      side is correct. Aligned in a dated migration
+      (`20260806000000_nilify_asset_fks_in_test_schemas`, per the repo convention that the monolithic
+      file is the original schema; it is symlinked into e2e so both DBs get it). Two tests
+      mutation-verified against the pre-migration fixtures: both raise the FK violation verbatim.
+      *The point stands on its own: a fixture that under-specifies a constraint makes every test
+      written on top of it assert behaviour production does not have.*
+- [x] Introduce a behaviour + Mox boundary for the S3/Mux/Bunny clients — no mock boundary exists
       today (no Mox/Bypass hits for uploads) `[testing]`
-- [ ] Partial-failure multi-root block save (one root invalid, siblings valid) — untested at any level `[testing]`
-- [ ] Replace fixed `waitForTimeout` (500-1500ms) in the block-recovery and multiuser-sync specs
+      — **two seams, not one, and the split is the design decision.** S3 got the behaviour
+      (`Brando.CDN.Client` + `Client.ExAws`, mocked via `{:mox, "~> 1.2", only: :test}`); the three
+      video providers speak HTTP through `Req`, which ships `Req.Test`, so wrapping them in a
+      behaviour would be a second seam over one the library already provides — **and a behaviour
+      mock can only assert *that* a client was called, when the bugs these clients have are in the
+      request they build.** Cloudflare already had a `:req_options` config seam; Mux and Bunny now
+      match it. `config :brando, :cdn_client, Brando.CDN.Client.Mock` in test, so any un-stubbed S3
+      call fails loudly rather than reaching a bucket
+- [x] **Presigning was deliberately left out of the boundary**, and four existing tests are why.
+      `ExAws.S3.presigned_url/5` is an HMAC over local credentials, not a network call — routing it
+      through the mock bought nothing and broke `presign_put/3`'s four tests, which assert the signed
+      URL's actual query parameters. Reverted after seeing them fail. *A seam belongs where the
+      process boundary is, not where the module boundary is*
+- [x] Test: `test/brando/uploads/direct_finalize_test.exs`, 4 tests — **the coverage D1 recorded as
+      its honest limit** ("no test drives a *successful* finalize, because there is no S3 mock
+      boundary in the repo"). Drives a completed direct upload all the way to a real `File` row, and
+      pins that the server trusts only its own key/target plus what the bucket reports: a client
+      claiming a 1234-byte PDF over a 12MB object, or `application/pdf` over `text/html`, is rejected
+      — which is the entire reason `finalize_direct/3` does a HEAD instead of believing
+      `direct_complete`. Plus `test/brando/videos/provider_client_test.exs`, 5 tests asserting the
+      requests Mux and Bunny actually build (basic auth, library path, asset settings), and D3's
+      raise-vs-return distinction from the client side
+- [x] **Found by writing it: `Application.put_env(key, nil)` is not the same as absent.** The
+      config-restore helper stored `nil`, which beats the `[]` default in
+      `Application.get_env(:brando, __MODULE__, [])`, so `Keyword.get(nil, …)` raised a
+      `FunctionClauseError` — breaking `video_upload_target_test.exs`'s D3 assertion in a
+      *different file*, reproducibly but only when both ran. Restore now deletes the key when
+      `fetch_env/2` says there was none
+- [x] Partial-failure multi-root block save (one root invalid, siblings valid) — untested at any level `[testing]`
+      — `test/brando/content/partial_block_save_test.exs`, 8 tests driving the real save path
+      (materialize → recursive cast → `reject_deleted` → `strip_render_artifacts` → `put_assoc` →
+      update). Pins atomicity (nothing persists, so a retry cannot double-insert the valid roots),
+      error attribution (`[[], [:type], []]` — the editor has to point at *which* block failed), an
+      invalid nested child aborting the whole tree, and the realistic case: valid blocks under an
+      entry that fails its own validation. **The load-bearing one is that the valid siblings' content
+      survives in the returned changeset** — the form re-renders from it, so losing it would be
+      Phase 0's data-loss shape arriving through the save path
+- [x] **Found by writing it: two identity holes, and only one was fixture drift.**
+      - `uid` is declared `required: true` (`content/block.ex:86`) but neither `block_changeset/3`
+        nor `recursive_block_changeset/3` enforced it, so **a root saved happily with `uid: nil`**.
+        Not cosmetic: the op store keys on uid, the block component's DOM id is `block-<uid>`, and
+        block recovery keys on `entry_block_form-<uid>` — a nil-uid block is unaddressable by all
+        three. C6 fixed one way of *producing* one; `validate_required(:uid)` closes the source.
+        Real fix, not fixtures. Mutation-verified; full suite green, so nothing was relying on it
+      - `unique_constraint(:uid)` was declared with no index behind it in the test DB, so two roots
+        could share a uid. Consuming apps have had `unique_index(:content_blocks, [:uid])` since
+        `brando_123_blocks_uid_constraint` — fixture drift again, aligned in
+        `20260806000001_unique_block_uid_in_test_schema`. Mutation-verified by rolling it back.
+        **Second instance of the same class in one session** (see the FK item above): the test
+        migration under-specifies constraints that shipped migrations do specify, and every test
+        written on top of it then asserts behaviour production does not have
+- [x] Replace fixed `waitForTimeout` (500-1500ms) in the block-recovery and multiuser-sync specs
       with event-driven waits — highest flake risk in the repo, per its own CI-timing note in `utils.js` `[testing]`
+      — **all 19 gone from those two files** (2 in block-recovery, 17 in multiuser-sync). Three
+      different replacements, because they were waiting for three different things:
+      - waiting for a *server* round trip → `syncLV` or a retrying `expect`. A sleep that is
+        immediately followed by an auto-retrying assertion was only ever adding latency
+      - waiting for the socket to drop → `expect('.phx-connected').toBeHidden()`
+      - waiting for the form to be usable after save-and-continue → assert the blocks themselves are
+        there. `syncLV` returns while the block editor is still a loader shell, which is what the
+        750ms was really covering
+      What remains fixed is only the two **client-side timers the app itself runs** — `phx-debounce`
+      (300ms) and `SHIP_SETTLE_MS` (400ms) — now named in `awaitBlockDebounce`/`awaitBlockShip`
+      alongside the hook they mirror, each followed by an event-driven `syncLV`. That is the honest
+      floor: they are plain `setTimeout`s in `assets/src/hooks/Block/index.js` with nothing
+      observable to wait on. The variable part — everything after the push — is no longer guessed,
+      which is what the flakes were
+      **Verified: `block-recovery` 4/4, `block-multiuser-sync` 9/9, full e2e 108 passed / 0 failed
+      (9.0m, `--reset`).** The 128 `waitForTimeout` calls in the other specs are out of this item's
+      scope, which named these two files
 
 ---
 

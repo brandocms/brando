@@ -529,3 +529,93 @@ close signal that does not exist, and inventing one is the `tab.ex` trap again.
 consumer assets. Includes `projects.spec.js`, the spec that blocked the `tab.ex`
 item — so the two new `render/1` clauses, the `nil`-not-`[]` palette contract and
 the non-raising `get_fragment/1` all clear the real browser path.
+
+## Phase 4 implementation notes (2026-08-06)
+
+Phase 4 shipped complete — all 7 items. What the plan did not predict:
+
+1. **Three of seven items were wrong as written, and all three in the same direction:
+   they asked for a guarantee the system does not make.** This is now the audit's most
+   repeated failure mode — D2 asked for a delivery ACK the contract forbids, D6 assumed
+   `video_block` knew an image id, and now:
+   - "verify uploaded rows are cleaned up on a failed or reset save" — they are not,
+     deliberately (`UPLOADER.md:529`, and `research/03-uploads.md:88` had already written
+     it down as an *accepted-by-design orphan*). The research report contradicted the plan
+     item derived from it.
+   - "positive sessionStorage-recovery assertion via hard `page.reload()`" — structurally
+     impossible: capture is in `disconnected()`, replay in `reconnected()`, and `mounted()`
+     is an explicit no-op. A reload runs neither.
+   - "a behaviour + Mox boundary for the S3/Mux/Bunny clients" — one seam for two different
+     problems. See 3 below.
+   *Read the research the item came from before implementing the item.*
+
+2. **The harness found a live data-loss bug on its first real assertion, and it is the
+   audit's own subject.** `Form.handle_event("validate", …)` assigned the recomputed form
+   inside the `[^singular | rest]` branch of its `_target` case. Form recovery has no
+   originating element, so `pushFormRecovery` names **the first non-hidden input in the
+   form** (`view.ts:2450`) — which on the entry form is the `image_editor_upload` file input
+   two elements in (`form.ex:2105`), not an entry field. `_target: ["image_editor_upload"]`
+   fell to the `[_]` clause, so every recovered value was cast and then dropped.
+   This *sharpens* the scratchpad's retraction #1 rather than reversing it: default recovery
+   does fire for plain fields, exactly as recorded — the handler discarded the result.
+   **Nothing short of mounting the form could see this.** Every prior form test drove
+   `handle_event/3` directly and therefore chose its own `_target`.
+   *Lesson: a handler that branches on `_target` sees something on recovery that it never
+   sees while the user types.*
+
+3. **Two seams, not one, and the shape of the seam matters more than having one.**
+   S3 got a behaviour (`Brando.CDN.Client`) because ExAws has no test transport and the calls
+   are semantic. Mux/Bunny/Cloudflare got `Req.Test` because they speak HTTP and **a behaviour
+   mock can only assert *that* a client was called, when the bugs these clients have are in
+   the request they build** — the auth header, the library path. Cloudflare already had a
+   `:req_options` seam; the other two just needed the same line.
+   And presigning was pulled back *out* of the behaviour after four existing tests failed:
+   `ExAws.S3.presigned_url/5` is an HMAC over local credentials, not a network call, and those
+   tests assert the real signature's query parameters. *A seam belongs where the process
+   boundary is, not where the module boundary is.*
+
+4. **The test fixtures under-specify constraints that shipped migrations specify — twice in
+   one session.** Seven asset FKs were bare `references(:images)`/`references(:files)` where
+   every app gets `on_delete: :nilify_all` from `brando_80`/`brando_92`; `content_blocks.uid`
+   had no unique index where apps get one from `brando_123`. Consequences were real: purging a
+   soft-deleted image that a page referenced raised `foreign_key_violation` and wedged
+   `clean_up_soft_deletions/0` for every schema after `Image`, and two roots could share a uid.
+   Both aligned in dated migrations (the monolithic file is the original schema; it is
+   symlinked into e2e, so both DBs get them).
+   *Lesson, and it generalises past this repo: a fixture that under-specifies a constraint makes
+   every test written on top of it assert behaviour production does not have. Check the shipped
+   migration before trusting the test schema.*
+
+5. **`uid` was declared `required: true` and never enforced.** Neither `block_changeset/3` nor
+   `recursive_block_changeset/3` validated it, so a root saved with `uid: nil`. The op store
+   keys on uid, the block component's DOM id is `block-<uid>`, and recovery keys on
+   `entry_block_form-<uid>` — C6 fixed one way of *producing* a nil uid; this closes the source.
+   Same shape as B4 and the `var_struct_to_map/1` crash: **a declared contract that the cast
+   path does not implement.** Worth a sweep for other `required: true` attributes whose schema
+   uses a hand-rolled changeset.
+
+6. **Block recovery does not fire on a real connection loss — measured, not inferred.**
+   `disconnected()` fires and the snapshot is written correctly. But when the network returns
+   LiveView cannot rejoin the lost view and does a **full page reload**, so the hook runs
+   `mounted()` (the no-op) and the snapshot is never read. Recovery covers
+   `liveSocket.disconnect()` → `connect()`, which only a test or the dev console does.
+   **The obvious patch is wrong**: recovering in `mounted()` would replay one abandoned create
+   form's blocks into the next, because every unsaved entry shares the `new` bucket (C4) — the
+   "stale sessionStorage" spec forbids exactly that. A real fix needs an identity that survives
+   a reload without colliding across create forms. Left asserted-as-is so a future fix flips
+   the test. *This is the third time a "reasonable line edit" turned out to be a design change
+   (`tab.ex`, D2's topic, now this) — and the second time the e2e run was the thing that said so.*
+
+7. **`Application.put_env(key, nil)` is not the same as absent.** A config-restore helper stored
+   `nil`, which beats the `[]` default in `Application.get_env(:brando, __MODULE__, [])`, so
+   `Keyword.get(nil, …)` raised — breaking a D3 assertion in a *different file*, reproducibly
+   but only when both ran. Restore with `fetch_env/2` + `delete_env/2`.
+
+### Deliberately not done, and why
+- **Recovery on `mounted()`** (6 above) — needs a per-form identity, not a line edit.
+- **The other 128 `waitForTimeout` calls.** The item named block-recovery and multiuser-sync;
+  all 19 in those two are gone. What remains fixed there is only the app's own two client-side
+  timers (`phx-debounce` 300ms, `SHIP_SETTLE_MS` 400ms), now named next to the hook they mirror
+  and each followed by an event-driven `syncLV`.
+- **A successful *video* provider finalize.** The provider tests stub the request the client
+  builds; the webhook-driven completion path is still uncovered.
