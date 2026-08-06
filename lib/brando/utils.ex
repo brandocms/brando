@@ -1179,7 +1179,17 @@ defmodule Brando.Utils do
 
     key = concat_with_upload_path(filename, file_cfg)
 
-    if Brando.CDN.key_available?(key, file_cfg), do: key, else: unique_filename(key)
+    cond do
+      # `overwrite: true` is a request to write over whatever is there, so the
+      # bucket is not consulted at all — asking and then renaming on a hit is
+      # what defeated the option. `Brando.Upload`'s filesystem path
+      # (`upload.ex:321-327`) and `Uploads.build_direct_filename/2` both branch
+      # here; this one did not, so a documented option (`Brando.Type.FileConfig`)
+      # had no effect on the CDN path.
+      Map.get(file_cfg, :overwrite, false) -> key
+      Brando.CDN.key_available?(key, file_cfg) -> key
+      true -> unique_filename(key)
+    end
   end
 
   defp concat_with_upload_path(filename, file_cfg) do

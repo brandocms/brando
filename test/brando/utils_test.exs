@@ -517,6 +517,12 @@ defmodule Brando.UtilsTest do
   # question that matters is not what it does when the bucket answers cleanly —
   # it is what it does when the bucket answers something it cannot read.
   #
+  # Nothing in *this* tree calls it: it is public API on a library, and the
+  # upload path it guards is a **downstream consumer's**. That is the reason
+  # these tests exist rather than an in-repo integration test — there is no
+  # in-repo caller to integrate with, and a consumer inherits whatever this
+  # function decides.
+  #
   # A 403 is the realistic case: a bucket without `s3:ListBucket` masks 404 as
   # 403, so "absent" and "forbidden" are indistinguishable on the wire. Treating
   # that as "free" writes new bytes underneath an existing asset's row. Treating
@@ -555,6 +561,23 @@ defmodule Brando.UtilsTest do
       end)
 
       assert build_upload_key("logo.jpg", @field_cfg) != @wanted_key
+    end
+
+    # `overwrite: true` means "write over whatever is there". Consulting the
+    # bucket and then renaming on a hit is precisely the outcome the option
+    # exists to prevent, so the bucket must not be consulted at all — and no
+    # `expect` on the mock is what asserts that: any `head_object/3` from here
+    # is an unexpected call and fails the test on its own.
+    test "an occupied key is written to as-is when the config says overwrite" do
+      cfg = Map.put(@field_cfg, :overwrite, true)
+
+      assert build_upload_key("logo.jpg", cfg) == @wanted_key
+    end
+
+    test "a forced filename under overwrite keeps the forced name" do
+      cfg = Map.merge(@field_cfg, %{overwrite: true, force_filename: "brand.jpg"})
+
+      assert build_upload_key("logo.jpg", cfg) == "media/images/site/logo/brand.jpg"
     end
 
     test "a key the bucket will not answer for is renamed, not overwritten" do
