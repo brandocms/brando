@@ -619,3 +619,113 @@ Phase 4 shipped complete — all 7 items. What the plan did not predict:
   and each followed by an event-driven `syncLV`.
 - **A successful *video* provider finalize.** The provider tests stub the request the client
   builds; the webhook-driven completion path is still uncovered.
+
+[13:14] WARN: phx:elixir-reviewer hit its turn limit and wrote a PARTIAL elixir-p4.md
+(ended "(continued)"). Resumed via SendMessage to complete items 1-4 (cdn/client.ex
+dispatch completeness, validate_required(:uid) flows, migration reversibility,
+upload_manager form id). Partial content was retained, not discarded.
+
+## Phase 5 implementation notes (2026-08-06)
+
+Phase 5 shipped complete — all 22 tasks, closing all 15 triage items from the
+Phase 4 review. Final gates: `mix test` **1265 / 0** (1257 + 8 new), credo
+**284** (unchanged), format clean, compile clean, e2e **107 / 0** on `--reset`
+against rebuilt consumer assets.
+
+### 1. The sequencing decision paid, and it is measurable
+
+5A first was the plan's load-bearing call, and the throwaway wrote it down in
+one run: mount → `kill_live` → remount → kill the second view. **It PASSED
+against the leak and FAILED with the fix.** That is the whole argument for the
+ordering — every mutation-verification in 5B and 5C is read off this
+instrument, and before the fix the instrument under-reported crashes for the
+rest of the test process.
+
+`flush_exits/0` was the second half. It drained *every* `{:EXIT, _, _}` for
+50 ms; it now drains only `view.proxy`'s pid. The proxy pid is not the view pid
+(`%View{proxy: {ref, topic, proxy_pid}}`), and killing a **root** view stops its
+proxy (`client_proxy.ex:542-545`) while a **child** shares the root's proxy,
+which stays alive — so "no exit arrived and the proxy is alive" is correct, not
+a timeout.
+
+### 2. The pre-existing test stayed green, exactly as predicted
+
+W1's mutation-verify is the one worth remembering. Reverting the 404
+translation left `direct_finalize_test.exs`'s `:not_found` test **passing** —
+because it stubs `Client.Mock`, and the mock was the only thing in the system
+ever producing the contract. The branch was dead in production and green in CI.
+The new coverage drives the real `Client.ExAws` through the real ExAws response
+pipeline with only the socket replaced (`http_client:` + `http_opts:` in the
+config keyword list), which is what can actually go red.
+
+*Generalisation: when a behaviour has one real implementation and one mock, a
+test that only ever meets the mock proves the mock, not the contract.*
+
+### 3. Three findings were wrong-as-written again — and this time in a new way
+
+The audit's most repeated failure mode has been "the item asks for a guarantee
+the system does not make". Phase 5 added a variant: **the item names a fix whose
+premise is false, and the check is the deliverable.**
+
+- **S1 (`uid` `null: false`).** The plan said "check the shipped consumer
+  migrations first", and the check said *don't do it*: `brando_103` ships
+  `add :uid, :text` and the only thing production adds is `brando_123`'s unique
+  index. Tightening the fixture would have made every test on it assert
+  behaviour real apps do not have — Phase 4's fixture-drift lesson pointed the
+  other way. Recorded in the migration so it is not re-litigated.
+  (`content_refs.uid` IS `null: false`, via `brando_137`, and the fixture
+  already matches. The asymmetry is production's.)
+- **S5 (suite stdout noise).** The plan said "find the `IO.inspect`/`dbg`".
+  There is none. It is a `Logger.error` in `error_translator.ex` that
+  `inspect`s an entire `Forms.Form` — tabs → fieldsets → inputs, >100 lines per
+  occurrence. Also **not e2e-only**: it fires four times in the unit suite.
+  Replaced with the form name + `Forms.list_fields/1`, which is what you
+  actually compare the missing key against. Unit-suite output **579 → 89 lines**.
+- **The e2e baseline of 108.** There are 107 tests, and Phase 5 added none.
+  The number was in the plan without a run behind it; the last recorded run in
+  this scratchpad was 105/105. *A baseline nobody measured is not a baseline.*
+
+### 4. A mutation found a weak assertion inside the fix I was writing
+
+Dropping `required: true` from `Page.uri` reddened both rewritten "invalid
+entry" tests — but the error list came back `[:language, :status]`, meaning the
+insert had been failing for reasons the test never named and `{:error, _}` would
+have matched regardless. Tightened to `assert Keyword.keys(errors) == [:uri]`
+with `language`/`status` supplied.
+
+*The mutation is not only a check on the fix; it prints the actual failure and
+that tells you whether your assertion was aimed at the right thing.*
+
+### 5. W4 was four sites in the plan and eight in the tree
+
+The named twins (`direct_finalize`, `utils_test`, `uploads_test`, `html_test`)
+plus `lockdown_test.exs` (five tests, **no restore at all**, "restoring"
+`:lockdown` to `false` and `:lockdown_until` to literal `nil` — neither is the
+absent key they started from, and neither runs if an assertion fails first) and
+three copies of a local `restore_env/2,3` helper. All now go through
+`Brando.Test.Support.put_test_env/2`; the three duplicates are gone.
+
+`html_test.exs` was the worst of them: a bare `put_env(:brando, Brando.Villain,
+parser: …)` with no restore, which drops `extra_blocks` (`config/test.exs:48-49`
+sets both keys) for every test that runs after it.
+
+### 6. S4 — verified rather than assumed
+
+Dropping `config` and `test` from `mix.exs`'s `files:` looked risky because
+`elixirc_paths(:test)` returns `["lib", "test/support"]`. It is not: Mix compiles
+dependencies in `:prod`, so that clause never fires for a consumer. Confirmed
+empirically — `e2e/_build/test/lib/brando/ebin/` contains no
+`Elixir.Brando.ConnCase.beam`. Both directories were shipped, never evaluated,
+and full of placeholder credentials.
+
+### Deliberately not done, and why
+- **The install/upgrade migration gap.** `brando.install` stops at `brando_115`
+  (123 files) while `brando.upgrade` has 157 — so a freshly installed app never
+  gets `brando_123`'s unique index, among ~38 others. Found while checking S1.
+  Real, pre-existing, and a much bigger job than a Phase 5 line edit.
+- **`selected_option/2` with several options selected in a `multiple` select.**
+  Still returns the first only; correct handling needs `name[]` array encoding.
+  The plan scoped W6 to the single-select fallback and that is what shipped.
+- **`lockdown_test.exs` is `async: true` while mutating global app env.**
+  `put_test_env/2` makes the restore correct, but the concurrency is still
+  wrong in principle. No other file reads `:lockdown`, so it does not bite.
