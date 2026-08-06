@@ -3051,6 +3051,15 @@ defmodule BrandoAdmin.Components.Form do
         assign(socket, :dirty_fields, changed_fields)
       end
 
+    # The recomputed form is assigned before the `_target` branch, and that
+    # placement is load-bearing. Form *recovery* pushes this same event with a
+    # `_target` naming the first non-hidden input in the form — which here is
+    # the `image_editor_upload` file input a few lines into the markup, not an
+    # entry field (`view.ts:2450`, `channel.ex:848-853`). Assigning inside the
+    # `[^singular | rest]` branch meant every recovered value was recomputed and
+    # then dropped, so a reconnect silently restored nothing.
+    socket = assign(socket, :form, to_form(changeset, []))
+
     case Map.get(params, "_target") do
       [^singular | rest] ->
         if has_blocks? && rest != ["__force_change"] do
@@ -3074,16 +3083,16 @@ defmodule BrandoAdmin.Components.Form do
           request_select_options_update(socket)
         end
 
-        new_form = to_form(changeset, [])
-
         socket
-        |> assign(:form, new_form)
         |> maybe_invalidate_live_preview_assign(rest, :string_path)
         |> maybe_fetch_root_blocks(:live_preview_update, 0)
         |> maybe_finish_live_preview_recovery()
         |> then(&{:noreply, &1})
 
-      [_] ->
+      # Anything else — a target outside the entry, or none at all. A missing
+      # `_target` used to raise `CaseClauseError` here and take the form
+      # LiveView down with every unsaved edit in it.
+      _ ->
         {:noreply, maybe_finish_live_preview_recovery(socket)}
     end
   end

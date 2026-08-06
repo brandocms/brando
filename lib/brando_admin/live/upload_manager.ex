@@ -644,7 +644,11 @@ defmodule BrandoAdmin.UploadManager do
       phx-hook="Brando.UploadManager"
       data-max-concurrent-transfers={Uploads.max_concurrent_transfers()}
     >
-      <form phx-change="validate_queue" class="upload-manager-queue-form">
+      <%!-- The id is what makes this form eligible for LiveView's form recovery
+            (`getFormsForRecovery()` skips any form without one) — and this
+            manager is sticky, so it is exactly the form that outlives a
+            reconnect. --%>
+      <form id="upload-manager-queue-form" phx-change="validate_queue" class="upload-manager-queue-form">
         <.live_file_input upload={@uploads.queue} />
       </form>
 

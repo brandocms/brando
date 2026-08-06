@@ -10,17 +10,35 @@ BrandoIntegration.Repo.start_link()
 
 {:ok, _} = Application.ensure_all_started(:ex_machina)
 
-Supervisor.start_link(
-  [{Phoenix.PubSub, name: BrandoIntegration.PubSub, pool_size: 1}, Brando],
-  strategy: :one_for_one
-)
-
 defmodule BrandoIntegration.Presence do
   @moduledoc false
   use BrandoAdmin.Presence,
     otp_app: :brando,
     pubsub_server: BrandoIntegration.PubSub,
     presence: __MODULE__
+end
+
+# Presence has to be running, not merely defined: `BrandoAdmin.Hooks.handle_params/3`
+# tracks every mounted admin LiveView, so without it `Brando.LiveCase` mounts die
+# on a missing ETS table.
+Supervisor.start_link(
+  [
+    {Phoenix.PubSub, name: BrandoIntegration.PubSub, pool_size: 1},
+    Brando,
+    BrandoIntegration.Presence
+  ],
+  strategy: :one_for_one
+)
+
+# The admin nav LiveView (mounted by the admin root layout) calls
+# `<admin_module>.Menus.__menus__/0`, so a routed admin request needs one to exist.
+defmodule BrandoIntegrationAdmin.Menus do
+  @moduledoc false
+  use BrandoAdmin.Menu
+
+  menus do
+    menu_item Brando.Pages.Page
+  end
 end
 
 defmodule BrandoIntegrationWeb.Gettext do
@@ -66,6 +84,11 @@ defmodule BrandoIntegrationWeb.Endpoint do
     only: ~w(css images js fonts favicon.ico robots.txt),
     cache_control_for_vsn_requests: nil,
     cache_control_for_etags: nil
+
+  # Routing the test endpoint is what makes `Phoenix.LiveViewTest.live/2` usable
+  # against the real admin LiveViews (see `Brando.LiveCase`). Without it the
+  # endpoint answers nothing and every mounted-form test has to fake the socket.
+  plug BrandoIntegrationWeb.Router
 end
 
 defmodule BrandoIntegration.Authorization do
@@ -235,6 +258,11 @@ defmodule BrandoIntegration.ModuleWithDatasource do
     end
   end
 end
+
+# The S3 seam (`Brando.CDN.Client`). Tests that touch a bucket set expectations
+# on this; everything else never reaches it, because the default config disables
+# the CDN entirely.
+Mox.defmock(Brando.CDN.Client.Mock, for: Brando.CDN.Client)
 
 ExUnit.start()
 

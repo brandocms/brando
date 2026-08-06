@@ -162,6 +162,10 @@ defmodule Brando.Mixfile do
       {:ex_machina, "~> 2.0", only: :test, runtime: false},
       {:excoveralls, "~> 0.6", only: :test, runtime: false},
       {:floki, "~> 0.32", only: :test},
+      # Required by Phoenix.LiveViewTest — see `Brando.LiveCase`
+      {:lazy_html, ">= 0.1.0", only: :test},
+      # Mocks the S3 seam — see `Brando.CDN.Client`
+      {:mox, "~> 1.2", only: :test},
 
       # Documentation dependencies
       {:ex_doc, "~> 0.11", only: :docs, runtime: false},

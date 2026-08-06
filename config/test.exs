@@ -4,6 +4,10 @@ config :bcrypt_elixir, log_rounds: 1
 
 config :brando, Brando.Files, cdn: [enabled: false]
 
+# Every runtime S3 call goes through `Brando.CDN.Client`; in test that is a Mox
+# mock, so an un-stubbed call fails loudly instead of reaching a bucket.
+config :brando, :cdn_client, Brando.CDN.Client.Mock
+
 config :brando, Brando.Images,
   cdn: %{enabled: false},
   processor_module: Brando.Images.Processor.Dummy,
@@ -56,7 +60,10 @@ config :brando, BrandoIntegrationWeb.Endpoint,
   http: [port: 80],
   debug_errors: true,
   server: false,
-  secret_key_base: "verysecret",
+  # Must be >= 64 bytes: the cookie session store rejects anything shorter, and
+  # `Brando.LiveCase` dispatches real requests through this endpoint.
+  secret_key_base: String.duplicate("verysecret", 8),
+  live_view: [signing_salt: "testsigningsalt"],
   pubsub_server: BrandoIntegration.PubSub
 
 config :brando, Oban,
