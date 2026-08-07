@@ -618,26 +618,37 @@ defmodule Brando.Uploads do
   # non-provider strategy is rejected on its own terms rather than reported as
   # a credentials problem; before `validate_intake/4`, because there is no point
   # size-checking an upload that cannot start.
-  defp validate_provider_credentials(%{upload_strategy: :mux}),
-    do: credentials_ok(Brando.Videos.Uploaders.Mux)
+  # One clause and a runtime lookup rather than a clause per provider plus a
+  # catch-all. The catch-all is what the shape is avoiding: `validate_provider_strategy/1`
+  # runs first and admits exactly these three, so Elixir 1.20's type checker
+  # narrows the argument through the `with` chain and correctly reports a
+  # trailing `%{upload_strategy: strategy}` clause as unreachable. The old
+  # comment here conceded as much — it called the clause unreachable and kept it
+  # anyway — and `--warnings-as-errors` on 1.20 turns that into a build failure.
+  #
+  # The defensive intent survives, because `Map.fetch/2`'s `:error` branch is
+  # not a function clause and so cannot be pruned: a fourth provider added to
+  # `validate_provider_strategy/1`'s list without an entry below still returns
+  # an error tuple rather than raising `FunctionClauseError`, which is the very
+  # crash this validator exists to prevent. Mirrors `Videos.Uploader`'s
+  # `{:error, {:unknown_strategy, strategy}}` branch.
+  #
+  # It also makes the map the single place a provider is registered, so the two
+  # lists cannot drift.
+  @provider_modules %{
+    mux: Brando.Videos.Uploaders.Mux,
+    bunny: Brando.Videos.Uploaders.Bunny,
+    cloudflare: Brando.Videos.Uploaders.Cloudflare
+  }
 
-  defp validate_provider_credentials(%{upload_strategy: :bunny}),
-    do: credentials_ok(Brando.Videos.Uploaders.Bunny)
+  defp validate_provider_credentials(%{upload_strategy: strategy}) do
+    case Map.fetch(@provider_modules, strategy) do
+      {:ok, provider} ->
+        if provider.configured?(), do: :ok, else: {:error, :provider_not_configured}
 
-  defp validate_provider_credentials(%{upload_strategy: :cloudflare}),
-    do: credentials_ok(Brando.Videos.Uploaders.Cloudflare)
-
-  # Unreachable while `validate_provider_strategy/1` runs first and admits
-  # exactly these three. It exists so that adding a fourth provider to that
-  # list without a clause here fails as an error tuple rather than a
-  # FunctionClauseError — which would be the very crash this validator was
-  # added to prevent. Mirrors `Videos.Uploader`'s `{:error, {:unknown_strategy,
-  # strategy}}` branch.
-  defp validate_provider_credentials(%{upload_strategy: strategy}),
-    do: {:error, {:unknown_strategy, strategy}}
-
-  defp credentials_ok(provider) do
-    if provider.configured?(), do: :ok, else: {:error, :provider_not_configured}
+      :error ->
+        {:error, {:unknown_strategy, strategy}}
+    end
   end
 
   @doc """
