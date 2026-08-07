@@ -29,13 +29,19 @@
 
 ## START HERE — audit status (updated 2026-08-07)
 
-**Phases 0–8 are complete.** Phase 8's review is closed: 2 BLOCKERs, 3 WARNINGs,
-5 SUGGESTIONs, all fixed and measured the same day.
+**Phases 0–8 are complete**, and so are **9A** (bookkeeping) and **9B** (the
+credential decision). Phase 8's review is closed: 2 BLOCKERs, 3 WARNINGs,
+5 SUGGESTIONs, all fixed and measured. Committed as `a5dac0331` (review fixes +
+9A) and `08c371da2` (9B, a breaking change, deliberately on its own).
 
-**Next up: `phase-9-plan.md`.** Phases 5–9 live in their own files
-(`phase-5-plan.md` … `phase-9-plan.md`), because this file's Phases 0–4 are
-followed by shared `## Verification` / `## Sequencing` / `## Risks` sections and
-appending after those would break it.
+**Next up: `phase-9-plan.md` § Phase 9C — extract `Form.VideoDrawer`.** It is
+the only unblocked task with code in it, its targets have been re-measured, and
+nothing is waiting on a decision. That file opens with a "Start here on a fresh
+context" section written for exactly this situation.
+
+Phases 5–9 live in their own files (`phase-5-plan.md` … `phase-9-plan.md`),
+because this file's Phases 0–4 are followed by shared `## Verification` /
+`## Sequencing` / `## Risks` sections and appending after those would break it.
 
 ### Do not read the checkboxes below as a to-do list
 
@@ -52,7 +58,10 @@ the full classification is the table in `phase-9-plan.md`.
 | `Form.ImageDrawer` / `FileDrawer` extraction | `## G` below | deferred to Phase 10, gated on 9C's cost |
 | `Form.Chrome` extraction | `## G` below | same gate |
 | Cross-entry snapshot leak | finding **C4** | unconfirmed; Phase 9D reproduces it or closes it |
-| Video-uploader credential disagreement | not a numbered finding | **sixth recording; needs a user decision.** Mux and Bunny raise, Cloudflare returns `{:error, :not_configured}`. See `phase-9-plan.md` §Decisions |
+
+That is the whole list. The video-uploader credential disagreement, carried
+unresolved through Phases 4–8, was **closed on 2026-08-07** (`08c371da2`,
+decided (a): all three raise) and is no longer tracked anywhere.
 
 ### Where the knowledge is
 
@@ -60,7 +69,7 @@ the full classification is the table in `phase-9-plan.md`.
   the audit up cold; the lessons are there, not here.
 * **`reviews/phase-N-review.md`** — one panel review per phase, Phases 0–8.
 * **Baselines**, measured on the current tree (2026-08-07):
-  `mix test` **1287 + 135 doctests / 0 failures** · `mix credo --strict` **284** ·
+  `mix test` **1291 + 135 doctests / 0 failures** · `mix credo --strict` **284** ·
   compile and format clean · unit-suite output **43 stdout / 27 non-dot / 0
   stderr** · E2E **107 / 0**.
   The 27 is a **warm-build** number — a `mix test` that also recompiles adds two

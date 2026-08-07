@@ -1373,35 +1373,30 @@ chooses it deliberately or stops recording it.**
 
 ## State of the tree at end of session (2026-08-07, night)
 
-**Nothing is committed.** Everything below is in the working tree on `next`.
-Committing is the first thing to decide tomorrow; the changes are green on every
-gate but they are one commit's worth of work, not eight.
+**Committed and clean.** Two commits on `next`, not pushed:
 
-Modified:
-
-| File | Why |
+| Commit | What |
 |---|---|
-| `lib/brando/cdn/cdn.ex` | B1 citation → `head_object/2` by name; the `:cdn`-subject comment disambiguated; credentials dropped from `upload_image/4`'s raise |
-| `lib/brando/cdn/s3_config.ex` | `@derive {Inspect, except: […]}` + `@moduledoc` naming the gap it does not cover |
-| `lib/brando/videos/uploaders/req_options.ex` | W1 citation → `api_request/3` by name; `:redirect_trusted` bullet now says which providers it exposes and why Bunny is not one |
-| `test/brando_admin/live/form_recovery_test.exs` | B2: kill the child with `:child_died` so the reason is causal; W2 comment corrected; version-assertion failure message now names both couplings |
-| `test/brando/videos/uploaders/req_options_test.exs` | W3 mutation comment corrected (`:plug` must stay in the take list); new `req` 0.7.2 version pin |
-| `test/brando/cdn/cdn_test.exs` | **new** — five tests pinning the credential redaction and the gap between its two halves |
-| `CHANGELOG.md` | Fixes entry for the credential redaction, above the Bunny one |
-| `.claude/plans/form-audit/plan.md` | Phase 9A: `## START HERE` block; nine boxes labelled; `form.ex` line count corrected |
-| `.claude/plans/form-audit/phase-8-plan.md` | W-4b's false record amended, original quoted, per B1-record's precedent |
-| `.claude/plans/form-audit/phase-9-plan.md` | **new** — the plan to pick up |
-| `.claude/plans/form-audit/reviews/*-p8.md`, `phase-8-review.md` | **new** — the panel output and the review |
-| `.claude/plans/form-audit/reviews/.requirements-input.md` | now holds the Phase 8 plan (it is the review skill's scratch input, not a record) |
+| `a5dac0331` | Phase 8 review fixes (2 BLOCKERs, 3 WARNINGs, 5 SUGGESTIONs) + the review artifacts + Phase 9A bookkeeping |
+| `08c371da2` | Phase 9B — `feat(videos)!`, all three providers raise on missing credentials. Breaking, deliberately its own commit so it is findable and revertable |
 
-**Final gates, all measured on this tree:** `mix test` 1287 + 135 doctests / 0
-failures · `mix credo --strict` 284 (2 / 118 / 152 / 12) · compile
-`--warnings-as-errors` clean · `mix format --check-formatted` clean ·
-unit output 43 / 27 / 0 warm · **E2E 107 / 0, 8.9m**.
+Split because a breaking change on a library deserves to be isolated. Three
+docs (`CHANGELOG.md`, `phase-9-plan.md`, `scratchpad.md`) carried content for
+both commits; they were backed up, stripped for the first, then restored and
+verified byte-identical by checksum before the second.
 
-**The open decision was taken: (a), all three raise.** Phase 9B is done — see
-below. Nothing is blocked.
+**Final gates, measured on the committed tree:** `mix test` **1291 + 135
+doctests / 0 failures** · `mix credo --strict` **284** (2 / 118 / 152 / 12) ·
+compile `--warnings-as-errors` clean · `mix format --check-formatted` clean ·
+unit output **43 / 27 / 0** warm · **E2E 107 / 0, 9.1m**.
 
+E2E was run three times across the session — once before the fixes, once after
+the `cdn.ex`/`s3_config.ex` changes, once after the Cloudflare change — because
+each round touched `lib/` after the previous run. 107/0 every time.
+
+**Next step: Phase 9C**, extracting `Form.VideoDrawer`. Its targets have been
+re-measured and are listed in `phase-9-plan.md` § "Start here on a fresh
+context". No decision is outstanding.
 
 ---
 

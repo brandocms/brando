@@ -54,6 +54,7 @@ disagree, and the checkbox is what a reader sees first.
 ## Decisions needed
 
 **1. The video-uploader credential disagreement — decide, or stop recording it.**
+**→ CLOSED: (a), all three raise. Shipped `08c371da2`.**
 Phase 8's plan committed to this in writing: *"Six recordings is enough evidence
 that it will not arrive via a finding — if it is to be fixed, it needs to be
 chosen deliberately, and Phase 9 is the place to either do that or stop
@@ -63,7 +64,8 @@ The disagreement, re-measured today: Mux raises (`mux.ex:545`), Bunny raises
 (`bunny.ex:403`), Cloudflare returns `{:error, :not_configured}`
 (`cloudflare.ex:273`). A caller cannot handle all three with one branch.
 
-**This needs a user decision before 9B is written**, because every option is a
+**ANSWERED 2026-08-07: (a).** Kept below as the record of what was weighed, per
+the audit's practice of amending rather than replacing. Every option was a
 public behaviour change on a library:
 
 * **(a) All three raise.** Missing credentials are a deploy-time config error,
@@ -75,8 +77,12 @@ public behaviour change on a library:
   for it in nine phases — but then it stops being tracked, which is the point of
   deciding.
 
-No option is free, (a) and (b) are both breaking, and the audit has now spent
-six recordings not choosing. **Ask before planning 9B.**
+No option was free, (a) and (b) were both breaking, and the audit had spent six
+recordings not choosing. **(a) was chosen and shipped in `08c371da2`** — see
+Phase 9B below, and the retro in `scratchpad.md`. What made it the cheap
+direction only became clear during implementation: it aligns Cloudflare with
+behaviour `Bunny.delete_remote/1` already had on the same path, and
+`{:error, :not_configured}` turned out to have one producer and no consumer.
 
 **2. Extraction scope.** `form.ex` is **6565 lines** today, not the 6257
 `plan.md` says — it grew 308 lines during the audit, which is its own small
@@ -165,10 +171,33 @@ did not. That is a 2-for-2 record against changes to this component's structure.
 The extraction is more mechanical than either — but the file's history says the
 gate that matters is E2E, not `mix test`.
 
-- [ ] **9C-1 — extract `Form.VideoDrawer`.** `update/2` and the `handle_event`
-      range named under **G** (re-measure the ranges; the file grew 308
-      lines since they were written, so **assume they are stale** and cite
-      function heads, per Phase 8A's standard).
+### Start here on a fresh context
+
+Read, in order: this section → `plan.md`'s `## START HERE` → `scratchpad.md`'s
+last two sections. Nothing else is needed to begin.
+
+**The stale ranges are already re-measured (2026-08-07), so 9C does not inherit
+them.** Section **G** said `handle_event:3549-4069`. That range is wrong in
+*both* directions: it **misses** `save_video` (`:4137`) and
+`save_video_authorized` (`:4144`), and it **swallows** unrelated file and image
+handlers (`reset_file_field`, `validate_file`, `save_file`, `validate_image`,
+`save_image`, `image_editor_save`). Extracting by it would have moved the wrong
+code and left two clauses behind — the risk this plan flagged, confirmed by
+measuring rather than by trusting the note. Cited by name below, per 8A.
+
+**`update/2` clauses — the drawer's inbound messages:** `:update_edit_video`
+(three clauses), `:open_video_drawer`, `:get_video_upload_url`,
+`:video_upload_complete`, `:video_upload_error`.
+
+**`handle_event/3` clauses:** `"reset_video_field"`, `"reset_video_thumbnail"`,
+`"parse_video_url"`, `"extract_thumbnail"`, `"validate_video"` (2),
+`"save_video"` (2), `"save_video_authorized"` (2).
+
+**Check before moving it:** `"extract_thumbnail"` is the only name in that list
+that does not say "video". Confirm it belongs to the video drawer and is not
+shared with the image editor.
+
+- [ ] **9C-1 — extract `Form.VideoDrawer`**, using the inventory above.
       Communicates via `send_update` already, so the seam is declared clean —
       **verify that claim before relying on it**, the same way Phase 8's SEC-1
       verified "no Bunny call follows a redirect" before changing transport.
@@ -204,12 +233,12 @@ recorded before the review:
 
 | Gate | Baseline | Phase 9 expectation |
 |---|---|---|
-| `mix test` | **1287 tests + 135 doctests, 0 failures** (Phase 8 shipped 1281; +1 `req` version pin, +5 CDN credential-redaction tests) | ≥ baseline, 0 failures |
+| `mix test` | **1291 tests + 135 doctests, 0 failures** (Phase 8 shipped 1281; +1 `req` version pin, +5 CDN redaction tests, +4 provider credential tests) | ≥ baseline, 0 failures |
 | `mix credo --strict` | 284 | ≤ 284 |
 | `mix compile --warnings-as-errors` | clean | clean |
 | `mix format --check-formatted` | clean | clean |
 | Unit-suite output | 43 stdout / 27 non-dot / 0 stderr, **warm build** | ≤ baseline |
-| E2E | 107 / 0, measured 2026-08-07 | 107 / 0 after 9C |
+| E2E | 107 / 0, measured 2026-08-07 (three runs, one per round that touched `lib/`) | 107 / 0 after 9C |
 
 **The output-noise figure is a warm-build number.** A `mix test` that also
 recompiles adds two non-dot lines (`Compiling N files`, `Generated brando app`).
@@ -224,16 +253,15 @@ them. 9B and 9C both do.
 ## Sequencing
 
 ```
-9A  Bookkeeping        9A-1 → 9A-2 ∥ 9A-3 ∥ 9A-4     (no code, do first)
+9A  Bookkeeping        ✔ DONE 2026-08-07  (a5dac0331)
+9B  Credential         ✔ DONE 2026-08-07  (08c371da2, breaking)
       ↓
-9B  Credential        blocked on Decision 1 — ASK BEFORE PLANNING
-9C  Extraction        9C-1 → 9C-2 → 9C-3             ┐ independent of 9B
-9D  :418              decide, or close                ┘
+9C  Extraction        ◀ NEXT — 9C-1 → 9C-2 → 9C-3
+9D  :418               decide, or close   (independent of 9C)
 ```
 
-**9A first** because everything else is easier to scope once the twelve boxes
-stop lying. **9B is blocked on a user decision** and should not be planned
-around an assumed answer. 9C and 9D are independent of both.
+9A and 9B are closed and committed. **9C is the next step**, and 9D can be taken
+in either order relative to it — they touch nothing in common.
 
 ---
 
