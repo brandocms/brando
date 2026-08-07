@@ -4,6 +4,19 @@
 
 #### Breaking
 
+- **The form's image and file drawers moved out of `BrandoAdmin.Components.Form`**
+  into `BrandoAdmin.Components.Form.ImageDrawer` and
+  `BrandoAdmin.Components.Form.FileDrawer`, markup only. The JS command helpers
+  moved with them, since their only callers are the markup they target:
+  `close_image/1`, `close_image_editor/1`, `open_image_editor/3`,
+  `duplicate_image/3` and `reset_image_field/2` are now on `ImageDrawer`;
+  `close_file/1` and `reset_file_field/2` on `FileDrawer`. The image editor
+  drawer is `ImageDrawer.editor/1`.
+
+  **What to change.** Alias the new modules and call `render/1` there. The
+  drawers' `update/2` and `handle_event/3` clauses stay on `Form` — they write
+  the parent's state — so nothing about event handling changes.
+
 - **`Brando.Videos.Uploader.initiate_upload/3` never raises, and its error terms
   changed.** It was possible for a provider client's exception to escape this
   function; it now returns `{:error, reason}` for every failure. Two new reasons

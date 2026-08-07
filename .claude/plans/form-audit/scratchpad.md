@@ -1827,3 +1827,98 @@ sibling drawers does today.*
   Real, found this phase, no finding asked for it, and it changes when an
   upload button renders — which deserves its own decision rather than a
   drive-by.
+
+---
+
+## Phase 10 implementation notes (2026-08-07)
+
+Shipped both halves: `Form.Primitives` (the input primitives) and the
+`ImageDrawer`/`FileDrawer` pair. `form.ex` **6220 → 5288 lines (−932)**.
+Gates: `mix test` **1305 + 135 / 0** · credo **279** (below the 284 baseline —
+sorting alias blocks fixed 5 pre-existing `AliasOrder` issues) · compile
+`--warnings-as-errors --force` clean · format clean · **E2E 109 / 0 twice**,
+once after each half.
+
+### 1. The rationale I gave for the first half was wrong, and measuring killed it
+
+`Primitives` was justified as cutting the 202-node compile cycle by breaking the
+`Form.input/1` back-edge. **Measured after the move: 1 cycle, 203 nodes; compile
+edges 919 → 921.** It went *up*, by the one file added.
+
+`primitives.ex`'s only compile deps are `brando_admin.ex` and `translator.ex` —
+the two `use` hubs — and it is in the cycle anyway. That is decisive: **the cycle
+runs through `use BrandoAdmin, :component`**, so every admin component is inside
+it regardless of who calls whom, and no extraction of form components can ever
+escape it.
+
+*I did the exact thing this file warns about in three places: formed a mechanism
+from reading and acted on it. I had measured that the cycle existed and that
+`video_drawer.ex` was in it. I never measured **why**. The 9E note "9C bought
+line count, not coupling" was right about the outcome and wrong about the cause,
+and I inherited its cause without checking it.*
+
+**Consequence, and it closes the question permanently:** "extract to reduce
+coupling" is dead as a rationale for this file. Anything further must be
+justified on line count and locality alone — which is what the drawers were,
+honestly, from the start.
+
+### 2. Two traps from code whose meaning depended on where it sat
+
+Both in `Primitives`, both invisible to review:
+
+* `send_update(__MODULE__, …)` in `input/1` — `__MODULE__` meant `Form`. **The
+  compiler caught this**, since a plain `:component` has no `send_update/2`.
+* `Module.concat([Input, type_module])` — relied on `alias …Form.Input` being in
+  scope. Without it `Input` is the bare atom `Elixir.Input`, every input-type
+  lookup misses, and **every select, textarea and toggle in the admin raises at
+  render time**. `Module.concat/1` is runtime and a bare alias is valid syntax,
+  so nothing warned. 19 mounted-LiveView tests found it.
+
+*9C recorded "the gate that actually earned its keep was the compiler". Here it
+inverted: the compiler passed clean on a change that broke every select in the
+admin, and only the Phase 4 harness caught it. Neither gate is the reliable one
+— the pair is.*
+
+### 3. The mutation I predicted was not the one that reddened
+
+For the drawers I claimed the faithful mutation was 9C's: drop a `phx-submit`
+and watch the dispatched submit land on nothing. Dropped `phx-submit="save_file"`
+→ **`file-field-sync.spec.js` still passed.**
+
+Its own comment says *"closing dispatches submit → save_file →
+ship_all_field_changes"*, and that is not what makes it pass: the sticky
+UploadManager's delivery already ships the field, so the assertion ("B sees Edit
+file") is satisfied without the drawer's submit ever firing. **The spec's stated
+mechanism is not its actual mechanism** — same shape as the `key_exists?` and
+`req_options` findings, a test that cannot see the thing it names.
+
+The mutation that *does* redden is the extraction's real hazard: remove
+`phx-target={@myself}` from the image drawer's form and events route to the root
+LiveView instead of the parent component. **`image-editor.spec.js` fails**, and
+passes again restored. Run both directions.
+
+*Recorded rather than quietly swapped: I asserted a RED before running it, and
+it was wrong. The one I ran is the one that counts.*
+
+### 4. What actually proved the moves
+
+The rename-only diff, which 9C called "cheaper and stronger than reading the new
+file over", and it was again:
+
+* `FileDrawer.render/1` — **identical** to the original apart from the head rename
+* `ImageDrawer.render/1` + `editor/1` — **identical** apart from two head renames
+
+### 5. The plan's Phase 10 target did not exist as written
+`plan.md` § G called for "`Form.Chrome` — the ~35 pure function components at
+`:5274-6257`". There are 20 function components in the whole file, and `:6257`
+was past its end. The range predated two extractions and was never re-measured.
+What is actually there — and worth moving — was the input primitives, found by
+counting call sites (`field_base` 90×, `inputs_for_block` 32×, `label` 12×)
+rather than by reading the range.
+
+### Deliberately not done
+- **Breaking the `use BrandoAdmin, :component` cycle.** That is the Blueprint/DSL
+  layer, not the form tree, and it is the only thing that would change the graph.
+  Out of scope by a wide margin.
+- **`Form`'s remaining 5288 lines.** Mostly `update/2` and `handle_event/3` — the
+  stateful half every seam check in this audit has said not to move.

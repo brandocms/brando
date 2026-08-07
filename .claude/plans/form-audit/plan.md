@@ -1165,7 +1165,14 @@ seams are clean.~~
       *Consequence for Phase 10: do not justify `Chrome` or the `ImageDrawer`/`FileDrawer` pair on
       decoupling or compile-time grounds unless the extraction also breaks the `Form.input/1`
       back-edge — which none of the three sibling drawers does today.*
-- [ ] `Form.ImageDrawer` / `Form.FileDrawer` — ~~`update/2:175-330`~~ — **Phase 10. The gate is
+- [x] `Form.ImageDrawer` / `Form.FileDrawer` — **DONE 2026-08-07 (Phase 10), markup only.**
+      Seam checked first, as 9C's lesson requires, and it landed where the video drawer did:
+      158 references to `edit_image`/`edit_file`/`image_editor_*` stay in `form.ex`, with 9
+      `handle_event/3` and 5 `update/2` clauses and the shared `assign_drawer_recovery_state/1`
+      `cond`. Markup + the seven JS command helpers + `upload_target_dom_id/1` (one caller) moved.
+      Proven rename-only by diff. RED: dropping `phx-target={@myself}` reddens
+      `image-editor.spec.js` — the predicted `phx-submit` mutation did NOT redden, see scratchpad.
+      ~~old:~~  — ~~`update/2:175-330`~~ — **Phase 10. The gate is
       OPEN: 9C's cost is measured** (354 lines, ~1h, both suites green throughout — see 9C-3).
       **Split it the way 9C did, and check the seam first.** These are the *harder* pair, not the
       easier: the image drawer additionally owns `image_editor_*` state and a focal-point
@@ -1174,7 +1181,14 @@ seams are clean.~~
       stateful half not to.
       **Ranges doubly stale** — written before the file grew 308 lines, and 9C then removed 354
       from `:2603` onward. Re-locate by function head; do not shift them arithmetically.
-- [ ] `Form.Chrome` — ~~the ~35 pure function components at `:5274-6257`~~ — **Phase 10, and on
+- [x] ~~`Form.Chrome`~~ → **shipped as `Form.Primitives` 2026-08-07 (Phase 10).** The target as
+      written did not exist: 20 function components in the file, not ~35, and `:6257` was past its
+      end. Found the real one by counting call sites — `field_base` 90x, `inputs_for_block` 32x —
+      and moved the input primitives (691 lines). **The coupling rationale was measured and is
+      FALSE:** the cycle grew 202 -> 203 nodes. It runs through `use BrandoAdmin, :component`, so
+      no component extraction can escape it. Line count and locality only, for this and any future
+      extraction from this file.
+      ~~old:~~  — ~~the ~35 pure function components at `:5274-6257`~~ — **Phase 10, and on
       the evidence this is the CHEAPEST of the three, not the riskiest.** Section G ranked it last
       as highest-risk; 9C's seam check is what invalidates that ranking. "~35 *pure function
       components*" is a description of markup with no state to strand — the exact shape that cost

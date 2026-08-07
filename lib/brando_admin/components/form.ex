@@ -41,9 +41,9 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.AlternatesDrawer
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.Fieldset
-  alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.FileDrawer
+  alias BrandoAdmin.Components.Form.ImageDrawer
   alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
-  alias BrandoAdmin.Components.Form.Input.Image.FocalPoint
   alias BrandoAdmin.Components.Form.Input.MultiSelect
   alias BrandoAdmin.Components.Form.Input.Select
   alias BrandoAdmin.Components.Form.MetaDrawer
@@ -2045,7 +2045,7 @@ defmodule BrandoAdmin.Components.Form do
           <.live_component module={VideoPicker} id="video-picker" current_user={@current_user} />
           <.live_component module={TipTapLinkDialog} id="tiptap-link-dialog" />
 
-          <.file_drawer
+          <FileDrawer.render
             file_changeset={@file_changeset}
             myself={@myself}
             schema={@schema}
@@ -2053,7 +2053,7 @@ defmodule BrandoAdmin.Components.Form do
             processing={@processing}
           />
 
-          <.image_drawer
+          <ImageDrawer.render
             image_changeset={@image_changeset}
             myself={@myself}
             schema={@schema}
@@ -2061,7 +2061,7 @@ defmodule BrandoAdmin.Components.Form do
             processing={@processing}
           />
 
-          <.image_editor_drawer
+          <ImageDrawer.editor
             edit_image={@edit_image}
             myself={@myself}
           />
@@ -2334,297 +2334,6 @@ defmodule BrandoAdmin.Components.Form do
       <% end %>
     <% end %>
     """
-  end
-
-  def file_drawer(assigns) do
-    ~H"""
-    <Content.drawer id="file-drawer" title={gettext("File")} close={close_file()} z={1001} narrow>
-      <.form
-        :let={file_form}
-        :if={@file_changeset}
-        id="file-drawer-form"
-        for={@file_changeset}
-        phx-submit="save_file"
-        phx-change="validate_file"
-        phx-target={@myself}
-      >
-        <div
-          id="file-drawer-form-preview"
-          phx-hook="Brando.UploadTrigger"
-          data-kind="entry_field"
-          data-asset-type="file"
-          data-field={@edit_file.field}
-          data-path={Jason.encode!(@edit_file.path || [])}
-          data-config-target={
-            @edit_file.field &&
-              Brando.Assets.ConfigTarget.serialize({"file", Map.get(@edit_file, :schema) || @schema, @edit_file.field})
-          }
-          class="file-drawer-preview"
-        >
-          <input id="file-drawer-upload-input" type="file" class="file-input" />
-
-          <div class="img-placeholder">
-            <div class="placeholder-wrapper">
-              <div class="svg-wrapper">
-                <svg class="icon-add-file" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                  <path fill="none" d="M0 0h24v24H0z" /><path d="M14.997 2L21 8l.001 4.26a5.471 5.471 0 0 0-2-1.053L19 9h-5V4H5v16h5.06a4.73 4.73 0 0 0 .817 2H3.993a.993.993 0 0 1-.986-.876L3 21.008V2.992c0-.498.387-.927.885-.985L4.002 2h10.995zM17.5 13a3.5 3.5 0 0 1 3.5 3.5l-.001.103a2.75 2.75 0 0 1-.581 5.392L20.25 22h-5.5l-.168-.005a2.75 2.75 0 0 1-.579-5.392L14 16.5a3.5 3.5 0 0 1 3.5-3.5zm0 2a1.5 1.5 0 0 0-1.473 1.215l-.02.14L16 16.5v1.62l-1.444.406a.75.75 0 0 0 .08 1.466l.109.008h5.51a.75.75 0 0 0 .19-1.474l-1.013-.283L19 18.12V16.5l-.007-.144A1.5 1.5 0 0 0 17.5 15z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div
-            :if={
-              @edit_file && @edit_file[:file] &&
-                !is_struct(@edit_file[:file], Ecto.Association.NotLoaded)
-            }
-            class="file-info"
-          >
-            <div class="filename">&#x2B24; {@edit_file.file.filename}</div>
-            <div class="mimetype">&#x2B24; {@edit_file.file.mime_type}</div>
-            <div class="filesize">
-              &#x2B24; {Brando.Utils.human_size(@edit_file.file.filesize)}
-            </div>
-          </div>
-        </div>
-
-        <div class="button-group vertical">
-          <button
-            class="secondary"
-            type="button"
-            phx-click={JS.dispatch("click", to: "#file-drawer-upload-input")}
-          >
-            {gettext("Upload file")}
-          </button>
-
-          <button class="secondary" type="button" phx-click={toggle_drawer("#file-picker")}>
-            {gettext("Select existing file")}
-          </button>
-
-          <button class="secondary" type="button" phx-click={reset_file_field(@myself)}>
-            {gettext("Reset file field")}
-          </button>
-        </div>
-
-        <div :if={@edit_file.file} class="brando-input">
-          <Input.text field={file_form[:title]} label={gettext("Title")} />
-        </div>
-      </.form>
-    </Content.drawer>
-    """
-  end
-
-  def image_drawer(assigns) do
-    upload_dom_id = upload_target_dom_id(to_string(assigns.edit_image.field))
-
-    assigns = assign(assigns, :upload_dom_id, upload_dom_id)
-
-    ~H"""
-    <Content.drawer id="image-drawer" title={gettext("Image")} close={close_image()} z={1001} narrow>
-      <.form
-        :let={image_form}
-        :if={@image_changeset}
-        id="image-drawer-form"
-        for={@image_changeset}
-        phx-submit="save_image"
-        phx-change="validate_image"
-        phx-target={@myself}
-      >
-        <div
-          id="image-drawer-form-preview"
-          phx-hook="Brando.UploadTrigger"
-          data-kind="entry_field"
-          data-asset-type="image"
-          data-field={@edit_image.field}
-          data-path={Jason.encode!(@edit_image.path || [])}
-          data-config-target={
-            @edit_image.field &&
-              Brando.Assets.ConfigTarget.serialize({"image", Map.get(@edit_image, :schema) || @schema, @edit_image.field})
-          }
-          data-folder-browser="true"
-          data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
-          class="image-drawer-preview"
-        >
-          <input id="image-drawer-upload-input" type="file" class="file-input" />
-          <%= if @edit_image.image do %>
-            <figure class="grid-overlay">
-              <div class="drop-indicator">
-                <div>{gettext("+ Drop here to upload")}</div>
-              </div>
-              <.live_component
-                module={FocalPoint}
-                id={"image-drawer-focal-#{@upload_dom_id}"}
-                image={@edit_image}
-                form_id={image_form.id}
-                form_name={image_form.name}
-              />
-              <img
-                width={@edit_image.image.width}
-                height={@edit_image.image.height}
-                src={Brando.Utils.img_url(@edit_image.image, :original, prefix: Brando.Utils.media_url())}
-              />
-            </figure>
-            <figcaption class="tiny">{@edit_image.image.path}</figcaption>
-          <% else %>
-            <div class="img-placeholder">
-              <div class="placeholder-wrapper">
-                <div class="svg-wrapper">
-                  <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none" />
-                    <polygon
-                      class="plus"
-                      points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"
-                    />
-                    <path
-                      d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z"
-                      transform="translate(0 0)"
-                    />
-                    <circle cx="8" cy="9" r="2" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          <% end %>
-        </div>
-
-        <div class="button-group vertical">
-          <button
-            id={"image-drawer-upload-#{@upload_dom_id}"}
-            class="secondary"
-            type="button"
-            phx-click={JS.dispatch("click", to: "#image-drawer-upload-input")}
-          >
-            {gettext("Upload image")}
-          </button>
-          <button class="secondary" type="button" phx-click={toggle_drawer("#image-picker")}>
-            {gettext("Select existing image")}
-          </button>
-
-          <button
-            :if={@edit_image.image && @edit_image.image.path}
-            class="secondary"
-            type="button"
-            phx-click={open_image_editor(@edit_image, @myself)}
-          >
-            {gettext("Edit/Crop image")}
-          </button>
-
-          <button
-            :if={@edit_image.image}
-            class="secondary"
-            type="button"
-            phx-click={duplicate_image(@edit_image, @myself)}
-          >
-            {gettext("Duplicate image")}
-          </button>
-
-          <button class="secondary" type="button" phx-click={reset_image_field(@myself)}>
-            {gettext("Reset image field")}
-          </button>
-        </div>
-        <%= if @edit_image.image do %>
-          <div class="brando-input">
-            <Input.text field={image_form[:title]} label={gettext("Caption")} />
-          </div>
-
-          <div class="brando-input">
-            <Input.text field={image_form[:credits]} label={gettext("Credits")} />
-          </div>
-
-          <div class="brando-input">
-            <Input.text field={image_form[:alt]} label={gettext("Alt. text")} />
-          </div>
-        <% end %>
-      </.form>
-    </Content.drawer>
-    """
-  end
-
-  defp image_editor_drawer(assigns) do
-    ~H"""
-    <Content.drawer
-      id="image-editor-drawer"
-      title={gettext("Image Editor")}
-      close={close_image_editor()}
-      z={1002}
-      wide
-    >
-      <div
-        id="image-editor-hook"
-        phx-hook="Brando.ImageEditor"
-        phx-update="ignore"
-        data-label-crop-previews={gettext("Crop previews")}
-      >
-        <div class="image-editor">
-          <div class="image-editor-main">
-            <canvas id="image-editor-canvas"></canvas>
-            <canvas id="image-editor-overlay"></canvas>
-            <div class="image-editor-focal-pin"></div>
-          </div>
-          <div class="image-editor-sidebar">
-            <div class="image-editor-controls">
-              <div class="zoom-header">
-                <label>{gettext("Zoom")}</label>
-                <span class="zoom-value" id="image-editor-zoom-value">1.00x</span>
-              </div>
-              <input type="range" id="image-editor-zoom" min="1" max="3" step="0.05" value="1" />
-              <button type="button" id="image-editor-reset">{gettext("Reset")}</button>
-            </div>
-            <div class="image-editor-previews" id="image-editor-previews"></div>
-          </div>
-          <div class="image-editor-actions">
-            <button type="button" class="secondary" phx-click={close_image_editor()}>
-              {gettext("Cancel")}
-            </button>
-            <button type="button" class="secondary" id="image-editor-save-replace">
-              {gettext("Save changes")}
-            </button>
-            <button type="button" class="primary" id="image-editor-save-new">
-              {gettext("Save as new copy")}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Content.drawer>
-    """
-  end
-
-  def open_image_editor(js \\ %JS{}, edit_image, target) do
-    js
-    |> JS.push("open_image_editor", value: %{image_id: edit_image.image.id}, target: target)
-    |> toggle_drawer("#image-editor-drawer")
-  end
-
-  def close_image_editor(js \\ %JS{}) do
-    toggle_drawer(js, "#image-editor-drawer")
-  end
-
-  def duplicate_image(js \\ %JS{}, edit_image, target) do
-    JS.push(js, "duplicate_image", value: %{image_id: edit_image.image.id}, target: target)
-  end
-
-  def reset_file_field(js \\ %JS{}, target) do
-    js
-    |> JS.push("reset_file_field", target: target)
-    |> toggle_drawer("#file-drawer")
-  end
-
-  def reset_image_field(js \\ %JS{}, target) do
-    js
-    |> JS.push("reset_image_field", target: target)
-    |> toggle_drawer("#image-drawer")
-  end
-
-  def close_file(js \\ %JS{}) do
-    js
-    |> JS.dispatch("submit", to: "#file-drawer-form", detail: %{bubbles: true, cancelable: true})
-    |> toggle_drawer("#file-drawer")
-  end
-
-  def close_image(js \\ %JS{}) do
-    js
-    |> JS.dispatch("submit", to: "#image-drawer-form", detail: %{bubbles: true, cancelable: true})
-    |> toggle_drawer("#image-drawer")
   end
 
   defp extract_transformers(%Brando.Blueprint.Forms.Form{transformers: transformers}), do: transformers
@@ -5467,21 +5176,6 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp encode_drawer_changes(_type, _changeset), do: "{}"
-
-  defp upload_target_dom_id(value) when is_atom(value),
-    do: value |> Atom.to_string() |> upload_target_dom_id()
-
-  defp upload_target_dom_id(value) when is_binary(value) do
-    value
-    |> String.replace(~r/[^a-zA-Z0-9_-]/, "-")
-    |> String.trim("-")
-    |> case do
-      "" -> "image"
-      sanitized -> sanitized
-    end
-  end
-
-  defp upload_target_dom_id(_), do: "image"
 
   defp decode_recovery_path(path_json) when is_binary(path_json) do
     case Jason.decode(path_json) do
