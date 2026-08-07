@@ -79,6 +79,18 @@ depends on application semantics:
   server version and retaining Hackney explicitly if application code uses it;
 - moving function-based asset `config_target` callbacks from helper modules to
   the relevant Blueprint schema;
+- repointing custom admin form components at the modules the form's markup was
+  split into. `BrandoAdmin.Components.Form` no longer exports the input
+  primitives (`field_base/1`, `input/1`, `label/1`, `error_tag/1`,
+  `submit_button/1`, `inputs_for_block/1`, `inputs_for_poly/1`,
+  `array_inputs/1`, `array_inputs_from_data/1`, `map_inputs/1`,
+  `map_value_inputs/1`, `translate_error/1`) — those are now
+  `BrandoAdmin.Components.Form.Primitives` — nor the image, file and video
+  drawers and their JS command helpers, which are `Form.ImageDrawer`,
+  `Form.FileDrawer` and `Form.VideoDrawer`. The functions and their assigns are
+  unchanged, so each is a rename, but the compiler cannot rewrite them for you
+  because the call sites are in application markup. `mix compile
+  --warnings-as-errors` reports every one as an undefined function;
 - transferring ownership of PostgreSQL's `oban_job_state` enum before the Oban
   v14 migration when deploying through the bundled Fabric workflow.
 

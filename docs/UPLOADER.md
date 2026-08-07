@@ -678,7 +678,21 @@ the editor never re-renders for an upload again.
 
 ---
 
-## 12. Appendix — reference anchors (current code)
+## 12. Appendix — reference anchors (**pre-manager code, historical**)
+
+> **These anchors describe the code this migration replaced, not the code that
+> exists now.** They were the map for doing the work; the work is done. Verified
+> 2026-08-07: `register_block_upload`, `register_var_upload`,
+> `handle_var_upload_progress`, `var_upload_complete` and
+> `handle_block_image_progress` are all **gone** from `lib/` — the status header
+> above records deleting them — and every `form.ex:NNN` line number below is
+> stale, several by thousands of lines after the Phase 9/10 extractions.
+>
+> Kept for provenance rather than deleted, because the rest of the document
+> argues against the old design and these are what it is arguing about. Do not
+> use this section to find current code; grep for the function head instead.
+> Live upload plumbing is `BrandoAdmin.UploadManager`, `Brando.Uploads`, and the
+> `UploadTrigger` hook.
 
 - Storm threading: `form.ex:1703,1711,1724,1780,1820,1836`;
   `block_field.ex:1186`; `block/render.ex:57,108,136,176,258,661,709,832`;

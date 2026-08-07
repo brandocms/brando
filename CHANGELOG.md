@@ -4,6 +4,38 @@
 
 #### Breaking
 
+- **The form's input primitives moved out of `BrandoAdmin.Components.Form` into
+  `BrandoAdmin.Components.Form.Primitives`.** Twelve public functions:
+
+      Form.field_base/1              Form.inputs_for_block/1
+      Form.input/1                   Form.inputs_for_poly/1
+      Form.label/1                   Form.array_inputs/1
+      Form.error_tag/1               Form.array_inputs_from_data/1
+      Form.submit_button/1           Form.map_inputs/1
+      Form.translate_error/1         Form.map_value_inputs/1
+
+  **What to change.** Alias the new module and call them there — the functions
+  and their assigns are unchanged, so it is a rename:
+
+      # before
+      alias BrandoAdmin.Components.Form
+      <Form.field_base field={@field} label={@label}>…</Form.field_base>
+
+      # after
+      alias BrandoAdmin.Components.Form.Primitives
+      <Primitives.field_base field={@field} label={@label}>…</Primitives.field_base>
+
+  This affects any application with custom admin form inputs or field
+  components, which is the normal way to extend the admin. Within Brando itself
+  it was 165 call sites across 26 modules, 25 of which no longer reference
+  `Form` at all.
+
+  They were in the wrong module by their own usage: 26 modules called them —
+  `field_base/1` alone ~90 times — while `Form` used exactly two. Note this was
+  **not** done to reduce compile coupling and does not: the admin's compile
+  cycle runs through `use BrandoAdmin, :component`, so every component is inside
+  it regardless of who calls whom.
+
 - **The form's image and file drawers moved out of `BrandoAdmin.Components.Form`**
   into `BrandoAdmin.Components.Form.ImageDrawer` and
   `BrandoAdmin.Components.Form.FileDrawer`, markup only. The JS command helpers
