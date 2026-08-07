@@ -253,4 +253,65 @@ defmodule Brando.Videos.UploadTest do
 
     assert Brando.Videos.upload_available?(:cloudflare)
   end
+
+  # `upload_available?/1` and the providers' `configured?/0` answer different
+  # questions — "should the upload control render?" versus "would an API call
+  # work?" — and that is fine. What was not fine is that they each decided the
+  # *credential* half on their own terms: this module's `present?/1` accepts any
+  # non-nil, non-empty term, while the providers require a non-empty binary.
+  #
+  # So a non-binary credential rendered the button and then failed the pre-flight
+  # check behind it. `upload_available?/1` now delegates the credential half
+  # rather than re-deciding it, and only owns the extra requirements (webhook
+  # secret, routing values) that `configured?/0` deliberately does not check.
+  #
+  # MUTATION: restore the inline `present?(cfg[:account_id]) and
+  # present?(cfg[:api_token])`. This test goes green-to-red on the first
+  # assertion.
+  describe "upload_available?/1 agrees with the providers on credentials" do
+    test "a non-binary credential is unavailable, not merely unusable" do
+      cloudflare = Brando.Videos.Uploaders.Cloudflare
+
+      put_test_env(cloudflare,
+        account_id: 12_345,
+        api_token: "token",
+        webhook_secret: "webhook"
+      )
+
+      refute Brando.Videos.Uploaders.Cloudflare.configured?()
+
+      # Before: `present?(12_345)` was true, so the button rendered over a
+      # provider that would reject the pick.
+      refute Brando.Videos.upload_available?(:cloudflare)
+    end
+
+    test "an empty-string credential is unavailable" do
+      mux = Brando.Videos.Uploaders.Mux
+
+      put_test_env(mux,
+        access_token_id: "",
+        access_token_secret: "secret",
+        webhook_secret: "webhook"
+      )
+
+      refute Brando.Videos.upload_available?(:mux)
+    end
+
+    # The other direction: `configured?/0` true is not sufficient. A provider
+    # with usable credentials but no webhook secret can start an upload that
+    # never completes, so the control stays hidden. This is the requirement
+    # `upload_available?/1` legitimately owns.
+    test "usable credentials without a webhook secret are still unavailable" do
+      bunny = Brando.Videos.Uploaders.Bunny
+
+      put_test_env(bunny,
+        api_key: "api",
+        library_id: "133",
+        cdn_hostname: "video.example.com"
+      )
+
+      assert Brando.Videos.Uploaders.Bunny.configured?()
+      refute Brando.Videos.upload_available?(:bunny)
+    end
+  end
 end

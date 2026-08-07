@@ -188,32 +188,49 @@ defmodule Brando.Videos do
   """
   def upload_available?(strategy \\ Brando.default_video_upload_strategy())
 
+  # The credential half is the provider's own `configured?/0`, never re-decided
+  # here. The two functions answer different questions — "should the upload
+  # control render?" versus "would an API call work?" — but they must not
+  # disagree about whether a credential *is* one. They did: `present?/1` below
+  # accepts any non-nil non-empty term where the providers require a non-empty
+  # binary, so a non-binary credential rendered the button over a provider that
+  # would reject the pick during pre-flight validation.
+  #
+  # What this function legitimately owns is everything `configured?/0`
+  # deliberately does not check: the webhook secret, without which an upload
+  # starts and never completes, and the routing values. Those keep the looser
+  # `present?/1` — `library_id` is an id, not a secret, and an integer is a
+  # reasonable way to configure one.
   def upload_available?(:mux) do
-    cfg = Application.get_env(:brando, Brando.Videos.Uploaders.Mux, [])
+    cfg = provider_config(Brando.Videos.Uploaders.Mux)
 
-    present?(cfg[:access_token_id]) and present?(cfg[:access_token_secret]) and
-      present?(cfg[:webhook_secret])
+    Brando.Videos.Uploaders.Mux.configured?() and present?(cfg[:webhook_secret])
   end
 
   def upload_available?(:bunny) do
-    cfg = Application.get_env(:brando, Brando.Videos.Uploaders.Bunny, [])
+    cfg = provider_config(Brando.Videos.Uploaders.Bunny)
     webhook_secret = cfg[:webhook_secret] || cfg[:read_only_api_key]
 
-    present?(cfg[:api_key]) and present?(cfg[:library_id]) and present?(cfg[:cdn_hostname]) and
-      present?(webhook_secret)
+    Brando.Videos.Uploaders.Bunny.configured?() and present?(cfg[:library_id]) and
+      present?(cfg[:cdn_hostname]) and present?(webhook_secret)
   end
 
   def upload_available?(:cloudflare) do
-    cfg = Application.get_env(:brando, Brando.Videos.Uploaders.Cloudflare, [])
+    cfg = provider_config(Brando.Videos.Uploaders.Cloudflare)
 
-    present?(cfg[:account_id]) and present?(cfg[:api_token]) and
-      present?(cfg[:webhook_secret])
+    Brando.Videos.Uploaders.Cloudflare.configured?() and present?(cfg[:webhook_secret])
   end
 
   # :local uses the traditional upload flow (not this direct-upload button);
   # unsupported strategies are rejected by Blueprint config validation.
   def upload_available?(_strategy), do: false
 
+  @doc false
+  def provider_config(provider), do: Application.get_env(:brando, provider, [])
+
+  # Deliberately looser than the providers' own `present?/1`, which requires a
+  # non-empty binary. This one guards ids and hostnames, not credentials — see
+  # `upload_available?/1`.
   defp present?(nil), do: false
   defp present?(""), do: false
   defp present?(_), do: true

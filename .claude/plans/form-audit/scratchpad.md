@@ -1922,3 +1922,73 @@ rather than by reading the range.
   Out of scope by a wide margin.
 - **`Form`'s remaining 5288 lines.** Mostly `update/2` and `handle_event/3` — the
   stateful half every seam check in this audit has said not to move.
+
+## The two open items, closed (2026-08-07)
+
+Both were carried out of 9E as "recorded rather than pretended closed". Gates:
+`mix test` **1320 + 135 / 0** (+15) · credo **279** unchanged · compile
+`--warnings-as-errors --force` clean · format clean · **E2E 109 / 0, 9.0m**.
+
+### 1. `upload_available?/1` no longer re-decides the credential question
+
+The two functions answer genuinely different questions — *"should the upload
+control render?"* versus *"would an API call work?"* — so they are not merged.
+What was wrong is that each decided the **credential half** on its own terms:
+`Videos.present?/1` accepts any non-nil non-empty term, the providers require a
+non-empty binary. `upload_available?/1` now delegates to `configured?/0` and
+owns only what that deliberately does not check — the webhook secret and the
+routing values, which keep the looser check because `library_id` is an id and an
+integer is a reasonable way to configure one.
+
+**RED, and it was narrower than expected.** The empty-string case *already*
+agreed (`Videos.present?("")` is false), so only the non-binary case diverged:
+`account_id: 12_345` rendered the button over a provider that would reject the
+pick. That is the test, and it is the only one that went red pre-change.
+*Worth noting because the 9E note described the divergence as two-sided; it was
+one-sided, and running it is what said so.*
+
+### 2. Boot-time provider validation — `Brando.Videos.ProviderConfigCheck`
+
+Runs from `Brando.Supervisor.init/1`. This is the half 9E left open: pre-flight
+validation made a bad deploy *harmless*, but it was still discovered by the
+first person who tried to upload.
+
+**It logs; it does not raise by default, and that is the design.** Refusing to
+boot turns a misconfiguration into an outage and breaks every environment that
+legitimately has no provider credentials — dev, test, CI, any site on `:local`.
+The damage was already fixed; what was missing was *visibility*.
+`config :brando, :strict_video_provider_config, true` opts into raising, off by
+default because it decides whether an application starts and nobody should
+inherit that by upgrading.
+
+**Detection is deliberately narrow, because a check that cries wolf gets
+scrolled past.** Three cases: the default strategy is an unconfigured provider;
+*partial* credentials (which cannot be intentional — nobody sets
+`MUX_TOKEN_ID` and omits `MUX_TOKEN_SECRET`); credentials present but no webhook
+secret (uploads start, never finish, and the control silently does not render).
+A provider with *no* configuration is not a problem — that is what every site
+not using it looks like.
+
+**RED: deleting the "not in use" clause reddens 9 of 12**, including the
+narrowness test and every `[problem] =` single-match assertion, because the two
+unconfigured providers start reporting. That is the mutation that matters — the
+detection tests would pass without that clause; only the quiet-by-default
+property fails.
+
+Confirmed against e2e: **zero output across a full run**, so a correctly
+configured app boots silently.
+
+### A correction to this file's own numbers
+
+A `form.ex` breakdown given earlier in this session claimed "41% private
+helpers, 2171 lines". **Wrong** — the script bucketed public functions into the
+private tally. Actual: private **103 names / 1599 lines (30%)**, median 12 lines,
+3 over 40; public **27 names / 3302 lines (62%)**. The bulk is four names —
+`handle_event` 1284, `update` 842, `render` 288, `event_tag_received` 269 —
+i.e. 51% of the file in four functions, and a healthy helper layer under them.
+
+`event_tag_received/2` is the most separable thing left: 269 lines, `def` but
+with one external caller and that caller a test, and 6 of its 11 clauses are
+`:live_preview*` variants worth ~196 lines. Separable as plain `socket -> socket`
+functions, with no component protocol — which is a different operation from the
+component splits this audit correctly kept rejecting.

@@ -376,8 +376,19 @@ the known strategies explicitly and letting an unknown one fail loudly — the
 `{:error, {:unknown_strategy, strategy}}` branch at `uploader.ex:162` already
 sets that precedent.
 
-**Config is read at call time, not boot.** Even after 9E, nothing catches a
-misconfigured deploy at startup — it is caught at first pick, just gracefully
-now. Genuine boot-time validation is a larger change and out of scope here, but
-it is the thing that would make 9B's "deploy-time config error" literally true.
-Worth recording in `plan.md` as an open item rather than pretending 9E closes it.
+~~**Config is read at call time, not boot.**~~ **CLOSED 2026-08-07**, after
+Phase 10, by `Brando.Videos.ProviderConfigCheck` running from
+`Brando.Supervisor.init/1`. It logs rather than raising — refusing to boot would
+turn a misconfiguration into an outage and break every environment that
+legitimately has no provider credentials — with
+`config :brando, :strict_video_provider_config, true` as the opt-in strict
+reading. Detection is narrow on purpose (default strategy unconfigured; partial
+credentials; credentials without a webhook secret), so a site not using a
+provider is never nagged. RED: deleting the "not in use" clause reddens 9 of 12
+tests. Zero output across a full e2e run.
+
+The second item found while implementing 9E — `video_upload_available?/1` being
+a fourth credential check with a fourth set of rules — is **also closed**: it
+now delegates the credential half to `configured?/0` and owns only the webhook
+secret and routing values. The divergence turned out to be one-sided, not two:
+the empty-string case already agreed, and only a non-binary credential differed.

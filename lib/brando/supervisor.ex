@@ -19,6 +19,11 @@ defmodule Brando.Supervisor do
     Brando.Villain.HeexRenderer.init_cache()
     Brando.Villain.init_parse_cache()
 
+    # A misconfigured video provider used to be discovered by the first editor
+    # who picked a file. It says so here instead. Logs by default and never
+    # blocks boot — see the moduledoc for why, and for the opt-in strict mode.
+    Brando.Videos.ProviderConfigCheck.run()
+
     children = [
       %{id: :main_cache, start: {Cachex, :start_link, [:cache, []]}},
       %{id: :query_cache, start: {Cachex, :start_link, [:query, []]}},

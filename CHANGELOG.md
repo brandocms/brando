@@ -156,6 +156,28 @@
 
 #### Features
 
+- **`Brando.Videos.ProviderConfigCheck` reports misconfigured video providers at
+  boot.** Runs from `Brando.Supervisor.init/1`. The provider clients have always
+  said missing credentials are "a deploy-time configuration error", but nothing
+  checked at deploy time — a bad configuration was found by the first editor who
+  picked a video file.
+
+  It **logs** and never blocks startup. Refusing to boot would turn a
+  misconfiguration into an outage and break every environment that legitimately
+  has no provider credentials. Sites wanting the strict reading can opt in:
+
+      config :brando, :strict_video_provider_config, true
+
+  which raises at boot instead. Off by default, because it decides whether an
+  application starts.
+
+  Three cases are reported, chosen so a site not using a provider is never
+  nagged: the default strategy is an unconfigured provider; a provider has
+  *some* credential keys set and others missing; a provider has usable
+  credentials but no webhook secret (uploads start, never complete, and the
+  upload control silently does not render). A provider with no configuration at
+  all is not reported.
+
 - **`configured?/0` on all three video providers.** `Brando.Videos.Uploaders.Mux`,
   `.Bunny` and `.Cloudflare` each expose the credential predicate their
   `api_request` raises on, so that a pre-flight validator and the raise cannot
@@ -204,6 +226,16 @@
   compilation and raised from the changeset instead.
 
 #### Fixes
+
+- **`Brando.Videos.upload_available?/1` now agrees with the providers about what
+  a credential is.** It decided the credential half itself, accepting any
+  non-nil non-empty term, while the providers require a non-empty binary. A
+  non-binary credential — `account_id: 12345` rather than `"12345"` — therefore
+  rendered the upload control over a provider that rejected the pick behind it.
+  It now delegates to `configured?/0` and owns only the checks that function
+  deliberately does not make: the webhook secret and routing values such as
+  `library_id`, which keep the looser check because an id is not a secret.
+
 
 - **S3 credentials no longer reach exception messages or `inspect/1` output.**
   `Brando.CDN.upload_image/4` raises when a config has no bucket, and that raise
