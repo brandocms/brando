@@ -71,6 +71,33 @@
   while silently changing behaviour on exactly the path this change was about, so
   the call sites are better updated by hand.
 
+- **The video drawer's markup moved out of `BrandoAdmin.Components.Form` into
+  `BrandoAdmin.Components.Form.VideoDrawer`.** Six public functions moved with it
+  and are no longer defined on `Form`:
+
+  | was | is now |
+  |---|---|
+  | `Form.video_drawer/1` | `Form.VideoDrawer.render/1` |
+  | `Form.reset_video_field/1,2` | `Form.VideoDrawer.reset_video_field/1,2` |
+  | `Form.reset_video_thumbnail/1,2` | `Form.VideoDrawer.reset_video_thumbnail/1,2` |
+  | `Form.parse_video_url/1,2` | `Form.VideoDrawer.parse_video_url/1,2` |
+  | `Form.extract_thumbnail/1,2` | `Form.VideoDrawer.extract_thumbnail/1,2` |
+  | `Form.close_video/0,1` | `Form.VideoDrawer.close_video/0,1` |
+
+  The function bodies are unchanged — this is a move, verified by diffing the
+  extracted text against the original, and the only edits are the renames in the
+  table plus three private helpers losing their now-redundant `video_` prefix.
+  The rendered markup and every `phx-*` binding in it are identical, so a form
+  that does not call these functions by name sees no difference.
+
+  **The drawer's behaviour deliberately did not move.** All eight `update/2` and
+  eleven `handle_event/3` clauses stay on `Form`, because they write *`Form`'s*
+  state: `save_video_authorized` assigns `:form` and `:entry` and ships field
+  changes, and drawer recovery is computed for image, video and file together in
+  one place. `VideoDrawer` is a `:component`, like `MetaDrawer` and
+  `ScheduledPublishingDrawer` — its events belong to the parent form, and its
+  `myself` still arrives as an assign, so component targeting is unchanged.
+
 #### Features
 
 - **`one_of` / `exactly_one_of` constraints for "either of these fields"**: an entry that is valid
