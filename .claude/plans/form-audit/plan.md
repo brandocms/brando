@@ -29,15 +29,17 @@
 
 ## START HERE — audit status (updated 2026-08-07)
 
-**Phases 0–8 are complete**, and so are **9A** (bookkeeping) and **9B** (the
-credential decision). Phase 8's review is closed: 2 BLOCKERs, 3 WARNINGs,
+**Phases 0–9 are complete.** Phase 8's review is closed: 2 BLOCKERs, 3 WARNINGs,
 5 SUGGESTIONs, all fixed and measured. Committed as `a5dac0331` (review fixes +
-9A) and `08c371da2` (9B, a breaking change, deliberately on its own).
+9A) and `08c371da2` (9B, a breaking change, deliberately on its own); 9C and 9D
+followed on 2026-08-07.
 
-**Next up: `phase-9-plan.md` § Phase 9C — extract `Form.VideoDrawer`.** It is
-the only unblocked task with code in it, its targets have been re-measured, and
-nothing is waiting on a decision. That file opens with a "Start here on a fresh
-context" section written for exactly this situation.
+**Nothing is open that has been decided-and-not-done.** What remains is the two
+**deferred** extractions (`ImageDrawer`/`FileDrawer`, `Chrome`), and Phase 9C
+changed how they should be approached — see the note under `## G` below and
+9C-3's cost table. The short version: **section G's "the seams are clean" premise
+is false as written**, the markup half of each extraction is cheap and the
+stateful half is not, and the two must be estimated separately.
 
 Phases 5–9 live in their own files (`phase-5-plan.md` … `phase-9-plan.md`),
 because this file's Phases 0–4 are followed by shared `## Verification` /
@@ -54,10 +56,10 @@ the full classification is the table in `phase-9-plan.md`.
 
 | What | Where | Note |
 |---|---|---|
-| `Form.VideoDrawer` extraction | `## G` below | Phase 9C does this one **only**, then decides the rest with a measured number |
-| `Form.ImageDrawer` / `FileDrawer` extraction | `## G` below | deferred to Phase 10, gated on 9C's cost |
-| `Form.Chrome` extraction | `## G` below | same gate |
-| Cross-entry snapshot leak | finding **C4** | unconfirmed; Phase 9D reproduces it or closes it |
+| ~~`Form.VideoDrawer` extraction~~ | `## G` below | **DONE 2026-08-07 (9C), markup only** — 354 lines out, `form.ex` 6565 → 6211 |
+| `Form.ImageDrawer` / `FileDrawer` extraction | `## G` below | deferred to Phase 10 — **ungated now**: 9C's cost is measured, see 9C-3 |
+| `Form.Chrome` extraction | `## G` below | same; on its face ~35 pure function components, so likely the **cheapest** of the three despite being listed last |
+| ~~Cross-entry snapshot leak~~ | finding **C4** | **CLOSED 2026-08-07 (9D) — not a leak**, and the reason the audit had been giving for it was wrong about its fact |
 
 That is the whole list. The video-uploader credential disagreement, carried
 unresolved through Phases 4–8, was **closed on 2026-08-07** (`08c371da2`,
@@ -481,14 +483,27 @@ The key is `STORAGE_PREFIX + this.el.id`, and `@id` is `"#{singular}_form"` with
 In principle a stale snapshot from entry A could inject blocks into entry B. The exact trigger
 path via `push_navigate` is **unconfirmed**.
 
-- **[OPEN — UNCONFIRMED]** *(Phase 9D reproduces this or closes it)* Reproduce: create unsaved
+- **[CLOSED — NOT A LEAK, 2026-08-07 (Phase 9D)]** Reproduce: create unsaved
       blocks on entry A, navigate to entry B without saving, reconnect
-      — **not reproduced, and the static read says it is hard to reach.** The snapshot is only
+      — ~~**not reproduced, and the static read says it is hard to reach.** The snapshot is only
       written by `disconnected()`, and only `reconnected()` reads it — a hook that *mounts* after
       the reconnect runs `mounted()`, which is deliberately a no-op. So the leak needs the same
       hook element to survive an entry change, i.e. a `push_patch` within one LiveView rather
-      than the `push_navigate` used between entries. Recorded as unconfirmed, not as absent:
-      this is a reading of the hook lifecycle, not a runtime probe
+      than the `push_navigate` used between entries.~~ Recorded as unconfirmed, not as absent:
+      this is a reading of the hook lifecycle, not a runtime probe.
+      **AMENDED — the struck sentence is wrong about its fact.** That `push_patch` path exists:
+      `form.ex`'s save-and-continue on a *create* does `push_patch(to: update_url)` after
+      `assign(:entry_id, entry.id)` with no remount, and `live_view/form/hooks.ex` says so
+      outright (*"create + save-and-continue push_patches to the update route without
+      remounting"*). The `mounted()` barrier does not apply there.
+      **The leak is still absent, for the other barrier — the one the checkbox below shipped.**
+      `data-entry-id` re-renders with the patch, so `storageKey()` moves *forward* with the
+      entry; the `new` bucket is orphaned, not served to a persisted entry, and orphans are
+      TTL-bounded and unreachable (another create form requires navigation, which remounts).
+      Now pinned by `block-recovery.spec.js`, *"the recovery key follows the entry across
+      save-and-continue"*. **RED:** `data-entry-id={nil}` reddens exactly that test — **and
+      leaves the other four recovery specs green**, which is how a barrier fixed in Phase 3
+      went eight phases without ever being exercised
 - [x] Regardless of repro, include `entry_id` in the storage key (cheap, strictly correct) —
       key is now `brando:block-recovery:<entry_id>:<el.id>`, fed by a new `data-entry-id` on the
       hook element. Unsaved entries share a `new` bucket, which is still strictly narrower than
@@ -1088,17 +1103,65 @@ pickers all read the changeset correctly (`image.ex:71`, `file.ex:52`, `video.ex
       `CastPolymorphicEmbeds` trait. The finding's "consistent 3-site pattern" was never about
       polymorphic embeds at all
 
-### G. Structure — `form.ex` is **6565 lines** (measured 2026-08-07; it was 6257 when this was written)
+### G. Structure — `form.ex` is **6211 lines** (measured 2026-08-07 after 9C; was 6565 before it, 6257 when this was written)
 
-Extract in this order, lowest risk first. These already communicate via `send_update`, so the
-seams are clean.
+Extract in this order, lowest risk first. ~~These already communicate via `send_update`, so the
+seams are clean.~~
 
-- [ ] `Form.VideoDrawer` — `update/2:365-459`, `handle_event:3549-4069` — **Phase 9C. Treat these
-      ranges as stale** and re-locate by function head: the file grew 308 lines after they were written.
-- [ ] `Form.ImageDrawer` / `Form.FileDrawer` — `update/2:175-330` — **deferred to Phase 10**, gated on
-      9C's measured cost. Ranges stale, as above.
-- [ ] `Form.Chrome` — the ~35 pure function components at `:5274-6257` — **deferred to Phase 10**, same
-      gate. Ranges stale, as above.
+> **The premise above was CHECKED in Phase 9C and is FALSE as written.** Kept rather than deleted,
+> per the audit's practice of amending records.
+>
+> **Inbound is `send_update`** — six sites, all real: `form/input/video.ex:241` (`:open_video_drawer`)
+> and `:263` (`:update_edit_video`), and `live_view/form/hooks.ex:903/919/934/952` (the four upload
+> actions). Those would retarget by changing a module name.
+>
+> **Outbound is direct assignment, not messages.** `handle_event("save_video_authorized", …)`
+> (`form.ex`, pre-9C `:4064`) is *the mechanism by which the video id reaches the parent entry
+> changeset*: it reads `form`/`entry`/`schema`/`singular` and writes `:form` and `:entry`, calls
+> `ship_all_field_changes/1` and pushes `b:validate`. `update(%{action: :video_upload_complete}, …)`
+> calls `update_changeset/3` for the same reason. Three further couplings are not messages either:
+> `assign_drawer_recovery_state/1` computes image, video **and** file recovery in a single `cond`
+> feeding the `phx-auto-recover` form on `Form`'s own element; `restore_video_drawer/2` is reached
+> from the parent's own handler; and `commit_selected_asset/3` is shared with image and file.
+>
+> So a **stateful** extraction needs a callback protocol invented for the changeset write plus a
+> CID change on every control in the drawer. A **markup** extraction costs nothing, because the
+> call site already passes all seven inputs explicitly, `myself={@myself}` included. 9C did the
+> second and recorded why, rather than forcing the first. That distinction should be applied to
+> the two deferred items below before either is estimated.
+
+- [x] `Form.VideoDrawer` — **DONE 2026-08-07 (Phase 9C), markup only.** `BrandoAdmin.Components.Form.VideoDrawer`,
+      a `:component` exposing `render/1`, following `MetaDrawer`/`ScheduledPublishingDrawer` — the two
+      sibling drawers whose events also belong to the parent form. **354 lines out of `form.ex`**
+      (6565 → 6211): `@aspect_ratio_options` + `video_metadata_inputs/1` → `metadata_inputs/1`,
+      `video_thumbnail_section/1` → `thumbnail_section/1`, `video_settings_section/1` →
+      `settings_section/1`, `video_drawer/1` → `render/1`, and the five JS command helpers
+      (`reset_video_field/2`, `reset_video_thumbnail/2`, `parse_video_url/2`, `extract_thumbnail/2`,
+      `close_video/1`). All 8 `update/2` and 11 `handle_event/3` clauses stayed in `form.ex`
+      deliberately — see the refutation above. The move was verified by diffing the extracted text
+      against the original: **exactly 11 renames and nothing else.**
+      The stale ranges were re-measured rather than trusted, and were wrong in both directions:
+      `handle_event:3549-4069` **missed** `save_video`/`save_video_authorized` and **swallowed**
+      six unrelated file and image handlers. `"extract_thumbnail"` — the one name in the inventory
+      that does not say "video" — was checked and **does** belong to the video drawer: its only
+      caller is `video_thumbnail_section/1`, rendered only from `video_drawer/1`.
+      One thing the extraction surfaced that no finding had: `Tab` was aliased in `form.ex` **only**
+      for the video drawer's sub-tabs, so the alias went unused and `--warnings-as-errors` caught it.
+- [ ] `Form.ImageDrawer` / `Form.FileDrawer` — ~~`update/2:175-330`~~ — **Phase 10. The gate is
+      OPEN: 9C's cost is measured** (354 lines, ~1h, both suites green throughout — see 9C-3).
+      **Split it the way 9C did, and check the seam first.** These are the *harder* pair, not the
+      easier: the image drawer additionally owns `image_editor_*` state and a focal-point
+      component, and `assign_drawer_recovery_state/1` covers image and file in the same `cond`
+      the video drawer could not be split out of. Expect the markup half to move cleanly and the
+      stateful half not to.
+      **Ranges doubly stale** — written before the file grew 308 lines, and 9C then removed 354
+      from `:2603` onward. Re-locate by function head; do not shift them arithmetically.
+- [ ] `Form.Chrome` — ~~the ~35 pure function components at `:5274-6257`~~ — **Phase 10, and on
+      the evidence this is the CHEAPEST of the three, not the riskiest.** Section G ranked it last
+      as highest-risk; 9C's seam check is what invalidates that ranking. "~35 *pure function
+      components*" is a description of markup with no state to strand — the exact shape that cost
+      9C nothing. It is also the largest, so it is where most of the remaining ~950 lines are.
+      **Ranges doubly stale**, as above; `form.ex` is now 6211 lines, so `:6257` is past its end.
 - **[DECISION, not a task]** Leave gallery/entry-relation delivery in place — state-entangled, not a clean split
 
 ---

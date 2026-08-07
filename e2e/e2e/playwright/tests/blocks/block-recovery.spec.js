@@ -193,4 +193,67 @@ test.describe('Block Recovery', () => {
     await expect(page.locator('.entry-block')).toHaveCount(1)
     await expect(page.locator('.header-block textarea')).toBeVisible()
   })
+
+  // C4, closed in Phase 9D — and the plan's stated reason for closing it was
+  // wrong about the fact.
+  //
+  // The finding was that the snapshot key was schema-scoped, so a stale
+  // snapshot from entry A could be offered to entry B. The static read closed
+  // it on the grounds that the leak "needs the same hook element to survive an
+  // entry change, i.e. a push_patch within one LiveView rather than the
+  // push_navigate used between entries" — implying no such path existed.
+  //
+  // One does. Save-and-continue on a CREATE is exactly it: form.ex's
+  // `push_patch(to: update_url)` keeps the same LiveView, so the BlockField
+  // hook element survives while the entry goes from unsaved to persisted. The
+  // `mounted()`-is-a-no-op barrier does not apply on this path.
+  //
+  // The leak still does not happen, but because of the OTHER barrier — the one
+  // C4's own fix shipped. `data-entry-id` (block_field.ex) re-renders with the
+  // patch, so `storageKey()` moves forward with the entry instead of serving
+  // the `new` bucket to a persisted entry. That is what this pins.
+  test('the recovery key follows the entry across save-and-continue', async ({ page }) => {
+    await createUnsavedBlock(page, {
+      title: 'Key Follows Entry Test',
+      uri: 'key-follows-entry-test',
+      text: 'Key Follows Header',
+    })
+
+    const hookEl = page.locator('[phx-hook="Brando.BlockField"]').first()
+
+    // Unsaved: `@entry.id` is nil, so HEEx omits the attribute entirely and
+    // storageKey()'s `this.el.dataset.entryId || 'new'` buckets under `new`.
+    const idBeforeSave = await hookEl.getAttribute('data-entry-id')
+    expect(idBeforeSave ?? '').toBe('')
+
+    // push_patch, not push_navigate — the URL changes to /update/ and the hook
+    // element is never torn down.
+    await page.getByTestId('split-dropdown-button').click()
+    await page.getByRole('button', { name: /Save and continue editing/ }).click()
+    await expect(page).toHaveURL(/\/update\//, { timeout: 30000 })
+    await syncLV(page)
+    await page.waitForTimeout(750) // let the post-save re-seed land
+
+    // The key moved forward with the entry. If this attribute did NOT re-render
+    // on the patch, the persisted entry would go on reading and writing the
+    // `new` bucket — which is C4's leak, on the one path that can reach it.
+    const entryId = await hookEl.getAttribute('data-entry-id')
+    expect(entryId).toMatch(/^\d+$/)
+
+    // And recovery still works after the patch, keyed by the new id: capture on
+    // disconnect, read back on reconnect, block intact.
+    await page.evaluate(() => window.liveSocket.disconnect())
+    await expect(page.locator('.phx-connected').first()).toBeHidden({ timeout: 15000 })
+
+    const keys = await page.evaluate(() =>
+      Object.keys(sessionStorage).filter(k => k.startsWith('brando:block-recovery:'))
+    )
+    expect(keys.some(k => k.startsWith(`brando:block-recovery:${entryId}:`))).toBe(true)
+
+    await page.evaluate(() => window.liveSocket.connect())
+    await syncLV(page)
+
+    await expect(page.locator('.entry-block')).toHaveCount(1)
+    await expect(page.locator('.header-block textarea')).toHaveValue('Key Follows Header')
+  })
 })

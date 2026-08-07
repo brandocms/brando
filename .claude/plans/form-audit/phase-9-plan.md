@@ -197,32 +197,118 @@ measuring rather than by trusting the note. Cited by name below, per 8A.
 that does not say "video". Confirm it belongs to the video drawer and is not
 shared with the image editor.
 
-- [ ] **9C-1 — extract `Form.VideoDrawer`**, using the inventory above.
-      Communicates via `send_update` already, so the seam is declared clean —
-      **verify that claim before relying on it**, the same way Phase 8's SEC-1
-      verified "no Bunny call follows a redirect" before changing transport.
-- [ ] **9C-2 — E2E is the gate, and run it before believing the extraction.**
-      `projects.spec.js:290` is the spec that caught `:997`; the video drawer is
-      exactly its subject. Run the full suite, not that file alone.
-      **RED:** state, before running, which spec would fail if the extraction
-      dropped an event handler — then confirm it does by removing one.
-- [ ] **9C-3 — record the cost.** Lines moved, wall-clock, whether E2E caught
-      anything `mix test` did not. That number is what decides whether
-      `ImageDrawer`/`FileDrawer` and `Chrome` happen in Phase 10 or not at all.
+- [x] **9C-1 — extract `Form.VideoDrawer`** — done 2026-08-07, **markup only, and
+      the seam claim was checked first and is FALSE as written.**
+      Inbound *is* `send_update` (six sites: `input/video.ex:241,263`,
+      `hooks.ex:903,919,934,952`). **Outbound is direct assignment, not messages** —
+      `handle_event("save_video_authorized", …)` is the mechanism by which the
+      video id reaches the *parent* entry changeset (reads `form`/`entry`/`schema`/
+      `singular`; writes `:form` and `:entry`; calls `ship_all_field_changes/1`;
+      pushes `b:validate`), and `update(%{action: :video_upload_complete}, …)`
+      calls `update_changeset/3`. Three more couplings are not messages at all:
+      `assign_drawer_recovery_state/1` computes image+video+file in one `cond`,
+      `restore_video_drawer/2` runs off the parent's `phx-auto-recover`, and
+      `commit_selected_asset/3` is shared with image and file.
+      So a **stateful** extraction needs a callback protocol invented for the
+      changeset write plus a CID change on every control; a **markup** extraction
+      costs nothing, because the call site already passes all seven inputs
+      explicitly including `myself={@myself}`. Shipped the second.
+      `BrandoAdmin.Components.Form.VideoDrawer`, a `:component` exposing `render/1`,
+      following `MetaDrawer`/`ScheduledPublishingDrawer` — the two sibling drawers
+      whose events also belong to the parent form. All 8 `update/2` + 11
+      `handle_event/3` clauses stayed in `form.ex` by design.
+      **The two checks this task named were both done and both paid:** the stale
+      ranges were wrong in *both* directions as predicted, and `"extract_thumbnail"`
+      does belong to the video drawer (only caller `video_thumbnail_section/1`,
+      rendered only from `video_drawer/1`).
+- [x] **9C-2 — E2E gate, green then RED** — done 2026-08-07.
+      **GREEN: full suite `--reset`, 107 passed / 0 failed, 8.9m** — baseline exactly.
+      **RED, predicted before running and confirmed:** this extraction moved *zero*
+      event handlers, so "dropped a handler" is not its failure mode — what moved is
+      markup plus five JS push helpers, making a dropped **event binding** the
+      faithful mutation. Removing `phx-submit="save_video"` from the extracted
+      `<.form id="video-drawer-form">` was predicted to fail
+      `projects.spec.js:290` at `getByRole('button', {name: 'Edit video'})`,
+      because `close_video/0`'s dispatched submit would reach a form with no bound
+      event. **It failed at exactly that line and that assertion.** Mutation reverted,
+      tree recompiled clean.
+- [x] **9C-3 — the cost, measured** — done 2026-08-07. **See the table below.**
+      The short version: **354 lines moved, ~1 hour end to end, and E2E caught
+      nothing `mix test` did not** — because nothing was there to catch. That last
+      fact is the number that matters, and it is a property of *markup-only*
+      extraction, not a licence for the stateful kind.
+
+### 9C-3 — the cost, measured (2026-08-07)
+
+| | |
+|---|---|
+| Lines out of `form.ex` | **354** (6565 → 6211, −5.4%) |
+| New file | `form/video_drawer.ex`, 390 lines (353 moved + 36 header/moduledoc + 1) |
+| Edits inside the moved text | **11 renames, and nothing else** — proven by diffing the extracted block against the original, not asserted |
+| Wall-clock | ~1h, of which **~19 min was E2E** (8.9m green + ~10m RED) and most of the rest was *checking the seam*, not moving code |
+| `mix test` | 1291 + 135 doctests, 0 failures — unchanged |
+| `mix credo --strict` | 284 (2/118/152/12) — unchanged |
+| Output noise | 43 / 27 / 0 warm — unchanged |
+| E2E | 107 / 0 — unchanged |
+| **Did E2E catch anything `mix test` did not?** | **No — and nothing was there to catch.** Both gates were green from the first compile |
+
+**What actually cost something was the compiler**, not either test suite: it caught
+that `Tab` was aliased in `form.ex` *only* for the video drawer's sub-tabs, so the
+alias went dead the moment the markup left. `--warnings-as-errors` found that in
+seconds; no test would have.
+
+**What this number does and does not license.** It says a *markup* extraction from
+this file is cheap and safe: the risk was in the seam, the seam was checked first,
+and once it was clear the move itself was mechanical. It says **nothing** about the
+stateful extraction section **G** originally meant — that one still has to invent a
+protocol for the parent-changeset write, and this file's record against structural
+change remains 2-for-2 reverted. **Phase 10 should apply the same split to
+`ImageDrawer`/`FileDrawer` and `Chrome`: check each seam before estimating, and
+expect the markup half to be the tractable one.** `Chrome` — "~35 pure function
+components" — is on its face almost entirely markup, and so is likely the *cheapest*
+of the three despite being listed last.
 
 ---
 
 ## Phase 9D — `:418`, or close it `[liveview]`
 
-- [ ] **Decide whether the cross-entry snapshot leak is worth reproducing.**
-      finding **C4** says the static read makes it hard to reach: the snapshot is
-      written only by `disconnected()` and read only by `reconnected()`, so it
-      needs the same hook element to survive an entry change — a `push_patch`
-      within one LiveView, where entries use `push_navigate`.
-      Either build that case and see, or mark it `UNCONFIRMED — closed` with the
-      static argument as the reason. **What is not acceptable is a tenth phase
-      that still says "recorded as unconfirmed"** — that is the same pattern the
-      credential disagreement just spent six phases in.
+- [x] **Decided 2026-08-07: CLOSED — not a leak. And the static argument this
+      task offered as the fallback reason was WRONG ABOUT ITS FACT**, so it is not
+      the reason given.
+
+      The argument was: the leak "needs the same hook element to survive an entry
+      change — a `push_patch` within one LiveView, where entries use
+      `push_navigate`." **That path exists.** `form.ex`'s save-and-continue on a
+      *create* does exactly it: `push_patch(to: update_url)` after
+      `assign(:entry_id, entry.id)`, no remount, hook element intact while the
+      entry goes from unsaved to persisted. `live_view/form/hooks.ex` documents it
+      in so many words — *"create + save-and-continue push_patches to the update
+      route without remounting"* — and attaches `:b_form_arm_entry` precisely
+      because that path needed special handling. So the `mounted()`-is-a-no-op
+      barrier, which is the whole of the static argument, **does not apply there.**
+
+      **The leak still does not occur, for the other barrier — the one C4's own
+      second checkbox shipped.** `data-entry-id` (`block_field.ex`, from
+      `@entry.id`) re-renders with the patch, so `storageKey()`'s
+      `dataset.entryId || 'new'` moves *forward* with the entry. Entry A's
+      snapshot is never offered to entry B; what actually happens is the `new`
+      bucket is orphaned, and orphans are bounded by `SNAPSHOT_TTL_MS` and are
+      unreachable anyway (reaching another create form requires navigation, which
+      remounts).
+
+      **Pinned by a test rather than by prose**, since a claim whose only check is
+      a re-read is not checked — which is exactly how this finding stayed
+      unconfirmed for nine phases. `block-recovery.spec.js`, *"the recovery key
+      follows the entry across save-and-continue"*: asserts the attribute is
+      absent before the save (the `new` bucket), numeric after the patch, that the
+      snapshot written on the next disconnect carries the entry id, and that
+      recovery still works. **RED measured:** replacing `data-entry-id={@entry.id}`
+      with `nil` reddens **exactly this test** at `expect(entryId).toMatch(/^\d+$/)`.
+
+      **The other four recovery specs stay green under that mutation** — so
+      nothing in the suite covered the entry-scoping barrier before this. That is
+      the more useful finding: C4's fix had shipped in Phase 3 with no test, and
+      the audit had been reasoning about a barrier it had never once exercised.
 
 ---
 
@@ -238,7 +324,7 @@ recorded before the review:
 | `mix compile --warnings-as-errors` | clean | clean |
 | `mix format --check-formatted` | clean | clean |
 | Unit-suite output | 43 stdout / 27 non-dot / 0 stderr, **warm build** | ≤ baseline |
-| E2E | 107 / 0, measured 2026-08-07 (three runs, one per round that touched `lib/`) | 107 / 0 after 9C |
+| E2E | 107 / 0, measured 2026-08-07 (three runs, one per round that touched `lib/`) | **108 / 0** — 107/0 measured after 9C, then **+1** for 9D's new recovery spec |
 
 **The output-noise figure is a warm-build number.** A `mix test` that also
 recompiles adds two non-dot lines (`Compiling N files`, `Generated brando app`).
@@ -255,13 +341,22 @@ them. 9B and 9C both do.
 ```
 9A  Bookkeeping        ✔ DONE 2026-08-07  (a5dac0331)
 9B  Credential         ✔ DONE 2026-08-07  (08c371da2, breaking)
-      ↓
-9C  Extraction        ◀ NEXT — 9C-1 → 9C-2 → 9C-3
-9D  :418               decide, or close   (independent of 9C)
+9C  Extraction         ✔ DONE 2026-08-07  — markup only; seam claim checked and refuted
+9D  :418               ✔ DONE 2026-08-07  — closed, not a leak; pinned by a new E2E test
 ```
 
-9A and 9B are closed and committed. **9C is the next step**, and 9D can be taken
-in either order relative to it — they touch nothing in common.
+**Phase 9 is complete.** 9C and 9D were taken in the same session and touch
+nothing in common, as predicted. Two things came out of it that Phase 10 should
+carry:
+
+1. **Section G's "the seams are clean" is false as written** — inbound is
+   `send_update`, outbound is direct assignment to the parent. Split every
+   remaining extraction into its markup half (cheap) and its stateful half
+   (needs a protocol invented), and estimate them separately.
+2. **A barrier can be fixed and still never exercised.** C4's entry-scoped key
+   shipped in Phase 3 with no test; eight phases of reasoning rested on it, and
+   the mutation that proves it shows the rest of the suite does not notice its
+   removal.
 
 ---
 

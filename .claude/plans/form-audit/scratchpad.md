@@ -1451,3 +1451,123 @@ Cloudflare tests fail** while Mux and Bunny stay green.
 
 *Same lesson as B2, one day later: the mutation you ran has to be the mutation
 you claimed. It cost one extra command to be right about it.*
+
+---
+
+## Phase 9C + 9D — the audit's own premises fail two checks (2026-08-07)
+
+Both closed the same session. Both went the way they went because a claim the
+plan had been resting on was **checked instead of re-read** — and in both cases
+the claim was wrong. That is now three phases running (B2, then these two), and
+the pattern has sharpened again: the dangerous claims are not the ones about
+code, they are the ones the plan makes about **why something is safe**.
+
+### 9C — "the seams are clean" was half a sentence, and the wrong half
+
+Section **G** justified all three extractions with: *"These already communicate
+via `send_update`, so the seams are clean."* Checked before moving anything:
+
+* **Inbound is `send_update`, exactly as claimed.** Six sites, all real —
+  `input/video.ex:241,263` and `hooks.ex:903/919/934/952`.
+* **Outbound is not messages at all.** `handle_event("save_video_authorized", …)`
+  *is the mechanism* by which the video id reaches the parent entry changeset:
+  it reads `form`/`entry`/`schema`/`singular`, writes `:form` and `:entry`, calls
+  `ship_all_field_changes/1`, pushes `b:validate`. `video_upload_complete` calls
+  `update_changeset/3` for the same reason. And three couplings are not even
+  message-shaped: `assign_drawer_recovery_state/1` computes image+video+file in
+  **one `cond`**, `restore_video_drawer/2` runs off the parent's
+  `phx-auto-recover`, `commit_selected_asset/3` is shared three ways.
+
+The sentence was written from the *inbound* direction only. Nobody looked at
+what came back out — which is where the state is.
+
+**So the extraction was split, and only the tractable half shipped.** Markup +
+the five JS command helpers → `Form.VideoDrawer`, a `:component` exposing
+`render/1`, following `MetaDrawer`/`ScheduledPublishingDrawer` — the two sibling
+drawers that already have this exact shape, and have it *for this exact reason*.
+354 lines out; `form.ex` 6565 → **6211**. All 19 `update/2` + `handle_event/3`
+clauses stayed.
+
+**What made the markup half free** is that it was already 90% done and nobody
+had noticed: the call site passes all seven inputs explicitly, `myself={@myself}`
+included. `video_drawer/1` had a declared interface long before it had a module.
+
+**The move was proven, not asserted** — the extracted text was diffed against
+the original: **exactly 11 renames, nothing else**, and the JS block byte-identical.
+That is a cheaper and stronger check than reading the new file over.
+
+**RED, stated before running and honest about what actually moved.** The plan
+asked for "which spec fails if the extraction dropped an event handler" — but
+this extraction moved *zero* handlers, so that mutation was not available. The
+faithful one is a dropped **event binding**: remove `phx-submit="save_video"`
+from the extracted `<.form>`, and `close_video/0`'s dispatched submit lands on
+nothing. Predicted `projects.spec.js:290` at
+`getByRole('button', {name: 'Edit video'})`. **Failed at exactly that line.**
+*Not answering the question as asked, when the question no longer fits, is part
+of the check — the alternative was running a mutation that could not have
+reddened and calling it RED.*
+
+**The gate that actually earned its keep was the compiler**, not either suite.
+`--warnings-as-errors` caught that `Tab` was aliased in `form.ex` **only** for
+the video drawer's sub-tabs, so the alias died with the move. `mix test` and
+E2E were both green from the first compile and stayed green. Recorded because
+9C-3's number is otherwise easy to misread as "E2E was the gate": it was the
+*insurance*, and it cost ~19 of the phase's ~60 minutes.
+
+**What the number does not license.** It says a *markup* extraction from this
+file is cheap. It says nothing about the stateful kind — that one still needs a
+protocol invented for the parent-changeset write, and this file's record against
+structural change is still 2-for-2 reverted. `Chrome` is ~35 pure function
+components and is therefore probably the **cheapest** of the three, despite
+section G listing it last as the riskiest. The ordering was risk-ranked on an
+intuition that the seam check just invalidated.
+
+### 9D — C4 closed, and the reason the audit had been giving was false
+
+The plan offered, as the acceptable fallback, *"mark it `UNCONFIRMED — closed`
+with the static argument as the reason."* The static argument was that the leak
+needs *"a `push_patch` within one LiveView rather than the `push_navigate` used
+between entries"* — the implication being that no such path exists.
+
+**It exists.** Save-and-continue on a *create*: `form.ex` does
+`push_patch(to: update_url)` after `assign(:entry_id, entry.id)`, no remount,
+BlockField's hook element intact while the entry goes unsaved → persisted.
+`live_view/form/hooks.ex` **documents it in a comment** — *"create +
+save-and-continue push_patches to the update route without remounting"* — and
+attaches `:b_form_arm_entry` precisely because that path needed handling. The
+fact was written down, in the codebase, the whole time.
+
+So the `mounted()`-is-a-no-op barrier — the entirety of the static argument —
+does not apply on the one path that can reach the hazard.
+
+**The leak is still absent, via the other barrier: C4's own shipped fix.**
+`data-entry-id` re-renders with the patch, so `storageKey()` moves *forward*
+with the entry. The `new` bucket is orphaned, not served to a persisted entry,
+and orphans are TTL-bounded and unreachable anyway.
+
+**Closed with a test, not with prose** — because "closed by a reading of the
+hook lifecycle" is what kept it open for nine phases.
+`block-recovery.spec.js`, *"the recovery key follows the entry across
+save-and-continue"*. **RED: `data-entry-id={nil}` reddens exactly that test.**
+
+**And the finding underneath the finding:** under that mutation, **the other
+four recovery specs stay green.** C4's entry-scoping fix shipped in Phase 3
+with no test at all. Eight phases of reasoning rested on a barrier the suite
+would not have noticed the removal of. *An unfalsifiable fix is the same defect
+class as an unfalsifiable security claim — which this audit already ruled on in
+Phase 8 §4, and then did not apply to its own earlier work.*
+
+### Verification, end of Phase 9
+
+| Gate | Baseline | Measured |
+|---|---|---|
+| `mix test` | 1291 + 135 doctests | **1291 + 135, 0 failures** — unchanged |
+| `mix credo --strict` | 284 | **284** exact (2 / 118 / 152 / 12) |
+| compile `--warnings-as-errors` | clean | clean |
+| `mix format --check-formatted` | clean | clean |
+| Unit-suite output | 43 / 27 / 0 warm | **43 / 27 / 0** exact |
+| E2E | 107 / 0 | **107 / 0 after 9C** (8.9m), then **108 / 0** with 9D's new spec |
+
+Four E2E runs this phase: green after the extraction, RED for the extraction's
+mutation, green for 9D's new spec, RED for its mutation — plus a final full
+suite. Each mutation was reverted and the tree recompiled before moving on.
