@@ -24,6 +24,8 @@ defmodule Brando.Videos.Uploader do
   than producing dead upload controls at runtime.
   """
 
+  require Logger
+
   @type video :: Brando.Videos.Video.t()
   @type user :: Brando.Users.User.t()
   @type config :: Brando.Type.VideoConfig.t()
@@ -141,29 +143,70 @@ defmodule Brando.Videos.Uploader do
   - `:mux` - Direct upload to Mux
   - `:bunny` - Direct upload to Bunny.net
   - `:local` - Returns error, use traditional upload flow instead
+
+  ## Never raises
+
+  All three callers are LiveView processes holding an editor's unsaved work, so
+  an exception escaping here costs the user their edits. This function is
+  therefore total: every failure comes back as `{:error, reason}`.
+
+  Two mechanisms, and the distinction is the point:
+
+    * **Expected** failures are validated up front by
+      `Brando.Uploads.validate_provider_video_intake/2` — uploads disabled, an
+      unusable strategy, missing provider credentials, size, mimetype. Nothing
+      is raised and nothing is caught.
+    * **Unexpected** ones — a `Req` transport failure, a JSON decode, a bug in a
+      provider client — hit the rescue below. That is what a `rescue` is for.
+
+  The rescue lived in `BrandoAdmin.Components.Form` until 9E, which meant the
+  other two call sites (`VideoPicker`, `Form.Transformer`) had no backstop at
+  all. It is here now so one copy covers all three.
+
+  Note what it deliberately does *not* catch: the providers' missing-credential
+  raise. That is checked before dispatch, so rescuing it here would convert a
+  decided contract straight back into the error tuple 0.54.0 removed.
   """
   def initiate_upload(filename, user, opts) when is_list(opts) do
     config = Keyword.fetch!(opts, :config)
     file_meta = Keyword.get(opts, :file_meta)
 
     with :ok <- Brando.Uploads.validate_provider_video_intake(config, file_meta) do
-      case config.upload_strategy do
-        :mux ->
-          Brando.Videos.Uploaders.Mux.initiate_upload(filename, user, opts)
-
-        :bunny ->
-          Brando.Videos.Uploaders.Bunny.initiate_upload(filename, user, opts)
-
-        :cloudflare ->
-          Brando.Videos.Uploaders.Cloudflare.initiate_upload(filename, user, opts)
-
-        strategy when strategy in [:local, :s3] ->
-          {:error, :use_traditional_upload}
-
-        strategy ->
-          {:error, {:unknown_strategy, strategy}}
-      end
+      dispatch_initiate_upload(config.upload_strategy, filename, user, opts)
     end
+  end
+
+  defp dispatch_initiate_upload(strategy, filename, user, opts) do
+    case strategy do
+      :mux ->
+        Brando.Videos.Uploaders.Mux.initiate_upload(filename, user, opts)
+
+      :bunny ->
+        Brando.Videos.Uploaders.Bunny.initiate_upload(filename, user, opts)
+
+      :cloudflare ->
+        Brando.Videos.Uploaders.Cloudflare.initiate_upload(filename, user, opts)
+
+      strategy when strategy in [:local, :s3] ->
+        {:error, :use_traditional_upload}
+
+      strategy ->
+        {:error, {:unknown_strategy, strategy}}
+    end
+  rescue
+    exception ->
+      # Deliberately broad: three provider clients with three failure
+      # vocabularies sit behind this call. The stacktrace is logged so a genuine
+      # bug here stays diagnosable rather than being reduced to a toast, and the
+      # caller gets an atom rather than `Exception.message/1` — a provider's
+      # exception text is not written for an editor, and can carry request
+      # detail that has no business in a browser.
+      Logger.error(
+        "Video provider upload raised: " <>
+          Exception.format(:error, exception, __STACKTRACE__)
+      )
+
+      {:error, :provider_error}
   end
 
   @doc """

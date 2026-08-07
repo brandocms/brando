@@ -395,11 +395,39 @@ defmodule Brando.Videos.Uploaders.Bunny do
     end
   end
 
+  @doc """
+  Whether this provider has usable credentials.
+
+  Public so `Brando.Uploads.validate_provider_video_intake/2` can pre-flight the
+  same condition `api_request/3` raises on. The raise below branches on this
+  rather than re-testing, so the validator and the raise cannot answer
+  differently — which is the whole reason it exists.
+
+  Only `:api_key` is a credential. `:library_id` and `:cdn_hostname` are routing
+  values — `api_request/3` does not check them, so neither does this.
+  """
+  def configured?, do: present?(get_config(:api_key))
+
+  # An empty string is not a credential, and all three providers agree on that.
+  # A truthiness check does not: it lets `api_key: ""` through, and the request
+  # goes out to the live API with an empty `AccessKey` header instead of the
+  # site being told its config is wrong.
+  defp present?(value), do: is_binary(value) and value != ""
+
   defp api_request(method, path, body \\ nil) do
     url = @base_url <> path
-    api_key = get_config(:api_key)
 
-    unless api_key do
+    # Missing credentials are a deploy-time configuration error, not a runtime
+    # condition, so this raises rather than returning an error tuple — as Mux
+    # and Cloudflare do, so one caller branch handles all three.
+    #
+    # Nothing on the admin upload path should reach it:
+    # `Brando.Uploads.validate_provider_video_intake/2` checks `configured?/0`
+    # during pre-flight validation. If this raise ever fires from a LiveView,
+    # that validator has a gap — the exception costs an editor their unsaved
+    # work, which is why the check belongs there and this is only the
+    # last-resort invariant guard.
+    unless configured?() do
       raise """
       Bunny credentials not configured. Please add to your config:
 
@@ -409,6 +437,8 @@ defmodule Brando.Videos.Uploaders.Bunny do
             cdn_hostname: System.get_env("BUNNY_CDN_HOSTNAME")
       """
     end
+
+    api_key = get_config(:api_key)
 
     headers = [
       {"AccessKey", api_key},

@@ -489,6 +489,7 @@ defmodule Brando.Uploads do
   def validate_provider_video_intake(cfg, %{name: name, size: size} = file_meta) do
     with :ok <- validate_upload_enabled(cfg),
          :ok <- validate_provider_strategy(cfg),
+         :ok <- validate_provider_credentials(cfg),
          :ok <- validate_intake(:video, name, size, size_limit(cfg)),
          :ok <- validate_optional_mimetype(cfg, Map.get(file_meta, :type), name) do
       :ok
@@ -596,6 +597,79 @@ defmodule Brando.Uploads do
 
   defp validate_provider_strategy(%{upload_strategy: strategy}),
     do: {:error, "Video upload strategy #{inspect(strategy)} is not available for provider uploads"}
+
+  # Missing provider credentials are a pre-flight condition, checked here beside
+  # the other pre-flight conditions rather than at the point of the HTTP call.
+  #
+  # The three clients raise on missing credentials — deliberately, since 0.54.0:
+  # a deploy-time config error is not a runtime condition. But the check lived
+  # in `api_request`, the hot path, so it fired at file-pick time with the
+  # editor's unsaved work in the blast radius. Only one of the three call sites
+  # of `Videos.Uploader.initiate_upload/3` rescued, so a pick in the video
+  # picker or a transformer took the LiveView down with it. That is fail-late
+  # wearing fail-fast's clothes.
+  #
+  # Checking it here makes the raises unreachable from the admin path without
+  # weakening them: they stay exactly as 0.54.0 decided and become a genuine
+  # last-resort invariant guard for every other caller. Both unrescued call
+  # sites already had `{:error, reason}` branches, so neither needed an edit.
+  #
+  # Ordering is load-bearing. After `validate_provider_strategy/1`, so a
+  # non-provider strategy is rejected on its own terms rather than reported as
+  # a credentials problem; before `validate_intake/4`, because there is no point
+  # size-checking an upload that cannot start.
+  defp validate_provider_credentials(%{upload_strategy: :mux}),
+    do: credentials_ok(Brando.Videos.Uploaders.Mux)
+
+  defp validate_provider_credentials(%{upload_strategy: :bunny}),
+    do: credentials_ok(Brando.Videos.Uploaders.Bunny)
+
+  defp validate_provider_credentials(%{upload_strategy: :cloudflare}),
+    do: credentials_ok(Brando.Videos.Uploaders.Cloudflare)
+
+  # Unreachable while `validate_provider_strategy/1` runs first and admits
+  # exactly these three. It exists so that adding a fourth provider to that
+  # list without a clause here fails as an error tuple rather than a
+  # FunctionClauseError — which would be the very crash this validator was
+  # added to prevent. Mirrors `Videos.Uploader`'s `{:error, {:unknown_strategy,
+  # strategy}}` branch.
+  defp validate_provider_credentials(%{upload_strategy: strategy}),
+    do: {:error, {:unknown_strategy, strategy}}
+
+  defp credentials_ok(provider) do
+    if provider.configured?(), do: :ok, else: {:error, :provider_not_configured}
+  end
+
+  @doc """
+  User-facing text for a failed provider video upload.
+
+  One owner, because three surfaces report the same failures to the same
+  browser channel — `VideoPicker`, `Form` (for the video drawer) and
+  `Form.Transformer` — and they had drifted: the picker pushed `inspect/1` of
+  the raw term, so a reader saw `:provider_not_configured`.
+
+  The atom clauses matter more than the shapes below them. They are the errors
+  this module *produces*, so they are the ones a site operator can act on, and
+  leaving them to an `inspect/1` fallback is how an internal atom ends up in
+  front of an editor.
+  """
+  def video_upload_error_message(reason)
+
+  def video_upload_error_message(:provider_not_configured),
+    do: gettext("Video provider is not configured. Check server configuration.")
+
+  def video_upload_error_message({:unknown_strategy, _strategy}),
+    do: gettext("This video upload strategy is not available.")
+
+  # Raised past `Videos.Uploader.initiate_upload/3`'s backstop rescue — an
+  # unexpected provider exception, already logged with its stacktrace there.
+  def video_upload_error_message(:provider_error),
+    do: gettext("The video provider could not be reached. Please try again.")
+
+  def video_upload_error_message({:error, reason}), do: video_upload_error_message(reason)
+  def video_upload_error_message(reason) when is_binary(reason), do: reason
+  def video_upload_error_message(reason) when is_atom(reason), do: to_string(reason)
+  def video_upload_error_message(reason), do: inspect(reason)
 
   defp validate_optional_mimetype(cfg, mime_type, filename) do
     effective_mime_type =

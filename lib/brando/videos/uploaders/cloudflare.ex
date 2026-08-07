@@ -265,22 +265,28 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
 
   defp metadata_pair(key, value), do: "#{key} #{Base.encode64(value)}"
 
-  defp api_request(method, path, body \\ nil, extra_headers \\ []) do
-    account_id = get_config(:account_id)
-    api_token = get_config(:api_token)
+  @doc """
+  Whether this provider has usable credentials.
 
-    # Raises rather than returning `{:error, :not_configured}`, which is what
-    # this returned until 0.54.0. Missing credentials are a deploy-time config
-    # error, not a runtime condition, and the three provider clients disagreeing
-    # about that meant a caller could not handle all three with one branch —
-    # recorded six times across the form audit before being decided rather than
-    # deferred again. Mux and Bunny already raised; this is the one that moved.
+  Public so `Brando.Uploads.validate_provider_video_intake/2` can pre-flight the
+  same condition `api_request/4` raises on. The raise below branches on this
+  rather than re-testing, so the validator and the raise cannot answer
+  differently — which is the whole reason it exists.
+  """
+  def configured?, do: present?(get_config(:account_id)) and present?(get_config(:api_token))
+
+  defp api_request(method, path, body \\ nil, extra_headers \\ []) do
+    # Missing credentials are a deploy-time configuration error, not a runtime
+    # condition, so this raises rather than returning an error tuple — as Mux
+    # and Bunny do, so one caller branch handles all three.
     #
-    # `present?/1` rather than truthiness, unlike Mux and Bunny: an empty-string
-    # credential is caught here and is not caught there. That difference is
-    # about *detecting* the failure, not about how it is reported, so it is left
-    # alone rather than folded into this change.
-    if not present?(account_id) or not present?(api_token) do
+    # Nothing on the admin upload path should reach it:
+    # `Brando.Uploads.validate_provider_video_intake/2` checks `configured?/0`
+    # during pre-flight validation, beside the other config-shaped failures. If
+    # this raise ever fires from a LiveView, that validator has a gap — the
+    # exception costs an editor their unsaved work, which is why the check
+    # belongs there and this is only the last-resort invariant guard.
+    unless configured?() do
       raise """
       Cloudflare credentials not configured. Please add to your config:
 
@@ -289,6 +295,9 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
             api_token: System.get_env("CLOUDFLARE_API_TOKEN")
       """
     end
+
+    account_id = get_config(:account_id)
+    api_token = get_config(:api_token)
 
     url = "#{@api_base}/#{account_id}#{path}"
 
