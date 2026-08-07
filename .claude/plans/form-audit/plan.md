@@ -30,9 +30,10 @@
 ## START HERE — audit status (updated 2026-08-07)
 
 **Phases 0–9 are complete.** Phase 8's review is closed: 2 BLOCKERs, 3 WARNINGs,
-5 SUGGESTIONs, all fixed and measured. Committed as `a5dac0331` (review fixes +
-9A) and `08c371da2` (9B, a breaking change, deliberately on its own); 9C and 9D
-followed on 2026-08-07.
+5 SUGGESTIONs, all fixed and measured. Four commits on `next`, **not pushed**:
+`a5dac0331` (review fixes + 9A), `08c371da2` (9B — breaking), `7c1b4fd3e`
+(9C — breaking, six public functions moved off `Form`), `4247636ce` (9D +
+bookkeeping).
 
 **Nothing is open that has been decided-and-not-done.** What remains is the two
 **deferred** extractions (`ImageDrawer`/`FileDrawer`, `Chrome`), and Phase 9C
@@ -47,10 +48,12 @@ because this file's Phases 0–4 are followed by shared `## Verification` /
 
 ### Do not read the checkboxes below as a to-do list
 
-Twelve `- [ ]` boxes remain in Phases 0–3. **Nine of them will never be ticked**
+Twelve `- [ ]` boxes stood here before 9A. **Nine of them will never be ticked**
 — they are decisions, reverts, rejections, or work resolved by other means, and
-each already carries the annotation saying so. They are now labelled inline;
-the full classification is the table in `phase-9-plan.md`.
+each already carries the annotation saying so. 9A converted those nine to inline
+status markers, leaving three; **9C then ticked one, so two remain**, and both
+are the deliberate Phase 10 deferrals in the table below. The full
+classification is the table in `phase-9-plan.md`.
 
 **Genuinely open work, in full:**
 
@@ -70,10 +73,11 @@ decided (a): all three raise) and is no longer tracked anywhere.
 * **`scratchpad.md`** — the retros. This is the file to read if you are picking
   the audit up cold; the lessons are there, not here.
 * **`reviews/phase-N-review.md`** — one panel review per phase, Phases 0–8.
-* **Baselines**, measured on the current tree (2026-08-07):
+  **Phase 9 has no review yet.**
+* **Baselines**, measured on the committed tree after Phase 9 (2026-08-07):
   `mix test` **1291 + 135 doctests / 0 failures** · `mix credo --strict` **284** ·
   compile and format clean · unit-suite output **43 stdout / 27 non-dot / 0
-  stderr** · E2E **107 / 0**.
+  stderr** · E2E **108 / 0** (was 107; 9D added one recovery spec).
   The 27 is a **warm-build** number — a `mix test` that also recompiles adds two
   lines (`Compiling N files`, `Generated brando app`). That artefact caused a
   false regression report in Phase 8's review; re-run warm before believing a
@@ -84,7 +88,8 @@ decided (a): all three raise) and is no longer tracked anywhere.
 Recorded across Phases 5–8 and worth carrying into any work here: **a claim
 whose only check is a re-read is not checked.** It has applied to line
 citations, to prose about vendored library behaviour, to recorded test
-observations that were never made, and — in Phase 8's review — to the review
+observations that were never made, to two of Phase 9's own premises (see the
+9C+9D retro), and — in Phase 8's review — to the review
 panel itself, twice. Measuring is cheap; the last instance cost one edit and a
 13-second test run to settle.
 

@@ -1394,9 +1394,11 @@ E2E was run three times across the session — once before the fixes, once after
 the `cdn.ex`/`s3_config.ex` changes, once after the Cloudflare change — because
 each round touched `lib/` after the previous run. 107/0 every time.
 
-**Next step: Phase 9C**, extracting `Form.VideoDrawer`. Its targets have been
+~~**Next step: Phase 9C**, extracting `Form.VideoDrawer`. Its targets have been
 re-measured and are listed in `phase-9-plan.md` § "Start here on a fresh
-context". No decision is outstanding.
+context". No decision is outstanding.~~
+**SUPERSEDED — 9C and 9D both shipped later the same day. See the end-of-session
+block at the bottom of this file, which is the current one.**
 
 ---
 
@@ -1571,3 +1573,67 @@ Phase 8 §4, and then did not apply to its own earlier work.*
 Four E2E runs this phase: green after the extraction, RED for the extraction's
 mutation, green for 9D's new spec, RED for its mutation — plus a final full
 suite. Each mutation was reverted and the tree recompiled before moving on.
+
+---
+
+## State of the tree at end of session (2026-08-07, afternoon) — CURRENT
+
+**This is the current end-of-session block.** The earlier one further up is
+marked superseded.
+
+**Committed and clean.** Two more commits on `next`, **not pushed** — four
+unpushed in total across the two sessions:
+
+| Commit | What |
+|---|---|
+| `a5dac0331` | Phase 8 review fixes + 9A bookkeeping |
+| `08c371da2` | Phase 9B — all three video providers raise. Breaking |
+| `7c1b4fd3e` | **Phase 9C — `Form.VideoDrawer` extracted, markup only. Breaking** (six public functions moved off `Form`) |
+| `4247636ce` | **Phase 9D — C4 closed, pinned by a new E2E spec, plus 9C+9D bookkeeping** |
+
+Split the same way as last session and for the same reason: the breaking change
+is its own commit, so it is findable and revertable on its own.
+
+**Final gates, measured on the committed tree:** `mix test` **1291 + 135
+doctests / 0 failures** · `mix credo --strict` **284** (2 / 118 / 152 / 12) ·
+compile `--warnings-as-errors` clean · `mix format --check-formatted` clean ·
+unit output **43 / 27 / 0** warm · **E2E 108 / 0, 9.0m**.
+
+### Where the audit stands
+
+**Phase 9 is complete. So is every phase before it.** Nothing has been decided
+and left undone, and there are no outstanding questions — the state 9A was
+written to produce, now actually true.
+
+**Two items remain, both deliberately deferred to Phase 10**, both in `plan.md`
+§ G, and 9C changed how to approach them:
+
+1. **`Form.Chrome` — do this one first.** Section G listed it last as the
+   riskiest; the seam check says it is almost certainly the cheapest. "~35 pure
+   function components" is markup with no state to strand, which is the shape
+   that cost 9C essentially nothing. It is also the biggest, so most of the
+   remaining reducible bulk is here.
+2. **`Form.ImageDrawer` / `FileDrawer` — the harder pair.** The image drawer
+   additionally owns `image_editor_*` state and a focal-point component, and
+   `assign_drawer_recovery_state/1` covers image and file in the same `cond`
+   the video drawer could not be split out of.
+
+**For either: split markup from behaviour and check the seam BEFORE estimating.**
+That is 9C's whole lesson. Both sets of line ranges in § G are doubly stale — 
+written before the file grew 308 lines, then invalidated again when 9C removed
+354 from `:2603` onward. `form.ex` is **6211** lines, so `Chrome`'s cited
+`:6257` is now past the end of the file. Re-locate by function head; do not
+shift them arithmetically.
+
+### If you are picking this up cold
+
+Read: `plan.md` § START HERE → this block → the Phase 9C+9D retro immediately
+above it. That is enough to begin. `phase-9-plan.md` § 9C-3 has the cost table
+if you are deciding whether Phase 10 is worth doing at all.
+
+**The audit's carried lesson, as of Phase 9:** a claim whose only check is a
+re-read is not checked — and the claims that matter are not the ones about what
+the code does, but the ones a plan makes about **why something is safe**. Phase
+9 checked two of those and both were false: section G's "the seams are clean"
+described only the inbound half, and C4's "no `push_patch` path exists" was
+contradicted by a comment sitting in `hooks.ex` the entire time.
