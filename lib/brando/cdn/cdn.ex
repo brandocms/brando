@@ -121,10 +121,15 @@ defmodule Brando.CDN do
     # says nothing about the config that is actually absent. Same shape as the
     # `s3: :default` clause above.
     #
-    # Reaching this at all needs `:cdn` present *and* carrying an explicit
-    # `s3: nil`: `%Brando.CDN.Config{}` defaults `:s3` to a populated
-    # `%Brando.CDN.S3Config{}`, so a CDN-less app falls through here and
-    # succeeds with nil credentials rather than raising. See `key_available?/2`.
+    # The subject changes between the paragraph above and this one, which is
+    # the easiest thing to misread here. What lands us in *this clause* is the
+    # **field** config having no `:cdn`. What decides whether we **raise** is
+    # a different config entirely: `Brando.Images`'. Reaching the raise needs
+    # that one to be present and to carry an explicit `s3: nil`, because
+    # `%Brando.CDN.Config{}` defaults `:s3` to a populated
+    # `%Brando.CDN.S3Config{}` — so an app with no CDN configured anywhere
+    # falls through here and *succeeds*, handing back nil credentials rather
+    # than raising. See `key_available?/2`, which is where that matters.
     #
     # Deliberately `!s3_config` and not a wider guard. A **keyword-list** config
     # cannot arrive here: given `cdn: [enabled: true, s3: …]`, `config/2` above
@@ -290,11 +295,22 @@ defmodule Brando.CDN do
     cdn_config = config.cdn || config(Brando.Images)
 
     if !s3_bucket do
+      # Credentials are dropped rather than inspected. `get_s3_config/2` with
+      # `as: :keyword_list` hands back `%S3Config{}` through `Map.from_struct/1`,
+      # so `:access_key_id` and `:secret_access_key` are plain values in this
+      # list — and a raise message is not a private place. It reaches the
+      # Logger, Oban's `errors` column and any attached error reporter.
+      #
+      # `@derive Inspect` on `%S3Config{}` does not cover this: by here the
+      # struct is already a keyword list, and derivation only applies to the
+      # struct. It is set on the struct too, for the paths that do inspect one.
       raise """
 
       upload_image -- missing s3_bucket for config
 
-      #{inspect(s3_config, pretty: true)}
+      #{inspect(Keyword.drop(s3_config, [:access_key_id, :secret_access_key]), pretty: true)}
+
+      (S3 credentials omitted.)
       """
     end
 
@@ -431,8 +447,15 @@ defmodule Brando.CDN do
   `Brando.Images` `:s3` fallback, and because `%Brando.CDN.Config{}` defaults
   `:s3` to a populated `%Brando.CDN.S3Config{}`, that fallback ordinarily
   **succeeds**, handing back a keyword list whose credentials are `nil`. The
-  raise arrives one line later at `cdn_config.bucket` (`:429`), where
-  `Map.get(field_cfg, :cdn)` returned `nil` — a `BadMapError`.
+  raise arrives just after it, in `head_object/2`, on `cdn_config.bucket`:
+  `Map.get(field_cfg, :cdn)` returned `nil`, and the dot on `nil` raises
+  `BadMapError` — *not* `UndefinedFunctionError`, which is what a literal
+  `nil.bucket` would give; this is a variable, so it takes the map path.
+
+  Cited by function rather than by line, per the standard the audit arrived at:
+  every interior line number this file has carried has been wrong at least
+  once, including one written into this paragraph that pointed inside this
+  docstring.
 
   The config error `get_s3_config/2` raises is the narrower case: it needs
   `:cdn` to be present *and* to carry an explicit `s3: nil`. Either way nothing

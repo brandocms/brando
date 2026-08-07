@@ -1,0 +1,259 @@
+# Phase 9 — Close the audit's bookkeeping, take the deferred decision, start the extraction
+
+**Source:** `.claude/plans/form-audit/reviews/phase-8-review.md` (all findings fixed in-session)
+plus the twelve unchecked boxes still standing in `plan.md`
+**Slug:** `form-audit` · **Depth:** standard · **Created:** 2026-08-07
+
+Own file, following the Phase 5–8 precedent.
+
+No research agents. The inputs are `plan.md`'s own annotations, which are
+detailed enough to classify without re-reading the code they describe — and
+where they are not, 9A says so rather than guessing.
+
+---
+
+## Where the audit actually stands
+
+Phase 8 shipped and its review is closed: 2 BLOCKERs, 3 WARNINGs, 5 SUGGESTIONs,
+all fixed and measured the same day (`reviews/phase-8-review.md`, retro in
+`scratchpad.md`). Phases 0–8 are otherwise complete.
+
+What is left is **not twelve tasks.** `plan.md` carries twelve `- [ ]` boxes,
+and reading them is the single most misleading thing a new reader can do to
+themselves tomorrow. Classified:
+
+Located by **finding**, not by line — 9A moved every one of them, which is the
+habit Phase 8A retired.
+
+| Box | Finding | What it actually is |
+|---|---|---|
+| E2E: kill LV, assert pick survives | **B1** |  **Resolved by other means.** Phase 4's status note says so explicitly: `Brando.LiveCase` is what these needed |
+| E2E: conditional/looped ref regression | **B5** |  **Resolved by other means.** Same note; covered at changeset + component level |
+| E2E: root block children survive kill | **C1** |  **Resolved by other means.** Same note |
+| Cross-entry snapshot leak | **C4** |  **Open, unconfirmed.** Static read says it needs `push_patch` within one LiveView; recorded as unconfirmed, not absent |
+| `deliver_topic` stable across remount | **D2** |  **Built, then reverted** (`6da10b844`). Verified correct in-browser, still broke `block-multiuser-sync.spec.js:245` |
+| Path helpers — collapse the 3× | **D-dup** |  **Rejected as written**, and the finding's "3×" is really 2×. Real work behind it is config-resolution unification |
+| `image_picker`/`video_picker` — bound the query | **E** |  **Rejected as written.** Needs the folder tree to stop being derived from entries — a design change |
+| `form/tab.ex` `:if` → class toggle | **F** |  **Attempted, then reverted.** Finding real, fix is not a line edit; causation established both ways |
+| `Form.VideoDrawer` extraction | **G** |  **Open, real work** |
+| `Form.ImageDrawer`/`FileDrawer` extraction | **G** |  **Open, real work** |
+| `Form.Chrome` extraction | **G** |  **Open, real work** |
+| Leave gallery/entry-relation in place | **G** |  **A decision, not a task.** It should never have been a checkbox |
+
+So: **three genuinely open pieces of work** (the extraction), **one open
+question** (`:418`), **two documented dead ends**, **two rejected-as-written
+findings**, **three resolved-by-other-means**, and **one decision miscast as a
+task**.
+
+Nine of twelve boxes will never be ticked, and every one of them already carries
+the annotation saying why. The defect is that the checkbox and the annotation
+disagree, and the checkbox is what a reader sees first.
+
+---
+
+## Decisions needed
+
+**1. The video-uploader credential disagreement — decide, or stop recording it.**
+Phase 8's plan committed to this in writing: *"Six recordings is enough evidence
+that it will not arrive via a finding — if it is to be fixed, it needs to be
+chosen deliberately, and Phase 9 is the place to either do that or stop
+recording it."*
+
+The disagreement, re-measured today: Mux raises (`mux.ex:545`), Bunny raises
+(`bunny.ex:403`), Cloudflare returns `{:error, :not_configured}`
+(`cloudflare.ex:273`). A caller cannot handle all three with one branch.
+
+**This needs a user decision before 9B is written**, because every option is a
+public behaviour change on a library:
+
+* **(a) All three raise.** Missing credentials are a deploy-time config error,
+  not a runtime condition. Simplest contract; breaks any consumer currently
+  matching Cloudflare's tuple.
+* **(b) All three return `{:error, :not_configured}`.** Callers branch instead of
+  rescuing. Breaks consumers relying on the raise to fail loudly at boot.
+* **(c) Leave it, delete the recording.** Defensible — no finding has ever asked
+  for it in nine phases — but then it stops being tracked, which is the point of
+  deciding.
+
+No option is free, (a) and (b) are both breaking, and the audit has now spent
+six recordings not choosing. **Ask before planning 9B.**
+
+**2. Extraction scope.** `form.ex` is **6565 lines** today, not the 6257
+`plan.md` says — it grew 308 lines during the audit, which is its own small
+argument for doing this. Three extractions are listed. They are not equal risk,
+and 9C proposes doing **one** and measuring, rather than all three.
+
+---
+
+## Phase 9A — Make `plan.md` say what it means `[docs]` — **DONE 2026-08-07**
+
+Cheap, and it is what makes tomorrow legible. No code. Done ahead of the rest of
+Phase 9, so that a cold read of `plan.md` tomorrow starts from the truth.
+
+- [x] **9A-1 — retire the nine boxes that are not tasks.** — done 2026-08-07: twelve `- [ ]` boxes are now three. Nine carry `[RESOLVED ELSEWHERE]` / `[REVERTED]` / `[REJECTED AS WRITTEN]` / `[DECISION, not a task]` / `[OPEN — UNCONFIRMED]`, every annotation kept verbatim. Convert each to a
+      status marker that matches its own annotation: `RESOLVED ELSEWHERE`
+      (`:144`, `:244`, `:363`), `REVERTED` (`:609`, `:997`), `REJECTED AS
+      WRITTEN` (`:873`, `:945`), `DECISION` (`:1032`). Keep every word of the
+      existing annotations — they are the evidence, and Phase 8's B1-record
+      precedent is that records are amended, never deleted.
+      **Do not** silently tick them. A ticked box claims work happened.
+
+- [x] **9A-2 — carry Phase 4's note up to the three boxes it covers.** — done: each of the three now says "see Phase 4's status block" inline, and names what the harness does that the E2E spec does not (kills the process rather than disconnecting cooperatively). The
+      sentence explaining that `:144`/`:244`/`:363` are addressed by the
+      harness's existence lives only in Phase 4's status block, ~700 lines from
+      any of them. One line at each site pointing to it.
+
+- [x] **9A-3 — correct `form.ex`'s line count.** — done: heading reads **6565 lines**, measured 2026-08-07, with the old figure kept. The three extraction items are additionally marked **ranges stale** — the file grew 308 lines after they were written. section **G**'s heading said 6257;
+      measured 6565. Fix the heading and note that the number is measured, with
+      its date — Phase 8's S-5 was the same class of stale figure and cost a
+      review round.
+
+- [x] **9A-4 — restate the audit's status at the top of `plan.md`.** — done: a `## START HERE` block above the executive summary, carrying the open-work table, where the knowledge lives, the measured baselines, the warm-build caveat, and the audit's recurring lesson. One block:
+      Phases 0–8 complete, what genuinely remains (the extraction, `:418`), and
+      the pointer to `scratchpad.md` for the lessons. A reader opening
+      `plan.md` cold should not have to classify twelve checkboxes to find out
+      three of them matter.
+
+---
+
+## Phase 9B — The credential disagreement `[elixir]` *(blocked on Decision 1)*
+
+Written only after the decision is taken. Shape, per option:
+
+- [ ] **(a) or (b) — unify the three, one contract.** Change the odd one out,
+      add a test per provider pinning the shape, and a CHANGELOG **Breaking**
+      entry that names what a consumer must change — the Phase 7/8 precedent for
+      `key_exists?/2` → `key_available?/2` is the model, including the
+      declined-shim reasoning if a shim is declined again.
+      **RED:** each provider's test fails against the other two providers'
+      current shape.
+- [ ] **(c) — delete the recording.** Remove the deferral from `plan.md` and
+      `scratchpad.md`, with one line saying it was considered and closed, and
+      why. **This is a real outcome, not a cop-out** — but it must be written
+      down, or the seventh recording arrives in Phase 10.
+
+---
+
+## Phase 9C — Extract one drawer, and find out what extraction costs `[liveview]`
+
+Section **G** lists three extractions "lowest risk first". The order is
+`VideoDrawer` → `Image`/`FileDrawer` → `Chrome`. **Do the first one only**, then
+decide with numbers instead of estimates.
+
+Reason to be careful rather than fast: Phase 3's two attempted refactors in this
+file (`:997`'s tab toggle, `:609`'s `deliver_topic`) were both **built,
+verified, and reverted** after E2E caught what unit tests and in-browser checks
+did not. That is a 2-for-2 record against changes to this component's structure.
+The extraction is more mechanical than either — but the file's history says the
+gate that matters is E2E, not `mix test`.
+
+- [ ] **9C-1 — extract `Form.VideoDrawer`.** `update/2` and the `handle_event`
+      range named under **G** (re-measure the ranges; the file grew 308
+      lines since they were written, so **assume they are stale** and cite
+      function heads, per Phase 8A's standard).
+      Communicates via `send_update` already, so the seam is declared clean —
+      **verify that claim before relying on it**, the same way Phase 8's SEC-1
+      verified "no Bunny call follows a redirect" before changing transport.
+- [ ] **9C-2 — E2E is the gate, and run it before believing the extraction.**
+      `projects.spec.js:290` is the spec that caught `:997`; the video drawer is
+      exactly its subject. Run the full suite, not that file alone.
+      **RED:** state, before running, which spec would fail if the extraction
+      dropped an event handler — then confirm it does by removing one.
+- [ ] **9C-3 — record the cost.** Lines moved, wall-clock, whether E2E caught
+      anything `mix test` did not. That number is what decides whether
+      `ImageDrawer`/`FileDrawer` and `Chrome` happen in Phase 10 or not at all.
+
+---
+
+## Phase 9D — `:418`, or close it `[liveview]`
+
+- [ ] **Decide whether the cross-entry snapshot leak is worth reproducing.**
+      finding **C4** says the static read makes it hard to reach: the snapshot is
+      written only by `disconnected()` and read only by `reconnected()`, so it
+      needs the same hook element to survive an entry change — a `push_patch`
+      within one LiveView, where entries use `push_navigate`.
+      Either build that case and see, or mark it `UNCONFIRMED — closed` with the
+      static argument as the reason. **What is not acceptable is a tenth phase
+      that still says "recorded as unconfirmed"** — that is the same pattern the
+      credential disagreement just spent six phases in.
+
+---
+
+## Verification
+
+Baselines are Phase 8's **as measured on the fixed tree** (2026-08-07), not as
+recorded before the review:
+
+| Gate | Baseline | Phase 9 expectation |
+|---|---|---|
+| `mix test` | **1287 tests + 135 doctests, 0 failures** (Phase 8 shipped 1281; +1 `req` version pin, +5 CDN credential-redaction tests) | ≥ baseline, 0 failures |
+| `mix credo --strict` | 284 | ≤ 284 |
+| `mix compile --warnings-as-errors` | clean | clean |
+| `mix format --check-formatted` | clean | clean |
+| Unit-suite output | 43 stdout / 27 non-dot / 0 stderr, **warm build** | ≤ baseline |
+| E2E | 107 / 0, measured 2026-08-07 | 107 / 0 after 9C |
+
+**The output-noise figure is a warm-build number.** A `mix test` that also
+recompiles adds two non-dot lines (`Compiling N files`, `Generated brando app`).
+That artefact is what produced the 27-vs-32 disagreement in Phase 8's review;
+it will recur, and re-running on a warm build is the whole fix.
+
+9A and 9D are doc-only and have no RED. Saying so is the correct answer for
+them. 9B and 9C both do.
+
+---
+
+## Sequencing
+
+```
+9A  Bookkeeping        9A-1 → 9A-2 ∥ 9A-3 ∥ 9A-4     (no code, do first)
+      ↓
+9B  Credential        blocked on Decision 1 — ASK BEFORE PLANNING
+9C  Extraction        9C-1 → 9C-2 → 9C-3             ┐ independent of 9B
+9D  :418              decide, or close                ┘
+```
+
+**9A first** because everything else is easier to scope once the twelve boxes
+stop lying. **9B is blocked on a user decision** and should not be planned
+around an assumed answer. 9C and 9D are independent of both.
+
+---
+
+## Risks
+
+**What is this plan most likely to get wrong?** Underestimating 9C. Two
+structural changes to `form.ex` have been built and reverted in this audit, both
+after passing everything except E2E. The plan's "these already communicate via
+`send_update`, so the seams are clean" is an *unverified claim written before
+either revert* — 9C-1 treats it as a claim to check, and if it does not hold,
+the honest outcome is a third revert recorded rather than an extraction forced
+through.
+
+**Where could this phase quietly grow?** 9B under option (a) or (b). "Unify
+three providers" is one line each, and then it is a breaking change to a library,
+which means a CHANGELOG entry, an UPGRADE note, and a decision about a shim —
+the `key_available?/2` change took most of a phase for exactly that reason.
+
+**What is being assumed without checking?** That section **G**'s line ranges
+still locate the video drawer. They almost certainly do not — the file grew 308
+lines after they were written, which is more than the audit's measured error
+rate on citations needs. 9C-1 says to re-measure and cite function heads; the
+risk is doing the extraction from the stale ranges instead.
+
+---
+
+## Traceability
+
+| Item | Origin | Task | Phase |
+|---|---|---|---|
+| Nine non-task checkboxes | `plan.md` | 9A-1, 9A-2 | 9A |
+| Stale `form.ex` line count | measured 2026-08-07 | 9A-3 | 9A |
+| No status at top of `plan.md` | this plan | 9A-4 | 9A |
+| Credential disagreement | Phases 4–8, six recordings | 9B | 9B |
+| `Form.VideoDrawer` | **G** | 9C-1…9C-3 | 9C |
+| `Form.ImageDrawer`/`FileDrawer` | **G** | **deferred to Phase 10, deliberately** — gated on 9C-3's number | — |
+| `Form.Chrome` | **G** | **deferred to Phase 10, deliberately** — same gate | — |
+| Cross-entry snapshot leak | **C4** | 9D | 9D |
+
+Skipped: none. Deferred: two, both named above with the condition that ungates
+them — which is the difference between this deferral and the credential one.

@@ -192,7 +192,7 @@ tests genuinely fail on an unexpected `head_object/3`. Only these three are weak
       assertion whose RED comes from the fixture is a category this suite will
       meet again.
 
-- [x] **W-4b — restore causation to B1-prove** — three premises + `:killed` reason asserted. RED confirmed: killing the root yields `{:proxy_stopped, :shutdown}`, which `_` accepted.
+- [x] **W-4b — restore causation to B1-prove** — three premises asserted, and the reason pinned. **The first version of this record was false, and is kept here rather than replaced:** it read *"RED confirmed: killing the root yields `{:proxy_stopped, :shutdown}`, which `_` accepted."* It does not. `client_proxy.ex`'s `handle_info({:DOWN, …}, state)` clause propagates the monitored view's reason verbatim, so a root killed with `:kill` also reports `:killed` and the assertion passed with the child uninvolved — measured by the Phase 8 review, which ran the mutation. Fixed by killing the child with a *distinguishable* reason (`:child_died`) instead of `:kill`; the RED was then measured both ways (root → `{:proxy_stopped, :killed}`, fails; proxy survives → `:proxy_survived`, fails). **Third instance of the audit's most durable lesson, and the first where the false claim was about an observation rather than a citation.**
       `form_recovery_test.exs:83-114`. The control test (mount, find child, kill
       nothing, assert the proxy survives 500ms) was deleted after it did its job,
       which leaves the shipped test satisfied by any other death of the root view

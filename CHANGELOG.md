@@ -66,6 +66,19 @@
 
 #### Fixes
 
+- **S3 credentials no longer reach exception messages or `inspect/1` output.**
+  `Brando.CDN.upload_image/4` raises when a config has no bucket, and that raise
+  interpolated the full S3 config — including `access_key_id` and
+  `secret_access_key` — into its message, which is then carried by the Logger,
+  Oban's `errors` column and any attached error reporter. The credentials are
+  now dropped from that message.
+
+  `%Brando.CDN.S3Config{}` also derives `Inspect` with both fields redacted, so
+  inspecting a media config no longer prints them either. Note that
+  `Brando.CDN.get_s3_config/2` with `as: :keyword_list` returns a plain keyword
+  list built via `Map.from_struct/1`, which the derivation does not cover — code
+  that interpolates *that* value must still drop the credentials itself.
+
 - **The Bunny video provider no longer forwards its API key across a redirect.**
   `Req` strips credentials when a redirect crosses to another host, but it does
   so by deleting exactly two things: the `authorization` header and the `:auth`

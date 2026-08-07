@@ -59,9 +59,14 @@ defmodule BrandoAdmin.FormRecoveryTest do
       end
 
       # Subject assertion: reaching the proxy wait at all means `kill_live/1`
-      # killed the view and observed its `:DOWN` first. Goes RED if the two
-      # waits are ever reordered, or if the flunk moves ahead of the kill —
-      # both of which leave the `assert_raise` above still passing.
+      # killed the view first. Goes RED if the kill is removed, or moved after
+      # the flunk — either of which leaves the `assert_raise` above still
+      # passing, so this is the line that catches them.
+      #
+      # Reordering the two waits does **not** redden it, and the mutation is
+      # named here because it is the one a reader would reach for: the kill
+      # runs ahead of both waits, so the view is already dead by the time the
+      # proxy wait flunks.
       refute Process.alive?(view.pid)
 
       # Fixture premise, not a subject assertion — kept, and labelled as one.
@@ -118,15 +123,19 @@ defmodule BrandoAdmin.FormRecoveryTest do
         proxy_ref = Process.monitor(proxy_pid)
         child_ref = Process.monitor(child.pid)
 
-        Process.exit(child.pid, :kill)
-        assert_receive {:DOWN, ^child_ref, :process, _, :killed}, 1_000
+        # Killed with a *distinguishable* reason rather than `:kill`. The child
+        # does not trap exits, so this terminates it with `:child_died` —
+        # and `client_proxy.ex`'s `handle_info({:DOWN, …}, state)` clause stops
+        # the proxy by propagating the monitored view's reason verbatim. That
+        # verbatim propagation is what makes the reason usable as evidence: a
+        # reason only this line can produce identifies *which* death stopped the
+        # proxy. `:kill` would not — every other way the root dies inside this
+        # window also reports `:killed`, so the assertion below would pass with
+        # the child entirely uninvolved.
+        Process.exit(child.pid, :child_died)
+        assert_receive {:DOWN, ^child_ref, :process, _, :child_died}, 1_000
 
-        # The same window `await_proxy_exit/1` allows. The reason is asserted,
-        # not matched with `_`: the proxy stops by propagating the *child's*
-        # exit, so `:killed` is the causal link. A proxy that went down for any
-        # other reason — the root crashing on its own, a sandbox teardown —
-        # reports a different reason and reddens this line, where `_` would
-        # have accepted it as a pass.
+        # The same window `await_proxy_exit/1` allows.
         outcome =
           receive do
             {:DOWN, ^proxy_ref, :process, ^proxy_pid, reason} -> {:proxy_stopped, reason}
@@ -134,7 +143,11 @@ defmodule BrandoAdmin.FormRecoveryTest do
             500 -> :proxy_survived
           end
 
-        assert outcome == {:proxy_stopped, :killed}
+        # RED, measured both ways: killing the root instead of the child yields
+        # `{:proxy_stopped, :killed}`, and the proxy surviving yields
+        # `:proxy_survived`. Matching the reason with `_` accepts the first of
+        # those, which is why it is pinned.
+        assert outcome == {:proxy_stopped, :child_died}
 
         Process.demonitor(proxy_ref, [:flush])
         Process.demonitor(child_ref, [:flush])
@@ -148,13 +161,23 @@ defmodule BrandoAdmin.FormRecoveryTest do
     # the JS changes, so pin the version it was read against: a bump surfaces
     # here as a prompt to re-read the source, instead of as a test that still
     # passes while modelling a client that no longer exists.
+    #
+    # It carries a second coupling for the same reason: `stub_view_with_live_proxy/0`
+    # below duck-types `%Phoenix.LiveViewTest.View{}`, a struct this repo does
+    # not own. A bump is the moment to re-check that struct's shape as well as
+    # `pushFormRecovery` — the failure message says so, and the stub's own
+    # comment points back here.
     test "the recovery target mirrors a known LiveView version" do
       assert to_string(Application.spec(:phoenix_live_view, :vsn)) == "1.2.8",
              """
-             phoenix_live_view moved. Re-read `pushFormRecovery`
-             (assets/js/phoenix_live_view/view.ts) and confirm
-             `Brando.LiveCase.recovery_target/2` still mirrors it — then update
-             this version and the docstring that names it.
+             phoenix_live_view moved. Two things to re-read before bumping this:
+
+               * `pushFormRecovery` (assets/js/phoenix_live_view/view.ts) —
+                 confirm `Brando.LiveCase.recovery_target/2` still mirrors it;
+               * `%Phoenix.LiveViewTest.View{}` — confirm
+                 `stub_view_with_live_proxy/0` still duck-types it correctly.
+
+             Then update this version and the docstrings that name it.
              """
     end
   end

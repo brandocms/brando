@@ -113,8 +113,15 @@ defmodule Brando.Videos.Uploaders.ReqOptionsTest do
   # step, not in this module, so only a round trip can see it.
   describe "merge/2 does not defend keys the built options omit" do
     # MUTATION: wrap the configured side in
-    # `Keyword.take(configured || [], [:headers, :method, :url, :json])`, which
-    # drops `:auth`; the stub then sees the built header and this reddens.
+    # `Keyword.take(configured || [], [:headers, :method, :url, :json, :plug])`,
+    # which drops `:auth` and nothing else; the stub then sees the built header
+    # and its assertion reddens.
+    #
+    # `:plug` has to stay in that take list, and the reason is worth stating
+    # because the obvious version of this mutation omits it: without `:plug` the
+    # stub is never installed, the request leaves for the real `example.com`,
+    # and the test reddens on the status assertion instead — the right colour
+    # for the wrong reason, from a suite that suddenly needs the network.
     #
     # It also goes red if **Req** changes underneath us — switch `auth/2` to
     # `put_new_header/3` (`req/steps.ex:236, 240, 244`) and the built header
@@ -143,5 +150,27 @@ defmodule Brando.Videos.Uploaders.ReqOptionsTest do
       assert Keyword.fetch!(merged, :headers) == [{"authorization", "Bearer built"}]
       assert {:ok, %{status: 200}} = Req.request(merged)
     end
+  end
+
+  # `ReqOptions`' `@doc` cites `req/steps.ex` by line eight times, and `mix.exs`
+  # pins `req` as `~> 0.5 or ~> 1.0` — a range wide enough for every one of them
+  # to go stale without anything in this repo noticing. The LiveView citations
+  # have a tripwire (`form_recovery_test.exs`, "the recovery target mirrors a
+  # known LiveView version"); these had none. Same exposure, same remedy.
+  #
+  # This pins the version the citations were *read against*, which is a
+  # different job from `mix.exs`'s pin: that one says what the library will run
+  # with, this one says what the prose was checked against.
+  test "the req citations name a known req version" do
+    assert to_string(Application.spec(:req, :vsn)) == "0.7.2",
+           """
+           req moved. `Brando.Videos.Uploaders.ReqOptions`' @doc cites
+           req/steps.ex by line for :redirect_trusted, :auth, :form /
+           :form_multipart, :json and :base_url, and `bunny.ex`'s
+           `redirect: false` comment cites `remove_credentials_if_untrusted/3`.
+
+           Re-read those, confirm the behaviour they describe still holds, then
+           update the citations and this version.
+           """
   end
 end

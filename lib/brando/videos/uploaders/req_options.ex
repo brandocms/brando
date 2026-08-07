@@ -41,6 +41,15 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
       hands the request back untouched (`req/steps.ex:1571`), disabling
       cross-host credential stripping outright. On a doc about config seams
       that can unset credentials, this is the sharpest one available.
+
+      Worth knowing which providers it exposes. **Mux and Cloudflare** depend on
+      Req's stripping, because their credential is an `authorization` header and
+      that is one of the two things Req removes; setting `redirect_trusted: true`
+      re-arms cross-host forwarding for both. **Bunny does not**, and not
+      because its credential is safer — the opposite. Its `AccessKey` header was
+      never covered by that stripping, so it carries `redirect: false` in its
+      built options instead, which this merge cannot override. The provider with
+      the weaker credential shape ended up with the stronger guarantee.
     * `:auth` — Req's auth step writes with `Req.Request.put_header/3`, not
       `put_new_header/3` (`req/steps.ex:236, 240, 244`), so
       `req_options: [auth: {:bearer, …}]` overwrites the `authorization` header
@@ -49,8 +58,11 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
     * `:form` / `:form_multipart` — `encode_body/1` tests both **before**
       `:json` (`req/steps.ex:486, 490` vs `:497`), so a configured `form:`
       replaces the body all three providers build.
-    * `:json` — Bunny's GET and DELETE build no body (`bunny.ex:422, 428`), so
-      a configured `json:` attaches one where there should be none.
+    * `:json` — Bunny's GET and DELETE build no body (the `:get` and `:delete`
+      branches of `Brando.Videos.Uploaders.Bunny`'s `api_request/3`), so a
+      configured `json:` attaches one where there should be none. Cited by
+      function because the last version of this line cited two interior line
+      numbers that a comment added to `bunny.ex` in the same commit moved.
     * `:plug` / `:adapter` — replace the transport outright.
     * `:connect_options` / `:finch` — proxy and TLS verification: the same
       reach as `:plug`, by a longer route.

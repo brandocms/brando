@@ -27,6 +27,58 @@
 
 ---
 
+## START HERE — audit status (updated 2026-08-07)
+
+**Phases 0–8 are complete.** Phase 8's review is closed: 2 BLOCKERs, 3 WARNINGs,
+5 SUGGESTIONs, all fixed and measured the same day.
+
+**Next up: `phase-9-plan.md`.** Phases 5–9 live in their own files
+(`phase-5-plan.md` … `phase-9-plan.md`), because this file's Phases 0–4 are
+followed by shared `## Verification` / `## Sequencing` / `## Risks` sections and
+appending after those would break it.
+
+### Do not read the checkboxes below as a to-do list
+
+Twelve `- [ ]` boxes remain in Phases 0–3. **Nine of them will never be ticked**
+— they are decisions, reverts, rejections, or work resolved by other means, and
+each already carries the annotation saying so. They are now labelled inline;
+the full classification is the table in `phase-9-plan.md`.
+
+**Genuinely open work, in full:**
+
+| What | Where | Note |
+|---|---|---|
+| `Form.VideoDrawer` extraction | `## G` below | Phase 9C does this one **only**, then decides the rest with a measured number |
+| `Form.ImageDrawer` / `FileDrawer` extraction | `## G` below | deferred to Phase 10, gated on 9C's cost |
+| `Form.Chrome` extraction | `## G` below | same gate |
+| Cross-entry snapshot leak | finding **C4** | unconfirmed; Phase 9D reproduces it or closes it |
+| Video-uploader credential disagreement | not a numbered finding | **sixth recording; needs a user decision.** Mux and Bunny raise, Cloudflare returns `{:error, :not_configured}`. See `phase-9-plan.md` §Decisions |
+
+### Where the knowledge is
+
+* **`scratchpad.md`** — the retros. This is the file to read if you are picking
+  the audit up cold; the lessons are there, not here.
+* **`reviews/phase-N-review.md`** — one panel review per phase, Phases 0–8.
+* **Baselines**, measured on the current tree (2026-08-07):
+  `mix test` **1287 + 135 doctests / 0 failures** · `mix credo --strict` **284** ·
+  compile and format clean · unit-suite output **43 stdout / 27 non-dot / 0
+  stderr** · E2E **107 / 0**.
+  The 27 is a **warm-build** number — a `mix test` that also recompiles adds two
+  lines (`Compiling N files`, `Generated brando app`). That artefact caused a
+  false regression report in Phase 8's review; re-run warm before believing a
+  change.
+
+### The audit's own recurring lesson
+
+Recorded across Phases 5–8 and worth carrying into any work here: **a claim
+whose only check is a re-read is not checked.** It has applied to line
+citations, to prose about vendored library behaviour, to recorded test
+observations that were never made, and — in Phase 8's review — to the review
+panel itself, twice. Measuring is cheap; the last instance cost one edit and a
+13-second test run to settle.
+
+---
+
 ## Executive summary
 
 The recovery architecture is **healthier than it looks from the outside**, and the audit's
@@ -141,7 +193,10 @@ fields alone); it is the missing `applied_block` merge that makes the pair lossy
       (pick survives keystroke, clear survives, untouched ref keeps DB value, params win over
       merge, pick survives a save, FK inputs render, identity stays suppressed). Verified 4/7
       failing pre-fix; the 3 that pass pre-fix are the controls
-- [ ] E2E: same flow, then kill the LV process, assert the pick survives (needs Phase 4 harness)
+- **[RESOLVED ELSEWHERE]** E2E: same flow, then kill the LV process, assert the pick survives
+      — **not a pending task.** Phase 4's harness (`Brando.LiveCase`, `kill_live/1`) is what this
+      needed, and it kills the process for real where the E2E spec only disconnects cooperatively.
+      See Phase 4's status block. Left unticked deliberately: no E2E spec was written.
       — **deferred, Phase 4 is out of this run's scope**
 
 **Payload cost of (b), measured** (the plan's Risks section asked for this): 4 hidden inputs =
@@ -241,7 +296,8 @@ would then delete them. **Inferred, not probe-verified.**
       splits. It emits `id` + `_persistent_id` for any ref whose name isn't in `@liquid_splits`.
       Identity alone is sufficient and verified: `cast_assoc` matches on the primary key and
       leaves unmentioned fields alone (asserted directly — `description` and `uid` survive)
-- [ ] E2E regression covering conditional/looped ref regions — **not done**, covered at the
+- **[RESOLVED ELSEWHERE]** E2E regression covering conditional/looped ref regions
+      — **not a pending task**; see Phase 4's status block. Covered at the
       changeset + component level instead; E2E belongs with the Phase 4 harness
 
 > **Known gap, documented in `carried_refs/1`:** an *unsaved* ref inside a stripped region is
@@ -360,7 +416,8 @@ changeset, which is non-recursive — no `cast_assoc(:children)` — while the s
       skipped, and a real `Repo.insert` round-trip materialized from the op store). 5 of 6 fail
       pre-fix; the no-children case is the control. Existing `block-recovery.spec.js` re-run
       green after the JS change (2/2, assets rebuilt)
-- [ ] E2E: add a root block with children, kill the process, assert children return —
+- **[RESOLVED ELSEWHERE]** E2E: add a root block with children, kill the process, assert children
+      return — **not a pending task**; see Phase 4's status block.
       **deferred, needs the Phase 4 harness.** Today's spec does a cooperative
       `liveSocket.disconnect()/connect()`, so the server process never dies and this path is
       not exercised end to end
@@ -415,7 +472,8 @@ The key is `STORAGE_PREFIX + this.el.id`, and `@id` is `"#{singular}_form"` with
 In principle a stale snapshot from entry A could inject blocks into entry B. The exact trigger
 path via `push_navigate` is **unconfirmed**.
 
-- [ ] Reproduce: create unsaved blocks on entry A, navigate to entry B without saving, reconnect
+- **[OPEN — UNCONFIRMED]** *(Phase 9D reproduces this or closes it)* Reproduce: create unsaved
+      blocks on entry A, navigate to entry B without saving, reconnect
       — **not reproduced, and the static read says it is hard to reach.** The snapshot is only
       written by `disconnected()`, and only `reconnected()` reads it — a hook that *mounts* after
       the reconnect runs `mounted()`, which is deliberately a no-op. So the leak needs the same
@@ -606,7 +664,7 @@ object in the bucket with no `File` row, no log, and no reaper — videos have
       topic returns `:ok` silently. Both sides now log their topic (`UploadManager: delivering asset
       #N to <topic>` / `Form: listening for asset delivery on <topic>`), which is what makes the
       repro conclusive and is worth keeping in production regardless of the fix
-- [ ] Make `deliver_topic` stable across remount — **BUILT, THEN REVERTED (`6da10b844`).**
+- **[REVERTED]** Make `deliver_topic` stable across remount — **BUILT, THEN REVERTED (`6da10b844`).**
       The client owned the topic in `sessionStorage` (per tab, per entry) and replayed it via
       `pushEventTo('set_deliver_topic')`; the server validated and resubscribed. It verified
       correctly in the browser — project 1 → `form:a50aa0e4…`, project 2 → `form:3c0b7a58…`, back
@@ -870,7 +928,7 @@ pickers all read the changeset correctly (`image.ex:71`, `file.ex:52`, `video.ex
       the `editing_*?` handling drift apart between them (D7). Now one
       `deliver_entry_field_asset/5`. The two gallery clauses stay separate: they append to an assoc
       rather than setting an FK, which is a different operation, not a different spelling
-- [ ] Path helpers — **not collapsed, and the finding's "3×" is really 2×.** `file_picker`'s
+- **[REJECTED AS WRITTEN]** Path helpers — **not collapsed, and the finding's "3×" is really 2×.** `file_picker`'s
       `file_upload_root/1` and `video_picker`'s `video_upload_root/1` share only the
       normalize-then-typed-default *shape*; they resolve config through different APIs
       (`Uploads.resolve_file_config/1` returning a tuple vs `Videos.get_config_for/1` returning
@@ -942,7 +1000,7 @@ pickers all read the changeset correctly (`image.ex:71`, `file.ex:52`, `video.ex
       the rendered list is **already a stream**. Renamed `assign_images/1` → `assign_config_target/1`
       since it no longer assigns images. **Tradeoff stated in the code**: folder navigation used to
       filter that cached list and now re-queries — the same query the picker already runs on open
-- [ ] `image_picker` / `video_picker`: bound the query itself — **NOT done, and the two are not the
+- **[REJECTED AS WRITTEN]** `image_picker` / `video_picker`: bound the query itself — **NOT done, and the two are not the
       same case.** `VideoPicker`'s `:videos` assign *is* a real cache: `assign_folder_state/2` is
       reached from a dozen call sites there that do not reload, so dropping it would add queries
       rather than remove them. Real pagination needs the folder tree to stop being derived from the
@@ -994,7 +1052,7 @@ pickers all read the changeset correctly (`image.ex:71`, `file.ex:52`, `video.ex
       "Position Response Tracker" is now corrected: that machinery no longer exists anywhere in
       `lib/` or `assets/src/`, because reorder under the single-owner op store is one store mutation
       with no per-block confirmations to await
-- [ ] `form/tab.ex`'s `:if` on the video drawer's Upload/External-URL sub-tabs — **ATTEMPTED, then
+- **[REVERTED]** `form/tab.ex`'s `:if` on the video drawer's Upload/External-URL sub-tabs — **ATTEMPTED, then
       REVERTED. The finding is real; its proposed fix is not a line edit, and the plan's "narrow
       blast radius: 2 fields" is wrong.**
       Switching those panels to a class toggle (matching `Form.form_tabs/1`) broke
@@ -1021,15 +1079,18 @@ pickers all read the changeset correctly (`image.ex:71`, `file.ex:52`, `video.ex
       `CastPolymorphicEmbeds` trait. The finding's "consistent 3-site pattern" was never about
       polymorphic embeds at all
 
-### G. Structure — `form.ex` is 6257 lines
+### G. Structure — `form.ex` is **6565 lines** (measured 2026-08-07; it was 6257 when this was written)
 
 Extract in this order, lowest risk first. These already communicate via `send_update`, so the
 seams are clean.
 
-- [ ] `Form.VideoDrawer` — `update/2:365-459`, `handle_event:3549-4069`
-- [ ] `Form.ImageDrawer` / `Form.FileDrawer` — `update/2:175-330`
-- [ ] `Form.Chrome` — the ~35 pure function components at `:5274-6257`
-- [ ] Leave gallery/entry-relation delivery in place — state-entangled, not a clean split
+- [ ] `Form.VideoDrawer` — `update/2:365-459`, `handle_event:3549-4069` — **Phase 9C. Treat these
+      ranges as stale** and re-locate by function head: the file grew 308 lines after they were written.
+- [ ] `Form.ImageDrawer` / `Form.FileDrawer` — `update/2:175-330` — **deferred to Phase 10**, gated on
+      9C's measured cost. Ranges stale, as above.
+- [ ] `Form.Chrome` — the ~35 pure function components at `:5274-6257` — **deferred to Phase 10**, same
+      gate. Ranges stale, as above.
+- **[DECISION, not a task]** Leave gallery/entry-relation delivery in place — state-entangled, not a clean split
 
 ---
 

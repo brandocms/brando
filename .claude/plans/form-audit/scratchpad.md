@@ -1250,3 +1250,158 @@ the key.
 - **The missing-credential disagreement** (Mux/Bunny raise, Cloudflare returns
   `{:error, :not_configured}`). **Fifth recording.** Phase 9 decides or stops
   recording it, per the Phase 8 plan's own instruction.
+
+---
+
+## Phase 8 review, and the fixes it produced (2026-08-07)
+
+Panel: elixir · security · testing · requirements · verification. Verdict
+**REQUIRES CHANGES** — 2 BLOCKERs, 3 WARNINGs, 5 SUGGESTIONs. Full text in
+`reviews/phase-8-review.md`. All findings fixed the same day; measurements
+below are from the fixed tree.
+
+### 1. The phase's own remedy was not applied to the file the phase edited
+
+B1: `cdn.ex`'s W-1 rewrite cited `:429` for `cdn_config.bucket`. The real site
+is `head_object/2`, and `:429` was a **blank line inside the docstring holding
+the citation**. 8A's remedy — cite function heads — worked perfectly where it
+was applied (all five `live_case.ex` citations verify); it simply was not
+carried to 8B's file. W1 was the same thing at one remove: `req_options.ex`
+cited `bunny.ex:422, 428`, and SEC-1's own 18-line comment moved those lines
+**in the same commit**.
+
+Both now cite by function (`head_object/2`, `api_request/3`). The lesson is not
+"be careful" — it is that the remedy has to travel with the standard.
+
+### 2. A false record about an observation, not a citation — a new category
+
+B2 is the one worth keeping. `phase-8-plan.md:195` recorded *"RED confirmed:
+killing the root yields `{:proxy_stopped, :shutdown}`."* It does not.
+`client_proxy.ex`'s `handle_info({:DOWN, …}, state)` clause propagates the
+monitored view's reason **verbatim**, so a root killed with `:kill` also reports
+`:killed`. The review ran the mutation: `1 test, 0 failures` — the assertion
+passed with the child entirely uninvolved.
+
+Fixed by killing the child with a reason **only that kill can produce**:
+`Process.exit(child.pid, :child_died)`. Measured both ways afterwards —
+root → `{:proxy_stopped, :killed}` (fails), proxy survives → `:proxy_survived`
+(fails). The record in the plan is amended, not replaced, per B1-record's
+precedent.
+
+*Three phases running, the audit's most durable lesson has been about
+citations. This is the first time it was about a claimed **observation**, and
+the generalisation is the sharper one: a claim whose only check is a re-read is
+not checked. Settling it cost one edit and a 13-second run.*
+
+### 3. The review panel reproduced the defect it was reviewing — twice
+
+Not incidental, and cheaper to record than to rediscover:
+
+- `elixir-reviewer` reported the doc's `BadMapError` as wrong, claiming
+  `UndefinedFunctionError` on `nil.bucket/0`. **Measured: `BadMapError`.** The
+  doc was right. `cdn_config` is a *variable*, so the dot takes the map path;
+  the `UndefinedFunctionError` reading applies to a literal atom.
+- `verification-runner` reported 32 non-dot output lines against a 27 baseline
+  and flagged a regression. **Re-measured: 27**, matching Phase 7 exactly. A
+  counting difference, not output.
+
+Both were caught by measuring rather than by re-reading — the same move that
+settled B2. **A review pass is not exempt from the rule it is enforcing.**
+
+### 4. One security finding the phase surfaced but did not look for
+
+`cdn.ex`'s `upload_image/4` raise interpolated the full S3 config into its
+message — `access_key_id` and `secret_access_key` in plaintext, into a string
+that reaches the Logger, Oban's `errors` column and any error reporter.
+Pre-existing, and adjacent to the `Map.from_struct/1` path W-1 spent the phase
+describing without anyone reading what the value *contained*.
+
+Fixed at the raise (`Keyword.drop/2`) **and** on the struct
+(`@derive {Inspect, except: …}`). Worth stating why both: by the raise the
+struct is already a keyword list, so the derivation does not cover it — and the
+derivation alone would have looked like a fix while changing nothing. That
+asymmetry is now written into both the struct's `@moduledoc` and the CHANGELOG.
+
+The fix had **no test at all** when first written — an unfalsifiable security
+claim, which this audit treats as a defect in its own right. `test/brando/cdn/cdn_test.exs`
+now carries five, and both mutations were run:
+
+* restore `inspect(s3_config, pretty: true)` → the message comes back as
+  `access_key_id: "TESTKEY", secret_access_key: "TESTSECRET"`. Reddens on the
+  **first** refutation only — both values return, but they share a test, so the
+  second never runs. The comment says so; the first draft said "both go red",
+  which is the same overclaim W3 was about.
+* remove the `@derive` → the two inspect tests redden, separately, both
+  reporting.
+
+One test deliberately asserts the **gap**: the `as: :keyword_list` return value
+is *not* redacted. It pins that the two fixes are independent, so neither can be
+mistaken for covering the other.
+
+### 5. Verification, fixed tree
+
+| Gate | Baseline | Measured |
+|---|---|---|
+| `mix test` | 1280 + 135 doctests | **1287 + 135, 0 failures** (+6: the `req` version pin, and five CDN credential-redaction tests) |
+| `mix credo --strict` | 284 | **284** exact (2 / 118 / 152 / 12) |
+| compile `--warnings-as-errors` | clean | clean |
+| `mix format --check-formatted` | clean | clean |
+| Unit-suite output | 43 / 27 non-dot / 0 stderr | **43 / 27 / 0** exact |
+| E2E (`--reset`) | 107 / 0 | **107 / 0, 8.9m**, measured 2026-08-07 — run **twice**: once before the fixes and again against the modified `lib/`, since the second round touched `cdn.ex` and `s3_config.ex` |
+
+Caution for whoever measures the noise figure next: a `mix test` run that also
+**recompiles** adds two non-dot lines (`Compiling N files`, `Generated brando
+app`). The 43/27 figure is a warm-build number. That is what the 27-vs-32
+disagreement in §3 came down to, and it will recur.
+
+### 6. `req` now has the tripwire the LiveView citations already had
+
+`ReqOptions`' `@doc` cites `req/steps.ex` by line eight times against 0.7.2,
+while `mix.exs` pins `~> 0.5 or ~> 1.0` — wide enough for all eight to go stale
+silently. `req_options_test.exs` now asserts `0.7.2` the way
+`form_recovery_test.exs` asserts `1.2.8`. Two different jobs, worth not
+conflating: `mix.exs` says what the library will *run* with, the test says what
+the prose was *checked* against.
+
+### Still deferred, sixth recording
+The three video uploaders disagree on missing credentials (Mux/Bunny raise,
+Cloudflare returns `{:error, :not_configured}`, `cloudflare.ex:272-273`). No
+review finding has ever asked for it. Per the Phase 8 plan: **Phase 9 either
+chooses it deliberately or stops recording it.**
+
+---
+
+## State of the tree at end of session (2026-08-07, night)
+
+**Nothing is committed.** Everything below is in the working tree on `next`.
+Committing is the first thing to decide tomorrow; the changes are green on every
+gate but they are one commit's worth of work, not eight.
+
+Modified:
+
+| File | Why |
+|---|---|
+| `lib/brando/cdn/cdn.ex` | B1 citation → `head_object/2` by name; the `:cdn`-subject comment disambiguated; credentials dropped from `upload_image/4`'s raise |
+| `lib/brando/cdn/s3_config.ex` | `@derive {Inspect, except: […]}` + `@moduledoc` naming the gap it does not cover |
+| `lib/brando/videos/uploaders/req_options.ex` | W1 citation → `api_request/3` by name; `:redirect_trusted` bullet now says which providers it exposes and why Bunny is not one |
+| `test/brando_admin/live/form_recovery_test.exs` | B2: kill the child with `:child_died` so the reason is causal; W2 comment corrected; version-assertion failure message now names both couplings |
+| `test/brando/videos/uploaders/req_options_test.exs` | W3 mutation comment corrected (`:plug` must stay in the take list); new `req` 0.7.2 version pin |
+| `test/brando/cdn/cdn_test.exs` | **new** — five tests pinning the credential redaction and the gap between its two halves |
+| `CHANGELOG.md` | Fixes entry for the credential redaction, above the Bunny one |
+| `.claude/plans/form-audit/plan.md` | Phase 9A: `## START HERE` block; nine boxes labelled; `form.ex` line count corrected |
+| `.claude/plans/form-audit/phase-8-plan.md` | W-4b's false record amended, original quoted, per B1-record's precedent |
+| `.claude/plans/form-audit/phase-9-plan.md` | **new** — the plan to pick up |
+| `.claude/plans/form-audit/reviews/*-p8.md`, `phase-8-review.md` | **new** — the panel output and the review |
+| `.claude/plans/form-audit/reviews/.requirements-input.md` | now holds the Phase 8 plan (it is the review skill's scratch input, not a record) |
+
+**Final gates, all measured on this tree:** `mix test` 1287 + 135 doctests / 0
+failures · `mix credo --strict` 284 (2 / 118 / 152 / 12) · compile
+`--warnings-as-errors` clean · `mix format --check-formatted` clean ·
+unit output 43 / 27 / 0 warm · **E2E 107 / 0, 8.9m**.
+
+**Open decision, first thing:** the video-uploader credential disagreement.
+`phase-9-plan.md` §Decisions lays out (a) all raise, (b) all return
+`{:error, :not_configured}`, (c) close it and delete the recording. (a) and (b)
+are both breaking changes on a library. Phase 9B is deliberately unwritten until
+that is answered.
+
