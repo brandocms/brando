@@ -6,9 +6,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   import BrandoAdmin.Components.Content.List.Checklist
 
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Primitives
   alias Ecto.Changeset
 
   # prop block, :any
@@ -357,13 +357,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                       <Input.input type={:hidden} field={focal_form[:y]} />
                     </.inputs_for>
 
-                    <Form.map_inputs :let={%{value: value, name: name}} field={cover_image[:sizes]}>
+                    <Primitives.map_inputs :let={%{value: value, name: name}} field={cover_image[:sizes]}>
                       <input type="hidden" name={"#{name}"} value={"#{value}"} />
-                    </Form.map_inputs>
+                    </Primitives.map_inputs>
 
-                    <Form.array_inputs :let={%{value: array_value, name: array_name}} field={cover_image[:formats]}>
+                    <Primitives.array_inputs :let={%{value: array_value, name: array_name}} field={cover_image[:formats]}>
                       <input type="hidden" name={array_name} value={array_value} />
-                    </Form.array_inputs>
+                    </Primitives.array_inputs>
                   </.inputs_for>
                 </div>
               </div>

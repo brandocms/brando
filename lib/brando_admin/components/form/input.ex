@@ -8,8 +8,8 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.Options
+  alias BrandoAdmin.Components.Form.Primitives
 
   # prop current_user, :any
   # prop form, :any
@@ -39,10 +39,10 @@ defmodule BrandoAdmin.Components.Form.Input do
       )
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <div class={["check-wrapper", @compact && "small"]}>
         <.input type={:checkbox} field={@field} />
-        <Form.label
+        <Primitives.label
           field={@field}
           class={[
             "control-label",
@@ -50,9 +50,9 @@ defmodule BrandoAdmin.Components.Form.Input do
           ]}
         >
           {@text}
-        </Form.label>
+        </Primitives.label>
       </div>
-    </Form.field_base>
+    </Primitives.field_base>
     """
   end
 
@@ -60,14 +60,14 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns = prepare_input_component(assigns)
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <div id={"#{@field.id}-code"} class="code-editor" phx-hook="Brando.CodeEditor">
         <.input type={:textarea} field={@field} phx-debounce={300} />
         <div id={"#{@field.id}-code-editor"} phx-update="ignore">
           <div class="editor"></div>
         </div>
       </div>
-    </Form.field_base>
+    </Primitives.field_base>
     """
   end
 
@@ -91,7 +91,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       end)
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <div
         id={"#{@field.id}-color-picker"}
         phx-hook="Brando.ColorPicker"
@@ -115,7 +115,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           </div>
         </div>
       </div>
-    </Form.field_base>
+    </Primitives.field_base>
     """
   end
 
@@ -136,7 +136,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       )
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <div id={"#{@field.id}-datepicker"} class="datetime-wrapper" phx-hook="Brando.DatePicker" data-locale={@locale}>
         <div id={"#{@field.id}-datepicker-flatpickr"} phx-update="ignore">
           <button type="button" class="clear-datetime">
@@ -145,7 +145,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           <.input type={:hidden} field={@field} value={@value} class="flatpickr" />
         </div>
       </div>
-    </Form.field_base>
+    </Primitives.field_base>
     """
   end
 
@@ -160,7 +160,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       )
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <div id={"#{@field.id}-datetimepicker"} class="datetime-wrapper" phx-hook="Brando.DateTimePicker" data-locale={@locale}>
         <div id={"#{@field.id}-datetimepicker-flatpickr"} phx-update="ignore">
           <button type="button" class="clear-datetime">
@@ -170,7 +170,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           <div class="timezone">&mdash; {gettext("Your timezone is")}: <span>Unknown</span></div>
         </div>
       </div>
-    </Form.field_base>
+    </Primitives.field_base>
     """
   end
 
@@ -180,7 +180,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns = prepare_input_component(assigns)
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <.input
         type={:email}
         field={@field}
@@ -191,7 +191,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         data-watch-focus
         class={["text", @monospace && "monospace"]}
       />
-    </Form.field_base>
+    </Primitives.field_base>
     """
   end
 
@@ -199,7 +199,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns = prepare_input_component(assigns)
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <.input
         type={:number}
         field={@field}
@@ -208,7 +208,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         phx-debounce={@debounce}
         class={["text", @monospace && "monospace"]}
       />
-    </Form.field_base>
+    </Primitives.field_base>
     """
   end
 
@@ -227,7 +227,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:confirmation_value, confirmation_value)
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <.input
         type={:password}
         field={@field}
@@ -236,9 +236,9 @@ defmodule BrandoAdmin.Components.Form.Input do
         phx-debounce={@debounce}
         class={["text", @monospace && "monospace"]}
       />
-    </Form.field_base>
+    </Primitives.field_base>
     <%= if @confirmation do %>
-      <Form.field_base
+      <Primitives.field_base
         field={@confirmation_field}
         label={"#{@label} [#{gettext("confirm")}]"}
         instructions={@instructions}
@@ -253,7 +253,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           phx-debounce={@debounce}
           class={["text", @monospace && "monospace"]}
         />
-      </Form.field_base>
+      </Primitives.field_base>
     <% end %>
     """
   end
@@ -262,7 +262,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns = prepare_input_component(assigns)
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <.input
         type={:phone}
         field={@field}
@@ -271,7 +271,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         phx-debounce={@debounce}
         class={["text", @monospace && "monospace"]}
       />
-    </Form.field_base>
+    </Primitives.field_base>
     """
   end
 
@@ -295,13 +295,13 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:input_options, input_options)
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <div :if={@input_options != []} class="radios-wrapper">
         <div :for={opt <- @input_options} class="form-check">
           <.radio_opt id={@id} opt={opt} field={@field} />
         </div>
       </div>
-    </Form.field_base>
+    </Primitives.field_base>
     """
   end
 
@@ -338,7 +338,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> prepare_ai_support()
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <div class={["tiptap-wrapper", "input-with-action", @ai_enabled? && "has-action"]} id={"#{@field.id}-rich-text-wrapper"}>
         <div
           id={"#{@field.id}-rich-text"}
@@ -372,7 +372,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           </svg>
         </button>
       </div>
-    </Form.field_base>
+    </Primitives.field_base>
     """
   end
 
@@ -407,7 +407,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> maybe_assign_url(assigns.opts[:show_url])
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <.input
         type={:text}
         field={@field}
@@ -429,7 +429,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           {@url}
         </div>
       <% end %>
-    </Form.field_base>
+    </Primitives.field_base>
     """
   end
 
@@ -593,7 +593,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       status_compact(assigns)
     else
       ~H"""
-      <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+      <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
         <div class="radios-wrapper status">
           <div :for={status <- @statuses} :key={status.value} class="form-check">
             <label class="form-check-label">
@@ -614,7 +614,7 @@ defmodule BrandoAdmin.Components.Form.Input do
             </label>
           </div>
         </div>
-      </Form.field_base>
+      </Primitives.field_base>
       """
     end
   end
@@ -630,7 +630,14 @@ defmodule BrandoAdmin.Components.Form.Input do
       )
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact} fit_content>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      fit_content
+    >
       <div class="radios-wrapper status compact" phx-click={toggle_dropdown("##{@id}")}>
         <.status_circle status={@current_status} publish_at={nil} />
         <div class="status-dropdown hidden" id={@id}>
@@ -656,7 +663,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           <% end %>
         </div>
       </div>
-    </Form.field_base>
+    </Primitives.field_base>
     """
   end
 
@@ -691,8 +698,8 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns = assign(assigns, :field, updated_field)
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
-      <Form.map_inputs :let={%{value: value, key: language, name: name}} field={@field}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+      <Primitives.map_inputs :let={%{value: value, key: language, name: name}} field={@field}>
         <div class="field-base i18n-text">
           <div class="language">{language}</div>
           <input
@@ -705,8 +712,8 @@ defmodule BrandoAdmin.Components.Form.Input do
             data-watch-focus
           />
         </div>
-      </Form.map_inputs>
-    </Form.field_base>
+      </Primitives.map_inputs>
+    </Primitives.field_base>
     """
   end
 
@@ -731,7 +738,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> prepare_ai_support()
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <div class={["input-with-action", @ai_enabled? && "has-action"]}>
         <.input
           type={:text}
@@ -765,7 +772,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           </svg>
         </button>
       </div>
-    </Form.field_base>
+    </Primitives.field_base>
     """
   end
 
@@ -787,7 +794,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:display_placeholder, assigns.default_value || "")
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <div class="input-with-action has-action">
         <.input
           type={:text}
@@ -810,7 +817,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           <.icon name="hero-arrow-uturn-left-mini" />
         </button>
       </div>
-    </Form.field_base>
+    </Primitives.field_base>
     """
   end
 
@@ -893,7 +900,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:monospace, assigns.opts[:monospace])
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <div class={["input-with-action", @ai_enabled? && "has-action"]}>
         <.input
           type={:textarea}
@@ -927,7 +934,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           </svg>
         </button>
       </div>
-    </Form.field_base>
+    </Primitives.field_base>
     """
   end
 
@@ -981,8 +988,8 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:field, updated_field)
 
     ~H"""
-    <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
-      <Form.map_inputs :let={%{value: value, key: language, name: name}} field={@field}>
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+      <Primitives.map_inputs :let={%{value: value, key: language, name: name}} field={@field}>
         <div class="field-base i18n-textarea">
           <div class="language">{language}</div>
           <textarea
@@ -995,8 +1002,8 @@ defmodule BrandoAdmin.Components.Form.Input do
             data-watch-focus
           ><%= value %></textarea>
         </div>
-      </Form.map_inputs>
-    </Form.field_base>
+      </Primitives.map_inputs>
+    </Primitives.field_base>
     """
   end
 
@@ -1010,18 +1017,18 @@ defmodule BrandoAdmin.Components.Form.Input do
     ~H"""
     <%= if @tiny do %>
       <div class="tiny-toggle-wrapper">
-        <Form.label field={@field} class="switch small" skip_presence>
+        <Primitives.label field={@field} class="switch small" skip_presence>
           <%= if @inner_block do %>
             {render_slot(@inner_block)}
           <% else %>
             <.input type={:checkbox} field={@field} />
           <% end %>
           <div class="slider round"></div>
-        </Form.label>
+        </Primitives.label>
         <span class="tiny-toggle-label">{@label}</span>
       </div>
     <% else %>
-      <Form.field_base
+      <Primitives.field_base
         field={@field}
         label={@label}
         instructions={@instructions}
@@ -1029,15 +1036,15 @@ defmodule BrandoAdmin.Components.Form.Input do
         compact={@compact}
         left_justify_meta
       >
-        <Form.label field={@field} class={["switch", @compact && "small"]} skip_presence>
+        <Primitives.label field={@field} class={["switch", @compact && "small"]} skip_presence>
           <%= if @inner_block do %>
             {render_slot(@inner_block)}
           <% else %>
             <.input type={:checkbox} field={@field} />
           <% end %>
           <div class="slider round"></div>
-        </Form.label>
-      </Form.field_base>
+        </Primitives.label>
+      </Primitives.field_base>
     <% end %>
     """
   end

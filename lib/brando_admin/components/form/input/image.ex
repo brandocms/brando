@@ -6,8 +6,8 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   import Ecto.Changeset
 
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Primitives
 
   # prop field, :atom
   # prop label, :string
@@ -181,7 +181,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   def render(assigns) do
     ~H"""
     <div>
-      <Form.field_base
+      <Primitives.field_base
         :if={@editable}
         field={@field}
         label={@label}
@@ -203,7 +203,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
             />
           </div>
         </div>
-      </Form.field_base>
+      </Primitives.field_base>
       <%!-- `click={false}`: this branch only renders when `@editable` is false,
             so the old `@editable && open_image(...)` could never be anything
             else. --%>

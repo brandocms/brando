@@ -4,14 +4,14 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   use BrandoAdmin.Toast
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Content.Ref
   alias Brando.Content.Var
-  alias Brando.Content.Blocks, as: ContentBlocks
+  alias Brando.Villain.Blocks.TextBlock
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.ModuleProps
-  alias Brando.Villain.Blocks.TextBlock
+  alias BrandoAdmin.Components.Form.Primitives
   alias Ecto.Changeset
 
   def mount(%{"entry_id" => entry_id}, %{"user_token" => token}, socket) do
@@ -76,7 +76,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
         </div>
 
         <div class="button-group module-editor-actions">
-          <Form.submit_button
+          <Primitives.submit_button
             processing={false}
             form_id="module_form"
             label={gettext("Save (⇧⌘S)")}

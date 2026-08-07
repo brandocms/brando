@@ -5,8 +5,8 @@ defmodule BrandoAdmin.Components.Form.Input.File do
 
   import Ecto.Changeset
 
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Primitives
 
   # prop form, :form
   # prop field, :atom
@@ -115,7 +115,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
   def render(assigns) do
     ~H"""
     <div>
-      <Form.field_base
+      <Primitives.field_base
         field={@field}
         label={@label}
         instructions={@instructions}
@@ -136,7 +136,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
             />
           </div>
         </div>
-      </Form.field_base>
+      </Primitives.field_base>
     </div>
     """
   end

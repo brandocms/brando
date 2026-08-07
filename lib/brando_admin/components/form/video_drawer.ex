@@ -28,8 +28,8 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.Tab
   alias Phoenix.LiveView.JS
 
@@ -67,7 +67,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
       <Input.text field={@video_form[:caption]} label={gettext("Caption")} />
     </div>
 
-    <Form.input
+    <Primitives.input
       type={:select}
       field={@video_form[:aspect_ratio]}
       label={gettext("Aspect Ratio")}
@@ -308,7 +308,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
 
             <Tab.tab_content :if={@allow_external_urls?} id="external" active_tab={@active_video_tab}>
               <div class="brando-input">
-                <Form.input
+                <Primitives.input
                   type={:select}
                   field={video_form[:type]}
                   label={gettext("Video Service")}

@@ -5,11 +5,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
   import Brando.Utils, only: [loaded_assoc?: 2]
 
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object
   alias BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm
+  alias BrandoAdmin.Components.Form.Primitives
   alias Ecto.Changeset
 
   # prop uploads, :any
@@ -338,12 +338,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               ]}
             />
 
-            <Form.array_inputs
+            <Primitives.array_inputs
               :let={%{value: array_value, name: array_name}}
               field={block_data[:formats]}
             >
               <input type="hidden" name={array_name} value={array_value} />
-            </Form.array_inputs>
+            </Primitives.array_inputs>
 
             <input type="hidden" data-upload-formats={@upload_formats} />
           </:config>

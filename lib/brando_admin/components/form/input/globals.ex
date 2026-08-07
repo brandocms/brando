@@ -6,8 +6,8 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
 
   import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 2]
 
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.RenderVar
+  alias BrandoAdmin.Components.Form.Primitives
 
   # prop form, :form
   # prop subform, :form
@@ -35,13 +35,13 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
   def render(assigns) do
     ~H"""
     <fieldset>
-      <Form.field_base field={@field} label={@label} instructions={@instructions} class="subform">
+      <Primitives.field_base field={@field} label={@label} instructions={@instructions} class="subform">
         <div id={"#{@field.id}-sortable"} phx-hook="Brando.SubFormSortable">
           <%= if Enum.empty?(inputs_for_poly(@field, [])) do %>
             <input type="hidden" name={@field.name} value="" />
             <div class="subform-empty">&rarr; {gettext("No associated entries")}</div>
           <% else %>
-            <Form.inputs_for_poly :let={var} field={@field}>
+            <Primitives.inputs_for_poly :let={var} field={@field}>
               <div class="subform-entry flex-row" data-id={var.index}>
                 <div class="subform-tools">
                   <button type="button" class="subform-handle">
@@ -79,7 +79,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
                   publish
                 />
               </div>
-            </Form.inputs_for_poly>
+            </Primitives.inputs_for_poly>
           <% end %>
         </div>
         <button
@@ -96,7 +96,7 @@ defmodule BrandoAdmin.Components.Form.Input.Globals do
           </svg>
           {gettext("Add entry")}
         </button>
-      </Form.field_base>
+      </Primitives.field_base>
     </fieldset>
     """
   end

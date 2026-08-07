@@ -6,8 +6,8 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
   import Ecto.Changeset
 
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Primitives
 
   def mount(socket) do
     {:ok,
@@ -152,7 +152,14 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
   def render(assigns) do
     ~H"""
     <div>
-      <Form.field_base :if={@editable} field={@field} label={@label} instructions={@instructions} class={@class} relation>
+      <Primitives.field_base
+        :if={@editable}
+        field={@field}
+        label={@label}
+        instructions={@instructions}
+        class={@class}
+        relation
+      >
         <div>
           <div class="input-video">
             <.video_preview
@@ -164,7 +171,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
             />
           </div>
         </div>
-      </Form.field_base>
+      </Primitives.field_base>
       <%!-- `click={false}`: this branch only renders when `@editable` is false,
             so the old `@editable && open_video(...)` could never be anything
             else. --%>

@@ -5,8 +5,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
 
   use Gettext, backend: Brando.Gettext
 
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
+  alias BrandoAdmin.Components.Form.Primitives
   alias Ecto.Changeset
 
   # prop block, :form
@@ -171,9 +171,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
 
   def select_block(assigns) do
     ~H"""
-    <Form.array_inputs :let={%{value: array_value, name: array_name}} field={@block_data[:available_blocks]}>
+    <Primitives.array_inputs :let={%{value: array_value, name: array_name}} field={@block_data[:available_blocks]}>
       <input type="hidden" name={array_name} value={array_value} />
-    </Form.array_inputs>
+    </Primitives.array_inputs>
 
     <button
       :for={block_type <- @available_blocks}

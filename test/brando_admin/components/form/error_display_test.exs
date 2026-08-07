@@ -13,6 +13,7 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
   import Phoenix.LiveViewTest, only: [render_component: 2]
 
   alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Primitives
 
   # A form the user has not interacted with: no params, so used_input? is false
   # for every field.
@@ -45,7 +46,7 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
   end
 
   defp error_tag(form, opts \\ []) do
-    render_component(&Form.error_tag/1, %{
+    render_component(&Primitives.error_tag/1, %{
       field: form[:meta_image],
       relation: Keyword.get(opts, :relation, true),
       id_prefix: "",
@@ -108,7 +109,7 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
         |> to_form(as: :plain)
 
       html =
-        render_component(&Form.error_tag/1, %{
+        render_component(&Primitives.error_tag/1, %{
           field: form[:meta_image],
           relation: true,
           id_prefix: "",
@@ -170,7 +171,7 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
 
   describe "field_base/1 label state" do
     defp field_base(form) do
-      render_component(&Form.field_base/1, %{
+      render_component(&Primitives.field_base/1, %{
         field: form[:meta_image],
         relation: true,
         label: "META image",

@@ -330,11 +330,15 @@ Run after 9E-2, and again at the end:
       **284 exact**, same split
 - [x] `mix test` — **baseline 1291 + 135 doctests / 0 failures** —
       **1305 + 135 / 0**, +14 new
-- [ ] E2E, user-run: `cd e2e && source .envrc && ./test_e2e.sh --reset` —
+- [x] E2E, user-run: `cd e2e && source .envrc && ./test_e2e.sh --reset` —
       **baseline 108 / 0**. 9E-5 touches a spec, so this is required, not
       optional. **9E-8 adds one**, so the expected count is **109 / 0**.
       No JS or CSS changed, so no consumer asset rebuild is needed —
       both edits are to `block-recovery.spec.js` itself
+      — **measured 109 / 0, 9.4m**, the predicted count exactly. The two
+      touched specs: `:249` the key-follows-entry test (2.4s, no longer
+      sleeping 750ms before reading the attribute it observes) and `:289`
+      the new cross-entry test (4.1s)
 
 Unit-suite output measured **25 lines / 13 non-dot / 0 stderr** (warm). The
 stderr figure matches the recorded baseline exactly; the other two are *lower*

@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
   use BrandoAdmin, :component
   # use Phoenix.HTML
 
-  alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Primitives
 
   # prop input, :map
   # prop sub_form, :form
@@ -22,7 +22,7 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
       |> assign_new(:subform_id, fn -> nil end)
 
     ~H"""
-    <Form.input
+    <Primitives.input
       id={"#{@sub_form.id}-input-#{@cardinality}-#{@input.name}"}
       field={@sub_form[@input.name]}
       label={@label}

@@ -2,9 +2,9 @@ defmodule BrandoAdmin.Components.Form.Subform do
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
 
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.SubformHelpers
+  alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.Subform
 
   use Gettext, backend: Brando.Gettext
@@ -109,7 +109,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   def render(%{subform: _} = assigns) do
     ~H"""
     <fieldset>
-      <Form.field_base
+      <Primitives.field_base
         :if={@subform.cardinality == :one}
         field={@field}
         label={@label}
@@ -136,8 +136,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
             />
           </div>
         </.inputs_for>
-      </Form.field_base>
-      <Form.field_base
+      </Primitives.field_base>
+      <Primitives.field_base
         :if={@subform.cardinality == :many}
         field={@field}
         label={@label}
@@ -179,7 +179,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
           <input type="hidden" name={"#{@field.form.name}[#{@drop_param}][]"} />
         </div>
         <.subentry_add on_click={JS.push("add_subentry", target: @myself)} />
-      </Form.field_base>
+      </Primitives.field_base>
     </fieldset>
     """
   end

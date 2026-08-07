@@ -8,17 +8,17 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   import Phoenix.LiveView.TagEngine
   import PolymorphicEmbed.HTML.Component
 
-  alias Phoenix.LiveView.JS
-  alias Ecto.Changeset
+  alias Brando.Content.Block, as: ContentBlock
+  alias Brando.Content.Var.Layout
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
   alias BrandoAdmin.Components.Form.Input.Entries
-  alias Brando.Content.Block, as: ContentBlock
-  alias Brando.Content.Var.Layout
   alias BrandoAdmin.Components.Form.Input.RenderVar
+  alias BrandoAdmin.Components.Form.Primitives
+  alias Ecto.Changeset
+  alias Phoenix.LiveView.JS
 
   def render(%{module_not_found: true} = assigns) do
     ~H"""
@@ -1897,9 +1897,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <%= if @extensions == "all" do %>
               <Input.hidden field={text_block_data[:extensions]} />
             <% else %>
-              <Form.array_inputs :let={%{value: array_value, name: array_name}} field={text_block_data[:extensions]}>
+              <Primitives.array_inputs :let={%{value: array_value, name: array_name}} field={text_block_data[:extensions]}>
                 <input type="hidden" name={array_name} value={array_value} />
-              </Form.array_inputs>
+              </Primitives.array_inputs>
             <% end %>
           </:config>
           <div class={["text-block", @text_type]}>
@@ -2259,10 +2259,10 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     ~H"""
     <div class="block-toolbar">
       <div class="block-description">
-        <Form.label field={@active_field} class="switch small inverse">
+        <Primitives.label field={@active_field} class="switch small inverse">
           <Input.input type={:checkbox} field={@active_field} />
           <div class="slider round"></div>
-        </Form.label>
+        </Primitives.label>
         <span class="block-type">
           <span :if={@is_datasource?} class="datasource">
             {gettext("Datamodule")} |
@@ -2354,7 +2354,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         >
           <.icon name="hero-cog-8-tooth" />
         </button>
-        <Form.label
+        <Primitives.label
           field={@collapsed_field}
           class="block-action toggler"
           popover={gettext("Collapse (hide) block in block editor")}
@@ -2362,7 +2362,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           <.icon :if={@collapsed} name="hero-eye-slash" />
           <.icon :if={!@collapsed} name="hero-eye" />
           <Input.input type={:checkbox} field={@collapsed_field} />
-        </Form.label>
+        </Primitives.label>
 
         <div
           :if={!@is_ref?}

@@ -7,10 +7,10 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   alias Brando.Exception.BlueprintError
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Options
+  alias BrandoAdmin.Components.Form.Primitives
 
   # prop form, :form
   # prop field, :atom
@@ -48,7 +48,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   def render(assigns) do
     ~H"""
     <div>
-      <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+      <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
         <.invalid_options_warning
           :if={@invalid_options != []}
           invalid_options={@invalid_options}
@@ -256,7 +256,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             </:footer>
           </Content.modal>
         </.portal>
-      </Form.field_base>
+      </Primitives.field_base>
     </div>
     """
   end

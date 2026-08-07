@@ -8,8 +8,8 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   alias Brando.Blueprint.Identifier
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Content.List.Row
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Primitives
   alias Ecto.Changeset
 
   # prop form, :form
@@ -125,7 +125,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   def render(assigns) do
     ~H"""
     <div>
-      <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+      <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
         <div class="asset-field entries-input">
           <%= if !@has_entries do %>
             <div class="empty-list">
@@ -210,7 +210,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
             />
           <% end %>
         </Content.modal>
-      </Form.field_base>
+      </Primitives.field_base>
     </div>
     """
   end

@@ -7,10 +7,10 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Gallery.Media
   alias BrandoAdmin.Components.Form.Input.Gallery.Thumb
+  alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.ImagePicker
   alias BrandoAdmin.Components.VideoPicker
 
@@ -46,7 +46,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
   def render(assigns) do
     ~H"""
     <fieldset>
-      <Form.field_base field={@field} label={@label} instructions={@instructions} class="subform">
+      <Primitives.field_base field={@field} label={@label} instructions={@instructions} class="subform">
         <div class="gallery-input">
           <div class="actions">
             <button
@@ -101,7 +101,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
             </div>
           <% end %>
         </div>
-      </Form.field_base>
+      </Primitives.field_base>
     </fieldset>
     """
   end

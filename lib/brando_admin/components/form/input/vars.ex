@@ -6,8 +6,8 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
 
   import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 2]
 
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.RenderVar
+  alias BrandoAdmin.Components.Form.Primitives
 
   # prop form, :form
   # prop subform, :form
@@ -35,7 +35,7 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
   def render(assigns) do
     ~H"""
     <fieldset>
-      <Form.field_base field={@field} label={@label} instructions={@instructions} class="subform">
+      <Primitives.field_base field={@field} label={@label} instructions={@instructions} class="subform">
         <div
           id={"#{@field.id}-sortable"}
           phx-hook="Brando.SortableInputsFor"
@@ -85,7 +85,7 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
           <.icon name="hero-squares-plus" />
           {gettext("Add entry")}
         </button>
-      </Form.field_base>
+      </Primitives.field_base>
     </fieldset>
     """
   end

@@ -6,11 +6,11 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
   alias Brando.Datasource
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.RenderVar
-  alias BrandoAdmin.Components.Form.VarLayout
   alias BrandoAdmin.Components.Form.ModuleProps.RefBlockForm
+  alias BrandoAdmin.Components.Form.Primitives
+  alias BrandoAdmin.Components.Form.VarLayout
 
   @ref_types [
     %{value: "text", label: "Text", description: "Rich, editable body content"},
@@ -251,7 +251,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       <span class="drag-grip" aria-hidden="true"></span>
                     </button>
 
-                    <Form.inputs_for_block :let={ref_data} field={ref[:data]} skip_hidden>
+                    <Primitives.inputs_for_block :let={ref_data} field={ref[:data]} skip_hidden>
                       <button
                         class="module-item-summary"
                         type="button"
@@ -289,7 +289,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                           <.icon name="hero-x-mark" />
                         </button>
                       </div>
-                    </Form.inputs_for_block>
+                    </Primitives.inputs_for_block>
 
                     <Content.modal
                       title={gettext("Edit reference")}
@@ -298,7 +298,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       close={close_item_modal("##{@form.id}-#{@key}-ref-#{ref.index}")}
                       wide
                     >
-                      <Form.inputs_for_block :let={ref_data} field={ref[:data]}>
+                      <Primitives.inputs_for_block :let={ref_data} field={ref[:data]}>
                         <Input.input type={:hidden} field={ref_data[:type]} />
                         <div class="panels">
                           <div class="panel">
@@ -337,7 +337,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                           type={ref_data[:type].value}
                           block_data={ref_data}
                         />
-                      </Form.inputs_for_block>
+                      </Primitives.inputs_for_block>
                       <:footer>
                         <button
                           type="button"
@@ -604,7 +604,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     assigns = assign(assigns, :options, @format_options)
 
     ~H"""
-    <Form.array_inputs_from_data
+    <Primitives.array_inputs_from_data
       :let={%{id: array_id, value: array_value, label: array_label, name: array_name, checked: checked}}
       field={@field}
       options={@options}
@@ -615,7 +615,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           <label class="control-label small" for={array_id}>{array_label}</label>
         </div>
       </div>
-    </Form.array_inputs_from_data>
+    </Primitives.array_inputs_from_data>
     """
   end
 end

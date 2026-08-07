@@ -9,8 +9,8 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Primitives
 
   @days [
     {"monday", "Monday"},
@@ -49,7 +49,7 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
   def render(assigns) do
     ~H"""
     <fieldset>
-      <Form.field_base field={@field} label={@label} instructions={@instructions} class="subform">
+      <Primitives.field_base field={@field} label={@label} instructions={@instructions} class="subform">
         <.inputs_for :let={config} field={@field}>
           <div :if={@type_fields != []} class="type-config-fields">
             <.type_field
@@ -78,7 +78,7 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
             <p>{gettext("No additional fields for this identity type.")}</p>
           </div>
         </.inputs_for>
-      </Form.field_base>
+      </Primitives.field_base>
     </fieldset>
     """
   end
@@ -89,14 +89,14 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
 
     ~H"""
     <div class="brando-input" data-component={@type}>
-      <Form.field_base field={@config[@name]} label={@label} instructions={@instructions}>
+      <Primitives.field_base field={@config[@name]} label={@label} instructions={@instructions}>
         <Input.input
           type={@type}
           field={@config[@name]}
           class={["text"]}
           phx-debounce={300}
         />
-      </Form.field_base>
+      </Primitives.field_base>
     </div>
     """
   end

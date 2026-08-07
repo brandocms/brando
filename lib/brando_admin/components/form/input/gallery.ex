@@ -7,13 +7,14 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   import Ecto.Changeset
 
   alias Brando.Utils
+  alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Gallery.ImageConfig
   alias BrandoAdmin.Components.Form.Input.Gallery.Media
   alias BrandoAdmin.Components.Form.Input.Gallery.Thumb
   alias BrandoAdmin.Components.Form.Input.Gallery.VideoConfig
-  alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.ImagePicker
   alias BrandoAdmin.Components.VideoPicker
 
@@ -158,7 +159,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   def render(assigns) do
     ~H"""
     <div>
-      <Form.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+      <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
         <div class="asset-field gallery-input">
           <div
             id={"#{@field.id}-gallery-upload-trigger"}
@@ -283,7 +284,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
             <% end %>
           </Content.modal>
         </div>
-      </Form.field_base>
+      </Primitives.field_base>
     </div>
     """
   end
@@ -720,7 +721,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     )
   end
 
-  # `Form.input/1` threads the entry form component's own id down as `@form_id`
+  # `Primitives.input/1` threads the entry form component's own id down as `@form_id`
   # (`form.ex`, `form_id={@id}`), so it is authoritative — no derivation needed.
   #
   # The fallback covers a gallery rendered outside that pipeline. It reads the

@@ -8,8 +8,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   alias Brando.Utils
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Primitives
 
   # prop var, :any
   # prop render, :atom, values: [:all, :content, :config], default: :all
@@ -510,7 +510,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                       data-sortable-handle=".sort-handle"
                       data-sortable-selector=".input-group"
                     >
-                      <Form.field_base field={@var[:options]} label={gettext("Options")} left_justify_meta skip_presence>
+                      <Primitives.field_base field={@var[:options]} label={gettext("Options")} left_justify_meta skip_presence>
                         <.inputs_for :let={opt} field={@var[:options]}>
                           <%!-- `.input-group` is the hook's sortable selector and
                                 `.sort-handle` the handle it looks for — there was
@@ -551,7 +551,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                           <.icon name="hero-plus" />
                           {gettext("Add option")}
                         </button>
-                      </Form.field_base>
+                      </Primitives.field_base>
                     </div>
                 <% end %>
               </section>
@@ -682,17 +682,17 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :boolean} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Form.field_base field={@var[:value_boolean]} label={@label} left_justify_meta>
+      <Primitives.field_base field={@var[:value_boolean]} label={@label} left_justify_meta>
         <div class="boolean-control">
-          <Form.label field={@var[:value_boolean]} class="switch small" skip_presence>
+          <Primitives.label field={@var[:value_boolean]} class="switch small" skip_presence>
             <Input.input type={:checkbox} field={@var[:value_boolean]} />
             <div class="slider round"></div>
-          </Form.label>
+          </Primitives.label>
           <span :if={@instructions} class="boolean-instructions" title={@instructions}>
             <.icon name="hero-information-circle" />
           </span>
         </div>
-      </Form.field_base>
+      </Primitives.field_base>
     </div>
     """
   end
@@ -760,7 +760,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :image} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Form.field_base field={@var[:image_id]} label={@label} instructions={@instructions} skip_presence>
+      <Primitives.field_base field={@var[:image_id]} label={@label} instructions={@instructions} skip_presence>
         <div class="input-image">
           <Input.Image.image_preview
             image={@image}
@@ -780,7 +780,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             upload_kind={@upload_kind}
           />
         </div>
-      </Form.field_base>
+      </Primitives.field_base>
       <div :if={@edit} class="brando-input">
         <Input.text
           field={@var[:config_target]}
@@ -796,7 +796,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :file} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Form.field_base field={@var[:file_id]} label={@label} instructions={@instructions} skip_presence>
+      <Primitives.field_base field={@var[:file_id]} label={@label} instructions={@instructions} skip_presence>
         <div class="input-file">
           <Input.File.file_preview
             publish
@@ -816,7 +816,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             upload_kind={@upload_kind}
           />
         </div>
-      </Form.field_base>
+      </Primitives.field_base>
       <div :if={@edit} class="brando-input">
         <Input.text
           field={@var[:config_target]}
@@ -832,7 +832,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :video} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Form.field_base field={@var[:video_id]} label={@label} instructions={@instructions} skip_presence>
+      <Primitives.field_base field={@var[:video_id]} label={@label} instructions={@instructions} skip_presence>
         <Input.hidden field={@var[:video_id]} value={@video_id || ""} />
         <button
           type="button"
@@ -848,7 +848,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           </div>
         </button>
         <.video_modal field={@var} video={@video} target={@target} />
-      </Form.field_base>
+      </Primitives.field_base>
       <div :if={@edit} class="brando-input">
         <Input.text
           field={@var[:config_target]}
@@ -866,7 +866,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
     ~H"""
     <div class="brando-input">
-      <Form.field_base field={@var[:gallery_id]} label={@label} instructions={@instructions} skip_presence>
+      <Primitives.field_base field={@var[:gallery_id]} label={@label} instructions={@instructions} skip_presence>
         <Input.hidden field={@var[:gallery_id]} value={@gallery_id || ""} />
         <button
           type="button"
@@ -882,7 +882,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           </div>
         </button>
         <.gallery_modal field={@var} gallery={@gallery} target={@target} />
-      </Form.field_base>
+      </Primitives.field_base>
       <div :if={@edit} class="brando-input">
         <.live_component
           module={Input.MultiSelect}
@@ -901,7 +901,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :link} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Form.field_base field={@var[:identifier_id]} label={@label} instructions={@instructions} skip_presence>
+      <Primitives.field_base field={@var[:identifier_id]} label={@label} instructions={@instructions} skip_presence>
         <div class="input-link">
           <Input.hidden field={@var[:identifier_id]} value={@identifier_id || ""} />
           <.link_preview
@@ -917,7 +917,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             on_change={@on_change || fn params -> send_update(@target, params) end}
           />
         </div>
-      </Form.field_base>
+      </Primitives.field_base>
     </div>
     """
   end

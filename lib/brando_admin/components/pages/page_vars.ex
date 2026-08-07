@@ -7,9 +7,9 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
 
   import BrandoAdmin.Components.Form.Input.Blocks.Utils, only: [inputs_for_poly: 2]
 
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.Form.Input.SubformHelpers
+  alias BrandoAdmin.Components.Form.Primitives
 
   # prop form, :form
   # prop subform, :form
@@ -30,7 +30,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
   def render(assigns) do
     ~H"""
     <fieldset>
-      <Form.field_base field={@field} label={@label} instructions={@instructions} class="subform">
+      <Primitives.field_base field={@field} label={@label} instructions={@instructions} class="subform">
         <:header>
           <div class="switch-description">{gettext("Advanced")}</div>
           <div class="brando-input">
@@ -53,7 +53,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
               <input type="hidden" name={"#{@field.name}"} value="" />
               <div class="subform-empty">&rarr; {gettext("No associated entries")}</div>
             <% end %>
-            <Form.inputs_for_poly :let={var} field={@field}>
+            <Primitives.inputs_for_poly :let={var} field={@field}>
               <div class="subform-entry flex-row" data-id={var.index}>
                 <div class="subform-tools">
                   <button type="button" class="subform-handle">
@@ -83,7 +83,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
 
                 <.live_component module={RenderVar} id={"#{@field.id}-render-var-#{var.index}"} var={var} render={:all} edit />
               </div>
-            </Form.inputs_for_poly>
+            </Primitives.inputs_for_poly>
           </div>
           <button
             id={"#{@field.id}-add-entry"}
@@ -101,12 +101,12 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
           </button>
         <% else %>
           <%= unless Enum.empty?(inputs_for_poly(@field, [])) do %>
-            <Form.inputs_for_poly :let={var} field={@field}>
+            <Primitives.inputs_for_poly :let={var} field={@field}>
               <.live_component module={RenderVar} id={"#{@field.id}-render-var-#{var.index}"} var={var} render={:all} />
-            </Form.inputs_for_poly>
+            </Primitives.inputs_for_poly>
           <% end %>
         <% end %>
-      </Form.field_base>
+      </Primitives.field_base>
     </fieldset>
     """
   end

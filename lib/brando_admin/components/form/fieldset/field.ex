@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
   # use Phoenix.HTML
 
   alias Brando.Blueprint.Forms.Input, as: BlueprintInput
-  alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.Subform
   alias BrandoAdmin.Components.Form.Transformer
   alias Phoenix.HTML.FormField
@@ -76,7 +76,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
           <% end %>
         <% end %>
       <% else %>
-        <Form.input
+        <Primitives.input
           field={@form[@input.name]}
           label={@label}
           instructions={@instructions}

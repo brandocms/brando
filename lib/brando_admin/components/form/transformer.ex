@@ -16,7 +16,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   use BrandoAdmin, :live_component
 
   alias BrandoAdmin.Components.Content
-  alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.Subform
 
   import Ecto.Changeset, only: [change: 2, get_field: 2]
@@ -281,7 +281,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
 
     ~H"""
     <fieldset>
-      <Form.field_base
+      <Primitives.field_base
         field={@field}
         label={@label}
         instructions={@instructions}
@@ -423,7 +423,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
             />
           </Content.modal>
         </div>
-      </Form.field_base>
+      </Primitives.field_base>
     </fieldset>
     """
   end
@@ -594,7 +594,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
       :if={input.name not in @skip_fields and input.type not in [:image, :video]}
       class="field-wrapper"
     >
-      <Form.input
+      <Primitives.input
         id={"#{@item.dom_id}-input-#{input.name}"}
         field={@item_form[input.name]}
         label={nil}

@@ -5,9 +5,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext
 
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.ModuleProps
+  alias BrandoAdmin.Components.Form.Primitives
   alias Phoenix.LiveView.JS
 
   @text_extension_options [
@@ -84,74 +84,74 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
 
   def block_form(%{type: "header"} = assigns) do
     ~H"""
-    <Form.inputs_for_block :let={block_data} field={@ref_data[:data]}>
+    <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
       <Input.text field={block_data[:level]} label={gettext("Level")} />
       <Input.text field={block_data[:text]} label={gettext("Text")} />
       <Input.text field={block_data[:id]} label={gettext("ID")} />
       <Input.text field={block_data[:link]} label={gettext("Link")} />
-    </Form.inputs_for_block>
+    </Primitives.inputs_for_block>
     """
   end
 
   def block_form(%{type: "comment"} = assigns) do
     ~H"""
-    <Form.inputs_for_block :let={block_data} field={@ref_data[:data]}>
+    <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
       <Input.code
         id={"#{@form_id}-ref-#{@key}-#{@ref_name}-comment-text"}
         field={block_data[:text]}
         label={gettext("Text")}
       />
-    </Form.inputs_for_block>
+    </Primitives.inputs_for_block>
     """
   end
 
   def block_form(%{type: "html"} = assigns) do
     ~H"""
-    <Form.inputs_for_block :let={block_data} field={@ref_data[:data]}>
+    <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
       <Input.code
         id={"#{@form_id}-ref-#{@key}-#{@ref_name}-html-code"}
         field={block_data[:text]}
         label={gettext("HTML")}
       />
-    </Form.inputs_for_block>
+    </Primitives.inputs_for_block>
     """
   end
 
   def block_form(%{type: "markdown"} = assigns) do
     ~H"""
-    <Form.inputs_for_block :let={block_data} field={@ref_data[:data]}>
+    <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
       <Input.code
         id={"#{@form_id}-ref-#{@key}-#{@ref_name}-markdown-code"}
         field={block_data[:text]}
         label={gettext("Markdown")}
       />
-    </Form.inputs_for_block>
+    </Primitives.inputs_for_block>
     """
   end
 
   def block_form(%{type: "map"} = assigns) do
     ~H"""
-    <Form.inputs_for_block :let={block_data} field={@ref_data[:data]}>
+    <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
       <Input.radios
         field={block_data[:source]}
         opts={[options: [%{label: gettext("GMaps"), value: :gmaps}]]}
         label={gettext("Source")}
       />
       <Input.text field={block_data[:embed_url]} label={gettext("Embed URL")} />
-    </Form.inputs_for_block>
+    </Primitives.inputs_for_block>
     """
   end
 
   def block_form(%{type: "svg"} = assigns) do
     ~H"""
-    <Form.inputs_for_block :let={block_data} field={@ref_data[:data]}>
+    <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
       <Input.text field={block_data[:class]} label={gettext("Class")} />
       <Input.code
         id={"#{@form_id}-ref-#{@key}-#{@ref_name}-svg-code"}
         field={block_data[:code]}
         label={gettext("Code")}
       />
-    </Form.inputs_for_block>
+    </Primitives.inputs_for_block>
     """
   end
 
@@ -160,7 +160,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
       assign(assigns, :text_extension_options, @text_extension_options)
 
     ~H"""
-    <Form.inputs_for_block :let={block_data} field={@ref_data[:data]}>
+    <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
       <Input.text field={block_data[:text]} label={gettext("Text")} />
       <.live_component
         module={Input.MultiSelect}
@@ -172,7 +172,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
       <Input.hidden field={block_data[:type]} />
       <br />
       {block_data[:extensions].value}
-    </Form.inputs_for_block>
+    </Primitives.inputs_for_block>
     """
   end
 
@@ -183,7 +183,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
       |> assign(:fetchpriority_options, @fetchpriority_options)
 
     ~H"""
-    <Form.inputs_for_block :let={block_data} field={@ref_data[:data]}>
+    <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
       <Input.toggle field={block_data[:lazyload]} label={gettext("Lazyload")} />
       <Input.toggle field={block_data[:moonwalk]} label={gettext("Moonwalk")} />
       <Input.text field={block_data[:title]} label={gettext("Title/Caption")} />
@@ -213,13 +213,13 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
         instructions={gettext("i.e: `image:Elixir.MyApp.Schema:function:fn_name`")}
         monospace
       />
-    </Form.inputs_for_block>
+    </Primitives.inputs_for_block>
     """
   end
 
   def block_form(%{type: "file"} = assigns) do
     ~H"""
-    <Form.inputs_for_block :let={block_data} field={@ref_data[:data]}>
+    <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
       <Input.text field={block_data[:title]} label={gettext("Title override")} />
       <Input.text field={block_data[:label]} label={gettext("Link label")} />
       <Input.textarea field={block_data[:description]} label={gettext("Description")} />
@@ -232,7 +232,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
         instructions={gettext("i.e: `file:Elixir.MyApp.Schema:function:fn_name`")}
         monospace
       />
-    </Form.inputs_for_block>
+    </Primitives.inputs_for_block>
     """
   end
 
@@ -244,7 +244,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
       |> assign(:gallery_placeholder_options, @gallery_placeholder_options)
 
     ~H"""
-    <Form.inputs_for_block :let={block_data} field={@ref_data[:data]}>
+    <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
       <Input.radios
         field={block_data[:type]}
         label={gettext("Type")}
@@ -272,7 +272,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
       />
       <Input.text field={block_data[:image_config_target]} label={gettext("Image config target")} monospace />
       <Input.text field={block_data[:video_config_target]} label={gettext("Video config target")} monospace />
-    </Form.inputs_for_block>
+    </Primitives.inputs_for_block>
     """
   end
 
@@ -280,7 +280,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
     assigns = assign(assigns, :video_source_options, @video_source_options)
 
     ~H"""
-    <Form.inputs_for_block :let={block_data} field={@ref_data[:data]}>
+    <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
       <Input.text field={block_data[:url]} label={gettext("URL")} />
       <Input.radios
         field={block_data[:source]}
@@ -302,7 +302,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
         instructions={gettext("i.e: `video:Elixir.MyApp.Schema:field_name`")}
         monospace
       />
-    </Form.inputs_for_block>
+    </Primitives.inputs_for_block>
     """
   end
 
@@ -317,7 +317,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
       |> assign(:gallery_placeholder_options, @gallery_placeholder_options)
 
     ~H"""
-    <Form.inputs_for_block :let={block_data} field={@ref_data[:data]}>
+    <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
       <.available_blocks_checkboxes field={block_data[:available_blocks]} options={@available_blocks_options} />
 
       <.media_picture_template
@@ -347,17 +347,17 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
         :if={"svg" in (block_data[:available_blocks].value || [])}
         field={block_data[:template_svg]}
       />
-    </Form.inputs_for_block>
+    </Primitives.inputs_for_block>
     """
   end
 
   def block_form(%{type: "datasource"} = assigns) do
     ~H"""
-    <Form.inputs_for_block :let={block_data} field={@ref_data[:data]}>
+    <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
       <Input.text field={block_data[:description]} label={gettext("Description")} />
       <Input.text field={block_data[:arg]} label={gettext("Arg")} />
       <Input.text field={block_data[:limit]} label={gettext("Limit")} />
-    </Form.inputs_for_block>
+    </Primitives.inputs_for_block>
     """
   end
 
@@ -374,7 +374,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
 
   defp available_blocks_checkboxes(assigns) do
     ~H"""
-    <Form.array_inputs_from_data
+    <Primitives.array_inputs_from_data
       :let={%{id: array_id, value: array_value, label: array_label, name: array_name, checked: checked}}
       field={@field}
       options={@options}
@@ -385,7 +385,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
           <label class="control-label small" for={array_id}>{array_label}</label>
         </div>
       </div>
-    </Form.array_inputs_from_data>
+    </Primitives.array_inputs_from_data>
     """
   end
 
@@ -513,8 +513,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
     assigns = assign(assigns, :style_element_options, @style_element_options)
 
     ~H"""
-    <Form.inputs_for_block :let={block_data} field={@block_data[:data]}>
-      <Form.field_base field={block_data[:styles]} label={gettext("Styles")} class="subform">
+    <Primitives.inputs_for_block :let={block_data} field={@block_data[:data]}>
+      <Primitives.field_base field={block_data[:styles]} label={gettext("Styles")} class="subform">
         <.inputs_for :let={style_form} field={block_data[:styles]}>
           <div class="subform-entry inline">
             <input type="hidden" name={"#{block_data.name}[sort_style_ids][]"} value={style_form.index} />
@@ -554,8 +554,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
         >
           {gettext("Add style")}
         </button>
-      </Form.field_base>
-    </Form.inputs_for_block>
+      </Primitives.field_base>
+    </Primitives.inputs_for_block>
     """
   end
 
