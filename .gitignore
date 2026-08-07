@@ -17,3 +17,10 @@ npm-debug.log
 /.vscode
 /priv/templates/brando.install/assets/backend/.yalc
 /.playwright-mcp
+
+# Claude Code working files. Plans, review artifacts and local settings stay
+# on disk but out of git — they are session scratch, not project history.
+# skills/ is the exception: AGENTS.md references those files directly.
+.claude/
+!.claude/skills/
+!.claude/skills/**
