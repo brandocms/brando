@@ -31,6 +31,40 @@ test.describe('Block Recovery', () => {
     await expect(page.locator('.entry-block')).toHaveCount(1)
   }
 
+  const blockFieldHook = page => page.locator('[phx-hook="Brando.BlockField"]').first()
+
+  const snapshotKeys = page =>
+    page.evaluate(() => Object.keys(sessionStorage).filter(k => k.startsWith('brando:block-recovery:')))
+
+  // Save-and-continue on a CREATE: `push_patch(to: update_url)` keeps the same
+  // LiveView, so the hook element survives while the entry goes from unsaved to
+  // persisted. Returns the id the recovery key is now scoped by.
+  //
+  // The wait is on the attribute becoming numeric, not on a duration — that
+  // transition is the observable this whole area is about, and sleeping before
+  // reading it is what `aeb0bce45` removed from these specs.
+  const saveAndContinue = async page => {
+    await page.getByTestId('split-dropdown-button').click()
+    await page.getByRole('button', { name: /Save and continue editing/ }).click()
+    await expect(page).toHaveURL(/\/update\//, { timeout: 30000 })
+    await syncLV(page)
+
+    const hookEl = blockFieldHook(page)
+    await expect(hookEl).toHaveAttribute('data-entry-id', /^\d+$/, { timeout: 15000 })
+
+    return hookEl.getAttribute('data-entry-id')
+  }
+
+  const disconnect = async page => {
+    await page.evaluate(() => window.liveSocket.disconnect())
+    await expect(page.locator('.phx-connected').first()).toBeHidden({ timeout: 15000 })
+  }
+
+  const reconnect = async page => {
+    await page.evaluate(() => window.liveSocket.connect())
+    await syncLV(page)
+  }
+
   test('blocks recover after disconnect/reconnect without errors', async ({ page }) => {
     await createUnsavedBlock(page, {
       title: 'Block Recovery Test Page',
@@ -219,41 +253,77 @@ test.describe('Block Recovery', () => {
       text: 'Key Follows Header',
     })
 
-    const hookEl = page.locator('[phx-hook="Brando.BlockField"]').first()
-
     // Unsaved: `@entry.id` is nil, so HEEx omits the attribute entirely and
     // storageKey()'s `this.el.dataset.entryId || 'new'` buckets under `new`.
-    const idBeforeSave = await hookEl.getAttribute('data-entry-id')
+    const idBeforeSave = await blockFieldHook(page).getAttribute('data-entry-id')
     expect(idBeforeSave ?? '').toBe('')
-
-    // push_patch, not push_navigate — the URL changes to /update/ and the hook
-    // element is never torn down.
-    await page.getByTestId('split-dropdown-button').click()
-    await page.getByRole('button', { name: /Save and continue editing/ }).click()
-    await expect(page).toHaveURL(/\/update\//, { timeout: 30000 })
-    await syncLV(page)
-    await page.waitForTimeout(750) // let the post-save re-seed land
 
     // The key moved forward with the entry. If this attribute did NOT re-render
     // on the patch, the persisted entry would go on reading and writing the
     // `new` bucket — which is C4's leak, on the one path that can reach it.
-    const entryId = await hookEl.getAttribute('data-entry-id')
-    expect(entryId).toMatch(/^\d+$/)
+    const entryId = await saveAndContinue(page)
 
     // And recovery still works after the patch, keyed by the new id: capture on
     // disconnect, read back on reconnect, block intact.
-    await page.evaluate(() => window.liveSocket.disconnect())
-    await expect(page.locator('.phx-connected').first()).toBeHidden({ timeout: 15000 })
+    await disconnect(page)
 
-    const keys = await page.evaluate(() =>
-      Object.keys(sessionStorage).filter(k => k.startsWith('brando:block-recovery:'))
-    )
+    const keys = await snapshotKeys(page)
     expect(keys.some(k => k.startsWith(`brando:block-recovery:${entryId}:`))).toBe(true)
 
-    await page.evaluate(() => window.liveSocket.connect())
-    await syncLV(page)
+    await reconnect(page)
 
     await expect(page.locator('.entry-block')).toHaveCount(1)
     await expect(page.locator('.header-block textarea')).toHaveValue('Key Follows Header')
+  })
+
+  // SUGGESTION 4 from the Phase 9 review, and the reason it was worth taking:
+  // C4 is a *cross-entry* leak, so it should be observable as entry A's value
+  // turning up in entry B. The test above infers safety from a key prefix,
+  // which is one indirection away from the thing the finding names.
+  //
+  // Two distinct entries, both persisted through save-and-continue, with A's
+  // snapshot deliberately left behind in sessionStorage — the shape of a real
+  // abandoned edit: the editor disconnects mid-work on A and goes to B in the
+  // same tab, so A's snapshot is still sitting there while B mounts and
+  // recovers.
+  test("one entry never recovers another entry's blocks", async ({ page }) => {
+    await createUnsavedBlock(page, {
+      title: 'Cross Entry A',
+      uri: 'cross-entry-a',
+      text: 'Entry A Header',
+    })
+
+    const entryA = await saveAndContinue(page)
+
+    // Abandon A while disconnected. Not reconnecting is the point: a successful
+    // recovery removes the snapshot, so reconnecting here would clear the very
+    // thing that has to still be present when B mounts.
+    await disconnect(page)
+    const keysAfterA = await snapshotKeys(page)
+    expect(keysAfterA.some(k => k.startsWith(`brando:block-recovery:${entryA}:`))).toBe(true)
+
+    // B is reached by a full navigation, so this is a fresh mount with A's
+    // snapshot still in the tab's sessionStorage.
+    await createUnsavedBlock(page, {
+      title: 'Cross Entry B',
+      uri: 'cross-entry-b',
+      text: 'Entry B Header',
+    })
+
+    const entryB = await saveAndContinue(page)
+    expect(entryB).not.toBe(entryA)
+
+    await disconnect(page)
+    await reconnect(page)
+
+    // The finding, stated as the finding: B recovers B.
+    await expect(page.locator('.entry-block')).toHaveCount(1)
+    await expect(page.locator('.header-block textarea')).toHaveValue('Entry B Header')
+
+    // A's snapshot is untouched — B recovered from its own bucket rather than
+    // consuming A's. Without this, a leak that *also* cleaned up after itself
+    // would be indistinguishable from correct behaviour.
+    const keysAfterB = await snapshotKeys(page)
+    expect(keysAfterB.some(k => k.startsWith(`brando:block-recovery:${entryA}:`))).toBe(true)
   })
 })

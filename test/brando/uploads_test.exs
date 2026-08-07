@@ -180,6 +180,20 @@ defmodule Brando.UploadsTest do
   end
 
   describe "validate_provider_video_intake/2" do
+    # Credentials for both providers used below, so `validate_provider_credentials/1`
+    # is not what these observe. It runs before `validate_intake/4`, so without
+    # them every assertion here comes back `{:error, :provider_not_configured}`
+    # and the size/extension/MIME rules they exist for are never reached.
+    setup do
+      put_test_env(Brando.Videos.Uploaders.Mux,
+        access_token_id: "id",
+        access_token_secret: "secret"
+      )
+
+      put_test_env(Brando.Videos.Uploaders.Bunny, api_key: "key")
+      :ok
+    end
+
     test "enforces upload gate, strategy, size, extension, and MIME type" do
       cfg = %Brando.Type.VideoConfig{
         upload_strategy: :mux,
@@ -242,6 +256,65 @@ defmodule Brando.UploadsTest do
                  name: "clip.mov",
                  size: 100,
                  type: ""
+               })
+    end
+
+    # The pre-flight credential check. It lives here, beside the other
+    # pre-flight validators, rather than in the provider clients' hot path:
+    # those raise, and a raise at file-pick time takes a LiveView down with an
+    # editor's unsaved work in it. See
+    # `test/brando_admin/live/video_picker_credentials_test.exs` for that
+    # consequence asserted against a real mounted form.
+    test "rejects a provider whose credentials are missing" do
+      put_test_env(Brando.Videos.Uploaders.Mux, [])
+
+      cfg = %Brando.Type.VideoConfig{upload_strategy: :mux, allow_uploads: true}
+
+      assert {:error, :provider_not_configured} =
+               Uploads.validate_provider_video_intake(cfg, %{
+                 name: "clip.mp4",
+                 size: 9_000,
+                 type: "video/mp4"
+               })
+    end
+
+    # Ordering is load-bearing in both directions, so both are pinned.
+    #
+    # An unusable *strategy* is reported on its own terms rather than as a
+    # credentials problem — `:local` has no provider credentials to be missing,
+    # so "not configured" would send an operator looking for the wrong thing.
+    test "reports an unusable strategy before it reports credentials" do
+      put_test_env(Brando.Videos.Uploaders.Mux, [])
+
+      cfg = %Brando.Type.VideoConfig{upload_strategy: :local, allow_uploads: true}
+
+      assert {:error, "Video upload strategy" <> _} =
+               Uploads.validate_provider_video_intake(cfg, %{
+                 name: "clip.mp4",
+                 size: 9_000,
+                 type: "video/mp4"
+               })
+    end
+
+    # And credentials are reported before size, because there is no point
+    # size-checking an upload that cannot start. This is the ordering choice
+    # that broke two existing tests in this file — recorded as a test rather
+    # than as a comment, since the fix for those was to add credentials to the
+    # setup, which would otherwise quietly hide the decision.
+    test "reports missing credentials before an oversized file" do
+      put_test_env(Brando.Videos.Uploaders.Mux, [])
+
+      cfg = %Brando.Type.VideoConfig{
+        upload_strategy: :mux,
+        allow_uploads: true,
+        size_limit: 10_000
+      }
+
+      assert {:error, :provider_not_configured} =
+               Uploads.validate_provider_video_intake(cfg, %{
+                 name: "clip.mp4",
+                 size: 10_001,
+                 type: "video/mp4"
                })
     end
   end

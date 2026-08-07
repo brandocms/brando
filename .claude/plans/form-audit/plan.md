@@ -1152,6 +1152,19 @@ seams are clean.~~
       caller is `video_thumbnail_section/1`, rendered only from `video_drawer/1`.
       One thing the extraction surfaced that no finding had: `Tab` was aliased in `form.ex` **only**
       for the video drawer's sub-tabs, so the alias went unused and `--warnings-as-errors` caught it.
+
+      **The extraction did not decouple, and this must be read before estimating the two below**
+      (Phase 9 review SUGGESTION 5, measured in 9E rather than taken on the finding's word).
+      `VideoDrawer` calls `Form.input/1` and `Form` calls `VideoDrawer.render/1`, so the dependency
+      is mutual. `mix xref graph --source .../video_drawer.ex --label compile` reports the new module
+      **inside a 202-node compile cycle** — it recompiles whenever anything in that cycle changes,
+      exactly as `form.ex` did. Repo-wide there is still **1 cycle / 919 compile edges**.
+      So what 9C bought was **line count in one file, not compile-time coupling, and not build time.**
+      Both are worth having and they are not the same thing; the cost table in `phase-9-plan.md`
+      § 9C-3 measures the first and says nothing about the second.
+      *Consequence for Phase 10: do not justify `Chrome` or the `ImageDrawer`/`FileDrawer` pair on
+      decoupling or compile-time grounds unless the extraction also breaks the `Form.input/1`
+      back-edge — which none of the three sibling drawers does today.*
 - [ ] `Form.ImageDrawer` / `Form.FileDrawer` — ~~`update/2:175-330`~~ — **Phase 10. The gate is
       OPEN: 9C's cost is measured** (354 lines, ~1h, both suites green throughout — see 9C-3).
       **Split it the way 9C did, and check the seam first.** These are the *harder* pair, not the

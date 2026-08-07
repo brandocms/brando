@@ -482,9 +482,12 @@ defmodule BrandoAdmin.Components.VideoPicker do
         {:noreply, push_event(socket, "video_upload_url_ready", event_payload)}
 
       {:error, reason} ->
+        # `inspect/1` here pushed the raw term to the browser, so a missing
+        # credential surfaced to the editor as `:provider_not_configured`.
+        # Same channel as the drawer's, now the same text as well.
         {:noreply,
          push_event(socket, "video_upload_url_error", %{
-           error: inspect(reason),
+           error: Brando.Uploads.video_upload_error_message(reason),
            filename: filename,
            request_ref: request_ref
          })}

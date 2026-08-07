@@ -4,6 +4,47 @@
 
 #### Breaking
 
+- **`Brando.Videos.Uploader.initiate_upload/3` never raises, and its error terms
+  changed.** It was possible for a provider client's exception to escape this
+  function; it now returns `{:error, reason}` for every failure. Two new reasons
+  join the existing ones:
+
+  | Reason | When |
+  |---|---|
+  | `{:error, :provider_not_configured}` | the strategy's credentials are missing or empty, checked before dispatch |
+  | `{:error, :provider_error}` | an unexpected provider exception, rescued and logged with its stacktrace |
+
+  **What to change.** If you call this function, a `rescue` around it is now dead
+  code and can be removed. If you rendered the error, note that
+  `:provider_error` replaces what used to be the raised exception's message —
+  use `Brando.Uploads.video_upload_error_message/1`, which is now the single
+  owner of the user-facing text for all of these.
+
+  **Why the check moved rather than the raise being caught.** The three
+  providers still raise on missing credentials, exactly as 0.54.0 decided —
+  rescuing that at the facade would have converted the decision straight back
+  into the error tuple 0.54.0 removed. Instead
+  `Brando.Uploads.validate_provider_video_intake/2` checks credentials among the
+  other pre-flight validators, so the raise stays a last-resort invariant guard
+  that the admin path does not reach.
+
+  This matters because `initiate_upload/3` is called from three LiveViews
+  holding an editor's unsaved work, and only one of them had a `rescue`. A pick
+  in the video picker or a transformer against a misconfigured provider took the
+  form process down, and every unsaved change with it.
+
+- **Mux and Bunny now reject empty-string credentials, as Cloudflare already
+  did.** All three check for a non-empty binary. Previously a truthiness check
+  let `access_token_id: ""` or `api_key: ""` through, and the request went out to
+  the live API carrying an empty auth header instead of the site being told its
+  configuration was wrong.
+
+  **What to change.** Nothing, unless you were relying on an empty-string
+  credential reaching the provider — which only ever produced a 401 from the
+  other end. A config that sets a credential to `""` now fails at the same point
+  an absent one does.
+
+
 - **All three video providers now raise on missing credentials.**
   `Brando.Videos.Uploaders.Cloudflare` returned `{:error, :not_configured}` when
   `account_id` or `api_token` was absent, while `Mux` and `Bunny` raised. Cloudflare
@@ -27,10 +68,11 @@
   Cloudflare call, that clause is now dead and the raise will reach you instead.
   Two paths are worth knowing about:
 
-  * **Uploads from the admin entry form are unaffected.** `initiate_provider_upload/5`
-    already rescues broadly and turns any provider exception into an upload error,
-    so a misconfigured Cloudflare account surfaces as a message on the form rather
-    than taking the form process down.
+  * **Uploads from the admin are unaffected**, and since 0.54.1 that is true of
+    all three upload surfaces rather than only the entry form's drawer.
+    `Brando.Videos.Uploader.initiate_upload/3` validates provider credentials
+    before dispatch and never raises, so a misconfigured account surfaces as a
+    message rather than taking a LiveView down. See the 0.54.1 entry below.
   * **`delete_remote/1` is where you may notice.** It is called from
     `Brando.Videos` and from soft-delete purging, and an unconfigured provider now
     raises there. This is not new behaviour for that path — `Bunny.delete_remote/1`
@@ -39,10 +81,11 @@
   No shim is provided. A shim would have to rescue and re-wrap, which reinstates
   exactly the branch this removes.
 
-  One difference is deliberately left in place: Cloudflare rejects an
-  empty-string credential (it checks for a non-empty binary) where Mux and Bunny
-  accept one and fail later at the API. That is about *detecting* the failure,
-  not about how it is reported, and was out of scope for this change.
+  One difference was left in place by this change and closed by the next:
+  Cloudflare rejected an empty-string credential (it checks for a non-empty
+  binary) where Mux and Bunny accepted one and failed later at the API. That is
+  about *detecting* the failure rather than reporting it, so it was out of scope
+  here. **All three now agree** — see the 0.54.1 entry below.
 
 - **`Brando.CDN.key_exists?/2` is removed, replaced by `Brando.CDN.key_available?/2`
   — and the sense is inverted.** `key_exists?/2` returned `true` when the key was
@@ -99,6 +142,22 @@
   `myself` still arrives as an assign, so component targeting is unchanged.
 
 #### Features
+
+- **`configured?/0` on all three video providers.** `Brando.Videos.Uploaders.Mux`,
+  `.Bunny` and `.Cloudflare` each expose the credential predicate their
+  `api_request` raises on, so that a pre-flight validator and the raise cannot
+  answer differently.
+
+  It is not the same question as `Brando.Videos.upload_available?/1`, which
+  decides whether to *render* an upload control and additionally requires a
+  `webhook_secret`. Use `configured?/0` to ask whether a call would work, and
+  `upload_available?/1` to ask whether to offer the button.
+
+- **`Brando.Uploads.video_upload_error_message/1`** — the single owner of the
+  user-facing text for a failed provider video upload. The video picker, the
+  form's video drawer and the transformer all report on the same browser channel
+  and had drifted: the picker pushed `inspect/1` of the raw term, so a missing
+  credential reached an editor as `:provider_not_configured`.
 
 - **`one_of` / `exactly_one_of` constraints for "either of these fields"**: an entry that is valid
   with either of two fields filled in — a listing needing an image *or* a video —

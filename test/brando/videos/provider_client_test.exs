@@ -332,12 +332,36 @@ defmodule Brando.Videos.ProviderClientTest do
       end
     end
 
-    # An empty string is not the same as an absent key, and only Cloudflare
-    # notices: it checks `present?/1` where Mux and Bunny check truthiness.
-    # Pinned as a known difference rather than asserted as a contract — the
-    # 0.54.0 decision unified how the failure is *reported*, not how it is
-    # detected.
-    test "Cloudflare also rejects an empty-string credential" do
+    # An empty string is not the same as an absent key, and until 0.54.1 only
+    # Cloudflare noticed: it checked `present?/1` where Mux and Bunny checked
+    # truthiness. 0.54.0 unified how the failure is *reported*; 9E unifies how
+    # it is *detected*, because the pre-flight validator added in the same phase
+    # has to agree with the raise or the two drift apart.
+    #
+    # MUTATION, per provider: put the truthiness check back (`unless token_id &&
+    # token_secret`). Mux and Bunny redden; Cloudflare, which never had it, does
+    # not.
+    test "Mux rejects an empty-string credential" do
+      with_config(Mux, access_token_id: "", access_token_secret: "")
+
+      assert_raise RuntimeError, ~r/Mux credentials not configured/, fn ->
+        Mux.initiate_upload("clip.mp4", Factory.insert(:random_user),
+          file_meta: %{name: "clip.mp4", size: 12_345, type: "video/mp4"}
+        )
+      end
+    end
+
+    test "Bunny rejects an empty-string credential" do
+      with_config(Bunny, api_key: "", library_id: "library-id")
+
+      assert_raise RuntimeError, ~r/Bunny credentials not configured/, fn ->
+        Bunny.initiate_upload("clip.mp4", Factory.insert(:random_user),
+          file_meta: %{name: "clip.mp4", size: 12_345, type: "video/mp4"}
+        )
+      end
+    end
+
+    test "Cloudflare rejects an empty-string credential" do
       with_config(Cloudflare, account_id: "", api_token: "")
 
       assert_raise RuntimeError, ~r/Cloudflare credentials not configured/, fn ->
@@ -345,6 +369,135 @@ defmodule Brando.Videos.ProviderClientTest do
           file_meta: %{name: "clip.mp4", size: 12_345, type: "video/mp4"}
         )
       end
+    end
+  end
+
+  # `Videos.Uploader.initiate_upload/3` is documented as total: every failure
+  # returns `{:error, reason}`, because all three call sites are LiveView
+  # processes holding an editor's unsaved work.
+  #
+  # Two mechanisms hold that, and they are tested apart on purpose. *Expected*
+  # failures are pre-flight validated and never raise — covered by
+  # `test/brando_admin/live/video_picker_credentials_test.exs`. *Unexpected*
+  # ones are rescued, which is what this covers. Conflating them is what the
+  # rescue in `Form` used to do, and it is why 0.54.0's breaking change nearly
+  # bought nothing.
+  describe "Videos.Uploader.initiate_upload/3 totality" do
+    setup do
+      {:ok, user: Factory.insert(:random_user)}
+    end
+
+    defp provider_config(strategy) do
+      %{Brando.Type.VideoConfig.default_config() | upload_strategy: strategy}
+    end
+
+    defp initiate(strategy, user) do
+      Brando.Videos.Uploader.initiate_upload("clip.mp4", user,
+        config: provider_config(strategy),
+        file_meta: %{name: "clip.mp4", size: 12_345, type: "video/mp4"}
+      )
+    end
+
+    # Credentials are present, so pre-flight passes and the provider is really
+    # called — then the transport blows up the way a Req failure or a decode bug
+    # would. Nothing below the facade turns this into a tuple, so a returned
+    # tuple can only come from the rescue.
+    #
+    # MUTATION: delete the `rescue` on `dispatch_initiate_upload/4`. This test
+    # reddens with the raised RuntimeError rather than a failed assertion.
+    test "an unexpected provider exception is rescued into an error tuple", ctx do
+      stub_transport(
+        Mux,
+        [access_token_id: "id", access_token_secret: "secret"],
+        fn _conn -> raise "provider client exploded" end
+      )
+
+      assert capture_log(fn ->
+               assert initiate(:mux, ctx.user) == {:error, :provider_error}
+             end) =~ "provider client exploded"
+    end
+
+    # The atom, not `Exception.message/1`. A provider's exception text is not
+    # written for an editor and can carry request detail; the stacktrace goes to
+    # the log instead, which the assertion above pins.
+    test "the rescued error does not leak the exception's message", ctx do
+      stub_transport(
+        Mux,
+        [access_token_id: "id", access_token_secret: "secret"],
+        fn _conn -> raise "s3cr3t-bucket-name/internal-path" end
+      )
+
+      capture_log(fn ->
+        assert {:error, reason} = initiate(:mux, ctx.user)
+        refute inspect(reason) =~ "s3cr3t-bucket-name"
+      end)
+    end
+
+    # The missing-credential raise is deliberately NOT what the rescue catches —
+    # it is checked before dispatch, so rescuing it would convert a decided
+    # contract straight back into the tuple 0.54.0 removed. Distinct atom, and
+    # no log line, because nothing was raised.
+    test "a missing credential is pre-flight validated, not rescued", ctx do
+      with_config(Mux, [])
+
+      log = capture_log(fn -> assert initiate(:mux, ctx.user) == {:error, :provider_not_configured} end)
+
+      refute log =~ "Video provider upload raised"
+    end
+  end
+
+  # `configured?/0` is the predicate the raise branches on, made public so
+  # `Brando.Uploads.validate_provider_video_intake/2` can pre-flight the same
+  # condition. The point of extracting it is that the validator and the raise
+  # cannot answer differently; these tests are what hold that.
+  #
+  # These assert all three providers in one test each, so a mutation to one
+  # provider reddens on the FIRST refutation and the other two never run — the
+  # same caveat recorded in Phase 8. Per-provider independence is covered above
+  # instead, by the three separate "rejects an empty-string credential" tests.
+  # Measured: mutating only Mux's predicate to truthiness reddens exactly
+  # "Mux rejects an empty-string credential" and this block's empty-value test.
+  describe "configured?/0" do
+    test "false when credentials are absent" do
+      with_config(Mux, [])
+      with_config(Bunny, library_id: "library-id")
+      with_config(Cloudflare, [])
+
+      refute Mux.configured?()
+      refute Bunny.configured?()
+      refute Cloudflare.configured?()
+    end
+
+    test "false when credentials are present but empty" do
+      with_config(Mux, access_token_id: "", access_token_secret: "")
+      with_config(Bunny, api_key: "", library_id: "library-id")
+      with_config(Cloudflare, account_id: "", api_token: "")
+
+      refute Mux.configured?()
+      refute Bunny.configured?()
+      refute Cloudflare.configured?()
+    end
+
+    test "true when credentials are present" do
+      with_config(Mux, access_token_id: "id", access_token_secret: "secret")
+      with_config(Bunny, api_key: "key", library_id: "library-id")
+      with_config(Cloudflare, account_id: "account", api_token: "token")
+
+      assert Mux.configured?()
+      assert Bunny.configured?()
+      assert Cloudflare.configured?()
+    end
+
+    # Mux needs *both* halves of its credential pair and Bunny needs only its
+    # api_key — `library_id` is a routing value, not a credential, and
+    # `api_request/3` does not check it. Pinned so the validator cannot be
+    # written against a guess about which keys matter.
+    test "Mux requires both halves of its token pair" do
+      with_config(Mux, access_token_id: "id")
+      refute Mux.configured?()
+
+      with_config(Mux, access_token_secret: "secret")
+      refute Mux.configured?()
     end
   end
 end

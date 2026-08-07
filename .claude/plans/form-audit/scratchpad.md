@@ -1637,3 +1637,193 @@ the code does, but the ones a plan makes about **why something is safe**. Phase
 9 checked two of those and both were false: section G's "the seams are clean"
 described only the inbound half, and C4's "no `push_patch` path exists" was
 contradicted by a comment sitting in `hooks.ex` the entire time.
+
+---
+
+## Phase 9 review, and the plan it produced (2026-08-07)
+
+**Review:** `reviews/phase-9-review.md` — 1 BLOCKER, 2 WARNINGs, 5 SUGGESTIONs.
+Verdict REQUIRES CHANGES. All four unit gates re-measured and **exact** against
+the recorded numbers (1291 + 135 / 0, credo 284 = 2/118/152/12, compile and
+format clean). E2E not run by the review; recorded 108/0 stands unverified.
+Requirements: 11 MET, **0 UNMET**.
+
+**First phase where the claims held.** 9C's "markup only", 9D's corrected C4
+premise and 9A's bookkeeping were each checked against source and each was true.
+The blocker is not a false claim — it is a cost the decision did not budget for.
+
+**The blocker:** `Videos.Uploader.initiate_upload/3` has three call sites and
+only `form.ex:5816` is guarded. 9B took Cloudflare from tuple to raise, so a
+pick in `video_picker.ex:463` or `transformer.ex:909` now kills the form and
+every unsaved change in it. `form.ex:5811` had already documented this exact
+hazard by name; 9B widened who triggers it without widening the guard.
+
+### The fix the review proposed was rejected in planning
+
+The review said: hoist `form.ex`'s rescue into `Brando.Videos.Uploader`.
+**Rejected.** 9B turned a tuple into a raise; a facade rescue turns it straight
+back into a tuple. Net contract identical to pre-9B Cloudflare, plus a `rescue`
+— 9B's breaking change would have bought nothing and the audit would be carrying
+a decision whose effect it had quietly undone one layer up.
+
+**The real defect is that 9B's mechanism contradicts its own rationale.**
+"Missing credentials are a deploy-time config error" (`cloudflare.ex:272`), but
+the check sits in `api_request/4` — the hot path — so it fires at file-pick
+time, the latest possible moment, with unsaved work in the blast radius. That is
+fail-late dressed as fail-fast.
+
+**What Phase 9E does instead:** put the credential check in
+`Brando.Uploads.validate_provider_video_intake/2` (`uploads.ex:489`), the
+existing `with` chain of pre-flight validators that `initiate_upload/3` already
+threads (`uploader.ex:149`). The three raises stay exactly as 9B decided and
+become a genuine last-resort guard the admin path cannot reach. Neither call
+site needs an edit — both already have `{:error, reason}` branches.
+
+**Two things found while planning, neither in the review:**
+
+1. `video_picker.ex:~484` pushes `inspect(reason)` to the browser — same channel
+   as SUGGESTION 1 and strictly worse than `form.ex`'s string.
+2. The `present?/1`-vs-truthiness asymmetry 9B deliberately left alone is now in
+   scope: 9B deferred it as being about *detecting* the failure rather than
+   reporting it, and 9E is about detection.
+
+**Still open after 9E, recorded rather than pretended closed:** nothing
+validates provider config at boot. Even post-9E it is caught at first pick, just
+gracefully. Boot-time validation is what would make "deploy-time config error"
+literally true.
+
+**Plan:** `phase-9e-plan.md` — 9 task groups, ~24 checkboxes, 4 REDs. One
+decision left open in it deliberately: 9E-4, whether `form.ex`'s rescue stays
+local or moves to the facade as an unexpected-exception backstop.
+Recommendation is to move it.
+
+---
+
+## Phase 9E implementation notes (2026-08-07)
+
+All 9 task groups shipped; both open decisions were the user's (9E-4 → move the
+rescue to the facade; 9E-8 → do it rather than defer). Unit gates: `mix test`
+**1305 + 135 doctests / 0** (+14), credo **284** exact (2 / 118 / 152 / 12),
+compile `--warnings-as-errors --force` clean, format clean. **E2E is
+outstanding and required** — two specs changed, expected **109 / 0**.
+
+### 1. The test could not reach the defect, and was green because of it
+
+The blocker's RED had to be a mounted LiveView asserting `Process.alive?/1` —
+the plan was explicit that reading the `with` chain would not do. Getting the
+event to the right place was the whole difficulty, and both obvious spellings
+were wrong in the same direction:
+
+* `element("#video-provider-uploader-video-picker") |> render_hook(…)` — the
+  element has `data-target`, not `phx-target`, because the hook pushes
+  programmatically. LiveViewTest reads only `phx-target` (`test/dom.ex:116`).
+* `with_target("#video-picker")` — that id is on the drawer div *inside* the
+  component root, which carries no `data-phx-component`.
+
+Both fall through to the **root** LiveView, where `hooks.ex:895` forwards to
+`Form` — the one call site that was already rescued. **The test passed that way
+against the unfixed code.** The fix is to read the CID out of `data-target` and
+hand it to `with_target/2`, which is what `pushEventTo` does.
+
+*Generalisation, and it is the sharpest form of this audit's carried lesson yet:
+a test that cannot reach the defect is green for the same reason the defect is
+invisible. Phase 5 §2 was "a test that only ever meets the mock proves the
+mock"; this is the routing version. Both were caught only by mutating.*
+
+Once routed, the mutation printed the blocker verbatim:
+`VideoPicker.handle_event/3 (video_picker.ex:463)` → `Cloudflare.initiate_upload/3`
+→ `api_request/4` → `RuntimeError` → dead view.
+
+### 2. Two facts the review did not have, both found by making the test reach
+
+Neither changes the fix; both change what it is *for*.
+
+1. **The exposure is narrower than the review said, for an unreassuring reason.**
+   All three upload surfaces gate their trigger on
+   `Brando.Uploads.video_upload_available?/1`, so a wholly credential-less
+   deploy renders no button. But that is computed in `update/2` and never
+   re-checked in `handle_event/3`, while providers read config at *call* time.
+   It is a render-time snapshot, not a guard — a credential rotated after the
+   last update leaves a live trigger on the page. **This is the plan's own
+   "config is read at call time, not boot" risk arriving as a live defect
+   rather than a note**, and the test models exactly it.
+2. **`video_upload_available?/1` is a FOURTH credential check with a fourth set
+   of rules.** It additionally demands `webhook_secret`, and its `present?/1`
+   accepts any non-nil non-empty term where the providers' accepts only a
+   non-empty binary. A non-binary `account_id` renders the button and fails the
+   provider check. 9E-1 unified three of the four; **this one is still out
+   there** and is the natural next item if anyone extends this work.
+
+### 3. Truthiness was not a bad error message, it was an outbound request
+
+9E-1's RED was written behaviourally (`initiate_upload` with `access_token_id:
+""` must raise) rather than as `configured?/0 == false`, so it could fail
+pre-change for the right reason instead of merely because the function did not
+exist yet. That is what exposed the real cost: `with_config/2` installs no
+transport stub, so pre-change the empty-credential test **made real network
+requests to the live Mux and Bunny APIs** with an empty auth header. The file's
+runtime dropped 0.9s → 0.2s once the raise landed ahead of the request.
+
+*The plan asked for a unit-level RED. Writing it one level out is what made it
+informative — and it is the same move as 9C's "not answering the question as
+asked, when the question no longer fits, is part of the check".*
+
+### 4. The ordering choice broke three existing tests, which is the ordering choice being real
+
+`validate_provider_credentials/1` runs before `validate_intake/4`, so any test
+exercising size/mimetype rules without credentials now gets
+`:provider_not_configured` first. Three tests across two files needed
+credentials in setup (`uploads_test.exs` ×2, `video_upload_target_test.exs` ×3,
+whose moduledoc had explicitly relied on "intake validation runs before any HTTP
+call" as its observability mechanism).
+
+Fixed by configuring credentials, **not** by reordering — and then pinned with
+three new tests asserting the order in both directions, because a fix that lives
+only in a `setup` block hides the decision it was compensating for. That is the
+D7 lesson ("a workaround comment can be load-bearing for the wrong reason")
+applied before it became one.
+
+### 5. 9C did not decouple anything, and now there is a number
+
+SUGGESTION 5 was recorded as a note, not a task. Measuring it made it worse than
+the finding: `mix xref graph --source .../video_drawer.ex --label compile` puts
+the extracted module inside a **202-node compile cycle**, so it recompiles on
+the same triggers `form.ex` does. Repo-wide: 1 cycle, 919 compile edges.
+
+**9C bought line count in one file. Not coupling, not build time.** Both are
+worth having; they are not the same thing, and `phase-9-plan.md` § 9C-3's cost
+table measures only the first. *Consequence for Phase 10: do not justify
+`Chrome` or the `ImageDrawer`/`FileDrawer` pair on decoupling grounds unless the
+extraction also breaks the `Form.input/1` back-edge — which none of the three
+sibling drawers does today.*
+
+### 6. Small things worth not re-deriving
+
+- The three providers' `get_config/1` is byte-identical too. `present?/1` was
+  duplicated rather than hoisted (the plan allowed either); the anti-drift
+  mechanism is three symmetric `configured?/0` tests, and the empty-string
+  cases are asserted **per provider** because a single test asserting all three
+  reddens on the first refutation only — the Phase 8 §4 caveat, written down
+  next to the tests this time.
+- The facade's rescue wraps `dispatch_initiate_upload/4`, **not** the `with`
+  chain. Rescuing the validators too would swallow a pre-flight bug as a
+  provider error.
+- `{:error, :provider_error}` rather than `Exception.message/1`: a provider's
+  exception text is not written for an editor and can carry request detail. A
+  test pins that a secret-shaped string in the exception does not reach the
+  caller.
+- `validate_provider_credentials/1`'s catch-all returns
+  `{:error, {:unknown_strategy, …}}` rather than being absent. Unreachable
+  today, but a fourth provider added to `validate_provider_strategy/1`'s list
+  without a clause here would otherwise raise `FunctionClauseError` — which is
+  the exact crash this validator exists to prevent.
+
+### Deliberately not done, and why
+- **Boot-time provider config validation.** Still nothing catches a
+  misconfigured deploy at startup; 9E makes first-pick graceful, not early. It
+  is what would make "deploy-time config error" literally true, and it is a
+  design change. Recorded here and in the plan rather than pretended closed.
+- **Unifying `video_upload_available?/1` with `configured?/0`** (§2.2 above).
+  Real, found this phase, no finding asked for it, and it changes when an
+  upload button renders — which deserves its own decision rather than a
+  drive-by.

@@ -1280,10 +1280,12 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   defp pending_status_label(%{status: :uploading, progress: progress}), do: "#{progress}%"
   defp pending_status_label(_pending), do: gettext("Uploading…")
 
-  defp upload_error_message(reason) when is_binary(reason), do: reason
-  defp upload_error_message({:error, reason}), do: upload_error_message(reason)
-  defp upload_error_message(reason) when is_atom(reason), do: to_string(reason)
-  defp upload_error_message(reason), do: inspect(reason)
+  # Delegated rather than duplicated: `Brando.Uploads` owns the text, because
+  # the picker and the video drawer report the same failures on the same
+  # channel. The clauses that used to live here are its tail — what it adds is
+  # a fixed string for the error atoms this file used to render with
+  # `to_string/1`, which is how `provider_not_configured` reached an editor.
+  defp upload_error_message(reason), do: Brando.Uploads.video_upload_error_message(reason)
 
   # --- Helpers ---
 

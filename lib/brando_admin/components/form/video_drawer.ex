@@ -33,6 +33,17 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
   alias BrandoAdmin.Components.Form.Tab
   alias Phoenix.LiveView.JS
 
+  # prop video_changeset, :any, required: true
+  # prop myself, :any, required: true
+  # prop schema, :atom, required: true
+  # prop edit_video, :map, required: true
+  # prop active_video_tab, :string, required: true
+  # prop video_context, :any, required: true
+  #
+  # `myself` is the *parent* form's CID, not this module's — this is a function
+  # component, so it has none. Every event the drawer emits is routed back to
+  # `Form`, which is where its `handle_event/3` clauses stayed.
+
   @aspect_ratio_options [
     {"16:9 (Standard Widescreen)", "16:9"},
     {"4:3 (Classic)", "4:3"},

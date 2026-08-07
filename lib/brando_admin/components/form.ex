@@ -2071,7 +2071,6 @@ defmodule BrandoAdmin.Components.Form do
             myself={@myself}
             schema={@schema}
             edit_video={@edit_video}
-            processing={@processing}
             active_video_tab={@active_video_tab}
             video_context={@video_context}
           />
@@ -5721,6 +5720,19 @@ defmodule BrandoAdmin.Components.Form do
 
   # Extract user-friendly error message from various video provider error formats
   # Supports: Mux, Cloudflare, S3, Bunny, Vimeo, etc.
+  #
+  # Errors Brando itself produces — `Brando.Uploads`' pre-flight validators and
+  # the facade's backstop rescue — are atoms, and they come first: they are the
+  # ones a site operator can act on, and the `inspect/1` fallback at the bottom
+  # of this chain would otherwise put an internal atom in front of an editor.
+  # `Brando.Uploads` owns the text so the picker and the transformer say the
+  # same thing.
+  defp extract_video_error_message(reason) when is_atom(reason) and not is_nil(reason),
+    do: Brando.Uploads.video_upload_error_message(reason)
+
+  defp extract_video_error_message({:unknown_strategy, _strategy} = reason),
+    do: Brando.Uploads.video_upload_error_message(reason)
+
   defp extract_video_error_message(%{"error" => %{"messages" => messages}})
        when is_list(messages) do
     # Mux format: %{"error" => %{"messages" => [...]}}
@@ -5808,28 +5820,26 @@ defmodule BrandoAdmin.Components.Form do
     ArgumentError -> nil
   end
 
-  # Provider clients raise rather than return on some configuration failures —
-  # `Mux.api_request/3` raises a bare RuntimeError when the site has no Mux
-  # credentials, and that exception would take the whole entry form process down
-  # along with every unsaved change in it (the same class as A2). Found while
-  # writing the D3 regression test, not reported by the audit.
+  # No rescue here any more, and that is the change rather than an omission.
+  #
+  # This wrapper existed because provider clients raise rather than return on
+  # some configuration failures, and an escaping exception takes the entry form
+  # process down with every unsaved change in it (the A2 class). Both halves of
+  # that are now handled a layer down, where all three call sites benefit:
+  # `Brando.Uploads.validate_provider_video_intake/2` rejects a missing
+  # credential before dispatch, and `Videos.Uploader.initiate_upload/3` carries
+  # the broad rescue for genuinely unexpected provider exceptions. That function
+  # documents itself as total.
+  #
+  # Keeping a second rescue here would have guarded only the one call site that
+  # was never the problem — the picker and the transformer were the unguarded
+  # ones — while making the facade's guarantee look untrusted.
   defp initiate_provider_upload(video_config, config_target, filename, user, file_meta) do
     Brando.Videos.Uploader.initiate_upload(filename, user,
       config: video_config,
       config_target: config_target,
       file_meta: file_meta
     )
-  rescue
-    exception ->
-      # Deliberately broad: three provider clients with three failure vocabularies
-      # sit behind this call. The stacktrace is logged so a genuine bug here is
-      # still diagnosable rather than reduced to a toast.
-      Logger.error(
-        "Video provider upload raised: " <>
-          Exception.format(:error, exception, __STACKTRACE__)
-      )
-
-      {:error, Exception.message(exception)}
   end
 
   defp start_provider_video_upload(socket, config_target, %{
