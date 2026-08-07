@@ -116,21 +116,39 @@ Phase 9, so that a cold read of `plan.md` tomorrow starts from the truth.
 
 ---
 
-## Phase 9B — The credential disagreement `[elixir]` *(blocked on Decision 1)*
+## Phase 9B — The credential disagreement `[elixir]` — **DONE 2026-08-07**
 
-Written only after the decision is taken. Shape, per option:
+**Decision 1 answered: (a) all three raise.** Taken by the user; implemented and
+measured the same session. Seven phases of recording, closed.
 
-- [ ] **(a) or (b) — unify the three, one contract.** Change the odd one out,
-      add a test per provider pinning the shape, and a CHANGELOG **Breaking**
-      entry that names what a consumer must change — the Phase 7/8 precedent for
-      `key_exists?/2` → `key_available?/2` is the model, including the
-      declined-shim reasoning if a shim is declined again.
-      **RED:** each provider's test fails against the other two providers'
-      current shape.
-- [ ] **(c) — delete the recording.** Remove the deferral from `plan.md` and
-      `scratchpad.md`, with one line saying it was considered and closed, and
-      why. **This is a real outcome, not a cop-out** — but it must be written
-      down, or the seventh recording arrives in Phase 10.
+- [x] **(a) — unify the three, one contract.** `cloudflare.ex`'s `api_request/4`
+      raises instead of returning `{:error, :not_configured}`, with a message in
+      the same shape as Mux's and Bunny's. `{:error, :not_configured}` occurred
+      exactly once in `lib/` and nothing asserted it, so no call site needed
+      rewriting — `delete_remote/1`'s `{:error, reason}` clause still covers the
+      HTTP failures it was really there for.
+- [x] **Checked before writing, not assumed.** Two paths reach a raising client:
+      the admin form's `initiate_provider_upload/5` already rescues broadly
+      (`form.ex`, "Provider clients raise rather than return") and turns any
+      provider exception into an upload error, so the form is unaffected; and
+      `delete_remote/1`, where **Bunny already raised on the same path**. So this
+      aligns Cloudflare with existing behaviour rather than introducing a new
+      failure mode — which is what made (a) the cheap direction.
+- [x] **Tests — one per provider, plus the difference.** `provider_client_test.exs`,
+      `describe "missing credentials"`: Mux, Bunny and Cloudflare each assert their
+      own raise, and a fourth pins that Cloudflare alone rejects an **empty-string**
+      credential (`present?/1` vs truthiness). That difference is about detecting
+      the failure, not reporting it, so it was left in place and pinned rather than
+      unified — recorded so it is not mistaken for an oversight.
+      **RED, measured:** restoring the `{:error, :not_configured}` return —
+      including the `if/else` structure it needs — reddens **exactly the two
+      Cloudflare tests**; Mux and Bunny stay green. Run with the faithful
+      mutation, not an approximation of it.
+- [x] **CHANGELOG — under Breaking.** Names the old shape, the before/after
+      branch, the two paths a consumer might notice (form uploads rescued;
+      `delete_remote/1` not), why no shim is provided, and the empty-string
+      difference left standing. `UPGRADE.md` defers to the CHANGELOG since 0.52.0,
+      so there is no second place to write it.
 
 ---
 

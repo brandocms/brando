@@ -290,4 +290,61 @@ defmodule Brando.Videos.ProviderClientTest do
                )
     end
   end
+
+  # All three clients raise on missing credentials, as of 0.54.0. Before that,
+  # Cloudflare returned `{:error, :not_configured}` while Mux and Bunny raised —
+  # so a caller could not handle the three with one branch. The audit recorded
+  # that disagreement six times without resolving it; these tests are what stop
+  # it drifting back apart.
+  #
+  # MUTATION, per provider: restore the other shape — for Cloudflare that is the
+  # `{:error, :not_configured}` return this replaced; for Mux and Bunny, turn the
+  # `raise` into the same tuple. Each test reddens on its own provider only,
+  # which is the point of having three rather than one.
+  describe "missing credentials" do
+    test "Mux raises" do
+      with_config(Mux, [])
+
+      assert_raise RuntimeError, ~r/Mux credentials not configured/, fn ->
+        Mux.initiate_upload("clip.mp4", Factory.insert(:random_user),
+          file_meta: %{name: "clip.mp4", size: 12_345, type: "video/mp4"}
+        )
+      end
+    end
+
+    test "Bunny raises" do
+      with_config(Bunny, library_id: "library-id")
+
+      assert_raise RuntimeError, ~r/Bunny credentials not configured/, fn ->
+        Bunny.initiate_upload("clip.mp4", Factory.insert(:random_user),
+          file_meta: %{name: "clip.mp4", size: 12_345, type: "video/mp4"}
+        )
+      end
+    end
+
+    test "Cloudflare raises" do
+      with_config(Cloudflare, [])
+
+      assert_raise RuntimeError, ~r/Cloudflare credentials not configured/, fn ->
+        Cloudflare.initiate_upload("clip.mp4", Factory.insert(:random_user),
+          file_meta: %{name: "clip.mp4", size: 12_345, type: "video/mp4"}
+        )
+      end
+    end
+
+    # An empty string is not the same as an absent key, and only Cloudflare
+    # notices: it checks `present?/1` where Mux and Bunny check truthiness.
+    # Pinned as a known difference rather than asserted as a contract — the
+    # 0.54.0 decision unified how the failure is *reported*, not how it is
+    # detected.
+    test "Cloudflare also rejects an empty-string credential" do
+      with_config(Cloudflare, account_id: "", api_token: "")
+
+      assert_raise RuntimeError, ~r/Cloudflare credentials not configured/, fn ->
+        Cloudflare.initiate_upload("clip.mp4", Factory.insert(:random_user),
+          file_meta: %{name: "clip.mp4", size: 12_345, type: "video/mp4"}
+        )
+      end
+    end
+  end
 end

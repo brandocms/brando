@@ -269,33 +269,50 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
     account_id = get_config(:account_id)
     api_token = get_config(:api_token)
 
+    # Raises rather than returning `{:error, :not_configured}`, which is what
+    # this returned until 0.54.0. Missing credentials are a deploy-time config
+    # error, not a runtime condition, and the three provider clients disagreeing
+    # about that meant a caller could not handle all three with one branch —
+    # recorded six times across the form audit before being decided rather than
+    # deferred again. Mux and Bunny already raised; this is the one that moved.
+    #
+    # `present?/1` rather than truthiness, unlike Mux and Bunny: an empty-string
+    # credential is caught here and is not caught there. That difference is
+    # about *detecting* the failure, not about how it is reported, so it is left
+    # alone rather than folded into this change.
     if not present?(account_id) or not present?(api_token) do
-      {:error, :not_configured}
-    else
-      url = "#{@api_base}/#{account_id}#{path}"
+      raise """
+      Cloudflare credentials not configured. Please add to your config:
 
-      headers =
-        [{"authorization", "Bearer #{api_token}"}, {"accept", "application/json"}] ++
-          extra_headers
+          config :brando, Brando.Videos.Uploaders.Cloudflare,
+            account_id: System.get_env("CLOUDFLARE_ACCOUNT_ID"),
+            api_token: System.get_env("CLOUDFLARE_API_TOKEN")
+      """
+    end
 
-      request_opts =
-        ReqOptions.merge(
-          __MODULE__,
-          [method: method, url: url, headers: headers] |> maybe_put_json(body)
-        )
+    url = "#{@api_base}/#{account_id}#{path}"
 
-      case Req.request(request_opts) do
-        {:ok, %Req.Response{status: status} = response} when status in 200..299 ->
-          {:ok, response}
+    headers =
+      [{"authorization", "Bearer #{api_token}"}, {"accept", "application/json"}] ++
+        extra_headers
 
-        {:ok, %Req.Response{status: status, body: response_body}} ->
-          Logger.error("Cloudflare Stream API request failed: #{status} - #{inspect(response_body)}")
-          {:error, {:http_error, status, response_body}}
+    request_opts =
+      ReqOptions.merge(
+        __MODULE__,
+        [method: method, url: url, headers: headers] |> maybe_put_json(body)
+      )
 
-        {:error, reason} ->
-          Logger.error("Cloudflare Stream API request error: #{inspect(reason)}")
-          {:error, reason}
-      end
+    case Req.request(request_opts) do
+      {:ok, %Req.Response{status: status} = response} when status in 200..299 ->
+        {:ok, response}
+
+      {:ok, %Req.Response{status: status, body: response_body}} ->
+        Logger.error("Cloudflare Stream API request failed: #{status} - #{inspect(response_body)}")
+        {:error, {:http_error, status, response_body}}
+
+      {:error, reason} ->
+        Logger.error("Cloudflare Stream API request error: #{inspect(reason)}")
+        {:error, reason}
     end
   end
 

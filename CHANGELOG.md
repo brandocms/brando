@@ -4,6 +4,46 @@
 
 #### Breaking
 
+- **All three video providers now raise on missing credentials.**
+  `Brando.Videos.Uploaders.Cloudflare` returned `{:error, :not_configured}` when
+  `account_id` or `api_token` was absent, while `Mux` and `Bunny` raised. Cloudflare
+  now raises too, with a message naming the config keys it wants.
+
+  Missing credentials are a deploy-time configuration error, not a runtime
+  condition — and the disagreement meant a caller could not handle the three
+  providers with one branch:
+
+      # before — this was necessary, and easy to get wrong
+      case Uploader.delete_remote(video) do
+        {:error, :not_configured} -> :cloudflare_only
+        {:error, reason} -> handle(reason)
+        :ok -> :ok
+      end
+
+      # after — one shape for all three
+      Uploader.delete_remote(video)
+
+  **What to change.** If you match on `{:error, :not_configured}` from a
+  Cloudflare call, that clause is now dead and the raise will reach you instead.
+  Two paths are worth knowing about:
+
+  * **Uploads from the admin entry form are unaffected.** `initiate_provider_upload/5`
+    already rescues broadly and turns any provider exception into an upload error,
+    so a misconfigured Cloudflare account surfaces as a message on the form rather
+    than taking the form process down.
+  * **`delete_remote/1` is where you may notice.** It is called from
+    `Brando.Videos` and from soft-delete purging, and an unconfigured provider now
+    raises there. This is not new behaviour for that path — `Bunny.delete_remote/1`
+    has always raised on missing credentials — but it is new for Cloudflare.
+
+  No shim is provided. A shim would have to rescue and re-wrap, which reinstates
+  exactly the branch this removes.
+
+  One difference is deliberately left in place: Cloudflare rejects an
+  empty-string credential (it checks for a non-empty binary) where Mux and Bunny
+  accept one and fail later at the API. That is about *detecting* the failure,
+  not about how it is reported, and was out of scope for this change.
+
 - **`Brando.CDN.key_exists?/2` is removed, replaced by `Brando.CDN.key_available?/2`
   — and the sense is inverted.** `key_exists?/2` returned `true` when the key was
   **taken**; `key_available?/2` returns `true` when the key is **free**. A consumer

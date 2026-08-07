@@ -1399,9 +1399,60 @@ failures · `mix credo --strict` 284 (2 / 118 / 152 / 12) · compile
 `--warnings-as-errors` clean · `mix format --check-formatted` clean ·
 unit output 43 / 27 / 0 warm · **E2E 107 / 0, 8.9m**.
 
-**Open decision, first thing:** the video-uploader credential disagreement.
-`phase-9-plan.md` §Decisions lays out (a) all raise, (b) all return
-`{:error, :not_configured}`, (c) close it and delete the recording. (a) and (b)
-are both breaking changes on a library. Phase 9B is deliberately unwritten until
-that is answered.
+**The open decision was taken: (a), all three raise.** Phase 9B is done — see
+below. Nothing is blocked.
 
+
+---
+
+## Phase 9B — the credential disagreement, closed (2026-08-07)
+
+**Seven phases of recording it, one decision, one afternoon.** The user chose
+(a): all three providers raise on missing credentials. Cloudflare was the one
+that moved.
+
+### What made (a) cheap, and it was not obvious in advance
+
+The plan flagged this as a breaking change on a library, which it is. What the
+implementation found is that it aligns Cloudflare with behaviour that **already
+existed on the same code path**:
+
+* `delete_remote/1` is reachable from `Brando.Videos` and from soft-delete
+  purging, and `Bunny.delete_remote/1` has always raised there on missing
+  credentials. Cloudflare joining it is not a new failure mode for that path.
+* The admin form is unaffected: `initiate_provider_upload/5` already rescues
+  broadly — deliberately so, per its own comment: *"three provider clients with
+  three failure vocabularies sit behind this call."* That comment was written in
+  Phase 4 as a defence against exactly this inconsistency, and it is what made
+  removing the inconsistency safe.
+
+*Checked before writing rather than assumed — the risk being guarded against was
+unifying on "raise" and thereby handing the entry form an unrescued exception,
+which is the A2 class this whole audit started from.*
+
+### `{:error, :not_configured}` occurred once
+
+Grepped `lib/`, `test/` and `e2e/`: exactly one site, `cloudflare.ex`, and
+nothing asserted it. No call site needed rewriting; `delete_remote/1`'s
+`{:error, reason}` clause still covers the HTTP failures it was actually for.
+The six recordings had described a contract that had **one producer and no
+consumer** — which is worth knowing about the other deferrals.
+
+### A difference deliberately left standing
+
+Cloudflare checks `present?/1` (non-empty binary); Mux and Bunny check
+truthiness. An empty-string credential is caught by one and not the other two.
+That is about **detecting** the failure, not **reporting** it — the decision was
+about reporting — so it is pinned by a test and named in the CHANGELOG rather
+than folded in silently. Scope kept honest; the fourth test exists so the
+difference cannot later be read as an oversight.
+
+### RED, measured with the mutation actually written down
+
+First attempt mutated with a `throw`, which reddens the right two tests for the
+wrong reason. Redone faithfully — restoring the `{:error, :not_configured}`
+return *and* the `if/else` structure it requires — and **exactly the two
+Cloudflare tests fail** while Mux and Bunny stay green.
+
+*Same lesson as B2, one day later: the mutation you ran has to be the mutation
+you claimed. It cost one extra command to be right about it.*
