@@ -12,6 +12,17 @@ defmodule BrandoWeb.Plugs.BunnyWebhook do
   Configure `:webhook_secret` with the Bunny library's Read-Only API key.
   Requests without Bunny's valid `v1` HMAC signature are rejected.
 
+  ## No replay protection
+
+  `BrandoWeb.Plugs.MuxWebhook` and `BrandoWeb.Plugs.CloudflareStreamWebhook`
+  both sign a timestamp alongside the body and reject deliveries outside a
+  5-minute tolerance. Bunny signs the body alone, so there is nothing here to
+  check freshness against and a captured delivery verifies forever.
+
+  That is Bunny's scheme rather than a gap in this plug, and the exposure is
+  bounded — the body is signed, so a replay can only re-apply a status Bunny
+  itself sent for a video the site already owns. See the "Videos" guide.
+
   ## Webhook Payload
 
   Bunny sends webhooks with the following structure:

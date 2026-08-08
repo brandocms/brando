@@ -145,6 +145,31 @@ Bunny will send status updates when videos finish encoding. The webhook plug
 rejects requests unless the `v1` HMAC signature validates against
 `webhook_secret` (the library Read-Only API key).
 
+> #### Bunny deliveries can be replayed {: .warning}
+>
+> Unlike Mux and Cloudflare, **Bunny's signature covers the raw body only — it
+> carries no timestamp**, so Brando has nothing to check freshness against and
+> the other two plugs' 5-minute tolerance has no equivalent here. Anyone who
+> captures a valid Bunny delivery can resubmit it indefinitely and it will
+> verify.
+>
+> This is Bunny's own specification, not an omission on our side. Their Stream
+> webhook documentation says of the `v1` scheme: *"The URL, timestamp, HTTP
+> method, and headers are not part of the v1 signature."* Checked against
+> [their docs](https://bunny.net/docs/stream/webhooks) on 2026-08-08; `v1` is
+> still the only version they define. If Bunny ever ships a `v2` that signs a
+> timestamp, this plug should adopt it and gain the tolerance check that
+> `MuxWebhook` and `CloudflareStreamWebhook` already have.
+>
+> This is a property of Bunny's signing scheme, not a gap in the plug. The
+> exposure is bounded: a replayed webhook re-applies a status Bunny already
+> sent for a video the site already owns, so the realistic effect is a video
+> being moved back to an earlier encoding status. It cannot introduce a video,
+> retarget one, or carry an attacker's payload, because the body is signed.
+>
+> Terminate TLS in front of the endpoint so deliveries are not capturable in
+> transit, and treat the Read-Only API key as the secret it is.
+
 #### Bunny Blueprint Example
 
 ```elixir

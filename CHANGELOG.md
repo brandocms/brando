@@ -304,6 +304,25 @@
 
 #### Fixes
 
+- **`BrandoWeb.Plugs.MuxWebhook` answered a malformed signature header with a
+  500 instead of a 401.** The `Mux-Signature` parser built its map with
+  `Enum.into(%{}, fn [k, v] -> {k, v} end)` over `String.split(&1, "=")`, so any
+  segment that was not exactly `key=value` raised `FunctionClauseError` — `t,v1`,
+  `t=1,v1`, `nonsense` and a `v1` value containing `=` all crashed the plug on
+  unauthenticated input, in the one branch whose whole job is to reject it
+  cleanly.
+
+  Parsing is total now, and `Integer.parse/1` must consume the whole timestamp:
+  the `{timestamp, _}` match it replaces read `"123abc"` as `123`, letting a
+  caller vary the signed payload with trailing bytes the tolerance check never
+  saw. `verify_signature/4` also takes an injectable `now`, matching
+  `CloudflareStreamWebhook`, so the replay window is testable rather than
+  wall-clock-dependent.
+
+  This plug had no test at all — the only one of the three video webhook plugs
+  without one, and the only one with a hand-rolled header parser. It has eight
+  now.
+
 - **`Brando.Videos.upload_available?/1` now agrees with the providers about what
   a credential is.** It decided the credential half itself, accepting any
   non-nil non-empty term, while the providers require a non-empty binary. A

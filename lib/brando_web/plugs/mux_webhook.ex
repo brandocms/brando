@@ -13,6 +13,8 @@ defmodule BrandoWeb.Plugs.MuxWebhook do
 
   require Logger
 
+  @timestamp_tolerance_seconds 300
+
   def init(options) do
     options
   end
@@ -70,70 +72,75 @@ defmodule BrandoWeb.Plugs.MuxWebhook do
     end
   end
 
-  defp verify_signature(nil, _body, _secret) do
+  @doc false
+  def verify_signature(signature_header, body, secret, now \\ System.system_time(:second))
+
+  def verify_signature(nil, _body, _secret, _now) do
     Logger.warning("Mux webhook received without signature header")
     {:error, :invalid_signature}
   end
 
-  defp verify_signature(_signature_header, _body, nil) do
+  def verify_signature(_signature_header, _body, nil, _now) do
     Logger.error("Mux webhook secret not configured - rejecting webhook for security")
     {:error, :invalid_signature}
   end
 
-  defp verify_signature(signature_header, body, webhook_secret) do
-    # Mux-Signature header format: "t=timestamp,v1=signature"
-    signature_parts =
-      signature_header
-      |> String.split(",")
-      |> Enum.map(&String.split(&1, "="))
-      |> Enum.into(%{}, fn [k, v] -> {k, v} end)
-
-    timestamp = Map.get(signature_parts, "t")
-    expected_signature = Map.get(signature_parts, "v1")
-
-    cond do
-      is_nil(timestamp) || is_nil(expected_signature) ->
-        Logger.warning("Invalid Mux-Signature header format")
-        {:error, :invalid_signature}
-
-      !valid_timestamp?(timestamp) ->
-        {:error, :invalid_signature}
-
-      true ->
-        # Compute signature: HMAC-SHA256(webhook_secret, timestamp + "." + raw_body)
-        payload = "#{timestamp}.#{body}"
-
-        computed_signature =
-          :crypto.mac(:hmac, :sha256, webhook_secret, payload)
-          |> Base.encode16(case: :lower)
-
-        # Constant-time comparison to prevent timing attacks
-        if Plug.Crypto.secure_compare(computed_signature, expected_signature) do
-          :ok
-        else
-          Logger.warning("Mux webhook signature mismatch")
-          {:error, :invalid_signature}
-        end
+  def verify_signature(signature_header, body, secret, now) do
+    with {:ok, timestamp, signature} <- parse_signature(signature_header),
+         :ok <- validate_timestamp(timestamp, now) do
+      :hmac
+      |> :crypto.mac(:sha256, secret, "#{timestamp}.#{body}")
+      |> Base.encode16(case: :lower)
+      |> compare_signature(signature)
     end
   end
 
-  defp valid_timestamp?(timestamp_str) do
-    case Integer.parse(timestamp_str) do
-      {timestamp, _} ->
-        current_time = System.system_time(:second)
-        time_diff = abs(current_time - timestamp)
+  # Mux-Signature is "t=<timestamp>,v1=<hex>".
+  #
+  # Deliberately total. This parses unauthenticated input, and the `Enum.into/3`
+  # it replaces raised `FunctionClauseError` on any segment that was not exactly
+  # `key=value` — so `t=1,v1` answered a request with a 500 rather than the 401
+  # every other branch here is careful to return. `parts: 2` for the same
+  # reason: a value containing `=` is data, not a parse failure.
+  defp parse_signature(header) do
+    parts =
+      for segment <- String.split(header, ","),
+          [key, value] <- [String.split(segment, "=", parts: 2)],
+          into: %{},
+          do: {key, value}
 
-        # Reject if timestamp is more than 5 minutes old (prevent replay attacks)
-        if time_diff > 300 do
-          Logger.warning("Mux webhook timestamp too old: #{time_diff} seconds")
-          false
-        else
-          true
-        end
+    with {:ok, timestamp} <- Map.fetch(parts, "t"),
+         {:ok, signature} <- Map.fetch(parts, "v1"),
+         {timestamp, ""} <- Integer.parse(timestamp) do
+      {:ok, timestamp, signature}
+    else
+      _ ->
+        Logger.warning("Invalid Mux-Signature header format")
+        {:error, :invalid_signature}
+    end
+  end
 
-      :error ->
-        Logger.warning("Invalid timestamp in Mux-Signature header")
-        false
+  # Rejects replayed deliveries. `Integer.parse/1` is required to consume the
+  # whole string — the `{timestamp, _}` match this replaces read "123abc" as
+  # 123, which let a caller smuggle trailing bytes through the signed payload.
+  defp validate_timestamp(timestamp, now) do
+    drift = abs(now - timestamp)
+
+    if drift <= @timestamp_tolerance_seconds do
+      :ok
+    else
+      Logger.warning("Mux webhook timestamp outside tolerance: #{drift} seconds")
+      {:error, :invalid_signature}
+    end
+  end
+
+  defp compare_signature(expected, signature) do
+    # Constant-time comparison to prevent timing attacks
+    if Plug.Crypto.secure_compare(expected, signature) do
+      :ok
+    else
+      Logger.warning("Mux webhook signature mismatch")
+      {:error, :invalid_signature}
     end
   end
 
