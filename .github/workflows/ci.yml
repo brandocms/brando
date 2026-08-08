@@ -29,7 +29,7 @@ jobs:
             otp: 27.2
           - elixir: 1.19.5
             otp: 28.0
-          - elixir: 1.20.0
+          - elixir: 1.20.3
             otp: 28.0
 
     runs-on: ubuntu-latest
@@ -94,7 +94,7 @@ jobs:
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: 1.20.0
+          elixir-version: 1.20.3
           otp-version: 28.0
 
       - name: Restore deps and _build cache
@@ -103,9 +103,9 @@ jobs:
           path: |
             deps
             _build
-          key: quality-${{ runner.os }}-28.0-1.20.0-${{ hashFiles('**/mix.lock') }}
+          key: quality-${{ runner.os }}-28.0-1.20.3-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
-            quality-${{ runner.os }}-28.0-1.20.0
+            quality-${{ runner.os }}-28.0-1.20.3
 
       - name: Install dependencies
         run: mix deps.get --only test
@@ -140,7 +140,7 @@ jobs:
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: 1.20.0
+          elixir-version: 1.20.3
           otp-version: 28.0
 
       - name: Restore docs dependencies and build cache
@@ -149,9 +149,9 @@ jobs:
           path: |
             deps
             _build
-          key: docs-${{ runner.os }}-28.0-1.20.0-${{ hashFiles('**/mix.lock') }}
+          key: docs-${{ runner.os }}-28.0-1.20.3-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
-            docs-${{ runner.os }}-28.0-1.20.0
+            docs-${{ runner.os }}-28.0-1.20.3
 
       - name: Install documentation dependencies
         run: mix deps.get --only docs
@@ -214,7 +214,7 @@ jobs:
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: 1.20.0
+          elixir-version: 1.20.3
           otp-version: 28.0
 
       - name: Set up pnpm
