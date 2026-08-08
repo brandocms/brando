@@ -235,7 +235,103 @@ defmodule Brando.HTMLTest do
 
     assert result =~ hls_url
     assert result =~ thumbnail_url
-    assert result =~ "video-wrapper video-file"
+    assert result =~ "video-wrapper video-cloudflare"
+    assert result =~ ~s(controls)
+  end
+
+  describe "video playback settings" do
+    defp mux_video(fields) do
+      struct!(
+        %Brando.Videos.Video{
+          type: :mux,
+          status: :ready,
+          width: 1920,
+          height: 1080,
+          aspect_ratio: "1920/1080",
+          meta: %{"mux" => %{"playback_id" => "pb123"}}
+        },
+        fields
+      )
+    end
+
+    defp render_video(video, opts) do
+      assigns = %{video_struct: video, opts: opts}
+
+      rendered_to_string(~H"""
+      <.video video={@video_struct} opts={@opts} />
+      """)
+    end
+
+    test "a provider video with no opts uses the record's settings" do
+      result = render_video(mux_video(autoplay: true, controls: true), [])
+
+      assert result =~ "video-wrapper video-mux"
+      assert result =~ "https://stream.mux.com/pb123.m3u8"
+      assert result =~ "data-autoplay"
+      assert result =~ "controls"
+    end
+
+    test "an opt overrides the record, including when the opt is false" do
+      video = mux_video(autoplay: true, controls: true)
+
+      refute render_video(video, autoplay: false) =~ "data-autoplay"
+      refute render_video(video, controls: false) =~ "controls"
+    end
+
+    test "a record that turns a setting off beats the built-in default" do
+      # `loop` defaults to true, so the `||` chain this replaced could never
+      # see an editor's "off".
+      refute render_video(mux_video(loop: false), []) =~ "loop"
+      assert render_video(mux_video(loop: nil), []) =~ "loop"
+    end
+
+    test "muted is honoured on its own, not only as a side effect of autoplay" do
+      assert render_video(mux_video(muted: true), []) =~ "muted"
+      assert render_video(mux_video(muted: nil), muted: true) =~ "muted"
+      refute render_video(mux_video(muted: nil), []) =~ "muted"
+    end
+
+    test "the record's dimensions win over the ones implied by the aspect ratio" do
+      result = render_video(mux_video(width: 1920, height: 1080), [])
+
+      assert result =~ ~s(width="1920")
+      assert result =~ ~s(height="1080")
+      assert result =~ "landscape"
+    end
+
+    test "an unparseable aspect ratio does not raise" do
+      result = render_video(mux_video(width: nil, height: nil, aspect_ratio: "1.77:1"), [])
+
+      assert result =~ "video-wrapper video-mux"
+      refute result =~ ~s(width=")
+    end
+
+    test "a Bunny video is record-aware too" do
+      video = %Brando.Videos.Video{
+        type: :bunny,
+        status: :ready,
+        width: 1280,
+        height: 720,
+        aspect_ratio: "1280/720",
+        controls: true,
+        meta: %{"bunny" => %{"video_guid" => "guid-1", "library_id" => 42}}
+      }
+
+      result = render_video(video, [])
+
+      assert result =~ "video-wrapper video-bunny"
+      assert result =~ "guid-1/playlist.m3u8"
+      assert result =~ "controls"
+    end
+
+    test "captions stay opt-in but can now resolve to the record" do
+      video = mux_video(caption: "From the editor", title: "The title")
+
+      refute render_video(video, []) =~ "figcaption"
+      assert render_video(video, caption: true) =~ "<figcaption>From the editor</figcaption>"
+      assert render_video(video, caption: true, title: "From the tag") =~ "From the tag"
+      assert render_video(mux_video(caption: nil, title: "The title"), caption: true) =~ "The title"
+    end
   end
 
   test "picture_tag" do

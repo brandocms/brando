@@ -186,6 +186,51 @@
   `ScheduledPublishingDrawer` — its events belong to the parent form, and its
   `myself` still arrives as an assign, so component targeting is unchanged.
 
+- **`<.video>` now resolves playback settings as opt → record → default, and
+  Mux and Bunny videos read the record at all.** `autoplay`, `controls`, `loop`,
+  `muted`, `preload`, `width`, `height` and `aspect_ratio` exist both as opts on
+  the tag and as fields on `%Brando.Videos.Video{}`, editable in the admin. Two
+  things were wrong:
+
+  1. The Mux and Bunny clauses were hand-written copies of the file renderer
+     that read **only** opts. An editor could switch "Autoplay" on for a Mux
+     video and the front end ignored it. Cloudflare, `:upload` and
+     `:external_file` honoured it.
+  2. Where the record *was* consulted it was through `record || opt || default`,
+     which cannot tell "unset" from "set to false". A record with `loop: false`
+     fell through to the default and looped anyway.
+
+  Both clauses now render through the one renderer, and resolution is explicit:
+  an opt passed at the call site wins (**including `false`**), then the record's
+  value if the editor set one, then the default.
+
+  **What changes for you.** A template that passes an opt the record disagrees
+  with now behaves differently — `{% video entry.video { autoplay: false } %}`
+  over a record with autoplay on used to autoplay and no longer does, and a Mux
+  or Bunny video whose record says autoplay/controls/loop will now obey it.
+  If a site was relying on the old behaviour, the fix is to set the field in the
+  admin rather than around it.
+
+  Two related dead settings were wired up while the resolution was being fixed:
+  `muted` was accepted by the tag grammar and never read (it was hardcoded to
+  follow `autoplay`), and `caption: true` could only resolve to `opts[:title]`,
+  never the record's own caption. Captions remain opt-in — a record with a
+  caption does not start rendering a `<figcaption>` on templates that never
+  asked for one.
+
+  The Mux and Bunny wrapper classes (`video-mux`, `video-bunny`) are unchanged,
+  as is the file markup, byte for byte. Two other markup changes:
+
+  - **Cloudflare videos now render `video-wrapper video-cloudflare`, not
+    `video-wrapper video-file`.** Every other provider had a class naming it;
+    Cloudflare was rendering as a plain file because it was the one provider
+    already going through the shared renderer. If you style `.video-file` and
+    rely on it catching Cloudflare, add `.video-cloudflare` to the selector.
+  - Mux and Bunny videos no longer emit a `<source type="application/x-mpegURL">`
+    child: with a single source it is equivalent to the `src` attribute the
+    shared renderer uses, and it defeated `preload` by making the browser fetch
+    the manifest eagerly.
+
 #### Features
 
 - **`Brando.Videos.ProviderConfigCheck` reports misconfigured video providers at
