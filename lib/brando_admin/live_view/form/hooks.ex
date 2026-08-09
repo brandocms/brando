@@ -656,6 +656,15 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       self(),
       {:register_pending_block_image, image.id, {BrandoAdmin.Components.Form.Transformer, component_id}}
     )
+
+    # And subscribing plus registering is still only two thirds of it. Both only
+    # catch a broadcast that has yet to happen: a local libvips run over a JPEG
+    # finishes in well under a second, so `:processed` is regularly broadcast
+    # before this LiveView even handles `:asset_ready`. The registration is then
+    # stranded in `pending_block_image_updates` with nothing left to consume it,
+    # and the card sits on "Processing" for the life of the form — which is the
+    # exact failure the comment above says the registration prevents.
+    maybe_forward_already_processed(image, BrandoAdmin.Components.Form.Transformer, component_id)
   end
 
   # Gallery refs add the image_id immediately (placeholder renders while
