@@ -263,9 +263,26 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         image = Map.put(image, :status, :unprocessed)
 
         case full_path do
+          # Currently unreachable: no producer emits a path headed by
+          # `:transformer`. `field_full_path` comes from `queue_processing/4`,
+          # whose callers pass either the default `[]` (crop.ex, form.ex:2920/
+          # 3264/4153), `edit_image.path ++ [field]` (form.ex:3358 — and
+          # `edit_image.path` is only ever set by `Input.Image`, which a
+          # transformer never renders; it draws its own `asset_picker` because
+          # "a transformer item deliberately has none"), or
+          # `image_field_path(target)` (upload_manager.ex:425), which returns a
+          # path only for `"kind" => "entry_field"` while the transformer
+          # enqueues `"transformer_image"`. Transformer image cards are updated
+          # through `pending_block_image_updates` instead, not through here.
+          #
+          # Kept rather than deleted, but with the id corrected: it was built
+          # off the Form *component* id (`<singular>_form`) where the component
+          # is registered under the HTML form id (`<singular>`), so anything
+          # that made this live would have addressed a component that does not
+          # exist and failed silently.
           [:transformer, relation_key | _] ->
             relation_atom = String.to_existing_atom(relation_key)
-            transformer_id = "#{target_id}-transformer-#{relation_atom}"
+            transformer_id = "#{singular}-transformer-#{relation_atom}"
 
             send_update(BrandoAdmin.Components.Form.Transformer,
               id: transformer_id,
@@ -345,9 +362,26 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
         # Route transformer image updates to the Transformer component
         case full_path do
+          # Currently unreachable: no producer emits a path headed by
+          # `:transformer`. `field_full_path` comes from `queue_processing/4`,
+          # whose callers pass either the default `[]` (crop.ex, form.ex:2920/
+          # 3264/4153), `edit_image.path ++ [field]` (form.ex:3358 — and
+          # `edit_image.path` is only ever set by `Input.Image`, which a
+          # transformer never renders; it draws its own `asset_picker` because
+          # "a transformer item deliberately has none"), or
+          # `image_field_path(target)` (upload_manager.ex:425), which returns a
+          # path only for `"kind" => "entry_field"` while the transformer
+          # enqueues `"transformer_image"`. Transformer image cards are updated
+          # through `pending_block_image_updates` instead, not through here.
+          #
+          # Kept rather than deleted, but with the id corrected: it was built
+          # off the Form *component* id (`<singular>_form`) where the component
+          # is registered under the HTML form id (`<singular>`), so anything
+          # that made this live would have addressed a component that does not
+          # exist and failed silently.
           [:transformer, relation_key | _] ->
             relation_atom = String.to_existing_atom(relation_key)
-            transformer_id = "#{target_id}-transformer-#{relation_atom}"
+            transformer_id = "#{singular}-transformer-#{relation_atom}"
 
             send_update(BrandoAdmin.Components.Form.Transformer,
               id: transformer_id,
