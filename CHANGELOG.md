@@ -211,12 +211,21 @@
   If a site was relying on the old behaviour, the fix is to set the field in the
   admin rather than around it.
 
-  Two related dead settings were wired up while the resolution was being fixed:
-  `muted` was accepted by the tag grammar and never read (it was hardcoded to
-  follow `autoplay`), and `caption: true` could only resolve to `opts[:title]`,
-  never the record's own caption. Captions remain opt-in — a record with a
-  caption does not start rendering a `<figcaption>` on templates that never
-  asked for one.
+  Two related dead settings were wired up while the resolution was being fixed.
+
+  `muted` was accepted by the tag grammar and never read; it resolves through
+  the same opt → record → default chain now, so an editor can mute a video that
+  is not autoplaying. **What did not change: `autoplay` still forces `muted`.**
+  The attribute renders as `@autoplay || @muted`, exactly as before, because
+  browsers block unmuted autoplay. A template passing `autoplay: true` and no
+  `muted` therefore behaves as it always did, and `muted: false` neither does
+  nor can un-mute an autoplaying video — the setting is only reachable with
+  autoplay off. This is the one setting the precedence rule above does not fully
+  describe.
+
+  `caption: true` could only resolve to `opts[:title]`, never the record's own
+  caption. Captions remain opt-in — a record with a caption does not start
+  rendering a `<figcaption>` on templates that never asked for one.
 
   The Mux and Bunny wrapper classes (`video-mux`, `video-bunny`) are unchanged,
   as is the file markup, byte for byte. Two other markup changes:

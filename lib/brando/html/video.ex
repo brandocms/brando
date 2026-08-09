@@ -18,7 +18,7 @@ defmodule Brando.HTML.Video do
     - `autoplay`
     - `controls`
     - `loop`
-    - `muted`
+    - `muted` -> forced on whenever `autoplay` is on, see Precedence
     - `preload`
     - `aspect_ratio`
     - `caption` -> `true` resolves to `opts[:title]`, then the record's caption
@@ -36,6 +36,11 @@ defmodule Brando.HTML.Video do
 
   Passing `false` counts as passing — `{% video entry.video { autoplay: false } %}`
   turns autoplay off on a record that has it on.
+
+  `muted` is the one exception to all of the above. It resolves like the others,
+  but the rendered attribute is `autoplay || muted`, since browsers block
+  unmuted autoplay. `muted: false` therefore cannot un-mute an autoplaying
+  video — the setting only has an effect with autoplay off.
   """
   def video(assigns)
 
