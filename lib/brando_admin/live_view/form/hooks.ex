@@ -813,6 +813,36 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     end
   end
 
+  @doc """
+  Transformer component ids on `schema`'s form that own a `related_schema`.
+
+  Extracted from the webhook routing below so it can be tested without mounting
+  a LiveView — both halves of it have been wrong in production:
+
+    * `__relations__` is `Brando.Blueprint.Relations.__relations__/1`, taking the
+      module. It is NOT a function on the blueprint, so `schema.__relations__()`
+      raises `UndefinedFunctionError` and takes the form down.
+
+    * the id is keyed off the HTML form id (`<singular>`), not the Form
+      *component* id (`<singular>_form`). `fieldset/field.ex` renders the
+      component as `"\#{@form.id}-transformer-\#{@input.name}"`, so the `_form`
+      variant silently addressed a component that does not exist — no crash, no
+      log, just a card that never updates.
+
+  Only the webhook path reaches this, which is why neither surfaced until a Mux
+  callback arrived: a site with no tunnel in development never runs it.
+  """
+  @spec transformer_ids_for(module(), module()) :: [String.t()]
+  def transformer_ids_for(schema, related_schema) do
+    singular = schema.__naming__().singular
+
+    for rel <- Brando.Blueprint.Relations.__relations__(schema),
+        rel.type == :has_many,
+        get_in(rel.opts, [:module]) == related_schema do
+      "#{singular}-transformer-#{rel.name}"
+    end
+  end
+
   # Video hooks - handle PubSub updates
   defp handle_hooks_video_info({video, [:video, :updated], path}, socket) do
     case String.split(video.config_target, ":") do
@@ -861,17 +891,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         if video_schema != schema do
           # Video belongs to a relation module — route to all Transformer components.
           # Each component checks internally if it owns this video.
-          singular = schema.__naming__().singular
-          form_id = "#{singular}_form"
-
-          # Look up which relations use this module
-          relations = schema.__relations__()
-
-          for rel <- relations,
-              rel.type == :has_many,
-              get_in(rel.opts, [:module]) == video_schema do
-            transformer_id = "#{form_id}-transformer-#{rel.name}"
-
+          for transformer_id <- transformer_ids_for(schema, video_schema) do
             send_update(BrandoAdmin.Components.Form.Transformer,
               id: transformer_id,
               event: "video_updated",
