@@ -66,6 +66,14 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
         phx-change="validate_image"
         phx-target={@myself}
       >
+        <%!-- `data-click-mode="trigger"` because this wrapper contains the
+        focal-point picker, which is what that mode exists for. Under the
+        default mode UploadTrigger opens the file chooser on any click that is
+        not a button or a link, and the focal point is a plain `div` — so
+        setting a focal point also popped up an upload dialog. Only
+        `.upload-trigger` opens it now: the empty-state placeholder below, plus
+        the "Upload image" button, which dispatches straight to the input and
+        never went through the hook. Drag and drop is unaffected. --%>
         <div
           id="image-drawer-form-preview"
           phx-hook="Brando.UploadTrigger"
@@ -79,6 +87,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
           }
           data-folder-browser="true"
           data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
+          data-click-mode="trigger"
           class="image-drawer-preview"
         >
           <input id="image-drawer-upload-input" type="file" class="file-input" />
@@ -102,7 +111,10 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
             </figure>
             <figcaption class="tiny">{@edit_image.image.path}</figcaption>
           <% else %>
-            <div class="img-placeholder">
+            <%!-- Carries `upload-trigger` so the empty state stays click-to-upload
+            under `trigger` mode — there is no focal point to conflict with when
+            there is no image. --%>
+            <div class="img-placeholder upload-trigger">
               <div class="placeholder-wrapper">
                 <div class="svg-wrapper">
                   <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
