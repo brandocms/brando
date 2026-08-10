@@ -38,6 +38,27 @@ defmodule Brando.Images.ProcessingTest do
     valid?: true
   }
 
+  test "slugifies the client filename by default" do
+    u1 = Factory.insert(:random_user)
+    upload_entry = %{@upload_entry | client_name: "NTECH 12, Keynote.png"}
+
+    {:ok, uploaded_image} = Brando.Upload.handle_upload(@meta, upload_entry, @cfg, u1)
+
+    assert Path.basename(uploaded_image.path) =~ "ntech-12-keynote"
+    refute uploaded_image.path =~ " "
+    refute uploaded_image.path =~ ","
+  end
+
+  test "keeps the client filename verbatim when slugify_filename is false" do
+    u1 = Factory.insert(:random_user)
+    cfg = %{@cfg | slugify_filename: false}
+    upload_entry = %{@upload_entry | client_name: "NTECH 12 Keynote.png"}
+
+    {:ok, uploaded_image} = Brando.Upload.handle_upload(@meta, upload_entry, cfg, u1)
+
+    assert uploaded_image.path =~ "NTECH 12 Keynote"
+  end
+
   test "recreate_sizes_for_image_field" do
     u1 = Factory.insert(:random_user)
 

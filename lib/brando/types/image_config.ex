@@ -5,6 +5,11 @@ defmodule Brando.Type.ImageConfig do
   ### Options
 
     * random_filename - use filename given at upload, or create a random filename
+    * slugify_filename - slugify the uploaded filename (default `true`). Only
+      applies when `random_filename` is false, which takes precedence. Leaving
+      this off stores the client's filename verbatim, so spaces and commas end
+      up in image urls — which is a problem for `srcset`, where both characters
+      are structural.
     * completed_callback - arity-2 function or `{module, function, extra_args}`
       called after image processing. Receives `(image, user)` before configured
       MFA arguments. Completion work may retry, so side effects should be
@@ -22,6 +27,7 @@ defmodule Brando.Type.ImageConfig do
           completed_callback: Brando.Assets.CompletedCallback.t(struct()),
           default_size: atom() | String.t(),
           random_filename: boolean(),
+          slugify_filename: boolean(),
           size_limit: pos_integer(),
           sizes: %{optional(String.t()) => map()},
           srcset: map() | list() | nil,
@@ -42,6 +48,7 @@ defmodule Brando.Type.ImageConfig do
             ],
             default_size: "medium",
             random_filename: false,
+            slugify_filename: true,
             size_limit: 10_240_000,
             sizes: %{},
             srcset: nil,

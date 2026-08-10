@@ -55,6 +55,13 @@ defmodule Brando.Types.ImageConfigTest do
     assert ImageConfig.cast(@map) == {:ok, @casted_map}
   end
 
+  test "slugify_filename defaults to true and survives a cast" do
+    assert @struct.slugify_filename == true
+
+    {:ok, casted} = ImageConfig.cast(Map.put(@map, "slugify_filename", false))
+    assert casted.slugify_filename == false
+  end
+
   test "blank?" do
     assert ImageConfig.blank?(@struct) == @struct
   end
