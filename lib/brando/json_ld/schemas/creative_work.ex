@@ -42,6 +42,7 @@ defmodule Brando.JSONLD.Schema.CreativeWork do
             dateCreated: nil,
             dateModified: nil,
             datePublished: nil,
+            description: nil,
             discussionUrl: nil,
             editor: nil,
             educationalAlignment: nil,
