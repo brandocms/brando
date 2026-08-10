@@ -103,9 +103,25 @@ Available settings via `meta.mux`:
 
 | Setting | Description | Values |
 |---------|-------------|--------|
-| `max_resolution_tier` | Maximum transcoding resolution | `"1080p"`, `"2160p"` |
+| `max_resolution_tier` | Maximum transcoding resolution | `"1080p"` (Brando default), `"1440p"`, `"2160p"` |
+| `video_quality` | Encoding quality level | `"basic"`, `"plus"`, `"premium"` |
 | `playback_policies` | Who can view the video | `["public"]` |
 | `static_renditions` | Generate downloadable renditions | `[%{"resolution" => "highest"}]` |
+
+`max_resolution_tier` accepts only the three values above — Mux rejects anything
+else (`"720p"`, `"480p"`) with `Invalid max resolution tier value`. Set it to
+`nil` to drop it from the request entirely and let Mux pick based on the source.
+
+`video_quality` (formerly `encoding_tier`, where `basic` was `baseline` and
+`plus` was `smart`) has no Brando default. When unset, Mux applies the
+organization default — `basic` for newer accounts, `plus` for older ones — so
+set it explicitly if encoding cost matters. `basic` uses a reduced encoding
+ladder at a lower target quality; `plus` and `premium` use per-title encoding.
+
+Brando merges `meta.mux` into Mux's `new_asset_settings` verbatim, so any other
+setting the Mux asset API accepts can be passed here as well. Only
+`playback_policies` is validated up front; other invalid values surface as a Mux
+API error when the upload is initiated, not at compile time.
 
 Signed Mux playback is rejected until the application provides a token-signing
 boundary. Legacy `playback_policy` and `mp4_support` settings are translated to

@@ -40,10 +40,22 @@ defmodule Brando.Type.VideoConfig do
 
   Available settings for Mux uploads via `meta.mux`:
 
-  - `"max_resolution_tier"` - Maximum resolution tier for transcoding
-    - `"1080p"` - Transcode up to 1080p (default for cost control)
+  - `"max_resolution_tier"` - Maximum resolution tier for transcoding. Mux only
+    accepts these three values - anything else (`"720p"`, `"480p"`) is rejected
+    by the Mux API with `Invalid max resolution tier value`.
+    - `"1080p"` - Transcode up to 1080p (Brando's default, for cost control)
+    - `"1440p"` - Transcode up to 1440p
     - `"2160p"` - Transcode up to 4K
-    - Not set - Mux decides based on source
+    - `nil` - Drops the setting from the request, letting Mux decide based on
+      the source
+
+  - `"video_quality"` - Encoding quality level (formerly `encoding_tier`)
+    - `"basic"` - Reduced encoding ladder, lower target quality, cheapest
+    - `"plus"` - AI-powered per-title encoding
+    - `"premium"` - Same as plus, tuned for premium media
+    - Not set - Mux falls back to the organization default, which is `"basic"`
+      for newer accounts and `"plus"` for older ones. Set it explicitly if the
+      encoding cost matters.
 
   - `"playback_policies"` - Who can view the video
     - `["public"]` - Anyone with the URL. Signed playback is rejected until
@@ -51,6 +63,11 @@ defmodule Brando.Type.VideoConfig do
 
   - `"static_renditions"` - Optional downloadable MP4/M4A renditions using
     Mux's current static rendition API.
+
+  Apart from `"playback_policies"`, Brando does not validate these values - the
+  `meta.mux` map is merged into Mux's `new_asset_settings` as-is, so any other
+  setting the Mux asset API accepts can be passed here too, and invalid values
+  surface as Mux API errors at upload time rather than at compile time.
 
   ### Example Configuration
 

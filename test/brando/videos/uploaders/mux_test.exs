@@ -21,6 +21,19 @@ defmodule Brando.Videos.Uploaders.MuxTest do
     refute Map.has_key?(settings, "mp4_support")
   end
 
+  test "passes video quality through from config meta and direct opts" do
+    config = %Brando.Type.VideoConfig{
+      upload_strategy: :mux,
+      meta: %{mux: %{"video_quality" => "basic"}}
+    }
+
+    assert {:ok, settings} = Mux.build_asset_settings(config: config)
+    assert settings["video_quality"] == "basic"
+
+    assert {:ok, overridden} = Mux.build_asset_settings(config: config, video_quality: "premium")
+    assert overridden["video_quality"] == "premium"
+  end
+
   test "translates legacy public settings without sending deprecated fields" do
     config = %Brando.Type.VideoConfig{
       upload_strategy: :mux,

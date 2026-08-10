@@ -49,7 +49,10 @@ defmodule Brando.Videos.Uploaders.Mux do
   - `:playback_policies` - Override config default. Only `["public"]` is
     supported until Brando has a token-signing boundary.
   - `:static_renditions` - Optional current Mux static rendition settings
-  - `:max_resolution_tier` - Override config default (e.g., "1080p", "2160p")
+  - `:max_resolution_tier` - Override config default. Mux accepts `"1080p"`,
+    `"1440p"` or `"2160p"` only
+  - `:video_quality` - `"basic"`, `"plus"` or `"premium"`. No Brando default;
+    Mux falls back to the organization default when unset
 
   ## Configuration via meta
 
@@ -60,11 +63,19 @@ defmodule Brando.Videos.Uploaders.Mux do
           meta: %{
             mux: %{
               "max_resolution_tier" => "1080p",
+              "video_quality" => "basic",
               "playback_policies" => ["public"],
               "static_renditions" => [%{"resolution" => "highest"}]
             }
           }
         }
+
+  The `meta.mux` map is merged into Mux's `new_asset_settings` verbatim, so any
+  setting the Mux asset API accepts can be passed there, not just the keys with
+  a matching option above. Only `"playback_policies"` is validated by Brando;
+  everything else fails at upload time with a Mux API error.
+
+  See `Brando.Type.VideoConfig` for the full list of settings.
 
   Settings priority: direct opts > config.meta.mux > uploader defaults
   """
@@ -318,6 +329,7 @@ defmodule Brando.Videos.Uploaders.Mux do
         :playback_policies,
         :static_renditions,
         :max_resolution_tier,
+        :video_quality,
         :playback_policy,
         :mp4_support
       ])
