@@ -44,6 +44,32 @@ defmodule Brando.Blueprint.TemplateParserTest do
     end
   end
 
+  test "tag arguments may span multiple lines" do
+    templates = [
+      """
+      {% picture entry.cover {
+           sizes: 'auto',
+           lazyload: true
+      } %}
+      """,
+      """
+      {% video entry.video {
+           autoplay: true,
+           muted: true
+      } %}
+      """,
+      """
+      {% route page_path show {
+           entry.uri
+      } %}
+      """
+    ]
+
+    for template <- templates do
+      assert {:ok, _parsed} = TemplateParser.parse(template)
+    end
+  end
+
   test "parse!/2 reports the Blueprint setting and parser location" do
     template = "{{ entry.title "
 

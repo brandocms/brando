@@ -155,22 +155,26 @@ defmodule Brando.Villain.LiquexParser.Syntax do
 
   defp video_args(combinator \\ empty()) do
     combinator
-    |> ignore(string("{ "))
+    |> ignore(string("{"))
+    |> ignore(Literal.whitespace())
     |> repeat(
-      lookahead_not(string(" }"))
+      lookahead_not(string("}"))
       |> Object.arguments()
     )
-    |> ignore(string(" }"))
+    |> ignore(Literal.whitespace())
+    |> ignore(string("}"))
   end
 
   defp route_args(combinator \\ empty()) do
     combinator
-    |> ignore(string("{ "))
+    |> ignore(string("{"))
+    |> ignore(Literal.whitespace())
     |> repeat(
-      lookahead_not(string(" }"))
+      lookahead_not(string("}"))
       |> argument_list()
     )
-    |> ignore(string(" }"))
+    |> ignore(Literal.whitespace())
+    |> ignore(string("}"))
   end
 
   defp argument_list(combinator) do
