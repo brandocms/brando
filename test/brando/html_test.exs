@@ -1189,6 +1189,29 @@ defmodule Brando.HTMLTest do
              {false, "image/small/1.jpg 300w, image/medium/1.jpg 500w, image/large/1.jpg 700w"}
   end
 
+  test "get_srcset escapes whitespace and commas in filenames" do
+    srcset = [{"small", "300w"}, {"large", "700w"}]
+
+    img_field =
+      Factory.build(:image,
+        path: "image/NTECH 12, Keynote.jpg",
+        sizes: %{
+          "small" => "image/small/NTECH 12, Keynote.jpg",
+          "large" => "image/large/NTECH 12, Keynote.jpg"
+        }
+      )
+
+    {false, rendered} = Brando.HTML.Images.get_srcset(img_field, srcset, [], :svg)
+
+    assert rendered ==
+             "image/small/NTECH%2012%2C%20Keynote.jpg 300w, image/large/NTECH%2012%2C%20Keynote.jpg 700w"
+
+    # every candidate is still `url descriptor`, so the list stays parseable
+    assert rendered
+           |> String.split(", ")
+           |> Enum.all?(&match?([_url, _descriptor], String.split(&1, " ")))
+  end
+
   test "init_js" do
     assigns = %{}
 

@@ -744,7 +744,7 @@ defmodule Brando.HTML.Images do
             opts
           )
 
-        "#{path} #{v}"
+        "#{encode_candidate_url(path)} #{v}"
       end
 
     {cropped_ratio, Enum.join(srcset_values, ", ")}
@@ -789,7 +789,7 @@ defmodule Brando.HTML.Images do
             opts
           )
 
-        "#{path} #{v}"
+        "#{encode_candidate_url(path)} #{v}"
       end
 
     {cropped_ratio, Enum.join(srcset_values, ", ")}
@@ -811,7 +811,7 @@ defmodule Brando.HTML.Images do
             opts
           )
 
-        "#{path} #{v}"
+        "#{encode_candidate_url(path)} #{v}"
       end
 
     {false, Enum.join(srcset_values, ", ")}
@@ -845,7 +845,7 @@ defmodule Brando.HTML.Images do
             opts
           )
 
-        "#{path} #{v}"
+        "#{encode_candidate_url(path)} #{v}"
       end
 
     {false, Enum.join(srcset_values, ", ")}
@@ -891,12 +891,27 @@ defmodule Brando.HTML.Images do
       rendered_srcsets =
         Enum.map(srcsets, fn {k, v} ->
           path = Utils.img_url(image_field, k, opts)
-          "#{path} #{v}"
+          "#{encode_candidate_url(path)} #{v}"
         end)
 
       {media_query, Enum.join(rendered_srcsets, ", ")}
     end
   end
+
+  # `srcset` separates a candidate URL from its descriptor with whitespace, and
+  # separates candidates from each other with commas. An unencoded space or
+  # comma in a filename therefore truncates the URL and invalidates the entire
+  # candidate list, so the browser renders no image at all — silently, with no
+  # console error. `URI.encode/1` leaves reserved URL characters (`/`, `:`, …)
+  # intact so prefixed CDN urls survive, but it also leaves the comma, which
+  # has to be escaped separately here.
+  defp encode_candidate_url(path) when is_binary(path) do
+    path
+    |> URI.encode()
+    |> String.replace(",", "%2C")
+  end
+
+  defp encode_candidate_url(path), do: path
 
   defp sort_srcset(map) when is_map(map) do
     map
