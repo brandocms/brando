@@ -178,12 +178,6 @@
     letter-spacing: 0.01em;
     position: relative;
 
-    .important-vars & {
-      @fontsize 14px >mobile;
-      @fontsize 12px $mobile;
-      @space margin-bottom 5px;
-    }
-
     &:before {
       transition: opacity 0.5s ease;
       content: "";

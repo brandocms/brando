@@ -301,11 +301,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                     </button>
                   </div>
                   <Input.input type={:hidden} field={block_data[:config_target]} />
-                  <Input.override_text
+                  <Input.rich_text
                     field={block_data[:title]}
                     label={gettext("Caption")}
                     default_value={@image && @image.title}
-                    target={@myself}
+                    reset
+                    opts={[]}
                   />
                   <Input.override_text
                     field={block_data[:alt]}

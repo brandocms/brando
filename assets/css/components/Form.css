@@ -196,7 +196,12 @@
     }
   }
 
-  .brando-input:last-of-type .field-wrapper {
+  /* Direct child only. As a descendant selector this reached into every
+     field-wrapper nested below the last input — including the ones inside a
+     modal rendered within a block var, which then lost the spacing
+     `.modal-content .field-wrapper` gives them and stacked label onto
+     instructions. */
+  .brando-input:last-of-type > .field-wrapper {
     margin-bottom: 0;
   }
 

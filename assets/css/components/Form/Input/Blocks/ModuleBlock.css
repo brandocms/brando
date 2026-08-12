@@ -1,29 +1,4 @@
 .block {
-  .important-vars {
-    background-color: var(--brando-color-peach);
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 10px;
-
-    .field-wrapper {
-      @space margin-bottom 2.5vw;
-    }
-
-    .tiptap-wrapper {
-      background-color: var(--brando-color-white);
-    }
-
-    input.text, textarea.text {
-      background-color: var(--brando-color-white);
-      color: var(--brando-color-dark);
-      @fontsize sm;
-
-      &::placeholder {
-        @fontsize sm;
-      }
-    }
-  }
-
   .rendered-variable {
     @font mono;
     background-color: #fafafa;

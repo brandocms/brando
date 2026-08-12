@@ -220,7 +220,7 @@ function rebuildContentBlockRegistry() {
       let safety = 0
       while (sibling && safety++ < 10000) {
         if (sibling.nodeType === NODE_TYPES.COMMENT && sibling.nodeValue.trim().startsWith(`[-:B<${uid}`)) {
-          contentBlockRegistry.set(uid, { elements: blockElements, insertionPoint: sibling })
+          contentBlockRegistry.set(uid, { uid, elements: blockElements, insertionPoint: sibling })
           break
         } else if (sibling.nodeType === NODE_TYPES.ELEMENT) {
           blockElements.push({ element: sibling, children: [] })
@@ -332,9 +332,16 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
     return
   }
 
-  // Parse new content
+  // Parse new content. `rebuildContentBlockRegistry` only tracks ELEMENT nodes,
+  // so the parsed nodes have to be filtered the same way or the two lists do not
+  // line up: index 0 would pair the `[+:B<uid>]` boundary comment against the
+  // block's first element, the nodeType check below would fail, and the replace
+  // branch would drop the live element without ever running the child splice —
+  // which is how a multi-module's children vanished from the preview.
   const doc = parser.parseFromString(rendered_html, 'text/html')
-  const newBlocks = Array.from(doc.querySelector('body').childNodes)
+  const newBlocks = Array.from(doc.querySelector('body').childNodes).filter(
+    node => node.nodeType === NODE_TYPES.ELEMENT
+  )
 
   // Update children map if needed
   if (has_children) {
@@ -344,11 +351,6 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
   // Handle new blocks (no existing elements)
   if (!block.elements.length) {
     newBlocks.forEach((newBlock, idx) => {
-      // Skip comment nodes that mark block boundaries
-      if (newBlock.nodeType === NODE_TYPES.COMMENT && newBlock.nodeValue.trim().startsWith(`[-:B<${block.uid}`)) {
-        return
-      }
-
       const newElement = block.insertionPoint.parentNode.insertBefore(
         newBlock,
         block.insertionPoint
@@ -363,11 +365,6 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
     const newEls = []
 
     newBlocks.forEach((newBlock, idx) => {
-      // Skip comment nodes that mark block boundaries
-      if (newBlock.nodeType === NODE_TYPES.COMMENT && newBlock.nodeValue.trim().startsWith(`[-:B<${block.uid}`)) {
-        return
-      }
-
       const existingEl = block.elements[idx]
 
       if (existingEl && existingEl.element.nodeType === newBlock.nodeType) {

@@ -6,6 +6,7 @@ export default (app) => ({
   mounted() {
     this.mount()
     this.setupLinkHandler()
+    this.setupClearHandler()
     app.components.push(this)
   },
 
@@ -109,6 +110,26 @@ export default (app) => ({
     })
   },
 
+  // `Input.rich_text` with `reset` dispatches this from its revert button.
+  // The editor owns the document and only syncs outwards to the hidden input,
+  // so clearing the input alone would leave the visible text in place.
+  setupClearHandler() {
+    this._clearListener = () => {
+      const $input = Dom.find(this.el, '.tiptap-text')
+
+      if (this._editor) {
+        this._editor.commands.clearContent(true)
+      }
+
+      if ($input) {
+        $input.value = ''
+        $input.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+    }
+
+    this.el.addEventListener('brando:tiptap:clear', this._clearListener)
+  },
+
   remount() {
     unmount(this._instance)
     this.mount()
@@ -116,6 +137,7 @@ export default (app) => ({
   },
 
   destroyed() {
+    this.el.removeEventListener('brando:tiptap:clear', this._clearListener)
     unmount(this._instance)
   },
 })

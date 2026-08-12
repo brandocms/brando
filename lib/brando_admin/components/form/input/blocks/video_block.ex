@@ -260,11 +260,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                   </div>
                 </div>
                 <div class="panel">
-                  <Input.override_text
+                  <Input.rich_text
                     field={block_data[:title]}
                     label={gettext("Caption")}
                     default_value={@video && @video.title}
-                    target={@myself}
+                    reset
+                    opts={[]}
                   />
 
                   <div class="button-group-vertical">

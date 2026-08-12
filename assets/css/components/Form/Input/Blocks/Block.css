@@ -742,6 +742,33 @@ button.btn-palette {
       height: auto;
     }
 
+    /* A var's editing modal (link picker, image picker, …) is a descendant of
+       `.variable`, not a portal, so every rule above cascades into it. The var
+       widget sizing outranked `.modal-content input.text` on specificity and
+       rendered the modal's fields 50px tall with 14px of vertical padding.
+       Hand the modal's own chrome back — values mirror Modal.css. */
+    .modal-content {
+      input[type="text"],
+      textarea.text {
+        font-family: inherit;
+        padding: 0 12px;
+        height: 40px;
+
+        &::placeholder {
+          font-family: inherit;
+        }
+      }
+
+      textarea.text {
+        padding: 12px;
+        height: auto;
+      }
+
+      label.control-label {
+        font-size: 12px;
+      }
+    }
+
     .datetime-wrapper {
       .clear-datetime {
         font-size: 12px;

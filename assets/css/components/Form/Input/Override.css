@@ -38,6 +38,21 @@ input.is-overridden {
   border-left: 3px solid var(--brando-color-primary);
 }
 
+/* A rich text field has no placeholder to advertise the value it inherits when
+   left empty, so `Input.rich_text` with `default_value` prints it below the
+   editor instead. */
+.tiptap-inherited-value {
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 6px;
+  color: var(--brando-color-text-muted);
+
+  &:before {
+    content: "↳ ";
+    opacity: 0.6;
+  }
+}
+
 /* Toggle group fieldset */
 .override-toggle-group {
   border: none !important;

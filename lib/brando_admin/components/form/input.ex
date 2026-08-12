@@ -328,18 +328,40 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
+  @doc """
+  A TipTap editor bound to `field`.
+
+  Pass `reset` to get the same revert affordance `override_text/1` has: a button
+  that clears the editor back to empty, meaning "inherit the default". Give it
+  `default_value` too and the inherited text is shown below the editor, since a
+  rich text editor has no placeholder to advertise it with. Both are opt-in —
+  most call sites are plain rich text fields with nothing to fall back to.
+  """
   def rich_text(assigns) do
     extensions = process_extensions(assigns)
 
     assigns =
       assigns
       |> assign(:extensions, extensions)
+      |> assign_new(:reset, fn -> false end)
+      |> assign_new(:default_value, fn -> nil end)
       |> prepare_input_component()
       |> prepare_ai_support()
 
+    # An empty TipTap document still serializes to `<p></p>`, so a bare
+    # `not in [nil, ""]` would call every untouched field overridden — and would
+    # advertise `<p></p>` as the value being inherited.
+    assigns =
+      assigns
+      |> assign(:is_overridden, present_rich_text?(assigns.field.value))
+      |> assign(:show_default?, present_rich_text?(assigns.default_value))
+
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
-      <div class={["tiptap-wrapper", "input-with-action", @ai_enabled? && "has-action"]} id={"#{@field.id}-rich-text-wrapper"}>
+      <div
+        class={["tiptap-wrapper", "input-with-action", (@ai_enabled? || (@reset && @is_overridden)) && "has-action"]}
+        id={"#{@field.id}-rich-text-wrapper"}
+      >
         <div
           id={"#{@field.id}-rich-text"}
           phx-hook="Brando.TipTap"
@@ -371,10 +393,35 @@ defmodule BrandoAdmin.Components.Form.Input do
             /><path d="M12 2a10 10 0 0 1 10 10h-2a8 8 0 0 0-8-8V2z" />
           </svg>
         </button>
+        <%!-- Clearing has to go through the hook: the editor owns the document
+              and only syncs *out* to the hidden input, so writing the input
+              directly would leave the visible text untouched. --%>
+        <button
+          :if={@reset && @is_overridden}
+          type="button"
+          class="override-reset-button"
+          phx-click={Phoenix.LiveView.JS.dispatch("brando:tiptap:clear", to: "##{@field.id}-rich-text")}
+          title={gettext("Reset to default")}
+        >
+          <.icon name="hero-arrow-uturn-left-mini" />
+        </button>
+      </div>
+      <%!-- The default is rich text itself, so it is rendered as markup rather
+            than printed as escaped tags. --%>
+      <div :if={@show_default? && !@is_overridden} class="tiptap-inherited-value">
+        {@default_value |> HtmlSanitizeEx.basic_html() |> Phoenix.HTML.raw()}
       </div>
     </Primitives.field_base>
     """
   end
+
+  # `<p></p>` is what TipTap serializes an empty document to, and legacy rows
+  # hold it verbatim from when captions were rich text. Treat it as empty.
+  defp present_rich_text?(value) when is_binary(value) do
+    value |> String.replace(~r{<p>\s*(<br\s*/?>)?\s*</p>}, "") |> String.trim() != ""
+  end
+
+  defp present_rich_text?(_value), do: false
 
   defp process_extensions(%{opts: opts}) do
     case Keyword.get(opts, :extensions) do

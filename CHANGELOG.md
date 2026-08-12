@@ -341,6 +341,50 @@
 
 #### Fixes
 
+- **A multi module's children vanished from live preview on any edit.** The
+  `update_block` handler in `livepreview.js` zipped the parsed HTML against the
+  block's registered elements, but the two lists were built differently:
+  `rebuildContentBlockRegistry` collects ELEMENT nodes only, while the parsed
+  side was every child node — boundary comments and whitespace included. Index 0
+  therefore paired the `[+:B<uid>]` comment against the block's first element,
+  the nodeType check failed, and the replace branch removed the live element
+  without ever reaching the `has_children` splice that puts the children back.
+  The parsed nodes are now filtered to elements, matching the registry.
+
+  Registry entries also never carried their own `uid`, so every
+  `` `[-:C<${block.uid}` `` guard compared against the string `"[-:C<undefined"`
+  and never matched. They carry it now.
+
+- **Reactivating a multi module left `[$ content $]` on screen.** Two gates, one
+  behind the other. `should_force_live_preview_update?/3` only asked for a
+  children render when a `:container` flipped active — a `multi` module renders
+  its children through the same annotated slot and needs the same treatment. And
+  even once it did, `Parser.module/2` tested `if skip_children?` rather than
+  `if skip_children? === true`; `:force_render` is truthy, so the placeholder
+  branch ran anyway. The container clauses had always matched on `true`
+  explicitly, which is why only containers ever worked.
+
+- **Block var modals were styled by the block they sit in.** A var's editing
+  modal is a descendant of `.variable`, not a portal, so block styles cascade in.
+  `.brando-input:last-of-type .field-wrapper` zeroed the bottom margin of every
+  wrapper nested below the last input — it is a direct-child selector now — and
+  `.block-vars input[type="text"]` outranked `.modal-content input.text`,
+  rendering the modal's fields 50px tall with 14px of vertical padding. The var
+  widget rules now hand the modal's own chrome back inside `.modal-content`.
+
+- **Picture and video captions lost their rich text editor** in `ad47cd205`,
+  which left existing captions showing their markup as literal `<p></p>` in a
+  plain text input. Both are `Input.rich_text` again. To keep the revert
+  affordance that change was made for, `rich_text/1` takes two opt-in attrs:
+  `reset` renders the same reset button, dispatching `brando:tiptap:clear` to
+  the hook because the editor owns the document and only syncs outwards; and
+  `default_value` prints the inherited value below the editor, since a rich text
+  field has no placeholder to advertise it with. Both treat `<p></p>` — what an
+  empty TipTap document serializes to — as empty.
+
+- **Removed the dead `.important-vars` styles**, orphaned when `important`
+  became `placement`.
+
 - **Gallery refs rendered nothing at all.** Two defects stacked, and each hid
   the other:
 

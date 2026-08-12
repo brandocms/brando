@@ -1804,11 +1804,28 @@ defmodule BrandoAdmin.Components.Form.Block do
   @doc "Renders a block reference field."
   defdelegate ref(assigns), to: __MODULE__.Render
 
+  @doc """
+  Whether a re-render has to include the block's children rather than the
+  `[$ content $]` placeholder.
+
+  A normal validate renders with `skip_children: true` and lets the live preview
+  splice its existing child DOM into the placeholder. That only works while the
+  children are still on screen — while the block was inactive it rendered as
+  `""`, so reactivating it leaves the preview with nothing to splice and the raw
+  placeholder on screen.
+
+  Containers are not the only blocks that own children: a `multi` module renders
+  its children through the same annotated slot, so it needs the same treatment.
+  """
   def should_force_live_preview_update?(changeset, updated_changeset, :root) do
     block_changeset = Changeset.get_assoc(changeset, :block)
     updated_block_changeset = Changeset.get_assoc(updated_changeset, :block)
 
-    Changeset.get_field(block_changeset, :type) == :container &&
+    owns_children? =
+      Changeset.get_field(block_changeset, :type) == :container ||
+        Changeset.get_field(block_changeset, :multi) == true
+
+    owns_children? &&
       Changeset.get_field(block_changeset, :active) == false &&
       Changeset.get_field(updated_block_changeset, :active) == true
   end

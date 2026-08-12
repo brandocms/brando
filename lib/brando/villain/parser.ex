@@ -292,8 +292,12 @@ defmodule Brando.Villain.Parser do
     adapter = adapter_for(module.type)
     opts = Map.put(opts, :parser_module, parser_module(opts))
 
+    # `=== true`, not a truthy test: `:force_render` also has to reach the real
+    # children. It is truthy, so a bare `if` sent a reactivated multi module
+    # down the placeholder branch and left `[$ content $]` on screen — the
+    # container clauses below have always matched on `true` explicitly.
     content =
-      if skip_children? do
+      if skip_children? === true do
         "[$ content $]"
         |> annotate_children(block.uid)
       else
