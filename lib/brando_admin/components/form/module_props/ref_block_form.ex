@@ -296,6 +296,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
       <Input.toggle field={block_data[:autoplay]} label={gettext("Autoplay")} />
       <Input.toggle field={block_data[:preload]} label={gettext("Preload")} />
       <Input.toggle field={block_data[:play_button]} label={gettext("Play button")} />
+      <Input.toggle field={block_data[:progress]} label={gettext("Progress bar")} />
       <Input.text
         field={block_data[:config_target]}
         label={gettext("Config target")}
@@ -441,6 +442,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
       <Input.toggle field={tpl_data[:autoplay]} label={gettext("Autoplay")} />
       <Input.toggle field={tpl_data[:preload]} label={gettext("Preload")} />
       <Input.toggle field={tpl_data[:play_button]} label={gettext("Play button")} />
+      <Input.toggle field={tpl_data[:progress]} label={gettext("Progress bar")} />
       <Input.toggle field={tpl_data[:controls]} label={gettext("Show native player controls")} />
       <Input.toggle field={tpl_data[:loop]} label={gettext("Loop")} />
       <Input.toggle field={tpl_data[:muted]} label={gettext("Muted")} />

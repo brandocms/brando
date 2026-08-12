@@ -30,12 +30,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     :opacity,
     :preload,
     :play_button,
+    :progress,
     :controls,
     :cover,
     :aspect_ratio,
     :loop,
     :muted,
-    :playsinline,
     :video_class,
     :container_class,
     :config_target
@@ -298,6 +298,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                   <% end %>
 
                   <Input.toggle tiny field={block_data[:play_button]} label={gettext("Play button")} />
+                  <Input.toggle tiny field={block_data[:progress]} label={gettext("Progress bar")} />
 
                   <Input.override_toggle_group
                     label={gettext("Video playback")}
@@ -316,9 +317,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                     label={gettext("Aspect ratio override")}
                     placeholder="16:9"
                   />
-
-                  <!-- playsinline is always true for better UX -->
-                  <Input.input type={:hidden} field={block_data[:playsinline]} value="true" />
 
                   <fieldset class="override-toggle-group">
                     <legend>{gettext("CSS classes")}</legend>

@@ -40,6 +40,11 @@ defmodule Brando.Villain.Blocks.GalleryBlock do
         default: :gallery
 
       attribute :formats, {:array, Ecto.Enum}, values: [:original, :jpg, :png, :gif, :webp, :avif, :svg]
+
+      # The resolved `%Brando.Galleries.Gallery{}`, attached at render time by
+      # `Brando.Villain.Parser` so the gallery callback can reach its objects.
+      # Virtual: the ref stores only `gallery_id`, and nothing here is persisted.
+      attribute :gallery, :any, virtual: true
     end
 
     relations do

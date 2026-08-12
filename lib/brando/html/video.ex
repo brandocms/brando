@@ -24,6 +24,8 @@ defmodule Brando.HTML.Video do
     - `caption` -> `true` resolves to `opts[:title]`, then the record's caption
       or title
     - `progress`
+    - `play_button` -> `true`, or a string to use as the button's label
+    - `opacity` -> background opacity of the `:svg` cover
     - `width`
     - `height`
 
@@ -33,6 +35,11 @@ defmodule Brando.HTML.Video do
   `aspect_ratio` are also fields on `%Brando.Videos.Video{}`, set by the editor
   in the admin. An opt passed here is an override and wins; without one, the
   record's value is used; failing both, the built-in default.
+
+  `cover`, `opacity`, `progress` and `play_button` resolve the same way, but
+  their second step is a virtual field: they are block-level presentation
+  settings that `Brando.Content.OverrideResolver` merges onto the record when a
+  video block renders, and are simply nil for a video used anywhere else.
 
   Passing `false` counts as passing — `{% video entry.video { autoplay: false } %}`
   turns autoplay off on a record that has it on.
@@ -44,7 +51,13 @@ defmodule Brando.HTML.Video do
   """
   def video(assigns)
 
-  def video(%{assigns: %{video: %Video{type: :vimeo, remote_id: remote_id, width: width, height: height}} = assigns}) do
+  # These two took `%{assigns: %{video: …}}` while every other clause takes
+  # `%{video: …, opts: …}`. A function component is handed its assigns directly,
+  # never wrapped, so neither clause could match and a Vimeo or YouTube record
+  # reaching `<.video>` — from `{% video entry.video %}` or a gallery — raised
+  # FunctionClauseError. `Brando.Villain.Parser.video/2` renders those two types
+  # itself, which is why nothing hit it sooner.
+  def video(%{video: %Video{type: :vimeo, remote_id: remote_id, width: width, height: height}} = assigns) do
     assigns =
       assigns
       |> assign(:remote_id, remote_id)
@@ -65,10 +78,7 @@ defmodule Brando.HTML.Video do
     """
   end
 
-  def video(%{
-        assigns:
-          %{video: %Video{type: :youtube, remote_id: remote_id, width: width, height: height}, opts: opts} = assigns
-      }) do
+  def video(%{video: %Video{type: :youtube, remote_id: remote_id, width: width, height: height}, opts: opts} = assigns) do
     autoplay = (Keyword.get(opts, :autoplay, false) && 1) || 0
     controls = (Keyword.get(opts, :controls, false) && 1) || 0
     params = "autoplay=#{autoplay}&controls=#{controls}&showinfo=0&rel=0"
@@ -181,10 +191,10 @@ defmodule Brando.HTML.Video do
     height = setting(opts, video, :height, fallback_height)
 
     orientation = (width && height && width > height && "landscape") || "portrait"
-    opacity = Keyword.get(opts, :opacity, 0)
-    cover = Keyword.get(opts, :cover, false)
-    progress = Keyword.get(opts, :progress, false)
-    play_button = Keyword.get(opts, :play_button, false)
+    opacity = setting(opts, video, :opacity, 0)
+    cover = setting(opts, video, :cover, false)
+    progress = setting(opts, video, :progress, false)
+    play_button = setting(opts, video, :play_button, false)
 
     assigns =
       assigns
@@ -386,6 +396,10 @@ defmodule Brando.HTML.Video do
       "" |> Phoenix.HTML.raw()
     end
   end
+
+  # The editor stores `cover` as a string ("false", "svg", or a URL), so the
+  # block's own setting arrives as "svg" where a template would pass :svg.
+  defp get_video_cover("svg", width, height, opacity), do: get_video_cover(:svg, width, height, opacity)
 
   defp get_video_cover("true", _, _, _), do: nil
   defp get_video_cover(true, _, _, _), do: nil

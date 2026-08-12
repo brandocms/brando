@@ -20,14 +20,14 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
      |> assign_new(:video, fn -> nil end)
      |> assign_new(:video_id, fn -> nil end)
      |> assign_new(:parent_form, fn -> nil end)
-     |> assign_new(:placeholder, fn -> nil end)
-     |> assign_new(:defaults, fn -> %{} end)}
+     |> assign_new(:placeholder, fn -> nil end)}
   end
 
   def update(assigns, socket) do
     socket =
       socket
       |> assign(assigns)
+      |> then(&assign(&1, :defaults, field_defaults(&1.assigns.opts)))
       |> assign_new(:form_id, fn ->
         form = assigns.field.form
         path = Brando.Utils.get_path_from_field_name(form.name)
@@ -114,6 +114,39 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
      |> prepare_input_component()
      |> assign_new(:editable, fn -> Keyword.get(socket.assigns.opts, :editable, true) end)
      |> assign_new(:relation_field, fn -> relation_field end)}
+  end
+
+  # Field-level defaults for a *new* video, from the form input:
+  #
+  #     input :video, :video, defaults: %{loop: true, muted: true}
+  #
+  # `BrandoAdmin.Components.Form` merges these onto the blank `%Video{}` before
+  # building the drawer's changeset, so the drawer's switches show them and
+  # saving persists them. They set the video *record*, which is the middle layer
+  # of the resolution chain — a block or `{% video %}` override still wins over
+  # them at render time, and they in turn beat `Brando.HTML.Video`'s built-ins.
+  defp field_defaults(opts) do
+    case Keyword.get(opts, :defaults, %{}) do
+      %{} = defaults -> validate_defaults!(defaults)
+      other -> raise ArgumentError, "video input `defaults` must be a map, got: #{inspect(other)}"
+    end
+  end
+
+  # A key the video schema cannot hold would be dropped by `struct/2` without a
+  # word, and the field would silently keep rendering its built-in default.
+  defp validate_defaults!(defaults) do
+    case Map.keys(defaults) -- Map.keys(Map.from_struct(%Brando.Videos.Video{})) do
+      [] ->
+        defaults
+
+      unknown ->
+        raise ArgumentError, """
+        video input `defaults` has no field on Brando.Videos.Video for #{inspect(unknown)}.
+
+        Settable defaults are the video's own columns, e.g. `autoplay`, `preload`,
+        `loop`, `muted`, `controls`, `aspect_ratio`.
+        """
+    end
   end
 
   # Mirrors `input/image.ex`'s `fetch_image/2`: a referenced video may have been

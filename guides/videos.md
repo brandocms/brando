@@ -317,6 +317,68 @@ The upload flow:
 3. Video record is created and associated with the block
 4. Provider webhooks update the video status when processing completes
 
+### Playback settings
+
+`autoplay`, `preload`, `loop`, `muted`, `controls` and `aspect_ratio` are columns
+on `Brando.Videos.Video`, not part of the asset `cfg` — the `cfg` is upload
+configuration only. They resolve in three layers, and the first one with an
+answer wins:
+
+1. **A render-time override** — a video block's own settings, or arguments to the
+   `{% video entry.video { loop: false } %}` tag.
+2. **The video record** — what the editor set in the video drawer.
+3. **A built-in default** in `Brando.HTML.Video`.
+
+Passing `false` counts as answering. `{% video entry.video { autoplay: false } %}`
+turns autoplay off on a record that has it on, and a block that sets `loop: false`
+beats a record with `loop: true`. Only `nil` means "I have no opinion, ask the
+next layer".
+
+The built-in defaults:
+
+| Setting | Default |
+|---|---|
+| `autoplay` | `false` |
+| `muted` | `false` — but the rendered attribute is `autoplay or muted`, since browsers block unmuted autoplay |
+| `controls` | `false` |
+| `loop` | **`true`** |
+| `preload` | `false` — video *blocks* pass `true` when the block leaves it unset |
+| `aspect_ratio` | the provider's, where it has one |
+
+#### Field-level defaults
+
+The video record's playback columns carry no default of their own, so a freshly
+uploaded video answers "no opinion" to everything and falls through to the table
+above. To start new videos on a particular setting, declare it on the **form**
+field:
+
+```elixir
+forms do
+  form do
+    tab gettext("Content") do
+      fieldset do
+        input :video, :video,
+          label: t("Video"),
+          defaults: %{loop: true, muted: true}
+      end
+    end
+  end
+end
+```
+
+These are merged onto the blank video before the drawer opens, so the drawer's
+switches show them and saving persists them. They apply to **new** videos only —
+an existing record keeps whatever it has.
+
+Because they set the record, they sit at layer 2: a block or `{% video %}`
+override still wins over them, and they in turn beat the built-in defaults. Keys
+must be real `Brando.Videos.Video` fields; anything else raises rather than being
+silently dropped.
+
+To change what a video *block* passes to the player — layer 1 — override
+`video_file_options/1` in your parser; see the
+[Villain parser](villain_parser.md) guide.
+
 ### Videos in Galleries
 
 Gallery fields (`asset :my_gallery, :gallery`) hold both images and videos. Videos

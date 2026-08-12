@@ -68,6 +68,21 @@ defmodule Brando.Videos.Video do
       default: :ready
 
     attribute :meta, :map, default: %{}
+
+    # Block-level presentation settings, declared on
+    # `Brando.Villain.Blocks.VideoBlock.Data` and merged onto the video at render
+    # time by `Brando.Content.OverrideResolver`. They describe how *this
+    # placement* of the video should render, never the video itself, so they are
+    # virtual — nothing here is persisted on the video record, and nothing here
+    # is set for a video outside a video block. The playback fields
+    # (`autoplay`, `preload`, `loop`, `muted`, `controls`) are real columns
+    # above: those the editor sets on the record and the block overrides.
+    attribute :poster, :text, virtual: true
+    attribute :opacity, :integer, virtual: true, default: 0
+    attribute :play_button, :boolean, virtual: true, default: false
+    attribute :progress, :boolean, virtual: true, default: false
+    attribute :cover, :string, virtual: true, default: "false"
+    attribute :cover_image, :any, virtual: true
   end
 
   assets do

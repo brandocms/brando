@@ -262,6 +262,38 @@ defmodule Brando.HTMLTest do
       """)
     end
 
+    # The `:vimeo` and `:youtube` clauses destructured `%{assigns: %{video: …}}`
+    # while every other clause takes the assigns directly. A function component
+    # is never handed a wrapper, so neither could match and both raised
+    # FunctionClauseError — reachable from `{% video entry.video %}` and from a
+    # gallery holding an embed.
+    test "an embed record renders through the component instead of raising" do
+      youtube = %Brando.Videos.Video{
+        type: :youtube,
+        remote_id: "abc123",
+        width: 1920,
+        height: 1080
+      }
+
+      vimeo = %Brando.Videos.Video{type: :vimeo, remote_id: "987654", width: 640, height: 360}
+
+      youtube_html = render_video(youtube, [])
+      assert youtube_html =~ "youtube.com/embed/abc123"
+      assert youtube_html =~ ~s(width="1920")
+
+      vimeo_html = render_video(vimeo, [])
+      assert vimeo_html =~ "player.vimeo.com/video/987654"
+      assert vimeo_html =~ ~s(width="640")
+    end
+
+    test "a youtube embed reads autoplay and controls from opts" do
+      video = %Brando.Videos.Video{type: :youtube, remote_id: "abc123", width: 100, height: 100}
+
+      # `&` is escaped in the attribute
+      assert render_video(video, autoplay: true, controls: true) =~ "autoplay=1&amp;controls=1"
+      assert render_video(video, []) =~ "autoplay=0&amp;controls=0"
+    end
+
     test "a provider video with no opts uses the record's settings" do
       result = render_video(mux_video(autoplay: true, controls: true), [])
 

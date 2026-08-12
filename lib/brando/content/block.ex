@@ -130,9 +130,15 @@ defmodule Brando.Content.Block do
       on_replace: :delete_if_exists,
       cast: true
 
+    # `:id` breaks ties. `Brando.Trait.Sequenced` documents 0 as the default
+    # sequence for a new entry, so rows sharing one are expected — the trait's
+    # own fallback is `desc: :inserted_at`, which this join table has no column
+    # for. Without a tiebreaker Postgres returns them in physical order, so a
+    # re-save that rewrites the rows silently reorders whatever the block
+    # renders from them.
     relation :block_identifiers, :has_many,
       module: Brando.Content.BlockIdentifier,
-      preload_order: [asc: :sequence],
+      preload_order: [asc: :sequence, asc: :id],
       on_replace: :delete_if_exists,
       cast: true
 

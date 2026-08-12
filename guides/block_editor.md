@@ -47,6 +47,10 @@ time. To parse at request time instead (e.g. for blocks containing
 runtime-dynamic content), use `Brando.Villain.parse(entry.entry_blocks, entry)`
 or the `render_data/1` component.
 
+The HTML itself comes from your project's parser module, where each block
+type's markup can be overridden — see the [Villain parser](villain_parser.md)
+guide.
+
 ## Modules, refs and vars
 
 A **module** (`Brando.Content.Module`) is a Liquid-ish template with:

@@ -77,6 +77,7 @@ defmodule Brando.Villain do
     opts_map =
       opts_map
       |> Map.put(:context, context)
+      |> Map.put(:parser_module, parser)
       |> Map.put(:modules, modules)
       |> Map.put(:containers, containers)
       |> Map.put(:palettes, palettes)
@@ -119,6 +120,7 @@ defmodule Brando.Villain do
     opts_map =
       opts_map
       |> Map.put(:context, context)
+      |> Map.put(:parser_module, parser)
       |> put_render_sources(block)
 
     parser

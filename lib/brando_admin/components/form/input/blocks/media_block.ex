@@ -104,12 +104,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
           <input type="hidden" name={template_video[:opacity].name} value={to_string(template_video[:opacity].value)} />
           <input type="hidden" name={template_video[:preload].name} value={to_string(template_video[:preload].value)} />
           <input type="hidden" name={template_video[:play_button].name} value={to_string(template_video[:play_button].value)} />
+          <input type="hidden" name={template_video[:progress].name} value={to_string(template_video[:progress].value)} />
           <input type="hidden" name={template_video[:controls].name} value={to_string(template_video[:controls].value)} />
           <input type="hidden" name={template_video[:cover].name} value={to_string(template_video[:cover].value)} />
           <input type="hidden" name={template_video[:aspect_ratio].name} value={template_video[:aspect_ratio].value || ""} />
           <input type="hidden" name={template_video[:loop].name} value={to_string(template_video[:loop].value)} />
           <input type="hidden" name={template_video[:muted].name} value={to_string(template_video[:muted].value)} />
-          <input type="hidden" name={template_video[:playsinline].name} value={to_string(template_video[:playsinline].value)} />
           <input type="hidden" name={template_video[:video_class].name} value={template_video[:video_class].value || ""} />
           <input
             type="hidden"

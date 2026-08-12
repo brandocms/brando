@@ -24,7 +24,26 @@ defmodule Brando.Mixfile do
         extras: [
           "guides/migrating_to_054.md",
           "guides/blueprints.md",
-          "guides/blueprint_migrations.md"
+          "guides/blueprint_migrations.md",
+          "guides/generators.md",
+          "guides/block_editor.md",
+          "guides/villain_parser.md",
+          "guides/villain_text_styles.md",
+          "guides/live_preview.md",
+          "guides/pages.md",
+          "guides/navigation.md",
+          "guides/datasources.md",
+          "guides/revisions.md",
+          "guides/scheduled_publishing.md",
+          "guides/videos.md",
+          "guides/cdn.md",
+          "guides/meta.md",
+          "guides/jsonld.md",
+          "guides/sitemaps.md",
+          "guides/authorization.md",
+          "guides/i18n.md",
+          "guides/querying.md",
+          "guides/deployment.md"
         ],
         groups_for_extras: [
           Upgrading: [
@@ -32,7 +51,34 @@ defmodule Brando.Mixfile do
           ],
           "Blueprint system": [
             "guides/blueprints.md",
-            "guides/blueprint_migrations.md"
+            "guides/blueprint_migrations.md",
+            "guides/generators.md"
+          ],
+          Content: [
+            "guides/block_editor.md",
+            "guides/villain_parser.md",
+            "guides/villain_text_styles.md",
+            "guides/live_preview.md",
+            "guides/pages.md",
+            "guides/navigation.md",
+            "guides/datasources.md",
+            "guides/revisions.md",
+            "guides/scheduled_publishing.md"
+          ],
+          Media: [
+            "guides/videos.md",
+            "guides/cdn.md"
+          ],
+          SEO: [
+            "guides/meta.md",
+            "guides/jsonld.md",
+            "guides/sitemaps.md"
+          ],
+          Operations: [
+            "guides/authorization.md",
+            "guides/i18n.md",
+            "guides/querying.md",
+            "guides/deployment.md"
           ]
         ]
       ]
@@ -45,7 +91,11 @@ defmodule Brando.Mixfile do
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.html": :test,
-        "coveralls.json": :test
+        "coveralls.json": :test,
+        # `ex_doc` and `inch_ex` are `only: :docs`, so `mix docs` in the default
+        # env could never find the task.
+        docs: :docs,
+        inch: :docs
       ]
     ]
   end

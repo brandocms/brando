@@ -96,7 +96,8 @@ defmodule Brando.Villain.ParserTest do
                autoplay: true,
                poster: false,
                preload: nil,
-               opacity: 0
+               opacity: 0,
+               cover: "svg"
              },
              []
            ) ==
@@ -115,11 +116,75 @@ defmodule Brando.Villain.ParserTest do
                poster: false,
                preload: nil,
                opacity: 0,
+               cover: "svg",
                title: "<p>This is a caption</p>"
              },
              []
            ) ==
              "<div class=\"video-wrapper video-file\" data-smart-video data-orientation=\"portrait\" data-preload=\"my_video.mp4\" data-src=\"my_video.mp4\" data-autoplay style=\"--aspect-ratio: 1.0; --aspect-ratio-division: 300/300;\">\n  <video width=\"300\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"auto\" autoplay muted loop playsinline data-video style=\"--aspect-ratio: 1.0; --aspect-ratio-division: 300/300;\" data-src=\"my_video.mp4\">\n  </video>\n\n  <noscript>\n    <video width=\"300\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"metadata\" muted loop playsinline src=\"my_video.mp4\">\n    </video>\n  </noscript>\n\n  \n\n  \n    \n      \n         <div data-cover>\n           <img\n             width=\"300\"\n             height=\"300\"\n             alt=\"Video cover image\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E\" />\n         </div>\n       \n    \n  \n  <figcaption><p>This is a caption</p></figcaption>\n</div>"
+  end
+
+  # The parser used to hardcode `cover: :svg`, so every video block grew a cover
+  # it never asked for and the block's own `cover` attribute (default "false")
+  # was unreachable.
+  test "video/2 file honours the block's cover setting" do
+    base = %{
+      source_url: "my_video.mp4",
+      type: :external_file,
+      width: 300,
+      height: 300,
+      play_button: false,
+      opacity: 0
+    }
+
+    refute video(base, []) =~ "data-cover"
+    refute video(Map.put(base, :cover, "false"), []) =~ "data-cover"
+    assert video(Map.put(base, :cover, "svg"), []) =~ "data-cover"
+  end
+
+  test "video/2 file passes the block's progress setting through to data-progress" do
+    base = %{
+      source_url: "my_video.mp4",
+      type: :external_file,
+      width: 300,
+      height: 300,
+      play_button: false
+    }
+
+    refute video(base, []) =~ "data-progress"
+    assert video(Map.put(base, :progress, true), []) =~ "data-progress"
+  end
+
+  test "video/2 file renders a play button when autoplay is off" do
+    base = %{
+      source_url: "my_video.mp4",
+      type: :external_file,
+      width: 300,
+      height: 300,
+      autoplay: false
+    }
+
+    refute video(base, []) =~ "video-play-button"
+    assert video(Map.put(base, :play_button, true), []) =~ "video-play-button"
+  end
+
+  # `loop` has no "unset" representation in the options list — a nil there reads
+  # as an explicit value and would beat `Brando.HTML.Video`'s default of `true`.
+  test "video/2 file honours loop and muted, defaulting to loop when unset" do
+    base = %{
+      source_url: "my_video.mp4",
+      type: :external_file,
+      width: 300,
+      height: 300,
+      play_button: false
+    }
+
+    assert video(base, []) =~ " loop"
+    assert video(Map.put(base, :loop, true), []) =~ " loop"
+    refute video(Map.put(base, :loop, false), []) =~ " loop"
+
+    refute video(base, []) =~ " muted"
+    assert video(Map.put(base, :muted, true), []) =~ " muted"
   end
 
   test "video/2 upload" do

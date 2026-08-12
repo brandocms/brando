@@ -708,4 +708,294 @@ defmodule Brando.Villain.RefRenderingTest do
       # assert parsed =~ "Item #1"
     end
   end
+
+  # A ref's block data carries two different kinds of field: overrides for the
+  # media record's own values (title, credits, alt, the video's playback
+  # settings) and settings that describe this *placement* of the media
+  # (lazyload, placeholder, play_button, cover). `merge_ref_associations/1`
+  # merges both onto the media struct, and the second kind used to fall off the
+  # end of `Kernel.struct/2` because the media schema had no field for them —
+  # silently, so the renderer just used its defaults.
+  describe "block-level presentation settings" do
+    defp render_picture_ref(user, block_data) do
+      image = Factory.insert(:image, creator: user, dominant_color: "#112233")
+
+      module_params =
+        Factory.params_for(:module, %{
+          code: "{% ref refs.cover %}",
+          refs: [
+            %{
+              name: "cover",
+              uid: Brando.Utils.generate_uid(),
+              data: %{type: "picture", data: %{}}
+            }
+          ]
+        })
+
+      {:ok, module} = Content.create_module(module_params, user)
+
+      block = %{
+        block: %{
+          type: :module,
+          module_id: module.id,
+          uid: Brando.Utils.generate_uid(),
+          vars: [],
+          refs: [
+            %{
+              name: "cover",
+              description: nil,
+              uid: Brando.Utils.generate_uid(),
+              image_id: image.id,
+              image: image,
+              data: %Brando.Villain.Blocks.PictureBlock{type: "picture", data: block_data}
+            }
+          ]
+        }
+      }
+
+      Brando.Villain.parse([block], %Brando.Pages.Page{})
+    end
+
+    defp render_video_ref(user, block_data) do
+      video = Factory.insert(:upload_video, creator: user)
+
+      module_params =
+        Factory.params_for(:module, %{
+          code: "{% ref refs.hero %}",
+          refs: [
+            %{
+              name: "hero",
+              uid: Brando.Utils.generate_uid(),
+              data: %{type: "video", data: %{}}
+            }
+          ]
+        })
+
+      {:ok, module} = Content.create_module(module_params, user)
+
+      block = %{
+        block: %{
+          type: :module,
+          module_id: module.id,
+          uid: Brando.Utils.generate_uid(),
+          vars: [],
+          refs: [
+            %{
+              name: "hero",
+              description: nil,
+              uid: Brando.Utils.generate_uid(),
+              video_id: video.id,
+              video: video,
+              data: %Brando.Villain.Blocks.VideoBlock{type: "video", data: block_data}
+            }
+          ]
+        }
+      }
+
+      Brando.Villain.parse([block], %Brando.Pages.Page{})
+    end
+
+    test "a picture ref renders lazyloaded with its placeholder", %{user: user} do
+      html =
+        render_picture_ref(user, %Brando.Villain.Blocks.PictureBlock.Data{
+          lazyload: true,
+          placeholder: :dominant_color_faded
+        })
+
+      assert html =~ "data-ll-srcset"
+      assert html =~ ~s(data-placeholder="dominant_color")
+      # both dominant_color variants render the same data-placeholder; the
+      # faded one is the alpha suffix on the colour
+      assert html =~ "background-color: #11223311"
+    end
+
+    test "a picture ref renders its own classes, link and moonwalk", %{user: user} do
+      html =
+        render_picture_ref(user, %Brando.Villain.Blocks.PictureBlock.Data{
+          picture_class: "my-picture",
+          img_class: "my-img",
+          link: "/somewhere",
+          moonwalk: true
+        })
+
+      assert html =~ "my-picture"
+      assert html =~ "my-img"
+      assert html =~ ~s(href="/somewhere")
+      assert html =~ "data-moonwalk"
+    end
+
+    test "a video ref renders a play button when autoplay is off", %{user: user} do
+      html =
+        render_video_ref(user, %Brando.Villain.Blocks.VideoBlock.Data{
+          play_button: true,
+          autoplay: false
+        })
+
+      assert html =~ "video-play-button"
+    end
+
+    test "a video ref honours its cover setting", %{user: user} do
+      refute render_video_ref(user, %Brando.Villain.Blocks.VideoBlock.Data{}) =~ "data-cover"
+
+      assert render_video_ref(user, %Brando.Villain.Blocks.VideoBlock.Data{cover: "svg"}) =~
+               "data-cover"
+    end
+
+    # `loop` and `muted` were missing from the take-list entirely, so a block
+    # that turned looping off still looped.
+    test "a video ref with loop: false does not loop", %{user: user} do
+      assert render_video_ref(user, %Brando.Villain.Blocks.VideoBlock.Data{loop: true}) =~ " loop"
+      refute render_video_ref(user, %Brando.Villain.Blocks.VideoBlock.Data{loop: false}) =~ " loop"
+    end
+
+    test "a video ref renders data-progress when progress is on", %{user: user} do
+      refute render_video_ref(user, %Brando.Villain.Blocks.VideoBlock.Data{}) =~ "data-progress"
+
+      assert render_video_ref(user, %Brando.Villain.Blocks.VideoBlock.Data{progress: true}) =~
+               "data-progress"
+    end
+  end
+
+  # `gallery/2`'s clauses matched a flat `images` list, the shape block data
+  # carried before galleries became their own domain. `GalleryBlock.Data` has a
+  # `gallery` relation instead, so no clause ever matched and every gallery ref
+  # fell through to the `_ -> ""` catch-all: refs rendered nothing, silently.
+  # There was no test for gallery ref rendering at all.
+  describe "gallery refs" do
+    defp gallery_with(objects) do
+      gallery = Factory.insert(:gallery)
+
+      for {media, sequence} <- Enum.with_index(objects) do
+        attrs =
+          case media do
+            {:image, image} -> %{image: image, image_id: image.id}
+            {:video, video} -> %{video: video, video_id: video.id}
+          end
+
+        Factory.insert(
+          :gallery_object,
+          Map.merge(attrs, %{gallery: gallery, gallery_id: gallery.id, sequence: sequence})
+        )
+      end
+
+      Brando.Repo.preload(gallery, [gallery_objects: [:image, :video]], force: true)
+    end
+
+    defp render_gallery_ref(user, gallery, block_data) do
+      module_params =
+        Factory.params_for(:module, %{
+          code: "{% ref refs.g %}",
+          refs: [
+            %{name: "g", uid: Brando.Utils.generate_uid(), data: %{type: "gallery", data: %{}}}
+          ]
+        })
+
+      {:ok, module} = Content.create_module(module_params, user)
+
+      block = %{
+        block: %{
+          type: :module,
+          module_id: module.id,
+          uid: Brando.Utils.generate_uid(),
+          vars: [],
+          refs: [
+            %{
+              name: "g",
+              description: nil,
+              uid: Brando.Utils.generate_uid(),
+              gallery_id: gallery.id,
+              gallery: gallery,
+              data: %Brando.Villain.Blocks.GalleryBlock{type: "gallery", data: block_data}
+            }
+          ]
+        }
+      }
+
+      Brando.Villain.parse([block], %Brando.Pages.Page{})
+    end
+
+    test "render their images", %{user: user} do
+      image = Factory.insert(:image, creator: user)
+      gallery = gallery_with([{:image, image}])
+
+      html =
+        render_gallery_ref(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{type: :gallery})
+
+      assert html =~ "data-gallery"
+      assert html =~ "<picture"
+      assert html =~ "/media/image/"
+    end
+
+    test "render their videos through the video component", %{user: user} do
+      video = Factory.insert(:upload_video, creator: user)
+      gallery = gallery_with([{:video, video}])
+
+      html =
+        render_gallery_ref(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{type: :gallery})
+
+      assert html =~ "data-gallery"
+      assert html =~ "<video"
+      assert html =~ "data-smart-video"
+    end
+
+    test "render images and videos together, in sequence", %{user: user} do
+      image = Factory.insert(:image, creator: user)
+      video = Factory.insert(:upload_video, creator: user)
+      gallery = gallery_with([{:image, image}, {:video, video}])
+
+      html =
+        render_gallery_ref(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{type: :gallery})
+
+      assert html =~ "<picture"
+      assert html =~ "<video"
+      assert :binary.match(html, "<picture") < :binary.match(html, "<video")
+    end
+
+    # The three display types differ only in their wrapper markup.
+    test "render the wrapper for each display type", %{user: user} do
+      image = Factory.insert(:image, creator: user)
+      gallery = gallery_with([{:image, image}])
+
+      slider =
+        render_gallery_ref(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{type: :slider})
+
+      slideshow =
+        render_gallery_ref(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{
+          type: :slideshow
+        })
+
+      grid =
+        render_gallery_ref(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{type: :gallery})
+
+      assert slider =~ "data-panner-container"
+      assert slider =~ "data-panner-item"
+      assert slideshow =~ "data-slideshow"
+      assert grid =~ "data-gallery-items"
+    end
+
+    test "pass the block's class and lightbox down", %{user: user} do
+      image = Factory.insert(:image, creator: user)
+      gallery = gallery_with([{:image, image}])
+
+      html =
+        render_gallery_ref(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{
+          type: :gallery,
+          class: "my-gallery",
+          lightbox: true
+        })
+
+      assert html =~ ~s(data-gallery="my-gallery")
+      assert html =~ "data-lightbox"
+    end
+
+    test "render an empty gallery as empty", %{user: user} do
+      gallery = gallery_with([])
+
+      html =
+        render_gallery_ref(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{type: :gallery})
+
+      assert html =~ "data-gallery"
+      refute html =~ "<picture"
+    end
+  end
 end

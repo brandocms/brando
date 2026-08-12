@@ -204,8 +204,40 @@ defmodule Brando.Villain.Parser do
   import Brando.HTML
 
   alias Brando.Content
+  alias Brando.RuntimeConfig
   alias Brando.Utils
   alias Brando.Villain.TemplateAdapter
+
+  # ⚠ Never call one of the callbacks below by bare name from this module.
+  #
+  # Every callback `__using__` defines is marked `defoverridable`, so the
+  # implementations here are only ever the *default*. While they lived inside
+  # the `__using__` quote, a bare `render_caption(data)` meant "the using
+  # module's version" and a site's override applied. In the module body the
+  # same call resolves to Brando's own version, and the override becomes dead
+  # code — no warning, no error, just quietly different HTML. Route every
+  # internal call through `parser_module(opts)` instead:
+  #
+  #     parser_module(opts).render_caption(data)
+  #     apply(parser_module(opts), block.type, [block, opts])
+  #
+  # `test/brando/villain/parser/dispatch_test.exs` renders refs, containers and
+  # nested modules through a parser whose overrides return sentinel values, and
+  # fails if Brando's own implementation answers instead.
+
+  @doc """
+  The parser module every overridable callback must be dispatched through.
+
+  Prefers the parser threaded through `opts` (set by `Brando.Villain.parse/3`
+  and carried down through modules, containers and refs), and falls back to the
+  configured parser so that call sites without opts still resolve correctly.
+  """
+  def parser_module(opts \\ %{})
+
+  def parser_module(%{parser_module: parser_module}) when is_atom(parser_module) and not is_nil(parser_module),
+    do: parser_module
+
+  def parser_module(_opts), do: RuntimeConfig.get(Brando.Villain)[:parser] || __MODULE__
 
   @doc """
   Returns the template adapter module for a given template type.
@@ -216,8 +248,8 @@ defmodule Brando.Villain.Parser do
 
   def header(%{text: nil}, _), do: ""
 
-  def header(%{text: text, level: level, anchor: anchor}, _) do
-    h = header(%{text: text, level: level}, [])
+  def header(%{text: text, level: level, anchor: anchor}, opts) do
+    h = parser_module(opts).header(%{text: text, level: level}, opts)
     ~s(<a name="#{anchor}"></a>#{h})
   end
 
@@ -258,7 +290,7 @@ defmodule Brando.Villain.Parser do
 
     {:ok, module} = Content.find_module(modules, id)
     adapter = adapter_for(module.type)
-    opts = Map.put(opts, :parser_module, __MODULE__)
+    opts = Map.put(opts, :parser_module, parser_module(opts))
 
     content =
       if skip_children? do
@@ -331,7 +363,7 @@ defmodule Brando.Villain.Parser do
         processed_vars = process_vars(block.vars)
         processed_refs = process_refs(block.refs)
         adapter = adapter_for(module.type)
-        opts = Map.put(opts, :parser_module, __MODULE__)
+        opts = Map.put(opts, :parser_module, parser_module(opts))
 
         adapter.render_module(module, block, processed_vars, processed_refs, opts)
         |> maybe_annotate(block.uid, opts)
@@ -509,10 +541,10 @@ defmodule Brando.Villain.Parser do
     )
   end
 
-  def video(%{source_url: src, type: :external_file} = data, _) do
+  def video(%{source_url: src, type: :external_file} = data, opts) do
     assigns = %{
       video: src,
-      opts: video_file_options(data),
+      opts: parser_module(opts).video_file_options(data),
       cover_image: Map.get(data, :cover_image)
     }
 
@@ -522,10 +554,10 @@ defmodule Brando.Villain.Parser do
   end
 
   # Convert file video to html
-  def video(%{remote_id: src, type: :upload} = data, _) do
+  def video(%{remote_id: src, type: :upload} = data, opts) do
     assigns = %{
       video: src,
-      opts: video_file_options(data),
+      opts: parser_module(opts).video_file_options(data),
       cover_image: Map.get(data, :cover_image)
     }
 
@@ -570,7 +602,7 @@ defmodule Brando.Villain.Parser do
   def picture(%{url: ""}, _), do: ""
   def picture(nil, _), do: ""
 
-  def picture(data, _) do
+  def picture(data, opts) do
     # Extract data fields with defaults
     fields = extract_picture_fields(data)
 
@@ -581,7 +613,7 @@ defmodule Brando.Villain.Parser do
     {rel, target} = get_link_attributes(fields.link)
 
     # Get caption and determine alt text
-    caption = render_caption(Map.merge(data, %{title: fields.title, credits: fields.credits}))
+    caption = parser_module(opts).render_caption(Map.merge(data, %{title: fields.title, credits: fields.credits}))
     alt = get_alt_text(fields.alt, caption)
 
     # Build assigns for the template
@@ -670,50 +702,32 @@ defmodule Brando.Villain.Parser do
     }
   end
 
-  def gallery(%{type: :slider, images: images} = data, _) do
-    default_srcset = Brando.config(Brando.Images)[:default_srcset]
+  # A gallery ref carries `%Brando.Galleries.Gallery{}` with `gallery_objects`,
+  # each holding an image or a video. The clauses that came before the Gallery
+  # domain matched a flat `images` list, which `GalleryBlock.Data` has never
+  # had — so every gallery ref fell through to the catch-all and rendered
+  # nothing at all. The `images` shape is kept for direct callers.
+  def gallery(%{gallery: %Brando.Galleries.Gallery{} = gallery} = data, opts),
+    do: render_gallery(gallery_media(gallery), data, opts)
 
-    items =
-      images
-      |> Enum.map(fn img ->
-        title = Map.get(img, :title, nil)
-        credits = Map.get(img, :credits, nil)
-        alt = Map.get(img, :alt, nil)
-        placeholder = Map.get(data, :placeholder, :svg)
+  def gallery(%{images: images} = data, opts) when is_list(images),
+    do: render_gallery(Enum.map(images, &{:image, &1}), data, opts)
 
-        placeholder =
-          (is_binary(placeholder) && String.to_existing_atom(placeholder)) || placeholder
+  # empty gallery
+  def gallery(_data, _), do: ""
 
-        orientation = (img.width > img.height && "landscape") || "portrait"
-        caption = render_caption(Map.merge(img, %{title: title, credits: credits}))
+  defp gallery_media(%{gallery_objects: gallery_objects}) when is_list(gallery_objects) do
+    Enum.flat_map(gallery_objects, fn
+      %{image: %Brando.Images.Image{} = image} -> [{:image, image}]
+      %{video: %Brando.Videos.Video{} = video} -> [{:video, video}]
+      _ -> []
+    end)
+  end
 
-        alt = if alt, do: alt, else: ""
+  defp gallery_media(_gallery), do: []
 
-        assigns = %{
-          src: img,
-          link: "",
-          caption: caption,
-          orientation: orientation,
-          opts: [
-            key: :largest,
-            caption: caption,
-            alt: alt,
-            width: true,
-            height: true,
-            placeholder: placeholder,
-            sizes: "auto",
-            srcset: default_srcset,
-            lazyload: true,
-            lightbox: data.lightbox || false,
-            prefix: Utils.media_url()
-          ]
-        }
-
-        assigns
-        |> Brando.Villain.Parser.panner_item()
-        |> Phoenix.LiveViewTest.rendered_to_string()
-      end)
-      |> Enum.intersperse("\n")
+  defp render_gallery(media, %{type: :slider} = data, opts) do
+    items = gallery_items(media, data, opts, :panner)
 
     """
     <div data-panner-container>
@@ -726,51 +740,9 @@ defmodule Brando.Villain.Parser do
     """
   end
 
-  def gallery(%{type: :slideshow, images: images} = data, _) do
+  defp render_gallery(media, %{type: :slideshow} = data, opts) do
     class = Map.get(data, :class, "")
-    default_srcset = Brando.config(Brando.Images)[:default_srcset]
-
-    items =
-      images
-      |> Enum.map(fn img ->
-        title = Map.get(img, :title, nil)
-        credits = Map.get(img, :credits, nil)
-        alt = Map.get(img, :alt, nil)
-        placeholder = Map.get(data, :placeholder, :svg)
-
-        placeholder =
-          (is_binary(placeholder) && String.to_existing_atom(placeholder)) || placeholder
-
-        orientation = (img.width > img.height && "landscape") || "portrait"
-        caption = render_caption(Map.merge(img, %{title: title, credits: credits}))
-
-        alt = if alt, do: alt, else: ""
-
-        assigns = %{
-          src: img,
-          link: "",
-          caption: caption,
-          orientation: orientation,
-          opts: [
-            key: :largest,
-            caption: caption,
-            alt: alt,
-            width: true,
-            height: true,
-            placeholder: placeholder,
-            sizes: "auto",
-            srcset: default_srcset,
-            lazyload: true,
-            lightbox: data.lightbox || false,
-            prefix: Utils.media_url()
-          ]
-        }
-
-        assigns
-        |> Brando.Villain.Parser.picture_tag()
-        |> Phoenix.LiveViewTest.rendered_to_string()
-      end)
-      |> Enum.intersperse("\n")
+    items = gallery_items(media, data, opts, :plain)
 
     """
     <div data-slideshow="#{class}">
@@ -779,51 +751,9 @@ defmodule Brando.Villain.Parser do
     """
   end
 
-  def gallery(%{type: :gallery, images: images} = data, _) do
+  defp render_gallery(media, data, opts) do
     class = Map.get(data, :class, "")
-    default_srcset = Brando.config(Brando.Images)[:default_srcset]
-
-    items =
-      images
-      |> Enum.map(fn img ->
-        title = Map.get(img, :title, nil)
-        credits = Map.get(img, :credits, nil)
-        alt = Map.get(img, :alt, nil)
-        placeholder = Map.get(data, :placeholder, :svg)
-
-        placeholder =
-          (is_binary(placeholder) && String.to_existing_atom(placeholder)) || placeholder
-
-        orientation = (img.width > img.height && "landscape") || "portrait"
-        caption = render_caption(Map.merge(img, %{title: title, credits: credits}))
-
-        alt = if alt, do: alt, else: ""
-
-        assigns = %{
-          src: img,
-          link: "",
-          caption: caption,
-          orientation: orientation,
-          opts: [
-            key: :largest,
-            caption: caption,
-            alt: alt,
-            width: true,
-            height: true,
-            placeholder: placeholder,
-            sizes: "auto",
-            srcset: default_srcset,
-            lazyload: true,
-            lightbox: data.lightbox || false,
-            prefix: Utils.media_url()
-          ]
-        }
-
-        assigns
-        |> Brando.Villain.Parser.picture_tag()
-        |> Phoenix.LiveViewTest.rendered_to_string()
-      end)
-      |> Enum.intersperse("\n")
+    items = gallery_items(media, data, opts, :plain)
 
     """
     <div data-gallery="#{class}">
@@ -836,8 +766,84 @@ defmodule Brando.Villain.Parser do
     """
   end
 
-  # empty gallery
-  def gallery(_data, _), do: ""
+  defp gallery_items(media, data, opts, wrapper) do
+    parser = parser_module(opts)
+
+    media
+    |> Enum.map(&gallery_item(&1, data, parser, wrapper))
+    |> Enum.intersperse("\n")
+  end
+
+  defp gallery_item({:image, img}, data, parser, wrapper) do
+    title = Map.get(img, :title, nil)
+    credits = Map.get(img, :credits, nil)
+    alt = Map.get(img, :alt, nil)
+
+    orientation = (img.width > img.height && "landscape") || "portrait"
+    caption = parser.render_caption(Map.merge(img, %{title: title, credits: credits}))
+
+    assigns = %{
+      src: img,
+      link: "",
+      caption: caption,
+      orientation: orientation,
+      opts: [
+        key: :largest,
+        caption: caption,
+        alt: alt || "",
+        width: true,
+        height: true,
+        placeholder: gallery_placeholder(data),
+        sizes: "auto",
+        srcset: Brando.config(Brando.Images)[:default_srcset],
+        lazyload: true,
+        lightbox: Map.get(data, :lightbox) || false,
+        prefix: Utils.media_url()
+      ]
+    }
+
+    assigns
+    |> gallery_image_tag(wrapper)
+    |> Phoenix.LiveViewTest.rendered_to_string()
+  end
+
+  # A gallery video renders through the same `<.video>` component as a video
+  # block, but is handed the record rather than a bare URL — so the playback
+  # settings the editor put on the video, and any per-object override merged
+  # onto it, resolve through `setting/4` as usual.
+  defp gallery_item({:video, video}, _data, parser, wrapper) do
+    orientation = gallery_video_orientation(video)
+
+    assigns = %{
+      video: video,
+      opts: parser.video_file_options(video),
+      cover_image: nil,
+      orientation: orientation
+    }
+
+    assigns
+    |> gallery_video_tag(wrapper)
+    |> Phoenix.LiveViewTest.rendered_to_string()
+  end
+
+  defp gallery_image_tag(assigns, :panner), do: Brando.Villain.Parser.panner_item(assigns)
+  defp gallery_image_tag(assigns, :plain), do: Brando.Villain.Parser.picture_tag(assigns)
+
+  defp gallery_video_tag(assigns, :panner), do: Brando.Villain.Parser.panner_video_item(assigns)
+  defp gallery_video_tag(assigns, :plain), do: Brando.Villain.Parser.video_tag(assigns)
+
+  defp gallery_video_orientation(%{width: width, height: height})
+       when is_integer(width) and is_integer(height) and width > height,
+       do: "landscape"
+
+  defp gallery_video_orientation(_video), do: "portrait"
+
+  defp gallery_placeholder(data) do
+    case Map.get(data, :placeholder, :svg) do
+      placeholder when is_binary(placeholder) -> String.to_existing_atom(placeholder)
+      placeholder -> placeholder
+    end
+  end
 
   def list(%{rows: rows} = data, _) do
     rows_html =
@@ -969,7 +975,7 @@ defmodule Brando.Villain.Parser do
           |> Enum.reduce([], fn
             %{active: false}, acc -> acc
             %{marked_as_deleted: true}, acc -> acc
-            d, acc -> [apply(__MODULE__, d.type, [d, opts]) | acc]
+            d, acc -> [apply(parser_module(opts), d.type, [d, opts]) | acc]
           end)
           |> Enum.reverse()
           |> annotate_children(block.uid)
@@ -996,7 +1002,7 @@ defmodule Brando.Villain.Parser do
         |> Enum.reduce([], fn
           %{active: false}, acc -> acc
           %{marked_as_deleted: true}, acc -> acc
-          d, acc -> [apply(__MODULE__, d.type, [d, opts]) | acc]
+          d, acc -> [apply(parser_module(opts), d.type, [d, opts]) | acc]
         end)
         |> Enum.reverse()
         |> annotate_children(block.uid)
@@ -1054,7 +1060,7 @@ defmodule Brando.Villain.Parser do
         |> Enum.reduce([], fn
           %{active: false}, acc -> acc
           %{marked_as_deleted: true}, acc -> acc
-          d, acc -> [apply(__MODULE__, d.type, [d, opts]) | acc]
+          d, acc -> [apply(parser_module(opts), d.type, [d, opts]) | acc]
         end)
         |> Enum.reverse()
         |> annotate_children(block.uid)
@@ -1131,15 +1137,32 @@ defmodule Brando.Villain.Parser do
     [
       width: Map.get(data, :width),
       height: Map.get(data, :height),
-      cover: :svg,
+      cover: Map.get(data, :cover, false),
       autoplay: autoplay,
       poster: Map.get(data, :poster),
       preload: get_preload_setting(data),
       opacity: Map.get(data, :opacity, 0.1),
       controls: Map.get(data, :controls, false),
       caption: Map.get(data, :title, false),
-      play_button: play_button
+      play_button: play_button,
+      progress: Map.get(data, :progress, false)
     ]
+    |> put_unless_nil(data, :loop)
+    |> put_unless_nil(data, :muted)
+    |> put_unless_nil(data, :aspect_ratio)
+  end
+
+  # A video block renders through `<.video video={src} …>` with a plain URL, so
+  # `Brando.HTML.Video` has no record to read settings off — everything has to
+  # arrive in the options list. But the options list has no way to say "unset":
+  # a nil counts as an explicit value there and beats the built-in default. So
+  # only pass these when the block (or, via the merge, the video record) has
+  # something to say about them.
+  defp put_unless_nil(opts, data, key) do
+    case Map.get(data, key) do
+      nil -> opts
+      value -> Keyword.put(opts, key, value)
+    end
   end
 
   # Helper function for determining play button setting
@@ -1224,6 +1247,14 @@ defmodule Brando.Villain.Parser do
     ~H"""
     <figure data-panner-item data-orientation={@orientation} data-moonwalk="panner">
       <.picture src={@src} opts={@opts} />
+    </figure>
+    """
+  end
+
+  def panner_video_item(assigns) do
+    ~H"""
+    <figure data-panner-item data-orientation={@orientation} data-moonwalk="panner">
+      <.video video={@video} opts={@opts} />
     </figure>
     """
   end
@@ -1367,25 +1398,7 @@ defmodule Brando.Villain.Parser do
           # No image association but we have image_id, load the image
           case Brando.Images.get_image(image_id) do
             {:ok, image} ->
-              override_data = Map.from_struct(ref.data.data || %{})
-
-              override_attrs =
-                Map.take(override_data, [
-                  :title,
-                  :credits,
-                  :alt,
-                  :picture_class,
-                  :img_class,
-                  :link,
-                  :srcset,
-                  :media_queries,
-                  :lazyload,
-                  :moonwalk,
-                  :placeholder,
-                  :fetchpriority
-                ])
-
-              Brando.Content.OverrideResolver.merge_overrides(image, override_attrs)
+              merge_picture_overrides(image, ref)
 
             _ ->
               ref.data.data
@@ -1394,26 +1407,7 @@ defmodule Brando.Villain.Parser do
         {image, _} ->
           # We have an image, so we should return the image data with overrides
           # from the block data (like custom title, credits, alt)
-          override_data = Map.from_struct(ref.data.data || %{})
-
-          override_attrs =
-            Map.take(override_data, [
-              :title,
-              :credits,
-              :alt,
-              :picture_class,
-              :img_class,
-              :link,
-              :srcset,
-              :media_queries,
-              :lazyload,
-              :moonwalk,
-              :placeholder,
-              :fetchpriority
-            ])
-
-          # Merge into the image struct, nil values = use image default
-          Brando.Content.OverrideResolver.merge_overrides(image, override_attrs)
+          merge_picture_overrides(image, ref)
       end
 
     # Return the ref structure with merged data, including active status
@@ -1566,8 +1560,39 @@ defmodule Brando.Villain.Parser do
     }
   end
 
+  # Both the caption overrides (title/credits/alt) and the block's own
+  # presentation settings. The latter have no column on `Brando.Images.Image` —
+  # they are virtual attributes declared there for exactly this merge, so that
+  # `picture/2` can keep reading everything it needs off one struct.
+  #
+  # `media_queries` is deliberately absent: the block declares it as free text,
+  # while `Brando.HTML.Images.get_mq/3` needs a list of
+  # `{media_query, srcsets}` tuples. There is no value the block can hold that
+  # the renderer could use, and `picture/2` has always forced it to nil.
+  defp merge_picture_overrides(image, ref) do
+    override_attrs =
+      ref
+      |> ref_override_data()
+      |> Map.take([
+        :title,
+        :credits,
+        :alt,
+        :picture_class,
+        :img_class,
+        :link,
+        :srcset,
+        :lazyload,
+        :moonwalk,
+        :placeholder,
+        :fetchpriority
+      ])
+
+    # Merge into the image struct, nil values = use image default
+    Brando.Content.OverrideResolver.merge_overrides(image, override_attrs)
+  end
+
   defp merge_video_overrides(video, ref) do
-    override_data = Map.from_struct(ref.data.data || %{})
+    override_data = ref_override_data(ref)
 
     override_attrs =
       Map.take(override_data, [
@@ -1577,7 +1602,10 @@ defmodule Brando.Villain.Parser do
         :opacity,
         :preload,
         :play_button,
+        :progress,
         :controls,
+        :loop,
+        :muted,
         :cover,
         :aspect_ratio,
         :cover_image
@@ -1586,6 +1614,11 @@ defmodule Brando.Villain.Parser do
     # Merge into the video struct, nil values = use video default
     Brando.Content.OverrideResolver.merge_overrides(video, override_attrs)
   end
+
+  # A ref with no block data at all has nothing to override with. `|| %{}`
+  # would not do: `Map.from_struct/1` has no clause for a plain map.
+  defp ref_override_data(%{data: %{data: nil}}), do: %{}
+  defp ref_override_data(%{data: %{data: data}}), do: Map.from_struct(data)
 
   defp fetch_video_assoc(video_id) do
     case Brando.Repo.get(Brando.Videos.Video, video_id) do

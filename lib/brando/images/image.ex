@@ -41,6 +41,20 @@ defmodule Brando.Images.Image do
     attribute :config_target, :text
     attribute :folder_id, :integer
     attribute :fetchpriority, :enum, values: [:high, :low, :auto], default: :auto
+
+    # Block-level presentation settings, declared on
+    # `Brando.Villain.Blocks.PictureBlock.Data` and merged onto the image at
+    # render time by `Brando.Content.OverrideResolver`. They describe how *this
+    # placement* of the image should render, never the image itself, so they are
+    # virtual — nothing here is persisted on the image record, and nothing here
+    # is set for an image outside a picture block.
+    attribute :picture_class, :text, virtual: true
+    attribute :img_class, :text, virtual: true
+    attribute :link, :text, virtual: true
+    attribute :srcset, :text, virtual: true
+    attribute :lazyload, :boolean, virtual: true, default: false
+    attribute :moonwalk, :boolean, virtual: true, default: false
+    attribute :placeholder, :any, virtual: true
   end
 
   relations do

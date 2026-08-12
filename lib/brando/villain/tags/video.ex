@@ -19,7 +19,6 @@ defmodule Brando.Villain.Tags.Video do
       :controls,
       :loop,
       :muted,
-      :playsinline,
       :preload,
       :poster,
       :width,

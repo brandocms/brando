@@ -147,11 +147,6 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
         <Input.toggle field={@video_form[:controls]} label={gettext("Show controls")} tiny={true} />
         <Input.toggle field={@video_form[:loop]} label={gettext("Loop")} tiny={true} />
         <Input.toggle field={@video_form[:preload]} label={gettext("Preload")} tiny={true} />
-        <Input.toggle
-          field={@video_form[:playsinline]}
-          label={gettext("Plays inline (mobile)")}
-          tiny={true}
-        />
       </div>
     </div>
     """

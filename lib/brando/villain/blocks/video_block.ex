@@ -34,9 +34,9 @@ defmodule Brando.Villain.Blocks.VideoBlock do
       # Block-specific styling and behavior (not overrides, keep defaults)
       attribute :opacity, :integer, default: 0
       attribute :play_button, :boolean, default: false
+      attribute :progress, :boolean, default: false
       attribute :cover, :string, default: "false"
       attribute :aspect_ratio, :string
-      attribute :playsinline, :boolean, default: true
       attribute :video_class, :string
       attribute :container_class, :string
       attribute :config_target, :text

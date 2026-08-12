@@ -242,6 +242,34 @@
 
 #### Features
 
+- **A video form field can declare playback defaults for new videos.**
+
+      input :video, :video,
+        label: t("Video"),
+        defaults: %{loop: true, muted: true}
+
+  `BrandoAdmin.Components.Form` merges these onto the blank `%Brando.Videos.Video{}`
+  before building the drawer's changeset, so the drawer's switches show them and
+  saving persists them.
+
+  Both ends of this were already built — `Form.Input.Video` carried a `defaults`
+  assign and `Form.update(%{action: :open_video_drawer, …})` consumed it — but
+  nothing populated it: the generic input renderer passes a fixed assign list
+  with no `defaults` in it, so `assign_new` always won with `%{}`. The input now
+  reads it from the form field's opts, and raises on a key
+  `Brando.Videos.Video` has no field for rather than letting `struct/2` drop it.
+
+  This matters because the video's playback columns carry no default, so a new
+  record has `autoplay`, `preload`, `loop`, `muted` and `controls` all nil.
+  `Brando.HTML.Video` reads nil as "use the built-in default" — `true` for
+  `loop`, `false` for the rest — while the drawer draws them as plain
+  checkboxes, which have no way to render "unset". A freshly uploaded video
+  therefore showed **Loop: off** while looping.
+
+  These set the video *record*, the middle layer of the resolution chain: a
+  block or `{% video %}` override still wins over them, and they in turn beat
+  `Brando.HTML.Video`'s built-ins.
+
 - **`Brando.Videos.ProviderConfigCheck` reports misconfigured video providers at
   boot.** Runs from `Brando.Supervisor.init/1`. The provider clients have always
   said missing credentials are "a deploy-time configuration error", but nothing
@@ -312,6 +340,110 @@
   compilation and raised from the changeset instead.
 
 #### Fixes
+
+- **Gallery refs rendered nothing at all.** Two defects stacked, and each hid
+  the other:
+
+  1. `merge_ref_associations/1` attached the resolved gallery with
+     `struct(ref.data.data.__struct__, Map.put(override_data, :gallery, …))`,
+     but `GalleryBlock.Data` has no `gallery` field — so `Kernel.struct/2`
+     dropped it, exactly as it dropped the picture and video presentation
+     settings. `GalleryBlock.Data` now declares `gallery` as a virtual
+     attribute.
+  2. `gallery/2`'s clauses matched `%{type: …, images: images}` — the flat list
+     block data carried before galleries became their own domain in
+     `44af5c449`. `GalleryBlock.Data` has never had an `images` key, so every
+     gallery ref fell through to the `_ -> ""` catch-all.
+
+  `gallery/2` now renders `gallery.gallery_objects` in sequence, images through
+  the picture component and videos through the video component — galleries have
+  held both since the Gallery domain landed, but the parser could only ever
+  render images. The three display types (`:gallery`, `:slider`, `:slideshow`)
+  keep their existing wrapper markup, and image output is unchanged. The
+  `images` shape still works for direct callers.
+
+  There was no test covering gallery ref rendering, which is how this survived;
+  there are now six.
+
+- **`playsinline` is gone from every place that pretended to configure it.**
+  `Brando.HTML.Video` hardcodes the attribute on both `<video>` tags, so none of
+  the three settings that claimed to control it could ever affect the output:
+  the video drawer's "Plays inline (mobile)" switch (bound to
+  `@video_form[:playsinline]`, a field `Brando.Videos.Video` does not even
+  have), `Brando.Villain.Blocks.VideoBlock.Data`'s `:playsinline` attribute and
+  its hidden inputs, and `:playsinline` in the `{% video %}` tag's allowed args.
+  Playback is unchanged — inline playback stays on, as it always was.
+
+- **A block's identifiers could reorder themselves on every re-render.**
+  `Brando.Content.Block`'s `:block_identifiers` relation preloaded with
+  `preload_order: [asc: :sequence]` and no tiebreaker. `Brando.Trait.Sequenced`
+  documents `0` as the default sequence for a new entry, so rows sharing one are
+  expected — the trait's own fallback is `desc: :inserted_at`, a column this join
+  table does not have. Ties therefore resolved to physical row order, and any
+  re-save that rewrote the rows silently reshuffled whatever the block rendered
+  from them. Ordering is now `[asc: :sequence, asc: :id]`.
+
+  Seen on a production dataset as case cards changing order inside
+  "case entrances" blocks after `mix brando.entries.resave` — no content lost,
+  but a different case led the list. Only blocks whose identifiers all share a
+  sequence are affected; those written since `957c8a3a1` carry `0, 1, 2, …` and
+  were always stable.
+
+- **Block-level presentation settings on picture and video refs were silently
+  dropped at render time, and a site's parser overrides were never called.**
+  Re-rendering 62 case pages of one production dataset lost lazyloading on 284
+  pictures, dominant-color placeholders on 340, `data-moonwalk` on 284, and
+  every play button. The markup was structurally intact — same `<picture>`,
+  `<video>` and `<article>` counts — so nothing looked broken until you read the
+  attributes.
+
+  Four independent defects, which compounded:
+
+  1. **A site's parser overrides became dead code.** Every callback in
+     `Brando.Villain.Parser` is `defoverridable`, and while the implementations
+     lived inside the `__using__` quote a bare `video_file_options(data)` meant
+     "the using module's version". Moving them into the module body changed that
+     to "Brando's version", so `render_caption/1`, `video_file_options/1`,
+     `header/2` and every block type reached through a container or a ref went
+     to the default implementation. No warning, no error. Internal dispatch now
+     goes through `Brando.Villain.Parser.parser_module/1`, which prefers the
+     parser threaded through `opts` and falls back to the configured one.
+  2. **`Brando.Content.OverrideResolver.merge_overrides/2` discarded keys the
+     target struct could not hold.** It ends in `Kernel.struct/2`, which drops
+     unknown keys without a word, and the picture/video call sites handed it 12
+     and 10 keys respectively while `Brando.Images.Image` and
+     `Brando.Videos.Video` had fields for only a handful. `picture_class`,
+     `img_class`, `link`, `srcset`, `lazyload`, `moonwalk`, `placeholder`,
+     `poster`, `opacity`, `play_button`, `cover` and `cover_image` all fell off,
+     and the renderer's `Map.get(data, key, default)` used its defaults. Those
+     settings are now virtual attributes on the two schemas — nothing is
+     persisted, and no migration is needed — and `merge_overrides/2` raises
+     rather than dropping a key it cannot hold.
+  3. **`loop` and `muted` were missing from the video take-list**, so a block
+     with `loop: false` still looped.
+  4. **`video_file_options/1` hardcoded `cover: :svg` and never passed
+     `progress:`.** The block's own `cover` attribute was unreachable, and
+     `data-progress` could not be set by the default parser at all.
+
+  `progress` is also a new setting on the video block, alongside "Play button"
+  in the admin — the option existed in `Brando.HTML.Video` with no way to reach
+  it. `Brando.HTML.Video` now resolves `cover`, `opacity`, `progress` and
+  `play_button` through `setting/4` like every other viewer-configurable
+  setting, instead of reading them straight off `opts`.
+
+  Files do not have this problem — that branch builds a plain map, which holds
+  anything. Galleries had it worse; see the next entry.
+
+  **Re-render cached blocks after upgrading.** Any entry saved against the
+  broken code has degraded HTML persisted in `rendered_blocks` /
+  `rendered_html`; the fix only affects rendering, so those rows stay wrong
+  until they are re-rendered (`mix brando.entries.resave`).
+
+  **Two rendering changes to expect**, both of them the fix working as
+  intended. Video blocks that never set `cover` no longer get an SVG cover — the
+  attribute defaults to `"false"` and is now honoured. And blocks with
+  `loop: false` stop looping, including entries that have been looping for a
+  while.
 
 - **`BrandoWeb.Plugs.MuxWebhook` answered a malformed signature header with a
   500 instead of a 401.** The `Mux-Signature` parser built its map with
