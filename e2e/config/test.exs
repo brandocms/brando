@@ -1,5 +1,13 @@
 import Config
 
+e2e_database =
+  System.get_env("BRANDO_E2E_DATABASE") ||
+    "e2e_project_test#{System.get_env("MIX_TEST_PARTITION") || ""}"
+
+e2e_port =
+  System.get_env("BRANDO_E2E_PORT", System.get_env("PORT", "4444"))
+  |> String.to_integer()
+
 # Configure your database
 #
 # The MIX_TEST_PARTITION environment variable can be used
@@ -9,7 +17,7 @@ config :e2e_project, E2eProject.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: "e2e_project_test",
+  database: e2e_database,
   ownership_timeout: 1_000_000,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
@@ -17,7 +25,7 @@ config :e2e_project, E2eProject.Repo,
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :e2e_project, E2eProjectWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("PORT") || "4444")],
+  http: [ip: {127, 0, 0, 1}, port: e2e_port],
   secret_key_base: "ngv3Man7Y6Z2hZhsjWuEoVmZNnVIdoaHFtTzeKNCiIdvs/7vavFhxK1LnmRZ+Nko",
   server: true
 

@@ -1,6 +1,14 @@
 import Config
 
 import_config "test.exs"
+
+e2e_port =
+  System.get_env("BRANDO_E2E_PORT", System.get_env("PORT", "4444"))
+  |> String.to_integer()
+
+default_pool_size = if System.get_env("CI"), do: "50", else: "20"
+e2e_pool_size = String.to_integer(System.get_env("BRANDO_E2E_POOL_SIZE", default_pool_size))
+
 # Use :warning to reduce log noise, change to :debug for troubleshooting
 config :logger, level: :warning
 
@@ -11,14 +19,15 @@ config :e2e_project, sql_sandbox: true
 
 # Override pool settings for e2e tests - need more connections for
 # browser tests with LiveView (HTTP + WebSocket + sandbox per test)
-# Using a large pool to diagnose connection leaks
+# CI keeps the historical pool size. Local runs default lower so multiple
+# worktrees fit within PostgreSQL's usual 100-connection limit.
 config :e2e_project, E2eProject.Repo,
-  pool_size: 50,
+  pool_size: e2e_pool_size,
   queue_target: 5000,
   queue_interval: 10000
 
 config :e2e_project, E2eProjectWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4444],
+  http: [ip: {127, 0, 0, 1}, port: e2e_port],
   server: true
 
 config :brando, Oban,

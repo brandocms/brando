@@ -1,12 +1,13 @@
 // setup.js
 import { test as baseTest, expect } from '@playwright/test'
+import { baseURL, e2eUrl } from './e2eUrl'
 
 // Log a user in and build a browser context bound to the given sandbox
 // user-agent. Every context sharing the same user-agent shares the same
 // per-test SQL sandbox session — this is what makes multi-user specs
 // possible (see the `secondUserPage` fixture).
 async function buildUserPage(browser, userAgentString, email) {
-  const authResponse = await fetch(`http://localhost:4444/e2e/login/${email}`, {
+  const authResponse = await fetch(e2eUrl(`/e2e/login/${email}`), {
     method: 'POST',
     headers: {
       'user-agent': userAgentString,
@@ -14,7 +15,7 @@ async function buildUserPage(browser, userAgentString, email) {
   })
 
   const context = await browser.newContext({
-    baseURL: 'http://localhost:4444',
+    baseURL,
     userAgent: userAgentString,
   })
 
@@ -47,7 +48,7 @@ export const test = baseTest.extend({
   // Per-test SQL sandbox session. All contexts created with this user-agent
   // share one sandbox transaction, rolled back at test end.
   sandboxUserAgent: async ({}, use) => {
-    const sandboxResp = await fetch('http://localhost:4444/sandbox', {
+    const sandboxResp = await fetch(e2eUrl('/sandbox'), {
       method: 'POST',
     })
 
@@ -67,7 +68,7 @@ export const test = baseTest.extend({
       // Ensure sandbox is always cleaned up, even if the test fails.
       // Without this, failed tests leak sandbox connections, causing
       // cascading sandbox errors in subsequent tests.
-      await fetch('http://localhost:4444/sandbox', {
+      await fetch(e2eUrl('/sandbox'), {
         method: 'DELETE',
         headers: {
           'user-agent': userAgentString,

@@ -163,6 +163,12 @@ jobs:
     name: Serial E2E (PostgreSQL)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # Each CI job has its own PostgreSQL service, so a stable key keeps the
+      # generated database and port predictable while exercising the same
+      # worktree-aware path used locally.
+      BRANDO_E2E_INSTANCE: ci
+      BRANDO_E2E_POOL_SIZE: 50
     # Pull requests only. The suite is serial by design (`workers: 1`) and runs
     # for the better part of ten minutes before the asset builds and Playwright
     # install are counted, which is too slow to sit on every push. The workflow

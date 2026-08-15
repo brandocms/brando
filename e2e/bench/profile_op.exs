@@ -20,7 +20,7 @@
 # Run `bench/profile-op.spec.js` (BENCH_OP=insert|outline|copy) alongside it.
 # The server must be a named node:
 #
-#   MIX_ENV=e2e PORT=4444 elixir --sname brandobench --cookie benchcookie -S mix phx.server
+#   MIX_ENV=e2e elixir --sname brandobench --cookie benchcookie -S mix phx.server
 
 flag_dir = Path.expand("../e2e/playwright/bench", __DIR__)
 ready = Path.join(flag_dir, "op-ready.flag")

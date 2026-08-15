@@ -2,17 +2,20 @@
 set -e
 source .envrc
 
+echo "E2E instance: $BRANDO_E2E_INSTANCE"
+echo "E2E database: $BRANDO_E2E_DATABASE"
+echo "E2E server: $BRANDO_E2E_BASE_URL"
+
 # Check if database exists, create it if not, then ensure it's up to date
 MIX_ENV=test mix do ecto.create, ecto.migrate
 
-# Only run seeds if database was just created or if --reset flag is passed
+# Reset explicitly, otherwise seed only when the isolated database is fresh.
 if [ "$1" = "--reset" ] || [ "$2" = "--reset" ]; then
   echo "Resetting database with seed data..."
   MIX_ENV=test mix do ecto.drop, ecto.create, ecto.migrate
   MIX_ENV=test mix run priv/repo/e2e_seeds.exs
-elif ! MIX_ENV=test mix ecto.migrate; then
-  echo "Running seed data for fresh database..."  
-  MIX_ENV=test mix run priv/repo/e2e_seeds.exs
+else
+  BRANDO_SEEDING=true MIX_ENV=test mix run priv/repo/ensure_e2e_seeds.exs
 fi
 
 # Build static assets. Each build runs in a subshell so a failure aborts the
@@ -27,4 +30,4 @@ echo "Building static assets [frontend]"
 (cd assets/frontend && yarn install && yarn build)
 
 echo "Starting E2E project server"
-MIX_ENV=test PORT=4444 iex -S mix phx.server
+MIX_ENV=test PORT="$BRANDO_E2E_PORT" iex -S mix phx.server

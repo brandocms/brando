@@ -37,7 +37,7 @@ Start the server as a named node:
 
 ```sh
 cd e2e && source .envrc
-MIX_ENV=e2e PORT=4444 elixir --sname brandobench --cookie benchcookie -S mix phx.server
+MIX_ENV=e2e elixir --sname brandobench --cookie benchcookie -S mix phx.server
 ```
 
 Hold an entry open (keeps the LiveView connected while you measure):

@@ -1,9 +1,10 @@
 import { test as baseTest, expect } from '@playwright/test'
+import { baseURL, e2eUrl } from './e2eUrl'
 
 export const test = baseTest.extend({
   page: async ({ browser }, use) => {
     // This checks out the DB and gets the user agent string
-    const resp = await fetch('http://localhost:4444/sandbox', {
+    const resp = await fetch(e2eUrl('/sandbox'), {
       method: 'POST'
     })
 
@@ -12,7 +13,7 @@ export const test = baseTest.extend({
     // We setup a new browser context with the user agent string
     // This allows the database to be sandboxed and provides isolation
     const context = await browser.newContext({
-      baseURL: 'http://localhost:4444',
+      baseURL,
       userAgent: userAgentString
     })
 
@@ -22,7 +23,7 @@ export const test = baseTest.extend({
       await use(page)
     } finally {
       // Ensure cleanup happens even if test fails
-      await fetch('http://localhost:4444/sandbox', {
+      await fetch(e2eUrl('/sandbox'), {
         method: 'DELETE',
         headers: {
           'user-agent': userAgentString
