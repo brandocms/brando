@@ -41,7 +41,8 @@ defmodule Brando.Content.Module do
   @type t :: %__MODULE__{}
 
   @reserved_heex_assigns ~w(
-    block refs entries content forloop identity globals navigation
+    _heex_ctx block refs entries entries_with_meta content forloop
+    identity configs globals navigation
     language locale entry render_context parser_module module_id
     links url request refs_field target target_ref form_id
   )

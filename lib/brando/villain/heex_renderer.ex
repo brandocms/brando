@@ -3,7 +3,9 @@ defmodule Brando.Villain.HeexRenderer do
   Compiles HEEx template strings into dynamic modules and renders them.
 
   Uses an ETS cache keyed by `{id, :erlang.phash2(code)}` to avoid
-  recompilation when the template hasn't changed.
+  recompilation when the template hasn't changed. The generated module name
+  includes the code hash as well, so two cached code versions for the same
+  content module cannot point at whichever version happened to compile last.
   """
 
   @ets_table :brando_heex_cache
@@ -20,14 +22,14 @@ defmodule Brando.Villain.HeexRenderer do
   @doc """
   Compile a HEEx template string into a dynamic module.
 
-  The module is created as `Brando.DynamicTemplate.Module_<id>` and defines
-  a `render/1` function component that renders the given HEEx code.
+  The module is created as `Brando.DynamicTemplate.Module_<id>_<code_hash>`
+  and defines a `render/1` function component that renders the given HEEx code.
 
   Returns the module atom.
   """
   @spec compile_module!(integer() | binary(), String.t()) :: module()
   def compile_module!(id, code_string) do
-    module_name = module_name_for(id)
+    module_name = module_name_for(id, code_string)
     preprocessed = preprocess_heex(code_string)
 
     # Purge if already exists to allow recompilation
@@ -112,17 +114,28 @@ defmodule Brando.Villain.HeexRenderer do
   end
 
   @doc """
-  Preprocess HEEx code to inject `_heex_ctx` into `<.ref>` component calls.
+  Preprocess HEEx code to inject renderer-owned assigns into Villain component
+  calls.
 
   This allows the `ref` component to receive admin context (refs_field, target, etc.)
-  transparently, without the template author needing to pass it explicitly.
+  and `<.content />` to receive multi-module/container children transparently,
+  without the template author needing to pass internal assigns explicitly.
   """
   def preprocess_heex(code_string) do
-    String.replace(code_string, ~r/<\.ref\s/, "<.ref _heex_ctx={@_heex_ctx} ")
+    code_string
+    |> String.replace(
+      ~r/<\.ref(?![^>]*\b_heex_ctx=)(?=\s|\/>)/,
+      "<.ref _heex_ctx={@_heex_ctx}"
+    )
+    |> String.replace(
+      ~r/<\.content(?![^>]*\bcontent=)(?=\s|\/>)/,
+      "<.content content={@content}"
+    )
   end
 
-  defp module_name_for(id) do
-    Module.concat(Brando.DynamicTemplate, "Module_#{id}")
+  defp module_name_for(id, code_string) do
+    hash = :erlang.phash2(code_string)
+    Module.concat(Brando.DynamicTemplate, "Module_#{id}_#{hash}")
   end
 
   defp ets_lookup(key) do

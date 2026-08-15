@@ -109,6 +109,16 @@ defmodule Brando.Villain.Components do
   defp render_ref(%{active: false}, _ref_name, _block, _headless, _assigns),
     do: Phoenix.HTML.raw("<!-- !a -->")
 
+  defp render_ref(%{data: block_data}, _ref_name, _block, true, assigns) do
+    assigns = assign(assigns, :headless_data, block_data.data)
+
+    ~H"""
+    <%= if @inner_block != [] do %>
+      {render_slot(@inner_block, @headless_data)}
+    <% end %>
+    """
+  end
+
   defp render_ref(
          %{data: block_data, description: description} = _ref_data,
          ref_name,
@@ -155,7 +165,8 @@ defmodule Brando.Villain.Components do
       context: assigns[:liquex_context] || build_empty_context(),
       containers: containers,
       modules: modules,
-      palettes: palettes
+      palettes: palettes,
+      parser_module: assigns[:parser_module] || Brando.Villain.Parser
     }
   end
 
@@ -191,11 +202,13 @@ defmodule Brando.Villain.Components do
   """
   def video(assigns) do
     ~H"""
-    <Brando.HTML.video src={@src} opts={@opts} />
+    <Brando.HTML.Video.video video={@src} opts={@opts} />
     """
   end
 
   # -- content component --
+
+  attr :content, :string, required: true
 
   @doc """
   Render the `@content` assign (children HTML in multi modules / containers).
@@ -213,19 +226,40 @@ defmodule Brando.Villain.Components do
   attr :href, :string, default: nil
   attr :entry, :map, default: nil
   attr :field, :atom, default: :url
-  slot :inner_block, required: true
+  attr :var, :any, default: nil
+  attr :class, :any, default: nil
+  slot :inner_block
 
   @doc """
   Render a link, avoiding collision with `Phoenix.Component.link/1`.
 
-  Can be used with a direct `href` or by extracting the URL from an entry field.
+  Can be used with a direct `href`, by extracting the URL from an entry field,
+  or with a link var. A link var supplies its configured text, target and the
+  standard `link` class when no inner content is given.
   """
   def entry_link(assigns) do
-    href = assigns.href || get_in(assigns, [:entry, assigns.field])
-    assigns = assign(assigns, :resolved_href, href)
+    var_href = Brando.Villain.Filters.link_url(assigns.var, nil)
+    var_text = Brando.Villain.Filters.link_text(assigns.var, nil)
+
+    href = assigns.href || var_href || get_in(assigns, [:entry, assigns.field])
+    target = if assigns.var && Map.get(assigns.var, :link_target_blank), do: "_blank"
+    class = assigns.class || (assigns.var && "link")
+
+    assigns =
+      assigns
+      |> assign(:resolved_href, href)
+      |> assign(:resolved_target, target)
+      |> assign(:resolved_class, class)
+      |> assign(:resolved_text, var_text)
 
     ~H"""
-    <a href={@resolved_href}>{render_slot(@inner_block)}</a>
+    <a href={@resolved_href} target={@resolved_target} class={@resolved_class}>
+      <%= if @inner_block == [] do %>
+        {@resolved_text}
+      <% else %>
+        {render_slot(@inner_block)}
+      <% end %>
+    </a>
     """
   end
 
@@ -243,8 +277,7 @@ defmodule Brando.Villain.Components do
       <.route helper={:project_path} action={:detail} args={[@entry.slug]} />
   """
   def route(assigns) do
-    router_module = Brando.helpers()
-    url = apply(router_module, assigns.helper, [Brando.endpoint(), assigns.action | assigns.args])
+    url = Brando.Blueprint.AbsoluteURL.route(assigns.helper, assigns.action, assigns.args)
     assigns = assign(assigns, :url, url)
 
     ~H"""
@@ -263,8 +296,19 @@ defmodule Brando.Villain.Components do
   Generate a URL using a route helper with language prefix.
   """
   def route_i18n(assigns) do
-    router_module = Brando.helpers()
-    url = apply(router_module, assigns.helper, [Brando.endpoint(), assigns.action, assigns.language | assigns.args])
+    args = prepare_route_args(assigns.helper, assigns.action, assigns.args)
+
+    url =
+      if assigns.helper == :page_path do
+        apply(Brando.helpers(), assigns.helper, [Brando.endpoint(), assigns.action | args])
+      else
+        Brando.I18n.Helpers.localized_path(
+          assigns.language,
+          assigns.helper,
+          [Brando.endpoint(), assigns.action | args]
+        )
+      end
+
     assigns = assign(assigns, :url, url)
 
     ~H"""
@@ -296,20 +340,34 @@ defmodule Brando.Villain.Components do
 
   # -- t component --
 
-  attr :no, :string, required: true
-  attr :en, :string, required: true
+  attr :no, :string, default: nil
+  attr :en, :string, default: nil
+  attr :translations, :map, default: %{}
   attr :language, :string, required: true
 
   @doc """
   Conditional language text. Returns the text matching `@language`.
+
+  `no` and `en` are convenient shorthands. Use `translations` for any
+  configured language:
+
+      <.t language={@language} translations={%{"fr" => "Bonjour"}} />
   """
   def t(assigns) do
+    language = to_string(assigns.language)
+    translations = Map.get(assigns, :translations, %{})
+    shorthand = %{"no" => assigns[:no], "en" => assigns[:en]}
+
+    translated =
+      Map.get(translations, language) ||
+        Enum.find_value(translations, fn {locale, text} ->
+          if to_string(locale) == language, do: text
+        end)
+
     text =
-      case assigns.language do
-        "no" -> assigns.no
-        "en" -> assigns.en
-        _ -> assigns.en
-      end
+      translated ||
+        Map.get(shorthand, language) ||
+        assigns[:en] || ""
 
     assigns = assign(assigns, :text, text)
 
@@ -317,4 +375,12 @@ defmodule Brando.Villain.Components do
     {@text}
     """
   end
+
+  defp prepare_route_args(:page_path, :show, args) do
+    args
+    |> Enum.reject(&is_nil/1)
+    |> Enum.map(&String.split(to_string(&1), "/"))
+  end
+
+  defp prepare_route_args(_helper, _action, args), do: Enum.reject(args, &is_nil/1)
 end

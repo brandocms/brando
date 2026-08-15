@@ -422,6 +422,92 @@ defmodule Brando.VillainTest do
     assert parsed =~ "/media/image/medium/1.jpg" || parsed =~ image.path
   end
 
+  test "multi modules dispatch each child through its own template adapter", %{user: user} do
+    {:ok, heex_parent} =
+      Brando.Content.create_module(
+        Factory.params_for(:module, %{
+          type: :heex,
+          code: "<section><.content /></section>",
+          multi: true,
+          refs: [],
+          vars: []
+        }),
+        user
+      )
+
+    {:ok, liquid_child} =
+      Brando.Content.create_module(
+        Factory.params_for(:module, %{
+          type: :liquid,
+          code: "<p>Liquid child: {{ child_label }}</p>",
+          refs: [],
+          vars: []
+        }),
+        user
+      )
+
+    {:ok, liquid_parent} =
+      Brando.Content.create_module(
+        Factory.params_for(:module, %{
+          type: :liquid,
+          code: "<section>{{ content }}</section>",
+          multi: true,
+          refs: [],
+          vars: []
+        }),
+        user
+      )
+
+    {:ok, heex_child} =
+      Brando.Content.create_module(
+        Factory.params_for(:module, %{
+          type: :heex,
+          code: "<p>HEEx child: {@child_label}</p>",
+          refs: [],
+          vars: []
+        }),
+        user
+      )
+
+    render_multi = fn parent, child, label ->
+      block = %{
+        block: %{
+          type: :module,
+          module_id: parent.id,
+          multi: true,
+          uid: Brando.Utils.generate_uid(),
+          refs: [],
+          vars: [],
+          children: [
+            %{
+              type: :module,
+              module_id: child.id,
+              active: true,
+              uid: Brando.Utils.generate_uid(),
+              refs: [],
+              vars: [
+                %{
+                  key: "child_label",
+                  label: "Child label",
+                  type: :text,
+                  value: label
+                }
+              ]
+            }
+          ]
+        }
+      }
+
+      Brando.Villain.parse([block], %Brando.Pages.Page{})
+    end
+
+    assert render_multi.(heex_parent, liquid_child, "from Liquid") =~
+             "Liquid child: from Liquid"
+
+    assert render_multi.(liquid_parent, heex_child, "from HEEx") =~
+             "HEEx child: from HEEx"
+  end
+
   test "list_blocks" do
     actual =
       Brando.Content.Blocks.list_blocks()

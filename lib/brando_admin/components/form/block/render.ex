@@ -2752,30 +2752,24 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     # Read current var values from the form (live changeset data), not
     # from the static :vars assign which is only set at init.
     block_form = assigns[:block_form]
+    block_cs = block_form.source
 
-    var_assigns =
-      case block_form[:vars] do
-        nil ->
-          %{}
+    processed_vars =
+      if block_form[:vars] do
+        block_cs
+        |> Changeset.get_assoc(:vars, :struct)
+        |> Brando.Villain.Parser.process_vars()
+      else
+        %{}
+      end
 
-        vars_field ->
-          block_cs = vars_field.form.source
-          vars = Changeset.get_assoc(block_cs, :vars, :struct)
-
-          Map.new(vars, fn var ->
-            value =
-              case var.type do
-                :boolean -> var.value_boolean
-                :image -> var.image
-                :file -> var.file
-                :video -> var.video
-                :gallery -> var.gallery
-                :link -> var
-                _ -> var.value
-              end
-
-            {String.to_existing_atom(var.key), value}
-          end)
+    processed_refs =
+      if block_form[:refs] do
+        block_cs
+        |> Changeset.get_assoc(:refs, :struct)
+        |> Brando.Villain.Parser.process_refs()
+      else
+        %{}
       end
 
     block = %{
@@ -2788,21 +2782,36 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
     heex_ctx = %{
       refs_field: block_form[:refs],
+      refs: processed_refs,
       target: assigns[:target],
       target_ref: assigns[:target_ref],
       form_id: assigns[:form_id]
     }
 
-    base = %{
-      render_context: :admin,
-      block: block,
-      refs: %{},
-      entries: [],
-      content: "",
-      entry: assigns[:entry],
-      _heex_ctx: heex_ctx
-    }
+    system_assigns =
+      assigns[:entry]
+      |> Brando.Villain.get_base_context()
+      |> Brando.Villain.TemplateAdapter.Heex.context_assigns()
 
-    Map.merge(base, var_assigns)
+    base =
+      system_assigns
+      |> Map.merge(%{
+        render_context: :admin,
+        parser_module: Brando.Villain.Parser.parser_module(),
+        module_id: block.module_id,
+        block: block,
+        refs: processed_refs,
+        entries: [],
+        entries_with_meta: [],
+        content: "",
+        forloop: nil,
+        refs_field: block_form[:refs],
+        target: assigns[:target],
+        target_ref: assigns[:target_ref],
+        form_id: assigns[:form_id],
+        _heex_ctx: heex_ctx
+      })
+
+    Brando.Villain.TemplateAdapter.Heex.put_vars(base, processed_vars)
   end
 end

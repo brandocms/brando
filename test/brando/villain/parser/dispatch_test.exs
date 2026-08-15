@@ -53,9 +53,10 @@ defmodule Brando.Villain.ParserDispatchTest do
     {:ok, %{user: user}}
   end
 
-  defp render_ref(user, code, ref_name, ref_block) do
+  defp render_ref(user, code, ref_name, ref_block, type \\ :liquid) do
     module_params =
       Factory.params_for(:module, %{
+        type: type,
         code: code,
         refs: [
           %{
@@ -98,6 +99,27 @@ defmodule Brando.Villain.ParserDispatchTest do
             }
           }
         })
+
+      assert html =~ "DISPATCHED_TEXT:hi"
+    end
+
+    test "are used for refs rendered by HEEx modules", %{user: user} do
+      html =
+        render_ref(
+          user,
+          "<.ref block={@block} ref={:body} />",
+          "body",
+          %{
+            type: "text",
+            ref: %{
+              data: %Brando.Villain.Blocks.TextBlock{
+                type: "text",
+                data: %Brando.Villain.Blocks.TextBlock.Data{text: "hi", type: :paragraph}
+              }
+            }
+          },
+          :heex
+        )
 
       assert html =~ "DISPATCHED_TEXT:hi"
     end

@@ -17,7 +17,7 @@ defmodule Brando.Villain.HeexRendererTest do
     test "recompiles when called again with same id" do
       mod1 = HeexRenderer.compile_module!("test_recompile", "<h1>V1</h1>")
       mod2 = HeexRenderer.compile_module!("test_recompile", "<h1>V2</h1>")
-      assert mod1 == mod2
+      refute mod1 == mod2
     end
   end
 
@@ -33,9 +33,15 @@ defmodule Brando.Villain.HeexRendererTest do
       HeexRenderer.invalidate("test_cache_change")
       mod1 = HeexRenderer.get_or_compile!("test_cache_change", "<p>v1</p>")
       mod2 = HeexRenderer.get_or_compile!("test_cache_change", "<p>v2</p>")
-      # Different code hash means different cache key, both are compiled
-      # Same module name since same id
-      assert mod1 == mod2
+      refute mod1 == mod2
+    end
+
+    test "cached code versions for the same id keep their own render function" do
+      HeexRenderer.invalidate("test_cache_versions")
+
+      assert HeexRenderer.render_to_string("test_cache_versions", "<p>v1</p>", %{}) =~ "v1"
+      assert HeexRenderer.render_to_string("test_cache_versions", "<p>v2</p>", %{}) =~ "v2"
+      assert HeexRenderer.render_to_string("test_cache_versions", "<p>v1</p>", %{}) =~ "v1"
     end
   end
 

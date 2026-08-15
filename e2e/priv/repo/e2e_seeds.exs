@@ -275,8 +275,7 @@ end
   namespace: %{"en" => "01 HEADERS", "no" => "01 HEADINGER"},
   help_text: %{"en" => "Large text", "no" => "Stor tekst"},
   class: "header",
-  code:
-    "<article b-tpl=\"{{ block.class }}\">\n  <div class=\"inner\">\n    {% ref refs.h2 %}\n  </div>\n</article>",
+  code: "<article b-tpl=\"{{ block.class }}\">\n  <div class=\"inner\">\n    {% ref refs.h2 %}\n  </div>\n</article>",
   svg: nil,
   multi: false,
   datasource: false,
@@ -316,8 +315,7 @@ end
   namespace: %{"en" => "02 MEDIA", "no" => "02 MEDIA"},
   help_text: %{"en" => "Full width image or video", "no" => "Fullbredde bilde eller video"},
   class: "asset",
-  code:
-    "<article b-tpl=\"asset\">\n  <div class=\"inner\">\n    {% ref refs.media %}\n  </div>\n</article>",
+  code: "<article b-tpl=\"asset\">\n  <div class=\"inner\">\n    {% ref refs.media %}\n  </div>\n</article>",
   svg: nil,
   multi: false,
   datasource: false,
@@ -926,6 +924,96 @@ table_template =
 }
 |> E2eProject.Repo.insert!()
 
+# Module 8: HEEx parity — exercises the block editor preview, published live
+# preview, vars, parsed refs, headless refs, system assigns, routes and video.
+%Brando.Content.Module{
+  type: :heex,
+  name: %{"en" => "HEEx Parity", "no" => "HEEx-paritet"},
+  namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
+  help_text: %{
+    "en" => "HEEx module rendering parity coverage",
+    "no" => "Dekning for HEEx-modulrendering"
+  },
+  class: "heex-parity",
+  code: """
+  <article
+    b-tpl="heex-parity"
+    data-language={@language}
+    data-identity={@identity.name}
+  >
+    <h2 class="heex-headline">{@headline}</h2>
+    <p :if={@show_entry_title} class="heex-entry-title">{@entry.title}</p>
+    <span class="heex-ref-type">{@refs["body"].data.type}</span>
+    <.ref block={@block} ref={:body} />
+    <.ref block={@block} ref={:headless_title} headless :let={data}>
+      <span class="heex-headless-title">{data.text}</span>
+    </.ref>
+    <span class="heex-route">
+      <.route helper={:page_path} action={:show} args={["about/team"]} />
+    </span>
+    <span class="heex-translation">
+      <.t language={@language} translations={%{"en" => "Translated", "no" => "Oversatt"}} />
+    </span>
+    <.video src="https://cdn.example/video.mp4" opts={[controls: true]} />
+  </article>
+  """,
+  svg: nil,
+  multi: false,
+  datasource: false,
+  sequence: 27,
+  deleted_at: nil,
+  table_template_id: nil,
+  parent_id: nil,
+  refs: [
+    %Brando.Content.Ref{
+      name: "body",
+      description: "Body",
+      uid: Brando.Utils.generate_uid(),
+      data: %Brando.Villain.Blocks.TextBlock{
+        type: "text",
+        data: %Brando.Villain.Blocks.TextBlock.Data{
+          text: "<p>HEEx body</p>",
+          type: :paragraph,
+          extensions: []
+        }
+      }
+    },
+    %Brando.Content.Ref{
+      name: "headless_title",
+      description: "Headless title",
+      uid: Brando.Utils.generate_uid(),
+      data: %Brando.Villain.Blocks.HeaderBlock{
+        type: "header",
+        data: %Brando.Villain.Blocks.HeaderBlock.Data{
+          text: "Headless title",
+          level: 3
+        }
+      }
+    }
+  ],
+  vars: [
+    %Brando.Content.Var{
+      type: :string,
+      label: "Headline",
+      key: "headline",
+      placement: :content,
+      value: "HEEx headline",
+      sequence: 0,
+      width: :full
+    },
+    %Brando.Content.Var{
+      type: :boolean,
+      label: "Show entry title",
+      key: "show_entry_title",
+      placement: :content,
+      value_boolean: true,
+      sequence: 1,
+      width: :half
+    }
+  ]
+}
+|> E2eProject.Repo.insert!()
+
 # ============================================================================
 # COPY/PASTE TEST MODULES
 # ============================================================================
@@ -974,8 +1062,7 @@ team_section =
   namespace: %{"en" => "06 COPY PASTE TEST", "no" => "06 COPY PASTE TEST"},
   help_text: %{"en" => "A single team member", "no" => "Enkelt teammedlem"},
   class: "team-member",
-  code:
-    "<div b-tpl=\"team-member\">\n  <h3>{{ member_name }}</h3>\n  <p>{{ member_role }}</p>\n</div>",
+  code: "<div b-tpl=\"team-member\">\n  <h3>{{ member_name }}</h3>\n  <p>{{ member_role }}</p>\n</div>",
   svg: nil,
   multi: false,
   datasource: false,

@@ -227,6 +227,7 @@ defmodule Brando.Villain do
     %{}
     |> create_context()
     |> add_to_context("identity", identity)
+    |> add_to_context("configs", Map.get(identity, :configs) || %{})
     |> add_to_context("links", identity)
     |> add_to_context("globals", globals)
     |> add_to_context("navigation", navigation)

@@ -12,6 +12,7 @@ defmodule Brando.Sites do
   alias Brando.Sites.Preview
   alias Brando.Sites.SEO
   alias Brando.Content.Blocks, as: ContentBlocks
+  alias Brando.Villain.RenderInvalidation
 
   @type id :: integer | binary
   @type params :: map
@@ -115,14 +116,10 @@ defmodule Brando.Sites do
   def update_villains_referencing_identity({:error, changeset}), do: {:error, changeset}
 
   def update_villains_referencing_identity({:ok, identity}) do
-    search_terms = [
-      identity: "{{ identity\.(.*?) }}",
-      configs: "{{ configs\.(.*?) }}",
-      links: "{{ links\.(.*?) }}",
-      links_for: "{% for (.*?) in links\.(.*?) %}",
-      configs_for: "{% for (.*?) in configs\.(.*?) %}",
-      identity_for: "{% for (.*?) in identity\.(.*?) %}"
-    ]
+    # Match the data source itself instead of a particular template tag shape.
+    # HEEx assigns, Liquid conditionals/aliases and bracket access all need to
+    # invalidate stored block and entry renders just as Liquid output tags do.
+    search_terms = RenderInvalidation.patterns([:identity, :configs, :links])
 
     # Check for instances in blocks (refs/vars)
     ContentBlocks.render_entries_matching_regex(search_terms)
@@ -333,7 +330,7 @@ defmodule Brando.Sites do
   def update_villains_referencing_global({:error, changeset}), do: {:error, changeset}
 
   def update_villains_referencing_global({:ok, global_set}) do
-    search_terms = [globals: "{{ globals\.(.*?) }}"]
+    search_terms = RenderInvalidation.patterns([:globals])
 
     # Check for instances in blocks (refs/vars)
     ContentBlocks.render_entries_matching_regex(search_terms)

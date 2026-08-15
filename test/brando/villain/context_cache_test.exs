@@ -30,6 +30,21 @@ defmodule Brando.Villain.ContextCacheTest do
     assert ContextCache.navigation() == %{"main" => %{}}
   end
 
+  test "the Villain context exposes identity configs to both template adapters" do
+    Cache.put(
+      :identity,
+      %{"en" => %{name: "Brando", configs: %{lockdown_enabled: true}, links: []}},
+      :infinite
+    )
+
+    Cache.put(:globals, %{"en" => %{}}, :infinite)
+    Cache.put(:navigation, %{}, :infinite)
+
+    context = Brando.Villain.get_base_context(%{language: "en"})
+
+    assert Liquex.Context.get(context, "configs") == %{lockdown_enabled: true}
+  end
+
   defp restore(key, nil), do: Cache.del(key)
   defp restore(key, value), do: Cache.put(key, value, :infinite)
 end

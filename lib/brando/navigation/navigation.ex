@@ -37,6 +37,7 @@ defmodule Brando.Navigation do
   alias Brando.Navigation.Item
   alias Brando.Navigation.Menu
   alias Brando.Content.Blocks, as: ContentBlocks
+  alias Brando.Villain.RenderInvalidation
 
   @type id :: binary | integer
   @type params :: map
@@ -172,10 +173,7 @@ defmodule Brando.Navigation do
   def update_villains_referencing_navigation({:error, changeset}), do: {:error, changeset}
 
   def update_villains_referencing_navigation({:ok, menu}) do
-    search_terms = [
-      navigation_vars: "{{ navigation\.(.*?) }}",
-      navigation_for_loops: "{% for (.*?) in navigation\.(.*?) %}"
-    ]
+    search_terms = RenderInvalidation.patterns([:navigation])
 
     # Check for instances in blocks (refs/vars)
     ContentBlocks.render_entries_matching_regex(search_terms)

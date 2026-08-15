@@ -856,6 +856,17 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   # update liquid splits for the block editor, and render the module for live preview
+  def update(%{event: "replace_entry", entry: entry}, socket) do
+    liquid_splits = socket.assigns.liquid_splits
+    updated_liquid_splits = update_liquid_splits_entry_variables(liquid_splits, entry)
+
+    socket
+    |> assign(:entry, entry)
+    |> assign(:liquid_splits, updated_liquid_splits)
+    |> render_module()
+    |> then(&{:ok, &1})
+  end
+
   def update(%{event: "update_entry_field", path: path, change: change}, socket) do
     liquid_splits = socket.assigns.liquid_splits
     entry = put_in(socket.assigns.entry, path, change)

@@ -312,6 +312,7 @@ defmodule Brando.Villain.Parser do
 
           {child_block, index} ->
             {:ok, child_module} = Content.find_module(modules, child_block.module_id)
+            child_adapter = adapter_for(child_module.type)
 
             vars = process_vars(child_block.vars)
             refs = process_refs(child_block.refs)
@@ -322,7 +323,7 @@ defmodule Brando.Villain.Parser do
               "count" => Enum.count(children)
             }
 
-            adapter.render_child_module(child_module, child_block, vars, refs, forloop, id, opts)
+            child_adapter.render_child_module(child_module, child_block, vars, refs, forloop, id, opts)
             |> maybe_annotate(child_block.uid, opts)
         end)
         |> Enum.intersperse("\n")
@@ -1283,9 +1284,10 @@ defmodule Brando.Villain.Parser do
   end
 
   # ...
-  defp process_vars(nil), do: %{}
-  defp process_vars(%Ecto.Association.NotLoaded{}), do: []
-  defp process_vars(vars), do: Map.new(vars, &process_var(&1))
+  @doc false
+  def process_vars(nil), do: %{}
+  def process_vars(%Ecto.Association.NotLoaded{}), do: %{}
+  def process_vars(vars), do: Map.new(vars, &process_var(&1))
 
   defp process_var(
          %Brando.Content.Var{
@@ -1367,9 +1369,11 @@ defmodule Brando.Villain.Parser do
 
   defp process_var(%{key: key, label: _, type: _, value: value}), do: {key, value}
 
-  defp process_refs(nil), do: %{}
+  @doc false
+  def process_refs(nil), do: %{}
+  def process_refs(%Ecto.Association.NotLoaded{}), do: %{}
 
-  defp process_refs(refs), do: Map.new(refs, &process_ref(&1))
+  def process_refs(refs), do: Map.new(refs, &process_ref(&1))
 
   defp process_ref(%{name: ref_name} = ref_block) do
     # Build the processed ref by combining data with referenced entities

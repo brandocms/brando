@@ -520,6 +520,17 @@ defmodule BrandoAdmin.Components.Form do
   # re-registering block replaces rather than duplicates its entry.
   def update(%{event: "register_block_wanting_entry", block_ref: block_ref} = msg, socket) do
     fields = Map.get(msg, :fields, :all)
+    {mod, id} = block_ref
+
+    # `entry_for_blocks` is deliberately not rebuilt on every main-form
+    # keystroke. Existing consumers receive the changed field through the
+    # targeted fan-out below, but a block mounted after that edit would
+    # otherwise start with the stale snapshot from the last structural render.
+    # Seed each newly registered consumer once from the current changeset;
+    # subsequent edits stay on the cheaper field-delta path.
+    current_entry = build_entry_for_blocks(socket.assigns.form.source, socket.assigns.block_map)
+    send_update(mod, id: id, event: "replace_entry", entry: current_entry)
+
     {:ok, update(socket, :blocks_wanting_entry, &Map.put(&1, block_ref, fields))}
   end
 

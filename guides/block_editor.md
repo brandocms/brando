@@ -53,7 +53,8 @@ guide.
 
 ## Modules, refs and vars
 
-A **module** (`Brando.Content.Module`) is a Liquid-ish template with:
+A **module** (`Brando.Content.Module`) can use either Liquex (`:liquid`) or
+HEEx (`:heex`) templates. In Liquex:
 
 - **refs** — named slots holding a block primitive (header, text, picture,
   file, video, gallery, map, …). Templates reference them as `{% ref refs.name %}`.
@@ -63,8 +64,47 @@ A **module** (`Brando.Content.Module`) is a Liquid-ish template with:
 - **multi modules** — a module whose template contains `{{ content }}`
   renders nested child blocks there (each an instance of a child module).
 
+The equivalent HEEx forms are:
+
+```heex
+<article data-language={@language}>
+  <h2>{@headline}</h2>
+  <.ref block={@block} ref={:body} />
+  <.content />
+</article>
+```
+
+Vars are top-level assigns such as `@headline`. Renderer-owned assigns include
+`@block`, `@refs`, `@entry`, `@identity`, `@configs`, `@links`, `@globals`,
+`@navigation`, `@language`, `@locale`, `@request`, `@url`, `@entries`,
+`@entries_with_meta`, `@content`, `@forloop` and `@render_context`. Var keys
+that collide with these names are rejected.
+
+Villain imports these HEEx components into module templates:
+
+- `<.ref block={@block} ref={:name} />` renders an editable ref. Add `headless`
+  and `:let={data}` to render the ref data yourself.
+- `<.picture src={...} opts={[...]} />` and `<.video src={...} opts={[...]} />`
+  render media.
+- `<.entry_link var={@link_var} />` renders a link var; it also accepts a
+  direct `href` or `entry` plus `field`.
+- `<.route ... />`, `<.route_i18n ... />`, `<.fragment ... />` and `<.t ... />`
+  provide the corresponding Villain helpers.
+- `<.content />` inserts rendered children in multi modules and containers.
+
+HEEx uses normal Elixir expressions, comprehensions and conditionals in place
+of Liquex filters and control-flow tags. Parent and child modules may use
+different template types, which supports gradual migration.
+
+> #### HEEx templates are trusted code {: .warning}
+>
+> HEEx module templates compile and execute as server-side Elixir; they are not
+> sandboxed like Liquex. Only trusted administrators should be allowed to edit
+> module or container templates.
+
 **Containers** (`Brando.Content.Container`) wrap root blocks in a palette-
-aware `<section>` wrapper (their template also uses `{{ content }}`).
+aware `<section>` wrapper (using `{{ content }}` in Liquex or `<.content />` in
+HEEx).
 **Fragments** embed another entry's blocks by reference.
 
 Modules are managed in the admin under Configuration → Modules; entries
