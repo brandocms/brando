@@ -7,14 +7,13 @@ defmodule Brando.Videos.ProviderConfigCheckTest do
   is rejected instead of killing the editor's LiveView — but it was still
   discovered by the first person to try uploading. This closes the timing half.
 
-  These assert `problems/0` directly rather than through the log, because
-  `config/test.exs` pins `config :logger, level: :error` and this suite has
-  twice been bitten by capture-based assertions that could not see what they
-  claimed to (recorded in the scratchpad under the gallery work and Phase 3).
+  Most tests assert `problems/0` directly. The `run/0` error-path test also
+  captures its expected report so it does not add noise to the unit-test output.
   """
   use ExUnit.Case, async: false
 
   import Brando.Test.Support, only: [put_test_env: 2]
+  import ExUnit.CaptureLog
 
   alias Brando.Videos.ProviderConfigCheck, as: Check
   alias Brando.Videos.Uploaders.Bunny
@@ -111,7 +110,8 @@ defmodule Brando.Videos.ProviderConfigCheckTest do
     test "returns :ok and does not raise when problems exist" do
       put_test_env(Mux, access_token_id: "id")
 
-      assert Check.run() == :ok
+      assert capture_log(fn -> assert Check.run() == :ok end) =~
+               "access_token_secret"
     end
 
     test "returns :ok on a clean configuration" do

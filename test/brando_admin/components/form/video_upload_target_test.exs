@@ -19,6 +19,8 @@ defmodule BrandoAdmin.Components.Form.VideoUploadTargetTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
+  import ExUnit.CaptureLog, only: [with_log: 1]
+
   alias BrandoAdmin.Components.Form
   alias Phoenix.Component
 
@@ -91,21 +93,25 @@ defmodule BrandoAdmin.Components.Form.VideoUploadTargetTest do
     |> Component.assign(:current_user, user)
   end
 
-  defp request_upload(socket, filename, mime_type) do
-    {:ok, socket} =
-      Form.update(
-        %{
-          action: :get_video_upload_url,
-          upload_request: %{
-            "request_ref" => "ref-1",
-            "filename" => filename,
-            "size" => 1_000,
-            "mime_type" => mime_type
-          }
-        },
-        socket
-      )
+  defp request_upload(socket, filename, mime_type, expected_log) do
+    {result, log} =
+      with_log(fn ->
+        Form.update(
+          %{
+            action: :get_video_upload_url,
+            upload_request: %{
+              "request_ref" => "ref-1",
+              "filename" => filename,
+              "size" => 1_000,
+              "mime_type" => mime_type
+            }
+          },
+          socket
+        )
+      end)
 
+    assert log =~ expected_log
+    assert {:ok, socket} = result
     socket
   end
 
@@ -129,7 +135,14 @@ defmodule BrandoAdmin.Components.Form.VideoUploadTargetTest do
         ctx.user
       )
 
-    error = socket |> request_upload("clip.mov", "video/quicktime") |> pushed_error()
+    error =
+      socket
+      |> request_upload(
+        "clip.mov",
+        "video/quicktime",
+        "Failed to get video upload URL: \"Rejected file type [video/quicktime]"
+      )
+      |> pushed_error()
 
     assert error.request_ref == "ref-1"
     assert error.error =~ "Rejected file type [video/quicktime]"
@@ -147,7 +160,14 @@ defmodule BrandoAdmin.Components.Form.VideoUploadTargetTest do
         ctx.user
       )
 
-    error = socket |> request_upload("promo.mov", "video/quicktime") |> pushed_error()
+    error =
+      socket
+      |> request_upload(
+        "promo.mov",
+        "video/quicktime",
+        "Failed to get video upload URL: \"Rejected file type [video/quicktime]"
+      )
+      |> pushed_error()
 
     assert error.error =~ "Rejected file type [video/quicktime]"
   end
@@ -162,7 +182,10 @@ defmodule BrandoAdmin.Components.Form.VideoUploadTargetTest do
         ctx.user
       )
 
-    error = socket |> request_upload("clip.mp4", "video/mp4") |> pushed_error()
+    error =
+      socket
+      |> request_upload("clip.mp4", "video/mp4", "Failed to build video config target for nil")
+      |> pushed_error()
 
     assert error.error == "Invalid video upload target"
     assert error.filename == "clip.mp4"
@@ -191,7 +214,10 @@ defmodule BrandoAdmin.Components.Form.VideoUploadTargetTest do
         ctx.user
       )
 
-    error = socket |> request_upload("clip.mp4", "video/mp4") |> pushed_error()
+    error =
+      socket
+      |> request_upload("clip.mp4", "video/mp4", "Failed to get video upload URL: :provider_not_configured")
+      |> pushed_error()
 
     # got past intake — so the nested schema's :mux strategy was the one resolved
     refute error.error =~ "Rejected file type"

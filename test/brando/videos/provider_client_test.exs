@@ -121,7 +121,11 @@ defmodule Brando.Videos.ProviderClientTest do
         end
       )
 
-      assert {:error, _} = Mux.initiate_upload("clip.mp4", Factory.insert(:random_user))
+      assert capture_log(fn ->
+               assert {:error, _} =
+                        Mux.initiate_upload("clip.mp4", Factory.insert(:random_user))
+             end) =~ "Mux API request failed: 422"
+
       assert Brando.Repo.all(Brando.Videos.Video) == []
     end
   end

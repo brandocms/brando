@@ -60,7 +60,7 @@ defmodule Brando.Assets.Vite do
         |> File.read!()
         |> Jason.decode!()
       else
-        if Application.get_env(:brando, :ssg_run) != :css do
+        if Brando.env() != :test and Application.get_env(:brando, :ssg_run) != :css do
           Logger.error("(!) Could not find vite manifest at #{inspect(outer)}.")
         end
 

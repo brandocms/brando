@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
   use ExUnit.Case, async: false
 
   import Ecto.Changeset, only: [cast: 3, add_error: 3, add_error: 4]
+  import ExUnit.CaptureLog, only: [with_log: 1]
   import Phoenix.Component, only: [to_form: 2]
   import Phoenix.LiveViewTest, only: [render_component: 2]
 
@@ -68,16 +69,19 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
     end
 
     test "interpolates a group constraint's fields as their form labels" do
-      html =
-        error_tag(
-          submitted_form([
-            {:meta_image_id, "requires one of: %{fields}",
-             [validation: :one_of, one_of: [:meta_image, :title], fields: "meta_image, title"]}
-          ])
-        )
+      {html, log} =
+        with_log(fn ->
+          error_tag(
+            submitted_form([
+              {:meta_image_id, "requires one of: %{fields}",
+               [validation: :one_of, one_of: [:meta_image, :title], fields: "meta_image, title"]}
+            ])
+          )
+        end)
 
       # The atoms in `fields` are the fallback; the form knows the blueprint and
       # replaces them with the labels the editor sees on those inputs.
+      assert log =~ "Could not get field :meta_image from form :default"
       assert html =~ "requires one of:"
       refute html =~ "meta_image, title"
     end
@@ -128,12 +132,15 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
     end
 
     test "collapses a one_of set into a single entry" do
-      {items, consumed} =
-        grouped([
-          {:meta_image_id, "requires one of: %{fields}", [validation: :one_of, one_of: [:meta_image, :title]]},
-          {:title, "requires one of: %{fields}", [validation: :one_of, one_of: [:meta_image, :title]]}
-        ])
+      {{items, consumed}, log} =
+        with_log(fn ->
+          grouped([
+            {:meta_image_id, "requires one of: %{fields}", [validation: :one_of, one_of: [:meta_image, :title]]},
+            {:title, "requires one of: %{fields}", [validation: :one_of, one_of: [:meta_image, :title]]}
+          ])
+        end)
 
+      assert log =~ "Could not get field :meta_image from form :default"
       assert length(items) == 1
       assert hd(items) =~ ~r/ or /
 
@@ -144,12 +151,15 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
     end
 
     test "collapses exactly_one_of the same way" do
-      {items, _consumed} =
-        grouped([
-          {:meta_image_id, "requires exactly one of: %{fields}",
-           [validation: :exactly_one_of, exactly_one_of: [:meta_image, :title]]}
-        ])
+      {{items, _consumed}, log} =
+        with_log(fn ->
+          grouped([
+            {:meta_image_id, "requires exactly one of: %{fields}",
+             [validation: :exactly_one_of, exactly_one_of: [:meta_image, :title]]}
+          ])
+        end)
 
+      assert log =~ "Could not get field :meta_image from form :default"
       assert length(items) == 1
     end
 
@@ -158,13 +168,16 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
     end
 
     test "does not repeat a set that several fields report" do
-      {items, _consumed} =
-        grouped([
-          {:meta_image_id, "m", [one_of: [:meta_image, :title]]},
-          {:title, "m", [one_of: [:meta_image, :title]]},
-          {:meta_image, "m", [one_of: [:meta_image, :title]]}
-        ])
+      {{items, _consumed}, log} =
+        with_log(fn ->
+          grouped([
+            {:meta_image_id, "m", [one_of: [:meta_image, :title]]},
+            {:title, "m", [one_of: [:meta_image, :title]]},
+            {:meta_image, "m", [one_of: [:meta_image, :title]]}
+          ])
+        end)
 
+      assert log =~ "Could not get field :meta_image from form :default"
       assert length(items) == 1
     end
   end
