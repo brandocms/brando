@@ -277,6 +277,9 @@ defmodule Brando.Query.Runtime do
     end)
   end
 
+  @doc false
+  defdelegate with_include(query, includes), to: Brando.Query.Include
+
   def with_join(query, joins) do
     Enum.reduce(joins, query, fn
       join, query ->
@@ -296,47 +299,63 @@ defmodule Brando.Query.Runtime do
   defdelegate try_cache(query_key, cache_opts), to: Cache.Query
 
   def run_list_query_reducer(context, args, initial_query, module) do
-    args
-    |> prepare_args(module)
-    |> Enum.reduce(initial_query, fn
-      {_, nil}, q -> q
-      {:select, select}, q -> with_select(q, select)
-      {:order, order}, q -> with_order(q, order)
-      {:offset, offset}, q -> offset(q, ^offset)
-      {:limit, 0}, q -> exclude(q, :limit)
-      {:limit, limit}, q -> limit(q, ^limit)
-      {:status, status}, q -> with_status(q, to_string(status))
-      {:join, join}, q -> with_join(q, join)
-      {:preload, preload}, q -> with_preload(q, preload)
-      {:language, language}, q -> with_language(q, language)
-      {:exclude_language, language}, q -> with_exclude_language(q, language)
-      {:filter, filter}, q -> context.with_filter(q, module, filter)
-      {:paginate, true}, q -> q
-      {:with_deleted, true}, q -> q
-      {:with_deleted, false}, q -> from query in q, where: is_nil(query.deleted_at)
-      {:with_deleted, :only}, q -> from query in q, where: not is_nil(query.deleted_at)
-    end)
+    prepared_args = prepare_args(args, module)
+    includes = Map.get(prepared_args, :include)
+
+    query =
+      prepared_args
+      |> Map.delete(:include)
+      |> Enum.reduce(initial_query, fn
+        {_, nil}, q -> q
+        {:select, select}, q -> with_select(q, select)
+        {:order, order}, q -> with_order(q, order)
+        {:offset, offset}, q -> offset(q, ^offset)
+        {:limit, 0}, q -> exclude(q, :limit)
+        {:limit, limit}, q -> limit(q, ^limit)
+        {:status, status}, q -> with_status(q, to_string(status))
+        {:join, join}, q -> with_join(q, join)
+        {:preload, preload}, q -> with_preload(q, preload)
+        {:language, language}, q -> with_language(q, language)
+        {:exclude_language, language}, q -> with_exclude_language(q, language)
+        {:filter, filter}, q -> context.with_filter(q, module, filter)
+        {:paginate, true}, q -> q
+        {:with_deleted, true}, q -> q
+        {:with_deleted, false}, q -> from query in q, where: is_nil(query.deleted_at)
+        {:with_deleted, :only}, q -> from query in q, where: not is_nil(query.deleted_at)
+      end)
+
+    maybe_with_include(query, includes)
   end
 
   def run_single_query_reducer(context, args, module) do
-    args
-    |> prepare_args(module)
-    |> Enum.reduce(module, fn
-      {_, nil}, q -> q
-      {:select, select}, q -> with_select(q, select)
-      {:limit, limit}, q -> limit(q, ^limit)
-      {:status, status}, q -> with_status(q, status)
-      {:preload, preload}, q -> with_preload(q, preload)
-      {:matches, match}, q -> context.with_match(q, module, match)
-      {:revision, revision}, _ -> get_revision(module, args, revision)
-      {:language, language}, q -> with_language(q, language)
-      {:exclude_language, language}, q -> with_exclude_language(q, language)
-      {:force_villain, _}, q -> q
-      {:with_deleted, true}, q -> q
-      {:with_deleted, false}, q -> from query in q, where: is_nil(query.deleted_at)
-      {:with_deleted, :only}, q -> from query in q, where: not is_nil(query.deleted_at)
-    end)
+    prepared_args = prepare_args(args, module)
+    includes = Map.get(prepared_args, :include)
+
+    query =
+      prepared_args
+      |> Map.delete(:include)
+      |> Enum.reduce(module, fn
+        {_, nil}, q -> q
+        {:select, select}, q -> with_select(q, select)
+        {:limit, limit}, q -> limit(q, ^limit)
+        {:status, status}, q -> with_status(q, status)
+        {:preload, preload}, q -> with_preload(q, preload)
+        {:matches, match}, q -> context.with_match(q, module, match)
+        {:revision, revision}, _ -> get_revision(module, args, revision)
+        {:language, language}, q -> with_language(q, language)
+        {:exclude_language, language}, q -> with_exclude_language(q, language)
+        {:force_villain, _}, q -> q
+        {:with_deleted, true}, q -> q
+        {:with_deleted, false}, q -> from query in q, where: is_nil(query.deleted_at)
+        {:with_deleted, :only}, q -> from query in q, where: not is_nil(query.deleted_at)
+      end)
+
+    maybe_with_include(query, includes)
   end
+
+  defp maybe_with_include(query, nil), do: query
+  defp maybe_with_include({status, _result} = result, _includes) when status in [:ok, :error], do: result
+  defp maybe_with_include(query, includes), do: with_include(query, includes)
 
   defp prepare_args(%{revision: _} = args, _) do
     args
@@ -567,11 +586,12 @@ defmodule Brando.Query.Runtime do
     case try_cache(query_key, cache_args) do
       {:miss, cache_key, ttl} ->
         args_without_cache = Map.delete(args, :cache)
+        includes = Map.get(args_without_cache, :include)
 
         reduced_query =
           run_single_query_reducer(
             context,
-            args_without_cache,
+            Map.delete(args_without_cache, :include),
             module
           )
 
@@ -586,6 +606,7 @@ defmodule Brando.Query.Runtime do
           query ->
             query
             |> block.()
+            |> with_include(includes)
             |> limit(1)
             |> Repo.one()
             |> case do
@@ -603,11 +624,12 @@ defmodule Brando.Query.Runtime do
 
       :no_cache ->
         args_without_cache = Map.delete(args, :cache)
+        includes = Map.get(args_without_cache, :include)
 
         reduced_query =
           run_single_query_reducer(
             context,
-            args_without_cache,
+            Map.delete(args_without_cache, :include),
             module
           )
 
@@ -621,6 +643,7 @@ defmodule Brando.Query.Runtime do
           query ->
             query
             |> block.()
+            |> with_include(includes)
             |> limit(1)
             |> Repo.one()
             |> case do

@@ -29,6 +29,7 @@ defmodule Brando.CompilerAPIContractTest do
     update: 1,
     update: 2,
     with_exclude_language: 2,
+    with_include: 2,
     with_join: 2,
     with_language: 2,
     with_order: 2,

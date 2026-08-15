@@ -9,6 +9,37 @@ defmodule Brando.Query do
   The compiler and runtime engine are split internally to keep context
   compilation isolated. Callers should not depend on those implementation
   modules directly.
+
+  ## Include
+
+  `:include` provides a recursive, association-aware alternative to the lower-level
+  `:preload` API. Association modules are inferred from the parent schema, and each
+  include node can select fields, order its query, nest more includes, or start from
+  a custom Ecto query.
+
+      user_summary = [select: [:id, :username]]
+
+      Comments.list_comments(%{
+        select: {:struct, [:id, :parent_id, :user_id, :inserted_at]},
+        include: [
+          user: user_summary,
+          children: [
+            select: [:id, :parent_id, :user_id, :inserted_at],
+            order: [desc: :inserted_at],
+            include: [user: user_summary]
+          ]
+        ]
+      })
+
+  Partial selections must contain the parent-side association key needed to load
+  each include. For example, a `:children` include needs the parent's `:id`, while
+  a `:user` include needs its `:user_id`. Missing keys produce an `ArgumentError`
+  when the query is built.
+
+  `:preload` remains available unchanged for existing callers and as a low-level
+  escape hatch. A custom query can also be supplied explicitly inside an include:
+
+      include: [children: [query: comments_query, include: [:user]]]
   """
 
   alias Brando.Query.Compiler
@@ -62,6 +93,9 @@ defmodule Brando.Query do
 
   @doc "Applies preload specifications to a query."
   def with_preload(query, preloads), do: runtime(:with_preload, [query, preloads])
+
+  @doc "Applies recursive, association-aware include specifications to a query."
+  def with_include(query, includes), do: runtime(:with_include, [query, includes])
 
   @doc "Applies association joins to a query."
   def with_join(query, joins), do: runtime(:with_join, [query, joins])

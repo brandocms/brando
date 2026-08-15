@@ -173,9 +173,12 @@ defmodule Brando.Query.Compiler do
       end
 
       def unquote(:"get_#{singular_schema}!")(args) when is_map(args) do
+        includes = Map.get(args, :include)
+
         __MODULE__
-        |> Brando.Query.run_single_query_reducer(args, unquote(module))
+        |> Brando.Query.run_single_query_reducer(Map.delete(args, :include), unquote(module))
         |> unquote(block).()
+        |> Brando.Query.with_include(includes)
         |> limit(1)
         |> Brando.Repo.one!()
       end
