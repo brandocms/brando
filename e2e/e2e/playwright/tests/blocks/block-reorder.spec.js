@@ -138,4 +138,58 @@ test.describe('Block reordering (root blocks)', () => {
     await syncLV(page)
     await expectHeaderOrder(page, ['Alpha', 'Beta', 'Gamma'])
   })
+
+  test('drag-reordering multi-block entries persists after save', async ({ page }) => {
+    await page.goto('/admin/pages')
+    await page.getByRole('link', { name: 'Create page' }).click()
+    await syncLV(page)
+    await page.getByLabel('Title', { exact: true }).fill('Multi Entry Reorder Test')
+    await page.getByLabel('URI').fill('multi-entry-reorder-test')
+
+    await page.getByRole('button', { name: 'Add block' }).click()
+    await page.getByRole('button', { name: 'COPY PASTE TEST' }).click()
+    await page.getByRole('button', { name: 'Team Section' }).click()
+    await syncLV(page)
+
+    const multiBlock = page.locator('[data-module-multi="true"]')
+    const childEntries = multiBlock.locator('.block-children > [data-uid]')
+
+    for (const [index, name] of ['Alice', 'Bob', 'Charlie'].entries()) {
+      await multiBlock.locator('.block-plus').last().click()
+      await page.getByRole('button', { name: 'COPY PASTE TEST' }).click()
+      await page.getByRole('button', { name: /^Team Member\b/ }).click()
+      await syncLV(page)
+      await expect(childEntries).toHaveCount(index + 1)
+
+      const nameInput = childEntries.nth(index).locator('.block-vars').getByLabel('Name')
+      await nameInput.fill(name)
+      await nameInput.blur()
+      await syncLV(page)
+    }
+
+    const expectMemberOrder = async (names) => {
+      for (let index = 0; index < names.length; index++) {
+        await expect(childEntries.nth(index).locator('.block-vars').getByLabel('Name')).toHaveValue(
+          names[index]
+        )
+      }
+    }
+
+    await expectMemberOrder(['Alice', 'Bob', 'Charlie'])
+    await dragBlock(
+      page,
+      childEntries.nth(2).locator('.sort-handle').first(),
+      childEntries.nth(0),
+      'top'
+    )
+    await expectMemberOrder(['Charlie', 'Alice', 'Bob'])
+
+    await page.getByRole('button', { name: 'Save' }).click()
+    await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })
+    await syncLV(page)
+
+    await page.getByRole('link', { name: 'Multi Entry Reorder Test →' }).click()
+    await syncLV(page)
+    await expectMemberOrder(['Charlie', 'Alice', 'Bob'])
+  })
 })

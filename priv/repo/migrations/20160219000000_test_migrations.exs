@@ -251,6 +251,19 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
 
     create index(:content_modules, [:namespace])
 
+    create table(:content_module_sets) do
+      add :title, :text
+      add :creator_id, references(:users, on_delete: :nothing)
+      timestamps()
+    end
+
+    create table(:content_module_set_modules) do
+      add :module_id, references(:content_modules, on_delete: :delete_all)
+      add :module_set_id, references(:content_module_sets, on_delete: :delete_all)
+      add :sequence, :integer
+      timestamps()
+    end
+
     create table(:content_palettes) do
       add :name, :text
       add :key, :text

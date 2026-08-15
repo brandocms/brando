@@ -48,6 +48,7 @@ defmodule Brando.Plug.E2ETest do
     with {:ok, schema_binary} <- Map.fetch(conn.body_params, "schema"),
          {:ok, attrs} <- Map.fetch(conn.body_params, "attributes"),
          creator_id = Map.get(conn.body_params, "creator_id"),
+         oban_testing = Map.get(conn.body_params, "oban_testing"),
          {:ok, fields} <- Map.fetch(conn.body_params, "fields") do
       schema = Module.concat([schema_binary])
       context = schema.__modules__().context
@@ -65,7 +66,8 @@ defmodule Brando.Plug.E2ETest do
           :system
         end
 
-      {:ok, entry} = apply(context, :"create_#{singular}", [final_attrs, creator])
+      create_entry = fn -> apply(context, :"create_#{singular}", [final_attrs, creator]) end
+      {:ok, entry} = with_oban_testing(oban_testing, create_entry)
       partial_entry = Map.take(entry, atom_fields)
       send_resp(conn, 200, Jason.encode!(partial_entry))
     else
@@ -76,6 +78,9 @@ defmodule Brando.Plug.E2ETest do
   post "/db/default_language" do
     send_resp(conn, 200, Brando.config(:default_language))
   end
+
+  defp with_oban_testing("manual", fun), do: Oban.Testing.with_testing_mode(:manual, fun)
+  defp with_oban_testing(_, fun), do: fun.()
 
   match _, do: send_resp(conn, 404, "not found")
 end

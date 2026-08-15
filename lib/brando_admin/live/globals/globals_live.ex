@@ -10,6 +10,9 @@ defmodule BrandoAdmin.Globals.GlobalsLive do
     {:ok, assign(socket, :active_tab, nil)}
   end
 
+  def handle_event("focus", _, socket), do: {:noreply, socket}
+  def handle_event("blur", _, socket), do: {:noreply, socket}
+
   def render(assigns) do
     ~H"""
     <Content.header title={gettext("Globals")} subtitle={gettext("Overview")} />
