@@ -18,7 +18,10 @@ defmodule BrandoAdmin.Nav do
       |> assign(:current_url, url)
       |> put_locale()
       |> assign_tenant_options()
-      |> assign(:menu_sections, BrandoAdmin.Menu.get_menu(socket.assigns.current_user))
+      |> assign(
+        :menu_sections,
+        BrandoAdmin.Menu.get_menu(socket.assigns.current_user, socket.assigns[:current_site])
+      )
       |> then(&{:ok, &1})
     else
       socket

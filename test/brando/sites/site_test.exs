@@ -48,4 +48,31 @@ defmodule Brando.Sites.SiteTest do
       assert changeset.errors[:languages]
     end
   end
+
+  test "validates static deployment targets and optional notification URLs" do
+    missing_target = Site.changeset(%{@valid_attrs | deploy_config: %{strategy: :s3}})
+    refute missing_target.valid?
+
+    invalid_webhook =
+      Site.changeset(%{
+        @valid_attrs
+        | deploy_config: %{
+            strategy: :s3,
+            target: "s3://acme-site",
+            webhook_url: "javascript:alert(1)"
+          }
+      })
+
+    refute invalid_webhook.valid?
+
+    assert Site.changeset(%{
+             @valid_attrs
+             | deploy_config: %{
+                 strategy: :s3,
+                 target: "s3://acme-site/static",
+                 webhook_url: "https://hooks.example.test/published",
+                 retention_count: 25
+               }
+           }).valid?
+  end
 end

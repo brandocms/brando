@@ -45,6 +45,7 @@ defmodule Mix.Tasks.Brando.GenerateTest do
     assert_file("lib/brando_web/villain/parser.ex")
     assert File.dir?("priv/repo/tenant_migrations")
     assert_file("priv/repo/migrations/20260816002300_brando_163_add_shared_content_library.exs")
+    assert_file("priv/repo/migrations/20260816002400_brando_164_add_ssg_builds.exs")
     assert_file("priv/repo/tenant_migrations/20260816002300_add_shared_content_library.exs")
 
     assert_file("config/runtime.exs", fn file ->

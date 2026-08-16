@@ -721,10 +721,7 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
   defp error_message({:error, reason}), do: error_message(reason)
 
   defp error_message(%Ecto.Changeset{} = changeset) do
-    changeset
-    |> Ecto.Changeset.traverse_errors(fn {message, _opts} -> message end)
-    |> Enum.flat_map(fn {field, messages} -> Enum.map(messages, &"#{field} #{&1}") end)
-    |> Enum.join(", ")
+    BrandoAdmin.Utils.format_changeset_errors(changeset)
   end
 
   defp error_message({:shared_item_in_use, usages}) do

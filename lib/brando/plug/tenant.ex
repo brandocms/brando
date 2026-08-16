@@ -11,6 +11,7 @@ defmodule Brando.Plug.Tenant do
 
   import Plug.Conn, only: [assign: 3, halt: 1, send_resp: 3]
 
+  alias Brando.SSG.Context
   alias Brando.Tenant
   alias Brando.Tenant.Frontend
 
@@ -21,7 +22,7 @@ defmodule Brando.Plug.Tenant do
 
   @impl Plug
   def call(conn, _opts) do
-    case Frontend.resolve(conn.host) do
+    case resolve(conn) do
       {site, environment} ->
         prefix = Tenant.prefix(site, environment)
         Tenant.put_prefix(prefix)
@@ -35,6 +36,14 @@ defmodule Brando.Plug.Tenant do
         Tenant.put_prefix(nil)
         reject_missing_multi_site(conn)
     end
+  end
+
+  defp resolve(conn) do
+    conn
+    |> Plug.Conn.get_req_header(Context.header())
+    |> List.first()
+    |> Context.resolve()
+    |> Kernel.||(Frontend.resolve(conn.host))
   end
 
   defp reject_missing_multi_site(conn) do

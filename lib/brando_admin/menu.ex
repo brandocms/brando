@@ -15,6 +15,8 @@ defmodule BrandoAdmin.Menu do
 
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Tenant
+
   defmacro __using__(_) do
     quote do
       import BrandoAdmin.Menu
@@ -243,7 +245,7 @@ defmodule BrandoAdmin.Menu do
     end
   end
 
-  def get_menu(current_user \\ nil) do
+  def get_menu(current_user \\ nil, current_site \\ nil) do
     content_menus = Brando.admin_module(Menus).__menus__()
 
     [
@@ -255,11 +257,7 @@ defmodule BrandoAdmin.Menu do
               name: gettext("Dashboard"),
               url: "/admin"
             },
-            Brando.Tenant.mode() == :multi && current_user && current_user.role == :superuser &&
-              %{
-                name: gettext("Sites"),
-                url: "/admin/sites"
-              },
+            sites_menu_item(current_user),
             %{
               name: gettext("Configuration"),
               url: nil,
@@ -285,16 +283,9 @@ defmodule BrandoAdmin.Menu do
                     name: gettext("Scheduled publishing"),
                     url: "/admin/config/scheduled_publishing"
                   },
-                  Brando.Tenant.enabled?() &&
-                    %{
-                      name: gettext("Environments"),
-                      url: "/admin/config/environments"
-                    },
-                  current_user && current_user.role == :superuser &&
-                    %{
-                      name: gettext("Frontend assets"),
-                      url: "/admin/config/assets"
-                    },
+                  environments_menu_item(),
+                  publishing_menu_item(current_site),
+                  frontend_assets_menu_item(current_user),
                   %{
                     name: gettext("Cache"),
                     url: "/admin/config/cache"
@@ -307,15 +298,7 @@ defmodule BrandoAdmin.Menu do
                     name: gettext("Block modules"),
                     url: "/admin/config/content/modules"
                   },
-                  Brando.Tenant.mode() == :multi && current_user &&
-                    %{
-                      name:
-                        if(current_user.role == :superuser,
-                          do: gettext("Shared content library"),
-                          else: gettext("Site content library")
-                        ),
-                      url: "/admin/config/content/shared_library"
-                    },
+                  shared_library_menu_item(current_user),
                   %{
                     name: gettext("Block module sets"),
                     url: "/admin/config/content/module_sets"
@@ -384,4 +367,35 @@ defmodule BrandoAdmin.Menu do
       }
     ]
   end
+
+  defp publishing_menu_item(%{delivery_mode: :static}) do
+    %{name: gettext("Publishing"), url: "/admin/config/publishing"}
+  end
+
+  defp publishing_menu_item(_site), do: nil
+
+  defp sites_menu_item(%{role: :superuser}) do
+    if Tenant.mode() == :multi, do: %{name: gettext("Sites"), url: "/admin/sites"}
+  end
+
+  defp sites_menu_item(_user), do: nil
+
+  defp environments_menu_item do
+    if Tenant.enabled?(), do: %{name: gettext("Environments"), url: "/admin/config/environments"}
+  end
+
+  defp frontend_assets_menu_item(%{role: :superuser}) do
+    %{name: gettext("Frontend assets"), url: "/admin/config/assets"}
+  end
+
+  defp frontend_assets_menu_item(_user), do: nil
+
+  defp shared_library_menu_item(%{role: role}) do
+    if Tenant.mode() == :multi do
+      name = if role == :superuser, do: gettext("Shared content library"), else: gettext("Site content library")
+      %{name: name, url: "/admin/config/content/shared_library"}
+    end
+  end
+
+  defp shared_library_menu_item(_user), do: nil
 end

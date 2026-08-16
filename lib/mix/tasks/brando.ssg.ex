@@ -1,25 +1,50 @@
 defmodule Mix.Tasks.Brando.Ssg do
-  @shortdoc "Static site generation"
+  @shortdoc "Build a static site interactively"
 
   @moduledoc """
-  Static site generation
+  Builds a static snapshot through the same callable API used by the publishing
+  worker.
 
       mix brando.ssg
       mix brando.ssg --force
-      mix brando.ssg --site acme --force
+      mix brando.ssg --site acme --environment staging --output ./ssg
+      mix brando.ssg --site acme --dry-run
 
   Options:
 
-    * `--force` - Skip all prompts and run all steps
-    * `--site` - Site key to export in multi-site mode
+    * `--force` - skip confirmation prompts
+    * `--site` - site key in multi-site mode
+    * `--environment` - environment key (defaults to the live environment)
+    * `--output` - output directory (defaults to the application's SSG path)
+    * `--dry-run` - resolve URLs without requesting or writing files
+    * `--no-compile-assets` - use existing release assets without running Vite
 
+  The task remains compatible with non-tenant applications. Tenant builds may
+  target any named environment, whether or not it has a public domain.
   """
+
   use Mix.Task
 
-  @default_host "http://localhost:4000"
+  alias Brando.Assets.SiteAssets
+  alias Brando.Environments.Environment
+  alias Brando.Sites.Site
+  alias Brando.SSG
+  alias Brando.Tenant
+  alias Brando.Tenant.Cache
+  alias Brando.Tenant.Registry
+
+  @switches [
+    force: :boolean,
+    site: :string,
+    environment: :string,
+    output: :string,
+    dry_run: :boolean,
+    compile_assets: :boolean
+  ]
+
+  @impl Mix.Task
   def run(args) do
-    {opts, _} = OptionParser.parse!(args, strict: [force: :boolean, site: :string])
-    force? = Keyword.get(opts, :force, false)
+    {opts, _argv} = OptionParser.parse!(args, strict: @switches)
     Application.put_env(:phoenix, :serve_endpoints, true)
     Application.put_env(:logger, :level, :error)
 
@@ -31,119 +56,100 @@ defmodule Mix.Tasks.Brando.Ssg do
     """)
 
     Mix.Tasks.Run.run([])
-    :inets.start()
-    site = select_tenant!(opts[:site])
 
-    ssg_path = Brando.SSG.get_root_path()
-    File.mkdir_p!(ssg_path)
-    {:ok, ssg_urls} = Brando.SSG.get_urls()
+    {site, environment} = select_context!(opts)
+    output_path = opts[:output] |> Kernel.||(SSG.get_root_path()) |> Path.expand()
 
-    Application.put_env(:brando, :ssg_run, :css)
-    Application.put_env(Brando.config(:otp_app), :hmr, false)
-    Application.put_env(Brando.config(:otp_app), :show_breakpoint_debug, false)
+    asset_set =
+      if site && Tenant.mode() == :multi,
+        do: SiteAssets.active_set(site),
+        else: SiteAssets.active_set()
 
-    uploaded_assets_path = Brando.Assets.SiteAssets.current_root()
+    dry_run? = Keyword.get(opts, :dry_run, false)
 
-    if force? or Mix.shell().yes?("\nGenerate static files?") do
-      copy_or_build_assets(uploaded_assets_path, ssg_path)
+    show_plan(site, environment, asset_set, output_path, dry_run?)
+
+    if Keyword.get(opts, :force, false) or Mix.shell().yes?("\nGenerate this static snapshot?") do
+      maybe_compile_assets(asset_set, opts, dry_run?)
+      result = run_build(site, environment, asset_set, output_path, dry_run?)
+      report_result!(result)
+    else
+      Mix.shell().info("Static generation cancelled.")
     end
-
-    if force? or Mix.shell().yes?("\nGenerate HTML?") do
-      Application.put_env(:brando, :ssg_run, :html)
-
-      for url <- ssg_urls do
-        # we just need to access the url to generate html
-        full_url = Path.join([@default_host, url])
-        :httpc.request(String.to_charlist(full_url))
-      end
-    end
-
-    Application.put_env(:brando, :ssg_run, :media)
-
-    if force? or Mix.shell().yes?("\nCopy media directory?") do
-      media_path = media_path(site)
-      File.cp_r!(media_path, Path.join([ssg_path, "media"]))
-    end
-
-    Application.put_env(:brando, :ssg_run, :normal)
   end
 
-  defp copy_or_build_assets(nil, ssg_path) do
-    static_path = Path.join([File.cwd!(), "priv", "static"])
-
-    IO.write([
-      IO.ANSI.blue(),
-      "* ",
-      IO.ANSI.reset(),
-      "Deleting static files... "
-    ])
-
-    File.rm_rf!(static_path)
-    IO.write([IO.ANSI.green(), "done!\n", IO.ANSI.reset()])
-    # generate static files
-    assets_path = Path.join([File.cwd!(), "assets", "frontend"])
-    vite_path = Path.join([File.cwd!(), "assets", "frontend", "node_modules", ".bin", "vite"])
-
-    IO.write([
-      IO.ANSI.blue(),
-      "* ",
-      IO.ANSI.reset(),
-      "Building static files... "
-    ])
-
-    System.cmd(vite_path, ["build"], cd: assets_path)
-    IO.write([IO.ANSI.green(), "done!\n", IO.ANSI.reset()])
-
-    IO.write([
-      IO.ANSI.blue(),
-      "* ",
-      IO.ANSI.reset(),
-      "Copying static files... "
-    ])
-
-    File.cp_r!(static_path, ssg_path)
-    IO.write([IO.ANSI.green(), "done!\n", IO.ANSI.reset()])
-  end
-
-  defp copy_or_build_assets(uploaded_assets_path, ssg_path) do
-    IO.write([
-      IO.ANSI.blue(),
-      "* ",
-      IO.ANSI.reset(),
-      "Copying active uploaded asset set... "
-    ])
-
-    File.cp_r!(uploaded_assets_path, ssg_path)
-    IO.write([IO.ANSI.green(), "done!\n", IO.ANSI.reset()])
-  end
-
-  defp select_tenant!(requested_site_key) do
-    case Brando.Tenant.mode() do
+  defp select_context!(opts) do
+    case Tenant.mode() do
       :none ->
-        nil
+        {nil, nil}
 
       mode when mode in [:single, :multi] ->
         site_key =
           if mode == :single,
             do: Brando.config(:site_key),
-            else: requested_site_key || Mix.raise("--site is required in multi-site mode")
+            else: opts[:site] || Mix.raise("--site is required in multi-site mode")
 
-        with %Brando.Sites.Site{} = site <- Brando.Tenant.Registry.get_site_by_key(site_key),
-             %Brando.Environments.Environment{} = environment <-
-               Brando.Tenant.Cache.get_live_env(site.key) do
-          Brando.Tenant.put_prefix(Brando.Tenant.prefix(site, environment))
-          site
+        with %Site{} = site <- Registry.get_site_by_key(site_key),
+             %Environment{} = environment <- select_environment(site, opts[:environment]) do
+          {site, environment}
         else
-          _ -> Mix.raise("Could not resolve an active site and live environment for #{inspect(site_key)}")
+          _ -> Mix.raise("Could not resolve site/environment for #{inspect(site_key)}")
         end
     end
   end
 
-  defp media_path(nil), do: Brando.config(:media_path)
+  defp select_environment(site, nil), do: Cache.get_live_env(site.key)
+  defp select_environment(site, key), do: Registry.get_environment_by_key(site, key)
 
-  defp media_path(site) do
-    if Brando.Tenant.mode() == :multi,
-      do: Brando.Tenant.Storage.media_root(site),
-      else: Brando.config(:media_path)
+  defp show_plan(site, environment, asset_set, output_path, dry_run?) do
+    Mix.shell().info("Mode: #{if dry_run?, do: "dry run", else: "build"}")
+    Mix.shell().info("Site: #{if site, do: site.name <> " (" <> site.key <> ")", else: "standalone"}")
+    Mix.shell().info("Environment: #{if environment, do: environment.name, else: "public"}")
+    Mix.shell().info("Assets: #{if asset_set, do: asset_set.name, else: "current release"}")
+    Mix.shell().info("Output: #{output_path}")
+  end
+
+  defp maybe_compile_assets(%{path: _uploaded_set}, _opts, _dry_run?), do: :ok
+  defp maybe_compile_assets(_asset_set, _opts, true), do: :ok
+
+  defp maybe_compile_assets(nil, opts, false) do
+    if Keyword.get(opts, :compile_assets, true) do
+      vite = Path.join([File.cwd!(), "assets", "frontend", "node_modules", ".bin", "vite"])
+      assets_path = Path.join([File.cwd!(), "assets", "frontend"])
+
+      unless File.regular?(vite) do
+        Mix.raise("Vite executable not found at #{vite}; pass --no-compile-assets to use existing priv/static")
+      end
+
+      Mix.shell().info("Building release frontend assets…")
+
+      case System.cmd(vite, ["build"], cd: assets_path, stderr_to_stdout: true) do
+        {_output, 0} -> :ok
+        {output, status} -> Mix.raise("Vite build failed (#{status}):\n#{output}")
+      end
+    end
+  end
+
+  defp run_build(nil, nil, asset_set, output_path, dry_run?) do
+    SSG.build(output_path: output_path, asset_set: asset_set, dry_run: dry_run?)
+  end
+
+  defp run_build(site, environment, asset_set, output_path, dry_run?) do
+    SSG.build(site, environment,
+      output_path: output_path,
+      asset_set: asset_set,
+      dry_run: dry_run?
+    )
+  end
+
+  defp report_result!({:ok, result}) do
+    Mix.shell().info(
+      "Generated #{result.url_count} URLs and #{result.file_count} files (#{result.total_size} bytes) in #{result.output_path}"
+    )
+  end
+
+  defp report_result!({:error, reason, result}) do
+    Enum.each(result.failed_urls, &Mix.shell().error("Failed: #{&1}"))
+    Mix.raise("Static generation failed: #{inspect(reason)}")
   end
 end

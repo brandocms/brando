@@ -380,10 +380,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
     do: gettext("This site must remain archived for %{days} days before permanent deletion.", days: days)
 
   defp lifecycle_error(%Ecto.Changeset{} = changeset) do
-    changeset
-    |> Ecto.Changeset.traverse_errors(fn {message, _opts} -> message end)
-    |> Enum.flat_map(fn {field, messages} -> Enum.map(messages, &"#{field} #{&1}") end)
-    |> Enum.join(", ")
+    BrandoAdmin.Utils.format_changeset_errors(changeset)
   end
 
   defp lifecycle_error({:site_setup_failed, reason, _compensation}), do: lifecycle_error(reason)

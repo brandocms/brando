@@ -71,14 +71,18 @@ assets packaged in `priv/static`. Activating an asset set therefore changes
 frontend files without changing the site's content environment or requiring a
 full application release.
 
-For `:static`, the flag records that the site belongs to the SSG delivery
-workflow. The current tenancy phases provide the field and a tenant-aware
-manual `mix brando.ssg --site SITE_KEY` command. They do **not** yet enqueue,
-version, deploy, or route traffic to static builds automatically. Those build
-records, workers, deploy targets, previews, and rollbacks belong to the
-versioned SSG phase. Until that phase or an application-owned deploy pipeline
-is configured, selecting `:static` does not stop Phoenix from serving the
-site's domains and does not itself publish a build.
+For `:static`, Brando exposes **Publishing** under the selected site's admin
+configuration. Site administrators can build the live environment or any
+working environment, schedule a build, inspect progress and failed URLs,
+preview a completed artifact, deploy it, or roll back by redeploying an older
+artifact. Builds receive monotonic versions (`v1`, `v2`, …) per site and run on
+the serial `ssg_builds` Oban queue.
+
+Setting the flag still does not move public traffic by itself. The public host
+continues to reach Phoenix until its web server or CDN is pointed at the
+configured static target. This separation makes a first static build safe to
+preview before the infrastructure cutover and keeps changing delivery mode
+independent from changing content environments.
 
 An asset set and a delivery mode answer different questions:
 
@@ -87,7 +91,9 @@ An asset set and a delivery mode answer different questions:
 - the delivery mode states whether Phoenix responses or a deployed static
   snapshot are intended to be the public site.
 
-Choose `:dynamic` unless the site already has an SSG build-and-deploy pipeline.
+Choose `:dynamic` when editors should publish directly through Phoenix. Choose
+`:static` when publication should create a reviewable, immutable artifact and
+the public site can be served by rsync- or S3-backed static infrastructure.
 Changing the field later does not move traffic or activate an asset set; treat
 that change and the corresponding infrastructure cutover as separate
 operations.
@@ -576,9 +582,71 @@ clears the active cache and immediately restores `priv/static` fallback.
 Vite manifest and critical CSS resolution follow the same active-set-first,
 release-fallback order. In multi-site mode caches are keyed by the full tenant
 prefix, so Production, Staging, and another site cannot share rendered content
-or manifests. `mix brando.ssg --site acme` copies Acme's active uploaded set and
-media root when present; without an active set it retains the existing local
-Vite build flow.
+or manifests. Every queued static build snapshots the active asset-set record
+and deployment configuration at creation time. A later asset activation or
+target edit therefore affects new builds, never an artifact already being
+reviewed or deployed.
+
+## Build and publish static sites
+
+Declare public paths in your application's web SSG module:
+
+```elixir
+defmodule MyAppWeb.SSG do
+  import Brando.SSG
+
+  urls :pages do
+    ["/", "/about", "/contact"]
+  end
+
+  urls :projects do
+    MyApp.Projects.list_projects!(%{status: :published})
+    |> Enum.map(&MyApp.Projects.Project.__absolute_url__/1)
+  end
+end
+```
+
+URL callbacks execute under the selected environment's tenant prefix. The
+renderer sends a short-lived signed context header through the normal endpoint,
+so a working environment can be built without assigning it a temporary domain.
+Responses outside the 200 range are retained in the build's failed-URL list and
+make the build fail without hiding partial logs or counts.
+
+Open `/admin/config/publishing` while a static site is selected. The deployment
+form supports:
+
+- `rsync`, with a target such as `deploy@example.com:/srv/www`;
+- `s3`, with `s3://bucket` or `s3://bucket/prefix`;
+- an optional public CDN URL and completion webhook;
+- automatic deployment after successful builds; and
+- artifact retention from 1 through 100 builds (10 by default).
+
+Generated output is persistent at
+`sites/{site_key}/ssg/builds/{version}`. Old ready, archived, and failed artifact
+directories are pruned after the retention window, while their database history
+and logs remain. Preview tokens expire after seven days and stop working as soon
+as their artifact is pruned.
+
+The command-line task uses the same renderer and remains interactive by default:
+
+```bash
+# Standalone application
+mix brando.ssg
+
+# Any environment in a multi-site application
+mix brando.ssg --site acme --environment staging
+
+# Inspect the plan without requests or filesystem writes
+mix brando.ssg --site acme --environment production --dry-run
+
+# Non-interactive build to an explicit directory
+mix brando.ssg --site acme --force --output /tmp/acme-static
+```
+
+Without an uploaded asset set, the task builds the local frontend with Vite and
+copies `priv/static`. Pass `--no-compile-assets` to reuse the current release
+files. Background builds never compile source assets on the server: they copy
+the snapshotted uploaded set or the running release's `priv/static`.
 
 The storage roots can be made explicit; otherwise they are derived alongside
 the configured media directory:
@@ -591,9 +659,11 @@ config :brando,
 ```
 
 Back up `sites/` and `site_assets/` alongside `media/`. Florist remains
-responsible for clean builds, upload transport, retention pruning, and
-blue/green shared-directory symlinks; Brando owns registration, activation,
-serving, manifest selection, and the management UI.
+responsible for clean frontend builds and blue/green shared-directory symlinks;
+Brando owns asset registration/activation and the versioned static artifact
+lifecycle. If the application overrides `config :brando, Oban`, re-declare a
+serial `ssg_builds` queue because an application-level Oban configuration
+replaces, rather than merges with, Brando's defaults.
 
 ## Migrate an existing installation
 

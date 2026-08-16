@@ -55,4 +55,18 @@ defmodule BrandoAdmin.MenuTest do
              }
            ]
   end
+
+  test "publishing is only present for the selected static site" do
+    static_menu = BrandoAdmin.Menu.get_menu(nil, %Brando.Sites.Site{delivery_mode: :static})
+    dynamic_menu = BrandoAdmin.Menu.get_menu(nil, %Brando.Sites.Site{delivery_mode: :dynamic})
+
+    assert menu_urls(static_menu) =~ "/admin/config/publishing"
+    refute menu_urls(dynamic_menu) =~ "/admin/config/publishing"
+  end
+
+  defp menu_urls(menus) do
+    menus
+    |> Enum.flat_map(fn menu -> List.wrap(menu[:url]) ++ List.wrap(menu[:items] && menu_urls(menu.items)) end)
+    |> Enum.join(" ")
+  end
 end

@@ -68,6 +68,8 @@ defmodule Mix.Tasks.Brando.Install do
      "priv/repo/migrations/20260816002200_brando_162_add_site_asset_sets.exs"},
     {:eex, "../brando.upgrade/migrations/brando_163_add_shared_content_library.exs",
      "priv/repo/migrations/20260816002300_brando_163_add_shared_content_library.exs"},
+    {:eex, "../brando.upgrade/migrations/brando_164_add_ssg_builds.exs",
+     "priv/repo/migrations/20260816002400_brando_164_add_ssg_builds.exs"},
 
     # Etc. Various OS config files and log directory.
     {:keep, "log", "log"},

@@ -11,6 +11,7 @@ defmodule Brando.Tenant.PublicDataMigrator.Postgres do
     oban_jobs
     schema_migrations
     site_asset_sets
+    ssg_builds
     sites
     sites_previews
     uploads_pending_intents
