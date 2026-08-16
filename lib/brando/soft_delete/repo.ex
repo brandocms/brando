@@ -12,7 +12,8 @@ defmodule Brando.SoftDelete.Repo do
   @doc """
   Soft deletes all entries matching the given query.
   """
-  @callback soft_delete_all(queryable :: Ecto.Queryable.t()) :: {integer, nil | [term]}
+  @callback soft_delete_all(queryable :: Ecto.Queryable.t(), opts :: keyword()) ::
+              {integer, nil | [term]}
 
   @doc """
   Soft deletes a struct.
@@ -87,8 +88,8 @@ defmodule Brando.SoftDelete.Repo do
         end
       end
 
-      def soft_delete_all(queryable) do
-        update_all(queryable, set: [deleted_at: utc_now()])
+      def soft_delete_all(queryable, opts \\ []) do
+        update_all(queryable, [set: [deleted_at: utc_now()]], opts)
       end
 
       def soft_delete(%Ecto.Changeset{data: data} = changeset) do

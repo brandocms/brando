@@ -3,14 +3,17 @@ defmodule Brando.RepoTenantPrefixTest do
   use Brando.ConnCase
 
   import Ecto.Changeset, only: [change: 2]
+  import Ecto.Query, only: [from: 2]
 
   alias Brando.Tenant
+  alias Brando.Tenant.Registry
 
   defmodule Record do
     use Ecto.Schema
 
     schema "tenant_prefix_records" do
       field :name, :string
+      field :deleted_at, :utc_datetime
     end
   end
 
@@ -26,7 +29,7 @@ defmodule Brando.RepoTenantPrefixTest do
 
       Ecto.Adapters.SQL.query!(
         BrandoIntegration.Repo,
-        ~s|CREATE TABLE "#{prefix}".tenant_prefix_records (id serial PRIMARY KEY, name text)|
+        ~s|CREATE TABLE "#{prefix}".tenant_prefix_records (id serial PRIMARY KEY, name text, deleted_at timestamp)|
       )
     end
 
@@ -49,6 +52,11 @@ defmodule Brando.RepoTenantPrefixTest do
     |> Brando.Repo.update!()
 
     assert %Record{name: "Updated"} = Brando.Repo.get!(Record, record.id)
+
+    query = from(row in Record, where: row.id == ^record.id)
+    assert {1, nil} = Brando.Repo.soft_delete_all(query)
+    assert %Record{deleted_at: deleted_at} = Brando.Repo.get!(Record, record.id)
+    refute is_nil(deleted_at)
   end
 
   test "an explicit prefix overrides process context" do
@@ -59,5 +67,21 @@ defmodule Brando.RepoTenantPrefixTest do
 
     assert [%Record{id: record_id}] = Brando.Repo.all(Record, prefix: @override_prefix)
     assert record_id == record.id
+  end
+
+  test "schemas marked public ignore the process tenant prefix" do
+    assert {:ok, site} =
+             Registry.create_site(%{
+               name: "Public site",
+               key: "public-site",
+               languages: ["en"],
+               default_language: "en",
+               status: :active,
+               delivery_mode: :dynamic
+             })
+
+    assert Brando.Repo.get!(Brando.Sites.Site, site.id).__meta__.prefix == "public"
+    assert Brando.Users.User.__schema__(:prefix) == "public"
+    assert Brando.Users.UserToken.__schema__(:prefix) == "public"
   end
 end

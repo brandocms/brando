@@ -12,6 +12,8 @@ defmodule Brando.Users.User do
     plural: "users",
     gettext_module: Brando.Gettext
 
+  @schema_prefix "public"
+
   use Gettext, backend: Brando.Gettext
   import Brando.Blueprint.Listings.Components.Core
   import Brando.Blueprint.Listings.Components.Cover, only: [cover: 1]

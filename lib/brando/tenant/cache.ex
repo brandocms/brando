@@ -16,13 +16,13 @@ defmodule Brando.Tenant.Cache do
 
   @spec warm() :: :ok
   def warm do
-    clear()
-
     if Tenant.enabled?() do
       Site
       |> Brando.Repo.all(@public_opts)
       |> Brando.Repo.preload(:environments, @public_opts)
       |> cache_sites()
+    else
+      clear()
     end
 
     :ok
@@ -45,6 +45,10 @@ defmodule Brando.Tenant.Cache do
     :persistent_term.get({:brando, :site, site_key}, nil)
   end
 
+  def list_sites do
+    :persistent_term.get({:brando, :sites}, [])
+  end
+
   def get_env_by_domain(domain) when is_binary(domain) do
     normalized_domain = domain |> String.trim() |> String.downcase()
     :persistent_term.get({:brando, :env_domain, normalized_domain}, nil)
@@ -61,13 +65,20 @@ defmodule Brando.Tenant.Cache do
   end
 
   defp cache_sites(sites) do
-    entries = Enum.flat_map(sites, &site_entries/1)
+    entries = [{{:brando, :sites}, sites} | Enum.flat_map(sites, &site_entries/1)]
+    previous_keys = :persistent_term.get(@cache_keys_key, [])
+    current_keys = Enum.map(entries, &elem(&1, 0))
+    current_key_set = MapSet.new(current_keys)
 
     Enum.each(entries, fn {key, value} ->
       :persistent_term.put(key, value)
     end)
 
-    :persistent_term.put(@cache_keys_key, Enum.map(entries, &elem(&1, 0)))
+    previous_keys
+    |> Enum.reject(&MapSet.member?(current_key_set, &1))
+    |> Enum.each(&:persistent_term.erase/1)
+
+    :persistent_term.put(@cache_keys_key, current_keys)
   end
 
   defp site_entries(%Site{} = site) do

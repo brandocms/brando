@@ -166,7 +166,7 @@ defmodule BrandoAdmin.Components.Form do
             cs
 
           {assoc_field, asset_schema} ->
-            case Brando.repo().get(asset_schema, value) do
+            case Brando.Repo.get(asset_schema, value) do
               nil ->
                 cs
 

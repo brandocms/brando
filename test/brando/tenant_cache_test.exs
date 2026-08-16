@@ -24,6 +24,7 @@ defmodule Brando.TenantCacheTest do
 
     assert site_id == site.id
     assert environment_id == environment.id
+    assert [%Site{id: ^site_id}] = Cache.list_sites()
     assert %Environment{id: ^environment_id} = Cache.get_env("acme", "production")
     assert %Environment{id: ^environment_id} = Cache.get_live_env("acme")
 

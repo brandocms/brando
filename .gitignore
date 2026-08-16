@@ -17,6 +17,7 @@ npm-debug.log
 /.vscode
 /priv/templates/brando.install/assets/backend/.yalc
 /.playwright-mcp
+/.pnpm-store/
 
 # Claude Code working files. Plans, review artifacts and local settings stay
 # on disk but out of git — they are session scratch, not project history.

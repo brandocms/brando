@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Nav do
   alias BrandoAdmin.Components.Content
 
   on_mount {BrandoAdmin.UserAuth, :mount_current_user}
+  on_mount {Brando.Tenant.LiveView, :default}
 
   def mount(_, %{"user_token" => _token, "current_url" => url}, socket) do
     if connected?(socket) do
@@ -14,6 +15,7 @@ defmodule BrandoAdmin.Nav do
       |> subscribe()
       |> assign(:current_url, url)
       |> put_locale()
+      |> assign_tenant_options()
       |> assign(:menu_sections, BrandoAdmin.Menu.get_menu())
       |> then(&{:ok, &1})
     else
@@ -21,6 +23,7 @@ defmodule BrandoAdmin.Nav do
       |> assign(:socket_connected, false)
       |> assign(:current_user, nil)
       |> assign(:current_url, url)
+      |> assign_tenant_options()
       |> assign(:menu_sections, [])
       |> then(&{:ok, &1})
     end
@@ -49,6 +52,20 @@ defmodule BrandoAdmin.Nav do
 
   def subscribe(socket) do
     socket
+  end
+
+  defp assign_tenant_options(socket) do
+    sites = if Brando.Tenant.enabled?(), do: Brando.Tenant.Cache.list_sites(), else: []
+
+    environments =
+      case socket.assigns.current_site do
+        nil -> []
+        site -> site.environments
+      end
+
+    socket
+    |> assign(:tenant_sites, sites)
+    |> assign(:tenant_environments, environments)
   end
 
   def render(assigns) do
@@ -104,6 +121,44 @@ defmodule BrandoAdmin.Nav do
                 <% end %>
               </div>
             </header>
+            <form
+              :if={@current_site && @current_environment}
+              action="/admin/environment"
+              method="post"
+              class="tenant-switcher"
+            >
+              <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+              <input type="hidden" name="return_to" value={@current_url || "/admin"} />
+              <label :if={Brando.Tenant.mode() == :multi}>
+                <span>{gettext("Site")}</span>
+                <select name="site_key">
+                  <option
+                    :for={site <- @tenant_sites}
+                    value={site.key}
+                    selected={site.id == @current_site.id}
+                  >
+                    {site.name}
+                  </option>
+                </select>
+              </label>
+              <input :if={Brando.Tenant.mode() == :single} type="hidden" name="site_key" value={@current_site.key} />
+              <label>
+                <span>{gettext("Environment")}</span>
+                <select name="environment_key">
+                  <option
+                    :for={environment <- @tenant_environments}
+                    value={environment.key}
+                    selected={environment.id == @current_environment.id}
+                  >
+                    {environment.name}{if environment.live, do: " • live", else: ""}
+                  </option>
+                </select>
+              </label>
+              <button type="submit">{gettext("Switch")}</button>
+              <div :if={!@current_environment.live} class="non-live-environment">
+                {gettext("Working in a non-live environment")}
+              </div>
+            </form>
             <div :if={@current_user} id="current-user" class="current-user" tabindex="0" data-testid="current-user">
               <section class="button">
                 <section class="avatar-wrapper">

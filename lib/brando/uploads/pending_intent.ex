@@ -32,6 +32,8 @@ defmodule Brando.Uploads.PendingIntent do
 
   @asset_types [:image, :file, :video]
 
+  @schema_prefix "public"
+
   @required [:ref, :key, :resolved_target, :asset_type]
   @optional [:mime_type, :filename, :filesize, :target, :creator_id]
 

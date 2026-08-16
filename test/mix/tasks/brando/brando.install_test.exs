@@ -111,7 +111,7 @@ defmodule Mix.Tasks.Brando.GenerateTest do
   end
 
   test "guides interactive single-site setup and supplies the project key default" do
-    send(self(), {:mix_shell_input, :prompt, "single"})
+    send(self(), {:mix_shell_input, :prompt, "2"})
     send(self(), {:mix_shell_input, :prompt, ""})
 
     assert Mix.Tasks.Brando.Install.resolve_tenancy_options!([], "photo-blog") == %{
@@ -121,6 +121,7 @@ defmodule Mix.Tasks.Brando.GenerateTest do
 
     assert_received {:mix_shell, :prompt, [mode_prompt]}
     assert mode_prompt =~ "Choose tenancy mode"
+    assert mode_prompt =~ "2. single"
     assert_received {:mix_shell, :prompt, [site_prompt]}
     assert site_prompt =~ "Site key [photo-blog]"
   end

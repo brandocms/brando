@@ -158,7 +158,7 @@ defmodule Brando.Uploads do
   def create_pending_intent(attrs) do
     attrs
     |> PendingIntent.changeset()
-    |> Brando.Repo.repo().insert()
+    |> Brando.Repo.insert()
   end
 
   @doc """
@@ -169,7 +169,7 @@ defmodule Brando.Uploads do
   """
   def get_pending_intent(ref) when is_binary(ref) do
     case Ecto.UUID.cast(ref) do
-      {:ok, ref} -> Brando.Repo.repo().get_by(PendingIntent, ref: ref)
+      {:ok, ref} -> Brando.Repo.get_by(PendingIntent, ref: ref)
       :error -> nil
     end
   end
@@ -183,7 +183,7 @@ defmodule Brando.Uploads do
   object either has an asset row pointing at it or is the reaper's problem.
   """
   def delete_pending_intent(%PendingIntent{} = intent) do
-    Brando.Repo.repo().delete(intent)
+    Brando.Repo.delete(intent)
   end
 
   def delete_pending_intent(ref) do

@@ -568,10 +568,10 @@ defmodule Mix.Tasks.Brando.Install do
   defp prompt_tenancy_options(default_site_key) do
     response =
       Mix.shell().prompt("""
-      + Choose tenancy mode [none]
-        none   — classic single-site Brando
-        single — one site with named environments
-        multi  — multiple sites with named environments
+      + Choose tenancy mode [1]
+        1. none   — classic single-site Brando
+        2. single — one site with named environments
+        3. multi  — multiple sites with named environments
       """)
 
     case response |> String.trim() |> String.downcase() do

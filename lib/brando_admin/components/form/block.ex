@@ -1648,7 +1648,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     if assoc_is_loaded(get_in(changeset, [Access.key(:data), Access.key(:block), Access.key(:vars)])) do
       changeset
     else
-      update_in(changeset.data.block, &Brando.Repo.repo().preload(&1, assoc))
+      update_in(changeset.data.block, &Brando.Repo.preload(&1, assoc))
     end
   end
 
@@ -1656,7 +1656,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     if assoc_is_loaded(get_in(changeset, [Access.key(:data), Access.key(:vars)])) do
       changeset
     else
-      update_in(changeset.data, &Brando.Repo.repo().preload(&1, assoc))
+      update_in(changeset.data, &Brando.Repo.preload(&1, assoc))
     end
   end
 
