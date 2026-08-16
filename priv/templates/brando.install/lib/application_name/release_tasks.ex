@@ -14,6 +14,17 @@ defmodule <%= application_module %>.ReleaseTasks do
     {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :down, to: version))
   end
 
+  def migrate_tenants do
+    load_app()
+
+    for repo <- repos() do
+      {:ok, result, _} =
+        Ecto.Migrator.with_repo(repo, fn _repo -> Brando.Environments.migrate_all() end)
+
+      {:ok, _migrated} = result
+    end
+  end
+
   defp repos do
     Application.fetch_env!(@app, :ecto_repos)
   end

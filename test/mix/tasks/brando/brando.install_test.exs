@@ -36,10 +36,14 @@ defmodule Mix.Tasks.Brando.GenerateTest do
   end
 
   test "brando.install" do
+    send(self(), {:mix_shell_input, :prompt, "none"})
     Mix.Tasks.Brando.Install.run([])
+    assert_received {:mix_shell, :prompt, [prompt]}
+    assert prompt =~ "Choose tenancy mode"
     assert_received {:mix_shell, :info, ["\nBrando finished copying."]}
     assert File.exists?("lib/brando_web/villain")
     assert_file("lib/brando_web/villain/parser.ex")
+    assert File.dir?("priv/repo/tenant_migrations")
 
     assert_file("config/runtime.exs", fn file ->
       assert file =~ ~s<url: System.get_env("BRANDO_DB_URL")>
@@ -53,6 +57,10 @@ defmodule Mix.Tasks.Brando.GenerateTest do
     assert_file("lib/brando_web/components/layouts.ex", fn file ->
       assert file =~ "embed_templates \"layouts/*\""
       assert file =~ "embed_templates \"partials/*\""
+    end)
+
+    assert_file("lib/brando_web/router.ex", fn file ->
+      assert file =~ "plug Brando.Plug.Tenant"
     end)
 
     assert_file("mix.exs", fn file ->
@@ -100,6 +108,30 @@ defmodule Mix.Tasks.Brando.GenerateTest do
 
     assert config =~ "tenancy_mode: :single"
     assert config =~ ~s(site_key: "photo-blog")
+  end
+
+  test "guides interactive single-site setup and supplies the project key default" do
+    send(self(), {:mix_shell_input, :prompt, "single"})
+    send(self(), {:mix_shell_input, :prompt, ""})
+
+    assert Mix.Tasks.Brando.Install.resolve_tenancy_options!([], "photo-blog") == %{
+             mode: :single,
+             site_key: "photo-blog"
+           }
+
+    assert_received {:mix_shell, :prompt, [mode_prompt]}
+    assert mode_prompt =~ "Choose tenancy mode"
+    assert_received {:mix_shell, :prompt, [site_prompt]}
+    assert site_prompt =~ "Site key [photo-blog]"
+  end
+
+  test "supports non-interactive installs without tenancy flags" do
+    assert Mix.Tasks.Brando.Install.resolve_tenancy_options!(
+             [tenancy_prompt: false],
+             "photo-blog"
+           ) == %{mode: :none, site_key: nil}
+
+    refute_received {:mix_shell, :prompt, _message}
   end
 
   test "rejects incomplete or contradictory installer tenancy options" do

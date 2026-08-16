@@ -4,6 +4,7 @@ defmodule Brando.TenantRegistryTest do
 
   alias Brando.Environments.Environment
   alias Brando.Sites.Site
+  alias Brando.Tenant
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
 
@@ -18,8 +19,14 @@ defmodule Brando.TenantRegistryTest do
 
   setup do
     put_test_env(:tenancy_mode, :multi)
+    Tenant.put_prefix("tenant_missing_preview")
     Cache.clear()
-    on_exit(&Cache.clear/0)
+
+    on_exit(fn ->
+      Tenant.put_prefix(nil)
+      Cache.clear()
+    end)
+
     :ok
   end
 

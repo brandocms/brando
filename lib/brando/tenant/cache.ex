@@ -12,6 +12,7 @@ defmodule Brando.Tenant.Cache do
   alias Brando.Tenant
 
   @cache_keys_key {:brando, :tenant_cache_keys}
+  @public_opts [prefix: "public"]
 
   @spec warm() :: :ok
   def warm do
@@ -19,8 +20,8 @@ defmodule Brando.Tenant.Cache do
 
     if Tenant.enabled?() do
       Site
-      |> Brando.Repo.all()
-      |> Brando.Repo.preload(:environments)
+      |> Brando.Repo.all(@public_opts)
+      |> Brando.Repo.preload(:environments, @public_opts)
       |> cache_sites()
     end
 
@@ -44,9 +45,12 @@ defmodule Brando.Tenant.Cache do
     :persistent_term.get({:brando, :site, site_key}, nil)
   end
 
-  def get_env_by_domain(domain) do
-    :persistent_term.get({:brando, :env_domain, domain}, nil)
+  def get_env_by_domain(domain) when is_binary(domain) do
+    normalized_domain = domain |> String.trim() |> String.downcase()
+    :persistent_term.get({:brando, :env_domain, normalized_domain}, nil)
   end
+
+  def get_env_by_domain(_domain), do: nil
 
   def get_env(site_key, environment_key) do
     :persistent_term.get({:brando, :env, site_key, environment_key}, nil)

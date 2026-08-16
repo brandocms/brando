@@ -7,8 +7,11 @@ defmodule Mix.Tasks.Brando.Install do
       mix brando.install [--module MyApp]
                          [--tenancy-mode none|single|multi]
                          [--site-key my-site]
+                         [--no-tenancy-prompt]
 
-  Tenancy defaults to `none`. A URL-safe `--site-key` is required when using
+  Without tenancy flags the installer asks which mode to configure and defaults
+  to `none` when Enter is pressed. Automated installs can pass an explicit mode
+  or `--no-tenancy-prompt`. A URL-safe `--site-key` is required with an explicit
   `--tenancy-mode single` and is rejected for the other modes.
   """
 
@@ -39,6 +42,9 @@ defmodule Mix.Tasks.Brando.Install do
 
     # Brando migrator
     {:eex, "lib/mix/brando.upgrade.ex", "lib/mix/brando.upgrade.ex"},
+
+    # Application-owned migrations for named environment schemas
+    {:keep, "tenant_migrations", "priv/repo/tenant_migrations"},
 
     # Etc. Various OS config files and log directory.
     {:keep, "log", "log"},
@@ -473,18 +479,25 @@ defmodule Mix.Tasks.Brando.Install do
   def run(args) do
     {opts, _, invalid} =
       OptionParser.parse(args,
-        strict: [module: :string, tenancy_mode: :string, site_key: :string]
+        strict: [
+          module: :string,
+          tenancy_mode: :string,
+          site_key: :string,
+          tenancy_prompt: :boolean
+        ]
       )
 
     if invalid != [], do: Mix.raise("Invalid options: #{inspect(invalid)}")
 
-    tenancy = parse_tenancy_options!(opts)
-
     app = Mix.Project.config()[:app]
+    application_name = Atom.to_string(app)
+
+    tenancy =
+      resolve_tenancy_options!(opts, String.replace(application_name, "_", "-"))
 
     binding = [
-      application_module: opts[:module] || Phoenix.Naming.camelize(Atom.to_string(app)),
-      application_name: Atom.to_string(app),
+      application_module: opts[:module] || Phoenix.Naming.camelize(application_name),
+      application_name: application_name,
       tenancy_mode: tenancy.mode,
       site_key: tenancy.site_key,
       secret_key_base: random_string(64),
@@ -504,6 +517,20 @@ defmodule Mix.Tasks.Brando.Install do
     copy_from("templates/brando.install", "./", binding, @static)
 
     Mix.shell().info("\nBrando finished copying.")
+  end
+
+  @doc false
+  def resolve_tenancy_options!(opts, default_site_key) do
+    cond do
+      Keyword.has_key?(opts, :tenancy_mode) or Keyword.has_key?(opts, :site_key) ->
+        parse_tenancy_options!(opts)
+
+      opts[:tenancy_prompt] == false ->
+        parse_tenancy_options!(opts)
+
+      true ->
+        prompt_tenancy_options(default_site_key)
+    end
   end
 
   @doc false
@@ -536,6 +563,48 @@ defmodule Mix.Tasks.Brando.Install do
 
   defp parse_tenancy_mode!(mode) do
     Mix.raise("Invalid --tenancy-mode #{inspect(mode)}; expected none, single, or multi")
+  end
+
+  defp prompt_tenancy_options(default_site_key) do
+    response =
+      Mix.shell().prompt("""
+      + Choose tenancy mode [none]
+        none   — classic single-site Brando
+        single — one site with named environments
+        multi  — multiple sites with named environments
+      """)
+
+    case response |> String.trim() |> String.downcase() do
+      mode when mode in ["", "none", "1"] ->
+        %{mode: :none, site_key: nil}
+
+      mode when mode in ["single", "2"] ->
+        %{mode: :single, site_key: prompt_site_key(default_site_key)}
+
+      mode when mode in ["multi", "3"] ->
+        %{mode: :multi, site_key: nil}
+
+      _invalid ->
+        Mix.shell().error("Please choose none, single, or multi.")
+        prompt_tenancy_options(default_site_key)
+    end
+  end
+
+  defp prompt_site_key(default_site_key) do
+    response = Mix.shell().prompt("+ Site key [#{default_site_key}]")
+
+    case String.trim(response) do
+      "" ->
+        default_site_key
+
+      site_key ->
+        if Brando.Tenant.valid_key?(site_key) do
+          site_key
+        else
+          Mix.shell().error("Use lowercase letters, numbers, and single hyphens only.")
+          prompt_site_key(default_site_key)
+        end
+    end
   end
 
   defp copy_from(src_dir, target_dir, binding, mapping) when is_list(mapping) do

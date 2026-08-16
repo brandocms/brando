@@ -17,47 +17,47 @@ defmodule Brando.Repo do
   end
 
   def reload!(queryable, opts \\ []) do
-    repo().reload!(queryable, opts)
+    repo().reload!(queryable, put_prefix(opts))
   end
 
   def preload(struct, preloads, opts \\ []) do
-    repo().preload(struct, preloads, maybe_serialize_preloads(opts))
+    repo().preload(struct, preloads, opts |> maybe_serialize_preloads() |> put_prefix())
   end
 
   def all(queryable, opts \\ []) do
-    repo().all(queryable, maybe_serialize_preloads(opts))
+    repo().all(queryable, opts |> maybe_serialize_preloads() |> put_prefix())
   end
 
   def get(queryable, id, opts \\ []) do
-    repo().get(queryable, id, maybe_serialize_preloads(opts))
+    repo().get(queryable, id, opts |> maybe_serialize_preloads() |> put_prefix())
   end
 
   def get!(queryable, id, opts \\ []) do
-    repo().get!(queryable, id, maybe_serialize_preloads(opts))
+    repo().get!(queryable, id, opts |> maybe_serialize_preloads() |> put_prefix())
   end
 
   def one(queryable, opts \\ []) do
-    repo().one(queryable, maybe_serialize_preloads(opts))
+    repo().one(queryable, opts |> maybe_serialize_preloads() |> put_prefix())
   end
 
   def aggregate(queryable, aggregate, opts \\ []) do
-    repo().aggregate(queryable, aggregate, opts)
+    repo().aggregate(queryable, aggregate, put_prefix(opts))
   end
 
   def one!(queryable, opts \\ []) do
-    repo().one!(queryable, maybe_serialize_preloads(opts))
+    repo().one!(queryable, opts |> maybe_serialize_preloads() |> put_prefix())
   end
 
   def delete(struct_or_cs, opts \\ []) do
-    repo().delete(struct_or_cs, opts)
+    repo().delete(struct_or_cs, put_prefix(opts))
   end
 
   def delete!(struct_or_cs, opts \\ []) do
-    repo().delete!(struct_or_cs, opts)
+    repo().delete!(struct_or_cs, put_prefix(opts))
   end
 
   def delete_all(queryable, opts \\ []) do
-    repo().delete_all(queryable, opts)
+    repo().delete_all(queryable, put_prefix(opts))
   end
 
   def soft_delete(entry) do
@@ -81,27 +81,27 @@ defmodule Brando.Repo do
   end
 
   def insert(struct_or_cs, opts \\ []) do
-    repo().insert(struct_or_cs, opts)
+    repo().insert(struct_or_cs, put_prefix(opts))
   end
 
   def insert!(struct_or_cs, opts \\ []) do
-    repo().insert!(struct_or_cs, opts)
+    repo().insert!(struct_or_cs, put_prefix(opts))
   end
 
   def insert_all(source, q, opts \\ []) do
-    repo().insert_all(source, q, opts)
+    repo().insert_all(source, q, put_prefix(opts))
   end
 
   def update(cs, opts \\ []) do
-    repo().update(cs, opts)
+    repo().update(cs, put_prefix(opts))
   end
 
   def update!(cs, opts \\ []) do
-    repo().update!(cs, opts)
+    repo().update!(cs, put_prefix(opts))
   end
 
   def update_all(queryable, updates, opts \\ []) do
-    repo().update_all(queryable, updates, opts)
+    repo().update_all(queryable, updates, put_prefix(opts))
   end
 
   def transaction(fun, opts \\ []) do
@@ -113,6 +113,13 @@ defmodule Brando.Repo do
   end
 
   def stream(queryable, opts \\ []) do
-    repo().stream(queryable, opts)
+    repo().stream(queryable, put_prefix(opts))
+  end
+
+  defp put_prefix(opts) do
+    case Brando.Tenant.current_prefix() do
+      nil -> opts
+      prefix -> Keyword.put_new(opts, :prefix, prefix)
+    end
   end
 end

@@ -14,24 +14,26 @@ defmodule Brando.Tenant.Registry do
   alias Brando.Sites.Site
   alias Brando.Tenant.Cache
 
+  @public_opts [prefix: "public"]
+
   @spec list_sites() :: [Site.t()]
   def list_sites do
     Site
-    |> Repo.all()
-    |> Repo.preload(:environments)
+    |> Repo.all(@public_opts)
+    |> Repo.preload(:environments, @public_opts)
   end
 
   @spec get_site(pos_integer()) :: Site.t() | nil
   def get_site(id) do
     Site
-    |> Repo.get(id)
+    |> Repo.get(id, @public_opts)
     |> preload_environments()
   end
 
   @spec get_site_by_key(String.t()) :: Site.t() | nil
   def get_site_by_key(key) do
     from(site in Site, where: site.key == ^key)
-    |> Repo.one()
+    |> Repo.one(@public_opts)
     |> preload_environments()
   end
 
@@ -39,7 +41,7 @@ defmodule Brando.Tenant.Registry do
   def create_site(attrs) do
     %Site{}
     |> Site.changeset(attrs)
-    |> Repo.insert()
+    |> Repo.insert(@public_opts)
     |> refresh_cache_on_success()
   end
 
@@ -47,14 +49,14 @@ defmodule Brando.Tenant.Registry do
   def update_site(%Site{} = site, attrs) do
     site
     |> Site.changeset(attrs)
-    |> Repo.update()
+    |> Repo.update(@public_opts)
     |> refresh_cache_on_success()
   end
 
   @spec delete_site(Site.t()) :: {:ok, Site.t()} | {:error, Ecto.Changeset.t()}
   def delete_site(%Site{} = site) do
     site
-    |> Repo.delete()
+    |> Repo.delete(@public_opts)
     |> refresh_cache_on_success()
   end
 
@@ -66,11 +68,11 @@ defmodule Brando.Tenant.Registry do
       where: environment.site_id == ^site_id,
       order_by: [asc: environment.name, asc: environment.id]
     )
-    |> Repo.all()
+    |> Repo.all(@public_opts)
   end
 
   @spec get_environment(pos_integer()) :: Environment.t() | nil
-  def get_environment(id), do: Repo.get(Environment, id)
+  def get_environment(id), do: Repo.get(Environment, id, @public_opts)
 
   @spec get_environment_by_key(Site.t() | pos_integer(), String.t()) :: Environment.t() | nil
   def get_environment_by_key(%Site{id: site_id}, key), do: get_environment_by_key(site_id, key)
@@ -79,7 +81,7 @@ defmodule Brando.Tenant.Registry do
     from(environment in Environment,
       where: environment.site_id == ^site_id and environment.key == ^key
     )
-    |> Repo.one()
+    |> Repo.one(@public_opts)
   end
 
   @spec create_environment(Site.t() | pos_integer(), map()) ::
@@ -91,7 +93,7 @@ defmodule Brando.Tenant.Registry do
 
     %Environment{}
     |> Environment.changeset(attrs)
-    |> Repo.insert()
+    |> Repo.insert(@public_opts)
     |> refresh_cache_on_success()
   end
 
@@ -100,7 +102,7 @@ defmodule Brando.Tenant.Registry do
   def update_environment(%Environment{} = environment, attrs) do
     environment
     |> Environment.changeset(attrs)
-    |> Repo.update()
+    |> Repo.update(@public_opts)
     |> refresh_cache_on_success()
   end
 
@@ -108,12 +110,14 @@ defmodule Brando.Tenant.Registry do
           {:ok, Environment.t()} | {:error, Ecto.Changeset.t()}
   def delete_environment(%Environment{} = environment) do
     environment
-    |> Repo.delete()
+    |> Repo.delete(@public_opts)
     |> refresh_cache_on_success()
   end
 
   defp preload_environments(nil), do: nil
-  defp preload_environments(%Site{} = site), do: Repo.preload(site, :environments)
+
+  defp preload_environments(%Site{} = site),
+    do: Repo.preload(site, :environments, @public_opts)
 
   defp put_site_id(attrs, site_id) do
     if Enum.all?(Map.keys(attrs), &is_binary/1) do
