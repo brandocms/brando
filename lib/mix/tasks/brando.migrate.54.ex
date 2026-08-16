@@ -1177,6 +1177,10 @@ if Code.ensure_loaded?(Igniter) do
       `florist.config.exs`. It preserves the legacy single-release/nginx model,
       does not copy passwords, and leaves the legacy files untouched.
 
+      Tenancy remains opt-in. Applications adopting named environments can run
+      `mix brando.setup.tenancy` after this general source upgrade to prepare
+      their configuration, router pipelines, and tenant migration support.
+
       Continue in this order:
 
         1. Review the complete Igniter diff, then run `mix format` and

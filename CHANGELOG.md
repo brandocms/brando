@@ -242,6 +242,14 @@
 
 #### Features
 
+- **Igniter-assisted tenancy setup for existing applications.** The opt-in
+  `mix brando.setup.tenancy` task configures `:single` or `:multi` mode, inserts
+  `Brando.Plug.Tenant` idempotently into recognized browser pipelines before
+  Brando content-loading plugs, and installs Brando's tenant migration support.
+  It reports unsupported router layouts and prints the ordered migration and
+  provisioning workflow without inferring application tables, touching the
+  database, or copying production data.
+
 - **Versioned static-site publishing for sites with `delivery_mode: :static`.**
   The new Publishing screen builds any named content environment on a serial
   Oban queue, records monotonic versions, progress, logs, and failed URLs, and

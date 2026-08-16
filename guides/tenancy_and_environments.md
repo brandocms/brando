@@ -131,8 +131,32 @@ Configuration is validated when Brando starts. An invalid mode or a missing or
 invalid single-site key stops startup with a configuration error.
 
 The installer does **not** create registry records or generate application
-content migrations. Complete the next two sections before serving requests in
-an enabled tenancy mode.
+content migrations. Complete the tenant migration and provisioning steps below
+before serving requests in an enabled tenancy mode.
+
+## Prepare an existing installation
+
+Existing applications can apply the deterministic source changes with the
+opt-in Igniter task:
+
+```bash
+# One site with named environments
+mix brando.setup.tenancy --mode single --site-key my-site
+
+# Multiple isolated sites
+mix brando.setup.tenancy --mode multi
+```
+
+The task updates `config/brando.exs`, adds `Brando.Plug.Tenant` to recognized
+`:browser` and `:browser_api` pipelines before Brando content-loading plugs,
+and installs Brando's tenant migration support under
+`priv/repo/tenant_migrations`. It is idempotent and warns when it cannot find a
+standard Phoenix router or `:browser` pipeline.
+
+Review the complete Igniter diff before applying it. The task deliberately does
+not infer application content tables, run database migrations, provision sites,
+or copy production data. Create and review the application-owned migrations in
+the next section before running the separate data conversion task.
 
 ## Tenant migrations
 
@@ -653,7 +677,13 @@ replaces, rather than merges with, Brando's defaults.
 
 ## Migrate an existing installation
 
-After writing and applying tenant migrations, copy an existing public-schema
+First prepare the application's source and review the Igniter diff:
+
+```bash
+mix brando.setup.tenancy --mode single --site-key my-site
+```
+
+After writing and applying tenant migrations, copy the existing public-schema
 site with:
 
 ```bash
@@ -711,10 +741,11 @@ create  copy  set_live  rollback  delete
 Before enabling `:single` or `:multi`:
 
 1. Keep a restorable external database backup.
-2. Apply public migrations.
-3. Provide tenant migrations for every tenant content table.
-4. Provision the site or run `mix brando.migrate_to_tenant` for existing data.
-5. Add `Brando.Plug.Tenant` before content-loading plugs in existing routers.
+2. Run `mix brando.setup.tenancy` for an existing application and review its
+   source diff.
+3. Apply public migrations.
+4. Provide tenant migrations for every tenant content table.
+5. Provision the site or run `mix brando.migrate_to_tenant` for existing data.
 6. Verify `pg_dump` and `psql` availability from the release environment.
 7. Run tenant migrations for every environment.
 8. Exercise copy and recovery on representative production-sized data.
