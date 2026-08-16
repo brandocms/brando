@@ -15,19 +15,32 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   alias Ecto.Changeset
 
   def mount(%{"entry_id" => entry_id}, %{"user_token" => token}, socket) do
-    if connected?(socket) do
-      {:ok,
-       socket
-       |> assign(:socket_connected, true)
-       |> assign(:save_redirect_target, :listing)
-       |> assign(:open_item_modal, nil)
-       |> assign(:active_tab, :template)
-       |> assign_entry(entry_id)
-       |> assign_current_user(token)
-       |> assign_form()
-       |> set_admin_locale()}
-    else
-      {:ok, assign(socket, :socket_connected, false)}
+    shared_library? = socket.assigns.live_action == :shared_update
+
+    cond do
+      shared_library? and
+          (Brando.Tenant.mode() != :multi or socket.assigns.current_user.role != :superuser) ->
+        {:ok, redirect(socket, to: "/admin")}
+
+      connected?(socket) ->
+        {:ok,
+         socket
+         |> assign(:socket_connected, true)
+         |> assign(:shared_library?, shared_library?)
+         |> assign(:save_redirect_target, :listing)
+         |> assign(:open_item_modal, nil)
+         |> assign(:active_tab, :template)
+         |> assign_entry(entry_id)
+         |> assign_current_user(token)
+         |> assign_form()
+         |> set_admin_locale()
+         |> maybe_use_public_library_context()}
+
+      true ->
+        {:ok,
+         socket
+         |> assign(:socket_connected, false)
+         |> assign(:shared_library?, shared_library?)}
     end
   end
 
@@ -38,13 +51,24 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Content Modules")} subtitle={gettext("Edit module")} />
+    <Content.header
+      title={if @shared_library?, do: gettext("Shared module library"), else: gettext("Content Modules")}
+      subtitle={gettext("Edit module")}
+    />
 
     <div id="module_form-el" phx-hook="Brando.Form" data-skip-keydown>
       <.form for={@form} class="main-form" phx-change="validate" phx-submit="save">
         <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
 
         <.tab_bar active_tab={@active_tab} form={@form} />
+
+        <div :if={@shared_library?} class="module-version-note">
+          <Input.text
+            field={@form[:version_note]}
+            label={gettext("Changelog note")}
+            instructions={gettext("Describe what changed for sites with customized versions.")}
+          />
+        </div>
 
         <%!-- Every panel stays in the DOM and is hidden with CSS. Rendering only
               the active one would drop the other panels' inputs from the form
@@ -315,7 +339,12 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
   def handle_event("validate", %{"module" => module_params}, socket) do
     %{current_user: current_user, entry: entry} = socket.assigns
-    changeset = Brando.Content.Module.changeset(entry, module_params, current_user)
+
+    changeset =
+      entry
+      |> Brando.Content.Module.changeset(module_params, current_user)
+      |> maybe_require_version_note(socket.assigns.shared_library?)
+
     updated_changeset = %{changeset | action: :update}
 
     updated_form = to_form(updated_changeset, [])
@@ -328,7 +357,12 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   def handle_event("save", %{"module" => module_params}, socket) do
     user = socket.assigns.current_user
     entry = socket.assigns.entry
-    changeset = Brando.Content.Module.changeset(entry, module_params, user)
+
+    changeset =
+      entry
+      |> Brando.Content.Module.changeset(module_params, user)
+      |> maybe_require_version_note(socket.assigns.shared_library?)
+
     updated_changeset = %{changeset | action: :update}
 
     changeset =
@@ -345,7 +379,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
         updated_changeset
       end
 
-    case Brando.Content.update_module(changeset, user) do
+    case persist_module(changeset, user, socket.assigns.shared_library?) do
       {:ok, entry} ->
         send(self(), {:toast, gettext("Module updated")})
 
@@ -354,7 +388,10 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
             :self ->
               socket
               |> assign(:entry, entry)
-              |> assign(:form, to_form(Brando.Content.Module.changeset(entry, %{}, user), []))
+              |> assign(:form, module_form(entry, user, socket.assigns.shared_library?))
+
+            :listing when socket.assigns.shared_library? ->
+              push_navigate(socket, to: "/admin/config/content/shared_library")
 
             :listing ->
               push_navigate(socket, to: "/admin/config/content/modules")
@@ -435,17 +472,47 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
   defp assign_entry(socket, entry_id) do
     assign_new(socket, :entry, fn ->
-      Brando.Content.get_module!(%{matches: %{id: entry_id}, preload: [:vars, :refs]})
+      if socket.assigns.shared_library? do
+        Brando.Content.SharedLibrary.get_shared(:module, entry_id) ||
+          raise Ecto.NoResultsError, queryable: Brando.Content.Module
+      else
+        Brando.Content.get_module!(%{matches: %{id: entry_id}, preload: [:vars, :refs]})
+      end
     end)
   end
 
   defp assign_form(%{assigns: %{entry: entry, current_user: current_user}} = socket) do
     assign_new(socket, :form, fn ->
-      entry
-      |> Brando.Content.Module.changeset(%{}, current_user)
-      |> to_form([])
+      module_form(entry, current_user, socket.assigns.shared_library?)
     end)
   end
+
+  defp module_form(entry, current_user, shared_library?) do
+    entry
+    |> Brando.Content.Module.changeset(%{}, current_user)
+    |> then(fn changeset ->
+      if shared_library?, do: Changeset.put_change(changeset, :version_note, ""), else: changeset
+    end)
+    |> to_form([])
+  end
+
+  defp maybe_require_version_note(changeset, true),
+    do: Changeset.validate_required(changeset, [:version_note])
+
+  defp maybe_require_version_note(changeset, false), do: changeset
+
+  defp maybe_use_public_library_context(%{assigns: %{shared_library?: true}} = socket) do
+    Brando.Tenant.put_prefix(nil)
+    assign(socket, :tenant_prefix, nil)
+  end
+
+  defp maybe_use_public_library_context(socket), do: socket
+
+  defp persist_module(changeset, user, true) do
+    Brando.Content.SharedLibrary.update_shared(:module, changeset.data.id, changeset, user)
+  end
+
+  defp persist_module(changeset, user, false), do: Brando.Content.update_module(changeset, user)
 
   defp build_ref_data(TextBlock) do
     struct(TextBlock.Data, %{styles: TextBlock.Data.default_styles()})

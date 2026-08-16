@@ -12,7 +12,9 @@ environments backed by PostgreSQL schemas.
 > strict host and admin authorization, compensated site provisioning,
 > retention-aware site deletion, per-site media, tenant-scoped caches,
 > uploadable frontend asset sets, and the existing-installation migration task
-> are also available.
+> are also available. Multi-site installations can curate a shared module,
+> container, and palette library with per-site access and per-environment
+> overrides.
 > Before enabling tenancy for an application, you must provide tenant migrations
 > for every table the application queries as tenant content.
 
@@ -299,6 +301,61 @@ In `:multi`, a suspended, archived, or unknown frontend host receives `404`
 before content plugs run. A stale or forged admin site selection is checked
 against `public.user_sites`; it can never restore another tenant's schema
 prefix.
+
+## Shared modules, containers, and palettes
+
+In `:multi` mode, global superusers can manage reusable block building blocks
+at `/admin/config/content/shared_library`. Shared modules, containers, and
+palettes live in `public`; custom entries and customizations live in the
+selected environment schema.
+
+Access is opt-in and site-wide. Enabling an entry makes it available in every
+environment's picker for that site. It does not copy the entry into those
+schemas. A site can therefore use only custom entries, only an approved subset
+of the shared library, or a mixture of both. The dashboard supports saving an
+exact allowlist as well as enabling or disabling all entries of one kind.
+
+Blocks store both an integer ID and an explicit `local` or `shared` origin for
+their module, container, and palette references. The origin is significant:
+`local:42` and `shared:42` are different references even when PostgreSQL has
+assigned the same integer in both schemas. Existing local blocks are migrated
+with `local`, preserving pre-tenancy behavior.
+
+Resolution has two paths:
+
+- pickers return all non-deleted local entries plus the enabled shared entries;
+- rendering resolves the block's stored origin and may load a shared entry even
+  after picker access was revoked.
+
+The second rule is deliberate. Disabling a shared entry prevents adding new
+references but never breaks published or draft blocks that already use it.
+Deleting a shared entry is blocked while it is enabled, customized, or
+referenced in any environment. The dashboard shows those sites and
+environments before an edit or deletion.
+
+Choosing **Customize** copies the shared entry into the selected environment
+and records its source ID and source version. Blocks keep their shared identity,
+so they immediately resolve to that environment's customization without a
+content rewrite. Other environments and sites are unaffected. **Reset to
+shared** removes only the customization.
+
+Publishing a shared edit increments its version and records a changelog note.
+Sites without a customization use the new version immediately, and Brando
+queues affected entries for rendering in each environment. A customization
+continues using its local version and receives an **Update available** badge.
+The administrator can inspect a field-level diff, replace the customization
+with the current shared version, or dismiss that version's notification.
+
+The allowlist is cached per site. Mutations update the cache immediately; no
+application restart is required. When upgrading an existing application, run
+both public and tenant migrations so the public access tables, source/version
+columns, and origin-qualified block fields are present:
+
+```bash
+mix brando.upgrade
+mix brando.migrate
+mix brando.migrate --tenants
+```
 
 ## Per-site roles and lifecycle
 

@@ -144,7 +144,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Outline do
   reflects live structure, not mount-time seeds.
   """
   def build_outline_item_from_struct(%Brando.Content.Block{} = block) do
-    {module_name, module_color, multi} = resolve_module(block.module_id)
+    {module_name, module_color, multi} =
+      resolve_module(block.module_id, Map.get(block, :module_origin, :local))
 
     children =
       case block.children do
@@ -166,10 +167,10 @@ defmodule BrandoAdmin.Components.Form.BlockField.Outline do
     }
   end
 
-  defp resolve_module(nil), do: {nil, :blue, false}
+  defp resolve_module(nil, _origin), do: {nil, :blue, false}
 
-  defp resolve_module(module_id) do
-    case Brando.Content.fetch_module(module_id) do
+  defp resolve_module(module_id, origin) do
+    case Brando.Content.fetch_module(module_id, origin) do
       nil -> {nil, :blue, false}
       module -> {module.name, module.color || :blue, module.multi || false}
     end

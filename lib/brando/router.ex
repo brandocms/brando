@@ -146,6 +146,12 @@ defmodule Brando.Router do
 
             live "/content/modules", BrandoAdmin.Content.ModuleListLive
             live "/content/modules/update/:entry_id", BrandoAdmin.Content.ModuleFormLive, :update
+            live "/content/shared_library", BrandoAdmin.Content.SharedLibraryLive
+
+            live "/content/shared_library/modules/update/:entry_id",
+                 BrandoAdmin.Content.ModuleFormLive,
+                 :shared_update
+
             live "/content/module_sets", BrandoAdmin.Content.ModuleSetListLive
             live "/content/module_sets/create", BrandoAdmin.Content.ModuleSetFormLive, :create
 

@@ -128,13 +128,13 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
                 <div class="module-picker-grid">
                   <button
                     :for={module <- modules}
-                    :key={module.id}
+                    :key={{module.library_origin, module.id}}
                     type="button"
                     class={["module-card", module.svg && "has-preview"]}
                     data-color={module.color}
                     aria-label={translate(module.name)}
                     phx-click={JS.push("insert_module", target: @myself) |> hide_modal("##{@id}")}
-                    phx-value-module-id={module.id}
+                    phx-value-module-id={Brando.Content.SharedLibrary.encode_reference(module.library_origin, module.id)}
                   >
                     <%!-- Only modules that actually ship an SVG get a preview
                           box. Rendering an empty 16:9 placeholder for the rest
@@ -145,6 +145,19 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
                     </figure>
                     <span class="module-card-body">
                       <span class="module-card-name">{translate(module.name)}</span>
+                      <span class="badge">
+                        <%= cond do %>
+                          <% module.library_origin == :shared and module.source_module_id -> %>
+                            {gettext("customized")}
+                          <% module.library_origin == :shared -> %>
+                            {gettext("shared")}
+                          <% true -> %>
+                            {gettext("site")}
+                        <% end %>
+                      </span>
+                      <span :if={module.update_available} class="badge warning">
+                        {gettext("update available")}
+                      </span>
                       <span :if={translate(module.help_text) != ""} class="module-card-help">
                         {translate(module.help_text)}
                       </span>
@@ -209,7 +222,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   end
 
   def maybe_update_modules_by_filter(socket, %{filter: %{parent_id: nil, namespace: _} = filter}) do
-    {:ok, modules} = Brando.Content.list_modules(%{filter: filter})
+    modules = list_picker_modules(filter)
 
     modules_by_namespace =
       modules
@@ -220,7 +233,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   end
 
   def maybe_update_modules_by_filter(socket, %{filter: %{parent_id: parent_id}}) do
-    {:ok, modules} = Brando.Content.list_modules(%{filter: %{parent_id: parent_id}})
+    modules = list_picker_modules(%{parent_id: parent_id})
 
     modules_by_namespace =
       modules
@@ -235,7 +248,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   end
 
   def assign_modules(socket) do
-    {:ok, modules} = Brando.Content.list_modules(%{cache: {:ttl, :infinite}})
+    modules = list_picker_modules(%{})
 
     modules_by_namespace =
       modules
@@ -377,5 +390,48 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
       end
 
     {translated_namespace, namespace, sorted_modules}
+  end
+
+  defp list_picker_modules(filter) do
+    case current_site_and_prefix() do
+      {site, prefix} ->
+        :module
+        |> Brando.Content.SharedLibrary.list_available(site, prefix)
+        |> filter_modules(filter)
+
+      nil ->
+        {:ok, modules} =
+          Brando.Content.list_modules(%{
+            filter: filter,
+            cache: {:ttl, :infinite}
+          })
+
+        modules
+    end
+  end
+
+  defp filter_modules(modules, filter) do
+    Enum.filter(modules, fn module ->
+      Enum.all?(filter, fn
+        {:parent_id, value} -> module.parent_id == value
+        {:parent_origin, value} -> module.library_origin == normalize_origin(value)
+        {:namespace, "all"} -> true
+        {:namespace, value} -> module.namespace == value
+        _other -> true
+      end)
+    end)
+  end
+
+  defp normalize_origin(origin) when origin in [:shared, "shared"], do: :shared
+  defp normalize_origin(_origin), do: :local
+
+  defp current_site_and_prefix do
+    with prefix when is_binary(prefix) <- Brando.Tenant.current_prefix(),
+         site_key when is_binary(site_key) <- Brando.Tenant.current_site_key(),
+         %Brando.Sites.Site{} = site <- Brando.Tenant.Registry.get_site_by_key(site_key) do
+      {site, prefix}
+    else
+      _no_tenant -> nil
+    end
   end
 end

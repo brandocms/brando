@@ -297,12 +297,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   # INSERT ROOT BLOCK
   def update(%{event: "insert_block", sequence: sequence, module_id: module_id}, socket) do
-    module_id = String.to_integer(module_id)
+    {module_origin, module_id} = Brando.Content.SharedLibrary.reference(module_id)
     block_module = socket.assigns.block_module
     user_id = socket.assigns.current_user.id
     parent_id = nil
     source = socket.assigns.block_module
-    empty_block_cs = build_block(module_id, user_id, parent_id, source, :module)
+    empty_block_cs = build_block({module_origin, module_id}, user_id, parent_id, source, :module)
 
     sequence = (is_integer(sequence) && sequence) || String.to_integer(sequence)
 
@@ -329,7 +329,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
         topic,
-        {:block_added, %{uid: uid, module_id: module_id, sequence: sequence, user_id: socket.assigns.current_user.id}}
+        {:block_added,
+         %{
+           uid: uid,
+           module_id: module_id,
+           module_origin: module_origin,
+           sequence: sequence,
+           user_id: socket.assigns.current_user.id
+         }}
       )
     end
 
@@ -495,7 +502,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           module_id: module_id,
           sequence: sequence,
           user_id: remote_user_id
-        },
+        } = msg,
         socket
       ) do
     # Skip if we already have this block (dedup)
@@ -505,7 +512,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       block_module = socket.assigns.block_module
       source = socket.assigns.block_module
 
-      empty_block_cs = build_block(module_id, remote_user_id, nil, source, :module)
+      module_origin = Map.get(msg, :module_origin, :local)
+      empty_block_cs = build_block({module_origin, module_id}, remote_user_id, nil, source, :module)
       # Override UID to match the original
       empty_block_cs = Changeset.put_change(empty_block_cs, :uid, remote_uid)
 
@@ -581,10 +589,19 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       |> Enum.each(fn {uid, index} ->
         with :inserted <- ops.statuses[uid],
              module_id when not is_nil(module_id) <- get_in(ops.diffs, [uid, "block", "module_id"]) do
+          module_origin = get_in(ops.diffs, [uid, "block", "module_origin"]) || "local"
+
           Phoenix.PubSub.broadcast(
             Brando.pubsub(),
             topic,
-            {:block_added, %{uid: uid, module_id: module_id, sequence: index, user_id: user_id}}
+            {:block_added,
+             %{
+               uid: uid,
+               module_id: module_id,
+               module_origin: module_origin,
+               sequence: index,
+               user_id: user_id
+             }}
           )
         end
       end)
@@ -1655,8 +1672,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     )
   end
 
-  def build_block(module_id, user_id, parent_id, source, type) do
-    module = get_module(module_id)
+  def build_block(module_reference, user_id, parent_id, source, type) do
+    {module_origin, module_id} = Brando.Content.SharedLibrary.reference(module_reference)
+    module = get_module(module_id, module_origin)
     # Generate fresh refs with new UIDs when creating blocks from modules
     fresh_refs =
       (module.refs || [])
@@ -1684,6 +1702,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         type: type,
         creator_id: user_id,
         module_id: module_id,
+        module_origin: module_origin,
         parent_id: parent_id,
         multi: module.multi,
         source: source,
@@ -1768,9 +1787,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     for {block_uid, form} <- socket.assigns.seed_forms do
       block_cs = Changeset.get_assoc(form.source, :block)
       module_id = Changeset.get_field(block_cs, :module_id)
+      module_origin = Changeset.get_field(block_cs, :module_origin) || :local
 
       if module_id do
-        case Brando.Content.fetch_module(module_id) do
+        case Brando.Content.fetch_module(module_id, module_origin) do
           %{multi: true} ->
             send_update(Block,
               id: "block-#{block_uid}",
@@ -1787,7 +1807,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
   end
 
-  defp get_module(module_id), do: Brando.Content.fetch_module(module_id)
+  defp get_module(module_id, origin \\ :local), do: Brando.Content.fetch_module(module_id, origin)
 
   defp assign_module_set(socket) do
     assign_new(socket, :module_set, fn ->

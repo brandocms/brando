@@ -248,7 +248,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     belongs_to = socket.assigns.belongs_to
     module_id = socket.assigns.module_id
     uid = socket.assigns.uid
-    module = Block.get_module(module_id)
+    module = Block.get_module(module_id, Map.get(socket.assigns, :module_origin, :local))
 
     module_refs = module.refs
     module_ref_names = Enum.map(module_refs, & &1.name)
@@ -301,7 +301,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     belongs_to = socket.assigns.belongs_to
     module_id = socket.assigns.module_id
     uid = socket.assigns.uid
-    module = Block.get_module(module_id)
+    module = Block.get_module(module_id, Map.get(socket.assigns, :module_origin, :local))
 
     module_refs = module.refs
 
@@ -359,7 +359,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     belongs_to = socket.assigns.belongs_to
     module_id = socket.assigns.module_id
     uid = socket.assigns.uid
-    module = Block.get_module(module_id)
+    module = Block.get_module(module_id, Map.get(socket.assigns, :module_origin, :local))
 
     module_refs = module.refs
 
@@ -396,7 +396,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     belongs_to = socket.assigns.belongs_to
     module_id = socket.assigns.module_id
     uid = socket.assigns.uid
-    module = Block.get_module(module_id)
+    module = Block.get_module(module_id, Map.get(socket.assigns, :module_origin, :local))
 
     module_vars = module.vars
     module_var_names = Enum.map(module_vars, & &1.key)
@@ -449,7 +449,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     belongs_to = socket.assigns.belongs_to
     module_id = socket.assigns.module_id
     uid = socket.assigns.uid
-    module = Block.get_module(module_id)
+    module = Block.get_module(module_id, Map.get(socket.assigns, :module_origin, :local))
 
     module_vars = module.vars
 
@@ -486,7 +486,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     belongs_to = socket.assigns.belongs_to
     module_id = socket.assigns.module_id
     uid = socket.assigns.uid
-    module = Block.get_module(module_id)
+    module = Block.get_module(module_id, Map.get(socket.assigns, :module_origin, :local))
 
     module_vars = module.vars
 
@@ -618,10 +618,17 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
         socket.assigns.module_id
       end
 
+    module_origin =
+      if socket.assigns.parent_module_id do
+        Map.get(socket.assigns, :parent_module_origin, :local) || :local
+      else
+        Map.get(socket.assigns, :module_origin, :local) || :local
+      end
+
     send_update(ModulePicker,
       id: block_picker_id,
       event: :show_module_picker,
-      filter: %{parent_id: module_id, namespace: "all"},
+      filter: %{parent_id: module_id, parent_origin: module_origin, namespace: "all"},
       module_set: "all",
       type: :module_entry,
       sequence: sequence,

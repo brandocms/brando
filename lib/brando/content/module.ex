@@ -50,7 +50,11 @@ defmodule Brando.Content.Module do
   identifier "[{{ entry.namespace | i18n }}] {{ entry.name | i18n }}"
   persist_identifier false
 
-  @derived_fields ~w(id type name sequence namespace help_text multi color class code refs vars svg deleted_at)a
+  @derived_fields ~w(
+    id type name sequence namespace help_text multi color class code refs vars svg deleted_at
+    version version_note source_module_id source_version acknowledged_version library_origin
+    override_id
+  )a
   @derive {Jason.Encoder, only: @derived_fields}
 
   trait :sequenced
@@ -74,6 +78,15 @@ defmodule Brando.Content.Module do
     attribute :datasource_module, :string
     attribute :datasource_type, :enum, values: [:list, :single, :selection]
     attribute :datasource_query, :string
+
+    attribute :version, :integer, default: 1
+    attribute :version_note, :text
+    attribute :source_module_id, :integer
+    attribute :source_version, :integer
+    attribute :acknowledged_version, :integer
+    attribute :library_origin, :enum, values: [:local, :shared], default: :local, virtual: true
+    attribute :update_available, :boolean, default: false, virtual: true
+    attribute :override_id, :integer, virtual: true
   end
 
   relations do

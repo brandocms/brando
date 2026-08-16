@@ -25,10 +25,13 @@ defmodule Brando.Content.Block do
     :sequence,
     :parent_id,
     :module_id,
+    :module_origin,
     :container_id,
+    :container_origin,
     :fragment_id,
     :multi,
     :palette_id,
+    :palette_origin,
     :type,
     :source,
     :identifier_metas
@@ -95,6 +98,9 @@ defmodule Brando.Content.Block do
     attribute :rendered_at, :datetime
     attribute :source, Brando.Type.Module
     attribute :identifier_metas, Brando.Type.Json
+    attribute :module_origin, :enum, values: [:local, :shared], default: :local
+    attribute :container_origin, :enum, values: [:local, :shared], default: :local
+    attribute :palette_origin, :enum, values: [:local, :shared], default: :local
   end
 
   relations do
