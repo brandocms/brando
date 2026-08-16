@@ -249,108 +249,115 @@ defmodule BrandoAdmin.Menu do
     [
       %{
         name: gettext("System"),
-        items: [
-          %{
-            name: gettext("Dashboard"),
-            url: "/admin"
-          },
-          %{
-            name: gettext("Configuration"),
-            url: nil,
-            items:
-              [
-                %{
-                  name: gettext("Navigation"),
-                  url: "/admin/config/navigation/menus"
-                },
-                %{
-                  name: gettext("Identity"),
-                  url: "/admin/config/identity"
-                },
-                %{
-                  name: gettext("SEO"),
-                  url: "/admin/config/seo"
-                },
-                %{
-                  name: gettext("Globals"),
-                  url: "/admin/config/global_sets"
-                },
-                %{
-                  name: gettext("Scheduled publishing"),
-                  url: "/admin/config/scheduled_publishing"
-                },
-                Brando.Tenant.enabled?() &&
+        items:
+          [
+            %{
+              name: gettext("Dashboard"),
+              url: "/admin"
+            },
+            Brando.Tenant.mode() == :multi && current_user && current_user.role == :superuser &&
+              %{
+                name: gettext("Sites"),
+                url: "/admin/sites"
+              },
+            %{
+              name: gettext("Configuration"),
+              url: nil,
+              items:
+                [
                   %{
-                    name: gettext("Environments"),
-                    url: "/admin/config/environments"
+                    name: gettext("Navigation"),
+                    url: "/admin/config/navigation/menus"
                   },
-                current_user && current_user.role == :superuser &&
                   %{
-                    name: gettext("Frontend assets"),
-                    url: "/admin/config/assets"
+                    name: gettext("Identity"),
+                    url: "/admin/config/identity"
                   },
+                  %{
+                    name: gettext("SEO"),
+                    url: "/admin/config/seo"
+                  },
+                  %{
+                    name: gettext("Globals"),
+                    url: "/admin/config/global_sets"
+                  },
+                  %{
+                    name: gettext("Scheduled publishing"),
+                    url: "/admin/config/scheduled_publishing"
+                  },
+                  Brando.Tenant.enabled?() &&
+                    %{
+                      name: gettext("Environments"),
+                      url: "/admin/config/environments"
+                    },
+                  current_user && current_user.role == :superuser &&
+                    %{
+                      name: gettext("Frontend assets"),
+                      url: "/admin/config/assets"
+                    },
+                  %{
+                    name: gettext("Cache"),
+                    url: "/admin/config/cache"
+                  },
+                  %{
+                    name: gettext("Utilities"),
+                    url: "/admin/config/utils"
+                  },
+                  %{
+                    name: gettext("Block modules"),
+                    url: "/admin/config/content/modules"
+                  },
+                  %{
+                    name: gettext("Block module sets"),
+                    url: "/admin/config/content/module_sets"
+                  },
+                  %{
+                    name: gettext("Containers"),
+                    url: "/admin/config/content/containers"
+                  },
+                  %{
+                    name: gettext("Table Templates"),
+                    url: "/admin/config/content/table_templates"
+                  },
+                  %{
+                    name: gettext("Templates"),
+                    url: "/admin/config/content/templates"
+                  },
+                  %{
+                    name: gettext("Palettes"),
+                    url: "/admin/config/content/palettes"
+                  }
+                ]
+                |> Enum.reject(&(&1 in [false, nil]))
+            },
+            %{
+              name: gettext("Assets"),
+              url: nil,
+              items: [
                 %{
-                  name: gettext("Cache"),
-                  url: "/admin/config/cache"
+                  name: gettext("Images"),
+                  url: "/admin/assets/images"
                 },
                 %{
-                  name: gettext("Utilities"),
-                  url: "/admin/config/utils"
+                  name: gettext("Files"),
+                  url: "/admin/assets/files"
                 },
                 %{
-                  name: gettext("Block modules"),
-                  url: "/admin/config/content/modules"
+                  name: gettext("Videos"),
+                  url: "/admin/assets/videos"
                 },
                 %{
-                  name: gettext("Block module sets"),
-                  url: "/admin/config/content/module_sets"
-                },
-                %{
-                  name: gettext("Containers"),
-                  url: "/admin/config/content/containers"
-                },
-                %{
-                  name: gettext("Table Templates"),
-                  url: "/admin/config/content/table_templates"
-                },
-                %{
-                  name: gettext("Templates"),
-                  url: "/admin/config/content/templates"
-                },
-                %{
-                  name: gettext("Palettes"),
-                  url: "/admin/config/content/palettes"
+                  name: gettext("Galleries"),
+                  url: "/admin/assets/galleries"
                 }
               ]
-              |> Enum.reject(&(&1 in [false, nil]))
-          },
-          %{
-            name: gettext("Assets"),
-            url: nil,
-            items: [
-              %{
-                name: gettext("Images"),
-                url: "/admin/assets/images"
-              },
-              %{
-                name: gettext("Files"),
-                url: "/admin/assets/files"
-              },
-              %{
-                name: gettext("Videos"),
-                url: "/admin/assets/videos"
-              },
-              %{
-                name: gettext("Galleries"),
-                url: "/admin/assets/galleries"
-              }
-            ]
-          },
-          %{
-            name: gettext("Users"),
-            url: "/admin/users"
-          }
-        ]
+            },
+            %{
+              name: gettext("Users"),
+              url: "/admin/users"
+            }
+          ]
+          |> Enum.reject(&(&1 in [false, nil]))
       },
       %{
         name: gettext("Content"),

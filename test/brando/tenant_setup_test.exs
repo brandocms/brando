@@ -99,6 +99,19 @@ defmodule Brando.Tenant.SetupTest do
     refute File.exists?(Path.join(Brando.config(:sites_path), "broken-site"))
   end
 
+  test "never deletes storage that existed before provisioning", %{creator: creator} do
+    existing_root = Path.join(Brando.config(:media_path), "existing-site")
+    existing_file = Path.join(existing_root, "keep.txt")
+    File.mkdir_p!(existing_root)
+    File.write!(existing_file, "legacy")
+
+    assert {:error, {:site_setup_failed, {:site_storage_already_exists, ^existing_root}, _compensation}} =
+             Setup.create_site(site_attrs("existing-site"), creator)
+
+    refute Registry.get_site_by_key("existing-site")
+    assert File.read!(existing_file) == "legacy"
+  end
+
   test "suspends, archives, and only permanently deletes after retention", %{creator: creator} do
     assert {:ok, site} = Setup.create_site(site_attrs("retained-site"), creator)
     assert {:ok, suspended} = Setup.suspend_site(site)

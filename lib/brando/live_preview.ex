@@ -391,6 +391,7 @@ defmodule Brando.LivePreview do
     {:ok, preview} = Brando.Sites.create_preview(preview, user)
 
     %{id: preview.id}
+    |> Brando.Tenant.Job.attach()
     |> Worker.PreviewPurger.new(scheduled_at: expires_at, tags: [:preview_purger])
     |> Oban.insert()
 

@@ -162,12 +162,13 @@ defmodule Brando.CDN do
   def queue_upload(file_or_image, user, field_full_path \\ [])
 
   def queue_upload(%Brando.Files.File{} = file, user, field_full_path) do
-    args = %{
-      file_id: file.id,
-      config_target: file.config_target,
-      user_id: user.id,
-      field_full_path: field_full_path
-    }
+    args =
+      Brando.Tenant.Job.attach(%{
+        file_id: file.id,
+        config_target: file.config_target,
+        user_id: user.id,
+        field_full_path: field_full_path
+      })
 
     Brando.Repo.delete_all(
       from j in Oban.Job,
@@ -213,6 +214,8 @@ defmodule Brando.CDN do
   end
 
   defp create_image_upload_job(args) do
+    args = Brando.Tenant.Job.attach(args)
+
     Brando.Repo.delete_all(
       from j in Oban.Job,
         where: fragment("? @> ?", j.args, ^args)

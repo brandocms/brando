@@ -1,4 +1,4 @@
-defmodule <%= application_module %>.Repo.Migrations.Brando160AddUserSites do
+defmodule Brando.Repo.Migrations.Brando160AddUserSites do
   use Ecto.Migration
 
   def change do

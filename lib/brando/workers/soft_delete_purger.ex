@@ -4,10 +4,12 @@ defmodule Brando.Worker.SoftDeletePurger do
 
   require Logger
 
+  alias Brando.Tenant.Job, as: TenantJob
+
   @impl Oban.Worker
   def perform(_) do
     Logger.info("==> [CRON] Cleaning up soft deleted entries...")
-    Brando.SoftDelete.Query.clean_up_soft_deletions()
+    TenantJob.each_active_environment(:all, &Brando.SoftDelete.Query.clean_up_soft_deletions/0)
     Logger.info("==> [CRON] Cleaning up soft deleted entries... done")
     :ok
   end

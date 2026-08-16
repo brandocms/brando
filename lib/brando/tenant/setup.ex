@@ -67,6 +67,10 @@ defmodule Brando.Tenant.Setup do
         {:ok, provisioned_site} ->
           {:ok, provisioned_site}
 
+        {:error, {:storage_not_created, reason}} ->
+          compensation = compensate(site, delete_storage: false)
+          {:error, {:site_setup_failed, reason, compensation}}
+
         {:error, reason} ->
           compensation = compensate(site)
           {:error, {:site_setup_failed, reason, compensation}}
@@ -77,11 +81,11 @@ defmodule Brando.Tenant.Setup do
   defp provision(site, creator, opts) do
     environments = Keyword.get(opts, :environments, @default_environments)
 
-    with :ok <- validate_environments(environments),
-         :ok <- Storage.create(site),
+    with :ok <- create_storage(site),
+         :ok <- validate_environments(environments),
          [live_attrs | remaining_attrs] <- order_live_first(environments),
          {:ok, live_environment} <- Environments.create_environment(site, live_attrs, creator: creator),
-         :ok <- seed(site, live_environment, creator),
+         :ok <- seed(site, live_environment, creator, opts),
          {:ok, _environments} <- create_copies(site, live_environment, remaining_attrs, creator),
          {:ok, _assignment} <- Access.grant(creator, site, :admin) do
       {:ok, Registry.get_site(site.id)}
@@ -107,13 +111,24 @@ defmodule Brando.Tenant.Setup do
     end)
   end
 
-  defp seed(site, environment, creator) do
-    prefix = Tenant.prefix(site, environment)
-    seeder = Brando.config(:tenant_seeder) || Brando.Tenant.Seeder
+  defp seed(site, environment, creator, opts) do
+    if Keyword.get(opts, :seed, true) do
+      prefix = Tenant.prefix(site, environment)
+      seeder = Brando.config(:tenant_seeder) || Brando.Tenant.Seeder
 
-    Tenant.with_prefix(prefix, fn -> seeder.seed(site, environment, creator) end)
+      Tenant.with_prefix(prefix, fn -> seeder.seed(site, environment, creator) end)
+    else
+      :ok
+    end
   rescue
     exception -> {:error, {:seeding_failed, exception}}
+  end
+
+  defp create_storage(site) do
+    case Storage.create(site) do
+      :ok -> :ok
+      {:error, reason} -> {:error, {:storage_not_created, reason}}
+    end
   end
 
   defp validate_environments(environments) when is_list(environments) do
@@ -185,9 +200,10 @@ defmodule Brando.Tenant.Setup do
     end
   end
 
-  defp compensate(site) do
+  defp compensate(site, opts \\ []) do
     Enum.each(site_schema_prefixes(site), &Schema.drop/1)
-    Storage.delete(site)
+
+    if Keyword.get(opts, :delete_storage, true), do: Storage.delete(site)
 
     case Registry.get_site(site.id) do
       nil -> :ok

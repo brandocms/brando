@@ -21,10 +21,24 @@ defmodule Brando.Worker.VideoUploadReaper do
 
   require Logger
 
+  alias Brando.Tenant.Job, as: TenantJob
+
   @stale_after_hours 24
 
   @impl Oban.Worker
   def perform(_) do
+    count =
+      TenantJob.each_active_environment(:all, &reap_current_environment/0)
+      |> Enum.sum()
+
+    if count > 0 do
+      Logger.info("==> [CRON] Marked #{count} abandoned video upload(s) as errored")
+    end
+
+    :ok
+  end
+
+  defp reap_current_environment do
     now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
     cutoff = NaiveDateTime.add(now, -@stale_after_hours * 3600, :second)
 
@@ -33,12 +47,7 @@ defmodule Brando.Worker.VideoUploadReaper do
         where: v.status == :uploading and v.inserted_at < ^cutoff and is_nil(v.deleted_at)
 
     {count, _} = Brando.Repo.update_all(query, set: [status: :errored, updated_at: now])
-
-    if count > 0 do
-      Logger.info("==> [CRON] Marked #{count} abandoned video upload(s) as errored")
-    end
-
-    :ok
+    count
   end
 
   @impl Oban.Worker

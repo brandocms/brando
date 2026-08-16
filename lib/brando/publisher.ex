@@ -7,6 +7,7 @@ defmodule Brando.Publisher do
   alias Brando.Blueprint.Identifier
   alias Brando.Repo
   alias Brando.Revisions
+  alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Users.User
   alias Brando.Worker
   alias Ecto.Changeset
@@ -30,7 +31,9 @@ defmodule Brando.Publisher do
       # the publishing date is in the past, just leave it
       {:ok, entry}
     else
-      args = %{schema: schema, id: id, user_id: user_id(user), status: :published}
+      args =
+        TenantJob.attach(%{schema: schema, id: id, user_id: user_id(user), status: :published})
+
       entry_identifier = Identifier.identifier_for(entry)
 
       Repo.delete_all(
@@ -71,12 +74,13 @@ defmodule Brando.Publisher do
            false <- revision.active,
            :ok <- cancel_revision_job(schema, id, revision_number),
            {1, _} <- Revisions.mark_revision_scheduled(schema, id, revision_number, true),
-           args = %{
-             schema: to_string(schema),
-             id: id,
-             revision: revision_number,
-             user_id: user_id(user)
-           },
+           args =
+             TenantJob.attach(%{
+               schema: to_string(schema),
+               id: id,
+               revision: revision_number,
+               user_id: user_id(user)
+             }),
            revision_identifier =
              decoded_entry
              |> Identifier.identifier_for()
@@ -100,7 +104,7 @@ defmodule Brando.Publisher do
       meta: %{identifier: job_identifier(revision_identifier)},
       unique: [
         fields: [:worker, :args],
-        keys: [:schema, :id, :revision],
+        keys: [:tenant_prefix, :schema, :id, :revision],
         period: :infinity,
         states: :incomplete
       ]
@@ -131,12 +135,13 @@ defmodule Brando.Publisher do
   @doc "Cancel all revision publishing jobs for an entry."
   def cancel_revision_jobs(schema, id) do
     schema = to_string(schema)
+    args = Map.merge(%{"schema" => schema, "id" => id}, TenantJob.context_fragment())
 
     from(j in Oban.Job,
       where:
         j.worker == ^inspect(Worker.EntryPublisher) and
           j.state in ["available", "scheduled", "executing", "retryable"] and
-          fragment("? @> ?", j.args, ^%{"schema" => schema, "id" => id})
+          fragment("? @> ?", j.args, ^args)
     )
     |> Oban.cancel_all_jobs()
 
@@ -146,19 +151,17 @@ defmodule Brando.Publisher do
   defp cancel_revision_job(schema, id, revision_number) do
     schema = to_string(schema)
 
+    args =
+      Map.merge(
+        %{"schema" => schema, "id" => id, "revision" => revision_number},
+        TenantJob.context_fragment()
+      )
+
     from(j in Oban.Job,
       where:
         j.worker == ^inspect(Worker.EntryPublisher) and
           j.state in ["available", "scheduled", "executing", "retryable"] and
-          fragment(
-            "? @> ?",
-            j.args,
-            ^%{
-              "schema" => schema,
-              "id" => id,
-              "revision" => revision_number
-            }
-          )
+          fragment("? @> ?", j.args, ^args)
     )
     |> Oban.cancel_all_jobs()
 
@@ -229,22 +232,28 @@ defmodule Brando.Publisher do
   end
 
   def list_jobs do
+    context = TenantJob.context_fragment()
+
     query =
       from j in Oban.Job,
-        where: "publisher" in j.tags,
+        where: "publisher" in j.tags and fragment("? @> ?", j.args, ^context),
         order_by: j.scheduled_at
 
     {:ok, Repo.all(query)}
   end
 
   def delete_job(id) do
+    context = TenantJob.context_fragment()
+
     with {:ok, id} <- cast_entry_id(id),
          %Oban.Job{} = job <- Repo.get(Oban.Job, id),
+         true <- map_size(context) == 0 or Map.take(job.args, Map.keys(context)) == context,
          :ok <- Oban.cancel_job(job) do
       clear_revision_schedule(job)
       Repo.delete_all(from j in Oban.Job, where: j.id == ^id)
     else
       nil -> {0, nil}
+      false -> {0, nil}
       {:error, _reason} = error -> error
     end
   end

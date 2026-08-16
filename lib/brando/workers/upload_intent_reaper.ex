@@ -24,6 +24,7 @@ defmodule Brando.Worker.UploadIntentReaper do
   use Oban.Worker, queue: :upload_reaping, max_attempts: 2
 
   alias Brando.Uploads
+  alias Brando.Tenant.Job, as: TenantJob
 
   require Logger
 
@@ -40,6 +41,18 @@ defmodule Brando.Worker.UploadIntentReaper do
 
   @impl Oban.Worker
   def perform(_job) do
+    errors =
+      TenantJob.each_active_environment(:all, &reap_current_environment/0)
+      |> Enum.reject(&(&1 == :ok))
+
+    case errors do
+      [] -> :ok
+      [{:error, reason}] -> {:error, reason}
+      multiple -> {:error, multiple}
+    end
+  end
+
+  defp reap_current_environment do
     stale = Uploads.list_stale_pending_intents(@stale_after_hours, @batch_size)
 
     {reaped, failed} = Enum.split_with(stale, &(reap(&1) == :ok))

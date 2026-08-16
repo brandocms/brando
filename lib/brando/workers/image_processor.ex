@@ -4,22 +4,25 @@ defmodule Brando.Worker.ImageProcessor do
 
   alias Brando.Assets.CompletedCallback
   alias Brando.Images
+  alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Users
 
   require Logger
 
   @impl Oban.Worker
-  def perform(
-        %Oban.Job{
-          args:
-            %{
-              "image_id" => image_id,
-              "config_target" => config_target,
-              "user_id" => user_id,
-              "field_full_path" => field_full_path
-            } = args
-        } = job
-      ) do
+  def perform(%Oban.Job{} = job), do: TenantJob.run(job, fn -> perform_tenant(job) end)
+
+  defp perform_tenant(
+         %Oban.Job{
+           args:
+             %{
+               "image_id" => image_id,
+               "config_target" => config_target,
+               "user_id" => user_id,
+               "field_full_path" => field_full_path
+             } = args
+         } = job
+       ) do
     silent? = Map.get(args, "silent", false)
 
     field_full_path =

@@ -5,15 +5,17 @@ defmodule Brando.TenantCacheKeyTest do
   alias Brando.Cache.Query
   alias Brando.Tenant
 
+  @prefixes ~w(tenant_cache-a_production tenant_cache-a_preview tenant_cache-b_production)
+
   setup do
+    previous_identity = Cachex.get(:cache, :identity)
     put_test_env(:tenancy_mode, :multi)
-    Cachex.clear(:cache)
-    Cachex.clear(:query)
+    cleanup_tenant_entries()
 
     on_exit(fn ->
       Tenant.put_prefix(nil)
-      Cachex.clear(:cache)
-      Cachex.clear(:query)
+      cleanup_tenant_entries()
+      restore_cache_entry(:cache, :identity, previous_identity)
     end)
 
     :ok
@@ -60,4 +62,20 @@ defmodule Brando.TenantCacheKeyTest do
     assert {:ok, %{name: "Legacy"}} = Cachex.get(:cache, :identity)
     assert {:list, "pages", _hash} = Query.hash_query({:list, "pages", %{}})
   end
+
+  defp cleanup_tenant_entries do
+    Enum.each([:cache, :query], fn cache ->
+      {:ok, keys} = Cachex.keys(cache)
+
+      keys
+      |> Enum.filter(&tenant_test_key?/1)
+      |> Enum.each(&Cachex.del(cache, &1))
+    end)
+  end
+
+  defp tenant_test_key?({:tenant, prefix, _key}), do: prefix in @prefixes
+  defp tenant_test_key?(_key), do: false
+
+  defp restore_cache_entry(cache, key, {:ok, nil}), do: Cachex.del(cache, key)
+  defp restore_cache_entry(cache, key, {:ok, value}), do: Cachex.put(cache, key, value)
 end

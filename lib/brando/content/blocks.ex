@@ -505,6 +505,7 @@ defmodule Brando.Content.Blocks do
   """
   def enqueue_entry_cascade(module, entry, identifier_id) do
     %{schema: to_string(module), entry_id: entry.id, identifier_id: identifier_id}
+    |> Brando.Tenant.Job.attach()
     |> Brando.Worker.EntryCascade.new()
     |> Oban.insert()
   end

@@ -8,19 +8,22 @@ defmodule Brando.Worker.EntryPublisher do
 
   require Logger
   alias Brando.Revisions
+  alias Brando.Tenant.Job, as: TenantJob
 
   # schedule publishing/depublishing an entry
   @impl Oban.Worker
-  def perform(
-        %Oban.Job{
-          args: %{
-            "schema" => schema,
-            "id" => id,
-            "revision" => revision,
-            "user_id" => user_id
-          }
-        } = job
-      ) do
+  def perform(%Oban.Job{} = job), do: TenantJob.run(job, fn -> perform_tenant(job) end)
+
+  defp perform_tenant(
+         %Oban.Job{
+           args: %{
+             "schema" => schema,
+             "id" => id,
+             "revision" => revision,
+             "user_id" => user_id
+           }
+         } = job
+       ) do
     user = publisher_user(user_id)
     now = DateTime.utc_now()
 
@@ -50,15 +53,14 @@ defmodule Brando.Worker.EntryPublisher do
   end
 
   # schedule publishing/depublishing an entry
-  @impl Oban.Worker
-  def perform(%Oban.Job{
-        args: %{
-          "schema" => schema,
-          "id" => id,
-          "status" => status,
-          "user_id" => user_id
-        }
-      }) do
+  defp perform_tenant(%Oban.Job{
+         args: %{
+           "schema" => schema,
+           "id" => id,
+           "status" => status,
+           "user_id" => user_id
+         }
+       }) do
     user = publisher_user(user_id)
     now = DateTime.utc_now()
 

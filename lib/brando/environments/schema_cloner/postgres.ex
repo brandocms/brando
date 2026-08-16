@@ -19,7 +19,7 @@ defmodule Brando.Environments.SchemaCloner.Postgres do
          :ok <- validate_identifier(target_prefix),
          {:ok, dump} <- dump_schema(source_prefix),
          {:ok, rewritten_dump} <- rewrite_schema(dump, source_prefix, target_prefix),
-         :ok <- restore_schema(rewritten_dump) do
+         :ok <- restore_dump(rewritten_dump) do
       :ok
     end
   end
@@ -59,8 +59,10 @@ defmodule Brando.Environments.SchemaCloner.Postgres do
     String.starts_with?(line, "COPY ") and String.ends_with?(line, " FROM stdin;")
   end
 
-  defp dump_schema(prefix) do
-    with {:ok, executable} <- executable(:pg_dump_path, "pg_dump"),
+  @doc false
+  def dump_schema(prefix, extra_args \\ []) do
+    with :ok <- validate_identifier(prefix),
+         {:ok, executable} <- executable(:pg_dump_path, "pg_dump"),
          {output, 0} <-
            System.cmd(
              executable,
@@ -73,7 +75,7 @@ defmodule Brando.Environments.SchemaCloner.Postgres do
                  "--no-owner",
                  "--no-privileges",
                  "--quote-all-identifiers"
-               ],
+               ] ++ extra_args,
              env: connection_env(),
              stderr_to_stdout: true
            ) do
@@ -87,7 +89,8 @@ defmodule Brando.Environments.SchemaCloner.Postgres do
     end
   end
 
-  defp restore_schema(sql) do
+  @doc false
+  def restore_dump(sql) do
     with {:ok, executable} <- executable(:psql_path, "psql"),
          {:ok, path} <- write_temporary_dump(sql) do
       try do

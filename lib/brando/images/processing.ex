@@ -5,6 +5,7 @@ defmodule Brando.Images.Processing do
   alias Brando.Images
   alias Brando.Images.Image
   alias Brando.Images.Operations
+  alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Upload
   alias Brando.Users.User
   alias Brando.Worker
@@ -20,13 +21,14 @@ defmodule Brando.Images.Processing do
   Queue an image for processing
   """
   def queue_processing(image, user, field_full_path \\ [], opts \\ []) do
-    args = %{
-      image_id: image.id,
-      config_target: image.config_target,
-      user_id: user.id,
-      field_full_path: field_full_path,
-      silent: Keyword.get(opts, :silent, false)
-    }
+    args =
+      TenantJob.attach(%{
+        image_id: image.id,
+        config_target: image.config_target,
+        user_id: user.id,
+        field_full_path: field_full_path,
+        silent: Keyword.get(opts, :silent, false)
+      })
 
     Brando.Repo.delete_all(
       from j in Oban.Job,
@@ -54,13 +56,14 @@ defmodule Brando.Images.Processing do
   """
   def processing_queued?(%{id: image_id}) when not is_nil(image_id) do
     worker = Oban.Worker.to_string(Worker.ImageProcessor)
+    args = TenantJob.attach(%{image_id: image_id})
 
     query =
       from j in Oban.Job,
         where:
           j.worker == ^worker and
             j.state in ^@unfinished_states and
-            fragment("? @> ?", j.args, ^%{image_id: image_id}),
+            fragment("? @> ?", j.args, ^args),
         select: true,
         limit: 1
 

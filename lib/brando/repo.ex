@@ -163,7 +163,8 @@ defmodule Brando.Repo do
   defp public_source?(_source), do: false
 
   defp public_schema?(schema) do
-    Code.ensure_loaded?(schema) and function_exported?(schema, :__schema__, 1) and
-      schema.__schema__(:prefix) == "public"
+    schema == Oban.Job or
+      (Code.ensure_loaded?(schema) and function_exported?(schema, :__schema__, 1) and
+         schema.__schema__(:prefix) == "public")
   end
 end

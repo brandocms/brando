@@ -85,6 +85,19 @@ defmodule Brando.TenantTest do
     assert Tenant.current_prefix() == "tenant_acme_production"
   end
 
+  test "tenant context can be captured for zero- and one-arity task functions" do
+    put_test_env(:tenancy_mode, :multi)
+    Tenant.put_prefix("tenant_acme_production")
+
+    zero_arity = Tenant.capture_context(fn -> Tenant.current_prefix() end)
+    one_arity = Tenant.capture_context(fn value -> {Tenant.current_prefix(), value} end)
+
+    assert Task.async(zero_arity) |> Task.await() == "tenant_acme_production"
+
+    assert Task.async(fn -> one_arity.(:value) end) |> Task.await() ==
+             {"tenant_acme_production", :value}
+  end
+
   test "arbitrary schema names cannot enter the process context" do
     assert_raise ArgumentError, ~r/invalid tenant prefix/, fn ->
       Tenant.put_prefix("public; DROP SCHEMA public")

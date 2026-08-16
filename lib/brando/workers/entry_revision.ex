@@ -9,8 +9,14 @@ defmodule Brando.Worker.EntryRevision do
 
   require Logger
 
+  alias Brando.Tenant.Job, as: TenantJob
+
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"schema" => schema, "entry_id" => entry_id, "user_id" => user_id}}) do
+  def perform(%Oban.Job{} = job), do: TenantJob.run(job, fn -> perform_tenant(job) end)
+
+  defp perform_tenant(%Oban.Job{
+         args: %{"schema" => schema, "entry_id" => entry_id, "user_id" => user_id}
+       }) do
     schema = Module.concat([schema])
     Logger.info("==> [OBAN] Creating revision for #{inspect(schema)} ##{entry_id}")
 

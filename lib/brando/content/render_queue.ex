@@ -34,6 +34,7 @@ defmodule Brando.Content.RenderQueue do
     worker = @entry_renderer
 
     args
+    |> Brando.Tenant.Job.attach()
     |> worker.new(replace_args: true, tags: [:render_entry])
     |> Oban.insert()
   end

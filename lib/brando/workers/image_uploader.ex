@@ -3,20 +3,23 @@ defmodule Brando.Worker.ImageUploader do
   import Ecto.Query
   alias Brando.CDN
   alias Brando.Images
+  alias Brando.Tenant.Job, as: TenantJob
   # alias Brando.Users
 
   @impl Oban.Worker
-  def perform(%Oban.Job{
-        id: job_id,
-        args: %{
-          "image_id" => image_id,
-          "src_key" => src_key,
-          "dest_key" => dest_key,
-          "user_id" => user_id,
-          "config_target" => config_target,
-          "field_full_path" => field_full_path
-        }
-      }) do
+  def perform(%Oban.Job{} = job), do: TenantJob.run(job, fn -> perform_tenant(job) end)
+
+  defp perform_tenant(%Oban.Job{
+         id: job_id,
+         args: %{
+           "image_id" => image_id,
+           "src_key" => src_key,
+           "dest_key" => dest_key,
+           "user_id" => user_id,
+           "config_target" => config_target,
+           "field_full_path" => field_full_path
+         }
+       }) do
     BrandoAdmin.Progress.show(user_id)
 
     field_full_path =
@@ -52,12 +55,15 @@ defmodule Brando.Worker.ImageUploader do
   end
 
   defp any_remaining_jobs?(image_id, job_id) do
+    context = TenantJob.context_fragment()
+
     query =
       from j in Oban.Job,
         select: [j.id],
         where:
           ^"image_upload_#{image_id}" in j.tags and
-            j.state != ^"completed"
+            j.state != ^"completed" and
+            fragment("? @> ?", j.args, ^context)
 
     result = Brando.Repo.all(query)
     result != [[job_id]]

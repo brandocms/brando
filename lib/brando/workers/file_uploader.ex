@@ -4,17 +4,20 @@ defmodule Brando.Worker.FileUploader do
 
   alias Brando.CDN
   alias Brando.Files
+  alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Users
 
   @impl Oban.Worker
-  def perform(%Oban.Job{
-        args: %{
-          "file_id" => file_id,
-          "config_target" => config_target,
-          "user_id" => user_id,
-          "field_full_path" => field_full_path
-        }
-      }) do
+  def perform(%Oban.Job{} = job), do: TenantJob.run(job, fn -> perform_tenant(job) end)
+
+  defp perform_tenant(%Oban.Job{
+         args: %{
+           "file_id" => file_id,
+           "config_target" => config_target,
+           "user_id" => user_id,
+           "field_full_path" => field_full_path
+         }
+       }) do
     field_full_path =
       Enum.map(field_full_path, fn
         segment when is_binary(segment) -> String.to_existing_atom(segment)

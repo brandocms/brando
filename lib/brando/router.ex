@@ -99,6 +99,7 @@ defmodule Brando.Router do
                 {Brando.Tenant.LiveView, :default}
               ] do
           # brando routes
+          live "/sites", BrandoAdmin.Sites.SiteLive
           live "/assets/images", BrandoAdmin.Images.ImageListLive
           live "/assets/images/update/:entry_id", BrandoAdmin.Images.ImageFormLive, :update
           live "/assets/videos", BrandoAdmin.Videos.VideoListLive

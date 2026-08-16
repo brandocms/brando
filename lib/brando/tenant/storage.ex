@@ -5,13 +5,12 @@ defmodule Brando.Tenant.Storage do
 
   @spec create(Site.t()) :: :ok | {:error, term()}
   def create(%Site{} = site) do
-    [media_root(site), assets_root(site)]
-    |> Enum.reduce_while(:ok, fn path, :ok ->
-      case File.mkdir_p(path) do
-        :ok -> {:cont, :ok}
-        {:error, reason} -> {:halt, {:error, {:create_directory_failed, path, reason}}}
-      end
-    end)
+    roots = [media_root(site), site_root(site)]
+
+    case Enum.find(roots, &File.exists?/1) do
+      nil -> create_new_directories(roots ++ [assets_root(site)])
+      path -> {:error, {:site_storage_already_exists, path}}
+    end
   end
 
   @spec delete(Site.t()) :: :ok | {:error, term()}
@@ -54,4 +53,22 @@ defmodule Brando.Tenant.Storage do
 
   @spec assets_root(Site.t()) :: String.t()
   def assets_root(%Site{} = site), do: Path.join(site_root(site), "assets")
+
+  defp create_new_directories(paths) do
+    paths
+    |> Enum.reduce_while({:ok, []}, fn path, {:ok, created} ->
+      case File.mkdir_p(path) do
+        :ok -> {:cont, {:ok, [path | created]}}
+        {:error, reason} -> {:halt, {:error, {:create_directory_failed, path, reason}, created}}
+      end
+    end)
+    |> case do
+      {:ok, _created} ->
+        :ok
+
+      {:error, reason, created} ->
+        Enum.each(created, &File.rm_rf/1)
+        {:error, reason}
+    end
+  end
 end

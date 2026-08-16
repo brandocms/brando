@@ -255,37 +255,39 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
             # Spawn translation Task
             lv_pid = self()
 
-            Task.start(fn ->
-              progress_fn = fn step ->
-                send(lv_pid, {:translation_progress, schema, %{step: step, entry_url: entry_url}})
-              end
+            Task.start(
+              Brando.Tenant.capture_context(fn ->
+                progress_fn = fn step ->
+                  send(lv_pid, {:translation_progress, schema, %{step: step, entry_url: entry_url}})
+                end
 
-              case Brando.AI.Translation.translate_entry(
-                     schema,
-                     duped_entry.id,
-                     source_lang,
-                     language,
-                     progress_fn
-                   ) do
-                {:ok, _} ->
-                  send(
-                    lv_pid,
-                    {:translation_progress, schema, %{step: :complete, entry_url: entry_url, language: language}}
-                  )
+                case Brando.AI.Translation.translate_entry(
+                       schema,
+                       duped_entry.id,
+                       source_lang,
+                       language,
+                       progress_fn
+                     ) do
+                  {:ok, _} ->
+                    send(
+                      lv_pid,
+                      {:translation_progress, schema, %{step: :complete, entry_url: entry_url, language: language}}
+                    )
 
-                  update_list_entries(schema)
+                    update_list_entries(schema)
 
-                {:error, reason} ->
-                  # Roll back: delete the duplicated entry
-                  apply(context, :"delete_#{singular}", [duped_entry.id, user])
-                  update_list_entries(schema)
+                  {:error, reason} ->
+                    # Roll back: delete the duplicated entry
+                    apply(context, :"delete_#{singular}", [duped_entry.id, user])
+                    update_list_entries(schema)
 
-                  send(
-                    lv_pid,
-                    {:translation_progress, schema, %{step: {:error, inspect(reason)}, entry_url: nil}}
-                  )
-              end
-            end)
+                    send(
+                      lv_pid,
+                      {:translation_progress, schema, %{step: {:error, inspect(reason)}, entry_url: nil}}
+                    )
+                end
+              end)
+            )
 
             {:halt, socket}
 
