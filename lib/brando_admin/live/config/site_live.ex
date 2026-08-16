@@ -305,18 +305,20 @@ defmodule BrandoAdmin.Sites.SiteLive do
   defp directory_size(path) do
     case File.ls(path) do
       {:ok, entries} ->
-        Enum.reduce(entries, 0, fn entry, total ->
-          child = Path.join(path, entry)
-
-          case File.lstat(child) do
-            {:ok, %{type: :regular, size: size}} -> total + size
-            {:ok, %{type: :directory}} -> total + directory_size(child)
-            _symlink_or_error -> total
-          end
-        end)
+        Enum.reduce(entries, 0, fn entry, total -> total + entry_size(path, entry) end)
 
       {:error, _reason} ->
         0
+    end
+  end
+
+  defp entry_size(path, entry) do
+    child = Path.join(path, entry)
+
+    case File.lstat(child) do
+      {:ok, %{type: :regular, size: size}} -> size
+      {:ok, %{type: :directory}} -> directory_size(child)
+      _symlink_or_error -> 0
     end
   end
 

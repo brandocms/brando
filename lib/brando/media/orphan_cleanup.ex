@@ -83,15 +83,17 @@ defmodule Brando.Media.OrphanCleanup do
         {:error, :no_environments}
 
       environments ->
-        Enum.reduce_while(environments, {:ok, MapSet.new()}, fn environment, {:ok, paths} ->
-          case environment_paths(site, environment) do
-            {:ok, environment_paths} ->
-              {:cont, {:ok, MapSet.union(paths, environment_paths)}}
+        Enum.reduce_while(environments, {:ok, MapSet.new()}, &collect_environment_paths(&1, &2, site))
+    end
+  end
 
-            {:error, reason} ->
-              {:halt, {:error, {:environment_scan_failed, environment.key, reason}}}
-          end
-        end)
+  defp collect_environment_paths(environment, {:ok, paths}, site) do
+    case environment_paths(site, environment) do
+      {:ok, environment_paths} ->
+        {:cont, {:ok, MapSet.union(paths, environment_paths)}}
+
+      {:error, reason} ->
+        {:halt, {:error, {:environment_scan_failed, environment.key, reason}}}
     end
   end
 
@@ -165,26 +167,7 @@ defmodule Brando.Media.OrphanCleanup do
   defp regular_files(directory) do
     case File.ls(directory) do
       {:ok, entries} ->
-        Enum.reduce_while(entries, {:ok, []}, fn entry, {:ok, files} ->
-          path = Path.join(directory, entry)
-
-          case File.lstat(path) do
-            {:ok, %{type: :regular}} ->
-              {:cont, {:ok, [path | files]}}
-
-            {:ok, %{type: :directory}} ->
-              case regular_files(path) do
-                {:ok, nested} -> {:cont, {:ok, nested ++ files}}
-                {:error, reason} -> {:halt, {:error, reason}}
-              end
-
-            {:ok, _symlink_or_special} ->
-              {:cont, {:ok, files}}
-
-            {:error, reason} ->
-              {:halt, {:error, {path, reason}}}
-          end
-        end)
+        Enum.reduce_while(entries, {:ok, []}, &collect_regular_file(&1, &2, directory))
 
       {:error, :enoent} ->
         {:ok, []}
@@ -193,6 +176,20 @@ defmodule Brando.Media.OrphanCleanup do
         {:error, reason}
     end
   end
+
+  defp collect_regular_file(entry, {:ok, files}, directory) do
+    path = Path.join(directory, entry)
+
+    case File.lstat(path) do
+      {:ok, %{type: :regular}} -> {:cont, {:ok, [path | files]}}
+      {:ok, %{type: :directory}} -> continue_file_scan(regular_files(path), files)
+      {:ok, _symlink_or_special} -> {:cont, {:ok, files}}
+      {:error, reason} -> {:halt, {:error, {path, reason}}}
+    end
+  end
+
+  defp continue_file_scan({:ok, nested}, files), do: {:cont, {:ok, nested ++ files}}
+  defp continue_file_scan({:error, reason}, _files), do: {:halt, {:error, reason}}
 
   defp orphan_paths(candidates, root, references, grace_seconds) do
     candidates
@@ -203,9 +200,8 @@ defmodule Brando.Media.OrphanCleanup do
   end
 
   defp old_enough?(path, grace_seconds) do
-    with {:ok, %{mtime: modified_at}} <- File.stat(path, time: :posix) do
-      System.os_time(:second) - modified_at >= grace_seconds
-    else
+    case File.stat(path, time: :posix) do
+      {:ok, %{mtime: modified_at}} -> System.os_time(:second) - modified_at >= grace_seconds
       _ -> false
     end
   end

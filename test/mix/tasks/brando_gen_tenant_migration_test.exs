@@ -7,7 +7,7 @@ defmodule Mix.Tasks.Brando.GenTenantMigrationTest do
 
   test "generates migrations in the tenant migration path" do
     in_tmp("tenant_migration_generator", fn ->
-      path = Path.expand("priv/repo/tenant_migrations")
+      path = Path.join(File.cwd!(), "priv/repo/tenant_migrations")
 
       Mix.Tasks.Brando.Gen.TenantMigration.run([
         "add_projects",

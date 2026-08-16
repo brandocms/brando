@@ -593,19 +593,25 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
     prefix = Tenant.prefix(site, environment)
 
     Enum.reduce(@kinds, {%{}, %{}}, fn kind, {effective_acc, diff_acc} ->
-      Enum.reduce(Map.fetch!(libraries, kind), {effective_acc, diff_acc}, fn entry, {entries, diffs} ->
-        effective = SharedLibrary.get(kind, entry.id, :shared, site, prefix)
-        entries = Map.put(entries, {kind, entry.id}, effective)
-
-        diffs =
-          case SharedLibrary.diff(kind, entry.id, site, prefix) do
-            {:ok, diff} -> Map.put(diffs, {kind, entry.id}, diff)
-            {:error, :not_found} -> diffs
-          end
-
-        {entries, diffs}
-      end)
+      Enum.reduce(
+        Map.fetch!(libraries, kind),
+        {effective_acc, diff_acc},
+        &put_context_entry(&1, &2, kind, site, prefix)
+      )
     end)
+  end
+
+  defp put_context_entry(entry, {entries, diffs}, kind, site, prefix) do
+    effective = SharedLibrary.get(kind, entry.id, :shared, site, prefix)
+    entries = Map.put(entries, {kind, entry.id}, effective)
+
+    diffs =
+      case SharedLibrary.diff(kind, entry.id, site, prefix) do
+        {:ok, diff} -> Map.put(diffs, {kind, entry.id}, diff)
+        {:error, :not_found} -> diffs
+      end
+
+    {entries, diffs}
   end
 
   defp select_site([], _selected_id), do: nil
@@ -633,14 +639,16 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
   end
 
   defp entry_attrs(:palette, params) do
-    with {:ok, colors} <- Jason.decode(params["colors_json"] || "[]") do
-      {:ok,
-       params
-       |> Map.take(["name", "namespace", "key", "version_note"])
-       |> Map.put("status", "published")
-       |> Map.put("colors", colors)}
-    else
-      _error -> {:error, :invalid_colors_json}
+    case Jason.decode(params["colors_json"] || "[]") do
+      {:ok, colors} ->
+        {:ok,
+         params
+         |> Map.take(["name", "namespace", "key", "version_note"])
+         |> Map.put("status", "published")
+         |> Map.put("colors", colors)}
+
+      _error ->
+        {:error, :invalid_colors_json}
     end
   end
 

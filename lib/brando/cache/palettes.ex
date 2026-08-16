@@ -2,8 +2,8 @@ defmodule Brando.Cache.Palettes do
   @moduledoc """
   Interaction with palettes cache
   """
-  alias Brando.Content
   alias Brando.Cache
+  alias Brando.Content
 
   @type changeset :: Ecto.Changeset.t()
 
@@ -41,9 +41,8 @@ defmodule Brando.Cache.Palettes do
     {:ok, palettes} = get_palettes()
     palettes_css = get_palettes_css(palettes)
 
-    with {:ok, true} <- Cache.put(:palettes, palettes, :infinite),
-         {:ok, true} <- Cache.put(:palettes_css, palettes_css, :infinite) do
-      {:ok, true}
+    with {:ok, true} <- Cache.put(:palettes, palettes, :infinite) do
+      Cache.put(:palettes_css, palettes_css, :infinite)
     end
   end
 

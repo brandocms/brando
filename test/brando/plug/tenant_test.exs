@@ -2,10 +2,10 @@ defmodule Brando.Plug.TenantTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
+  alias Brando.SSG.Context
   alias Brando.Tenant
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
-  alias Brando.SSG.Context
 
   @site_attrs %{
     name: "Acme",

@@ -9,9 +9,9 @@ defmodule Brando.Content.SharedLibrary do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Brando.Content.Container
   alias Brando.Content.Block
   alias Brando.Content.Blocks
+  alias Brando.Content.Container
   alias Brando.Content.Module
   alias Brando.Content.Palette
   alias Brando.Content.SharedLibrary.Cache
@@ -209,17 +209,7 @@ defmodule Brando.Content.SharedLibrary do
 
     with override when not is_nil(override) <- get_override(kind, id, prefix),
          shared when not is_nil(shared) <- get_public(kind, id) do
-      case Repo.transaction(fn ->
-             with {:ok, _deleted} <- Repo.delete(override, prefix: prefix),
-                  {:ok, replacement} <- create_override(kind, shared, prefix, user) do
-               replacement
-             else
-               {:error, reason} -> Repo.rollback(reason)
-             end
-           end) do
-        {:ok, replacement} -> {:ok, replacement}
-        {:error, reason} -> {:error, reason}
-      end
+      replace_override(kind, override, shared, prefix, user)
     else
       nil -> {:error, :not_found}
     end
@@ -258,21 +248,23 @@ defmodule Brando.Content.SharedLibrary do
     definition = definition(kind)
     schema = definition.schema
 
-    with shared when not is_nil(shared) <- get_public(kind, normalize_id!(id)) do
-      attrs =
-        attrs
-        |> Map.put(version_key(attrs), (shared.version || 1) + 1)
-        |> Map.delete(opposite_version_key(attrs))
+    case get_public(kind, normalize_id!(id)) do
+      nil ->
+        {:error, :not_found}
 
-      result =
-        shared
-        |> schema.changeset(attrs, user)
-        |> Changeset.validate_required([:version_note])
-        |> Repo.update(@public_opts)
+      shared ->
+        attrs =
+          attrs
+          |> Map.put(version_key(attrs), (shared.version || 1) + 1)
+          |> Map.delete(opposite_version_key(attrs))
 
-      after_shared_update(result, kind)
-    else
-      nil -> {:error, :not_found}
+        result =
+          shared
+          |> schema.changeset(attrs, user)
+          |> Changeset.validate_required([:version_note])
+          |> Repo.update(@public_opts)
+
+        after_shared_update(result, kind)
     end
   end
 
@@ -281,29 +273,7 @@ defmodule Brando.Content.SharedLibrary do
     id = normalize_id!(id)
 
     Registry.list_sites()
-    |> Enum.map(fn site ->
-      {overridden, referenced} =
-        Enum.reduce(site.environments, {[], []}, fn environment, {overridden_acc, referenced_acc} ->
-          prefix = Tenant.prefix(site, environment)
-
-          overridden_acc =
-            if get_override(kind, id, prefix), do: [environment.key | overridden_acc], else: overridden_acc
-
-          referenced_acc =
-            if shared_reference_exists?(kind, id, prefix),
-              do: [environment.key | referenced_acc],
-              else: referenced_acc
-
-          {overridden_acc, referenced_acc}
-        end)
-
-      %{
-        site: site,
-        enabled: enabled?(site, kind, id),
-        overridden_environments: Enum.reverse(overridden),
-        referenced_environments: Enum.reverse(referenced)
-      }
-    end)
+    |> Enum.map(&usage_for_site(&1, kind, id))
     |> Enum.reject(&(!&1.enabled and &1.overridden_environments == [] and &1.referenced_environments == []))
   end
 
@@ -484,18 +454,54 @@ defmodule Brando.Content.SharedLibrary do
   end
 
   defp rerender_shared(kind, id) do
-    Enum.each(Registry.list_sites(), fn site ->
-      Enum.each(site.environments, fn environment ->
-        prefix = Tenant.prefix(site, environment)
+    Enum.each(Registry.list_sites(), &rerender_site(&1, kind, id))
+  end
 
-        Tenant.with_prefix(prefix, fn ->
-          case kind do
-            :module -> Blocks.render_entries_with_module_id(id, :shared)
-            :container -> Blocks.render_entries_with_container_id(id, :shared)
-            :palette -> Blocks.render_entries_with_palette_id(id, :shared)
-          end
-        end)
-      end)
+  defp rerender_site(site, kind, id) do
+    Enum.each(site.environments, &rerender_environment(site, &1, kind, id))
+  end
+
+  defp rerender_environment(site, environment, kind, id) do
+    prefix = Tenant.prefix(site, environment)
+    Tenant.with_prefix(prefix, fn -> rerender_kind(kind, id) end)
+  end
+
+  defp rerender_kind(:module, id), do: Blocks.render_entries_with_module_id(id, :shared)
+  defp rerender_kind(:container, id), do: Blocks.render_entries_with_container_id(id, :shared)
+  defp rerender_kind(:palette, id), do: Blocks.render_entries_with_palette_id(id, :shared)
+
+  defp usage_for_site(site, kind, id) do
+    {overridden, referenced} =
+      Enum.reduce(site.environments, {[], []}, &collect_environment_usage(&1, &2, site, kind, id))
+
+    %{
+      site: site,
+      enabled: enabled?(site, kind, id),
+      overridden_environments: Enum.reverse(overridden),
+      referenced_environments: Enum.reverse(referenced)
+    }
+  end
+
+  defp collect_environment_usage(environment, {overridden, referenced}, site, kind, id) do
+    prefix = Tenant.prefix(site, environment)
+
+    {
+      prepend_if(overridden, environment.key, get_override(kind, id, prefix)),
+      prepend_if(referenced, environment.key, shared_reference_exists?(kind, id, prefix))
+    }
+  end
+
+  defp prepend_if(values, value, present) when present not in [false, nil], do: [value | values]
+  defp prepend_if(values, _value, _missing), do: values
+
+  defp replace_override(kind, override, shared, prefix, user) do
+    Repo.transaction(fn ->
+      with {:ok, _deleted} <- Repo.delete(override, prefix: prefix),
+           {:ok, replacement} <- create_override(kind, shared, prefix, user) do
+        replacement
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
     end)
   end
 

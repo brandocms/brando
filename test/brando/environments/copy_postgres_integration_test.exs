@@ -2,8 +2,10 @@ defmodule Brando.Environments.CopyPostgresIntegrationTest do
   use ExUnit.Case, async: false
 
   alias Brando.Environments
+  alias Brando.IntegrationRepo
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
+  alias Ecto.Adapters.SQL
 
   defmodule Repo do
     use Ecto.Repo,
@@ -12,28 +14,7 @@ defmodule Brando.Environments.CopyPostgresIntegrationTest do
   end
 
   setup_all do
-    integration_config = BrandoIntegration.Repo.config()
-
-    repo_options =
-      integration_config
-      |> Keyword.take([:database, :hostname, :password, :port, :socket_options, :ssl, :username])
-      |> Keyword.merge(pool: DBConnection.ConnectionPool, pool_size: 3)
-
-    previous_repo_config = Application.fetch_env(:brando, Repo)
-    Application.put_env(:brando, Repo, repo_options)
-    {:ok, repo} = Repo.start_link()
-
-    on_exit(fn ->
-      try do
-        GenServer.stop(repo)
-      catch
-        :exit, _ -> :ok
-      end
-
-      restore_env(Repo, previous_repo_config)
-    end)
-
-    :ok
+    IntegrationRepo.start(Repo)
   end
 
   setup do
@@ -46,7 +27,7 @@ defmodule Brando.Environments.CopyPostgresIntegrationTest do
     site_key = "copyint#{unique}"
 
     %{rows: [[site_id]]} =
-      Ecto.Adapters.SQL.query!(
+      SQL.query!(
         Repo,
         """
         INSERT INTO public.sites
@@ -59,7 +40,7 @@ defmodule Brando.Environments.CopyPostgresIntegrationTest do
       )
 
     for {name, key, live} <- [{"Source", "source", true}, {"Target", "target", false}] do
-      Ecto.Adapters.SQL.query!(
+      SQL.query!(
         Repo,
         """
         INSERT INTO public.environments
@@ -80,9 +61,9 @@ defmodule Brando.Environments.CopyPostgresIntegrationTest do
 
     on_exit(fn ->
       drop_site_schemas(site_key)
-      Ecto.Adapters.SQL.query!(Repo, "DELETE FROM public.sites WHERE id = $1", [site_id])
-      restore_env(:repo_module, previous_repo)
-      restore_env(:environment_schema_cloner, previous_cloner)
+      SQL.query!(Repo, "DELETE FROM public.sites WHERE id = $1", [site_id])
+      IntegrationRepo.restore_env(:repo_module, previous_repo)
+      IntegrationRepo.restore_env(:environment_schema_cloner, previous_cloner)
       Cache.clear()
     end)
 
@@ -104,16 +85,16 @@ defmodule Brando.Environments.CopyPostgresIntegrationTest do
   end
 
   defp create_records_schema(prefix, names) do
-    Ecto.Adapters.SQL.query!(Repo, ~s|CREATE SCHEMA "#{prefix}"|, [])
+    SQL.query!(Repo, ~s|CREATE SCHEMA "#{prefix}"|, [])
 
-    Ecto.Adapters.SQL.query!(
+    SQL.query!(
       Repo,
       ~s|CREATE TABLE "#{prefix}".records (id serial PRIMARY KEY, name text NOT NULL)|,
       []
     )
 
     Enum.each(names, fn name ->
-      Ecto.Adapters.SQL.query!(
+      SQL.query!(
         Repo,
         ~s|INSERT INTO "#{prefix}".records (name) VALUES ($1)|,
         [name]
@@ -122,7 +103,7 @@ defmodule Brando.Environments.CopyPostgresIntegrationTest do
   end
 
   defp records_in(prefix) do
-    Ecto.Adapters.SQL.query!(
+    SQL.query!(
       Repo,
       ~s|SELECT name FROM "#{prefix}".records ORDER BY id|,
       []
@@ -131,17 +112,14 @@ defmodule Brando.Environments.CopyPostgresIntegrationTest do
 
   defp drop_site_schemas(site_key) do
     %{rows: rows} =
-      Ecto.Adapters.SQL.query!(
+      SQL.query!(
         Repo,
         "SELECT nspname FROM pg_namespace WHERE nspname LIKE $1",
         ["tenant_#{site_key}_%"]
       )
 
     Enum.each(rows, fn [schema] ->
-      Ecto.Adapters.SQL.query!(Repo, ~s|DROP SCHEMA "#{schema}" CASCADE|, [])
+      SQL.query!(Repo, ~s|DROP SCHEMA "#{schema}" CASCADE|, [])
     end)
   end
-
-  defp restore_env(key, {:ok, value}), do: Application.put_env(:brando, key, value)
-  defp restore_env(key, :error), do: Application.delete_env(:brando, key)
 end

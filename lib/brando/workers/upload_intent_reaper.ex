@@ -23,8 +23,8 @@ defmodule Brando.Worker.UploadIntentReaper do
   """
   use Oban.Worker, queue: :upload_reaping, max_attempts: 2
 
-  alias Brando.Uploads
   alias Brando.Tenant.Job, as: TenantJob
+  alias Brando.Uploads
 
   require Logger
 

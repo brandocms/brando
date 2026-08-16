@@ -48,10 +48,9 @@ defmodule Brando.Tenant.Setup do
     now = Keyword.get_lazy(opts, :now, &DateTime.utc_now/0)
 
     Lock.with(lifecycle_lock_key(site.key), fn ->
-      with %Site{} = current_site <- Registry.get_site(site.id) do
-        Registry.update_site(current_site, %{status: :archived, archived_at: now})
-      else
+      case Registry.get_site(site.id) do
         nil -> {:error, :site_not_found}
+        %Site{} = current_site -> Registry.update_site(current_site, %{status: :archived, archived_at: now})
       end
     end)
   end
@@ -148,10 +147,9 @@ defmodule Brando.Tenant.Setup do
 
   defp update_status(site, status) do
     Lock.with(lifecycle_lock_key(site.key), fn ->
-      with %Site{} = current_site <- Registry.get_site(site.id) do
-        Registry.update_site(current_site, %{status: status, archived_at: nil})
-      else
+      case Registry.get_site(site.id) do
         nil -> {:error, :site_not_found}
+        %Site{} = current_site -> Registry.update_site(current_site, %{status: status, archived_at: nil})
       end
     end)
   end
@@ -182,21 +180,23 @@ defmodule Brando.Tenant.Setup do
   defp deletable?(%Site{}, _opts), do: {:error, :site_must_be_archived}
 
   defp delete_registry_and_schemas(site) do
-    case Repo.transaction(fn ->
-           Enum.each(site_schema_prefixes(site), fn prefix ->
-             case Schema.drop(prefix) do
-               :ok -> :ok
-               {:error, reason} -> Repo.rollback({:schema_drop_failed, prefix, reason})
-             end
-           end)
+    Repo.transaction(fn ->
+      Enum.each(site_schema_prefixes(site), &drop_schema!/1)
+      delete_registry_site!(site)
+    end)
+  end
 
-           case Registry.delete_site(site) do
-             {:ok, deleted_site} -> deleted_site
-             {:error, reason} -> Repo.rollback(reason)
-           end
-         end) do
-      {:ok, deleted_site} -> {:ok, deleted_site}
-      {:error, reason} -> {:error, reason}
+  defp drop_schema!(prefix) do
+    case Schema.drop(prefix) do
+      :ok -> :ok
+      {:error, reason} -> Repo.rollback({:schema_drop_failed, prefix, reason})
+    end
+  end
+
+  defp delete_registry_site!(site) do
+    case Registry.delete_site(site) do
+      {:ok, deleted_site} -> deleted_site
+      {:error, reason} -> Repo.rollback(reason)
     end
   end
 

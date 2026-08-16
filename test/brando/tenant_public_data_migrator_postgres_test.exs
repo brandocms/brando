@@ -1,6 +1,7 @@
 defmodule Brando.TenantPublicDataMigratorPostgresTest do
   use ExUnit.Case, async: false
 
+  alias Brando.IntegrationRepo
   alias Brando.Tenant.PublicDataMigrator.Postgres
 
   defmodule Repo do
@@ -10,28 +11,7 @@ defmodule Brando.TenantPublicDataMigratorPostgresTest do
   end
 
   setup_all do
-    integration_config = BrandoIntegration.Repo.config()
-
-    repo_options =
-      integration_config
-      |> Keyword.take([:database, :hostname, :password, :port, :socket_options, :ssl, :username])
-      |> Keyword.merge(pool: DBConnection.ConnectionPool, pool_size: 3)
-
-    previous_repo_config = Application.fetch_env(:brando, Repo)
-    Application.put_env(:brando, Repo, repo_options)
-    {:ok, repo} = Repo.start_link()
-
-    on_exit(fn ->
-      try do
-        GenServer.stop(repo)
-      catch
-        :exit, _ -> :ok
-      end
-
-      restore_env(Repo, previous_repo_config)
-    end)
-
-    :ok
+    IntegrationRepo.start(Repo)
   end
 
   setup do
@@ -55,7 +35,7 @@ defmodule Brando.TenantPublicDataMigratorPostgresTest do
     on_exit(fn ->
       Ecto.Adapters.SQL.query!(Repo, ~s|DROP SCHEMA IF EXISTS "#{target}" CASCADE|, [])
       Ecto.Adapters.SQL.query!(Repo, ~s|DROP TABLE IF EXISTS public."#{table}" CASCADE|, [])
-      restore_env(:repo_module, previous_repo)
+      IntegrationRepo.restore_env(:repo_module, previous_repo)
     end)
 
     %{table: table, target: target}
@@ -71,7 +51,4 @@ defmodule Brando.TenantPublicDataMigratorPostgresTest do
                []
              )
   end
-
-  defp restore_env(key, {:ok, value}), do: Application.put_env(:brando, key, value)
-  defp restore_env(key, :error), do: Application.delete_env(:brando, key)
 end
