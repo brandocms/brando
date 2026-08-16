@@ -4,20 +4,6 @@ Brando can run in three tenancy modes. The default preserves the traditional
 single-site, `public`-schema setup; the other modes introduce named content
 environments backed by PostgreSQL schemas.
 
-> #### Implementation status {: .warning}
->
-> The tenant registry, schema lifecycle, routing context, archive/copy/rollback
-> operations, scheduling and management UI, admin environment switcher, and
-> cross-environment local-media cleanup are available. Multi-site roles,
-> strict host and admin authorization, compensated site provisioning,
-> retention-aware site deletion, per-site media, tenant-scoped caches,
-> uploadable frontend asset sets, and the existing-installation migration task
-> are also available. Multi-site installations can curate a shared module,
-> container, and palette library with per-site access and per-environment
-> overrides.
-> Before enabling tenancy for an application, you must provide tenant migrations
-> for every table the application queries as tenant content.
-
 ## Choose a mode
 
 | Mode | Storage and behavior | Intended use |
