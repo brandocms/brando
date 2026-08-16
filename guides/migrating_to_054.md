@@ -30,8 +30,11 @@ mix brando.migrate54
 
 The task:
 
-- rewrites legacy Blueprint datasource, trait, villain/block, form, listing,
-  input, metadata, and JSON-LD syntax;
+- rewrites legacy Blueprint list, single, and selection datasources; trait,
+  villain/block, form, input, metadata, and JSON-LD syntax; and listing queries,
+  filters, actions, selection actions, and supported exports;
+- preserves legacy Meta and JSON-LD path/mutator behavior and adds the narrow
+  listing component imports used by custom row functions;
 - renames legacy listing `filter:` keys and `list_villains/0` calls on
   `Brando.Villain`;
 - rewrites every legacy LivePreview target with its own layout and template
@@ -39,7 +42,9 @@ The task:
 - replaces `mix phx.digest` in a root Dockerfile, removes `?vsn=d` from font
   URLs in application styles/templates, adds a missing single-Repo
   `config :brando, repo_module:` setting, and defaults an unconfigured Swoosh
-  API client to `Swoosh.ApiClient.Req`;
+  API client to `Swoosh.ApiClient.Req`, and pins declared
+  `phoenix_live_view` dependencies in `assets/**/package.json` to the loaded
+  server version;
 - updates Gettext source declarations through `igniter.update_gettext`;
 - copies the current `mix brando.upgrade` task and
   `scripts/sync_gettext.sh` helper into the application;
@@ -72,11 +77,22 @@ depends on application semantics:
   (Brando-owned migrations handle database-stored module/fragment code);
 - updating code that traverses generated `*_identifiers` associations for
   `:entries` relations, whose join entries are now exposed directly;
+- moving datasource declarations that still use `Brando.Datasource` outside a
+  Blueprint module onto the appropriate Blueprint;
+- replacing legacy listing `field`, `template`, and positional `child_listing`
+  declarations with application-specific row components/child schemas, and
+  redesigning exports that use the removed `after_export` callback;
 - changing a Vite manifest only when that application actually uses Vite 5+;
 - replacing custom Sharp processing, consolidating custom Create/Update
   LiveViews, adopting `<.head>`, and updating custom navigation markup;
-- pinning the consumer `phoenix_live_view` JavaScript package to the changelog's
-  server version and retaining Hackney explicitly if application code uses it;
+- refreshing the package-manager lockfile and rebuilding backend assets after
+  the task pins `phoenix_live_view`; nonstandard frontend manifests still need
+  manual review. Retain Hackney explicitly if application code uses it;
+- updating callers of `Brando.Videos.Uploader.initiate_upload/3` for its new
+  error tuples and provider credential behavior;
+- replacing `Brando.CDN.key_exists?/2` by hand. `key_available?/2` has inverted
+  truth and deliberately different error semantics, so a mechanical rename is
+  unsafe;
 - moving function-based asset `config_target` callbacks from helper modules to
   the relevant Blueprint schema;
 - repointing custom admin form components at the modules the form's markup was

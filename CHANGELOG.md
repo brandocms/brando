@@ -1329,8 +1329,8 @@
 
 #### Dependencies
 
-- Bumped `phoenix` to `1.8.8` and `phoenix_live_view` to `1.2.3`. Both are pinned exactly,
-  so when upgrading also pin `phoenix_live_view` to `1.2.3` in your `assets/package.json`
+- Bumped `phoenix` to `1.8.8` and `phoenix_live_view` to `1.2.8`. Both are pinned exactly,
+  so when upgrading also pin `phoenix_live_view` to `1.2.8` in your `assets/package.json`
   (and rebuild your backend assets) — LiveView warns when the JS client and server versions
   differ.
 - Bumped `oban` to `~> 2.23`. The schema is upgraded to v14 via `brando_153` (see Migrations).
@@ -1653,13 +1653,16 @@ guide. The required order is:
 
 1. Commit the existing application and back up the database and Gettext catalogs.
 2. Update Brando, then run `mix brando.migrate54`. The task rewrites legacy
-   unnamed and named `form` options, listing `filter:` keys,
-   `Brando.Villain.list_villains/0`, root Docker digest commands, and font cache
-   suffixes. It also fills missing single-Repo Brando and Swoosh Req
-   configuration and is safe to rerun. It warns about the video-data, template,
-   related-entry, Vite, custom admin-view, head, navigation, dependency-client,
-   secure config-target, and Fabric/Oban changes that require manual
-   application-specific decisions. When both legacy `deployment.cfg` and
+   datasource declarations, unnamed and named `form` options, listing queries,
+   filters, actions, selection actions, supported exports, Meta/JSON-LD path
+   fields, explicit custom-row imports, `Brando.Villain.list_villains/0`, root
+   Docker digest commands, font cache suffixes, and the declared LiveView
+   JavaScript dependency. It also fills missing single-Repo Brando and Swoosh
+   Req configuration and is safe to rerun. It warns about the video-data,
+   standalone datasource, legacy listing-row, template, related-entry, Vite,
+   custom admin form-module, head, navigation, CDN/provider,
+   dependency-client, secure config-target, and Fabric/Oban changes that require
+   manual application-specific decisions. When both legacy `deployment.cfg` and
    `fabfile.py` exist, it also creates a non-secret `florist.config.exs` without
    overwriting any existing Florist or Fabric files. Review the generated
    single/nginx deployment, password environment variables, persistent media
