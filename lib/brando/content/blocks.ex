@@ -141,13 +141,27 @@ defmodule Brando.Content.Blocks do
   @doc """
   Return list of all blocks using `palette_id`
   """
-  def list_block_ids_using_palette(palette_id) do
+  def list_block_ids_using_palette(palette_id, origin \\ nil) do
     query =
       from b in Block,
         select: b.id,
         where: b.palette_id == ^palette_id
 
-    Brando.Repo.all(query)
+    query
+    |> maybe_filter_library_origin(:palette_origin, origin)
+    |> Brando.Repo.all()
+  end
+
+  @doc "Return list of all blocks using `container_id`."
+  def list_block_ids_using_container(container_id, origin \\ nil) do
+    query =
+      from b in Block,
+        select: b.id,
+        where: b.container_id == ^container_id
+
+    query
+    |> maybe_filter_library_origin(:container_origin, origin)
+    |> Brando.Repo.all()
   end
 
   @doc """
@@ -194,13 +208,15 @@ defmodule Brando.Content.Blocks do
   @doc """
   Return list of all blocks using `module_id`
   """
-  def list_block_ids_using_module(module_id) do
+  def list_block_ids_using_module(module_id, origin \\ nil) do
     query =
       from b in Block,
         select: b.id,
         where: b.module_id == ^module_id
 
-    Brando.Repo.all(query)
+    query
+    |> maybe_filter_library_origin(:module_origin, origin)
+    |> Brando.Repo.all()
   end
 
   @doc """
@@ -320,10 +336,10 @@ defmodule Brando.Content.Blocks do
   First syncs the module with the block, renders the block,
   then renders all entries using the block.
   """
-  def render_entries_with_module_id(module_id) do
+  def render_entries_with_module_id(module_id, origin \\ :local) do
     module_id
-    |> list_block_ids_using_module()
-    |> sync_and_render_blocks(module_id)
+    |> list_block_ids_using_module(origin)
+    |> sync_and_render_blocks(module_id, origin)
     |> list_entry_ids_for_root_blocks_by_source()
     |> enqueue_entry_map_for_render()
   end
@@ -342,9 +358,18 @@ defmodule Brando.Content.Blocks do
   @doc """
   Render and update all entries with a block using `palette_id`
   """
-  def render_entries_with_palette_id(palette_id) do
+  def render_entries_with_palette_id(palette_id, origin \\ :local) do
     palette_id
-    |> list_block_ids_using_palette()
+    |> list_block_ids_using_palette(origin)
+    |> list_root_block_ids_by_source()
+    |> list_entry_ids_for_root_blocks_by_source()
+    |> enqueue_entry_map_for_render()
+  end
+
+  @doc "Render entries containing a block that uses `container_id`."
+  def render_entries_with_container_id(container_id, origin \\ :local) do
+    container_id
+    |> list_block_ids_using_container(origin)
     |> list_root_block_ids_by_source()
     |> list_entry_ids_for_root_blocks_by_source()
     |> enqueue_entry_map_for_render()
@@ -703,12 +728,24 @@ defmodule Brando.Content.Blocks do
     |> Changeset.put_assoc(:refs, reapplied_refs)
   end
 
-  def sync_and_render_blocks(block_ids, module_id) do
-    {:ok, module} =
-      Content.get_module(%{
-        matches: %{id: module_id},
-        preload: [:vars, refs: Ref.preloads()]
-      })
+  def sync_and_render_blocks(block_ids, module_id, origin \\ :local)
+  def sync_and_render_blocks([], _module_id, _origin), do: %{}
+
+  def sync_and_render_blocks(block_ids, module_id, origin) do
+    module =
+      case normalize_library_origin(origin) do
+        :local ->
+          {:ok, module} =
+            Content.get_module(%{
+              matches: %{id: module_id},
+              preload: [:vars, refs: Ref.preloads()]
+            })
+
+          module
+
+        :shared ->
+          Brando.Content.SharedLibrary.get_for_current_tenant(:module, module_id, :shared)
+      end
 
     {:ok, blocks} =
       Content.list_blocks(%{
@@ -726,6 +763,16 @@ defmodule Brando.Content.Blocks do
     end)
     |> render_blocks()
   end
+
+  defp maybe_filter_library_origin(query, _field, nil), do: query
+
+  defp maybe_filter_library_origin(query, field, origin) do
+    normalized_origin = normalize_library_origin(origin)
+    from entry in query, where: field(entry, ^field) == ^normalized_origin
+  end
+
+  defp normalize_library_origin(origin) when origin in [:shared, "shared"], do: :shared
+  defp normalize_library_origin(_origin), do: :local
 
   def render_blocks(block_ids) do
     source_map = list_root_block_ids_by_source(block_ids)

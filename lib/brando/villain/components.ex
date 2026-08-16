@@ -157,9 +157,9 @@ defmodule Brando.Villain.Components do
   end
 
   defp build_parser_opts(assigns) do
-    {:ok, modules} = Brando.Content.list_modules(cache_opts())
-    {:ok, containers} = Brando.Content.list_containers(cache_opts())
-    {:ok, palettes} = Brando.Content.list_palettes(cache_opts())
+    {:ok, modules} = Brando.Villain.RenderSourceQuery.list_modules(cache_opts())
+    {:ok, containers} = Brando.Villain.RenderSourceQuery.list_containers(cache_opts())
+    {:ok, palettes} = Brando.Villain.RenderSourceQuery.list_palettes(cache_opts())
 
     %{
       context: assigns[:liquex_context] || build_empty_context(),

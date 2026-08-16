@@ -32,6 +32,14 @@ defmodule Brando.Content.Palette do
     attribute :global, :boolean
     attribute :namespace, :string, default: "site"
     attribute :instructions, :text
+    attribute :version, :integer, default: 1
+    attribute :version_note, :text
+    attribute :source_palette_id, :integer
+    attribute :source_version, :integer
+    attribute :acknowledged_version, :integer
+    attribute :library_origin, :enum, values: [:local, :shared], default: :local, virtual: true
+    attribute :update_available, :boolean, default: false, virtual: true
+    attribute :override_id, :integer, virtual: true
   end
 
   relations do

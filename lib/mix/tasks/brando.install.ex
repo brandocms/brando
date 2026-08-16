@@ -45,6 +45,29 @@ defmodule Mix.Tasks.Brando.Install do
 
     # Application-owned migrations for named environment schemas
     {:keep, "tenant_migrations", "priv/repo/tenant_migrations"},
+    {:eex, "tenant_migrations/20260816002300_add_shared_content_library.exs",
+     "priv/repo/tenant_migrations/20260816002300_add_shared_content_library.exs"},
+
+    # Current versioned Brando migrations. Reuse the same templates as
+    # `mix brando.upgrade` so new and existing applications get identical SQL.
+    {:eex, "../brando.upgrade/migrations/brando_155_harden_revisions.exs",
+     "priv/repo/migrations/20260716000000_brando_155_harden_revisions.exs"},
+    {:eex, "../brando.upgrade/migrations/brando_156_add_var_layout.exs",
+     "priv/repo/migrations/20260725000000_brando_156_add_var_layout.exs"},
+    {:eex, "../brando.upgrade/migrations/brando_157_add_uploads_pending_intents.exs",
+     "priv/repo/migrations/20260805000000_brando_157_add_uploads_pending_intents.exs"},
+    {:eex, "../brando.upgrade/migrations/brando_158_add_tenant_infrastructure.exs",
+     "priv/repo/migrations/20260816000000_brando_158_add_tenant_infrastructure.exs"},
+    {:eex, "../brando.upgrade/migrations/brando_159_add_environment_operation_logs.exs",
+     "priv/repo/migrations/20260816001000_brando_159_add_environment_operation_logs.exs"},
+    {:eex, "../brando.upgrade/migrations/brando_160_add_user_sites.exs",
+     "priv/repo/migrations/20260816002000_brando_160_add_user_sites.exs"},
+    {:eex, "../brando.upgrade/migrations/brando_161_add_site_archival.exs",
+     "priv/repo/migrations/20260816002100_brando_161_add_site_archival.exs"},
+    {:eex, "../brando.upgrade/migrations/brando_162_add_site_asset_sets.exs",
+     "priv/repo/migrations/20260816002200_brando_162_add_site_asset_sets.exs"},
+    {:eex, "../brando.upgrade/migrations/brando_163_add_shared_content_library.exs",
+     "priv/repo/migrations/20260816002300_brando_163_add_shared_content_library.exs"},
 
     # Etc. Various OS config files and log directory.
     {:keep, "log", "log"},

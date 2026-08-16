@@ -1247,6 +1247,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         event: "remote_block_added",
         uid: msg.uid,
         module_id: msg.module_id,
+        module_origin: Map.get(msg, :module_origin, :local),
         sequence: msg.sequence,
         user_id: msg.user_id
       )

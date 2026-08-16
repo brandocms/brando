@@ -203,9 +203,9 @@ defmodule Brando.Content do
   @doc """
   Find module with `id` in `modules`
   """
-  def find_module(modules, id) do
+  def find_module(modules, id, origin \\ :local) do
     modules
-    |> Enum.find(&(&1.id == id))
+    |> Enum.find(&(&1.id == id and library_origin(&1) == normalize_library_origin(origin)))
     |> case do
       nil -> {:error, {:module, :not_found, id}}
       mod -> {:ok, mod}
@@ -215,9 +215,9 @@ defmodule Brando.Content do
   @doc """
   Find container with `id` in `containers`
   """
-  def find_container(containers, id) do
+  def find_container(containers, id, origin \\ :local) do
     containers
-    |> Enum.find(&(&1.id == id))
+    |> Enum.find(&(&1.id == id and library_origin(&1) == normalize_library_origin(origin)))
     |> case do
       nil -> {:error, {:container, :not_found, id}}
       mod -> {:ok, mod}
@@ -237,17 +237,29 @@ defmodule Brando.Content do
   @doc """
   Fetch a single module by ID from the cached module list.
   """
-  def fetch_module(id) do
-    {:ok, modules} = list_modules(@module_cache_opts)
-    Enum.find(modules, &(&1.id == id))
+  def fetch_module(id, origin \\ :local)
+
+  def fetch_module(id, origin) do
+    if Brando.Tenant.enabled?() do
+      Brando.Content.SharedLibrary.get_for_current_tenant(:module, id, origin)
+    else
+      {:ok, modules} = list_modules(@module_cache_opts)
+      Enum.find(modules, &(&1.id == id))
+    end
   end
 
   @doc """
   Fetch a single container by ID from the cached container list.
   """
-  def fetch_container(id) do
-    {:ok, containers} = list_containers(@container_cache_opts)
-    Enum.find(containers, &(&1.id == id))
+  def fetch_container(id, origin \\ :local)
+
+  def fetch_container(id, origin) do
+    if Brando.Tenant.enabled?() do
+      Brando.Content.SharedLibrary.get_for_current_tenant(:container, id, origin)
+    else
+      {:ok, containers} = list_containers(@container_cache_opts)
+      Enum.find(containers, &(&1.id == id))
+    end
   end
 
   ## Vars
@@ -373,14 +385,18 @@ defmodule Brando.Content do
   @doc """
   Find palette with `id` in `palettes`
   """
-  def find_palette(palettes, id) do
+  def find_palette(palettes, id, origin \\ :local) do
     palettes
-    |> Enum.find(&(&1.id == id))
+    |> Enum.find(&(&1.id == id and library_origin(&1) == normalize_library_origin(origin)))
     |> case do
       nil -> {:error, {:palette, :not_found, id}}
       palette -> {:ok, palette}
     end
   end
+
+  defp library_origin(entry), do: Map.get(entry, :library_origin) || :local
+  defp normalize_library_origin(origin) when origin in [:shared, "shared"], do: :shared
+  defp normalize_library_origin(_origin), do: :local
 
   @doc """
   Get color from palette by key

@@ -595,13 +595,13 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def update(%{event: "insert_block", sequence: sequence, module_id: module_id, type: type}, socket) do
-    module_id = String.to_integer(module_id)
+    module_reference = Brando.Content.SharedLibrary.reference(module_id)
     user_id = socket.assigns.current_user_id
     parent_id = nil
     sequence = (is_binary(sequence) && String.to_integer(sequence)) || sequence
     source = socket.assigns.block_module
 
-    empty_block_cs = BlockField.build_block(module_id, user_id, parent_id, source, type)
+    empty_block_cs = BlockField.build_block(module_reference, user_id, parent_id, source, type)
     uid = Changeset.get_field(empty_block_cs, :uid)
     # insert the new block uid into the block_list
     block_list = socket.assigns.block_list
@@ -936,6 +936,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     end)
     |> assign_new(:parent_id, fn -> Changeset.get_field(block_cs, :parent_id) end)
     |> assign_new(:parent_module_id, fn -> nil end)
+    |> assign_new(:parent_module_origin, fn -> nil end)
     # Both lists come out of an ETS-cached query, and an ETS read copies the
     # whole term onto the reading process's heap — so this was one copy per
     # block component, all inside the single LiveView process. Scope them to the
@@ -952,7 +953,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     # Anything else was carrying a list it had no template for.
     |> assign_new(:containers, fn %{type: type} ->
       if type == :container do
-        Brando.Content.list_containers!(%{
+        library_entries(:container, %{
           order: "desc namespace, asc sequence",
           cache: {:ttl, :infinite}
         })
@@ -972,7 +973,10 @@ defmodule BrandoAdmin.Components.Form.Block do
     end)
     |> assign_new(:collapsed, fn -> Changeset.get_field(changeset, :collapsed) end)
     |> assign_new(:module_id, fn -> Changeset.get_field(block_cs, :module_id) end)
+    |> assign_new(:module_origin, fn -> Changeset.get_field(block_cs, :module_origin) || :local end)
     |> assign_new(:container_id, fn -> Changeset.get_field(block_cs, :container_id) end)
+    |> assign_new(:container_origin, fn -> Changeset.get_field(block_cs, :container_origin) || :local end)
+    |> assign_new(:palette_origin, fn -> Changeset.get_field(block_cs, :palette_origin) || :local end)
     |> assign_new(:fragment_id, fn -> Changeset.get_field(block_cs, :fragment_id) end)
     |> assign_new(:has_children?, fn -> assigns.children !== [] end)
     |> assign_new(:available_identifiers, fn -> [] end)
@@ -1030,6 +1034,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     :anchor,
     :multi,
     :module_id,
+    :module_origin,
+    :container_origin,
+    :palette_origin,
     :parent_id,
     :creator_id,
     :marked_as_deleted
@@ -1303,7 +1310,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   # returning it renders a `<select>` with no options, which submits nothing for
   # `block[palette_id]` and drops an already-set palette on the next validate.
   defp palette_options_for(assigns, opts_fun) do
-    if renders_palette_options?(assigns), do: Brando.Content.list_palettes!(opts_fun.()), else: nil
+    if renders_palette_options?(assigns), do: library_entries(:palette, opts_fun.()), else: nil
   end
 
   defp palette_query_opts(%{palette_namespace: nil}), do: %{cache: {:ttl, :infinite}}
@@ -1320,7 +1327,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def maybe_assign_container(%{assigns: %{container_id: container_id}} = socket) do
-    case get_container(container_id) do
+    case get_container(container_id, Map.get(socket.assigns, :container_origin, :local)) do
       nil ->
         # Still assign both, or `render(%{type: :container})` — which has no
         # `container_not_found` clause of its own until the one in `render.ex`
@@ -1397,7 +1404,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def maybe_assign_module(%{assigns: %{module_id: module_id}} = socket) do
-    case get_module(module_id) do
+    case get_module(module_id, Map.get(socket.assigns, :module_origin, :local)) do
       nil ->
         assign(socket, :module_not_found, true)
 
@@ -1986,8 +1993,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  defdelegate get_container(id), to: Brando.Content, as: :fetch_container
-  defdelegate get_module(id), to: Brando.Content, as: :fetch_module
+  def get_container(id, origin \\ :local), do: Brando.Content.fetch_container(id, origin)
+  def get_module(id, origin \\ :local), do: Brando.Content.fetch_module(id, origin)
 
   # `render_html?: false` skips the Villain render entirely — the output is only
   # consumed by live preview, and both preview-open and save re-render from
@@ -2185,11 +2192,13 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> Enum.reverse()
   end
 
-  def maybe_update_container(socket, [_block_type, "block", "container_id"]) do
+  def maybe_update_container(socket, [_block_type, "block", field])
+      when field in ["container_id", "container_origin"] do
     changeset = socket.assigns.form.source
     block_cs = Changeset.get_assoc(changeset, :block)
     container_id = Changeset.get_field(block_cs, :container_id)
-    container = get_container(container_id)
+    container_origin = Changeset.get_field(block_cs, :container_origin) || :local
+    container = get_container(container_id, container_origin)
 
     # `:palette_options` is derived from the container's `allow_custom_palette`
     # and `palette_namespace`, so it has to move with it. Re-assigning only
@@ -2202,10 +2211,36 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     socket
     |> assign(:container, container)
+    |> assign(:container_origin, container_origin)
     |> assign(:palette_options, palette_options)
   end
 
   def maybe_update_container(socket, _), do: socket
+
+  defp library_entries(kind, fallback_opts) do
+    with prefix when is_binary(prefix) <- Brando.Tenant.current_prefix(),
+         site_key when is_binary(site_key) <- Brando.Tenant.current_site_key(),
+         %Brando.Sites.Site{} = site <- Brando.Tenant.Registry.get_site_by_key(site_key) do
+      kind
+      |> Brando.Content.SharedLibrary.list_available(site, prefix)
+      |> filter_library_entries(Map.get(fallback_opts, :filter, %{}))
+    else
+      _no_tenant ->
+        case kind do
+          :container -> Brando.Content.list_containers!(fallback_opts)
+          :palette -> Brando.Content.list_palettes!(fallback_opts)
+        end
+    end
+  end
+
+  defp filter_library_entries(entries, filter) do
+    Enum.filter(entries, fn entry ->
+      Enum.all?(filter, fn
+        {:namespace, value} -> entry.namespace == value
+        _other -> true
+      end)
+    end)
+  end
 
   def maybe_update_fragment(socket, [_block_type, "block", "fragment_id"]) do
     changeset = socket.assigns.form.source

@@ -288,7 +288,7 @@ defmodule Brando.Villain.Parser do
     modules = opts.modules
     skip_children? = Map.get(opts, :skip_children, false)
 
-    {:ok, module} = Content.find_module(modules, id)
+    {:ok, module} = Content.find_module(modules, id, Map.get(block, :module_origin, :local))
     adapter = adapter_for(module.type)
     opts = Map.put(opts, :parser_module, parser_module(opts))
 
@@ -311,7 +311,13 @@ defmodule Brando.Villain.Parser do
             ""
 
           {child_block, index} ->
-            {:ok, child_module} = Content.find_module(modules, child_block.module_id)
+            {:ok, child_module} =
+              Content.find_module(
+                modules,
+                child_block.module_id,
+                Map.get(child_block, :module_origin, :local)
+              )
+
             child_adapter = adapter_for(child_module.type)
 
             vars = process_vars(child_block.vars)
@@ -363,7 +369,7 @@ defmodule Brando.Villain.Parser do
   def module(%{module_id: id} = block, opts) do
     modules = opts.modules
 
-    case Content.find_module(modules, id) do
+    case Content.find_module(modules, id, Map.get(block, :module_origin, :local)) do
       {:ok, module} ->
         processed_vars = process_vars(block.vars)
         processed_refs = process_refs(block.refs)
@@ -1016,7 +1022,7 @@ defmodule Brando.Villain.Parser do
     target_id =
       (target_id && " id=\"#{target_id}\" data-scrollspy-trigger=\"##{target_id}\"") || ""
 
-    case Content.find_palette(palettes, palette_id) do
+    case Content.find_palette(palettes, palette_id, Map.get(block, :palette_origin, :local)) do
       {:ok, palette} ->
         colors =
           palette.colors |> Enum.map(&"--#{&1.key}: #{&1.hex_value}") |> Enum.intersperse(";")
@@ -1055,7 +1061,9 @@ defmodule Brando.Villain.Parser do
     containers = opts.containers
     # palettes = opts.palettes
     skip_children? = Map.get(opts, :skip_children, false)
-    {:ok, container} = Content.find_container(containers, container_id)
+
+    {:ok, container} =
+      Content.find_container(containers, container_id, Map.get(block, :container_origin, :local))
 
     children_html =
       if skip_children? === true do

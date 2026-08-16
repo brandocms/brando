@@ -307,6 +307,15 @@ defmodule BrandoAdmin.Menu do
                     name: gettext("Block modules"),
                     url: "/admin/config/content/modules"
                   },
+                  Brando.Tenant.mode() == :multi && current_user &&
+                    %{
+                      name:
+                        if(current_user.role == :superuser,
+                          do: gettext("Shared content library"),
+                          else: gettext("Site content library")
+                        ),
+                      url: "/admin/config/content/shared_library"
+                    },
                   %{
                     name: gettext("Block module sets"),
                     url: "/admin/config/content/module_sets"

@@ -47,6 +47,13 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     <div>
       <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
         <Input.input type={:hidden} field={@field} value={@selected_option} publish={@publish} />
+        <Input.input
+          :if={@origin_field}
+          type={:hidden}
+          field={@origin_field}
+          value={@selected_origin}
+          publish={@publish}
+        />
         <div class="multiselect">
           <div>
             <span class="select-label">
@@ -94,6 +101,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
               ]}
               data-label={extract_label(opt)}
               value={extract_value(opt)}
+              phx-value-origin={extract_origin(opt)}
               phx-click={
                 JS.add_class("option-selected")
                 |> JS.push("select_option", target: @myself)
@@ -166,10 +174,11 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                     type="button"
                     class={[
                       "options-option",
-                      option_value(opt) == @selected_option && "option-selected"
+                      option_selected?(opt, @selected_option, @selected_origin) && "option-selected"
                     ]}
                     data-label={extract_label(opt)}
                     value={extract_value(opt)}
+                    phx-value-origin={extract_origin(opt)}
                     phx-click={
                       JS.add_class("option-selected")
                       |> JS.push("select_option", target: @myself)
@@ -276,6 +285,8 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   def update(assigns, socket) do
     selected_option = get_selected_option(assigns.field)
+    origin_field = Map.get(assigns, :origin_field)
+    selected_origin = if origin_field, do: get_selected_option(origin_field), else: nil
 
     show_filter = Keyword.get(assigns.opts, :filter, true)
     narrow = Keyword.get(assigns.opts, :narrow)
@@ -294,6 +305,8 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      |> prepare_input_component()
      |> assign_input_options()
      |> assign(:selected_option, selected_option)
+     |> assign(:selected_origin, selected_origin)
+     |> assign(:origin_field, origin_field)
      |> assign_new(:allow_custom, fn -> allow_custom end)
      |> assign_label()
      |> assign_custom_input_value()
@@ -356,7 +369,14 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   defp precompute_option(%{__struct__: module} = entry) do
     if function_exported?(module, :__identifier__, 2) do
       identifier = module.__identifier__(entry, skip_cover: true)
-      %{value: to_string(entry.id), label: identifier.title, status: identifier.status, entry: entry}
+
+      %{
+        value: to_string(entry.id),
+        label: identifier.title,
+        status: identifier.status,
+        entry: entry,
+        origin: Map.get(entry, :library_origin)
+      }
     else
       entry
     end
@@ -364,7 +384,13 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   defp precompute_option(opt), do: opt
 
-  defp option_value(opt), do: to_string(extract_value(opt))
+  defp option_selected?(opt, selected_value, nil),
+    do: to_string(extract_value(opt)) == selected_value
+
+  defp option_selected?(opt, selected_value, selected_origin) do
+    to_string(extract_value(opt)) == selected_value and
+      to_string(extract_origin(opt) || "local") == selected_origin
+  end
 
   defp ensure_string_values(%{label: _label, value: value} = opt) when not is_binary(value) do
     %{opt | value: to_string(value)}
@@ -378,9 +404,16 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   defp ensure_string_values(map), do: map
 
   def assign_label(
-        %{assigns: %{input_options: input_options, selected_option: selected_option, allow_custom: allow_custom}} = socket
+        %{
+          assigns: %{
+            input_options: input_options,
+            selected_option: selected_option,
+            selected_origin: selected_origin,
+            allow_custom: allow_custom
+          }
+        } = socket
       ) do
-    assign(socket, :select_label, get_label(input_options, selected_option, allow_custom))
+    assign(socket, :select_label, get_label(input_options, selected_option, selected_origin, allow_custom))
   end
 
   def maybe_assign_select_form(%{assigns: %{entry_form: {target_module, form_name}}} = socket) do
@@ -431,6 +464,9 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   defp extract_value(%{value: value}), do: value
   defp extract_value(%{id: value}), do: value
+  defp extract_origin(%{origin: origin}) when not is_nil(origin), do: origin
+  defp extract_origin(%{library_origin: origin}) when not is_nil(origin), do: origin
+  defp extract_origin(_opt), do: nil
 
   defp get_label(%{opt: %{entry: _, status: _}} = assigns) do
     assigns = assign_new(assigns, :deletable, fn -> false end)
@@ -488,10 +524,9 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   # Developer-authored `%{label: ...}` options may deliberately contain markup
   # and pass through untouched; entry titles and custom values are user input
   # and must be escaped before they reach `raw`.
-  defp get_label(input_options, selected_option, allow_custom) do
+  defp get_label(input_options, selected_option, selected_origin, allow_custom) do
     case Enum.find(input_options, fn
-           %{value: value} -> value == selected_option
-           %{id: id} -> to_string(id) == selected_option
+           option -> option_selected?(option, selected_option, selected_origin)
          end) do
       nil ->
         if allow_custom && selected_option && selected_option != "" do
@@ -590,7 +625,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     {:noreply, assign(socket, select_changeset: select_changeset)}
   end
 
-  def handle_event("select_option", %{"value" => value}, socket) do
+  def handle_event("select_option", %{"value" => value} = params, socket) do
     update_relation = socket.assigns.update_relation
     value = if value == "", do: nil, else: value
 
@@ -609,6 +644,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
     socket
     |> assign(:selected_option, value)
+    |> assign(:selected_origin, selected_origin(socket, params, value))
     |> assign_label()
     |> then(&{:noreply, &1})
   end
@@ -617,6 +653,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     {:noreply,
      socket
      |> assign(:selected_option, nil)
+     |> assign(:selected_origin, nil)
      |> assign_label()}
   end
 
@@ -653,6 +690,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       _ -> nil
     end
   end
+
+  defp selected_origin(%{assigns: %{origin_field: nil}}, _params, _value), do: nil
+  defp selected_origin(_socket, _params, nil), do: nil
+  defp selected_origin(_socket, params, _value), do: Map.get(params, "origin", "local")
 
   defp assign_relation_schema(socket, field) do
     assign_new(socket, :relation_schema, fn ->

@@ -137,6 +137,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               parent_uid={@uid}
               parent_path={@path}
               parent_module_id={@module_id}
+              parent_module_origin={@module_origin}
               module_set={@module_set}
               form={child_block_form}
               form_id={@form_id}
@@ -1204,6 +1205,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             module={Input.Select}
             id={"#{@block.id}-container-select"}
             field={@block[:container_id]}
+            origin_field={@block[:container_origin]}
             label={gettext("Container template")}
             opts={[options: @containers, resetable: true]}
             publish
@@ -1213,6 +1215,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               module={Input.Select}
               id={"#{@block.id}-palette-select"}
               field={@block[:palette_id]}
+              origin_field={@block[:palette_origin]}
               label={gettext("Palette")}
               opts={[options: @palette_options]}
               publish

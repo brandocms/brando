@@ -43,6 +43,16 @@ defmodule Brando.Villain.RenderSourceQuery do
   def list_palettes(opts \\ %{}), do: list(@palette_schema, opts)
 
   defp list(schema, opts) when is_map(opts) do
+    kind = tenant_library_kind(schema)
+
+    if kind && Brando.Tenant.enabled?() do
+      {:ok, Brando.Content.SharedLibrary.list_for_current_tenant(kind)}
+    else
+      list_from_current_prefix(schema, opts)
+    end
+  end
+
+  defp list_from_current_prefix(schema, opts) do
     query =
       from entry in schema,
         where: is_nil(entry.deleted_at)
@@ -63,6 +73,11 @@ defmodule Brando.Villain.RenderSourceQuery do
         {:ok, Repo.all(query)}
     end
   end
+
+  defp tenant_library_kind(@module_schema), do: :module
+  defp tenant_library_kind(@container_schema), do: :container
+  defp tenant_library_kind(@palette_schema), do: :palette
+  defp tenant_library_kind(_schema), do: nil
 
   defp maybe_preload(query, nil), do: query
   defp maybe_preload(query, preloads), do: preload(query, ^preloads)
