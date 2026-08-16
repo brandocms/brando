@@ -4,6 +4,7 @@ defmodule Brando.Images.Crop do
   """
 
   alias Brando.Images
+  alias Brando.Tenant.Storage
 
   @doc """
   Save a cropped image as a new copy.
@@ -81,7 +82,7 @@ defmodule Brando.Images.Crop do
   end
 
   defp write_and_measure(path, binary_data, fallback_dimensions) do
-    media_path = Brando.config(:media_path)
+    media_path = Storage.current_media_root()
     dest_file = Path.join(media_path, path)
 
     File.mkdir_p!(Path.dirname(dest_file))

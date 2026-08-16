@@ -14,7 +14,7 @@ defmodule Brando.Tenant.LiveView do
   alias Brando.Tenant.AdminContext
 
   def on_mount(:default, params, session, socket) do
-    case resolve_context(params, session) do
+    case resolve_context(params, session, socket.assigns[:current_user]) do
       {site, environment} ->
         prefix = Tenant.prefix(site, environment)
         Tenant.put_prefix(prefix)
@@ -43,7 +43,9 @@ defmodule Brando.Tenant.LiveView do
   end
 
   @doc false
-  defdelegate resolve_context(params, session), to: AdminContext, as: :resolve
+  def resolve_context(params, session, current_user \\ nil) do
+    AdminContext.resolve(params, session, current_user)
+  end
 
   defp attach_context_hooks(socket) do
     socket

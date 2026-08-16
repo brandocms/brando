@@ -49,6 +49,27 @@ defmodule Brando.Tenant do
     if enabled?(), do: Process.get(@process_prefix_key), else: nil
   end
 
+  @doc "Returns the site key encoded in the current tenant prefix."
+  @spec current_site_key() :: String.t() | nil
+  def current_site_key do
+    case current_prefix() do
+      "tenant_" <> remainder ->
+        case String.split(remainder, "_", parts: 2) do
+          [site_key, _environment_key] -> site_key
+          _invalid -> nil
+        end
+
+      _no_prefix ->
+        nil
+    end
+  end
+
+  @doc "Namespaces an application cache key by the active tenant prefix."
+  @spec cache_key(term(), String.t() | nil) :: term()
+  def cache_key(key, prefix \\ current_prefix()) do
+    if is_binary(prefix), do: {:tenant, prefix, key}, else: key
+  end
+
   @spec put_prefix(String.t() | nil) :: String.t() | nil
   def put_prefix(nil) do
     Process.delete(@process_prefix_key)
@@ -74,6 +95,19 @@ defmodule Brando.Tenant do
     end
   end
 
+  @doc "Captures the current tenant context for work that will run in another process."
+  @spec capture_context((-> result)) :: (-> result) when result: var
+  def capture_context(fun) when is_function(fun, 0) do
+    prefix = current_prefix()
+    fn -> run_captured(prefix, fun) end
+  end
+
+  @spec capture_context((arg -> result)) :: (arg -> result) when arg: var, result: var
+  def capture_context(fun) when is_function(fun, 1) do
+    prefix = current_prefix()
+    fn arg -> run_captured(prefix, fn -> fun.(arg) end) end
+  end
+
   @spec validate_config!() :: :ok
   def validate_config! do
     case mode() do
@@ -85,6 +119,9 @@ defmodule Brando.Tenant do
   @spec valid_key?(term()) :: boolean()
   def valid_key?(key), do: is_binary(key) and Regex.match?(@key_format, key)
 
+  @spec valid_prefix?(term()) :: boolean()
+  def valid_prefix?(prefix), do: is_binary(prefix) and Regex.match?(@prefix_format, prefix)
+
   defp validate_single_site_key! do
     case Brando.config(:site_key) do
       site_key when is_binary(site_key) ->
@@ -94,6 +131,9 @@ defmodule Brando.Tenant do
         raise_invalid_site_key(site_key)
     end
   end
+
+  defp run_captured(nil, fun), do: fun.()
+  defp run_captured(prefix, fun), do: with_prefix(prefix, fun)
 
   defp raise_invalid_mode(mode) do
     raise ConfigError,

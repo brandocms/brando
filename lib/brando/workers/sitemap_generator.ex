@@ -4,10 +4,12 @@ defmodule Brando.Worker.SitemapGenerator do
 
   require Logger
 
+  alias Brando.Tenant.Job, as: TenantJob
+
   @impl Oban.Worker
   def perform(_) do
     Logger.info("==> [CRON] Generating sitemap...")
-    Brando.Sitemap.generate_sitemap()
+    TenantJob.each_active_environment(:live, &Brando.Sitemap.generate_sitemap/0)
     Logger.info("==> [CRON] Generating sitemap... done")
     :ok
   end

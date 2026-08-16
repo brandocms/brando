@@ -6,6 +6,7 @@ defmodule Brando.Images.Utils do
   import SweetXml
 
   alias Brando.Images.Image
+  alias Brando.Tenant.Storage
 
   @type id :: binary | integer
   @type image_struct :: Brando.Images.Image.t()
@@ -66,7 +67,7 @@ defmodule Brando.Images.Utils do
     if String.ends_with?(file, ".svg") do
       nil
     else
-      file = Path.join([Brando.config(:media_path), file])
+      file = Path.join(Storage.current_media_root(), file)
       File.rm(file)
     end
   end
@@ -164,7 +165,7 @@ defmodule Brando.Images.Utils do
 
   @spec media_path() :: binary
   @spec media_path(nil | binary) :: binary
-  def media_path, do: Brando.config(:media_path)
-  def media_path(nil), do: Brando.config(:media_path)
-  def media_path(file), do: Path.join([Brando.config(:media_path), file])
+  def media_path, do: Storage.current_media_root()
+  def media_path(nil), do: Storage.current_media_root()
+  def media_path(file), do: Path.join(Storage.current_media_root(), file)
 end

@@ -23,6 +23,8 @@ defmodule <%= application_module %>Web.Endpoint do
   #
   # You should set gzip to true if you are running phoenix.digest
   # when deploying your static files in production.
+  plug Brando.Plug.SiteAssets
+
   plug Plug.Static,
     at: "/",
     from: :<%= application_name %>,

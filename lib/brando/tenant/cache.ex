@@ -89,9 +89,17 @@ defmodule Brando.Tenant.Cache do
         by_key = [{{:brando, :env, site.key, environment.key}, environment}]
 
         by_domain =
-          if environment.domain, do: [{{:brando, :env_domain, environment.domain}, {site, environment}}], else: []
+          if site.status == :active and environment.domain do
+            domain = environment.domain |> String.trim() |> String.downcase()
+            [{{:brando, :env_domain, domain}, {site, environment}}]
+          else
+            []
+          end
 
-        live = if environment.live, do: [{{:brando, :live_env, site.key}, environment}], else: []
+        live =
+          if site.status == :active and environment.live,
+            do: [{{:brando, :live_env, site.key}, environment}],
+            else: []
 
         by_key ++ by_domain ++ live
       end)

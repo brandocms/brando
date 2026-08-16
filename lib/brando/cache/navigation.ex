@@ -11,7 +11,16 @@ defmodule Brando.Cache.Navigation do
   Get all menus from cache
   """
   @spec get :: map() | nil
-  def get, do: Cache.get(:navigation)
+  def get do
+    case Cache.get(:navigation) do
+      nil ->
+        set()
+        Cache.get(:navigation)
+
+      navigation ->
+        navigation
+    end
+  end
 
   @doc """
   Get menu from cache by path
@@ -38,7 +47,7 @@ defmodule Brando.Cache.Navigation do
   @spec set :: {:error, boolean} | {:ok, boolean}
   def set do
     menu_map = get_menu_map()
-    Cachex.put(:cache, :navigation, menu_map)
+    Cache.put(:navigation, menu_map, :infinite)
   end
 
   @doc """
@@ -48,7 +57,7 @@ defmodule Brando.Cache.Navigation do
           {:ok, map()} | {:error, changeset}
   def update({:ok, menu}) do
     menu_map = get_menu_map()
-    Cachex.update(:cache, :navigation, menu_map)
+    Cache.update(:navigation, menu_map)
     {:ok, menu}
   end
 

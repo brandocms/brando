@@ -3,6 +3,8 @@ defmodule BrandoAdmin.Nav do
   use BrandoAdmin, :child_live_view
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Tenant
+  alias Brando.Tenant.Access
   alias BrandoAdmin.Components.Content
 
   on_mount {BrandoAdmin.UserAuth, :mount_current_user}
@@ -16,7 +18,7 @@ defmodule BrandoAdmin.Nav do
       |> assign(:current_url, url)
       |> put_locale()
       |> assign_tenant_options()
-      |> assign(:menu_sections, BrandoAdmin.Menu.get_menu())
+      |> assign(:menu_sections, BrandoAdmin.Menu.get_menu(socket.assigns.current_user))
       |> then(&{:ok, &1})
     else
       socket
@@ -55,7 +57,7 @@ defmodule BrandoAdmin.Nav do
   end
 
   defp assign_tenant_options(socket) do
-    sites = if Brando.Tenant.enabled?(), do: Brando.Tenant.Cache.list_sites(), else: []
+    sites = tenant_sites(socket.assigns[:current_user], socket.assigns[:current_site])
 
     environments =
       case socket.assigns.current_site do
@@ -66,6 +68,15 @@ defmodule BrandoAdmin.Nav do
     socket
     |> assign(:tenant_sites, sites)
     |> assign(:tenant_environments, environments)
+    |> assign(:tenant_mode, Tenant.mode())
+  end
+
+  defp tenant_sites(current_user, current_site) do
+    case Tenant.mode() do
+      :none -> []
+      :single -> if current_site, do: [current_site], else: []
+      :multi -> Access.list_sites(current_user)
+    end
   end
 
   def render(assigns) do
@@ -129,7 +140,7 @@ defmodule BrandoAdmin.Nav do
             >
               <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
               <input type="hidden" name="return_to" value={@current_url || "/admin"} />
-              <label :if={Brando.Tenant.mode() == :multi}>
+              <label :if={@tenant_mode == :multi}>
                 <span>{gettext("Site")}</span>
                 <select name="site_key">
                   <option
@@ -141,7 +152,7 @@ defmodule BrandoAdmin.Nav do
                   </option>
                 </select>
               </label>
-              <input :if={Brando.Tenant.mode() == :single} type="hidden" name="site_key" value={@current_site.key} />
+              <input :if={@tenant_mode == :single} type="hidden" name="site_key" value={@current_site.key} />
               <label>
                 <span>{gettext("Environment")}</span>
                 <select name="environment_key">

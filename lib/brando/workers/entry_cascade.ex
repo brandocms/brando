@@ -9,7 +9,7 @@ defmodule Brando.Worker.EntryCascade do
   use Oban.Worker,
     queue: :default,
     max_attempts: 3,
-    unique: [keys: [:schema, :entry_id], period: 5, states: :incomplete]
+    unique: [keys: [:tenant_prefix, :schema, :entry_id], period: 5, states: :incomplete]
 
   require Logger
 
@@ -17,9 +17,12 @@ defmodule Brando.Worker.EntryCascade do
   alias Brando.Content.Blocks
   alias Brando.Content.RenderQueue
   alias Brando.Datasource.Registry
+  alias Brando.Tenant.Job, as: TenantJob
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: args}) do
+  def perform(%Oban.Job{} = job), do: TenantJob.run(job, fn -> perform_tenant(job) end)
+
+  defp perform_tenant(%Oban.Job{args: args}) do
     schema = Module.concat([args["schema"]])
     entry_id = args["entry_id"]
     identifier_id = args["identifier_id"]

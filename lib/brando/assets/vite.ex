@@ -14,6 +14,8 @@ defmodule Brando.Assets.Vite do
     def read(manifest_file, cache_key, force \\ nil)
 
     def read(manifest_file, cache_key, nil) do
+      cache_key = Brando.Tenant.cache_key(cache_key)
+
       case :persistent_term.get(cache_key, nil) do
         nil ->
           hmr? = Application.get_env(Brando.otp_app(), :hmr, false)
@@ -28,6 +30,7 @@ defmodule Brando.Assets.Vite do
     end
 
     def read(manifest_file, cache_key, :force) do
+      cache_key = Brando.Tenant.cache_key(cache_key)
       hmr? = Application.get_env(Brando.otp_app(), :hmr, false)
       res = do_read(manifest_file, hmr?)
       parsed_manifest = Manifest.parse(res)
@@ -112,7 +115,18 @@ defmodule Brando.Assets.Vite do
     end
 
     @spec read(atom) :: map()
+    def read(:app = scope) do
+      case Brando.Assets.SiteAssets.current_manifest() do
+        nil -> read_release_manifest(scope)
+        uploaded_manifest -> parse(uploaded_manifest)
+      end
+    end
+
     def read(scope) do
+      read_release_manifest(scope)
+    end
+
+    defp read_release_manifest(scope) do
       scope
       |> config()
       |> Map.get(:manifest_file)
@@ -120,7 +134,18 @@ defmodule Brando.Assets.Vite do
     end
 
     @spec refresh(atom) :: map()
+    def refresh(:app = scope) do
+      case Brando.Assets.SiteAssets.current_manifest() do
+        nil -> refresh_release_manifest(scope)
+        uploaded_manifest -> parse(uploaded_manifest)
+      end
+    end
+
     def refresh(scope) do
+      refresh_release_manifest(scope)
+    end
+
+    defp refresh_release_manifest(scope) do
       scope
       |> config()
       |> Map.get(:manifest_file)
@@ -172,7 +197,9 @@ defmodule Brando.Assets.Vite do
     end
 
     def critical_css(scope \\ :app) do
-      case :persistent_term.get(config(scope).critical_css_cache_key, nil) do
+      cache_key = Brando.Tenant.cache_key(config(scope).critical_css_cache_key)
+
+      case :persistent_term.get(cache_key, nil) do
         nil ->
           manifest = Manifest.read(scope)
 
@@ -188,7 +215,7 @@ defmodule Brando.Assets.Vite do
               |> Phoenix.HTML.raw()
             end
 
-          :persistent_term.put(config(scope).critical_css_cache_key, res)
+          :persistent_term.put(cache_key, res)
           res
 
         res ->
@@ -203,10 +230,11 @@ defmodule Brando.Assets.Vite do
     def critical_css(:prod, critical_css_files) do
       Enum.reduce(critical_css_files, "", fn file, acc ->
         full_path =
-          Application.app_dir(
-            Brando.endpoint().config(:otp_app),
-            Path.join("priv/static", file)
-          )
+          Brando.Assets.SiteAssets.current_file(file) ||
+            Application.app_dir(
+              Brando.endpoint().config(:otp_app),
+              Path.join("priv/static", file)
+            )
 
         if File.exists?(full_path) do
           acc <> File.read!(full_path)
@@ -222,7 +250,7 @@ defmodule Brando.Assets.Vite do
 
     def critical_css(_, critical_css_files) do
       Enum.reduce(critical_css_files, "", fn file, acc ->
-        full_path = Path.join("priv/static", file)
+        full_path = Brando.Assets.SiteAssets.current_file(file) || Path.join("priv/static", file)
 
         if File.exists?(full_path) do
           acc <> File.read!(full_path)

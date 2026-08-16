@@ -3,6 +3,7 @@ defmodule BrandoAdmin.EnvironmentControllerTest do
   use Brando.ConnCase
 
   alias Brando.Tenant
+  alias Brando.Tenant.Access
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
 
@@ -39,7 +40,14 @@ defmodule BrandoAdmin.EnvironmentControllerTest do
         live: false
       })
 
-    %{conn: init_test_session(conn, %{}), site: site, production: production, preview: preview}
+    superuser = Brando.Factory.insert(:random_user, role: :superuser)
+
+    conn =
+      conn
+      |> init_test_session(%{})
+      |> Plug.Conn.assign(:current_user, superuser)
+
+    %{conn: conn, site: site, production: production, preview: preview}
   end
 
   test "stores a valid site and environment selection", context do
@@ -76,5 +84,32 @@ defmodule BrandoAdmin.EnvironmentControllerTest do
       })
 
     assert redirected_to(conn) == "/admin"
+  end
+
+  test "rejects a site selection the current user cannot access", context do
+    editor = Brando.Factory.insert(:random_user, role: :editor)
+    conn = Plug.Conn.assign(context.conn, :current_user, editor)
+
+    conn =
+      BrandoAdmin.EnvironmentController.update(conn, %{
+        "site_key" => "acme",
+        "environment_key" => "preview"
+      })
+
+    refute get_session(conn, "brando_site_key")
+    refute get_session(conn, "brando_environment_key")
+    assert redirected_to(conn) == "/admin"
+
+    assert {:ok, _assignment} = Access.grant(editor, context.site, :editor)
+
+    authorized_conn =
+      context.conn
+      |> Plug.Conn.assign(:current_user, editor)
+      |> BrandoAdmin.EnvironmentController.update(%{
+        "site_key" => "acme",
+        "environment_key" => "preview"
+      })
+
+    assert get_session(authorized_conn, "brando_site_key") == "acme"
   end
 end

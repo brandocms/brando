@@ -101,7 +101,7 @@ defmodule Brando.Images.Operations do
     operation_results =
       if max_concurrency > 1 do
         operations
-        |> Task.async_stream(&__MODULE__.resize_image/1,
+        |> Task.async_stream(Brando.Tenant.capture_context(&__MODULE__.resize_image/1),
           max_concurrency: max_concurrency,
           timeout: 60_000
         )

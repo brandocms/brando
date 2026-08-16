@@ -29,7 +29,7 @@ defmodule Brando.Cache.Identity do
   def set do
     {:ok, identities} = Sites.list_identities(%{preload: [:logo]})
     identity_map = process_identities(identities)
-    Cachex.put(:cache, :identity, identity_map)
+    Cache.put(:identity, identity_map, :infinite)
     identity_map
   end
 
@@ -41,7 +41,7 @@ defmodule Brando.Cache.Identity do
   def update({:ok, identity}) do
     {:ok, identities} = Sites.list_identities(%{preload: [:logo]})
     identity_map = process_identities(identities)
-    Cachex.update(:cache, :identity, identity_map)
+    Cache.update(:identity, identity_map)
     {:ok, identity}
   end
 

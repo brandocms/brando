@@ -25,6 +25,7 @@ defmodule Brando.Upload do
   alias Brando.Assets.CompletedCallback
   alias Brando.Files
   alias Brando.Images
+  alias Brando.Tenant.Storage
   alias Brando.Type.FileConfig
   alias Brando.Type.ImageConfig
   alias Brando.Type.VideoConfig
@@ -298,7 +299,7 @@ defmodule Brando.Upload do
   end
 
   defp create_upload_path(%__MODULE__{cfg: cfg} = upload) do
-    upload_path = Path.join(Brando.config(:media_path), Map.get(cfg, :upload_path))
+    upload_path = Path.join(Storage.current_media_root(), Map.get(cfg, :upload_path))
 
     case File.mkdir_p(upload_path) do
       :ok ->

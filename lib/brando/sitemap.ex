@@ -89,7 +89,7 @@ defmodule Brando.Sitemap do
     sitemap_functions = sitemap_module.__info__(:functions)
     entries = Stream.flat_map(sitemap_functions, &apply(sitemap_module, elem(&1, 0), []))
 
-    sitemap_path = Path.join([Brando.config(:media_path), "sitemaps"])
+    sitemap_path = Path.join([Brando.Tenant.Storage.current_media_root(), "sitemaps"])
     File.mkdir_p!(sitemap_path)
 
     default_opts = [

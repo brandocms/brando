@@ -11,12 +11,19 @@ defmodule Brando.System do
   def initialize do
     run_checks()
     Brando.Tenant.Cache.warm()
-    Cache.Identity.set()
-    Cache.SEO.set()
-    Cache.Globals.set()
-    Cache.Navigation.set()
-    Cache.Palettes.set()
+    Brando.Assets.SiteAssets.warm()
+    initialize_content_caches()
     :ok
+  end
+
+  defp initialize_content_caches do
+    unless Brando.Tenant.enabled?() do
+      Cache.Identity.set()
+      Cache.SEO.set()
+      Cache.Globals.set()
+      Cache.Navigation.set()
+      Cache.Palettes.set()
+    end
   end
 
   def run_checks do

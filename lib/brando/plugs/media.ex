@@ -1,6 +1,9 @@
 defmodule Brando.Plug.Media do
-  @moduledoc false
+  @moduledoc "Serves media from the host's isolated site directory in multi-site mode."
   import Plug.Conn
+
+  alias Brando.Tenant.Frontend
+  alias Brando.Tenant.Storage
 
   def init(opts) do
     static_opts = [
@@ -19,7 +22,7 @@ defmodule Brando.Plug.Media do
         conn
 
       _path_match ->
-        conn = Plug.Static.call(conn, opts)
+        conn = Plug.Static.call(conn, media_opts(conn, opts))
 
         if conn.state in [:sent, :file] do
           conn
@@ -28,6 +31,19 @@ defmodule Brando.Plug.Media do
           |> send_resp(404, "not found")
           |> halt()
         end
+    end
+  end
+
+  defp media_opts(conn, opts) do
+    case Brando.Tenant.mode() do
+      :multi ->
+        case Frontend.resolve(conn.host) do
+          {site, _environment} -> Map.put(opts, :from, Storage.media_root(site))
+          nil -> Map.put(opts, :from, Path.join(Brando.config(:media_path), "__unresolved_tenant__"))
+        end
+
+      _single_or_none ->
+        opts
     end
   end
 

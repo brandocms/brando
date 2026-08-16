@@ -29,6 +29,8 @@ defmodule E2eProjectWeb.Endpoint do
   #
   # You should set gzip to true if you are running phoenix.digest
   # when deploying your static files in production.
+  plug Brando.Plug.SiteAssets
+
   plug Plug.Static,
     at: "/",
     from: :e2e_project,

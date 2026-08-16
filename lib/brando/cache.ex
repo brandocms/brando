@@ -23,18 +23,24 @@ defmodule Brando.Cache do
   def put(key, var, ttl \\ :timer.minutes(15))
 
   def put(key, val, :infinite) do
-    @cache_module.put(:cache, key, val)
+    @cache_module.put(:cache, cache_key(key), val)
   end
 
   def put(key, val, ttl) do
-    @cache_module.put(:cache, key, val, expire: ttl)
+    @cache_module.put(:cache, cache_key(key), val, expire: ttl)
+  end
+
+  def update(key, val) do
+    @cache_module.update(:cache, cache_key(key), val)
   end
 
   def del(key) do
-    @cache_module.del(:cache, key)
+    @cache_module.del(:cache, cache_key(key))
   end
 
   defp get_from_cache(key) do
-    @cache_module.get(:cache, key)
+    @cache_module.get(:cache, cache_key(key))
   end
+
+  defp cache_key(key), do: Brando.Tenant.cache_key(key)
 end
