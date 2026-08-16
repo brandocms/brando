@@ -525,7 +525,7 @@ def text(%{"text" => text} = params, _) do
       type -> "<div class=\"#{type}\">#{text}</div>"
     end
 
-  Earmark.as_html!(text, %Earmark.Options{breaks: true})
+  Brando.Markdown.to_html!(text, breaks: true)
 end
 ```
 

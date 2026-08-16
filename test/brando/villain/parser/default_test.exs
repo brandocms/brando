@@ -36,6 +36,11 @@ defmodule Brando.Villain.ParserTest do
     assert html(%{text: "<h1>test</h1>"}, []) == "<h1>test</h1>"
   end
 
+  test "markdown/2" do
+    assert markdown(%{text: "**Some** text\non two lines"}, []) ==
+             "<p><strong>Some</strong> text<br />\non two lines</p>"
+  end
+
   test "video/2 youtube" do
     assert video(%{remote_id: "asdf1234", type: :youtube, autoplay: false}, []) ==
              "<div class=\"video-wrapper video-embed\" data-orientation=\"landscape\" style=\"--aspect-ratio: 0.75\">\n         <iframe width=\"420\"\n                 height=\"315\"\n                 src=\"//www.youtube.com/embed/asdf1234?autoplay=0&controls=0&showinfo=0&rel=0\"\n                 frameborder=\"0\"\n                 allowfullscreen>\n         </iframe>\n       </div>"
@@ -230,9 +235,9 @@ defmodule Brando.Villain.ParserTest do
 
   test "blockquote/2" do
     assert blockquote(%{text: "Some text", cite: "J. Williamson"}, []) ==
-             "<blockquote>\n  <p>\nSome text</p>\n\n  <p class=\"cite\">\n    — <cite>J. Williamson</cite>\n  </p>\n</blockquote>\n"
+             "<blockquote>\n  <p>Some text</p>\n  <p class=\"cite\">\n    — <cite>J. Williamson</cite>\n  </p>\n</blockquote>\n"
 
     assert blockquote(%{text: "Some text", cite: ""}, []) ==
-             "<blockquote>\n  <p>\nSome text</p>\n\n</blockquote>\n"
+             "<blockquote>\n  <p>Some text</p>\n</blockquote>\n"
   end
 end

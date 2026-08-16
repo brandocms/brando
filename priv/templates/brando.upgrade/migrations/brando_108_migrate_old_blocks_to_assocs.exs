@@ -331,8 +331,8 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
     text = Map.get(data, "text", "")
 
     html =
-      case Earmark.as_html(text) do
-        {:ok, converted, _} -> converted
+      case Brando.Markdown.to_html(text) do
+        {:ok, converted} -> converted
         _ -> text
       end
 

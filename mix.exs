@@ -212,7 +212,7 @@ defmodule Brando.Mixfile do
       {:req_llm, "~> 1.6"},
       {:req, "~> 0.5 or ~> 1.0"},
       {:gettext, "~> 1.0.0"},
-      {:earmark, "~> 1.4.0"},
+      {:mdex, "~> 0.13.0"},
       {:jason, "~> 1.0"},
       {:slugify, "~> 1.3.1"},
       {:ecto_nested_changeset, "~> 1.0.0"},

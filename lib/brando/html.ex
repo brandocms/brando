@@ -331,7 +331,7 @@ defmodule Brando.HTML do
   """
   def render_markdown(markdown, opts \\ [breaks: true])
   def render_markdown(nil, _), do: ""
-  def render_markdown(markdown, opts), do: markdown |> Earmark.as_html!(opts) |> raw()
+  def render_markdown(markdown, opts), do: markdown |> Brando.Markdown.to_html!(opts) |> raw()
 
   @doc """
   Zero pad `val` as a binary.

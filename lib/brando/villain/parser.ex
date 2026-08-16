@@ -395,7 +395,7 @@ defmodule Brando.Villain.Parser do
   def svg(%{code: html}, _), do: html
 
   def markdown(%{text: markdown}, _) do
-    Earmark.as_html!(markdown, %Earmark.Options{breaks: true})
+    Brando.Markdown.to_html!(markdown, breaks: true)
   end
 
   def map(%{embed_url: embed_url, source: :gmaps}, _) do
@@ -939,7 +939,7 @@ defmodule Brando.Villain.Parser do
 
   def blockquote(%{text: text, cite: cite}, _)
       when byte_size(cite) > 0 do
-    text_html = Earmark.as_html!(text)
+    text_html = Brando.Markdown.to_html!(text)
 
     """
     <blockquote>
@@ -952,7 +952,7 @@ defmodule Brando.Villain.Parser do
   end
 
   def blockquote(%{text: text}, _) do
-    text_html = Earmark.as_html!(text)
+    text_html = Brando.Markdown.to_html!(text)
 
     """
     <blockquote>

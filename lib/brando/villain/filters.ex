@@ -1112,7 +1112,7 @@ defmodule Brando.Villain.Filters do
   Converts from markdown
   ## Examples
       iex> Brando.Villain.Filters.markdown("this is a **string**", %{}) |> String.trim("\\n")
-      "<p>\\nthis is a <strong>string</strong></p>"
+      "<p>this is a <strong>string</strong></p>"
   """
   def markdown(%{value: str}, opts), do: markdown(str, opts)
 

@@ -53,8 +53,8 @@ defmodule Brando.Repo.Migrations.FixLegacyContentData do
       text = get_in(ref.data, ["data", "text"])
 
       if text && is_binary(text) && is_markdown?(text) do
-        case Earmark.as_html(text) do
-          {:ok, html, _} ->
+        case Brando.Markdown.to_html(text) do
+          {:ok, html} ->
             updated_data = put_in(ref.data, ["data", "text"], html)
             update_ref_data(ref.id, updated_data)
 
