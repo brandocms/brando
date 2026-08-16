@@ -104,7 +104,7 @@ defmodule BrandoAdmin.Components.Content.List do
 
     target_path =
       Path.join([
-        Brando.config(:media_path),
+        Brando.Tenant.Storage.current_media_root(),
         exports_path
       ])
 

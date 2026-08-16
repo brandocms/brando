@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   alias Brando.Environments
   alias Brando.Environments.Environment
   alias Brando.Tenant
+  alias Brando.Tenant.Access
   alias Brando.Tenant.Registry
   alias Brando.Worker.EnvironmentCopy
   alias Brando.Worker.EnvironmentSetLive
@@ -18,7 +19,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
     if connected?(socket) do
-      can_manage? = socket.assigns.current_user.role in @manager_roles
+      can_manage? = can_manage?(socket.assigns.current_user, socket.assigns[:current_site])
 
       {:ok,
        socket
@@ -29,6 +30,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
        |> refresh_data()}
     else
       {:ok, assign(socket, :socket_connected, false)}
+    end
+  end
+
+  defp can_manage?(current_user, current_site) do
+    case Tenant.mode() do
+      :multi -> not is_nil(current_site) and Access.can_manage?(current_user, current_site)
+      _other -> current_user.role in @manager_roles
     end
   end
 

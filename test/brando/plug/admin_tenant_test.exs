@@ -41,12 +41,24 @@ defmodule Brando.Plug.AdminTenantTest do
       })
 
     conn =
-      init_test_session(conn, %{
+      conn
+      |> init_test_session(%{
         "brando_site_key" => "acme",
         "brando_environment_key" => "preview"
       })
+      |> Plug.Conn.assign(:current_user, Brando.Factory.insert(:random_user, role: :superuser))
 
     %{conn: conn, site: site, production: production, preview: preview}
+  end
+
+  test "does not restore an unassigned site for a regular user", context do
+    user = Brando.Factory.insert(:random_user, role: :admin)
+    conn = Plug.Conn.assign(context.conn, :current_user, user)
+
+    conn = AdminTenant.call(conn, [])
+
+    refute conn.assigns[:current_site]
+    assert Tenant.current_prefix() == nil
   end
 
   test "restores the signed-session environment for controller requests", context do

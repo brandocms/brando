@@ -30,6 +30,7 @@ defmodule Brando.Sites.Site do
     field :languages, {:array, :string}, default: []
     field :default_language, :string
     field :status, Ecto.Enum, values: @statuses, default: :active
+    field :archived_at, :utc_datetime_usec
     field :delivery_mode, Ecto.Enum, values: @delivery_modes, default: :dynamic
 
     embeds_one :deploy_config, DeployConfig, on_replace: :update
@@ -40,10 +41,11 @@ defmodule Brando.Sites.Site do
   end
 
   @required_fields [:name, :key, :languages, :default_language, :status, :delivery_mode]
+  @optional_fields [:archived_at]
 
   def changeset(site \\ %__MODULE__{}, attrs) do
     site
-    |> cast(attrs, @required_fields)
+    |> cast(attrs, @required_fields ++ @optional_fields)
     |> cast_embed(:deploy_config, with: &DeployConfig.changeset/2)
     |> validate_required(@required_fields)
     |> validate_length(:name, min: 1)

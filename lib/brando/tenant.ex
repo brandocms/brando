@@ -49,6 +49,27 @@ defmodule Brando.Tenant do
     if enabled?(), do: Process.get(@process_prefix_key), else: nil
   end
 
+  @doc "Returns the site key encoded in the current tenant prefix."
+  @spec current_site_key() :: String.t() | nil
+  def current_site_key do
+    case current_prefix() do
+      "tenant_" <> remainder ->
+        case String.split(remainder, "_", parts: 2) do
+          [site_key, _environment_key] -> site_key
+          _invalid -> nil
+        end
+
+      _no_prefix ->
+        nil
+    end
+  end
+
+  @doc "Namespaces an application cache key by the active tenant prefix."
+  @spec cache_key(term(), String.t() | nil) :: term()
+  def cache_key(key, prefix \\ current_prefix()) do
+    if is_binary(prefix), do: {:tenant, prefix, key}, else: key
+  end
+
   @spec put_prefix(String.t() | nil) :: String.t() | nil
   def put_prefix(nil) do
     Process.delete(@process_prefix_key)

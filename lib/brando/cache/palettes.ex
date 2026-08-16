@@ -3,6 +3,7 @@ defmodule Brando.Cache.Palettes do
   Interaction with palettes cache
   """
   alias Brando.Content
+  alias Brando.Cache
 
   @type changeset :: Ecto.Changeset.t()
 
@@ -11,16 +12,24 @@ defmodule Brando.Cache.Palettes do
   """
   @spec get_css :: binary() | nil
   def get_css do
-    case Cachex.get(:cache, :palettes_css) do
-      {:ok, css} -> css
-      css -> css
+    case Cache.get(:palettes_css) do
+      nil ->
+        set()
+        Cache.get(:palettes_css)
+
+      css ->
+        css
     end
   end
 
   def get do
-    case Cachex.get(:cache, :palettes) do
-      {:ok, palettes} -> palettes
-      palettes -> palettes
+    case Cache.get(:palettes) do
+      nil ->
+        set()
+        Cache.get(:palettes)
+
+      palettes ->
+        palettes
     end
   end
 
@@ -31,8 +40,11 @@ defmodule Brando.Cache.Palettes do
   def set do
     {:ok, palettes} = get_palettes()
     palettes_css = get_palettes_css(palettes)
-    Cachex.put(:cache, :palettes, palettes)
-    Cachex.put(:cache, :palettes_css, palettes_css)
+
+    with {:ok, true} <- Cache.put(:palettes, palettes, :infinite),
+         {:ok, true} <- Cache.put(:palettes_css, palettes_css, :infinite) do
+      {:ok, true}
+    end
   end
 
   @doc """
@@ -43,8 +55,8 @@ defmodule Brando.Cache.Palettes do
   def update({:ok, palette}) do
     {:ok, palettes} = get_palettes()
     palettes_css = get_palettes_css(palettes)
-    Cachex.put(:cache, :palettes, palettes)
-    Cachex.update(:cache, :palettes_css, palettes_css)
+    Cache.put(:palettes, palettes, :infinite)
+    Cache.update(:palettes_css, palettes_css)
     {:ok, palette}
   end
 

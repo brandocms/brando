@@ -13,7 +13,7 @@ defmodule Brando.Plug.AdminTenant do
 
   @impl Plug
   def call(conn, _opts) do
-    case AdminContext.resolve(%{}, get_session(conn)) do
+    case AdminContext.resolve(%{}, get_session(conn), conn.assigns[:current_user]) do
       {site, environment} ->
         prefix = Tenant.prefix(site, environment)
         Tenant.put_prefix(prefix)

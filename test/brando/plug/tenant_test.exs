@@ -76,6 +76,23 @@ defmodule Brando.Plug.TenantTest do
       |> Brando.Plug.Tenant.call([])
 
     refute conn.assigns[:current_site]
+    assert conn.halted
+    assert conn.status == 404
+    assert Tenant.current_prefix() == nil
+  end
+
+  test "suspended sites are no longer served by their domains", context do
+    assert {:ok, _site} = Registry.update_site(context.site, %{status: :suspended})
+
+    conn =
+      :get
+      |> Plug.Test.conn("https://www.acme.test/")
+      |> Map.put(:host, "www.acme.test")
+      |> Brando.Plug.Tenant.call([])
+
+    assert conn.halted
+    assert conn.status == 404
+    refute conn.assigns[:current_site]
     assert Tenant.current_prefix() == nil
   end
 

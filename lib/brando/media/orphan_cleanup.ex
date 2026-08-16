@@ -21,6 +21,7 @@ defmodule Brando.Media.OrphanCleanup do
   alias Brando.Sites.Site
   alias Brando.Tenant
   alias Brando.Tenant.Registry
+  alias Brando.Tenant.Storage
 
   @managed_directories ~w(images videos files)
   @default_grace_seconds :timer.hours(24) |> div(1_000)
@@ -71,7 +72,7 @@ defmodule Brando.Media.OrphanCleanup do
   @spec media_root(Site.t()) :: String.t()
   def media_root(%Site{} = site) do
     case Tenant.mode() do
-      :multi -> Path.join(Brando.config(:media_path), site.key)
+      :multi -> Storage.media_root(site)
       _single_or_none -> Brando.config(:media_path)
     end
   end

@@ -6,12 +6,14 @@ defmodule BrandoAdmin.EnvironmentController do
   import Plug.Conn, only: [put_session: 3]
 
   alias Brando.Tenant
+  alias Brando.Tenant.Access
   alias Brando.Tenant.Cache
 
   def update(conn, params) do
     with true <- Tenant.enabled?(),
          site_key when is_binary(site_key) <- selected_site_key(params),
          site when not is_nil(site) <- Cache.get_site(site_key),
+         true <- authorized?(conn.assigns[:current_user], site),
          environment when not is_nil(environment) <- selected_environment(site.key, params) do
       conn
       |> put_session("brando_site_key", site.key)
@@ -19,6 +21,13 @@ defmodule BrandoAdmin.EnvironmentController do
       |> redirect(to: safe_return_to(params["return_to"]))
     else
       _ -> redirect(conn, to: "/admin")
+    end
+  end
+
+  defp authorized?(current_user, site) do
+    case Tenant.mode() do
+      :single -> true
+      :multi -> Access.can_access?(current_user, site)
     end
   end
 

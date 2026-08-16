@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
   alias Brando.Environments.OperationLog
   alias Brando.Environments.Schema
   alias Brando.Tenant
+  alias Brando.Tenant.Access
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
 
@@ -140,6 +141,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
         role: :editor,
         config: %Brando.Users.UserConfig{}
       )
+
+    assert {:ok, _assignment} = Access.grant(editor, site, :editor)
 
     conn = log_in_user(Phoenix.ConnTest.build_conn(), editor)
     {:ok, view, _html} = live(conn, "/admin/config/environments")

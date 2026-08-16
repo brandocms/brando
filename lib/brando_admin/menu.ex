@@ -243,7 +243,7 @@ defmodule BrandoAdmin.Menu do
     end
   end
 
-  def get_menu do
+  def get_menu(current_user \\ nil) do
     content_menus = Brando.admin_module(Menus).__menus__()
 
     [
@@ -284,6 +284,11 @@ defmodule BrandoAdmin.Menu do
                     name: gettext("Environments"),
                     url: "/admin/config/environments"
                   },
+                current_user && current_user.role == :superuser &&
+                  %{
+                    name: gettext("Frontend assets"),
+                    url: "/admin/config/assets"
+                  },
                 %{
                   name: gettext("Cache"),
                   url: "/admin/config/cache"
@@ -317,7 +322,7 @@ defmodule BrandoAdmin.Menu do
                   url: "/admin/config/content/palettes"
                 }
               ]
-              |> Enum.reject(&(&1 == false))
+              |> Enum.reject(&(&1 in [false, nil]))
           },
           %{
             name: gettext("Assets"),

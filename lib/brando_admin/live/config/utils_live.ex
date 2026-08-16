@@ -24,7 +24,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
   end
 
   defp assign_sitemap(socket) do
-    sitemap_path = Path.join([Brando.config(:media_path), "sitemaps", "sitemap.xml.gz"])
+    sitemap_path = Path.join([Brando.Tenant.Storage.current_media_root(), "sitemaps", "sitemap.xml.gz"])
 
     sitemap_last_updated =
       if File.exists?(sitemap_path) do

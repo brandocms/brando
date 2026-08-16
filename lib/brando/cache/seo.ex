@@ -34,7 +34,7 @@ defmodule Brando.Cache.SEO do
   def set do
     {:ok, seos} = Sites.list_seos(%{preload: [:fallback_meta_image]})
     seo_map = process_seos(seos)
-    Cachex.put(:cache, :seo, seo_map)
+    Cache.put(:seo, seo_map, :infinite)
     seo_map
   end
 
@@ -46,7 +46,7 @@ defmodule Brando.Cache.SEO do
   def update({:ok, seo}) do
     {:ok, seos} = Sites.list_seos(%{preload: [:fallback_meta_image]})
     seo_map = process_seos(seos)
-    Cachex.update(:cache, :seo, seo_map)
+    Cache.update(:seo, seo_map)
     {:ok, seo}
   end
 

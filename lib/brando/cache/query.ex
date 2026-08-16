@@ -8,9 +8,10 @@ defmodule Brando.Cache.Query do
   @doc """
   Hashes a query key into the canonical cache-key representation.
   """
-  @spec hash_query({atom(), binary(), term()}) :: {atom(), binary(), binary()}
+  @spec hash_query({atom(), binary(), term()}) :: term()
   def hash_query({query_type, query_name, _} = query_key) do
-    {query_type, query_name, Base.encode16(<<:erlang.phash2(Jason.encode!(query_key))::size(32)>>)}
+    key = {query_type, query_name, Base.encode16(<<:erlang.phash2(Jason.encode!(query_key))::size(32)>>)}
+    Brando.Tenant.cache_key(key)
   end
 
   @doc """
@@ -44,9 +45,14 @@ defmodule Brando.Cache.Query do
   def put(key, val, ttl \\ :timer.minutes(15))
   def put(key, val, ttl), do: @cache_module.put(:query, key, val, expire: ttl)
 
-  def put({:single, src, hash}, val, ttl, id), do: @cache_module.put(:query, {:single, src, hash, id}, val, expire: ttl)
+  def put({:single, src, hash}, val, ttl, id),
+    do: @cache_module.put(:query, {:single, src, hash, id}, val, expire: ttl)
+
+  def put({:tenant, prefix, {:single, src, hash}}, val, ttl, id),
+    do: @cache_module.put(:query, {:tenant, prefix, {:single, src, hash, id}}, val, expire: ttl)
 
   defp get_from_cache({:single, source, key}), do: find_single_entry(source, key)
+  defp get_from_cache({:tenant, prefix, {:single, source, key}}), do: find_single_entry(source, key, prefix)
   defp get_from_cache(key), do: @cache_module.get(:query, key)
 
   @spec evict({:ok, map()} | {:error, changeset}) :: {:ok, map()} | {:error, changeset}
@@ -89,7 +95,8 @@ defmodule Brando.Cache.Query do
 
   @spec perform_eviction(:list, binary()) :: [:ok]
   defp perform_eviction(:list, schema) do
-    ms = [{{:entry, {:list, schema, :_}, :_, :_, :_}, [], [:"$_"]}]
+    key_pattern = scoped_pattern({:list, schema, :_})
+    ms = [{{:entry, key_pattern, :_, :_, :_}, [], [:"$_"]}]
 
     :query
     |> Cachex.stream!(ms)
@@ -100,7 +107,8 @@ defmodule Brando.Cache.Query do
 
   @spec perform_eviction(:single, binary(), integer()) :: [:ok]
   defp perform_eviction(:single, schema, id) do
-    ms = [{{:entry, {:single, schema, :_, id}, :_, :_, :_}, [], [:"$_"]}]
+    key_pattern = scoped_pattern({:single, schema, :_, id})
+    ms = [{{:entry, key_pattern, :_, :_, :_}, [], [:"$_"]}]
 
     :query
     |> Cachex.stream!(ms)
@@ -109,8 +117,13 @@ defmodule Brando.Cache.Query do
     Cachex.Error -> :ok
   end
 
-  defp find_single_entry(source, key) do
-    ms = [{{:entry, {:single, source, key, :_}, :_, :_, :_}, [], [:"$_"]}]
+  defp find_single_entry(source, key, prefix \\ nil) do
+    key_pattern =
+      if prefix,
+        do: {:tenant, prefix, {:single, source, key, :_}},
+        else: {:single, source, key, :_}
+
+    ms = [{{:entry, key_pattern, :_, :_, :_}, [], [:"$_"]}]
 
     :query
     |> Cachex.stream!(ms)
@@ -119,6 +132,13 @@ defmodule Brando.Cache.Query do
     |> case do
       nil -> {:error, nil}
       entry -> {:ok, entry}
+    end
+  end
+
+  defp scoped_pattern(key_pattern) do
+    case Brando.Tenant.current_prefix() do
+      nil -> key_pattern
+      prefix -> {:tenant, prefix, key_pattern}
     end
   end
 end
