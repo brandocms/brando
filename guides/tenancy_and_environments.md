@@ -7,14 +7,15 @@ environments backed by PostgreSQL schemas.
 > #### Implementation status {: .warning}
 >
 > The tenant registry, schema lifecycle, routing context, archive/copy/rollback
-> operations, scheduling backend, and admin environment switcher are available.
+> operations, scheduling and management UI, admin environment switcher, and
+> cross-environment local-media cleanup are available.
 > Before enabling tenancy for an application, you must provide tenant migrations
 > for every table the application queries as tenant content.
 >
-> The full environment-management panel, media orphan cleanup across
-> environments, existing-installation data migration, multi-site roles, and
-> strict multi-site authorization are not complete. Keep existing installations
-> on `:none`, and do not deploy `:multi` as a tenant-security boundary yet.
+> Existing-installation data migration, multi-site roles, per-site upload paths,
+> and strict multi-site authorization are not complete. Keep existing
+> installations on `:none`, and do not deploy `:multi` as a tenant-security
+> boundary yet.
 
 ## Choose a mode
 
@@ -233,6 +234,11 @@ session:
 - the sidebar switcher marks the live environment and warns while editing a
   non-live environment.
 
+Administrators and superusers can open `/admin/config/environments` to create
+and delete working environments, queue or schedule copies and live switches,
+cancel pending jobs, restore the newest archive, and prune old archives. Editors
+can inspect the same state without lifecycle mutation controls.
+
 `Brando.Repo` applies the current prefix to reads, writes, preloads, bulk
 updates, and bulk soft deletion. An explicit prefix always wins:
 
@@ -291,9 +297,27 @@ therefore cannot overlap another copy, promotion, rollback, or deletion on the
 same site. If source-to-target restore fails, Brando drops the partial target
 and restores its archive.
 
-Media bytes are not copied. The intended model is one media directory per site,
-shared by all its environments; the cross-environment orphan cleanup required
-to make that lifecycle complete is still pending.
+Media bytes are not copied. In `:single`, every environment shares the existing
+configured media root. `:multi` reserves `media/{site_key}` roots; wiring upload
+paths into those roots belongs to the multi-site isolation phase.
+
+Local orphan cleanup unions image and file records from **every** environment
+schema before deleting a byte:
+
+```elixir
+# Inspect what would be removed
+{:ok, report} =
+  Brando.Media.OrphanCleanup.run(site, dry_run: true)
+
+# Delete local files older than the default 24-hour grace period
+{:ok, report} = Brando.Media.OrphanCleanup.run(site)
+```
+
+Only regular files below `images`, `videos`, and `files` are candidates.
+Symlinks and SVGs are skipped. Most importantly, if even one environment schema
+cannot be inspected, the entire run fails before deleting anything. The default
+Oban cron invokes `Brando.Worker.MediaOrphanCleanup` at 05:00 UTC; applications
+that replace Brando's Oban configuration must re-declare that job if desired.
 
 ## Switch live, rollback, and delete
 
@@ -375,8 +399,8 @@ jobs = Brando.Environments.list_scheduled_operations(site)
 :ok = Brando.Environments.cancel_scheduled_operation(site, copy_job.id)
 ```
 
-The backend supports listing and cancellation, but the admin management panel
-for creating, scheduling, and cancelling operations is not implemented yet.
+The environment management panel shows these jobs with their scheduled time and
+state, and exposes the same site-ownership-checked cancellation path.
 
 ## Operation log
 

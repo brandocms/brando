@@ -112,6 +112,7 @@ defmodule Brando.Router do
           live "/assets/files", BrandoAdmin.Files.FileListLive
 
           scope "/config" do
+            live "/environments", BrandoAdmin.Sites.EnvironmentLive
             live "/cache", BrandoAdmin.Sites.CacheLive
             live "/global_sets", BrandoAdmin.Sites.GlobalSetListLive
             live "/global_sets/create", BrandoAdmin.Sites.GlobalSetFormLive, :create

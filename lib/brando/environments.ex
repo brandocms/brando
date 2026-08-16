@@ -29,14 +29,21 @@ defmodule Brando.Environments do
   Creates the public environment record, its PostgreSQL schema, and applies all
   tenant migrations. A failed schema creation or migration is compensated.
   """
-  @spec create_environment(Site.t(), map()) ::
+  @spec create_environment(Site.t(), map(), keyword()) ::
           {:ok, Environment.t()} | {:error, Ecto.Changeset.t() | term()}
-  def create_environment(%Site{} = site, attrs) do
+  def create_environment(site, attrs, opts \\ [])
+
+  def create_environment(%Site{} = site, attrs, opts) do
     with {:ok, environment} <- Registry.create_environment(site, attrs),
          prefix = Tenant.prefix(site, environment),
          :ok <- create_schema_or_compensate(environment, prefix),
          {:ok, _versions} <- migrate_or_compensate(site, environment, prefix) do
-      log_operation!(site.id, :create, target_environment_id: environment.id)
+      log_operation!(site.id, :create,
+        target_environment_id: environment.id,
+        creator_id: creator_id(opts),
+        note: opts[:note]
+      )
+
       Cache.invalidate()
       {:ok, environment}
     end
@@ -71,13 +78,18 @@ defmodule Brando.Environments do
   end
 
   @doc "Deletes a non-live environment and its content schema."
-  @spec delete_environment(Environment.t()) :: {:ok, Environment.t()} | {:error, term()}
-  def delete_environment(%Environment{} = environment) do
+  @spec delete_environment(Environment.t(), keyword()) ::
+          {:ok, Environment.t()} | {:error, term()}
+  def delete_environment(environment, opts \\ [])
+
+  def delete_environment(%Environment{} = environment, opts) do
     case Registry.get_environment(environment.id) do
       %Environment{} = current_environment ->
         case Registry.get_site(current_environment.site_id) do
           %Site{} = site ->
-            with_site_lock(site, fn -> delete_under_lock(site, current_environment.id) end)
+            with_site_lock(site, fn ->
+              delete_under_lock(site, current_environment.id, opts)
+            end)
 
           nil ->
             {:error, :site_or_environment_not_found}
@@ -187,6 +199,12 @@ defmodule Brando.Environments do
   def prune_archives(site, keep \\ @default_archive_keep)
 
   def prune_archives(%Site{} = site, keep) when is_integer(keep) and keep >= 0 do
+    with_site_lock(site, fn -> prune_archives_under_lock(site, keep) end)
+  end
+
+  def prune_archives(%Site{}, keep), do: {:error, {:invalid_keep, keep}}
+
+  defp prune_archives_under_lock(site, keep) do
     site
     |> list_archives()
     |> Enum.drop(keep)
@@ -202,20 +220,17 @@ defmodule Brando.Environments do
     end
   end
 
-  def prune_archives(%Site{}, keep), do: {:error, {:invalid_keep, keep}}
-
   @doc "Restores the newest archive as a new, non-live environment."
   @spec rollback(Site.t(), keyword()) :: {:ok, Environment.t()} | {:error, term()}
   def rollback(site, opts \\ [])
 
   def rollback(%Site{} = site, opts) do
-    case List.first(list_archives(site)) do
-      nil ->
-        {:error, :no_archives}
-
-      archive ->
-        with_site_lock(site, fn -> restore_archive(site, archive, opts) end)
-    end
+    with_site_lock(site, fn ->
+      case List.first(list_archives(site)) do
+        nil -> {:error, :no_archives}
+        archive -> restore_archive(site, archive, opts)
+      end
+    end)
   end
 
   @doc "Schedules a copy operation through Oban."
@@ -299,7 +314,7 @@ defmodule Brando.Environments do
     with {:ok, archive_prefix} <- archive_live_environment(site, environment.id),
          {:ok, live_environment} <-
            persist_live_switch(environment, archive_prefix, opts) do
-      prune_archives(site, opts[:keep_archives] || @default_archive_keep)
+      prune_archives_under_lock(site, opts[:keep_archives] || @default_archive_keep)
       {:ok, live_environment}
     end
   end
@@ -370,7 +385,7 @@ defmodule Brando.Environments do
         )
 
       Cache.invalidate()
-      prune_archives(site, opts[:keep_archives] || @default_archive_keep)
+      prune_archives_under_lock(site, opts[:keep_archives] || @default_archive_keep)
 
       {:ok, %{archive_schema: archive_prefix, operation_log: log, target: target}}
     else
@@ -392,12 +407,16 @@ defmodule Brando.Environments do
     end
   end
 
-  defp delete_under_lock(site, environment_id) do
+  defp delete_under_lock(site, environment_id, opts) do
     with %Environment{live: false} = environment <- Registry.get_environment(environment_id),
          prefix = Tenant.prefix(site, environment),
          :ok <- Schema.drop(prefix),
          {:ok, deleted_environment} <- Registry.delete_environment(environment) do
-      log_operation!(site.id, :delete, note: "Deleted environment #{environment.key}")
+      log_operation!(site.id, :delete,
+        creator_id: creator_id(opts),
+        note: opts[:note] || "Deleted environment #{environment.key}"
+      )
+
       {:ok, deleted_environment}
     else
       %Environment{live: true} -> {:error, :live_environment}

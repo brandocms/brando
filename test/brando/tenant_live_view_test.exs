@@ -60,6 +60,17 @@ defmodule Brando.TenantLiveViewTest do
     assert environment.id == context.production.id
   end
 
+  test "resolves child LiveViews that are not mounted at the router", context do
+    assert {site, environment} =
+             LiveView.resolve_context(:not_mounted_at_router, %{
+               "brando_site_key" => "acme",
+               "brando_environment_key" => "preview"
+             })
+
+    assert site.id == context.site.id
+    assert environment.id == context.preview.id
+  end
+
   test "single mode derives its configured site without a session site key", context do
     put_test_env(:tenancy_mode, :single)
     put_test_env(:site_key, "acme")

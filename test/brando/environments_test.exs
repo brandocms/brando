@@ -144,6 +144,39 @@ defmodule Brando.EnvironmentsTest do
     assert Enum.any?(operation_logs(site), &(&1.operation == :delete))
   end
 
+  test "records the actor and note for create and delete operations", %{site: site} do
+    creator = Brando.Factory.insert(:random_user)
+
+    assert {:ok, environment} =
+             Environments.create_environment(
+               site,
+               %{name: "Audited", key: "audited", live: false},
+               creator: creator,
+               note: "Created from environment manager"
+             )
+
+    assert {:ok, _deleted} =
+             Environments.delete_environment(environment,
+               creator: creator,
+               note: "Cancelled launch"
+             )
+
+    assert [
+             %OperationLog{
+               operation: :create,
+               creator_id: creator_id,
+               note: "Created from environment manager"
+             },
+             %OperationLog{
+               operation: :delete,
+               creator_id: creator_id,
+               note: "Cancelled launch"
+             }
+           ] = operation_logs(site)
+
+    assert creator_id == creator.id
+  end
+
   test "sets one environment live atomically and refreshes routing cache", %{site: site} do
     {:ok, production} =
       Environments.create_environment(site, %{

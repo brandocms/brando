@@ -7,9 +7,11 @@ defmodule Brando.Tenant.AdminContext do
   @site_session_key "brando_site_key"
   @environment_session_key "brando_environment_key"
 
-  @spec resolve(map(), map()) :: {Brando.Sites.Site.t(), Brando.Environments.Environment.t()} | nil
+  @spec resolve(map() | :not_mounted_at_router, map()) ::
+          {Brando.Sites.Site.t(), Brando.Environments.Environment.t()} | nil
   def resolve(params, session) do
     if Tenant.enabled?() do
+      params = if is_map(params), do: params, else: %{}
       site_key = selected_site_key(params, session)
       environment_key = params[@environment_session_key] || session[@environment_session_key]
 
