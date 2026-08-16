@@ -17,6 +17,10 @@ config :brando,
   admin_module: <%= application_module %>Admin,
   repo_module: <%= application_module %>.Repo,
 
+  # Tenancy is opt-in. :none preserves the standard single-site/public-schema setup.
+  tenancy_mode: :<%= tenancy_mode %>,<%= if site_key do %>
+  site_key: "<%= site_key %>",<% end %>
+
   # cron_jobs: [
   #   {"0 0 * * *", <%= application_module %>.Worker.RefreshFrontpage}
   # ],

@@ -10,6 +10,7 @@ defmodule Brando.System do
 
   def initialize do
     run_checks()
+    Brando.Tenant.Cache.warm()
     Cache.Identity.set()
     Cache.SEO.set()
     Cache.Globals.set()
@@ -22,6 +23,7 @@ defmodule Brando.System do
     Logger.info("==> Brando >> Running system checks...")
     Brando.Cache.put(:warnings, [], :infinite)
     {:ok, {:module_config, :exists}} = check_module_config_exists()
+    {:ok, {:tenancy_config, :valid}} = check_tenancy_config()
     {:ok, {:villain_filters, :exists}} = check_villain_filters_exists()
     {:ok, {:media_path, :exists}} = check_media_path_exists()
     {:ok, {:media_url, :exists}} = check_media_url_exists()
@@ -33,6 +35,11 @@ defmodule Brando.System do
     {:ok, {:presence, :exists}} = check_presence_exists()
 
     Logger.info("==> Brando >> System checks complete!")
+  end
+
+  defp check_tenancy_config do
+    :ok = Brando.Tenant.validate_config!()
+    {:ok, {:tenancy_config, :valid}}
   end
 
   defp check_media_path_exists do

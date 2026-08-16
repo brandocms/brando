@@ -45,6 +45,11 @@ defmodule Mix.Tasks.Brando.GenerateTest do
       assert file =~ ~s<url: System.get_env("BRANDO_DB_URL")>
     end)
 
+    assert_file("config/brando.exs", fn file ->
+      assert file =~ "tenancy_mode: :none"
+      refute file =~ "site_key:"
+    end)
+
     assert_file("lib/brando_web/components/layouts.ex", fn file ->
       assert file =~ "embed_templates \"layouts/*\""
       assert file =~ "embed_templates \"partials/*\""
@@ -63,5 +68,51 @@ defmodule Mix.Tasks.Brando.GenerateTest do
     end)
 
     refute File.exists?("assets/css/app.css")
+  end
+
+  test "parses valid installer tenancy options" do
+    assert Mix.Tasks.Brando.Install.parse_tenancy_options!([]) == %{
+             mode: :none,
+             site_key: nil
+           }
+
+    assert Mix.Tasks.Brando.Install.parse_tenancy_options!(
+             tenancy_mode: "single",
+             site_key: "photo-blog"
+           ) == %{mode: :single, site_key: "photo-blog"}
+
+    assert Mix.Tasks.Brando.Install.parse_tenancy_options!(tenancy_mode: "multi") == %{
+             mode: :multi,
+             site_key: nil
+           }
+  end
+
+  test "renders single-site tenancy configuration" do
+    config =
+      "templates/brando.install/config/brando.exs"
+      |> Mix.Tasks.Brando.Install.render()
+      |> EEx.eval_string(
+        application_name: "photo_blog",
+        application_module: "PhotoBlog",
+        tenancy_mode: :single,
+        site_key: "photo-blog"
+      )
+
+    assert config =~ "tenancy_mode: :single"
+    assert config =~ ~s(site_key: "photo-blog")
+  end
+
+  test "rejects incomplete or contradictory installer tenancy options" do
+    assert_raise Mix.Error, ~r/--site-key is required/, fn ->
+      Mix.Tasks.Brando.Install.parse_tenancy_options!(tenancy_mode: "single")
+    end
+
+    assert_raise Mix.Error, ~r/--site-key can only be used/, fn ->
+      Mix.Tasks.Brando.Install.parse_tenancy_options!(site_key: "photo-blog")
+    end
+
+    assert_raise Mix.Error, ~r/Invalid --tenancy-mode/, fn ->
+      Mix.Tasks.Brando.Install.parse_tenancy_options!(tenancy_mode: "global")
+    end
   end
 end

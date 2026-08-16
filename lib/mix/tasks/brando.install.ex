@@ -3,6 +3,13 @@ defmodule Mix.Tasks.Brando.Install do
 
   @moduledoc """
   Install Brando.
+
+      mix brando.install [--module MyApp]
+                         [--tenancy-mode none|single|multi]
+                         [--site-key my-site]
+
+  Tenancy defaults to `none`. A URL-safe `--site-key` is required when using
+  `--tenancy-mode single` and is rejected for the other modes.
   """
 
   use Mix.Task
@@ -464,13 +471,22 @@ defmodule Mix.Tasks.Brando.Install do
   Copies Brando files from template and static directories to OTP app.
   """
   def run(args) do
-    {opts, _, _} = OptionParser.parse(args, switches: [module: :string])
+    {opts, _, invalid} =
+      OptionParser.parse(args,
+        strict: [module: :string, tenancy_mode: :string, site_key: :string]
+      )
+
+    if invalid != [], do: Mix.raise("Invalid options: #{inspect(invalid)}")
+
+    tenancy = parse_tenancy_options!(opts)
 
     app = Mix.Project.config()[:app]
 
     binding = [
       application_module: opts[:module] || Phoenix.Naming.camelize(Atom.to_string(app)),
       application_name: Atom.to_string(app),
+      tenancy_mode: tenancy.mode,
+      site_key: tenancy.site_key,
       secret_key_base: random_string(64),
       signing_salt: random_string(8),
       lv_signing_salt: random_string(8)
@@ -488,6 +504,38 @@ defmodule Mix.Tasks.Brando.Install do
     copy_from("templates/brando.install", "./", binding, @static)
 
     Mix.shell().info("\nBrando finished copying.")
+  end
+
+  @doc false
+  def parse_tenancy_options!(opts) do
+    mode = opts |> Keyword.get(:tenancy_mode, "none") |> parse_tenancy_mode!()
+    site_key = opts[:site_key]
+
+    case {mode, site_key} do
+      {:single, key} when is_binary(key) ->
+        if Brando.Tenant.valid_key?(key) do
+          %{mode: mode, site_key: key}
+        else
+          Mix.raise("--site-key must be a lowercase, URL-safe key such as my-site")
+        end
+
+      {:single, nil} ->
+        Mix.raise("--site-key is required with --tenancy-mode single")
+
+      {_, nil} ->
+        %{mode: mode, site_key: nil}
+
+      {_, _key} ->
+        Mix.raise("--site-key can only be used with --tenancy-mode single")
+    end
+  end
+
+  defp parse_tenancy_mode!(mode) when mode in ["none", "single", "multi"] do
+    String.to_existing_atom(mode)
+  end
+
+  defp parse_tenancy_mode!(mode) do
+    Mix.raise("Invalid --tenancy-mode #{inspect(mode)}; expected none, single, or multi")
   end
 
   defp copy_from(src_dir, target_dir, binding, mapping) when is_list(mapping) do
