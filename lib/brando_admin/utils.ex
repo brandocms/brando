@@ -17,6 +17,15 @@ defmodule BrandoAdmin.Utils do
     send_update(module, Map.put(assigns, :id, id))
   end
 
+  @doc "Formats nested changeset errors as a compact, human-readable sentence."
+  @spec format_changeset_errors(Ecto.Changeset.t()) :: String.t()
+  def format_changeset_errors(%Ecto.Changeset{} = changeset) do
+    changeset
+    |> Ecto.Changeset.traverse_errors(fn {message, _opts} -> message end)
+    |> flatten_changeset_errors([])
+    |> Enum.join(", ")
+  end
+
   def prepare_subform_component(%{assigns: assigns} = socket) do
     schema = assigns.field.form.source.data.__struct__
 
@@ -40,6 +49,24 @@ defmodule BrandoAdmin.Utils do
       instructions: g(schema, Map.get(socket.assigns.subform, :instructions)),
       label: g(schema, Map.get(socket.assigns.subform, :label))
     )
+  end
+
+  defp flatten_changeset_errors(errors, path) when is_map(errors) do
+    Enum.flat_map(errors, fn {field, nested_errors} ->
+      flatten_changeset_errors(nested_errors, path ++ [field])
+    end)
+  end
+
+  defp flatten_changeset_errors(errors, path) when is_list(errors) do
+    if Enum.all?(errors, &is_binary/1) do
+      Enum.map(errors, &"#{Enum.join(path, ".")} #{&1}")
+    else
+      errors
+      |> Enum.with_index()
+      |> Enum.flat_map(fn {nested_errors, index} ->
+        flatten_changeset_errors(nested_errors, path ++ [index])
+      end)
+    end
   end
 
   def prepare_input_component(%{assigns: assigns} = socket) do

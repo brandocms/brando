@@ -18,48 +18,45 @@ defmodule Brando.Environments.SchemaCloner.Postgres do
     with :ok <- validate_identifier(source_prefix),
          :ok <- validate_identifier(target_prefix),
          {:ok, dump} <- dump_schema(source_prefix),
-         {:ok, rewritten_dump} <- rewrite_schema(dump, source_prefix, target_prefix),
-         :ok <- restore_dump(rewritten_dump) do
-      :ok
+         {:ok, rewritten_dump} <- rewrite_schema(dump, source_prefix, target_prefix) do
+      restore_dump(rewritten_dump)
     end
   end
 
-  @doc false
+  @doc "Rewrites quoted schema identifiers in a plain PostgreSQL dump."
   def rewrite_schema(dump, source_prefix, target_prefix) do
     source_identifier = ~s|"#{source_prefix}"|
 
     if String.contains?(dump, source_identifier) do
       target_identifier = ~s|"#{target_prefix}"|
-
-      rewritten_dump =
-        dump
-        |> String.split("\n")
-        |> Enum.map_reduce(:sql, fn
-          "\\." = line, :copy_data ->
-            {line, :sql}
-
-          line, :copy_data ->
-            {line, :copy_data}
-
-          line, :sql ->
-            rewritten_line = String.replace(line, source_identifier, target_identifier)
-            next_state = if copy_from_stdin?(line), do: :copy_data, else: :sql
-            {rewritten_line, next_state}
-        end)
-        |> elem(0)
-        |> Enum.join("\n")
-
-      {:ok, rewritten_dump}
+      {:ok, rewrite_dump(dump, source_identifier, target_identifier)}
     else
       {:error, {:source_schema_not_found_in_dump, source_prefix}}
     end
+  end
+
+  defp rewrite_dump(dump, source_identifier, target_identifier) do
+    dump
+    |> String.split("\n")
+    |> Enum.map_reduce(:sql, &rewrite_dump_line(&1, &2, source_identifier, target_identifier))
+    |> elem(0)
+    |> Enum.join("\n")
+  end
+
+  defp rewrite_dump_line("\\." = line, :copy_data, _source, _target), do: {line, :sql}
+  defp rewrite_dump_line(line, :copy_data, _source, _target), do: {line, :copy_data}
+
+  defp rewrite_dump_line(line, :sql, source_identifier, target_identifier) do
+    rewritten_line = String.replace(line, source_identifier, target_identifier)
+    next_state = if copy_from_stdin?(line), do: :copy_data, else: :sql
+    {rewritten_line, next_state}
   end
 
   defp copy_from_stdin?(line) do
     String.starts_with?(line, "COPY ") and String.ends_with?(line, " FROM stdin;")
   end
 
-  @doc false
+  @doc "Dumps one PostgreSQL schema as quoted, restorable plain SQL."
   def dump_schema(prefix, extra_args \\ []) do
     with :ok <- validate_identifier(prefix),
          {:ok, executable} <- executable(:pg_dump_path, "pg_dump"),
@@ -89,7 +86,7 @@ defmodule Brando.Environments.SchemaCloner.Postgres do
     end
   end
 
-  @doc false
+  @doc "Restores a plain SQL dump with PostgreSQL's stop-on-error mode enabled."
   def restore_dump(sql) do
     with {:ok, executable} <- executable(:psql_path, "psql"),
          {:ok, path} <- write_temporary_dump(sql) do

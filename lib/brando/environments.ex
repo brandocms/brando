@@ -52,10 +52,9 @@ defmodule Brando.Environments do
   @doc "Runs tenant migrations on one environment schema."
   @spec migrate(Environment.t()) :: {:ok, [integer()]} | {:error, term()}
   def migrate(%Environment{} = environment) do
-    with %Site{} = site <- Registry.get_site(environment.site_id) do
-      migrator().migrate(site, environment)
-    else
+    case Registry.get_site(environment.site_id) do
       nil -> {:error, :site_not_found}
+      %Site{} = site -> migrator().migrate(site, environment)
     end
   end
 
@@ -83,18 +82,10 @@ defmodule Brando.Environments do
   def delete_environment(environment, opts \\ [])
 
   def delete_environment(%Environment{} = environment, opts) do
-    case Registry.get_environment(environment.id) do
-      %Environment{} = current_environment ->
-        case Registry.get_site(current_environment.site_id) do
-          %Site{} = site ->
-            with_site_lock(site, fn ->
-              delete_under_lock(site, current_environment.id, opts)
-            end)
-
-          nil ->
-            {:error, :site_or_environment_not_found}
-        end
-
+    with %Environment{} = current_environment <- Registry.get_environment(environment.id),
+         %Site{} = site <- Registry.get_site(current_environment.site_id) do
+      with_site_lock(site, fn -> delete_under_lock(site, current_environment.id, opts) end)
+    else
       nil ->
         {:error, :site_or_environment_not_found}
     end
@@ -110,23 +101,27 @@ defmodule Brando.Environments do
         {:ok, current_environment}
 
       %Environment{} = current_environment ->
-        site = Registry.get_site(current_environment.site_id)
-
-        case with_site_lock(site, fn ->
-               set_current_environment_live(site, current_environment, opts)
-             end) do
-          {:ok, _live_environment} = result ->
-            Cache.invalidate()
-            result
-
-          {:error, _reason} = error ->
-            error
-        end
+        current_environment.site_id
+        |> Registry.get_site()
+        |> set_live_for_site(current_environment, opts)
 
       nil ->
         {:error, :environment_not_found}
     end
   end
+
+  defp set_live_for_site(%Site{} = site, environment, opts) do
+    case with_site_lock(site, fn -> set_current_environment_live(site, environment, opts) end) do
+      {:ok, _live_environment} = result ->
+        Cache.invalidate()
+        result
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  defp set_live_for_site(nil, _environment, _opts), do: {:error, :site_not_found}
 
   @doc """
   Archives the target schema, replaces it with a complete copy of the source,

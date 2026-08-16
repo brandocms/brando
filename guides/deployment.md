@@ -5,6 +5,11 @@ a zero-downtime deployment tool for Elixir applications. Florist handles the ful
 lifecycle: building Docker releases, uploading to servers, managing systemd services,
 configuring web servers, database operations, and blue/green deployments.
 
+This guide's `deploy` and `rollback` commands refer to the running Phoenix/OTP
+application. A site whose `delivery_mode` is `:static` also has an independent
+artifact lifecycle in Brando's **Publishing** screen: SSG build, preview, static
+deploy, and static rollback. Rolling back one does not roll back the other.
+
 ## Prerequisites
 
 - **Florist** installed locally (`mix escript.install github brandocms/florist`)
@@ -280,6 +285,14 @@ florist prod db:migrate
 ```
 
 ## Rollback
+
+> #### Application rollback versus static-site rollback {: .info}
+>
+> `florist prod rollback` switches the running OTP release (and optionally its
+> database). In `/admin/config/publishing`, **Roll back** republishes an older
+> `sites/{site_key}/ssg/builds/{version}` artifact to that site's rsync or S3
+> target. Static artifacts live outside release `priv/static`, so they survive
+> blue/green switches and Florist release pruning.
 
 ### Blue/green rollback (instant, zero-downtime)
 

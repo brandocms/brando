@@ -242,6 +242,27 @@
 
 #### Features
 
+- **Igniter-assisted tenancy setup for existing applications.** The opt-in
+  `mix brando.setup.tenancy` task configures `:single` or `:multi` mode, inserts
+  `Brando.Plug.Tenant` idempotently into recognized browser pipelines before
+  Brando content-loading plugs, and installs Brando's tenant migration support.
+  It reports unsupported router layouts and prints the ordered migration and
+  provisioning workflow without inferring application tables, touching the
+  database, or copying production data.
+
+- **Versioned static-site publishing for sites with `delivery_mode: :static`.**
+  The new Publishing screen builds any named content environment on a serial
+  Oban queue, records monotonic versions, progress, logs, and failed URLs, and
+  provides expiring previews. Successful artifacts persist outside OTP
+  releases and can be deployed or rolled back through rsync or S3, with
+  optional automatic deployment, webhooks, and retention pruning. The
+  interactive `mix brando.ssg` task now calls the same tenant-safe renderer and
+  retains a non-tenant dry-run/non-interactive workflow.
+
+  This lifecycle is intentionally separate from Florist: Florist deploys and
+  rolls back the running Phoenix release; Brando republishes static artifacts.
+  See `guides/tenancy_and_environments.md` and `guides/deployment.md`.
+
 - **A video form field can declare playback defaults for new videos.**
 
       input :video, :video,

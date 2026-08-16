@@ -62,6 +62,9 @@ defmodule Brando.Supervisor do
           # dedicated queue also prevents multiple expensive pg_dump restores
           # from saturating the database host.
           environment_operations: [limit: 1],
+          # Static builds are CPU, disk, and network heavy. Serializing them
+          # also keeps their versioned output and deploy transitions simple.
+          ssg_builds: [limit: 1],
           image_processing: [limit: 1],
           # Its own queue on purpose. :default has limit: 1 and also carries the
           # interactive FileUploader/ImageUploader, so a reaper sweep doing one

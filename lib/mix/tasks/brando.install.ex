@@ -68,6 +68,8 @@ defmodule Mix.Tasks.Brando.Install do
      "priv/repo/migrations/20260816002200_brando_162_add_site_asset_sets.exs"},
     {:eex, "../brando.upgrade/migrations/brando_163_add_shared_content_library.exs",
      "priv/repo/migrations/20260816002300_brando_163_add_shared_content_library.exs"},
+    {:eex, "../brando.upgrade/migrations/brando_164_add_ssg_builds.exs",
+     "priv/repo/migrations/20260816002400_brando_164_add_ssg_builds.exs"},
 
     # Etc. Various OS config files and log directory.
     {:keep, "log", "log"},
@@ -542,7 +544,7 @@ defmodule Mix.Tasks.Brando.Install do
     Mix.shell().info("\nBrando finished copying.")
   end
 
-  @doc false
+  @doc "Resolves installer tenancy options, prompting when requested options are absent."
   def resolve_tenancy_options!(opts, default_site_key) do
     cond do
       Keyword.has_key?(opts, :tenancy_mode) or Keyword.has_key?(opts, :site_key) ->
@@ -556,7 +558,7 @@ defmodule Mix.Tasks.Brando.Install do
     end
   end
 
-  @doc false
+  @doc "Parses and validates non-interactive installer tenancy options."
   def parse_tenancy_options!(opts) do
     mode = opts |> Keyword.get(:tenancy_mode, "none") |> parse_tenancy_mode!()
     site_key = opts[:site_key]

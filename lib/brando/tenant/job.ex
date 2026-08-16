@@ -49,15 +49,7 @@ defmodule Brando.Tenant.Job do
     if Tenant.enabled?() do
       Registry.list_sites()
       |> Enum.filter(&(&1.status == :active))
-      |> Enum.flat_map(fn site ->
-        site.environments
-        |> select_environments(scope)
-        |> Enum.map(fn environment ->
-          site
-          |> Tenant.prefix(environment)
-          |> Tenant.with_prefix(fun)
-        end)
-      end)
+      |> Enum.flat_map(&run_for_site(&1, scope, fun))
     else
       [fun.()]
     end
@@ -72,6 +64,17 @@ defmodule Brando.Tenant.Job do
   end
 
   defp prefix_from(args), do: Map.get(args, @prefix_key) || Map.get(args, :tenant_prefix)
+
+  defp run_for_site(site, scope, fun) do
+    site.environments
+    |> select_environments(scope)
+    |> Enum.map(fn environment ->
+      site
+      |> Tenant.prefix(environment)
+      |> Tenant.with_prefix(fun)
+    end)
+  end
+
   defp select_environments(environments, :all), do: environments
   defp select_environments(environments, :live), do: Enum.filter(environments, & &1.live)
 end

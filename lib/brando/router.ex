@@ -18,6 +18,7 @@ defmodule Brando.Router do
       if unquote(options)[:root] do
         get "/robots.txt", Brando.SEOController, :robots
         get "/__p__/:preview_key", Brando.PreviewController, :show
+        get "/__ssg_preview__/:token/*path", Brando.SSG.PreviewController, :show
         get "/sitemaps/:file", Brando.SitemapController, :show
       end
 
@@ -115,6 +116,7 @@ defmodule Brando.Router do
           scope "/config" do
             live "/assets", BrandoAdmin.Sites.AssetLive
             live "/environments", BrandoAdmin.Sites.EnvironmentLive
+            live "/publishing", BrandoAdmin.Sites.PublishingLive
             live "/cache", BrandoAdmin.Sites.CacheLive
             live "/global_sets", BrandoAdmin.Sites.GlobalSetListLive
             live "/global_sets/create", BrandoAdmin.Sites.GlobalSetFormLive, :create

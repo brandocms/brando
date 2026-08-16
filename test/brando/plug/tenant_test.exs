@@ -2,6 +2,7 @@ defmodule Brando.Plug.TenantTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
+  alias Brando.SSG.Context
   alias Brando.Tenant
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
@@ -79,6 +80,43 @@ defmodule Brando.Plug.TenantTest do
     assert conn.halted
     assert conn.status == 404
     assert Tenant.current_prefix() == nil
+  end
+
+  test "a signed SSG header resolves a domainless working environment", context do
+    {:ok, staging} =
+      Registry.create_environment(context.site, %{
+        name: "Staging",
+        key: "staging",
+        live: false
+      })
+
+    token = Context.sign(context.site, staging)
+
+    conn =
+      :get
+      |> Plug.Test.conn("https://unknown.test/")
+      |> Plug.Conn.put_req_header(Context.header(), token)
+      |> Map.put(:host, "unknown.test")
+      |> Brando.Plug.Tenant.call([])
+
+    assert conn.assigns.current_site.id == context.site.id
+    assert conn.assigns.current_environment.id == staging.id
+    assert conn.assigns.tenant_prefix == "tenant_acme_staging"
+    refute conn.halted
+  end
+
+  test "a tampered SSG header cannot bypass unknown-host rejection", context do
+    token = Context.sign(context.site, context.environment) <> "tampered"
+
+    conn =
+      :get
+      |> Plug.Test.conn("https://unknown.test/")
+      |> Plug.Conn.put_req_header(Context.header(), token)
+      |> Map.put(:host, "unknown.test")
+      |> Brando.Plug.Tenant.call([])
+
+    assert conn.halted
+    assert conn.status == 404
   end
 
   test "suspended sites are no longer served by their domains", context do

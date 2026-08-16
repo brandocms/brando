@@ -14,12 +14,29 @@ defmodule Mix.Tasks.Brando.Migrate do
 
   use Mix.Task
 
+  alias Mix.Task
+
   @switches [tenants: :boolean, site: :string]
 
   @impl Mix.Task
   def run(args) do
     {opts, positional, invalid} = OptionParser.parse(args, strict: @switches)
+    validate_options!(opts, positional, invalid)
 
+    cond do
+      opts[:tenants] ->
+        Task.run("app.start")
+        Brando.Environments.migrate_all() |> report_tenant_result()
+
+      is_binary(opts[:site]) ->
+        migrate_site(opts[:site])
+
+      true ->
+        Task.run("ecto.migrate")
+    end
+  end
+
+  defp validate_options!(opts, positional, invalid) do
     if invalid != [] or positional != [] do
       Mix.raise("Invalid arguments: #{inspect(positional ++ invalid)}")
     end
@@ -27,24 +44,14 @@ defmodule Mix.Tasks.Brando.Migrate do
     if opts[:tenants] and opts[:site] do
       Mix.raise("Choose either --tenants or --site, not both")
     end
+  end
 
-    cond do
-      opts[:tenants] ->
-        Mix.Task.run("app.start")
-        Brando.Environments.migrate_all() |> report_tenant_result()
+  defp migrate_site(site_key) do
+    Task.run("app.start")
 
-      is_binary(opts[:site]) ->
-        Mix.Task.run("app.start")
-
-        opts[:site]
-        |> Brando.Tenant.Registry.get_site_by_key()
-        |> case do
-          nil -> Mix.raise("Unknown site key: #{opts[:site]}")
-          site -> Brando.Environments.migrate_site(site) |> report_tenant_result()
-        end
-
-      true ->
-        Mix.Task.run("ecto.migrate")
+    case Brando.Tenant.Registry.get_site_by_key(site_key) do
+      nil -> Mix.raise("Unknown site key: #{site_key}")
+      site -> Brando.Environments.migrate_site(site) |> report_tenant_result()
     end
   end
 

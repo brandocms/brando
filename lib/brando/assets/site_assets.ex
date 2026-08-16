@@ -174,13 +174,13 @@ defmodule Brando.Assets.SiteAssets do
     end
   end
 
-  @doc false
+  @doc "Returns the configured standalone asset-set storage root."
   def standalone_root do
     Brando.config(:site_assets_path) ||
       Brando.config(:media_path) |> Path.expand() |> Path.dirname() |> Path.join("site_assets")
   end
 
-  @doc false
+  @doc "Returns the asset-set storage root for a standalone or site scope."
   def sets_root(nil), do: Path.join(standalone_root(), "sets")
   def sets_root(%Site{} = site), do: Path.join(Storage.assets_root(site), "sets")
 
@@ -225,32 +225,34 @@ defmodule Brando.Assets.SiteAssets do
   defp scan_directory(root, directory, files, size) do
     case File.ls(directory) do
       {:ok, entries} ->
-        Enum.reduce_while(entries, {:ok, files, size}, fn entry, {:ok, acc_files, acc_size} ->
-          path = Path.join(directory, entry)
-
-          case File.lstat(path) do
-            {:ok, %{type: :directory}} ->
-              case scan_directory(root, path, acc_files, acc_size) do
-                {:ok, nested_files, nested_size} -> {:cont, {:ok, nested_files, nested_size}}
-                {:error, reason} -> {:halt, {:error, reason}}
-              end
-
-            {:ok, %{type: :regular, size: file_size}} ->
-              relative_path = Path.relative_to(path, root)
-              {:cont, {:ok, MapSet.put(acc_files, relative_path), acc_size + file_size}}
-
-            {:ok, _symlink_or_special} ->
-              {:halt, {:error, {:unsupported_asset_file, path}}}
-
-            {:error, reason} ->
-              {:halt, {:error, {:asset_file_stat_failed, path, reason}}}
-          end
-        end)
+        Enum.reduce_while(entries, {:ok, files, size}, &scan_entry(root, directory, &1, &2))
 
       {:error, reason} ->
         {:error, {:asset_directory_scan_failed, directory, reason}}
     end
   end
+
+  defp scan_entry(root, directory, entry, {:ok, files, size}) do
+    path = Path.join(directory, entry)
+
+    case File.lstat(path) do
+      {:ok, %{type: :directory}} ->
+        continue_scan(scan_directory(root, path, files, size))
+
+      {:ok, %{type: :regular, size: file_size}} ->
+        relative_path = Path.relative_to(path, root)
+        {:cont, {:ok, MapSet.put(files, relative_path), size + file_size}}
+
+      {:ok, _symlink_or_special} ->
+        {:halt, {:error, {:unsupported_asset_file, path}}}
+
+      {:error, reason} ->
+        {:halt, {:error, {:asset_file_stat_failed, path, reason}}}
+    end
+  end
+
+  defp continue_scan({:ok, files, size}), do: {:cont, {:ok, files, size}}
+  defp continue_scan({:error, reason}), do: {:halt, {:error, reason}}
 
   defp build_cache(%SiteAssetSet{} = asset_set) do
     with {:ok, files, _size} <- scan_files(asset_set.path),
@@ -317,15 +319,11 @@ defmodule Brando.Assets.SiteAssets do
   defp current_scope do
     case Tenant.mode() do
       :multi ->
-        case Tenant.current_site_key() do
-          nil ->
-            :error
-
-          site_key ->
-            case Brando.Tenant.Cache.get_site(site_key) do
-              nil -> :error
-              site -> {:ok, site}
-            end
+        with site_key when is_binary(site_key) <- Tenant.current_site_key(),
+             site when not is_nil(site) <- Brando.Tenant.Cache.get_site(site_key) do
+          {:ok, site}
+        else
+          _missing_context -> :error
         end
 
       _standalone ->
