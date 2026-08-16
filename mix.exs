@@ -23,6 +23,7 @@ defmodule Brando.Mixfile do
         source_url: "https://github.com/brandocms/brando",
         extras: [
           "guides/migrating_to_054.md",
+          "guides/tenancy_and_environments.md",
           "guides/blueprints.md",
           "guides/blueprint_migrations.md",
           "guides/generators.md",
@@ -75,6 +76,7 @@ defmodule Brando.Mixfile do
             "guides/sitemaps.md"
           ],
           Operations: [
+            "guides/tenancy_and_environments.md",
             "guides/authorization.md",
             "guides/i18n.md",
             "guides/querying.md",

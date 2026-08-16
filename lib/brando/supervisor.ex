@@ -58,6 +58,10 @@ defmodule Brando.Supervisor do
         repo: Brando.Repo.repo(),
         queues: [
           default: [limit: 1],
+          # Copy and live-switch jobs take an advisory lock per site, while a
+          # dedicated queue also prevents multiple expensive pg_dump restores
+          # from saturating the database host.
+          environment_operations: [limit: 1],
           image_processing: [limit: 1],
           # Its own queue on purpose. :default has limit: 1 and also carries the
           # interactive FileUploader/ImageUploader, so a reaper sweep doing one
@@ -78,7 +82,9 @@ defmodule Brando.Supervisor do
                # Mark video rows stuck in :uploading as errored (abandoned external uploads)
                {"30 4 * * *", Brando.Worker.VideoUploadReaper},
                # Delete bucket objects of client-direct uploads that never finalized
-               {"45 4 * * *", Brando.Worker.UploadIntentReaper}
+               {"45 4 * * *", Brando.Worker.UploadIntentReaper},
+               # Delete local files no environment has referenced for at least 24 hours
+               {"0 5 * * *", Brando.Worker.MediaOrphanCleanup}
              ] ++ extra_oban_cron_jobs(),
            timezone: "Etc/UTC"},
           {Oban.Plugins.Pruner, max_age: 300},

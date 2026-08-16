@@ -90,7 +90,7 @@ depends on application semantics:
   manual review. Retain Hackney explicitly if application code uses it;
 - updating callers of `Brando.Videos.Uploader.initiate_upload/3` for its new
   error tuples and provider credential behavior;
-- replacing `Brando.CDN.key_exists?/2` by hand. `key_available?/2` has inverted
+- replacing the removed Brando.CDN key-existence check by hand. `key_available?/2` has inverted
   truth and deliberately different error semantics, so a mechanical rename is
   unsafe;
 - moving function-based asset `config_target` callbacks from helper modules to

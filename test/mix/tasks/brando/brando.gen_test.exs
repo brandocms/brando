@@ -17,7 +17,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
 
   test "generates html resource" do
     in_tmp("brando.gen", fn ->
-      Mix.Tasks.Brando.Install.run([])
+      Mix.Tasks.Brando.Install.run(["--no-tenancy-prompt"])
 
       send(self(), {:mix_shell_input, :prompt, "Brando.BlueprintTest.Project"})
       Mix.Tasks.Brando.Gen.run([])

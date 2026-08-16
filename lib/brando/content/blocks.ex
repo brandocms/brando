@@ -435,20 +435,22 @@ defmodule Brando.Content.Blocks do
       source = module.__schema__(:source)
       field_str = to_string(field)
       id_str = to_string(identifier_id)
+      qualified_source = qualified_source(module, source)
+      quoted_field = quote_identifier(field_str)
 
       # Single UPDATE per table/field using regexp_replace
       # Pattern: href="..." followed by data-identifier-id="ID"
       Ecto.Adapters.SQL.query(
         Brando.repo(),
         """
-        UPDATE #{source}
-        SET #{field_str} = regexp_replace(
-          #{field_str},
+        UPDATE #{qualified_source}
+        SET #{quoted_field} = regexp_replace(
+          #{quoted_field},
           '(href=")[^"]*("[^>]*?data-identifier-id="' || $1 || '")',
           '\\1' || $2 || '\\2',
           'g'
         )
-        WHERE #{field_str} LIKE $3
+        WHERE #{quoted_field} LIKE $3
         """,
         [id_str, new_url, "%data-identifier-id=\"#{id_str}\"%"]
       )
@@ -461,6 +463,17 @@ defmodule Brando.Content.Blocks do
     else
       []
     end
+  end
+
+  defp qualified_source(module, source) do
+    case module.__schema__(:prefix) || Brando.Tenant.current_prefix() do
+      nil -> quote_identifier(source)
+      prefix -> Enum.join([quote_identifier(prefix), quote_identifier(source)], ".")
+    end
+  end
+
+  defp quote_identifier(identifier) do
+    ~s|"#{String.replace(identifier, "\"", "\"\"")}"|
   end
 
   @doc """

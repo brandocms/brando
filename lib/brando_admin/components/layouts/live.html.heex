@@ -3,7 +3,11 @@
   {live_render(@socket, BrandoAdmin.UploadManager, id: "brando-upload-manager-lv", sticky: true)}
   {live_render(@socket, BrandoAdmin.Nav,
     id: "brando-nav",
-    session: %{"current_url" => @uri && @uri.path},
+    session: %{
+      "current_url" => @uri && @uri.path,
+      "brando_site_key" => @current_site && @current_site.key,
+      "brando_environment_key" => @current_environment && @current_environment.key
+    },
     sticky: true
   )}
   <div id="admin" phx-hook="Brando.Admin">

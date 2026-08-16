@@ -66,6 +66,7 @@
 @import "./components/SideBar/SideBar.css";
 @import "./components/SideBar/ContentLanguageSelector.css";
 @import "./components/SideBar/CurrentUser.css";
+@import "./components/SideBar/TenantSwitcher.css";
 @import "./components/SideBar/NavigationHeader.css";
 @import "./components/SideBar/NavigationMenu.css";
 @import "./components/SideBar/NavigationMenuSection.css";
@@ -76,6 +77,7 @@
 
 @import "./views/assets/Images.css";
 @import "./views/config/Cache.css";
+@import "./views/config/Environments.css";
 @import "./views/config/Globals.css";
 @import "./views/config/ScheduledPublishing.css";
 @import "./views/config/Utils.css";

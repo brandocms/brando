@@ -43,7 +43,8 @@ config :brando, Brando.Images,
 # purposes. We put them here to not pollute the brando.exs file.
 config :brando,
   auth_sleep_duration: 2_000,
-  otp_app: :brando
+  otp_app: :brando,
+  tenancy_mode: :none
 
 config :brando, ecto_repos: [BrandoIntegration.Repo]
 

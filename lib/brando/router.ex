@@ -52,6 +52,7 @@ defmodule Brando.Router do
         plug :put_secure_browser_headers
         plug :put_root_layout, {BrandoAdmin.Layouts, :root}
         plug :fetch_current_user
+        plug Brando.Plug.AdminTenant
         plug :put_admin_locale
       end
 
@@ -87,10 +88,16 @@ defmodule Brando.Router do
       scope unquote(path), as: :admin do
         pipe_through [:admin, :brando_root_layout, :require_authenticated_user]
 
+        post "/environment", BrandoAdmin.EnvironmentController, :update
         post "/api/content/image/replace_crop", BrandoAdmin.API.Content.Upload.ImageController, :replace_crop
 
         live_session :require_authenticated_user,
-          on_mount: sandbox_hooks ++ [{BrandoAdmin.UserAuth, :ensure_authenticated}] do
+          on_mount:
+            sandbox_hooks ++
+              [
+                {BrandoAdmin.UserAuth, :ensure_authenticated},
+                {Brando.Tenant.LiveView, :default}
+              ] do
           # brando routes
           live "/assets/images", BrandoAdmin.Images.ImageListLive
           live "/assets/images/update/:entry_id", BrandoAdmin.Images.ImageFormLive, :update
@@ -105,6 +112,7 @@ defmodule Brando.Router do
           live "/assets/files", BrandoAdmin.Files.FileListLive
 
           scope "/config" do
+            live "/environments", BrandoAdmin.Sites.EnvironmentLive
             live "/cache", BrandoAdmin.Sites.CacheLive
             live "/global_sets", BrandoAdmin.Sites.GlobalSetListLive
             live "/global_sets/create", BrandoAdmin.Sites.GlobalSetFormLive, :create

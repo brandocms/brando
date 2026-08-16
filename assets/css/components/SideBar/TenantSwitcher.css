@@ -1,0 +1,43 @@
+.tenant-switcher {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 12px;
+  border: 1px solid var(--brando-color-dark);
+  border-radius: 12px;
+
+  label {
+    display: grid;
+    gap: 4px;
+  }
+
+  label > span {
+    @font mono;
+    font-size: 10px;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  select,
+  button {
+    width: 100%;
+    min-height: 34px;
+    border: 1px solid var(--brando-color-dark);
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+  }
+
+  button {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .non-live-environment {
+    padding: 7px 8px;
+    border-radius: 6px;
+    background: var(--brando-color-peach);
+    font-size: 11px;
+    line-height: 1.25;
+  }
+}

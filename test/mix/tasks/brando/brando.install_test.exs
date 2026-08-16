@@ -36,18 +36,31 @@ defmodule Mix.Tasks.Brando.GenerateTest do
   end
 
   test "brando.install" do
+    send(self(), {:mix_shell_input, :prompt, "none"})
     Mix.Tasks.Brando.Install.run([])
+    assert_received {:mix_shell, :prompt, [prompt]}
+    assert prompt =~ "Choose tenancy mode"
     assert_received {:mix_shell, :info, ["\nBrando finished copying."]}
     assert File.exists?("lib/brando_web/villain")
     assert_file("lib/brando_web/villain/parser.ex")
+    assert File.dir?("priv/repo/tenant_migrations")
 
     assert_file("config/runtime.exs", fn file ->
       assert file =~ ~s<url: System.get_env("BRANDO_DB_URL")>
     end)
 
+    assert_file("config/brando.exs", fn file ->
+      assert file =~ "tenancy_mode: :none"
+      refute file =~ "site_key:"
+    end)
+
     assert_file("lib/brando_web/components/layouts.ex", fn file ->
       assert file =~ "embed_templates \"layouts/*\""
       assert file =~ "embed_templates \"partials/*\""
+    end)
+
+    assert_file("lib/brando_web/router.ex", fn file ->
+      assert file =~ "plug Brando.Plug.Tenant"
     end)
 
     assert_file("mix.exs", fn file ->
@@ -63,5 +76,76 @@ defmodule Mix.Tasks.Brando.GenerateTest do
     end)
 
     refute File.exists?("assets/css/app.css")
+  end
+
+  test "parses valid installer tenancy options" do
+    assert Mix.Tasks.Brando.Install.parse_tenancy_options!([]) == %{
+             mode: :none,
+             site_key: nil
+           }
+
+    assert Mix.Tasks.Brando.Install.parse_tenancy_options!(
+             tenancy_mode: "single",
+             site_key: "photo-blog"
+           ) == %{mode: :single, site_key: "photo-blog"}
+
+    assert Mix.Tasks.Brando.Install.parse_tenancy_options!(tenancy_mode: "multi") == %{
+             mode: :multi,
+             site_key: nil
+           }
+  end
+
+  test "renders single-site tenancy configuration" do
+    config =
+      "templates/brando.install/config/brando.exs"
+      |> Mix.Tasks.Brando.Install.render()
+      |> EEx.eval_string(
+        application_name: "photo_blog",
+        application_module: "PhotoBlog",
+        tenancy_mode: :single,
+        site_key: "photo-blog"
+      )
+
+    assert config =~ "tenancy_mode: :single"
+    assert config =~ ~s(site_key: "photo-blog")
+  end
+
+  test "guides interactive single-site setup and supplies the project key default" do
+    send(self(), {:mix_shell_input, :prompt, "2"})
+    send(self(), {:mix_shell_input, :prompt, ""})
+
+    assert Mix.Tasks.Brando.Install.resolve_tenancy_options!([], "photo-blog") == %{
+             mode: :single,
+             site_key: "photo-blog"
+           }
+
+    assert_received {:mix_shell, :prompt, [mode_prompt]}
+    assert mode_prompt =~ "Choose tenancy mode"
+    assert mode_prompt =~ "2. single"
+    assert_received {:mix_shell, :prompt, [site_prompt]}
+    assert site_prompt =~ "Site key [photo-blog]"
+  end
+
+  test "supports non-interactive installs without tenancy flags" do
+    assert Mix.Tasks.Brando.Install.resolve_tenancy_options!(
+             [tenancy_prompt: false],
+             "photo-blog"
+           ) == %{mode: :none, site_key: nil}
+
+    refute_received {:mix_shell, :prompt, _message}
+  end
+
+  test "rejects incomplete or contradictory installer tenancy options" do
+    assert_raise Mix.Error, ~r/--site-key is required/, fn ->
+      Mix.Tasks.Brando.Install.parse_tenancy_options!(tenancy_mode: "single")
+    end
+
+    assert_raise Mix.Error, ~r/--site-key can only be used/, fn ->
+      Mix.Tasks.Brando.Install.parse_tenancy_options!(site_key: "photo-blog")
+    end
+
+    assert_raise Mix.Error, ~r/Invalid --tenancy-mode/, fn ->
+      Mix.Tasks.Brando.Install.parse_tenancy_options!(tenancy_mode: "global")
+    end
   end
 end

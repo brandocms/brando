@@ -79,6 +79,9 @@ Generate templates:
 - [Blueprint migrations](guides/blueprint_migrations.md) — generation,
   rollback, storage options, legacy snapshots, hand-written migrations, and
   rebaselining.
+- [Tenancy and named environments](guides/tenancy_and_environments.md) —
+  installer modes, tenant migrations, routing, safe copy and rollback,
+  scheduling, and current implementation boundaries.
 
 
 ## Serve static from DO Spaces

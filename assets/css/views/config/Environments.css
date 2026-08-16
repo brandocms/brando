@@ -1,0 +1,152 @@
+.environment-management-live {
+  display: grid;
+  gap: 24px;
+  padding-bottom: 80px;
+
+  .environment-notice,
+  .environment-panel {
+    border: 1px solid var(--brando-color-dark);
+    border-radius: 12px;
+    padding: 18px;
+  }
+
+  .environment-notice.warning {
+    background: var(--brando-color-peach);
+  }
+
+  .environment-panel > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  h2 {
+    margin: 0 0 6px;
+  }
+
+  p {
+    margin: 0 0 18px;
+    opacity: 0.72;
+  }
+
+  .environment-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  form,
+  label {
+    display: grid;
+    gap: 6px;
+  }
+
+  form {
+    gap: 14px;
+  }
+
+  label > span {
+    @font mono;
+    font-size: 11px;
+    text-transform: uppercase;
+  }
+
+  input,
+  select {
+    width: 100%;
+    min-height: 42px;
+    padding: 8px 10px;
+    border: 1px solid var(--brando-color-dark);
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+  }
+
+  button[disabled] {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  .environment-pair {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: end;
+    gap: 10px;
+  }
+
+  .environment-arrow {
+    padding-bottom: 12px;
+  }
+
+  .environment-table-wrap {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    padding: 12px 10px;
+    border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  td code {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    opacity: 0.7;
+  }
+
+  .environment-state,
+  .environment-count {
+    display: inline-flex;
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, currentColor 10%, transparent);
+    font-size: 11px;
+    line-height: 1;
+  }
+
+  .environment-state.live {
+    background: color-mix(in srgb, #2bb673 26%, transparent);
+  }
+
+  .environment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .environment-archives {
+    display: grid;
+    gap: 8px;
+    margin: 16px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .environment-archives li {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 9px 10px;
+    border-radius: 6px;
+    background: color-mix(in srgb, currentColor 6%, transparent);
+  }
+
+  @media (max-width: 900px) {
+    .environment-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .environment-panel > header {
+      display: grid;
+    }
+  }
+}

@@ -257,60 +257,67 @@ defmodule BrandoAdmin.Menu do
           %{
             name: gettext("Configuration"),
             url: nil,
-            items: [
-              %{
-                name: gettext("Navigation"),
-                url: "/admin/config/navigation/menus"
-              },
-              %{
-                name: gettext("Identity"),
-                url: "/admin/config/identity"
-              },
-              %{
-                name: gettext("SEO"),
-                url: "/admin/config/seo"
-              },
-              %{
-                name: gettext("Globals"),
-                url: "/admin/config/global_sets"
-              },
-              %{
-                name: gettext("Scheduled publishing"),
-                url: "/admin/config/scheduled_publishing"
-              },
-              %{
-                name: gettext("Cache"),
-                url: "/admin/config/cache"
-              },
-              %{
-                name: gettext("Utilities"),
-                url: "/admin/config/utils"
-              },
-              %{
-                name: gettext("Block modules"),
-                url: "/admin/config/content/modules"
-              },
-              %{
-                name: gettext("Block module sets"),
-                url: "/admin/config/content/module_sets"
-              },
-              %{
-                name: gettext("Containers"),
-                url: "/admin/config/content/containers"
-              },
-              %{
-                name: gettext("Table Templates"),
-                url: "/admin/config/content/table_templates"
-              },
-              %{
-                name: gettext("Templates"),
-                url: "/admin/config/content/templates"
-              },
-              %{
-                name: gettext("Palettes"),
-                url: "/admin/config/content/palettes"
-              }
-            ]
+            items:
+              [
+                %{
+                  name: gettext("Navigation"),
+                  url: "/admin/config/navigation/menus"
+                },
+                %{
+                  name: gettext("Identity"),
+                  url: "/admin/config/identity"
+                },
+                %{
+                  name: gettext("SEO"),
+                  url: "/admin/config/seo"
+                },
+                %{
+                  name: gettext("Globals"),
+                  url: "/admin/config/global_sets"
+                },
+                %{
+                  name: gettext("Scheduled publishing"),
+                  url: "/admin/config/scheduled_publishing"
+                },
+                Brando.Tenant.enabled?() &&
+                  %{
+                    name: gettext("Environments"),
+                    url: "/admin/config/environments"
+                  },
+                %{
+                  name: gettext("Cache"),
+                  url: "/admin/config/cache"
+                },
+                %{
+                  name: gettext("Utilities"),
+                  url: "/admin/config/utils"
+                },
+                %{
+                  name: gettext("Block modules"),
+                  url: "/admin/config/content/modules"
+                },
+                %{
+                  name: gettext("Block module sets"),
+                  url: "/admin/config/content/module_sets"
+                },
+                %{
+                  name: gettext("Containers"),
+                  url: "/admin/config/content/containers"
+                },
+                %{
+                  name: gettext("Table Templates"),
+                  url: "/admin/config/content/table_templates"
+                },
+                %{
+                  name: gettext("Templates"),
+                  url: "/admin/config/content/templates"
+                },
+                %{
+                  name: gettext("Palettes"),
+                  url: "/admin/config/content/palettes"
+                }
+              ]
+              |> Enum.reject(&(&1 == false))
           },
           %{
             name: gettext("Assets"),
