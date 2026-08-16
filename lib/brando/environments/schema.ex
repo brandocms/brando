@@ -7,8 +7,9 @@ defmodule Brando.Environments.Schema do
   only environment content schemas are managed here.
   """
 
-  alias Brando.Tenant
   alias Ecto.Adapters.SQL
+
+  @safe_identifier ~r/^tenant_[a-z0-9_-]+$/
 
   @spec create(String.t()) :: :ok | {:error, Exception.t()}
   def create(prefix) do
@@ -42,14 +43,10 @@ defmodule Brando.Environments.Schema do
   end
 
   defp validate_prefix(prefix) do
-    case Regex.run(~r/^tenant_([a-z0-9]+(?:-[a-z0-9]+)*)_([a-z0-9]+(?:-[a-z0-9]+)*)$/, prefix) do
-      [^prefix, site_key, environment_key] ->
-        if Tenant.prefix(site_key, environment_key) == prefix,
-          do: :ok,
-          else: {:error, ArgumentError.exception("invalid tenant prefix: #{inspect(prefix)}")}
-
-      _ ->
-        {:error, ArgumentError.exception("invalid tenant prefix: #{inspect(prefix)}")}
+    if is_binary(prefix) and Regex.match?(@safe_identifier, prefix) and byte_size(prefix) <= 63 do
+      :ok
+    else
+      {:error, ArgumentError.exception("invalid tenant prefix: #{inspect(prefix)}")}
     end
   end
 

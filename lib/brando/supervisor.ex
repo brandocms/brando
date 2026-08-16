@@ -58,6 +58,10 @@ defmodule Brando.Supervisor do
         repo: Brando.Repo.repo(),
         queues: [
           default: [limit: 1],
+          # Copy and live-switch jobs take an advisory lock per site, while a
+          # dedicated queue also prevents multiple expensive pg_dump restores
+          # from saturating the database host.
+          environment_operations: [limit: 1],
           image_processing: [limit: 1],
           # Its own queue on purpose. :default has limit: 1 and also carries the
           # interactive FileUploader/ImageUploader, so a reaper sweep doing one
