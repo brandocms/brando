@@ -3,12 +3,12 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Videos.Video
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Videos
+  alias Brando.Videos.Video
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Images.FolderBrowser
   alias BrandoAdmin.LiveView.AssetListHelpers
-  alias Brando.Videos
-  alias Brando.Videos.Video
 
   @impl true
   def mount(_params, _session, socket) do

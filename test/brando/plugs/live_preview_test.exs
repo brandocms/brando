@@ -4,8 +4,8 @@ defmodule Brando.Plug.LivePreviewTest do
 
   import ExUnit.CaptureLog
 
-  alias Brando.Plug.LivePreview
   alias Brando.Factory
+  alias Brando.Plug.LivePreview
 
   setup do
     opts =

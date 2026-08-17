@@ -7,10 +7,10 @@ defmodule Brando.Pages do
 
   import Ecto.Query
 
+  alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Pages.Fragment
   alias Brando.Pages.Page
   alias Brando.Users.User
-  alias Brando.Content.Blocks, as: ContentBlocks
   alias Ecto.Changeset
 
   @type changeset :: Changeset.t()

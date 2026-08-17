@@ -34,9 +34,9 @@ defmodule Brando.Navigation do
   import Ecto.Query
 
   alias Brando.Cache
+  alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Navigation.Item
   alias Brando.Navigation.Menu
-  alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Villain.RenderInvalidation
 
   @type id :: binary | integer

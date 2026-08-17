@@ -1,8 +1,8 @@
 defmodule Brando.Plug.I18nTest do
   use ExUnit.Case
   use Brando.ConnCase
-  alias Brando.Plug.I18n
   alias Brando.Factory
+  alias Brando.Plug.I18n
 
   test "put_locale" do
     mock_conn = %Plug.Conn{path_info: ["news"], private: %{plug_session: %{}}}

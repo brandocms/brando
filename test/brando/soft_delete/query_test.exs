@@ -6,9 +6,9 @@ defmodule Brando.SoftDelete.QueryTest do
   alias Brando.Content.Palette
   alias Brando.Content.Template
   alias Brando.Factory
+  alias Brando.Files.File
   alias Brando.Galleries.Gallery
   alias Brando.Images.Image
-  alias Brando.Files.File
   alias Brando.MigrationTest.Profile
   alias Brando.Pages.Fragment
   alias Brando.Pages.Page

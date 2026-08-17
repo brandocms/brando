@@ -772,17 +772,15 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   end
 
   def handle_event("select_image", %{"id" => id}, socket) do
-    with {:ok, image} <- Brando.Images.get_image(id) do
-      {:noreply, select_asset(socket, socket.assigns.image_field, image)}
-    else
+    case Brando.Images.get_image(id) do
+      {:ok, image} -> {:noreply, select_asset(socket, socket.assigns.image_field, image)}
       _error -> {:noreply, socket}
     end
   end
 
   def handle_event("select_video", %{"id" => id}, socket) do
-    with {:ok, video} <- Brando.Videos.get_video(id) do
-      {:noreply, select_asset(socket, socket.assigns.video_field, video)}
-    else
+    case Brando.Videos.get_video(id) do
+      {:ok, video} -> {:noreply, select_asset(socket, socket.assigns.video_field, video)}
       _error -> {:noreply, socket}
     end
   end

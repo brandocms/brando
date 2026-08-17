@@ -3,8 +3,8 @@ defmodule BrandoAdmin.Live.Content.ModuleFormLiveTest do
 
   import Phoenix.Component, only: [to_form: 2]
 
-  alias Brando.Content.Ref
   alias Brando.Content.Module
+  alias Brando.Content.Ref
   alias Brando.Content.Var
   alias Brando.Content.Var.Option
   alias Brando.Villain.Blocks.TextBlock

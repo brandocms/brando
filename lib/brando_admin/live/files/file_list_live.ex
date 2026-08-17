@@ -3,12 +3,12 @@ defmodule BrandoAdmin.Files.FileListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Files.File
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Files
+  alias Brando.Files.File
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Images.FolderBrowser
   alias BrandoAdmin.LiveView.AssetListHelpers
-  alias Brando.Files
-  alias Brando.Files.File
 
   @impl true
   def mount(_params, _session, socket) do

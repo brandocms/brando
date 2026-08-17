@@ -6,9 +6,9 @@ defmodule Brando.Villain.Tags.Route do
   @behaviour Liquex.Tag
 
   import NimbleParsec
+  alias Brando.Villain.LiquexParser.TagGrammar
   alias Liquex.Parser.Argument
   alias Liquex.Parser.Literal
-  alias Brando.Villain.LiquexParser.TagGrammar
 
   @impl true
   def parse, do: TagGrammar.parse(:route)

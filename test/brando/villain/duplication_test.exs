@@ -8,9 +8,9 @@ defmodule Brando.Villain.DuplicationTest do
   """
   use ExUnit.Case, async: false
   use Brando.ConnCase
-  alias Brando.Factory
-  alias Brando.Content.{Block, Ref, Var, TableRow}
+  alias Brando.Content.{Block, Ref, TableRow, Var}
   alias Brando.Content.Blocks, as: ContentBlocks
+  alias Brando.Factory
   alias Ecto.Changeset
 
   setup do

@@ -141,14 +141,16 @@ defmodule Brando.HTML.Video do
   end
 
   def video(%{video: %Video{type: :cloudflare, status: :ready} = video, opts: opts} = assigns) do
-    with {:ok, src} <- Brando.Videos.Helpers.get_playback_url(video) do
-      render_video(assigns, video, opts,
-        class: "video-cloudflare",
-        src: src,
-        poster: Brando.Videos.Helpers.thumbnail_url(video)
-      )
-    else
-      _ -> ~H"<!-- Cloudflare Stream playback is unavailable -->"
+    case Brando.Videos.Helpers.get_playback_url(video) do
+      {:ok, src} ->
+        render_video(assigns, video, opts,
+          class: "video-cloudflare",
+          src: src,
+          poster: Brando.Videos.Helpers.thumbnail_url(video)
+        )
+
+      _ ->
+        ~H"<!-- Cloudflare Stream playback is unavailable -->"
     end
   end
 

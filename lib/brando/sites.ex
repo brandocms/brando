@@ -7,11 +7,11 @@ defmodule Brando.Sites do
   import Ecto.Query
 
   alias Brando.Cache
+  alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Sites.GlobalSet
   alias Brando.Sites.Identity
   alias Brando.Sites.Preview
   alias Brando.Sites.SEO
-  alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Villain.RenderInvalidation
 
   @type id :: integer | binary

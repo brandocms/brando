@@ -1,8 +1,8 @@
 defmodule Brando.Content.RefTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
-  alias Brando.Factory
   alias Brando.Content
+  alias Brando.Factory
   alias Brando.Repo
   import Ecto.Query
 

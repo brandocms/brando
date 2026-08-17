@@ -3,9 +3,9 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   import Phoenix.LiveView, only: [attach_hook: 4, push_event: 3, send_update: 2]
   import Phoenix.Component
   import BrandoAdmin.Utils, only: [send_to_ref: 2]
-  alias Ecto.Changeset
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
+  alias Ecto.Changeset
 
   def attach_block_events(socket) do
     attach_hook(socket, :block_events, :handle_event, &handle_block_event/3)

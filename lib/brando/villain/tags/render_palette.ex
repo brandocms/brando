@@ -3,12 +3,12 @@ defmodule Brando.Villain.Tags.RenderPalette do
   @behaviour Liquex.Tag
 
   import NimbleParsec
-  alias Liquex.Parser.Literal
   alias Liquex.Parser.Argument
+  alias Liquex.Parser.Literal
   alias Liquex.Parser.Tag
 
   @impl true
-  def parse() do
+  def parse do
     ignore(Tag.open_tag())
     |> ignore(string("render_palette"))
     |> ignore(Literal.whitespace())
