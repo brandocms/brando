@@ -68,8 +68,14 @@ fallback for any Python expression it cannot convert safely.
 It does not connect to the database, generate application Blueprint migrations,
 choose identifier persistence, migrate data, or resolve production constraints.
 
-Named environments and multi-site tenancy remain opt-in. After completing this
-general source upgrade, applications choosing tenancy can run
+Named environments and multi-site tenancy remain opt-in. Projects staying in
+the default `tenancy_mode: :none` keep their existing content and media in the
+classic locations; they still apply the ordinary Brando-owned public
+migrations, but do not add the tenant plug, create tenant migrations, provision
+site/environment records, or copy data with `mix brando.migrate_to_tenant`.
+
+After completing this general source upgrade, applications deliberately
+choosing tenancy can run
 `mix brando.setup.tenancy --mode single --site-key my-site` or
 `mix brando.setup.tenancy --mode multi`. That separate Igniter task configures
 the deterministic application source changes without running migrations or

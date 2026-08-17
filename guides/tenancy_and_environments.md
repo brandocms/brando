@@ -12,6 +12,19 @@ environments backed by PostgreSQL schemas.
 | `:single` | One configured site can have any number of schema-backed environments | Standalone site with production, staging, and project environments |
 | `:multi` | Multiple isolated sites with per-site roles, media, assets, domains, and environments | Agencies and Brando Master installations |
 
+Upgrading Brando does **not** require an existing project to adopt tenancy.
+Projects that keep the default `:none` mode continue to read and write content
+in `public` as before. They should apply the ordinary Brando-owned public
+database migrations during an upgrade, but they do not need tenant migrations,
+`Brando.Plug.Tenant`, site or environment records, or
+`mix brando.migrate_to_tenant`. The new public registry tables may exist unused
+in this mode.
+
+The tenant setup and data-conversion sections in this guide apply only when a
+project deliberately changes to `:single` or `:multi`. Existing projects may
+adopt those modes later; there is no requirement to convert every Brando
+project as part of the framework upgrade.
+
 The registry itself always lives in `public`:
 
 ```text
@@ -43,6 +56,9 @@ a partial database index guarantees that no more than one is marked live.
 `delivery_mode` describes how a site's public frontend is published. It is
 independent of `tenancy_mode`: a site in a multi-tenant installation can be
 dynamic or static, and uploadable frontend asset sets can be used by either.
+Classic projects in `tenancy_mode: :none` have no site registry record and do
+not need to set `delivery_mode`; Phoenix continues to serve them dynamically as
+it did before tenancy support was introduced.
 
 | Mode | Public delivery | Content publication |
 | --- | --- | --- |
@@ -134,7 +150,7 @@ The installer does **not** create registry records or generate application
 content migrations. Complete the tenant migration and provisioning steps below
 before serving requests in an enabled tenancy mode.
 
-## Prepare an existing installation
+## Optionally enable tenancy for an existing installation
 
 Existing applications can apply the deterministic source changes with the
 opt-in Igniter task:
@@ -152,6 +168,10 @@ The task updates `config/brando.exs`, adds `Brando.Plug.Tenant` to recognized
 and installs Brando's tenant migration support under
 `priv/repo/tenant_migrations`. It is idempotent and warns when it cannot find a
 standard Phoenix router or `:browser` pipeline.
+
+Do not run this task merely to upgrade a classic single-site project. Leave
+`tenancy_mode` as `:none` if named environments and site isolation are not
+needed.
 
 Review the complete Igniter diff before applying it. The task deliberately does
 not infer application content tables, run database migrations, provision sites,
@@ -675,7 +695,12 @@ lifecycle. If the application overrides `config :brando, Oban`, re-declare a
 serial `ssg_builds` queue because an application-level Oban configuration
 replaces, rather than merges with, Brando's defaults.
 
-## Migrate an existing installation
+## Copy an existing installation into tenancy
+
+This conversion is optional and applies only after deciding to move an existing
+project from `:none` to `:single` or `:multi`. A project remaining in `:none`
+must not run this task and can leave its existing content and media in their
+classic locations.
 
 First prepare the application's source and review the Igniter diff:
 
@@ -736,7 +761,7 @@ Supported operations are:
 create  copy  set_live  rollback  delete
 ```
 
-## Operational checklist
+## Operational checklist for enabled tenancy
 
 Before enabling `:single` or `:multi`:
 
