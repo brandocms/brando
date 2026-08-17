@@ -5,11 +5,11 @@ defmodule BrandoAdmin.Images.ImageListLive do
 
   import Ecto.Query
 
+  alias Brando.Images
+  alias Brando.Images.Image
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Images.FolderBrowser
-  alias Brando.Images
-  alias Brando.Images.Image
   alias BrandoAdmin.LiveView.AssetListHelpers
 
   @impl true

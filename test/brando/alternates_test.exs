@@ -5,9 +5,9 @@ defmodule Brando.AlternatesTest do
   import Phoenix.LiveViewTest
   import Phoenix.Component
 
+  alias Brando.Factory
   alias Brando.Pages
   alias Brando.Pages.Page
-  alias Brando.Factory
 
   test "creates has_alternates?" do
     assert {:has_alternates?, 0} in Page.__info__(:functions)

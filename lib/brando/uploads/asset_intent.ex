@@ -132,15 +132,13 @@ defmodule Brando.Uploads.AssetIntent do
   defp validate_destination(kind, target)
        when kind in ["block_var", "block_var_gallery", "entry_var", "entry_var_gallery"] do
     with :ok <- required_binary(target["component_id"], "component id"),
-         :ok <- required_binary(target["var_key"], "var key") do
-      :ok
-    end
+         do: required_binary(target["var_key"], "var key")
   end
 
   defp validate_destination(_kind, target), do: required_binary(target["component_id"], "component id")
 
   defp validate_existing_field(field) when is_binary(field) and field != "" do
-    String.to_existing_atom(field)
+    _existing_field = String.to_existing_atom(field)
     :ok
   rescue
     ArgumentError -> {:error, "Unknown upload field"}
@@ -179,7 +177,7 @@ defmodule Brando.Uploads.AssetIntent do
 
       segment, {:ok, acc} when is_binary(segment) and segment != "" ->
         try do
-          String.to_existing_atom(segment)
+          _existing_segment = String.to_existing_atom(segment)
           {:cont, {:ok, [segment | acc]}}
         rescue
           ArgumentError -> {:halt, {:error, "Unknown upload path segment"}}

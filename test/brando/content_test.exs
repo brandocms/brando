@@ -1,9 +1,9 @@
 defmodule Brando.ContentTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
-  alias Brando.Factory
   alias Brando.Content
   alias Brando.Content.Var
+  alias Brando.Factory
 
   describe "module export/import with children" do
     test "prepare_modules_for_export/2 handles multi modules with children" do

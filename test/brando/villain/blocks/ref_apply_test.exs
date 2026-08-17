@@ -1,8 +1,8 @@
 defmodule Brando.Villain.Blocks.RefApplyTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
-  alias Brando.Factory
   alias Brando.Content
+  alias Brando.Factory
   alias Ecto.Changeset
 
   setup do
@@ -415,7 +415,7 @@ defmodule Brando.Villain.Blocks.RefApplyTest do
       updated_ref_1 = Changeset.apply_changes(result_1)
       assert updated_ref_1.data.data.text == "Target Text"
 
-      # Scenario 2: data field is already a changeset  
+      # Scenario 2: data field is already a changeset
       data_changeset = Changeset.change(target_ref_struct.data)
       target_changeset_2 = Changeset.put_change(target_changeset_1, :data, data_changeset)
 

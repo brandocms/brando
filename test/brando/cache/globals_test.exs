@@ -3,8 +3,8 @@ defmodule Brando.Cache.GlobalsTest do
   use Brando.ConnCase
   use BrandoIntegration.TestCase
 
-  alias Brando.Sites
   alias Brando.Factory
+  alias Brando.Sites
 
   setup do
     ExMachina.Sequence.reset()

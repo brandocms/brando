@@ -5,8 +5,8 @@ defmodule BrandoAdmin.Components.ImagePicker do
   use BrandoAdmin.Components.PickerHelpers
 
   alias BrandoAdmin.Components.Assets.FileBrowser
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Images.FolderBrowser
   alias Phoenix.LiveView.JS
 

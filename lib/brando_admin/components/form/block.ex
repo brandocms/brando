@@ -42,11 +42,11 @@ defmodule BrandoAdmin.Components.Form.Block do
   """
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
-  alias Ecto.Changeset
+  alias Brando.Content.Blocks, as: ContentBlocks
+  alias BrandoAdmin.Components.Form.Block.Events
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.BlockField.Ops
-  alias BrandoAdmin.Components.Form.Block.Events
-  alias Brando.Content.Blocks, as: ContentBlocks
+  alias Ecto.Changeset
 
   def mount(socket) do
     socket

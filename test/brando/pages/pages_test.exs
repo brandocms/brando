@@ -4,8 +4,8 @@ defmodule Brando.PagesTest do
 
   import Ecto.Query
 
-  alias Brando.Pages
   alias Brando.Factory
+  alias Brando.Pages
 
   test "get page in various forms" do
     p1 = Factory.insert(:page, uri: "test/path")

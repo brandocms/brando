@@ -68,10 +68,8 @@ defmodule BrandoAdmin.Galleries.GalleryFormLive do
   end
 
   defp edit_url(identifier) do
-    try do
-      identifier.schema.__admin_route__(:update, [identifier.entry_id])
-    rescue
-      _ -> "#"
-    end
+    identifier.schema.__admin_route__(:update, [identifier.entry_id])
+  rescue
+    _ -> "#"
   end
 end

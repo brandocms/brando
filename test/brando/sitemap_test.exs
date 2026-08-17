@@ -26,8 +26,8 @@ defmodule Brando.SitemapTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
   alias Brando.Factory
-  alias Brando.Sitemap
   alias Brando.Pages
+  alias Brando.Sitemap
   alias Sitemapper.URL
 
   test "check_lastmod/1" do

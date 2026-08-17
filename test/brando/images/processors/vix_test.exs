@@ -3,8 +3,8 @@ defmodule Brando.Images.Processor.VixTest do
 
   @moduletag :integration
 
-  alias Brando.Images.Processor.Vix
   alias Brando.Images.ConversionParameters
+  alias Brando.Images.Processor.Vix
   alias Brando.Images.TransformResult
 
   @fixtures_path Path.expand("../../../fixtures", __DIR__)

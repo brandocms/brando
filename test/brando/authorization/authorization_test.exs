@@ -4,8 +4,8 @@ defmodule Brando.AuthorizationTest do
   defmodule TestAuth do
     use Brando.Authorization
 
-    alias Brando.Users.User
     alias Brando.Pages.Page
+    alias Brando.Users.User
 
     types([
       {"User", Brando.Users.User},

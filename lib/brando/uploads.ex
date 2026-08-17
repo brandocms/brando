@@ -318,9 +318,7 @@ defmodule Brando.Uploads do
       end)
 
     with :ok <- validate_direct_size(normalized_headers["content-length"], expected_size),
-         :ok <- validate_direct_mimetype(normalized_headers["content-type"], expected_mime_type) do
-      :ok
-    end
+         do: validate_direct_mimetype(normalized_headers["content-type"], expected_mime_type)
   end
 
   def validate_direct_object(_response, _expected_size, _expected_mime_type),
@@ -490,9 +488,8 @@ defmodule Brando.Uploads do
     with :ok <- validate_upload_enabled(cfg),
          :ok <- validate_provider_strategy(cfg),
          :ok <- validate_provider_credentials(cfg),
-         :ok <- validate_intake(:video, name, size, size_limit(cfg)),
-         :ok <- validate_optional_mimetype(cfg, Map.get(file_meta, :type), name) do
-      :ok
+         :ok <- validate_intake(:video, name, size, size_limit(cfg)) do
+      validate_optional_mimetype(cfg, Map.get(file_meta, :type), name)
     end
   end
 

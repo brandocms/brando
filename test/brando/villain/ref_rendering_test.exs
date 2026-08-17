@@ -1,8 +1,8 @@
 defmodule Brando.Villain.RefRenderingTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
-  alias Brando.Factory
   alias Brando.Content
+  alias Brando.Factory
 
   setup do
     user = Factory.insert(:random_user)

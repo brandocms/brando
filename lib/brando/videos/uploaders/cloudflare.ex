@@ -111,14 +111,14 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
   def build_upload_metadata(filename, opts \\ []) do
     max_duration_seconds = Keyword.get(opts, :max_duration_seconds, @default_max_duration_seconds)
 
-    with true <- is_integer(max_duration_seconds) and max_duration_seconds > 0 do
+    if is_integer(max_duration_seconds) and max_duration_seconds > 0 do
       [
         metadata_pair("name", filename),
         metadata_pair("maxDurationSeconds", Integer.to_string(max_duration_seconds))
       ]
       |> Enum.join(",")
     else
-      false -> raise ArgumentError, "Cloudflare max_duration_seconds must be a positive integer"
+      raise ArgumentError, "Cloudflare max_duration_seconds must be a positive integer"
     end
   end
 

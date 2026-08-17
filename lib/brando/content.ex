@@ -31,6 +31,7 @@ defmodule Brando.Content do
   import Ecto.Query
 
   alias Brando.Content.Block
+  alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Content.Container
   alias Brando.Content.Identifier
   alias Brando.Content.Module
@@ -38,7 +39,6 @@ defmodule Brando.Content do
   alias Brando.Content.Palette
   alias Brando.Content.TableTemplate
   alias Brando.Content.Template
-  alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Content.Var
 
   query :list, Block, do: fn query -> from(q in query) end

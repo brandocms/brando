@@ -1,8 +1,8 @@
 defmodule Brando.Blueprint.Identifier.HEExTest do
   use ExUnit.Case
 
-  alias Brando.Blueprint.Identifier.HEExTest.HEExIdentifierSchema
   alias Brando.Blueprint.Identifier.HEExTest.HEExAbsoluteURLSchema
+  alias Brando.Blueprint.Identifier.HEExTest.HEExIdentifierSchema
 
   describe "identifier with ~H" do
     test "__has_identifier__ returns true" do

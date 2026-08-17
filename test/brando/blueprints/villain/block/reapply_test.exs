@@ -1,9 +1,9 @@
 defmodule Brando.Villain.Block.PictureBlockTest do
   use ExUnit.Case
-  alias Brando.Villain.Blocks
   alias Brando.Content.Module
   alias Brando.Content.Ref
   alias Brando.Content.Var
+  alias Brando.Villain.Blocks
 
   test "reapply header ref" do
     updated_module = %Module{
