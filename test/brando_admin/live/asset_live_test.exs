@@ -29,21 +29,38 @@ defmodule BrandoAdmin.Sites.AssetLiveTest do
 
     assert html =~ "Frontend assets"
     assert has_element?(view, "#asset-set-#{asset_set.id}", asset_set.name)
-    assert has_element?(view, "#asset-set-#{asset_set.id} button", "Activate")
+    assert has_element?(view, ".frontend-assets-current", "Release assets")
+    assert has_element?(view, "#asset-set-#{asset_set.id} button", "Activate build")
 
     view
-    |> element("#asset-set-#{asset_set.id} button", "Activate")
+    |> element("#asset-set-#{asset_set.id} button", "Activate build")
     |> render_click()
 
     assert SiteAssets.active_set().id == asset_set.id
     assert has_element?(view, "#asset-set-#{asset_set.id}", "Active")
+    assert has_element?(view, ".frontend-assets-current.uploaded", asset_set.name)
 
     view
-    |> element("button", "Revert to release assets")
+    |> element("button", "Use release assets")
     |> render_click()
 
     refute SiteAssets.active_set()
     assert has_element?(view, "#asset-set-#{asset_set.id}", "Available")
+  end
+
+  test "uses the superuser's Norwegian admin locale", %{current_user: current_user} do
+    {:ok, norwegian_user} =
+      current_user
+      |> Ecto.Changeset.change(language: :no)
+      |> Repo.update()
+
+    conn = log_in_user(Phoenix.ConnTest.build_conn(), norwegian_user)
+    {:ok, view, html} = live(conn, "/admin/config/assets")
+
+    assert html =~ "Frontend-ressurser"
+    assert has_element?(view, ".frontend-assets-current", "Frontend-filer fra release")
+    assert has_element?(view, ".frontend-assets-library", "Opplastede bygg")
+    assert has_element?(view, "button", "Aktiver bygg")
   end
 
   test "non-superusers are redirected", %{asset_set: _asset_set} do
