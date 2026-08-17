@@ -20,6 +20,7 @@ defmodule BrandoAdmin.Sites.AssetLive do
          socket
          |> assign(:socket_connected, true)
          |> assign(:scope_site, scope_site(socket))
+         |> set_admin_locale()
          |> refresh()}
 
       true ->
@@ -37,74 +38,131 @@ defmodule BrandoAdmin.Sites.AssetLive do
     ~H"""
     <Content.header
       title={gettext("Frontend assets")}
-      subtitle={gettext("Activate or revert persistent frontend builds without deploying a release")}
+      subtitle={gettext("Manage the frontend build currently served by Phoenix")}
     >
       <button type="button" class="secondary" phx-click="refresh">{gettext("Refresh")}</button>
     </Content.header>
 
-    <div class="environment-management-live">
-      <section class="environment-panel">
-        <header>
-          <div>
-            <h2>{scope_name(@scope_site)}</h2>
-            <p>{gettext("Florist registers uploaded sets here; registration never activates a build.")}</p>
-          </div>
-          <button
-            type="button"
-            class="danger"
-            disabled={is_nil(@active_set)}
-            phx-click="deactivate"
-            phx-confirm={gettext("Revert to the frontend assets included in the current release?")}
-          >
-            {gettext("Revert to release assets")}
-          </button>
-        </header>
-
-        <div :if={@sets == []} class="environment-notice">
-          {gettext("No uploaded frontend asset sets have been registered.")}
+    <div class="frontend-assets-live">
+      <section class={["frontend-assets-current", @active_set && "uploaded"]}>
+        <div class="frontend-assets-current__icon">
+          <.icon name={if @active_set, do: "hero-cube-transparent", else: "hero-code-bracket"} />
         </div>
 
-        <div :if={@sets != []} class="environment-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>{gettext("Set")}</th>
-                <th>{gettext("Uploaded")}</th>
-                <th>{gettext("Files")}</th>
-                <th>{gettext("Size")}</th>
-                <th>{gettext("State")}</th>
-                <th>{gettext("Actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr :for={asset_set <- @sets} id={"asset-set-#{asset_set.id}"}>
-                <td>
-                  <strong>{asset_set.name}</strong>
-                  <code>{asset_set.metadata["revision"] || asset_set.path}</code>
-                </td>
-                <td>{format_datetime(asset_set.uploaded_at)}</td>
-                <td>{asset_set.file_count}</td>
-                <td>{format_size(asset_set.size)}</td>
-                <td>
-                  <span class={["environment-state", asset_set.active && "live"]}>
-                    {if asset_set.active, do: gettext("Active"), else: gettext("Available")}
-                  </span>
-                </td>
-                <td>
-                  <button
-                    :if={!asset_set.active}
-                    type="button"
-                    class="primary small"
-                    phx-click="activate"
-                    phx-value-id={asset_set.id}
-                    phx-confirm={gettext("Activate %{name} immediately?", name: asset_set.name)}
-                  >
-                    {gettext("Activate")}
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="frontend-assets-current__content">
+          <span class="frontend-assets-eyebrow">
+            {gettext("Currently served")} · {scope_name(@scope_site)}
+          </span>
+          <h2>{if @active_set, do: @active_set.name, else: gettext("Release assets")}</h2>
+          <p>
+            {if @active_set,
+              do: gettext("This uploaded build is serving frontend requests now."),
+              else: gettext("The CSS and JavaScript packaged with the current application release are being served.")}
+          </p>
+
+          <dl :if={@active_set} class="frontend-assets-current__meta">
+            <div>
+              <dt>{gettext("Revision")}</dt>
+              <dd>{@active_set.metadata["revision"] || gettext("Not provided")}</dd>
+            </div>
+            <div>
+              <dt>{gettext("Uploaded")}</dt>
+              <dd>{format_datetime(@active_set.uploaded_at)}</dd>
+            </div>
+            <div>
+              <dt>{gettext("Bundle")}</dt>
+              <dd>{ngettext("%{count} file", "%{count} files", @active_set.file_count)}</dd>
+              <dd>{format_size(@active_set.size)}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="frontend-assets-current__actions">
+          <span class="frontend-assets-status active">
+            <span aria-hidden="true"></span>
+            {gettext("Serving now")}
+          </span>
+          <button
+            :if={@active_set}
+            type="button"
+            class="secondary small"
+            phx-click="deactivate"
+            phx-confirm={gettext("Use the frontend assets included in the current release?")}
+          >
+            {gettext("Use release assets")}
+          </button>
+        </div>
+      </section>
+
+      <section class="frontend-assets-library">
+        <header>
+          <div>
+            <span class="frontend-assets-eyebrow">{gettext("Build library")}</span>
+            <h2>{gettext("Uploaded builds")}</h2>
+            <p>
+              {gettext(
+                "Florist registers each build here. Activating one takes effect immediately and does not deploy the application."
+              )}
+            </p>
+          </div>
+          <span class="frontend-assets-count">
+            {ngettext("%{count} build", "%{count} builds", length(@sets))}
+          </span>
+        </header>
+
+        <div :if={@sets == []} class="frontend-assets-empty">
+          <span class="frontend-assets-empty__icon"><.icon name="hero-arrow-path" /></span>
+          <h3>{gettext("No uploaded builds yet")}</h3>
+          <p>
+            {gettext("The frontend packaged with the current release remains active until Florist registers a build.")}
+          </p>
+        </div>
+
+        <div :if={@sets != []} class="frontend-assets-list">
+          <article
+            :for={asset_set <- @sets}
+            id={"asset-set-#{asset_set.id}"}
+            class={["frontend-assets-build", asset_set.active && "active"]}
+          >
+            <span class="frontend-assets-build__icon"><.icon name="hero-cube-transparent" /></span>
+
+            <div class="frontend-assets-build__identity">
+              <h3>{asset_set.name}</h3>
+              <code>{asset_set.metadata["revision"] || asset_set.path}</code>
+            </div>
+
+            <dl class="frontend-assets-build__meta">
+              <div>
+                <dt>{gettext("Uploaded")}</dt>
+                <dd>{format_datetime(asset_set.uploaded_at)}</dd>
+              </div>
+              <div>
+                <dt>{gettext("Bundle")}</dt>
+                <dd>
+                  {ngettext("%{count} file", "%{count} files", asset_set.file_count)} · {format_size(asset_set.size)}
+                </dd>
+              </div>
+            </dl>
+
+            <div class="frontend-assets-build__actions">
+              <span class={["frontend-assets-status", asset_set.active && "active"]}>
+                <span aria-hidden="true"></span>
+                {if asset_set.active, do: gettext("Active"), else: gettext("Available")}
+              </span>
+              <button
+                :if={!asset_set.active}
+                type="button"
+                class="primary small"
+                phx-click="activate"
+                phx-value-id={asset_set.id}
+                phx-confirm={
+                  gettext("Activate %{name} now? Frontend requests will switch immediately.", name: asset_set.name)
+                }
+              >
+                {gettext("Activate build")}
+              </button>
+            </div>
+          </article>
         </div>
       </section>
     </div>
@@ -151,7 +209,15 @@ defmodule BrandoAdmin.Sites.AssetLive do
     if Tenant.mode() == :multi, do: socket.assigns[:current_site], else: nil
   end
 
-  defp scope_name(nil), do: gettext("Standalone frontend")
+  defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do
+    current_user.language
+    |> to_string()
+    |> Gettext.put_locale()
+
+    socket
+  end
+
+  defp scope_name(nil), do: gettext("This installation")
   defp scope_name(site), do: site.name
 
   defp format_datetime(%DateTime{} = datetime),

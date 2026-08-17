@@ -3130,12 +3130,15 @@ msgstr "Nytt bilde opprettet."
 msgid "Save changes"
 msgstr "Lagre endringer"
 
+#: lib/brando_admin/components/file_picker.ex:213
+#: lib/brando_admin/live/config/asset_live.ex:77
+#: lib/brando_admin/live/config/asset_live.ex:147
 #: lib/brando_admin/live/files/file_list_live.ex:236
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "%{count} file"
 msgid_plural "%{count} files"
-msgstr[0] "%{count} valgt"
-msgstr[1] "%{count} valgt"
+msgstr[0] "%{count} fil"
+msgstr[1] "%{count} filer"
 
 #: lib/brando_admin/components/image_picker.ex:302
 #: lib/brando_admin/live/images/image_list_live.ex:237
@@ -3879,3 +3882,159 @@ msgstr "Nullstill video"
 #, elixir-autogen, elixir-format
 msgid "Undo"
 msgstr "Angre"
+
+#: lib/brando_admin/live/config/asset_live.ex:112
+#, elixir-autogen, elixir-format
+msgid "%{count} build"
+msgid_plural "%{count} builds"
+msgstr[0] "%{count} bygg"
+msgstr[1] "%{count} bygg"
+
+#: lib/brando_admin/live/config/asset_live.ex:164
+#, elixir-autogen, elixir-format
+msgid "Activate %{name} now? Frontend requests will switch immediately."
+msgstr "Aktiver %{name} nå? Frontend-filene byttes umiddelbart."
+
+#: lib/brando_admin/live/config/asset_live.ex:167
+#, elixir-autogen, elixir-format
+msgid "Activate build"
+msgstr "Aktiver bygg"
+
+#: lib/brando_admin/live/config/asset_live.ex:184
+#, elixir-autogen, elixir-format
+msgid "Activated %{name}"
+msgstr "Aktiverte %{name}"
+
+#: lib/brando_admin/live/config/asset_live.ex:155
+#, elixir-autogen, elixir-format
+msgid "Active"
+msgstr "Aktiv"
+
+#: lib/brando_admin/live/config/asset_live.ex:155
+#, elixir-autogen, elixir-format
+msgid "Available"
+msgstr "Tilgjengelig"
+
+#: lib/brando_admin/live/config/asset_live.ex:103
+#, elixir-autogen, elixir-format
+msgid "Build library"
+msgstr "Byggbibliotek"
+
+#: lib/brando_admin/live/config/asset_live.ex:76
+#: lib/brando_admin/live/config/asset_live.ex:145
+#, elixir-autogen, elixir-format
+msgid "Bundle"
+msgstr "Pakke"
+
+#: lib/brando_admin/live/config/asset_live.ex:188
+#, elixir-autogen, elixir-format
+msgid "Could not activate the frontend asset set"
+msgstr "Kunne ikke aktivere frontend-pakken"
+
+#: lib/brando_admin/live/config/asset_live.ex:200
+#, elixir-autogen, elixir-format
+msgid "Could not revert the frontend assets"
+msgstr "Kunne ikke bytte til frontend-filene fra releasen"
+
+#: lib/brando_admin/live/config/asset_live.ex:54
+#, elixir-autogen, elixir-format
+msgid "Currently served"
+msgstr "I bruk nå"
+
+#: lib/brando_admin/live/config/asset_live.ex:106
+#, elixir-autogen, elixir-format
+msgid ""
+"Florist registers each build here. Activating one takes effect immediately "
+"and does not deploy the application."
+msgstr ""
+"Florist registrerer hvert bygg her. Aktivering trer i kraft umiddelbart og "
+"deployer ikke applikasjonen."
+
+#: lib/brando_admin/live/config/asset_live.ex:40
+#: lib/brando_admin/menu.ex:388
+#, elixir-autogen, elixir-format
+msgid "Frontend assets"
+msgstr "Frontend-ressurser"
+
+#: lib/brando_admin/live/config/asset_live.ex:41
+#, elixir-autogen, elixir-format
+msgid "Manage the frontend build currently served by Phoenix"
+msgstr "Administrer frontend-bygget som leveres av Phoenix"
+
+#: lib/brando_admin/live/config/asset_live.ex:118
+#, elixir-autogen, elixir-format
+msgid "No uploaded builds yet"
+msgstr "Ingen opplastede bygg ennå"
+
+#: lib/brando_admin/live/config/asset_live.ex:69
+#, elixir-autogen, elixir-format
+msgid "Not provided"
+msgstr "Ikke oppgitt"
+
+#: lib/brando_admin/live/config/asset_live.ex:56
+#, elixir-autogen, elixir-format
+msgid "Release assets"
+msgstr "Frontend-filer fra release"
+
+#: lib/brando_admin/live/config/asset_live.ex:196
+#, elixir-autogen, elixir-format
+msgid "Reverted to release assets"
+msgstr "Byttet til frontend-filer fra release"
+
+#: lib/brando_admin/components/form/revisions_drawer.ex:115
+#: lib/brando_admin/live/config/asset_live.ex:68
+#, elixir-autogen, elixir-format
+msgid "Revision"
+msgstr "Revisjon"
+
+#: lib/brando_admin/live/config/asset_live.ex:86
+#, elixir-autogen, elixir-format
+msgid "Serving now"
+msgstr "I bruk nå"
+
+#: lib/brando_admin/live/config/asset_live.ex:61
+#, elixir-autogen, elixir-format
+msgid ""
+"The CSS and JavaScript packaged with the current application release are "
+"being served."
+msgstr "CSS og JavaScript fra gjeldende applikasjonsrelease er i bruk."
+
+#: lib/brando_admin/live/config/asset_live.ex:120
+#, elixir-autogen, elixir-format
+msgid ""
+"The frontend packaged with the current release remains active until Florist "
+"registers a build."
+msgstr ""
+"Frontend-filene som følger med gjeldende release, forblir aktive til Florist "
+"registrerer et bygg."
+
+#: lib/brando_admin/live/config/asset_live.ex:225
+#, elixir-autogen, elixir-format
+msgid "This installation"
+msgstr "Denne installasjonen"
+
+#: lib/brando_admin/live/config/asset_live.ex:59
+#, elixir-autogen, elixir-format
+msgid "This uploaded build is serving frontend requests now."
+msgstr "Dette opplastede bygget leverer frontend-filene nå."
+
+#: lib/brando_admin/live/config/asset_live.ex:72
+#: lib/brando_admin/live/config/asset_live.ex:141
+#, elixir-autogen, elixir-format
+msgid "Uploaded"
+msgstr "Lastet opp"
+
+#: lib/brando_admin/live/config/asset_live.ex:104
+#, elixir-autogen, elixir-format
+msgid "Uploaded builds"
+msgstr "Opplastede bygg"
+
+#: lib/brando_admin/live/config/asset_live.ex:95
+#, elixir-autogen, elixir-format
+msgid "Use release assets"
+msgstr "Bruk filer fra release"
+
+#: lib/brando_admin/live/config/asset_live.ex:93
+#, elixir-autogen, elixir-format
+msgid "Use the frontend assets included in the current release?"
+msgstr "Bruk frontend-filene som følger med gjeldende release?"
