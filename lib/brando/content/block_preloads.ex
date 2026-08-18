@@ -50,7 +50,10 @@ defmodule Brando.Content.BlockPreloads do
                    vars: ^vars_query,
                    refs: ^refs_query,
                    table_rows: ^table_row_query,
-                   children: ^(&__MODULE__.preload_child_trees/1)
+                   # Ecto runs custom preload functions in their own processes,
+                   # which do not inherit the tenant prefix from the process
+                   # dictionary. Captured here, where the prefix is still set.
+                   children: ^Brando.Tenant.capture_context(&__MODULE__.preload_child_trees/1)
                  ]
                ]
              )}

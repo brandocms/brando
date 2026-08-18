@@ -21,13 +21,17 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     if connected?(socket) do
       can_manage? = can_manage?(socket.assigns.current_user, socket.assigns[:current_site])
 
-      {:ok,
-       socket
-       |> assign(:socket_connected, true)
-       |> assign(:can_manage?, can_manage?)
-       |> assign(:tenancy_enabled?, Tenant.enabled?())
-       |> assign(:default_scheduled_at, default_scheduled_at())
-       |> refresh_data()}
+      socket =
+        socket
+        |> assign(:socket_connected, true)
+        |> assign(:can_manage?, can_manage?)
+        |> assign(:tenancy_enabled?, Tenant.enabled?())
+        |> assign(:default_scheduled_at, default_scheduled_at())
+        |> refresh_data()
+
+      subscribe_to_environments(socket.assigns.site)
+
+      {:ok, socket}
     else
       {:ok, assign(socket, :socket_connected, false)}
     end
@@ -89,7 +93,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                   <th>{gettext("Environment")}</th>
                   <th>{gettext("Domain")}</th>
                   <th>{gettext("State")}</th>
-                  <th>{gettext("Actions")}</th>
+                  <th class="environment-actions">{gettext("Actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -98,7 +102,19 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                     <strong>{environment.name}</strong>
                     <code>{environment.key}</code>
                   </td>
-                  <td>{environment.domain || "—"}</td>
+                  <td>
+                    <form phx-submit="update_domain" class="environment-inline-form">
+                      <input type="hidden" name="environment_id" value={environment.id} />
+                      <input
+                        type="text"
+                        name="domain"
+                        value={environment.domain}
+                        disabled={!@can_manage?}
+                        placeholder={gettext("No domain")}
+                        aria-label={gettext("Domain for %{name}", name: environment.name)}
+                      />
+                    </form>
+                  </td>
                   <td>
                     <span class={["environment-state", environment.live && "live"]}>
                       {if environment.live, do: gettext("Live"), else: gettext("Working")}
@@ -142,8 +158,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
 
         <div class="environment-grid">
           <section class="environment-panel">
+            <span class="environment-eyebrow">{gettext("Provision")}</span>
             <h2>{gettext("Create environment")}</h2>
-            <p>{gettext("Creates an empty schema and runs all application tenant migrations.")}</p>
+            <div class="alert environment-hint">
+              <.icon name="hero-information-circle" />
+              <span>{gettext("Creates an empty schema and runs all application tenant migrations.")}</span>
+            </div>
             <form id="create-environment-form" phx-submit="create_environment">
               <label>
                 <span>{gettext("Name")}</span>
@@ -164,8 +184,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
           </section>
 
           <section class="environment-panel">
+            <span class="environment-eyebrow">{gettext("Replace content")}</span>
             <h2>{gettext("Copy now")}</h2>
-            <p>{gettext("Archives the target, then replaces all of its database content from the source.")}</p>
+            <div class="alert environment-hint">
+              <.icon name="hero-information-circle" />
+              <span>{gettext("Archives the target, then replaces all of its database content from the source.")}</span>
+            </div>
             <form id="copy-environment-form" phx-submit="queue_copy">
               <.environment_pair_fields environments={@environments} />
               <label>
@@ -179,6 +203,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
           </section>
 
           <section class="environment-panel">
+            <span class="environment-eyebrow">{gettext("Scheduled")}</span>
             <h2>{gettext("Schedule copy")}</h2>
             <form id="schedule-environment-copy-form" phx-submit="schedule_copy">
               <.environment_pair_fields environments={@environments} />
@@ -190,6 +215,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
           </section>
 
           <section class="environment-panel">
+            <span class="environment-eyebrow">{gettext("Scheduled")}</span>
             <h2>{gettext("Schedule live switch")}</h2>
             <form id="schedule-live-switch-form" phx-submit="schedule_set_live">
               <label>
@@ -209,8 +235,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         </div>
 
         <section class="environment-panel">
+          <span class="environment-eyebrow">{gettext("Queue")}</span>
           <h2>{gettext("Pending operations")}</h2>
-          <p :if={@jobs == []}>{gettext("No copy or live-switch operations are pending.")}</p>
+          <div :if={@jobs == []} class="environment-empty">
+            <span class="environment-empty__icon"><.icon name="hero-clock" /></span>
+            <p>{gettext("No copy or live-switch operations are pending.")}</p>
+          </div>
           <div :if={@jobs != []} class="environment-table-wrap">
             <table>
               <thead>
@@ -218,7 +248,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                   <th>{gettext("Operation")}</th>
                   <th>{gettext("Scheduled")}</th>
                   <th>{gettext("State")}</th>
-                  <th>{gettext("Actions")}</th>
+                  <th class="environment-actions">{gettext("Actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -226,7 +256,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                   <td>{job_description(job, @environments)}</td>
                   <td>{format_scheduled_at(job.scheduled_at)}</td>
                   <td><span class="environment-state">{job.state}</span></td>
-                  <td>
+                  <td class="environment-actions">
                     <button
                       type="button"
                       class="danger small"
@@ -245,10 +275,73 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         </section>
 
         <section class="environment-panel">
+          <span class="environment-eyebrow">{gettext("History")}</span>
+          <h2>{gettext("Operation log")}</h2>
+          <div class="alert environment-hint">
+            <.icon name="hero-information-circle" />
+            <span>
+              {gettext("Immutable record of every lifecycle operation. Notes added when scheduling are recorded here.")}
+            </span>
+          </div>
+
+          <div :if={@operation_logs == []} class="environment-empty">
+            <span class="environment-empty__icon"><.icon name="hero-list-bullet" /></span>
+            <p>{gettext("No operations have been recorded for this site.")}</p>
+          </div>
+
+          <div :if={@operation_logs != []} class="environment-table-wrap">
+            <table class="environment-log">
+              <thead>
+                <tr>
+                  <th>{gettext("Operation")}</th>
+                  <th>{gettext("Environment")}</th>
+                  <th>{gettext("Note")}</th>
+                  <th>{gettext("By")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr :for={log <- @operation_logs} id={"environment-log-#{log.id}"}>
+                  <td>
+                    <span class="environment-log__operation">{log.operation}</span>
+                  </td>
+                  <td>
+                    <code :if={log.target_environment}>{log.target_environment.key}</code>
+                    <span :if={is_nil(log.target_environment)}>—</span>
+                  </td>
+                  <td class="environment-log__note">{log.note || "—"}</td>
+                  <td>
+                    <%!-- Same item-meta shape listings use for their creator column.
+                          `creator/1` itself assumes a listing grid cell and an
+                          `updated_at`, which the log has neither of. --%>
+                    <article :if={log.creator} class="item-meta">
+                      <section :if={log.creator.avatar} class="avatar-wrapper">
+                        <div class="avatar">
+                          <Content.image image={log.creator.avatar} size={:thumb} />
+                        </div>
+                      </section>
+                      <section class="content">
+                        <div class="info">
+                          <div class="name">{log.creator.name}</div>
+                          <div class="time">{format_log_time(log.inserted_at)}</div>
+                        </div>
+                      </section>
+                    </article>
+                    <span :if={is_nil(log.creator)}>—</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="environment-panel">
           <header>
             <div>
               <h2>{gettext("Recovery archives")}</h2>
-              <p>{gettext("Archives live in the same database and do not replace external backups.")}</p>
+              <div class="alert environment-hint">
+                <.icon name="hero-information-circle" />
+                <span>{gettext("Archives live in the same database and do not replace external backups.")}</span>
+              </div>
             </div>
             <div class="environment-actions">
               <button
@@ -272,11 +365,29 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
               </button>
             </div>
           </header>
-          <p :if={@archives == []}>{gettext("No recovery archives exist for this site.")}</p>
+          <div :if={@archives == []} class="environment-empty">
+            <span class="environment-empty__icon"><.icon name="hero-archive-box" /></span>
+            <p>{gettext("No recovery archives exist for this site.")}</p>
+          </div>
           <ul :if={@archives != []} class="environment-archives">
             <li :for={archive <- @archives}>
-              <code>{archive.schema}</code>
-              <span>{archive.operation || gettext("Recovered archive")}</span>
+              <div class="environment-archive__identity">
+                <code>{archive.schema}</code>
+                <span :if={archive.note} class="environment-archive__note">{archive.note}</span>
+              </div>
+              <div class="environment-archive__meta">
+                <span>{archive.operation || gettext("Recovered archive")}</span>
+                <button
+                  type="button"
+                  class="secondary small"
+                  disabled={!@can_manage?}
+                  phx-click="rollback"
+                  phx-value-schema={archive.schema}
+                  phx-confirm={gettext("Restore this archive as a new, non-live environment?")}
+                >
+                  {gettext("Restore")}
+                </button>
+              </div>
             </li>
           </ul>
         </section>
@@ -335,7 +446,30 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   end
 
   @impl Phoenix.LiveView
+  def handle_info({:environments_updated, _site_id}, socket) do
+    {:noreply, refresh_data(socket)}
+  end
+
+  def handle_info(_message, socket), do: {:noreply, socket}
+
+  @impl Phoenix.LiveView
   def handle_event("refresh", _params, socket), do: {:noreply, refresh_data(socket)}
+
+  def handle_event("update_domain", %{"environment_id" => id} = params, socket) do
+    domain = params |> Map.get("domain", "") |> String.trim()
+    domain = if domain == "", do: nil, else: domain
+
+    with :ok <- authorize(socket),
+         {:ok, environment} <- environment_for_site(socket, id),
+         {:ok, _updated} <- Registry.update_environment(environment, %{domain: domain}) do
+      {:noreply,
+       socket
+       |> notify(gettext("Domain updated."))
+       |> refresh_data()}
+    else
+      {:error, reason} -> {:noreply, notify_error(socket, operation_error(reason))}
+    end
+  end
 
   def handle_event("create_environment", %{"environment" => attrs}, socket) do
     with :ok <- authorize(socket),
@@ -447,10 +581,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     end
   end
 
-  def handle_event("rollback", _params, socket) do
+  def handle_event("rollback", params, socket) do
     with :ok <- authorize(socket),
          {:ok, restored} <-
-           Environments.rollback(socket.assigns.site, creator: socket.assigns.current_user) do
+           Environments.rollback(socket.assigns.site,
+             creator: socket.assigns.current_user,
+             archive_schema: params["schema"]
+           ) do
       {:noreply,
        socket
        |> notify(gettext("Archive restored as %{name}.", name: restored.name))
@@ -474,19 +611,34 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     end
   end
 
+  # Scheduled copies and live switches complete in Oban workers, so the screen
+  # only learns about them through the site's environment topic.
+  defp subscribe_to_environments(%{id: site_id}) do
+    Phoenix.PubSub.subscribe(Brando.pubsub(), Environments.topic(site_id))
+  end
+
+  defp subscribe_to_environments(_site), do: :ok
+
   defp refresh_data(socket) do
-    site =
-      case socket.assigns[:current_site] do
-        %{id: site_id} -> Registry.get_site(site_id)
-        _ -> nil
-      end
+    site = current_site(socket)
 
     socket
     |> assign(:site, site)
-    |> assign(:environments, (site && Registry.list_environments(site)) || [])
-    |> assign(:archives, (site && Environments.list_archives(site)) || [])
-    |> assign(:jobs, (site && Environments.list_scheduled_operations(site)) || [])
+    |> assign(:environments, for_site(site, &Registry.list_environments/1))
+    |> assign(:archives, for_site(site, &Environments.list_archives/1))
+    |> assign(:jobs, for_site(site, &Environments.list_scheduled_operations/1))
+    |> assign(:operation_logs, for_site(site, &Environments.list_operation_logs/1))
   end
+
+  defp current_site(socket) do
+    case socket.assigns[:current_site] do
+      %{id: site_id} -> Registry.get_site(site_id)
+      _no_site -> nil
+    end
+  end
+
+  defp for_site(nil, _fun), do: []
+  defp for_site(site, fun), do: fun.(site)
 
   defp authorize(%{assigns: %{can_manage?: true}}), do: :ok
   defp authorize(_socket), do: {:error, :not_authorized}
@@ -520,6 +672,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     |> DateTime.add(3_600, :second)
     |> DateTime.shift_zone!(Brando.timezone())
     |> Calendar.strftime("%Y-%m-%dT%H:%M")
+  end
+
+  defp format_log_time(datetime) do
+    datetime
+    |> DateTime.shift_zone!(Brando.timezone())
+    |> Calendar.strftime("%d/%m/%y • %H:%M")
   end
 
   defp format_scheduled_at(scheduled_at) do

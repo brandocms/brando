@@ -19,6 +19,13 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
     def clone_schema(_source_prefix, target_prefix), do: Schema.create(target_prefix)
   end
 
+  defmodule StructureCloner do
+    @behaviour Brando.Environments.StructureCloner
+
+    @impl true
+    def clone_structure(_source_prefix, _target_prefix), do: :ok
+  end
+
   defmodule Seeder do
     @behaviour Brando.Tenant.Seeder
 
@@ -31,6 +38,7 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
 
     put_test_env(:tenancy_mode, :multi)
     put_test_env(:tenant_migrator, Migrator)
+    put_test_env(:tenant_structure_cloner, StructureCloner)
     put_test_env(:environment_schema_cloner, SchemaCloner)
     put_test_env(:tenant_seeder, Seeder)
     put_test_env(:media_path, Path.join(root, "media"))

@@ -35,7 +35,8 @@ defmodule Brando.Tenant.Migration do
 
     with :ok <- migrator.migrate("public", prefix),
          :ok <- media_migrator.migrate(site),
-         {:ok, staging} <- Environments.create_environment(site, @staging, creator: creator),
+         {:ok, staging} <-
+           Environments.create_environment(site, @staging, creator: creator, clone_structure: false),
          {:ok, _copy} <-
            Environments.copy_environment(production, staging,
              creator: creator,

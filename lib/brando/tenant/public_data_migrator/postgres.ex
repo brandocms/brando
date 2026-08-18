@@ -4,24 +4,8 @@ defmodule Brando.Tenant.PublicDataMigrator.Postgres do
   @behaviour Brando.Tenant.PublicDataMigrator
 
   alias Brando.Environments.SchemaCloner.Postgres, as: SchemaCloner
-
-  @shared_tables ~w(
-    environments
-    environment_operation_logs
-    oban_jobs
-    schema_migrations
-    site_asset_sets
-    ssg_builds
-    sites
-    sites_previews
-    uploads_pending_intents
-    user_sites
-    user_tokens
-    users
-    users_tokens
-  )
-
-  @safe_table ~r/^[a-z0-9_]+$/
+  alias Brando.Environments.StructureCloner.Postgres, as: StructureCloner
+  alias Brando.Tenant.SharedTables
 
   @impl true
   def migrate(source_prefix, target_prefix) do
@@ -53,11 +37,12 @@ defmodule Brando.Tenant.PublicDataMigrator.Postgres do
         tables =
           rows
           |> Enum.map(&List.first/1)
-          |> Enum.reject(&(&1 in @shared_tables))
+          |> Enum.reject(&SharedTables.member?/1)
 
-        if Enum.all?(tables, &Regex.match?(@safe_table, &1)),
-          do: {:ok, tables},
-          else: {:error, :unsafe_public_table_name}
+        case Enum.filter(tables, &String.contains?(&1, ~s|"|)) do
+          [] -> {:ok, tables}
+          unquotable -> {:error, {:unsafe_public_table_name, unquotable}}
+        end
 
       {:error, reason} ->
         {:error, reason}
@@ -65,6 +50,7 @@ defmodule Brando.Tenant.PublicDataMigrator.Postgres do
   end
 
   defp dump_args(source_prefix, tables) do
-    ["--data-only"] ++ Enum.map(tables, &"--table=#{source_prefix}.#{&1}")
+    schema = StructureCloner.quote_identifier(source_prefix)
+    ["--data-only"] ++ Enum.map(tables, &"--table=#{schema}.#{StructureCloner.quote_identifier(&1)}")
   end
 end

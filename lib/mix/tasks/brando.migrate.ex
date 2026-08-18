@@ -36,14 +36,18 @@ defmodule Mix.Tasks.Brando.Migrate do
     end
   end
 
-  defp validate_options!(opts, positional, invalid) do
+  @doc false
+  # Public so the argument rules can be tested without running migrations.
+  def validate_options!(opts, positional, invalid) do
     if invalid != [] or positional != [] do
       Mix.raise("Invalid arguments: #{inspect(positional ++ invalid)}")
     end
 
-    if opts[:tenants] and opts[:site] do
+    if opts[:tenants] && opts[:site] do
       Mix.raise("Choose either --tenants or --site, not both")
     end
+
+    :ok
   end
 
   defp migrate_site(site_key) do

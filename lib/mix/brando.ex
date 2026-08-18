@@ -339,6 +339,31 @@ defmodule Mix.Brando do
     Mix.Project.config() |> Keyword.fetch!(:app)
   end
 
+  @doc """
+  Aborts a task that needs `igniter`, an optional Brando dependency.
+
+  Brando decides whether to define its Igniter-backed tasks while it compiles,
+  so adding the dependency is not enough on its own — Brando must be recompiled
+  afterwards.
+  """
+  def missing_igniter!(task) do
+    Mix.raise("""
+    mix #{task} requires the optional `igniter` dependency, which is not available.
+
+    Add it to your application's deps:
+
+        {:igniter, "~> 0.8", only: [:dev, :test]}
+
+    Then fetch it and recompile Brando:
+
+        mix deps.get
+        mix deps.compile brando --force
+
+    The forced recompile is required. Brando only defines this task if `igniter`
+    is loadable at the time Brando itself is compiled.
+    """)
+  end
+
   defp validate_attr!({_name, type} = attr) when type in @valid_attributes, do: attr
   defp validate_attr!({_name, {type, _}} = attr) when type in @valid_attributes, do: attr
 

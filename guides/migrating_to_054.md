@@ -21,12 +21,25 @@ existing table look new to the generator.
 
 ## 2. Update source with Igniter
 
+This task is built on Igniter, an optional Brando dependency. Add it to the
+application's own deps:
+
+```elixir
+# mix.exs
+{:igniter, "~> 0.8", only: [:dev, :test]},
+```
+
 Update the Brando dependency and fetch it, then run:
 
 ```shell
 mix deps.get
+mix deps.compile brando --force
 mix brando.migrate54
 ```
+
+The forced recompile matters: Brando only defines its Igniter-backed tasks if
+`igniter` is loadable when Brando itself compiles, so a stale Brando build keeps
+reporting `The task "brando.migrate54" could not be found`.
 
 The task:
 

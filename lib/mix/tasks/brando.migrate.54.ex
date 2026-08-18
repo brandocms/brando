@@ -1355,4 +1355,20 @@ if Code.ensure_loaded?(Igniter) do
       )
     end
   end
+else
+  defmodule Mix.Tasks.Brando.Migrate54 do
+    use Mix.Task
+
+    @shortdoc "Migrates a Brando 0.53 application to 0.54 (requires igniter)"
+    @moduledoc """
+    #{@shortdoc}.
+
+    This task is built on Igniter, an optional Brando dependency. Add it to your
+    application's deps, run `mix deps.get`, then recompile Brando with
+    `mix deps.compile brando --force` to enable the task.
+    """
+
+    @impl Mix.Task
+    def run(_argv), do: Mix.Brando.missing_igniter!("brando.migrate54")
+  end
 end

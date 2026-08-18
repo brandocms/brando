@@ -29,6 +29,16 @@ defmodule Brando.Tenant.SetupTest do
     end
   end
 
+  defmodule StructureCloner do
+    @behaviour Brando.Environments.StructureCloner
+
+    @impl true
+    def clone_structure(source_prefix, target_prefix) do
+      send(self(), {:structure_cloned, source_prefix, target_prefix})
+      :ok
+    end
+  end
+
   defmodule Seeder do
     @behaviour Brando.Tenant.Seeder
 
@@ -53,6 +63,7 @@ defmodule Brando.Tenant.SetupTest do
 
     put_test_env(:tenancy_mode, :multi)
     put_test_env(:tenant_migrator, Migrator)
+    put_test_env(:tenant_structure_cloner, StructureCloner)
     put_test_env(:environment_schema_cloner, SchemaCloner)
     put_test_env(:tenant_seeder, Seeder)
     put_test_env(:media_path, media_path)

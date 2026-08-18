@@ -20,6 +20,13 @@ defmodule Brando.TenantMigrationTest do
     def clone_schema(_source_prefix, target_prefix), do: Schema.create(target_prefix)
   end
 
+  defmodule StructureCloner do
+    @behaviour Brando.Environments.StructureCloner
+
+    @impl true
+    def clone_structure(_source_prefix, _target_prefix), do: :ok
+  end
+
   defmodule PublicMigrator do
     @behaviour Brando.Tenant.PublicDataMigrator
 
@@ -48,6 +55,7 @@ defmodule Brando.TenantMigrationTest do
     root = Path.join(System.tmp_dir!(), "brando-tenant-migration-#{System.unique_integer([:positive])}")
     put_test_env(:tenancy_mode, :multi)
     put_test_env(:tenant_migrator, Migrator)
+    put_test_env(:tenant_structure_cloner, StructureCloner)
     put_test_env(:environment_schema_cloner, SchemaCloner)
     put_test_env(:media_path, Path.join(root, "media"))
     put_test_env(:sites_path, Path.join(root, "sites"))

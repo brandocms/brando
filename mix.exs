@@ -230,7 +230,7 @@ defmodule Brando.Mixfile do
       {:ex_slop, "~> 0.1", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
-      {:igniter, "~> 0.8.0", only: [:dev, :test]},
+      {:igniter, "~> 0.8.0", optional: true, runtime: false},
 
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test, runtime: false},

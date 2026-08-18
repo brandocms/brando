@@ -39,6 +39,16 @@ defmodule Brando.EnvironmentsTest do
     end
   end
 
+  defmodule SuccessfulStructureCloner do
+    @behaviour Brando.Environments.StructureCloner
+
+    @impl true
+    def clone_structure(source_prefix, target_prefix) do
+      send(self(), {:structure_cloned, source_prefix, target_prefix})
+      :ok
+    end
+  end
+
   defmodule RecoveringSchemaCloner do
     @behaviour Brando.Environments.SchemaCloner
 
@@ -69,6 +79,7 @@ defmodule Brando.EnvironmentsTest do
   setup do
     put_test_env(:tenancy_mode, :multi)
     put_test_env(:tenant_migrator, SuccessfulMigrator)
+    put_test_env(:tenant_structure_cloner, SuccessfulStructureCloner)
     put_test_env(:environment_schema_cloner, SuccessfulSchemaCloner)
     Tenant.put_prefix("tenant_unrelated-context_preview")
     Cache.clear()
@@ -252,7 +263,14 @@ defmodule Brando.EnvironmentsTest do
     assert Schema.exists?(archive_schema)
     assert Schema.exists?(Tenant.prefix(site, target))
 
-    assert [%{schema: ^archive_schema, operation: :copy}] = Environments.list_archives(site)
+    assert [%{schema: ^archive_schema, operation: :copy, note: "Approved release"}] =
+             Environments.list_archives(site)
+
+    # The note is only ever written to the log, so the screen reads it back here.
+    assert [%OperationLog{operation: :copy, note: "Approved release"} | _] =
+             Environments.list_operation_logs(site)
+
+    assert Enum.count(Environments.list_operation_logs(site, 1)) == 1
 
     assert [%OperationLog{operation: :copy, note: "Approved release"}] =
              Enum.filter(operation_logs(site), &(&1.operation == :copy))
@@ -301,6 +319,34 @@ defmodule Brando.EnvironmentsTest do
 
     assert [%OperationLog{archive_schema: ^archive_schema, note: "Restore checkpoint"}] =
              Enum.filter(operation_logs(site), &(&1.operation == :rollback))
+  end
+
+  test "restores a chosen archive and refuses one that is not the site's", %{site: site} do
+    {:ok, source} =
+      Environments.create_environment(site, %{name: "Source", key: "source", live: true})
+
+    {:ok, target} =
+      Environments.create_environment(site, %{name: "Target", key: "target", live: false})
+
+    assert {:ok, %{archive_schema: first_archive}} =
+             Environments.copy_environment(source, target, note: "First checkpoint")
+
+    assert {:ok, %{archive_schema: second_archive}} =
+             Environments.copy_environment(source, target, note: "Second checkpoint")
+
+    refute first_archive == second_archive
+
+    # Without a schema the newest wins; naming one reaches past it.
+    assert {:ok, %Environment{} = restored} =
+             Environments.rollback(site, archive_schema: first_archive)
+
+    assert Schema.exists?(Tenant.prefix(site, restored))
+
+    assert [%OperationLog{archive_schema: ^first_archive}] =
+             Enum.filter(operation_logs(site), &(&1.operation == :rollback))
+
+    assert {:error, :archive_not_found} =
+             Environments.rollback(site, archive_schema: "tenant_other-site_production_archive_1")
   end
 
   test "schedules, lists, and cancels environment operations", %{site: site} do

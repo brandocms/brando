@@ -22,12 +22,14 @@ defmodule Brando.Environments do
   alias Brando.Worker.EnvironmentCopy
   alias Brando.Worker.EnvironmentSetLive
 
-  @public_opts [prefix: "public"]
+  @public_prefix "public"
+  @public_opts [prefix: @public_prefix]
   @default_archive_keep 3
 
   @doc """
-  Creates the public environment record, its PostgreSQL schema, and applies all
-  tenant migrations. A failed schema creation or migration is compensated.
+  Creates the public environment record and its PostgreSQL schema, clones the
+  content structure from `public`, then applies all tenant migrations. A failed
+  schema creation, structure clone, or migration is compensated.
   """
   @spec create_environment(Site.t(), map(), keyword()) ::
           {:ok, Environment.t()} | {:error, Ecto.Changeset.t() | term()}
@@ -37,6 +39,7 @@ defmodule Brando.Environments do
     with {:ok, environment} <- Registry.create_environment(site, attrs),
          prefix = Tenant.prefix(site, environment),
          :ok <- create_schema_or_compensate(environment, prefix),
+         :ok <- clone_structure_or_compensate(environment, prefix, opts),
          {:ok, _versions} <- migrate_or_compensate(site, environment, prefix) do
       log_operation!(site.id, :create,
         target_environment_id: environment.id,
@@ -45,8 +48,22 @@ defmodule Brando.Environments do
       )
 
       Cache.invalidate()
+      announce(site.id)
       {:ok, environment}
     end
+  end
+
+  @doc """
+  PubSub topic carrying environment lifecycle changes for one site.
+
+  Scheduled copies and live switches run in Oban workers, so a browser sitting
+  on the environments screen has no other way to learn that state moved.
+  """
+  @spec topic(pos_integer()) :: String.t()
+  def topic(site_id), do: "brando:environments:#{site_id}"
+
+  defp announce(site_id) do
+    Phoenix.PubSub.broadcast(Brando.pubsub(), topic(site_id), {:environments_updated, site_id})
   end
 
   @doc "Runs tenant migrations on one environment schema."
@@ -114,6 +131,7 @@ defmodule Brando.Environments do
     case with_site_lock(site, fn -> set_current_environment_live(site, environment, opts) end) do
       {:ok, _live_environment} = result ->
         Cache.invalidate()
+        announce(site.id)
         result
 
       {:error, _reason} = error ->
@@ -148,6 +166,47 @@ defmodule Brando.Environments do
     end
   end
 
+  @doc """
+  Lists a site's most recent lifecycle operations, newest first.
+
+  The log is the only place a `note` is ever recorded, so this is what makes
+  those notes readable outside the database.
+  """
+  @spec list_operation_logs(Site.t(), pos_integer()) :: [OperationLog.t()]
+  def list_operation_logs(%Site{} = site, limit \\ 10) do
+    from(log in OperationLog,
+      where: log.site_id == ^site.id,
+      order_by: [desc: log.inserted_at, desc: log.id],
+      limit: ^limit
+    )
+    |> Repo.all(@public_opts)
+    |> Repo.preload([:source_environment, :target_environment, :creator], @public_opts)
+    |> preload_creator_avatars()
+  end
+
+  # `User` is pinned to `public`, and Ecto preloads an association using the
+  # parent struct's prefix — so `creator: :avatar` looks for the image in
+  # `public.images`, where tenant-scoped images do not exist. The avatar
+  # therefore has to be preloaded against the active tenant prefix explicitly.
+  # Listings are unaffected because their parent entries are tenant-scoped.
+  defp preload_creator_avatars(records) do
+    case Tenant.current_prefix() do
+      nil -> Repo.preload(records, creator: :avatar)
+      prefix -> Repo.preload(records, [creator: :avatar], prefix: prefix)
+    end
+  rescue
+    # An environment schema without an `images` table — mid-provision, or one
+    # that never got structure — must not take an audit view down over a
+    # decorative avatar. Drop to no avatar rather than leaving it unloaded,
+    # which would fail in the template instead.
+    _exception -> Enum.map(records, &drop_avatar/1)
+  end
+
+  defp drop_avatar(%{creator: %Brando.Users.User{} = creator} = record),
+    do: %{record | creator: %{creator | avatar: nil}}
+
+  defp drop_avatar(record), do: record
+
   @doc "Lists existing archive schemas for a site, newest first."
   @spec list_archives(Site.t()) :: [map()]
   def list_archives(%Site{} = site) do
@@ -159,6 +218,8 @@ defmodule Brando.Environments do
         order_by: [desc: log.inserted_at, desc: log.id]
       )
       |> Repo.all(@public_opts)
+      |> Repo.preload([:creator], @public_opts)
+      |> preload_creator_avatars()
       |> Enum.reduce(%{}, fn log, logs -> Map.put_new(logs, log.archive_schema, log) end)
 
     pattern = "tenant_#{site.key}\\_%\\_archive\\_%"
@@ -183,7 +244,9 @@ defmodule Brando.Environments do
         schema: schema,
         operation: log && log.operation,
         operation_log_id: log && log.id,
-        created_at: log && log.inserted_at
+        created_at: log && log.inserted_at,
+        note: log && log.note,
+        creator: log && log.creator
       }
     end)
     |> Enum.sort_by(&archive_sort_key/1, :desc)
@@ -215,17 +278,37 @@ defmodule Brando.Environments do
     end
   end
 
-  @doc "Restores the newest archive as a new, non-live environment."
+  @doc """
+  Restores an archive as a new, non-live environment.
+
+  Defaults to the newest archive. Pass `:archive_schema` to restore a specific
+  one; it is resolved against this site's own archives, so a schema belonging to
+  another site is rejected rather than restored.
+  """
   @spec rollback(Site.t(), keyword()) :: {:ok, Environment.t()} | {:error, term()}
   def rollback(site, opts \\ [])
 
   def rollback(%Site{} = site, opts) do
     with_site_lock(site, fn ->
-      case List.first(list_archives(site)) do
-        nil -> {:error, :no_archives}
-        archive -> restore_archive(site, archive, opts)
+      case archive_to_restore(site, opts[:archive_schema]) do
+        {:ok, archive} -> restore_archive(site, archive, opts)
+        {:error, _reason} = error -> error
       end
     end)
+  end
+
+  defp archive_to_restore(site, nil) do
+    case List.first(list_archives(site)) do
+      nil -> {:error, :no_archives}
+      archive -> {:ok, archive}
+    end
+  end
+
+  defp archive_to_restore(site, archive_schema) when is_binary(archive_schema) do
+    case Enum.find(list_archives(site), &(&1.schema == archive_schema)) do
+      nil -> {:error, :archive_not_found}
+      archive -> {:ok, archive}
+    end
   end
 
   @doc "Schedules a copy operation through Oban."
@@ -380,6 +463,7 @@ defmodule Brando.Environments do
         )
 
       Cache.invalidate()
+      announce(site.id)
       prune_archives_under_lock(site, opts[:keep_archives] || @default_archive_keep)
 
       {:ok, %{archive_schema: archive_prefix, operation_log: log, target: target}}
@@ -441,6 +525,7 @@ defmodule Brando.Environments do
       )
 
       Cache.invalidate()
+      announce(site.id)
       {:ok, environment}
     end
   end
@@ -568,6 +653,26 @@ defmodule Brando.Environments do
     end
   end
 
+  # Callers that immediately copy another environment over this one would only
+  # throw the cloned structure away, because copying drops the target schema.
+  defp clone_structure_or_compensate(environment, prefix, opts) do
+    if Keyword.get(opts, :clone_structure, true),
+      do: do_clone_structure(environment, prefix),
+      else: :ok
+  end
+
+  defp do_clone_structure(environment, prefix) do
+    case structure_cloner().clone_structure(@public_prefix, prefix) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Schema.drop(prefix)
+        Registry.delete_environment(environment)
+        {:error, {:structure_clone_failed, reason}}
+    end
+  end
+
   defp migrate_or_compensate(site, environment, prefix) do
     case migrator().migrate(site, environment) do
       {:ok, versions} ->
@@ -595,6 +700,10 @@ defmodule Brando.Environments do
 
   defp migrator do
     Brando.config(:tenant_migrator) || Brando.Environments.Migrator
+  end
+
+  defp structure_cloner do
+    Brando.config(:tenant_structure_cloner) || Brando.Environments.StructureCloner.Postgres
   end
 
   defp schema_cloner do

@@ -15,8 +15,17 @@ if Code.ensure_loaded?(Igniter) do
     tenant migration support. It does not infer application-owned tenant
     tables, run migrations, provision sites, or copy production data.
 
+        mix brando.setup.tenancy
         mix brando.setup.tenancy --mode single --site-key my-site
         mix brando.setup.tenancy --mode multi
+
+    Anything not passed as an option is asked for. Pass `--yes` for a
+    non-interactive run, where a missing option is an error instead.
+
+    This task changes source only. It never touches the database, because the
+    configuration it writes has to be compiled and the public migrations applied
+    before a site can be provisioned. Converting existing content is therefore a
+    separate step, `mix brando.migrate_to_tenant`, run afterwards.
 
     Review the Igniter diff before applying it. Then follow the ordered tenant
     migration and provisioning workflow printed by the task.
@@ -32,8 +41,7 @@ if Code.ensure_loaded?(Igniter) do
       %Igniter.Mix.Task.Info{
         group: :brando,
         example: "mix brando.setup.tenancy --mode single --site-key my-site",
-        schema: [mode: :string, site_key: :string],
-        required: [:mode]
+        schema: [mode: :string, site_key: :string]
       }
     end
 
@@ -53,30 +61,104 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp tenancy_options(options) do
-      mode = options[:mode]
-      site_key = options[:site_key]
-
-      case {mode, site_key} do
-        {"single", site_key} when is_binary(site_key) ->
-          if Brando.Tenant.valid_key?(site_key) do
-            {:ok, :single, site_key}
-          else
-            {:error, "--site-key must be a lowercase, URL-safe key such as my-site"}
-          end
-
-        {"single", nil} ->
-          {:error, "--site-key is required with --mode single"}
-
-        {"multi", nil} ->
-          {:ok, :multi, nil}
-
-        {"multi", _site_key} ->
-          {:error, "--site-key can only be used with --mode single"}
-
-        {mode, _site_key} ->
-          {:error, "invalid --mode #{inspect(mode)}; expected single or multi"}
+      with {:ok, mode} <- resolve_mode(options),
+           {:ok, site_key} <- resolve_site_key(mode, options) do
+        {:ok, mode, site_key}
       end
     end
+
+    defp resolve_mode(options) do
+      case options[:mode] do
+        nil -> ask_mode(options)
+        "single" -> {:ok, :single}
+        "multi" -> {:ok, :multi}
+        mode -> {:error, "invalid --mode #{inspect(mode)}; expected single or multi"}
+      end
+    end
+
+    defp ask_mode(options) do
+      if interactive?(options) do
+        Mix.shell().info("""
+
+        Tenancy mode:
+
+          single  one site with named environments (Production, Staging, ...)
+          multi   many isolated sites, each with its own environments
+        """)
+
+        case ask("Which tenancy mode? [single/multi] (single) \u276f ") do
+          :eof -> {:error, "--mode is required; expected single or multi"}
+          mode when mode in ["", "single"] -> {:ok, :single}
+          "multi" -> {:ok, :multi}
+          other -> retry_mode(options, other)
+        end
+      else
+        {:error, "--mode is required; expected single or multi"}
+      end
+    end
+
+    defp retry_mode(options, answer) do
+      Mix.shell().info("Expected single or multi. Got: #{answer}")
+      ask_mode(options)
+    end
+
+    defp resolve_site_key(:multi, options) do
+      if options[:site_key] do
+        {:error, "--site-key can only be used with --mode single"}
+      else
+        {:ok, nil}
+      end
+    end
+
+    defp resolve_site_key(:single, options) do
+      case options[:site_key] do
+        nil -> ask_site_key(options)
+        site_key -> validate_site_key(site_key)
+      end
+    end
+
+    defp ask_site_key(options) do
+      if interactive?(options) do
+        case ask("Site key for the existing installation (lowercase, URL-safe) \u276f ") do
+          :eof -> {:error, "--site-key is required with --mode single"}
+          answer -> confirm_site_key(options, answer)
+        end
+      else
+        {:error, "--site-key is required with --mode single"}
+      end
+    end
+
+    defp confirm_site_key(options, answer) do
+      case validate_site_key(answer) do
+        {:ok, site_key} ->
+          {:ok, site_key}
+
+        {:error, message} ->
+          Mix.shell().info(message)
+          ask_site_key(options)
+      end
+    end
+
+    # Returns `:eof` rather than looping, so a piped or CI run without `--yes`
+    # fails with the missing option instead of spinning on an unanswerable prompt.
+    defp ask(prompt) do
+      case Mix.shell().prompt(prompt) do
+        :eof -> :eof
+        answer -> String.trim(answer)
+      end
+    end
+
+    defp validate_site_key(site_key) do
+      if Brando.Tenant.valid_key?(site_key) do
+        {:ok, site_key}
+      else
+        {:error, "Site key must be a lowercase, URL-safe key such as my-site"}
+      end
+    end
+
+    # `--yes` means the caller wants no questions asked, so missing options
+    # become errors rather than a prompt that would block a script.
+    defp interactive?(options), do: !options[:yes]
 
     defp configure_tenancy(igniter, mode, site_key) do
       igniter =
@@ -227,32 +309,79 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp add_instructions(igniter, mode, site_key) do
-      site_option = if mode == :single, do: " --site-key=#{site_key}", else: " --site-key=my-site"
+      key = if mode == :single, do: site_key, else: "my-site"
 
       Igniter.add_notice(igniter, """
       Brando tenancy source setup prepared for `#{mode}` mode.
 
       Igniter configured `config/brando.exs`, updated recognized browser
-      pipelines, and installed Brando's tenant migration support. It did not
-      infer application-owned tenant tables or change any database.
+      pipelines, and installed Brando's tenant migration support. No database
+      was touched.
 
       Continue in this order:
 
-        1. Review the complete Igniter diff, then run `mix format` and
-           `mix compile --warnings-as-errors`.
-        2. Run `mix brando.upgrade`, review its public registry migrations,
-           and apply the public migrations.
-        3. Create and review tenant migrations for every application content
-           table with `mix brando.gen.tenant_migration migration_name`.
-        4. Run tenant migrations against a disposable environment and verify
-           that every tenant-scoped query has a table.
-        5. Back up the database and media, then provision a new site or run
-           `mix brando.migrate_to_tenant#{site_option}` in a maintenance window.
-        6. Verify routing, authorization, media, assets, environment copy, and
+        1. Review the Igniter diff, then run `mix format` and
+           `mix compile --warnings-as-errors`. Recompiling matters: the tenancy
+           mode is read from compiled config, so every later step needs it.
+
+        2. Run `mix brando.upgrade`, review the generated public migrations,
+           then apply them with `mix brando.migrate`. This is what gives
+           `public` the content tables that each new environment is cloned
+           from.
+
+        3. Declare any cross-site tables of your own. Everything else in
+           `public` is treated as tenant content, so an undeclared table is
+           cloned into every environment and its rows copied with the content:
+
+               config :brando, :shared_tables, ["my_table"]
+
+           Brando cannot handle a table name containing a double quote. Check
+           for them, and rename anything that turns up:
+
+               SELECT tablename FROM pg_tables
+               WHERE schemaname = 'public' AND tablename LIKE '%"%';
+
+        4. Make sure `pg_dump` and `psql` are available here and in your
+           release image. Provisioning shells out to them to clone structure,
+           so an environment without them cannot create a site.
+
+        5. Provision a disposable site from `/admin/sites`, or with
+           `Brando.Tenant.Setup.create_site/3`, and verify that every
+           tenant-scoped query resolves.
+
+        6. Back up the database and media, then convert in a maintenance
+           window:
+
+               mix brando.migrate_to_tenant --site-key=#{key}
+
+           Add `--move` to relocate the tables instead of copying them. That
+           is constant-time whatever the database weighs, but it leaves no
+           legacy rows in `public` to roll back to.
+
+        7. Verify routing, authorization, media, assets, environment copy, and
            rollback before directing production traffic to tenant schemas.
+
+      Content tables need no tenant migrations. `priv/repo/tenant_migrations`
+      is only for changes that must reach environments that already exist.
 
       See `guides/tenancy_and_environments.md` for the complete workflow.
       """)
     end
+  end
+else
+  defmodule Mix.Tasks.Brando.Setup.Tenancy do
+    use Mix.Task
+
+    @shortdoc "Prepares an existing Brando application for tenancy (requires igniter)"
+    @moduledoc """
+    #{@shortdoc}.
+
+    This task is built on Igniter, an optional Brando dependency. Add it to your
+    application's deps, run `mix deps.get`, then recompile Brando with
+    `mix deps.compile brando --force` to enable the task.
+    """
+
+    @impl Mix.Task
+    def run(_argv), do: Mix.Brando.missing_igniter!("brando.setup.tenancy")
   end
 end

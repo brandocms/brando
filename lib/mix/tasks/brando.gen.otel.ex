@@ -149,4 +149,20 @@ if Code.ensure_loaded?(Igniter) do
       end)
     end
   end
+else
+  defmodule Mix.Tasks.Brando.Gen.Otel do
+    use Mix.Task
+
+    @shortdoc "Generates otel/honeycomb setup (requires igniter)"
+    @moduledoc """
+    #{@shortdoc}.
+
+    This task is built on Igniter, an optional Brando dependency. Add it to your
+    application's deps, run `mix deps.get`, then recompile Brando with
+    `mix deps.compile brando --force` to enable the task.
+    """
+
+    @impl Mix.Task
+    def run(_argv), do: Mix.Brando.missing_igniter!("brando.gen.otel")
+  end
 end

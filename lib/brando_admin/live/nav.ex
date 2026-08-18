@@ -59,6 +59,9 @@ defmodule BrandoAdmin.Nav do
     socket
   end
 
+  defp environment_state(%{live: true}), do: gettext("live")
+  defp environment_state(_environment), do: gettext("working")
+
   defp assign_tenant_options(socket) do
     sites = tenant_sites(socket.assigns[:current_user], socket.assigns[:current_site])
 
@@ -135,44 +138,55 @@ defmodule BrandoAdmin.Nav do
                 <% end %>
               </div>
             </header>
-            <form
+            <details
               :if={@current_site && @current_environment}
-              action="/admin/environment"
-              method="post"
-              class="tenant-switcher"
+              class={["tenant-switcher", !@current_environment.live && "working"]}
             >
-              <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
-              <input type="hidden" name="return_to" value={@current_url || "/admin"} />
-              <label :if={@tenant_mode == :multi}>
-                <span>{gettext("Site")}</span>
-                <select name="site_key">
-                  <option
-                    :for={site <- @tenant_sites}
-                    value={site.key}
-                    selected={site.id == @current_site.id}
-                  >
-                    {site.name}
-                  </option>
-                </select>
-              </label>
-              <input :if={@tenant_mode == :single} type="hidden" name="site_key" value={@current_site.key} />
-              <label>
-                <span>{gettext("Environment")}</span>
-                <select name="environment_key">
-                  <option
+              <summary>
+                <span class="tenant-switcher__label">{gettext("Environment")}</span>
+                <span class="tenant-switcher__current">
+                  {@current_environment.name}<span class="tenant-switcher__state">{environment_state(@current_environment)}</span>
+                </span>
+                <.icon name="hero-chevron-down" />
+              </summary>
+
+              <div class="tenant-switcher__sheet">
+                <form action="/admin/environment" method="post">
+                  <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+                  <input type="hidden" name="return_to" value={@current_url || "/admin"} />
+                  <input type="hidden" name="site_key" value={@current_site.key} />
+
+                  <span class="tenant-switcher__heading">{gettext("Environment")}</span>
+                  <button
                     :for={environment <- @tenant_environments}
+                    type="submit"
+                    name="environment_key"
                     value={environment.key}
-                    selected={environment.id == @current_environment.id}
+                    class={["tenant-switcher__option", environment.id == @current_environment.id && "current"]}
                   >
-                    {environment.name}{if environment.live, do: " • live", else: ""}
-                  </option>
-                </select>
-              </label>
-              <button type="submit">{gettext("Switch")}</button>
-              <div :if={!@current_environment.live} class="non-live-environment">
-                {gettext("Working in a non-live environment")}
+                    <span class="tenant-switcher__option-name">{environment.name}</span>
+                    <span class="tenant-switcher__state">{environment_state(environment)}</span>
+                  </button>
+                </form>
+
+                <form :if={@tenant_mode == :multi} action="/admin/environment" method="post">
+                  <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+                  <input type="hidden" name="return_to" value={@current_url || "/admin"} />
+
+                  <span class="tenant-switcher__heading">{gettext("Site")}</span>
+                  <%!-- No environment_key: the controller falls back to the site's live environment. --%>
+                  <button
+                    :for={site <- @tenant_sites}
+                    type="submit"
+                    name="site_key"
+                    value={site.key}
+                    class={["tenant-switcher__option", site.id == @current_site.id && "current"]}
+                  >
+                    <span class="tenant-switcher__option-name">{site.name}</span>
+                  </button>
+                </form>
               </div>
-            </form>
+            </details>
             <div :if={@current_user} id="current-user" class="current-user" tabindex="0" data-testid="current-user">
               <section class="button">
                 <section class="avatar-wrapper">

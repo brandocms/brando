@@ -153,15 +153,40 @@ before serving requests in an enabled tenancy mode.
 ## Optionally enable tenancy for an existing installation
 
 Existing applications can apply the deterministic source changes with the
-opt-in Igniter task:
+opt-in Igniter task. Igniter is an optional Brando dependency, so add it to the
+application's own deps first:
+
+```elixir
+# mix.exs
+{:igniter, "~> 0.8", only: [:dev, :test]},
+```
 
 ```bash
+mix deps.get
+mix deps.compile brando --force
+```
+
+The forced recompile matters: Brando only defines its Igniter-backed tasks if
+`igniter` is loadable when Brando itself compiles, so a stale Brando build keeps
+reporting `The task "brando.setup.tenancy" could not be found`. Then run:
+
+```bash
+# Asks for anything you do not pass
+mix brando.setup.tenancy
+
 # One site with named environments
 mix brando.setup.tenancy --mode single --site-key my-site
 
 # Multiple isolated sites
 mix brando.setup.tenancy --mode multi
 ```
+
+Pass `--yes` for a non-interactive run, where a missing option is an error
+rather than a prompt. Igniter also sets that automatically when there is no
+TTY, so piped and CI runs never block on a question.
+
+The task prints an ordered next-steps notice when it finishes, naming the exact
+commands for each remaining step.
 
 The task updates `config/brando.exs`, adds `Brando.Plug.Tenant` to recognized
 `:browser` and `:browser_api` pipelines before Brando content-loading plugs,
@@ -173,10 +198,10 @@ Do not run this task merely to upgrade a classic single-site project. Leave
 `tenancy_mode` as `:none` if named environments and site isolation are not
 needed.
 
-Review the complete Igniter diff before applying it. The task deliberately does
-not infer application content tables, run database migrations, provision sites,
-or copy production data. Create and review the application-owned migrations in
-the next section before running the separate data conversion task.
+Review the complete Igniter diff before applying it. The task changes source
+only: it never runs database migrations, provisions sites, or copies production
+data. Apply the public migrations and read the next section before running the
+separate data conversion task.
 
 ## Tenant migrations
 
@@ -187,24 +212,91 @@ priv/repo/migrations/          # public registry and shared records
 priv/repo/tenant_migrations/   # content repeated in every environment schema
 ```
 
-Create application-owned tenant migrations with:
+### Structure comes from `public`, not from tenant migrations
+
+Ordinary migrations create the application's content tables in `public` in every
+tenancy mode, so `public` is the canonical structural template. Provisioning
+clones it: creating an environment runs `CREATE SCHEMA`, copies the structure of
+every tenant table out of `public` without its data, and only then runs tenant
+migrations.
+
+Applications therefore do **not** restate their content schema as tenant
+migrations. Neither does Brando. Adding `create table` migrations to
+`priv/repo/tenant_migrations` would fork one schema definition into two places
+that must then be kept in step by hand.
+
+> #### Table names may not contain a double quote {: .warning}
+>
+> Mixed-case, hyphenated, dotted, non-ASCII, and wildcard-looking table names are
+> all cloned and migrated correctly. A name containing `"` is refused, because it
+> cannot be expressed unambiguously in a `pg_dump` object pattern. Provisioning
+> then fails with `{:structure_clone_failed, {:unsafe_source_table_name, names}}`
+> and conversion with `{:unsafe_public_table_name, names}`, listing the offenders.
+>
+> The operation aborts rather than skipping the table, because silently omitting
+> one would leave an environment missing part of its schema. To find any:
+>
+> ```sql
+> SELECT tablename FROM pg_tables
+> WHERE schemaname = 'public' AND tablename LIKE '%"%';
+> ```
+>
+> Rename anything that turns up, or add it to `:shared_tables` if it is genuinely
+> a cross-site table that should stay in `public`.
+
+Tenant migrations exist to *evolve* environments that already exist. Write them
+for column additions, index changes, and backfills, and generate them with:
 
 ```bash
-mix brando.gen.tenant_migration create_content_tables
+mix brando.gen.tenant_migration add_summary_to_pages
 ```
 
 For an umbrella or custom repository layout:
 
 ```bash
-mix brando.gen.tenant_migration create_content_tables \
+mix brando.gen.tenant_migration add_summary_to_pages \
   --migrations-path apps/my_app/priv/repo/tenant_migrations
 ```
 
-Tenant migrations should create every table accessed after tenant context is
-set. Do not duplicate shared registry and authentication tables such as
-`sites`, `environments`, `users`, `users_tokens`, or
-`environment_operation_logs`; their schemas are permanently pinned to
-`public`.
+Make them idempotent. They run against freshly cloned structure as well as
+against long-lived environments, so guard them the way Brando's own tenant
+migration does, with `ADD COLUMN IF NOT EXISTS` and `to_regclass` checks. Note
+also that `execute/1` does not receive the migration prefix the way
+`create table/2` does — read `prefix()` and interpolate it yourself.
+
+### Which tables are shared
+
+`Brando.Tenant.SharedTables` is the single source of truth. Registry,
+authentication, session, and migration-history tables stay in `public`
+permanently, along with every `oban_*` table, since Oban is configured against
+`public`:
+
+```text
+environments  environment_operation_logs  schema_migrations
+site_asset_sets  ssg_builds  sites  sites_previews
+uploads_pending_intents  user_sites  user_tokens  users  users_tokens
+oban_*
+```
+
+Everything else in `public` is treated as tenant content, so an application with
+its own cross-site tables must say so, or they will be cloned into every
+environment and their rows copied with the content:
+
+```elixir
+config :brando, :shared_tables, ["billing_accounts", "feature_flags"]
+```
+
+Foreign keys from tenant tables
+to shared tables keep their `public` qualifier through cloning, so a
+`creator_id` in a tenant schema still resolves to `public.users`. When a
+hand-written tenant migration adds such a reference, spell that out:
+
+```elixir
+add :creator_id, references(:users, prefix: "public", on_delete: :nilify_all)
+```
+
+A bare `references(:users)` inside a prefixed migration resolves to
+`tenant_{site}_{environment}.users`, which does not exist.
 
 Run public migrations first because tenant discovery reads the public registry:
 
@@ -233,8 +325,8 @@ the new columns.
 
 ## Provision sites and initial environments
 
-Once tenant migrations exist, provision a complete site from the superuser
-screen at `/admin/sites`, or call the same compensated API from setup tooling:
+Provision a complete site from the superuser screen at `/admin/sites`, or call
+the same compensated API from setup tooling:
 
 ```elixir
 {:ok, site} =
@@ -474,6 +566,23 @@ inside `media/{site_key}`. The database continues storing relative paths such
 as `images/hero.jpg`, so the same URL can safely resolve to different bytes on
 different site domains.
 
+> #### Deleting an asset must not delete its bytes {: .warning}
+>
+> Because media is shared, copying an environment duplicates image, file, and
+> video rows while leaving one copy of each file on disk. Two environments
+> routinely hold different rows pointing at the same `path`.
+>
+> Brando therefore soft-deletes asset rows and never removes media bytes:
+> `Brando.Images.delete_images/1` marks `deleted_at`, and
+> `Brando.Images.Utils.delete_original_and_sized_images/1` has no callers. The
+> upload reapers only clear abandoned direct-upload objects that never became
+> assets.
+>
+> The consequence is that deleted assets leave their files behind, and media
+> grows monotonically. Prune it with a job that first confirms no row in **any**
+> of the site's environment schemas still references the path — deleting on the
+> strength of one environment's rows alone would break the others.
+
 Local orphan cleanup unions image and file records from **every** environment
 schema before deleting a byte:
 
@@ -708,8 +817,7 @@ First prepare the application's source and review the Igniter diff:
 mix brando.setup.tenancy --mode single --site-key my-site
 ```
 
-After writing and applying tenant migrations, copy the existing public-schema
-site with:
+Then convert the existing public-schema site with:
 
 ```bash
 mix brando.migrate_to_tenant --site-key=my-site
@@ -718,11 +826,10 @@ mix brando.migrate_to_tenant --site-key=my-site
 Use `--name` to override the generated display name and `--creator-email` when
 the first active superuser should not own the new site. The task:
 
-1. provisions a migrated, empty Production schema without default seeding;
-2. discovers tables present in both `public` and the migrated tenant schema;
-3. excludes users, sessions, sites, environments, assignments, Oban jobs,
-   operation logs, asset metadata, transient previews/uploads, and migration
-   history;
+1. provisions a Production schema without default seeding, cloning its structure
+   from `public`;
+2. discovers tables present in both `public` and the provisioned tenant schema;
+3. excludes everything in `Brando.Tenant.SharedTables`;
 4. copies only matching table data with `pg_dump` and `psql`;
 5. copies classic local media into `media/{site_key}` without deleting the
    legacy media tree;
@@ -734,6 +841,42 @@ storage boundary. Provisioning also refuses to reuse an existing
 `media/{site_key}` or `sites/{site_key}` directory; a failed setup never removes
 storage it did not create. Keep the original public data and legacy media until
 the migrated site has been verified and the rollback window has closed.
+
+### Moving instead of copying
+
+Copying leaves the original rows in `public`, which is the rollback window the
+paragraph above depends on. Large installations can relocate the tables instead:
+
+```bash
+mix brando.migrate_to_tenant --site-key=my-site --move
+```
+
+`ALTER TABLE ... SET SCHEMA` is a catalog operation, so no table data is
+rewritten and the conversion takes the same time whatever the database weighs.
+Indexes, constraints, and column-owned sequences travel with their table, so
+foreign keys keep resolving to `public.users` and sequences arrive at their
+current position rather than needing a reset.
+
+Brando builds an empty template from `public` first, then drops the target's
+cloned tables, moves the populated tables in, and moves the template tables back
+into `public` — all in one transaction, so a failure leaves both schemas as they
+were. `public` is left with the same tables, empty, still serving as the
+structural template for the next site or environment.
+
+`--move` also sidesteps circular foreign keys. A Brando schema has several —
+`pages` and `media_folders` reference themselves, and `images` and `users`
+reference each other — so `pg_dump --data-only` warns that the copy may not
+restore. In practice the `images`/`users` cycle is harmless, because `users`
+stays in `public` and is never copied, but a self-referential table can still
+fail if a child row is copied before its parent. Moving performs no data
+restore at all, so the question does not arise.
+
+Two trades come with it. There is no rollback window, because no legacy rows are
+left in `public` — take a restorable external backup first. And the tables that
+arrive from `public` are never re-migrated, so `public` must already carry every
+structural change; a change that exists only in tenant schemas would be lost.
+That follows from `public` being the structural template, but it is worth
+checking before a production cutover.
 
 Run the conversion in a maintenance window after draining tenant-owned Oban
 work such as publishing, rendering, image processing, and CDN uploads. Jobs
@@ -768,8 +911,10 @@ Before enabling `:single` or `:multi`:
 1. Keep a restorable external database backup.
 2. Run `mix brando.setup.tenancy` for an existing application and review its
    source diff.
-3. Apply public migrations.
-4. Provide tenant migrations for every tenant content table.
+3. Apply public migrations, which is what gives `public` the content tables
+   provisioning clones from.
+4. Provide tenant migrations for any change that must reach existing
+   environments. Content tables themselves need none.
 5. Provision the site or run `mix brando.migrate_to_tenant` for existing data.
 6. Verify `pg_dump` and `psql` availability from the release environment.
 7. Run tenant migrations for every environment.
@@ -781,6 +926,18 @@ Before enabling `:single` or `:multi`:
 12. Back up the database, `media/`, `sites/`, and `site_assets/` together.
 
 If a tenant request reports that a relation does not exist, first verify the
-resolved prefix and tenant migration history. The most common cause is a table
-that still exists only in `public` because it was omitted from the application’s
-tenant migrations.
+resolved prefix. Because structure is cloned from `public` at provisioning time,
+the usual cause is that the table did not exist in `public` yet when the
+environment was created — a public migration applied afterwards reaches `public`
+only. Add a tenant migration that creates the table for existing environments,
+or recreate the environment.
+
+`Brando.Environments.StructureCloner.Postgres.tenant_tables/1` lists what a
+schema is expected to hold, and comparing it against a tenant prefix shows what
+is missing:
+
+```elixir
+{:ok, expected} = Brando.Environments.StructureCloner.Postgres.tenant_tables("public")
+{:ok, actual} = Brando.Environments.StructureCloner.Postgres.tenant_tables("tenant_acme_production")
+expected -- actual
+```

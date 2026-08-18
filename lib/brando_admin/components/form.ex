@@ -1063,9 +1063,14 @@ defmodule BrandoAdmin.Components.Form do
       |> assign(:entry_loading?, true)
       |> assign(:blocks_ready?, false)
       |> assign(:entry_load_status, %{phase: :entry, blocks?: has_blocks?, block_count: nil})
-      |> start_async(:entry_load, fn ->
-        load_entry_with_progress(lv_pid, form_id, schema, form_blueprint, entry_id, singular, context)
-      end)
+      |> start_async(
+        :entry_load,
+        # The tenant prefix lives in the process dictionary, which a fresh async
+        # task does not inherit — without this the query runs against `public`.
+        Brando.Tenant.capture_context(fn ->
+          load_entry_with_progress(lv_pid, form_id, schema, form_blueprint, entry_id, singular, context)
+        end)
+      )
     end
   end
 

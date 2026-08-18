@@ -5,13 +5,50 @@
 
   .environment-notice,
   .environment-panel {
-    border: 1px solid var(--brando-color-dark);
-    border-radius: 12px;
-    padding: 18px;
+    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 18%, transparent);
+    border-radius: 16px;
+    background: var(--brando-color-white);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--brando-color-dark) 5%, transparent);
+    padding: 26px;
+  }
+
+  .environment-notice {
+    @font mono;
+    font-size: 12px;
+    line-height: 1.5;
   }
 
   .environment-notice.warning {
+    border-color: color-mix(in srgb, var(--brando-color-dark) 26%, transparent);
     background: var(--brando-color-peach);
+    box-shadow: none;
+  }
+
+  /* The live site and its environments are the subject of the page, so the
+     overview carries the accent bar the way the active asset set does. */
+  .environment-overview {
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 4px;
+      background: var(--brando-color-peach-darker);
+      content: "";
+    }
+  }
+
+  .environment-panel > h2 + form,
+  .environment-panel > h2 + .environment-table-wrap {
+    margin-top: 26px;
+  }
+
+  .environment-panel > p + form,
+  .environment-panel > .environment-hint + form {
+    margin-top: 32px;
   }
 
   .environment-panel > header {
@@ -19,67 +56,180 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 20px;
+
+    button {
+      margin: 0;
+    }
+  }
+
+  h2,
+  h3 {
+    margin: 0;
+  }
+
+  .environment-eyebrow {
+    @font mono;
+    display: block;
+    margin-bottom: 6px;
+    color: color-mix(in srgb, var(--brando-color-dark) 62%, transparent);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+    text-transform: uppercase;
   }
 
   h2 {
-    margin: 0 0 6px;
+    margin-bottom: 14px;
+    font-size: clamp(19px, 1.6vw, 23px);
+    line-height: 1.1;
   }
 
-  p {
-    margin: 0 0 18px;
-    opacity: 0.72;
+  .environment-overview h2 {
+    font-size: clamp(24px, 3vw, 34px);
+    line-height: 1.05;
+  }
+
+  .environment-overview > header p {
+    margin-bottom: 0;
+  }
+
+  /* A global `p:last-of-type { margin-bottom: 0 !important }` wins over any
+     bottom margin here, so the gap is owned by whatever follows the text. */
+  .environment-panel > p {
+    max-width: 62ch;
+    margin: 0;
+    color: color-mix(in srgb, var(--brando-color-dark) 55%, transparent);
+    font-size: 13px;
+    line-height: 1.55;
   }
 
   .environment-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px;
+    gap: 24px;
   }
 
   form,
   label {
     display: grid;
-    gap: 6px;
+    gap: 9px;
   }
 
   form {
-    gap: 14px;
+    gap: 22px;
   }
 
   label > span {
     @font mono;
-    font-size: 11px;
+    color: color-mix(in srgb, var(--brando-color-dark) 62%, transparent);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 
   input,
   select {
     width: 100%;
-    min-height: 42px;
-    padding: 8px 10px;
-    border: 1px solid var(--brando-color-dark);
-    border-radius: 6px;
-    background: transparent;
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 13px;
+    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 22%, transparent);
+    border-radius: 10px;
+    background: var(--brando-color-input);
     color: inherit;
+    transition: border-color 150ms ease;
+
+    &:focus {
+      border-color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+      outline: none;
+    }
+  }
+
+  /* The native chevron ignores the field padding and crowds the edge. */
+  select {
+    appearance: none;
+    padding-right: 36px;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%23052752' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 11px;
+  }
+
+  /* Submits sit at the end of their form rather than filling it, so four
+     panels no longer read as four competing calls to action. */
+  form > button[type="submit"] {
+    justify-self: start;
+    min-height: 34px;
+    margin-top: 10px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 999px;
+    background: var(--brando-color-dark);
+    color: var(--brando-color-peach);
+    font-size: 12px;
+    transition: background-color 150ms ease;
+
+    &:hover:not([disabled]) {
+      background: color-mix(in srgb, var(--brando-color-dark) 85%, var(--brando-color-blue));
+    }
   }
 
   button[disabled] {
     cursor: not-allowed;
-    opacity: 0.45;
+    opacity: 0.4;
   }
 
   .environment-pair {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: end;
-    gap: 10px;
+    gap: 12px;
   }
 
+  /* Matching the select's height and centring inside it lines the glyph up
+     with the field, rather than padding-bottom nudging the box while leaving
+     the arrow itself sitting high. */
   .environment-arrow {
-    padding-bottom: 12px;
+    display: grid;
+    place-items: center;
+    align-self: end;
+    height: 40px;
+    padding: 0;
+    color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+  }
+
+  .environment-hint {
+    /* Softer and tighter than the default .alert, which is sized in vw for
+       full-width form contexts. It also sets mono, which reads as technical
+       output rather than guidance at this size. */
+    @font main;
+    align-items: flex-start;
+    margin: 0;
+    padding: 13px 15px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--brando-color-blue) 6%, var(--brando-color-white));
+    color: color-mix(in srgb, var(--brando-color-dark) 72%, transparent);
+    font-size: 13px;
+    line-height: 1.5;
+    gap: 10px;
+
+    [data-icon] {
+      flex-shrink: 0;
+      width: 17px;
+      height: 17px;
+      margin-top: 1px;
+      background-color: color-mix(in srgb, var(--brando-color-blue) 62%, var(--brando-color-dark));
+    }
+
+    span {
+      max-width: 62ch;
+    }
   }
 
   .environment-table-wrap {
+    margin-top: 26px;
     overflow-x: auto;
   }
 
@@ -88,56 +238,325 @@
     border-collapse: collapse;
   }
 
-  th,
+  /* The overview lists environments, whose names are short and whose remaining
+     columns are narrow, so fixed proportions keep it from sprawling. Other
+     tables size to their own content instead. */
+  .environment-overview table {
+    table-layout: fixed;
+  }
+
+  .environment-overview th:nth-child(1),
+  .environment-overview td:nth-child(1) {
+    width: 46%;
+  }
+
+  .environment-overview th:nth-child(2),
+  .environment-overview td:nth-child(2),
+  .environment-overview th:nth-child(3),
+  .environment-overview td:nth-child(3) {
+    width: 16%;
+  }
+
+  .environment-overview th:nth-child(4),
+  .environment-overview td:nth-child(4) {
+    width: 22%;
+  }
+
+  th.environment-actions,
+  td.environment-actions {
+    text-align: right;
+  }
+
+  /* Operation tables carry a description, a timestamp, a state and an action.
+     Fixed proportions keep each header sitting directly above its value
+     instead of auto layout pushing the data into the right half. */
+  .environment-panel:not(.environment-overview) table {
+    table-layout: fixed;
+  }
+
+  .environment-panel:not(.environment-overview) th:nth-child(1),
+  .environment-panel:not(.environment-overview) td:nth-child(1) {
+    width: 42%;
+  }
+
+  .environment-log th:nth-child(1),
+  .environment-log td:nth-child(1) {
+    width: 16%;
+  }
+
+  .environment-log th:nth-child(2),
+  .environment-log td:nth-child(2) {
+    width: 18%;
+  }
+
+  .environment-log th:nth-child(3),
+  .environment-log td:nth-child(3) {
+    width: 38%;
+  }
+
+  .environment-log th:nth-child(4),
+  .environment-log td:nth-child(4) {
+    width: 28%;
+  }
+
+  /* Avatar rows need more height than a text row. */
+  .environment-log td {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .environment-log .item-meta .avatar,
+  .environment-log .item-meta .avatar img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .environment-log .item-meta .name {
+    font-size: 13px;
+  }
+
+  .environment-log .item-meta .time {
+    @font mono;
+    color: color-mix(in srgb, var(--brando-color-dark) 55%, transparent);
+    font-size: 11px;
+  }
+
+  .environment-panel:not(.environment-overview) th:nth-child(2),
+  .environment-panel:not(.environment-overview) td:nth-child(2) {
+    width: 24%;
+  }
+
+  .environment-panel:not(.environment-overview) th:nth-child(3),
+  .environment-panel:not(.environment-overview) td:nth-child(3) {
+    width: 16%;
+  }
+
+  .environment-panel:not(.environment-overview) th:nth-child(4),
+  .environment-panel:not(.environment-overview) td:nth-child(4) {
+    width: 18%;
+  }
+
+  /* Timestamps and states are data, not prose. */
+  .environment-panel:not(.environment-overview) td:nth-child(2) {
+    @font mono;
+    color: color-mix(in srgb, var(--brando-color-dark) 72%, transparent);
+    font-size: 12px;
+  }
+
+  th {
+    @font mono;
+    padding: 0 10px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--brando-color-dark) 18%, transparent);
+    color: color-mix(in srgb, var(--brando-color-dark) 62%, transparent);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
   td {
-    padding: 12px 10px;
-    border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+    padding: 14px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--brando-color-dark) 10%, transparent);
     text-align: left;
     vertical-align: middle;
   }
 
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* The schema key is an identifier, so it reads as a mono chip instead of
+     inheriting the default code background, which looked like a redaction. */
   td code {
-    display: block;
-    margin-top: 3px;
-    font-size: 11px;
-    opacity: 0.7;
+    @font mono;
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--brando-color-dark) 7%, transparent);
+    color: color-mix(in srgb, var(--brando-color-dark) 70%, transparent);
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  /* The domain reads as plain text until hovered or focused, so the row stays
+     calm while still being obviously editable. */
+  .environment-inline-form input {
+    min-height: 30px;
+    padding: 4px 8px;
+    border-color: transparent;
+    background: transparent;
+    font-size: 13px;
+    transition: border-color 150ms ease, background-color 150ms ease;
+
+    &:hover:not(:disabled) {
+      border-color: color-mix(in srgb, var(--brando-color-dark) 18%, transparent);
+    }
+
+    &:focus {
+      border-color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+      background: var(--brando-color-input);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
+
+    &::placeholder {
+      color: color-mix(in srgb, var(--brando-color-dark) 35%, transparent);
+    }
   }
 
   .environment-state,
   .environment-count {
+    @font mono;
     display: inline-flex;
-    padding: 5px 8px;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
     border-radius: 999px;
-    background: color-mix(in srgb, currentColor 10%, transparent);
-    font-size: 11px;
+    background: color-mix(in srgb, var(--brando-color-dark) 8%, transparent);
+    color: color-mix(in srgb, var(--brando-color-dark) 70%, transparent);
+    font-size: 10px;
+    letter-spacing: 0.06em;
     line-height: 1;
+    text-transform: uppercase;
   }
 
   .environment-state.live {
-    background: color-mix(in srgb, #2bb673 26%, transparent);
+    background: color-mix(in srgb, var(--brando-color-blue) 12%, transparent);
+    color: var(--brando-color-blue);
+
+    &::before {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentcolor;
+      content: "";
+    }
   }
 
-  .environment-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+  /* Kept as a table cell: display:flex on a <td> drops it out of table layout,
+     which detached its bottom border from the rest of the row. */
+  td.environment-actions {
+    display: table-cell;
+    white-space: nowrap;
+
+    button {
+      /* .secondary carries a 15px top margin from the base button styles,
+         .danger does not, which left the two misaligned in a row. */
+      min-height: 32px;
+      margin: 0 0 0 8px;
+      padding: 0 14px;
+      line-height: 1;
+      vertical-align: middle;
+    }
+  }
+
+  /* Destructive actions stay quiet until they are deliberately reached for. */
+  .environment-actions button.danger,
+  .environment-panel button.danger {
+    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 20%, transparent);
+    background: transparent;
+    color: color-mix(in srgb, var(--brando-color-dark) 70%, transparent);
+    transition: border-color 150ms ease, color 150ms ease;
+
+    &:hover:not([disabled]) {
+      border-color: #c0392b;
+      color: #c0392b;
+    }
+  }
+
+  .environment-empty {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    padding: 26px 20px 6px;
+    text-align: center;
+
+    p {
+      margin: 0;
+      color: color-mix(in srgb, var(--brando-color-dark) 55%, transparent);
+    }
+  }
+
+  .environment-empty__icon {
+    display: inline-grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--brando-color-dark) 6%, transparent);
+    color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+
+    [data-icon] {
+      width: 20px;
+      height: 20px;
+      background-color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+    }
   }
 
   .environment-archives {
     display: grid;
     gap: 8px;
-    margin: 16px 0 0;
+    margin: 4px 0 0;
     padding: 0;
     list-style: none;
   }
 
   .environment-archives li {
+    @font mono;
     display: flex;
+    align-items: baseline;
     justify-content: space-between;
     gap: 16px;
-    padding: 9px 10px;
-    border-radius: 6px;
-    background: color-mix(in srgb, currentColor 6%, transparent);
+    padding: 11px 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--brando-color-dark) 5%, transparent);
+    font-size: 11px;
+  }
+
+  .environment-archive__identity {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  /* The note explains why the archive exists, so it reads as prose next to the
+     schema name rather than as more identifier. */
+  .environment-archive__note {
+    @font main;
+    color: color-mix(in srgb, var(--brando-color-dark) 62%, transparent);
+    font-size: 12px;
+  }
+
+  /* Operation names are machine values (`set_live`, `rollback`), like the
+     environment keys beside them. */
+  .environment-log__operation {
+    @font mono;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .environment-archive__meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    button {
+      margin: 0;
+      min-height: 28px;
+      padding: 0 12px;
+      font-size: 11px;
+    }
+  }
+
+  .environment-log__note {
+    @font main;
+    color: color-mix(in srgb, var(--brando-color-dark) 62%, transparent);
+    font-size: 13px;
+    white-space: normal;
   }
 
   @media (max-width: 900px) {

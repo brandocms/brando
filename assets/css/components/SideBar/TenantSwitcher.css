@@ -1,43 +1,149 @@
 .tenant-switcher {
-  display: grid;
-  gap: 8px;
+  /* Explicit reset: a grid display here would insert a gap between the summary
+     and the sheet, which are meant to read as one joined control. */
+  @font mono;
+  display: block;
+  /* It is a control, not copy: clicking the summary would otherwise leave the
+     label and options selected. */
+  user-select: none;
   margin-bottom: 18px;
-  padding: 12px;
-  border: 1px solid var(--brando-color-dark);
-  border-radius: 12px;
+  padding: 0;
+  border: none;
+  font-size: 11px;
 
-  label {
-    display: grid;
-    gap: 4px;
+  summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px;
+    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 22%, transparent);
+    border-radius: 9px;
+    cursor: pointer;
+    list-style: none;
+    transition: border-color 150ms ease;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &:hover {
+      border-color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+    }
   }
 
-  label > span {
-    @font mono;
-    font-size: 10px;
+  .tenant-switcher__label {
+    flex-shrink: 0;
+    color: color-mix(in srgb, var(--brando-color-dark) 50%, transparent);
+    font-size: 9px;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    opacity: 0.7;
   }
 
-  select,
-  button {
+  .tenant-switcher__current {
+    flex-grow: 1;
+    overflow: hidden;
+    color: var(--brando-color-dark);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Renders as "Production · live" without needing the separator in markup. */
+  .tenant-switcher__state {
+    color: color-mix(in srgb, var(--brando-color-dark) 55%, transparent);
+
+    &::before {
+      content: " · ";
+    }
+  }
+
+  summary [data-icon] {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    background-color: color-mix(in srgb, var(--brando-color-dark) 55%, transparent);
+    transition: transform 150ms ease;
+  }
+
+  &[open] summary {
+    border-color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
+  &[open] summary [data-icon] {
+    transform: rotate(180deg);
+  }
+
+  /* A non-live environment is easy to forget, so the trigger itself carries it. */
+  &.working summary {
+    border-color: var(--brando-color-peach-darker);
+    background: var(--brando-color-peach);
+  }
+
+  .tenant-switcher__sheet {
+    display: grid;
+    gap: 3px;
+    padding: 8px;
+    border: 1px solid color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+    border-top: none;
+    border-bottom-right-radius: 9px;
+    border-bottom-left-radius: 9px;
+    background: var(--brando-color-white);
+  }
+
+  .tenant-switcher__heading {
+    padding: 6px 8px 3px;
+    color: color-mix(in srgb, var(--brando-color-dark) 45%, transparent);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  form {
+    display: grid;
+    gap: 3px;
+  }
+
+  form + form {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid color-mix(in srgb, var(--brando-color-dark) 10%, transparent);
+  }
+
+  .tenant-switcher__option {
+    /* Buttons here are content-box by default, so width:100% overflowed the
+       sheet's padding by the horizontal padding. */
+    box-sizing: border-box;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
     width: 100%;
-    min-height: 34px;
-    border: 1px solid var(--brando-color-dark);
+    min-height: 0;
+    margin: 0;
+    padding: 7px 8px;
+    border: none;
     border-radius: 6px;
     background: transparent;
-    color: inherit;
-  }
-
-  button {
-    cursor: pointer;
-    font-weight: 600;
-  }
-
-  .non-live-environment {
-    padding: 7px 8px;
-    border-radius: 6px;
-    background: var(--brando-color-peach);
+    color: var(--brando-color-dark);
     font-size: 11px;
-    line-height: 1.25;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+
+    &:hover {
+      background: color-mix(in srgb, var(--brando-color-dark) 6%, transparent);
+    }
+
+    &.current {
+      background: color-mix(in srgb, var(--brando-color-dark) 9%, transparent);
+      font-weight: 600;
+    }
+  }
+
+  .tenant-switcher__option-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }

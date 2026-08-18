@@ -13,7 +13,21 @@ defmodule Brando.Images.Utils do
   @type user :: Brando.Users.User.t() | :system
 
   @doc """
-  Goes through `image` then passes to `delete_media/2` for removal
+  Goes through `image` then passes to `delete_media/2` for removal.
+
+  > #### Media files are shared across environments {: .warning}
+  >
+  > This function has no callers. Deleting an image soft-deletes the row and
+  > leaves the bytes on disk, which is what keeps environments intact today.
+  >
+  > Every environment of a site resolves to the same media root — `media_path`
+  > in `:single`, `media/{site_key}` in `:multi` — and copying an environment
+  > duplicates image rows while sharing their files. Two environments therefore
+  > routinely hold different rows pointing at one identical `path`.
+  >
+  > So removing bytes for one row breaks every other environment that still
+  > references that path. Before wiring this up, check that no row in any of the
+  > site's environment schemas still points at the same `path`.
 
   ## Example:
 
@@ -55,7 +69,13 @@ defmodule Brando.Images.Utils do
   end
 
   @doc """
-  Deletes `file` after joining it with `media_path`
+  Deletes `file` after joining it with `media_path`.
+
+  Resolves through `Storage.current_media_root/0`, which is shared by every
+  environment of a site. This removes the bytes without consulting any other
+  environment's rows, so callers are responsible for establishing that nothing
+  else references the path.
+
   # TODO: Check for `cdn` key and handle
   """
   @spec delete_media(file_name :: binary) :: any

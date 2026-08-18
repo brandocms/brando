@@ -11,6 +11,8 @@ defmodule Brando.Environments.SchemaCloner.Postgres do
 
   @behaviour Brando.Environments.SchemaCloner
 
+  require Logger
+
   @safe_identifier ~r/^[a-z0-9_-]+$/
 
   @impl true
@@ -56,33 +58,62 @@ defmodule Brando.Environments.SchemaCloner.Postgres do
     String.starts_with?(line, "COPY ") and String.ends_with?(line, " FROM stdin;")
   end
 
-  @doc "Dumps one PostgreSQL schema as quoted, restorable plain SQL."
+  @doc """
+  Dumps one PostgreSQL schema as quoted, restorable plain SQL.
+
+  The dump is written with `--file` rather than read from standard output.
+  pg_dump reports warnings — circular foreign keys, unsupported objects — on
+  standard error, and capturing both streams together would splice that prose
+  into the SQL, where psql then fails on it.
+  """
   def dump_schema(prefix, extra_args \\ []) do
     with :ok <- validate_identifier(prefix),
          {:ok, executable} <- executable(:pg_dump_path, "pg_dump"),
-         {output, 0} <-
-           System.cmd(
-             executable,
-             connection_args() ++
-               [
-                 "--schema",
-                 prefix,
-                 "--format",
-                 "plain",
-                 "--no-owner",
-                 "--no-privileges",
-                 "--quote-all-identifiers"
-               ] ++ extra_args,
-             env: connection_env(),
-             stderr_to_stdout: true
-           ) do
-      {:ok, output}
-    else
-      {:error, _reason} = error ->
-        error
+         {:ok, path} <- temporary_path() do
+      try do
+        executable
+        |> System.cmd(dump_args(prefix, path, extra_args),
+          env: connection_env(),
+          stderr_to_stdout: true
+        )
+        |> read_dump(path)
+      after
+        File.rm(path)
+      end
+    end
+  end
 
-      {output, status} when is_integer(status) ->
-        {:error, {:pg_dump_failed, status, String.trim(output)}}
+  defp dump_args(prefix, path, extra_args) do
+    connection_args() ++
+      [
+        "--schema",
+        prefix,
+        "--format",
+        "plain",
+        "--no-owner",
+        "--no-privileges",
+        "--quote-all-identifiers",
+        "--file",
+        path
+      ] ++ extra_args
+  end
+
+  defp read_dump({diagnostics, 0}, path) do
+    log_diagnostics(diagnostics)
+
+    case File.read(path) do
+      {:ok, sql} -> {:ok, sql}
+      {:error, reason} -> {:error, {:dump_unreadable, reason}}
+    end
+  end
+
+  defp read_dump({output, status}, _path),
+    do: {:error, {:pg_dump_failed, status, String.trim(output)}}
+
+  defp log_diagnostics(diagnostics) do
+    case String.trim(diagnostics) do
+      "" -> :ok
+      message -> Logger.warning("pg_dump reported:\n#{message}")
     end
   end
 
@@ -107,13 +138,32 @@ defmodule Brando.Environments.SchemaCloner.Postgres do
   end
 
   defp write_temporary_dump(sql) do
+    case temporary_path() do
+      {:ok, path} ->
+        case File.write(path, sql) do
+          :ok ->
+            {:ok, path}
+
+          {:error, reason} ->
+            File.rm(path)
+            {:error, {:temporary_dump_failed, reason}}
+        end
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  # Created empty and locked down before pg_dump writes into it, so the dump is
+  # never briefly world-readable.
+  defp temporary_path do
     path =
       Path.join(
         System.tmp_dir!(),
         "brando-tenant-#{System.unique_integer([:positive, :monotonic])}.sql"
       )
 
-    case File.write(path, sql, [:exclusive]) do
+    case File.write(path, "", [:exclusive]) do
       :ok ->
         File.chmod!(path, 0o600)
         {:ok, path}

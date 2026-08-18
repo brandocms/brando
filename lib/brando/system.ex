@@ -167,33 +167,58 @@ defmodule Brando.System do
     end
   end
 
-  defp check_identity_exists do
-    case Brando.Repo.all(Brando.Sites.Identity) do
-      [] ->
-        Logger.error("==> No identities found.")
-        {:ok, {:identity, :exists}}
+  defp check_identity_exists,
+    do: check_content_exists(Brando.Sites.Identity, :identity, "identity", "identities")
 
-      identities ->
-        for identity <- identities do
-          Logger.debug("==> identity: [#{identity.language}] exists")
-        end
+  defp check_seo_exists,
+    do: check_content_exists(Brando.Sites.SEO, :seo, "seo", "seo entries")
 
-        {:ok, {:identity, :exists}}
+  # With tenancy enabled `public` holds only the structural template that new
+  # environments are cloned from, so content lives in each site's live
+  # environment and has to be checked there.
+  defp check_content_exists(schema, key, singular, plural) do
+    Enum.each(content_scopes(), &log_content(schema, singular, plural, &1))
+    {:ok, {key, :exists}}
+  end
+
+  defp log_content(schema, singular, plural, {label, opts}) do
+    case Brando.Repo.all(schema, opts) do
+      [] -> Logger.error("==> No #{plural} found#{label}.")
+      entries -> Enum.each(entries, &log_content_entry(&1, singular, label))
     end
   end
 
-  defp check_seo_exists do
-    case Brando.Repo.all(Brando.Sites.SEO) do
+  defp log_content_entry(entry, singular, label) do
+    Logger.debug("==> #{singular}: [#{entry.language}] exists#{label}")
+  end
+
+  defp content_scopes do
+    if Brando.Tenant.enabled?(), do: live_environment_scopes(), else: [{"", []}]
+  end
+
+  defp live_environment_scopes do
+    case Brando.Tenant.Registry.list_sites() do
       [] ->
-        Logger.error("==> No seo entries found.")
-        {:ok, {:seo, :exists}}
+        Logger.info("==> No sites provisioned yet; skipping content checks.")
+        []
 
-      seos ->
-        for seo <- seos do
-          Logger.debug("==> seo: [#{seo.language}] exists")
-        end
+      sites ->
+        Enum.flat_map(sites, &live_environment_scope/1)
+    end
+  rescue
+    exception ->
+      Logger.error("==> Could not read the site registry: #{Exception.message(exception)}")
+      []
+  end
 
-        {:ok, {:seo, :exists}}
+  defp live_environment_scope(site) do
+    case Enum.find(site.environments, & &1.live) do
+      nil ->
+        Logger.error("==> Site #{site.key} has no live environment.")
+        []
+
+      environment ->
+        [{" for #{site.key}", [prefix: Brando.Tenant.prefix(site, environment)]}]
     end
   end
 

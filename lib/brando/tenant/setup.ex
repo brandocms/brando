@@ -96,7 +96,8 @@ defmodule Brando.Tenant.Setup do
 
   defp create_copies(site, live_environment, environment_attrs, creator) do
     Enum.reduce_while(environment_attrs, {:ok, [live_environment]}, fn attrs, {:ok, environments} ->
-      with {:ok, environment} <- Environments.create_environment(site, attrs, creator: creator),
+      with {:ok, environment} <-
+             Environments.create_environment(site, attrs, creator: creator, clone_structure: false),
            {:ok, _copy} <-
              Environments.copy_environment(live_environment, environment,
                creator: creator,

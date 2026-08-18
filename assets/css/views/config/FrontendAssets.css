@@ -16,9 +16,9 @@
     display: grid;
     grid-template-columns: 58px minmax(0, 1fr) auto;
     align-items: center;
-    gap: 22px;
+    gap: 26px;
     overflow: hidden;
-    padding: 26px;
+    padding: 32px 30px;
 
     &::before {
       position: absolute;
@@ -72,7 +72,7 @@
 
   .frontend-assets-eyebrow {
     display: block;
-    margin-bottom: 7px;
+    margin-bottom: 9px;
     color: color-mix(in srgb, var(--brando-color-dark) 62%, transparent);
   }
 
@@ -85,7 +85,7 @@
   }
 
   .frontend-assets-current__content h2 {
-    margin-bottom: 5px;
+    margin-bottom: 11px;
     font-size: clamp(24px, 3vw, 34px);
     line-height: 1.05;
   }
@@ -177,11 +177,11 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 24px;
-    padding: 24px 26px;
+    padding: 28px 30px 26px;
     border-bottom: 1px solid color-mix(in srgb, var(--brando-color-dark) 12%, transparent);
 
     h2 {
-      margin-bottom: 6px;
+      margin-bottom: 11px;
       font-size: 22px;
     }
   }
