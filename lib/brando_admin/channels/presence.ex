@@ -4,6 +4,8 @@ defmodule BrandoAdmin.Presence do
   defmodule LobbyFetcher do
     @moduledoc false
 
+    require Logger
+
     def fetch(presences) do
       users =
         presences
@@ -57,6 +59,10 @@ defmodule BrandoAdmin.Presence do
             :error -> []
           end
 
+        # No metas left means this was the user's last admin session, so this is
+        # the moment they were last here.
+        if metas == [], do: record_last_seen(presence.user.id)
+
         user_data = %{
           user: %{
             id: presence.user.id,
@@ -73,6 +79,41 @@ defmodule BrandoAdmin.Presence do
           {BrandoAdmin.Presence, {:presence, %{user_left: user_data}}}
         )
       end
+    end
+
+    # Recording the departure here, rather than in a subscriber, is the whole
+    # point. `BrandoAdmin.Chrome` is the only subscriber to "presence" and it is
+    # a sticky LiveView — one per open admin browser — and it used to own this
+    # write. So a user's "last seen" was recorded by *other people's* browsers:
+    # when the last admin left, the broadcast went out and the only process that
+    # would have persisted it was the one dying. Someone working alone never had
+    # a departure recorded at all, and their timestamp sat at whatever it was the
+    # last time a colleague happened to be online to witness them leaving.
+    # Reported from production as a user's last-seen frozen twelve days back,
+    # on a site with two editors who rarely overlap.
+    #
+    # `handle_metas/4` runs in the presence process for every leave, watchers or
+    # not, which is the property the write needs. It is also the only place that
+    # sees a leave exactly once, so the redundant write every online browser used
+    # to perform goes away with it.
+    defp record_last_seen(user_id) do
+      Brando.Users.set_last_login(%Brando.Users.User{id: user_id})
+      :ok
+    rescue
+      exception ->
+        # A raise here would take the tracker down and presence with it, for
+        # everyone connected — a missed timestamp is much the smaller loss.
+        #
+        # Synchronous and unspawned on purpose: leaves are rare, the write is a
+        # single UPDATE by primary key, and spawning would let a quick
+        # leave/rejoin/leave land its writes out of order and record the older
+        # time as the newer one.
+        Logger.error(
+          "==> Presence: could not record last seen for user #{inspect(user_id)}: " <>
+            Exception.message(exception)
+        )
+
+        :ok
     end
   end
 

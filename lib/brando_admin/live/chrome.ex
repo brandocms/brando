@@ -167,8 +167,11 @@ defmodule BrandoAdmin.Chrome do
         avatar: user.avatar
       }
 
-      Brando.Users.set_last_login(%Brando.Users.User{id: user.id})
-
+      # `current_time` above is this view's own optimistic copy, so the row it
+      # renders for the departed user is right without waiting for a refetch.
+      # Persisting it is `Presence.LobbyFetcher`'s job now — from here it was a
+      # write performed once per *watching* browser, and not at all when the
+      # leaving user was the last one online.
       {:noreply, assign_presence(socket, "offline", presence)}
     else
       last_active =
