@@ -2843,14 +2843,30 @@ defmodule BrandoAdmin.Components.Form do
               push_navigate(socket, to: redirect_new_fn.(socket, entry, mutation_type))
           end
 
-        {:noreply, assign(maybe_redirected_socket, :save_redirect_target, :listing)}
+        # `:processing` is cleared here rather than per-branch: `:listing` and
+        # `:new` navigate away, so only `:self` ever renders the button again —
+        # and it was the one branch that forgot. The button is `disabled` while
+        # the flag is set, so a stuck flag does not just look wrong, it locks
+        # the form until the page is reloaded. Its sibling clause above sets
+        # the flag in each `:self` sub-branch; one place is harder to forget.
+        {:noreply,
+         maybe_redirected_socket
+         |> assign(:save_redirect_target, :listing)
+         |> assign(:processing, false)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         require Logger
         Logger.error(inspect(changeset, pretty: true))
 
+        # A rejected save leaves the editor on the form by definition, so this
+        # path always renders the button — and it was stuck here too. Observed
+        # in production: a Project failing its `one_of` listing_image/
+        # listing_video constraint showed its errors under a spinner that never
+        # stopped, which reads as "saving is broken" rather than "fix these
+        # fields".
         {:noreply,
          socket
+         |> assign(:processing, false)
          |> assign(:form, to_form(changeset, []))
          |> push_errors(changeset, form_blueprint, schema)}
     end
