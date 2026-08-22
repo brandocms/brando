@@ -83,8 +83,8 @@ defmodule BrandoAdmin.Chrome do
         |> DateTime.shift_zone!(Brando.timezone())
         |> Datetime.format_datetime("%d/%m/%y %H:%M:%S")
       else
-        if assigns.presence.last_login do
-          assigns.presence.last_login
+        if assigns.presence.last_seen do
+          assigns.presence.last_seen
           |> DateTime.from_naive!("Etc/UTC")
           |> DateTime.shift_zone!(Brando.timezone())
           |> Datetime.format_datetime("%d/%m/%y %H:%M:%S")
@@ -147,6 +147,7 @@ defmodule BrandoAdmin.Chrome do
       urls: urls,
       last_active: last_active,
       last_login: user.last_login,
+      last_seen: user.last_seen,
       avatar: user.avatar
     }
 
@@ -163,7 +164,8 @@ defmodule BrandoAdmin.Chrome do
         status: "offline",
         urls: [],
         last_active: nil,
-        last_login: current_time,
+        last_login: user.last_login,
+        last_seen: current_time,
         avatar: user.avatar
       }
 
@@ -189,6 +191,7 @@ defmodule BrandoAdmin.Chrome do
         urls: urls,
         last_active: last_active,
         last_login: user.last_login,
+        last_seen: user.last_seen,
         avatar: user.avatar
       }
 
@@ -246,6 +249,7 @@ defmodule BrandoAdmin.Chrome do
             urls: [],
             last_active: nil,
             last_login: user.last_login,
+            last_seen: user.last_seen,
             avatar: user.avatar
           }
 
@@ -264,6 +268,7 @@ defmodule BrandoAdmin.Chrome do
             status: status,
             urls: urls,
             last_login: user.last_login,
+            last_seen: user.last_seen,
             last_active: last_active,
             avatar: user.avatar
           }

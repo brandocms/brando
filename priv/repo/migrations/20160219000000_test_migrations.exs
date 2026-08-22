@@ -54,6 +54,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :active, :boolean, default: true
       add :language, :text, default: "no"
       add :last_login, :naive_datetime
+      add :last_seen, :naive_datetime
       timestamps()
       soft_delete()
     end

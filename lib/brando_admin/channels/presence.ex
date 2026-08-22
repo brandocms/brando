@@ -22,7 +22,8 @@ defmodule BrandoAdmin.Presence do
              id: user.id,
              name: user.name,
              avatar: user.avatar,
-             last_login: user.last_login
+             last_login: user.last_login,
+             last_seen: user.last_seen
            },
            metas: metas
          }}
@@ -39,7 +40,8 @@ defmodule BrandoAdmin.Presence do
             id: presence.user.id,
             name: presence.user.name,
             avatar: presence.user.avatar,
-            last_login: presence.user.last_login
+            last_login: presence.user.last_login,
+            last_seen: presence.user.last_seen
           },
           metas: metas
         }
@@ -68,7 +70,8 @@ defmodule BrandoAdmin.Presence do
             id: presence.user.id,
             name: presence.user.name,
             avatar: presence.user.avatar,
-            last_login: presence.user.last_login
+            last_login: presence.user.last_login,
+            last_seen: presence.user.last_seen
           },
           metas: metas
         }
@@ -97,7 +100,7 @@ defmodule BrandoAdmin.Presence do
     # sees a leave exactly once, so the redundant write every online browser used
     # to perform goes away with it.
     defp record_last_seen(user_id) do
-      Brando.Users.set_last_login(%Brando.Users.User{id: user_id})
+      Brando.Users.set_last_seen(%Brando.Users.User{id: user_id})
       :ok
     rescue
       exception ->

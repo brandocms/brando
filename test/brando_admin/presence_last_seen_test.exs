@@ -1,15 +1,14 @@
 defmodule BrandoAdmin.PresenceLastSeenTest do
   @moduledoc """
   The presence modal shows `last_active` for a user who is online and falls back
-  to `users.last_login` for one who is not, so that column is what an editor
-  reads as "last seen".
+  to `users.last_seen` for one who is not.
 
-  Only two things write it: the login controller, and — for a departure —
-  `LobbyFetcher.handle_metas/4`. It used to be `BrandoAdmin.Chrome`, which is
-  the only subscriber to the "presence" topic and is a sticky LiveView, one per
-  open admin browser. The write was therefore performed by *other people's*
-  browsers: when the last admin left, the broadcast went out and the only
-  process that would have persisted it was the one dying.
+  `last_seen` is written in one place — `LobbyFetcher.handle_metas/4`, on a
+  departure. It used to be `last_login`, written from `BrandoAdmin.Chrome`,
+  which is the only subscriber to the "presence" topic and is a sticky
+  LiveView, one per open admin browser. The write was therefore performed by
+  *other people's* browsers: when the last admin left, the broadcast went out
+  and the only process that would have persisted it was the one dying.
 
   On a site whose two editors rarely overlap that means the timestamp only ever
   moves when someone happens to be watching. Reported from production as a
@@ -29,7 +28,7 @@ defmodule BrandoAdmin.PresenceLastSeenTest do
   @pubsub Brando.pubsub()
 
   setup do
-    user = Brando.Factory.insert(:random_user, last_login: ~N[2020-01-01 00:00:00])
+    user = Brando.Factory.insert(:random_user, last_seen: ~N[2020-01-01 00:00:00])
     Phoenix.PubSub.subscribe(@pubsub, "presence")
     {:ok, user: user}
   end
@@ -39,7 +38,13 @@ defmodule BrandoAdmin.PresenceLastSeenTest do
 
     leaves = %{
       key => %{
-        user: %{id: user.id, name: user.name, avatar: nil, last_login: user.last_login},
+        user: %{
+          id: user.id,
+          name: user.name,
+          avatar: nil,
+          last_login: user.last_login,
+          last_seen: user.last_seen
+        },
         metas: []
       }
     }
@@ -58,7 +63,7 @@ defmodule BrandoAdmin.PresenceLastSeenTest do
 
     refreshed = reload(user)
 
-    assert NaiveDateTime.compare(refreshed.last_login, user.last_login) == :gt,
+    assert NaiveDateTime.compare(refreshed.last_seen, user.last_seen) == :gt,
            "the departure was not recorded — last seen only moves when another admin is watching"
   end
 
@@ -67,14 +72,14 @@ defmodule BrandoAdmin.PresenceLastSeenTest do
 
     assert_receive {BrandoAdmin.Presence, {:presence, %{user_left: _}}}
 
-    assert reload(user).last_login == user.last_login,
+    assert reload(user).last_seen == user.last_seen,
            "a still-connected user was recorded as having left"
   end
 
   test "a database failure does not take the tracker down", %{user: user} do
     # The presence process handles every diff for every connected admin, so a
     # raise here is not a missed timestamp, it is presence going dark. Deleting
-    # the row makes `set_last_login/1` fail against a primary key that is gone.
+    # the row makes `set_last_seen/1` fail against a primary key that is gone.
     Brando.Repo.delete!(user)
 
     log =

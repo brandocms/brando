@@ -67,6 +67,11 @@ defmodule Brando.Users.User do
     attribute :role, :enum, values: [:user, :editor, :admin, :superuser], required: true
     attribute :active, :boolean, default: true
     attribute :last_login, :naive_datetime
+
+    # Written by the presence layer when a user's last admin session goes away,
+    # which is the only writer that can honestly claim to know it. `last_login`
+    # stays what its name says: set once, at sign-in. See brando_165.
+    attribute :last_seen, :naive_datetime
     attribute :language, :language, languages: RuntimeConfig.get(:admin_languages)
 
     attribute :password, :string,

@@ -47,11 +47,27 @@ defmodule Brando.Users do
 
   @doc """
   Bumps `user`'s `last_login` to current time.
+
+  Called once, from the login controller. It used to double as "last seen",
+  which is what `set_last_seen/1` is for now.
   """
   @spec set_last_login(user) :: {:ok, user}
   def set_last_login(user) do
     current_time = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
     Utils.Schema.update_field(user, last_login: current_time)
+  end
+
+  @doc """
+  Bumps `user`'s `last_seen` to current time.
+
+  Called from `BrandoAdmin.Presence` when a user's last admin session goes
+  away. A remembered session can keep somebody signed in for months, so
+  `last_login` is no guide at all to when they were last actually here.
+  """
+  @spec set_last_seen(user) :: {:ok, user}
+  def set_last_seen(user) do
+    current_time = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
+    Utils.Schema.update_field(user, last_seen: current_time)
   end
 
   @doc """
@@ -208,10 +224,10 @@ defmodule Brando.Users do
 
   def get_users_map do
     list_opts = %{
-      select: [:id, :name, :last_login],
+      select: [:id, :name, :last_login, :last_seen],
       cache: {:ttl, :infinite},
       preload: [{:avatar, :join}],
-      order: [{:desc_nulls_last, :last_login}]
+      order: [{:desc_nulls_last, :last_seen}]
     }
 
     do_get_users_map(list_opts)
@@ -220,10 +236,10 @@ defmodule Brando.Users do
   def get_users_map(user_ids) when is_list(user_ids) and user_ids != [] do
     list_opts = %{
       filter: %{ids: user_ids},
-      select: [:id, :name, :last_login],
+      select: [:id, :name, :last_login, :last_seen],
       cache: {:ttl, :infinite},
       preload: [{:avatar, :join}],
-      order: [{:desc_nulls_last, :last_login}]
+      order: [{:desc_nulls_last, :last_seen}]
     }
 
     do_get_users_map(list_opts)
@@ -244,7 +260,8 @@ defmodule Brando.Users do
            name: user.name,
            id: user.id,
            avatar: user.avatar,
-           last_login: user.last_login
+           last_login: user.last_login,
+           last_seen: user.last_seen
          }}
       end
     )
