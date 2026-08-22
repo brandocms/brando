@@ -145,14 +145,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
                     </figure>
                     <span class="module-card-body">
                       <span class="module-card-name">{translate(module.name)}</span>
-                      <span class="badge">
-                        <%= cond do %>
-                          <% module.library_origin == :shared and module.source_module_id -> %>
-                            {gettext("customized")}
-                          <% module.library_origin == :shared -> %>
-                            {gettext("shared")}
-                          <% true -> %>
-                            {gettext("site")}
+                      <%!-- Origin only earns a badge when it distinguishes this
+                            module from the others on screen. With no shared
+                            library in play every module is site-local, so the
+                            old unconditional badge stamped an identical "site"
+                            on every card and said nothing. --%>
+                      <span :if={module.library_origin == :shared} class="badge">
+                        <%= if module.source_module_id do %>
+                          {gettext("customized")}
+                        <% else %>
+                          {gettext("shared")}
                         <% end %>
                       </span>
                       <span :if={module.update_available} class="badge warning">

@@ -1036,8 +1036,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
     ~H"""
     <Content.modal title={gettext("Link")} id={"var-#{@field.id}-link-config"}>
-      <div class="panels">
-        <div class="panel">
+      <div class="link-var-config">
+        <div class="link-var-settings">
           <Input.radios
             field={@field[:link_type]}
             label={gettext("Type")}
@@ -1048,38 +1048,36 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               ]
             ]}
           />
+          <Input.text
+            :if={@allow_text?}
+            field={@field[:link_text]}
+            label={gettext("Link text")}
+            instructions={@link_type == :identifier && gettext("Overrides identifier title")}
+          />
+          <Input.toggle field={@field[:link_target_blank]} label={gettext("Open link in new window/tab")} />
         </div>
-        <div class="panel">
-          <div :if={@link_type == :url}>
-            <Input.text
-              field={@field[:value]}
-              label={gettext("URL")}
-              instructions={gettext("i.e: `https://example.com`")}
-              monospace
-            />
-            <Input.text :if={@allow_text?} field={@field[:link_text]} label={gettext("Link text")} />
-            <Input.toggle field={@field[:link_target_blank]} label={gettext("Open link in new window/tab")} />
-          </div>
-          <div :if={@link_type == :identifier}>
-            <Input.text
-              :if={@allow_text?}
-              field={@field[:link_text]}
-              label={gettext("Link text")}
-              instructions={gettext("Overrides identifier title")}
-            />
-            <Input.toggle field={@field[:link_target_blank]} label={gettext("Open link in new window/tab")} />
 
-            <.live_component
-              module={Content.SelectIdentifier}
-              id={"#{@field.id}-identifier-select"}
-              field={@field[:identifier_id]}
-              var_key={@var_key}
-              var_type={@var_type}
-              wanted_schemas={@wanted_schemas}
-              on_change={@on_change}
-              target={@target}
-            />
-          </div>
+        <div :if={@link_type == :url} class="link-var-target">
+          <Input.text
+            field={@field[:value]}
+            label={gettext("URL")}
+            instructions={gettext("i.e: `https://example.com`")}
+            monospace
+          />
+        </div>
+
+        <div :if={@link_type == :identifier} class="link-var-target">
+          <.live_component
+            module={Content.SelectIdentifier}
+            id={"#{@field.id}-identifier-select"}
+            field={@field[:identifier_id]}
+            var_key={@var_key}
+            var_type={@var_type}
+            wanted_schemas={@wanted_schemas}
+            layout={:columns}
+            on_change={@on_change}
+            target={@target}
+          />
         </div>
       </div>
     </Content.modal>

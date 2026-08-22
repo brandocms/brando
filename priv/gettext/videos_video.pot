@@ -11,82 +11,82 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/videos/video.ex:80
+#: lib/brando/videos/video.ex:96
 #, elixir-autogen, elixir-format
 msgid "Path"
 msgstr ""
 
-#: lib/brando/videos/video.ex:107
+#: lib/brando/videos/video.ex:125
 #, elixir-autogen, elixir-format
 msgid "Aspect ratio"
 msgstr ""
 
-#: lib/brando/videos/video.ex:113
+#: lib/brando/videos/video.ex:131
 #, elixir-autogen, elixir-format
 msgid "Autoplay"
 msgstr ""
 
-#: lib/brando/videos/video.ex:91
+#: lib/brando/videos/video.ex:107
 #, elixir-autogen, elixir-format
 msgid "Caption"
 msgstr ""
 
-#: lib/brando/videos/video.ex:108
+#: lib/brando/videos/video.ex:126
 #, elixir-autogen, elixir-format
 msgid "Configuration target"
 msgstr ""
 
-#: lib/brando/videos/video.ex:116
+#: lib/brando/videos/video.ex:134
 #, elixir-autogen, elixir-format
 msgid "Controls"
 msgstr ""
 
-#: lib/brando/videos/video.ex:106
+#: lib/brando/videos/video.ex:124
 #, elixir-autogen, elixir-format
 msgid "Height"
 msgstr ""
 
-#: lib/brando/videos/video.ex:115
+#: lib/brando/videos/video.ex:133
 #, elixir-autogen, elixir-format
 msgid "Loop"
 msgstr ""
 
-#: lib/brando/videos/video.ex:114
+#: lib/brando/videos/video.ex:132
 #, elixir-autogen, elixir-format
 msgid "Preload"
 msgstr ""
 
-#: lib/brando/videos/video.ex:104
+#: lib/brando/videos/video.ex:122
 #, elixir-autogen, elixir-format
 msgid "Remote ID"
 msgstr ""
 
-#: lib/brando/videos/video.ex:103
+#: lib/brando/videos/video.ex:121
 #, elixir-autogen, elixir-format
 msgid "Source URL"
 msgstr ""
 
-#: lib/brando/videos/video.ex:118
+#: lib/brando/videos/video.ex:136
 #, elixir-autogen, elixir-format
 msgid "Thumbnail"
 msgstr ""
 
-#: lib/brando/videos/video.ex:90
+#: lib/brando/videos/video.ex:106
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/brando/videos/video.ex:94
+#: lib/brando/videos/video.ex:110
 #, elixir-autogen, elixir-format
 msgid "Type"
 msgstr ""
 
-#: lib/brando/videos/video.ex:117
+#: lib/brando/videos/video.ex:135
 #, elixir-autogen, elixir-format
 msgid "Video file"
 msgstr ""
 
-#: lib/brando/videos/video.ex:105
+#: lib/brando/videos/video.ex:123
 #, elixir-autogen, elixir-format
 msgid "Width"
 msgstr ""

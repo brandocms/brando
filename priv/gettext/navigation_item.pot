@@ -11,12 +11,12 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:73
+#: lib/brando/navigation/menu.ex:78
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:77
+#: lib/brando/navigation/menu.ex:80
 #, elixir-autogen, elixir-format
 msgid "Link"
 msgstr ""

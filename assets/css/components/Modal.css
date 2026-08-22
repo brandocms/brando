@@ -408,6 +408,36 @@
   }
 }
 
+/* Link var config modal — the type/text/target settings sit as one row above
+   the identifier picker, so the picker itself gets the full modal width for its
+   schema-buttons | entries columns instead of being squeezed into half a panel. */
+.link-var-config {
+  .link-var-settings {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0 40px;
+    @space padding-bottom 0.5;
+    @space margin-bottom 1;
+    border-bottom: 1px solid #f0f0f2;
+
+    > .field-wrapper {
+      flex: 1 1 220px;
+    }
+  }
+
+  .link-var-target {
+    .identifier-options .identifier {
+      min-width: 0;
+      width: 100%;
+    }
+
+    .button-group-vertical.tiny {
+      width: 100%;
+    }
+  }
+}
+
 .modal-no-chrome-content {
   display: flex;
   flex-direction: column;

@@ -8,25 +8,26 @@
 ### to merge POT files into PO files.
 msgid ""
 msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/content/table_template.ex:50
+#: lib/brando/content/table_template.ex:51
 #, elixir-autogen, elixir-format
 msgid "Columns"
 msgstr "Kolonner"
 
-#: lib/brando/content/table_template.ex:42
+#: lib/brando/content/table_template.ex:43
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/content/table_template.ex:76
+#: lib/brando/content/table_template.ex:77
 #, elixir-autogen, elixir-format
 msgid "table template"
 msgstr "tabellmal"
 
-#: lib/brando/content/table_template.ex:77
+#: lib/brando/content/table_template.ex:78
 #, elixir-autogen, elixir-format
 msgid "table templates"
 msgstr "tabellmaler"

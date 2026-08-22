@@ -8,40 +8,41 @@
 ### to merge POT files into PO files.
 msgid ""
 msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/content/module.ex:122
+#: lib/brando/content/module.ex:138
 #, elixir-autogen, elixir-format
 msgid "Class"
 msgstr "Klasse"
 
-#: lib/brando/content/module.ex:125
+#: lib/brando/content/module.ex:141
 #, elixir-autogen, elixir-format
 msgid "Export modules"
 msgstr "Eksporter moduler"
 
-#: lib/brando/content/module.ex:120
+#: lib/brando/content/module.ex:136
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Navn"
 
-#: lib/brando/content/module.ex:121
+#: lib/brando/content/module.ex:137
 #, elixir-autogen, elixir-format
 msgid "Namespace"
 msgstr "Kategori"
 
-#: lib/brando/content/module.ex:209
+#: lib/brando/content/module.ex:225
 #, elixir-autogen, elixir-format
 msgid "module"
 msgstr "modul"
 
-#: lib/brando/content/module.ex:210
+#: lib/brando/content/module.ex:226
 #, elixir-autogen, elixir-format
 msgid "modules"
 msgstr "moduler"
 
-#: lib/brando/content/module.ex:123
+#: lib/brando/content/module.ex:139
 #, elixir-autogen, elixir-format
 msgid "Code"
 msgstr "Kode"

@@ -362,6 +362,59 @@
 
 #### Fixes
 
+- **The identifier picker's filter input did nothing.** `Brando.SelectFilter`
+  toggles `.filter-hidden` on each option it filters out, but the only rule for
+  that class lived nested under `.multiselect .options .options-option` in
+  `Select.css`. An `.identifier` therefore got the class and stayed on screen —
+  `.identifier` sets `display: flex` at the same specificity from a stylesheet
+  imported later. `.filter-hidden` and the `.no-results` empty state are now
+  global utilities in `app.css`, so every consumer of the hook is covered.
+
+  Two adjacent problems in the same picker: the schema buttons never showed
+  which type was selected (`selected_schema_raw` holds the *string* pushed back
+  by `phx-value-schema`, and was compared against the module atom), and a picker
+  restricted to a single schema crashed on render — the lone schema was
+  preselected but `@identifiers` was only ever assigned by the `select_schema`
+  event, which never fired.
+
+  `.select-filter` also named two unrelated components: the hook's wrapper and
+  the content list's filter dropdowns, whose `display: flex` and
+  `margin-bottom: 0 !important` leaked into every filter modal. The list one is
+  now `.list-filter-select`.
+
+- **Every module in the block picker wore an identical "site" badge.** The card
+  rendered its `library_origin` unconditionally, so with no shared library in
+  play — every module local — the badge stamped the same word on all of them and
+  distinguished nothing. It now appears only for `shared`/`customized` modules,
+  where it is the thing that separates them from the site's own.
+
+- **The link var's identifier modal was laid out in a narrow column.** Its two
+  panels were type-radios on the left and *everything else* on the right, so the
+  content-type buttons and the whole entry list were squeezed into half the
+  modal while the left panel sat nearly empty. Type, link text and target now
+  share one row above, and the identifier picker gets the full width for its
+  own `schema buttons | entries` columns — the same shape the TipTap link dialog
+  already used.
+
+- **A missing module took down the whole render instead of one block.** The
+  multi-module clause of `Parser.module/2` matched `{:ok, module} =
+  Content.find_module(...)` for both the parent and every child, so one
+  soft-deleted or uncached module raised `MatchError` out of `Villain.parse/3`.
+  On the live-preview path that kills the entire render, and the preview then
+  looks frozen rather than showing the broken block. Both lookups now fall back
+  to the same `module-not-found` placeholder the single-module clause has always
+  rendered.
+
+- **Norwegian translations were ~450 strings behind the source.** The `.pot`
+  files had not been re-extracted since a large batch of admin work landed, so
+  the block picker, the environment/site/publishing views, the var layout
+  canvas, the asset browsers and the AI and revision flows all fell through to
+  English. Extracted and merged, then translated — including the 104 entries
+  gettext had fuzzy-matched from unrelated strings, which is worse than
+  untranslated because they render (`Paste` → *Plakat*, `Pages` → *Bilder*,
+  `Author` → *Auto*). The `.po` headers were also missing `Content-Type`, which
+  made `msgattrib`/`msgfmt` mangle every non-ASCII msgid.
+
 - **A multi module's children vanished from live preview on any edit.** The
   `update_block` handler in `livepreview.js` zipped the parsed HTML against the
   block's registered elements, but the two lists were built differently:

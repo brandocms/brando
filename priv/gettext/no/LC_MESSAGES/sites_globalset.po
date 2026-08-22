@@ -8,41 +8,42 @@
 ### to merge POT files into PO files.
 msgid ""
 msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/sites/global_set.ex:38
+#: lib/brando/sites/global_set.ex:44
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/sites/global_set.ex:48
+#: lib/brando/sites/global_set.ex:54
 #, elixir-autogen, elixir-format
 msgid "Globals"
 msgstr "Globaler"
 
-#: lib/brando/sites/global_set.ex:43
+#: lib/brando/sites/global_set.ex:49
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr "Nøkkel"
 
-#: lib/brando/sites/global_set.ex:42
-#: lib/brando/sites/global_set.ex:59
+#: lib/brando/sites/global_set.ex:48
+#: lib/brando/sites/global_set.ex:65
 #, elixir-autogen, elixir-format
 msgid "Label"
 msgstr "Merkelapp"
 
-#: lib/brando/sites/global_set.ex:41
+#: lib/brando/sites/global_set.ex:47
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr "Språk"
 
-#: lib/brando/sites/global_set.ex:83
+#: lib/brando/sites/global_set.ex:89
 #, elixir-autogen, elixir-format
 msgid "global set"
 msgstr "globalsett"
 
-#: lib/brando/sites/global_set.ex:84
+#: lib/brando/sites/global_set.ex:90
 #, elixir-autogen, elixir-format
 msgid "global sets"
 msgstr "globalsett"

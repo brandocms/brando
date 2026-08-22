@@ -305,10 +305,6 @@ h2.titlecase + .button-group-vertical button:first-of-type {
         filter: brightness(0.96);
       }
 
-      &.filter-hidden {
-        display: none;
-      }
-
       .option-label-wrap {
         display: flex;
         flex-direction: column;
@@ -324,15 +320,10 @@ h2.titlecase + .button-group-vertical button:first-of-type {
     }
 
     .no-results {
-      display: none;
       padding: 12px 14px;
       font-size: 13px;
       opacity: 0.6;
       @font mono;
-
-      &.visible {
-        display: block;
-      }
     }
   }
 

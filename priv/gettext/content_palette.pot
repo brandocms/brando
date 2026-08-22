@@ -11,27 +11,27 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/content/palette.ex:77
+#: lib/brando/content/palette.ex:86
 #, elixir-autogen, elixir-format
 msgid "Color"
 msgstr ""
 
-#: lib/brando/content/palette.ex:42
+#: lib/brando/content/palette.ex:51
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
 
-#: lib/brando/content/palette.ex:76
+#: lib/brando/content/palette.ex:85
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 
-#: lib/brando/content/palette.ex:108
+#: lib/brando/content/palette.ex:117
 #, elixir-autogen, elixir-format
 msgid "palette"
 msgstr ""
 
-#: lib/brando/content/palette.ex:109
+#: lib/brando/content/palette.ex:118
 #, elixir-autogen, elixir-format
 msgid "palettes"
 msgstr ""

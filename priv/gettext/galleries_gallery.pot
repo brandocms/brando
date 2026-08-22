@@ -11,12 +11,12 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/galleries/gallery.ex:52
+#: lib/brando/galleries/gallery.ex:54
 #, elixir-autogen, elixir-format
 msgid "Configuration target"
 msgstr ""
 
-#: lib/brando/galleries/gallery.ex:59
+#: lib/brando/galleries/gallery.ex:61
 #, elixir-autogen, elixir-format
 msgid "Gallery objects"
 msgstr ""

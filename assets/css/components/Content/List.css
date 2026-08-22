@@ -742,7 +742,7 @@
   text-transform: uppercase;
 }
 
-.select-filter {
+.list-filter-select {
   display: flex;
   align-items: center;
   gap: 0.5rem;

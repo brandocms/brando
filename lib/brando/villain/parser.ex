@@ -288,7 +288,37 @@ defmodule Brando.Villain.Parser do
     modules = opts.modules
     skip_children? = Map.get(opts, :skip_children, false)
 
-    {:ok, module} = Content.find_module(modules, id, Map.get(block, :module_origin, :local))
+    case Content.find_module(modules, id, Map.get(block, :module_origin, :local)) do
+      {:ok, module} -> multi_module(block, module, children, skip_children?, opts)
+      {:error, {:module, :not_found, module_id}} -> module_not_found(module_id)
+    end
+  end
+
+  def module(%{module_id: id} = block, opts) do
+    modules = opts.modules
+
+    case Content.find_module(modules, id, Map.get(block, :module_origin, :local)) do
+      {:ok, module} ->
+        processed_vars = process_vars(block.vars)
+        processed_refs = process_refs(block.refs)
+        adapter = adapter_for(module.type)
+        opts = Map.put(opts, :parser_module, parser_module(opts))
+
+        adapter.render_module(module, block, processed_vars, processed_refs, opts)
+        |> maybe_annotate(block.uid, opts)
+        |> maybe_format(opts)
+
+      {:error, {:module, :not_found, module_id}} ->
+        module_not_found(module_id)
+    end
+  end
+
+  # A missing module has to degrade the same way the single-module clause does.
+  # This used to be `{:ok, module} = find_module(...)`, so one soft-deleted or
+  # uncached module anywhere in the tree raised MatchError out of `Villain.parse`
+  # — which on the live-preview path takes down the whole render, and the preview
+  # then looks frozen rather than showing the broken block.
+  defp multi_module(%{module_id: id} = block, module, children, skip_children?, opts) do
     adapter = adapter_for(module.type)
     opts = Map.put(opts, :parser_module, parser_module(opts))
 
@@ -301,36 +331,14 @@ defmodule Brando.Villain.Parser do
         "[$ content $]"
         |> annotate_children(block.uid)
       else
+        count = Enum.count(children)
+
         children
         |> Enum.with_index()
         |> Enum.map(fn
-          {%{active: false}, _} ->
-            ""
-
-          {%{marked_as_deleted: true}, _} ->
-            ""
-
-          {child_block, index} ->
-            {:ok, child_module} =
-              Content.find_module(
-                modules,
-                child_block.module_id,
-                Map.get(child_block, :module_origin, :local)
-              )
-
-            child_adapter = adapter_for(child_module.type)
-
-            vars = process_vars(child_block.vars)
-            refs = process_refs(child_block.refs)
-
-            forloop = %{
-              "index" => index + 1,
-              "index0" => index,
-              "count" => Enum.count(children)
-            }
-
-            child_adapter.render_child_module(child_module, child_block, vars, refs, forloop, id, opts)
-            |> maybe_annotate(child_block.uid, opts)
+          {%{active: false}, _} -> ""
+          {%{marked_as_deleted: true}, _} -> ""
+          {child_block, index} -> render_multi_child(child_block, index, count, id, opts)
         end)
         |> Enum.intersperse("\n")
         |> annotate_children(block.uid)
@@ -366,27 +374,40 @@ defmodule Brando.Villain.Parser do
     |> maybe_format(opts)
   end
 
-  def module(%{module_id: id} = block, opts) do
-    modules = opts.modules
+  defp render_multi_child(child_block, index, count, parent_module_id, opts) do
+    case Content.find_module(
+           opts.modules,
+           child_block.module_id,
+           Map.get(child_block, :module_origin, :local)
+         ) do
+      {:ok, child_module} ->
+        child_adapter = adapter_for(child_module.type)
+        forloop = %{"index" => index + 1, "index0" => index, "count" => count}
 
-    case Content.find_module(modules, id, Map.get(block, :module_origin, :local)) do
-      {:ok, module} ->
-        processed_vars = process_vars(block.vars)
-        processed_refs = process_refs(block.refs)
-        adapter = adapter_for(module.type)
-        opts = Map.put(opts, :parser_module, parser_module(opts))
-
-        adapter.render_module(module, block, processed_vars, processed_refs, opts)
-        |> maybe_annotate(block.uid, opts)
-        |> maybe_format(opts)
+        child_module
+        |> child_adapter.render_child_module(
+          child_block,
+          process_vars(child_block.vars),
+          process_refs(child_block.refs),
+          forloop,
+          parent_module_id,
+          opts
+        )
+        |> maybe_annotate(child_block.uid, opts)
 
       {:error, {:module, :not_found, module_id}} ->
-        """
-        <div class="module-not-found">
-          <p>Module not found: #{module_id}</p>
-        </div>
-        """
+        module_id
+        |> module_not_found()
+        |> maybe_annotate(child_block.uid, opts)
     end
+  end
+
+  defp module_not_found(module_id) do
+    """
+    <div class="module-not-found">
+      <p>Module not found: #{module_id}</p>
+    </div>
+    """
   end
 
   def text(%{text: text} = params, _) do

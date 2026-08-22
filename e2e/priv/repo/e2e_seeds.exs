@@ -1094,6 +1094,163 @@ team_section =
 }
 |> E2eProject.Repo.insert!()
 
+# Multi module (child) — "Team Lead", an entry template that is ITSELF flagged
+# multi. Mirrors real projects where an entry template was created from the
+# multi form and inherited `multi: true`; the block built from it then carries
+# multi=true even though it never takes children of its own.
+%Brando.Content.Module{
+  type: :liquid,
+  name: %{"en" => "Team Lead", "no" => "Teamleder"},
+  namespace: %{"en" => "06 COPY PASTE TEST", "no" => "06 COPY PASTE TEST"},
+  help_text: %{"en" => "A team lead entry", "no" => "En teamleder"},
+  class: "team-lead",
+  code: "<div b-tpl=\"team-lead\">\n  <h3>{{ lead_name }}</h3>\n</div>",
+  svg: nil,
+  multi: true,
+  datasource: false,
+  sequence: 32,
+  deleted_at: nil,
+  table_template_id: nil,
+  parent_id: team_section.id,
+  refs: [],
+  vars: [
+    %Brando.Content.Var{
+      type: :string,
+      label: "Lead name",
+      key: "lead_name",
+      placement: :content,
+      value: "Jane Doe",
+      sequence: 0,
+      width: :full
+    }
+  ]
+}
+|> E2eProject.Repo.insert!()
+
+# Multi module (parent) + child that mirrors a real project's "media object":
+# the child carries BOTH a `{% ref %}` media ref and a `{% headless_ref %}` text
+# ref, and falls back to entry content pulled through a link var's identifier
+# when either ref is switched off. This is the shape that exercises
+# `refs.<name>.active` from a module template.
+fallback_group =
+  %Brando.Content.Module{
+    type: :liquid,
+    name: %{"en" => "Fallback Group", "no" => "Fallbackgruppe"},
+    namespace: %{"en" => "08 REF FALLBACK TEST", "no" => "08 REF FALLBACK TEST"},
+    help_text: %{"en" => "Multi block of media objects", "no" => "Multiblokk med mediaobjekter"},
+    class: "fallback-group",
+    code: """
+    <section b-tpl="fallback-group">
+      {{ content }}
+    </section>
+    """,
+    svg: nil,
+    multi: true,
+    datasource: false,
+    sequence: 40,
+    deleted_at: nil,
+    table_template_id: nil,
+    parent_id: nil,
+    refs: [],
+    vars: []
+  }
+  |> E2eProject.Repo.insert!()
+
+%Brando.Content.Module{
+  type: :liquid,
+  name: %{"en" => "Fallback Object", "no" => "Fallbackobjekt"},
+  namespace: %{"en" => "08 REF FALLBACK TEST", "no" => "08 REF FALLBACK TEST"},
+  help_text: %{"en" => "Media + text refs with fallbacks", "no" => "Media- og tekstref med fallback"},
+  class: "fallback-object",
+  # Flagged multi even though it is an entry template that never takes children
+  # — the shape real projects produce when the template is created from the
+  # multi form. It makes the block render through `Parser.module/2`'s multi
+  # clause instead of `render_child_module/7`, which is worth covering here
+  # since this module is the one with refs and a `get_entry` fallback.
+  code: """
+  {% if project and project.identifier %}
+    {% assign e = project.identifier | get_entry %}
+  {% endif %}
+  <article b-tpl="fallback-object" data-entry-id="{{ e.id }}">
+    <div class="media">
+      {% ref refs.media %}
+      {% hide %}
+      {% if refs.media.active == false %}
+        {% if e %}
+          <div class="entry-fallback">{{ e.title }}</div>
+        {% else %}
+          <div class="media-fallback">FALLBACK MEDIA</div>
+        {% endif %}
+      {% endif %}
+      {% endhide %}
+    </div>
+    {% headless_ref refs.text %}
+    {% if refs.text.active %}
+      <div class="text">{{ refs.text.data.data.text }}</div>
+    {% else %}
+      <div class="text-fallback">FALLBACK TEXT</div>
+    {% endif %}
+  </article>
+  """,
+  svg: nil,
+  multi: true,
+  datasource: false,
+  sequence: 41,
+  deleted_at: nil,
+  table_template_id: nil,
+  parent_id: fallback_group.id,
+  refs: [
+    %Brando.Content.Ref{
+      name: "media",
+      description: "Media",
+      uid: Brando.Utils.generate_uid(),
+      data: %Brando.Villain.Blocks.PictureBlock{
+        type: "picture",
+        data: %Brando.Villain.Blocks.PictureBlock.Data{
+          title: nil,
+          credits: nil,
+          alt: nil,
+          picture_class: nil,
+          img_class: nil,
+          link: nil,
+          srcset: nil,
+          media_queries: nil,
+          lazyload: true,
+          moonwalk: false,
+          placeholder: :dominant_color_faded,
+          fetchpriority: :auto
+        }
+      }
+    },
+    %Brando.Content.Ref{
+      name: "text",
+      description: "Caption",
+      uid: Brando.Utils.generate_uid(),
+      data: %Brando.Villain.Blocks.TextBlock{
+        type: "text",
+        data: %Brando.Villain.Blocks.TextBlock.Data{
+          text: "Caption body",
+          type: "paragraph",
+          extensions: nil
+        }
+      }
+    }
+  ],
+  vars: [
+    %Brando.Content.Var{
+      type: :link,
+      label: "Project",
+      key: "project",
+      placement: :content,
+      link_type: :identifier,
+      link_allow_custom_text: true,
+      sequence: 0,
+      width: :full
+    }
+  ]
+}
+|> E2eProject.Repo.insert!()
+
 # Module with image and file vars for upload testing
 %Brando.Content.Module{
   type: :liquid,

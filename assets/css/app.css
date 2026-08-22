@@ -1395,3 +1395,21 @@ input::-moz-placeholder {
 [data-outline="true"] *:focus {
   display: inherit !important;
 }
+
+/* Client-side filtering (Brando.SelectFilter hook).
+   The hook toggles `.filter-hidden` on arbitrary option elements — identifiers,
+   select options, block picker modules — so the rule has to outrank whatever
+   `display` the component itself sets. */
+.filter-hidden {
+  display: none !important;
+}
+
+/* Empty-state row for the same hook — hidden until every option is filtered out.
+   Per-component rules add their own padding/typography on top. */
+.no-results {
+  display: none;
+
+  &.visible {
+    display: block;
+  }
+}

@@ -8,6 +8,7 @@
 ### to merge POT files into PO files.
 msgid ""
 msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
 "Language: en\n"
 
 #: lib/brando/content/module_set_module.ex:36

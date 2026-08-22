@@ -896,7 +896,7 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign(:resolved_options, options)
 
     ~H"""
-    <div class="select-filter">
+    <div class="list-filter-select">
       <label class="filter-label">{g(@schema, @filter.label)}</label>
       <select
         name={"filter[#{@filter_key}]"}

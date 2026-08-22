@@ -11,8 +11,6 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
      socket
      |> assign(assigns)
      |> assign_new(:field, fn -> nil end)
-     |> assign_new(:selected_schema, fn -> nil end)
-     |> assign_new(:selected_schema_raw, fn -> nil end)
      |> assign_new(:selected_identifier_id, fn ->
        case assigns do
          %{field: %{} = field} ->
@@ -44,24 +42,48 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
   def assign_available_schemas(socket) do
     wanted_schemas = socket.assigns.wanted_schemas
 
-    assign_new(socket, :available_schemas, fn ->
-      if wanted_schemas == [] do
-        all_relevant_types =
-          Brando.Content.Identifier.Registry.list_persistent_identifier_modules(:include_brando)
+    assign_new(socket, :available_schemas, fn -> schema_options(wanted_schemas) end)
+  end
 
-        Enum.map(all_relevant_types, &{Brando.Blueprint.get_plural(&1), &1})
-      else
-        Enum.map(wanted_schemas, &{Brando.Blueprint.get_plural(Module.concat(List.wrap(&1))), &1})
-      end
+  defp schema_options([]) do
+    :include_brando
+    |> Brando.Content.Identifier.Registry.list_persistent_identifier_modules()
+    |> Enum.map(&{Brando.Blueprint.get_plural(&1), &1})
+  end
+
+  # `wanted_schemas` arrives as module atoms, strings or path lists — normalise to
+  # module atoms so the rest of the component only deals with one shape.
+  defp schema_options(wanted_schemas) do
+    Enum.map(wanted_schemas, fn schema ->
+      module = Module.concat(List.wrap(schema))
+      {Brando.Blueprint.get_plural(module), module}
     end)
   end
 
-  def assign_selected_schema(%{assigns: %{available_schemas: [schema]}} = socket) do
-    assign_new(socket, :selected_schema, fn -> schema end)
+  # A single available schema has nothing to pick between, so preselect it and
+  # load its entries up front — `entries_list` renders as soon as a schema is
+  # selected and reads `@identifiers`.
+  def assign_selected_schema(%{assigns: %{available_schemas: [{_label, schema_module}]}} = socket) do
+    socket
+    |> assign_new(:selected_schema, fn -> schema_module end)
+    |> assign_new(:selected_schema_raw, fn -> to_string(schema_module) end)
+    |> assign_new(:identifiers, fn ->
+      {:ok, identifiers} =
+        list_identifiers_for_schema(
+          schema_module,
+          socket.assigns.language,
+          socket.assigns.statuses
+        )
+
+      identifiers
+    end)
   end
 
   def assign_selected_schema(socket) do
-    assign_new(socket, :selected_schema, fn -> nil end)
+    socket
+    |> assign_new(:selected_schema, fn -> nil end)
+    |> assign_new(:selected_schema_raw, fn -> nil end)
+    |> assign_new(:identifiers, fn -> [] end)
   end
 
   def render(assigns) do
@@ -124,7 +146,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
         :for={{label, schema} <- @available_schemas}
         :key={schema}
         type="button"
-        class={["secondary", @selected_schema_raw == schema && "selected"]}
+        class={["secondary", @selected_schema_raw == to_string(schema) && "selected"]}
         phx-click={JS.push("select_schema", target: @myself)}
         phx-value-schema={schema}
       >
@@ -139,20 +161,47 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     <div>
       <h2 class="titlecase">{gettext("Available entries")}</h2>
 
-      <div id={"#{@id}-select-modal-filter"} class="select-filter" phx-hook="Brando.SelectFilter" data-target=".identifier">
+      <div
+        id={"#{@id}-select-modal-filter"}
+        class="select-filter"
+        phx-hook="Brando.SelectFilter"
+        data-target=".identifier"
+        data-filter-target={"##{@id}-identifier-options"}
+      >
         <div class="field-wrapper">
           <div class="label-wrapper">
-            <label for="identifier-filter" class="control-label">
+            <label for={"#{@id}-identifier-filter"} class="control-label">
               <span>{gettext("Filter identifiers")}</span>
             </label>
           </div>
           <div class="field-base">
-            <input class="text" name="identifier-filter" type="text" value="" />
+            <div class="filter-input-wrapper">
+              <svg class="filter-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5" />
+                <line x1="10.75" y1="10.75" x2="14.5" y2="14.5" stroke="currentColor" stroke-width="1.5" />
+              </svg>
+              <input
+                class="text"
+                id={"#{@id}-identifier-filter"}
+                name="identifier-filter"
+                type="text"
+                value=""
+                placeholder={gettext("Filter identifiers…")}
+                autocomplete="off"
+              />
+              <button type="button" class="filter-clear" aria-label={gettext("Clear filter")} tabindex="-1">
+                <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" />
+                  <line x1="2" y1="14" x2="14" y2="2" stroke="currentColor" stroke-width="1.5" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="identifier-options">
+      <div id={"#{@id}-identifier-options"} class="identifier-options">
+        <div class="no-results">{gettext("No matching identifiers")}</div>
         <.identifier
           :for={identifier <- @identifiers}
           :key={identifier.id}

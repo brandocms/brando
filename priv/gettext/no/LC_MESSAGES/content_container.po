@@ -8,60 +8,61 @@
 ### to merge POT files into PO files.
 msgid ""
 msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/content/container.ex:61
+#: lib/brando/content/container.ex:74
 #, elixir-autogen, elixir-format
 msgid "Allow custom palette"
 msgstr "Tillat egendefinert palett"
 
-#: lib/brando/content/container.ex:48
+#: lib/brando/content/container.ex:61
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/content/container.ex:59
+#: lib/brando/content/container.ex:72
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Navn"
 
-#: lib/brando/content/container.ex:60
+#: lib/brando/content/container.ex:73
 #, elixir-autogen, elixir-format
 msgid "Namespace"
 msgstr "Kategori"
 
-#: lib/brando/content/container.ex:68
+#: lib/brando/content/container.ex:81
 #, elixir-autogen, elixir-format
 msgid "Palette"
 msgstr "Palett"
 
-#: lib/brando/content/container.ex:62
+#: lib/brando/content/container.ex:75
 #, elixir-autogen, elixir-format
 msgid "Palette namespace"
 msgstr "Palettkategori"
 
-#: lib/brando/content/container.ex:57
+#: lib/brando/content/container.ex:70
 #, elixir-autogen, elixir-format
 msgid "Type"
 msgstr "Type"
 
-#: lib/brando/content/container.ex:74
+#: lib/brando/content/container.ex:87
 #, elixir-autogen, elixir-format
 msgid "Use `{{ content }}` to render inner content"
 msgstr "Bruk `{{ content }}` for å integrere indre innhold"
 
-#: lib/brando/content/container.ex:73
+#: lib/brando/content/container.ex:86
 #, elixir-autogen, elixir-format
 msgid "Wrapper code"
 msgstr "Innpakningskode"
 
-#: lib/brando/content/container.ex:132
+#: lib/brando/content/container.ex:145
 #, elixir-autogen, elixir-format
 msgid "container"
 msgstr "seksjon"
 
-#: lib/brando/content/container.ex:133
+#: lib/brando/content/container.ex:146
 #, elixir-autogen, elixir-format
 msgid "containers"
 msgstr "seksjoner"

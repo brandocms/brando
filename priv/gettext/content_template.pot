@@ -11,22 +11,22 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/content/template.ex:65
+#: lib/brando/content/template.ex:66
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr ""
 
-#: lib/brando/content/template.ex:67
+#: lib/brando/content/template.ex:68
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
 
-#: lib/brando/content/template.ex:40
+#: lib/brando/content/template.ex:41
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 
-#: lib/brando/content/template.ex:41
+#: lib/brando/content/template.ex:42
 #, elixir-autogen, elixir-format
 msgid "Namespace"
 msgstr ""

@@ -8,20 +8,21 @@
 ### to merge POT files into PO files.
 msgid ""
 msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/files/file.ex:36
+#: lib/brando/files/file.ex:37
 #, elixir-autogen, elixir-format
 msgid "Filename"
 msgstr "Filnavn"
 
-#: lib/brando/files/file.ex:65
-#, elixir-autogen, elixir-format
-msgid "file"
-msgstr ""
-
 #: lib/brando/files/file.ex:66
 #, elixir-autogen, elixir-format
+msgid "file"
+msgstr "fil"
+
+#: lib/brando/files/file.ex:67
+#, elixir-autogen, elixir-format
 msgid "files"
-msgstr ""
+msgstr "filer"
