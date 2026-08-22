@@ -179,6 +179,33 @@ defmodule Brando.HTML.Video do
     """
   end
 
+  # Everything above is a specific record shape; this is what happens to the
+  # rest. Without it the clause list is a partial function on a value a template
+  # author cannot inspect, and a miss is a FunctionClauseError raised out of
+  # `Brando.Villain.Tags.Video.render/2` — which, in the admin, is inside live
+  # preview, so it takes the entry form down mid-save along with every unsaved
+  # change in it.
+  #
+  # Two shapes reach here in practice, and neither is an authoring error:
+  #
+  #   * `%Ecto.Association.NotLoaded{}` — `{% video entry.listing_video %}` where
+  #     the preview query did not preload the association. Observed in
+  #     production against `Bergo.Projects.Project.listing_video`.
+  #   * a provider record that is not `status: :ready` — the `:mux`, `:bunny`
+  #     and `:cloudflare` clauses all require it, because there is no playback
+  #     id to render until the provider's webhook lands. A video is in exactly
+  #     that state for the whole window between upload and transcode.
+  #
+  # Rendering nothing is the same answer `nil` already gets, and for the same
+  # reason: there is no video to show yet. A record that will never become
+  # playable is a data problem the video list surfaces, not something a page
+  # render should crash over.
+  def video(assigns) do
+    ~H"""
+    <!-- empty video component -->
+    """
+  end
+
   # One renderer for every provider. `provider` carries only what the calling
   # clause can know — the playback URL, the poster, the wrapper class, and a
   # fallback aspect ratio for providers that have one. Everything a viewer can

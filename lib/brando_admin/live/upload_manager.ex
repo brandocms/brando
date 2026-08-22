@@ -71,29 +71,10 @@ defmodule BrandoAdmin.UploadManager do
 
   # Entries that error without ever completing (validation backstop, transport
   # failure) never reach handle_progress — sweep them here or their transfer
-  # slots stay wedged and the drawer row sticks at :uploading.
+  # slots stay wedged and the drawer row sticks at :uploading. Resurrected
+  # entries are swept first, because they are what silently fills the config.
   def handle_event("validate_queue", _params, socket) do
-    queue = socket.assigns.uploads.queue
-
-    socket =
-      Enum.reduce(queue.errors, socket, fn {entry_ref, reason}, socket ->
-        # Config-level errors carry the upload config's ref, not an entry's —
-        # nothing to cancel for those.
-        case Enum.find(queue.entries, &(&1.ref == entry_ref)) do
-          nil ->
-            socket
-
-          entry ->
-            item_ref = ref_from_entry(entry)
-
-            socket
-            |> cancel_upload(:queue, entry.ref)
-            |> push_released(item_ref)
-            |> mark_item_error(item_ref, upload_error_label(reason))
-        end
-      end)
-
-    {:noreply, socket}
+    {:noreply, socket |> drop_resurrected_entries() |> sweep_entry_errors()}
   end
 
   ## Client-direct transport — the browser PUTs to the presigned URL and
@@ -264,6 +245,83 @@ defmodule BrandoAdmin.UploadManager do
   def handle_event(event, params, socket) do
     Logger.warning("==> UploadManager: unhandled event #{inspect(event)}: #{inspect(params)}")
     {:noreply, socket}
+  end
+
+  defp sweep_entry_errors(socket) do
+    queue = socket.assigns.uploads.queue
+
+    Enum.reduce(queue.errors, socket, fn {entry_ref, reason}, socket ->
+      # Config-level errors carry the upload config's ref, not an entry's —
+      # nothing to cancel for those. One does reach here: `:too_many_files`,
+      # which `drop_resurrected_entries/1` above exists to prevent and
+      # `UploadConfig.recalculate_errors/1` clears as soon as the entry count
+      # falls back under the limit. If it survives that, the queue is wedged
+      # and every further file will be dropped without a word — so say so.
+      case Enum.find(queue.entries, &(&1.ref == entry_ref)) do
+        nil ->
+          Logger.error(
+            "==> UploadManager: upload config error #{inspect(reason)} with " <>
+              "#{length(queue.entries)} entries (max #{queue.max_entries}) — " <>
+              "further files will not be uploaded until this clears."
+          )
+
+          socket
+
+        entry ->
+          item_ref = ref_from_entry(entry)
+
+          socket
+          |> cancel_upload(:queue, entry.ref)
+          |> push_released(item_ref)
+          |> mark_item_error(item_ref, upload_error_label(reason))
+      end
+    end)
+  end
+
+  # LiveView's client re-serializes every file still tracked on the input on
+  # each change, and `UploadConfig.put_entries/2` mints a fresh entry for any
+  # ref it does not currently hold. A file is untracked only once the browser
+  # has processed the reply to its final progress push — and this manager frees
+  # the next transfer slot from `consume_and_deliver/3`, inside that same round
+  # trip. So the change event that starts the next file still carries the file
+  # that was just consumed, and the entry we dropped comes straight back:
+  # never preflighted, no upload channel behind it, never done. Nothing will
+  # ever consume or cancel it, and it holds one of the config's `max_entries`
+  # slots for the life of the page.
+  #
+  # Past that limit `Phoenix.LiveView.Upload.generate_preflight_response/4`
+  # caps the refs it answers at `i < conf.max_entries` and simply omits the
+  # rest — no error, no entry token. Under `auto_upload: true` the client
+  # cancels an entry that gets no token without telling the server, so the file
+  # is never uploaded: no error item, nothing in the log, and the source's
+  # placeholder sits on "Waiting…" until the page is reloaded. It is also why
+  # the failure looks intermittent — a page uploads perfectly well until the
+  # accumulated ghosts reach `max_entries`, and then stops dead.
+  #
+  # The item is what tells the two apart. An entry registered moments ago
+  # belongs to an item still in `:queued`; a resurrected one belongs to an item
+  # that has already moved on to `:processing`/`:done`/`:error`, or that was
+  # auto-dismissed and is gone. Cancelling drops the entry outright (there is
+  # no channel to stop), which also recalculates the config's errors and so
+  # releases a queue already wedged on `:too_many_files`.
+  defp drop_resurrected_entries(socket) do
+    items = socket.assigns.items
+
+    socket.assigns.uploads.queue.entries
+    |> Enum.filter(&resurrected?(&1, items))
+    |> Enum.reduce(socket, &cancel_upload(&2, :queue, &1.ref))
+  end
+
+  # A live entry is either mid-transfer (preflighted) or about to be consumed
+  # (done) — neither is a ghost, whatever its item says.
+  defp resurrected?(%{done?: true}, _items), do: false
+  defp resurrected?(%{preflighted?: true}, _items), do: false
+
+  defp resurrected?(entry, items) do
+    case Map.get(items, ref_from_entry(entry)) do
+      nil -> true
+      %{status: status} -> status in [:processing, :done, :error]
+    end
   end
 
   defp accept_intake(files, target, socket) do

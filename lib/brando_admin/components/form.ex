@@ -3430,6 +3430,33 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  # The drawer can be saved before there is anything to save: opened on a field
+  # that has no video, nothing picked and nothing uploaded, and the editor hits
+  # save. `edit_video.video` is nil then, and the clause below binds it straight
+  # into `Brando.Videos.Video.changeset/3` — where `ChangesetRunner.run/1` reads
+  # `schema.__struct__` on nil, raises KeyError, and takes the entry form
+  # process down with every unsaved change in it. Seen in production as
+  # `video[type]=upload` with an empty drawer.
+  #
+  # Defaulting to `%Video{}` would not do: `update_video/2` further down expects
+  # a persisted record, so a struct with no id only moves the failure. There is
+  # genuinely nothing to persist here, so close the drawer — which is exactly
+  # what the "no video in params" clause below already does.
+  #
+  # `validate_video/2` has guarded this since it was written (`edit_video.video
+  # || %Video{}`); it was only ever the save path that did not.
+  def handle_event(
+        "save_video_authorized",
+        %{"video" => _video_params},
+        %{assigns: %{edit_video: %{video: nil}, video_save_authorized?: true}} = socket
+      ) do
+    {:noreply,
+     socket
+     |> assign(:video_save_authorized?, false)
+     |> assign(:editing_video?, false)
+     |> assign_drawer_recovery_state()}
+  end
+
   def handle_event(
         "save_video_authorized",
         %{"video" => video_params},
