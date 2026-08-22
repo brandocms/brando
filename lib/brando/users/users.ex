@@ -60,9 +60,13 @@ defmodule Brando.Users do
   @doc """
   Bumps `user`'s `last_seen` to current time.
 
-  Called from `BrandoAdmin.Presence` when a user's last admin session goes
+  Called from the admin presence tracker when a user's last admin session goes
   away. A remembered session can keep somebody signed in for months, so
   `last_login` is no guide at all to when they were last actually here.
+
+  The module is deliberately named in prose rather than as a reference: it
+  carries `@moduledoc false`, and ExDoc treats a link to a hidden module as a
+  warning — which `mix docs --warnings-as-errors` in CI turns into a failure.
   """
   @spec set_last_seen(user) :: {:ok, user}
   def set_last_seen(user) do
