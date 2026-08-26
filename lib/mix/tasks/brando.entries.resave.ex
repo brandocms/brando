@@ -43,8 +43,9 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
 
   defp resave_all(force?) do
     blueprints =
-      [Brando.Pages.Fragment] ++
-        Brando.Blueprint.list_blueprints() ++ [Brando.Pages.Page]
+      ([Brando.Pages.Fragment] ++
+         Brando.Blueprint.list_blueprints() ++ [Brando.Pages.Page])
+      |> Enum.reject(&embedded?/1)
 
     Mix.shell().info([:yellow, "\n==> Blueprint schemas that will be resaved:\n\n"])
 
@@ -66,10 +67,26 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
   defp resave_one(blueprint_binary) do
     blueprint_module = Module.concat([blueprint_binary])
 
+    if embedded?(blueprint_module) do
+      Mix.raise("""
+      #{inspect(blueprint_module)} declares `data_layer :embedded`.
+
+      Embedded Blueprints have no table and no context list function of their own —
+      they are re-saved with the entry that embeds them.\
+      """)
+    end
+
     if blueprint_module.__has_identifier__() do
       resave_entries(blueprint_module)
       Mix.shell().info([:green, "\n==> Done.\n"])
     end
+  end
+
+  # Embedded Blueprints live inside their parent's column: no table, no
+  # `list_<plural>/1` on any context. Walking them raises UndefinedFunctionError.
+  defp embedded?(blueprint_module) do
+    function_exported?(blueprint_module, :__data_layer__, 0) and
+      blueprint_module.__data_layer__() == :embedded
   end
 
   defp resave_entries(blueprint_module) do

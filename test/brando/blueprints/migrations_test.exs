@@ -227,6 +227,20 @@ defmodule Brando.Blueprint.MigrationsTest do
     end
   end
 
+  test "embedded Blueprints have no storage to diff and are refused" do
+    assert_raise BlueprintError, ~r/declares `data_layer :embedded`/, fn ->
+      Migrations.create_migration(Brando.MigrationTest.Property, @test_opts)
+    end
+
+    assert_raise BlueprintError, ~r/declares `data_layer :embedded`/, fn ->
+      Migrations.rebaseline_snapshot(Brando.MigrationTest.Property, @test_opts)
+    end
+
+    # nothing was written for a Blueprint that owns no table
+    refute File.exists?("tmp/test_migrations")
+    refute File.exists?("tmp/test_snapshots/brando_projects_property")
+  end
+
   test "migration schemas reduce existing parameterized and custom Ecto types" do
     ref_schema = MigrationSchema.build(Brando.Content.Ref)
     ref_data = Enum.find(ref_schema.columns, &(&1.name == :data))

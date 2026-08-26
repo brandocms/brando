@@ -379,6 +379,10 @@ defmodule Brando.Blueprint.Dsl do
         @allow_mark_as_deleted
       end
 
+      def __data_layer__ do
+        @data_layer
+      end
+
       def __factory__(attrs) do
         Map.merge(@factory, attrs)
       end

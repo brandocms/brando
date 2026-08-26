@@ -25,6 +25,7 @@ defmodule Brando.Blueprint.Migrations do
   """
   @spec create_migration(module(), keyword()) :: {:ok | :noop, map()}
   def create_migration(module, opts \\ @default_opts) do
+    refuse_embedded!(module, "generate a migration for")
     opts = Keyword.merge(@default_opts, opts)
 
     with_migration_lock(opts, fn ->
@@ -43,6 +44,7 @@ defmodule Brando.Blueprint.Migrations do
   """
   @spec rebaseline_snapshot(module(), keyword()) :: {:ok, map()}
   def rebaseline_snapshot(module, opts \\ @default_opts) do
+    refuse_embedded!(module, "rebaseline")
     opts = Keyword.merge(@default_opts, opts)
 
     Snapshot.with_lock(module, opts, fn ->
@@ -64,6 +66,20 @@ defmodule Brando.Blueprint.Migrations do
 
   def diff_against(%Snapshot{schema: current_schema}, %Snapshot{schema: previous_schema}) do
     Diff.compare(current_schema, previous_schema)
+  end
+
+  # An embedded Blueprint is stored inside its parent entry's column and owns no
+  # table, so there is no storage to diff. Without this the generator read it as
+  # a brand-new table and proposed a CREATE TABLE that could never be applied.
+  defp refuse_embedded!(module, action) do
+    if function_exported?(module, :__data_layer__, 0) and module.__data_layer__() == :embedded do
+      raise BlueprintError, """
+      Cannot #{action} #{inspect(module)}: it declares `data_layer :embedded`.
+
+      Embedded Blueprints have no table of their own — their storage belongs to
+      the Blueprint that embeds them. Generate that Blueprint's migration instead.
+      """
+    end
   end
 
   defp do_create_migration(module, opts) do
