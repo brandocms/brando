@@ -154,7 +154,11 @@ defmodule Brando.HTML.Images do
         caption -> caption
       end
 
-    noscript_alt = Keyword.get(attrs.opts, :alt, Map.get(src, :alt, ""))
+    # An explicit `alt: nil` — which a picture block with no alt text passes —
+    # must still reach the tag as "", marking the image decorative. `Keyword.get/3`
+    # returns the stored nil rather than the default, and HEEx drops an attribute
+    # whose value is nil, so the fallback img came out with no alt at all.
+    noscript_alt = Keyword.get(attrs.opts, :alt) || Map.get(src, :alt) || ""
     overlay = Keyword.get(opts, :overlay, false)
 
     assigns =

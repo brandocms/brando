@@ -1244,6 +1244,20 @@ defmodule Brando.HTMLTest do
            |> Enum.all?(&match?([_url, _descriptor], String.split(&1, " ")))
   end
 
+  # `alt=""` marks an image decorative; no alt attribute at all makes a screen
+  # reader fall back to announcing the filename.
+  test "the noscript fallback always carries an alt attribute" do
+    assigns = %{img: Factory.build(:image, alt: nil)}
+
+    rendered =
+      rendered_to_string(~H"""
+      <Brando.HTML.picture src={@img} opts={[lazyload: true, alt: nil, prefix: media_url()]} />
+      """)
+
+    assert [_, noscript] = Regex.run(~r|<noscript>(.*?)</noscript>|s, rendered)
+    assert noscript =~ ~s(alt="")
+  end
+
   defmodule SrcsetAssets do
     @moduledoc false
     use Brando.Blueprint,
