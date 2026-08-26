@@ -13,7 +13,11 @@ defmodule Brando.Migrations.TransferRefGalleryData do
       new_gallery_id integer;
       img_data jsonb;
       img_path text;
+      size_path text;
+      size_dir text;
+      size_stem text;
       img_id integer;
+      obj_config jsonb;
       seq integer := 0;
     BEGIN
       -- Create a new gallery
@@ -33,26 +37,80 @@ defmodule Brando.Migrations.TransferRefGalleryData do
       FOR img_data IN SELECT * FROM jsonb_array_elements(ref_data->'images')
       LOOP
         img_path := img_data->>'path';
+        img_id := NULL;
 
-        -- Find the image in the images table
-        SELECT id INTO img_id
-        FROM images
-        WHERE path = img_path
-        AND deleted_at IS NULL
+        -- Prefer the identity implied by `sizes` over `path`.
+        --
+        -- Legacy gallery data can carry a stale `path` alongside correct
+        -- `sizes` — a replaced image wrote one but not the other. The old
+        -- renderer read `sizes`, so those entries displayed the image `sizes`
+        -- names, and matching `path` here would silently swap them for a
+        -- different picture. `sizes` is what the site actually showed.
+        --
+        -- The size file may have a converted extension (a .png source renders
+        -- to .jpg), so match on the stem within the source directory.
+        SELECT value INTO size_path
+        FROM jsonb_each_text(
+          CASE WHEN jsonb_typeof(img_data->'sizes') = 'object'
+               THEN img_data->'sizes' ELSE '{}'::jsonb END
+        )
+        WHERE value IS NOT NULL AND value <> ''
         LIMIT 1;
+
+        IF size_path IS NOT NULL THEN
+          -- strip "/<size>/<file>" to get the source directory
+          size_dir := regexp_replace(size_path, '/[^/]+/[^/]+$', '');
+          size_stem := regexp_replace(regexp_replace(size_path, '^.*/', ''), '\.[^.]+$', '');
+
+          SELECT id INTO img_id
+          FROM images
+          WHERE regexp_replace(path, '\.[^.]+$', '') = (size_dir || '/' || size_stem)
+          AND deleted_at IS NULL
+          LIMIT 1;
+        END IF;
+
+        -- Fall back to `path` when there are no sizes, or when the image the
+        -- sizes name is gone.
+        IF img_id IS NULL THEN
+          SELECT id INTO img_id
+          FROM images
+          WHERE path = img_path
+          AND deleted_at IS NULL
+          LIMIT 1;
+        END IF;
 
         -- If image found, create gallery_object
         IF img_id IS NOT NULL THEN
+          -- Carry the per-placement metadata across. The same image can sit in
+          -- several galleries, or twice in one, with a different caption each
+          -- time, so this belongs on the object rather than on the image.
+          -- An absent key means "not overridden", matching what the admin writes.
+          obj_config := '{}'::jsonb;
+
+          IF COALESCE(img_data->>'title', '') <> '' THEN
+            obj_config := obj_config || jsonb_build_object('title', img_data->>'title');
+          END IF;
+
+          IF COALESCE(img_data->>'alt', '') <> '' THEN
+            obj_config := obj_config || jsonb_build_object('alt', img_data->>'alt');
+          END IF;
+
+          IF COALESCE(img_data->>'credits', '') <> '' THEN
+            obj_config := obj_config || jsonb_build_object('credits', img_data->>'credits');
+          END IF;
+
           INSERT INTO galleries_gallery_objects (
             gallery_id,
             image_id,
             sequence,
+            config,
             inserted_at,
             updated_at
           ) VALUES (
             new_gallery_id,
             img_id,
             seq,
+            obj_config,
             NOW(),
             NOW()
           );

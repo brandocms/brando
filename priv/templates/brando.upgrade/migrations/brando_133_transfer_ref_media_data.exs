@@ -237,15 +237,23 @@ defmodule Brando.Migrations.TransferRefMediaData do
     AND jsonb_array_length(r.data->'data'->'images') > 0
     """
 
+    # `config` carries the per-placement metadata below, and it is added by a
+    # later migration. Ensure it here so this one can populate it; the later
+    # migration adds it conditionally and stays correct either way.
+    execute """
+    ALTER TABLE galleries_gallery_objects
+    ADD COLUMN IF NOT EXISTS config jsonb DEFAULT '{}'::jsonb
+    """
+
     # Create gallery_objects for each image in the gallery
     # We need to match each ref to its corresponding gallery by order
     execute """
     INSERT INTO galleries_gallery_objects (
-      gallery_id, image_id, sequence, creator_id,
+      gallery_id, image_id, sequence, creator_id, config,
       inserted_at, updated_at
     )
     WITH ref_galleries AS (
-      SELECT 
+      SELECT
         r.id as ref_id,
         ROW_NUMBER() OVER (ORDER BY r.id) as ref_order
       FROM content_refs r
@@ -256,26 +264,91 @@ defmodule Brando.Migrations.TransferRefMediaData do
       AND jsonb_array_length(r.data->'data'->'images') > 0
     ),
     gallery_ids AS (
-      SELECT 
+      SELECT
         id,
         ROW_NUMBER() OVER (ORDER BY id) as gallery_order
       FROM galleries
       WHERE config_target = 'default'
+    ),
+    gallery_images AS (
+      SELECT
+        gi.id AS gallery_id,
+        imgs.img_ord,
+        imgs.img_data,
+        COALESCE(b.creator_id, 1) AS creator_id
+      FROM content_refs r
+      CROSS JOIN LATERAL jsonb_array_elements(r.data->'data'->'images') WITH ORDINALITY AS imgs(img_data, img_ord)
+      INNER JOIN ref_galleries rg ON r.id = rg.ref_id
+      INNER JOIN gallery_ids gi ON rg.ref_order = gi.gallery_order
+      LEFT JOIN content_blocks b ON r.block_id = b.id
+      WHERE r.data->>'type' = 'gallery'
+    ),
+    resolved AS (
+      SELECT
+        gallery_images.*,
+        COALESCE(by_size.id, by_path.id) AS image_id
+      FROM gallery_images
+      -- Prefer the identity implied by `sizes` over `path`. Legacy gallery data
+      -- can carry a stale `path` next to correct `sizes` — a replaced image
+      -- wrote one but not the other. The old renderer read `sizes`, so that is
+      -- the image the site actually displayed; matching `path` here would
+      -- silently swap it for a different picture.
+      LEFT JOIN LATERAL (
+        SELECT value
+        FROM jsonb_each_text(
+          CASE WHEN jsonb_typeof(gallery_images.img_data->'sizes') = 'object'
+               THEN gallery_images.img_data->'sizes' ELSE '{}'::jsonb END
+        )
+        WHERE value IS NOT NULL AND value <> ''
+        LIMIT 1
+      ) sz ON TRUE
+      -- The size file may carry a converted extension (a .png source renders to
+      -- .jpg), so compare the extensionless path rather than the filename.
+      LEFT JOIN LATERAL (
+        SELECT i.id
+        FROM images i
+        WHERE sz.value IS NOT NULL
+        AND i.deleted_at IS NULL
+        AND regexp_replace(i.path, '\\.[^.]+$', '') =
+            regexp_replace(
+              regexp_replace(sz.value, '/[^/]+/([^/]+)$', '/\\1'),
+              '\\.[^.]+$', ''
+            )
+        LIMIT 1
+      ) by_size ON TRUE
+      -- Fall back to `path` when the ref has no sizes, or when the image its
+      -- sizes name is gone.
+      LEFT JOIN LATERAL (
+        SELECT i.id
+        FROM images i
+        WHERE i.deleted_at IS NULL
+        AND i.path = gallery_images.img_data->>'path'
+        LIMIT 1
+      ) by_path ON TRUE
     )
-    SELECT 
-      gi.id,
-      i.id,
-      (row_number() OVER (PARTITION BY gi.id ORDER BY img_ord)) - 1,
-      COALESCE(b.creator_id, 1),
+    SELECT
+      gallery_id,
+      image_id,
+      (row_number() OVER (PARTITION BY gallery_id ORDER BY img_ord)) - 1,
+      creator_id,
+      -- The same image can sit in several galleries, or twice in one, with a
+      -- different caption each time, so this metadata belongs on the placement
+      -- rather than on the image. An absent key means "not overridden", which is
+      -- what the admin's override fields write.
+      (
+        CASE WHEN COALESCE(img_data->>'title', '') <> ''
+             THEN jsonb_build_object('title', img_data->>'title') ELSE '{}'::jsonb END
+        ||
+        CASE WHEN COALESCE(img_data->>'alt', '') <> ''
+             THEN jsonb_build_object('alt', img_data->>'alt') ELSE '{}'::jsonb END
+        ||
+        CASE WHEN COALESCE(img_data->>'credits', '') <> ''
+             THEN jsonb_build_object('credits', img_data->>'credits') ELSE '{}'::jsonb END
+      ),
       NOW(),
       NOW()
-    FROM content_refs r
-    CROSS JOIN LATERAL jsonb_array_elements(r.data->'data'->'images') WITH ORDINALITY AS imgs(img_data, img_ord)
-    INNER JOIN ref_galleries rg ON r.id = rg.ref_id
-    INNER JOIN gallery_ids gi ON rg.ref_order = gi.gallery_order
-    INNER JOIN images i ON i.path = imgs.img_data->>'path' AND i.deleted_at IS NULL
-    LEFT JOIN content_blocks b ON r.block_id = b.id
-    WHERE r.data->>'type' = 'gallery'
+    FROM resolved
+    WHERE image_id IS NOT NULL
     """
 
     # Update refs with gallery_id - we need a way to link each ref to its specific gallery
