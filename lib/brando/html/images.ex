@@ -298,9 +298,18 @@ defmodule Brando.HTML.Images do
     )
   end
 
+  # 50/50 is CSS's own initial value for `object-position`, so writing it out said
+  # nothing and cost an inline style on every image. Worse, an inline declaration
+  # beats a stylesheet: a rule positioning an image somewhere other than centre
+  # was overridden back to centre by a focal point the editor never set.
+  #
+  # The attribute now appears only when it carries a real focal point.
   defp add_focal(attrs, image_struct) do
-    focal = Map.get(image_struct, :focal) || %{x: 50, y: 50}
-    put_in(attrs, [:img, "style"], "object-position: #{focal.x}% #{focal.y}%;")
+    case Map.get(image_struct, :focal) do
+      %{x: 50, y: 50} -> attrs
+      %{x: x, y: y} -> put_in(attrs, [:img, "style"], "object-position: #{x}% #{y}%;")
+      _ -> attrs
+    end
   end
 
   defp add_extra_attrs(attrs) do

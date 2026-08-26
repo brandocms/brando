@@ -1244,6 +1244,36 @@ defmodule Brando.HTMLTest do
            |> Enum.all?(&match?([_url, _descriptor], String.split(&1, " ")))
   end
 
+  describe "object-position" do
+    defp picture_html(focal) do
+      assigns = %{img: Brando.Factory.build(:image, focal: focal)}
+
+      rendered_to_string(~H"""
+      <Brando.HTML.picture src={@img} opts={[lazyload: true, prefix: media_url()]} />
+      """)
+    end
+
+    # 50/50 is CSS's own initial value, so the declaration said nothing — and an
+    # inline style outranks a stylesheet, so it overrode any rule that positioned
+    # the image somewhere other than centre.
+    test "is left out for a centred focal point" do
+      refute picture_html(%Brando.Images.Focal{x: 50, y: 50}) =~ "object-position"
+    end
+
+    test "is left out when the image has no focal point" do
+      refute picture_html(nil) =~ "object-position"
+    end
+
+    test "is written for a real focal point" do
+      assert picture_html(%Brando.Images.Focal{x: 60, y: 74}) =~ "object-position: 60% 74%;"
+    end
+
+    test "an off-centre value on one axis still counts" do
+      assert picture_html(%Brando.Images.Focal{x: 50, y: 74}) =~ "object-position: 50% 74%;"
+      assert picture_html(%Brando.Images.Focal{x: 60, y: 50}) =~ "object-position: 60% 50%;"
+    end
+  end
+
   # `alt=""` marks an image decorative; no alt attribute at all makes a screen
   # reader fall back to announcing the filename.
   test "the noscript fallback always carries an alt attribute" do
