@@ -84,10 +84,7 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
 
   # Embedded Blueprints live inside their parent's column: no table, no
   # `list_<plural>/1` on any context. Walking them raises UndefinedFunctionError.
-  defp embedded?(blueprint_module) do
-    function_exported?(blueprint_module, :__data_layer__, 0) and
-      blueprint_module.__data_layer__() == :embedded
-  end
+  defp embedded?(blueprint_module), do: Brando.Blueprint.embedded?(blueprint_module)
 
   defp resave_entries(blueprint_module) do
     context = blueprint_module.__modules__().context

@@ -241,6 +241,17 @@ defmodule Brando.Blueprint.MigrationsTest do
     refute File.exists?("tmp/test_snapshots/brando_projects_property")
   end
 
+  # A Blueprint compiled against an older Brando has no `__data_layer__/0`, and a
+  # guard keyed on that function alone silently lets it through — which is exactly
+  # the situation during an upgrade, when these generators get used.
+  test "embedded Blueprints are recognized from the compiled Ecto schema" do
+    assert Brando.Blueprint.embedded?(Brando.MigrationTest.Property)
+    assert is_nil(Brando.MigrationTest.Property.__schema__(:source))
+
+    refute Brando.Blueprint.embedded?(Brando.MigrationTest.Project)
+    assert Brando.MigrationTest.Project.__schema__(:source)
+  end
+
   test "migration schemas reduce existing parameterized and custom Ecto types" do
     ref_schema = MigrationSchema.build(Brando.Content.Ref)
     ref_data = Enum.find(ref_schema.columns, &(&1.name == :data))

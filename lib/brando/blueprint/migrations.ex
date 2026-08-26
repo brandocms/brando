@@ -72,7 +72,7 @@ defmodule Brando.Blueprint.Migrations do
   # table, so there is no storage to diff. Without this the generator read it as
   # a brand-new table and proposed a CREATE TABLE that could never be applied.
   defp refuse_embedded!(module, action) do
-    if function_exported?(module, :__data_layer__, 0) and module.__data_layer__() == :embedded do
+    if Brando.Blueprint.embedded?(module) do
       raise BlueprintError, """
       Cannot #{action} #{inspect(module)}: it declares `data_layer :embedded`.
 

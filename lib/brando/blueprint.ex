@@ -651,6 +651,25 @@ defmodule Brando.Blueprint do
   def blueprint?(module), do: {:__blueprint__, 0} in module.__info__(:functions)
 
   @doc """
+  Returns true when the Blueprint stores its entries inside a parent entry's column.
+
+  Embedded Blueprints own no table, so anything table-shaped — migrations,
+  snapshots, context list functions — does not apply to them.
+
+  The answer comes from the compiled Ecto schema rather than from
+  `__data_layer__/0`, so it stays correct for a Blueprint that was compiled
+  against an older Brando: `embedded_schema/1` leaves `__schema__(:source)` nil.
+  """
+  @spec embedded?(module()) :: boolean()
+  def embedded?(module) do
+    cond do
+      function_exported?(module, :__schema__, 1) -> is_nil(module.__schema__(:source))
+      function_exported?(module, :__data_layer__, 0) -> module.__data_layer__() == :embedded
+      true -> false
+    end
+  end
+
+  @doc """
   List all blueprints
   """
   @spec list_blueprints :: [module()]
