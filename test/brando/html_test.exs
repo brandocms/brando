@@ -1244,6 +1244,68 @@ defmodule Brando.HTMLTest do
            |> Enum.all?(&match?([_url, _descriptor], String.split(&1, " ")))
   end
 
+  defmodule SrcsetAssets do
+    @moduledoc false
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "HTMLTest",
+      schema: "SrcsetAssets",
+      singular: "srcset_asset",
+      plural: "srcset_assets",
+      gettext_module: Brando.Gettext
+
+    @sizes %{
+      "small" => %{"size" => "300", "quality" => 65},
+      "medium" => %{"size" => "500", "quality" => 65},
+      "large" => %{"size" => "700", "quality" => 65}
+    }
+
+    @flat_srcset [{"small", "300w"}, {"medium", "500w"}, {"large", "700w"}]
+    @keyed_srcset %{default: [{"small", "300w"}, {"large", "700w"}]}
+
+    assets do
+      asset :cover, :image, cfg: [sizes: @sizes, srcset: @flat_srcset]
+      asset :photos, :gallery, cfg: [sizes: @sizes, srcset: @flat_srcset]
+      asset :keyed_cover, :image, cfg: [sizes: @sizes, srcset: @keyed_srcset]
+      asset :keyed_photos, :gallery, cfg: [sizes: @sizes, srcset: @keyed_srcset]
+    end
+  end
+
+  # A `:gallery` asset's config is `%{image: ImageConfig, video: VideoConfig}`
+  # rather than an image config, so reading `:srcset` straight off it raised.
+  test "get_srcset reads a gallery asset's image config" do
+    img_field = Factory.build(:image)
+    expected = "image/small/1.jpg 300w, image/medium/1.jpg 500w, image/large/1.jpg 700w"
+
+    assert Brando.HTML.Images.get_srcset(img_field, {SrcsetAssets, :cover}, [], :svg) ==
+             {false, expected}
+
+    assert Brando.HTML.Images.get_srcset(img_field, {SrcsetAssets, :photos}, [], :svg) ==
+             {false, expected}
+  end
+
+  test "get_srcset reads a keyed srcset from a gallery asset's image config" do
+    img_field = Factory.build(:image)
+    expected = "image/small/1.jpg 300w, image/large/1.jpg 700w"
+
+    assert Brando.HTML.Images.get_srcset(img_field, {SrcsetAssets, :keyed_cover, :default}, [], :svg) ==
+             {false, expected}
+
+    assert Brando.HTML.Images.get_srcset(img_field, {SrcsetAssets, :keyed_photos, :default}, [], :svg) ==
+             {false, expected}
+  end
+
+  test "get_srcset accepts a gallery asset through the string form" do
+    img_field = Factory.build(:image)
+
+    assert Brando.HTML.Images.get_srcset(
+             img_field,
+             "#{inspect(SrcsetAssets)}:keyed_photos.default",
+             [],
+             :svg
+           ) == {false, "image/small/1.jpg 300w, image/large/1.jpg 700w"}
+  end
+
   test "init_js" do
     assigns = %{}
 

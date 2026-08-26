@@ -719,7 +719,7 @@ defmodule Brando.HTML.Images do
   end
 
   def get_srcset(image_field, {mod, field}, opts, placeholder) do
-    {:ok, %{cfg: cfg}} = {:ok, Assets.__asset_opts__(mod, field)}
+    cfg = srcset_image_config(mod, field)
 
     if !Map.get(cfg, :srcset) do
       raise ArgumentError,
@@ -765,7 +765,7 @@ defmodule Brando.HTML.Images do
   #   ]
   # }
   def get_srcset(image_field, {mod, field, key}, opts, placeholder) do
-    {:ok, %{cfg: cfg}} = {:ok, Assets.__asset_opts__(mod, field)}
+    cfg = srcset_image_config(mod, field)
 
     if !cfg.srcset do
       raise ArgumentError,
@@ -849,6 +849,16 @@ defmodule Brando.HTML.Images do
       end
 
     {false, Enum.join(srcset_values, ", ")}
+  end
+
+  # A `:gallery` asset carries one config per media type — `%{image: .., video: ..}` —
+  # so the image config has to be unwrapped before looking for `:srcset`. Every
+  # other asset type stores its typed config directly.
+  defp srcset_image_config(mod, field) do
+    case Assets.__asset_opts__(mod, field) do
+      %{cfg: %{image: image_cfg}} -> image_cfg
+      %{cfg: cfg} -> cfg
+    end
   end
 
   defp check_cropped(%{sizes: sizes, srcset: srcset}, key) do
