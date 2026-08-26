@@ -13,6 +13,52 @@ defmodule Brando.Villain.RefRenderingTest do
   end
 
   describe "ref parsing and rendering" do
+    # The marker exists to say *which* ref was switched off. `active` moved from
+    # the ref's data into a database column, which stranded the clause that
+    # printed the name and left every deactivated ref rendering an anonymous
+    # `<!-- !a -->`.
+    test "names the ref in the marker for a deactivated ref", %{user: user} do
+      module_params =
+        Factory.params_for(:module, %{
+          code: "Headline: {% ref refs.title %}",
+          refs: [
+            %{
+              name: "title",
+              uid: Brando.Utils.generate_uid(),
+              data: %{type: "text", data: %{text: "Default Title", type: :paragraph}}
+            }
+          ]
+        })
+
+      {:ok, module} = Content.create_module(module_params, user)
+
+      block = %{
+        block: %{
+          type: :module,
+          module_id: module.id,
+          refs: [
+            %{
+              name: "title",
+              description: nil,
+              active: false,
+              uid: Brando.Utils.generate_uid(),
+              data: %Brando.Villain.Blocks.TextBlock{
+                type: "text",
+                data: %Brando.Villain.Blocks.TextBlock.Data{text: "Hidden", type: :paragraph}
+              }
+            }
+          ],
+          uid: Brando.Utils.generate_uid(),
+          vars: []
+        }
+      }
+
+      parsed = Brando.Villain.parse([block], %Brando.Pages.Page{})
+
+      assert parsed =~ "<!-- !a[title] -->"
+      refute parsed =~ "Hidden"
+    end
+
     test "renders text refs correctly", %{user: user} do
       module_params =
         Factory.params_for(:module, %{

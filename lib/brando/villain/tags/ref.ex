@@ -51,7 +51,7 @@ defmodule Brando.Villain.Tags.Ref do
   defp render_ref(_, %{data: %{hidden: true}}, _id, ref_name, _, _), do: "<!-- h[#{ref_name}] -->"
 
   defp render_ref(_, %{deleted: true}, _id, _ref_name, _, _), do: "<!-- d -->"
-  defp render_ref(_, %{active: false}, _id, _ref_name, _, _), do: "<!-- !a -->"
+  defp render_ref(_, %{active: false}, _id, ref_name, _, _), do: "<!-- !a[#{ref_name}] -->"
 
   defp render_ref(parser, %{data: block, description: description}, id, ref_name, true, opts) do
     rendered_ref = apply(parser, String.to_atom(block.type), [block.data, opts])

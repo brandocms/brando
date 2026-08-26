@@ -106,8 +106,8 @@ defmodule Brando.Villain.Components do
   defp render_ref(%{deleted: true}, _ref_name, _block, _headless, _assigns),
     do: Phoenix.HTML.raw("<!-- d -->")
 
-  defp render_ref(%{active: false}, _ref_name, _block, _headless, _assigns),
-    do: Phoenix.HTML.raw("<!-- !a -->")
+  defp render_ref(%{active: false}, ref_name, _block, _headless, _assigns),
+    do: Phoenix.HTML.raw("<!-- !a[#{ref_name}] -->")
 
   defp render_ref(%{data: block_data}, _ref_name, _block, true, assigns) do
     assigns = assign(assigns, :headless_data, block_data.data)
