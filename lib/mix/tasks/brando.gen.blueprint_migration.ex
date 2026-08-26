@@ -27,6 +27,8 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigration do
     snapshot_path: :string
   ]
 
+  @requirements ["app.config"]
+
   @impl Mix.Task
   def run(argv) do
     {opts, positional, invalid} = OptionParser.parse(argv, strict: @switches)
