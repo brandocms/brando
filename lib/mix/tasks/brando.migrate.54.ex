@@ -953,7 +953,7 @@ if Code.ensure_loaded?(Igniter) do
 
     defp rewrite_dockerfiles(igniter) do
       igniter
-      |> Igniter.include_glob(Path.expand("Dockerfile*"))
+      |> Igniter.include_glob("Dockerfile*")
       |> rewrite_matching_sources(&dockerfile?/1, fn content ->
         Regex.replace(@phx_digest_regex, content, "mix brando.digest")
       end)
@@ -961,8 +961,8 @@ if Code.ensure_loaded?(Igniter) do
 
     defp rewrite_font_urls(igniter) do
       igniter
-      |> Igniter.include_glob(Path.expand("assets/**/*.{css,pcss,sass,scss}"))
-      |> Igniter.include_glob(Path.expand("lib/**/*.{eex,ex,exs,heex,leex}"))
+      |> Igniter.include_glob("assets/**/*.{css,pcss,sass,scss}")
+      |> Igniter.include_glob("lib/**/*.{eex,ex,exs,heex,leex}")
       |> rewrite_matching_sources(&font_source?/1, fn content ->
         Regex.replace(@font_vsn_regex, content, "\\1")
       end)
@@ -972,8 +972,8 @@ if Code.ensure_loaded?(Igniter) do
       version = phoenix_live_view_version()
 
       igniter
-      |> Igniter.include_glob(Path.expand("assets/package.json"))
-      |> Igniter.include_glob(Path.expand("assets/**/package.json"))
+      |> Igniter.include_glob("assets/package.json")
+      |> Igniter.include_glob("assets/**/package.json")
       |> rewrite_matching_sources(&assets_package_json?/1, fn content ->
         Regex.replace(@live_view_package_regex, content, fn _match, prefix, suffix ->
           prefix <> version <> suffix

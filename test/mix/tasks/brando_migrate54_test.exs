@@ -386,6 +386,21 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert_unchanged(second_pass)
   end
 
+  # `Path.expand/1` on these globs put absolute paths into the rewrite. Igniter then
+  # takes each source's first path segment to find `.formatter.exs`, got "/" back,
+  # and ran `Path.wildcard("/**/.formatter.exs")` — a walk of the whole filesystem,
+  # so the task never returned.
+  #
+  # This is asserted against the source because Igniter's test mode relativizes
+  # every included path before storing it, which hides the difference: the task
+  # behaves identically here whether the globs are absolute or not.
+  test "includes its globs relative to the project root" do
+    source = File.read!("lib/mix/tasks/brando.migrate.54.ex")
+
+    refute source =~ ~r/include_glob\(\s*Path\.expand/,
+           "include_glob/2 must receive a project-relative glob"
+  end
+
   test "does not require a LivePreview module" do
     igniter = migrate(@legacy_blueprint, nil)
     assert source(igniter, @blueprint_path) =~ "trait(Brando.Trait.Blocks)"
