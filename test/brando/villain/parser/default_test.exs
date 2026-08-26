@@ -233,6 +233,70 @@ defmodule Brando.Villain.ParserTest do
              "<ul id=\"ul_id\" class=\"ul_class\">\n  <li class=\"test\">\n  val here!\n</li>\n\n<li>\n  val 2 here!\n</li>\n\n</ul>\n"
   end
 
+  describe "gallery/2 per-placement overrides" do
+    # The admin writes title/alt/credits per gallery object, because the same
+    # image can appear twice in one gallery with a different caption each time.
+    # Those values were persisted but never reached the rendered markup.
+    defp gallery_with(config) do
+      image =
+        Brando.Factory.build(:image,
+          title: "Image title",
+          alt: "Image alt",
+          credits: "Image credits"
+        )
+
+      %Brando.Galleries.Gallery{
+        gallery_objects: [
+          %Brando.Galleries.GalleryObject{sequence: 0, image: image, config: config}
+        ]
+      }
+    end
+
+    test "an override replaces the image's own metadata" do
+      html = gallery(%{type: :slideshow, gallery: gallery_with(%{"alt" => "Placement alt"})}, [])
+
+      assert html =~ ~s(alt="Placement alt")
+      refute html =~ ~s(alt="Image alt")
+    end
+
+    test "keys the placement does not override fall through to the image" do
+      html = gallery(%{type: :slideshow, gallery: gallery_with(%{"alt" => "Placement alt"})}, [])
+
+      assert html =~ "Image title"
+      assert html =~ "Image credits"
+    end
+
+    test "an empty config leaves the image untouched" do
+      html = gallery(%{type: :slideshow, gallery: gallery_with(%{})}, [])
+
+      assert html =~ ~s(alt="Image alt")
+      assert html =~ "Image title"
+    end
+
+    test "an empty string is not an override" do
+      html = gallery(%{type: :slideshow, gallery: gallery_with(%{"alt" => ""})}, [])
+
+      assert html =~ ~s(alt="Image alt")
+    end
+
+    test "the same image can carry different metadata in two placements" do
+      image = Brando.Factory.build(:image, title: nil, alt: "shared", credits: nil)
+
+      gallery = %Brando.Galleries.Gallery{
+        gallery_objects: [
+          %Brando.Galleries.GalleryObject{sequence: 0, image: image, config: %{"alt" => "first"}},
+          %Brando.Galleries.GalleryObject{sequence: 1, image: image, config: %{"alt" => "second"}}
+        ]
+      }
+
+      html = gallery(%{type: :slideshow, gallery: gallery}, [])
+
+      assert html =~ ~s(alt="first")
+      assert html =~ ~s(alt="second")
+      refute html =~ ~s(alt="shared")
+    end
+  end
+
   test "blockquote/2" do
     assert blockquote(%{text: "Some text", cite: "J. Williamson"}, []) ==
              "<blockquote>\n  <p>Some text</p>\n  <p class=\"cite\">\n    — <cite>J. Williamson</cite>\n  </p>\n</blockquote>\n"

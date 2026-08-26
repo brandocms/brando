@@ -750,13 +750,49 @@ defmodule Brando.Villain.Parser do
 
   defp gallery_media(%{gallery_objects: gallery_objects}) when is_list(gallery_objects) do
     Enum.flat_map(gallery_objects, fn
-      %{image: %Brando.Images.Image{} = image} -> [{:image, image}]
-      %{video: %Brando.Videos.Video{} = video} -> [{:video, video}]
+      %{image: %Brando.Images.Image{} = image} = object -> [{:image, apply_object_config(image, object)}]
+      %{video: %Brando.Videos.Video{} = video} = object -> [{:video, apply_object_config(video, object)}]
       _ -> []
     end)
   end
 
   defp gallery_media(_gallery), do: []
+
+  # A gallery object may override the record's own metadata for this one
+  # placement — the same image can appear in two galleries, or twice in one, with
+  # a different caption each time. The admin writes these under
+  # `GalleryObject.config` and omits a key entirely when the field is left empty,
+  # so a present key means "overridden" and everything else falls through to the
+  # record.
+  @image_overrides ~w(title alt credits)
+  @video_overrides ~w(title caption autoplay loop muted controls preload)
+
+  defp apply_object_config(%Brando.Images.Image{} = image, object),
+    do: merge_overrides(image, object_config(object), @image_overrides)
+
+  defp apply_object_config(%Brando.Videos.Video{} = video, object),
+    do: merge_overrides(video, object_config(object), @video_overrides)
+
+  defp object_config(%{config: config}) when is_map(config), do: config
+  defp object_config(_object), do: %{}
+
+  defp merge_overrides(record, config, _keys) when map_size(config) == 0, do: record
+
+  defp merge_overrides(record, config, keys) do
+    Enum.reduce(keys, record, fn key, acc ->
+      field = String.to_existing_atom(key)
+
+      case Map.fetch(config, key) do
+        # `false` is a real override for the video booleans, so only nil and the
+        # empty string fall through to the record.
+        {:ok, value} when value not in [nil, ""] ->
+          if Map.has_key?(acc, field), do: Map.put(acc, field, value), else: acc
+
+        _ ->
+          acc
+      end
+    end)
+  end
 
   defp render_gallery(media, %{type: :slider} = data, opts) do
     items = gallery_items(media, data, opts, :panner)
