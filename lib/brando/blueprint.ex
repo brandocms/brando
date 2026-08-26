@@ -662,11 +662,15 @@ defmodule Brando.Blueprint do
   """
   @spec embedded?(module()) :: boolean()
   def embedded?(module) do
-    cond do
-      function_exported?(module, :__schema__, 1) -> is_nil(module.__schema__(:source))
-      function_exported?(module, :__data_layer__, 0) -> module.__data_layer__() == :embedded
-      true -> false
-    end
+    # `function_exported?/3` answers for the *loaded* module and does not load it,
+    # so without this an unloaded Blueprint reads as not-embedded — and whether it
+    # happens to be loaded depends on what ran before.
+    Code.ensure_loaded?(module) and
+      cond do
+        function_exported?(module, :__schema__, 1) -> is_nil(module.__schema__(:source))
+        function_exported?(module, :__data_layer__, 0) -> module.__data_layer__() == :embedded
+        true -> false
+      end
   end
 
   @doc """

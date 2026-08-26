@@ -241,6 +241,17 @@ defmodule Brando.Blueprint.MigrationsTest do
     refute File.exists?("tmp/test_snapshots/brando_projects_property")
   end
 
+  # `function_exported?/3` reports on the loaded module and will not load it, so an
+  # unloaded Blueprint answered "not embedded" and walked straight past the guard.
+  # Whether it happened to be loaded depended on what ran before it.
+  test "an embedded Blueprint is recognized even when its module is not loaded yet" do
+    :code.purge(Brando.MigrationTest.Property)
+    :code.delete(Brando.MigrationTest.Property)
+    refute :erlang.module_loaded(Brando.MigrationTest.Property)
+
+    assert Brando.Blueprint.embedded?(Brando.MigrationTest.Property)
+  end
+
   # A Blueprint compiled against an older Brando has no `__data_layer__/0`, and a
   # guard keyed on that function alone silently lets it through — which is exactly
   # the situation during an upgrade, when these generators get used.
