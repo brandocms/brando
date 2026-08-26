@@ -748,7 +748,17 @@ defmodule Brando.Villain.Parser do
   # empty gallery
   def gallery(_data, _), do: ""
 
-  defp gallery_media(%{gallery_objects: gallery_objects}) when is_list(gallery_objects) do
+  @doc """
+  Resolves a gallery's media into `{:image, image}` / `{:video, video}` pairs.
+
+  Each record comes back with its gallery object's `config` overrides already
+  applied, so a parser that overrides `gallery/2` — the normal way to change a
+  project's gallery markup — gets the same per-placement titles, alt texts and
+  credits the default renderer does. Reading `gallery_objects` directly skips
+  them.
+  """
+  @spec gallery_media(map()) :: [{:image, Brando.Images.Image.t()} | {:video, Brando.Videos.Video.t()}]
+  def gallery_media(%{gallery_objects: gallery_objects}) when is_list(gallery_objects) do
     Enum.flat_map(gallery_objects, fn
       %{image: %Brando.Images.Image{} = image} = object -> [{:image, apply_object_config(image, object)}]
       %{video: %Brando.Videos.Video{} = video} = object -> [{:video, apply_object_config(video, object)}]
@@ -756,7 +766,7 @@ defmodule Brando.Villain.Parser do
     end)
   end
 
-  defp gallery_media(_gallery), do: []
+  def gallery_media(_gallery), do: []
 
   # A gallery object may override the record's own metadata for this one
   # placement — the same image can appear in two galleries, or twice in one, with

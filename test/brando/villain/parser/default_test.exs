@@ -279,6 +279,21 @@ defmodule Brando.Villain.ParserTest do
       assert html =~ ~s(alt="Image alt")
     end
 
+    # A parser that overrides gallery/2 — the normal way to change a project's
+    # gallery markup — must be able to reach the same resolved media, or its
+    # markup silently loses every override.
+    test "gallery_media/1 hands a custom parser the overridden records" do
+      gallery = gallery_with(%{"alt" => "Placement alt"})
+
+      assert [{:image, image}] = Brando.Villain.Parser.gallery_media(gallery)
+      assert image.alt == "Placement alt"
+      assert image.title == "Image title"
+    end
+
+    test "gallery_media/1 tolerates a gallery with nothing loaded" do
+      assert Brando.Villain.Parser.gallery_media(%{}) == []
+    end
+
     test "the same image can carry different metadata in two placements" do
       image = Brando.Factory.build(:image, title: nil, alt: "shared", credits: nil)
 
