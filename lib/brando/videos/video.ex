@@ -132,6 +132,7 @@ defmodule Brando.Videos.Video do
           input :preload, :toggle, label: t("Preload")
           input :loop, :toggle, label: t("Loop")
           input :controls, :toggle, label: t("Controls")
+          input :muted, :toggle, label: t("Muted")
           input :file, :file, label: t("Video file")
           input :thumbnail, :image, label: t("Thumbnail")
         end
