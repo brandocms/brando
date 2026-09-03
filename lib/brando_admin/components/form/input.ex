@@ -873,10 +873,30 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :target, :any, default: nil
 
   def override_toggle_group(assigns) do
-    any_overridden =
-      Enum.any?(assigns.fields, fn {f, _, d} -> f.value != nil && f.value != (d || false) end)
+    # `field.value` is a boolean straight from the changeset, but a *string*
+    # once the block form has round-tripped through params — the hidden input
+    # below submits "true"/"false". Comparing it strictly against `true` drew
+    # every toggle as off no matter what the ref held, so a block that inherited
+    # `autoplay: true` from its module template looked completely switched off.
+    # Worse, `toggle_override` reads the changeset's real boolean and writes
+    # `!value`, so the first click on a toggle that *looked* off turned the
+    # setting off for real. The inline reset arrow appeared on fields that were
+    # not overridden for the same reason ("false" != false), and one click on it
+    # replaced a module template's value with nil. Normalize before comparing.
+    rows =
+      Enum.map(assigns.fields, fn {field, label, default_val} ->
+        {field, label, default_val, override_value(field.value)}
+      end)
 
-    assigns = assign(assigns, :any_overridden, any_overridden)
+    any_overridden =
+      Enum.any?(rows, fn {_field, _label, default_val, value} ->
+        value != nil and value != (default_val || false)
+      end)
+
+    assigns =
+      assigns
+      |> assign(:rows, rows)
+      |> assign(:any_overridden, any_overridden)
 
     ~H"""
     <fieldset class="override-toggle-group">
@@ -888,23 +908,18 @@ defmodule BrandoAdmin.Components.Form.Input do
           class="override-reset-all"
           phx-click="reset_override_group"
           phx-target={@target}
-          phx-value-fields={Enum.map_join(@fields, ",", fn {f, _, _} -> f.field end)}
+          phx-value-fields={Enum.map_join(@rows, ",", fn {f, _, _, _} -> f.field end)}
         >
           <.icon name="hero-arrow-uturn-left-mini" />
         </button>
       </legend>
-      <div :for={{field, label, default_val} <- @fields} class="override-toggle-row">
-        <input
-          :if={field.value != nil}
-          type="hidden"
-          name={field.name}
-          value={to_string(field.value)}
-        />
+      <div :for={{field, label, default_val, value} <- @rows} class="override-toggle-row">
+        <input :if={value != nil} type="hidden" name={field.name} value={to_string(value)} />
         <button
           type="button"
           class={[
             "override-toggle-btn",
-            (field.value == true || (field.value == nil && default_val)) && "active"
+            (value == true || (value == nil && default_val)) && "active"
           ]}
           phx-click="toggle_override"
           phx-target={@target}
@@ -913,7 +928,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         ></button>
         <span class="override-toggle-label">{label}</span>
         <button
-          :if={field.value != nil && field.value != (default_val || false)}
+          :if={value != nil && value != (default_val || false)}
           type="button"
           class="override-reset-inline"
           phx-click="reset_override"
@@ -926,6 +941,10 @@ defmodule BrandoAdmin.Components.Form.Input do
     </fieldset>
     """
   end
+
+  defp override_value(value) when value in [true, "true"], do: true
+  defp override_value(value) when value in [false, "false"], do: false
+  defp override_value(_value), do: nil
 
   attr :field, FormField
   attr :label, :string
