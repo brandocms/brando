@@ -23,10 +23,14 @@ defmodule Brando.Repo.Migrations.AddVarLayout do
        SET placement = CASE WHEN important IS TRUE THEN 'content' ELSE 'config' END
     """
 
-    # Every var used to start its own row in practice, since the old 12-column
-    # grid packed them densely and authors had no way to group them.
+    # No var carried an authored row break before this migration: the old
+    # 12-column grid packed them densely and authors had no way to group them.
+    # `Brando.Content.Var.Layout.pack/1` breaks a row on its own whenever the
+    # next var would overflow the 12 units or the 4 slots, so leaving every
+    # `new_row` false reproduces that packing exactly. Setting them true instead
+    # pushes every var onto a line of its own.
     execute """
-    UPDATE content_vars SET new_row = TRUE
+    UPDATE content_vars SET new_row = FALSE
     """
 
     alter table(:content_vars) do
