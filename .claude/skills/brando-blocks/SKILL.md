@@ -259,6 +259,25 @@ Events.handle_block_event("duplicate_block")
 Duplication is the one place a changeset still travels between components, because a copy
 needs the whole materialized subtree.
 
+### Copy / Paste Flow
+Copy gathers the same way duplication does, then stores
+`%{changeset, type, parent_module_id}` in **`Brando.Cache` under
+`{:block_clipboard, user_id}`** (4h TTL, tenant-scoped) — never in the socket. That is what
+makes paste work **across entries and across schemas**: any BlockField the same user mounts
+reads the same clipboard.
+
+* `initialize_blocks/2` hydrates `clipboard_meta` + `paste_multi_module_id` from the cache.
+  Skipping that hydration is what used to make paste look same-document-only: the buttons
+  are shown by CSS from `data-paste-allow`, which is rendered from `clipboard_meta`.
+* Paste forces `source:` to the **target** field's `block_module` (`duplicate_block/2`'s
+  `:source` opt, applied recursively) — `source` names the join table `list_orphaned_blocks/0`
+  reaches a block through, so a cross-schema paste must re-source.
+* `duplicate_ref/2` **deep-copies the ref's gallery** (`Galleries.duplicate_gallery/2`,
+  a real DB insert): images/videos/files are library assets and stay shared, but a gallery
+  is owned by its ref, so sharing the row would make the copy's edits hit the original.
+  The new `gallery_id` is written to the ref's *data* (not `put_assoc`ed) because the op
+  store snapshots a new block's applied state.
+
 ### Insert / Delete / Reorder
 All are **ops applied to the store**, not list surgery:
 `{:insert, uid, seq, diff}`, `{:delete, uid}`, `{:reorder_children, parent, uids}`. Root-level

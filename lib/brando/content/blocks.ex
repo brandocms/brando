@@ -1107,6 +1107,12 @@ defmodule Brando.Content.Blocks do
     * `:user_id` - required, the creator ID for the duplicated block
     * `:sequence` - optional, defaults to 0
     * `:uid` - optional, auto-generated if not provided
+    * `:source` - optional, the entry-block schema the copy now belongs to.
+      Required when the copy lands under a *different* schema than the
+      original (pasting a block from a page into a project): `source` names
+      the join table a block is reachable through, so a stale one makes the
+      block look orphaned to `list_orphaned_blocks/0`. Applied recursively to
+      children. Omit to keep the original's source.
   """
   def duplicate_block(block_cs, opts) do
     user_id = Keyword.fetch!(opts, :user_id)
@@ -1131,20 +1137,24 @@ defmodule Brando.Content.Blocks do
       table_rows: [],
       refs: []
     })
+    |> maybe_put_source(Keyword.get(opts, :source))
     |> Changeset.change()
     |> duplicate_vars(vars, user_id)
     |> duplicate_table_rows(table_rows, user_id)
     |> duplicate_refs(refs, user_id)
-    |> duplicate_children(children, user_id)
+    |> duplicate_children(children, user_id, Keyword.get(opts, :source))
     |> Map.put(:action, :insert)
   end
 
-  def duplicate_children(changeset, children, current_user_id) do
+  defp maybe_put_source(block, nil), do: block
+  defp maybe_put_source(block, source), do: Map.put(block, :source, source)
+
+  def duplicate_children(changeset, children, current_user_id, source \\ nil) do
     duplicated_children =
       Enum.map(children, fn child ->
         child
         |> Changeset.change()
-        |> duplicate_block(user_id: current_user_id)
+        |> duplicate_block(user_id: current_user_id, source: source)
       end)
 
     Changeset.put_assoc(changeset, :children, duplicated_children)

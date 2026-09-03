@@ -371,6 +371,48 @@ defmodule Brando.Villain.DuplicationTest do
       assert is_binary(uid)
       assert Changeset.get_field(result, :sequence) == 0
     end
+
+    test "keeps the original source when none is given", %{user: user} do
+      block =
+        build_block(%{source: Brando.Pages.Page.Block, refs: [], vars: [], table_rows: [], children: []})
+
+      result = ContentBlocks.duplicate_block(Changeset.change(block), user_id: user.id)
+
+      assert Changeset.get_field(result, :source) == Brando.Pages.Page.Block
+    end
+
+    test "rewrites source, recursively, when the copy lands under another schema", %{user: user} do
+      block =
+        build_block(%{
+          source: Brando.Pages.Page.Block,
+          refs: [],
+          vars: [],
+          table_rows: [],
+          children: [
+            build_block(%{
+              id: 99,
+              uid: "child-uid",
+              parent_id: 50,
+              source: Brando.Pages.Page.Block,
+              refs: [],
+              vars: [],
+              table_rows: [],
+              children: []
+            })
+          ]
+        })
+
+      result =
+        ContentBlocks.duplicate_block(Changeset.change(block),
+          user_id: user.id,
+          source: Brando.Pages.Fragment.Block
+        )
+
+      assert Changeset.get_field(result, :source) == Brando.Pages.Fragment.Block
+
+      [child_cs] = Changeset.get_change(result, :children)
+      assert Changeset.get_field(child_cs, :source) == Brando.Pages.Fragment.Block
+    end
   end
 
   # ============================================================

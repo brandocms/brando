@@ -10,6 +10,32 @@ async function copyBlock(scope) {
   await scope.locator('.block-action-dropdown-content button', { hasText: 'Copy' }).click()
 }
 
+/**
+ * Creates a page with the given title/uri and saves it, landing back on the
+ * page list.
+ */
+async function createPage(page, title, uri) {
+  await page.goto('/admin/pages')
+  await syncLV(page)
+  await page.getByRole('link', { name: 'Create page' }).click()
+  await syncLV(page)
+  await page.getByLabel('Title', { exact: true }).fill(title)
+  await page.getByLabel('URI').fill(uri)
+}
+
+async function savePage(page) {
+  await page.getByTestId('submit').click()
+  await expect(page).toHaveURL(/\/admin\/pages$/)
+  await syncLV(page)
+}
+
+async function openPage(page, title) {
+  await page.goto('/admin/pages')
+  await syncLV(page)
+  await page.getByRole('link', { name: title }).click()
+  await syncLV(page)
+}
+
 test.describe('Block Copy/Paste', () => {
   test('copy root module and paste at root level', async ({ page }) => {
     // Navigate to Pages
@@ -282,5 +308,126 @@ test.describe('Block Copy/Paste', () => {
     await expect(pastedMember.locator('.block-vars').getByLabel('Role')).toHaveValue(
       'Lead Engineer'
     )
+  })
+  // The clipboard is cached per user, not per LiveView, so a copy has always
+  // been readable from another entry. What was missing was the *visibility*
+  // rule: `clipboard_meta` started nil on every BlockField mount, so a freshly
+  // opened entry rendered no `data-paste-allow` and CSS hid every paste
+  // button — the feature looked like it only worked inside one document.
+  test('copy in one entry and paste into two others', async ({ page }) => {
+    test.setTimeout(120000)
+
+    // Target entries first, so they exist when we go looking for them
+    await createPage(page, 'Cross Entry Target One', 'cross-entry-target-one')
+    await savePage(page)
+    await createPage(page, 'Cross Entry Target Two', 'cross-entry-target-two')
+    await savePage(page)
+
+    // Source entry with a block carrying an identifiable var value
+    await createPage(page, 'Cross Entry Source', 'cross-entry-source')
+    await page.getByRole('button', { name: 'Add block' }).click()
+    await page.getByRole('button', { name: 'MEDIA' }).click()
+    await page.getByRole('button', { name: 'Single Asset' }).click()
+    await syncLV(page)
+
+    const sourceBlock = page.locator('.entry-block').first()
+    await sourceBlock.locator('.block-vars').getByLabel('String label').fill('Value From Source')
+    await page.waitForTimeout(400)
+    await syncLV(page)
+    await savePage(page)
+
+    await openPage(page, 'Cross Entry Source')
+    await expect(page.locator('.entry-block')).toHaveCount(1)
+    await copyBlock(page.locator('.entry-block').first())
+    await syncLV(page)
+
+    // First target: the paste affordance has to survive the navigation
+    await openPage(page, 'Cross Entry Target One')
+    await expect(page.locator('.entry-block')).toHaveCount(0)
+
+    const bottomPaste = page.locator('.blocks-content > .block-plus-wrapper .block-paste')
+    await expect(bottomPaste).toBeVisible()
+    await bottomPaste.click()
+    await syncLV(page)
+
+    await expect(page.locator('.entry-block')).toHaveCount(1)
+    await expect(
+      page.locator('.entry-block').first().locator('.block-vars').getByLabel('String label')
+    ).toHaveValue('Value From Source')
+    await savePage(page)
+
+    // Second target: one copy pastes into as many entries as you like — the
+    // clipboard is not consumed by a paste
+    await openPage(page, 'Cross Entry Target Two')
+    const secondPaste = page.locator('.blocks-content > .block-plus-wrapper .block-paste')
+    await expect(secondPaste).toBeVisible()
+    await secondPaste.click()
+    await syncLV(page)
+    await expect(page.locator('.entry-block')).toHaveCount(1)
+    await savePage(page)
+
+    // Both pasted blocks persisted, and the source kept its own
+    await openPage(page, 'Cross Entry Target One')
+    await expect(page.locator('.entry-block')).toHaveCount(1)
+    await expect(
+      page.locator('.entry-block').first().locator('.block-vars').getByLabel('String label')
+    ).toHaveValue('Value From Source')
+
+    await openPage(page, 'Cross Entry Target Two')
+    await expect(page.locator('.entry-block')).toHaveCount(1)
+
+    await openPage(page, 'Cross Entry Source')
+    await expect(page.locator('.entry-block')).toHaveCount(1)
+  })
+
+  // A block pasted under a different schema must be re-sourced to the target's
+  // join table, or `list_orphaned_blocks/0` reads it as unreachable.
+  test('copy a multi entry in a page and paste it into a project', async ({ page }) => {
+    test.setTimeout(120000)
+
+    await createPage(page, 'Cross Schema Source', 'cross-schema-source')
+    await page.getByRole('button', { name: 'Add block' }).click()
+    await page.getByRole('button', { name: 'COPY PASTE TEST' }).click()
+    await page.getByRole('button', { name: 'Team Section' }).click()
+    await syncLV(page)
+
+    const sourceMulti = page.locator('[data-module-multi="true"]')
+    await sourceMulti.locator('.block-plus').last().click()
+    await page.getByRole('button', { name: 'COPY PASTE TEST' }).click()
+    await page.getByRole('button', { name: /^Team Member\b/ }).click()
+    await syncLV(page)
+
+    const member = sourceMulti.locator('.block-children [data-uid]').first()
+    await member.locator('.block-vars').getByLabel('Name').fill('Cross Schema Alice')
+    await page.waitForTimeout(400)
+    await syncLV(page)
+
+    await copyBlock(member)
+    await syncLV(page)
+
+    // Over to a project — a different schema, a different block field
+    await page.goto('/admin/projects/projects')
+    await syncLV(page)
+    await page.getByRole('link', { name: 'Test Project Alpha' }).click()
+    await syncLV(page)
+
+    await page.getByRole('button', { name: 'Add block' }).click()
+    await page.getByRole('button', { name: 'COPY PASTE TEST' }).click()
+    await page.getByRole('button', { name: 'Team Section' }).click()
+    await syncLV(page)
+
+    const targetMulti = page.locator('[data-module-multi="true"]')
+    const multiPaste = targetMulti.locator('.block-paste[data-paste-ctx="multi"]')
+    await expect(multiPaste.first()).toBeVisible()
+    await multiPaste.first().click()
+    await syncLV(page)
+
+    const pasted = targetMulti.locator('.block-children [data-uid]').first()
+    await expect(pasted.locator('.block-vars').getByLabel('Name')).toHaveValue('Cross Schema Alice')
+
+    // No save here: the seeded projects are missing required fields (Client,
+    // Introduction) that have nothing to do with blocks. Persistence of a
+    // pasted block is covered by the page-to-page test above, and the source
+    // rewrite by `Brando.Villain.DuplicationTest`.
   })
 })

@@ -199,10 +199,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # paste_child_block — from a multi/container end paste button, forwarded up via Block
   def update(%{event: "paste_child_block", parent_ref: parent_ref, sequence: sequence}, socket) do
     user_id = socket.assigns.current_user.id
-    clipboard = Brando.Cache.get({:block_clipboard, user_id})
+    clipboard = read_clipboard(user_id)
 
     if clipboard do
-      block_cs = create_duplicate_from_clipboard(clipboard, user_id)
+      block_cs = create_duplicate_from_clipboard(clipboard, user_id, socket.assigns.block_module)
       send_to_ref(parent_ref, %{event: "insert_pasted_block", block_cs: block_cs, sequence: sequence})
     end
 
@@ -722,8 +722,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign_ops(Ops.from_entry_blocks(entry_blocks))
     # Bare id, not a selector — consumed by `data-ui-modal-show`.
     |> assign(:module_picker_id, "block-field-#{assigns.block_field}-module-picker")
-    |> assign(:clipboard_meta, nil)
-    |> assign(:paste_multi_module_id, nil)
+    |> assign_clipboard_meta(read_clipboard(user_id))
     |> assign(:block_bin, [])
     |> assign(:pending_remote_snapshots, %{})
     |> assign(:last_synced_snapshots, %{})
@@ -1818,6 +1817,39 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   ## Clipboard helpers
 
+  # The clipboard lives in the cache, keyed by user and tenant — never in the
+  # socket — so a block copied in one entry can be pasted into another. Only
+  # the *visibility* of the paste buttons was session-local: `clipboard_meta`
+  # started nil on every mount, so a freshly opened entry rendered no
+  # `data-paste-allow` and CSS hid every paste affordance (see
+  # `Block.Render.paste_allow/1`). Reading the cache at init is what makes
+  # cross-entry paste reachable.
+  #
+  # Long enough to copy in one entry, navigate to another (or several) and
+  # paste — the previous 15 minute default expired mid-navigation often
+  # enough to look like the feature simply did not exist across documents.
+  @clipboard_ttl :timer.hours(4)
+
+  defp clipboard_key(user_id), do: {:block_clipboard, user_id}
+
+  defp read_clipboard(user_id), do: Brando.Cache.get(clipboard_key(user_id))
+
+  defp assign_clipboard_meta(socket, %{type: type} = clipboard) do
+    socket
+    |> assign(:clipboard_meta, %{type: type, parent_module_id: clipboard.parent_module_id})
+    # Only a copied `module_entry` can change what a `{:multi, module_id}` paste
+    # button decides, and that decision is an id comparison CSS cannot make. So
+    # it is the one piece of clipboard state that still reaches the block tree —
+    # as a scalar, so copying anything else leaves it nil and re-renders nothing.
+    |> assign(:paste_multi_module_id, (type == :module_entry && clipboard.parent_module_id) || nil)
+  end
+
+  defp assign_clipboard_meta(socket, _no_clipboard) do
+    socket
+    |> assign(:clipboard_meta, nil)
+    |> assign(:paste_multi_module_id, nil)
+  end
+
   defp store_clipboard(socket, changeset) do
     user_id = socket.assigns.current_user.id
 
@@ -1841,21 +1873,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       end
 
     clipboard = %{changeset: changeset, type: type, parent_module_id: parent_mid}
-    Brando.Cache.put({:block_clipboard, user_id}, clipboard)
+    Brando.Cache.put(clipboard_key(user_id), clipboard, @clipboard_ttl)
 
     socket
-    |> assign(:clipboard_meta, %{type: type, parent_module_id: parent_mid})
-    # Only a copied `module_entry` can change what a `{:multi, module_id}` paste
-    # button decides, and that decision is an id comparison CSS cannot make. So
-    # it is the one piece of clipboard state that still reaches the block tree —
-    # as a scalar, so copying anything else leaves it nil and re-renders nothing.
-    |> assign(:paste_multi_module_id, (type == :module_entry && parent_mid) || nil)
+    |> assign_clipboard_meta(clipboard)
     |> then(&{:ok, &1})
   end
 
   defp paste_root_block(socket, sequence) do
     user_id = socket.assigns.current_user.id
-    clipboard = Brando.Cache.get({:block_clipboard, user_id})
+    clipboard = read_clipboard(user_id)
 
     if clipboard do
       insert_pasted_root_block(socket, clipboard, sequence)
@@ -1875,7 +1902,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     new_uid = Brando.Utils.generate_uid()
 
     updated_block_cs =
-      ContentBlocks.duplicate_block(block_cs, user_id: current_user_id, sequence: sequence, uid: new_uid)
+      ContentBlocks.duplicate_block(block_cs,
+        user_id: current_user_id,
+        sequence: sequence,
+        uid: new_uid,
+        source: block_module
+      )
 
     entry_block_cs =
       block_module
@@ -1901,9 +1933,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> push_event("b:scroll_to", %{selector: selector})
   end
 
-  defp create_duplicate_from_clipboard(clipboard, user_id) do
+  # `source` is forced to the *target* field's block module: a block copied
+  # from a page and pasted into a project would otherwise keep naming the
+  # pages join table, and `list_orphaned_blocks/0` reads `source` to decide
+  # what a block is still reachable through.
+  defp create_duplicate_from_clipboard(clipboard, user_id, block_module) do
     block_cs = extract_block_changeset(clipboard.changeset)
-    ContentBlocks.duplicate_block(block_cs, user_id: user_id)
+    ContentBlocks.duplicate_block(block_cs, user_id: user_id, source: block_module)
   end
 
   defp extract_block_changeset(src_changeset) do
