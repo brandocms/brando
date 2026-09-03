@@ -67,6 +67,53 @@ defmodule Brando.Galleries do
     |> Brando.Repo.insert()
   end
 
+  @gallery_preloads [gallery_objects: [:image, video: [:thumbnail]]]
+
+  @doc """
+  Deep-copies a gallery: a new gallery row with new join rows pointing at the
+  same images and videos.
+
+  A gallery is owned by the ref that points at it, so a copied block must not
+  inherit the original's `gallery_id` — adding or removing media on the copy
+  would otherwise mutate the block it was copied from. Only the join rows are
+  duplicated; the underlying images and videos stay shared, as they are
+  library assets in their own right.
+
+  Returns the new gallery with its objects and their media preloaded, ready to
+  put back on a ref for display.
+  """
+  @spec duplicate_gallery(id | Gallery.t(), user | integer) ::
+          {:ok, Gallery.t()} | {:error, changeset} | {:error, {:gallery, :not_found}}
+  def duplicate_gallery(gallery_id, user) when is_integer(gallery_id) or is_binary(gallery_id) do
+    case get_gallery(%{matches: %{id: gallery_id}, preload: @gallery_preloads}) do
+      {:ok, gallery} -> duplicate_gallery(gallery, user)
+      {:error, _} -> {:error, {:gallery, :not_found}}
+    end
+  end
+
+  def duplicate_gallery(%Gallery{} = gallery, user) do
+    objects =
+      gallery
+      |> Map.get(:gallery_objects)
+      |> normalize_gallery_objects()
+      |> Enum.with_index()
+      |> Enum.map(fn {object, index} ->
+        object
+        |> slim_gallery_object()
+        |> Map.drop([:id, :gallery_id])
+        |> Map.put(:sequence, index)
+      end)
+
+    case create_gallery(%{config_target: gallery.config_target, gallery_objects: objects}, user) do
+      {:ok, new_gallery} -> get_gallery(%{matches: %{id: new_gallery.id}, preload: @gallery_preloads})
+      {:error, _} = error -> error
+    end
+  end
+
+  defp normalize_gallery_objects(%Ecto.Association.NotLoaded{}), do: []
+  defp normalize_gallery_objects(nil), do: []
+  defp normalize_gallery_objects(objects) when is_list(objects), do: objects
+
   @gallery_object_fields [:id, :image_id, :video_id, :gallery_id, :sequence, :creator_id, :config]
 
   @doc """
