@@ -650,9 +650,28 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     |> struct_to_params()
   end
 
-  # schema fields (embeds included) + the owned assoc trees — belongs_to
-  # associations stay out (their FK fields cover them)
-  @snapshot_assocs [:block, :children, :vars, :refs, :table_rows, :block_identifiers]
+  # Schema fields (embeds included) + the owned assoc trees. Media belongs_to
+  # associations stay out — `image_id`/`video_id`/`file_id` cover them, because
+  # those rows exist in the library before a ref ever points at one.
+  #
+  # `:gallery` is the exception, and it has to be here. A gallery has no
+  # independent existence: `Ref.ref_changeset/3` `cast_assoc`s it, so a gallery
+  # picked or uploaded into a ref is *created by the save*. Leaving it out of
+  # the snapshot meant a new (never-saved) block lost its gallery entirely —
+  # its `gallery_id` is still nil at that point, so the FK covered nothing.
+  # A persisted block was unaffected: `changes_to_params/1` ships changes, and
+  # `:gallery` is one. `:gallery_objects` rides along for the same reason —
+  # without it the gallery would save as an empty one.
+  @snapshot_assocs [
+    :block,
+    :children,
+    :vars,
+    :refs,
+    :table_rows,
+    :block_identifiers,
+    :gallery,
+    :gallery_objects
+  ]
 
   defp struct_to_params(%mod{} = struct) do
     field_params =
@@ -665,9 +684,24 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     |> Enum.reduce(field_params, fn assoc, acc ->
       case Map.get(struct, assoc) do
         %Ecto.Association.NotLoaded{} -> acc
-        value -> Map.put(acc, to_string(assoc), change_value(value))
+        # A cleared association is expressed by its FK going nil, which the
+        # field params already carry — emitting the assoc as nil as well would
+        # take the FK's place below and say nothing.
+        nil -> acc
+        value -> acc |> drop_owner_key(mod, assoc) |> Map.put(to_string(assoc), change_value(value))
       end
     end)
+  end
+
+  # `cast_assoc` writes the foreign key itself, and Ecto refuses to accept both
+  # at once — "cannot change belongs_to association `gallery` because there is
+  # already a change setting its foreign key `gallery_id`". So an emitted
+  # belongs_to takes its FK's place in the params rather than sitting beside it.
+  defp drop_owner_key(params, mod, assoc) do
+    case mod.__schema__(:association, assoc) do
+      %Ecto.Association.BelongsTo{owner_key: owner_key} -> Map.delete(params, to_string(owner_key))
+      _ -> params
+    end
   end
 
   ## State plumbing
