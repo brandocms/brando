@@ -119,6 +119,64 @@ defmodule Brando.Villain.DuplicationTest do
       new_uid = Changeset.get_field(ref_cs, :uid)
       assert new_uid != "ref-original-uid", "should have a new uid"
     end
+
+    test "images, videos and files stay shared — they are library assets", %{user: user} do
+      image = Factory.insert(:image)
+      ref = build_ref(%{image_id: image.id, gallery_id: nil})
+
+      [ref_cs] =
+        %Block{}
+        |> Changeset.change()
+        |> ContentBlocks.duplicate_refs([ref], user.id)
+        |> Changeset.get_change(:refs)
+
+      assert Changeset.get_field(ref_cs, :image_id) == image.id
+    end
+
+    test "a gallery is deep-copied — the copy must not edit the original's gallery", %{user: user} do
+      image = Factory.insert(:image)
+      gallery = Factory.insert(:gallery, config_target: "ref:gallery")
+      Factory.insert(:gallery_object, gallery_id: gallery.id, image_id: image.id, creator_id: user.id)
+
+      ref = build_ref(%{gallery_id: gallery.id})
+
+      [ref_cs] =
+        %Block{}
+        |> Changeset.change()
+        |> ContentBlocks.duplicate_refs([ref], user.id)
+        |> Changeset.get_change(:refs)
+
+      new_gallery_id = Changeset.get_field(ref_cs, :gallery_id)
+
+      refute new_gallery_id == gallery.id, "the copy should point at its own gallery"
+      refute is_nil(new_gallery_id)
+
+      # The id has to reach the *data*, not just the changes: the block editor's
+      # op store snapshots a new block's applied state and drops belongs_to
+      # associations, so `gallery_id` is the only thing that survives to the save.
+      assert ref_cs.data.gallery_id == new_gallery_id
+
+      # And the loaded association has to follow, because the editor's gallery
+      # mutations read `gallery.id` back off it when adding or removing media.
+      assert ref_cs.data.gallery.id == new_gallery_id
+
+      {:ok, copy} =
+        Brando.Galleries.get_gallery(%{matches: %{id: new_gallery_id}, preload: [:gallery_objects]})
+
+      assert Enum.map(copy.gallery_objects, & &1.image_id) == [image.id]
+    end
+
+    test "a ref without a gallery is left alone", %{user: user} do
+      ref = build_ref(%{gallery_id: nil})
+
+      [ref_cs] =
+        %Block{}
+        |> Changeset.change()
+        |> ContentBlocks.duplicate_refs([ref], user.id)
+        |> Changeset.get_change(:refs)
+
+      assert is_nil(Changeset.get_field(ref_cs, :gallery_id))
+    end
   end
 
   # ============================================================

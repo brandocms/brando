@@ -1230,11 +1230,51 @@ defmodule Brando.Content.Blocks do
     Changeset.put_assoc(changeset, :refs, duplicated_refs)
   end
 
-  def duplicate_ref(ref, _current_user_id) do
+  def duplicate_ref(ref, current_user_id) do
     ref
     |> Map.merge(%{id: nil, block_id: nil, module_id: nil})
+    |> clone_ref_gallery(current_user_id)
     |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
     |> Changeset.change(%{uid: Utils.generate_uid()})
     |> Map.put(:action, :insert)
   end
+
+  # Images, videos and files are library assets, shared by reference — but a
+  # gallery is *owned* by the ref that points at it. Leaving the copy on the
+  # original's `gallery_id` means adding or removing media on the copy edits
+  # the block it was copied from, which is at its most surprising when the two
+  # blocks live in different entries (copy/paste across documents).
+  #
+  # The new row is written here rather than `put_assoc`ed onto the ref because
+  # the block editor's op store drops belongs_to associations from a new
+  # block's param snapshot (`BlockField.Ops.struct_to_params/1` keeps only the
+  # owned trees) — only the `gallery_id` field survives to the save. Writing
+  # the id AND the loaded struct onto the ref's *data* keeps both the save and
+  # the editor's own gallery mutations (which read `gallery.id` back off the
+  # loaded assoc) pointed at the copy.
+  defp clone_ref_gallery(%{gallery_id: nil} = ref, _user_id), do: ref
+
+  defp clone_ref_gallery(%{gallery_id: gallery_id} = ref, user_id) do
+    case Brando.Galleries.duplicate_gallery(gallery_id, user_id) do
+      {:ok, gallery} ->
+        %{ref | gallery_id: gallery.id, gallery: gallery}
+
+      {:error, reason} ->
+        require Logger
+
+        Logger.error("""
+
+        duplicate_ref ——
+
+        Failed to duplicate gallery ##{inspect(gallery_id)}: #{inspect(reason)}.
+        The copied ref keeps the original gallery, which means the two blocks
+        now share it.
+
+        """)
+
+        ref
+    end
+  end
+
+  defp clone_ref_gallery(ref, _user_id), do: ref
 end
