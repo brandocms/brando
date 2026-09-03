@@ -109,7 +109,7 @@ test.describe('Listing Filters', () => {
     await expect(page.locator('.content-list .list-row')).toHaveCount(4)
 
     // Click the select filter dropdown
-    const selectFilter = page.locator('.select-filter select')
+    const selectFilter = page.locator('.list-filter-select select')
     await selectFilter.selectOption('published')
     await syncLV(page)
 
@@ -166,7 +166,7 @@ test.describe('Listing Filters', () => {
     await expect(page.getByText('Full Case Project')).toBeVisible()
 
     // Select published status (full case project is published)
-    await page.locator('.select-filter select').selectOption('published')
+    await page.locator('.list-filter-select select').selectOption('published')
     await syncLV(page)
 
     // Should still show the full case project (it's published AND full case)
@@ -174,7 +174,7 @@ test.describe('Listing Filters', () => {
     await expect(page.getByText('Full Case Project')).toBeVisible()
 
     // Select draft status
-    await page.locator('.select-filter select').selectOption('draft')
+    await page.locator('.list-filter-select select').selectOption('draft')
     await syncLV(page)
 
     // Should show no results (no project is both draft AND full case)
@@ -211,7 +211,7 @@ test.describe('Listing Filters', () => {
 
     // Filters should be active
     await expect(page.locator('.boolean-filter input')).toBeChecked()
-    await expect(page.locator('.select-filter select')).toHaveValue('published')
+    await expect(page.locator('.list-filter-select select')).toHaveValue('published')
 
     // Only matching project should be visible (1 full case + published)
     await expect(page.locator('.content-list .list-row')).toHaveCount(1)
