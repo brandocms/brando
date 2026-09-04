@@ -19,7 +19,7 @@ config :e2e_project, E2eProjectWeb.Endpoint,
 
 # Additional cron jobs to run
 # - Format is `[{"* * * * *", MyApp.Worker.ModuleName}]`
-# https://hexdocs.pm/oban/Oban.Plugins.Cron.html
+# https://hexdocs.pm/oban/Oban.Cron.html
 config :e2e_project,
   cron_jobs: []
 
