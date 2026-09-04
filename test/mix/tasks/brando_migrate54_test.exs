@@ -420,6 +420,7 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
 
     assert source(igniter, @package_json_path) =~
              ~s("phoenix_live_view": "#{live_view_version}")
+
     assert source(igniter, @package_json_path) =~ ~s("unrelated": "1.0.0")
 
     assert_creates(igniter, @florist_config_path, fn config ->
