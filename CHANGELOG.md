@@ -1408,8 +1408,16 @@
   (and rebuild your backend assets) — LiveView warns when the JS client and server versions
   differ. LiveView `1.2.9` fixes an open redirect in `redirect/2` (CVE-2026-64941), so this
   is a security update, not just a maintenance one.
-- Bumped `oban` to `~> 2.23`. The schema is upgraded to v14 via `brando_153` (see Migrations).
-- Bumped `image` (0.69), `req` (0.7), `req_llm` (1.16), `sentry` (13.5), `postgrex` (0.22),
+- Bumped `oban` to `~> 2.23`, locked at `2.24.1`. The schema is upgraded to v14 via
+  `brando_153` (see Migrations). Oban `2.24` unified queue, repo and service configuration
+  and flattened the module names — `Oban.Plugins.Cron` is now `Oban.Cron`, and services are
+  top-level keys rather than a `plugins:` list. Old configuration is rewritten transparently
+  and the old modules delegate, so **nothing in your app has to change**; Brando still starts
+  Oban with the legacy shape.
+- Bumped `req_llm` to `1.21.1`. No API change on the surface Brando uses
+  (`ReqLLM.generate_text/3`, `ReqLLM.get_key/1`, `ReqLLM.Keys`, `ReqLLM.Response`) — the range
+  is provider fixes and additions.
+- Bumped `image` (0.69), `req` (0.7), `sentry` (13.5), `postgrex` (0.22),
   `mox` (1.3), `ecto_nested_changeset` (1.1), and `spark`, `tz`, `earmark`, `floki`, `credo`,
   `ex_doc`, `igniter`.
 - **`html_sanitize_ex` to `1.5.5`, a security update.** `1.5.2` carries six advisories,
