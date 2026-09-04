@@ -1409,10 +1409,20 @@
   differ. LiveView `1.2.9` fixes an open redirect in `redirect/2` (CVE-2026-64941), so this
   is a security update, not just a maintenance one.
 - Bumped `oban` to `~> 2.23`. The schema is upgraded to v14 via `brando_153` (see Migrations).
-- Bumped `image` (0.69), `req` (0.6), `req_llm` (1.16), `sentry` (13.2), and `spark`, `tz`,
-  `earmark`, `floki`, `html_sanitize_ex`, `credo`, `ex_doc`, `igniter`.
-- Held `ecto`/`ecto_sql` at `3.13`: Ecto `3.14` requires `decimal ~> 3.0`, which `liquex 0.15`
-  does not yet support.
+- Bumped `image` (0.69), `req` (0.7), `req_llm` (1.16), `sentry` (13.5), `postgrex` (0.22),
+  `mox` (1.3), `ecto_nested_changeset` (1.1), and `spark`, `tz`, `earmark`, `floki`, `credo`,
+  `ex_doc`, `igniter`.
+- **`html_sanitize_ex` to `1.5.5`, a security update.** `1.5.2` carries six advisories,
+  two of them HIGH: quadratic backtracking in the CSS scrubber and quadratic sibling
+  re-flattening in the traversal engine, both CPU-exhaustion denial of service
+  (CVE-2026-68749, CVE-2026-68750). Brando runs the scrubber on user content —
+  `strip_tags` in the Villain filters and the `:strip_tags` blueprint value transforms.
+  `xml_builder` (its dependency) moves to `2.4.1` for three LOW advisories of its own.
+- `postgrex` `0.22.4` fixes SQL injection via the `:comment` option in `Postgrex.stream/4`
+  (CVE-2026-66838).
+- Bumped `ecto`/`ecto_sql` to `3.14`. The `3.14.2` changeset fixes land close to Brando's
+  `put_assoc` paths: stale `belongs_to` keys in `apply_changes/1`, `changed?/3` for removed
+  one-to-one relations, and `prepare_changes` callbacks surviving `merge/2`.
 - **`hackney` is no longer pulled in transitively.** `ex_aws` (now `~> 2.7`) only declares
   `hackney` as an *optional* dependency, and `fastimage` (which required `hackney`) has been
   dropped in favour of `image` + `vex`. If anything in your app relied on `hackney` being

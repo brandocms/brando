@@ -217,7 +217,7 @@ defmodule Brando.Mixfile do
       {:mdex, "~> 0.13.0"},
       {:jason, "~> 1.0"},
       {:slugify, "~> 1.3.1"},
-      {:ecto_nested_changeset, "~> 1.0.0"},
+      {:ecto_nested_changeset, "~> 1.1"},
       {:nimble_csv, "~> 1.2"},
       {:tz, "~> 0.28"},
       {:polymorphic_embed, "~> 5.0.1"},
