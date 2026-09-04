@@ -7,9 +7,9 @@
       {assigns[:page_title] || "Admin"}
     </.live_title>
     <meta
-      :if={@current_user}
+      :if={@current_user && @current_user.config.prefers_reduced_motion}
       name="prefers_reduced_motion"
-      content={(@current_user.config.prefers_reduced_motion && "true") || nil}
+      content="true"
     />
     <meta :if={@current_user} name="user_id" content={@current_user.id} />
     <meta :if={@current_user} name="user_token" content={Brando.Users.build_token(@current_user.id)} />
