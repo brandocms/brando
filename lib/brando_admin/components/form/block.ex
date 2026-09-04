@@ -42,6 +42,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   """
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
+  alias Brando.Cache
   alias Brando.Content.Blocks, as: ContentBlocks
   alias BrandoAdmin.Components.Form.Block.Events
   alias BrandoAdmin.Components.Form.BlockField
@@ -2407,11 +2408,11 @@ defmodule BrandoAdmin.Components.Form.Block do
           image == %Ecto.Association.NotLoaded{} ->
             image_id = Changeset.get_field(var_cs, :image_id)
 
-            case Brando.Cache.get("var_image_#{image_id}") do
+            case Cache.get("var_image_#{image_id}") do
               nil ->
                 image = Brando.Images.get_image!(image_id)
                 media_path = Brando.Utils.media_url(image.path)
-                Brando.Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
+                Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
                 media_path
 
               media_path ->
@@ -2421,7 +2422,7 @@ defmodule BrandoAdmin.Components.Form.Block do
           is_struct(image, Brando.Images.Image) ->
             path = image.path
             media_path = Brando.Utils.media_url(path)
-            Brando.Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
+            Cache.put("var_image_#{image_id}", media_path, :timer.minutes(3))
             media_path
 
           true ->

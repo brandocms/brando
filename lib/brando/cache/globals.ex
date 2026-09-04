@@ -6,6 +6,7 @@ defmodule Brando.Cache.Globals do
   """
   alias Brando.Cache
   alias Brando.Sites
+  alias Brando.Utils
 
   @type changeset :: Ecto.Changeset.t()
 
@@ -55,8 +56,8 @@ defmodule Brando.Cache.Globals do
         put_in(
           acc,
           [
-            Brando.Utils.access_map(to_string(language)),
-            Brando.Utils.access_map(set.key)
+            Utils.access_map(to_string(language)),
+            Utils.access_map(set.key)
           ],
           []
         )
@@ -70,8 +71,8 @@ defmodule Brando.Cache.Globals do
         put_in(
           acc,
           [
-            Brando.Utils.access_map(to_string(language)),
-            Brando.Utils.access_map(set.key)
+            Utils.access_map(to_string(language)),
+            Utils.access_map(set.key)
           ],
           set_globals
         )

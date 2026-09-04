@@ -19,6 +19,7 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
   alias Brando.Factory
   alias BrandoAdmin.Components.Form
   alias Ecto.Changeset
+  alias Phoenix.Component
 
   setup do
     user = Factory.insert(:random_user)
@@ -28,16 +29,16 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
 
   defp socket do
     %Phoenix.LiveView.Socket{}
-    |> Phoenix.Component.assign(:id, "page_form")
-    |> Phoenix.Component.assign(:editing_image?, false)
-    |> Phoenix.Component.assign(:editing_video?, false)
-    |> Phoenix.Component.assign(:editing_file?, false)
-    |> Phoenix.Component.assign(:edit_image, nil)
-    |> Phoenix.Component.assign(:edit_video, nil)
-    |> Phoenix.Component.assign(:edit_file, nil)
-    |> Phoenix.Component.assign(:image_changeset, nil)
-    |> Phoenix.Component.assign(:video_changeset, nil)
-    |> Phoenix.Component.assign(:file_changeset, nil)
+    |> Component.assign(:id, "page_form")
+    |> Component.assign(:editing_image?, false)
+    |> Component.assign(:editing_video?, false)
+    |> Component.assign(:editing_file?, false)
+    |> Component.assign(:edit_image, nil)
+    |> Component.assign(:edit_video, nil)
+    |> Component.assign(:edit_file, nil)
+    |> Component.assign(:image_changeset, nil)
+    |> Component.assign(:video_changeset, nil)
+    |> Component.assign(:file_changeset, nil)
   end
 
   defp drawer_params(image, changes) do

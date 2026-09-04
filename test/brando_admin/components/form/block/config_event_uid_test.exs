@@ -23,6 +23,7 @@ defmodule BrandoAdmin.Components.Form.Block.ConfigEventUidTest do
   alias BrandoAdmin.Components.Form.Block.Events
   alias BrandoAdmin.Components.Form.BlockField
   alias Ecto.Changeset
+  alias Phoenix.Component
 
   defp create_module(user) do
     {:ok, module} =
@@ -94,12 +95,12 @@ defmodule BrandoAdmin.Components.Form.Block.ConfigEventUidTest do
     uid = uid_of(changeset, belongs_to)
 
     %Phoenix.LiveView.Socket{}
-    |> Phoenix.Component.assign(:form, Block.build_form_from_changeset(changeset, uid, belongs_to))
-    |> Phoenix.Component.assign(:belongs_to, belongs_to)
-    |> Phoenix.Component.assign(:module_id, module.id)
-    |> Phoenix.Component.assign(:uid, uid)
-    |> Phoenix.Component.assign(:form_id, "page_form")
-    |> Phoenix.Component.assign(:block_field, "blocks")
+    |> Component.assign(:form, Block.build_form_from_changeset(changeset, uid, belongs_to))
+    |> Component.assign(:belongs_to, belongs_to)
+    |> Component.assign(:module_id, module.id)
+    |> Component.assign(:uid, uid)
+    |> Component.assign(:form_id, "page_form")
+    |> Component.assign(:block_field, "blocks")
   end
 
   defp expected_form_id(uid, :root), do: "entry_block_form-#{uid}"

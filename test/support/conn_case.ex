@@ -8,8 +8,8 @@ end
 
 defmodule Brando.ConnCase do
   @moduledoc """
-  This module defines the test case to be used by
-  tests that require setting up a connection.
+  Use this case template for tests that need a Plug connection and
+  transactional database access.
 
   Such tests rely on `Phoenix.ConnTest` and also
   imports other functionality to make it easier

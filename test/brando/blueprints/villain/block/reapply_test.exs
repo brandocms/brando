@@ -234,8 +234,10 @@ defmodule Brando.Villain.Block.PictureBlockTest do
     updated_block_cs = Brando.Content.Blocks.sync_module(original_block, updated_module)
     updated_block = Ecto.Changeset.apply_changes(updated_block_cs)
 
-    orig_header_ref = List.first(original_block.refs)
-    orig_picture_ref = List.last(original_block.refs)
+    [
+      %Ref{data: %Blocks.HeaderBlock{}} = orig_header_ref,
+      %Ref{data: %Brando.Villain.Blocks.PictureBlock{}} = orig_picture_ref
+    ] = original_block.refs
 
     assert orig_header_ref.data.data.level == 2
     assert orig_header_ref.data.data.class == nil

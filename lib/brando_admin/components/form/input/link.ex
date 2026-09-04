@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Link do
   use BrandoAdmin, :live_component
 
   alias BrandoAdmin.Components.Form.Input.RenderVar
+  alias Ecto.Changeset
 
   # prop form, :form
   # prop subform, :form
@@ -46,14 +47,14 @@ defmodule BrandoAdmin.Components.Form.Input.Link do
     changeset = field.form.source
 
     field_name = field.field
-    current_link = Ecto.Changeset.get_field(changeset, field_name)
+    current_link = Changeset.get_field(changeset, field_name)
 
     if current_link do
       socket
     else
       default_link =
         %Brando.Content.Var{}
-        |> Ecto.Changeset.change(%{
+        |> Changeset.change(%{
           type: :link,
           label: "Link",
           key: "link",
@@ -66,7 +67,7 @@ defmodule BrandoAdmin.Components.Form.Input.Link do
       module = changeset.data.__struct__
       form_id = "#{module.__naming__().singular}_form"
 
-      updated_changeset = Ecto.Changeset.put_change(changeset, field_name, default_link)
+      updated_changeset = Changeset.put_change(changeset, field_name, default_link)
 
       send_update(BrandoAdmin.Components.Form,
         id: form_id,

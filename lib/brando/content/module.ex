@@ -36,6 +36,7 @@ defmodule Brando.Content.Module do
   import Brando.Blueprint.Listings.Components.Children, only: [children_button: 1]
   import Brando.Blueprint.Listings.Components.Core
 
+  alias Ecto.Changeset
   alias Phoenix.LiveView.JS
 
   @type t :: %__MODULE__{}
@@ -274,10 +275,10 @@ defmodule Brando.Content.Module do
   Only applies when the module type is `:heex`.
   """
   def validate_var_keys(changeset) do
-    type = Ecto.Changeset.get_field(changeset, :type)
+    type = Changeset.get_field(changeset, :type)
 
     if type == :heex do
-      vars = Ecto.Changeset.get_field(changeset, :vars) || []
+      vars = Changeset.get_field(changeset, :vars) || []
 
       collisions =
         vars
@@ -287,7 +288,7 @@ defmodule Brando.Content.Module do
       if collisions == [] do
         changeset
       else
-        Ecto.Changeset.add_error(
+        Changeset.add_error(
           changeset,
           :vars,
           "var keys conflict with reserved HEEx assigns: #{Enum.join(collisions, ", ")}"

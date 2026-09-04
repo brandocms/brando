@@ -900,8 +900,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   defp put_data_pk(params, %Changeset{data: %schema{} = data}) do
     if function_exported?(schema, :__schema__, 1) do
-      schema
-      |> apply(:__schema__, [:primary_key])
+      schema.__schema__(:primary_key)
       |> Enum.reduce(params, fn pk_field, acc ->
         case Map.get(data, pk_field) do
           nil -> acc

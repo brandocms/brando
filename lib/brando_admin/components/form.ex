@@ -34,6 +34,7 @@ defmodule BrandoAdmin.Components.Form do
 
   alias Brando.Blueprint.Callback
   alias Brando.Blueprint.Forms, as: BlueprintForms
+  alias Brando.Images
   alias Brando.Villain
   alias BrandoAdmin.Components.Button
   alias BrandoAdmin.Components.Content
@@ -245,7 +246,7 @@ defmodule BrandoAdmin.Components.Form do
         %{action: :update_edit_image, edit_image: %{image: nil} = edit_image},
         socket
       ) do
-    image_changeset = change(%Brando.Images.Image{})
+    image_changeset = change(%Images.Image{})
 
     {:ok,
      socket
@@ -1529,7 +1530,7 @@ defmodule BrandoAdmin.Components.Form do
   defp build_asset_fk_map(schema) do
     image_fields =
       if function_exported?(schema, :__image_fields__, 0),
-        do: Enum.map(schema.__image_fields__(), &{:"#{&1.name}_id", {&1.name, Brando.Images.Image}}),
+        do: Enum.map(schema.__image_fields__(), &{:"#{&1.name}_id", {&1.name, Images.Image}}),
         else: []
 
     video_fields =
@@ -2877,7 +2878,7 @@ defmodule BrandoAdmin.Components.Form do
         %{"image_id" => image_id},
         %{assigns: %{singular: singular, current_user: current_user}} = socket
       ) do
-    {:ok, image} = Brando.Images.duplicate_image(image_id, current_user)
+    {:ok, image} = Images.duplicate_image(image_id, current_user)
 
     send_update(__MODULE__,
       id: "#{singular}_form",
@@ -2909,7 +2910,7 @@ defmodule BrandoAdmin.Components.Form do
         # Crop was already applied via the HTTP replace_crop endpoint.
         # The controller's Crop.save_replace already queued processing.
         image_id = params["image_id"] || edit_image.image.id
-        {:ok, img} = Brando.Images.get_image(image_id)
+        {:ok, img} = Images.get_image(image_id)
         img
       else
         # No crop — just update focal point and reprocess from the original file.
@@ -2919,7 +2920,7 @@ defmodule BrandoAdmin.Components.Form do
               image
 
             _ ->
-              {:ok, img} = Brando.Images.get_image(params["image_id"])
+              {:ok, img} = Images.get_image(params["image_id"])
               img
           end
 
@@ -2928,7 +2929,7 @@ defmodule BrandoAdmin.Components.Form do
 
         changeset =
           image
-          |> Brando.Images.Image.changeset(
+          |> Images.Image.changeset(
             %{focal: %{x: x, y: y}, status: :unprocessed},
             current_user
           )
@@ -2949,7 +2950,7 @@ defmodule BrandoAdmin.Components.Form do
 
     # For non-crop case, queue processing after subscribing.
     unless params["crop_applied"] do
-      Brando.Images.Processing.queue_processing(updated_image, current_user)
+      Images.Processing.queue_processing(updated_image, current_user)
     end
 
     # For crop_applied, processing was already queued by the controller.
@@ -2957,7 +2958,7 @@ defmodule BrandoAdmin.Components.Form do
     # Re-fetch to get the latest state (may already be processed).
     updated_image =
       if params["crop_applied"] do
-        {:ok, fresh} = Brando.Images.get_image(updated_image.id)
+        {:ok, fresh} = Images.get_image(updated_image.id)
         fresh
       else
         updated_image
@@ -3275,25 +3276,25 @@ defmodule BrandoAdmin.Components.Form do
     new_image_params = Map.put(image_params, "config_target", original_image.config_target)
 
     validated_changeset =
-      %Brando.Images.Image{}
-      |> Brando.Images.Image.changeset(new_image_params, current_user)
+      %Images.Image{}
+      |> Images.Image.changeset(new_image_params, current_user)
       |> Map.put(:action, :insert)
       |> Brando.Trait.run_trait_before_save_callbacks(
-        Brando.Images.Image,
+        Images.Image,
         current_user
       )
 
     {:ok, new_image} = Brando.Repo.insert(validated_changeset)
 
     Brando.Trait.run_trait_after_save_callbacks(
-      Brando.Images.Image,
+      Images.Image,
       new_image,
       validated_changeset,
       current_user
     )
 
     if new_image.status !== :processed do
-      Brando.Images.Processing.queue_processing(new_image, current_user)
+      Images.Processing.queue_processing(new_image, current_user)
     end
 
     if block_target do
@@ -3336,21 +3337,21 @@ defmodule BrandoAdmin.Components.Form do
 
     validated_changeset =
       image
-      |> Brando.Images.Image.changeset(image_params, current_user)
+      |> Images.Image.changeset(image_params, current_user)
       |> Map.put(:action, :update)
       |> Brando.Trait.run_trait_before_save_callbacks(
-        Brando.Images.Image,
+        Images.Image,
         current_user
       )
 
-    {:ok, _} = Brando.Images.update_image(validated_changeset, current_user)
+    {:ok, _} = Images.update_image(validated_changeset, current_user)
 
     # Reload from DB — the Oban processing job may have updated
     # status/sizes since the drawer was opened.
-    {:ok, updated_image} = Brando.Images.get_image(image.id)
+    {:ok, updated_image} = Images.get_image(image.id)
 
     Brando.Trait.run_trait_after_save_callbacks(
-      Brando.Images.Image,
+      Images.Image,
       updated_image,
       validated_changeset,
       current_user
@@ -3387,7 +3388,7 @@ defmodule BrandoAdmin.Components.Form do
     Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
 
     if requeue_processing?(validated_changeset, updated_image) do
-      Brando.Images.Processing.queue_processing(updated_image, current_user, field_full_path)
+      Images.Processing.queue_processing(updated_image, current_user, field_full_path)
     end
 
     target_field_name =
@@ -4045,7 +4046,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp loaded_image?(nil), do: false
   defp loaded_image?(%Ecto.Association.NotLoaded{}), do: false
-  defp loaded_image?(%Brando.Images.Image{}), do: true
+  defp loaded_image?(%Images.Image{}), do: true
 
   defp push_errors(socket, changeset, form, schema, env \\ :save) do
     error_title = gettext("Error")
@@ -4195,7 +4196,7 @@ defmodule BrandoAdmin.Components.Form do
           # Apply focal and mark for reprocessing
           changeset =
             new_image
-            |> Brando.Images.Image.changeset(
+            |> Images.Image.changeset(
               %{focal: %{x: focal.x, y: focal.y}, status: :unprocessed},
               current_user
             )
@@ -4209,7 +4210,7 @@ defmodule BrandoAdmin.Components.Form do
                 send(self(), {:register_pending_block_image, updated_image.id, block_target})
               end
 
-              Brando.Images.Processing.queue_processing(updated_image, current_user)
+              Images.Processing.queue_processing(updated_image, current_user)
 
               if block_target = Map.get(edit_image, :block_target) do
                 {module, id} = block_target
@@ -4255,13 +4256,13 @@ defmodule BrandoAdmin.Components.Form do
   defp resolve_block_image_config(config_target) do
     resolved_target = normalize_upload_config_target(config_target) || "default"
 
-    case Brando.Images.get_config_for(resolved_target) do
+    case Images.get_config_for(resolved_target) do
       {:ok, cfg} ->
         {cfg, resolved_target}
 
       _ ->
         default_config =
-          Brando.config(Brando.Images)[:default_config] ||
+          Brando.config(Images)[:default_config] ||
             Brando.Type.ImageConfig.default_config()
 
         cfg =
@@ -4620,9 +4621,7 @@ defmodule BrandoAdmin.Components.Form do
     with [root | field_segments] <- segments,
          true <- root == singular,
          false <- field_segments == [],
-         {:ok, typed_segments} <- cast_form_path_segments(field_segments),
-         key when is_atom(key) <- List.last(typed_segments) do
-      path = Enum.drop(typed_segments, -1)
+         {:ok, path, key} when is_atom(key) <- cast_form_path_segments(field_segments) do
       {:ok, path, key, field_segments}
     else
       _ -> {:error, :invalid_field_name}
@@ -4630,15 +4629,17 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp cast_form_path_segments(segments) do
-    Enum.reduce_while(segments, {:ok, []}, fn segment, {:ok, acc} ->
+    segments
+    |> Enum.reduce_while({:ok, []}, fn segment, {:ok, reversed} ->
       case cast_form_path_segment(segment) do
-        {:ok, casted} ->
-          {:cont, {:ok, acc ++ [casted]}}
-
-        {:error, _reason} = error ->
-          {:halt, error}
+        {:ok, casted} -> {:cont, {:ok, [casted | reversed]}}
+        {:error, _reason} = error -> {:halt, error}
       end
     end)
+    |> case do
+      {:ok, [key | reversed_path]} -> {:ok, Enum.reverse(reversed_path), key}
+      error -> error
+    end
   end
 
   defp cast_form_path_segment(segment) do
@@ -4931,7 +4932,7 @@ defmodule BrandoAdmin.Components.Form do
       # the upload that created it may never have processed, and the drawer is
       # the only place the editor can recover that from — but not if a pass is
       # already in flight, which is the case the old gate kept restarting.
-      image.status != :processed and not Brando.Images.Processing.processing_queued?(image)
+      image.status != :processed and not Images.Processing.processing_queued?(image)
     end
   end
 
@@ -5083,7 +5084,7 @@ defmodule BrandoAdmin.Components.Form do
   defp restore_image_drawer(socket, params) do
     resource_id = String.to_integer(params["resource_id"])
 
-    case Brando.Images.get_image(resource_id) do
+    case Images.get_image(resource_id) do
       {:ok, image} ->
         edit_image = %{
           id: resource_id,
@@ -5247,7 +5248,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp image_editor_payload(image) do
     crop_groups =
-      case Brando.Images.get_config_for(image) do
+      case Images.get_config_for(image) do
         {:ok, config} -> build_crop_groups(config.sizes)
         _ -> []
       end
@@ -5278,7 +5279,7 @@ defmodule BrandoAdmin.Components.Form do
       is_map(cfg) and cfg["crop"] == true and to_string(key) != "thumb"
     end)
     |> Enum.map(fn {key, cfg} ->
-      {w, h} = Brando.Images.Operations.Sizing.get_crop_dimensions_from_cfg(cfg)
+      {w, h} = Images.Operations.Sizing.get_crop_dimensions_from_cfg(cfg)
       ratio = w / h
       %{key: to_string(key), width: w, height: h, ratio: ratio}
     end)
@@ -5303,7 +5304,7 @@ defmodule BrandoAdmin.Components.Form do
   struct rather than a size config.
   """
   def build_crop_groups_for(image) do
-    case Brando.Images.get_config_for(image) do
+    case Images.get_config_for(image) do
       {:ok, config} -> build_crop_groups(config.sizes)
       _ -> []
     end

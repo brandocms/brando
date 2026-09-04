@@ -1,7 +1,7 @@
 defmodule Brando.ChannelCase do
   @moduledoc """
-  This module defines the test case to be used by
-  channel tests.
+  Use this case template for channel tests that need the integration endpoint
+  and transactional database access.
 
   Such tests rely on `Phoenix.ChannelTest` and also
   import other functionality to make it easier

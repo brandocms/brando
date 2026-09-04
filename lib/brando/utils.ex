@@ -653,10 +653,9 @@ defmodule Brando.Utils do
   end
 
   defp do_active_path?(current_path, url_to_match) do
-    chunks = String.split(url_to_match, "/")
-
     {url, current_path} =
-      if List.last(chunks) == "*" do
+      if wildcard_path?(url_to_match) do
+        chunks = String.split(url_to_match, "/")
         normalize_wildcard_paths(chunks, current_path)
       else
         {url_to_match, current_path}
@@ -664,6 +663,9 @@ defmodule Brando.Utils do
 
     current_path == url
   end
+
+  defp wildcard_path?("*"), do: true
+  defp wildcard_path?(path), do: String.ends_with?(path, "/*")
 
   defp normalize_wildcard_paths(chunks, current_path) do
     url_without_star =

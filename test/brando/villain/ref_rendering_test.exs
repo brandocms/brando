@@ -3,6 +3,7 @@ defmodule Brando.Villain.RefRenderingTest do
   use Brando.ConnCase
   alias Brando.Content
   alias Brando.Factory
+  alias Brando.Utils
 
   setup do
     user = Factory.insert(:random_user)
@@ -66,7 +67,7 @@ defmodule Brando.Villain.RefRenderingTest do
           refs: [
             %{
               name: "title",
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "text", data: %{text: "Default Title", type: :paragraph}}
             }
           ]
@@ -82,7 +83,7 @@ defmodule Brando.Villain.RefRenderingTest do
             %{
               name: "title",
               description: nil,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %Brando.Villain.Blocks.TextBlock{
                 type: "text",
                 data: %Brando.Villain.Blocks.TextBlock.Data{
@@ -92,7 +93,7 @@ defmodule Brando.Villain.RefRenderingTest do
               }
             }
           ],
-          uid: Brando.Utils.generate_uid(),
+          uid: Utils.generate_uid(),
           vars: []
         }
       }
@@ -112,7 +113,7 @@ defmodule Brando.Villain.RefRenderingTest do
             %{
               name: "cover",
               image_id: image.id,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "picture", data: %{alt: "Default alt"}}
             }
           ]
@@ -130,7 +131,7 @@ defmodule Brando.Villain.RefRenderingTest do
               description: nil,
               image_id: image.id,
               image: image,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %Brando.Villain.Blocks.PictureBlock{
                 type: "picture",
                 data: %Brando.Villain.Blocks.PictureBlock.Data{
@@ -139,7 +140,7 @@ defmodule Brando.Villain.RefRenderingTest do
               }
             }
           ],
-          uid: Brando.Utils.generate_uid(),
+          uid: Utils.generate_uid(),
           vars: []
         }
       }
@@ -160,7 +161,7 @@ defmodule Brando.Villain.RefRenderingTest do
             %{
               name: "hero_video",
               video_id: video.id,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "video", data: %{autoplay: false}}
             }
           ]
@@ -178,7 +179,7 @@ defmodule Brando.Villain.RefRenderingTest do
               description: nil,
               video_id: video.id,
               video: video,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %Brando.Villain.Blocks.VideoBlock{
                 type: "video",
                 data: %Brando.Villain.Blocks.VideoBlock.Data{
@@ -187,7 +188,7 @@ defmodule Brando.Villain.RefRenderingTest do
               }
             }
           ],
-          uid: Brando.Utils.generate_uid(),
+          uid: Utils.generate_uid(),
           vars: []
         }
       }
@@ -209,7 +210,7 @@ defmodule Brando.Villain.RefRenderingTest do
             %{
               name: "hero_video",
               video_id: video.id,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "video", data: %{autoplay: false}}
             }
           ]
@@ -227,7 +228,7 @@ defmodule Brando.Villain.RefRenderingTest do
               description: nil,
               video_id: video.id,
               video: video,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %Brando.Villain.Blocks.VideoBlock{
                 type: "video",
                 data: %Brando.Villain.Blocks.VideoBlock.Data{
@@ -236,7 +237,7 @@ defmodule Brando.Villain.RefRenderingTest do
               }
             }
           ],
-          uid: Brando.Utils.generate_uid(),
+          uid: Utils.generate_uid(),
           vars: []
         }
       }
@@ -269,7 +270,7 @@ defmodule Brando.Villain.RefRenderingTest do
             %{
               name: "report",
               file_id: file.id,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "file", data: %{label: "Default report"}}
             }
           ]
@@ -287,7 +288,7 @@ defmodule Brando.Villain.RefRenderingTest do
               description: nil,
               file_id: file.id,
               file: file,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %Brando.Villain.Blocks.FileBlock{
                 type: "file",
                 data: %Brando.Villain.Blocks.FileBlock.Data{
@@ -299,7 +300,7 @@ defmodule Brando.Villain.RefRenderingTest do
               }
             }
           ],
-          uid: Brando.Utils.generate_uid(),
+          uid: Utils.generate_uid(),
           vars: []
         }
       }
@@ -320,7 +321,7 @@ defmodule Brando.Villain.RefRenderingTest do
           refs: [
             %{
               name: "existing",
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "text", data: %{text: "Existing Content", type: :paragraph}}
             }
           ]
@@ -336,7 +337,7 @@ defmodule Brando.Villain.RefRenderingTest do
             %{
               name: "existing",
               description: nil,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %Brando.Villain.Blocks.TextBlock{
                 type: "text",
                 data: %Brando.Villain.Blocks.TextBlock.Data{
@@ -346,7 +347,7 @@ defmodule Brando.Villain.RefRenderingTest do
               }
             }
           ],
-          uid: Brando.Utils.generate_uid(),
+          uid: Utils.generate_uid(),
           vars: []
         }
       }
@@ -376,13 +377,13 @@ defmodule Brando.Villain.RefRenderingTest do
           refs: [
             %{
               name: "child_title",
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "text", data: %{text: "Default Child Title", type: :paragraph}}
             },
             %{
               name: "child_image",
               image_id: image.id,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "picture", data: %{alt: "Default child alt"}}
             }
           ]
@@ -395,12 +396,12 @@ defmodule Brando.Villain.RefRenderingTest do
         type: :module,
         module_id: child_module.id,
         active: true,
-        uid: Brando.Utils.generate_uid(),
+        uid: Utils.generate_uid(),
         refs: [
           %{
             name: "child_title",
             description: nil,
-            uid: Brando.Utils.generate_uid(),
+            uid: Utils.generate_uid(),
             data: %Brando.Villain.Blocks.TextBlock{
               type: "text",
               data: %Brando.Villain.Blocks.TextBlock.Data{
@@ -414,7 +415,7 @@ defmodule Brando.Villain.RefRenderingTest do
             description: nil,
             image_id: image.id,
             image: image,
-            uid: Brando.Utils.generate_uid(),
+            uid: Utils.generate_uid(),
             data: %Brando.Villain.Blocks.PictureBlock{
               type: "picture",
               data: %Brando.Villain.Blocks.PictureBlock.Data{
@@ -431,7 +432,7 @@ defmodule Brando.Villain.RefRenderingTest do
           type: :module,
           module_id: parent_module.id,
           multi: true,
-          uid: Brando.Utils.generate_uid(),
+          uid: Utils.generate_uid(),
           refs: [],
           vars: [],
           children: [child_block]
@@ -482,7 +483,7 @@ defmodule Brando.Villain.RefRenderingTest do
           refs: [
             %{
               name: "content",
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "text", data: %{text: "Default container content", type: :paragraph}}
             }
           ]
@@ -504,7 +505,7 @@ defmodule Brando.Villain.RefRenderingTest do
                 %{
                   name: "content",
                   description: nil,
-                  uid: Brando.Utils.generate_uid(),
+                  uid: Utils.generate_uid(),
                   data: %Brando.Villain.Blocks.TextBlock{
                     type: "text",
                     data: %Brando.Villain.Blocks.TextBlock.Data{
@@ -514,11 +515,11 @@ defmodule Brando.Villain.RefRenderingTest do
                   }
                 }
               ],
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               vars: []
             }
           ],
-          uid: Brando.Utils.generate_uid()
+          uid: Utils.generate_uid()
         }
       }
 
@@ -542,13 +543,13 @@ defmodule Brando.Villain.RefRenderingTest do
           refs: [
             %{
               name: "title",
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "text", data: %{text: "Default Title", type: :paragraph}}
             },
             %{
               name: "cover",
               image_id: image.id,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "picture", data: %{alt: "Default alt"}}
             }
           ]
@@ -564,7 +565,7 @@ defmodule Brando.Villain.RefRenderingTest do
             %{
               name: "title",
               description: nil,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %Brando.Villain.Blocks.TextBlock{
                 type: "text",
                 data: %Brando.Villain.Blocks.TextBlock.Data{
@@ -578,7 +579,7 @@ defmodule Brando.Villain.RefRenderingTest do
               description: nil,
               image_id: image.id,
               image: image,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %Brando.Villain.Blocks.PictureBlock{
                 type: "picture",
                 data: %Brando.Villain.Blocks.PictureBlock.Data{
@@ -587,7 +588,7 @@ defmodule Brando.Villain.RefRenderingTest do
               }
             }
           ],
-          uid: Brando.Utils.generate_uid(),
+          uid: Utils.generate_uid(),
           vars: []
         }
       }
@@ -613,7 +614,7 @@ defmodule Brando.Villain.RefRenderingTest do
           refs: [
             %{
               name: "title",
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "text", data: %{text: "Module Title", type: :paragraph}}
             }
           ]
@@ -629,7 +630,7 @@ defmodule Brando.Villain.RefRenderingTest do
             %{
               name: "title",
               description: nil,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %Brando.Villain.Blocks.TextBlock{
                 type: "text",
                 data: %Brando.Villain.Blocks.TextBlock.Data{
@@ -639,7 +640,7 @@ defmodule Brando.Villain.RefRenderingTest do
               }
             }
           ],
-          uid: Brando.Utils.generate_uid(),
+          uid: Utils.generate_uid(),
           vars: []
         }
       }
@@ -661,7 +662,7 @@ defmodule Brando.Villain.RefRenderingTest do
           refs: [
             %{
               name: "content",
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "text", data: %{text: "Text content", type: :paragraph}}
             }
           ]
@@ -678,7 +679,7 @@ defmodule Brando.Villain.RefRenderingTest do
             %{
               name: "content",
               description: nil,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %Brando.Villain.Blocks.HtmlBlock{
                 type: "html",
                 data: %Brando.Villain.Blocks.HtmlBlock.Data{
@@ -687,7 +688,7 @@ defmodule Brando.Villain.RefRenderingTest do
               }
             }
           ],
-          uid: Brando.Utils.generate_uid(),
+          uid: Utils.generate_uid(),
           vars: []
         }
       }
@@ -708,7 +709,7 @@ defmodule Brando.Villain.RefRenderingTest do
           refs: [
             %{
               name: "item_template",
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "text", data: %{text: "Template: " <> "{{ forloop.index }}", type: :paragraph}}
             }
           ]
@@ -724,7 +725,7 @@ defmodule Brando.Villain.RefRenderingTest do
             %{
               name: "item_template",
               description: nil,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %Brando.Villain.Blocks.TextBlock{
                 type: "text",
                 data: %Brando.Villain.Blocks.TextBlock.Data{
@@ -734,7 +735,7 @@ defmodule Brando.Villain.RefRenderingTest do
               }
             }
           ],
-          uid: Brando.Utils.generate_uid(),
+          uid: Utils.generate_uid(),
           vars: [
             %{
               key: "items",
@@ -772,7 +773,7 @@ defmodule Brando.Villain.RefRenderingTest do
           refs: [
             %{
               name: "cover",
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "picture", data: %{}}
             }
           ]
@@ -784,13 +785,13 @@ defmodule Brando.Villain.RefRenderingTest do
         block: %{
           type: :module,
           module_id: module.id,
-          uid: Brando.Utils.generate_uid(),
+          uid: Utils.generate_uid(),
           vars: [],
           refs: [
             %{
               name: "cover",
               description: nil,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               image_id: image.id,
               image: image,
               data: %Brando.Villain.Blocks.PictureBlock{type: "picture", data: block_data}
@@ -811,7 +812,7 @@ defmodule Brando.Villain.RefRenderingTest do
           refs: [
             %{
               name: "hero",
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "video", data: %{}}
             }
           ]
@@ -823,13 +824,13 @@ defmodule Brando.Villain.RefRenderingTest do
         block: %{
           type: :module,
           module_id: module.id,
-          uid: Brando.Utils.generate_uid(),
+          uid: Utils.generate_uid(),
           vars: [],
           refs: [
             %{
               name: "hero",
               description: nil,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               video_id: video.id,
               video: video,
               data: %Brando.Villain.Blocks.VideoBlock{type: "video", data: block_data}
@@ -932,7 +933,7 @@ defmodule Brando.Villain.RefRenderingTest do
         Factory.params_for(:module, %{
           code: "{% ref refs.g %}",
           refs: [
-            %{name: "g", uid: Brando.Utils.generate_uid(), data: %{type: "gallery", data: %{}}}
+            %{name: "g", uid: Utils.generate_uid(), data: %{type: "gallery", data: %{}}}
           ]
         })
 
@@ -942,13 +943,13 @@ defmodule Brando.Villain.RefRenderingTest do
         block: %{
           type: :module,
           module_id: module.id,
-          uid: Brando.Utils.generate_uid(),
+          uid: Utils.generate_uid(),
           vars: [],
           refs: [
             %{
               name: "g",
               description: nil,
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               gallery_id: gallery.id,
               gallery: gallery,
               data: %Brando.Villain.Blocks.GalleryBlock{type: "gallery", data: block_data}

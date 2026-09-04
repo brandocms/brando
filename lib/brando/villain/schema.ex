@@ -31,6 +31,9 @@ defmodule Brando.Villain.Schema do
       config :brando, Brando.Villain, :parser
 
   """
+
+  alias Ecto.Changeset
+
   defmacro __using__(opts) do
     quote do
       Module.register_attribute(__MODULE__, :villain_fields, accumulate: true)
@@ -88,16 +91,16 @@ defmodule Brando.Villain.Schema do
   """
   def generate_html(changeset, data_field \\ :data)
 
-  def generate_html(%Ecto.Changeset{valid?: true} = changeset, data_field) do
+  def generate_html(%Changeset{valid?: true} = changeset, data_field) do
     html_field =
       data_field
       |> to_string()
       |> String.replace("data", "html")
       |> String.to_atom()
 
-    existing_html = Ecto.Changeset.get_field(changeset, html_field)
+    existing_html = Changeset.get_field(changeset, html_field)
 
-    applied_changes = Ecto.Changeset.apply_changes(changeset)
+    applied_changes = Changeset.apply_changes(changeset)
     data_src = Map.get(applied_changes, data_field)
 
     parsed_data =
@@ -107,7 +110,7 @@ defmodule Brando.Villain.Schema do
       )
 
     if parsed_data != existing_html do
-      Ecto.Changeset.put_change(changeset, html_field, parsed_data)
+      Changeset.put_change(changeset, html_field, parsed_data)
     else
       changeset
     end

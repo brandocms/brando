@@ -1,6 +1,8 @@
 defmodule Mix.Tasks.Brando.Entries.Resave do
   use Mix.Task
 
+  alias IO.ANSI
+
   @shortdoc "Re-save all entries"
 
   @moduledoc """
@@ -100,17 +102,17 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
 
       IO.write([
         "* [",
-        IO.ANSI.blue(),
+        ANSI.blue(),
         "#{singular}",
-        IO.ANSI.reset(),
+        ANSI.reset(),
         ":",
-        IO.ANSI.blue(),
+        ANSI.blue(),
         "#{entry.id}",
-        IO.ANSI.reset(),
+        ANSI.reset(),
         "] → ",
-        IO.ANSI.blue(),
+        ANSI.blue(),
         title,
-        IO.ANSI.reset(),
+        ANSI.reset(),
         " ... "
       ])
 
@@ -122,10 +124,10 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
 
       case Brando.Repo.update(changeset, force: true) do
         {:ok, _} ->
-          IO.write([IO.ANSI.green(), "done!\n", IO.ANSI.reset()])
+          IO.write([ANSI.green(), "done!\n", ANSI.reset()])
 
         {:error, _} ->
-          IO.write([IO.ANSI.red(), "failed!\n", IO.ANSI.reset()])
+          IO.write([ANSI.red(), "failed!\n", ANSI.reset()])
       end
     end
   end

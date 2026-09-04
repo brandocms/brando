@@ -20,6 +20,7 @@ defmodule Brando.Villain.Components do
 
   use Phoenix.Component
   import Phoenix.HTML, only: [raw: 1]
+  alias Brando.Villain.RenderSourceQuery
   alias Ecto.Changeset
 
   # -- ref component --
@@ -157,9 +158,9 @@ defmodule Brando.Villain.Components do
   end
 
   defp build_parser_opts(assigns) do
-    {:ok, modules} = Brando.Villain.RenderSourceQuery.list_modules(cache_opts())
-    {:ok, containers} = Brando.Villain.RenderSourceQuery.list_containers(cache_opts())
-    {:ok, palettes} = Brando.Villain.RenderSourceQuery.list_palettes(cache_opts())
+    {:ok, modules} = RenderSourceQuery.list_modules(cache_opts())
+    {:ok, containers} = RenderSourceQuery.list_containers(cache_opts())
+    {:ok, palettes} = RenderSourceQuery.list_palettes(cache_opts())
 
     %{
       context: assigns[:liquex_context] || build_empty_context(),

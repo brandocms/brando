@@ -24,6 +24,7 @@ defmodule BrandoAdmin.Components.Form.Block.RecoverChildrenTest do
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.BlockField.Ops
   alias Ecto.Changeset
+  alias Phoenix.Component
 
   @block_module Brando.Pages.Page.Blocks
 
@@ -59,15 +60,15 @@ defmodule BrandoAdmin.Components.Form.Block.RecoverChildrenTest do
 
   defp socket(user, page) do
     %Phoenix.LiveView.Socket{}
-    |> Phoenix.Component.assign(:block_module, @block_module)
-    |> Phoenix.Component.assign(:current_user, user)
-    |> Phoenix.Component.assign(:entry, page)
-    |> Phoenix.Component.assign(:entry_blocks, [])
-    |> Phoenix.Component.assign(:seed_forms, %{})
-    |> Phoenix.Component.assign(:block_ops, Ops.new([]))
-    |> Phoenix.Component.assign(:block_field, "blocks")
-    |> Phoenix.Component.assign(:form_id, "page_form")
-    |> Phoenix.Component.assign(:blocks_changed?, false)
+    |> Component.assign(:block_module, @block_module)
+    |> Component.assign(:current_user, user)
+    |> Component.assign(:entry, page)
+    |> Component.assign(:entry_blocks, [])
+    |> Component.assign(:seed_forms, %{})
+    |> Component.assign(:block_ops, Ops.new([]))
+    |> Component.assign(:block_field, "blocks")
+    |> Component.assign(:form_id, "page_form")
+    |> Component.assign(:blocks_changed?, false)
   end
 
   # The params the hook's `formDataToParams` produces for one root block form.

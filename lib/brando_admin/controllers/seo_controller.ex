@@ -5,6 +5,7 @@ defmodule Brando.SEOController do
   use BrandoAdmin, :controller
 
   alias Brando.Cache
+  alias Plug.Conn
 
   @default_robots """
   User-agent: *
@@ -18,13 +19,13 @@ defmodule Brando.SEOController do
     case Map.get(seo, :robots) do
       nil ->
         conn
-        |> Plug.Conn.resp(200, @default_robots)
-        |> Plug.Conn.send_resp()
+        |> Conn.resp(200, @default_robots)
+        |> Conn.send_resp()
 
       robots ->
         conn
-        |> Plug.Conn.resp(200, robots)
-        |> Plug.Conn.send_resp()
+        |> Conn.resp(200, robots)
+        |> Conn.send_resp()
     end
   end
 end

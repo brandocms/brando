@@ -325,7 +325,7 @@ defmodule Brando.Pages do
     view_module = Brando.web_module(PageView)
 
     if Code.ensure_loaded?(view_module) do
-      {_, _, templates} = apply(view_module, :__templates__, [])
+      {_, _, templates} = view_module.__templates__()
 
       main_templates = Enum.filter(templates, &(not String.starts_with?(&1, "_")))
 

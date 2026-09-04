@@ -10,6 +10,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
   alias Brando.Content.Block, as: ContentBlock
   alias Brando.Content.Var.Layout
+  alias Brando.Villain.Parser
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
@@ -2761,7 +2762,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       if block_form[:vars] do
         block_cs
         |> Changeset.get_assoc(:vars, :struct)
-        |> Brando.Villain.Parser.process_vars()
+        |> Parser.process_vars()
       else
         %{}
       end
@@ -2770,7 +2771,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       if block_form[:refs] do
         block_cs
         |> Changeset.get_assoc(:refs, :struct)
-        |> Brando.Villain.Parser.process_refs()
+        |> Parser.process_refs()
       else
         %{}
       end
@@ -2800,7 +2801,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       system_assigns
       |> Map.merge(%{
         render_context: :admin,
-        parser_module: Brando.Villain.Parser.parser_module(),
+        parser_module: Parser.parser_module(),
         module_id: block.module_id,
         block: block,
         refs: processed_refs,
