@@ -3693,6 +3693,11 @@ msgstr ""
 msgid "Collapse multi blocks"
 msgstr ""
 
+#: lib/brando_admin/components/form/block_field.ex:1587
+#, elixir-autogen, elixir-format
+msgid "Clear clipboard"
+msgstr ""
+
 #: lib/brando_admin/components/form/block_field.ex:1536
 #, elixir-autogen, elixir-format
 msgid "Collapse root blocks"

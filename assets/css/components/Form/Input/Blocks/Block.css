@@ -132,6 +132,20 @@
   display: none;
 }
 
+/* A paste never consumes the clipboard, and the clipboard outlives navigation
+   by hours — so these pills can legitimately sit between every block for a
+   whole session. Fade them in with the plus they belong to instead of having
+   them shout from every gap. Opacity only, deliberately: `pointer-events: none`
+   would also take them out of Playwright's hit-target check, and the cursor
+   cannot reach the pill without first hovering the wrapper that reveals it. */
+.block-plus-wrapper .block-paste {
+  transition: opacity 200ms ease;
+}
+
+.block-plus-wrapper:not(:hover):not(:focus-within) .block-paste {
+  opacity: 0;
+}
+
 [data-block-type="container"] > .block-plus-wrapper {
   margin-top: 0;
 }

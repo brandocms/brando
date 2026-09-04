@@ -269,6 +269,13 @@ reads the same clipboard.
 * `initialize_blocks/2` hydrates `clipboard_meta` + `paste_multi_module_id` from the cache.
   Skipping that hydration is what used to make paste look same-document-only: the buttons
   are shown by CSS from `data-paste-allow`, which is rendered from `clipboard_meta`.
+* **A paste never consumes the clipboard** — one copy pastes into as many spots and as many
+  entries as the user likes. The only way out is the block field's actions dropdown
+  (`clear_clipboard` → `Brando.Cache.del/1` + `assign_clipboard_meta(socket, nil)`), which
+  names what it holds from the `label` snapshotted at copy time. Because a clipboard can
+  legitimately sit there for hours, the pills are faded out until their `.block-plus-wrapper`
+  is hovered (opacity only — `pointer-events: none` would take them out of Playwright's
+  hit-target check).
 * Paste forces `source:` to the **target** field's `block_module` (`duplicate_block/2`'s
   `:source` opt, applied recursively) — `source` names the join table `list_orphaned_blocks/0`
   reaches a block through, so a cross-schema paste must re-source.

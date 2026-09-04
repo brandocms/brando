@@ -1070,6 +1070,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:noreply, paste_root_block(socket, length(socket.assigns.block_ops.order))}
   end
 
+  # A paste never consumes the clipboard — copying once and pasting into
+  # several spots, or several entries, is the point of it living in the cache
+  # — so this is the way out. Cheap by construction: `data-paste-allow` is one
+  # attribute on this component's own root, so dropping the clipboard hides
+  # every root/container paste button without touching a single block.
+  def handle_event("clear_clipboard", _, socket) do
+    Brando.Cache.del(clipboard_key(socket.assigns.current_user.id))
+    {:noreply, assign_clipboard_meta(socket, nil)}
+  end
+
   # Undo the most recent delete (LIFO — a parent deleted after its child
   # restores first, so the child's snapshot finds its parent again).
   def handle_event("restore_block", _, socket) do
@@ -1501,7 +1511,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         </label>
       </div>
       <div class="blocks-content">
-        <div :if={@root_order != []} class="blocks-actions">
+        <div :if={@root_order != [] or @clipboard_meta} class="blocks-actions">
           <div class="block-field-dropdown">
             <button
               type="button"
@@ -1514,52 +1524,70 @@ defmodule BrandoAdmin.Components.Form.BlockField do
               class="block-field-dropdown-content hidden"
               id={"block-field-#{@block_field}-actions-dropdown"}
             >
-              <li>
+              <%= if @root_order != [] do %>
+                <li>
+                  <button
+                    type="button"
+                    phx-click={
+                      JS.push("rebuild_outline", target: @myself)
+                      |> toggle_drawer("#block-field-#{@block_field}-outline")
+                    }
+                  >
+                    <.icon name="hero-bars-3-bottom-left" /> {gettext("Block outline")}
+                  </button>
+                </li>
+                <li class="dropdown-separator"></li>
+                <li>
+                  <button
+                    type="button"
+                    phx-click="collapse_root_blocks"
+                    phx-target={@myself}
+                  >
+                    <.icon name="hero-eye-slash" /> {gettext("Collapse root blocks")}
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    phx-click="expand_root_blocks"
+                    phx-target={@myself}
+                  >
+                    <.icon name="hero-eye" /> {gettext("Expand root blocks")}
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    phx-click="collapse_multi_children"
+                    phx-target={@myself}
+                  >
+                    <.icon name="hero-eye-slash" /> {gettext("Collapse multi blocks")}
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    phx-click="expand_multi_children"
+                    phx-target={@myself}
+                  >
+                    <.icon name="hero-eye" /> {gettext("Expand multi blocks")}
+                  </button>
+                </li>
+              <% end %>
+              <li :if={@clipboard_meta && @root_order != []} class="dropdown-separator"></li>
+              <li :if={@clipboard_meta}>
                 <button
                   type="button"
-                  phx-click={
-                    JS.push("rebuild_outline", target: @myself)
-                    |> toggle_drawer("#block-field-#{@block_field}-outline")
-                  }
-                >
-                  <.icon name="hero-bars-3-bottom-left" /> {gettext("Block outline")}
-                </button>
-              </li>
-              <li class="dropdown-separator"></li>
-              <li>
-                <button
-                  type="button"
-                  phx-click="collapse_root_blocks"
+                  class="block-field-clipboard-clear"
+                  phx-click="clear_clipboard"
                   phx-target={@myself}
+                  data-testid="clear-clipboard"
                 >
-                  <.icon name="hero-eye-slash" /> {gettext("Collapse root blocks")}
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  phx-click="expand_root_blocks"
-                  phx-target={@myself}
-                >
-                  <.icon name="hero-eye" /> {gettext("Expand root blocks")}
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  phx-click="collapse_multi_children"
-                  phx-target={@myself}
-                >
-                  <.icon name="hero-eye-slash" /> {gettext("Collapse multi blocks")}
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  phx-click="expand_multi_children"
-                  phx-target={@myself}
-                >
-                  <.icon name="hero-eye" /> {gettext("Expand multi blocks")}
+                  <.icon name="hero-clipboard-document-check" />
+                  {gettext("Clear clipboard")}
+                  <span :if={@clipboard_meta.label} class="block-field-clipboard-label">
+                    {@clipboard_meta.label}
+                  </span>
                 </button>
               </li>
             </ul>
@@ -1836,7 +1864,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp assign_clipboard_meta(socket, %{type: type} = clipboard) do
     socket
-    |> assign(:clipboard_meta, %{type: type, parent_module_id: clipboard.parent_module_id})
+    # `label` is fetched rather than matched: a clipboard cached before labels
+    # existed is still perfectly pasteable, it just has nothing to name itself.
+    |> assign(:clipboard_meta, %{
+      type: type,
+      parent_module_id: clipboard.parent_module_id,
+      label: Map.get(clipboard, :label)
+    })
     # Only a copied `module_entry` can change what a `{:multi, module_id}` paste
     # button decides, and that decision is an id comparison CSS cannot make. So
     # it is the one piece of clipboard state that still reaches the block tree —
@@ -1872,13 +1906,37 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         module && module.parent_id
       end
 
-    clipboard = %{changeset: changeset, type: type, parent_module_id: parent_mid}
+    clipboard = %{
+      changeset: changeset,
+      type: type,
+      parent_module_id: parent_mid,
+      label: clipboard_label(type, module_id)
+    }
+
     Brando.Cache.put(clipboard_key(user_id), clipboard, @clipboard_ttl)
 
     socket
     |> assign_clipboard_meta(clipboard)
     |> then(&{:ok, &1})
   end
+
+  # What the clipboard holds, named at copy time so "clear" can say what it is
+  # about to throw away. Snapshotted rather than resolved on read: the module
+  # may have been renamed — or deleted — by the time the clipboard is dropped.
+  defp clipboard_label(type, module_id) do
+    module = module_id && get_module(module_id)
+
+    case module && ModulePicker.translate(module.name) do
+      name when is_binary(name) and name != "" -> name
+      _ -> block_type_label(type)
+    end
+  end
+
+  defp block_type_label(:module), do: gettext("Module")
+  defp block_type_label(:module_entry), do: gettext("Entry")
+  defp block_type_label(:container), do: gettext("Container")
+  defp block_type_label(:fragment), do: gettext("Fragment")
+  defp block_type_label(_type), do: gettext("Block")
 
   defp paste_root_block(socket, sequence) do
     user_id = socket.assigns.current_user.id

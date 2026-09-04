@@ -309,6 +309,40 @@ test.describe('Block Copy/Paste', () => {
       'Lead Engineer'
     )
   })
+  // A paste never consumes the clipboard and the clipboard outlives navigation
+  // by hours, so the way out has to be explicit: the block field's actions
+  // dropdown offers to drop it, naming what it holds. Until then the pills stay
+  // faded out — a clipboard kept for a whole session must not shout from every
+  // gap between blocks.
+  test('clipboard can be cleared, and its pills stay quiet until hovered', async ({ page }) => {
+    await createPage(page, 'Clear Clipboard Test', 'clear-clipboard-test')
+
+    await page.getByRole('button', { name: 'Add block' }).click()
+    await page.getByRole('button', { name: 'HEADERS' }).click()
+    await page.getByRole('button', { name: 'Heading' }).click()
+    await syncLV(page)
+
+    await copyBlock(page.locator('.entry-block').first())
+    await syncLV(page)
+
+    const bottomPaste = page.locator('.blocks-content > .block-plus-wrapper .block-paste')
+    await expect(bottomPaste).toBeVisible()
+    await expect(bottomPaste).toHaveCSS('opacity', '0')
+    // reaching for the plus is what reveals the pill beside it
+    await page.locator('.blocks-content > .block-plus-wrapper').hover()
+    await expect(bottomPaste).toHaveCSS('opacity', '1')
+
+    await page.locator('.block-field-dropdown-toggle').first().click()
+    const clearClipboard = page.getByTestId('clear-clipboard')
+    // named, so it is clear which copy is being thrown away
+    await expect(clearClipboard).toContainText('Heading')
+    await clearClipboard.click()
+    await syncLV(page)
+
+    await expect(bottomPaste).toBeHidden()
+    await expect(page.getByTestId('clear-clipboard')).toHaveCount(0)
+  })
+
   // The clipboard is cached per user, not per LiveView, so a copy has always
   // been readable from another entry. What was missing was the *visibility*
   // rule: `clipboard_meta` started nil on every BlockField mount, so a freshly
