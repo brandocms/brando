@@ -1412,8 +1412,9 @@
   `brando_153` (see Migrations). Oban `2.24` unified queue, repo and service configuration
   and flattened the module names — `Oban.Plugins.Cron` is now `Oban.Cron`, and services are
   top-level keys rather than a `plugins:` list. Old configuration is rewritten transparently
-  and the old modules delegate, so **nothing in your app has to change**; Brando still starts
-  Oban with the legacy shape.
+  and the old modules delegate, so **nothing in your app has to change** — an app-level
+  `config :brando, Oban` keeps working in either shape. Brando's own default now declares the
+  new one.
 - Bumped `req_llm` to `1.21.1`. No API change on the surface Brando uses
   (`ReqLLM.generate_text/3`, `ReqLLM.get_key/1`, `ReqLLM.Keys`, `ReqLLM.Response`) — the range
   is provider fixes and additions.
