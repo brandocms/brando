@@ -84,7 +84,7 @@ defmodule Mix.Tasks.Brando.Gen.Languages do
   end
 
   defp prompt_with_default(prompt, default) do
-    case "+ #{prompt} [#{default}]" |> Mix.shell().prompt() |> String.trim("\n") do
+    case Mix.Brando.prompt("+ #{prompt} [#{default}]") do
       "" -> default
       ret -> ret
     end

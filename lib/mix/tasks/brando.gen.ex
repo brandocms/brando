@@ -21,7 +21,7 @@ defmodule Mix.Tasks.Brando.Gen do
       Mix.Task.run("compile")
     end
 
-    blueprint = Mix.shell().prompt("+ Enter blueprint module") |> String.trim("\n")
+    blueprint = Mix.Brando.prompt("+ Enter blueprint module")
     blueprint_module = Module.concat([blueprint])
     build_from_blueprint(blueprint_module)
   end

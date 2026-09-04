@@ -3,6 +3,32 @@ defmodule Mix.Brando do
 
   @moduledoc false
 
+  @doc """
+  Asks a question, and refuses to guess when nobody is there to answer.
+
+  `Mix.Shell.IO.prompt/1` hands back `IO.gets/1`'s `:eof` when stdin is closed —
+  a piped generator run, a CI runner — and every caller here fed that straight
+  into `String.trim/1`, which has no clause for an atom. "Nobody answered" then
+  surfaced as a `FunctionClauseError` raised from inside `String`, naming
+  neither the generator nor the prompt. `Brando.Setup.Tenancy.ask/1` already
+  refuses to guess for its own prompts; this is the same rule for the rest.
+  """
+  def prompt(message) do
+    case Mix.shell().prompt(message) do
+      answer when is_binary(answer) ->
+        String.trim(answer)
+
+      :eof ->
+        Mix.raise("""
+        No answer given for:
+
+        #{message}
+
+        stdin is closed, so this generator cannot run non-interactively.
+        """)
+    end
+  end
+
   @valid_attributes [
     :array,
     :boolean,

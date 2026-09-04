@@ -19,8 +19,8 @@ defmodule Mix.Tasks.Brando.Gen.Blueprint do
 
     app = Mix.Project.config()[:app]
 
-    domain = "+ Enter domain" |> Mix.shell().prompt() |> String.trim("\n")
-    schema = "+ Enter schema" |> Mix.shell().prompt() |> String.trim("\n")
+    domain = Mix.Brando.prompt("+ Enter domain")
+    schema = Mix.Brando.prompt("+ Enter schema")
 
     binding = [
       app_module: :app_module |> Brando.config() |> to_string() |> String.replace("Elixir.", ""),

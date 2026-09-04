@@ -53,7 +53,7 @@ defmodule Mix.Tasks.Brando.Gen.Admin do
   end
 
   defp prompt_with_default(prompt, default) do
-    case Mix.shell().prompt("+ #{prompt} [#{default}]") |> String.trim("\n") do
+    case Mix.Brando.prompt("+ #{prompt} [#{default}]") do
       "" -> default
       ret -> ret
     end

@@ -11,6 +11,8 @@ defmodule Mix.Tasks.Brando.Gen.Test do
   import MixHelper
 
   setup do
+    Mix.shell(Mix.Shell.Process)
+    on_exit(fn -> Mix.shell(Mix.Shell.Process) end)
     Mix.Task.clear()
     :ok
   end

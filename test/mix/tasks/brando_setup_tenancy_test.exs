@@ -133,9 +133,8 @@ defmodule Mix.Tasks.BrandoSetupTenancyTest do
   end
 
   test "asks for mode and site key when they are not passed" do
-    shell = Mix.shell()
     Mix.shell(Mix.Shell.Process)
-    on_exit(fn -> Mix.shell(shell) end)
+    on_exit(fn -> Mix.shell(Mix.Shell.Process) end)
 
     send(self(), {:mix_shell_input, :prompt, "single"})
     send(self(), {:mix_shell_input, :prompt, "by"})
@@ -152,9 +151,8 @@ defmodule Mix.Tasks.BrandoSetupTenancyTest do
   end
 
   test "re-asks until the site key is valid" do
-    shell = Mix.shell()
     Mix.shell(Mix.Shell.Process)
-    on_exit(fn -> Mix.shell(shell) end)
+    on_exit(fn -> Mix.shell(Mix.Shell.Process) end)
 
     send(self(), {:mix_shell_input, :prompt, "Not Valid"})
     send(self(), {:mix_shell_input, :prompt, "second-try"})

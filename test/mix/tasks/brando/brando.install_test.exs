@@ -35,6 +35,18 @@ defmodule Mix.Tasks.Brando.GenerateTest do
     end)
   end
 
+  # `Mix.shell()` is global, and these tests only work under
+  # `Mix.Shell.Process` — the seeded `{:mix_shell_input, :prompt, _}` messages
+  # go nowhere otherwise, and `Mix.Shell.IO` answers from a closed CI stdin with
+  # `:eof`. Owning it here rather than inheriting whatever the run happens to
+  # have installed: the load-time `Mix.shell/1` call in `mix_helper.exs` is one
+  # assignment for the whole suite, and CI has caught it not holding.
+  setup do
+    Mix.shell(Mix.Shell.Process)
+    on_exit(fn -> Mix.shell(Mix.Shell.Process) end)
+    :ok
+  end
+
   test "brando.install" do
     send(self(), {:mix_shell_input, :prompt, "none"})
     Mix.Tasks.Brando.Install.run([])

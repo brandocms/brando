@@ -5,13 +5,12 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
   @snapshot_path "tmp/mix_task_blueprint_snapshots"
 
   setup do
-    previous_shell = Mix.shell()
     Mix.shell(Mix.Shell.Process)
     File.rm_rf!(@migration_path)
     File.rm_rf!(@snapshot_path)
 
     on_exit(fn ->
-      Mix.shell(previous_shell)
+      Mix.shell(Mix.Shell.Process)
       File.rm_rf!(@migration_path)
       File.rm_rf!(@snapshot_path)
     end)
