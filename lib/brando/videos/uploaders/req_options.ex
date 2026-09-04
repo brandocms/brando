@@ -35,10 +35,10 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
   without a change here.
 
   What follows is therefore a list of **examples**, not a set. These are the
-  ones with the sharpest consequences against **req 0.7.2**:
+  ones with the sharpest consequences against **req 0.7.4**:
 
     * `:redirect_trusted` — `remove_credentials_if_untrusted(request, true, _)`
-      hands the request back untouched (`req/steps.ex:1571`), disabling
+      hands the request back untouched (`req/steps.ex:1562`), disabling
       cross-host credential stripping outright. On a doc about config seams
       that can unset credentials, this is the sharpest one available.
 
@@ -56,7 +56,7 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
       the provider just built. Bunny's credential is an `AccessKey` header
       rather than `authorization`, so there it lands alongside instead.
     * `:form` / `:form_multipart` — `encode_body/1` tests both **before**
-      `:json` (`req/steps.ex:486, 490` vs `:497`), so a configured `form:`
+      `:json` (`req/steps.ex:478, 482` vs `:489`), so a configured `form:`
       replaces the body all three providers build.
     * `:json` — Bunny's GET and DELETE build no body (the `:get` and `:delete`
       branches of `Brando.Videos.Uploaders.Bunny`'s `api_request/3`), so a

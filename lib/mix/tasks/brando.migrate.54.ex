@@ -14,7 +14,7 @@ if Code.ensure_loaded?(Igniter) do
     @font_vsn_regex ~r/(\.(?:woff2?|ttf|otf|eot))\?vsn=d\b/
     @live_view_package_regex ~r/("phoenix_live_view"\s*:\s*")[^"]+("\s*[,}])/
     @phx_digest_regex ~r/\bmix[\t ]+phx\.digest(?=[\t ]|$)/m
-    @phoenix_live_view_fallback_version "1.2.8"
+    @phoenix_live_view_fallback_version "1.2.11"
 
     @listing_core_components ~w(<.field <.i18n <.update_link <.url)
 

@@ -162,7 +162,7 @@ defmodule Brando.Videos.Uploaders.ReqOptionsTest do
   # different job from `mix.exs`'s pin: that one says what the library will run
   # with, this one says what the prose was checked against.
   test "the req citations name a known req version" do
-    assert to_string(Application.spec(:req, :vsn)) == "0.7.2",
+    assert to_string(Application.spec(:req, :vsn)) == "0.7.4",
            """
            req moved. `Brando.Videos.Uploaders.ReqOptions`' @doc cites
            req/steps.ex by line for :redirect_trusted, :auth, :form /

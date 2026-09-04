@@ -1403,10 +1403,11 @@
 
 #### Dependencies
 
-- Bumped `phoenix` to `1.8.8` and `phoenix_live_view` to `1.2.8`. Both are pinned exactly,
-  so when upgrading also pin `phoenix_live_view` to `1.2.8` in your `assets/package.json`
+- Bumped `phoenix` to `1.8.13` and `phoenix_live_view` to `1.2.11`. Both are pinned exactly,
+  so when upgrading also pin `phoenix_live_view` to `1.2.11` in your `assets/package.json`
   (and rebuild your backend assets) — LiveView warns when the JS client and server versions
-  differ.
+  differ. LiveView `1.2.9` fixes an open redirect in `redirect/2` (CVE-2026-64941), so this
+  is a security update, not just a maintenance one.
 - Bumped `oban` to `~> 2.23`. The schema is upgraded to v14 via `brando_153` (see Migrations).
 - Bumped `image` (0.69), `req` (0.6), `req_llm` (1.16), `sentry` (13.2), and `spark`, `tz`,
   `earmark`, `floki`, `html_sanitize_ex`, `credo`, `ex_doc`, `igniter`.

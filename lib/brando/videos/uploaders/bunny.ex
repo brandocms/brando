@@ -450,7 +450,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
     #
     # Req strips credentials on a cross-host redirect by deleting exactly two
     # things: the `authorization` header and the `:auth` option
-    # (`remove_credentials_if_untrusted/3`, `req/steps.ex:1573-1582`). Bunny's
+    # (`remove_credentials_if_untrusted/3`, `req/steps.ex:1564-1573`). Bunny's
     # credential is neither — it is the `AccessKey` header above — so a 302 to
     # another host would forward the library API key verbatim, on stock
     # defaults with no config involved. Mux and Cloudflare need no equivalent:

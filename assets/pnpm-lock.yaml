@@ -114,14 +114,14 @@ importers:
         specifier: ^2.7.8
         version: 2.7.8
       phoenix:
-        specifier: 1.8.9
-        version: 1.8.9
+        specifier: 1.8.13
+        version: 1.8.13
       phoenix_html:
         specifier: ^4.3.0
         version: 4.3.0
       phoenix_live_view:
-        specifier: 1.2.8
-        version: 1.2.8
+        specifier: 1.2.11
+        version: 1.2.11
       prosemirror-inputrules:
         specifier: ^1.4.0
         version: 1.5.1
@@ -1112,10 +1112,6 @@ packages:
   morphdom@2.7.8:
     resolution: {integrity: sha512-D/fR4xgGUyVRbdMGU6Nejea1RFzYxYtyurG4Fbv2Fi/daKlWKuXGLOdXtl+3eIwL110cI2hz1ZojGICjjFLgTg==}
 
-  morphdom@https://codeload.github.com/SteffenDE/morphdom/tar.gz/92f9125ed8c1a52861719544c83314cd062d65aa:
-    resolution: {tarball: https://codeload.github.com/SteffenDE/morphdom/tar.gz/92f9125ed8c1a52861719544c83314cd062d65aa}
-    version: 2.7.8
-
   nanoid@3.3.12:
     resolution: {integrity: sha512-ZB9RH/39qpq5Vu6Y+NmUaFhQR6pp+M2Xt76XBnEwDaGcVAqhlvxrl3B2bKS5D3NH3QR76v3aSrKaF/Kiy7lEtQ==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -1147,14 +1143,14 @@ packages:
     resolution: {integrity: sha512-AVbw3UJ2e9bq64vSaS9Am0fje1Pa8pbGqTTsmXfaIiMpnr5DlDhfJOuLj9Sf95ZPVDAUerDfEk88MPmPe7UCQg==}
     engines: {node: '>=0.10.0'}
 
-  phoenix@1.8.9:
-    resolution: {integrity: sha512-/2qzAZB3P2s08fFAYaG65lqaNFmVXUSlXdY4/JDdDKIC81y2cFWkPwI8gycy4VLpv197JwZ5PpBf3VhoG32yGA==}
+  phoenix@1.8.13:
+    resolution: {integrity: sha512-5UByH7ejdsPLd6eihwzV3L3i6YX4mHUtFjLaE8S1YuA+3aBj37rzH6KDjxBuPlB04o9ZHVz+PKRiUg3aYYvzmQ==}
 
   phoenix_html@4.3.0:
     resolution: {integrity: sha512-6vnR2Y7KxEPX1DdN59AuO98TTFtsYBqfUiUOo3NY6vyVp3o94RTawdaKtELFOKfiUD7LCEclBcpCltJM2GWuKw==}
 
-  phoenix_live_view@1.2.8:
-    resolution: {integrity: sha512-annJ0s4pLqbDg0poMCnneeSmiCDIb9LOAG/dEJNx8dz15KrrqTstw2+28eUNmgXPRbLzrZd4xFRzguXowIMZoQ==}
+  phoenix_live_view@1.2.11:
+    resolution: {integrity: sha512-52aAL+cW0IGxZT9QMEkN+3+pRfCTCBEQZUL6C1gRgAlqmOf15VkMFxISHX71IAj+Px7uQl31ROmYUsWXDUT95g==}
 
   picocolors@0.2.1:
     resolution: {integrity: sha512-cMlDqaLEqfSaW8Z7N5Jw+lyIW869EzT73/F5lhtY9cLGoVxSXznfgfXMO0Z5K0o0Q2TkTXq+0KFsdnSe3jDViA==}
@@ -2345,8 +2341,6 @@ snapshots:
 
   morphdom@2.7.8: {}
 
-  morphdom@https://codeload.github.com/SteffenDE/morphdom/tar.gz/92f9125ed8c1a52861719544c83314cd062d65aa: {}
-
   nanoid@3.3.12: {}
 
   node-releases@2.0.44: {}
@@ -2367,13 +2361,11 @@ snapshots:
 
   path-is-absolute@1.0.1: {}
 
-  phoenix@1.8.9: {}
+  phoenix@1.8.13: {}
 
   phoenix_html@4.3.0: {}
 
-  phoenix_live_view@1.2.8:
-    dependencies:
-      morphdom: https://codeload.github.com/SteffenDE/morphdom/tar.gz/92f9125ed8c1a52861719544c83314cd062d65aa
+  phoenix_live_view@1.2.11: {}
 
   picocolors@0.2.1: {}
 

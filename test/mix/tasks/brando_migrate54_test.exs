@@ -416,7 +416,10 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert source(igniter, @fonts_path) =~ "/fonts/legacy.woff2'"
     refute source(igniter, @fonts_path) =~ "/fonts/legacy.woff2?vsn=d"
     assert source(igniter, @fonts_path) =~ "/images/hero.png?vsn=d"
-    assert source(igniter, @package_json_path) =~ ~s("phoenix_live_view": "1.2.8")
+    live_view_version = to_string(Application.spec(:phoenix_live_view, :vsn))
+
+    assert source(igniter, @package_json_path) =~
+             ~s("phoenix_live_view": "#{live_view_version}")
     assert source(igniter, @package_json_path) =~ ~s("unrelated": "1.0.0")
 
     assert_creates(igniter, @florist_config_path, fn config ->
