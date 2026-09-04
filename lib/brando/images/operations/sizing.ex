@@ -15,7 +15,7 @@ defmodule Brando.Images.Operations.Sizing do
   """
   def delegate_processor(conversion_parameters) do
     module = Brando.config(Brando.Images, :processor_module) || Brando.Images.Processor.Vix
-    apply(module, :process_image, [conversion_parameters])
+    module.process_image(conversion_parameters)
   end
 
   @doc """

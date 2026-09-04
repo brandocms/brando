@@ -19,6 +19,7 @@ defmodule BrandoAdmin.Components.Form.PickerSelectTest do
   alias Brando.Factory
   alias BrandoAdmin.Components.Form
   alias Ecto.Changeset
+  alias Phoenix.Component
 
   setup do
     user = Factory.insert(:random_user)
@@ -28,20 +29,20 @@ defmodule BrandoAdmin.Components.Form.PickerSelectTest do
 
   defp form_socket(page, user, edit_assigns) do
     %Phoenix.LiveView.Socket{}
-    |> Phoenix.Component.assign(:form, to_form(Changeset.change(page)))
-    |> Phoenix.Component.assign(:entry, page)
-    |> Phoenix.Component.assign(:schema, Brando.Pages.Page)
-    |> Phoenix.Component.assign(:singular, "page")
-    |> Phoenix.Component.assign(:current_user, user)
-    |> Phoenix.Component.assign(:processing_images, [])
+    |> Component.assign(:form, to_form(Changeset.change(page)))
+    |> Component.assign(:entry, page)
+    |> Component.assign(:schema, Brando.Pages.Page)
+    |> Component.assign(:singular, "page")
+    |> Component.assign(:current_user, user)
+    |> Component.assign(:processing_images, [])
     # drawer state `assign_drawer_recovery_state/1` destructures
-    |> Phoenix.Component.assign(:editing_image?, true)
-    |> Phoenix.Component.assign(:editing_video?, false)
-    |> Phoenix.Component.assign(:editing_file?, false)
-    |> Phoenix.Component.assign(:edit_image, nil)
-    |> Phoenix.Component.assign(:edit_video, nil)
-    |> Phoenix.Component.assign(:edit_file, nil)
-    |> Phoenix.Component.assign(edit_assigns)
+    |> Component.assign(:editing_image?, true)
+    |> Component.assign(:editing_video?, false)
+    |> Component.assign(:editing_file?, false)
+    |> Component.assign(:edit_image, nil)
+    |> Component.assign(:edit_video, nil)
+    |> Component.assign(:edit_file, nil)
+    |> Component.assign(edit_assigns)
   end
 
   defp committed_fk(socket, key) do

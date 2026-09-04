@@ -3,6 +3,8 @@ defmodule Mix.Brando do
 
   @moduledoc false
 
+  alias Phoenix.Naming
+
   @doc """
   Asks a question, and refuses to guess when nobody is there to answer.
 
@@ -131,12 +133,12 @@ defmodule Mix.Brando do
   """
   def inflect(singular) do
     base = Mix.Phoenix.base()
-    scoped = Phoenix.Naming.camelize(singular)
-    path = Phoenix.Naming.underscore(scoped)
+    scoped = Naming.camelize(singular)
+    path = Naming.underscore(scoped)
     singular = path |> String.split("/") |> List.last()
     module = base |> Module.concat(scoped) |> inspect
     alias = module |> String.split(".") |> List.last()
-    human = Phoenix.Naming.humanize(singular)
+    human = Naming.humanize(singular)
 
     [
       alias: alias,
@@ -260,7 +262,7 @@ defmodule Mix.Brando do
     app = Mix.Project.config() |> Keyword.fetch!(:app)
 
     case Application.get_env(app, :app_namespace, app) do
-      ^app -> app |> to_string |> Phoenix.Naming.camelize()
+      ^app -> app |> to_string |> Naming.camelize()
       mod -> mod |> inspect
     end
   end

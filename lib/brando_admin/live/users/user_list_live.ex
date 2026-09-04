@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Users.UserListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Users.User
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Users
   alias BrandoAdmin.Components.Content
 
   import BrandoAdmin.Utils, only: [hide_modal: 1]
@@ -141,11 +142,11 @@ defmodule BrandoAdmin.Users.UserListLive do
   end
 
   def handle_event("delete_user", %{"id" => id}, socket) do
-    user = Brando.Users.get_user!(id)
-    content_summary = Brando.Users.get_user_content_summary(user.id)
+    user = Users.get_user!(id)
+    content_summary = Users.get_user_content_summary(user.id)
 
     {:ok, all_users} =
-      Brando.Users.list_users(%{
+      Users.list_users(%{
         filter: %{active: true},
         preload: [{:avatar, :join}]
       })
@@ -176,10 +177,10 @@ defmodule BrandoAdmin.Users.UserListLive do
     %{deleting_user: user, transfer_to_user_id: to_id, current_user: current_user} =
       socket.assigns
 
-    case Brando.Users.delete_user_with_transfer(user.id, to_id, current_user) do
+    case Users.delete_user_with_transfer(user.id, to_id, current_user) do
       {:ok, _} ->
         send(self(), {:toast, gettext("User deleted and content transferred.")})
-        BrandoAdmin.LiveView.Listing.update_list_entries(Brando.Users.User)
+        BrandoAdmin.LiveView.Listing.update_list_entries(Users.User)
 
         {:noreply,
          socket
@@ -202,15 +203,15 @@ defmodule BrandoAdmin.Users.UserListLive do
   end
 
   def handle_event("disable_user", %{"id" => id}, socket) do
-    user = Brando.Users.get_user!(id)
-    Brando.Users.set_active(id, false, user)
+    user = Users.get_user!(id)
+    Users.set_active(id, false, user)
     send(self(), {:toast, gettext("User disabled.")})
     {:noreply, socket}
   end
 
   def handle_event("enable_user", %{"id" => id}, socket) do
-    user = Brando.Users.get_user!(id)
-    Brando.Users.set_active(id, true, user)
+    user = Users.get_user!(id)
+    Users.set_active(id, true, user)
     send(self(), {:toast, gettext("User enabled.")})
     {:noreply, socket}
   end

@@ -11,6 +11,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Options
   alias BrandoAdmin.Components.Form.Primitives
+  alias Ecto.Changeset
 
   # prop form, :form
   # prop field, :atom
@@ -296,7 +297,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         new_rel =
           rel_module
           |> struct!()
-          |> Ecto.Changeset.change([{relation_key, id}])
+          |> Changeset.change([{relation_key, id}])
           |> Map.put(:action, :insert)
           |> maybe_change_sequence?(idx, sequenced?)
 
@@ -304,7 +305,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
         struct =
           new_rel
-          |> Ecto.Changeset.apply_changes()
+          |> Changeset.apply_changes()
           |> maybe_add_relation(relation, assoc_data)
 
         {cs_acc ++ [new_rel], struct_acc ++ [struct]}
@@ -498,7 +499,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       selected_options = socket.assigns.selected_options
 
       if socket.assigns.relation_type in [:has_many, {:subform, :has_many}] do
-        Enum.map(selected_options, &Ecto.Changeset.apply_changes/1)
+        Enum.map(selected_options, &Changeset.apply_changes/1)
       else
         selected_options
       end
@@ -545,23 +546,23 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   defp get_selected_options(changeset, field, {:array, _}) do
-    Ecto.Changeset.get_field(changeset, field.field) || []
+    Changeset.get_field(changeset, field.field) || []
   end
 
   defp get_selected_options(changeset, field, :many_to_many) do
-    Ecto.Changeset.get_assoc(changeset, field.field, :struct)
+    Changeset.get_assoc(changeset, field.field, :struct)
   end
 
   defp get_selected_options(changeset, field, :has_many) do
-    Ecto.Changeset.get_assoc(changeset, field.field)
+    Changeset.get_assoc(changeset, field.field)
   end
 
   defp get_selected_options(changeset, field, {:subform, :has_many}) do
-    Ecto.Changeset.get_assoc(changeset, field.field)
+    Changeset.get_assoc(changeset, field.field)
   end
 
   defp get_selected_options(changeset, field, :embeds_many) do
-    Ecto.Changeset.get_embed(changeset, field.field, :struct)
+    Changeset.get_embed(changeset, field.field, :struct)
   end
 
   def assign_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
@@ -649,8 +650,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   defp compute_selected_values(selected_options, relation_key, relation_type)
        when relation_type in [:has_many, {:subform, :has_many}] do
     selected_options
-    |> Enum.reject(&(Ecto.Changeset.get_change(&1, :marked_as_deleted) == true))
-    |> MapSet.new(&to_string(Ecto.Changeset.get_field(&1, relation_key)))
+    |> Enum.reject(&(Changeset.get_change(&1, :marked_as_deleted) == true))
+    |> MapSet.new(&to_string(Changeset.get_field(&1, relation_key)))
   end
 
   defp compute_selected_values(selected_options, _relation_key, _relation_type) do
@@ -675,7 +676,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   defp find_invalid_options(selected_options, input_options, relation_key, relation_type, relation)
        when relation_type in [:has_many, {:subform, :has_many}] do
     selected_options
-    |> Enum.reject(&(Ecto.Changeset.get_change(&1, :marked_as_deleted) == true))
+    |> Enum.reject(&(Changeset.get_change(&1, :marked_as_deleted) == true))
     |> Enum.filter(&is_nil(get_opt(&1, input_options, relation_key, relation_type)))
     |> Enum.map(fn changeset ->
       %{title: get_invalid_option_title(changeset, relation)}
@@ -761,7 +762,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         data-sortable-dispatch-event="true"
       >
         <.inputs_for :let={selected_option} field={@field} skip_hidden>
-          <%= if Ecto.Changeset.get_change(selected_option.source, :marked_as_deleted) in [false, nil] do %>
+          <%= if Changeset.get_change(selected_option.source, :marked_as_deleted) in [false, nil] do %>
             <.selected_label
               :let={opt}
               selected_option={selected_option}
@@ -835,7 +836,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   def selected_label(%{relation_type: relation_type} = assigns)
       when relation_type in [:has_many, {:subform, :has_many}] do
     ~H"""
-    <div :if={Ecto.Changeset.get_change(@selected_option.source, :marked_as_deleted) in [false, nil]} class="selected-label">
+    <div :if={Changeset.get_change(@selected_option.source, :marked_as_deleted) in [false, nil]} class="selected-label">
       <div class="selected-label-text">
         {render_slot(
           @inner_block,
@@ -854,7 +855,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     <% else %>
       <div
         :for={opt <- @selected_options}
-        :if={Ecto.Changeset.get_change(opt, :marked_as_deleted) in [false, nil]}
+        :if={Changeset.get_change(opt, :marked_as_deleted) in [false, nil]}
         class="selected-label"
       >
         <div class="selected-label-text">
@@ -883,7 +884,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp get_opt(changeset, opts, relation_key, relation_type)
        when relation_type in [:has_many, {:subform, :has_many}] do
-    wanted_id = to_string(Ecto.Changeset.get_field(changeset, relation_key))
+    wanted_id = to_string(Changeset.get_field(changeset, relation_key))
     Enum.find(opts, &(option_value(&1) == wanted_id))
   end
 
@@ -894,7 +895,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     end)
   end
 
-  defp extract_value(%Ecto.Changeset{data: %{id: id}}), do: id
+  defp extract_value(%Changeset{data: %{id: id}}), do: id
   defp extract_value(%{value: value}), do: value
   defp extract_value(%{id: value}), do: value
   defp extract_value(value), do: value
@@ -944,7 +945,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     """
   end
 
-  defp get_label(%{opt: %Ecto.Changeset{} = changeset} = assigns) do
+  defp get_label(%{opt: %Changeset{} = changeset} = assigns) do
     entry = changeset.data
     identifier = entry.__struct__.__identifier__(entry, skip_cover: true)
 
@@ -1037,7 +1038,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     """
   end
 
-  defp maybe_slug(%Ecto.Changeset{data: %{id: id}}), do: id
+  defp maybe_slug(%Changeset{data: %{id: id}}), do: id
   defp maybe_slug(%{id: id}), do: id
   defp maybe_slug(opt) when is_atom(opt), do: to_string(opt)
   defp maybe_slug(opt) when is_integer(opt), do: opt
@@ -1051,7 +1052,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
        when relation_type in [:has_many, {:subform, :has_many}] do
     count =
       selected_options
-      |> Enum.reject(&(Ecto.Changeset.get_change(&1, :marked_as_deleted) || &1.action == :replace))
+      |> Enum.reject(&(Changeset.get_change(&1, :marked_as_deleted) || &1.action == :replace))
       |> Enum.count()
 
     gettext("%{count} selected", count: count)
@@ -1112,7 +1113,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
          |> update_input_options()
          |> maybe_assign_select_changeset()}
 
-      {:error, %Ecto.Changeset{} = select_changeset} ->
+      {:error, %Changeset{} = select_changeset} ->
         {:noreply, assign(socket, select_changeset: select_changeset)}
     end
   end
@@ -1188,8 +1189,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     exists_at_idx =
       Enum.find_index(
         selected_options,
-        &(to_string(Ecto.Changeset.get_field(&1, relation_fk)) == value &&
-            Ecto.Changeset.get_change(&1, :marked_as_deleted) != true)
+        &(to_string(Changeset.get_field(&1, relation_fk)) == value &&
+            Changeset.get_change(&1, :marked_as_deleted) != true)
       )
 
     {selected_options_structs, selected_options} =
@@ -1202,7 +1203,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               selected_options,
               exists_at_idx,
               to_delete
-              |> Ecto.Changeset.change(marked_as_deleted: true)
+              |> Changeset.change(marked_as_deleted: true)
               |> Map.put(:action, :delete)
             )
           else
@@ -1222,7 +1223,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         new_rel =
           rel_module
           |> struct!()
-          |> Ecto.Changeset.change([{relation_fk, value}])
+          |> Changeset.change([{relation_fk, value}])
           |> Map.put(:action, :insert)
           |> maybe_change_sequence?(sequence_count, sequenced?)
 
@@ -1231,7 +1232,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
         selected_option_struct =
           new_rel
-          |> Ecto.Changeset.apply_changes()
+          |> Changeset.apply_changes()
           |> maybe_add_relation(relation, assoc_data)
 
         {selected_options_structs ++ [selected_option_struct], selected_options ++ [new_rel]}
@@ -1249,7 +1250,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
     {updated, updated_structs} =
       Enum.reduce(selected, {[], socket.assigns.selected_options_structs}, fn opt, {acc, structs} ->
-        already_deleted? = Ecto.Changeset.get_change(opt, :marked_as_deleted) == true
+        already_deleted? = Changeset.get_change(opt, :marked_as_deleted) == true
         valid? = already_deleted? or not is_nil(get_opt(opt, opts, rk, rt))
 
         cond do
@@ -1257,8 +1258,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             {acc ++ [opt], structs}
 
           opt.data.id ->
-            deleted = opt |> Ecto.Changeset.change(marked_as_deleted: true) |> Map.put(:action, :delete)
-            fk_val = to_string(Ecto.Changeset.get_field(opt, rk))
+            deleted = opt |> Changeset.change(marked_as_deleted: true) |> Map.put(:action, :delete)
+            fk_val = to_string(Changeset.get_field(opt, rk))
             {acc ++ [deleted], Enum.reject(structs, &(to_string(Map.get(&1, rk)) == fk_val))}
 
           true ->
@@ -1286,11 +1287,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     updated_selected_options =
       Enum.reduce(selected_options, [], fn opt, acc ->
         cond do
-          Ecto.Changeset.get_change(opt, :marked_as_deleted) == true ->
+          Changeset.get_change(opt, :marked_as_deleted) == true ->
             acc ++ [opt]
 
           opt.data.id ->
-            acc ++ [opt |> Ecto.Changeset.change(marked_as_deleted: true) |> Map.put(:action, :delete)]
+            acc ++ [opt |> Changeset.change(marked_as_deleted: true) |> Map.put(:action, :delete)]
 
           true ->
             acc
@@ -1324,7 +1325,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp request_field_ship(socket) do
     field = socket.assigns.field
-    entry_id = Ecto.Changeset.get_field(field.form.source, :id)
+    entry_id = Changeset.get_field(field.form.source, :id)
     current_user = socket.assigns[:current_user]
 
     if entry_id do
@@ -1367,7 +1368,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp broadcast_field_focus(socket) do
     field = socket.assigns.field
-    entry_id = Ecto.Changeset.get_field(field.form.source, :id)
+    entry_id = Changeset.get_field(field.form.source, :id)
     current_user = socket.assigns[:current_user]
     field_name = "#{field.form.name}[#{field.field}]"
 
@@ -1440,11 +1441,11 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     # we should fetch and put the full "through" structs on the changeset, similar to how
     # select.ex uses the fetcher_fn to update the belongs_to relation after selection.
 
-    Ecto.Changeset.put_assoc(changeset, field, updated_relation)
+    Changeset.put_assoc(changeset, field, updated_relation)
   end
 
   defp update_relation(changeset, field, updated_relation, :embeds_many) do
-    Ecto.Changeset.put_embed(changeset, field, updated_relation)
+    Changeset.put_embed(changeset, field, updated_relation)
   end
 
   defp maybe_change_sequence?(changeset, _, false) do
@@ -1452,6 +1453,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   defp maybe_change_sequence?(changeset, sequence_count, _) do
-    Ecto.Changeset.change(changeset, [{:sequence, sequence_count}])
+    Changeset.change(changeset, [{:sequence, sequence_count}])
   end
 end

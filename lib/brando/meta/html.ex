@@ -6,6 +6,7 @@ defmodule Brando.Meta.HTML do
   import Phoenix.Component
 
   alias Brando.Cache
+  alias Brando.Utils
 
   @type conn :: Plug.Conn.t()
 
@@ -41,7 +42,7 @@ defmodule Brando.Meta.HTML do
       |> put_meta_if_missing("og:title", seo.fallback_meta_title)
       |> put_meta_if_missing("og:site_name", app_name)
       |> put_meta_if_missing("og:type", "website")
-      |> put_meta_if_missing("og:url", Brando.Utils.current_url(conn))
+      |> put_meta_if_missing("og:url", Utils.current_url(conn))
       |> maybe_put_meta_description(seo.fallback_meta_description)
       |> maybe_put_meta_image(seo.fallback_meta_image)
       |> maybe_add_see_also()
@@ -118,7 +119,7 @@ defmodule Brando.Meta.HTML do
   defp put_meta_image(conn, meta_image) when is_binary(meta_image) do
     img =
       (String.contains?(meta_image, "://") && meta_image) ||
-        Brando.Utils.hostname(meta_image)
+        Utils.hostname(meta_image)
 
     type =
       meta_image
@@ -135,8 +136,8 @@ defmodule Brando.Meta.HTML do
 
   defp put_meta_image(conn, meta_image) when is_map(meta_image) do
     # grab xlarge from img
-    img_src = Brando.Utils.img_url(meta_image, :largest, prefix: Brando.Utils.media_url())
-    img = Brando.Utils.hostname(img_src)
+    img_src = Utils.img_url(meta_image, :largest, prefix: Utils.media_url())
+    img = Utils.hostname(img_src)
 
     type =
       meta_image.path
@@ -192,7 +193,7 @@ defmodule Brando.Meta.HTML do
         Map.get(record, :meta_image) ->
           Enum.join(
             [
-              Brando.Utils.host_and_media_url(),
+              Utils.host_and_media_url(),
               record.meta_image.sizes[img_field_size]
             ],
             "/"
@@ -203,7 +204,7 @@ defmodule Brando.Meta.HTML do
 
           Enum.join(
             [
-              Brando.Utils.host_and_media_url(),
+              Utils.host_and_media_url(),
               img.sizes[img_field_size]
             ],
             "/"

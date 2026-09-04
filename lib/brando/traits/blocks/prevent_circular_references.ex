@@ -5,13 +5,15 @@ defmodule Brando.Trait.Blocks.PreventCircularReferences do
   use Brando.Trait
   use Gettext, backend: Brando.Gettext
 
+  alias Ecto.Changeset
+
   def changeset_mutator(_module, _config, %{changes: %{data: data}} = changeset, _user, _) do
     json = inspect(data)
 
     # we need the keys
-    key = Ecto.Changeset.get_field(changeset, :key)
-    parent_key = Ecto.Changeset.get_field(changeset, :parent_key)
-    language = Ecto.Changeset.get_field(changeset, :language)
+    key = Changeset.get_field(changeset, :key)
+    parent_key = Changeset.get_field(changeset, :parent_key)
+    language = Changeset.get_field(changeset, :language)
 
     # build a fragment ref string
     ref_string = "{% fragment #{parent_key} #{key} #{language} %}"
@@ -22,7 +24,7 @@ defmodule Brando.Trait.Blocks.PreventCircularReferences do
           ref_string: ref_string
         )
 
-      Ecto.Changeset.add_error(
+      Changeset.add_error(
         changeset,
         :data,
         error_msg

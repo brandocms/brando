@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Content.List do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Blueprint.Listings
+  alias Brando.Query
   alias Brando.Trait.Creator
   alias Brando.Trait.Sequenced
   alias Brando.Trait.SoftDelete
@@ -188,7 +189,7 @@ defmodule BrandoAdmin.Components.Content.List do
   def handle_event("update_sort", %{"sort_key" => sort_key}, socket) do
     sorts = socket.assigns.listing.sorts
     sort = Enum.find(sorts, &(&1.key == String.to_existing_atom(sort_key)))
-    sort_string = Brando.Query.order_string_to_list(sort.order)
+    sort_string = Query.order_string_to_list(sort.order)
 
     {:noreply,
      socket
@@ -374,15 +375,15 @@ defmodule BrandoAdmin.Components.Content.List do
           # find matching sort
 
           Enum.find(sorts, default_sort, fn sort ->
-            Brando.Query.order_string_to_list(sort.order) ==
-              Brando.Query.order_string_to_list(param_order)
+            Query.order_string_to_list(sort.order) ==
+              Query.order_string_to_list(param_order)
           end)
 
         # param order is a keyword list
         is_list(param_order) ->
           # find matching sort
           Enum.find(sorts, default_sort, fn sort ->
-            Brando.Query.order_string_to_list(sort.order) == param_order
+            Query.order_string_to_list(sort.order) == param_order
           end)
 
         is_map(param_order) ->
@@ -393,7 +394,7 @@ defmodule BrandoAdmin.Components.Content.List do
             end)
 
           Enum.find(sorts, default_sort, fn sort ->
-            Brando.Query.order_string_to_list(sort.order) == Map.to_list(parsed_order)
+            Query.order_string_to_list(sort.order) == Map.to_list(parsed_order)
           end)
       end
     end)
@@ -436,7 +437,7 @@ defmodule BrandoAdmin.Components.Content.List do
   defp sanitize_list_opts(%{filter: filters} = list_opts) do
     sanitized_filters =
       Map.new(filters, fn {k, v} ->
-        {k, Brando.Query.sanitize_ilike_pattern(v)}
+        {k, Query.sanitize_ilike_pattern(v)}
       end)
 
     Map.put(list_opts, :filter, sanitized_filters)

@@ -15,6 +15,7 @@ defmodule Brando.Villain.ParserDispatchTest do
 
   alias Brando.Content
   alias Brando.Factory
+  alias Brando.Utils
 
   defmodule Parser do
     @moduledoc false
@@ -61,7 +62,7 @@ defmodule Brando.Villain.ParserDispatchTest do
         refs: [
           %{
             name: ref_name,
-            uid: Brando.Utils.generate_uid(),
+            uid: Utils.generate_uid(),
             data: %{type: ref_block.type, data: %{}}
           }
         ]
@@ -73,11 +74,11 @@ defmodule Brando.Villain.ParserDispatchTest do
       block: %{
         type: :module,
         module_id: module.id,
-        uid: Brando.Utils.generate_uid(),
+        uid: Utils.generate_uid(),
         vars: [],
         refs: [
           Map.merge(
-            %{name: ref_name, description: nil, uid: Brando.Utils.generate_uid()},
+            %{name: ref_name, description: nil, uid: Utils.generate_uid()},
             ref_block.ref
           )
         ]
@@ -234,7 +235,7 @@ defmodule Brando.Villain.ParserDispatchTest do
           refs: [
             %{
               name: "body",
-              uid: Brando.Utils.generate_uid(),
+              uid: Utils.generate_uid(),
               data: %{type: "text", data: %{}}
             }
           ]
@@ -245,13 +246,13 @@ defmodule Brando.Villain.ParserDispatchTest do
       child = %{
         type: :module,
         module_id: module.id,
-        uid: Brando.Utils.generate_uid(),
+        uid: Utils.generate_uid(),
         vars: [],
         refs: [
           %{
             name: "body",
             description: nil,
-            uid: Brando.Utils.generate_uid(),
+            uid: Utils.generate_uid(),
             data: %Brando.Villain.Blocks.TextBlock{
               type: "text",
               data: %Brando.Villain.Blocks.TextBlock.Data{text: "nested", type: :paragraph}
@@ -263,7 +264,7 @@ defmodule Brando.Villain.ParserDispatchTest do
       block = %{
         block: %{
           type: :container,
-          uid: Brando.Utils.generate_uid(),
+          uid: Utils.generate_uid(),
           palette_id: nil,
           container_id: nil,
           anchor: nil,

@@ -1,5 +1,6 @@
 defmodule Mix.Tasks.Brando.Static.Deploy do
   use Mix.Task
+  alias Brando.CDN
   alias ExAws.S3
 
   @shortdoc "Upload static files to CDN"
@@ -8,7 +9,7 @@ defmodule Mix.Tasks.Brando.Static.Deploy do
     {parsed_opts, _, _} = OptionParser.parse(args, switches: [purge: :boolean])
     Mix.Task.run("app.config")
 
-    unless Brando.CDN.enabled?(Brando.Static) do
+    unless CDN.enabled?(Brando.Static) do
       raise "CDN not enabled in config."
     end
 
@@ -21,12 +22,12 @@ defmodule Mix.Tasks.Brando.Static.Deploy do
 
     s3_config =
       Brando.Static
-      |> Brando.CDN.config(:s3)
+      |> CDN.config(:s3)
       |> Map.from_struct()
 
     s3_config_list = Map.to_list(s3_config)
 
-    bucket = Brando.CDN.config(Brando.Static, :bucket)
+    bucket = CDN.config(Brando.Static, :bucket)
 
     bucket
     |> S3.get_bucket_location()

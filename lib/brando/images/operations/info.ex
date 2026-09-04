@@ -9,6 +9,6 @@ defmodule Brando.Images.Operations.Info do
   """
   def get_dominant_color(image_path) do
     module = Brando.config(Images, :processor_module) || Images.Processor.Vix
-    apply(module, :get_dominant_color, [image_path])
+    module.get_dominant_color(image_path)
   end
 end

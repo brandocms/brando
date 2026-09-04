@@ -12,6 +12,7 @@ defmodule Brando.Content.BlockMediaAttrsTest do
 
   alias Brando.Content.Block
   alias Brando.Factory
+  alias Brando.Repo
   alias Ecto.Changeset
 
   setup do
@@ -29,7 +30,7 @@ defmodule Brando.Content.BlockMediaAttrsTest do
 
   # no :file factory exists yet
   defp insert_file(user) do
-    Brando.Repo.insert!(%Brando.Files.File{
+    Repo.insert!(%Brando.Files.File{
       filename: "doc.pdf",
       filesize: 1234,
       mime_type: "application/pdf",
@@ -59,15 +60,15 @@ defmodule Brando.Content.BlockMediaAttrsTest do
 
     {:ok, _} =
       page
-      |> Brando.Repo.preload(:entry_blocks)
+      |> Repo.preload(:entry_blocks)
       |> Changeset.change()
       |> Changeset.put_assoc(:entry_blocks, [entry_block_cs])
-      |> Brando.Repo.update()
+      |> Repo.update()
 
     [entry_block] =
       Brando.Pages.Page.Blocks
-      |> Brando.Repo.all()
-      |> Brando.Repo.preload(block: [:vars, :refs])
+      |> Repo.all()
+      |> Repo.preload(block: [:vars, :refs])
 
     entry_block.block
   end
@@ -233,10 +234,10 @@ defmodule Brando.Content.BlockMediaAttrsTest do
         |> Brando.Utils.set_action()
 
       page
-      |> Brando.Repo.preload(:entry_blocks)
+      |> Repo.preload(:entry_blocks)
       |> Changeset.change()
       |> Changeset.put_assoc(:entry_blocks, [entry_block_cs])
-      |> Brando.Repo.update()
+      |> Repo.update()
     end
   end
 

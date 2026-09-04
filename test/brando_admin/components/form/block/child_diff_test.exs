@@ -19,6 +19,7 @@ defmodule BrandoAdmin.Components.Form.Block.ChildDiffTest do
   alias BrandoAdmin.Components.Form.Block.Events
   alias BrandoAdmin.Components.Form.BlockField.Ops
   alias Ecto.Changeset
+  alias Phoenix.Component
 
   setup do
     user = Factory.insert(:random_user)
@@ -61,17 +62,17 @@ defmodule BrandoAdmin.Components.Form.Block.ChildDiffTest do
 
   defp socket_for(changeset, entry, user) do
     %Phoenix.LiveView.Socket{}
-    |> Phoenix.Component.assign(:form, to_form(changeset, as: "child_block", id: "child_block_form-childY"))
-    |> Phoenix.Component.assign(:uid, "childY")
-    |> Phoenix.Component.assign(:current_user_id, user.id)
-    |> Phoenix.Component.assign(:entry, entry)
-    |> Phoenix.Component.assign(:has_vars?, false)
-    |> Phoenix.Component.assign(:has_table_rows?, false)
-    |> Phoenix.Component.assign(:live_preview_active?, false)
-    |> Phoenix.Component.assign(:original_block_identifiers, [])
-    |> Phoenix.Component.assign(:form_id, "page_form")
-    |> Phoenix.Component.assign(:block_field, "blocks")
-    |> Phoenix.Component.assign(:belongs_to, {:child, "containerX"})
+    |> Component.assign(:form, to_form(changeset, as: "child_block", id: "child_block_form-childY"))
+    |> Component.assign(:uid, "childY")
+    |> Component.assign(:current_user_id, user.id)
+    |> Component.assign(:entry, entry)
+    |> Component.assign(:has_vars?, false)
+    |> Component.assign(:has_table_rows?, false)
+    |> Component.assign(:live_preview_active?, false)
+    |> Component.assign(:original_block_identifiers, [])
+    |> Component.assign(:form_id, "page_form")
+    |> Component.assign(:block_field, "blocks")
+    |> Component.assign(:belongs_to, {:child, "containerX"})
   end
 
   defp validate(socket, target, params) do

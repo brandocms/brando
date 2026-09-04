@@ -65,6 +65,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   alias BrandoAdmin.Components.Form.BlockField.Ops
   alias BrandoAdmin.Components.Form.BlockField.Outline
   alias Ecto.Changeset
+  alias Phoenix.PubSub
 
   require Logger
 
@@ -212,7 +213,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   def update(%{event: "delete_block", uid: uid}, socket) do
     # Broadcast to other users
     if topic = socket.assigns[:blocks_topic] do
-      Phoenix.PubSub.broadcast(
+      PubSub.broadcast(
         Brando.pubsub(),
         topic,
         {:block_deleted, %{uid: uid, user_id: socket.assigns.current_user.id}}
@@ -326,7 +327,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     # Broadcast to other users
     if topic = socket.assigns[:blocks_topic] do
-      Phoenix.PubSub.broadcast(
+      PubSub.broadcast(
         Brando.pubsub(),
         topic,
         {:block_added,
@@ -591,7 +592,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
              module_id when not is_nil(module_id) <- get_in(ops.diffs, [uid, "block", "module_id"]) do
           module_origin = get_in(ops.diffs, [uid, "block", "module_origin"]) || "local"
 
-          Phoenix.PubSub.broadcast(
+          PubSub.broadcast(
             Brando.pubsub(),
             topic,
             {:block_added,
@@ -620,10 +621,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         end)
 
       Enum.each(ops.deleted_roots, fn uid ->
-        Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {:block_deleted, %{uid: uid, user_id: user_id}})
+        PubSub.broadcast(Brando.pubsub(), topic, {:block_deleted, %{uid: uid, user_id: user_id}})
       end)
 
-      Phoenix.PubSub.broadcast(
+      PubSub.broadcast(
         Brando.pubsub(),
         topic,
         {:blocks_reordered, %{block_list: ops.order, user_id: user_id}}
@@ -673,7 +674,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # process and subscribes there, which is the subscription that matters.
   defp subscribe_to_blocks(socket, topic) do
     if connected?(socket) do
-      Phoenix.PubSub.subscribe(Brando.pubsub(), topic)
+      PubSub.subscribe(Brando.pubsub(), topic)
     end
 
     socket
@@ -690,7 +691,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # the waste lands in other processes, once per page load, per editor.
   defp request_blocks_sync(socket) do
     if socket.assigns[:blocks_topic] && connected?(socket) do
-      Phoenix.PubSub.broadcast(
+      PubSub.broadcast(
         Brando.pubsub(),
         socket.assigns.blocks_topic,
         {:blocks_sync_request, %{block_field: socket.assigns.block_field, user_id: socket.assigns.current_user.id}}
@@ -899,7 +900,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp broadcast_snapshot(socket, root_uid, snapshot) do
     if topic = socket.assigns[:blocks_topic] do
-      Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {
+      PubSub.broadcast(Brando.pubsub(), topic, {
         :block_ops_shipped,
         %{uid: root_uid, snapshot: snapshot, user_id: socket.assigns.current_user.id}
       })
@@ -1054,7 +1055,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     # Broadcast the store's order to other users
     if topic = socket.assigns[:blocks_topic] do
-      Phoenix.PubSub.broadcast(
+      PubSub.broadcast(
         Brando.pubsub(),
         topic,
         {:blocks_reordered, %{block_list: socket.assigns.block_ops.order, user_id: socket.assigns.current_user.id}}
@@ -1093,7 +1094,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         case restore_from_snapshot(socket, snapshot) do
           {:ok, socket} ->
             if topic = socket.assigns[:blocks_topic] do
-              Phoenix.PubSub.broadcast(
+              PubSub.broadcast(
                 Brando.pubsub(),
                 topic,
                 {:block_restored,
@@ -1156,7 +1157,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     # Broadcast the store's order to other users
     if topic = socket.assigns[:blocks_topic] do
-      Phoenix.PubSub.broadcast(
+      PubSub.broadcast(
         Brando.pubsub(),
         topic,
         {:blocks_reordered, %{block_list: socket.assigns.block_ops.order, user_id: socket.assigns.current_user.id}}

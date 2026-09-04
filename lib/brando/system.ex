@@ -163,7 +163,7 @@ defmodule Brando.System do
 
       module ->
         module = module || Brando.Images.Processor.Vix
-        apply(module, :confirm_executable_exists, [])
+        module.confirm_executable_exists()
     end
   end
 

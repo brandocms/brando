@@ -207,6 +207,7 @@ defmodule Brando.Villain.Parser do
   alias Brando.RuntimeConfig
   alias Brando.Utils
   alias Brando.Villain.TemplateAdapter
+  alias Ecto.Changeset
 
   # ⚠ Never call one of the callbacks below by bare name from this module.
   #
@@ -480,15 +481,13 @@ defmodule Brando.Villain.Parser do
   defp parse_youtube_time(nil), do: nil
 
   defp parse_youtube_time(t) do
-    cond do
-      # e.g. "2m45s"
-      Regex.match?(~r/^\d+m\d+s$/, t) ->
-        [m, s] = Regex.run(~r/^(\d+)m(\d+)s$/, t, capture: :all_but_first)
-        String.to_integer(m) * 60 + String.to_integer(s)
-
+    # e.g. "2m45s"
+    if Regex.match?(~r/^\d+m\d+s$/, t) do
+      [m, s] = Regex.run(~r/^(\d+)m(\d+)s$/, t, capture: :all_but_first)
+      String.to_integer(m) * 60 + String.to_integer(s)
+    else
       # e.g. "165s" or "165"
-      true ->
-        t |> String.trim_trailing("s") |> String.to_integer()
+      t |> String.trim_trailing("s") |> String.to_integer()
     end
   rescue
     _ -> nil
@@ -1842,8 +1841,8 @@ defmodule Brando.Villain.Parser do
     end
   end
 
-  defp override_object_id(%Ecto.Changeset{} = override) do
-    Ecto.Changeset.get_field(override, :object_id)
+  defp override_object_id(%Changeset{} = override) do
+    Changeset.get_field(override, :object_id)
   end
 
   defp override_object_id(%{object_id: object_id}) do
@@ -1852,22 +1851,22 @@ defmodule Brando.Villain.Parser do
 
   defp override_object_id(_), do: nil
 
-  defp apply_caption_overrides(media_object, %Ecto.Changeset{} = override) do
+  defp apply_caption_overrides(media_object, %Changeset{} = override) do
     media_object
     |> maybe_apply_override(
       :title,
-      Ecto.Changeset.get_field(override, :title),
-      Ecto.Changeset.get_field(override, :use_default_title)
+      Changeset.get_field(override, :title),
+      Changeset.get_field(override, :use_default_title)
     )
     |> maybe_apply_override(
       :credits,
-      Ecto.Changeset.get_field(override, :credits),
-      Ecto.Changeset.get_field(override, :use_default_credits)
+      Changeset.get_field(override, :credits),
+      Changeset.get_field(override, :use_default_credits)
     )
     |> maybe_apply_override(
       :alt,
-      Ecto.Changeset.get_field(override, :alt),
-      Ecto.Changeset.get_field(override, :use_default_alt)
+      Changeset.get_field(override, :alt),
+      Changeset.get_field(override, :use_default_alt)
     )
   end
 
@@ -1902,10 +1901,10 @@ defmodule Brando.Villain.Parser do
     end
   end
 
-  defp apply_playback_overrides(video, %Ecto.Changeset{} = override) do
+  defp apply_playback_overrides(video, %Changeset{} = override) do
     Enum.reduce(~w(autoplay loop muted controls preload)a, video, fn field, acc ->
-      value = Ecto.Changeset.get_field(override, field)
-      use_default = Ecto.Changeset.get_field(override, :"use_default_#{field}")
+      value = Changeset.get_field(override, field)
+      use_default = Changeset.get_field(override, :"use_default_#{field}")
       maybe_apply_override(acc, field, value, use_default)
     end)
   end

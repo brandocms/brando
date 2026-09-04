@@ -6,10 +6,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
   import Ecto.Changeset
 
+  alias Brando.Repo
   alias Brando.Utils
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Primitives
+  alias Phoenix.HTML
 
   # prop var, :any
   # prop render, :atom, values: [:all, :content, :config], default: :all
@@ -977,10 +979,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     url
     |> String.split("/")
     |> Enum.map_join("/", fn segment ->
-      escaped = segment |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+      escaped = segment |> HTML.html_escape() |> HTML.safe_to_string()
       "#{escaped}<wbr />"
     end)
-    |> Phoenix.HTML.raw()
+    |> HTML.raw()
   end
 
   attr(:link_text, :string, default: nil)
@@ -1552,13 +1554,13 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       (gallery || %Brando.Galleries.Gallery{})
       |> Brando.Galleries.Gallery.changeset(params, current_user_id)
       |> then(fn changeset ->
-        if gallery, do: Brando.Repo.update(changeset), else: Brando.Repo.insert(changeset)
+        if gallery, do: Repo.update(changeset), else: Repo.insert(changeset)
       end)
 
     case result do
       {:ok, saved_gallery} ->
         saved_gallery =
-          Brando.Repo.preload(
+          Repo.preload(
             saved_gallery,
             [gallery_objects: [:image, video: [:thumbnail, :file]]],
             force: true
@@ -1600,7 +1602,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   defp normalize_id(id) when is_binary(id), do: String.to_integer(id)
 
   defp current_user(nil), do: nil
-  defp current_user(user_id), do: Brando.Repo.get(Brando.Users.User, user_id)
+  defp current_user(user_id), do: Repo.get(Brando.Users.User, user_id)
 
   # Entry-level vars have no owning block component (`on_change` unset) — their
   # FKs live in the parent entry form's changeset. Sync the picked/reset value

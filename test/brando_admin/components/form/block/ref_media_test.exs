@@ -22,6 +22,7 @@ defmodule BrandoAdmin.Components.Form.Block.RefMediaTest do
   alias Brando.Factory
   alias BrandoAdmin.Components.Form.Block.Events
   alias Ecto.Changeset
+  alias Phoenix.Component
 
   setup do
     user = Factory.insert(:random_user)
@@ -85,19 +86,19 @@ defmodule BrandoAdmin.Components.Form.Block.RefMediaTest do
 
   defp socket_for(changeset, entry_block, user) do
     %Phoenix.LiveView.Socket{}
-    |> Phoenix.Component.assign(:form, to_form(changeset, as: "entry_block", id: "entry_block_form-blockrefs1"))
-    |> Phoenix.Component.assign(:uid, "blockrefs1")
-    |> Phoenix.Component.assign(:block_module, Brando.Pages.Page.Blocks)
-    |> Phoenix.Component.assign(:current_user_id, user.id)
-    |> Phoenix.Component.assign(:entry, entry_block.entry)
-    |> Phoenix.Component.assign(:has_vars?, false)
-    |> Phoenix.Component.assign(:has_children?, false)
-    |> Phoenix.Component.assign(:has_table_rows?, false)
-    |> Phoenix.Component.assign(:live_preview_active?, false)
-    |> Phoenix.Component.assign(:original_block_identifiers, [])
-    |> Phoenix.Component.assign(:form_id, "page_form")
-    |> Phoenix.Component.assign(:block_field, "blocks")
-    |> Phoenix.Component.assign(:belongs_to, :root)
+    |> Component.assign(:form, to_form(changeset, as: "entry_block", id: "entry_block_form-blockrefs1"))
+    |> Component.assign(:uid, "blockrefs1")
+    |> Component.assign(:block_module, Brando.Pages.Page.Blocks)
+    |> Component.assign(:current_user_id, user.id)
+    |> Component.assign(:entry, entry_block.entry)
+    |> Component.assign(:has_vars?, false)
+    |> Component.assign(:has_children?, false)
+    |> Component.assign(:has_table_rows?, false)
+    |> Component.assign(:live_preview_active?, false)
+    |> Component.assign(:original_block_identifiers, [])
+    |> Component.assign(:form_id, "page_form")
+    |> Component.assign(:block_field, "blocks")
+    |> Component.assign(:belongs_to, :root)
   end
 
   # The params a keystroke in the block's description sends. `ref_params` lets a

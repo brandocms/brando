@@ -2,10 +2,12 @@ defmodule BrandoAdmin.Components.Form.Subform do
   use BrandoAdmin, :live_component
   # use Phoenix.HTML
 
+  alias Brando.Blueprint.Relations
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.Subform
+  alias Ecto.Changeset
 
   use Gettext, backend: Brando.Gettext
 
@@ -52,11 +54,11 @@ defmodule BrandoAdmin.Components.Form.Subform do
         #   - has a :sequenced trait
         parent_schema = assigns.field.form.data.__struct__
 
-        case Brando.Blueprint.Relations.__relation__(parent_schema, assigns.subform.name) do
-          %Brando.Blueprint.Relations.Relation{type: :has_many, opts: %{module: rel_module}} ->
+        case Relations.__relation__(parent_schema, assigns.subform.name) do
+          %Relations.Relation{type: :has_many, opts: %{module: rel_module}} ->
             rel_module.has_trait(Brando.Trait.Sequenced)
 
-          %Brando.Blueprint.Relations.Relation{type: :embeds_many} ->
+          %Relations.Relation{type: :embeds_many} ->
             true
 
           _ ->
@@ -66,16 +68,16 @@ defmodule BrandoAdmin.Components.Form.Subform do
       |> assign_new(:embeds?, fn ->
         parent_schema = assigns.field.form.data.__struct__
 
-        case Brando.Blueprint.Relations.__relation__(parent_schema, assigns.subform.name) do
-          %Brando.Blueprint.Relations.Relation{type: :embeds_many} -> true
+        case Relations.__relation__(parent_schema, assigns.subform.name) do
+          %Relations.Relation{type: :embeds_many} -> true
           _ -> false
         end
       end)
       |> assign_new(:sort_param, fn ->
         parent_schema = assigns.field.form.data.__struct__
 
-        case Brando.Blueprint.Relations.__relation__(parent_schema, assigns.subform.name) do
-          %Brando.Blueprint.Relations.Relation{opts: opts} ->
+        case Relations.__relation__(parent_schema, assigns.subform.name) do
+          %Relations.Relation{opts: opts} ->
             Map.get(opts, :sort_param, :"sort_#{assigns.subform.name}_ids")
 
           _ ->
@@ -85,8 +87,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
       |> assign_new(:drop_param, fn ->
         parent_schema = assigns.field.form.data.__struct__
 
-        case Brando.Blueprint.Relations.__relation__(parent_schema, assigns.subform.name) do
-          %Brando.Blueprint.Relations.Relation{opts: opts} ->
+        case Relations.__relation__(parent_schema, assigns.subform.name) do
+          %Relations.Relation{opts: opts} ->
             Map.get(opts, :drop_param, :"drop_#{assigns.subform.name}_ids")
 
           _ ->
@@ -312,7 +314,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   def handle_event("add_subentry", _, socket) do
     changeset = socket.assigns.field.form.source
-    entry = Ecto.Changeset.apply_changes(changeset)
+    entry = Changeset.apply_changes(changeset)
 
     default =
       case socket.assigns.subform.default do
@@ -386,15 +388,15 @@ defmodule BrandoAdmin.Components.Form.Subform do
         if embed? do
           entry
         else
-          Ecto.Changeset.change(entry, %{sequence: idx})
+          Changeset.change(entry, %{sequence: idx})
         end
       end)
 
     updated_changeset =
       if embed? do
-        Ecto.Changeset.put_embed(changeset, field_name, sorted_related_entries)
+        Changeset.put_embed(changeset, field_name, sorted_related_entries)
       else
-        Ecto.Changeset.put_assoc(changeset, field_name, sorted_related_entries)
+        Changeset.put_assoc(changeset, field_name, sorted_related_entries)
       end
 
     send_update(BrandoAdmin.Components.Form,
@@ -407,8 +409,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
   end
 
   defp get_change_or_field(changeset, field) do
-    with nil <- Ecto.Changeset.get_change(changeset, field) do
-      Ecto.Changeset.get_field(changeset, field, [])
+    with nil <- Changeset.get_change(changeset, field) do
+      Changeset.get_field(changeset, field, [])
     end
   end
 end

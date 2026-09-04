@@ -3,6 +3,7 @@ defmodule Brando.Trait.ProtectRole do
   Protect user role changes from other users than superusers
   """
   use Brando.Trait
+  alias Brando.Type.Role
   alias Ecto.Changeset
   import Ecto.Changeset
   use Gettext, backend: Brando.Gettext
@@ -24,9 +25,9 @@ defmodule Brando.Trait.ProtectRole do
   def changeset_mutator(_, _, %{changes: %{role: new_role}} = changeset, current_user, _opts) do
     old_role = changeset.data.role
     # check if the user has the right to change the role
-    {:ok, user_role_val} = Brando.Type.Role.dump(current_user.role)
-    {:ok, new_role_val} = Brando.Type.Role.dump(new_role)
-    {:ok, old_role_val} = Brando.Type.Role.dump(old_role || :user)
+    {:ok, user_role_val} = Role.dump(current_user.role)
+    {:ok, new_role_val} = Role.dump(new_role)
+    {:ok, old_role_val} = Role.dump(old_role || :user)
 
     cond do
       current_user.role == :superuser ->

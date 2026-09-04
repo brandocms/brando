@@ -8,6 +8,7 @@ defmodule Brando.Content.Identifier.Sync do
 
   import Ecto.Query
 
+  alias Brando.Content
   alias Brando.Content.Identifier
   alias Brando.Content.Identifier.Queries
   alias Brando.Content.Identifier.Registry
@@ -36,7 +37,7 @@ defmodule Brando.Content.Identifier.Sync do
     log_red("[-] Removing irrelevant identifiers")
 
     # Process each existing identifier
-    {:ok, identifiers} = Brando.Content.list_identifiers()
+    {:ok, identifiers} = Content.list_identifiers()
 
     for identifier <- identifiers do
       process_identifier(identifier)
@@ -81,7 +82,7 @@ defmodule Brando.Content.Identifier.Sync do
     entries = Brando.Repo.all(entries_query)
 
     for entry <- entries do
-      {:ok, identifier} = Brando.Content.create_identifier(module, entry)
+      {:ok, identifier} = Content.create_identifier(module, entry)
 
       if identifier do
         log_green(
@@ -96,28 +97,28 @@ defmodule Brando.Content.Identifier.Sync do
       {:error, :module_does_not_exist} ->
         log_red("[-] Could not find schema #{inspect(identifier.schema)} in application. Deleting identifier")
 
-        Brando.Content.delete_identifier(identifier)
+        Content.delete_identifier(identifier)
 
       {:error, _} ->
         log_red(
           "[-] Could not find entry for identifier #{inspect(identifier.id)} in schema #{inspect(identifier.schema)}. Deleting identifier"
         )
 
-        Brando.Content.delete_identifier(identifier)
+        Content.delete_identifier(identifier)
 
       {:ok, %{deleted_at: deleted_at}} when not is_nil(deleted_at) ->
         log_red(
           "[-] Entry for identifier #{inspect(identifier.id)} in schema #{inspect(identifier.schema)} is marked as deleted. Deleting identifier"
         )
 
-        Brando.Content.delete_identifier(identifier)
+        Content.delete_identifier(identifier)
 
       {:ok, entry} ->
         log_green(
           "[+] Updating identifier for identifier #{inspect(identifier.id)} in schema #{inspect(identifier.schema)}"
         )
 
-        Brando.Content.update_identifier(entry.__struct__, entry)
+        Content.update_identifier(entry.__struct__, entry)
     end
   end
 
