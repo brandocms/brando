@@ -15,9 +15,23 @@ user, entry schema/ID, form, and tenant/environment. Separate editing sessions
 keep separate copies.
 
 The review panel compares changed scalar fields and offers a downloadable JSON
-copy containing the complete recovery payload.
+copy containing the complete recovery payload. Selected copies have an explicit
+checkmark and timestamp. A shaded recovery column separates proposed values from
+the saved entry, with readable empty and boolean values.
+
+The recovery controls share a 44px minimum height, consistent spacing, and visible
+keyboard focus. The footer groups restoration and clean-editor actions, while
+inspection, download, and discard remain easy to find. On narrow screens, each
+field becomes a stacked comparison with saved and recovered values side by side.
 
 ![Review an unsaved page before restoring](recovery-available.png)
+
+<details>
+<summary>Recovery on a narrow screen</summary>
+
+![Stacked comparisons and consistent controls at 390px](recovery-compact.png)
+
+</details>
 
 Restoring loads the copy into the editor. Normal Save still controls persistence,
 validation, rendering, and publication. A successful save resolves the matching
@@ -100,3 +114,7 @@ protection, ownership, generation ordering, invalid values, and transformer asse
 Validation: 1,903 Elixir tests/doctests and 21 media/recovery browser scenarios passed, together
 with the E2E consumer asset build, formatting, Blueprint Credo checks, and the
 compile-connected dependency gate (no cycles).
+
+The recovery card redesign was also verified with all 5 recovery browser scenarios,
+37 existing draft/form recovery tests, desktop and 390px screenshots, a fresh E2E
+consumer build, formatting, and the compile-connected dependency gate.
