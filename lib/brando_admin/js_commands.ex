@@ -1,18 +1,17 @@
 defmodule BrandoAdmin.JSCommands do
-  @moduledoc """
-  The admin's shared `Phoenix.LiveView.JS` command builders — dropdowns, modals,
-  drawers.
-
-  A leaf on purpose: it depends on nothing but `Phoenix.LiveView.JS`. Blueprint's
-  `listings` DSL evaluates a `selection_action`'s event at compile time, so a
-  schema that declares one takes a compile-time dependency on wherever these
-  live. When that was `BrandoAdmin.Utils` — which uses the translator and imports
-  `Phoenix.Component` — a core content schema recompiled with the admin. See
-  issue #2737.
-
-  `BrandoAdmin.Utils` delegates to these, so admin code can keep calling them
-  there.
-  """
+  # The admin's shared `Phoenix.LiveView.JS` command builders — dropdowns,
+  # modals, drawers.
+  #
+  # A leaf on purpose: it depends on nothing but `Phoenix.LiveView.JS`.
+  # Blueprint's `listings` DSL evaluates a `selection_action`'s event at compile
+  # time, so a schema that declares one takes a compile-time dependency on
+  # wherever these live. When that was BrandoAdmin.Utils — which uses the
+  # translator and imports `Phoenix.Component` — a core content schema
+  # recompiled with the admin. See issue #2737.
+  #
+  # BrandoAdmin.Utils delegates to these, so admin code can keep calling them
+  # there.
+  @moduledoc false
   alias Phoenix.LiveView.JS
 
   def toggle_dropdown(js \\ %JS{}, dropdown_id) do

@@ -3,7 +3,7 @@ defmodule Brando.Content.VarAttrs do
   The castable var field lists, and the subset the block editor round-trips
   through hidden inputs for an unsaved var.
 
-  A leaf module on purpose. `BrandoAdmin.Components.Form.Block.Render` reads
+  A leaf module on purpose. The block editor's ref renderer reads
   `carried/0` into a module attribute — the list has to be a compile-time
   constant or LiveView re-sends the whole comprehension on every diff — and
   reading it off `Brando.Content.Block` gave the block editor a compile-time edge
