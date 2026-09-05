@@ -362,10 +362,14 @@ defmodule Brando.Content.RefTest do
       assert new_ref.data.data.text == "New text"
     end
 
-    test "handles refs with missing module refs during reapply" do
-      # This tests the error condition where a ref exists in a block
-      # but the corresponding ref is removed from the module
+    test "retains refs the module no longer defines, rather than deleting them" do
+      # A ref removed from a module is indistinguishable from a renamed one, and
+      # the block's copy holds content an editor typed. Deleting it here wiped
+      # that content out of every entry on the site — see issue #2642. It is kept
+      # instead, and the block is left behind the module's version so it stays
+      # findable through `Blocks.list_stale_block_ids/2`.
       module_with_missing_ref = %Content.Module{
+        version: 3,
         id: 1,
         name: "Test Module",
         namespace: "test",
@@ -389,11 +393,15 @@ defmodule Brando.Content.RefTest do
         ]
       }
 
-      # Should remove the orphaned ref
       updated_block_cs = Brando.Content.Blocks.sync_module(original_block, module_with_missing_ref)
       updated_block = Ecto.Changeset.apply_changes(updated_block_cs)
 
-      assert updated_block.refs == []
+      assert [orphan] = updated_block.refs
+      assert orphan.name == "orphaned_ref"
+      assert orphan.data.data.text == "Orphaned text"
+
+      # ...and the block is not stamped as migrated to the module's revision
+      refute Ecto.Changeset.get_change(updated_block_cs, :module_version)
     end
   end
 

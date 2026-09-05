@@ -105,6 +105,7 @@ defmodule Brando.Factory do
 
   def module_factory do
     %Module{
+      uid: sequence(:module_uid, &"module_uid_#{&1}"),
       name: "test",
       namespace: "posts",
       help_text: "help",

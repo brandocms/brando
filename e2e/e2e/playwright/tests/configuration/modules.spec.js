@@ -157,7 +157,17 @@ test('create, edit, duplicate, persist and delete refs and vars', async ({ page 
   await openModuleTab(page, 'References')
   await page.getByRole('button', { name: 'Delete reference intro_text_copy', exact: true }).click()
 
+  // Removing a reference or a variable migrates every block using this module,
+  // so the save is held until it is confirmed — and the dialog names exactly
+  // what is about to be orphaned. See issue #2642.
   await page.getByTestId('submit').click()
+  const destructiveModal = page.locator('#module-destructive-modal')
+  await expect(destructiveModal).toBeVisible()
+  await expect(destructiveModal).toContainText('intro_text_copy')
+  await expect(destructiveModal).toContainText('theme_copy')
+  await expect(page).toHaveURL(/\/admin\/config\/content\/modules\/update\/\d+$/)
+
+  await destructiveModal.getByRole('button', { name: 'Save anyway' }).click()
   await expect(page).toHaveURL('/admin/config/content/modules')
   await page.getByRole('link', { name: 'New module →' }).click()
   await syncLV(page)

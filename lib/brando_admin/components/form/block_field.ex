@@ -1730,6 +1730,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         creator_id: user_id,
         module_id: module_id,
         module_origin: module_origin,
+        # Born at the module's current revision — a block built from the
+        # definition as it stands now has nothing to migrate.
+        module_version: module.version || 1,
         parent_id: parent_id,
         multi: module.multi,
         source: source,

@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Content.Blocks, as: ContentBlocks
+  alias Brando.Content.ModuleDiff
   alias Brando.Content.Ref
   alias Brando.Content.Var
   alias Brando.Villain.Blocks.TextBlock
@@ -29,6 +30,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
          |> assign(:shared_library?, shared_library?)
          |> assign(:save_redirect_target, :listing)
          |> assign(:open_item_modal, nil)
+         |> assign(:pending_destructive_save, nil)
          |> assign(:active_tab, :template)
          |> assign_entry(entry_id)
          |> assign_current_user(token)
@@ -109,7 +111,66 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
         </div>
       </.form>
     </div>
+
+    <.destructive_save_modal pending={@pending_destructive_save} />
     """
+  end
+
+  attr :pending, :any, required: true
+
+  # Saving a module migrates every block that uses it, across every entry on the
+  # site. When that migration would orphan content the editor typed — a removed
+  # reference, a variable whose type changed — say so before it happens, and say
+  # how far it reaches. The data is retained either way (see
+  # `Brando.Content.Blocks.sync_module/2`), but the affected blocks stop
+  # matching their module until someone resolves them.
+  defp destructive_save_modal(assigns) do
+    ~H"""
+    <Content.modal
+      :if={@pending}
+      id="module-destructive-modal"
+      title={gettext("This change affects existing content")}
+      show={true}
+      medium
+      close={JS.push("cancel_destructive_save")}
+    >
+      <p>{affected_line(@pending.affected)}</p>
+      <ul class="destructive-change-list">
+        <li :for={line <- @pending.summary}>{line}</li>
+      </ul>
+      <p>
+        {gettext(
+          "Existing content is kept, not deleted — but those blocks will no longer match this module until they are reviewed."
+        )}
+      </p>
+      <:footer>
+        <button type="button" class="secondary" phx-click={JS.push("cancel_destructive_save")}>
+          {gettext("Cancel")}
+        </button>
+        <button type="button" class="primary" phx-click={JS.push("confirm_destructive_save")}>
+          {gettext("Save anyway")}
+        </button>
+      </:footer>
+    </Content.modal>
+    """
+  end
+
+  defp affected_line({:blocks, count}) do
+    ngettext(
+      "%{count} block on this site uses this module.",
+      "%{count} blocks on this site use this module.",
+      count,
+      count: count
+    )
+  end
+
+  defp affected_line({:sites, count}) do
+    ngettext(
+      "%{count} site uses this shared module.",
+      "%{count} sites use this shared module.",
+      count,
+      count: count
+    )
   end
 
   @tabs ~w(template overview variables references datasource)a
@@ -355,6 +416,51 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   end
 
   def handle_event("save", %{"module" => module_params}, socket) do
+    case pending_destructive_change(socket, module_params) do
+      nil -> do_save(socket, module_params)
+      pending -> {:noreply, assign(socket, :pending_destructive_save, pending)}
+    end
+  end
+
+  def handle_event("cancel_destructive_save", _, socket) do
+    {:noreply, assign(socket, :pending_destructive_save, nil)}
+  end
+
+  def handle_event("confirm_destructive_save", _, socket) do
+    %{params: module_params} = socket.assigns.pending_destructive_save
+    do_save(assign(socket, :pending_destructive_save, nil), module_params)
+  end
+
+  # Returns what the confirmation dialog needs, or nil when the save may go
+  # straight through. The diff is taken against the persisted entry, so it
+  # describes exactly the migration this save is about to run.
+  defp pending_destructive_change(%{assigns: %{pending_destructive_save: nil}} = socket, module_params) do
+    %{current_user: current_user, entry: entry} = socket.assigns
+    changeset = Brando.Content.Module.changeset(entry, module_params, current_user)
+    diff = ModuleDiff.diff(entry, changeset)
+
+    if ModuleDiff.destructive?(diff) do
+      %{
+        params: module_params,
+        summary: ModuleDiff.summary(diff),
+        affected: count_affected(socket)
+      }
+    end
+  end
+
+  defp pending_destructive_change(_socket, _module_params), do: nil
+
+  # A shared module is edited in the public schema, where no tenant's blocks are
+  # visible — count the sites it reaches instead, and let the dialog say so.
+  defp count_affected(%{assigns: %{shared_library?: true, entry: entry}}) do
+    {:sites, length(Brando.Content.SharedLibrary.usage(:module, entry.id))}
+  end
+
+  defp count_affected(%{assigns: %{entry: entry}}) do
+    {:blocks, length(ContentBlocks.list_block_ids_using_module(entry.id))}
+  end
+
+  defp do_save(socket, module_params) do
     user = socket.assigns.current_user
     entry = socket.assigns.entry
 
@@ -380,6 +486,17 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
       end
 
     case persist_module(changeset, user, socket.assigns.shared_library?) do
+      {:error, :stale} ->
+        send(
+          self(),
+          {:toast,
+           gettext(
+             "This module was changed by someone else while you were editing. Reload to see their version before saving yours."
+           )}
+        )
+
+        {:noreply, socket}
+
       {:ok, entry} ->
         send(self(), {:toast, gettext("Module updated")})
 
@@ -508,11 +625,20 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
   defp maybe_use_public_library_context(socket), do: socket
 
-  defp persist_module(changeset, user, true) do
+  # `Brando.Trait.ModuleVersioned` bumps the version under an optimistic lock, so
+  # a second editor saving over a revision they never saw raises instead of
+  # silently winning. Turn that into an answer this function's caller can render.
+  defp persist_module(changeset, user, shared_library?) do
+    do_persist_module(changeset, user, shared_library?)
+  rescue
+    Ecto.StaleEntryError -> {:error, :stale}
+  end
+
+  defp do_persist_module(changeset, user, true) do
     Brando.Content.SharedLibrary.update_shared(:module, changeset.data.id, changeset, user)
   end
 
-  defp persist_module(changeset, user, false), do: Brando.Content.update_module(changeset, user)
+  defp do_persist_module(changeset, user, false), do: Brando.Content.update_module(changeset, user)
 
   defp build_ref_data(TextBlock) do
     struct(TextBlock.Data, %{styles: TextBlock.Data.default_styles()})

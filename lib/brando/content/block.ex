@@ -98,6 +98,12 @@ defmodule Brando.Content.Block do
     attribute :rendered_at, :datetime
     attribute :source, Brando.Type.Module
     attribute :identifier_metas, Brando.Type.Json
+    # The newest module revision whose instance-data migration was applied to this
+    # block. Deliberately absent from `@block_attrs`: it is server-controlled, so
+    # an entry editor opened before a module migration cannot save its way to
+    # claiming it is current. See `Brando.Content.Blocks.sync_module/2`.
+    attribute :module_version, :integer
+
     attribute :module_origin, :enum, values: [:local, :shared], default: :local
     attribute :container_origin, :enum, values: [:local, :shared], default: :local
     attribute :palette_origin, :enum, values: [:local, :shared], default: :local
