@@ -123,6 +123,27 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
   end
 
   describe "D5 — merge_loaded_media/2" do
+    test "recovery loads uncached images and videos from their FKs", ctx do
+      video = Factory.insert(:video)
+      objects = [%GalleryObject{image_id: ctx.image.id}, %GalleryObject{video_id: video.id}]
+
+      [image_object, video_object] =
+        BrandoAdmin.Components.Form.Input.Gallery.Media.load_missing(objects)
+
+      assert image_object.image.id == ctx.image.id
+      assert video_object.video.id == video.id
+      assert image_object.id == nil
+      assert video_object.id == nil
+    end
+
+    test "a recovered replacement does not reuse the saved object's old image", ctx do
+      replacement = Factory.insert(:image)
+      object = %GalleryObject{image_id: replacement.id, image: ctx.image}
+
+      assert [%{image: image}] = BrandoAdmin.Components.Form.Input.Gallery.Media.load_missing([object])
+      assert image.id == replacement.id
+    end
+
     test "keeps an object that already carries its loaded media" do
       loaded = %GalleryObject{image_id: 1, image: %Brando.Images.Image{id: 1, path: "a.jpg"}}
 

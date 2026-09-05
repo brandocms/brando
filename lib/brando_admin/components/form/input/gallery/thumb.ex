@@ -80,6 +80,13 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Thumb do
     end)
   end
 
+  def media_id(field) do
+    case field[:image_id].value do
+      value when value in [nil, ""] -> field[:video_id].value
+      value -> value
+    end
+  end
+
   defp same?(value, _other) when value in [nil, ""], do: false
   defp same?(_value, nil), do: false
   defp same?(value, other), do: to_string(value) == to_string(other)

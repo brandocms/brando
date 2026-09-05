@@ -38,8 +38,9 @@ export default (app) => ({
     this.handleEvent('b:show_drawer', ({ drawer_id }) => {
       const drawer = document.getElementById(drawer_id)
       if (drawer) {
-        drawer.classList.remove('hidden', 'x-100')
-        drawer.classList.add('x-0')
+        this.js().removeClass(drawer, 'hidden x-100')
+        this.js().addClass(drawer, 'x-0')
+        this.js().show(drawer)
       }
     })
 

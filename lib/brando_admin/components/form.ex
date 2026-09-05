@@ -3196,15 +3196,24 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:image_editor_config_target, config_target)}
   end
 
-  def handle_event("reset_video_field", _, socket) do
-    edit_video = socket.assigns.edit_video
+  def handle_event(
+        "reset_video_field",
+        _,
+        %{assigns: %{form: form, edit_video: edit_video, entry: entry, singular: singular}} = socket
+      ) do
+    relation_key = relation_field_key(edit_video.relation_field, edit_video.field)
+    full_path = edit_video.path ++ [relation_key]
+    changeset = EctoNestedChangeset.update_at(form.source, full_path, fn _ -> nil end)
 
     {:noreply,
      socket
+     |> assign(:entry, Map.put(entry, edit_video.field, nil))
      |> assign(:video_changeset, nil)
      |> assign(:editing_video?, false)
      |> assign(:edit_video, %{edit_video | video: nil})
-     |> assign_drawer_recovery_state()}
+     |> assign(:form, to_form(changeset, []))
+     |> assign_drawer_recovery_state()
+     |> push_event("b:validate", %{target: "#{singular}[#{relation_key}]", value: ""})}
   end
 
   def handle_event("reset_video_thumbnail", _, socket) do

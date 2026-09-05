@@ -34,6 +34,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
       |> Ecto.Changeset.get_field(:gallery_objects)
       |> List.wrap()
       |> Brando.Galleries.merge_loaded_media(socket.assigns[:gallery_objects] || [])
+      |> Media.load_missing()
 
     {:ok,
      socket
@@ -80,7 +81,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
               <.inputs_for :let={gallery_object} field={@field}>
                 <figure
                   class="gallery-object sort-handle draggable"
-                  data-id={gallery_object[:image_id].value || gallery_object[:video_id].value}
+                  data-id={Thumb.media_id(gallery_object)}
                 >
                   <Thumb.thumb
                     gallery_objects={@gallery_objects}

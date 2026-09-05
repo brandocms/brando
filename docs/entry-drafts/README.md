@@ -47,6 +47,31 @@ remains accessible through “Recovery copies”; subsequent edits use a new cop
 
 ![An unsuccessful restore with an escape to a clean editor](recovery-failed.png)
 
+## Media recovery
+
+Recovery keeps references to existing library assets. It does not duplicate image,
+file, or video records, or overwrite their metadata. Galleries retain their owned
+rows, order, deletions, captions, focal points, and playback overrides.
+
+| Editor surface | Recovery coverage |
+| --- | --- |
+| Image, file, and video fields | New selections, replacements of saved assets, resets, save and reopen |
+| Gallery fields | Mixed images/videos, drag ordering, loaded previews, deletions and owned row identity |
+| Picture/video refs and gallery blocks | Media selection, mixed galleries, usage overrides and deletion |
+| Media variables | Image/file block vars and image/file/video entry vars |
+
+The media audit also fixes stale file previews after FK replacement/reset, missing
+gallery previews after recovery, video field resets that previously only closed
+the drawer, and upload folder drawers that failed to reopen after being closed.
+
+![Recovered image, file and video fields](recovery-media-fields.png)
+
+![Recovered mixed gallery field](recovery-gallery-field.png)
+
+![Recovered mixed gallery block](recovery-gallery-block.png)
+
+![Recovered picture/video refs and media variables](recovery-media-refs-vars.png)
+
 ## Implementation and installation
 
 - Run `mix brando.upgrade`, then `mix ecto.migrate` in the consuming application.
@@ -72,6 +97,6 @@ new and existing entries, focused block inputs, nested children, save-and-contin
 module changes, failed restore/reload/start-fresh, retained originals, navigation
 protection, ownership, generation ordering, invalid values, and transformer assets.
 
-Validation: 1,895 Elixir tests/doctests and 17 browser scenarios passed, together
+Validation: 1,903 Elixir tests/doctests and 21 media/recovery browser scenarios passed, together
 with the E2E consumer asset build, formatting, Blueprint Credo checks, and the
 compile-connected dependency gate (no cycles).

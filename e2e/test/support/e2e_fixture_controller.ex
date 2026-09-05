@@ -35,6 +35,40 @@ defmodule E2EFixtureController do
 
   # Only routed in the sandbox application. Browser tests use the real editor
   # for capture/restore; this injects failures that an editor cannot create.
+  def drafts(conn, %{"action" => "media-state", "schema" => type, "entry_id" => id}) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+
+    schema =
+      case type do
+        "project" -> E2eProject.Projects.Project
+        "page" -> Brando.Pages.Page
+      end
+
+    entry_id = if id == "new", do: nil, else: String.to_integer(id)
+
+    entry =
+      if entry_id do
+        {:ok, entry} = Brando.Blueprint.EntryQuery.get(schema, entry_id)
+        Brando.Drafts.Params.snapshot(entry)
+      end
+
+    drafts = schema |> Brando.Drafts.identity(entry_id, get_admin_user().id) |> Brando.Drafts.list()
+
+    counts =
+      Map.new(
+        [
+          images: Brando.Images.Image,
+          files: Brando.Files.File,
+          videos: Brando.Videos.Video,
+          galleries: Brando.Galleries.Gallery
+        ],
+        fn {key, schema} -> {key, Brando.Repo.aggregate(schema, :count)} end
+      )
+
+    json(conn, %{entry: entry, drafts: Enum.map(drafts, & &1.payload), counts: counts})
+  end
+
   def drafts(conn, %{"action" => action}) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
