@@ -41,6 +41,27 @@ defmodule Brando.Content.BlockReferences do
   end
 
   @doc """
+  Lists blocks referencing a file through refs, block vars, or table-row vars.
+  """
+  @spec list_block_ids_using_file(integer()) :: [integer()]
+  def list_block_ids_using_file(file_id) do
+    refs =
+      from ref in "content_refs",
+        where: ref.file_id == ^file_id and not is_nil(ref.block_id),
+        select: ref.block_id
+
+    vars =
+      from var in "content_vars",
+        left_join: row in "content_table_rows",
+        on: row.id == var.table_row_id,
+        where: var.file_id == ^file_id,
+        where: not is_nil(var.block_id) or not is_nil(row.block_id),
+        select: coalesce(var.block_id, row.block_id)
+
+    refs |> union(^vars) |> repo().all()
+  end
+
+  @doc """
   Resolves root block ids, grouped by join schema, to owning entry ids.
   """
   @spec list_entry_ids_for_root_blocks_by_source(%{optional(module()) => [integer()]}) :: %{

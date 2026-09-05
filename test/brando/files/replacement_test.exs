@@ -4,8 +4,11 @@ defmodule Brando.Files.ReplacementTest do
 
   import Mox
 
+  alias Brando.Content.Blocks
+  alias Brando.Factory
   alias Brando.Files
   alias Brando.Files.Replacement
+  alias Ecto.Changeset
 
   setup :verify_on_exit!
 
@@ -79,6 +82,64 @@ defmodule Brando.Files.ReplacementTest do
     assert File.read!(ctx.original) == "original"
   end
 
+  for placement <- [:ref, :var, :table_row, :nested_var] do
+    @placement placement
+    test "refreshes stored entry HTML for a file in a #{@placement}", ctx do
+      page = file_entry(ctx, @placement)
+      assert page.rendered_blocks =~ "<p>8</p>"
+
+      {:ok, other_file} =
+        Files.create_file(
+          %{filename: "other.pdf", filesize: 8, mime_type: "application/pdf", config_target: "default"},
+          ctx.user
+        )
+
+      unrelated = file_entry(%{ctx | asset: other_file}, @placement)
+      deleted = file_entry(ctx, @placement)
+      deleted |> Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Brando.Repo.update!()
+      cached_query = %{matches: %{id: page.id}, cache: {:ttl, :infinite}}
+      assert {:ok, %{rendered_blocks: before_html}} = Brando.Pages.get_page(cached_query)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Replacement.store(ctx.asset.id, %{path: ctx.source}, ctx.entry, ctx.user)
+        assert [%{args: %{"entry_id" => entry_id}}] = all_enqueued(worker: Brando.Worker.EntryRenderer)
+        assert entry_id == page.id
+        assert Brando.Repo.get!(Brando.Pages.Page, page.id).rendered_blocks == before_html
+        assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :default)
+      end)
+
+      assert {:ok, updated} = Brando.Pages.get_page(cached_query)
+      assert updated.rendered_blocks =~ "<p>20</p>"
+      refute updated.rendered_blocks =~ "<p>8</p>"
+      assert Brando.Repo.get!(Brando.Pages.Page, unrelated.id).rendered_blocks == unrelated.rendered_blocks
+      assert Brando.Repo.get!(Brando.Pages.Page, deleted.id).rendered_blocks == deleted.rendered_blocks
+    end
+  end
+
+  test "file replacements propagate through fragments to their parent entries", ctx do
+    fragment = file_entry(ctx, :var, :fragment)
+
+    page =
+      insert_entry(ctx.user, :page, %{type: :fragment, fragment_id: fragment.id})
+
+    assert page.rendered_blocks == "<p>8</p>"
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, _} = Replacement.store(ctx.asset.id, %{path: ctx.source}, ctx.entry, ctx.user)
+
+      assert_enqueued(
+        worker: Brando.Worker.EntryRenderer,
+        args: %{schema: "Elixir.Brando.Pages.Fragment", entry_id: fragment.id}
+      )
+
+      refute_enqueued(worker: Brando.Worker.EntryRenderer, args: %{schema: "Elixir.Brando.Pages.Page", entry_id: page.id})
+      assert %{success: 2, failure: 0} = Oban.drain_queue(queue: :default, with_recursion: true)
+    end)
+
+    assert Brando.Repo.get!(Brando.Pages.Fragment, fragment.id).rendered_blocks == "<p>20</p>"
+    assert Brando.Repo.get!(Brando.Pages.Page, page.id).rendered_blocks == "<p>20</p>"
+  end
+
   test "checks the actual transferred size and preserves the original on rejection", ctx do
     File.write!(ctx.source, String.duplicate("x", 101))
     assert {:error, "File is too large" <> _} = Replacement.store(ctx.asset.id, %{path: ctx.source}, ctx.entry, ctx.user)
@@ -104,10 +165,17 @@ defmodule Brando.Files.ReplacementTest do
   end
 
   test "a storage failure rolls back metadata", ctx do
+    page = file_entry(ctx, :var)
     File.rm!(ctx.original)
     File.mkdir!(ctx.original)
     File.write!(Path.join(ctx.original, "sentinel"), "untouched")
-    assert {:error, _} = Replacement.store(ctx.asset.id, %{path: ctx.source}, ctx.entry, ctx.user)
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:error, _} = Replacement.store(ctx.asset.id, %{path: ctx.source}, ctx.entry, ctx.user)
+      refute_enqueued(worker: Brando.Worker.EntryRenderer)
+    end)
+
+    assert Brando.Repo.get!(Brando.Pages.Page, page.id).rendered_blocks == page.rendered_blocks
     assert Files.get_file!(ctx.asset.id).filesize == 8
     assert File.read!(Path.join(ctx.original, "sentinel")) == "untouched"
     assert Path.wildcard(ctx.original <> ".replacement-*") == []
@@ -167,6 +235,7 @@ defmodule Brando.Files.ReplacementTest do
     end
 
     test "uploads to the existing bucket key and keeps the CDN URL", ctx do
+      page = file_entry(ctx, :var)
       url = Brando.Utils.media_url(ctx.asset)
 
       expect(Brando.CDN.Client.Mock, :replace_file, fn bucket, key, path, opts, _cfg ->
@@ -182,17 +251,69 @@ defmodule Brando.Files.ReplacementTest do
       assert updated.cdn
       assert Brando.Utils.media_url(updated) == url
       assert File.read!(ctx.original) == "replacement contents"
+      assert Brando.Repo.get!(Brando.Pages.Page, page.id).rendered_blocks == "<p>20</p>"
     end
 
     test "a CDN failure keeps the previous record and local copy", ctx do
+      page = file_entry(ctx, :var)
       expect(Brando.CDN.Client.Mock, :replace_file, fn _, _, _, _, _ -> {:error, :unavailable} end)
 
-      assert {:error, "Could not replace the file on the CDN"} =
-               Replacement.store(ctx.asset.id, %{path: ctx.source}, ctx.entry, ctx.user)
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:error, "Could not replace the file on the CDN"} =
+                 Replacement.store(ctx.asset.id, %{path: ctx.source}, ctx.entry, ctx.user)
+
+        refute_enqueued(worker: Brando.Worker.EntryRenderer)
+      end)
+
+      assert Brando.Repo.get!(Brando.Pages.Page, page.id).rendered_blocks == page.rendered_blocks
 
       assert File.read!(ctx.original) == "original"
       assert Files.get_file!(ctx.asset.id).filesize == 8
       assert Files.get_file!(ctx.asset.id).cdn
     end
+  end
+
+  defp file_entry(ctx, placement, kind \\ :page) do
+    var = %{type: :file, key: "download", file_id: ctx.asset.id}
+
+    {code, attrs} =
+      case placement do
+        :ref ->
+          ref = %{
+            name: "report",
+            uid: Brando.Utils.generate_uid(),
+            file_id: ctx.asset.id,
+            data: %Brando.Villain.Blocks.FileBlock{data: %Brando.Villain.Blocks.FileBlock.Data{}}
+          }
+
+          {~S(<p>{@refs["report"].data.data.filesize}</p>), %{refs: [ref]}}
+
+        :table_row ->
+          {~S|<p :for={row <- @block.table_rows}>{hd(row.vars).file.filesize}</p>|, %{table_rows: [%{vars: [var]}]}}
+
+        _ ->
+          {~S(<p>{@download.filesize}</p>), %{vars: [var]}}
+      end
+
+    {:ok, module} = Brando.Content.create_module(Factory.params_for(:module, type: :heex, code: code), ctx.user)
+    block = Map.merge(%{type: :module, module_id: module.id}, attrs)
+    block = if placement == :nested_var, do: %{type: :container, children: [block]}, else: block
+    insert_entry(ctx.user, kind, block)
+  end
+
+  defp insert_entry(user, kind, block) do
+    entry = Factory.build(kind, creator: user)
+
+    block =
+      Map.merge(%{uid: Brando.Utils.generate_uid(), source: "#{entry.__struct__}.Blocks"}, block)
+
+    entry =
+      entry
+      |> Changeset.change()
+      |> Changeset.put_assoc(:entry_blocks, [%{block: block}])
+      |> Brando.Repo.insert!()
+
+    {:ok, rendered} = Blocks.render_entry(entry.__struct__, entry.id)
+    rendered
   end
 end

@@ -4,6 +4,8 @@ defmodule Brando.Files.Replacement do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Assets.CompletedCallback
+  alias Brando.Content.BlockReferences
+  alias Brando.Content.RenderQueue
   alias Brando.Files
   alias Brando.Tenant.Storage
   alias Brando.Uploads
@@ -57,6 +59,13 @@ defmodule Brando.Files.Replacement do
       case result do
         {:ok, {file, cfg}} ->
           Brando.Cache.Query.evict({:ok, file})
+
+          file.id
+          |> BlockReferences.list_block_ids_using_file()
+          |> BlockReferences.list_root_block_ids_by_source()
+          |> BlockReferences.list_entry_ids_for_root_blocks_by_source()
+          |> RenderQueue.enqueue_map()
+
           CompletedCallback.run(cfg, file, user)
           {:ok, file}
 

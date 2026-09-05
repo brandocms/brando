@@ -305,7 +305,8 @@
 - File resource listings offer **Replace file** (#2638). Replacements preserve
   the file ID, filename, URL, title, folder, and existing references. Uploads use
   the shared manager and validate the original file's configuration before
-  replacing local or CDN contents.
+  replacing local or CDN contents. Entries using the file in block refs, vars,
+  or table rows are queued for rendering so embedded file metadata stays current.
 
 - **Automatic entry recovery copies** (#2694). Blueprint forms keep user-owned
   recovery copies of unsaved fields, blocks, and completed transformer rows.

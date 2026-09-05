@@ -175,6 +175,12 @@ preserved. A failed validation or storage operation leaves the original record
 and contents intact. Completion is delivered to the listing through PubSub, so
 the replacement still completes if the editor navigates away.
 
+After storage succeeds, replacement evicts cached file queries and enqueues
+entries whose blocks reference the file through refs, vars, or table-row vars.
+Nested blocks resolve to their owning entries, and the existing renderer
+propagates fragment changes to dependent entries. This refreshes stored HTML
+that embeds file metadata without syncing module definitions.
+
 ## 1. TL;DR
 
 - Today, block/var/field uploads use **LiveView native uploads registered on the form**,
