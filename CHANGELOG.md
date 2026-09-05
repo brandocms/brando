@@ -270,6 +270,11 @@
   during macro expansion — that crosses into a module the callee's own
   dependencies reach back to.
 
+  A `trait` declaration is one of those compile-time references, so a trait that
+  calls back into a module holding the schema's struct closes the same loop:
+  `Brando.Content.ModuleDiff` therefore types its arguments as `map()` and
+  matches on shape rather than on `%Module{}`.
+
 #### Features
 
 - **Module migration tracking, and a warning before a module save destroys
