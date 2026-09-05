@@ -15,7 +15,54 @@ deploy, and static rollback. Rolling back one does not roll back the other.
 - **Florist** installed locally (`mix escript.install github brandocms/florist`)
 - **Docker** for building releases
 - **SSH access** to your server with key-based authentication
+- **Passwordless sudo** for the SSH user on the server. Florist runs `sudo` over
+  SSH exec channels without a TTY, so it cannot answer a password prompt and
+  will fail on its first command without this.
 - A server running Linux with PostgreSQL and either Traefik or nginx
+
+### Health endpoint
+
+Blue/green deployments require a health endpoint. Florist starts the new colour,
+polls `/health` until it answers, and only then switches traffic over. Add the
+plug to your endpoint, above the router:
+
+```elixir
+# lib/my_app_web/endpoint.ex
+plug Brando.Plug.Media, at: "/media"
+plug Brando.Plug.Health
+```
+
+`Brando.Plug.Health` answers `GET`/`HEAD /health` before the request reaches the
+router, returning `200` when healthy and `503` otherwise. Without it, the health
+check never passes and the deploy stalls on the new colour.
+
+### Formatting florist.config.exs
+
+Florist's DSL relies on `locals_without_parens`, but florist is installed as an
+escript rather than a dependency, so `import_deps` cannot pick that up and
+`mix format` will add parens throughout your config. Mirror the DSL in your
+project's `.formatter.exs`:
+
+```elixir
+florist_locals_without_parens = [
+  set: 2,
+  target: 2,
+  project_module: 1,
+  project_name: 1,
+  ssh: 1,
+  rclone: 1,
+  database: 1,
+  docker: 1,
+  remote: 1,
+  deployment: 1,
+  webserver: 1
+]
+
+[
+  # ... your existing config
+  locals_without_parens: florist_locals_without_parens
+]
+```
 
 ## Quick start
 
@@ -26,6 +73,11 @@ florist prod traefik:setup
 florist prod bootstrap
 florist prod release:deploy
 ```
+
+The order matters. `config:generate` writes the systemd, Traefik and logrotate
+configs into `etc/`, which `bootstrap` uploads and symlinks. `traefik:setup`
+both reads `etc/traefik/traefik.yml` and installs the Traefik binary, which
+`bootstrap` checks for before it will configure the web server.
 
 ## Configuration
 
@@ -106,10 +158,13 @@ export FLORIST_DB_PASSWORD_PROD="your_database_password"
 export FLORIST_SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
 ```
 
-### Runtime environment (.envrc.runtime)
+### Runtime environment (.envrc.&lt;flavor&gt;)
 
-Create `.envrc.runtime` in your project root (add to `.gitignore`). This file is
-uploaded to the server and sourced by the systemd service before starting your app:
+Create one env file per target, named after the target's flavor — `.envrc.prod`
+for a `:prod` flavor, `.envrc.staging` for `:staging` — in your project root
+(add them to `.gitignore`). Florist reads `.envrc.<flavor>` locally and uploads
+it to the server as `.envrc.runtime`, which the systemd service sources before
+starting your app. The `.runtime` name only ever exists on the server.
 
 ```bash
 export BRANDO_SECRET_KEY_BASE="generate-with-mix-phx-gen-secret"
@@ -117,9 +172,23 @@ export BRANDO_DB_URL="postgresql://myapp:password@localhost/myapp_prod"
 export BRANDO_URL_SCHEME="https"
 export BRANDO_URL_HOST="example.com"
 export BRANDO_URL_PORT="443"
-export PORT="4000"
 export POOL_SIZE="15"
 ```
+
+> #### Do not set PORT for blue/green {: .warning}
+>
+> With `deployment type: :blue_green`, systemd sets `PORT` per environment —
+> blue and green each get their own. Since `rel/env.sh.eex` sources
+> `.envrc.runtime` *after* systemd has set the environment, a `PORT=` line in
+> your env file overrides it and puts both colours on the same port.
+>
+> Florist guards against this: `florist prod bootstrap` and `env:upload` halt
+> with an explicit error if they find `PORT=` in the env file. For a `:single`
+> deployment, setting `PORT` is fine and expected.
+
+The database password in `BRANDO_DB_URL` must match `FLORIST_DB_PASSWORD_PROD`,
+since florist uses the latter to create the database user that your app then
+authenticates as.
 
 Upload it with:
 
@@ -135,18 +204,47 @@ Bootstrap sets up everything on a fresh server. Run it once per target:
 florist prod bootstrap
 ```
 
-This runs through the following steps:
+This runs through the following steps, in this order:
 
 1. Creates the remote system user and group
-2. Creates the directory structure on the server
-3. Uploads your `media/` and `etc/` directories
-4. Creates the PostgreSQL database and user
-5. Configures systemd services (one per blue/green environment)
-6. Configures the web server (Traefik or nginx)
-7. Sets up log rotation
-8. Uploads `.envrc.runtime`
-9. Sets file permissions and ownership
-10. Optionally sets up automated database backups (pgbackup + rclone)
+2. Creates the directory structure on the server, including the blue and green
+   environments
+3. Uploads your local `media/` directory
+4. Uploads your local `etc/` directory
+5. Creates the PostgreSQL database and user
+6. Configures systemd services (one per blue/green environment)
+7. Configures the web server (Traefik or nginx)
+8. Sets up log rotation
+9. **Dumps your local database and loads it onto the server**
+10. Uploads `.envrc.<flavor>` as `.envrc.runtime`
+11. Sets file permissions and ownership
+12. Sets up automated database backups (pgbackup and rclone)
+
+> #### Step 9 loads your local database {: .warning}
+>
+> `bootstrap` seeds the server with a dump of whatever is in your **local**
+> development database. Make sure that is the data you want on the server.
+>
+> When migrating an existing site, the clean way is to prepare locally first:
+> pull the old server's dump down, restore it locally, run `mix ecto.migrate`
+> so the schema matches the release you are about to deploy, and only then
+> bootstrap. Step 9 then ships the migrated production data for you.
+>
+> If you bootstrap with dev data by mistake, replace it afterwards:
+>
+> ```bash
+> florist prod db:drop
+> florist prod db:create
+> florist prod db:load:local
+> ```
+>
+> Either way, take a final dump during the cutover freeze so you do not lose
+> edits made on the old server in the meantime.
+
+Note that step 7 requires the web server to already be installed. With Traefik,
+`bootstrap` halts with `Traefik is not installed` unless you have run
+`florist prod traefik:setup` beforehand — see the ordering in
+[Quick start](#quick-start).
 
 Verify the bootstrap completed successfully:
 
