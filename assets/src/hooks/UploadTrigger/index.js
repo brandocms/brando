@@ -18,7 +18,7 @@
  * Expected markup:
  *
  *   <div phx-hook="Brando.UploadTrigger"
- *        data-kind="block_var|block_var_gallery|block_ref_picture|block_ref_file|block_ref_video|block_ref_gallery|entry_var|entry_var_gallery|entry_field|entry_field_gallery"
+ *        data-kind="block_var|block_var_gallery|block_ref_picture|block_ref_file|block_ref_video|block_ref_gallery|entry_var|entry_var_gallery|entry_field|entry_field_gallery|file_replace"
  *        data-component-id="..."
  *        data-asset-type="file|image|video"
  *        data-config-target="..."
@@ -187,6 +187,7 @@ export default (app) => ({
       component_id: ds.componentId,
       var_key: ds.varKey,
       field: ds.field || null,
+      file_id: ds.fileId || null,
       path,
       asset_type: ds.assetType,
       config_target: ds.configTarget || 'default',

@@ -302,6 +302,11 @@
 
 #### Features
 
+- File resource listings offer **Replace file** (#2638). Replacements preserve
+  the file ID, filename, URL, title, folder, and existing references. Uploads use
+  the shared manager and validate the original file's configuration before
+  replacing local or CDN contents.
+
 - **Automatic entry recovery copies** (#2694). Blueprint forms keep user-owned
   recovery copies of unsaved fields, blocks, and completed transformer rows.
   Editors can compare, restore, download, or dismiss a copy. Changed modules

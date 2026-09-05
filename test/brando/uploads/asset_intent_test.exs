@@ -87,4 +87,16 @@ defmodule Brando.Uploads.AssetIntentTest do
                })
     end
   end
+
+  test "file replacement requires an existing-id shape and the file asset type" do
+    target = %{kind: "file_replace", asset_type: "file", file_id: "42", deliver_topic: @topic}
+    assert {:ok, normalized} = AssetIntent.normalize(target)
+    assert normalized["file_id"] == "42"
+
+    for id <- [nil, "", "bogus", "1 OR 1=1", -1, 0] do
+      assert {:error, "Invalid replacement file id"} = AssetIntent.normalize(%{target | file_id: id})
+    end
+
+    assert {:error, "Asset type is not valid" <> _} = AssetIntent.normalize(%{target | asset_type: "image"})
+  end
 end

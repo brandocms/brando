@@ -5,15 +5,19 @@ defmodule BrandoAdmin.Files.FileListLive do
 
   alias Brando.Files
   alias Brando.Files.File
+  alias Brando.Uploads.AssetIntent
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Images.FolderBrowser
   alias BrandoAdmin.LiveView.AssetListHelpers
+  alias Phoenix.LiveView.JS
 
   @impl true
   def mount(_params, _session, socket) do
     {:ok, default_cfg} = Files.get_config_for(%{config_target: "default"})
     upload_root = FolderBrowser.scope_for(default_cfg.upload_path)
+    deliver_topic = "form:" <> Ecto.UUID.generate()
+    if connected?(socket), do: Phoenix.PubSub.subscribe(Brando.pubsub(), deliver_topic)
 
     socket =
       socket
@@ -25,6 +29,9 @@ defmodule BrandoAdmin.Files.FileListLive do
         progress: &handle_progress/3
       )
       |> assign(:recent_folders, [])
+      |> assign(:deliver_topic, deliver_topic)
+      |> assign(:replacement_file, nil)
+      |> assign(:replacement_target, nil)
       |> assign(:custom_folders, [])
       |> assign(:folders, [""])
       |> assign(:child_folders, [])
@@ -54,6 +61,28 @@ defmodule BrandoAdmin.Files.FileListLive do
 
   def handle_event("validate", _params, socket) do
     {:noreply, socket}
+  end
+
+  def handle_event("replace_file", %{"id" => id}, socket) do
+    with {:ok, %{deleted_at: nil} = file} <- Files.get_file(id),
+         {:ok, target} <-
+           AssetIntent.normalize(%{
+             kind: "file_replace",
+             asset_type: "file",
+             file_id: file.id,
+             config_target: file.config_target,
+             deliver_topic: socket.assigns.deliver_topic
+           }) do
+      {:noreply, socket |> assign(:replacement_file, file) |> assign(:replacement_target, target)}
+    else
+      _ ->
+        send(self(), {:toast, gettext("The file is no longer available")})
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("close_file_replacement", _, socket) do
+    {:noreply, socket |> assign(:replacement_file, nil) |> assign(:replacement_target, nil)}
   end
 
   def handle_event("assets_go_root", _, socket) do
@@ -202,9 +231,58 @@ defmodule BrandoAdmin.Files.FileListLive do
   end
 
   @impl true
+  def handle_info({:asset_ready, %{"kind" => "file_replace"}, file}, socket) do
+    AssetListHelpers.update_list_entries(socket.assigns.schema)
+    send(self(), {:toast, gettext("File replaced")})
+
+    socket =
+      if socket.assigns.replacement_file && socket.assigns.replacement_file.id == file.id do
+        socket |> assign(:replacement_file, nil) |> assign(:replacement_target, nil)
+      else
+        socket
+      end
+
+    {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <Content.header title={gettext("Assets — Files")} subtitle={gettext("Overview")} />
+
+    <Content.modal
+      :if={@replacement_file}
+      id="file-replacement-modal"
+      title={gettext("Replace file")}
+      show
+      medium
+      close={JS.push("close_file_replacement")}
+    >
+      <p>{gettext("Replace this file everywhere it is used. Its filename and URL will stay the same.")}</p>
+      <div class="field-wrapper">
+        <label for="replacement-filename">{gettext("Current file")}</label>
+        <input id="replacement-filename" class="text" type="text" readonly value={@replacement_file.filename} />
+      </div>
+      <p class="monospace tiny">{Brando.Utils.media_url(@replacement_file)}</p>
+      <p>{gettext("Choose a file with the same extension as the original.")}</p>
+      <div
+        id={"file-replacement-upload-#{@replacement_file.id}"}
+        phx-hook="Brando.UploadTrigger"
+        data-kind={@replacement_target["kind"]}
+        data-asset-type={@replacement_target["asset_type"]}
+        data-file-id={@replacement_target["file_id"]}
+        data-config-target={@replacement_target["config_target"]}
+        data-deliver-topic={@replacement_target["deliver_topic"]}
+        data-accept={Path.extname(@replacement_file.filename)}
+        data-click-mode="trigger"
+      >
+        <input type="file" class="file-input hidden" aria-label={gettext("Replacement file")} />
+        <button type="button" class="primary upload-trigger">{gettext("Choose replacement")}</button>
+      </div>
+      <:footer>
+        <button type="button" class="secondary" phx-click="close_file_replacement">{gettext("Close")}</button>
+      </:footer>
+    </Content.modal>
 
     <.live_component
       module={FileBrowser}
@@ -321,7 +399,10 @@ defmodule BrandoAdmin.Files.FileListLive do
     |> assign(:current_folder_abs, current_folder_abs)
     |> assign(:breadcrumbs, breadcrumbs)
     |> assign(:recent_folders, recent_folders)
-    |> assign(:visible_file_count, length(visible_files))
+    |> assign(
+      :visible_file_count,
+      if(current_folder == "", do: Enum.count(files, &is_nil(&1.folder_id)), else: length(visible_files))
+    )
     |> assign(:current_folder_config_target, current_folder_config_target)
   end
 
