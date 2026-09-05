@@ -240,6 +240,36 @@
     shared renderer uses, and it defeated `preload` by making the browser fetch
     the manifest eagerly.
 
+#### Improvements
+
+- **The 251-module compile-connected dependency cycle is gone** (#2737), and the
+  CI gate is back to `--fail-above 0`.
+
+  It was never the Blueprint DSL. Every edge holding it together was an
+  accidental compile-time call from one module into another whose own
+  dependencies led back:
+
+  - `BrandoAdmin.live_view/0` and `UploadManager` called `Brando.config/1` during
+    macro expansion; they read the same value off the leaf
+    `Brando.RuntimeConfig` now.
+  - `SharedLibrary`'s `@definitions` and `Content`'s `@module_cache_opts`
+    resolved `Ref.preloads/0` into module attributes; both are functions now.
+  - `Block.Render` read `Content.Block.carried_var_attrs/0` into an attribute;
+    the lists moved to the new leaf `Brando.Content.VarAttrs`, which
+    `Content.Block` re-exports.
+  - `Content.Module`'s listing action called `BrandoAdmin.Utils.show_modal/2` at
+    compile time — a core schema recompiling with the admin. The JS command
+    builders moved to the new leaf `BrandoAdmin.JSCommands`; `BrandoAdmin.Utils`
+    delegates to it, so existing call sites are unchanged.
+  - The last one was a single struct literal: `default %Palette.Color{}` in
+    `Content.Palette`'s form. `default` also takes a 2-arity function, which
+    defers it.
+
+  The pattern to watch for is in `Brando.Blueprint.Forms`' docs now: a
+  compile-time call — module attribute, `%Struct{}` literal, or a function call
+  during macro expansion — that crosses into a module the callee's own
+  dependencies reach back to.
+
 #### Features
 
 - **Igniter-assisted tenancy setup for existing applications.** The opt-in

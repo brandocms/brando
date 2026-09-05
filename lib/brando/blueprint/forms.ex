@@ -76,6 +76,16 @@ defmodule Brando.Blueprint.Forms do
 
   Renders a sub form
 
+  `default` supplies the entry created by the subform's "Add entry" button. It
+  takes either a struct or a 2-arity function `fn entry, _ -> ... end`.
+
+  Prefer the function form when the default is a struct of another Blueprint
+  schema. A `%Struct{}` literal is resolved while *this* schema compiles, so it
+  is a compile-time dependency; when the target's own dependency graph leads back
+  here, that single literal closes a compile-connected cycle and every module in
+  the loop recompiles whenever any of them is touched. One such literal held a
+  251-module cycle together — see brandocms/brando#2737.
+
   ## Example
 
   Regular inline form set:

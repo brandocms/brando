@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   import Phoenix.LiveView.TagEngine
   import PolymorphicEmbed.HTML.Component
 
-  alias Brando.Content.Block, as: ContentBlock
+  alias Brando.Content.VarAttrs
   alias Brando.Content.Var.Layout
   alias Brando.Villain.Parser
   alias BrandoAdmin.Components.Content
@@ -2147,7 +2147,10 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   # Resolved at compile time, not per render. A function call in the template
   # cannot be change-tracked — LiveView has no way to know the list is constant,
   # so it re-evaluates and re-sends the whole comprehension on every diff.
-  @carried_var_fields ContentBlock.carried_var_attrs()
+  # Read off the leaf `Brando.Content.VarAttrs`, not off `Brando.Content.Block`:
+  # this is a compile-time call, and `Block` is a Blueprint schema inside
+  # Blueprint's compile-connected component — see issue #2737.
+  @carried_var_fields VarAttrs.carried()
 
   def carried_var(assigns) do
     # Blank, not just nil: once a validate round trip has happened the id comes

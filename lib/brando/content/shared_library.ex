@@ -27,35 +27,41 @@ defmodule Brando.Content.SharedLibrary do
   @public_opts [prefix: "public"]
   @kinds [:module, :container, :palette]
 
-  @definitions %{
-    module: %{
-      schema: Module,
-      access_schema: SiteEnabledModule,
-      access_field: :module_id,
-      block_field: :module_id,
-      block_origin_field: :module_origin,
-      source_field: :source_module_id,
-      preloads: [:vars, refs: Brando.Content.Ref.preloads()]
-    },
-    container: %{
-      schema: Container,
-      access_schema: SiteEnabledContainer,
-      access_field: :container_id,
-      block_field: :container_id,
-      block_origin_field: :container_origin,
-      source_field: :source_container_id,
-      preloads: []
-    },
-    palette: %{
-      schema: Palette,
-      access_schema: SiteEnabledPalette,
-      access_field: :palette_id,
-      block_field: :palette_id,
-      block_origin_field: :palette_origin,
-      source_field: :source_palette_id,
-      preloads: []
+  # A function, not a module attribute. `Ref.preloads/0` resolved inside an
+  # attribute is a compile-time call into a Blueprint schema, which puts this
+  # module inside Blueprint's compile-connected component — see issue #2737. The
+  # map is small and built per lookup; the lookups are not hot.
+  defp definitions do
+    %{
+      module: %{
+        schema: Module,
+        access_schema: SiteEnabledModule,
+        access_field: :module_id,
+        block_field: :module_id,
+        block_origin_field: :module_origin,
+        source_field: :source_module_id,
+        preloads: [:vars, refs: Brando.Content.Ref.preloads()]
+      },
+      container: %{
+        schema: Container,
+        access_schema: SiteEnabledContainer,
+        access_field: :container_id,
+        block_field: :container_id,
+        block_origin_field: :container_origin,
+        source_field: :source_container_id,
+        preloads: []
+      },
+      palette: %{
+        schema: Palette,
+        access_schema: SiteEnabledPalette,
+        access_field: :palette_id,
+        block_field: :palette_id,
+        block_origin_field: :palette_origin,
+        source_field: :source_palette_id,
+        preloads: []
+      }
     }
-  }
+  end
 
   @doc "Returns the public IDs enabled for `site` and `kind`."
   def enabled_ids(%Site{id: site_id}, kind) when kind in @kinds do
@@ -646,7 +652,7 @@ defmodule Brando.Content.SharedLibrary do
   defp result_to_ok({:ok, _entry}), do: :ok
   defp result_to_ok({:error, _changeset} = error), do: error
 
-  defp definition(kind), do: Map.fetch!(@definitions, kind)
+  defp definition(kind), do: Map.fetch!(definitions(), kind)
 
   defp normalize_origin(origin) when origin in [:local, "local", nil], do: :local
   defp normalize_origin(origin) when origin in [:shared, "shared"], do: :shared

@@ -29,7 +29,10 @@ defmodule BrandoAdmin.UploadManager do
   # e2e/acceptance runs use the Ecto SQL sandbox — the manager writes to the
   # DB at consume, so it must join the test's sandbox connection like every
   # other admin LiveView (see BrandoAdmin.live_view/0).
-  if Application.compile_env(Brando.config(:otp_app), :sql_sandbox) do
+  # `RuntimeConfig`, not `Brando.config/1`: this is evaluated while the module is
+  # being compiled, and `Brando` is inside Blueprint's compile-connected
+  # component — see the same note in `BrandoAdmin.live_view/0` and issue #2737.
+  if Application.compile_env(Brando.RuntimeConfig.get(:otp_app), :sql_sandbox) do
     on_mount({BrandoAdmin.Mounts.LiveAcceptance, {:default, __MODULE__}})
   end
 
