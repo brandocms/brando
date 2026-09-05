@@ -28,7 +28,6 @@ defmodule Brando.Content.ModuleDiff do
   The classes are ordered: `classify/1` returns the most severe one that applies.
   """
 
-  alias Brando.Content.Module
   alias Brando.Villain.Blocks
   alias Ecto.Changeset
 
@@ -71,14 +70,22 @@ defmodule Brando.Content.ModuleDiff do
   @doc """
   Diffs a persisted module against its pending revision.
 
-  The second argument may be a `%Module{}` or a changeset on one — a changeset is
-  applied first, so this works straight off an unsaved admin form.
+  Both arguments are `Brando.Content.Module` structs; the second may instead be a
+  changeset on one, which is applied first, so this works straight off an unsaved
+  admin form.
+
+  Deliberately typed as `map()` rather than `Module.t()`, and matching on shape
+  rather than on `%Module{}`. `Brando.Content.Module` declares
+  `trait Brando.Trait.ModuleVersioned`, which is a compile-time reference, and
+  that trait calls this module — so a struct pattern or typespec here is an
+  export dependency straight back to the schema, closing a compile-connected
+  cycle across the whole content layer. See issue #2737.
   """
-  @spec diff(Module.t(), Module.t() | Changeset.t()) :: t()
-  def diff(%Module{} = old, %Changeset{} = changeset),
+  @spec diff(map(), map() | Changeset.t()) :: t()
+  def diff(old, %Changeset{} = changeset) when is_map(old),
     do: diff(old, Changeset.apply_changes(changeset))
 
-  def diff(%Module{} = old, %Module{} = new) do
+  def diff(old, new) when is_map(old) and is_map(new) do
     old_refs = ref_map(old)
     new_refs = ref_map(new)
     old_vars = var_map(old)
