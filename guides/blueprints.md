@@ -539,6 +539,35 @@ static query whose `:matches` value is not a map.
 
 ## Traits
 
+Use atom shorthands for Brando's built-in traits and module names for custom traits:
+
+```elixir
+trait :revisioned
+trait :scheduled_publishing
+trait :sequenced, append: true
+trait :soft_delete, obfuscated_fields: [:uri]
+trait :status
+trait :timestamped
+trait :translatable
+trait :blocks
+trait MyApp.Trait.Searchable
+```
+
+Every built-in trait has an atom shorthand: `:blocks`,
+`:blocks_prevent_circular_references`, `:cast_polymorphic_embeds`, `:creator`,
+`:ensure_uid`, `:focal`, `:meta`, `:module_versioned`, `:password`, `:permalink`,
+`:protect_password`, `:protect_role`, `:revisioned`, `:scheduled_publishing`,
+`:sequenced`, `:soft_delete`, `:status`, `:timestamped`, `:translatable`,
+`:validate_var_keys`, and `:watch_language`. The legacy `:villain` shorthand also
+resolves but remains deprecated; use `:blocks` for new declarations.
+The nested `Brando.Trait.Blocks.PreventCircularReferences` trait uses
+`:blocks_prevent_circular_references`.
+
+Full module declarations remain supported. Both forms register the same runtime
+module and preserve trait options, so calls such as
+`Page.has_trait(Brando.Trait.Revisioned)` and `Page.__trait__(Brando.Trait.Sequenced)`
+continue to use module names.
+
 Blueprint invokes a trait's `generate_code/2` callback while compiling each
 schema. Runtime-heavy custom traits can keep that compile path small by moving
 the same callback to a focused compiler module:
@@ -597,10 +626,36 @@ trait MyApp.Trait.Validated,
   runtime_option: :preserved
 ```
 
-Brando's `EnsureUID` and `ValidateVarKeys` traits select this boundary automatically.
-Use their `trait :ensure_uid` and `trait :validate_var_keys` shorthands to also avoid
+Brando's `EnsureUID`, `Permalink`, and `ValidateVarKeys` traits select this boundary automatically.
+Use their `trait :ensure_uid`, `trait :permalink`, and `trait :validate_var_keys` shorthands to also avoid
 a module-body dependency on the runtime trait. Existing full module declarations remain
 supported and require no application or database migration.
+
+### Permalink redirects
+
+Add `trait :permalink` to a blueprint with an `absolute_url` definition to offer
+redirects when editors change an existing entry's key, slug, or URL:
+
+```elixir
+trait :permalink
+absolute_url ~H"/articles/{@entry.slug}"
+```
+
+After a successful admin save, Brando compares the previous and saved URLs and
+shows the proposed permanent (301) redirect. The editor can create it or continue
+without it; either choice completes the selected save action. New entries,
+unchanged URLs, and entries with `has_url: false` do not prompt. Built-in pages
+include this trait.
+
+When the URL changes, any exact permalink redirect on the new URL is removed from
+the saved entry's language before the prompt appears. This also happens when the
+editor chooses **Continue without redirect**, closes the prompt, or renames back
+to a previous URL. Pattern rules that may cover other pages are preserved.
+
+Confirmed redirects are stored in the previous language's SEO settings and match
+the exact old path, so changing `/about` does not redirect `/about/team`. The
+language must already have SEO settings. Redirect creation failures leave the
+saved entry intact and allow retrying or continuing without the redirect.
 
 ## Datasources
 
@@ -911,7 +966,7 @@ Meta trait defaults are trait-driven. You can configure those fields either:
 2. by defining regular form inputs with `ai: [...]` so drawer reuses blueprint opts.
 
 ```elixir
-trait Brando.Trait.Meta,
+trait :meta,
   ai: [
     meta_title: [prompt: "Write SEO title from title", context: [:title]],
     meta_description: [prompt: "Write SEO description from title and blocks", context: [:title, :blocks]]

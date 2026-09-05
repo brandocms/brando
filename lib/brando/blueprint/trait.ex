@@ -14,9 +14,22 @@ defmodule Brando.Blueprint.Trait do
     ]
   end
 
+  defp expand_trait(:blocks, _caller), do: built_in_trait("Blocks")
+
+  defp expand_trait(:blocks_prevent_circular_references, _caller),
+    do: built_in_trait("Blocks.PreventCircularReferences")
+
+  defp expand_trait(:cast_polymorphic_embeds, _caller), do: built_in_trait("CastPolymorphicEmbeds")
   defp expand_trait(:creator, _caller), do: built_in_trait("Creator")
   defp expand_trait(:ensure_uid, _caller), do: built_in_trait("EnsureUID")
+  defp expand_trait(:focal, _caller), do: built_in_trait("Focal")
   defp expand_trait(:meta, _caller), do: built_in_trait("Meta")
+  defp expand_trait(:module_versioned, _caller), do: built_in_trait("ModuleVersioned")
+  defp expand_trait(:password, _caller), do: built_in_trait("Password")
+  defp expand_trait(:permalink, _caller), do: built_in_trait("Permalink")
+  defp expand_trait(:protect_password, _caller), do: built_in_trait("ProtectPassword")
+  defp expand_trait(:protect_role, _caller), do: built_in_trait("ProtectRole")
+  defp expand_trait(:revisioned, _caller), do: built_in_trait("Revisioned")
   defp expand_trait(:scheduled_publishing, _caller), do: built_in_trait("ScheduledPublishing")
   defp expand_trait(:sequenced, _caller), do: sequenced_trait()
   defp expand_trait(:soft_delete, _caller), do: built_in_trait("SoftDelete")
@@ -24,6 +37,8 @@ defmodule Brando.Blueprint.Trait do
   defp expand_trait(:timestamped, _caller), do: built_in_trait("Timestamped")
   defp expand_trait(:translatable, _caller), do: built_in_trait("Translatable")
   defp expand_trait(:validate_var_keys, _caller), do: built_in_trait("ValidateVarKeys")
+  defp expand_trait(:villain, _caller), do: built_in_trait("Villain")
+  defp expand_trait(:watch_language, _caller), do: built_in_trait("WatchLanguage")
   defp expand_trait(name, caller), do: Macro.expand(name, caller)
 
   defp expand_compiler(nil, trait, _caller) do
@@ -74,6 +89,7 @@ defmodule Brando.Blueprint.Trait do
   defp runtime_only_traits,
     do: [
       built_in_trait("EnsureUID"),
+      built_in_trait("Permalink"),
       built_in_trait("ValidateVarKeys")
     ]
 

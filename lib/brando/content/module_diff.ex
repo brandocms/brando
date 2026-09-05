@@ -76,7 +76,7 @@ defmodule Brando.Content.ModuleDiff do
 
   Deliberately typed as `map()` rather than `Module.t()`, and matching on shape
   rather than on `%Module{}`. `Brando.Content.Module` declares
-  `trait Brando.Trait.ModuleVersioned`, which is a compile-time reference, and
+  `trait :module_versioned`, which is a compile-time reference, and
   that trait calls this module — so a struct pattern or typespec here is an
   export dependency straight back to the schema, closing a compile-connected
   cycle across the whole content layer. See issue #2737.

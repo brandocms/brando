@@ -46,12 +46,12 @@ defmodule Brando.Users.User do
     ]
   ]
 
-  trait Brando.Trait.Password
+  trait :password
   trait :soft_delete
   trait :timestamped
-  trait Brando.Trait.ProtectRole
-  trait Brando.Trait.ProtectPassword
-  trait Brando.Trait.WatchLanguage
+  trait :protect_role
+  trait :protect_password
+  trait :watch_language
 
   identifier false
   persist_identifier false

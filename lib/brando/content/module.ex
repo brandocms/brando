@@ -61,10 +61,10 @@ defmodule Brando.Content.Module do
   trait :sequenced
   trait :soft_delete
   trait :timestamped
-  trait Brando.Trait.CastPolymorphicEmbeds
+  trait :cast_polymorphic_embeds
   trait :ensure_uid
   trait :validate_var_keys
-  trait Brando.Trait.ModuleVersioned
+  trait :module_versioned
 
   attributes do
     # Lineage identity. Survives export/import, where name and namespace cannot:

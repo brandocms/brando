@@ -100,6 +100,8 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:status_revisions, :closed)
      |> assign(:processing, false)
      |> assign(:save_redirect_target, :listing)
+     |> assign(:pending_permalink_redirect, nil)
+     |> assign(:permalink_redirect_error, nil)
      |> assign(:live_preview_target, "desktop")
      |> assign(:live_preview_ready?, false)
      |> assign(:live_preview_active?, false)
@@ -1954,6 +1956,51 @@ defmodule BrandoAdmin.Components.Form do
   def render(assigns) do
     ~H"""
     <div>
+      <Content.modal
+        :if={@pending_permalink_redirect}
+        id={"#{@id}-permalink-redirect"}
+        title={gettext("URL changed")}
+        show
+        medium
+        close={JS.push("skip_permalink_redirect", target: @myself)}
+      >
+        <p>{gettext("Your changes have been saved. Create a permanent redirect from the previous URL?")}</p>
+        <div class="field-wrapper">
+          <label for={"#{@id}-permalink-from"}>{gettext("From")}</label>
+          <input
+            id={"#{@id}-permalink-from"}
+            class="text"
+            type="text"
+            readonly
+            value={@pending_permalink_redirect.redirect.from}
+          />
+        </div>
+        <div class="field-wrapper">
+          <label for={"#{@id}-permalink-to"}>{gettext("To")}</label>
+          <input
+            id={"#{@id}-permalink-to"}
+            class="text"
+            type="text"
+            readonly
+            value={@pending_permalink_redirect.redirect.to}
+          />
+        </div>
+        <p>{gettext("Permanent redirect (301)")}</p>
+        <p :if={@permalink_redirect_error} role="alert">{@permalink_redirect_error}</p>
+        <:footer>
+          <button type="button" class="secondary" phx-click={JS.push("skip_permalink_redirect", target: @myself)}>
+            {gettext("Continue without redirect")}
+          </button>
+          <button
+            type="button"
+            class="primary"
+            phx-click={JS.push("create_permalink_redirect", target: @myself)}
+            phx-disable-with={gettext("Creating redirect...")}
+          >
+            {gettext("Create redirect")}
+          </button>
+        </:footer>
+      </Content.modal>
       <.entry_loader :if={!@blocks_ready?} id={"#{@id}-loader"} status={@entry_load_status} />
       <div
         id={"#{@id}-el"}
@@ -2571,6 +2618,40 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, assign(socket, :focused_field, nil)}
   end
 
+  def handle_event("create_permalink_redirect", _, %{assigns: %{pending_permalink_redirect: nil}} = socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("create_permalink_redirect", _, socket) do
+    %{redirect: redirect} = socket.assigns.pending_permalink_redirect
+
+    case Brando.Sites.Redirects.create_permalink_redirect(redirect, socket.assigns.current_user) do
+      {:ok, _seo} ->
+        send(self(), {:toast, gettext("Redirect created")})
+        {:noreply, finish_permalink_redirect(socket)}
+
+      {:error, _reason} ->
+        {:noreply,
+         assign(
+           socket,
+           :permalink_redirect_error,
+           gettext("The entry was saved, but the redirect could not be created. Please try again or continue without it.")
+         )}
+    end
+  end
+
+  def handle_event("skip_permalink_redirect", _, %{assigns: %{pending_permalink_redirect: nil}} = socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("skip_permalink_redirect", _, socket) do
+    {:noreply, finish_permalink_redirect(socket)}
+  end
+
+  def handle_event("save", _, %{assigns: %{pending_permalink_redirect: pending}} = socket) when not is_nil(pending) do
+    {:noreply, socket}
+  end
+
   def handle_event("save", _params, %{assigns: %{editing_image?: true}} = socket) do
     {:noreply,
      push_event(socket, "b:alert", %{
@@ -2682,52 +2763,55 @@ defmodule BrandoAdmin.Components.Form do
 
         send(self(), {:toast, mutation_message})
 
-        maybe_redirected_socket =
-          case save_redirect_target do
-            :self ->
-              update_url = schema.__admin_route__(:update, [entry.id])
+        {:noreply,
+         maybe_offer_permalink_redirect(socket, entry_or_default, entry, fn socket ->
+           maybe_redirected_socket =
+             case save_redirect_target do
+               :self ->
+                 update_url = schema.__admin_route__(:update, [entry.id])
 
-              if mutation_type == :create do
-                socket
-                |> assign(:processing, false)
-                |> assign(:all_blocks_received?, false)
-                |> reset_transformer_changesets()
-                |> assign(:entry_id, entry.id)
-                |> assign_refreshed_entry()
-                |> assign_refreshed_form()
-                |> clear_blocks_root_changesets()
-                |> assign_block_map()
-                |> assign_entry_for_blocks()
-                |> reload_all_blocks()
-                |> push_patch(to: update_url)
-              else
-                if schema.has_trait(Brando.Trait.Revisioned) do
-                  id = "#{socket.assigns.id}-revisions-drawer"
-                  send_update(RevisionsDrawer, id: id, action: :refresh_revisions)
-                end
+                 if mutation_type == :create do
+                   socket
+                   |> assign(:processing, false)
+                   |> assign(:all_blocks_received?, false)
+                   |> reset_transformer_changesets()
+                   |> assign(:entry_id, entry.id)
+                   |> assign_refreshed_entry()
+                   |> assign_refreshed_form()
+                   |> clear_blocks_root_changesets()
+                   |> assign_block_map()
+                   |> assign_entry_for_blocks()
+                   |> reload_all_blocks()
+                   |> push_patch(to: update_url)
+                 else
+                   if schema.has_trait(Brando.Trait.Revisioned) do
+                     id = "#{socket.assigns.id}-revisions-drawer"
+                     send_update(RevisionsDrawer, id: id, action: :refresh_revisions)
+                   end
 
-                # update entry!
-                socket
-                |> assign(:processing, false)
-                |> assign(:all_blocks_received?, false)
-                |> reset_transformer_changesets()
-                |> assign(:entry_id, entry.id)
-                |> assign_refreshed_entry()
-                |> assign_refreshed_form()
-                |> clear_blocks_root_changesets()
-                |> assign_block_map()
-                |> assign_entry_for_blocks()
-                |> reload_all_blocks()
-              end
+                   # update entry!
+                   socket
+                   |> assign(:processing, false)
+                   |> assign(:all_blocks_received?, false)
+                   |> reset_transformer_changesets()
+                   |> assign(:entry_id, entry.id)
+                   |> assign_refreshed_entry()
+                   |> assign_refreshed_form()
+                   |> clear_blocks_root_changesets()
+                   |> assign_block_map()
+                   |> assign_entry_for_blocks()
+                   |> reload_all_blocks()
+                 end
 
-            :listing ->
-              push_navigate(socket, to: Callback.call(redirect_fn, [socket, entry, mutation_type]))
+               :listing ->
+                 push_navigate(socket, to: Callback.call(redirect_fn, [socket, entry, mutation_type]))
 
-            :new ->
-              push_navigate(socket, to: redirect_new_fn.(socket, entry, mutation_type))
-          end
+               :new ->
+                 push_navigate(socket, to: redirect_new_fn.(socket, entry, mutation_type))
+             end
 
-        {:noreply, assign(maybe_redirected_socket, :save_redirect_target, :listing)}
+           assign(maybe_redirected_socket, :save_redirect_target, :listing)
+         end)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         require Logger
@@ -2817,43 +2901,45 @@ defmodule BrandoAdmin.Components.Form do
         maybe_run_form_after_save(form_blueprint, entry, current_user)
         send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
 
-        maybe_redirected_socket =
-          case save_redirect_target do
-            :self ->
-              if mutation_type == :create do
-                generated_route = schema.__admin_route__(:update, [entry.id])
-
-                push_navigate(socket, to: generated_route)
-              else
-                if schema.has_trait(Brando.Trait.Revisioned) do
-                  id = "#{socket.assigns.id}-revisions-drawer"
-                  send_update(RevisionsDrawer, id: id, action: :refresh_revisions)
-                end
-
-                # update entry!
-                socket
-                |> assign(:entry_id, entry.id)
-                |> assign_refreshed_entry()
-                |> assign_refreshed_form()
-              end
-
-            :listing ->
-              push_navigate(socket, to: Callback.call(redirect_fn, [socket, entry, mutation_type]))
-
-            :new ->
-              push_navigate(socket, to: redirect_new_fn.(socket, entry, mutation_type))
-          end
-
-        # `:processing` is cleared here rather than per-branch: `:listing` and
-        # `:new` navigate away, so only `:self` ever renders the button again —
-        # and it was the one branch that forgot. The button is `disabled` while
-        # the flag is set, so a stuck flag does not just look wrong, it locks
-        # the form until the page is reloaded. Its sibling clause above sets
-        # the flag in each `:self` sub-branch; one place is harder to forget.
         {:noreply,
-         maybe_redirected_socket
-         |> assign(:save_redirect_target, :listing)
-         |> assign(:processing, false)}
+         maybe_offer_permalink_redirect(socket, entry_or_default, entry, fn socket ->
+           maybe_redirected_socket =
+             case save_redirect_target do
+               :self ->
+                 if mutation_type == :create do
+                   generated_route = schema.__admin_route__(:update, [entry.id])
+
+                   push_navigate(socket, to: generated_route)
+                 else
+                   if schema.has_trait(Brando.Trait.Revisioned) do
+                     id = "#{socket.assigns.id}-revisions-drawer"
+                     send_update(RevisionsDrawer, id: id, action: :refresh_revisions)
+                   end
+
+                   # update entry!
+                   socket
+                   |> assign(:entry_id, entry.id)
+                   |> assign_refreshed_entry()
+                   |> assign_refreshed_form()
+                 end
+
+               :listing ->
+                 push_navigate(socket, to: Callback.call(redirect_fn, [socket, entry, mutation_type]))
+
+               :new ->
+                 push_navigate(socket, to: redirect_new_fn.(socket, entry, mutation_type))
+             end
+
+           # `:processing` is cleared here rather than per-branch: `:listing` and
+           # `:new` navigate away, so only `:self` ever renders the button again —
+           # and it was the one branch that forgot. The button is `disabled` while
+           # the flag is set, so a stuck flag does not just look wrong, it locks
+           # the form until the page is reloaded. Its sibling clause above sets
+           # the flag in each `:self` sub-branch; one place is harder to forget.
+           maybe_redirected_socket
+           |> assign(:save_redirect_target, :listing)
+           |> assign(:processing, false)
+         end)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         require Logger
@@ -3947,6 +4033,41 @@ defmodule BrandoAdmin.Components.Form do
     end)
 
     socket
+  end
+
+  defp maybe_offer_permalink_redirect(socket, previous, saved, continue) do
+    case Brando.Trait.Permalink.redirect_for(previous, saved, Brando.config(:default_language)) do
+      nil ->
+        continue.(socket)
+
+      redirect ->
+        language = to_string(Map.get(saved, :language) || Brando.config(:default_language))
+
+        error =
+          case Brando.Sites.Redirects.delete_permalink_redirect(redirect.to, language, socket.assigns.current_user) do
+            {:ok, _} ->
+              nil
+
+            {:error, _} ->
+              gettext(
+                "The entry was saved, but an existing redirect on its new URL could not be removed. Please check the SEO redirect settings."
+              )
+          end
+
+        socket
+        |> assign(:processing, false)
+        |> assign(:pending_permalink_redirect, %{redirect: redirect, continue: continue})
+        |> assign(:permalink_redirect_error, error)
+    end
+  end
+
+  defp finish_permalink_redirect(socket) do
+    %{continue: continue} = socket.assigns.pending_permalink_redirect
+
+    socket
+    |> assign(:pending_permalink_redirect, nil)
+    |> assign(:permalink_redirect_error, nil)
+    |> continue.()
   end
 
   defp maybe_run_form_after_save(%{after_save: nil}, _, _), do: nil

@@ -43,7 +43,7 @@ defmodule Brando.Content.Block do
 
   # ++ Traits
   trait :creator
-  trait Brando.Trait.Revisioned
+  trait :revisioned
   trait :sequenced
   trait :timestamped
   # --

@@ -19,7 +19,7 @@ defmodule Brando.Images.Image do
   trait :creator
   trait :timestamped
   trait :soft_delete
-  trait Brando.Trait.Focal
+  trait :focal
 
   identifier false
   persist_identifier false

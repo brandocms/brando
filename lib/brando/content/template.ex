@@ -23,7 +23,7 @@ defmodule Brando.Content.Template do
   trait :sequenced
   trait :soft_delete
   trait :timestamped
-  trait Brando.Trait.Blocks
+  trait :blocks
 
   attributes do
     attribute :name, :string, required: true

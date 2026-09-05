@@ -17,7 +17,7 @@ defmodule Brando.Sites.GlobalSet do
   import Brando.Blueprint.Listings.Components.Core
 
   trait :creator
-  trait Brando.Trait.CastPolymorphicEmbeds
+  trait :cast_polymorphic_embeds
   trait :timestamped
   trait :translatable, alternates: false
 

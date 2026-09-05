@@ -80,8 +80,23 @@ defmodule Brando.Blueprint.TraitCompilerTest do
   end
 
   test "built-in runtime-only traits retain their runtime registration" do
-    assert Brando.Content.Ref.has_trait(Brando.Trait.EnsureUID)
-    assert Brando.Content.Module.has_trait(Brando.Trait.ValidateVarKeys)
+    for {schema, trait} <- [
+          {Brando.Content.Ref, Brando.Trait.EnsureUID},
+          {Brando.Content.Module, Brando.Trait.ValidateVarKeys},
+          {Brando.Content.Module, Brando.Trait.ModuleVersioned},
+          {Brando.Pages.Page, Brando.Trait.CastPolymorphicEmbeds},
+          {Brando.Pages.Page, Brando.Trait.Revisioned},
+          {Brando.Pages.Page, Brando.Trait.Blocks},
+          {Brando.Pages.Fragment, Brando.Trait.Blocks.PreventCircularReferences},
+          {Brando.Images.Image, Brando.Trait.Focal},
+          {Brando.Users.User, Brando.Trait.Password},
+          {Brando.Users.User, Brando.Trait.ProtectPassword},
+          {Brando.Users.User, Brando.Trait.ProtectRole},
+          {Brando.Users.User, Brando.Trait.WatchLanguage}
+        ] do
+      assert schema.has_trait(trait), "expected #{inspect(schema)} to register #{inspect(trait)}"
+      assert schema.__trait__(trait) == []
+    end
   end
 
   test "the Sequenced compiler preserves its generated Blueprint attribute" do
