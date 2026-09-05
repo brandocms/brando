@@ -675,3 +675,25 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+.draft-recovery {
+  margin-bottom: 24px;
+  font-size: 14px;
+  .draft-recovery-status { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 12px; }
+  .draft-offline-status { display: none; }
+  .draft-recovery-notice, .draft-recovery-panel { margin-top: 16px; padding: 24px; border: 1px solid #c8ccc9; background: #f6f8f5; border-radius: 6px; }
+  h2 { font-size: 22px; margin-bottom: 12px; }
+  h3 { font-size: 16px; margin: 20px 0 8px; }
+  p { margin-bottom: 12px; }
+  .draft-actions, .draft-copy-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+  .draft-copy-list { margin-bottom: 20px; }
+  .draft-payload { max-height: 280px; overflow: auto; padding: 16px; background: white; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+  details { margin: 12px 0; }
+  summary { cursor: pointer; text-decoration: underline; }
+  .draft-error, .draft-block-issue { padding: 16px; border-left: 3px solid #a15026; background: #fff4e8; margin-top: 16px; }
+  .draft-export { text-decoration: underline; }
+  .draft-comparison { width: 100%; margin: 16px 0; table-layout: fixed; border-collapse: collapse; }
+  .draft-comparison th, .draft-comparison td { text-align: left; padding: 8px; border-bottom: 1px solid #d9ddd7; overflow-wrap: anywhere; }
+}
+.draft-offline .draft-online-status { display: none; }
+.draft-offline .draft-offline-status { display: inline; }

@@ -1,5 +1,6 @@
 import { Dom, Events, gsap } from '@brandocms/jupiter'
 import tippy from 'tippy.js'
+import draftRecovery from './draftRecovery'
 import {
   setBlockLock,
   clearBlockLock,
@@ -13,6 +14,7 @@ export default (app) => ({
     this.$form = this.el.querySelector('form.main-form')
     this.$input = this.$form.querySelector('input')
     this.submitListenerEvent = this.submitListener.bind(this)
+    this.draftRecovery = draftRecovery(this)
 
     if (!this.skipKeydown) {
       window.addEventListener('keydown', this.submitListenerEvent, false)
@@ -127,10 +129,14 @@ export default (app) => ({
   },
 
   destroyed() {
+    this.draftRecovery?.destroy()
     if (!this.skipKeydown) {
       window.removeEventListener('keydown', this.submitListenerEvent, false)
     }
   },
+
+  disconnected() { this.draftRecovery?.disconnected() },
+  reconnected() { this.draftRecovery?.reconnected() },
 
   submitListener(ev) {
     if (ev.metaKey && ev.shiftKey && ev.key.toLowerCase() === 's') {

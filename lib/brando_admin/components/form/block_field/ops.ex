@@ -625,6 +625,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
         converted -> Map.put(acc, to_string(field), converted)
       end
     end)
+    |> Brando.Drafts.Params.preserve_invalid(changeset)
   end
 
   @doc """
@@ -645,9 +646,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   """
   @spec snapshot_params(Changeset.t()) :: params()
   def snapshot_params(%Changeset{} = changeset) do
-    changeset
-    |> Changeset.apply_changes()
-    |> struct_to_params()
+    params = changeset |> Changeset.apply_changes() |> struct_to_params()
+    Brando.Drafts.Params.preserve_invalid_tree(params, changeset)
   end
 
   # Schema fields (embeds included) + the owned assoc trees. Media belongs_to
