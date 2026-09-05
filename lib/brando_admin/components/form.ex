@@ -41,6 +41,8 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.FilePicker
   alias BrandoAdmin.Components.Form.AlternatesDrawer
   alias BrandoAdmin.Components.Form.BlockField
+  alias BrandoAdmin.Components.Form.Drafts
+  alias BrandoAdmin.Components.Form.DraftRecovery
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.FileDrawer
   alias BrandoAdmin.Components.Form.ImageDrawer
@@ -89,6 +91,8 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:blocks_ready?, true)
      |> assign(:entry_load_status, nil)
      |> assign(:dirty_fields, [])
+     |> assign(:draft, nil)
+     |> assign(:draft_save_checked?, false)
      |> assign(:editing_image?, false)
      |> assign(:editing_file?, false)
      |> assign(:editing_video?, false)
@@ -121,6 +125,13 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # Ship field changes — triggered by child components (e.g. multi-select on close)
+  def update(%{event: "draft_dirty"}, socket), do: {:ok, Drafts.dirty(socket)}
+
+  def update(%{event: "draft_part", capture_id: id, kind: kind, field: field, data: data}, socket),
+    do: {:ok, Drafts.part(socket, id, kind, field, data)}
+
+  def update(%{event: "draft_timeout", capture_id: id}, socket), do: {:ok, Drafts.timeout(socket, id)}
+
   def update(%{event: "ship_field_changes"}, socket) do
     {:ok, ship_all_field_changes(socket)}
   end
@@ -1035,6 +1046,7 @@ defmodule BrandoAdmin.Components.Form do
     |> maybe_assign_uploads()
     |> maybe_assign_block_map()
     |> maybe_assign_entry_for_blocks()
+    |> Drafts.init()
     |> assign(:initial_update, false)
   end
 
@@ -2008,6 +2020,9 @@ defmodule BrandoAdmin.Components.Form do
         phx-hook="Brando.Form"
         data-deliver-topic={@deliver_topic}
         data-entry-id={@entry_id}
+        data-draft-enabled={@draft && "true"}
+        data-draft-form-id={@id}
+        data-draft-leave-message={gettext("Your latest edits have not reached recovery storage. Leave this editor anyway?")}
       >
         <div class="form-content">
           <div :if={@header} class="form-header">
@@ -2019,6 +2034,8 @@ defmodule BrandoAdmin.Components.Form do
           <div :if={@instructions} class="form-instructions">
             {render_slot(@instructions)}
           </div>
+
+          <DraftRecovery.render state={@draft} target={@myself} entry_id={@entry_id} />
 
           <div class="form-tabs">
             <div class="form-tab-customs">
@@ -2437,6 +2454,72 @@ defmodule BrandoAdmin.Components.Form do
     socket_with_video_uploads
   end
 
+  def handle_event("draft_capture", params, socket), do: {:noreply, Drafts.capture(socket, params)}
+
+  def handle_event("draft_open", _, socket) do
+    draft = socket.assigns.draft
+
+    case List.first(draft.candidates) do
+      nil -> {:noreply, socket}
+      copy -> {:noreply, Drafts.review(socket, copy.id)}
+    end
+  end
+
+  def handle_event("draft_review", %{"id" => id}, socket), do: {:noreply, Drafts.review(socket, id)}
+  def handle_event("draft_dismiss", _, socket), do: {:noreply, Drafts.dismiss(socket)}
+  def handle_event("draft_discard", %{"id" => id}, socket), do: {:noreply, Drafts.discard(socket, id)}
+
+  def handle_event("draft_clean", _, socket) do
+    socket = Drafts.dismiss(socket)
+    schema = socket.assigns.schema
+
+    url =
+      if socket.assigns.entry.id,
+        do: schema.__admin_route__(:update, [socket.assigns.entry.id]),
+        else: schema.__admin_route__(:create, [])
+
+    {:noreply, push_navigate(socket, to: url)}
+  end
+
+  def handle_event(event, %{"id" => id}, socket) when event in ["draft_restore", "draft_restore_compatible"] do
+    opts = if event == "draft_restore_compatible", do: [accept_conflict: true, compatible_only: true], else: []
+
+    case Drafts.prepare_restore(socket, id, opts) do
+      {:error, socket} ->
+        {:noreply, socket}
+
+      {:ok, socket, changeset} ->
+        form = to_form(changeset)
+
+        for field <- socket.assigns.form_blueprint.blocks do
+          send_update(BlockField,
+            id: "#{socket.assigns.id}-blocks-#{field.name}",
+            event: "restore_draft",
+            entry_blocks: Map.get(changeset.data, :"entry_#{field.name}") || [],
+            changesets: get_assoc(changeset, :"entry_#{field.name}")
+          )
+        end
+
+        for {name, _, _} <- socket.assigns.form_blueprint.transformers do
+          send_update(BrandoAdmin.Components.Form.Transformer,
+            id: "#{form.id}-transformer-#{name}",
+            event: "restore_draft",
+            field: form[name]
+          )
+        end
+
+        draft = %{socket.assigns.draft | open?: socket.assigns.draft.issues != [], status: :ready}
+
+        {:noreply,
+         socket
+         |> assign(:draft, draft)
+         |> assign(:form, form)
+         |> assign_entry_for_blocks()
+         |> force_svelte_remounts()
+         |> Drafts.dirty()}
+    end
+  end
+
   def handle_event("validate", params, socket) do
     # This is also the recovery event for the main form, and it is what
     # rebuilds the entry from the recovered params — see
@@ -2475,7 +2558,7 @@ defmodule BrandoAdmin.Components.Form do
     # entry field (`view.ts:2450`, `channel.ex:848-853`). Assigning inside the
     # `[^singular | rest]` branch meant every recovered value was recomputed and
     # then dropped, so a reconnect silently restored nothing.
-    socket = assign(socket, :form, to_form(changeset, []))
+    socket = socket |> assign(:form, to_form(changeset, [])) |> Drafts.dirty()
 
     case Map.get(params, "_target") do
       [^singular | rest] ->
@@ -2648,6 +2731,19 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, finish_permalink_redirect(socket)}
   end
 
+  def handle_event("save", params, %{assigns: %{draft_save_checked?: false}} = socket) do
+    socket = Drafts.before_save(socket)
+
+    case Drafts.check_save(socket) do
+      {:error, socket} ->
+        {:noreply, socket}
+
+      :ok ->
+        {:noreply, result} = handle_event("save", params, assign(socket, :draft_save_checked?, true))
+        {:noreply, result |> assign(:draft_save_checked?, false) |> Drafts.save_result()}
+    end
+  end
+
   def handle_event("save", _, %{assigns: %{pending_permalink_redirect: pending}} = socket) when not is_nil(pending) do
     {:noreply, socket}
   end
@@ -2764,7 +2860,7 @@ defmodule BrandoAdmin.Components.Form do
         send(self(), {:toast, mutation_message})
 
         {:noreply,
-         maybe_offer_permalink_redirect(socket, entry_or_default, entry, fn socket ->
+         maybe_offer_permalink_redirect(Drafts.saved(socket, entry), entry_or_default, entry, fn socket ->
            maybe_redirected_socket =
              case save_redirect_target do
                :self ->
@@ -2902,7 +2998,7 @@ defmodule BrandoAdmin.Components.Form do
         send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
 
         {:noreply,
-         maybe_offer_permalink_redirect(socket, entry_or_default, entry, fn socket ->
+         maybe_offer_permalink_redirect(Drafts.saved(socket, entry), entry_or_default, entry, fn socket ->
            maybe_redirected_socket =
              case save_redirect_target do
                :self ->
@@ -3100,15 +3196,24 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:image_editor_config_target, config_target)}
   end
 
-  def handle_event("reset_video_field", _, socket) do
-    edit_video = socket.assigns.edit_video
+  def handle_event(
+        "reset_video_field",
+        _,
+        %{assigns: %{form: form, edit_video: edit_video, entry: entry, singular: singular}} = socket
+      ) do
+    relation_key = relation_field_key(edit_video.relation_field, edit_video.field)
+    full_path = edit_video.path ++ [relation_key]
+    changeset = EctoNestedChangeset.update_at(form.source, full_path, fn _ -> nil end)
 
     {:noreply,
      socket
+     |> assign(:entry, Map.put(entry, edit_video.field, nil))
      |> assign(:video_changeset, nil)
      |> assign(:editing_video?, false)
      |> assign(:edit_video, %{edit_video | video: nil})
-     |> assign_drawer_recovery_state()}
+     |> assign(:form, to_form(changeset, []))
+     |> assign_drawer_recovery_state()
+     |> push_event("b:validate", %{target: "#{singular}[#{relation_key}]", value: ""})}
   end
 
   def handle_event("reset_video_thumbnail", _, socket) do

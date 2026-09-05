@@ -47,6 +47,7 @@ defmodule E2eProjectWeb.Router do
     scope "/e2e" do
       post "/setup_fixtures/:name", E2EFixtureController, :setup
       post "/login/:email", E2EFixtureController, :login
+      post "/drafts/:action", E2EFixtureController, :drafts
     end
   end
 

@@ -19,7 +19,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.Subform
 
-  import Ecto.Changeset, only: [change: 2, get_field: 2]
+  import Ecto.Changeset, only: [change: 2]
 
   use Gettext, backend: Brando.Gettext
 
@@ -38,6 +38,33 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   end
 
   # --- Update handlers ---
+
+  def update(%{event: "capture_draft", capture_id: id, reply_to: target}, socket) do
+    data =
+      socket.assigns.items
+      |> Enum.reject(& &1.pending)
+      |> Enum.with_index()
+      |> Enum.map(fn {item, idx} ->
+        item.source
+        |> Brando.Drafts.Params.snapshot()
+        |> Map.merge(Brando.Drafts.Params.snapshot(item.changes))
+        |> Map.put("sequence", idx)
+      end)
+
+    send_update(target,
+      event: "draft_part",
+      capture_id: id,
+      kind: :transformer,
+      field: socket.assigns.relation_key,
+      data: data
+    )
+
+    {:ok, socket}
+  end
+
+  def update(%{event: "restore_draft", field: field}, socket) do
+    socket |> assign(:field, field) |> initialize()
+  end
 
   def update(%{event: "fetch_transformer_data", tag: tag}, socket) do
     items = socket.assigns.items
@@ -183,12 +210,9 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     {video_field, video_cfg} = resolve_asset_field(relation_module, asset_fields, :video)
 
     # Get existing items from the changeset
-    existing = get_field(field.form.source, subform.name) || []
+    existing = Ecto.Changeset.get_assoc(field.form.source, subform.name) || []
 
-    items =
-      Enum.map(existing, fn struct ->
-        new_item("transformer-item-#{struct.id}", struct, is_new: false)
-      end)
+    items = Enum.map(existing, &recovery_item(&1, asset_fields))
 
     stream_entries = Enum.map(items, &stream_entry/1)
 
@@ -229,7 +253,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
      # and every handler that looks an entry up by the dom_id the markup sent
      # back — toggle, remove, field edits, reorder — silently matches nothing.
      |> stream_configure(:transformer_items, dom_id: & &1.id)
-     |> stream(:transformer_items, stream_entries)}
+     |> stream(:transformer_items, stream_entries, reset: true)}
   end
 
   # Mirrors Brando.Uploads' resolution so the browser can reject an oversized
@@ -1031,6 +1055,37 @@ defmodule BrandoAdmin.Components.Form.Transformer do
       pending: Keyword.get(opts, :pending),
       assets: Keyword.get(opts, :assets, %{})
     }
+  end
+
+  @doc false
+  def recovery_item(cs, asset_fields) do
+    entry = Ecto.Changeset.apply_changes(cs)
+
+    source =
+      if is_nil(entry.id),
+        do:
+          entry
+          |> Map.from_struct()
+          |> Map.delete(:__meta__)
+          |> Map.reject(fn {_, v} -> match?(%Ecto.Association.NotLoaded{}, v) end),
+        else: entry
+
+    # Restored FKs may differ from the saved row's preloaded assets. Resolve
+    # those for display without putting asset structs into the save params.
+    assets =
+      Map.new(asset_fields, fn field ->
+        assoc = entry.__struct__.__schema__(:association, field)
+        id = Map.get(entry, assoc.owner_key)
+        asset = Map.get(entry, field)
+        resolved = if id && match?(%{id: ^id}, asset), do: asset, else: id && Brando.Repo.get(assoc.related, id)
+        {field, resolved}
+      end)
+
+    invalid = Map.new(cs.errors, fn {key, _} -> {key, cs.params && cs.params[to_string(key)]} end)
+
+    new_item("transformer-item-#{entry.id || Ecto.UUID.generate()}", source, is_new: is_nil(entry.id))
+    |> Map.put(:changes, invalid)
+    |> Map.put(:assets, assets)
   end
 
   defp new_item_dom_id, do: "transformer-item-new-#{System.unique_integer([:positive])}"

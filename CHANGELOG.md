@@ -302,6 +302,14 @@
 
 #### Features
 
+- **Automatic entry recovery copies** (#2694). Blueprint forms keep user-owned
+  recovery copies of unsaved fields, blocks, and completed transformer rows.
+  Editors can compare, restore, download, or dismiss a copy. Changed modules
+  require review before incompatible blocks are applied; failed attempts leave
+  the original available and offer a clean editor without a restore loop.
+  Explicit saves resolve the matching copy. Requires migration 168. See
+  [the walkthrough and screenshots](docs/entry-drafts/README.md).
+
 - `trait :permalink` offers to create an exact 301 redirect after an editor changes
   an existing entry's URL. Built-in pages enable it; confirmation stores the rule
   in the previous language's SEO settings and continues the selected save action.

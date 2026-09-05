@@ -33,6 +33,61 @@ defmodule E2EFixtureController do
     Brando.Users.get_user!(%{matches: %{email: "admin@brandocms.com"}})
   end
 
+  # Only routed in the sandbox application. Browser tests use the real editor
+  # for capture/restore; this injects failures that an editor cannot create.
+  def drafts(conn, %{"action" => "media-state", "schema" => type, "entry_id" => id}) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+
+    schema =
+      case type do
+        "project" -> E2eProject.Projects.Project
+        "page" -> Brando.Pages.Page
+      end
+
+    entry_id = if id == "new", do: nil, else: String.to_integer(id)
+
+    entry =
+      if entry_id do
+        {:ok, entry} = Brando.Blueprint.EntryQuery.get(schema, entry_id)
+        Brando.Drafts.Params.snapshot(entry)
+      end
+
+    drafts = schema |> Brando.Drafts.identity(entry_id, get_admin_user().id) |> Brando.Drafts.list()
+
+    counts =
+      Map.new(
+        [
+          images: Brando.Images.Image,
+          files: Brando.Files.File,
+          videos: Brando.Videos.Video,
+          galleries: Brando.Galleries.Gallery
+        ],
+        fn {key, schema} -> {key, Brando.Repo.aggregate(schema, :count)} end
+      )
+
+    json(conn, %{entry: entry, drafts: Enum.map(drafts, & &1.payload), counts: counts})
+  end
+
+  def drafts(conn, %{"action" => action}) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    user = get_admin_user()
+    identity = Brando.Drafts.identity(Brando.Pages.Page, nil, user.id)
+    [draft | _] = Brando.Drafts.list(identity)
+
+    case action do
+      "unsupported" ->
+        draft |> Ecto.Changeset.change(format_version: 999) |> Brando.Repo.update!()
+
+      "change-module" ->
+        [row | _] = draft.payload["blocks"]["blocks"]
+        {:ok, _} = Brando.Content.update_module(row["block"]["module_id"], %{refs: [], vars: []}, user)
+    end
+
+    json(conn, %{ok: true})
+  end
+
   def login_user(conn, user) do
     token = Brando.Users.generate_user_session_token(user)
 

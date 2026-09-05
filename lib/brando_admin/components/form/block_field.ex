@@ -73,6 +73,48 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, assign(socket, :outline_items, [])}
   end
 
+  def update(%{event: "restore_draft", changesets: changesets, entry_blocks: originals}, socket) do
+    # Seed from the saved entry, then replay a complete replacement through the
+    # reducer. This retains owned IDs and deletion tombstones for the next save.
+    ops = Ops.from_entry_blocks(originals)
+
+    forms =
+      Enum.map(changesets, fn cs ->
+        uid = cs |> Changeset.get_assoc(:block) |> Changeset.get_field(:uid)
+        {uid, to_form(cs, as: "entry_block", id: "entry_block_form-#{uid}")}
+      end)
+
+    wanted = Enum.map(forms, &elem(&1, 0))
+
+    ops =
+      Enum.reduce(ops.order -- wanted, ops, fn uid, acc ->
+        {:ok, next} = Ops.apply_op(acc, {:delete, uid})
+        next
+      end)
+
+    ops =
+      Enum.reduce(forms, ops, fn {uid, form}, acc ->
+        params = Brando.Drafts.Params.snapshot(form.source)
+        op = if Ops.known?(acc, uid), do: {:update, uid, params}, else: {:insert, uid, :end, params}
+        {:ok, next} = Ops.apply_op(acc, op)
+        next
+      end)
+
+    {:ok, ops} = Ops.apply_op(ops, {:reorder, wanted})
+
+    for {uid, form} <- forms, uid in socket.assigns.root_order do
+      send_update(Block, id: "block-#{uid}", event: "replace_form", form: form)
+    end
+
+    {:ok,
+     socket
+     |> assign(:entry_blocks, originals)
+     |> assign(:seed_forms, Map.new(forms))
+     |> assign_ops(ops)
+     |> assign(:blocks_changed?, true)
+     |> assign(:block_bin, [])}
+  end
+
   # duplicate block (that is an entry block)
   # this is received when the block is done gathering all its children changesets
   def update(%{event: "duplicate_block", uid: uid, changeset: changeset, populated: true}, socket) do
@@ -409,6 +451,27 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> apply_block_op({:insert, uid, sequence, Ops.block_diff_params(entry_block_cs)})
     |> refresh_live_preview()
     |> then(&{:ok, &1})
+  end
+
+  def update(%{event: "capture_draft", capture_id: id, reply_to: target, forms: forms}, socket) do
+    alias Brando.Drafts.Params
+
+    roots =
+      Enum.map(socket.assigns.block_ops.order, fn uid ->
+        {:ok, params} = Ops.materialize_root(socket.assigns.block_ops, uid)
+        base = materialize_base_struct(socket, uid)
+        module = socket.assigns.block_module
+        full = module.changeset(base, params, socket.assigns.current_user.id, true) |> Params.snapshot()
+        full = Map.update!(full, "block", &Params.overlay_block(&1, forms))
+        module.changeset(base, full, socket.assigns.current_user.id, true) |> Params.snapshot()
+      end)
+
+    send_update(target, event: "draft_part", capture_id: id, kind: :block, field: socket.assigns.block_field, data: roots)
+    {:ok, socket}
+  rescue
+    _ ->
+      send_update(target, event: "draft_timeout", capture_id: id)
+      {:ok, socket}
   end
 
   # Save, live preview and share all read the op store — the store is
@@ -786,6 +849,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp apply_block_op(socket, op) do
     case Ops.apply_op(socket.assigns.block_ops, op) do
       {:ok, ops_state} ->
+        send_update(BrandoAdmin.Components.Form, id: socket.assigns.form_id, event: "draft_dirty")
+
         socket
         |> assign_ops(ops_state)
         |> assign(:blocks_changed?, true)

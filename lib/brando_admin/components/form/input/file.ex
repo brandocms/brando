@@ -50,8 +50,10 @@ defmodule BrandoAdmin.Components.Form.Input.File do
     file_from_changeset = get_field(changeset, assigns.field.field)
 
     file_id =
-      changeset
-      |> get_field(relation_field_atom)
+      case {fetch_change(changeset, relation_field_atom), fetch_change(changeset, assigns.field.field)} do
+        {:error, {:ok, _}} -> file_from_changeset && file_from_changeset.id
+        _ -> get_field(changeset, relation_field_atom)
+      end
       |> try_force_int()
 
     file = resolve_file(file_from_changeset, file_id)
@@ -92,14 +94,11 @@ defmodule BrandoAdmin.Components.Form.Input.File do
      |> assign(:editable, Keyword.get(assigns.opts, :editable, true))}
   end
 
-  defp resolve_file(%Brando.Files.File{} = file, _file_id), do: file
-  defp resolve_file(%Ecto.Changeset{} = changeset, _file_id), do: apply_changes(changeset)
-
-  defp resolve_file(%Ecto.Association.NotLoaded{}, file_id), do: fetch_file(file_id)
-  defp resolve_file(nil, file_id), do: fetch_file(file_id)
-  defp resolve_file(file, _file_id), do: file
-
-  defp fetch_file(nil), do: nil
+  # The FK can change independently of the preloaded association on recovery.
+  defp resolve_file(_file, nil), do: nil
+  defp resolve_file(%Brando.Files.File{id: id} = file, id), do: file
+  defp resolve_file(%Ecto.Changeset{} = changeset, file_id), do: resolve_file(apply_changes(changeset), file_id)
+  defp resolve_file(_file, file_id), do: fetch_file(file_id)
 
   defp fetch_file(file_id) do
     case Brando.Files.get_file(file_id) do

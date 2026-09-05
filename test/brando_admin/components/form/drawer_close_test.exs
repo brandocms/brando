@@ -151,8 +151,23 @@ defmodule BrandoAdmin.Components.Form.DrawerCloseTest do
       assert socket.assigns.editing_drawer_type == nil
     end
 
-    # `reset_file_field` received the identical fix; Page has no file asset to
-    # drive it through here, and `reset_video_field` already did it correctly.
+    test "reset_video_field clears the entry FK as well as the drawer", ctx do
+      video = Factory.insert(:video)
+      entry = %Brando.Content.Ref{video_id: video.id, video: video}
+
+      socket =
+        form_socket(%{ctx | page: entry}, %{
+          editing_video?: true,
+          edit_video: %{id: video.id, path: [], field: :video, relation_field: :video_id, video: video}
+        })
+
+      assert {:noreply, socket} = Form.handle_event("reset_video_field", %{}, socket)
+      refute socket.assigns.editing_video?
+      assert socket.assigns.editing_drawer_type == nil
+      assert Changeset.get_field(socket.assigns.form.source, :video_id) == nil
+      assert Brando.Drafts.Params.snapshot(socket.assigns.form.source)["video_id"] == nil
+      assert Brando.Repo.get!(Brando.Videos.Video, video.id).id == video.id
+    end
   end
 
   describe "(a) processing_queued?/1" do

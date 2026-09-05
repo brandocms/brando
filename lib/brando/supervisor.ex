@@ -87,6 +87,7 @@ defmodule Brando.Supervisor do
               {"0 3 * * *", Brando.Worker.SoftDeletePurger},
               # Purge inactive/unprotected revisions older than 14 days
               {"0 4 * * *", Brando.Worker.RevisionPurger},
+              {"15 4 * * *", Brando.Worker.DraftPurger},
               # Mark video rows stuck in :uploading as errored (abandoned external uploads)
               {"30 4 * * *", Brando.Worker.VideoUploadReaper},
               # Delete bucket objects of client-direct uploads that never finalized
