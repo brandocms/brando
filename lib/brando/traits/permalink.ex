@@ -6,6 +6,8 @@ defmodule Brando.Trait.Permalink do
 
   The form compares URLs after a successful save and only stores the redirect
   when the editor confirms it. Redirects belong to the entry's previous language.
+  An exact redirect on the new URL is removed from the saved entry's language
+  before the prompt, even if the editor continues without creating a redirect.
   """
   use Brando.Trait
 

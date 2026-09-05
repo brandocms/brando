@@ -78,6 +78,34 @@ test('escape dismisses the prompt and completes Save and create new', async ({ p
   await expect(page).toHaveURL(/\/admin\/pages\/create$/)
 })
 
+test('renaming back removes the destination redirect even when the new redirect is declined', async ({ page }) => {
+  await createPage(page)
+  const dialog = await changeUrl(page, 'our-studio', 'self')
+  await dialog.getByRole('button', { name: 'Create redirect', exact: true }).click()
+  await expect(dialog).not.toBeVisible()
+  await expect(page.getByTestId('submit')).toBeEnabled()
+  const oldResponse = await page.request.get('/about-our-studio', { maxRedirects: 0 })
+  expect(oldResponse.status()).toBe(301)
+  expect(oldResponse.headers().location).toBe('/our-studio')
+
+  await page.getByLabel('URI', { exact: true }).fill('about-our-studio')
+  await page.getByTestId('submit').click()
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByLabel('From', { exact: true })).toHaveValue('/our-studio')
+  await expect(dialog.getByLabel('To', { exact: true })).toHaveValue('/about-our-studio')
+  await dialog.getByRole('button', { name: 'Continue without redirect' }).click()
+  await expect(page).toHaveURL(/\/admin\/pages$/)
+  const savedResponse = await page.request.get('/about-our-studio', { maxRedirects: 0 })
+  expect(savedResponse.status()).toBe(200)
+  const declinedResponse = await page.request.get('/our-studio', { maxRedirects: 0 })
+  expect(declinedResponse.status()).toBe(404)
+
+  await page.getByText('Configuration', { exact: true }).click()
+  await page.getByRole('link', { name: 'SEO', exact: true }).click()
+  await syncLV(page)
+  await expect(page.locator('input[name^="seo[redirects]"][name$="[from]"]')).toHaveCount(0)
+})
+
 test('plain forms prompt on slug changes and preserve continue-editing saves', async ({ page }) => {
   await page.goto('/admin')
   await page.getByRole('link', { name: 'Categories', exact: true }).click()

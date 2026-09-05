@@ -76,4 +76,21 @@ defmodule Brando.Sites.RedirectsTest do
     assert {:error, :seo_not_found} =
              Redirects.create_permalink_redirect(%{from: "/old", to: "/new", language: "no"}, :system)
   end
+
+  test "cleanup removes only the exact destination rule and refreshes the cache" do
+    {:ok, seo} = Sites.get_seo(%{matches: %{language: "en"}})
+    assert {:ok, _} = Sites.update_seo(seo, @seo_params, :system)
+
+    assert {:ok, _} =
+             Redirects.create_permalink_redirect(%{from: "/old.v1/:literal", to: "/new", language: "en"}, :system)
+
+    assert {:ok, seo} = Redirects.delete_permalink_redirect("https://example.com/old.v1/:literal", "en", :system)
+    assert length(seo.redirects) == 3
+    assert Redirects.test_redirect(["old.v1", ":literal"], "en") == {:error, {:redirects, :no_match}}
+    assert Redirects.test_redirect(@test_path, "en") == {:ok, {:redirect, {"/new/projects", 302}}}
+
+    assert {:ok, unchanged} = Redirects.delete_permalink_redirect("/test/projects", "en", :system)
+    assert unchanged.redirects == seo.redirects
+    assert {:ok, nil} = Redirects.delete_permalink_redirect("/new", "no", :system)
+  end
 end

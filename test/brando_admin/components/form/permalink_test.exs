@@ -65,6 +65,57 @@ defmodule BrandoAdmin.Components.Form.PermalinkTest do
     assert socket.assigns.pending_permalink_redirect.redirect.from == "/en/second-permalink"
   end
 
+  for target <- ["old-permalink", "reclaimed-permalink"] do
+    test "removes the existing redirect on #{target} before the prompt, even when dismissed", %{socket: socket} do
+      target = unquote(target)
+      {:noreply, socket} = Form.handle_event("save", %{"page" => %{"uri" => "current-permalink"}}, socket)
+      {:noreply, socket} = Form.handle_event("create_permalink_redirect", %{}, socket)
+
+      if target == "reclaimed-permalink" do
+        assert {:ok, _} =
+                 Redirects.create_permalink_redirect(
+                   %{from: "/en/#{target}", to: "/en/elsewhere", language: "en"},
+                   :system
+                 )
+      end
+
+      assert {:ok, {:redirect, _}} = Redirects.test_redirect(["en", target], "en")
+      socket = Component.assign(socket, :save_redirect_target, :self)
+      {:noreply, socket} = Form.handle_event("save", %{"page" => %{"uri" => target}}, socket)
+      assert socket.assigns.pending_permalink_redirect.redirect.to == "/en/#{target}"
+      assert Redirects.test_redirect(["en", target], "en") == {:error, {:redirects, :no_match}}
+
+      {:noreply, socket} = Form.handle_event("skip_permalink_redirect", %{}, socket)
+      assert socket.assigns.entry.uri == target
+      assert Redirects.test_redirect(["en", target], "en") == {:error, {:redirects, :no_match}}
+      assert Redirects.test_redirect(["en", "current-permalink"], "en") == {:error, {:redirects, :no_match}}
+    end
+  end
+
+  test "cleanup uses the saved language while the proposal uses the previous language", %{socket: socket} do
+    Brando.Repo.insert!(struct(Brando.Sites.SEO, language: :no))
+    proposal = %{from: "/no/reclaimed", to: "/elsewhere", language: "no"}
+    assert {:ok, _} = Redirects.create_permalink_redirect(proposal, :system)
+    assert {:ok, _} = Redirects.create_permalink_redirect(%{proposal | language: "en"}, :system)
+
+    {:noreply, socket} = Form.handle_event("save", %{"page" => %{"uri" => "reclaimed", "language" => "no"}}, socket)
+    assert socket.assigns.pending_permalink_redirect.redirect.language == "en"
+    assert Redirects.test_redirect(["no", "reclaimed"], "no") == {:error, {:redirects, :no_match}}
+    assert Redirects.test_redirect(["no", "reclaimed"], "en") == {:ok, {:redirect, {"/elsewhere", 301}}}
+    {:noreply, _socket} = Form.handle_event("skip_permalink_redirect", %{}, socket)
+    assert Redirects.test_redirect(["en", "old-permalink"], "en") == {:error, {:redirects, :no_match}}
+  end
+
+  @tag capture_log: true
+  test "failed saves leave destination redirects intact", %{socket: socket, page: page} do
+    proposal = %{from: "/en/reclaimed", to: "/en/elsewhere", language: "en"}
+    assert {:ok, _} = Redirects.create_permalink_redirect(proposal, :system)
+    {:noreply, socket} = Form.handle_event("save", %{"page" => %{"uri" => "reclaimed", "title" => ""}}, socket)
+    assert Brando.Repo.get!(Brando.Pages.Page, page.id).uri == "old-permalink"
+    refute socket.assigns.pending_permalink_redirect
+    assert Redirects.test_redirect(["en", "reclaimed"], "en") == {:ok, {:redirect, {"/en/elsewhere", 301}}}
+  end
+
   test "failed redirect creation keeps the prompt available for retry or dismissal", %{socket: socket} do
     {:noreply, socket} = Form.handle_event("save", %{"page" => %{"uri" => "new-permalink"}}, socket)
     pending = Map.update!(socket.assigns.pending_permalink_redirect, :redirect, &Map.put(&1, :language, "no"))

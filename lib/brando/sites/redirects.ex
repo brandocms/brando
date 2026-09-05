@@ -3,6 +3,32 @@ defmodule Brando.Sites.Redirects do
   import Ecto.Query, only: [from: 2]
 
   @doc """
+  Removes an exact permalink redirect on a newly saved URL in its language.
+
+  This runs before offering a redirect from the old URL, so declining that offer
+  still leaves the new URL free of its previous exact rule. Pattern rules are
+  preserved. Missing SEO settings are a no-op because there is no rule to remove.
+  """
+  def delete_permalink_redirect(url, language, user) do
+    schema = Brando.Sites.SEO
+    source = exact_source(URI.parse(url).path)
+
+    result =
+      Brando.Repo.transaction(fn ->
+        case Brando.Repo.one(from s in schema, where: s.language == ^language, lock: "FOR UPDATE") do
+          nil ->
+            nil
+
+          seo ->
+            redirects = Enum.reject(seo.redirects || [], &(&1.from == source))
+            store_redirects(seo, redirects, user)
+        end
+      end)
+
+    Brando.Cache.SEO.update(result)
+  end
+
+  @doc """
   Stores a confirmed permalink redirect in the previous language's SEO settings.
 
   The source is an escaped, exact path. Earlier redirects for that source are
@@ -32,19 +58,25 @@ defmodule Brando.Sites.Redirects do
                 existing -> existing
               end)
 
-            changeset =
-              seo
-              |> Ecto.Changeset.change()
-              |> Ecto.Changeset.put_embed(:redirects, [redirect | redirects])
-
-            case Brando.Sites.update_seo(changeset, user) do
-              {:ok, updated_seo} -> updated_seo
-              {:error, changeset} -> Brando.Repo.repo().rollback(changeset)
-            end
+            store_redirects(seo, [redirect | redirects], user)
         end
       end)
 
     Brando.Cache.SEO.update(result)
+  end
+
+  defp store_redirects(%{redirects: redirects} = seo, redirects, _user), do: seo
+
+  defp store_redirects(seo, redirects, user) do
+    changeset =
+      seo
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:redirects, redirects)
+
+    case Brando.Sites.update_seo(changeset, user) do
+      {:ok, updated_seo} -> updated_seo
+      {:error, changeset} -> Brando.Repo.repo().rollback(changeset)
+    end
   end
 
   # A segment beginning with ':' is a placeholder in the redirect matcher.

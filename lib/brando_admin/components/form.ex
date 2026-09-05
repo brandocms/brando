@@ -4041,10 +4041,23 @@ defmodule BrandoAdmin.Components.Form do
         continue.(socket)
 
       redirect ->
+        language = to_string(Map.get(saved, :language) || Brando.config(:default_language))
+
+        error =
+          case Brando.Sites.Redirects.delete_permalink_redirect(redirect.to, language, socket.assigns.current_user) do
+            {:ok, _} ->
+              nil
+
+            {:error, _} ->
+              gettext(
+                "The entry was saved, but an existing redirect on its new URL could not be removed. Please check the SEO redirect settings."
+              )
+          end
+
         socket
         |> assign(:processing, false)
         |> assign(:pending_permalink_redirect, %{redirect: redirect, continue: continue})
-        |> assign(:permalink_redirect_error, nil)
+        |> assign(:permalink_redirect_error, error)
     end
   end
 

@@ -647,6 +647,11 @@ without it; either choice completes the selected save action. New entries,
 unchanged URLs, and entries with `has_url: false` do not prompt. Built-in pages
 include this trait.
 
+When the URL changes, any exact permalink redirect on the new URL is removed from
+the saved entry's language before the prompt appears. This also happens when the
+editor chooses **Continue without redirect**, closes the prompt, or renames back
+to a previous URL. Pattern rules that may cover other pages are preserved.
+
 Confirmed redirects are stored in the previous language's SEO settings and match
 the exact old path, so changing `/about` does not redirect `/about/team`. The
 language must already have SEO settings. Redirect creation failures leave the
