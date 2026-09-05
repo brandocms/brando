@@ -345,6 +345,11 @@
 }
 
 .modal-body {
+  /* `body` is `@fontsize base` — 20px on desktop, 23px at xl — which is a
+     reading size for page content, not for a dialog. Prose in a modal inherited
+     it and came out oversized next to the 13-16px controls it sits beside.
+     Fields and labels set their own sizes, so this only reaches loose text. */
+  @fontsize sm;
   @space padding-y 18px;
   @space padding-x 20px;
   max-height: 80vh;
@@ -361,6 +366,7 @@
 .modal-footer {
   display: flex;
   align-items: center;
+  gap: 10px;
   @space padding-x 20px;
   padding-top: 12px;
   justify-content: flex-end;

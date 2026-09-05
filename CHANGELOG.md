@@ -398,6 +398,14 @@
 
 #### Fixes
 
+- **Modal dialogs sized their prose like page content, and stacked their footer
+  buttons edge to edge.** `.modal-body` inherited `body`'s `@fontsize base` —
+  20px on desktop, 23px at xl — so loose text in a dialog came out oversized
+  beside the 13–16px controls next to it; it is `@fontsize sm` now. Fields and
+  labels set their own sizes, so nothing else moves. `.modal-footer` was a flex
+  row with `justify-content: flex-end` and no `gap`, which left two buttons
+  touching.
+
 - **The identifier picker's filter input did nothing.** `Brando.SelectFilter`
   toggles `.filter-hidden` on each option it filters out, but the only rule for
   that class lived nested under `.multiselect .options .options-option` in
