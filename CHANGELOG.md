@@ -275,6 +275,31 @@
   `Brando.Content.ModuleDiff` therefore types its arguments as `map()` and
   matches on shape rather than on `%Module{}`.
 
+- **Accessible form validation in the admin** (#1996). The admin is essentially
+  one large form application and shipped exactly one ARIA attribute in its whole
+  form layer: no error association, no live regions, no required exposure, no
+  dialog semantics, no focus management.
+
+  - `Input.input/1` — the single place every control in the admin is rendered —
+    now emits `aria-invalid`, `aria-describedby` and `aria-required`. Required
+    comes from the blueprint's `__required_attrs__/0`; hidden inputs get nothing.
+  - `Primitives.error_tag/1` renders one `role="alert"` container instead of a
+    span per message, present whether or not it has anything to say (a live
+    region added *with* its content is not reliably announced). This also fixes
+    two errors on one field being drawn on top of each other, and each claiming
+    the same DOM id.
+  - Modals are `role="dialog" aria-modal="true"`, named by their own heading. The
+    new `Brando.Modal` hook takes focus on open, wraps Tab, and returns focus to
+    whatever opened them.
+  - A failed save focuses the first invalid control instead of only scrolling to
+    it.
+
+  **If you style `.field-error`:** the messages are now wrapped in a
+  `.field-errors` container, and positioning moved to it. A selector like
+  `.label-wrapper > span.field-error` no longer matches.
+
+  Not yet done: associating a field's `help-text` instructions with its control.
+
 #### Features
 
 - **Module migration tracking, and a warning before a module save destroys

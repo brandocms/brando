@@ -521,6 +521,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign_new(:checked_value, fn -> "true" end)
       |> assign_new(:unchecked_value, fn -> "false" end)
       |> process_input_id()
+      |> assign_a11y()
 
     assigns =
       assign(
@@ -532,11 +533,30 @@ defmodule BrandoAdmin.Components.Form.Input do
     if assigns.hidden_input do
       ~H"""
       <input type={:hidden} name={@field.name} id={"#{@id}-unchecked"} value={@unchecked_value} {@rest} />
-      <input type={@type} name={@field.name} id={"#{@id}"} value={@checked_value} checked={@checked} {@rest} />
+      <input
+        type={@type}
+        name={@field.name}
+        id={"#{@id}"}
+        value={@checked_value}
+        checked={@checked}
+        aria-invalid={@aria_invalid}
+        aria-describedby={@aria_describedby}
+        aria-required={@aria_required}
+        {@rest}
+      />
       """
     else
       ~H"""
-      <input type={@type} name={@field.name} id={"#{@id}"} value={@checked_value} {@rest} />
+      <input
+        type={@type}
+        name={@field.name}
+        id={"#{@id}"}
+        value={@checked_value}
+        aria-invalid={@aria_invalid}
+        aria-describedby={@aria_describedby}
+        aria-required={@aria_required}
+        {@rest}
+      />
       """
     end
   end
@@ -558,9 +578,18 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:id, assigns.id || assigns.field.id)
       |> assign(:name, assigns.name || assigns.field.name)
       |> process_input_id()
+      |> assign_a11y()
 
     ~H"""
-    <textarea type={@type} name={@name} id={@id} {@rest}><%= @value %></textarea>
+    <textarea
+      type={@type}
+      name={@name}
+      id={@id}
+      aria-invalid={@aria_invalid}
+      aria-describedby={@aria_describedby}
+      aria-required={@aria_required}
+      {@rest}
+    ><%= @value %></textarea>
     """
   end
 
@@ -578,11 +607,63 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:name, assigns.name || assigns.field.name)
       |> assign(:hook, (assigns.publish && "Brando.PublishInput") || nil)
       |> process_input_id()
+      |> assign_a11y()
 
     ~H"""
-    <input type={@type} name={@name} id={@id} value={@value} phx-hook={@hook} {@rest} />
+    <input
+      type={@type}
+      name={@name}
+      id={@id}
+      value={@value}
+      phx-hook={@hook}
+      aria-invalid={@aria_invalid}
+      aria-describedby={@aria_describedby}
+      aria-required={@aria_required}
+      {@rest}
+    />
     """
   end
+
+  # Every control the admin renders passes through `input/1`, so the accessible
+  # state of a field is decided here rather than in the ~20 wrapper components.
+  #
+  # `Primitives.field_base/1` renders the message container as
+  # `"<field id>-error"`, and both derive that id from the field the same way
+  # (`process_input_id/1` mirrors `Primitives.field_id/1`), so the reference is
+  # always to an element that exists. It points there unconditionally: the
+  # container is rendered whether or not it currently holds a message, and an
+  # empty one contributes nothing to the accessible description.
+  #
+  # A hidden input has no accessible presence to annotate, so it is skipped —
+  # marking it invalid would announce a field the user cannot see or reach.
+  defp assign_a11y(%{type: :hidden} = assigns) do
+    assigns
+    |> assign(:aria_invalid, nil)
+    |> assign(:aria_describedby, nil)
+    |> assign(:aria_required, nil)
+  end
+
+  defp assign_a11y(assigns) do
+    field = assigns.field
+
+    assigns
+    |> assign(:aria_invalid, (field_invalid?(field) && "true") || nil)
+    |> assign(:aria_describedby, "#{assigns.id}-error")
+    |> assign(:aria_required, (field_required?(field) && "true") || nil)
+  end
+
+  # Gated on `used_input?/1` exactly as `Primitives.error_tag/1` is. Reading
+  # `field.errors` alone marks every required field invalid the moment a blank
+  # create form renders — a screen reader would read a form full of errors
+  # before the user has typed anything, and there is no message to go with it.
+  defp field_invalid?(%FormField{} = field), do: Phoenix.Component.used_input?(field) and field.errors != []
+  defp field_invalid?(_), do: false
+
+  defp field_required?(%FormField{form: %{source: %Ecto.Changeset{data: %schema{}}}, field: name}) do
+    function_exported?(schema, :__required_attrs__, 0) and name in schema.__required_attrs__()
+  end
+
+  defp field_required?(_), do: false
 
   defp process_input_id(%{uid: nil, id_prefix: _id_prefix} = assigns), do: assign(assigns, :id, assigns.field.id)
 

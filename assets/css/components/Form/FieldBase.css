@@ -165,10 +165,19 @@
     visibility: hidden;
   }
 
-  > span.field-error {
-    font-size: 12px;
+  /* The errors live in one `role="alert"` container so screen readers announce
+     them as they appear, and so `aria-describedby` has a single id to point at.
+     Positioning moved from the individual messages to the container: when there
+     was more than one, each was absolutely positioned at right: 0 and they were
+     drawn on top of each other. */
+  > .field-errors {
     position: absolute;
     right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    font-size: 12px;
   }
 
   label {

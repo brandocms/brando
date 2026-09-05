@@ -624,9 +624,17 @@ defmodule BrandoAdmin.Components.Form.Primitives do
     assigns = assign(assigns, :f_id, field_id(assigns))
 
     ~H"""
-    <span :for={error <- @errors} id={"#{@f_id}-error"} class="field-error">
-      {@translate_fn.(error)}
-    </span>
+    <%!-- One container, rendered whether or not there are errors, because a live
+          region has to already be in the accessibility tree when content is
+          inserted into it — a `role="alert"` element that appears *with* its
+          message is not reliably announced. It also carries the single id that
+          `Input.input/1` points `aria-describedby` at; the messages used to be
+          sibling spans that each claimed the same id. --%>
+    <div id={"#{@f_id}-error"} class="field-errors" role="alert">
+      <span :for={error <- @errors} class="field-error">
+        {@translate_fn.(error)}
+      </span>
+    </div>
     """
   end
 
