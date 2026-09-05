@@ -22,15 +22,15 @@ defmodule Brando.Pages.Fragment do
   alias Brando.Pages
 
   trait :creator
-  trait Brando.Trait.Revisioned
+  trait :revisioned
   trait :scheduled_publishing
   trait :sequenced
   trait :soft_delete
   trait :status
   trait :timestamped
   trait :translatable, alternates: false
-  trait Brando.Trait.Blocks
-  trait Brando.Trait.Blocks.PreventCircularReferences
+  trait :blocks
+  trait :blocks_prevent_circular_references
 
   identifier "[{{ entry.parent_key }}/{{ entry.key }}] {{ entry.title }}"
   persist_identifier false

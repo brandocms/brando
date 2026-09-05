@@ -28,7 +28,7 @@ defmodule Brando.Pages.Page do
   def __schema_version__, do: @schema_version
 
   # ++ Traits
-  trait Brando.Trait.CastPolymorphicEmbeds
+  trait :cast_polymorphic_embeds
   trait :creator
 
   trait :meta,
@@ -45,14 +45,14 @@ defmodule Brando.Pages.Page do
       ]
     ]
 
-  trait Brando.Trait.Revisioned
+  trait :revisioned
   trait :scheduled_publishing
   trait :sequenced, append: true
   trait :soft_delete, obfuscated_fields: [:uri]
   trait :status
   trait :timestamped
   trait :translatable
-  trait Brando.Trait.Blocks
+  trait :blocks
 
   # --
 

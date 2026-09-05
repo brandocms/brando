@@ -12,16 +12,16 @@ defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
 
   use Gettext, backend: <%= app_module %>Admin.Gettext
 
-  # trait Brando.Trait.Blocks
-  # trait Brando.Trait.Creator
-  # trait Brando.Trait.Meta
-  # trait Brando.Trait.Revisioned
-  # trait Brando.Trait.ScheduledPublishing
-  # trait Brando.Trait.Sequenced
-  # trait Brando.Trait.SoftDelete, obfuscated_fields: [:slug]
-  # trait Brando.Trait.Status
-  # trait Brando.Trait.Timestamped
-  # trait Brando.Trait.Translatable
+  # trait :blocks
+  # trait :creator
+  # trait :meta
+  # trait :revisioned
+  # trait :scheduled_publishing
+  # trait :sequenced
+  # trait :soft_delete, obfuscated_fields: [:slug]
+  # trait :status
+  # trait :timestamped
+  # trait :translatable
 
   identifier "{{ entry.title }}"
   # NOTE: If using Brando.Trait.Translatable, change `route` to `route_i18n(@entry, ...)`

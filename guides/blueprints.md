@@ -539,6 +539,35 @@ static query whose `:matches` value is not a map.
 
 ## Traits
 
+Use atom shorthands for Brando's built-in traits and module names for custom traits:
+
+```elixir
+trait :revisioned
+trait :scheduled_publishing
+trait :sequenced, append: true
+trait :soft_delete, obfuscated_fields: [:uri]
+trait :status
+trait :timestamped
+trait :translatable
+trait :blocks
+trait MyApp.Trait.Searchable
+```
+
+Every built-in trait has an atom shorthand: `:blocks`,
+`:blocks_prevent_circular_references`, `:cast_polymorphic_embeds`, `:creator`,
+`:ensure_uid`, `:focal`, `:meta`, `:module_versioned`, `:password`,
+`:protect_password`, `:protect_role`, `:revisioned`, `:scheduled_publishing`,
+`:sequenced`, `:soft_delete`, `:status`, `:timestamped`, `:translatable`,
+`:validate_var_keys`, and `:watch_language`. The legacy `:villain` shorthand also
+resolves but remains deprecated; use `:blocks` for new declarations.
+The nested `Brando.Trait.Blocks.PreventCircularReferences` trait uses
+`:blocks_prevent_circular_references`.
+
+Full module declarations remain supported. Both forms register the same runtime
+module and preserve trait options, so calls such as
+`Page.has_trait(Brando.Trait.Revisioned)` and `Page.__trait__(Brando.Trait.Sequenced)`
+continue to use module names.
+
 Blueprint invokes a trait's `generate_code/2` callback while compiling each
 schema. Runtime-heavy custom traits can keep that compile path small by moving
 the same callback to a focused compiler module:
@@ -911,7 +940,7 @@ Meta trait defaults are trait-driven. You can configure those fields either:
 2. by defining regular form inputs with `ai: [...]` so drawer reuses blueprint opts.
 
 ```elixir
-trait Brando.Trait.Meta,
+trait :meta,
   ai: [
     meta_title: [prompt: "Write SEO title from title", context: [:title]],
     meta_description: [prompt: "Write SEO description from title and blocks", context: [:title, :blocks]]
