@@ -30,6 +30,7 @@ defmodule Brando.Pages.Page do
   # ++ Traits
   trait :cast_polymorphic_embeds
   trait :creator
+  trait :permalink
 
   trait :meta,
     ai: [

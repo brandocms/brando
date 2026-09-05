@@ -14,13 +14,14 @@ defmodule E2eProject.Projects.Category do
   import Brando.Blueprint.Listings.Components.Core
 
   trait Brando.Trait.Creator
+  trait :permalink
   trait Brando.Trait.Sequenced
   trait Brando.Trait.Status
   trait Brando.Trait.Timestamped
   trait Brando.Trait.Translatable
 
   identifier "{{ entry.title }}"
-  absolute_url ~H|{route_i18n(@entry, :category_path, :detail, [@entry.slug])}|
+  absolute_url ~H"/{@entry.language}/categories/{@entry.slug}"
 
   attributes do
     attribute :title, :text, required: true

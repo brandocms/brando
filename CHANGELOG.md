@@ -302,6 +302,10 @@
 
 #### Features
 
+- `trait :permalink` offers to create an exact 301 redirect after an editor changes
+  an existing entry's URL. Built-in pages enable it; confirmation stores the rule
+  in the previous language's SEO settings and continues the selected save action.
+
 - **Module migration tracking, and a warning before a module save destroys
   content** (#2642). Saving a module has always been a site-wide migration: every
   block using it is re-synced, and any reference the module no longer declares was

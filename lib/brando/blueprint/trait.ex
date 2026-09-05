@@ -26,6 +26,7 @@ defmodule Brando.Blueprint.Trait do
   defp expand_trait(:meta, _caller), do: built_in_trait("Meta")
   defp expand_trait(:module_versioned, _caller), do: built_in_trait("ModuleVersioned")
   defp expand_trait(:password, _caller), do: built_in_trait("Password")
+  defp expand_trait(:permalink, _caller), do: built_in_trait("Permalink")
   defp expand_trait(:protect_password, _caller), do: built_in_trait("ProtectPassword")
   defp expand_trait(:protect_role, _caller), do: built_in_trait("ProtectRole")
   defp expand_trait(:revisioned, _caller), do: built_in_trait("Revisioned")
@@ -88,6 +89,7 @@ defmodule Brando.Blueprint.Trait do
   defp runtime_only_traits,
     do: [
       built_in_trait("EnsureUID"),
+      built_in_trait("Permalink"),
       built_in_trait("ValidateVarKeys")
     ]
 

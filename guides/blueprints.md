@@ -555,7 +555,7 @@ trait MyApp.Trait.Searchable
 
 Every built-in trait has an atom shorthand: `:blocks`,
 `:blocks_prevent_circular_references`, `:cast_polymorphic_embeds`, `:creator`,
-`:ensure_uid`, `:focal`, `:meta`, `:module_versioned`, `:password`,
+`:ensure_uid`, `:focal`, `:meta`, `:module_versioned`, `:password`, `:permalink`,
 `:protect_password`, `:protect_role`, `:revisioned`, `:scheduled_publishing`,
 `:sequenced`, `:soft_delete`, `:status`, `:timestamped`, `:translatable`,
 `:validate_var_keys`, and `:watch_language`. The legacy `:villain` shorthand also
@@ -626,10 +626,31 @@ trait MyApp.Trait.Validated,
   runtime_option: :preserved
 ```
 
-Brando's `EnsureUID` and `ValidateVarKeys` traits select this boundary automatically.
-Use their `trait :ensure_uid` and `trait :validate_var_keys` shorthands to also avoid
+Brando's `EnsureUID`, `Permalink`, and `ValidateVarKeys` traits select this boundary automatically.
+Use their `trait :ensure_uid`, `trait :permalink`, and `trait :validate_var_keys` shorthands to also avoid
 a module-body dependency on the runtime trait. Existing full module declarations remain
 supported and require no application or database migration.
+
+### Permalink redirects
+
+Add `trait :permalink` to a blueprint with an `absolute_url` definition to offer
+redirects when editors change an existing entry's key, slug, or URL:
+
+```elixir
+trait :permalink
+absolute_url ~H"/articles/{@entry.slug}"
+```
+
+After a successful admin save, Brando compares the previous and saved URLs and
+shows the proposed permanent (301) redirect. The editor can create it or continue
+without it; either choice completes the selected save action. New entries,
+unchanged URLs, and entries with `has_url: false` do not prompt. Built-in pages
+include this trait.
+
+Confirmed redirects are stored in the previous language's SEO settings and match
+the exact old path, so changing `/about` does not redirect `/about/team`. The
+language must already have SEO settings. Redirect creation failures leave the
+saved entry intact and allow retrying or continuing without the redirect.
 
 ## Datasources
 
