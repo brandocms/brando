@@ -650,6 +650,27 @@
   }
 }
 
+/* Saving a module migrates every block that uses it. The confirmation dialog
+   lists what that migration orphans — keep the list scannable, and let a module
+   with many changed references scroll rather than push the buttons off-screen. */
+.destructive-change-list {
+  max-height: 280px;
+  margin: 14px 0;
+  padding: 12px 12px 12px 28px;
+  overflow-y: auto;
+  border-left: 2px solid theme(colors.status.pending);
+  background-color: theme(colors.peach);
+
+  li {
+    margin-bottom: 4px;
+    font-size: 14px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
 @media (max-width: 1180px) {
   .module-editor-panels {
     .code .cm-editor {

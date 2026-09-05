@@ -652,6 +652,44 @@ defmodule Brando.Content.Blocks do
   # --- Module Sync ---
 
   @doc """
+  Ids of blocks that have not been migrated to a module's current revision.
+
+  A block is stale when its `module_version` is behind the module's `version`, or
+  is missing entirely (a block created before migration tracking landed and never
+  re-synced since). Stale means the block still holds data — refs or vars the
+  module no longer defines, or whose type it changed — that no definition backs
+  any more. It renders through the module's current code regardless; the version
+  gap is what makes the mismatch findable.
+  """
+  @spec list_stale_block_ids(Brando.Content.Module.t() | integer(), atom()) :: [integer()]
+  def list_stale_block_ids(module_or_id, origin \\ :local)
+
+  def list_stale_block_ids(%{id: module_id, version: version}, origin),
+    do: query_stale_block_ids(module_id, version || 1, origin)
+
+  def list_stale_block_ids(module_id, origin) when is_integer(module_id) do
+    case Brando.Repo.get(Brando.Content.Module, module_id) do
+      nil -> []
+      module -> query_stale_block_ids(module_id, module.version || 1, origin)
+    end
+  end
+
+  @doc "How many blocks are behind `module`'s current revision. See `list_stale_block_ids/2`."
+  @spec count_stale_blocks(Brando.Content.Module.t() | integer(), atom()) :: non_neg_integer()
+  def count_stale_blocks(module_or_id, origin \\ :local),
+    do: module_or_id |> list_stale_block_ids(origin) |> length()
+
+  defp query_stale_block_ids(module_id, version, origin) do
+    from(b in Block,
+      where: b.module_id == ^module_id,
+      where: is_nil(b.module_version) or b.module_version < ^version,
+      select: b.id
+    )
+    |> maybe_filter_library_origin(:module_origin, origin)
+    |> Brando.Repo.all()
+  end
+
+  @doc """
   Gets all blocks with `module_id` and reapply refs and vars, then saves them.
   Returns a list of all updated block ids.
   """
@@ -668,27 +706,40 @@ defmodule Brando.Content.Blocks do
         preload: [:vars, refs: Ref.preloads()]
       })
 
-    Enum.reduce(blocks, [], fn block, acc ->
-      updated_changeset = sync_module(block, module)
-      Brando.Repo.update(updated_changeset)
-      [block.id | acc]
+    blocks
+    |> Enum.reduce([], fn block, acc ->
+      case block |> sync_module(module) |> Brando.Repo.update() do
+        {:ok, _} -> [block.id | acc]
+        {:error, changeset} -> log_failed_sync(block, module, changeset, acc)
+      end
     end)
     |> render_blocks()
   end
 
   @doc """
-  Syncs a block's vars and refs with a module
+  Syncs a block's vars and refs with a module.
+
+  Called for every block using a module each time that module is saved, so this
+  is the site-wide migration path — see `Brando.Content.ModuleDiff`.
+
+  Refs and vars the module no longer defines are **retained**, not deleted. Their
+  data is the editor's, not the module's, and a removal is indistinguishable from
+  a rename here; deleting it destroyed content across every entry on the site
+  with no way back. The module's template no longer references them, so they lie
+  dormant until an explicit upgrade resolves them.
+
+  A block left holding such orphans — or a ref whose type the module changed
+  underneath it — is not stamped with the module's current version. It stays
+  discoverable through `list_stale_block_ids/2` instead of quietly claiming to be
+  up to date.
   """
   def sync_module(block, module) do
     module_refs = module.refs
+    module_refs_by_name = Map.new(module_refs, &{&1.name, &1})
     module_ref_names = Enum.map(module_refs, & &1.name)
     changeset = Changeset.change(block)
 
-    # strip away refs that are no longer in the module
-    current_refs =
-      changeset
-      |> Changeset.get_assoc(:refs)
-      |> Enum.filter(&(Changeset.get_field(&1, :name) in module_ref_names))
+    current_refs = Changeset.get_assoc(changeset, :refs)
 
     current_ref_names = Enum.map(current_refs, &Changeset.get_field(&1, :name))
     missing_ref_names = module_ref_names -- current_ref_names
@@ -726,7 +777,58 @@ defmodule Brando.Content.Blocks do
     changeset
     |> Changeset.put_assoc(:vars, reapplied_vars)
     |> Changeset.put_assoc(:refs, reapplied_refs)
+    |> stamp_module_version(module, reapplied_refs, new_vars, module_refs_by_name, module_var_keys)
   end
+
+  # `module_version` means "the newest module revision whose instance-data
+  # migration was successfully applied to this block". Only stamp it when every
+  # ref and var the block holds still has a definition of the same type behind
+  # it; anything else is data awaiting review, and claiming it current would make
+  # the stale count useless.
+  defp stamp_module_version(changeset, module, refs, vars, module_refs_by_name, module_var_keys) do
+    if fully_migrated?(refs, vars, module_refs_by_name, module_var_keys) do
+      Changeset.put_change(changeset, :module_version, module.version || 1)
+    else
+      changeset
+    end
+  end
+
+  defp fully_migrated?(refs, vars, module_refs_by_name, module_var_keys) do
+    Enum.all?(refs, &migratable_ref?(&1, module_refs_by_name)) and
+      Enum.all?(vars, &(Changeset.get_field(&1, :key) in module_var_keys))
+  end
+
+  @doc """
+  True when the module still defines this ref, with the same block type.
+
+  A ref whose name is gone, or whose block type the module swapped out from under
+  it, cannot be migrated: the stored data does not fit the new definition.
+  """
+  def migratable_ref?(ref_changeset, module_refs_by_name) do
+    case Map.get(module_refs_by_name, Changeset.get_field(ref_changeset, :name)) do
+      nil ->
+        false
+
+      ref_src ->
+        VillainBlocks.ref_types_compatible?(ref_data_type(ref_src), ref_data_type(ref_changeset))
+    end
+  end
+
+  defp ref_data_type(%Changeset{} = ref_changeset) do
+    ref_changeset
+    |> Changeset.get_field(:data)
+    |> block_data_type()
+  end
+
+  defp ref_data_type(%Ref{data: data}), do: block_data_type(data)
+  defp ref_data_type(_), do: nil
+
+  # A ref's `data` is a polymorphic embed, and reaches us either as the block
+  # struct itself or as a changeset on one, depending on whether anything has
+  # already touched it this pass.
+  defp block_data_type(%Changeset{data: %{__struct__: struct}}), do: struct
+  defp block_data_type(%{__struct__: struct}), do: struct
+  defp block_data_type(_), do: nil
 
   def sync_and_render_blocks(block_ids, module_id, origin \\ :local)
   def sync_and_render_blocks([], _module_id, _origin), do: %{}
@@ -755,13 +857,29 @@ defmodule Brando.Content.Blocks do
 
     blocks
     |> Enum.reduce([], fn block, acc ->
-      block
-      |> sync_module(module)
-      |> Brando.Repo.update()
-
-      [block.id | acc]
+      case block |> sync_module(module) |> Brando.Repo.update() do
+        {:ok, _} -> [block.id | acc]
+        {:error, changeset} -> log_failed_sync(block, module, changeset, acc)
+      end
     end)
     |> render_blocks()
+  end
+
+  # A module save migrates every block that uses it, one write at a time and
+  # outside a transaction. A block that fails keeps its old data and its old
+  # `module_version`, so it stays behind the module and shows up in
+  # `list_stale_block_ids/2` — a visible queue rather than silent mixed state.
+  defp log_failed_sync(block, module, changeset, acc) do
+    require Logger
+
+    Logger.error("""
+    Failed to sync block ##{block.id} with module ##{module.id}.
+    The block keeps its previous data and stays behind module version #{module.version || 1}.
+
+    #{inspect(changeset.errors, pretty: true)}
+    """)
+
+    acc
   end
 
   defp maybe_filter_library_origin(query, _field, nil), do: query
@@ -817,36 +935,28 @@ defmodule Brando.Content.Blocks do
     |> Brando.Repo.update()
   end
 
-  def reapply_refs(module, module_refs, refs) do
+  @doc """
+  Reapplies the module's template-controlled ref settings onto a block's refs.
+
+  Refs the module no longer defines, and refs whose block type it swapped out,
+  are passed through untouched. Both used to be impossible — the first was
+  filtered away before this ran, and the second raised — but a module save is a
+  migration over content the editor owns, and neither case is a reason to
+  overwrite it. `sync_module/2` leaves such a block behind its module's version
+  so it stays visible as needing review.
+  """
+  def reapply_refs(_module, module_refs, refs) do
     refs_by_name = Map.new(module_refs, &{&1.name, &1})
 
     Enum.map(refs, fn
       %Changeset{data: %{name: ref_name}} = ref ->
-        block_module =
-          case Changeset.get_field(ref, :data) do
-            %Changeset{} = data_cs ->
-              data_cs.data.__struct__
-
-            block_data ->
-              block_data.__struct__
-          end
-
-        ref_src = Map.get(refs_by_name, ref_name)
-
-        if ref_src == nil do
-          raise """
-
-          Ref #{ref_name} not found in module refs!
-
-          Module: ##{module.id} [#{module.namespace}] #{module.name}
-
-          #{inspect(module, pretty: true)}
-
-          """
+        if migratable_ref?(ref, refs_by_name) do
+          ref_src = Map.fetch!(refs_by_name, ref_name)
+          block_module = block_data_type(Changeset.get_field(ref, :data))
+          block_module.apply_ref(ref_src.data.__struct__, ref_src, apply_ref_principals(ref_src, ref))
+        else
+          ref
         end
-
-        ref_target = apply_ref_principals(ref_src, ref)
-        block_module.apply_ref(ref_src.data.__struct__, ref_src, ref_target)
     end)
   end
 

@@ -116,9 +116,12 @@ Entry → EntryBlock (join table) → Block → vars/refs/children/table_rows/bl
 ```
 uid, type (:module/:container/:fragment/:module_entry), active, collapsed,
 description, anchor, multi, datasource, rendered_html, rendered_at,
-source (Brando.Type.Module), identifier_metas (JSON),
+source (Brando.Type.Module), identifier_metas (JSON), module_version,
 sequence, creator_id, module_id, container_id, fragment_id, parent_id, palette_id
 ```
+
+`module_version` is server-controlled and deliberately absent from `@block_attrs`
+— see section 14.
 
 ### Block Relations
 ```
@@ -461,6 +464,50 @@ When building maps for `put_assoc`, drop association keys (`:block`, `:module`, 
 - **`onEnd`**: Pushes `reposition` event with `{old: oldIndex, new: newIndex, ...item.dataset}`
 - Prevents `phx-blur` from firing during drag (`focusout` stopImmediatePropagation)
 - Optional grouping via `data-blocks-wrapper-type` for cross-container drag
+
+---
+
+## 14. Module Saves Are Site-Wide Migrations
+
+Saving a module re-syncs **every block that uses it, in every entry**:
+
+`Content.update_module/3` → `mutation :update, Module` → `Blocks.render_entries_with_module_id/2`
+→ `list_block_ids_using_module/2` → `sync_and_render_blocks/3` → `Blocks.sync_module/2`
+(one `Repo.update/1` per block, outside a transaction).
+
+### Rules
+
+- **Nothing is deleted.** Refs and vars the module no longer defines are
+  retained. A removal cannot be told apart from a rename here, and the data
+  belongs to the editor. Orphans lie dormant — the template does not reference
+  them — until an explicit upgrade resolves them.
+- **`Module.version` counts definition revisions**, bumped by
+  `Brando.Trait.ModuleVersioned` when `Brando.Content.ModuleDiff` says the change
+  was effective. It is also an optimistic lock: a save over a revision the editor
+  never saw raises `Ecto.StaleEntryError`.
+- **`Block.module_version` is how far that block got.** `sync_module/2` stamps it
+  only when every ref and var the block holds still has a definition of a
+  compatible type behind it. Anything else — an orphan, a retyped ref, or a
+  failed write — leaves the block behind, findable via
+  `Blocks.list_stale_block_ids/2` and `count_stale_blocks/2`.
+- **A `media` module ref is a slot, not a type.** It legitimately drives
+  picture / video / gallery / svg block refs, each of which has a `MediaBlock`
+  clause in `apply_ref/3`. Use `Brando.Villain.Blocks.ref_types_compatible?/2`
+  rather than comparing structs — treating that as a retype puts a warning in
+  front of every media module edit.
+- **Never trust `module_version` from params.** It is not in `@block_attrs`. An
+  entry editor opened before a migration must not be able to save its way to
+  claiming it is current.
+
+### Classifying a pending module change
+
+`ModuleDiff.diff(old_module, new_module_or_changeset)` → `:none` | `:metadata` |
+`:render` | `:compatible` | `:destructive` (most severe wins). `destructive?/1`
+gates the module editor's confirmation dialog; `summary/1` gives the lines it
+shows.
+
+`Module.uid` is lineage identity for import replacement (not yet built). Export
+and import mint a fresh one at v1, so import produces copies.
 
 ---
 

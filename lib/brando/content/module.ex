@@ -52,7 +52,7 @@ defmodule Brando.Content.Module do
   persist_identifier false
 
   @derived_fields ~w(
-    id type name sequence namespace help_text multi color class code refs vars svg deleted_at
+    id uid type name sequence namespace help_text multi color class code refs vars svg deleted_at
     version version_note source_module_id source_version acknowledged_version library_origin
     override_id
   )a
@@ -62,9 +62,15 @@ defmodule Brando.Content.Module do
   trait :soft_delete
   trait :timestamped
   trait Brando.Trait.CastPolymorphicEmbeds
+  trait :ensure_uid
   trait :validate_var_keys
+  trait Brando.Trait.ModuleVersioned
 
   attributes do
+    # Lineage identity. Survives export/import, where name and namespace cannot:
+    # both are i18n JSON maps, neither is unique, and both are editable.
+    attribute :uid, :string, required: true
+
     attribute :type, :enum, values: [:liquid, :heex], default: :liquid
     attribute :name, :i18n_string, required: true
     attribute :namespace, :i18n_string, required: true
@@ -263,8 +269,7 @@ defmodule Brando.Content.Module do
       }
     ],
     vars: [],
-    multi: false,
-    uid: "abcdef"
+    multi: false
   }
 
   @doc """

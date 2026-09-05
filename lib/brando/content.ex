@@ -886,7 +886,21 @@ defmodule Brando.Content do
   defp prepare_single_module_for_export(module, current_user_id) do
     module =
       module
-      |> Map.put(:id, nil)
+      |> Map.merge(%{
+        id: nil,
+        # An exported module installs as a new lineage at v1, the same way
+        # duplicating one does. Carrying the source installation's `uid` would
+        # collide with it on re-import, and its `version`/`source_module_id`
+        # describe a history and a shared-library link the destination has no
+        # part in. Recognising a re-import as the *same* lineage needs the
+        # versioned envelope and conflict handling in issue #2642's phase 3.
+        uid: Brando.Utils.generate_uid(),
+        version: 1,
+        version_note: nil,
+        source_module_id: nil,
+        source_version: nil,
+        acknowledged_version: nil
+      })
       |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
 
     refs_with_new_uids =

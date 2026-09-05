@@ -272,6 +272,42 @@
 
 #### Features
 
+- **Module migration tracking, and a warning before a module save destroys
+  content** (#2642). Saving a module has always been a site-wide migration: every
+  block using it is re-synced, and any reference the module no longer declares was
+  deleted from every block, in every entry, with no warning and no way back.
+
+  - **References are now retained instead of deleted.** A removal is
+    indistinguishable from a rename at this level, and the data is the editor's,
+    not the module's. Orphaned references lie dormant — the template no longer
+    renders them — until an explicit upgrade resolves them. Variables were
+    already retained; references now match.
+  - **`content_modules.version` counts definition revisions.** It bumps on an
+    effective change (see `Brando.Content.ModuleDiff` for what counts) and not on
+    a save that changed nothing. The bump doubles as an optimistic lock, so two
+    editors on the same module can no longer silently publish two different next
+    revisions — the second is told to reload.
+  - **`content_blocks.module_version` records how far each block got.** A block
+    holding data the current definition cannot read — an orphaned reference or
+    variable, or a reference whose block type the module swapped — is left behind
+    its module rather than stamped as current, and is findable through
+    `Brando.Content.Blocks.list_stale_block_ids/2` and `count_stale_blocks/2`. A
+    block whose write fails mid-migration stays behind too, so a partial migration
+    is a visible queue instead of silent mixed state.
+  - **The module editor asks before a destructive save**, naming each reference
+    and variable that will be orphaned and how many blocks on the site use the
+    module.
+  - **`content_modules.uid`** is the new lineage identity, for the import
+    replacement still to come. Name and namespace cannot serve: both are i18n
+    JSON maps, neither is unique, and both are editable. Export and import mint a
+    fresh `uid` at v1 for now — importing has always produced copies, and
+    recognising a re-import as the same lineage needs the versioned envelope and
+    conflict handling still to be built.
+
+  Requires `brando_167`. Run `mix brando.upgrade && mix ecto.migrate`. Existing
+  modules are given a `uid`, and existing blocks are backfilled as current, so
+  upgrading does not flag a site as stale on day one.
+
 - **Igniter-assisted tenancy setup for existing applications.** The opt-in
   `mix brando.setup.tenancy` task configures `:single` or `:multi` mode, inserts
   `Brando.Plug.Tenant` idempotently into recognized browser pipelines before
@@ -391,6 +427,14 @@
   compilation and raised from the changeset instead.
 
 #### Fixes
+
+- **Modal dialogs sized their prose like page content, and stacked their footer
+  buttons edge to edge.** `.modal-body` inherited `body`'s `@fontsize base` —
+  20px on desktop, 23px at xl — so loose text in a dialog came out oversized
+  beside the 13–16px controls next to it; it is `@fontsize sm` now. Fields and
+  labels set their own sizes, so nothing else moves. `.modal-footer` was a flex
+  row with `justify-content: flex-end` and no `gap`, which left two buttons
+  touching.
 
 - **The identifier picker's filter input did nothing.** `Brando.SelectFilter`
   toggles `.filter-hidden` on each option it filters out, but the only rule for
