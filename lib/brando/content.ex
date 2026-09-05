@@ -224,10 +224,15 @@ defmodule Brando.Content do
     end
   end
 
-  @module_cache_opts %{
-    cache: {:ttl, :infinite},
-    preload: [{:vars, {Var, [asc: :sequence]}}, refs: Brando.Content.Ref.preloads()]
-  }
+  # A function, not a module attribute: `Ref.preloads/0` resolved into an
+  # attribute is a compile-time call into a Blueprint schema, which is one of the
+  # edges holding Blueprint's compile-connected cycle together. See issue #2737.
+  defp module_cache_opts do
+    %{
+      cache: {:ttl, :infinite},
+      preload: [{:vars, {Var, [asc: :sequence]}}, refs: Brando.Content.Ref.preloads()]
+    }
+  end
 
   @container_cache_opts %{
     cache: {:ttl, :infinite},
@@ -243,7 +248,7 @@ defmodule Brando.Content do
     if Brando.Tenant.enabled?() do
       Brando.Content.SharedLibrary.get_for_current_tenant(:module, id, origin)
     else
-      {:ok, modules} = list_modules(@module_cache_opts)
+      {:ok, modules} = list_modules(module_cache_opts())
       Enum.find(modules, &(&1.id == id))
     end
   end

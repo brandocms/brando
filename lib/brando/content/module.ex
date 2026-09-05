@@ -138,11 +138,14 @@ defmodule Brando.Content.Module do
       filter label: t("Class"), key: "class"
       filter label: t("Code"), key: "code"
 
+      # `JSCommands`, not `BrandoAdmin.Utils`: a `selection_action`'s event is built
+      # during compilation of this schema, and `Utils` pulls in the translator and
+      # `Phoenix.Component` — so this schema recompiled with the admin. See #2737.
       selection_action label: t("Export modules"),
                        event:
                          "export_modules"
                          |> JS.push()
-                         |> BrandoAdmin.Utils.show_modal("#module-export-modal")
+                         |> BrandoAdmin.JSCommands.show_modal("#module-export-modal")
 
       child_listing name: :module_entries, schema: Brando.Content.Module
       component &__MODULE__.listing_row/1

@@ -63,7 +63,7 @@ defmodule Brando.Content.Palette do
           inputs_for :colors do
             style :inline
             cardinality :many
-            default %Brando.Content.Palette.Color{}
+            default fn _entry, _ -> struct(Brando.Content.Palette.Color) end
 
             input :hex_value, :color, monospace: true
             input :name, :text

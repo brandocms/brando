@@ -13,6 +13,8 @@ defmodule Brando.Content.Block do
 
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Content.VarAttrs
+
   @type t :: %__MODULE__{}
 
   @block_attrs [
@@ -37,46 +39,7 @@ defmodule Brando.Content.Block do
     :identifier_metas
   ]
 
-  @var_attrs [
-    :type,
-    :label,
-    :placeholder,
-    :key,
-    :value,
-    :value_boolean,
-    :placement,
-    :new_row,
-    :instructions,
-    :color_picker,
-    :color_opacity,
-    :link_text,
-    :link_type,
-    :link_identifier_schemas,
-    :link_target_blank,
-    :link_allow_custom_text,
-    :width,
-    :sequence,
-    :creator_id,
-    :module_id,
-    :page_id,
-    :block_id,
-    :palette_id,
-    :identifier_id,
-    :global_set_id,
-    :table_template_id,
-    # Media a var can carry. The editor renders and commits all four
-    # (`render_var.ex`, `block.ex`'s `commit_var_data`), so omitting any of them
-    # here means the cast silently drops it and the value never reaches the DB.
-    :image_id,
-    :file_id,
-    :video_id,
-    :gallery_id,
-    # Upload/picker configuration for media vars, set through the var's config UI
-    :config_target,
-    :gallery_image_config_target,
-    :gallery_video_config_target,
-    :gallery_allowed_types
-  ]
+  @var_attrs VarAttrs.all()
 
   # ++ Traits
   trait :creator
@@ -293,9 +256,7 @@ defmodule Brando.Content.Block do
   `palette_id` and `identifier_id` stay: for a palette or identifier var those
   *are* the value.
   """
-  @var_owner_attrs [:creator_id, :module_id, :page_id, :block_id, :global_set_id, :table_template_id]
-
-  def carried_var_attrs, do: @var_attrs -- @var_owner_attrs
+  def carried_var_attrs, do: VarAttrs.carried()
 
   def var_changeset(var, attrs, position, user) when is_integer(position) do
     var

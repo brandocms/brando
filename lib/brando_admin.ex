@@ -29,7 +29,13 @@ defmodule BrandoAdmin do
 
       on_mount {BrandoAdmin.Hooks, :urls}
 
-      if Application.compile_env(Brando.config(:otp_app), :sql_sandbox) do
+      # `Brando.RuntimeConfig.get/1`, not `Brando.config/1`: this runs during macro
+      # expansion in every admin LiveView, so calling into `Brando` here gives each
+      # of them a compile-time edge to it — and `Brando` sits inside Blueprint's
+      # compile-connected component, so the edge closes a cycle that pulls the
+      # whole admin into one recompilation unit. `RuntimeConfig` is the leaf that
+      # exists for exactly this, and reads the same value. See issue #2737.
+      if Application.compile_env(Brando.RuntimeConfig.get(:otp_app), :sql_sandbox) do
         on_mount {BrandoAdmin.Mounts.LiveAcceptance, {:default, __MODULE__}}
       end
 
