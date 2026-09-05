@@ -125,6 +125,10 @@ defmodule BrandoAdmin.Components.Content do
         @auto && "auto",
         @show && "visible"
       ]}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={"#{@id}-title"}
+      phx-hook="Brando.Modal"
       phx-window-keydown={@close}
       phx-key="escape"
       {@rest}
@@ -136,7 +140,7 @@ defmodule BrandoAdmin.Components.Content do
             "modal-header",
             @center_header && "centered"
           ]}>
-            <h2>{@title}</h2>
+            <h2 id={"#{@id}-title"}>{@title}</h2>
             <div class="header-wrap">
               <%= if @header != [] do %>
                 {render_slot(@header)}

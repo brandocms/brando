@@ -65,7 +65,18 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
     test "stays silent while the field is untouched" do
       html = error_tag(untouched_form([{:meta_image_id, "can't be blank"}]))
 
-      refute html =~ "field-error"
+      # The `role="alert"` container is always rendered — a live region has to be
+      # in the accessibility tree before content lands in it — so what proves
+      # silence is that it holds no message, not that it is absent.
+      refute html =~ ~s(class="field-error")
+      refute html =~ "can&#39;t be blank"
+    end
+
+    test "keeps the announcement region in the DOM even with nothing to say" do
+      html = error_tag(untouched_form([]))
+
+      assert html =~ ~s(role="alert")
+      assert html =~ ~s(id="page_meta_image_id-error")
     end
 
     test "interpolates a group constraint's fields as their form labels" do

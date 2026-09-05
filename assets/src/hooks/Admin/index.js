@@ -46,15 +46,21 @@ export default app => ({
 
     this.handleEvent('b:scroll_to_first_error', () => {
       const $fieldErrors = Dom.all('.field-error')
-      if ($fieldErrors.length) {
-        const firstError = $fieldErrors[0]
-        // const $tabWithError = firstError.closest('.form-tab')
-        // console.log($tabWithError)
-        // if (!Dom.hasClass($tabWithError, 'active')) {
-        //   this.pushEvent
-        //   console.log('has active!')
-        // }
-        app.scrollTo({ y: firstError, offsetY: 50 })
+      if (!$fieldErrors.length) return
+
+      const firstError = $fieldErrors[0]
+      app.scrollTo({ y: firstError, offsetY: 50 })
+
+      // Scrolling alone leaves a keyboard or screen-reader user wherever they
+      // were — usually the submit button — with no indication of which field
+      // is wrong. Put the caret in the offending control instead; its
+      // `aria-describedby` points back at this message, so it is read out on
+      // arrival. The wait lets the scroll settle first, otherwise focus()
+      // fights it with its own jump.
+      const wrapper = firstError.closest('.field-wrapper')
+      const control = wrapper && wrapper.querySelector('[aria-invalid="true"]')
+      if (control) {
+        setTimeout(() => control.focus({ preventScroll: true }), 300)
       }
     })
 
