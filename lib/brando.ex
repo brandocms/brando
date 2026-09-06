@@ -1,4 +1,5 @@
 defmodule Brando do
+  @external_resource "README.md"
   @moduledoc File.read!("README.md")
   @version Mix.Project.config()[:version]
 
