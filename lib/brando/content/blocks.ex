@@ -1245,6 +1245,7 @@ defmodule Brando.Content.Blocks do
       sequence: sequence,
       creator_id: user_id,
       parent_id: nil,
+      slot_remap: nil,
       children: [],
       vars: [],
       table_rows: [],

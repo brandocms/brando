@@ -76,6 +76,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
           | {:reorder, [uid()]}
           | {:reorder_children, parent :: uid(), [uid()]}
           | {:move_to_parent, uid(), new_parent :: uid(), non_neg_integer() | :end}
+          | {:remap_slot, uid(), uid() | nil, params()}
           | {:delete, uid()}
 
   @doc """
@@ -246,6 +247,23 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
            | parents: Map.put(state.parents, uid, new_parent_uid),
              child_order: Map.put(state.child_order, new_parent_uid, List.insert_at(siblings, clamp(at, siblings), uid))
          }}
+    end
+  end
+
+  # One operation replaces an empty destination and updates the retained slot.
+  # Its children never move, keeping their IDs, edits and snapshot ownership.
+  def apply_op(%__MODULE__{} = state, {:remap_slot, uid, destination_uid, params}) do
+    valid_destination? =
+      is_nil(destination_uid) ||
+        (destination_uid != uid && known?(state, destination_uid) &&
+           state.parents[uid] == state.parents[destination_uid] &&
+           Map.get(state.child_order, destination_uid, []) == [])
+
+    if known?(state, uid) && Map.has_key?(state.parents, uid) && valid_destination? do
+      {:ok, state} = apply_op(state, {:update, uid, params})
+      if destination_uid, do: apply_op(state, {:delete, destination_uid}), else: {:ok, state}
+    else
+      {:error, :invalid_slot_remap}
     end
   end
 
@@ -678,6 +696,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       Map.new(mod.__schema__(:fields), fn field ->
         {to_string(field), struct |> Map.get(field) |> change_value()}
       end)
+
+    field_params =
+      if mod == Brando.Content.Block && struct.slot_remap,
+        do: Map.put(field_params, "slot_remap", struct.slot_remap),
+        else: field_params
 
     mod.__schema__(:associations)
     |> Enum.filter(&(&1 in @snapshot_assocs))

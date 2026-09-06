@@ -45,6 +45,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   alias Brando.Cache
   alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Content.BlockSlots
+  alias Brando.Content.BlockSlots.Lifecycle, as: CollectionLifecycle
   alias BrandoAdmin.Components.Form.Block.Events
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.BlockField.Ops
@@ -66,6 +67,10 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:open_slot_uid, nil)
     |> assign(:slot_open, false)
     |> assign(:slot_title, nil)
+    |> assign(:unused_collections, [])
+    |> assign(:remap_slot_uid, nil)
+    |> assign(:remap_targets, [])
+    |> assign(:remap_error, nil)
     |> assign_new(:paste_multi_module_id, fn -> nil end)
     |> Events.attach_block_events()
     |> then(&{:ok, &1})
@@ -589,18 +594,35 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_hidden_block_fields()
     |> assign(:form_is_new, false)
     |> assign(:form_has_changes, false)
-    |> assign(:active, Changeset.get_field(changeset, :active))
-    |> assign(:deleted, Changeset.get_field(changeset, :marked_as_deleted))
+    |> assign(:active, Changeset.get_field(block_cs, :active))
+    |> assign(:deleted, Changeset.get_field(block_cs, :marked_as_deleted))
     |> assign(:children_forms, Map.new(children_forms, &{Changeset.get_field(&1.source, :uid), &1}))
     |> assign(:block_list, Enum.map(children, & &1.uid))
     |> assign(:changesets, Enum.map(children, &{&1.uid, nil}))
     |> assign(:has_children?, children != [])
+    |> assign(:slot_name, Changeset.get_field(block_cs, :slot_name))
+    |> assign(:slot_kind, Changeset.get_field(block_cs, :slot_kind))
+    |> assign(:slot_module_set, Changeset.get_field(block_cs, :slot_module_set))
+    |> assign_unused_collections()
     |> maybe_push_remount(msg)
     |> then(&{:ok, &1})
   end
 
   def update(%{event: "close_slot"}, socket) do
     {:ok, assign(socket, :open_slot_uid, nil)}
+  end
+
+  def update(%{event: "region_remap_targets", uid: uid, targets: targets}, socket) do
+    {:ok, assign(socket, remap_slot_uid: uid, remap_targets: targets, remap_error: nil)}
+  end
+
+  def update(%{event: "region_remapped"}, socket) do
+    {:ok, socket |> assign(remap_slot_uid: nil, remap_error: nil) |> assign_unused_collections()}
+  end
+
+  def update(%{event: "region_remap_failed"}, socket) do
+    {:ok,
+     assign(socket, :remap_error, gettext("This destination is no longer available. Choose an empty compatible region."))}
   end
 
   def update(%{event: "insert_block", module_id: module_id} = message, %{assigns: %{type: :slot}} = socket) do
@@ -997,6 +1019,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> maybe_get_live_preview_status()
     |> assign_hidden_block_fields()
     |> assign(:block_initialized, true)
+    |> assign_unused_collections()
     |> then(&{:ok, &1})
   end
 
@@ -1076,7 +1099,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       block_form ->
         field_names =
           if block_form[:type].value == :slot,
-            do: @hidden_block_fields ++ [:slot_kind, :slot_name, :slot_module_set],
+            do: @hidden_block_fields ++ [:slot_kind, :slot_name, :slot_module_set, :slot_remap],
             else: @hidden_block_fields
 
         fields =
@@ -1821,6 +1844,88 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
+  def assign_unused_collections(%{assigns: %{type: :module, multi: false}} = socket) do
+    owner = collection_owner(socket)
+    definitions = CollectionLifecycle.definitions(owner)
+
+    unused =
+      owner
+      |> CollectionLifecycle.unused(definitions)
+      |> Enum.map(fn slot ->
+        %{
+          uid: slot.uid,
+          kind: slot.slot_kind,
+          name: slot.slot_name,
+          label: CollectionLifecycle.label(slot),
+          restore?: slot.slot_kind == :footnote && CollectionLifecycle.text_ref?(definitions, slot.slot_name)
+        }
+      end)
+
+    assign(socket, :unused_collections, unused)
+  end
+
+  def assign_unused_collections(socket), do: socket
+
+  defp collection_owner(socket) do
+    owner = socket.assigns.form.source |> get_block_changeset(socket.assigns.belongs_to) |> Changeset.apply_changes()
+    slots = Enum.map(socket.assigns.block_list, &Changeset.apply_changes(socket.assigns.children_forms[&1].source))
+    %{owner | children: slots}
+  end
+
+  def unused_collection_action(socket, action, %{"uid" => uid} = params) do
+    socket = assign_unused_collections(socket)
+
+    case Enum.find(socket.assigns.unused_collections, &(&1.uid == uid)) do
+      nil ->
+        socket
+
+      slot ->
+        case action do
+          "open_unused_collection" ->
+            assign(socket, open_slot_uid: uid, slot_title: slot.name)
+
+          "delete_unused_collection" ->
+            {:ok, socket} = update(%{event: "delete_block", uid: uid, dom_id: nil}, socket)
+            assign(socket, open_slot_uid: nil)
+
+          "restore_note_reference" when slot.restore? ->
+            case instance_ref(socket, slot.name) do
+              %{uid: ref_uid} ->
+                push_event(socket, "b:tiptap:insert_footnote:block-#{ref_uid}-rich-text", %{uid: uid, restore: true})
+
+              _ ->
+                socket
+            end
+
+          "choose_region_remap" when slot.kind == :region ->
+            request_region_remap(socket, "region_remap_targets", uid, %{})
+
+          "remap_region" when slot.kind == :region ->
+            request_region_remap(socket, "remap_region", uid, %{name: params["name"]})
+
+          _ ->
+            socket
+        end
+    end
+  end
+
+  def unused_collection_action(socket, _, _), do: socket
+
+  defp request_region_remap(socket, event, uid, extra) do
+    send_update(
+      BlockField,
+      Map.merge(extra, %{
+        id: "#{socket.assigns.form_id}-blocks-#{socket.assigns.block_field}",
+        event: event,
+        owner_uid: socket.assigns.uid,
+        uid: uid,
+        reply_to: socket.assigns.myself
+      })
+    )
+
+    socket
+  end
+
   def create_footnote(socket, %{"ref_name" => name, "tiptap_id" => tiptap_id}) do
     case {collection_ref(socket, name), instance_ref(socket, name)} do
       {%{data: %{type: "text", data: %{footnotes: true} = data}}, %{uid: ref_uid}}
@@ -1931,6 +2036,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> assign(:changesets, insert_child_changeset(socket.assigns.changesets, uid, sequence))
       |> assign(:open_slot_uid, uid)
       |> assign(:slot_title, title)
+      |> assign_unused_collections()
       |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(slot)})
     end
   end
@@ -2053,6 +2159,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:form, form)
     |> assign_hidden_block_fields()
     |> emit_block_op({:update, socket.assigns.uid, Ops.block_diff_params(form.source)})
+    |> assign_unused_collections()
   end
 
   @doc """

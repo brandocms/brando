@@ -379,6 +379,14 @@ defmodule BrandoAdmin.Components.Form.Input do
           </div>
           <.input type={:hidden} field={@field} class="tiptap-text" phx-debounce={300} />
         </div>
+        <.live_component
+          :if={@footnotes}
+          module={BrandoAdmin.Components.Form.UnusedNotes}
+          id={"#{@field.id}-unused-notes"}
+          field={@field.field}
+          html={@field.value}
+          form_target={@target}
+        />
         <button
           :if={@ai_enabled?}
           type="button"

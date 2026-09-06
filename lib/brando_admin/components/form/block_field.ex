@@ -61,6 +61,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Content.BlockSlots
+  alias Brando.Content.BlockSlots.Lifecycle, as: CollectionLifecycle
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
   alias BrandoAdmin.Components.Form.BlockField.Ops
@@ -71,10 +72,83 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   require Logger
 
   def mount(socket) do
-    {:ok, assign(socket, outline_items: [], open_slot_uid: nil, slot_title: nil)}
+    {:ok, assign(socket, outline_items: [], open_slot_uid: nil, slot_title: nil, note_observers: %{})}
   end
 
   def update(%{event: "close_slot"}, socket), do: {:ok, assign(socket, :open_slot_uid, nil)}
+
+  def update(%{event: "inspect_field_notes", field: field, html: html, reply_to: reply_to}, socket) do
+    if Map.has_key?(socket.assigns.footnote_fields, field) do
+      {:ok,
+       socket
+       |> update(:note_observers, &Map.put(&1, field, %{html: html, reply_to: reply_to}))
+       |> notify_note_observers()}
+    else
+      {:ok, socket}
+    end
+  end
+
+  def update(
+        %{event: "field_note_action", field: field, html: html, uid: uid, action: action, input_id: input_id},
+        socket
+      ) do
+    unused = CollectionLifecycle.unused_notes(field_note_slots(socket), field, html)
+
+    if Map.has_key?(socket.assigns.footnote_fields, field) && Enum.any?(unused, &(&1.uid == uid)) do
+      case action do
+        "open_unused_collection" ->
+          {:ok, assign(socket, open_slot_uid: uid, slot_title: gettext("Footnote"))}
+
+        "restore_note_reference" ->
+          {:ok, push_event(socket, "b:tiptap:insert_footnote:#{input_id}", %{uid: uid, restore: true})}
+
+        "delete_unused_collection" ->
+          update(%{event: "delete_block", uid: uid}, assign(socket, :open_slot_uid, nil))
+
+        _ ->
+          {:ok, socket}
+      end
+    else
+      {:ok, socket}
+    end
+  end
+
+  def update(%{event: "region_remap_targets", owner_uid: owner_uid, uid: uid, reply_to: reply_to}, socket) do
+    targets =
+      with {:ok, owner} <- collection_owner(socket, owner_uid) do
+        owner
+        |> CollectionLifecycle.remap_targets(CollectionLifecycle.definitions(owner), uid)
+        |> Enum.map(&{&1.description || &1.name, &1.name})
+      else
+        _ -> []
+      end
+
+    send_update(reply_to, event: "region_remap_targets", uid: uid, targets: targets)
+    {:ok, socket}
+  end
+
+  def update(%{event: "remap_region", owner_uid: owner_uid, uid: uid, name: name, reply_to: reply_to}, socket) do
+    with {:ok, owner} <- collection_owner(socket, owner_uid),
+         {:ok, destination_uid, params} <-
+           CollectionLifecycle.remap(owner, CollectionLifecycle.definitions(owner), uid, name),
+         {:ok, _} <- Ops.apply_op(socket.assigns.block_ops, {:remap_slot, uid, destination_uid, params}) do
+      root_uid = Ops.root_of(socket.assigns.block_ops, owner_uid)
+
+      socket =
+        socket
+        |> apply_block_op({:remap_slot, uid, destination_uid, params})
+        |> replace_root_from_store(root_uid)
+        |> ship_or_flush(root_uid)
+        |> refresh_live_preview()
+
+      send_update(reply_to, event: "region_remapped")
+      {:ok, socket}
+    else
+      _ ->
+        send_update(reply_to, event: "region_remap_failed")
+        {:ok, socket}
+    end
+  end
 
   def update(%{event: "create_footnote", field: field, params: params}, socket) do
     with %{enabled: true, module_set: set} <- socket.assigns.footnote_fields[field],
@@ -899,6 +973,39 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
+  defp collection_owner(socket, uid) do
+    if Ops.known?(socket.assigns.block_ops, uid) do
+      root_uid = Ops.root_of(socket.assigns.block_ops, uid)
+      {:ok, params} = Ops.materialize_root(socket.assigns.block_ops, root_uid)
+
+      root =
+        socket
+        |> materialize_base_struct(root_uid)
+        |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
+        |> Changeset.get_assoc(:block, :struct)
+
+      case find_block_by_uid([root], uid) do
+        %{type: :module, multi: false} = owner -> {:ok, owner}
+        _ -> {:error, :invalid_owner}
+      end
+    else
+      {:error, :unknown_owner}
+    end
+  end
+
+  defp replace_root_from_store(socket, root_uid) do
+    {:ok, params} = Ops.materialize_root(socket.assigns.block_ops, root_uid)
+
+    form =
+      socket
+      |> materialize_base_struct(root_uid)
+      |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
+      |> to_form(as: "entry_block", id: "entry_block_form-#{root_uid}")
+
+    send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: form, remount_js: true)
+    put_seed_form(socket, root_uid, form)
+  end
+
   # The op chokepoint: every mutation (structural or content, local or
   # remote) lands here. A rejected op means a caller drifted from the store —
   # log it loudly, keep the socket usable.
@@ -929,6 +1036,39 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> assign(:block_ops, ops_state)
     |> assign(:root_order, ops_state.order)
+    |> notify_note_observers()
+  end
+
+  defp field_note_slots(socket) do
+    Enum.map(socket.assigns.block_ops.order, fn uid ->
+      {:ok, params} = Ops.materialize_root(socket.assigns.block_ops, uid)
+
+      socket
+      |> materialize_base_struct(uid)
+      |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
+      |> Changeset.get_assoc(:block, :struct)
+    end)
+  end
+
+  defp notify_note_observers(socket) do
+    observers = socket.assigns[:note_observers] || %{}
+
+    if map_size(observers) > 0 do
+      slots = field_note_slots(socket)
+
+      Enum.each(observers, fn {field, observer} ->
+        items =
+          slots
+          |> CollectionLifecycle.unused_notes(field, observer.html)
+          |> Enum.map(
+            &%{uid: &1.uid, kind: :footnote, name: &1.slot_name, label: CollectionLifecycle.label(&1), restore?: true}
+          )
+
+        send_update(observer.reply_to, event: "notes", items: items)
+      end)
+    end
+
+    socket
   end
 
   # Seed forms exist for one purpose: a Block component reads its form from

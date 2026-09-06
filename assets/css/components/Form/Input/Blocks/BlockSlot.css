@@ -53,6 +53,22 @@
 .footnote-storage { margin: 0; padding: 0; }
 .footnote-storage > .blocks-content { margin: 0; padding: 0; }
 
+.unused-collections {
+  margin: 12px 0 24px; padding: 18px 20px; border: 1px solid #ccad76;
+  border-radius: 9px; background: #fff9ed; color: #052752;
+  h3 { font-size: 15px; font-weight: 600; margin: 0 0 7px; span { margin-left: 6px; } }
+  > p { font-size: 13px; line-height: 1.5; margin: 0 0 12px; }
+  ul { list-style: none; padding: 0; margin: 0; }
+  li { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 10px 0; }
+  li + li { border-top: 1px solid #05275218; }
+  .unused-collection-label { display: grid; gap: 3px; min-width: 0; strong { overflow-wrap: anywhere; } > span { font-size: 12px; opacity: .7; } }
+  .unused-collection-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  button { border: 1px solid #05275230; border-radius: 5px; padding: 7px 11px; background: white; color: inherit; font-size: 13px; }
+  button:hover { border-color: #052752; }
+  button:focus-visible, select:focus-visible { outline: 2px solid #0047e5; outline-offset: 3px; }
+  .region-remap-form { border-top: 1px solid #05275218; margin-top: 8px; padding-top: 14px; label { display: block; font-size: 13px; margin-bottom: 8px; } select { width: 100%; padding: 8px; margin-bottom: 12px; } button + button { margin-left: 8px; } }
+}
+
 .tiptap .tiptap-footnote {
   display: inline-flex; align-items: center; justify-content: center; vertical-align: super;
   min-width: 21px; min-height: 21px; padding: 2px 5px; margin: 0 2px; border: 0;

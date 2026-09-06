@@ -93,8 +93,29 @@ reading.” Place it in an ordinary module template using the normal ref syntax:
 Content lives in an internal `:slot` block under its owner, matched by the ref's
 name. Replacing a ref row does not replace its content. Renaming or removing a
 region ref retains the subtree, but it is no longer rendered at that insertion
-point. There is currently no separate interface for managing unmatched regions
-or notes whose last reference has been removed.
+point. The owner shows these collections under **Unused content**.
+
+## Recovering unused content
+
+An unused collection still holds its content. Removing or renaming a region
+definition, or removing the last inline reference to a note, never deletes its
+body automatically. The editor lists unmatched regions and unreferenced notes
+on their owning block, or beside the owning Blueprint rich-text field.
+
+- **Open** lets you inspect and edit the retained content.
+- **Remap** connects an unmatched region to an empty current region on the same
+  block. Only destinations whose module set allows all its children are offered.
+  The region and its children keep their identities and order, including pending
+  edits. Populated destinations cannot be overwritten or merged.
+- **Restore reference** inserts a marker for the existing note in its original
+  text owner. It is available while that text ref or field still exists.
+- **Delete** removes the collection explicitly. The block bin can undo this
+  until the entry is saved.
+
+Region remaps participate in collaboration and recovery copies. Their virtual,
+signed `slot_remap` field authorizes only the selected region and owner; saves
+recheck the current module definition and destination policy. Plain posted slot
+metadata cannot rename persisted collections. No additional migration is needed.
 
 ## Rendering and numbering
 

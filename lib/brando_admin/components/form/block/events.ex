@@ -21,6 +21,19 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   def handle_block_event("open_block_slot", %{"ref_name" => name}, socket),
     do: {:halt, Block.open_named_slot(socket, name)}
 
+  def handle_block_event(event, params, socket)
+      when event in [
+             "open_unused_collection",
+             "delete_unused_collection",
+             "restore_note_reference",
+             "choose_region_remap",
+             "remap_region"
+           ],
+      do: {:halt, Block.unused_collection_action(socket, event, params)}
+
+  def handle_block_event("cancel_region_remap", _, socket),
+    do: {:halt, assign(socket, remap_slot_uid: nil, remap_error: nil)}
+
   def handle_block_event("create_footnote", params, socket),
     do: {:halt, Block.create_footnote(socket, params)}
 

@@ -93,10 +93,12 @@ export default (app) => ({
   },
 
   setupFootnoteHandler() {
-    this.handleEvent(`b:tiptap:insert_footnote:${this.el.id}`, ({ uid }) => {
+    this.handleEvent(`b:tiptap:insert_footnote:${this.el.id}`, ({ uid, restore }) => {
       // Keep the saved ProseMirror selection, but leave focus in the drawer
       // which has just opened above this editor.
-      this._editor?.chain().insertContent({ type: 'footnote', attrs: { uid } }).run()
+      const chain = this._editor?.chain()
+      if (restore) chain?.focus()
+      chain?.insertContent({ type: 'footnote', attrs: { uid } }).run()
       renumberFootnotes(this.el)
       this.commitInput(() => {
         const drawer = document.getElementById(`block-slot-drawer-${uid}`)
