@@ -1,55 +1,49 @@
 ---
 name: brando-live-preview
-description: Work on Brando preview target configuration, cached preview rendering, assign invalidation, iframe updates, share previews, or preview recovery. Use brando-blocks as well for block-state changes.
+description: Change Brando live-preview cache invalidation, update transport, editor-state collection, or reconnect recovery. Use for preview internals and lifecycle bugs, not routine application target/template configuration.
 user-invocable: true
 ---
 
-# Live preview
+# Live-preview lifecycle
 
-Paths are repository-relative. The current implementation is in
-`lib/brando/live_preview.ex`; the target entity and Spark DSL are in
-`lib/brando/live_preview/target.ex` and `lib/brando/live_preview/dsl.ex`.
-Use the consumer's `e2e/lib/e2e_project_web/live_preview.ex` as a working example.
+Paths are repository-relative. Follow the server in `lib/brando/live_preview.ex`,
+the producer in `lib/brando_admin/components/form.ex`, and the consumer in
+`assets/src/hooks/LivePreview/index.js` plus the preview channel/client. Search
+an event name at both ends before changing its payload.
 
-## Render and update flow
+## Preserve render and cache ordering
 
-- Form's `open_live_preview` starts collection of the current entry, blocks, and
-  transformers. `event_tag_received` initializes or updates the preview once
-  that data is available; an unsaved entry must not be replaced with a DB reload.
-- LivePreview prepares the entry, applies target preloads, computes cached
-  assigns, applies `mutate_data`, renders block fields, builds a preview conn,
-  and renders the target template inside its layout.
-- Assign callbacks accept the entry or entry plus language. They see the
-  preloaded entry before `mutate_data`. Their cache is separate from HTML;
-  changing HTML alone does not recompute a cached listing/navigation assign.
-- `rerender_on_change` requests a full render for configured field paths;
-  `reassign_on_change` invalidates selected assign keys. Trace both the scalar
-  form validation path and nested component update path for dependency changes.
-- `initialize`, `update`, `rerender`, `reload`, and `share` have different
-  transport semantics. `reload` keeps the cache key, so existing block-channel
-  subscriptions continue to address the same preview.
+- Form requests materialized BlockField state before initializing a block
+  preview. Keep the current unsaved entry; loading the persisted entry again
+  discards the edit being previewed. Read [blocks](../brando-blocks/SKILL.md)
+  before changing block ownership or collection.
+- Target preloads run before cached assign callbacks; `mutate_data` runs after
+  those callbacks. An assign that needs a relation must receive it through
+  `schema_preloads`. A mutation cannot prepare input for an earlier callback.
+- Assign values and rendered HTML have separate caches. Updating HTML alone
+  does not refresh an assign. Trace `reassign_on_change` through scalar and
+  nested-field update paths, and invalidate affected keys before rendering.
+- A new template or newly introduced frontend behavior may need `reload`, not
+  an HTML morph. Keep the preview key when reloading so existing block-channel
+  subscriptions remain valid. Device viewport controls and template targets
+  are separate choices.
+- Extend `cleanup_cache/1` whenever adding session cache data. Ownership and
+  shared-snapshot rules are documented in `guides/authorization.md`; preserve
+  its update/recovery authorization checks.
 
-## Browser and ownership contracts
+## Recovery is a two-event handshake
 
-- `assets/src/hooks/LivePreview/index.js` controls the split pane and device
-  dimensions. The Form hook and preview channel/client manage content updates.
-  Search the event names in both producer and consumer before changing payloads.
-- Device viewport choices and rendered page/template targets are distinct
-  concepts even where historical assigns use similar names.
-- `lib/brando/authorization/preview.ex` registers ownership and checks reads,
-  writes, and broadcasts. Keep these checks for updates and recovery as well
-  as initial creation. A cache key alone is not an authorization decision.
-- `cleanup_cache/1` removes HTML, ownership metadata, and cached assign values.
-  Preserve cleanup when adding target-specific caches or switching behavior.
-- Shared previews are persisted snapshots with export authorization; they must
-  not silently inherit later edits from an active editing session.
+The main form's `validate` recovery and the hidden preview form's recovery can
+arrive in either order. `maybe_finish_live_preview_recovery/1` waits for both
+`form_recovered?` and `live_preview_recovery_pending?` before rendering. Starting
+an iframe successfully does not establish that recovered unsaved inputs have
+reached the server. Keep the recovery form outside the conditional preview pane
+and avoid replacing the ignored iframe wrapper during ordinary patches.
 
-## Verification
-
-Start with `test/brando/live_preview/live_preview_test.exs`,
-`test/brando/plugs/live_preview_test.exs`, and
-`test/brando_admin/preview_controller_test.exs`. The browser fixtures are in
-`e2e/e2e/playwright/tests/blocks/block-live-preview.spec.js` and
-`e2e/e2e/playwright/tests/blocks/block-multi-live-preview.spec.js`.
-Check unsaved changes, cached assigns, reload/recovery, and independent editors.
-Read [blocks](../brando-blocks/SKILL.md) before changing block state or collection.
+Use `test/brando_admin/live/form_recovery_test.exs` for this race;
+`test/brando/live_preview/live_preview_test.exs` for rendering/assign ordering;
+`test/brando/plugs/live_preview_test.exs` and
+`test/brando_admin/preview_controller_test.exs` for access and snapshots.
+Browser cases in `e2e/e2e/playwright/tests/blocks/block-live-preview.spec.js` and
+`e2e/e2e/playwright/tests/blocks/block-multi-live-preview.spec.js` cover unsaved
+updates and independent editors. Follow AGENTS.md for test setup.
