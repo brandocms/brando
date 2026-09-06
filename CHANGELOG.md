@@ -302,6 +302,15 @@
 
 #### Features
 
+- **Opt-in rich footnotes and named block regions.** Text refs and top-level
+  Blueprint rich-text fields can enable notes backed by a configured set of
+  ordinary modules, including image, video and file controls. References load
+  as numbered editor buttons; Villain numbers them in final rendered order
+  with accessible endnotes and return links. Blocks refs expose independent
+  named collections in both Liquid and HEEx templates. Upgrade migration 169
+  adds the internal slot fields; Floki is now a runtime dependency. See
+  [the setup and rendering guide](docs/FOOTNOTES.md). (#1523, #2651)
+
 - File resource listings offer **Replace file** (#2638). Replacements preserve
   the file ID, filename, URL, title, folder, and existing references. Uploads use
   the shared manager and validate the original file's configuration before

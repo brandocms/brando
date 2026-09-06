@@ -14,25 +14,21 @@ defmodule Brando.Blueprint.Forms.Footnotes do
   """
   alias Brando.Blueprint.Forms
 
-  def config(opts) do
-    case Keyword.get(opts || [], :footnotes, false) do
-      value when value in [nil, false] ->
-        nil
+  def config(opts), do: normalize_config(Keyword.get(opts || [], :footnotes, false))
 
-      value when is_list(value) ->
-        with blocks when is_atom(blocks) and not is_nil(blocks) <- Keyword.get(value, :blocks),
-             set when is_binary(set) and set != "" <- Keyword.get(value, :module_set) do
-          enabled = Keyword.get(value, :enabled, true)
-          if enabled not in [true, false], do: invalid!()
-          %{blocks: blocks, module_set: set, enabled: enabled}
-        else
-          _ -> invalid!()
-        end
+  defp normalize_config(value) when value in [nil, false], do: nil
 
-      _ ->
-        invalid!()
+  defp normalize_config(value) when is_list(value) do
+    with blocks when is_atom(blocks) and not is_nil(blocks) <- Keyword.get(value, :blocks),
+         set when is_binary(set) and set != "" <- Keyword.get(value, :module_set),
+         enabled when is_boolean(enabled) <- Keyword.get(value, :enabled, true) do
+      %{blocks: blocks, module_set: set, enabled: enabled}
+    else
+      _ -> invalid!()
     end
   end
+
+  defp normalize_config(_), do: invalid!()
 
   def fields(%{tabs: tabs}) do
     for tab <- tabs,
