@@ -607,3 +607,85 @@
     }
   }
 }
+
+/* File replacement dialog.
+
+   The current file is shown with the same card the file form field uses
+   (`.asset-field--single`), so the thing being replaced looks like the thing
+   the editor already knows. The picker is a drop zone rather than a button —
+   the UploadTrigger hook accepts drops on it — which leaves the button free to
+   be quiet. A `primary` here read as the confirming action, which it is not:
+   nothing is written until a file is chosen. */
+#file-replacement-modal {
+  .replacement-intro {
+    margin: 0;
+  }
+
+  .replacement-current {
+    @space margin-y 18px;
+    width: 100%;
+
+    .file-info {
+      /* The card's default `space-between` assumes a trailing action button.
+         There is none here, so the two lines would be pushed apart. */
+      justify-content: center;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .name {
+      font-weight: 500;
+    }
+
+    /* A media URL is long and has no spaces the browser will break on. */
+    .updated {
+      overflow-wrap: anywhere;
+    }
+  }
+
+  .replacement-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 20px;
+    border: 1px dashed var(--brando-input-border);
+    border-radius: var(--brando-input-radius);
+    background-color: var(--brando-color-input);
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+
+    &:hover {
+      border-color: var(--brando-color-blue);
+    }
+
+    /* The same tint the gallery drop zone uses, and for the same reason: it has
+       to read as "let go here" in both themes, which a themed background
+       variable cannot do — `--brando-color-input` and `--brando-color-peach`
+       resolve to the same dark value in dark mode. */
+    &.dragging {
+      border-color: var(--brando-color-blue);
+      background-color: #cde7ec;
+      cursor: cell;
+
+      .replacement-prompt {
+        color: var(--brando-color-dark);
+        opacity: 1;
+      }
+    }
+
+    .replacement-prompt {
+      @font mono;
+      font-size: 12px;
+      margin: 0;
+      opacity: 0.7;
+    }
+
+    /* `%btnSecondary` gives its first button a 15px top margin, for stacked
+       form buttons. Inside a centred flex column it just breaks the rhythm. */
+    button.secondary:first-of-type {
+      margin-top: 0;
+    }
+  }
+}

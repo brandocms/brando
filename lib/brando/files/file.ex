@@ -35,6 +35,7 @@ defmodule Brando.Files.File do
     listing do
       query %{order: [{:desc, :id}]}
       filter label: t("Filename"), key: "filename"
+      action label: t("Replace file"), event: "replace_file"
       component &__MODULE__.listing_row/1
     end
   end

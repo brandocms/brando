@@ -27,6 +27,7 @@ defmodule Brando.Uploads.AssetIntent do
     transformer_image
     transformer_video
     video_picker
+    file_replace
   )
 
   @known_keys ~w(
@@ -41,6 +42,7 @@ defmodule Brando.Uploads.AssetIntent do
     folder
     folder_id
     ref
+    file_id
   )
 
   # Opaque client-generated correlation token. It is echoed back to the owning
@@ -102,7 +104,7 @@ defmodule Brando.Uploads.AssetIntent do
         "block_ref_picture" ->
           asset_type == "image"
 
-        "block_ref_file" ->
+        kind when kind in ["block_ref_file", "file_replace"] ->
           asset_type == "file"
 
         "block_ref_video" ->
@@ -127,6 +129,13 @@ defmodule Brando.Uploads.AssetIntent do
   defp validate_destination(kind, target)
        when kind in ["entry_field", "entry_field_gallery"] do
     validate_existing_field(target["field"])
+  end
+
+  defp validate_destination("file_replace", target) do
+    case Ecto.Type.cast(:id, target["file_id"]) do
+      {:ok, id} when is_integer(id) and id > 0 -> :ok
+      _ -> {:error, "Invalid replacement file id"}
+    end
   end
 
   defp validate_destination(kind, target)

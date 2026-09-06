@@ -67,8 +67,14 @@ defmodule BrandoAdmin.UploadManager do
 
   def handle_event("intake", %{"files" => files, "target" => target}, socket) do
     case AssetIntent.normalize(target) do
-      {:ok, target} -> accept_intake(files, target, socket)
-      {:error, message} -> reject_intake(files, target, message, socket)
+      {:ok, %{"kind" => "file_replace"} = target} when length(files) != 1 ->
+        reject_intake(files, target, gettext("Choose one replacement file at a time"), socket)
+
+      {:ok, target} ->
+        accept_intake(files, target, socket)
+
+      {:error, message} ->
+        reject_intake(files, target, message, socket)
     end
   end
 
@@ -340,7 +346,7 @@ defmodule BrandoAdmin.UploadManager do
 
         file_meta = %{name: name, size: size, type: mime_type}
 
-        case Uploads.initiate(asset_type, target["config_target"], file_meta, user) do
+        case initiate_upload(asset_type, target, file_meta, user) do
           {:ok, :server} ->
             {item, socket} =
               put_intake_item(socket, name, size, asset_type, target, transport: :server)
@@ -388,6 +394,12 @@ defmodule BrandoAdmin.UploadManager do
 
     {:reply, %{decisions: decisions}, assign(socket, :open?, true)}
   end
+
+  defp initiate_upload(:file, %{"kind" => "file_replace", "file_id" => file_id}, meta, _user),
+    do: Brando.Files.Replacement.initiate(file_id, meta)
+
+  defp initiate_upload(asset_type, target, meta, user),
+    do: Uploads.initiate(asset_type, target["config_target"], meta, user)
 
   defp reject_intake(files, target, message, socket) do
     asset_type_value =
@@ -459,7 +471,7 @@ defmodule BrandoAdmin.UploadManager do
 
         # Always {:ok, _} so the entry is consumed (and its temp file cleaned)
         # even on storage failure; store_upload normalizes every error shape.
-        case Uploads.store_upload(meta, clean_entry, cfg, user) do
+        case store_upload(item.target, meta, clean_entry, cfg, user) do
           {:ok, asset} -> {:ok, asset}
           {:error, message} -> {:ok, {:upload_error, message}}
         end
@@ -494,7 +506,7 @@ defmodule BrandoAdmin.UploadManager do
             # Parity with save_file: server-transport files on CDN-enabled
             # sites must still be pushed to the CDN (images push from the
             # processing worker; direct transport is already in the bucket).
-            maybe_queue_cdn_upload(asset, user)
+            if item.target["kind"] != "file_replace", do: maybe_queue_cdn_upload(asset, user)
             Process.send_after(self(), {:auto_dismiss_item, item.ref}, @auto_dismiss_ms)
             update_item(socket, item.ref, %{status: :done, progress: 100, asset_id: asset.id})
           end
@@ -502,6 +514,11 @@ defmodule BrandoAdmin.UploadManager do
         {:noreply, socket}
     end
   end
+
+  defp store_upload(%{"kind" => "file_replace", "file_id" => file_id}, meta, entry, _cfg, user),
+    do: Brando.Files.Replacement.store(file_id, meta, entry, user)
+
+  defp store_upload(_target, meta, entry, cfg, user), do: Uploads.store_upload(meta, entry, cfg, user)
 
   defp record_pending_intent(item, direct, mime_type, user) do
     attrs = %{

@@ -36,6 +36,11 @@ defmodule Brando.CDN.Client do
       config :brando, :cdn_client, Brando.CDN.Client.Mock
 
   Defaults to `Brando.CDN.Client.ExAws`.
+
+  File replacements also use this boundary to verify that a failed object-store
+  write preserves the existing file record. The real implementation streams the
+  completed upload with ExAws; tests substitute the storage result while running
+  the database update and rollback paths.
   """
 
   @typedoc "An `ExAws` keyword-list config, as built by `Brando.CDN.get_s3_config/2`"
@@ -54,6 +59,10 @@ defmodule Brando.CDN.Client do
 
   @doc "Delete an object. S3 DELETE is idempotent, so a missing key succeeds."
   @callback delete_object(bucket :: binary, key :: binary, s3_config) ::
+              {:ok, map} | {:error, term}
+
+  @doc "Replace a known file key with a completed upload, retaining its URL."
+  @callback replace_file(bucket :: binary, key :: binary, path :: binary, opts :: keyword, s3_config) ::
               {:ok, map} | {:error, term}
 
   @doc """
@@ -102,6 +111,14 @@ defmodule Brando.CDN.Client.ExAws do
   def delete_object(bucket, key, s3_config) do
     bucket
     |> ExAws.S3.delete_object(key)
+    |> ExAws.request(s3_config)
+  end
+
+  @impl true
+  def replace_file(bucket, key, path, opts, s3_config) do
+    path
+    |> ExAws.S3.Upload.stream_file()
+    |> ExAws.S3.upload(bucket, key, opts)
     |> ExAws.request(s3_config)
   end
 end
