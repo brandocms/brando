@@ -19,6 +19,16 @@ cross-component decisions or failure modes not already covered at a better home.
 | Auth | No standalone skill | `guides/authorization.md` already documents modes, scopes, policies, revocation, boundaries, uploads, preview, and background execution. `docs/AUTHORIZATION.md` redirects there. A second set of security rules would create a competing source of truth. Session/onboarding gaps belong in developer docs. |
 | Workers | No standalone skill | `Brando.Tenant.Job` documents tenant capture/restore at the enqueue/perform boundary; `guides/tenancy_and_environments.md` covers operations and `guides/authorization.md` covers execution-time reauthorization. Link to these contracts instead of maintaining a worker catalogue or duplicating their instructions. |
 
+## Follow-up after #2771
+
+The public-guide gaps above are now filled: pages/navigation, identity/SEO,
+sitemaps, media, publishing, and user/session workflows have application-developer
+guides. See [documentation coverage](documentation-coverage.md) for the topic map
+and verification. This strengthens the decisions against adding duplicate skills;
+it does not remove the distinct state-coordination contracts owned by the retained
+block, upload, admin-form, and live-preview maintenance skills. The table above
+preserves the reasoning at the original audit baseline.
+
 ## Existing instructions reused
 
 The block skill remains needed for the single-owner ops architecture. The upload

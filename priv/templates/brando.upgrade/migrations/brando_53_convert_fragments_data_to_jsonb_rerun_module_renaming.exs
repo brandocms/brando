@@ -15,7 +15,7 @@ defmodule Brando.Migrations.FragmentsDataJSONBRenameTemplatesToModules do
     # Add your own schemas to the reject list, if they were created AFTER this migration
     villain_schemas =
       Enum.reject(
-        Brando.Villain.list_blocks(),
+        Brando.Content.Blocks.list_blocks(),
         &(elem(&1, 0) in [
             Brando.Content.Template,
             Brando.Pages.Page,

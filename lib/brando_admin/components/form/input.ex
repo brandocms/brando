@@ -240,7 +240,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     <%= if @confirmation do %>
       <Primitives.field_base
         field={@confirmation_field}
-        label={"#{@label} [#{gettext("confirm")}]"}
+        label={[@label, " [", gettext("confirm"), "]"]}
         instructions={@instructions}
         class={@class}
         compact={@compact}

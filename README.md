@@ -22,26 +22,14 @@
 
 ## Install
 
-Start by creating a new Phoenix project:
+For Brando 0.54, follow [Installation and generators](guides/generators.md).
+The walkthrough creates a fresh Phoenix consumer, runs `mix brando.install`,
+builds its frontend and admin assets through Vite/Yalc, applies migrations,
+initializes languages, and creates the first administrator before seeding.
 
-    $ mix phx.new my_project
-
-Run the install script:
-
-    $ wget https://raw.githubusercontent.com/brandocms/brando/master/install.sh && chmod +x install.sh && ./install.sh
-
-Go through `config/brando.exs`.
-
-To use Brando's error views, add to your Endpoint's config (in prod.exs):
-
-```elixir
-config :my_app, MyApp.Endpoint,
-  render_errors: [
-    formats: [html: Brando.ErrorHTML, json: Brando.ErrorJSON], layout: false
-  ],
-```
-
-*Remember to switch out your ports and configure SSL in `etc/nginx/prod.conf`*
+Keep the Elixir and BrandoJS dependencies on the same revision. The `next` branch
+contains the developing 0.54 API; existing applications should follow
+[Migrating to 0.54](guides/migrating_to_054.md) instead of rerunning the installer.
 
 ## Dependencies
 
@@ -49,32 +37,17 @@ Brando 0.54 processes images through the Image library and Vix/libvips. The
 current processor does not require the former `sharp-cli` or `gifsicle` tools.
 See [Videos](guides/videos.md) for video processing and provider requirements.
 
-## I18n
+## Languages and content
 
-Brando uses Gettext for i18n.
-
-To extract and merge your frontend and backend translations:
-(Example for norwegian)
-
-    $ mix gettext.extract --merge priv/gettext/frontend --locale no --plural-forms-header nplurals="2; plural=(n != 1);"
-    $ mix gettext.extract --merge priv/gettext/backend --locale no --plural-forms-header nplurals="2; plural=(n != 1);"
-
-
-## Generators
-
-Generate blueprint
-
-    $ mix brando.gen.blueprint
-
-Generate templates:
-
-    $ mix brando.gen
+[Languages and translations](guides/i18n.md) covers Gettext, content languages,
+translated pages, alternates, and routes. Continue with [Pages and fragments](guides/pages.md)
+and [Navigation](guides/navigation.md) to build a translated site.
 
 ## Documentation
 
 Start with the [Brando 0.54 guide index](guides/overview.md) for task-oriented
-reading paths. The [coverage audit](https://github.com/brandocms/brando/blob/next/docs/documentation-coverage.md) identifies
-partial and unfinished guides and the remaining writing work.
+reading paths. The [coverage audit](https://github.com/brandocms/brando/blob/next/docs/documentation-coverage.md) records
+coverage and the validation used for the guide workflows.
 
 - [Migrating to Brando 0.54](guides/migrating_to_054.md) — ordered source,
   database, derived-data, and Gettext upgrade workflow.
@@ -88,31 +61,9 @@ partial and unfinished guides and the remaining writing work.
   scheduling, and current implementation boundaries.
 
 
-## Serve static from DO Spaces
+## Media and deployment
 
-Setup Endpoint for `prod.exs`
-
-```elixir
-config :my_app, hmr: false
-config :my_app, MyAppWeb.Endpoint,
-  static_url: [
-    scheme: "https",
-    host: "cdn.univers.agency",
-    path: "/my_app/static",
-    port: 443
-  ]
-
-config :ex_aws, :s3, %{
-  access_key_id: System.get_env("AWS_ACCESS_KEY_ID"),
-  secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY"),
-  scheme: "https://",
-  host: %{"fra1" => "SPACES_NAME.fra1.digitaloceanspaces.com"},
-  region: "fra1"
-}
-```
-
-Add to Dockerfile build:
-
-```bash
-$ mix brando.static.deploy
-```
+Use [Images, files, and galleries](guides/media.md) for field configuration and
+frontend rendering, and [CDN and object storage](guides/cdn.md) for S3-compatible
+storage and delivery URLs. Application assets and media have different deployment
+paths; see [Deployment](guides/deployment.md) for the release workflow.

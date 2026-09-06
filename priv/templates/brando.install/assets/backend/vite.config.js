@@ -15,7 +15,7 @@ export default defineConfig({
   build: {
     manifest: 'admin_manifest.json',
     emptyOutDir: false,
-    target: 'baseline-widely-available',
+    target: 'es2022',
     outDir: '../../priv/static', // <- Phoenix expects our files here
     sourcemap: true, // we want to debug our code in production
     rollupOptions: {

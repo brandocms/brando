@@ -36,13 +36,17 @@ defmodule Brando.Mixfile do
           "guides/pages.md",
           "guides/navigation.md",
           "guides/datasources.md",
+          "guides/content_lifecycle.md",
           "guides/revisions.md",
           "guides/scheduled_publishing.md",
+          "guides/media.md",
           "guides/videos.md",
           "guides/cdn.md",
+          "guides/identity_and_seo.md",
           "guides/meta.md",
           "guides/jsonld.md",
           "guides/sitemaps.md",
+          "guides/users.md",
           "guides/authorization.md",
           "guides/i18n.md",
           "guides/querying.md",
@@ -66,20 +70,24 @@ defmodule Brando.Mixfile do
             "guides/pages.md",
             "guides/navigation.md",
             "guides/datasources.md",
+            "guides/content_lifecycle.md",
             "guides/revisions.md",
             "guides/scheduled_publishing.md"
           ],
           Media: [
+            "guides/media.md",
             "guides/videos.md",
             "guides/cdn.md"
           ],
           SEO: [
+            "guides/identity_and_seo.md",
             "guides/meta.md",
             "guides/jsonld.md",
             "guides/sitemaps.md"
           ],
           Operations: [
             "guides/tenancy_and_environments.md",
+            "guides/users.md",
             "guides/authorization.md",
             "guides/i18n.md",
             "guides/querying.md",

@@ -175,4 +175,21 @@ defmodule BrandoAdmin.Components.Form.InputTest do
 
     assert html =~ ~s(placeholder="Enter a title")
   end
+
+  test "password confirmation accepts the HTML-safe labels produced by Blueprint forms" do
+    form = to_form(%{"password" => nil, "password_confirmation" => nil}, as: :user)
+
+    for label <- ["Password", Phoenix.HTML.raw("Password")] do
+      html =
+        render_component(&Input.password/1, %{
+          field: form[:password],
+          label: label,
+          opts: [confirmation: true]
+        })
+
+      assert html =~ "Password [confirm]"
+      assert html =~ ~s(for="user_password_confirmation")
+      assert html =~ ~s(name="user[password_confirmation]")
+    end
+  end
 end

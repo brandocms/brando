@@ -4,6 +4,9 @@ Brando supports an explicit transition from legacy roles to configurable groups.
 Authentication still uses the existing Phoenix session tokens. Authorization decides
 which resources and actions that authenticated account may use in a specific scope.
 
+For account creation, restricted-editor setup, login/session behavior, deactivation,
+and content transfer, see [User accounts and sessions](users.md).
+
 ## Enable for an existing application
 
 1. Run `mix brando.upgrade`, review migration 170, and run `mix ecto.migrate`.

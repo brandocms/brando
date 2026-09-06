@@ -30,6 +30,10 @@ config :logger, :console,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# The scaffold has no HTTP mail adapter. Configure Swoosh's API client when
+# adding a delivery provider; otherwise its default requires an absent Hackney.
+config :swoosh, :api_client, false
 # config :phoenix, :static_compressors, [Phoenix.Digester.Gzip, Brando.Digester.Brotli]
 
 # Import environment specific config. This must remain at the bottom
