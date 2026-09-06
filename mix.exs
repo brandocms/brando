@@ -19,9 +19,11 @@ defmodule Brando.Mixfile do
       # Docs
       name: "Brando",
       docs: [
+        main: "overview",
         source_ref: "v#{@version}",
         source_url: "https://github.com/brandocms/brando",
         extras: [
+          "guides/overview.md",
           "guides/migrating_to_054.md",
           "guides/tenancy_and_environments.md",
           "guides/blueprints.md",
@@ -47,6 +49,7 @@ defmodule Brando.Mixfile do
           "guides/deployment.md"
         ],
         groups_for_extras: [
+          Introduction: ["guides/overview.md"],
           Upgrading: [
             "guides/migrating_to_054.md"
           ],

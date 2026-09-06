@@ -45,9 +45,9 @@ config :my_app, MyApp.Endpoint,
 
 ## Dependencies
 
-  * `sharp`/`sharp-cli` for image processing.
-    Installation instructions: https://github.com/brandocms/brando/issues/183
-  * `gifsicle` for GIF resizing.
+Brando 0.54 processes images through the Image library and Vix/libvips. The
+current processor does not require the former `sharp-cli` or `gifsicle` tools.
+See [Videos](guides/videos.md) for video processing and provider requirements.
 
 ## I18n
 
@@ -71,6 +71,10 @@ Generate templates:
     $ mix brando.gen
 
 ## Documentation
+
+Start with the [Brando 0.54 guide index](guides/overview.md) for task-oriented
+reading paths. The [coverage audit](https://github.com/brandocms/brando/blob/next/docs/documentation-coverage.md) identifies
+partial and unfinished guides and the remaining writing work.
 
 - [Migrating to Brando 0.54](guides/migrating_to_054.md) — ordered source,
   database, derived-data, and Gettext upgrade workflow.
