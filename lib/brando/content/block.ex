@@ -38,6 +38,7 @@ defmodule Brando.Content.Block do
     :slot_name,
     :slot_kind,
     :slot_module_set,
+    :slot_remap,
     :source,
     :identifier_metas
   ]
@@ -57,6 +58,7 @@ defmodule Brando.Content.Block do
     attribute :slot_name, :string
     attribute :slot_kind, :enum, values: [:region, :footnote]
     attribute :slot_module_set, :string
+    attribute :slot_remap, :string, virtual: true
     attribute :active, :boolean, default: true
     attribute :collapsed, :boolean, default: false
     attribute :description, :string

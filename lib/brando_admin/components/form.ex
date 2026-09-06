@@ -127,6 +127,28 @@ defmodule BrandoAdmin.Components.Form do
   # Ship field changes — triggered by child components (e.g. multi-select on close)
   def update(%{event: "draft_dirty"}, socket), do: {:ok, Drafts.dirty(socket)}
 
+  def update(%{event: event, field: field} = message, socket)
+      when event in ["inspect_field_notes", "field_note_action"] do
+    case Brando.Blueprint.Forms.Footnotes.field(socket.assigns.schema, field) do
+      nil ->
+        :ok
+
+      config ->
+        input = socket.assigns.form[config.field]
+
+        send_update(
+          BlockField,
+          message
+          |> Map.put(:id, "#{socket.assigns.id}-blocks-#{config.blocks}")
+          |> Map.put(:field, config.field)
+          |> Map.put(:html, input.value)
+          |> Map.put(:input_id, "#{input.id}-rich-text")
+        )
+    end
+
+    {:ok, socket}
+  end
+
   def update(%{event: "draft_part", capture_id: id, kind: kind, field: field, data: data}, socket),
     do: {:ok, Drafts.part(socket, id, kind, field, data)}
 

@@ -76,6 +76,10 @@ defmodule Brando.Drafts.Modules do
   defp compare_fields(label, old, current) do
     Enum.flat_map(old, fn {name, type} ->
       cond do
+        # A Blocks ref only names an insertion point. Its content is owned by
+        # a separate slot, retained and exposed by the unused-content controls.
+        # Keeping an obsolete region binding must not reject that whole owner.
+        label == "Reference" && type == "blocks" && !Map.has_key?(current, name) -> []
         not Map.has_key?(current, name) -> ["#{label} “#{name}” was removed or renamed."]
         compatible_type?(type, current[name]) -> []
         true -> ["#{label} “#{name}” changed type."]

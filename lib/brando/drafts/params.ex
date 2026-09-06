@@ -29,7 +29,8 @@ defmodule Brando.Drafts.Params do
             not is_nil(Map.get(value, key)) and not match?(%Ecto.Association.NotLoaded{}, Map.get(value, key))
         end)
 
-      value |> Map.take(mod.__schema__(:fields) ++ assocs) |> snapshot()
+      virtuals = if mod == Brando.Content.Block && value.slot_remap, do: [:slot_remap], else: []
+      value |> Map.take(mod.__schema__(:fields) ++ assocs ++ virtuals) |> snapshot()
     else
       value |> Map.from_struct() |> snapshot()
     end

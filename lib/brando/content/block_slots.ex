@@ -6,6 +6,7 @@ defmodule Brando.Content.BlockSlots do
   they do not own them, so replacing a ref cannot delete its content.
   """
   alias Brando.Content.Block
+  alias Brando.Content.BlockSlots.Lifecycle
   alias Ecto.Changeset
 
   def children(%{children: children}) when is_list(children), do: children
@@ -92,18 +93,35 @@ defmodule Brando.Content.BlockSlots do
         Changeset.add_error(changeset, :children, "contains a module that is not allowed in this collection")
       end
     else
-      validate_owned_slots(changeset)
+      changeset |> validate_owned_slots() |> Lifecycle.validate_remaps()
     end
   end
 
   # Slot identity is server-owned. A ref being renamed or switched off does
   # not re-home its old notes, and posted hidden fields cannot change policy.
-  defp keep_slot_identity(%{data: %{id: nil}} = changeset), do: changeset
-
   defp keep_slot_identity(changeset) do
-    Enum.reduce([:type, :slot_kind, :slot_name, :slot_module_set], changeset, fn field, cs ->
-      Changeset.put_change(cs, field, Map.get(cs.data, field))
-    end)
+    cond do
+      Changeset.get_field(changeset, :slot_remap) not in [nil, ""] ->
+        case Lifecycle.remap_claim(changeset) do
+          {:ok, claim} ->
+            changeset
+            |> Changeset.put_change(:type, :slot)
+            |> Changeset.put_change(:slot_kind, :region)
+            |> Changeset.put_change(:slot_name, claim.name)
+            |> Changeset.put_change(:slot_module_set, claim.set)
+
+          :error ->
+            Changeset.add_error(changeset, :slot_remap, "is not a valid region remap")
+        end
+
+      is_nil(changeset.data.id) ->
+        changeset
+
+      true ->
+        Enum.reduce([:type, :slot_kind, :slot_name, :slot_module_set], changeset, fn field, cs ->
+          Changeset.put_change(cs, field, Map.get(cs.data, field))
+        end)
+    end
   end
 
   defp same_module?(a, b),
@@ -159,6 +177,9 @@ defmodule Brando.Content.BlockSlots do
     note_owner? = Enum.any?(configured, fn {_name, config} -> config.blocks == field end)
 
     cond do
+      block && block.slot_remap not in [nil, ""] ->
+        Changeset.add_error(changeset, :block, "only module-owned regions can be remapped")
+
       block && note_owner? && block.type != :slot ->
         Changeset.add_error(changeset, :block, "this field only stores its configured footnotes")
 

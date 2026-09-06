@@ -198,6 +198,14 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           end
         }
       />
+      <.unused_collections
+        id={"unused-collections-#{@uid}"}
+        items={@unused_collections}
+        target={@myself}
+        remap_uid={@remap_slot_uid}
+        remap_targets={@remap_targets}
+        remap_error={@remap_error}
+      />
       <.collection_children {assigns} />
     </div>
     """
@@ -462,6 +470,70 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         level={@level + 1}
       />
     </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :items, :list, required: true
+  attr :target, :any, required: true
+  attr :remap_uid, :string, default: nil
+  attr :remap_targets, :list, default: []
+  attr :remap_error, :string, default: nil
+
+  def unused_collections(assigns) do
+    ~H"""
+    <section :if={@items != []} id={@id} class="unused-collections" aria-labelledby={"#{@id}-title"}>
+      <h3 id={"#{@id}-title"}>{gettext("Unused content")} <span>{length(@items)}</span></h3>
+      <p>{gettext("This content is kept here, but no longer has a region or a reference in the text.")}</p>
+      <ul>
+        <li :for={item <- @items} data-unused-uid={item.uid}>
+          <span class="unused-collection-label">
+            <strong>{item.label}</strong>
+            <span>{if item.kind == :region, do: gettext("Unmatched region"), else: gettext("Unreferenced footnote")}</span>
+          </span>
+          <div class="unused-collection-actions">
+            <button type="button" phx-click="open_unused_collection" phx-value-uid={item.uid} phx-target={@target}>{gettext(
+              "Open"
+            )}</button>
+            <button
+              :if={item.kind == :region}
+              type="button"
+              phx-click="choose_region_remap"
+              phx-value-uid={item.uid}
+              phx-target={@target}
+            >{gettext("Remap")}</button>
+            <button
+              :if={item.restore?}
+              type="button"
+              phx-click="restore_note_reference"
+              phx-value-uid={item.uid}
+              phx-target={@target}
+            >{gettext("Restore reference")}</button>
+            <button type="button" phx-click="delete_unused_collection" phx-value-uid={item.uid} phx-target={@target}>{gettext(
+              "Delete"
+            )}</button>
+          </div>
+        </li>
+      </ul>
+      <.form
+        :if={@remap_uid}
+        for={%{}}
+        id={"#{@id}-remap"}
+        phx-submit="remap_region"
+        phx-target={@target}
+        class="region-remap-form"
+      >
+        <input type="hidden" name="uid" value={@remap_uid} />
+        <label for={"#{@id}-destination"}>{gettext("Move this content to an empty region")}</label>
+        <select :if={@remap_targets != []} id={"#{@id}-destination"} name="name" required>
+          <option :for={{label, name} <- @remap_targets} value={name}>{label} ({name})</option>
+        </select>
+        <p :if={@remap_targets == []}>{gettext("There are no empty compatible regions on this block.")}</p>
+        <p :if={@remap_error} role="alert">{@remap_error}</p>
+        <button :if={@remap_targets != []} type="submit">{gettext("Remap region")}</button>
+        <button type="button" phx-click="cancel_region_remap" phx-target={@target}>{gettext("Cancel")}</button>
+      </.form>
+    </section>
     """
   end
 
