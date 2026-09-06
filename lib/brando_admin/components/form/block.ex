@@ -1987,16 +1987,22 @@ defmodule BrandoAdmin.Components.Form.Block do
   `""`, so reactivating it leaves the preview with nothing to splice and the raw
   placeholder on screen.
 
-  Containers are not the only blocks that own children: a `multi` module renders
-  its children through the same annotated slot, so it needs the same treatment.
+  This applies at any depth, including ordinary modules with owned collections.
+  Empty containers and multi modules still emit a content placeholder, so their
+  ability to own children matters even before the first child is inserted.
   """
-  def should_force_live_preview_update?(changeset, updated_changeset, :root) do
-    block_changeset = Changeset.get_assoc(changeset, :block)
-    updated_block_changeset = Changeset.get_assoc(updated_changeset, :block)
+  def should_force_live_preview_update?(changeset, updated_changeset, belongs_to) do
+    block_changeset = get_block_changeset(changeset, belongs_to)
+    updated_block_changeset = get_block_changeset(updated_changeset, belongs_to)
+
+    # Reading an unloaded association through get_field/2 raises for persisted
+    # blocks. Inspect the stored tree without asking Ecto to load the relation.
+    children = Map.get(updated_block_changeset.changes, :children, updated_block_changeset.data.children)
 
     owns_children? =
-      Changeset.get_field(block_changeset, :type) == :container ||
-        Changeset.get_field(block_changeset, :multi) == true
+      Changeset.get_field(block_changeset, :type) in [:container, :slot] ||
+        Changeset.get_field(block_changeset, :multi) == true ||
+        match?([_ | _], children)
 
     owns_children? &&
       Changeset.get_field(block_changeset, :active) == false &&
