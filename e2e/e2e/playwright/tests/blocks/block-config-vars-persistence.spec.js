@@ -44,7 +44,7 @@ test.describe('Block config var persistence', () => {
   }
 
   const reopenEntry = async (page) => {
-    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })
     await syncLV(page)
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })

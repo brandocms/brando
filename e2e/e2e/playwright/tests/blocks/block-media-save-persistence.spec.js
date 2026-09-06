@@ -41,7 +41,7 @@ test.describe('Block media save persistence', () => {
   }
 
   const saveAndReopen = async (page, title) => {
-    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(page).not.toHaveURL(/\/create$/, { timeout: 30000 })
     await syncLV(page)
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
@@ -78,7 +78,7 @@ test.describe('Block media save persistence', () => {
     await page.locator('.header-block textarea').first().fill('Edited after reload')
     await syncLV(page)
 
-    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })
     await syncLV(page)
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })

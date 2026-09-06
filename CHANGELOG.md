@@ -487,6 +487,9 @@
 
 #### Fixes
 
+- Container blocks render without reading a module-only `multi` flag, restoring
+  insertion, nested content and copy/paste after the footnote changes.
+
 - **Modal dialogs sized their prose like page content, and stacked their footer
   buttons edge to edge.** `.modal-body` inherited `body`'s `@fontsize base` —
   20px on desktop, 23px at xl — so loose text in a dialog came out oversized

@@ -687,7 +687,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             </section>
           <% end %>
         </.form>
-        <%= if @multi && @has_children? do %>
+        <%= if @has_children? do %>
           {render_slot(@inner_block)}
           <.plus
             click={@insert_child_block}

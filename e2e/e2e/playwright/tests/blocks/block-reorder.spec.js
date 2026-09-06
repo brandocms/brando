@@ -104,7 +104,7 @@ test.describe('Block reordering (root blocks)', () => {
     await expect(previewHeaders.nth(2)).toContainText('Beta')
 
     // Save, reopen, verify the order actually persisted.
-    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })
     await syncLV(page)
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
@@ -129,7 +129,7 @@ test.describe('Block reordering (root blocks)', () => {
     await dragBlock(page, sortHandle(page, 0), page.locator('.entry-block').nth(2), 'bottom')
     await expectHeaderOrder(page, ['Alpha', 'Beta', 'Gamma'])
 
-    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })
     await syncLV(page)
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
@@ -184,7 +184,7 @@ test.describe('Block reordering (root blocks)', () => {
     )
     await expectMemberOrder(['Charlie', 'Alice', 'Bob'])
 
-    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })
     await syncLV(page)
 
