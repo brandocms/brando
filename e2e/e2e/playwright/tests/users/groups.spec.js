@@ -4,7 +4,7 @@ import { e2eUrl } from '../../test-support/e2eUrl'
 
 test.skip(process.env.BRANDO_AUTHORIZATION_MODE !== 'groups', 'Requires explicit group mode')
 
-test('manages a custom group with a reviewed permission change and membership', async ({ page }) => {
+test('manages a custom group with a reviewed permission change and membership', async ({ page }, testInfo) => {
   await page.goto('/admin')
   await syncLV(page)
   await page.locator('#navigation [data-nav-expand]').filter({ hasText: 'Configuration' }).click()
@@ -22,7 +22,7 @@ test('manages a custom group with a reviewed permission change and membership', 
   await page.locator('input[name="permissions[brando.pages.update]"]').check()
   await page.getByRole('button', { name: 'Review changes', exact: true }).click()
   await expect(page.locator('#authorization-review-title')).toBeFocused()
-  await page.screenshot({ path: '/private/tmp/authorization-review-desktop.png', fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('authorization-review-desktop.png'), fullPage: true })
   await expect(page.locator('.authorization-review')).toContainText('3 permissions added')
   await page.getByRole('button', { name: 'Confirm & save' }).click()
   await expect(page.getByRole('status')).toContainText('Group saved')
@@ -37,11 +37,12 @@ test('manages a custom group with a reviewed permission change and membership', 
   await expect(page.locator('.authorization-activity')).toContainText('Membership added')
 
   await page.getByRole('button', { name: 'Permissions', exact: true }).click()
-  await page.screenshot({ path: '/private/tmp/authorization-groups-desktop.png', fullPage: true })
+  await expect(page.getByLabel('Group name', { exact: true })).toHaveValue('Campaign editors')
+  await page.screenshot({ path: testInfo.outputPath('authorization-groups-desktop.png'), fullPage: true })
   await page.setViewportSize({ width: 768, height: 1024 })
   await expect(page.locator('.authorization-editor')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  await page.screenshot({ path: '/private/tmp/authorization-groups-tablet.png', fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('authorization-groups-tablet.png'), fullPage: true })
   await page.setViewportSize({ width: 390, height: 844 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.getByLabel('Pages: Edit', { exact: true }).uncheck()
@@ -52,7 +53,7 @@ test('manages a custom group with a reviewed permission change and membership', 
   await syncLV(page)
   await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toBeFocused()
   await expect(page.getByLabel('Pages: View', { exact: true })).toBeVisible()
-  await page.screenshot({ path: '/private/tmp/authorization-groups-mobile.png', fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('authorization-groups-mobile.png'), fullPage: true })
 })
 
 test('keeps filtered grants and unsaved changes through navigation and keyboard review', async ({ page }) => {

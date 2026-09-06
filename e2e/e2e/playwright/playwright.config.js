@@ -45,7 +45,10 @@ module.exports = defineConfig({
   // leak transient state between workers. Keep every E2E run deterministic.
   workers: 1,
   retries: process.env.CI ? 2 : 1,
-  reporter: process.env.CI ? [['github'], ['html'], ['dot']] : [['list']],
+  // Retain per-test timings on successful CI runs as well as failures.
+  reporter: process.env.CI
+    ? [['github'], ['html'], ['json', { outputFile: 'test-results/results.json' }], ['dot']]
+    : [['list']],
   use: {
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',

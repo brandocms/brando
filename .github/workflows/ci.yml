@@ -161,20 +161,29 @@ jobs:
         run: mix docs --warnings-as-errors
 
   e2e:
-    name: Serial E2E (PostgreSQL)
+    name: E2E (${{ matrix.suite }})
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: legacy-1
+            shard: 1/2
+          - suite: legacy-2
+            shard: 2/2
+          - suite: authorization
+            shard: ''
     env:
       # Each CI job has its own PostgreSQL service, so a stable key keeps the
       # generated database and port predictable while exercising the same
       # worktree-aware path used locally.
       BRANDO_E2E_INSTANCE: ci
       BRANDO_E2E_POOL_SIZE: 50
-    # Pull requests only. The suite is serial by design (`workers: 1`) and runs
-    # for the better part of ten minutes before the asset builds and Playwright
-    # install are counted, which is too slow to sit on every push. The workflow
-    # triggers on both push and pull_request, so without this it would also run
-    # twice for any PR raised from a branch in this repo.
+    # Each shard gets its own runner, PostgreSQL service, server, PubSub and
+    # caches. Keep workers: 1 within a server; only isolated jobs run in parallel.
+    # Authorization runs independently so it need not wait for the legacy suite.
+    # PRs only, avoiding duplicate E2E runs for push + pull_request events.
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     # Non-blocking until it has a track record. This job was added on
     # 2026-07-18 and had never once run to completion — it died at the first
@@ -205,6 +214,10 @@ jobs:
         uses: actions/checkout@v6.0.3
         with:
           path: brando
+
+      - name: Reject machine-specific E2E paths
+        working-directory: brando
+        run: bash .github/scripts/check-e2e-paths.sh
 
       - name: Check out JSON API integration
         uses: actions/checkout@v6.0.3
@@ -270,31 +283,48 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm exec playwright install --with-deps chromium
 
-      - name: Run serial E2E suite
+      - name: Run legacy E2E shard
+        if: matrix.shard != ''
         working-directory: brando/e2e
-        run: source .envrc && ./test_e2e.sh --reset
+        run: source .envrc && ./test_e2e.sh --reset --shard=${{ matrix.shard }}
 
       - name: Run group authorization, preview and collaboration regressions
+        if: matrix.suite == 'authorization'
         working-directory: brando/e2e
         run: |
           source .envrc
-          BRANDO_AUTHORIZATION_MODE=groups ./test_e2e.sh --reset \
+          PLAYWRIGHT_HTML_OUTPUT_DIR=playwright-report/groups \
+          PLAYWRIGHT_JSON_OUTPUT_FILE=test-results/groups/results.json \
+          BRANDO_AUTHORIZATION_MODE=groups ./test_e2e.sh --reset --output=test-results/groups \
             tests/users/groups.spec.js tests/blocks/block-live-preview.spec.js \
             tests/blocks/block-multiuser-sync.spec.js tests/projects/file-field-sync.spec.js \
             tests/projects/multi-select-reorder.spec.js
 
-      - name: Run multi-site and single-site authorization regressions
+      - name: Run multi-site authorization regressions
+        if: matrix.suite == 'authorization'
         working-directory: brando/e2e
         run: |
           source .envrc
-          BRANDO_AUTHORIZATION_MODE=groups BRANDO_TENANCY_MODE=multi ./test_e2e.sh tests/users/authorization-sites.spec.js
-          BRANDO_AUTHORIZATION_MODE=groups BRANDO_TENANCY_MODE=single ./test_e2e.sh tests/users/authorization-sites.spec.js
+          PLAYWRIGHT_HTML_OUTPUT_DIR=playwright-report/multi \
+          PLAYWRIGHT_JSON_OUTPUT_FILE=test-results/multi/results.json \
+          BRANDO_AUTHORIZATION_MODE=groups BRANDO_TENANCY_MODE=multi \
+            ./test_e2e.sh --output=test-results/multi tests/users/authorization-sites.spec.js
 
-      - name: Upload E2E failure artifacts
-        if: failure()
+      - name: Run single-site authorization regressions
+        if: matrix.suite == 'authorization'
+        working-directory: brando/e2e
+        run: |
+          source .envrc
+          PLAYWRIGHT_HTML_OUTPUT_DIR=playwright-report/single \
+          PLAYWRIGHT_JSON_OUTPUT_FILE=test-results/single/results.json \
+          BRANDO_AUTHORIZATION_MODE=groups BRANDO_TENANCY_MODE=single \
+            ./test_e2e.sh --output=test-results/single tests/users/authorization-sites.spec.js
+
+      - name: Upload E2E reports and artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-failure-artifacts
+          name: e2e-artifacts-${{ matrix.suite }}
           path: |
             brando/e2e/e2e/playwright/playwright-report
             brando/e2e/e2e/playwright/test-results
