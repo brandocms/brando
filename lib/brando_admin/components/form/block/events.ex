@@ -790,11 +790,16 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       block_for_changeset
       |> Brando.Content.Block.block_changeset(params, current_user_id)
       |> Map.put(:action, :validate)
+
+    force_render? = Block.should_force_live_preview_update?(changeset, updated_changeset, socket.assigns.belongs_to)
+
+    updated_changeset =
+      updated_changeset
       |> Block.render_and_update_block_changeset(
         entry,
         has_vars?,
         has_table_rows?,
-        false,
+        force_render?,
         socket.assigns.live_preview_active?
       )
 
@@ -888,8 +893,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       |> block_module.changeset(params, current_user_id)
       |> Map.put(:action, :validate)
 
-    # if this is a container and it's flipped from active = false to true,
-    # then we must force an update to the live preview to get the rendered children.
+    # Reactivated owners have no child DOM left for an incremental render to preserve.
     force_render? = Block.should_force_live_preview_update?(changeset, updated_changeset, :root)
 
     updated_changeset =
