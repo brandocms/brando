@@ -35,6 +35,9 @@ defmodule Brando.Content.Block do
     :palette_id,
     :palette_origin,
     :type,
+    :slot_name,
+    :slot_kind,
+    :slot_module_set,
     :source,
     :identifier_metas
   ]
@@ -50,7 +53,10 @@ defmodule Brando.Content.Block do
 
   attributes do
     attribute :uid, :string, required: true
-    attribute :type, :enum, values: [:module, :container, :module_entry, :fragment]
+    attribute :type, :enum, values: [:module, :container, :module_entry, :fragment, :slot]
+    attribute :slot_name, :string
+    attribute :slot_kind, :enum, values: [:region, :footnote]
+    attribute :slot_module_set, :string
     attribute :active, :boolean, default: true
     attribute :collapsed, :boolean, default: false
     attribute :description, :string
@@ -197,6 +203,7 @@ defmodule Brando.Content.Block do
     )
     |> cast_assoc(:refs, with: &ref_changeset(&1, &2, user))
     |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user))
+    |> Brando.Content.BlockSlots.validate()
     |> finalize_new_block(block)
   end
 

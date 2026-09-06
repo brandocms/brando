@@ -12,6 +12,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
        module_set: "all",
        show: false,
        query: "",
+       collection: false,
        modules_by_namespace: []
      )}
   end
@@ -43,7 +44,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
         wide
         close={JS.push("close_modal", target: @myself) |> hide_modal("##{@id}")}
       >
-        <:header :if={@show and (!@hide_fragments or !@hide_sections)}>
+        <:header :if={@show and !@collection and (!@hide_fragments or !@hide_sections)}>
           <div class="module-picker-extras">
             <span class="module-picker-extras-label">{gettext("Or insert")}</span>
             <button
@@ -196,12 +197,23 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
       type: type,
       module_set: module_set
     )
+    |> assign(:collection, Map.get(assigns, :collection, false))
     |> maybe_update_modules_by_filter(assigns)
     |> then(&{:ok, &1})
   end
 
   def update(assigns, socket) do
     {:ok, assign(socket, assigns)}
+  end
+
+  def maybe_update_modules_by_filter(socket, %{collection: true, module_set: module_set}) do
+    groups =
+      module_set
+      |> Brando.Content.BlockSlots.modules()
+      |> Brando.Utils.split_by(:namespace)
+      |> Enum.map(&__MODULE__.sort_namespace/1)
+
+    assign(socket, :modules_by_namespace, groups)
   end
 
   def maybe_update_modules_by_filter(socket, %{filter: %{parent_id: nil, namespace: set_title} = filter})

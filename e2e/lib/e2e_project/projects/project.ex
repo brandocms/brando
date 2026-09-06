@@ -50,6 +50,7 @@ defmodule E2eProject.Projects.Project do
     relation :client, :belongs_to, module: Projects.Client, required: true
     relation :related_entries, :entries, constraints: [max_length: 3]
     relation :blocks, :has_many, module: :blocks
+    relation :introduction_notes, :has_many, module: :blocks
   end
 
   assets do
@@ -134,6 +135,7 @@ defmodule E2eProject.Projects.Project do
 
           input :introduction, :rich_text,
             label: t("Introduction"),
+            footnotes: [blocks: :introduction_notes, module_set: "Footnotes"],
             instructions: t("Used for case listings and also the heading for the case detail page"),
             extensions: ["p", "bold", "link", "color"]
 

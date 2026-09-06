@@ -74,8 +74,8 @@ defmodule BrandoAdmin.WireContractTest do
 
   defp collect_server_handlers do
     # handle_event("name"… plus attach_hook-style dispatchers
-    # (handle_hooks_video_event("name"…) that route raw events.
-    scan_files(@ex_globs, ~r/defp?\s+handle_(?:event|hooks_\w+)\(\s*\n?\s*"([^"]+)"/)
+    # (handle_block_event/3 and handle_hooks_video_event/3) that route raw events.
+    scan_files(@ex_globs, ~r/defp?\s+handle_(?:event|block_event|hooks_\w+)\(\s*\n?\s*"([^"]+)"/)
     |> Map.keys()
     |> MapSet.new()
   end

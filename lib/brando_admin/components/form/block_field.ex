@@ -60,6 +60,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Content.Blocks, as: ContentBlocks
+  alias Brando.Content.BlockSlots
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
   alias BrandoAdmin.Components.Form.BlockField.Ops
@@ -70,7 +71,60 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   require Logger
 
   def mount(socket) do
-    {:ok, assign(socket, :outline_items, [])}
+    {:ok, assign(socket, outline_items: [], open_slot_uid: nil, slot_title: nil)}
+  end
+
+  def update(%{event: "close_slot"}, socket), do: {:ok, assign(socket, :open_slot_uid, nil)}
+
+  def update(%{event: "create_footnote", field: field, params: params}, socket) do
+    with %{enabled: true, module_set: set} <- socket.assigns.footnote_fields[field],
+         [module | _] <- BlockSlots.modules(set) do
+      uid = Brando.Utils.generate_uid()
+      user_id = socket.assigns.current_user.id
+      source = socket.assigns.block_module
+      child = build_block({module.library_origin, module.id}, user_id, nil, source, :module)
+      slot = BlockSlots.build(:footnote, to_string(field), set, source, user_id, uid)
+      slot = Changeset.put_assoc(slot, :children, [child])
+      sequence = length(socket.assigns.root_order)
+
+      entry_block_cs =
+        source
+        |> struct(%{})
+        |> Changeset.change(%{entry_id: socket.assigns.entry.id, sequence: sequence})
+        |> Changeset.put_assoc(:block, slot)
+        |> Map.put(:action, :insert)
+
+      form = to_form(entry_block_cs, as: "entry_block", id: "entry_block_form-#{uid}")
+
+      socket
+      |> put_seed_form(uid, form)
+      |> apply_block_op({:insert, uid, sequence, Ops.block_diff_params(entry_block_cs)})
+      |> assign(open_slot_uid: uid, slot_title: gettext("Footnote"))
+      |> push_event("b:tiptap:insert_footnote:#{params["tiptap_id"]}", %{uid: uid})
+      |> then(&{:ok, &1})
+    else
+      _ ->
+        {:ok,
+         put_flash(
+           socket,
+           :error,
+           gettext("This field’s footnote module set has no suitable modules. Add a Text module to it first.")
+         )}
+    end
+  end
+
+  def update(%{event: "open_footnote", field: field, params: %{"uid" => uid}}, socket) do
+    slot =
+      case socket.assigns.seed_forms[uid] do
+        nil -> nil
+        form -> Changeset.get_assoc(form.source, :block, :struct)
+      end
+
+    if slot && slot.slot_kind == :footnote && slot.slot_name == to_string(field) do
+      {:ok, assign(socket, open_slot_uid: uid, slot_title: gettext("Footnote"))}
+    else
+      {:ok, put_flash(socket, :error, gettext("This footnote could not be found in this field."))}
+    end
   end
 
   def update(%{event: "restore_draft", changesets: changesets, entry_blocks: originals}, socket) do
@@ -793,6 +847,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:blocks_changed?, false)
     |> assign(:blocks_topic, blocks_topic)
     |> assign(:blocks_initialized, true)
+    |> assign(:footnote_fields, assigns.opts[:footnote_fields] || %{})
+    |> assign(:note_collection?, !!assigns.opts[:footnote_fields])
     |> request_blocks_sync()
   end
 
@@ -1565,19 +1621,19 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     <div
       id={"#{@id}-wrapper"}
       phx-hook="Brando.BlockField"
-      class="blocks-wrapper"
+      class={["blocks-wrapper", @note_collection? && "footnote-storage"]}
       data-block-field={"#{@form_name}[#{@block_field}]"}
       data-entry-id={@entry.id}
       data-paste-allow={Block.Render.paste_allow(@clipboard_meta)}
     >
-      <div class="label-wrapper">
+      <div :if={!@note_collection?} class="label-wrapper">
         <label class="control-label" data-field-presence={"#{@form_name}[#{@block_field}]"}>
           <span>{gettext("Blocks")}</span>
           <div class="field-presence" phx-update="ignore" id={"#{@form_name}[#{@block_field}]-field-presence"}></div>
         </label>
       </div>
       <div class="blocks-content">
-        <div :if={@root_order != [] or @clipboard_meta} class="blocks-actions">
+        <div :if={!@note_collection? && (@root_order != [] or @clipboard_meta)} class="blocks-actions">
           <div class="block-field-dropdown">
             <button
               type="button"
@@ -1666,7 +1722,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           hide_fragments={false}
           hide_sections={false}
         />
-        <%= if @root_order == [] do %>
+        <%= if @root_order == [] && !@note_collection? do %>
           <div class="blocks-empty-instructions">
             {gettext("Click the plus to start adding content blocks")}
           </div>
@@ -1708,6 +1764,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                 form_id={@form_id}
                 current_user_id={@current_user.id}
                 belongs_to={:root}
+                slot_open={@open_slot_uid == block[:uid].value}
+                slot_title={@slot_title}
                 paste_multi_module_id={@paste_multi_module_id}
                 level={0}
               />
@@ -1716,6 +1774,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         </div>
 
         <Block.plus
+          :if={!@note_collection?}
           click={JS.push("show_block_picker", target: @myself)}
           modal={@module_picker_id}
           paste_context={:root}

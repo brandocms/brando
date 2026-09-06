@@ -1227,7 +1227,10 @@ defmodule Brando.Content.Blocks do
   def duplicate_block(block_cs, opts) do
     user_id = Keyword.fetch!(opts, :user_id)
     sequence = Keyword.get(opts, :sequence, 0)
-    uid = Keyword.get(opts, :uid, Utils.generate_uid())
+    block = Changeset.apply_changes(block_cs)
+    mapping = Keyword.get_lazy(opts, :uid_mapping, fn -> Brando.Content.BlockSlots.uid_mapping(block) end)
+    uid = Keyword.get(opts, :uid, Map.fetch!(mapping, block.uid))
+    mapping = Map.put(mapping, block.uid, uid)
 
     children = Changeset.get_assoc(block_cs, :children, :struct)
     vars = Changeset.get_assoc(block_cs, :vars, :struct)
@@ -1252,22 +1255,53 @@ defmodule Brando.Content.Blocks do
     |> duplicate_vars(vars, user_id)
     |> duplicate_table_rows(table_rows, user_id)
     |> duplicate_refs(refs, user_id)
-    |> duplicate_children(children, user_id, Keyword.get(opts, :source))
+    |> duplicate_children(children, user_id, Keyword.get(opts, :source), mapping)
+    |> remap_footnote_markers(mapping)
     |> Map.put(:action, :insert)
   end
 
   defp maybe_put_source(block, nil), do: block
   defp maybe_put_source(block, source), do: Map.put(block, :source, source)
 
-  def duplicate_children(changeset, children, current_user_id, source \\ nil) do
+  def duplicate_children(changeset, children, current_user_id, source \\ nil, mapping \\ nil) do
     duplicated_children =
       Enum.map(children, fn child ->
         child
         |> Changeset.change()
-        |> duplicate_block(user_id: current_user_id, source: source)
+        |> duplicate_block(
+          user_id: current_user_id,
+          source: source,
+          uid_mapping: mapping || Brando.Content.BlockSlots.uid_mapping(child)
+        )
       end)
 
     Changeset.put_assoc(changeset, :children, duplicated_children)
+  end
+
+  defp remap_footnote_markers(changeset, mapping) do
+    changeset
+    |> Changeset.update_change(:refs, fn refs ->
+      Enum.map(refs, fn ref ->
+        case Changeset.get_field(ref, :data) do
+          %{type: "text", data: data} = block ->
+            text = Brando.Content.BlockSlots.remap_markers(data.text, mapping)
+            Changeset.put_change(ref, :data, %{block | data: %{data | text: text}})
+
+          _ ->
+            ref
+        end
+      end)
+    end)
+    |> Changeset.update_change(:vars, fn vars ->
+      Enum.map(vars, fn var ->
+        if Changeset.get_field(var, :type) == :html do
+          value = Brando.Content.BlockSlots.remap_markers(Changeset.get_field(var, :value), mapping)
+          Changeset.put_change(var, :value, value)
+        else
+          var
+        end
+      end)
+    end)
   end
 
   @doc """

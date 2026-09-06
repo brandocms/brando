@@ -69,7 +69,7 @@ defmodule E2eProject.MixProject do
 
       # live view
       {:phoenix_live_view, "1.2.11"},
-      {:floki, ">= 0.27.0", only: :test},
+      {:floki, ">= 0.27.0"},
 
       # general deps
       {:postgrex, "~> 0.15"},

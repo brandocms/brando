@@ -1,4 +1,5 @@
 import Sortable from 'sortablejs'
+import { renumberFootnotes } from '../../components/TipTap/extensions/Footnote'
 
 export default app => ({
   mounted() {
@@ -25,6 +26,7 @@ export default app => ({
         isDragging = false
         let params = { old: e.oldIndex, new: e.newIndex, to: {...e.to.dataset}, from: {...e.from.dataset}, ...e.item.dataset }
         this.pushEventTo(this.el, this.el.dataset['drop'] || 'reposition', params)
+        renumberFootnotes(this.el)
       }
     })
   }

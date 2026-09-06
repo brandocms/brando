@@ -2,6 +2,7 @@ defmodule Brando.Villain.Blocks do
   @moduledoc false
 
   @blocks [
+    blocks: Module.concat(["Brando", "Villain", "Blocks", "BlocksBlock"]),
     comment: Module.concat(["Brando", "Villain", "Blocks", "CommentBlock"]),
     container: Module.concat(["Brando", "Villain", "Blocks", "ContainerBlock"]),
     file: Module.concat(["Brando", "Villain", "Blocks", "FileBlock"]),

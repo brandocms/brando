@@ -6,6 +6,8 @@
  * DOM and sends any missing blocks to the server for reconstruction.
  */
 
+import { renumberFootnotes } from '../../components/TipTap/extensions/Footnote'
+
 const STORAGE_PREFIX = 'brando:block-recovery:'
 
 // Snapshots older than this are discarded unread. Recovery is meant to bridge a
@@ -52,6 +54,10 @@ function formDataToParams(form) {
 export default app => ({
   mounted() {
     // No recovery on fresh mount — only on reconnect after disconnect
+  },
+
+  updated() {
+    renumberFootnotes(this.el)
   },
 
   reconnected() {

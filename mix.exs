@@ -232,10 +232,12 @@ defmodule Brando.Mixfile do
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       {:igniter, "~> 0.8.0", optional: true, runtime: false},
 
+      # HTML-aware footnote resolution after Villain composes the render scope.
+      {:floki, "~> 0.32"},
+
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test, runtime: false},
       {:excoveralls, "~> 0.6", only: :test, runtime: false},
-      {:floki, "~> 0.32", only: :test},
       # Required by Phoenix.LiveViewTest — see `Brando.LiveCase`
       {:lazy_html, ">= 0.1.0", only: :test},
       # Mocks the S3 seam — see `Brando.CDN.Client`

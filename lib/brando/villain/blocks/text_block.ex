@@ -58,12 +58,14 @@ defmodule Brando.Villain.Blocks.TextBlock do
       field :text, :string
       field :type, Ecto.Enum, values: [:paragraph, :lede, :lead], default: :paragraph
       field :extensions, {:array, :string}
+      field :footnotes, :boolean, default: false
+      field :footnote_module_set, :string, default: "Footnotes"
       embeds_many :styles, Style, on_replace: :delete
     end
 
     def changeset(struct, params \\ %{}) do
       struct
-      |> cast(params, ~w(text type extensions)a)
+      |> cast(params, ~w(text type extensions footnotes footnote_module_set)a)
       |> cast_embed(:styles,
         sort_param: :sort_style_ids,
         drop_param: :drop_style_ids

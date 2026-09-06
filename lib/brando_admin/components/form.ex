@@ -2551,6 +2551,10 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  def handle_event("commit_tiptap", %{"form" => form, "target" => target}, socket)
+      when is_binary(form) and is_list(target),
+      do: handle_event("validate", Map.put(Plug.Conn.Query.decode(form), "_target", target), socket)
+
   def handle_event("validate", params, socket) do
     # This is also the recovery event for the main form, and it is what
     # rebuilds the entry from the recovered params — see
@@ -2668,6 +2672,26 @@ defmodule BrandoAdmin.Components.Form do
     )
 
     # drawer visibility is pushed by the ImagePicker itself (avoids patch race)
+    {:noreply, socket}
+  end
+
+  def handle_event(event, %{"field" => field} = params, socket)
+      when event in ["create_footnote", "open_footnote"] do
+    # Resolve both the owning relation and palette from the Blueprint. The
+    # client only supplies the field name and marker, never its permissions.
+    case Brando.Blueprint.Forms.Footnotes.field(socket.assigns.schema, field) do
+      nil ->
+        :ok
+
+      config ->
+        send_update(BlockField,
+          id: "#{socket.assigns.id}-blocks-#{config.blocks}",
+          event: event,
+          field: config.field,
+          params: params
+        )
+    end
+
     {:noreply, socket}
   end
 

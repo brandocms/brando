@@ -149,9 +149,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.Outline do
 
     children =
       case block.children do
-        %Ecto.Association.NotLoaded{} -> []
-        nil -> []
-        list -> Enum.map(list, &build_outline_item_from_struct/1)
+        %Ecto.Association.NotLoaded{} ->
+          []
+
+        nil ->
+          []
+
+        list ->
+          list
+          |> Enum.reject(&(&1.type == :slot))
+          |> Enum.map(&build_outline_item_from_struct/1)
       end
 
     %{

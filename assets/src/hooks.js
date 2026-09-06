@@ -17,6 +17,7 @@ import ListingHook from './hooks/Listing'
 import LivePreviewHook from './hooks/LivePreview'
 import MapURLParserHook from './hooks/MapURLParser'
 import ModalHook from './hooks/Modal'
+import BlockSlotHook from './hooks/BlockSlot'
 import MuxUploaderHook from './hooks/MuxUploader'
 import BunnyUploaderHook from './hooks/BunnyUploader'
 import CloudflareUploaderHook from './hooks/CloudflareUploader'
@@ -65,6 +66,7 @@ export default (app) => {
     'Brando.LivePreview': LivePreviewHook(app),
     'Brando.MapURLParser': MapURLParserHook(app),
     'Brando.Modal': ModalHook(app),
+    'Brando.BlockSlot': BlockSlotHook(app),
     'Brando.MuxUploader': MuxUploaderHook(app),
     'Brando.BunnyUploader': BunnyUploaderHook(app),
     'Brando.CloudflareUploader': CloudflareUploaderHook(app),

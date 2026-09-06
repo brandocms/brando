@@ -1371,6 +1371,8 @@ fallback_group =
 |> E2eProject.Repo.insert!()
 
 # Gallery for gallery listing/editing tests
+Code.require_file("block_slots_seeds.exs", __DIR__)
+
 %Brando.Galleries.Gallery{
   config_target: "gallery:E2eProject.Projects.Project:project_gallery",
   gallery_objects: []

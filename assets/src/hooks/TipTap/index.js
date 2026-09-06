@@ -1,12 +1,14 @@
 import { Dom } from '@brandocms/jupiter'
 import TipTap from '../../components/TipTap/TipTap.svelte'
 import { mount, unmount } from 'svelte'
+import { renumberFootnotes } from '../../components/TipTap/extensions/Footnote'
 
 export default (app) => ({
   mounted() {
     this.mount()
     this.setupLinkHandler()
     this.setupClearHandler()
+    this.setupFootnoteHandler()
     app.components.push(this)
   },
 
@@ -59,12 +61,64 @@ export default (app) => ({
         extensions: this.el.getAttribute('data-tiptap-extensions'),
         styles: this.el.getAttribute('data-tiptap-styles'),
         onFocus: reportFocus,
+        onBlur: () => {
+          if (this.el.dataset.footnotes === 'true' || this.el.closest('.block-slot-drawer')) {
+            this.commitInput()
+          }
+        },
         onToggleLink,
         onToggleButton,
-        onEditorCreated: (editor) => { this._editor = editor },
+        footnotes: this.el.dataset.footnotes === 'true',
+        onOpenFootnote: (uid, number) => {
+          this.pushEventTo(this.el, uid ? 'open_footnote' : 'create_footnote', {
+            uid,
+            number,
+            ref_name: this.el.dataset.footnoteRef,
+            field: this.el.dataset.footnoteField,
+            tiptap_id: this.el.id,
+          })
+        },
+        onEditorCreated: (editor) => {
+          this._editor = editor
+          queueMicrotask(() => renumberFootnotes(this.el))
+        },
         tiptapInput: $input,
       },
     })
+    queueMicrotask(() => renumberFootnotes(this.el))
+  },
+
+  updated() {
+    renumberFootnotes(this.el)
+  },
+
+  setupFootnoteHandler() {
+    this.handleEvent(`b:tiptap:insert_footnote:${this.el.id}`, ({ uid }) => {
+      // Keep the saved ProseMirror selection, but leave focus in the drawer
+      // which has just opened above this editor.
+      this._editor?.chain().insertContent({ type: 'footnote', attrs: { uid } }).run()
+      renumberFootnotes(this.el)
+      this.commitInput(() => {
+        const drawer = document.getElementById(`block-slot-drawer-${uid}`)
+        if (drawer?.classList.contains('visible')) {
+          drawer.querySelector('[contenteditable="true"]')?.focus()
+        }
+      })
+    })
+  },
+
+  commitInput(onCommitted = () => {}) {
+    const input = this.el.querySelector('.tiptap-text')
+    const form = input?.form
+    if (!form || !this._editor) return
+    input.value = this._editor.getHTML()
+    // Drawer navigation must not race the 300ms typing debounce. Use exactly
+    // the owning form's normal validation params, including sibling fields.
+    const fields = Array.from(new FormData(form)).filter(([, value]) => typeof value === 'string')
+    this.pushEventTo(this.el, 'commit_tiptap', {
+      form: new URLSearchParams(fields).toString(),
+      target: input.name.match(/[^\[\]]+/g),
+    }, onCommitted)
   },
 
   setupLinkHandler() {

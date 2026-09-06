@@ -64,7 +64,7 @@ defmodule <%= application_module %>.MixProject do
 
       # live view
       {:phoenix_live_view, "~> 1.2.3"},
-      {:floki, ">= 0.27.0", only: :test},
+      {:floki, ">= 0.27.0"},
 
       # general deps
       {:postgrex, "~> 0.15"},

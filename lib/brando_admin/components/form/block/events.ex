@@ -14,6 +14,39 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   ##
   ## Block events
 
+  def handle_block_event("commit_tiptap", %{"form" => form, "target" => target}, socket)
+      when is_binary(form) and is_list(target),
+      do: handle_block_event("validate_block", Map.put(Plug.Conn.Query.decode(form), "_target", target), socket)
+
+  def handle_block_event("open_block_slot", %{"ref_name" => name}, socket),
+    do: {:halt, Block.open_named_slot(socket, name)}
+
+  def handle_block_event("create_footnote", params, socket),
+    do: {:halt, Block.create_footnote(socket, params)}
+
+  def handle_block_event("open_footnote", params, socket),
+    do: {:halt, Block.open_footnote(socket, params)}
+
+  def handle_block_event("close_block_slot", _, socket) do
+    send_to_ref(socket.assigns.parent_ref, %{event: "close_slot"})
+    {:halt, socket}
+  end
+
+  def handle_block_event("insert_slot_block", _, socket) do
+    send_update(ModulePicker,
+      id: socket.assigns.module_picker_id,
+      event: :show_module_picker,
+      filter: %{parent_id: nil, namespace: socket.assigns.slot_module_set},
+      module_set: socket.assigns.slot_module_set,
+      collection: true,
+      type: :module,
+      sequence: length(socket.assigns.block_list),
+      parent_ref: {Block, socket.assigns.id}
+    )
+
+    {:halt, socket}
+  end
+
   # copy and duplicate both ship the block's changeset (+ children refs) up to
   # the parent — only the event name forwarded differs
   def handle_block_event(event, _, socket) when event in ["copy_block", "duplicate_block"] do
@@ -598,6 +631,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       event: :show_module_picker,
       filter: %{parent_id: nil, namespace: module_set},
       module_set: module_set,
+      collection: socket.assigns.belongs_to == :slot || socket.assigns.type == :slot,
       type: :module,
       sequence: sequence,
       parent_ref: parent_ref
