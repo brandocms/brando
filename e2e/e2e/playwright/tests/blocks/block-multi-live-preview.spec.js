@@ -125,7 +125,7 @@ test.describe('Live Preview with multi modules', () => {
     await addChild(page, page.locator('[data-module-multi="true"]').first(), 'Team Member')
     await syncLV(page)
 
-    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })
     await syncLV(page)
     await page.getByRole('link', { name: 'Multi Preview Saved →' }).click()

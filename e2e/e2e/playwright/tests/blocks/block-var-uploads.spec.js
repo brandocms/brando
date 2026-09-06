@@ -52,7 +52,7 @@ test.describe('Render var uploads', () => {
     await expect(page.getByRole('button', { name: 'Edit image' })).toBeVisible({ timeout: 5000 })
 
     // Save the page
-    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
     await syncLV(page)
 
     // Verify save succeeded
@@ -113,7 +113,7 @@ test.describe('Render var uploads', () => {
     await expect(page.getByRole('button', { name: 'Edit file' })).toBeVisible({ timeout: 5000 })
 
     // Save the page
-    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
     await syncLV(page)
 
     // Verify save succeeded

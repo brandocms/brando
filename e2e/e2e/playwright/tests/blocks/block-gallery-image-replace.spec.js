@@ -59,7 +59,7 @@ test.describe('Gallery block image replacement', () => {
     })
 
     // Save the page — this is the operation that previously failed
-    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
 
     // Wait for save + image processing to complete and redirect away from create page
     await expect(page).not.toHaveURL(/\/create$/, { timeout: 30000 })
