@@ -40,10 +40,11 @@ an iframe successfully does not establish that recovered unsaved inputs have
 reached the server. Keep the recovery form outside the conditional preview pane
 and avoid replacing the ignored iframe wrapper during ordinary patches.
 
-Use `test/brando_admin/live/form_recovery_test.exs` for this race;
-`test/brando/live_preview/live_preview_test.exs` for rendering/assign ordering;
+Use `test/brando_admin/live/form_recovery_test.exs` as a mounted-recovery
+harness; when changing this handshake, cover both arrival orders explicitly.
+Use `test/brando/live_preview/live_preview_test.exs` for rendering;
 `test/brando/plugs/live_preview_test.exs` and
 `test/brando_admin/preview_controller_test.exs` for access and snapshots.
 Browser cases in `e2e/e2e/playwright/tests/blocks/block-live-preview.spec.js` and
 `e2e/e2e/playwright/tests/blocks/block-multi-live-preview.spec.js` cover unsaved
-updates and independent editors. Follow AGENTS.md for test setup.
+updates and nested modules. Follow AGENTS.md for test setup.
