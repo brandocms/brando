@@ -27,6 +27,26 @@
 - If any of my requests are not clear, ask me to clarify.
 - If you have better suggestions, feel free to suggest them.
 
+## Subsystem skills
+
+Use the relevant skill when working in one of these subsystems. Paths within
+skills are relative to the repository root unless a Markdown link says otherwise.
+Read only the skills needed for the task; the block-state and upload contracts
+below still apply when work crosses those boundaries.
+
+| Work area | Skill |
+| --- | --- |
+| Blueprint DSL, schemas, traits, queries, migrations | [.claude/skills/brando-blueprint/SKILL.md](.claude/skills/brando-blueprint/SKILL.md) |
+| Image processing, video providers, galleries, CDN | [.claude/skills/brando-media/SKILL.md](.claude/skills/brando-media/SKILL.md) |
+| Admin forms, nested inputs, validation, saving, recovery | [.claude/skills/brando-admin-forms/SKILL.md](.claude/skills/brando-admin-forms/SKILL.md) |
+| Preview rendering, assigns, iframe updates, sharing | [.claude/skills/brando-live-preview/SKILL.md](.claude/skills/brando-live-preview/SKILL.md) |
+| Villain, Liquex/HEEx, refs, render invalidation | [.claude/skills/brando-villain/SKILL.md](.claude/skills/brando-villain/SKILL.md) |
+| Pages, fragments, hierarchy, navigation | [.claude/skills/brando-pages/SKILL.md](.claude/skills/brando-pages/SKILL.md) |
+| Identity, globals, SEO, JSON-LD, caches | [.claude/skills/brando-sites/SKILL.md](.claude/skills/brando-sites/SKILL.md) |
+| Admin list queries, filters, selection, exports | [.claude/skills/brando-admin-listings/SKILL.md](.claude/skills/brando-admin-listings/SKILL.md) |
+| Sessions, users, scoped groups, authorization | [.claude/skills/brando-auth/SKILL.md](.claude/skills/brando-auth/SKILL.md) |
+| Oban, scheduling, cleanup, tenant job context | [.claude/skills/brando-workers/SKILL.md](.claude/skills/brando-workers/SKILL.md) |
+
 ## LiveView, Phoenix and Ecto (+ Forms & Changesets)
 
 ### LiveView Component Patterns
