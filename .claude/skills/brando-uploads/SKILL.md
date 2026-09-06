@@ -39,3 +39,8 @@ fields, refs, and vars:
 - **Gallery media configuration is per type.** Galleries may independently configure and
   restrict images and videos. A legacy flat gallery config remains the image config; do
   not silently apply it to video.
+
+For processing after delivery, follow `lib/brando/images/processing.ex` (especially
+`processing_queued?/1` before opportunistic requeueing) and the current Image/Vix
+implementation in `lib/brando/images/processors/vix.ex`. Drawer-close duplicate
+processing is covered by `test/brando_admin/components/form/drawer_close_test.exs`.

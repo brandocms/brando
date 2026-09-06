@@ -27,6 +27,18 @@
 - If any of my requests are not clear, ask me to clarify.
 - If you have better suggestions, feel free to suggest them.
 
+## Subsystem skills
+
+Load only the skill needed for the state boundary being changed:
+
+- [Admin forms](.claude/skills/brando-admin-forms/SKILL.md): parent/component state collection, transformer delivery, and recovery.
+- [Live preview](.claude/skills/brando-live-preview/SKILL.md): cached assigns, transport choices, and iframe recovery.
+
+The existing block-state and upload contracts below still apply. DSL usage belongs
+in `guides/blueprints.md`, authorization in `guides/authorization.md`, and tenant
+job context in `Brando.Tenant.Job`. The [skill necessity audit](docs/agent-skill-audit.md)
+records why the other candidates in #2701 do not need standalone skills.
+
 ## LiveView, Phoenix and Ecto (+ Forms & Changesets)
 
 ### LiveView Component Patterns
