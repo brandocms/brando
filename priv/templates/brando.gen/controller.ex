@@ -1,36 +1,15 @@
-defmodule <%= module %>Controller do
-  use BrandoWeb, :controller
-  alias <%= app_module %>.<%= domain %>
-  alias <%= web_module %>.FallbackController
+defmodule <%= inspect controller_module %> do
+  use <%= web_module %>, :controller
 
-  @type conn :: Plug.Conn.t()
-
-  action_fallback FallbackController
-
-  @doc false
-  @spec list(conn, map) :: conn
-  def list(conn, _params) do
-    list_opts = %{}
-
-    with {:ok, <%= plural %>} <- <%= domain %>.list_<%= plural %>(list_opts) do
-      conn
-      |> assign(:<%= plural %>, <%= plural %>)
-      |> put_section("<%= snake_domain %>")
-      |> render(:list)
-    end
+  def index(conn, _params) do
+    {:ok, entries} = <%= inspect context_module %>.list_<%= plural %>(<%= if status, do: "%{status: :published}", else: "%{}" %>)
+    render(conn, :index, entries: entries)
   end
 
-  @doc false
-  @spec detail(conn, map) :: {:error, {:<%= singular %>, :not_found}} | conn
-  def detail(conn, %{"slug" => slug}) do
-    opts = %{matches: %{slug: slug}, <%= if translatable do %>preload: [:alternate_entries], <% end %>status: :published}
-
-    with {:ok, <%= singular %>} <- <%= domain %>.get_<%= singular %>(opts) do
-      conn
-      |> assign(:entry, <%= singular %>)<%= if translatable do %>
-      |> put_hreflang(<%= singular %>)<% end %>
-      |> put_section("<%= singular %>")
-      |> render(:detail)
+  def show(conn, %{"id" => id}) do
+    case <%= inspect context_module %>.get_<%= singular %>(%{matches: %{id: id}<%= if status, do: ", status: :published" %>}) do
+      {:ok, entry} -> render(conn, :show, entry: entry)
+      {:error, {_, :not_found}} -> send_resp(conn, 404, "Not found")
     end
   end
 end

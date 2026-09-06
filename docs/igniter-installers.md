@@ -1,93 +1,91 @@
-# Igniter installer foundations
+# Igniter source tasks
 
 Implementation tracker: [#2462](https://github.com/brandocms/brando/issues/2462).
+User-facing commands and the current Yalc bootstrap are in
+[Installation and generators](../guides/generators.md).
 
-The first increment provides shared source-planning helpers and the opt-in
-interactive installer convention. The main `brando.install` task is still the
-legacy fresh-project scaffold; its conversion to Igniter is the next increment.
-It must not be used as an in-place updater. The new discovery/namespace options
-below are internal contracts, not additional flags on the legacy task.
+`brando.install`, `brando.gen.blueprint`, `brando.gen`, and the frontend/backend
+asset generators use Igniter. `igniter.install brando` discovers the same
+`Brando.Install` task; there is one installation implementation.
 
-## Source discovery
+## Discovery and supported inputs
 
-`Mix.Brando.Igniter.Project.discover/2` reads the pending Igniter sources and
-returns `{:ok, igniter, project}` or `{:error, igniter}` with a blocking issue.
-Always carry the returned Igniter forward.
+`Mix.Brando.Igniter.Project.discover/2` reads the pending source tree and returns
+`{:ok, igniter, project}` or `{:error, igniter}` with issues. It discovers the OTP
+application independently of application/web/admin namespaces, Repo, endpoint
+and router. Multiple matching modules require explicit selection with `--repo`,
+`--router` or `--endpoint`. Other overrides are `--module`, `--web-module` and
+`--admin-module`. Literal existing Brando namespace configuration is respected.
 
-The initial supported shape is a standalone Phoenix project with a conventional
-`mix.exs`, an application callback declared as a literal module tuple, an Ecto
-Repo declaring the PostgreSQL adapter, and an endpoint that plugs the selected
-router. The source helpers are exercised with Igniter 0.8.3; the repository's CI
-currently covers Elixir 1.17–1.20 and OTP 27–28. Consumer version compatibility
-still needs qualification with the actual installer.
+The initial supported layout is a standalone Phoenix application with a literal
+Mix application callback, a PostgreSQL Repo, conventional application children,
+and an endpoint plugging the selected router. Umbrella roots, unsupported
+supervision shapes, ambiguous modules and dynamic/conflicting identity or tenancy
+configuration produce blocking issues. Discovery does not evaluate consumer code.
 
-Discovery returns the OTP application, base application namespace, supervision
-module, web/admin namespaces, Repo, router, and endpoint. It uses the selected
-router's `use WebModule, :router` declaration for the web namespace. By default,
-the application namespace comes from the Mix project module and the admin
-namespace appends `Admin`; composing tasks can supply namespace overrides.
-Discovery does not evaluate consumer configuration or load its modules.
+Source tests use Igniter 0.8.3. A real consumer has been checked with phx_new and
+Phoenix 1.8.13, LiveView 1.2.11, Elixir 1.20.3 and OTP 28.4.1. This is evidence for
+that combination, not qualification of every version in Brando's unit-test matrix.
 
-`Project.options/0` supplies string options for `module`, `web_module`,
-`admin_module`, `repo`, `router`, and `endpoint` to an Igniter task's `info/2`.
-Multiple Repos/routers/endpoints require explicit selection. Endpoints must use
-the selected router, and test-support modules are excluded from candidates.
-Umbrella roots and unsupported adapters produce issues before scaffold writes.
+## Source planning and file ownership
 
-## Owned files and shared files
+Shared Elixir files are extended using AST edits. Existing routes, dependencies,
+secrets, application children and tests remain in place. The installer enables
+named Phoenix route helpers, initializes Brando after successful supervisor
+startup, and uses a distinct admin API pipeline to coexist with Phoenix's `:api`.
+Runtime module lookup respects selected endpoint/router/admin namespaces.
 
-`Mix.Brando.Igniter.Files.create/3` plans a new owned file. Equivalent existing
-Elixir code is preserved, including comments and formatting; non-Elixir files
-must match byte for byte. Different content produces a blocking issue rather
-than an overwrite, including when `--yes` is set. Pending files from other
-composed tasks participate in the same check.
+`Files.create/3` checks both pending and existing owned files. Equivalent Elixir
+ASTs preserve comments and formatting. Text comparison permits trailing whitespace
+normalization, matching Rewrite's writer. Different content blocks the plan even
+with `--yes`. Consumer asset package manifests merge missing defaults while
+preserving existing dependency sources and scripts. Historical migration names are
+matched independently of timestamps, and newly added versions follow existing ones.
 
-Patch shared files such as `mix.exs`, application modules, configuration, and
-routers with Igniter's AST helpers. Do not pass them to an owned-file copier or
-call a disk-writing legacy task inside `igniter/1`. Keep Yalc and the consumer's
-chosen dependency sources during iteration. npm publication belongs to later
-release qualification.
+Rewrite normalizes trailing newlines even for binary files. Binary fonts/icons
+therefore never enter its new-file writer. A whitelisted, digest-checked
+`brando.assets.copy` task runs after acceptance, writes exact bytes with atomic
+no-clobber creation, and refuses changed destinations. Dry runs do not copy them.
+`brando.assets.setup` is a separate operational task for Yalc and consumer builds.
 
-## Defaults and guided setup
+## CLI and compilation boundaries
 
-New installations default to tenancy mode `none` without prompting.
-`mix brando.install --interactive` guides the tenancy choice; an explicit
-`--tenancy-mode single` asks only for the missing site key. Supplied choices are
-respected. `--tenancy-prompt` remains a compatibility alias and
-`--no-tenancy-prompt` suppresses tenancy questions even with `--interactive`.
-Closed stdin produces the existing actionable prompt error, not an assumed
-answer.
+A new install defaults to tenancy `none`; a rerun with no flag preserves existing
+configuration. `single` requires a valid site key. `--interactive` asks only for
+missing choices, while `--yes` controls diff acceptance. Closed input is an issue.
+`--no-tenancy-prompt` retains its compatibility behavior.
 
-Future Igniter generators should use the same opt-in `--interactive` convention:
-ask only for missing choices, validate responses, and pass resolved arguments
-to source-planning helpers. `--yes` accepts a reviewed plan; it is not a request
-for guided setup or permission to overwrite conflicting application files.
+Blueprint generation takes `Domain Schema`, validates module and query names,
+and generates title/slug fields, a form and a listing using the current DSL.
+Explicit `--template` wins over the consumer template, then the packaged default.
 
-`Mix.Brando.Install.Options.tenancy/2` supplies the pure option resolver for the
-native installer. Passing an existing tenancy choice preserves it when flags
-are omitted; a mode is not assigned as an OptionParser default because doing so
-would erase the distinction between omission and an explicit change. The legacy
-scaffold does not yet read or preserve an existing application's configuration.
+Resource generation takes a compiled Blueprint. A Blueprint with pending source
+changes cannot feed a resource generator in the same plan: accept, compile, then
+generate. Context query declarations and admin routes are edited semantically;
+custom functions are preserved and conflicting names are reported. Public
+controllers/routes require `--public-route`. Authorization and navigation are
+explicit application choices.
 
-## Focused verification
+Dependency installation and compilation performed by Igniter itself are upstream
+bootstrap operations. Brando's planning callbacks do not start a database, seed
+content, build assets, create accounts, or deploy an application.
 
-Run the source tests and the existing installer regression tests without
-starting Brando or connecting to a database:
+## Verification and remaining work
 
 ```sh
 MIX_ENV=test mix run --no-start scripts/test_igniter.exs
 ```
 
-Pass a test file to rerun a failing group:
+Pass one or more test files to select a smaller group. These tests also run in the
+normal `mix test` suite. They cover direct/composed plans, repeat runs, custom
+namespaces, conflicts, template precedence, missing input, exact binary copying,
+historical migration names, and compiling two resources in a shared context.
+A separate Elixir process verifies that guarded helpers compile without Igniter.
 
-```sh
-MIX_ENV=test mix run --no-start scripts/test_igniter.exs test/mix/brando/igniter/project_test.exs
-```
-
-The same test files are also discovered by the normal `mix test` suite.
-Fixtures contain source only and distinguish the OTP name from the module and
-web namespaces. They preserve existing routes, tests, local dependencies, and
-Yalc manifests. A separate Elixir process verifies that the optional helpers
-can compile without Igniter installed. These checks establish the planning
-contracts; complete installation still needs generated-consumer compilation,
-consumer Vite builds, database setup, and browser verification in later steps.
+The disposable consumer check has exercised the real `igniter.install` command,
+both Vite builds through Yalc, database migrations, admin login, and creating,
+editing and publicly rendering a generated resource. Keep the issue open for
+optional CMS public-site scaffolding, the complete consumer CI/tenancy matrix,
+migration/snapshot planning, native upgrades, remaining auxiliary tasks, and
+release artifact qualification. npm publication is deliberately deferred until
+release preparation.

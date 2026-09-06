@@ -20,7 +20,10 @@ defmodule Brando.IgniterCase do
       "lib/#{app_path}/application.ex" => """
       defmodule #{module}.Application do
         use Application
-        def start(_type, _args), do: Supervisor.start_link([], strategy: :one_for_one)
+        def start(_type, _args) do
+          children = [#{module}.Repo, {Phoenix.PubSub, name: #{module}.PubSub}, #{web}.Endpoint]
+          Supervisor.start_link(children, strategy: :one_for_one)
+        end
       end
       """,
       "lib/#{app_path}/repo.ex" => """
@@ -30,7 +33,7 @@ defmodule Brando.IgniterCase do
       """,
       "lib/#{web_path}.ex" => """
       defmodule #{web} do
-        def router, do: quote(do: use(Phoenix.Router))
+        def router, do: quote(do: use(Phoenix.Router, helpers: false))
         defmacro __using__(which), do: apply(__MODULE__, which, [])
       end
       """,
@@ -50,6 +53,10 @@ defmodule Brando.IgniterCase do
       "lib/#{web_path}/endpoint.ex" => """
       defmodule #{web}.Endpoint do
         use Phoenix.Endpoint, otp_app: :#{app}
+        @session_options [store: :cookie, key: "_#{app}_key", signing_salt: "preserve-this-salt"]
+        socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
+        plug Plug.Static, at: "/", from: :#{app}, only: ~w(assets)
+        plug Plug.Session, @session_options
         plug #{web}.Router
       end
       """,
@@ -67,7 +74,11 @@ defmodule Brando.IgniterCase do
       |> Map.merge(options[:files] || %{})
 
     igniter = Igniter.assign(igniter, :test_files, files)
-    Enum.reduce(Map.keys(files), igniter, &Igniter.include_existing_file(&2, &1))
+
+    Enum.reduce(Map.keys(files), igniter, fn path, igniter ->
+      options = if String.starts_with?(path, "priv/templates/"), do: [source_handler: Rewrite.Source], else: []
+      Igniter.include_existing_file(igniter, path, options)
+    end)
   end
 
   def source(igniter, path) do

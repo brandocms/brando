@@ -7,7 +7,7 @@ and translations. Brando validates this contract while the schema compiles so
 invalid or ignored configuration fails before it reaches a request or a
 production migration.
 
-Generate a new resource with `mix brando.gen.blueprint`, then keep its Blueprint,
+Generate a new resource with `mix brando.gen.blueprint Catalog Product`, then keep its Blueprint,
 generated Ecto migrations, and migration snapshots under version control. Read
 [Blueprint migrations](blueprint_migrations.md) before changing persisted
 fields, relations, indexes, table identity, or primary keys.

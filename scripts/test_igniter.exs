@@ -5,7 +5,11 @@ Mix.shell(Mix.Shell.Process)
 
 default_tests =
   Path.wildcard("test/mix/brando/{igniter,install}/**/*_test.exs") ++
-    ["test/mix/tasks/brando/brando.install_test.exs"]
+    [
+      "test/mix/tasks/brando/brando.install_test.exs",
+      "test/mix/tasks/brando/brando.gen.blueprint_test.exs",
+      "test/mix/tasks/brando/brando.gen_test.exs"
+    ]
 
 tests = if System.argv() == [], do: default_tests, else: System.argv()
 Enum.each(tests, &Code.require_file/1)

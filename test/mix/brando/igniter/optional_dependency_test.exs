@@ -8,7 +8,7 @@ defmodule Mix.Brando.Igniter.OptionalDependencyTest do
     IO.puts("optional helpers compile without Igniter")
     """
 
-    files = ["lib/mix/brando/igniter/project.ex", "lib/mix/brando/igniter/files.ex"]
+    files = Path.wildcard("lib/mix/brando/igniter/**/*.ex")
     {output, status} = System.cmd(System.find_executable("elixir"), ["-e", script, "--" | files], stderr_to_stdout: true)
 
     assert status == 0, output

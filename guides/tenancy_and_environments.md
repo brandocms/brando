@@ -141,7 +141,9 @@ Without `--interactive`, all choices must be supplied for `single`/`multi`.
 `--site-key` is required only for `single`, and keys must contain lowercase letters, numbers,
 and single hyphens.
 
-The installer writes the selection to `config/brando.exs`:
+On reruns, omitted tenancy flags preserve the existing selection. An explicit
+mode updates its existing base configuration; changing it does not move data.
+New installations write the selection to `config/brando.exs`:
 
 ```elixir
 config :brando,

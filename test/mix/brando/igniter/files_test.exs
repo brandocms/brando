@@ -55,16 +55,16 @@ defmodule Mix.Brando.Igniter.FilesTest do
     refute Map.has_key?(conflicting.assigns.test_files, "assets/example.txt")
   end
 
-  test "preserves the exact content of non-Elixir assets" do
-    for {path, contents} <- [{"assets/owned.txt", "text\n"}, {"assets/owned.png", <<137, 80, 78, 71, 0, 255>>}] do
-      result = test_project(files: %{path => contents}) |> Files.create(path, contents)
-      assert result.issues == []
-      assert_unchanged(result)
+  test "treats Rewrite's trailing newline normalization as equivalent for text" do
+    result = test_project(files: %{"assets/owned.txt" => "text\n"}) |> Files.create("assets/owned.txt", "text")
+    assert result.issues == []
+    assert_unchanged(result)
+  end
 
-      conflicting = Files.create(result, path, contents <> " ")
-      assert_has_issue(conflicting, &String.contains?(&1, "already contains different content"))
-      assert_unchanged(conflicting)
-    end
+  test "rejects binary payloads which Rewrite would corrupt with a trailing newline" do
+    result = test_project() |> Files.create("assets/owned.png", <<137, 80, 78, 71, 0, 255>>)
+    assert_has_issue(result, &String.contains?(&1, "text writer cannot safely write binary"))
+    assert_unchanged(result)
   end
 
   test "rejects generated paths outside the project" do

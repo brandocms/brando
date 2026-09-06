@@ -1,42 +1,59 @@
 defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
   @moduledoc """
-  Blueprint for <%= schema %>
+  Blueprint for <%= schema %>.
   """
 
   use Brando.Blueprint,
     application: "<%= app_module %>",
     domain: "<%= domain %>",
     schema: "<%= schema %>",
-    singular: "<%= Macro.underscore(schema) %>",
-    plural: "<%= Macro.underscore(schema) %>s"
+    singular: "<%= singular %>",
+    plural: "<%= plural %>"
 
-  use Gettext, backend: <%= app_module %>Admin.Gettext
+  use Gettext, backend: <%= admin_module %>.Gettext
+  import Brando.Blueprint.Listings.Components.Core, only: [update_link: 1]
 
-  # trait :blocks
-  # trait :creator
-  # trait :meta
-  # trait :revisioned
-  # trait :scheduled_publishing
-  # trait :sequenced
-  # trait :soft_delete, obfuscated_fields: [:slug]
-  # trait :status
-  # trait :timestamped
-  # trait :translatable
+  trait :creator
+  trait :status
+  trait :timestamped
 
-  identifier "{{ entry.title }}"
-  # NOTE: If using Brando.Trait.Translatable, change `route` to `route_i18n(@entry, ...)`
-  absolute_url ~H|{route(:<%= Macro.underscore(schema) %>_path, :detail, [@entry.slug])}|
+  identifier ~H"{@entry.title}"
+  absolute_url false
 
   attributes do
+    attribute :title, :string, required: true
+    attribute :slug, :slug, required: true
   end
 
-  relations do
+  listings do
+    listing do
+      query %{order: [desc: :inserted_at]}
+      component &__MODULE__.listing_row/1
+    end
+  end
+
+  forms do
+    form do
+      tab t("Content") do
+        fieldset do
+          input :title, :text, label: t("Title")
+          input :slug, :slug, from: :title, label: t("Slug")
+          input :status, :status, label: t("Status")
+        end
+      end
+    end
   end
 
   translations do
     context :naming do
-      translate :singular, t("<%= Macro.underscore(schema) |> Brando.Utils.humanize(:downcase) %>")
-      translate :plural, t("<%= Macro.underscore(schema) |> Brando.Utils.humanize(:downcase) %>s")
+      translate :singular, t("<%= String.replace(singular, "_", " ") %>")
+      translate :plural, t("<%= String.replace(plural, "_", " ") %>")
     end
+  end
+
+  def listing_row(assigns) do
+    ~H"""
+    <.update_link entry={@entry} columns={12}>{@entry.title}</.update_link>
+    """
   end
 end

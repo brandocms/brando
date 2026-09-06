@@ -1,18 +1,8 @@
-defmodule <%= module %>Test do
-  use <%= app_module %>.ModelCase
+defmodule <%= inspect schema_module %>Test do
+  use ExUnit.Case, async: true
 
-  alias <%= module %>
-
-  @valid_attrs <%= inspect params %>
-  @invalid_attrs %{}
-
-  test "changeset with valid attributes" do
-    changeset = <%= alias %>.changeset(%<%= alias %>{}, @valid_attrs)
-    assert changeset.valid?
-  end
-
-  test "changeset with invalid attributes" do
-    changeset = <%= alias %>.changeset(%<%= alias %>{}, @invalid_attrs)
-    refute changeset.valid?
+  test "rejects a missing <%= main_field %>" do
+    changeset = <%= inspect schema_module %>.changeset(%<%= inspect schema_module %>{}, %{})
+    assert Keyword.has_key?(changeset.errors, :<%= main_field %>)
   end
 end

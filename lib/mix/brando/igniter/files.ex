@@ -11,6 +11,12 @@ if Code.ensure_loaded?(Igniter) do
     """
     def create(igniter, path, contents) do
       cond do
+        not String.valid?(contents) or String.contains?(contents, <<0>>) ->
+          Igniter.add_issue(
+            igniter,
+            "#{path} is binary. Igniter's text writer cannot safely write binary assets; use the deferred asset copier."
+          )
+
         Path.type(path) != :relative or ".." in Path.split(path) ->
           Igniter.add_issue(igniter, "Generated file paths must stay inside the project: #{path}")
 
@@ -43,7 +49,7 @@ if Code.ensure_loaded?(Igniter) do
           _ -> false
         end
       else
-        false
+        String.trim_trailing(current) == String.trim_trailing(contents)
       end
     end
   end
