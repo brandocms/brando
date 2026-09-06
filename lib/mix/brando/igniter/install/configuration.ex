@@ -151,8 +151,13 @@ if Code.ensure_loaded?(Igniter) do
         [Brando.Villain, :parser],
         Module.concat(project.app_module, Villain.Parser)
       )
-      |> tenancy_mode(tenancy.mode)
-      |> site_key(tenancy.site_key)
+      |> configure_tenancy(tenancy.mode, tenancy.site_key)
+    end
+
+    def configure_tenancy(igniter, mode, key) do
+      igniter
+      |> tenancy_mode(mode)
+      |> site_key(key)
       |> import_config()
     end
 

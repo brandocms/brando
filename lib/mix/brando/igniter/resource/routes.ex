@@ -119,7 +119,7 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp declared_paths({:scope, _, [path | rest]}, prefix, verb) when is_binary(path) do
-      declared_paths(List.last(rest), join_path(prefix, path), verb)
+      declared_paths(rest, join_path(prefix, path), verb)
     end
 
     defp declared_paths({verb, _, [path | _]}, prefix, verb) when is_binary(path), do: [join_path(prefix, path)]

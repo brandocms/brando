@@ -1,37 +1,31 @@
-defmodule Mix.Tasks.Brando.Gen.Sitemap do
-  @shortdoc "Generates a sitemap module template"
+if Code.ensure_loaded?(Igniter) do
+  defmodule Mix.Tasks.Brando.Gen.Sitemap do
+    use Igniter.Mix.Task
 
-  @moduledoc """
-  Generates a sitemap module template
+    @shortdoc "Plans a CMS sitemap module"
+    @moduledoc """
+    #{@shortdoc}.
 
-      mix brando.gen.sitemap
+        mix brando.gen.sitemap
 
-  """
-  use Mix.Task
+    Generates a sitemap for published CMS pages using the discovered web namespace.
+    Review its public URL rules before generating or publishing a sitemap.
+    Namespace selection uses the shared --module/--web-module/--repo options.
+    """
 
-  @spec run(any) :: no_return
-  def run(_) do
-    Mix.shell().info("""
-    % Brando Sitemap module generator
-    ---------------------------------------
+    @impl Igniter.Mix.Task
+    def info(_argv, _source) do
+      %Igniter.Mix.Task.Info{group: :brando, schema: Mix.Brando.Igniter.Project.options()}
+    end
 
-    """)
-
-    app = Mix.Project.config()[:app]
-
-    binding = [
-      web_module: :web_module |> Brando.config() |> to_string() |> String.replace("Elixir.", ""),
-      application_name: Atom.to_string(app)
-    ]
-
-    files = [
-      {:eex, "lib/application_name_web/sitemap.ex", "lib/application_name_web/sitemap.ex"}
-    ]
-
-    Mix.Brando.copy_from(apps(), "priv/templates/brando.gen.sitemap", "", binding, files)
+    @impl Igniter.Mix.Task
+    def igniter(igniter), do: Mix.Brando.Igniter.Auxiliary.plan(igniter, :sitemap)
   end
-
-  defp apps do
-    [".", :brando]
+else
+  defmodule Mix.Tasks.Brando.Gen.Sitemap do
+    use Mix.Task
+    @shortdoc "Plans a CMS sitemap module (requires igniter)"
+    @impl Mix.Task
+    def run(_argv), do: Mix.Brando.missing_igniter!("brando.gen.sitemap")
   end
 end

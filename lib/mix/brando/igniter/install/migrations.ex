@@ -5,17 +5,26 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Install
     alias Mix.Brando.Install.Templates
 
-    def plan(igniter, project) do
+    def plan(igniter, project, options \\ []) do
       igniter = Igniter.include_glob(igniter, "priv/repo/{migrations,tenant_migrations}/*.exs")
 
       files =
         Templates.manifest()
         |> Enum.filter(fn {_format, _source, target} ->
-          String.starts_with?(target, "priv/repo/") && target != "priv/repo/seeds.exs"
+          migration_template?(target, options)
         end)
         |> Enum.sort_by(fn {_format, _, target} -> target end)
 
       Enum.reduce(files, igniter, &copy_missing(&1, &2, project))
+    end
+
+    defp migration_template?(target, options) do
+      if options[:upgrade] do
+        Regex.match?(~r/^\d+_brando_/, Path.basename(target)) or
+          String.starts_with?(target, "priv/repo/tenant_migrations/")
+      else
+        String.starts_with?(target, "priv/repo/") && target != "priv/repo/seeds.exs"
+      end
     end
 
     defp copy_missing({:keep, _, _} = file, igniter, project), do: Install.copy(igniter, file, project)

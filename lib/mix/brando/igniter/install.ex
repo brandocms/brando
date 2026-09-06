@@ -6,9 +6,9 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Code.Keyword, as: CodeKeyword
     alias Igniter.Project.Application, as: ProjectApplication
-    alias Igniter.Project.Deps
     alias Igniter.Project.Module, as: ProjectModule
     alias Mix.Brando.Igniter.Assets
+    alias Mix.Brando.Igniter.Dependencies
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Igniter.Project
@@ -63,7 +63,7 @@ if Code.ensure_loaded?(Igniter) do
     defp dependencies(igniter) do
       # Preserve the user's package/git/path selection, including local Brando.
       Enum.reduce([{:gettext, "~> 1.0"}, {:jason, "~> 1.0"}], igniter, fn dep, igniter ->
-        Deps.add_dep(igniter, dep, on_exists: :skip, error?: true, append?: true)
+        Dependencies.add_new(igniter, dep)
       end)
     end
 

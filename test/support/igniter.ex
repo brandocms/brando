@@ -84,4 +84,13 @@ defmodule Brando.IgniterCase do
   def source(igniter, path) do
     igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)
   end
+
+  def apply_and_reload(igniter) do
+    igniter = Igniter.Test.apply_igniter!(igniter)
+
+    Enum.reduce(Map.keys(igniter.assigns.test_files), igniter, fn path, igniter ->
+      options = if String.starts_with?(path, "priv/templates/"), do: [source_handler: Rewrite.Source], else: []
+      Igniter.include_existing_file(igniter, path, options)
+    end)
+  end
 end

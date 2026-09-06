@@ -56,7 +56,7 @@ defmodule Mix.Brando.Igniter.InstallTest do
     Igniter.Test.assert_creates(igniter, "lib/studio_admin/gettext.ex")
     Igniter.Test.assert_creates(igniter, "priv/repo/migrations/20260101000250_brando_170_add_authorization_groups.exs")
     assert IgniterCase.source(igniter, "assets/backend/package.json") =~ "file:.yalc/@brandocms/brandojs"
-    assert Enum.all?(igniter.tasks, fn {task, _} -> task == "brando.assets.copy" end)
+    assert Enum.all?(igniter.tasks, fn {task, _} -> task in ["brando.assets.copy", "deps.get"] end)
   end
 
   test "direct and composed installation produce equivalent source plans" do

@@ -59,7 +59,7 @@ The task:
   `phoenix_live_view` dependencies in `assets/**/package.json` to the loaded
   server version;
 - updates Gettext source declarations through `igniter.update_gettext`;
-- copies the current `mix brando.upgrade` task and
+- archives a recognized consumer-owned `mix brando.upgrade` task and creates
   `scripts/sync_gettext.sh` helper into the application;
 - creates `florist.config.exs` when both legacy `deployment.cfg` and
   `fabfile.py` exist and no Florist configuration is already present.
@@ -194,11 +194,13 @@ commit after the Florist deployment has been proven.
 First copy every missing Brando-owned migration:
 
 ```shell
-mix brando.upgrade
+mix brando.gen.migrations
 ```
 
-The copied upgrader does not start the application or touch the database. It
-allocates unique, monotonically increasing Ecto versions and is idempotent.
+The Igniter migration-file command does not start the application or touch the
+database. It allocates monotonically increasing Ecto versions and preserves
+historical files. A customized legacy `Mix.Tasks.Brando.Upgrade` must be renamed
+and compiled before using the library-owned versioned upgrade hook.
 
 Handle application Blueprints according to their history:
 

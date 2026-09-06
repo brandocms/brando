@@ -5,7 +5,8 @@ User-facing commands and the current Yalc bootstrap are in
 [Installation and generators](../guides/generators.md).
 
 `brando.install`, `brando.gen.blueprint`, `brando.gen`,
-`brando.gen.blueprint_migration`, and the frontend/backend
+`brando.gen.blueprint_migration`, framework/tenant migrations, auxiliary
+mail/sitemap/authorization/release generators, telemetry and the frontend/backend
 asset generators use Igniter. `igniter.install brando` discovers the same
 `Brando.Install` task; there is one installation implementation.
 
@@ -67,8 +68,9 @@ custom functions are preserved and conflicting names are reported. Public
 controllers/routes require `--public-route`. Authorization and navigation are
 explicit application choices.
 
-Dependency installation and compilation performed by Igniter itself are upstream
-bootstrap operations. Brando's planning callbacks do not start a database, seed
+New direct dependencies queue one `deps.get` after source acceptance. Existing
+dependency sources are preserved. Dependency installation and compilation
+performed by Igniter itself remain upstream bootstrap operations. Brando's planning callbacks do not start a database, seed
 content, build assets, create accounts, or deploy an application.
 
 ## Storage plans
@@ -87,6 +89,27 @@ unattended previews. Real terminal rejection and dry-run behavior have both been
 checked against the disposable consumer, followed by successful paired persistence
 and database application of an accepted alteration.
 
+## Auxiliary and upgrade contracts
+
+Mail reuses existing mailers, requires explicit notification addresses and
+valid form data, and supplies Swoosh/Req defaults without sending messages.
+Release generation owns only ReleaseTasks and missing Mix release configuration;
+legacy deployment/environment/config replacement is retired. Telemetry preserves
+service/exporter configuration and initializes the discovered Repo inside start/2.
+It does not require provider credentials or attach duplicate LiveView handlers.
+The tenancy preparation task uses the same opt-in interactive contract and shared
+configuration mutation as installation.
+
+`brando.gen.migrations` is library-owned and distinct from historical
+consumer-owned `brando.upgrade` tasks. The compatibility planner recognizes the
+maintained historical implementation, archives its complete source outside
+compilation paths and schedules removal only after conflict checks. Customized
+implementations require an explicit rename. A separate compile removes the stale
+beam before Igniter resolves the library hook. The current version hook rejects
+downgrades, unsupported old DSL source, future recipes and versions beyond the
+loaded dependency. Equal versions are a no-op. The pre-0.54 DSL conversion remains
+an explicit compilation prerequisite, with its own existing rewrite tests.
+
 ## Verification and remaining work
 
 ```sh
@@ -103,6 +126,5 @@ The disposable consumer check has exercised the real `igniter.install` command,
 both Vite builds through Yalc, database migrations, admin login, and creating,
 editing and publicly rendering a generated resource. Keep the issue open for
 optional CMS public-site scaffolding, the complete consumer CI/tenancy matrix,
-native upgrades, remaining auxiliary tasks, and
-release artifact qualification. npm publication is deliberately deferred until
+full old-consumer/version-upgrade qualification, and release artifact qualification. npm publication is deliberately deferred until
 release preparation.

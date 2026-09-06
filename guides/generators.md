@@ -160,9 +160,91 @@ accepts `--template RELATIVE_PATH`, which takes precedence over the conventional
 consumer override. Conflicting output files are preserved for manual integration.
 
 [Blueprint migrations](blueprint_migrations.md) explains snapshot history,
-subsequent storage changes, rollback, and explicit rebaseline. Versioned Igniter upgrades and remaining qualification are tracked in
-[#2462](https://github.com/brandocms/brando/issues/2462); source installation is not
-an automatic data-upgrade procedure for an older Brando application.
+subsequent storage changes, rollback, and explicit rebaseline.
+
+## Framework migrations and upgrades
+
+```sh
+mix brando.gen.migrations --dry-run
+mix brando.gen.migrations
+mix brando.migrate
+# For named environments, after public migrations:
+mix brando.migrate --tenants
+```
+
+The source command adds missing versioned framework migrations, preserves
+historical files regardless of their timestamps, and does not recreate the
+pre-versioned installation baseline or run the database.
+
+Older installations generated their own `Mix.Tasks.Brando.Upgrade`, which shadows
+the library's native upgrade hook. Retire the recognized task in a separate step:
+
+```sh
+mix brando.upgrade.prepare
+mix compile
+```
+
+The plan archives its source under `priv/brando/legacy_tasks` and removes it from
+compilation. Customized or unrecognized tasks block removal: rename their module
+and task explicitly, preserving your application-specific steps. Compile in a
+new invocation before using `mix igniter.upgrade brando`.
+
+Igniter calls the library-owned `brando.upgrade FROM TO` hook. The current recipe
+accepts forward changes in the 0.54 development line, from `0.54.0-dev` onward,
+and never beyond the loaded dependency version. Equal versions are a no-op;
+use `brando.gen.migrations` to reconcile files during development. Applications
+with older DSL syntax must first follow [Migrating to 0.54](migrating_to_054.md).
+Future release transitions require explicit upgrade recipes and qualification.
+
+## Auxiliary generators
+
+```sh
+mix brando.gen.mail
+mix brando.gen.sitemap
+mix brando.gen.authorization
+mix brando.gen.release
+mix brando.gen.tenant_migration add_projects
+```
+
+All commands use reviewed source plans and consumer namespaces. New dependencies
+are fetched once after acceptance. Customized owned files produce conflicts;
+consumer templates under `priv/templates/TASK` take precedence. Tenant migration
+names use lowercase letters, digits and underscores; `--interactive` guides a
+missing name. Existing migration implementations and timestamps are preserved.
+
+Mail generation reuses a Phoenix mailer, adds missing Swoosh/Req dependencies,
+and supplies local/test adapter defaults plus a default Req API client.
+Build notifications with `MyApp.Emails.contact(changeset, from: ..., to: ...)`.
+Invalid form data raises before constructing an email. Configure the production
+adapter and credentials deliberately; generating mail helpers never sends mail.
+
+The sitemap selects published pages; review their public URL rules before calling
+`Brando.Sitemap.generate_sitemap/0`. Authorization generation starts from the
+maintained default policy; review permissions for your application content types.
+
+Release generation creates `MyApp.ReleaseTasks` and adds a missing Mix release
+definition. It preserves existing release settings, runtime configuration,
+secrets, Dockerfiles and deployment files. Build with `MIX_ENV=prod mix release`,
+then invoke migrations explicitly as described in [Deployment](deployment.md).
+`brando.install.fabfile` is retired and directs callers to release generation and
+Florist; it does not modify existing Fabric files.
+
+```sh
+mix brando.gen.otel
+mix brando.gen.otel --adapter bandit --exporter otlp
+```
+
+Telemetry infers a single declared Bandit/PlugCowboy dependency or asks for an
+explicit `--adapter`. It uses the discovered service namespace and the Repo's
+configured event prefix, preserves existing configuration, and guards against
+legacy duplicate instrumentation. [Phoenix instrumentation](https://hexdocs.pm/opentelemetry_phoenix/OpentelemetryPhoenix.html)
+already covers LiveView. The [OpenTelemetry SDK](https://hexdocs.pm/opentelemetry/readme.html)
+supports the default `traces_exporter: :none`; opt into OTLP and set the standard
+`OTEL_EXPORTER_OTLP_ENDPOINT`/`OTEL_EXPORTER_OTLP_HEADERS` environment variables.
+Existing exporter choices remain unchanged on reruns.
+
+`brando.setup.tenancy` also accepts `--interactive` for missing mode/site choices.
+Without it, pass the options explicitly; `--yes` only accepts the diff.
 
 ## Task reference
 
@@ -179,8 +261,13 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.gen.languages` / `brando.gen.admin` | Operational language/account initialization |
 | `brando.setup.tenancy` | Igniter tenancy source preparation |
 | `brando.migrate_to_tenant` | Operational data conversion |
-| `brando.gen.sitemap` / `brando.gen.mail` / `brando.gen.authorization` | Legacy auxiliary source generators pending conversion |
-| `brando.gen.release` / `brando.install.fabfile` | Legacy deployment scaffolds pending replacement |
+| `brando.gen.sitemap` / `brando.gen.mail` / `brando.gen.authorization` | Reviewed auxiliary modules with conflict checks |
+| `brando.gen.release` | Reviewed release helpers and missing Mix configuration |
+| `brando.install.fabfile` | Retired; use release generation and Florist |
+| `brando.gen.otel` | Reviewed application-scoped telemetry setup |
+| `brando.gen.migrations` | Reviewed missing framework migration files |
+| `brando.upgrade.prepare` | Reviewed retirement of the recognized consumer-owned upgrade task |
+| `brando.upgrade FROM TO` | Version-aware hook called by Igniter |
 | `brando.gen.tenant_migration` | Tenant migration source; see the tenancy guide |
 
 For setup failures, fix the first compiler, migration or asset error before
