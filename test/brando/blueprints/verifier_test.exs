@@ -1080,6 +1080,40 @@ defmodule Brando.Blueprint.VerifierTest do
     assert :ok = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
   end
 
+  test "accepts listing subforms and rejects missing summaries" do
+    media_item = MediaItem
+
+    blueprint = fn listing ->
+      quote do
+        relations do
+          relation :items, :has_many, module: unquote(media_item)
+        end
+
+        forms do
+          form do
+            tab "Content" do
+              fieldset do
+                inputs_for :items do
+                  cardinality :many
+                  style :listing
+                  unquote(listing)
+                  input :title, :text
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+
+    module = compile_blueprint(blueprint.(quote do: listing(fn _assigns -> "Summary" end)))
+    assert %{style: :listing, listing: listing} = first_subform(module)
+    assert is_function(listing, 1)
+    assert :ok = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+
+    assert_form_error(blueprint.(nil), ~r/listing style requires a listing function component/)
+  end
+
   defp first_subform(module) do
     module.__form__().tabs
     |> hd()

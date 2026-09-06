@@ -1,5 +1,6 @@
 defmodule BrandoAdmin.Components.Form.TransformerTest do
   use ExUnit.Case, async: true
+  require Phoenix.LiveViewTest
 
   alias Brando.Blueprint.Forms.Subform
   alias BrandoAdmin.Components.Form.Transformer
@@ -10,6 +11,70 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
     embedded_schema do
       field :title, :string
     end
+  end
+
+  defmodule MediaItem do
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "TransformerTest",
+      schema: "MediaItem",
+      singular: "media_item",
+      plural: "media_items",
+      gettext_module: Brando.Gettext
+
+    attributes do
+      attribute :title, :string
+    end
+
+    assets do
+      asset :cover, :image, cfg: :default
+    end
+  end
+
+  defmodule Collection do
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "TransformerTest",
+      schema: "Collection",
+      singular: "collection",
+      plural: "collections",
+      gettext_module: Brando.Gettext
+
+    relations do
+      relation :items, :has_many, module: MediaItem
+    end
+  end
+
+  test "a transformer without a summary renders its fields directly, including a requested grid" do
+    field =
+      %Collection{items: [%MediaItem{id: 1, title: "Editable caption", cover: nil}]}
+      |> Ecto.Changeset.change()
+      |> Phoenix.Component.to_form()
+      |> Access.get(:items)
+
+    subform = %Subform{
+      name: :items,
+      cardinality: :many,
+      style: {:transformer, :cover},
+      layout: :grid,
+      sub_fields: [%Brando.Blueprint.Forms.Input{name: :title, type: :text, opts: [label: "Title"]}]
+    }
+
+    html =
+      Phoenix.LiveViewTest.render_component(Transformer,
+        id: "collection-items",
+        field: field,
+        subform: subform,
+        form_id: "collection_form",
+        current_user: %Brando.Users.User{language: "en"},
+        label: "Items",
+        instructions: nil
+      )
+
+    document = Floki.parse_fragment!(html)
+    assert [_] = Floki.find(document, ".layout-list .subform-fields input[value='Editable caption']")
+    assert [] = Floki.find(document, ".subform-edit")
+    assert [] = Floki.find(document, ".modal")
   end
 
   test "builds a clean related record when no default is configured" do

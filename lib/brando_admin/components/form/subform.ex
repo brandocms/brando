@@ -47,7 +47,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
       socket
       |> assign(assigns)
       |> prepare_subform_component()
-      |> assign_new(:open_entries, fn -> [] end)
+      |> assign_new(:open_entries, fn -> %{} end)
       |> assign_new(:sequenced?, fn ->
         # can we sequence the subform? we can if it
         #   - is an embed
@@ -95,7 +95,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
             :"drop_#{assigns.subform.name}_ids"
         end
       end)
-      |> assign(:empty_subform_fields, assigns.field == [])
+      |> assign(
+        :empty_subform_fields,
+        SubformHelpers.current_entries(assigns.field.form.source, assigns.subform.name) == []
+      )
       |> assign(:path, List.wrap(assigns.subform.name))
       |> assign_new(:parent_form_id, fn ->
         parent_schema = assigns.field.form.data.__struct__
@@ -157,14 +160,45 @@ defmodule BrandoAdmin.Components.Form.Subform do
         >
           <.empty_subform :if={@empty_subform_fields} field={@field} />
           <.inputs_for :let={sub_form} field={@field}>
-            <div class={["subform-entry", @subform.style == :inline && "inline"]}>
+            <div
+              id={"#{sub_form.id}-entry"}
+              class={["subform-entry", @subform.style == :inline && "inline", @subform.style == :listing && "summary-entry"]}
+            >
               <input type="hidden" name={"#{@field.form.name}[#{@sort_param}][]"} value={sub_form.index} />
               <div class="subform-tools">
                 <.subentry_sequence :if={@sequenced?} />
                 <.subentry_remove name={"#{@field.form.name}[#{@drop_param}][]"} index={sub_form.index} />
               </div>
 
-              <div class="subform-fields">
+              <div :if={@subform.style == :listing} class="subform-summary">
+                <div class="subform-summary-content">
+                  {Phoenix.LiveView.TagEngine.component(
+                    @subform.listing,
+                    [entry: Changeset.apply_changes(sub_form.source)],
+                    {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+                  )}
+                </div>
+                <button
+                  type="button"
+                  class="subform-summary-edit"
+                  aria-expanded={to_string(entry_open?(sub_form, @open_entries))}
+                  aria-controls={"#{sub_form.id}-fields"}
+                  phx-click={
+                    JS.push("edit_subentry",
+                      value: %{index: sub_form[:_persistent_id].value, open: !entry_open?(sub_form, @open_entries)},
+                      target: @myself
+                    )
+                  }
+                >
+                  <.icon name={if entry_open?(sub_form, @open_entries), do: "hero-chevron-up", else: "hero-pencil-square"} />
+                  {if entry_open?(sub_form, @open_entries), do: gettext("Done"), else: gettext("Edit")}
+                </button>
+              </div>
+              <div
+                id={"#{sub_form.id}-fields"}
+                class="subform-fields"
+                hidden={@subform.style == :listing && !entry_open?(sub_form, @open_entries)}
+              >
                 <Subform.Field.render
                   :for={input <- @subform.sub_fields}
                   cardinality={:many}
@@ -180,7 +214,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
           </.inputs_for>
           <input type="hidden" name={"#{@field.form.name}[#{@drop_param}][]"} />
         </div>
-        <.subentry_add on_click={JS.push("add_subentry", target: @myself)} />
+        <.subentry_add :if={@subform.add_entry} on_click={JS.push("add_subentry", target: @myself)} />
       </Primitives.field_base>
     </fieldset>
     """
@@ -225,7 +259,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   def subentry_sequence(assigns) do
     ~H"""
-    <button type="button" class="subform-handle">
+    <button type="button" class="subform-handle" aria-label={gettext("Reorder entry")}>
       <.icon name="hero-arrows-up-down" />
     </button>
     """
@@ -233,7 +267,12 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   def subentry_edit(assigns) do
     ~H"""
-    <button class="subform-edit" type="button" phx-click={@on_click}>
+    <button
+      class="subform-edit"
+      type="button"
+      phx-click={@on_click}
+      aria-label={if @open, do: gettext("Close entry"), else: gettext("Edit entry")}
+    >
       <svg
         :if={!@open}
         xmlns="http://www.w3.org/2000/svg"
@@ -275,7 +314,14 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   def subentry_remove(assigns) do
     ~H"""
-    <button name={@name} type="button" value={@index} phx-click={JS.dispatch("change")} class="subform-delete">
+    <button
+      name={@name}
+      type="button"
+      value={@index}
+      phx-click={JS.dispatch("change")}
+      class="subform-delete"
+      aria-label={gettext("Remove entry")}
+    >
       <.icon name="hero-x-mark" />
     </button>
     """
@@ -302,14 +348,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
     {:noreply, socket}
   end
 
-  def handle_event("edit_subentry", %{"index" => index}, socket) do
-    open_entries = socket.assigns.open_entries
-
-    if index in open_entries do
-      {:noreply, assign(socket, :open_entries, Enum.reject(open_entries, &(&1 == index)))}
-    else
-      {:noreply, update(socket, :open_entries, &(&1 ++ [index]))}
-    end
+  def handle_event("edit_subentry", %{"index" => index, "open" => open}, socket) when is_boolean(open) do
+    {:noreply, update(socket, :open_entries, &Map.put(&1, to_string(index), open))}
   end
 
   def handle_event("add_subentry", _, socket) do
@@ -406,6 +446,14 @@ defmodule BrandoAdmin.Components.Form.Subform do
     )
 
     {:noreply, socket}
+  end
+
+  # LiveView's persistent form key follows the row through reordering. DOM IDs
+  # still come from the nested form, including for entries without a database ID.
+  def entry_open?(form, open_entries) do
+    key = to_string(form[:_persistent_id].value)
+    has_errors? = form.source.action not in [nil, :ignore] && !form.source.valid?
+    has_errors? || Map.get(open_entries, key, is_nil(form.data.id))
   end
 
   defp get_change_or_field(changeset, field) do
