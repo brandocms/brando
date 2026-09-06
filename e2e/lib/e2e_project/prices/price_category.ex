@@ -76,7 +76,8 @@ defmodule E2eProject.Prices.PriceCategory do
 
           inputs_for :prices do
             label t("Prices")
-            style :inline
+            style :listing
+            listing &__MODULE__.price_summary/1
             cardinality :many
             size :full
             default %Prices.Price{}
@@ -87,6 +88,13 @@ defmodule E2eProject.Prices.PriceCategory do
         end
       end
     end
+  end
+
+  def price_summary(assigns) do
+    ~H"""
+    <strong>{@entry.title || gettext("New price")}</strong>
+    <small>{@entry.price || gettext("Set a price")}</small>
+    """
   end
 
   translations do

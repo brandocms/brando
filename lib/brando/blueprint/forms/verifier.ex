@@ -62,7 +62,8 @@ defmodule Brando.Blueprint.Forms.Verifier do
     with {:ok, relation} <- fetch_subform_relation(context, form, subform),
          :ok <- verify_cardinality(context, form, subform, relation),
          {:ok, related_module} <- fetch_related_schema(context, form, subform, relation),
-         :ok <- verify_sub_fields(context, form, subform, related_module) do
+         :ok <- verify_sub_fields(context, form, subform, related_module),
+         :ok <- verify_listing(context, form, subform) do
       verify_transformer(context, form, subform, relation, related_module)
     end
   end
@@ -184,6 +185,24 @@ defmodule Brando.Blueprint.Forms.Verifier do
       end
     end)
   end
+
+  defp verify_listing(context, form, %{style: :listing} = subform) do
+    cond do
+      subform.cardinality != :many ->
+        error(context, subform, [form.name, subform.name], "listing style requires cardinality :many")
+
+      not is_nil(subform.component) ->
+        error(context, subform, [form.name, subform.name], "cannot combine listing style with a custom component")
+
+      is_nil(subform.listing) ->
+        error(context, subform, [form.name, subform.name], "listing style requires a listing function component")
+
+      true ->
+        :ok
+    end
+  end
+
+  defp verify_listing(_context, _form, _subform), do: :ok
 
   defp verify_transformer(_context, _form, %{style: style}, _relation, _related_module)
        when not is_tuple(style),

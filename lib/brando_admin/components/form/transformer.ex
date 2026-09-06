@@ -246,7 +246,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
      |> assign(:upload_strategy, upload_strategy)
      |> assign(:video_upload_available?, video_upload_available?)
      |> assign(:add_entry?, Map.get(subform, :add_entry, true))
-     |> assign(:layout, Map.get(subform, :layout, :list))
+     |> assign(:layout, if(subform.listing, do: Map.get(subform, :layout, :list), else: :list))
      |> assign(:image_max_size, image_max_size)
      |> assign(:video_max_size, video_max_size(video_cfg))
      # Without this the stream prefixes its DOM ids ("transformer_items-<id>"),
@@ -354,19 +354,20 @@ defmodule BrandoAdmin.Components.Form.Transformer do
                   "group",
                   entry.item.pending && "pending",
                   entry.item.pending && entry.item.pending.status == :error && "failed",
-                  dom_id not in @open_entries && "listing"
+                  (@subform.listing || entry.item.pending) && dom_id not in @open_entries && "listing"
                 ]}
                 data-id={dom_id}
               >
                 <div class="subform-tools">
                   <Subform.subentry_edit
-                    :if={is_nil(entry.item.pending)}
+                    :if={@subform.listing && is_nil(entry.item.pending)}
                     on_click={JS.push("toggle_entry", value: %{dom_id: dom_id}, target: @myself)}
                     open={dom_id in @open_entries}
                   />
                   <button
                     type="button"
                     class="subform-delete"
+                    aria-label={gettext("Remove entry")}
                     phx-click={JS.push("remove_entry", value: %{dom_id: dom_id}, target: @myself)}
                   >
                     <.icon name="hero-x-mark" />
@@ -379,7 +380,12 @@ defmodule BrandoAdmin.Components.Form.Transformer do
                   relation_module={@relation_module}
                   subform={@subform}
                 />
-                <div :if={@layout == :list and dom_id in @open_entries} class="subform-fields">
+                <div
+                  :if={
+                    is_nil(entry.item.pending) && @layout == :list && (is_nil(@subform.listing) || dom_id in @open_entries)
+                  }
+                  class="subform-fields"
+                >
                   <.item_fields
                     item={entry.item}
                     subform={@subform}

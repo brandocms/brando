@@ -101,7 +101,7 @@ defmodule Brando.Blueprint.Forms.Dsl do
         type:
           {:or,
            [
-             {:in, [:regular, :inline]},
+             {:in, [:regular, :inline, :listing]},
              {:tagged_tuple, :transformer, {:or, [:atom, {:list, :atom}]}}
            ]},
         required: false,
@@ -127,7 +127,7 @@ defmodule Brando.Blueprint.Forms.Dsl do
       listing: [
         type: {:fun, 1},
         required: false,
-        doc: "Function component used to render each transformer entry"
+        doc: "Function component receiving @entry for listing subforms and transformer summaries"
       ],
       layout: [
         type: {:in, [:list, :grid]},

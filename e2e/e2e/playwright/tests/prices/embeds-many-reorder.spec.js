@@ -31,17 +31,17 @@ test.describe('Embeds many reordering and deletion', () => {
     await expect(priceEntries).toHaveCount(3)
 
     // Fill first price
-    await priceEntries.nth(0).getByRole('textbox', { name: 'Title' }).fill('Price A')
+    await priceEntries.nth(0).getByRole('textbox', { name: 'Title', includeHidden: true }).fill('Price A')
     await priceEntries.nth(0).getByRole('textbox', { name: 'Price' }).fill('kr 100,-')
     await syncLV(page)
 
     // Fill second price
-    await priceEntries.nth(1).getByRole('textbox', { name: 'Title' }).fill('Price B')
+    await priceEntries.nth(1).getByRole('textbox', { name: 'Title', includeHidden: true }).fill('Price B')
     await priceEntries.nth(1).getByRole('textbox', { name: 'Price' }).fill('kr 200,-')
     await syncLV(page)
 
     // Fill third price
-    await priceEntries.nth(2).getByRole('textbox', { name: 'Title' }).fill('Price C')
+    await priceEntries.nth(2).getByRole('textbox', { name: 'Title', includeHidden: true }).fill('Price C')
     await priceEntries.nth(2).getByRole('textbox', { name: 'Price' }).fill('kr 300,-')
     await syncLV(page)
 
@@ -58,9 +58,9 @@ test.describe('Embeds many reordering and deletion', () => {
     await expect(savedEntries).toHaveCount(3)
 
     // Verify order: A, B, C
-    await expect(savedEntries.nth(0).getByRole('textbox', { name: 'Title' })).toHaveValue('Price A')
-    await expect(savedEntries.nth(1).getByRole('textbox', { name: 'Title' })).toHaveValue('Price B')
-    await expect(savedEntries.nth(2).getByRole('textbox', { name: 'Title' })).toHaveValue('Price C')
+    await expect(savedEntries.nth(0).getByRole('textbox', { name: 'Title', includeHidden: true })).toHaveValue('Price A')
+    await expect(savedEntries.nth(1).getByRole('textbox', { name: 'Title', includeHidden: true })).toHaveValue('Price B')
+    await expect(savedEntries.nth(2).getByRole('textbox', { name: 'Title', includeHidden: true })).toHaveValue('Price C')
 
     // Test reordering: drag Price C to first position
     const priceC = savedEntries.nth(2)
@@ -92,13 +92,13 @@ test.describe('Embeds many reordering and deletion', () => {
 
     // Verify new order after drag: C, A, B
     const reorderedEntries = page.locator('.subform-entry')
-    await expect(reorderedEntries.nth(0).getByRole('textbox', { name: 'Title' })).toHaveValue(
+    await expect(reorderedEntries.nth(0).getByRole('textbox', { name: 'Title', includeHidden: true })).toHaveValue(
       'Price C'
     )
-    await expect(reorderedEntries.nth(1).getByRole('textbox', { name: 'Title' })).toHaveValue(
+    await expect(reorderedEntries.nth(1).getByRole('textbox', { name: 'Title', includeHidden: true })).toHaveValue(
       'Price A'
     )
-    await expect(reorderedEntries.nth(2).getByRole('textbox', { name: 'Title' })).toHaveValue(
+    await expect(reorderedEntries.nth(2).getByRole('textbox', { name: 'Title', includeHidden: true })).toHaveValue(
       'Price B'
     )
 
@@ -113,13 +113,13 @@ test.describe('Embeds many reordering and deletion', () => {
     // Verify persisted order: C, A, B
     const persistedEntries = page.locator('.subform-entry')
     await expect(persistedEntries).toHaveCount(3)
-    await expect(persistedEntries.nth(0).getByRole('textbox', { name: 'Title' })).toHaveValue(
+    await expect(persistedEntries.nth(0).getByRole('textbox', { name: 'Title', includeHidden: true })).toHaveValue(
       'Price C'
     )
-    await expect(persistedEntries.nth(1).getByRole('textbox', { name: 'Title' })).toHaveValue(
+    await expect(persistedEntries.nth(1).getByRole('textbox', { name: 'Title', includeHidden: true })).toHaveValue(
       'Price A'
     )
-    await expect(persistedEntries.nth(2).getByRole('textbox', { name: 'Title' })).toHaveValue(
+    await expect(persistedEntries.nth(2).getByRole('textbox', { name: 'Title', includeHidden: true })).toHaveValue(
       'Price B'
     )
 
@@ -131,10 +131,10 @@ test.describe('Embeds many reordering and deletion', () => {
     // Verify only 2 entries remain: C, B
     const afterDeleteEntries = page.locator('.subform-entry')
     await expect(afterDeleteEntries).toHaveCount(2)
-    await expect(afterDeleteEntries.nth(0).getByRole('textbox', { name: 'Title' })).toHaveValue(
+    await expect(afterDeleteEntries.nth(0).getByRole('textbox', { name: 'Title', includeHidden: true })).toHaveValue(
       'Price C'
     )
-    await expect(afterDeleteEntries.nth(1).getByRole('textbox', { name: 'Title' })).toHaveValue(
+    await expect(afterDeleteEntries.nth(1).getByRole('textbox', { name: 'Title', includeHidden: true })).toHaveValue(
       'Price B'
     )
 
@@ -149,7 +149,7 @@ test.describe('Embeds many reordering and deletion', () => {
     // Verify persisted deletion: only C and B remain
     const finalEntries = page.locator('.subform-entry')
     await expect(finalEntries).toHaveCount(2)
-    await expect(finalEntries.nth(0).getByRole('textbox', { name: 'Title' })).toHaveValue('Price C')
-    await expect(finalEntries.nth(1).getByRole('textbox', { name: 'Title' })).toHaveValue('Price B')
+    await expect(finalEntries.nth(0).getByRole('textbox', { name: 'Title', includeHidden: true })).toHaveValue('Price C')
+    await expect(finalEntries.nth(1).getByRole('textbox', { name: 'Title', includeHidden: true })).toHaveValue('Price B')
   })
 })

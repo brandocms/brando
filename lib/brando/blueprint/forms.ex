@@ -174,6 +174,11 @@ defmodule Brando.Blueprint.Forms do
         relation :project, :belongs_to, module: MyApp.Projects.Project
       end
 
+  Without a `listing` function component, transformer entries display their
+  editable fields directly in a full-width list. Grid cards require a listing
+  component. Ordinary many-entry subforms may use `style :listing` with the same
+  `listing` callback contract; each summary has an Edit button.
+
   Finally we add the transformer input to our project form:
 
       forms do

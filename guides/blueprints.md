@@ -1005,3 +1005,42 @@ For a custom built-in renderer, set `component` to `:vars`,
 `:gallery_objects`, `:identity_type_config`, or `:page_vars`. Existing component
 modules remain supported. Transformer entries may supply a one-argument
 `listing` function component.
+
+### Subform presentation
+
+Use `inputs_for` for nested relations. `style :regular` shows a complete form for
+each entry; `style :inline` places the fields next to one another. For longer
+collections, `style :listing` shows a compact summary with an **Edit** button:
+
+```elixir
+inputs_for :prices do
+  cardinality :many
+  style :listing
+  listing &__MODULE__.price_summary/1
+  default %MyApp.Prices.Price{}
+
+  input :title, :text, label: "Title"
+  input :price, :text, label: "Price"
+end
+
+def price_summary(assigns) do
+  ~H"""
+  <strong>{@entry.title || "New price"}</strong>
+  <small>{@entry.price || "Set a price"}</small>
+  """
+end
+```
+
+The listing function receives `@entry` with pending changes applied. Keep the
+summary short and meaningful: a title and the information that distinguishes
+this entry from its neighbours. New entries open for editing, and validation
+errors reveal their fields. Collapsing a row keeps its fields in the form, so
+unsaved values still submit. **Done** collapses the editor; save the parent form
+to persist changes. Listing style requires `cardinality :many`, a `listing`
+function, and the built-in subform component. Set `add_entry false` to hide the
+add button while retaining editing, ordering, and removal.
+
+Transformers use their listing component as a summary too. Without one, they
+show each entry's fields directly in a list, including when `layout :grid` was
+requested. Supply a listing component to use compact rows or grid cards with
+an explicit editor.
