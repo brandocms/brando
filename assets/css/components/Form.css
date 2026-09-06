@@ -499,14 +499,16 @@
 /**
  * Entry form tab bar. Shares its chip vocabulary with the module editor's
  * `.module-editor-tabs` (see Form/BlockEditor.css) — both read the
- * `--brando-tabbar-*` / `--brando-chip-*` tokens from app.css. The builtins on
- * the right used to be a hard-bordered joined group; they are now the same
- * borderless chips as the tab buttons on the left, icons kept.
+ * `--brando-tabbar-*` / `--brando-chip-*` tokens from app.css. Action-specific
+ * pastel chips sit on a white surface; classes keep colors stable when
+ * optional actions are absent.
  */
 .form-tabs {
+  --form-tool-tint-strength: 100%;
+  --form-tool-icon-strength: 100%;
   margin-bottom: 25px;
-  background-color: var(--brando-tabbar-bg);
-  padding: 8px;
+  background-color: var(--brando-color-white);
+  padding: 9px;
   border-radius: var(--brando-tabbar-radius);
   display: flex;
   justify-content: flex-start;
@@ -514,15 +516,16 @@
   top: 5px;
   position: sticky;
   z-index: 2;
-  @space padding-x 12px;
-  box-shadow: var(--brando-tabbar-shadow);
+  @space padding-x 10px;
+  box-shadow: 0 2px 6px rgba(5, 39, 82, 0.025), 0 0 0 1px rgba(5, 39, 82, 0.065);
 
   @responsive $mobile {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
 
-    .form-tab-customs {
-      margin-bottom: 10px;
+    .form-tab-builtins {
+      width: 100%;
+      justify-content: space-between;
     }
   }
 
@@ -536,6 +539,8 @@
     line-height: 1;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    min-height: 34px;
     gap: 7px;
     padding: var(--brando-chip-padding);
     border: 0;
@@ -552,9 +557,11 @@
       background-color: var(--brando-chip-hover-bg);
     }
 
-    /* The icons here are `<.icon>` mask spans (`background-color: currentColor`),
-       so they follow this `color` on their own — the `svg path:nth-of-type(2)`
-       fill override that used to live here went dead with the inline SVGs. */
+    &:focus-visible {
+      outline: 2px solid var(--brando-chip-active-fg);
+      outline-offset: 3px;
+    }
+
     &.active,
     &.active:hover {
       background-color: var(--brando-chip-active-bg);
@@ -564,19 +571,119 @@
 
   .form-tab-customs {
     display: flex;
-    gap: 8px;
+    gap: 4px;
+
+    button:not(.active) {
+      color: color-mix(in srgb, var(--brando-color-dark) 65%, var(--brando-color-white));
+    }
+  }
+
+  .page-presences {
+    margin-right: 16px;
+    margin-left: 16px;
+
+    .user-presence > .avatar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      background-color: color-mix(in srgb, var(--brando-color-dark) 2%, var(--brando-color-white));
+      color: color-mix(in srgb, var(--brando-color-dark) 60%, var(--brando-color-white));
+      box-shadow: 0 2px 7px rgba(5, 39, 82, 0.12), 0 1px 2px rgba(5, 39, 82, 0.045);
+
+      /* A quiet, static shadow replaces the toolbar's pulsing presence glow. */
+      &::before {
+        display: none;
+      }
+
+      .avatar-placeholder {
+        width: 16px;
+        height: 16px;
+      }
+    }
   }
 
   .form-tab-builtins {
     display: flex;
-    gap: 4px;
+    align-items: center;
+    gap: 5px;
+
+    .form-tool-meta {
+      --form-tool-bg: #fcf3f0;
+      --form-tool-hover: #f8eae5;
+      --form-tool-ink: #946857;
+    }
+
+    .form-tool-revisions {
+      --form-tool-bg: #f5f2fc;
+      --form-tool-hover: #ede7f8;
+      --form-tool-ink: #7b689a;
+    }
+
+    .form-tool-schedule {
+      --form-tool-bg: #fcf7e9;
+      --form-tool-hover: #f6eed6;
+      --form-tool-ink: #8b773f;
+    }
+
+    .form-tool-language {
+      --form-tool-bg: #f0f6fd;
+      --form-tool-hover: #e5effa;
+      --form-tool-ink: #6080a4;
+    }
+
+    .form-tool-preview {
+      --form-tool-bg: #eef7f3;
+      --form-tool-hover: #dfefe7;
+      --form-tool-ink: #55826e;
+    }
+
+    .form-tool-share {
+      --form-tool-bg: #eff7f8;
+      --form-tool-hover: #e1f0f2;
+      --form-tool-ink: #53838b;
+    }
+
+    .form-tool-save {
+      --form-tool-bg: #edf2ff;
+      --form-tool-hover: #e2eaff;
+      --form-tool-ink: #3c609a;
+    }
+
+    > * {
+      background-color: color-mix(in srgb, var(--form-tool-bg) var(--form-tool-tint-strength), var(--brando-color-white));
+    }
+
+    > button:hover {
+      background-color: color-mix(in srgb, var(--form-tool-hover) var(--form-tool-tint-strength), var(--brando-color-white));
+    }
+
+    [data-icon] {
+      width: 17px;
+      height: 17px;
+      color: color-mix(in srgb, var(--form-tool-ink) var(--form-tool-icon-strength), var(--brando-color-dark));
+    }
+
+    > button.active {
+      &,
+      &:hover {
+        background-color: var(--brando-chip-active-bg);
+        color: var(--brando-chip-active-fg);
+      }
+
+      [data-icon] {
+        color: inherit;
+      }
+    }
 
     .split-dropdown {
+      position: relative;
       padding: 0;
       gap: 0;
+      margin-left: 3px;
 
       &:hover {
-        background-color: transparent;
+        background-color: color-mix(in srgb, var(--form-tool-bg) var(--form-tool-tint-strength), var(--brando-color-white));
       }
 
       > button,
@@ -586,14 +693,43 @@
         font-weight: 500;
         display: inline-flex;
         align-items: center;
-        padding: var(--brando-chip-padding);
+        justify-content: center;
+        min-height: 34px;
+        padding: 7px 12px;
         border: none;
         border-radius: var(--brando-chip-radius);
         background-color: transparent;
+        color: color-mix(in srgb, var(--form-tool-ink) var(--form-tool-icon-strength), var(--brando-color-dark));
         transition: background-color 0.2s ease;
 
         &:hover {
-          background-color: var(--brando-chip-hover-bg);
+          background-color: color-mix(in srgb, var(--form-tool-hover) var(--form-tool-tint-strength), var(--brando-color-white));
+        }
+
+        &:focus-visible {
+          outline: 2px solid var(--brando-chip-active-fg);
+          outline-offset: 3px;
+        }
+      }
+
+      .split-dropdown-wrapper > button {
+        position: relative;
+        width: 27px;
+        padding: 0;
+        border-radius: 0 var(--brando-chip-radius) var(--brando-chip-radius) 0;
+
+        &::before {
+          content: "";
+          position: absolute;
+          left: 0;
+          width: 1px;
+          height: 14px;
+          background-color: currentColor;
+          opacity: 0.12;
+        }
+
+        svg path:last-child {
+          fill: currentColor;
         }
       }
     }
@@ -608,6 +744,39 @@
       margin-top: 1px;
     }
   }
+
+  @responsive $mobile {
+    .form-tab-builtins > button {
+      padding: 7px 10px;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .form-tab-builtins {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+
+      .split-dropdown {
+        grid-column: span 2;
+        margin-left: 0;
+
+        > button {
+          flex: 1;
+        }
+      }
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    button {
+      transition: none !important;
+    }
+  }
+}
+
+.dark-mode .form-tabs {
+  --form-tool-tint-strength: 14%;
+  --form-tool-icon-strength: 40%;
 }
 
 .shortcut {
@@ -635,6 +804,14 @@
       border: 1px solid var(--brando-color-dark);
       border-radius: 50%;
       transform: translateY(1px);
+
+      /* Field presence clones the toolbar avatar into this smaller circle. */
+      .avatar-placeholder {
+        display: block;
+        width: 10px;
+        height: 10px;
+        margin: 1px;
+      }
 
       /* Pulsing glow on a pseudo-element so we animate opacity (GPU-composited)
          instead of box-shadow (forces a main-thread repaint every frame). */

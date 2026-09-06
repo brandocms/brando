@@ -2054,56 +2054,83 @@ defmodule BrandoAdmin.Components.Form do
             <.form_presences presences={@presences} />
 
             <div class="form-tab-builtins">
-              <button :if={@has_meta?} phx-click={toggle_drawer("##{@id}-meta-drawer")} type="button">
+              <button
+                :if={@has_meta?}
+                class="form-tool-meta"
+                phx-click={toggle_drawer("##{@id}-meta-drawer")}
+                type="button"
+                aria-label="Meta"
+                title="Meta"
+              >
                 <.icon name="hero-tag" class="s" />
                 <span class="tab-text">Meta</span>
               </button>
               <button
                 :if={@has_revisioning?}
+                class="form-tool-revisions"
                 phx-click={
                   JS.push("toggle_revisions_drawer_status", target: @myself)
                   |> toggle_drawer("##{@id}-revisions-drawer")
                 }
                 type="button"
+                aria-label={gettext("Revisions")}
+                title={gettext("Revisions")}
               >
                 <.icon name="hero-clock" class="s" />
                 <span class="tab-text">{gettext("Revisions")}</span>
               </button>
               <button
                 :if={@has_scheduled_publishing?}
+                class="form-tool-schedule"
                 phx-click={toggle_drawer("##{@id}-scheduled-publishing-drawer")}
                 type="button"
+                aria-label={gettext("Scheduled publishing")}
+                title={gettext("Scheduled publishing")}
               >
                 <.icon name="hero-calendar-days" class="s" />
                 <span class="tab-text">{gettext("Scheduled publishing")}</span>
               </button>
               <button
                 :if={@has_alternates?}
+                class="form-tool-language"
                 phx-click={toggle_drawer("##{@id}-alternates-drawer")}
                 type="button"
+                aria-label={gettext("Languages")}
+                title={gettext("Languages")}
               >
                 <.icon name="hero-language" class="s" />
               </button>
               <button
                 :if={@has_live_preview?}
                 phx-click={JS.push("open_live_preview", target: @myself)}
-                class={["live-preview-toggle", @live_preview_active? && "active"]}
+                class={["live-preview-toggle form-tool-preview", @live_preview_active? && "active"]}
                 type="button"
+                aria-label={gettext("Live preview")}
+                aria-pressed={to_string(@live_preview_active?)}
+                title={gettext("Live preview")}
               >
                 <.icon name="hero-eye" class="s" />
               </button>
               <button
                 :if={@has_live_preview?}
+                class="form-tool-share"
                 phx-click={JS.push("share_link", target: @myself)}
                 type="button"
+                aria-label={gettext("Share preview")}
+                title={gettext("Share preview")}
               >
                 <.icon name="hero-arrow-top-right-on-square" class="s" />
               </button>
-              <div class="split-dropdown">
-                <button phx-click={JS.push("push_submit_redirect", target: @myself)} type="button">
+              <div class="split-dropdown form-tool-save">
+                <button
+                  phx-click={JS.push("push_submit_redirect", target: @myself)}
+                  type="button"
+                  aria-label={gettext("Save")}
+                  title={gettext("Save")}
+                >
                   <.icon name="hero-arrow-down-tray" class="s" />
                 </button>
-                <SplitDropdown.render id="save-dropdown">
+                <SplitDropdown.render id="save-dropdown" label={gettext("Save options")}>
                   <Button.dropdown
                     value={false}
                     event={JS.push("push_submit_redirect", target: @myself)}
@@ -2343,8 +2370,12 @@ defmodule BrandoAdmin.Components.Form do
         class="user-presence visible"
         data-presence-user-id={user.id}
       >
-        <div class="avatar" data-popover={user.name}>
-          <Content.image image={user.avatar} size={:thumb} />
+        <div class="avatar" data-popover={user.name} role="img" aria-label={user.name}>
+          <%= if user.avatar do %>
+            <Content.image image={user.avatar} size={:thumb} />
+          <% else %>
+            <.icon name="hero-user" class="avatar-placeholder" />
+          <% end %>
         </div>
       </div>
     </div>

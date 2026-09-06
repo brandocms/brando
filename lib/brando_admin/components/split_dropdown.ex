@@ -9,6 +9,10 @@ defmodule BrandoAdmin.Components.SplitDropdown do
      |> assign(:id, "split-dropdown-#{assigns.id}")}
   end
 
+  attr :id, :string, required: true
+  attr :label, :string, default: nil
+  slot :inner_block, required: true
+
   def render(assigns) do
     ~H"""
     <div class="split-dropdown-wrapper">
@@ -16,6 +20,8 @@ defmodule BrandoAdmin.Components.SplitDropdown do
         class="split-dropdown-button"
         data-testid="split-dropdown-button"
         type="button"
+        aria-label={@label}
+        title={@label}
         phx-click={toggle_dropdown("##{@id}")}
         phx-click-away={hide_dropdown("##{@id}")}
       >
