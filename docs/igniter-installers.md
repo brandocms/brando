@@ -4,7 +4,8 @@ Implementation tracker: [#2462](https://github.com/brandocms/brando/issues/2462)
 User-facing commands and the current Yalc bootstrap are in
 [Installation and generators](../guides/generators.md).
 
-`brando.install`, `brando.gen.blueprint`, `brando.gen`, and the frontend/backend
+`brando.install`, `brando.gen.blueprint`, `brando.gen`,
+`brando.gen.blueprint_migration`, and the frontend/backend
 asset generators use Igniter. `igniter.install brando` discovers the same
 `Brando.Install` task; there is one installation implementation.
 
@@ -70,6 +71,22 @@ Dependency installation and compilation performed by Igniter itself are upstream
 bootstrap operations. Brando's planning callbacks do not start a database, seed
 content, build assets, create accounts, or deploy an application.
 
+## Storage plans
+
+`Migrations.plan/2` reads and validates history without writing files or directories.
+`commit_plan/1` rechecks the compiled schema and a fingerprint of migration/snapshot
+files under the existing locks. The deferred Igniter adapter prints the migration
+source before acceptance and uses this writer for both transaction participants.
+It never hands binary snapshots or independently writable migrations to Rewrite.
+Fingerprints serialize deterministically across the separate Mix process used by
+Igniter. Competing/stale plans are rejected; snapshot failure rolls back the newly
+created migration. Only one Blueprint storage plan may be composed per invocation.
+
+Igniter 0.8 automatically accepts tasks with redirected stdin. Use `--dry-run` for
+unattended previews. Real terminal rejection and dry-run behavior have both been
+checked against the disposable consumer, followed by successful paired persistence
+and database application of an accepted alteration.
+
 ## Verification and remaining work
 
 ```sh
@@ -86,6 +103,6 @@ The disposable consumer check has exercised the real `igniter.install` command,
 both Vite builds through Yalc, database migrations, admin login, and creating,
 editing and publicly rendering a generated resource. Keep the issue open for
 optional CMS public-site scaffolding, the complete consumer CI/tenancy matrix,
-migration/snapshot planning, native upgrades, remaining auxiliary tasks, and
+native upgrades, remaining auxiliary tasks, and
 release artifact qualification. npm publication is deliberately deferred until
 release preparation.

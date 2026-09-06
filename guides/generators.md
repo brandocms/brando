@@ -65,7 +65,8 @@ mix brando.install --interactive
 
 `--interactive --tenancy-mode single` asks only for the missing site key.
 `--yes` accepts the diff; it neither enables guided questions nor permits replacing
-conflicting files. `--dry-run` previews source without applying it.
+conflicting files. `--dry-run` previews source without applying it. Igniter 0.8 auto-accepts when
+stdin is redirected; use `--dry-run` for unattended previews.
 `--no-tenancy-prompt` remains supported.
 
 Review `config/brando.exs` and your existing Phoenix database/endpoint settings.
@@ -159,8 +160,7 @@ accepts `--template RELATIVE_PATH`, which takes precedence over the conventional
 consumer override. Conflicting output files are preserved for manual integration.
 
 [Blueprint migrations](blueprint_migrations.md) explains snapshot history,
-subsequent storage changes, rollback, and explicit rebaseline. Migration/snapshot
-planning and versioned Igniter upgrades remain tracked in
+subsequent storage changes, rollback, and explicit rebaseline. Versioned Igniter upgrades and remaining qualification are tracked in
 [#2462](https://github.com/brandocms/brando/issues/2462); source installation is not
 an automatic data-upgrade procedure for an older Brando application.
 
@@ -175,7 +175,7 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.gen` | Reviewed context/admin source; optional public routes |
 | `brando.gen.backend` / `brando.gen.frontend` | Reviewed asset scaffolds with conflict checks |
 | `brando.assets.setup` | Operational Yalc installation and consumer builds |
-| `brando.gen.blueprint_migration` | Storage migration and snapshot; review before applying |
+| `brando.gen.blueprint_migration` | Reviewed migration/snapshot pair with stale-plan checks; database application is separate |
 | `brando.gen.languages` / `brando.gen.admin` | Operational language/account initialization |
 | `brando.setup.tenancy` | Igniter tenancy source preparation |
 | `brando.migrate_to_tenant` | Operational data conversion |

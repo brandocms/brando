@@ -1,83 +1,47 @@
-defmodule Mix.Tasks.Brando.Gen.BlueprintMigration do
-  use Mix.Task
+if Code.ensure_loaded?(Igniter) do
+  defmodule Mix.Tasks.Brando.Gen.BlueprintMigration do
+    use Igniter.Mix.Task
+    @shortdoc "Plans a reversible Blueprint migration and snapshot for review"
+    @moduledoc """
+    Plans storage changes from an accepted, compiled Blueprint using Igniter.
 
-  @shortdoc "Generates a reversible migration from a Blueprint storage diff"
+        mix brando.gen.blueprint_migration MyApp.Catalog.Product
+        mix brando.gen.blueprint_migration MyApp.Catalog.Product --dry-run
+        mix brando.gen.blueprint_migration MyApp.Catalog.Product --rebaseline
 
-  @moduledoc """
-  Generates the next reviewed Ecto migration and versioned storage snapshot for
-  a Blueprint.
+    The exact migration source and snapshot version are printed before acceptance.
+    Migration and binary snapshot writes use Brando's checked, paired writer after
+    acceptance. They do not pass through Igniter's generic text writer. A dry run
+    or declined plan does not create files or advance snapshot history.
 
-      mix brando.gen.blueprint_migration MyApp.Projects.Project
+    The commit rejects changes to Blueprint metadata or migration/snapshot history
+    since review. Generate one Blueprint storage plan per invocation; accept and
+    compile pending Blueprint source changes before planning its storage.
 
-  Use `--rebaseline` only after a hand-written migration has brought the database
-  in line with the current Blueprint:
+    --migration-path and --snapshot-path select custom directories. --rebaseline
+    explicitly records storage already implemented by a reviewed manual migration;
+    it must not be used to hide missing or failed database migrations. The command
+    only creates source files; apply them separately with mix ecto.migrate.
+    """
 
-      mix brando.gen.blueprint_migration MyApp.Projects.Project --rebaseline
-
-  Custom paths are useful in umbrella applications and tests:
-
-      mix brando.gen.blueprint_migration MyApp.Projects.Project \\
-        --migration-path apps/my_app/priv/repo/migrations \\
-        --snapshot-path apps/my_app/priv/blueprints/snapshots
-  """
-
-  @switches [
-    migration_path: :string,
-    rebaseline: :boolean,
-    snapshot_path: :string
-  ]
-
-  @requirements ["app.config"]
-
-  @impl Mix.Task
-  def run(argv) do
-    {opts, positional, invalid} = OptionParser.parse(argv, strict: @switches)
-
-    if invalid != [] do
-      Mix.raise("Invalid options: #{inspect(invalid)}")
+    @impl Igniter.Mix.Task
+    def info(_argv, _source) do
+      %Igniter.Mix.Task.Info{
+        group: :brando,
+        positional: [blueprint: [optional: true]],
+        schema: [interactive: :boolean, migration_path: :string, snapshot_path: :string, rebaseline: :boolean],
+        example: "mix brando.gen.blueprint_migration MyApp.Catalog.Product"
+      }
     end
 
-    module = parse_module!(positional)
-    ensure_blueprint!(module)
-
-    result =
-      if opts[:rebaseline] do
-        Brando.Blueprint.Migrations.rebaseline_snapshot(module, opts)
-      else
-        Brando.Blueprint.Migrations.create_migration(module, opts)
-      end
-
-    report(result)
+    @impl Igniter.Mix.Task
+    def igniter(igniter), do: Mix.Brando.Igniter.Migration.plan(igniter)
   end
-
-  defp parse_module!([module_name]), do: Module.concat([module_name])
-
-  defp parse_module!(_) do
-    Mix.raise("Usage: mix brando.gen.blueprint_migration MyApp.Domain.Schema [options]")
-  end
-
-  defp ensure_blueprint!(module) do
-    unless Code.ensure_loaded?(module) and function_exported?(module, :__blueprint__, 0) do
-      Mix.raise("#{inspect(module)} is not a compiled Brando Blueprint")
-    end
-  end
-
-  defp report({:noop, metadata}) do
-    Mix.shell().info([:green, "No migration needed for #{inspect(metadata.module)}."])
-  end
-
-  defp report({:ok, %{migration: migration} = metadata}) do
-    Mix.shell().info([:green, "Created #{migration}"])
-    Mix.shell().info([:green, "Created #{metadata.snapshot}"])
-
-    if metadata.destructive_operations != [] do
-      Mix.shell().error(
-        "Review destructive operations before running the migration: #{inspect(metadata.destructive_operations)}"
-      )
-    end
-  end
-
-  defp report({:ok, metadata}) do
-    Mix.shell().info([:yellow, "Re-baselined #{inspect(metadata.module)} at #{metadata.snapshot}"])
+else
+  defmodule Mix.Tasks.Brando.Gen.BlueprintMigration do
+    use Mix.Task
+    @shortdoc "Plans Blueprint storage changes (requires igniter)"
+    @impl Mix.Task
+    def run(_), do: Mix.Brando.missing_igniter!("brando.gen.blueprint_migration")
   end
 end

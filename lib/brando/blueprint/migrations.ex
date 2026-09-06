@@ -7,7 +7,7 @@ defmodule Brando.Blueprint.Migrations do
   must be handled by a hand-written migration.
   """
 
-  alias Brando.Blueprint.Migrations.{Diff, Renderer, Schema}
+  alias Brando.Blueprint.Migrations.{Diff, Plan, Renderer, Schema}
   alias Brando.Blueprint.Snapshot
   alias Brando.Exception.BlueprintError
 
@@ -25,14 +25,8 @@ defmodule Brando.Blueprint.Migrations do
   """
   @spec create_migration(module(), keyword()) :: {:ok | :noop, map()}
   def create_migration(module, opts \\ @default_opts) do
-    refuse_embedded!(module, "generate a migration for")
     opts = Keyword.merge(@default_opts, opts)
-
-    with_migration_lock(opts, fn ->
-      Snapshot.with_lock(module, opts, fn ->
-        do_create_migration(module, opts)
-      end)
-    end)
+    with_storage_lock(module, opts, fn -> module |> plan(opts) |> commit_prepared() end)
   end
 
   @doc """
@@ -44,16 +38,56 @@ defmodule Brando.Blueprint.Migrations do
   """
   @spec rebaseline_snapshot(module(), keyword()) :: {:ok, map()}
   def rebaseline_snapshot(module, opts \\ @default_opts) do
-    refuse_embedded!(module, "rebaseline")
+    opts = @default_opts |> Keyword.merge(opts) |> Keyword.put(:rebaseline, true)
+    with_storage_lock(module, opts, fn -> module |> plan(opts) |> commit_prepared() end)
+  end
+
+  @doc """
+  Prepares a migration/snapshot change without creating files or directories.
+
+  History validation, storage diffing and rendering use the same rules as
+  `create_migration/2`. The returned plan is valid only while both the compiled
+  schema and the migration/snapshot history remain unchanged.
+  """
+  @spec plan(module(), keyword()) :: Plan.t()
+  def plan(module, opts \\ @default_opts) do
+    refuse_embedded!(module, "generate a migration for")
     opts = Keyword.merge(@default_opts, opts)
+    history = history_digest(module, opts)
+    previous = Snapshot.get_latest_snapshot(module, opts)
+    schema = Schema.build(module)
+    prepared = prepare(module, previous, schema, opts)
+    if history != history_digest(module, opts), do: stale_plan!()
+    struct!(Plan, Map.merge(prepared, %{module: module, options: opts, history_digest: history, schema: schema}))
+  end
 
-    Snapshot.with_lock(module, opts, fn ->
-      version = Snapshot.get_snapshot_version(module, opts) + 1
-      snapshot = %{Snapshot.build_snapshot(module, version) | rebaseline?: true}
-      {:ok, filename} = Snapshot.store_snapshot(snapshot, module, opts)
+  @doc """
+  Commits exactly the reviewed migration/snapshot pair after checking for changes.
 
-      {:ok, %{module: module, snapshot: filename, snapshot_version: version}}
-    end)
+  A stale plan raises before writing. Migration creation is rolled back if the
+  paired snapshot cannot be persisted. The migration directory and Blueprint
+  snapshot locks are the same locks used by immediate generation.
+  """
+  @spec commit_plan(Plan.t()) :: {:ok | :noop, map()}
+  def commit_plan(%Plan{} = plan) do
+    with_storage_lock(plan.module, plan.options, fn -> commit_prepared(plan) end)
+  end
+
+  @doc "Fingerprints the reviewed source and history, excluding the snapshot's informational creation time."
+  @spec plan_digest(Plan.t()) :: String.t()
+  def plan_digest(%Plan{} = plan) do
+    snapshot = if plan.snapshot, do: %{plan.snapshot | updated_at: nil}
+
+    options =
+      plan.options
+      |> Keyword.delete(:planned_migration_version)
+      |> Keyword.put(:rebaseline, plan.options[:rebaseline] || false)
+      |> Enum.sort()
+
+    %{plan | snapshot: snapshot, options: options}
+    |> :erlang.term_to_binary([:deterministic])
+    |> then(&:crypto.hash(:sha256, &1))
+    |> Base.encode16(case: :lower)
   end
 
   @doc """
@@ -82,82 +116,127 @@ defmodule Brando.Blueprint.Migrations do
     end
   end
 
-  defp do_create_migration(module, opts) do
-    previous_snapshot = Snapshot.get_latest_snapshot(module, opts)
-    ensure_consistent_history!(module, previous_snapshot, migration_files(module, opts))
-    current_schema = Schema.build(module)
+  defp prepare(module, previous, schema, opts) do
+    if opts[:rebaseline] do
+      version = snapshot_version(previous) + 1
+      snapshot = %{Snapshot.build_snapshot(module, version) | rebaseline?: true}
+      %{result: :ok, snapshot: snapshot, metadata: snapshot_metadata(module, snapshot, opts)}
+    else
+      ensure_consistent_history!(module, previous, migration_files(module, opts))
+      prepare_diff(module, previous, schema, opts)
+    end
+  end
 
-    case Diff.compare(current_schema, snapshot_schema(previous_snapshot)) do
+  defp prepare_diff(module, previous, schema, opts) do
+    case Diff.compare(schema, snapshot_schema(previous)) do
       {:ok, diff} ->
-        if Diff.empty?(diff) do
-          upgrade_snapshot_format(module, previous_snapshot, current_schema, opts)
-
-          {:noop,
-           %{
-             module: module,
-             message: "No storage changes necessary",
-             snapshot_version: snapshot_version(previous_snapshot)
-           }}
-        else
-          write_migration_and_snapshot(module, diff, current_schema, previous_snapshot, opts)
-        end
+        if Diff.empty?(diff),
+          do: prepare_noop(module, previous, schema),
+          else: prepare_migration(module, diff, schema, previous, opts)
 
       {:error, reason} ->
         raise_unsupported_change!(module, reason)
     end
   end
 
-  defp write_migration_and_snapshot(module, diff, current_schema, previous_snapshot, opts) do
+  defp prepare_migration(module, diff, schema, previous, opts) do
     sequence = get_sequence(module, opts)
-    snapshot_version = snapshot_version(previous_snapshot) + 1
+    snapshot = Snapshot.build_snapshot(module, snapshot_version(previous) + 1)
+    contents = module |> Renderer.render(sequence, diff, schema, snapshot_schema(previous)) |> format_code()
 
-    contents =
-      module
-      |> Renderer.render(sequence, diff, current_schema, snapshot_schema(previous_snapshot))
-      |> format_code()
+    metadata =
+      snapshot_metadata(module, snapshot, opts)
+      |> Map.merge(%{
+        migration: build_migration_filename(module, sequence, opts),
+        sequence: sequence,
+        destructive_operations: Diff.destructive_operations(diff)
+      })
 
-    migration_filename = build_migration_filename(module, sequence, opts)
-    snapshot = Snapshot.build_snapshot(module, snapshot_version)
+    %{result: :ok, migration_source: contents, snapshot: snapshot, metadata: metadata}
+  end
 
-    atomic_write!(migration_filename, contents)
+  defp prepare_noop(module, previous, schema) do
+    snapshot =
+      if previous && previous.migrated_from_format do
+        %Snapshot{} = previous
+
+        %Snapshot{
+          previous
+          | format_version: 3,
+            migrated_from_format: nil,
+            schema: Schema.persistable(schema),
+            updated_at: DateTime.utc_now(),
+            attributes: nil,
+            assets: nil,
+            relations: nil,
+            traits: nil
+        }
+      end
+
+    %{
+      result: :noop,
+      snapshot: snapshot,
+      metadata: %{
+        module: module,
+        message: "No storage changes necessary",
+        snapshot_version: snapshot_version(previous)
+      }
+    }
+  end
+
+  defp snapshot_metadata(module, snapshot, opts) do
+    filename = Path.join(Snapshot.build_path(module, opts), "#{pad_sequence(snapshot.version)}.snapshot")
+    %{module: module, snapshot: filename, snapshot_version: snapshot.version}
+  end
+
+  defp commit_prepared(plan) do
+    current_schema = Schema.build(plan.module)
+
+    if history_digest(plan.module, plan.options) != plan.history_digest || current_schema != plan.schema,
+      do: stale_plan!()
+
+    persist_plan(plan)
+    {plan.result, plan.metadata}
+  end
+
+  defp persist_plan(%Plan{migration_source: nil, snapshot: nil}), do: :ok
+
+  defp persist_plan(%Plan{migration_source: nil} = plan) do
+    Snapshot.store_snapshot(plan.snapshot, plan.module, plan.options)
+  end
+
+  defp persist_plan(%Plan{} = plan) do
+    filename = plan.metadata.migration
+    File.mkdir_p!(Path.dirname(filename))
+    atomic_write!(filename, plan.migration_source)
 
     try do
-      {:ok, snapshot_filename} = Snapshot.store_snapshot(snapshot, module, opts)
-
-      {:ok,
-       %{
-         module: module,
-         migration: migration_filename,
-         snapshot: snapshot_filename,
-         sequence: sequence,
-         snapshot_version: snapshot_version,
-         destructive_operations: Diff.destructive_operations(diff)
-       }}
+      Snapshot.store_snapshot(plan.snapshot, plan.module, plan.options)
     rescue
       error ->
-        File.rm(migration_filename)
+        File.rm(filename)
         reraise error, __STACKTRACE__
     end
   end
 
-  defp upgrade_snapshot_format(_module, nil, _current_schema, _opts), do: :ok
+  defp history_digest(module, opts) do
+    migrations = opts |> Keyword.fetch!(:migration_path) |> Path.join("*.exs") |> Path.wildcard()
+    snapshots = module |> Snapshot.build_path(opts) |> Path.join("*.snapshot") |> Path.wildcard()
 
-  defp upgrade_snapshot_format(_module, %Snapshot{migrated_from_format: nil}, _current_schema, _opts), do: :ok
+    (migrations ++ snapshots)
+    |> Enum.sort()
+    |> Enum.map(fn path -> {Path.expand(path), :crypto.hash(:sha256, File.read!(path))} end)
+    |> :erlang.term_to_binary()
+    |> then(&:crypto.hash(:sha256, &1))
+  end
 
-  defp upgrade_snapshot_format(module, %Snapshot{} = previous_snapshot, current_schema, opts) do
-    upgraded = %Snapshot{
-      previous_snapshot
-      | format_version: 3,
-        migrated_from_format: nil,
-        schema: Schema.persistable(current_schema),
-        updated_at: DateTime.utc_now(),
-        attributes: nil,
-        assets: nil,
-        relations: nil,
-        traits: nil
-    }
+  defp with_storage_lock(module, opts, fun) do
+    with_migration_lock(opts, fn -> Snapshot.with_lock(module, opts, fun) end)
+  end
 
-    Snapshot.store_snapshot(upgraded, module, opts)
+  defp stale_plan! do
+    raise BlueprintError,
+          "Blueprint schema or migration/snapshot history changed after planning. Generate and review a new plan; no files were written."
   end
 
   defp snapshot_schema(nil), do: nil
@@ -224,7 +303,6 @@ defmodule Brando.Blueprint.Migrations do
 
   defp build_migration_filename(module, sequence, opts) do
     migration_path = Keyword.fetch!(opts, :migration_path)
-    File.mkdir_p!(migration_path)
 
     Path.join(
       migration_path,
@@ -248,7 +326,10 @@ defmodule Brando.Blueprint.Migrations do
       |> Enum.map(&ecto_migration_version!/1)
       |> Enum.max(fn -> 0 end)
 
-    max(current_version, latest_version + 1)
+    version = Keyword.get(opts, :planned_migration_version) || max(current_version, latest_version + 1)
+    if version <= latest_version, do: stale_plan!()
+
+    version
     |> Integer.to_string()
     |> String.pad_leading(14, "0")
   end
@@ -283,11 +364,12 @@ defmodule Brando.Blueprint.Migrations do
   end
 
   defp atomic_write!(filename, contents) do
-    temporary = "#{filename}.tmp.#{System.unique_integer([:positive, :monotonic])}"
+    suffix = :crypto.strong_rand_bytes(12) |> Base.url_encode64(padding: false)
+    temporary = "#{filename}.tmp.#{suffix}"
 
     try do
-      File.write!(temporary, contents, [:sync])
-      File.rename!(temporary, filename)
+      File.write!(temporary, contents, [:sync, :exclusive])
+      File.ln!(temporary, filename)
     after
       File.rm(temporary)
     end

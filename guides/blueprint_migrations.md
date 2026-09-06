@@ -1,5 +1,29 @@
 # Blueprint migrations
 
+The command uses Igniter. It prints the exact migration source and snapshot
+version before acceptance, then commits both through Brando's checked storage
+writer. `--dry-run` leaves files, directories and snapshot versions unchanged;
+`--yes` accepts the prepared changes. Igniter 0.8 also auto-accepts when stdin is
+redirected, so always use `--dry-run` for unattended previews.
+
+Accept and compile Blueprint edits before planning storage. Prepare one Blueprint
+storage plan per invocation, committing it before planning another so migration
+ordering and history checks remain valid. If the schema, an existing snapshot,
+or the migration directory changes after review, the commit rejects the stale
+plan. Generate and review a new plan; do not reuse the old deferred command.
+
+The binary snapshot and its migration are deliberately excluded from Igniter's
+text writer. A deferred task recomputes and verifies the reviewed fingerprint,
+then uses the migration-directory and snapshot locks and paired persistence.
+The normal storage diff engine, rename hints, legacy snapshot upgrades, and
+explicit `--rebaseline` behavior are retained. No database migration is run by
+the source generator.
+
+For programmatic callers, `Brando.Blueprint.Migrations.plan/2` creates the plan
+without writes and `commit_plan/1` verifies and persists it. Existing
+`create_migration/2` and `rebaseline_snapshot/2` callers retain immediate operation
+through the same implementation.
+
 Blueprint migrations turn storage-relevant DSL changes into reviewed Ecto migrations. The generator stores a
 versioned, normalized schema snapshot beside the migration history and compares the next Blueprint definition to that
 snapshot. It does not compare arbitrary runtime structs or infer state from the database.

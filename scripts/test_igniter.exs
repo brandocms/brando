@@ -8,7 +8,10 @@ default_tests =
     [
       "test/mix/tasks/brando/brando.install_test.exs",
       "test/mix/tasks/brando/brando.gen.blueprint_test.exs",
-      "test/mix/tasks/brando/brando.gen_test.exs"
+      "test/mix/tasks/brando/brando.gen_test.exs",
+      "test/brando/blueprints/migrations_test.exs",
+      "test/brando/blueprints/migration_plan_test.exs",
+      "test/mix/tasks/brando.gen.blueprint_migration_test.exs"
     ]
 
 tests = if System.argv() == [], do: default_tests, else: System.argv()
