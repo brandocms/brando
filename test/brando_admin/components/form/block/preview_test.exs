@@ -36,7 +36,9 @@ defmodule BrandoAdmin.Components.Form.Block.PreviewTest do
   end
 
   test "leaf modules need no child render, including when children are not preloaded" do
-    for block <- [%ContentBlock{uid: "leaf"}, %ContentBlock{uid: "leaf", children: []}] do
+    persisted = Ecto.put_meta(%ContentBlock{id: 123, uid: "persisted-leaf"}, state: :loaded)
+
+    for block <- [%ContentBlock{uid: "leaf"}, %ContentBlock{uid: "leaf", children: []}, persisted] do
       inactive = Changeset.change(%{block | active: false})
       active = Changeset.change(block)
       refute Block.should_force_live_preview_update?(inactive, active, :container)

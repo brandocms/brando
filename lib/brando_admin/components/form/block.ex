@@ -1995,10 +1995,14 @@ defmodule BrandoAdmin.Components.Form.Block do
     block_changeset = get_block_changeset(changeset, belongs_to)
     updated_block_changeset = get_block_changeset(updated_changeset, belongs_to)
 
+    # Reading an unloaded association through get_field/2 raises for persisted
+    # blocks. Inspect the stored tree without asking Ecto to load the relation.
+    children = Map.get(updated_block_changeset.changes, :children, updated_block_changeset.data.children)
+
     owns_children? =
       Changeset.get_field(block_changeset, :type) in [:container, :slot] ||
         Changeset.get_field(block_changeset, :multi) == true ||
-        match?([_ | _], Changeset.get_field(updated_block_changeset, :children))
+        match?([_ | _], children)
 
     owns_children? &&
       Changeset.get_field(block_changeset, :active) == false &&
