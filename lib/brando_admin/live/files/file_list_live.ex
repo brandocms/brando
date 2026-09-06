@@ -258,15 +258,31 @@ defmodule BrandoAdmin.Files.FileListLive do
       medium
       close={JS.push("close_file_replacement")}
     >
-      <p>{gettext("Replace this file everywhere it is used. Its filename and URL will stay the same.")}</p>
-      <div class="field-wrapper">
-        <label for="replacement-filename">{gettext("Current file")}</label>
-        <input id="replacement-filename" class="text" type="text" readonly value={@replacement_file.filename} />
+      <p class="replacement-intro">
+        {gettext(
+          "The new file takes over this one's contents everywhere it is used. Its filename, URL and references stay as they are."
+        )}
+      </p>
+
+      <div class="asset-field asset-field--single file-preview replacement-current">
+        <div class="img-placeholder">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+            <path fill="none" d="M0 0h24v24H0z" /><path d="M20 22H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1zm-1-2V4H5v16h14zM8 7h8v2H8V7zm0 4h8v2H8v-2zm0 4h5v2H8v-2z" />
+          </svg>
+        </div>
+        <div class="file-info">
+          <div class="info-wrapper">
+            <div class="name">
+              {@replacement_file.filename} ({Brando.Utils.human_size(@replacement_file.filesize)})
+            </div>
+            <div class="updated">{Brando.Utils.media_url(@replacement_file)}</div>
+          </div>
+        </div>
       </div>
-      <p class="monospace tiny">{Brando.Utils.media_url(@replacement_file)}</p>
-      <p>{gettext("Choose a file with the same extension as the original.")}</p>
+
       <div
         id={"file-replacement-upload-#{@replacement_file.id}"}
+        class="replacement-dropzone"
         phx-hook="Brando.UploadTrigger"
         data-kind={@replacement_target["kind"]}
         data-asset-type={@replacement_target["asset_type"]}
@@ -274,10 +290,12 @@ defmodule BrandoAdmin.Files.FileListLive do
         data-config-target={@replacement_target["config_target"]}
         data-deliver-topic={@replacement_target["deliver_topic"]}
         data-accept={Path.extname(@replacement_file.filename)}
-        data-click-mode="trigger"
       >
         <input type="file" class="file-input hidden" aria-label={gettext("Replacement file")} />
-        <button type="button" class="primary upload-trigger">{gettext("Choose replacement")}</button>
+        <p class="replacement-prompt">
+          {gettext("Drop a %{extension} file here", extension: Path.extname(@replacement_file.filename))}
+        </p>
+        <button type="button" class="secondary small upload-trigger">{gettext("Choose file")}</button>
       </div>
       <:footer>
         <button type="button" class="secondary" phx-click="close_file_replacement">{gettext("Close")}</button>

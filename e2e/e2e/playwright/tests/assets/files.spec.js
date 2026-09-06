@@ -21,7 +21,8 @@ async function uploadFile(page) {
   await page.getByRole('button', { name: 'Replace file', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Replace file', exact: true })
   await expect(dialog).toBeVisible()
-  await expect(dialog.getByLabel('Current file')).toHaveValue(filename)
+  await expect(dialog.locator('.replacement-current .name')).toContainText(filename)
+  await expect(dialog.locator('.replacement-current .updated')).toHaveText(url)
   return { row, id, url, dialog, original }
 }
 
