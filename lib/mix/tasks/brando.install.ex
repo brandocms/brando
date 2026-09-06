@@ -7,11 +7,14 @@ defmodule Mix.Tasks.Brando.Install do
       mix brando.install [--module MyApp]
                          [--tenancy-mode none|single|multi]
                          [--site-key my-site]
+                         [--interactive]
                          [--no-tenancy-prompt]
 
-  Without tenancy flags the installer asks which mode to configure and defaults
-  to `none` when Enter is pressed. Automated installs can pass an explicit mode
-  or `--no-tenancy-prompt`. A URL-safe `--site-key` is required with an explicit
+  Without tenancy flags the installer configures `none` without prompting.
+  Pass `--interactive` to choose interactively or supply a missing site key.
+  `--tenancy-prompt` remains an alias for guided tenancy setup, and
+  `--no-tenancy-prompt` suppresses tenancy questions even with `--interactive`.
+  A URL-safe `--site-key` is required with a non-interactive
   `--tenancy-mode single` and is rejected for the other modes.
   """
 
@@ -277,6 +280,7 @@ defmodule Mix.Tasks.Brando.Install do
       OptionParser.parse(args,
         strict: [
           module: :string,
+          interactive: :boolean,
           tenancy_mode: :string,
           site_key: :string,
           tenancy_prompt: :boolean
@@ -315,50 +319,30 @@ defmodule Mix.Tasks.Brando.Install do
     Mix.shell().info("\nBrando finished copying.")
   end
 
-  @doc "Resolves installer tenancy options, prompting when requested options are absent."
+  @doc "Resolves installer tenancy options, prompting only when explicitly requested."
   def resolve_tenancy_options!(opts, default_site_key) do
-    cond do
-      Keyword.has_key?(opts, :tenancy_mode) or Keyword.has_key?(opts, :site_key) ->
-        parse_tenancy_options!(opts)
+    interactive? = (opts[:interactive] == true or opts[:tenancy_prompt] == true) and opts[:tenancy_prompt] != false
 
-      opts[:tenancy_prompt] == false ->
-        parse_tenancy_options!(opts)
-
-      true ->
+    case {interactive?, opts[:tenancy_mode], opts[:site_key]} do
+      {true, nil, nil} ->
         prompt_tenancy_options(default_site_key)
+
+      {true, "single", nil} ->
+        opts
+        |> Keyword.put(:site_key, prompt_site_key(default_site_key))
+        |> parse_tenancy_options!()
+
+      _ ->
+        parse_tenancy_options!(opts)
     end
   end
 
   @doc "Parses and validates non-interactive installer tenancy options."
   def parse_tenancy_options!(opts) do
-    mode = opts |> Keyword.get(:tenancy_mode, "none") |> parse_tenancy_mode!()
-    site_key = opts[:site_key]
-
-    case {mode, site_key} do
-      {:single, key} when is_binary(key) ->
-        if Brando.Tenant.valid_key?(key) do
-          %{mode: mode, site_key: key}
-        else
-          Mix.raise("--site-key must be a lowercase, URL-safe key such as my-site")
-        end
-
-      {:single, nil} ->
-        Mix.raise("--site-key is required with --tenancy-mode single")
-
-      {_, nil} ->
-        %{mode: mode, site_key: nil}
-
-      {_, _key} ->
-        Mix.raise("--site-key can only be used with --tenancy-mode single")
+    case Mix.Brando.Install.Options.tenancy(opts) do
+      {:ok, tenancy} -> tenancy
+      {:error, message} -> Mix.raise(message)
     end
-  end
-
-  defp parse_tenancy_mode!(mode) when mode in ["none", "single", "multi"] do
-    String.to_existing_atom(mode)
-  end
-
-  defp parse_tenancy_mode!(mode) do
-    Mix.raise("Invalid --tenancy-mode #{inspect(mode)}; expected none, single, or multi")
   end
 
   defp prompt_tenancy_options(default_site_key) do
@@ -387,17 +371,17 @@ defmodule Mix.Tasks.Brando.Install do
   end
 
   defp prompt_site_key(default_site_key) do
-    case Mix.Brando.prompt("+ Site key [#{default_site_key}]") do
-      "" ->
-        default_site_key
+    site_key =
+      case Mix.Brando.prompt("+ Site key [#{default_site_key}]") do
+        "" -> default_site_key
+        site_key -> site_key
+      end
 
-      site_key ->
-        if Brando.Tenant.valid_key?(site_key) do
-          site_key
-        else
-          Mix.shell().error("Use lowercase letters, numbers, and single hyphens only.")
-          prompt_site_key(default_site_key)
-        end
+    if Brando.Tenant.valid_key?(site_key) do
+      site_key
+    else
+      Mix.shell().error("Use lowercase letters, numbers, and single hyphens only.")
+      prompt_site_key(default_site_key)
     end
   end
 

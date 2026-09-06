@@ -38,7 +38,7 @@ then run:
 
 ```bash
 mix deps.get
-mix brando.install --module Studio --tenancy-mode none
+mix brando.install --module Studio
 mix deps.get
 ```
 
@@ -76,7 +76,8 @@ Replace placeholder organization details, fonts, deployment hosts, and productio
 secrets before deploying the scaffold. The scaffold disables Swoosh’s unused HTTP
 client; configure a delivery adapter and its required client when adding email.
 
-`--tenancy-mode none` is the classic `public`-schema setup. The other choices are:
+Omitting `--tenancy-mode` selects the classic `public`-schema setup (`none`)
+without prompting. The other choices are:
 
 ```bash
 mix brando.install --tenancy-mode single --site-key studio
@@ -85,8 +86,11 @@ mix brando.install --tenancy-mode multi
 
 Choose the mode **once during installation**, not by rerunning these three
 commands. `single` requires a lowercase URL-safe site key. Without a mode flag,
-the task prompts and defaults to `none`; `--no-tenancy-prompt` selects that default
-noninteractively. Follow [Sites and environments](tenancy_and_environments.md)
+the task selects `none`. Use `--interactive` for guided setup; supplied choices
+are respected, and a missing site key is requested for `single` mode.
+`--tenancy-prompt` remains an alias for guided tenancy setup, and
+`--no-tenancy-prompt` suppresses tenancy questions even with `--interactive`.
+Follow [Sites and environments](tenancy_and_environments.md)
 for provisioning named environments after public migrations.
 
 ## 3. Build the JavaScript and CSS consumers

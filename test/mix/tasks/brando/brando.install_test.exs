@@ -48,10 +48,8 @@ defmodule Mix.Tasks.Brando.GenerateTest do
   end
 
   test "brando.install" do
-    send(self(), {:mix_shell_input, :prompt, "none"})
     Mix.Tasks.Brando.Install.run([])
-    assert_received {:mix_shell, :prompt, [prompt]}
-    assert prompt =~ "Choose tenancy mode"
+    refute_received {:mix_shell, :prompt, _message}
     assert_received {:mix_shell, :info, ["\nBrando finished copying."]}
     assert File.exists?("lib/brando_web/villain")
     assert_file("lib/brando_web/villain/parser.ex")
@@ -115,6 +113,20 @@ defmodule Mix.Tasks.Brando.GenerateTest do
     refute File.exists?("assets/css/app.css")
   end
 
+  test "accepts --interactive through the Mix task entry point" do
+    send(self(), {:mix_shell_input, :prompt, "single"})
+    send(self(), {:mix_shell_input, :prompt, "guided-site"})
+    Mix.Tasks.Brando.Install.run(["--interactive"])
+
+    assert_received {:mix_shell, :prompt, [prompt]}
+    assert prompt =~ "Choose tenancy mode"
+
+    assert_file("config/brando.exs", fn file ->
+      assert file =~ "tenancy_mode: :single"
+      assert file =~ ~s(site_key: "guided-site")
+    end)
+  end
+
   test "parses valid installer tenancy options" do
     assert Mix.Tasks.Brando.Install.parse_tenancy_options!([]) == %{
              mode: :none,
@@ -151,7 +163,7 @@ defmodule Mix.Tasks.Brando.GenerateTest do
     send(self(), {:mix_shell_input, :prompt, "2"})
     send(self(), {:mix_shell_input, :prompt, ""})
 
-    assert Mix.Tasks.Brando.Install.resolve_tenancy_options!([], "photo-blog") == %{
+    assert Mix.Tasks.Brando.Install.resolve_tenancy_options!([tenancy_prompt: true], "photo-blog") == %{
              mode: :single,
              site_key: "photo-blog"
            }
