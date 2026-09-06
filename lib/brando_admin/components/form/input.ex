@@ -339,10 +339,12 @@ defmodule BrandoAdmin.Components.Form.Input do
   """
   def rich_text(assigns) do
     extensions = process_extensions(assigns)
+    footnotes = Brando.Blueprint.Forms.Footnotes.config(assigns[:opts] || [])
 
     assigns =
       assigns
       |> assign(:extensions, extensions)
+      |> assign(:footnotes, footnotes)
       |> assign_new(:reset, fn -> false end)
       |> assign_new(:default_value, fn -> nil end)
       |> prepare_input_component()
@@ -368,6 +370,9 @@ defmodule BrandoAdmin.Components.Form.Input do
           data-name="TipTap"
           data-tiptap-type="rich_text"
           data-tiptap-extensions={@extensions}
+          data-footnotes={@footnotes && @footnotes.enabled && "true"}
+          data-footnote-field={@footnotes && @field.field}
+          phx-target={@footnotes && @target}
         >
           <div id={"#{@field.id}-rich-text-target-wrapper"} class="tiptap-target-wrapper" phx-update="ignore">
             <div id={"#{@field.id}-rich-text-target"} class="tiptap-target"></div>

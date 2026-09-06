@@ -92,6 +92,40 @@ defmodule Brando.Villain.DuplicationTest do
   # duplicate_refs/3
   # ============================================================
 
+  test "copying a block gives notes independent identities while retaining library assets", %{user: user} do
+    text = ~s(<p>A source<sup data-footnote-uid="original-note">•</sup></p>)
+    ref = build_ref(%{data: %Brando.Villain.Blocks.TextBlock{data: %Brando.Villain.Blocks.TextBlock.Data{text: text}}})
+    media = build_ref(%{image_id: 42, video_id: 43, file_id: 44})
+    note_body = build_block(%{id: 52, uid: "note-body", refs: [media], vars: []})
+
+    note =
+      build_block(%{
+        id: 51,
+        uid: "original-note",
+        type: :slot,
+        slot_kind: :footnote,
+        slot_name: "text",
+        slot_module_set: "Footnotes",
+        refs: [],
+        vars: [],
+        children: [note_body]
+      })
+
+    owner = build_block(%{refs: [ref], children: [note], vars: [build_var(%{type: :html, value: text})]})
+
+    copied = owner |> Changeset.change() |> ContentBlocks.duplicate_block(user_id: user.id) |> Changeset.apply_changes()
+    [copied_note] = copied.children
+    refute copied_note.uid == note.uid
+    assert copied_note.slot_name == "text"
+    assert hd(copied.refs).data.data.text =~ ~s(data-footnote-uid="#{copied_note.uid}")
+    assert hd(copied.vars).value =~ ~s(data-footnote-uid="#{copied_note.uid}")
+    refute hd(copied.refs).data.data.text =~ "original-note"
+    assert hd(owner.refs).data.data.text == text
+    [copied_body] = copied_note.children
+    refute copied_body.uid == note_body.uid
+    assert {hd(copied_body.refs).image_id, hd(copied_body.refs).video_id, hd(copied_body.refs).file_id} == {42, 43, 44}
+  end
+
   describe "duplicate_refs/3" do
     test "clears id, block_id, module_id and generates new uid", %{user: user} do
       block = build_block()

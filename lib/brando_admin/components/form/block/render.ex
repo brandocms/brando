@@ -190,8 +190,15 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         available_identifiers={@available_identifiers}
         paste_multi_module_id={@paste_multi_module_id}
         hidden_block_fields={@hidden_block_fields}
-        paste_context={if @belongs_to == :container, do: :container, else: :root}
+        paste_context={
+          case @belongs_to do
+            :container -> :container
+            :slot -> nil
+            _ -> :root
+          end
+        }
       />
+      <.collection_children {assigns} />
     </div>
     """
   end
@@ -304,6 +311,75 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     """
   end
 
+  def render(%{type: :slot} = assigns) do
+    ~H"""
+    <div id={"slot-#{@uid}"} data-block-slot={@uid} data-slot-kind={@slot_kind}>
+      <%!-- Every block keeps its own form. Closed drawers stay mounted so
+            LiveView recovery and the owner op store retain their drafts. --%>
+      <.form for={@form} phx-change="validate_block" phx-target={@myself} hidden>
+        <Input.hidden field={@form[:id]} />
+        <Input.hidden :if={@belongs_to == :root} field={@form[:sequence]} />
+        <Input.hidden :if={@belongs_to == :root} field={@form[:marked_as_deleted]} />
+        <.hidden_block_fields fields={@hidden_block_fields} />
+      </.form>
+      <section
+        id={"block-slot-drawer-#{@uid}"}
+        class={["block-slot-drawer", @slot_open && "visible"]}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={"block-slot-title-#{@uid}"}
+        phx-hook="Brando.BlockSlot"
+        phx-target={@myself}
+      >
+        <button
+          class="block-slot-backdrop"
+          type="button"
+          tabindex="-1"
+          phx-click="close_block_slot"
+          phx-target={@myself}
+          aria-label={gettext("Close collection")}
+        />
+        <div class="block-slot-panel">
+          <header class="block-slot-header">
+            <div>
+              <p class="block-slot-breadcrumb">
+                {if @slot_kind == :footnote, do: gettext("Text / Footnotes"), else: gettext("Content / Block region")}
+              </p>
+              <h2 id={"block-slot-title-#{@uid}"}>{@slot_title || @slot_name}</h2>
+            </div>
+            <button type="button" class="block-slot-done" phx-click="close_block_slot" phx-target={@myself}>{gettext("Done")}</button>
+          </header>
+          <div class="block-slot-meta">
+            <span>{ngettext("%{count} block", "%{count} blocks", length(@block_list))}</span>
+            <span class="block-slot-set">{@slot_module_set}</span>
+          </div>
+          <div class="block-slot-content">
+            <div :if={@block_list == []} class="block-slot-empty">
+              <.icon name="hero-squares-2x2" />
+              <h3>{gettext("Make room for more")}</h3>
+              <p>{gettext("Add text, a source or supporting media from this collection’s module set.")}</p>
+            </div>
+            <div
+              id={"#{@id}-children"}
+              phx-hook="Brando.SortableBlocks"
+              data-sortable-id={"sortable-slot-#{@uid}"}
+              data-sortable-handle=".sort-handle"
+              data-sortable-selector=".block"
+              class="block-slot-blocks"
+            >
+              <.collection_children {assigns} />
+            </div>
+            <.plus click={JS.push("insert_slot_block", target: @myself)} modal={@module_picker_id} />
+          </div>
+          <footer class="block-slot-footer">
+            <.icon name="hero-document-check" /><span>{gettext("Changes are saved with this entry.")}</span>
+          </footer>
+        </div>
+      </section>
+    </div>
+    """
+  end
+
   def render(%{type: :fragment} = assigns) do
     ~H"""
     <div>
@@ -349,6 +425,45 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
   ##
   ## Function components
+
+  def collection_children(assigns) do
+    ~H"""
+    <div
+      :for={{child_uid, child_form, list_index} <- Block.child_shells(@block_list, @children_forms)}
+      :key={child_uid}
+      id={"child-#{child_uid}"}
+      data-uid={child_uid}
+      data-parent_uid={@uid}
+      data-parent_id={child_form[:parent_id].value}
+      data-id={child_form[:id].value}
+    >
+      <.live_component
+        module={Block}
+        id={"#{@id}-child-#{child_uid}"}
+        dom_id={"child-#{child_uid}"}
+        list_index={list_index}
+        block_module={@block_module}
+        block_field={@block_field}
+        children={child_form[:children].value}
+        live_preview_active?={@live_preview_active?}
+        live_preview_cache_key={@live_preview_cache_key}
+        parent_ref={{Block, @id}}
+        parent_uid={@uid}
+        parent_path={@path}
+        module_set={if @type == :slot, do: @slot_module_set, else: @module_set}
+        form={child_form}
+        form_id={@form_id}
+        entry={@entry}
+        current_user_id={@current_user_id}
+        belongs_to={:slot}
+        slot_open={@open_slot_uid == child_uid}
+        slot_title={@slot_title}
+        paste_multi_module_id={@paste_multi_module_id}
+        level={@level + 1}
+      />
+    </div>
+    """
+  end
 
   attr :form, :any
   attr :dirty, :any
@@ -572,7 +687,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             </section>
           <% end %>
         </.form>
-        <%= if @has_children? do %>
+        <%= if @multi && @has_children? do %>
           {render_slot(@inner_block)}
           <.plus
             click={@insert_child_block}
@@ -1302,6 +1417,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       assigns
       |> assign(:ref_found, ref_found)
       |> assign(:ref_names, ref_names)
+      |> assign(:footnotes_enabled, ref_footnotes_enabled?(assigns.refs_field.form.source, assigns.ref_name, refs))
 
     ~H"""
     <%= if @ref_found do %>
@@ -1317,6 +1433,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 ref_name={ref_form[:name].value}
                 ref_description={ref_form[:description].value}
                 ref_form={ref_form}
+                footnotes_enabled={@footnotes_enabled}
                 block={block}
                 target={@target}
                 target_ref={@target_ref}
@@ -1360,6 +1477,28 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       </section>
     <% end %>
     """
+  end
+
+  defp ref_footnotes_enabled?(block_cs, name, refs) do
+    case Enum.find(refs, &(&1.name == name)) do
+      %{data: %{type: "text"}} ->
+        module =
+          Brando.Content.fetch_module(
+            Changeset.get_field(block_cs, :module_id),
+            Changeset.get_field(block_cs, :module_origin) || :local
+          )
+
+        case module do
+          %{refs: definitions} when is_list(definitions) ->
+            Enum.any?(definitions, &match?(%{name: ^name, data: %{data: %{footnotes: true}}}, &1))
+
+          _ ->
+            false
+        end
+
+      _ ->
+        false
+    end
   end
 
   def handle(assigns) do
@@ -1838,6 +1977,28 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     """
   end
 
+  def blocks(assigns) do
+    ~H"""
+    <.inputs_for :let={data} field={@block[:data]}>
+      <Input.hidden field={data[:module_set]} />
+      <button
+        type="button"
+        class="block-region-entry"
+        phx-click="open_block_slot"
+        phx-target={@target}
+        phx-value-ref_name={@ref_name}
+      >
+        <span class="block-region-icon" aria-hidden="true"><.icon name="hero-rectangle-group" /></span>
+        <span class="block-region-copy">
+          <span class="block-region-label">{@ref_description || @ref_name}</span>
+          <span class="block-region-hint">{gettext("Edit blocks")} · {data[:module_set].value}</span>
+        </span>
+        <span class="block-region-arrow" aria-hidden="true"><.icon name="hero-arrow-up-right" /></span>
+      </button>
+    </.inputs_for>
+    """
+  end
+
   def text(assigns) do
     block_data_cs = Block.get_block_data_changeset(assigns.block)
 
@@ -1867,6 +2028,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       |> assign(:text_type, Changeset.get_field(block_data_cs, :type))
       |> assign(:extensions, extensions)
       |> assign(:styles, styles)
+      |> assign(:footnotes, assigns[:footnotes_enabled] == true)
 
     ~H"""
     <.inputs_for :let={text_block_data} field={@block[:data]}>
@@ -1888,6 +2050,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <% end %>
           </:description>
           <:config>
+            <Input.hidden field={text_block_data[:footnotes]} />
+            <Input.hidden field={text_block_data[:footnote_module_set]} />
             <Input.radios
               field={text_block_data[:type]}
               label="Type"
@@ -1913,6 +2077,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 data-block-uid={@uid}
                 data-tiptap-extensions={@extensions}
                 data-tiptap-styles={@styles}
+                data-footnotes={@footnotes && "true"}
+                data-footnote-ref={@ref_name}
                 phx-hook="Brando.TipTap"
                 data-tiptap-type="block"
                 data-name="TipTap"

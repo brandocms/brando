@@ -845,6 +845,22 @@ defmodule Brando.HTML do
     """
   end
 
+  @doc "Render a Blueprint rich-text field with its configured footnote blocks."
+  attr :entry, :map, required: true
+  attr :field, :atom, required: true
+  attr :title, :string, default: "Notes & sources"
+  attr :scope, :string, default: nil
+
+  def render_rich_text(assigns) do
+    opts = if assigns.scope, do: [scope: assigns.scope], else: []
+    result = Brando.Villain.Footnotes.render_field(assigns.entry, assigns.field, opts)
+    assigns = assign(assigns, :html, Brando.Villain.Footnotes.to_html(result, title: assigns.title))
+
+    ~H"""
+    {@html |> raw}
+    """
+  end
+
   defdelegate absolute_url(entry, mode), to: URL, as: :resolve
   defdelegate absolute_url(entry), to: URL, as: :resolve
 

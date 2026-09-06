@@ -62,6 +62,9 @@ defmodule Brando.Villain.Parser do
   @doc "Parses module"
   @callback module(data :: map, opts :: map) :: iodata
 
+  @callback blocks(data :: map, opts :: map) :: iodata
+  @optional_callbacks blocks: 2
+
   @doc "Parses datasource"
   @callback datasource(data :: map, opts :: map) :: iodata
 
@@ -89,6 +92,9 @@ defmodule Brando.Villain.Parser do
 
       def module(data, opts), do: Brando.Villain.Parser.module(data, opts)
       defoverridable module: 2
+
+      def blocks(data, opts), do: Brando.Villain.Parser.blocks(data, opts)
+      defoverridable blocks: 2
 
       def datasource(_, _) do
         require Logger
@@ -204,6 +210,7 @@ defmodule Brando.Villain.Parser do
   import Brando.HTML
 
   alias Brando.Content
+  alias Brando.Content.BlockSlots
   alias Brando.RuntimeConfig
   alias Brando.Utils
   alias Brando.Villain.TemplateAdapter
@@ -301,11 +308,12 @@ defmodule Brando.Villain.Parser do
     case Content.find_module(modules, id, Map.get(block, :module_origin, :local)) do
       {:ok, module} ->
         processed_vars = process_vars(block.vars)
-        processed_refs = process_refs(block.refs)
+        processed_refs = process_refs(block.refs, block, opts)
         adapter = adapter_for(module.type)
         opts = Map.put(opts, :parser_module, parser_module(opts))
 
         adapter.render_module(module, block, processed_vars, processed_refs, opts)
+        |> Brando.Villain.Footnotes.attach(block, opts)
         |> maybe_annotate(block.uid, opts)
         |> maybe_format(opts)
 
@@ -409,6 +417,28 @@ defmodule Brando.Villain.Parser do
       <p>Module not found: #{module_id}</p>
     </div>
     """
+  end
+
+  def blocks(%{rendered_html: html}, _opts), do: html
+  def blocks(_data, _opts), do: ""
+
+  @doc "Renders an internal collection without introducing a layout wrapper."
+  def render_block_slot(slot, opts) do
+    html =
+      if opts[:skip_children] === true do
+        "[$ slot:#{slot.uid} $]"
+      else
+        slot
+        |> BlockSlots.children()
+        |> Enum.reject(&(Map.get(&1, :active) == false || Map.get(&1, :marked_as_deleted) == true))
+        |> Enum.map(fn child ->
+          type = if child.type == :module_entry, do: :module, else: child.type
+          apply(parser_module(opts), type, [child, opts])
+        end)
+        |> IO.iodata_to_binary()
+      end
+
+    if opts[:annotate_blocks], do: html |> annotate_children(slot.uid) |> IO.iodata_to_binary(), else: html
   end
 
   def text(%{text: text} = params, _) do
@@ -1448,6 +1478,21 @@ defmodule Brando.Villain.Parser do
   def process_refs(%Ecto.Association.NotLoaded{}), do: %{}
 
   def process_refs(refs), do: Map.new(refs, &process_ref(&1))
+
+  def process_refs(refs, owner, opts) do
+    refs
+    |> process_refs()
+    |> Map.new(fn
+      {name, %{data: %{type: "blocks"} = block_data} = ref} ->
+        slot = BlockSlots.named(owner, name)
+        html = if slot && slot.active, do: render_block_slot(slot, opts), else: ""
+        data = Map.merge(block_data.data, %{rendered_html: html, slot_uid: slot && slot.uid})
+        {name, %{ref | data: %{block_data | data: data}}}
+
+      other ->
+        other
+    end)
+  end
 
   defp process_ref(%{name: ref_name} = ref_block) do
     # Build the processed ref by combining data with referenced entities

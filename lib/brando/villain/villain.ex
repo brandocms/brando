@@ -94,6 +94,15 @@ defmodule Brando.Villain do
 
     output = parse_and_render(html, context)
 
+    output =
+      if opts_map[:footnotes] == false do
+        output
+      else
+        output
+        |> Brando.Villain.Footnotes.render(scope: opts_map[:footnote_scope] || "article")
+        |> Brando.Villain.Footnotes.to_html()
+      end
+
     :telemetry.execute([:brando, :villain, :parse_and_render], %{
       duration: System.monotonic_time() - start
     })
@@ -178,6 +187,9 @@ defmodule Brando.Villain do
   defp add_url_to_context(ctx, entry) do
     add_to_context(ctx, "url", URL.resolve(entry))
   end
+
+  defp parse_node(_parser, %{type: :slot} = block, opts_map),
+    do: Brando.Villain.Parser.render_block_slot(block, opts_map)
 
   defp parse_node(parser, block, opts_map) do
     type_atom = if block.type == :module_entry, do: :module, else: block.type

@@ -290,7 +290,8 @@ defmodule Brando.Blueprint.Forms.Dsl do
           %Forms.Subform{component: nil, style: {:transformer, asset_fields}} = subform <- fieldset.fields,
           do: {subform.name, asset_fields, subform.default}
 
-    {:ok, %{form | tabs: tabs, transformers: transformers}}
+    form = %{form | tabs: tabs, transformers: transformers}
+    {:ok, Brando.Blueprint.Forms.Footnotes.mount_fields(form)}
   end
 
   defp resolve_tab_components(%Forms.Tab{fields: fieldsets} = tab) do

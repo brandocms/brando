@@ -14,6 +14,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
 
   @ref_types [
     %{value: "text", label: "Text", description: "Rich, editable body content"},
+    %{value: "blocks", label: "Blocks", description: "An ordered collection of modules in a named region"},
     %{value: "header", label: "Header", description: "A semantic heading"},
     %{value: "picture", label: "Picture", description: "A configured responsive image"},
     %{value: "gallery", label: "Gallery", description: "An image or video collection"},

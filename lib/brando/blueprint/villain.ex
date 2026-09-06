@@ -8,7 +8,13 @@ defmodule Brando.Blueprint.Villain do
       Enum.reduce(blocks_fields, changeset, fn field, updated_changeset ->
         {block_module, assoc_field} = get_block_module_and_assoc_field(field, module)
 
-        Ecto.Changeset.cast_assoc(updated_changeset, assoc_field, with: &block_module.changeset(&1, &2, user, true))
+        Ecto.Changeset.cast_assoc(updated_changeset, assoc_field,
+          with: fn entry_block, attrs ->
+            entry_block
+            |> block_module.changeset(attrs, user, true)
+            |> Brando.Content.BlockSlots.validate_entry_slot(field.name, module)
+          end
+        )
       end)
     else
       changeset

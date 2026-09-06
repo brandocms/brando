@@ -155,6 +155,18 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
     """
   end
 
+  def block_form(%{type: "blocks"} = assigns) do
+    ~H"""
+    <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
+      <Input.text
+        field={block_data[:module_set]}
+        label={gettext("Module set")}
+        instructions={gettext("The module set available in this region. Use all for all suitable modules.")}
+      />
+    </Primitives.inputs_for_block>
+    """
+  end
+
   def block_form(%{type: "text"} = assigns) do
     assigns =
       assign(assigns, :text_extension_options, @text_extension_options)
@@ -170,6 +182,14 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
         opts={[options: @text_extension_options]}
       />
       <Input.hidden field={block_data[:type]} />
+      <Input.toggle field={block_data[:footnotes]} label={gettext("Footnotes")} />
+      <Input.text
+        field={block_data[:footnote_module_set]}
+        label={gettext("Footnote module set")}
+        instructions={
+          gettext("An ordered set of modules for notes. Put a Text module first to make new notes quick to write.")
+        }
+      />
       <br />
       {block_data[:extensions].value}
     </Primitives.inputs_for_block>

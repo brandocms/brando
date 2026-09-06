@@ -44,6 +44,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   use Gettext, backend: Brando.Gettext
   alias Brando.Cache
   alias Brando.Content.Blocks, as: ContentBlocks
+  alias Brando.Content.BlockSlots
   alias BrandoAdmin.Components.Form.Block.Events
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.BlockField.Ops
@@ -62,6 +63,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:source, nil)
     |> assign(:live_preview_active?, false)
     |> assign(:live_preview_cache_key, nil)
+    |> assign(:open_slot_uid, nil)
+    |> assign(:slot_open, false)
+    |> assign(:slot_title, nil)
     |> assign_new(:paste_multi_module_id, fn -> nil end)
     |> Events.attach_block_events()
     |> then(&{:ok, &1})
@@ -595,41 +599,23 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
-  def update(%{event: "insert_block", sequence: sequence, module_id: module_id, type: type}, socket) do
-    module_reference = Brando.Content.SharedLibrary.reference(module_id)
-    user_id = socket.assigns.current_user_id
-    parent_id = nil
-    sequence = (is_binary(sequence) && String.to_integer(sequence)) || sequence
-    source = socket.assigns.block_module
-
-    empty_block_cs = BlockField.build_block(module_reference, user_id, parent_id, source, type)
-    uid = Changeset.get_field(empty_block_cs, :uid)
-    # insert the new block uid into the block_list
-    block_list = socket.assigns.block_list
-    updated_block_list = List.insert_at(block_list, sequence, uid)
-
-    block_form =
-      to_change_form(
-        empty_block_cs,
-        %{sequence: sequence},
-        user_id
-      )
-
-    changesets = socket.assigns.changesets
-    updated_changesets = insert_child_changeset(changesets, uid, sequence)
-
-    selector = "[data-block-uid=\"#{uid}\"]"
-
-    socket
-    |> put_child_seed_form(uid, block_form)
-    |> assign(:has_children?, true)
-    |> assign(:block_list, updated_block_list)
-    |> assign(:changesets, updated_changesets)
-    |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(empty_block_cs)})
-    |> refresh_live_preview()
-    |> push_event("b:scroll_to", %{selector: selector})
-    |> then(&{:ok, &1})
+  def update(%{event: "close_slot"}, socket) do
+    {:ok, assign(socket, :open_slot_uid, nil)}
   end
+
+  def update(%{event: "insert_block", module_id: module_id} = message, %{assigns: %{type: :slot}} = socket) do
+    allowed = BlockSlots.modules(socket.assigns.slot_module_set)
+
+    {origin, id} = Brando.Content.SharedLibrary.reference(module_id)
+
+    if Enum.any?(allowed, &(&1.id == id && &1.library_origin == origin)) do
+      insert_child_module(message, socket)
+    else
+      {:ok, put_flash(socket, :error, gettext("This module is not available in this collection."))}
+    end
+  end
+
+  def update(%{event: "insert_block"} = message, socket), do: insert_child_module(message, socket)
 
   def update(%{event: "update_ref", ref: ref}, socket) do
     form = socket.assigns.form
@@ -915,6 +901,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:uid, fn -> Changeset.get_field(block_cs, :uid) end)
     |> assign_new(:path, fn %{uid: uid} -> assigns.parent_path ++ List.wrap(uid) end)
     |> assign_new(:type, fn -> Changeset.get_field(block_cs, :type) end)
+    |> assign_new(:slot_kind, fn -> Changeset.get_field(block_cs, :slot_kind) end)
+    |> assign_new(:slot_name, fn -> Changeset.get_field(block_cs, :slot_name) end)
+    |> assign_new(:slot_module_set, fn -> Changeset.get_field(block_cs, :slot_module_set) end)
     |> assign_new(:multi, fn -> Changeset.get_field(block_cs, :multi) end)
     |> assign_new(:has_vars?, fn ->
       try do
@@ -1011,6 +1000,42 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
+  defp insert_child_module(%{sequence: sequence, module_id: module_id, type: type}, socket) do
+    module_reference = Brando.Content.SharedLibrary.reference(module_id)
+    user_id = socket.assigns.current_user_id
+    parent_id = nil
+    sequence = (is_binary(sequence) && String.to_integer(sequence)) || sequence
+    source = socket.assigns.block_module
+
+    empty_block_cs = BlockField.build_block(module_reference, user_id, parent_id, source, type)
+    uid = Changeset.get_field(empty_block_cs, :uid)
+    # insert the new block uid into the block_list
+    block_list = socket.assigns.block_list
+    updated_block_list = List.insert_at(block_list, sequence, uid)
+
+    block_form =
+      to_change_form(
+        empty_block_cs,
+        %{sequence: sequence},
+        user_id
+      )
+
+    changesets = socket.assigns.changesets
+    updated_changesets = insert_child_changeset(changesets, uid, sequence)
+
+    selector = "[data-block-uid=\"#{uid}\"]"
+
+    socket
+    |> put_child_seed_form(uid, block_form)
+    |> assign(:has_children?, true)
+    |> assign(:block_list, updated_block_list)
+    |> assign(:changesets, updated_changesets)
+    |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(empty_block_cs)})
+    |> refresh_live_preview()
+    |> push_event("b:scroll_to", %{selector: selector})
+    |> then(&{:ok, &1})
+  end
+
   # The block's identity inputs — uid/type/anchor/multi/module_id/parent_id/
   # creator_id/marked_as_deleted/source. They have to be in the DOM on every
   # keystroke (the params contract: `validate_block` rebuilds every child from
@@ -1049,8 +1074,13 @@ defmodule BrandoAdmin.Components.Form.Block do
         assign(socket, :hidden_block_fields, [])
 
       block_form ->
+        field_names =
+          if block_form[:type].value == :slot,
+            do: @hidden_block_fields ++ [:slot_kind, :slot_name, :slot_module_set],
+            else: @hidden_block_fields
+
         fields =
-          Enum.map(@hidden_block_fields, fn name ->
+          Enum.map(field_names, fn name ->
             field = block_form[name]
             {field.name, "f--" <> field.id, hidden_field_value(field.value)}
           end)
@@ -1736,7 +1766,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   def maybe_assign_children(%{assigns: %{type: :container}} = socket),
     do: do_assign_children(socket)
 
-  def maybe_assign_children(%{assigns: %{type: :module, multi: true}} = socket),
+  def maybe_assign_children(%{assigns: %{type: type}} = socket) when type in [:module, :slot],
     do: do_assign_children(socket)
 
   def maybe_assign_children(socket) do
@@ -1779,6 +1809,130 @@ defmodule BrandoAdmin.Components.Form.Block do
     block_list
     |> Enum.with_index()
     |> Enum.map(fn {uid, list_index} -> {uid, Map.fetch!(children_forms, uid), list_index} end)
+  end
+
+  def open_named_slot(socket, ref_name) do
+    case collection_ref(socket, ref_name) do
+      %{data: %{type: "blocks", data: data}} = ref ->
+        ensure_collection(socket, :region, ref_name, data.module_set, nil, ref.description || ref_name)
+
+      _ ->
+        socket
+    end
+  end
+
+  def create_footnote(socket, %{"ref_name" => name, "tiptap_id" => tiptap_id}) do
+    case {collection_ref(socket, name), instance_ref(socket, name)} do
+      {%{data: %{type: "text", data: %{footnotes: true} = data}}, %{uid: ref_uid}}
+      when tiptap_id == "block-" <> ref_uid <> "-rich-text" ->
+        modules = BlockSlots.modules(data.footnote_module_set)
+
+        case modules do
+          [] ->
+            put_flash(
+              socket,
+              :error,
+              gettext("Add a Text module to the %{set} module set before creating a note.", set: data.footnote_module_set)
+            )
+
+          [module | _] ->
+            uid = Brando.Utils.generate_uid()
+
+            socket
+            |> ensure_collection(:footnote, name, data.footnote_module_set, {uid, module.id}, gettext("Footnote"))
+            |> push_event("b:tiptap:insert_footnote:#{tiptap_id}", %{uid: uid})
+        end
+
+      _ ->
+        socket
+    end
+  end
+
+  def create_footnote(socket, _params), do: socket
+
+  def open_footnote(socket, %{"uid" => uid} = params) do
+    case socket.assigns.children_forms[uid] do
+      %{source: source} ->
+        if Changeset.get_field(source, :slot_kind) == :footnote &&
+             Changeset.get_field(source, :slot_name) == params["ref_name"] do
+          number =
+            case Integer.parse(to_string(params["number"] || "")) do
+              {n, ""} when n > 0 -> " #{n}"
+              _ -> ""
+            end
+
+          assign(socket, open_slot_uid: uid, slot_title: gettext("Footnote") <> number)
+        else
+          socket
+        end
+
+      _ ->
+        put_flash(
+          socket,
+          :error,
+          gettext("This footnote could not be found. Its marker may have been pasted without its content.")
+        )
+    end
+  end
+
+  defp collection_ref(socket, name) do
+    # The definition controls capabilities; hidden ref inputs are content,
+    # not permission to turn a disabled feature on.
+    case get_module(socket.assigns.module_id, socket.assigns.module_origin) do
+      %{refs: refs} when is_list(refs) -> Enum.find(refs, &(&1.name == name))
+      _ -> nil
+    end
+  end
+
+  defp instance_ref(socket, name) do
+    socket.assigns.form.source
+    |> get_block_changeset(socket.assigns.belongs_to)
+    |> Changeset.get_assoc(:refs, :struct)
+    |> Enum.find(&(&1.name == name))
+  end
+
+  defp ensure_collection(socket, kind, name, module_set, initial, title) do
+    existing =
+      if kind == :region do
+        Enum.find_value(socket.assigns.children_forms, fn {uid, form} ->
+          if form[:slot_kind].value == kind && form[:slot_name].value == name, do: uid
+        end)
+      end
+
+    if existing do
+      assign(socket, open_slot_uid: existing, slot_title: title)
+    else
+      uid = if initial, do: elem(initial, 0), else: Brando.Utils.generate_uid()
+      slot = BlockSlots.build(kind, name, module_set, socket.assigns.block_module, socket.assigns.current_user_id, uid)
+
+      slot =
+        if initial do
+          child =
+            BlockField.build_block(
+              elem(initial, 1),
+              socket.assigns.current_user_id,
+              nil,
+              socket.assigns.block_module,
+              :module
+            )
+
+          Changeset.put_assoc(slot, :children, [child])
+        else
+          slot
+        end
+
+      sequence = length(socket.assigns.block_list)
+      form = to_change_form(slot, %{}, socket.assigns.current_user_id)
+
+      socket
+      |> put_child_seed_form(uid, form)
+      |> assign(:has_children?, true)
+      |> assign(:block_list, socket.assigns.block_list ++ [uid])
+      |> assign(:changesets, insert_child_changeset(socket.assigns.changesets, uid, sequence))
+      |> assign(:open_slot_uid, uid)
+      |> assign(:slot_title, title)
+      |> emit_block_op({:insert_child, socket.assigns.uid, uid, sequence, Ops.block_diff_params(slot)})
+    end
   end
 
   defdelegate update_child_changeset(changesets, uid, new_changeset),
@@ -1954,6 +2108,17 @@ defmodule BrandoAdmin.Components.Form.Block do
       &Map.has_key?(params, &1)
     )
   end
+
+  def maybe_update_live_preview_block(%{assigns: %{live_preview_active?: true, belongs_to: :slot}} = socket),
+    do: refresh_live_preview(socket)
+
+  def maybe_update_live_preview_block(%{assigns: %{live_preview_active?: true, type: :slot}} = socket),
+    do: refresh_live_preview(socket)
+
+  def maybe_update_live_preview_block(
+        %{assigns: %{live_preview_active?: true, type: :module, multi: false, has_children?: true}} = socket
+      ),
+      do: refresh_live_preview(socket)
 
   def maybe_update_live_preview_block(%{assigns: %{live_preview_active?: true}} = socket) do
     %{
