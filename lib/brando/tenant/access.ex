@@ -17,8 +17,14 @@ defmodule Brando.Tenant.Access do
 
   @public_opts [prefix: "public"]
 
+  alias Brando.Authorization.{Engine, Scope}
+
+  def list_sites(user) do
+    if Engine.enabled?(), do: Engine.accessible_sites(user), else: legacy_list_sites(user)
+  end
+
   @spec list_sites(User.t() | nil) :: [Site.t()]
-  def list_sites(%User{role: :superuser}) do
+  defp legacy_list_sites(%User{role: :superuser}) do
     from(site in Site,
       where: site.status == :active,
       order_by: [asc: site.name, asc: site.id],
@@ -27,7 +33,7 @@ defmodule Brando.Tenant.Access do
     |> Repo.all(@public_opts)
   end
 
-  def list_sites(%User{id: user_id}) do
+  defp legacy_list_sites(%User{id: user_id}) do
     from(site in Site,
       join: user_site in UserSite,
       on: user_site.site_id == site.id,
@@ -38,12 +44,26 @@ defmodule Brando.Tenant.Access do
     |> Repo.all(@public_opts)
   end
 
-  def list_sites(nil), do: []
+  defp legacy_list_sites(nil), do: []
+
+  # Compatibility display only. Authorization callers use capabilities below.
+  def role_for(user, site) do
+    if Engine.enabled?() do
+      cond do
+        not can_access?(user, site) -> nil
+        Engine.superuser?(Scope.site(user, site)) -> :superuser
+        can_manage?(user, site) -> :admin
+        true -> :editor
+      end
+    else
+      legacy_role_for(user, site)
+    end
+  end
 
   @spec role_for(User.t(), Site.t()) :: :superuser | :admin | :editor | nil
-  def role_for(%User{role: :superuser}, %Site{status: :active}), do: :superuser
+  defp legacy_role_for(%User{role: :superuser}, %Site{status: :active}), do: :superuser
 
-  def role_for(%User{id: user_id}, %Site{id: site_id, status: :active}) do
+  defp legacy_role_for(%User{id: user_id}, %Site{id: site_id, status: :active}) do
     from(user_site in UserSite,
       where: user_site.user_id == ^user_id and user_site.site_id == ^site_id,
       select: user_site.role
@@ -51,14 +71,24 @@ defmodule Brando.Tenant.Access do
     |> Repo.one(@public_opts)
   end
 
-  def role_for(%User{}, %Site{}), do: nil
+  defp legacy_role_for(%User{}, %Site{}), do: nil
 
   @spec can_access?(User.t() | nil, Site.t()) :: boolean()
-  def can_access?(%User{} = user, %Site{} = site), do: not is_nil(role_for(user, site))
+  def can_access?(%User{} = user, %Site{} = site) do
+    if Engine.enabled?(),
+      do: Engine.can?(Scope.site(user, site), :access, :backend),
+      else: not is_nil(legacy_role_for(user, site))
+  end
+
   def can_access?(nil, %Site{}), do: false
 
   @spec can_manage?(User.t() | nil, Site.t()) :: boolean()
-  def can_manage?(%User{} = user, %Site{} = site), do: role_for(user, site) in [:admin, :superuser]
+  def can_manage?(%User{} = user, %Site{} = site) do
+    if Engine.enabled?(),
+      do: Engine.can?(Scope.site(user, site), :update, :environments),
+      else: legacy_role_for(user, site) in [:admin, :superuser]
+  end
+
   def can_manage?(nil, %Site{}), do: false
 
   @spec grant(User.t(), Site.t(), :editor | :admin) ::

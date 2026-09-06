@@ -29,8 +29,12 @@ defmodule Brando.Tenant.AdminContext do
 
   defp selected_site(params, session, current_user) do
     case Tenant.mode() do
-      :single -> Cache.get_site(Brando.config(:site_key))
-      :multi -> selected_multi_site(params, session, current_user)
+      :single ->
+        site = Cache.get_site(Brando.config(:site_key))
+        if not Brando.Authorization.enabled?() or (site && Access.can_access?(current_user, site)), do: site
+
+      :multi ->
+        selected_multi_site(params, session, current_user)
     end
   end
 

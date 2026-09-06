@@ -14,12 +14,11 @@ defmodule BrandoAdmin.AdminSocket do
   """
   @impl true
   def connect(%{"token" => token}, socket) do
-    case Brando.Users.verify_token(token) do
-      {:ok, user_id} ->
-        {:ok, assign(socket, :user_id, user_id)}
-
-      {:error, _} ->
-        :error
+    with {:ok, user_id} <- Brando.Users.verify_token(token),
+         :ok <- Brando.Authorization.Realtime.authorize_account(user_id) do
+      {:ok, assign(socket, :user_id, user_id)}
+    else
+      _ -> :error
     end
   end
 
@@ -39,5 +38,5 @@ defmodule BrandoAdmin.AdminSocket do
   #
   # Returning `nil` makes this socket anonymous.
   @impl true
-  def id(_socket), do: nil
+  def id(socket), do: "brando_admin_socket:#{socket.assigns.user_id}"
 end

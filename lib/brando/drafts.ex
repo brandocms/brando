@@ -43,6 +43,7 @@ defmodule Brando.Drafts do
     now = DateTime.utc_now()
 
     Repo.transaction(fn ->
+      unless authorized_identity?(identity), do: Repo.rollback(:forbidden)
       lock(id)
       existing = Repo.one(from d in EntryDraft, where: d.id == ^id, lock: "FOR UPDATE")
 
@@ -98,6 +99,7 @@ defmodule Brando.Drafts do
     now = DateTime.utc_now()
 
     Repo.transaction(fn ->
+      unless authorized_identity?(identity), do: Repo.rollback(:forbidden)
       lock(id)
       expires = DateTime.add(now, resolved_days() * 86_400, :second)
 
@@ -160,10 +162,33 @@ defmodule Brando.Drafts do
   defp resolved_days, do: Application.get_env(:brando, :resolved_draft_retention_days, 7)
 
   defp owned_query(identity) do
-    Enum.reduce(identity, from(d in EntryDraft, select: d), fn
+    allowed? = authorized_identity?(identity)
+
+    Enum.reduce(identity, from(d in EntryDraft, select: d, where: ^allowed?), fn
       {key, nil}, query -> from d in query, where: is_nil(field(d, ^key))
       {key, value}, query -> from d in query, where: field(d, ^key) == ^value
     end)
+  end
+
+  defp authorized_identity?(identity) do
+    if Brando.Authorization.enabled?() do
+      scope = Brando.Authorization.Boundary.current_scope()
+      schema = Brando.Authorization.Catalog.schema(identity.entry_type)
+      action = if identity.entry_id, do: :update, else: :create
+
+      with %{user_id: user_id} <- scope,
+           true <- user_id == identity.owner_id and (scope.prefix || "public") == identity.scope,
+           true <- not is_nil(schema),
+           subject when not is_nil(subject) <-
+             if(identity.entry_id, do: Repo.get(schema, identity.entry_id), else: schema),
+           :ok <- Brando.Authorization.authorize(scope, action, subject) do
+        true
+      else
+        _ -> false
+      end
+    else
+      true
+    end
   end
 
   defp owned?(draft, identity), do: Enum.all?(identity, fn {key, value} -> Map.get(draft, key) == value end)

@@ -8,10 +8,10 @@ defmodule Brando.Worker.SSGDeploy do
   alias Brando.SSG.Deploy
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"build_id" => build_id, "action" => action}})
+  def perform(%Oban.Job{args: %{"build_id" => build_id, "action" => action} = args})
       when action in ["deploy", "rollback"] do
     with %Build{} = build <- Builds.get_build(build_id),
-         {:ok, deployed} <- run(action, build) do
+         {:ok, deployed} <- run(action, build, args["creator_id"]) do
       notify_creator(deployed, action)
       :ok
     else
@@ -23,8 +23,8 @@ defmodule Brando.Worker.SSGDeploy do
   @impl Oban.Worker
   def timeout(_job), do: :timer.minutes(30)
 
-  defp run("deploy", build), do: Deploy.deploy(build)
-  defp run("rollback", build), do: Deploy.rollback(build.site, build)
+  defp run("deploy", build, creator_id), do: Deploy.deploy(build, creator_id: creator_id)
+  defp run("rollback", build, creator_id), do: Deploy.rollback(build.site, build, creator_id: creator_id)
 
   defp notify_creator(%Build{creator: nil}, _action), do: :ok
 

@@ -72,6 +72,8 @@ defmodule Brando.Worker.EntryPublisher do
     params =
       if status == "published" do
         Map.put(params, :publish_at, DateTime.utc_now())
+      else
+        params
       end
 
     schema_module = Module.concat(List.wrap(schema))
@@ -103,7 +105,7 @@ defmodule Brando.Worker.EntryPublisher do
   defp publisher_user(user_id) do
     case Brando.Users.get_user(user_id) do
       {:ok, user} -> user
-      _ -> :system
+      _ -> nil
     end
   end
 

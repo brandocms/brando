@@ -64,7 +64,7 @@ defmodule Brando.Users.User do
       unique: true,
       required: true
 
-    attribute :role, :enum, values: [:user, :editor, :admin, :superuser], required: true
+    attribute :role, :enum, values: [:user, :editor, :admin, :superuser], required: true, default: :user
     attribute :active, :boolean, default: true
     attribute :last_login, :naive_datetime
 
@@ -131,7 +131,7 @@ defmodule Brando.Users.User do
       <:outside>
         <div :if={!@entry.active}><span class="badge">{t("Inactive")}</span></div>
         <div><small>{@entry.email}</small></div>
-        <div><small class="badge">{@entry.role}</small></div>
+        <div :if={!Brando.Authorization.enabled?()}><small class="badge">{@entry.role}</small></div>
       </:outside>
     </.update_link>
     """
@@ -164,6 +164,7 @@ defmodule Brando.Users.User do
           input :language, :radios, options: :admin_languages, label: t("Language")
 
           input :role, :radios,
+            hidden: fn _ -> Brando.Authorization.enabled?() end,
             options: [
               %{label: t("Superuser"), value: :superuser},
               %{label: t("Admin"), value: :admin},

@@ -16,7 +16,15 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
-    global_manager? = socket.assigns.current_user.role == :superuser
+    global_manager? =
+      if Brando.Authorization.enabled?(),
+        do:
+          Brando.Authorization.can?(
+            Brando.Authorization.Scope.installation(socket.assigns.current_user),
+            :read,
+            :shared_library
+          ),
+        else: socket.assigns.current_user.role == :superuser
 
     site_access? =
       not is_nil(socket.assigns.current_site) and

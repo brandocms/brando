@@ -38,7 +38,49 @@ defmodule Brando.Trait.Sequenced do
       sequence %{module, "ids" => [3, 5, 1]}
 
   """
-  def sequence(module, %{"composite_keys" => composite_keys}) do
+  def sequence(module, params, actor \\ nil) do
+    if Brando.Authorization.enabled?() do
+      actor = actor || Brando.Authorization.Boundary.current_scope()
+
+      Brando.Authorization.Boundary.run(actor, :reorder, module, fn user ->
+        composites = Map.get(params, "composite_keys")
+        keys = Map.get(params, "ids") || if(is_list(composites), do: Enum.map(composites, &Map.get(&1, "id")))
+        if not is_list(keys) or length(keys) > 1000, do: Brando.Repo.rollback(:forbidden)
+        entries = Brando.Repo.all(from(e in module, where: e.id in ^keys, lock: "FOR UPDATE"))
+        if length(entries) != length(Enum.uniq(keys)), do: Brando.Repo.rollback(:forbidden)
+
+        if composites do
+          unless Enum.all?(composites, fn keys ->
+                   entry = Enum.find(entries, &(to_string(&1.id) == to_string(keys["id"])))
+
+                   entry &&
+                     Enum.all?(keys, fn {field, value} ->
+                       schema_field = Enum.find(module.__schema__(:fields), &(to_string(&1) == field))
+                       schema_field && to_string(Map.get(entry, schema_field)) == to_string(value)
+                     end)
+                 end),
+                 do: Brando.Repo.rollback(:forbidden)
+        end
+
+        Enum.each(entries, fn entry ->
+          changeset = Ecto.Changeset.change(entry, sequence: -1)
+
+          unless Brando.Authorization.Engine.authorize_change(
+                   Brando.Authorization.Boundary.actor_scope(user),
+                   :reorder,
+                   changeset
+                 ) == :ok,
+                 do: Brando.Repo.rollback(:forbidden)
+        end)
+
+        legacy_sequence(module, params)
+      end)
+    else
+      legacy_sequence(module, params)
+    end
+  end
+
+  defp legacy_sequence(module, %{"composite_keys" => composite_keys}) do
     table = module.__schema__(:source)
 
     Brando.Repo.transaction(fn ->
@@ -61,7 +103,7 @@ defmodule Brando.Trait.Sequenced do
     Datasource.update_datasource(module)
   end
 
-  def sequence(module, %{"ids" => keys} = params) do
+  defp legacy_sequence(module, %{"ids" => keys} = params) do
     offset =
       params
       |> Map.get("sortable_offset", 0)

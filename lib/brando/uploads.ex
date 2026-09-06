@@ -54,10 +54,11 @@ defmodule Brando.Uploads do
     browser PUTs to `upload_url`; finalize with `finalize_direct/3`
   - `{:error, message}` — reject before any bytes move
   """
-  def initiate(:file, config_target, %{name: name, size: size} = file_meta, _user) do
+  def initiate(:file, config_target, %{name: name, size: size} = file_meta, user) do
     {cfg, resolved_target} = resolve_file_config(config_target)
 
-    with :ok <- validate_intake(:file, name, size, size_limit(cfg)) do
+    with :ok <- Brando.Authorization.Media.authorize(user, :file),
+         :ok <- validate_intake(:file, name, size, size_limit(cfg)) do
       if direct_transport?(cfg) do
         initiate_direct_file(cfg, resolved_target, file_meta)
       else
@@ -66,18 +67,20 @@ defmodule Brando.Uploads do
     end
   end
 
-  def initiate(:image, config_target, %{name: name, size: size}, _user) do
+  def initiate(:image, config_target, %{name: name, size: size}, user) do
     {cfg, _} = resolve_image_config(config_target)
 
-    with :ok <- validate_intake(:image, name, size, size_limit(cfg)) do
+    with :ok <- Brando.Authorization.Media.authorize(user, :image),
+         :ok <- validate_intake(:image, name, size, size_limit(cfg)) do
       {:ok, :server}
     end
   end
 
-  def initiate(:video, config_target, %{name: name, size: size} = file_meta, _user) do
+  def initiate(:video, config_target, %{name: name, size: size} = file_meta, user) do
     {cfg, resolved_target} = resolve_video_config(config_target)
 
-    with :ok <- validate_upload_enabled(cfg),
+    with :ok <- Brando.Authorization.Media.authorize(user, :video),
+         :ok <- validate_upload_enabled(cfg),
          :ok <- validate_intake(:video, name, size, size_limit(cfg)),
          :ok <- validate_optional_mimetype(cfg, Map.get(file_meta, :type), name) do
       case cfg.upload_strategy do

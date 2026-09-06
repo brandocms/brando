@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Hooks do
       end
 
       socket = assign(socket, :previous_uri, uri)
-      Phoenix.PubSub.subscribe(Brando.pubsub(), "url:#{uri.path}")
+      Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("url:#{uri.path}"))
       Brando.presence().track_url(uri.path, user_id)
 
       {:cont, assign_uri_presences(socket, uri)}
@@ -85,28 +85,37 @@ defmodule BrandoAdmin.Hooks do
     socket = assign(socket, presences: %{}, presence_ids: %{})
 
     Enum.reduce(
-      Brando.presence().list("url:#{uri.path}"),
+      Brando.presence().list(Brando.Tenant.Topic.scoped("url:#{uri.path}")),
       socket,
-      fn {_, presence}, updated_socket ->
-        # get metas
-        metas = Map.get(presence, :metas)
-        # find the meta with the latest last_active value
-        latest_meta = Enum.max_by(metas, &Map.get(&1, :last_active))
+      fn
+        {_, %{user: nil}}, updated_socket ->
+          updated_socket
 
-        updated_socket =
-          if Map.get(latest_meta, :active_field) do
-            push_event(updated_socket, "b:set_active_field", %{
-              user_id: presence.user.id,
-              field: latest_meta.active_field
-            })
-          else
-            updated_socket
-          end
+        {_, %{metas: []}}, updated_socket ->
+          updated_socket
 
-        assign_uri_presence(updated_socket, presence)
+        {_, presence}, updated_socket ->
+          # get metas
+          metas = Map.get(presence, :metas)
+          # find the meta with the latest last_active value
+          latest_meta = Enum.max_by(metas, &Map.get(&1, :last_active))
+
+          updated_socket =
+            if Map.get(latest_meta, :active_field) do
+              push_event(updated_socket, "b:set_active_field", %{
+                user_id: presence.user.id,
+                field: latest_meta.active_field
+              })
+            else
+              updated_socket
+            end
+
+          assign_uri_presence(updated_socket, presence)
       end
     )
   end
+
+  defp assign_uri_presence(socket, %{user: nil}), do: socket
 
   defp assign_uri_presence(socket, presence) do
     %{user: user} = presence
@@ -120,6 +129,8 @@ defmodule BrandoAdmin.Hooks do
       |> update(:presence_ids, &Map.put(&1, user.id, System.system_time()))
     end
   end
+
+  defp remove_presence(socket, nil), do: socket
 
   defp remove_presence(socket, user) do
     socket

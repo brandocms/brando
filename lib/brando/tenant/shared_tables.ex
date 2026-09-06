@@ -17,6 +17,11 @@ defmodule Brando.Tenant.SharedTables do
   """
 
   @shared ~w(
+    authorization_groups
+    authorization_group_permissions
+    authorization_user_groups
+    authorization_legacy_mappings
+    authorization_audit_events
     environments
     environment_operation_logs
     schema_migrations

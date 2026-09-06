@@ -17,7 +17,10 @@ defmodule Brando.Worker.SSGBuild do
         cancel_unbuildable(build, :environment_not_found)
 
       %Build{status: status} = build when status in [:queued, :building] ->
-        run_build(build)
+        case Brando.Authorization.Operations.authorize(%{id: build.creator_id}, :build, :publishing, build.site_id) do
+          :ok -> run_build(build)
+          {:error, reason} -> cancel_unbuildable(build, reason)
+        end
 
       %Build{status: status} when status in [:ready, :deployed, :archived] ->
         :ok
@@ -95,7 +98,7 @@ defmodule Brando.Worker.SSGBuild do
   defp finish_build(_build, result), do: {:error, {:invalid_builder_result, result}}
 
   defp maybe_deploy(%Build{auto_deploy: true} = build) do
-    case Deploy.deploy(build) do
+    case Deploy.deploy(build, creator_id: build.creator_id) do
       {:ok, deployed} -> {:ok, deployed}
       {:error, reason} -> {:error, {:deploy_failed, reason}, build}
     end

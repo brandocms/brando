@@ -241,7 +241,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
 
     Phoenix.PubSub.broadcast(
       Brando.pubsub(),
-      "brando:active_field:#{entry_id}",
+      Brando.Tenant.Topic.scoped("brando:active_field:#{entry_id}"),
       {:active_field, field.name, current_user.id}
     )
 

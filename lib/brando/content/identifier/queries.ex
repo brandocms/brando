@@ -58,10 +58,10 @@ defmodule Brando.Content.Identifier.Queries do
   def list_entries_for(schema, list_opts \\ %{})
 
   def list_entries_for(schema_binary, list_opts) when is_binary(schema_binary) do
-    schema_binary
-    |> List.wrap()
-    |> Module.concat()
-    |> list_entries_for(list_opts)
+    case Brando.Authorization.Catalog.schema(schema_binary) do
+      nil -> {:ok, []}
+      schema -> list_entries_for(schema, list_opts)
+    end
   end
 
   def list_entries_for(schema, list_opts) when is_atom(schema) do

@@ -19,6 +19,9 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
          {:ok, _updated_image} <- Brando.Images.Crop.save_replace(image, binary_data, focal, user) do
       json(conn, %{status: 200, image_id: image.id})
     else
+      {:error, :forbidden} ->
+        conn |> put_status(:forbidden) |> json(%{status: 403, error: "You do not have permission to edit this image."})
+
       {:error, reason} ->
         json(conn, %{status: 500, error: "Error replacing image: #{inspect(reason)}"})
     end

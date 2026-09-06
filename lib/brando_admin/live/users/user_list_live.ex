@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Users.UserListLive do
 
     ~H"""
     <Content.header title={gettext("Users")} subtitle={gettext("Overview")}>
-      <.link navigate="/admin/users/create" class="primary">
+      <.link :if={BrandoAdmin.Authorization.allowed?(:create, @schema)} navigate="/admin/users/create" class="primary">
         {gettext("Create new")}
       </.link>
     </Content.header>

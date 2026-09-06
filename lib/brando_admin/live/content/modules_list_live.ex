@@ -19,7 +19,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       <button class="stealth" phx-click={show_modal("#module-import-modal")}>
         {gettext("Import modules")}
       </button>
-      <button class="primary" phx-click={JS.push("create_module")}>
+      <button :if={BrandoAdmin.Authorization.allowed?(:create, @schema)} class="primary" phx-click={JS.push("create_module")}>
         {gettext("Create new")}
       </button>
     </Content.header>
@@ -150,7 +150,11 @@ defmodule BrandoAdmin.Content.ModuleListLive do
         filter: %{ids: module_ids},
         preload: [:vars, :refs, table_template: [:vars], children: [:vars, :refs, table_template: [:vars]]]
       }
-      |> Brando.Content.list_modules!()
+      |> then(fn query ->
+        Brando.Authorization.Boundary.with_query_action(:export, Brando.Content.Module, fn ->
+          Brando.Content.list_modules!(query)
+        end)
+      end)
       |> Brando.Content.prepare_modules_for_export(current_user.id)
       |> Brando.Content.serialize_modules()
 

@@ -18,6 +18,8 @@ defmodule BrandoAdmin.LiveView.Form.Compiler do
     quote do
       use BrandoAdmin, :live_view
 
+      def __authorization_resource__, do: {:form, unquote(schema)}
+
       on_mount({BrandoAdmin.LiveView.Form.Hooks, {:setup, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_toast, unquote(schema)}})
       on_mount({BrandoAdmin.LiveView.Form.Hooks, {:hooks_progress_popup, unquote(schema)}})

@@ -12,7 +12,7 @@ defmodule BrandoAdmin.Sites.AssetLive do
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
     cond do
-      socket.assigns.current_user.role != :superuser ->
+      not superuser?(socket.assigns.current_user) ->
         {:ok, redirect(socket, to: "/admin")}
 
       connected?(socket) ->
@@ -226,4 +226,10 @@ defmodule BrandoAdmin.Sites.AssetLive do
   defp format_size(bytes) when bytes < 1_024, do: "#{bytes} B"
   defp format_size(bytes) when bytes < 1_048_576, do: "#{Float.round(bytes / 1_024, 1)} KB"
   defp format_size(bytes), do: "#{Float.round(bytes / 1_048_576, 1)} MB"
+
+  defp superuser?(user) do
+    if Brando.Authorization.enabled?(),
+      do: Brando.Authorization.can?(Brando.Authorization.Scope.installation(user), :read, :frontend_assets),
+      else: user.role == :superuser
+  end
 end

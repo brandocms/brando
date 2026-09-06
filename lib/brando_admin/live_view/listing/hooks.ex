@@ -34,8 +34,8 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     socket
     |> attach_hook(:b_listing_events, :handle_event, fn
       "set_status", %{"id" => id, "status" => status, "schema" => target_schema}, socket ->
-        target_schema = Module.concat([target_schema])
-        Brando.Trait.Status.update_status(target_schema, id, status)
+        target_schema = Brando.Authorization.Catalog.schema(target_schema)
+        Brando.Trait.Status.update_status(target_schema, id, status, socket.assigns.current_user)
         update_list_entries(schema)
 
         {:halt, socket}
@@ -57,7 +57,7 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
         case apply(context, :"get_#{singular}", [entry_id]) do
           {:ok, entry} ->
-            Brando.Repo.restore(entry)
+            Brando.Authorization.Boundary.restore(socket.assigns.current_user, entry)
 
             send(
               self(),
@@ -428,14 +428,14 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
   end
 
   def update_list_entries(schema) do
-    topic = "brando:listing:content_listing_#{schema}_default"
+    topic = Brando.Tenant.Topic.scoped("brando:listing:content_listing_#{schema}_default")
     Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {schema, [:entries, :updated], []})
   end
 
   defp subscribe(nil), do: :ok
 
   defp subscribe(schema) do
-    topic = "brando:listing:content_listing_#{schema}_default"
+    topic = Brando.Tenant.Topic.scoped("brando:listing:content_listing_#{schema}_default")
     Phoenix.PubSub.subscribe(Brando.pubsub(), topic)
   end
 
@@ -464,7 +464,7 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
   defp assign_create_url(socket, schema) do
     assign_new(socket, :admin_create_url, fn ->
       try do
-        schema.__admin_route__(:create, [])
+        if BrandoAdmin.Authorization.allowed?(:create, schema), do: schema.__admin_route__(:create, [])
       rescue
         UndefinedFunctionError -> nil
         FunctionClauseError -> nil

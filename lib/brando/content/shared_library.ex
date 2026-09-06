@@ -73,6 +73,10 @@ defmodule Brando.Content.SharedLibrary do
 
   @doc "Atomically replaces one site's allowlist for a library kind."
   def set_enabled(%Site{} = site, kind, ids) when kind in @kinds and is_list(ids) do
+    with :ok <- authorize_shared(:system), do: do_set_enabled(site, kind, ids)
+  end
+
+  defp do_set_enabled(site, kind, ids) do
     definition = definition(kind)
     ids = ids |> Enum.map(&normalize_id!/1) |> Enum.uniq() |> Enum.sort()
 
@@ -118,6 +122,10 @@ defmodule Brando.Content.SharedLibrary do
 
   @doc "Creates a versioned entry directly in the public shared library."
   def create_shared(kind, attrs, user \\ :system) when kind in @kinds and is_map(attrs) do
+    with :ok <- authorize_shared(user), do: do_create_shared(kind, attrs, user)
+  end
+
+  defp do_create_shared(kind, attrs, user) do
     definition = definition(kind)
     schema = definition.schema
 
@@ -184,6 +192,10 @@ defmodule Brando.Content.SharedLibrary do
 
   @doc "Copies a shared entry into the tenant schema as an override."
   def customize(kind, id, %Site{} = site, prefix, user \\ :system) when kind in @kinds do
+    with :ok <- authorize_local(kind, site, prefix, user), do: do_customize(kind, id, site, prefix, user)
+  end
+
+  defp do_customize(kind, id, site, prefix, user) do
     id = normalize_id!(id)
 
     cond do
@@ -202,7 +214,11 @@ defmodule Brando.Content.SharedLibrary do
   end
 
   @doc "Deletes a tenant override; origin-qualified blocks immediately use shared again."
-  def reset(kind, id, %Site{}, prefix) when kind in @kinds do
+  def reset(kind, id, %Site{} = site, prefix) when kind in @kinds do
+    with :ok <- authorize_local(kind, site, prefix, :system), do: do_reset(kind, id, prefix)
+  end
+
+  defp do_reset(kind, id, prefix) do
     case get_override(kind, normalize_id!(id), prefix) do
       nil -> :ok
       override -> override |> Repo.delete(prefix: prefix) |> result_to_ok()
@@ -210,7 +226,11 @@ defmodule Brando.Content.SharedLibrary do
   end
 
   @doc "Destructively replaces an override with the current shared version."
-  def accept_update(kind, id, %Site{}, prefix, user \\ :system) when kind in @kinds do
+  def accept_update(kind, id, %Site{} = site, prefix, user \\ :system) when kind in @kinds do
+    with :ok <- authorize_local(kind, site, prefix, user), do: do_accept_update(kind, id, prefix, user)
+  end
+
+  defp do_accept_update(kind, id, prefix, user) do
     id = normalize_id!(id)
 
     with override when not is_nil(override) <- get_override(kind, id, prefix),
@@ -222,7 +242,11 @@ defmodule Brando.Content.SharedLibrary do
   end
 
   @doc "Acknowledges the current shared version without replacing local changes."
-  def dismiss_update(kind, id, %Site{}, prefix) when kind in @kinds do
+  def dismiss_update(kind, id, %Site{} = site, prefix) when kind in @kinds do
+    with :ok <- authorize_local(kind, site, prefix, :system), do: do_dismiss_update(kind, id, prefix)
+  end
+
+  defp do_dismiss_update(kind, id, prefix) do
     with override when not is_nil(override) <- get_override(kind, normalize_id!(id), prefix),
          shared when not is_nil(shared) <- get_public(kind, normalize_id!(id)) do
       override
@@ -236,10 +260,15 @@ defmodule Brando.Content.SharedLibrary do
   @doc "Updates a public library entry and bumps its meaningful version."
   def update_shared(kind, id, attrs_or_changeset, user \\ :system)
 
-  def update_shared(kind, id, %Changeset{} = changeset, _user) when kind in @kinds do
+  def update_shared(kind, id, attrs_or_changeset, user) when kind in @kinds do
+    with :ok <- authorize_shared(user), do: do_update_shared(kind, id, attrs_or_changeset, user)
+  end
+
+  defp do_update_shared(kind, id, %Changeset{} = changeset, _user) do
     id = normalize_id!(id)
 
-    if changeset.data.id == id and changeset.data.__struct__ == definition(kind).schema do
+    if changeset.data.id == id and changeset.data.__struct__ == definition(kind).schema and
+         changeset.data.__meta__.prefix in [nil, "public"] do
       changeset
       |> Changeset.put_change(:version, (changeset.data.version || 1) + 1)
       |> Changeset.validate_required([:version_note])
@@ -250,7 +279,7 @@ defmodule Brando.Content.SharedLibrary do
     end
   end
 
-  def update_shared(kind, id, attrs, user) when kind in @kinds and is_map(attrs) do
+  defp do_update_shared(kind, id, attrs, user) when is_map(attrs) do
     definition = definition(kind)
     schema = definition.schema
 
@@ -324,6 +353,10 @@ defmodule Brando.Content.SharedLibrary do
 
   @doc "Prevents deleting a shared entry while any site can still use it."
   def delete_shared(kind, id) when kind in @kinds do
+    with :ok <- authorize_shared(:system), do: do_delete_shared(kind, id)
+  end
+
+  defp do_delete_shared(kind, id) do
     id = normalize_id!(id)
 
     case usage(kind, id) do
@@ -335,6 +368,36 @@ defmodule Brando.Content.SharedLibrary do
 
       usages ->
         {:error, {:shared_item_in_use, usages}}
+    end
+  end
+
+  defp authorize_shared(actor) do
+    actor = Brando.Authorization.Boundary.current_scope() || actor
+    scope = if actor == :system, do: :system, else: Brando.Authorization.Boundary.actor_scope(actor)
+    Brando.Authorization.Boundary.authorize(scope, :update, :shared_library)
+  end
+
+  defp authorize_local(kind, site, prefix, actor) do
+    boundary = Brando.Authorization.Boundary
+    scope = boundary.current_scope()
+
+    cond do
+      not Brando.Authorization.enabled?() ->
+        :ok
+
+      is_nil(scope) and actor == :system ->
+        :ok
+
+      scope && scope.kind == :site && (scope.site_id != site.id or scope.prefix != prefix) ->
+        {:error, :forbidden}
+
+      true ->
+        actor = if scope, do: %{id: scope.user_id}, else: actor
+        target_scope = Tenant.with_prefix(prefix, fn -> Brando.Authorization.Scope.current(actor) end)
+
+        if target_scope.site_id == site.id,
+          do: boundary.authorize(target_scope, :update, definition(kind).schema),
+          else: {:error, :forbidden}
     end
   end
 

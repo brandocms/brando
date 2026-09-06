@@ -23,7 +23,14 @@ defmodule BrandoAdmin.Toast do
 
     payload = put_in(payload, [:identifier], identifier_with_type)
 
-    map = Map.merge(%{payload: payload}, opts)
+    map =
+      Map.merge(%{payload: payload}, opts)
+      |> Map.put(:authorization, %{
+        prefix: Brando.Tenant.current_prefix(),
+        schema: schema,
+        entry_id: payload.identifier.entry_id
+      })
+
     Brando.endpoint().broadcast("lobby", "toast", map)
   end
 

@@ -272,7 +272,20 @@ jobs:
 
       - name: Run serial E2E suite
         working-directory: brando/e2e
-        run: ./test_e2e.sh --reset
+        run: source .envrc && ./test_e2e.sh --reset
+
+      - name: Run group authorization and live-preview regressions
+        working-directory: brando/e2e
+        run: |
+          source .envrc
+          BRANDO_AUTHORIZATION_MODE=groups ./test_e2e.sh --reset tests/users/groups.spec.js tests/blocks/block-live-preview.spec.js
+
+      - name: Run multi-site and single-site authorization regressions
+        working-directory: brando/e2e
+        run: |
+          source .envrc
+          BRANDO_AUTHORIZATION_MODE=groups BRANDO_TENANCY_MODE=multi ./test_e2e.sh tests/users/authorization-sites.spec.js
+          BRANDO_AUTHORIZATION_MODE=groups BRANDO_TENANCY_MODE=single ./test_e2e.sh tests/users/authorization-sites.spec.js
 
       - name: Upload E2E failure artifacts
         if: failure()

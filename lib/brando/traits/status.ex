@@ -13,7 +13,24 @@ defmodule Brando.Trait.Status do
   def generate_code(module, config), do: Compiler.generate_code(module, config)
 
   @doc "Updates an entry's status and synchronizes its identifier, content cascade, and query cache."
-  def update_status(schema, id, status) do
+  def update_status(schema, id, status, actor \\ nil) do
+    actor = actor || Brando.Authorization.Boundary.current_scope()
+
+    if Brando.Authorization.enabled?() do
+      schema = Brando.Authorization.Catalog.schema(schema)
+
+      if schema do
+        context = schema.__modules__().context
+        apply(context, :"update_#{schema.__naming__().singular}", [id, %{status: status}, actor])
+      else
+        {:error, :forbidden}
+      end
+    else
+      legacy_update_status(schema, id, status)
+    end
+  end
+
+  defp legacy_update_status(schema, id, status) do
     entry = Brando.Repo.one(from q in schema, where: q.id == ^id)
 
     {:ok, updated_entry} =

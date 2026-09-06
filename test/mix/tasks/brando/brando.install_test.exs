@@ -90,6 +90,11 @@ defmodule Mix.Tasks.Brando.GenerateTest do
       assert file =~ "use BrandoAdmin.LiveView.Listing, schema: nil"
     end)
 
+    assert_file("priv/repo/migrations/20260906120000_brando_170_add_authorization_groups.exs", fn file ->
+      assert file =~ "authorization_groups"
+      assert file =~ "authorization_legacy_mappings"
+    end)
+
     refute File.exists?("assets/css/app.css")
   end
 

@@ -16,7 +16,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
     cond do
-      Brando.Tenant.mode() != :multi or socket.assigns.current_user.role != :superuser ->
+      Brando.Tenant.mode() != :multi or not superuser?(socket.assigns.current_user) ->
         {:ok, redirect(socket, to: "/admin")}
 
       connected?(socket) ->
@@ -155,7 +155,10 @@ defmodule BrandoAdmin.Sites.SiteLive do
           </button>
         </div>
 
-        <div class="environment-grid">
+        <p :if={Brando.Authorization.enabled?()}>
+          <a href={"/admin/groups?brando_site_key=#{site.key}"}>{gettext("Manage this site’s groups and members →")}</a>
+        </p>
+        <div :if={!Brando.Authorization.enabled?()} class="environment-grid">
           <section>
             <h3>{gettext("Site users")}</h3>
             <p :if={assignments(@assignments, site.id) == []}>{gettext("No explicit user assignments.")}</p>
@@ -223,6 +226,11 @@ defmodule BrandoAdmin.Sites.SiteLive do
       {:ok, site} -> {:noreply, socket |> notify(gettext("Site %{name} created.", name: site.name)) |> refresh()}
       {:error, reason} -> {:noreply, notify_error(socket, lifecycle_error(reason))}
     end
+  end
+
+  def handle_event(event, _params, socket)
+      when event in ["grant", "revoke"] and is_map_key(socket.assigns, :authorization) do
+    {:noreply, put_flash(socket, :error, gettext("Manage access through this site’s groups."))}
   end
 
   def handle_event("grant", %{"assignment" => params}, socket) do
@@ -388,4 +396,10 @@ defmodule BrandoAdmin.Sites.SiteLive do
   defp lifecycle_error({:site_setup_failed, reason, _compensation}), do: lifecycle_error(reason)
   defp lifecycle_error(reason) when is_atom(reason), do: reason |> Atom.to_string() |> String.replace("_", " ")
   defp lifecycle_error(reason), do: inspect(reason)
+
+  defp superuser?(user) do
+    if Brando.Authorization.enabled?(),
+      do: Brando.Authorization.can?(Brando.Authorization.Scope.installation(user), :read, :sites),
+      else: user.role == :superuser
+  end
 end

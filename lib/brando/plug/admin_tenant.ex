@@ -18,6 +18,10 @@ defmodule Brando.Plug.AdminTenant do
         prefix = Tenant.prefix(site, environment)
         Tenant.put_prefix(prefix)
 
+        Brando.Authorization.Boundary.put_scope(
+          Brando.Authorization.Scope.site(conn.assigns[:current_user], site, environment)
+        )
+
         conn
         |> assign(:current_site, site)
         |> assign(:current_environment, environment)
@@ -25,6 +29,8 @@ defmodule Brando.Plug.AdminTenant do
 
       nil ->
         Tenant.put_prefix(nil)
+        scope = if conn.assigns[:current_user], do: Brando.Authorization.Scope.current(conn.assigns.current_user)
+        Brando.Authorization.Boundary.put_scope(scope)
         conn
     end
   end

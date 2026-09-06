@@ -84,6 +84,7 @@ defmodule Brando.Revisions do
       |> limit(^limit)
       |> offset(^offset)
       |> select([r], struct(r, ^@metadata_fields))
+      |> Brando.Authorization.Boundary.subject_query(entry_type, entry_id)
       |> preload(:creator)
       |> Repo.all()
 
@@ -148,6 +149,7 @@ defmodule Brando.Revisions do
           r.revision == ^revision_number,
       update: [set: [description: ^description]]
     )
+    |> Brando.Authorization.Boundary.subject_query(entry_type, entry_id, :update)
     |> Repo.update_all([])
   end
 
@@ -163,6 +165,7 @@ defmodule Brando.Revisions do
           r.revision == ^revision_number,
       update: [set: [protected: ^protect]]
     )
+    |> Brando.Authorization.Boundary.subject_query(entry_type, entry_id, :update)
     |> Repo.update_all([])
   end
 
@@ -178,6 +181,7 @@ defmodule Brando.Revisions do
           r.revision == ^revision_number and r.active == false,
       update: [set: [scheduled: true]]
     )
+    |> Brando.Authorization.Boundary.subject_query(entry_type, entry_id, :schedule)
     |> Repo.update_all([])
   end
 
@@ -192,6 +196,7 @@ defmodule Brando.Revisions do
           r.revision == ^revision_number,
       update: [set: [scheduled: ^scheduled]]
     )
+    |> Brando.Authorization.Boundary.subject_query(entry_type, entry_id, :schedule)
     |> Repo.update_all([])
   end
 
@@ -202,6 +207,7 @@ defmodule Brando.Revisions do
     with {:ok, {_revision, {_revision_id, decoded_entry}}} <-
            get_revision(entry_schema, entry_id, base_revision_version),
          changeset <- entry_schema.changeset(decoded_entry, entry_params, user, nil, cast_blocks: true),
+         :ok <- Brando.Authorization.Boundary.change(user, :update, changeset),
          {:ok, updated_entry} <- Ecto.Changeset.apply_action(changeset, :update) do
       create_revision(updated_entry, user, false)
     end
@@ -227,6 +233,7 @@ defmodule Brando.Revisions do
         r.entry_type == ^entry_type_binary and r.entry_id == ^entry_id and
           r.protected == false and r.scheduled == false and r.active == false
     )
+    |> Brando.Authorization.Boundary.subject_query(entry_type, entry_id, :delete)
     |> Repo.delete_all()
   end
 
@@ -242,6 +249,7 @@ defmodule Brando.Revisions do
           r.revision == ^revision_number and r.active == false and
           r.protected == false and r.scheduled == false
     )
+    |> Brando.Authorization.Boundary.subject_query(entry_type, entry_id, :delete)
     |> Repo.delete_all()
   end
 
@@ -282,6 +290,12 @@ defmodule Brando.Revisions do
   the current publication timestamp.
   """
   def set_entry_to_revision(entry_schema, entry_id, revision_number, user, opts \\ []) do
+    Brando.Authorization.Boundary.run(user, :restore, entry_schema, fn user ->
+      do_set_entry_to_revision(entry_schema, entry_id, revision_number, user, opts)
+    end)
+  end
+
+  defp do_set_entry_to_revision(entry_schema, entry_id, revision_number, user, opts) do
     entry_id = normalize_entry_id(entry_id)
     revision_number = normalize_revision_number(revision_number)
     publish? = Keyword.get(opts, :publish?, false)
@@ -307,7 +321,8 @@ defmodule Brando.Revisions do
           |> entry_schema.changeset(restore_params, user, nil, cast_blocks: true)
           |> Brando.Trait.run_trait_before_save_callbacks(entry_schema, user)
 
-        with {:ok, updated_entry} <- Query.update(changeset),
+        with :ok <- Brando.Authorization.Boundary.change(user, :update, changeset),
+             {:ok, updated_entry} <- Query.update(changeset),
              {:ok, identifier_result} <- Content.update_identifier(entry_schema, updated_entry),
              {:ok, _} <- Brando.Publisher.schedule_publishing(updated_entry, changeset, user) do
           deactivate_all_revisions(to_string(entry_schema), entry_id)
@@ -431,7 +446,9 @@ defmodule Brando.Revisions do
   defp revision_query(entry_type, entry_id) do
     entry_type_binary = to_string(entry_type)
     entry_id = normalize_entry_id(entry_id)
+
     from(r in Revision, where: r.entry_type == ^entry_type_binary and r.entry_id == ^entry_id)
+    |> Brando.Authorization.Boundary.subject_query(entry_type, entry_id)
   end
 
   defp fetch_and_decode(query) do
@@ -539,7 +556,7 @@ defmodule Brando.Revisions do
   defp broadcast_restored(schema, entry) do
     Phoenix.PubSub.broadcast(
       Brando.pubsub(),
-      "brando:mutations:#{inspect(schema)}",
+      Brando.Tenant.Topic.scoped("brando:mutations:#{inspect(schema)}"),
       {:mutation, schema, entry, :updated}
     )
   end

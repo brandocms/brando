@@ -21,7 +21,10 @@ defmodule Brando.Trait.ProtectPassword do
 
   def changeset_mutator(_, _, %{changes: %{password: _}} = changeset, current_user, _opts) do
     cond do
-      current_user.role == :superuser ->
+      if(Brando.Authorization.enabled?(),
+        do: Brando.Authorization.Engine.superuser?(Brando.Authorization.Scope.installation(current_user)),
+        else: current_user.role == :superuser
+      ) ->
         changeset
 
       changeset.data.id == nil ->

@@ -163,7 +163,9 @@ defmodule Brando.Users do
   @spec get_user_content_summary(integer()) :: [map()]
   def get_user_content_summary(user_id) do
     get_user_foreign_key_references()
-    |> Enum.reject(fn {table, _col} -> table == "users_tokens" end)
+    |> Enum.reject(fn {table, _col} ->
+      table == "users_tokens" or table == "user_sites" or String.starts_with?(table, "authorization_")
+    end)
     |> Enum.map(fn {table, column} ->
       %{rows: [[count]]} =
         Ecto.Adapters.SQL.query!(
@@ -204,6 +206,9 @@ defmodule Brando.Users do
     num_rows
   end
 
+  defp transfer_or_delete_ref("authorization_" <> _, _column, _from, _to), do: 0
+  defp transfer_or_delete_ref("user_sites", _column, _from, _to), do: 0
+
   defp transfer_or_delete_ref(table, column, from_user_id, to_user_id) do
     %{num_rows: num_rows} =
       Ecto.Adapters.SQL.query!(
@@ -221,9 +226,15 @@ defmodule Brando.Users do
   """
   @spec delete_user_with_transfer(integer(), integer(), user()) :: {:ok, User.t()} | {:error, any()}
   def delete_user_with_transfer(user_id, transfer_to_user_id, current_user) do
-    with {:ok, _counts} <- transfer_user_content(user_id, transfer_to_user_id) do
-      delete_user(user_id, current_user)
-    end
+    Brando.Authorization.Boundary.run(current_user, :delete, User, fn actor ->
+      with {:ok, user} <- get_user(user_id),
+           :ok <- Brando.Authorization.Boundary.authorize(actor, :delete, user),
+           :ok <-
+             if(Brando.Authorization.enabled?(), do: Brando.Authorization.Groups.protect_account!(user.id), else: :ok),
+           {:ok, _counts} <- transfer_user_content(user_id, transfer_to_user_id) do
+        delete_user(user_id, actor)
+      end
+    end)
   end
 
   def get_users_map do

@@ -13,6 +13,7 @@
     />
     <meta :if={@current_user} name="user_id" content={@current_user.id} />
     <meta :if={@current_user} name="user_token" content={Brando.Users.build_token(@current_user.id)} />
+    <meta :if={@current_user} name="realtime_scope" content={Brando.Authorization.Realtime.token(@current_user)} />
     <script>
       (function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)
     </script>

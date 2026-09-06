@@ -1,5 +1,12 @@
 <%= if @current_user do %>
-  {live_render(@socket, BrandoAdmin.Chrome, id: "brando-chrome", sticky: true)}
+  {live_render(@socket, BrandoAdmin.Chrome,
+    id: "brando-chrome",
+    session: %{
+      "brando_site_key" => @current_site && @current_site.key,
+      "brando_environment_key" => @current_environment && @current_environment.key
+    },
+    sticky: true
+  )}
   {live_render(@socket, BrandoAdmin.UploadManager, id: "brando-upload-manager-lv", sticky: true)}
   {live_render(@socket, BrandoAdmin.Nav,
     id: "brando-nav",
@@ -17,7 +24,7 @@
         id="content-language-switch"
         current_user={@current_user}
       />
-      <main id="brando-main">
+      <main id="brando-main" data-authorization-upload={Brando.Authorization.Media.token(@current_user)}>
         <article class="content">
           {@inner_content}
         </article>

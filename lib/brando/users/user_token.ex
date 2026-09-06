@@ -42,7 +42,8 @@ defmodule Brando.Users.UserToken do
     query =
       from token in token_and_context_query(token, "session"),
         join: user in assoc(token, :user),
-        where: token.inserted_at > ago(@session_validity_in_days, "day"),
+        where:
+          token.inserted_at > ago(@session_validity_in_days, "day") and user.active == true and is_nil(user.deleted_at),
         select: user
 
     {:ok, query}

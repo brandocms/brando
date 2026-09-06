@@ -10,8 +10,13 @@ defmodule Brando.Query.Mutations do
   alias Brando.Revisions
   alias Brando.Trait
   alias Brando.Utils
+  alias Brando.Authorization.Boundary
 
   def create(module, params, user, callback_block, opts) do
+    Boundary.run(user, :create, module, &do_create(module, params, &1, callback_block, opts))
+  end
+
+  defp do_create(module, params, user, callback_block, opts) do
     {preloads, opts} = Keyword.pop(opts, :preloads)
     {custom_changeset, opts} = Keyword.pop(opts, :changeset)
     changeset_fun = custom_changeset || (&module.changeset/5)
@@ -24,7 +29,9 @@ defmodule Brando.Query.Mutations do
       |> changeset_fun.(params, user, nil, opts)
       |> Publisher.maybe_override_status()
 
-    case Query.insert(changeset) do
+    result = with :ok <- Boundary.change(user, :create, changeset), do: Query.insert(changeset)
+
+    case result do
       {:ok, entry} ->
         {:ok, entry} = maybe_preload(entry, preloads)
         {:ok, identifier_result} = Content.create_identifier(module, entry)
@@ -49,12 +56,21 @@ defmodule Brando.Query.Mutations do
   end
 
   def create_with_changeset(module, changeset, user, callback_block, opts) do
+    if changeset.data.__struct__ == module do
+      Boundary.run(user, :create, module, &do_create_with_changeset(module, changeset, &1, callback_block, opts))
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  defp do_create_with_changeset(module, changeset, user, callback_block, opts) do
     {preloads, _opts} = Keyword.pop(opts, :preloads)
     notify? = Keyword.get(opts, :notify?, true)
     pubsub? = Keyword.get(opts, :pubsub?, true)
 
     with changeset <- Publisher.maybe_override_status(changeset),
          changeset <- set_action(changeset, :insert),
+         :ok <- Boundary.change(user, :create, changeset),
          {:ok, entry} <- Query.insert(changeset),
          {:ok, entry} <- maybe_preload(entry, preloads),
          {:ok, identifier_result} <- Content.create_identifier(module, entry),
@@ -78,6 +94,11 @@ defmodule Brando.Query.Mutations do
 
   def update(context, module, name, id, params, opts) do
     user = Keyword.fetch!(opts, :user)
+    Boundary.run(user, :update, module, &do_update(context, module, name, id, params, Keyword.put(opts, :user, &1)))
+  end
+
+  defp do_update(context, module, name, id, params, opts) do
+    user = Keyword.fetch!(opts, :user)
     preloads = Keyword.get(opts, :preloads)
     callback = Keyword.get(opts, :callback, &{:ok, &1})
     custom_changeset = Keyword.get(opts, :changeset)
@@ -96,6 +117,7 @@ defmodule Brando.Query.Mutations do
          changeset <- changeset_fun.(entry, params, user, nil, []),
          changeset <- Publisher.maybe_override_status(changeset),
          changeset <- set_action(changeset, :update),
+         :ok <- Boundary.change(user, :update, changeset),
          {:ok, entry} <- Query.update(changeset),
          {:ok, identifier_result} <- Content.update_identifier(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
@@ -117,11 +139,25 @@ defmodule Brando.Query.Mutations do
   end
 
   def update_with_changeset(module, changeset, user, preloads, callback_block, opts) do
+    if changeset.data.__struct__ == module do
+      Boundary.run(
+        user,
+        :update,
+        module,
+        &do_update_with_changeset(module, changeset, &1, preloads, callback_block, opts)
+      )
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  defp do_update_with_changeset(module, changeset, user, preloads, callback_block, opts) do
     notify? = Keyword.get(opts, :show_notification, true)
     pubsub? = Keyword.get(opts, :pubsub, true)
 
     with changeset <- Publisher.maybe_override_status(changeset),
          changeset <- set_action(changeset, :update),
+         :ok <- Boundary.change(user, :update, changeset),
          {:ok, entry} <- Query.update(changeset),
          {:ok, entry} <- maybe_preload(entry, preloads),
          {:ok, identifier_result} <- Content.update_identifier(module, entry),
@@ -142,6 +178,9 @@ defmodule Brando.Query.Mutations do
         {:ok, entry}
       end
     else
+      {:error, :forbidden} = err ->
+        err
+
       err ->
         require Logger
 
@@ -158,34 +197,39 @@ defmodule Brando.Query.Mutations do
 
   def duplicate(context, module, name, id, opts) do
     user = Keyword.fetch!(opts, :user)
+    Boundary.run(user, :duplicate, module, &do_duplicate(context, module, name, id, Keyword.put(opts, :user, &1)))
+  end
+
+  defp do_duplicate(context, module, name, id, opts) do
+    user = Keyword.fetch!(opts, :user)
     duplicate_opts = Keyword.get(opts, :duplicate_opts, [])
     override_opts = Keyword.get(opts, :override_opts, []) |> Enum.into(%{})
     preloads = Keyword.get(duplicate_opts, :preload) || Brando.Blueprint.preloads_for(module)
 
-    case apply(context, :"get_#{name}", [%{matches: %{id: id}, preload: preloads}]) do
-      {:ok, entry} ->
-        merged_opts =
-          duplicate_opts
-          |> Enum.into(%{})
-          |> Map.merge(override_opts)
+    with {:ok, entry} <- apply(context, :"get_#{name}", [%{matches: %{id: id}, preload: preloads}]),
+         :ok <- Boundary.authorize(user, :read, entry),
+         :ok <- Boundary.authorize(user, :duplicate, entry),
+         :ok <- Boundary.authorize(user, :create, module) do
+      merged_opts =
+        duplicate_opts
+        |> Enum.into(%{})
+        |> Map.merge(override_opts)
 
-        has_blocks? = module.has_trait(Trait.Blocks)
+      has_blocks? = module.has_trait(Trait.Blocks)
 
-        cloned_entry =
-          entry
-          |> maybe_change_fields(merged_opts)
-          |> maybe_delete_fields(merged_opts)
-          |> maybe_set_status()
-          |> maybe_duplicate_blocks(module, has_blocks?)
-          |> maybe_merge_fields(merged_opts)
-          |> maybe_put_creator(user)
-          |> drop_fields()
-          |> update_meta()
+      cloned_entry =
+        entry
+        |> maybe_change_fields(merged_opts)
+        |> maybe_delete_fields(merged_opts)
+        |> maybe_set_status()
+        |> maybe_duplicate_blocks(module, has_blocks?)
+        |> maybe_merge_fields(merged_opts)
+        |> maybe_put_creator(user)
+        |> drop_fields()
+        |> update_meta()
 
-        Brando.Repo.insert(cloned_entry)
-
-      err ->
-        err
+      with :ok <- Boundary.change(user, :create, Ecto.Changeset.change(cloned_entry)),
+           do: Brando.Repo.insert(cloned_entry)
     end
   end
 
@@ -316,12 +360,19 @@ defmodule Brando.Query.Mutations do
 
   def delete(context, module, name, id, opts) do
     user = Keyword.get(opts, :user, :system)
+    Boundary.run(user, :delete, module, &do_delete(context, module, name, id, Keyword.put(opts, :user, &1)))
+  end
+
+  defp do_delete(context, module, name, id, opts) do
+    user = Keyword.get(opts, :user, :system)
     preloads = Keyword.get(opts, :preloads)
     callback = Keyword.get(opts, :callback, &{:ok, &1})
 
     get_opts = (preloads && %{matches: %{id: id}, preload: preloads}) || %{matches: %{id: id}}
 
     with {:ok, entry} <- apply(context, :"get_#{name}", [get_opts]),
+         :ok <- Boundary.authorize(user, :delete, entry),
+         :ok <- authorize_deletion(user, entry),
          soft_deletable? = module.__trait__(Trait.SoftDelete),
          {:ok, entry} <-
            if(soft_deletable?,
@@ -341,6 +392,16 @@ defmodule Brando.Query.Mutations do
       callback.(entry)
     end
   end
+
+  defp authorize_deletion(:system, _), do: :ok
+
+  defp authorize_deletion(user, %{__struct__: Brando.Users.User} = entry) do
+    if Brando.Authorization.enabled?(), do: Brando.Authorization.Groups.protect_account!(entry.id)
+    Boundary.authorize(user, :delete, entry)
+  end
+
+  defp authorize_deletion(user, %{status: :published} = entry), do: Boundary.authorize(user, :publish, entry)
+  defp authorize_deletion(_user, _entry), do: :ok
 
   defp has_changes(%Ecto.Changeset{changes: changes}) when map_size(changes) > 0, do: true
   defp has_changes(_), do: false
@@ -366,7 +427,7 @@ defmodule Brando.Query.Mutations do
   defp maybe_broadcast(module, entry, action, true) do
     Phoenix.PubSub.broadcast(
       Brando.pubsub(),
-      "brando:mutations:#{inspect(module)}",
+      Brando.Tenant.Topic.scoped("brando:mutations:#{inspect(module)}"),
       {:mutation, module, entry, action}
     )
   end
