@@ -18,9 +18,13 @@ defmodule Brando.LivePreview do
     assign :partials, fn _ -> Brando.Pages.get_fragments("partials") |> elem(1) end
   end
   ```
-  Set `template_prop` if your template uses another way to reference the entry than what
-  is used in Vue. For instance, if in Vue it is a `project`, but you want `entry`, then
-  set `template_prop :entry`
+  Set `template_prop` to the assign name your template uses for the edited entry
+  (`:entry` by default).
+
+  Declare multiple targets for a schema with distinct `name` atoms. `label` and
+  optional `description` identify each view in the editor's preview chooser.
+  Unnamed targets use `:default`; existing single-target configurations are unchanged.
+  See the [Live preview guide](live_preview.html) for a detail/listing example.
 
     - `schema_preloads` - List of atoms to preload on `entry`
     - `mutate_data` - function to mutate entry data `entry`
@@ -78,7 +82,7 @@ defmodule Brando.LivePreview do
             assigns: []
 
   def render(schema_module, entry, cache_key, render_opts \\ []) do
-    opts = Brando.LivePreview.get_target_config(schema_module)
+    opts = get_target_config(schema_module, Keyword.get(render_opts, :target, target_name(cache_key)))
     language = Map.get(entry, :language, Brando.config(:default_language))
 
     # Preload before processing assigns so that both the assign value_fns and the
@@ -276,26 +280,21 @@ defmodule Brando.LivePreview do
     Task.start(fn ->
       Cachex.del(:cache, "__live_preview__" <> cache_key)
       Brando.Authorization.Preview.cleanup(cache_key)
-
-      {:ok, keys} = Cachex.keys(:cache)
-
-      keys
-      |> Enum.filter(fn
-        key when is_binary(key) -> String.starts_with?(key, "#{cache_key}__VAR__")
-        _ -> false
-      end)
-      |> Enum.each(&Cachex.del(:cache, &1))
+      Cachex.del(:cache, "#{cache_key}__TARGET__")
+      invalidate_assigns(cache_key)
     end)
   end
 
-  def initialize(schema, changeset, updated_entry_assocs \\ %{}) do
+  def initialize(schema, changeset, updated_entry_assocs \\ %{}, target \\ nil) do
     cache_key = build_cache_key(:erlang.system_time())
     schema_module = Module.concat([schema])
     entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
 
     try do
       with :ok <- Brando.Authorization.Preview.register(cache_key, changeset) do
-        wrapper_html = render(schema_module, entry_struct, cache_key)
+        target_config = get_target_config(schema_module, target)
+        wrapper_html = render(schema_module, entry_struct, cache_key, target: target_config.name)
+        store_target(cache_key, target_config.name)
         store_cache(cache_key, wrapper_html)
         broadcast(cache_key, "update", %{html: wrapper_html})
         {:ok, cache_key}
@@ -304,6 +303,8 @@ defmodule Brando.LivePreview do
       end
     rescue
       err in [KeyError] ->
+        cleanup_cache(cache_key)
+
         Logger.error("""
 
         Stacktrace:
@@ -322,6 +323,7 @@ defmodule Brando.LivePreview do
         end
 
       err ->
+        cleanup_cache(cache_key)
         error_message = Map.get(err, :message, inspect(err))
         {:error, "Initialization failed.\r\n\r\n#{error_message}"}
     end
@@ -359,11 +361,57 @@ defmodule Brando.LivePreview do
     with :ok <- Brando.Authorization.Preview.authorize_write(cache_key, changeset),
          :ok <- Brando.Authorization.Preview.register(cache_key, changeset) do
       entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
-      wrapper_html = render(Module.concat([schema]), entry_struct, cache_key)
+      target = get_target_config(Module.concat([schema]), target_name(cache_key))
+      wrapper_html = render(Module.concat([schema]), entry_struct, cache_key, target: target.name)
+      store_target(cache_key, target.name)
       store_cache(cache_key, wrapper_html)
       if event, do: broadcast(cache_key, event, if(event == "reload", do: %{}, else: %{html: wrapper_html}))
       cache_key
     end
+  end
+
+  @doc "Switch the view without changing the preview session or its block subscriptions."
+  def switch_target(schema, changeset, cache_key, target_name, updated_entry_assocs \\ %{}) do
+    with :ok <- Brando.Authorization.Preview.authorize_write(cache_key, changeset) do
+      schema_module = Module.concat([schema])
+      target = get_target_config(schema_module, target_name)
+      entry = prepare_entry_struct(changeset, updated_entry_assocs)
+      invalidate_assigns(cache_key)
+      html = render(schema_module, entry, cache_key, target: target.name)
+
+      with :ok <- Brando.Authorization.Preview.register(cache_key, changeset) do
+        store_target(cache_key, target.name)
+        store_cache(cache_key, html)
+        broadcast(cache_key, "reload", %{})
+        {:ok, cache_key}
+      end
+    end
+  rescue
+    err ->
+      Logger.error(Exception.format(:error, err, __STACKTRACE__))
+      # Preserve the previous view if the new template fails. Its assigns must
+      # also be recomputed after a partially rendered alternative.
+      invalidate_assigns(cache_key)
+      {:error, "Could not switch preview: #{Exception.message(err)}"}
+  end
+
+  @doc "The server-owned target selected for a preview session (nil for legacy sessions)."
+  def target_name(cache_key) when is_binary(cache_key) do
+    {:ok, name} = Cachex.get(:cache, "#{cache_key}__TARGET__")
+    name
+  end
+
+  def target_name(_cache_key), do: nil
+
+  defp store_target(cache_key, name),
+    do: Cachex.put(:cache, "#{cache_key}__TARGET__", name, expire: :timer.hours(1))
+
+  defp invalidate_assigns(cache_key) do
+    {:ok, keys} = Cachex.keys(:cache)
+
+    keys
+    |> Enum.filter(&(is_binary(&1) and String.starts_with?(&1, "#{cache_key}__VAR__")))
+    |> Enum.each(&Cachex.del(:cache, &1))
   end
 
   @doc false
@@ -376,7 +424,7 @@ defmodule Brando.LivePreview do
   @doc """
   Renders the entry, stores in DB and returns URL
   """
-  def share(schema_module, changeset, user, updated_entry_assocs \\ %{}) do
+  def share(schema_module, changeset, user, updated_entry_assocs \\ %{}, target \\ nil) do
     with :ok <- Brando.Authorization.Preview.authorize_share(user, changeset) do
       cache_key = build_cache_key(:erlang.system_time())
       entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
@@ -385,7 +433,7 @@ defmodule Brando.LivePreview do
 
       html =
         schema_module
-        |> render(entry_struct, cache_key, include_meta: true)
+        |> render(entry_struct, cache_key, include_meta: true, target: target)
         |> Utils.term_to_binary()
 
       preview_key = Utils.random_string(12)
@@ -433,24 +481,30 @@ defmodule Brando.LivePreview do
     Cachex.del(:cache, "#{cache_key}__VAR__#{key}")
   end
 
-  def get_target_config(schema_module) do
+  @doc "All configured views for a schema, in declaration order."
+  def get_targets(schema_module) do
     Brando.live_preview()
     |> Spark.Dsl.Extension.get_entities([:live_preview])
-    |> Enum.find(&(&1.schema == schema_module))
-    |> case do
-      nil ->
-        raise LivePreviewError, message: "No preview target found for #{inspect(schema_module)}"
-
-      target_config ->
-        target_config
-    end
+    |> Enum.filter(&(&1.schema == schema_module))
   end
 
-  def has_live_preview_target(schema_module) do
-    Brando.live_preview()
-    |> Spark.Dsl.Extension.get_entities([:live_preview])
-    |> Enum.any?(&(&1.schema == schema_module))
+  @doc "Resolve a declared target safely from its atom or browser string name."
+  def get_target_config(schema_module, name \\ nil) do
+    targets = get_targets(schema_module)
+
+    target =
+      if is_nil(name) do
+        Enum.find(targets, &(&1.name == :default)) || List.first(targets)
+      else
+        Enum.find(targets, &(to_string(&1.name) == to_string(name)))
+      end
+
+    target ||
+      raise LivePreviewError,
+        message: "No preview target #{inspect(name)} found for #{inspect(schema_module)}"
   end
+
+  def has_live_preview_target(schema_module), do: get_targets(schema_module) != []
 
   defp prepare_entry_struct(changeset, updated_entry_assocs) do
     changeset

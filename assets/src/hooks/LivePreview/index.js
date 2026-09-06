@@ -37,7 +37,7 @@ export default app => ({
       gsap.to(this.$livePreview, { opacity: 1, ease: 'none', duration: 0.35, delay: 0.7 })
 
       // bind target buttons
-      const targetBtns = this.$livePreview.querySelectorAll('button')
+      const targetBtns = this.$livePreview.querySelectorAll('button[data-live-preview-target]')
       Array.from(targetBtns).forEach(targetBtn => {
         targetBtn.addEventListener('click', () => {
           const target = targetBtn.dataset.livePreviewTarget

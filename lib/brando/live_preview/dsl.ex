@@ -8,7 +8,7 @@ defmodule Brando.LivePreview.Dsl do
 
   @preview_target %Spark.Dsl.Entity{
     name: :preview_target,
-    identifier: :schema,
+    transform: {Brando.LivePreview.Target, :transform, []},
     args: [:schema],
     entities: [assigns: [@assign]],
     target: Brando.LivePreview.Target,
@@ -26,6 +26,6 @@ defmodule Brando.LivePreview.Dsl do
   @moduledoc false
   use Spark.Dsl.Extension,
     sections: @sections,
-    transformers: [],
+    transformers: [Brando.LivePreview.ValidateTargets],
     imports: [Brando.LivePreview.Legacy]
 end
