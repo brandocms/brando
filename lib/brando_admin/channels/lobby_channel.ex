@@ -8,6 +8,8 @@ defmodule Brando.LobbyChannel do
   intercept(["presence_diff", "toast"])
 
   def join("lobby", %{"url" => url} = params, socket) when is_binary(url) do
+    Realtime.allow_sandbox(socket)
+
     with {:ok, scope} <- resolve_scope(params["scope_token"], socket.assigns.user_id) do
       Realtime.subscribe()
       send(self(), :after_join)

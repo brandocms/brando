@@ -29,8 +29,10 @@ const restore = async page => {
 
 const openProject = async page => {
   await page.goto('/admin/projects/clients/create')
+  await syncLV(page)
   await page.getByText('Published', { exact: true }).click()
   await page.getByRole('textbox', { name: 'Name', exact: true }).fill('Recovery client')
+  await page.getByRole('textbox', { name: 'Slug', exact: true }).fill('recovery-client')
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL(/\/projects\/clients$/)
   await page.goto('/admin/projects/projects')

@@ -16,10 +16,16 @@ defmodule BrandoAdmin.PreviewControllerTest do
     response = Brando.PreviewController.show(build_conn(), %{"preview_key" => preview.preview_key})
     assert response.status == 200
     assert response.resp_body =~ "Shared draft"
+    assert {:snooze, seconds} = Brando.Worker.PreviewPurger.perform(%Oban.Job{args: %{"id" => preview.id}})
+    assert seconds > 0
+    assert Repo.get(Preview, preview.id)
     Repo.update!(Ecto.Changeset.change(preview, expires_at: ~U[2020-01-01 00:00:00Z]))
     Brando.Cache.Query.evict(preview)
 
     assert {:error, {:preview, :not_found}} =
              Brando.PreviewController.show(build_conn(), %{"preview_key" => preview.preview_key})
+
+    assert :ok = Brando.Worker.PreviewPurger.perform(%Oban.Job{args: %{"id" => preview.id}})
+    refute Repo.get(Preview, preview.id)
   end
 end

@@ -169,7 +169,7 @@ defmodule BrandoAdmin.Components.Form do
     if field && entry && entry.id do
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
-        Brando.Tenant.Topic.scoped("brando:active_field:#{entry.id}"),
+        Brando.Tenant.Topic.entry("active_field", socket.assigns.schema, entry.id),
         {:active_field, field, socket.assigns.current_user.id}
       )
     end
@@ -1638,7 +1638,7 @@ defmodule BrandoAdmin.Components.Form do
     if changes != [] do
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
-        Brando.Tenant.Topic.scoped("brando:field_sync:#{entry_id}"),
+        Brando.Tenant.Topic.entry("field_sync", socket.assigns.schema, entry_id),
         {:fields_shipped, %{changes: changes, user_id: user_id}}
       )
     end
@@ -2608,7 +2608,7 @@ defmodule BrandoAdmin.Components.Form do
       else
         Phoenix.PubSub.broadcast(
           Brando.pubsub(),
-          Brando.Tenant.Topic.scoped("brando:dirty_fields:#{entry.id}"),
+          Brando.Tenant.Topic.entry("dirty_fields", socket.assigns.schema, entry.id),
           {:dirty_fields, changed_fields, current_user.id}
         )
 
@@ -2749,7 +2749,7 @@ defmodule BrandoAdmin.Components.Form do
     if entry && entry.id do
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
-        Brando.Tenant.Topic.scoped("brando:active_field:#{entry.id}"),
+        Brando.Tenant.Topic.entry("active_field", socket.assigns.schema, entry.id),
         {:active_field, field, current_user.id}
       )
 

@@ -222,6 +222,8 @@ The activity panel shows colleagues with backend access in the selected workspac
 Live URLs are limited to its environment. Global last-seen timestamps are omitted
 in site workspaces because they can reveal activity elsewhere. Mutation notices
 also check the selected environment and permission to read the affected record.
+Field and block collaboration is isolated by resource type, record, and environment;
+identical record IDs in different resources or environments do not share edits.
 
 ## Testing application permissions
 

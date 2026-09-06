@@ -113,13 +113,20 @@ defmodule Brando.Authorization.SiteContextTest do
     end)
   end
 
-  test "collaboration topics differ across sites and environments", c do
+  test "collaboration topics differ across sites, environments and resource types", c do
     topics =
       Enum.map([c.live, c.staging, c.beta_scope], fn scope ->
-        Tenant.with_prefix(scope.prefix, fn -> Tenant.Topic.scoped("brando:field_sync:#{c.page.id}") end)
+        Tenant.with_prefix(scope.prefix, fn -> Tenant.Topic.entry("field_sync", Page, c.page.id) end)
       end)
 
     assert length(Enum.uniq(topics)) == 3
+
+    for event <- ["field_sync", "dirty_fields", "active_field", "block_presence", "blocks:blocks"] do
+      Tenant.with_prefix(c.live.prefix, fn ->
+        refute Tenant.Topic.entry(event, Page, c.page.id) ==
+                 Tenant.Topic.entry(event, Brando.Pages.Fragment, c.page.id)
+      end)
+    end
   end
 
   test "mutation notifications require record access in the receiving environment", c do

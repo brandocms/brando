@@ -163,7 +163,7 @@ jobs:
   e2e:
     name: Serial E2E (PostgreSQL)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       # Each CI job has its own PostgreSQL service, so a stable key keeps the
       # generated database and port predictable while exercising the same
@@ -274,11 +274,14 @@ jobs:
         working-directory: brando/e2e
         run: source .envrc && ./test_e2e.sh --reset
 
-      - name: Run group authorization and live-preview regressions
+      - name: Run group authorization, preview and collaboration regressions
         working-directory: brando/e2e
         run: |
           source .envrc
-          BRANDO_AUTHORIZATION_MODE=groups ./test_e2e.sh --reset tests/users/groups.spec.js tests/blocks/block-live-preview.spec.js
+          BRANDO_AUTHORIZATION_MODE=groups ./test_e2e.sh --reset \
+            tests/users/groups.spec.js tests/blocks/block-live-preview.spec.js \
+            tests/blocks/block-multiuser-sync.spec.js tests/projects/file-field-sync.spec.js \
+            tests/projects/multi-select-reorder.spec.js
 
       - name: Run multi-site and single-site authorization regressions
         working-directory: brando/e2e

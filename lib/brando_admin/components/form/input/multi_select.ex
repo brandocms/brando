@@ -1353,7 +1353,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
         Phoenix.PubSub.broadcast(
           Brando.pubsub(),
-          Brando.Tenant.Topic.scoped("brando:field_sync:#{entry_id}"),
+          Brando.Tenant.Topic.entry("field_sync", field.form.data.__struct__, entry_id),
           {:multi_select_changed,
            %{
              field: field.field,
@@ -1375,7 +1375,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     if entry_id && current_user do
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
-        Brando.Tenant.Topic.scoped("brando:active_field:#{entry_id}"),
+        Brando.Tenant.Topic.entry("active_field", field.form.data.__struct__, entry_id),
         {:active_field, field_name, current_user.id}
       )
     end

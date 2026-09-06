@@ -11,6 +11,8 @@ defmodule Brando.LivePreviewChannel do
   Join live_preview channel for specific preview key
   """
   def join("live_preview:" <> preview_id, _params, socket) do
+    Realtime.allow_sandbox(socket)
+
     with :ok <- Preview.authorize(preview_id, socket.assigns.user_id) do
       Realtime.subscribe()
       {:ok, socket.assigns.user_id, assign(socket, :preview_id, preview_id)}

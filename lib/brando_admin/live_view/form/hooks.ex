@@ -20,10 +20,10 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         |> assign_title()
         |> assign(:mutation_listeners, %{})
 
-      PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("brando:dirty_fields:#{entry_id}"))
-      PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("brando:active_field:#{entry_id}"))
-      PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("brando:block_presence:#{entry_id}"))
-      PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("brando:field_sync:#{entry_id}"))
+      PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("dirty_fields", socket.assigns.schema, entry_id))
+      PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("active_field", socket.assigns.schema, entry_id))
+      PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("block_presence", socket.assigns.schema, entry_id))
+      PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("field_sync", socket.assigns.schema, entry_id))
 
       {:cont, assign(socket, :current_focused_block_uid, nil)}
     else
@@ -206,10 +206,10 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   defp maybe_arm_entry_scope(%{"entry_id" => entry_id}, _uri, %{assigns: %{entry_id: nil}} = socket) do
-    PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("brando:dirty_fields:#{entry_id}"))
-    PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("brando:active_field:#{entry_id}"))
-    PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("brando:block_presence:#{entry_id}"))
-    PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("brando:field_sync:#{entry_id}"))
+    PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("dirty_fields", socket.assigns.schema, entry_id))
+    PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("active_field", socket.assigns.schema, entry_id))
+    PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("block_presence", socket.assigns.schema, entry_id))
+    PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("field_sync", socket.assigns.schema, entry_id))
 
     {:cont,
      socket
@@ -1147,7 +1147,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
         PubSub.broadcast(
           Brando.pubsub(),
-          Brando.Tenant.Topic.scoped("brando:block_presence:#{entry_id}"),
+          Brando.Tenant.Topic.entry("block_presence", socket.assigns.schema, entry_id),
           {:block_blur, %{uid: old_uid, user_id: current_user_id}}
         )
       end
@@ -1155,7 +1155,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       # Focus new block
       PubSub.broadcast(
         Brando.pubsub(),
-        Brando.Tenant.Topic.scoped("brando:block_presence:#{entry_id}"),
+        Brando.Tenant.Topic.entry("block_presence", socket.assigns.schema, entry_id),
         {:block_focus, %{uid: uid, user_id: current_user_id}}
       )
     end
@@ -1180,7 +1180,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       unless still_inside do
         PubSub.broadcast(
           Brando.pubsub(),
-          Brando.Tenant.Topic.scoped("brando:block_presence:#{entry_id}"),
+          Brando.Tenant.Topic.entry("block_presence", socket.assigns.schema, entry_id),
           {:block_blur, %{uid: uid, user_id: current_user_id}}
         )
       end
@@ -1209,7 +1209,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
       PubSub.broadcast(
         Brando.pubsub(),
-        Brando.Tenant.Topic.scoped("brando:block_presence:#{entry_id}"),
+        Brando.Tenant.Topic.entry("block_presence", socket.assigns.schema, entry_id),
         {:block_blur, %{uid: current_uid, user_id: current_user_id}}
       )
     end
@@ -1298,7 +1298,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       if focused_uid && entry_id do
         PubSub.broadcast(
           Brando.pubsub(),
-          Brando.Tenant.Topic.scoped("brando:block_presence:#{entry_id}"),
+          Brando.Tenant.Topic.entry("block_presence", socket.assigns.schema, entry_id),
           {:block_focus, %{uid: focused_uid, user_id: socket.assigns.current_user.id}}
         )
       end

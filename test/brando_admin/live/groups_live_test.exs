@@ -40,6 +40,23 @@ defmodule BrandoAdmin.Users.GroupsLiveTest do
     assert {:error, {:redirect, %{to: "/admin/access-denied"}}} = live(conn, "/admin/pages")
   end
 
+  test "a delayed previous group's form cannot populate a new group", %{conn: conn, scope: scope} do
+    {:ok, group} = Groups.create(scope, %{name: "Previous"}, ["brando.admin.access"])
+    {:ok, view, _} = live(conn, "/admin/groups")
+    render_click(view, "select", %{"id" => to_string(group.id)})
+    render_click(view, "new")
+
+    render_change(view, "change", %{
+      "editor_key" => to_string(group.id),
+      "group" => %{"name" => "Previous"},
+      "permissions" => %{"brando.admin.access" => "true"}
+    })
+
+    assert has_element?(view, "#authorization-editor-new")
+    refute has_element?(view, "input[name='group[name]'][value='Previous']")
+    refute has_element?(view, "input[name='permissions[brando.admin.access]'][checked]")
+  end
+
   test "removing access redirects an already mounted group editor", %{conn: conn, scope: scope} do
     user = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
     {:ok, group} = Groups.create(scope, %{name: "Access reviewer"}, ["brando.admin.access", "brando.groups.read"])

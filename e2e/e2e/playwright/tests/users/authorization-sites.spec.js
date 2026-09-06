@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, toggleLivePreview } from '../../utils'
+import { syncLV, toggleLivePreview, awaitBlockShip } from '../../utils'
 import { e2eUrl } from '../../test-support/e2eUrl'
 
 test.skip(process.env.BRANDO_AUTHORIZATION_MODE !== 'groups' || !['multi', 'single'].includes(process.env.BRANDO_TENANCY_MODE), 'Requires tenant group mode')
@@ -77,4 +77,33 @@ test('private previews reject other accounts and close after site access is revo
   await expect(editor).toHaveURL('/admin/access-denied')
   const revoked = await editor.request.get(previewURL)
   expect(revoked.status()).toBe(403)
+})
+
+test('simultaneous editors never share fields or blocks across environments', async ({ page: owner, secondUserPage: editor, sandboxUserAgent }) => {
+  await fixture(sandboxUserAgent, 'setup')
+  await owner.goto('/admin/pages/update/1')
+  await editor.goto('/admin/pages/update/1')
+  await switchTo(editor, 'environment_key', 'staging')
+  await expect(editor.getByLabel('Title', { exact: true })).toHaveValue('Alpha staging page')
+  await expect(owner.getByLabel('Title', { exact: true })).toHaveValue('Alpha production page')
+  await expect(editor.locator('#page_form-blocks-blocks-wrapper')).toBeVisible()
+  const existingHeaders = await editor.locator('.header-block textarea').count()
+
+  await owner.getByLabel('Title', { exact: true }).fill('Private production draft')
+  await owner.getByLabel('Title', { exact: true }).blur()
+  await owner.getByRole('button', { name: 'Add block', exact: true }).last().click()
+  await owner.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+  await owner.getByRole('button', { name: 'Styled Header' }).click()
+  await owner.locator('.header-block textarea').last().fill('Private production block')
+  await owner.locator('.header-block textarea').last().blur()
+  await awaitBlockShip(owner)
+
+  // Saving the receiver exposes any leaked field or block snapshot as a real write.
+  await editor.getByTestId('submit').click()
+  await expect(editor).toHaveURL('/admin/pages')
+  await editor.goto('/admin/pages/update/1')
+  await expect(editor.getByLabel('Title', { exact: true })).toHaveValue('Alpha staging page')
+  await expect(editor.locator('#page_form-blocks-blocks-wrapper')).toBeVisible()
+  await expect(editor.locator('.header-block textarea')).toHaveCount(existingHeaders)
+  await expect(editor.locator('#page_form-blocks-blocks-wrapper')).not.toContainText('Private production block')
 })

@@ -13,6 +13,17 @@ defmodule BrandoAdmin.AdminSocket do
   Connect socket with token
   """
   @impl true
+  def connect(params, socket, connect_info) do
+    socket =
+      if Application.get_env(Brando.otp_app(), :sql_sandbox, false),
+        do: assign(socket, :phoenix_ecto_sandbox, connect_info[:user_agent]),
+        else: socket
+
+    Brando.Authorization.Realtime.allow_sandbox(socket)
+    connect(params, socket)
+  end
+
+  @impl true
   def connect(%{"token" => token}, socket) do
     with {:ok, user_id} <- Brando.Users.verify_token(token),
          :ok <- Brando.Authorization.Realtime.authorize_account(user_id) do

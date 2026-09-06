@@ -21,6 +21,7 @@ defmodule Brando.UserChannel do
   Join user channel for your user
   """
   def join("user:" <> user_id, _params, socket) do
+    Realtime.allow_sandbox(socket)
     assigned_user_id = socket.assigns.user_id
 
     vsn =

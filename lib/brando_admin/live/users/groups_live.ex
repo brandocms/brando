@@ -107,7 +107,11 @@ defmodule BrandoAdmin.Users.GroupsLive do
           <p :if={filter_groups(@groups, @group_search) == []} class="authorization-hint">No matching groups.</p>
           <p class="authorization-hint">A person can belong to several groups. Their permissions add together.</p>
         </aside>
-        <section class="authorization-editor" aria-label="Group details">
+        <section
+          id={"authorization-editor-#{editor_key(@selected)}"}
+          class="authorization-editor"
+          aria-label="Group details"
+        >
           <%= if @selected do %>
             <%= if @preview do %>
               <section class="authorization-review" aria-label="Review permission changes">
@@ -220,6 +224,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                   </div>
                 <% else %>
                   <form id="group-permissions" phx-change="change" phx-submit="review">
+                    <input type="hidden" name="editor_key" value={editor_key(@selected)} />
                     <fieldset class="authorization-fields" disabled={!can_save?(@authorization, @selected)}>
                       <label>Group name<input
                         name="group[name]"
@@ -641,6 +646,14 @@ defmodule BrandoAdmin.Users.GroupsLive do
     end
   end
 
+  # A debounced form event from the previous group may arrive after navigation.
+  # It must never seed a new group with that group's old permissions.
+  def handle_event(event, %{"editor_key" => key} = params, socket) when event in ["change", "review"] do
+    if key == editor_key(socket.assigns.selected),
+      do: handle_event(event, Map.delete(params, "editor_key"), socket),
+      else: {:noreply, socket}
+  end
+
   def handle_event("change", params, socket) do
     # Keep hidden/search-filtered and non-editable grants intact. Only visible,
     # editable checkboxes participate in this form event.
@@ -772,6 +785,9 @@ defmodule BrandoAdmin.Users.GroupsLive do
     |> assign(:stale?, false)
     |> assign(:adding_member?, false)
   end
+
+  defp editor_key(%Group{id: id}) when not is_nil(id), do: to_string(id)
+  defp editor_key(_), do: "new"
 
   defp change_member(socket, action, id) do
     with {id, ""} <- Integer.parse(id),

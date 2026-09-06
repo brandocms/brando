@@ -7,6 +7,15 @@ defmodule Brando.Authorization.Realtime do
 
   @salt "brando-realtime-scope"
 
+  @doc false
+  def allow_sandbox(socket) do
+    if Application.get_env(Brando.otp_app(), :sql_sandbox, false) do
+      Phoenix.Ecto.SQL.Sandbox.allow(socket.assigns[:phoenix_ecto_sandbox], Ecto.Adapters.SQL.Sandbox)
+    end
+
+    :ok
+  end
+
   def token(actor), do: Phoenix.Token.sign(Brando.endpoint(), @salt, Scope.current(actor))
 
   def verify_scope(token, user_id) do
