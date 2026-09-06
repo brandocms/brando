@@ -53,7 +53,7 @@ guide exists, though source/API documentation may be available.
 
 Other existing guides cover Blueprint migrations, tenancy/environments, videos,
 and deployment. `guides/revisions.md` is also a heading-only stub, although it
-was not named separately in the original checklist. In total, ten of the 23
+was not named separately in the original checklist. In total, nine of the 23
 guide files present at this baseline are heading-only stubs.
 
 ## Prioritized writing packages
