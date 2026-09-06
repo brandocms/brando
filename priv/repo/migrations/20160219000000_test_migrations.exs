@@ -457,6 +457,16 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
 
     create index(:persons, [:language])
 
+    create table(:sites_previews) do
+      add :preview_key, :text, null: false
+      add :expires_at, :utc_datetime, null: false
+      add :html, :binary
+      add :creator_id, references(:users, on_delete: :nilify_all)
+      timestamps()
+    end
+
+    create index(:sites_previews, [:preview_key])
+
     create table(:sites_identities) do
       add :name, :string
       add :alternate_name, :string

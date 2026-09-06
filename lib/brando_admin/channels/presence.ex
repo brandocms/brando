@@ -13,9 +13,10 @@ defmodule BrandoAdmin.Presence do
         |> Brando.Users.get_users_map()
         |> Map.new()
 
-      for {id, %{metas: metas}} <- presences, into: %{} do
-        user = users[String.to_integer(id)]
-
+      for {id, %{metas: metas}} <- presences,
+          user = users[String.to_integer(id)],
+          not is_nil(user),
+          into: %{} do
         {user.id,
          %{
            user: %{
@@ -204,7 +205,7 @@ defmodule BrandoAdmin.Presence do
 
         track(
           self(),
-          "url:#{url}",
+          Brando.Tenant.Topic.scoped("url:#{url}"),
           current_user_id,
           %{
             last_active: timestamp,
@@ -217,19 +218,19 @@ defmodule BrandoAdmin.Presence do
       def untrack_url(url, current_user_id) do
         untrack(
           self(),
-          "url:#{url}",
+          Brando.Tenant.Topic.scoped("url:#{url}"),
           current_user_id
         )
       end
 
       def update_dirty_fields(url, user_id, dirty_fields) do
-        update(self(), "url:#{url}", user_id, fn state ->
+        update(self(), Brando.Tenant.Topic.scoped("url:#{url}"), user_id, fn state ->
           %{state | dirty_fields: dirty_fields}
         end)
       end
 
       def update_active_field(url, user_id, active_field) do
-        update(self(), "url:#{url}", user_id, fn state ->
+        update(self(), Brando.Tenant.Topic.scoped("url:#{url}"), user_id, fn state ->
           %{state | active_field: active_field}
         end)
       end

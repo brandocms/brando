@@ -248,7 +248,7 @@ defmodule BrandoAdmin.Menu do
   def get_menu(current_user \\ nil, current_site \\ nil) do
     content_menus = Brando.admin_module(Menus).__menus__()
 
-    [
+    menus = [
       %{
         name: gettext("System"),
         items:
@@ -283,6 +283,7 @@ defmodule BrandoAdmin.Menu do
                     name: gettext("Scheduled publishing"),
                     url: "/admin/config/scheduled_publishing"
                   },
+                  if(Brando.Authorization.enabled?(), do: %{name: gettext("Permissions"), url: "/admin/groups"}),
                   environments_menu_item(),
                   publishing_menu_item(current_site),
                   frontend_assets_menu_item(current_user),
@@ -366,6 +367,8 @@ defmodule BrandoAdmin.Menu do
           ] ++ content_menus
       }
     ]
+
+    if Brando.Authorization.enabled?(), do: filter_authorized(menus, current_user), else: menus
   end
 
   defp publishing_menu_item(%{delivery_mode: :static}) do
@@ -374,21 +377,20 @@ defmodule BrandoAdmin.Menu do
 
   defp publishing_menu_item(_site), do: nil
 
-  defp sites_menu_item(%{role: :superuser}) do
-    if Tenant.mode() == :multi, do: %{name: gettext("Sites"), url: "/admin/sites"}
+  defp sites_menu_item(user) do
+    if Brando.Authorization.enabled?() or (user && user.role == :superuser) do
+      if Tenant.mode() == :multi, do: %{name: gettext("Sites"), url: "/admin/sites"}
+    end
   end
-
-  defp sites_menu_item(_user), do: nil
 
   defp environments_menu_item do
     if Tenant.enabled?(), do: %{name: gettext("Environments"), url: "/admin/config/environments"}
   end
 
-  defp frontend_assets_menu_item(%{role: :superuser}) do
-    %{name: gettext("Frontend assets"), url: "/admin/config/assets"}
+  defp frontend_assets_menu_item(user) do
+    if Brando.Authorization.enabled?() or (user && user.role == :superuser),
+      do: %{name: gettext("Frontend assets"), url: "/admin/config/assets"}
   end
-
-  defp frontend_assets_menu_item(_user), do: nil
 
   defp shared_library_menu_item(%{role: role}) do
     if Tenant.mode() == :multi do
@@ -398,4 +400,42 @@ defmodule BrandoAdmin.Menu do
   end
 
   defp shared_library_menu_item(_user), do: nil
+
+  defp filter_authorized(items, user) do
+    Enum.flat_map(items, fn item ->
+      case item do
+        %{items: children} when is_list(children) and children != [] ->
+          case filter_authorized(children, user) do
+            [] -> []
+            children -> [%{item | items: children}]
+          end
+
+        %{url: url} when is_binary(url) ->
+          if allowed_url?(user, url), do: [item], else: []
+
+        _ ->
+          []
+      end
+    end)
+  end
+
+  defp allowed_url?(user, url) do
+    router = Brando.RuntimeConfig.web_module(Router)
+
+    case Phoenix.Router.route_info(router, "GET", URI.parse(url).path, "localhost") do
+      %{phoenix_live_view: {view, action, _, _}, path_params: params} ->
+        {operation, resource} = BrandoAdmin.Authorization.requirement(view, params, action)
+
+        scope =
+          if resource in [:sites, :frontend_assets, :shared_library] or
+               (resource == Brando.Users.User and Brando.Tenant.enabled?()),
+             do: Brando.Authorization.Scope.installation(user),
+             else: Brando.Authorization.Scope.current(user)
+
+        Brando.Authorization.can?(scope, operation, resource)
+
+      _ ->
+        false
+    end
+  end
 end

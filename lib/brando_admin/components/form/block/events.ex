@@ -758,7 +758,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
     Phoenix.PubSub.broadcast(
       Brando.pubsub(),
-      "brando:active_field:#{entry.id}",
+      Brando.Tenant.Topic.entry("active_field", entry.__struct__, entry.id),
       {:active_field, field_name, current_user_id}
     )
 

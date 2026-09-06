@@ -8,7 +8,11 @@ defmodule BrandoAdmin.Navigation.MenuListLive do
   def render(assigns) do
     ~H"""
     <Content.header title={gettext("Navigation")} subtitle={gettext("Overview")}>
-      <.link navigate="/admin/config/navigation/menus/create" class="primary">
+      <.link
+        :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
+        navigate="/admin/config/navigation/menus/create"
+        class="primary"
+      >
         {gettext("Create new")}
       </.link>
     </Content.header>

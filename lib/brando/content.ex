@@ -545,7 +545,7 @@ defmodule Brando.Content do
         order_by: [asc: t.schema, asc: t.entry_id]
       )
 
-    {:ok, Brando.Repo.all(query)}
+    {:ok, query |> Brando.Authorization.Boundary.identifiers() |> Brando.Repo.all()}
   end
 
   def list_identifiers(schema, list_opts) when is_atom(schema) do
@@ -558,7 +558,7 @@ defmodule Brando.Content do
       Brando.Query.run_list_query_reducer(
         Brando.Query,
         list_opts,
-        initial_query,
+        Brando.Authorization.Boundary.identifiers(initial_query),
         Brando.Content.Identifier
       )
 
@@ -569,7 +569,7 @@ defmodule Brando.Content do
         order_by: [asc: t.schema, asc: t.language, asc: t.title]
       )
 
-    {:ok, Brando.Repo.all(query)}
+    {:ok, query |> Brando.Authorization.Boundary.identifiers() |> Brando.Repo.all()}
   end
 
   def list_identifiers(schemas, list_opts) when is_list(schemas) do
@@ -582,7 +582,7 @@ defmodule Brando.Content do
       Brando.Query.run_list_query_reducer(
         Brando.Query,
         list_opts,
-        initial_query,
+        Brando.Authorization.Boundary.identifiers(initial_query),
         Brando.Content.Identifier
       )
 
@@ -593,7 +593,7 @@ defmodule Brando.Content do
         order_by: [asc: t.schema, asc: t.language, asc: t.title]
       )
 
-    {:ok, Brando.Repo.all(query)}
+    {:ok, query |> Brando.Authorization.Boundary.identifiers() |> Brando.Repo.all()}
   end
 
   def list_identifiers(args) when is_map(args) do
@@ -617,7 +617,7 @@ defmodule Brando.Content do
         order_by: fragment("array_position(?, ?)", ^ids, t.id)
       )
 
-    {:ok, Brando.Repo.all(query)}
+    {:ok, query |> Brando.Authorization.Boundary.identifiers() |> Brando.Repo.all()}
   end
 
   def list_identifiers_for(entries) when is_list(entries) do

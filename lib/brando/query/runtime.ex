@@ -533,6 +533,8 @@ defmodule Brando.Query.Runtime do
         module,
         stream \\ false
       ) do
+    args = Brando.Authorization.Boundary.cache_options(args)
+    initial_query = Brando.Authorization.Boundary.query(initial_query, module)
     cache_args = Map.get(args, :cache)
 
     case try_cache(query_key, cache_args) do
@@ -581,6 +583,9 @@ defmodule Brando.Query.Runtime do
   Handle single queries
   """
   def handle_single_query(context, query_key, args, module, block, schema_atom) do
+    args = Brando.Authorization.Boundary.cache_options(args)
+    original_block = block
+    block = fn query -> Brando.Authorization.Boundary.query(original_block.(query), module) end
     cache_args = Map.get(args, :cache)
 
     case try_cache(query_key, cache_args) do

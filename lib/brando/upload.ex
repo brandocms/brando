@@ -39,13 +39,15 @@ defmodule Brando.Upload do
   Finally returns an image struct
   """
   def handle_upload(%{uploader: "S3"} = meta, upload_entry, cfg, user) do
-    with {:ok, upload} <- create_upload_struct(meta, upload_entry, cfg) do
+    with :ok <- Brando.Authorization.Media.authorize_config(user, cfg),
+         {:ok, upload} <- create_upload_struct(meta, upload_entry, cfg) do
       handle_upload_type(upload, user, :direct_to_s3)
     end
   end
 
   def handle_upload(meta, upload_entry, cfg, user) do
-    with {:ok, upload} <- create_upload_struct(meta, upload_entry, cfg),
+    with :ok <- Brando.Authorization.Media.authorize_config(user, cfg),
+         {:ok, upload} <- create_upload_struct(meta, upload_entry, cfg),
          {:ok, upload} <- get_valid_filename(upload),
          {:ok, upload} <- ensure_correct_ext(upload),
          {:ok, upload} <- check_mimetype(upload),

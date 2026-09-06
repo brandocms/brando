@@ -8,7 +8,11 @@ defmodule BrandoAdmin.Sites.GlobalSetListLive do
   def render(assigns) do
     ~H"""
     <Content.header title={gettext("Global sets")} subtitle={gettext("Overview")}>
-      <.link navigate="/admin/config/global_sets/create" class="primary">
+      <.link
+        :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
+        navigate="/admin/config/global_sets/create"
+        class="primary"
+      >
         {gettext("Create new")}
       </.link>
     </Content.header>

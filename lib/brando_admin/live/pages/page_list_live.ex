@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Pages.PageListLive do
   def render(assigns) do
     ~H"""
     <Content.header title={gettext("Pages & Sections")} subtitle={gettext("Overview")}>
-      <.link navigate="/admin/pages/create" class="primary">
+      <.link :if={BrandoAdmin.Authorization.allowed?(:create, @schema)} navigate="/admin/pages/create" class="primary">
         {gettext("Create page")}
       </.link>
     </Content.header>

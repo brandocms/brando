@@ -40,13 +40,31 @@ defmodule Brando.Plug.LivePreview do
 
   def call(%Plug.Conn{path_info: ["__livepreview" | _suffix]} = conn, _) do
     key = conn.query_string && Plug.Conn.Query.decode(conn.query_string)["key"]
+    conn = put_resp_header(conn, "cache-control", "private, no-store")
 
+    if Brando.Authorization.enabled?() do
+      conn = conn |> fetch_session() |> BrandoAdmin.UserAuth.fetch_current_user(nil)
+      user = conn.assigns[:current_user]
+
+      if user && Brando.Authorization.Preview.authorize(key, user.id) == :ok do
+        serve(conn, key)
+      else
+        conn |> put_resp_content_type("text/html") |> send_resp(403, "This preview is no longer available.") |> halt()
+      end
+    else
+      serve(conn, key)
+    end
+  end
+
+  def call(conn, _), do: conn
+
+  defp serve(conn, key) do
     case Brando.LivePreview.get_cache(key) do
       {:ok, nil} ->
         conn
         |> put_resp_content_type("text/html")
         |> send_resp(200, [
-          "LIVE PREVIEW FAILED. NO DATA SET FOR KEY #{key}"
+          "LIVE PREVIEW FAILED. NO DATA SET FOR KEY #{Phoenix.HTML.safe_to_string(Phoenix.HTML.html_escape(key || ""))}"
         ])
         |> halt()
 
@@ -96,6 +114,4 @@ defmodule Brando.Plug.LivePreview do
         end
     end
   end
-
-  def call(conn, _), do: conn
 end

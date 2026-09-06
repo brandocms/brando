@@ -36,6 +36,12 @@ defmodule Brando.Environments do
   def create_environment(site, attrs, opts \\ [])
 
   def create_environment(%Site{} = site, attrs, opts) do
+    Brando.Authorization.Operations.run(:create, :environments, site.id, opts, fn ->
+      do_create_environment(site, attrs, opts)
+    end)
+  end
+
+  defp do_create_environment(%Site{} = site, attrs, opts) do
     with {:ok, environment} <- Registry.create_environment(site, attrs),
          prefix = Tenant.prefix(site, environment),
          :ok <- create_schema_or_compensate(environment, prefix),
@@ -99,6 +105,12 @@ defmodule Brando.Environments do
   def delete_environment(environment, opts \\ [])
 
   def delete_environment(%Environment{} = environment, opts) do
+    Brando.Authorization.Operations.run(:delete, :environments, environment.site_id, opts, fn ->
+      do_delete_environment(environment, opts)
+    end)
+  end
+
+  defp do_delete_environment(%Environment{} = environment, opts) do
     with %Environment{} = current_environment <- Registry.get_environment(environment.id),
          %Site{} = site <- Registry.get_site(current_environment.site_id) do
       with_site_lock(site, fn -> delete_under_lock(site, current_environment.id, opts) end)
@@ -113,6 +125,12 @@ defmodule Brando.Environments do
   def set_live(environment, opts \\ [])
 
   def set_live(%Environment{} = environment, opts) do
+    Brando.Authorization.Operations.run(:promote, :environments, environment.site_id, opts, fn ->
+      do_set_live(environment, opts)
+    end)
+  end
+
+  defp do_set_live(%Environment{} = environment, opts) do
     case Registry.get_environment(environment.id) do
       %Environment{live: true} = current_environment ->
         {:ok, current_environment}
@@ -153,6 +171,12 @@ defmodule Brando.Environments do
     do: {:error, :same_environment}
 
   def copy_environment(%Environment{} = source, %Environment{} = target, opts) do
+    Brando.Authorization.Operations.run(:promote, :environments, target.site_id, opts, fn ->
+      do_copy_environment(source, target, opts)
+    end)
+  end
+
+  defp do_copy_environment(%Environment{} = source, %Environment{} = target, opts) do
     with %Environment{} = current_source <- Registry.get_environment(source.id),
          %Environment{} = current_target <- Registry.get_environment(target.id),
          true <- current_source.site_id == current_target.site_id,
@@ -257,7 +281,9 @@ defmodule Brando.Environments do
   def prune_archives(site, keep \\ @default_archive_keep)
 
   def prune_archives(%Site{} = site, keep) when is_integer(keep) and keep >= 0 do
-    with_site_lock(site, fn -> prune_archives_under_lock(site, keep) end)
+    Brando.Authorization.Operations.run(:delete, :environments, site.id, [], fn ->
+      with_site_lock(site, fn -> prune_archives_under_lock(site, keep) end)
+    end)
   end
 
   def prune_archives(%Site{}, keep), do: {:error, {:invalid_keep, keep}}
@@ -289,6 +315,10 @@ defmodule Brando.Environments do
   def rollback(site, opts \\ [])
 
   def rollback(%Site{} = site, opts) do
+    Brando.Authorization.Operations.run(:promote, :environments, site.id, opts, fn -> do_rollback(site, opts) end)
+  end
+
+  defp do_rollback(%Site{} = site, opts) do
     with_site_lock(site, fn ->
       case archive_to_restore(site, opts[:archive_schema]) do
         {:ok, archive} -> restore_archive(site, archive, opts)
@@ -317,6 +347,15 @@ defmodule Brando.Environments do
   def schedule_copy(source, target, scheduled_at, opts \\ [])
 
   def schedule_copy(%Environment{} = source, %Environment{} = target, %DateTime{} = scheduled_at, opts) do
+    Brando.Authorization.Operations.run(:promote, :environments, target.site_id, opts, fn ->
+      do_schedule_copy(source, target, scheduled_at, opts)
+    end)
+  end
+
+  def schedule_copy(%Environment{}, %Environment{}, scheduled_at, _opts),
+    do: {:error, {:invalid_scheduled_at, scheduled_at}}
+
+  defp do_schedule_copy(%Environment{} = source, %Environment{} = target, %DateTime{} = scheduled_at, opts) do
     if source.site_id == target.site_id and source.id != target.id do
       %{
         site_id: source.site_id,
@@ -333,15 +372,21 @@ defmodule Brando.Environments do
     end
   end
 
-  def schedule_copy(%Environment{}, %Environment{}, scheduled_at, _opts),
-    do: {:error, {:invalid_scheduled_at, scheduled_at}}
-
   @doc "Schedules an environment to become live through Oban."
   @spec schedule_set_live(Environment.t(), DateTime.t(), keyword()) ::
           {:ok, Oban.Job.t()} | {:error, Ecto.Changeset.t() | term()}
   def schedule_set_live(environment, scheduled_at, opts \\ [])
 
   def schedule_set_live(%Environment{} = environment, %DateTime{} = scheduled_at, opts) do
+    Brando.Authorization.Operations.run(:promote, :environments, environment.site_id, opts, fn ->
+      do_schedule_set_live(environment, scheduled_at, opts)
+    end)
+  end
+
+  def schedule_set_live(%Environment{}, scheduled_at, _opts),
+    do: {:error, {:invalid_scheduled_at, scheduled_at}}
+
+  defp do_schedule_set_live(%Environment{} = environment, %DateTime{} = scheduled_at, opts) do
     %{
       site_id: environment.site_id,
       environment_id: environment.id,
@@ -352,9 +397,6 @@ defmodule Brando.Environments do
     |> EnvironmentSetLive.new(scheduled_at: scheduled_at, tags: ["environment-operation"])
     |> Oban.insert()
   end
-
-  def schedule_set_live(%Environment{}, scheduled_at, _opts),
-    do: {:error, {:invalid_scheduled_at, scheduled_at}}
 
   @doc "Lists pending copy/live-switch jobs for a site."
   @spec list_scheduled_operations(Site.t()) :: [Oban.Job.t()]
@@ -375,6 +417,12 @@ defmodule Brando.Environments do
   @doc "Cancels a pending environment operation after checking site ownership."
   @spec cancel_scheduled_operation(Site.t(), pos_integer()) :: :ok | {:error, term()}
   def cancel_scheduled_operation(%Site{} = site, job_id) do
+    Brando.Authorization.Operations.run(:promote, :environments, site.id, [], fn ->
+      do_cancel_scheduled_operation(site, job_id)
+    end)
+  end
+
+  defp do_cancel_scheduled_operation(site, job_id) do
     case Repo.get(Oban.Job, job_id, @public_opts) do
       %Oban.Job{} = job ->
         if scheduled_environment_job?(job, site.id) do

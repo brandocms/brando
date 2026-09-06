@@ -110,6 +110,31 @@ defmodule Brando.Tenant.SetupTest do
     refute File.exists?(Path.join(Brando.config(:sites_path), "broken-site"))
   end
 
+  test "an installation provisioner receives access to the new site before environment setup", %{creator: creator} do
+    put_test_env(:authorization_mode, :groups)
+    owner = Brando.Factory.insert(:random_user, role: :superuser)
+    {:ok, _} = Brando.Authorization.Migration.run()
+    scope = Brando.Authorization.Scope.installation(owner)
+
+    {:ok, group} =
+      Brando.Authorization.Groups.create(scope, %{name: "Site provisioners"}, [
+        "brando.admin.access",
+        "brando.sites.create"
+      ])
+
+    {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, creator.id)
+    assert {:ok, site} = Setup.create_site(site_attrs("group-provisioned-site"), creator)
+    assert length(site.environments) == 2
+    refute Brando.Authorization.Engine.superuser?(Brando.Authorization.Scope.installation(creator))
+    assert Brando.Authorization.can?(Brando.Authorization.Scope.site(creator, site), :create, :environments)
+
+    assert Repo.exists?(
+             from(e in Brando.Authorization.AuditEvent,
+               where: e.site_id == ^site.id and e.action == "membership.provisioned"
+             )
+           )
+  end
+
   test "never deletes storage that existed before provisioning", %{creator: creator} do
     existing_root = Path.join(Brando.config(:media_path), "existing-site")
     existing_file = Path.join(existing_root, "keep.txt")

@@ -258,6 +258,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     <CircleDropdown.render id={@id}>
       <%= if @default_actions? do %>
         <.action_button
+          :if={BrandoAdmin.Authorization.allowed?(:update, @entry)}
           id={"action_#{@listing.name}_edit_entry_#{@entry.id}"}
           entry_id={@entry.id}
           language={@language}
@@ -266,6 +267,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           {gettext("Edit")} {@translated_singular}
         </.action_button>
         <.action_button
+          :if={BrandoAdmin.Authorization.allowed?(:delete, @entry)}
           id={"action_#{@listing.name}_delete_entry_#{@entry.id}"}
           entry_id={@entry.id}
           language={@language}
@@ -275,7 +277,10 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           {gettext("Delete")} {@translated_singular}
         </.action_button>
         <.action_button
-          :if={@has_duplicate_fn?}
+          :if={
+            @has_duplicate_fn? && BrandoAdmin.Authorization.allowed?(:duplicate, @entry) &&
+              BrandoAdmin.Authorization.allowed?(:create, @schema)
+          }
           id={"action_#{@listing.name}_duplicate_entry_#{@entry.id}"}
           entry_id={@entry.id}
           language={@language}
@@ -285,7 +290,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         </.action_button>
         <.action_button
           :for={lang <- @duplicate_langs}
-          :if={@duplicate_langs?}
+          :if={@duplicate_langs? && BrandoAdmin.Authorization.allowed?(:duplicate, @entry)}
           :key={lang}
           id={"action_#{@listing.name}_duplicate_entry_to_lang_#{@entry.id}_lang_#{lang}"}
           entry_id={@entry.id}
@@ -307,7 +312,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           {gettext("Translate to")} [{String.upcase(lang)}] <.icon name="hero-sparkles" />
         </.action_button>
         <.action_button
-          :if={@has_blocks?}
+          :if={@has_blocks? && BrandoAdmin.Authorization.allowed?(:publish, @entry)}
           id={"action_#{@listing.name}_rerender_entry_#{@entry.id}"}
           entry_id={@entry.id}
           language={@language}
@@ -328,7 +333,10 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         {g(@schema, label)}
       </.action_button>
       <.action_button
-        :if={Map.has_key?(@entry, :deleted_at) && not is_nil(@entry.deleted_at)}
+        :if={
+          Map.has_key?(@entry, :deleted_at) && not is_nil(@entry.deleted_at) &&
+            BrandoAdmin.Authorization.allowed?(:restore, @entry)
+        }
         id={"action_#{@listing.name}_undelete_#{@entry.id}"}
         entry_id={@entry.id}
         language={@language}
@@ -379,7 +387,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       <div center={@is_deleted} phx-click={if !@is_deleted, do: toggle_dropdown("#status-dropdown-#{@entry_id}")}>
         <.status_circle status={@status_value} publish_at={@publish_at} />
         <.status_dropdown
-          :if={!@is_deleted}
+          :if={!@is_deleted && BrandoAdmin.Authorization.allowed?(:publish, @entry)}
           id={"status-dropdown-#{@entry_id}"}
           entry_id={@entry.id}
           schema={@entry.__struct__}

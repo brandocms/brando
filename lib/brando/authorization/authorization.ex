@@ -23,6 +23,24 @@ defmodule Brando.Authorization do
 
   alias Brando.Authorization.Rule
 
+  @doc "Whether this installation has switched from legacy roles to groups."
+  defdelegate enabled?(), to: Brando.Authorization.Engine
+
+  @doc "Boolean permission check for UI presentation."
+  defdelegate can?(scope, action, subject), to: Brando.Authorization.Engine
+
+  @doc "Authorizes an operation using fresh account and group state."
+  defdelegate authorize(scope, action, subject), to: Brando.Authorization.Engine
+
+  @doc "Builds an authorized Ecto query before pagination or loading."
+  defdelegate scope(scope, action, schema), to: Brando.Authorization.Engine
+
+  @doc "Explains a permission decision for an authorized inspection interface."
+  defdelegate explain(scope, action, subject), to: Brando.Authorization.Engine
+
+  @doc "Loads one presentation snapshot for repeated checks in a render."
+  defdelegate snapshot(scope), to: Brando.Authorization.Engine
+
   defmacro __using__(_) do
     quote do
       Module.register_attribute(__MODULE__, :rules, accumulate: true)
@@ -58,6 +76,15 @@ defmodule Brando.Authorization do
 
         @spec can?(user, atom, any) :: {:ok, :authorized} | {:error, :unauthorized}
         def can?(%Brando.Users.User{} = user, action, subject) when is_map(subject) do
+          if Brando.Authorization.enabled?() do
+            scope = Brando.Authorization.Boundary.actor_scope(user)
+            if Brando.Authorization.can?(scope, action, subject), do: {:ok, :authorized}, else: {:error, :unauthorized}
+          else
+            legacy_can?(user, action, subject)
+          end
+        end
+
+        defp legacy_can?(user, action, subject) do
           rules = @authorization_module.__rules__(user.role)
 
           if Enum.reduce(

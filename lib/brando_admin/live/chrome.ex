@@ -9,7 +9,7 @@ defmodule BrandoAdmin.Chrome do
 
   """
 
-  use Phoenix.LiveView
+  use BrandoAdmin, :child_live_view
   use Gettext, backend: Brando.Gettext
 
   import BrandoAdmin.Utils, only: [show_modal: 1]
@@ -17,25 +17,16 @@ defmodule BrandoAdmin.Chrome do
   alias Brando.Utils.Datetime
   alias BrandoAdmin.Components.Content
 
-  ##
+  alias Brando.Authorization.{Realtime, Scope}
+
+  on_mount {BrandoAdmin.UserAuth, :mount_current_user}
+  on_mount {Brando.Tenant.LiveView, :default}
+  on_mount {BrandoAdmin.Authorization, :default}
 
   def mount(_params, _session, socket) do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Brando.pubsub(), "presence")
-      presences = build_presences()
-
-      active_presences = Enum.filter(presences, &(&1.status in ["online", "idle"]))
-
-      inactive_presences =
-        presences
-        |> Enum.filter(&(&1.status == "offline"))
-        |> Enum.reverse()
-
-      {:ok,
-       socket
-       |> assign(:socket_connected, true)
-       |> stream(:active_presences, active_presences)
-       |> stream(:inactive_presences, inactive_presences)}
+      {:ok, socket |> assign(:socket_connected, true) |> refresh_authorization()}
     else
       {:ok,
        socket
@@ -131,148 +122,46 @@ defmodule BrandoAdmin.Chrome do
     """
   end
 
-  def handle_info({_, {:presence, %{user_joined: %{user: user, metas: metas}}}}, socket) do
-    last_active =
-      metas
-      |> Enum.map(& &1.online_at)
-      |> Enum.max()
+  def handle_info({_, {:presence, _}}, socket), do: {:noreply, refresh_authorization(socket)}
 
-    urls = Enum.map(metas, & &1.url)
-    status = (Enum.any?(metas, & &1.active) && "online") || "idle"
+  def refresh_authorization(socket) do
+    scope = socket.assigns[:authorization_scope] || Scope.current(socket.assigns.current_user)
+    presences = build_presences(scope)
+    {active, inactive} = Enum.split_with(presences, &(&1.status in ["online", "idle"]))
 
-    presence = %{
-      id: user.id,
-      name: user.name,
-      status: status,
-      urls: urls,
-      last_active: last_active,
-      last_login: user.last_login,
-      last_seen: user.last_seen,
-      avatar: user.avatar
-    }
-
-    {:noreply, assign_presence(socket, status, presence)}
+    socket
+    |> stream(:active_presences, active, reset: true)
+    |> stream(:inactive_presences, Enum.reverse(inactive), reset: true)
   end
 
-  def handle_info({_, {:presence, %{user_left: %{metas: metas, user: user}}}}, socket) do
-    if metas == [] do
-      current_time = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
+  def assign_presences(socket), do: refresh_authorization(socket)
 
-      presence = %{
+  defp build_presences(scope) do
+    presence_map = Map.new(Brando.presence().list("lobby"))
+
+    Enum.map(Realtime.users(scope), fn user ->
+      metas =
+        presence_map
+        |> Map.get(user.id, %{metas: []})
+        |> Map.get(:metas, [])
+        |> Enum.filter(&Realtime.visible_meta?(scope, &1))
+
+      %{
         id: user.id,
         name: user.name,
-        status: "offline",
-        urls: [],
-        last_active: nil,
-        last_login: user.last_login,
-        last_seen: current_time,
-        avatar: user.avatar
+        avatar: user.avatar,
+        status:
+          cond do
+            metas == [] -> "offline"
+            Enum.any?(metas, & &1.active) -> "online"
+            true -> "idle"
+          end,
+        urls: metas |> Enum.map(& &1.url) |> Enum.uniq(),
+        last_active: metas |> Enum.map(& &1.online_at) |> Enum.max(fn -> nil end),
+        # Global timestamps must not reveal this person's activity in other sites.
+        last_login: if(scope.kind == :standalone, do: user.last_login),
+        last_seen: if(scope.kind == :standalone, do: user.last_seen)
       }
-
-      # `current_time` above is this view's own optimistic copy, so the row it
-      # renders for the departed user is right without waiting for a refetch.
-      # Persisting it is `Presence.LobbyFetcher`'s job now — from here it was a
-      # write performed once per *watching* browser, and not at all when the
-      # leaving user was the last one online.
-      {:noreply, assign_presence(socket, "offline", presence)}
-    else
-      last_active =
-        metas
-        |> Enum.map(& &1.online_at)
-        |> Enum.max()
-
-      urls = Enum.map(metas, & &1.url)
-      status = (Enum.any?(metas, & &1.active) && "online") || "idle"
-
-      presence = %{
-        id: user.id,
-        name: user.name,
-        status: status,
-        urls: urls,
-        last_active: last_active,
-        last_login: user.last_login,
-        last_seen: user.last_seen,
-        avatar: user.avatar
-      }
-
-      {:noreply, assign_presence(socket, status, presence)}
-    end
-  end
-
-  def assign_presences(socket) do
-    presences = build_presences()
-
-    Enum.reduce(
-      presences,
-      socket,
-      fn {_, presence}, updated_socket ->
-        assign_presence(updated_socket, presence.status, presence)
-      end
-    )
-  end
-
-  defp assign_presence(socket, "online", presence) do
-    socket
-    |> stream_insert(:active_presences, presence, at: -1)
-    |> stream_delete(:inactive_presences, presence)
-  end
-
-  defp assign_presence(socket, "idle", presence) do
-    socket
-    |> stream_insert(:active_presences, presence)
-    |> stream_delete(:inactive_presences, presence)
-  end
-
-  defp assign_presence(socket, "offline", presence) do
-    socket
-    |> stream_insert(:inactive_presences, presence, at: -1)
-    |> stream_delete(:active_presences, presence)
-  end
-
-  # If we ever will listen for "delete user" events
-  # defp remove_presence(socket, id) do
-  #   update(socket, :presences, &Map.delete(&1, id))
-  # end
-
-  defp build_presences do
-    presences = Brando.presence().list("lobby")
-    presence_map = Map.new(presences)
-    all_users_map = Brando.Users.get_users_map()
-
-    Enum.map(all_users_map, fn {id, user} ->
-      case Map.get(presence_map, id) do
-        nil ->
-          %{
-            id: id,
-            name: user.name,
-            status: "offline",
-            urls: [],
-            last_active: nil,
-            last_login: user.last_login,
-            last_seen: user.last_seen,
-            avatar: user.avatar
-          }
-
-        %{user: user, metas: metas} ->
-          last_active =
-            metas
-            |> Enum.map(& &1.online_at)
-            |> Enum.max()
-
-          urls = Enum.map(metas, & &1.url)
-          status = (Enum.any?(metas, & &1.active) && "online") || "idle"
-
-          %{
-            id: id,
-            name: user.name,
-            status: status,
-            urls: urls,
-            last_login: user.last_login,
-            last_seen: user.last_seen,
-            last_active: last_active,
-            avatar: user.avatar
-          }
-      end
     end)
   end
 end

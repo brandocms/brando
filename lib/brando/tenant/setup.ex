@@ -28,6 +28,14 @@ defmodule Brando.Tenant.Setup do
 
   @spec create_site(map(), User.t(), keyword()) :: {:ok, Site.t()} | {:error, term()}
   def create_site(attrs, %User{} = creator, opts \\ []) do
+    scope = Brando.Authorization.Scope.installation(creator)
+
+    with :ok <- Brando.Authorization.Boundary.authorize(scope, :create, :sites) do
+      do_create_site(attrs, creator, opts)
+    end
+  end
+
+  defp do_create_site(attrs, creator, opts) do
     case site_key(attrs) do
       key when is_binary(key) ->
         Lock.with(lifecycle_lock_key(key), fn -> create_under_lock(attrs, creator, opts) end)
@@ -38,13 +46,17 @@ defmodule Brando.Tenant.Setup do
   end
 
   @spec suspend_site(Site.t()) :: {:ok, Site.t()} | {:error, term()}
-  def suspend_site(%Site{} = site), do: update_status(site, :suspended)
+  def suspend_site(%Site{} = site, opts \\ []), do: lifecycle(:update, opts, fn -> update_status(site, :suspended) end)
 
   @spec activate_site(Site.t()) :: {:ok, Site.t()} | {:error, term()}
-  def activate_site(%Site{} = site), do: update_status(site, :active)
+  def activate_site(%Site{} = site, opts \\ []), do: lifecycle(:update, opts, fn -> update_status(site, :active) end)
 
   @spec archive_site(Site.t(), keyword()) :: {:ok, Site.t()} | {:error, term()}
   def archive_site(%Site{} = site, opts \\ []) do
+    lifecycle(:delete, opts, fn -> do_archive_site(site, opts) end)
+  end
+
+  defp do_archive_site(site, opts) do
     now = Keyword.get_lazy(opts, :now, &DateTime.utc_now/0)
 
     Lock.with(lifecycle_lock_key(site.key), fn ->
@@ -57,7 +69,12 @@ defmodule Brando.Tenant.Setup do
 
   @spec delete_site(Site.t(), keyword()) :: {:ok, Site.t()} | {:error, term()}
   def delete_site(%Site{} = site, opts \\ []) do
-    Lock.with(lifecycle_lock_key(site.key), fn -> delete_under_lock(site, opts) end)
+    lifecycle(:delete, opts, fn -> Lock.with(lifecycle_lock_key(site.key), fn -> delete_under_lock(site, opts) end) end)
+  end
+
+  defp lifecycle(action, opts, fun) do
+    actor = opts[:actor] || Brando.Authorization.Boundary.current_scope()
+    with :ok <- Brando.Authorization.Boundary.authorize(actor, action, :sites), do: fun.()
   end
 
   defp create_under_lock(attrs, creator, opts) do
@@ -83,14 +100,41 @@ defmodule Brando.Tenant.Setup do
     with :ok <- create_storage(site),
          :ok <- validate_environments(environments),
          [live_attrs | remaining_attrs] <- order_live_first(environments),
+         {:ok, _assignment} <- assign_creator(creator, site),
          {:ok, live_environment} <- Environments.create_environment(site, live_attrs, creator: creator),
          :ok <- seed(site, live_environment, creator, opts),
-         {:ok, _environments} <- create_copies(site, live_environment, remaining_attrs, creator),
-         {:ok, _assignment} <- Access.grant(creator, site, :admin) do
+         {:ok, _environments} <- create_copies(site, live_environment, remaining_attrs, creator) do
       {:ok, Registry.get_site(site.id)}
     else
       [] -> {:error, :missing_live_environment}
       {:error, _reason} = error -> error
+    end
+  end
+
+  defp assign_creator(creator, site) do
+    if Brando.Authorization.enabled?() do
+      scope = Brando.Authorization.Scope.site(creator, site)
+
+      # The installation create check already authorized this new site.
+      # Bootstrap its creator before provisioning the first environment.
+      Repo.transaction(fn ->
+        {:ok, groups} = Brando.Authorization.Migration.seed_scope(scope)
+        group = Enum.find(groups, &(&1.preset == :admin))
+        Repo.insert!(%Brando.Authorization.Membership{user_id: creator.id, group_id: group.id})
+
+        Repo.insert!(%Brando.Authorization.AuditEvent{
+          actor_id: creator.id,
+          site_id: site.id,
+          group_id: group.id,
+          subject_user_id: creator.id,
+          action: "membership.provisioned",
+          after: %{user_id: creator.id}
+        })
+
+        group
+      end)
+    else
+      Access.grant(creator, site, :admin)
     end
   end
 

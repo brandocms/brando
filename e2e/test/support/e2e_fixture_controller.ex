@@ -29,6 +29,42 @@ defmodule E2EFixtureController do
     |> send_resp(200, "")
   end
 
+  def authorization(conn, %{"role" => role}) when role in ["reader", "author", "publisher", "none"] do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    owner = get_admin_user()
+    user = Brando.Users.get_user!(%{matches: %{email: "editor@brandocms.com"}})
+    alias Brando.Authorization.{Groups, Scope}
+
+    for scope <- [Scope.installation(owner), Scope.standalone(owner)] do
+      {:ok, groups} = Groups.list(scope)
+      for group <- groups, do: Groups.remove_member(scope, group.id, user.id)
+    end
+
+    base =
+      ~w(brando.admin.access brando.profile.read brando.profile.update brando.pages.read brando.files.read brando.images.read)
+
+    keys =
+      case role do
+        "reader" ->
+          base
+
+        "author" ->
+          base ++
+            ~w(brando.pages.create brando.pages.update brando.pages.duplicate brando.pages.reorder brando.content_modules.read brando.content_module_sets.read brando.content_palettes.read brando.content_containers.read brando.content_table_templates.read)
+
+        "publisher" ->
+          base ++ ~w(brando.pages.update brando.pages.publish brando.pages.schedule)
+
+        "none" ->
+          []
+      end
+
+    {:ok, group} = Groups.create(Scope.standalone(owner), %{name: "Test #{role}"}, keys)
+    {:ok, :ok} = Groups.add_member(Scope.standalone(owner), group.id, user.id)
+    json(conn, %{user_id: user.id})
+  end
+
   def get_admin_user do
     Brando.Users.get_user!(%{matches: %{email: "admin@brandocms.com"}})
   end
@@ -53,7 +89,9 @@ defmodule E2EFixtureController do
         Brando.Drafts.Params.snapshot(entry)
       end
 
-    drafts = schema |> Brando.Drafts.identity(entry_id, get_admin_user().id) |> Brando.Drafts.list()
+    user = get_admin_user()
+    Brando.Authorization.Boundary.put_scope(Brando.Authorization.Scope.current(user))
+    drafts = schema |> Brando.Drafts.identity(entry_id, user.id) |> Brando.Drafts.list()
 
     counts =
       Map.new(
@@ -73,6 +111,7 @@ defmodule E2EFixtureController do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
     user = get_admin_user()
+    Brando.Authorization.Boundary.put_scope(Brando.Authorization.Scope.current(user))
     identity = Brando.Drafts.identity(Brando.Pages.Page, nil, user.id)
     [draft | _] = Brando.Drafts.list(identity)
 

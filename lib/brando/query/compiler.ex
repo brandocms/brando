@@ -143,6 +143,7 @@ defmodule Brando.Query.Compiler do
 
       def unquote(:"get_#{singular_schema}")(id) when is_binary(id) or is_integer(id) do
         query = unquote(block).(unquote(module)) |> where([t], t.id == ^id)
+        query = Brando.Authorization.Boundary.query(query, unquote(module))
 
         case Brando.Repo.one(query) do
           nil -> {:error, {unquote(singular_schema_atom), :not_found}}
@@ -169,6 +170,7 @@ defmodule Brando.Query.Compiler do
       def unquote(:"get_#{singular_schema}!")(id) when is_binary(id) or is_integer(id) do
         unquote(block).(unquote(module))
         |> where([t], t.id == ^id)
+        |> Brando.Authorization.Boundary.query(unquote(module))
         |> Brando.Repo.one!()
       end
 
@@ -178,6 +180,7 @@ defmodule Brando.Query.Compiler do
         __MODULE__
         |> Brando.Query.run_single_query_reducer(Map.delete(args, :include), unquote(module))
         |> unquote(block).()
+        |> Brando.Authorization.Boundary.query(unquote(module))
         |> Brando.Query.with_include(includes)
         |> limit(1)
         |> Brando.Repo.one!()

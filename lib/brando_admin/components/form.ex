@@ -169,7 +169,7 @@ defmodule BrandoAdmin.Components.Form do
     if field && entry && entry.id do
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
-        "brando:active_field:#{entry.id}",
+        Brando.Tenant.Topic.entry("active_field", socket.assigns.schema, entry.id),
         {:active_field, field, socket.assigns.current_user.id}
       )
     end
@@ -512,7 +512,7 @@ defmodule BrandoAdmin.Components.Form do
       ) do
     cache_key = socket.assigns.live_preview_cache_key
 
-    Brando.endpoint().broadcast("live_preview:#{cache_key}", "update_block", %{
+    Brando.LivePreview.broadcast(cache_key, "update_block", %{
       uid: uid,
       rendered_html: rendered_html,
       has_children: has_children?
@@ -1638,7 +1638,7 @@ defmodule BrandoAdmin.Components.Form do
     if changes != [] do
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
-        "brando:field_sync:#{entry_id}",
+        Brando.Tenant.Topic.entry("field_sync", socket.assigns.schema, entry_id),
         {:fields_shipped, %{changes: changes, user_id: user_id}}
       )
     end
@@ -1725,27 +1725,34 @@ defmodule BrandoAdmin.Components.Form do
       changeset = assoc_all_block_fields(block_changesets, changeset)
       user = socket.assigns.current_user
 
-      {:ok, preview_url, expiration_days} =
-        Brando.LivePreview.share(
-          schema,
-          changeset,
-          user,
-          updated_entry_assocs
-        )
+      case Brando.LivePreview.share(
+             schema,
+             changeset,
+             user,
+             updated_entry_assocs
+           ) do
+        {:ok, preview_url, expiration_days} ->
+          message =
+            gettext(
+              ~s(A shareable time limited URL has been created. The URL will expire %{expiration_days} days from now.<br><br><a href="%{preview_url}" target="_blank">OPEN LINK</a>),
+              %{expiration_days: expiration_days, preview_url: preview_url}
+            )
 
-      message =
-        gettext(
-          ~s(A shareable time limited URL has been created. The URL will expire %{expiration_days} days from now.<br><br><a href="%{preview_url}" target="_blank">OPEN LINK</a>),
-          %{expiration_days: expiration_days, preview_url: preview_url}
-        )
+          socket
+          |> clear_blocks_root_changesets()
+          |> push_event("b:alert", %{
+            title: gettext("Get shareable link"),
+            message: message,
+            type: "info"
+          })
 
-      socket
-      |> clear_blocks_root_changesets()
-      |> push_event("b:alert", %{
-        title: gettext("Get shareable link"),
-        message: message,
-        type: "info"
-      })
+        {:error, _} ->
+          push_event(socket, "b:alert", %{
+            title: gettext("Cannot share preview"),
+            message: gettext("You do not have permission to export this entry."),
+            type: "error"
+          })
+      end
     end
   end
 
@@ -2134,7 +2141,7 @@ defmodule BrandoAdmin.Components.Form do
                 <.icon name="hero-eye" class="s" />
               </button>
               <button
-                :if={@has_live_preview?}
+                :if={@has_live_preview? && BrandoAdmin.Authorization.allowed?(:export, @schema)}
                 class="form-tool-share"
                 phx-click={JS.push("share_link", target: @myself)}
                 type="button"
@@ -2601,7 +2608,7 @@ defmodule BrandoAdmin.Components.Form do
       else
         Phoenix.PubSub.broadcast(
           Brando.pubsub(),
-          "brando:dirty_fields:#{entry.id}",
+          Brando.Tenant.Topic.entry("dirty_fields", socket.assigns.schema, entry.id),
           {:dirty_fields, changed_fields, current_user.id}
         )
 
@@ -2742,7 +2749,7 @@ defmodule BrandoAdmin.Components.Form do
     if entry && entry.id do
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
-        "brando:active_field:#{entry.id}",
+        Brando.Tenant.Topic.entry("active_field", socket.assigns.schema, entry.id),
         {:active_field, field, current_user.id}
       )
 
@@ -3194,7 +3201,7 @@ defmodule BrandoAdmin.Components.Form do
           )
           |> Map.put(:action, :update)
 
-        {:ok, img} = Brando.Repo.update(changeset)
+        {:ok, img} = Images.update_image(changeset, current_user)
         img
       end
 
@@ -3552,7 +3559,7 @@ defmodule BrandoAdmin.Components.Form do
         current_user
       )
 
-    {:ok, new_image} = Brando.Repo.insert(validated_changeset)
+    {:ok, new_image} = Images.create_image(validated_changeset, current_user)
 
     Brando.Trait.run_trait_after_save_callbacks(
       Images.Image,
@@ -3885,37 +3892,41 @@ defmodule BrandoAdmin.Components.Form do
         socket
       )
       when cache_key != "" do
-    schema = socket.assigns.schema
+    if Brando.Authorization.Preview.authorize_write(cache_key, socket.assigns.form.source) == :ok do
+      schema = socket.assigns.schema
 
-    socket =
-      socket
-      |> assign(:live_preview_active?, true)
-      |> assign(:live_preview_cache_key, cache_key)
-      |> assign_entry_fields_demanding_live_preview_rerender(schema)
-      |> assign_entry_fields_demanding_live_preview_reassign(schema)
-      |> push_event("b:live_preview", %{cache_key: cache_key})
-      |> push_event("js-exec", %{to: "#sidebar", attr: "data-js-hide"})
-
-    socket =
-      if socket.assigns.has_blocks? do
-        enable_live_preview_in_blocks(socket)
-      else
+      socket =
         socket
-      end
+        |> assign(:live_preview_active?, true)
+        |> assign(:live_preview_cache_key, cache_key)
+        |> assign_entry_fields_demanding_live_preview_rerender(schema)
+        |> assign_entry_fields_demanding_live_preview_reassign(schema)
+        |> push_event("b:live_preview", %{cache_key: cache_key})
+        |> push_event("js-exec", %{to: "#sidebar", attr: "data-js-hide"})
 
-    # Do not render the preview here. Recovery is two independent
-    # `phx-auto-recover` forms — this one and the main form's `validate` — and
-    # LiveView orders them however it likes; measured locally they land about a
-    # millisecond apart. `validate` is what rebuilds the entry from the
-    # recovered params, so rendering from this handler produces an empty page
-    # whenever it happens to go first.
-    #
-    # Instead both sides mark their half done and whichever finishes last does
-    # the render. See `maybe_finish_live_preview_recovery/1`.
-    socket
-    |> assign(:live_preview_recovery_pending?, true)
-    |> maybe_finish_live_preview_recovery()
-    |> then(&{:noreply, &1})
+      socket =
+        if socket.assigns.has_blocks? do
+          enable_live_preview_in_blocks(socket)
+        else
+          socket
+        end
+
+      # Do not render the preview here. Recovery is two independent
+      # `phx-auto-recover` forms — this one and the main form's `validate` — and
+      # LiveView orders them however it likes; measured locally they land about a
+      # millisecond apart. `validate` is what rebuilds the entry from the
+      # recovered params, so rendering from this handler produces an empty page
+      # whenever it happens to go first.
+      #
+      # Instead both sides mark their half done and whichever finishes last does
+      # the render. See `maybe_finish_live_preview_recovery/1`.
+      socket
+      |> assign(:live_preview_recovery_pending?, true)
+      |> maybe_finish_live_preview_recovery()
+      |> then(&{:noreply, &1})
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event("recover_live_preview_state", _params, socket) do
@@ -4284,7 +4295,11 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp store_revision(socket, changeset) do
-    case Ecto.Changeset.apply_action(changeset, :update) do
+    result =
+      with :ok <- Brando.Authorization.Boundary.change(socket.assigns.current_user, :update, changeset),
+           do: Ecto.Changeset.apply_action(changeset, :update)
+
+    case result do
       {:ok, entry} ->
         case Brando.Revisions.create_revision(entry, socket.assigns.current_user, false) do
           {:ok, _revision} ->
@@ -4300,6 +4315,9 @@ defmodule BrandoAdmin.Components.Form do
           {:error, reason} ->
             revision_error(socket, reason)
         end
+
+      {:error, :forbidden} ->
+        revision_error(socket, :forbidden)
 
       {:error, invalid_changeset} ->
         socket
@@ -4505,7 +4523,7 @@ defmodule BrandoAdmin.Components.Form do
             )
             |> Map.put(:action, :update)
 
-          case Brando.Repo.update(changeset) do
+          case Images.update_image(changeset, current_user) do
             {:ok, updated_image} ->
               Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
 

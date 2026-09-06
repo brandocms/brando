@@ -13,9 +13,22 @@ defmodule Brando.Worker.PreviewPurger do
   def perform(%Oban.Job{} = job), do: TenantJob.run(job, fn -> perform_tenant(job) end)
 
   defp perform_tenant(%Oban.Job{args: %{"id" => id}}) do
-    case Sites.delete_preview(id) do
-      {:ok, _} -> :ok
-      {:error, _} -> :ok
+    case Brando.Repo.get(Sites.Preview, id) do
+      nil ->
+        :ok
+
+      preview ->
+        now = DateTime.utc_now()
+        remaining = DateTime.diff(preview.expires_at, now, :second)
+
+        if DateTime.compare(preview.expires_at, now) == :gt do
+          {:snooze, max(remaining, 1)}
+        else
+          case Sites.delete_preview(id, :system) do
+            {:ok, _} -> :ok
+            {:error, _} -> :ok
+          end
+        end
     end
   end
 

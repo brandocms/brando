@@ -3,9 +3,10 @@ import { syncLV } from '../../utils'
 
 test('lists galleries and edits a gallery', async ({ page }) => {
   await page.goto('/admin')
+  await expect(page.locator('#brando-nav')).toHaveClass(/phx-connected/)
 
   // Navigate to galleries via menu (expand Assets submenu first)
-  await page.getByText('Assets').click()
+  await page.getByText('Assets', { exact: true }).click()
   await page.getByRole('link', { name: 'Galleries' }).click()
   await syncLV(page)
 

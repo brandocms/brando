@@ -89,6 +89,8 @@ defmodule Brando.Router do
       scope unquote(path), as: :admin do
         pipe_through [:admin, :brando_root_layout, :require_authenticated_user]
 
+        get "/access-denied", BrandoAdmin.AccessDeniedController, :show
+
         post "/environment", BrandoAdmin.EnvironmentController, :update
         post "/api/content/image/replace_crop", BrandoAdmin.API.Content.Upload.ImageController, :replace_crop
 
@@ -97,8 +99,10 @@ defmodule Brando.Router do
             sandbox_hooks ++
               [
                 {BrandoAdmin.UserAuth, :ensure_authenticated},
-                {Brando.Tenant.LiveView, :default}
+                {Brando.Tenant.LiveView, :default},
+                {BrandoAdmin.Authorization, :default}
               ] do
+          live "/groups", BrandoAdmin.Users.GroupsLive
           # brando routes
           live "/sites", BrandoAdmin.Sites.SiteLive
           live "/assets/images", BrandoAdmin.Images.ImageListLive

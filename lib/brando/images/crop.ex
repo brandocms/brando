@@ -4,6 +4,7 @@ defmodule Brando.Images.Crop do
   """
 
   alias Brando.Images
+  alias Brando.Authorization.Boundary
   alias Brando.Tenant.Storage
 
   @doc """
@@ -19,8 +20,16 @@ defmodule Brando.Images.Crop do
       {:ok, %Brando.Images.Image{}}
   """
   def save_as_new_copy(original_image, binary_data, focal, user) do
+    Boundary.run(user, :create, Images.Image, fn user ->
+      with :ok <- Boundary.authorize(user, :read, original_image),
+           {:ok, original} <- Images.get_image(original_image.id),
+           do: do_save_as_new_copy(original, binary_data, focal, user)
+    end)
+  end
+
+  defp do_save_as_new_copy(original_image, binary_data, focal, user) do
     new_path = Brando.Utils.unique_filename(original_image.path)
-    {width, height} = write_and_measure(new_path, binary_data, {nil, nil})
+    {width, height} = measure(binary_data, {nil, nil})
 
     new_image_params = %{
       path: new_path,
@@ -33,7 +42,16 @@ defmodule Brando.Images.Crop do
       formats: []
     }
 
-    case Images.create_image(new_image_params, user) do
+    changeset = Images.Image.changeset(%Images.Image{}, new_image_params, user)
+
+    result =
+      with :ok <- Boundary.change(user, :create, changeset),
+           {:ok, _} <- Ecto.Changeset.apply_action(changeset, :insert) do
+        write(new_path, binary_data)
+        Images.create_image(new_image_params, user)
+      end
+
+    case result do
       {:ok, image} ->
         Images.Processing.queue_processing(image, user)
         {:ok, image}
@@ -55,7 +73,15 @@ defmodule Brando.Images.Crop do
       {:ok, %Brando.Images.Image{}}
   """
   def save_replace(image, binary_data, focal, user) do
-    {width, height} = write_and_measure(image.path, binary_data, {image.width, image.height})
+    Boundary.run(user, :update, Images.Image, fn user ->
+      with :ok <- Boundary.authorize(user, :update, image),
+           {:ok, current} <- Images.get_image(image.id),
+           do: do_save_replace(current, binary_data, focal, user)
+    end)
+  end
+
+  defp do_save_replace(image, binary_data, focal, user) do
+    {width, height} = measure(binary_data, {image.width, image.height})
 
     update_params = %{
       width: width,
@@ -71,7 +97,14 @@ defmodule Brando.Images.Crop do
       |> Brando.Images.Image.changeset(update_params, user)
       |> Map.put(:action, :update)
 
-    case Brando.Repo.update(changeset) do
+    result =
+      with :ok <- Boundary.change(user, :update, changeset),
+           {:ok, _} <- Ecto.Changeset.apply_action(changeset, :update) do
+        write(image.path, binary_data)
+        Images.update_image(changeset, user)
+      end
+
+    case result do
       {:ok, updated_image} ->
         Images.Processing.queue_processing(updated_image, user)
         {:ok, updated_image}
@@ -81,13 +114,15 @@ defmodule Brando.Images.Crop do
     end
   end
 
-  defp write_and_measure(path, binary_data, fallback_dimensions) do
+  defp write(path, binary_data) do
     media_path = Storage.current_media_root()
     dest_file = Path.join(media_path, path)
 
     File.mkdir_p!(Path.dirname(dest_file))
     File.write!(dest_file, binary_data)
+  end
 
+  defp measure(binary_data, fallback_dimensions) do
     # Use Image.from_binary instead of Image.open(path) to bypass the libvips
     # file cache, which returns stale dimensions when overwriting an existing file.
     case Image.from_binary(binary_data) do

@@ -1399,3 +1399,5 @@ Code.require_file("block_slots_seeds.exs", __DIR__)
   creator_id: user.id
 }
 |> E2eProject.Repo.insert!()
+
+if Brando.Authorization.enabled?(), do: Brando.Authorization.Migration.run()

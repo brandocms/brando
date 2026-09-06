@@ -38,6 +38,18 @@ defmodule Brando.Plug.Tenant do
     end
   end
 
+  # Internal preview rendering has a server-resolved workspace but no frontend
+  # host. This private connection metadata cannot be supplied by an HTTP client.
+  defp resolve(%{
+         private: %{
+           brando_live_preview: true,
+           brando_preview_context:
+             {%Brando.Sites.Site{id: id} = site, %Brando.Environments.Environment{site_id: id} = environment}
+         }
+       }) do
+    {site, environment}
+  end
+
   defp resolve(conn) do
     conn
     |> Plug.Conn.get_req_header(Context.header())

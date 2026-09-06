@@ -48,6 +48,8 @@ defmodule E2eProjectWeb.Router do
       post "/setup_fixtures/:name", E2EFixtureController, :setup
       post "/login/:email", E2EFixtureController, :login
       post "/drafts/:action", E2EFixtureController, :drafts
+      post "/authorization/:role", E2EFixtureController, :authorization
+      post "/authorization-sites/:action", E2EAuthorizationController, :run
     end
   end
 

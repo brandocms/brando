@@ -23,6 +23,7 @@ if (!window.BrandoUploads) {
     _buffer: [],
 
     enqueue(files, target) {
+      target = { ...target, scope_token: document.querySelector("[data-authorization-upload]")?.dataset.authorizationUpload || null }
       const fileList = Array.from(files)
       if (!fileList.length) return
 

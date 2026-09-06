@@ -53,6 +53,10 @@ defmodule BrandoAdmin do
     quote do
       use Phoenix.LiveView, layout: {BrandoAdmin.Layouts, :live_child}
 
+      if Application.compile_env(Brando.RuntimeConfig.get(:otp_app), :sql_sandbox) do
+        on_mount {BrandoAdmin.Mounts.LiveAcceptance, {:default, __MODULE__}}
+      end
+
       unquote(html_helpers())
     end
   end

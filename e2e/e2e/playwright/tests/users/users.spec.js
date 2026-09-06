@@ -3,6 +3,7 @@ import { syncLV } from '../../utils'
 
 test('creates, updates and deletes a user with content transfer', async ({ page }) => {
   const email = 'coverage-editor@brandocms.com'
+  const groups = process.env.BRANDO_AUTHORIZATION_MODE === 'groups'
 
   await page.goto('/admin/users')
   await syncLV(page)
@@ -13,14 +14,15 @@ test('creates, updates and deletes a user with content transfer', async ({ page 
   await page.getByLabel('Email', { exact: true }).fill(email)
   await page.getByLabel('Password', { exact: true }).fill('brandocms')
   await page.getByLabel('English').check()
-  await page.getByLabel('Editor').check()
+  if (groups) await expect(page.getByLabel('Editor', { exact: true })).toHaveCount(0)
+  else await page.getByLabel('Editor').check()
   await page.getByTestId('submit').click()
 
   await expect(page).toHaveURL('/admin/users')
   await syncLV(page)
   let userRow = page.locator('.content-list .list-row').filter({ hasText: email })
   await expect(userRow).toContainText('Coverage Editor')
-  await expect(userRow).toContainText('editor')
+  if (!groups) await expect(userRow).toContainText('editor')
 
   await userRow.getByRole('link', { name: 'Coverage Editor →' }).click()
   await syncLV(page)

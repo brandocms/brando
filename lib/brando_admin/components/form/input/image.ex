@@ -253,7 +253,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
     Phoenix.PubSub.broadcast(
       Brando.pubsub(),
-      "brando:active_field:#{entry_id}",
+      Brando.Tenant.Topic.entry("active_field", form.data.__struct__, entry_id),
       {:active_field, field.name, current_user.id}
     )
 

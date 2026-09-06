@@ -77,3 +77,15 @@ config :phoenix, :stacktrace_depth, 60
 
 # Show breakpoint debug in frontend
 config :e2e_project, show_breakpoint_debug: false
+
+config :brando,
+  authorization_mode: if(System.get_env("BRANDO_AUTHORIZATION_MODE") == "groups", do: :groups, else: :legacy)
+
+config :brando,
+  tenancy_mode:
+    (case System.get_env("BRANDO_TENANCY_MODE") do
+       "multi" -> :multi
+       "single" -> :single
+       _ -> :none
+     end),
+  site_key: "auth-alpha"

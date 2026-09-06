@@ -31,6 +31,7 @@ defmodule Brando.Uploads.AssetIntent do
   )
 
   @known_keys ~w(
+    scope_token
     kind
     component_id
     var_key

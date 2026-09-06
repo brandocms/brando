@@ -16,6 +16,8 @@ defmodule BrandoAdmin.LiveView.Listing.Compiler do
 
     quote do
       use BrandoAdmin, :live_view
+
+      def __authorization_resource__, do: {:listing, unquote(schema)}
       import Phoenix.Component
 
       on_mount({__MODULE__, :hooks})

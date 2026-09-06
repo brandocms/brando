@@ -849,7 +849,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # otherwise multi-user block sync stays disarmed until a full reload.
   defp maybe_arm_blocks_topic(%{assigns: %{blocks_topic: nil, entry: %{id: entry_id}}} = socket)
        when not is_nil(entry_id) do
-    topic = "brando:blocks:#{entry_id}:#{socket.assigns.block_field}"
+    topic = Brando.Tenant.Topic.entry("blocks:#{socket.assigns.block_field}", socket.assigns.entry.__struct__, entry_id)
     subscribe_to_blocks(socket, topic)
 
     socket
@@ -903,7 +903,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     # Subscribe to blocks sync topic for structural changes + data shipping
     entry_id = assigns.entry && assigns.entry.id
-    blocks_topic = entry_id && "brando:blocks:#{entry_id}:#{assigns.block_field}"
+
+    blocks_topic =
+      entry_id && Brando.Tenant.Topic.entry("blocks:#{assigns.block_field}", assigns.entry.__struct__, entry_id)
 
     if blocks_topic do
       subscribe_to_blocks(socket, blocks_topic)

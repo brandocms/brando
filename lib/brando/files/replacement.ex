@@ -13,8 +13,12 @@ defmodule Brando.Files.Replacement do
   require Logger
 
   @doc "Validate a replacement against the stored file, before transferring bytes."
-  def initiate(file_id, meta) do
-    with {:ok, %{deleted_at: nil} = file} <- Files.get_file(file_id),
+  def initiate(file_id, meta, actor \\ nil) do
+    with :ok <-
+           Brando.Authorization.Media.authorize(actor || Brando.Authorization.Boundary.current_scope(), :file, :update),
+         {:ok, %{deleted_at: nil} = file} <- Files.get_file(file_id),
+         :ok <-
+           Brando.Authorization.Boundary.authorize(actor || Brando.Authorization.Boundary.current_scope(), :update, file),
          {:ok, cfg} <- Files.get_config_for(file.config_target),
          :ok <- validate(file, cfg, meta) do
       # A replacement is staged on the server, including for CDN files. Never
@@ -40,6 +44,7 @@ defmodule Brando.Files.Replacement do
             file = Brando.Repo.one(from f in schema, where: f.id == ^file_id and is_nil(f.deleted_at), lock: "FOR UPDATE")
 
             with %{id: _} <- file,
+                 :ok <- Brando.Authorization.Boundary.authorize(user, :update, file),
                  {:ok, cfg} <- Files.get_config_for(file.config_target),
                  :ok <- validate(file, cfg, meta),
                  {:ok, destination} <- destination(file, cfg),

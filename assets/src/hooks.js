@@ -1,4 +1,5 @@
 // hooks and callbacks
+import AuthorizationHook from './hooks/Authorization'
 import AdminHook from './hooks/Admin'
 import AssetFolderDropHook from './hooks/AssetFolderDrop'
 import BlockFieldHook from './hooks/BlockField'
@@ -48,6 +49,7 @@ import VideoURLParserHook from './hooks/VideoURLParser'
 // Brando hooks
 export default (app) => {
   return {
+    'Brando.Authorization': AuthorizationHook(app),
     'Brando.Admin': AdminHook(app),
     'Brando.AssetFolderDrop': AssetFolderDropHook(app),
     'Brando.BlockField': BlockFieldHook(app),

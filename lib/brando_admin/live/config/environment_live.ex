@@ -38,9 +38,14 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   end
 
   defp can_manage?(current_user, current_site) do
-    case Tenant.mode() do
-      :multi -> not is_nil(current_site) and Access.can_manage?(current_user, current_site)
-      _other -> current_user.role in @manager_roles
+    if Brando.Authorization.enabled?() do
+      scope = Brando.Authorization.Scope.current(current_user)
+      Enum.any?([:create, :update, :delete, :promote], &Brando.Authorization.can?(scope, &1, :environments))
+    else
+      case Tenant.mode() do
+        :multi -> not is_nil(current_site) and Access.can_manage?(current_user, current_site)
+        _other -> current_user.role in @manager_roles
+      end
     end
   end
 
@@ -109,7 +114,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                         type="text"
                         name="domain"
                         value={environment.domain}
-                        disabled={!@can_manage?}
+                        disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:update, :environments)}
                         placeholder={gettext("No domain")}
                         aria-label={gettext("Domain for %{name}", name: environment.name)}
                       />
@@ -125,7 +130,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                       :if={!environment.live}
                       type="button"
                       class="secondary small"
-                      disabled={!@can_manage?}
+                      disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments)}
                       phx-click="queue_set_live"
                       phx-value-id={environment.id}
                       phx-confirm={
@@ -138,7 +143,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                       :if={!environment.live}
                       type="button"
                       class="danger small"
-                      disabled={!@can_manage?}
+                      disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:delete, :environments)}
                       phx-click="delete_environment"
                       phx-value-id={environment.id}
                       phx-confirm={
@@ -177,7 +182,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                 <span>{gettext("Domain (optional)")}</span>
                 <input name="environment[domain]" placeholder="spring.example.com" />
               </label>
-              <button type="submit" class="primary" disabled={!@can_manage?} phx-disable-with={gettext("Creating…")}>
+              <button
+                type="submit"
+                class="primary"
+                disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:create, :environments)}
+                phx-disable-with={gettext("Creating…")}
+              >
                 {gettext("Create environment")}
               </button>
             </form>
@@ -196,7 +206,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                 <span>{gettext("Note (optional)")}</span>
                 <input name="operation[note]" />
               </label>
-              <button type="submit" class="primary" disabled={!@can_manage? || length(@environments) < 2}>
+              <button
+                type="submit"
+                class="primary"
+                disabled={
+                  !@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || length(@environments) < 2
+                }
+              >
                 {gettext("Queue copy now")}
               </button>
             </form>
@@ -208,7 +224,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
             <form id="schedule-environment-copy-form" phx-submit="schedule_copy">
               <.environment_pair_fields environments={@environments} />
               <.schedule_fields default_scheduled_at={@default_scheduled_at} />
-              <button type="submit" class="primary" disabled={!@can_manage? || length(@environments) < 2}>
+              <button
+                type="submit"
+                class="primary"
+                disabled={
+                  !@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || length(@environments) < 2
+                }
+              >
                 {gettext("Schedule copy")}
               </button>
             </form>
@@ -227,7 +249,14 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                 </select>
               </label>
               <.schedule_fields default_scheduled_at={@default_scheduled_at} />
-              <button type="submit" class="primary" disabled={!@can_manage? || Enum.all?(@environments, & &1.live)}>
+              <button
+                type="submit"
+                class="primary"
+                disabled={
+                  !@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) ||
+                    Enum.all?(@environments, & &1.live)
+                }
+              >
                 {gettext("Schedule live switch")}
               </button>
             </form>
@@ -260,7 +289,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                     <button
                       type="button"
                       class="danger small"
-                      disabled={!@can_manage?}
+                      disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments)}
                       phx-click="cancel_operation"
                       phx-value-id={job.id}
                       phx-confirm={gettext("Cancel this pending environment operation?")}
@@ -347,7 +376,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
               <button
                 type="button"
                 class="secondary"
-                disabled={!@can_manage? || @archives == []}
+                disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || @archives == []}
                 phx-click="rollback"
                 phx-confirm={gettext("Restore the newest archive as a new non-live environment?")}
               >
@@ -356,7 +385,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
               <button
                 type="button"
                 class="danger"
-                disabled={!@can_manage? || length(@archives) <= 3}
+                disabled={
+                  !@can_manage? || !BrandoAdmin.Authorization.allowed?(:delete, :environments) || length(@archives) <= 3
+                }
                 phx-click="prune_archives"
                 phx-value-keep="3"
                 phx-confirm={gettext("Permanently drop all but the three newest archives?")}
@@ -380,7 +411,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                 <button
                   type="button"
                   class="secondary small"
-                  disabled={!@can_manage?}
+                  disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments)}
                   phx-click="rollback"
                   phx-value-schema={archive.schema}
                   phx-confirm={gettext("Restore this archive as a new, non-live environment?")}

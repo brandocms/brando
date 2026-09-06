@@ -73,62 +73,12 @@ defmodule BrandoAdmin.Components.Content.List do
   end
 
   def handle_event("export", %{"name" => export_name}, socket) do
-    send(self(), {:toast, gettext("Exporting entries...")})
-    exports = socket.assigns.listing.exports
-    schema = socket.assigns.schema
-    context = schema.__modules__().context
-    plural = schema.__naming__().plural
-    selected_export = Enum.find(exports, &(to_string(&1.name) == export_name))
-
-    {:ok, entries} = apply(context, :"list_#{plural}", [selected_export.query])
-    headers = Enum.map(selected_export.fields, &to_string/1)
-
-    rows =
-      List.wrap([headers]) ++
-        Enum.map(entries, fn entry ->
-          for key <- selected_export.fields, do: Map.get(entry, key)
-        end)
-
-    csv_content = Brando.CSVParser.dump_to_iodata(rows)
-
-    date =
-      :timezone
-      |> Brando.config()
-      |> DateTime.now!()
-      |> Calendar.strftime("%Y%m%d_%H%M%S")
-
-    exports_path =
-      Path.join([
-        "exports",
-        to_string(selected_export.type)
-      ])
-
-    target_path =
-      Path.join([
-        Brando.Tenant.Storage.current_media_root(),
-        exports_path
-      ])
-
-    File.mkdir_p!(target_path)
-
-    target_filename = "#{plural}_export_#{date}.csv"
-    File.write(Path.join(target_path, target_filename), csv_content)
-
-    download_path = Brando.Utils.media_url(Path.join(exports_path, target_filename))
-
-    message = """
-    #{gettext("Download exports: ")}
-    <a href="#{download_path}" target="_blank" download>
-      #{gettext("Download")}
-    </a>
-    """
-
-    {:noreply,
-     push_event(socket, "b:alert", %{
-       title: gettext("Download ready"),
-       type: "info",
-       message: message
-     })}
+    if Brando.Authorization.Boundary.authorize(socket.assigns.current_user, :export, socket.assigns.schema) == :ok do
+      export_entries(export_name, socket)
+    else
+      {:noreply,
+       Phoenix.LiveView.put_flash(socket, :error, gettext("You do not have permission to export these entries."))}
+    end
   end
 
   def handle_event("next_filter_key", _, socket) do
@@ -316,6 +266,60 @@ defmodule BrandoAdmin.Components.Content.List do
   defp truthy?(value) when value in [true, "true", "1", 1], do: true
   defp truthy?(_value), do: false
 
+  defp export_entries(export_name, socket) when is_binary(export_name) do
+    case Enum.find(socket.assigns.listing.exports, &(to_string(&1.name) == export_name)) do
+      nil -> {:noreply, Phoenix.LiveView.put_flash(socket, :error, gettext("This export is not available."))}
+      selected_export -> export_entries(socket, selected_export)
+    end
+  end
+
+  defp export_entries(socket, selected_export) do
+    send(self(), {:toast, gettext("Exporting entries...")})
+    schema = socket.assigns.schema
+    context = schema.__modules__().context
+    plural = schema.__naming__().plural
+
+    {:ok, entries} =
+      Brando.Authorization.Boundary.with_query_action(:export, schema, fn ->
+        apply(context, :"list_#{plural}", [selected_export.query])
+      end)
+
+    headers = Enum.map(selected_export.fields, &to_string/1)
+
+    rows =
+      List.wrap([headers]) ++
+        Enum.map(entries, fn entry ->
+          for key <- selected_export.fields, do: Map.get(entry, key)
+        end)
+
+    csv_content = Brando.CSVParser.dump_to_iodata(rows)
+
+    date =
+      :timezone
+      |> Brando.config()
+      |> DateTime.now!()
+      |> Calendar.strftime("%Y%m%d_%H%M%S")
+
+    target_filename = "#{plural}_export_#{date}.csv"
+    # Return the export only to this authenticated LiveView. Persisting a
+    # predictable file below /media bypasses access checks on later downloads.
+    download_path = "data:text/csv;charset=utf-8;base64," <> Base.encode64(IO.iodata_to_binary(csv_content))
+
+    message = """
+    #{gettext("Download exports: ")}
+    <a href="#{download_path}" download="#{target_filename}">
+      #{gettext("Download")}
+    </a>
+    """
+
+    {:noreply,
+     push_event(socket, "b:alert", %{
+       title: gettext("Download ready"),
+       type: "info",
+       message: message
+     })}
+  end
+
   defp assign_defaults(socket, assigns) do
     schema = assigns.schema
     context = schema.__modules__().context
@@ -352,7 +356,8 @@ defmodule BrandoAdmin.Components.Content.List do
       end)
 
     assign_new(socket, :sortable?, fn ->
-      socket.assigns.listing.sortable && schema.has_trait(Sequenced)
+      socket.assigns.listing.sortable && schema.has_trait(Sequenced) &&
+        BrandoAdmin.Authorization.allowed?(:reorder, schema)
     end)
   end
 
@@ -923,7 +928,7 @@ defmodule BrandoAdmin.Components.Content.List do
 
   def export_dropdown(assigns) do
     ~H"""
-    <div :if={@exports != []} class="exports">
+    <div :if={@exports != [] && BrandoAdmin.Authorization.allowed?(:export, @schema)} class="exports">
       {gettext("Export")}
       <CircleDropdown.render id="listing-exports-dropdown">
         <button
@@ -1210,7 +1215,11 @@ defmodule BrandoAdmin.Components.Content.List do
                 {gettext("Duplicate selected to")} [{String.upcase(lang)}]
               </.selection_action_button>
             <% end %>
-            <.selection_action_button event="delete_selected" encoded_ids={@encoded_selected_rows}>
+            <.selection_action_button
+              :if={BrandoAdmin.Authorization.allowed?(:delete, @schema)}
+              event="delete_selected"
+              encoded_ids={@encoded_selected_rows}
+            >
               {gettext("Delete selected")}
             </.selection_action_button>
             <%= for %{event: event, label: label} <- @selection_actions do %>

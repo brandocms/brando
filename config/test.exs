@@ -58,7 +58,7 @@ config :brando, Brando.Villain, extra_blocks: []
 config :brando, Brando.Villain, parser: Brando.Villain.ParserTest.Parser
 
 config :brando, BrandoIntegration.Repo,
-  url: "ecto://postgres:postgres@localhost/brando_test",
+  url: System.get_env("BRANDO_TEST_DATABASE_URL", "ecto://postgres:postgres@localhost/brando_test"),
   pool: Ecto.Adapters.SQL.Sandbox,
   ownership_pool: DBConnection.Poolboy,
   # We don't run a server during test. If one is required,

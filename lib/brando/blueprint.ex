@@ -226,6 +226,8 @@ defmodule Brando.Blueprint do
       end
 
       def __blueprint__, do: true
+      def __authorization__, do: []
+      defoverridable __authorization__: 0
       def __absolute_url__(_), do: nil
       defoverridable __absolute_url__: 1
 
@@ -237,6 +239,22 @@ defmodule Brando.Blueprint do
 
       def __persist_identifier__, do: true
       defoverridable __persist_identifier__: 0
+    end
+  end
+
+  @doc """
+  Customizes a Blueprint's registered permissions. Ordinary CRUD is inferred.
+
+      authorization key: "my_app.projects", actions: [:approve], policy: MyApp.ProjectPolicy
+
+  A policy implements `authorize(scope, action, entry)` and, for read restrictions,
+  `scope(scope, action, query)`. Labels and group names are never permission keys.
+  """
+  defmacro authorization(options) do
+    options = Brando.Blueprint.Authorization.validate!(options, __CALLER__)
+
+    quote do
+      def __authorization__, do: unquote(options)
     end
   end
 

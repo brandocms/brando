@@ -68,6 +68,13 @@ defmodule Brando.Plug.LivePreviewTest do
     end)
   end
 
+  test "unknown preview keys cannot inject HTML into the legacy error page" do
+    key = URI.encode_www_form("<script>alert(1)</script>")
+    conn = build_conn(:get, "/__livepreview?key=#{key}") |> LivePreview.call([])
+    refute conn.resp_body =~ "<script>"
+    assert conn.resp_body =~ "&lt;script&gt;"
+  end
+
   test "live preview succeeds", %{opts: opts, user: user} do
     Brando.LivePreview.store_cache(
       "LIVEPREVIEWKEY",

@@ -136,7 +136,7 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
 
   @doc "Broadcasts a listing update for the given schema."
   def update_list_entries(schema) do
-    topic = "brando:listing:content_listing_#{schema}_default"
+    topic = Brando.Tenant.Topic.scoped("brando:listing:content_listing_#{schema}_default")
     Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {schema, [:entries, :updated], []})
   end
 

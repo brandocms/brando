@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Content.ModuleFormLive do
   @moduledoc false
   use BrandoAdmin, :live_view
+
+  def __authorization_resource__, do: {:form, Brando.Content.Module}
   use BrandoAdmin.Toast
   use Gettext, backend: Brando.Gettext
 
@@ -20,7 +22,16 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
     cond do
       shared_library? and
-          (Brando.Tenant.mode() != :multi or socket.assigns.current_user.role != :superuser) ->
+          (Brando.Tenant.mode() != :multi or
+             not if(Brando.Authorization.enabled?(),
+               do:
+                 Brando.Authorization.can?(
+                   Brando.Authorization.Scope.installation(socket.assigns.current_user),
+                   :update,
+                   :shared_library
+                 ),
+               else: socket.assigns.current_user.role == :superuser
+             )) ->
         {:ok, redirect(socket, to: "/admin")}
 
       connected?(socket) ->

@@ -66,12 +66,6 @@ defmodule Brando.LivePreview do
   alias Brando.Utils
   alias Brando.Worker
 
-  @preview_coder Hashids.new(
-                   alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
-                   salt: "bxqStiFpm5to0gsRHyC0afyIaTOH5jjD/T+kOMU5Z9UHCLJuPVnM6ESNaMC8rkzR",
-                   min_len: 32
-                 )
-
   defstruct layout: nil,
             template: nil,
             mutate_data: nil,
@@ -152,9 +146,11 @@ defmodule Brando.LivePreview do
     # build conn
     conn =
       Phoenix.ConnTest.build_conn(:get, "/#{language}/__LIVE_PREVIEW")
+      |> Map.put(:secret_key_base, Brando.endpoint().config(:secret_key_base))
       |> Plug.Session.call(session_opts)
       |> Plug.Conn.assign(:language, to_string(language))
       |> Plug.Conn.put_private(:brando_live_preview, true)
+      |> Plug.Conn.put_private(:brando_preview_context, preview_context())
       |> Brando.router().browser([])
       |> Brando.Plug.HTML.put_section(section)
       |> Brando.Plug.HTML.put_css_classes(css_classes)
@@ -188,6 +184,16 @@ defmodule Brando.LivePreview do
       layout_template,
       root_assigns
     )
+  end
+
+  defp preview_context do
+    case Brando.Authorization.Scope.current(nil) do
+      %{kind: :site, site_id: site_id, environment_id: environment_id} ->
+        {Brando.Tenant.Registry.get_site(site_id), Brando.Tenant.Registry.get_environment(environment_id)}
+
+      _ ->
+        nil
+    end
   end
 
   defp maybe_preload(entry, []), do: entry
@@ -252,12 +258,13 @@ defmodule Brando.LivePreview do
     Phoenix.Template.render(tpl_module, tpl_with_type, "html", render_assigns)
   end
 
-  defp build_cache_key(seed), do: "PREVIEW-" <> Hashids.encode(@preview_coder, seed)
+  defp build_cache_key(_seed), do: "PREVIEW-" <> Base.url_encode64(:crypto.strong_rand_bytes(24), padding: false)
 
   def store_cache(key, html),
     do: Cachex.put(:cache, "__live_preview__" <> key, html, expire: :timer.hours(1))
 
-  def get_cache(key), do: Cachex.get(:cache, "__live_preview__" <> key)
+  def get_cache(key) when is_binary(key), do: Cachex.get(:cache, "__live_preview__" <> key)
+  def get_cache(_), do: {:ok, nil}
 
   @doc """
   Clean up all Cachex entries for a live preview session.
@@ -268,6 +275,7 @@ defmodule Brando.LivePreview do
   def cleanup_cache(cache_key) do
     Task.start(fn ->
       Cachex.del(:cache, "__live_preview__" <> cache_key)
+      Brando.Authorization.Preview.cleanup(cache_key)
 
       {:ok, keys} = Cachex.keys(:cache)
 
@@ -286,12 +294,14 @@ defmodule Brando.LivePreview do
     entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
 
     try do
-      wrapper_html = render(schema_module, entry_struct, cache_key)
-      store_cache(cache_key, wrapper_html)
-
-      Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
-
-      {:ok, cache_key}
+      with :ok <- Brando.Authorization.Preview.register(cache_key, changeset) do
+        wrapper_html = render(schema_module, entry_struct, cache_key)
+        store_cache(cache_key, wrapper_html)
+        broadcast(cache_key, "update", %{html: wrapper_html})
+        {:ok, cache_key}
+      else
+        _ -> {:error, "You no longer have permission to preview this entry."}
+      end
     rescue
       err in [KeyError] ->
         Logger.error("""
@@ -317,30 +327,16 @@ defmodule Brando.LivePreview do
     end
   end
 
-  def update_cache(cache_key, schema, changeset, updated_entry_assocs \\ %{}) do
-    schema_module = Module.concat([schema])
-    entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
-    wrapper_html = render(schema_module, entry_struct, cache_key)
-    store_cache(cache_key, wrapper_html)
-  end
+  def update_cache(cache_key, schema, changeset, updated_entry_assocs \\ %{}),
+    do: render_update(schema, changeset, cache_key, updated_entry_assocs, nil)
 
   def update(_schema, _changeset, nil), do: nil
 
-  def update(schema, changeset, cache_key, updated_entry_assocs \\ %{}) do
-    schema_module = Module.concat([schema])
-    entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
-    wrapper_html = render(schema_module, entry_struct, cache_key)
-    store_cache(cache_key, wrapper_html)
-    Brando.endpoint().broadcast("live_preview:#{cache_key}", "update", %{html: wrapper_html})
-    cache_key
-  end
+  def update(schema, changeset, cache_key, updated_entry_assocs \\ %{}),
+    do: render_update(schema, changeset, cache_key, updated_entry_assocs, "update")
 
-  def rerender(schema, changeset, cache_key, updated_entry_assocs \\ %{}) do
-    schema_module = Module.concat([schema])
-    entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
-    wrapper_html = render(schema_module, entry_struct, cache_key)
-    Brando.endpoint().broadcast("live_preview:#{cache_key}", "rerender", %{html: wrapper_html})
-  end
+  def rerender(schema, changeset, cache_key, updated_entry_assocs \\ %{}),
+    do: render_update(schema, changeset, cache_key, updated_entry_assocs, "rerender")
 
   @doc """
   Refresh the cached HTML for `cache_key` and tell the iframe to reload itself.
@@ -356,46 +352,62 @@ defmodule Brando.LivePreview do
   """
   def reload(_schema, _changeset, nil), do: nil
 
-  def reload(schema, changeset, cache_key, updated_entry_assocs \\ %{}) do
-    schema_module = Module.concat([schema])
-    entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
-    wrapper_html = render(schema_module, entry_struct, cache_key)
-    store_cache(cache_key, wrapper_html)
-    Brando.endpoint().broadcast("live_preview:#{cache_key}", "reload", %{})
-    cache_key
+  def reload(schema, changeset, cache_key, updated_entry_assocs \\ %{}),
+    do: render_update(schema, changeset, cache_key, updated_entry_assocs, "reload")
+
+  defp render_update(schema, changeset, cache_key, updated_entry_assocs, event) do
+    with :ok <- Brando.Authorization.Preview.authorize_write(cache_key, changeset),
+         :ok <- Brando.Authorization.Preview.register(cache_key, changeset) do
+      entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
+      wrapper_html = render(Module.concat([schema]), entry_struct, cache_key)
+      store_cache(cache_key, wrapper_html)
+      if event, do: broadcast(cache_key, event, if(event == "reload", do: %{}, else: %{html: wrapper_html}))
+      cache_key
+    end
+  end
+
+  @doc false
+  def broadcast(cache_key, event, payload) do
+    with :ok <- Brando.Authorization.Preview.authorize_broadcast(cache_key) do
+      Brando.endpoint().broadcast("live_preview:#{cache_key}", event, payload)
+    end
   end
 
   @doc """
   Renders the entry, stores in DB and returns URL
   """
   def share(schema_module, changeset, user, updated_entry_assocs \\ %{}) do
-    cache_key = build_cache_key(:erlang.system_time())
-    entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
+    with :ok <- Brando.Authorization.Preview.authorize_share(user, changeset) do
+      cache_key = build_cache_key(:erlang.system_time())
+      entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
 
-    expiry_days = Brando.config(:preview_expiry_days) || 2
+      expiry_days = Brando.config(:preview_expiry_days) || 2
 
-    html =
-      schema_module
-      |> render(entry_struct, cache_key, include_meta: true)
-      |> Utils.term_to_binary()
+      html =
+        schema_module
+        |> render(entry_struct, cache_key, include_meta: true)
+        |> Utils.term_to_binary()
 
-    preview_key = Utils.random_string(12)
-    expires_at = DateTime.add(DateTime.utc_now(), expiry_days, :day)
+      preview_key = Utils.random_string(12)
+      expires_at = DateTime.add(DateTime.utc_now(), expiry_days, :day)
 
-    preview = %{
-      html: html,
-      preview_key: preview_key,
-      expires_at: expires_at
-    }
+      preview = %{
+        html: html,
+        preview_key: preview_key,
+        expires_at: expires_at,
+        creator_id: user.id
+      }
 
-    {:ok, preview} = Brando.Sites.create_preview(preview, user)
+      with :ok <- Brando.Authorization.Preview.authorize_share(user, changeset),
+           {:ok, preview} <- Brando.Sites.create_preview(preview, :system) do
+        %{id: preview.id}
+        |> Brando.Tenant.Job.attach()
+        |> Worker.PreviewPurger.new(scheduled_at: expires_at, tags: [:preview_purger])
+        |> Oban.insert()
 
-    %{id: preview.id}
-    |> Brando.Tenant.Job.attach()
-    |> Worker.PreviewPurger.new(scheduled_at: expires_at, tags: [:preview_purger])
-    |> Oban.insert()
-
-    {:ok, Brando.Sites.Preview.__absolute_url__(preview), expiry_days}
+        {:ok, Brando.Sites.Preview.__absolute_url__(preview), expiry_days}
+      end
+    end
   end
 
   defp resolve_cached_var(cache_key, key, value_fn) do

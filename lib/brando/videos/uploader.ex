@@ -171,7 +171,8 @@ defmodule Brando.Videos.Uploader do
     config = Keyword.fetch!(opts, :config)
     file_meta = Keyword.get(opts, :file_meta)
 
-    with :ok <- Brando.Uploads.validate_provider_video_intake(config, file_meta) do
+    with :ok <- Brando.Authorization.Media.authorize(user, :video),
+         :ok <- Brando.Uploads.validate_provider_video_intake(config, file_meta) do
       dispatch_initiate_upload(config.upload_strategy, filename, user, opts)
     end
   end

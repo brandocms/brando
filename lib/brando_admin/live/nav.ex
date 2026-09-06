@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Nav do
 
   on_mount {BrandoAdmin.UserAuth, :mount_current_user}
   on_mount {Brando.Tenant.LiveView, :default}
+  on_mount {BrandoAdmin.Authorization, :default}
 
   def mount(_, %{"user_token" => _token, "current_url" => url}, socket) do
     if connected?(socket) do
@@ -48,6 +49,12 @@ defmodule BrandoAdmin.Nav do
 
   def update(assigns, socket) do
     {:ok, assign(socket, assigns)}
+  end
+
+  def refresh_authorization(socket) do
+    socket
+    |> assign_tenant_options()
+    |> assign(:menu_sections, BrandoAdmin.Menu.get_menu(socket.assigns.current_user, socket.assigns[:current_site]))
   end
 
   def subscribe(%{assigns: %{current_user: user}} = socket) when not is_nil(user) do
@@ -140,6 +147,8 @@ defmodule BrandoAdmin.Nav do
             </header>
             <details
               :if={@current_site && @current_environment}
+              id="tenant-switcher"
+              phx-mounted={JS.ignore_attributes(["open"])}
               class={["tenant-switcher", !@current_environment.live && "working"]}
             >
               <summary>
@@ -150,7 +159,7 @@ defmodule BrandoAdmin.Nav do
                 <.icon name="hero-chevron-down" />
               </summary>
 
-              <div class="tenant-switcher__sheet">
+              <div id="tenant-switcher-options" class="tenant-switcher__sheet">
                 <form action="/admin/environment" method="post">
                   <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
                   <input type="hidden" name="return_to" value={@current_url || "/admin"} />
@@ -200,7 +209,7 @@ defmodule BrandoAdmin.Nav do
                       {@current_user.name}
                     </div>
                     <div class="role">
-                      {@current_user.role}
+                      {if Brando.Authorization.enabled?(), do: "Account", else: @current_user.role}
                     </div>
                   </div>
                   <div class="dropdown-icon">

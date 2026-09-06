@@ -31,9 +31,35 @@ defmodule Brando.SSG.Builds do
     asset_set = Keyword.get_lazy(opts, :asset_set, fn -> SiteAssets.active_set(asset_scope(site)) end)
     opts = Keyword.put(opts, :asset_set, asset_set)
 
-    with :ok <- validate_build_request(site, environment, opts) do
+    with :ok <-
+           Brando.Authorization.Operations.authorize(
+             opts[:creator] || Brando.Authorization.Boundary.current_scope() || %{id: opts[:creator_id]},
+             :build,
+             :publishing,
+             site.id
+           ),
+         :ok <- authorize_build_options(site, opts),
+         :ok <- validate_build_request(site, environment, opts) do
       Lock.with("ssg-build:#{site.id}", fn -> insert_build_and_job(site, environment, opts) end)
     end
+  end
+
+  defp authorize_build_options(site, opts) do
+    actor = opts[:creator] || Brando.Authorization.Boundary.current_scope() || %{id: opts[:creator_id]}
+
+    actions =
+      [:schedule, :deploy]
+      |> Enum.filter(fn
+        :schedule -> not is_nil(opts[:scheduled_at])
+        :deploy -> Keyword.get(opts, :auto_deploy, deploy_config(site)["auto_deploy"] || false)
+      end)
+
+    Enum.reduce_while(actions, :ok, fn action, :ok ->
+      case Brando.Authorization.Operations.authorize(actor, action, :publishing, site.id) do
+        :ok -> {:cont, :ok}
+        error -> {:halt, error}
+      end
+    end)
   end
 
   @doc "Lists builds newest first, optionally limited by `:limit`."

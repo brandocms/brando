@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, awaitBlockDebounce } from '../../utils'
 
 async function openCreateForm(page, listUrl, heading) {
   await page.goto(listUrl)
@@ -10,9 +10,13 @@ async function openCreateForm(page, listUrl, heading) {
 }
 
 async function replaceCodeEditor(page, code) {
+  // Settle the preceding fields before editing the separate CodeMirror input.
+  await awaitBlockDebounce(page)
   await page.locator('.cm-editor').click()
   await page.keyboard.press('ControlOrMeta+A')
-  await page.keyboard.type(code)
+  await page.keyboard.insertText(code)
+  await awaitBlockDebounce(page)
+  await expect(page.locator('.code-editor textarea')).toHaveValue(code)
 }
 
 test('creates and persists a module set', async ({ page }) => {

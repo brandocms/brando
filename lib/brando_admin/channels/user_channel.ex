@@ -4,18 +4,24 @@ defmodule Brando.UserChannel do
   """
 
   use Phoenix.Channel
+  alias Brando.Authorization.Realtime
 
   intercept([
     "alert",
     "progress_popup",
     "set_progress",
-    "increase_progress"
+    "increase_progress",
+    "toast",
+    "progress:show",
+    "progress:hide",
+    "progress:update"
   ])
 
   @doc """
   Join user channel for your user
   """
   def join("user:" <> user_id, _params, socket) do
+    Realtime.allow_sandbox(socket)
     assigned_user_id = socket.assigns.user_id
 
     vsn =
@@ -23,31 +29,27 @@ defmodule Brando.UserChannel do
       |> Application.spec(:vsn)
       |> to_string()
 
-    if assigned_user_id == String.to_integer(user_id) do
+    if to_string(assigned_user_id) == user_id and Realtime.authorize_account(assigned_user_id) == :ok do
+      Realtime.subscribe()
       {:ok, %{vsn: vsn}, socket}
     else
       :error
     end
   end
 
-  def handle_out("progress_popup", payload, socket) do
-    push(socket, "progress_popup", payload)
-    {:noreply, socket}
+  def handle_out(event, payload, socket) do
+    if Realtime.authorize_account(socket.assigns.user_id) == :ok do
+      push(socket, event, payload)
+      {:noreply, socket}
+    else
+      {:stop, :normal, socket}
+    end
   end
 
-  def handle_out("alert", payload, socket) do
-    push(socket, "alert", payload)
-    {:noreply, socket}
-  end
-
-  def handle_out("set_progress", payload, socket) do
-    push(socket, "set_progress", payload)
-    {:noreply, socket}
-  end
-
-  def handle_out("increase_progress", payload, socket) do
-    push(socket, "increase_progress", payload)
-    {:noreply, socket}
+  def handle_info({:authorization_changed, _}, socket) do
+    if Realtime.authorize_account(socket.assigns.user_id) == :ok,
+      do: {:noreply, socket},
+      else: {:stop, :normal, socket}
   end
 
   def handle_info({:user_update, _usr}, socket) do

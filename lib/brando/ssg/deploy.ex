@@ -20,8 +20,10 @@ defmodule Brando.SSG.Deploy do
   @doc "Deploys a ready or archived build using its snapshotted configuration."
   @spec deploy(Build.t(), keyword()) :: {:ok, Build.t()} | {:error, term()}
   def deploy(%Build{} = build, opts \\ []) do
-    Lock.with("ssg-deploy:#{build.site_id}", fn -> deploy_locked(build.id, opts) end)
-    |> notify_webhook(opts)
+    Brando.Authorization.Operations.run(:deploy, :publishing, build.site_id, opts, fn ->
+      Lock.with("ssg-deploy:#{build.site_id}", fn -> deploy_locked(build.id, opts) end)
+      |> notify_webhook(opts)
+    end)
   end
 
   @doc "Redeploys an older artifact and makes it the site's current static release."

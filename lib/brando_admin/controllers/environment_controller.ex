@@ -26,7 +26,7 @@ defmodule BrandoAdmin.EnvironmentController do
 
   defp authorized?(current_user, site) do
     case Tenant.mode() do
-      :single -> true
+      :single -> not Brando.Authorization.enabled?() or Access.can_access?(current_user, site)
       :multi -> Access.can_access?(current_user, site)
     end
   end

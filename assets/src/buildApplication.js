@@ -245,6 +245,7 @@ export default (hooks, enableDebug = false) => {
     app.userChannel = app.userSocket.channel(`user:${app.userId}`, {})
     app.lobbyChannel = app.userSocket.channel('lobby', {
       url: window.location.pathname,
+      scope_token: document.querySelector('meta[name="realtime_scope"]')?.content,
     })
 
     app.lobbyChannel.on('toast', (data) => {

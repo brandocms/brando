@@ -346,7 +346,9 @@ defmodule BrandoAdmin.UploadManager do
 
         file_meta = %{name: name, size: size, type: mime_type}
 
-        case initiate_upload(asset_type, target, file_meta, user) do
+        case Brando.Authorization.Media.with_intent(target, user, fn ->
+               initiate_upload(asset_type, target, file_meta, user)
+             end) do
           {:ok, :server} ->
             {item, socket} =
               put_intake_item(socket, name, size, asset_type, target, transport: :server)
@@ -395,8 +397,8 @@ defmodule BrandoAdmin.UploadManager do
     {:reply, %{decisions: decisions}, assign(socket, :open?, true)}
   end
 
-  defp initiate_upload(:file, %{"kind" => "file_replace", "file_id" => file_id}, meta, _user),
-    do: Brando.Files.Replacement.initiate(file_id, meta)
+  defp initiate_upload(:file, %{"kind" => "file_replace", "file_id" => file_id}, meta, user),
+    do: Brando.Files.Replacement.initiate(file_id, meta, user)
 
   defp initiate_upload(asset_type, target, meta, user),
     do: Uploads.initiate(asset_type, target["config_target"], meta, user)
@@ -456,6 +458,19 @@ defmodule BrandoAdmin.UploadManager do
   end
 
   defp consume_and_deliver(socket, entry, item) do
+    case Brando.Authorization.Media.with_intent(item.target, socket.assigns.current_user, fn ->
+           do_consume_and_deliver(socket, entry, item)
+         end) do
+      {:error, message} ->
+        socket = socket |> cancel_upload(:queue, entry.ref) |> push_released(item.ref)
+        {:noreply, update_item(socket, item.ref, %{status: :error, error: message})}
+
+      result ->
+        result
+    end
+  end
+
+  defp do_consume_and_deliver(socket, entry, item) do
     user = socket.assigns.current_user
     clean_entry = %{entry | client_name: strip_ref(entry.client_name)}
 
@@ -551,6 +566,10 @@ defmodule BrandoAdmin.UploadManager do
   # in-process one. Everything it reads is server-side: the key and target come
   # from intake, never from the completion event.
   defp finalize_item(item, user) do
+    Brando.Authorization.Media.with_intent(item.target, user, fn -> do_finalize_item(item, user) end)
+  end
+
+  defp do_finalize_item(item, user) do
     finalize_params =
       maybe_put_folder_id(
         %{

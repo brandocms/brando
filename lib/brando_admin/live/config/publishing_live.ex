@@ -83,14 +83,20 @@ defmodule BrandoAdmin.Sites.PublishingLive do
             <input name="build[note]" placeholder={gettext("Homepage campaign update")} />
           </label>
           <label>
-            <input type="checkbox" name="build[auto_deploy]" value="true" checked={auto_deploy?(@site)} />
+            <input
+              type="checkbox"
+              name="build[auto_deploy]"
+              value="true"
+              checked={auto_deploy?(@site) && BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
+              disabled={!BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
+            />
             <span>{gettext("Deploy automatically after a successful build")}</span>
           </label>
           <div class="environment-actions">
             <button
               type="submit"
               class="primary"
-              disabled={!@can_manage?}
+              disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:build, :publishing)}
               phx-disable-with={gettext("Queueing…")}
             >
               {gettext("Build now")}
@@ -112,10 +118,23 @@ defmodule BrandoAdmin.Sites.PublishingLive do
             </select>
           </label>
           <label>
-            <input type="checkbox" name="build[auto_deploy]" value="true" checked={auto_deploy?(@site)} />
+            <input
+              type="checkbox"
+              name="build[auto_deploy]"
+              value="true"
+              checked={auto_deploy?(@site) && BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
+              disabled={!BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
+            />
             <span>{gettext("Deploy automatically")}</span>
           </label>
-          <button type="submit" class="secondary" disabled={!@can_manage?}>
+          <button
+            type="submit"
+            class="secondary"
+            disabled={
+              !@can_manage? || !BrandoAdmin.Authorization.allowed?(:build, :publishing) ||
+                !BrandoAdmin.Authorization.allowed?(:schedule, :publishing)
+            }
+          >
             {gettext("Schedule")}
           </button>
         </form>
@@ -176,7 +195,11 @@ defmodule BrandoAdmin.Sites.PublishingLive do
             />
             <span>{gettext("Default new builds to automatic deployment")}</span>
           </label>
-          <button type="submit" class="secondary" disabled={!@can_manage?}>
+          <button
+            type="submit"
+            class="secondary"
+            disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
+          >
             {gettext("Save deployment settings")}
           </button>
         </form>
@@ -247,7 +270,9 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                     :if={build.status == :ready && is_nil(build.pruned_at)}
                     type="button"
                     class="primary small"
-                    disabled={!@can_manage? || !deploy_configured?(@site)}
+                    disabled={
+                      !@can_manage? || !BrandoAdmin.Authorization.allowed?(:deploy, :publishing) || !deploy_configured?(@site)
+                    }
                     phx-click="deploy"
                     phx-value-id={build.id}
                     phx-confirm={gettext("Deploy %{version}?", version: build.version)}
@@ -258,7 +283,9 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                     :if={build.status == :archived && is_nil(build.pruned_at)}
                     type="button"
                     class="secondary small"
-                    disabled={!@can_manage? || !deploy_configured?(@site)}
+                    disabled={
+                      !@can_manage? || !BrandoAdmin.Authorization.allowed?(:deploy, :publishing) || !deploy_configured?(@site)
+                    }
                     phx-click="rollback"
                     phx-value-id={build.id}
                     phx-confirm={gettext("Roll back to %{version}?", version: build.version)}
@@ -325,7 +352,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
          %Build{site_id: site_id} <- Enum.find(socket.assigns.builds, &(&1.id == build_id)),
          true <- site_id == socket.assigns.site.id,
          {:ok, _job} <-
-           %{"build_id" => build_id, "action" => action}
+           %{"build_id" => build_id, "action" => action, "creator_id" => socket.assigns.current_user.id}
            |> SSGDeploy.new(tags: ["ssg-deploy", "site:#{site_id}"])
            |> Oban.insert() do
       send(self(), {:toast, gettext("Static %{action} queued", action: action)})
@@ -374,9 +401,14 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   end
 
   defp can_manage?(user, site) do
-    case Tenant.mode() do
-      :multi -> Access.can_manage?(user, site)
-      _other -> user.role in @manager_roles
+    if Brando.Authorization.enabled?() do
+      scope = Brando.Authorization.Scope.site(user, site)
+      Enum.any?([:build, :deploy, :schedule], &Brando.Authorization.can?(scope, &1, :publishing))
+    else
+      case Tenant.mode() do
+        :multi -> Access.can_manage?(user, site)
+        _other -> user.role in @manager_roles
+      end
     end
   end
 
