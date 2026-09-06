@@ -3,6 +3,9 @@ defmodule Brando.LivePreview.Target do
   defstruct __identifier__: nil,
             __spark_metadata__: nil,
             schema: nil,
+            name: :default,
+            label: nil,
+            description: nil,
             layout: nil,
             template: nil,
             mutate_data: nil,
@@ -20,6 +23,13 @@ defmodule Brando.LivePreview.Target do
       required: true,
       doc: "Schema to LivePreview"
     ],
+    name: [
+      type: :atom,
+      default: :default,
+      doc: "Stable name, unique within this schema. Existing unnamed targets use :default."
+    ],
+    label: [type: :string, doc: "Editor-facing name shown in the preview chooser"],
+    description: [type: :string, doc: "Optional explanation of this view"],
     layout: [
       type: {:or, [{:tuple, [:atom, {:or, [:string, :atom]}]}, {:fun, 1}]},
       required: false,
@@ -78,4 +88,11 @@ defmodule Brando.LivePreview.Target do
   ]
 
   def schema, do: @schema
+
+  def transform(%{name: name} = target) when name not in [nil, true, false] do
+    label = target.label || if(name == :default, do: "Preview", else: Phoenix.Naming.humanize(name))
+    {:ok, %{target | label: label}}
+  end
+
+  def transform(_target), do: {:error, "preview target name must be a non-nil atom other than true or false"}
 end

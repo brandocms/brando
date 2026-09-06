@@ -193,10 +193,17 @@ export async function dragAndDrop(page, dragLocator, dropLocator, targetPosition
 
 // Toggle live preview on/off - clicks the eye icon in form tab builtins
 const toggleLivePreview = async page => {
+  const wasOpen = await page.locator('.live-preview-wrapper').isVisible()
   const btn = page.locator('.form-tab-builtins button.live-preview-toggle')
   await btn.scrollIntoViewIfNeeded()
   await btn.click()
   await syncLV(page)
+  const choices = page.getByRole('group', { name: 'Preview as' })
+  if (await choices.isVisible()) {
+    if (wasOpen) await choices.getByRole('button', { name: 'Close preview', exact: true }).click()
+    else await choices.locator('.preview-choice').first().click()
+    await syncLV(page)
+  }
 }
 
 // Get the preview iframe frame locator

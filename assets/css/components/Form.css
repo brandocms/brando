@@ -50,6 +50,7 @@
   flex-direction: row;
 
   .form-content {
+    min-width: 0;
     flex-shrink: 1;
     flex-grow: 1;
     width: 100%;
@@ -536,7 +537,7 @@
     @font main;
     font-size: 13px;
     font-weight: 500;
-    line-height: 1;
+    line-height: 18px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -659,8 +660,10 @@
     }
 
     [data-icon] {
-      width: 17px;
-      height: 17px;
+      display: block;
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
       color: color-mix(in srgb, var(--form-tool-ink) var(--form-tool-icon-strength), var(--brando-color-dark));
     }
 
@@ -851,4 +854,164 @@
 @keyframes presence-pulse {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* Preview targets are page views; device controls stay inside the preview pane. */
+.form-tabs .form-tab-builtins {
+  .preview-chooser {
+    position: relative;
+    padding: 0;
+    cursor: default;
+  }
+
+  .preview-chooser-trigger {
+    font: inherit;
+    line-height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 34px;
+    padding: var(--brando-chip-padding);
+    border: 0;
+    border-radius: var(--brando-chip-radius);
+    background: transparent;
+
+    &.active {
+      background: var(--brando-chip-active-bg);
+      color: var(--brando-chip-active-fg);
+
+      [data-icon] {
+        color: inherit;
+      }
+    }
+
+    .preview-chooser-chevron {
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  .preview-choices {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 300px;
+    max-width: calc(100vw - 32px);
+    max-height: min(480px, 70vh);
+    overflow-y: auto;
+    padding: 8px;
+    border: 1px solid var(--brando-color-peach);
+    border-radius: 12px;
+    background: var(--brando-color-white);
+    box-shadow: 0 12px 36px rgba(5, 39, 82, 0.14), 0 2px 8px rgba(5, 39, 82, 0.05);
+    white-space: normal;
+    text-align: left;
+    z-index: 5;
+  }
+
+  .preview-choices-heading {
+    padding: 8px 10px 10px;
+    font-size: 11px;
+    line-height: 1.4;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--brando-color-dark);
+    opacity: 0.65;
+  }
+
+  .preview-choice,
+  .preview-choice-close {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 10px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--brando-color-dark);
+    text-align: left;
+    font-family: inherit;
+
+    &:hover {
+      background: var(--brando-chip-hover-bg);
+    }
+  }
+
+  .preview-choice[aria-pressed="true"] {
+    background: var(--brando-chip-active-bg);
+    color: var(--brando-chip-active-fg);
+  }
+
+  .preview-choice-copy {
+    flex: 1;
+    min-width: 0;
+  }
+  .preview-choice-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+  .preview-choice-description {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+    opacity: 0.75;
+  }
+  .preview-choice-check {
+    flex-shrink: 0;
+    visibility: hidden;
+  }
+  .preview-choice[aria-pressed="true"] .preview-choice-check {
+    visibility: visible;
+    color: inherit;
+  }
+  .preview-choice-close {
+    margin-top: 8px;
+    border-top: 1px solid var(--brando-color-peach);
+    border-radius: 0 0 7px 7px;
+    font-size: 12px;
+  }
+
+  .preview-chooser button:focus-visible {
+    outline: 2px solid var(--brando-chip-active-fg);
+    outline-offset: -2px;
+  }
+}
+
+.form-tabs .preview-current-view {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/* Main's glyphs sit slightly above its line-box center. Align the visible text
+   with the centered icon masks, including text-only tabs. */
+.form-tabs .form-tab-label,
+.form-tabs .tab-text,
+.form-tabs .preview-current-view {
+  transform: translateY(1px);
+}
+
+.form-tabs .split-dropdown-button > svg {
+  display: block;
+  margin: 0;
+}
+
+/* Keep the preview and its toolbar fully visible when sharing the viewport. */
+@media (max-width: 1600px) {
+  .with-live-preview .form-tabs .form-tab-builtins .tab-text {
+    display: none;
+  }
+
+  .with-live-preview .form-tabs .preview-current-view {
+    max-width: 90px;
+  }
 }

@@ -1,0 +1,23 @@
+<style>
+  .preview-directory { max-width: 1160px; margin: 0 auto; padding: 72px 40px; color: #183e35; }
+  .preview-directory > p { font: 500 14px/1.5 sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+  .preview-directory h1 { font: 500 56px/1.1 Georgia, serif; margin: 16px 0 40px; }
+  .preview-directory-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+  .preview-directory-card { padding: 28px; min-height: 190px; border: 1px solid #d6e2dc; border-radius: 12px; background: #f6f9f7; }
+  .preview-directory-card[data-edited="true"] { background: #e6f1e9; border-color: #76a08a; }
+  .preview-directory-card small { font: 500 12px/1.5 sans-serif; color: #38644e; }
+  .preview-directory-card h2 { font: 500 28px/1.2 Georgia, serif; margin: 30px 0 12px; overflow-wrap: anywhere; }
+  .preview-directory-card a { color: inherit; font: 400 14px/1.5 sans-serif; }
+  @media(max-width: 600px) { .preview-directory { padding: 32px 20px; } .preview-directory h1 { font-size: 38px; } }
+</style>
+<main class="preview-directory">
+  <p>Explore the site</p>
+  <h1>Pages &amp; stories</h1>
+  <div class="preview-directory-grid">
+    <article :for={page <- @pages} class="preview-directory-card" data-edited={to_string(page.id == @page.id)}>
+      <small>{if page.id == @page.id, do: "Currently editing", else: "Published page"}</small>
+      <h2>{page.title}</h2>
+      <a href={Brando.Pages.Page.__absolute_url__(page)}>Explore page →</a>
+    </article>
+  </div>
+</main>

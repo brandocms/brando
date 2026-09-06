@@ -107,6 +107,9 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:pending_permalink_redirect, nil)
      |> assign(:permalink_redirect_error, nil)
      |> assign(:live_preview_target, "desktop")
+     |> assign(:live_preview_schema_target, nil)
+     |> assign(:pending_live_preview_target, nil)
+     |> assign(:live_preview_menu_open?, false)
      |> assign(:live_preview_ready?, false)
      |> assign(:live_preview_active?, false)
      |> assign(:live_preview_cache_key, nil)
@@ -1509,6 +1512,10 @@ defmodule BrandoAdmin.Components.Form do
       schema.has_trait(Brando.Trait.ScheduledPublishing)
     end)
     |> assign_new(:has_live_preview?, fn -> check_live_preview(schema) end)
+    |> assign_new(:live_preview_targets, fn -> Brando.LivePreview.get_targets(schema) end)
+    |> assign_new(:live_preview_default_target, fn ->
+      if Brando.LivePreview.has_live_preview_target(schema), do: Brando.LivePreview.get_target_config(schema).name
+    end)
     |> assign_transformer_statuses()
     |> assign(
       :has_alternates?,
@@ -1729,7 +1736,8 @@ defmodule BrandoAdmin.Components.Form do
              schema,
              changeset,
              user,
-             updated_entry_assocs
+             updated_entry_assocs,
+             socket.assigns.live_preview_schema_target
            ) do
         {:ok, preview_url, expiration_days} ->
           message =
@@ -1763,7 +1771,12 @@ defmodule BrandoAdmin.Components.Form do
     schema = socket.assigns.schema
 
     if changeset.errors == [] do
-      case Brando.LivePreview.initialize(schema, changeset, updated_entry_assocs) do
+      case Brando.LivePreview.initialize(
+             schema,
+             changeset,
+             updated_entry_assocs,
+             socket.assigns.live_preview_schema_target
+           ) do
         {:ok, cache_key} ->
           socket
           |> assign(:live_preview_active?, true)
@@ -1808,7 +1821,12 @@ defmodule BrandoAdmin.Components.Form do
 
       if changeset.errors == [] do
         # fetch all blocks' rendered_html
-        case Brando.LivePreview.initialize(schema, changeset, updated_entry_assocs) do
+        case Brando.LivePreview.initialize(
+               schema,
+               changeset,
+               updated_entry_assocs,
+               socket.assigns.live_preview_schema_target
+             ) do
           {:ok, cache_key} ->
             socket
             |> assign(:live_preview_active?, true)
@@ -1896,6 +1914,50 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  def event_tag_received(%{assigns: %{pending_live_preview_target: nil}} = socket, :live_preview_target),
+    do: clear_blocks_root_changesets(socket)
+
+  def event_tag_received(socket, :live_preview_target) do
+    block_changesets = socket.assigns.block_changesets
+
+    if Enum.any?(Map.values(block_changesets), &is_nil/1) do
+      socket
+    else
+      changeset = assoc_all_block_fields(block_changesets, socket.assigns.form.source)
+      schema = socket.assigns.schema
+      target = socket.assigns.pending_live_preview_target
+      socket = socket |> clear_blocks_root_changesets() |> assign(:pending_live_preview_target, nil)
+
+      if changeset.errors == [] do
+        case Brando.LivePreview.switch_target(
+               schema,
+               changeset,
+               socket.assigns.live_preview_cache_key,
+               target,
+               socket.assigns.updated_entry_assocs
+             ) do
+          {:ok, _key} ->
+            socket
+            |> assign(:live_preview_schema_target, target)
+            |> assign_entry_fields_demanding_live_preview_rerender(schema)
+            |> assign_entry_fields_demanding_live_preview_reassign(schema)
+
+          {:error, _reason} ->
+            push_event(socket, "b:alert", %{
+              title: gettext("Could not switch preview"),
+              message:
+                gettext(
+                  "The previous preview is still open. Check the target configuration and your access, then try again."
+                ),
+              type: "error"
+            })
+        end
+      else
+        push_errors(socket, changeset, socket.assigns.form_blueprint, schema)
+      end
+    end
+  end
+
   def event_tag_received(socket, :live_preview_full_rerender) do
     block_changesets = socket.assigns.block_changesets
     changeset = socket.assigns.form.source
@@ -1964,12 +2026,12 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def assign_entry_fields_demanding_live_preview_rerender(socket, schema) do
-    lp_opts = Brando.LivePreview.get_target_config(schema)
+    lp_opts = Brando.LivePreview.get_target_config(schema, socket.assigns.live_preview_schema_target)
     assign(socket, :fields_demanding_full_live_preview_rerender, lp_opts.rerender_on_change)
   end
 
   def assign_entry_fields_demanding_live_preview_reassign(socket, schema) do
-    lp_opts = Brando.LivePreview.get_target_config(schema)
+    lp_opts = Brando.LivePreview.get_target_config(schema, socket.assigns.live_preview_schema_target)
     assign(socket, :fields_demanding_live_preview_reassign, lp_opts.reassign_on_change)
   end
 
@@ -2053,7 +2115,7 @@ defmodule BrandoAdmin.Components.Form do
         data-draft-form-id={@id}
         data-draft-leave-message={gettext("Your latest edits have not reached recovery storage. Leave this editor anyway?")}
       >
-        <div class="form-content">
+        <div class={["form-content", @live_preview_active? && "with-live-preview"]}>
           <div :if={@header} class="form-header">
             <h1>
               {render_slot(@header)}
@@ -2076,7 +2138,7 @@ defmodule BrandoAdmin.Components.Form do
                 phx-click={JS.push("select_tab", target: @myself)}
                 phx-value-name={tab}
               >
-                {g(@schema, tab)}
+                <span class="form-tab-label">{g(@schema, tab)}</span>
               </button>
             </div>
 
@@ -2130,7 +2192,7 @@ defmodule BrandoAdmin.Components.Form do
                 <.icon name="hero-language" class="s" />
               </button>
               <button
-                :if={@has_live_preview?}
+                :if={@has_live_preview? && length(@live_preview_targets) == 1}
                 phx-click={JS.push("open_live_preview", target: @myself)}
                 class={["live-preview-toggle form-tool-preview", @live_preview_active? && "active"]}
                 type="button"
@@ -2140,6 +2202,73 @@ defmodule BrandoAdmin.Components.Form do
               >
                 <.icon name="hero-eye" class="s" />
               </button>
+              <div :if={length(@live_preview_targets) > 1} class="preview-chooser form-tool-preview">
+                <button
+                  id={"#{@id}-preview-trigger"}
+                  type="button"
+                  class={["live-preview-toggle preview-chooser-trigger", @live_preview_active? && "active"]}
+                  phx-click="toggle_preview_targets"
+                  phx-target={@myself}
+                  aria-label={gettext("Live preview")}
+                  aria-expanded={to_string(@live_preview_menu_open?)}
+                  aria-controls={"#{@id}-preview-choices"}
+                  title={gettext("Choose preview")}
+                >
+                  <.icon name="hero-eye" class="s" />
+                  <span
+                    :for={preview <- @live_preview_targets}
+                    :if={
+                      @live_preview_active? && preview.name == (@live_preview_schema_target || @live_preview_default_target)
+                    }
+                    class="preview-current-view"
+                  >{preview.label}</span>
+                  <.icon name="hero-chevron-down" class="preview-chooser-chevron" />
+                </button>
+                <div
+                  :if={@live_preview_menu_open?}
+                  id={"#{@id}-preview-choices"}
+                  class="preview-choices"
+                  role="group"
+                  aria-labelledby={"#{@id}-preview-heading"}
+                  phx-click-away="close_preview_targets"
+                  phx-target={@myself}
+                  phx-window-keydown={
+                    JS.push("close_preview_targets", target: @myself) |> JS.focus(to: "##{@id}-preview-trigger")
+                  }
+                  phx-key="Escape"
+                >
+                  <div id={"#{@id}-preview-heading"} class="preview-choices-heading">{gettext("Preview as")}</div>
+                  <button
+                    :for={preview <- @live_preview_targets}
+                    type="button"
+                    class="preview-choice"
+                    phx-click={
+                      JS.push("select_preview_target", target: @myself, value: %{name: preview.name})
+                      |> JS.focus(to: "##{@id}-preview-trigger")
+                    }
+                    aria-pressed={
+                      to_string(
+                        @live_preview_active? && preview.name == (@live_preview_schema_target || @live_preview_default_target)
+                      )
+                    }
+                  >
+                    <span class="preview-choice-copy">
+                      <span class="preview-choice-label">{preview.label}</span>
+                      <span :if={preview.description} class="preview-choice-description">{preview.description}</span>
+                    </span>
+                    <.icon name="hero-check" class="preview-choice-check" />
+                  </button>
+                  <button
+                    :if={@live_preview_active?}
+                    type="button"
+                    class="preview-choice-close"
+                    phx-click={JS.push("open_live_preview", target: @myself) |> JS.focus(to: "##{@id}-preview-trigger")}
+                  >
+                    <.icon name="hero-x-mark" class="s" />
+                    {gettext("Close preview")}
+                  </button>
+                </div>
+              </div>
               <button
                 :if={@has_live_preview? && BrandoAdmin.Authorization.allowed?(:export, @schema)}
                 class="form-tool-share"
@@ -3885,6 +4014,32 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, fetch_root_blocks(socket, :store_revision, 150)}
   end
 
+  def handle_event("toggle_preview_targets", _, socket) do
+    {:noreply, assign(socket, :live_preview_menu_open?, !socket.assigns.live_preview_menu_open?)}
+  end
+
+  def handle_event("close_preview_targets", _, socket) do
+    {:noreply, assign(socket, :live_preview_menu_open?, false)}
+  end
+
+  def handle_event("select_preview_target", %{"name" => name}, socket) do
+    case Enum.find(socket.assigns.live_preview_targets, &(to_string(&1.name) == name)) do
+      nil ->
+        {:noreply, socket}
+
+      target ->
+        socket = assign(socket, :live_preview_menu_open?, false)
+
+        if socket.assigns.live_preview_active? do
+          socket = assign(socket, :pending_live_preview_target, target.name)
+          {:noreply, fetch_root_blocks(socket, :live_preview_target, 0)}
+        else
+          socket = assign(socket, :live_preview_schema_target, target.name)
+          handle_event("open_live_preview", %{}, socket)
+        end
+    end
+  end
+
   # restore live preview after reconnect via form recovery
   def handle_event(
         "recover_live_preview_state",
@@ -3899,6 +4054,7 @@ defmodule BrandoAdmin.Components.Form do
         socket
         |> assign(:live_preview_active?, true)
         |> assign(:live_preview_cache_key, cache_key)
+        |> assign(:live_preview_schema_target, Brando.LivePreview.target_name(cache_key))
         |> assign_entry_fields_demanding_live_preview_rerender(schema)
         |> assign_entry_fields_demanding_live_preview_reassign(schema)
         |> push_event("b:live_preview", %{cache_key: cache_key})
@@ -3945,6 +4101,8 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> assign(:live_preview_active?, false)
+    |> assign(:live_preview_menu_open?, false)
+    |> assign(:pending_live_preview_target, nil)
     |> assign(:live_preview_cache_key, nil)
     |> disable_live_preview_in_blocks()
     |> push_event("js-exec", %{to: "#sidebar", attr: "data-js-show"})

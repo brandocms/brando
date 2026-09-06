@@ -66,6 +66,7 @@ defmodule Brando.Authorization.RealtimeTest do
   test "another form, actor, or absent scope cannot overwrite a preview", c do
     other = Factory.insert(:page, status: :draft)
     assert {:error, :forbidden} = Preview.authorize_write(c.key, c.changeset)
+    assert {:error, :forbidden} = Brando.LivePreview.switch_target(Page, c.changeset, c.key, :listing)
 
     Boundary.with_scope(Scope.standalone(c.owner), fn ->
       assert {:error, :forbidden} = Preview.authorize_write(c.key, c.changeset)
@@ -75,6 +76,7 @@ defmodule Brando.Authorization.RealtimeTest do
       assert :ok = Preview.authorize_write(c.key, c.changeset)
       assert {:error, :forbidden} = Preview.authorize_write(c.key, Ecto.Changeset.change(other))
       assert {:error, :forbidden} = Brando.LivePreview.update(Page, Ecto.Changeset.change(other), c.key)
+      assert {:error, :forbidden} = Brando.LivePreview.switch_target(Page, Ecto.Changeset.change(other), c.key, :listing)
     end)
 
     assert {:ok, html} = Brando.LivePreview.get_cache(c.key)

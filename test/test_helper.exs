@@ -175,6 +175,23 @@ defmodule BrandoIntegrationWeb.LivePreview do
     assign :employees, fn _ -> __MODULE__.list_employees!() end
   end
 
+  preview_target Brando.Pages.Page do
+    name :listing
+    label "Listing"
+    description "The edited page among other pages"
+    template {BrandoIntegrationWeb.PageHTML, "listing"}
+    layout {BrandoIntegrationWeb.Layouts, "app"}
+    reassign_on_change [{:employees, [:title]}]
+    assign :employees, fn entry -> [%{id: entry.id, name: entry.title}] end
+  end
+
+  preview_target Brando.Pages.Page do
+    name :broken
+    template fn _ -> raise "Broken preview template" end
+    layout {BrandoIntegrationWeb.Layouts, "app"}
+    assign :employees, fn _ -> [%{id: 0, name: "Failed view"}] end
+  end
+
   def list_restaurants! do
     [
       %{id: 1, name: "Oslo"},
