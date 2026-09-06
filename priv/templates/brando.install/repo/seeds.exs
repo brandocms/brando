@@ -27,7 +27,6 @@ for lang <- languages do
           creator_id: user.id,
           link_text: "Brando CMS",
           link_target_blank: true,
-          important: true,
           label: "Link",
           key: "link",
           value: "https://brandocms.com"
@@ -43,7 +42,6 @@ for lang <- languages do
           creator_id: user.id,
           link_text: "API Documentation",
           link_target_blank: true,
-          important: true,
           label: "Link",
           key: "link",
           value: "https://hexdocs.pm/brando"
@@ -59,7 +57,6 @@ for lang <- languages do
           creator_id: user.id,
           link_text: "Guides",
           link_target_blank: true,
-          important: true,
           label: "Link",
           key: "link",
           value: "https://brandocms.com/guides"
@@ -77,6 +74,7 @@ for lang <- languages do
 end
 
 example_module = %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   class: "example",
   code:
     "<article b-tpl=\"example\">\n\t<div class=\"inner\">\n\t\t{% ref refs.h1 %}\n        {% ref refs.p %}\n\t</div>\n</article>",
@@ -177,7 +175,8 @@ for lang <- languages do
     parent_id: nil,
     sequence: 0,
     status: :published,
-    title: "Index"
+    title: "Index",
+    template: "default.html"
   }
 
   p1 = <%= application_module %>.Repo.insert!(page)
@@ -193,4 +192,10 @@ for lang <- languages do
   }
 
   <%= application_module %>.Repo.insert!(footer_fragment)
+
+  # Repo inserts bypass context rendering callbacks. Make the sample homepage
+  # usable on its first request, including when no rendering worker has run yet.
+  {:ok, _page} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, p1.id)
 end
+
+Brando.Cache.Navigation.set()

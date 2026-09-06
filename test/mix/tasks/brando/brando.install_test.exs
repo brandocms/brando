@@ -56,8 +56,8 @@ defmodule Mix.Tasks.Brando.GenerateTest do
     assert File.exists?("lib/brando_web/villain")
     assert_file("lib/brando_web/villain/parser.ex")
     assert File.dir?("priv/repo/tenant_migrations")
-    assert_file("priv/repo/migrations/20260816002300_brando_163_add_shared_content_library.exs")
-    assert_file("priv/repo/migrations/20260816002400_brando_164_add_ssg_builds.exs")
+    assert_file("priv/repo/migrations/20260101000243_brando_163_add_shared_content_library.exs")
+    assert_file("priv/repo/migrations/20260101000244_brando_164_add_ssg_builds.exs")
     assert_file("priv/repo/tenant_migrations/20260816002300_add_shared_content_library.exs")
 
     assert_file("config/runtime.exs", fn file ->
@@ -90,10 +90,27 @@ defmodule Mix.Tasks.Brando.GenerateTest do
       assert file =~ "use BrandoAdmin.LiveView.Listing, schema: nil"
     end)
 
-    assert_file("priv/repo/migrations/20260906120000_brando_170_add_authorization_groups.exs", fn file ->
+    assert_file("priv/repo/migrations/20260101000250_brando_170_add_authorization_groups.exs", fn file ->
       assert file =~ "authorization_groups"
       assert file =~ "authorization_legacy_mappings"
     end)
+
+    # Every versioned migration comes from the maintained upgrade source, and
+    # runs in numeric order even when older versions were added after newer ones.
+    installed = Path.wildcard("priv/repo/migrations/*_brando_*.exs") |> Enum.sort()
+    templates = Path.wildcard(Path.join(@root_path, "priv/templates/brando.upgrade/migrations/*.exs"))
+    assert length(installed) == length(templates)
+
+    sequences =
+      Enum.map(installed, fn path ->
+        [_, filename, sequence] = Regex.run(~r/\d+_(brando_(\d+)_.+\.exs)$/, path)
+        template = Path.join(@root_path, "priv/templates/brando.upgrade/migrations/#{filename}")
+        assert File.read!(path) == EEx.eval_file(template)
+        String.to_integer(sequence)
+      end)
+
+    assert sequences == Enum.sort(sequences)
+    assert length(sequences) == length(Enum.uniq(sequences))
 
     refute File.exists?("assets/css/app.css")
   end

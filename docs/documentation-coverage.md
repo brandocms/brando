@@ -1,91 +1,87 @@
-# Documentation coverage and remaining work
+# Brando 0.54 documentation coverage
 
-Issue [#627](https://github.com/brandocms/brando/issues/627) is now scoped to the
-0.54 documentation entry points and this coverage baseline. It is not an
-unbounded promise to document every subsystem in one PR.
+The entry-point audit in [#627](https://github.com/brandocms/brando/issues/627)
+identified missing application-developer guidance. The remaining writing packages
+are completed by [#2771](https://github.com/brandocms/brando/issues/2771), with live
+preview delivered separately in [#2770](https://github.com/brandocms/brando/pull/2770).
+The reader entry point is [Brando 0.54 guides](../guides/overview.md).
 
-Audit baseline: `next` at `67191f96d`, 6 September 2026. This records guide content,
-not the existence of a Markdown filename or an ExDoc module. The reader entry
-point is [Brando 0.54 guides](../guides/overview.md).
-
-## Completion criteria for the rescoped issue
-
-- Account for all 23 top-level topics in the original issue, including redirects
-  under SEO.
-- Distinguish usable guides, partial coverage, heading-only stubs, and missing
-  dedicated guides.
-- Publish a task-oriented index from both README and ExDoc.
-- State remaining deliverables and their verification requirements; do not mark
-  a topic complete merely because its file exists.
+Coverage reviewed on 6 September 2026 against the developing 0.54 source. A guide
+here means practical instructions with prerequisites, current APIs, an example,
+and relevant failure states. It does not imply every provider or deployment
+combination has been exercised against an external service.
 
 ## Original topic inventory
 
-**Guide** means substantial usable guidance exists, without claiming an exhaustive
-audit of every example. **Partial** means selected APIs or recipes are covered.
-**Stub** means the dedicated file has only a heading. **Missing** means no dedicated
-guide exists, though source/API documentation may be available.
+All 23 topics from the original issue now have developer guidance. Revisions,
+which were not listed separately in that checklist, also have a complete guide.
 
-| Original topic | Coverage at baseline | Existing guidance and remaining deliverable |
+| Original topic | Guide | Scope |
 | --- | --- | --- |
-| Datasources | Partial | [Datasource examples](../guides/datasources.md), [Blueprint DSL](../guides/blueprints.md#datasources). Cover list/selection/single callback contracts, ordering, vars, runtime context, and invalidation with current examples. |
-| Villain | Guide | [Block editor](../guides/block_editor.md), [parser](../guides/villain_parser.md), [text styles](../guides/villain_text_styles.md). Keep both Liquex and HEEx examples in sync with rendering tests. |
-| Identity | Partial | [JSON-LD identity](../guides/jsonld.md#identity-type-specific-fields). Add translated identity setup, links, frontend access, defaults, and cache refresh. Source: `lib/brando/sites/identity.ex`, `lib/brando/sites.ex`. |
-| SEO and redirects | Partial | [Permalink redirects](../guides/blueprints.md#permalink-redirects) covers automatic redirects. Add the SEO configuration form, fallback values, manual patterns/captures, language scoping, and redirect testing. Source: `lib/brando/sites/seo.ex`, `lib/brando/sites/redirects.ex`. |
-| Sitemap | Stub | `guides/sitemaps.md`. Explain sitemap DSL, publication/status filtering, language URLs, generation schedule, storage, and an output check. Source: `lib/brando/sitemap.ex`. |
-| CDN | Stub | `guides/cdn.md`. Cover field/default S3 settings, image/file upload flow, media URL versus object key, tenant paths, and verification. Source: `lib/brando/cdn/cdn.ex`. |
-| Users | Partial | [Authorization](../guides/authorization.md) covers access and group management. Add account creation, login eligibility, sessions, deactivation, and deletion/content transfer. Source: `lib/brando/users/users.ex`. |
-| Pages/Sections | Stub | `guides/pages.md`. Define current pages, hierarchy, templates, vars, fragments, homepage URLs, breadcrumbs, and frontend rendering. Source: `lib/brando/pages/pages.ex`. |
-| Generator | Stub | `guides/generators.md`. Give a fresh-install path and task catalog with generated files, follow-up commands, and overwrite boundaries. Source: `lib/mix/tasks/`. |
-| Authorization | Guide | [Authorization](../guides/authorization.md). Covers opt-in groups, legacy compatibility, scopes, policies, enforcement, and testing. |
-| META schemas | Partial | [Meta](../guides/meta.md), [Blueprint metadata](../guides/blueprints.md#metadata-and-json-ld). Correct stale callback examples and show a complete controller/layout result with fallbacks. |
-| JSONLD schemas | Guide | [JSON-LD](../guides/jsonld.md). Covers graph relationships, controller integration, supported schema fields, and custom schemas. |
-| Image fields | Partial | [Blueprint assets](../guides/blueprints.md#assets) and internal [upload architecture](UPLOADER.md). Add a public recipe for field configuration, Image/Vix processing, focal crop, sizes/srcset, and rendering. |
-| File fields | Partial | [Blueprint assets](../guides/blueprints.md#assets), internal [upload architecture](UPLOADER.md). Add allowed types/limits, replacement, download URLs, and persisted field behavior. |
-| Live Preview | Stub | `guides/live_preview.md`. Explain configuration, unsaved data, preloads, assigns, invalidation, independent targets, and sharing. Implementation is tracked in [#2485](https://github.com/brandocms/brando/issues/2485); update coverage when its guide lands. |
-| Soft delete | Partial | [Query status/deletion](../guides/querying.md#status-language-and-soft-deletion), [traits](../guides/blueprints.md#traits). Add delete/restore, obfuscated unique fields, conflicts, and purge behavior. Source: `lib/brando/traits/soft_delete.ex`. |
-| Sequence | Partial | [Traits](../guides/blueprints.md#traits), [ordering](../guides/querying.md#ordering). Add append/strict semantics, stable ordering, nested rows, and authorized reorder. Source: `lib/brando/traits/sequenced.ex`. |
-| Gallery | Partial | [Blueprint assets](../guides/blueprints.md#assets), internal [upload architecture](UPLOADER.md). Add mixed image/video configuration, ordering, usage overrides, independent duplication, and rendering. |
-| Status | Partial | [Query status/deletion](../guides/querying.md#status-language-and-soft-deletion). Explain draft/pending/published/disabled values as defined by the current status type, required-field behavior, and publication side effects. Source: `lib/brando/traits/status.ex`. |
-| Scheduled publishing | Stub | `guides/scheduled_publishing.md`. Separate publishing an entry status from scheduling a revision, including time zones, cancellation, retries, permissions, and tenant context. Source: `lib/brando/publisher.ex`. |
-| I18n | Stub | `guides/i18n.md`. Explain admin/content languages, Gettext, translated entries/alternates, route scoping, and frontend helpers. Existing migration guidance covers Gettext upgrades only. |
-| Navigation | Stub | `guides/navigation.md`. Give a complete menu, nested item, identifier-backed link, language lookup, rendering, and cache refresh example. Source: `lib/brando/navigation/navigation.ex`. |
-| Query | Guide | [Querying](../guides/querying.md). Covers generated contexts, options, association loading, caching, revisions, and mutations. |
+| Datasources | [Datasources](../guides/datasources.md) | List/selection/single contracts, ordering, vars, request context, metadata, invalidation |
+| Villain | [Block editor](../guides/block_editor.md), [parser](../guides/villain_parser.md), [text styles](../guides/villain_text_styles.md) | Modules, refs, vars, Liquex/HEEx rendering, rich text |
+| Identity | [Identity and SEO](../guides/identity_and_seo.md) | Translated defaults, contact details, links, frontend access, cache/render refresh |
+| SEO and redirects | [Identity and SEO](../guides/identity_and_seo.md), [permalink redirects](../guides/blueprints.md#permalink-redirects) | Fallbacks, robots, manual patterns/captures, language and fallback-controller behavior |
+| Sitemap | [Sitemaps](../guides/sitemaps.md) | Public filters, struct-preserving URL queries, generation, XML output, schedule and storage |
+| CDN | [CDN](../guides/cdn.md) | Global/field S3 settings, upload transports, media URLs versus object keys, tenant boundaries |
+| Users | [Users and sessions](../guides/users.md) | Creation, restricted accounts, login eligibility, tokens, deactivation, content transfer |
+| Pages/Sections | [Pages and fragments](../guides/pages.md) | Context writes, public routes, templates, vars, homepage URI, hierarchy, breadcrumbs, fragments |
+| Generator | [Installation and generators](../guides/generators.md) | Fresh consumer through first login, asset builds, migration/seeding order, task catalog and overwrite boundaries |
+| Authorization | [Authorization](../guides/authorization.md) | Modes, scoped groups, policies, application enforcement and revocation |
+| META schemas | [Page metadata](../guides/meta.md) | Whole-entry callbacks, fallbacks, locale, controller/title/layout integration and output checks |
+| JSONLD schemas | [JSON-LD](../guides/jsonld.md) | Graph relationships, supported identity fields, controllers, custom schemas |
+| Image fields | [Images, files, and galleries](../guides/media.md#configure-a-cover-image) | Image/Vix processing, focal crop, formats, sizes/srcset, captions and alt text |
+| File fields | [Images, files, and galleries](../guides/media.md#add-a-pdf-download) | MIME/size limits, replacement versus association selection, download URLs and headers |
+| Live Preview | [Live preview](../guides/live_preview.md) | Unsaved data, preloads/assigns, cache invalidation, independent targets, sharing |
+| Soft delete | [Content lifecycle](../guides/content_lifecycle.md#deletion-and-restoration) | Authorized delete/restore, obfuscated unique fields, collisions, purge and shared media |
+| Sequence | [Content lifecycle](../guides/content_lifecycle.md#choose-sequence-behavior) | Append/strict modes, language scope, stable ordering, authorized reorder and nested rows |
+| Gallery | [Images, files, and galleries](../guides/media.md#add-an-ordered-mixed-gallery) | Mixed media configuration, placement overrides, ordering, rendering, independent duplication |
+| Status | [Content lifecycle](../guides/content_lifecycle.md#status-and-valid-publication) | Four status values, required-field validation, public queries and mutation side effects |
+| Scheduled publishing | [Scheduled publishing](../guides/scheduled_publishing.md) | Entry dates versus frozen revisions, cancellation, time zones, retries, permissions and environments |
+| I18n | [Languages and translations](../guides/i18n.md) | Admin/content languages, Gettext, translated entries, alternates, routes and helpers |
+| Navigation | [Navigation](../guides/navigation.md) | Translated menus, link identifiers, nesting, rendering, ordering and cache refresh |
+| Query | [Querying](../guides/querying.md) | Contexts, filters, ordering, pagination, association loading, caching and mutation behavior |
 
-Other existing guides cover Blueprint migrations, tenancy/environments, videos,
-and deployment. `guides/revisions.md` is also a heading-only stub, although it
-was not named separately in the original checklist. In total, nine of the 23
-guide files present at this baseline are heading-only stubs.
+Additional guides cover [Revisions](../guides/revisions.md), Blueprint migrations,
+tenancy/environments, videos, deployment, and migration to 0.54. There are no
+heading-only guide stubs left in this inventory.
 
-## Prioritized writing packages
+## Verification for the remaining writing packages
 
-Each package is suitable for a focused follow-up PR. These are remaining work,
-not completed acceptance criteria for the current implementation.
+The guide review followed the implementation and focused behavior checks, rather
+than using internal skill files as evidence that public documentation existed.
 
-1. **Onboarding and everyday content:** complete generators/install, pages and
-   fragments, navigation, and I18n. Walk through a fresh consumer setup, one
-   translated page and menu, and a saved/reloaded content edit. Replace the
-   README's historical shell-installer path with the verified 0.54 workflow.
-2. **Media and delivery:** public image, file, gallery, and CDN recipes. Use the
-   current Image/Vix processor, current video providers, and the sticky upload
-   manager; verify consumer rendering and distinguish local paths from CDN keys.
-3. **Preview and publishing:** live preview (#2485), revisions, scheduled
-   publishing, and status lifecycle. Show unsaved previews, selected revisions,
-   cancellation, invalid saves, and execution in the intended environment.
-4. **Site output and lifecycle:** identity, SEO/manual redirects, sitemaps,
-   datasource expansion, metadata correction, soft-delete/restore, and sequence.
-   Verify rendered output, language boundaries, and dependency/cache invalidation.
-5. **Account workflows:** extend authorization guidance with actual user session,
-   deactivation, and content-transfer behavior, with a restricted-account example.
+| Package | Verification |
+| --- | --- |
+| Onboarding and everyday content | Generated a disposable Phoenix consumer; compiled it, migrated an empty PostgreSQL database through Brando 170, built both Vite consumers using matching Yalc source, seeded and rendered English/Norwegian homepages. `test/brando/guides/workflows_test.exs` verifies seed output, page save/reload, nested translated menus, and public query filtering. Installer tests verify every maintained migration is copied exactly once in numeric order. Existing pages, alternates, locale and plug tests cover routing/language behavior. |
+| Media and delivery | Focused Vix processor, sizing, image URL/config, file replacement, mixed-gallery config/duplication, and CDN tests. Reviewed UploadManager transport/ownership contracts against source and the upload architecture. External S3/video-provider accounts were not used; deployment credentials, remote headers, webhooks and delivery URLs require the consumer checks described in the guides. |
+| Preview and publishing | Existing revision tests check snapshot/restore behavior; authorization operation tests cover publication and schedule boundaries; tenant-job tests exercise captured environment context. Reviewed scheduler cancellation, retries and retention against the publisher/revision/worker implementations. Live-preview configuration and target checks belong to #2770. |
+| Site output and lifecycle | Focused metadata extraction/rendering, redirects, sitemap XML, datasource, soft-delete and permission tests. New workflow tests verify that public URL queries retain Blueprint structs and exclude drafts and entries without URLs. Reviewed translated cache callbacks, datasource invalidation, sequence and purge code. |
+| Account workflows | Users and authorization group/operation tests, plus a password component regression for Blueprint HTML-safe labels. Reviewed login/token/logout, deactivation and content-transfer implementations; completed the fresh consumer’s initial password setup and a page save/reopen in a headless browser. |
 
-A guide is ready when it states prerequisites, uses current public APIs, includes
-one complete practical example, explains its important failure/empty state, and
-has its commands or example behavior checked against the consumer or focused
-tests. API inventories and internal agent skills complement these guides; they
-do not replace the application developer's walkthrough.
+The fresh-consumer exercise exposed prerequisites that documentation alone could
+not fix: the installer's frozen/incomplete migration set, a removed migration API,
+Vite target/dependency mismatches, Swoosh's absent default HTTP client, stale seed
+fields and missing initial rendering, and the first-login password label crash.
+These fixes accompany the walkthrough and have focused regressions where relevant.
 
-## Maintaining the index
+The focused checks above total **187 passing tests** (83 content/output checks,
+87 media/access checks, 9 installer/workflow checks, and 8 input-component checks).
+The isolated test database needed the latest authorization migration before the
+permission tests could run; those affected tests passed after it was applied.
 
-Keep `guides/overview.md`, ExDoc's extras in `mix.exs`, and this table aligned when
-a guide lands. Build docs with `mix docs`, check local Markdown links and anchors,
-and inspect the generated overview. Record unresolved baseline warnings rather
-than describing a warning-filled build as warning-free.
+## Documentation checks and maintenance
+
+Keep `guides/overview.md`, ExDoc extras/groups in `mix.exs`, and this table aligned.
+Build with `mix docs --warnings-as-errors`, validate local Markdown links and
+anchors, and inspect the generated overview. For this update, the strict ExDoc
+build passed; all 160 local links/guide anchors and 28 extras matched; all 48
+Elixir examples in the 14 completed guides parsed; desktop/mobile ExDoc views
+were inspected in a headless browser. The README now points at the Mix
+installer walkthrough rather than the historical shell installer.
+
+Consumer asset builds can report PostCSS configuration and Vite chunk-size
+warnings; successful compilation is not a claim that those baseline warnings
+were eliminated. No root framework asset build is used as a consumer validation
+gate. Live remote providers and production deployment remain consumer-specific
+checks, not results implied by the local documentation build.
