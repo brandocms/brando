@@ -54,12 +54,12 @@ routing, content environments, asset sets, and static publication.
 
 ## Documentation still being written
 
-Pages/fragments, navigation, live preview, revisions, scheduled publishing,
-sitemaps, CDN, language setup, and generators need complete standalone guides.
+Pages/fragments, navigation, revisions, scheduled publishing, sitemaps, CDN,
+language setup, and generators need complete standalone guides.
 The older datasource and metadata examples also need review and expansion.
 For those areas, consult the relevant API module and the consuming application's
 configuration; heading-only guide files are not implementation instructions.
 
-The repository's [documentation coverage audit](https://github.com/brandocms/brando/blob/next/docs/documentation-coverage.md)
-records the original #627 topics, the existing source of guidance, and concrete
-acceptance criteria for the remaining work. Update the audit when a guide lands.
+Issue [#2771](https://github.com/brandocms/brando/issues/2771) records the original
+#627 topics, the existing source of guidance, and concrete acceptance criteria for
+the remaining work. Update that issue when a guide lands.

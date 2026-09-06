@@ -73,8 +73,8 @@ Generate templates:
 ## Documentation
 
 Start with the [Brando 0.54 guide index](guides/overview.md) for task-oriented
-reading paths. The [coverage audit](https://github.com/brandocms/brando/blob/next/docs/documentation-coverage.md) identifies
-partial and unfinished guides and the remaining writing work.
+reading paths. Issue [#2771](https://github.com/brandocms/brando/issues/2771) tracks
+which guides are partial or unwritten, and the remaining writing work.
 
 - [Migrating to Brando 0.54](guides/migrating_to_054.md) — ordered source,
   database, derived-data, and Gettext upgrade workflow.
