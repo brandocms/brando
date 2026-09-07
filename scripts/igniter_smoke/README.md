@@ -4,8 +4,10 @@ This creates a new standalone Phoenix app and a uniquely named database for ever
 run. It exercises the real package installer with the current Brando checkout and
 matching Yalc assets, rather than an already configured E2E application.
 
-Prerequisites: Elixir 1.20.3 / OTP 28.4.1, phx_new 1.8.13, Node.js 22, pnpm,
-Yalc 1.0.0-pre.53, and a disposable PostgreSQL service. Install the pinned browser
+Prerequisites: Elixir 1.20.3 / OTP 28.4.1, phx_new 1.8.13, Node.js, pnpm,
+Yalc 1.0.0-pre.53, and a disposable PostgreSQL service. Local checks used Node.js
+23.11.0, pnpm 10.4.1 and PostgreSQL 16.1; CI selects Node.js 22, pnpm 10.32.1 and
+PostgreSQL 14 and needs its own run before those results can be claimed. Install the pinned browser
 test dependency and Chromium once:
 
 ```sh
