@@ -31,8 +31,9 @@ that combination with PostgreSQL 16.1, not qualification of every version in
 Brando's unit-test matrix. The `igniter.new` archive 0.5.28 one-shot path also
 installs and compiles successfully from outside an existing Mix project.
 Local asset/browser checks used Node.js 23.11.0, pnpm 10.4.1 and Yalc
-1.0.0-pre.53. The CI job selects its own Node/PostgreSQL versions and still needs
-a remote run; local success does not establish that result.
+1.0.0-pre.53. The four consumer cases also
+[passed on Linux CI](https://github.com/brandocms/brando/actions/runs/34073198244)
+with Node.js 22, pnpm 10.32.1 and PostgreSQL 14.
 
 ## Source planning and file ownership
 
@@ -156,8 +157,8 @@ editing and publicly rendering a generated resource in all three tenancy modes.
 The reproducible [smoke script](../scripts/igniter_smoke/README.md) creates a new
 consumer and isolated database per run, checks preview/rerun fingerprints and
 binary asset bytes, and provisions named environments before generating tenant
-storage. A GitHub Actions matrix runs the same workflow; its remote result still
-needs confirmation after pushing the branch.
+storage. A GitHub Actions matrix runs the same workflow and passes all three
+tenancy modes and the customized/precompiled consumer case on the recorded revision.
 
 These checks caught and now cover schema-qualified public user references,
 automatic tenant migration destinations and shared user cascades before the first

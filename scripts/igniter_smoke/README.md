@@ -6,9 +6,10 @@ matching Yalc assets, rather than an already configured E2E application.
 
 Prerequisites: Elixir 1.20.3 / OTP 28.4.1, phx_new 1.8.13, Node.js, pnpm,
 Yalc 1.0.0-pre.53, and a disposable PostgreSQL service. Local checks used Node.js
-23.11.0, pnpm 10.4.1 and PostgreSQL 16.1; CI selects Node.js 22, pnpm 10.32.1 and
-PostgreSQL 14 and needs its own run before those results can be claimed. Install the pinned browser
-test dependency and Chromium once:
+23.11.0, pnpm 10.4.1 and PostgreSQL 16.1. All four cases also
+[passed on Linux CI](https://github.com/brandocms/brando/actions/runs/34073198244)
+with Node.js 22, pnpm 10.32.1 and PostgreSQL 14. Install the pinned browser test
+dependency and Chromium once:
 
 ```sh
 pnpm --dir scripts/igniter_smoke install --frozen-lockfile
