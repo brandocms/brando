@@ -73,7 +73,12 @@ defmodule Brando.IgniterCase do
       |> Map.merge(files)
       |> Map.merge(options[:files] || %{})
 
-    igniter = Igniter.assign(igniter, :test_files, files)
+    # Igniter may already have loaded its base project into Rewrite. Reload
+    # these paths from the consumer fixture instead of retaining cached source.
+    igniter =
+      igniter
+      |> Igniter.assign(:test_files, files)
+      |> Map.update!(:rewrite, &Rewrite.drop(&1, Map.keys(files)))
 
     Enum.reduce(Map.keys(files), igniter, fn path, igniter ->
       options = if String.starts_with?(path, "priv/templates/"), do: [source_handler: Rewrite.Source], else: []

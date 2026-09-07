@@ -3,6 +3,12 @@ defmodule Mix.Brando.Igniter.TenantMigrationTest do
 
   alias Brando.IgniterCase
 
+  setup do
+    shell = Mix.shell()
+    Mix.shell(Mix.Shell.Process)
+    on_exit(fn -> Mix.shell(shell) end)
+  end
+
   test "plans ordered tenant migrations and preserves customized reruns" do
     existing = "priv/repo/tenant_migrations/20990101000000_existing.exs"
     project = IgniterCase.phoenix_project(app: :shop, module: "Acme.Shop", files: %{existing => "# keep\n"})
@@ -37,6 +43,7 @@ defmodule Mix.Brando.Igniter.TenantMigrationTest do
   test "invalid and missing names or paths do not prompt or plan changes" do
     for args <- [
           [],
+          ["one", "two"],
           ["../unsafe"],
           ["BadName"],
           ["safe", "--migrations-path", "../outside"],

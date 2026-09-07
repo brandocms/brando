@@ -52,8 +52,13 @@ if Code.ensure_loaded?(Igniter) do
     def igniter(igniter), do: Mix.Brando.Igniter.Install.plan(igniter)
 
     # Retained for callers rendering maintained installer templates.
+    @doc "Renders a maintained installer template for existing generator callers."
     defdelegate render(path), to: Mix.Brando.Install.Templates
+
+    @doc "Parses tenancy options for existing installer callers."
     defdelegate parse_tenancy_options!(opts), to: Mix.Brando.Install.Options
+
+    @doc "Resolves tenancy options against a caller-supplied default."
     defdelegate resolve_tenancy_options!(opts, default), to: Mix.Brando.Install.Options
   end
 else

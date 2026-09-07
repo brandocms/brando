@@ -13,7 +13,8 @@ if Code.ensure_loaded?(Igniter) do
     def plan(igniter) do
       options = igniter.args.options
 
-      with {:ok, name} <- Input.required(igniter.args.positional[:name], "Migration name", options[:interactive]),
+      with :ok <- single_name(igniter.args.argv),
+           {:ok, name} <- Input.required(igniter.args.positional[:name], "Migration name", options[:interactive]),
            {:ok, name} <- Input.identifier(name, "Migration name"),
            {:ok, path} <- path(options[:migrations_path] || "priv/repo/tenant_migrations"),
            {:ok, migration} <- Input.module_name(options[:migration_module] || "Ecto.Migration", "Migration module"),
@@ -24,6 +25,14 @@ if Code.ensure_loaded?(Igniter) do
         {:error, %Igniter{} = igniter} -> igniter
         {:error, message} -> Igniter.add_issue(igniter, message)
       end
+    end
+
+    defp single_name(argv) do
+      {_flags, names} = argv |> Igniter.Util.Info.args_for_group(:brando) |> Igniter.Mix.Task.extract_positional_args()
+
+      if length(names) > 1,
+        do: {:error, "Supply exactly one migration name: mix brando.gen.tenant_migration add_projects."},
+        else: :ok
     end
 
     defp path(value) do

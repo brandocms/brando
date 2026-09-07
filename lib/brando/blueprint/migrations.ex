@@ -157,20 +157,22 @@ defmodule Brando.Blueprint.Migrations do
 
   defp prepare_noop(module, previous, schema) do
     snapshot =
-      if previous && previous.migrated_from_format do
-        %Snapshot{} = previous
+      case previous do
+        %Snapshot{migrated_from_format: format} = previous when format not in [nil, false] ->
+          %Snapshot{
+            previous
+            | format_version: 3,
+              migrated_from_format: nil,
+              schema: Schema.persistable(schema),
+              updated_at: DateTime.utc_now(),
+              attributes: nil,
+              assets: nil,
+              relations: nil,
+              traits: nil
+          }
 
-        %Snapshot{
-          previous
-          | format_version: 3,
-            migrated_from_format: nil,
-            schema: Schema.persistable(schema),
-            updated_at: DateTime.utc_now(),
-            attributes: nil,
-            assets: nil,
-            relations: nil,
-            traits: nil
-        }
+        _ ->
+          nil
       end
 
     %{
