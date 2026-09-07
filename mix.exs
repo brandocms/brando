@@ -92,7 +92,7 @@ defmodule Brando.Mixfile do
       {:oban, "~> 2.19.0"},
 
       # sitemaps
-      {:sitemapper, "~> 0.9.0"},
+      {:sitemapper, "~> 0.10.0"},
 
       # images
       {:fastimage, "~> 1.0.0-rc4"},
