@@ -168,6 +168,12 @@ display a meaningful unknown state instead of inventing a value.
 
 CSS that looks right in a diff is insufficient evidence of a finished layout.
 
+Before editing, search the existing E2E tests for the page's route, labels, and
+selectors. Include those tests in local validation alongside new tests. A new
+workflow test does not replace existing coverage of the page's other actions.
+Update assertions affected by an intentional redesign while preserving their
+behavioral coverage. When fixing a failing test, rerun that specific test first.
+
 1. Build changed JS/CSS through the E2E consumer, following [AGENTS.md](../AGENTS.md).
    Source `e2e/.envrc` first. Do not use a standalone root asset build as a gate.
 2. Inspect the actual page with its real styles and fonts. Reload after rebuilding
