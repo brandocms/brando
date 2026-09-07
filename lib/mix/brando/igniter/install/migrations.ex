@@ -36,8 +36,8 @@ if Code.ensure_loaded?(Igniter) do
       if tables == [], do: [], else: [path]
     end
 
-    defp user_table({:create, _, [{:table, _, [name | _]} | _]} = node, found)
-         when name in [:users, :users_tokens, "users", "users_tokens"],
+    defp user_table({operation, _, [{:table, _, [name | _]} | _]} = node, found)
+         when operation in [:create, :create_if_not_exists] and name in [:users, :users_tokens, "users", "users_tokens"],
          do: {node, [name | found]}
 
     defp user_table(node, found), do: {node, found}

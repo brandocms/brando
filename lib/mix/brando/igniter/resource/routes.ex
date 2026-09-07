@@ -116,9 +116,14 @@ if Code.ensure_loaded?(Igniter) do
         end)
 
       case routes do
-        [] -> :missing
-        [%{kind: ^verb, module: ^module, action: ^action}] -> :present
-        _ -> :conflict
+        [] ->
+          :missing
+
+        [%{kind: ^verb, path: existing_path, module: ^module, action: ^action}] ->
+          if RouteInventory.same_path?(existing_path, path), do: :present, else: :conflict
+
+        _ ->
+          :conflict
       end
     end
   end

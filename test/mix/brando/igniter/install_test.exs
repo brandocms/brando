@@ -81,14 +81,16 @@ defmodule Mix.Brando.Igniter.InstallTest do
   end
 
   test "existing Phoenix authentication tables require explicit integration" do
-    for migration <- ["20200101000000_create_users.exs", "20200101000000_create_users_auth_tables.exs"] do
+    for migration <- ["20200101000000_create_users.exs", "20200101000000_create_users_auth_tables.exs"],
+        table <- [:users, :users_tokens],
+        operation <- [:create, :create_if_not_exists] do
       result =
         project(%{
           "priv/repo/migrations/#{migration}" => """
           defmodule Studio.Repo.Migrations.ExistingUsers do
             use Ecto.Migration
             def change do
-              create table(:users) do
+              #{operation} table(#{inspect(table)}) do
                 add :email, :string
               end
             end

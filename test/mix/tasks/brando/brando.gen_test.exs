@@ -235,6 +235,13 @@ defmodule Mix.Tasks.Brando.Gen.Test do
   test "route ownership includes resources and parameter names but respects scope prefixes" do
     for {routes, conflict?} <- [
           {~s(resources "/products", ExistingController), true},
+          {~s(get "/:section", ExistingController, :index), true},
+          {~s(get "/:section/:id", ExistingController, :show), true},
+          {~s(get "/products/new", ExistingController, :new), true},
+          {~s(resources "/:collection", ExistingController), true},
+          {~s(forward "/", ExistingPlug), true},
+          {~s(get "/:section", GeneratorStudioWeb.Catalog.ProductController, :index\nget "/:section/:id", GeneratorStudioWeb.Catalog.ProductController, :show),
+           true},
           {~s(get "/products/:slug", ExistingController, :show), true},
           {~s(scope "/api" do\n get "/products", ExistingController, :index\nend), false},
           {~s(post "/products", ExistingController, :create), false},

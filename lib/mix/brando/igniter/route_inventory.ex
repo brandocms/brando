@@ -64,12 +64,26 @@ if Code.ensure_loaded?(Igniter) do
     def same_path?(left, right), do: normalize(left) == normalize(right)
 
     def covers?(%{path: path, kind: kind}, requested) do
-      cond do
-        kind == :unknown -> true
-        kind in [:resources, :forward, :admin_routes] -> requested == path || String.starts_with?(requested, path <> "/")
-        String.contains?(path, "*") -> String.starts_with?(requested, path |> String.split("*") |> hd())
-        true -> same_path?(path, requested)
-      end
+      kind == :unknown ||
+        overlapping_segments?(
+          String.split(path, "/", trim: true),
+          String.split(requested, "/", trim: true),
+          kind in [:resources, :forward, :admin_routes]
+        )
+    end
+
+    # Either declaration may contain parameters. Comparing normalized strings
+    # misses ownership such as /:slug capturing /robots.txt, or /products/new
+    # overlapping a generated /products/:id route.
+    defp overlapping_segments?(["*" <> _ | _], _, _), do: true
+    defp overlapping_segments?(_, ["*" <> _ | _], _), do: true
+    defp overlapping_segments?([], [], _), do: true
+    defp overlapping_segments?([], _, prefix?), do: prefix?
+    defp overlapping_segments?(_, [], _), do: false
+
+    defp overlapping_segments?([left | left_rest], [right | right_rest], prefix?) do
+      (left == right || String.starts_with?(left, ":") || String.starts_with?(right, ":")) &&
+        overlapping_segments?(left_rest, right_rest, prefix?)
     end
 
     defp collect({:scope, _, [path | rest]}, prefix, namespace) when is_binary(path) do

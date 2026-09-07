@@ -65,12 +65,21 @@ defmodule Mix.Brando.Igniter.SiteTest do
           {~s(get "/", LandingController, :index), ["--yes", "--replace-phoenix-home"]},
           {~s(get "/*path", SPAController, :show), ["--replace-phoenix-home"]},
           {~s(get "/robots.txt", RobotsController, :show), []},
+          {~s(get "/:slug", ExistingController, :show), []},
+          {~s(get "/:section/:slug", ExistingController, :show), []},
+          {~s(resources "/:collection", ExistingController), []},
           {~s(forward "/", ExistingPlug), []}
         ] do
       result = project(route) |> generate(options)
       assert result.issues != []
       Igniter.Test.assert_unchanged(result)
     end
+  end
+
+  test "parameterized routes outside CMS support paths keep their ownership" do
+    result = project(~s(get "/blog/:slug", ExistingController, :show)) |> generate()
+    assert result.issues == []
+    assert IgniterCase.source(result, "lib/studio_web/router.ex") =~ ~s("/blog/:slug")
   end
 
   test "guidance records an explicit homepage answer and handles decline or closed input" do
