@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Brando.Igniter.Template do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     @moduledoc false
 
     # Pending consumer templates participate in composition. Packaged defaults
@@ -26,5 +29,11 @@ if Code.ensure_loaded?(Igniter) do
     rescue
       error -> {:error, "Could not render #{directory}/#{name}: #{Exception.message(error)}"}
     end
+  end
+else
+  defmodule Mix.Brando.Igniter.Template do
+    @moduledoc false
+    # Revisit this source when the optional dependency becomes available.
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
   end
 end

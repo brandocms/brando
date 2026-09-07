@@ -370,9 +370,9 @@ defmodule Mix.Brando do
   @doc """
   Aborts a task that needs `igniter`, an optional Brando dependency.
 
-  Brando decides whether to define its Igniter-backed tasks while it compiles,
-  so adding the dependency is not enough on its own — Brando must be recompiled
-  afterwards.
+  Optional task and helper modules request recompilation when Igniter's
+  availability changes. The package installer performs dependency compilation;
+  callers adding dependencies manually can compile them explicitly.
   """
   def missing_igniter!(task) do
     Mix.raise("""
@@ -385,10 +385,10 @@ defmodule Mix.Brando do
     Then fetch it and recompile Brando:
 
         mix deps.get
-        mix deps.compile brando --force
+        mix deps.compile brando
 
-    The forced recompile is required. Brando only defines this task if `igniter`
-    is loadable at the time Brando itself is compiled.
+    Then rerun mix #{task}. The optional modules automatically request
+    recompilation when Igniter becomes available.
     """)
   end
 

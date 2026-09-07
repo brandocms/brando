@@ -128,6 +128,15 @@ namespaces, conflicts, template precedence, missing input, exact binary copying,
 historical migration names, and compiling two resources in a shared context.
 A separate Elixir process verifies that guarded helpers compile without Igniter.
 
+Both branches of optional modules implement Mix's
+[`__mix_recompile__?/0` hook](https://hexdocs.pm/mix/Mix.Tasks.Compile.Elixir.html#module-__mix_recompile__-0).
+Empty conditional source files otherwise stay absent after a dependency was
+compiled without Igniter, even when the installer task itself reloads. Fallback
+modules now request recompilation when Igniter appears; native modules request it
+when Igniter is removed. Subprocess tests cover both transitions. A real consumer
+compiled without Igniter, added it, ran the normal package installer and compiled
+successfully without a manual forced rebuild after adding Igniter.
+
 The disposable consumer check has exercised the real `igniter.install` command,
 both Vite builds through Yalc, database migrations, admin login, and creating,
 editing and publicly rendering a generated resource in all three tenancy modes.

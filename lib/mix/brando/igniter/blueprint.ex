@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Brando.Igniter.Blueprint do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     @moduledoc false
 
     alias Mix.Brando.Igniter.Files
@@ -66,5 +69,11 @@ if Code.ensure_loaded?(Igniter) do
 
     defp distinct_names(name, name), do: {:error, "--singular and --plural must be different query names."}
     defp distinct_names(_, _), do: :ok
+  end
+else
+  defmodule Mix.Brando.Igniter.Blueprint do
+    @moduledoc false
+    # Revisit this source when the optional dependency becomes available.
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
   end
 end

@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Brando.Igniter.Assets do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     @moduledoc false
 
     alias Mix.Brando.Igniter.Install
@@ -85,5 +88,11 @@ if Code.ensure_loaded?(Igniter) do
         if is_map(default) && is_map(existing), do: merge_defaults(existing, default), else: existing
       end)
     end
+  end
+else
+  defmodule Mix.Brando.Igniter.Assets do
+    @moduledoc false
+    # Revisit this source when the optional dependency becomes available.
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
   end
 end

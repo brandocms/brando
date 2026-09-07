@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.Brando.Gen.Frontend do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     use Igniter.Mix.Task
     @shortdoc "Generates Brando frontend assets with a reviewable diff"
     @moduledoc """
@@ -28,6 +31,9 @@ if Code.ensure_loaded?(Igniter) do
 else
   defmodule Mix.Tasks.Brando.Gen.Frontend do
     use Mix.Task
+
+    @doc false
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
     @shortdoc "Generates Brando frontend assets (requires igniter)"
     def run(_argv), do: Mix.Brando.missing_igniter!("brando.gen.frontend")
   end

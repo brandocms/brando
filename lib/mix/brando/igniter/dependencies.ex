@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Brando.Igniter.Dependencies do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     @moduledoc false
 
     alias Igniter.Project.Deps
@@ -16,5 +19,11 @@ if Code.ensure_loaded?(Igniter) do
         Igniter.add_task(igniter, "deps.get")
       end
     end
+  end
+else
+  defmodule Mix.Brando.Igniter.Dependencies do
+    @moduledoc false
+    # Revisit this source when the optional dependency becomes available.
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
   end
 end

@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.Brando.Upgrade.Prepare do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     use Igniter.Mix.Task
 
     @shortdoc "Prepares a legacy consumer for library-owned Igniter upgrades"
@@ -25,6 +28,9 @@ if Code.ensure_loaded?(Igniter) do
 else
   defmodule Mix.Tasks.Brando.Upgrade.Prepare do
     use Mix.Task
+
+    @doc false
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
     @shortdoc "Prepares a legacy consumer for library-owned Igniter upgrades (requires igniter)"
     @impl Mix.Task
     def run(_argv), do: Mix.Brando.missing_igniter!("brando.upgrade.prepare")

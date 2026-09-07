@@ -33,13 +33,12 @@ Update the Brando dependency and fetch it, then run:
 
 ```shell
 mix deps.get
-mix deps.compile brando --force
+mix deps.compile brando
 mix brando.migrate54
 ```
 
-The forced recompile matters: Brando only defines its Igniter-backed tasks if
-`igniter` is loadable when Brando itself compiles, so a stale Brando build keeps
-reporting `The task "brando.migrate54" could not be found`.
+Brando's optional task and helper modules automatically request recompilation
+when Igniter becomes available. The dependency remains optional at runtime.
 
 The task:
 

@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.Brando.Gen.TenantMigration do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     use Igniter.Mix.Task
 
     @shortdoc "Plans an application-owned tenant migration"
@@ -33,6 +36,9 @@ if Code.ensure_loaded?(Igniter) do
 else
   defmodule Mix.Tasks.Brando.Gen.TenantMigration do
     use Mix.Task
+
+    @doc false
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
     @shortdoc "Plans a tenant migration (requires igniter)"
     @impl Mix.Task
     def run(_argv), do: Mix.Brando.missing_igniter!("brando.gen.tenant_migration")

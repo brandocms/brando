@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.Brando.Gen.Mail do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     use Igniter.Mix.Task
 
     @shortdoc "Plans mail helpers, reusing an existing Phoenix mailer"
@@ -24,6 +27,9 @@ if Code.ensure_loaded?(Igniter) do
 else
   defmodule Mix.Tasks.Brando.Gen.Mail do
     use Mix.Task
+
+    @doc false
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
     @shortdoc "Plans mail helpers, reusing an existing Phoenix mailer (requires igniter)"
     @impl Mix.Task
     def run(_argv), do: Mix.Brando.missing_igniter!("brando.gen.mail")

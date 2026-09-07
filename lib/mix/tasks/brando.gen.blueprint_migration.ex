@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.Brando.Gen.BlueprintMigration do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     use Igniter.Mix.Task
     @shortdoc "Plans a reversible Blueprint migration and snapshot for review"
     @moduledoc """
@@ -46,6 +49,9 @@ if Code.ensure_loaded?(Igniter) do
 else
   defmodule Mix.Tasks.Brando.Gen.BlueprintMigration do
     use Mix.Task
+
+    @doc false
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
     @shortdoc "Plans Blueprint storage changes (requires igniter)"
     @impl Mix.Task
     def run(_), do: Mix.Brando.missing_igniter!("brando.gen.blueprint_migration")

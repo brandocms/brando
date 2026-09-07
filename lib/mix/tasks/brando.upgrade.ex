@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.Brando.Upgrade do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     use Igniter.Mix.Task
 
     @shortdoc "Applies versioned Brando source upgrades through Igniter"
@@ -32,6 +35,9 @@ if Code.ensure_loaded?(Igniter) do
 else
   defmodule Mix.Tasks.Brando.Upgrade do
     use Mix.Task
+
+    @doc false
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
     @shortdoc "Applies versioned Brando source upgrades through Igniter (requires igniter)"
     @impl Mix.Task
     def run(_argv), do: Mix.Brando.missing_igniter!("brando.upgrade")

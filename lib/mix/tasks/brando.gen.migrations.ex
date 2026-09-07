@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.Brando.Gen.Migrations do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     use Igniter.Mix.Task
 
     @shortdoc "Plans missing framework migration files"
@@ -25,6 +28,9 @@ if Code.ensure_loaded?(Igniter) do
 else
   defmodule Mix.Tasks.Brando.Gen.Migrations do
     use Mix.Task
+
+    @doc false
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
     @shortdoc "Plans missing framework migration files (requires igniter)"
     @impl Mix.Task
     def run(_argv), do: Mix.Brando.missing_igniter!("brando.gen.migrations")

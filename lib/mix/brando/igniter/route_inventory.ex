@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Brando.Igniter.RouteInventory do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     @moduledoc false
 
     @verbs [:get, :post, :put, :patch, :delete, :options, :head, :live, :match]
@@ -62,5 +65,11 @@ if Code.ensure_loaded?(Igniter) do
     defp unknown, do: %{kind: :unknown, path: "", module: nil, action: nil}
     defp normalize(path), do: Regex.replace(~r/:[^\/]+/, String.trim_trailing(path, "/"), ":param")
     defp join(prefix, path), do: "/" <> String.trim(prefix <> "/" <> String.trim_leading(path, "/"), "/")
+  end
+else
+  defmodule Mix.Brando.Igniter.RouteInventory do
+    @moduledoc false
+    # Revisit this source when the optional dependency becomes available.
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
   end
 end

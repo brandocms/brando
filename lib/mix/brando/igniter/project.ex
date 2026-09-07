@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Brando.Igniter.Project do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     @moduledoc false
 
     alias Igniter.Code.Common
@@ -200,5 +203,11 @@ if Code.ensure_loaded?(Igniter) do
     defp missing_hint(:repo), do: "Brando requires an Ecto Repo backed by PostgreSQL."
     defp missing_hint(:router), do: "Brando requires a Phoenix router."
     defp flag(key), do: "--" <> String.replace(Atom.to_string(key), "_", "-")
+  end
+else
+  defmodule Mix.Brando.Igniter.Project do
+    @moduledoc false
+    # Revisit this source when the optional dependency becomes available.
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
   end
 end

@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Brando.Igniter.Files do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     @moduledoc false
 
     @doc """
@@ -52,5 +55,11 @@ if Code.ensure_loaded?(Igniter) do
         String.trim_trailing(current) == String.trim_trailing(contents)
       end
     end
+  end
+else
+  defmodule Mix.Brando.Igniter.Files do
+    @moduledoc false
+    # Revisit this source when the optional dependency becomes available.
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
   end
 end

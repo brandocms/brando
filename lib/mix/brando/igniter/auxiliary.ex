@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Brando.Igniter.Auxiliary do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     @moduledoc false
 
     alias Igniter.Project.Config
@@ -108,5 +111,11 @@ if Code.ensure_loaded?(Igniter) do
         {:error, message} -> Igniter.add_issue(igniter, message)
       end
     end
+  end
+else
+  defmodule Mix.Brando.Igniter.Auxiliary do
+    @moduledoc false
+    # Revisit this source when the optional dependency becomes available.
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
   end
 end

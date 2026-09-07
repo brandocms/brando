@@ -171,16 +171,15 @@ application's own deps first:
 
 ```bash
 mix deps.get
-mix deps.compile brando --force
+mix deps.compile brando
 ```
 
-The forced recompile matters: Brando only defines its Igniter-backed tasks if
-`igniter` is loadable when Brando itself compiles, so a stale Brando build keeps
-reporting `The task "brando.setup.tenancy" could not be found`. Then run:
+Brando's optional task and helper modules automatically request recompilation
+when Igniter becomes available. Then run:
 
 ```bash
 # Asks for anything you do not pass
-mix brando.setup.tenancy
+mix brando.setup.tenancy --interactive
 
 # One site with named environments
 mix brando.setup.tenancy --mode single --site-key my-site

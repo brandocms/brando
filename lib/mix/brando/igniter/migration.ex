@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Brando.Igniter.Migration do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     @moduledoc false
 
     alias Brando.Blueprint.Migrations
@@ -131,5 +134,11 @@ if Code.ensure_loaded?(Igniter) do
           "#{String.pad_leading(to_string(plan.snapshot.version), 3, "0")}.snapshot"
         )
     end
+  end
+else
+  defmodule Mix.Brando.Igniter.Migration do
+    @moduledoc false
+    # Revisit this source when the optional dependency becomes available.
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
   end
 end

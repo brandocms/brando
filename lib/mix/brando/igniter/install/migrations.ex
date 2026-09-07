@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Brando.Igniter.Install.Migrations do
+    @doc false
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     @moduledoc false
 
     alias Mix.Brando.Igniter.Install
@@ -63,5 +66,11 @@ if Code.ensure_loaded?(Igniter) do
         _ -> {0, Path.basename(path)}
       end
     end
+  end
+else
+  defmodule Mix.Brando.Igniter.Install.Migrations do
+    @moduledoc false
+    # Revisit this source when the optional dependency becomes available.
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
   end
 end
