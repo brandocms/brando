@@ -1,36 +1,22 @@
 defmodule <%= application_module %>.Emails do
-  import Swoosh.Email
+  alias Swoosh.Email
 
-  @recipient {"Recipient name", "mail@domain.tld"}
-  @sender {"<%= application_module %> — form", "no-reply@mailer.domain.tld"}
+  @doc "Builds a contact notification with explicit :from and :to addresses."
+  @spec contact(Ecto.Changeset.t(), keyword()) :: Swoosh.Email.t()
+  def contact(changeset, options) do
+    form = Ecto.Changeset.apply_action!(changeset, :insert)
 
-  @spec contact(Ecto.Changeset.t()) :: Swoosh.Email.t()
-  def contact(changeset) do
-    name = Ecto.Changeset.get_field(changeset, :name)
+    Email.new()
+    |> Email.to(Keyword.fetch!(options, :to))
+    |> Email.from(Keyword.fetch!(options, :from))
+    |> Email.reply_to(form.email)
+    |> Email.subject("Contact form submission")
+    |> Email.text_body("""
+    Name: #{form.name}
+    Email: #{form.email}
+    Phone: #{form.phone}
 
-    content = """
-    <html>
-    <head>
-    </head>
-    <body>
-    You have received a new form submission<br>
-    <br>
-    <code><pre>
-    =============
-    HEADING
-    =============
-
-    Name..................: #{name}
-
-    </pre></code>
-    </body>
-    </html>
-    """
-
-    new()
-    |> to(@recipient)
-    |> from(@sender)
-    |> subject("Subject")
-    |> html_body(content)
+    #{form.message}
+    """)
   end
 end

@@ -1,65 +1,40 @@
-defmodule Mix.Tasks.Brando.Gen.Frontend do
-  @shortdoc "Generates a frontend template"
+if Code.ensure_loaded?(Igniter) do
+  defmodule Mix.Tasks.Brando.Gen.Frontend do
+    @doc "Requests recompilation when optional Igniter support is removed."
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
 
-  @moduledoc """
-  Generates a frontend template
+    use Igniter.Mix.Task
+    @shortdoc "Generates Brando frontend assets with a reviewable diff"
+    @moduledoc """
+    Generates Vite frontend assets without overwriting customized files.
+    Existing package dependencies and scripts are preserved. This task does
+    not install JavaScript packages or run a build.
+    """
 
-      mix brando.gen.frontend
+    @impl Igniter.Mix.Task
+    def info(_argv, _source) do
+      %Igniter.Mix.Task.Info{group: :brando, schema: Mix.Brando.Igniter.Project.options()}
+    end
 
-  """
-  use Mix.Task
-
-  @spec run(any) :: no_return
-  def run(_) do
-    Mix.shell().info("""
-    % Brando frontend tpl generator
-    -------------------------------
-
-    """)
-
-    app = Mix.Project.config()[:app]
-
-    binding = [
-      application_module: Phoenix.Naming.camelize(Atom.to_string(app)),
-      application_name: Atom.to_string(app)
-    ]
-
-    files = [
-      # Frontend assets
-      {:keep, "assets/frontend/public/fonts", "assets/frontend/public/fonts"},
-      {:keep, "assets/frontend/public/fonts", "assets/frontend/public/images"},
-      {:copy, "assets/frontend/eslint.config.js", "assets/frontend/eslint.config.js"},
-      {:copy, "assets/frontend/europa.config.cjs", "assets/frontend/europa.config.cjs"},
-      {:copy, "assets/frontend/vite.config.js", "assets/frontend/vite.config.js"},
-      {:copy, "assets/frontend/postcss.config.cjs", "assets/frontend/postcss.config.cjs"},
-      {:eex, "assets/frontend/package.json", "assets/frontend/package.json"},
-
-      # Frontend static
-      {:copy, "assets/frontend/public/favicon.ico", "assets/frontend/public/favicon.ico"},
-
-      # Frontend src - CSS
-      {:copy, "assets/frontend/css/app.css", "assets/frontend/css/app.css"},
-      {:copy, "assets/frontend/css/critical.css", "assets/frontend/css/critical.css"},
-      {:copy, "assets/frontend/css/includes/cookies.css", "assets/frontend/css/includes/cookies.css"},
-      {:copy, "assets/frontend/css/includes/fonts.css", "assets/frontend/css/includes/fonts.css"},
-      {:copy, "assets/frontend/css/includes/modules.css", "assets/frontend/css/includes/modules.css"},
-      {:copy, "assets/frontend/css/includes/navigation.css", "assets/frontend/css/includes/navigation.css"},
-
-      # Frontend JS
-
-      {:keep, "assets/frontend/js/modules", "assets/frontend/js/modules"},
-      {:copy, "assets/frontend/js/index.js", "assets/frontend/js/index.js"},
-      {:copy, "assets/frontend/js/critical.js", "assets/frontend/js/critical.js"},
-      {:copy, "assets/frontend/js/config/BREAKPOINTS.js", "assets/frontend/js/config/BREAKPOINTS.js"},
-      {:copy, "assets/frontend/js/config/MOBILE_MENU.js", "assets/frontend/js/config/MOBILE_MENU.js"},
-      {:copy, "assets/frontend/js/config/MOONWALK.js", "assets/frontend/js/config/MOONWALK.js"},
-      {:copy, "assets/frontend/js/config/HEADER.js", "assets/frontend/js/config/HEADER.js"}
-    ]
-
-    Mix.Brando.copy_from(apps(), "priv/templates/brando.install", "", binding, files)
+    @impl Igniter.Mix.Task
+    def igniter(igniter) do
+      with {:ok, igniter, options} <-
+             Mix.Brando.Igniter.Install.Configuration.namespace_options(igniter, igniter.args.options),
+           {:ok, igniter, project} <- Mix.Brando.Igniter.Project.discover(igniter, options) do
+        Mix.Brando.Igniter.Assets.plan(igniter, project, [:frontend])
+      else
+        {:error, %Igniter{} = igniter} -> igniter
+        {:error, message} -> Igniter.add_issue(igniter, message)
+      end
+    end
   end
+else
+  defmodule Mix.Tasks.Brando.Gen.Frontend do
+    use Mix.Task
 
-  defp apps do
-    [".", :brando]
+    @doc "Requests recompilation when optional Igniter support becomes available."
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
+    @shortdoc "Generates Brando frontend assets (requires igniter)"
+    def run(_argv), do: Mix.Brando.missing_igniter!("brando.gen.frontend")
   end
 end

@@ -102,7 +102,8 @@ operations.
 
 ## New installations
 
-`mix brando.install` starts a guided setup when no tenancy flags are supplied:
+`mix brando.install` defaults to `none` without prompting when no tenancy flags
+are supplied. Pass `--interactive` to choose interactively:
 
 ```text
 + Choose tenancy mode [1]
@@ -115,11 +116,16 @@ Pressing Enter selects `none`. Selecting `single` also asks for a URL-safe site
 key, defaulting to the OTP application name with underscores changed to
 hyphens.
 
+Guided setup respects choices supplied as flags. For example,
+`mix brando.install --interactive --tenancy-mode single` asks only for the site
+key. `--tenancy-prompt` remains a compatibility alias for guided tenancy setup;
+`--no-tenancy-prompt` suppresses those questions even with `--interactive`.
+
 For repeatable or CI-driven installation, pass the choices explicitly:
 
 ```bash
-# Traditional installation
-mix brando.install --tenancy-mode none
+# Traditional installation (defaults to none without prompting)
+mix brando.install
 
 # Standalone site with environments
 mix brando.install --tenancy-mode single --site-key acme
@@ -127,15 +133,17 @@ mix brando.install --tenancy-mode single --site-key acme
 # Multi-site registry
 mix brando.install --tenancy-mode multi
 
-# Preserve the default without prompting
+# Existing scripts can still explicitly suppress the optional prompt
 mix brando.install --no-tenancy-prompt
 ```
 
-Passing any tenancy flag makes the command non-interactive. `--site-key` is
-required only for `single`, and keys must contain lowercase letters, numbers,
+Without `--interactive`, all choices must be supplied for `single`/`multi`.
+`--site-key` is required only for `single`, and keys must contain lowercase letters, numbers,
 and single hyphens.
 
-The installer writes the selection to `config/brando.exs`:
+On reruns, omitted tenancy flags preserve the existing selection. An explicit
+mode updates its existing base configuration; changing it does not move data.
+New installations write the selection to `config/brando.exs`:
 
 ```elixir
 config :brando,
@@ -163,16 +171,15 @@ application's own deps first:
 
 ```bash
 mix deps.get
-mix deps.compile brando --force
+mix deps.compile
 ```
 
-The forced recompile matters: Brando only defines its Igniter-backed tasks if
-`igniter` is loadable when Brando itself compiles, so a stale Brando build keeps
-reporting `The task "brando.setup.tenancy" could not be found`. Then run:
+Brando's optional task and helper modules automatically request recompilation
+when Igniter becomes available. Then run:
 
 ```bash
 # Asks for anything you do not pass
-mix brando.setup.tenancy
+mix brando.setup.tenancy --interactive
 
 # One site with named environments
 mix brando.setup.tenancy --mode single --site-key my-site

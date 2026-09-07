@@ -1,9 +1,13 @@
 defmodule Mix.Tasks.Brando.Migrate54Test do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   import Igniter.Test
 
   alias Mix.Tasks.Brando.Migrate54
+
+  defmodule TestEndpoint do
+    def url, do: "https://migration.example.test"
+  end
 
   @blueprint_path "lib/legacy_app/projects/project.ex"
   @live_preview_path "lib/legacy_app_web/live_preview.ex"
@@ -290,6 +294,16 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
   end
 
   test "compiled migrations preserve datasource, Meta, and JSON-LD behavior" do
+    previous = Application.fetch_env(:brando, :endpoint_module)
+    Application.put_env(:brando, :endpoint_module, TestEndpoint)
+
+    on_exit(fn ->
+      case previous do
+        {:ok, value} -> Application.put_env(:brando, :endpoint_module, value)
+        :error -> Application.delete_env(:brando, :endpoint_module)
+      end
+    end)
+
     unique = System.unique_integer([:positive])
     module = Module.concat(__MODULE__, "MigratedBlueprint#{unique}")
     schema = "MigratedBlueprint#{unique}"
@@ -502,11 +516,7 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
       refute contents =~ "gsed"
     end)
 
-    assert_creates(igniter, "lib/mix/brando.upgrade.ex", fn contents ->
-      assert contents =~ "monotonically"
-      refute contents =~ ":timer.sleep"
-      refute contents =~ "ensure_all_started"
-    end)
+    refute_creates(igniter, "lib/mix/brando.upgrade.ex")
 
     assert_has_task(igniter, "igniter.update_gettext", [])
     assert_has_notice(igniter, &String.contains?(&1, "Continue in this order"))

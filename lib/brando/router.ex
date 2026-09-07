@@ -29,9 +29,10 @@ defmodule Brando.Router do
     end
   end
 
-  defmacro admin_routes(path \\ "/admin", do: block) do
+  defmacro admin_routes(path \\ "/admin", options \\ [], do: block) do
     quote do
       import BrandoAdmin.UserAuth
+      import Brando.Plug.I18n, only: [put_admin_locale: 2]
 
       # Check if @sql_sandbox module attribute is set (for e2e testing)
       # If so, include LiveAcceptance hook to grant sandbox access before auth checks
@@ -57,7 +58,7 @@ defmodule Brando.Router do
         plug :put_admin_locale
       end
 
-      pipeline :api do
+      pipeline unquote(Keyword.get(options, :api_pipeline, :api)) do
         plug :accepts, ["json"]
         # plug RemoteIp
         # plug :refresh_token

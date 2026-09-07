@@ -8,6 +8,8 @@ defmodule Brando.Query.Mutations do
   alias Brando.Publisher
   alias Brando.Query
   alias Brando.Revisions
+  alias Brando.Tenant
+  alias Brando.Tenant.Job
   alias Brando.Trait
   alias Brando.Utils
   alias Brando.Authorization.Boundary
@@ -39,7 +41,7 @@ defmodule Brando.Query.Mutations do
 
         # Enqueue async cascade (merged datasource + identifier)
         identifier_id = get_identifier_id(identifier_result)
-        ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id)
+        enqueue_entry_cascade(module, entry, identifier_id)
 
         # Revision capture must happen before another save can replace the
         # persisted state this mutation represents.
@@ -77,7 +79,7 @@ defmodule Brando.Query.Mutations do
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
       # Enqueue async cascade (merged datasource + identifier)
       identifier_id = get_identifier_id(identifier_result)
-      ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id)
+      enqueue_entry_cascade(module, entry, identifier_id)
 
       # Capture the exact state from this mutation synchronously.
       revisioned? = module.__trait__(Trait.Revisioned)
@@ -124,7 +126,7 @@ defmodule Brando.Query.Mutations do
       if has_changes(changeset) do
         # Enqueue async cascade (merged datasource + identifier)
         identifier_id = get_identifier_id(identifier_result)
-        ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id)
+        enqueue_entry_cascade(module, entry, identifier_id)
 
         # Capture the exact state from this mutation synchronously.
         revisioned? = module.__trait__(Trait.Revisioned)
@@ -165,7 +167,7 @@ defmodule Brando.Query.Mutations do
       if has_changes(changeset) do
         # Enqueue async cascade (merged datasource + identifier)
         identifier_id = get_identifier_id(identifier_result)
-        ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id)
+        enqueue_entry_cascade(module, entry, identifier_id)
 
         # Capture the exact state from this mutation synchronously.
         revisioned? = module.__trait__(Trait.Revisioned)
@@ -430,6 +432,16 @@ defmodule Brando.Query.Mutations do
       Brando.Tenant.Topic.scoped("brando:mutations:#{inspect(module)}"),
       {:mutation, module, entry, action}
     )
+  end
+
+  defp enqueue_entry_cascade(module, entry, identifier_id) do
+    # Shared records can be referenced by content in any environment. At initial
+    # account setup there may be no environments yet, so there is nothing to render.
+    if Tenant.enabled?() && module.__schema__(:prefix) == "public" do
+      Job.each_active_environment(:all, fn -> ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id) end)
+    else
+      ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id)
+    end
   end
 
   defp get_identifier_id(%Brando.Content.Identifier{id: id}), do: id

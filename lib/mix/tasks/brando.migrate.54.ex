@@ -1,5 +1,8 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.Brando.Migrate54 do
+    @doc "Requests recompilation when optional Igniter support is removed."
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     use Igniter.Mix.Task
 
     alias Brando.Migration.FloristConfig
@@ -24,8 +27,8 @@ if Code.ensure_loaded?(Igniter) do
 
     Run this task from a clean, committed worktree after updating the Brando
     dependency. It rewrites legacy Blueprint and LivePreview syntax, preserves
-    legacy Meta and JSON-LD path extraction semantics, copies the current
-    `mix brando.upgrade` task and gettext recovery helper, and schedules
+    legacy Meta and JSON-LD path extraction semantics, retires recognized
+    legacy upgrade tasks and creates the gettext recovery helper, and schedules
     Igniter's Gettext source upgrade.
 
     The task changes source files only. Review and compile its diff before
@@ -53,7 +56,7 @@ if Code.ensure_loaded?(Igniter) do
       |> rewrite_preview_targets()
       |> create_florist_config()
       |> copy_gettext_script()
-      |> copy_updated_migration_script()
+      |> Mix.Brando.Igniter.Upgrade.prepare()
       |> Igniter.add_task("igniter.update_gettext")
       |> add_notices()
       |> add_warnings()
@@ -1188,7 +1191,7 @@ if Code.ensure_loaded?(Igniter) do
         2. If `florist.config.exs` was created, set its required password
            environment variables and complete the deployment review in the
            migration guide before running Florist.
-        3. Run `mix brando.upgrade` to copy missing Brando Ecto migrations.
+        3. Run `mix brando.gen.migrations` to plan missing Brando Ecto migrations.
         4. For every application Blueprint with generated migration history,
            run `mix brando.gen.blueprint_migration MyApp.Domain.Schema`.
         5. Review every generated `up/0` and `down/0`, test rollback/forward,
@@ -1331,33 +1334,15 @@ if Code.ensure_loaded?(Igniter) do
         |> Application.app_dir(["priv", "templates", "brando.migrate"])
         |> Path.join("sync_gettext.sh")
 
-      Igniter.copy_template(
-        igniter,
-        src_file,
-        "scripts/sync_gettext.sh",
-        [],
-        on_exists: :overwrite
-      )
-    end
-
-    defp copy_updated_migration_script(igniter) do
-      src_file =
-        :brando
-        |> Application.app_dir(["priv", "templates", "brando.install", "lib", "mix"])
-        |> Path.join("brando.upgrade.ex")
-
-      Igniter.copy_template(
-        igniter,
-        src_file,
-        "lib/mix/brando.upgrade.ex",
-        [],
-        on_exists: :overwrite
-      )
+      Mix.Brando.Igniter.Files.create(igniter, "scripts/sync_gettext.sh", File.read!(src_file))
     end
   end
 else
   defmodule Mix.Tasks.Brando.Migrate54 do
     use Mix.Task
+
+    @doc "Requests recompilation when optional Igniter support becomes available."
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
 
     @shortdoc "Migrates a Brando 0.53 application to 0.54 (requires igniter)"
     @moduledoc """

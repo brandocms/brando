@@ -1,10 +1,12 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.Brando.Setup.Tenancy do
+    @doc "Requests recompilation when optional Igniter support is removed."
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
     use Igniter.Mix.Task
 
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
-    alias Igniter.Code.Keyword, as: CodeKeyword
 
     @shortdoc "Prepares an existing Brando application for tenancy"
     @moduledoc """
@@ -19,8 +21,8 @@ if Code.ensure_loaded?(Igniter) do
         mix brando.setup.tenancy --mode single --site-key my-site
         mix brando.setup.tenancy --mode multi
 
-    Anything not passed as an option is asked for. Pass `--yes` for a
-    non-interactive run, where a missing option is an error instead.
+    Pass `--interactive` to ask for missing choices. Normal commands require
+    explicit options without prompts. `--yes` only accepts the Igniter diff.
 
     This task changes source only. It never touches the database, because the
     configuration it writes has to be compiled and the public migrations applied
@@ -41,7 +43,7 @@ if Code.ensure_loaded?(Igniter) do
       %Igniter.Mix.Task.Info{
         group: :brando,
         example: "mix brando.setup.tenancy --mode single --site-key my-site",
-        schema: [mode: :string, site_key: :string]
+        schema: [mode: :string, site_key: :string, interactive: :boolean]
       }
     end
 
@@ -50,7 +52,7 @@ if Code.ensure_loaded?(Igniter) do
       case tenancy_options(igniter.args.options) do
         {:ok, mode, site_key} ->
           igniter
-          |> configure_tenancy(mode, site_key)
+          |> Mix.Brando.Igniter.Install.Configuration.configure_tenancy(mode, site_key)
           |> configure_routers()
           |> install_tenant_migration()
           |> add_instructions(mode, site_key)
@@ -139,8 +141,7 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # Returns `:eof` rather than looping, so a piped or CI run without `--yes`
-    # fails with the missing option instead of spinning on an unanswerable prompt.
+    # Closed input must terminate guidance instead of repeating a prompt.
     defp ask(prompt) do
       case Mix.shell().prompt(prompt) do
         :eof -> :eof
@@ -156,62 +157,7 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # `--yes` means the caller wants no questions asked, so missing options
-    # become errors rather than a prompt that would block a script.
-    defp interactive?(options), do: !options[:yes]
-
-    defp configure_tenancy(igniter, mode, site_key) do
-      igniter =
-        Igniter.Project.Config.configure(
-          igniter,
-          "brando.exs",
-          :brando,
-          [:tenancy_mode],
-          mode
-        )
-
-      case site_key do
-        nil ->
-          remove_site_key(igniter)
-
-        site_key ->
-          Igniter.Project.Config.configure(
-            igniter,
-            "brando.exs",
-            :brando,
-            [:site_key],
-            site_key
-          )
-      end
-    end
-
-    defp remove_site_key(igniter) do
-      Igniter.update_elixir_file(igniter, "config/brando.exs", fn zipper ->
-        Common.update_all_matches(
-          zipper,
-          &brando_config_with_site_key?/1,
-          &remove_site_key_from_config/1
-        )
-      end)
-    end
-
-    defp remove_site_key_from_config(config_zipper) do
-      with {:ok, options_zipper} <- CodeFunction.move_to_nth_argument(config_zipper, 1),
-           {:ok, options_zipper} <- CodeKeyword.remove_keyword_key(options_zipper, :site_key) do
-        {:ok, options_zipper}
-      else
-        _ -> {:ok, config_zipper}
-      end
-    end
-
-    defp brando_config_with_site_key?(zipper) do
-      CodeFunction.function_call?(zipper, :config, 2) &&
-        CodeFunction.argument_equals?(zipper, 0, :brando) &&
-        case CodeFunction.move_to_nth_argument(zipper, 1) do
-          {:ok, options_zipper} -> CodeKeyword.keyword_has_path?(options_zipper, [:site_key])
-          :error -> false
-        end
-    end
+    defp interactive?(options), do: options[:interactive] == true
 
     defp configure_routers(igniter) do
       {igniter, routers} = Igniter.Libs.Phoenix.list_routers(igniter)
@@ -371,6 +317,9 @@ if Code.ensure_loaded?(Igniter) do
 else
   defmodule Mix.Tasks.Brando.Setup.Tenancy do
     use Mix.Task
+
+    @doc "Requests recompilation when optional Igniter support becomes available."
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
 
     @shortdoc "Prepares an existing Brando application for tenancy (requires igniter)"
     @moduledoc """

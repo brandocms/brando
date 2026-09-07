@@ -1,61 +1,37 @@
-defmodule Mix.Tasks.Brando.Gen.Mail do
-  @shortdoc "Generates a mailer template"
+if Code.ensure_loaded?(Igniter) do
+  defmodule Mix.Tasks.Brando.Gen.Mail do
+    @doc "Requests recompilation when optional Igniter support is removed."
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
 
-  @moduledoc """
-  Generates a mailer
+    use Igniter.Mix.Task
 
-      mix brando.gen.mailer
+    @shortdoc "Plans mail helpers, reusing an existing Phoenix mailer"
+    @moduledoc """
+    #{@shortdoc}.
 
-  """
-  use Mix.Task
+        mix brando.gen.mail
 
-  @spec run(any) :: no_return
-  def run(_) do
-    Mix.shell().info("""
-    % Brando mailer module generator
-    ---------------------------------------
+    Adds Swoosh when absent and local/test adapter defaults. Production delivery
+    remains an explicit runtime configuration. Consumer templates override defaults.
+    Namespace selection uses the shared --module/--web-module/--repo options.
+    """
 
-    """)
+    @impl Igniter.Mix.Task
+    def info(_argv, _source) do
+      %Igniter.Mix.Task.Info{group: :brando, schema: Mix.Brando.Igniter.Project.options()}
+    end
 
-    app = Mix.Project.config()[:app]
-
-    binding = [
-      application_module: Phoenix.Naming.camelize(Atom.to_string(app)),
-      application_name: Atom.to_string(app)
-    ]
-
-    files = [
-      {:eex, "lib/application_name/mailer.ex", "lib/application_name/mailer.ex"},
-      {:eex, "lib/application_name/emails.ex", "lib/application_name/emails.ex"},
-      {:eex, "lib/application_name/contact/contact_form.ex", "lib/application_name/contact/contact_form.ex"}
-    ]
-
-    Mix.Brando.copy_from(apps(), "priv/templates/brando.gen.mail", "", binding, files)
-
-    Mix.shell().info([:green, "\n==> Add to mix.exs deps\n"])
-
-    Mix.shell().info("""
-        {:swoosh, "~> 1.0"},
-    """)
-
-    Mix.shell().info([:green, "\n==> Add to config/dev.exs\n"])
-
-    Mix.shell().info("""
-        config :#{binding[:application_name]}, #{binding[:application_module]}.Mailer, adapter: Swoosh.Adapters.Local
-    """)
-
-    Mix.shell().info([:green, "\n==> Add to config/prod.exs\n"])
-
-    Mix.shell().info("""
-        config :#{binding[:application_name]}, #{binding[:application_module]}.Mailer,
-          adapter: Swoosh.Adapters.Mailgun,
-          api_key: "YOUR API KEY HERE",
-          base_url: "https://api.eu.mailgun.net/v3",
-          domain: "mailer.domain.tld"
-    """)
+    @impl Igniter.Mix.Task
+    def igniter(igniter), do: Mix.Brando.Igniter.Auxiliary.plan(igniter, :mail)
   end
+else
+  defmodule Mix.Tasks.Brando.Gen.Mail do
+    use Mix.Task
 
-  defp apps do
-    [".", :brando]
+    @doc "Requests recompilation when optional Igniter support becomes available."
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
+    @shortdoc "Plans mail helpers, reusing an existing Phoenix mailer (requires igniter)"
+    @impl Mix.Task
+    def run(_argv), do: Mix.Brando.missing_igniter!("brando.gen.mail")
   end
 end

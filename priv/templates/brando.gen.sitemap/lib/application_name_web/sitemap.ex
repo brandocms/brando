@@ -1,8 +1,6 @@
 defmodule <%= web_module %>.Sitemap do
   import Brando.Sitemap
   alias Brando.Pages
-  alias <%= web_module %>.Endpoint
-  alias <%= web_module %>.Router.Helpers, as: Routes
 
   sitemap "pages" do
     Pages.list_pages(
