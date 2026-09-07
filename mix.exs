@@ -128,7 +128,7 @@ defmodule Brando.Mixfile do
       {:credo, "~> 1.5", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
-      {:igniter, "~> 0.6.0", only: [:dev, :test]},
+      {:igniter, "~> 0.8.3", only: [:dev, :test]},
 
       # Test dependencies
       {:ex_machina, "~> 2.0", only: :test, runtime: false},
