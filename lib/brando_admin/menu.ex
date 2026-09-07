@@ -283,7 +283,9 @@ defmodule BrandoAdmin.Menu do
                     name: gettext("Scheduled publishing"),
                     url: "/admin/config/scheduled_publishing"
                   },
-                  if(Brando.Authorization.enabled?(), do: %{name: gettext("Permissions"), url: "/admin/groups"}),
+                  if(Brando.Authorization.enabled?() or match?(%{role: :superuser}, current_user),
+                    do: %{name: gettext("Permissions"), url: "/admin/groups"}
+                  ),
                   environments_menu_item(),
                   publishing_menu_item(current_site),
                   frontend_assets_menu_item(current_user),
