@@ -28,7 +28,7 @@ defmodule Brando do
   @doc """
   Gets the parent app's router
   """
-  def router, do: web_module(Router)
+  defdelegate router(), to: Brando.RuntimeConfig
 
   @doc """
   Gets the timezone set for app

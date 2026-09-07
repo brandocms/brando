@@ -1,4 +1,4 @@
-defmodule <%= app_module %>Admin.<%= domain %>.<%= camel_singular %>ListLive do
+defmodule <%= admin_module %>.<%= domain %>.<%= camel_singular %>ListLive do
   use BrandoAdmin.LiveView.Listing, schema: <%= inspect schema_module %>
   use Gettext, backend: <%= admin_module %>.Gettext, warn: false
   alias BrandoAdmin.Components.Content

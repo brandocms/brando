@@ -1,38 +1,18 @@
 defmodule Mix.Tasks.Brando.Install.Fabfile do
-  @shortdoc "Copy fabfile and pgbackup"
-
-  @moduledoc """
-  Copy fabfile and pgbackup
-
-      mix brando.install.fabfile
-
-  """
   use Mix.Task
 
-  @spec run(any) :: no_return
-  def run(_) do
-    Mix.shell().info("""
-    % Brando fabfile + pgbackup copy
-    -------------------------------
+  @shortdoc "Retired Fabric scaffold; use brando.gen.release and Florist"
+  @moduledoc """
+  The legacy Fabric/pgbackup scaffold is retired. Generate release helpers with
+  `mix brando.gen.release`, then configure deployment using the Florist guide.
+  Existing Fabric configuration is preserved. See `guides/deployment.md` for the
+  supported deployment workflow and migration from existing configuration.
+  """
 
-    """)
-
-    app = Mix.Project.config()[:app]
-
-    binding = [
-      application_module: Phoenix.Naming.camelize(Atom.to_string(app)),
-      application_name: Atom.to_string(app)
-    ]
-
-    files = [
-      {:copy, "fabfile.py", "fabfile.py"},
-      {:eex, "etc/pgbkup.sh", "etc/pgbkup.sh"}
-    ]
-
-    Mix.Brando.copy_from(apps(), "priv/templates/brando.install", "", binding, files)
-  end
-
-  defp apps do
-    [".", :brando]
+  @impl Mix.Task
+  def run(_argv) do
+    Mix.raise(
+      "brando.install.fabfile is retired. Use mix brando.gen.release and the Florist deployment guide (guides/deployment.md). Existing deployment files were preserved."
+    )
   end
 end

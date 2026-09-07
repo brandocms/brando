@@ -3,15 +3,16 @@ defmodule Mix.Tasks.Brando.UpgradeTemplateTest do
 
   import ExUnit.CaptureIO
 
-  @compile {:no_warn_undefined, Mix.Tasks.Brando.Upgrade}
+  @compile {:no_warn_undefined, Mix.Tasks.Brando.LegacyUpgradeFixture}
   @template_path "priv/templates/brando.install/lib/mix/brando.upgrade.ex"
 
   setup_all do
-    Code.compile_file(@template_path)
+    {:defmodule, metadata, [_module, body]} = @template_path |> File.read!() |> Code.string_to_quoted!()
+    Code.compile_quoted({:defmodule, metadata, [Mix.Tasks.Brando.LegacyUpgradeFixture, body]})
 
     on_exit(fn ->
-      :code.purge(Mix.Tasks.Brando.Upgrade)
-      :code.delete(Mix.Tasks.Brando.Upgrade)
+      :code.purge(Mix.Tasks.Brando.LegacyUpgradeFixture)
+      :code.delete(Mix.Tasks.Brando.LegacyUpgradeFixture)
     end)
   end
 
@@ -44,7 +45,7 @@ defmodule Mix.Tasks.Brando.UpgradeTemplateTest do
 
   defp run_upgrade(tmp_dir) do
     capture_io(fn ->
-      File.cd!(tmp_dir, fn -> Mix.Tasks.Brando.Upgrade.run([]) end)
+      File.cd!(tmp_dir, fn -> Mix.Tasks.Brando.LegacyUpgradeFixture.run([]) end)
     end)
   end
 

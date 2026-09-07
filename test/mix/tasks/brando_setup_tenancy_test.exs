@@ -118,9 +118,9 @@ defmodule Mix.Tasks.BrandoSetupTenancyTest do
   end
 
   test "rejects incomplete and contradictory tenancy options" do
-    # --yes opts out of the prompts, so a missing option stays an error.
+    # Normal commands do not prompt; --yes only accepts the source plan.
     missing_key = setup_tenancy(["--mode", "single", "--yes"])
-    missing_mode = setup_tenancy(["--yes"])
+    missing_mode = setup_tenancy([])
     invalid_key = setup_tenancy(["--mode", "single", "--site-key", "Not Valid"])
     multi_key = setup_tenancy(["--mode", "multi", "--site-key", "legacy-site"])
     invalid_mode = setup_tenancy(["--mode", "none"])
@@ -130,6 +130,14 @@ defmodule Mix.Tasks.BrandoSetupTenancyTest do
     assert_has_issue(invalid_key, &String.contains?(&1, "lowercase, URL-safe key"))
     assert_has_issue(multi_key, &String.contains?(&1, "can only be used with --mode single"))
     assert_has_issue(invalid_mode, &String.contains?(&1, "expected single or multi"))
+    refute_received {:mix_shell, :prompt, _}
+  end
+
+  test "closed interactive input terminates without planning source changes" do
+    send(self(), {:mix_shell_input, :prompt, :eof})
+    igniter = setup_tenancy(["--interactive"])
+    assert_has_issue(igniter, &String.contains?(&1, "--mode is required"))
+    assert_unchanged(igniter)
   end
 
   test "asks for mode and site key when they are not passed" do
@@ -139,7 +147,7 @@ defmodule Mix.Tasks.BrandoSetupTenancyTest do
     send(self(), {:mix_shell_input, :prompt, "single"})
     send(self(), {:mix_shell_input, :prompt, "by"})
 
-    igniter = setup_tenancy([])
+    igniter = setup_tenancy(["--interactive"])
 
     assert_has_patch(igniter, @config_path, """
     + |  tenancy_mode: :single,
@@ -157,7 +165,7 @@ defmodule Mix.Tasks.BrandoSetupTenancyTest do
     send(self(), {:mix_shell_input, :prompt, "Not Valid"})
     send(self(), {:mix_shell_input, :prompt, "second-try"})
 
-    igniter = setup_tenancy(["--mode", "single"])
+    igniter = setup_tenancy(["--mode", "single", "--interactive"])
 
     assert_received {:mix_shell, :info, [message]}
     assert message =~ "lowercase, URL-safe key"

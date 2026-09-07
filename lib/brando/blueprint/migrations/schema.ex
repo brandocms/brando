@@ -209,12 +209,20 @@ defmodule Brando.Blueprint.Migrations.Schema do
     with :ok <- validate_value(reference, :table, &non_empty_string?/1),
          :ok <- validate_value(reference, :type, &valid_migration_type?/1),
          :ok <- validate_value(reference, :column, &valid_atom?/1),
-         :ok <- validate_value(reference, :on_delete, &valid_atom?/1) do
+         :ok <- validate_value(reference, :on_delete, &valid_atom?/1),
+         :ok <- validate_reference_prefix(reference) do
       validate_value(reference, :name, &non_empty_string?/1)
     end
   end
 
   defp validate_reference(reference), do: {:error, {:invalid_reference, reference}}
+
+  defp validate_reference_prefix(reference) do
+    case Map.fetch(reference, :prefix) do
+      :error -> :ok
+      {:ok, prefix} -> if non_empty_string?(prefix), do: :ok, else: {:error, {:invalid_reference_prefix, prefix}}
+    end
+  end
 
   defp validate_index(index, expected_table) when is_map(index) do
     with :ok <- validate_value(index, :name, &non_empty_string?/1),
@@ -469,6 +477,7 @@ defmodule Brando.Blueprint.Migrations.Schema do
             field_source(referenced_module, referenced_column),
             Map.get(opts, :constraint_name)
           )
+          |> reference_prefix(referenced_module)
       }
     ]
   end
@@ -505,6 +514,7 @@ defmodule Brando.Blueprint.Migrations.Schema do
             field_source(referenced_module, referenced_column),
             Map.get(opts, :constraint_name)
           )
+          |> reference_prefix(referenced_module)
 
         put_manual_reference!(current_columns, column_name, reference, owner_module, name)
 
@@ -680,6 +690,13 @@ defmodule Brando.Blueprint.Migrations.Schema do
           else: DatabaseIdentifier.foreign_key_name(owner_table, column)
         )
     }
+  end
+
+  defp reference_prefix(reference, module) do
+    case module.__schema__(:prefix) do
+      nil -> reference
+      prefix -> Map.put(reference, :prefix, prefix)
+    end
   end
 
   defp index(table, fields, unique) do

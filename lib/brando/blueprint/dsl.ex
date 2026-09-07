@@ -286,7 +286,14 @@ defmodule Brando.Blueprint.Dsl do
     quote location: :keep, unquote: false do
       def __modules__ do
         application_module = Module.concat([@application])
-        admin_module = Module.concat([:"#{@application}Admin"])
+
+        admin_module =
+          if application_module == RuntimeConfig.get(:app_module) do
+            RuntimeConfig.get(:admin_module) || Module.concat([:"#{@application}Admin"])
+          else
+            Module.concat([:"#{@application}Admin"])
+          end
+
         context_module = Module.concat([@application, @domain])
         schema_module = Module.concat([@application, @domain, @schema])
 

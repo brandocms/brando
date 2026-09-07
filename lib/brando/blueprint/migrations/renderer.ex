@@ -155,6 +155,7 @@ defmodule Brando.Blueprint.Migrations.Renderer do
       |> maybe_put_opt(:on_delete, reference.on_delete, !is_nil(reference.on_delete))
       |> maybe_put_opt(:type, reference.type, reference.type not in [nil, :id])
       |> maybe_put_opt(:name, reference.name, !is_nil(reference.name))
+      |> maybe_put_opt(:prefix, Map.get(reference, :prefix), Map.has_key?(reference, :prefix))
 
     "references(#{table_atom(reference.table)}#{render_keyword_args(opts)})"
   end

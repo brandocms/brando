@@ -310,14 +310,26 @@ defmodule Brando.Blueprint.MigrationExecutionTest do
     v2_module = Brando.MigrationTest.OperationMatrixV2
     table = v1_module.__schema__(:source)
 
-    create_dependency_tables!(prefix, ~w(users images files content_identifiers))
+    create_dependency_tables!(prefix, ~w(images files content_identifiers))
 
-    Enum.each(~w(users images files), fn dependency ->
+    Enum.each(~w(images files), fn dependency ->
       Ecto.Adapters.SQL.query!(
         MigrationRepo,
         ~s|INSERT INTO "#{prefix}"."#{dependency}" (id) VALUES (1)|,
         []
       )
+    end)
+
+    owner =
+      :user
+      |> Brando.Factory.build(avatar: nil, language: :en, email: "#{prefix}@example.test")
+      |> MigrationRepo.insert!()
+
+    owner_id = owner.id
+
+    on_exit(fn ->
+      Ecto.Adapters.SQL.query!(MigrationRepo, ~s(DROP SCHEMA IF EXISTS "#{prefix}" CASCADE), [])
+      MigrationRepo.delete!(owner)
     end)
 
     assert {:ok, v1} = Migrations.create_migration(v1_module, opts)
@@ -334,9 +346,9 @@ defmodule Brando.Blueprint.MigrationExecutionTest do
       INSERT INTO "#{prefix}"."#{table}"
         (legacy_title, amount, obsolete, tenant_id, code, owner_id, cover_id, inserted_at, updated_at)
       VALUES
-        ('preserved', 7, 'removed', 9, 'code-1', 1, 1, NOW(), NOW())
+        ('preserved', 7, 'removed', 9, 'code-1', $1, 1, NOW(), NOW())
       """,
-      []
+      [owner_id]
     )
 
     [legacy_auxiliary] = Brando.Blueprint.Migrations.Schema.build(v1_module).auxiliary_tables
@@ -354,15 +366,15 @@ defmodule Brando.Blueprint.MigrationExecutionTest do
     assert column(prefix, table, "added") == ["boolean", "NO", "false"]
     assert column(prefix, table, "owner_id") == ["bigint", "YES", nil]
 
-    assert %{rows: [["preserved", 7.0, false, 9, "code-1", 1, 1]]} =
+    assert %{rows: [["preserved", 7.0, false, 9, "code-1", ^owner_id, 1]]} =
              Ecto.Adapters.SQL.query!(
                MigrationRepo,
                ~s|SELECT headline, amount, added, tenant_id, code, owner_id, cover_id FROM "#{prefix}"."#{table}"|,
                []
              )
 
-    assert foreign_key(prefix, table, "#{table}_owner_id_fkey") == ["users", "CASCADE"]
-    assert foreign_key(prefix, table, "#{table}_cover_id_fkey") == ["files", "SET NULL"]
+    assert foreign_key(prefix, table, "#{table}_owner_id_fkey") == ["public", "users", "CASCADE"]
+    assert foreign_key(prefix, table, "#{table}_cover_id_fkey") == [prefix, "files", "SET NULL"]
 
     v2_index_names = index_names(prefix, table)
     assert "#{table}_code_index" in v2_index_names
@@ -378,15 +390,15 @@ defmodule Brando.Blueprint.MigrationExecutionTest do
     assert column(prefix, table, "amount") == ["integer", "NO", "1"]
     assert column(prefix, table, "owner_id") == ["bigint", "NO", nil]
 
-    assert %{rows: [["preserved", 7, nil, 9, "code-1", 1, 1]]} =
+    assert %{rows: [["preserved", 7, nil, 9, "code-1", ^owner_id, 1]]} =
              Ecto.Adapters.SQL.query!(
                MigrationRepo,
                ~s|SELECT legacy_title, amount, obsolete, tenant_id, code, owner_id, cover_id FROM "#{prefix}"."#{table}"|,
                []
              )
 
-    assert foreign_key(prefix, table, "#{table}_owner_id_fkey") == ["users", "RESTRICT"]
-    assert foreign_key(prefix, table, "#{table}_cover_id_fkey") == ["images", "SET NULL"]
+    assert foreign_key(prefix, table, "#{table}_owner_id_fkey") == ["public", "users", "RESTRICT"]
+    assert foreign_key(prefix, table, "#{table}_cover_id_fkey") == [prefix, "images", "SET NULL"]
 
     v1_index_names = index_names(prefix, table)
     assert "#{table}_code_tenant_id_index" in v1_index_names
@@ -488,7 +500,7 @@ defmodule Brando.Blueprint.MigrationExecutionTest do
     assert [^version] = run_migration(prefix, version, migration, :up)
     assert column_names(prefix, table) == ["owner_ref"]
     assert primary_key_columns(prefix, table) == ["owner_ref"]
-    assert foreign_key(prefix, table, "#{table}_owner_ref_fkey") == ["users", "RESTRICT"]
+    assert foreign_key(prefix, table, "#{table}_owner_ref_fkey") == ["public", "users", "RESTRICT"]
 
     assert [^version] = run_migration(prefix, version, migration, :down)
     refute table_exists?(prefix, table)
@@ -571,7 +583,7 @@ defmodule Brando.Blueprint.MigrationExecutionTest do
       Ecto.Adapters.SQL.query!(
         MigrationRepo,
         """
-        SELECT target.relname,
+        SELECT target_namespace.nspname, target.relname,
                CASE foreign_key.confdeltype
                  WHEN 'a' THEN 'NO ACTION'
                  WHEN 'r' THEN 'RESTRICT'
@@ -583,6 +595,7 @@ defmodule Brando.Blueprint.MigrationExecutionTest do
         JOIN pg_class AS owner ON owner.oid = foreign_key.conrelid
         JOIN pg_namespace AS namespace ON namespace.oid = owner.relnamespace
         JOIN pg_class AS target ON target.oid = foreign_key.confrelid
+        JOIN pg_namespace AS target_namespace ON target_namespace.oid = target.relnamespace
         WHERE namespace.nspname = $1
           AND owner.relname = $2
           AND foreign_key.conname = $3

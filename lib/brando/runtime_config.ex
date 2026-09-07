@@ -50,13 +50,17 @@ defmodule Brando.RuntimeConfig do
   Resolves the configured Phoenix endpoint module.
   """
   @spec endpoint() :: module()
-  def endpoint, do: web_module(Endpoint)
+  def endpoint, do: get(:endpoint_module) || web_module(Endpoint)
+
+  @doc "Resolves the configured Phoenix router module."
+  @spec router() :: module()
+  def router, do: get(:router_module) || web_module(Router)
 
   @doc """
   Resolves the configured Phoenix router helpers module.
   """
   @spec router_helpers() :: module()
-  def router_helpers, do: web_module(Router.Helpers)
+  def router_helpers, do: Module.concat(router(), Helpers)
 
   @doc """
   Resolves the configured Gettext module.

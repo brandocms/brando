@@ -1,21 +1,20 @@
 #!/usr/bin/env bash
-# BRANDO INSTALL SCRIPT
-clear
-echo "╓─────────────────────────────────────────────╖"
-echo "║             BRANDO Installation             ║"
-echo "╙─────────────────────────────────────────────╜"
-echo   # new line
-MODULE=$(cat mix.exs | sed -n 's/defmodule \(.*\)\.MixProject.*/\1/p')
-echo "==> Extracted module from mix.exs => $MODULE"
-echo   # new line
-read -p "Do you want to continue installation? " -n 1 -r
-echo   # new line
-if [[ $REPLY =~ ^[Yy]$ ]]
-then
-  echo "==> Starting installation"
-  gsed -i '/{:phoenix,/i\      {:brando, github: "brandocms/brando"},' mix.exs
-  mix do deps.get, brando.install --module $MODULE
-  cd assets/frontend && pnpm install && pnpm update @brandocms/jupiter @brandocms/europacss && cd ../backend && yalc add @brandocms/brandojs && pnpm install && pnpm build && cd ../../
-  mix deps.get && mix brando.upgrade
-  echo "==> finally run \"direnv allow && mix do ecto.create, brando.upgrade, ecto.migrate, ecto.dump, brando.gen.languages, brando.gen.admin, run priv/repo/seeds.exs\""  
-fi
+set -euo pipefail
+
+cat >&2 <<'MESSAGE'
+The legacy Brando shell installer has been retired.
+
+Use the reviewed Igniter installer from your Phoenix application:
+
+  mix igniter.install brando@path:/absolute/path/to/brando
+
+Install Igniter in the consumer first if it is not already available:
+  {:igniter, "~> 0.8.0", only: [:dev, :test]}
+  mix deps.get
+
+Then follow the ordered asset, database and account setup in:
+  https://github.com/brandocms/brando/blob/next/guides/generators.md
+
+Keep Brando and the Yalc JavaScript source on the same revision during development.
+MESSAGE
+exit 1

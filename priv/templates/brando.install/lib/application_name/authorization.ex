@@ -12,7 +12,7 @@ defmodule <%= application_module %>.Authorization do
   # frontend and backend authorization queries.
   types [
     {"Identity", Brando.Sites.Identity},
-    {"Image", Brando.Image},
+    {"Image", Brando.Images.Image},
     {"Page", Brando.Pages.Page},
     {"Fragment", Brando.Pages.Fragment},
     {"Module", Brando.Content.Module},

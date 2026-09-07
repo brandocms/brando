@@ -5,7 +5,7 @@ defmodule BrandoWeb do
 
   def legacy_controller do
     gettext_module = Brando.web_module(Gettext)
-    routes_module = Brando.web_module(Router.Helpers)
+    routes_module = Brando.helpers()
 
     quote do
       use Phoenix.Controller,
@@ -23,7 +23,7 @@ defmodule BrandoWeb do
 
   def controller do
     gettext_module = Brando.web_module(Gettext)
-    routes_module = Brando.web_module(Router.Helpers)
+    routes_module = Brando.helpers()
 
     quote do
       use Phoenix.Controller,
@@ -92,7 +92,7 @@ defmodule BrandoWeb do
 
   def html_helpers do
     gettext_module = Brando.web_module(Gettext)
-    routes_module = Brando.web_module(Router.Helpers)
+    routes_module = Brando.helpers()
 
     quote do
       use Gettext, backend: unquote(gettext_module)
@@ -121,7 +121,7 @@ defmodule BrandoWeb do
 
   def view_helpers do
     gettext_module = Brando.web_module(Gettext)
-    routes_module = Brando.web_module(Router.Helpers)
+    routes_module = Brando.helpers()
 
     quote do
       use Gettext, backend: unquote(gettext_module)

@@ -323,15 +323,16 @@ defmodule Brando.Pages do
   """
   def list_templates do
     view_module = Brando.web_module(PageView)
+    configured_html = Brando.config(:page_html_module)
 
-    if Code.ensure_loaded?(view_module) do
+    if is_nil(configured_html) && Code.ensure_loaded?(view_module) do
       {_, _, templates} = view_module.__templates__()
 
       main_templates = Enum.filter(templates, &(not String.starts_with?(&1, "_")))
 
       {:ok, main_templates}
     else
-      html_module = Brando.web_module(PageHTML)
+      html_module = configured_html || Brando.web_module(PageHTML)
 
       main_templates =
         :functions

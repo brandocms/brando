@@ -1,5 +1,29 @@
 # Blueprint migrations
 
+The command uses Igniter. It prints the exact migration source and snapshot
+version before acceptance, then commits both through Brando's checked storage
+writer. `--dry-run` leaves files, directories and snapshot versions unchanged;
+`--yes` accepts the prepared changes. Igniter 0.8 also auto-accepts when stdin is
+redirected, so always use `--dry-run` for unattended previews.
+
+Accept and compile Blueprint edits before planning storage. Prepare one Blueprint
+storage plan per invocation, committing it before planning another so migration
+ordering and history checks remain valid. If the schema, an existing snapshot,
+or the migration directory changes after review, the commit rejects the stale
+plan. Generate and review a new plan; do not reuse the old deferred command.
+
+The binary snapshot and its migration are deliberately excluded from Igniter's
+text writer. A deferred task recomputes and verifies the reviewed fingerprint,
+then uses the migration-directory and snapshot locks and paired persistence.
+The normal storage diff engine, rename hints, legacy snapshot upgrades, and
+explicit `--rebaseline` behavior are retained. No database migration is run by
+the source generator.
+
+For programmatic callers, `Brando.Blueprint.Migrations.plan/2` creates the plan
+without writes and `commit_plan/1` verifies and persists it. Existing
+`create_migration/2` and `rebaseline_snapshot/2` callers retain immediate operation
+through the same implementation.
+
 Blueprint migrations turn storage-relevant DSL changes into reviewed Ecto migrations. The generator stores a
 versioned, normalized schema snapshot beside the migration history and compares the next Blueprint definition to that
 snapshot. It does not compare arbitrary runtime structs or infer state from the database.
@@ -14,12 +38,28 @@ mix brando.gen.blueprint_migration MyApp.Projects.Project
 
 The task creates two files:
 
-- an Ecto migration under `priv/repo/migrations/`;
+- an Ecto migration under `priv/repo/migrations/`, or `priv/repo/tenant_migrations/`
+  for a new tenant content Blueprint when single/multi tenancy is configured;
 - a storage snapshot under `priv/blueprints/snapshots/<blueprint>/`.
 
 Commit the Blueprint, migration, and snapshot together. Never edit a snapshot by hand, and do not delete old snapshots
 or migration files. If no storage-relevant configuration changed, the task reports that no migration is needed and
 does not create another version.
+
+Public-schema Blueprints keep public migration history. `--migration-path`
+overrides the destination explicitly. Other fixed schema prefixes require an
+explicit destination and the matching Ecto `--prefix` when applying migrations.
+If history already exists in the other
+conventional directory, generation stops for a deliberate transition decision;
+changing tenancy configuration does not move tables or historical migrations.
+After public migrations, apply tenant content migrations with
+`mix brando.migrate --tenants` (or `--site SITE_KEY`).
+
+Foreign keys preserve a referenced schema's explicit prefix, including
+`public.users`, so new tenant tables can reference their shared creators. A
+legacy snapshot that omitted the prefix produces a reviewed, reversible
+constraint change on its next migration. Unprefixed content references continue
+to use the migration's current schema.
 
 Before committing a generated migration:
 

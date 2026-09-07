@@ -1,63 +1,46 @@
-defmodule Mix.Tasks.Brando.Gen.TenantMigration do
-  @shortdoc "Generates an application-owned tenant migration"
+if Code.ensure_loaded?(Igniter) do
+  defmodule Mix.Tasks.Brando.Gen.TenantMigration do
+    @doc "Requests recompilation when optional Igniter support is removed."
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
 
-  @moduledoc """
-  Generates an Ecto migration under `priv/repo/tenant_migrations`:
+    use Igniter.Mix.Task
 
-      mix brando.gen.tenant_migration add_projects
+    @shortdoc "Plans an application-owned tenant migration"
+    @moduledoc """
+    Creates an empty migration through Igniter's reviewed source plan:
 
-  Use `--migrations-path` for an umbrella or custom repository layout.
-  """
+        mix brando.gen.tenant_migration add_projects
+        mix brando.gen.tenant_migration --interactive
 
-  use Mix.Task
+    Names use lowercase letters, digits and underscores. An existing migration
+    with the same name is preserved, including its implementation and timestamp.
+    Use --migrations-path for a custom project-relative directory and
+    --migration-module for an explicit alternative to Ecto.Migration.
+    Database application remains a separate operation.
+    """
 
-  import Mix.Generator, only: [create_file: 2]
-
-  @switches [migrations_path: :string]
-
-  @impl Mix.Task
-  def run(args) do
-    {opts, positional, invalid} = OptionParser.parse(args, strict: @switches)
-
-    if invalid != [], do: Mix.raise("Invalid options: #{inspect(invalid)}")
-
-    case positional do
-      [name] ->
-        path = opts[:migrations_path] || "priv/repo/tenant_migrations"
-        generate!(name, path)
-
-      _ ->
-        Mix.raise("Usage: mix brando.gen.tenant_migration migration_name")
+    @impl Igniter.Mix.Task
+    def info(_argv, _source) do
+      %Igniter.Mix.Task.Info{
+        group: :brando,
+        positional: [name: [optional: true]],
+        schema:
+          Mix.Brando.Igniter.Project.options() ++
+            [interactive: :boolean, migrations_path: :string, migration_module: :string]
+      }
     end
+
+    @impl Igniter.Mix.Task
+    def igniter(igniter), do: Mix.Brando.Igniter.TenantMigration.plan(igniter)
   end
+else
+  defmodule Mix.Tasks.Brando.Gen.TenantMigration do
+    use Mix.Task
 
-  defp generate!(name, path) do
-    unless Regex.match?(~r/^[a-zA-Z][a-zA-Z0-9_]*$/, name) do
-      Mix.raise("Migration name must contain only letters, numbers, and underscores")
-    end
-
-    underscored_name = Macro.underscore(name)
-    existing = Path.wildcard(Path.join(path, "*_#{underscored_name}.exs"))
-
-    if existing != [] do
-      Mix.raise("A tenant migration named #{name} already exists")
-    end
-
-    repo = Mix.Ecto.parse_repo([]) |> List.first()
-    module = Module.concat([repo, Migrations, Macro.camelize(name)])
-    migration_module = Application.get_env(:ecto_sql, :migration_module, Ecto.Migration)
-    timestamp = Calendar.strftime(DateTime.utc_now(), "%Y%m%d%H%M%S")
-    file = Path.join(path, "#{timestamp}_#{underscored_name}.exs")
-
-    create_file(file, """
-    defmodule #{inspect(module)} do
-      use #{inspect(migration_module)}
-
-      def change do
-      end
-    end
-    """)
-
-    file
+    @doc "Requests recompilation when optional Igniter support becomes available."
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
+    @shortdoc "Plans a tenant migration (requires igniter)"
+    @impl Mix.Task
+    def run(_argv), do: Mix.Brando.missing_igniter!("brando.gen.tenant_migration")
   end
 end

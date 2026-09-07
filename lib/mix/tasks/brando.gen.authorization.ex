@@ -1,37 +1,37 @@
-defmodule Mix.Tasks.Brando.Gen.Authorization do
-  @shortdoc "Generates an authorization module template"
+if Code.ensure_loaded?(Igniter) do
+  defmodule Mix.Tasks.Brando.Gen.Authorization do
+    @doc "Requests recompilation when optional Igniter support is removed."
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
 
-  @moduledoc """
-  Generates an authorization module template
+    use Igniter.Mix.Task
 
-      mix brando.gen.authorization
+    @shortdoc "Plans an application authorization module"
+    @moduledoc """
+    #{@shortdoc}.
 
-  """
-  use Mix.Task
+        mix brando.gen.authorization
 
-  @spec run(any) :: no_return
-  def run(_) do
-    Mix.shell().info("""
-    % Brando Authorization module generator
-    ---------------------------------------
+    Creates the default policy when absent. Customized policies are preserved and
+    reported as conflicts; review permissions for application content types.
+    Namespace selection uses the shared --module/--web-module/--repo options.
+    """
 
-    """)
+    @impl Igniter.Mix.Task
+    def info(_argv, _source) do
+      %Igniter.Mix.Task.Info{group: :brando, schema: Mix.Brando.Igniter.Project.options()}
+    end
 
-    app = Mix.Project.config()[:app]
-
-    binding = [
-      application_module: Phoenix.Naming.camelize(Atom.to_string(app)),
-      application_name: Atom.to_string(app)
-    ]
-
-    files = [
-      {:eex, "lib/application_name/authorization.ex", "lib/application_name/authorization.ex"}
-    ]
-
-    Mix.Brando.copy_from(apps(), "priv/templates/brando.install", "", binding, files)
+    @impl Igniter.Mix.Task
+    def igniter(igniter), do: Mix.Brando.Igniter.Auxiliary.plan(igniter, :authorization)
   end
+else
+  defmodule Mix.Tasks.Brando.Gen.Authorization do
+    use Mix.Task
 
-  defp apps do
-    [".", :brando]
+    @doc "Requests recompilation when optional Igniter support becomes available."
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
+    @shortdoc "Plans an application authorization module (requires igniter)"
+    @impl Mix.Task
+    def run(_argv), do: Mix.Brando.missing_igniter!("brando.gen.authorization")
   end
 end

@@ -1,86 +1,38 @@
-defmodule Mix.Tasks.Brando.Gen.Release do
-  @shortdoc "Generates an Elixir release template"
+if Code.ensure_loaded?(Igniter) do
+  defmodule Mix.Tasks.Brando.Gen.Release do
+    @doc "Requests recompilation when optional Igniter support is removed."
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
 
-  @moduledoc """
-  Generates an Elixir release template
+    use Igniter.Mix.Task
 
-      mix brando.gen.release
+    @shortdoc "Plans release helpers and missing Mix release configuration"
+    @moduledoc """
+    #{@shortdoc}.
 
-  """
-  use Mix.Task
+        mix brando.gen.release
 
-  @spec run(any) :: no_return
-  def run(_) do
-    Mix.shell().info("""
-    % Brando release tpl generator
-    ---------------------------------------
+    Creates ReleaseTasks and adds a release definition when absent. Existing release
+    settings, secrets, runtime configuration and deployment files are preserved.
+    Database migrations and deployment remain explicit operations.
+    Namespace selection uses the shared --module/--web-module/--repo options.
+    """
 
-    """)
+    @impl Igniter.Mix.Task
+    def info(_argv, _source) do
+      %Igniter.Mix.Task.Info{group: :brando, schema: Mix.Brando.Igniter.Project.options()}
+    end
 
-    app = Mix.Project.config()[:app]
-
-    binding = [
-      application_module: Phoenix.Naming.camelize(Atom.to_string(app)),
-      application_name: Atom.to_string(app),
-      secret_key_base: random_string(64),
-      signing_salt: random_string(8),
-      lv_signing_salt: random_string(8)
-    ]
-
-    Mix.shell().yes?("""
-    This task will overwrite
-
-      - your envrc files
-      - your config files
-      - your dockerfile
-      - your fabfile
-      - your systemd cfg
-
-    Be sure to commit your changes BEFORE running, then cherry pick these changes.
-
-    Are you sure you want to continue?
-    """)
-
-    files = [
-      {:copy, "gitignore", ".gitignore"},
-      {:copy, "dockerignore", ".dockerignore"},
-      {:eex, ".envrc", ".envrc"},
-      {:eex, ".envrc.prod", ".envrc.prod"},
-      {:eex, ".envrc.staging", ".envrc.staging"},
-      {:eex, "rel/env.sh.eex", "rel/env.sh.eex"},
-      {:eex, "rel/vm.args.eex", "rel/vm.args.eex"},
-      {:eex, "lib/application_name/release_tasks.ex", "lib/application_name/release_tasks.ex"},
-      {:copy, "Dockerfile", "Dockerfile"},
-      {:copy, "fabfile.py", "fabfile.py"},
-      {:eex, "config/config.exs", "config/config.exs"},
-      {:eex, "config/dev.exs", "config/dev.exs"},
-      {:eex, "config/e2e.exs", "config/e2e.exs"},
-      {:eex, "config/prod.exs", "config/prod.exs"},
-      {:eex, "config/staging.exs", "config/staging.exs"},
-      {:eex, "config/runtime.exs", "config/runtime.exs"},
-      {:eex, "etc/systemd/prod.service", "etc/systemd/prod.service"},
-      {:eex, "etc/systemd/staging.service", "etc/systemd/staging.service"}
-    ]
-
-    Mix.Brando.copy_from(apps(), "priv/templates/brando.install", "", binding, files)
-
-    Mix.shell().info([:green, "\n==> Add to mix.exs under `project`:\n"])
-
-    Mix.shell().info("""
-        releases: [
-          #{binding[:application_name]}: [
-            include_executables_for: [:unix],
-            steps: [:assemble, :tar]
-          ]
-        ]
-    """)
+    @impl Igniter.Mix.Task
+    def igniter(igniter), do: Mix.Brando.Igniter.Auxiliary.plan(igniter, :release)
   end
+else
+  defmodule Mix.Tasks.Brando.Gen.Release do
+    use Mix.Task
 
-  defp apps do
-    [".", :brando]
-  end
-
-  defp random_string(length) do
-    length |> :crypto.strong_rand_bytes() |> Base.encode64() |> binary_part(0, length)
+    @doc "Requests recompilation when optional Igniter support becomes available."
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
+    @shortdoc "Plans release helpers and missing Mix release configuration (requires igniter)"
+    @impl Mix.Task
+    def run(_argv), do: Mix.Brando.missing_igniter!("brando.gen.release")
   end
 end

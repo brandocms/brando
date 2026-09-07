@@ -25,11 +25,11 @@
 For Brando 0.54, follow [Installation and generators](guides/generators.md).
 The walkthrough creates a fresh Phoenix consumer, runs `mix brando.install`,
 builds its frontend and admin assets through Vite/Yalc, applies migrations,
-initializes languages, and creates the first administrator before seeding.
+initializes languages, and creates the first administrator.
 
 Keep the Elixir and BrandoJS dependencies on the same revision. The `next` branch
-contains the developing 0.54 API; existing applications should follow
-[Migrating to 0.54](guides/migrating_to_054.md) instead of rerunning the installer.
+contains the developing 0.54 API; data upgrades for older Brando applications are described in
+[Migrating to 0.54](guides/migrating_to_054.md).
 
 ## Dependencies
 

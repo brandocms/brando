@@ -69,6 +69,42 @@ defmodule Brando.TenantJobTest do
     assert Brando.Repo.all(Oban.Job) == []
   end
 
+  test "shared user changes work before provisioning the first environment" do
+    user = Brando.Factory.insert(:user, avatar: nil)
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, updated} = Brando.Users.update_user(user.id, %{name: "First administrator"}, user)
+      assert updated.name == "First administrator"
+      refute_enqueued(worker: Brando.Worker.EntryCascade)
+    end)
+
+    assert Tenant.current_prefix() == nil
+  end
+
+  test "shared user changes enqueue cascades for every active environment and restore context" do
+    active = create_site("acme", :active)
+    suspended = create_site("beta", :suspended)
+    create_environment(active, "production", true)
+    create_environment(active, "staging", false)
+    create_environment(suspended, "production", true)
+    user = Brando.Factory.insert(:user, avatar: nil)
+    Tenant.put_prefix("tenant_acme_production")
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, _} = Brando.Users.update_user(user.id, %{name: "Shared administrator"}, user)
+
+      prefixes =
+        all_enqueued(worker: Brando.Worker.EntryCascade)
+        |> Enum.filter(&(&1.args["entry_id"] == user.id))
+        |> Enum.map(& &1.args["tenant_prefix"])
+        |> Enum.sort()
+
+      assert prefixes == ["tenant_acme_production", "tenant_acme_staging"]
+    end)
+
+    assert Tenant.current_prefix() == "tenant_acme_production"
+  end
+
   defp create_site(key, status) do
     {:ok, site} =
       Registry.create_site(%{

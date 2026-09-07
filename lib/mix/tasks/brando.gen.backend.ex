@@ -1,56 +1,40 @@
-defmodule Mix.Tasks.Brando.Gen.Backend do
-  @shortdoc "Generates a backend template"
+if Code.ensure_loaded?(Igniter) do
+  defmodule Mix.Tasks.Brando.Gen.Backend do
+    @doc "Requests recompilation when optional Igniter support is removed."
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
 
-  @moduledoc """
-  Generates a backend template
+    use Igniter.Mix.Task
+    @shortdoc "Generates Brando backend assets with a reviewable diff"
+    @moduledoc """
+    Generates Vite backend assets without overwriting customized files.
+    Existing package dependencies and scripts are preserved. This task does
+    not install JavaScript packages or run a build.
+    """
 
-      mix brando.gen.backend
+    @impl Igniter.Mix.Task
+    def info(_argv, _source) do
+      %Igniter.Mix.Task.Info{group: :brando, schema: Mix.Brando.Igniter.Project.options()}
+    end
 
-  """
-  use Mix.Task
-
-  @spec run(any) :: no_return
-  def run(_) do
-    Mix.shell().info("""
-    % Brando backend tpl generator
-    -------------------------------
-
-    """)
-
-    app = Mix.Project.config()[:app]
-
-    binding = [
-      application_module: Phoenix.Naming.camelize(Atom.to_string(app)),
-      application_name: Atom.to_string(app)
-    ]
-
-    files = [
-      # Backend tooling
-      {:copy, "assets/backend/europa.config.cjs", "assets/backend/europa.config.cjs"},
-      {:copy, "assets/backend/package.json", "assets/backend/package.json"},
-      {:copy, "assets/backend/postcss.config.cjs", "assets/backend/postcss.config.cjs"},
-      {:copy, "assets/backend/README.md", "assets/backend/README.md"},
-      {:copy, "assets/backend/svelte.config.cjs", "assets/backend/svelte.config.cjs"},
-      {:copy, "assets/backend/vite.config.js", "assets/backend/vite.config.js"},
-
-      # Backend resources
-      {:copy, "assets/backend/public/favicon.ico", "assets/backend/public/favicon.ico"},
-      {:copy, "assets/backend/public/fonts/Mono.woff2", "assets/backend/public/fonts/Mono.woff2"},
-      {:copy, "assets/backend/public/fonts/Main-Light.woff2", "assets/backend/public/fonts/Main-Light.woff2"},
-      {:copy, "assets/backend/public/fonts/Main-Medium.woff2", "assets/backend/public/fonts/Main-Medium.woff2"},
-      {:copy, "assets/backend/public/fonts/Main-Regular.woff2", "assets/backend/public/fonts/Main-Regular.woff2"},
-      {:copy, "assets/backend/public/images/admin/avatar.svg", "assets/backend/public/images/admin/avatar.svg"},
-
-      # Backend src
-      {:copy, "assets/backend/src/main.js", "assets/backend/src/main.js"},
-      {:copy, "assets/backend/css/app.css", "assets/backend/css/app.css"},
-      {:copy, "assets/backend/css/blocks.css", "assets/backend/css/blocks.css"}
-    ]
-
-    Mix.Brando.copy_from(apps(), "priv/templates/brando.install", "", binding, files)
+    @impl Igniter.Mix.Task
+    def igniter(igniter) do
+      with {:ok, igniter, options} <-
+             Mix.Brando.Igniter.Install.Configuration.namespace_options(igniter, igniter.args.options),
+           {:ok, igniter, project} <- Mix.Brando.Igniter.Project.discover(igniter, options) do
+        Mix.Brando.Igniter.Assets.plan(igniter, project, [:backend])
+      else
+        {:error, %Igniter{} = igniter} -> igniter
+        {:error, message} -> Igniter.add_issue(igniter, message)
+      end
+    end
   end
+else
+  defmodule Mix.Tasks.Brando.Gen.Backend do
+    use Mix.Task
 
-  defp apps do
-    [".", :brando]
+    @doc "Requests recompilation when optional Igniter support becomes available."
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
+    @shortdoc "Generates Brando backend assets (requires igniter)"
+    def run(_argv), do: Mix.Brando.missing_igniter!("brando.gen.backend")
   end
 end

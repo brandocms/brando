@@ -1,0 +1,8 @@
+{
+  "name": "brando-igniter-smoke",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@playwright/test": "1.58.2"
+  }
+}

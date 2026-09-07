@@ -151,6 +151,7 @@ defmodule Brando.Blueprint.MigrationsTest do
     owner_column = Enum.find(schema.columns, &(&1.name == :owner_ref))
     assert owner_column.opts == %{null: false}
     assert owner_column.reference.on_delete == :restrict
+    assert owner_column.reference.prefix == "public"
     assert MapSet.member?(runtime_constraint_names, owner_column.reference.name)
 
     [related_entries] = schema.auxiliary_tables
@@ -166,10 +167,32 @@ defmodule Brando.Blueprint.MigrationsTest do
     assert source =~ "add :owner_ref,"
     assert source =~ "references(:users,"
     assert source =~ "on_delete: :restrict"
+    assert source =~ ~s(prefix: "public")
     assert source =~ "add :payload, :jsonb"
     assert source =~ "column: :record_pk"
     refute source =~ "add :title,"
     refute source =~ "add :owner_id,"
+  end
+
+  test "legacy snapshots can explicitly qualify shared references with a reversible migration" do
+    module = Brando.MigrationTest.PhysicalSources
+    {:ok, initial} = Migrations.create_migration(module, @test_opts)
+    snapshot = Snapshot.get_latest_snapshot(module, @test_opts)
+
+    columns =
+      Enum.map(snapshot.schema.columns, fn
+        %{reference: %{prefix: _} = reference} = column -> %{column | reference: Map.delete(reference, :prefix)}
+        column -> column
+      end)
+
+    legacy = %{snapshot | schema: %{snapshot.schema | columns: columns}}
+    File.write!(initial.snapshot, :erlang.term_to_binary(legacy))
+
+    {:ok, updated} = Migrations.create_migration(module, @test_opts)
+    source = File.read!(updated.migration)
+    assert source =~ ~s(prefix: "public")
+    refute down_source(source) =~ ~s(prefix: "public")
+    assert {:noop, _} = Migrations.create_migration(module, @test_opts)
   end
 
   test "migration schemas dump enum defaults and custom types to database representations" do

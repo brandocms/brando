@@ -1,0 +1,89 @@
+name: Igniter consumer smoke
+
+on:
+  pull_request:
+    paths:
+      - 'lib/**'
+      - 'assets/**'
+      - 'priv/templates/**'
+      - 'scripts/igniter_smoke/**'
+      - 'scripts/igniter_smoke.sh'
+      - 'mix.exs'
+      - 'mix.lock'
+      - '.github/workflows/igniter-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: igniter-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  consumer:
+    name: Consumer (${{ matrix.tenancy }}, ${{ matrix.bootstrap }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tenancy: none
+            bootstrap: fresh
+          - tenancy: single
+            bootstrap: fresh
+          - tenancy: multi
+            bootstrap: fresh
+          - tenancy: none
+            bootstrap: precompiled
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      BRANDO_SMOKE_PGPORT: '5432'
+      BRANDO_SMOKE_PGPASSWORD: postgres
+      BRANDO_SMOKE_BOOTSTRAP: ${{ matrix.bootstrap }}
+    steps:
+      - uses: actions/checkout@v6.0.3
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: 1.20.3
+          otp-version: 28.4.1
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install the qualified Phoenix generator and Yalc
+        run: |
+          mix archive.install hex phx_new 1.8.13 --force
+          npm install --global yalc@1.0.0-pre.53
+      - name: Fetch public GitHub asset dependencies over HTTPS
+        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
+      - name: Install browser test dependencies
+        run: |
+          pnpm --dir scripts/igniter_smoke install --frozen-lockfile
+          pnpm --dir scripts/igniter_smoke exec playwright install --with-deps chromium
+      - name: Install and exercise a fresh consumer
+        id: smoke
+        run: ./scripts/igniter_smoke.sh "${{ matrix.tenancy }}"
+      - name: Preserve smoke logs and browser failures
+        if: always() && steps.smoke.outputs.root != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: igniter-${{ matrix.tenancy }}-${{ matrix.bootstrap }}
+          path: |
+            ${{ steps.smoke.outputs.root }}/logs
+            ${{ steps.smoke.outputs.root }}/browser
+          retention-days: 7
