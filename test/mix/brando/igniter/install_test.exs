@@ -80,6 +80,28 @@ defmodule Mix.Brando.Igniter.InstallTest do
     end
   end
 
+  test "existing Phoenix authentication tables require explicit integration" do
+    for migration <- ["20200101000000_create_users.exs", "20200101000000_create_users_auth_tables.exs"] do
+      result =
+        project(%{
+          "priv/repo/migrations/#{migration}" => """
+          defmodule Studio.Repo.Migrations.ExistingUsers do
+            use Ecto.Migration
+            def change do
+              create table(:users) do
+                add :email, :string
+              end
+            end
+          end
+          """
+        })
+        |> install(["--yes"])
+
+      assert Enum.any?(result.issues, &String.contains?(&1, "authentication schema"))
+      Igniter.Test.assert_unchanged(result)
+    end
+  end
+
   test "admin routes precede an existing public catch-all" do
     result =
       project(%{

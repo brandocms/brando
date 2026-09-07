@@ -1,6 +1,6 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.Brando.Gen.BlueprintMigration do
-    @doc false
+    @doc "Requests recompilation when optional Igniter support is removed."
     def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
 
     use Igniter.Mix.Task
@@ -22,7 +22,7 @@ if Code.ensure_loaded?(Igniter) do
     compile pending Blueprint source changes before planning its storage.
 
     New storage uses priv/repo/migrations in classic mode and tenant_migrations
-    for tenant content in single/multi mode. Explicit schema-prefixed Blueprints
+    for tenant content in single/multi mode. Shared public-schema Blueprints
     use public migration history. Existing history in the other directory requires
     an explicit --migration-path decision; source settings do not move tables.
 
@@ -50,7 +50,7 @@ else
   defmodule Mix.Tasks.Brando.Gen.BlueprintMigration do
     use Mix.Task
 
-    @doc false
+    @doc "Requests recompilation when optional Igniter support becomes available."
     def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
     @shortdoc "Plans Blueprint storage changes (requires igniter)"
     @impl Mix.Task

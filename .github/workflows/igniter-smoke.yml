@@ -22,13 +22,21 @@ concurrency:
 
 jobs:
   consumer:
-    name: Fresh consumer (${{ matrix.tenancy }})
+    name: Consumer (${{ matrix.tenancy }}, ${{ matrix.bootstrap }})
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        tenancy: [none, single, multi]
+        include:
+          - tenancy: none
+            bootstrap: fresh
+          - tenancy: single
+            bootstrap: fresh
+          - tenancy: multi
+            bootstrap: fresh
+          - tenancy: none
+            bootstrap: precompiled
     services:
       postgres:
         image: postgres:14
@@ -44,6 +52,7 @@ jobs:
     env:
       BRANDO_SMOKE_PGPORT: '5432'
       BRANDO_SMOKE_PGPASSWORD: postgres
+      BRANDO_SMOKE_BOOTSTRAP: ${{ matrix.bootstrap }}
     steps:
       - uses: actions/checkout@v6.0.3
       - uses: erlef/setup-beam@v1
@@ -73,7 +82,7 @@ jobs:
         if: always() && steps.smoke.outputs.root != ''
         uses: actions/upload-artifact@v4
         with:
-          name: igniter-${{ matrix.tenancy }}
+          name: igniter-${{ matrix.tenancy }}-${{ matrix.bootstrap }}
           path: |
             ${{ steps.smoke.outputs.root }}/logs
             ${{ steps.smoke.outputs.root }}/browser

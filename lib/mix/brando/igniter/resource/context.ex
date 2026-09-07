@@ -1,6 +1,6 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Brando.Igniter.Resource.Context do
-    @doc false
+    @doc "Requests recompilation when optional Igniter support is removed."
     def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
 
     @moduledoc false

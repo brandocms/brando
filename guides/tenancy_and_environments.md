@@ -171,7 +171,7 @@ application's own deps first:
 
 ```bash
 mix deps.get
-mix deps.compile brando
+mix deps.compile
 ```
 
 Brando's optional task and helper modules automatically request recompilation

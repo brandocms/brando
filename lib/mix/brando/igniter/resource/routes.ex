@@ -1,6 +1,6 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Brando.Igniter.Resource.Routes do
-    @doc false
+    @doc "Requests recompilation when optional Igniter support is removed."
     def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
 
     @moduledoc false
@@ -87,14 +87,7 @@ if Code.ensure_loaded?(Igniter) do
 
     defp insert_public_scope(zipper, code) do
       # Place explicit routes ahead of catch-all scopes, after router imports.
-      case Common.move_to(zipper, fn call ->
-             Enum.any?([:scope, :get, :match, :forward, :resources, :page_routes, :admin_routes], fn name ->
-               CodeFunction.function_call?(call, name, :any)
-             end)
-           end) do
-        {:ok, scope} -> {:ok, Common.add_code(scope, code, placement: :before)}
-        :error -> {:ok, Common.add_code(zipper, code)}
-      end
+      RouteInventory.insert_before_routes(zipper, code)
     end
 
     defp ensure_route(body, verb, path, module, action, code) do

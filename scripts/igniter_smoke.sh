@@ -6,6 +6,8 @@ set -euo pipefail
 : "${BRANDO_SMOKE_PGPORT:?Set BRANDO_SMOKE_PGPORT to a disposable PostgreSQL service}"
 smoke_mode="${1:-none}"
 case "$smoke_mode" in none|single|multi) ;; *) echo 'Expected none, single or multi' >&2; exit 2 ;; esac
+smoke_bootstrap="${BRANDO_SMOKE_BOOTSTRAP:-fresh}"
+case "$smoke_bootstrap" in fresh|precompiled) ;; *) echo 'Expected fresh or precompiled bootstrap' >&2; exit 2 ;; esac
 framework_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 smoke_root="$(mktemp -d "${TMPDIR:-/tmp}/brando-igniter-smoke.XXXXXX")"
 smoke_app="$smoke_root/consumer"
@@ -32,13 +34,24 @@ else
 fi
 cd "$smoke_app"
 elixir "$framework_dir/scripts/igniter_smoke/bootstrap.exs" "$framework_dir" "$smoke_database" "$smoke_mode" "$smoke_port"
+if [[ "$smoke_bootstrap" == precompiled ]]; then
+  elixir "$framework_dir/scripts/igniter_smoke/customize.exs"
+  elixir "$framework_dir/scripts/igniter_smoke/optional_dependency.exs" remove
+  mix deps.get > "$smoke_root/logs/deps-without-igniter.log" 2>&1
+  mix compile > "$smoke_root/logs/compile-without-igniter.log" 2>&1
+  mix run --no-start -e 'false = Code.ensure_loaded?(Igniter); false = Mix.Brando.Igniter.Project.__mix_recompile__?()' > "$smoke_root/logs/check-without-igniter.log" 2>&1
+  elixir "$framework_dir/scripts/igniter_smoke/optional_dependency.exs" add
+fi
 mix deps.get > "$smoke_root/logs/deps.log" 2>&1
+if [[ "$smoke_bootstrap" == precompiled ]]; then
+  mix deps.compile > "$smoke_root/logs/compile-with-igniter.log" 2>&1
+fi
 elixir "$framework_dir/scripts/igniter_smoke/fingerprint.exs" > "$smoke_root/before-preview"
 mix brando.install --dry-run --yes > "$smoke_root/logs/preview.log" 2>&1
 elixir "$framework_dir/scripts/igniter_smoke/fingerprint.exs" > "$smoke_root/after-preview"
 cmp "$smoke_root/before-preview" "$smoke_root/after-preview"
 
-install_options=(--yes --tenancy-mode "$smoke_mode")
+install_options=(--yes --tenancy-mode "$smoke_mode" --public-site --replace-phoenix-home)
 if [[ "$smoke_mode" == single ]]; then install_options+=(--site-key smoke); fi
 mix igniter.install "brando@path:$framework_dir" "${install_options[@]}" > "$smoke_root/logs/install.log" 2>&1
 mix compile --warnings-as-errors > "$smoke_root/logs/compile.log" 2>&1
@@ -52,6 +65,7 @@ mix run --no-start "$framework_dir/scripts/igniter_smoke/check_assets.exs" "$fra
 mix ecto.create > "$smoke_root/logs/database-create.log" 2>&1
 mix ecto.migrate > "$smoke_root/logs/framework-migrations.log" 2>&1
 mix run "$framework_dir/scripts/igniter_smoke/seed.exs" > "$smoke_root/logs/seed.log" 2>&1
+mix run "$framework_dir/scripts/igniter_smoke/seed_pages.exs" > "$smoke_root/logs/seed-pages.log" 2>&1
 
 mix brando.gen.blueprint Catalog Product --yes > "$smoke_root/logs/blueprint.log" 2>&1
 mix compile --warnings-as-errors > "$smoke_root/logs/blueprint-compile.log" 2>&1
@@ -62,6 +76,9 @@ if [[ "$smoke_mode" == none ]]; then
   mix brando.migrate > "$smoke_root/logs/resource-migrate.log" 2>&1
 else
   mix brando.migrate --tenants > "$smoke_root/logs/resource-migrate.log" 2>&1
+fi
+if [[ "$smoke_bootstrap" == precompiled ]]; then
+  mix run "$framework_dir/scripts/igniter_smoke/check_customized.exs" > "$smoke_root/logs/check-customized.log" 2>&1
 fi
 
 PORT="$smoke_port" mix phx.server > "$smoke_root/logs/server.log" 2>&1 &

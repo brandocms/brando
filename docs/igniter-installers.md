@@ -6,7 +6,7 @@ User-facing commands and the current Yalc bootstrap are in
 
 `brando.install`, `brando.gen.blueprint`, `brando.gen`,
 `brando.gen.blueprint_migration`, framework/tenant migrations, auxiliary
-mail/sitemap/authorization/release generators, telemetry and the frontend/backend
+mail/sitemap/authorization/release/CMS-site generators, telemetry and the frontend/backend
 asset generators use Igniter. `igniter.install brando` discovers the same
 `Brando.Install` task; there is one installation implementation.
 
@@ -25,9 +25,11 @@ and an endpoint plugging the selected router. Umbrella roots, unsupported
 supervision shapes, ambiguous modules and dynamic/conflicting identity or tenancy
 configuration produce blocking issues. Discovery does not evaluate consumer code.
 
-Source tests use Igniter 0.8.3. A real consumer has been checked with phx_new and
+Source tests use Igniter 0.8.3. Real consumers have been checked with phx_new and
 Phoenix 1.8.13, LiveView 1.2.11, Elixir 1.20.3 and OTP 28.4.1. This is evidence for
-that combination, not qualification of every version in Brando's unit-test matrix.
+that combination with PostgreSQL 16.1, not qualification of every version in
+Brando's unit-test matrix. The `igniter.new` archive 0.5.28 one-shot path also
+installs and compiles successfully from outside an existing Mix project.
 
 ## Source planning and file ownership
 
@@ -67,6 +69,14 @@ generate. Context query declarations and admin routes are edited semantically;
 custom functions are preserved and conflicting names are reported. Public
 controllers/routes require `--public-route`. Authorization and navigation are
 explicit application choices.
+
+Optional CMS scaffolding uses a distinct Web.CMS namespace and an explicit
+`:page_html_module` configuration. It owns a tenant/locale/identity pipeline,
+page routes and the Brando support endpoints, appending catch-all routing after
+explicit application routes. `--replace-phoenix-home` only removes the root
+Phoenix PageController.home declaration; nested routes and Phoenix source files
+remain. Other ownership and custom generated files block the plan. Guidance
+requires an affirmative ownership answer, independently of diff acceptance.
 
 Embedded Blueprints cannot generate standalone resources. Context checks include
 function names supplied by other Blueprint query/mutation declarations. Route
@@ -151,6 +161,14 @@ automatic tenant migration destinations and shared user cascades before the firs
 environment exists. Dedicated database tests verify cascades in all active
 environments while preserving the caller's tenant context.
 
-Keep the issue open for optional CMS public-site scaffolding, broader existing-app
-and old-consumer/version-upgrade qualification, and release artifact qualification.
+The CMS scaffold also passes a real dry run/rerun and browser checks for published
+pages, drafts, 404s, robots and its frontend initialization without optional menu
+markup. The fixture suite rejects existing authentication table ownership before
+planning installation.
+
+Keep the issue open for broader existing-app and old-consumer/version-upgrade
+qualification across additional layouts/versions, and release artifact qualification.
+The customized/precompiled consumer case is included in the smoke CI matrix and
+passes locally, preserving custom files, routes, configuration, context functions
+and supervision while exercising both browser workflows.
 npm publication is deliberately deferred until release preparation.

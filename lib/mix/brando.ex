@@ -385,7 +385,7 @@ defmodule Mix.Brando do
     Then fetch it and recompile Brando:
 
         mix deps.get
-        mix deps.compile brando
+        mix deps.compile
 
     Then rerun mix #{task}. The optional modules automatically request
     recompilation when Igniter becomes available.

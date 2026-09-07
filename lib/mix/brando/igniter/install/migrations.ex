@@ -1,12 +1,46 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Brando.Igniter.Install.Migrations do
-    @doc false
+    @doc "Requests recompilation when optional Igniter support is removed."
     def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
 
     @moduledoc false
 
     alias Mix.Brando.Igniter.Install
     alias Mix.Brando.Install.Templates
+
+    def preflight(igniter) do
+      igniter = Igniter.include_glob(igniter, "priv/repo/migrations/*.exs")
+
+      sources =
+        Enum.filter(igniter.rewrite.sources, fn {path, _} -> String.starts_with?(path, "priv/repo/migrations/") end)
+
+      installed? = Enum.any?(sources, fn {path, _} -> Regex.match?(~r/^\d+_brando_/, Path.basename(path)) end)
+
+      conflicts =
+        if installed? do
+          []
+        else
+          Enum.flat_map(sources, &authentication_conflicts/1)
+        end
+
+      if conflicts == [],
+        do: {:ok, igniter},
+        else:
+          {:error,
+           "Existing migrations already create users/users_tokens: #{Enum.join(conflicts, ", ")}. Brando owns these shared public tables. Integrate the existing authentication schema and its migration history explicitly before installing; the installer cannot rename or replace existing accounts."}
+    end
+
+    defp authentication_conflicts({path, source}) do
+      quoted = Rewrite.Source.get(source, :content) |> Code.string_to_quoted!()
+      {_, tables} = Macro.prewalk(quoted, [], &user_table/2)
+      if tables == [], do: [], else: [path]
+    end
+
+    defp user_table({:create, _, [{:table, _, [name | _]} | _]} = node, found)
+         when name in [:users, :users_tokens, "users", "users_tokens"],
+         do: {node, [name | found]}
+
+    defp user_table(node, found), do: {node, found}
 
     def plan(igniter, project, options \\ []) do
       igniter = Igniter.include_glob(igniter, "priv/repo/{migrations,tenant_migrations}/*.exs")

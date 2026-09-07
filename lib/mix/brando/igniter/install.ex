@@ -1,6 +1,6 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Brando.Igniter.Install do
-    @doc false
+    @doc "Requests recompilation when optional Igniter support is removed."
     def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
 
     @moduledoc false
@@ -34,7 +34,9 @@ if Code.ensure_loaded?(Igniter) do
     def plan(igniter) do
       with {:ok, igniter, options} <- Configuration.namespace_options(igniter, igniter.args.options),
            {:ok, igniter, project} <- Project.discover(igniter, options),
+           :ok <- public_site_options(options),
            {:ok, igniter} <- preflight(igniter, project),
+           {:ok, igniter} <- Mix.Brando.Igniter.Install.Migrations.preflight(igniter),
            {:ok, igniter, existing} <- Configuration.existing_tenancy(igniter),
            {:ok, tenancy} <- resolve_tenancy(options, existing, project) do
         igniter
@@ -46,11 +48,22 @@ if Code.ensure_loaded?(Igniter) do
         |> application(project)
         |> endpoint(project)
         |> router(project)
+        |> public_site(project, options)
         |> instructions(tenancy)
       else
         {:error, %Igniter{} = igniter} -> igniter
         {:error, message} -> Igniter.add_issue(igniter, message)
       end
+    end
+
+    defp public_site_options(options) do
+      if options[:replace_phoenix_home] && !options[:public_site],
+        do: {:error, "--replace-phoenix-home requires --public-site."},
+        else: :ok
+    end
+
+    defp public_site(igniter, project, options) do
+      if options[:public_site], do: Mix.Brando.Igniter.Site.plan(igniter, project, options), else: igniter
     end
 
     defp preflight(igniter, project) do
@@ -248,14 +261,7 @@ if Code.ensure_loaded?(Igniter) do
             end
             """
 
-            case Common.move_to(zipper, fn call ->
-                   Enum.any?([:scope, :get, :match, :forward, :resources, :page_routes], fn name ->
-                     CodeFunction.function_call?(call, name, :any)
-                   end)
-                 end) do
-              {:ok, route} -> {:ok, Common.add_code(route, code, placement: :before)}
-              :error -> {:ok, Common.add_code(zipper, code)}
-            end
+            RouteInventory.insert_before_routes(zipper, code)
         end
       end)
     end
@@ -306,7 +312,7 @@ if Code.ensure_loaded?(Igniter) do
       using an Elixir package without JS sources. No directory layout is assumed.
       For single/multi tenancy, provision a site/environment after public migrations;
       see the tenancy guide before initializing tenant content.
-      Existing public routes are preserved. Brando's admin is available at /admin.
+      Brando's admin is available at /admin.
       """)
     end
   end

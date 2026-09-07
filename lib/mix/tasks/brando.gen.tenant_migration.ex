@@ -1,6 +1,6 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.Brando.Gen.TenantMigration do
-    @doc false
+    @doc "Requests recompilation when optional Igniter support is removed."
     def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
 
     use Igniter.Mix.Task
@@ -37,7 +37,7 @@ else
   defmodule Mix.Tasks.Brando.Gen.TenantMigration do
     use Mix.Task
 
-    @doc false
+    @doc "Requests recompilation when optional Igniter support becomes available."
     def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
     @shortdoc "Plans a tenant migration (requires igniter)"
     @impl Mix.Task

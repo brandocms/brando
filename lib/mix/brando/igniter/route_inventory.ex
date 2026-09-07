@@ -1,20 +1,65 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Brando.Igniter.RouteInventory do
-    @doc false
+    @doc "Requests recompilation when optional Igniter support is removed."
     def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
 
     @moduledoc false
 
+    alias Igniter.Code.Common
+    alias Igniter.Code.Function, as: CodeFunction
+    alias Sourceror.Zipper
+
     @verbs [:get, :post, :put, :patch, :delete, :options, :head, :live, :match]
+
+    def insert_before_routes(zipper, code) do
+      case Common.move_to(zipper, &route_call?/1) do
+        {:ok, route} -> {:ok, Common.add_code(route, code, placement: :before)}
+        :error -> {:ok, Common.add_code(zipper, code)}
+      end
+    end
+
+    defp route_call?(call) do
+      Enum.any?([:scope, :get, :match, :forward, :resources, :page_routes, :admin_routes], fn name ->
+        CodeFunction.function_call?(call, name, :any)
+      end)
+    end
 
     # Read source declarations without expanding consumer macros or loading its router.
     # Unknown dynamic paths require explicit integration instead of guessing ownership.
     def read(zipper) do
-      zipper.node
-      |> Sourceror.to_string()
-      |> Code.string_to_quoted!()
-      |> collect("", nil)
+      collect(quoted(zipper), "", nil)
     end
+
+    def at(zipper) do
+      {prefix, namespace} =
+        zipper
+        |> Zipper.up()
+        |> scopes([])
+        |> Enum.reduce({"", nil}, fn {:scope, _, [path | rest]}, {prefix, namespace} ->
+          nested = Enum.find(rest, &match?({:__aliases__, _, _}, &1))
+          {join(prefix, path), if(nested, do: module(nested, namespace), else: namespace)}
+        end)
+
+      collect(quoted(zipper), prefix, namespace)
+    end
+
+    defp scopes(nil, found), do: found
+
+    defp scopes(zipper, found) do
+      found =
+        if CodeFunction.function_call?(zipper, :scope, [2, 3, 4]) do
+          case quoted(zipper) do
+            {:scope, _, [path | _]} = scope when is_binary(path) -> [scope | found]
+            _ -> found
+          end
+        else
+          found
+        end
+
+      scopes(Zipper.up(zipper), found)
+    end
+
+    defp quoted(zipper), do: zipper.node |> Sourceror.to_string() |> Code.string_to_quoted!()
 
     def same_path?(left, right), do: normalize(left) == normalize(right)
 

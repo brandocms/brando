@@ -47,7 +47,9 @@ or migration files. If no storage-relevant configuration changed, the task repor
 does not create another version.
 
 Public-schema Blueprints keep public migration history. `--migration-path`
-overrides the destination explicitly. If history already exists in the other
+overrides the destination explicitly. Other fixed schema prefixes require an
+explicit destination and the matching Ecto `--prefix` when applying migrations.
+If history already exists in the other
 conventional directory, generation stops for a deliberate transition decision;
 changing tenancy configuration does not move tables or historical migrations.
 After public migrations, apply tenant content migrations with

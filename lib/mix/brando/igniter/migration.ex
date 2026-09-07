@@ -1,6 +1,6 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Brando.Igniter.Migration do
-    @doc false
+    @doc "Requests recompilation when optional Igniter support is removed."
     def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
 
     @moduledoc false
@@ -44,6 +44,19 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp default_migration_path(module, mode) when mode in [nil, :none, :single, :multi] do
+      case module.__schema__(:prefix) do
+        prefix when prefix in [nil, "public"] ->
+          conventional_migration_path(module, mode)
+
+        prefix ->
+          {:error,
+           "#{inspect(module)} fixes its schema prefix to #{inspect(prefix)}. Choose --migration-path explicitly and apply those migrations with the matching Ecto --prefix; a public or tenant destination cannot be inferred."}
+      end
+    end
+
+    defp default_migration_path(_module, mode), do: {:error, "Unsupported configured tenancy mode #{inspect(mode)}."}
+
+    defp conventional_migration_path(module, mode) do
       paths = {"priv/repo/migrations", "priv/repo/tenant_migrations"}
       tenant? = mode in [:single, :multi] && is_nil(module.__schema__(:prefix))
       {selected, other} = if tenant?, do: {elem(paths, 1), elem(paths, 0)}, else: paths
@@ -55,8 +68,6 @@ if Code.ensure_loaded?(Igniter) do
          "#{inspect(module)} already has storage history in #{other}. Choose --migration-path explicitly after reviewing the tenancy transition; changing source configuration does not migrate existing tables between schemas."}
       end
     end
-
-    defp default_migration_path(_module, mode), do: {:error, "Unsupported configured tenancy mode #{inspect(mode)}."}
 
     defp compiled?(module) do
       if Code.ensure_loaded?(module) && function_exported?(module, :__blueprint__, 0),

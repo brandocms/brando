@@ -33,7 +33,7 @@ Update the Brando dependency and fetch it, then run:
 
 ```shell
 mix deps.get
-mix deps.compile brando
+mix deps.compile
 mix brando.migrate54
 ```
 

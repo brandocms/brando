@@ -1,3 +1,17 @@
+defmodule Brando.MigrationTest.FixedPrefix do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "MigrationTest",
+    schema: "FixedPrefix",
+    singular: "fixed_prefix",
+    plural: "fixed_prefixes"
+
+  @schema_prefix "shared"
+  attributes do
+    attribute :title, :string
+  end
+end
+
 defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
   use ExUnit.Case, async: false
 
@@ -126,5 +140,25 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
       assert explicit.issues == []
       assert Path.dirname(explicit.assigns.brando_storage_plan.metadata.migration) == context.migration_path
     end
+  end
+
+  test "custom fixed prefixes need an explicit storage destination", context do
+    result = Igniter.Test.test_project() |> Igniter.compose_task(BlueprintMigration, ["Brando.MigrationTest.FixedPrefix"])
+    assert Enum.any?(result.issues, &String.contains?(&1, "fixes its schema prefix"))
+    assert result.tasks == []
+    Igniter.Test.assert_unchanged(result)
+
+    explicit =
+      Igniter.Test.test_project()
+      |> Igniter.compose_task(BlueprintMigration, [
+        "Brando.MigrationTest.FixedPrefix",
+        "--migration-path",
+        context.migration_path,
+        "--snapshot-path",
+        context.snapshot_path
+      ])
+
+    assert explicit.issues == []
+    refute File.exists?(context.root)
   end
 end

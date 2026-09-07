@@ -1,6 +1,6 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.Brando.Install do
-    @doc false
+    @doc "Requests recompilation when optional Igniter support is removed."
     def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
 
     use Igniter.Mix.Task
@@ -12,6 +12,7 @@ if Code.ensure_loaded?(Igniter) do
         mix brando.install
         mix brando.install --interactive
         mix brando.install --tenancy-mode single --site-key my-site
+        mix brando.install --public-site --replace-phoenix-home
 
     A new installation defaults to `--tenancy-mode none` without prompting.
     `--interactive` guides missing choices; explicit options take precedence.
@@ -21,6 +22,12 @@ if Code.ensure_loaded?(Igniter) do
     Phoenix source is extended in place. Existing application files, routes,
     tests, assets, dependencies and secrets are preserved. Conflicting scaffold
     files are reported for review, even with `--yes`. No database is touched.
+
+    `--public-site` adds CMS page rendering in a separate Web.CMS namespace.
+    An existing Phoenix homepage route needs explicit `--replace-phoenix-home`
+    or an affirmative guided answer with `--public-site --interactive`.
+    Existing controllers/templates/layouts are preserved; other homepage or
+    catch-all ownership requires manual integration.
     """
 
     @impl Igniter.Mix.Task
@@ -34,7 +41,9 @@ if Code.ensure_loaded?(Igniter) do
               interactive: :boolean,
               tenancy_mode: :string,
               site_key: :string,
-              tenancy_prompt: :boolean
+              tenancy_prompt: :boolean,
+              public_site: :boolean,
+              replace_phoenix_home: :boolean
             ]
       }
     end
@@ -51,7 +60,7 @@ else
   defmodule Mix.Tasks.Brando.Install do
     use Mix.Task
 
-    @doc false
+    @doc "Requests recompilation when optional Igniter support becomes available."
     def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
     @shortdoc "Installs Brando (requires igniter)"
     @impl Mix.Task

@@ -8,13 +8,31 @@ preserved. Conflicting generated files stop the plan, including with `--yes`.
 The developing branch uses Yalc for BrandoJS. Keep the Elixir and JavaScript
 sources on the same revision; npm publication belongs to release preparation.
 The working consumer combination is Phoenix/phx_new 1.8.13, LiveView 1.2.11,
-Elixir 1.20.3 and OTP 28.4.1. Install Node.js, pnpm, Yalc, PostgreSQL, the matching
+Elixir 1.20.3, OTP 28.4.1 and PostgreSQL 16.1. Install Node.js, pnpm, Yalc, PostgreSQL, the matching
 Phoenix generator and an Image/Vix-supported build environment first.
 
 The old `install.sh` entry point is retired and prints these instructions without
 changing the application. Use the commands below for a reviewed installation.
 
 ## Create or select a Phoenix application
+
+From outside an existing Mix project, the qualified one-shot development bootstrap is:
+
+```sh
+mix archive.install hex phx_new 1.8.13
+mix archive.install hex igniter_new 0.5.28
+mix igniter.new studio --with phx.new \
+  --with-args="--no-install --no-assets --no-dashboard --no-mailer" \
+  --install brando@path:/absolute/path/to/brando
+```
+
+The archive supplies Igniter and invokes Brando's installer. Brando's optional
+modules automatically recompile if Igniter is added to an already compiled
+consumer. The one-shot archive currently fails when launched from inside an
+existing Mix project on the qualified Elixir version; create the new application
+from its parent directory. Existing applications use the package command below.
+
+Alternatively, create Phoenix explicitly:
 
 ```sh
 mix phx.new studio --no-install --no-assets --no-dashboard --no-mailer
@@ -36,6 +54,7 @@ Then run:
 
 ```sh
 mix deps.get
+mix deps.compile
 mix brando.install
 ```
 
@@ -52,8 +71,8 @@ installer does not replace your dependency with a hardcoded relative path.
 
 The generated changes configure Brando, extend supervision/endpoint/router,
 create the admin support modules and Vite projects, and add missing migrations.
-The current default preserves your public homepage. It does not scaffold a CMS
-public site, deployment configuration, or sample content.
+The default preserves your public homepage. CMS public pages are an explicit
+option below; deployment configuration and sample content remain separate.
 
 ## Choose configuration
 
@@ -81,6 +100,39 @@ The installer discovers custom namespaces and allows `--module`, `--web-module`,
 `--admin-module`, `--repo`, `--router` and `--endpoint` selection. Ambiguous modules
 and unsupported application layouts produce instructions before files are written.
 Umbrella roots are not currently supported.
+
+Existing `/admin` routes, dynamic route paths and conflicting authentication
+migrations require explicit integration. Brando owns the shared public `users`
+and `users_tokens` tables; the installer does not rename an existing account
+schema. Preflight examines source declarations, without inspecting a live database.
+
+## Add CMS public pages
+
+```sh
+# During installation:
+mix brando.install --public-site --replace-phoenix-home
+
+# Or after installing, with guided homepage ownership:
+mix brando.gen.site --interactive
+```
+
+`--public-site` creates `YourWeb.CMS.PageController`, `PageHTML`, `Layouts`, and
+`SiteContext`. Its pipeline resolves the tenant before locale and identity;
+published pages use the built frontend assets, Brando metadata and named page
+routes. Explicit application routes take precedence over CMS catch-all routing.
+
+An existing Phoenix `PageController.home` route at `/` is removed only with
+`--replace-phoenix-home` or an affirmative interactive answer. Its files remain
+available. Other homepages, catch-alls and support-path collisions require manual
+integration; `--yes` never selects that ownership for you. Update existing homepage
+request-test expectations when deliberately replacing the homepage behavior.
+
+After database and account setup, use `/admin/pages` to create and publish a Page
+with URI `index`, marking it as the homepage and choosing `index.html`. Other pages
+can use `default.html`. The scaffold configures `:page_html_module` to select its
+own CMS templates while preserving your Phoenix PageHTML and layouts. Templates
+under `priv/templates/brando.gen.site` override packaged defaults. No page or
+account is created by this source generator.
 
 ## Build assets
 
