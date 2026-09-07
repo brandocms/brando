@@ -1,6 +1,8 @@
 defmodule <%= inspect controller_module %> do
   use <%= web_module %>, :controller
 
+  plug Brando.Plug.Tenant
+
   def index(conn, _params) do
     {:ok, entries} = <%= inspect context_module %>.list_<%= plural %>(<%= if status, do: "%{status: :published}", else: "%{}" %>)
     render(conn, :index, entries: entries)

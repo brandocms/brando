@@ -254,9 +254,10 @@ defmodule Brando.Blueprint.Migrations do
     |> pad_sequence()
   end
 
-  defp migration_files(module, opts) do
+  @doc "Lists a compiled Blueprint's migration history without creating directories or files."
+  def migration_files(module, opts \\ []) do
     filename_core = build_filename_core(module)
-    migration_path = Keyword.fetch!(opts, :migration_path)
+    migration_path = Keyword.get(opts, :migration_path, @default_opts[:migration_path])
     Path.wildcard(Path.join(migration_path, "*_#{filename_core}_*.exs"))
   end
 

@@ -5,6 +5,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Project.Module, as: ProjectModule
+    alias Mix.Brando.Igniter.RouteInventory
 
     def validate_public_path(nil), do: :ok
 
@@ -83,7 +84,11 @@ if Code.ensure_loaded?(Igniter) do
 
     defp insert_public_scope(zipper, code) do
       # Place explicit routes ahead of catch-all scopes, after router imports.
-      case CodeFunction.move_to_function_call_in_current_scope(zipper, :scope, [2, 3, 4]) do
+      case Common.move_to(zipper, fn call ->
+             Enum.any?([:scope, :get, :match, :forward, :resources, :page_routes, :admin_routes], fn name ->
+               CodeFunction.function_call?(call, name, :any)
+             end)
+           end) do
         {:ok, scope} -> {:ok, Common.add_code(scope, code, placement: :before)}
         :error -> {:ok, Common.add_code(zipper, code)}
       end
@@ -104,32 +109,21 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp route_state(body, verb, path, module, action) do
-      case CodeFunction.move_to_function_call(body, verb, [2, 3, 4], &CodeFunction.argument_equals?(&1, 0, path)) do
-        :error ->
-          quoted = body.node |> Sourceror.to_string() |> Code.string_to_quoted!()
-          if path in declared_paths(quoted, "", verb), do: :conflict, else: :missing
+      routes =
+        body
+        |> RouteInventory.read()
+        |> Enum.filter(fn route ->
+          # Explicit generated routes are inserted before catch-alls. Other
+          # resource/forward declarations still own their named path segments.
+          route.kind in [verb, :live, :get, :match, :resources, :forward, :admin_routes, :unknown] &&
+            not String.contains?(route.path, "*") && RouteInventory.covers?(route, path)
+        end)
 
-        {:ok, call} ->
-          same? =
-            CodeFunction.argument_equals?(call, 1, module) &&
-              (is_nil(action) || CodeFunction.argument_equals?(call, 2, action))
-
-          if same?, do: :present, else: :conflict
+      case routes do
+        [] -> :missing
+        [%{kind: ^verb, module: ^module, action: ^action}] -> :present
+        _ -> :conflict
       end
     end
-
-    defp declared_paths({:scope, _, [path | rest]}, prefix, verb) when is_binary(path) do
-      declared_paths(rest, join_path(prefix, path), verb)
-    end
-
-    defp declared_paths({verb, _, [path | _]}, prefix, verb) when is_binary(path), do: [join_path(prefix, path)]
-    defp declared_paths({_, _, args}, prefix, verb) when is_list(args), do: declared_paths(args, prefix, verb)
-    defp declared_paths({:do, body}, prefix, verb), do: declared_paths(body, prefix, verb)
-
-    defp declared_paths(nodes, prefix, verb) when is_list(nodes),
-      do: Enum.flat_map(nodes, &declared_paths(&1, prefix, verb))
-
-    defp declared_paths(_, _, _), do: []
-    defp join_path(prefix, path), do: "/" <> String.trim(prefix <> "/" <> String.trim_leading(path, "/"), "/")
   end
 end

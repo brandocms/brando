@@ -6,6 +6,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Brando.Exception.BlueprintError
     alias Igniter.Project.Module, as: ProjectModule
     alias Mix.Brando.Igniter.Input
+    alias Mix.Brando.Igniter.Install.Configuration
 
     def plan(igniter) do
       options = igniter.args.options
@@ -15,8 +16,9 @@ if Code.ensure_loaded?(Igniter) do
            module = Module.concat([name]),
            :ok <- compiled?(module),
            :ok <- accepted_source?(igniter, module),
-           :ok <- single_storage_plan(igniter) do
-        prepared = Migrations.plan(module, Keyword.take(options, [:migration_path, :snapshot_path, :rebaseline]))
+           :ok <- single_storage_plan(igniter),
+           {:ok, igniter, options} <- storage_options(igniter, module, options) do
+        prepared = Migrations.plan(module, options)
         attach(igniter, prepared)
       else
         {:error, message} -> Igniter.add_issue(igniter, message)
@@ -24,6 +26,34 @@ if Code.ensure_loaded?(Igniter) do
     rescue
       error in [BlueprintError, File.Error] -> Igniter.add_issue(igniter, Exception.message(error))
     end
+
+    defp storage_options(igniter, module, options) do
+      options = Keyword.take(options, [:migration_path, :snapshot_path, :rebaseline])
+
+      if options[:migration_path] do
+        {:ok, igniter, options}
+      else
+        with {:ok, igniter, mode} <- Configuration.read(igniter, :tenancy_mode),
+             {:ok, path} <- default_migration_path(module, mode) do
+          {:ok, igniter, Keyword.put(options, :migration_path, path)}
+        end
+      end
+    end
+
+    defp default_migration_path(module, mode) when mode in [nil, :none, :single, :multi] do
+      paths = {"priv/repo/migrations", "priv/repo/tenant_migrations"}
+      tenant? = mode in [:single, :multi] && is_nil(module.__schema__(:prefix))
+      {selected, other} = if tenant?, do: {elem(paths, 1), elem(paths, 0)}, else: paths
+
+      if Migrations.migration_files(module, migration_path: other) == [] do
+        {:ok, selected}
+      else
+        {:error,
+         "#{inspect(module)} already has storage history in #{other}. Choose --migration-path explicitly after reviewing the tenancy transition; changing source configuration does not migrate existing tables between schemas."}
+      end
+    end
+
+    defp default_migration_path(_module, mode), do: {:error, "Unsupported configured tenancy mode #{inspect(mode)}."}
 
     defp compiled?(module) do
       if Code.ensure_loaded?(module) && function_exported?(module, :__blueprint__, 0),

@@ -12,6 +12,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Igniter.Project
+    alias Mix.Brando.Igniter.RouteInventory
     alias Mix.Brando.Igniter.Source
     alias Mix.Brando.Install.Options
     alias Mix.Brando.Install.Templates
@@ -30,6 +31,7 @@ if Code.ensure_loaded?(Igniter) do
     def plan(igniter) do
       with {:ok, igniter, options} <- Configuration.namespace_options(igniter, igniter.args.options),
            {:ok, igniter, project} <- Project.discover(igniter, options),
+           {:ok, igniter} <- preflight(igniter, project),
            {:ok, igniter, existing} <- Configuration.existing_tenancy(igniter),
            {:ok, tenancy} <- resolve_tenancy(options, existing, project) do
         igniter
@@ -45,6 +47,23 @@ if Code.ensure_loaded?(Igniter) do
       else
         {:error, %Igniter{} = igniter} -> igniter
         {:error, message} -> Igniter.add_issue(igniter, message)
+      end
+    end
+
+    defp preflight(igniter, project) do
+      {:ok, {igniter, _, router}} = ProjectModule.find_module(igniter, project.router)
+      routes = RouteInventory.read(router)
+
+      cond do
+        Enum.any?(routes, &(&1.kind == :admin_routes)) ->
+          {:ok, igniter}
+
+        Enum.any?(routes, &(&1.kind == :unknown || &1.path == "/admin" || String.starts_with?(&1.path, "/admin/"))) ->
+          {:error,
+           "The router already owns /admin routes or uses dynamic paths. Review that ownership and integrate Brando's admin_routes block explicitly before installing; existing routes cannot be silently shadowed."}
+
+        true ->
+          {:ok, igniter}
       end
     end
 
@@ -220,12 +239,20 @@ if Code.ensure_loaded?(Igniter) do
             {:ok, zipper}
 
           :error ->
-            {:ok,
-             Common.add_code(zipper, """
-             admin_routes "/admin", api_pipeline: :brando_api do
-               live "/", #{inspect(project.admin_module)}.DashboardLive
-             end
-             """)}
+            code = """
+            admin_routes "/admin", api_pipeline: :brando_api do
+              live "/", #{inspect(project.admin_module)}.DashboardLive
+            end
+            """
+
+            case Common.move_to(zipper, fn call ->
+                   Enum.any?([:scope, :get, :match, :forward, :resources, :page_routes], fn name ->
+                     CodeFunction.function_call?(call, name, :any)
+                   end)
+                 end) do
+              {:ok, route} -> {:ok, Common.add_code(route, code, placement: :before)}
+              :error -> {:ok, Common.add_code(zipper, code)}
+            end
         end
       end)
     end

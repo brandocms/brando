@@ -12,6 +12,19 @@ defmodule GeneratorStudio.Catalog.Product do
   end
 end
 
+defmodule GeneratorStudio.Catalog.OtherProduct do
+  use Brando.Blueprint,
+    application: "GeneratorStudio",
+    domain: "Catalog",
+    schema: "OtherProduct",
+    singular: "product",
+    plural: "products"
+
+  attributes do
+    attribute :title, :string
+  end
+end
+
 defmodule GeneratorStudio.Catalog.Category do
   use Brando.Blueprint,
     application: "GeneratorStudio",
@@ -151,6 +164,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
     for {module, options} <- [
           {"Unknown.Catalog.Product", []},
           {"String", []},
+          {"Brando.MigrationTest.Property", []},
           {"../Bad", []},
           {"GeneratorStudio.Catalog.Product", ["--main-field", "missing"]},
           {"GeneratorStudio.Catalog.Product", ["--public-route", "/admin"]}
@@ -159,6 +173,27 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       assert result.issues != []
       Igniter.Test.assert_unchanged(result)
       refute_received {:mix_shell, :prompt, _}
+    end
+  end
+
+  test "Blueprint declarations cannot silently generate overlapping context functions" do
+    for declaration <- ["query :list, OtherProduct", "mutation :create, OtherProduct"] do
+      result =
+        project(%{
+          "lib/generator_studio/catalog.ex" => """
+          defmodule GeneratorStudio.Catalog do
+            use Brando.Query
+            alias GeneratorStudio.Catalog.OtherProduct
+            #{declaration}
+          end
+          """
+        })
+        |> generate()
+
+      assert Enum.any?(result.issues, &String.contains?(&1, "another Blueprint declaration"))
+      source = IgniterCase.source(result, "lib/generator_studio/catalog.ex")
+      assert source =~ "OtherProduct"
+      assert source =~ "alias GeneratorStudio.Catalog.OtherProduct"
     end
   end
 
@@ -195,5 +230,35 @@ defmodule Mix.Tasks.Brando.Gen.Test do
 
     result = generate(base, "GeneratorStudio.Catalog.Product", ["--public-route", "/products"])
     assert Enum.any?(result.issues, &String.contains?(&1, "Public routes at /products conflict"))
+  end
+
+  test "route ownership includes resources and parameter names but respects scope prefixes" do
+    for {routes, conflict?} <- [
+          {~s(resources "/products", ExistingController), true},
+          {~s(get "/products/:slug", ExistingController, :show), true},
+          {~s(scope "/api" do\n get "/products", ExistingController, :index\nend), false},
+          {~s(post "/products", ExistingController, :create), false},
+          {~s(get "/*path", ExistingController, :show), false}
+        ] do
+      base =
+        project()
+        |> Igniter.update_elixir_file("lib/generator_studio_web/router.ex", fn zipper ->
+          {:ok, module} = Igniter.Code.Common.move_to_do_block(zipper)
+          {:ok, Igniter.Code.Common.add_code(module, routes, placement: :before)}
+        end)
+
+      result = generate(base, "GeneratorStudio.Catalog.Product", ["--public-route", "/products"])
+      assert result.issues != [] == conflict?, inspect(result.issues)
+
+      unless conflict? do
+        rerun =
+          result
+          |> IgniterCase.apply_and_reload()
+          |> generate("GeneratorStudio.Catalog.Product", ["--public-route", "/products"])
+
+        assert rerun.issues == []
+        Igniter.Test.assert_unchanged(rerun)
+      end
+    end
   end
 end

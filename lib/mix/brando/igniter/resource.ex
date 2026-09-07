@@ -43,7 +43,11 @@ if Code.ensure_loaded?(Igniter) do
     defp compiled_blueprint(module) do
       if Code.ensure_loaded?(module) && function_exported?(module, :__blueprint__, 0) &&
            function_exported?(module, :__schema__, 1) do
-        :ok
+        if Brando.Blueprint.embedded?(module),
+          do:
+            {:error,
+             "#{inspect(module)} is an embedded Blueprint. Generate its parent resource; embedded values have no table or standalone context queries."},
+          else: :ok
       else
         {:error, "#{inspect(module)} is not a compiled Brando Blueprint. Accept its source and run mix compile first."}
       end

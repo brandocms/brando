@@ -91,4 +91,40 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
     assert File.exists?(planned.assigns.brando_storage_plan.metadata.migration)
     assert File.exists?(planned.assigns.brando_storage_plan.metadata.snapshot)
   end
+
+  test "new tenant storage defaults to tenant migrations without changing explicit paths", context do
+    for mode <- [:none, :single, :multi] do
+      project =
+        Brando.IgniterCase.phoenix_project(
+          files: %{
+            "config/brando.exs" => "import Config\nconfig :brando, tenancy_mode: :#{mode}\n"
+          }
+        )
+
+      result =
+        Igniter.compose_task(project, BlueprintMigration, [
+          "Brando.MigrationTest.ExecutionV1",
+          "--snapshot-path",
+          context.snapshot_path
+        ])
+
+      assert result.issues == []
+      expected = if mode == :none, do: "priv/repo/migrations", else: "priv/repo/tenant_migrations"
+      assert Path.dirname(result.assigns.brando_storage_plan.metadata.migration) == expected
+      refute File.exists?(result.assigns.brando_storage_plan.metadata.migration)
+      refute File.exists?(context.root)
+
+      explicit =
+        Igniter.compose_task(project, BlueprintMigration, [
+          "Brando.MigrationTest.ExecutionV1",
+          "--snapshot-path",
+          context.snapshot_path,
+          "--migration-path",
+          context.migration_path
+        ])
+
+      assert explicit.issues == []
+      assert Path.dirname(explicit.assigns.brando_storage_plan.metadata.migration) == context.migration_path
+    end
+  end
 end

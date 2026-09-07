@@ -18,10 +18,16 @@ if Code.ensure_loaded?(Igniter) do
     since review. Generate one Blueprint storage plan per invocation; accept and
     compile pending Blueprint source changes before planning its storage.
 
+    New storage uses priv/repo/migrations in classic mode and tenant_migrations
+    for tenant content in single/multi mode. Explicit schema-prefixed Blueprints
+    use public migration history. Existing history in the other directory requires
+    an explicit --migration-path decision; source settings do not move tables.
+
     --migration-path and --snapshot-path select custom directories. --rebaseline
     explicitly records storage already implemented by a reviewed manual migration;
     it must not be used to hide missing or failed database migrations. The command
-    only creates source files; apply them separately with mix ecto.migrate.
+    only creates source files; apply them separately with mix brando.migrate,
+    followed by mix brando.migrate --tenants when using named environments.
     """
 
     @impl Igniter.Mix.Task

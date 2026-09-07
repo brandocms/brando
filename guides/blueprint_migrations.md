@@ -38,12 +38,26 @@ mix brando.gen.blueprint_migration MyApp.Projects.Project
 
 The task creates two files:
 
-- an Ecto migration under `priv/repo/migrations/`;
+- an Ecto migration under `priv/repo/migrations/`, or `priv/repo/tenant_migrations/`
+  for a new tenant content Blueprint when single/multi tenancy is configured;
 - a storage snapshot under `priv/blueprints/snapshots/<blueprint>/`.
 
 Commit the Blueprint, migration, and snapshot together. Never edit a snapshot by hand, and do not delete old snapshots
 or migration files. If no storage-relevant configuration changed, the task reports that no migration is needed and
 does not create another version.
+
+Public-schema Blueprints keep public migration history. `--migration-path`
+overrides the destination explicitly. If history already exists in the other
+conventional directory, generation stops for a deliberate transition decision;
+changing tenancy configuration does not move tables or historical migrations.
+After public migrations, apply tenant content migrations with
+`mix brando.migrate --tenants` (or `--site SITE_KEY`).
+
+Foreign keys preserve a referenced schema's explicit prefix, including
+`public.users`, so new tenant tables can reference their shared creators. A
+legacy snapshot that omitted the prefix produces a reviewed, reversible
+constraint change on its next migration. Unprefixed content references continue
+to use the migration's current schema.
 
 Before committing a generated migration:
 

@@ -11,6 +11,9 @@ The working consumer combination is Phoenix/phx_new 1.8.13, LiveView 1.2.11,
 Elixir 1.20.3 and OTP 28.4.1. Install Node.js, pnpm, Yalc, PostgreSQL, the matching
 Phoenix generator and an Image/Vix-supported build environment first.
 
+The old `install.sh` entry point is retired and prints these instructions without
+changing the application. Use the commands below for a reviewed installation.
+
 ## Create or select a Phoenix application
 
 ```sh
@@ -66,7 +69,7 @@ mix brando.install --interactive
 `--interactive --tenancy-mode single` asks only for the missing site key.
 `--yes` accepts the diff; it neither enables guided questions nor permits replacing
 conflicting files. `--dry-run` previews source without applying it. Igniter 0.8 auto-accepts when
-stdin is redirected; use `--dry-run` for unattended previews.
+stdin is redirected; use `--dry-run --yes` for unattended previews (including large diffs).
 `--no-tenancy-prompt` remains supported.
 
 Review `config/brando.exs` and your existing Phoenix database/endpoint settings.
@@ -151,6 +154,7 @@ mix brando.gen Studio.Catalog.Product --public-route /products
 This adds a simple controller/HTML pair and browser routes for `/products` and
 `/products/:id`. Schemas with a status field expose published records. The default
 Blueprint leaves `absolute_url false`; define its URL when public routing is ready.
+Generated public controllers resolve tenant context before querying content.
 Templates do not assume an image field. `--main-field` selects a display/filter
 field; otherwise the generator prefers `title`, a string field, then `id`.
 
@@ -210,7 +214,10 @@ All commands use reviewed source plans and consumer namespaces. New dependencies
 are fetched once after acceptance. Customized owned files produce conflicts;
 consumer templates under `priv/templates/TASK` take precedence. Tenant migration
 names use lowercase letters, digits and underscores; `--interactive` guides a
-missing name. Existing migration implementations and timestamps are preserved.
+missing name. Existing migration implementations and timestamps are preserved. New Blueprint
+storage uses tenant migrations in single/multi mode; run `mix brando.migrate --tenants`
+after public migrations. History in a different directory requires an explicit
+transition decision.
 
 Mail generation reuses a Phoenix mailer, adds missing Swoosh/Req dependencies,
 and supplies local/test adapter defaults plus a default Req API client.

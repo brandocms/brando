@@ -68,6 +68,12 @@ custom functions are preserved and conflicting names are reported. Public
 controllers/routes require `--public-route`. Authorization and navigation are
 explicit application choices.
 
+Embedded Blueprints cannot generate standalone resources. Context checks include
+function names supplied by other Blueprint query/mutation declarations. Route
+ownership accounts for nested prefixes, REST resources and parameter names;
+existing `/admin` routes require integration before installation. Explicit admin
+and resource routes precede public catch-alls.
+
 New direct dependencies queue one `deps.get` after source acceptance. Existing
 dependency sources are preserved. Dependency installation and compilation
 performed by Igniter itself remain upstream bootstrap operations. Brando's planning callbacks do not start a database, seed
@@ -84,8 +90,8 @@ Fingerprints serialize deterministically across the separate Mix process used by
 Igniter. Competing/stale plans are rejected; snapshot failure rolls back the newly
 created migration. Only one Blueprint storage plan may be composed per invocation.
 
-Igniter 0.8 automatically accepts tasks with redirected stdin. Use `--dry-run` for
-unattended previews. Real terminal rejection and dry-run behavior have both been
+Igniter 0.8 automatically accepts tasks with redirected stdin. Use `--dry-run --yes` for
+unattended previews; `--yes` also suppresses the large-diff display question. Real terminal rejection and dry-run behavior have both been
 checked against the disposable consumer, followed by successful paired persistence
 and database application of an accepted alteration.
 
@@ -124,7 +130,18 @@ A separate Elixir process verifies that guarded helpers compile without Igniter.
 
 The disposable consumer check has exercised the real `igniter.install` command,
 both Vite builds through Yalc, database migrations, admin login, and creating,
-editing and publicly rendering a generated resource. Keep the issue open for
-optional CMS public-site scaffolding, the complete consumer CI/tenancy matrix,
-full old-consumer/version-upgrade qualification, and release artifact qualification. npm publication is deliberately deferred until
-release preparation.
+editing and publicly rendering a generated resource in all three tenancy modes.
+The reproducible [smoke script](../scripts/igniter_smoke/README.md) creates a new
+consumer and isolated database per run, checks preview/rerun fingerprints and
+binary asset bytes, and provisions named environments before generating tenant
+storage. A GitHub Actions matrix runs the same workflow; its remote result still
+needs confirmation after pushing the branch.
+
+These checks caught and now cover schema-qualified public user references,
+automatic tenant migration destinations and shared user cascades before the first
+environment exists. Dedicated database tests verify cascades in all active
+environments while preserving the caller's tenant context.
+
+Keep the issue open for optional CMS public-site scaffolding, broader existing-app
+and old-consumer/version-upgrade qualification, and release artifact qualification.
+npm publication is deliberately deferred until release preparation.

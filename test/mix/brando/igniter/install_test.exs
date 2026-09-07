@@ -59,6 +59,45 @@ defmodule Mix.Brando.Igniter.InstallTest do
     assert Enum.all?(igniter.tasks, fn {task, _} -> task in ["brando.assets.copy", "deps.get"] end)
   end
 
+  test "existing admin route ownership blocks before planning source changes" do
+    for route <- [
+          ~s(get "/admin", ExistingController, :index),
+          ~s(scope "/admin" do\n get "/reports", ReportsController, :index\nend)
+        ] do
+      result =
+        project(%{
+          "lib/studio_web/router.ex" => """
+          defmodule StudioWeb.Router do
+            use StudioWeb, :router
+            #{route}
+          end
+          """
+        })
+        |> install(["--yes"])
+
+      assert Enum.any?(result.issues, &String.contains?(&1, "already owns /admin"))
+      Igniter.Test.assert_unchanged(result)
+    end
+  end
+
+  test "admin routes precede an existing public catch-all" do
+    result =
+      project(%{
+        "lib/studio_web/router.ex" => """
+        defmodule StudioWeb.Router do
+          use StudioWeb, :router
+          get "/*path", StudioWeb.ExistingController, :show
+        end
+        """
+      })
+      |> install()
+
+    assert result.issues == []
+    router = IgniterCase.source(result, "lib/studio_web/router.ex")
+    assert [before_catchall, _] = Regex.split(~r/get\(?\s*"\/\*path"/, router)
+    assert before_catchall =~ "admin_routes"
+  end
+
   test "direct and composed installation produce equivalent source plans" do
     base = project()
     args = ["--tenancy-mode", "single", "--site-key", "studio", "--yes", "--dry-run"]
