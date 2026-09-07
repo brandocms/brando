@@ -172,11 +172,37 @@ defmodule Brando.Authorization.Migration do
   defp description(:editor), do: "Create, edit and publish content."
   defp description(:user), do: "No workspace access until another group grants it."
 
-  defp legacy_rules_report do
-    module = Brando.authorization()
-
+  @doc "Inspects each legacy role without claiming to translate application policy."
+  def legacy_rules_report(module \\ Brando.authorization()) do
     if Code.ensure_loaded?(module) and function_exported?(module, :__rules__, 1) do
-      "Review #{inspect(module)} before cutover: custom and conditional legacy rules require explicit policy mappings."
+      roles = Enum.map([:superuser, :admin, :editor, :user], &inspect_rules(module, &1))
+
+      %{
+        module: inspect(module),
+        available: true,
+        roles: roles,
+        review_count: Enum.sum(Enum.map(roles, &length(&1.rules)))
+      }
+    else
+      %{module: inspect(module), available: false, roles: [], review_count: 0}
     end
+  end
+
+  defp inspect_rules(module, role) do
+    rules =
+      Enum.map(module.__rules__(role), fn rule ->
+        %{
+          action: to_string(rule.action),
+          subject: inspect(rule.subject),
+          effect: if(rule.inverted, do: "Cannot", else: "Can"),
+          conditions: if(rule.conditions, do: inspect(rule.conditions, pretty: true, limit: :infinity)),
+          conditional: not is_nil(rule.conditions)
+        }
+      end)
+
+    %{role: role, rules: rules, error: nil}
+  rescue
+    FunctionClauseError -> %{role: role, rules: [], error: "No rules declared for this role."}
+    _ -> %{role: role, rules: [], error: "Rules could not be inspected. Review the application module before cutover."}
   end
 end

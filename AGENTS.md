@@ -27,6 +27,14 @@
 - If any of my requests are not clear, ask me to clarify.
 - If you have better suggestions, feel free to suggest them.
 
+## Admin UI design
+
+When creating or refining admin screens, read the [Admin UI design guide](docs/admin-ui-design.md).
+It records the approved visual direction, spacing and control proportions, plain
+copy, settings and metadata layouts, the global paragraph-margin pitfall, and
+browser verification with screenshots. Use its linked Utilities example as a
+reference alongside existing components.
+
 ## Subsystem skills
 
 Load only the skill needed for the state boundary being changed:

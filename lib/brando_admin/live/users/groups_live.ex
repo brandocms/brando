@@ -1,17 +1,21 @@
 defmodule BrandoAdmin.Users.GroupsLive do
   use BrandoAdmin, :live_view
-  alias Brando.Authorization.{Catalog, Engine, Group, Groups, Scope}
+  alias Brando.Authorization.{Administration, Catalog, Engine, Group, Groups, Scope}
 
   def mount(_params, _session, socket) do
-    if Engine.enabled?() do
+    if Administration.can?(socket.assigns.authorization_scope, :read, :groups) do
       scope = socket.assigns.authorization_scope
       catalog = Enum.filter(Catalog.all(), &(scope.kind in &1.scopes))
 
       {:ok,
        socket
        |> assign(:socket_connected, true)
+       |> assign(:legacy_mode?, !Engine.enabled?())
        |> assign(:catalog, catalog)
-       |> assign(:installation_access?, Engine.can?(Scope.installation(socket.assigns.current_user), :read, :groups))
+       |> assign(
+         :installation_access?,
+         Administration.can?(Scope.installation(socket.assigns.current_user), :read, :groups)
+       )
        |> assign(:search, "")
        |> assign(:group_search, "")
        |> assign(:selected, nil)
@@ -60,6 +64,11 @@ defmodule BrandoAdmin.Users.GroupsLive do
           <a :if={@authorization_scope.kind == :installation} href="/admin/groups">Workspace groups →</a>
         </div>
       </header>
+      <div :if={@legacy_mode?} class="authorization-legacy-notice" role="status">
+        <strong>Preparing for group access</strong>
+        <span>Legacy roles are still active. Changes here take effect after your application switches to groups.</span>
+        <a href="/admin/config/utils#authorization-tools">Migration tools →</a>
+      </div>
       <div class="authorization-layout">
         <aside class="authorization-groups" aria-label="User groups">
           <div class="authorization-heading">
@@ -710,7 +719,16 @@ defmodule BrandoAdmin.Users.GroupsLive do
     case result do
       {:ok, group} ->
         {:noreply,
-         socket |> refresh() |> select(group) |> assign(:message, "Group saved. Access changes apply immediately.")}
+         socket
+         |> refresh()
+         |> select(group)
+         |> assign(
+           :message,
+           if(socket.assigns.legacy_mode?,
+             do: "Group saved. Legacy roles remain active until cutover.",
+             else: "Group saved. Access changes apply immediately."
+           )
+         )}
 
       error ->
         {:noreply, failure(socket, error)}

@@ -7,7 +7,7 @@ defmodule Brando.Authorization.Groups do
   permissions. The shared administration lock also protects the last Superuser.
   """
   import Ecto.Query, only: [from: 2]
-  alias Brando.Authorization.{AuditEvent, Catalog, Engine, Grant, Group, Membership, Scope}
+  alias Brando.Authorization.{Administration, AuditEvent, Catalog, Engine, Grant, Group, Membership, Scope}
   alias Brando.Repo
   alias Ecto.Changeset
 
@@ -15,7 +15,7 @@ defmodule Brando.Authorization.Groups do
 
   @doc "Lists groups and member counts in the authorized scope."
   def list(%Scope{} = scope) do
-    with :ok <- Engine.authorize(scope, :read, :groups) do
+    with :ok <- Administration.authorize(scope, :read, :groups) do
       groups =
         scoped(scope)
         |> Ecto.Query.order_by([g], asc: g.name, asc: g.id)
@@ -28,7 +28,7 @@ defmodule Brando.Authorization.Groups do
 
   @doc "Gets an authorized group; IDs from other scopes remain inaccessible."
   def get(scope, id) do
-    with :ok <- Engine.authorize(scope, :read, :groups),
+    with :ok <- Administration.authorize(scope, :read, :groups),
          %Group{} = group <- find(scope, id) do
       {:ok, Repo.preload(group, [:grants, :memberships])}
     else
@@ -136,7 +136,7 @@ defmodule Brando.Authorization.Groups do
 
   @doc "Returns only directory fields safe for selecting a site group member."
   def directory(scope, search \\ "") do
-    with :ok <- Engine.authorize(scope, :assign, :groups) do
+    with :ok <- Administration.authorize(scope, :assign, :groups) do
       # A site administrator may select an account already assigned to that site.
       # Inviting previously unassigned identities is an installation operation.
       query =
@@ -149,7 +149,7 @@ defmodule Brando.Authorization.Groups do
         )
 
       query =
-        if scope.kind == :site and not Engine.superuser?(scope) do
+        if scope.kind == :site and not Administration.superuser?(scope) do
           from(u in query,
             where:
               u.id in subquery(
@@ -193,7 +193,7 @@ defmodule Brando.Authorization.Groups do
 
   @doc "Explains a member's effective grants in this scope only."
   def effective(scope, user_id) do
-    with :ok <- Engine.authorize(scope, :read, :groups),
+    with :ok <- Administration.authorize(scope, :read, :groups),
          true <-
            Repo.one(
              from(m in Membership,
@@ -275,7 +275,7 @@ defmodule Brando.Authorization.Groups do
   defp find!(scope, id), do: find(scope, id) || Repo.rollback(:not_found)
 
   defp authorize!(scope, action) do
-    if Engine.authorize(scope, action, :groups) != :ok, do: Repo.rollback(:forbidden)
+    if Administration.authorize(scope, action, :groups) != :ok, do: Repo.rollback(:forbidden)
   end
 
   defp validate_permissions!(scope, permissions) when is_list(permissions) do
@@ -292,7 +292,7 @@ defmodule Brando.Authorization.Groups do
   defp validate_permissions!(_, _), do: Repo.rollback(:invalid_permissions)
 
   defp check_delegation!(scope, permissions) do
-    snapshot = Engine.snapshot(scope)
+    snapshot = Administration.snapshot(scope)
 
     unless snapshot.superuser? do
       catalog = Map.new(Catalog.all(), &{&1.key, &1})
@@ -311,7 +311,7 @@ defmodule Brando.Authorization.Groups do
   defp check_editable!(_), do: :ok
 
   defp check_assignment!(scope, %{preset: :superuser}) do
-    unless Engine.superuser?(scope), do: Repo.rollback(:forbidden)
+    unless Administration.superuser?(scope), do: Repo.rollback(:forbidden)
   end
 
   defp check_assignment!(scope, group), do: check_delegation!(scope, permission_keys(group))
@@ -324,7 +324,7 @@ defmodule Brando.Authorization.Groups do
   end
 
   defp check_directory_access!(%Scope{kind: :site} = scope, user_id) do
-    unless Engine.superuser?(scope) do
+    unless Administration.superuser?(scope) do
       membership =
         Repo.one(
           from(m in Membership,

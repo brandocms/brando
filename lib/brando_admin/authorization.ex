@@ -6,7 +6,7 @@ defmodule BrandoAdmin.Authorization do
   """
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [attach_hook: 4, connected?: 1, redirect: 2, put_flash: 3]
-  alias Brando.Authorization.{Boundary, Engine, Scope}
+  alias Brando.Authorization.{Administration, Boundary, Engine, Scope}
 
   # View names are registry data, not dependencies of the authorization engine.
   # Module aliases here would close compile-connected cycles through LiveView macros.
@@ -57,7 +57,7 @@ defmodule BrandoAdmin.Authorization do
   end
 
   def on_mount(:default, params, _session, socket) do
-    if Engine.enabled?() do
+    if Engine.enabled?() or socket.view == BrandoAdmin.Users.GroupsLive do
       requirement = requirement(socket.view, params, socket.assigns[:live_action])
       scope = scope(socket, requirement, params)
       Boundary.put_scope(scope)
@@ -143,7 +143,12 @@ defmodule BrandoAdmin.Authorization do
     scope = socket.assigns.authorization_scope
     Boundary.put_scope(scope)
     {action, subject} = socket.assigns.authorization_requirement
-    snapshot = Engine.snapshot(scope)
+
+    snapshot =
+      if socket.view == BrandoAdmin.Users.GroupsLive,
+        do: Administration.snapshot(scope),
+        else: Engine.snapshot(scope)
+
     Boundary.put_presentation(snapshot)
 
     if Engine.can?(snapshot, action, subject) do

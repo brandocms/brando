@@ -12,9 +12,11 @@ and content transfer, see [User accounts and sessions](users.md).
 1. Run `mix brando.upgrade`, review migration 170, and run `mix ecto.migrate`.
    Rebuild the application's backend assets to include the scope-aware channels.
    Security tables live in `public`; they are never copied with site content.
-2. Run `mix brando.authorization.migrate --dry-run`. Review the accounts, site
-   assignments, and custom legacy rules reported by the command.
-3. Run `mix brando.authorization.migrate`. Review seeded groups and permission keys
+2. As a Superuser, open **Configuration → Utilities** and run the migration
+   report. Review the accounts, site assignments, and application rules. The
+   operator equivalent is `mix brando.authorization.migrate --dry-run`.
+3. Choose **Prepare groups** (or run `mix brando.authorization.migrate`). Follow
+   **Review groups** to review seeded groups and permission keys
    before the configuration switch. Map custom/conditional application rules to
    explicit permissions and resource policies. The old rule DSL is not translated
    silently and is not combined with the new resolver.
@@ -32,6 +34,59 @@ revoked in groups. Treat this as an authority migration, not a routine rollback.
 The import is retry-safe: it preserves edited preset grants and records each
 legacy assignment it imports. Re-running does not resurrect memberships removed
 through the group editor. New capabilities require an explicit group edit.
+
+## Preparing and moving configuration
+
+**Configuration → Utilities** exposes authorization tools only to active
+Superusers. In legacy mode this means the freshly loaded legacy role; in groups
+mode it means protected installation membership. An ordinary administrator with
+Utilities permissions cannot invoke these operations. Backfill is installation-wide,
+idempotent, audited, and does not change `authorization_mode`.
+
+The report inspects `__rules__/1` for each built-in role and shows its actions,
+subjects, conditions and inverted (Cannot) rules. Missing or unreadable rules are
+shown explicitly. This is a review inventory, not an automatic translation or a
+claim that the new permissions are equivalent. Map application-specific restrictions
+to policies in application code before deploying the switch.
+
+Legacy Superusers can open **Configuration → Permissions**, edit prepared groups,
+and review memberships before cutover. This exception is confined to group
+administration; application access continues to use the legacy resolver.
+
+The **Import / export** panel operates on the scope named in the panel. Use its
+installation link to manage installation configuration, or select the appropriate
+site in the admin before exporting/importing site groups. Site permissions are
+shared across that site's environments. Importing within the same installation
+and site therefore changes the same groups used by both staging and production.
+
+Exports are private JSON downloads containing a format identifier, version,
+scope type, stable group keys, display names, descriptions, preset identifiers,
+and sorted permission keys. They contain no accounts, memberships, database IDs,
+or protected Superuser configuration. Keep a reviewed export in version control
+or move it to another installation using the same permission catalog.
+
+Choose a JSON file (up to 1 MB / 500 groups), then **Preview import**. Review the
+new, updated and unchanged groups, grant additions/removals, detail changes, and
+number of affected existing members. **Apply configuration** merges by stable key
+into the selected scope and replaces the listed groups' grants. Unlisted groups
+and all memberships are preserved. The whole import and its audit entries commit
+atomically. A concurrent group or membership edit invalidates the preview; choose
+the file again to review the current changes. Unknown permissions, different scope
+types, duplicate or reserved keys, and protected-group data reject the whole file.
+
+Importing tuned presets before running backfill is supported: the backfill uses
+them without resetting their grants. In legacy mode imported grants take effect
+only after cutover; in group mode changes apply immediately.
+
+The same reviewed workflow is available to trusted application code:
+
+```elixir
+alias Brando.Authorization.Configuration
+
+{:ok, json} = Configuration.export(scope)
+{:ok, preview} = Configuration.preview(target_scope, json)
+{:ok, result} = Configuration.apply(target_scope, json, preview.revision)
+```
 
 ## Scopes and defaults
 
