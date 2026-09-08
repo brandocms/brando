@@ -102,6 +102,44 @@ test.describe('Media in entry recovery copies', () => {
   test.setTimeout(180000)
   test.beforeEach(async ({ page }) => { page.setDefaultTimeout(15000) })
 
+  test('idle forms send no captures, edits reuse one row, and Save leaves only a closed marker', async ({ page }) => {
+    const captures = []
+    page.on('websocket', socket => socket.on('framesent', ({ payload }) => {
+      const frame = JSON.parse(String(payload))
+      if (frame[4]?.event === 'draft_capture') captures.push(frame[4].value)
+    }))
+    await page.goto('/admin/pages/create')
+    await syncLV(page)
+    await expect(page.getByTestId('draft-status')).toHaveText('No unsaved changes in this editor')
+    // Observe longer than the removed 15-second polling interval.
+    await page.waitForTimeout(16000)
+    expect(captures).toHaveLength(0)
+    expect((await mediaState(page, 'page')).storage).toHaveLength(0)
+
+    await page.locator('#page_title').fill('One working copy')
+    await page.getByLabel('URI').fill('one-working-copy')
+    await waitForCopy(page, 'page', 'new', copy => copy.main.title === 'One working copy')
+    const [first] = (await mediaState(page, 'page')).storage
+    for (const title of ['Revised working copy', 'Finished working copy']) {
+      await page.locator('#page_title').fill(title)
+      await waitForCopy(page, 'page', 'new', copy => copy.main.title === title)
+      const state = await mediaState(page, 'page')
+      expect(state.storage).toHaveLength(1)
+      expect(state.storage[0].id).toBe(first.id)
+    }
+    const captureCount = captures.length
+    await page.waitForTimeout(16000)
+    expect(captures).toHaveLength(captureCount)
+
+    const id = await savePage(page, 'Finished working copy')
+    const saved = await mediaState(page, 'page', id)
+    expect(saved.drafts).toHaveLength(0)
+    expect(saved.storage).toEqual([expect.objectContaining({ id: first.id, empty: true, resolved: true })])
+    await page.reload()
+    await expect(page.locator('#page_title')).toHaveValue('Finished working copy')
+    await expect(page.getByTestId('draft-notice')).toHaveCount(0)
+  })
+
   test('saving new content permanently retires recovery copies matching the previous saved version', async ({ page }) => {
     await createPage(page, 'Previous saved content')
     const id = await savePage(page, 'Previous saved content')
@@ -118,8 +156,24 @@ test.describe('Media in entry recovery copies', () => {
       await expect(page.locator('#page_title')).toHaveValue(title)
       await expect(page.getByTestId('draft-status')).toHaveText('No unsaved changes in this editor', { timeout: 25000 })
       await expect(page.getByTestId('draft-notice')).toHaveCount(0)
-      expect((await mediaState(page, 'page', id)).drafts).toHaveLength(0)
+      const state = await mediaState(page, 'page', id)
+      expect(state.drafts).toHaveLength(0)
+      expect(state.storage.every(copy => copy.empty && copy.resolved)).toBe(true)
     }
+  })
+
+  test('a rejected Save retains the full recovery payload', async ({ page }) => {
+    await createPage(page, 'Work surviving a rejected save')
+    await page.getByText('Published', { exact: true }).click()
+    await page.getByLabel('URI').fill('')
+    await waitForCopy(page, 'page', 'new', copy => copy.main.uri === '')
+    await page.getByTestId('submit').click()
+    await expect(page.locator('#page_uri-error')).toContainText("can't be blank")
+    const state = await mediaState(page, 'page')
+    expect(state.drafts[0].main.title).toBe('Work surviving a rejected save')
+    expect(state.storage).toEqual([expect.objectContaining({ empty: false, resolved: false })])
+    await page.reload()
+    await expect(page.getByTestId('draft-notice')).toBeVisible()
   })
 
   test('opening legacy content resolves no-op copies and does not create another copy on capture or reload', async ({ page }) => {

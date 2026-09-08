@@ -3,8 +3,11 @@
 export default function draftRecovery(hook) {
   let generation = 0
   let pending = false
-  let inFlight = false
-  let trailing
+  let inFlight = null
+  let saveGeneration = null
+  let dirtySince = null
+  let lastChanged = 0
+  let captureTimer
   let flightTimer
   const enabled = () => hook.el.dataset.draftEnabled === 'true'
   const ours = ({ id }) => id === hook.el.dataset.draftFormId
@@ -16,7 +19,8 @@ export default function draftRecovery(hook) {
     return params.toString()
   }
   const capture = () => {
-    if (!enabled() || inFlight || !hook.liveSocket.isConnected()) return
+    clearTimeout(captureTimer)
+    if (!pending || !enabled() || inFlight || !hook.liveSocket.isConnected()) return
     const form = hook.el.querySelector('form.main-form')
     if (!form) return
     const blocks = {}
@@ -24,18 +28,34 @@ export default function draftRecovery(hook) {
       const uid = block.id.replace(/^(entry_block_form|child_block_form)-/, '')
       blocks[uid] = encode(block)
     })
-    inFlight = true
-    flightTimer = setTimeout(() => { inFlight = false }, 11000)
-    hook.pushEventTo(hook.el, 'draft_capture', { main: encode(form), blocks, generation })
+    dirtySince = null
+    inFlight = { requestId: crypto.randomUUID(), generation }
+    // The server abandons incomplete captures after ten seconds. Retry only
+    // unacknowledged work; a timeout must not leave it stranded until another edit.
+    flightTimer = setTimeout(() => { inFlight = null; capture() }, 11000)
+    hook.pushEventTo(hook.el, 'draft_capture', {
+      main: encode(form), blocks, generation, request_id: inFlight.requestId,
+    })
+  }
+  const schedule = () => {
+    clearTimeout(captureTimer)
+    if (!pending || inFlight || !hook.liveSocket.isConnected()) return
+    const deadline = Math.min(lastChanged + 3000, dirtySince + 15000)
+    captureTimer = setTimeout(capture, Math.max(0, deadline - Date.now()))
   }
   const dirty = () => {
+    if (!enabled()) return
     generation += 1
     pending = true
-    clearTimeout(trailing)
-    trailing = setTimeout(capture, 2000)
+    lastChanged = Date.now()
+    dirtySince ??= lastChanged
+    schedule()
   }
   const onInput = event => {
     if (event.target.closest('form.main-form, form[phx-change="validate_block"]')) dirty()
+  }
+  const onSubmit = event => {
+    if (event.target.matches('form.main-form')) saveGeneration = generation
   }
   const beforeUnload = event => {
     if (pending) { event.preventDefault(); event.returnValue = '' }
@@ -71,32 +91,45 @@ export default function draftRecovery(hook) {
   }
   hook.el.addEventListener('input', onInput, true)
   hook.el.addEventListener('change', onInput, true)
+  hook.el.addEventListener('submit', onSubmit, true)
   hook.el.addEventListener('click', copyContent)
   window.addEventListener('beforeunload', beforeUnload)
   window.addEventListener('click', beforeNavigate, true)
-  const interval = setInterval(capture, 15000)
   hook.handleEvent('b:draft-dirty', event => { if (ours(event)) dirty() })
   hook.handleEvent('b:draft-saved', event => {
-    if (!ours(event)) return
+    if (!ours(event) || !inFlight || event.request_id !== inFlight.requestId) return
+    pending = inFlight.generation !== generation
     clearTimeout(flightTimer)
-    inFlight = false
-    if (event.generation === generation) pending = false
-    else trailing = setTimeout(capture, 2000)
+    inFlight = null
+    if (!pending) dirtySince = null
+    schedule()
   })
   hook.handleEvent('b:draft-reset', event => {
     if (!ours(event)) return
-    if (event.clean) pending = false
-    inFlight = false
-    clearTimeout(trailing)
+    // A server save can finish before newer browser input has been validated.
+    // Never acknowledge input typed after the submit that this reset belongs to.
+    if (!event.clean) pending = true
+    if (event.clean && (saveGeneration === null || saveGeneration === generation)) pending = false
+    saveGeneration = null
+    inFlight = null
+    dirtySince = pending ? Date.now() : null
+    lastChanged = Date.now()
     clearTimeout(flightTimer)
+    schedule()
   })
   return {
-    disconnected() { hook.js().addClass(hook.el, 'draft-offline'); inFlight = false },
+    disconnected() {
+      hook.js().addClass(hook.el, 'draft-offline')
+      inFlight = null
+      clearTimeout(captureTimer)
+      clearTimeout(flightTimer)
+    },
     reconnected() { hook.js().removeClass(hook.el, 'draft-offline'); capture() },
     destroy() {
-      clearTimeout(trailing); clearTimeout(flightTimer); clearInterval(interval)
+      clearTimeout(captureTimer); clearTimeout(flightTimer)
       hook.el.removeEventListener('input', onInput, true)
       hook.el.removeEventListener('change', onInput, true)
+      hook.el.removeEventListener('submit', onSubmit, true)
       hook.el.removeEventListener('click', copyContent)
       window.removeEventListener('beforeunload', beforeUnload)
       window.removeEventListener('click', beforeNavigate, true)

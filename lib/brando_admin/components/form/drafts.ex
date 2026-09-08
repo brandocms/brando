@@ -107,6 +107,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
       id: id,
       generation: draft.generation,
       client_generation: params["generation"],
+      request_id: params["request_id"],
       main: main_params(socket, cs),
       parts: %{},
       expected: expected
@@ -200,6 +201,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
           |> push_event("b:draft-saved", %{
             id: socket.assigns.id,
             generation: capture.client_generation,
+            request_id: capture.request_id,
             draft_id: state.id
           })
 
@@ -228,9 +230,9 @@ defmodule BrandoAdmin.Components.Form.Drafts do
     end
   end
 
-  defp candidates(socket, identity, baseline) do
+  defp candidates(socket, identity, baseline, opts \\ []) do
     version = Brando.Blueprint.Snapshot.get_current_version(socket.assigns.schema)
-    {:ok, _} = Drafts.resolve_unchanged(identity, baseline, version)
+    {:ok, _} = Drafts.resolve_unchanged(identity, baseline, version, opts)
     Drafts.candidates(identity, baseline: baseline, schema_version: version)
   end
 
@@ -283,14 +285,15 @@ defmodule BrandoAdmin.Components.Form.Drafts do
       Drafts.resolve_unchanged(
         draft.identity,
         draft.baseline,
-        Brando.Blueprint.Snapshot.get_current_version(socket.assigns.schema)
+        Brando.Blueprint.Snapshot.get_current_version(socket.assigns.schema),
+        compact: true
       )
 
-    Drafts.resolve(draft.identity, draft.id, generation)
-    # Resolved originals remain available for the retention window, but never
-    # re-enter the normal recovery list after a successful explicit save.
+    Drafts.resolve(draft.identity, draft.id, generation, compact: true)
+    # Only a complete, successfully saved restore releases the original payload.
+    # Failed/partial restores and newer generations retain their recovery content.
     if draft.selected && draft.issues == [] && draft.generation <= generation,
-      do: Drafts.resolve_equivalent(draft.identity, draft.selected)
+      do: Drafts.resolve_equivalent(draft.identity, draft.selected, compact: true)
 
     Drafts.rebind_entry(draft.identity, draft.id, entry.id)
     if draft.selected, do: Drafts.rebind_entry(draft.identity, draft.selected.id, entry.id)
@@ -323,7 +326,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
         identity: identity,
         capture: nil,
         save_generation: nil,
-        candidates: candidates(socket, identity, checksum),
+        candidates: candidates(socket, identity, checksum, compact: true),
         selected: nil,
         issues: [],
         error: nil,

@@ -354,7 +354,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
   defp status(%{status: :error}), do: gettext("Recovery copy could not be saved — keep this editor open")
   defp status(%{status: :saving}), do: gettext("Saving recovery copy…")
 
-  defp status(%{saved_at: %DateTime{}, checksum: checksum, baseline: checksum}),
+  defp status(%{checksum: checksum, baseline: checksum}),
     do: gettext("No unsaved changes in this editor")
 
   defp status(%{saved_at: %DateTime{} = at}),

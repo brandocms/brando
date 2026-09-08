@@ -45,6 +45,66 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
     end
   end
 
+  defp recovery_socket(item) do
+    %Phoenix.LiveView.Socket{private: %{lifecycle: %Phoenix.LiveView.Lifecycle{}}}
+    |> Phoenix.Component.assign(:items, [item])
+    |> Phoenix.Component.assign(:form_id, "collection_form")
+    |> Phoenix.Component.assign(:relation_key, :items)
+    |> Phoenix.Component.assign(:relation_module, MediaItem)
+    |> Phoenix.Component.assign(:image_field, :cover)
+    |> Phoenix.Component.assign(:video_field, nil)
+    |> Phoenix.LiveView.stream(:transformer_items, [])
+  end
+
+  test "editing a transformer field notifies recovery with its current content" do
+    item = Transformer.new_item("item-1", %{title: "Before", cover_id: nil})
+
+    assert {:noreply, socket} =
+             Transformer.handle_event(
+               "update_field",
+               %{"dom_id" => "item-1", "field" => "title", "value" => "Unsaved caption"},
+               recovery_socket(item)
+             )
+
+    assert hd(socket.assigns.items).changes.title == "Unsaved caption"
+
+    assert_receive {:phoenix, :send_update,
+                    {{BrandoAdmin.Components.Form, "collection_form"},
+                     %{draft_dirty: true, updated_relation: [%{title: "Unsaved caption"}]}}}
+  end
+
+  test "upload progress does not dirty recovery, but completed delivery does" do
+    item =
+      Transformer.build_placeholder(
+        %{"ref" => "upload-1", "filename" => "photo.jpg", "size" => 100, "kind" => "image"},
+        %Subform{},
+        MediaItem,
+        %{}
+      )
+
+    {:noreply, socket} =
+      Transformer.handle_event(
+        "video_upload_progress",
+        %{"request_ref" => "upload-1", "percentage" => 50},
+        recovery_socket(item)
+      )
+
+    refute_receive {:phoenix, :send_update, _}
+    image = %Brando.Images.Image{id: 42}
+    {:ok, socket} = Transformer.update(%{event: "upload_complete", ref: "upload-1", asset: image}, socket)
+    assert hd(socket.assigns.items).pending == nil
+
+    assert_receive {:phoenix, :send_update,
+                    {{BrandoAdmin.Components.Form, "collection_form"},
+                     %{draft_dirty: true, updated_relation: [%{cover_id: 42}]}}}
+
+    target = %Phoenix.LiveComponent.CID{cid: 7}
+    assert {:ok, _} = Transformer.update(%{event: "capture_draft", capture_id: "capture-1", reply_to: target}, socket)
+
+    assert_receive {:phoenix, :send_update,
+                    {^target, %{event: "draft_part", data: [%{"cover_id" => 42, "sequence" => 0}]}}}
+  end
+
   test "a transformer without a summary renders its fields directly, including a requested grid" do
     field =
       %Collection{items: [%MediaItem{id: 1, title: "Editable caption", cover: nil}]}

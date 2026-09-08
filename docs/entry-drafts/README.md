@@ -17,8 +17,10 @@ and matching restore contracts into one choice, represented by the newest copy.
 Copies that match known saved content are marked resolved when the editor opens
 and when it saves. Saving settles matches against the previous baseline before
 switching to the new one. This is durable state, so a later save cannot make old
-saved content reappear as unsaved work. Original payloads remain in storage for
-the resolved-copy retention period. Different unsaved content remains available,
+saved content reappear as unsaved work. A successful Save releases the matching
+payloads and keeps small closed markers for the resolved-copy retention period.
+Failed saves and incomplete restores retain their original content. Copies
+resolved on opening an entry keep their payload until expiry. Different unsaved content remains available,
 including older work from another session; timestamps alone never resolve it.
 
 Opening an entry can fill variable ownership, normalize positional sequence
@@ -119,11 +121,19 @@ the drawer, and upload folder drawers that failed to reopen after being closed.
   tenant environments. `DraftPurger` runs daily through Oban. Active copies expire
   after 30 days; resolved/discarded copies after 7 days. Configure
   `:draft_retention_days` and `:resolved_draft_retention_days` under `:brando`.
-- Capture uses a two-second debounce and a fifteen-second fallback. It reads
-  block structure from the op store and overlays visible raw inputs, without
-  blurring editors. Capture IDs and generations isolate replies from save/preview.
-  Unchanged payloads avoid database writes; advisory locks prevent late captures
-  from resurrecting resolved copies.
+- Capture runs three seconds after the last change, or after fifteen seconds of
+  continuous changes. Idle editors send no recovery requests. Each tab updates
+  one working row; this is not a history of every keystroke. Server-owned edits
+  (including block operations and completed transformer uploads) explicitly
+  signal changes. Upload progress alone does not trigger capture.
+- Capture reads block structure from the op store and overlays visible raw
+  inputs, without blurring editors. Requests have unique acknowledgement IDs;
+  timeouts retry pending work, and reconnect sends it immediately. Save cannot
+  acknowledge browser input typed after submission. Unchanged content avoids
+  database writes; advisory locks and closed markers prevent late captures from
+  resurrecting resolved copies. Successful saves clear full payloads only for
+  the saved generation and proven equivalents; newer and incompatible content
+  remains available.
 - Raw invalid values and completed media references survive capture. Password
   fields, file bytes, pending uploads, and rendered HTML caches are excluded.
   Unsaved metadata in separate asset drawers is outside the entry recovery copy.
@@ -164,3 +174,11 @@ content returning after save, then passed two edit/save/reopen cycles with the
 fix. The legacy gallery scenario also saves restored content and reopens it;
 original payload retention, distinct older work, and newer tab edits have
 storage-level coverage.
+
+Event-driven capture and payload compaction were verified with 11 deterministic
+JavaScript timing/race tests, 73 Elixir recovery/transformer/reconnect tests, and
+all 16 recovery/media browser scenarios (two passed on focused reruns). The
+browser checks measure zero idle capture messages, repeated edits using one
+storage row, and an empty closed marker after Save. Rejected saves and partial
+restores retain content. The E2E consumer asset build, formatting, and the
+compile-connected dependency gate also pass.

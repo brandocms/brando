@@ -60,6 +60,47 @@ defmodule Brando.DraftsTest do
     assert Drafts.list(ctx.identity) == []
   end
 
+  test "successful save releases its payload but keeps a marker blocking late captures", ctx do
+    assert {:ok, _} = Drafts.write(ctx.identity, ctx.id, 3, ctx.payload, "base", 0)
+    assert {:ok, _} = Drafts.resolve(ctx.identity, ctx.id, 2, compact: true)
+    assert Drafts.get(ctx.identity, ctx.id).payload == ctx.payload
+    assert {:ok, marker} = Drafts.resolve(ctx.identity, ctx.id, 3, compact: true)
+    assert marker.payload == %{}
+    assert marker.checksum == Drafts.checksum(%{})
+    assert marker.generation == 3
+    assert marker.resolved_at
+    assert {:error, :closed} = Drafts.write(ctx.identity, ctx.id, 4, ctx.payload, "base", 0)
+    assert Drafts.list(ctx.identity) == []
+  end
+
+  test "saving a restored copy compacts its equivalents and preserves divergent or newer work", ctx do
+    {:ok, selected} = Drafts.write(ctx.identity, ctx.id, 1, ctx.payload, "base", 0)
+    {:ok, duplicate} = Drafts.write(ctx.identity, Ecto.UUID.generate(), 1, ctx.payload, "base", 0)
+    edited = put_in(ctx.payload, ["main", "title"], "Newer work")
+    {:ok, newer} = Drafts.write(ctx.identity, selected.id, 2, edited, "base", 0)
+    {:ok, independent} = Drafts.write(ctx.identity, Ecto.UUID.generate(), 1, edited, "base", 0)
+    {:ok, failed} = Drafts.begin_restore(ctx.identity, independent.id)
+
+    assert {:ok, _} = Drafts.resolve_equivalent(ctx.identity, selected, compact: true)
+    assert Drafts.get(ctx.identity, duplicate.id).payload == %{}
+    assert Drafts.get(ctx.identity, newer.id).payload == edited
+    assert Drafts.get(ctx.identity, failed.id).payload == edited
+    assert length(Drafts.list(ctx.identity)) == 2
+
+    assert {:ok, _} = Drafts.resolve_equivalent(ctx.identity, newer, compact: true)
+    assert Drafts.get(ctx.identity, newer.id).payload == %{}
+  end
+
+  test "save compacts baseline matches with initialization noise without touching other content", ctx do
+    baseline = DraftFixtures.payload()
+    {:ok, matching} = Drafts.write(ctx.identity, ctx.id, 1, DraftFixtures.initialized(baseline), "base", 0)
+    {:ok, other} = Drafts.write(ctx.identity, Ecto.UUID.generate(), 1, ctx.payload, "base", 0)
+    assert {:ok, 1} = Drafts.resolve_unchanged(ctx.identity, Content.checksum(baseline), 0, compact: true)
+    assert Drafts.get(ctx.identity, matching.id).payload == %{}
+    assert Drafts.get(ctx.identity, matching.id).checksum == Drafts.checksum(%{})
+    assert Drafts.get(ctx.identity, other.id).payload == ctx.payload
+  end
+
   test "independent editing sessions keep their own copies", ctx do
     other_id = Ecto.UUID.generate()
     assert {:ok, _} = Drafts.write(ctx.identity, ctx.id, 1, ctx.payload, "base", 0)

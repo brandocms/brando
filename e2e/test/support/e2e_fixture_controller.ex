@@ -249,7 +249,19 @@ defmodule E2EFixtureController do
 
     user = get_admin_user()
     Brando.Authorization.Boundary.put_scope(Brando.Authorization.Scope.current(user))
-    drafts = schema |> Brando.Drafts.identity(entry_id, user.id) |> Brando.Drafts.list()
+    identity = Brando.Drafts.identity(schema, entry_id, user.id)
+    drafts = Brando.Drafts.list(identity)
+
+    import Ecto.Query, only: [from: 2]
+
+    storage =
+      identity
+      |> Enum.reduce(Brando.Drafts.EntryDraft, fn
+        {key, nil}, query -> from d in query, where: is_nil(field(d, ^key))
+        {key, value}, query -> from d in query, where: field(d, ^key) == ^value
+      end)
+      |> Brando.Repo.all()
+      |> Enum.map(&%{id: &1.id, generation: &1.generation, empty: &1.payload == %{}, resolved: !!&1.resolved_at})
 
     counts =
       Map.new(
@@ -262,7 +274,7 @@ defmodule E2EFixtureController do
         fn {key, schema} -> {key, Brando.Repo.aggregate(schema, :count)} end
       )
 
-    json(conn, %{entry: entry, drafts: Enum.map(drafts, & &1.payload), counts: counts})
+    json(conn, %{entry: entry, drafts: Enum.map(drafts, & &1.payload), counts: counts, storage: storage})
   end
 
   def drafts(conn, %{"action" => "legacy-copies", "entry_id" => id}) do

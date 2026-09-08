@@ -219,6 +219,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:form, to_form(updated_changeset, []))
+     |> Drafts.dirty()
      |> force_svelte_remounts()}
   end
 
@@ -728,6 +729,7 @@ defmodule BrandoAdmin.Components.Form do
 
     # 1. Always update updated_entry_assocs (for live preview)
     socket = update_entry_assocs(socket, path, updated_relation)
+    socket = if params[:draft_dirty], do: Drafts.dirty(socket), else: socket
 
     # 2. Optionally update entry
     socket =
@@ -875,6 +877,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:form, to_form(updated_changeset, []))
+     |> Drafts.dirty()
      |> push_event("b:validate", %{})
      |> force_svelte_remounts()}
   end
@@ -882,7 +885,7 @@ defmodule BrandoAdmin.Components.Form do
   def update(%{action: :update_changeset, changeset: updated_changeset}, socket) do
     updated_form = to_form(updated_changeset, [])
 
-    {:ok, assign(socket, :form, updated_form)}
+    {:ok, socket |> assign(:form, updated_form) |> Drafts.dirty()}
   end
 
   # Gallery picker writes. The gallery components hand back a replacement
@@ -1250,6 +1253,7 @@ defmodule BrandoAdmin.Components.Form do
     socket
     |> assign(:entry, updated_entry)
     |> assign(:form, to_form(updated_changeset, []))
+    |> Drafts.dirty()
     # Ship while the FK is still a change — the drawer-save path re-bakes the
     # changeset (apply_changes/change), after which there is nothing to ship.
     |> ship_all_field_changes()
@@ -1308,7 +1312,7 @@ defmodule BrandoAdmin.Components.Form do
         EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> gallery_changeset end)
       end
 
-    assign(socket, :form, to_form(updated_changeset, []))
+    socket |> assign(:form, to_form(updated_changeset, [])) |> Drafts.dirty()
   end
 
   # `gallery_at/3` reads the *applied* gallery, so objects the editor added but
@@ -5197,7 +5201,7 @@ defmodule BrandoAdmin.Components.Form do
         Enum.map(list, &Map.from_struct/1)
       end)
 
-    assign(socket, :form, to_form(new_changeset, []))
+    socket |> assign(:form, to_form(new_changeset, [])) |> Drafts.dirty()
   end
 
   def update_changeset(socket, path, key, map) when is_list(path) and is_map(map) do
@@ -5206,7 +5210,7 @@ defmodule BrandoAdmin.Components.Form do
     new_changeset =
       EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> Map.from_struct(map) end)
 
-    assign(socket, :form, to_form(new_changeset, []))
+    socket |> assign(:form, to_form(new_changeset, [])) |> Drafts.dirty()
   end
 
   def update_changeset(socket, path, key, value) when is_list(path) do
@@ -5217,28 +5221,28 @@ defmodule BrandoAdmin.Components.Form do
 
     new_changeset = EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> value end)
 
-    assign(socket, :form, to_form(new_changeset, []))
+    socket |> assign(:form, to_form(new_changeset, [])) |> Drafts.dirty()
   end
 
   def update_changeset(socket, key, list) when is_list(list) do
     changeset = socket.assigns.form.source
     new_changeset = put_change(changeset, key, Enum.map(list, &Map.from_struct/1))
 
-    assign(socket, :form, to_form(new_changeset, []))
+    socket |> assign(:form, to_form(new_changeset, [])) |> Drafts.dirty()
   end
 
   def update_changeset(socket, key, value) when is_map(value) do
     changeset = socket.assigns.form.source
     new_changeset = put_change(changeset, key, Map.from_struct(value))
 
-    assign(socket, :form, to_form(new_changeset, []))
+    socket |> assign(:form, to_form(new_changeset, [])) |> Drafts.dirty()
   end
 
   def update_changeset(socket, key, value) do
     changeset = socket.assigns.form.source
     new_changeset = put_change(changeset, key, value)
 
-    assign(socket, :form, to_form(new_changeset, []))
+    socket |> assign(:form, to_form(new_changeset, [])) |> Drafts.dirty()
   end
 
   defp sequence(gallery_images) do

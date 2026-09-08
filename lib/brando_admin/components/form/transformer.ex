@@ -910,7 +910,8 @@ defmodule BrandoAdmin.Components.Form.Transformer do
           {:noreply,
            socket
            |> assign(:items, updated_items)
-           |> stream_insert(:transformer_items, stream_entry(updated_item))}
+           |> stream_insert(:transformer_items, stream_entry(updated_item))
+           |> notify_relation_change()}
       end
     end
   end
@@ -1284,7 +1285,8 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   # The transformer deliberately keeps its items out of the parent changeset
   # until save — but live preview renders from the form's entry, so without this
   # it shows the relation as it was on mount. Push the current list whenever the
-  # list itself changes (order, membership, assets); not on progress ticks.
+  # list itself changes (order, membership, fields, assets); not on progress ticks.
+  # Recovery also needs this signal: transformer rows live outside the main form.
   defp notify_relation_change(socket) do
     form_id = socket.assigns[:form_id]
 
@@ -1293,6 +1295,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         id: form_id,
         event: "update_entry_relation",
         path: [socket.assigns.relation_key],
+        draft_dirty: true,
         updated_relation: relation_entries(socket)
       )
     end

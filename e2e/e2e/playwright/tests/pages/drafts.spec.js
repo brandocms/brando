@@ -53,9 +53,9 @@ test.describe('Entry recovery copies', () => {
     await inspector.locator('summary').click()
     await expect(inspector).toHaveAttribute('open', '')
 
-    // Wait for the actual 15-second capture to patch the same @draft assign.
-    const statusBefore = await page.getByTestId('draft-status').textContent()
-    await expect(page.getByTestId('draft-status')).not.toHaveText(statusBefore, { timeout: 20000 })
+    // A real edit behind the panel must patch @draft without closing inspection.
+    await page.getByLabel('Title', { exact: true }).fill('Editing behind the recovery panel')
+    await expect(page.getByTestId('draft-status')).toContainText('Recovery copy saved at', { timeout: 20000 })
     await expect(inspector).toHaveAttribute('open', '')
     await expect(panel).toBeVisible()
 
@@ -115,8 +115,7 @@ test.describe('Entry recovery copies', () => {
     await page.getByTestId('split-dropdown-button').click()
     await page.getByRole('button', { name: /Save and continue editing/ }).click()
     await expect(page).toHaveURL(/\/update\//, { timeout: 30000 })
-    // Let the periodic capture run after save-and-continue: it must not
-    // manufacture another draft from differences in persisted row metadata.
+    // Saving returns to a clean state without needing an idle capture.
     await expect(page.getByTestId('draft-status')).toHaveText('No unsaved changes in this editor', { timeout: 20000 })
     await page.reload()
     await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Autumn campaign')
@@ -137,7 +136,7 @@ test.describe('Entry recovery copies', () => {
     await page.getByTestId('split-dropdown-button').click()
     await page.getByRole('button', { name: /Save and continue editing/ }).click()
     await expect(page.getByTestId('draft-panel')).toHaveCount(0)
-    await expect(page.getByTestId('draft-status')).toContainText('Recovery copies are saved automatically')
+    await expect(page.getByTestId('draft-status')).toHaveText('No unsaved changes in this editor')
     await page.reload()
     await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Autumn campaign revised')
     await expect(page.locator('.header-block textarea')).toHaveValue('An updated season of ideas')
@@ -181,6 +180,13 @@ test.describe('Entry recovery copies', () => {
     await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Autumn campaign')
     await expect(page.locator('.entry-block')).toHaveCount(0)
     await expect(page.locator('.draft-block-issue pre')).toContainText('A new season of ideas')
+
+    // Saving the compatible portion must keep the excluded original available.
+    await page.getByTestId('submit').click()
+    await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })
+    await page.getByRole('link', { name: 'Autumn campaign', exact: true }).click()
+    await page.getByRole('button', { name: /^Recovery copies/ }).click()
+    await expect(page.locator('.draft-content-preview')).toContainText('A new season of ideas')
   })
 
   test('recovers nested child content and persists it through a subsequent save', async ({ page }) => {

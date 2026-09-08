@@ -42,14 +42,14 @@ defmodule Brando.Drafts do
     |> Enum.uniq_by(&equivalence_key/1)
   end
 
-  @doc "Permanently resolve copies already represented by a known saved baseline, retaining their payloads."
-  def resolve_unchanged(identity, baseline, schema_version) when is_binary(baseline) do
+  @doc "Resolve copies represented by a saved baseline; compact their payloads only after a successful save."
+  def resolve_unchanged(identity, baseline, schema_version, opts \\ []) when is_binary(baseline) do
     now = DateTime.utc_now()
 
     Repo.transaction(fn ->
       unless authorized_identity?(identity), do: Repo.rollback(:forbidden)
       lock("draft-group:" <> checksum(identity))
-      attrs = [resolved_at: now, expires_at: DateTime.add(now, resolved_days() * 86_400, :second)]
+      attrs = resolved_attrs(now, opts)
 
       identity
       |> list()
@@ -131,7 +131,7 @@ defmodule Brando.Drafts do
   end
 
   @doc "Resolve a restored copy and its unchanged equivalents after an explicit save."
-  def resolve_equivalent(identity, original) do
+  def resolve_equivalent(identity, original, opts \\ []) do
     now = DateTime.utc_now()
 
     Repo.transaction(fn ->
@@ -140,12 +140,12 @@ defmodule Brando.Drafts do
       # The selected snapshot's generation belongs to the save that completed.
       # Never replace it with a newer generation fetched from storage.
       matches = equivalent_copies(identity, original) |> Enum.reject(&(&1.id == original.id))
-      attrs = [resolved_at: now, expires_at: DateTime.add(now, resolved_days() * 86_400, :second)]
+      attrs = resolved_attrs(now, opts)
       Enum.each([original | matches], &mark_snapshot(identity, &1, attrs))
     end)
   end
 
-  def resolve(identity, id, generation) do
+  def resolve(identity, id, generation, opts \\ []) do
     now = DateTime.utc_now()
 
     Repo.transaction(fn ->
@@ -171,7 +171,7 @@ defmodule Brando.Drafts do
 
         %{generation: current} = draft when current <= generation ->
           if owned?(draft, identity),
-            do: draft |> Changeset.change(resolved_at: now, expires_at: expires) |> Repo.update!(),
+            do: draft |> Changeset.change(resolved_attrs(now, opts)) |> Repo.update!(),
             else: Repo.rollback(:not_found)
 
         draft ->
@@ -211,6 +211,12 @@ defmodule Brando.Drafts do
   defp retention_days, do: Application.get_env(:brando, :draft_retention_days, 30)
   defp resolved_days, do: Application.get_env(:brando, :resolved_draft_retention_days, 7)
 
+  defp resolved_attrs(now, opts) do
+    attrs = [resolved_at: now, expires_at: DateTime.add(now, resolved_days() * 86_400, :second)]
+
+    if opts[:compact], do: attrs ++ [payload: %{}, checksum: checksum(%{})], else: attrs
+  end
+
   defp owned_query(identity) do
     allowed? = authorized_identity?(identity)
 
@@ -249,7 +255,7 @@ defmodule Brando.Drafts do
         Content.checksum(copy.payload) == baseline
 
   # Restore contracts and saved-entry conflicts remain distinct even when their
-  # visible content is the same. The raw payload and checksum are never rewritten.
+  # visible content is the same. Working payloads retain their raw checksums.
   defp equivalence_key(copy),
     do: {copy.base_fingerprint, copy.format_version, copy.schema_version, Content.checksum(copy.payload)}
 

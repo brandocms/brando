@@ -40,6 +40,7 @@ defmodule BrandoAdmin.Components.Form.DraftCaptureTest do
       id: Ecto.UUID.generate(),
       generation: draft.generation + 1,
       client_generation: 1,
+      request_id: 1,
       main: payload["main"],
       expected: [{:block, "blocks"}, {:transformer, "items"}],
       parts: %{{:transformer, "items"} => payload["transformers"]["items"]}
@@ -50,7 +51,7 @@ defmodule BrandoAdmin.Components.Form.DraftCaptureTest do
     |> FormDrafts.part(capture.id, :block, "blocks", payload["blocks"]["blocks"])
   end
 
-  test "periodic captures of initialized content never write a recovery copy", ctx do
+  test "captures of initialized content never write a recovery copy", ctx do
     initialized = DraftFixtures.initialized(ctx.baseline)
     socket = ctx.socket |> capture(initialized) |> capture(initialized)
     assert socket.assigns.draft.status == :saved
