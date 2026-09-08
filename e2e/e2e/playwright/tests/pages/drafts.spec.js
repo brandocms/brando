@@ -117,7 +117,7 @@ test.describe('Entry recovery copies', () => {
     await expect(page).toHaveURL(/\/update\//, { timeout: 30000 })
     // Let the periodic capture run after save-and-continue: it must not
     // manufacture another draft from differences in persisted row metadata.
-    await expect(page.getByTestId('draft-status')).toContainText('Recovery copy saved at', { timeout: 20000 })
+    await expect(page.getByTestId('draft-status')).toHaveText('No unsaved changes in this editor', { timeout: 20000 })
     await page.reload()
     await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Autumn campaign')
     await expect(page.locator('.header-block textarea')).toHaveValue('A new season of ideas')

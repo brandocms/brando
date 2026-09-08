@@ -22,6 +22,8 @@ values, and initialize default gallery overrides. Those changes alone do not
 create a recovery copy. Comparison ignores only that initialization metadata;
 text, explicit overrides, invalid values, asset selections, module contracts,
 and list order still count as changes. Stored payloads and checksums stay intact.
+An unchanged capture reports “No unsaved changes in this editor” instead of
+claiming to have saved a recovery copy.
 
 The review panel lists recovery copies in a bounded, scrollable table with entry
 names, capture timestamps (including seconds), and block counts. Selected copies

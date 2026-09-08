@@ -117,7 +117,7 @@ test.describe('Media in entry recovery copies', () => {
     for (let session = 0; session < 2; session++) {
       await page.reload()
       await syncLV(page)
-      await expect(page.getByTestId('draft-status')).toContainText('Recovery copy saved at', { timeout: 25000 })
+      await expect(page.getByTestId('draft-status')).toHaveText('No unsaved changes in this editor', { timeout: 25000 })
       await expect(page.getByTestId('draft-notice')).toHaveCount(0)
       await expect(page.getByRole('button', { name: /^Recovery copies/ })).toHaveCount(0)
       expect((await mediaState(page, 'page', id)).drafts).toHaveLength(14)
