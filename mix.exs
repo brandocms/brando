@@ -31,6 +31,7 @@ defmodule Brando.Mixfile do
           "guides/generators.md",
           "guides/block_editor.md",
           "guides/markdown_sources.md",
+          "guides/module_definitions.md",
           "guides/villain_parser.md",
           "guides/villain_text_styles.md",
           "guides/live_preview.md",
@@ -66,6 +67,7 @@ defmodule Brando.Mixfile do
           Content: [
             "guides/block_editor.md",
             "guides/markdown_sources.md",
+            "guides/module_definitions.md",
             "guides/villain_parser.md",
             "guides/villain_text_styles.md",
             "guides/live_preview.md",

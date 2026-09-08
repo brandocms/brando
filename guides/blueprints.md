@@ -1061,3 +1061,9 @@ Transformers use their listing component as a summary too. Without one, they
 show each entry's fields directly in a list, including when `layout :grid` was
 requested. Supply a listing component to use compact rows or grid cards with
 an explicit editor.
+
+## Module-definition DSL
+
+Content modules can also be authored as declarative Spark definitions and exported
+from the admin database to the same format. See [Module definitions as files](module_definitions.md)
+for refs, vars, templates, dependency declarations and the import/export commands.
