@@ -102,7 +102,27 @@ test.describe('Media in entry recovery copies', () => {
   test.setTimeout(180000)
   test.beforeEach(async ({ page }) => { page.setDefaultTimeout(15000) })
 
-  test('opening legacy content hides no-op copies and does not create another copy on capture or reload', async ({ page }) => {
+  test('saving new content permanently retires recovery copies matching the previous saved version', async ({ page }) => {
+    await createPage(page, 'Previous saved content')
+    const id = await savePage(page, 'Previous saved content')
+    // Insert after mount to also cover copies missed by initial reconciliation.
+    expect((await page.request.post('/e2e/drafts/legacy-copies', { data: { entry_id: id } })).ok()).toBeTruthy()
+    expect((await mediaState(page, 'page', id)).drafts).toHaveLength(14)
+
+    for (const title of ['New saved content', 'Saved again']) {
+      await page.locator('#page_title').fill(title)
+      await savePage(page, title)
+      await expect(page.getByTestId('draft-notice')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: /^Recovery copies/ })).toHaveCount(0)
+      await page.reload()
+      await expect(page.locator('#page_title')).toHaveValue(title)
+      await expect(page.getByTestId('draft-status')).toHaveText('No unsaved changes in this editor', { timeout: 25000 })
+      await expect(page.getByTestId('draft-notice')).toHaveCount(0)
+      expect((await mediaState(page, 'page', id)).drafts).toHaveLength(0)
+    }
+  })
+
+  test('opening legacy content resolves no-op copies and does not create another copy on capture or reload', async ({ page }) => {
     const title = 'Unchanged legacy gallery'
     await createPage(page, title)
     await addBlock(page, 'Gallery with Controls')
@@ -120,10 +140,10 @@ test.describe('Media in entry recovery copies', () => {
       await expect(page.getByTestId('draft-status')).toHaveText('No unsaved changes in this editor', { timeout: 25000 })
       await expect(page.getByTestId('draft-notice')).toHaveCount(0)
       await expect(page.getByRole('button', { name: /^Recovery copies/ })).toHaveCount(0)
-      expect((await mediaState(page, 'page', id)).drafts).toHaveLength(14)
+      expect((await mediaState(page, 'page', id)).drafts).toHaveLength(0)
     }
 
-    // A real edit must still be offered alongside retained, hidden originals.
+    // A real edit must still be offered after retiring the unchanged originals.
     await page.locator('#page_title').fill('An actual unsaved edit')
     await waitForCopy(page, 'page', id, copy => copy.main.title === 'An actual unsaved edit')
     await page.reload()
@@ -132,6 +152,12 @@ test.describe('Media in entry recovery copies', () => {
     await page.getByRole('button', { name: 'Restore recovery copy', exact: true }).click()
     await expect(page.locator('#page_title')).toHaveValue('An actual unsaved edit')
     await expect(gallery.locator('.gallery-object')).toHaveCount(1)
+    await savePage(page, 'An actual unsaved edit')
+    await expect(page.getByTestId('draft-notice')).toHaveCount(0)
+    await page.reload()
+    await expect(page.locator('#page_title')).toHaveValue('An actual unsaved edit')
+    await expect(page.getByTestId('draft-status')).toHaveText('No unsaved changes in this editor', { timeout: 25000 })
+    expect((await mediaState(page, 'page', id)).drafts).toHaveLength(0)
   })
 
   test('image, file and video fields recover selections, replacements and resets without duplicating assets', async ({ page }, testInfo) => {

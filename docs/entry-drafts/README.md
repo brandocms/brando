@@ -14,8 +14,12 @@ content, and the user chooses which copy to restore. Copies are scoped to the
 user, entry schema/ID, form, and tenant/environment. Separate editing sessions
 keep separate stored copies. The chooser groups copies with equivalent content
 and matching restore contracts into one choice, represented by the newest copy.
-Copies that match the saved content are omitted. Existing originals remain in
-storage for their retention period.
+Copies that match known saved content are marked resolved when the editor opens
+and when it saves. Saving settles matches against the previous baseline before
+switching to the new one. This is durable state, so a later save cannot make old
+saved content reappear as unsaved work. Original payloads remain in storage for
+the resolved-copy retention period. Different unsaved content remains available,
+including older work from another session; timestamps alone never resolve it.
 
 Opening an entry can fill variable ownership, normalize positional sequence
 values, and initialize default gallery overrides. Those changes alone do not
@@ -153,3 +157,10 @@ focused rerun after upload/timing failures). The legacy-data regression retains
 14 original copies, verifies two capture/reload cycles create no new copies, and
 then restores a real edit. Formatting and the compile-connected dependency gate
 also pass.
+
+Durable baseline resolution was verified with 35 Elixir tests and all 14
+recovery/media browser scenarios. The new regression first reproduced the old
+content returning after save, then passed two edit/save/reopen cycles with the
+fix. The legacy gallery scenario also saves restored content and reopens it;
+original payload retention, distinct older work, and newer tab edits have
+storage-level coverage.

@@ -89,15 +89,47 @@ defmodule Brando.DraftsTest do
     assert {1, _} = Drafts.purge()
   end
 
-  test "legacy initialization-only copies are hidden without changing their stored originals", ctx do
+  test "legacy copies matching saved content stay resolved when the saved baseline changes", ctx do
     saved = DraftFixtures.payload()
     captured = DraftFixtures.initialized(saved)
     {:ok, copy} = Drafts.write(ctx.identity, ctx.id, 1, captured, "base", 0)
 
     assert Drafts.candidates(ctx.identity, baseline: Content.checksum(saved), schema_version: 0) == []
     assert [^copy] = Drafts.list(ctx.identity)
-    assert Drafts.get(ctx.identity, copy.id).payload == captured
-    assert Drafts.get(ctx.identity, copy.id).checksum == Drafts.checksum(captured)
+    assert {:ok, 1} = Drafts.resolve_unchanged(ctx.identity, Content.checksum(saved), 0)
+    assert {:ok, 0} = Drafts.resolve_unchanged(ctx.identity, Content.checksum(saved), 0)
+    updated = put_in(saved, ["main", "title"], "New saved content")
+    assert Drafts.candidates(ctx.identity, baseline: Content.checksum(updated), schema_version: 0) == []
+    assert Drafts.list(ctx.identity) == []
+    retained = Drafts.get(ctx.identity, copy.id)
+    assert retained.resolved_at
+    assert retained.discarded_at == nil
+    assert retained.payload == captured
+    assert retained.checksum == copy.checksum
+    assert retained.generation == copy.generation
+    assert retained.updated_at == copy.updated_at
+  end
+
+  test "baseline reconciliation preserves real unsaved changes regardless of age", ctx do
+    saved = DraftFixtures.payload()
+    {:ok, matching} = Drafts.write(ctx.identity, ctx.id, 1, DraftFixtures.initialized(saved), "base", 0)
+    edited = put_in(saved, ["main", "title"], "Older but genuinely unsaved work")
+    {:ok, other} = Drafts.write(ctx.identity, Ecto.UUID.generate(), 1, edited, "base", 0)
+    other |> Ecto.Changeset.change(updated_at: DateTime.add(DateTime.utc_now(), -86_400)) |> Brando.Repo.update!()
+
+    assert {:ok, 1} = Drafts.resolve_unchanged(ctx.identity, Content.checksum(saved), 0)
+    assert [remaining] = Drafts.list(ctx.identity)
+    assert remaining.id == other.id
+    assert remaining.payload == edited
+    assert Drafts.get(ctx.identity, matching.id).resolved_at
+  end
+
+  test "baseline reconciliation preserves a copy that another tab has changed", ctx do
+    {:ok, _} = Drafts.write(ctx.identity, ctx.id, 1, ctx.payload, "base", 0)
+    edited = put_in(ctx.payload, ["main", "title"], "Newer input in another tab")
+    {:ok, newer} = Drafts.write(ctx.identity, ctx.id, 2, edited, "base", 0)
+    assert {:ok, 0} = Drafts.resolve_unchanged(ctx.identity, Content.checksum(ctx.payload), 0)
+    assert [^newer] = Drafts.list(ctx.identity)
   end
 
   test "equal content is one choice, while restore contracts and saved baselines remain distinct", ctx do
@@ -118,6 +150,8 @@ defmodule Brando.DraftsTest do
     assert length(candidates) == 2
     assert Enum.any?(candidates, &(&1.format_version == 999))
     assert Enum.any?(candidates, &(&1.schema_version == 1))
+    assert {:ok, 3} = Drafts.resolve_unchanged(ctx.identity, Content.checksum(saved), 0)
+    assert MapSet.new(Drafts.list(ctx.identity)) == MapSet.new(candidates)
   end
 
   test "dismissing and discarding a duplicate choice affects its equivalents without deleting content", ctx do

@@ -37,10 +37,30 @@ defmodule Brando.Drafts do
     identity
     |> list()
     |> Enum.reject(fn copy ->
-      baseline && copy.format_version == 1 && copy.schema_version == schema_version &&
-        Content.checksum(copy.payload) == baseline
+      matches_baseline?(copy, baseline, schema_version)
     end)
     |> Enum.uniq_by(&equivalence_key/1)
+  end
+
+  @doc "Permanently resolve copies already represented by a known saved baseline, retaining their payloads."
+  def resolve_unchanged(identity, baseline, schema_version) when is_binary(baseline) do
+    now = DateTime.utc_now()
+
+    Repo.transaction(fn ->
+      unless authorized_identity?(identity), do: Repo.rollback(:forbidden)
+      lock("draft-group:" <> checksum(identity))
+      attrs = [resolved_at: now, expires_at: DateTime.add(now, resolved_days() * 86_400, :second)]
+
+      identity
+      |> list()
+      |> Enum.filter(&matches_baseline?(&1, baseline, schema_version))
+      |> Enum.reduce(0, fn copy, count ->
+        # A concurrent capture can change a matching copy after it was read.
+        # The snapshot predicate must still match before marking it resolved.
+        {resolved, _} = mark_snapshot(identity, copy, attrs)
+        count + resolved
+      end)
+    end)
   end
 
   def get(identity, id) do
@@ -222,6 +242,11 @@ defmodule Brando.Drafts do
   end
 
   defp owned?(draft, identity), do: Enum.all?(identity, fn {key, value} -> Map.get(draft, key) == value end)
+
+  defp matches_baseline?(copy, baseline, schema_version),
+    do:
+      is_binary(baseline) && copy.format_version == 1 && copy.schema_version == schema_version &&
+        Content.checksum(copy.payload) == baseline
 
   # Restore contracts and saved-entry conflicts remain distinct even when their
   # visible content is the same. The raw payload and checksum are never rewritten.

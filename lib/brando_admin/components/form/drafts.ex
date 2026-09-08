@@ -229,10 +229,9 @@ defmodule BrandoAdmin.Components.Form.Drafts do
   end
 
   defp candidates(socket, identity, baseline) do
-    Drafts.candidates(identity,
-      baseline: baseline,
-      schema_version: Brando.Blueprint.Snapshot.get_current_version(socket.assigns.schema)
-    )
+    version = Brando.Blueprint.Snapshot.get_current_version(socket.assigns.schema)
+    {:ok, _} = Drafts.resolve_unchanged(identity, baseline, version)
+    Drafts.candidates(identity, baseline: baseline, schema_version: version)
   end
 
   defp parts(parts, kind), do: Map.new(for {{^kind, field}, value} <- parts, do: {field, value})
@@ -278,6 +277,15 @@ defmodule BrandoAdmin.Components.Form.Drafts do
 
   def saved(%{assigns: %{draft: draft}} = socket, entry) when is_map(draft) do
     generation = draft.save_generation || draft.generation
+    # Settle copies of the PREVIOUS saved content before switching baselines.
+    # Merely hiding them would turn them into apparent unsaved work after save.
+    {:ok, _} =
+      Drafts.resolve_unchanged(
+        draft.identity,
+        draft.baseline,
+        Brando.Blueprint.Snapshot.get_current_version(socket.assigns.schema)
+      )
+
     Drafts.resolve(draft.identity, draft.id, generation)
     # Resolved originals remain available for the retention window, but never
     # re-enter the normal recovery list after a successful explicit save.
