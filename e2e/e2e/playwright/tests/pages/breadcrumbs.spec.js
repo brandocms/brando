@@ -23,7 +23,7 @@ test('pages have JSON-LD breadcrumbs', async ({ page }) => {
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL('/admin/pages')
   await syncLV(page)
-  await expect(page.getByRole('link', { name: 'Services →' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Services', exact: true })).toBeVisible()
 
   // Create a child page "Design" with "Services" as parent
   await page.getByRole('link', { name: 'Create page' }).click()
@@ -59,11 +59,12 @@ test('pages have JSON-LD breadcrumbs', async ({ page }) => {
   await expect(page).toHaveURL('/admin/pages')
   await syncLV(page)
 
-  const servicesRow = page.locator('.list-row', { has: page.getByRole('link', { name: 'Services →' }) })
+  const servicesRow = page.locator('.list-row', { has: page.getByRole('link', { name: 'Services', exact: true }) })
   const childrenButton = servicesRow.getByTestId('children-button')
-  await expect(childrenButton).toHaveAccessibleName('+ 1')
+  await expect(childrenButton).toHaveAccessibleName('Show or hide 1 children')
+  await expect(childrenButton).toHaveAttribute('aria-expanded', 'false')
   await childrenButton.click()
-  await expect(childrenButton).toHaveAccessibleName('Close')
+  await expect(childrenButton).toHaveAttribute('aria-expanded', 'true')
   await expect(servicesRow.locator('.child-row').getByText('Design', { exact: true })).toBeVisible()
   await childrenButton.click()
   await expect(servicesRow.locator('.child-row')).toHaveCount(0)

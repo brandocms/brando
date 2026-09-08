@@ -77,6 +77,12 @@
 @import "./components/UploadManager.css";
 @import "./components/Var.css";
 
+@import "./components/Form/Controls.css";
+@import "./components/Workspace.css";
+@import "./components/ModalWorkspace.css";
+@import "./views/Users.css";
+@import "./views/ContentWorkspace.css";
+@import "./views/SettingsWorkspace.css";
 @import "./views/assets/Images.css";
 @import "./views/config/Cache.css";
 @import "./views/config/Authorization.css";
@@ -176,6 +182,25 @@ code {
 
 .avatar img {
   vertical-align: baseline;
+}
+
+/* Avatar photos must fit their container even when the source image carries
+   large width/height attributes and its wrapper is a non-shrinking flex item.
+   Clip the photo wrapper, keeping presence dots and glows outside it visible. */
+:is(.user-presence, .field-presence-user) > .avatar {
+  > .image-content {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    overflow: hidden;
+  }
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 }
 
 .popup.popup_right {

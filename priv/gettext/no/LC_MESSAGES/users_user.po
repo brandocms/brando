@@ -12,101 +12,131 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/users/user.ex:164
+#: lib/brando/users/user.ex:198
 #, elixir-autogen, elixir-format
 msgid "Admin"
 msgstr "Admin"
 
-#: lib/brando/users/user.ex:115
+#: lib/brando/users/user.ex:120
 #, elixir-autogen, elixir-format
 msgid "Are you sure?"
 msgstr "Er du sikker?"
 
-#: lib/brando/users/user.ex:172
+#: lib/brando/users/user.ex:206
 #, elixir-autogen, elixir-format
 msgid "Avatar"
 msgstr "Profilbilde"
 
-#: lib/brando/users/user.ex:175
+#: lib/brando/users/user.ex:209
 #, elixir-autogen, elixir-format
 msgid "Config"
 msgstr "Konfigurasjon"
 
-#: lib/brando/users/user.ex:139
-#: lib/brando/users/user.ex:153
+#: lib/brando/users/user.ex:172
+#: lib/brando/users/user.ex:186
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/users/user.ex:115
+#: lib/brando/users/user.ex:120
 #, elixir-autogen, elixir-format
 msgid "Disable user"
 msgstr "Deaktiver bruker"
 
-#: lib/brando/users/user.ex:114
+#: lib/brando/users/user.ex:119
 #, elixir-autogen, elixir-format
 msgid "Edit user"
 msgstr "Oppdater bruker"
 
-#: lib/brando/users/user.ex:165
+#: lib/brando/users/user.ex:199
 #, elixir-autogen, elixir-format
 msgid "Editor"
 msgstr "Redaktør"
 
-#: lib/brando/users/user.ex:113
-#: lib/brando/users/user.ex:157
+#: lib/brando/users/user.ex:118
+#: lib/brando/users/user.ex:190
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "Epost"
 
-#: lib/brando/users/user.ex:159
+#: lib/brando/users/user.ex:192
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr "Språk"
 
-#: lib/brando/users/user.ex:112
-#: lib/brando/users/user.ex:156
+#: lib/brando/users/user.ex:117
+#: lib/brando/users/user.ex:189
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Navn"
 
-#: lib/brando/users/user.ex:145
-#: lib/brando/users/user.ex:158
+#: lib/brando/users/user.ex:178
+#: lib/brando/users/user.ex:191
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr "Passord"
 
-#: lib/brando/users/user.ex:163
+#: lib/brando/users/user.ex:197
 #, elixir-autogen, elixir-format
 msgid "Superuser"
 msgstr "Superbruker"
 
-#: lib/brando/users/user.ex:141
+#: lib/brando/users/user.ex:174
 #, elixir-autogen, elixir-format
 msgid "The administrator has set a mandatory password change on first login for this website."
 msgstr "Administratoren har angitt obligatorisk passordendring ved første pålogging for dette nettstedet."
 
-#: lib/brando/users/user.ex:166
+#: lib/brando/users/user.ex:200
 #, elixir-autogen, elixir-format
 msgid "User"
 msgstr "Bruker"
 
-#: lib/brando/users/user.ex:103
+#: lib/brando/users/user.ex:108
 #, elixir-autogen, elixir-format
 msgid "user"
 msgstr "bruker"
 
-#: lib/brando/users/user.ex:104
+#: lib/brando/users/user.ex:109
 #, elixir-autogen, elixir-format
 msgid "users"
 msgstr "brukere"
 
-#: lib/brando/users/user.ex:127
+#: lib/brando/users/user.ex:149
 #, elixir-autogen, elixir-format
 msgid "Inactive"
 msgstr "Inaktiv"
 
-#: lib/brando/users/user.ex:116
+#: lib/brando/users/user.ex:121
 #, elixir-autogen, elixir-format
 msgid "Delete user"
 msgstr "Slett bruker"
+
+#: lib/brando/users/user.ex:149
+#, elixir-format, elixir-autogen
+msgid "Active"
+msgstr "Aktiv"
+
+#: lib/brando/users/user.ex:137
+#, elixir-format, elixir-autogen
+msgid "Legacy role"
+msgstr "Tidligere rolle"
+
+#: lib/brando/users/user.ex:141
+#, elixir-format, elixir-autogen
+msgid "Last seen"
+msgstr "Sist sett"
+
+#: lib/brando/users/user.ex:145
+#, elixir-format, elixir-autogen
+msgid "Last logged in"
+msgstr "Sist innlogget"
+
+#: lib/brando/users/user.ex:164
+#, elixir-format, elixir-autogen
+msgid "Not recorded"
+msgstr "Ikke registrert"
+
+#: lib/brando/users/user.ex:137
+#, elixir-autogen, elixir-format
+msgid "Role"
+msgstr ""

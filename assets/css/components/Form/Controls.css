@@ -1,0 +1,29 @@
+/* Inputs in the same form share a box and type scale, including custom selects. */
+.brando-form {
+  --admin-field-height: 44px;
+  --admin-field-font-size: 14px;
+  .field-wrapper :is(input.text, input[type="email"], input[type="tel"], input[type="number"], input[type="url"], input[type="date"]), .field-wrapper .multiselect {
+    box-sizing: border-box;
+    height: var(--admin-field-height);
+    min-height: var(--admin-field-height);
+    font-size: var(--admin-field-font-size);
+    line-height: 20px;
+    padding-block: 0;
+  }
+  .field-wrapper .multiselect { padding-inline: 12px 8px; gap: 12px; }
+  .multiselect > div:first-child { min-width: 0; }
+  .multiselect .select-label { line-height: 20px; overflow-wrap: anywhere; }
+  .multiselect > .button-edit { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; min-height: 28px; padding: 3px 9px; font-size: 12px; line-height: 20px; }
+}
+.form-tabs .form-tab-builtins {
+  .preview-chooser-trigger .dropdown-chevron,
+  .split-dropdown .split-dropdown-button .dropdown-chevron { display: block; width: 14px; height: 14px; margin: 0; flex: 0 0 14px; }
+}
+
+/* A full toolbar must fit the content column on small phones. */
+@media (max-width: 600px) {
+  .brando-form .form-tabs { padding-inline: 8px; }
+  .brando-form .form-tabs .form-tab-builtins { min-width: 0; gap: 4px; }
+  .brando-form .form-tabs .form-tab-builtins > button { padding-inline: 8px; }
+  .brando-form .form-tabs .preview-chooser-trigger { padding-inline: 8px; }
+}

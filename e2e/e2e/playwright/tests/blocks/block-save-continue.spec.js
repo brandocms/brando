@@ -62,7 +62,7 @@ test.describe('Save and continue editing', () => {
     // full reopen — the persisted state is the truth
     await page.goto('/admin/pages')
     await syncLV(page)
-    await page.getByRole('link', { name: 'Save Continue Test →' }).click()
+    await page.getByRole('link', { name: 'Save Continue Test', exact: true }).click()
     await syncLV(page)
 
     await expect(page.locator('.entry-block')).toHaveCount(1)

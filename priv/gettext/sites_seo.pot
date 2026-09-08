@@ -11,7 +11,7 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/sites/seo.ex:70
+#: lib/brando/sites/seo.ex:80
 #, elixir-autogen, elixir-format
 msgid "Base URL"
 msgstr ""
@@ -21,47 +21,62 @@ msgstr ""
 msgid "Content"
 msgstr ""
 
-#: lib/brando/sites/seo.ex:63
-#: lib/brando/sites/seo.ex:64
+#: lib/brando/sites/seo.ex:65
+#: lib/brando/sites/seo.ex:66
 #, elixir-autogen, elixir-format
 msgid "Fallback META description"
 msgstr ""
 
-#: lib/brando/sites/seo.ex:67
-#: lib/brando/sites/seo.ex:68
+#: lib/brando/sites/seo.ex:69
+#: lib/brando/sites/seo.ex:70
 #, elixir-autogen, elixir-format
 msgid "Fallback META image"
 msgstr ""
 
-#: lib/brando/sites/seo.ex:59
-#: lib/brando/sites/seo.ex:60
+#: lib/brando/sites/seo.ex:61
+#: lib/brando/sites/seo.ex:62
 #, elixir-autogen, elixir-format
 msgid "Fallback META title"
 msgstr ""
 
-#: lib/brando/sites/seo.ex:78
+#: lib/brando/sites/seo.ex:88
 #, elixir-autogen, elixir-format
 msgid "Redirects"
 msgstr ""
 
-#: lib/brando/sites/seo.ex:71
-#: lib/brando/sites/seo.ex:71
+#: lib/brando/sites/seo.ex:81
+#: lib/brando/sites/seo.ex:81
 #, elixir-autogen, elixir-format
 msgid "Robots"
 msgstr ""
 
-#: lib/brando/sites/seo.ex:95
-#: lib/brando/sites/seo.ex:96
+#: lib/brando/sites/seo.ex:105
+#: lib/brando/sites/seo.ex:106
 #, elixir-autogen, elixir-format
 msgid "SEO"
 msgstr ""
 
-#: lib/brando/sites/seo.ex:81
+#: lib/brando/sites/seo.ex:91
 #, elixir-autogen, elixir-format
 msgid "Use `$` at the end of test to prevent matching beyond string."
 msgstr ""
 
-#: lib/brando/sites/seo.ex:70
+#: lib/brando/sites/seo.ex:80
 #, elixir-autogen, elixir-format
 msgid "https://yoursite.com"
+msgstr ""
+
+#: lib/brando/sites/seo.ex:58
+#, elixir-autogen, elixir-format
+msgid "Default metadata"
+msgstr ""
+
+#: lib/brando/sites/seo.ex:79
+#, elixir-autogen, elixir-format
+msgid "Indexing"
+msgstr ""
+
+#: lib/brando/sites/seo.ex:74
+#, elixir-autogen, elixir-format
+msgid "Search preview"
 msgstr ""

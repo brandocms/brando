@@ -15,6 +15,7 @@ async function addGlobalVar(
 ) {
   // Click on "Add entry"
   await page.getByRole('button', { name: 'Add entry' }).click()
+  await expect(page.locator('#global_set_label')).toHaveValue('Configuration')
 
   // Expand the newly added entry by clicking its disclosure header
   await page.locator(`#global_set_vars_${index}-edit .variable-header`).click()
@@ -62,8 +63,11 @@ test('add global string', async ({ page }) => {
   await page.getByText('Configuration').click()
   await page.getByText('Globals').first().click()
   await page.getByRole('link', { name: 'Create new' }).click()
+  await syncLV(page)
   await page.getByLabel('Label').fill('Configuration')
   await page.getByLabel('Key').fill('config')
+  await syncLV(page)
+  await expect(page.locator('#global_set_label')).toHaveValue('Configuration')
 
   // First "Add entry" (the string)
   await addGlobalVar(page, 0, {

@@ -85,10 +85,9 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         <div
           :for={child_field <- @child_fields}
           :key={child_field}
-          class="child-rows"
+          class="child-rows sort-container"
           id={"sortable-#{@entry.id}-#{child_field}"}
           data-target={@target}
-          class="sort-container"
           phx-hook="Brando.Sortable"
           data-sortable-id={"child_listing|#{@entry.id}|#{child_field}"}
           data-sortable-handle=".sequence-handle"
@@ -386,6 +385,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     <div class="status">
       <div center={@is_deleted} phx-click={if !@is_deleted, do: toggle_dropdown("#status-dropdown-#{@entry_id}")}>
         <.status_circle status={@status_value} publish_at={@publish_at} />
+        <span class="listing-status-label">{render_status_label(@status_value)}</span>
         <.status_dropdown
           :if={!@is_deleted && BrandoAdmin.Authorization.allowed?(:publish, @entry)}
           id={"status-dropdown-#{@entry_id}"}
@@ -471,9 +471,10 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       |> assign(:identifiers, Identifier.identifiers_for!(alternate_entries))
 
     ~H"""
-    <div class="col-1">
+    <div class="col-1 listing-alternates">
       <button
         type="button"
+        aria-label={gettext("Alternates")}
         class="btn-icon-subtle"
         disabled={!@alternate_entries?}
         phx-click={show_modal("#entry-#{@entry.id}-alternates")}
@@ -527,11 +528,12 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     assigns = assign(assigns, :entry_id, make_id(assigns.entry))
 
     ~H"""
-    <div class="col-4">
+    <div class="col-4 listing-creator">
       <article class="item-meta">
         <section class="avatar-wrapper">
-          <div class="avatar">
-            <Content.image image={@entry.creator.avatar} size={:thumb} />
+          <div class="avatar" aria-hidden="true">
+            <Content.image :if={@entry.creator.avatar} image={@entry.creator.avatar} size={:thumb} />
+            <span :if={!@entry.creator.avatar} class="creator-initials">{String.first(@entry.creator.name || "?")}</span>
           </div>
         </section>
         <section class="content">
@@ -675,6 +677,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     [:published, :disabled, :draft, :pending]
   end
 
+  defp render_status_label(nil), do: gettext("Not set")
   defp render_status_label(:disabled), do: gettext("Disabled")
   defp render_status_label(:draft), do: gettext("Draft")
   defp render_status_label(:pending), do: gettext("Pending")

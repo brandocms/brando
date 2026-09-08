@@ -53,7 +53,7 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
               class={["path-link", crumb.folder == @current_folder && "active"]}
               phx-click={push_browser_event(@go_folder_event, @target, %{folder: crumb.folder})}
             >
-              {if crumb.folder == "", do: root_label(@upload_root), else: crumb.label}
+              {if crumb.folder == "", do: @root_name || root_label(@upload_root), else: crumb.label}
             </button>
             <span :if={idx < length(@breadcrumbs) - 1} class="path-separator">/</span>
           <% end %>
@@ -118,8 +118,8 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
           phx-click={@show_new_folder_event}
           phx-target={@target}
         >
-          <.icon name="hero-plus-small" />
-          {gettext("New folder")}
+          <.icon name="hero-plus" />
+          <span>{gettext("New folder")}</span>
         </button>
 
         <form
@@ -199,6 +199,7 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
     |> assign_new(:target, fn -> nil end)
     |> assign_new(:upload_root, fn -> "images/default" end)
     |> assign_new(:current_folder, fn -> "" end)
+    |> assign_new(:root_name, fn -> nil end)
     |> assign_new(:breadcrumbs, fn -> [%{label: "Root", folder: ""}] end)
     |> assign_new(:recent_folders, fn -> [] end)
     |> assign_new(:show_recent_folders, fn -> true end)

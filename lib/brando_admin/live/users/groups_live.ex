@@ -56,18 +56,18 @@ defmodule BrandoAdmin.Users.GroupsLive do
           <h1>Permissions</h1><p>Manage your team’s access with groups.</p>
         </div>
         <div class="authorization-scope">
-          <span>Managing access for</span><strong>{scope_label(@authorization_scope, @current_site)}</strong>
+          <div><span>Scope</span><strong>{scope_label(@authorization_scope, @current_site)}</strong></div>
           <a
             :if={@installation_access? && @authorization_scope.kind != :installation}
             href="/admin/groups?scope=installation"
-          >Installation groups →</a>
-          <a :if={@authorization_scope.kind == :installation} href="/admin/groups">Workspace groups →</a>
+          >Installation groups</a>
+          <a :if={@authorization_scope.kind == :installation} href="/admin/groups">Workspace groups</a>
         </div>
       </header>
       <div :if={@legacy_mode?} class="authorization-legacy-notice" role="status">
         <strong>Preparing for group access</strong>
         <span>Legacy roles are still active. Changes here take effect after your application switches to groups.</span>
-        <a href="/admin/config/utils#authorization-tools">Migration tools →</a>
+        <a href="/admin/config/utils#authorization-tools">Migration tools</a>
       </div>
       <div class="authorization-layout">
         <aside class="authorization-groups" aria-label="User groups">
@@ -79,7 +79,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
             <button
               :if={Engine.can?(@authorization, :create, :groups)}
               type="button"
-              class="access-button pastel-action"
+              class="access-button"
               phx-click="new"
               data-confirm={discard_confirmation(@selected, @draft, @permissions)}
             >New group</button>
@@ -106,10 +106,9 @@ defmodule BrandoAdmin.Users.GroupsLive do
               class={if @selected && @selected.id == group.id, do: "selected"}
               aria-current={@selected && @selected.id == group.id && "true"}
             >
-              <span><strong>{group.name}</strong><small class="authorization-member-count"><.count_badge tone="mint">
-                {length(group.memberships)}
-              </.count_badge>
-              {plural_label(length(group.memberships), "member")}</small></span>
+              <span><strong>{group.name}</strong><small class="authorization-member-count">
+                {count_label(length(group.memberships), "member")}
+              </small></span>
               <span :if={group.preset == :superuser} class="access-tag">Protected</span>
             </button>
           </nav>
@@ -124,7 +123,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
           <%= if @selected do %>
             <%= if @preview do %>
               <section class="authorization-review" aria-label="Review permission changes">
-                <button type="button" class="access-button quiet" phx-click="cancel_review">← Back to editing</button>
+                <button type="button" class="access-button quiet" phx-click="cancel_review">Back to editing</button>
                 <h2
                   id="authorization-review-title"
                   data-access-return="#authorization-review-button"
@@ -166,15 +165,18 @@ defmodule BrandoAdmin.Users.GroupsLive do
                     </ul>
                   </section>
                 </div>
-                <p class="authorization-impact">
-                  <strong><.count_badge tone="mint">{@preview.members}</.count_badge>
-                  {plural_label(@preview.members, "member")} affected.</strong>
-                  Changes apply immediately. Permissions from other groups are retained.
-                </p>
-                <p :if={"brando.admin.access" in @preview.removed} class="authorization-notice">
+                <div class="authorization-impact">
+                  <strong>{count_label(@preview.members, "member")} affected</strong>
+                  <p>
+                    {if @legacy_mode?,
+                      do: "Access changes take effect after your application switches to groups.",
+                      else: "Changes apply immediately."} Permissions from other groups are retained.
+                  </p>
+                </div>
+                <div :if={"brando.admin.access" in @preview.removed} class="authorization-notice">
                   Members who receive backend access only from this group will no longer be able to sign in to the admin.
-                </p>
-                <p :if={@error} class="authorization-notice error" role="alert">{@error}</p>
+                </div>
+                <div :if={@error} class="authorization-notice error" role="alert">{@error}</div>
                 <div class="authorization-review-actions">
                   <button type="button" class="access-button primary-action" phx-click="save" phx-disable-with="Saving…">Confirm &amp; save</button>
 
@@ -209,14 +211,14 @@ defmodule BrandoAdmin.Users.GroupsLive do
                   phx-disable-with="Preparing review…"
                 >Review changes</button>
               </header>
-              <p :if={@error} class="authorization-notice error" role="alert">{@error}</p>
-              <div class="authorization-tabs module-editor-tabs" role="group" aria-label="Group sections">
+              <div :if={@error} class="authorization-notice error" role="alert">{@error}</div>
+              <div class="authorization-tabs" role="group" aria-label="Group sections">
                 <button
                   :for={{key, label} <- @tabs}
                   type="button"
                   phx-click="tab"
                   phx-value-tab={key}
-                  class={["module-editor-tab", @tab == key && "is-active"]}
+                  class={["authorization-tab", @tab == key && "is-active"]}
                   aria-pressed={@tab == key}
                   disabled={!@selected.id && key != "permissions"}
                 >{label}
@@ -254,9 +256,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                     </fieldset>
                     <div class="authorization-permission-heading">
                       <h3>
-                        Permissions
-                        <span class="authorization-selected-count"><.count_badge>{MapSet.size(@permissions)}</.count_badge>
-                        selected</span>
+                        Permissions <span class="authorization-selected-count">{MapSet.size(@permissions)} selected</span>
                       </h3>
                     </div>
                     <div class="authorization-filter">
@@ -333,7 +333,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
               <div :if={@tab == "members"} class="authorization-members">
                 <%= if @effective do %>
                   <section class="authorization-effective">
-                    <button type="button" class="access-button quiet" phx-click="close_effective">← All members</button>
+                    <button type="button" class="access-button quiet" phx-click="close_effective">All members</button>
                     <h3
                       id="authorization-effective-title"
                       data-access-return={"#member-access-#{@effective_person.id}"}
@@ -342,7 +342,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                     >
                       {@effective_person.name}
                     </h3>
-                    <p class="authorization-lead">Combined access .</p>
+                    <p class="authorization-lead">Permissions from all groups in this scope.</p>
                     <%= if Enum.any?(@effective, & &1.explanation.superuser?) do %>
                       <div class="authorization-protected">
                         <span class="access-tag">Superuser</span><h3>Full access</h3><p>
@@ -375,7 +375,11 @@ defmodule BrandoAdmin.Users.GroupsLive do
                 <% else %>
                   <div class="authorization-section-heading">
                     <div>
-                      <h3>Group members</h3><p>Membership changes take effect immediately.</p>
+                      <h3>Group members</h3><p>
+                        {if @legacy_mode?,
+                          do: "Group access takes effect after your application switches to groups.",
+                          else: "Membership changes take effect immediately."}
+                      </p>
                     </div>
                     <button
                       :if={Engine.can?(@authorization, :assign, :groups) && !@adding_member?}
@@ -493,10 +497,9 @@ defmodule BrandoAdmin.Users.GroupsLive do
       open={@search != "" || @section in ["Workspace", "Content"]}
     >
       <summary>
-        <span>{@section}</span><small class="authorization-selected-count"><.count_badge>
-          {selected_count(@resources, @permissions)} / {@total}
-        </.count_badge>
-        selected</small>
+        <span>{@section}</span><small class="authorization-selected-count">
+          {selected_count(@resources, @permissions)} / {@total} selected
+        </small>
       </summary>
       <div class="authorization-table-scroll" tabindex="0" role="region" aria-label={"#{@section} permissions"}>
         <table class="authorization-matrix">

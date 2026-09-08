@@ -1,7 +1,8 @@
 import { test, expect } from '../../test-support/setupAuth'
 import { syncLV, confirmUploadFolder } from '../../utils'
 
-test('seo changes affect the frontpage', async ({ page }) => {
+test('seo changes affect the frontpage', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/admin')
   await page.getByText('Configuration').click()
   await page.getByRole('link', { name: 'SEO' }).click()
@@ -9,6 +10,8 @@ test('seo changes affect the frontpage', async ({ page }) => {
   await syncLV(page)
   await page.getByLabel('Fallback META title').fill('Brando CMS')
   await page.getByLabel('Fallback META description').fill('Brando CMS: A CMS of sorts.')
+  await expect(page.locator('.seo-search-preview')).toContainText('Brando CMS: A CMS of sorts.')
+  await expect(page.locator('.seo-preview-title')).toHaveText('Brando CMS')
   await page.getByPlaceholder('https://yoursite.com').fill('https://brando.dev')
   await page.locator('textarea[name="seo[robots]"]').fill('User-agent: *\nDisallow: /secret')
   await page.getByRole('button', { name: 'Add entry' }).click()
@@ -25,9 +28,19 @@ test('seo changes affect the frontpage', async ({ page }) => {
   await page.waitForSelector('#image-drawer', { state: 'hidden' })
   await syncLV(page)
   await expect(page.getByText('No image associated with')).toHaveCount(0)
+  await expect(page.locator('.seo-sharing-preview img')).toBeVisible()
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL('/admin/config/seo')
   await syncLV(page)
+
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
+  await page.screenshot({ path: testInfo.outputPath('seo-populated-desktop.png'), fullPage: true, animations: 'disabled' })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  await expect(page.locator('.seo-sharing-preview img')).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('seo-populated-mobile.png'), fullPage: true, animations: 'disabled' })
+  await page.setViewportSize({ width: 1440, height: 1000 })
 
   // Wait for the cache to be updated
   // The SEO update happens through Cachex and needs time to propagate

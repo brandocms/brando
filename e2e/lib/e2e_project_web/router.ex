@@ -48,6 +48,11 @@ defmodule E2eProjectWeb.Router do
       post "/setup_fixtures/:name", E2EFixtureController, :setup
       post "/login/:email", E2EFixtureController, :login
       post "/drafts/:action", E2EFixtureController, :drafts
+      post "/frontend-assets/:action", E2EFrontendAssetsController, :run
+      post "/user-directory/:action", E2EFixtureController, :user_directory
+      post "/image-creator/:image_id", E2EFixtureController, :image_creator
+      post "/admin-workspace-fixtures", E2EFixtureController, :admin_workspaces
+      post "/dashboard-access/:mode", E2EFixtureController, :dashboard_access
       post "/authorization/:role", E2EFixtureController, :authorization
       post "/authorization-sites/:action", E2EAuthorizationController, :run
     end

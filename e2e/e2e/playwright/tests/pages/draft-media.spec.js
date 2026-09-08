@@ -93,7 +93,7 @@ const addBlock = async (page, name, category = '05 LIVE PREVIEW TEST') => {
 const savePage = async (page, title) => {
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })
-  await page.getByRole('link', { name: `${title} →`, exact: true }).click()
+  await page.getByRole('link', { name: `${title}`, exact: true }).click()
   await syncLV(page)
   return new URL(page.url()).pathname.split('/').at(-1)
 }

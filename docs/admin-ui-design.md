@@ -201,3 +201,177 @@ while retaining Brando's visual identity:
 - [Supabase: layout](https://supabase.com/design-system/docs/ui-patterns/layout)
   — content-appropriate widths, grouped settings, and actions placed with their
   relevant content.
+
+## Shared workspaces and form sections
+
+Use `Workspace.header` and the opt-in `admin-workspace` styles for list and
+settings screens. Keep media folder navigation shared between images, files,
+and videos. Show the current folder's count using the same scope as the list.
+Keep item titles primary; formats, dimensions, file sizes, authors, and timestamps
+are secondary information. Avoid exposing URL query strings as video metadata.
+
+Blueprint fieldsets accept `label t("Section name")` for a translated legend.
+A read-only `component &Module.preview/1` can render from the current `form`
+assigns without maintaining a separate copy of pending values. Keep form IDs,
+input names, component IDs, upload targets, and save ownership stable.
+
+Constrain avatar photos and their image wrappers to their container. Source
+`width`/`height` attributes and a non-shrinking image wrapper can otherwise expand
+a small presence avatar over the page. Clip the photo wrapper, leaving status
+dots and focus rings outside it visible. Verify presence after a LiveView patch,
+not just on the initial render.
+
+
+## Listing and editor refinement checks
+
+Work at **1440px first**, then check 390px and expanded content. Review screenshots
+at their actual scale; a reduced full-page image can disguise small typography
+and misalignment. Use populated rows, long namespaces, photos and initials,
+child entries, open menus, and real form values.
+
+- Use 32px workspace headings, 17–18px section headings, and 15px listing titles.
+  Keep secondary metadata smaller without making it pale or difficult to read.
+- A listing toolbar should share one surface and baseline. Filters and sort
+  controls use a 38px box with symmetric padding. Status dots are at least 1em,
+  optically centered with their labels. Remove inherited margins before adjusting
+  position. The font stored as Main can differ between consumer applications.
+  Status labels use `text-box: trim-both cap alphabetic` so alignment follows the
+  font's capital height; descenders extend naturally below it. Older browsers use
+  the configurable `--status-label-offset` fallback (2px by default). Untrimmed DOM
+  bounding-box centers do not prove optical alignment: inspect close-ups with the
+  actual consumer font as well as the E2E font. See [Chrome's text-box guide](https://developer.chrome.com/blog/css-text-box-trim)
+  for the font-metric behavior.
+- Show creator photos when available and centered initials otherwise. Keep creator
+  information visible on mobile by giving it a deliberate place in the row.
+  Clip image wrappers as well as images to the avatar's dimensions.
+- Keep child disclosures rectangular and compact, with an aligned count and one
+  chevron. Reserve enough room for the full namespace rather than forcing it into
+  a narrow badge. Verify opening the children, including records with no status.
+- Text inputs and custom selects in a form must share height, type size, and
+  baseline: 44px in content editors, 40px in settings, with 14px text. Keep labels
+  on one line where appropriate; inline presence elements can otherwise create an
+  extra label line even when the visible text fits.
+- Use one spacing owner for settings: 24px between fieldsets, 16px between related
+  fields, 8px from label to control, and 24px from the final group to Save. Do not
+  stack fieldset, nested fieldset, and input margins for the same relationship.
+- Give repeated editor rows a quiet tinted parent surface and white fields/rows.
+  On mobile, arrange the status and row actions together, followed by labelled
+  fields. Keep editing and deletion controls distinguishable.
+- Group dashboard shortcuts in one toolbar. Soft sage, blue, lavender and sand
+  distinguish destinations while retaining the same proportions and icon family.
+- A settings toolbar with one section and only Save needs less visual emphasis:
+  use a white surface, a plain section label, and one sage action accent. Reserve
+  selected tab pills and multiple action colors for toolbars with actual choices.
+- Use the same chevron asset and rendered dimensions across neighboring dropdowns.
+  Preserve visible keyboard focus. Test Enter, Space and Escape against real
+  controls; closing an already closed dialog must not toggle it open internally.
+
+A passing overflow check is only the first audit. Follow it with screenshot
+inspection, measured alignment checks, and the existing local workflow tests.
+Capture fresh screenshots after the last change. Record limitations honestly;
+visual approval belongs to the person using the interface.
+
+
+## Pending subform sweep
+
+Requested on 8 September 2026; recorded for a later implementation pass. Use
+Navigation → Edit menu → Menu items as the starting reference, then review the
+shared subform components and other nested/repeated editors.
+
+- Increase the status dot **inside the link preview field** to `1em` in both
+  dimensions, relative to its accompanying text. This is separate from the row's
+  status selector. Align the dot with the visible text and prevent flex shrinking.
+- Replace the violet/lilac treatment of subform surfaces, reorder/delete controls,
+  and link icon badges with a very light pastel blue. Start by trying a near-white
+  blue such as `#f5f9fd`; the exact shade still needs visual review. Retain white
+  rows and input surfaces, readable labels/icons, and clear hover/focus states.
+- Audit nested levels, row rhythm, label/control alignment, and action placement
+  across subform usages. Check 1440px first, then 390px, including long link titles
+  and URLs. Capture fresh screenshots and run the relevant local E2E workflows.
+
+## Pending blueprint content-type icons
+
+Requested on 8 September 2026; proposal recorded for later implementation.
+Allow an optional top-level blueprint declaration using the existing icon names:
+
+```elixir
+icon "hero-folder"
+```
+
+Resolve the icon automatically in the link picker's “Content types” navigation
+and corresponding entry icons. Use one shared blueprint accessor so other admin
+content-type displays can reuse the same metadata. Preserve a sensible fallback
+for blueprints without an icon; this remains optional and requires no per-picker
+configuration. No blueprint-level icon declaration was found in the current DSL.
+
+When implemented, document the supported declaration in `guides/blueprints.md`
+and verify configured icons, unset fallbacks, and their alignment at 1440px and
+390px. This proposal is not yet a supported DSL feature.
+
+## Approved modal direction
+
+The modal study approved on 8 September 2026 uses **B (Section rail)** as the
+shared direction for the variable editor, block configuration, and transfer &
+delete user. Show section navigation when the task has distinct sections; simple
+confirmations and transfer dialogs do not need a rail merely for consistency.
+Use **C (Split workspace)** for link picking: content types and search on the
+left, results in the center, selected destination and link behavior on the right.
+The shared shell is implemented in `Content.modal`; `Content.modal_sections`
+provides the section rail and `SelectIdentifier` provides the link workspace.
+Their styling lives in `assets/css/components/ModalWorkspace.css`.
+
+Keep the title and context line in one compact stack centered beside the heading
+icon. Treat creator name and role the same way beside an avatar. Trim the text
+boxes to the font's capital height before setting the gap; centering oversized
+line boxes leaves the visible text looking displaced. Modal titles use 22px text.
+Heading and person text stacks both use an 8px gap, including equivalent creator
+and recipient details. Keep these proportions on mobile and check wrapped titles.
+
+Adjacent metadata values must share their type size and alignment row, including
+values containing badges or status dots. The link sidebar uses 13px values inside
+24px rows with centered contents. Keep status dots at least 1em. Verify the visible
+text positions with the actual consumer font, not only the surrounding boxes.
+
+Use subtle surface colors to distinguish context from editable content. The
+approved transfer summary has a near-white sage surface (`#fbfff7`). Keep
+headers and action rows outside the scrolling body, preserve input through nested
+selection, and return to the original editor and section after choosing a link.
+Block and variable settings currently update the parent form, so their completion
+action remains Done. Apply/Cancel requires an actual isolated draft; do not imply
+cancellation semantics with styling alone.
+
+Section changes keep inputs mounted so LiveView validation retains edits. Escape
+closes only the active dialog and returns focus to its opener; link openers must
+be real buttons. Show and hide commands target direct dialog children to avoid
+revealing nested dialogs. Cover these interactions with
+`e2e/e2e/playwright/tests/modal-design.spec.js`, alongside the existing form,
+block persistence, upload and accessibility tests.
+
+### Compare implementation against the approved sketch
+
+Use the actual approved render and its measurements as the reference; matching
+only the broad layout is insufficient. Compare at 1440px with the consumer's
+real font files. Review each context separately: a link variable inside a menu,
+a nested variable dialog, and the rich-text dialog have different ancestors.
+
+For the C sidebar, use a 21px/28px destination title, a 4px title-to-URL gap,
+16px before metadata, 20px from creator to link fields, and 14px between the
+link field and toggle. Keep field labels at 13px, the sidebar at 306px, and
+its background at `#f4f7f9`. Heading/person stacks retain the approved 8px gap.
+
+Align the C header icon, mode switch, and content-type heading text to the same
+20px desktop inset. Use a shared 18px inset for the header and switch on mobile.
+The selected entry's update timestamp includes the time in the configured site
+timezone, alongside its localized date.
+
+Form rules can override more than paragraph margins: definition-list margins,
+subform label spacing, old dialog-specific tab margins, and uppercase toggle
+styles also cross into nested dialogs. Inspect the winning rule and use a
+scoped layout owner for gaps. Check visible alignment after scrolling, too:
+a sticky search field must not cover mobile content navigation.
+
+Keep deliberate adaptations explicit. Real content-type names may need a
+slightly wider navigation column. Show unusual states such as drafts without
+repeating published status in every result. Use the existing icon family,
+actual counts and creator photos, and truthful completion actions for the
+form's state model.

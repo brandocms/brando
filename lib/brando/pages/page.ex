@@ -181,13 +181,13 @@ defmodule Brando.Pages.Page do
       )
 
     ~H"""
-    <div class="col-1 center">
-      <div :if={@entry.is_homepage} class="badge" data-popover={gettext("This page is marked as the homepage.")}>
-        <Brando.HTML.Icon.icon name="hero-home" class="s" />
-      </div>
-    </div>
-    <.update_link entry={@entry} columns={7}>
+    <.update_link class="listing-title" entry={@entry} columns={7}>
       {@entry.title}
+      <:before>
+        <span :if={@entry.is_homepage} class="listing-home" title={gettext("This page is marked as the homepage.")}>
+          <Brando.HTML.Icon.icon name="hero-home-mini" />
+        </span>
+      </:before>
       <:outside>
         <br />
         <div :if={@entry.has_url} class="badge lowercase no-border">
@@ -204,8 +204,7 @@ defmodule Brando.Pages.Page do
 
   def listing_fragment_row(assigns) do
     ~H"""
-    <div class="center col-1">⤷</div>
-    <.update_link entry={@entry} columns={6}>
+    <.update_link class="listing-title" entry={@entry} columns={6}>
       {@entry.title}
       <:outside>
         <br />
@@ -214,7 +213,7 @@ defmodule Brando.Pages.Page do
         </div>
       </:outside>
     </.update_link>
-    <div class="col-3">
+    <div class="col-3 listing-kind">
       <div class="badge uppercase">
         {gettext("Fragment")}
       </div>
@@ -227,8 +226,7 @@ defmodule Brando.Pages.Page do
       assign(assigns, :url, Brando.Blueprint.URL.resolve(assigns.entry))
 
     ~H"""
-    <div class="center col-1">⤷</div>
-    <.update_link entry={@entry} columns={6}>
+    <.update_link class="listing-title" entry={@entry} columns={6}>
       {@entry.title}
       <:outside>
         <br />
@@ -241,7 +239,7 @@ defmodule Brando.Pages.Page do
         </div>
       </:outside>
     </.update_link>
-    <div class="col-2">
+    <div class="col-2 listing-kind">
       <div class="badge uppercase">
         {gettext("Sub page")}
       </div>

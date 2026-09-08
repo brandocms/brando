@@ -159,6 +159,8 @@ defmodule Brando.Blueprint.Forms.Dsl do
       ]
     ],
     schema: [
+      label: [type: :string, required: false, doc: "Optional translated section heading"],
+      component: [type: {:fun, 1}, required: false, doc: "Optional function component receiving the current form assigns"],
       size: [
         type: {:in, [:full, :half, :third, :quarter]},
         required: false,

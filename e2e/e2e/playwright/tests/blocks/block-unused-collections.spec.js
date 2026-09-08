@@ -36,7 +36,7 @@ const createPage = async (page, title) => {
 const savePage = async (page, title) => {
   await page.getByRole('button', { name: 'Save (⌘S)', exact: true }).click()
   await expect(page).toHaveURL(/\/admin\/pages$/)
-  await page.getByRole('link', { name: `${title} →`, exact: true }).click()
+  await page.getByRole('link', { name: `${title}`, exact: true }).click()
   await syncLV(page)
 }
 

@@ -99,7 +99,7 @@ test('creates a simple page', async ({ page }) => {
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL('/admin/pages')
   await syncLV(page)
-  await expect(page.getByRole('link', { name: 'About →' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'About', exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: '/about' })).toBeVisible()
 
   // take a look at the frontend
@@ -124,7 +124,7 @@ test('duplicates to other language', async ({ page }) => {
   await page.getByRole('button', { name: 'Heading', exact: true }).click()
   await page.locator('textarea').filter({ hasText: 'Text' }).first().fill('Heading')
   await page.getByTestId('submit').click()
-  await expect(page.getByRole('link', { name: 'Clients →' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Clients', exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: '/clients' })).toBeVisible()
   await page.locator('.list-row').nth(1).getByTestId('circle-dropdown-button').click()
   await page.getByRole('button', { name: 'Duplicate to [NO]' }).click()

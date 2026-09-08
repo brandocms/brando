@@ -17,12 +17,17 @@ msgstr ""
 msgid "Filename"
 msgstr "Filnavn"
 
-#: lib/brando/files/file.ex:66
+#: lib/brando/files/file.ex:71
 #, elixir-autogen, elixir-format
 msgid "file"
 msgstr "fil"
 
-#: lib/brando/files/file.ex:67
+#: lib/brando/files/file.ex:72
 #, elixir-autogen, elixir-format
 msgid "files"
 msgstr "filer"
+
+#: lib/brando/files/file.ex:38
+#, elixir-autogen, elixir-format
+msgid "Replace file"
+msgstr ""

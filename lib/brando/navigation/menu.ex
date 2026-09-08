@@ -59,11 +59,25 @@ defmodule Brando.Navigation.Menu do
 
       tab t("Content") do
         fieldset do
-          size :half
-          input :status, :status
-          input :language, :select, options: :languages, narrow: true, label: t("Language")
+          style :inline
           input :title, :text, label: t("Title")
           input :key, :text, monospace: true, label: t("Key")
+        end
+
+        fieldset do
+          style :inline
+
+          input :status, :select,
+            label: t("Status"),
+            inline: true,
+            options: [
+              %{value: :draft, label: t("Draft")},
+              %{value: :pending, label: t("Pending")},
+              %{value: :published, label: t("Published")},
+              %{value: :disabled, label: t("Deactivated")}
+            ]
+
+          input :language, :select, options: :languages, narrow: true, label: t("Language")
         end
 
         fieldset do
@@ -117,7 +131,7 @@ defmodule Brando.Navigation.Menu do
 
   def listing_row(assigns) do
     ~H"""
-    <.update_link entry={@entry} columns={10}>
+    <.update_link class="listing-title" entry={@entry} columns={10}>
       {@entry.title}
       <:outside>
         <br />

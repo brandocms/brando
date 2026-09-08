@@ -28,6 +28,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   ##
   ## Form inputs (function components)
 
+  alias Phoenix.LiveView.JS
   alias Phoenix.HTML.FormField
 
   def checkbox(assigns) do
@@ -321,6 +322,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     ~H"""
     <label class="form-check-label">
       <input type="radio" id={@id} name={@field.name} class="form-check-input" value={@opt.value} checked={@checked} />
+      <.icon :if={@opt[:icon]} name={@opt[:icon]} />
       <span class="label-text">
         {@label}
       </span>
@@ -770,6 +772,9 @@ defmodule BrandoAdmin.Components.Form.Input do
         "status-dropdown-#{assigns.field.id}"
       )
 
+    hide = hide_dropdown("##{assigns.id}") |> JS.set_attribute({"aria-expanded", "false"}, to: "##{assigns.id}-trigger")
+    assigns = assign(assigns, :hide, hide)
+
     ~H"""
     <Primitives.field_base
       field={@field}
@@ -779,8 +784,25 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}
       fit_content
     >
-      <div class="radios-wrapper status compact" phx-click={toggle_dropdown("##{@id}")}>
-        <.status_circle status={@current_status} publish_at={nil} />
+      <div
+        class="radios-wrapper status compact"
+        phx-click={
+          toggle_dropdown("##{@id}") |> JS.toggle_attribute({"aria-expanded", "true", "false"}, to: "##{@id}-trigger")
+        }
+        phx-click-away={@hide}
+      >
+        <button
+          id={"#{@id}-trigger"}
+          class="status-trigger"
+          type="button"
+          aria-label={@label || gettext("Status")}
+          aria-controls={@id}
+          aria-expanded="false"
+          phx-keydown={@hide |> JS.focus(to: "##{@id}-trigger")}
+          phx-key="Escape"
+        >
+          <.status_circle status={@current_status} publish_at={nil} />
+        </button>
         <div class="status-dropdown hidden" id={@id}>
           <%= for status <- @statuses do %>
             <div class="form-check">
@@ -792,6 +814,8 @@ defmodule BrandoAdmin.Components.Form.Input do
                   class="form-check-input"
                   value={status.value}
                   checked={status.value == to_string(@field.value)}
+                  phx-keydown={@hide |> JS.focus(to: "##{@id}-trigger")}
+                  phx-key="Escape"
                 />
                 <span class={["label-text", status.value]}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12">

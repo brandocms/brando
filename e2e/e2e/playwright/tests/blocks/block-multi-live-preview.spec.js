@@ -128,7 +128,7 @@ test.describe('Live Preview with multi modules', () => {
     await page.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })
     await syncLV(page)
-    await page.getByRole('link', { name: 'Multi Preview Saved →' }).click()
+    await page.getByRole('link', { name: 'Multi Preview Saved', exact: true }).click()
     await syncLV(page)
 
     await toggleLivePreview(page)

@@ -33,6 +33,10 @@ export default (app) => ({
     }
   },
 
+  updated() {
+    this.filter(this.$input.value.toLowerCase().trim())
+  },
+
   getContainer() {
     // explicit target — falls back to legacy sibling coupling for
     // any external markup still relying on it
@@ -70,6 +74,11 @@ export default (app) => ({
       if (!matches) hiddenCount += 1
       this.setClass(option, !matches, 'filter-hidden')
     })
+
+    if (this.el.dataset.countTarget) {
+      const count = document.querySelector(this.el.dataset.countTarget)
+      if (count) count.textContent = $options.length - hiddenCount
+    }
 
     if (this.$clearBtn) {
       this.setClass(this.$clearBtn, value !== '', 'visible')

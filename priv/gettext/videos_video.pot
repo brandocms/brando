@@ -11,11 +11,6 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/videos/video.ex:96
-#, elixir-autogen, elixir-format
-msgid "Path"
-msgstr ""
-
 #: lib/brando/videos/video.ex:125
 #, elixir-autogen, elixir-format
 msgid "Aspect ratio"
@@ -66,7 +61,7 @@ msgstr ""
 msgid "Source URL"
 msgstr ""
 
-#: lib/brando/videos/video.ex:136
+#: lib/brando/videos/video.ex:137
 #, elixir-autogen, elixir-format
 msgid "Thumbnail"
 msgstr ""
@@ -81,7 +76,7 @@ msgstr ""
 msgid "Type"
 msgstr ""
 
-#: lib/brando/videos/video.ex:135
+#: lib/brando/videos/video.ex:136
 #, elixir-autogen, elixir-format
 msgid "Video file"
 msgstr ""
@@ -89,4 +84,14 @@ msgstr ""
 #: lib/brando/videos/video.ex:123
 #, elixir-autogen, elixir-format
 msgid "Width"
+msgstr ""
+
+#: lib/brando/videos/video.ex:135
+#, elixir-autogen, elixir-format
+msgid "Muted"
+msgstr ""
+
+#: lib/brando/videos/video.ex:96
+#, elixir-autogen, elixir-format
+msgid "Title or source"
 msgstr ""

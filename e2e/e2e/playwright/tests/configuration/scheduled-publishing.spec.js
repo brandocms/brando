@@ -1,7 +1,8 @@
 import { test, expect } from '../../test-support/setupAuth'
 import { syncLV } from '../../utils'
 
-test('selects a future publishing date and manages the publishing queue', async ({ page }) => {
+test('selects a future publishing date and manages the publishing queue', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/admin/pages')
   await syncLV(page)
   await page.getByRole('link', { name: 'Create page' }).click()
@@ -50,6 +51,12 @@ test('selects a future publishing date and manages the publishing queue', async 
   })
   expect(fixtureResponse.ok()).toBeTruthy()
 
+  await page.goto('/admin')
+  await syncLV(page)
+  const scheduled = page.locator('.workspace-panel').filter({ has: page.getByRole('heading', { name: 'Scheduled publishing', exact: true }) })
+  await expect(scheduled.getByRole('link', { name: title, exact: true })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('dashboard-scheduled-desktop.png'), fullPage: true })
+
   await page.goto('/admin/config/scheduled_publishing')
   await syncLV(page)
   await expect(page.getByRole('heading', { name: 'Scheduled Publishing' })).toBeVisible()
@@ -61,7 +68,12 @@ test('selects a future publishing date and manages the publishing queue', async 
   await syncLV(page)
   await expect(scheduledJob).toBeVisible()
 
+  await expect(scheduledJob).toContainText('Scheduled')
+  await expect(scheduledJob).toContainText(/Entry #\d+/)
+  await page.screenshot({ path: testInfo.outputPath('scheduled-publishing-desktop.png'), fullPage: true })
   await scheduledJob.getByRole('button', { name: 'Delete job' }).click()
   await syncLV(page)
   await expect(scheduledJob).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'No scheduled publications' })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('scheduled-publishing-empty-desktop.png'), fullPage: true })
 })

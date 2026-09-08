@@ -333,6 +333,10 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign(:params, assigns.params)
       |> assign(:current_user, assigns.current_user)
       |> assign(:extra_selection_actions, Map.get(assigns, :extra_selection_actions, []))
+      |> assign(:hidden_filters, Map.get(assigns, :hidden_filters, []))
+      |> assign(:column_header, Map.get(assigns, :column_header, []))
+      |> assign(:empty_title, Map.get(assigns, :empty_title))
+      |> assign(:empty_description, Map.get(assigns, :empty_description))
       |> assign_new(:schema, fn -> schema end)
       |> assign_new(:context, fn -> context end)
       |> assign_new(:singular, fn -> singular end)
@@ -700,7 +704,7 @@ defmodule BrandoAdmin.Components.Content.List do
     ~H"""
     <div class="pagination">
       <div class="pagination-entries">
-        &rarr; {@total_entries} {gettext("entries")}
+        <span class="pagination-prefix" aria-hidden="true">&rarr;</span> {@total_entries} {gettext("entries")}
         <%= if @has_entries do %>
           | {gettext("showing")} {@showing_start}-{@showing_end}
         <% end %>
@@ -767,6 +771,7 @@ defmodule BrandoAdmin.Components.Content.List do
           name="q"
           value=""
           placeholder={gettext("Filter")}
+          aria-label={gettext("Filter by %{field}", field: Phoenix.HTML.safe_to_string(g(@schema, @filter.label)))}
           autocomplete="off"
           phx-debounce="300"
         />
@@ -956,6 +961,7 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign(:active_filter, assigns.active_filter)
       |> assign(:active_sort, assigns.active_sort)
       |> assign(:list_opts, assigns.list_opts)
+      |> assign(:display_filters, Map.drop(assigns.list_opts[:filter] || %{}, assigns.hidden_filters))
       |> assign(:advanced_filters, adv_filters)
       |> assign(:has_active_advanced_filters?, has_active_advanced_filters?(assigns.list_opts, adv_filters))
       |> assign_new(:has_status?, fn -> assigns.schema.has_trait(Brando.Trait.Status) end)
@@ -1012,8 +1018,8 @@ defmodule BrandoAdmin.Components.Content.List do
       />
       <div class="list-filters-and-sorts">
         <.active_filters
-          :if={@list_opts[:filter]}
-          active_filters={@list_opts[:filter]}
+          :if={@display_filters != %{}}
+          active_filters={@display_filters}
           filters={@filters}
           delete={@delete_filter}
         />
@@ -1031,7 +1037,7 @@ defmodule BrandoAdmin.Components.Content.List do
   def sorts(assigns) do
     ~H"""
     <div class="sorts">
-      {gettext("Sort by")} &rarr;
+      <span class="sorts-label">{gettext("Sort by")}</span>
       <.simple_dropdown id="sorts-dropdown" label={g(@schema, @active_sort.label)}>
         <:options>
           <li>
@@ -1061,7 +1067,7 @@ defmodule BrandoAdmin.Components.Content.List do
         phx-click={toggle_dropdown("##{@id}")}
         phx-click-away={hide_dropdown("##{@id}")}
       >
-        {@label} <span class="icon">▾</span>
+        <span>{@label}</span><.icon name="hero-chevron-down" class="dropdown-chevron" />
       </button>
       <ul data-testid="simple-dropdown-content" class="simple-dropdown-content hidden" id={@id}>
         {render_slot(@options, @id)}
@@ -1087,6 +1093,7 @@ defmodule BrandoAdmin.Components.Content.List do
     <button
       phx-click={@on_update_status}
       phx-value-status={@status}
+      aria-pressed={to_string(@active_class != "")}
       class={[
         "status",
         @active_class

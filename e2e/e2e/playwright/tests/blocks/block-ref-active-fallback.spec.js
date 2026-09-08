@@ -93,7 +93,7 @@ test.describe('Ref active toggles and template fallbacks', () => {
 
     const linkModal = page.locator('[id$="-link-config"]').first()
     await expect(linkModal).toBeVisible()
-    await linkModal.locator('.radios-wrapper').getByText('Identifier').click()
+    await linkModal.getByRole('radio', { name: 'Content', exact: true }).check()
     await syncLV(page)
     await linkModal.locator('.button-group-vertical.tiny button', { hasText: 'Cases' }).click()
     await syncLV(page)

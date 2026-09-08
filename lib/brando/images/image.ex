@@ -71,20 +71,45 @@ defmodule Brando.Images.Image do
   end
 
   def listing_row(assigns) do
+    formats =
+      case assigns.entry.formats do
+        formats when is_list(formats) and formats != [] -> formats
+        _ -> [:original]
+      end
+      |> Enum.map(fn
+        :original -> assigns.entry.path |> Path.extname() |> String.trim_leading(".")
+        format -> Atom.to_string(format)
+      end)
+      |> Enum.map(&String.upcase/1)
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.uniq()
+
+    assigns =
+      assigns
+      |> assign(:image_formats, formats)
+      |> assign(:size_count, map_size(assigns.entry.sizes || %{}))
+
     ~H"""
-    <.cover image={@entry} columns={2} size={:smallest} padded />
-    <.field columns={9}>
-      <small class="monospace">#{@entry.id}</small>
-      <br />
-      <small class="monospace">{@entry.path}</small>
-      <br />
-      <small>{@entry.width}&times;{@entry.height}</small>
-      <br />
-      <small>{inspect(@entry.config_target)}</small>
-      <br />
-      <div :if={@entry.title} class="badge mini">{gettext("Title")}</div>
-      <div :if={@entry.alt} class="badge mini">Alt</div>
-    </.field>
+    <.cover image={@entry} columns={2} size={:smallest} class="library-thumbnail" />
+    <.update_link entry={@entry} columns={9} class="library-image-info">
+      {Path.basename(@entry.path)}
+      <:outside>
+        <p :if={@entry.title} class="library-image-title">{@entry.title}</p>
+        <div class="library-image-meta">
+          <span :if={@image_formats != []} class="library-formats" role="group" aria-label={gettext("Formats")}>
+            <span :for={format <- @image_formats} class="library-format">{format}</span>
+          </span>
+          <span :if={@entry.width && @entry.height}>{@entry.width} × {@entry.height}</span>
+          <span :if={@size_count > 0} class="library-size-count">
+            {ngettext("%{count} size", "%{count} sizes", @size_count)}
+          </span>
+          <span class={["library-alt", @entry.alt in [nil, ""] && "missing"]}>{if @entry.alt in [nil, ""],
+            do: gettext("No alt text"),
+            else: gettext("Alt text added")}</span>
+          <span :if={@entry.status != :processed}>{gettext("Processing")}</span>
+        </div>
+      </:outside>
+    </.update_link>
     """
   end
 

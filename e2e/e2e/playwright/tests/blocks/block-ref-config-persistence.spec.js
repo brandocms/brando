@@ -83,7 +83,7 @@ test.describe('Block ref config persistence', () => {
     await syncLV(page)
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
 
-    await page.getByRole('link', { name: `${TITLE} →` }).click()
+    await page.getByRole('link', { name: TITLE, exact: true }).click()
     await syncLV(page)
 
     const savedRef = page.locator('.base-block.ref-block').first()

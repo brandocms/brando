@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Content do
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext
 
+  alias Phoenix.LiveView.JS
   alias BrandoAdmin.Components.Image
 
   def header(assigns) do
@@ -87,6 +88,9 @@ defmodule BrandoAdmin.Components.Content do
 
   attr :id, :string, required: true
   attr :title, :string, required: true
+  attr :subtitle, :string, default: nil
+  attr :icon, :string, default: "hero-adjustments-horizontal"
+  attr :layout, :string, default: nil
   attr :show, :boolean, default: false
   attr :center_header, :boolean, default: false
   attr :narrow, :boolean, default: false
@@ -111,7 +115,7 @@ defmodule BrandoAdmin.Components.Content do
       |> assign_new(:wide, fn -> false end)
       |> assign_new(:auto, fn -> false end)
       |> assign_new(:remember_scroll_position, fn -> false end)
-      |> assign_new(:close, fn -> hide_modal("##{assigns.id}") end)
+      |> assign(:close, assigns.close || hide_modal("##{assigns.id}"))
       |> assign_new(:ok, fn -> nil end)
 
     ~H"""
@@ -123,14 +127,14 @@ defmodule BrandoAdmin.Components.Content do
         @medium && "medium",
         @wide && "wide",
         @auto && "auto",
-        @show && "visible"
+        @show && "visible",
+        @layout && "modal--#{@layout}"
       ]}
       role="dialog"
       aria-modal="true"
       aria-labelledby={"#{@id}-title"}
       phx-hook="Brando.Modal"
-      phx-window-keydown={@close}
-      phx-key="escape"
+      data-modal-close={@close}
       {@rest}
     >
       <div class="modal-backdrop" phx-click={@close} />
@@ -140,12 +144,18 @@ defmodule BrandoAdmin.Components.Content do
             "modal-header",
             @center_header && "centered"
           ]}>
-            <h2 id={"#{@id}-title"}>{@title}</h2>
+            <div class="modal-heading">
+              <span :if={@icon} class="modal-heading-icon" aria-hidden="true"><.icon name={@icon} /></span>
+              <div class="heading-copy">
+                <h2 id={"#{@id}-title"}>{@title}</h2>
+                <p :if={@subtitle} class="modal-subtitle">{@subtitle}</p>
+              </div>
+            </div>
             <div class="header-wrap">
               <%= if @header != [] do %>
                 {render_slot(@header)}
               <% end %>
-              <button type="button" class="modal-close" phx-click={@close || hide_modal("##{@id}")}>
+              <button type="button" class="modal-close" aria-label={gettext("Close dialog")} phx-click={@close}>
                 <.icon name="hero-x-mark" />
               </button>
             </div>
@@ -166,6 +176,86 @@ defmodule BrandoAdmin.Components.Content do
         </div>
       </div>
     </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :enabled, :boolean, default: true
+
+  slot :section, required: true do
+    attr :id, :string, required: true
+    attr :label, :string, required: true
+    attr :icon, :string
+  end
+
+  # Panels stay mounted so switching sections cannot drop pending form params.
+  def modal_sections(assigns) do
+    ~H"""
+    <div id={@id} class={["modal-sections", !@enabled && "modal-sections--stacked"]}>
+      <nav :if={@enabled} class="modal-section-nav" role="tablist" aria-label={gettext("Sections")}>
+        <button
+          :for={{section, index} <- Enum.with_index(@section)}
+          type="button"
+          id={"#{@id}-tab-#{section.id}"}
+          role="tab"
+          data-modal-tab
+          aria-selected={to_string(index == 0)}
+          aria-controls={"#{@id}-panel-#{section.id}"}
+          tabindex={if index == 0, do: "0", else: "-1"}
+          phx-click={modal_section(@id, section.id)}
+        >
+          <.icon :if={section[:icon]} name={section.icon} />
+          <span>{section.label}</span>
+        </button>
+      </nav>
+      <div class="modal-section-content">
+        <section
+          :for={{section, index} <- Enum.with_index(@section)}
+          id={"#{@id}-panel-#{section.id}"}
+          class="modal-section-panel"
+          role={@enabled && "tabpanel"}
+          aria-labelledby={@enabled && "#{@id}-tab-#{section.id}"}
+          hidden={@enabled && index != 0}
+        >
+          {render_slot(section)}
+        </section>
+      </div>
+    </div>
+    """
+  end
+
+  defp modal_section(id, section) do
+    JS.set_attribute({"hidden", ""}, to: "##{id} > .modal-section-content > .modal-section-panel")
+    |> JS.remove_attribute("hidden", to: "##{id}-panel-#{section}")
+    |> JS.set_attribute({"aria-selected", "false"}, to: "##{id} > nav > button")
+    |> JS.set_attribute({"tabindex", "-1"}, to: "##{id} > nav > button")
+    |> JS.set_attribute({"aria-selected", "true"}, to: "##{id}-tab-#{section}")
+    |> JS.set_attribute({"tabindex", "0"}, to: "##{id}-tab-#{section}")
+  end
+
+  attr :user, :any, required: true
+  attr :caption, :string, default: nil
+
+  def modal_person(assigns) do
+    avatar =
+      case Map.get(assigns.user, :avatar) do
+        %{status: :processed} = image -> image
+        _ -> nil
+      end
+
+    assigns = assign(assigns, :avatar, avatar)
+
+    ~H"""
+    <span class="modal-person">
+      <span class="modal-person-avatar">
+        <img :if={@avatar} src={Brando.Utils.img_url(@avatar, :thumb, prefix: Brando.Utils.media_url())} alt="" />
+        <span :if={!@avatar}>{String.first(@user.name || "?")}</span>
+      </span>
+      <span class="person-copy">
+        <strong>{@user.name}</strong>
+        <small :if={@caption}>{@caption}</small>
+      </span>
+    </span>
     """
   end
 end

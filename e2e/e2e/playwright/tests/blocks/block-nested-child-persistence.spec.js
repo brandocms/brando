@@ -55,7 +55,7 @@ test.describe('Nested child block persistence', () => {
     await syncLV(page)
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
 
-    await page.getByRole('link', { name: `${title} →` }).click()
+    await page.getByRole('link', { name: `${title}`, exact: true }).click()
     await syncLV(page)
   }
 

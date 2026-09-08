@@ -12,11 +12,6 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/videos/video.ex:96
-#, elixir-autogen, elixir-format
-msgid "Path"
-msgstr "Sti"
-
 #: lib/brando/videos/video.ex:125
 #, elixir-autogen, elixir-format
 msgid "Aspect ratio"
@@ -67,7 +62,7 @@ msgstr "Ekstern ID"
 msgid "Source URL"
 msgstr "Kilde-URL"
 
-#: lib/brando/videos/video.ex:136
+#: lib/brando/videos/video.ex:137
 #, elixir-autogen, elixir-format
 msgid "Thumbnail"
 msgstr "Miniatyrbilde"
@@ -82,7 +77,7 @@ msgstr "Tittel"
 msgid "Type"
 msgstr "Type"
 
-#: lib/brando/videos/video.ex:135
+#: lib/brando/videos/video.ex:136
 #, elixir-autogen, elixir-format
 msgid "Video file"
 msgstr "Videofil"
@@ -91,3 +86,13 @@ msgstr "Videofil"
 #, elixir-autogen, elixir-format
 msgid "Width"
 msgstr "Bredde"
+
+#: lib/brando/videos/video.ex:135
+#, elixir-autogen, elixir-format
+msgid "Muted"
+msgstr ""
+
+#: lib/brando/videos/video.ex:96
+#, elixir-autogen, elixir-format
+msgid "Title or source"
+msgstr "Tittel eller kilde"

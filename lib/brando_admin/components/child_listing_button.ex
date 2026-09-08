@@ -35,8 +35,10 @@ defmodule BrandoAdmin.Components.ChildListingButton do
         data-testid="children-button"
         class={@text && "text"}
         aria-expanded="false"
+        aria-label={Gettext.gettext(Brando.Gettext, "Show or hide %{count} children", count: @count)}
       >
         <span class="children-button-count">+ {@count}</span>
+        <span class="children-button-disclosure" aria-hidden="true"><span class="children-number">{@count}</span><Brando.HTML.Icon.icon name="hero-chevron-right" /></span>
         <span class="children-button-close">{Gettext.gettext(Brando.Gettext, "Close")}</span>
         <span :if={@text} class="children-button-text">{@text}</span>
       </button>

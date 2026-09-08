@@ -125,15 +125,43 @@ defmodule Brando.Users.User do
 
   def listing_row(assigns) do
     ~H"""
-    <.cover image={@entry.avatar} columns={2} size={:smallest} />
-    <.update_link entry={@entry} columns={13} class={if !@entry.active, do: "disabled"}>
-      {@entry.name}
-      <:outside>
-        <div :if={!@entry.active}><span class="badge">{t("Inactive")}</span></div>
-        <div><small>{@entry.email}</small></div>
-        <div :if={!Brando.Authorization.enabled?()}><small class="badge">{@entry.role}</small></div>
-      </:outside>
-    </.update_link>
+    <.cover :if={@entry.avatar} image={@entry.avatar} columns={1} size={:thumb} class="user-avatar" />
+    <div :if={!@entry.avatar} class="user-avatar user-initials" aria-hidden="true">
+      <span>{String.first(@entry.name)}</span>
+    </div>
+    <div class="user-account">
+      <.update_link entry={@entry} columns={4} class="user-identity">{@entry.name}</.update_link>
+      <span class="user-email">{@entry.email}</span>
+    </div>
+    <.field columns={2} class="user-role">
+      <span class="user-detail-label">{if Brando.Authorization.enabled?(), do: t("Legacy role"), else: t("Role")}</span>
+      <span class="workspace-badge">{@entry.role}</span>
+    </.field>
+    <div class="user-activity user-last-seen">
+      <span class="user-detail-label">{t("Last seen")}</span>
+      <.activity_time value={@entry.last_seen} />
+    </div>
+    <div class="user-activity user-last-login">
+      <span class="user-detail-label">{t("Last logged in")}</span>
+      <.activity_time value={@entry.last_login} />
+    </div>
+    <.field columns={2} class="user-state">
+      <span class={["workspace-badge", @entry.active && "positive"]}>{if @entry.active, do: t("Active"), else: t("Inactive")}</span>
+    </.field>
+    """
+  end
+
+  defp activity_time(assigns) do
+    ~H"""
+    <time
+      :if={@value}
+      datetime={NaiveDateTime.to_iso8601(@value) <> "Z"}
+      title={Brando.Utils.Datetime.format_datetime(@value, "%d %b %Y %H:%M %Z")}
+    >
+      {Brando.Utils.Datetime.format_datetime(@value, "%d %b %Y")}
+      <small>{Brando.Utils.Datetime.format_datetime(@value, "%H:%M %Z")}</small>
+    </time>
+    <span :if={!@value} class="user-no-activity">{t("Not recorded")}</span>
     """
   end
 

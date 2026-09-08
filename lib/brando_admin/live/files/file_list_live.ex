@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Files.FileListLive do
   alias Brando.Uploads.AssetIntent
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Workspace
   alias BrandoAdmin.Images.FolderBrowser
   alias BrandoAdmin.LiveView.AssetListHelpers
   alias Phoenix.LiveView.JS
@@ -227,7 +228,7 @@ defmodule BrandoAdmin.Files.FileListLive do
       end
     end
 
-    {:noreply, socket}
+    {:noreply, if(entry.done?, do: assign_folder_state(socket, socket.assigns.current_folder), else: socket)}
   end
 
   @impl true
@@ -248,131 +249,137 @@ defmodule BrandoAdmin.Files.FileListLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Assets — Files")} subtitle={gettext("Overview")} />
+    <div class="admin-workspace workspace-list media-workspace files-workspace">
+      <Workspace.header title={gettext("Files")} />
 
-    <Content.modal
-      :if={@replacement_file}
-      id="file-replacement-modal"
-      title={gettext("Replace file")}
-      show
-      medium
-      close={JS.push("close_file_replacement")}
-    >
-      <p class="replacement-intro">
-        {gettext(
-          "The new file takes over this one's contents everywhere it is used. Its filename, URL and references stay as they are."
-        )}
-      </p>
-
-      <div class="asset-field asset-field--single file-preview replacement-current">
-        <div class="img-placeholder">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-            <path fill="none" d="M0 0h24v24H0z" /><path d="M20 22H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1zm-1-2V4H5v16h14zM8 7h8v2H8V7zm0 4h8v2H8v-2zm0 4h5v2H8v-2z" />
-          </svg>
-        </div>
-        <div class="file-info">
-          <div class="info-wrapper">
-            <div class="name">
-              {@replacement_file.filename} ({Brando.Utils.human_size(@replacement_file.filesize)})
-            </div>
-            <div class="updated">{Brando.Utils.media_url(@replacement_file)}</div>
-          </div>
-        </div>
-      </div>
-
-      <div
-        id={"file-replacement-upload-#{@replacement_file.id}"}
-        class="replacement-dropzone"
-        phx-hook="Brando.UploadTrigger"
-        data-kind={@replacement_target["kind"]}
-        data-asset-type={@replacement_target["asset_type"]}
-        data-file-id={@replacement_target["file_id"]}
-        data-config-target={@replacement_target["config_target"]}
-        data-deliver-topic={@replacement_target["deliver_topic"]}
-        data-accept={Path.extname(@replacement_file.filename)}
+      <Content.modal
+        :if={@replacement_file}
+        id="file-replacement-modal"
+        title={gettext("Replace file")}
+        show
+        medium
+        close={JS.push("close_file_replacement")}
       >
-        <input type="file" class="file-input hidden" aria-label={gettext("Replacement file")} />
-        <p class="replacement-prompt">
-          {gettext("Drop a %{extension} file here", extension: Path.extname(@replacement_file.filename))}
+        <p class="replacement-intro">
+          {gettext(
+            "The new file takes over this one's contents everywhere it is used. Its filename, URL and references stay as they are."
+          )}
         </p>
-        <button type="button" class="secondary small upload-trigger">{gettext("Choose file")}</button>
-      </div>
-      <:footer>
-        <button type="button" class="secondary" phx-click="close_file_replacement">{gettext("Close")}</button>
-      </:footer>
-    </Content.modal>
 
-    <.live_component
-      module={FileBrowser}
-      id="assets-file-browser"
-      mode={:inline}
-      upload_root={@upload_root}
-      current_folder={@current_folder}
-      breadcrumbs={@breadcrumbs}
-      recent_folders={@recent_folders}
-      child_folders={@child_folders}
-      show_new_folder_form={@show_new_folder_form}
-      new_folder={@new_folder}
-      go_root_event="assets_go_root"
-      go_folder_event="assets_go_folder"
-      go_parent_event="assets_go_parent"
-      go_recent_event="assets_go_recent"
-      enable_folder_drop={true}
-      folder_drop_event="assets_move_selected_to_folder"
-      show_new_folder_event="assets_show_new_folder_form"
-      cancel_new_folder_event="assets_cancel_new_folder_form"
-      create_folder_event="assets_create_folder"
-      main_id="assets-file-browser-main"
-    >
-      <:main_header>
-        <div class="image-picker-main-header">
-          <h3>{folder_label_for_display(@current_folder_abs, @upload_root)}</h3>
-          <div class="image-picker-main-actions">
-            <span>
-              {ngettext("%{count} file", "%{count} files", @visible_file_count, count: @visible_file_count)}
-            </span>
-            <span :if={@clipboard_ids != []} class="clipboard-status">
-              {gettext("Cut queue")}: {length(@clipboard_ids)}
-            </span>
-            <form phx-change="validate" phx-drop-target={@uploads.files.ref}>
-              <label class="folder-action">
-                <span>{gettext("Upload")}</span>
-                <.live_file_input upload={@uploads.files} class="hidden" />
-              </label>
-            </form>
-            <button
-              :if={@clipboard_ids != []}
-              type="button"
-              class="folder-action"
-              phx-click="assets_paste_selected"
-            >
-              {gettext("Paste")}
-            </button>
-            <button
-              :if={@clipboard_ids != []}
-              type="button"
-              class="folder-action"
-              phx-click="assets_clear_clipboard"
-            >
-              {gettext("Clear")}
-            </button>
+        <div class="asset-field asset-field--single file-preview replacement-current">
+          <div class="img-placeholder">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+              <path fill="none" d="M0 0h24v24H0z" /><path d="M20 22H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1zm-1-2V4H5v16h14zM8 7h8v2H8V7zm0 4h8v2H8v-2zm0 4h5v2H8v-2z" />
+            </svg>
+          </div>
+          <div class="file-info">
+            <div class="info-wrapper">
+              <div class="name">
+                {@replacement_file.filename} ({Brando.Utils.human_size(@replacement_file.filesize)})
+              </div>
+              <div class="updated">{Brando.Utils.media_url(@replacement_file)}</div>
+            </div>
           </div>
         </div>
-      </:main_header>
+
+        <div
+          id={"file-replacement-upload-#{@replacement_file.id}"}
+          class="replacement-dropzone"
+          phx-hook="Brando.UploadTrigger"
+          data-kind={@replacement_target["kind"]}
+          data-asset-type={@replacement_target["asset_type"]}
+          data-file-id={@replacement_target["file_id"]}
+          data-config-target={@replacement_target["config_target"]}
+          data-deliver-topic={@replacement_target["deliver_topic"]}
+          data-accept={Path.extname(@replacement_file.filename)}
+        >
+          <input type="file" class="file-input hidden" aria-label={gettext("Replacement file")} />
+          <p class="replacement-prompt">
+            {gettext("Drop a %{extension} file here", extension: Path.extname(@replacement_file.filename))}
+          </p>
+          <button type="button" class="secondary small upload-trigger">{gettext("Choose file")}</button>
+        </div>
+        <:footer>
+          <button type="button" class="secondary" phx-click="close_file_replacement">{gettext("Close")}</button>
+        </:footer>
+      </Content.modal>
 
       <.live_component
-        module={Content.List}
-        id={"content_listing_#{@schema}_default"}
-        schema={@schema}
-        current_user={@current_user}
-        uri={@uri}
-        params={AssetListHelpers.list_params(@params)}
-        listing={:default}
-        extra_selection_actions={[
-          %{event: "assets_cut_selected", label: gettext("Cut selected")}
-        ]}
-      />
-    </.live_component>
+        module={FileBrowser}
+        id="assets-file-browser"
+        mode={:inline}
+        root_name={gettext("Files")}
+        upload_root={@upload_root}
+        current_folder={@current_folder}
+        breadcrumbs={@breadcrumbs}
+        recent_folders={@recent_folders}
+        child_folders={@child_folders}
+        show_new_folder_form={@show_new_folder_form}
+        new_folder={@new_folder}
+        go_root_event="assets_go_root"
+        go_folder_event="assets_go_folder"
+        go_parent_event="assets_go_parent"
+        go_recent_event="assets_go_recent"
+        enable_folder_drop={true}
+        folder_drop_event="assets_move_selected_to_folder"
+        show_new_folder_event="assets_show_new_folder_form"
+        cancel_new_folder_event="assets_cancel_new_folder_form"
+        create_folder_event="assets_create_folder"
+        main_id="assets-file-browser-main"
+      >
+        <:main_header>
+          <div class="image-picker-main-header">
+            <h3>{if @current_folder == "", do: gettext("Library root"), else: Path.basename(@current_folder)}</h3>
+            <div class="image-picker-main-actions">
+              <span>
+                {ngettext("%{count} file", "%{count} files", @visible_file_count, count: @visible_file_count)}
+              </span>
+              <span :if={@clipboard_ids != []} class="clipboard-status">
+                {gettext("Cut queue")}: {length(@clipboard_ids)}
+              </span>
+              <form phx-change="validate" phx-drop-target={@uploads.files.ref}>
+                <label class="folder-action">
+                  <span>{gettext("Upload")}</span>
+                  <.live_file_input upload={@uploads.files} class="library-upload-input" aria-label={gettext("Upload files")} />
+                </label>
+              </form>
+              <button
+                :if={@clipboard_ids != []}
+                type="button"
+                class="folder-action"
+                phx-click="assets_paste_selected"
+              >
+                {gettext("Paste")}
+              </button>
+              <button
+                :if={@clipboard_ids != []}
+                type="button"
+                class="folder-action"
+                phx-click="assets_clear_clipboard"
+              >
+                {gettext("Clear")}
+              </button>
+            </div>
+          </div>
+        </:main_header>
+
+        <.live_component
+          module={Content.List}
+          id={"content_listing_#{@schema}_default"}
+          schema={@schema}
+          current_user={@current_user}
+          uri={@uri}
+          params={AssetListHelpers.list_params(@params)}
+          listing={:default}
+          hidden_filters={[:folder_id]}
+          empty_title={gettext("No files in this view")}
+          empty_description={gettext("Choose a folder or adjust your search.")}
+          extra_selection_actions={[
+            %{event: "assets_cut_selected", label: gettext("Cut selected")}
+          ]}
+        />
+      </.live_component>
+    </div>
     """
   end
 

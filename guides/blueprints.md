@@ -885,7 +885,10 @@ end
 ### Tabs, alerts, and fieldsets
 
 A form contains tabs; each tab contains alerts and fieldsets. Fieldsets control
-layout with `size`, `align`, `shaded`, and `style`. Alerts use `:info`,
+layout with `size`, `align`, `shaded`, and `style`. An optional `label` renders a
+translated section legend. An optional `component &MyModule.preview/1` renders
+read-only content using the current `form` assigns, such as an SEO preview; it
+does not own or collect form state. Alerts use `:info`,
 `:warning`, or `:error` and accept a string or one-argument function component.
 
 ```elixir

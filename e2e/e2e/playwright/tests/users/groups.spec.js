@@ -5,6 +5,7 @@ import { e2eUrl } from '../../test-support/e2eUrl'
 test.skip(process.env.BRANDO_AUTHORIZATION_MODE !== 'groups', 'Requires explicit group mode')
 
 test('manages a custom group with a reviewed permission change and membership', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/admin')
   await syncLV(page)
   await page.locator('#navigation [data-nav-expand]').filter({ hasText: 'Configuration' }).click()
@@ -31,6 +32,7 @@ test('manages a custom group with a reviewed permission change and membership', 
   await page.getByRole('button', { name: 'Add member', exact: true }).click()
   await page.getByRole('button', { name: 'Add Brando Admin', exact: true }).click()
   await expect(page.locator('.authorization-person')).toContainText('Brando Admin')
+  await page.screenshot({ path: testInfo.outputPath('authorization-members-desktop.png'), fullPage: true })
   await page.getByRole('button', { name: 'View access', exact: true }).click()
   await expect(page.locator('.authorization-effective')).toContainText('Protected Superuser access')
   await page.getByRole('button', { name: 'Activity', exact: true }).click()
@@ -39,6 +41,9 @@ test('manages a custom group with a reviewed permission change and membership', 
   await page.getByRole('button', { name: 'Permissions', exact: true }).click()
   await expect(page.getByLabel('Group name', { exact: true })).toHaveValue('Campaign editors')
   await page.screenshot({ path: testInfo.outputPath('authorization-groups-desktop.png'), fullPage: true })
+  await page.setViewportSize({ width: 1920, height: 1080 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('authorization-groups-wide-desktop.png'), fullPage: true })
   await page.setViewportSize({ width: 768, height: 1024 })
   await expect(page.locator('.authorization-editor')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)

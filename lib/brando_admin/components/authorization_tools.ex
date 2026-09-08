@@ -62,11 +62,11 @@ defmodule BrandoAdmin.Components.AuthorizationTools do
           </div>
         </article>
       </div>
-      <p :if={@busy} class="utils-feedback" role="status" aria-live="polite">
+      <div :if={@busy} class="utils-feedback" role="status" aria-live="polite">
         {gettext("Processing migration…")}
-      </p>
-      <p :if={@message} class="utils-feedback success" role="status" aria-live="polite">{@message}</p>
-      <p :if={@error} class="utils-feedback error" role="alert">{@error}</p>
+      </div>
+      <div :if={@message} class="utils-feedback success" role="status" aria-live="polite">{@message}</div>
+      <div :if={@error} class="utils-feedback error" role="alert">{@error}</div>
       <section :if={@report} id="authorization-migration-report" class="utils-report" aria-labelledby="migration-report-title">
         <div class="utils-report-heading">
           <h3 id="migration-report-title">{gettext("Migration report")}</h3><span class="utils-eyebrow">{gettext(
@@ -88,11 +88,11 @@ defmodule BrandoAdmin.Components.AuthorizationTools do
             <dd>{length(@report.unassigned_user_ids)}</dd><dt>{gettext("Unassigned accounts")}</dt>
           </div>
         </dl>
-        <p :if={@report.unassigned_user_ids != []} class="utils-feedback warning">
+        <div :if={@report.unassigned_user_ids != []} class="utils-feedback warning">
           {gettext("These accounts have no site assignment and will receive no site access: %{ids}.",
             ids: Enum.join(@report.unassigned_user_ids, ", ")
           )}
-        </p>
+        </div>
         <details class="utils-rules" open>
           <summary>
             <span>{gettext("Application rules")}</span><span class="utils-pill">{@report.application_rules.review_count} {gettext(
@@ -106,11 +106,11 @@ defmodule BrandoAdmin.Components.AuthorizationTools do
               )}
             </p>
             <code class="utils-module-name">{@report.application_rules.module}</code>
-            <p :if={!@report.application_rules.available} class="utils-feedback warning">
+            <div :if={!@report.application_rules.available} class="utils-feedback warning">
               {gettext(
                 "The application rules module could not be inspected. Review your application’s authorization code manually."
               )}
-            </p>
+            </div>
             <div :for={role <- @report.application_rules.roles} class="utils-rule-role">
               <h4>{String.capitalize(to_string(role.role))}</h4>
               <p :if={role.error}>{role.error}</p>

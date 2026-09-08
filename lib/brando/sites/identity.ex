@@ -85,6 +85,7 @@ defmodule Brando.Sites.Identity do
 
       tab t("Content") do
         fieldset do
+          label t("Organization")
           style :inline
           input :name, :text, label: t("Name")
 
@@ -94,12 +95,14 @@ defmodule Brando.Sites.Identity do
         end
 
         fieldset do
+          label t("Contact")
           style :inline
           input :email, :email, label: t("Email")
           input :phone, :phone, label: t("Phone")
         end
 
         fieldset do
+          label t("Address")
           input :address, :text, label: t("Address line 1")
           input :address2, :text, label: t("Address line 2")
           input :address3, :text, label: t("Address line 3")
@@ -113,6 +116,7 @@ defmodule Brando.Sites.Identity do
         end
 
         fieldset do
+          label t("Page titles")
           style :inline
           input :title_prefix, :text, label: t("Title (prefix)")
           input :title, :text, label: t("Title")
@@ -120,11 +124,12 @@ defmodule Brando.Sites.Identity do
         end
 
         fieldset do
+          label t("Branding")
           input :logo, :image, label: t("Logo")
         end
 
         fieldset do
-          size :half
+          label t("Structured data")
 
           input :type, :select,
             options: [

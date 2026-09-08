@@ -11,6 +11,7 @@
       active_filter={@active_filter}
       active_sort={@active_sort}
       list_opts={@list_opts}
+      hidden_filters={@hidden_filters}
       content_language={@content_language}
       exports={@listing.exports}
       select_export={JS.push("export", target: @myself)}
@@ -24,6 +25,8 @@
       reset_filters={JS.push("reset_filters", target: @myself)}
     />
 
+    {render_slot(@column_header)}
+
     <.entries
       :let={entry}
       target={@myself}
@@ -32,7 +35,10 @@
       pagination_meta={@entries.pagination_meta}
     >
       <:empty>
-        <div class="empty-list">
+        <div :if={@empty_title} class="workspace-empty">
+          <h3>{@empty_title}</h3><p>{@empty_description}</p>
+        </div>
+        <div :if={!@empty_title} class="empty-list">
           <figure>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100" height="100">
               <path fill="none" d="M0 0h24v24H0z" /><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" />
@@ -61,6 +67,7 @@
     </.entries>
 
     <.pagination
+      :if={@entries.pagination_meta.total_entries > 0}
       pagination_meta={@entries.pagination_meta}
       change_page={JS.push("change_page", target: @myself)}
       change_limit={JS.push("change_limit", target: @myself)}

@@ -15,11 +15,13 @@ defmodule BrandoAdmin.Sites.IdentityLive do
 
   def render(assigns) do
     ~H"""
-    <.live_component module={Form} id="identity_form" entry_id={@entry_id} current_user={@current_user} schema={@schema}>
-      <:header>
-        {gettext("Update identity")} (<code><%= @current_user.config.content_language %></code>)
-      </:header>
-    </.live_component>
+    <div class="admin-workspace settings-workspace identity-workspace">
+      <.live_component module={Form} id="identity_form" entry_id={@entry_id} current_user={@current_user} schema={@schema}>
+        <:header>
+          <span>{gettext("Update identity")}</span><span class="workspace-language">{@current_user.config.content_language}</span>
+        </:header>
+      </.live_component>
+    </div>
     """
   end
 

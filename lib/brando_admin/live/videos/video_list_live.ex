@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   alias Brando.Videos.Video
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Workspace
   alias BrandoAdmin.Images.FolderBrowser
   alias BrandoAdmin.LiveView.AssetListHelpers
 
@@ -156,73 +157,79 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Assets — Videos")} subtitle={gettext("Overview")} />
-
-    <.live_component
-      module={FileBrowser}
-      id="assets-video-browser"
-      mode={:inline}
-      upload_root={@upload_root}
-      current_folder={@current_folder}
-      breadcrumbs={@breadcrumbs}
-      recent_folders={@recent_folders}
-      child_folders={@child_folders}
-      show_new_folder_form={@show_new_folder_form}
-      new_folder={@new_folder}
-      go_root_event="assets_go_root"
-      go_folder_event="assets_go_folder"
-      go_parent_event="assets_go_parent"
-      go_recent_event="assets_go_recent"
-      enable_folder_drop={true}
-      folder_drop_event="assets_move_selected_to_folder"
-      show_new_folder_event="assets_show_new_folder_form"
-      cancel_new_folder_event="assets_cancel_new_folder_form"
-      create_folder_event="assets_create_folder"
-      main_id="assets-video-browser-main"
-    >
-      <:main_header>
-        <div class="image-picker-main-header">
-          <h3>{folder_label_for_display(@current_folder_abs, @upload_root)}</h3>
-          <div class="image-picker-main-actions">
-            <span>
-              {ngettext("%{count} video", "%{count} videos", @visible_video_count, count: @visible_video_count)}
-            </span>
-            <span :if={@clipboard_ids != []} class="clipboard-status">
-              {gettext("Cut queue")}: {length(@clipboard_ids)}
-            </span>
-            <button
-              :if={@clipboard_ids != []}
-              type="button"
-              class="folder-action"
-              phx-click="assets_paste_selected"
-            >
-              {gettext("Paste")}
-            </button>
-            <button
-              :if={@clipboard_ids != []}
-              type="button"
-              class="folder-action"
-              phx-click="assets_clear_clipboard"
-            >
-              {gettext("Clear")}
-            </button>
-          </div>
-        </div>
-      </:main_header>
+    <div class="admin-workspace workspace-list media-workspace videos-workspace">
+      <Workspace.header title={gettext("Videos")} />
 
       <.live_component
-        module={Content.List}
-        id={"content_listing_#{@schema}_default"}
-        schema={@schema}
-        current_user={@current_user}
-        uri={@uri}
-        params={AssetListHelpers.list_params(@params)}
-        listing={:default}
-        extra_selection_actions={[
-          %{event: "assets_cut_selected", label: gettext("Cut selected")}
-        ]}
-      />
-    </.live_component>
+        module={FileBrowser}
+        id="assets-video-browser"
+        mode={:inline}
+        root_name={gettext("Videos")}
+        upload_root={@upload_root}
+        current_folder={@current_folder}
+        breadcrumbs={@breadcrumbs}
+        recent_folders={@recent_folders}
+        child_folders={@child_folders}
+        show_new_folder_form={@show_new_folder_form}
+        new_folder={@new_folder}
+        go_root_event="assets_go_root"
+        go_folder_event="assets_go_folder"
+        go_parent_event="assets_go_parent"
+        go_recent_event="assets_go_recent"
+        enable_folder_drop={true}
+        folder_drop_event="assets_move_selected_to_folder"
+        show_new_folder_event="assets_show_new_folder_form"
+        cancel_new_folder_event="assets_cancel_new_folder_form"
+        create_folder_event="assets_create_folder"
+        main_id="assets-video-browser-main"
+      >
+        <:main_header>
+          <div class="image-picker-main-header">
+            <h3>{if @current_folder == "", do: gettext("Library root"), else: Path.basename(@current_folder)}</h3>
+            <div class="image-picker-main-actions">
+              <span>
+                {ngettext("%{count} video", "%{count} videos", @visible_video_count, count: @visible_video_count)}
+              </span>
+              <span :if={@clipboard_ids != []} class="clipboard-status">
+                {gettext("Cut queue")}: {length(@clipboard_ids)}
+              </span>
+              <button
+                :if={@clipboard_ids != []}
+                type="button"
+                class="folder-action"
+                phx-click="assets_paste_selected"
+              >
+                {gettext("Paste")}
+              </button>
+              <button
+                :if={@clipboard_ids != []}
+                type="button"
+                class="folder-action"
+                phx-click="assets_clear_clipboard"
+              >
+                {gettext("Clear")}
+              </button>
+            </div>
+          </div>
+        </:main_header>
+
+        <.live_component
+          module={Content.List}
+          id={"content_listing_#{@schema}_default"}
+          schema={@schema}
+          current_user={@current_user}
+          uri={@uri}
+          params={AssetListHelpers.list_params(@params)}
+          listing={:default}
+          hidden_filters={[:folder_id]}
+          empty_title={gettext("No videos in this view")}
+          empty_description={gettext("Choose a folder or adjust your search.")}
+          extra_selection_actions={[
+            %{event: "assets_cut_selected", label: gettext("Cut selected")}
+          ]}
+        />
+      </.live_component>
+    </div>
     """
   end
 
@@ -267,7 +274,10 @@ defmodule BrandoAdmin.Videos.VideoListLive do
     |> assign(:current_folder_abs, current_folder_abs)
     |> assign(:breadcrumbs, breadcrumbs)
     |> assign(:recent_folders, recent_folders)
-    |> assign(:visible_video_count, length(visible_videos))
+    |> assign(
+      :visible_video_count,
+      if(current_folder == "", do: Enum.count(videos, &is_nil(&1.folder_id)), else: length(visible_videos))
+    )
   end
 
   defp folder_label_for_display(folder, upload_root) do

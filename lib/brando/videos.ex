@@ -52,7 +52,14 @@ defmodule Brando.Videos do
         from t in query, where: t.config_target == ^target_string
 
       {:path, path}, query ->
-        from q in query, where: ilike(q.path, ^"%#{path}%")
+        pattern = "%#{path}%"
+        encoded_pattern = "%#{URI.encode(path)}%"
+
+        from q in query,
+          where:
+            ilike(q.title, ^pattern) or ilike(q.source_url, ^pattern) or ilike(q.remote_id, ^pattern) or
+              ilike(q.title, ^encoded_pattern) or ilike(q.source_url, ^encoded_pattern) or
+              ilike(q.remote_id, ^encoded_pattern)
 
       {:folder_id, folder_id}, query ->
         case normalize_folder_id(folder_id) do

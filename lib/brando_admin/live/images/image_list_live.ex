@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
   alias Brando.Images.Image
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Workspace
   alias BrandoAdmin.Images.FolderBrowser
   alias BrandoAdmin.LiveView.AssetListHelpers
 
@@ -170,34 +171,39 @@ defmodule BrandoAdmin.Images.ImageListLive do
   end
 
   def handle_progress(:images, entry, socket) do
-    if entry.done? do
-      config_target = socket.assigns.current_folder_config_target || "default"
-      {:ok, cfg} = Images.get_config_for(%{config_target: config_target})
-      folder_id = FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root)
-      cfg = maybe_override_image_upload_path(cfg, socket.assigns.upload_folder || socket.assigns.current_folder_abs)
+    socket =
+      if entry.done? do
+        config_target = socket.assigns.current_folder_config_target || "default"
+        {:ok, cfg} = Images.get_config_for(%{config_target: config_target})
+        folder_id = FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root)
+        cfg = maybe_override_image_upload_path(cfg, socket.assigns.upload_folder || socket.assigns.current_folder_abs)
 
-      case consume_uploaded_entry(socket, entry, fn %{path: path} ->
-             case Images.Uploads.Schema.handle_upload(
-                    %{
-                      "image" => %Plug.Upload{filename: entry.client_name, content_type: entry.client_type, path: path},
-                      "config_target" => config_target,
-                      "folder_id" => folder_id
-                    },
-                    cfg,
-                    socket.assigns.current_user
-                  ) do
-               {:ok, image} -> {:ok, image}
-               {:error, reason} -> {:ok, {:upload_error, reason}}
-             end
-           end) do
-        {:upload_error, _reason} ->
-          send(self(), {:toast, gettext("Failed to upload image")})
+        case consume_uploaded_entry(socket, entry, fn %{path: path} ->
+               case Images.Uploads.Schema.handle_upload(
+                      %{
+                        "image" => %Plug.Upload{filename: entry.client_name, content_type: entry.client_type, path: path},
+                        "config_target" => config_target,
+                        "folder_id" => folder_id
+                      },
+                      cfg,
+                      socket.assigns.current_user
+                    ) do
+                 {:ok, image} -> {:ok, image}
+                 {:error, reason} -> {:ok, {:upload_error, reason}}
+               end
+             end) do
+          {:upload_error, _reason} ->
+            send(self(), {:toast, gettext("Failed to upload image")})
+            socket
 
-        _image ->
-          send(self(), {:toast, gettext("Image uploaded successfully")})
-          AssetListHelpers.update_list_entries(socket.assigns.schema)
+          _image ->
+            send(self(), {:toast, gettext("Image uploaded successfully")})
+            AssetListHelpers.update_list_entries(socket.assigns.schema)
+            assign_folder_state(socket, socket.assigns.current_folder)
+        end
+      else
+        socket
       end
-    end
 
     {:noreply, socket}
   end
@@ -205,80 +211,94 @@ defmodule BrandoAdmin.Images.ImageListLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Assets — Images")} subtitle={gettext("Overview")}></Content.header>
-
-    <.live_component
-      module={FileBrowser}
-      id="assets-image-browser"
-      mode={:inline}
-      upload_root={@upload_root}
-      current_folder={@current_folder}
-      breadcrumbs={@breadcrumbs}
-      recent_folders={@recent_folders}
-      child_folders={@child_folders}
-      show_new_folder_form={@show_new_folder_form}
-      new_folder={@new_folder}
-      go_root_event="assets_go_root"
-      go_folder_event="assets_go_folder"
-      go_parent_event="assets_go_parent"
-      go_recent_event="assets_go_recent"
-      enable_folder_drop={true}
-      folder_drop_event="assets_move_selected_to_folder"
-      show_new_folder_event="assets_show_new_folder_form"
-      cancel_new_folder_event="assets_cancel_new_folder_form"
-      create_folder_event="assets_create_folder"
-      main_id="assets-image-browser-main"
-    >
-      <:main_header>
-        <div class="image-picker-main-header">
-          <h3>{folder_label_for_display(@current_folder_abs)}</h3>
-          <div class="image-picker-main-actions">
-            <span>
-              {ngettext("%{count} image", "%{count} images", @visible_image_count, count: @visible_image_count)}
-            </span>
-            <span :if={@clipboard_ids != []} class="clipboard-status">
-              {gettext("Cut queue")}: {length(@clipboard_ids)}
-            </span>
-            <form phx-change="validate" phx-drop-target={@uploads.images.ref}>
-              <input type="hidden" name="upload[folder]" value={@current_folder_abs} />
-              <label class="folder-action">
-                <span>{gettext("Upload")}</span>
-                <.live_file_input upload={@uploads.images} class="hidden" />
-              </label>
-            </form>
-            <button
-              :if={@clipboard_ids != []}
-              type="button"
-              class="folder-action"
-              phx-click="assets_paste_selected"
-            >
-              {gettext("Paste")}
-            </button>
-            <button
-              :if={@clipboard_ids != []}
-              type="button"
-              class="folder-action"
-              phx-click="assets_clear_clipboard"
-            >
-              {gettext("Clear")}
-            </button>
-          </div>
-        </div>
-      </:main_header>
+    <div class="admin-workspace media-workspace images-workspace workspace-list">
+      <Workspace.header
+        title={gettext("Images")}
+        subtitle={gettext("Browse folders, upload images, and manage your library.")}
+      />
 
       <.live_component
-        module={Content.List}
-        id={"content_listing_#{@schema}_default"}
-        schema={@schema}
-        current_user={@current_user}
-        uri={@uri}
-        params={AssetListHelpers.list_params(@params)}
-        listing={:default}
-        extra_selection_actions={[
-          %{event: "assets_cut_selected", label: gettext("Cut selected")}
-        ]}
-      />
-    </.live_component>
+        module={FileBrowser}
+        id="assets-image-browser"
+        mode={:inline}
+        root_name={gettext("Images")}
+        folders_description={gettext("Browse this location")}
+        upload_root={@upload_root}
+        current_folder={@current_folder}
+        breadcrumbs={@breadcrumbs}
+        recent_folders={@recent_folders}
+        child_folders={@child_folders}
+        show_new_folder_form={@show_new_folder_form}
+        new_folder={@new_folder}
+        go_root_event="assets_go_root"
+        go_folder_event="assets_go_folder"
+        go_parent_event="assets_go_parent"
+        go_recent_event="assets_go_recent"
+        enable_folder_drop={true}
+        folder_drop_event="assets_move_selected_to_folder"
+        show_new_folder_event="assets_show_new_folder_form"
+        cancel_new_folder_event="assets_cancel_new_folder_form"
+        create_folder_event="assets_create_folder"
+        main_id="assets-image-browser-main"
+      >
+        <:main_header>
+          <div class="image-picker-main-header">
+            <h3>{if @current_folder == "", do: gettext("Root folder"), else: Path.basename(@current_folder)}</h3>
+            <div class="image-picker-main-actions">
+              <span>
+                {ngettext("%{count} image", "%{count} images", @visible_image_count, count: @visible_image_count)}
+              </span>
+              <span :if={@clipboard_ids != []} class="clipboard-status">
+                {gettext("Cut queue")}: {length(@clipboard_ids)}
+              </span>
+              <form phx-change="validate" phx-drop-target={@uploads.images.ref}>
+                <input type="hidden" name="upload[folder]" value={@current_folder_abs} />
+                <label class="folder-action workspace-button primary">
+                  <span>{gettext("Upload")}</span>
+                  <.live_file_input
+                    upload={@uploads.images}
+                    class="library-upload-input"
+                    aria-label={gettext("Upload images")}
+                  />
+                </label>
+              </form>
+              <button
+                :if={@clipboard_ids != []}
+                type="button"
+                class="folder-action"
+                phx-click="assets_paste_selected"
+              >
+                {gettext("Paste")}
+              </button>
+              <button
+                :if={@clipboard_ids != []}
+                type="button"
+                class="folder-action"
+                phx-click="assets_clear_clipboard"
+              >
+                {gettext("Clear")}
+              </button>
+            </div>
+          </div>
+        </:main_header>
+
+        <.live_component
+          module={Content.List}
+          id={"content_listing_#{@schema}_default"}
+          schema={@schema}
+          current_user={@current_user}
+          uri={@uri}
+          params={AssetListHelpers.list_params(@params)}
+          listing={:default}
+          hidden_filters={[:folder_id]}
+          empty_title={gettext("No images in this view")}
+          empty_description={gettext("Choose a folder, upload an image, or adjust your search.")}
+          extra_selection_actions={[
+            %{event: "assets_cut_selected", label: gettext("Cut selected")}
+          ]}
+        />
+      </.live_component>
+    </div>
     """
   end
 

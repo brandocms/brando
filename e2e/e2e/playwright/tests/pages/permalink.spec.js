@@ -9,7 +9,7 @@ async function createPage(page) {
   await page.getByLabel('URI', { exact: true }).fill('about-our-studio')
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL(/\/admin\/pages$/)
-  await page.getByRole('link', { name: 'About our studio →' }).click()
+  await page.getByRole('link', { name: 'About our studio', exact: true }).click()
   await syncLV(page)
 }
 
@@ -112,7 +112,7 @@ test('plain forms prompt on slug changes and preserve continue-editing saves', a
   await page.getByRole('link', { name: 'Create new', exact: true }).click()
   await page.getByLabel('Title', { exact: true }).fill('Design')
   await page.getByTestId('submit').click()
-  await page.getByRole('link', { name: 'Design →' }).click()
+  await page.getByRole('link', { name: 'Design →', exact: true }).click()
   await syncLV(page)
   const editUrl = page.url()
   const slug = page.getByLabel('Slug', { exact: true })

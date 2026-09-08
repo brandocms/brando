@@ -93,7 +93,7 @@ defmodule Brando.Videos.Video do
   listings do
     listing do
       query %{order: [{:desc, :id}]}
-      filter label: t("Path"), key: "path"
+      filter label: t("Title or source"), key: "path"
       component &__MODULE__.listing_row/1
     end
   end
@@ -142,34 +142,46 @@ defmodule Brando.Videos.Video do
 
   def listing_row(assigns) do
     ~H"""
-    <.field columns={1}>
-      <div class="padded">
-        <img :if={@entry.thumbnail} width="25" height="25" src={Brando.Utils.img_url(@entry.thumbnail, :smallest)} />
-      </div>
+    <.field columns={1} class="library-thumbnail library-video-thumbnail">
+      <img :if={@entry.thumbnail} width="64" height="52" alt="" src={Brando.Utils.img_url(@entry.thumbnail, :smallest)} />
+      <Brando.HTML.Icon.icon :if={!@entry.thumbnail} name="hero-film" />
     </.field>
-    <.field columns={1}>
-      <small class="monospace">#{@entry.id}</small>
-    </.field>
-    <.update_link entry={@entry} columns={8}>
-      {@entry.title || gettext("Untitled")}
+    <.update_link entry={@entry} columns={8} class="library-image-info">
+      {if @entry.title, do: URI.decode(@entry.title), else: gettext("Untitled")}
       <:outside>
-        <br />
-        <div>
-          <small>
-            <%= case @entry.type do %>
-              <% :upload -> %>
-                Upload: {@entry.file.filename}
-              <% :external_file -> %>
-                External file <span :if={@entry.source_url}>({URI.parse(@entry.source_url).host})</span>
-              <% _ -> %>
-                {@entry.type}: {@entry.source_url || @entry.remote_id}
-            <% end %>
-          </small>
+        <div class="library-image-title">
+          <%= case @entry.type do %>
+            <% :upload -> %>
+              {if @entry.file, do: URI.decode(@entry.file.filename)}
+            <% _ -> %>
+              {video_source(@entry)}
+          <% end %>
         </div>
-        <div><small>{@entry.width}&times;{@entry.height}</small></div>
+        <div class="library-image-meta">
+          <span class="library-format">{video_type_label(@entry.type)}</span>
+          <span :if={@entry.width && @entry.height}>{@entry.width} × {@entry.height}</span>
+          <span :if={@entry.duration && @entry.duration != ""}>{@entry.duration}</span>
+          <span :if={@entry.type == :upload && @entry.file}>{Brando.Utils.human_size(@entry.file.filesize)}</span>
+        </div>
       </:outside>
     </.update_link>
-    <.url entry={@entry} />
     """
   end
+
+  defp video_source(%{source_url: url}) when is_binary(url) and url != "" do
+    uri = URI.parse(url)
+
+    [uri.host, uri.path && Path.basename(uri.path)]
+    |> Enum.reject(&(&1 in [nil, "", "/"]))
+    |> Enum.join("/")
+    |> URI.decode()
+  end
+
+  defp video_source(video), do: video.remote_id
+
+  defp video_type_label(:upload), do: gettext("Uploaded file")
+  defp video_type_label(:external_file), do: gettext("External file")
+  defp video_type_label(:youtube), do: "YouTube"
+  defp video_type_label(:vimeo), do: "Vimeo"
+  defp video_type_label(type), do: type |> to_string() |> String.capitalize()
 end

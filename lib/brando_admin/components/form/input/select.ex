@@ -116,7 +116,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
             id={@modal_id}
             title={gettext("Select option")}
             narrow={@narrow}
-            close={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}
+            close={JS.push("close_modal", target: @myself) |> hide_modal("##{@modal_id}")}
           >
             <%= if @open do %>
               <div class="select-modal">
@@ -182,7 +182,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                     phx-click={
                       JS.add_class("option-selected")
                       |> JS.push("select_option", target: @myself)
-                      |> JS.push("toggle_modal", target: @myself)
+                      |> JS.push("close_modal", target: @myself)
                       |> hide_modal("##{@modal_id}")
                     }
                   >
@@ -210,7 +210,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                       class="secondary"
                       phx-click={
                         JS.push("select_custom_value", target: @myself)
-                        |> JS.push("toggle_modal", target: @myself)
+                        |> JS.push("close_modal", target: @myself)
                         |> hide_modal("##{@modal_id}")
                       }
                     >
@@ -256,7 +256,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 <button
                   type="button"
                   class="primary small"
-                  phx-click={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}
+                  phx-click={JS.push("close_modal", target: @myself) |> hide_modal("##{@modal_id}")}
                 >
                   OK
                 </button>
@@ -562,6 +562,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   end
 
   defp assign_custom_input_value(socket), do: socket
+
+  def handle_event("close_modal", _, socket) do
+    {:noreply, assign(socket, :open, false)}
+  end
 
   def handle_event("toggle_modal", _, socket) do
     socket = (!socket.assigns.open && update_input_options(socket)) || socket

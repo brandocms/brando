@@ -1,0 +1,160 @@
+/* Settings use one spacing owner: the outer fieldset grid. */
+.admin-workspace.settings-workspace {
+  max-width: 1120px;
+  .brando-form { --admin-field-height: 40px; --admin-field-font-size: 14px; }
+  .brando-form .form-content .form-header { margin: 0 0 24px; padding-bottom: 24px; border-bottom: 1px solid var(--workspace-line); }
+  .form-header h1 { display: flex; align-items: center; gap: 12px; }
+  .workspace-language { display: inline-flex; align-items: center; justify-content: center; padding: 4px 8px; border: 1px solid #dce6dc; border-radius: 5px; background: #eef4eb; color: #526b54; font-size: 12px; font-weight: 500; line-height: 18px; letter-spacing: .04em; text-transform: uppercase; }
+  .form-content > .form-tabs { min-height: 44px; padding: 4px; margin: 0 0 24px; border: 1px solid #dce5df; border-radius: 7px; background: #f4f8f2; box-shadow: none; }
+  .form-tab-customs button { min-height: 32px; padding: 6px 12px; font-size: 13px; border-radius: 5px; color: var(--workspace-muted); }
+  .form-tab-customs button.active { background: #e5efdf; color: var(--workspace-accent); }
+  /* With one section and only Save, use a quiet caption and one action accent. */
+  .form-content > .form-tabs:has(> .form-tab-customs > button:only-child):has(> .form-tab-builtins > .form-tool-save:only-child) {
+    background: #fff;
+    .form-tab-customs button, .form-tab-customs button:hover { background: transparent; color: var(--workspace-ink); }
+    .form-tab-builtins .form-tool-save {
+      --form-tool-bg: #edf3e9;
+      --form-tool-hover: #e2ecdd;
+      --form-tool-ink: #3d5c48;
+    }
+  }
+  .brando-form .form-tab > .row { row-gap: 24px; }
+  .brando-form fieldset { min-width: 0; padding: 0; margin: 0; }
+  .brando-form .form-tab > .row > fieldset.labelled { padding-top: 24px; border-top: 1px solid var(--workspace-line); }
+  .brando-form .form-tab > .row > fieldset.labelled:first-child { padding-top: 0; border-top: 0; }
+  .brando-form fieldset legend { width: 100%; float: left; margin: 0 0 16px; font-size: 18px; line-height: 26px; font-weight: 500; color: var(--workspace-ink); }
+  .brando-form fieldset.inline { display: flex; flex-wrap: wrap; gap: 16px; }
+  .brando-form fieldset.inline > .brando-input { margin: 0; flex: 1 1 0; min-width: 0; }
+  .brando-form fieldset.inline > legend { flex-basis: 100%; margin-bottom: 0; }
+  .brando-form fieldset:not(.inline) > .brando-input + .brando-input { margin-top: 16px; }
+  .brando-form .field-wrapper { margin-bottom: 0; }
+  .field-wrapper > .label-wrapper { margin-bottom: 8px; }
+  .field-wrapper > .label-wrapper label { font-size: 13px; line-height: 20px; color: #46554c; }
+  .field-wrapper input.text, .field-wrapper input[type="email"], .field-wrapper input[type="tel"], .field-wrapper textarea, .field-wrapper .multiselect { border-color: #d7dfd9; border-radius: 6px; color: var(--workspace-ink); background: #fff; box-shadow: 0 1px 2px #233d2e05; font-size: 14px; }
+  .field-wrapper input.text { padding-inline: 12px; }
+  .field-wrapper textarea { padding: 10px 12px; line-height: 1.6; }
+  .field-wrapper .instructions { color: var(--workspace-muted); font-size: 12px; }
+  .brando-form .subform { border: 1px solid #e1dfeb; border-radius: 8px; background: #f6f4fb; box-shadow: none; padding: 16px; }
+  .subform > .label-wrapper { margin-bottom: 16px; }
+  .subform > .label-wrapper label { font-size: 15px; color: #554d6b; }
+  .brando-form .subform-entry { border-color: #e6e2ee; background: #fff; border-radius: 6px; }
+  .brando-form .subform-entry .subform-fields { gap: 16px; align-items: flex-end; }
+  .brando-form .subform-entry .subform-fields > .brando-input { margin: 0; min-width: 0; }
+  .brando-form .subform-entry .subform-fields .field-wrapper { margin: 0; }
+  .brando-form .subform-entry.inline:first-of-type .label-wrapper { margin-bottom: 8px; }
+  .brando-form .subform-entry.inline:not(:first-of-type) .label-wrapper { margin-bottom: 0; }
+  .brando-form .subform-tools button { min-height: 26px; padding: 5px; background: #f0edf8; color: #6a5a89; }
+  .brando-form .subform-tools button:hover { background: #e5ddf3; }
+  .brando-form .subform-tools button [data-icon] { background-color: currentColor; }
+  .brando-form button.primary, .brando-form button.secondary, .brando-form button.small { min-height: 34px; height: auto; padding: 7px 14px; border-radius: 6px; font-size: 13px; line-height: 18px; }
+  .brando-form button.primary { background: var(--workspace-accent); border-color: var(--workspace-accent); color: #fff; }
+  .brando-form .submit-button { display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 116px; margin-top: 24px; }
+  .add-entry-button { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; height: auto; margin-top: 12px; padding: 7px 12px; border: 1px solid #d9d4e7; border-radius: 6px; background: #fff; color: #5b4b77; font-family: inherit; font-size: 13px; line-height: 18px; }
+  .add-entry-button [data-icon] { display: block; width: 14px; height: 14px; margin: 0; }
+  .add-entry-button:hover { background: #efeaf8; border-color: #c8bedb; }
+  .global-save-actions { padding-top: 20px; }
+  .global-tabs > [role="region"] { max-width: 880px; }
+  .seo-search-preview { max-width: 620px; padding: 16px; border: 1px solid var(--workspace-line); border-radius: 6px; display: flex; flex-direction: column; gap: 6px; overflow-wrap: anywhere; }
+  .seo-sharing-preview { max-width: 620px; margin: 16px 0 0; }
+  .seo-sharing-preview figcaption { margin-bottom: 8px; font-size: 12px; color: var(--workspace-muted); }
+  .seo-sharing-preview .image-content { width: 100%; aspect-ratio: 1.91; overflow: hidden; border: 1px solid var(--workspace-line); border-radius: 6px; }
+  .seo-sharing-preview .image, .seo-sharing-preview picture, .seo-sharing-preview img { display: block; width: 100%; height: 100%; }
+  .seo-sharing-preview img { object-fit: cover; }
+  .seo-preview-url { color: var(--workspace-muted); font-size: 12px; }
+  .seo-preview-title { color: var(--workspace-accent); font-size: 19px; line-height: 1.4; }
+  .seo-search-preview p { color: var(--workspace-ink); font-size: 13px; line-height: 1.6; }
+  .seo-search-preview small { margin-top: 8px; color: var(--workspace-muted); font-size: 11px; }
+  .seo-not-found { margin-top: 32px; }
+  .seo-not-found td:first-child { overflow-wrap: anywhere; }
+
+  @media (max-width: 600px) {
+    .brando-form fieldset.inline > .brando-input { flex-basis: 100%; width: 100%; }
+    .brando-form fieldset.half { width: 100%; }
+    .form-content > .form-tabs { flex-wrap: nowrap; gap: 8px; }
+    .form-content > .form-tabs .form-tab-builtins { width: auto; margin-left: auto; }
+    .brando-form .subform { padding: 12px; }
+    .brando-form .subform-entry .subform-fields { flex-wrap: wrap; }
+    .brando-form .subform-entry .subform-fields > .brando-input { flex-basis: 100%; }
+    .brando-form .subform-entry.inline .subform-fields .label-wrapper { height: auto; overflow: visible; margin-bottom: 8px; }
+  }
+  @media (pointer: coarse) { .brando-form button.primary, .brando-form button.secondary, .form-tab-customs button, .add-entry-button { min-height: 40px; } }
+}
+.admin-workspace.seo-workspace {
+  .brando-form fieldset:not(:has(.subform)) { max-width: 800px; }
+  .brando-input:has(> .field-wrapper input[name$="[code]"]) { flex: 0 0 80px; max-width: 80px; }
+  .brando-form .subform { background: #f1f6fa; border-color: #d8e4ed; }
+  .subform > .label-wrapper label { color: #476477; }
+  .brando-form .subform-entry { border-color: #dbe6ed; }
+  @media(max-width: 600px) { .brando-input:has(> .field-wrapper input[name$="[code]"]) { flex: 0 0 80px; } }
+}
+.admin-workspace.identity-workspace {
+  .type-config-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 600px) { .type-config-fields { grid-template-columns: minmax(0, 1fr); } }
+
+  .brando-input:has(> .field-wrapper input[name="identity[zipcode]"]) { flex: 0 0 130px; }
+  .brando-input:has(> .field-wrapper input[name="identity[country]"]) { flex: 0 0 160px; }
+  .brando-input:has(input[name="identity[type]"]) { max-width: 520px; }
+  .brando-form .subform { background: #f5f7ed; border-color: #e0e6d4; }
+  .subform > .label-wrapper label { color: #596844; }
+}
+.admin-workspace.menu-workspace {
+  .brando-form .form-tab > .row > fieldset.inline:first-child .brando-input:first-child { flex: 1.5; }
+  .brando-form .form-tab > .row > fieldset.inline:nth-child(2) { max-width: 680px; }
+  .brando-form .subform-entry.inline { align-items: flex-end; padding: 14px; margin-bottom: 8px; }
+  .brando-form .subform-entry.inline .subform-tools { padding: 0 12px 0 0; align-self: stretch; justify-content: flex-end; }
+  .brando-form .subform-entry.inline .subform-fields { display: grid; grid-template-columns: 40px minmax(120px, 180px) minmax(0, 1fr); gap: 16px; align-items: end; }
+  .brando-form .subform-fields .brando-input { width: 100%; }
+  .brando-form .subform-fields .radios-wrapper.status.compact { box-sizing: border-box; width: 40px; height: 40px; min-height: 40px; background: #fff; }
+  .brando-form .subform-fields .label-wrapper { display: flex; align-items: center; line-height: 20px; }
+  .brando-form .subform-fields .label-wrapper label { display: block; white-space: nowrap; font-size: 13px; line-height: 20px; }
+  .brando-form .subform-entry.inline .subform-fields .label-wrapper { height: auto; overflow: visible; margin-bottom: 8px; }
+  .brando-form .subform-fields .link-preview { box-sizing: border-box; width: 100%; max-width: none; height: 40px; min-height: 40px; padding: 6px 10px; border: 1px solid #d7dfd9; border-radius: 6px; background: #fff; cursor: pointer; }
+  .subform-fields .link-preview .icon { width: 24px; height: 24px; border: 0; background: #eeebf6; color: #76638e; }
+  .subform-fields .link-preview .info { @font main; text-transform: none; display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; }
+  .subform-fields .link-preview .link-text { flex: 0 1 auto; font-family: inherit; font-size: 14px; line-height: 20px; text-transform: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .subform-fields .link-preview dl { min-width: 0; font-family: inherit; font-size: 12px; color: var(--workspace-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .subform-fields .link-preview dl:has(dd) dt { display: none; }
+  .subform-fields .link-preview dd { margin: 0; padding: 0; }
+  @media (max-width: 700px) {
+    .brando-form .form-tab > .row > fieldset.inline:first-child .brando-input:first-child { flex-basis: 100%; }
+    .brando-form .subform-entry.inline { position: relative; display: block; padding: 14px; }
+    .brando-form .subform-entry.inline .subform-tools { position: absolute; top: 12px; right: 12px; flex-direction: row; gap: 6px; padding: 0; }
+    .brando-form .subform-entry.inline .subform-tools button { width: 30px; height: 30px; }
+    .brando-form .subform-entry.inline .subform-fields { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .brando-form .subform-fields > .brando-input:has(.radios-wrapper.status.compact) { min-height: 40px; padding-right: 80px; }
+    .brando-form .subform-fields .field-wrapper:has(> .field-base .radios-wrapper.status.compact) { display: flex; flex-direction: row-reverse; align-items: center; gap: 8px; }
+    .brando-form .subform-fields .field-wrapper:has(.radios-wrapper.status.compact) > .label-wrapper { margin: 0; }
+    .brando-form .subform-fields > .brando-input:has(.link-preview) { grid-column: 1 / -1; }
+    .brando-form .subform-fields .link-preview { height: auto; min-height: 54px; }
+    .subform-fields .link-preview .info { display: block; }
+    .subform-fields .link-preview .link-text { white-space: normal; }
+    .subform-fields .link-preview dl { white-space: normal; overflow-wrap: anywhere; }
+  }
+}
+.dashboard-workspace {
+  .dashboard-shortcuts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px; margin-bottom: 24px; border: 1px solid #e0e5e3; border-radius: 8px; background: #fafbf9; }
+  .dashboard-shortcut { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 8px 12px; border: 1px solid transparent; border-radius: 5px; color: #3d5c48; text-decoration: none; font-size: 13px; line-height: 20px; background: #eaf2e4; }
+  .dashboard-shortcut:nth-child(2) { color: #4b6780; background: #eaf2f9; }
+  .dashboard-shortcut:nth-child(3) { color: #766080; background: #f0eafa; }
+  .dashboard-shortcut:nth-child(4) { color: #886849; background: #faf0df; }
+  .dashboard-shortcut [data-icon] { display: block; width: 16px; height: 16px; }
+  .dashboard-shortcut:hover { filter: brightness(.96); border-color: #bacbbb; }
+  .dashboard-columns { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .dashboard-columns .workspace-panel { margin: 0; }
+  .dashboard-secondary { display: flex; flex-direction: column; gap: 24px; }
+  .workspace-panel-heading { padding: 16px 18px; background: #f0f5ed; }
+  .workspace-panel-heading h2 { font-size: 17px; line-height: 24px; }
+  .dashboard-secondary .workspace-panel:first-child .workspace-panel-heading { background: #f3eff9; }
+  .dashboard-secondary .workspace-panel:last-child .workspace-panel-heading { background: #faf3e7; }
+  .dashboard-entry { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 18px; border-bottom: 1px solid var(--workspace-line); }
+  .dashboard-entry:last-child { border-bottom: 0; }
+  .dashboard-entry > div { min-width: 0; }
+  .dashboard-entry a, .dashboard-entry strong { color: var(--workspace-ink); font-size: 15px; line-height: 22px; font-weight: 500; text-decoration: none; overflow-wrap: anywhere; }
+  .dashboard-entry a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .dashboard-entry small { display: block; margin-top: 4px; font-size: 12px; color: var(--workspace-muted); }
+  .dashboard-entry-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+  .dashboard-entry time { font-size: 11px; color: var(--workspace-muted); white-space: nowrap; }
+  .workspace-empty { padding: 24px 18px; }
+  @media (max-width: 900px) { .dashboard-columns { grid-template-columns: 1fr; } }
+  @media (max-width: 500px) { .dashboard-entry { align-items: flex-start; gap: 10px; } .dashboard-shortcuts { gap: 6px; } .dashboard-shortcut { flex: 1 1 42%; padding-inline: 10px; } }
+}

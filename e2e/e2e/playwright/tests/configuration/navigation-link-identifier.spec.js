@@ -10,18 +10,18 @@ test.describe('Link var identifier picker', () => {
     await page.goto('/admin')
     await page.getByText('Configuration').click()
     await page.getByRole('link', { name: 'Navigation' }).click()
-    await page.getByRole('link', { name: 'Main menu →' }).click()
+    await page.getByRole('link', { name: 'Main menu' }).click()
     await syncLV(page)
 
     // Open the first menu item's link modal
-    await page.locator('#menu_items_0_link_0_identifier_id-field-base').click()
+    await page.locator('#menu_items_0_link_0_identifier_id-field-base .link-preview').click()
     await syncLV(page)
 
     const modal = page.locator('#var-menu_items_0_link_0-link-config')
     await expect(modal).toBeVisible()
 
     // Switch the link type to Identifier
-    await modal.locator('#menu_items_0_link_0_link_type-field-base').getByText('Identifier').click()
+    await modal.getByRole('radio', { name: 'Content', exact: true }).check()
     await syncLV(page)
 
     // Projects (labelled "Cases" here) is the only seeded identifier schema
@@ -44,7 +44,7 @@ test.describe('Link var identifier picker', () => {
     await expect(identifiers.filter({ visible: true })).toHaveCount(1)
     await expect(identifiers.filter({ visible: true })).toHaveAttribute(
       'data-label',
-      'Test Project Alpha'
+      /^Test Project Alpha/
     )
 
     // A term matching nothing hides every row and shows the empty state

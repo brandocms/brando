@@ -55,6 +55,8 @@ defmodule Brando.Sites.SEO do
 
       tab t("Content") do
         fieldset do
+          label t("Default metadata")
+
           input :fallback_meta_title, :text,
             label: t("Fallback META title"),
             placeholder: t("Fallback META title")
@@ -66,7 +68,15 @@ defmodule Brando.Sites.SEO do
           input :fallback_meta_image, :image,
             label: t("Fallback META image"),
             placeholder: t("Fallback META image")
+        end
 
+        fieldset do
+          label t("Search preview")
+          component &__MODULE__.search_preview/1
+        end
+
+        fieldset do
+          label t("Indexing")
           input :base_url, :text, label: t("Base URL"), placeholder: t("https://yoursite.com")
           input :robots, :textarea, monospace: true, label: t("Robots"), placeholder: t("Robots")
         end
@@ -95,6 +105,28 @@ defmodule Brando.Sites.SEO do
       translate :singular, t("SEO")
       translate :plural, t("SEO")
     end
+  end
+
+  def search_preview(assigns) do
+    image = Ecto.Changeset.get_field(assigns.form.source, :fallback_meta_image)
+
+    assigns =
+      assigns
+      |> Phoenix.Component.assign(:preview_form, assigns.form)
+      |> Phoenix.Component.assign(:preview_image, if(match?(%Brando.Images.Image{}, image), do: image))
+
+    ~H"""
+    <div class="seo-search-preview">
+      <span class="seo-preview-url">{@preview_form[:base_url].value}</span>
+      <div class="seo-preview-title">{@preview_form[:fallback_meta_title].value}</div>
+      <p>{@preview_form[:fallback_meta_description].value}</p>
+      <small>{gettext("Preview of the default metadata. Individual pages can override these values.")}</small>
+    </div>
+    <figure :if={@preview_image} class="seo-sharing-preview">
+      <figcaption>{gettext("Sharing image")}</figcaption>
+      <BrandoAdmin.Components.Content.image image={@preview_image} size={:xlarge} />
+    </figure>
+    """
   end
 
   def redirect(socket, _entry, _) do

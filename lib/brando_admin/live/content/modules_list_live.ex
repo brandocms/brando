@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Workspace
   alias Phoenix.LiveView.JS
 
   def mount(_, _session, socket) do
@@ -15,24 +16,33 @@ defmodule BrandoAdmin.Content.ModuleListLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Content Modules")} subtitle={gettext("Overview")}>
-      <button class="stealth" phx-click={show_modal("#module-import-modal")}>
-        {gettext("Import modules")}
-      </button>
-      <button :if={BrandoAdmin.Authorization.allowed?(:create, @schema)} class="primary" phx-click={JS.push("create_module")}>
-        {gettext("Create new")}
-      </button>
-    </Content.header>
+    <div class="admin-workspace workspace-list content-workspace modules-workspace">
+      <Workspace.header title={gettext("Content Modules")}>
+        <button class="workspace-button" phx-click={show_modal("#module-import-modal")}>
+          {gettext("Import modules")}
+        </button>
+        <button
+          :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
+          class="workspace-button primary"
+          phx-click={JS.push("create_module")}
+        >
+          {gettext("Create new")}
+        </button>
+      </Workspace.header>
 
-    <.live_component
-      module={Content.List}
-      id={"content_listing_#{@schema}_default"}
-      schema={@schema}
-      current_user={@current_user}
-      uri={@uri}
-      params={@params}
-      listing={:default}
-    />
+      <.live_component
+        module={Content.List}
+        id={"content_listing_#{@schema}_default"}
+        schema={@schema}
+        current_user={@current_user}
+        uri={@uri}
+        params={@params}
+        listing={:default}
+        hidden_filters={[:parent_id]}
+        empty_title={gettext("No modules in this view")}
+        empty_description={gettext("Adjust your search or create a new entry.")}
+      />
+    </div>
 
     <Content.modal title={gettext("Exported modules")} id="module-export-modal">
       <textarea rows="15" style="width: 100%; font-size: 11px; font-family: Mono"><%= @base64_modules %></textarea>

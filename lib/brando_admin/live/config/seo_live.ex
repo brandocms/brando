@@ -16,40 +16,47 @@ defmodule BrandoAdmin.Sites.SEOLive do
 
   def render(assigns) do
     ~H"""
-    <.live_component module={Form} id="seo_form" entry_id={@entry_id} current_user={@current_user} schema={@schema}>
-      <:header>
-        {gettext("Update SEO")}
-      </:header>
-    </.live_component>
+    <div class="admin-workspace settings-workspace seo-workspace">
+      <.live_component module={Form} id="seo_form" entry_id={@entry_id} current_user={@current_user} schema={@schema}>
+        <:header>
+          {gettext("Update SEO")}
+        </:header>
+      </.live_component>
 
-    <div class="cache-live">
-      <table>
-        <h1>404s</h1>
-        <tr>
-          <th>{gettext("URL")}</th>
-          <th>{gettext("Hits")}</th>
-          <th>{gettext("Last hit")}</th>
-        </tr>
-        <%= for item <- @four_oh_fours do %>
-          <tr>
-            <td>
-              <div class="text-mono">
-                {item.url}
-              </div>
-            </td>
-            <td>
-              <div class="text-mono">
-                {item.hits}
-              </div>
-            </td>
-            <td>
-              <div class="text-mono">
-                {item.last_hit_at}
-              </div>
-            </td>
-          </tr>
-        <% end %>
-      </table>
+      <section class="workspace-panel seo-not-found">
+        <header class="workspace-panel-heading">
+          <div>
+            <h2>{gettext("Not found (404)")}</h2><p>
+              {gettext("Requests for URLs that do not exist. Add a redirect above when a page has moved.")}
+            </p>
+          </div>
+        </header>
+        <BrandoAdmin.Components.Workspace.empty
+          :if={@four_oh_fours == []}
+          title={gettext("No missing URLs recorded")}
+          description={gettext("Missing pages will appear here when they are requested.")}
+        />
+        <div
+          :if={@four_oh_fours != []}
+          class="workspace-table-scroll"
+          tabindex="0"
+          role="region"
+          aria-label={gettext("Not found (404)")}
+        >
+          <table class="workspace-table">
+            <thead>
+              <tr>
+                <th>{gettext("URL")}</th><th>{gettext("Hits")}</th><th>{gettext("Last hit")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr :for={item <- @four_oh_fours}>
+                <td class="workspace-mono">{item.url}</td><td>{item.hits}</td><td>{item.last_hit_at}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
     """
   end

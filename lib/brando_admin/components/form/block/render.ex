@@ -1214,14 +1214,18 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     </div>
     <Content.modal
       :if={@open}
-      title={gettext("Configure")}
+      title={gettext("Configure block")}
+      subtitle={@block_form[:description].value}
+      icon="hero-squares-2x2"
+      layout="editor"
       id={"block-#{@uid}_config"}
       show={true}
       close={JS.push("close_block_config", target: @target)}
       wide={true}
     >
-      <div class="panels">
-        <div class="panel">
+      <Content.modal_sections id={"block-#{@uid}-config-sections"}>
+        <:section id="settings" label={gettext("Settings")} icon="hero-adjustments-horizontal">
+          <h3 class="modal-section-title">{gettext("Block settings")}</h3>
           <Input.text
             field={@block_form[:description]}
             label={gettext("Block description")}
@@ -1236,51 +1240,58 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             form_id={@form_id}
             current_user_id={@block_form[:creator_id].value}
           />
-          <div>
+          <div class="modal-technical-note">
             UID: <span class="text-mono">{@uid}</span>
           </div>
-        </div>
-        <div class="panel">
-          <h2 class="titlecase">Vars</h2>
-          <.inputs_for :let={var} field={@block_form[:vars]}>
-            <div class="var">
-              <div class="key">{var[:key].value}</div>
-              <div class="buttons">
+        </:section>
+        <:section id="variables" label={gettext("Variables")} icon="hero-code-bracket">
+          <h3 class="modal-section-title">{gettext("Variables")}</h3>
+          <div class="modal-maintenance-list">
+            <.inputs_for :let={var} field={@block_form[:vars]}>
+              <div class="var">
+                <div class="key">{var[:key].value}</div>
+                <div class="buttons">
+                  <button
+                    type="button"
+                    class="tiny"
+                    phx-click={JS.push("reset_var", target: @target)}
+                    phx-value-id={var[:key].value}
+                  >
+                    {gettext("Reset")}
+                  </button>
+                  <button
+                    type="button"
+                    class="tiny"
+                    phx-click={JS.push("delete_var", target: @target)}
+                    phx-value-id={var[:key].value}
+                  >
+                    {gettext("Delete")}
+                  </button>
+                </div>
+              </div>
+            </.inputs_for>
+          </div>
+        </:section>
+        <:section id="references" label={gettext("References")} icon="hero-squares-2x2">
+          <h3 class="modal-section-title">{gettext("References")}</h3>
+          <div class="modal-maintenance-list">
+            <.inputs_for :let={ref} field={@block_form[:refs]}>
+              <div class="ref">
+                <div class="key">{ref[:name].value}</div>
                 <button
                   type="button"
                   class="tiny"
-                  phx-click={JS.push("reset_var", target: @target)}
-                  phx-value-id={var[:key].value}
+                  phx-click={JS.push("reset_ref", target: @target)}
+                  phx-value-id={ref[:name].value}
                 >
                   {gettext("Reset")}
                 </button>
-                <button
-                  type="button"
-                  class="tiny"
-                  phx-click={JS.push("delete_var", target: @target)}
-                  phx-value-id={var[:key].value}
-                >
-                  {gettext("Delete")}
-                </button>
               </div>
-            </div>
-          </.inputs_for>
-
-          <h2 class="titlecase">Refs</h2>
-          <.inputs_for :let={ref} field={@block_form[:refs]}>
-            <div class="ref">
-              <div class="key">{ref[:name].value}</div>
-              <button
-                type="button"
-                class="tiny"
-                phx-click={JS.push("reset_ref", target: @target)}
-                phx-value-id={ref[:name].value}
-              >
-                {gettext("Reset")}
-              </button>
-            </div>
-          </.inputs_for>
-          <h2 class="titlecase">{gettext("Advanced")}</h2>
+            </.inputs_for>
+          </div>
+        </:section>
+        <:section id="advanced" label={gettext("Advanced")} icon="hero-cog-6-tooth">
+          <h3 class="modal-section-title">{gettext("Advanced")}</h3>
           <div class="button-group-vertical">
             <button type="button" class="secondary" phx-click={JS.push("fetch_missing_refs", target: @target)}>
               {gettext("Fetch missing refs")}
@@ -1302,11 +1313,12 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               {gettext("Edit module")}
             </a>
           </div>
-        </div>
-      </div>
+        </:section>
+      </Content.modal_sections>
       <:footer>
+        <span class="modal-footer-note">{gettext("Saved with the page")}</span>
         <button type="button" class="primary" phx-click="close_block_config" phx-target={@target}>
-          {gettext("Close")}
+          {gettext("Done")}
         </button>
       </:footer>
     </Content.modal>

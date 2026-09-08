@@ -6,7 +6,7 @@ test('deactivate menu item', async ({ page }) => {
   await page.getByText('Configuration').click()
   await page.getByRole('link', { name: 'Navigation' }).click()
   await expect(page).toHaveURL('/admin/config/navigation/menus')
-  await page.getByRole('link', { name: 'Main menu →' }).click()
+  await page.getByRole('link', { name: 'Main menu' }).click()
   await expect(page).toHaveURL('/admin/config/navigation/menus/update/1')
   await page
     .locator('#menu_items_2_status-field-base')
@@ -34,22 +34,14 @@ test('create menu item', async ({ page }) => {
   await page.getByText('Configuration').click()
   await page.getByRole('link', { name: 'Navigation' }).click()
   await expect(page).toHaveURL('/admin/config/navigation/menus')
-  await page.getByRole('link', { name: 'Main menu →' }).click()
+  await page.getByRole('link', { name: 'Main menu' }).click()
   await expect(page).toHaveURL('/admin/config/navigation/menus/update/1')
 
   await page.getByRole('button', { name: 'Add entry' }).click()
   await page.locator('#menu_items_3_key').click()
   await page.locator('#menu_items_3_key').fill('new_item')
-  await page
-    .locator('#menu_items_3_link_0_identifier_id-field-base div')
-    .filter({ hasText: 'Text URL= https://example.com' })
-    .nth(1)
-    .click()
-  await page
-    .locator('#menu_items_3_link_0_link_type-field-base')
-    .getByText('URL')
-    .click()
-  await page.locator('#menu_items_3_link_0_link_type-field-wrapper').click()
+  await page.locator('#menu_items_3_link_0_identifier_id-field-base .link-preview').click()
+  await page.locator('#var-menu_items_3_link_0-link-config').getByRole('radio', { name: 'URL', exact: true }).check()
   await page.getByRole('textbox', { name: 'URL' }).click()
   await page.getByRole('textbox', { name: 'URL' }).fill('https://google.com')
   await page.getByRole('textbox', { name: 'URL' }).press('Tab')
@@ -59,7 +51,7 @@ test('create menu item', async ({ page }) => {
     .click()
   await page
     .locator('#var-menu_items_3_link_0-link-config')
-    .getByRole('button')
+    .getByRole('button', { name: 'Done', exact: true })
     .click()
   await expect(
     page.locator('#menu_items_3_link_0_identifier_id-field-base')
@@ -82,7 +74,7 @@ test('delete menu item', async ({ page }) => {
   await page.getByText('Configuration').click()
   await page.getByRole('link', { name: 'Navigation' }).click()
   await expect(page).toHaveURL('/admin/config/navigation/menus')
-  await page.getByRole('link', { name: 'Main menu →' }).click()
+  await page.getByRole('link', { name: 'Main menu' }).click()
   await expect(page).toHaveURL('/admin/config/navigation/menus/update/1')
 
   await page
@@ -104,7 +96,7 @@ test('reorder menu items', async ({ page }) => {
   await page.getByText('Configuration').click()
   await page.getByRole('link', { name: 'Navigation' }).click()
   await expect(page).toHaveURL('/admin/config/navigation/menus')
-  await page.getByRole('link', { name: 'Main menu →' }).click()
+  await page.getByRole('link', { name: 'Main menu' }).click()
   await expect(page).toHaveURL('/admin/config/navigation/menus/update/1')
 
   await page.locator('.subform-handle').first().hover()

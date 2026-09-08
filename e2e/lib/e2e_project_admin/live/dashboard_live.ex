@@ -1,11 +1,16 @@
 defmodule E2eProjectAdmin.DashboardLive do
   use BrandoAdmin.LiveView.Listing, schema: nil
   use Gettext, backend: E2eProjectAdmin.Gettext
-  alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Dashboard
 
   def render(assigns) do
     ~H"""
-    <Content.header title="Dashboard" subtitle={@current_user.name} />
+    <.live_component
+      module={Dashboard}
+      id="admin-dashboard"
+      current_user={@current_user}
+      authorization={assigns[:authorization]}
+    />
     """
   end
 end

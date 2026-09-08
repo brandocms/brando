@@ -46,7 +46,7 @@ test.describe('Block media save persistence', () => {
     await syncLV(page)
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
 
-    await page.getByRole('link', { name: `${title} →` }).click()
+    await page.getByRole('link', { name: `${title}`, exact: true }).click()
     await syncLV(page)
   }
 
@@ -83,7 +83,7 @@ test.describe('Block media save persistence', () => {
     await syncLV(page)
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
 
-    await page.getByRole('link', { name: 'Persist Insert Test →' }).click()
+    await page.getByRole('link', { name: 'Persist Insert Test', exact: true }).click()
     await syncLV(page)
 
     await expect(page.locator('.picture-block img:visible').first()).toBeVisible({

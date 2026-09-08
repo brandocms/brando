@@ -75,13 +75,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
     ~H"""
     <div>
       <Content.modal
-        title={gettext("Link")}
+        title={gettext("Edit link")}
+        subtitle={gettext("Text link")}
+        icon="hero-link"
+        layout="picker"
         id="tiptap-link-dialog"
-        auto
         show={@show}
         close={JS.push("close_dialog", target: @myself)}
       >
-        <div class="form-tabs tiptap-link-tabs">
+        <div class="link-picker-modes tiptap-link-tabs">
           <div class="form-tab-customs">
             <button
               type="button"
@@ -90,7 +92,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
               phx-value-type="url"
               phx-target={@myself}
             >
-              {gettext("URL")}
+              <.icon name="hero-globe-alt" /><span>{gettext("URL")}</span>
             </button>
             <button
               type="button"
@@ -99,20 +101,21 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
               phx-value-type="identifier"
               phx-target={@myself}
             >
-              {gettext("Content")}
+              <.icon name="hero-document-text" /><span>{gettext("Content")}</span>
             </button>
           </div>
         </div>
 
-        <div :if={@link_type == :url}>
+        <div :if={@link_type == :url} class="link-picker-url">
           <div class="field-wrapper">
             <div class="label-wrapper">
-              <label class="control-label">
+              <label class="control-label" for="tiptap-link-url">
                 <span>{gettext("URL")}</span>
               </label>
             </div>
             <div class="field-base">
               <input
+                id="tiptap-link-url"
                 class="text monospace"
                 type="text"
                 value={@url_value}
@@ -125,13 +128,28 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
           </div>
         </div>
 
+        <div :if={@link_type == :url} class="link-picker-url-options">
+          <div class="tiny-toggle-wrapper">
+            <label class="switch small">
+              <input
+                aria-label={gettext("Open link in new window/tab")}
+                type="checkbox"
+                checked={@target_blank}
+                phx-click="toggle_target_blank"
+                phx-target={@myself}
+              />
+              <div class="slider round"></div>
+            </label>
+            <span class="tiny-toggle-label">{gettext("Open link in new window/tab")}</span>
+          </div>
+        </div>
         <div :if={@link_type == :identifier}>
           <.live_component
             module={SelectIdentifier}
             id="tiptap-link-identifier-select"
             selected_identifier_id={@selected_identifier_id}
             language={@language}
-            layout={:columns}
+            layout={:workspace}
             statuses={[:published]}
             on_change={
               fn %{data: %{identifier: identifier}} ->
@@ -142,30 +160,35 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
                 )
               end
             }
-          />
-        </div>
-
-        <div class="tiny-toggle-wrapper">
-          <label class="switch small">
-            <input
-              type="checkbox"
-              checked={@target_blank}
-              phx-click="toggle_target_blank"
-              phx-target={@myself}
-            />
-            <div class="slider round"></div>
-          </label>
-          <span class="tiny-toggle-label">{gettext("Open link in new window/tab")}</span>
+          >
+            <:details>
+              <div class="tiny-toggle-wrapper">
+                <label class="switch small">
+                  <input
+                    aria-label={gettext("Open link in new window/tab")}
+                    type="checkbox"
+                    checked={@target_blank}
+                    phx-click="toggle_target_blank"
+                    phx-target={@myself}
+                  />
+                  <div class="slider round"></div>
+                </label>
+                <span class="tiny-toggle-label">{gettext("Open link in new window/tab")}</span>
+              </div>
+            </:details>
+          </.live_component>
         </div>
 
         <:footer>
+          <button type="button" class="secondary" phx-click="close_dialog" phx-target={@myself}>{gettext("Cancel")}</button>
           <button
             type="button"
             class="primary"
+            disabled={@link_type == :identifier && is_nil(@selected_identifier_id)}
             phx-click="confirm_link"
             phx-target={@myself}
           >
-            {gettext("Apply")}
+            {gettext("Apply link")}
           </button>
           <button
             :if={@has_existing_link?}

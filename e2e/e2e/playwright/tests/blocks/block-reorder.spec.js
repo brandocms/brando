@@ -109,7 +109,7 @@ test.describe('Block reordering (root blocks)', () => {
     await syncLV(page)
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
 
-    await page.getByRole('link', { name: 'Reorder Test →' }).click()
+    await page.getByRole('link', { name: 'Reorder Test', exact: true }).click()
     await syncLV(page)
     await expectHeaderOrder(page, ['Gamma', 'Alpha', 'Beta'])
   })
@@ -134,7 +134,7 @@ test.describe('Block reordering (root blocks)', () => {
     await syncLV(page)
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
 
-    await page.getByRole('link', { name: 'Reorder Roundtrip Test →' }).click()
+    await page.getByRole('link', { name: 'Reorder Roundtrip Test', exact: true }).click()
     await syncLV(page)
     await expectHeaderOrder(page, ['Alpha', 'Beta', 'Gamma'])
   })
@@ -188,7 +188,7 @@ test.describe('Block reordering (root blocks)', () => {
     await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })
     await syncLV(page)
 
-    await page.getByRole('link', { name: 'Multi Entry Reorder Test →' }).click()
+    await page.getByRole('link', { name: 'Multi Entry Reorder Test', exact: true }).click()
     await syncLV(page)
     await expectMemberOrder(['Charlie', 'Alice', 'Bob'])
   })

@@ -48,13 +48,13 @@ defmodule BrandoAdmin.JSCommands do
       time: 0
     )
     |> JS.show(
-      to: "#{modal_id} .modal-backdrop",
+      to: "#{modal_id} > .modal-backdrop",
       transition: {"transition ease-out duration-200", "opacity-0", "opacity-100"},
       blocking: false,
       time: 200
     )
     |> JS.show(
-      to: "#{modal_id} .modal-dialog",
+      to: "#{modal_id} > .modal-dialog",
       blocking: false,
       transition: {"transition ease-out duration-200", "opacity-0 y-100", "opacity-100 y-0"},
       time: 200
@@ -64,13 +64,13 @@ defmodule BrandoAdmin.JSCommands do
   def hide_modal(js \\ %JS{}, modal_id) do
     js
     |> JS.hide(
-      to: "#{modal_id} .modal-dialog",
+      to: "#{modal_id} > .modal-dialog",
       transition: {"transition ease-in duration-100", "opacity-100 y-0", "opacity-0 y-100"},
       blocking: true,
       time: 100
     )
     |> JS.hide(
-      to: "#{modal_id} .modal-backdrop",
+      to: "#{modal_id} > .modal-backdrop",
       transition: {"transition ease-in duration-100", "opacity-100", "opacity-0"},
       blocking: false,
       time: 100

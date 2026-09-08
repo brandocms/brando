@@ -1,7 +1,8 @@
 import { test, expect } from '../../test-support/setupAuth'
 import { syncLV } from '../../utils'
 
-test('updates and persists content globals', async ({ page }) => {
+test('updates and persists content globals', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/admin/config/global_sets/create')
   await syncLV(page)
 
@@ -35,4 +36,5 @@ test('updates and persists content globals', async ({ page }) => {
   await page.reload()
   await syncLV(page)
   await expect(page.getByLabel('Announcement')).toHaveValue('Site maintenance at midnight')
+  await page.screenshot({ path: testInfo.outputPath('globals-populated-desktop.png'), fullPage: true })
 })

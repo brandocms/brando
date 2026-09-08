@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Users.UserListLive do
 
   alias Brando.Users
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Workspace
 
   import BrandoAdmin.Utils, only: [hide_modal: 1]
 
@@ -14,122 +15,150 @@ defmodule BrandoAdmin.Users.UserListLive do
         Enum.find(assigns.available_users, &(&1.id == assigns.transfer_to_user_id))
       end
 
-    assigns = assign(assigns, :selected_user, selected_user)
+    total = Enum.reduce(assigns.content_summary, 0, &(&1.count + &2))
+    assigns = assigns |> assign(:selected_user, selected_user) |> assign(:transfer_total, total)
 
     ~H"""
-    <Content.header title={gettext("Users")} subtitle={gettext("Overview")}>
-      <.link :if={BrandoAdmin.Authorization.allowed?(:create, @schema)} navigate="/admin/users/create" class="primary">
-        {gettext("Create new")}
-      </.link>
-    </Content.header>
+    <div class="admin-workspace users-workspace workspace-list" data-groups={to_string(Brando.Authorization.enabled?())}>
+      <Workspace.header title={gettext("Users")} subtitle={gettext("Manage accounts and access.")}>
+        <.link
+          :if={Brando.Authorization.Administration.can?(Brando.Authorization.Scope.current(@current_user), :read, :groups)}
+          navigate="/admin/groups"
+          class="workspace-button"
+        >
+          {gettext("Permissions")}
+        </.link>
+        <.link
+          :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
+          navigate="/admin/users/create"
+          class="workspace-button primary"
+        >
+          {gettext("Create new")}
+        </.link>
+      </Workspace.header>
 
-    <.live_component
-      module={Content.List}
-      id={"content_listing_#{@schema}_default"}
-      schema={@schema}
-      current_user={@current_user}
-      uri={@uri}
-      params={@params}
-      listing={:default}
-    />
+      <.live_component
+        module={Content.List}
+        id={"content_listing_#{@schema}_default"}
+        schema={@schema}
+        current_user={@current_user}
+        uri={@uri}
+        params={@params}
+        listing={:default}
+        empty_title={gettext("No matching users")}
+        empty_description={gettext("Try another name or email address.")}
+      >
+        <:column_header>
+          <div class="user-directory-columns" aria-hidden="true">
+            <span>{gettext("User")}</span>
+            <span>{if Brando.Authorization.enabled?(), do: gettext("Legacy role"), else: gettext("Role")}</span>
+            <span>{gettext("Last seen")}</span>
+            <span>{gettext("Last logged in")}</span>
+            <span>{gettext("Status")}</span>
+            <span></span>
+          </div>
+        </:column_header>
+      </.live_component>
+    </div>
 
     <Content.modal
       id="transfer-content-modal"
-      title={gettext("Delete user")}
-      medium
+      title={gettext("Transfer content & delete user")}
+      subtitle={@deleting_user && @deleting_user.name}
+      icon="hero-user"
+      layout="transfer"
       show={@deleting_user != nil}
       close={hide_modal("#transfer-content-modal") |> JS.push("cancel_delete")}
     >
       <div :if={@deleting_user} class="transfer-content-modal">
-        <p class="help-text">
-          {gettext(
-            "When deleting a user, all content they have created must be transferred to another user. Select a user below to take over ownership of the content."
-          )}
-        </p>
-
-        <h3>{gettext("Transfer content from %{name} to:", name: @deleting_user.name)}</h3>
-
-        <div class={["transfer-user-select", @user_select_open && "open"]}>
-          <%= if !@user_select_open do %>
-            <button type="button" class="transfer-user-trigger" phx-click="toggle_user_select">
+        <div class="transfer-main">
+          <div class="transfer-source">
+            <Content.modal_person user={@deleting_user} caption={user_role(@deleting_user)} />
+            <span class="modal-badge">{gettext("User to delete")}</span>
+          </div>
+          <h3>{gettext("Transfer ownership to")}</h3>
+          <p class="modal-muted">{gettext("Choose who will own %{name}’s content.", name: @deleting_user.name)}</p>
+          <div class={["transfer-user-select", @user_select_open && "open"]}>
+            <button
+              type="button"
+              class="transfer-user-trigger"
+              phx-click="toggle_user_select"
+              aria-expanded={to_string(@user_select_open)}
+            >
               <%= if @selected_user do %>
-                <.user_row user={@selected_user} />
+                <Content.modal_person user={@selected_user} caption={user_role(@selected_user)} />
               <% else %>
                 <span class="transfer-user-placeholder">{gettext("Select user...")}</span>
               <% end %>
               <.icon name="hero-chevron-down" />
             </button>
-          <% else %>
-            <button
-              :for={user <- @available_users}
-              type="button"
-              class="transfer-user-option"
-              phx-click="select_transfer_user"
-              phx-value-id={user.id}
-            >
-              <.user_row user={user} />
-            </button>
-          <% end %>
+            <div :if={@user_select_open} class="transfer-user-options">
+              <button
+                :for={user <- @available_users}
+                type="button"
+                class="transfer-user-option"
+                phx-click="select_transfer_user"
+                phx-value-id={user.id}
+              >
+                <Content.modal_person user={user} caption={user_role(user)} />
+              </button>
+            </div>
+          </div>
+          <div class="modal-notice">
+            <.icon name="hero-information-circle" /><p>
+              {gettext("Content will remain in the CMS. Ownership will transfer to the selected user.")}
+            </p>
+          </div>
+          <div class="modal-notice modal-notice--danger">
+            <.icon name="hero-exclamation-triangle" /><p>
+              {gettext("%{name}’s account will be deleted after the transfer.", name: @deleting_user.name)}
+            </p>
+          </div>
         </div>
-
-        <div :if={@content_summary != []} class="transfer-content-summary">
-          <h3>{gettext("Content to transfer")}</h3>
-          <table>
+        <div class="transfer-content-summary">
+          <div class="transfer-summary-heading">
+            <h3>{gettext("Content to transfer")}</h3><span class="modal-badge">{@transfer_total}</span>
+          </div>
+          <table :if={@content_summary != []}>
             <thead>
               <tr>
-                <th>{gettext("Table")}</th>
-                <th class="right">{gettext("Entries")}</th>
+                <th>{gettext("Table")}</th><th class="right">{gettext("Entries")}</th>
               </tr>
             </thead>
             <tbody>
               <tr :for={item <- @content_summary}>
-                <td>{item.table}</td>
-                <td class="right">{item.count}</td>
+                <td>{item.label}</td><td class="right">{item.count}</td>
               </tr>
             </tbody>
+            <tfoot>
+              <tr>
+                <td>{gettext("Total")}</td><td class="right">{@transfer_total}</td>
+              </tr>
+            </tfoot>
           </table>
-        </div>
-
-        <div :if={@content_summary == []} class="transfer-content-empty">
-          <p>{gettext("This user has no content to transfer.")}</p>
+          <p :if={@content_summary == []} class="modal-muted">{gettext("This user has no content to transfer.")}</p>
         </div>
       </div>
-
       <:footer>
+        <span class="modal-footer-note">{gettext("Content is retained.")}</span>
+        <button type="button" class="secondary" phx-click={hide_modal("#transfer-content-modal") |> JS.push("cancel_delete")}>{gettext(
+          "Cancel"
+        )}</button>
         <button
           type="button"
-          class="primary"
+          class="primary danger"
           disabled={is_nil(@transfer_to_user_id)}
           phx-click="confirm_transfer_delete"
-        >
-          {gettext("Transfer & Delete")}
-        </button>
-        <button
-          type="button"
-          class="tertiary ml-auto"
-          phx-click={hide_modal("#transfer-content-modal") |> JS.push("cancel_delete")}
-        >
-          {gettext("Cancel")}
-        </button>
+        >{gettext("Transfer & Delete")}</button>
       </:footer>
     </Content.modal>
     """
   end
 
-  defp user_row(assigns) do
-    ~H"""
-    <div class="transfer-user-avatar">
-      <img
-        :if={@user.avatar && @user.avatar.status == :processed}
-        src={Brando.Utils.img_url(@user.avatar, :thumb, prefix: Brando.Utils.media_url())}
-      />
-      <span :if={!@user.avatar || @user.avatar.status != :processed} class="transfer-user-avatar-placeholder">
-        {String.first(@user.name)}
-      </span>
-    </div>
-    <span class="transfer-user-name">{@user.name}</span>
-    """
-  end
+  defp user_role(%{role: :superuser}), do: gettext("Superuser")
+  defp user_role(%{role: :admin}), do: gettext("Administrator")
+  defp user_role(%{role: :editor}), do: gettext("Editor")
+  defp user_role(%{role: role}), do: Phoenix.Naming.humanize(to_string(role))
 
   def mount(_params, _session, socket) do
     {:ok,
@@ -142,8 +171,17 @@ defmodule BrandoAdmin.Users.UserListLive do
   end
 
   def handle_event("delete_user", %{"id" => id}, socket) do
-    user = Users.get_user!(id)
-    content_summary = Users.get_user_content_summary(user.id)
+    user = Users.get_user!(id) |> Brando.Repo.preload(:avatar)
+
+    table_labels =
+      Brando.Blueprint.list_blueprints(:include_brando)
+      |> Enum.filter(&function_exported?(&1, :__schema__, 1))
+      |> Map.new(&{&1.__schema__(:source), Brando.Blueprint.get_plural(&1)})
+
+    content_summary =
+      user.id
+      |> Users.get_user_content_summary()
+      |> Enum.map(&Map.put(&1, :label, Map.get(table_labels, &1.table, Phoenix.Naming.humanize(&1.table))))
 
     {:ok, all_users} =
       Users.list_users(%{

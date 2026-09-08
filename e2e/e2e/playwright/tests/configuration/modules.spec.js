@@ -73,7 +73,7 @@ test('create a simple text module', async ({ page }) => {
 
   await expect(page).toHaveURL('/admin/config/content/modules')
   await syncLV(page)
-  await expect(page.getByRole('link', { name: 'New text module →', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'New text module', exact: true })).toBeVisible()
   await expect(page.getByText('Helpful text', { exact: true })).toBeVisible()
 })
 
@@ -90,6 +90,7 @@ test('create, edit, duplicate, persist and delete refs and vars', async ({ page 
   await expect(varModal).toBeVisible()
   await varModal.getByLabel('Key', { exact: true }).fill('theme')
   await varModal.getByLabel('Label', { exact: true }).fill('Theme')
+  await varModal.getByRole('tab', { name: 'Choices', exact: true }).click()
   await varModal.getByRole('button', { name: 'Add option' }).click()
   await varModal
     .locator('input[name*="[options]"][name$="[label]"]')
@@ -107,7 +108,9 @@ test('create, edit, duplicate, persist and delete refs and vars', async ({ page 
     ).toHaveCount(1, { timeout: 2000 })
   })
   varModal = page.locator('#module-default-var-0')
+  await varModal.getByRole('tab', { name: 'Definition', exact: true }).click()
   await expect(varModal.getByLabel('Key', { exact: true })).toHaveValue('theme_copy')
+  await varModal.getByRole('tab', { name: 'Choices', exact: true }).click()
   await expect(
     varModal.locator('input[name*="[options]"][name$="[label]"]').filter({ visible: true })
   ).toHaveValue('Dark')
@@ -136,7 +139,7 @@ test('create, edit, duplicate, persist and delete refs and vars', async ({ page 
 
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL('/admin/config/content/modules')
-  await page.getByRole('link', { name: 'New module →' }).click()
+  await page.getByRole('link', { name: 'New module' }).click()
   await syncLV(page)
 
   await openModuleTab(page, 'Variables')
@@ -169,7 +172,7 @@ test('create, edit, duplicate, persist and delete refs and vars', async ({ page 
 
   await destructiveModal.getByRole('button', { name: 'Save anyway' }).click()
   await expect(page).toHaveURL('/admin/config/content/modules')
-  await page.getByRole('link', { name: 'New module →' }).click()
+  await page.getByRole('link', { name: 'New module' }).click()
   await syncLV(page)
 
   await openModuleTab(page, 'Variables')

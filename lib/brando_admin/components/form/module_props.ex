@@ -390,6 +390,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           <.inputs_for :let={var} field={@form[:vars]} skip_hidden>
             <Content.modal
               title={gettext("Edit variable")}
+              subtitle={var[:label].value || var[:key].value}
+              icon="hero-code-bracket"
+              layout="editor"
               id={"#{@form.id}-#{@key}-var-#{var.index}"}
               show={@open_item_modal == :var && var.index == 0}
               close={close_item_modal("##{@form.id}-#{@key}-var-#{var.index}")}
@@ -402,6 +405,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                 render={:all}
                 target={@myself}
                 initially_open
+                modal_editor
                 edit
               />
               <:footer>

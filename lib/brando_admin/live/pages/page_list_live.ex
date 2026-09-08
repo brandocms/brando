@@ -4,25 +4,35 @@ defmodule BrandoAdmin.Pages.PageListLive do
 
   alias Brando.Pages
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Workspace
   use Gettext, backend: Brando.Gettext
 
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Pages & Sections")} subtitle={gettext("Overview")}>
-      <.link :if={BrandoAdmin.Authorization.allowed?(:create, @schema)} navigate="/admin/pages/create" class="primary">
-        {gettext("Create page")}
-      </.link>
-    </Content.header>
+    <div class="admin-workspace workspace-list content-workspace pages-workspace">
+      <Workspace.header title={gettext("Pages & Sections")}>
+        <.link
+          :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
+          navigate="/admin/pages/create"
+          class="workspace-button primary"
+        >
+          {gettext("Create page")}
+        </.link>
+      </Workspace.header>
 
-    <.live_component
-      module={Content.List}
-      id={"content_listing_#{@schema}_default"}
-      schema={@schema}
-      current_user={@current_user}
-      uri={@uri}
-      params={@params}
-      listing={:default}
-    />
+      <.live_component
+        module={Content.List}
+        id={"content_listing_#{@schema}_default"}
+        schema={@schema}
+        current_user={@current_user}
+        uri={@uri}
+        params={@params}
+        listing={:default}
+        hidden_filters={[:parents]}
+        empty_title={gettext("No pages in this view")}
+        empty_description={gettext("Adjust your search or create a new entry.")}
+      />
+    </div>
     """
   end
 

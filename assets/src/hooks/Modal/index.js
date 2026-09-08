@@ -11,9 +11,8 @@
  * because there is no single event to watch — the same modal can be opened by a
  * `JS.show` command on the client or by an assign on the server.
  *
- * It deliberately does not handle Escape: `Content.modal/1` already binds
- * `phx-window-keydown` for that, and its close command is the one that knows
- * whether to hide on the client or tell the server.
+ * Escape runs only the active dialog's close command. Nested pickers must not
+ * close their parent editor or lose the original focus return target.
  */
 
 // `BrandoAdmin.JSCommands.show_modal/2` fades the dialog in over 200ms; nothing
@@ -38,8 +37,21 @@ export default app => ({
     // already inside, and letting it bubble to the document would fight with
     // other keydown handlers on the page.
     this.onKeydown = event => {
-      if (event.key !== 'Tab' || !this.isOpen()) return
-      this.wrapTab(event)
+      if (!this.isOpen() || event.target.closest('.modal') !== this.el) return
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        app.liveSocket.execJS(this.el, this.el.dataset.modalClose)
+      } else if (event.key === 'Tab') {
+        this.wrapTab(event)
+      } else if (event.target.matches('[data-modal-tab]') && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault()
+        const tabs = [...event.target.parentElement.querySelectorAll('[data-modal-tab]')]
+        const direction = ['ArrowUp', 'ArrowLeft'].includes(event.key) ? -1 : 1
+        const index = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (tabs.indexOf(event.target) + direction + tabs.length) % tabs.length
+        tabs[index].click()
+        tabs[index].focus()
+      }
     }
     this.el.addEventListener('keydown', this.onKeydown)
 

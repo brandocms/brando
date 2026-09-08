@@ -65,6 +65,164 @@ defmodule E2EFixtureController do
     json(conn, %{user_id: user.id})
   end
 
+  def user_directory(conn, %{"action" => "create"}) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    {name, avatar} = create_directory_avatar()
+
+    user = get_admin_user()
+
+    user
+    |> Ecto.Changeset.change(
+      avatar_id: avatar.id,
+      last_seen: ~N[2026-09-07 12:34:00],
+      last_login: ~N[2026-09-06 08:15:00]
+    )
+    |> Brando.Repo.update!()
+    |> Brando.Cache.Query.evict()
+
+    # Presence fetches run outside the request's SQL sandbox. Populate its user
+    # queries here so both editors see the avatar created in this transaction.
+    editor = Brando.Users.get_user!(%{matches: %{email: "editor@brandocms.com"}})
+    ids = [to_string(user.id), to_string(editor.id)]
+    Brando.Users.get_users_map([to_string(user.id)])
+    Brando.Users.get_users_map(ids)
+    Brando.Users.get_users_map(Enum.reverse(ids))
+
+    json(conn, %{name: name})
+  end
+
+  def user_directory(conn, %{"action" => "cleanup", "name" => name}) do
+    Brando.Cache.Query.evict_schema(Brando.Users.User)
+
+    if Regex.match?(~r/^e2e-directory-\d+\.jpg$/, name) do
+      File.rm(Path.join([Brando.config(:media_path), "images", name]))
+    end
+
+    json(conn, %{ok: true})
+  end
+
+  def image_creator(conn, %{"image_id" => image_id}) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    {name, avatar} = create_directory_avatar()
+
+    # Keep the active user's row unlocked: presence records their departure on
+    # reload outside the test transaction. Use a separate image contributor.
+    creator =
+      Brando.Repo.insert!(%Brando.Users.User{
+        name: "Image contributor",
+        email: name <> "@brandocms.com",
+        avatar_id: avatar.id
+      })
+
+    Brando.Repo.get!(Brando.Images.Image, image_id)
+    |> Ecto.Changeset.change(creator_id: creator.id)
+    |> Brando.Repo.update!()
+
+    json(conn, %{name: name})
+  end
+
+  def dashboard_access(conn, %{"mode" => mode}) when mode in ["author", "reader", "backend"] do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    alias Brando.Authorization.{Groups, Scope}
+    owner = get_admin_user()
+    user = Brando.Users.get_user!(%{matches: %{email: "editor@brandocms.com"}})
+    scope = Scope.standalone(owner)
+    {:ok, groups} = Groups.list(scope)
+    existing = Enum.find(groups, &(&1.name == "Dashboard browser access"))
+
+    keys =
+      case mode do
+        "author" -> ~w(brando.admin.access brando.pages.read brando.pages.update)
+        "reader" -> ~w(brando.admin.access brando.pages.read)
+        "backend" -> ~w(brando.admin.access)
+      end
+
+    if existing do
+      {:ok, _} = Groups.update(scope, existing.id, %{name: existing.name}, keys, existing.lock_version)
+    else
+      for actor_scope <- [scope, Scope.installation(owner)] do
+        {:ok, prior_groups} = Groups.list(actor_scope)
+        for group <- prior_groups, do: Groups.remove_member(actor_scope, group.id, user.id)
+      end
+
+      {:ok, group} = Groups.create(scope, %{name: "Dashboard browser access"}, keys)
+      {:ok, :ok} = Groups.add_member(scope, group.id, user.id)
+    end
+
+    json(conn, %{ok: true})
+  end
+
+  def admin_workspaces(conn, _params) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    owner = get_admin_user()
+    alias BrandoAdmin.Images.FolderBrowser
+    {:ok, cfg} = Brando.Videos.get_config_for(%{config_target: "default"})
+    scope = FolderBrowser.scope_for(cfg.upload_path)
+    {:ok, _} = FolderBrowser.create_folder("Campaigns", scope)
+    folder_id = FolderBrowser.folder_id_for("Campaigns", scope)
+
+    for {title, folder} <- [{"Launch%20film.mp4", nil}, {"Studio tour", nil}, {"Campaign film", folder_id}] do
+      Brando.Repo.insert!(%Brando.Videos.Video{
+        title: title,
+        type: :external_file,
+        source_url: "https://example.com/Launch%20film.mp4?signature=private-query",
+        width: 1920,
+        height: 1080,
+        duration: "00:31",
+        config_target: "default",
+        creator_id: owner.id,
+        folder_id: folder
+      })
+    end
+
+    for {title, status} <- [{"Summer collection", :published}, {"Studio notes", :draft}] do
+      page =
+        Brando.Repo.insert!(%Brando.Pages.Page{
+          title: title,
+          uri: String.downcase(String.replace(title, " ", "-")),
+          language: :en,
+          status: status,
+          creator_id: owner.id
+        })
+
+      Brando.Repo.insert!(%Brando.Content.Identifier{
+        schema: Brando.Pages.Page,
+        entry_id: page.id,
+        title: title,
+        status: status,
+        language: :en,
+        updated_at: DateTime.utc_now(:second)
+      })
+    end
+
+    json(conn, %{folder_id: folder_id})
+  end
+
+  defp create_directory_avatar do
+    name = "e2e-directory-#{System.unique_integer([:positive])}.jpg"
+    relative_path = Path.join("images", name)
+    path = Path.join(Brando.config(:media_path), relative_path)
+    File.mkdir_p!(Path.dirname(path))
+    File.cp!(Path.expand("../../e2e/playwright/fixtures/image2.jpg", __DIR__), path)
+
+    avatar =
+      Brando.Repo.insert!(%Brando.Images.Image{
+        path: relative_path,
+        status: :processed,
+        width: 292,
+        height: 173,
+        config_target: "image:Brando.Users.User:avatar",
+        formats: [:jpg],
+        sizes: %{"thumb" => relative_path, "small" => relative_path}
+      })
+
+    {name, avatar}
+  end
+
   def get_admin_user do
     Brando.Users.get_user!(%{matches: %{email: "admin@brandocms.com"}})
   end

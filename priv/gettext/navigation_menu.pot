@@ -16,23 +16,23 @@ msgstr ""
 msgid "Content"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:71
+#: lib/brando/navigation/menu.ex:85
 #, elixir-autogen, elixir-format
 msgid "Items"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:66
+#: lib/brando/navigation/menu.ex:64
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:64
+#: lib/brando/navigation/menu.ex:80
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
 
-#: lib/brando/navigation/menu.ex:65
-#: lib/brando/navigation/menu.ex:113
+#: lib/brando/navigation/menu.ex:63
+#: lib/brando/navigation/menu.ex:127
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
@@ -45,4 +45,29 @@ msgstr ""
 #: lib/brando/navigation/menu.ex:52
 #, elixir-autogen, elixir-format
 msgid "menus"
+msgstr ""
+
+#: lib/brando/navigation/menu.ex:71
+#, elixir-autogen, elixir-format
+msgid "Status"
+msgstr ""
+
+#: lib/brando/navigation/menu.ex:74
+#, elixir-autogen, elixir-format
+msgid "Draft"
+msgstr ""
+
+#: lib/brando/navigation/menu.ex:75
+#, elixir-autogen, elixir-format
+msgid "Pending"
+msgstr ""
+
+#: lib/brando/navigation/menu.ex:76
+#, elixir-autogen, elixir-format
+msgid "Published"
+msgstr ""
+
+#: lib/brando/navigation/menu.ex:77
+#, elixir-autogen, elixir-format
+msgid "Deactivated"
 msgstr ""

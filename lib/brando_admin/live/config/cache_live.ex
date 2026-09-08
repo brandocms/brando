@@ -7,7 +7,7 @@ defmodule BrandoAdmin.Sites.CacheLive do
 
   import Phoenix.Component
 
-  alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Workspace
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
 
@@ -31,76 +31,89 @@ defmodule BrandoAdmin.Sites.CacheLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header title={gettext("Cache")} subtitle={gettext("Inspect and clear caches")} />
-
-    <div class="cache-live">
-      <p class="help">
-        {gettext(
-          "A cache is like a snapshot of your data that is accessed in memory to deliver content faster without rebuilding it from scratch every time. If you have changed some content and it is not reflected on the website, you can attempt to empty these caches in order to produce fresh data."
-        )}
-      </p>
-      <table>
-        <%= for {category, entries} <- @caches do %>
-          <h1>{category}</h1>
-          <tr>
-            <th>{gettext("Type")}</th>
-            <th>{gettext("Module")}</th>
-            <th>{gettext("Cache key")}</th>
-            <th>{gettext("Entry ID")}</th>
-          </tr>
-          <%= for entry <- entries do %>
-            <tr>
-              <%= case entry do %>
-                <% {:list, module, key} -> %>
-                  <td>
-                    <div class="badge no-border ta-left">
-                      {gettext("List")}
-                    </div>
-                  </td>
-                  <td>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
-                      <path fill="none" d="M0 0h24v24H0z" /><path d="M2 5l7-3 6 3 6.303-2.701a.5.5 0 0 1 .697.46V19l-7 3-6-3-6.303 2.701a.5.5 0 0 1-.697-.46V5zm14 14.395l4-1.714V5.033l-4 1.714v12.648zm-2-.131V6.736l-4-2v12.528l4 2zm-6-2.011V4.605L4 6.319v12.648l4-1.714z" />
-                    </svg>
-                    {module}
-                  </td>
-                  <td>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
-                      <path fill="none" d="M0 0h24v24H0z" /><path d="M10.758 11.828l7.849-7.849 1.414 1.414-1.414 1.415 2.474 2.474-1.414 1.415-2.475-2.475-1.414 1.414 2.121 2.121-1.414 1.415-2.121-2.122-2.192 2.192a5.002 5.002 0 0 1-7.708 6.294 5 5 0 0 1 6.294-7.708zm-.637 6.293A3 3 0 1 0 5.88 13.88a3 3 0 0 0 4.242 4.242z" />
-                    </svg>
-                    {key}
-                  </td>
-                  <td></td>
-                <% {:single, module, key, entry_id} -> %>
-                  <td>
-                    <div class="badge no-border">
-                      {gettext("Single")}
-                    </div>
-                  </td>
-                  <td>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
-                      <path fill="none" d="M0 0h24v24H0z" /><path d="M2 5l7-3 6 3 6.303-2.701a.5.5 0 0 1 .697.46V19l-7 3-6-3-6.303 2.701a.5.5 0 0 1-.697-.46V5zm14 14.395l4-1.714V5.033l-4 1.714v12.648zm-2-.131V6.736l-4-2v12.528l4 2zm-6-2.011V4.605L4 6.319v12.648l4-1.714z" />
-                    </svg>
-                    {module}
-                  </td>
-                  <td>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
-                      <path fill="none" d="M0 0h24v24H0z" /><path d="M10.758 11.828l7.849-7.849 1.414 1.414-1.414 1.415 2.474 2.474-1.414 1.415-2.475-2.475-1.414 1.414 2.121 2.121-1.414 1.415-2.121-2.122-2.192 2.192a5.002 5.002 0 0 1-7.708 6.294 5 5 0 0 1 6.294-7.708zm-.637 6.293A3 3 0 1 0 5.88 13.88a3 3 0 0 0 4.242 4.242z" />
-                    </svg>
-                    {key}
-                  </td>
-                  <td>
-                    #{entry_id}
-                  </td>
-              <% end %>
-            </tr>
-          <% end %>
-        <% end %>
-      </table>
-
-      <button type="button" class="primary" phx-click={JS.push("empty_caches")}>
-        {gettext("Empty all caches")}
-      </button>
+    <div class="admin-workspace cache-workspace">
+      <Workspace.header title={gettext("Cache")} subtitle={gettext("Inspect cached content and clear outdated entries.")}>
+        <button type="button" class="workspace-button" phx-click="empty_caches" phx-disable-with={gettext("Clearing…")}>
+          {gettext("Empty all caches")}
+        </button>
+      </Workspace.header>
+      <div class="cache-live">
+        <section :for={{category, entries} <- @caches} class="workspace-panel">
+          <header class="workspace-panel-heading">
+            <div>
+              <h2>{String.capitalize(to_string(category))}</h2>
+              <p>{gettext("Stored results used to serve your website.")}</p>
+            </div>
+            <span>{ngettext("%{count} entry", "%{count} entries", length(entries))}</span>
+          </header>
+          <Workspace.empty
+            :if={entries == []}
+            title={gettext("No cached entries")}
+            description={gettext("The cache fills automatically as content is requested.")}
+          />
+          <div
+            :if={entries != []}
+            class="workspace-table-scroll"
+            tabindex="0"
+            role="region"
+            aria-label={gettext("Cache entries")}
+          >
+            <table class="workspace-table">
+              <thead>
+                <tr>
+                  <th>{gettext("Type")}</th><th>{gettext("Module")}</th><th>{gettext("Cache key")}</th><th>
+                    {gettext("Entry ID")}
+                  </th><th><span class="workspace-sr-only">{gettext("Actions")}</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <.cache_row :for={entry <- entries} entry={entry} />
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <p class="workspace-note">
+          {gettext(
+            "Clear the cache if saved changes are not appearing on the website. Content is rebuilt on the next request."
+          )}
+        </p>
+      </div>
     </div>
+    """
+  end
+
+  defp cache_row(assigns) do
+    row =
+      case assigns.entry do
+        {:list, module, key} -> %{type: gettext("List"), module: module, key: key, id: nil}
+        {:single, module, key, id} -> %{type: gettext("Single"), module: module, key: key, id: id}
+      end
+
+    assigns = assigns |> assign(:row, row) |> assign(:cache_token, cache_token(assigns.entry))
+
+    ~H"""
+    <tr>
+      <td><span class="workspace-badge">{@row.type}</span></td>
+      <td><code>{@row.module}</code></td><td><code>{@row.key}</code></td>
+      <td>
+        <%= if @row.id do %>
+          <code>#{@row.id}</code>
+        <% else %>
+          <span class="cache-unavailable">—</span>
+        <% end %>
+      </td>
+      <td class="row-actions">
+        <button
+          type="button"
+          class="workspace-button"
+          phx-click="clear_cache_entry"
+          phx-value-key={@cache_token}
+          aria-label={gettext("Clear cache %{key}", key: @row.key)}
+        >
+          {gettext("Clear")}
+        </button>
+      </td>
+    </tr>
     """
   end
 
@@ -118,6 +131,21 @@ defmodule BrandoAdmin.Sites.CacheLive do
     send(self(), {:toast, gettext("Caches cleared!")})
 
     {:noreply, assign_caches(socket)}
+  end
+
+  def handle_event("clear_cache_entry", %{"key" => token}, socket) do
+    case Enum.find(socket.assigns.caches.query, &(cache_token(&1) == token)) do
+      nil -> :ok
+      entry -> Cachex.del(:query, entry)
+    end
+
+    {:noreply, assign_caches(socket)}
+  end
+
+  defp cache_token(entry) do
+    :sha256
+    |> :crypto.hash(:erlang.term_to_binary(entry))
+    |> Base.url_encode64(padding: false)
   end
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do

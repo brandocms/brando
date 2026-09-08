@@ -37,7 +37,7 @@ test.describe('Block config var persistence', () => {
 
   const closeConfig = async (page) => {
     await configModal(page)
-      .locator('.modal-footer button', { hasText: 'Close' })
+      .locator('.modal-footer button', { hasText: 'Done' })
       .click()
     await syncLV(page)
     await expect(page.locator('.modal.visible')).toHaveCount(0)
@@ -49,7 +49,7 @@ test.describe('Block config var persistence', () => {
     await syncLV(page)
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
 
-    await page.getByRole('link', { name: `${TITLE} →` }).click()
+    await page.getByRole('link', { name: TITLE, exact: true }).click()
     await syncLV(page)
   }
 

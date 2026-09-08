@@ -55,7 +55,7 @@ test.describe('Entry-level page var uploads', () => {
     await expect(page.locator('.alert.error')).not.toBeVisible({ timeout: 5000 })
     await expect(page).not.toHaveURL(/\/create$/, { timeout: 10000 })
 
-    await page.getByRole('link', { name: `${title} →` }).click()
+    await page.getByRole('link', { name: title, exact: true }).click()
     await syncLV(page)
     await page.getByRole('button', { name: 'Advanced' }).click()
     await syncLV(page)

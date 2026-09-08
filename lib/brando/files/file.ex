@@ -42,22 +42,26 @@ defmodule Brando.Files.File do
 
   def listing_row(assigns) do
     ~H"""
-    <.field columns={1}>
-      <small class="monospace">#{@entry.id}</small>
+    <.field columns={1} class="library-thumbnail library-file-icon">
+      <Brando.HTML.Icon.icon name="hero-document" />
     </.field>
-    <.field columns={7}>
-      <small class="monospace"><strong>{@entry.filename}</strong></small> <br />
-      <small class="monospace tiny">{Brando.Utils.media_url(@entry)}</small>
+    <.field columns={7} class="library-image-info">
+      <a class="entry-link" href={Brando.Utils.media_url(@entry)} target="_blank" rel="noopener">{URI.decode(@entry.filename)}</a>
+      <div :if={@entry.title && @entry.title != @entry.filename} class="library-image-title">{@entry.title}</div>
+      <div class="library-image-meta">
+        <span class="library-format">{String.upcase(String.trim_leading(Path.extname(@entry.filename), "."))}</span>
+        <span>{Brando.Utils.human_size(@entry.filesize)}</span>
+        <span :if={@entry.mime_type}>{@entry.mime_type}</span>
+      </div>
     </.field>
-    <.field columns={2}>
-      <small class="monospace">{Brando.Utils.human_size(@entry.filesize)}</small>
-    </.field>
-    <.field columns={1}>
-      <a href={Brando.Utils.media_url(@entry)} target="_blank">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18">
-          <path fill="none" d="M0 0h24v24H0z" /><path d="M18.364 15.536L16.95 14.12l1.414-1.414a5 5 0 1 0-7.071-7.071L9.879 7.05 8.464 5.636 9.88 4.222a7 7 0 0 1 9.9 9.9l-1.415 1.414zm-2.828 2.828l-1.415 1.414a7 7 0 0 1-9.9-9.9l1.415-1.414L7.05 9.88l-1.414 1.414a5 5 0 1 0 7.071 7.071l1.414-1.414 1.415 1.414zm-.708-10.607l1.415 1.415-7.071 7.07-1.415-1.414 7.071-7.07z" />
-        </svg>
-      </a>
+    <.field columns={1} class="library-file-action">
+      <a
+        href={Brando.Utils.media_url(@entry)}
+        target="_blank"
+        rel="noopener"
+        class="workspace-button"
+        aria-label={gettext("Open %{filename}", filename: @entry.filename)}
+      >{gettext("Open file")}</a>
     </.field>
     """
   end

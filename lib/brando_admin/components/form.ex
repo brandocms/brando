@@ -2222,7 +2222,7 @@ defmodule BrandoAdmin.Components.Form do
                     }
                     class="preview-current-view"
                   >{preview.label}</span>
-                  <.icon name="hero-chevron-down" class="preview-chooser-chevron" />
+                  <.icon name="hero-chevron-down" class="preview-chooser-chevron dropdown-chevron" />
                 </button>
                 <div
                   :if={@live_preview_menu_open?}

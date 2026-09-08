@@ -165,13 +165,13 @@ defmodule Brando.Content.Module do
 
   def listing_row(assigns) do
     ~H"""
-    <.field columns={2}>
+    <.field class="listing-module-icon" columns={2}>
       <div class="svg"><img :if={@entry.svg} src={"data:image/svg+xml;base64,#{@entry.svg}"} /></div>
     </.field>
-    <.field columns={3}>
+    <.field class="listing-category" columns={3}>
       <div class="badge"><.i18n map={@entry.namespace} /></div>
     </.field>
-    <.update_link entry={@entry} columns={8}>
+    <.update_link class="listing-title" entry={@entry} columns={8}>
       <svg
         :if={@entry.datasource}
         xmlns="http://www.w3.org/2000/svg"
@@ -199,13 +199,13 @@ defmodule Brando.Content.Module do
 
   def listing_child_row(assigns) do
     ~H"""
-    <.field columns={2}>
+    <.field class="listing-module-icon" columns={2}>
       <div class="svg"><img :if={@entry.svg} src={"data:image/svg+xml;base64,#{@entry.svg}"} /></div>
     </.field>
-    <.field columns={3}>
+    <.field class="listing-category" columns={3}>
       <div class="badge"><.i18n map={@entry.namespace} /></div>
     </.field>
-    <.update_link entry={@entry} columns={9}>
+    <.update_link class="listing-title" entry={@entry} columns={9}>
       <svg
         :if={@entry.datasource}
         xmlns="http://www.w3.org/2000/svg"

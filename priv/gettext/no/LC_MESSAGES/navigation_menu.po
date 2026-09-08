@@ -17,23 +17,23 @@ msgstr ""
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/navigation/menu.ex:71
+#: lib/brando/navigation/menu.ex:85
 #, elixir-autogen, elixir-format
 msgid "Items"
 msgstr "Menypunkter"
 
-#: lib/brando/navigation/menu.ex:66
+#: lib/brando/navigation/menu.ex:64
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr "Nøkkel"
 
-#: lib/brando/navigation/menu.ex:64
+#: lib/brando/navigation/menu.ex:80
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr "Språk"
 
-#: lib/brando/navigation/menu.ex:65
-#: lib/brando/navigation/menu.ex:113
+#: lib/brando/navigation/menu.ex:63
+#: lib/brando/navigation/menu.ex:127
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Tittel"
@@ -47,3 +47,28 @@ msgstr "meny"
 #, elixir-autogen, elixir-format
 msgid "menus"
 msgstr "menyer"
+
+#: lib/brando/navigation/menu.ex:71
+#, elixir-autogen, elixir-format
+msgid "Status"
+msgstr "Status"
+
+#: lib/brando/navigation/menu.ex:74
+#, elixir-autogen, elixir-format
+msgid "Draft"
+msgstr "Utkast"
+
+#: lib/brando/navigation/menu.ex:75
+#, elixir-autogen, elixir-format
+msgid "Pending"
+msgstr "Venter"
+
+#: lib/brando/navigation/menu.ex:76
+#, elixir-autogen, elixir-format
+msgid "Published"
+msgstr "Publisert"
+
+#: lib/brando/navigation/menu.ex:77
+#, elixir-autogen, elixir-format
+msgid "Deactivated"
+msgstr "Deaktivert"

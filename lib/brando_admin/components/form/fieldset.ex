@@ -15,10 +15,13 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
     ~H"""
     <fieldset class={[
       @fieldset.size,
+      @fieldset.label && "labelled",
       @fieldset.align == :end && "align-end",
       @fieldset.style == :inline && "inline",
       @fieldset.shaded && "shaded"
     ]}>
+      <legend :if={@fieldset.label}>{g(@form.source.data.__struct__, @fieldset.label)}</legend>
+      {if @fieldset.component, do: @fieldset.component.(assigns)}
       <Fieldset.Field.render
         :for={input <- @fieldset.fields}
         form={@form}
