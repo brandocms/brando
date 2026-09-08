@@ -15,15 +15,12 @@ defmodule BrandoAdmin.Images.ImageListLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    deliver_topic = "form:" <> Ecto.UUID.generate()
+    if connected?(socket), do: Phoenix.PubSub.subscribe(Brando.pubsub(), deliver_topic)
+
     socket =
       socket
-      |> allow_upload(:images,
-        accept: ~w(.jpg .jpeg .png .gif .webp .avif .svg),
-        max_entries: 10,
-        max_file_size: 10_000_000,
-        auto_upload: true,
-        progress: &handle_progress/3
-      )
+      |> assign(:deliver_topic, deliver_topic)
       |> assign(:recent_folders, [])
       |> assign(:custom_folders, [])
       |> assign(:folders, [""])
@@ -170,41 +167,28 @@ defmodule BrandoAdmin.Images.ImageListLive do
     {:noreply, assign(socket, :clipboard_ids, [])}
   end
 
-  def handle_progress(:images, entry, socket) do
+  @impl true
+  def handle_info({:asset_ready, %{"kind" => "asset_library"}, image}, socket) do
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    AssetListHelpers.update_list_entries(socket.assigns.schema)
+
     socket =
-      if entry.done? do
-        config_target = socket.assigns.current_folder_config_target || "default"
-        {:ok, cfg} = Images.get_config_for(%{config_target: config_target})
-        folder_id = FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root)
-        cfg = maybe_override_image_upload_path(cfg, socket.assigns.upload_folder || socket.assigns.current_folder_abs)
-
-        case consume_uploaded_entry(socket, entry, fn %{path: path} ->
-               case Images.Uploads.Schema.handle_upload(
-                      %{
-                        "image" => %Plug.Upload{filename: entry.client_name, content_type: entry.client_type, path: path},
-                        "config_target" => config_target,
-                        "folder_id" => folder_id
-                      },
-                      cfg,
-                      socket.assigns.current_user
-                    ) do
-                 {:ok, image} -> {:ok, image}
-                 {:error, reason} -> {:ok, {:upload_error, reason}}
-               end
-             end) do
-          {:upload_error, _reason} ->
-            send(self(), {:toast, gettext("Failed to upload image")})
-            socket
-
-          _image ->
-            send(self(), {:toast, gettext("Image uploaded successfully")})
-            AssetListHelpers.update_list_entries(socket.assigns.schema)
-            assign_folder_state(socket, socket.assigns.current_folder)
-        end
+      if socket.assigns.current_folder == "" && image.folder_id do
+        AssetListHelpers.patch_folder_filter(socket, image.folder_id)
       else
-        socket
+        assign_folder_state(socket, socket.assigns.current_folder)
       end
 
+    {:noreply, socket}
+  end
+
+  def handle_info({%Image{} = image, [:image, :updated], _path}, socket) do
+    if image.status == :processed, do: Phoenix.PubSub.unsubscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    AssetListHelpers.update_list_entries(socket.assigns.schema)
+    {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+  end
+
+  def handle_info({%Image{}, [:image, _event], _path}, socket) do
     {:noreply, socket}
   end
 
@@ -251,17 +235,33 @@ defmodule BrandoAdmin.Images.ImageListLive do
               <span :if={@clipboard_ids != []} class="clipboard-status">
                 {gettext("Cut queue")}: {length(@clipboard_ids)}
               </span>
-              <form phx-change="validate" phx-drop-target={@uploads.images.ref}>
-                <input type="hidden" name="upload[folder]" value={@current_folder_abs} />
-                <label class="folder-action workspace-button primary">
-                  <span>{gettext("Upload")}</span>
-                  <.live_file_input
-                    upload={@uploads.images}
-                    class="library-upload-input"
-                    aria-label={gettext("Upload images")}
-                  />
-                </label>
-              </form>
+              <div
+                id="library-image-upload"
+                phx-hook="Brando.UploadTrigger"
+                data-kind="asset_library"
+                data-component-id="assets-image-browser"
+                data-asset-type="image"
+                data-deliver-topic={@deliver_topic}
+                data-config-target={@current_folder_config_target || "default"}
+                data-folder={@effective_upload_folder}
+                data-folder-id={@effective_upload_folder_id}
+                data-click-mode="trigger"
+                class="library-upload-trigger"
+              >
+                <button type="button" class="folder-action upload-trigger"><.icon name="hero-arrow-up-tray" />{if @current_folder ==
+                                                                                                                    "",
+                                                                                                                  do:
+                                                                                                                    gettext(
+                                                                                                                      "Upload to %{folder}",
+                                                                                                                      folder:
+                                                                                                                        @effective_upload_folder
+                                                                                                                    ),
+                                                                                                                  else:
+                                                                                                                    gettext(
+                                                                                                                      "Upload"
+                                                                                                                    )}</button>
+                <input type="file" class="file-input" multiple aria-label={gettext("Upload images")} />
+              </div>
               <button
                 :if={@clipboard_ids != []}
                 type="button"
@@ -332,6 +332,9 @@ defmodule BrandoAdmin.Images.ImageListLive do
     current_folder_config_target =
       resolve_folder_config_target(images, visible_images, current_folder, current_folder_abs, socket.assigns.upload_root)
 
+    {upload_cfg, _} = Brando.Uploads.resolve_image_config(current_folder_config_target)
+    effective_upload_folder = current_folder_abs || upload_cfg.upload_path
+
     recent_folders =
       if current_folder_abs do
         FolderBrowser.push_recent_folder(socket.assigns.recent_folders, current_folder_abs)
@@ -348,18 +351,11 @@ defmodule BrandoAdmin.Images.ImageListLive do
     |> assign(:recent_folders, recent_folders)
     |> assign(:visible_image_count, length(visible_images))
     |> assign(:current_folder_config_target, current_folder_config_target)
-  end
-
-  defp maybe_override_image_upload_path(cfg, nil), do: cfg
-
-  defp maybe_override_image_upload_path(%Brando.Type.ImageConfig{} = cfg, folder) do
-    resolved_folder = FolderBrowser.absolute_folder(folder, cfg.upload_path)
-
-    if resolved_folder do
-      %{cfg | upload_path: resolved_folder}
-    else
-      cfg
-    end
+    |> assign(:effective_upload_folder, effective_upload_folder)
+    |> assign(
+      :effective_upload_folder_id,
+      FolderBrowser.folder_id_for(effective_upload_folder, socket.assigns.upload_root)
+    )
   end
 
   defp folder_label_for_display(folder) do

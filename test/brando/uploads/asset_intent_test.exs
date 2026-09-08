@@ -99,4 +99,26 @@ defmodule Brando.Uploads.AssetIntentTest do
 
     assert {:error, "Asset type is not valid" <> _} = AssetIntent.normalize(%{target | asset_type: "image"})
   end
+
+  test "replacement delivery only applies to the selection that started it" do
+    assert AssetIntent.current_selection?(nil, 12)
+    assert AssetIntent.current_selection?("none", nil)
+    assert AssetIntent.current_selection?("12", 12)
+    refute AssetIntent.current_selection?("none", 12)
+    refute AssetIntent.current_selection?("12", nil)
+    refute AssetIntent.current_selection?("12", 13)
+  end
+
+  test "library uploads have their own intent and validate selection snapshots" do
+    base = %{kind: "asset_library", component_id: "images-browser", asset_type: "image", deliver_topic: @topic}
+    assert {:ok, _} = AssetIntent.normalize(base)
+    assert {:ok, _} = AssetIntent.normalize(Map.put(base, :expected_asset_id, "none"))
+    assert {:error, "Invalid current asset id"} = AssetIntent.normalize(Map.put(base, :expected_asset_id, %{}))
+  end
+
+  test "the resource gallery adapter accepts only gallery media" do
+    base = %{kind: "resource_gallery", component_id: "gallery-objects", asset_type: "video", deliver_topic: @topic}
+    assert {:ok, _} = AssetIntent.normalize(base)
+    assert {:error, "Asset type is not valid" <> _} = AssetIntent.normalize(%{base | asset_type: "file"})
+  end
 end

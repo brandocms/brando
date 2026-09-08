@@ -1,3 +1,5 @@
+import { trackUpload, updateUpload, uploadTargetKey } from '../shared/uploadProgress'
+
 /**
  * UploadManager — hook mounted on the sticky BrandoAdmin.UploadManager LiveView.
  *
@@ -80,10 +82,14 @@ export default (app) => ({
     this._maxTransfers = Math.max(1, parseInt(this.el.dataset.maxConcurrentTransfers || '3', 10) || 3)
     this._transferQueue = []
     this._activeTransfers = new Set()
+    this._activeGroups = new Map()
+
+    this.handleEvent('b:uploads:state', ({ ref, ...state }) => updateUpload(ref, state))
 
     this.handleEvent('b:uploads:released', ({ ref }) => this.releaseSlot(ref))
 
     this.handleEvent('b:uploads:cancel', ({ ref }) => {
+      updateUpload(ref, { status: 'cancelled' })
       this._transferQueue = this._transferQueue.filter((task) => task.ref !== ref)
       const xhr = this._directXhrs[ref]
       if (xhr) {
@@ -101,6 +107,7 @@ export default (app) => ({
     this._directXhrs = {}
     this._transferQueue = []
     this._activeTransfers = new Set()
+    this._activeGroups = new Map()
     window.BrandoUploads._detach(this)
   },
 
@@ -116,6 +123,11 @@ export default (app) => ({
       if (!reply || !reply.decisions) return
 
       reply.decisions.forEach((decision) => {
+        trackUpload(decision.ref, target, {
+          filename: files[decision.index]?.name,
+          status: decision.error ? 'error' : 'queued',
+          error: decision.error || null,
+        })
         if (decision.error) {
           console.warn(`[UploadManager] rejected "${files[decision.index]?.name}": ${decision.error}`)
           return
@@ -125,10 +137,10 @@ export default (app) => ({
         if (!file) return
 
         if (decision.transport === 'direct') {
-          this.scheduleTransfer({ ref: decision.ref, kind: 'direct', file, decision })
+          this.scheduleTransfer({ ref: decision.ref, kind: 'direct', file, decision, group: target.kind?.endsWith('_gallery') ? uploadTargetKey(target) : null })
         } else {
           const tagged = new File([file], `${decision.ref}::${file.name}`, { type: file.type })
-          this.scheduleTransfer({ ref: decision.ref, kind: 'server', file: tagged })
+          this.scheduleTransfer({ ref: decision.ref, kind: 'server', file: tagged, group: target.kind?.endsWith('_gallery') ? uploadTargetKey(target) : null })
         }
       })
     })
@@ -141,8 +153,12 @@ export default (app) => ({
 
   pumpTransfers() {
     while (this._activeTransfers.size < this._maxTransfers && this._transferQueue.length > 0) {
-      const task = this._transferQueue.shift()
+      // Keep each gallery's insertion order; unrelated fields still transfer in parallel.
+      const index = this._transferQueue.findIndex(task => !task.group || !Array.from(this._activeGroups.values()).includes(task.group))
+      if (index === -1) break
+      const [task] = this._transferQueue.splice(index, 1)
       this._activeTransfers.add(task.ref)
+      if (task.group) this._activeGroups.set(task.ref, task.group)
 
       if (task.kind === 'server') {
         this.upload('queue', [task.file])
@@ -153,6 +169,7 @@ export default (app) => ({
   },
 
   releaseSlot(ref) {
+    this._activeGroups.delete(ref)
     if (this._activeTransfers.delete(ref)) {
       this.pumpTransfers()
     }
@@ -174,10 +191,10 @@ export default (app) => ({
 
     xhr.addEventListener('load', () => {
       delete this._directXhrs[ref]
-      this.releaseSlot(ref)
       if (xhr.status >= 200 && xhr.status < 300) {
-        this.pushEvent('direct_complete', { ref })
+        this.pushEvent('direct_complete', { ref }, () => this.releaseSlot(ref))
       } else {
+        this.releaseSlot(ref)
         this.pushEvent('direct_error', { ref, message: `Upload failed (HTTP ${xhr.status})` })
       }
     })

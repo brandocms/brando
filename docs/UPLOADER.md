@@ -1,5 +1,20 @@
 # Brando Unified Uploader — design & migration plan
 
+> **8 September 2026 UX consolidation:** The shared `MediaField` now exposes
+> upload/browse/configure actions and drop targets on populated and empty fields,
+> refs, and variables. Image/file library intake uses `asset_library`; standalone
+> gallery editors use `resource_gallery`. Mixed gallery intake resolves image and
+> video configs separately and preserves order through the manager scheduler.
+> Scalar delivery includes an expected-selection snapshot; removal or a later
+> accepted replacement prevents stale completion from changing the selection.
+> Fields project the sticky manager's state; they never own transfers. Picture
+> refs now receive the association on upload completion and refresh their preview
+> when processing finishes. Default image destinations use the existing folder
+> browser, with request-correlated confirmation and cancellation. See the
+> [implementation record](audits/media-upload-2026-09-08/IMPLEMENTATION.md)
+> for verified coverage and remaining transport/recovery boundaries. Earlier
+> phase notes below are historical.
+
 > Status: **Phases 1–2 implemented (2026-07-05).**
 > Phase 1 verified end-to-end — block file/image *vars* run through the sticky
 > `BrandoAdmin.UploadManager`; measured 4 MB var upload: ~7 s, 4 diffs to the manager +

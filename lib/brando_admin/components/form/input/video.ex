@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
 
   import Ecto.Changeset
 
+  alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Primitives
@@ -195,13 +196,21 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
       >
         <div>
           <div class="input-video">
-            <.video_preview
-              video={@video}
-              field={@field}
-              relation_field={@relation_field}
-              click={@editable && open_video(@myself)}
-              editable={@editable}
-            />
+            <MediaField.field
+              id={"#{@field.id}-media"}
+              type={:video}
+              asset={@video}
+              kind="entry_field"
+              field={@field.field}
+              path={Brando.Utils.get_path_from_field_name(@field.form.name)}
+              config_target={MediaField.entry_config(@field, :video)}
+              label={@label}
+              configure={open_video(@myself)}
+              browse={JS.push("browse_video", target: @myself) |> toggle_drawer("#video-picker")}
+              remove={JS.push("remove_video", target: @myself)}
+            >
+              <Input.hidden field={@relation_field} value={@video_id || ""} />
+            </MediaField.field>
           </div>
         </div>
       </Primitives.field_base>
@@ -225,6 +234,29 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
     js
     |> JS.push("open_video", target: target)
     |> toggle_drawer("#video-drawer")
+  end
+
+  def handle_event("browse_video", _, socket) do
+    send_update(BrandoAdmin.Components.VideoPicker,
+      id: "video-picker",
+      config_target: MediaField.entry_config(socket.assigns.field, :video),
+      event_target: socket.assigns.myself,
+      multi: false,
+      selected_videos: if(socket.assigns.video_id, do: [socket.assigns.video_id], else: [])
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("remove_video", _, socket) do
+    send_update(BrandoAdmin.Components.Form,
+      id: socket.assigns.form_id,
+      event: "clear_entry_field_asset",
+      field: socket.assigns.field.field,
+      path: Brando.Utils.get_path_from_field_name(socket.assigns.field.form.name)
+    )
+
+    {:noreply, socket}
   end
 
   def handle_event("open_video", _, socket) do
@@ -300,8 +332,11 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      action: :update_edit_video,
-      video: video
+      event: "entry_field_upload_complete",
+      asset_type: :video,
+      field: socket.assigns.field.field,
+      path: Brando.Utils.get_path_from_field_name(socket.assigns.field.form.name),
+      asset: video
     )
 
     if on_change do

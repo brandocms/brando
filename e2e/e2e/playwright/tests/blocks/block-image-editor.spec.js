@@ -29,7 +29,7 @@ test.describe('Image Editor from Blocks', () => {
     await page.waitForTimeout(2000)
 
     // Wait for image to appear in preview
-    await expect(page.locator('.picture-block .preview .image-content img')).toBeVisible({
+    await expect(page.locator('.picture-block .media-field--block:visible img')).toBeVisible({
       timeout: 15000,
     })
 
@@ -93,16 +93,17 @@ test.describe('Image Editor from Blocks', () => {
     await page.waitForTimeout(2000)
 
     // Wait for image to appear
-    await expect(page.locator('.picture-block .preview .image-content img')).toBeVisible({
+    await expect(page.locator('.picture-block .media-field--block:visible img')).toBeVisible({
       timeout: 15000,
     })
 
     // Open config modal
-    await page.locator('.picture-block .preview button.tiny').click()
+    await page.locator('.picture-block .media-field--block:visible').getByRole('button', { name: 'Configure', exact: true }).click()
+    await page.getByRole('tab', { name: 'Image', exact: true }).click()
     await syncLV(page)
 
     // Click "Edit/Crop" button in config panel
-    const editCropBtn = page.getByRole('button', { name: 'Edit/Crop' })
+    const editCropBtn = page.locator('.modal.visible').getByRole('button', { name: 'Edit/Crop' })
     await expect(editCropBtn).toBeVisible({ timeout: 5000 })
     await editCropBtn.click()
     await syncLV(page)
@@ -314,7 +315,7 @@ test.describe('Image Editor from Blocks', () => {
     })
 
     // Open image picker and select the original image (adds a second image)
-    await page.locator('.gallery-block button.tiny', { hasText: 'Select images' }).click()
+    await page.locator('.gallery-block button', { hasText: 'Browse images' }).click()
     await syncLV(page)
     await page.waitForTimeout(1000)
 
@@ -370,7 +371,7 @@ test.describe('Image Editor from Blocks', () => {
     })
 
     // Open image picker - the uploaded image should be selected
-    await page.locator('.gallery-block button.tiny', { hasText: 'Select images' }).click()
+    await page.locator('.gallery-block button', { hasText: 'Browse images' }).click()
     await syncLV(page)
     await page.waitForTimeout(1000)
 
@@ -462,7 +463,7 @@ test.describe('Image Editor from Blocks', () => {
     await page.waitForTimeout(2000)
 
     // Wait for image to appear in preview
-    const imgLocator = page.locator('.picture-block .preview .image-content img')
+    const imgLocator = page.locator('.picture-block .media-field--block:visible img')
     await expect(imgLocator).toBeVisible({ timeout: 15000 })
 
     // Click the edit icon overlay on the picture block preview
@@ -493,13 +494,13 @@ test.describe('Image Editor from Blocks', () => {
     await syncLV(page)
 
     // Wait for reprocessing to complete and image to reappear
-    await expect(page.locator('.picture-block .preview .image-content img')).toBeVisible({
+    await expect(page.locator('.picture-block .media-field--block:visible img')).toBeVisible({
       timeout: 20000,
     })
 
     // Verify the crop was applied by checking the rendered image dimensions changed.
     // Original fixture is landscape; after 2x zoom crop, dimensions should be smaller.
-    const dims = await page.locator('.picture-block .preview .image-content img').evaluate((img) => ({
+    const dims = await page.locator('.picture-block .media-field--block:visible img').evaluate((img) => ({
       w: img.naturalWidth,
       h: img.naturalHeight,
     }))
@@ -603,7 +604,7 @@ test.describe('Image Editor from Blocks', () => {
     await page.waitForTimeout(2000)
 
     // Wait for image to appear in preview
-    const imgLocator = page.locator('.picture-block .preview .image-content img')
+    const imgLocator = page.locator('.picture-block .media-field--block:visible img')
     await expect(imgLocator).toBeVisible({ timeout: 15000 })
 
     // Capture the original image src
@@ -633,7 +634,7 @@ test.describe('Image Editor from Blocks', () => {
     await syncLV(page)
 
     // Wait for the new image to be processed — src must change from the original
-    const imgAfter = page.locator('.picture-block .preview .image-content img')
+    const imgAfter = page.locator('.picture-block .media-field--block:visible img')
     await expect(imgAfter).not.toHaveAttribute('src', srcBefore, { timeout: 20000 })
 
     // Verify the image src actually changed (new image created from the crop)

@@ -3,13 +3,16 @@ import { syncLV } from '../../utils'
 
 test.use({ viewport: { width: 1440, height: 1000 } })
 test('video metadata and counts follow the selected folder', async ({ page }, testInfo) => {
+  await page.goto('/admin/assets/videos')
+  await syncLV(page)
+  const expectedCount = await page.locator('.list-row').count() + 2
   const response = await page.request.post('/e2e/admin-workspace-fixtures')
   expect(response.ok()).toBeTruthy()
   const { folder_id } = await response.json()
   await page.goto('/admin/assets/videos')
   await syncLV(page)
-  await expect(page.locator('.list-row')).toHaveCount(3)
-  await expect(page.getByText('3 videos', { exact: true })).toBeVisible()
+  await expect(page.locator('.list-row')).toHaveCount(expectedCount)
+  await expect(page.getByText(`${expectedCount} videos`, { exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Launch film.mp4', exact: true })).toBeVisible()
   await expect(page.locator('.list-row').first()).toContainText('1920 × 1080')
   await expect(page.locator('.list-row').first()).toContainText('00:31')
@@ -20,7 +23,7 @@ test('video metadata and counts follow the selected folder', async ({ page }, te
   await page.getByLabel('Filter by Title or source').fill('Studio tour')
   await expect(page.locator('.list-row')).toHaveCount(1)
   await page.getByLabel('Filter by Title or source').fill('')
-  await expect(page.locator('.list-row')).toHaveCount(3)
+  await expect(page.locator('.list-row')).toHaveCount(expectedCount)
   await page.getByRole('button', { name: 'Campaigns', exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`folder_id=${folder_id}`))
   await expect(page.locator('.list-row')).toHaveCount(1)

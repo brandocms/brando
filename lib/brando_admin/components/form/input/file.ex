@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
 
   import Ecto.Changeset
 
+  alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Primitives
 
@@ -124,15 +125,22 @@ defmodule BrandoAdmin.Components.Form.Input.File do
       >
         <div>
           <div class="input-file">
-            <.file_preview
-              file={@file}
-              field={@field}
-              relation_field={@relation_field}
-              click={@editable && open_file(@myself)}
-              file_name={@file_name}
+            <MediaField.field
+              id={"#{@field.id}-media"}
+              type={:file}
+              asset={@file}
+              kind="entry_field"
+              field={@field.field}
+              path={@path}
+              config_target={MediaField.entry_config(@field, :file)}
+              label={@label}
               editable={@editable}
-              compact={@compact}
-            />
+              configure={open_file(@myself)}
+              browse={JS.push("browse_file", target: @myself) |> toggle_drawer("#file-picker")}
+              remove={JS.push("remove_file", target: @myself)}
+            >
+              <Input.hidden field={@relation_field} value={@file_id || ""} />
+            </MediaField.field>
           </div>
         </div>
       </Primitives.field_base>
@@ -144,6 +152,29 @@ defmodule BrandoAdmin.Components.Form.Input.File do
     js
     |> JS.push("open_file", target: target)
     |> toggle_drawer("#file-drawer")
+  end
+
+  def handle_event("browse_file", _, socket) do
+    send_update(BrandoAdmin.Components.FilePicker,
+      id: "file-picker",
+      config_target: MediaField.entry_config(socket.assigns.field, :file),
+      event_target: socket.assigns.myself,
+      multi: false,
+      selected_files: if(socket.assigns.file_id, do: [socket.assigns.file_id], else: [])
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("remove_file", _, socket) do
+    send_update(BrandoAdmin.Components.Form,
+      id: socket.assigns.form_id,
+      event: "clear_entry_field_asset",
+      field: socket.assigns.field.field,
+      path: socket.assigns.path
+    )
+
+    {:noreply, socket}
   end
 
   def handle_event(
@@ -195,8 +226,11 @@ defmodule BrandoAdmin.Components.Form.Input.File do
 
     send_update(BrandoAdmin.Components.Form,
       id: socket.assigns.form_id,
-      action: :update_edit_file,
-      file: file
+      event: "entry_field_upload_complete",
+      asset_type: :file,
+      field: socket.assigns.field.field,
+      path: socket.assigns.path,
+      asset: file
     )
 
     {:noreply, socket}

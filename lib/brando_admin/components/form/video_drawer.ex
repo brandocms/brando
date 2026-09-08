@@ -197,7 +197,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
       |> assign(:video_filename, video_filename)
 
     ~H"""
-    <Content.drawer id="video-drawer" title={gettext("Video")} close={close_video()} z={1001} narrow>
+    <Content.drawer id="video-drawer" title={gettext("Video")} close={close_video()} z={1001} narrow light>
       <.form
         :let={video_form}
         :if={@video_changeset}
@@ -255,6 +255,8 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
                     phx-hook="Brando.UploadTrigger"
                     data-kind="entry_field"
                     data-asset-type="video"
+                    data-max-files="1"
+                    data-asset-id={@edit_video.video && @edit_video.video.id}
                     data-field={@edit_video.field}
                     data-path={Jason.encode!(@edit_video.path || [])}
                     data-config-target={

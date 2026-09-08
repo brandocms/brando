@@ -30,7 +30,11 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> assign(:picker_mode, :block_upload)
      |> assign(:opened?, true)
      |> assign(:pending_upload_name, assigns[:upload_name])
+     |> assign(:pending_request_id, assigns[:request_id])
      |> assign(:pending_file_count, assigns[:file_count] || 0)
+     |> assign(:pending_video_count, assigns[:video_count] || 0)
+     |> assign(:pending_video_folder, assigns[:video_folder])
+     |> assign(:pending_target_label, assigns[:target_label])
      |> assign(:new_folder, "")
      |> assign(:show_new_folder_form, false)
      |> assign(:form_id, assigns[:form_id] || socket.assigns.form_id)
@@ -153,6 +157,14 @@ defmodule BrandoAdmin.Components.ImagePicker do
     _ -> "default"
   end
 
+  def handle_event("cancel_pending_upload", _, socket) do
+    {:noreply,
+     push_event(socket, "b:block_upload_folder_cancelled", %{
+       upload_name: socket.assigns[:pending_upload_name],
+       request_id: socket.assigns[:pending_request_id]
+     })}
+  end
+
   def handle_event("confirm_block_upload_folder", _, socket) do
     upload_name = socket.assigns.pending_upload_name
     absolute_folder = FolderBrowser.absolute_folder(socket.assigns.current_folder, socket.assigns.upload_root)
@@ -163,6 +175,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> remember_folder(absolute_folder)
      |> push_event("b:block_upload_folder_confirmed", %{
        upload_name: to_string(upload_name),
+       request_id: socket.assigns[:pending_request_id],
        folder: absolute_folder,
        folder_id: folder_id
      })}
@@ -257,36 +270,34 @@ defmodule BrandoAdmin.Components.ImagePicker do
   def render(assigns) do
     ~H"""
     <div>
-      <Content.drawer id={@id} title={gettext("Select image")} close={toggle_drawer("##{@id}")} z={@z_index} wide light>
+      <Content.drawer
+        id={@id}
+        title={if @picker_mode == :block_upload, do: gettext("Choose upload folder"), else: gettext("Images")}
+        close={JS.push("cancel_pending_upload", target: @myself) |> toggle_drawer("##{@id}")}
+        z={@z_index}
+        wide
+        light
+        workspace
+        icon="hero-photo"
+        subtitle={
+          if @picker_mode == :block_upload,
+            do: gettext("Choose where to store these images."),
+            else: gettext("Select an image from your library.")
+        }
+      >
         <:info>
           <.live_component
             module={FileBrowser}
             id={"#{@id}-top"}
             section={:top}
             mode={:drawer}
+            root_name={gettext("Images")}
             target={@myself}
             upload_root={@upload_root}
             current_folder={@current_folder}
             breadcrumbs={@breadcrumbs}
             recent_folders={@recent_folders_for_root}
           >
-            <:top_lead :if={@picker_mode == :block_upload}>
-              <div class="image-picker-upload-callout">
-                <div>
-                  {gettext(
-                    "Upload %{count} file(s) to this folder",
-                    count: @pending_file_count
-                  )}
-                </div>
-                <button
-                  class="primary small"
-                  type="button"
-                  phx-click={JS.push("confirm_block_upload_folder", target: @myself) |> toggle_drawer("#image-picker")}
-                >
-                  {gettext("Upload here")}
-                </button>
-              </div>
-            </:top_lead>
             <:toolbar_actions>
               <div class="image-picker-view-toggle">
                 <button
@@ -330,7 +341,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
         >
           <:main_header>
             <div class="image-picker-main-header">
-              <h3>{folder_label_for_display(@current_folder, @upload_root)}</h3>
+              <h3>{if @current_folder == "", do: gettext("Root folder"), else: Path.basename(@current_folder)}</h3>
               <div class="image-picker-main-actions">
                 <span>
                   {ngettext("%{count} image", "%{count} images", @image_count, count: @image_count)}
@@ -347,7 +358,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
               <div class="image-picker-empty">
                 <.icon name="hero-photo" />
                 <h4>{gettext("No images in this folder")}</h4>
-                <p>{gettext("Upload files here or choose another folder")}</p>
+                <p>{gettext("Choose another folder to find an image")}</p>
               </div>
             <% end %>
 
@@ -393,6 +404,48 @@ defmodule BrandoAdmin.Components.ImagePicker do
             </div>
           </div>
         </.live_component>
+        <:footer :if={@picker_mode == :block_upload}>
+          <div class="image-picker-upload-callout">
+            <div>
+              <span :if={@pending_target_label} class="media-destination-target">{@pending_target_label}</span>
+              <span class="media-destination-folder">{FolderBrowser.absolute_folder(@current_folder, @upload_root)}</span>
+              <%= if @pending_video_count > 0 do %>
+                <div>
+                  {ngettext(
+                    "%{count} image to this folder",
+                    "%{count} images to this folder",
+                    @pending_file_count - @pending_video_count
+                  )}
+                </div>
+                <div>
+                  {ngettext("%{count} video to %{folder}", "%{count} videos to %{folder}", @pending_video_count,
+                    folder: @pending_video_folder
+                  )}
+                </div>
+              <% else %>
+                {ngettext(
+                  "Upload %{count} file to this folder",
+                  "Upload %{count} files to this folder",
+                  @pending_file_count
+                )}
+              <% end %>
+            </div>
+            <div class="media-destination-actions">
+              <button
+                class="primary small"
+                type="button"
+                phx-click={JS.push("confirm_block_upload_folder", target: @myself) |> toggle_drawer("#image-picker")}
+              >
+                {gettext("Upload here")}
+              </button>
+              <button
+                type="button"
+                class="media-button"
+                phx-click={JS.push("cancel_pending_upload", target: @myself) |> toggle_drawer("#image-picker")}
+              >{gettext("Cancel")}</button>
+            </div>
+          </div>
+        </:footer>
       </Content.drawer>
     </div>
     """
@@ -423,10 +476,17 @@ defmodule BrandoAdmin.Components.ImagePicker do
       id={@id}
       class="image-picker__image"
       data-id={@image.id}
+      data-selectable={to_string(@picker_mode == :select)}
+      role={if @picker_mode == :select, do: "button"}
+      tabindex={if @picker_mode == :select, do: "0"}
+      phx-key="Enter"
+      phx-keydown={if @picker_mode == :select, do: JS.exec("phx-click")}
       phx-click={
-        if @multi,
-          do: JS.push("select_image", target: @event_target),
-          else: JS.push("select_image", target: @event_target) |> toggle_drawer("#image-picker")
+        if @picker_mode == :select do
+          if @multi,
+            do: JS.push("select_image", target: @event_target),
+            else: JS.push("select_image", target: @event_target) |> toggle_drawer("#image-picker")
+        end
       }
       phx-value-id={@image.id}
     >

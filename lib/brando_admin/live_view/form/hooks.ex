@@ -521,7 +521,13 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     # send_updates, making the block process multiple adds against the same
     # initial state (adds get lost; the old flow serialized via the
     # client-side next_file dance). Queue them with a small spacing instead.
-    if target["kind"] in ["block_ref_gallery", "entry_field_gallery"] do
+    if target["kind"] in [
+         "block_ref_gallery",
+         "entry_field_gallery",
+         "block_var_gallery",
+         "entry_var_gallery",
+         "resource_gallery"
+       ] do
       queue = socket.assigns[:gallery_delivery_queue] || []
 
       if queue == [] do
@@ -568,8 +574,8 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   # Scalar vars hold image/file/video FKs — classify by struct (the target's
   # "asset_type" string can lie for e.g. self-hosted video), and refuse
   # anything else rather than writing a foreign id into file_id.
-  defp deliver_asset(%{"kind" => kind, "component_id" => component_id}, asset, _socket)
-       when kind in ["block_var", "entry_var"] and
+  defp deliver_asset(%{"kind" => kind, "component_id" => component_id} = target, asset, _socket)
+       when kind in ["block_var", "entry_var", "block_var_gallery", "entry_var_gallery"] and
               is_binary(component_id) and
               (is_struct(asset, Brando.Images.Image) or is_struct(asset, Brando.Files.File) or
                  is_struct(asset, Brando.Videos.Video)) do
@@ -580,8 +586,8 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         %Brando.Videos.Video{} -> :video
       end
 
-    # Mirror the old var upload flow: track processing updates for the image
-    # so the picker/pending flows keep working once the Oban worker finishes.
+    asset = refresh_processed_image(asset)
+
     if asset_type == :image do
       PubSub.subscribe(Brando.pubsub(), "brando:image:#{asset.id}")
     end
@@ -589,20 +595,32 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     send_update(BrandoAdmin.Components.Form.Input.RenderVar,
       id: component_id,
       event: "upload_complete",
+      expected_asset_id: target["expected_asset_id"],
       asset_type: asset_type,
       asset: asset
     )
+
+    if asset_type == :image && asset.status != :processed do
+      send(self(), {:register_pending_block_image, asset.id, {BrandoAdmin.Components.Form.Input.RenderVar, component_id}})
+      maybe_forward_already_processed(asset, BrandoAdmin.Components.Form.Input.RenderVar, component_id)
+    end
   end
 
-  # Picture refs get their image_id only when processing completes (thumbs need
-  # sizes) — register as pending; the [:image, :updated] hook forwards
-  # `image_processed` to the block, which runs update_ref_data + propagate.
+  # Attach the uploaded image immediately, then refresh its preview after
+  # processing without replacing a newer selection in the ref.
   defp deliver_asset(
-         %{"kind" => "block_ref_picture", "component_id" => component_id},
+         %{"kind" => "block_ref_picture", "component_id" => component_id} = target,
          %Brando.Images.Image{} = image,
          _socket
        )
        when is_binary(component_id) do
+    send_update(BrandoAdmin.Components.Form.Input.Blocks.PictureBlock,
+      id: component_id,
+      event: "image_uploaded",
+      image: image,
+      expected_asset_id: target["expected_asset_id"]
+    )
+
     PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
 
     send(
@@ -614,7 +632,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   defp deliver_asset(
-         %{"kind" => "block_ref_file", "component_id" => component_id},
+         %{"kind" => "block_ref_file", "component_id" => component_id} = target,
          %Brando.Files.File{} = file,
          _socket
        )
@@ -622,12 +640,13 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     send_update(BrandoAdmin.Components.Form.Input.Blocks.FileBlock,
       id: component_id,
       event: "live_upload_complete",
+      expected_asset_id: target["expected_asset_id"],
       file: file
     )
   end
 
   defp deliver_asset(
-         %{"kind" => "block_ref_video", "component_id" => component_id},
+         %{"kind" => "block_ref_video", "component_id" => component_id} = target,
          %Brando.Videos.Video{} = video,
          _socket
        )
@@ -635,6 +654,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     send_update(BrandoAdmin.Components.Form.Input.Blocks.VideoBlock,
       id: component_id,
       event: "select_video",
+      expected_asset_id: target["expected_asset_id"],
       video_id: video.id
     )
   end
@@ -725,6 +745,19 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     maybe_forward_already_processed(image, BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock, component_id)
   end
 
+  defp deliver_asset(
+         %{"kind" => "block_ref_gallery", "component_id" => component_id},
+         %Brando.Videos.Video{} = video,
+         _socket
+       )
+       when is_binary(component_id) do
+    send_update(BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock,
+      id: component_id,
+      event: "video_created_from_url",
+      video_data: %{id: video.id}
+    )
+  end
+
   # Entry schema fields (Phase 4) — route to the Form component, which updates
   # the entry changeset at the field's (possibly nested) path.
   defp deliver_asset(%{"kind" => "entry_field", "field" => field} = target, asset, socket)
@@ -759,6 +792,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       id: "#{singular}_form",
       event: "entry_field_upload_complete",
       asset_type: asset_type,
+      expected_asset_id: target["expected_asset_id"],
       field: String.to_existing_atom(field),
       path: path,
       asset: asset
@@ -805,6 +839,18 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       config_target: target["config_target"],
       asset: video
     )
+  end
+
+  defp deliver_asset(%{"kind" => "resource_gallery", "component_id" => component_id}, asset, _socket)
+       when is_struct(asset, Brando.Images.Image) or is_struct(asset, Brando.Videos.Video) do
+    module = BrandoAdmin.Components.Form.Input.GalleryObjects
+    send_update(module, id: component_id, event: "upload_complete", asset: refresh_processed_image(asset))
+
+    if is_struct(asset, Brando.Images.Image) do
+      PubSub.subscribe(Brando.pubsub(), "brando:image:#{asset.id}")
+      send(self(), {:register_pending_block_image, asset.id, {module, component_id}})
+      maybe_forward_already_processed(asset, module, component_id)
+    end
   end
 
   defp deliver_asset(target, asset, _socket) do

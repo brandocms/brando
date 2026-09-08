@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
   import Ecto.Changeset
 
+  alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Primitives
@@ -192,15 +193,21 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       >
         <div>
           <div class={["input-image", @small && "small", @square && "square", @compact && "compact"]}>
-            <.image_preview
-              image={@image}
-              field={@field}
-              relation_field={@relation_field}
-              click={@editable && open_image(@myself)}
-              editable={@editable}
-              file_name={@file_name}
-              compact={@compact}
-            />
+            <MediaField.field
+              id={"#{@field.id}-media"}
+              type={:image}
+              asset={@image}
+              kind="entry_field"
+              field={@field.field}
+              path={Brando.Utils.get_path_from_field_name(@field.form.name)}
+              config_target={MediaField.entry_config(@field, :image)}
+              label={@label}
+              configure={open_image(@myself)}
+              browse={JS.push("browse_image", target: @myself) |> toggle_drawer("#image-picker")}
+              remove={JS.push("remove_image", target: @myself)}
+            >
+              <Input.hidden field={@relation_field} value={@image_id || ""} />
+            </MediaField.field>
           </div>
         </div>
       </Primitives.field_base>
@@ -226,6 +233,32 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     js
     |> JS.push("open_image", target: target)
     |> toggle_drawer("#image-drawer")
+  end
+
+  def handle_event("browse_image", _, socket) do
+    field = socket.assigns.field
+
+    send_update(BrandoAdmin.Components.ImagePicker,
+      id: "image-picker",
+      config_target: MediaField.entry_config(field, :image),
+      event_target: socket.assigns.myself,
+      multi: false,
+      selected_images: if(socket.assigns.image_id, do: [socket.assigns.image_id], else: [])
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("remove_image", _, socket) do
+    send_update(BrandoAdmin.Components.Form,
+      id: socket.assigns.form_id,
+      event: "clear_entry_field_asset",
+      asset_type: :image,
+      field: socket.assigns.field.field,
+      path: Brando.Utils.get_path_from_field_name(socket.assigns.field.form.name)
+    )
+
+    {:noreply, socket}
   end
 
   def handle_event("open_image", _, socket) do
@@ -316,8 +349,11 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
-      action: :update_edit_image,
-      image: image
+      event: "entry_field_upload_complete",
+      asset_type: :image,
+      field: socket.assigns.field.field,
+      path: Brando.Utils.get_path_from_field_name(socket.assigns.field.form.name),
+      asset: image
     )
 
     if on_change do

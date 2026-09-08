@@ -1,0 +1,195 @@
+{
+  "date": "2026-09-08",
+  "commit": "f7276d594",
+  "application": "isolated E2E consumer, local storage",
+  "desktop": "1440 \u00d7 1000",
+  "mobile": "390 \u00d7 844",
+  "method": "Playwright UI actions, chooser events, file inputs, dispatched DataTransfer drops, DOM/handler inspection; source review",
+  "screenshots": [
+    {
+      "image": "screenshots/01-project-fields-empty.png",
+      "title": "Form fields: empty",
+      "observation": "Image, video and file fields offer Add buttons. A drop onto the visible image field made no intake call."
+    },
+    {
+      "image": "screenshots/02-image-field-drawer-empty.png",
+      "title": "Image field \u2192 Image drawer",
+      "observation": "Add image opens this dark side drawer. Upload and selection are another action inside it."
+    },
+    {
+      "image": "screenshots/03-image-picker-empty.png",
+      "title": "Image picker: empty folder",
+      "observation": "The picker invites uploads but contains no file input or upload action."
+    },
+    {
+      "image": "screenshots/05-image-drawer-populated.png",
+      "title": "Image drawer: populated",
+      "observation": "Dropping onto the drawer preview succeeded; metadata and crop actions then appear."
+    },
+    {
+      "image": "screenshots/06-image-rejected-file.png",
+      "title": "Rejected image upload",
+      "observation": "Dropping a PDF preserved the prior image. The queue error is clipped and separated from the field."
+    },
+    {
+      "image": "screenshots/07-file-field-drawer.png",
+      "title": "File field \u2192 File drawer",
+      "observation": "Another contextual drawer, with upload and existing-file selection."
+    },
+    {
+      "image": "screenshots/08-file-picker.png",
+      "title": "File library picker",
+      "observation": "Folder-aware file selection has no upload action."
+    },
+    {
+      "image": "screenshots/09-file-drawer-populated.png",
+      "title": "File uploaded in drawer",
+      "observation": "The PDF arrived through the shared manager and is visible in the drawer."
+    },
+    {
+      "image": "screenshots/10-video-field-drawer.png",
+      "title": "Video field \u2192 Video drawer",
+      "observation": "Upload/File and External URL tabs introduce another acquisition layout."
+    },
+    {
+      "image": "screenshots/11-video-picker.png",
+      "title": "Video library picker",
+      "observation": "Unlike image/file pickers, this offers Upload file and Add from URL."
+    },
+    {
+      "image": "screenshots/12-video-upload-result.png",
+      "title": "Local video upload",
+      "observation": "A system chooser selection delivered a local video to the field."
+    },
+    {
+      "image": "screenshots/13-gallery-field-empty.png",
+      "title": "Gallery field before upload",
+      "observation": "Four separate buttons. The floating queue obscures part of this low-positioned field; see the close-up below."
+    },
+    {
+      "image": "screenshots/14-gallery-field-video-drop-error.png",
+      "title": "Video dropped onto gallery",
+      "observation": "The main gallery surface routed the video as an image and rejected .mp4."
+    },
+    {
+      "image": "screenshots/15-gallery-field-populated.png",
+      "title": "Image dropped onto gallery",
+      "observation": "The same gallery surface accepted an image. A video must use its separate upload control."
+    },
+    {
+      "image": "screenshots/16-picture-ref-empty.png",
+      "title": "Picture ref: empty",
+      "observation": "Clicking this canvas was observed to open the system file chooser directly."
+    },
+    {
+      "image": "screenshots/17-picture-folder-confirmation.png",
+      "title": "Default-config upload \u2192 folder drawer",
+      "observation": "After selecting a file, the image picker is reused to ask for Upload here."
+    },
+    {
+      "image": "screenshots/18-picture-ref-populated.png",
+      "title": "Picture ref: populated",
+      "observation": "Its visible preview has no uploader. A subsequent image drop left it unchanged."
+    },
+    {
+      "image": "screenshots/20-picture-ref-editor.png",
+      "title": "Picture ref \u2192 configuration modal",
+      "observation": "Edit image opens a light modal with usage overrides; crop opens another drawer."
+    },
+    {
+      "image": "screenshots/21-gallery-ref-empty.png",
+      "title": "Gallery ref: misleading drop area",
+      "observation": "Dropping on the empty-state message added nothing. The hook is on the button strip above."
+    },
+    {
+      "image": "screenshots/22-gallery-ref-populated.png",
+      "title": "Gallery ref after toolbar-area drop",
+      "observation": "Dropping on the actual upload wrapper and confirming the folder added an image."
+    },
+    {
+      "image": "screenshots/23-image-var-modal-empty.png",
+      "title": "Image variable: empty modal",
+      "observation": "The outer field opens this modal. Its empty canvas supports upload."
+    },
+    {
+      "image": "screenshots/24-image-var-modal-populated.png",
+      "title": "Image variable: populated modal",
+      "observation": "After upload the file input disappears. Only selection and reset remain."
+    },
+    {
+      "image": "screenshots/25-file-var-modal-empty.png",
+      "title": "File variable: empty modal",
+      "observation": "The file uploader reuses an image icon and the image-shaped placeholder."
+    },
+    {
+      "image": "screenshots/26-video-ref-empty.png",
+      "title": "Video ref: empty",
+      "observation": "The visible action is Select or create video. There is no direct file drop handler here."
+    },
+    {
+      "image": "screenshots/29-image-crop-editor.png",
+      "title": "Image editor",
+      "observation": "Save changes and Save as new copy use distinct mutation/upload paths."
+    },
+    {
+      "image": "screenshots/30-image-var-mobile.png",
+      "title": "Image variable at 390px",
+      "observation": "The two-column modal remains; the technical path wraps across the divider."
+    },
+    {
+      "image": "screenshots/31-image-picker-mobile.png",
+      "title": "Image picker at 390px",
+      "observation": "Nested picker leaves part of the underlying modal visible. Current unsaved image is marked selected."
+    },
+    {
+      "image": "screenshots/32-gallery-var-modal.png",
+      "title": "Gallery variable",
+      "observation": "Add images/Add videos open pickers. The modal has no direct upload control."
+    },
+    {
+      "image": "screenshots/33-images-library.png",
+      "title": "Images resource: root",
+      "observation": "The shared folder browser has a small native uploader in the toolbar."
+    },
+    {
+      "image": "screenshots/34-images-library-uploaded.png",
+      "title": "Root image upload: success, empty view",
+      "observation": "Upload succeeded without a manager item; the new image landed in the configured default folder."
+    },
+    {
+      "image": "screenshots/35-files-library.png",
+      "title": "Files resource after upload",
+      "observation": "Native listing upload succeeded. Uploaded local video also has a backing file here."
+    },
+    {
+      "image": "screenshots/36-file-library-replacement.png",
+      "title": "Replace shared file",
+      "observation": "This dialog clearly explains replacement everywhere and preserves the URL. Inspected without performing replacement."
+    },
+    {
+      "image": "screenshots/37-videos-library.png",
+      "title": "Videos resource: reproduced 500",
+      "observation": "After local video upload the listing failed. Server trace: file association NotLoaded in Video.listing_row/1."
+    },
+    {
+      "image": "screenshots/38-images-library-default-folder.png",
+      "title": "The uploaded image in its destination",
+      "observation": "The new asset is found under site/default, after navigating away from the root view."
+    },
+    {
+      "image": "screenshots/39-gallery-field-detail.png",
+      "title": "Gallery field: close-up",
+      "observation": "Upload images, Upload videos, Select images, Select videos. This is a direct element screenshot."
+    },
+    {
+      "image": "screenshots/40-image-field-drawer-mobile.png",
+      "title": "Image drawer at 390px",
+      "observation": "Measured drawer width 425px, left edge \u221235px. The title and left control edges are clipped."
+    },
+    {
+      "image": "screenshots/41-gallery-resource-editor.png",
+      "title": "Gallery resource editor",
+      "observation": "Select images and Select videos open library pickers. The collection itself has no uploader or external-file drop target; its drag behavior is for reordering."
+    }
+  ]
+}

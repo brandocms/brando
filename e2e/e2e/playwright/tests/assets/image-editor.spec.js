@@ -1,7 +1,7 @@
 import { test, expect } from '../../test-support/setupAuth'
 import { syncLV, fillSlugSource, confirmUploadFolder } from '../../utils'
 
-test('opens image editor, adjusts focal point, and saves', async ({ page }) => {
+test('opens image editor, adjusts focal point, and saves', async ({ page }, testInfo) => {
   test.setTimeout(120000)
 
   // Step 1: Navigate to projects and create a client first
@@ -51,17 +51,33 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }) => {
   await page.getByRole('button', { name: 'ImgEdClient' }).click()
   await syncLV(page)
 
-  // Step 3: Upload an image via the listing_image field
-  await page.getByRole('button', { name: 'Add image' }).click()
-  await page.locator('#image-drawer-upload-input').setInputFiles('./fixtures/image.jpg')
+  // Upload through the field, then edit shared metadata in the workspace drawer.
+  const imageField = page.locator('#project_listing_image-media')
+  await imageField.locator('input[type="file"]').setInputFiles('./fixtures/image.jpg')
   await confirmUploadFolder(page)
-
-  // Wait for upload to complete — image should appear in the drawer
-  await expect(page.locator('#image-drawer img')).toBeVisible({ timeout: 30000 })
-
-  // Close drawer immediately (same pattern as projects.spec.js to avoid loading state)
-  await page.getByRole('button', { name: 'Close' }).first().click()
-  await page.waitForSelector('#image-drawer', { state: 'hidden' })
+  await expect(imageField.locator('img')).toBeVisible({ timeout: 30000 })
+  await imageField.getByRole('button', { name: 'Configure', exact: true }).click()
+  const details = page.getByRole('dialog', { name: 'Image details', exact: true })
+  await details.getByLabel('Alternative text', { exact: true }).fill('Library description')
+  await syncLV(page)
+  await details.locator('summary', { hasText: 'Replace' }).click()
+  await details.getByRole('button', { name: 'Browse library', exact: true }).click()
+  const browser = page.getByRole('dialog', { name: 'Images', exact: true })
+  await expect(browser).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(browser).not.toBeVisible()
+  await expect(details).toBeVisible()
+  // The menu closes on selection, so focus returns to its visible disclosure.
+  await expect(details.locator('summary', { hasText: 'Replace' })).toBeFocused()
+  await expect(details.getByLabel('Alternative text', { exact: true })).toHaveValue('Library description')
+  await page.screenshot({ path: testInfo.outputPath('image-details-desktop.png') })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(details.getByRole('button', { name: 'Done', exact: true })).toBeInViewport()
+  expect(await details.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+  await page.screenshot({ path: testInfo.outputPath('image-details-mobile.png') })
+  await details.getByRole('button', { name: 'Done', exact: true }).click()
+  await expect(details).not.toBeVisible()
+  await page.setViewportSize({ width: 1440, height: 1000 })
   await syncLV(page)
 
   // Step 4: Save the project so the image is fully persisted and processed
@@ -78,14 +94,14 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }) => {
   await syncLV(page)
 
   // Step 6: Open the image drawer by clicking "Edit image" on the listing image
-  await page.getByRole('button', { name: 'Edit image' }).click()
+  await imageField.getByRole('button', { name: 'Configure', exact: true }).click()
   await syncLV(page)
 
   // Verify the image drawer is open and image is visible
   await expect(page.locator('#image-drawer img')).toBeVisible({ timeout: 10000 })
 
   // Step 7: Click "Edit/Crop image" button in the image drawer
-  const editCropBtn = page.getByRole('button', { name: 'Edit/Crop image' })
+  const editCropBtn = details.getByRole('button', { name: 'Edit/Crop', exact: true })
   await expect(editCropBtn).toBeVisible({ timeout: 10000 })
   await editCropBtn.click()
   await syncLV(page)
@@ -149,15 +165,15 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }) => {
   await syncLV(page, 30000)
 
   // Close the image drawer
-  await page.getByRole('button', { name: 'Close' }).first().click()
+  await details.getByRole('button', { name: 'Done', exact: true }).click()
   await page.waitForSelector('#image-drawer', { state: 'hidden' })
   await syncLV(page)
 
   // Verify the image dimensions changed after crop (original was 292x173)
-  const dims = page.locator('.input-image .dims')
+  const dims = imageField.locator('.media-field-meta')
   await expect(dims).toBeVisible({ timeout: 10000 })
   const dimsText = await dims.textContent()
-  expect(dimsText).not.toBe('292×173')
+  expect(dimsText).not.toBe('292 × 173')
 
   // Step 14: Save the project again so the cropped image is persisted
   await page.getByTestId('submit').click()
@@ -170,11 +186,11 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }) => {
   await syncLV(page)
 
   // Step 16: Open the image drawer and image editor again
-  await page.getByRole('button', { name: 'Edit image' }).click()
+  await imageField.getByRole('button', { name: 'Configure', exact: true }).click()
   await syncLV(page)
   await expect(page.locator('#image-drawer img')).toBeVisible({ timeout: 10000 })
 
-  const editCropBtn2 = page.getByRole('button', { name: 'Edit/Crop image' })
+  const editCropBtn2 = details.getByRole('button', { name: 'Edit/Crop', exact: true })
   await expect(editCropBtn2).toBeVisible({ timeout: 10000 })
   await editCropBtn2.click()
   await syncLV(page)
@@ -199,7 +215,7 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }) => {
   await syncLV(page, 30000)
 
   // Close the image drawer
-  await page.getByRole('button', { name: 'Close' }).first().click()
+  await details.getByRole('button', { name: 'Done', exact: true }).click()
   await page.waitForSelector('#image-drawer', { state: 'hidden' })
   await syncLV(page)
 })

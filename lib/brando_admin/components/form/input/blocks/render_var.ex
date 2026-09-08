@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   alias Brando.Repo
   alias Brando.Utils
+  alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Primitives
@@ -31,6 +32,32 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   def update_many(assigns_sockets) do
+    original_assigns_sockets = assigns_sockets
+
+    {processed_events, assigns_sockets} =
+      Enum.split_with(assigns_sockets, fn {assigns, _} -> assigns[:event] == "image_processed" end)
+
+    processed_results =
+      Enum.map(processed_events, fn {%{image: image}, socket} ->
+        cond do
+          socket.assigns[:image_id] == image.id ->
+            assign(socket, :image, image)
+
+          socket.assigns[:type] == :gallery && socket.assigns[:gallery] ->
+            gallery = socket.assigns.gallery
+
+            objects =
+              Enum.map(gallery_objects(gallery), fn object ->
+                if object.image_id == image.id, do: %{object | image: image}, else: object
+              end)
+
+            assign(socket, :gallery, %{gallery | gallery_objects: objects})
+
+          true ->
+            socket
+        end
+      end)
+
     {upload_events, rest} =
       Enum.split_with(assigns_sockets, fn {assigns, _socket} ->
         Map.has_key?(assigns, :event) && assigns.event == "upload_complete"
@@ -71,24 +98,39 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     # Handle upload_complete events directly (no DB lookups needed)
     upload_results =
       Enum.map(upload_events, fn {assigns, socket} ->
-        case assigns.asset_type do
-          :image ->
-            socket
-            |> assign(:image, assigns.asset)
-            |> assign(:image_id, assigns.asset.id)
-            |> on_change(%{image: assigns.asset, image_id: assigns.asset.id})
+        current_id = socket.assigns[assigns.asset_type] && socket.assigns[assigns.asset_type].id
 
-          :file ->
-            socket
-            |> assign(:file, assigns.asset)
-            |> assign(:file_id, assigns.asset.id)
-            |> on_change(%{file: assigns.asset, file_id: assigns.asset.id})
+        if Brando.Uploads.AssetIntent.current_selection?(assigns[:expected_asset_id], current_id) do
+          case {socket.assigns.type, assigns.asset_type} do
+            {:gallery, media_type} ->
+              id_field = if media_type == :image, do: :image_id, else: :video_id
+              objects = gallery_objects(socket.assigns.gallery)
 
-          :video ->
-            socket
-            |> assign(:video, assigns.asset)
-            |> assign(:video_id, assigns.asset.id)
-            |> on_change(%{video: assigns.asset, video_id: assigns.asset.id})
+              persist_gallery(
+                socket,
+                objects ++ [%{id_field => assigns.asset.id, creator_id: socket.assigns.current_user_id}]
+              )
+
+            {_, :image} ->
+              socket
+              |> assign(:image, assigns.asset)
+              |> assign(:image_id, assigns.asset.id)
+              |> on_change(%{image: assigns.asset, image_id: assigns.asset.id})
+
+            {_, :file} ->
+              socket
+              |> assign(:file, assigns.asset)
+              |> assign(:file_id, assigns.asset.id)
+              |> on_change(%{file: assigns.asset, file_id: assigns.asset.id})
+
+            {_, :video} ->
+              socket
+              |> assign(:video, assigns.asset)
+              |> assign(:video_id, assigns.asset.id)
+              |> on_change(%{video: assigns.asset, video_id: assigns.asset.id})
+          end
+        else
+          socket
         end
       end)
 
@@ -102,7 +144,13 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         []
       end
 
-    upload_results ++ var_change_results ++ video_created_results ++ var_results
+    results =
+      Map.new(
+        processed_results ++ upload_results ++ var_change_results ++ video_created_results ++ var_results,
+        &{&1.assigns.id, &1}
+      )
+
+    Enum.map(original_assigns_sockets, fn {assigns, socket} -> Map.fetch!(results, assigns[:id] || socket.assigns.id) end)
   end
 
   defp collect_asset_ids(assigns_sockets) do
@@ -781,15 +829,21 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     <div class="brando-input">
       <Primitives.field_base field={@var[:image_id]} label={@label} instructions={@instructions} skip_presence>
         <div class="input-image">
-          <Input.Image.image_preview
-            image={@image}
-            field={@var[:image_id]}
-            value={@image_id || ""}
-            relation_field={@var[:image_id]}
-            click={show_modal("#var-#{@var.id}-image-config")}
-            file_name={@image && @image.path && Path.basename(@image.path)}
-            publish
-          />
+          <MediaField.field
+            id={"#{@var.id}-image-media"}
+            type={:image}
+            asset={@image}
+            kind={@upload_kind}
+            component_id={@component_id}
+            var_key={@var_key}
+            config_target={@var[:config_target].value || "default"}
+            configure={show_modal("#var-#{@var.id}-image-config")}
+            browse={JS.push("set_target", target: @target) |> toggle_drawer("#image-picker")}
+            remove={JS.push("reset_image", target: @target)}
+            label={@label}
+          >
+            <Input.input type={:hidden} field={@var[:image_id]} value={@image_id || ""} publish />
+          </MediaField.field>
           <.image_modal
             field={@var}
             image={@image}
@@ -817,15 +871,21 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     <div class="brando-input">
       <Primitives.field_base field={@var[:file_id]} label={@label} instructions={@instructions} skip_presence>
         <div class="input-file">
-          <Input.File.file_preview
-            publish
-            file={@file}
-            field={@var[:file_id]}
-            value={@file_id || ""}
-            relation_field={@var[:file_id]}
-            click={show_modal("#var-#{@var.id}-file-config")}
-            file_name={@file && @file.filename && Path.basename(@file.filename)}
-          />
+          <MediaField.field
+            id={"#{@var.id}-file-media"}
+            type={:file}
+            asset={@file}
+            kind={@upload_kind}
+            component_id={@component_id}
+            var_key={@var_key}
+            config_target={@var[:config_target].value || "default"}
+            configure={show_modal("#var-#{@var.id}-file-config")}
+            browse={JS.push("set_file_target", target: @target) |> toggle_drawer("#file-picker")}
+            remove={JS.push("reset_file", target: @target)}
+            label={@label}
+          >
+            <Input.input type={:hidden} field={@var[:file_id]} value={@file_id || ""} publish />
+          </MediaField.field>
           <.file_modal
             field={@var}
             file={@file}
@@ -852,21 +912,29 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     ~H"""
     <div class="brando-input">
       <Primitives.field_base field={@var[:video_id]} label={@label} instructions={@instructions} skip_presence>
-        <Input.hidden field={@var[:video_id]} value={@video_id || ""} />
-        <button
-          type="button"
-          class="file-card"
-          phx-click={show_modal("#var-#{@var.id}-video-config")}
+        <MediaField.field
+          id={"#{@var.id}-video-media"}
+          type={:video}
+          asset={@video}
+          kind={@upload_kind}
+          component_id={@component_id}
+          var_key={@var[:key].value}
+          config_target={@var[:config_target].value || "default"}
+          label={@label}
+          configure={show_modal("#var-#{@var.id}-video-config")}
+          browse={JS.push("set_video_target", target: @target) |> toggle_drawer("#video-picker")}
+          remove={JS.push("reset_video", target: @target)}
         >
-          <div class="file-card__icon"><.icon name="hero-play-circle" /></div>
-          <div class="file-card__meta">
-            <div class="file-card__name">
-              {(@video && (@video.title || @video.remote_id || @video.source_url)) || gettext("Select video")}
-            </div>
-            <div :if={@video} class="file-card__sub">{@video.type}</div>
-          </div>
-        </button>
-        <.video_modal field={@var} video={@video} target={@target} />
+          <Input.input type={:hidden} field={@var[:video_id]} value={@video_id || ""} publish />
+        </MediaField.field>
+        <.video_modal
+          field={@var}
+          video={@video}
+          target={@target}
+          component_id={@component_id}
+          var_key={@var_key}
+          upload_kind={@upload_kind}
+        />
       </Primitives.field_base>
       <div :if={@edit} class="brando-input">
         <Input.text
@@ -886,21 +954,56 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     ~H"""
     <div class="brando-input">
       <Primitives.field_base field={@var[:gallery_id]} label={@label} instructions={@instructions} skip_presence>
-        <Input.hidden field={@var[:gallery_id]} value={@gallery_id || ""} />
-        <button
-          type="button"
-          class="file-card"
-          phx-click={show_modal("#var-#{@var.id}-gallery-config")}
+        <div
+          id={"#{@var.id}-gallery-media"}
+          class="media-gallery"
+          phx-hook="Brando.UploadTrigger"
+          data-kind={"#{@upload_kind}_gallery"}
+          data-component-id={@component_id}
+          data-var-key={@var[:key].value}
+          data-upload-label={@label}
+          data-asset-type="image"
+          data-config-target={@var[:gallery_image_config_target].value || "default"}
+          data-video-config-target={@var[:gallery_video_config_target].value || "default"}
+          data-allowed-types={Enum.join(@var[:gallery_allowed_types].value || [:image, :video], ",")}
+          data-folder-browser="true"
+          data-click-mode="trigger"
+          data-accept="image/*,video/*"
         >
-          <div class="file-card__icon"><.icon name="hero-photo" /></div>
-          <div class="file-card__meta">
-            <div class="file-card__name">{gettext("Gallery")}</div>
-            <div class="file-card__sub">
-              {ngettext("%{count} asset", "%{count} assets", length(@gallery_objects))}
-            </div>
+          <input type="file" class="file-input" multiple accept="image/*,video/*" />
+          <Input.input type={:hidden} field={@var[:gallery_id]} value={@gallery_id || ""} publish />
+          <div class="media-field-copy">
+            <span class="media-field-name">{gettext("Gallery")}</span>
+            <span class="media-field-meta">{ngettext("%{count} item", "%{count} items", length(@gallery_objects))} · {gettext(
+              "Drop media here to add"
+            )}</span>
           </div>
-        </button>
-        <.gallery_modal field={@var} gallery={@gallery} target={@target} />
+          <div class="media-field-actions">
+            <button type="button" class="media-button primary upload-trigger"><.icon name="hero-arrow-up-tray" />{gettext(
+              "Upload media"
+            )}</button>
+            <button type="button" class="media-button" phx-click={show_modal("#var-#{@var.id}-gallery-config")}><.icon name="hero-adjustments-horizontal" />{gettext(
+              "Configure"
+            )}</button>
+          </div>
+          <div
+            id={"#{@var.id}-gallery-progress"}
+            class="media-field-progress"
+            phx-update="ignore"
+            role="status"
+            aria-live="polite"
+          >
+          </div>
+          <div class="media-field-drop" aria-hidden="true"><span>{gettext("Add to gallery")}</span></div>
+        </div>
+        <.gallery_modal
+          field={@var}
+          gallery={@gallery}
+          target={@target}
+          component_id={@component_id}
+          var_key={@var_key}
+          upload_kind={@upload_kind}
+        />
       </Primitives.field_base>
       <div :if={@edit} class="brando-input">
         <.live_component
@@ -1117,73 +1220,24 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def image_modal(assigns) do
     ~H"""
     <Content.modal title={gettext("Image")} id={"var-#{@field.id}-image-config"}>
-      <div class="panels">
+      <div class="media-var-config">
         <div class="panel">
-          <%= if @image && @image.path do %>
-            <img
-              width={"#{@image.width}"}
-              height={"#{@image.height}"}
-              src={"#{Utils.img_url(@image, :original, prefix: Utils.media_url())}"}
-            />
-
-            <div class="image-info">
-              Path: {@image.path}<br /> Dimensions: {@image.width}&times;{@image.height}<br />
-            </div>
-          <% end %>
-          <%= if !@image do %>
-            <div
-              id={"#{@field.id}-var-uploader"}
-              class="input-image"
-              phx-hook="Brando.UploadTrigger"
-              data-kind={@upload_kind}
-              data-component-id={@component_id}
-              data-var-key={@var_key}
-              data-asset-type="image"
-              data-config-target={@field[:config_target].value || "default"}
-              data-folder-browser="true"
-              data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
-            >
-              <input type="file" class="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" />
-              <div class="img-placeholder empty upload-canvas">
-                <div class="placeholder-wrapper">
-                  <div class="svg-wrapper">
-                    <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                      <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none" />
-                      <polygon
-                        class="plus"
-                        points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"
-                      />
-                      <path
-                        d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z"
-                        transform="translate(0 0)"
-                      />
-                      <circle cx="8" cy="9" r="2" />
-                    </svg>
-                  </div>
-                </div>
-                <div class="instructions">
-                  <span>{gettext("Click or drag an image &uarr; to upload") |> raw()}</span>
-                </div>
-              </div>
-            </div>
-          <% end %>
-        </div>
-        <div class="panel">
-          <div class="button-group-vertical">
-            <button
-              type="button"
-              class="secondary"
-              phx-click={JS.push("set_target", target: @target) |> toggle_drawer("#image-picker")}
-            >
-              {gettext("Select image")}
-            </button>
-
-            <button type="button" class="danger" phx-click={JS.push("reset_image", target: @target)}>
-              {gettext("Reset image")}
-            </button>
-          </div>
+          <MediaField.field
+            id={"#{@field.id}-var-uploader"}
+            type={:image}
+            asset={@image}
+            kind={@upload_kind}
+            component_id={@component_id}
+            var_key={@var_key}
+            config_target={@field[:config_target].value || "default"}
+            browse={JS.push("set_target", target: @target) |> toggle_drawer("#image-picker")}
+            remove={JS.push("reset_image", target: @target)}
+          />
         </div>
       </div>
+      <:footer>
+        <button type="button" class="primary" phx-click={hide_modal("#var-#{@field.id}-image-config")}>{gettext("Done")}</button>
+      </:footer>
     </Content.modal>
     """
   end
@@ -1191,120 +1245,45 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def file_modal(assigns) do
     ~H"""
     <Content.modal title={gettext("File")} id={"var-#{@field.id}-file-config"}>
-      <div class="panels">
+      <div class="media-var-config">
         <div class="panel">
-          <%= if @file && @file.filename do %>
-            <a
-              class="file-card"
-              href={Utils.file_url(@file, prefix: Utils.media_url())}
-              target="_blank"
-              rel="noopener"
-            >
-              <div class="file-card__icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
-                  <path fill="none" d="M0 0h24v24H0z" />
-                  <path d="M21 8v12.993A1 1 0 0 1 20.007 22H3.993A.993.993 0 0 1 3 21.008V2.992C3 2.444 3.445 2 3.993 2H15l6 6zm-2 1h-5V4H5v16h14V9z" />
-                </svg>
-              </div>
-              <div class="file-card__meta">
-                <div class="file-card__name">{Path.basename(@file.filename)}</div>
-                <div class="file-card__sub">
-                  <span class="file-card__type">{@file.mime_type}</span>
-                  <span class="file-card__size">{Utils.human_size(@file.filesize)}</span>
-                </div>
-              </div>
-            </a>
-          <% end %>
-          <%= if !@file do %>
-            <div
-              id={"#{@field.id}-var-uploader"}
-              class="input-image"
-              phx-hook="Brando.UploadTrigger"
-              data-kind={@upload_kind}
-              data-component-id={@component_id}
-              data-var-key={@var_key}
-              data-asset-type="file"
-              data-config-target={@field[:config_target].value || "default"}
-            >
-              <input type="file" class="file-input" />
-              <div class="img-placeholder empty upload-canvas">
-                <div class="placeholder-wrapper">
-                  <div class="svg-wrapper">
-                    <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                      <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none" />
-                      <polygon
-                        class="plus"
-                        points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"
-                      />
-                      <path
-                        d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z"
-                        transform="translate(0 0)"
-                      />
-                      <circle cx="8" cy="9" r="2" />
-                    </svg>
-                  </div>
-                </div>
-                <div class="instructions">
-                  <span>{gettext("Click or drag a file &uarr; to upload") |> raw()}</span>
-                </div>
-              </div>
-            </div>
-          <% end %>
-        </div>
-        <div class="panel">
-          <div class="button-group-vertical">
-            <button
-              type="button"
-              class="secondary"
-              phx-click={JS.push("set_file_target", target: @target) |> toggle_drawer("#file-picker")}
-            >
-              {gettext("Select file")}
-            </button>
-
-            <button type="button" class="danger" phx-click={JS.push("reset_file", target: @target)}>
-              {gettext("Reset file")}
-            </button>
-          </div>
+          <MediaField.field
+            id={"#{@field.id}-var-uploader"}
+            type={:file}
+            asset={@file}
+            kind={@upload_kind}
+            component_id={@component_id}
+            var_key={@var_key}
+            config_target={@field[:config_target].value || "default"}
+            browse={JS.push("set_file_target", target: @target) |> toggle_drawer("#file-picker")}
+            remove={JS.push("reset_file", target: @target)}
+          />
         </div>
       </div>
+      <:footer>
+        <button type="button" class="primary" phx-click={hide_modal("#var-#{@field.id}-file-config")}>{gettext("Done")}</button>
+      </:footer>
     </Content.modal>
     """
   end
 
   def video_modal(assigns) do
     ~H"""
-    <Content.modal title={gettext("Video")} id={"var-#{@field.id}-video-config"}>
-      <div class="panels">
-        <div class="panel">
-          <%= if @video do %>
-            <img
-              :if={@video.thumbnail}
-              src={Utils.img_url(@video.thumbnail, :small, prefix: Utils.media_url())}
-              alt=""
-            />
-            <div class="image-info">
-              {@video.title || gettext("Untitled video")}<br />
-              <span :if={@video.caption}>{@video.caption}</span>
-            </div>
-          <% else %>
-            <p>{gettext("No video selected.")}</p>
-          <% end %>
-        </div>
-        <div class="panel">
-          <div class="button-group-vertical">
-            <button
-              type="button"
-              class="secondary"
-              phx-click={JS.push("set_video_target", target: @target) |> toggle_drawer("#video-picker")}
-            >
-              {if @video, do: gettext("Replace video"), else: gettext("Select video")}
-            </button>
-            <button :if={@video} type="button" class="danger" phx-click={JS.push("reset_video", target: @target)}>
-              {gettext("Reset video")}
-            </button>
-          </div>
-        </div>
-      </div>
+    <Content.modal title={gettext("Video")} icon="hero-film" id={"var-#{@field.id}-video-config"}>
+      <MediaField.field
+        id={"#{@field.id}-var-uploader"}
+        type={:video}
+        asset={@video}
+        kind={@upload_kind}
+        component_id={@component_id}
+        var_key={@var_key}
+        config_target={@field[:config_target].value || "default"}
+        browse={JS.push("set_video_target", target: @target) |> toggle_drawer("#video-picker")}
+        remove={JS.push("reset_video", target: @target)}
+      />
+      <:footer>
+        <button type="button" class="primary" phx-click={hide_modal("#var-#{@field.id}-video-config")}>{gettext("Done")}</button>
+      </:footer>
     </Content.modal>
     """
   end
@@ -1319,56 +1298,133 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       |> assign(:allowed_types, allowed_types)
 
     ~H"""
-    <Content.modal title={gettext("Gallery")} id={"var-#{@field.id}-gallery-config"} wide>
-      <div class="gallery-input">
-        <div :if={@objects == []} class="empty">{gettext("No assets in this gallery.")}</div>
-        <div :if={@objects != []} class="gallery-objects gallery-objects--grid">
-          <div :for={object <- @objects} class="gallery-object">
-            <img
-              :if={object.image}
-              src={Utils.img_url(object.image, :small, prefix: Utils.media_url())}
-              alt=""
-            />
-            <div :if={object.video} class="file-card">
-              <div class="file-card__icon"><.icon name="hero-play-circle" /></div>
-              <div class="file-card__meta">{object.video.title || gettext("Untitled video")}</div>
-            </div>
+    <Content.modal
+      title={gettext("Gallery")}
+      icon="hero-squares-2x2"
+      subtitle={@field[:label].value}
+      id={"var-#{@field.id}-gallery-config"}
+      wide
+    >
+      <div
+        id={"#{@field.id}-gallery-uploader"}
+        class="gallery-input media-gallery media-gallery--variable"
+        phx-hook="Brando.UploadTrigger"
+        data-kind={"#{@upload_kind}_gallery"}
+        data-component-id={@component_id}
+        data-var-key={@var_key}
+        data-upload-label={@field[:label].value}
+        data-asset-type="image"
+        data-config-target={@field[:gallery_image_config_target].value || "default"}
+        data-video-config-target={@field[:gallery_video_config_target].value || "default"}
+        data-allowed-types={Enum.join(@allowed_types, ",")}
+        data-folder-browser="true"
+        data-click-mode="trigger"
+        data-accept="image/*,video/*"
+      >
+        <input type="file" class="file-input" multiple />
+        <div
+          id={"#{@field.id}-gallery-modal-progress"}
+          class="media-field-progress"
+          phx-update="ignore"
+          role="status"
+          aria-live="polite"
+        >
+        </div>
+        <div class="media-field-drop" aria-hidden="true">{gettext("Drop to add to this gallery")}</div>
+        <div class="gallery-workspace-toolbar">
+          <div class="gallery-workspace-context">
+            <h3>{ngettext("%{count} item", "%{count} items", length(@objects))}</h3><p>
+              {gettext("Drop images or videos here to add them.")}
+            </p>
+          </div>
+          <div class="actions">
+            <button type="button" class="media-button primary upload-trigger">{gettext("Upload media")}</button>
             <button
+              :if={:image in @allowed_types}
               type="button"
-              class="tiny danger"
-              phx-click={JS.push("remove_gallery_object", target: @target, value: %{id: object.id})}
+              class="media-button"
+              phx-click={JS.push("set_gallery_image_target", target: @target) |> toggle_drawer("#image-picker")}
             >
-              {gettext("Remove")}
+              {gettext("Browse images")}
+            </button>
+            <button
+              :if={:video in @allowed_types}
+              type="button"
+              class="media-button"
+              phx-click={JS.push("set_gallery_video_target", target: @target) |> toggle_drawer("#video-picker")}
+            >
+              {gettext("Browse videos")}
             </button>
           </div>
         </div>
-        <div class="actions">
-          <button
-            :if={:image in @allowed_types}
-            type="button"
-            class="secondary"
-            phx-click={JS.push("set_gallery_image_target", target: @target) |> toggle_drawer("#image-picker")}
+        <div :if={@objects == []} class="gallery-workspace-empty">
+          <.icon name="hero-photo" />
+          <h3>{gettext("Build your gallery")}</h3>
+          <p>{gettext("Upload media or choose from your library.")}</p>
+        </div>
+        <div :if={@objects != []} class="gallery-workspace-items" role="list" aria-label={gettext("Gallery items")}>
+          <div
+            :for={{object, index} <- Enum.with_index(@objects)}
+            class="gallery-object gallery-workspace-item"
+            role="listitem"
           >
-            {gettext("Add images")}
-          </button>
-          <button
-            :if={:video in @allowed_types}
-            type="button"
-            class="secondary"
-            phx-click={JS.push("set_gallery_video_target", target: @target) |> toggle_drawer("#video-picker")}
-          >
-            {gettext("Add videos")}
-          </button>
-          <button
-            :if={@gallery}
-            type="button"
-            class="danger"
-            phx-click={JS.push("reset_gallery", target: @target)}
-          >
-            {gettext("Reset gallery")}
-          </button>
+            <span class="gallery-item-position">{String.pad_leading(to_string(index + 1), 2, "0")}</span>
+            <div class="gallery-item-preview">
+              <img :if={object.image} src={Utils.img_url(object.image, :small, prefix: Utils.media_url())} alt="" />
+              <%= if object.video do %>
+                <%= cond do %>
+                  <% match?(%Brando.Images.Image{}, object.video.thumbnail) -> %>
+                    <Content.image image={object.video.thumbnail} size={:smallest} />
+                  <% match?(%Brando.Files.File{}, object.video.file) -> %>
+                    <.icon name="hero-film" />
+                    <video
+                      class="gallery-video-preview"
+                      muted
+                      preload="metadata"
+                      src={Utils.media_url(object.video.file) <> "#t=0.1"}
+                      aria-label={gettext("Video preview")}
+                    />
+                  <% true -> %>
+                    <.icon name="hero-film" />
+                <% end %>
+              <% end %>
+            </div>
+            <div class="gallery-item-info">
+              <span class="gallery-item-name">{if object.image,
+                do: Path.basename(object.image.path),
+                else: object.video.title || gettext("Untitled video")}</span>
+              <span class="gallery-item-meta">
+                <%= if object.image do %>
+                  {gettext("Image")}<span>·</span>{object.image.width} × {object.image.height}
+                <% else %>
+                  {gettext("Video")}
+                <% end %>
+              </span>
+            </div>
+            <button
+              type="button"
+              class="gallery-item-remove"
+              aria-label={
+                gettext("Remove %{name}",
+                  name: if(object.image, do: Path.basename(object.image.path), else: object.video.title || gettext("video"))
+                )
+              }
+              phx-click={JS.push("remove_gallery_object", target: @target, value: %{id: object.id})}
+            >
+              <.icon name="hero-x-mark" /><span>{gettext("Remove")}</span>
+            </button>
+          </div>
         </div>
       </div>
+      <:footer>
+        <button
+          :if={@gallery}
+          type="button"
+          class="gallery-reset-button"
+          phx-click={JS.push("reset_gallery", target: @target)}
+        >{gettext("Reset gallery")}</button>
+        <button type="button" class="primary" phx-click={hide_modal("#var-#{@field.id}-gallery-config")}>{gettext("Done")}</button>
+      </:footer>
     </Content.modal>
     """
   end
@@ -1561,7 +1617,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   defp persist_gallery(socket, objects) do
     gallery = socket.assigns.gallery
-    current_user_id = socket.assigns.current_user_id
+    current_user_id = normalize_id(socket.assigns.current_user_id)
 
     params = %{
       config_target:
@@ -1574,7 +1630,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         |> Enum.map(fn {object, sequence} ->
           object
           |> Map.put(:sequence, sequence)
-          |> Map.update(:creator_id, current_user_id, &(&1 || current_user_id))
+          |> Map.update(:creator_id, current_user_id, &normalize_id(&1 || current_user_id))
         end)
     }
 

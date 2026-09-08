@@ -53,23 +53,21 @@ const saveProject = async (page, path) => {
   await syncLV(page)
 }
 
+const projectMediaField = (page, type) => {
+  const field = { image: 'listing_image', file: 'cover_file', video: 'cover_video' }[type]
+  return page.locator(`#project_${field}-media`)
+}
+const blockMediaVar = (page, type) => page.locator(`.media-field[data-kind="block_var"][id$="-${type}-media"]`)
+
 const uploadField = async (page, type, file) => {
-  const fieldName = { image: 'listing_image', file: 'cover_file', video: 'cover_video' }[type]
-  const field = page.locator(`#project_${fieldName}-field-base`)
-  const fk = page.locator(`input[name="project[${fieldName}_id]"]`)
-  const previous = await fk.inputValue()
-  await field.getByRole('button', { name: new RegExp(`^(Add|Edit) ${type}$`) }).click()
-  const drawer = page.locator(`#${type}-drawer`)
-  const input = type === 'video' ? '#video-drawer-upload-trigger input[type="file"]' : `#${type}-drawer-upload-input`
-  await page.locator(input).setInputFiles(file)
+  const field = projectMediaField(page, type)
+  const previous = await field.getAttribute('data-asset-id')
+  await field.locator('input[type="file"]').setInputFiles(file)
   if (type === 'image') await confirmUploadFolder(page)
-  if (type === 'file') await expect(drawer.locator('.file-info')).toBeVisible({ timeout: 20000 })
-  if (type === 'image') await expect(drawer.locator('img').first()).toBeVisible({ timeout: 20000 })
-  if (type === 'video') await expect(drawer.getByRole('button', { name: 'Reset video field' })).toBeVisible({ timeout: 20000 })
-  await expect(fk).not.toHaveValue(previous, { timeout: 30000 })
-  await drawer.getByRole('button', { name: 'Close', exact: true }).click()
-  await expect(drawer).toBeHidden()
-  await expect(field.getByRole('button', { name: `Edit ${type}`, exact: true })).toBeVisible({ timeout: 20000 })
+  await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
+  if (previous) await expect(field).not.toHaveAttribute('data-asset-id', previous, { timeout: 30000 })
+  if (type === 'image') await expect(field.locator('img')).toBeVisible({ timeout: 20000 })
+  await expect(field.getByRole('button', { name: 'Configure', exact: true })).toBeVisible()
 }
 
 const fields = ['listing_image_id', 'cover_file_id', 'cover_video_id']
@@ -113,7 +111,7 @@ test.describe('Media in entry recovery copies', () => {
     let counts = (await mediaState(page, 'project', id)).counts
     await restore(page)
     expect(await fieldIds(page)).toEqual(initial)
-    for (const type of ['image', 'file', 'video']) await expect(page.getByRole('button', { name: `Edit ${type}`, exact: true })).toBeVisible()
+    for (const type of ['image', 'file', 'video']) await expect(projectMediaField(page, type)).toHaveAttribute('data-asset-id', /\d+/)
     await screenshot(page, testInfo, 'recovery-media-fields.png')
     await saveProject(page, path)
     let state = await mediaState(page, 'project', id)
@@ -135,14 +133,16 @@ test.describe('Media in entry recovery copies', () => {
     expect(state.counts).toEqual(counts)
 
     for (const type of ['image', 'file', 'video']) {
-      await page.getByRole('button', { name: `Edit ${type}`, exact: true }).click()
-      await page.locator(`#${type}-drawer`).getByRole('button', { name: `Reset ${type} field`, exact: true }).click()
+      await projectMediaField(page, type).getByRole('button', { name: 'Configure', exact: true }).click()
+      const drawer = page.locator(`#${type}-drawer`)
+      if (type === 'image') await drawer.getByLabel('More image actions', { exact: true }).click()
+      await drawer.getByRole('button', { name: type === 'video' ? 'Reset video field' : 'Remove', exact: true }).click()
       await expect(page.locator(`#${type}-drawer`)).toBeHidden()
     }
     const cleared = Object.fromEntries(fields.map(field => [field, null]))
     await waitForCopy(page, 'project', id, copy => matchesFields(copy.main, cleared))
     await restore(page)
-    for (const type of ['image', 'file', 'video']) await expect(page.getByRole('button', { name: `Add ${type}`, exact: true })).toBeVisible()
+    for (const type of ['image', 'file', 'video']) await expect(projectMediaField(page, type).getByRole('button', { name: 'Upload', exact: true })).toBeVisible()
     expect(await fieldIds(page)).toEqual(cleared)
     await saveProject(page, path)
     state = await mediaState(page, 'project', id)
@@ -154,11 +154,11 @@ test.describe('Media in entry recovery copies', () => {
     const { path, id } = await openProject(page)
     const gallery = page.locator('.gallery-input')
     const chooser = page.waitForEvent('filechooser')
-    await gallery.getByRole('button', { name: 'Upload images', exact: true }).click()
+    await gallery.getByRole('button', { name: 'Upload media', exact: true }).click()
     await (await chooser).setFiles(['./fixtures/image.jpg', './fixtures/image2.jpg'])
     await confirmUploadFolder(page)
     await expect(gallery.locator('.gallery-object')).toHaveCount(2, { timeout: 30000 })
-    await gallery.locator('[data-asset-type="video"] input[type="file"]').setInputFiles('./fixtures/video.mp4')
+    await gallery.locator('input[type="file"]').setInputFiles('./fixtures/video.mp4')
     await expect(gallery.locator('.gallery-object')).toHaveCount(3, { timeout: 30000 })
     const objects = gallery.locator('.gallery-object')
     await gallery.scrollIntoViewIfNeeded()
@@ -214,7 +214,7 @@ test.describe('Media in entry recovery copies', () => {
     await gallery.locator('.file-input').setInputFiles(['./fixtures/image.jpg', './fixtures/image2.jpg'])
     await confirmUploadFolder(page)
     await expect(gallery.locator('.gallery-object')).toHaveCount(2, { timeout: 30000 })
-    await gallery.getByRole('button', { name: 'Select videos', exact: true }).click()
+    await gallery.getByRole('button', { name: 'Browse videos', exact: true }).click()
     await page.locator('.video-picker__video', { hasText: 'Test Video' }).first().click()
     await page.locator('#video-picker').getByRole('button', { name: 'Close', exact: true }).click()
     await expect(gallery.locator('.gallery-object')).toHaveCount(3)
@@ -246,22 +246,20 @@ test.describe('Media in entry recovery copies', () => {
     const picture = page.locator('.picture-block')
     await picture.locator('.file-input').last().setInputFiles('./fixtures/image.jpg')
     await confirmUploadFolder(page)
-    await expect(picture.locator('.preview .image-content img')).toBeVisible({ timeout: 30000 })
+    await expect(picture.locator('.media-field--block:visible img')).toBeVisible({ timeout: 30000 })
     await addBlock(page, 'Video Player')
-    await page.getByRole('button', { name: 'Select or create video', exact: true }).click()
+    await page.locator('.video-block .media-field:visible').getByRole('button', { name: 'Browse library', exact: true }).click()
     await page.locator('.video-picker__video', { hasText: 'Test Video' }).first().click()
-    await expect(page.locator('.video-block')).toContainText('dQw4w9WgXcQ')
+    await expect(page.locator('.video-block .media-field:visible')).toContainText('Test Video')
     await addBlock(page, 'Image and File Vars', '07 VAR UPLOAD TEST')
     for (const [type, file] of [['image', 'image2.jpg'], ['file', 'test.pdf']]) {
-      await page.getByRole('button', { name: `Add ${type}`, exact: true }).click()
-      const modal = page.locator(`[id$="${type}-config"]:visible`)
-      await expect(modal).toBeVisible()
+      const field = blockMediaVar(page, type)
       const chooser = page.waitForEvent('filechooser')
-      await modal.locator('.upload-canvas').click()
+      await field.getByRole('button', { name: 'Upload', exact: true }).click()
       await (await chooser).setFiles(`./fixtures/${file}`)
       if (type === 'image') await confirmUploadFolder(page)
-      await expect(modal.locator(type === 'image' ? 'img' : '.file-card')).toBeVisible({ timeout: 30000 })
-      await modal.locator('button.modal-close').click()
+      await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
+      if (type === 'image') await expect(field.locator('img')).toBeVisible({ timeout: 30000 })
     }
     const media = copy => {
       const blocks = (copy.blocks.blocks || []).map(row => row.block)
@@ -273,22 +271,22 @@ test.describe('Media in entry recovery copies', () => {
     await waitForCopy(page, 'page', 'new', copy => media(copy).every(Boolean))
     const counts = (await mediaState(page, 'page')).counts
     await restore(page)
-    await expect(picture.locator('.preview .image-content img')).toBeVisible()
-    await expect(page.locator('.video-block')).toContainText('dQw4w9WgXcQ')
-    await expect(page.getByRole('button', { name: 'Edit image', exact: true }).last()).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Edit file', exact: true })).toBeVisible()
+    await expect(picture.locator('.media-field--block:visible img')).toBeVisible()
+    await expect(page.locator('.video-block .media-field:visible')).toContainText('Test Video')
+    await expect(blockMediaVar(page, 'image')).toHaveAttribute('data-asset-id', /\d+/)
+    await expect(blockMediaVar(page, 'file')).toHaveAttribute('data-asset-id', /\d+/)
     await screenshot(page, testInfo, 'recovery-media-refs-vars.png')
     const id = await savePage(page, title)
     expect((await mediaState(page, 'page', id)).counts).toEqual(counts)
     for (const type of ['image', 'file']) {
-      await page.getByRole('button', { name: `Edit ${type}`, exact: true }).last().click()
+      await blockMediaVar(page, type).getByRole('button', { name: 'Configure', exact: true }).click()
       const modal = page.locator(`[id$="${type}-config"]:visible`)
-      await modal.getByRole('button', { name: `Reset ${type}`, exact: true }).click()
-      await modal.locator('button.modal-close').click()
+      await modal.getByRole('button', { name: 'Remove', exact: true }).click()
+      await modal.getByRole('button', { name: 'Done', exact: true }).click()
     }
     await waitForCopy(page, 'page', id, copy => media(copy).slice(0, 2).every(Boolean) && media(copy).slice(2).every(value => !value))
     await restore(page)
-    for (const type of ['image', 'file']) await expect(page.getByRole('button', { name: `Add ${type}`, exact: true })).toBeVisible()
+    for (const type of ['image', 'file']) await expect(blockMediaVar(page, type).getByRole('button', { name: 'Upload', exact: true })).toBeVisible()
     await savePage(page, title)
     const state = await mediaState(page, 'page', id)
     const vars = state.entry.entry_blocks.flatMap(row => row.block.vars)
@@ -313,22 +311,17 @@ test.describe('Media in entry recovery copies', () => {
       await entry.getByLabel('Key', { exact: true }).fill(`recovery_${type}`)
       await entry.getByLabel('Key', { exact: true }).blur()
       await syncLV(page)
+      const field = entry.locator('.media-field[id$="-media"]')
       if (type === 'video') {
-        await entry.getByRole('button', { name: 'Select video', exact: true }).click()
-        const modal = page.locator('[id$="video-config"]:visible')
-        await modal.getByRole('button', { name: 'Select video', exact: true }).click()
+        await field.getByRole('button', { name: 'Browse library', exact: true }).click()
         await page.locator('.video-picker__video', { hasText: 'Test Video' }).first().click()
         await expect(page.locator('#video-picker')).toBeHidden()
-        await expect(modal.locator('.image-info')).toContainText('Test Video')
-        await modal.locator('button.modal-close').click()
+        await expect(field).toContainText('Test Video')
       } else {
-        await entry.getByRole('button', { name: `Add ${type}`, exact: true }).click()
-        const modal = page.locator(`[id$="${type}-config"]:visible`)
-        await modal.locator('input[type="file"]').setInputFiles(type === 'image' ? './fixtures/image.jpg' : './fixtures/test.pdf')
+        await field.locator('input[type="file"]').setInputFiles(type === 'image' ? './fixtures/image.jpg' : './fixtures/test.pdf')
         if (type === 'image') await confirmUploadFolder(page)
-        await expect(modal.locator(type === 'image' ? 'img' : '.file-card')).toBeVisible({ timeout: 30000 })
-        await modal.locator('button.modal-close').click()
       }
+      await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
     }
     await waitForCopy(page, 'page', 'new', copy => ['image', 'file', 'video'].every(type =>
       copy.main.vars?.find(variable => variable.key === `recovery_${type}`)?.[`${type}_id`]))
@@ -338,7 +331,7 @@ test.describe('Media in entry recovery copies', () => {
     for (const [index, type] of ['image', 'file', 'video'].entries()) {
       const entry = page.locator('.subform-entry').nth(index)
       if (!(await entry.getByLabel('Key', { exact: true }).isVisible())) await entry.locator('.variable-header').click()
-      await expect(entry.getByRole('button', { name: type === 'video' ? /Test Video/ : `Edit ${type}` })).toBeVisible()
+      await expect(entry.locator('.media-field[id$="-media"]')).toHaveAttribute('data-asset-id', /\d+/)
     }
     const id = await savePage(page, title)
     const state = await mediaState(page, 'page', id)

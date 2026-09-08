@@ -588,6 +588,32 @@ defmodule BrandoAdmin.Components.Form do
   # `assign_drawer_recovery_state/1` gates on exactly these flags — clearing one
   # dropped the drawer's recovery snapshot mid-edit, and let a save through
   # while an image was still processing, which is what the guard exists to stop.
+  def update(%{event: "clear_entry_field_asset", field: field, path: path}, socket) do
+    relation_key = String.to_existing_atom("#{field}_id")
+    changeset = EctoNestedChangeset.update_at(socket.assigns.form.source, path ++ [relation_key], fn _ -> nil end)
+
+    {:ok,
+     socket
+     |> assign(:form, to_form(changeset, []))
+     |> update_entry_with_relation(path ++ [field], nil)
+     |> update_entry_assocs(path ++ [field], nil)
+     |> ship_all_field_changes()
+     |> push_event("b:validate", %{})}
+  end
+
+  def update(
+        %{event: "entry_field_upload_complete", expected_asset_id: expected, field: field, path: path} = assigns,
+        socket
+      ) do
+    current_id = EctoNestedChangeset.get_at(socket.assigns.form.source, path ++ [String.to_existing_atom("#{field}_id")])
+
+    if Brando.Uploads.AssetIntent.current_selection?(expected, current_id) do
+      update(Map.delete(assigns, :expected_asset_id), socket)
+    else
+      {:ok, socket}
+    end
+  end
+
   def update(
         %{event: "entry_field_upload_complete", asset_type: :file, field: field, path: path, asset: file},
         socket
@@ -2818,11 +2844,17 @@ defmodule BrandoAdmin.Components.Form do
           0
       end
 
+    {video_config, _} = Brando.Uploads.resolve_video_config(params["video_config_target"] || "default")
+
     send_update(ImagePicker,
       id: "image-picker",
       event: "open_block_upload_browser",
       upload_name: upload_name,
+      request_id: params["request_id"],
       file_count: file_count,
+      video_count: params["video_count"] || 0,
+      video_folder: video_config.upload_path,
+      target_label: params["target_label"],
       config_target: config_target,
       initial_folder: params["initial_folder"],
       recent_folders: recent_folders,

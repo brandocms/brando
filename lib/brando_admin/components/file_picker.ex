@@ -171,22 +171,30 @@ defmodule BrandoAdmin.Components.FilePicker do
   def render(assigns) do
     ~H"""
     <div>
-      <Content.drawer id={@id} title={gettext("Select file")} close={toggle_drawer("##{@id}")} z={@z_index} wide light>
+      <Content.drawer
+        id={@id}
+        title={gettext("Select file")}
+        close={toggle_drawer("##{@id}")}
+        z={@z_index}
+        wide
+        light
+        workspace
+        icon="hero-document"
+        subtitle={gettext("Select a file from your library.")}
+      >
         <:info>
           <.live_component
             module={FileBrowser}
             id={"#{@id}-top"}
             section={:top}
             mode={:drawer}
+            root_name={gettext("Files")}
             target={@myself}
             upload_root={@upload_root}
             current_folder={@current_folder}
             breadcrumbs={@breadcrumbs}
             recent_folders={@recent_folders_for_root}
           >
-            <:top_lead :if={@config_target}>
-              <div class="mb-2">{gettext("Select a compatible file from the library")}</div>
-            </:top_lead>
           </.live_component>
         </:info>
 
@@ -208,7 +216,7 @@ defmodule BrandoAdmin.Components.FilePicker do
         >
           <:main_header>
             <div class="image-picker-main-header">
-              <h3>{folder_label_for_display(@current_folder, @upload_root)}</h3>
+              <h3>{if @current_folder == "", do: gettext("Root folder"), else: Path.basename(@current_folder)}</h3>
               <div class="image-picker-main-actions">
                 <span>{ngettext("%{count} file", "%{count} files", @file_count, count: @file_count)}</span>
               </div>
@@ -268,7 +276,7 @@ defmodule BrandoAdmin.Components.FilePicker do
       <div class="file-picker__info">
         <div class="file-picker__name">
           <div class="file-picker__filename">{@file.filename}</div>
-          <div class="file-picker__path">#{@file.id} {Utils.file_url(@file)}</div>
+          <div class="file-picker__path">{Utils.file_url(@file)}</div>
         </div>
         <div class="file-picker__size">{Brando.Utils.human_size(@file.filesize)}</div>
       </div>

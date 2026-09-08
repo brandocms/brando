@@ -17,15 +17,11 @@ test('seo changes affect the frontpage', async ({ page }, testInfo) => {
   await page.getByRole('button', { name: 'Add entry' }).click()
   await page.locator('input[name="seo[redirects][0][code]"]').click()
   await page.locator('input[name="seo[redirects][0][code]"]').fill('301')
-  // Add SEO image
-  await page.getByRole('button', { name: 'Add image' }).click()
-  await page.locator('#image-drawer-upload-input').setInputFiles('./fixtures/image.jpg')
+  // Upload the fallback image through its field.
+  const imageField = page.locator('#seo_fallback_meta_image-media')
+  await imageField.locator('input[type="file"]').setInputFiles('./fixtures/image.jpg')
   await confirmUploadFolder(page)
-  // Wait for upload to complete - the image should appear in the drawer
-  await expect(page.locator('#image-drawer img')).toBeVisible({ timeout: 30000 })
-  // Close drawer - this should save the image selection
-  await page.getByRole('button', { name: 'Close' }).click()
-  await page.waitForSelector('#image-drawer', { state: 'hidden' })
+  await expect(imageField.locator('img')).toBeVisible({ timeout: 30000 })
   await syncLV(page)
   await expect(page.getByText('No image associated with')).toHaveCount(0)
   await expect(page.locator('.seo-sharing-preview img')).toBeVisible()

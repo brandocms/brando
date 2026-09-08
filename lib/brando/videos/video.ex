@@ -92,7 +92,7 @@ defmodule Brando.Videos.Video do
 
   listings do
     listing do
-      query %{order: [{:desc, :id}]}
+      query %{order: [{:desc, :id}], preload: [:file, :thumbnail]}
       filter label: t("Title or source"), key: "path"
       component &__MODULE__.listing_row/1
     end
