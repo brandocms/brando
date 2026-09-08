@@ -25,7 +25,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     ~H"""
     <div class="alert danger text-mono">
       <div>
-        Missing module — #{inspect(assigns.module_id)}.<br /><br />
+        Missing module — #{inspect(@module_id)}.<br /><br />
         If this is a mistake, you can hopefully undelete the module.<br /><br /> If you're sure the module is gone, you can
         <button type="button" phx-click="delete_block" phx-target={@myself}>
           delete this block.
@@ -45,7 +45,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     ~H"""
     <div class="alert danger text-mono">
       <div>
-        Missing container — #{inspect(assigns.container_id)}.<br /><br />
+        Missing container — #{inspect(@container_id)}.<br /><br />
         If this is a mistake, you can hopefully undelete the container.<br /><br />
         If you're sure the container is gone, you can
         <button type="button" phx-click="delete_block" phx-target={@myself}>
@@ -60,7 +60,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     ~H"""
     <div class="alert danger text-mono">
       <div>
-        Missing fragment — #{inspect(assigns.fragment_id)}.<br /><br />
+        Missing fragment — #{inspect(@fragment_id)}.<br /><br />
         If this is a mistake, you can hopefully undelete the fragment.<br /><br />
         If you're sure the fragment is gone, you can
         <button type="button" phx-click="delete_block" phx-target={@myself}>
@@ -206,7 +206,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         remap_targets={@remap_targets}
         remap_error={@remap_error}
       />
-      <.collection_children {assigns} />
+      {collection_children(assigns)}
     </div>
     """
   end
@@ -375,7 +375,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               data-sortable-selector=".block"
               class="block-slot-blocks"
             >
-              <.collection_children {assigns} />
+              {collection_children(assigns)}
             </div>
             <.plus click={JS.push("insert_slot_block", target: @myself)} modal={@module_picker_id} />
           </div>
@@ -413,6 +413,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   end
 
   def render(assigns) do
+    assigns = assign(assigns, :assign_keys, Map.keys(assigns))
+
     ~H"""
     <div class="block-unknown-type">
       <code>
@@ -421,7 +423,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
       Assign keys:
 
-      <%= inspect Map.keys(assigns), pretty: true, width: 0 %>
+      <%= inspect @assign_keys, pretty: true, width: 0 %>
 
       - type: <%= inspect @type %>
       - multi: <%= inspect @multi %>
@@ -835,6 +837,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       |> assign(:description, Changeset.get_field(block_cs, :description))
       |> assign(:active, Changeset.get_field(block_cs, :active))
       |> assign(:collapsed, Changeset.get_field(block_cs, :collapsed))
+      |> assign_new(:heex_compiled_module, fn -> nil end)
 
     ~H"""
     <div
@@ -902,7 +905,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 liquid_splits={@liquid_splits}
                 module_class={@module_class}
                 module_type={@module_type}
-                heex_compiled_module={assigns[:heex_compiled_module]}
+                heex_compiled_module={@heex_compiled_module}
                 has_table_template?={@has_table_template?}
                 table_template_name={@table_template_name}
                 target={@target}
@@ -953,7 +956,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               liquid_splits={@liquid_splits}
               module_class={@module_class}
               module_type={@module_type}
-              heex_compiled_module={assigns[:heex_compiled_module]}
+              heex_compiled_module={@heex_compiled_module}
               has_table_template?={@has_table_template?}
               table_template_name={@table_template_name}
               target={@target}
@@ -1055,6 +1058,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   end
 
   def module_content(assigns) do
+    assigns = assign(assigns, :footnote_refs, footnote_ref_names(assigns.block_form.source))
+
     ~H"""
     <div class="block-content">
       <div b-editor-tpl={@module_class}>
@@ -1093,6 +1098,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 <.ref
                   refs_field={@block_form[:refs]}
                   ref_name={ref}
+                  footnotes_enabled={ref in @footnote_refs}
                   config_open={@config_open}
                   target={@target}
                   target_ref={@target_ref}
@@ -1492,6 +1498,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :form_id, :any, default: nil
   attr :config_open, :string, default: nil
 
+  attr :footnotes_enabled, :boolean
+
   def ref(assigns) do
     refs = Changeset.get_assoc(assigns.refs_field.form.source, :refs, :struct)
     ref_names = Enum.map(refs, & &1.name)
@@ -1501,7 +1509,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       assigns
       |> assign(:ref_found, ref_found)
       |> assign(:ref_names, ref_names)
-      |> assign(:footnotes_enabled, ref_footnotes_enabled?(assigns.refs_field.form.source, assigns.ref_name, refs))
+      |> assign_new(:footnotes_enabled, fn ->
+        assigns.ref_name in footnote_ref_names(assigns.refs_field.form.source)
+      end)
 
     ~H"""
     <%= if @ref_found do %>
@@ -1563,25 +1573,28 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
     """
   end
 
-  defp ref_footnotes_enabled?(block_cs, name, refs) do
-    case Enum.find(refs, &(&1.name == name)) do
-      %{data: %{type: "text"}} ->
-        module =
-          Brando.Content.fetch_module(
-            Changeset.get_field(block_cs, :module_id),
-            Changeset.get_field(block_cs, :module_origin) || :local
-          )
+  # Resolve module definitions once for the block, rather than once per text ref.
+  # Keep this tied to the current form and module cache so edited definitions do
+  # not become another mount-only snapshot.
+  defp footnote_ref_names(block_cs) do
+    refs = Changeset.get_assoc(block_cs, :refs, :struct)
 
-        case module do
-          %{refs: definitions} when is_list(definitions) ->
-            Enum.any?(definitions, &match?(%{name: ^name, data: %{data: %{footnotes: true}}}, &1))
+    if Enum.any?(refs, &match?(%{data: %{type: "text"}}, &1)) do
+      module =
+        Brando.Content.fetch_module(
+          Changeset.get_field(block_cs, :module_id),
+          Changeset.get_field(block_cs, :module_origin) || :local
+        )
 
-          _ ->
-            false
-        end
+      case module do
+        %{refs: definitions} when is_list(definitions) ->
+          for %{name: name, data: %{data: %{footnotes: true}}} <- definitions, do: name
 
-      _ ->
-        false
+        _ ->
+          []
+      end
+    else
+      []
     end
   end
 

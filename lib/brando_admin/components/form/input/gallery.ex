@@ -228,6 +228,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                       data-id={Thumb.media_id(gallery_object)}
                     >
                       <.gallery_object
+                        id={@id}
                         gallery_objects={@gallery_objects}
                         gallery_object_field={gallery_object}
                         parent_form_name={gallery_form.name}
@@ -264,7 +265,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           </div>
 
           <Content.modal
-            id="gallery-object-config-modal"
+            id={"#{@id}-object-config-modal"}
             title={
               if(@config_modal && @config_modal.type == :video,
                 do: gettext("Video configuration"),
@@ -272,14 +273,14 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
               )
             }
             narrow
-            close={hide_modal("#gallery-object-config-modal") |> JS.push("close_config_modal", target: @myself)}
+            close={hide_modal("##{@id}-object-config-modal") |> JS.push("close_config_modal", target: @myself)}
           >
             <%= if @config_modal do %>
               <%= case @config_modal.type do %>
                 <% :image -> %>
                   <.live_component
                     module={ImageConfig}
-                    id={"gallery-image-config-#{@config_modal.index}"}
+                    id={"#{@id}-image-config-#{@config_modal.index}"}
                     image={@config_modal.media}
                     config={@config_modal.config}
                     gallery_object_index={@config_modal.index}
@@ -289,7 +290,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                 <% :video -> %>
                   <.live_component
                     module={VideoConfig}
-                    id={"gallery-video-config-#{@config_modal.index}"}
+                    id={"#{@id}-video-config-#{@config_modal.index}"}
                     video={@config_modal.media}
                     config={@config_modal.config}
                     gallery_object_index={@config_modal.index}
@@ -360,6 +361,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       assigns
       |> assign(:gallery_object, gallery_object)
       |> assign_list_object_data(gallery_object)
+      |> assign(:menu_id, "#{assigns.gallery_object_field.id}-menu")
 
     ~H"""
     <div :if={@gallery_object} class="gallery-object-list-row">
@@ -425,7 +427,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                     value: %{index: @gallery_object_field.index}
                   )
                   |> hide_dropdown("##{@menu_id}")
-                  |> show_modal("#gallery-object-config-modal")
+                  |> show_modal("##{@id}-object-config-modal")
                 }
               >
                 <.icon name="hero-cog-6-tooth" />
@@ -472,7 +474,6 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
       assigns
       |> assign(:media_type, :image)
-      |> assign(:menu_id, "gallery-obj-menu-img-#{image.id}")
       |> assign(:thumb_url, thumb_url_for_image(image))
       |> assign(:display_filename, Path.basename(image.path))
       |> assign(:display_dir, Path.dirname(image.path))
@@ -483,7 +484,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       |> assign(:display_status, format_status(image.status))
       |> assign(:display_status_key, image.status)
     else
-      assign_list_object_defaults(assigns, :image, obj.image_id)
+      assign_list_object_defaults(assigns, :image)
     end
   end
 
@@ -493,7 +494,6 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
       assigns
       |> assign(:media_type, :video)
-      |> assign(:menu_id, "gallery-obj-menu-vid-#{video.id}")
       |> assign(:thumb_url, Brando.Videos.Helpers.thumbnail_url(video))
       |> assign(:display_filename, video.title || video.remote_id || "-")
       |> assign(:display_dir, video.source_url)
@@ -504,14 +504,13 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       |> assign(:display_status, format_status(video.status))
       |> assign(:display_status_key, video.status)
     else
-      assign_list_object_defaults(assigns, :video, Map.get(obj, :video_id))
+      assign_list_object_defaults(assigns, :video)
     end
   end
 
-  defp assign_list_object_defaults(assigns, type, id) do
+  defp assign_list_object_defaults(assigns, type) do
     assigns
     |> assign(:media_type, type)
-    |> assign(:menu_id, "gallery-obj-menu-#{type}-#{id}")
     |> assign(:thumb_url, nil)
     |> assign(:display_filename, "-")
     |> assign(:display_dir, nil)

@@ -56,7 +56,7 @@ defmodule BrandoAdmin.Components.Form.BlockHelpersTest do
 
       embedded_schema do
         field :image_id, :integer
-        field :name, :string
+        field :image, :map
       end
     end
 
@@ -74,26 +74,26 @@ defmodule BrandoAdmin.Components.Form.BlockHelpersTest do
       form = ref_form(%{image_id: 42})
 
       fetched =
-        Block.resolve_ref_association(form, :name, :image_id, fn 42 -> {:ok, %{id: 42}} end)
+        Block.resolve_ref_association(form, :image, :image_id, fn 42 -> {:ok, %{id: 42}} end)
 
       assert fetched == %{id: 42}
     end
 
     test "returns nil when FK is nil" do
       form = ref_form(%{image_id: nil})
-      assert Block.resolve_ref_association(form, :name, :image_id, fn _ -> raise "no fetch" end) == nil
+      assert Block.resolve_ref_association(form, :image, :image_id, fn _ -> raise "no fetch" end) == nil
     end
 
     test "returns nil when fetch fails" do
       form = ref_form(%{image_id: 42})
-      assert Block.resolve_ref_association(form, :name, :image_id, fn _ -> {:error, :nope} end) == nil
+      assert Block.resolve_ref_association(form, :image, :image_id, fn _ -> {:error, :nope} end) == nil
     end
 
-    test "prefers the preloaded association value over fetching" do
-      form = ref_form(%{image_id: 42, name: "preloaded"})
+    test "prefers the matching preloaded association over fetching" do
+      form = ref_form(%{image_id: 42, image: %{id: 42}})
 
-      assert Block.resolve_ref_association(form, :name, :image_id, fn _ -> raise "no fetch" end) ==
-               "preloaded"
+      assert Block.resolve_ref_association(form, :image, :image_id, fn _ -> raise "no fetch" end) ==
+               %{id: 42}
     end
   end
 end

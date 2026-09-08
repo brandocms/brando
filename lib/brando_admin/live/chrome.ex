@@ -43,14 +43,14 @@ defmodule BrandoAdmin.Chrome do
           <p>
             {gettext("Current user activity")} &darr;
           </p>
-          <div class="online" phx-update="stream" id="presence-modal-online">
-            <%= for {dom_id, presence} <- @streams.active_presences do %>
-              <.presence_modal_item presence={presence} id={"#{dom_id}_modal"} />
+          <div class="online" id="presence-modal-online">
+            <%= for presence <- @active_presences do %>
+              <.presence_modal_item presence={presence} id={"presence-modal-user-#{presence.id}"} />
             <% end %>
           </div>
-          <div class="offline" phx-update="stream" id="presence-modal-offline">
-            <%= for {dom_id, presence} <- @streams.inactive_presences do %>
-              <.presence_modal_item presence={presence} id={"#{dom_id}_modal"} />
+          <div class="offline" id="presence-modal-offline">
+            <%= for presence <- @inactive_presences do %>
+              <.presence_modal_item presence={presence} id={"presence-modal-user-#{presence.id}"} />
             <% end %>
           </div>
         </div>
@@ -130,6 +130,8 @@ defmodule BrandoAdmin.Chrome do
     {active, inactive} = Enum.split_with(presences, &(&1.status in ["online", "idle"]))
 
     socket
+    |> assign(:active_presences, active)
+    |> assign(:inactive_presences, Enum.reverse(inactive))
     |> stream(:active_presences, active, reset: true)
     |> stream(:inactive_presences, Enum.reverse(inactive), reset: true)
   end

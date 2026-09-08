@@ -1,0 +1,32 @@
+Audited revision: dde6121a9a34eb2ea53345b77d2952963e307439
+Phoenix LiveView: 1.2.11
+
+HEEx scan: 234 inventoried source/template/support files; 601 templates parsed
+and compiled to AST. Separate review of 18 generator/template sources.
+
+Elixir probe: 10 passed.
+- Whole-assign attribute spread re-evaluates an unchanged child value.
+- Explicit attributes skip unrelated parent changes.
+- A direct function call preserves the child's existing tracking map.
+- Generic assign mutation loses a newly derived changed key.
+- A zero-assign template expression is skipped on tracked updates.
+- Nil LiveComponent IDs raise.
+- Parent FK 11 -> 22 retains cached FK 11 for image/file/video/gallery vars.
+- Parent image/video ref FK 22 retains cached media 11.
+
+DOM probe: 7 assertions passed against the packaged 1.2.11 JavaScript bundle.
+{
+  "modalRef": null,
+  "staleModal": true,
+  "removedAvatar": true,
+  "bothModalRows": true,
+  "ignoredDate": "2026-09-01",
+  "textarea": "restored source",
+  "editor": "old source"
+}
+
+The engine, diff, Phoenix.Component, and DOMPatch source in the dependency
+checkout matched the cached Hex 1.2.11 package byte for byte.
+
+These are targeted standalone probes. No full application E2E suite, database
+reset, asset build, or application mutation was performed.

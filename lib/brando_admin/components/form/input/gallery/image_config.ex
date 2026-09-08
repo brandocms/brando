@@ -15,7 +15,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.ImageConfig do
       "credits" => Map.get(config, "credits")
     }
 
-    form = to_form(form_data, as: "config")
+    form = to_form(form_data, as: "config", id: assigns.id)
 
     {:ok,
      socket
@@ -69,7 +69,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.ImageConfig do
   def handle_event("reset_override", %{"field" => field_name}, socket) do
     form = socket.assigns.form
     updated_data = Map.put(form.source, field_name, nil)
-    updated_form = to_form(updated_data, as: "config")
+    updated_form = to_form(updated_data, as: "config", id: form.id)
 
     {:noreply, assign(socket, :form, updated_form)}
   end

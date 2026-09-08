@@ -21,13 +21,13 @@
     </.cookie_law> --%>
     <div class="backdrop"></div>
 <!-- :nav - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
-    <.navigation {assigns} />
+    {navigation(assigns)}
 <!-- /nav - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
 <!-- :content - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
     <%%= @inner_content %>
 <!-- /content - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
 <!-- :footer - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
-    <.footer {assigns} />
+    {footer(assigns)}
 <!-- /footer - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
 
     <.include_legacy_assets />

@@ -20,7 +20,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.VideoConfig do
       "preload" => Map.get(config, "preload")
     }
 
-    form = to_form(form_data, as: "config")
+    form = to_form(form_data, as: "config", id: assigns.id)
 
     {:ok,
      socket
@@ -92,7 +92,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.VideoConfig do
     new_value = !visual_state
 
     updated_data = Map.put(form.source, field_name, new_value)
-    updated_form = to_form(updated_data, as: "config")
+    updated_form = to_form(updated_data, as: "config", id: form.id)
 
     {:noreply, assign(socket, :form, updated_form)}
   end
@@ -100,7 +100,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.VideoConfig do
   def handle_event("reset_override", %{"field" => field_name}, socket) do
     form = socket.assigns.form
     updated_data = Map.put(form.source, field_name, nil)
-    updated_form = to_form(updated_data, as: "config")
+    updated_form = to_form(updated_data, as: "config", id: form.id)
 
     {:noreply, assign(socket, :form, updated_form)}
   end
@@ -114,7 +114,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.VideoConfig do
         Map.put(acc, field, nil)
       end)
 
-    updated_form = to_form(updated_data, as: "config")
+    updated_form = to_form(updated_data, as: "config", id: form.id)
 
     {:noreply, assign(socket, :form, updated_form)}
   end

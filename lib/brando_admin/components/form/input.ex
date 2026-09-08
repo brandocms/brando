@@ -62,7 +62,12 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
-      <div id={"#{@field.id}-code"} class="code-editor" phx-hook="Brando.CodeEditor">
+      <div
+        id={"#{@field.id}-code"}
+        class="code-editor"
+        phx-hook="Brando.CodeEditor"
+        data-value={@field.value || ""}
+      >
         <.input type={:textarea} field={@field} phx-debounce={300} />
         <div id={"#{@field.id}-code-editor"} phx-update="ignore">
           <div class="editor"></div>
@@ -81,15 +86,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:palette_id, Keyword.get(assigns.opts, :palette_id))
       |> assign(:default, Keyword.get(assigns.opts, :default))
 
-    assigns =
-      assign_new(assigns, :palette_colors, fn ->
-        with palette_id when palette_id not in [nil, ""] <- assigns.palette_id,
-             {:ok, palette} <- Brando.Content.get_palette(palette_id) do
-          palette.colors |> Enum.map(& &1.hex_value) |> Enum.uniq() |> Enum.join(",")
-        else
-          _ -> nil
-        end
-      end)
+    assigns = assign_new(assigns, :palette_colors, fn -> palette_colors(assigns.palette_id) end)
 
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
@@ -120,6 +117,16 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
+  @doc false
+  def palette_colors(palette_id) when palette_id in [nil, ""], do: nil
+
+  def palette_colors(palette_id) do
+    case Enum.find(Brando.Cache.Palettes.get(), &(to_string(&1.id) == to_string(palette_id))) do
+      nil -> nil
+      palette -> palette.colors |> Enum.map(& &1.hex_value) |> Enum.uniq() |> Enum.join(",")
+    end
+  end
+
   defp get_default(opts) do
     case Keyword.get(opts, :default) do
       default_fn when is_function(default_fn, 0) -> default_fn.()
@@ -138,7 +145,13 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
-      <div id={"#{@field.id}-datepicker"} class="datetime-wrapper" phx-hook="Brando.DatePicker" data-locale={@locale}>
+      <div
+        id={"#{@field.id}-datepicker"}
+        class="datetime-wrapper"
+        phx-hook="Brando.DatePicker"
+        data-locale={@locale}
+        data-value={@value || ""}
+      >
         <div id={"#{@field.id}-datepicker-flatpickr"} phx-update="ignore">
           <button type="button" class="clear-datetime">
             {gettext("Clear")}
@@ -162,7 +175,13 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
-      <div id={"#{@field.id}-datetimepicker"} class="datetime-wrapper" phx-hook="Brando.DateTimePicker" data-locale={@locale}>
+      <div
+        id={"#{@field.id}-datetimepicker"}
+        class="datetime-wrapper"
+        phx-hook="Brando.DateTimePicker"
+        data-locale={@locale}
+        data-value={@value || ""}
+      >
         <div id={"#{@field.id}-datetimepicker-flatpickr"} phx-update="ignore">
           <button type="button" class="clear-datetime">
             {gettext("Clear")}

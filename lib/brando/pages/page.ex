@@ -273,6 +273,7 @@ defmodule Brando.Pages.Page do
 
           input :parent_id, :select,
             options: &__MODULE__.get_parents/2,
+            options_depends_on: [:id, :language],
             resetable: true,
             label: t("Parent page")
         end

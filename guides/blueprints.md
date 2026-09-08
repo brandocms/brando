@@ -918,6 +918,20 @@ Use `blocks :blocks, ...` for a block editor field. Inputs may be hidden with a
 boolean, `{field, expected_value}`, or one-argument form predicate. Constant
 option lists should be assigned by the LiveView rather than rebuilt in HEEx.
 
+Select and multi-select option lists refresh when their specification changes.
+Callable providers load on mount, when the picker opens, or on an explicit
+`action: :force_refresh_options` component update. For providers whose choices
+depend on form values, declare those fields so an open list and selected label
+also refresh when the values change:
+
+```elixir
+input :parent_id, :select,
+  options: &__MODULE__.get_parents/2,
+  options_depends_on: [:id, :language]
+```
+
+Unrelated field edits do not rerun these providers.
+
 Custom `inputs_for` renderers accept component modules as before. For Brando's
 built-in renderers, prefer symbolic tokens so schema compilation stays independent
 of the admin component tree:

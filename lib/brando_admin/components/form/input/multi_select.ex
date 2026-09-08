@@ -359,7 +359,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign_new(:modal_id, fn -> "select-#{assigns.id}-modal" end)
      |> assign_new(:create_modal_id, fn -> "create-#{assigns.id}-modal" end)
      |> assign_new(:create_form_key, fn -> "#{assigns.field.id}_new" end)
-     |> assign(:initial_run, fn -> false end)}
+     |> assign(:initial_run, false)}
   end
 
   defp maybe_register_mutation_listener(%{assigns: %{initial_run: true, relation_schema: schema}} = socket)
@@ -495,15 +495,17 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   end
 
   defp assign_selected_options_structs(socket) do
-    assign_new(socket, :selected_options_structs, fn ->
-      selected_options = socket.assigns.selected_options
+    assign(socket, :selected_options_structs, selected_options_structs(socket))
+  end
 
-      if socket.assigns.relation_type in [:has_many, {:subform, :has_many}] do
-        Enum.map(selected_options, &Changeset.apply_changes/1)
-      else
-        selected_options
-      end
-    end)
+  defp selected_options_structs(socket) do
+    selected_options = socket.assigns.selected_options
+
+    if socket.assigns.relation_type in [:has_many, {:subform, :has_many}] do
+      Enum.map(selected_options, &Changeset.apply_changes/1)
+    else
+      selected_options
+    end
   end
 
   defp assign_relation_type(socket, field) do
@@ -565,14 +567,15 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     Changeset.get_embed(changeset, field.field, :struct)
   end
 
-  def assign_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
-    assign_new(socket, :input_options, fn ->
-      get_input_options(field, opts)
-    end)
+  def assign_input_options(socket) do
+    Options.assign_options(socket, &get_input_options/2)
   end
 
-  def update_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
-    assign(socket, :input_options, get_input_options(field, opts))
+  def update_input_options(socket) do
+    socket
+    |> Options.assign_options(&get_input_options/2, true)
+    |> assign_invalid_options()
+    |> assign_label()
   end
 
   defp get_input_options(field, opts) do
@@ -1068,6 +1071,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       when relation_type in [:has_many, {:subform, :has_many}] do
     was_open = socket.assigns.open
     socket = assign(socket, :open, !was_open)
+    socket = if was_open, do: socket, else: update_input_options(socket)
 
     if !was_open, do: broadcast_field_focus(socket)
     if was_open, do: request_field_ship(socket)

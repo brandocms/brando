@@ -138,143 +138,158 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
           {gettext("No shared entries yet.")}
         </div>
 
-        <article
+        <.library_entry
           :for={entry <- Map.fetch!(@libraries, kind)}
-          class="environment-panel shared-library-entry"
-          id={"shared-#{kind}-#{entry.id}"}
-        >
-          <% usage = Map.get(@usage, {kind, entry.id}, []) %>
-          <% effective = Map.get(@effective, {kind, entry.id}) %>
-          <% overridden? = effective && Map.get(effective, source_field(kind)) %>
-
-          <header>
-            <div>
-              <h3>{entry_label(entry)}</h3>
-              <p>
-                <span class="badge">v{entry.version || 1}</span>
-                <span :if={entry.version_note not in [nil, ""]}>{entry.version_note}</span>
-              </p>
-            </div>
-            <div :if={@global_manager?} class="environment-actions">
-              <.link
-                :if={kind == :module}
-                navigate={"/admin/config/content/shared_library/modules/update/#{entry.id}"}
-                class="secondary button"
-              >
-                {gettext("Edit")}
-              </.link>
-              <button
-                type="button"
-                class="danger"
-                phx-click="delete"
-                phx-value-kind={kind}
-                phx-value-id={entry.id}
-                phx-confirm={gettext("Delete this shared entry? This is blocked while any site uses it.")}
-              >
-                {gettext("Delete")}
-              </button>
-            </div>
-          </header>
-
-          <div class="environment-grid">
-            <section :if={@global_manager?}>
-              <h4>{gettext("Impact")}</h4>
-              <p :if={usage == []}>{gettext("No sites currently use this entry.")}</p>
-              <ul :if={usage != []}>
-                <li :for={item <- usage}>
-                  <strong>{item.site.name}</strong>
-                  <span :if={item.enabled}> · {gettext("enabled")}</span>
-                  <span :if={item.overridden_environments != []}>
-                    · {gettext("customized in %{envs}", envs: Enum.join(item.overridden_environments, ", "))}
-                  </span>
-                  <span :if={item.referenced_environments != []}>
-                    · {gettext("used in %{envs}", envs: Enum.join(item.referenced_environments, ", "))}
-                  </span>
-                </li>
-              </ul>
-            </section>
-
-            <section :if={@selected_site && @selected_environment}>
-              <h4>{gettext("Selected environment")}</h4>
-              <p>
-                {@selected_site.name} · {@selected_environment.name}
-                <span :if={overridden?} class="badge">{gettext("customized")}</span>
-                <span :if={effective && effective.update_available} class="badge warning">
-                  {gettext("update available")}
-                </span>
-              </p>
-
-              <div class="environment-actions">
-                <.link
-                  :if={overridden? && @can_customize?}
-                  navigate={override_route(kind, effective, @selected_site, @selected_environment)}
-                  class="secondary button"
-                >
-                  {gettext("Edit customization")}
-                </.link>
-                <button
-                  :if={@can_customize? && enabled?(@enabled, kind, entry.id) && !overridden?}
-                  type="button"
-                  class="secondary"
-                  phx-click="customize"
-                  phx-value-kind={kind}
-                  phx-value-id={entry.id}
-                >
-                  {gettext("Customize")}
-                </button>
-                <button
-                  :if={@can_customize? && overridden?}
-                  type="button"
-                  class="secondary"
-                  phx-click="reset"
-                  phx-value-kind={kind}
-                  phx-value-id={entry.id}
-                  phx-confirm={gettext("Discard this environment's customization and use shared again?")}
-                >
-                  {gettext("Reset to shared")}
-                </button>
-                <button
-                  :if={@can_customize? && effective && effective.update_available}
-                  type="button"
-                  class="primary"
-                  phx-click="accept_update"
-                  phx-value-kind={kind}
-                  phx-value-id={entry.id}
-                  phx-confirm={gettext("Replace the customized version with the current shared version?")}
-                >
-                  {gettext("Accept update")}
-                </button>
-                <button
-                  :if={@can_customize? && effective && effective.update_available}
-                  type="button"
-                  class="secondary"
-                  phx-click="dismiss_update"
-                  phx-value-kind={kind}
-                  phx-value-id={entry.id}
-                >
-                  {gettext("Dismiss")}
-                </button>
-              </div>
-
-              <details :if={Map.has_key?(@diffs, {kind, entry.id})}>
-                <summary>{gettext("View changes")}</summary>
-                <dl>
-                  <div :for={{field, change} <- Map.fetch!(@diffs, {kind, entry.id})}>
-                    <dt>{field}</dt>
-                    <dd>
-                      <small>{gettext("Shared")}</small> {format_value(change.shared)}<br />
-                      <small>{gettext("Customized")}</small> {format_value(change.override)}
-                    </dd>
-                  </div>
-                </dl>
-              </details>
-            </section>
-          </div>
-
-          <.inline_edit_form :if={@global_manager? && kind != :module} kind={kind} entry={entry} />
-        </article>
+          kind={kind}
+          entry={entry}
+          usage={Map.get(@usage, {kind, entry.id}, [])}
+          effective={Map.get(@effective, {kind, entry.id})}
+          enabled?={enabled?(@enabled, kind, entry.id)}
+          diff={Map.get(@diffs, {kind, entry.id})}
+          global_manager?={@global_manager?}
+          can_customize?={@can_customize?}
+          selected_site={@selected_site}
+          selected_environment={@selected_environment}
+        />
       </section>
     </div>
+    """
+  end
+
+  defp library_entry(assigns) do
+    assigns = assign(assigns, :overridden?, assigns.effective && Map.get(assigns.effective, source_field(assigns.kind)))
+
+    ~H"""
+    <article
+      class="environment-panel shared-library-entry"
+      id={"shared-#{@kind}-#{@entry.id}"}
+    >
+      <header>
+        <div>
+          <h3>{entry_label(@entry)}</h3>
+          <p>
+            <span class="badge">v{@entry.version || 1}</span>
+            <span :if={@entry.version_note not in [nil, ""]}>{@entry.version_note}</span>
+          </p>
+        </div>
+        <div :if={@global_manager?} class="environment-actions">
+          <.link
+            :if={@kind == :module}
+            navigate={"/admin/config/content/shared_library/modules/update/#{@entry.id}"}
+            class="secondary button"
+          >
+            {gettext("Edit")}
+          </.link>
+          <button
+            type="button"
+            class="danger"
+            phx-click="delete"
+            phx-value-kind={@kind}
+            phx-value-id={@entry.id}
+            phx-confirm={gettext("Delete this shared entry? This is blocked while any site uses it.")}
+          >
+            {gettext("Delete")}
+          </button>
+        </div>
+      </header>
+
+      <div class="environment-grid">
+        <section :if={@global_manager?}>
+          <h4>{gettext("Impact")}</h4>
+          <p :if={@usage == []}>{gettext("No sites currently use this entry.")}</p>
+          <ul :if={@usage != []}>
+            <li :for={item <- @usage}>
+              <strong>{item.site.name}</strong>
+              <span :if={item.enabled}> · {gettext("enabled")}</span>
+              <span :if={item.overridden_environments != []}>
+                · {gettext("customized in %{envs}", envs: Enum.join(item.overridden_environments, ", "))}
+              </span>
+              <span :if={item.referenced_environments != []}>
+                · {gettext("used in %{envs}", envs: Enum.join(item.referenced_environments, ", "))}
+              </span>
+            </li>
+          </ul>
+        </section>
+
+        <section :if={@selected_site && @selected_environment}>
+          <h4>{gettext("Selected environment")}</h4>
+          <p>
+            {@selected_site.name} · {@selected_environment.name}
+            <span :if={@overridden?} class="badge">{gettext("customized")}</span>
+            <span :if={@effective && @effective.update_available} class="badge warning">
+              {gettext("update available")}
+            </span>
+          </p>
+
+          <div class="environment-actions">
+            <.link
+              :if={@overridden? && @can_customize?}
+              navigate={override_route(@kind, @effective, @selected_site, @selected_environment)}
+              class="secondary button"
+            >
+              {gettext("Edit customization")}
+            </.link>
+            <button
+              :if={@can_customize? && @enabled? && !@overridden?}
+              type="button"
+              class="secondary"
+              phx-click="customize"
+              phx-value-kind={@kind}
+              phx-value-id={@entry.id}
+            >
+              {gettext("Customize")}
+            </button>
+            <button
+              :if={@can_customize? && @overridden?}
+              type="button"
+              class="secondary"
+              phx-click="reset"
+              phx-value-kind={@kind}
+              phx-value-id={@entry.id}
+              phx-confirm={gettext("Discard this environment's customization and use shared again?")}
+            >
+              {gettext("Reset to shared")}
+            </button>
+            <button
+              :if={@can_customize? && @effective && @effective.update_available}
+              type="button"
+              class="primary"
+              phx-click="accept_update"
+              phx-value-kind={@kind}
+              phx-value-id={@entry.id}
+              phx-confirm={gettext("Replace the customized version with the current shared version?")}
+            >
+              {gettext("Accept update")}
+            </button>
+            <button
+              :if={@can_customize? && @effective && @effective.update_available}
+              type="button"
+              class="secondary"
+              phx-click="dismiss_update"
+              phx-value-kind={@kind}
+              phx-value-id={@entry.id}
+            >
+              {gettext("Dismiss")}
+            </button>
+          </div>
+
+          <details :if={@diff != nil}>
+            <summary>{gettext("View changes")}</summary>
+            <dl>
+              <div :for={{field, change} <- @diff}>
+                <dt>{field}</dt>
+                <dd>
+                  <small>{gettext("Shared")}</small> {format_value(change.shared)}<br />
+                  <small>{gettext("Customized")}</small> {format_value(change.override)}
+                </dd>
+              </div>
+            </dl>
+          </details>
+        </section>
+      </div>
+
+      <.inline_edit_form :if={@global_manager? && @kind != :module} kind={@kind} entry={@entry} />
+    </article>
     """
   end
 
