@@ -3,8 +3,17 @@
 .admin-workspace.content-workspace {
   .content-list .list-row .main-content, .content-list .child-row { display: flex; flex-wrap: nowrap; align-items: center; gap: 16px; width: 100%; margin: 0; padding: 16px; }
   .content-list .list-row .main-content > div, .content-list .child-row > div { width: auto; max-width: none; min-width: 0; margin: 0; padding: 0; }
-  .content-list .list-row .main-content > .status, .content-list .child-row > .status { position: static; flex: 0 0 108px; order: 6; }
-  .status > div { display: flex; align-items: center; gap: 6px; }
+  .content-list .list-row .main-content > .status, .content-list .child-row > .status { position: static; flex: 0 0 108px; order: 6; border: 0; cursor: default; }
+  /* The labelled trigger owns the hover surface; the column is wider than its content. */
+  .status > div {
+    display: flex; align-items: center; gap: 6px; position: relative;
+    width: fit-content; padding: 5px 8px; border: 1px solid transparent; border-radius: 5px;
+    transition: background-color .15s, border-color .15s;
+  }
+  .status > div:has(> .status-dropdown):hover {
+    cursor: pointer; background: #edf3e9; border-color: #cddfcb;
+  }
+  .status-dropdown { top: 100%; left: 0; }
   .listing-status-label { display: inline; font-size: 12px; color: var(--workspace-muted); }
   /* Fallback for older browsers; consumers can supply different Main fonts. */
   .listing-status-label, .list-tools .statuses .label { transform: translateY(var(--status-label-offset, 2px)); }
