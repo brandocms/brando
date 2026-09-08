@@ -105,6 +105,7 @@ defmodule Brando.Content.Definition.Importer do
         action = if record, do: :update, else: :create
         authorize!(actor, action, schema, record)
         if record && Map.get(record, :source_module_id), do: Error.raise!(uid, "shared-library overrides are unsupported")
+        if record && kind == "module" && is_nil(old), do: Error.raise!(uid, "shared-library descendants are unsupported")
 
         if is_nil(record) and Repo.get_by(schema, uid: uid),
           do: Error.raise!(uid, "UID belongs to a deleted or unavailable definition")

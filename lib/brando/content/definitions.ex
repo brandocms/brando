@@ -26,9 +26,9 @@ defmodule Brando.Content.Definitions do
       end
 
       paths = Reader.files!(root)
-      if paths == [], do: Error.raise!(root, "no .exs definitions found")
-      bundle = paths |> Enum.map(&Reader.read!/1) |> Model.from_specs!(root)
       lock_path = Path.join(root, "modules.lock.json")
+      if paths == [] and not File.exists?(lock_path), do: Error.raise!(root, "no .exs definitions found")
+      bundle = paths |> Enum.map(&Reader.read!/1) |> Model.from_specs!(root)
 
       lock =
         if File.exists?(lock_path) do

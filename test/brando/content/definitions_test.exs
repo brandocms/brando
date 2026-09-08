@@ -325,6 +325,23 @@ defmodule Brando.Content.DefinitionsTest do
     assert {:error, message} = Definitions.plan(bundle, c.user)
     assert message =~ "shared-library overrides"
     assert {:error, _} = Definitions.export(Path.join(c.path, "shared"), c.user, uids: [local.uid])
+
+    child =
+      local
+      |> Map.from_struct()
+      |> Map.take(Model.module_fields())
+      |> Map.merge(%{uid: "shared-child", parent_id: local.id})
+
+    child = %Module{} |> Module.changeset(child, c.user) |> Repo.insert!()
+    assert {:ok, exported} = Definitions.export(Path.join(c.path, "local-only"), c.user)
+    assert exported.bundle["modules"] == []
+    assert {:ok, empty} = Definitions.read(exported.directory)
+    assert empty == exported.bundle
+    assert %{changes: []} = apply_bundle!(empty, c.user)
+    child_bundle = edit(c.bundle, &Map.merge(&1, %{"uid" => child.uid, "refs" => []}))
+    assert {:error, message} = Definitions.plan(child_bundle, c.user)
+    assert message =~ "shared-library descendants"
+    Repo.delete!(child)
     Repo.update!(Changeset.change(local, source_module_id: nil))
     borrowed = edit(c.bundle, &Map.put(&1, "uid", "new-lineage"))
     assert {:error, message} = Definitions.plan(borrowed, c.user)
