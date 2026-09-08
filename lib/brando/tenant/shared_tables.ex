@@ -23,6 +23,7 @@ defmodule Brando.Tenant.SharedTables do
     authorization_legacy_mappings
     authorization_audit_events
     environments
+    markdown_webhook_deliveries
     environment_operation_logs
     schema_migrations
     site_asset_sets

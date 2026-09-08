@@ -829,7 +829,10 @@ defmodule BrandoAdmin.Components.Form.Block do
               end
 
             # Update the ref with the modified block data
-            updated_ref = Changeset.force_change(updated_ref, :data, updated_block)
+            updated_ref =
+              updated_ref
+              |> Changeset.force_change(:data, updated_block)
+              |> Brando.MarkdownSources.revalidate_placement(socket.assigns.current_user_id)
 
             acc ++ List.wrap(updated_ref)
           else

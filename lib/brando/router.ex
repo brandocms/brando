@@ -122,6 +122,7 @@ defmodule Brando.Router do
             live "/assets", BrandoAdmin.Sites.AssetLive
             live "/environments", BrandoAdmin.Sites.EnvironmentLive
             live "/publishing", BrandoAdmin.Sites.PublishingLive
+            live "/markdown-sources", BrandoAdmin.Sites.MarkdownSourcesLive
             live "/cache", BrandoAdmin.Sites.CacheLive
             live "/global_sets", BrandoAdmin.Sites.GlobalSetListLive
             live "/global_sets/create", BrandoAdmin.Sites.GlobalSetFormLive, :create

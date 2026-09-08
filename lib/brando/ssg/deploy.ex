@@ -74,8 +74,11 @@ defmodule Brando.SSG.Deploy do
          true <- build.status in [:ready, :deployed, :archived],
          true <- managed_build_path?(build),
          true <- is_nil(build.pruned_at) and File.dir?(build.build_path),
-         :ok <- run_strategy(build, opts) do
-      mark_deployed(build)
+         {:ok, deployed} <-
+           Brando.MarkdownSources.Publication.guard_deploy(build, fn ->
+             with :ok <- run_strategy(build, opts), do: mark_deployed(build)
+           end) do
+      {:ok, deployed}
     else
       nil -> {:error, :build_not_found}
       false -> {:error, :build_not_deployable}

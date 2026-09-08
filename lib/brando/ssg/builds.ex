@@ -191,6 +191,7 @@ defmodule Brando.SSG.Builds do
       note: Keyword.get(opts, :note),
       auto_deploy: Keyword.get(opts, :auto_deploy, deploy_config["auto_deploy"] || false),
       deploy_config: deploy_config,
+      markdown_context: Keyword.get(opts, :markdown_context, %{}),
       preview_token: preview_token(),
       preview_expires_at: DateTime.add(DateTime.utc_now(), @preview_lifetime_days, :day),
       scheduled_at: scheduled_at

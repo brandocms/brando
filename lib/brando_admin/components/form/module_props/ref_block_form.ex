@@ -129,6 +129,12 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
     """
   end
 
+  def block_form(%{type: "markdown_source"} = assigns) do
+    ~H"""
+    <p>{gettext("Editors connect a repository document and choose its update policy in each entry.")}</p>
+    """
+  end
+
   def block_form(%{type: "map"} = assigns) do
     ~H"""
     <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>

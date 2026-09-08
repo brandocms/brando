@@ -288,6 +288,7 @@ defmodule BrandoAdmin.Menu do
                   ),
                   environments_menu_item(),
                   publishing_menu_item(current_site),
+                  %{name: gettext("Markdown sources"), url: "/admin/config/markdown-sources"},
                   frontend_assets_menu_item(current_user),
                   %{
                     name: gettext("Cache"),

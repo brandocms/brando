@@ -344,6 +344,7 @@ defmodule Brando.Revisions do
         Content.Blocks.enqueue_entry_cascade(entry_schema, entry, identifier_id)
         Content.Blocks.enqueue_entry_for_render(%{schema: to_string(entry_schema), entry_id: entry.id})
         Cache.Query.evict({:ok, entry})
+        Brando.MarkdownSources.Publication.entry_saved(entry, user)
         broadcast_restored(entry_schema, entry)
         {:ok, entry}
 

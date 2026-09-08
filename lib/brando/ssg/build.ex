@@ -38,6 +38,7 @@ defmodule Brando.SSG.Build do
     field :failed_urls, {:array, :string}, default: []
     field :auto_deploy, :boolean, default: false
     field :deploy_config, :map, default: %{}
+    field :markdown_context, :map, default: %{}
     field :preview_token, :string
     field :preview_expires_at, :utc_datetime_usec
     field :scheduled_at, :utc_datetime_usec
@@ -73,6 +74,7 @@ defmodule Brando.SSG.Build do
     :failed_urls,
     :auto_deploy,
     :deploy_config,
+    :markdown_context,
     :scheduled_at,
     :built_at,
     :deployed_at,

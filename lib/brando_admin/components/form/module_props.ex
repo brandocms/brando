@@ -28,6 +28,11 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     %{value: "html", label: gettext_noop("HTML"), description: gettext_noop("Editable HTML content")},
     %{value: "svg", label: gettext_noop("SVG"), description: gettext_noop("Inline vector markup")},
     %{value: "markdown", label: gettext_noop("Markdown"), description: gettext_noop("Markdown content")},
+    %{
+      value: "markdown_source",
+      label: gettext_noop("Markdown source"),
+      description: gettext_noop("A repository document with a per-placement publishing policy")
+    },
     %{value: "map", label: gettext_noop("Map"), description: gettext_noop("An embedded map")},
     %{value: "comment", label: gettext_noop("Comment"), description: gettext_noop("An editor-only note")}
   ]

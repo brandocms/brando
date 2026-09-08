@@ -355,6 +355,7 @@ defmodule Brando.Content.Block do
     |> unique_constraint(:uid)
     |> validate_media_fks()
     |> PolymorphicEmbed.cast_polymorphic_embed(:data)
+    |> Brando.MarkdownSources.validate_placement(user)
     |> cast_assoc(:gallery, with: &Brando.Galleries.Gallery.changeset(&1, &2, user))
   end
 end
