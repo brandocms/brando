@@ -307,32 +307,35 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
      |> assign(:selected_option, selected_option)
      |> assign(:selected_origin, selected_origin)
      |> assign(:origin_field, origin_field)
-     |> assign_new(:allow_custom, fn -> allow_custom end)
+     |> assign(:allow_custom, Map.get(assigns, :allow_custom, allow_custom))
      |> assign_label()
      |> assign_custom_input_value()
-     |> assign_new(:inline, fn -> inline end)
-     |> assign_new(:narrow, fn -> narrow end)
-     |> assign_new(:resetable, fn -> resetable end)
-     |> assign_new(:show_filter, fn -> show_filter end)
-     |> assign_new(:changeset_fun, fn -> changeset_fun end)
-     |> assign_new(:update_relation, fn -> update_relation end)
-     |> assign_new(:default, fn -> default end)
-     |> assign_new(:entry_form, fn -> entry_form end)
+     |> assign(:inline, Map.get(assigns, :inline, inline))
+     |> assign(:narrow, Map.get(assigns, :narrow, narrow))
+     |> assign(:resetable, Map.get(assigns, :resetable, resetable))
+     |> assign(:show_filter, Map.get(assigns, :show_filter, show_filter))
+     |> assign(:changeset_fun, Map.get(assigns, :changeset_fun, changeset_fun))
+     |> assign(:update_relation, Map.get(assigns, :update_relation, update_relation))
+     |> assign(:default, Map.get(assigns, :default, default))
+     |> assign(:entry_form, Map.get(assigns, :entry_form, entry_form))
      |> maybe_assign_select_changeset()
      |> maybe_assign_select_form()
      |> assign_new(:inner_block, fn -> nil end)
      |> assign_new(:modal_id, fn -> "select-#{assigns.id}-modal" end)
      |> assign_relation_schema(assigns.field)
      |> maybe_register_mutation_listener()
-     |> assign(:initial_run, fn -> false end)}
+     |> assign(:initial_run, false)}
   end
 
-  def assign_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
-    assign_new(socket, :input_options, fn -> get_input_options(field, opts) end)
+  def assign_input_options(socket) do
+    Options.assign_options(socket, &get_input_options/2)
   end
 
-  def update_input_options(%{assigns: %{field: field, opts: opts}} = socket) do
-    assign(socket, :input_options, get_input_options(field, opts))
+  def update_input_options(socket) do
+    socket
+    |> Options.assign_options(&get_input_options/2, true)
+    |> assign_label()
+    |> assign_custom_input_value()
   end
 
   defp get_selected_option(field) do

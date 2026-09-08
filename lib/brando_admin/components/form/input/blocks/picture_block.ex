@@ -100,9 +100,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       |> assign(:block_data, block_data)
       |> assign(:form_id, form_id)
       |> assign_new(:compact, fn -> true end)
-      |> assign_new(:image, fn ->
-        Block.resolve_ref_association(assigns[:ref_form], :image, :image_id, &Brando.Images.get_image/1)
-      end)
+      |> Block.assign_ref_association(assigns.ref_form, :image, :image_id, &Brando.Images.get_image/1)
 
     {:ok, assign(socket, image_display_assigns(socket.assigns.image))}
   end

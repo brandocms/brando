@@ -50,10 +50,10 @@ records why the other candidates in #2701 do not need standalone skills.
 ## LiveView, Phoenix and Ecto (+ Forms & Changesets)
 
 ### LiveView Component Patterns
-- **Stable Component IDs**: live_component `id` props must be stable (not nil or derived from rebuilt form internals). If nil, a random ID is generated on each render, causing remounting and new CIDs.
+- **Stable Component IDs**: live_component `id` props must be stable (not nil or derived from rebuilt form internals). LiveView raises for a nil ID. Changing a valid ID (including a freshly generated random UID) creates a new component identity and CID.
 - **Form Index for DOM IDs**: Use `form.index` (not database ID) for DOM element identification in nested forms. New records don't have database IDs yet.
 - **CID Stability**: When a component remounts, its `@myself` CID changes. Any stored references to the old CID become invalid.
-- **Constant Options in Templates**: Never call functions that return constant lists directly in HEEx templates (e.g., `opts={[options: my_options()]}`). Instead, assign constants once in `mount/1` using `assign_new/3` and reference via assigns (e.g., `opts={[options: @my_options]}`). This avoids re-evaluating the function on every render.
+- **Constant Options in Templates**: Never call functions that return constant lists directly in HEEx templates (e.g., `opts={[options: my_options()]}`). Instead, assign constants once in `mount/1` using `assign_new/3` and reference via assigns (e.g., `opts={[options: @my_options]}`). This makes the dependency explicit and avoids rebuilding constants when a component is invoked. A zero-assign-dependency expression in HEEx is normally skipped during tracked patches; it does not run on every patch merely because it is a function call.
 - **Sticky JS for persistent client-side decorations**: DOM state that must survive
   LiveView patches (presence locks, etc.) MUST go through the hook's `this.js()`
   commands (`addClass`/`setAttribute`/… → `DOM.putSticky`) — plain

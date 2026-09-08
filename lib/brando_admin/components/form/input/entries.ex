@@ -62,50 +62,75 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
      |> assign(:has_entries, active_count > 0)
      |> prepare_input_component()
      |> assign_new(:join_schema, fn -> join_schema end)
-     |> assign_new(:selected_identifiers, fn -> Enum.map(field.value, & &1.identifier) end)
+     |> assign_selected_identifiers(field)
      |> assign_new(:max_length, fn -> get_in(field_opts, [:constraints, :max_length]) end)
      |> assign_new(:min_length, fn -> get_in(field_opts, [:constraints, :min_length]) end)
-     |> assign_available_schemas(wanted_schemas)
-     |> assign_selected_schema()}
+     |> refresh_filters(wanted_schemas)}
+  end
+
+  defp assign_selected_identifiers(socket, field) do
+    associations = Changeset.get_assoc(field.form.source, field.field) |> Enum.reject(&(&1.action == :replace))
+    cached = List.wrap(socket.assigns[:selected_identifiers]) ++ List.wrap(socket.assigns[:available_identifiers])
+    loaded = Enum.map(associations, &Changeset.get_field(&1, :identifier))
+    by_id = (cached ++ loaded) |> Enum.filter(&match?(%{id: id} when not is_nil(id), &1)) |> Map.new(&{&1.id, &1})
+    ids = Enum.map(associations, &Changeset.get_field(&1, :identifier_id)) |> Enum.reject(&is_nil/1)
+    missing = Enum.reject(ids, &Map.has_key?(by_id, &1))
+
+    by_id =
+      if missing == [] do
+        by_id
+      else
+        {:ok, identifiers} = Brando.Content.list_identifiers(%{filter: %{ids: missing}})
+        Map.merge(by_id, Map.new(identifiers, &{&1.id, &1}))
+      end
+
+    assign(socket, :selected_identifiers, Enum.map(ids, &Map.get(by_id, &1)) |> Enum.reject(&is_nil/1))
+  end
+
+  defp refresh_filters(socket, wanted_schemas) do
+    filter_language? = Keyword.get(socket.assigns.opts, :filter_language, false)
+    language = if filter_language?, do: socket.assigns.field.form[:language].value
+    key = {wanted_schemas, filter_language?, language}
+
+    if socket.assigns[:identifier_filters] == key do
+      socket
+    else
+      socket
+      |> assign(:identifier_filters, key)
+      |> assign_available_schemas(wanted_schemas)
+      |> assign_selected_schema()
+    end
   end
 
   def assign_available_schemas(socket, wanted_schemas) do
-    assign_new(socket, :available_schemas, fn ->
-      Identifier.get_entry_types(wanted_schemas)
-    end)
-  end
-
-  def assign_selected_schema(%{assigns: %{available_schemas: [single_schema]}} = socket) do
-    socket
-    |> assign_new(:selected_schema, fn -> single_schema end)
-    |> assign_new(:available_identifiers, fn ->
-      {_, schema_module, list_opts} = single_schema
-      field_opts = socket.assigns.opts
-
-      list_opts = maybe_filter_by_language(list_opts, field_opts, socket)
-
-      {:ok, identifiers} = Identifier.list_entries_for(schema_module, list_opts)
-      identifiers
-    end)
+    assign(socket, :available_schemas, Identifier.get_entry_types(wanted_schemas))
   end
 
   def assign_selected_schema(socket) do
+    schemas = socket.assigns.available_schemas
+    current = socket.assigns[:selected_schema]
+    selected = Enum.find(schemas, &(elem(&1, 1) == current)) || if(length(schemas) == 1, do: hd(schemas))
+
+    {schema, identifiers} =
+      if selected do
+        {_, schema, list_opts} = selected
+        list_opts = maybe_filter_by_language(list_opts, socket.assigns.opts, socket)
+        {:ok, identifiers} = Identifier.list_entries_for(schema, list_opts)
+        {schema, identifiers}
+      else
+        {nil, []}
+      end
+
     socket
-    |> assign_new(:selected_schema, fn -> nil end)
-    |> assign_new(:available_identifiers, fn %{selected_identifiers: selected_identifiers} ->
-      selected_identifiers
-    end)
+    |> assign(:selected_schema, schema)
+    |> assign(:available_identifiers, identifiers)
   end
 
   defp maybe_filter_by_language(list_opts, field_opts, socket) do
-    if Keyword.get(field_opts, :filter_language, false) do
-      language = socket.assigns.field.form[:language]
+    language = socket.assigns.field.form[:language].value
 
-      if language do
-        Map.put(list_opts, :language, String.to_existing_atom(language.value))
-      else
-        list_opts
-      end
+    if Keyword.get(field_opts, :filter_language, false) and language not in [nil, ""] do
+      Map.put(list_opts, :language, language)
     else
       list_opts
     end
@@ -301,20 +326,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     {_, _, list_opts} = get_list_opts(schema_module, available_schemas)
     field_opts = socket.assigns.opts
 
-    list_opts =
-      if Keyword.get(field_opts, :filter_language, false) do
-        form = socket.assigns.field.form
-        language = form[:language]
-
-        if language do
-          language_atom = String.to_existing_atom(language.value)
-          Map.put(list_opts, :language, language_atom)
-        else
-          list_opts
-        end
-      else
-        list_opts
-      end
+    list_opts = maybe_filter_by_language(list_opts, field_opts, socket)
 
     {:ok, identifiers} = Identifier.list_entries_for(schema_module, list_opts)
 

@@ -16,7 +16,7 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
   def render(%{section: :top} = assigns) do
     ~H"""
     <div id={@id} class="assets-file-browser assets-file-browser--top">
-      <.browser_top {assigns} />
+      {browser_top(assigns)}
     </div>
     """
   end
@@ -24,7 +24,7 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
   def render(%{section: :browser} = assigns) do
     ~H"""
     <div id={@id} class="assets-file-browser assets-file-browser--browser">
-      <.browser_main {assigns} />
+      {browser_main(assigns)}
     </div>
     """
   end
@@ -32,8 +32,8 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
   def render(assigns) do
     ~H"""
     <div id={@id} class={["assets-file-browser", "assets-file-browser--#{@mode}"]}>
-      <.browser_top {assigns} />
-      <.browser_main {assigns} />
+      {browser_top(assigns)}
+      {browser_main(assigns)}
     </div>
     """
   end

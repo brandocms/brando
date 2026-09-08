@@ -22,7 +22,9 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Thumb do
   attr :form_name, :string, required: true
 
   def thumb(assigns) do
-    assigns = assign(assigns, :gallery_object, find(assigns))
+    object = find(assigns)
+    thumb_url = if object && loaded_assoc?(object, :video), do: Brando.Videos.Helpers.thumbnail_url(object.video)
+    assigns = assign(assigns, gallery_object: object, thumb_url: thumb_url)
 
     ~H"""
     <div :if={@gallery_object}>
@@ -41,10 +43,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Thumb do
           </div>
         <% end %>
       <% else %>
-        <% thumb_url =
-          if(loaded_assoc?(@gallery_object, :video), do: Brando.Videos.Helpers.thumbnail_url(@gallery_object.video)) %>
-        <%= if thumb_url do %>
-          <img width="25" height="25" src={thumb_url} />
+        <%= if @thumb_url do %>
+          <img width="25" height="25" src={@thumb_url} />
         <% else %>
           <div class="img-placeholder">
             <.icon name="hero-video-camera" />

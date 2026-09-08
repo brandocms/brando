@@ -130,16 +130,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
        |> Map.from_struct()
        |> Map.take(@video_override_fields)
      end)
-     |> assign_new(:video, fn ->
-       # Always get video from ref_form since we only use refs now
-       Block.resolve_ref_association(assigns[:ref_form], :video, :video_id, fn video_id ->
-         Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]})
-       end)
+     |> Block.assign_ref_association(assigns.ref_form, :video, :video_id, fn video_id ->
+       Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]})
      end)
-     |> assign_new(:video_data, fn %{video: video} -> if video, do: Map.from_struct(video), else: %{} end)
-     |> assign_new(:type, fn %{video_data: video_data} -> Map.get(video_data, :type, :file) end)
-     |> assign_new(:cover_image, fn %{video_data: video_data} -> Map.get(video_data, :thumbnail) end)
-     |> assign_new(:cover_image_id, fn %{cover_image: cover_image} -> cover_image_id(cover_image) end)
+     |> assign_video_display()
      |> assign_new(:video_upload_strategy, fn ->
        config_target = Map.get(block_data, :config_target)
 
@@ -152,6 +146,27 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
          Brando.default_video_upload_strategy()
        end
      end)}
+  end
+
+  defp assign_video_display(socket) do
+    # Cover IDs are local picker state: the embedded override intentionally has
+    # no asset ID. Only a different video selection resets its display defaults.
+    source = socket.assigns.ref_media_selection
+
+    if socket.assigns[:video_display_source] == source do
+      socket
+    else
+      video = socket.assigns.video
+      video_data = if video, do: Map.from_struct(video), else: %{}
+      cover = Map.get(video_data, :thumbnail)
+
+      socket
+      |> assign(:video_data, video_data)
+      |> assign(:type, Map.get(video_data, :type, :file))
+      |> assign(:cover_image, cover)
+      |> assign(:cover_image_id, cover_image_id(cover))
+      |> assign(:video_display_source, source)
+    end
   end
 
   def render(assigns) do

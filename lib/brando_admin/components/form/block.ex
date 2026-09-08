@@ -2880,22 +2880,49 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def resolve_ref_association(ref_form, assoc_field, id_field, fetch) do
     ref_cs = ref_form.source
+    id = Changeset.get_field(ref_cs, id_field)
 
-    case Changeset.get_field(ref_cs, assoc_field) do
-      nil ->
-        case Changeset.get_field(ref_cs, id_field) do
-          nil ->
-            nil
+    case {id, Changeset.get_field(ref_cs, assoc_field)} do
+      {nil, _} ->
+        nil
 
-          id ->
-            case fetch.(id) do
-              {:ok, value} -> value
-              _ -> nil
-            end
+      {id, %{id: id} = value} ->
+        value
+
+      {id, _not_loaded_or_stale} ->
+        case fetch.(id) do
+          {:ok, value} -> value
+          _ -> nil
+        end
+    end
+  end
+
+  @doc """
+  Reconcile display media when the owning block supplies a different ref selection.
+
+  An unchanged parent selection must not overwrite a local picker/upload result
+  awaiting its commit, or newer processed metadata for the same asset.
+  """
+  def assign_ref_association(socket, ref_form, assoc_field, id_field, fetch) do
+    selection = {ref_form[:uid].value, Changeset.get_field(ref_form.source, id_field)}
+
+    if socket.assigns[:ref_media_selection] == selection do
+      socket
+    else
+      {uid, id} = selection
+      current = socket.assigns[assoc_field]
+
+      media =
+        if not is_nil(id) and match?({^uid, _}, socket.assigns[:ref_media_selection]) and
+             is_map(current) and Map.get(current, :id) == id do
+          current
+        else
+          resolve_ref_association(ref_form, assoc_field, id_field, fetch)
         end
 
-      value ->
-        value
+      socket
+      |> assign(assoc_field, media)
+      |> assign(:ref_media_selection, selection)
     end
   end
 

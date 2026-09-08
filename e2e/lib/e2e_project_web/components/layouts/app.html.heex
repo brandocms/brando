@@ -10,13 +10,13 @@
   <.body_tag conn={@conn} id="top">
     <div class="backdrop"></div>
 <!-- :nav - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
-    <.navigation {assigns} />
+    {navigation(assigns)}
 <!-- /nav - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
 <!-- :content - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
     <%= @inner_content %>
 <!-- /content - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
 <!-- :footer - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
-    <.footer {assigns} />
+    {footer(assigns)}
 <!-- /footer - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
 
     <.include_legacy_assets />

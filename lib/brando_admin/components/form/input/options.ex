@@ -6,11 +6,10 @@ defmodule BrandoAdmin.Components.Form.Input.Options do
   because the language lists come from config and Brando supports changing them
   at runtime (`Brando.RuntimeConfig`) — so this deliberately does NOT memoize.
 
-  It lived in three places (`Input.radios/1`, `Input.Select`,
-  `Input.MultiSelect`) as three byte-identical `case` arms, which is how
-  `radios/1` came to be the only one of the three whose caller never cached the
-  result. Keeping the expansion in one place does not fix that on its own, but
-  it means the next reader sees one contract instead of three copies.
+  Select and MultiSelect cache prepared options against the expanded specification.
+  Callable providers are loaded on mount, opening the picker, and explicit refresh.
+  Declare `options_depends_on: [:language, ...]` for providers that also need to
+  reload when particular form fields change. Other keystrokes do not query them.
   """
 
   @tokens [:languages, :admin_languages]
@@ -30,4 +29,20 @@ defmodule BrandoAdmin.Components.Form.Input.Options do
   end
 
   def expand(other), do: other
+
+  @doc false
+  def assign_options(socket, load, force? \\ false) do
+    %{field: field, opts: opts} = socket.assigns
+    expanded_opts = Keyword.update(opts, :options, nil, &expand/1)
+    dependencies = Enum.map(Keyword.get(opts, :options_depends_on, []), &{&1, field.form[&1].value})
+    key = {field.form.id, field.field, expanded_opts, dependencies}
+
+    if !force? and socket.assigns[:input_options_key] == key do
+      socket
+    else
+      socket
+      |> Phoenix.Component.assign(:input_options, load.(field, expanded_opts))
+      |> Phoenix.Component.assign(:input_options_key, key)
+    end
+  end
 end

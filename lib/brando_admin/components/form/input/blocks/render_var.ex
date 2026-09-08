@@ -308,14 +308,15 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign_new(:galleries, fn -> nil end)
     |> assign_new(:inner_block, fn -> nil end)
     |> assign_new(:identifiers, fn -> nil end)
-    |> assign_new(:value_id, fn -> value end)
-    |> assign_new(:image_id, fn -> if type == :image, do: value end)
-    |> assign_new(:file_id, fn -> if type == :file, do: value end)
-    |> assign_new(:video_id, fn -> if type == :video, do: value end)
-    |> assign_new(:gallery_id, fn -> if type == :gallery, do: value end)
+    |> assign(:value_id, value)
+    |> assign(:image_id, if(type == :image, do: value))
+    |> assign(:file_id, if(type == :file, do: value))
+    |> assign(:video_id, if(type == :video, do: value))
+    |> assign(:gallery_id, if(type == :gallery, do: value))
     |> assign(:identifier_id, get_field(changeset, :identifier_id))
     |> assign(:instructions, get_field(changeset, :instructions))
     |> assign(:placeholder, get_field(changeset, :placeholder))
+    |> assign(:palette_colors, if(type == :color, do: Input.palette_colors(get_field(changeset, :palette_id))))
     |> assign(:var, var)
   end
 
@@ -510,6 +511,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                       edit
                       id={@id}
                       type={@type}
+                      palette_colors={@palette_colors}
                       var={@var}
                       image={@image}
                       images={@images}
@@ -650,6 +652,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
             <.render_value_inputs
               type={@type}
+              palette_colors={@palette_colors}
               var={@var}
               image={@image}
               images={@images}
@@ -686,6 +689,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   attr(:edit, :boolean, default: false)
   attr(:id, :any)
   attr(:type, :any)
+  attr(:palette_colors, :string, default: nil)
   attr(:var, :any)
   attr(:identifier, :any)
   attr(:image, :any)
@@ -784,6 +788,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     ~H"""
     <div class="brando-input">
       <Input.color
+        palette_colors={@palette_colors}
         field={@var[:value]}
         label={@label}
         placeholder={@placeholder}

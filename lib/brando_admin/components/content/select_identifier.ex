@@ -38,28 +38,42 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
      |> assign_new(:layout, fn -> :default end)
      |> assign_new(:statuses, fn -> nil end)
      |> sync_selection(assigns)
-     |> assign_available_schemas()
-     |> assign_selected_schema()}
+     |> refresh_filters()}
+  end
+
+  defp refresh_filters(socket) do
+    %{wanted_schemas: wanted, language: language, statuses: statuses, layout: layout} = socket.assigns
+    key = {Enum.map(wanted, &Module.concat(List.wrap(&1))), language, statuses, layout}
+
+    if socket.assigns[:identifier_filters] == key do
+      socket
+    else
+      socket
+      |> assign_available_schemas()
+      |> assign_selected_schema()
+      |> assign(:identifier_filters, key)
+    end
   end
 
   def assign_available_schemas(socket) do
     wanted_schemas = socket.assigns.wanted_schemas
 
-    socket = assign_new(socket, :available_schemas, fn -> schema_options(wanted_schemas) end)
+    socket = assign(socket, :available_schemas, schema_options(wanted_schemas))
 
     if socket.assigns.layout == :workspace do
-      assign_new(socket, :schema_counts, fn ->
-        import Ecto.Query, only: [from: 2]
-        schemas = Enum.map(socket.assigns.available_schemas, &elem(&1, 1))
+      import Ecto.Query, only: [from: 2]
+      schemas = Enum.map(socket.assigns.available_schemas, &elem(&1, 1))
 
-        query =
-          identifier_query(schemas, socket.assigns.language, socket.assigns.statuses) |> Ecto.Query.exclude(:order_by)
+      query =
+        identifier_query(schemas, socket.assigns.language, socket.assigns.statuses) |> Ecto.Query.exclude(:order_by)
 
+      counts =
         Brando.Repo.all(
           from identifier in query, group_by: identifier.schema, select: {identifier.schema, count(identifier.id)}
         )
         |> Map.new()
-      end)
+
+      assign(socket, :schema_counts, counts)
     else
       socket
     end
@@ -80,49 +94,35 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     end)
   end
 
-  # A single available schema has nothing to pick between, so preselect it and
-  # load its entries up front — `entries_list` renders as soon as a schema is
-  # selected and reads `@identifiers`.
-  def assign_selected_schema(%{assigns: %{layout: :workspace}} = socket) do
-    schemas = socket.assigns.available_schemas
-    current = socket.assigns.selected_identifier
-    preferred = if current && Enum.any?(schemas, &(elem(&1, 1) == current.schema)), do: current.schema
-    schema = preferred || (List.first(schemas) && elem(List.first(schemas), 1))
+  # Preserve the user's chosen tab only while it belongs to the current filter.
+  # A filter change reloads results even when that tab itself stays the same.
+  def assign_selected_schema(socket) do
+    %{available_schemas: available, layout: layout, selected_identifier: current} = socket.assigns
+    schemas = Enum.map(available, &elem(&1, 1))
+    selected = socket.assigns[:selected_schema]
 
-    socket
-    |> assign_new(:selected_schema, fn -> schema end)
-    |> assign_new(:selected_schema_raw, fn -> schema && to_string(schema) end)
-    |> assign_new(:identifiers, fn ->
+    schema =
+      cond do
+        selected == :all and layout == :workspace -> :all
+        selected in schemas -> selected
+        (layout == :workspace and current) && current.schema in schemas -> current.schema
+        layout == :workspace or length(schemas) == 1 -> List.first(schemas)
+        true -> nil
+      end
+
+    identifiers =
       if schema do
-        {:ok, identifiers} = list_identifiers_for_schema(schema, socket.assigns.language, socket.assigns.statuses)
+        query_schemas = if schema == :all, do: schemas, else: schema
+        {:ok, identifiers} = list_identifiers_for_schema(query_schemas, socket.assigns.language, socket.assigns.statuses)
         identifiers
       else
         []
       end
-    end)
-  end
 
-  def assign_selected_schema(%{assigns: %{available_schemas: [{_label, schema_module}]}} = socket) do
     socket
-    |> assign_new(:selected_schema, fn -> schema_module end)
-    |> assign_new(:selected_schema_raw, fn -> to_string(schema_module) end)
-    |> assign_new(:identifiers, fn ->
-      {:ok, identifiers} =
-        list_identifiers_for_schema(
-          schema_module,
-          socket.assigns.language,
-          socket.assigns.statuses
-        )
-
-      identifiers
-    end)
-  end
-
-  def assign_selected_schema(socket) do
-    socket
-    |> assign_new(:selected_schema, fn -> nil end)
-    |> assign_new(:selected_schema_raw, fn -> nil end)
-    |> assign_new(:identifiers, fn -> [] end)
+    |> assign(:selected_schema, schema)
+    |> assign(:selected_schema_raw, schema && to_string(schema))
+    |> assign(:identifiers, identifiers)
   end
 
   def render(assigns) do

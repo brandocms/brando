@@ -418,8 +418,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
               <div :if={@video.title} class="title">{@video.title}</div>
             </div>
             <%= if @video.type == :mux && get_in(@video.meta, ["mux", "duration"]) do %>
-              <% duration = get_in(@video.meta, ["mux", "duration"]) %>
-              <div class="meta">{format_duration(duration)}</div>
+              <div class="meta">{format_duration(get_in(@video.meta, ["mux", "duration"]))}</div>
             <% end %>
           </div>
           <button class="tiny" type="button" phx-click={@click}>
