@@ -209,7 +209,7 @@ defmodule BrandoAdmin.Nav do
                       {@current_user.name}
                     </div>
                     <div class="role">
-                      {if Brando.Authorization.enabled?(), do: "Account", else: @current_user.role}
+                      {if Brando.Authorization.enabled?(), do: gettext("Account"), else: @current_user.role}
                     </div>
                   </div>
                   <div class="dropdown-icon">

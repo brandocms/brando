@@ -16,13 +16,13 @@ msgstr ""
 msgid "Advanced"
 msgstr ""
 
-#: lib/brando/pages/page.ex:160
-#: lib/brando/pages/page.ex:168
+#: lib/brando/pages/page.ex:161
+#: lib/brando/pages/page.ex:169
 #, elixir-autogen, elixir-format
 msgid "Are you sure?"
 msgstr ""
 
-#: lib/brando/pages/page.ex:254
+#: lib/brando/pages/page.ex:253
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr ""
@@ -32,47 +32,47 @@ msgstr ""
 msgid "CSS classes"
 msgstr ""
 
-#: lib/brando/pages/page.ex:256
+#: lib/brando/pages/page.ex:255
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
 
-#: lib/brando/pages/page.ex:149
+#: lib/brando/pages/page.ex:150
 #, elixir-autogen, elixir-format
 msgid "Create fragment"
 msgstr ""
 
-#: lib/brando/pages/page.ex:148
+#: lib/brando/pages/page.ex:149
 #, elixir-autogen, elixir-format
 msgid "Create subpage"
 msgstr ""
 
-#: lib/brando/pages/page.ex:160
+#: lib/brando/pages/page.ex:161
 #, elixir-autogen, elixir-format
 msgid "Delete fragment"
 msgstr ""
 
-#: lib/brando/pages/page.ex:168
+#: lib/brando/pages/page.ex:169
 #, elixir-autogen, elixir-format
 msgid "Delete sub page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:159
+#: lib/brando/pages/page.ex:160
 #, elixir-autogen, elixir-format
 msgid "Duplicate fragment"
 msgstr ""
 
-#: lib/brando/pages/page.ex:167
+#: lib/brando/pages/page.ex:168
 #, elixir-autogen, elixir-format
 msgid "Duplicate sub page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:158
+#: lib/brando/pages/page.ex:159
 #, elixir-autogen, elixir-format
 msgid "Edit fragment"
 msgstr ""
 
-#: lib/brando/pages/page.ex:166
+#: lib/brando/pages/page.ex:167
 #, elixir-autogen, elixir-format
 msgid "Edit sub page"
 msgstr ""
@@ -87,7 +87,7 @@ msgstr ""
 msgid "Homepage"
 msgstr ""
 
-#: lib/brando/pages/page.ex:273
+#: lib/brando/pages/page.ex:272
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
@@ -112,7 +112,7 @@ msgstr ""
 msgid "Parent page"
 msgstr ""
 
-#: lib/brando/pages/page.ex:258
+#: lib/brando/pages/page.ex:257
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
@@ -122,14 +122,14 @@ msgstr ""
 msgid "Template"
 msgstr ""
 
-#: lib/brando/pages/page.ex:146
-#: lib/brando/pages/page.ex:263
+#: lib/brando/pages/page.ex:147
+#: lib/brando/pages/page.ex:262
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/brando/pages/page.ex:145
-#: lib/brando/pages/page.ex:264
+#: lib/brando/pages/page.ex:146
+#: lib/brando/pages/page.ex:263
 #, elixir-autogen, elixir-format
 msgid "URI"
 msgstr ""
@@ -144,17 +144,17 @@ msgstr ""
 msgid "pages"
 msgstr ""
 
-#: lib/brando/pages/page.ex:141
+#: lib/brando/pages/page.ex:142
 #, elixir-autogen, elixir-format
 msgid "Default"
 msgstr ""
 
-#: lib/brando/pages/page.ex:142
+#: lib/brando/pages/page.ex:143
 #, elixir-autogen, elixir-format
 msgid "Title &darr;"
 msgstr ""
 
-#: lib/brando/pages/page.ex:143
+#: lib/brando/pages/page.ex:144
 #, elixir-autogen, elixir-format
 msgid "Title &uarr;"
 msgstr ""

@@ -12,12 +12,12 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/sites/identity.ex:186
+#: lib/brando/sites/identity.ex:191
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Navn"
 
-#: lib/brando/sites/identity.ex:187
+#: lib/brando/sites/identity.ex:192
 #, elixir-autogen, elixir-format
 msgid "URL"
 msgstr "URL"

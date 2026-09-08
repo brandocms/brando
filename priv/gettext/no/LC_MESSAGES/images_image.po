@@ -12,17 +12,17 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/images/image.ex:98
+#: lib/brando/images/image.ex:123
 #, elixir-autogen, elixir-format
 msgid "Alt. text"
 msgstr "Alternativ tekst"
 
-#: lib/brando/images/image.ex:107
+#: lib/brando/images/image.ex:132
 #, elixir-autogen, elixir-format
 msgid "Asset has been transferred to CDN"
 msgstr "Ressursen er overført til CDN"
 
-#: lib/brando/images/image.ex:106
+#: lib/brando/images/image.ex:131
 #, elixir-autogen, elixir-format
 msgid "CDN"
 msgstr "CDN"
@@ -32,53 +32,53 @@ msgstr "CDN"
 msgid "Config target"
 msgstr "Konfigurasjonsmål"
 
-#: lib/brando/images/image.ex:112
+#: lib/brando/images/image.ex:137
 #, elixir-autogen, elixir-format
 msgid "Configuration target"
 msgstr "Konfigurasjonsmål"
 
-#: lib/brando/images/image.ex:97
+#: lib/brando/images/image.ex:122
 #, elixir-autogen, elixir-format
 msgid "Credits"
 msgstr "Krediteringer"
 
-#: lib/brando/images/image.ex:111
+#: lib/brando/images/image.ex:136
 #, elixir-autogen, elixir-format
 msgid "Dominant color"
 msgstr "Dominerende farge"
 
-#: lib/brando/images/image.ex:110
+#: lib/brando/images/image.ex:135
 #, elixir-autogen, elixir-format
 msgid "Height"
 msgstr "Høyde"
 
 #: lib/brando/images/image.ex:67
-#: lib/brando/images/image.ex:99
+#: lib/brando/images/image.ex:124
 #, elixir-autogen, elixir-format
 msgid "Path"
 msgstr "Sti"
 
-#: lib/brando/images/image.ex:96
+#: lib/brando/images/image.ex:121
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Tittel"
 
-#: lib/brando/images/image.ex:109
+#: lib/brando/images/image.ex:134
 #, elixir-autogen, elixir-format
 msgid "Width"
 msgstr "Bredde"
 
-#: lib/brando/images/image.ex:115
+#: lib/brando/images/image.ex:140
 #, elixir-autogen, elixir-format
 msgid "Focal"
 msgstr "Fokuspunkt"
 
-#: lib/brando/images/image.ex:130
+#: lib/brando/images/image.ex:155
 #, elixir-autogen, elixir-format
 msgid "image"
 msgstr "bilde"
 
-#: lib/brando/images/image.ex:131
+#: lib/brando/images/image.ex:156
 #, elixir-autogen, elixir-format
 msgid "images"
 msgstr "bilder"

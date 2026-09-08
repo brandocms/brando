@@ -11,69 +11,69 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
   alias Phoenix.LiveView.JS
 
   @text_extension_options [
-    %{label: "All", value: nil},
-    %{label: "Paragraph", value: "p"},
-    %{label: "H1", value: "h1"},
-    %{label: "H2", value: "h2"},
-    %{label: "H3", value: "h3"},
-    %{label: "List", value: "list"},
-    %{label: "Link", value: "link"},
-    %{label: "Button", value: "button"},
-    %{label: "Bold", value: "bold"},
-    %{label: "Italic", value: "italic"},
-    %{label: "Subscript", value: "sub"},
-    %{label: "Superscript", value: "sup"},
-    %{label: "Color", value: "color"},
-    %{label: "Unset Marks", value: "unsetMarks"},
-    %{label: "Jump Anchor", value: "jumpAnchor"},
-    %{label: "Smart Text", value: "smartText"},
-    %{label: "Align", value: "align"}
+    %{label: gettext_noop("All"), value: nil},
+    %{label: gettext_noop("Paragraph"), value: "p"},
+    %{label: gettext_noop("H1"), value: "h1"},
+    %{label: gettext_noop("H2"), value: "h2"},
+    %{label: gettext_noop("H3"), value: "h3"},
+    %{label: gettext_noop("List"), value: "list"},
+    %{label: gettext_noop("Link"), value: "link"},
+    %{label: gettext_noop("Button"), value: "button"},
+    %{label: gettext_noop("Bold"), value: "bold"},
+    %{label: gettext_noop("Italic"), value: "italic"},
+    %{label: gettext_noop("Subscript"), value: "sub"},
+    %{label: gettext_noop("Superscript"), value: "sup"},
+    %{label: gettext_noop("Color"), value: "color"},
+    %{label: gettext_noop("Unset Marks"), value: "unsetMarks"},
+    %{label: gettext_noop("Jump Anchor"), value: "jumpAnchor"},
+    %{label: gettext_noop("Smart Text"), value: "smartText"},
+    %{label: gettext_noop("Align"), value: "align"}
   ]
 
   @placeholder_options [
-    %{label: "SVG", value: :svg},
-    %{label: "Dominant Color", value: :dominant_color},
-    %{label: "Dominant Color Faded", value: :dominant_color_faded},
-    %{label: "Micro", value: :micro},
-    %{label: "None", value: :none}
+    %{label: gettext_noop("SVG"), value: :svg},
+    %{label: gettext_noop("Dominant Color"), value: :dominant_color},
+    %{label: gettext_noop("Dominant Color Faded"), value: :dominant_color_faded},
+    %{label: gettext_noop("Micro"), value: :micro},
+    %{label: gettext_noop("None"), value: :none}
   ]
 
   @fetchpriority_options [
-    %{label: "Auto", value: :auto},
-    %{label: "High", value: :high},
-    %{label: "Low", value: :low}
+    %{label: gettext_noop("Auto"), value: :auto},
+    %{label: gettext_noop("High"), value: :high},
+    %{label: gettext_noop("Low"), value: :low}
   ]
 
   @gallery_type_options [
-    %{label: "Gallery", value: :gallery},
-    %{label: "Slider", value: :slider},
-    %{label: "Slideshow", value: :slideshow}
+    %{label: gettext_noop("Gallery"), value: :gallery},
+    %{label: gettext_noop("Slider"), value: :slider},
+    %{label: gettext_noop("Slideshow"), value: :slideshow}
   ]
 
   @display_options [
-    %{label: "Grid", value: :grid},
-    %{label: "List", value: :list}
+    %{label: gettext_noop("Grid"), value: :grid},
+    %{label: gettext_noop("List"), value: :list}
   ]
 
   @gallery_placeholder_options [
-    %{label: "Dominant color", value: "dominant_color"},
-    %{label: "Dominant color faded", value: "dominant_color_faded"},
-    %{label: "SVG", value: "svg"},
-    %{label: "Micro", value: "micro"},
-    %{label: "None", value: "none"}
+    %{label: gettext_noop("Dominant color"), value: "dominant_color"},
+    %{label: gettext_noop("Dominant color faded"), value: "dominant_color_faded"},
+    %{label: gettext_noop("SVG"), value: "svg"},
+    %{label: gettext_noop("Micro"), value: "micro"},
+    %{label: gettext_noop("None"), value: "none"}
   ]
 
   @video_source_options [
-    %{label: "YouTube", value: "youtube"},
-    %{label: "Vimeo", value: "vimeo"},
-    %{label: "File", value: "file"}
+    %{label: gettext_noop("YouTube"), value: "youtube"},
+    %{label: gettext_noop("Vimeo"), value: "vimeo"},
+    %{label: gettext_noop("File"), value: "file"}
   ]
 
   @available_blocks_options [
-    %{label: "Picture", value: "picture"},
-    %{label: "Video", value: "video"},
-    %{label: "Gallery", value: "gallery"},
-    %{label: "SVG", value: "svg"}
+    %{label: gettext_noop("Picture"), value: "picture"},
+    %{label: gettext_noop("Video"), value: "video"},
+    %{label: gettext_noop("Gallery"), value: "gallery"},
+    %{label: gettext_noop("SVG"), value: "svg"}
   ]
 
   attr :type, :string, required: true
@@ -169,7 +169,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
 
   def block_form(%{type: "text"} = assigns) do
     assigns =
-      assign(assigns, :text_extension_options, @text_extension_options)
+      assign(assigns, :text_extension_options, translate_options(@text_extension_options))
 
     ~H"""
     <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
@@ -199,8 +199,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
   def block_form(%{type: "picture"} = assigns) do
     assigns =
       assigns
-      |> assign(:placeholder_options, @placeholder_options)
-      |> assign(:fetchpriority_options, @fetchpriority_options)
+      |> assign(:placeholder_options, translate_options(@placeholder_options))
+      |> assign(:fetchpriority_options, translate_options(@fetchpriority_options))
 
     ~H"""
     <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
@@ -259,9 +259,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
   def block_form(%{type: "gallery"} = assigns) do
     assigns =
       assigns
-      |> assign(:gallery_type_options, @gallery_type_options)
-      |> assign(:display_options, @display_options)
-      |> assign(:gallery_placeholder_options, @gallery_placeholder_options)
+      |> assign(:gallery_type_options, translate_options(@gallery_type_options))
+      |> assign(:display_options, translate_options(@display_options))
+      |> assign(:gallery_placeholder_options, translate_options(@gallery_placeholder_options))
 
     ~H"""
     <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
@@ -297,7 +297,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
   end
 
   def block_form(%{type: "video"} = assigns) do
-    assigns = assign(assigns, :video_source_options, @video_source_options)
+    assigns = assign(assigns, :video_source_options, translate_options(@video_source_options))
 
     ~H"""
     <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
@@ -330,12 +330,12 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
   def block_form(%{type: "media"} = assigns) do
     assigns =
       assigns
-      |> assign(:available_blocks_options, @available_blocks_options)
-      |> assign(:placeholder_options, @placeholder_options)
-      |> assign(:fetchpriority_options, @fetchpriority_options)
-      |> assign(:gallery_type_options, @gallery_type_options)
-      |> assign(:display_options, @display_options)
-      |> assign(:gallery_placeholder_options, @gallery_placeholder_options)
+      |> assign(:available_blocks_options, translate_options(@available_blocks_options))
+      |> assign(:placeholder_options, translate_options(@placeholder_options))
+      |> assign(:fetchpriority_options, translate_options(@fetchpriority_options))
+      |> assign(:gallery_type_options, translate_options(@gallery_type_options))
+      |> assign(:display_options, translate_options(@display_options))
+      |> assign(:gallery_placeholder_options, translate_options(@gallery_placeholder_options))
 
     ~H"""
     <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
@@ -419,7 +419,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
 
   defp media_picture_template(assigns) do
     ~H"""
-    <h2>Picture block template</h2>
+    <h2>{gettext("Picture block template")}</h2>
     <.inputs_for :let={tpl_data} field={@field}>
       <Input.toggle field={tpl_data[:lazyload]} label={gettext("Lazyload")} />
       <Input.toggle field={tpl_data[:moonwalk]} label={gettext("Moonwalk")} />
@@ -456,7 +456,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
 
   defp media_video_template(assigns) do
     ~H"""
-    <h2>Video block template</h2>
+    <h2>{gettext("Video block template")}</h2>
     <.inputs_for :let={tpl_data} field={@field}>
       <Input.number field={tpl_data[:opacity]} label={gettext("Opacity")} />
       <Input.toggle field={tpl_data[:autoplay]} label={gettext("Autoplay")} />
@@ -483,7 +483,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
 
   defp media_gallery_template(assigns) do
     ~H"""
-    <h2>Gallery block template</h2>
+    <h2>{gettext("Gallery block template")}</h2>
     <.inputs_for :let={tpl_data} field={@field}>
       <Input.radios
         field={tpl_data[:type]}
@@ -519,7 +519,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
 
   defp media_svg_template(assigns) do
     ~H"""
-    <h2>SVG block template</h2>
+    <h2>{gettext("SVG block template")}</h2>
     <.inputs_for :let={tpl_data} field={@field}>
       <Input.text field={tpl_data[:class]} label={gettext("Class")} />
     </.inputs_for>
@@ -583,5 +583,9 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
 
   def block_form_extras(assigns) do
     ~H""
+  end
+
+  defp translate_options(options) do
+    Enum.map(options, &%{&1 | label: Gettext.gettext(Brando.Gettext, &1.label)})
   end
 end

@@ -14,7 +14,7 @@
   import HTMLInputParser from "./extensions/PasteCleaner/HTMLInputParser";
   import JumpAnchor from "./extensions/JumpAnchor";
   import PreventDrop from "./extensions/PreventDrop";
-  import Footnote, { renumberFootnotes } from "./extensions/Footnote";
+  import Footnote, { defaultFootnoteLabels, renumberFootnotes } from "./extensions/Footnote";
   import TextAlign from "@tiptap/extension-text-align";
 
   import { alertPrompt } from "../../alerts";
@@ -47,7 +47,7 @@
     },
   });
 
-  let { content, extensions = $bindable(), styles = "[]", onFocus, onBlur, onToggleLink, onToggleButton, onEditorCreated, tiptapInput, footnotes = false, onOpenFootnote } = $props();
+  let { content, extensions = $bindable(), styles = "[]", onFocus, onBlur, onToggleLink, onToggleButton, onEditorCreated, tiptapInput, footnotes = false, footnoteLabels = defaultFootnoteLabels, onOpenFootnote } = $props();
 
   let element = $state();
   let editor = $state();
@@ -485,7 +485,7 @@
           mode: "shallowest",
         }),
         PreventDrop,
-        Footnote.configure({ onOpen: onOpenFootnote }),
+        Footnote.configure({ onOpen: onOpenFootnote, editLabel: footnoteLabels.edit }),
         SmartText,
         TextStyleKit.configure({
           color: {
@@ -776,8 +776,8 @@
         onclick={() => onOpenFootnote?.(null)}
         class="menu-item tiptap-add-footnote"
         type="button"
-        title="Add footnote"
-        aria-label="Add footnote"
+        title={footnoteLabels.add}
+        aria-label={footnoteLabels.add}
       >
         <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M12.3 10.4c2.9-.2 4.7 1.7 3.6 4.3l-1.1 2.5c-.5 1.2-.3 2.5-1.3 3.3-1.3 1.2-3.5.7-4.1-.9-.5-1.4.6-2.5 0-4.1-1-2.6-.4-4.9 2.9-5.1Z" />

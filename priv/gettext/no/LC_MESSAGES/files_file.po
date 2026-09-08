@@ -30,4 +30,4 @@ msgstr "filer"
 #: lib/brando/files/file.ex:38
 #, elixir-autogen, elixir-format
 msgid "Replace file"
-msgstr ""
+msgstr "Erstatt fil"

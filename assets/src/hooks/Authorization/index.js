@@ -9,7 +9,7 @@ export default () => ({
       const link = event.target.closest('a[href]')
       if (!link || link.target === '_blank' || link.hasAttribute('download') ||
           link.getAttribute('href').startsWith('#') || (!this.localEdit && this.el.dataset.dirty !== 'true')) return
-      if (!window.confirm('Discard your unsaved group changes?')) {
+      if (!window.confirm(this.el.dataset.discardConfirmation)) {
         event.preventDefault()
         event.stopImmediatePropagation()
       } else {

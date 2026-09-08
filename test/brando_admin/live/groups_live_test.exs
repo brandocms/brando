@@ -40,6 +40,63 @@ defmodule BrandoAdmin.Users.GroupsLiveTest do
     assert {:error, {:redirect, %{to: "/admin/access-denied"}}} = live(conn, "/admin/pages")
   end
 
+  test "Norwegian group editing translates labels, search, counts and confirmations", %{
+    conn: conn,
+    current_user: user,
+    scope: scope
+  } do
+    user |> Ecto.Changeset.change(language: :no) |> Repo.update!()
+    {:ok, group} = Groups.create(scope, %{name: "Nyheter"}, ["brando.admin.access"])
+    {:ok, :ok} = Groups.add_member(scope, group.id, user.id)
+    {:ok, view, html} = live(conn, "/admin/groups")
+
+    assert html =~ ~s(lang="no")
+    assert has_element?(view, "h1", "Tillatelser")
+    assert has_element?(view, "#authorization-workspace[data-discard-confirmation]", "Administrasjon")
+
+    assert has_element?(
+             view,
+             "#authorization-workspace[data-discard-confirmation='Forkaste de ulagrede gruppeendringene dine?']"
+           )
+
+    render_click(view, "select", %{"id" => to_string(group.id)})
+    assert has_element?(view, ".authorization-member-count", "1 medlem")
+
+    view |> form("#group-permissions", search: "Administrasjon") |> render_change()
+    assert has_element?(view, "input[name='permissions[brando.admin.access]']")
+    refute has_element?(view, "input[name='permissions[brando.pages.read]']")
+    view |> form("#group-permissions", search: "") |> render_change()
+
+    view
+    |> form("#group-permissions", permissions: %{"brando.admin.access" => "true", "brando.pages.read" => "true"})
+    |> render_change()
+
+    view |> form("#group-permissions") |> render_submit()
+    assert has_element?(view, ".authorization-review", "1 tillatelse lagt til")
+    assert has_element?(view, ".authorization-impact", "1 medlem berøres")
+    render_click(view, "cancel_review")
+
+    view
+    |> form("#group-permissions",
+      permissions: %{"brando.admin.access" => "true", "brando.pages.read" => "true", "brando.pages.update" => "true"}
+    )
+    |> render_change()
+
+    view |> form("#group-permissions") |> render_submit()
+    assert has_element?(view, ".authorization-review", "2 tillatelser lagt til")
+    view |> element("button", "Bekreft og lagre") |> render_click()
+    assert has_element?(view, "[role=status]", "Gruppen er lagret.")
+    assert has_element?(view, "input[name='permissions[brando.pages.update]'][checked]")
+  end
+
+  test "access denied page follows the administrator's Norwegian locale", %{conn: conn, current_user: user} do
+    user |> Ecto.Changeset.change(language: :no) |> Repo.update!()
+    html = conn |> get("/admin/access-denied") |> html_response(403)
+    assert html =~ ~s(lang="no")
+    assert html =~ "Du har ikke tilgang til dette området."
+    assert html =~ "Tilbake til arbeidsområdet ditt"
+  end
+
   test "a delayed previous group's form cannot populate a new group", %{conn: conn, scope: scope} do
     {:ok, group} = Groups.create(scope, %{name: "Previous"}, ["brando.admin.access"])
     {:ok, view, _} = live(conn, "/admin/groups")

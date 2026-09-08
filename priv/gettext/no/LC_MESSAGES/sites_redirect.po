@@ -12,17 +12,17 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/sites/seo.ex:84
+#: lib/brando/sites/seo.ex:94
 #, elixir-autogen, elixir-format
 msgid "Code"
 msgstr "Kode"
 
-#: lib/brando/sites/seo.ex:85
+#: lib/brando/sites/seo.ex:95
 #, elixir-autogen, elixir-format
 msgid "From"
 msgstr "Fra"
 
-#: lib/brando/sites/seo.ex:86
+#: lib/brando/sites/seo.ex:96
 #, elixir-autogen, elixir-format
 msgid "To"
 msgstr "Til"

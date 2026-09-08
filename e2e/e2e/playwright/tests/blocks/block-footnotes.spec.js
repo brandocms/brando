@@ -32,6 +32,28 @@ const placeCaretAtEnd = async editor => {
   return text
 }
 
+test('uses Norwegian footnote buttons and numbered labels', async ({ page }) => {
+  const client = await fixture(page, 'E2eProject.Projects.Client', {
+    name: 'Norwegian notes', slug: 'norwegian-notes', status: 'published', language: 'en',
+  })
+  const project = await fixture(page, 'E2eProject.Projects.Project', {
+    title: 'Norwegian notes', slug: 'norwegian-notes', introduction: '<p>En tekst med en kilde.</p>',
+    client_id: client.id, status: 'draft', language: 'en',
+  })
+  const response = await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')
+  expect(response.ok()).toBe(true)
+
+  await page.goto(`/admin/projects/projects/update/${project.id}`)
+  await syncLV(page)
+  await placeCaretAtEnd(page.locator('[data-footnote-field="introduction"] .tiptap[contenteditable=true]'))
+  await page.getByRole('button', { name: 'Legg til fotnote', exact: true }).click()
+  const drawer = page.locator('.block-slot-drawer.visible')
+  await drawer.locator('.tiptap[contenteditable=true]').fill('En norsk kilde.')
+  await drawer.getByRole('button', { name: 'Ferdig', exact: true }).click()
+  await page.getByRole('button', { name: 'Rediger fotnote 1', exact: true }).click()
+  await expect(drawer.locator('.tiptap[contenteditable=true]')).toHaveText('En norsk kilde.')
+})
+
 test('notes are opt-in, keep their subtree on save, and renumber existing markers on load', async ({ page }, testInfo) => {
   test.setTimeout(150000)
   await page.goto('/admin/pages/create')

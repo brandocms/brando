@@ -259,10 +259,22 @@ defmodule BrandoAdmin.UserAuth do
   end
 
   defp mount_current_user(socket, session) do
-    Phoenix.Component.assign_new(socket, :current_user, fn ->
-      if user_token = session["user_token"] do
-        Users.get_user_by_session_token(user_token)
-      end
-    end)
+    socket =
+      Phoenix.Component.assign_new(socket, :current_user, fn ->
+        if user_token = session["user_token"] do
+          Users.get_user_by_session_token(user_token)
+        end
+      end)
+
+    # Gettext locales are process-local: the HTTP locale plug does not set the
+    # locale of connected LiveViews, including sticky children and upload UI.
+    if user = socket.assigns.current_user do
+      locale = to_string(user.language)
+      Gettext.put_locale(locale)
+      Gettext.put_locale(Brando.Gettext, locale)
+      Gettext.put_locale(Brando.gettext_admin(), locale)
+    end
+
+    socket
   end
 end

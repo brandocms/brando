@@ -11,17 +11,17 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/sites/seo.ex:84
+#: lib/brando/sites/seo.ex:94
 #, elixir-autogen, elixir-format
 msgid "Code"
 msgstr ""
 
-#: lib/brando/sites/seo.ex:85
+#: lib/brando/sites/seo.ex:95
 #, elixir-autogen, elixir-format
 msgid "From"
 msgstr ""
 
-#: lib/brando/sites/seo.ex:86
+#: lib/brando/sites/seo.ex:96
 #, elixir-autogen, elixir-format
 msgid "To"
 msgstr ""

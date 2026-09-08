@@ -4,6 +4,37 @@ import { e2eUrl } from '../../test-support/e2eUrl'
 
 test.skip(process.env.BRANDO_AUTHORIZATION_MODE !== 'groups', 'Requires explicit group mode')
 
+test('keeps Norwegian labels and navigation warnings after connecting', async ({ page }, testInfo) => {
+  const response = await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')
+  expect(response.ok()).toBe(true)
+
+  await page.goto('/admin/groups')
+  await syncLV(page)
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await expect(page.locator('html')).toHaveAttribute('lang', 'no')
+  await expect(page.getByRole('heading', { name: 'Tillatelser', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Ny gruppe', exact: true }).click()
+  await expect(page.getByLabel('Gruppenavn', { exact: true })).toHaveValue('')
+  await page.getByLabel('Gruppenavn', { exact: true }).fill('Norske redaktører')
+  await page.getByLabel('Administrasjon: Tilgang', { exact: true }).check()
+  await page.getByLabel('Sider: Vis', { exact: true }).check()
+  await expect(page.getByRole('button', { name: 'Gjennomgå endringer', exact: true })).toBeEnabled()
+
+  const cancelled = page.waitForEvent('dialog').then(async dialog => {
+    expect(dialog.message()).toBe('Forkaste de ulagrede gruppeendringene dine?')
+    await dialog.dismiss()
+  })
+  await page.getByRole('link', { name: 'Installasjonsgrupper', exact: true }).click()
+  await cancelled
+  await expect(page).toHaveURL('/admin/groups')
+  await page.getByRole('button', { name: 'Gjennomgå endringer', exact: true }).click()
+  await expect(page.locator('.authorization-review')).toContainText('2 tillatelser lagt til')
+  await page.screenshot({ path: testInfo.outputPath('norwegian-groups-desktop.png'), fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('norwegian-groups-mobile.png'), fullPage: true })
+})
+
 test('manages a custom group with a reviewed permission change and membership', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/admin')

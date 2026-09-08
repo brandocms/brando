@@ -11,12 +11,12 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/images/image.ex:120
+#: lib/brando/images/image.ex:145
 #, elixir-autogen, elixir-format
 msgid "x"
 msgstr ""
 
-#: lib/brando/images/image.ex:121
+#: lib/brando/images/image.ex:146
 #, elixir-autogen, elixir-format
 msgid "y"
 msgstr ""

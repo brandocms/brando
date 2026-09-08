@@ -1,5 +1,6 @@
 defmodule BrandoAdmin.Users.GroupsLive do
   use BrandoAdmin, :live_view
+  use Gettext, backend: Brando.Gettext
   alias Brando.Authorization.{Administration, Catalog, Engine, Group, Groups, Scope}
 
   def mount(_params, _session, socket) do
@@ -27,7 +28,11 @@ defmodule BrandoAdmin.Users.GroupsLive do
        |> assign(:message, nil)
        |> assign(:error, nil)
        |> assign(:tab, "permissions")
-       |> assign(:tabs, [{"permissions", "Permissions"}, {"members", "Members"}, {"activity", "Activity"}])
+       |> assign(:tabs, [
+         {"permissions", gettext("Permissions")},
+         {"members", gettext("Members")},
+         {"activity", gettext("Activity")}
+       ])
        |> assign(:stale?, false)
        |> assign(:adding_member?, false)
        |> assign(:effective_person, nil)
@@ -50,30 +55,31 @@ defmodule BrandoAdmin.Users.GroupsLive do
       id="authorization-workspace"
       phx-hook="Brando.Authorization"
       data-dirty={to_string(@dirty?)}
+      data-discard-confirmation={gettext("Discard your unsaved group changes?")}
     >
       <header class="authorization-page-heading">
         <div>
-          <h1>Permissions</h1><p>Manage your team’s access with groups.</p>
+          <h1>{gettext("Permissions")}</h1><p>{gettext("Manage your team’s access with groups.")}</p>
         </div>
         <div class="authorization-scope">
-          <div><span>Scope</span><strong>{scope_label(@authorization_scope, @current_site)}</strong></div>
+          <div><span>{gettext("Scope")}</span><strong>{scope_label(@authorization_scope, @current_site)}</strong></div>
           <a
             :if={@installation_access? && @authorization_scope.kind != :installation}
             href="/admin/groups?scope=installation"
-          >Installation groups</a>
-          <a :if={@authorization_scope.kind == :installation} href="/admin/groups">Workspace groups</a>
+          >{gettext("Installation groups")}</a>
+          <a :if={@authorization_scope.kind == :installation} href="/admin/groups">{gettext("Workspace groups")}</a>
         </div>
       </header>
       <div :if={@legacy_mode?} class="authorization-legacy-notice" role="status">
-        <strong>Preparing for group access</strong>
-        <span>Legacy roles are still active. Changes here take effect after your application switches to groups.</span>
-        <a href="/admin/config/utils#authorization-tools">Migration tools</a>
+        <strong>{gettext("Preparing for group access")}</strong>
+        <span>{gettext("Legacy roles are still active. Changes here take effect after your application switches to groups.")}</span>
+        <a href="/admin/config/utils#authorization-tools">{gettext("Migration tools")}</a>
       </div>
       <div class="authorization-layout">
-        <aside class="authorization-groups" aria-label="User groups">
+        <aside class="authorization-groups" aria-label={gettext("User groups")}>
           <div class="authorization-heading">
             <h2>
-              Groups
+              {gettext("Groups")}
               <.count_badge>{length(@groups)}</.count_badge>
             </h2>
             <button
@@ -82,7 +88,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
               class="access-button"
               phx-click="new"
               data-confirm={discard_confirmation(@selected, @draft, @permissions)}
-            >New group</button>
+            >{gettext("New group")}</button>
           </div>
           <form id="authorization-group-search" phx-change="search_groups">
             <input
@@ -90,11 +96,11 @@ defmodule BrandoAdmin.Users.GroupsLive do
               type="search"
               value={@group_search}
               phx-debounce="150"
-              aria-label="Find a group"
-              placeholder="Find a group…"
+              aria-label={gettext("Find a group")}
+              placeholder={gettext("Find a group…")}
             />
           </form>
-          <nav class="authorization-group-list" aria-label="Choose a group">
+          <nav class="authorization-group-list" aria-label={gettext("Choose a group")}>
             <button
               :for={group <- filter_groups(@groups, @group_search)}
               type="button"
@@ -107,49 +113,51 @@ defmodule BrandoAdmin.Users.GroupsLive do
               aria-current={@selected && @selected.id == group.id && "true"}
             >
               <span><strong>{group.name}</strong><small class="authorization-member-count">
-                {count_label(length(group.memberships), "member")}
+                {ngettext("%{count} member", "%{count} members", length(group.memberships))}
               </small></span>
-              <span :if={group.preset == :superuser} class="access-tag">Protected</span>
+              <span :if={group.preset == :superuser} class="access-tag">{gettext("Protected")}</span>
             </button>
           </nav>
-          <p :if={filter_groups(@groups, @group_search) == []} class="authorization-hint">No matching groups.</p>
-          <p class="authorization-hint">A person can belong to several groups. Their permissions add together.</p>
+          <p :if={filter_groups(@groups, @group_search) == []} class="authorization-hint">{gettext("No matching groups.")}</p>
+          <p class="authorization-hint">
+            {gettext("A person can belong to several groups. Their permissions add together.")}
+          </p>
         </aside>
         <section
           id={"authorization-editor-#{editor_key(@selected)}"}
           class="authorization-editor"
-          aria-label="Group details"
+          aria-label={gettext("Group details")}
         >
           <%= if @selected do %>
             <%= if @preview do %>
-              <section class="authorization-review" aria-label="Review permission changes">
-                <button type="button" class="access-button quiet" phx-click="cancel_review">Back to editing</button>
+              <section class="authorization-review" aria-label={gettext("Review permission changes")}>
+                <button type="button" class="access-button quiet" phx-click="cancel_review">{gettext("Back to editing")}</button>
                 <h2
                   id="authorization-review-title"
                   data-access-return="#authorization-review-button"
                   tabindex="-1"
                   data-access-focus
                 >
-                  Review changes
+                  {gettext("Review changes")}
                 </h2>
                 <p class="authorization-lead">
-                  {if @selected.id, do: "Update", else: "Create"} <strong>{@draft["name"]}</strong>.
+                  {if @selected.id, do: gettext("Update"), else: gettext("Create")} <strong>{@draft["name"]}</strong>.
                 </p>
                 <dl class="authorization-review-details">
                   <div :if={normalize(@selected.name) != normalize(@draft["name"])}>
-                    <dt>Group name</dt><dd><s :if={@selected.name}>{@selected.name}</s> {@draft["name"]}</dd>
+                    <dt>{gettext("Group name")}</dt><dd><s :if={@selected.name}>{@selected.name}</s> {@draft["name"]}</dd>
                   </div>
                   <div :if={normalize(@selected.description) != normalize(@draft["description"])}>
-                    <dt>Description</dt><dd>{@draft["description"] |> normalize() |> empty_label()}</dd>
+                    <dt>{gettext("Description")}</dt><dd>{@draft["description"] |> normalize() |> empty_label()}</dd>
                   </div>
                 </dl>
                 <div class="authorization-diff">
                   <section>
                     <h3>
                       <.count_badge tone="mint">{length(@preview.added)}</.count_badge>
-                      {plural_label(length(@preview.added), "permission")} added
+                      {ngettext("permission added", "permissions added", length(@preview.added))}
                     </h3>
-                    <p :if={@preview.added == []} class="authorization-hint">No new permissions.</p>
+                    <p :if={@preview.added == []} class="authorization-hint">{gettext("No new permissions.")}</p>
                     <ul>
                       <li :for={key <- @preview.added}>{permission_label(@catalog, key)}</li>
                     </ul>
@@ -157,48 +165,55 @@ defmodule BrandoAdmin.Users.GroupsLive do
                   <section>
                     <h3>
                       <.count_badge tone="peach">{length(@preview.removed)}</.count_badge>
-                      {plural_label(length(@preview.removed), "permission")} removed
+                      {ngettext("permission removed", "permissions removed", length(@preview.removed))}
                     </h3>
-                    <p :if={@preview.removed == []} class="authorization-hint">No permissions removed.</p>
+                    <p :if={@preview.removed == []} class="authorization-hint">{gettext("No permissions removed.")}</p>
                     <ul>
                       <li :for={key <- @preview.removed}>{permission_label(@catalog, key)}</li>
                     </ul>
                   </section>
                 </div>
                 <div class="authorization-impact">
-                  <strong>{count_label(@preview.members, "member")} affected</strong>
+                  <strong>{ngettext("%{count} member affected", "%{count} members affected", @preview.members)}</strong>
                   <p>
                     {if @legacy_mode?,
-                      do: "Access changes take effect after your application switches to groups.",
-                      else: "Changes apply immediately."} Permissions from other groups are retained.
+                      do: gettext("Access changes take effect after your application switches to groups."),
+                      else: gettext("Changes apply immediately.")} {gettext("Permissions from other groups are retained.")}
                   </p>
                 </div>
                 <div :if={"brando.admin.access" in @preview.removed} class="authorization-notice">
-                  Members who receive backend access only from this group will no longer be able to sign in to the admin.
+                  {gettext(
+                    "Members who receive backend access only from this group will no longer be able to sign in to the admin."
+                  )}
                 </div>
                 <div :if={@error} class="authorization-notice error" role="alert">{@error}</div>
                 <div class="authorization-review-actions">
-                  <button type="button" class="access-button primary-action" phx-click="save" phx-disable-with="Saving…">Confirm &amp; save</button>
+                  <button
+                    type="button"
+                    class="access-button primary-action"
+                    phx-click="save"
+                    phx-disable-with={gettext("Saving…")}
+                  >{gettext("Confirm & save")}</button>
 
                   <button
                     :if={@stale?}
                     type="button"
                     class="access-button"
                     phx-click="reload"
-                    data-confirm="Discard your draft and load the latest saved version?"
-                  >Load latest version</button>
+                    data-confirm={gettext("Discard your draft and load the latest saved version?")}
+                  >{gettext("Load latest version")}</button>
                 </div>
               </section>
             <% else %>
               <header class="authorization-editor-heading">
                 <div>
                   <div class="authorization-group-kind">
-                    {if @selected.preset, do: "Built-in group", else: "Custom group"}<span
+                    {if @selected.preset, do: gettext("Built-in group"), else: gettext("Custom group")}<span
                       :if={@dirty?}
                       class="authorization-unsaved"
-                    >Unsaved changes</span>
+                    >{gettext("Unsaved changes")}</span>
                   </div>
-                  <h2>{if @selected.id, do: @selected.name, else: "New group"}</h2>
+                  <h2>{if @selected.id, do: @selected.name, else: gettext("New group")}</h2>
                   <p :if={@message} class="authorization-feedback" role="status">{@message}</p>
                 </div>
                 <button
@@ -208,11 +223,11 @@ defmodule BrandoAdmin.Users.GroupsLive do
                   id="authorization-review-button"
                   class="access-button primary-action"
                   disabled={!@dirty?}
-                  phx-disable-with="Preparing review…"
-                >Review changes</button>
+                  phx-disable-with={gettext("Preparing review…")}
+                >{gettext("Review changes")}</button>
               </header>
               <div :if={@error} class="authorization-notice error" role="alert">{@error}</div>
-              <div class="authorization-tabs" role="group" aria-label="Group sections">
+              <div class="authorization-tabs" role="group" aria-label={gettext("Group sections")}>
                 <button
                   :for={{key, label} <- @tabs}
                   type="button"
@@ -227,36 +242,41 @@ defmodule BrandoAdmin.Users.GroupsLive do
               <div hidden={@tab != "permissions"}>
                 <%= if @selected.preset == :superuser do %>
                   <div class="authorization-protected">
-                    <span class="access-tag">Protected</span><h3>Full installation access</h3>
+                    <span class="access-tag">{gettext("Protected")}</span><h3>{gettext("Full installation access")}</h3>
                     <p>
-                      Superusers can manage every active site and all installation settings. These permissions are maintained automatically.
+                      {gettext(
+                        "Superusers can manage every active site and all installation settings. These permissions are maintained automatically."
+                      )}
                     </p>
-                    <p>Manage who has this access in Members. At least one active superuser must remain.</p>
+                    <p>{gettext("Manage who has this access in Members. At least one active superuser must remain.")}</p>
                   </div>
                 <% else %>
                   <form id="group-permissions" phx-change="change" phx-submit="review">
                     <input type="hidden" name="editor_key" value={editor_key(@selected)} />
                     <fieldset class="authorization-fields" disabled={!can_save?(@authorization, @selected)}>
-                      <label>Group name<input
+                      <label>{gettext("Group name")}<input
                         name="group[name]"
                         value={@draft["name"]}
                         required
                         maxlength="100"
                         phx-debounce="250"
                       /></label>
-                      <label>Description
-                      <span>Optional</span><input
+                      <label>{gettext("Description")}
+                      <span>{gettext("Optional")}</span><input
                         name="group[description]"
-                        aria-label="Description"
+                        aria-label={gettext("Description")}
                         value={@draft["description"]}
                         maxlength="500"
                         phx-debounce="250"
-                        placeholder="What is this group for?"
+                        placeholder={gettext("What is this group for?")}
                       /></label>
                     </fieldset>
                     <div class="authorization-permission-heading">
                       <h3>
-                        Permissions <span class="authorization-selected-count">{MapSet.size(@permissions)} selected</span>
+                        {gettext("Permissions")}
+                        <span class="authorization-selected-count">{gettext("%{count} selected",
+                          count: MapSet.size(@permissions)
+                        )}</span>
                       </h3>
                     </div>
                     <div class="authorization-filter">
@@ -264,21 +284,23 @@ defmodule BrandoAdmin.Users.GroupsLive do
                         type="search"
                         name="search"
                         value={@search}
-                        aria-label="Find a permission"
+                        aria-label={gettext("Find a permission")}
                         phx-debounce="150"
-                        placeholder="Find a resource or action…"
+                        placeholder={gettext("Find a resource or action…")}
                       />
-                      <span>Only checked permissions are granted.</span>
+                      <span>{gettext("Only checked permissions are granted.")}</span>
                     </div>
                     <p :if={!@authorization.superuser? && can_save?(@authorization, @selected)} class="authorization-hint">
-                      You can grant permissions you hold in this scope. Unavailable permissions are locked.
+                      {gettext("You can grant permissions you hold in this scope. Unavailable permissions are locked.")}
                     </p>
                     <div :if={retired_permissions(@catalog, @permissions) != []} class="authorization-notice">
-                      <strong>Retired permissions</strong><p>
-                        These permissions are no longer registered and grant no access.
+                      <strong>{gettext("Retired permissions")}</strong><p>
+                        {gettext("These permissions are no longer registered and grant no access.")}
                       </p>
                       <p :for={key <- retired_permissions(@catalog, @permissions)}>{key}</p>
-                      <button :if={@authorization.superuser?} type="button" class="access-button" phx-click="remove_retired">Remove retired permissions</button>
+                      <button :if={@authorization.superuser?} type="button" class="access-button" phx-click="remove_retired">{gettext(
+                        "Remove retired permissions"
+                      )}</button>
                     </div>
                     <div class="authorization-permissions">
                       <.permission_section
@@ -292,15 +314,15 @@ defmodule BrandoAdmin.Users.GroupsLive do
                       />
                     </div>
                     <div :if={@sections == []} class="authorization-empty compact">
-                      <h3>No matching permissions</h3><p>
-                        Try a resource name, such as Pages, or an action, such as Publish.
+                      <h3>{gettext("No matching permissions")}</h3><p>
+                        {gettext("Try a resource name, such as Pages, or an action, such as Publish.")}
                       </p>
                     </div>
                     <p
                       :if={!MapSet.member?(@permissions, "brando.admin.access")}
                       class="authorization-hint authorization-backend-hint"
                     >
-                      Backend access is not selected. Members need it from another group to use the admin.
+                      {gettext("Backend access is not selected. Members need it from another group to use the admin.")}
                     </p>
                   </form>
                   <footer class="authorization-editor-footer">
@@ -311,29 +333,34 @@ defmodule BrandoAdmin.Users.GroupsLive do
                         class="access-button quiet"
                         phx-click="clone"
                         data-confirm={discard_confirmation(@selected, @draft, @permissions)}
-                      >Duplicate group</button>
+                      >{gettext("Duplicate group")}</button>
                       <button
                         :if={@dirty?}
                         type="button"
                         class="access-button quiet"
                         phx-click="discard"
-                        data-confirm="Discard your unsaved group changes?"
-                      >Discard changes</button>
+                        data-confirm={gettext("Discard your unsaved group changes?")}
+                      >{gettext("Discard changes")}</button>
                     </div>
                     <button
                       :if={@selected.id && is_nil(@selected.preset) && Engine.can?(@authorization, :delete, :groups)}
                       type="button"
                       class="access-button quiet destructive"
                       phx-click="delete"
-                      data-confirm={"Delete #{@selected.name}? #{count_label(length(@selected.memberships), "member")} will lose the permissions granted by this group."}
-                    >Delete group</button>
+                      data-confirm={
+                        ngettext(
+                          "Delete %{name}? %{count} member will lose the permissions granted by this group.",
+                          "Delete %{name}? %{count} members will lose the permissions granted by this group.",
+                          length(@selected.memberships), name: @selected.name)
+                      }
+                    >{gettext("Delete group")}</button>
                   </footer>
                 <% end %>
               </div>
               <div :if={@tab == "members"} class="authorization-members">
                 <%= if @effective do %>
                   <section class="authorization-effective">
-                    <button type="button" class="access-button quiet" phx-click="close_effective">All members</button>
+                    <button type="button" class="access-button quiet" phx-click="close_effective">{gettext("All members")}</button>
                     <h3
                       id="authorization-effective-title"
                       data-access-return={"#member-access-#{@effective_person.id}"}
@@ -342,16 +369,18 @@ defmodule BrandoAdmin.Users.GroupsLive do
                     >
                       {@effective_person.name}
                     </h3>
-                    <p class="authorization-lead">Permissions from all groups in this scope.</p>
+                    <p class="authorization-lead">{gettext("Permissions from all groups in this scope.")}</p>
                     <%= if Enum.any?(@effective, & &1.explanation.superuser?) do %>
                       <div class="authorization-protected">
-                        <span class="access-tag">Superuser</span><h3>Full access</h3><p>
-                          Protected Superuser access covers this scope. Individual content policies still apply.
+                        <span class="access-tag">{gettext("Superuser")}</span><h3>{gettext("Full access")}</h3><p>
+                          {gettext("Protected Superuser access covers this scope. Individual content policies still apply.")}
                         </p>
                       </div>
                     <% else %>
                       <p :if={!Enum.any?(@effective, & &1.explanation.allowed?)} class="authorization-notice">
-                        No effective permissions in this scope. Check that the account is active and has backend access.
+                        {gettext(
+                          "No effective permissions in this scope. Check that the account is active and has backend access."
+                        )}
                       </p>
                       <div
                         :for={
@@ -359,13 +388,16 @@ defmodule BrandoAdmin.Users.GroupsLive do
                         }
                         class="authorization-access-section"
                       >
-                        <h4>{section}</h4><dl>
+                        <h4>{section_label(section)}</h4><dl>
                           <div :for={{_, permissions} <- resources}>
-                            <dt>{hd(permissions).label}</dt><dd>
-                              {Enum.map_join(permissions, ", ", &action_label(&1.action))}<small>From {permissions
-                              |> Enum.flat_map(& &1.explanation.groups)
-                              |> Enum.uniq_by(& &1.id)
-                              |> Enum.map_join(", ", & &1.name)}</small>
+                            <dt>{resource_label(hd(permissions))}</dt><dd>
+                              {Enum.map_join(permissions, ", ", &action_label(&1.action))}<small>{gettext("From %{groups}",
+                                groups:
+                                  permissions
+                                  |> Enum.flat_map(& &1.explanation.groups)
+                                  |> Enum.uniq_by(& &1.id)
+                                  |> Enum.map_join(", ", & &1.name)
+                              )}</small>
                             </dd>
                           </div>
                         </dl>
@@ -375,10 +407,10 @@ defmodule BrandoAdmin.Users.GroupsLive do
                 <% else %>
                   <div class="authorization-section-heading">
                     <div>
-                      <h3>Group members</h3><p>
+                      <h3>{gettext("Group members")}</h3><p>
                         {if @legacy_mode?,
-                          do: "Group access takes effect after your application switches to groups.",
-                          else: "Membership changes take effect immediately."}
+                          do: gettext("Group access takes effect after your application switches to groups."),
+                          else: gettext("Membership changes take effect immediately.")}
                       </p>
                     </div>
                     <button
@@ -386,23 +418,27 @@ defmodule BrandoAdmin.Users.GroupsLive do
                       type="button"
                       class="access-button"
                       phx-click="show_add_member"
-                    >Add member</button>
+                    >{gettext("Add member")}</button>
                   </div>
-                  <section :if={@adding_member?} class="authorization-member-picker" aria-label="Add a member">
+                  <section :if={@adding_member?} class="authorization-member-picker" aria-label={gettext("Add a member")}>
                     <div class="authorization-heading">
-                      <h4>Add a member</h4><button type="button" class="access-button quiet" phx-click="cancel_add_member">Cancel</button>
+                      <h4>{gettext("Add a member")}</h4><button
+                        type="button"
+                        class="access-button quiet"
+                        phx-click="cancel_add_member"
+                      >{gettext("Cancel")}</button>
                     </div>
                     <form id="group-people-search" phx-change="search_people">
                       <input
                         type="search"
                         name="search"
                         value={@people_search}
-                        aria-label="Find a person"
+                        aria-label={gettext("Find a person")}
                         phx-debounce="200"
-                        placeholder="Search people by name…"
+                        placeholder={gettext("Search people by name…")}
                       />
                     </form>
-                    <p class="authorization-hint">Choose an existing person with access to this workspace.</p>
+                    <p class="authorization-hint">{gettext("Choose an existing person with access to this workspace.")}</p>
                     <div class="authorization-picker-results">
                       <div :for={person <- available_people(@directory, @members)}>
                         <span>{person.name}</span><button
@@ -410,52 +446,60 @@ defmodule BrandoAdmin.Users.GroupsLive do
                           class="access-button"
                           phx-click="add_member"
                           phx-value-user_id={person.id}
-                          aria-label={"Add #{person.name}"}
-                          phx-disable-with="Adding…"
-                        >Add<span class="access-sr-only">{person.name}</span></button>
+                          aria-label={gettext("Add %{name}", name: person.name)}
+                          phx-disable-with={gettext("Adding…")}
+                        >{gettext("Add")}<span class="access-sr-only">{person.name}</span></button>
                       </div>
                       <p :if={available_people(@directory, @members) == []} class="authorization-hint">
-                        No available people match. Existing members are excluded.
+                        {gettext("No available people match. Existing members are excluded.")}
                       </p>
                     </div>
                   </section>
                   <div :if={@members == []} class="authorization-empty">
-                    <h3>No members yet</h3><p>Add someone to give them this group’s permissions.</p>
+                    <h3>{gettext("No members yet")}</h3><p>{gettext("Add someone to give them this group’s permissions.")}</p>
                   </div>
                   <div :for={person <- @members} class="authorization-person">
                     <span class="authorization-avatar" aria-hidden="true">{initials(person.name)}</span>
-                    <div><strong>{person.name}</strong><small :if={!person.active}>Disabled account</small></div>
+                    <div><strong>{person.name}</strong><small :if={!person.active}>{gettext("Disabled account")}</small></div>
                     <button
                       type="button"
                       class="access-button quiet"
                       phx-click="effective"
                       id={"member-access-#{person.id}"}
                       phx-value-id={person.id}
-                    >View access</button>
+                    >{gettext("View access")}</button>
                     <button
                       :if={Engine.can?(@authorization, :assign, :groups)}
                       type="button"
                       class="access-button quiet"
                       phx-click="remove_member"
                       phx-value-id={person.id}
-                      data-confirm={"Remove #{person.name} from #{@selected.name}? Permissions from other groups will be retained."}
-                    >Remove</button>
+                      data-confirm={
+                        gettext("Remove %{name} from %{group}? Permissions from other groups will be retained.",
+                          name: person.name,
+                          group: @selected.name
+                        )
+                      }
+                    >{gettext("Remove")}</button>
                   </div>
                 <% end %>
               </div>
               <div :if={@tab == "activity"} class="authorization-activity">
                 <div class="authorization-section-heading">
                   <div>
-                    <h3>Recent activity</h3><p>The latest 20 changes to this group.</p>
+                    <h3>{gettext("Recent activity")}</h3><p>{gettext("The latest 20 changes to this group.")}</p>
                   </div>
                 </div>
                 <div :if={@history == []} class="authorization-empty">
-                  <h3>No recorded changes</h3><p>Changes to permissions and membership will appear here.</p>
+                  <h3>{gettext("No recorded changes")}</h3><p>
+                    {gettext("Changes to permissions and membership will appear here.")}
+                  </p>
                 </div>
                 <article :for={event <- @history}>
                   <div>
-                    <strong>{event.action |> String.replace(".", " ") |> String.capitalize()}</strong><small>{event.actor_name ||
-                      "Deleted account"}<span :if={event.subject_user_id}> · {event.subject_name || "Deleted member"}</span></small>
+                    <strong>{activity_label(event.action)}</strong><small>{event.actor_name ||
+                      gettext("Deleted account")}<span :if={event.subject_user_id}> · {event.subject_name ||
+                      gettext("Deleted member")}</span></small>
                   </div>
                   <time datetime={DateTime.to_iso8601(event.inserted_at)}>{Calendar.strftime(
                     event.inserted_at,
@@ -466,7 +510,9 @@ defmodule BrandoAdmin.Users.GroupsLive do
             <% end %>
           <% else %>
             <div class="authorization-empty">
-              <h2>Choose a group</h2><p>Review its permissions and members, or create a group for your team.</p>
+              <h2>{gettext("Choose a group")}</h2><p>
+                {gettext("Review its permissions and members, or create a group for your team.")}
+              </p>
             </div>
           <% end %>
         </section>
@@ -497,15 +543,20 @@ defmodule BrandoAdmin.Users.GroupsLive do
       open={@search != "" || @section in ["Workspace", "Content"]}
     >
       <summary>
-        <span>{@section}</span><small class="authorization-selected-count">
-          {selected_count(@resources, @permissions)} / {@total} selected
+        <span>{section_label(@section)}</span><small class="authorization-selected-count">
+          {gettext("%{selected} / %{total} selected", selected: selected_count(@resources, @permissions), total: @total)}
         </small>
       </summary>
-      <div class="authorization-table-scroll" tabindex="0" role="region" aria-label={"#{@section} permissions"}>
+      <div
+        class="authorization-table-scroll"
+        tabindex="0"
+        role="region"
+        aria-label={gettext("%{section} permissions", section: section_label(@section))}
+      >
         <table class="authorization-matrix">
           <thead>
             <tr>
-              <th scope="col">Resource</th><th :for={action <- @actions} scope="col">{action_label(action)}</th>
+              <th scope="col">{gettext("Resource")}</th><th :for={action <- @actions} scope="col">{action_label(action)}</th>
             </tr>
           </thead>
           <tbody>
@@ -526,7 +577,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                       type="checkbox"
                       name={"permissions[#{permission.key}]"}
                       value="true"
-                      aria-label={"#{permission.label}: #{action_label(action)}"}
+                      aria-label={"#{resource_label(permission)}: #{action_label(action)}"}
                       checked={MapSet.member?(@permissions, permission.key)}
                       disabled={!editable_permission?(@authorization, @selected, permission)}
                     />
@@ -535,7 +586,12 @@ defmodule BrandoAdmin.Users.GroupsLive do
                 <% else %>
                   <span
                     class="authorization-unavailable"
-                    aria-label={"#{action_label(action)} is not available for #{hd(permissions).label}"}
+                    aria-label={
+                      gettext("%{action} is not available for %{resource}",
+                        action: action_label(action),
+                        resource: resource_label(hd(permissions))
+                      )
+                    }
                   >—</span>
                 <% end %>
               </td>
@@ -555,21 +611,23 @@ defmodule BrandoAdmin.Users.GroupsLive do
       assigns
       |> assign(:disabled?, MapSet.size(keys) == 0)
       |> assign(:state, selection_state(display_keys, assigns.permissions))
-      |> assign(:label, hd(assigns.row_permissions).label)
+      |> assign(:label, resource_label(hd(assigns.row_permissions)))
 
     ~H"""
     <button
       type="button"
       role="checkbox"
       class="authorization-row-toggle"
-      aria-label={"All permissions for #{@label}"}
+      aria-label={gettext("All permissions for %{resource}", resource: @label)}
       aria-checked={@state}
       disabled={@disabled?}
       title={
         if @disabled?,
-          do: "You cannot change permissions in this row.",
+          do: gettext("You cannot change permissions in this row."),
           else:
-            "Select or clear all permissions you can change in this row. Search limits the selection to visible permissions."
+            gettext(
+              "Select or clear all permissions you can change in this row. Search limits the selection to visible permissions."
+            )
       }
       phx-click="toggle_resource"
       phx-value-resource={@resource}
@@ -634,7 +692,12 @@ defmodule BrandoAdmin.Users.GroupsLive do
 
     {:noreply,
      socket
-     |> select(%Group{name: "#{group.name} copy", description: group.description, grants: group.grants, memberships: []})
+     |> select(%Group{
+       name: gettext("%{name} copy", name: group.name),
+       description: group.description,
+       grants: group.grants,
+       memberships: []
+     })
      |> assign(:tab, "permissions")}
   end
 
@@ -728,8 +791,8 @@ defmodule BrandoAdmin.Users.GroupsLive do
          |> assign(
            :message,
            if(socket.assigns.legacy_mode?,
-             do: "Group saved. Legacy roles remain active until cutover.",
-             else: "Group saved. Access changes apply immediately."
+             do: gettext("Group saved. Legacy roles remain active until cutover."),
+             else: gettext("Group saved. Access changes apply immediately.")
            )
          )}
 
@@ -742,7 +805,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
     a = socket.assigns
 
     case Groups.delete(a.authorization_scope, a.selected.id, a.selected.lock_version) do
-      {:ok, _} -> {:noreply, socket |> assign(:selected, nil) |> refresh() |> assign(:message, "Group deleted.")}
+      {:ok, _} -> {:noreply, socket |> assign(:selected, nil) |> refresh() |> assign(:message, gettext("Group deleted."))}
       error -> {:noreply, failure(socket, error)}
     end
   end
@@ -824,7 +887,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
        |> assign(:history, result_list(Groups.history(scope, group.id)))
        |> assign(:effective, nil)
        |> assign(:preview, nil)
-       |> assign(:message, "Membership updated.")
+       |> assign(:message, gettext("Membership updated."))
        |> assign(:adding_member?, false)}
     else
       error -> {:noreply, failure(socket, error)}
@@ -835,19 +898,23 @@ defmodule BrandoAdmin.Users.GroupsLive do
     message =
       case error do
         {:error, :stale} ->
-          "This group changed while you were editing. Load the latest version before saving. Your draft has been kept."
+          gettext(
+            "This group changed while you were editing. Load the latest version before saving. Your draft has been kept."
+          )
 
         {:error, :last_superuser} ->
-          "Keep at least one active superuser. Add another before removing this person."
+          gettext("Keep at least one active superuser. Add another before removing this person.")
 
         {:error, :protected_group} ->
-          "This built-in group is protected."
+          gettext("This built-in group is protected.")
 
         {:error, %Ecto.Changeset{}} ->
-          "Enter a group name (up to 100 characters) and a description up to 500 characters."
+          gettext("Enter a group name (up to 100 characters) and a description up to 500 characters.")
 
         _ ->
-          "You cannot make this change. Your permissions may have changed; reload the group to review its current access."
+          gettext(
+            "You cannot make this change. Your permissions may have changed; reload the group to review its current access."
+          )
       end
 
     socket |> assign(:error, message) |> assign(:stale?, error == {:error, :stale})
@@ -872,16 +939,12 @@ defmodule BrandoAdmin.Users.GroupsLive do
   end
 
   defp normalize(value), do: String.trim(value || "")
-  defp empty_label(""), do: "No description"
+  defp empty_label(""), do: gettext("No description")
   defp empty_label(value), do: value
 
   defp discard_confirmation(group, draft, permissions),
-    do: if(dirty?(group, draft, permissions), do: "Discard your unsaved group changes?")
+    do: if(dirty?(group, draft, permissions), do: gettext("Discard your unsaved group changes?"))
 
-  defp plural_label(1, label), do: label
-  defp plural_label(_, label), do: "#{label}s"
-  defp count_label(1, label), do: "1 #{label}"
-  defp count_label(count, label), do: "#{count} #{label}s"
   defp available_people(directory, members), do: Enum.reject(directory, fn p -> Enum.any?(members, &(&1.id == p.id)) end)
   defp initials(name), do: name |> String.split() |> Enum.take(2) |> Enum.map_join(&String.first/1)
 
@@ -889,7 +952,9 @@ defmodule BrandoAdmin.Users.GroupsLive do
     catalog
     |> Enum.filter(
       &String.contains?(
-        String.downcase("#{&1.label} #{action_label(&1.action)} #{&1.action} #{&1.section} #{&1.key}"),
+        String.downcase(
+          "#{resource_label(&1)} #{action_label(&1.action)} #{&1.action} #{section_label(&1.section)} #{&1.section} #{&1.key}"
+        ),
         String.downcase(search)
       )
     )
@@ -900,7 +965,9 @@ defmodule BrandoAdmin.Users.GroupsLive do
     end)
     |> Enum.map(fn {section, permissions} ->
       {section,
-       permissions |> Enum.group_by(& &1.resource) |> Enum.sort_by(fn {_, ps} -> String.downcase(hd(ps).label) end)}
+       permissions
+       |> Enum.group_by(& &1.resource)
+       |> Enum.sort_by(fn {_, ps} -> String.downcase(resource_label(hd(ps))) end)}
     end)
   end
 
@@ -954,23 +1021,61 @@ defmodule BrandoAdmin.Users.GroupsLive do
   defp permission_hint(snapshot, group, permission) do
     if editable_permission?(snapshot, group, permission),
       do: permission.key,
-      else: "You cannot change this permission. Only permissions you hold in this scope can be granted."
+      else: gettext("You cannot change this permission. Only permissions you hold in this scope can be granted.")
   end
 
-  defp action_label(:read), do: "View"
-  defp action_label(:update), do: "Edit"
-  defp action_label(:assign), do: "Members"
+  defp action_label(:read), do: gettext("View")
+  defp action_label(:update), do: gettext("Edit")
+  defp action_label(:assign), do: gettext("Members")
+  defp action_label(:access), do: gettext("Access")
+  defp action_label(:create), do: gettext("Create")
+  defp action_label(:delete), do: gettext("Delete")
+  defp action_label(:duplicate), do: gettext("Duplicate")
+  defp action_label(:publish), do: gettext("Publish")
+  defp action_label(:schedule), do: gettext("Schedule")
+  defp action_label(:restore), do: gettext("Restore")
+  defp action_label(:export), do: gettext("Export")
+  defp action_label(:build), do: gettext("Build")
+  defp action_label(:deploy), do: gettext("Deploy")
+  defp action_label(:promote), do: gettext("Promote")
+  defp action_label(:reorder), do: gettext("Reorder")
   defp action_label(action), do: action |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
 
   defp permission_label(catalog, key) do
     case Enum.find(catalog, &(&1.key == key)) do
       nil -> key
-      p -> "#{p.label} · #{action_label(p.action)}"
+      p -> "#{resource_label(p)} · #{action_label(p.action)}"
     end
   end
 
-  defp scope_label(%{kind: :installation}, _), do: "Entire installation"
-  defp scope_label(%{kind: :standalone}, _), do: "This workspace"
+  defp section_label("Workspace"), do: gettext("Workspace")
+  defp section_label("Content"), do: gettext("Content")
+  defp section_label("Media"), do: gettext("Media")
+  defp section_label("Settings"), do: gettext("Settings")
+  defp section_label("Access"), do: gettext("Access")
+  defp section_label("Installation"), do: gettext("Installation")
+  defp section_label(section), do: section
+
+  defp resource_label(%{subject: :backend}), do: gettext("Backend")
+  defp resource_label(%{subject: :profile}), do: gettext("Own profile")
+  defp resource_label(%{subject: :groups}), do: gettext("Groups")
+  defp resource_label(%{subject: :sites}), do: gettext("Sites")
+  defp resource_label(%{subject: :environments}), do: gettext("Environments")
+  defp resource_label(%{subject: :publishing}), do: gettext("Builds & deployments")
+  defp resource_label(%{subject: :frontend_assets}), do: gettext("Frontend assets")
+  defp resource_label(%{subject: :shared_library}), do: gettext("Shared content library")
+  defp resource_label(%{subject: :utilities}), do: gettext("Utilities & caches")
+  defp resource_label(permission), do: permission.label
+
+  defp activity_label("group.created"), do: gettext("Group created")
+  defp activity_label("group.updated"), do: gettext("Group updated")
+  defp activity_label("group.deleted"), do: gettext("Group deleted")
+  defp activity_label("membership.added"), do: gettext("Membership added")
+  defp activity_label("membership.removed"), do: gettext("Membership removed")
+  defp activity_label(action), do: action |> String.replace(".", " ") |> String.capitalize()
+
+  defp scope_label(%{kind: :installation}, _), do: gettext("Entire installation")
+  defp scope_label(%{kind: :standalone}, _), do: gettext("This workspace")
   defp scope_label(_, %{name: name}), do: name
-  defp scope_label(_, _), do: "Selected site"
+  defp scope_label(_, _), do: gettext("Selected site")
 end
