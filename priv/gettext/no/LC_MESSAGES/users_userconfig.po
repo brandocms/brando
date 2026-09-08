@@ -12,17 +12,17 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/users/user.ex:178
+#: lib/brando/users/user.ex:212
 #, elixir-autogen, elixir-format
 msgid "Prefers reduced motion"
 msgstr "Foretrekker redusert bevegelse"
 
-#: lib/brando/users/user.ex:176
+#: lib/brando/users/user.ex:210
 #, elixir-autogen, elixir-format
 msgid "Reset password on first login"
 msgstr "Tilbakestill passord ved første pålogging"
 
-#: lib/brando/users/user.ex:177
+#: lib/brando/users/user.ex:211
 #, elixir-autogen, elixir-format
 msgid "Show mutation notifications"
 msgstr "Vis mutasjonsvarsler"

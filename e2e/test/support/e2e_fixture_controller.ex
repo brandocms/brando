@@ -21,6 +21,7 @@ defmodule E2EFixtureController do
     scenario =
       case scenario_name do
         "admin-user" -> get_admin_user()
+        "norwegian-admin-user" -> create_norwegian_admin_user()
         "media-upload" -> create_media_upload_module()
       end
 
@@ -28,6 +29,21 @@ defmodule E2EFixtureController do
     conn
     |> login_user(scenario)
     |> send_resp(200, "")
+  end
+
+  defp create_norwegian_admin_user do
+    user =
+      Brando.Repo.insert!(%Brando.Users.User{
+        name: "Norsk administrator",
+        email: "norwegian-admin@brandocms.com",
+        password: Bcrypt.hash_pwd_salt("brandocms"),
+        role: :superuser,
+        language: :no,
+        config: %Brando.Users.UserConfig{content_language: :en}
+      })
+
+    {:ok, _} = Brando.Authorization.Migration.run()
+    user
   end
 
   defp create_media_upload_module do

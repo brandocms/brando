@@ -13,42 +13,46 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   alias BrandoAdmin.Components.Form.VarLayout
 
   @ref_types [
-    %{value: "text", label: "Text", description: "Rich, editable body content"},
-    %{value: "blocks", label: "Blocks", description: "An ordered collection of modules in a named region"},
-    %{value: "header", label: "Header", description: "A semantic heading"},
-    %{value: "picture", label: "Picture", description: "A configured responsive image"},
-    %{value: "gallery", label: "Gallery", description: "An image or video collection"},
-    %{value: "video", label: "Video", description: "Hosted or remote video"},
-    %{value: "media", label: "Media", description: "Let editors choose the media type"},
-    %{value: "file", label: "File", description: "A downloadable file"},
-    %{value: "html", label: "HTML", description: "Editable HTML content"},
-    %{value: "svg", label: "SVG", description: "Inline vector markup"},
-    %{value: "markdown", label: "Markdown", description: "Markdown content"},
-    %{value: "map", label: "Map", description: "An embedded map"},
-    %{value: "comment", label: "Comment", description: "An editor-only note"}
+    %{value: "text", label: gettext_noop("Text"), description: gettext_noop("Rich, editable body content")},
+    %{
+      value: "blocks",
+      label: gettext_noop("Blocks"),
+      description: gettext_noop("An ordered collection of modules in a named region")
+    },
+    %{value: "header", label: gettext_noop("Header"), description: gettext_noop("A semantic heading")},
+    %{value: "picture", label: gettext_noop("Picture"), description: gettext_noop("A configured responsive image")},
+    %{value: "gallery", label: gettext_noop("Gallery"), description: gettext_noop("An image or video collection")},
+    %{value: "video", label: gettext_noop("Video"), description: gettext_noop("Hosted or remote video")},
+    %{value: "media", label: gettext_noop("Media"), description: gettext_noop("Let editors choose the media type")},
+    %{value: "file", label: gettext_noop("File"), description: gettext_noop("A downloadable file")},
+    %{value: "html", label: gettext_noop("HTML"), description: gettext_noop("Editable HTML content")},
+    %{value: "svg", label: gettext_noop("SVG"), description: gettext_noop("Inline vector markup")},
+    %{value: "markdown", label: gettext_noop("Markdown"), description: gettext_noop("Markdown content")},
+    %{value: "map", label: gettext_noop("Map"), description: gettext_noop("An embedded map")},
+    %{value: "comment", label: gettext_noop("Comment"), description: gettext_noop("An editor-only note")}
   ]
 
   @var_types [
-    %{value: "string", label: "String", description: "A short line of text"},
-    %{value: "text", label: "Text", description: "Longer plain text"},
-    %{value: "html", label: "Rich text", description: "Formatted rich text"},
-    %{value: "boolean", label: "Boolean", description: "An on/off choice"},
-    %{value: "select", label: "Select", description: "A choice from predefined options"},
-    %{value: "link", label: "Link", description: "A URL or content link"},
-    %{value: "datetime", label: "Date & time", description: "A date and time value"},
-    %{value: "color", label: "Color", description: "A palette or custom color"},
-    %{value: "image", label: "Image", description: "A reusable image value"},
-    %{value: "video", label: "Video", description: "A reusable video value"},
-    %{value: "file", label: "File", description: "A reusable file value"},
-    %{value: "gallery", label: "Gallery", description: "A reusable media collection"}
+    %{value: "string", label: gettext_noop("String"), description: gettext_noop("A short line of text")},
+    %{value: "text", label: gettext_noop("Text"), description: gettext_noop("Longer plain text")},
+    %{value: "html", label: gettext_noop("Rich text"), description: gettext_noop("Formatted rich text")},
+    %{value: "boolean", label: gettext_noop("Boolean"), description: gettext_noop("An on/off choice")},
+    %{value: "select", label: gettext_noop("Select"), description: gettext_noop("A choice from predefined options")},
+    %{value: "link", label: gettext_noop("Link"), description: gettext_noop("A URL or content link")},
+    %{value: "datetime", label: gettext_noop("Date & time"), description: gettext_noop("A date and time value")},
+    %{value: "color", label: gettext_noop("Color"), description: gettext_noop("A palette or custom color")},
+    %{value: "image", label: gettext_noop("Image"), description: gettext_noop("A reusable image value")},
+    %{value: "video", label: gettext_noop("Video"), description: gettext_noop("A reusable video value")},
+    %{value: "file", label: gettext_noop("File"), description: gettext_noop("A reusable file value")},
+    %{value: "gallery", label: gettext_noop("Gallery"), description: gettext_noop("A reusable media collection")}
   ]
 
   @format_options [
-    %{label: "Original", value: "original"},
-    %{label: "jpg", value: "jpg"},
-    %{label: "png", value: "png"},
-    %{label: "webp", value: "webp"},
-    %{label: "avif", value: "avif"}
+    %{label: gettext_noop("Original"), value: "original"},
+    %{label: gettext_noop("jpg"), value: "jpg"},
+    %{label: gettext_noop("png"), value: "png"},
+    %{label: gettext_noop("webp"), value: "webp"},
+    %{label: gettext_noop("avif"), value: "avif"}
   ]
 
   # prop form, :form, required: true
@@ -63,8 +67,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     {:ok,
      socket
      |> assign(open_col_vars: [], datasource: false)
-     |> assign_new(:ref_types, fn -> @ref_types end)
-     |> assign_new(:var_types, fn -> @var_types end)
+     |> assign_new(:ref_types, fn -> translate_types(@ref_types) end)
+     |> assign_new(:var_types, fn -> translate_types(@var_types) end)
      |> assign_new(:entry_form, fn -> false end)
      |> assign_new(:key, fn -> "default" end)
      |> assign_new(:open_item_modal, fn -> nil end)
@@ -570,6 +574,16 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
     {:noreply, socket}
   end
 
+  defp translate_types(types) do
+    Enum.map(types, fn type ->
+      %{
+        type
+        | label: Gettext.gettext(Brando.Gettext, type.label),
+          description: Gettext.gettext(Brando.Gettext, type.description)
+      }
+    end)
+  end
+
   # --- Function components ---
 
   attr :types, :list, required: true
@@ -606,7 +620,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   attr :field, :any, required: true
 
   def format_checkboxes(assigns) do
-    assigns = assign(assigns, :options, @format_options)
+    assigns =
+      assign(assigns, :options, Enum.map(@format_options, &%{&1 | label: Gettext.gettext(Brando.Gettext, &1.label)}))
 
     ~H"""
     <Primitives.array_inputs_from_data

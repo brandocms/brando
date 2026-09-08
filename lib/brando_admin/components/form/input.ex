@@ -388,6 +388,13 @@ defmodule BrandoAdmin.Components.Form.Input do
         <div
           id={"#{@field.id}-rich-text"}
           phx-hook="Brando.TipTap"
+          data-footnote-labels={
+            Jason.encode!(%{
+              add: gettext("Add footnote"),
+              edit: gettext("Edit footnote"),
+              numbered: gettext("Edit footnote %{number}", number: "%{number}")
+            })
+          }
           data-name="TipTap"
           data-tiptap-type="rich_text"
           data-tiptap-extensions={@extensions}

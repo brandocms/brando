@@ -1,7 +1,7 @@
 import { Dom } from '@brandocms/jupiter'
 import TipTap from '../../components/TipTap/TipTap.svelte'
 import { mount, unmount } from 'svelte'
-import { renumberFootnotes } from '../../components/TipTap/extensions/Footnote'
+import { readFootnoteLabels, renumberFootnotes } from '../../components/TipTap/extensions/Footnote'
 
 export default (app) => ({
   mounted() {
@@ -69,6 +69,7 @@ export default (app) => ({
         onToggleLink,
         onToggleButton,
         footnotes: this.el.dataset.footnotes === 'true',
+        footnoteLabels: readFootnoteLabels(this.el),
         onOpenFootnote: (uid, number) => {
           this.pushEventTo(this.el, uid ? 'open_footnote' : 'create_footnote', {
             uid,

@@ -2185,6 +2185,13 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 data-footnotes={@footnotes && "true"}
                 data-footnote-ref={@ref_name}
                 phx-hook="Brando.TipTap"
+                data-footnote-labels={
+                  Jason.encode!(%{
+                    add: gettext("Add footnote"),
+                    edit: gettext("Edit footnote"),
+                    numbered: gettext("Edit footnote %{number}", number: "%{number}")
+                  })
+                }
                 data-tiptap-type="block"
                 data-name="TipTap"
               >

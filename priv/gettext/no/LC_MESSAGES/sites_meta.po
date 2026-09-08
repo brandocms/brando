@@ -12,12 +12,12 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);"
 
-#: lib/brando/sites/identity.ex:198
+#: lib/brando/sites/identity.ex:203
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr "Nøkkel"
 
-#: lib/brando/sites/identity.ex:199
+#: lib/brando/sites/identity.ex:204
 #, elixir-autogen, elixir-format
 msgid "Value"
 msgstr "Verdi"

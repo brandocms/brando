@@ -17,13 +17,13 @@ msgstr ""
 msgid "Advanced"
 msgstr "Avansert"
 
-#: lib/brando/pages/page.ex:160
-#: lib/brando/pages/page.ex:168
+#: lib/brando/pages/page.ex:161
+#: lib/brando/pages/page.ex:169
 #, elixir-autogen, elixir-format
 msgid "Are you sure?"
 msgstr "Er du sikker?"
 
-#: lib/brando/pages/page.ex:254
+#: lib/brando/pages/page.ex:253
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr "Blokker"
@@ -33,47 +33,47 @@ msgstr "Blokker"
 msgid "CSS classes"
 msgstr "CSS klasser"
 
-#: lib/brando/pages/page.ex:256
+#: lib/brando/pages/page.ex:255
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/pages/page.ex:149
+#: lib/brando/pages/page.ex:150
 #, elixir-autogen, elixir-format
 msgid "Create fragment"
 msgstr "Opprett fragment"
 
-#: lib/brando/pages/page.ex:148
+#: lib/brando/pages/page.ex:149
 #, elixir-autogen, elixir-format
 msgid "Create subpage"
 msgstr "Opprett underside"
 
-#: lib/brando/pages/page.ex:160
+#: lib/brando/pages/page.ex:161
 #, elixir-autogen, elixir-format
 msgid "Delete fragment"
 msgstr "Slett sidefragment"
 
-#: lib/brando/pages/page.ex:168
+#: lib/brando/pages/page.ex:169
 #, elixir-autogen, elixir-format
 msgid "Delete sub page"
 msgstr "Slett underside"
 
-#: lib/brando/pages/page.ex:159
+#: lib/brando/pages/page.ex:160
 #, elixir-autogen, elixir-format
 msgid "Duplicate fragment"
 msgstr "Dupliser fragment"
 
-#: lib/brando/pages/page.ex:167
+#: lib/brando/pages/page.ex:168
 #, elixir-autogen, elixir-format
 msgid "Duplicate sub page"
 msgstr "Dupliser underside"
 
-#: lib/brando/pages/page.ex:158
+#: lib/brando/pages/page.ex:159
 #, elixir-autogen, elixir-format
 msgid "Edit fragment"
 msgstr "Oppdater fragment"
 
-#: lib/brando/pages/page.ex:166
+#: lib/brando/pages/page.ex:167
 #, elixir-autogen, elixir-format
 msgid "Edit sub page"
 msgstr "Rediger underside"
@@ -88,7 +88,7 @@ msgstr "Har URL"
 msgid "Homepage"
 msgstr "Hjemmeside"
 
-#: lib/brando/pages/page.ex:273
+#: lib/brando/pages/page.ex:272
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr "Språk"
@@ -113,7 +113,7 @@ msgstr "Sidevariabler"
 msgid "Parent page"
 msgstr "Overordnet side"
 
-#: lib/brando/pages/page.ex:258
+#: lib/brando/pages/page.ex:257
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr "Status"
@@ -123,14 +123,14 @@ msgstr "Status"
 msgid "Template"
 msgstr "Mal"
 
-#: lib/brando/pages/page.ex:146
-#: lib/brando/pages/page.ex:263
+#: lib/brando/pages/page.ex:147
+#: lib/brando/pages/page.ex:262
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Tittel"
 
-#: lib/brando/pages/page.ex:145
-#: lib/brando/pages/page.ex:264
+#: lib/brando/pages/page.ex:146
+#: lib/brando/pages/page.ex:263
 #, elixir-autogen, elixir-format
 msgid "URI"
 msgstr "URI"
@@ -145,17 +145,17 @@ msgstr "side"
 msgid "pages"
 msgstr "sider"
 
-#: lib/brando/pages/page.ex:141
+#: lib/brando/pages/page.ex:142
 #, elixir-autogen, elixir-format
 msgid "Default"
 msgstr "Standard"
 
-#: lib/brando/pages/page.ex:142
+#: lib/brando/pages/page.ex:143
 #, elixir-autogen, elixir-format
 msgid "Title &darr;"
 msgstr "Tittel &darr;"
 
-#: lib/brando/pages/page.ex:143
+#: lib/brando/pages/page.ex:144
 #, elixir-autogen, elixir-format
 msgid "Title &uarr;"
 msgstr "Tittel &uarr;"

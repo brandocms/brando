@@ -90,7 +90,7 @@ msgstr "Bredde"
 #: lib/brando/videos/video.ex:135
 #, elixir-autogen, elixir-format
 msgid "Muted"
-msgstr ""
+msgstr "Uten lyd"
 
 #: lib/brando/videos/video.ex:96
 #, elixir-autogen, elixir-format

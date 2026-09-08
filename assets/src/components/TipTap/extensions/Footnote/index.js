@@ -1,7 +1,19 @@
 import { Node } from '@tiptap/core'
 
+export const defaultFootnoteLabels = {
+  add: 'Add footnote',
+  edit: 'Edit footnote',
+  numbered: 'Edit footnote %{number}',
+}
+
+export const readFootnoteLabels = (element) => {
+  const labels = element.closest('[data-footnote-labels]')?.dataset.footnoteLabels
+  return labels ? JSON.parse(labels) : defaultFootnoteLabels
+}
+
 export const renumberFootnotes = (element) => {
   const scope = element.closest('.blocks-wrapper') || element
+  const labels = readFootnoteLabels(element)
   const numbers = new Map()
   scope.querySelectorAll('.tiptap-footnote').forEach(marker => {
     const uid = marker.dataset.footnoteUid
@@ -9,7 +21,7 @@ export const renumberFootnotes = (element) => {
     const number = numbers.get(uid)
     marker.textContent = String(number)
     marker.dataset.number = String(number)
-    marker.setAttribute('aria-label', `Edit footnote ${number}`)
+    marker.setAttribute('aria-label', labels.numbered.replace('%{number}', String(number)))
   })
 }
 
@@ -23,7 +35,7 @@ export default Node.create({
   atom: true,
   selectable: true,
 
-  addOptions() { return { onOpen: null } },
+  addOptions() { return { onOpen: null, editLabel: defaultFootnoteLabels.edit } },
 
   addAttributes() {
     return {
@@ -50,7 +62,7 @@ export default Node.create({
       dom.className = 'tiptap-footnote'
       dom.dataset.footnoteUid = node.attrs.uid
       dom.textContent = '•'
-      dom.setAttribute('aria-label', 'Edit footnote')
+      dom.setAttribute('aria-label', this.options.editLabel)
       dom.addEventListener('mousedown', event => event.preventDefault())
       dom.addEventListener('click', () => this.options.onOpen?.(node.attrs.uid, dom.dataset.number))
       return { dom, stopEvent: () => true, ignoreMutation: () => true }

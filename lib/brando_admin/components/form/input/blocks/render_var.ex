@@ -452,18 +452,18 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                         field={@var[:type]}
                         opts={[
                           options: [
-                            %{label: "Boolean", value: "boolean"},
-                            %{label: "Color", value: "color"},
-                            %{label: "Datetime", value: "datetime"},
-                            %{label: "File", value: "file"},
-                            %{label: "Gallery", value: "gallery"},
-                            %{label: "Html", value: "html"},
-                            %{label: "Image", value: "image"},
-                            %{label: "Link", value: "link"},
-                            %{label: "String", value: "string"},
-                            %{label: "Select", value: "select"},
-                            %{label: "Text", value: "text"},
-                            %{label: "Video", value: "video"}
+                            %{label: gettext("Boolean"), value: "boolean"},
+                            %{label: gettext("Color"), value: "color"},
+                            %{label: gettext("Datetime"), value: "datetime"},
+                            %{label: gettext("File"), value: "file"},
+                            %{label: gettext("Gallery"), value: "gallery"},
+                            %{label: gettext("Html"), value: "html"},
+                            %{label: gettext("Image"), value: "image"},
+                            %{label: gettext("Link"), value: "link"},
+                            %{label: gettext("String"), value: "string"},
+                            %{label: gettext("Select"), value: "select"},
+                            %{label: gettext("Text"), value: "text"},
+                            %{label: gettext("Video"), value: "video"}
                           ]
                         ]}
                         publish={@publish}
