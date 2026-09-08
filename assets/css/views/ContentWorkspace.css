@@ -122,6 +122,8 @@
   .content-list .cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
   .content-list .main-content > .url { flex: 0 0 30px; order: 3; }
   .content-list .url a { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 5px; background: #f1f5ef; color: var(--workspace-muted); }
+  .content-list .url a:hover { background: #e3ebe0; }
+  .content-list .url a:hover [data-icon] { background-color: currentColor; }
   .content-list .main-content > [class*="col-"]:not(.seq, .cover, .url, .listing-creator, [class*="listing-"], :has(> .entry-link), :has(> .children-button)) { flex: 0 0 180px; order: 2; max-width: 180px; overflow-wrap: anywhere; }
   .content-list .empty-list { min-height: 180px; padding: 48px 24px; border: 1px solid var(--workspace-line); border-radius: 6px; background: #fafbf8; color: var(--workspace-muted); font-size: 13px; text-align: center; }
   .content-list .empty-list figure { display: none; }
