@@ -20,15 +20,19 @@ function HMREuropa() {
   }
 }
 
+// Export these in the same environment as Phoenix; Brando.HTML reads them too.
+const host = process.env.BRANDO_VITE_FRONTEND_HOST ?? 'localhost'
+const port = Number(process.env.BRANDO_VITE_FRONTEND_PORT ?? 3000)
+
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => ({
   base: './',
   server: {
-    host: 'localhost',
-    port: 3000,
+    host,
+    port,
     cors: 'localhost',
     hmr: {
-      port: 3000,
+      port,
     },
   },
   css: {

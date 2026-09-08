@@ -302,6 +302,13 @@
 
 #### Features
 
+- Configure Vite development servers independently with `BRANDO_VITE_FRONTEND_HOST`
+  / `BRANDO_VITE_FRONTEND_PORT` and `BRANDO_VITE_ADMIN_HOST` / `BRANDO_VITE_ADMIN_PORT`.
+  Brando's HMR script URLs and installer Vite configs read the same environment
+  variables, allowing multiple local projects to use HMR on different ports.
+  Defaults remain `localhost:3000` and `localhost:3333`; production and `hmr: false`
+  continue using the Vite manifests.
+
 - **Opt-in rich footnotes and named block regions.** Text refs and top-level
   Blueprint rich-text fields can enable notes backed by a configured set of
   ordinary modules, including image, video and file controls. References load

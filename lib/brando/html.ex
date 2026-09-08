@@ -634,7 +634,34 @@ defmodule Brando.HTML do
   end
 
   @doc """
-  If you use Vite assets pipeline
+  Includes assets from the Vite pipeline.
+
+  During development with HMR enabled, the dev-server origins use these
+  environment variables:
+
+  | Variable | Default |
+  | --- | --- |
+  | `BRANDO_VITE_FRONTEND_HOST` | `localhost` |
+  | `BRANDO_VITE_FRONTEND_PORT` | `3000` |
+  | `BRANDO_VITE_ADMIN_HOST` | `localhost` |
+  | `BRANDO_VITE_ADMIN_PORT` | `3333` |
+
+  Hosts are hostnames or IP addresses, without a scheme or port. Dev servers
+  use HTTP. Export the variables in each project's shell environment (for
+  example, `.envrc`) so both Phoenix and Vite inherit them:
+
+      export BRANDO_VITE_FRONTEND_PORT=3001
+      export BRANDO_VITE_ADMIN_PORT=3334
+
+  The installer Vite configs read the same variables. Existing applications
+  should copy the corresponding `server` settings into their Vite configs.
+  A Vite-only `.env` file does not configure the Phoenix process.
+
+  These values are read at render time, rather than through application config,
+  because they only configure development servers and must agree with Vite's
+  process environment without recompiling. Disable HMR as before with
+  `config :your_app, hmr: false`, using the host application's OTP app. Manifest
+  rendering does not read these variables.
   """
   attr :only_js, :boolean, default: false
   attr :only_css, :boolean, default: false
@@ -648,11 +675,13 @@ defmodule Brando.HTML do
       {Vite.Render.main_js(:admin) |> raw()}
       """
     else
+      assigns = assign(assigns, :vite_origin, vite_dev_server_origin("ADMIN", 3333))
+
       ~H"""
       <!-- admin dev/test -->
-      <script type="module" src="http://localhost:3333/@vite/client" phx-no-format>
+      <script type="module" src={@vite_origin <> "/@vite/client"} phx-no-format>
       </script>
-      <script type="module" src="http://localhost:3333/src/main.js" phx-no-format>
+      <script type="module" src={@vite_origin <> "/src/main.js"} phx-no-format>
       </script>
       <!-- end admin dev/test -->
       """
@@ -670,13 +699,15 @@ defmodule Brando.HTML do
         {Vite.Render.main_css() |> raw()}
         """
       else
+        assigns = assign(assigns, :vite_origin, vite_dev_server_origin("FRONTEND", 3000))
+
         ~H"""
         <!-- dev/test -->
-        <script type="module" src="http://localhost:3000/@vite/client" phx-no-format>
+        <script type="module" src={@vite_origin <> "/@vite/client"} phx-no-format>
         </script>
-        <script type="module" src="http://localhost:3000/js/critical.js" phx-no-format>
+        <script type="module" src={@vite_origin <> "/js/critical.js"} phx-no-format>
         </script>
-        <script type="module" src="http://localhost:3000/js/index.js" phx-no-format>
+        <script type="module" src={@vite_origin <> "/js/index.js"} phx-no-format>
         </script>
         <!-- end dev/test -->
         """
@@ -715,18 +746,27 @@ defmodule Brando.HTML do
         {Vite.Render.main_js() |> raw()}
         """
       else
+        assigns = assign(assigns, :vite_origin, vite_dev_server_origin("FRONTEND", 3000))
+
         ~H"""
         <!-- dev/test -->
-        <script type="module" src="http://localhost:3000/@vite/client" phx-no-format>
+        <script type="module" src={@vite_origin <> "/@vite/client"} phx-no-format>
         </script>
-        <script type="module" src="http://localhost:3000/js/critical.js" phx-no-format>
+        <script type="module" src={@vite_origin <> "/js/critical.js"} phx-no-format>
         </script>
-        <script type="module" src="http://localhost:3000/js/index.js" phx-no-format>
+        <script type="module" src={@vite_origin <> "/js/index.js"} phx-no-format>
         </script>
         <!-- end dev/test -->
         """
       end
     end
+  end
+
+  defp vite_dev_server_origin(scope, default_port) do
+    host = System.get_env("BRANDO_VITE_#{scope}_HOST", "localhost")
+    port = System.get_env("BRANDO_VITE_#{scope}_PORT", to_string(default_port))
+
+    URI.to_string(%URI{scheme: "http", host: host, port: String.to_integer(port)})
   end
 
   @doc """
