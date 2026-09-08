@@ -14,15 +14,23 @@ content, and the user chooses which copy to restore. Copies are scoped to the
 user, entry schema/ID, form, and tenant/environment. Separate editing sessions
 keep separate copies.
 
-The review panel compares changed scalar fields and offers a downloadable JSON
-copy containing the complete recovery payload. Selected copies have an explicit
-checkmark and timestamp. A shaded recovery column separates proposed values from
-the saved entry, with readable empty and boolean values.
+The review panel lists recovery copies in a bounded, scrollable table with entry
+names, capture timestamps (including seconds), and block counts. Selected copies
+have an explicit checkmark. A shaded recovery column compares changed scalar
+fields with the saved entry, with readable empty and boolean values.
 
-The recovery controls share a 44px minimum height, consistent spacing, and visible
-keyboard focus. The footer groups restoration and clean-editor actions, while
-inspection, download, and discard remain easy to find. On narrow screens, each
-field becomes a stacked comparison with saved and recovered values side by side.
+The content preview puts block text and variable values first, followed by entry
+fields and related content. Copy text copies this readable view; Copy JSON and
+Download JSON preserve the complete payload, including technical metadata. The
+full-data disclosure and incompatible-block disclosures retain their open state
+through LiveView patches using stable IDs and `JS.ignore_attributes("open")`.
+
+Controls have compact desktop proportions, larger touch targets, and visible
+keyboard focus. The footer groups restoration and clean-editor actions. On narrow
+screens, each changed field becomes a stacked comparison with saved and recovered
+values side by side, while the copy table keeps entry names and timestamps visible.
+
+![Recovery history table and readable block content](recovery-table.png)
 
 ![Review an unsaved page before restoring](recovery-available.png)
 
@@ -118,3 +126,9 @@ compile-connected dependency gate (no cycles).
 The recovery card redesign was also verified with all 5 recovery browser scenarios,
 37 existing draft/form recovery tests, desktop and 390px screenshots, a fresh E2E
 consumer build, formatting, and the compile-connected dependency gate.
+
+The recovery table and readable-preview update was verified with all 11 recovery
+and media browser scenarios, 3 preview unit tests, the E2E consumer asset build,
+formatting, and fresh desktop and 390px screenshots. The browser regression checks
+keyboard selection, open-state retention across the real autosave interval,
+clipboard content, and complete JSON downloads.

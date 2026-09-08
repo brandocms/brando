@@ -274,6 +274,18 @@ defmodule E2EFixtureController do
     [draft | _] = Brando.Drafts.list(identity)
 
     case action do
+      "history" ->
+        Enum.each(1..10, fn index ->
+          payload = put_in(draft.payload, ["main", "title"], "Autumn campaign #{index}")
+
+          {:ok, copy} =
+            Brando.Drafts.write(identity, Ecto.UUID.generate(), 1, payload, draft.base_fingerprint, draft.schema_version)
+
+          copy
+          |> Ecto.Changeset.change(updated_at: DateTime.add(draft.updated_at, -index * 60, :second))
+          |> Brando.Repo.update!()
+        end)
+
       "unsupported" ->
         draft |> Ecto.Changeset.change(format_version: 999) |> Brando.Repo.update!()
 

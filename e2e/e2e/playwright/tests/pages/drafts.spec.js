@@ -27,6 +27,61 @@ test.describe('Entry recovery copies', () => {
     await page.getByRole('button', { name: 'Review recovery copy', exact: true }).click()
   }
 
+  test('browses a recovery table and keeps inspected content open across autosave patches', async ({ page }, testInfo) => {
+    await createDraft(page)
+    expect((await page.request.post('/e2e/drafts/history')).ok()).toBeTruthy()
+    await review(page)
+    const panel = page.getByTestId('draft-panel')
+    const table = panel.getByRole('table', { name: 'Recovery copies', exact: true })
+    const preview = panel.locator('.draft-content-preview')
+    const inspector = panel.locator('.draft-raw-content')
+    await expect(table.locator('tbody tr')).toHaveCount(11)
+    await expect(preview).toContainText('A new season of ideas')
+    await inspector.locator('summary').click()
+    await expect(inspector).toHaveAttribute('open', '')
+
+    // Wait for the actual 15-second capture to patch the same @draft assign.
+    const statusBefore = await page.getByTestId('draft-status').textContent()
+    await expect(page.getByTestId('draft-status')).not.toHaveText(statusBefore, { timeout: 20000 })
+    await expect(inspector).toHaveAttribute('open', '')
+    await expect(panel).toBeVisible()
+
+    const otherCopy = table.getByRole('button', { name: 'Autumn campaign 1', exact: true })
+    await otherCopy.focus()
+    await page.keyboard.press('Enter')
+    await expect(otherCopy).toHaveAttribute('aria-pressed', 'true')
+    await expect(preview).toContainText('Autumn campaign 1')
+    await expect(inspector).toHaveAttribute('open', '')
+    await expect(inspector.locator('pre')).toContainText('Autumn campaign 1')
+
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+    await panel.getByRole('button', { name: 'Copy JSON', exact: true }).click()
+    await expect(inspector.getByRole('status')).toHaveText('Copied')
+    const copied = await page.evaluate(() => navigator.clipboard.readText())
+    expect(JSON.parse(copied).main.title).toBe('Autumn campaign 1')
+    await panel.getByRole('button', { name: 'Copy text', exact: true }).click()
+    await expect(panel.getByRole('button', { name: 'Copy text', exact: true })).toHaveAttribute('data-copy-state', 'copied')
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('A new season of ideas')
+    const downloadPromise = page.waitForEvent('download')
+    await panel.getByRole('link', { name: 'Download JSON', exact: true }).click()
+    const download = await downloadPromise
+    expect(download.suggestedFilename()).toBe('entry-recovery.json')
+    const chunks = []
+    for await (const chunk of await download.createReadStream()) chunks.push(chunk)
+    expect(JSON.parse(Buffer.concat(chunks).toString())).toEqual(JSON.parse(copied))
+
+    await inspector.locator('summary').click()
+    await expect(inspector).not.toHaveAttribute('open', '')
+    await table.getByRole('button', { name: 'Autumn campaign', exact: true }).click()
+    await expect(inspector).not.toHaveAttribute('open', '')
+    await panel.screenshot({ path: testInfo.outputPath('recovery-table.png'), animations: 'disabled' })
+    await inspector.locator('summary').click()
+    await panel.screenshot({ path: testInfo.outputPath('recovery-inspector.png'), animations: 'disabled' })
+    await page.setViewportSize({ width: 390, height: 1800 })
+    await expect.poll(() => panel.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    await panel.screenshot({ path: testInfo.outputPath('recovery-table-mobile.png'), animations: 'disabled' })
+  })
+
   test('recovers a new entry and unsaved block after reload, then resolves the copy on save', async ({ page }, testInfo) => {
     await createDraft(page)
     await review(page)

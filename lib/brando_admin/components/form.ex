@@ -2126,7 +2126,7 @@ defmodule BrandoAdmin.Components.Form do
             {render_slot(@instructions)}
           </div>
 
-          <DraftRecovery.render state={@draft} target={@myself} entry_id={@entry_id} />
+          <DraftRecovery.render id={"#{@id}-draft-recovery"} state={@draft} target={@myself} entry_id={@entry_id} />
 
           <div class="form-tabs">
             <div class="form-tab-customs">

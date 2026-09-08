@@ -50,8 +50,28 @@ export default function draftRecovery(hook) {
       event.stopImmediatePropagation()
     }
   }
+  const copyContent = async event => {
+    const button = event.target.closest('[data-draft-copy]')
+    if (!button || !hook.el.contains(button)) return
+    const source = document.getElementById(button.dataset.draftCopy)
+    if (!source || !hook.el.contains(source)) return
+
+    try {
+      await navigator.clipboard.writeText(source.tagName === 'PRE' ? source.textContent : source.innerText)
+      if (button.isConnected) hook.js().setAttribute(button, 'data-copy-state', 'copied')
+    } catch {
+      // Clipboard permission can be unavailable; leave the content selected.
+      const range = document.createRange()
+      range.selectNodeContents(source)
+      const selection = window.getSelection()
+      selection.removeAllRanges()
+      selection.addRange(range)
+      if (button.isConnected) hook.js().setAttribute(button, 'data-copy-state', 'failed')
+    }
+  }
   hook.el.addEventListener('input', onInput, true)
   hook.el.addEventListener('change', onInput, true)
+  hook.el.addEventListener('click', copyContent)
   window.addEventListener('beforeunload', beforeUnload)
   window.addEventListener('click', beforeNavigate, true)
   const interval = setInterval(capture, 15000)
@@ -77,6 +97,7 @@ export default function draftRecovery(hook) {
       clearTimeout(trailing); clearTimeout(flightTimer); clearInterval(interval)
       hook.el.removeEventListener('input', onInput, true)
       hook.el.removeEventListener('change', onInput, true)
+      hook.el.removeEventListener('click', copyContent)
       window.removeEventListener('beforeunload', beforeUnload)
       window.removeEventListener('click', beforeNavigate, true)
     },

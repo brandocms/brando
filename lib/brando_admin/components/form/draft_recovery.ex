@@ -2,6 +2,9 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
   @moduledoc false
   use Phoenix.Component
   use Gettext, backend: Brando.Gettext
+  alias Phoenix.LiveView.JS
+
+  attr :id, :string, required: true
 
   attr :state, :any, required: true
   attr :target, :any, required: true
@@ -9,7 +12,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
 
   def render(assigns) do
     ~H"""
-    <section class="draft-recovery" aria-label={gettext("Recovery copies")} data-testid="draft-recovery">
+    <section id={@id} class="draft-recovery" aria-label={gettext("Recovery copies")} data-testid="draft-recovery">
       <div class="draft-recovery-status">
         <div class="draft-storage-status" role="status">
           <.recovery_icon name="history" />
@@ -55,7 +58,6 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
         <header class="draft-panel-header">
           <span class="draft-heading-icon"><.recovery_icon name="history" /></span>
           <div class="draft-heading">
-            <p class="draft-eyebrow">{gettext("Your work, kept safe")}</p>
             <h2>{gettext("Recover unsaved changes")}</h2>
             <p>
               {gettext(
@@ -79,24 +81,43 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
           <div class="draft-copy-section">
             <h3 class="draft-section-label">{gettext("Choose a recovery copy")}</h3>
             <div class="draft-copy-list">
-              <button
-                :for={copy <- @state.candidates}
-                type="button"
-                class="draft-copy"
-                aria-pressed={to_string(!is_nil(@state.selected) && @state.selected.id == copy.id)}
-                phx-click="draft_review"
-                phx-value-id={copy.id}
-                phx-target={@target}
-              >
-                <span class="draft-copy-indicator"><.recovery_icon name="check" /></span>
-                <span class="draft-copy-description">
-                  <span class="draft-copy-title">{copy_title(copy)}</span>
-                  <time datetime={DateTime.to_iso8601(copy.updated_at)}>
-                    {Calendar.strftime(copy.updated_at, "%d %b %Y · %H:%M UTC")}
-                  </time>
-                  <span :if={copy.attempted_at} class="draft-copy-reviewed">{gettext("Previously reviewed")}</span>
-                </span>
-              </button>
+              <table class="draft-copy-table" aria-label={gettext("Recovery copies")}>
+                <thead>
+                  <tr>
+                    <th scope="col">{gettext("Entry")}</th>
+                    <th scope="col">{gettext("Captured (UTC)")}</th>
+                    <th scope="col">{gettext("Content")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    :for={copy <- @state.candidates}
+                    id={"#{@id}-copy-#{copy.id}"}
+                    class={selected?(@state, copy) && "draft-copy-selected"}
+                  >
+                    <th scope="row">
+                      <button
+                        type="button"
+                        class="draft-copy"
+                        aria-pressed={to_string(selected?(@state, copy))}
+                        phx-click="draft_review"
+                        phx-value-id={copy.id}
+                        phx-target={@target}
+                      >
+                        <span class="draft-copy-indicator"><.recovery_icon name="check" /></span>
+                        <span class="draft-copy-title">{copy_title(copy)}</span>
+                      </button>
+                      <span :if={copy.attempted_at} class="draft-copy-reviewed">{gettext("Previously reviewed")}</span>
+                    </th>
+                    <td>
+                      <time datetime={DateTime.to_iso8601(copy.updated_at)}>
+                        {Calendar.strftime(copy.updated_at, "%d %b %Y · %H:%M:%S")}
+                      </time>
+                    </td>
+                    <td class="draft-copy-contents">{content_summary(copy.payload)}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -137,24 +158,52 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
                 </tbody>
               </table>
             </div>
-            <div class="draft-content-tools">
-              <details class="draft-inspector">
-                <summary><.recovery_icon name="chevron" />{gettext("Inspect / copy recovery content")}</summary>
-                <pre class="draft-payload" tabindex="0">{Jason.encode!(@state.selected.payload, pretty: true)}</pre>
-              </details>
-              <a
-                class="draft-button draft-button-quiet draft-export"
-                download="entry-recovery.json"
-                href={"data:application/json;charset=utf-8," <> URI.encode(Jason.encode!(@state.selected.payload, pretty: true))}
-              >
-                <.recovery_icon name="download" />{gettext("Download recovery copy")}
-              </a>
+            <div class="draft-preview-heading">
+              <div>
+                <h3>{gettext("Content in this copy")}</h3>
+                <p>{gettext("Browse the stored fields and block content before restoring.")}</p>
+              </div>
+              <div class="draft-actions">
+                <.copy_button
+                  id={"#{@id}-copy-text-#{@state.selected.id}"}
+                  source={"#{@id}-preview"}
+                  label={gettext("Copy text")}
+                />
+                <a
+                  class="draft-button draft-export"
+                  download="entry-recovery.json"
+                  href={"data:application/json;base64," <> Base.encode64(Jason.encode!(@state.selected.payload, pretty: true))}
+                >
+                  <.recovery_icon name="download" />{gettext("Download JSON")}
+                </a>
+              </div>
             </div>
+            <.content_preview id={"#{@id}-preview"} payload={@state.selected.payload} />
+            <details
+              id={"#{@id}-inspector"}
+              class="draft-inspector draft-raw-content"
+              phx-mounted={JS.ignore_attributes("open")}
+            >
+              <summary><.recovery_icon name="chevron" />{gettext("View full recovery data (JSON)")}</summary>
+              <div class="draft-raw-toolbar">
+                <p>{gettext("Includes all stored values and technical details.")}</p>
+                <.copy_button
+                  id={"#{@id}-copy-json-#{@state.selected.id}"}
+                  source={"#{@id}-payload"}
+                  label={gettext("Copy JSON")}
+                />
+              </div>
+              <pre id={"#{@id}-payload"} class="draft-payload" tabindex="0">{Jason.encode!(@state.selected.payload, pretty: true)}</pre>
+            </details>
 
-            <article :for={issue <- @state.issues} class="draft-block-issue">
+            <article :for={{issue, index} <- Enum.with_index(@state.issues)} class="draft-block-issue">
               <h3><.recovery_icon name="warning" />{gettext("Block needs review")}</h3>
               <p :for={reason <- issue.reasons}>{reason}</p>
-              <details class="draft-inspector">
+              <details
+                id={"#{@id}-issue-#{@state.selected.id}-#{index}"}
+                class="draft-inspector"
+                phx-mounted={JS.ignore_attributes("open")}
+              >
                 <summary><.recovery_icon name="chevron" />{gettext("Recover this block’s content")}</summary>
                 <pre class="draft-payload" tabindex="0">{Jason.encode!(issue.content, pretty: true)}</pre>
               </details>
@@ -211,11 +260,66 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
     """
   end
 
+  attr :id, :string, required: true
+  attr :source, :string, required: true
+  attr :label, :string, required: true
+
+  defp copy_button(assigns) do
+    ~H"""
+    <button id={@id} type="button" class="draft-button draft-copy-content" data-draft-copy={@source} aria-label={@label}>
+      <.recovery_icon name="copy" />
+      <span class="draft-copy-label">{@label}</span>
+      <span class="draft-copy-success" role="status">{gettext("Copied")}</span>
+      <span class="draft-copy-failure" role="status">{gettext("Select and copy manually")}</span>
+    </button>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :payload, :map, required: true
+
+  defp content_preview(assigns) do
+    assigns = assign(assigns, :sections, BrandoAdmin.Components.Form.DraftPreview.sections(assigns.payload))
+
+    ~H"""
+    <div id={@id} class="draft-content-preview" tabindex="0" aria-label={gettext("Recovery content preview")}>
+      <section :for={section <- @sections} class="draft-preview-section">
+        <h4>{section.title}</h4>
+        <dl>
+          <div :for={row <- section.rows} class="draft-preview-row">
+            <dt>{row.field}</dt>
+            <dd>{display(row.value)}</dd>
+          </div>
+        </dl>
+      </section>
+      <p :if={@sections == []} class="draft-preview-empty">
+        {gettext("No readable fields in this copy. View or download the full recovery data below.")}
+      </p>
+    </div>
+    """
+  end
+
+  defp selected?(state, copy), do: !is_nil(state.selected) && state.selected.id == copy.id
+
+  defp content_summary(payload) do
+    count =
+      case payload["blocks"] do
+        blocks when is_map(blocks) ->
+          blocks |> Map.values() |> Enum.filter(&is_list/1) |> Enum.map(&length/1) |> Enum.sum()
+
+        _ ->
+          0
+      end
+
+    if count == 0, do: gettext("Entry fields"), else: ngettext("%{count} block", "%{count} blocks", count)
+  end
+
   attr :name, :string, required: true
 
   defp recovery_icon(assigns) do
     path =
       case assigns.name do
+        "copy" -> "M9 9h11v11H9z M15 9V4H4v11h5"
         "history" -> "M3 4v5h5 M3.5 9a9 9 0 1 1 1 9 M12 7v5l3 2"
         "check" -> "m5 12 4 4L19 6"
         "chevron" -> "m9 5 7 7-7 7"
