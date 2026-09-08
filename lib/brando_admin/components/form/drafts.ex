@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [connected?: 1, push_event: 3, send_update: 2, send_update_after: 3]
   alias Brando.Drafts
+  alias Brando.Drafts.Content
   alias Brando.Drafts.Modules
   alias Brando.Drafts.Params
   alias Brando.Drafts.Restore
@@ -31,18 +32,20 @@ defmodule BrandoAdmin.Components.Form.Drafts do
         "modules" => Modules.manifest(blocks)
       }
 
+      baseline = Content.checksum(payload)
+
       state = %{
         initialized?: true,
         id: Ecto.UUID.generate(),
         identity: identity,
         generation: 0,
         persisted: 0,
-        baseline: Drafts.checksum(payload),
-        checksum: Drafts.checksum(payload),
+        baseline: baseline,
+        checksum: baseline,
         base_fingerprint: Drafts.fingerprint(entry),
         modules: payload["modules"],
         capture: nil,
-        candidates: Drafts.list(identity),
+        candidates: candidates(socket, identity, baseline),
         open?: false,
         selected: nil,
         error: nil,
@@ -159,26 +162,19 @@ defmodule BrandoAdmin.Components.Form.Drafts do
         "modules" => modules
       }
 
-      checksum = Drafts.checksum(payload)
+      checksum = Content.checksum(payload)
       generation = max(capture.generation, draft.persisted + if(checksum != draft.checksum, do: 1, else: 0))
 
-      result =
+      {draft, result} =
         cond do
           checksum == draft.checksum ->
-            {:ok, nil}
+            {draft, {:ok, nil}}
 
           checksum == draft.baseline ->
-            Drafts.resolve(draft.identity, draft.id, generation)
+            {draft, Drafts.resolve(draft.identity, draft.id, generation)}
 
           true ->
-            Drafts.write(
-              draft.identity,
-              draft.id,
-              generation,
-              payload,
-              draft.base_fingerprint,
-              Brando.Blueprint.Snapshot.get_current_version(socket.assigns.schema)
-            )
+            write_capture(socket, draft, generation, payload)
         end
 
       case result do
@@ -215,6 +211,28 @@ defmodule BrandoAdmin.Components.Form.Drafts do
     end
   rescue
     _ -> fail_capture(socket)
+  end
+
+  defp write_capture(socket, draft, generation, payload) do
+    version = Brando.Blueprint.Snapshot.get_current_version(socket.assigns.schema)
+
+    case Drafts.write(draft.identity, draft.id, generation, payload, draft.base_fingerprint, version) do
+      {:error, :closed} ->
+        # Another tab can discard/resolve an equivalent copy. Keep that original
+        # closed, but store this tab's subsequent edit under a fresh session ID.
+        next = %{draft | id: Ecto.UUID.generate()}
+        {next, Drafts.write(next.identity, next.id, generation, payload, next.base_fingerprint, version)}
+
+      result ->
+        {draft, result}
+    end
+  end
+
+  defp candidates(socket, identity, baseline) do
+    Drafts.candidates(identity,
+      baseline: baseline,
+      schema_version: Brando.Blueprint.Snapshot.get_current_version(socket.assigns.schema)
+    )
   end
 
   defp parts(parts, kind), do: Map.new(for {{^kind, field}, value} <- parts, do: {field, value})
@@ -264,7 +282,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
     # Resolved originals remain available for the retention window, but never
     # re-enter the normal recovery list after a successful explicit save.
     if draft.selected && draft.issues == [] && draft.generation <= generation,
-      do: Drafts.resolve(draft.identity, draft.selected.id, draft.selected.generation)
+      do: Drafts.resolve_equivalent(draft.identity, draft.selected)
 
     Drafts.rebind_entry(draft.identity, draft.id, entry.id)
     if draft.selected, do: Drafts.rebind_entry(draft.identity, draft.selected.id, entry.id)
@@ -288,7 +306,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
       "modules" => Modules.manifest(blocks)
     }
 
-    checksum = Drafts.checksum(payload)
+    checksum = Content.checksum(payload)
 
     socket
     |> assign(:draft, %{
@@ -297,7 +315,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
         identity: identity,
         capture: nil,
         save_generation: nil,
-        candidates: Drafts.list(identity),
+        candidates: candidates(socket, identity, checksum),
         selected: nil,
         issues: [],
         error: nil,
@@ -358,7 +376,13 @@ defmodule BrandoAdmin.Components.Form.Drafts do
   def dismiss(socket) do
     draft = socket.assigns.draft
     Enum.each(draft.candidates, &Drafts.dismiss(draft.identity, &1.id))
-    assign(socket, :draft, %{draft | candidates: Drafts.list(draft.identity), open?: false, error: nil})
+
+    assign(socket, :draft, %{
+      draft
+      | candidates: candidates(socket, draft.identity, draft.baseline),
+        open?: false,
+        error: nil
+    })
   end
 
   def discard(socket, id) do
@@ -367,7 +391,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
 
     assign(socket, :draft, %{
       draft
-      | candidates: Drafts.list(draft.identity),
+      | candidates: candidates(socket, draft.identity, draft.baseline),
         selected: nil,
         open?: false,
         error: nil,
@@ -381,7 +405,14 @@ defmodule BrandoAdmin.Components.Form.Drafts do
     with {:ok, original} <- Drafts.begin_restore(draft.identity, id),
          {:ok, entry} <- fresh_entry(socket) do
       result = Restore.prepare(original, entry, socket.assigns.schema, socket.assigns.current_user, opts)
-      state = %{draft | selected: original, open?: true, candidates: Drafts.list(draft.identity), compatible?: false}
+
+      state = %{
+        draft
+        | selected: original,
+          open?: true,
+          candidates: candidates(socket, draft.identity, draft.baseline),
+          compatible?: false
+      }
 
       case result do
         {:ok, cs, issues} ->

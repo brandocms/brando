@@ -1,6 +1,7 @@
 defmodule Brando.Drafts do
   @moduledoc "Durable recovery storage, independent of Blueprint schemas and the editor."
   import Ecto.Query, only: [from: 2]
+  alias Brando.Drafts.Content
   alias Brando.Drafts.EntryDraft
   alias Brando.Repo
   alias Ecto.Changeset
@@ -26,6 +27,20 @@ defmodule Brando.Drafts do
         order_by: [desc: d.updated_at]
     end)
     |> Repo.all()
+  end
+
+  @doc "Distinct recovery choices, excluding supported copies equal to the editor's saved baseline."
+  def candidates(identity, opts \\ []) do
+    baseline = opts[:baseline]
+    schema_version = opts[:schema_version]
+
+    identity
+    |> list()
+    |> Enum.reject(fn copy ->
+      baseline && copy.format_version == 1 && copy.schema_version == schema_version &&
+        Content.checksum(copy.payload) == baseline
+    end)
+    |> Enum.uniq_by(&equivalence_key/1)
   end
 
   def get(identity, id) do
@@ -78,7 +93,7 @@ defmodule Brando.Drafts do
     end)
   end
 
-  def dismiss(identity, id), do: mark(identity, id, dismissed_at: DateTime.utc_now())
+  def dismiss(identity, id), do: mark_equivalent(identity, id, dismissed_at: DateTime.utc_now())
 
   def begin_restore(identity, id) do
     now = DateTime.utc_now()
@@ -88,11 +103,26 @@ defmodule Brando.Drafts do
   def discard(identity, id) do
     now = DateTime.utc_now()
 
-    mark(identity, id,
+    mark_equivalent(identity, id,
       discarded_at: now,
       dismissed_at: now,
       expires_at: DateTime.add(now, resolved_days() * 86_400, :second)
     )
+  end
+
+  @doc "Resolve a restored copy and its unchanged equivalents after an explicit save."
+  def resolve_equivalent(identity, original) do
+    now = DateTime.utc_now()
+
+    Repo.transaction(fn ->
+      lock("draft-group:" <> checksum(identity))
+
+      # The selected snapshot's generation belongs to the save that completed.
+      # Never replace it with a newer generation fetched from storage.
+      matches = equivalent_copies(identity, original) |> Enum.reject(&(&1.id == original.id))
+      attrs = [resolved_at: now, expires_at: DateTime.add(now, resolved_days() * 86_400, :second)]
+      Enum.each([original | matches], &mark_snapshot(identity, &1, attrs))
+    end)
   end
 
   def resolve(identity, id, generation) do
@@ -192,6 +222,46 @@ defmodule Brando.Drafts do
   end
 
   defp owned?(draft, identity), do: Enum.all?(identity, fn {key, value} -> Map.get(draft, key) == value end)
+
+  # Restore contracts and saved-entry conflicts remain distinct even when their
+  # visible content is the same. The raw payload and checksum are never rewritten.
+  defp equivalence_key(copy),
+    do: {copy.base_fingerprint, copy.format_version, copy.schema_version, Content.checksum(copy.payload)}
+
+  defp equivalent_copies(identity, original) do
+    key = equivalence_key(original)
+    identity |> list() |> Enum.filter(&(equivalence_key(&1) == key))
+  end
+
+  defp mark_equivalent(identity, id, attrs) do
+    Repo.transaction(fn ->
+      # Serialize group actions before taking any individual copy locks.
+      lock("draft-group:" <> checksum(identity))
+
+      case mark(identity, id, attrs) do
+        {:ok, original} ->
+          identity
+          |> equivalent_copies(original)
+          |> Enum.reject(&(&1.id == original.id))
+          |> Enum.each(&mark_snapshot(identity, &1, attrs))
+
+          original
+
+        {:error, reason} ->
+          Repo.rollback(reason)
+      end
+    end)
+  end
+
+  defp mark_snapshot(identity, copy, attrs) do
+    from(d in owned_query(identity),
+      where:
+        d.id == ^copy.id and d.generation == ^copy.generation and d.checksum == ^copy.checksum and
+          d.base_fingerprint == ^copy.base_fingerprint and d.format_version == ^copy.format_version and
+          d.schema_version == ^copy.schema_version and is_nil(d.resolved_at) and is_nil(d.discarded_at)
+    )
+    |> Repo.update_all(set: attrs)
+  end
 
   defp mark(identity, id, attrs) do
     Repo.transaction(fn ->

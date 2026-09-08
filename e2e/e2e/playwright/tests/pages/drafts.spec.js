@@ -27,6 +27,19 @@ test.describe('Entry recovery copies', () => {
     await page.getByRole('button', { name: 'Review recovery copy', exact: true }).click()
   }
 
+  test('identical copies form one choice and discarding it does not reveal another duplicate', async ({ page }) => {
+    await createDraft(page)
+    expect((await page.request.post('/e2e/drafts/duplicates')).ok()).toBeTruthy()
+    await review(page)
+    await expect(page.locator('.draft-copy-table tbody tr')).toHaveCount(1)
+    page.once('dialog', dialog => dialog.accept())
+    await page.getByRole('button', { name: 'Discard copy', exact: true }).click()
+    await expect(page.getByTestId('draft-panel')).toHaveCount(0)
+    await page.reload()
+    await expect(page.getByTestId('draft-notice')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^Recovery copies/ })).toHaveCount(0)
+  })
+
   test('browses a recovery table and keeps inspected content open across autosave patches', async ({ page }, testInfo) => {
     await createDraft(page)
     expect((await page.request.post('/e2e/drafts/history')).ok()).toBeTruthy()
@@ -84,8 +97,10 @@ test.describe('Entry recovery copies', () => {
 
   test('recovers a new entry and unsaved block after reload, then resolves the copy on save', async ({ page }, testInfo) => {
     await createDraft(page)
+    expect((await page.request.post('/e2e/drafts/duplicates')).ok()).toBeTruthy()
     await review(page)
     const panel = page.getByTestId('draft-panel')
+    await expect(panel.locator('.draft-copy-table tbody tr')).toHaveCount(1)
     await expect(panel.locator('.draft-comparison')).toBeVisible()
     await panel.screenshot({ path: testInfo.outputPath('recovery-available.png'), animations: 'disabled' })
     await page.setViewportSize({ width: 390, height: 1800 })

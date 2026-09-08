@@ -12,7 +12,16 @@ transformer rows. The status line acknowledges successful recovery storage.
 Reopening the form offers recovery explicitly: the editor starts with its saved
 content, and the user chooses which copy to restore. Copies are scoped to the
 user, entry schema/ID, form, and tenant/environment. Separate editing sessions
-keep separate copies.
+keep separate stored copies. The chooser groups copies with equivalent content
+and matching restore contracts into one choice, represented by the newest copy.
+Copies that match the saved content are omitted. Existing originals remain in
+storage for their retention period.
+
+Opening an entry can fill variable ownership, normalize positional sequence
+values, and initialize default gallery overrides. Those changes alone do not
+create a recovery copy. Comparison ignores only that initialization metadata;
+text, explicit overrides, invalid values, asset selections, module contracts,
+and list order still count as changes. Stored payloads and checksums stay intact.
 
 The review panel lists recovery copies in a bounded, scrollable table with entry
 names, capture timestamps (including seconds), and block counts. Selected copies
@@ -43,7 +52,10 @@ values side by side, while the copy table keeps entry names and timestamps visib
 
 Restoring loads the copy into the editor. Normal Save still controls persistence,
 validation, rendering, and publication. A successful save resolves the matching
-generation; a newer copy or another session's work remains available.
+generation and its unchanged equivalents. Dismissing or discarding a choice also
+applies to its equivalents, so the same content does not reappear under another
+timestamp. Generation and payload checks preserve concurrent changes. A tab
+whose copy was closed stores subsequent edits in a new copy.
 
 ![Restored page title, URI, variables, and header block](recovery-restored.png)
 
@@ -132,3 +144,10 @@ and media browser scenarios, 3 preview unit tests, the E2E consumer asset build,
 formatting, and fresh desktop and 390px screenshots. The browser regression checks
 keyboard selection, open-state retention across the real autosave interval,
 clipboard content, and complete JSON downloads.
+
+Content comparison and duplicate lifecycle handling are covered by 33 Elixir
+tests and 13 recovery/media browser scenarios (four media scenarios passed on a
+focused rerun after upload/timing failures). The legacy-data regression retains
+14 original copies, verifies two capture/reload cycles create no new copies, and
+then restores a real edit. Formatting and the compile-connected dependency gate
+also pass.

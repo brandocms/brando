@@ -102,6 +102,38 @@ test.describe('Media in entry recovery copies', () => {
   test.setTimeout(180000)
   test.beforeEach(async ({ page }) => { page.setDefaultTimeout(15000) })
 
+  test('opening legacy content hides no-op copies and does not create another copy on capture or reload', async ({ page }) => {
+    const title = 'Unchanged legacy gallery'
+    await createPage(page, title)
+    await addBlock(page, 'Gallery with Controls')
+    const gallery = page.locator('.gallery-block')
+    await gallery.locator('.file-input').setInputFiles(['./fixtures/image.jpg'])
+    await confirmUploadFolder(page)
+    await expect(gallery.locator('.gallery-object')).toHaveCount(1, { timeout: 30000 })
+    const id = await savePage(page, title)
+    expect((await page.request.post('/e2e/drafts/legacy-copies', { data: { entry_id: id } })).ok()).toBeTruthy()
+    expect((await mediaState(page, 'page', id)).drafts).toHaveLength(14)
+
+    for (let session = 0; session < 2; session++) {
+      await page.reload()
+      await syncLV(page)
+      await expect(page.getByTestId('draft-status')).toContainText('Recovery copy saved at', { timeout: 25000 })
+      await expect(page.getByTestId('draft-notice')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: /^Recovery copies/ })).toHaveCount(0)
+      expect((await mediaState(page, 'page', id)).drafts).toHaveLength(14)
+    }
+
+    // A real edit must still be offered alongside retained, hidden originals.
+    await page.locator('#page_title').fill('An actual unsaved edit')
+    await waitForCopy(page, 'page', id, copy => copy.main.title === 'An actual unsaved edit')
+    await page.reload()
+    await page.getByRole('button', { name: 'Review recovery copy', exact: true }).click()
+    await expect(page.locator('.draft-copy-table tbody tr')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Restore recovery copy', exact: true }).click()
+    await expect(page.locator('#page_title')).toHaveValue('An actual unsaved edit')
+    await expect(gallery.locator('.gallery-object')).toHaveCount(1)
+  })
+
   test('image, file and video fields recover selections, replacements and resets without duplicating assets', async ({ page }, testInfo) => {
     const { path, id } = await openProject(page)
     for (const [type, file] of [['image', 'image.jpg'], ['file', 'test.pdf'], ['video', 'video.mp4']]) {

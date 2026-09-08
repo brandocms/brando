@@ -1,6 +1,8 @@
 defmodule Brando.DraftsTest do
   use Brando.ConnCase, async: false
+  alias Brando.DraftFixtures
   alias Brando.Drafts
+  alias Brando.Drafts.Content
   alias Brando.Drafts.EntryDraft
 
   setup do
@@ -85,5 +87,68 @@ defmodule Brando.DraftsTest do
     assert {0, _} = Drafts.purge()
     Brando.Repo.update_all(EntryDraft, set: [expires_at: DateTime.add(DateTime.utc_now(), -1, :second)])
     assert {1, _} = Drafts.purge()
+  end
+
+  test "legacy initialization-only copies are hidden without changing their stored originals", ctx do
+    saved = DraftFixtures.payload()
+    captured = DraftFixtures.initialized(saved)
+    {:ok, copy} = Drafts.write(ctx.identity, ctx.id, 1, captured, "base", 0)
+
+    assert Drafts.candidates(ctx.identity, baseline: Content.checksum(saved), schema_version: 0) == []
+    assert [^copy] = Drafts.list(ctx.identity)
+    assert Drafts.get(ctx.identity, copy.id).payload == captured
+    assert Drafts.get(ctx.identity, copy.id).checksum == Drafts.checksum(captured)
+  end
+
+  test "equal content is one choice, while restore contracts and saved baselines remain distinct", ctx do
+    saved = DraftFixtures.payload()
+    initialized = DraftFixtures.initialized(saved)
+    {:ok, _} = Drafts.write(ctx.identity, ctx.id, 1, saved, "base", 0)
+    {:ok, duplicate} = Drafts.write(ctx.identity, Ecto.UUID.generate(), 1, initialized, "base", 0)
+    assert [^duplicate] = Drafts.candidates(ctx.identity)
+    assert length(Drafts.list(ctx.identity)) == 2
+
+    {:ok, _} = Drafts.write(ctx.identity, Ecto.UUID.generate(), 1, saved, "changed-entry", 0)
+    {:ok, _} = Drafts.write(ctx.identity, Ecto.UUID.generate(), 1, saved, "base", 1)
+    {:ok, unsupported} = Drafts.write(ctx.identity, Ecto.UUID.generate(), 1, saved, "base", 0)
+    unsupported |> Ecto.Changeset.change(format_version: 999) |> Brando.Repo.update!()
+    assert length(Drafts.candidates(ctx.identity)) == 4
+
+    candidates = Drafts.candidates(ctx.identity, baseline: Content.checksum(saved), schema_version: 0)
+    assert length(candidates) == 2
+    assert Enum.any?(candidates, &(&1.format_version == 999))
+    assert Enum.any?(candidates, &(&1.schema_version == 1))
+  end
+
+  test "dismissing and discarding a duplicate choice affects its equivalents without deleting content", ctx do
+    {:ok, _} = Drafts.write(ctx.identity, ctx.id, 1, ctx.payload, "base", 0)
+    {:ok, copy} = Drafts.write(ctx.identity, Ecto.UUID.generate(), 1, ctx.payload, "base", 0)
+    assert {:ok, _} = Drafts.dismiss(ctx.identity, copy.id)
+    assert Enum.all?(Drafts.list(ctx.identity), & &1.dismissed_at)
+    assert {:ok, _} = Drafts.discard(ctx.identity, copy.id)
+    assert Drafts.candidates(ctx.identity) == []
+    assert Drafts.get(ctx.identity, ctx.id).payload == ctx.payload
+    assert Drafts.get(ctx.identity, copy.id).payload == ctx.payload
+  end
+
+  test "discarding one choice preserves another session that has since diverged", ctx do
+    {:ok, _} = Drafts.write(ctx.identity, ctx.id, 1, ctx.payload, "base", 0)
+    {:ok, other} = Drafts.write(ctx.identity, Ecto.UUID.generate(), 1, ctx.payload, "base", 0)
+    edited = put_in(ctx.payload, ["main", "title"], "Other tab's newer edit")
+    {:ok, newer} = Drafts.write(ctx.identity, other.id, 2, edited, "base", 0)
+    assert {:ok, _} = Drafts.discard(ctx.identity, ctx.id)
+    assert [^newer] = Drafts.candidates(ctx.identity)
+  end
+
+  test "saving a restored choice resolves equivalents but never a newer selected generation", ctx do
+    {:ok, selected} = Drafts.write(ctx.identity, ctx.id, 1, ctx.payload, "base", 0)
+    {:ok, duplicate} = Drafts.write(ctx.identity, Ecto.UUID.generate(), 1, ctx.payload, "base", 0)
+    edited = put_in(ctx.payload, ["main", "title"], "Typed during save")
+    {:ok, newer} = Drafts.write(ctx.identity, selected.id, 2, edited, "base", 0)
+
+    assert {:ok, _} = Drafts.resolve_equivalent(ctx.identity, selected)
+    assert [^newer] = Drafts.list(ctx.identity)
+    assert Drafts.get(ctx.identity, duplicate.id).resolved_at
+    assert Drafts.get(ctx.identity, duplicate.id).payload == ctx.payload
   end
 end

@@ -265,6 +265,48 @@ defmodule E2EFixtureController do
     json(conn, %{entry: entry, drafts: Enum.map(drafts, & &1.payload), counts: counts})
   end
 
+  def drafts(conn, %{"action" => "legacy-copies", "entry_id" => id}) do
+    import Ecto.Query, only: [from: 2]
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    user = get_admin_user()
+    Brando.Authorization.Boundary.put_scope(Brando.Authorization.Scope.current(user))
+    {:ok, entry} = Brando.Blueprint.EntryQuery.get(Brando.Pages.Page, String.to_integer(id))
+    blueprint = Brando.Pages.Page.__form__(:default)
+    socket = %Phoenix.LiveView.Socket{assigns: %{schema: Brando.Pages.Page, form_blueprint: blueprint}}
+    blocks = %{"blocks" => Brando.Drafts.Params.snapshot(entry.entry_blocks)}
+
+    payload = %{
+      "main" => BrandoAdmin.Components.Form.Drafts.main_params(socket, Brando.Pages.Page.changeset(entry, %{}, user)),
+      "blocks" => blocks,
+      "transformers" => %{},
+      "modules" => Brando.Drafts.Modules.manifest(blocks)
+    }
+
+    identity = Brando.Drafts.identity(Brando.Pages.Page, entry.id, user.id)
+    version = Brando.Blueprint.Snapshot.get_current_version(Brando.Pages.Page)
+
+    # Reproduce the legacy data from A-Form: mounting fills owners, positional
+    # sequences and default gallery overrides, without an editorial change.
+    block_ids = Enum.map(entry.entry_blocks, & &1.block.id)
+
+    Brando.Repo.update_all(from(v in Brando.Content.Var, where: v.block_id in ^block_ids),
+      set: [creator_id: nil, sequence: 0]
+    )
+
+    for row <- entry.entry_blocks, ref <- row.block.refs, ref.data.type == "gallery" do
+      data = %{ref.data | data: %{ref.data.data | gallery_object_overrides: []}}
+      ref |> Ecto.Changeset.change(data: data) |> Brando.Repo.update!()
+    end
+
+    for _ <- 1..14 do
+      {:ok, _} =
+        Brando.Drafts.write(identity, Ecto.UUID.generate(), 1, payload, Brando.Drafts.fingerprint(entry), version)
+    end
+
+    json(conn, %{ok: true})
+  end
+
   def drafts(conn, %{"action" => action}) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
@@ -274,6 +316,19 @@ defmodule E2EFixtureController do
     [draft | _] = Brando.Drafts.list(identity)
 
     case action do
+      "duplicates" ->
+        for _ <- 1..3 do
+          {:ok, _} =
+            Brando.Drafts.write(
+              identity,
+              Ecto.UUID.generate(),
+              1,
+              draft.payload,
+              draft.base_fingerprint,
+              draft.schema_version
+            )
+        end
+
       "history" ->
         Enum.each(1..10, fn index ->
           payload = put_in(draft.payload, ["main", "title"], "Autumn campaign #{index}")
