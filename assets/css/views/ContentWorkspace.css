@@ -1,6 +1,6 @@
-/* Compact content lists, explicitly enabled by each workspace. */
+/* Shared content listing treatment, including previously generated LiveViews. */
 .listing-status-label, .children-button-disclosure { display: none; }
-.admin-workspace.content-workspace {
+:is(.admin-workspace.content-workspace, :where(#brando-main > .content):has(> .content-list-wrapper)) {
   .content-list .list-row .main-content, .content-list .child-row { display: flex; flex-wrap: nowrap; align-items: center; gap: 16px; width: 100%; margin: 0; padding: 16px; }
   .content-list .list-row .main-content > div, .content-list .child-row > div { width: auto; max-width: none; min-width: 0; margin: 0; padding: 0; }
   .content-list .list-row .main-content > .status, .content-list .child-row > .status { position: static; flex: 0 0 108px; order: 6; border: 0; cursor: default; }
@@ -32,13 +32,13 @@
   .listing-alternates:has(button:disabled) { display: none; }
   .listing-home { display: inline-flex; vertical-align: -2px; margin-right: 6px; color: #547361; }
   .listing-home [data-icon] { display: block; width: 16px; height: 16px; }
-  .content-list .list-row .listing-title { flex: 1 1 240px; min-width: 0; }
-  .listing-title > br { display: none; }
-  .listing-title > small, .listing-title > .badge { display: block; margin-top: 4px; padding: 0; line-height: 1.5; color: var(--workspace-muted); font-size: 12px; font-family: inherit; }
-  .listing-title .badge a { color: var(--workspace-muted); font-size: 12px; overflow-wrap: anywhere; }
-  .listing-title .badge [data-icon] { width: 12px; height: 12px; margin-right: 6px; }
+  .content-list .list-row :is(.listing-title, div:has(> .entry-link)) { flex: 1 1 240px; min-width: 0; }
+  :is(.listing-title, div:has(> .entry-link)) > br { display: none; }
+  :is(.listing-title, div:has(> .entry-link)) > small, :is(.listing-title, div:has(> .entry-link)) > .badge { display: block; margin-top: 4px; padding: 0; line-height: 1.5; color: var(--workspace-muted); font-size: 12px; font-family: inherit; }
+  :is(.listing-title, div:has(> .entry-link)) .badge a { color: var(--workspace-muted); font-size: 12px; overflow-wrap: anywhere; }
+  :is(.listing-title, div:has(> .entry-link)) .badge [data-icon] { width: 12px; height: 12px; margin-right: 6px; }
   .listing-page-icon .badge { padding: 0; border: 0; background: none; }
-  .content-list .list-row .main-content > .col-4, .content-list .child-row > .col-4 { flex: 0 0 180px; order: 7; }
+  .content-list .list-row .main-content > .listing-creator, .content-list .child-row > .listing-creator { flex: 0 0 180px; order: 7; }
   .item-meta .name, .item-meta .time { color: var(--workspace-muted); font-size: 12px; }
   .content-list .list-row .circle-dropdown { order: 8; }
   .content-list .list-row .main-content > div:has(> .children-button) { flex: 0 0 58px; }
@@ -58,14 +58,14 @@
   .listing-category { flex: 0 0 224px; order: 5; }
   .listing-category .badge { display: inline-block; max-width: 100%; line-height: 20px; font-size: 12px; font-family: inherit; text-transform: none; background: #f5f7f3; color: var(--workspace-muted); border: 0; padding: 3px 7px; }
   @media (max-width: 1000px) {
-    .content-list .list-row .main-content > .col-4, .content-list .child-row > .col-4 { flex-basis: 140px; }
+    .content-list .list-row .main-content > .listing-creator, .content-list .child-row > .listing-creator { flex-basis: 140px; }
     .listing-category { flex-basis: 180px; }
   }
   @media (max-width: 600px) {
     .content-list .list-row .main-content, .content-list .child-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto 30px; gap: 8px; padding: 16px 8px; }
     .content-list .list-row .seq { grid-column: 1; grid-row: 1; align-self: start; padding-top: 2px; }
-    .content-list .list-row .listing-title { grid-column: 2 / 4; grid-row: 1; }
-    .content-list .list-row .main-content:has(.children-button:not(.hidden)) .listing-title { grid-column: 2; }
+    .content-list .list-row :is(.listing-title, div:has(> .entry-link)) { grid-column: 2 / 4; grid-row: 1; }
+    .content-list .list-row .main-content:has(.children-button:not(.hidden)) :is(.listing-title, div:has(> .entry-link)) { grid-column: 2; }
     .content-list .list-row .main-content > div:has(> .children-button) { grid-column: 3; grid-row: 1; }
     .content-list .list-row .main-content > .status, .content-list .child-row > .status { grid-column: 2 / 4; grid-row: 2; }
     .content-list .list-row .main-content > .listing-creator, .content-list .child-row > .listing-creator { display: block; grid-column: 2 / -1; grid-row: 3; }
@@ -87,8 +87,8 @@
   .library-image-title { overflow-wrap: anywhere; }
   @media (max-width: 700px) { .library-file-action .workspace-button { padding-inline: 8px; } }
 }
-.admin-workspace.content-workspace {
-  .listing-title .badge a.flex-h { display: inline-flex; justify-content: flex-start; gap: 0; width: auto; }
+:is(.admin-workspace.content-workspace, :where(#brando-main > .content):has(> .content-list-wrapper)) {
+  :is(.listing-title, div:has(> .entry-link)) .badge a.flex-h { display: inline-flex; justify-content: flex-start; gap: 0; width: auto; }
   .content-list .status > div > svg { display: block; flex-shrink: 0; width: 12px; height: 12px; margin: 0; }
   .content-list .list-tools-wrapper { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; padding: 6px; border: 1px solid var(--workspace-line); border-radius: 8px; background: #f8faf6; }
   .content-list .list-tools { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
@@ -105,13 +105,42 @@
   .content-list .sorts-label { display: none; }
   .content-list .sorts .simple-dropdown-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; min-height: 38px; line-height: 20px; margin: 0; padding: 0 12px; border: 1px solid var(--workspace-line); border-radius: 5px; background: #fff; color: var(--workspace-muted); font-family: inherit; font-size: 12px; text-transform: none; }
   .content-list .sorts .simple-dropdown-content { font-size: 12px; background: #fff; border-color: var(--workspace-line); }
+  .advanced-filters-bar { gap: 12px; }
+  .boolean-filter .tiny-toggle-label, .list-filter-select .filter-label { font-family: inherit; font-size: 12px; text-transform: none; }
+  .list-filter-select select { min-height: 38px; padding: 0 28px 0 10px; border-color: var(--workspace-line); color: var(--workspace-ink); font-family: inherit; font-size: 12px; }
+  .reset-filters-btn { min-height: 30px; padding: 5px 10px; border-color: var(--workspace-line); border-radius: 5px; font-family: inherit; font-size: 12px; text-transform: none; color: var(--workspace-muted); }
+  .reset-filters-btn:hover { background: var(--workspace-wash); color: var(--workspace-accent); }
   .sorts .dropdown-chevron { display: block; width: 14px; height: 14px; }
   @media (max-width: 600px) { .content-list .list-tools { flex-basis: 100%; } .content-list .list-tools .filters { width: 100%; } }
 }
-.admin-workspace.content-workspace .content-list .list-tools .statuses .status .label { display: inline; }
+
+/* Blueprint rows can add their own cells; reserve room for content instead of
+   relying on the old sixteen-column widths or Pages-specific class names. */
+:is(.admin-workspace.content-workspace, :where(#brando-main > .content):has(> .content-list-wrapper)) {
+  .content-list .main-content > .cover { flex: 0 0 56px; align-self: center; }
+  .content-list .cover .image-content, .content-list .cover .img-placeholder { width: 56px; height: 64px; border-radius: 4px; overflow: hidden; }
+  .content-list .cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .content-list .main-content > .url { flex: 0 0 30px; order: 3; }
+  .content-list .url a { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 5px; background: #f1f5ef; color: var(--workspace-muted); }
+  .content-list .main-content > [class*="col-"]:not(.seq, .cover, .url, .listing-creator, [class*="listing-"], :has(> .entry-link), :has(> .children-button)) { flex: 0 0 180px; order: 2; max-width: 180px; overflow-wrap: anywhere; }
+  .content-list .empty-list { min-height: 180px; padding: 48px 24px; border: 1px solid var(--workspace-line); border-radius: 6px; background: #fafbf8; color: var(--workspace-muted); font-size: 13px; text-align: center; }
+  .content-list .empty-list figure { display: none; }
+  @media (max-width: 600px) {
+    .content-list .main-content:has(> .url):not(:has(> .cover)) > :is(.listing-title, div:has(> .entry-link)) { grid-column: 2; }
+    .content-list .list-row .main-content:has(> .cover) { grid-template-columns: 20px 48px minmax(0, 1fr) 30px; }
+    .content-list .main-content > .cover { grid-column: 2; grid-row: 1; justify-self: start; }
+    .content-list .main-content > .cover .image-content, .content-list .main-content > .cover .img-placeholder { width: 48px; height: 60px; }
+    .content-list .main-content:has(> .cover) > :is(.listing-title, div:has(> .entry-link)) { grid-column: 3; grid-row: 1; }
+    .content-list .main-content:has(> .cover) > .status { grid-column: 2 / 4; grid-row: 2; }
+    .content-list .main-content > .url { grid-column: 3; grid-row: 1; justify-self: end; }
+    .content-list .main-content:has(> .cover) > .url { grid-column: 4; grid-row: 2; }
+    .content-list .main-content > [class*="col-"]:not(.seq, .cover, .url, .listing-creator, [class*="listing-"], :has(> .entry-link), :has(> .children-button)) { grid-column: 2 / -1; grid-row: auto; max-width: none; }
+  }
+}
+:is(.admin-workspace.content-workspace, :where(#brando-main > .content):has(> .content-list-wrapper)) .content-list .list-tools .statuses .status .label { display: inline; }
 
 /* Creators remain recognizable in every listing, including when their photo is absent. */
-.admin-workspace .content-list .item-meta {
+:is(.admin-workspace, :where(#brando-main > .content):has(> .content-list-wrapper)) .content-list .item-meta {
   display: flex; align-items: center; gap: 10px;
   .avatar-wrapper { display: flex; flex: 0 0 30px; margin: 0; padding: 0; }
   .avatar-wrapper:not(:has(img)) { display: flex; }

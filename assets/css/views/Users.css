@@ -1,5 +1,5 @@
 /* Shared opt-in listing controls and row treatment. */
-.admin-workspace.workspace-list {
+:is(.admin-workspace.workspace-list, :where(#brando-main > .content):has(> .content-list-wrapper)) {
   .content-list-wrapper, .content-list { min-width: 0; }
   .content-list .list-tools-wrapper { margin-bottom: 20px; gap: 12px; }
   .content-list .list-tools { gap: 12px; }

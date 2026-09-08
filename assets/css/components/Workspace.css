@@ -1,5 +1,6 @@
-/* Opt-in settings and directory layouts. See docs/admin-ui-design.md. */
-.admin-workspace {
+/* Explicit workspaces and existing application listings using Content.header/List.
+   Only direct listing children opt in, so editors and nested lists stay scoped. */
+:is(.admin-workspace, :where(#brando-main > .content):has(> .content-list-wrapper)) {
   --workspace-ink: #272b2a;
   --workspace-muted: #626b66;
   --workspace-line: #dce2dc;
@@ -19,7 +20,14 @@
   .workspace-heading > div:first-child { min-width: 0; }
   .workspace-heading p { margin-top: 8px; font-size: 13px; color: var(--workspace-muted); }
   .workspace-heading-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
-  .workspace-button {
+  > #content-header {
+    margin: 0 0 24px; padding: 0 0 24px; border-bottom: 1px solid var(--workspace-line);
+    > .content { display: flex; align-items: center; justify-content: space-between; gap: 24px; width: 100%; margin: 0; }
+    .main { flex: 1; min-width: 0; width: auto; max-width: none; margin: 0; padding: 0; }
+    .main h3 { margin: 8px 0 0; font-size: 13px; line-height: 1.55; color: var(--workspace-muted); }
+    .actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; flex: 0 0 auto; gap: 8px; width: auto; max-width: none; margin: 0; padding: 0; }
+  }
+  :is(.workspace-button, #content-header .actions > a, #content-header .actions > button) {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     width: auto; min-width: 0; height: auto; min-height: 30px; margin: 0; padding: 5px 12px;
     border: 1px solid var(--workspace-line); border-radius: 5px; background: #fff;
@@ -69,8 +77,10 @@
     h1 { font-size: 26px; }
     .workspace-heading { align-items: flex-start; flex-direction: column; gap: 16px; }
     .workspace-heading-actions { justify-content: flex-start; }
+    > #content-header > .content { align-items: flex-start; flex-direction: column; gap: 16px; }
+    > #content-header .actions { justify-content: flex-start; }
     .workspace-panel-heading { padding: 16px; flex-wrap: wrap; }
     .workspace-table-scroll { padding-inline: 16px; }
   }
-  @media (pointer: coarse) { .workspace-button { min-height: 40px; } }
+  @media (pointer: coarse) { :is(.workspace-button, #content-header .actions > a, #content-header .actions > button) { min-height: 40px; } }
 }
