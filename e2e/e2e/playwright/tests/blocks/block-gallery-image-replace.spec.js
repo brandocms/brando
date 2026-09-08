@@ -47,7 +47,7 @@ test.describe('Gallery block image replacement', () => {
 
     // Upload a new image to replace the removed one
     const fileChooser = page.waitForEvent('filechooser')
-    await page.getByRole('button', { name: 'Upload images' }).click()
+    await page.getByRole('button', { name: 'Upload media' }).click()
     await (await fileChooser).setFiles('./fixtures/image.jpg')
     await confirmUploadFolder(page)
     await syncLV(page)

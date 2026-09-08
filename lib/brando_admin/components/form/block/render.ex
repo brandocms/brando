@@ -1697,6 +1697,10 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :block, :any, required: true
   attr :multi, :boolean, default: false
   attr :wide_config, :boolean, default: false
+  attr :config_layout, :string, default: nil
+  attr :config_title, :string, default: nil
+  attr :config_subtitle, :string, default: nil
+  attr :config_icon, :string, default: "hero-adjustments-horizontal"
   attr :type, :any
   attr :block_type, :any
   attr :is_datasource?, :boolean, default: false
@@ -1770,7 +1774,10 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       </div>
       <Content.modal
         :if={@config_open?}
-        title={gettext("Configure")}
+        title={@config_title || gettext("Configure")}
+        subtitle={@config_subtitle}
+        icon={@config_icon}
+        layout={@config_layout}
         id={"block-#{@uid}_config"}
         show={true}
         close={JS.push("close_block_config", target: @target)}
@@ -1780,8 +1787,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           {render_slot(@config)}
         <% end %>
         <:footer>
+          <span :if={@config_layout == "editor"} class="modal-footer-note">{gettext("Included when you save the entry")}</span>
           <button type="button" class="primary" phx-click="close_block_config" phx-target={@target}>
-            {gettext("Close")}
+            {if @config_layout == "editor", do: gettext("Done"), else: gettext("Close")}
           </button>
           <%= if @config_footer do %>
             {render_slot(@config_footer)}

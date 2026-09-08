@@ -14,6 +14,19 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
   alias BrandoAdmin.Components.ImagePicker
   alias BrandoAdmin.Components.VideoPicker
 
+  def update(%{event: "upload_complete", asset: asset}, socket) do
+    type = if is_struct(asset, Brando.Images.Image), do: :image, else: :video
+    {:ok, add_gallery_media(socket, type, asset.id)}
+  end
+
+  def update(%{event: "image_processed", image: image}, socket) do
+    update(%{action: :update_image, updated_image: image, force_validation: true}, socket)
+  end
+
+  def update(%{event: "video_created_from_url", video_data: %{id: id}}, socket) do
+    {:ok, add_gallery_media(socket, :video, id)}
+  end
+
   def update(%{action: :update_image, updated_image: updated_image, force_validation: true}, socket) do
     updated_image_id = updated_image.id
 
@@ -28,6 +41,8 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
 
   def update(assigns, socket) do
     changeset = assigns.field.form.source
+    config_target = Brando.Assets.ConfigTarget.serialize(Ecto.Changeset.get_field(changeset, :config_target) || "default")
+    {video_config, _} = Brando.Uploads.resolve_video_config(config_target)
 
     gallery_objects =
       changeset
@@ -39,6 +54,8 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign(:config_target, config_target)
+     |> assign(:video_upload_enabled?, Brando.Uploads.video_upload_available?(video_config))
      |> assign(:gallery_objects, gallery_objects)
      |> assign(:selected_images, Media.selected_ids(gallery_objects, :image_id))
      |> assign(:selected_videos, Media.selected_ids(gallery_objects, :video_id))}
@@ -48,26 +65,46 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
     ~H"""
     <fieldset>
       <Primitives.field_base field={@field} label={@label} instructions={@instructions} class="subform">
-        <div class="gallery-input">
+        <div
+          id={"#{@id}-upload"}
+          class="gallery-input media-gallery"
+          phx-hook="Brando.UploadTrigger"
+          data-kind="resource_gallery"
+          data-component-id={@id}
+          data-asset-type="image"
+          data-config-target={@config_target}
+          data-video-config-target={@config_target}
+          data-folder-browser="true"
+          data-click-mode="trigger"
+          data-upload-label={@label || gettext("Gallery")}
+          data-allowed-types={if @video_upload_enabled?, do: "image,video", else: "image"}
+          data-accept={if @video_upload_enabled?, do: "image/*,video/*", else: "image/*"}
+        >
+          <input type="file" class="file-input" multiple />
+          <div id={"#{@id}-progress"} class="media-field-progress" phx-update="ignore" role="status" aria-live="polite"></div>
+          <div class="media-field-drop" aria-hidden="true">{gettext("Drop to add to this gallery")}</div>
           <div class="actions">
+            <button type="button" class="media-button primary upload-trigger">{gettext("Upload media")}</button>
             <button
               phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
               type="button"
-              class="tiny"
+              class="media-button"
             >
-              {gettext("Select images")}
+              {gettext("Browse images")}
             </button>
             <button
               phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
               type="button"
-              class="tiny"
+              class="media-button"
             >
-              {gettext("Select videos")}
+              {gettext("Browse videos")}
             </button>
           </div>
 
           <%= if @gallery_objects == [] do %>
-            <small>{gettext("No images in gallery")}</small>
+            <div class="media-gallery-empty">
+              {if @video_upload_enabled?, do: gettext("Drop images or videos to add"), else: gettext("Drop images to add")}
+            </div>
           <% else %>
             <div
               id="sortable-gallery-objects-edit"
@@ -114,7 +151,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
   def handle_event("set_target", _, socket) do
     send_update(ImagePicker,
       id: "image-picker",
-      config_target: {"gallery", Brando.Galleries.Gallery, :gallery_objects},
+      config_target: socket.assigns.config_target,
       event_target: socket.assigns.myself,
       multi: true,
       selected_images: socket.assigns.selected_images
@@ -134,7 +171,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
   def handle_event("open_video_picker", _, socket) do
     send_update(VideoPicker,
       id: "video-picker",
-      config_target: nil,
+      config_target: socket.assigns.config_target,
       event_target: socket.assigns.myself,
       multi: true,
       selected_videos: socket.assigns.selected_videos

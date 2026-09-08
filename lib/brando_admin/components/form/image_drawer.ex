@@ -56,7 +56,17 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
     assigns = assign(assigns, :upload_dom_id, upload_dom_id)
 
     ~H"""
-    <Content.drawer id="image-drawer" title={gettext("Image")} close={close_image()} z={1001} narrow>
+    <Content.drawer
+      id="image-drawer"
+      title={gettext("Image details")}
+      close={close_image()}
+      z={1001}
+      narrow
+      light
+      workspace
+      icon="hero-photo"
+      subtitle={gettext("Edit the shared library image.")}
+    >
       <.form
         :let={image_form}
         :if={@image_changeset}
@@ -79,6 +89,8 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
           phx-hook="Brando.UploadTrigger"
           data-kind="entry_field"
           data-asset-type="image"
+          data-max-files="1"
+          data-asset-id={@edit_image.image && @edit_image.image.id}
           data-field={@edit_image.field}
           data-path={Jason.encode!(@edit_image.path || [])}
           data-config-target={
@@ -91,6 +103,14 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
           class="image-drawer-preview"
         >
           <input id="image-drawer-upload-input" type="file" class="file-input" />
+          <div
+            id="image-drawer-upload-progress"
+            class="media-field-progress"
+            phx-update="ignore"
+            role="status"
+            aria-live="polite"
+          >
+          </div>
           <%= if @edit_image.image do %>
             <figure class="grid-overlay">
               <div class="drop-indicator">
@@ -109,7 +129,11 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
                 src={Brando.Utils.img_url(@edit_image.image, :original, prefix: Brando.Utils.media_url())}
               />
             </figure>
-            <figcaption class="tiny">{@edit_image.image.path}</figcaption>
+            <div class="image-detail-file-info">
+              <span>{Path.basename(@edit_image.image.path)}</span>
+              <span>{@edit_image.image.width} × {@edit_image.image.height}</span>
+            </div>
+            <p class="image-detail-focal-hint">{gettext("Click the image to set its focal point.")}</p>
           <% else %>
             <%!-- Carries `upload-trigger` so the empty state stays click-to-upload
             under `trigger` mode — there is no focal point to conflict with when
@@ -135,55 +159,60 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
           <% end %>
         </div>
 
-        <div class="button-group vertical">
-          <button
-            id={"image-drawer-upload-#{@upload_dom_id}"}
-            class="secondary"
-            type="button"
-            phx-click={JS.dispatch("click", to: "#image-drawer-upload-input")}
-          >
-            {gettext("Upload image")}
-          </button>
-          <button class="secondary" type="button" phx-click={toggle_drawer("#image-picker")}>
-            {gettext("Select existing image")}
-          </button>
-
+        <div class="image-detail-actions">
           <button
             :if={@edit_image.image && @edit_image.image.path}
-            class="secondary"
+            class="workspace-button primary"
             type="button"
             phx-click={open_image_editor(@edit_image, @myself)}
           >
-            {gettext("Edit/Crop image")}
+            <.icon name="hero-scissors" />{gettext("Edit/Crop")}
           </button>
-
-          <button
-            :if={@edit_image.image}
-            class="secondary"
-            type="button"
-            phx-click={duplicate_image(@edit_image, @myself)}
-          >
-            {gettext("Duplicate image")}
-          </button>
-
-          <button class="secondary" type="button" phx-click={reset_image_field(@myself)}>
-            {gettext("Reset image field")}
-          </button>
+          <details class="media-action-menu">
+            <summary class="workspace-button">
+              <.icon name="hero-arrow-path" />{gettext("Replace")}<.icon name="hero-chevron-down-mini" />
+            </summary>
+            <div class="media-action-options">
+              <button
+                id={"image-drawer-upload-#{@upload_dom_id}"}
+                type="button"
+                phx-click={JS.dispatch("click", to: "#image-drawer-upload-input")}
+              ><.icon name="hero-arrow-up-tray" />{gettext("Upload")}</button>
+              <button type="button" phx-click={toggle_drawer("#image-picker")}><.icon name="hero-folder" />{gettext(
+                "Browse library"
+              )}</button>
+            </div>
+          </details>
+          <details :if={@edit_image.image} class="media-action-menu image-detail-more">
+            <summary class="workspace-button" aria-label={gettext("More image actions")}>
+              <.icon name="hero-ellipsis-horizontal" />
+            </summary>
+            <div class="media-action-options">
+              <button type="button" phx-click={duplicate_image(@edit_image, @myself)}><.icon name="hero-document-duplicate" />{gettext(
+                "Duplicate"
+              )}</button>
+              <button type="button" class="destructive" phx-click={reset_image_field(@myself)}><.icon name="hero-trash" />{gettext(
+                "Remove"
+              )}</button>
+            </div>
+          </details>
         </div>
         <%= if @edit_image.image do %>
-          <div class="brando-input">
+          <section class="image-detail-metadata">
+            <div class="image-detail-section-heading">
+              <h3>{gettext("Library details")}</h3>
+              <p>{gettext("Changes apply wherever this image is used.")}</p>
+            </div>
+            <Input.text field={image_form[:alt]} label={gettext("Alternative text")} />
             <Input.text field={image_form[:title]} label={gettext("Caption")} />
-          </div>
-
-          <div class="brando-input">
             <Input.text field={image_form[:credits]} label={gettext("Credits")} />
-          </div>
-
-          <div class="brando-input">
-            <Input.text field={image_form[:alt]} label={gettext("Alt. text")} />
-          </div>
+          </section>
         <% end %>
       </.form>
+      <:footer>
+        <span>{gettext("Shared image settings")}</span>
+        <button type="button" class="workspace-button primary" phx-click={close_image()}>{gettext("Done")}</button>
+      </:footer>
     </Content.drawer>
     """
   end

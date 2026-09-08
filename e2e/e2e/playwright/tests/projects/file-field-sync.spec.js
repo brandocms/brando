@@ -16,32 +16,32 @@ test('file drawer save ships the file field to a second connected editor', async
   await syncLV(page)
   await page.getByRole('link', { name: 'Test Project Gamma' }).click()
   await syncLV(page)
-  await expect(page.getByRole('button', { name: 'Add file' })).toBeVisible({ timeout: 10000 })
+  await expect(page.locator('.media-field[data-asset-type=file]').getByRole('button', { name: 'Upload', exact: true })).toBeVisible({ timeout: 10000 })
 
   // B opens the same entry
   const path = new URL(page.url()).pathname
   await secondUserPage.goto(path)
   await syncLV(secondUserPage)
-  await expect(secondUserPage.getByRole('button', { name: 'Add file' })).toBeVisible({
+  await expect(secondUserPage.locator('.media-field[data-asset-type=file]').getByRole('button', { name: 'Upload', exact: true })).toBeVisible({
     timeout: 10000,
   })
 
   // A uploads a file and saves it via the drawer (closing dispatches submit →
   // save_file → ship_all_field_changes)
-  await page.getByRole('button', { name: 'Add file' }).click()
-  await syncLV(page)
-  await page.locator('#file-drawer-upload-input').setInputFiles('./fixtures/test.pdf')
+  const field = page.locator('.media-field[data-asset-type=file]')
+  await field.locator('input[type=file]').setInputFiles('./fixtures/test.pdf')
+  await field.getByRole('button', { name: 'Configure', exact: true }).click()
   // the drawer renders .file-info once the uploaded file is delivered
   await expect(page.locator('#file-drawer .file-info')).toBeVisible({ timeout: 20000 })
   await syncLV(page)
   await page.locator('#file-drawer').getByRole('button', { name: 'Close' }).click()
   await page.waitForSelector('#file-drawer', { state: 'hidden' })
   await syncLV(page)
-  await expect(page.getByRole('button', { name: 'Edit file' })).toBeVisible({ timeout: 20000 })
+  await expect(page.locator('.media-field[data-asset-type=file]').getByRole('button', { name: 'Configure', exact: true })).toBeVisible({ timeout: 20000 })
 
   // B must see the file WITHOUT reloading — the shipped field change applies
   // to B's form in place
-  await expect(secondUserPage.getByRole('button', { name: 'Edit file' })).toBeVisible({
+  await expect(secondUserPage.locator('.media-field[data-asset-type=file]').getByRole('button', { name: 'Configure', exact: true })).toBeVisible({
     timeout: 15000,
   })
 })

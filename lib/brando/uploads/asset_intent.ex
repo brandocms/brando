@@ -24,13 +24,16 @@ defmodule Brando.Uploads.AssetIntent do
     entry_var_gallery
     entry_field
     entry_field_gallery
+    resource_gallery
     transformer_image
     transformer_video
     video_picker
+    asset_library
     file_replace
   )
 
   @known_keys ~w(
+    expected_asset_id
     scope_token
     kind
     component_id
@@ -64,7 +67,8 @@ defmodule Brando.Uploads.AssetIntent do
          {:ok, topic} <- deliver_topic(target["deliver_topic"]),
          {:ok, path} <- path(target["path"]),
          {:ok, ref} <- ref(target["ref"]),
-         :ok <- validate_destination(kind, target) do
+         :ok <- validate_destination(kind, target),
+         :ok <- validate_expected_asset_id(target["expected_asset_id"]) do
       {:ok,
        target
        |> Map.put("kind", kind)
@@ -79,6 +83,20 @@ defmodule Brando.Uploads.AssetIntent do
   end
 
   def normalize(_), do: {:error, "Invalid upload target"}
+
+  defp validate_expected_asset_id(value) when value in [nil, "none"], do: :ok
+
+  defp validate_expected_asset_id(value) do
+    case Ecto.Type.cast(:id, value) do
+      {:ok, id} when is_integer(id) and id > 0 -> :ok
+      _ -> {:error, "Invalid current asset id"}
+    end
+  end
+
+  @doc "Whether a replacement still refers to the selection that started it."
+  def current_selection?(nil, _id), do: true
+  def current_selection?("none", id), do: is_nil(id)
+  def current_selection?(expected, id), do: to_string(expected) == to_string(id)
 
   # Targets arrive with string keys from the browser and atom keys from
   # server-side callers. `Map.get/3`'s default is evaluated eagerly, so the old
@@ -117,7 +135,14 @@ defmodule Brando.Uploads.AssetIntent do
         kind when kind in ["transformer_video", "video_picker"] ->
           asset_type == "video"
 
-        kind when kind in ["block_ref_gallery", "block_var_gallery", "entry_var_gallery", "entry_field_gallery"] ->
+        kind
+        when kind in [
+               "block_ref_gallery",
+               "block_var_gallery",
+               "entry_var_gallery",
+               "entry_field_gallery",
+               "resource_gallery"
+             ] ->
           asset_type in ["image", "video"]
 
         _ ->

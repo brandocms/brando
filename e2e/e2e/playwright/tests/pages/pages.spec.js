@@ -39,7 +39,7 @@ test('creates a simple page', async ({ page }) => {
 
   // we can wait until we have [data-block-type="video"] in the DOM
   await page.waitForSelector('[data-block-type="video"]', { state: 'visible' })
-  await page.getByRole('button', { name: 'Select or create video' }).click()
+  await page.locator('.video-block .media-field:visible').getByRole('button', { name: 'Browse library', exact: true }).click()
 
   // Wait for the video picker drawer to be visible
   const videoPicker = page.locator('#video-picker')
@@ -158,15 +158,12 @@ test('creates meta information', async ({ page }) => {
   await page.locator('input[name="page[meta_title]"]').fill('Overridden title')
   await page.locator('textarea[name="page[meta_description]"]').fill('Overridden description')
 
-  // Add SEO image
-  await page.getByRole('button', { name: 'Add image' }).click()
-  await page.locator('#image-drawer-upload-input').setInputFiles('./fixtures/image.jpg')
+  // Upload the SEO image directly in the Meta field.
+  const imageField = page.locator('#page_meta_image-media')
+  await imageField.locator('input[type="file"]').setInputFiles('./fixtures/image.jpg')
   await confirmUploadFolder(page)
-  // Wait for upload to complete - the image should appear in the drawer
-  await expect(page.locator('#image-drawer img')).toBeVisible({ timeout: 30000 })
-  // Close drawer - this should save the image selection
-  await page.getByRole('button', { name: 'Close' }).first().click()
-  await page.waitForSelector('#image-drawer', { state: 'hidden' })
+  await expect(imageField.locator('img')).toBeVisible({ timeout: 30000 })
+  await page.locator('[id$="-meta-drawer"]').getByRole('button', { name: 'Close', exact: true }).click()
   await syncLV(page)
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL('/admin/pages')

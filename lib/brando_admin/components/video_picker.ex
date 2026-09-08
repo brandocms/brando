@@ -575,6 +575,9 @@ defmodule BrandoAdmin.Components.VideoPicker do
         z={@z_index}
         wide
         light
+        workspace
+        icon="hero-film"
+        subtitle={gettext("Select a video from your library.")}
       >
         <:info>
           <.live_component
@@ -582,14 +585,61 @@ defmodule BrandoAdmin.Components.VideoPicker do
             id={"#{@id}-top"}
             section={:top}
             mode={:drawer}
+            root_name={gettext("Videos")}
             target={@myself}
             upload_root={@upload_root}
             current_folder={@current_folder}
             breadcrumbs={@breadcrumbs}
             recent_folders={@recent_folders_for_root}
           >
-            <:top_lead>
-              <div class="video-picker-url-section">
+            <:toolbar_actions>
+              <div class="image-picker-view-toggle">
+                <button
+                  id={"#{@id}-view-grid"}
+                  class="view-toggle"
+                  type="button"
+                  phx-click={show_grid(@id)}
+                >
+                  {gettext("Grid")}
+                </button>
+                <button
+                  id={"#{@id}-view-list"}
+                  class="view-toggle is-active"
+                  type="button"
+                  phx-click={show_list(@id)}
+                >
+                  {gettext("List")}
+                </button>
+              </div>
+            </:toolbar_actions>
+          </.live_component>
+        </:info>
+
+        <.live_component
+          module={FileBrowser}
+          id={"#{@id}-browser"}
+          section={:browser}
+          mode={:drawer}
+          target={@myself}
+          upload_root={@upload_root}
+          current_folder={@current_folder}
+          breadcrumbs={@breadcrumbs}
+          recent_folders={@recent_folders_for_root}
+          show_recent_folders={false}
+          child_folders={@child_folders}
+          show_new_folder_form={@show_new_folder_form}
+          new_folder={@new_folder}
+          main_id={"video-picker-main-#{@id}"}
+          enable_folder_drop={true}
+          folder_drop_event="picker_move_to_folder"
+        >
+          <:main_header>
+            <div class="image-picker-main-header">
+              <h3>{if @current_folder == "", do: gettext("Root folder"), else: Path.basename(@current_folder)}</h3>
+              <div class="image-picker-main-actions">
+                <span>
+                  {ngettext("%{count} video", "%{count} videos", @video_count, count: @video_count)}
+                </span>
                 <div class="video-picker-add-actions">
                   <button
                     :if={@allow_external_urls?}
@@ -643,96 +693,46 @@ defmodule BrandoAdmin.Components.VideoPicker do
                     <input type="file" accept="video/*" class="video-picker-file-input" />
                   </div>
                 </div>
-
-                <div :if={@allow_external_urls? && @show_url_input} class="video-picker-url-input">
-                  <div
-                    class="video-url-parser"
-                    phx-hook="Brando.VideoURLParser"
-                    data-target={@myself}
-                    id={"video-url-parser-#{@id}"}
-                  >
-                    <div class="video-picker-url-field">
-                      <label>{gettext("Video URL")}</label>
-                      <input
-                        type="text"
-                        class="text"
-                        placeholder={gettext("Paste YouTube, Vimeo or direct video URL")}
-                      />
-                      <button type="button" class="video-picker-add-btn">
-                        <%= if @creating_video do %>
-                          {gettext("Creating...")}
-                        <% else %>
-                          {gettext("Create video")}
-                        <% end %>
-                      </button>
-                      <div class="video-picker-analyzing hidden">
-                        <div class="spinner"></div>
-                        <span>{gettext("Analyzing video...")}</span>
-                      </div>
-                    </div>
+              </div>
+            </div>
+            <div :if={@allow_external_urls? && @show_url_input} class="video-picker-url-input">
+              <div
+                class="video-url-parser"
+                phx-hook="Brando.VideoURLParser"
+                data-target={@myself}
+                id={"video-url-parser-#{@id}"}
+              >
+                <div class="video-picker-url-field">
+                  <label for={"#{@id}-source-url"}>{gettext("Video URL")}</label>
+                  <input
+                    id={"#{@id}-source-url"}
+                    type="text"
+                    class="text"
+                    placeholder={gettext("Paste YouTube, Vimeo or direct video URL")}
+                  />
+                  <button type="button" class="video-picker-add-btn">
+                    <%= if @creating_video do %>
+                      {gettext("Creating...")}
+                    <% else %>
+                      {gettext("Create video")}
+                    <% end %>
+                  </button>
+                  <div class="video-picker-analyzing hidden">
+                    <div class="spinner"></div>
+                    <span>{gettext("Analyzing video...")}</span>
                   </div>
                 </div>
+              </div>
+            </div>
 
-                <div :if={@upload_progress} class="video-picker-upload-progress">
-                  <div class="progress-bar">
-                    <div class="progress-fill" style={"width: #{@upload_progress.percentage}%"}></div>
-                  </div>
-                  <span class="progress-text">
-                    {gettext("Uploading...")} {@upload_progress.percentage}%
-                    ({@upload_progress.uploaded_mb}/{@upload_progress.total_mb} MB)
-                  </span>
-                </div>
+            <div :if={@upload_progress} class="video-picker-upload-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" style={"width: #{@upload_progress.percentage}%"}></div>
               </div>
-            </:top_lead>
-            <:toolbar_actions>
-              <div class="video-picker-view-toggle">
-                <button
-                  id={"#{@id}-view-grid"}
-                  class="view-toggle"
-                  type="button"
-                  phx-click={show_grid(@id)}
-                >
-                  {gettext("Grid")}
-                </button>
-                <button
-                  id={"#{@id}-view-list"}
-                  class="view-toggle is-active"
-                  type="button"
-                  phx-click={show_list(@id)}
-                >
-                  {gettext("List")}
-                </button>
-              </div>
-            </:toolbar_actions>
-          </.live_component>
-        </:info>
-
-        <.live_component
-          module={FileBrowser}
-          id={"#{@id}-browser"}
-          section={:browser}
-          mode={:drawer}
-          target={@myself}
-          upload_root={@upload_root}
-          current_folder={@current_folder}
-          breadcrumbs={@breadcrumbs}
-          recent_folders={@recent_folders_for_root}
-          show_recent_folders={false}
-          child_folders={@child_folders}
-          show_new_folder_form={@show_new_folder_form}
-          new_folder={@new_folder}
-          main_id={"video-picker-main-#{@id}"}
-          enable_folder_drop={true}
-          folder_drop_event="picker_move_to_folder"
-        >
-          <:main_header>
-            <div class="video-picker-main-header">
-              <h3>{folder_label_for_display(@current_folder, @upload_root)}</h3>
-              <div class="video-picker-main-actions">
-                <span>
-                  {ngettext("%{count} video", "%{count} videos", @video_count, count: @video_count)}
-                </span>
-              </div>
+              <span class="progress-text">
+                {gettext("Uploading...")} {@upload_progress.percentage}%
+                ({@upload_progress.uploaded_mb}/{@upload_progress.total_mb} MB)
+              </span>
             </div>
           </:main_header>
 
@@ -741,7 +741,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
             class="video-picker list"
           >
             <%= if @video_count == 0 do %>
-              <div class="video-picker-empty">
+              <div class="image-picker-empty">
                 <.icon name="hero-film" />
                 <h4>{gettext("No videos in this folder")}</h4>
                 <p>{gettext("Create a video from URL or choose another folder")}</p>
@@ -852,6 +852,10 @@ defmodule BrandoAdmin.Components.VideoPicker do
     <div
       id={@id}
       class="video-picker__video"
+      role="button"
+      tabindex="0"
+      phx-key="Enter"
+      phx-keydown={JS.exec("phx-click")}
       data-id={@video.id}
       phx-click={
         if @multi,
@@ -893,7 +897,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
             </div>
           <% end %>
         </div>
-        <div class="video-picker__meta">{@video.type}</div>
+        <div class="video-picker__meta">{video_type_label(@video.type)}</div>
         <div :if={@video.width && @video.height} class="video-picker__meta">
           {@video.width}&times;{@video.height}
         </div>
@@ -961,6 +965,12 @@ defmodule BrandoAdmin.Components.VideoPicker do
     """
   end
 
+  defp video_type_label(:upload), do: gettext("Uploaded file")
+  defp video_type_label(:external_file), do: gettext("External file")
+  defp video_type_label(:youtube), do: "YouTube"
+  defp video_type_label(:vimeo), do: "Vimeo"
+  defp video_type_label(type), do: type |> to_string() |> String.capitalize()
+
   defp video_preview(assigns) do
     thumbnail_url =
       Brando.Videos.Helpers.thumbnail_url(assigns.video) ||
@@ -976,6 +986,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
       phx-value-source-url={@video.source_url}
       phx-value-type={@video.type}
     >
+      <.icon name="hero-film" />
       <%= cond do %>
         <% @video.thumbnail -> %>
           <Content.image image={@video.thumbnail} size={:smallest} />

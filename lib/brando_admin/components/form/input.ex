@@ -1024,6 +1024,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           :if={@any_overridden}
           type="button"
           class="override-reset-all"
+          aria-label={gettext("Reset all to defaults")}
           phx-click="reset_override_group"
           phx-target={@target}
           phx-value-fields={Enum.map_join(@rows, ",", fn {f, _, _, _} -> f.field end)}
@@ -1039,6 +1040,9 @@ defmodule BrandoAdmin.Components.Form.Input do
             "override-toggle-btn",
             (value == true || (value == nil && default_val)) && "active"
           ]}
+          role="switch"
+          aria-label={label}
+          aria-checked={to_string(value == true || (value == nil && default_val) || false)}
           phx-click="toggle_override"
           phx-target={@target}
           phx-value-field={to_string(field.field)}
@@ -1049,6 +1053,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           :if={value != nil && value != (default_val || false)}
           type="button"
           class="override-reset-inline"
+          aria-label={gettext("Reset %{label} to default", label: label)}
           phx-click="reset_override"
           phx-target={@target}
           phx-value-field={field.field}

@@ -224,88 +224,100 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             id={"block-#{@uid}-upload"}
             phx-hook="Brando.UploadTrigger"
             data-kind="block_ref_gallery"
+            data-upload-label={@ref_description || gettext("Gallery")}
             data-component-id={"#{@uid}-gallery"}
             data-asset-type="image"
             data-config-target={@image_config_target}
             data-folder-browser="true"
             data-click-mode="trigger"
-            data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
-            class="gallery-upload-wrapper"
+            data-accept={Enum.map_join(@allowed_types, ",", &"#{&1}/*")}
+            data-video-config-target={@video_config_target}
+            data-allowed-types={Enum.join(@allowed_types, ",")}
+            class="gallery-upload-wrapper media-gallery"
           >
             <input
               type="file"
               class="file-input"
-              accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
+              accept={Enum.map_join(@allowed_types, ",", &"#{&1}/*")}
               multiple
             />
 
             <div class="gallery-buttons">
-              <button :if={:image in @allowed_types} type="button" class="tiny upload-trigger">
-                {gettext("Upload images")}
+              <button type="button" class="media-button primary upload-trigger">
+                {gettext("Upload media")}
               </button>
               <button
                 :if={:image in @allowed_types}
                 type="button"
-                class="tiny"
+                class="media-button"
                 phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
               >
-                {gettext("Select images")}
+                {gettext("Browse images")}
               </button>
               <button
                 :if={:video in @allowed_types}
                 type="button"
-                class="tiny"
+                class="media-button"
                 phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
               >
-                {gettext("Select videos")}
+                {gettext("Browse videos")}
               </button>
             </div>
-          </div>
 
-          <%= if @gallery do %>
-            <.inputs_for :let={gallery_form} field={@ref_form[:gallery]}>
-              <Input.input type={:hidden} field={gallery_form[:id]} />
-              <Input.input type={:hidden} field={gallery_form[:config_target]} />
-              <div
-                id={"sortable-#{block_data.id}-gallery-objects"}
-                class={[
-                  "images",
-                  (@display == :grid && "images-grid") || "images-list"
-                ]}
-                phx-hook="Brando.SortableAssocs"
-                data-target={@myself}
-                data-sortable-id={"sortable-#{block_data.id}-gallery"}
-                data-sortable-handle=".sort-handle-gallery-object"
-                data-sortable-selector=".gallery-object"
-                data-sortable-dispatch-event="true"
-              >
-                <.inputs_for
-                  :let={gallery_object_form}
-                  field={gallery_form[:gallery_objects]}
-                  skip_hidden
+            <%= if @gallery do %>
+              <.inputs_for :let={gallery_form} field={@ref_form[:gallery]}>
+                <Input.input type={:hidden} field={gallery_form[:id]} />
+                <Input.input type={:hidden} field={gallery_form[:config_target]} />
+                <div
+                  id={"sortable-#{block_data.id}-gallery-objects"}
+                  class={[
+                    "images",
+                    (@display == :grid && "images-grid") || "images-list"
+                  ]}
+                  phx-hook="Brando.SortableAssocs"
+                  data-target={@myself}
+                  data-sortable-id={"sortable-#{block_data.id}-gallery"}
+                  data-sortable-handle=".sort-handle-gallery-object"
+                  data-sortable-selector=".gallery-object"
+                  data-sortable-dispatch-event="true"
                 >
-                  <Object.render
-                    gallery_object_form={gallery_object_form}
-                    gallery_objects={@gallery_objects}
-                    display={@display}
-                    myself={@myself}
-                    uid={@uid}
-                    gallery_form={gallery_form}
-                    override_data={@override_data}
-                    block_data={block_data}
-                    form_id={@form_id}
-                  />
-                </.inputs_for>
-              </div>
-              <input type="hidden" name={"#{gallery_form.name}[drop_gallery_object_ids][]"} />
-            </.inputs_for>
-          <% end %>
+                  <.inputs_for
+                    :let={gallery_object_form}
+                    field={gallery_form[:gallery_objects]}
+                    skip_hidden
+                  >
+                    <Object.render
+                      gallery_object_form={gallery_object_form}
+                      gallery_objects={@gallery_objects}
+                      display={@display}
+                      myself={@myself}
+                      uid={@uid}
+                      gallery_form={gallery_form}
+                      override_data={@override_data}
+                      block_data={block_data}
+                      form_id={@form_id}
+                    />
+                  </.inputs_for>
+                </div>
+                <input type="hidden" name={"#{gallery_form.name}[drop_gallery_object_ids][]"} />
+              </.inputs_for>
+            <% end %>
 
-          <div :if={!@has_objects?} class="upload-canvas empty">
-            <div class="alert">
-              {gettext(
-                "No objects currently in block. Click one of the buttons above to get started, or drag and drop media here."
-              )}
+            <div :if={!@has_objects?} class="media-gallery-empty">
+              <.icon name="hero-photo" />
+              <span>{gettext("Drop media here to build your gallery")}</span>
+              <span class="media-field-meta">{gettext("You can reorder and configure each item afterwards.")}</span>
+            </div>
+            <div
+              id={"block-#{@uid}-gallery-progress"}
+              class="media-field-progress"
+              phx-update="ignore"
+              role="status"
+              aria-live="polite"
+            >
+            </div>
+            <div class="media-field-drop" aria-hidden="true">
+              <.icon name="hero-arrow-up-tray" /><span>{gettext("Add to gallery")}</span>
             </div>
           </div>
 

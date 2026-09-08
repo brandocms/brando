@@ -1,0 +1,3028 @@
+{
+  "date": "2026-09-08",
+  "scope": "Full default E2E suite with database reset, followed by targeted reruns; not a second full-suite run.",
+  "final_counts": {
+    "passed": 197,
+    "intentionally_skipped": 12,
+    "unresolved_failures": 0
+  },
+  "full_run": {
+    "stats": {
+      "startTime": "2026-09-08T15:08:35.824Z",
+      "duration": 2227028.268,
+      "expected": 179,
+      "skipped": 14,
+      "unexpected": 16,
+      "flaky": 0
+    },
+    "reported_summary": {
+      "passed": 179,
+      "failed": 16,
+      "intentionally_skipped": 12,
+      "blocked_by_serial_failure": 2
+    }
+  },
+  "workspace_followup": [
+    {
+      "file": "admin-workspaces.spec.js",
+      "title": "menu-editor workspace at desktop and mobile sizes",
+      "status": "expected",
+      "evidence": "\u2713   1 [Google Chrome] \u203a tests/admin-workspaces.spec.js:19:7 \u203a menu-editor workspace at desktop and mobile sizes (1.2s)"
+    },
+    {
+      "file": "admin-workspaces.spec.js",
+      "title": "seo workspace at desktop and mobile sizes",
+      "status": "expected",
+      "evidence": "\u2713   2 [Google Chrome] \u203a tests/admin-workspaces.spec.js:19:7 \u203a seo workspace at desktop and mobile sizes (775ms)"
+    },
+    {
+      "file": "admin-workspaces.spec.js",
+      "title": "identity workspace at desktop and mobile sizes",
+      "status": "expected",
+      "evidence": "\u2713   3 [Google Chrome] \u203a tests/admin-workspaces.spec.js:19:7 \u203a identity workspace at desktop and mobile sizes (771ms)"
+    }
+  ],
+  "targeted_followup": {
+    "stats": {
+      "startTime": "2026-09-08T15:51:43.978Z",
+      "duration": 152950.71,
+      "expected": 15,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "count": 15
+  },
+  "tests": [
+    {
+      "file": "accessibility/form-a11y.spec.js",
+      "title": "a failed save marks the field invalid, announces why, and moves focus to it",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1656
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "accessibility/form-a11y.spec.js",
+      "title": "correcting the field clears the announcement",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1439
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "accessibility/form-a11y.spec.js",
+      "title": "a modal announces itself as a dialog, takes focus, and gives it back",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 850
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "admin-layout-audit.spec.js",
+      "title": "listing filters align, disclose children by keyboard and retain creators on mobile",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 953
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "admin-layout-audit.spec.js",
+      "title": "menu controls align, keyboard status works and save follows the items",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2724
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "admin-layout-audit.spec.js",
+      "title": "page text and select controls match and toolbar dropdown chevrons are identical",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1527
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "admin-workspaces.spec.js",
+      "title": "dashboard workspace at desktop and mobile sizes",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 665
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "admin-workspaces.spec.js",
+      "title": "pages workspace at desktop and mobile sizes",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 689
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "admin-workspaces.spec.js",
+      "title": "modules workspace at desktop and mobile sizes",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1070
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "admin-workspaces.spec.js",
+      "title": "navigation workspace at desktop and mobile sizes",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 652
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "admin-workspaces.spec.js",
+      "title": "menu-editor workspace at desktop and mobile sizes",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "failed",
+          "duration_ms": 631
+        },
+        {
+          "status": "failed",
+          "duration_ms": 710
+        }
+      ],
+      "verified_in": "workspace follow-up"
+    },
+    {
+      "file": "admin-workspaces.spec.js",
+      "title": "files workspace at desktop and mobile sizes",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 759
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "admin-workspaces.spec.js",
+      "title": "videos workspace at desktop and mobile sizes",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 694
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "admin-workspaces.spec.js",
+      "title": "seo workspace at desktop and mobile sizes",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "failed",
+          "duration_ms": 614
+        },
+        {
+          "status": "failed",
+          "duration_ms": 704
+        }
+      ],
+      "verified_in": "workspace follow-up"
+    },
+    {
+      "file": "admin-workspaces.spec.js",
+      "title": "identity workspace at desktop and mobile sizes",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "failed",
+          "duration_ms": 735
+        },
+        {
+          "status": "failed",
+          "duration_ms": 693
+        }
+      ],
+      "verified_in": "workspace follow-up"
+    },
+    {
+      "file": "admin-workspaces.spec.js",
+      "title": "globals workspace at desktop and mobile sizes",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 711
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "assets/files.spec.js",
+      "title": "replaces a resource file while keeping its ID and download URL",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1570
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "assets/files.spec.js",
+      "title": "closing or rejecting a replacement keeps the original file",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2097
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "assets/galleries.spec.js",
+      "title": "lists galleries and edits a gallery",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1789
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "assets/image-editor.spec.js",
+      "title": "opens image editor, adjusts focal point, and saves",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 27250
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "assets/images.spec.js",
+      "title": "browses folders, uploads and searches images without exposing folder filters",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2372
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "assets/videos.spec.js",
+      "title": "video metadata and counts follow the selected folder",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2177
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-config-vars-persistence.spec.js",
+      "title": "config vars survive a closed-modal edit, save and reload",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 6711
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-copy-paste.spec.js",
+      "title": "copy root module and paste at root level",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1735
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-copy-paste.spec.js",
+      "title": "copy module and paste at bottom of page",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1664
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-copy-paste.spec.js",
+      "title": "copy module with vars and verify pasted block has same var values",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3410
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-copy-paste.spec.js",
+      "title": "copy module and paste inside container",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1864
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-copy-paste.spec.js",
+      "title": "copy root module and paste persists after save",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2357
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-copy-paste.spec.js",
+      "title": "smart matching: module_entry only pastes into matching multi-block",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3014
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-copy-paste.spec.js",
+      "title": "clipboard can be cleared, and its pills stay quiet until hovered",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2047
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-copy-paste.spec.js",
+      "title": "copy in one entry and paste into two others",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 8098
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-copy-paste.spec.js",
+      "title": "copy a multi entry in a page and paste it into a project",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3429
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-delete-undo.spec.js",
+      "title": "deleted root block restores with content and persists through save + reload",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3188
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-delete-undo.spec.js",
+      "title": "deleted nested child restores with vars and persists through save + reload",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4868
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-footnotes.spec.js",
+      "title": "notes are opt-in, keep their subtree on save, and renumber existing markers on load",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4773
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-footnotes.spec.js",
+      "title": "Blueprint rich text keeps its own notes across save and reload",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1745
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-footnotes.spec.js",
+      "title": "a note uses the existing image, video and file controls and keeps media on reload",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 7035
+        }
+      ],
+      "verified_in": "targeted follow-up"
+    },
+    {
+      "file": "blocks/block-footnotes.spec.js",
+      "title": "a recovery copy restores an unsaved note and keeps it through the next save",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 5343
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-gallery-copy-independence.spec.js",
+      "title": "a gallery block pasted into another entry gets its own gallery",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 7078
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-gallery-image-replace.spec.js",
+      "title": "can remove an image and add another, then save successfully",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 11419
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-heex.spec.js",
+      "title": "render vars, refs and system assigns in the editor and live preview",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4611
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-identifiers.spec.js",
+      "title": "add, reorder, remove, re-add identifiers and verify persistence",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 5077
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-identifiers.spec.js",
+      "title": "clicking same identifier twice toggles selection",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1424
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-image-editor.spec.js",
+      "title": "opens image editor from picture block preview icon",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 7411
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-image-editor.spec.js",
+      "title": "opens image editor from picture block config panel",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 7293
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-image-editor.spec.js",
+      "title": "opens image editor from gallery block thumbnail",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 8379
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-image-editor.spec.js",
+      "title": "save as new copy with crop replaces gallery image",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 8612
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-image-editor.spec.js",
+      "title": "gallery image stays processed after adding another image via picker",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 17259
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-image-editor.spec.js",
+      "title": "gallery image picker deselect syncs correctly",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 7927
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-image-editor.spec.js",
+      "title": "does not show edit icon on gallery video objects",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3741
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-image-editor.spec.js",
+      "title": "save changes with zoom applies crop to picture block image",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 7082
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-image-editor.spec.js",
+      "title": "save changes with zoom applies crop to gallery block image",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 8244
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-image-editor.spec.js",
+      "title": "save as new copy with crop from picture block replaces image",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 7612
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "can enable and disable live preview",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2565
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "live preview restores after LiveSocket reconnect",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4252
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "device size buttons work (desktop/tablet/mobile)",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3671
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "adding image and changing caption updates preview",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 6682
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "toggling show_border var updates preview",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4057
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "adding images to gallery and changing vars updates preview",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 10130
+        }
+      ],
+      "verified_in": "targeted follow-up"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "editing header and changing style vars updates preview",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4818
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "toggling show_intro and editing text updates preview",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4051
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "toggling autoplay and controls vars updates preview",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4314
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "preview reflects saved content after page reload",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2946
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "multiple block changes all reflect in preview",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4120
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "deleting a block removes it from preview",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3995
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "deactivating a block hides it from preview",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4002
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "duplicating a block shows the copy in preview",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3251
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "uploading image var updates preview iframe",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3377
+        }
+      ],
+      "verified_in": "targeted follow-up"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "video element survives morphdom update when data-src unchanged",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4034
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-live-preview.spec.js",
+      "title": "iframe element survives morphdom update when src unchanged",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3331
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-media-and-insert-position.spec.js",
+      "title": "uploaded picture survives inserting another block (live preview)",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 6811
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-media-and-insert-position.spec.js",
+      "title": "gap \"+\" inserts at the correct position after a prior insert",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1905
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-media-fields.spec.js",
+      "title": "image drops validate destination, preserve ref settings, and keep the modal usable on mobile",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 10522
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-media-fields.spec.js",
+      "title": "a mixed drop on the empty gallery preserves order and survives save",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2223
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-media-fields.spec.js",
+      "title": "the gallery resource editor accepts a mixed drop and saves its collection",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1581
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-media-fields.spec.js",
+      "title": "a queued replacement cannot reattach an image after Remove",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1758
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-media-fields.spec.js",
+      "title": "video replacement preserves playback overrides and display settings",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2885
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-media-fields.spec.js",
+      "title": "file refs keep their settings through replacement and gallery vars accept mixed media",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 8561
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-media-fields.spec.js",
+      "title": "configured file and video fields browse the current unsaved selection",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3738
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-media-save-persistence.spec.js",
+      "title": "uploaded picture survives insert + save + reload, then an edit + save cycle",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4265
+        },
+        {
+          "status": "passed",
+          "duration_ms": 4374
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-media-save-persistence.spec.js",
+      "title": "uploaded picture survives deleting another block, then save + reload",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4062
+        },
+        {
+          "status": "passed",
+          "duration_ms": 4087
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-media-save-persistence.spec.js",
+      "title": "editing other vars in the same block keeps uploaded media vars",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3056
+        }
+      ],
+      "verified_in": "targeted follow-up"
+    },
+    {
+      "file": "blocks/block-media-save-persistence.spec.js",
+      "title": "editing a var in the same block as an uploaded ref keeps both",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3289
+        }
+      ],
+      "verified_in": "targeted follow-up"
+    },
+    {
+      "file": "blocks/block-media-save-persistence.spec.js",
+      "title": "upload in one block does not clobber unsaved text in another",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2847
+        }
+      ],
+      "verified_in": "targeted follow-up"
+    },
+    {
+      "file": "blocks/block-multi-live-preview.spec.js",
+      "title": "inserting a child while the preview is open renders it",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 5364
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-multi-live-preview.spec.js",
+      "title": "opening the preview after the fact shows existing children",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3443
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-multi-live-preview.spec.js",
+      "title": "a multi module nested in a container updates its children",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4747
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-multi-live-preview.spec.js",
+      "title": "children survive a save and reopen",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4037
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-multi-live-preview.spec.js",
+      "title": "a child whose module is itself flagged multi renders and updates",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 5265
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-multiuser-sync.spec.js",
+      "title": "user B's save preserves user A's shipped block edit",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 5460
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-multiuser-sync.spec.js",
+      "title": "sync is armed right after create + save-and-continue (no reload)",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 5224
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-multiuser-sync.spec.js",
+      "title": "A's plain blur ships the edit and B SEES it \u2014 no other block focused",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4612
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-multiuser-sync.spec.js",
+      "title": "late joiner receives unsaved edits on mount",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4727
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-multiuser-sync.spec.js",
+      "title": "A's tiptap edit is VISIBLE for a connected B after plain blur",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4193
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-multiuser-sync.spec.js",
+      "title": "late joiner receives tiptap content AND entry field changes",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4258
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-multiuser-sync.spec.js",
+      "title": "block locks appear for late joiners, survive remote applies, clear on blur",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4731
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-multiuser-sync.spec.js",
+      "title": "field locks appear for late joiners and survive form patches",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4255
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-multiuser-sync.spec.js",
+      "title": "A's child delete syncs to B immediately, no blur needed",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3913
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-nested-child-persistence.spec.js",
+      "title": "child insert + var edits persist through save + reload, then edit + save again",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4077
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-nested-child-persistence.spec.js",
+      "title": "deleting a persisted last child survives save + reload",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4142
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-preview-targets.spec.js",
+      "title": "switches preview views with unsaved content and restores the selected view",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 5514
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-recovery.spec.js",
+      "title": "blocks recover after disconnect/reconnect without errors",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1601
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-recovery.spec.js",
+      "title": "a real network partition does NOT recover \u2014 snapshot is written, never read",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 10293
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-recovery.spec.js",
+      "title": "a hard reload starts clean and does not replay a stale snapshot",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1541
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-recovery.spec.js",
+      "title": "stale sessionStorage does not trigger recovery on fresh navigation",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2148
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-recovery.spec.js",
+      "title": "the recovery key follows the entry across save-and-continue",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2510
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-recovery.spec.js",
+      "title": "one entry never recovers another entry's blocks",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4541
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-ref-active-fallback.spec.js",
+      "title": "both a ref and a headless_ref expose a working on/off switch",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1646
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-ref-active-fallback.spec.js",
+      "title": "switching refs off swaps in the template fallbacks in live preview",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4385
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-ref-active-fallback.spec.js",
+      "title": "the fallback resolves an entry through the link var identifier",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3884
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-ref-config-persistence.spec.js",
+      "title": "ref config fields survive a closed-modal edit, save and reload",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4440
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-region-preview.spec.js",
+      "title": "liquid regions retain unsaved content after owner reactivation",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3910
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-region-preview.spec.js",
+      "title": "liquid regions retain unsaved content after owner reactivation inside a container",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4402
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-region-preview.spec.js",
+      "title": "heex regions retain unsaved content after owner reactivation",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3783
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-region-preview.spec.js",
+      "title": "heex regions retain unsaved content after owner reactivation inside a container",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4263
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-reorder.spec.js",
+      "title": "drag-reordering root blocks updates editor + preview and persists after save",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 5789
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-reorder.spec.js",
+      "title": "reordering up then back down restores the original order",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 5161
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-reorder.spec.js",
+      "title": "drag-reordering multi-block entries persists after save",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3896
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-save-continue.spec.js",
+      "title": "block edits survive repeated save-and-continue without duplication",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4826
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-table-rows.spec.js",
+      "title": "add, edit, reorder, delete table rows and verify persistence",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 6404
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-table-rows.spec.js",
+      "title": "adding row after deletion maintains correct sequence",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2698
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-unused-collections.spec.js",
+      "title": "a renamed region keeps its content through remap, collaboration, recovery and save",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 8087
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-unused-collections.spec.js",
+      "title": "an unreferenced block note can be restored, deleted, undone and saved",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3180
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-unused-collections.spec.js",
+      "title": "Blueprint notes expose the same recovery controls beside their text field",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3144
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-var-uploads.spec.js",
+      "title": "image var uploads, configures, and persists through save",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2304
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-var-uploads.spec.js",
+      "title": "image var removal leaves a usable upload field",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1684
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-var-uploads.spec.js",
+      "title": "file var uploads, configures, and persists through save",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1975
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-var-uploads.spec.js",
+      "title": "file var removal leaves a usable upload field",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1330
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-video-map-persistence.spec.js",
+      "title": "video picked from the picker survives insert + save + reload",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3037
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "blocks/block-video-map-persistence.spec.js",
+      "title": "map embed URL survives insert + save + reload",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3328
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "config/authorization-tools.spec.js",
+      "title": "prepares groups and moves a reviewed configuration through export and import",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4292
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "config/authorization-tools.spec.js",
+      "title": "shows useful invalid-file feedback and fits narrow screens",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1158
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/cache.spec.js",
+      "title": "has cache and clears cache",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1716
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/content-configuration.spec.js",
+      "title": "creates and persists a module set",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 813
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/content-configuration.spec.js",
+      "title": "creates and persists a container",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1726
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/content-configuration.spec.js",
+      "title": "creates and persists a table template",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 823
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/content-configuration.spec.js",
+      "title": "creates and persists a content template",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1134
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/content-configuration.spec.js",
+      "title": "creates and persists a palette with a color",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1157
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/frontend-assets.spec.js",
+      "title": "activates an uploaded frontend build and returns to release assets",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 856
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/globals.spec.js",
+      "title": "add global string",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4945
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/identity.spec.js",
+      "title": "verify navigation to admin page",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 517
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/identity.spec.js",
+      "title": "update identity",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1871
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/modules.spec.js",
+      "title": "create a simple text module",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1645
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/modules.spec.js",
+      "title": "create, edit, duplicate, persist and delete refs and vars",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 8783
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/navigation-link-identifier.spec.js",
+      "title": "filtering hides non-matching identifiers",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1234
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/navigation.spec.js",
+      "title": "deactivate menu item",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1667
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/navigation.spec.js",
+      "title": "create menu item",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1844
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/navigation.spec.js",
+      "title": "delete menu item",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1255
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/navigation.spec.js",
+      "title": "reorder menu items",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1694
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/scheduled-publishing.spec.js",
+      "title": "selects a future publishing date and manages the publishing queue",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1798
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "configuration/seo.spec.js",
+      "title": "seo changes affect the frontpage",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 6584
+        }
+      ],
+      "verified_in": "targeted follow-up"
+    },
+    {
+      "file": "configuration/utils.spec.js",
+      "title": "runs administrative utilities and displays system information",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 826
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "dashboard.spec.js",
+      "title": "should go straight to dashboard if authenticated",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 508
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "dashboard.spec.js",
+      "title": "updates dashboard content when permissions change without reloading",
+      "status": "skipped",
+      "expected_status": "skipped",
+      "skip_reasons": [
+        "Requires explicit group mode"
+      ],
+      "attempts": [
+        {
+          "status": "skipped",
+          "duration_ms": 361
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "modal-design.spec.js",
+      "title": "link picker aligns metadata and keeps the selected content through parent updates",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2322
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "modal-design.spec.js",
+      "title": "variable sections retain edits and Escape closes only the nested picker",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1871
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "modal-design.spec.js",
+      "title": "block sections preserve config fields and keep advanced actions separate",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2352
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "modal-design.spec.js",
+      "title": "transfer summary keeps content and recipient visible with the approved tint",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1822
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "modal-design.spec.js",
+      "title": "rich-text link picker applies, cancels and removes links",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1817
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "pages/breadcrumbs.spec.js",
+      "title": "pages have JSON-LD breadcrumbs",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3318
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "pages/draft-media.spec.js",
+      "title": "image, file and video fields recover selections, replacements and resets without duplicating assets",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 26163
+        }
+      ],
+      "verified_in": "targeted follow-up"
+    },
+    {
+      "file": "pages/draft-media.spec.js",
+      "title": "a mixed gallery field recovers its order and later deletions",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 16283
+        }
+      ],
+      "verified_in": "targeted follow-up"
+    },
+    {
+      "file": "pages/draft-media.spec.js",
+      "title": "gallery blocks retain mixed media and deletions through draft restore and save",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 13877
+        }
+      ],
+      "verified_in": "targeted follow-up"
+    },
+    {
+      "file": "pages/draft-media.spec.js",
+      "title": "picture and video refs plus image and file vars recover, save and reset",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 14422
+        }
+      ],
+      "verified_in": "targeted follow-up"
+    },
+    {
+      "file": "pages/draft-media.spec.js",
+      "title": "entry-level image, file and video variables recover and persist",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 7810
+        }
+      ],
+      "verified_in": "targeted follow-up"
+    },
+    {
+      "file": "pages/drafts.spec.js",
+      "title": "recovers a new entry and unsaved block after reload, then resolves the copy on save",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 15690
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "pages/drafts.spec.js",
+      "title": "a failed restore survives reload without trapping the editor or overwriting the original",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 7928
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "pages/drafts.spec.js",
+      "title": "changed modules require review and retain incompatible block content",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4456
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "pages/drafts.spec.js",
+      "title": "recovers nested child content and persists it through a subsequent save",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 5597
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "pages/drafts.spec.js",
+      "title": "warns before navigating away while recent edits have not reached storage",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 827
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "pages/globals.spec.js",
+      "title": "updates and persists content globals",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1784
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "pages/page-vars-upload.spec.js",
+      "title": "image picked for an entry-level var persists through save + reload",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2775
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "pages/page-vars-upload.spec.js",
+      "title": "reset of an entry-level image var persists through save + reload",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2929
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "pages/pages.spec.js",
+      "title": "creates a simple page",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 5959
+        }
+      ],
+      "verified_in": "targeted follow-up"
+    },
+    {
+      "file": "pages/pages.spec.js",
+      "title": "duplicates to other language",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2320
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "pages/pages.spec.js",
+      "title": "creates meta information",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 5307
+        }
+      ],
+      "verified_in": "targeted follow-up"
+    },
+    {
+      "file": "pages/permalink.spec.js",
+      "title": "offers a redirect after saving a page and shows the confirmed rule in SEO",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 4524
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "pages/permalink.spec.js",
+      "title": "dismissal continues editing and uses the saved URL for the next change",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2798
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "pages/permalink.spec.js",
+      "title": "escape dismisses the prompt and completes Save and create new",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2413
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "pages/permalink.spec.js",
+      "title": "renaming back removes the destination redirect even when the new redirect is declined",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3539
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "pages/permalink.spec.js",
+      "title": "plain forms prompt on slug changes and preserve continue-editing saves",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1955
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "pages/revisions.spec.js",
+      "title": "stores, previews, and activates the current editor state including blocks",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 6432
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "prices/embeds-many-reorder.spec.js",
+      "title": "creates price category with embedded prices, reorders and deletes them",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3018
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "prices/subform-listing.spec.js",
+      "title": "listing summaries preserve edits through collapse, validation and save",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2009
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "projects/clients.spec.js",
+      "title": "creates and edits clients",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2478
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "projects/file-field-sync.spec.js",
+      "title": "file drawer save ships the file field to a second connected editor",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2308
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "projects/listing-filters.spec.js",
+      "title": "shows advanced filters bar with boolean and select filters",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3197
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "projects/listing-filters.spec.js",
+      "title": "boolean filter toggles and filters list",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3520
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "projects/listing-filters.spec.js",
+      "title": "select filter filters by status",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3565
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "projects/listing-filters.spec.js",
+      "title": "text filter still works in header",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3539
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "projects/listing-filters.spec.js",
+      "title": "combining multiple filters (AND logic)",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3582
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "projects/listing-filters.spec.js",
+      "title": "reset filters button clears all advanced filters",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3442
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "projects/listing-filters.spec.js",
+      "title": "filter state persists in URL (shareable)",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 3233
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "projects/multi-select-reorder.spec.js",
+      "title": "reorders selected items in multi-select and persists order",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 6557
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "projects/multi-select-reorder.spec.js",
+      "title": "reset value clears selection from the changeset, not just the UI",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 6703
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "projects/projects.spec.js",
+      "title": "creates project",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 21975
+        }
+      ],
+      "verified_in": "targeted follow-up"
+    },
+    {
+      "file": "users/authorization-sites.spec.js",
+      "title": "isolates roles, membership, reads and writes across sites and environments",
+      "status": "skipped",
+      "expected_status": "skipped",
+      "skip_reasons": [
+        "Requires tenant group mode"
+      ],
+      "attempts": [
+        {
+          "status": "skipped",
+          "duration_ms": 0
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "users/authorization-sites.spec.js",
+      "title": "private previews reject other accounts and close after site access is revoked",
+      "status": "skipped",
+      "expected_status": "skipped",
+      "skip_reasons": [
+        "Requires tenant group mode"
+      ],
+      "attempts": [
+        {
+          "status": "skipped",
+          "duration_ms": 0
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "users/authorization-sites.spec.js",
+      "title": "simultaneous editors never share fields or blocks across environments",
+      "status": "skipped",
+      "expected_status": "skipped",
+      "skip_reasons": [
+        "Requires tenant group mode"
+      ],
+      "attempts": [
+        {
+          "status": "skipped",
+          "duration_ms": 0
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "users/groups.spec.js",
+      "title": "manages a custom group with a reviewed permission change and membership",
+      "status": "skipped",
+      "expected_status": "skipped",
+      "skip_reasons": [
+        "Requires explicit group mode"
+      ],
+      "attempts": [
+        {
+          "status": "skipped",
+          "duration_ms": 0
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "users/groups.spec.js",
+      "title": "keeps filtered grants and unsaved changes through navigation and keyboard review",
+      "status": "skipped",
+      "expected_status": "skipped",
+      "skip_reasons": [
+        "Requires explicit group mode"
+      ],
+      "attempts": [
+        {
+          "status": "skipped",
+          "duration_ms": 0
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "users/groups.spec.js",
+      "title": "selects a permission row with mixed state, keyboard support and search boundaries",
+      "status": "skipped",
+      "expected_status": "skipped",
+      "skip_reasons": [
+        "Requires explicit group mode"
+      ],
+      "attempts": [
+        {
+          "status": "skipped",
+          "duration_ms": 0
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "users/groups.spec.js",
+      "title": "reader gets the expected routes and cannot forge listing mutations",
+      "status": "skipped",
+      "expected_status": "skipped",
+      "skip_reasons": [
+        "Requires explicit group mode"
+      ],
+      "attempts": [
+        {
+          "status": "skipped",
+          "duration_ms": 0
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "users/groups.spec.js",
+      "title": "author gets the expected routes and cannot forge listing mutations",
+      "status": "skipped",
+      "expected_status": "skipped",
+      "skip_reasons": [
+        "Requires explicit group mode"
+      ],
+      "attempts": [
+        {
+          "status": "skipped",
+          "duration_ms": 0
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "users/groups.spec.js",
+      "title": "publisher gets the expected routes and cannot forge listing mutations",
+      "status": "skipped",
+      "expected_status": "skipped",
+      "skip_reasons": [
+        "Requires explicit group mode"
+      ],
+      "attempts": [
+        {
+          "status": "skipped",
+          "duration_ms": 0
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "users/groups.spec.js",
+      "title": "none gets the expected routes and cannot forge listing mutations",
+      "status": "skipped",
+      "expected_status": "skipped",
+      "skip_reasons": [
+        "Requires explicit group mode"
+      ],
+      "attempts": [
+        {
+          "status": "skipped",
+          "duration_ms": 0
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "users/groups.spec.js",
+      "title": "creates an expiring shared preview through the authorized editor flow",
+      "status": "skipped",
+      "expected_status": "skipped",
+      "skip_reasons": [
+        "Requires explicit group mode"
+      ],
+      "attempts": [
+        {
+          "status": "skipped",
+          "duration_ms": 0
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "users/presence-avatars.spec.js",
+      "title": "presence photos stay inside toolbar and field avatars through form patches",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 1582
+        }
+      ],
+      "verified_in": "full run"
+    },
+    {
+      "file": "users/users.spec.js",
+      "title": "creates, updates and deletes a user with content transfer",
+      "status": "expected",
+      "expected_status": "passed",
+      "skip_reasons": [],
+      "attempts": [
+        {
+          "status": "passed",
+          "duration_ms": 2894
+        }
+      ],
+      "verified_in": "full run"
+    }
+  ]
+}

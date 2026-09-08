@@ -22,13 +22,6 @@ defmodule BrandoAdmin.Files.FileListLive do
 
     socket =
       socket
-      |> allow_upload(:files,
-        accept: :any,
-        max_entries: 10,
-        max_file_size: 50_000_000,
-        auto_upload: true,
-        progress: &handle_progress/3
-      )
       |> assign(:recent_folders, [])
       |> assign(:deliver_topic, deliver_topic)
       |> assign(:replacement_file, nil)
@@ -198,39 +191,6 @@ defmodule BrandoAdmin.Files.FileListLive do
     {:noreply, assign(socket, :clipboard_ids, [])}
   end
 
-  def handle_progress(:files, entry, socket) do
-    if entry.done? do
-      config_target = socket.assigns.current_folder_config_target || "default"
-      {:ok, cfg} = Files.get_config_for(%{config_target: config_target})
-      folder_id = FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root)
-      cfg = maybe_override_file_upload_path(cfg, socket.assigns.current_folder_abs)
-
-      case consume_uploaded_entry(socket, entry, fn %{path: path} ->
-             case Files.Uploads.Schema.handle_upload(
-                    %{
-                      "file" => %Plug.Upload{filename: entry.client_name, content_type: entry.client_type, path: path},
-                      "config_target" => config_target,
-                      "folder_id" => folder_id
-                    },
-                    cfg,
-                    socket.assigns.current_user
-                  ) do
-               {:ok, file} -> {:ok, file}
-               {:error, reason} -> {:ok, {:upload_error, reason}}
-             end
-           end) do
-        {:upload_error, _reason} ->
-          send(self(), {:toast, gettext("Failed to upload file")})
-
-        _file ->
-          send(self(), {:toast, gettext("File uploaded successfully")})
-          AssetListHelpers.update_list_entries(socket.assigns.schema)
-      end
-    end
-
-    {:noreply, if(entry.done?, do: assign_folder_state(socket, socket.assigns.current_folder), else: socket)}
-  end
-
   @impl true
   def handle_info({:asset_ready, %{"kind" => "file_replace"}, file}, socket) do
     AssetListHelpers.update_list_entries(socket.assigns.schema)
@@ -243,6 +203,12 @@ defmodule BrandoAdmin.Files.FileListLive do
         socket
       end
 
+    {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+  end
+
+  @impl true
+  def handle_info({:asset_ready, %{"kind" => "asset_library"}, _asset}, socket) do
+    AssetListHelpers.update_list_entries(socket.assigns.schema)
     {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
   end
 
@@ -337,12 +303,24 @@ defmodule BrandoAdmin.Files.FileListLive do
               <span :if={@clipboard_ids != []} class="clipboard-status">
                 {gettext("Cut queue")}: {length(@clipboard_ids)}
               </span>
-              <form phx-change="validate" phx-drop-target={@uploads.files.ref}>
-                <label class="folder-action">
-                  <span>{gettext("Upload")}</span>
-                  <.live_file_input upload={@uploads.files} class="library-upload-input" aria-label={gettext("Upload files")} />
-                </label>
-              </form>
+              <div
+                id="library-file-upload"
+                phx-hook="Brando.UploadTrigger"
+                data-kind="asset_library"
+                data-component-id="assets-file-browser"
+                data-asset-type="file"
+                data-deliver-topic={@deliver_topic}
+                data-config-target={@current_folder_config_target || "default"}
+                data-folder={@current_folder_abs}
+                data-folder-id={FolderBrowser.folder_id_for(@current_folder, @upload_root)}
+                data-click-mode="trigger"
+                class="library-upload-trigger"
+              >
+                <button type="button" class="folder-action upload-trigger"><.icon name="hero-arrow-up-tray" />{gettext(
+                  "Upload"
+                )}</button>
+                <input type="file" class="file-input" multiple aria-label={gettext("Upload files")} />
+              </div>
               <button
                 :if={@clipboard_ids != []}
                 type="button"
@@ -430,20 +408,6 @@ defmodule BrandoAdmin.Files.FileListLive do
     )
     |> assign(:current_folder_config_target, current_folder_config_target)
   end
-
-  defp maybe_override_file_upload_path(cfg, nil), do: cfg
-
-  defp maybe_override_file_upload_path(%Brando.Type.FileConfig{} = cfg, folder) do
-    resolved_folder = FolderBrowser.absolute_folder(folder, cfg.upload_path)
-
-    if resolved_folder do
-      %{cfg | upload_path: resolved_folder}
-    else
-      cfg
-    end
-  end
-
-  defp maybe_override_file_upload_path(cfg, _folder), do: cfg
 
   defp folder_label_for_display(folder, upload_root) do
     case FolderBrowser.relative_folder(folder, upload_root) do

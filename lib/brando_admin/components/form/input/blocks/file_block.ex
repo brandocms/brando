@@ -3,12 +3,23 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FileBlock do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
-  alias Brando.Villain.Blocks.FileBlock
+  alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias Ecto.Changeset
 
   @override_fields [:title, :label, :description, :class, :target_blank, :download, :config_target]
+
+  def update(%{event: "live_upload_complete", expected_asset_id: expected} = assigns, socket) do
+    current_id = socket.assigns[:file] && socket.assigns.file.id
+
+    if Brando.Uploads.AssetIntent.current_selection?(expected, current_id) do
+      update(Map.delete(assigns, :expected_asset_id), socket)
+    else
+      {:ok, socket}
+    end
+  end
 
   def update(%{event: "live_upload_complete", file: file}, socket) do
     socket
@@ -44,94 +55,37 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FileBlock do
           target={@target}
           ref_form={@ref_form}
           config_open={@config_open}
+          config_layout="editor"
+          config_title={gettext("Configure file")}
+          config_subtitle={@ref_description || gettext("Settings for this use of the file")}
+          config_icon="hero-document"
         >
           <:description>
             {@ref_description || (@file && (@block_data.label || @block_data.title || @file.title || @file.filename)) ||
               gettext("No file selected")}
           </:description>
 
-          <button
-            :if={@file}
-            type="button"
-            class="file-card"
-            phx-click="open_block_config"
-            phx-value-uid={@uid}
-            phx-target={@target}
-          >
-            <.icon name="hero-document" />
-            <span class="file-card__meta">
-              <span class="file-card__name">{@block_data.label || @block_data.title || @file.title || @file.filename}</span>
-              <span class="file-card__sub">
-                {@file.mime_type} · {Brando.Utils.human_size(@file.filesize)}
-              </span>
-            </span>
-          </button>
-
-          <div :if={!@file} class="upload-canvas empty">
-            <.icon name="hero-document-plus" />
-            <div class="instructions">
-              <button
-                type="button"
-                class="primary small"
-                phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#file-picker")}
-              >
-                {gettext("Browse files")}
-              </button>
-              <button type="button" class="tiny" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
-                {gettext("Upload a new file")}
-              </button>
-            </div>
-          </div>
+          <MediaField.field
+            id={"block-#{@uid}-file-upload"}
+            type={:file}
+            asset={@file}
+            kind="block_ref_file"
+            component_id={"#{@uid}-file"}
+            config_target={@block_data.config_target || "default"}
+            label={@ref_description}
+            presentation={:block}
+            configure={JS.push("open_block_config", target: @target, value: %{uid: @uid})}
+            browse={JS.push("set_target", target: @myself) |> toggle_drawer("#file-picker")}
+            remove={JS.push("reset_file", target: @myself)}
+          />
 
           <:config>
-            <div class="panels">
-              <div class="panel">
-                <%= if @file do %>
-                  <a class="file-card" href={Brando.Utils.file_url(@file)} target="_blank" rel="noopener">
-                    <.icon name="hero-document" />
-                    <span class="file-card__meta">
-                      <span class="file-card__name">{@file.filename}</span>
-                      <span class="file-card__sub">
-                        {@file.mime_type} · {Brando.Utils.human_size(@file.filesize)}
-                      </span>
-                    </span>
-                  </a>
-                <% else %>
-                  <div
-                    id={"block-#{@uid}-file-upload"}
-                    phx-hook="Brando.UploadTrigger"
-                    data-kind="block_ref_file"
-                    data-component-id={"#{@uid}-file"}
-                    data-asset-type="file"
-                    data-config-target={@block_data.config_target || "default"}
-                    class="img-placeholder empty upload-canvas"
-                  >
-                    <input type="file" class="file-input" />
-                    <.icon name="hero-document-plus" />
-                    <div class="instructions">{gettext("Click or drop a file to upload")}</div>
-                  </div>
-                <% end %>
-              </div>
-
-              <div class="panel">
-                <div class="button-group-vertical">
-                  <button
-                    type="button"
-                    class="secondary"
-                    phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#file-picker")}
-                  >
-                    {if @file, do: gettext("Replace file"), else: gettext("Select file")}
-                  </button>
-                  <button
-                    :if={@file}
-                    type="button"
-                    class="danger"
-                    phx-click={JS.push("reset_file", target: @myself)}
-                  >
-                    {gettext("Remove file")}
-                  </button>
+            <Content.modal_sections id={"file-#{@uid}-config-sections"}>
+              <:section id="settings" label={gettext("Link & behavior")} icon="hero-link">
+                <div class="media-section-heading">
+                  <h3 class="modal-section-title">{gettext("Link & behavior")}</h3>
+                  <p class="modal-muted">{gettext("These settings apply to this use of the file.")}</p>
                 </div>
-
                 <Input.override_text
                   field={block_data[:title]}
                   label={gettext("Title")}
@@ -149,8 +103,23 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FileBlock do
                 <Input.toggle field={block_data[:target_blank]} label={gettext("Open in new window/tab")} />
                 <Input.toggle field={block_data[:download]} label={gettext("Download instead of open")} />
                 <Input.input type={:hidden} field={block_data[:config_target]} />
-              </div>
-            </div>
+              </:section>
+              <:section id="file" label={gettext("File")} icon="hero-document">
+                <div class="media-section-heading">
+                  <h3 class="modal-section-title">{gettext("Selected file")}</h3>
+                </div>
+                <MediaField.field
+                  id={"block-#{@uid}-file-modal-upload"}
+                  type={:file}
+                  asset={@file}
+                  kind="block_ref_file"
+                  component_id={"#{@uid}-file"}
+                  config_target={@block_data.config_target || "default"}
+                  browse={JS.push("set_target", target: @myself) |> toggle_drawer("#file-picker")}
+                  remove={JS.push("reset_file", target: @myself)}
+                />
+              </:section>
+            </Content.modal_sections>
           </:config>
         </Block.block>
       </.inputs_for>
@@ -178,7 +147,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.FileBlock do
   end
 
   def handle_event("reset_file", _, socket) do
-    data = %FileBlock.Data{} |> Map.from_struct() |> Map.take(@override_fields)
+    data = Block.current_block_data_map(socket.assigns.block, @override_fields)
 
     socket
     |> Block.commit_ref_data(ref_data: data, file_id: nil, force_render: true)

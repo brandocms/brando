@@ -1,3 +1,8 @@
+import { subscribeToUpload, uploadTargetKey } from '../shared/uploadProgress'
+
+// Confirmation belongs to a form target, including its inline and modal views.
+const confirmedFolders = new Map()
+
 /**
  * UploadTrigger — drop zone / click-to-upload element for any upload source.
  *
@@ -31,7 +36,9 @@ export default (app) => ({
   mounted() {
     this._pendingFiles = []
     this._confirmedFolder = null
+    this._folderConfigTarget = this.el.dataset.configTarget || 'default'
     this.configureInput()
+    this.subscribeProgress()
 
     // Delegate from the stable hook root. LiveView may replace the actual
     // file input while patching gallery objects, but `change` still bubbles.
@@ -42,6 +49,7 @@ export default (app) => ({
     this.el.addEventListener('change', this._onInputChange)
 
     this.el.addEventListener('click', (e) => {
+      if (e.target.closest('button')) e.target.closest('details')?.removeAttribute('open')
       if (e.target.closest('.upload-trigger')) {
         e.stopPropagation()
         const input = this.el.querySelector('input[type="file"]')
@@ -62,12 +70,14 @@ export default (app) => ({
     })
 
     this.el.addEventListener('dragenter', (e) => {
+      if (!Array.from(e.dataTransfer?.types || []).includes('Files')) return
       e.preventDefault()
       e.stopPropagation()
       this.el.classList.add('dragging')
     })
 
     this.el.addEventListener('dragover', (e) => {
+      if (!Array.from(e.dataTransfer?.types || []).includes('Files')) return
       e.preventDefault()
       e.stopPropagation()
       this.el.classList.add('dragging')
@@ -82,6 +92,7 @@ export default (app) => ({
     })
 
     this.el.addEventListener('drop', (e) => {
+      if (!e.dataTransfer?.files?.length) return
       e.preventDefault()
       e.stopPropagation()
       this.el.classList.remove('dragging')
@@ -91,19 +102,35 @@ export default (app) => ({
     })
 
     if (this.el.dataset.folderBrowser === 'true') {
-      this.handleEvent('b:block_upload_folder_confirmed', ({ upload_name, folder, folder_id }) => {
-        if (upload_name !== this.el.id) return
+      this.handleEvent('b:block_upload_folder_cancelled', ({ upload_name, request_id }) => {
+        if (upload_name === this.el.id && request_id === this._pendingRequest) this._pendingFiles = []
+      })
+      this.handleEvent('b:block_upload_folder_confirmed', ({ upload_name, request_id, folder, folder_id }) => {
+        if (upload_name !== this.el.id || request_id !== this._pendingRequest) return
         if (!this._pendingFiles.length) return
 
         this._confirmedFolder = { folder, folder_id }
+        confirmedFolders.set(this.folderContextKey(), this._confirmedFolder)
+        if (confirmedFolders.size > 100) confirmedFolders.delete(confirmedFolders.keys().next().value)
         this.storeRecentFolder(folder)
+        this.configureInput()
         const files = this._pendingFiles.splice(0)
         this.enqueue(files, { folder, folder_id })
       })
     }
   },
 
+  destroyed() {
+    this._unsubscribeProgress?.()
+  },
+
   updated() {
+    if (this._folderConfigTarget !== (this.el.dataset.configTarget || 'default')) {
+      this._confirmedFolder = null
+      this._pendingFiles = []
+      this._folderConfigTarget = this.el.dataset.configTarget || 'default'
+    }
+    this.subscribeProgress()
     // Some nested component patches tear down the DOM listener while keeping
     // the hook instance. Re-attach idempotently on every update.
     this.el.removeEventListener('change', this._onInputChange)
@@ -112,6 +139,10 @@ export default (app) => ({
   },
 
   configureInput() {
+    const confirmed = confirmedFolders.get(this.folderContextKey())
+    if (confirmed && (this.el.dataset.configTarget || 'default') === 'default') {
+      this.el.querySelectorAll('[data-media-destination]').forEach(label => { label.textContent = confirmed.folder })
+    }
     const input = this.el.querySelector(':scope > input[type="file"]')
     if (!input) return
 
@@ -131,70 +162,128 @@ export default (app) => ({
   // A click-selected file and a dropped file must therefore follow the same
   // configured-folder/current-folder/default-folder precedence.
   intake(files) {
+    if (this.el.dataset.uploadEnabled === 'false') {
+      this.showProgress({ status: 'error', error: this.el.dataset.uploadUnavailable })
+      return
+    }
     const configTarget = this.el.dataset.configTarget || 'default'
+    if (this.el.dataset.maxFiles === '1' && files.length > 1) {
+      this.showProgress({ status: 'error', error: this.el.dataset.singleFileError || 'Choose one file for this field.' })
+      return
+    }
+    this.showProgress(null)
 
     // A concrete form/ref/var target already owns its destination through its
     // upload config. Ask for a folder only when the target is truly default.
-    if (this.el.dataset.folderBrowser === 'true' && configTarget === 'default') {
+    if (this.el.dataset.folderBrowser === 'true' && configTarget === 'default' && files.some(file => file.type.startsWith('image/'))) {
+      this._confirmedFolder = confirmedFolders.get(this.folderContextKey()) || this._confirmedFolder
       if (this._confirmedFolder) {
         this.enqueue(files, this._confirmedFolder)
         return
       }
 
       this._pendingFiles = files
-      this.openFolderBrowser(files.length)
+      this._pendingRequest = crypto.randomUUID()
+      this.openFolderBrowser(files)
     } else {
       this.enqueue(files)
     }
   },
 
-  openFolderBrowser(fileCount) {
+  folderContextKey() {
+    return `${uploadTargetKey(this.uploadTarget())}:${this.el.dataset.configTarget || "default"}`
+  },
+
+  openFolderBrowser(files) {
     const formRoot = this.el.closest('[data-deliver-topic]')
 
     if (!formRoot || !formRoot.id) {
-      console.warn('[UploadTrigger] no form root for folder browser — uploading to default folder')
-      this.enqueue(this._pendingFiles.splice(0))
+      this._pendingFiles = []
+      this.showProgress({ status: 'error', error: 'The upload destination is unavailable. Reopen this editor.' })
       return
     }
 
     this.pushEventTo(`#${CSS.escape(formRoot.id)}`, 'open_block_upload_folder_browser', {
       upload_name: this.el.id,
+      request_id: this._pendingRequest,
       config_target: this.el.dataset.configTarget || 'default',
-      file_count: fileCount,
+      file_count: files.length,
+      video_count: files.filter(file => file.type.startsWith('video/')).length,
+      video_config_target: this.el.dataset.videoConfigTarget || 'default',
+      target_label: this.el.dataset.uploadLabel || null,
       initial_folder: this.lastRecentFolder(),
       recent_folders: this.recentFolders(),
     })
   },
 
-  enqueue(files, extra = {}) {
+  uploadTarget(extra = {}) {
     const ds = this.el.dataset
     const deliverTopic = ds.deliverTopic || this.el.closest('[data-deliver-topic]')?.dataset.deliverTopic
+    let path = []
+    try { path = ds.path ? JSON.parse(ds.path) : [] } catch (_) { /* invalid paths are rejected at intake */ }
+    return {
+      expected_asset_id: ds.maxFiles === "1" ? (ds.assetId || "none") : null,
+      kind: ds.kind, component_id: ds.componentId, var_key: ds.varKey,
+      field: ds.field || null, file_id: ds.fileId || null, path,
+      asset_type: ds.assetType, config_target: ds.configTarget || 'default',
+      deliver_topic: deliverTopic, folder: extra.folder || ds.folder || null, folder_id: extra.folder_id || ds.folderId || null,
+    }
+  },
 
-    if (!deliverTopic) {
-      console.error('[UploadTrigger] no deliver_topic found — upload aborted', this.el)
+  enqueue(files, extra = {}) {
+    if (this.el.dataset.allowedTypes) {
+      const allowed = this.el.dataset.allowedTypes.split(',')
+      const mediaType = file => file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : null
+      if (files.some(file => !allowed.includes(mediaType(file)))) {
+        this.showProgress({ status: 'error', error: 'This gallery does not accept one or more of these files.' })
+        return
+      }
+      for (const file of files) {
+        const type = mediaType(file)
+        this.enqueueTarget([file], type === 'video' ? {
+          asset_type: 'video', config_target: this.el.dataset.videoConfigTarget || 'default',
+        } : extra)
+      }
       return
     }
+    this.enqueueTarget(files, extra)
+  },
 
-    let path = []
-    try {
-      path = ds.path ? JSON.parse(ds.path) : []
-    } catch (_) {
-      path = []
+  enqueueTarget(files, extra = {}) {
+    const target = this.uploadTarget(extra)
+    if (extra.asset_type) target.asset_type = extra.asset_type
+    if (extra.config_target) target.config_target = extra.config_target
+    if (!target.deliver_topic) {
+      this.showProgress({ status: 'error', error: 'The upload destination is unavailable. Reopen this editor.' })
+      return
     }
+    window.BrandoUploads.enqueue(files, target)
+  },
 
-    window.BrandoUploads.enqueue(files, {
-      kind: ds.kind,
-      component_id: ds.componentId,
-      var_key: ds.varKey,
-      field: ds.field || null,
-      file_id: ds.fileId || null,
-      path,
-      asset_type: ds.assetType,
-      config_target: ds.configTarget || 'default',
-      deliver_topic: deliverTopic,
-      folder: extra.folder || null,
-      folder_id: extra.folder_id || null,
-    })
+  subscribeProgress() {
+    if (!this.el.querySelector(':scope > .media-field-progress')) return
+    this._unsubscribeProgress?.()
+    this._unsubscribeProgress = subscribeToUpload(this.uploadTarget(), state => this.showProgress(state))
+  },
+
+  showProgress(state) {
+    const container = this.el.querySelector(':scope > .media-field-progress')
+    if (!container) return
+    container.replaceChildren()
+    if (!state || state.status === 'done') return
+    container.dataset.state = state.status
+    const text = document.createElement('span')
+    const messages = { queued: 'Waiting to upload…', uploading: 'Uploading', processing: 'Processing…', cancelled: 'Upload cancelled' }
+    text.textContent = state.status === 'error' ? state.error :
+      state.status === 'uploading' ? `${messages.uploading} · ${state.progress}%` : messages[state.status]
+    if (state.total && state.status !== 'error') text.textContent += ` · ${state.completed} of ${state.total} ready${state.failed ? ` · ${state.failed} failed` : ''}`
+    container.append(text)
+    if (['queued', 'uploading'].includes(state.status)) {
+      const progress = document.createElement('progress')
+      progress.max = 100
+      progress.value = state.progress || 0
+      container.append(progress)
+    }
   },
 
   recentFolders() {

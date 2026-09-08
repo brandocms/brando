@@ -39,11 +39,12 @@ test.describe('Entry-level page var uploads', () => {
     await syncLV(page)
 
     // Open the image modal from the (empty) preview and upload
-    await entry.getByRole('button', { name: 'Add image' }).click()
+    await entry.locator('.media-field:visible input[type=file]').setInputFiles('./fixtures/image.jpg')
+    await confirmUploadFolder(page)
+    await expect(entry.locator('.media-field:visible img')).toBeVisible({ timeout: 20000 })
+    await entry.getByRole('button', { name: 'Configure', exact: true }).click()
     const imageModal = page.locator('[id$="image-config"]:visible')
     await expect(imageModal).toBeVisible({ timeout: 5000 })
-    await imageModal.locator('input[type="file"].file-input').setInputFiles('./fixtures/image.jpg')
-    await confirmUploadFolder(page)
     await expect(imageModal.locator('img')).toBeVisible({ timeout: 20000 })
 
     return { entry, imageModal }
@@ -76,7 +77,7 @@ test.describe('Entry-level page var uploads', () => {
     const entry = await saveAndReopen(page, 'Page Var Image')
 
     // The var preview must show the persisted image
-    await expect(entry.getByRole('button', { name: 'Edit image' })).toBeVisible({ timeout: 20000 })
+    await expect(entry.getByRole('button', { name: 'Configure', exact: true })).toBeVisible({ timeout: 20000 })
   })
 
   test('reset of an entry-level image var persists through save + reload', async ({ page }) => {
@@ -85,16 +86,16 @@ test.describe('Entry-level page var uploads', () => {
     const { imageModal } = await createPageWithImageVar(page, 'Page Var Reset', 'page-var-reset')
 
     // Reset the image in the modal, then save
-    await imageModal.getByRole('button', { name: 'Reset image' }).click()
+    await imageModal.getByRole('button', { name: 'Remove', exact: true }).click()
     await syncLV(page)
-    await expect(imageModal.locator('.upload-canvas')).toBeVisible({ timeout: 5000 })
+    await expect(imageModal.getByRole('button', { name: 'Upload', exact: true })).toBeVisible({ timeout: 5000 })
     await imageModal.locator('button.modal-close').click()
     await syncLV(page)
 
     const entry = await saveAndReopen(page, 'Page Var Reset')
 
     // The reset must have persisted — no image on the var after reload
-    await expect(entry.getByRole('button', { name: 'Add image' })).toBeVisible({ timeout: 10000 })
-    await expect(entry.getByRole('button', { name: 'Edit image' })).not.toBeVisible()
+    await expect(entry.getByRole('button', { name: 'Upload', exact: true })).toBeVisible({ timeout: 10000 })
+    await expect(entry.getByRole('button', { name: 'Configure', exact: true })).not.toBeVisible()
   })
 })

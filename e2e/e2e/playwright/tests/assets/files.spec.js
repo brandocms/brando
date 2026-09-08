@@ -8,6 +8,7 @@ async function uploadFile(page) {
   const original = readFileSync('./fixtures/test.pdf')
   await page.goto('/admin/assets/files')
   await syncLV(page)
+  const initialCount = await page.locator('.list-row').count()
   await page.locator('#assets-file-browser-main input[type="file"]').setInputFiles({
     name: filename,
     mimeType: 'application/pdf',
@@ -23,12 +24,12 @@ async function uploadFile(page) {
   await expect(dialog).toBeVisible()
   await expect(dialog.locator('.replacement-current .name')).toContainText(filename)
   await expect(dialog.locator('.replacement-current .updated')).toHaveText(url)
-  return { row, id, url, dialog, original }
+  return { row, id, url, dialog, original, expectedCount: initialCount + 1 }
 }
 
 test('replaces a resource file while keeping its ID and download URL', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
-  const { row, id, url, dialog, original } = await uploadFile(page)
+  const { row, id, url, dialog, original, expectedCount } = await uploadFile(page)
   await expect(page.locator('.progress-popup')).toHaveCount(0)
   await page.screenshot({ path: testInfo.outputPath('replace-file-dialog.png') })
   const replacement = Buffer.concat([original, Buffer.from('\n% Revised annual report\n')])
@@ -43,8 +44,8 @@ test('replaces a resource file while keeping its ID and download URL', async ({ 
   const download = await page.request.get(url)
   expect(download.status()).toBe(200)
   expect(await download.body()).toEqual(replacement)
-  await expect(page.locator('.list-row')).toHaveCount(1)
-  await expect(page.getByText('1 file', { exact: true })).toBeVisible()
+  await expect(page.locator('.list-row')).toHaveCount(expectedCount)
+  await expect(page.getByText(`${expectedCount} ${expectedCount === 1 ? 'file' : 'files'}`, { exact: true })).toBeVisible()
   await expect(row).toContainText(`${replacement.length} B`)
   await expect(page.locator('.progress-popup')).toHaveCount(0)
   await page.screenshot({ path: testInfo.outputPath('replaced-file-listing.png') })

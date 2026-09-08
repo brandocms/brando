@@ -1,0 +1,264 @@
+{
+  "date": "2026-09-08",
+  "review": "implementation.html",
+  "screenshots": [
+    {
+      "file": "implementation/final/compact-fields-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/compact-fields-empty-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/compact-fields-mobile.png",
+      "width": 390,
+      "height": 844,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/compact-image-detail-mobile.png",
+      "width": 308,
+      "height": 119,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/compact-image-detail.png",
+      "width": 501,
+      "height": 127,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/field-and-sticky-queue.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/field-drag-destination.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/field-drag-detail.png",
+      "width": 501,
+      "height": 127,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/field-upload-error.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/file-browser-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/file-browser-mobile.png",
+      "width": 390,
+      "height": 844,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/file-settings-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/file-settings-mobile.png",
+      "width": 390,
+      "height": 844,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/form-media-fields-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/gallery-editor-empty.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/gallery-variable-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/gallery-variable-mobile.png",
+      "width": 390,
+      "height": 844,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/image-field-settings-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/image-field-settings-mobile.png",
+      "width": 390,
+      "height": 844,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/image-grid-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/image-grid-mobile.png",
+      "width": 390,
+      "height": 844,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/image-replace-mobile.png",
+      "width": 390,
+      "height": 844,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/image-selection-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/image-selection-mobile.png",
+      "width": 390,
+      "height": 844,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/image-settings-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/image-settings-detail.png",
+      "width": 960,
+      "height": 718,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/image-settings-mobile.png",
+      "width": 390,
+      "height": 844,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/mixed-destination-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/mixed-destination-mobile.png",
+      "width": 390,
+      "height": 844,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/shared-image-browser-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/shared-image-browser-mobile.png",
+      "width": 390,
+      "height": 844,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/upload-folder-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/upload-folder-mobile.png",
+      "width": 390,
+      "height": 844,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/video-browser-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/video-browser-mobile.png",
+      "width": 390,
+      "height": 844,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/video-grid-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/video-grid-mobile.png",
+      "width": 390,
+      "height": 844,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/video-playback-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/video-playback-mobile.png",
+      "width": 390,
+      "height": 844,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/video-selection-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/video-url-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/video-url-mobile.png",
+      "width": 390,
+      "height": 844,
+      "source": "Actual E2E browser capture"
+    },
+    {
+      "file": "implementation/final/videos-populated-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "source": "Actual E2E browser capture"
+    }
+  ]
+}

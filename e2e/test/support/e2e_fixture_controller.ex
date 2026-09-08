@@ -21,12 +21,53 @@ defmodule E2EFixtureController do
     scenario =
       case scenario_name do
         "admin-user" -> get_admin_user()
+        "media-upload" -> create_media_upload_module()
       end
 
     # Log the user in
     conn
     |> login_user(scenario)
     |> send_resp(200, "")
+  end
+
+  defp create_media_upload_module do
+    user = get_admin_user()
+
+    module =
+      Brando.Repo.insert!(%Brando.Content.Module{
+        type: :liquid,
+        uid: Ecto.UUID.generate(),
+        name: %{"en" => "Media attachment", "no" => "Medievedlegg"},
+        namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
+        help_text: %{"en" => "File reference and gallery variable", "no" => "Filreferanse og gallerivariabel"},
+        class: "media-attachment",
+        multi: false,
+        datasource: false,
+        code: "{% ref refs.attachment %}",
+        refs: [
+          %Brando.Content.Ref{
+            name: "attachment",
+            description: "Download attachment",
+            uid: Brando.Utils.generate_uid(),
+            data: %Brando.Villain.Blocks.FileBlock{type: "file", data: %Brando.Villain.Blocks.FileBlock.Data{}}
+          }
+        ],
+        vars: [
+          %Brando.Content.Var{
+            type: :gallery,
+            key: "media_collection",
+            label: "Media collection",
+            width: :full,
+            placement: :content,
+            gallery_allowed_types: [:image, :video],
+            creator_id: user.id
+          }
+        ]
+      })
+
+    Brando.Cache.Query.evict_schema(Brando.Content.Module)
+    Brando.Content.fetch_module(module.id)
+    user
   end
 
   def authorization(conn, %{"role" => role}) when role in ["reader", "author", "publisher", "none"] do

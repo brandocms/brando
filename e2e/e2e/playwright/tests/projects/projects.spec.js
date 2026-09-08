@@ -79,32 +79,21 @@ test('creates project', async ({ page }) => {
     .click()
   await page.getByRole('button', { name: 'Microsoft' }).click()
 
-  // Add image
-  await page.getByRole('button', { name: 'Add image' }).click()
-  await page.locator('#image-drawer-upload-input').setInputFiles('./fixtures/image.jpg')
+  // Upload and replace the listing image in its field, leaving both assets
+  // available for the compatible-library selection checks below.
+  const listingImage = page.locator('#project_listing_image-media')
+  await listingImage.locator('input[type="file"]').setInputFiles('./fixtures/image.jpg')
   await confirmUploadFolder(page)
-  // Wait for upload to complete - the image should appear in the drawer
-  await expect(page.locator('#image-drawer img')).toBeVisible({ timeout: 30000 })
-  // Close drawer - this should save the image selection
-  await page.getByRole('button', { name: 'Close' }).first().click()
-  await page.waitForSelector('#image-drawer', { state: 'hidden' })
-  await syncLV(page)
-
-  // Upload a second image to the same field context. This leaves the first
-  // image available in the compatible library so we can exercise replacing
-  // an already-selected image below.
-  await page.getByRole('button', { name: 'Edit image' }).click()
-  await page.locator('#image-drawer-upload-input').setInputFiles('./fixtures/image2.jpg')
+  await expect(listingImage.locator('img')).toBeVisible({ timeout: 30000 })
+  const firstImageId = await listingImage.getAttribute('data-asset-id')
+  await listingImage.locator('input[type="file"]').setInputFiles('./fixtures/image2.jpg')
   await confirmUploadFolder(page)
-  await expect(page.locator('#image-drawer img')).toBeVisible({
-    timeout: 30000,
-  })
-  await page.locator('#image-drawer').getByRole('button', { name: 'Close' }).click()
-  await page.waitForSelector('#image-drawer', { state: 'hidden' })
-  await syncLV(page)
+  await expect(listingImage).not.toHaveAttribute('data-asset-id', firstImageId, { timeout: 30000 })
+  await expect(listingImage.locator('img')).toBeVisible({ timeout: 30000 })
+  const secondImageId = await listingImage.getAttribute('data-asset-id')
 
   const galleryFileChooser = page.waitForEvent('filechooser')
-  await page.locator('.gallery-input').getByRole('button', { name: 'Upload images' }).click()
+  await page.locator('.gallery-input').getByRole('button', { name: 'Upload media' }).click()
   await (await galleryFileChooser).setFiles(['./fixtures/image2.jpg', './fixtures/image.jpg'])
   await confirmUploadFolder(page)
 
@@ -208,13 +197,14 @@ test('creates project', async ({ page }) => {
   })
 
   // The listing image must also have persisted (image entry_field delivery).
-  await expect(page.getByRole('button', { name: 'Edit image' })).toBeVisible({ timeout: 20000 })
+  await expect(listingImage).toHaveAttribute('data-asset-id', secondImageId, { timeout: 20000 })
 
   // The picker selection follows the current unsaved drawer preview. It must
   // not fall back to whichever image was persisted when the drawer opened.
-  await page.getByRole('button', { name: 'Edit image' }).click()
+  await listingImage.getByRole('button', { name: 'Configure', exact: true }).click()
   const imageDrawer = page.locator('#image-drawer')
-  await imageDrawer.getByRole('button', { name: 'Select existing image' }).click()
+  await imageDrawer.locator('summary', { hasText: 'Replace' }).click()
+  await imageDrawer.getByRole('button', { name: 'Browse library', exact: true }).click()
   await syncLV(page)
 
   const imagePicker = page.locator('#image-picker')
@@ -230,7 +220,8 @@ test('creates project', async ({ page }) => {
   await page.waitForSelector('#image-picker', { state: 'hidden' })
   await expect(imageDrawer.locator('img')).toBeVisible()
 
-  await imageDrawer.getByRole('button', { name: 'Select existing image' }).click()
+  await imageDrawer.locator('summary', { hasText: 'Replace' }).click()
+  await imageDrawer.getByRole('button', { name: 'Browse library', exact: true }).click()
   await syncLV(page)
 
   await expect(imagePicker.locator(`.image-picker__image[data-id="${replacementId}"]`)).toHaveClass(
@@ -242,15 +233,13 @@ test('creates project', async ({ page }) => {
 
   await imagePicker.getByRole('button', { name: 'Close' }).click()
   await page.waitForSelector('#image-picker', { state: 'hidden' })
-  await imageDrawer.getByRole('button', { name: 'Close' }).click()
+  await imageDrawer.getByRole('button', { name: 'Done', exact: true }).click()
   await page.waitForSelector('#image-drawer', { state: 'hidden' })
   await syncLV(page)
 
-  // Upload a video FILE straight into the gallery via the "Upload videos"
-  // trigger (entry_field_gallery + asset_type: video; only rendered when the
-  // default video upload strategy is :local).
+  // The gallery's shared input accepts a local video as well as images.
   await page
-    .locator('.gallery-input [data-asset-type="video"] input[type="file"]')
+    .locator('.gallery-input input[type="file"]')
     .setInputFiles('./fixtures/video.mp4')
   await syncLV(page)
   await expect(page.locator('[id$="-sortable-gallery-objects"] .gallery-object')).toHaveCount(4, {
@@ -272,22 +261,11 @@ test('creates project', async ({ page }) => {
     timeout: 20000,
   })
 
-  // Upload a LOCAL video file to the cover_video field via the video drawer
-  // (entry_field + asset_type: video → Video{type: :upload} wrapping a File).
-  await page.getByRole('button', { name: 'Add video' }).click()
-  await syncLV(page)
-  await page
-    .locator('#video-drawer-upload-trigger input[type="file"]')
-    .setInputFiles('./fixtures/video.mp4')
-  await syncLV(page)
-  await page.waitForTimeout(2000) // upload + delivery
-  await syncLV(page)
-
-  await page.locator('#video-drawer').getByRole('button', { name: 'Close' }).click()
-  await page.waitForSelector('#video-drawer', { state: 'hidden' })
-  await syncLV(page)
-
-  await expect(page.getByRole('button', { name: 'Edit video' })).toBeVisible({ timeout: 20000 })
+  // Upload a local video directly to the cover field.
+  const coverVideo = page.locator('#project_cover_video-media')
+  await coverVideo.locator('input[type="file"]').setInputFiles('./fixtures/video.mp4')
+  await expect(coverVideo).toHaveAttribute('data-asset-id', /\d+/, { timeout: 20000 })
+  const videoId = await coverVideo.getAttribute('data-asset-id')
 
   // Save + reopen — the video field must persist.
   await page.getByTestId('submit').click()
@@ -299,25 +277,16 @@ test('creates project', async ({ page }) => {
     .getByRole('link', { name: 'Microsoft' })
     .click()
   await syncLV(page)
-  await expect(page.getByRole('button', { name: 'Edit video' })).toBeVisible({ timeout: 20000 })
+  await expect(coverVideo).toHaveAttribute('data-asset-id', videoId, { timeout: 20000 })
   await expect(page.locator('[id$="-sortable-gallery-objects"] .gallery-object')).toHaveCount(4, {
     timeout: 20000,
   })
 
-  // Upload a file to the cover_file field via the file drawer (entry_field +
-  // asset_type: file → EctoNestedChangeset FK write).
-  await page.getByRole('button', { name: 'Add file' }).click()
-  await syncLV(page)
-  await page.locator('#file-drawer-upload-input').setInputFiles('./fixtures/test.pdf')
-  await syncLV(page)
-  await page.waitForTimeout(1000) // upload + delivery
-  await syncLV(page)
-
-  await page.locator('#file-drawer').getByRole('button', { name: 'Close' }).click()
-  await page.waitForSelector('#file-drawer', { state: 'hidden' })
-  await syncLV(page)
-
-  await expect(page.getByRole('button', { name: 'Edit file' })).toBeVisible({ timeout: 20000 })
+  // Upload the cover file through the same field intake.
+  const coverFile = page.locator('#project_cover_file-media')
+  await coverFile.locator('input[type="file"]').setInputFiles('./fixtures/test.pdf')
+  await expect(coverFile).toHaveAttribute('data-asset-id', /\d+/, { timeout: 20000 })
+  const fileId = await coverFile.getAttribute('data-asset-id')
 
   // Save + reopen — EVERY entry-field asset must persist together: file,
   // video, listing image and the 4 gallery objects.
@@ -330,9 +299,9 @@ test('creates project', async ({ page }) => {
     .getByRole('link', { name: 'Microsoft' })
     .click()
   await syncLV(page)
-  await expect(page.getByRole('button', { name: 'Edit file' })).toBeVisible({ timeout: 20000 })
-  await expect(page.getByRole('button', { name: 'Edit video' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Edit image' })).toBeVisible()
+  await expect(coverFile).toHaveAttribute('data-asset-id', fileId, { timeout: 20000 })
+  await expect(coverVideo).toHaveAttribute('data-asset-id', videoId)
+  await expect(listingImage).toHaveAttribute('data-asset-id', replacementId)
   await expect(page.locator('[id$="-sortable-gallery-objects"] .gallery-object')).toHaveCount(4, {
     timeout: 20000,
   })

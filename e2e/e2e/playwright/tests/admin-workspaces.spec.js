@@ -52,7 +52,7 @@ for (const [name, route, heading] of screens) {
     await page.goto(route)
     await syncLV(page)
     await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible()
-    await expect(page.locator('.admin-workspace')).toBeVisible()
+    await expect(page.locator('.admin-workspace:not(.drawer)')).toBeVisible()
     await expect(page.locator('.phx-error')).toHaveCount(0)
     await page.screenshot({ path: testInfo.outputPath(`${name}-desktop.png`), fullPage: true })
     if (name === 'modules') {

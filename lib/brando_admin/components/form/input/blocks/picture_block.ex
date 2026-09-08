@@ -3,8 +3,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
-  alias Brando.Villain.Blocks.PictureBlock
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias Ecto.Changeset
@@ -31,6 +31,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
 
   # Only override fields that can be customized in the block data
   @override_fields [
+    :config_target,
+    :formats,
     :title,
     :credits,
     :alt,
@@ -52,8 +54,26 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     |> then(&{:ok, &1})
   end
 
-  def update(%{event: "image_processed", image: image}, socket) do
+  def update(%{event: "image_uploaded", expected_asset_id: expected} = assigns, socket) do
+    current_id = socket.assigns[:image] && socket.assigns.image.id
+
+    if Brando.Uploads.AssetIntent.current_selection?(expected, current_id) do
+      update(Map.delete(assigns, :expected_asset_id), socket)
+    else
+      {:ok, socket}
+    end
+  end
+
+  def update(%{event: "image_uploaded", image: image}, socket) do
     {:ok, handle_image_complete(socket, image)}
+  end
+
+  def update(%{event: "image_processed", image: image}, socket) do
+    if socket.assigns.image && socket.assigns.image.id == image.id do
+      {:ok, assign(socket, :image, image) |> assign(image_display_assigns(image))}
+    else
+      {:ok, socket}
+    end
   end
 
   def update(%{event: "image_editor_new_copy", new_image: new_image}, socket) do
@@ -136,6 +156,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
             target={@target}
             ref_form={@ref_form}
             config_open={@config_open}
+            config_layout="editor"
+            config_title={gettext("Configure image")}
+            config_subtitle={@ref_description || gettext("Settings for this use of the image")}
+            config_icon="hero-photo"
           >
             <:description>
               <%= if @ref_description not in ["", nil] do %>
@@ -144,163 +168,39 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                 {@extracted_filename}
               <% end %>
             </:description>
-            <div
-              :if={@extracted_path}
-              class={["preview", (@compact && "compact") || "classic"]}
-              phx-click={!@compact && "open_block_config"}
-              phx-value-uid={@uid}
-              phx-target={@target}
-            >
-              <div class="image-wrapper">
-                <Content.image image={@image} size={:largest} />
-                <button
-                  class="edit-image-btn"
-                  type="button"
-                  phx-click={
-                    JS.push("open_image_editor", target: @myself)
-                    |> toggle_drawer("#image-editor-drawer")
-                  }
-                >
-                  <.icon name="hero-pencil-square" />
-                </button>
-              </div>
-              <div class="image-info">
-                <figcaption
-                  phx-click={!@compact && "open_block_config"}
-                  phx-value-uid={@uid}
-                  phx-target={@target}
-                >
-                  <div class="info-wrapper">
-                    <div class="filename">{@file_name}</div>
-                    <div class="title-and-alt">
-                      <div class="dims">{@image.width}&times;{@image.height}</div>
-                      <div id={"block-#{@uid}-figcaption-title"}>
-                        <span>{gettext("Caption")}</span>
-                        <%= if @block_data.title in [nil, ""] do %>
-                          {gettext("<no caption>")}
-                        <% else %>
-                          {@block_data.title |> HtmlSanitizeEx.basic_html() |> raw()}
-                        <% end %>
-                      </div>
-                      <div id={"block-#{@uid}-figcaption-alt"}>
-                        <span>{gettext("Alt. text")}</span> {@block_data.alt ||
-                          gettext("<no alt.text>")}
-                      </div>
-                    </div>
-                  </div>
-                  <button class="tiny" type="button" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
-                    {gettext("Edit image")}
-                  </button>
-                </figcaption>
-              </div>
-            </div>
-
-            <div
+            <MediaField.field
               id={"block-#{@uid}-upload"}
-              phx-hook="Brando.UploadTrigger"
-              data-kind="block_ref_picture"
-              data-component-id={"#{@uid}-picture"}
-              data-asset-type="image"
-              data-config-target={@block_data.config_target || "default"}
-              data-folder-browser="true"
-              data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
-              class={["empty", "upload-canvas", @extracted_path && "hidden"]}
+              type={:image}
+              asset={@image}
+              kind="block_ref_picture"
+              component_id={"#{@uid}-picture"}
+              config_target={@block_data.config_target || "default"}
+              browse={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
+              remove={JS.push("reset_image", target: @myself)}
+              presentation={:block}
+              label={@ref_description}
+              configure={JS.push("open_block_config", target: @target, value: %{uid: @uid})}
             >
-              <input type="file" class="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" />
-              <figure>
-                <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                  <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none" />
-                  <polygon
-                    class="plus"
-                    points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"
-                  />
-                  <path
-                    d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z"
-                    transform="translate(0 0)"
-                  />
-                  <circle cx="8" cy="9" r="2" />
-                </svg>
-              </figure>
-              <div class="instructions">
-                <span>{gettext("Click or drag an image &uarr; to upload") |> raw()}</span>
-                <br />
-                <button type="button" class="tiny" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
-                  {gettext("Pick an existing image")}
+              <:actions :if={@image}>
+                <button
+                  class="media-button edit-image-btn"
+                  type="button"
+                  phx-click={JS.push("open_image_editor", target: @myself) |> toggle_drawer("#image-editor-drawer")}
+                >
+                  <.icon name="hero-scissors" />{gettext("Edit/Crop")}
                 </button>
-              </div>
-            </div>
+              </:actions>
+            </MediaField.field>
 
             <:config>
-              <div class="panels">
-                <div class="panel">
-                  <%= if @extracted_path do %>
-                    <Content.image image={@image} size={:largest} />
-                    <div class="image-info">
-                      Path: {@image.path}<br /> Dimensions: {@image.width}&times;{@image.height}<br />
-                    </div>
-                  <% end %>
-                  <div
-                    :if={!@extracted_path}
-                    id={"block-#{@uid}-modal-upload"}
-                    phx-hook="Brando.UploadTrigger"
-                    data-kind="block_ref_picture"
-                    data-component-id={"#{@uid}-picture"}
-                    data-asset-type="image"
-                    data-config-target={@block_data.config_target || "default"}
-                    data-folder-browser="true"
-                    data-accept=".jpg,.jpeg,.png,.gif,.webp,.svg"
-                    class="img-placeholder empty upload-canvas"
-                  >
-                    <input type="file" class="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg" />
-                    <div class="placeholder-wrapper">
-                      <div class="svg-wrapper">
-                        <svg class="icon-add-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                          <path d="M0,0H24V24H0Z" transform="translate(0 0)" fill="none" />
-                          <polygon
-                            class="plus"
-                            points="21 15 21 18 24 18 24 20 21 20 21 23 19 23 19 20 16 20 16 18 19 18 19 15 21 15"
-                          />
-                          <path
-                            d="M21,3a1,1,0,0,1,1,1v9H20V5H4V19L14,9l3,3v2.83l-3-3L6.83,19H14v2H3a1,1,0,0,1-1-1V4A1,1,0,0,1,3,3Z"
-                            transform="translate(0 0)"
-                          />
-                          <circle cx="8" cy="9" r="2" />
-                        </svg>
-                      </div>
-                    </div>
-                    <div class="instructions">
-                      <span>{gettext("Click or drag an image &uarr; to upload") |> raw()}</span>
-                    </div>
+              <Content.modal_sections id={"image-#{@uid}-config-sections"}>
+                <:section id="content" label={gettext("Text & link")} icon="hero-document-text">
+                  <div class="media-section-heading">
+                    <h3 class="modal-section-title">{gettext("Text & link")}</h3>
+                    <p class="modal-muted">
+                      {gettext("Customize this use of the image. Empty text overrides use the library values.")}
+                    </p>
                   </div>
-                </div>
-                <div class="panel">
-                  <div class="button-group-vertical">
-                    <button
-                      type="button"
-                      class="secondary"
-                      phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
-                    >
-                      {gettext("Select image")}
-                    </button>
-
-                    <button
-                      :if={@image}
-                      type="button"
-                      class="secondary"
-                      phx-click={
-                        JS.push("close_block_config", target: @target)
-                        |> JS.push("open_image_editor", target: @myself)
-                        |> toggle_drawer("#image-editor-drawer")
-                      }
-                    >
-                      {gettext("Edit/Crop")}
-                    </button>
-
-                    <button type="button" class="danger" phx-click={JS.push("reset_image", target: @myself)}>
-                      {gettext("Reset image")}
-                    </button>
-                  </div>
-                  <Input.input type={:hidden} field={block_data[:config_target]} />
                   <Input.rich_text
                     field={block_data[:title]}
                     label={gettext("Caption")}
@@ -310,7 +210,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                   />
                   <Input.override_text
                     field={block_data[:alt]}
-                    label={gettext("Alt")}
+                    label={gettext("Alternative text")}
                     default_value={@image && @image.alt}
                     target={@myself}
                   />
@@ -321,6 +221,44 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                     target={@myself}
                   />
                   <Input.text field={block_data[:link]} label={gettext("Link")} />
+                </:section>
+                <:section id="image" label={gettext("Image")} icon="hero-photo">
+                  <div class="media-section-heading">
+                    <h3 class="modal-section-title">{gettext("Selected image")}</h3>
+                    <p class="modal-muted">{gettext("Replace the image while keeping this reference’s settings.")}</p>
+                  </div>
+                  <MediaField.field
+                    id={"block-#{@uid}-modal-upload"}
+                    type={:image}
+                    asset={@image}
+                    kind="block_ref_picture"
+                    component_id={"#{@uid}-picture"}
+                    config_target={@block_data.config_target || "default"}
+                    browse={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
+                    remove={JS.push("reset_image", target: @myself)}
+                    presentation={:block}
+                  >
+                    <:actions>
+                      <button
+                        :if={@image}
+                        type="button"
+                        class="media-button"
+                        phx-click={
+                          JS.push("close_block_config", target: @target)
+                          |> JS.push("open_image_editor", target: @myself)
+                          |> toggle_drawer("#image-editor-drawer")
+                        }
+                      >
+                        <.icon name="hero-scissors" />{gettext("Edit/Crop")}
+                      </button>
+                    </:actions>
+                  </MediaField.field>
+                </:section>
+                <:section id="display" label={gettext("Display")} icon="hero-adjustments-horizontal">
+                  <div class="media-section-heading">
+                    <h3 class="modal-section-title">{gettext("Display")}</h3>
+                    <p class="modal-muted">{gettext("Control how the image loads in this reference.")}</p>
+                  </div>
                   <Input.radios
                     field={block_data[:fetchpriority]}
                     label={gettext("Fetch priority")}
@@ -332,9 +270,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                       ]
                     ]}
                   />
-                  <Input.text field={block_data[:dominant_color]} label={gettext("Dominant color")} />
-                </div>
-              </div>
+                  <Input.text field={block_data[:img_class]} label={gettext("Image CSS classes")} />
+                  <Input.text field={block_data[:picture_class]} label={gettext("Wrapper CSS classes")} />
+                </:section>
+              </Content.modal_sections>
+              <Input.input type={:hidden} field={block_data[:config_target]} />
 
               <Input.input type={:hidden} field={block_data[:placeholder]} />
               <Input.input type={:hidden} field={block_data[:moonwalk]} />
@@ -366,11 +306,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   def handle_event("reset_image", _, socket) do
-    # Reset to empty picture block data with no image association
-    new_data =
-      %PictureBlock.Data{}
-      |> Map.from_struct()
-      |> Map.take(@override_fields)
+    new_data = Block.current_block_data_map(socket.assigns.block, @override_fields)
 
     socket
     |> Block.commit_ref_data(ref_data: new_data, image_id: nil, force_render: true)

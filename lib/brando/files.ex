@@ -44,6 +44,9 @@ defmodule Brando.Files do
         target_string = "default"
         from t in query, where: t.config_target == ^target_string
 
+      {:config_target, target_string}, query when is_binary(target_string) ->
+        from t in query, where: t.config_target == ^target_string
+
       {:config_target, {type, schema, field}}, query ->
         target_string = "#{type}:#{inspect(schema)}:#{field}"
         from t in query, where: t.config_target == ^target_string

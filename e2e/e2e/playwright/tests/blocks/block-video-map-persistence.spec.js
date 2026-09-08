@@ -65,15 +65,16 @@ test.describe('Video and map block save persistence', () => {
 
     // Pick the seeded "Test Video" from the video picker drawer — this is
     // the select_video out-of-band video_id commit.
-    await page.getByRole('button', { name: 'Select or create video' }).click()
+    await page.locator('.video-block .media-field:visible').getByRole('button', { name: 'Browse library', exact: true }).click()
     await syncLV(page)
     const videoRow = page.locator('.video-picker__video', { hasText: 'Test Video' }).first()
     await expect(videoRow).toBeVisible({ timeout: 10000 })
     await videoRow.click()
     await syncLV(page)
 
-    // The block header shows the attached video's remote id.
-    await expect(page.locator('.video-block')).toContainText('dQw4w9WgXcQ', { timeout: 10000 })
+    const field = page.locator('.video-block .media-field--block:visible')
+    await expect(field).toHaveAttribute('data-asset-id', /\d+/)
+    const videoId = await field.getAttribute('data-asset-id')
 
     // Stale-cache regression trigger: inserting another block re-initialises
     // siblings from the parent's cached forms — this must not wipe video_id.
@@ -82,7 +83,7 @@ test.describe('Video and map block save persistence', () => {
     await saveAndReopen(page, 'Persist Video Test')
 
     // The video must still be attached after a full round-trip through the DB.
-    await expect(page.locator('.video-block')).toContainText('dQw4w9WgXcQ', { timeout: 20000 })
+    await expect(field).toHaveAttribute('data-asset-id', videoId, { timeout: 20000 })
   })
 
   test('map embed URL survives insert + save + reload', async ({ page }) => {

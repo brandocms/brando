@@ -75,6 +75,7 @@
 @import "./components/SideBar/NavigationMenuSectionItem.css";
 @import "./components/Toast.css";
 @import "./components/UploadManager.css";
+@import "./components/MediaField.css";
 @import "./components/Var.css";
 
 @import "./components/Form/Controls.css";
@@ -84,6 +85,7 @@
 @import "./views/ContentWorkspace.css";
 @import "./views/SettingsWorkspace.css";
 @import "./views/assets/Images.css";
+@import "./components/MediaWorkspace.css";
 @import "./views/config/Cache.css";
 @import "./views/config/Authorization.css";
 @import "./views/config/Environments.css";

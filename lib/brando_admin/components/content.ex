@@ -43,6 +43,10 @@ defmodule BrandoAdmin.Components.Content do
       |> assign_new(:dark, fn -> false end)
       |> assign_new(:light, fn -> false end)
       |> assign_new(:left, fn -> false end)
+      |> assign_new(:workspace, fn -> false end)
+      |> assign_new(:icon, fn -> "hero-photo" end)
+      |> assign_new(:subtitle, fn -> nil end)
+      |> assign_new(:footer, fn -> nil end)
       |> assign_new(:hidden, fn -> true end)
 
     ~H"""
@@ -55,17 +59,29 @@ defmodule BrandoAdmin.Components.Content do
         @wide && "wide",
         @dark && "dark",
         @light && "light",
+        @workspace && "admin-workspace media-workspace media-workspace-drawer",
         @left && "left"
       ]}
       style={"z-index: #{@z}"}
+      role={if @workspace, do: "dialog"}
+      aria-modal={if @workspace, do: "true"}
+      aria-labelledby={if @workspace, do: "#{@id}-title"}
+      phx-hook={if @workspace, do: "Brando.Modal"}
+      data-modal-close={if @workspace, do: @close}
     >
       <div class="inner">
         <div class="drawer-header">
-          <h2>
-            {@title}
-          </h2>
-          <button phx-click={@close} type="button" class="drawer-close-button">
-            {gettext("Close")}
+          <span :if={@workspace} class="drawer-heading-icon"><.icon name={@icon} /></span>
+          <div :if={@workspace} class="drawer-heading-text">
+            <h2 id={"#{@id}-title"}>
+              {@title}
+            </h2>
+            <p :if={@subtitle}>{@subtitle}</p>
+          </div>
+          <h2 :if={!@workspace}>{@title}</h2>
+          <button phx-click={@close} type="button" class="drawer-close-button" aria-label={gettext("Close")}>
+            <.icon :if={@workspace} name="hero-x-mark" />
+            <span :if={!@workspace}>{gettext("Close")}</span>
           </button>
         </div>
         <div :if={@info} class="drawer-info">
@@ -74,8 +90,18 @@ defmodule BrandoAdmin.Components.Content do
         <div class="drawer-form">
           {render_slot(@inner_block)}
         </div>
+        <footer :if={@footer not in [nil, []]} class="drawer-footer">{render_slot(@footer)}</footer>
       </div>
     </div>
+    <button
+      :if={@workspace}
+      type="button"
+      class="media-drawer-backdrop"
+      style={"z-index: #{@z - 1}"}
+      phx-click={@close}
+      tabindex="-1"
+      aria-label={gettext("Close media panel")}
+    />
     """
   end
 

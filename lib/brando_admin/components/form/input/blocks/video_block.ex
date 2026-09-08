@@ -3,9 +3,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
-  import BrandoAdmin.Components.Content.List.Checklist
-
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Primitives
@@ -38,7 +37,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     :muted,
     :video_class,
     :container_class,
-    :config_target
+    :config_target,
+    :cover_image
   ]
 
   # Override fields for cover image (still used for embedded cover images)
@@ -63,6 +63,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     # :config_target
   ]
 
+  def update(%{event: "select_video", expected_asset_id: expected} = assigns, socket) do
+    current_id = socket.assigns[:video] && socket.assigns.video.id
+
+    if Brando.Uploads.AssetIntent.current_selection?(expected, current_id) do
+      update(Map.delete(assigns, :expected_asset_id), socket)
+    else
+      {:ok, socket}
+    end
+  end
+
   def update(%{event: "video_created_from_url"} = assigns, socket) do
     # Handle the video creation event from VideoPicker
     socket
@@ -81,7 +91,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   end
 
   def update(%{event: "select_video", video_id: video_id}, socket) do
-    case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}) do
+    case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]}) do
       {:ok, video} ->
         video_data = Map.from_struct(video)
 
@@ -123,7 +133,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
      |> assign_new(:video, fn ->
        # Always get video from ref_form since we only use refs now
        Block.resolve_ref_association(assigns[:ref_form], :video, :video_id, fn video_id ->
-         Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]})
+         Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]})
        end)
      end)
      |> assign_new(:video_data, fn %{video: video} -> if video, do: Map.from_struct(video), else: %{} end)
@@ -156,6 +166,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
           target={@target}
           ref_form={@ref_form}
           config_open={@config_open}
+          config_layout="editor"
+          config_title={gettext("Configure video")}
+          config_subtitle={@ref_description || gettext("Settings for this use of the video")}
+          config_icon="hero-film"
         >
           <:description>
             <%= case @type do %>
@@ -188,78 +202,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
             <% end %>
           </:description>
           <:config>
-            <Input.input type={:hidden} field={block_data[:config_target]} />
-            <%= if is_nil(@video) do %>
-              <!-- Video association data is handled separately -->
-              <Input.input type={:hidden} field={block_data[:title]} />
-              <Input.input type={:hidden} field={block_data[:poster]} />
-              <Input.input type={:hidden} field={block_data[:cover]} />
-
-              <div class="empty-video-state">
-                <div class="instructions">
-                  <button
-                    type="button"
-                    class="primary small"
-                    phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
-                  >
-                    {gettext("Select or create video")}
-                  </button>
-                  <p>
-                    <small>
-                      {gettext("Choose from existing videos or create new from URL (YouTube, Vimeo, direct files)")}
-                    </small>
-                  </p>
+            <Content.modal_sections id={"video-#{@uid}-config-sections"}>
+              <:section id="video" label={gettext("Video")} icon="hero-film">
+                <div class="media-section-heading">
+                  <h3 class="modal-section-title">{gettext("Selected video")}</h3>
+                  <p class="modal-muted">{gettext("Replace the video while keeping this reference’s settings.")}</p>
                 </div>
-              </div>
-            <% else %>
-              <div class="panels">
-                <div class="panel">
-                  <div :if={@cover_image} class="cover">
-                    <Content.image image={@cover_image} size={:smallest} />
-                  </div>
-
-                  <div :if={!@cover_image && @video_data[:source_url]} class="cover">
-                    <video
-                      preload="metadata"
-                      muted
-                      class="video-frame-preview"
-                      src={"#{@video_data[:source_url]}#t=0.1"}
-                    />
-                  </div>
-
-                  <div :if={!@cover_image && !@video_data[:source_url]} class="cover">
-                    <div class="img-placeholder">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                        <path fill="none" d="M0 0h24v24H0z" /><path d="M4.828 21l-.02.02-.021-.02H2.992A.993.993 0 0 1 2 20.007V3.993A1 1 0 0 1 2.992 3h18.016c.548 0 .992.445.992.993v16.014a1 1 0 0 1-.992.993H4.828zM20 15V5H4v14L14 9l6 6zm0 2.828l-6-6L6.828 19H20v-1.172zM8 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  <div class="row">
-                    <div class="half">
-                      <Input.number placeholder={@video_data[:width]} field={block_data[:width]} label={gettext("Width")} />
-                    </div>
-                    <div class="half">
-                      <Input.number placeholder={@video_data[:height]} field={block_data[:height]} label={gettext("Height")} />
-                    </div>
-                  </div>
-
-                  <div class="video-info">
-                    <div class="video-info-item">
-                      <span>{gettext("Video type")}</span>
-                      {String.upcase(to_string(@type || ""))}
-                    </div>
-                    <div :if={@video_data[:source_url]} class="video-info-item">
-                      <span>{gettext("Source URL")}</span>
-                      <span class="video-info-url" title={@video_data[:source_url]}>{@video_data[:source_url]}</span>
-                    </div>
-                    <div :if={@video_data[:remote_id]} class="video-info-item">
-                      <span>{gettext("Remote ID")}</span>
-                      {@video_data[:remote_id]}
-                    </div>
-                  </div>
-                </div>
-                <div class="panel">
+                <MediaField.field
+                  id={"block-#{@uid}-video-modal-upload"}
+                  type={:video}
+                  asset={@video}
+                  kind="block_ref_video"
+                  component_id={"#{@uid}-video"}
+                  config_target={block_data[:config_target].value || "default"}
+                  presentation={:block}
+                  browse={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
+                  remove={JS.push("reset_video", target: @myself)}
+                />
+                <div class="media-config-fields">
                   <Input.rich_text
                     field={block_data[:title]}
                     label={gettext("Caption")}
@@ -267,210 +227,100 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                     reset
                     opts={[]}
                   />
-
-                  <div class="button-group-vertical">
-                    <button
-                      type="button"
-                      class="secondary"
-                      phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
-                    >
-                      {gettext("Change video")}
-                    </button>
+                </div>
+              </:section>
+              <:section id="playback" label={gettext("Playback")} icon="hero-play">
+                <div class="media-section-heading">
+                  <h3 class="modal-section-title">{gettext("Playback")}</h3>
+                  <p class="modal-muted">{gettext("Use the video’s defaults or customize playback for this reference.")}</p>
+                </div>
+                <Input.override_toggle_group
+                  label={gettext("Video playback")}
+                  fields={[
+                    {block_data[:autoplay], gettext("Autoplay"), @video && @video.autoplay},
+                    {block_data[:preload], gettext("Preload"), @video && @video.preload},
+                    {block_data[:controls], gettext("Controls"), @video && @video.controls},
+                    {block_data[:loop], gettext("Loop"), @video && @video.loop},
+                    {block_data[:muted], gettext("Muted"), @video && Map.get(@video, :muted, false)}
+                  ]}
+                  target={@myself}
+                />
+                <div class="media-playback-extra">
+                  <Input.toggle tiny field={block_data[:play_button]} label={gettext("Play button")} />
+                  <Input.toggle tiny field={block_data[:progress]} label={gettext("Progress bar")} />
+                </div>
+              </:section>
+              <:section id="display" label={gettext("Display")} icon="hero-adjustments-horizontal">
+                <div class="media-section-heading">
+                  <h3 class="modal-section-title">{gettext("Display")}</h3>
+                </div>
+                <div class="media-cover-settings">
+                  <Content.image :if={@cover_image} image={@cover_image} size={:smallest} />
+                  <div class="media-field-actions">
                     <button
                       type="button"
                       class="secondary"
                       phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
-                    >
-                      {gettext("Select cover image")}
-                    </button>
-                    <button type="button" class="danger" phx-click={JS.push("reset_image", target: @myself)}>
-                      {gettext("Reset cover image")}
-                    </button>
-                    <button type="button" class="danger" phx-click={JS.push("reset_video", target: @myself)}>
-                      {gettext("Reset video")}
-                    </button>
+                    >{gettext("Select cover image")}</button>
+                    <button
+                      :if={@cover_image}
+                      type="button"
+                      class="secondary"
+                      phx-click={JS.push("reset_image", target: @myself)}
+                    >{gettext("Remove cover image")}</button>
                   </div>
-
-                  <Input.input type={:hidden} field={block_data[:poster]} />
-                  <%= if block_data[:cover].value in ["false", "svg"] do %>
-                    <Input.input type={:hidden} field={block_data[:cover]} />
-                  <% else %>
-                    <Input.text field={block_data[:cover]} label={gettext("Cover")} />
-                  <% end %>
-
-                  <Input.toggle tiny field={block_data[:play_button]} label={gettext("Play button")} />
-                  <Input.toggle tiny field={block_data[:progress]} label={gettext("Progress bar")} />
-
-                  <Input.override_toggle_group
-                    label={gettext("Video playback")}
-                    fields={[
-                      {block_data[:autoplay], gettext("Autoplay"), @video && @video.autoplay},
-                      {block_data[:preload], gettext("Preload"), @video && @video.preload},
-                      {block_data[:controls], gettext("Controls"), @video && @video.controls},
-                      {block_data[:loop], gettext("Loop"), @video && @video.loop},
-                      {block_data[:muted], gettext("Muted"), @video && Map.get(@video, :muted, false)}
-                    ]}
-                    target={@myself}
-                  />
-
-                  <Input.text
-                    field={block_data[:aspect_ratio]}
-                    label={gettext("Aspect ratio override")}
-                    placeholder="16:9"
-                  />
-
-                  <fieldset class="override-toggle-group">
-                    <legend>{gettext("CSS classes")}</legend>
-                    <div class="row">
-                      <div class="half">
-                        <Input.text
-                          field={block_data[:video_class]}
-                          label={gettext("Video")}
-                          placeholder="my-video-class"
-                        />
-                      </div>
-                      <div class="half">
-                        <Input.text
-                          field={block_data[:container_class]}
-                          label={gettext("Container")}
-                          placeholder="my-container-class"
-                        />
-                      </div>
-                    </div>
-                  </fieldset>
-
-                  <Input.number field={block_data[:opacity]} label={gettext("Opacity (0-100)")} step="1" min="0" max="100" />
-                  <.inputs_for :let={cover_image} :if={block_data[:cover_image].value} field={block_data[:cover_image]}>
-                    <Input.input type={:hidden} field={cover_image[:placeholder]} />
-                    <Input.input type={:hidden} field={cover_image[:cdn]} />
-                    <Input.input type={:hidden} field={cover_image[:moonwalk]} />
-                    <Input.input type={:hidden} field={cover_image[:lazyload]} />
-                    <Input.input type={:hidden} field={cover_image[:credits]} />
-                    <Input.input type={:hidden} field={cover_image[:dominant_color]} />
-                    <Input.input type={:hidden} field={cover_image[:height]} />
-                    <Input.input type={:hidden} field={cover_image[:width]} />
-                    <Input.input type={:hidden} field={cover_image[:path]} />
-
-                    <.inputs_for :let={focal_form} field={cover_image[:focal]}>
-                      <Input.input type={:hidden} field={focal_form[:x]} />
-                      <Input.input type={:hidden} field={focal_form[:y]} />
-                    </.inputs_for>
-
-                    <Primitives.map_inputs :let={%{value: value, name: name}} field={cover_image[:sizes]}>
-                      <input type="hidden" name={"#{name}"} value={"#{value}"} />
-                    </Primitives.map_inputs>
-
-                    <Primitives.array_inputs :let={%{value: array_value, name: array_name}} field={cover_image[:formats]}>
-                      <input type="hidden" name={array_name} value={array_value} />
-                    </Primitives.array_inputs>
-                  </.inputs_for>
                 </div>
-              </div>
-            <% end %>
+                <Input.input type={:hidden} field={block_data[:poster]} />
+                <%= if block_data[:cover].value in ["false", "svg"] do %>
+                  <Input.input type={:hidden} field={block_data[:cover]} />
+                <% else %>
+                  <Input.text field={block_data[:cover]} label={gettext("Cover")} />
+                <% end %>
+                <Input.text field={block_data[:aspect_ratio]} label={gettext("Aspect ratio override")} placeholder="16:9" />
+                <Input.text field={block_data[:video_class]} label={gettext("Video CSS classes")} />
+                <Input.text field={block_data[:container_class]} label={gettext("Container CSS classes")} />
+                <Input.number field={block_data[:opacity]} label={gettext("Opacity (0–100)")} step="1" min="0" max="100" />
+              </:section>
+            </Content.modal_sections>
+            <Input.input type={:hidden} field={block_data[:config_target]} />
+            <.inputs_for :let={cover_image} :if={block_data[:cover_image].value} field={block_data[:cover_image]}>
+              <Input.input type={:hidden} field={cover_image[:placeholder]} />
+              <Input.input type={:hidden} field={cover_image[:cdn]} />
+              <Input.input type={:hidden} field={cover_image[:moonwalk]} />
+              <Input.input type={:hidden} field={cover_image[:lazyload]} />
+              <Input.input type={:hidden} field={cover_image[:credits]} />
+              <Input.input type={:hidden} field={cover_image[:dominant_color]} />
+              <Input.input type={:hidden} field={cover_image[:height]} />
+              <Input.input type={:hidden} field={cover_image[:width]} />
+              <Input.input type={:hidden} field={cover_image[:path]} />
+
+              <.inputs_for :let={focal_form} field={cover_image[:focal]}>
+                <Input.input type={:hidden} field={focal_form[:x]} />
+                <Input.input type={:hidden} field={focal_form[:y]} />
+              </.inputs_for>
+
+              <Primitives.map_inputs :let={%{value: value, name: name}} field={cover_image[:sizes]}>
+                <input type="hidden" name={"#{name}"} value={"#{value}"} />
+              </Primitives.map_inputs>
+
+              <Primitives.array_inputs :let={%{value: array_value, name: array_name}} field={cover_image[:formats]}>
+                <input type="hidden" name={array_name} value={array_value} />
+              </Primitives.array_inputs>
+            </.inputs_for>
           </:config>
-          <%= if is_nil(@video) do %>
-            <div class="empty">
-              <figure>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                  <path fill="none" d="M0 0H24V24H0z" /><path d="M16 4c.552 0 1 .448 1 1v4.2l5.213-3.65c.226-.158.538-.103.697.124.058.084.09.184.09.286v12.08c0 .276-.224.5-.5.5-.103 0-.203-.032-.287-.09L17 14.8V19c0 .552-.448 1-1 1H2c-.552 0-1-.448-1-1V5c0-.552.448-1 1-1h14zm-1 2H3v12h12V6zM8 8h2v3h3v2H9.999L10 16H8l-.001-3H5v-2h3V8zm13 .841l-4 2.8v.718l4 2.8V8.84z" />
-                </svg>
-              </figure>
-              <div class="instructions">
-                <button
-                  type="button"
-                  class="primary"
-                  phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
-                >
-                  {gettext("Select or create video")}
-                </button>
-              </div>
-            </div>
-          <% else %>
-            <%= case @type do %>
-              <% :vimeo -> %>
-                <div class="video-content">
-                  <iframe
-                    src={"https://player.vimeo.com/video/#{@video_data[:remote_id]}?title=0&byline=0"}
-                    width="580"
-                    height="320"
-                    frameborder="0"
-                  ></iframe>
-                </div>
-              <% :youtube -> %>
-                <div class="video-content">
-                  <iframe
-                    src={"https://www.youtube.com/embed/#{@video_data[:remote_id]}"}
-                    width="580"
-                    height="320"
-                    frameborder="0"
-                  ></iframe>
-                </div>
-              <% _ -> %>
-                <div class="preview compact" id={"block-#{@uid}-videoSize"}>
-                  <div class={[
-                    "video-content",
-                    (@video_data[:width] > @video_data[:height] && "landscape") || "portrait"
-                  ]}>
-                    <video
-                      class="villain-video-file"
-                      muted="muted"
-                      tabindex="-1"
-                      loop
-                      autoplay
-                      src={@video_data[:source_url] || @video_data[:remote_id]}
-                    >
-                      <source src={@video_data[:source_url] || @video_data[:remote_id]} type="video/mp4" />
-                    </video>
-                  </div>
-                  <div class="video-info" data-video-id={@video_data[:id]}>
-                    <figcaption>
-                      <div class="info-wrapper">
-                        <div class="video-type">
-                          <span>{gettext("Video type")}</span>
-                          {gettext("External video URL")}
-                        </div>
-                        <div class="video-dimensions">
-                          <span>{gettext("Dimensions")}</span>
-                          {@video_data[:width]} &times; {@video_data[:height]}
-                        </div>
-                        <div class="video-configuration">
-                          <span>{gettext("Configuration")}</span>
-                          <.checklist tiny>
-                            <.checklist_item cond={block_data[:autoplay].value in ["true", true]}>
-                              {gettext("Autoplay")}
-                            </.checklist_item>
-                            <%= if block_data[:autoplay].value in ["false", false] do %>
-                              <.checklist_item cond={block_data[:play_button].value in ["true", true]}>
-                                {gettext("Play button")}
-                              </.checklist_item>
-                              <.checklist_item cond={block_data[:controls].value in ["true", true]}>
-                                {gettext("Show native player controls")}
-                              </.checklist_item>
-                            <% else %>
-                              <.checklist_item cond={block_data[:muted].value in ["true", true]}>
-                                {gettext("Muted")}
-                              </.checklist_item>
-                              <.checklist_item cond={block_data[:loop].value in ["true", true]}>
-                                {gettext("Loop video")}
-                              </.checklist_item>
-                            <% end %>
-                          </.checklist>
-                        </div>
-                      </div>
-                      <button
-                        class="tiny mt-1"
-                        type="button"
-                        phx-click="open_block_config"
-                        phx-value-uid={@uid}
-                        phx-target={@target}
-                      >
-                        {gettext("Edit video")}
-                      </button>
-                    </figcaption>
-                  </div>
-                </div>
-            <% end %>
-          <% end %>
+          <MediaField.field
+            id={"block-#{@uid}-video-upload"}
+            type={:video}
+            asset={@video}
+            kind="block_ref_video"
+            component_id={"#{@uid}-video"}
+            config_target={block_data[:config_target].value || "default"}
+            presentation={:block}
+            label={@ref_description}
+            configure={JS.push("open_block_config", target: @target, value: %{uid: @uid})}
+            browse={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
+            remove={JS.push("reset_video", target: @myself)}
+          />
         </Block.block>
       </.inputs_for>
     </div>
@@ -552,11 +402,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   end
 
   def handle_event("reset_video", _, socket) do
-    # Reset to the ref's template defaults (captured on first mount)
-    # instead of a blank struct with all-false values
     socket
     |> Block.commit_ref_data(
-      ref_data: socket.assigns.initial_override_defaults,
+      ref_data: Block.current_block_data_map(socket.assigns.block, @video_override_fields),
       video_id: nil,
       force_render: true
     )
@@ -611,7 +459,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   end
 
   def handle_event("select_video", %{"id" => video_id}, socket) do
-    case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}) do
+    case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]}) do
       {:ok, video} ->
         video_data = Map.from_struct(video)
 

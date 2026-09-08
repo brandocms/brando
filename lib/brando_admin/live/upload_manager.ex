@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.UploadManager do
   @moduledoc """
-  Sticky LiveView that owns every admin upload (see `docs/UPLOADER.md`).
+  Sticky LiveView that owns manager-backed admin uploads (see `docs/UPLOADER.md`).
 
   Runs in its own process next to `BrandoAdmin.Chrome`, so upload progress
   re-renders only this view's drawer — never the editor form. Sources hand
@@ -69,6 +69,11 @@ defmodule BrandoAdmin.UploadManager do
     case AssetIntent.normalize(target) do
       {:ok, %{"kind" => "file_replace"} = target} when length(files) != 1 ->
         reject_intake(files, target, gettext("Choose one replacement file at a time"), socket)
+
+      {:ok, %{"kind" => kind} = target}
+      when kind in ["entry_field", "block_var", "entry_var", "block_ref_picture", "block_ref_file", "block_ref_video"] and
+             length(files) != 1 ->
+        reject_intake(files, target, gettext("Choose one file for this field"), socket)
 
       {:ok, target} ->
         accept_intake(files, target, socket)
@@ -676,6 +681,8 @@ defmodule BrandoAdmin.UploadManager do
   # about it. Nothing distinguished that from a successful delivery in the logs.
   # Pair this line with the one `form.ex` logs at mount: same topic means the
   # delivery could land, different means it could not. See D2.
+  defp deliver(%{superseded: true}, _asset), do: :ok
+
   defp deliver(%{target: %{"deliver_topic" => topic} = target}, asset) when is_binary(topic) do
     Logger.info("==> UploadManager: delivering asset ##{asset.id} to #{topic_ref(topic)}")
     Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {:asset_ready, target, asset})
@@ -812,7 +819,8 @@ defmodule BrandoAdmin.UploadManager do
   # Folder browser support — the trigger carries the confirmed folder in the
   # target; images store under that folder (mirrors the old form-side
   # upload_folder_targets handling).
-  defp maybe_override_upload_path(cfg, :image, folder) when is_binary(folder) and folder != "" do
+  defp maybe_override_upload_path(cfg, type, folder)
+       when type in [:image, :file] and is_binary(folder) and folder != "" do
     case BrandoAdmin.Images.FolderBrowser.absolute_folder(folder, cfg.upload_path) do
       nil -> cfg
       resolved -> %{cfg | upload_path: resolved}
@@ -879,6 +887,33 @@ defmodule BrandoAdmin.UploadManager do
       asset_id: nil
     }
 
+    singular? =
+      target["kind"] in [
+        "entry_field",
+        "entry_var",
+        "block_var",
+        "block_ref_picture",
+        "block_ref_file",
+        "block_ref_video"
+      ]
+
+    destination = destination_key(target)
+
+    socket =
+      if singular? && item.status != :error do
+        update(socket, :items, fn items ->
+          Map.new(items, fn {ref, previous} ->
+            if destination_key(previous.target) == destination do
+              {ref, Map.put(previous, :superseded, true)}
+            else
+              {ref, previous}
+            end
+          end)
+        end)
+      else
+        socket
+      end
+
     socket =
       socket
       |> update(:items, &Map.put(&1, ref, item))
@@ -887,13 +922,23 @@ defmodule BrandoAdmin.UploadManager do
     {item, socket}
   end
 
+  defp destination_key(target) do
+    key = Map.take(target, ~w(deliver_topic kind component_id var_key field path asset_type))
+    if target["kind"] in ["entry_field", "entry_field_gallery"], do: Map.delete(key, "component_id"), else: key
+  end
+
   defp update_item(socket, ref, attrs) do
-    update(socket, :items, fn items ->
-      case Map.get(items, ref) do
-        nil -> items
-        item -> Map.put(items, ref, Map.merge(item, attrs))
-      end
-    end)
+    case Map.get(socket.assigns.items, ref) do
+      nil ->
+        socket
+
+      item ->
+        updated = Map.merge(item, attrs)
+
+        socket
+        |> update(:items, &Map.put(&1, ref, updated))
+        |> push_event("b:uploads:state", Map.take(updated, [:ref, :status, :progress, :error]))
+    end
   end
 
   defp maybe_queue_cdn_upload(%Brando.Files.File{cdn: cdn} = file, user) when cdn != true do

@@ -40,7 +40,7 @@ defmodule BrandoAdmin.Components.Form.FileDrawer do
 
   def render(assigns) do
     ~H"""
-    <Content.drawer id="file-drawer" title={gettext("File")} close={close_file()} z={1001} narrow>
+    <Content.drawer id="file-drawer" title={gettext("File details")} close={close_file()} z={1001} narrow light>
       <.form
         :let={file_form}
         :if={@file_changeset}
@@ -55,6 +55,8 @@ defmodule BrandoAdmin.Components.Form.FileDrawer do
           phx-hook="Brando.UploadTrigger"
           data-kind="entry_field"
           data-asset-type="file"
+          data-max-files="1"
+          data-asset-id={@edit_file.file && @edit_file.file.id}
           data-field={@edit_file.field}
           data-path={Jason.encode!(@edit_file.path || [])}
           data-config-target={
@@ -64,6 +66,14 @@ defmodule BrandoAdmin.Components.Form.FileDrawer do
           class="file-drawer-preview"
         >
           <input id="file-drawer-upload-input" type="file" class="file-input" />
+          <div
+            id="file-drawer-upload-progress"
+            class="media-field-progress"
+            phx-update="ignore"
+            role="status"
+            aria-live="polite"
+          >
+          </div>
 
           <div class="img-placeholder">
             <div class="placeholder-wrapper">
@@ -82,29 +92,29 @@ defmodule BrandoAdmin.Components.Form.FileDrawer do
             }
             class="file-info"
           >
-            <div class="filename">&#x2B24; {@edit_file.file.filename}</div>
-            <div class="mimetype">&#x2B24; {@edit_file.file.mime_type}</div>
+            <div class="filename">{@edit_file.file.filename}</div>
+            <div class="mimetype">{@edit_file.file.mime_type}</div>
             <div class="filesize">
-              &#x2B24; {Brando.Utils.human_size(@edit_file.file.filesize)}
+              {Brando.Utils.human_size(@edit_file.file.filesize)}
             </div>
           </div>
         </div>
 
-        <div class="button-group vertical">
+        <div class="media-drawer-actions">
           <button
-            class="secondary"
+            class="media-button"
             type="button"
             phx-click={JS.dispatch("click", to: "#file-drawer-upload-input")}
           >
-            {gettext("Upload file")}
+            {gettext("Upload")}
           </button>
 
-          <button class="secondary" type="button" phx-click={toggle_drawer("#file-picker")}>
-            {gettext("Select existing file")}
+          <button class="media-button" type="button" phx-click={toggle_drawer("#file-picker")}>
+            {gettext("Browse library")}
           </button>
 
-          <button class="secondary" type="button" phx-click={reset_file_field(@myself)}>
-            {gettext("Reset file field")}
+          <button class="media-button" type="button" phx-click={reset_file_field(@myself)}>
+            {gettext("Remove")}
           </button>
         </div>
 

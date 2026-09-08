@@ -136,28 +136,20 @@ test.describe('Block media save persistence', () => {
     await page.getByRole('button', { name: 'Image and File Vars' }).click()
     await syncLV(page)
 
-    // Upload the image var
-    await page.getByRole('button', { name: 'Add image' }).click()
-    const imageModal = page.locator('[id$="image-config"]:visible')
-    await expect(imageModal).toBeVisible({ timeout: 5000 })
-    await imageModal.locator('input[type="file"].file-input').setInputFiles('./fixtures/image.jpg')
+    // Upload the image var through its shared field.
+    const imageField = page.locator('.media-field[data-kind="block_var"][id$="-image-media"]')
+    const fileField = page.locator('.media-field[data-kind="block_var"][id$="-file-media"]')
+    await imageField.locator('input[type="file"]').setInputFiles('./fixtures/image.jpg')
     await confirmUploadFolder(page)
-    await expect(imageModal.locator('img')).toBeVisible({ timeout: 20000 })
-    await imageModal.locator('button.modal-close').click()
-    await syncLV(page)
-    await expect(page.getByRole('button', { name: 'Edit image' })).toBeVisible({ timeout: 5000 })
+    await expect(imageField.locator('img')).toBeVisible({ timeout: 20000 })
+    const imageId = await imageField.getAttribute('data-asset-id')
+    expect(imageId).toMatch(/^\d+$/)
 
-    // Upload the file var — a SECOND media commit in the same block; its
-    // propagation must not lose the image var's just-set FK.
-    await page.getByRole('button', { name: 'Add file' }).click()
-    const fileModal = page.locator('[id$="file-config"]:visible')
-    await expect(fileModal).toBeVisible({ timeout: 5000 })
-    await fileModal.locator('input[type="file"].file-input').setInputFiles('./fixtures/test.pdf')
-    await expect(fileModal.locator('.file-card')).toBeVisible({ timeout: 20000 })
-    await fileModal.locator('button.modal-close').click()
-    await syncLV(page)
-    await expect(page.getByRole('button', { name: 'Edit file' })).toBeVisible({ timeout: 5000 })
-    await expect(page.getByRole('button', { name: 'Edit image' })).toBeVisible()
+    // A second media commit in the same block must retain the image's FK.
+    await fileField.locator('input[type="file"]').setInputFiles('./fixtures/test.pdf')
+    await expect(fileField).toHaveAttribute('data-asset-id', /\d+/, { timeout: 20000 })
+    const fileId = await fileField.getAttribute('data-asset-id')
+    await expect(imageField).toHaveAttribute('data-asset-id', imageId)
 
     // Edit the string var in the same block — the validate rebuild of the
     // block's changeset must not wipe either media var (the historical
@@ -166,13 +158,13 @@ test.describe('Block media save persistence', () => {
     await page.waitForTimeout(400) // debounce
     await syncLV(page)
 
-    await expect(page.getByRole('button', { name: 'Edit image' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Edit file' })).toBeVisible()
+    await expect(imageField).toHaveAttribute('data-asset-id', imageId)
+    await expect(fileField).toHaveAttribute('data-asset-id', fileId)
 
     await saveAndReopen(page, 'Persist Intra Var Test')
 
-    await expect(page.getByRole('button', { name: 'Edit image' })).toBeVisible({ timeout: 20000 })
-    await expect(page.getByRole('button', { name: 'Edit file' })).toBeVisible()
+    await expect(imageField).toHaveAttribute('data-asset-id', imageId, { timeout: 20000 })
+    await expect(fileField).toHaveAttribute('data-asset-id', fileId)
     await expect(page.locator('.block-vars').getByLabel('Notes')).toHaveValue(
       'Intra-block var edit'
     )
