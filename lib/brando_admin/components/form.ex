@@ -87,6 +87,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:image_changeset, nil)
      |> assign(:video_changeset, nil)
      |> assign(:initial_update, true)
+     |> assign(:tiptap_epoch, Ecto.UUID.generate())
      |> assign(:entry_loading?, false)
      |> assign(:blocks_ready?, true)
      |> assign(:entry_load_status, nil)
@@ -220,7 +221,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:form, to_form(updated_changeset, []))
      |> Drafts.dirty()
-     |> force_svelte_remounts()}
+     |> force_svelte_remounts(Map.keys(changes))}
   end
 
   def update(%{action: :image_processed, image_id: id}, socket) do
@@ -808,7 +809,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign_entry_for_blocks()
     |> clear_blocks_root_changesets()
     |> reload_all_blocks()
-    |> force_svelte_remounts()
+    |> force_svelte_remounts(:all)
     |> then(&{:ok, &1})
   end
 
@@ -823,7 +824,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:entry, updated_entry)
      |> assign(:form, to_form(new_changeset, []))
      |> assign(:block_map, [])
-     |> force_svelte_remounts()}
+     |> force_svelte_remounts(:all)}
   end
 
   def update(
@@ -980,7 +981,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:entry, updated_entry)
      |> assign(:form, to_form(updated_changeset))
-     |> force_svelte_remounts()}
+     |> force_svelte_remounts(:all)}
   end
 
   # only used for allowing global sets to add "select" options.
@@ -1203,6 +1204,10 @@ defmodule BrandoAdmin.Components.Form do
       end
 
     {:noreply, socket}
+  end
+
+  def handle_async({:tiptap_ai, id, request}, result, socket) do
+    {:noreply, BrandoAdmin.Components.Form.RichTextAI.finish(socket, id, request, result)}
   end
 
   def handle_async(:entry_load, {:exit, reason}, _socket) do
@@ -1594,8 +1599,35 @@ defmodule BrandoAdmin.Components.Form do
       message: "Missing form `#{inspect(name)}` for `#{inspect(schema)}`"
   end
 
-  defp force_svelte_remounts(socket) do
-    push_event(socket, "b:component:remount", %{})
+  defp force_svelte_remounts(socket, fields \\ []) do
+    revision = Map.get(socket.assigns, :tiptap_revision, 0) + 1
+    names = if fields == :all, do: :all, else: Enum.map(fields, &to_string/1)
+
+    rich_fields =
+      if function_exported?(socket.assigns.schema, :__rich_text_fields__, 0),
+        do: socket.assigns.schema.__rich_text_fields__(),
+        else: []
+
+    socket =
+      Enum.reduce(rich_fields, socket, fn field, current ->
+        if names == :all or to_string(field) in names do
+          input = current.assigns.form[field]
+
+          push_event(current, "b:tiptap:update", %{
+            id: "#{input.id}-rich-text",
+            html: input.value || "",
+            epoch: current.assigns[:tiptap_epoch],
+            revision: revision,
+            source: "replacement"
+          })
+        else
+          current
+        end
+      end)
+
+    socket
+    |> assign(:tiptap_revision, revision)
+    |> push_event("b:component:remount", %{skip_rich_text: true})
   end
 
   # Maps FK fields (e.g. :cover_id) to {assoc_field, schema_module}
@@ -2734,7 +2766,7 @@ defmodule BrandoAdmin.Components.Form do
          |> assign(:draft, draft)
          |> assign(:form, form)
          |> assign_entry_for_blocks()
-         |> force_svelte_remounts()
+         |> force_svelte_remounts(:all)
          |> Drafts.dirty()}
     end
   end
@@ -2897,12 +2929,24 @@ defmodule BrandoAdmin.Components.Form do
       event: :open,
       current_href: params["current_href"] || "",
       current_target: params["current_target"],
+      current_rel: params["current_rel"],
+      current_class: params["current_class"],
+      link_text: params["link_text"],
+      has_selection: params["has_selection"],
+      anchors: params["anchors"] || [],
+      appearances: params["appearances"],
+      request_id: params["request_id"],
       current_identifier_id: params["current_identifier_id"],
       mark_type: params["mark_type"] || "link",
       tiptap_id: params["tiptap_id"],
       language: content_language
     )
 
+    {:noreply, socket}
+  end
+
+  def handle_event("tiptap_link_result", params, socket) do
+    TipTapLinkDialog.receive_result(params)
     {:noreply, socket}
   end
 
@@ -3579,6 +3623,27 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("validate_file", _, socket) do
     {:noreply, socket}
+  end
+
+  def handle_event("tiptap_ai_generate", params, socket) do
+    with {:ok, field} <- safe_to_existing_atom(params["field_key"]),
+         true <- is_binary(params["field_name"]),
+         %{type: :rich_text} <- BlueprintForms.get_field(field, socket.assigns.form_blueprint),
+         {:ok, _, _, path} <- parse_form_field_name(params["field_name"], socket.assigns.singular),
+         true <- List.last(path) == to_string(field),
+         {:ok, opts} <- fetch_field_ai_opts(socket.assigns.form_blueprint, field, socket.assigns.schema),
+         {:ok, base} <- build_ai_prompt(socket, opts),
+         {:ok, prompt} <- BrandoAdmin.Components.Form.RichTextAI.prompt(base, params) do
+      {:noreply, BrandoAdmin.Components.Form.RichTextAI.start(socket, params, prompt, opts)}
+    else
+      _ ->
+        {:noreply,
+         push_event(socket, "b:tiptap:ai:#{params["tiptap_id"]}", %{request_id: params["request_id"], error: true})}
+    end
+  end
+
+  def handle_event("tiptap_ai_cancel", params, socket) do
+    {:noreply, BrandoAdmin.Components.Form.RichTextAI.cancel(socket, params)}
   end
 
   def handle_event(
@@ -5187,7 +5252,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp maybe_force_ai_component_remount(socket, form_blueprint, field_atom) do
     case BlueprintForms.get_field(field_atom, form_blueprint) do
-      %{type: :rich_text} -> force_svelte_remounts(socket)
+      %{type: :rich_text} -> force_svelte_remounts(socket, [field_atom])
       _ -> socket
     end
   end

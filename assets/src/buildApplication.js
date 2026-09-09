@@ -162,8 +162,10 @@ export default (hooks, enableDebug = false) => {
     e.target.classList.toggle('option-selected')
   })
 
-  window.addEventListener('phx:b:component:remount', () => {
-    app.components.forEach((cmp) => cmp.remount())
+  window.addEventListener('phx:b:component:remount', ({ detail }) => {
+    app.components
+      .filter(cmp => !detail?.skip_rich_text || cmp.el?.dataset.tiptapType !== 'rich_text')
+      .forEach((cmp) => cmp.remount())
   })
 
   window.addEventListener('phx:b:component:remount_block', ({ detail }) => {

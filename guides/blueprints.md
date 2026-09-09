@@ -947,11 +947,70 @@ The available built-in tokens are `:vars`, `:gallery_objects`,
 supported and can be migrated incrementally. This changes only form metadata and
 requires no database migration.
 
+#### Rich-text tools and HTML
+
+Rich text continues to store HTML. Configure authoring tools and named styles on
+the input; existing compatible markup remains readable when a tool is disabled.
+
+```elixir
+input :introduction, :rich_text,
+  extensions: ["p", "h2", "bold", "italic", "list", "orderedList", "link"],
+  styles: [
+    %{element: "p", class: "lede", label: "Introduction"},
+    %{element: "span", class: "small-caps", label: "Small caps"}
+  ],
+  label_mode: "compact"
+```
+
+Omitted extensions, `nil`, and `["all"]` use the default tools. An explicit `[]`
+means no optional formatting tools. `"list"` enables bullets and `"orderedList"`
+enables numbering; Tab and Shift-Tab indent and outdent where applicable. The
+split list button defaults to bullets outside a list. `"blockquote"` is explicit
+opt-in and excluded from every shipped preset. The legacy `"action_button"`
+alias remains supported as `"button"`.
+
+The module reference editor keeps the individual extension and style controls,
+adds **Basic**, **Caption** and **Article** presets, and previews the configured
+editor using its default text. A preset adds tools to the current selection;
+it never replaces text, styles, footnote settings or existing tools. The same
+union is available as
+`Brando.Blueprint.Forms.RichText.add_preset(extensions, :article)`.
+
+Style identity uses the element and class, independently of its visible label.
+Internal extension keys never enter stored HTML. Paragraph/heading classes,
+inline span classes and readable jump-anchor IDs keep their existing format.
+Use `label_mode: "compact"` (the default `¶` / `H2`), `"icon"`, or `"full"` to
+control the paragraph menu label. Removing `"smartText"` disables typography
+substitutions; `typography: [emDash: false]` selectively configures them.
+`readonly: true` or `disabled: true` prevents editing and formatting commands.
+
+Content links retain their identifier alongside the current URL. Destination
+URL changes update both block text and ordinary rich-text owners, evict cached
+owners and queue rerendering; editorial link wording stays authored. The link
+workspace also supports external/relative URLs, readable page anchors, button
+appearance, new-tab behavior and nofollow. Unsafe destinations fail visibly.
+Paste preserves supported meaning and converts unsupported structures to text;
+footnotes pasted from another entry must be added through its own footnote editor.
+
+Alt-F10 focuses the formatting toolbar, arrow keys move between its controls,
+and Escape closes the current menu or expanded editor. Expanded editing uses
+the same document and undo history. Its Done action returns to the form;
+the form's Save action persists the entry as usual.
+
 #### AI input generation
 
 Add `ai: [...]` to `:text`, `:textarea`, and `:rich_text` inputs to show an AI action button in the admin.
-Clicking the button performs server-side generation and replaces the field value.
-For `:rich_text` fields, prompt the model to return HTML (not Markdown), since the editor stores HTML.
+For `:text` and `:textarea`, the button generates and replaces the field value.
+Rich-text inputs offer **Write with AI** in their toolbar: Rewrite, Shorten or
+Continue produces a separate colored suggestion. Accept inserts it; Discard
+leaves the document unchanged, and one Undo reverses acceptance. Generation
+runs asynchronously. Suggestions are excluded from saved HTML, recovery copies
+and preview until accepted, and a response cannot overwrite a passage edited
+while generation was running.
+
+Rich-text prompts should request plain prose. The editor safely inserts text and
+paragraphs into the existing HTML document; it does not interpret generated
+HTML or Markdown. Update older rich-text prompts that explicitly requested HTML.
 
 ```elixir
 input :meta_description, :textarea,
@@ -972,10 +1031,18 @@ config :brando, Brando.AI,
   ],
   fields: [
     summary: [prompt: "Summarize title and intro", context: [:title, :intro]],
-    teaser: [prompt: "Write a short teaser from title and intro", context: [:title, :intro]]
+    teaser: [prompt: "Write a short teaser from title and intro", context: [:title, :intro]],
+    block_text: [prompt: "Help refine this passage while preserving its meaning"]
   ],
   default_opts: [temperature: 0.4]
 ```
+
+`block_text` opts text refs into the same proposal workflow. Module default-text
+previews do not generate AI content. Model/provider settings and credentials stay
+on the server; ordinary fields send their configured context, while text refs
+send the requested passage and author instruction. Continue includes up to
+4,000 preceding characters. Existing `receive_timeout` / `thinking_timeout`
+provider options remain available.
 
 `meta_title` and `meta_description` are rendered in the Meta drawer.
 Meta trait defaults are trait-driven. You can configure those fields either:

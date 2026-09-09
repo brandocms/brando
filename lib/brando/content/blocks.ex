@@ -193,16 +193,18 @@ defmodule Brando.Content.Blocks do
   Return list of all blocks containing `data-identifier-id="ID"` in ref data (TipTap inline links)
   """
   def list_block_ids_with_identifier_in_refs(identifier_id) do
-    # In JSONB text representation, quotes are escaped as \"
-    search_term = "%data-identifier-id=\\\\\"#{identifier_id}\\\\\"%"
-
-    query =
-      from b in Block,
-        select: b.id,
-        left_join: r in assoc(b, :refs),
-        where: fragment("CAST(? AS TEXT) LIKE ?", r.data, ^search_term)
-
-    Brando.Repo.all(query)
+    from(r in Ref,
+      where: not is_nil(r.block_id) and fragment("CAST(? AS TEXT) ILIKE ?", r.data, "%data-identifier-id%")
+    )
+    |> Brando.Repo.all()
+    |> Enum.filter(fn ref ->
+      case ref.data do
+        %{data: %{text: text}} -> Brando.RichText.contains_identifier?(text, identifier_id)
+        _ -> false
+      end
+    end)
+    |> Enum.map(& &1.block_id)
+    |> Enum.uniq()
   end
 
   @doc """
@@ -410,17 +412,24 @@ defmodule Brando.Content.Blocks do
   Update the href of identifier links in all refs that reference the given identifier.
   """
   def update_identifier_links_in_refs(identifier_id, new_url) do
-    # In JSONB text representation, quotes are escaped as \"
-    search_term = "%data-identifier-id=\\\\\"#{identifier_id}\\\\\"%"
+    search_term = "%data-identifier-id%"
 
     query =
       from r in Brando.Content.Ref,
-        where: fragment("CAST(? AS TEXT) LIKE ?", r.data, ^search_term)
+        where: fragment("CAST(? AS TEXT) ILIKE ?", r.data, ^search_term)
 
     refs = Brando.Repo.all(query)
 
-    for ref <- refs do
-      update_ref_identifier_link(ref, identifier_id, new_url)
+    for ref <- refs,
+        match?(%{data: %{text: text}} when is_binary(text), ref.data),
+        Brando.RichText.contains_identifier?(ref.data.data.text, identifier_id) do
+      Brando.Repo.transaction(fn ->
+        # Re-read under a row lock so a URL refresh cannot replace newer wording.
+        case Brando.Repo.one(from r in Ref, where: r.id == ^ref.id, lock: "FOR UPDATE") do
+          nil -> :ok
+          current -> update_ref_identifier_link(current, identifier_id, new_url)
+        end
+      end)
     end
   end
 
@@ -455,30 +464,34 @@ defmodule Brando.Content.Blocks do
   and updates the href to the new URL.
   """
   def update_identifier_links_in_rich_text_fields(identifier_id, new_url) do
-    for module <- Brando.Content.Identifier.Registry.list_persistent_identifier_modules(:include_brando),
-        field <- rich_text_fields_for(module) do
-      source = module.__schema__(:source)
-      field_str = to_string(field)
-      id_str = to_string(identifier_id)
-      qualified_source = qualified_source(module, source)
-      quoted_field = quote_identifier(field_str)
+    if Brando.RichText.allowed_uri?(new_url) do
+      for module <- Brando.Content.Identifier.Registry.list_persistent_identifier_modules(:include_brando),
+          rich_field <- rich_text_fields_for(module) do
+        query =
+          from entry in module,
+            where: ilike(field(entry, ^rich_field), "%data-identifier-id%"),
+            select: {entry.id, field(entry, ^rich_field)}
 
-      # Single UPDATE per table/field using regexp_replace
-      # Pattern: href="..." followed by data-identifier-id="ID"
-      Ecto.Adapters.SQL.query(
-        Brando.repo(),
-        """
-        UPDATE #{qualified_source}
-        SET #{quoted_field} = regexp_replace(
-          #{quoted_field},
-          '(href=")[^"]*("[^>]*?data-identifier-id="' || $1 || '")',
-          '\\1' || $2 || '\\2',
-          'g'
-        )
-        WHERE #{quoted_field} LIKE $3
-        """,
-        [id_str, new_url, "%data-identifier-id=\"#{id_str}\"%"]
-      )
+        for {id, html} <- Brando.Repo.all(query), Brando.RichText.contains_identifier?(html, identifier_id) do
+          Brando.Repo.transaction(fn ->
+            # Lock only the matching owner while rewriting. A concurrent author
+            # must never lose new wording to a stale read/replace operation.
+            entry = Brando.Repo.one(from entry in module, where: entry.id == ^id, lock: "FOR UPDATE")
+
+            if entry do
+              case Brando.RichText.update_identifier_url(Map.get(entry, rich_field), identifier_id, new_url) do
+                {:updated, html} ->
+                  updated = entry |> Changeset.change([{rich_field, html}]) |> Brando.Repo.update!()
+                  Brando.Cache.Query.evict({:ok, updated})
+                  enqueue_entry_for_render(%{schema: module, entry_id: id})
+
+                :unchanged ->
+                  :ok
+              end
+            end
+          end)
+        end
+      end
     end
   end
 
@@ -488,17 +501,6 @@ defmodule Brando.Content.Blocks do
     else
       []
     end
-  end
-
-  defp qualified_source(module, source) do
-    case module.__schema__(:prefix) || Brando.Tenant.current_prefix() do
-      nil -> quote_identifier(source)
-      prefix -> Enum.join([quote_identifier(prefix), quote_identifier(source)], ".")
-    end
-  end
-
-  defp quote_identifier(identifier) do
-    ~s|"#{String.replace(identifier, "\"", "\"\"")}"|
   end
 
   @doc """

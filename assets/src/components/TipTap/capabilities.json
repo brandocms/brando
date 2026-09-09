@@ -1,0 +1,8 @@
+{
+  "default": ["p", "h1", "h2", "h3", "h4", "list", "orderedList", "link", "button", "bold", "italic", "sub", "sup", "color", "unsetMarks", "jumpAnchor", "smartText", "align"],
+  "presets": {
+    "basic": ["p", "bold", "italic", "list", "orderedList", "link"],
+    "caption": ["p", "bold", "italic", "link"],
+    "article": ["p", "h2", "h3", "bold", "italic", "list", "orderedList", "link", "jumpAnchor", "smartText"]
+  }
+}

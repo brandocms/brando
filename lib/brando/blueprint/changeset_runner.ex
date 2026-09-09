@@ -77,6 +77,7 @@ defmodule Brando.Blueprint.ChangesetRunner do
       changeset_params.opts
     )
     |> maybe_sequence(changeset_params.module, changeset_params.sequence)
+    |> Brando.RichText.validate_blueprint(changeset_params.module)
   end
 
   @doc """

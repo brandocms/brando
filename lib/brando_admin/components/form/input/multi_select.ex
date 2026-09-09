@@ -64,7 +64,25 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           wrapped_labels={@wrapped_labels}
           sequenced?={@sequenced?}
           field={@field}
+          empty_array?={@presets != [] && (@array_touched || is_list(@field.value))}
         />
+
+        <details :if={@presets != []} class="tiptap-preset-picker">
+          <summary>{gettext("Add preset…")}</summary>
+          <p>{gettext("Adds these tools to your current selection. Styles and footnotes stay as configured.")}</p>
+          <button
+            :for={preset <- @presets}
+            type="button"
+            phx-click="add_preset"
+            phx-value-preset={preset.key}
+            phx-target={@myself}
+          >
+            <span>{preset.label}</span>
+            <small>{Enum.map_join(preset.values, ", ", fn value ->
+              Enum.find_value(@input_options, value, fn option -> if option.value == value, do: option.label end)
+            end)}</small>
+          </button>
+        </details>
 
         <div class="multiselect">
           <div>
@@ -75,7 +93,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 <%= if @selected_options != [] do %>
                   {@count_label |> raw}
                 <% else %>
-                  {gettext("No selection")}
+                  {if @presets != [] && !@array_touched && is_nil(@field.value),
+                    do: gettext("Default tools"),
+                    else: gettext("No selection")}
                 <% end %>
               <% end %>
             </span>
@@ -271,6 +291,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign(:creating, false)
      |> assign(:wrapped_labels, false)
      |> assign(:initial_run, true)
+     |> assign(:array_touched, false)
      |> assign(:filter_string, "")}
   end
 
@@ -335,6 +356,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      |> assign(assigns)
      |> prepare_input_component()
      |> assign(:relation_key, relation_key)
+     |> assign(:presets, Keyword.get(assigns.opts, :presets, []))
      |> assign(:relation, relation)
      |> assign_relation_type(assigns.field)
      |> assign_selected_options(changeset, assigns.field)
@@ -792,6 +814,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   # TODO: Rewrite this to use inputs_for @field
   def selected_options(%{relation_type: _} = assigns) do
     ~H"""
+    <input :if={assigns[:empty_array?] && @selected_options == []} type="hidden" name={"#{@field.name}[]"} value="" />
     <Input.input
       :for={opt <- @selected_options}
       type={:hidden}
@@ -1167,7 +1190,30 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     {:noreply,
      socket
      |> assign(:selected_options, updated_selected_options)
+     |> assign(:array_touched, true)
      |> assign_label()}
+  end
+
+  def handle_event("add_preset", %{"preset" => key}, %{assigns: %{relation_type: {:array, _}}} = socket) do
+    case Enum.find(socket.assigns.presets, &(&1.key == key)) do
+      nil ->
+        {:noreply, socket}
+
+      preset ->
+        current = socket.assigns.selected_options
+
+        current =
+          if current == [] && is_nil(socket.assigns.field.value) && !socket.assigns.array_touched, do: nil, else: current
+
+        values = Brando.Blueprint.Forms.RichText.add_preset(current, preset.key)
+
+        {:noreply,
+         socket
+         |> assign(:selected_options, values)
+         |> assign(:array_touched, true)
+         |> assign_label()
+         |> push_event("b:validate", %{target: "#{socket.assigns.field.name}[]"})}
+    end
   end
 
   def handle_event(

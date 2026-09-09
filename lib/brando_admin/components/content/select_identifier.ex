@@ -106,6 +106,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
         selected == :all and layout == :workspace -> :all
         selected in schemas -> selected
         (layout == :workspace and current) && current.schema in schemas -> current.schema
+        layout == :workspace and socket.assigns[:initial_schema] == :all -> :all
         layout == :workspace or length(schemas) == 1 -> List.first(schemas)
         true -> nil
       end
@@ -295,8 +296,10 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
               <input
                 class="text"
                 id={"#{@id}-identifier-filter"}
+                phx-update="ignore"
                 name="identifier-filter"
                 type="text"
+                aria-label={if @workspace, do: gettext("Search by title or URL"), else: gettext("Filter identifiers")}
                 value=""
                 placeholder={if @workspace, do: gettext("Search by title or URL…"), else: gettext("Filter identifiers…")}
                 autocomplete="off"

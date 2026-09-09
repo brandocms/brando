@@ -283,6 +283,15 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm exec playwright install --with-deps chromium
 
+      - name: Run fast rich-text regressions
+        if: matrix.suite == 'legacy-1'
+        working-directory: brando/e2e
+        run: |
+          source .envrc
+          node --test ../test/javascript/tiptap.test.mjs
+          cd e2e/playwright
+          pnpm exec playwright test --config tiptap.config.js
+
       - name: Run legacy E2E shard
         if: matrix.shard != ''
         working-directory: brando/e2e
