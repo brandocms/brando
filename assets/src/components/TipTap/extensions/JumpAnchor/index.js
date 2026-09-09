@@ -1,7 +1,11 @@
 import { Mark, mergeAttributes } from '@tiptap/core'
+import { Plugin, PluginKey } from '@tiptap/pm/state'
 
 export default Mark.create({
   name: 'jumpAnchor',
+  priority: 10000,
+  inclusive: false,
+  keepOnSplit: false,
 
   addAttributes() {
     return {
@@ -40,26 +44,31 @@ export default Mark.create({
         ({ commands }) => {
           return commands.setMark(this.name, attributes)
         },
-      getJumpAnchor:
-        () =>
-        ({ commands }) => {
-          if (this.editor.view.state.selection.$from.nodeAfter == null) {
-            return
-          }
-
-          let node = this.editor.view.state.selection.$from.nodeAfter
-          let mark = node.marks.find(mark => mark.type && mark.type.name == 'jumpAnchor')
-
-          if (mark) {
-            return mark.attrs.id
-          }
-        },
-
       unsetJumpAnchor:
         () =>
         ({ commands }) => {
-          return commands.unsetMark(this.name)
+          return commands.unsetMark(this.name, { extendEmptyMarkRange: true })
         }
     }
-  }
+  },
+
+  addProseMirrorPlugins() {
+    return [new Plugin({
+      key: new PluginKey('uniqueJumpAnchors'),
+      appendTransaction(transactions, _old, state) {
+        if (!transactions.some(tr => tr.docChanged)) return null
+        const seen = new Map()
+        const tr = state.tr
+        state.doc.descendants((node, pos) => {
+          if (!node.isInline) return
+          const mark = node.marks.find(mark => mark.type.name === 'jumpAnchor')
+          if (!mark?.attrs.id) return
+          const previousEnd = seen.get(mark.attrs.id)
+          if (previousEnd !== undefined && previousEnd !== pos) tr.removeMark(pos, pos + node.nodeSize, mark)
+          else seen.set(mark.attrs.id, pos + node.nodeSize)
+        })
+        return tr.docChanged ? tr : null
+      },
+    })]
+  },
 })

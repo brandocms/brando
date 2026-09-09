@@ -80,6 +80,26 @@ defmodule Brando.Content.ModuleSyncTest do
     |> Map.new()
   end
 
+  test "additive rich-text controls synchronize without replacing authored HTML or footnote settings" do
+    alias Brando.Villain.Blocks.TextBlock
+
+    config = %TextBlock.Data{
+      extensions: ["p", "color"],
+      footnotes: true,
+      text: "Default",
+      styles: TextBlock.Data.default_styles()
+    }
+
+    old_ref = ref("text", %TextBlock{type: "text", data: %{config | text: "<p class=\"lede\">Authored words</p>"}}, id: 1)
+    preset = Brando.Blueprint.Forms.RichText.add_preset(config.extensions, :article)
+    new_ref = ref("text", %TextBlock{type: "text", data: %{config | extensions: preset}}, id: 1)
+    updated = block(refs: [old_ref]) |> Blocks.sync_module(module(refs: [new_ref])) |> synced_refs()
+    assert updated["text"].data.text == "<p class=\"lede\">Authored words</p>"
+    assert updated["text"].data.extensions == preset
+    assert updated["text"].data.footnotes
+    assert hd(updated["text"].data.styles).class == "lede"
+  end
+
   describe "refs the module no longer defines" do
     test "are retained instead of deleted" do
       module = module(refs: [ref("h2", header_data("From module"))])

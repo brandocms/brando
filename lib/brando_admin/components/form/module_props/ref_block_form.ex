@@ -11,12 +11,17 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
   alias Phoenix.LiveView.JS
 
   @text_extension_options [
-    %{label: gettext_noop("All"), value: nil},
+    %{label: gettext_noop("Default tools"), value: "all"},
     %{label: gettext_noop("Paragraph"), value: "p"},
     %{label: gettext_noop("H1"), value: "h1"},
     %{label: gettext_noop("H2"), value: "h2"},
     %{label: gettext_noop("H3"), value: "h3"},
-    %{label: gettext_noop("List"), value: "list"},
+    %{label: gettext_noop("H4"), value: "h4"},
+    %{label: gettext_noop("H5"), value: "h5"},
+    %{label: gettext_noop("H6"), value: "h6"},
+    %{label: gettext_noop("Bulleted list"), value: "list"},
+    %{label: gettext_noop("Numbered list"), value: "orderedList"},
+    %{label: gettext_noop("Blockquote (optional)"), value: "blockquote"},
     %{label: gettext_noop("Link"), value: "link"},
     %{label: gettext_noop("Button"), value: "button"},
     %{label: gettext_noop("Bold"), value: "bold"},
@@ -24,7 +29,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
     %{label: gettext_noop("Subscript"), value: "sub"},
     %{label: gettext_noop("Superscript"), value: "sup"},
     %{label: gettext_noop("Color"), value: "color"},
-    %{label: gettext_noop("Unset Marks"), value: "unsetMarks"},
+    %{label: gettext_noop("Remove text formatting"), value: "unsetMarks"},
     %{label: gettext_noop("Jump Anchor"), value: "jumpAnchor"},
     %{label: gettext_noop("Smart Text"), value: "smartText"},
     %{label: gettext_noop("Align"), value: "align"}
@@ -175,17 +180,34 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
 
   def block_form(%{type: "text"} = assigns) do
     assigns =
-      assign(assigns, :text_extension_options, translate_options(@text_extension_options))
+      assigns
+      |> assign(:text_extension_options, translate_options(@text_extension_options))
+      |> assign(
+        :text_presets,
+        Enum.map([{"basic", gettext("Basic")}, {"caption", gettext("Caption")}, {"article", gettext("Article")}], fn {key,
+                                                                                                                      label} ->
+          %{key: key, label: label, values: Brando.Blueprint.Forms.RichText.presets()[key]}
+        end)
+      )
 
     ~H"""
     <Primitives.inputs_for_block :let={block_data} field={@ref_data[:data]}>
-      <Input.text field={block_data[:text]} label={gettext("Text")} />
       <.live_component
         module={Input.MultiSelect}
         id={"#{@form_id}-ref-#{@key}-#{@ref_name}-extensions"}
         label={gettext("Extensions")}
         field={block_data[:extensions]}
-        opts={[options: @text_extension_options]}
+        opts={[options: @text_extension_options, presets: @text_presets]}
+      />
+      <Input.rich_text
+        field={block_data[:text]}
+        label={gettext("Default text and preview")}
+        opts={[
+          extensions: block_data[:extensions].value,
+          styles: Ecto.Changeset.get_field(block_data.source, :styles) || [],
+          ai: nil
+        ]}
+        instructions={gettext("Try the selected tools here. This text is used as the default for new blocks.")}
       />
       <Input.hidden field={block_data[:type]} />
       <Input.toggle field={block_data[:footnotes]} label={gettext("Footnotes")} />
@@ -196,8 +218,6 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
           gettext("An ordered set of modules for notes. Put a Text module first to make new notes quick to write.")
         }
       />
-      <br />
-      {block_data[:extensions].value}
     </Primitives.inputs_for_block>
     """
   end

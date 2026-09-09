@@ -155,10 +155,11 @@ defmodule Brando.Mixfile do
       # risk. `priv/` still ships several on purpose — `brando.install`'s
       # `deployment.cfg`, `fabfile.py`, `.envrc.prod` — because a scaffold has
       # to hand the operator something to fill in.
-      # `assets/` is absent on purpose. The admin frontend reaches consuming
+      # Frontend `assets/` are absent on purpose. The admin frontend reaches consuming
       # applications through Yalc (`@brandocms/brandojs`), never through this
       # tarball, and the generator templates a consumer does need live under
-      # `priv/templates/`, not here.
+      # `priv/templates/`, not here. The one shared rich-text capability registry
+      # is included explicitly because Blueprint compilation also reads it.
       #
       # Naming the directory was also actively harmful: Hex globs the
       # filesystem and does not read `.gitignore`, so `"assets"` swept in
@@ -168,6 +169,7 @@ defmodule Brando.Mixfile do
         "lib",
         "guides",
         "priv",
+        "assets/src/components/TipTap/capabilities.json",
         "mix.exs",
         "README.md",
         "CHANGELOG.md",

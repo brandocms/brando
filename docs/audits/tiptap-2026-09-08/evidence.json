@@ -1,0 +1,370 @@
+{
+  "commit": "443943ad703bbea8f3be2765e5d327497e76cb20",
+  "date": "2026-09-08",
+  "method": "Isolated Chromium component/hook diagnostics, with LiveView event and push transport simulated. Actual repository Svelte component and extensions copied unchanged; alertPrompt stubbed. No Phoenix server or full admin styles. No published content changed. These are diagnostic observations, not a passing regression suite.",
+  "versions": {
+    "tiptap": "3.23.4",
+    "svelte": "5.55.5",
+    "vite": "8.0.13"
+  },
+  "source_sha256": {
+    "assets/src/components/TipTap/TipTap.svelte": "5782533e9c08c77fa959ff34ab5c1ff5507dad11fd63ccb9ce953edabfc2c37f",
+    "assets/src/hooks/TipTap/index.js": "52b1b05faa83d26d2652d3e1a90981f47473b04d2708e81da92109415019898e",
+    "assets/src/components/TipTap/extensions/Button/index.js": "2319bf7fa57668b694f9bf428068648d8705fc451def55fb74f301e1b6a3e804",
+    "assets/src/components/TipTap/extensions/Footnote/index.js": "b1b1e3c56f8743859ff04b493dcf9c962634e96e8b76909a894420a61a33dd83",
+    "assets/src/components/TipTap/extensions/JumpAnchor/index.js": "0edc7546c85e7fe498e7d020849536b7e51e2fa7cc009c01b0682388349dbb8e",
+    "assets/src/components/TipTap/extensions/PasteCleaner/HTMLInputParser.js": "3f2d23bd980688d94c0e34a77936d9310db28bb74ae5604eb22f138b2b422911",
+    "assets/src/components/TipTap/extensions/PreventDrop/index.js": "be78b36565f8f38b8028d1c45babf4fb6e264d58c302071c8da764936bead4bb",
+    "assets/src/components/TipTap/extensions/SmartText/index.js": "e5e687f679a81af0d5737b9c90eccd8802d365c74c76e5c9b2b911c13dc8c88c"
+  },
+  "component": {
+    "restricted": {
+      "names": [
+        "paragraph",
+        "link",
+        "button",
+        "footnote",
+        "textStyle",
+        "editable",
+        "clipboardTextSerializer",
+        "commands",
+        "focusEvents",
+        "keymap",
+        "tabindex",
+        "drop",
+        "paste",
+        "delete",
+        "textDirection",
+        "starterKit",
+        "bold",
+        "blockquote",
+        "bulletList",
+        "code",
+        "codeBlock",
+        "doc",
+        "gapCursor",
+        "hardBreak",
+        "heading",
+        "undoRedo",
+        "horizontalRule",
+        "italic",
+        "listItem",
+        "listKeymap",
+        "orderedList",
+        "strike",
+        "text",
+        "underline",
+        "trailingNode",
+        "styledNodes",
+        "typography",
+        "subscript",
+        "superscript",
+        "jumpAnchor",
+        "focus",
+        "preventDrop",
+        "smartText",
+        "textStyleKit",
+        "backgroundColor",
+        "color",
+        "fontFamily",
+        "fontSize",
+        "lineHeight",
+        "textAlign"
+      ],
+      "html": "<h6><u>Restricted</u></h6><p></p>",
+      "h": true,
+      "u": true,
+      "buttons": [
+        "Block type",
+        "Paragraph",
+        "Clear style",
+        "Bold",
+        "Clear marks"
+      ]
+    },
+    "buttonSafety": {
+      "ordinary": false,
+      "button": true,
+      "html": "<p><a class=\"action-button\" target=\"_blank\" rel=\"noopener noreferrer nofollow\" href=\"javascript:void(0)\">Audit text</a></p>"
+    },
+    "buttonMultiClass": "<p>CTA</p>",
+    "nestedLinks": {
+      "html": "<p><a target=\"_blank\" rel=\"noopener noreferrer nofollow\" href=\"/one\"><a class=\"action-button\" target=\"_blank\" rel=\"noopener noreferrer nofollow\" href=\"/two\">Audit text</a></a></p>",
+      "json": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "class": null,
+              "textAlign": null
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "/one",
+                      "target": "_blank",
+                      "rel": "noopener noreferrer nofollow",
+                      "class": null,
+                      "title": null,
+                      "data-identifier-id": null
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "attrs": {
+                      "href": "/two",
+                      "target": "_blank",
+                      "rel": "noopener noreferrer nofollow",
+                      "data-identifier-id": null
+                    }
+                  }
+                ],
+                "text": "Audit text"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "paste": {
+      "input": "<p class=\"unknown\"><span style=\"font-weight:bold;font-style:italic;color:red\">Office formatting</span> <a href=\"/page\" target=\"_blank\" data-identifier-id=\"123\">Link</a> <span class=\"highlight\">Styled</span><sup data-footnote-uid=\"note-one\">1</sup></p>",
+      "clean": "<p class=\"unknown\"><span>Office formatting</span> <a href=\"/page\" data-identifier-id=\"123\">Link</a> <span class=\"highlight\">Styled</span><sup data-footnote-uid=\"note-one\">1</sup></p>",
+      "parsed": "<p class=\"unknown\">Office formatting <a target=\"_blank\" rel=\"noopener noreferrer nofollow\" href=\"/page\" data-identifier-id=\"123\">Link</a> <span class=\"highlight\">Styled</span><sup data-footnote-uid=\"note-one\">\u2022</sup></p>"
+    },
+    "hiddenFormatting": "<p><span style=\"background-color: red; font-family: &quot;Comic Sans MS&quot;; font-size: 40px; line-height: 4;\">Fancy</span></p>",
+    "colorState": {
+      "isColorActive": false,
+      "attributes": {
+        "backgroundColor": null,
+        "color": "#ff0000",
+        "fontFamily": null,
+        "fontSize": null,
+        "lineHeight": null
+      },
+      "control": "<input type=\"color\">"
+    },
+    "a11y": {
+      "editor": "<div contenteditable=\"true\" role=\"textbox\" translate=\"no\" class=\"tiptap ProseMirror\" tabindex=\"0\"><p><span style=\"color: rgb(255, 0, 0);\">Audit text</span></p></div>",
+      "toolbar": null,
+      "toggles": [
+        {
+          "label": "Block type",
+          "pressed": null,
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "label": "Bullet list",
+          "pressed": null,
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "label": "Link",
+          "pressed": null,
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "label": "Button",
+          "pressed": null,
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "label": "Bold",
+          "pressed": null,
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "label": "Italic",
+          "pressed": null,
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "label": "Subscript",
+          "pressed": null,
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "label": "Superscript",
+          "pressed": null,
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "label": null,
+          "pressed": null,
+          "tabIndex": -1,
+          "role": null
+        },
+        {
+          "label": "Jump anchor",
+          "pressed": null,
+          "tabIndex": 0,
+          "role": null
+        },
+        {
+          "label": "Clear marks",
+          "pressed": null,
+          "tabIndex": 0,
+          "role": null
+        }
+      ]
+    },
+    "smartText": {
+      "inputRules": "function",
+      "addInputRules": "undefined"
+    },
+    "footnoteWhenDisabled": {
+      "html": "<p>A<sup data-footnote-uid=\"note-one\">\u2022</sup></p>",
+      "marker": true,
+      "addButton": false
+    },
+    "remount": {
+      "undoBefore": true,
+      "undoAfter": false,
+      "handlerBefore": 1,
+      "handlerAfter": 2
+    },
+    "remountAfterDestroy": {
+      "registrySize": 11,
+      "retainsDestroyed": true,
+      "error": null
+    },
+    "messages": [
+      "%c[svelte] lifecycle_double_unmount\n%cTried to unmount a component that was not mounted\nhttps://svelte.dev/e/lifecycle_double_unmount font-weight: bold font-weight: normal",
+      "%c[svelte] lifecycle_double_unmount\n%cTried to unmount a component that was not mounted\nhttps://svelte.dev/e/lifecycle_double_unmount font-weight: bold font-weight: normal",
+      "%c[svelte] lifecycle_double_unmount\n%cTried to unmount a component that was not mounted\nhttps://svelte.dev/e/lifecycle_double_unmount font-weight: bold font-weight: normal",
+      "%c[svelte] lifecycle_double_unmount\n%cTried to unmount a component that was not mounted\nhttps://svelte.dev/e/lifecycle_double_unmount font-weight: bold font-weight: normal",
+      "%c[svelte] lifecycle_double_unmount\n%cTried to unmount a component that was not mounted\nhttps://svelte.dev/e/lifecycle_double_unmount font-weight: bold font-weight: normal",
+      "%c[svelte] lifecycle_double_unmount\n%cTried to unmount a component that was not mounted\nhttps://svelte.dev/e/lifecycle_double_unmount font-weight: bold font-weight: normal",
+      "%c[svelte] lifecycle_double_unmount\n%cTried to unmount a component that was not mounted\nhttps://svelte.dev/e/lifecycle_double_unmount font-weight: bold font-weight: normal",
+      "%c[svelte] lifecycle_double_unmount\n%cTried to unmount a component that was not mounted\nhttps://svelte.dev/e/lifecycle_double_unmount font-weight: bold font-weight: normal",
+      "%c[svelte] lifecycle_double_unmount\n%cTried to unmount a component that was not mounted\nhttps://svelte.dev/e/lifecycle_double_unmount font-weight: bold font-weight: normal",
+      "%c[svelte] lifecycle_double_unmount\n%cTried to unmount a component that was not mounted\nhttps://svelte.dev/e/lifecycle_double_unmount font-weight: bold font-weight: normal",
+      "%c[svelte] lifecycle_double_unmount\n%cTried to unmount a component that was not mounted\nhttps://svelte.dev/e/lifecycle_double_unmount font-weight: bold font-weight: normal"
+    ]
+  },
+  "followup": {
+    "keyboardRestrictedList": "<ol><li><p>1. Numbered</p></li></ol><p></p>",
+    "typographyDespiteRestriction": "<p>\u2192 \u00a9 \u201cquotes\u201d 1/2</p>",
+    "bareUrl": "<p><a target=\"_blank\" rel=\"noopener noreferrer nofollow\" href=\"example.com\">Audit text</a></p>",
+    "sameTabPaste": {
+      "cleaned": "<p><a href=\"https://example.com\">Same tab</a></p>",
+      "parsed": "<p><a target=\"_blank\" rel=\"noopener noreferrer nofollow\" href=\"https://example.com\">Same tab</a></p>"
+    },
+    "anchor": {
+      "active": true,
+      "after": "<p><span data-type=\"jump-anchor\" id=\"chapter\">Hello</span> world</p>"
+    },
+    "splitAnchor": "<p><span data-type=\"jump-anchor\" id=\"chapter\">H</span><strong><span data-type=\"jump-anchor\" id=\"chapter\">el</span></strong><span data-type=\"jump-anchor\" id=\"chapter\">lo</span></p>",
+    "styleCollision": [
+      "style_span_foo_bar",
+      "style_span_foo_bar"
+    ],
+    "clearInlineStyle": "<p><span class=\"highlight\">Styled</span></p>",
+    "inputSync": {
+      "inputEvents": 2,
+      "html": "<p><a href=\"/test\">Audit text</a></p>"
+    },
+    "footnoteSelection": "<p><sup data-footnote-uid=\"note-selection\">\u2022</sup> text</p>",
+    "editorCount": 1,
+    "messages": [
+      "[tiptap warn]: Duplicate extension names found: ['style_span_foo_bar']. This can lead to issues."
+    ]
+  },
+  "asset_lockfile_sha256": "7fb4fd69cfaa246e61b814a748d4d0231e4a2a499a0f9c429040aa078737661a",
+  "asset_lockfile_matches_main_checkout": true,
+  "prosemirror_input_rules_original_graph": {
+    "results": [
+      {
+        "input": "1. ",
+        "html": "<p>1.</p>",
+        "errors": [
+          "Uncaught RangeError: Can not convert <> to a Fragment (looks like multiple versions of prosemirror-model were loaded)"
+        ]
+      },
+      {
+        "input": "- ",
+        "html": "<p>-</p>",
+        "errors": [
+          "Uncaught RangeError: Can not convert <> to a Fragment (looks like multiple versions of prosemirror-model were loaded)",
+          "Uncaught RangeError: Can not convert <> to a Fragment (looks like multiple versions of prosemirror-model were loaded)"
+        ]
+      },
+      {
+        "input": "## ",
+        "html": "<h2></h2><p></p>",
+        "errors": [
+          "Uncaught RangeError: Can not convert <> to a Fragment (looks like multiple versions of prosemirror-model were loaded)",
+          "Uncaught RangeError: Can not convert <> to a Fragment (looks like multiple versions of prosemirror-model were loaded)"
+        ]
+      },
+      {
+        "input": "> ",
+        "html": "<p>&gt;</p>",
+        "errors": [
+          "Uncaught RangeError: Can not convert <> to a Fragment (looks like multiple versions of prosemirror-model were loaded)",
+          "Uncaught RangeError: Can not convert <> to a Fragment (looks like multiple versions of prosemirror-model were loaded)",
+          "Uncaught RangeError: Can not convert <> to a Fragment (looks like multiple versions of prosemirror-model were loaded)"
+        ]
+      },
+      {
+        "input": "1/2 ",
+        "html": "<p>\u00bd </p>",
+        "errors": [
+          "Uncaught RangeError: Can not convert <> to a Fragment (looks like multiple versions of prosemirror-model were loaded)",
+          "Uncaught RangeError: Can not convert <> to a Fragment (looks like multiple versions of prosemirror-model were loaded)",
+          "Uncaught RangeError: Can not convert <> to a Fragment (looks like multiple versions of prosemirror-model were loaded)"
+        ]
+      }
+    ],
+    "errors": [
+      "RangeError: Can not convert <> to a Fragment (looks like multiple versions of prosemirror-model were loaded)\n    at Fragment.from (http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:319:9)\n    at NodeType$1.create (http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:1950:60)\n    at wrap (http://127.0.0.1:8791/.vite/deps/dist-BbX8Gons.js?v=e3910a0f:2867:44)\n    at Transaction.wrap (http://127.0.0.1:8791/.vite/deps/dist-BbX8Gons.js?v=e3910a0f:3612:3)\n    at InputRule.handler (http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:14292:7)\n    at http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:12495:12\n    at Array.forEach (<anonymous>)\n    at run (http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:12478:8)\n    at Plugin.handleTextInput (http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:12544:12)\n    at http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:9495:48",
+      "RangeError: Can not convert <> to a Fragment (looks like multiple versions of prosemirror-model were loaded)\n    at Fragment.from (http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:319:9)\n    at NodeType$1.create (http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:1950:60)\n    at wrap (http://127.0.0.1:8791/.vite/deps/dist-BbX8Gons.js?v=e3910a0f:2867:44)\n    at Transaction.wrap (http://127.0.0.1:8791/.vite/deps/dist-BbX8Gons.js?v=e3910a0f:3612:3)\n    at InputRule.handler (http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:14292:7)\n    at http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:12495:12\n    at Array.forEach (<anonymous>)\n    at run (http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:12478:8)\n    at Plugin.handleTextInput (http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:12544:12)\n    at http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:9495:48",
+      "RangeError: Can not convert <> to a Fragment (looks like multiple versions of prosemirror-model were loaded)\n    at Fragment.from (http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:319:9)\n    at NodeType$1.create (http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:1950:60)\n    at wrap (http://127.0.0.1:8791/.vite/deps/dist-BbX8Gons.js?v=e3910a0f:2867:44)\n    at Transaction.wrap (http://127.0.0.1:8791/.vite/deps/dist-BbX8Gons.js?v=e3910a0f:3612:3)\n    at InputRule.handler (http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:14292:7)\n    at http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:12495:12\n    at Array.forEach (<anonymous>)\n    at run (http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:12478:8)\n    at Plugin.handleTextInput (http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:12544:12)\n    at http://127.0.0.1:8791/.vite/deps/dist-m-Sf96eK.js?v=e3910a0f:9495:48"
+    ]
+  },
+  "prosemirror_input_rules_single_model_experiment": {
+    "change": "Temporary Vite alias resolving all prosemirror-model imports to installed version 1.25.5. Repository and E2E consumer unchanged.",
+    "observations": {
+      "results": [
+        {
+          "input": "1. ",
+          "html": "<ol><li><p></p></li></ol><p></p>",
+          "errors": []
+        },
+        {
+          "input": "- ",
+          "html": "<ul><li><p></p></li></ul><p></p>",
+          "errors": []
+        },
+        {
+          "input": "## ",
+          "html": "<h2></h2><p></p>",
+          "errors": []
+        },
+        {
+          "input": "> ",
+          "html": "<blockquote><p></p></blockquote><p></p>",
+          "errors": []
+        },
+        {
+          "input": "1/2 ",
+          "html": "<p>\u00bd </p>",
+          "errors": []
+        }
+      ],
+      "errors": []
+    }
+  }
+}

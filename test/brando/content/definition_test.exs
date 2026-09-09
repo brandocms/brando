@@ -73,6 +73,28 @@ defmodule Brando.Content.DefinitionTest do
     assert {:ok, ^bundle} = Definitions.from_modules([module], root: exported)
   end
 
+  test "text-ref presets, styles and footnotes round-trip through the definition files", %{path: path} do
+    source =
+      String.replace(@source, "refs do", """
+      refs do
+        ref :body, :text do
+          config extensions: ["p", "color", "list", "orderedList"], footnotes: true,
+            styles: [%{element: "span", class: "small-caps", label: "Small caps"}]
+          default text: "<p>Default words</p>"
+        end
+      """)
+
+    File.write!(Path.join(path, "text.exs"), source)
+    assert {:ok, bundle} = Definitions.read(path)
+    exported = Path.join(path, "exported")
+    Writer.write!(bundle, exported)
+    assert {:ok, ^bundle} = Definitions.read(exported)
+    data = hd(hd(bundle["modules"])["refs"])["data"]["data"]
+    assert data["extensions"] == ["p", "color", "list", "orderedList"]
+    assert data["footnotes"]
+    assert hd(data["styles"])["class"] == "small-caps"
+  end
+
   test "the file loader does not execute expressions", %{path: path} do
     File.write!(
       Path.join(path, "hero.exs"),

@@ -66,10 +66,25 @@ defmodule Brando.Villain.Blocks.TextBlock do
     def changeset(struct, params \\ %{}) do
       struct
       |> cast(params, ~w(text type extensions footnotes footnote_module_set)a)
+      |> update_change(:extensions, fn
+        nil -> nil
+        values -> values |> Enum.reject(&(&1 == "")) |> Enum.map(&if(is_nil(&1), do: "all", else: &1))
+      end)
       |> cast_embed(:styles,
         sort_param: :sort_style_ids,
         drop_param: :drop_style_ids
       )
+      |> Brando.RichText.validate_fields([:text])
+      |> validate_change(:styles, fn _, styles ->
+        keys =
+          styles
+          |> Enum.reject(&(&1.action in [:delete, :replace]))
+          |> Enum.map(&{get_field(&1, :element), get_field(&1, :class)})
+
+        if length(keys) == length(Enum.uniq(keys)),
+          do: [],
+          else: [styles: "contains duplicate element and class definitions"]
+      end)
     end
 
     def default_styles do
@@ -109,6 +124,11 @@ defmodule Brando.Villain.Blocks.TextBlock do
       %{"element" => style.element, "class" => style.class}
       |> maybe_put("label", style.label)
       |> maybe_put("icon", style.icon)
+    end
+
+    defp to_style_map(style) when is_map(style) do
+      Map.new(style, fn {key, value} -> {to_string(key), value} end)
+      |> Map.take(~w(element class label icon))
     end
 
     defp maybe_put(map, _key, nil), do: map

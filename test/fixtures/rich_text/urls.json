@@ -1,0 +1,18 @@
+[
+  {"input":"https://example.com/a?x=1&y=2", "normalized":"https://example.com/a?x=1&y=2", "allowed":true},
+  {"input":" /rooms ", "normalized":"/rooms", "allowed":false},
+  {"input":"example.com/rooms", "normalized":"https://example.com/rooms", "allowed":true},
+  {"input":"../rooms", "normalized":"../rooms", "allowed":true},
+  {"input":"./example.com", "normalized":"./example.com", "allowed":true},
+  {"input":"#Getting-here", "normalized":"#Getting-here", "allowed":true},
+  {"input":"mailto:hello@example.com", "normalized":"mailto:hello@example.com", "allowed":true},
+  {"input":"tel:+4712345678", "normalized":"tel:+4712345678", "allowed":true},
+  {"input":"javascript:alert(1)", "normalized":null, "allowed":false},
+  {"input":"JaVaScRiPt:alert(1)", "normalized":null, "allowed":false},
+  {"input":"java\nscript:alert(1)", "normalized":null, "allowed":false},
+  {"input":"data:text/html,test", "normalized":null, "allowed":false},
+  {"input":"vbscript:evil", "normalized":null, "allowed":false},
+  {"input":"https:\\evil.test", "normalized":null, "allowed":false},
+  {"input":"https://exa mple.test", "normalized":null, "allowed":false},
+  {"input":"", "normalized":null, "allowed":false}
+]

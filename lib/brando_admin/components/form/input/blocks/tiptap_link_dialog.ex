@@ -1,307 +1,400 @@
 defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
-  @moduledoc """
-  LiveComponent for the TipTap link/button dialog.
-
-  Provides URL input and identifier selection for creating links
-  in TipTap rich text editors. Communicates results back to the
-  TipTap hook via `push_event` through the parent Form component.
-  """
+  @moduledoc "A shared, isolated draft for ordinary links, content links and button appearance."
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.RichText
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Content.SelectIdentifier
 
-  def mount(socket) do
-    {:ok,
-     socket
-     |> assign(:show, false)
-     |> assign(:link_type, :url)
-     |> assign(:url_value, "")
-     |> assign(:target_blank, false)
-     |> assign(:mark_type, "link")
-     |> assign(:tiptap_id, nil)
-     |> assign(:selected_identifier, nil)
-     |> assign(:selected_identifier_id, nil)
-     |> assign(:has_existing_link?, false)}
+  def open(params, language) do
+    fields =
+      ~w(tiptap_id request_id current_href current_target current_rel current_class current_identifier_id link_text mark_type anchors appearances)a
+
+    attrs = Map.new(fields, fn key -> {key, params[to_string(key)]} end)
+    send_update(__MODULE__, Map.merge(attrs, %{id: "tiptap-link-dialog", event: :open, language: language}))
   end
 
-  def update(%{event: :open} = assigns, socket) do
-    current_href = assigns[:current_href] || ""
-    current_target = assigns[:current_target]
-    current_identifier_id = assigns[:current_identifier_id]
-    mark_type = assigns[:mark_type] || "link"
-    tiptap_id = assigns[:tiptap_id]
+  def mount(socket) do
+    {:ok,
+     assign(socket,
+       show: false,
+       link_type: :url,
+       tiptap_id: nil,
+       request_id: nil,
+       selected_identifier: nil,
+       selected_identifier_id: nil,
+       has_existing_link?: false,
+       anchors: [],
+       language: nil,
+       error: nil,
+       unavailable_destination: false,
+       original_class: nil,
+       original_rel: nil,
+       applying: false,
+       appearances: ["link", "button"],
+       original_target: nil,
+       target_changed: false,
+       draft: %{
+         "url" => "",
+         "text" => "",
+         "anchor" => "",
+         "appearance" => "link",
+         "target_blank" => false,
+         "nofollow" => false
+       }
+     )}
+  end
 
-    {link_type, selected_identifier, selected_identifier_id} =
-      if current_identifier_id do
-        case Brando.Content.get_identifier(current_identifier_id) do
-          {:ok, identifier} -> {:identifier, identifier, current_identifier_id}
-          _ -> {:url, nil, nil}
-        end
-      else
-        {:url, nil, nil}
+  def update(%{event: :open} = params, socket) do
+    href = params[:current_href] || ""
+
+    identifier =
+      case params[:current_identifier_id] && Brando.Content.get_identifier(params.current_identifier_id) do
+        {:ok, entry} -> entry
+        _ -> nil
       end
 
-    url_value = if link_type == :url, do: current_href, else: ""
-    target_blank = compute_target_blank(current_target, link_type, url_value)
+    type =
+      cond do
+        identifier -> :identifier
+        String.starts_with?(href, "#") -> :anchor
+        true -> :url
+      end
+
+    rel = String.split(params[:current_rel] || "")
+
+    draft = %{
+      "url" => href,
+      "text" => params[:link_text] || "",
+      "anchor" => String.trim_leading(href, "#"),
+      "appearance" => params[:mark_type] || "link",
+      "target_blank" => params[:current_target] == "_blank",
+      "nofollow" => "nofollow" in rel
+    }
 
     {:ok,
-     socket
-     |> assign(:show, true)
-     |> assign(:link_type, link_type)
-     |> assign(:url_value, url_value)
-     |> assign(:target_blank, target_blank)
-     |> assign(:mark_type, mark_type)
-     |> assign(:tiptap_id, tiptap_id)
-     |> assign(:selected_identifier, selected_identifier)
-     |> assign(:selected_identifier_id, selected_identifier_id)
-     |> assign(:has_existing_link?, current_href != "")
-     |> assign(:language, assigns[:language])}
+     assign(socket,
+       show: true,
+       draft: draft,
+       link_type: type,
+       tiptap_id: params[:tiptap_id],
+       request_id: params[:request_id],
+       selected_identifier: identifier,
+       selected_identifier_id: identifier && identifier.id,
+       unavailable_destination: !!params[:current_identifier_id] && is_nil(identifier),
+       has_existing_link?: href != "",
+       original_class: params[:current_class],
+       original_target: params[:current_target],
+       target_changed: false,
+       appearances: params[:appearances] || ["link", "button"],
+       original_rel: rel,
+       anchors: Enum.uniq(params[:anchors] || []),
+       language: params[:language],
+       error: nil,
+       applying: false
+     )}
   end
 
   def update(%{event: :identifier_selected, identifier: identifier}, socket) do
     {:ok,
-     socket
-     |> assign(:selected_identifier, identifier)
-     |> assign(:selected_identifier_id, identifier.id)}
+     assign(socket,
+       selected_identifier: identifier,
+       selected_identifier_id: identifier && identifier.id,
+       error: nil,
+       unavailable_destination: false
+     )}
   end
 
-  def update(assigns, socket) do
-    {:ok, assign(socket, assigns)}
+  def update(%{event: :applied, request_id: id, applied: applied}, socket) do
+    if id == socket.assigns.request_id do
+      if applied do
+        send(self(), {:tiptap_set_link, socket.assigns.tiptap_id, %{closed: true, request_id: id}})
+        {:ok, assign(socket, applying: false, show: false)}
+      else
+        {:ok,
+         assign(socket,
+           applying: false,
+           error: gettext("The text changed while this dialog was open. Cancel and select the text again.")
+         )}
+      end
+    else
+      {:ok, socket}
+    end
   end
+
+  def update(assigns, socket), do: {:ok, assign(socket, assigns)}
 
   def render(assigns) do
     ~H"""
     <div>
       <Content.modal
         title={gettext("Edit link")}
-        subtitle={gettext("Text link")}
+        subtitle={if @draft["text"] == "", do: gettext("Choose a destination and link text"), else: @draft["text"]}
         icon="hero-link"
         layout="picker"
         id="tiptap-link-dialog"
         show={@show}
         close={JS.push("close_dialog", target: @myself)}
       >
-        <div class="link-picker-modes tiptap-link-tabs">
-          <div class="form-tab-customs">
-            <button
-              type="button"
-              class={@link_type == :url && "active"}
-              phx-click="set_link_type"
-              phx-value-type="url"
-              phx-target={@myself}
-            >
-              <.icon name="hero-globe-alt" /><span>{gettext("URL")}</span>
-            </button>
-            <button
-              type="button"
-              class={@link_type == :identifier && "active"}
-              phx-click="set_link_type"
-              phx-value-type="identifier"
-              phx-target={@myself}
-            >
-              <.icon name="hero-document-text" /><span>{gettext("Content")}</span>
-            </button>
-          </div>
-        </div>
-
-        <div :if={@link_type == :url} class="link-picker-url">
-          <div class="field-wrapper">
-            <div class="label-wrapper">
-              <label class="control-label" for="tiptap-link-url">
-                <span>{gettext("URL")}</span>
-              </label>
-            </div>
-            <div class="field-base">
-              <input
-                id="tiptap-link-url"
-                class="text monospace"
-                type="text"
-                value={@url_value}
-                placeholder="https://example.com"
-                phx-blur="update_url"
+        <.form
+          for={%{}}
+          as={:link}
+          id="tiptap-link-form"
+          phx-change="validate_link"
+          phx-submit="confirm_link"
+          phx-target={@myself}
+        >
+          <div class="link-picker-modes tiptap-link-tabs">
+            <div class="form-tab-customs" role="group" aria-label={gettext("Link destination")}>
+              <button
+                type="button"
+                class={@link_type == :url && "active"}
+                aria-pressed={@link_type == :url}
+                phx-click="set_link_type"
+                phx-value-type="url"
                 phx-target={@myself}
-                name="tiptap_link_url"
-              />
+              ><.icon name="hero-globe-alt" /><span>{gettext("URL")}</span></button>
+              <button
+                type="button"
+                class={@link_type == :identifier && "active"}
+                aria-pressed={@link_type == :identifier}
+                phx-click="set_link_type"
+                phx-value-type="identifier"
+                phx-target={@myself}
+              ><.icon name="hero-document-text" /><span>{gettext("Content")}</span></button>
+              <button
+                type="button"
+                class={@link_type == :anchor && "active"}
+                aria-pressed={@link_type == :anchor}
+                phx-click="set_link_type"
+                phx-value-type="anchor"
+                phx-target={@myself}
+              ><.icon name="hero-hashtag" /><span>{gettext("Page anchor")}</span></button>
             </div>
           </div>
-        </div>
+          <p :if={@unavailable_destination} class="tiptap-link-warning" role="status">
+            {gettext("The original content entry is unavailable. Check the saved URL or choose another destination.")}
+          </p>
 
-        <div :if={@link_type == :url} class="link-picker-url-options">
-          <div class="tiny-toggle-wrapper">
-            <label class="switch small">
-              <input
-                aria-label={gettext("Open link in new window/tab")}
-                type="checkbox"
-                checked={@target_blank}
-                phx-click="toggle_target_blank"
-                phx-target={@myself}
-              />
-              <div class="slider round"></div>
-            </label>
-            <span class="tiny-toggle-label">{gettext("Open link in new window/tab")}</span>
-          </div>
-        </div>
-        <div :if={@link_type == :identifier}>
-          <.live_component
-            module={SelectIdentifier}
-            id="tiptap-link-identifier-select"
-            selected_identifier_id={@selected_identifier_id}
-            language={@language}
-            layout={:workspace}
-            statuses={[:published]}
-            on_change={
-              fn %{data: %{identifier: identifier}} ->
-                send_update(__MODULE__,
-                  id: @id,
-                  event: :identifier_selected,
-                  identifier: identifier
-                )
-              end
-            }
-          >
-            <:details>
-              <div class="tiny-toggle-wrapper">
-                <label class="switch small">
-                  <input
-                    aria-label={gettext("Open link in new window/tab")}
-                    type="checkbox"
-                    checked={@target_blank}
-                    phx-click="toggle_target_blank"
-                    phx-target={@myself}
-                  />
-                  <div class="slider round"></div>
-                </label>
-                <span class="tiny-toggle-label">{gettext("Open link in new window/tab")}</span>
+          <div :if={@link_type != :identifier} class="tiptap-link-url-workspace">
+            <div class="tiptap-link-destination">
+              <div :if={@link_type == :url} class="field-wrapper">
+                <label for="tiptap-link-url" class="control-label">{gettext("Destination")}</label>
+                <input
+                  id="tiptap-link-url"
+                  class="text monospace"
+                  type="text"
+                  name="link[url]"
+                  value={@draft["url"]}
+                  placeholder="https://example.com"
+                  aria-describedby="tiptap-link-url-help tiptap-link-error"
+                  aria-invalid={!!@error}
+                />
+                <p id="tiptap-link-url-help" class="help-text">
+                  {gettext("Web address, email, phone number or relative path")}
+                </p>
               </div>
-            </:details>
-          </.live_component>
-        </div>
+              <div :if={@link_type == :anchor} class="field-wrapper">
+                <label for="tiptap-link-anchor" class="control-label">{gettext("Anchor on this page")}</label>
+                <input
+                  id="tiptap-link-anchor"
+                  class="text"
+                  type="text"
+                  name="link[anchor]"
+                  value={@draft["anchor"]}
+                  list="tiptap-page-anchors"
+                  placeholder="getting-here"
+                  aria-describedby="tiptap-link-error"
+                />
+                <datalist id="tiptap-page-anchors"><option :for={anchor <- @anchors} value={anchor} /></datalist>
+              </div>
+            </div>
+            <div class="tiptap-link-settings"><.link_fields draft={@draft} appearances={@appearances} /></div>
+          </div>
 
+          <div :if={@link_type == :identifier} class="tiptap-link-content-workspace">
+            <.live_component
+              module={SelectIdentifier}
+              id="tiptap-link-identifier-select"
+              selected_identifier_id={@selected_identifier_id}
+              language={@language}
+              layout={:workspace}
+              initial_schema={:all}
+              statuses={[:published]}
+              on_change={
+                fn %{data: %{identifier: identifier}} ->
+                  send_update(__MODULE__, id: @id, event: :identifier_selected, identifier: identifier)
+                end
+              }
+            >
+              <:details><.link_fields draft={@draft} appearances={@appearances} /></:details>
+            </.live_component>
+          </div>
+          <p id="tiptap-link-error" class="tiptap-link-error" role="alert">{@error}</p>
+        </.form>
         <:footer>
-          <button type="button" class="secondary" phx-click="close_dialog" phx-target={@myself}>{gettext("Cancel")}</button>
+          <button type="button" class="secondary" phx-click="close_dialog" phx-target={@myself} disabled={@applying}>{gettext(
+            "Cancel"
+          )}</button>
           <button
-            type="button"
+            type="submit"
+            form="tiptap-link-form"
             class="primary"
-            disabled={@link_type == :identifier && is_nil(@selected_identifier_id)}
-            phx-click="confirm_link"
-            phx-target={@myself}
-          >
-            {gettext("Apply link")}
-          </button>
+            phx-disable-with={gettext("Applying…")}
+            disabled={@applying || (@link_type == :identifier && is_nil(@selected_identifier_id))}
+          >{gettext("Apply link")}</button>
           <button
             :if={@has_existing_link?}
             type="button"
             class="tertiary ml-auto"
             phx-click="remove_link"
             phx-target={@myself}
-          >
-            {gettext("Remove link")}
-          </button>
+          >{gettext("Remove link")}</button>
         </:footer>
       </Content.modal>
     </div>
     """
   end
 
-  def handle_event("set_link_type", %{"type" => type}, socket) do
-    link_type = String.to_existing_atom(type)
+  attr :appearances, :list, required: true
+  attr :draft, :map, required: true
 
-    target_blank =
-      case link_type do
-        :identifier -> false
-        :url -> compute_target_blank(nil, :url, socket.assigns.url_value)
-      end
-
-    {:noreply,
-     socket
-     |> assign(:link_type, link_type)
-     |> assign(:target_blank, target_blank)}
+  defp link_fields(assigns) do
+    ~H"""
+    <div class="tiptap-link-fields">
+      <label class="tiptap-link-field" for="tiptap-link-text"><span>{gettext("Link text")}</span><input
+        id="tiptap-link-text"
+        type="text"
+        class="text"
+        name="link[text]"
+        value={@draft["text"]}
+      /></label>
+      <label class="tiptap-link-field" for="tiptap-link-appearance"><span>{gettext("Appearance")}</span><select
+        id="tiptap-link-appearance"
+        name="link[appearance]"
+      ><option :if={"link" in @appearances} value="link" selected={@draft["appearance"] == "link"}>
+        {gettext("Text link")}
+      </option><option
+        :if={"button" in @appearances}
+        value="button"
+        selected={@draft["appearance"] == "button"}
+      >
+        {gettext("Button")}
+      </option></select></label>
+      <label class="tiptap-link-check"><input type="hidden" name="link[target_blank]" value="false" /><input
+        type="checkbox"
+        name="link[target_blank]"
+        value="true"
+        checked={@draft["target_blank"]}
+      /><span>{gettext("Open in a new tab")}</span></label>
+      <label class="tiptap-link-check"><input type="hidden" name="link[nofollow]" value="false" /><input
+        type="checkbox"
+        name="link[nofollow]"
+        value="true"
+        checked={@draft["nofollow"]}
+      /><span>{gettext("Mark as nofollow")}</span></label>
+    </div>
+    """
   end
 
-  def handle_event("update_url", %{"value" => url}, socket) do
-    target_blank = compute_target_blank(nil, :url, url)
-
-    {:noreply,
-     socket
-     |> assign(:url_value, url)
-     |> assign(:target_blank, target_blank)}
+  def handle_event("set_link_type", %{"type" => type}, socket) when type in ["url", "identifier", "anchor"] do
+    {:noreply, assign(socket, link_type: String.to_existing_atom(type), error: nil)}
   end
 
-  def handle_event("toggle_target_blank", _, socket) do
-    {:noreply, assign(socket, :target_blank, !socket.assigns.target_blank)}
-  end
+  def handle_event("validate_link", %{"link" => values}, socket), do: {:noreply, update_draft(socket, values)}
+  def handle_event("confirm_link", _, %{assigns: %{applying: true}} = socket), do: {:noreply, socket}
 
-  def handle_event("confirm_link", _, socket) do
-    link_data = build_link_data(socket.assigns)
-    send(self(), {:tiptap_set_link, socket.assigns.tiptap_id, link_data})
-    {:noreply, assign(socket, :show, false)}
+  def handle_event("confirm_link", params, socket) do
+    socket = update_draft(socket, Map.get(params, "link", %{}))
+
+    case build_link_data(socket.assigns) do
+      {:ok, link} ->
+        send(self(), {:tiptap_set_link, socket.assigns.tiptap_id, Map.put(link, :request_id, socket.assigns.request_id)})
+        {:noreply, assign(socket, :applying, true)}
+
+      {:error, _} ->
+        {:noreply, assign(socket, :error, gettext("Enter a valid destination before applying the link."))}
+    end
   end
 
   def handle_event("remove_link", _, socket) do
-    link_data = %{unset: true, mark_type: socket.assigns.mark_type}
-    send(self(), {:tiptap_set_link, socket.assigns.tiptap_id, link_data})
+    send(self(), {:tiptap_set_link, socket.assigns.tiptap_id, %{unset: true, request_id: socket.assigns.request_id}})
+    {:noreply, assign(socket, :applying, true)}
+  end
+
+  def handle_event("close_dialog", _, socket), do: close(socket, %{cancel: true})
+
+  defp close(socket, data) do
+    send(self(), {:tiptap_set_link, socket.assigns.tiptap_id, Map.put(data, :request_id, socket.assigns.request_id)})
     {:noreply, assign(socket, :show, false)}
   end
 
-  def handle_event("close_dialog", _, socket) do
-    {:noreply, assign(socket, :show, false)}
+  def receive_result(params) do
+    send_update(__MODULE__,
+      id: "tiptap-link-dialog",
+      event: :applied,
+      request_id: params["request_id"],
+      applied: params["applied"] == true
+    )
   end
 
-  # -- Private helpers
+  defp update_draft(socket, values) do
+    draft = Map.merge(socket.assigns.draft, Map.take(values, ~w(url text anchor appearance target_blank nofollow)))
 
-  defp compute_target_blank(current_target, _link_type, _url) when is_binary(current_target) do
-    current_target == "_blank"
+    draft =
+      Enum.reduce(~w(target_blank nofollow), draft, fn key, acc -> Map.update!(acc, key, &(&1 in [true, "true"])) end)
+
+    assign(socket,
+      draft: draft,
+      error: nil,
+      target_changed: socket.assigns.target_changed || draft["target_blank"] != socket.assigns.draft["target_blank"]
+    )
   end
 
-  defp compute_target_blank(nil, :identifier, _url), do: false
+  def build_link_data(assigns) do
+    draft = assigns.draft
 
-  defp compute_target_blank(nil, :url, url) when is_binary(url) do
-    String.starts_with?(url, "http://") or String.starts_with?(url, "https://")
-  end
+    url =
+      case assigns.link_type do
+        :url ->
+          draft["url"]
 
-  defp compute_target_blank(nil, :url, _url), do: false
+        :anchor ->
+          anchor = draft["anchor"] |> String.trim() |> String.trim_leading("#")
+          if anchor != "", do: "#" <> anchor
 
-  defp build_link_data(%{
-         link_type: :url,
-         url_value: url,
-         target_blank: target_blank,
-         mark_type: mark_type
-       }) do
-    target = if target_blank, do: "_blank", else: nil
-    rel = if target_blank, do: "noopener noreferrer nofollow", else: nil
+        :identifier ->
+          assigns.selected_identifier && assigns.selected_identifier.url
+      end
 
-    %{
-      href: url,
-      target: target,
-      rel: rel,
-      mark_type: mark_type,
-      identifier_id: nil
-    }
-  end
+    with {:ok, url} <- RichText.normalize_url(url), true <- draft["appearance"] in assigns.appearances do
+      target =
+        cond do
+          draft["target_blank"] -> "_blank"
+          assigns.target_changed -> nil
+          true -> assigns.original_target
+        end
 
-  defp build_link_data(%{
-         link_type: :identifier,
-         selected_identifier: identifier,
-         selected_identifier_id: id,
-         target_blank: target_blank,
-         mark_type: mark_type
-       })
-       when not is_nil(identifier) do
-    target = if target_blank, do: "_blank", else: nil
-    rel = if target_blank, do: "noopener noreferrer nofollow", else: nil
+      rel = Enum.reject(assigns.original_rel || [], &(&1 in ["nofollow", "noopener", "noreferrer"]))
 
-    %{
-      href: identifier.url || "#",
-      target: target,
-      rel: rel,
-      mark_type: mark_type,
-      identifier_id: id
-    }
-  end
+      rel =
+        Enum.uniq(
+          rel ++ if(target, do: ["noopener", "noreferrer"], else: []) ++ if(draft["nofollow"], do: ["nofollow"], else: [])
+        )
 
-  defp build_link_data(%{link_type: :identifier, mark_type: mark_type}) do
-    %{unset: true, mark_type: mark_type}
+      {:ok,
+       %{
+         href: url,
+         target: target,
+         rel: if(rel == [], do: nil, else: Enum.join(rel, " ")),
+         class: assigns.original_class,
+         link_text: draft["text"],
+         mark_type: draft["appearance"],
+         identifier_id: if(assigns.link_type == :identifier, do: assigns.selected_identifier_id)
+       }}
+    else
+      _ -> {:error, :invalid_link}
+    end
   end
 end

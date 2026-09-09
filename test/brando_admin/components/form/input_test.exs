@@ -155,9 +155,9 @@ defmodule BrandoAdmin.Components.Form.InputTest do
         ]
       })
 
-    assert html =~ ~s(phx-click="ai_generate_input")
-    assert html =~ ~s(phx-value-field_key="body")
-    assert html =~ ~s(phx-value-field_name="page[body]")
+    assert html =~ ~s(data-tiptap-ai="true")
+    assert html =~ ~s(data-tiptap-field="body")
+    assert html =~ ~s(name="page[body]")
   end
 
   test "text input renders the placeholder attribute" do

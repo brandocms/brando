@@ -379,14 +379,7 @@ defmodule Brando.Villain do
   """
   def update_identifier_url_in_html(html, identifier_id, new_url)
       when is_binary(html) and is_integer(identifier_id) do
-    # href always comes before data-identifier-id (we control the attribute order)
-    pattern = ~r/(<a\b[^>]*?\bhref=")([^"]*)("[^>]*?data-identifier-id="#{identifier_id}")/
-
-    if Regex.match?(pattern, html) do
-      {:updated, Regex.replace(pattern, html, "\\1#{new_url}\\3")}
-    else
-      :unchanged
-    end
+    Brando.RichText.update_identifier_url(html, identifier_id, new_url)
   end
 
   @doc """

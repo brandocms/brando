@@ -2131,6 +2131,10 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       assigns
       |> assign(:uid, uid)
       |> assign(:text_type, Changeset.get_field(block_data_cs, :type))
+      |> assign(
+        :ai_enabled?,
+        Brando.AI.field_ai_opts(:block_text) != [] && Brando.AI.configured?(Brando.AI.field_ai_opts(:block_text))
+      )
       |> assign(:extensions, extensions)
       |> assign(:styles, styles)
       |> assign(:footnotes, assigns[:footnotes_enabled] == true)
@@ -2170,6 +2174,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <%= if @extensions == "all" do %>
               <Input.hidden field={text_block_data[:extensions]} />
             <% else %>
+              <input :if={@extensions == ""} type="hidden" name={text_block_data[:extensions].name <> "[]"} value="" />
               <Primitives.array_inputs :let={%{value: array_value, name: array_name}} field={text_block_data[:extensions]}>
                 <input type="hidden" name={array_name} value={array_value} />
               </Primitives.array_inputs>
@@ -2182,6 +2187,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 data-block-uid={@uid}
                 data-tiptap-extensions={@extensions}
                 data-tiptap-styles={@styles}
+                data-tiptap-labels={Jason.encode!(BrandoAdmin.Components.Form.Input.RichTextLabels.labels())}
+                data-tiptap-label={@ref_description || @ref_name || gettext("Text")}
                 data-footnotes={@footnotes && "true"}
                 data-footnote-ref={@ref_name}
                 phx-hook="Brando.TipTap"
@@ -2193,6 +2200,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                   })
                 }
                 data-tiptap-type="block"
+                data-tiptap-ai={to_string(@ai_enabled?)}
                 data-name="TipTap"
               >
                 <div id={"block-#{@uid}-rich-text-target-wrapper"} class="tiptap-target-wrapper" phx-update="ignore">

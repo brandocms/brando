@@ -1,0 +1,15 @@
+export const defaultLabels = {
+  toolbar: 'Text formatting', paragraph: 'Paragraph', heading: 'Heading %{level}', styles: 'Paragraph and style', resetStyle: 'Reset paragraph style',
+  bold: 'Bold', italic: 'Italic', list: 'Bulleted list', orderedList: 'Numbered list', listTypes: 'List types', link: 'Link', button: 'Button',
+  sub: 'Subscript', sup: 'Superscript', color: 'Text color', resetColor: 'Reset color', align: 'Alignment', left: 'Align left', center: 'Align center', right: 'Align right',
+  more: 'More formatting', blockquote: 'Blockquote', underline: 'Underline', strike: 'Strikethrough', code: 'Inline code', codeBlock: 'Code block', horizontalRule: 'Horizontal rule',
+  clear: 'Remove text formatting', undo: 'Undo', redo: 'Redo', expand: 'Expand editor', collapse: 'Done', placeholder: 'Write something…',
+  expandedEditing: 'Expanded editing', returnToForm: 'Return to form',
+  anchor: 'Page anchor', anchorId: 'Anchor name', anchorHelp: 'Use a readable name, such as getting-here.', anchorInvalid: 'Use a name without spaces; it must be unique on this page.',
+  apply: 'Apply', cancel: 'Cancel', remove: 'Remove', copyLink: 'Copy link', copied: 'Link copied', open: 'Open link', edit: 'Edit link',
+  pasteFallback: 'Unsupported content was converted to text. Footnotes from another entry need to be added here.',
+  changed: 'The selected text changed. Try again with the current text.', linkFailed: 'The link could not be applied. Check the destination and selection.',
+  ai: 'Write with AI', rewrite: 'Rewrite', shorten: 'Shorten', continue: 'Continue', instruction: 'Instructions', generate: 'Generate suggestion',
+  aiSuggestion: 'AI suggestion', generating: 'Writing a suggestion…', accept: 'Accept', discard: 'Discard', retry: 'Try again', aiFailed: 'Could not generate a suggestion. Try again.',
+  aiAccepted: 'Suggestion accepted. Undo is available.', words: '%{count} words', indent: 'Indent list item', outdent: 'Outdent list item',
+}

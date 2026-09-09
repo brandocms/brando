@@ -1,813 +1,267 @@
 <script>
-  import { onMount, onDestroy } from "svelte";
-  import { Editor, Extension, Mark, mergeAttributes } from "@tiptap/core";
-  import { TextStyleKit } from '@tiptap/extension-text-style'
-  import StarterKit from "@tiptap/starter-kit";
-  import { Focus } from '@tiptap/extensions'
-  
-  import Typography from "@tiptap/extension-typography";
-  import Subscript from "@tiptap/extension-subscript";
-  import Superscript from "@tiptap/extension-superscript";
-  import Link from "@tiptap/extension-link";
-  import SmartText from "./extensions/SmartText";
-  import Button from "./extensions/Button";
-  import HTMLInputParser from "./extensions/PasteCleaner/HTMLInputParser";
-  import JumpAnchor from "./extensions/JumpAnchor";
-  import PreventDrop from "./extensions/PreventDrop";
-  import Footnote, { defaultFootnoteLabels, renumberFootnotes } from "./extensions/Footnote";
-  import TextAlign from "@tiptap/extension-text-align";
+  import { onMount, onDestroy } from 'svelte'
+  import { Editor } from '@tiptap/core'
+  import { closeHistory } from '@tiptap/pm/history'
+  import { Fragment, Slice } from '@tiptap/pm/model'
+  import { computePosition, autoUpdate, offset, flip, shift } from '@floating-ui/dom'
+  import { createExtensions, removeTextFormatting } from './createExtensions'
+  import { resolveCapabilities, normalizeStyles, headingLevelForElement } from './config'
+  import { defaultLabels } from './labels'
+  import { isButtonLink } from './extensions/Link'
+  import { defaultFootnoteLabels, renumberFootnotes } from './extensions/Footnote'
+  import HTMLInputParser from './extensions/PasteCleaner/HTMLInputParser'
+  import { captureRange, mapRange } from './selection'
+  import { proposalExtension, proposalKey } from './aiProposal'
 
-  import { alertPrompt } from "../../alerts";
-
-  const STYLED_NODE_ELEMENTS = ["p", "h1", "h2", "h3", "h4", "h5", "h6"];
-  const STYLED_MARK_ELEMENTS = ["span"];
-  const STYLE_CLASS_REGEX = /^[A-Za-z_][A-Za-z0-9_-]*$/;
-
-  const StyledNodes = Extension.create({
-    name: "styledNodes",
-    addGlobalAttributes() {
-      return [
-        {
-          types: ["paragraph", "heading"],
-          attributes: {
-            class: {
-              default: null,
-              parseHTML: (element) => element.getAttribute("class"),
-              renderHTML: (attributes) => {
-                if (!attributes.class) {
-                  return {};
-                }
-
-                return { class: attributes.class };
-              },
-            },
-          },
-        },
-      ];
-    },
-  });
-
-  let { content, extensions = $bindable(), styles = "[]", onFocus, onBlur, onToggleLink, onToggleButton, onEditorCreated, tiptapInput, footnotes = false, footnoteLabels = defaultFootnoteLabels, onOpenFootnote } = $props();
-
-  let element = $state();
-  let editor = $state();
-  let parsedStyles = $state([]);
-
-  let isLinkActive = $state(false);
-  let isH1Active = $state(false);
-  let isH2Active = $state(false);
-  let isH3Active = $state(false);
-  let isH4Active = $state(false);
-  let isPActive = $state(false);
-  let isListActive = $state(false);
-  let isButtonActive = $state(false);
-  let isBoldActive = $state(false);
-  let isItalicActive = $state(false);
-  let isSubActive = $state(false);
-  let isSupActive = $state(false);
-  let isAlignLeftActive = $state(false);
-  let isAlignCenterActive = $state(false);
-  let isAlignRightActive = $state(false);
-  let isColorActive = $state(false);
-  let isJumpAnchorActive = $state(false);
-  let activeStyleKeys = $state(new Set());
-  let dropdownTriggerEl = $state();
-  let dropdownEl = $state();
-
-  const ATTR_WHITESPACE =
-    /[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u2029\u205F\u3000]/g;
-
-  const isAllowedUri = (uri, protocols) => {
-    const allowedProtocols = [
-      "http",
-      "https",
-      "ftp",
-      "ftps",
-      "mailto",
-      "tel",
-      "callto",
-      "sms",
-      "cid",
-      "xmpp",
-    ];
-
-    if (protocols) {
-      protocols.forEach((protocol) => {
-        const nextProtocol =
-          typeof protocol === "string" ? protocol : protocol.scheme;
-
-        if (nextProtocol) {
-          allowedProtocols.push(nextProtocol);
-        }
-      });
+  let { content = '', extensions, styles = '[]', onFocus, onBlur, onToggleLink, onToggleButton, onEditorCreated, tiptapInput,
+    footnotes = false, footnoteLabels = defaultFootnoteLabels, onOpenFootnote, labels: providedLabels = {}, accessibility = {},
+    aiEnabled = false, onGenerateAi, onCancelAi, typography = {}, labelMode = 'compact' } = $props()
+  const labels = $derived({ ...defaultLabels, ...providedLabels })
+  const capabilities = $derived(resolveCapabilities(extensions))
+  const parsedStyles = $derived(normalizeStyles(styles))
+  const has = key => capabilities.includes(key)
+  let element, shell, typeMenu, listMenu, moreMenu, anchorMenu, aiMenu
+  let toolbar = $state.raw(null)
+  let editor = $state.raw(null)
+  let revision = $state(0)
+  let expanded = $state(false)
+  let currentMenu = $state('')
+  let notice = $state('')
+  let anchorId = $state('')
+  let anchorError = $state('')
+  let aiMode = $state('rewrite')
+  let instruction = $state('')
+  let pending = null, anchorRange = null, menuTrigger = null, stopPositioning, inertSiblings = [], resumeOverlay = false, menuCleanups = []
+  const id = $derived(`${tiptapInput?.id || 'tiptap'}-controls`)
+  const active = $derived.by(() => {
+    revision
+    if (!editor) return {}
+    const marks = Object.fromEntries(['bold', 'italic', 'subscript', 'superscript', 'link', 'jumpAnchor', 'blockquote', 'bulletList', 'orderedList', 'underline', 'strike', 'code', 'codeBlock'].map(name => [name, editor.isActive(name)]))
+    return { ...marks, level: editor.isActive('heading') ? editor.getAttributes('heading').level : null, linkAttrs: editor.getAttributes('link'), color: editor.getAttributes('textStyle').color || '', styles: Object.fromEntries(parsedStyles.map(style => [style.key, style.mode === 'mark' ? editor.isActive(style.markName) : editor.isActive(style.element === 'p' ? 'paragraph' : 'heading', { class: style.className, ...(style.element === 'p' ? {} : { level: headingLevelForElement(style.element) }) })])), canUndo: editor.can().undo(), canRedo: editor.can().redo(), editable: editor.isEditable }
+  })
+  const wordCount = $derived.by(() => { revision; return expanded && editor ? editor.getText().trim().split(/\s+/).filter(Boolean).length : 0 })
+  const typeLabel = $derived(labelMode === 'icon' ? '¶' : active.level ? labelMode === 'full' ? labels.heading.replace('%{level}', active.level) : `H${active.level}` : labelMode === 'full' ? labels.paragraph : '¶')
+  const more = $derived([
+    ['sub', 'subscript', 'toggleSubscript'], ['sup', 'superscript', 'toggleSuperscript'], ['blockquote', 'blockquote', 'toggleBlockquote'],
+    ['underline', 'underline', 'toggleUnderline'], ['strike', 'strike', 'toggleStrike'], ['code', 'code', 'toggleCode'], ['codeBlock', 'codeBlock', 'toggleCodeBlock'],
+  ].filter(([key]) => has(key)))
+  function closeMenus() { [typeMenu, listMenu, moreMenu, anchorMenu, aiMenu].forEach(menu => { if (menu?.matches(':popover-open')) menu.hidePopover() }); stopPositioning?.(); stopPositioning = null; currentMenu = '' }
+  function showMenu(menu, trigger, name) {
+    const wasOpen = menu.matches(':popover-open')
+    closeMenus()
+    if (wasOpen) return
+    menuTrigger = trigger; currentMenu = name; menu.showPopover()
+    stopPositioning = autoUpdate(trigger, menu, () => computePosition(trigger, menu, { strategy: 'fixed', placement: 'bottom-start', middleware: [offset(6), flip(), shift({ padding: 8 })] }).then(({ x, y }) => Object.assign(menu.style, { left: `${x}px`, top: `${y}px` })))
+    menu.querySelector('input, button:not(:disabled), select')?.focus()
+  }
+  function menuKeys(event) {
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeMenus(); menuTrigger?.focus(); return }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) || event.target.matches('input, select')) return
+    const buttons = [...event.currentTarget.querySelectorAll('button:not(:disabled)')]
+    const index = buttons.indexOf(document.activeElement)
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length
+    event.preventDefault(); buttons[next]?.focus()
+  }
+  function toolbarFocus(event) { if (!event.target.matches('button')) return; [...toolbar.querySelectorAll(':scope > button, :scope > .menu-item-group > button')].forEach(button => button.tabIndex = button === event.target ? 0 : -1) }
+  function toolbarKeys(event) {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key) || currentMenu) return
+    const buttons = [...toolbar.querySelectorAll(':scope > button:not(:disabled), :scope > .menu-item-group > button:not(:disabled)')]
+    const index = buttons.indexOf(event.target)
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length
+    event.preventDefault(); buttons[next]?.focus()
+  }
+  function colorHex(value) {
+    if (/^#[0-9a-f]{6}$/i.test(value)) return value
+    if (/^#[0-9a-f]{3}$/i.test(value)) return '#' + [...value.slice(1)].map(c => c + c).join('')
+    const rgb = value?.match(/^rgba?\(\s*(\d+)\D+(\d+)\D+(\d+)/)
+    return rgb ? '#' + rgb.slice(1, 4).map(v => Math.min(255, Number(v)).toString(16).padStart(2, '0')).join('') : '#272b2a'
+  }
+  function command(name, ...args) { closeMenus(); if (editor.isEditable) editor.chain().focus()[name](...args).run() }
+  function setParagraph(level = null) { command(level ? 'setHeading' : 'setParagraph', ...(level ? [{ level }] : [])) }
+  function applyStyle(style) {
+    closeMenus()
+    if (style.mode === 'mark') return command('toggleMark', style.markName)
+    const node = style.element === 'p' ? 'paragraph' : 'heading'
+    const chain = editor.chain().focus()
+    if (node === 'paragraph') chain.setParagraph()
+    else chain.setHeading({ level: headingLevelForElement(style.element) })
+    chain.updateAttributes(node, { class: style.className }).run()
+  }
+  function resetStyle() { closeMenus(); editor.chain().focus().resetAttributes('paragraph', 'class').resetAttributes('heading', 'class').run() }
+  function openLink(button = false) {
+    closeMenus()
+    if (expanded) { shell.hidePopover(); shell.removeAttribute('popover'); releaseInert(); resumeOverlay = true }
+    const attrs = editor.getAttributes('link')
+    const callback = button ? onToggleButton : onToggleLink
+    callback?.(attrs.href || '', attrs.target ?? null, attrs['data-identifier-id'] || null)
+  }
+  function openAnchor(event) { anchorRange = captureRange(editor); anchorId = editor.getAttributes('jumpAnchor').id || ''; anchorError = ''; showMenu(anchorMenu, event.currentTarget, 'anchor') }
+  function applyAnchor() {
+    const value = anchorId.trim()
+    const old = editor.getAttributes('jumpAnchor').id
+    const scope = element.closest('.blocks-wrapper') || document
+    const duplicates = [...scope.querySelectorAll('[id]')].some(node => node.id === value && (!element.contains(node) || old !== value))
+    if (!value || /[\s\u0000-\u001f\u007f]/u.test(value) || duplicates || !anchorRange?.valid) { anchorError = labels.anchorInvalid; return }
+    editor.chain().focus().setTextSelection({ from: anchorRange.from, to: anchorRange.to }).extendMarkRange('jumpAnchor').setJumpAnchor({ id: value }).run(); closeMenus()
+  }
+  function releaseInert() { inertSiblings.forEach(node => node.inert = false); inertSiblings = [] }
+  function makeInert() { let node = shell; while (node.parentElement && node.parentElement !== document.documentElement) { [...node.parentElement.children].filter(sibling => sibling !== node && !sibling.inert).forEach(sibling => { sibling.inert = true; inertSiblings.push(sibling) }); node = node.parentElement } }
+  function toggleExpanded() {
+    closeMenus()
+    if (expanded) { shell.hidePopover(); shell.removeAttribute('popover'); releaseInert(); expanded = false }
+    else { expanded = true; shell.setAttribute('popover', 'manual'); shell.showPopover(); makeInert() }
+    queueMicrotask(() => {
+      const first = toolbar?.querySelector('button:not(:disabled)')
+      toolbar?.querySelectorAll('button').forEach(button => button.tabIndex = button === first ? 0 : -1)
+    })
+    editor.commands.focus()
+  }
+  function shellKeys(event) {
+    if (!expanded) return
+    if (event.key === 'Escape' && !currentMenu) { event.preventDefault(); event.stopPropagation(); toggleExpanded() }
+    if (event.key === 'Tab' && !event.defaultPrevented && !currentMenu) {
+      const controls = [...shell.querySelectorAll('button:not(:disabled), [contenteditable="true"], input, select')].filter(node => node.getClientRects().length && node.tabIndex >= 0)
+      if (event.shiftKey && event.target === controls[0]) { event.preventDefault(); controls.at(-1)?.focus() }
+      else if (!event.shiftKey && (event.target === controls.at(-1) || controls.at(-1)?.contains(event.target))) { event.preventDefault(); controls[0]?.focus() }
     }
-
-    // eslint-disable-next-line no-useless-escape
-    return (
-      !uri ||
-      uri
-        .replace(ATTR_WHITESPACE, "")
-        .match(
-          new RegExp(
-            `^(?:(?:${allowedProtocols.join("|")}):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))`,
-            "i",
-          ),
-        )
-    );
-  };
-
-  const updateInput = () => {
-    tiptapInput.value = editor.getHTML();
-    tiptapInput.dispatchEvent(new Event("input", { bubbles: true }));
-    renumberFootnotes(element);
-  };
-
-  const processExtensions = () => {
-    let allExtensions = [
-      "p",
-      "h1",
-      "h2",
-      "h3",
-      "list",
-      "link",
-      "button",
-      "bold",
-      "italic",
-      "sub",
-      "sup",
-      "color",
-      "unsetMarks",
-      "jumpAnchor",
-      "smartText",
-    ];
-
-    if (extensions) {
-      if (extensions === "all") {
-        return allExtensions;
-      }
-
-      return extensions.split("|");
-    } else {
-      return allExtensions;
-    }
-  };
-
-  const headingLevelForElement = (element) => {
-    if (typeof element !== "string" || !element.startsWith("h")) {
-      return null;
-    }
-
-    const level = Number.parseInt(element.slice(1), 10);
-
-    if (Number.isNaN(level) || level < 1 || level > 6) {
-      return null;
-    }
-
-    return level;
-  };
-
-  const markNameForStyle = (element, className) => {
-    const slug = `${element}_${className}`
-      .toLowerCase()
-      .replace(/[^a-z0-9_]+/g, "_");
-    return `style_${slug}`;
-  };
-
-  const createStyledMarkExtension = (style) =>
-    Mark.create({
-      name: style.markName,
-      parseHTML() {
-        return [
-          {
-            tag: `${style.element}.${style.className}`,
-          },
-        ];
-      },
-      renderHTML({ HTMLAttributes }) {
-        return [
-          style.element,
-          mergeAttributes({ class: style.className }, HTMLAttributes),
-          0,
-        ];
-      },
-    });
-
-  const normalizeStyles = () => {
-    let styleConfig = styles;
-
-    if (!styleConfig) {
-      return [];
-    }
-
-    if (typeof styleConfig === "string") {
-      try {
-        styleConfig = JSON.parse(styleConfig);
-      } catch {
-        return [];
-      }
-    }
-
-    if (!Array.isArray(styleConfig)) {
-      return [];
-    }
-
-    const seen = new Set();
-
-    return styleConfig.reduce((acc, style) => {
-      if (!style || typeof style !== "object") {
-        return acc;
-      }
-
-      const rawElement = String(style.element ?? "")
-        .trim()
-        .toLowerCase();
-      const rawClass = String(style.class ?? "").trim();
-
-      if (
-        ![...STYLED_NODE_ELEMENTS, ...STYLED_MARK_ELEMENTS].includes(rawElement) ||
-        !STYLE_CLASS_REGEX.test(rawClass)
-      ) {
-        return acc;
-      }
-
-      const dedupeKey = `${rawElement}:${rawClass}`;
-
-      if (seen.has(dedupeKey)) {
-        return acc;
-      }
-
-      seen.add(dedupeKey);
-
-      const rawLabel = String(style.label ?? "").trim();
-      const rawIcon = String(style.icon ?? "").trim();
-
-      const mode = STYLED_NODE_ELEMENTS.includes(rawElement) ? "node" : "mark";
-
-      acc.push({
-        key: dedupeKey,
-        element: rawElement,
-        className: rawClass,
-        label: rawLabel || `${rawElement.toUpperCase()} ${rawClass}`,
-        icon: rawIcon || null,
-        mode,
-        markName: mode === "mark" ? markNameForStyle(rawElement, rawClass) : null,
-      });
-
-      return acc;
-    }, []);
-  };
-
-  const applyStyle = (style) => {
-    if (!editor || !style) {
-      return;
-    }
-
-    if (style.mode === "mark" && style.markName) {
-      editor.chain().focus().toggleMark(style.markName).run();
-      return;
-    }
-
-    const chain = editor.chain().focus();
-
-    if (style.element === "p") {
-      chain
-        .setParagraph()
-        .updateAttributes("paragraph", { class: style.className })
-        .run();
-
-      return;
-    }
-
-    const level = headingLevelForElement(style.element);
-
-    if (!level) {
-      return;
-    }
-
-    chain
-      .setHeading({ level })
-      .updateAttributes("heading", { level, class: style.className })
-      .run();
-  };
-
-  const isStyleActive = (style) => {
-    if (!editor || !style) {
-      return false;
-    }
-
-    if (style.mode === "mark" && style.markName) {
-      return editor.isActive(style.markName);
-    }
-
-    if (style.element === "p") {
-      return editor.isActive("paragraph", { class: style.className });
-    }
-
-    const level = headingLevelForElement(style.element);
-
-    if (!level) {
-      return false;
-    }
-
-    return editor.isActive("heading", { level, class: style.className });
-  };
-
-  const clearBlockStyle = () => {
-    if (!editor) {
-      return;
-    }
-
-    if (editor.isActive("paragraph")) {
-      editor.chain().focus().updateAttributes("paragraph", { class: null }).run();
-      return;
-    }
-
-    for (const level of [1, 2, 3, 4, 5, 6]) {
-      if (editor.isActive("heading", { level })) {
-        editor.chain().focus().updateAttributes("heading", { level, class: null }).run();
-        return;
-      }
-    }
-  };
-
-  const setParagraph = () => {
-    editor
-      .chain()
-      .focus()
-      .setParagraph()
-      .updateAttributes("paragraph", { class: null })
-      .run();
-  };
-
-  const toggleHeading = (level) => {
-    if (editor.isActive("heading", { level })) {
-      setParagraph();
-      return;
-    }
-
-    editor
-      .chain()
-      .focus()
-      .setHeading({ level })
-      .updateAttributes("heading", { level, class: null })
-      .run();
-  };
-
-  const toggleAnchor = () => {
-    let currentId = "";
-
-    if (editor.isActive("jumpAnchor")) {
-      const linkAttributes = editor.getAttributes("jumpAnchor");
-      currentId = linkAttributes.id;
-    }
-
-    alertPrompt("ID/Anchor", currentId, ({ data }) => {
-      if (!data) {
-        editor.chain().focus().unsetJumpAnchor().run();
-      } else {
-        editor
-          .chain()
-          .focus()
-          .extendMarkRange("jumpAnchor")
-          .setJumpAnchor({ id: data })
-          .run();
-      }
-    });
-  };
-
-  const toggleLink = () => {
-    let currentHref = "";
-    let currentTarget = null;
-    let currentIdentifierId = null;
-
-    if (editor.isActive("link")) {
-      const attrs = editor.getAttributes("link");
-      currentHref = attrs.href || "";
-      currentTarget = attrs.target || null;
-      currentIdentifierId = attrs['data-identifier-id'] || null;
-    }
-
-    if (onToggleLink) {
-      onToggleLink(currentHref, currentTarget, currentIdentifierId);
-    }
-  };
-
-  const toggleButton = () => {
-    let currentHref = "";
-    let currentTarget = null;
-    let currentIdentifierId = null;
-
-    if (editor.isActive("button")) {
-      const attrs = editor.getAttributes("button");
-      currentHref = attrs.href || "";
-      currentTarget = attrs.target || null;
-      currentIdentifierId = attrs['data-identifier-id'] || null;
-    }
-
-    if (onToggleButton) {
-      onToggleButton(currentHref, currentTarget, currentIdentifierId);
-    }
-  };
-
+  }
+  export function linkClosed() { if (resumeOverlay) { resumeOverlay = false; shell.setAttribute('popover', 'manual'); shell.showPopover(); makeInert() }; editor?.commands.focus() }
+  export function showError(message = labels.linkFailed) { notice = message }
+  function renderProposal() { editor.view.dispatch(editor.state.tr.setMeta(proposalKey, pending ? { id: pending.id, pos: Math.min(pending.range.to, editor.state.doc.content.size), status: pending.status, text: pending.text, error: pending.error } : null).setMeta('addToHistory', false)) }
+  function discardProposal() { if (pending?.status === 'pending') onCancelAi?.(pending.id); pending = null; renderProposal(); editor.commands.focus() }
+  function generate() {
+    closeMenus()
+    if (!aiEnabled || !editor.isEditable) return
+    if (pending) discardProposal()
+    const selection = editor.state.selection
+    const range = aiMode === 'continue' ? { from: selection.to, to: selection.to } : selection.empty ? { from: 0, to: editor.state.doc.content.size } : selection
+    pending = { id: crypto.randomUUID(), range: captureRange(editor, range), status: 'pending', mode: aiMode, text: '', error: null }
+    const selectedText = aiMode === 'continue' ? editor.state.doc.textBetween(Math.max(0, range.to - 4000), range.to, '\n') : editor.state.doc.textBetween(range.from, range.to, '\n')
+    renderProposal()
+    onGenerateAi?.({ request_id: pending.id, mode: aiMode, instruction, selection: selectedText })
+  }
+  export function openAi() { if (aiEnabled) showMenu(aiMenu, toolbar.querySelector('[data-ai-trigger]'), 'ai') }
+  export function receiveAi(payload) {
+    if (!pending || pending.id !== payload.request_id) return
+    pending.status = payload.error ? 'error' : 'ready'
+    pending.text = payload.text || ''
+    pending.error = !pending.range.valid ? labels.changed : payload.error ? labels.aiFailed : null
+    renderProposal()
+  }
+  function acceptProposal() {
+    if (!pending || pending.status !== 'ready' || !pending.range.valid || !editor.isEditable) return
+    const { range, text } = pending
+    const lines = text.split(/\n+/).filter(Boolean)
+    if (!lines.length) { pending.error = labels.aiFailed; renderProposal(); return }
+    const from = editor.state.doc.resolve(range.from), to = editor.state.doc.resolve(range.to)
+    const inline = from.parent.inlineContent && to.parent.inlineContent
+    const replacement = lines.length === 1 && inline
+      ? new Slice(Fragment.from(editor.schema.text(lines[0], from.marks())), 0, 0)
+      : new Slice(Fragment.fromArray(lines.map(line => editor.schema.nodes.paragraph.create(null, editor.schema.text(line)))), inline ? 1 : 0, inline ? 1 : 0)
+    pending = null; renderProposal()
+    editor.chain().focus().command(({ tr }) => { closeHistory(tr); tr.replaceRange(range.from, range.to, replacement); return true }).run()
+    editor.view.dispatch(closeHistory(editor.state.tr).setMeta('addToHistory', false))
+    notice = labels.aiAccepted
+  }
   onMount(() => {
-    if (!element.parentNode.parentNode) {
-      return;
-    }
-
-    extensions = processExtensions();
-    parsedStyles = normalizeStyles();
-    const styleMarkExtensions = parsedStyles
-      .filter((style) => style.mode === "mark")
-      .map((style) => createStyledMarkExtension(style));
-
-    const CustomLink = Link.extend({
-      addAttributes() {
-        return {
-          ...this.parent?.(),
-          'data-identifier-id': {
-            default: null,
-            parseHTML: element => element.getAttribute('data-identifier-id'),
-            renderHTML: attributes => {
-              if (!attributes['data-identifier-id']) return {}
-              return { 'data-identifier-id': attributes['data-identifier-id'] }
-            },
-          },
-        }
-      },
-
-      parseHTML() {
-        return [
-          {
-            tag: "a[href]:not(.action-button)",
-            getAttrs: (dom) => {
-              const href = dom.getAttribute("href");
-
-              // prevent XSS attacks
-              if (!href || !isAllowedUri(href, this.options.protocols)) {
-                return false;
-              }
-              return null;
-            },
-          },
-        ];
-      },
-    });
-
     editor = new Editor({
+      element, content,
+      extensions: [...createExtensions({ capabilities, styles: parsedStyles, footnoteLabels, onOpenFootnote, placeholder: labels.placeholder, typography }), proposalExtension({ labels, accept: acceptProposal, discard: discardProposal, retry: generate })],
       editorProps: {
-        transformPastedHTML: (html, editorView) => {
-          const htmlCleaner = new HTMLInputParser({ editorView });
-          const cleanedHtml = htmlCleaner.prepareHTML(html);
-          return cleanedHtml;
-        },
+        attributes: { role: 'textbox', 'aria-multiline': 'true', ...accessibility },
+        transformPastedHTML: html => new HTMLInputParser({ capabilities, styles: parsedStyles, scope: element.closest('.blocks-wrapper') || element, onWarning: key => notice = labels[key] }).prepareHTML(html),
+        handleKeyDown: (_view, event) => { if (event.altKey && event.key === 'F10') { toolbar.querySelector('button:not(:disabled)')?.focus(); return true } return false },
       },
-      element: element,
-      extensions: [
-        StarterKit.configure({
-          dropcursor: false,
-          link: false
-        }),
-        StyledNodes,
-        ...styleMarkExtensions,
-        Typography,
-
-        CustomLink.configure({
-          openOnClick: false,
-          autolink: true,
-          linkOnPaste: true,
-        }),
-        Subscript,
-        Superscript,
-        Button,
-        JumpAnchor,
-        Focus.configure({
-          className: "has-focus",
-          mode: "shallowest",
-        }),
-        PreventDrop,
-        Footnote.configure({ onOpen: onOpenFootnote, editLabel: footnoteLabels.edit }),
-        SmartText,
-        TextStyleKit.configure({
-          color: {
-            types: ['textStyle'],
-          },
-        }),
-        TextAlign.configure({ types: ["heading", "paragraph"] }),
-      ],
-      content,
-      onFocus({ editor, event }) {
-        onFocus({ editor, event });
-      },
-      onBlur() {
-        onBlur?.();
-      },
-      onUpdate({ editor }) {
-        updateInput();
-      },
-      onTransaction: () => {
-        editor = editor;
-        isH1Active = editor.isActive("heading", { level: 1 });
-        isH2Active = editor.isActive("heading", { level: 2 });
-        isH3Active = editor.isActive("heading", { level: 3 });
-        isH4Active = editor.isActive("heading", { level: 4 });
-        isPActive = editor.isActive("paragraph");
-        isListActive = editor.isActive("bulletList");
-        isLinkActive = editor.isActive("link");
-        isButtonActive = editor.isActive("button");
-        isBoldActive = editor.isActive("bold");
-        isItalicActive = editor.isActive("italic");
-        isSubActive = editor.isActive("subscript");
-        isSupActive = editor.isActive("superscript");
-        isAlignLeftActive = editor.isActive({ textAlign: "left" });
-        isAlignCenterActive = editor.isActive({ textAlign: "center" });
-        isAlignRightActive = editor.isActive({ textAlign: "right" });
-        isColorActive = editor.isActive("textStyle", { color: true });
-        isJumpAnchorActive = editor.isActive("jumpAnchor");
-
-        const nextActive = new Set();
-        for (const style of parsedStyles) {
-          if (isStyleActive(style)) {
-            nextActive.add(style.key);
-          }
+      onFocus: payload => onFocus?.(payload),
+      onBlur: () => onBlur?.(),
+      onUpdate: ({ editor: current }) => { tiptapInput.value = current.getHTML(); tiptapInput.dispatchEvent(new Event('input', { bubbles: true })); renumberFootnotes(element) },
+      onTransaction: ({ transaction }) => {
+        revision++
+        if (transaction.getMeta('brando:replacement')) { anchorRange = null; if (pending) { pending.range.valid = false; pending.error = labels.changed; queueMicrotask(renderProposal) } }
+        anchorRange = mapRange(anchorRange, transaction)
+        if (pending && transaction.docChanged) {
+          pending.range = mapRange(pending.range, transaction)
+          if (!pending.range.valid && !pending.error) { pending.error = labels.changed; queueMicrotask(() => { if (pending && !editor.isDestroyed) renderProposal() }) }
         }
-        activeStyleKeys = nextActive;
       },
-    });
-
-    if (onEditorCreated) {
-      onEditorCreated(editor);
-    }
-  });
-
-  onDestroy(() => {
-    if (editor) {
-      editor.destroy();
-    }
-  });
+    })
+    onEditorCreated?.(editor)
+    queueMicrotask(() => {
+      if (editor.isDestroyed) return
+      for (const menu of [typeMenu, listMenu, moreMenu, anchorMenu, aiMenu]) {
+        const onToggle = () => { if (![typeMenu, listMenu, moreMenu, anchorMenu, aiMenu].some(node => node?.matches(':popover-open'))) { currentMenu = ''; stopPositioning?.(); stopPositioning = null } }
+        menu.addEventListener('toggle', onToggle)
+        menuCleanups.push(() => menu.removeEventListener('toggle', onToggle))
+      }
+    })
+  })
+  onDestroy(() => { menuCleanups.forEach(cleanup => cleanup()); stopPositioning?.(); releaseInert(); if (pending?.status === 'pending') onCancelAi?.(pending.id); editor?.destroy() })
 </script>
 
-{#if editor}
-  <div class="tiptap-menu">
-    <div class="menu-item-group">
-      <button
-        bind:this={dropdownTriggerEl}
-        onclick={() => {
-          if (dropdownEl.matches(":popover-open")) {
-            dropdownEl.hidePopover();
-          } else {
-            const rect = dropdownTriggerEl.getBoundingClientRect();
-            dropdownEl.style.top = `${rect.bottom + 2}px`;
-            dropdownEl.style.left = `${rect.left}px`;
-            dropdownEl.showPopover();
-          }
-        }}
-        class="menu-item has-dropdown"
-        type="button"
-        title="Block type"
-        aria-label="Block type"
-      >
-        <span class="tiptap-paragraph"></span>
-      </button>
-      <div bind:this={dropdownEl} popover="auto" class="style-dropdown">
-        {#if extensions.includes("p")}
-          <button
-            onclick={() => { setParagraph(); dropdownEl.hidePopover(); }}
-            class="style-dropdown-item"
-            class:active={isPActive}
-            type="button"
-          >
-            Paragraph
-          </button>
-        {/if}
-        {#if extensions.includes("h1")}
-          <button
-            onclick={() => { toggleHeading(1); dropdownEl.hidePopover(); }}
-            class="style-dropdown-item"
-            class:active={isH1Active}
-            type="button"
-          >
-            Heading 1
-          </button>
-        {/if}
-        {#if extensions.includes("h2")}
-          <button
-            onclick={() => { toggleHeading(2); dropdownEl.hidePopover(); }}
-            class="style-dropdown-item"
-            class:active={isH2Active}
-            type="button"
-          >
-            Heading 2
-          </button>
-        {/if}
-        {#if extensions.includes("h3")}
-          <button
-            onclick={() => { toggleHeading(3); dropdownEl.hidePopover(); }}
-            class="style-dropdown-item"
-            class:active={isH3Active}
-            type="button"
-          >
-            Heading 3
-          </button>
-        {/if}
-        {#if extensions.includes("h4")}
-          <button
-            onclick={() => { toggleHeading(4); dropdownEl.hidePopover(); }}
-            class="style-dropdown-item"
-            class:active={isH4Active}
-            type="button"
-          >
-            Heading 4
-          </button>
-        {/if}
-        {#if parsedStyles.length > 0}
-          <div class="style-dropdown-separator"></div>
-          {#each parsedStyles as style (style.key)}
-            <button
-              onclick={() => { applyStyle(style); dropdownEl.hidePopover(); }}
-              class="style-dropdown-item"
-              class:active={activeStyleKeys.has(style.key)}
-              type="button"
-            >
-              {style.label}
-            </button>
-          {/each}
-        {/if}
-        <div class="style-dropdown-separator"></div>
-        <button
-          onclick={() => { clearBlockStyle(); dropdownEl.hidePopover(); }}
-          class="style-dropdown-item"
-          type="button"
-        >
-          Clear style
-        </button>
+<div bind:this={shell} class="tiptap-editor-shell" class:expanded role={expanded ? 'dialog' : 'group'} aria-modal={expanded ? 'true' : undefined} aria-label={accessibility['aria-label'] || labels.toolbar} onkeydown={shellKeys}>
+  {#if expanded}
+    <div class="tiptap-expanded-header">
+      <div class="tiptap-expanded-heading">
+        <span class="tiptap-expanded-icon" aria-hidden="true"><span class="hero-document-text"></span></span>
+        <div class="tiptap-expanded-heading-copy"><h2>{accessibility['aria-label'] || labels.toolbar}</h2><p>{labels.expandedEditing}</p></div>
       </div>
+      <button type="button" class="tiptap-expanded-done" onclick={toggleExpanded}><span class="hero-arrows-pointing-in" aria-hidden="true"></span>{labels.collapse}</button>
     </div>
-    {#if extensions.includes("list")}
-      <button
-        onclick={() => editor.chain().focus().toggleBulletList().run()}
-        class="menu-item"
-        class:active={isListActive}
-        type="button"
-        title="Bullet list"
-        aria-label="Bullet list"
-      >
-        <span class="hero-list-bullet"></span>
-      </button>
-    {/if}
-    {#if extensions.includes("link")}
-      <button
-        onclick={() => toggleLink()}
-        type="button"
-        title="Link"
-        class="menu-item"
-        class:active={isLinkActive}
-        aria-label="Link"
-      >
-        <span class="hero-link"></span>
-      </button>
-    {/if}
-    {#if extensions.includes("button") || extensions.includes("action_button")}
-      <button
-        onclick={() => toggleButton()}
-        type="button"
-        title="Button"
-        class="menu-item"
-        class:active={isButtonActive}
-        aria-label="Button"
-      >
-        <span class="hero-squares-plus"></span>
-      </button>
-    {/if}
-    {#if extensions.includes("bold")}
-      <button
-        onclick={() => editor.chain().focus().toggleBold().run()}
-        class="menu-item"
-        class:active={isBoldActive}
-        type="button"
-        title="Bold"
-        aria-label="Bold"
-      >
-        <span class="tiptap-bold"></span>
-      </button>
-    {/if}
-    {#if extensions.includes("italic")}
-      <button
-        onclick={() => editor.chain().focus().toggleItalic().run()}
-        class="menu-item"
-        class:active={isItalicActive}
-        type="button"
-        title="Italic"
-        aria-label="Italic"
-      >
-        <span class="tiptap-italic"></span>
-      </button>
-    {/if}
-    {#if extensions.includes("sub")}
-      <button
-        onclick={() => editor.chain().focus().toggleSubscript().run()}
-        class="menu-item"
-        class:active={isSubActive}
-        type="button"
-        title="Subscript"
-        aria-label="Subscript"
-      >
-        <span class="tiptap-sub"></span>
-      </button>
-    {/if}
-    {#if extensions.includes("sup")}
-      <button
-        onclick={() => editor.chain().focus().toggleSuperscript().run()}
-        class="menu-item"
-        class:active={isSupActive}
-        type="button"
-        title="Superscript"
-        aria-label="Superscript"
-      >
-        <span class="tiptap-sup"></span>
-      </button>
-    {/if}
-    {#if extensions.includes("align")}
-      <button
-        onclick={() => editor.chain().focus().setTextAlign("left").run()}
-        class="menu-item"
-        class:active={isAlignLeftActive}
-        type="button"
-        title="Align left"
-        aria-label="Align left"
-      >
-        <span class="hero-bars-3-bottom-left"></span>
-      </button>
-      <button
-        onclick={() => editor.chain().focus().setTextAlign("center").run()}
-        class="menu-item"
-        class:active={isAlignCenterActive}
-        type="button"
-        title="Align center"
-        aria-label="Align center"
-      >
-        <span class="hero-bars-3"></span>
-      </button>
-      <button
-        onclick={() => editor.chain().focus().setTextAlign("right").run()}
-        class="menu-item"
-        class:active={isAlignRightActive}
-        type="button"
-        title="Align right"
-        aria-label="Align right"
-      >
-        <span class="hero-bars-3-bottom-right"></span>
-      </button>
-    {/if}
-    {#if extensions.includes("color")}
-      <label class="menu-item">
-        <span class="hero-swatch"></span>
+  {/if}
+  {#if editor}
+    <div bind:this={toolbar} class="tiptap-menu" role="toolbar" tabindex="-1" aria-label={labels.toolbar} onkeydown={toolbarKeys} onfocusin={toolbarFocus}>
+      <button type="button" class="menu-item tiptap-type-control" aria-label={labels.styles} title={labels.styles} aria-expanded={currentMenu === 'type'} aria-controls={`${id}-types`} disabled={!active.editable} onclick={event => showMenu(typeMenu, event.currentTarget, 'type')}><span>{typeLabel}</span><span class="hero-chevron-down-mini" aria-hidden="true"></span></button>
+      {#if has('bold')}<button type="button" class="menu-item" aria-label={labels.bold} title={`${labels.bold} · ⌘/Ctrl B`} aria-pressed={active.bold} disabled={!active.editable} tabindex="-1" onclick={() => command('toggleBold')}><span class="tiptap-bold" aria-hidden="true"></span></button>{/if}
+      {#if has('italic')}<button type="button" class="menu-item" aria-label={labels.italic} title={`${labels.italic} · ⌘/Ctrl I`} aria-pressed={active.italic} disabled={!active.editable} tabindex="-1" onclick={() => command('toggleItalic')}><span class="tiptap-italic" aria-hidden="true"></span></button>{/if}
+      {#if has('list') || has('orderedList')}
+        <div class="menu-item-group">
+          <button type="button" class="menu-item" aria-label={active.orderedList || !has('list') ? labels.orderedList : labels.list} aria-pressed={active.bulletList || active.orderedList} disabled={!active.editable} tabindex="-1" onclick={() => command(active.orderedList || !has('list') ? 'toggleOrderedList' : 'toggleBulletList')}><span aria-hidden="true" class={active.orderedList ? 'tiptap-list-number' : 'hero-list-bullet'}>{active.orderedList ? '1.' : ''}</span></button>
+          <button type="button" class="menu-item tiptap-disclosure" aria-label={labels.listTypes} title={labels.listTypes} aria-expanded={currentMenu === 'list'} aria-controls={`${id}-lists`} tabindex="-1" disabled={!active.editable} onclick={event => showMenu(listMenu, event.currentTarget, 'list')}><span class="hero-chevron-down-mini" aria-hidden="true"></span></button>
+        </div>
+      {/if}
+      {#if has('link')}<button type="button" class="menu-item" aria-label={labels.link} title={labels.link} aria-pressed={active.link && !isButtonLink(active.linkAttrs)} disabled={!active.editable} tabindex="-1" onclick={() => openLink()}><span class="hero-link" aria-hidden="true"></span></button>{/if}
+      {#if has('button')}<button type="button" class="menu-item" aria-label={labels.button} title={labels.button} aria-pressed={isButtonLink(active.linkAttrs)} disabled={!active.editable} tabindex="-1" onclick={() => openLink(true)}><span class="hero-squares-plus" aria-hidden="true"></span></button>{/if}
+      {#if footnotes}<button type="button" class="menu-item tiptap-add-footnote" aria-label={footnoteLabels.add} title={footnoteLabels.add} disabled={!active.editable} tabindex="-1" onclick={() => onOpenFootnote?.(null)}><span aria-hidden="true">a¹</span></button>{/if}
+      {#if has('jumpAnchor')}<button type="button" class="menu-item" aria-label={labels.anchor} title={labels.anchor} aria-pressed={active.jumpAnchor} disabled={!active.editable} tabindex="-1" onclick={openAnchor}><span class="tiptap-anchor" aria-hidden="true"></span></button>{/if}
+      {#if more.length || ['horizontalRule', 'align', 'color', 'unsetMarks'].some(has)}<button type="button" class="menu-item" aria-label={labels.more} title={labels.more} aria-expanded={currentMenu === 'more'} aria-controls={`${id}-more`} disabled={!active.editable} tabindex="-1" onclick={event => showMenu(moreMenu, event.currentTarget, 'more')}><span class="hero-ellipsis-horizontal" aria-hidden="true"></span></button>{/if}
+      <button type="button" class="menu-item tiptap-undo" aria-label={labels.undo} title={`${labels.undo} · ⌘/Ctrl Z`} disabled={!active.editable || !active.canUndo} tabindex="-1" onclick={() => command('undo')}><span class="hero-arrow-uturn-left" aria-hidden="true"></span></button>
+      <button type="button" class="menu-item" aria-label={labels.redo} title={`${labels.redo} · ⌘/Ctrl ⇧ Z`} disabled={!active.editable || !active.canRedo} tabindex="-1" onclick={() => command('redo')}><span class="hero-arrow-uturn-right" aria-hidden="true"></span></button>
+      {#if aiEnabled}<button type="button" class="menu-item tiptap-ai-trigger" data-ai-trigger aria-label={labels.ai} title={labels.ai} disabled={!active.editable} tabindex="-1" onclick={openAi}><span class="hero-sparkles" aria-hidden="true"></span></button>{/if}
+      {#if !expanded}<button type="button" class="menu-item" aria-label={labels.expand} title={labels.expand} tabindex={active.editable ? -1 : 0} onclick={toggleExpanded}><span class="hero-arrows-pointing-out" aria-hidden="true"></span></button>{/if}
+    </div>
+  {/if}
+  <div class="tiptap-writing-area"><div bind:this={element} class="tiptap-document"></div></div>
+  {#if editor && active.link}
+    <div class="tiptap-link-preview"><span>{active.linkAttrs.href}</span><button type="button" disabled={!active.editable} onclick={() => openLink(isButtonLink(active.linkAttrs))}>{labels.edit}</button><button type="button" disabled={!active.editable} onclick={() => command('unsetLink')}>{labels.remove}</button><a href={active.linkAttrs.href} target="_blank" rel="noopener noreferrer">{labels.open}</a></div>
+  {/if}
+  {#if notice || expanded}<div class="tiptap-status" role="status">{#if expanded}<span class="tiptap-return-hint"><kbd>Esc</kbd>{labels.returnToForm}</span>{/if}{#if notice}<span class="tiptap-notice">{notice}</span>{/if}{#if expanded && editor}<span class="tiptap-word-count">{labels.words.replace('%{count}', wordCount)}</span>{/if}</div>{/if}
 
-        <input
-          type="color"
-          class:active={isColorActive}
-          oninput={(ev) =>
-            editor.chain().focus().setColor(ev.target.value).run()}
-          value={editor.getAttributes("textStyle").color}
-        />
-      </label>
-    {/if}
-    {#if footnotes}
-      <button
-        onclick={() => onOpenFootnote?.(null)}
-        class="menu-item tiptap-add-footnote"
-        type="button"
-        title={footnoteLabels.add}
-        aria-label={footnoteLabels.add}
-      >
-        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12.3 10.4c2.9-.2 4.7 1.7 3.6 4.3l-1.1 2.5c-.5 1.2-.3 2.5-1.3 3.3-1.3 1.2-3.5.7-4.1-.9-.5-1.4.6-2.5 0-4.1-1-2.6-.4-4.9 2.9-5.1Z" />
-          <ellipse cx="16.6" cy="5" rx="2" ry="2.7" transform="rotate(20 16.6 5)" />
-          <path d="M11.8 4.3v1.5M8.4 5.5l.4 1.4M5.9 7.8l.8 1M4.7 11l.9.6" />
-        </svg>
-      </button>
-    {/if}
-    {#if extensions.includes("jumpAnchor")}
-      <button
-        onclick={() => toggleAnchor()}
-        class="menu-item"
-        type="button"
-        title="Jump anchor"
-        class:active={isJumpAnchorActive}
-        aria-label="Jump anchor"
-      >
-        <span class="tiptap-anchor"></span>
-      </button>
-    {/if}
-    <button
-      onclick={() => editor.chain().focus().unsetAllMarks().run()}
-      class="menu-item"
-      type="button"
-      title="Clear marks"
-      aria-label="Clear marks"
-    >
-      <span class="tiptap-clear"></span>
-    </button>
+  <div bind:this={typeMenu} id={`${id}-types`} popover="auto" class="tiptap-popover style-dropdown" role="menu" tabindex="-1" aria-label={labels.styles} onkeydown={menuKeys}>
+    <button type="button" role="menuitem" onclick={() => setParagraph()}>{labels.paragraph}</button>
+    {#each [1, 2, 3, 4, 5, 6].filter(level => has(`h${level}`)) as level}<button type="button" role="menuitem" class:active={active.level === level} onclick={() => setParagraph(level)}>{labels.heading.replace('%{level}', level)}</button>{/each}
+    {#each parsedStyles as style (style.key)}<button type="button" role="menuitemcheckbox" aria-checked={!!active.styles?.[style.key]} class:active={active.styles?.[style.key]} onclick={() => applyStyle(style)}>{#if style.icon}<span class={style.icon} aria-hidden="true"></span>{/if}{style.label}</button>{/each}
+    {#if parsedStyles.length}<hr /><button type="button" role="menuitem" onclick={resetStyle}>{labels.resetStyle}</button>{/if}
   </div>
-{/if}
-
-<div bind:this={element}></div>
+  <div bind:this={listMenu} id={`${id}-lists`} popover="auto" class="tiptap-popover" role="menu" tabindex="-1" aria-label={labels.listTypes} onkeydown={menuKeys}>
+    {#if has('list')}<button type="button" role="menuitem" onclick={() => command('toggleBulletList')}>{labels.list}</button>{/if}
+    {#if has('orderedList')}<button type="button" role="menuitem" onclick={() => command('toggleOrderedList')}>{labels.orderedList}</button>{/if}
+    {#if editor && (active.bulletList || active.orderedList)}<hr /><button type="button" role="menuitem" disabled={!editor.can().sinkListItem('listItem')} onclick={() => command('sinkListItem', 'listItem')}>{labels.indent}</button><button type="button" role="menuitem" disabled={!editor.can().liftListItem('listItem')} onclick={() => command('liftListItem', 'listItem')}>{labels.outdent}</button>{/if}
+  </div>
+  <div bind:this={moreMenu} id={`${id}-more`} popover="auto" class="tiptap-popover" role="menu" tabindex="-1" aria-label={labels.more} onkeydown={menuKeys}>
+    {#each more as [key, mark, cmd]}<button type="button" role="menuitem" class:active={active[mark]} onclick={() => command(cmd)}>{labels[key]}</button>{/each}
+    {#if has('horizontalRule')}<button type="button" role="menuitem" onclick={() => command('setHorizontalRule')}>{labels.horizontalRule}</button>{/if}
+    {#if has('align')}{#each ['left', 'center', 'right'] as alignment}<button type="button" role="menuitem" onclick={() => command('setTextAlign', alignment)}>{labels[alignment]}</button>{/each}{/if}
+    {#if has('color')}<label class="tiptap-color">{labels.color}<input type="color" aria-label={labels.color} value={colorHex(active.color)} oninput={event => editor.chain().setColor(event.currentTarget.value).run()} /></label><button type="button" role="menuitem" disabled={!active.color} onclick={() => command('unsetColor')}>{labels.resetColor}</button>{/if}
+    {#if has('unsetMarks')}<hr /><button type="button" role="menuitem" onclick={() => { closeMenus(); removeTextFormatting(editor, parsedStyles) }}>{labels.clear}</button>{/if}
+  </div>
+  <div bind:this={anchorMenu} popover="auto" class="tiptap-popover tiptap-anchor-editor" role="dialog" tabindex="-1" aria-label={labels.anchor} onkeydown={menuKeys}>
+    <label for={`${id}-anchor`}>{labels.anchorId}</label><input id={`${id}-anchor`} type="text" bind:value={anchorId} aria-invalid={!!anchorError} aria-describedby={`${id}-anchor-help`} />
+    <p id={`${id}-anchor-help`}>{anchorError || labels.anchorHelp}</p>
+    <div class="tiptap-popover-actions"><button type="button" class="primary" onclick={applyAnchor}>{labels.apply}</button><button type="button" onclick={() => command('unsetJumpAnchor')}>{labels.remove}</button><button type="button" onclick={async () => { await navigator.clipboard.writeText(`#${anchorId}`); notice = labels.copied }}>{labels.copyLink}</button></div>
+  </div>
+  <div bind:this={aiMenu} popover="auto" class="tiptap-popover tiptap-ai-editor" role="dialog" tabindex="-1" aria-label={labels.ai} onkeydown={menuKeys}>
+    <label for={`${id}-ai-mode`}>{labels.ai}</label><select id={`${id}-ai-mode`} bind:value={aiMode}>{#each ['rewrite', 'shorten', 'continue'] as mode}<option value={mode}>{labels[mode]}</option>{/each}</select>
+    <label for={`${id}-instruction`}>{labels.instruction}</label><input id={`${id}-instruction`} type="text" bind:value={instruction} />
+    <button type="button" class="primary" onclick={generate}>{labels.generate}</button>
+  </div>
+</div>

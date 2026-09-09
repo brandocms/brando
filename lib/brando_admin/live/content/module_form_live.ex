@@ -13,6 +13,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   alias Brando.Villain.Blocks.TextBlock
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
   alias BrandoAdmin.Components.Form.ModuleProps
   alias BrandoAdmin.Components.Form.Primitives
   alias Ecto.Changeset
@@ -121,6 +122,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
           />
         </div>
       </.form>
+      <.live_component module={TipTapLinkDialog} id="tiptap-link-dialog" />
     </div>
 
     <.destructive_save_modal pending={@pending_destructive_save} />
@@ -250,6 +252,16 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
   def handle_event("focus", _, socket), do: {:noreply, socket}
   def handle_event("blur", _, socket), do: {:noreply, socket}
+
+  def handle_event("tiptap_link_dialog", params, socket) do
+    TipTapLinkDialog.open(params, nil)
+    {:noreply, socket}
+  end
+
+  def handle_event("tiptap_link_result", params, socket) do
+    TipTapLinkDialog.receive_result(params)
+    {:noreply, socket}
+  end
 
   def handle_event("select_tab", %{"tab" => tab}, socket) do
     {:noreply, assign(socket, :active_tab, to_tab(tab))}
@@ -560,6 +572,10 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   # whole changeset rather than trying to reach into ours.
   def handle_info({:var_layout_changeset, changeset}, socket) do
     {:noreply, assign(socket, :form, to_form(changeset, []))}
+  end
+
+  def handle_info({:tiptap_set_link, id, data}, socket) do
+    {:noreply, push_event(socket, "b:tiptap:set_link:#{id}", data)}
   end
 
   def handle_info({:add_select_var_option, var_key}, %{assigns: %{form: form}} = socket) do

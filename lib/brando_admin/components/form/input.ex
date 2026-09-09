@@ -366,6 +366,12 @@ defmodule BrandoAdmin.Components.Form.Input do
       assigns
       |> assign(:extensions, extensions)
       |> assign(:footnotes, footnotes)
+      |> assign(
+        :tiptap_styles,
+        Jason.encode!(Brando.Villain.Blocks.TextBlock.Data.normalize_styles((assigns[:opts] || [])[:styles]))
+      )
+      |> assign(:tiptap_labels, Jason.encode!(BrandoAdmin.Components.Form.Input.RichTextLabels.labels()))
+      |> assign_new(:target, fn -> nil end)
       |> assign_new(:reset, fn -> false end)
       |> assign_new(:default_value, fn -> nil end)
       |> prepare_input_component()
@@ -382,7 +388,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <div
-        class={["tiptap-wrapper", "input-with-action", (@ai_enabled? || (@reset && @is_overridden)) && "has-action"]}
+        class={["tiptap-wrapper", "input-with-action", @reset && @is_overridden && "has-action"]}
         id={"#{@field.id}-rich-text-wrapper"}
       >
         <div
@@ -398,14 +404,26 @@ defmodule BrandoAdmin.Components.Form.Input do
           data-name="TipTap"
           data-tiptap-type="rich_text"
           data-tiptap-extensions={@extensions}
+          data-tiptap-styles={@tiptap_styles}
+          data-tiptap-labels={@tiptap_labels}
+          data-tiptap-label={if @label in [nil, :hidden], do: Brando.Utils.humanize(to_string(@field.field)), else: @label}
+          data-tiptap-describedby={"#{@field.id}-error #{@field.id}-tiptap-help"}
+          data-tiptap-invalid={to_string(field_invalid?(@field))}
+          data-tiptap-required={to_string(field_required?(@field))}
+          data-tiptap-readonly={to_string(@disabled == true || @opts[:readonly] == true)}
+          data-tiptap-ai={to_string(@ai_enabled?)}
+          data-tiptap-field={@field.field}
+          data-tiptap-label-mode={@opts[:label_mode] || "compact"}
+          data-tiptap-typography={Jason.encode!(Map.new(@opts[:typography] || %{}))}
           data-footnotes={@footnotes && @footnotes.enabled && "true"}
           data-footnote-field={@footnotes && @field.field}
-          phx-target={@footnotes && @target}
+          phx-target={@target}
         >
           <div id={"#{@field.id}-rich-text-target-wrapper"} class="tiptap-target-wrapper" phx-update="ignore">
             <div id={"#{@field.id}-rich-text-target"} class="tiptap-target"></div>
           </div>
           <.input type={:hidden} field={@field} class="tiptap-text" phx-debounce={300} />
+          <span id={"#{@field.id}-tiptap-help"} class="tiptap-sr-only">{@instructions}</span>
         </div>
         <.live_component
           :if={@footnotes}
@@ -415,25 +433,6 @@ defmodule BrandoAdmin.Components.Form.Input do
           html={@field.value}
           form_target={@target}
         />
-        <button
-          :if={@ai_enabled?}
-          type="button"
-          class="ai-generate-button"
-          phx-click="ai_generate_input"
-          phx-target={@target}
-          phx-value-field_name={to_string(@field.name)}
-          phx-value-field_key={to_string(@field.field)}
-          title={@ai_label}
-          aria-label={@ai_label}
-        >
-          <.icon name="hero-sparkles" class="icon-default" />
-          <svg class="icon-loading spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
-            <path
-              fill="none"
-              d="M0 0h24v24H0z"
-            /><path d="M12 2a10 10 0 0 1 10 10h-2a8 8 0 0 0-8-8V2z" />
-          </svg>
-        </button>
         <%!-- Clearing has to go through the hook: the editor owns the document
               and only syncs *out* to the hidden input, so writing the input
               directly would leave the visible text untouched. --%>
@@ -468,6 +467,9 @@ defmodule BrandoAdmin.Components.Form.Input do
     case Keyword.get(opts, :extensions) do
       extensions when is_list(extensions) ->
         Enum.join(extensions, "|")
+
+      extensions when is_binary(extensions) ->
+        extensions
 
       _ ->
         "all"

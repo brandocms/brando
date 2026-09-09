@@ -1958,6 +1958,26 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def create_footnote(socket, _params), do: socket
 
+  def generate_rich_text(socket, %{"ref_name" => name, "tiptap_id" => id} = params) do
+    opts = Brando.AI.field_ai_opts(:block_text)
+
+    with %{data: %{type: "text"}, uid: uid} <- instance_ref(socket, name),
+         true <- id == "block-#{uid}-rich-text",
+         true <- Brando.AI.configured?(opts),
+         base when is_binary(base) and base != "" <- opts[:prompt],
+         {:ok, prompt} <- BrandoAdmin.Components.Form.RichTextAI.prompt(base, params) do
+      BrandoAdmin.Components.Form.RichTextAI.start(socket, params, prompt, opts)
+    else
+      _ -> push_event(socket, "b:tiptap:ai:#{id}", %{request_id: params["request_id"], error: true})
+    end
+  end
+
+  def generate_rich_text(socket, _), do: socket
+
+  def handle_async({:tiptap_ai, id, request}, result, socket) do
+    {:noreply, BrandoAdmin.Components.Form.RichTextAI.finish(socket, id, request, result)}
+  end
+
   def open_footnote(socket, %{"uid" => uid} = params) do
     case socket.assigns.children_forms[uid] do
       %{source: source} ->

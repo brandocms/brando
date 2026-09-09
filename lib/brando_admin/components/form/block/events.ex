@@ -1025,6 +1025,13 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       event: :open,
       current_href: params["current_href"] || "",
       current_target: params["current_target"],
+      current_rel: params["current_rel"],
+      current_class: params["current_class"],
+      link_text: params["link_text"],
+      has_selection: params["has_selection"],
+      anchors: params["anchors"] || [],
+      appearances: params["appearances"],
+      request_id: params["request_id"],
       current_identifier_id: params["current_identifier_id"],
       mark_type: params["mark_type"] || "link",
       tiptap_id: params["tiptap_id"],
@@ -1033,6 +1040,17 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
     {:halt, socket}
   end
+
+  def handle_block_event("tiptap_link_result", params, socket) do
+    BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog.receive_result(params)
+    {:halt, socket}
+  end
+
+  def handle_block_event("tiptap_ai_generate", params, socket),
+    do: {:halt, Block.generate_rich_text(socket, params)}
+
+  def handle_block_event("tiptap_ai_cancel", params, socket),
+    do: {:halt, BrandoAdmin.Components.Form.RichTextAI.cancel(socket, params)}
 
   # Fallback for any unhandled events
   def handle_block_event(event, params, socket) do

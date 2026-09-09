@@ -1,282 +1,77 @@
 import DOMPurify from 'dompurify'
+import { defaultCapabilities } from '../../config'
+import { isAllowedUri, linkRel } from '../../urlPolicy'
 
-const DEFAULT_SAFE_ATTRIBUTES = [
-  'about',
-  'accept',
-  'action',
-  'align',
-  'alt',
-  'autocomplete',
-  'axis',
-  'background',
-  'bgcolor',
-  'border',
-  'cellpadding',
-  'cellspacing',
-  'checked',
-  'cite',
-  'class',
-  'clear',
-  // 'color',
-  'cols',
-  'colspan',
-  'content',
-  'coords',
-  'crossorigin',
-  'datatype',
-  'datetime',
-  'default',
-  'dir',
-  'disabled',
-  'download',
-  'enctype',
-  'face',
-  'for',
-  'headers',
-  'height',
-  'hidden',
-  'high',
-  'href',
-  'hreflang',
-  'id',
-  'inlist',
-  'integrity',
-  'ismap',
-  'label',
-  'lang',
-  'list',
-  'loop',
-  'low',
-  'max',
-  'maxlength',
-  'media',
-  'method',
-  'min',
-  'multiple',
-  'name',
-  'noshade',
-  'novalidate',
-  'nowrap',
-  'open',
-  'optimum',
-  'pattern',
-  'placeholder',
-  'poster',
-  'prefix',
-  'preload',
-  'property',
-  'pubdate',
-  'radiogroup',
-  'readonly',
-  'rel',
-  'required',
-  'resource',
-  'rev',
-  'reversed',
-  'role',
-  'rows',
-  'rowspan',
-  'spellcheck',
-  'scope',
-  'selected',
-  'shape',
-  'size',
-  'sizes',
-  'span',
-  'srclang',
-  'start',
-  'src',
-  'srcset',
-  'step',
-  'summary',
-  'tabindex',
-  'title',
-  'type',
-  'typeof',
-  'usemap',
-  'valign',
-  'value',
-  'vocab',
-  'width',
-  'xmlns'
-]
+const attributes = ['href', 'target', 'rel', 'title', 'class', 'id', 'style', 'start', 'data-type', 'data-identifier-id', 'data-footnote-uid', 'alt']
+const tags = ['p', 'br', 'div', 'span', 'strong', 'b', 'em', 'i', 's', 'strike', 'u', 'code', 'pre', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'sub', 'sup', 'ul', 'ol', 'li', 'hr', 'table', 'tbody', 'thead', 'tr', 'th', 'td', 'img']
+const capability = { strong: 'bold', b: 'bold', em: 'italic', i: 'italic', s: 'strike', strike: 'strike', u: 'underline', code: 'code', pre: 'codeBlock', blockquote: 'blockquote', ul: 'list', ol: 'orderedList', hr: 'horizontalRule', sub: 'sub', sup: 'sup' }
 
-const DEFAULT_URI_SAFE_ATTRIBUTES = [
-  'about',
-  'content',
-  'datatype',
-  'inlist',
-  'prefix',
-  'property',
-  'rel',
-  'resource',
-  'rev',
-  'typeof',
-  'vocab'
-]
-
-const DEFAULT_SAFE_TAGS = [
-  'a',
-  'abbr',
-  'acronym',
-  'address',
-  'area',
-  'article',
-  'aside',
-  'audio',
-  'b',
-  'bdi',
-  'bdo',
-  'big',
-  'blink',
-  'blockquote',
-  'body',
-  'br',
-  'button',
-  'canvas',
-  'caption',
-  'center',
-  'cite',
-  'code',
-  'col',
-  'colgroup',
-  'content',
-  'data',
-  'datalist',
-  'dd',
-  'decorator',
-  'del',
-  'details',
-  'dfn',
-  'dir',
-  'div',
-  'dl',
-  'dt',
-  'element',
-  'em',
-  'fieldset',
-  'figcaption',
-  'figure',
-  'font',
-  'footer',
-  'form',
-  'h1',
-  'h2',
-  'h3',
-  'h4',
-  'h5',
-  'h6',
-  'head',
-  'header',
-  'hgroup',
-  'hr',
-  'html',
-  'i',
-  'img',
-  'input',
-  'ins',
-  'kbd',
-  'label',
-  'legend',
-  'li',
-  'main',
-  'map',
-  'mark',
-  'marquee',
-  'menu',
-  'menuitem',
-  'meter',
-  'nav',
-  'nobr',
-  'ol',
-  'optgroup',
-  'option',
-  'output',
-  'p',
-  'pre',
-  'progress',
-  'q',
-  'rp',
-  'rt',
-  'ruby',
-  's',
-  'samp',
-  'section',
-  'select',
-  'shadow',
-  'small',
-  'source',
-  'spacer',
-  'span',
-  'strike',
-  'strong',
-  'sub',
-  'summary',
-  'sup',
-  'table',
-  'tbody',
-  'td',
-  'template',
-  'textarea',
-  'tfoot',
-  'th',
-  'thead',
-  'time',
-  'tr',
-  'track',
-  'tt',
-  'u',
-  'ul',
-  'var',
-  'video',
-  'wbr'
-]
-
-/**
- * An html input parser for the editor.
- * The parser makes the HTML input safe for usage in the editor.
- * This means it removes any tags, attributes and styling we don't understand.
- * It may also translate attributes and tags to things we do understand.
- *
- */
 export default class HTMLInputParser {
-  constructor({
-    editorView,
-    safeAttributes = DEFAULT_SAFE_ATTRIBUTES,
-    safeTags = DEFAULT_SAFE_TAGS,
-    uriSafeAttributes = DEFAULT_URI_SAFE_ATTRIBUTES
-  }) {
-    this.safeAttributes = safeAttributes
-    this.safeTags = safeTags
-    this.uriSafeAttributes = uriSafeAttributes
+  constructor({ capabilities = defaultCapabilities, styles = [], scope = null, onWarning = () => {}, preserveReferences = false } = {}) {
+    Object.assign(this, { capabilities, styles, scope, onWarning, preserveReferences })
   }
 
-  /**
-   * Takes an html string, preprocesses its nodes and sanitizes the result.
-   * Returns the cleaned html string with any extra attributes we need.
-   *
-   * @method prepareHTML
-   * @param htmlString {string}
-   */
-  prepareHTML(htmlString) {
-    // const parser = new DOMParser()
-    // const document = parser.parseFromString(htmlString, 'text/html')
-    // const bodyElement = document.body
-    return this.sanitizeHTML(htmlString)
-  }
+  prepareHTML(html) {
+    const safe = DOMPurify.sanitize(html, { ALLOWED_TAGS: tags, ALLOWED_ATTR: attributes, ALLOW_DATA_ATTR: false })
+    const doc = new DOMParser().parseFromString(safe, 'text/html')
+    const has = key => this.capabilities.includes(key)
+    const unwrap = node => node.replaceWith(...node.childNodes)
+    const rename = (node, tag) => { const next = doc.createElement(tag); next.append(...node.childNodes); node.replaceWith(next); return next }
+    let fallback = false
 
-  /**
-   * Takes an HTML string and sanitize it.
-   * Returns the sanitized HTML string.
-   *
-   * @method sanitizeHTML
-   * @param html {String}
-   */
-  sanitizeHTML(html) {
-    return DOMPurify.sanitize(html, {
-      ALLOWED_TAGS: this.safeTags,
-      ALLOWED_ATTR: this.safeAttributes,
-      ADD_URI_SAFE_ATTR: this.uriSafeAttributes
+    // Office editors often encode emphasis only in CSS. Convert it before
+    // presentation cleanup; detached DOM operations never execute pasted HTML.
+    doc.body.querySelectorAll('[style]').forEach(node => {
+      if (has('bold') && /^(bold|[6-9]00)$/.test(node.style.fontWeight)) {
+        const strong = doc.createElement('strong'); strong.append(...node.childNodes); node.append(strong)
+      }
+      if (has('italic') && node.style.fontStyle === 'italic') {
+        const em = doc.createElement('em'); em.append(...node.childNodes); node.append(em)
+      }
+      const color = has('color') ? node.style.color : ''
+      const align = has('align') && /^(left|center|right|justify)$/.test(node.style.textAlign) ? node.style.textAlign : ''
+      node.removeAttribute('style')
+      if (color) node.style.color = color
+      if (align) node.style.textAlign = align
     })
+
+    doc.body.querySelectorAll('table').forEach(table => {
+      const rows = [...table.querySelectorAll('tr')].map(row => { const p = doc.createElement('p'); p.textContent = [...row.querySelectorAll('td, th')].map(cell => cell.textContent).join(' · '); return p })
+      table.replaceWith(...rows); fallback = true
+    })
+    doc.body.querySelectorAll('img').forEach(node => { node.replaceWith(doc.createTextNode(node.alt || '')); fallback = true })
+    const anchorIds = new Set([...this.scope?.querySelectorAll('[id]') || []].map(node => node.id))
+    const noteIds = new Set([...this.scope?.querySelectorAll('[data-footnote-uid]') || []].map(node => node.dataset.footnoteUid))
+    doc.body.querySelectorAll('*').forEach(node => {
+      if (!node.isConnected) return
+      const tag = node.tagName.toLowerCase()
+      if (node.hasAttribute('data-footnote-uid')) {
+        if (this.preserveReferences || noteIds.has(node.dataset.footnoteUid)) return
+        node.replaceWith(doc.createTextNode('[note]')); fallback = true; return
+      }
+      const classes = [...node.classList].filter(name => this.styles.some(style => style.element === tag && style.className === name) || tag === 'a' && name === 'action-button')
+      if (classes.length) node.className = classes.join(' ')
+      else node.removeAttribute('class')
+      if (tag === 'a') {
+        const button = node.classList.contains('action-button')
+        if (!isAllowedUri(node.getAttribute('href')) || !has(button ? 'button' : 'link')) { unwrap(node); return }
+        const rel = linkRel(node.getAttribute('target'), node.getAttribute('rel'))
+        if (rel) node.setAttribute('rel', rel)
+      }
+      if (node.id) {
+        if (node.dataset.type !== 'jump-anchor' || !has('jumpAnchor') || anchorIds.has(node.id)) { node.removeAttribute('id'); node.removeAttribute('data-type') }
+        else anchorIds.add(node.id)
+      }
+      const key = /^h[1-6]$/.test(tag) ? tag : capability[tag]
+      if (key && !has(key) && !this.styles.some(style => style.element === tag && node.classList.contains(style.className))) {
+        if (/^(h[1-6]|pre|blockquote|li)$/.test(tag)) rename(node, 'p')
+        else if (tag === 'ul' || tag === 'ol') { [...node.children].forEach(li => rename(li, 'p')); unwrap(node) }
+        else unwrap(node)
+      }
+    })
+    if (fallback) this.onWarning('pasteFallback')
+    return doc.body.innerHTML
   }
+
+  sanitizeHTML(html) { return this.prepareHTML(html) }
 }
