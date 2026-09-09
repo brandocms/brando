@@ -12,20 +12,22 @@ test('has cache and clears cache', async ({ page }, testInfo) => {
   await page.getByRole('link', { name: 'Cache' }).click()
   await expect(page).toHaveURL('/admin/config/cache')
 
-  await expect(
-    page.getByRole('cell', { name: 'pages', exact: true })
-  ).toBeVisible()
-  await expect(page.locator('td').getByText('#1')).toBeVisible()
+  await syncLV(page)
+  // Query caches survive individual SQL sandboxes, so other pages may already
+  // be cached. Clear the homepage's single-entry cache, not every pages row.
+  const cachedPage = page.getByRole('row')
+    .filter({ has: page.getByRole('cell', { name: 'pages', exact: true }) })
+    .filter({ has: page.getByRole('cell', { name: '#1', exact: true }) })
+  await expect(cachedPage).toBeVisible()
 
   await page.screenshot({ path: testInfo.outputPath('cache-desktop.png'), fullPage: true })
-  const cachedPage = page.getByRole('row').filter({ has: page.getByRole('cell', { name: 'pages', exact: true }) })
   await cachedPage.getByRole('button', { name: /^Clear cache/ }).click()
   await expect(cachedPage).toHaveCount(0)
-  await expect(page.getByRole('cell', { name: 'users', exact: true })).toBeVisible()
+  await expect(page.getByRole('cell', { name: 'users', exact: true }).first()).toBeVisible()
   await page.getByRole('button', { name: 'Empty all caches' }).click()
   await expect(
     page.getByRole('cell', { name: 'pages', exact: true })
-  ).not.toBeVisible()
+  ).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'No cached entries' })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('cache-empty-desktop.png'), fullPage: true })
 })

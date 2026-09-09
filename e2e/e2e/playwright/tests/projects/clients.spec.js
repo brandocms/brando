@@ -25,7 +25,7 @@ test('creates and edits clients', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Name' }).fill('OpenAI')
   await page.getByTestId('submit').click()
   await syncLV(page)
-  await page.getByRole('link', { name: 'Google →' }).click()
+  await page.getByRole('link', { name: 'Google', exact: true }).click()
   await syncLV(page)
   await page.getByRole('textbox', { name: 'Name' }).click()
   await page.getByRole('textbox', { name: 'Name' }).press('ControlOrMeta+Shift+ArrowLeft')

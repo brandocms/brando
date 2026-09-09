@@ -28,7 +28,7 @@ test('creates and persists a module set', async ({ page }) => {
 
   await expect(page).toHaveURL(listUrl)
   await syncLV(page)
-  await expect(page.getByRole('link', { name: 'Editorial modules →' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Editorial modules', exact: true })).toBeVisible()
   await expect(page.getByText('0 modules in this set')).toBeVisible()
 })
 
@@ -43,7 +43,7 @@ test('creates and persists a container', async ({ page }) => {
 
   await expect(page).toHaveURL(listUrl)
   await syncLV(page)
-  await expect(page.getByRole('link', { name: 'Centered content →' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Centered content', exact: true })).toBeVisible()
   await expect(page.getByText('layout', { exact: true })).toBeVisible()
 })
 
@@ -56,7 +56,7 @@ test('creates and persists a table template', async ({ page }) => {
 
   await expect(page).toHaveURL(listUrl)
   await syncLV(page)
-  await expect(page.getByRole('link', { name: 'Contact table →' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Contact table', exact: true })).toBeVisible()
 })
 
 test('creates and persists a content template', async ({ page }) => {
@@ -70,7 +70,7 @@ test('creates and persists a content template', async ({ page }) => {
 
   await expect(page).toHaveURL(listUrl)
   await syncLV(page)
-  await expect(page.getByRole('link', { name: 'Landing page →' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Landing page', exact: true })).toBeVisible()
   await expect(page.getByText('Start with a strong introduction')).toBeVisible()
 })
 
@@ -95,6 +95,6 @@ test('creates and persists a palette with a color', async ({ page }) => {
 
   await expect(page).toHaveURL(listUrl)
   await syncLV(page)
-  await expect(page.getByRole('link', { name: 'Ocean →' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Ocean', exact: true })).toBeVisible()
   await expect(page.getByText('brand', { exact: true })).toBeVisible()
 })
