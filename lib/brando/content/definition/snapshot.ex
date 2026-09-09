@@ -36,8 +36,8 @@ defmodule Brando.Content.Definition.Snapshot do
         if module.table_template_id && not Map.has_key?(table_uids, module.table_template_id),
           do: Error.raise!(module.uid, "table template is outside the local definition scope")
 
-        {refs, bindings} = associations(module.refs, &Model.ref_record/1, Model.ref_assets(), bindings)
-        {vars, bindings} = associations(module.vars, &Model.var_record/1, Model.var_assets(), bindings)
+        {refs, bindings} = associations(module.refs, &Model.stored_ref_record/1, Model.ref_assets(), bindings)
+        {vars, bindings} = associations(module.vars, &Model.stored_var_record/1, Model.var_assets(), bindings)
         children = Enum.filter(modules, &(&1.parent_id == module.id)) |> Enum.map(& &1.uid)
 
         definition =
@@ -55,7 +55,7 @@ defmodule Brando.Content.Definition.Snapshot do
     {table_definitions, bindings} =
       Enum.map_reduce(selected_tables, bindings, fn table, bindings ->
         Value.nonempty!(table.uid, "table-template UID; run framework migrations")
-        {vars, bindings} = associations(table.vars, &Model.var_record/1, Model.var_assets(), bindings)
+        {vars, bindings} = associations(table.vars, &Model.stored_var_record/1, Model.var_assets(), bindings)
         {Model.table_record(table) |> Map.put("vars", vars), bindings}
       end)
 

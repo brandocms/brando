@@ -191,6 +191,7 @@ defmodule Brando.Content.Definition.Model do
     |> Map.put("kind", "module")
     |> Map.put("refs", ordered(record.refs, &ref_record/1))
     |> Map.put("vars", ordered(record.vars, &var_record/1))
+    |> normalize_module!()
   end
 
   def table_record(record),
@@ -207,6 +208,22 @@ defmodule Brando.Content.Definition.Model do
   def var_record(record),
     do: record |> Map.take(var_fields()) |> Value.plain() |> Map.put("assets", Map.new(@var_assets, &{&1, nil}))
 
+  # Compare persisted definitions using the same schema normalization as the
+  # literal reader. Legacy empty strings must not become edits on reimport.
+  def stored_ref_record(record) do
+    struct(Ref)
+    |> Ref.changeset(Map.delete(ref_record(record), "assets"), :system)
+    |> apply_valid!(record.uid)
+    |> ref_record()
+  end
+
+  def stored_var_record(record) do
+    struct(Var)
+    |> Var.changeset(Map.delete(var_record(record), "assets"), %{id: 0})
+    |> apply_valid!(record.key)
+    |> var_record()
+  end
+
   defp ordered(records, fun) when is_list(records) do
     records
     |> Enum.sort_by(&{&1.sequence || 0, Map.get(&1, :id)})
@@ -215,7 +232,12 @@ defmodule Brando.Content.Definition.Model do
   end
 
   def normalize_module!(definition) do
-    attrs = Map.take(definition, Enum.map(@module_fields, &to_string/1))
+    attrs =
+      definition
+      |> Map.take(Enum.map(@module_fields, &to_string/1))
+      |> Map.update!("name", &Value.object/1)
+      |> Map.update!("namespace", &Value.object/1)
+      |> Map.update!("help_text", &Value.object/1)
 
     normalized =
       Module.changeset(struct(Module), attrs, :system)

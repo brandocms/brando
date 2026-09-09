@@ -52,6 +52,30 @@ defmodule Brando.Content.DefinitionsTest do
     assert Repo.aggregate(Var, :count) == 1
   end
 
+  test "exported legacy empty values use reader normalization without changing stored records", c do
+    apply_bundle!(c.bundle, c.user)
+    module = hero()
+    [ref] = module.refs
+    [var] = module.vars
+    module |> Changeset.change(help_text: nil) |> Repo.update!()
+    ref |> Changeset.change(description: "") |> Repo.update!()
+    var |> Changeset.change(value: "") |> Repo.update!()
+    before = hero()
+
+    assert {:ok, exported} = Definitions.export(Path.join(c.path, "legacy"), c.user)
+    assert {:ok, bundle} = Definitions.read(exported.directory)
+    assert bundle == exported.bundle
+    assert {:ok, plan} = Definitions.plan(bundle, c.user)
+    assert [%{action: :noop}] = plan.items
+    assert {:ok, %{changes: []}} = Definitions.apply(plan, c.user)
+    assert hero() == before
+
+    changed = edit(bundle, &Map.put(&1, "class", "updated"))
+    result = apply_bundle!(changed, c.user)
+    assert {:ok, plan} = Definitions.plan(result.bundle, c.user)
+    assert [%{action: :noop}] = plan.items
+  end
+
   test "updates settings and defaults once while preserving identities and editor content", c do
     apply_bundle!(c.bundle, c.user)
     before = hero()

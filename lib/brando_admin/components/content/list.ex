@@ -760,8 +760,10 @@ defmodule BrandoAdmin.Components.Content.List do
         </span>
       </button>
       <.form
+        id={"listing-filter-form-#{@schema}-#{@filter.key}"}
         for={%{}}
         as={:filter_form}
+        phx-auto-recover="ignore"
         phx-change={@update_filter}
         onkeydown="return event.key != 'Enter';"
       >

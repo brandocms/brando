@@ -18,6 +18,9 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     ~H"""
     <div class="admin-workspace workspace-list content-workspace modules-workspace">
       <Workspace.header title={gettext("Content Modules")}>
+        <button class="workspace-button" phx-click={JS.push("open_module_files") |> show_modal("#module-files-modal")}>
+          {gettext("Import / export DSL")}
+        </button>
         <button class="workspace-button" phx-click={show_modal("#module-import-modal")}>
           {gettext("Import modules")}
         </button>
@@ -43,6 +46,13 @@ defmodule BrandoAdmin.Content.ModuleListLive do
         empty_description={gettext("Adjust your search or create a new entry.")}
       />
     </div>
+
+    <.live_component
+      module={BrandoAdmin.Components.ModuleFiles}
+      id="module-files"
+      current_user={@current_user}
+      scope_label={module_files_scope(assigns)}
+    />
 
     <Content.modal title={gettext("Exported modules")} id="module-export-modal">
       <textarea rows="15" style="width: 100%; font-size: 11px; font-family: Mono"><%= @base64_modules %></textarea>
@@ -88,6 +98,31 @@ defmodule BrandoAdmin.Content.ModuleListLive do
 
   def handle_event("focus", _, socket), do: {:noreply, socket}
   def handle_event("blur", _, socket), do: {:noreply, socket}
+
+  def handle_event("open_module_files", _, socket) do
+    send_update(BrandoAdmin.Components.ModuleFiles, id: "module-files", selected_ids: nil)
+    {:noreply, socket}
+  end
+
+  def handle_event("export_module_files", %{"ids" => encoded}, socket) do
+    ids =
+      case if(is_binary(encoded), do: Jason.decode(encoded), else: :error) do
+        {:ok, ids} when is_list(ids) and length(ids) <= 500 ->
+          Enum.flat_map(ids, fn id ->
+            case if(is_integer(id) or is_binary(id), do: Integer.parse(to_string(id)), else: :error) do
+              {id, ""} when id > 0 -> [id]
+              _ -> []
+            end
+          end)
+          |> Enum.uniq()
+
+        _ ->
+          []
+      end
+
+    send_update(BrandoAdmin.Components.ModuleFiles, id: "module-files", selected_ids: ids)
+    {:noreply, socket}
+  end
 
   def handle_event("validate_module_import", %{"encoded_modules" => ""}, socket) do
     {:noreply, socket}
@@ -169,6 +204,14 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       |> Brando.Content.serialize_modules()
 
     {:noreply, assign(socket, :base64_modules, base64_modules)}
+  end
+
+  defp module_files_scope(assigns) do
+    case {assigns[:current_site], assigns[:current_environment]} do
+      {%{name: site}, %{name: environment}} -> "#{site} · #{environment}"
+      {%{name: site}, %{key: environment}} -> "#{site} · #{environment}"
+      _ -> gettext("Current workspace")
+    end
   end
 
   defp import_modules_in_transaction(modules, current_user) do

@@ -144,6 +144,10 @@ defmodule Brando.Content.Definition.Importer do
           before: old_digest,
           after: digest,
           fields: changed_fields(old, definition),
+          diff:
+            Enum.map(changed_fields(old, definition), fn field ->
+              %{field: field, before: old && old[field], after: definition[field]}
+            end),
           block_count: length(block_ids),
           entry_count: entry_count(block_ids)
         }

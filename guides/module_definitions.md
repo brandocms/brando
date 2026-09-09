@@ -9,9 +9,54 @@ The guarantee is a **semantic round trip**: export → read → import without e
 does not duplicate modules, replace their identities, bump versions, synchronize
 blocks or enqueue renders. Export produces canonical source; it does not recover
 comments or formatting from previously authored files.
+Empty values use the same schema normalization when exporting and reading, so
+legacy blank values do not produce spurious updates or writes on reimport.
 
 This workflow supports standalone applications and local modules in a selected
 tenant environment. The admin's existing copy/install export remains available.
+
+## Using the admin
+
+Open **Content Modules → Import / export DSL**. Both directions use the same
+definitions, authorization checks and importer as the CLI.
+
+1. Choose **Prepare export**, then **Download ZIP** for all local modules in the
+   current workspace. To export particular modules, select their listing rows and
+   choose **Export DSL files**. Child modules and required table templates travel
+   with the selected module trees.
+2. Unzip the bundle, edit its `.exs`, `.heex` or `.liquid` files, and zip them
+   together with `modules.lock.json`. Files may be at the archive root or inside
+   one enclosing folder. Keep the baseline with your edits.
+3. Upload the ZIP under **Import definitions** and choose **Preview import**.
+   The preview lists creates, updates, unchanged definitions, conflicts and
+   required migrations. Expand a definition to inspect current and imported
+   values and the affected block/entry counts. Preview and cancellation do not
+   write definitions.
+4. Choose **Apply import** after reviewing the changes. Conflicts and required
+   migrations disable this action. The server rechecks permissions and the
+   baseline at apply time, including changes made after opening the preview.
+5. Choose **Download updated ZIP** after a successful import. This preserves
+   the uploaded source, comments and templates, and advances the baseline. Use
+   this updated bundle for your next edit; the browser cannot update your original
+   local ZIP in place. The result also reports refresh failures and offers
+   **Retry refresh** without reimporting definitions.
+
+For another installation or tenant environment, expand **Destination reference
+mappings** and enter a JSON object mapping external tokens to destination record
+IDs (see [Media and content references](#media-and-content-references)). Missing
+mappings are reported before a plan can be applied. The modal identifies the
+current workspace; it does not switch the active site or environment.
+
+ZIP uploads are limited to 5 MB compressed, 20 MB expanded and 500 entries.
+Only definitions, templates and the baseline lockfile are accepted; archive
+traversal and overlapping paths are rejected. macOS `.DS_Store` and `__MACOSX`
+metadata are ignored. A disconnected/reloaded page requires a new upload and
+preview. Temporary files are removed after reading; uploaded contents and the
+preview are held only in the current LiveView session.
+
+The older **Import modules** and **Export modules** actions still create copies
+using the legacy encoded format. Use the DSL actions to update existing module
+identities.
 
 ## Export, edit, inspect, import
 
@@ -380,7 +425,7 @@ server-side site/environment. The actor's authorization scope must match that
 target. Trusted maintenance callers may explicitly pass `:system`; planning
 then also requires `creator: user_id` for newly inserted var/table records.
 
-Shared-library publication and overrides, remote Florist pull/apply, admin import
-review screens, automatic destructive migrations and coordinated frontend asset
+Shared-library publication and overrides, remote Florist pull/apply,
+automatic destructive migrations and coordinated frontend asset
 activation are follow-up work. This importer does not change shared-source
 provenance or install frontend assets.
