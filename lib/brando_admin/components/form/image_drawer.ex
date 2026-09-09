@@ -168,11 +168,11 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
           >
             <.icon name="hero-scissors" />{gettext("Edit/Crop")}
           </button>
-          <details class="media-action-menu">
-            <summary class="workspace-button">
+          <div id="image-drawer-replace" class="media-action-menu" phx-hook="Brando.FloatingDropdown">
+            <button type="button" class="workspace-button" popovertarget="image-drawer-replace-menu" aria-expanded="false">
               <.icon name="hero-arrow-path" />{gettext("Replace")}<.icon name="hero-chevron-down-mini" />
-            </summary>
-            <div class="media-action-options">
+            </button>
+            <div id="image-drawer-replace-menu" class="media-action-options" popover="auto">
               <button
                 id={"image-drawer-upload-#{@upload_dom_id}"}
                 type="button"
@@ -182,12 +182,24 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
                 "Browse library"
               )}</button>
             </div>
-          </details>
-          <details :if={@edit_image.image} class="media-action-menu image-detail-more">
-            <summary class="workspace-button" aria-label={gettext("More image actions")}>
+          </div>
+          <div
+            :if={@edit_image.image}
+            id="image-drawer-more"
+            class="media-action-menu image-detail-more"
+            phx-hook="Brando.FloatingDropdown"
+            data-placement="bottom-end"
+          >
+            <button
+              type="button"
+              class="workspace-button"
+              aria-label={gettext("More image actions")}
+              popovertarget="image-drawer-more-menu"
+              aria-expanded="false"
+            >
               <.icon name="hero-ellipsis-horizontal" />
-            </summary>
-            <div class="media-action-options">
+            </button>
+            <div id="image-drawer-more-menu" class="media-action-options" popover="auto">
               <button type="button" phx-click={duplicate_image(@edit_image, @myself)}><.icon name="hero-document-duplicate" />{gettext(
                 "Duplicate"
               )}</button>
@@ -195,7 +207,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
                 "Remove"
               )}</button>
             </div>
-          </details>
+          </div>
         </div>
         <%= if @edit_image.image do %>
           <section class="image-detail-metadata">

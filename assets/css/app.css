@@ -14,6 +14,7 @@
 @import "./components/ChildrenButton.css";
 @import "./components/CircleDropdown.css";
 @import "./components/SplitDropdown.css";
+@import "./components/FloatingDropdown.css";
 @import "./components/CircleFlag.css";
 @import "./components/Content.css";
 @import "./components/Content/Header.css";

@@ -1,0 +1,21 @@
+/* Shared positioning overrides for the older LiveView-driven menus. Keep
+   their colors, typography and action layout in their component stylesheets. */
+[data-floating-dropdown][popover] {
+  position: fixed !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+  max-width: calc(100vw - 16px) !important;
+  max-height: calc(100dvh - 16px) !important;
+  overflow: auto !important;
+
+  &:not(:popover-open) { display: none !important; }
+  &:popover-open { display: flex !important; flex-direction: column; }
+
+  button, a {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}

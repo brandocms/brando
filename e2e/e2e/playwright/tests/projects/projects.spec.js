@@ -203,7 +203,7 @@ test('creates project', async ({ page }) => {
   // not fall back to whichever image was persisted when the drawer opened.
   await listingImage.getByRole('button', { name: 'Configure', exact: true }).click()
   const imageDrawer = page.locator('#image-drawer')
-  await imageDrawer.locator('summary', { hasText: 'Replace' }).click()
+  await imageDrawer.getByRole('button', { name: 'Replace', exact: true }).click()
   await imageDrawer.getByRole('button', { name: 'Browse library', exact: true }).click()
   await syncLV(page)
 
@@ -220,7 +220,7 @@ test('creates project', async ({ page }) => {
   await page.waitForSelector('#image-picker', { state: 'hidden' })
   await expect(imageDrawer.locator('img')).toBeVisible()
 
-  await imageDrawer.locator('summary', { hasText: 'Replace' }).click()
+  await imageDrawer.getByRole('button', { name: 'Replace', exact: true }).click()
   await imageDrawer.getByRole('button', { name: 'Browse library', exact: true }).click()
   await syncLV(page)
 

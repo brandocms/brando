@@ -2264,7 +2264,12 @@ defmodule BrandoAdmin.Components.Form do
               >
                 <.icon name="hero-eye" class="s" />
               </button>
-              <div :if={length(@live_preview_targets) > 1} class="preview-chooser form-tool-preview">
+              <div
+                :if={length(@live_preview_targets) > 1}
+                class="preview-chooser form-tool-preview"
+                phx-click-away={if @live_preview_menu_open?, do: "close_preview_targets"}
+                phx-target={@myself}
+              >
                 <button
                   id={"#{@id}-preview-trigger"}
                   type="button"
@@ -2290,9 +2295,10 @@ defmodule BrandoAdmin.Components.Form do
                   :if={@live_preview_menu_open?}
                   id={"#{@id}-preview-choices"}
                   class="preview-choices"
+                  phx-hook="Brando.PreviewChoices"
+                  data-dropdown-close={JS.push("close_preview_targets", target: @myself)}
                   role="group"
                   aria-labelledby={"#{@id}-preview-heading"}
-                  phx-click-away="close_preview_targets"
                   phx-target={@myself}
                   phx-window-keydown={
                     JS.push("close_preview_targets", target: @myself) |> JS.focus(to: "##{@id}-preview-trigger")

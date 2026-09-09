@@ -60,7 +60,7 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   const details = page.getByRole('dialog', { name: 'Image details', exact: true })
   await details.getByLabel('Alternative text', { exact: true }).fill('Library description')
   await syncLV(page)
-  await details.locator('summary', { hasText: 'Replace' }).click()
+  await details.getByRole('button', { name: 'Replace', exact: true }).click()
   await details.getByRole('button', { name: 'Browse library', exact: true }).click()
   const browser = page.getByRole('dialog', { name: 'Images', exact: true })
   await expect(browser).toBeVisible()
@@ -68,7 +68,7 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   await expect(browser).not.toBeVisible()
   await expect(details).toBeVisible()
   // The menu closes on selection, so focus returns to its visible disclosure.
-  await expect(details.locator('summary', { hasText: 'Replace' })).toBeFocused()
+  await expect(details.getByRole('button', { name: 'Replace', exact: true })).toBeFocused()
   await expect(details.getByLabel('Alternative text', { exact: true })).toHaveValue('Library description')
   await page.screenshot({ path: testInfo.outputPath('image-details-desktop.png') })
   await page.setViewportSize({ width: 390, height: 844 })

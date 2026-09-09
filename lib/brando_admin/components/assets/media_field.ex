@@ -117,15 +117,23 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
           @asset && @type == :image && !@compact? && @actions != [] && "media-field-split"
         ]}>
           {render_slot(@actions)}
-          <details :if={@asset && !@compact? && (@upload_enabled? || @browse)} class="media-field-replace">
-            <summary class="media-button">{gettext("Replace")}<.icon name="hero-chevron-down-mini" /></summary>
-            <div class="media-field-menu">
+          <div
+            :if={@asset && !@compact? && (@upload_enabled? || @browse)}
+            id={"#{@id}-replace"}
+            class="media-field-replace"
+            phx-hook="Brando.FloatingDropdown"
+            data-placement={if @type == :image && @actions != [], do: "bottom-end", else: "bottom-start"}
+          >
+            <button type="button" class="media-button" popovertarget={"#{@id}-replace-menu"} aria-expanded="false">
+              {gettext("Replace")}<.icon name="hero-chevron-down-mini" />
+            </button>
+            <div id={"#{@id}-replace-menu"} class="media-field-menu" popover="auto">
               <button :if={@upload_enabled?} type="button" class="upload-trigger"><.icon name="hero-arrow-up-tray" />{gettext(
                 "Upload replacement"
               )}</button>
               <button :if={@browse} type="button" phx-click={@browse}><.icon name="hero-folder" />{gettext("Browse library")}</button>
             </div>
-          </details>
+          </div>
         </div>
         <button
           :if={@asset && @remove && (!@compact? || !@configure)}

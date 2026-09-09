@@ -51,14 +51,12 @@
   display: inline-flex; align-items: stretch;
   > .media-button:not(:last-child) { border-radius: 5px 0 0 5px; }
   > .media-field-replace:not(:first-child) { margin-left: -1px; }
-  > .media-field-replace:not(:first-child) > summary { border-radius: 0 5px 5px 0; }
+  > .media-field-replace:not(:first-child) > .media-button { border-radius: 0 5px 5px 0; }
   > .media-button:hover, > .media-button:focus-visible, > .media-field-replace:focus-within { position: relative; z-index: 1; }
-  .media-field-menu { left: auto; right: 0; }
 }
 .media-field-replace {
   position: relative;
-  summary::-webkit-details-marker { display: none; }
-  .media-field-menu { position: absolute; top: calc(100% + 5px); left: 0; z-index: 50; min-width: 190px; padding: 5px; background: #fff; border: 1px solid #dce2dc; border-radius: 7px; box-shadow: 0 8px 24px #13251c18; }
+  .media-field-menu { position: fixed; inset: auto; margin: 0; min-width: min(190px, calc(100vw - 16px)); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow-y: auto; padding: 5px; background: #fff; border: 1px solid #dce2dc; border-radius: 7px; box-shadow: 0 8px 24px #13251c18; }
   .media-field-menu button { display: flex; align-items: center; gap: 9px; width: 100%; border: 0; border-radius: 4px; padding: 9px 10px; margin: 0; background: #fff; color: #272b2a; font: 12px/18px "Main", sans-serif; text-align: left; }
   .media-field-menu button:hover { background: #f1f5ef; }
   .media-field-menu [class^="hero-"] { width: 16px; height: 16px; flex-shrink: 0; }
@@ -87,8 +85,7 @@
   .media-field-actions > .media-button:nth-child(n+3) { margin-left: 6px; }
   .media-field-actions > .media-button:hover, .media-field-actions > .media-button:focus-visible { position: relative; z-index: 1; }
   .media-field-progress { grid-column: 1 / -1; margin: 8px 6px 6px; }
-  .media-field-replace > summary { border-color: transparent; padding-inline: 7px; color: #626b66; }
-  .media-field-replace .media-field-menu { left: auto; right: 0; }
+  .media-field-replace > .media-button { border-color: transparent; padding-inline: 7px; color: #626b66; }
   &.media-field--empty { background: #fff; border-style: solid; }
   &.media-field--empty .media-field-preview { background: #f7f8f6; }
   .media-button.primary { background: #fff; color: #272b2a; border-color: #dce2dc; }

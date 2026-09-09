@@ -42,12 +42,6 @@ export default app => ({
       if (event.key === 'Escape') {
         event.preventDefault()
         event.stopPropagation()
-        const menu = event.target.closest('details.media-action-menu[open]')
-        if (menu) {
-          menu.open = false
-          menu.querySelector('summary')?.focus()
-          return
-        }
         app.liveSocket.execJS(this.el, this.el.dataset.modalClose)
       } else if (event.key === 'Tab') {
         this.wrapTab(event)
@@ -61,15 +55,6 @@ export default app => ({
       }
     }
     this.el.addEventListener('keydown', this.onKeydown)
-    this.onMenuAction = event => {
-      if (!event.target.closest('.media-action-options button')) return
-      const menu = event.target.closest('details')
-      if (!menu) return
-      const hadFocus = menu.contains(document.activeElement)
-      menu.removeAttribute('open')
-      if (hadFocus) menu.querySelector('summary')?.focus()
-    }
-    this.el.addEventListener('click', this.onMenuAction)
 
     // `style` covers JS.show/JS.hide (inline display); `class` covers the
     // server-gated `visible` variant. Watching both means the hook does not
@@ -86,7 +71,6 @@ export default app => ({
 
   destroyed() {
     this.el.removeEventListener('keydown', this.onKeydown)
-    this.el.removeEventListener('click', this.onMenuAction)
     this.observer?.disconnect()
     clearTimeout(this.focusTimer)
     // A modal removed from the DOM while open would otherwise strand focus on

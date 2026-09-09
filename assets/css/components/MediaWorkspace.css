@@ -154,10 +154,7 @@
 .media-action-menu { position: relative; }
 .media-workspace-drawer .media-destination-folder { display: block; color: #272b2a; font: 13px/20px "Main", sans-serif; padding-bottom: 4px; overflow-wrap: anywhere; }
 #image-drawer.media-workspace-drawer .focus-point-pin { width: 20px; height: 20px; padding: 0; border: 2px solid white; border-radius: 50%; background: #254e3fcc; box-shadow: 0 0 0 1px #254e3f, 0 2px 6px #0006; }
-.media-action-menu summary { list-style: none; cursor: pointer; }
-.media-action-menu summary::-webkit-details-marker { display: none; }
-.media-action-options { position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; min-width: 186px; padding: 6px; border: 1px solid #dce2dc; border-radius: 6px; background: #fff; box-shadow: 0 8px 24px #17291e20; }
-.image-detail-more .media-action-options { left: auto; right: 0; }
+.media-action-options { position: fixed; inset: auto; margin: 0; min-width: min(186px, calc(100vw - 16px)); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow-y: auto; padding: 6px; border: 1px solid #dce2dc; border-radius: 6px; background: #fff; box-shadow: 0 8px 24px #17291e20; }
 .media-action-options button { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0; padding: 9px 10px; border: 0; border-radius: 4px; background: #fff; color: #272b2a; font: 13px/20px "Main", sans-serif; text-align: left; }
 .media-action-options button:hover { background: #f2f6ee; }
 .media-action-options button.destructive { color: #983e30; }
