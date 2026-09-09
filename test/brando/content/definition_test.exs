@@ -127,6 +127,28 @@ defmodule Brando.Content.DefinitionTest do
     assert {:ok, ^bundle} = Definitions.read(output)
   end
 
+  test "Markdown source and version tokens round-trip without being cast to local IDs", %{path: path} do
+    spec = fixture_spec(path)
+
+    ref = %{
+      name: :document,
+      type: :markdown_source,
+      default: %{source_id: "document", policy: :pinned, version_id: "revision"}
+    }
+
+    bundle = Model.from_specs!([%{spec | refs: [ref]}], path)
+    output = Path.join(path, "markdown")
+    Writer.write!(bundle, output)
+    assert {:ok, ^bundle} = Definitions.read(output)
+    assert get_in(bundle, ["modules", Access.at(0), "refs", Access.at(0), "data", "data", "source_id"]) == "document"
+
+    bad = put_in(ref, [:default, :source_id], 123)
+
+    assert_raise Brando.Content.Definition.Error, ~r/source_id/, fn ->
+      Model.from_specs!([%{spec | refs: [bad]}], path)
+    end
+  end
+
   test "rejects unknown settings, duplicate identities and dependency cycles", %{path: path} do
     spec = fixture_spec(path)
 

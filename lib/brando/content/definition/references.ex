@@ -11,8 +11,12 @@ defmodule Brando.Content.Definition.References do
     "gallery" => Brando.Galleries.Gallery,
     "palette" => Brando.Content.Palette,
     "identifier" => Brando.Content.Identifier,
-    "gallery_object" => Brando.Galleries.GalleryObject
+    "gallery_object" => Brando.Galleries.GalleryObject,
+    "markdown_source" => Brando.MarkdownSources.Source,
+    "markdown_version" => Brando.MarkdownSources.Version
   }
+
+  @markdown_fields %{"source_id" => "markdown_source", "version_id" => "markdown_version"}
 
   def scope do
     config = Repo.repo().config()
@@ -61,6 +65,10 @@ defmodule Brando.Content.Definition.References do
 
   defp collect!(value, bindings) when is_list(value), do: Enum.reduce(value, bindings, &collect!/2)
 
+  defp collect!(%{"type" => "markdown_source", "data" => data}, bindings) do
+    Enum.reduce(@markdown_fields, bindings, fn {field, kind}, bindings -> declare!(data[field], kind, bindings) end)
+  end
+
   defp collect!(value, bindings) when is_map(value) do
     Enum.reduce(value, bindings, fn
       {"assets", assets}, bindings ->
@@ -83,6 +91,10 @@ defmodule Brando.Content.Definition.References do
     unless Map.has_key?(@schemas, kind), do: Error.raise!(token, "unknown reference kind")
     if bindings[token] && bindings[token] != kind, do: Error.raise!(token, "token is used for different reference kinds")
     Map.put(bindings, token, kind)
+  end
+
+  defp authorize!(actor, kind, _schema, _record) when kind in ~w(markdown_source markdown_version) do
+    if Brando.MarkdownSources.authorize(actor, :read) != :ok, do: Error.raise!("references", "forbidden")
   end
 
   defp authorize!(actor, kind, schema, record) do
@@ -133,6 +145,16 @@ defmodule Brando.Content.Definition.References do
     end
   end
 
+  def encode_data(%{"type" => "markdown_source", "data" => data} = ref, bindings) do
+    {data, bindings} =
+      Enum.reduce(@markdown_fields, {data, bindings}, fn {field, kind}, {data, bindings} ->
+        {token, bindings} = token(kind, data[field], bindings)
+        {Map.put(data, field, token), bindings}
+      end)
+
+    {Map.put(ref, "data", data), bindings}
+  end
+
   def encode_data(data, bindings) when is_map(data) do
     Enum.reduce(data, {%{}, bindings}, fn
       {"object_id", id}, {map, refs} when not is_nil(id) ->
@@ -153,6 +175,16 @@ defmodule Brando.Content.Definition.References do
 
   def encode_data(data, bindings) when is_list(data), do: Enum.map_reduce(data, bindings, &encode_data/2)
   def encode_data(data, bindings), do: {data, bindings}
+
+  def decode_data!(%{"type" => "markdown_source", "data" => data} = ref, bindings) do
+    data =
+      Enum.reduce(@markdown_fields, data, fn {field, kind}, data ->
+        token = data[field]
+        Map.put(data, field, if(token, do: resolve!(token, kind, bindings), else: nil))
+      end)
+
+    Map.put(ref, "data", data)
+  end
 
   def decode_data!(data, bindings) when is_map(data) do
     Map.new(data, fn

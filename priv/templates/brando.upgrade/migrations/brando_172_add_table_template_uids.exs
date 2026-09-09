@@ -1,4 +1,4 @@
-defmodule Brando.Repo.Migrations.Brando171AddTableTemplateUids do
+defmodule Brando.Repo.Migrations.Brando172AddTableTemplateUids do
   use Ecto.Migration
 
   def up do

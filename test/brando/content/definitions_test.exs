@@ -211,6 +211,94 @@ defmodule Brando.Content.DefinitionsTest do
     assert Repo.aggregate(Module, :count) == 0
   end
 
+  test "Markdown sources require destination mappings and preserve pins on round-trip", c do
+    %{bundle: bundle, source: source, version: version, mappings: mappings} = markdown_fixture(c)
+    assert {:error, message} = Definitions.plan(bundle, c.user)
+    assert message =~ "requires a destination reference mapping"
+    assert {:ok, plan} = Definitions.plan(bundle, c.user, references: mappings)
+    assert {:ok, _} = Definitions.apply(plan, c.user)
+    before = hero()
+    [ref] = before.refs
+    assert ref.data.data.source_id == source.id
+    assert ref.data.data.version_id == version.id
+    assert ref.data.data.policy == :pinned
+    assert {:ok, exported} = Definitions.export(Path.join(c.path, "markdown"), c.user)
+    assert {:ok, read} = Definitions.read(exported.directory)
+    assert read == exported.bundle
+    assert %{changes: []} = apply_bundle!(read, c.user)
+    assert hero() == before
+
+    other =
+      Repo.insert!(%Brando.MarkdownSources.Source{
+        name: "Other",
+        connection: "docs",
+        ref: "refs/heads/main",
+        path: "other.md"
+      })
+
+    assert {:error, message} = Definitions.plan(bundle, c.user, references: %{mappings | "document" => other.id})
+    assert message =~ "Choose an available source and an exact version"
+    assert hero() == before
+  end
+
+  test "module import cannot bypass Markdown publication permissions", c do
+    %{bundle: bundle, mappings: mappings} = markdown_fixture(c)
+    put_test_env(:authorization_mode, :groups)
+    alias Brando.Authorization.{Catalog, Groups, Migration, Scope}
+    owner = Factory.insert(:random_user, role: :superuser)
+    assert {:ok, _} = Migration.run()
+    editor = Factory.insert(:random_user, role: :user)
+    scope = Scope.standalone(owner)
+    grants = [Catalog.get(:create, Module).key, "brando.admin.access", "brando.markdown_sources.read"]
+    assert {:ok, group} = Groups.create(scope, %{name: "Module authors"}, grants)
+    assert {:ok, :ok} = Groups.add_member(scope, group.id, editor.id)
+    assert {:error, message} = Definitions.plan(bundle, editor, references: mappings)
+    assert message =~ "You cannot publish Markdown source updates"
+    assert Repo.aggregate(Module, :count) == 0
+  end
+
+  defp markdown_fixture(c) do
+    put_test_env(:markdown_sources,
+      connections: %{
+        "docs" => %{repository: "acme/docs", repository_id: 42, secret: String.duplicate("s", 40), destinations: [nil]}
+      }
+    )
+
+    source =
+      Repo.insert!(%Brando.MarkdownSources.Source{
+        name: "Docs",
+        connection: "docs",
+        ref: "refs/heads/main",
+        path: "start.md"
+      })
+
+    version =
+      Repo.insert!(%Brando.MarkdownSources.Version{
+        source_id: source.id,
+        commit: String.duplicate("a", 40),
+        markdown: "first",
+        html: "<p>first</p>",
+        content_hash: "first",
+        repository: "acme/docs",
+        path: source.path
+      })
+
+    bundle =
+      edit(c.bundle, fn definition ->
+        put_in(definition, ["refs", Access.at(0), "data"], %{
+          "type" => "markdown_source",
+          "data" => %{"source_id" => "document", "version_id" => "revision", "policy" => "pinned"}
+        })
+      end)
+
+    %{
+      bundle: Map.put(bundle, "source", "another-installation"),
+      source: source,
+      version: version,
+      mappings: %{"document" => source.id, "revision" => version.id}
+    }
+  end
+
   test "missing baselines, deleted definitions, wrong scopes and shared overrides are rejected", c do
     apply_bundle!(c.bundle, c.user)
     before = snapshot()

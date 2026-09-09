@@ -100,6 +100,15 @@ defmodule Brando.Content.Definition.Model do
 
     data = Map.merge(config, defaults)
     validate_fields!(Elixir.Module.concat(block_schema, Data), data, uid <> "." <> name)
+    references = if type == "markdown_source", do: Map.take(data, ~w(source_id version_id)), else: %{}
+
+    Enum.each(references, fn {field, token} ->
+      if token != nil, do: Value.nonempty!(token, uid <> "." <> name <> "." <> field)
+    end)
+
+    # External tokens are resolved only at the destination. Validate the rest
+    # of the embedded data without passing tokens to its integer ID fields.
+    data = Map.merge(data, Map.new(references, fn {field, _} -> {field, nil} end))
 
     params = %{
       "name" => name,
@@ -115,6 +124,7 @@ defmodule Brando.Content.Definition.Model do
     |> then(&Ref.changeset(struct(Ref), &1, :system))
     |> apply_valid!(uid <> ".refs." <> name)
     |> ref_record()
+    |> update_in(["data", "data"], &Map.merge(&1, references))
     |> Map.put("assets", assets!(spec[:assets], @ref_assets, uid))
   end
 

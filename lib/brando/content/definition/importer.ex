@@ -117,6 +117,13 @@ defmodule Brando.Content.Definition.Importer do
 
         changeset = Params.changeset(definition, record, bindings, creator, table_ids, parent_id)
         Model.apply_valid!(changeset, uid)
+
+        if kind == "module" do
+          Enum.each(Changeset.get_assoc(changeset, :refs), fn ref ->
+            ref |> Brando.MarkdownSources.validate_placement(actor) |> Model.apply_valid!(uid <> ".refs")
+          end)
+        end
+
         validate_ref_uids!(definition, record)
         validate_template!(definition)
         digest = Value.digest(definition)

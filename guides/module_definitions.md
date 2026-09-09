@@ -15,7 +15,7 @@ tenant environment. The admin's existing copy/install export remains available.
 
 ## Export, edit, inspect, import
 
-Run the framework upgrade migrations first. Migration 171 adds and backfills
+Run the framework upgrade migrations first. Migration 172 adds and backfills
 stable UIDs for table templates, in public and existing tenant schemas.
 
 From your Brando application's directory:
@@ -148,7 +148,7 @@ Changing only the module UID while retaining another module's ref UIDs is reject
 
 `ref :name, :type` declares a normal content ref. Available types include
 `:header`, `:text`, `:picture`, `:media`, `:video`, `:gallery`, `:file`, `:blocks`,
-`:html`, `:markdown`, `:svg`, `:map`, `:input` and `:comment`.
+`:html`, `:markdown`, `:markdown_source`, `:svg`, `:map`, `:input` and `:comment`.
 
 `config` and `default` are maps of the ref type's persisted data fields. They
 must not declare the same field twice. Together they describe the complete
@@ -289,6 +289,21 @@ and identifier. Gallery-object override IDs are exported as typed tokens too.
 Keep token names stable while editing. To replace an asset in the same destination,
 use a new token with a new mapping; rebinding an existing token is rejected so its
 baseline meaning cannot change.
+
+Markdown-source refs use typed tokens for their source and pinned/review version:
+
+```elixir
+ref :document, :markdown_source do
+  default source_id: "product-docs", policy: :pinned, version_id: "product-docs-v1"
+end
+```
+
+Map both tokens to destination records with `--references`, just like asset
+tokens. Export records their `markdown_source` and `markdown_version` kinds in
+the lockfile. Import checks source-read and publication permissions, connection
+availability, and that the mapped version belongs to the mapped source. Source
+configuration, credentials and document contents are not included in the bundle.
+Use a blank ref if editors should select the document themselves.
 
 ## Plans, conflicts and migrations
 
