@@ -105,9 +105,8 @@ export default app => ({
 
   configuration() { return ['tiptapExtensions', 'tiptapStyles', 'tiptapTypography', 'footnotes', 'tiptapAi'].map(key => this.el.dataset[key] || '').join('\u001f') },
 
-  listen(event, callback) { this._handlers.push(this.handleEvent(event, callback)) },
   setupHandlers() {
-    this.listen(`b:tiptap:set_link:${this.el.id}`, payload => {
+    this._handlers.push(this.handleEvent(`b:tiptap:set_link:${this.el.id}`, payload => {
       if (payload.request_id && payload.request_id !== this._linkRequest) return
       if (payload.cancel || payload.closed) { this._instance.linkClosed?.(); this._linkRange = null; return }
       const editor = this._editor, range = this._linkRange
@@ -128,8 +127,8 @@ export default app => ({
         result(applied)
       }
       this._linkRange = null
-    })
-    this.listen(`b:tiptap:insert_footnote:${this.el.id}`, ({ uid, restore }) => {
+    }))
+    this._handlers.push(this.handleEvent(`b:tiptap:insert_footnote:${this.el.id}`, ({ uid, restore }) => {
       if (!this._editor?.isEditable) return
       const range = this._footnoteRange || (restore ? captureRange(this._editor, { from: this._editor.state.selection.to, to: this._editor.state.selection.to }) : null)
       if (!range?.valid) { this._instance.showError?.(); return }
@@ -139,9 +138,9 @@ export default app => ({
       chain.insertContentAt(range.to, { type: 'footnote', attrs: { uid } }, { updateSelection: false }).run()
       renumberFootnotes(this.el)
       this.commitInput(() => document.getElementById(`block-slot-drawer-${uid}`)?.querySelector('[contenteditable="true"]')?.focus())
-    })
-    this.listen(`b:tiptap:ai:${this.el.id}`, payload => this._instance.receiveAi?.(payload))
-    this.listen('b:tiptap:update', payload => { if (payload.id === this.el.id) this.replaceContent(payload) })
+    }))
+    this._handlers.push(this.handleEvent(`b:tiptap:ai:${this.el.id}`, payload => this._instance.receiveAi?.(payload)))
+    this._handlers.push(this.handleEvent('b:tiptap:update', payload => { if (payload.id === this.el.id) this.replaceContent(payload) }))
     this._clearListener = () => { if (this._editor?.isEditable) this._editor.commands.clearContent(true) }
     this._aiListener = () => this._instance.openAi?.()
     this._compositionEnd = () => { if (this._pendingReplacement) { const payload = this._pendingReplacement; this._pendingReplacement = null; this.replaceContent(payload) } }

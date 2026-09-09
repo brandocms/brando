@@ -50,6 +50,7 @@ style keys and AI request IDs are never saved as text or styling.
 | Real Svelte/Tiptap + hook, mocked LiveView transport | 20 passed | 5.2 s |
 | Additional nested-keyboard and 20-editor checks | 2 passed | 2.9 s including a fresh Vite start |
 | Focused ExUnit: rich text, link dialog, AI, inputs, module sync/DSL, form recovery | 63 passed | 2.4 s after compilation |
+| Client/server event contract | 2 passed | 0.3 s after compilation |
 | Actual consumer DB: normal destination mutation, ref/field rewrite, owner cache and render job | 1 passed | 0.4 s after compilation |
 | CMS: module creation with additive presets | passed | 2.6 s test body |
 | CMS: Norwegian footnotes and ordinary-field note save/reload | 2 passed | 3.9 s combined test bodies |
@@ -83,7 +84,8 @@ mix test test/brando/rich_text_test.exs \
   test/brando_admin/components/form/input_test.exs \
   test/brando/content/module_sync_test.exs \
   test/brando/content/definition_test.exs \
-  test/brando_admin/live/form_recovery_test.exs
+  test/brando_admin/live/form_recovery_test.exs \
+  test/brando_admin/wire_contract_test.exs
 
 cd e2e
 source .envrc
