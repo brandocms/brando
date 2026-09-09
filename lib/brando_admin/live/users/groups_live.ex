@@ -351,7 +351,9 @@ defmodule BrandoAdmin.Users.GroupsLive do
                         ngettext(
                           "Delete %{name}? %{count} member will lose the permissions granted by this group.",
                           "Delete %{name}? %{count} members will lose the permissions granted by this group.",
-                          length(@selected.memberships), name: @selected.name)
+                          length(@selected.memberships),
+                          name: @selected.name
+                        )
                       }
                     >{gettext("Delete group")}</button>
                   </footer>
