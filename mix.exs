@@ -30,6 +30,7 @@ defmodule Brando.Mixfile do
           "guides/blueprint_migrations.md",
           "guides/generators.md",
           "guides/block_editor.md",
+          "guides/markdown_sources.md",
           "guides/villain_parser.md",
           "guides/villain_text_styles.md",
           "guides/live_preview.md",
@@ -64,6 +65,7 @@ defmodule Brando.Mixfile do
           ],
           Content: [
             "guides/block_editor.md",
+            "guides/markdown_sources.md",
             "guides/villain_parser.md",
             "guides/villain_text_styles.md",
             "guides/live_preview.md",
@@ -226,6 +228,7 @@ defmodule Brando.Mixfile do
       {:req, "~> 0.5 or ~> 1.0"},
       {:gettext, "~> 1.0.0"},
       {:mdex, "~> 0.13.0"},
+      {:mint, "~> 1.7"},
       {:jason, "~> 1.0"},
       {:slugify, "~> 1.3.1"},
       {:ecto_nested_changeset, "~> 1.1"},

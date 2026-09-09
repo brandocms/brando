@@ -61,6 +61,9 @@ defmodule E2eProjectWeb.Endpoint do
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
+  plug BrandoWeb.Plugs.GitHubMarkdownWebhook,
+    allow_insecure: Application.compile_env(:e2e_project, :sql_sandbox, false)
+
   plug Plug.Parsers,
     parsers: [:urlencoded, {:multipart, length: 100_000_000}, :json],
     pass: ["*/*"],

@@ -53,6 +53,9 @@ defmodule Brando.Villain.Parser do
   @doc "Parses markdown (deprecated)"
   @callback markdown(data :: map, opts :: map) :: iodata
 
+  @callback markdown_source(data :: map, opts :: map) :: iodata
+  @optional_callbacks markdown_source: 2
+
   @doc "Parses html"
   @callback html(data :: map, opts :: map) :: iodata
 
@@ -117,6 +120,9 @@ defmodule Brando.Villain.Parser do
 
       def markdown(data, opts), do: Brando.Villain.Parser.markdown(data, opts)
       defoverridable markdown: 2
+
+      def markdown_source(data, opts), do: Brando.Villain.Parser.markdown_source(data, opts)
+      defoverridable markdown_source: 2
 
       def map(data, opts), do: Brando.Villain.Parser.map(data, opts)
       defoverridable map: 2
@@ -455,6 +461,8 @@ defmodule Brando.Villain.Parser do
   def markdown(%{text: markdown}, _) do
     Brando.Markdown.to_html!(markdown, breaks: true)
   end
+
+  def markdown_source(data, _), do: Brando.MarkdownSources.render(data)
 
   def map(%{embed_url: embed_url, source: :gmaps}, _) do
     ~s(<div class="map-wrapper">
@@ -1203,6 +1211,8 @@ defmodule Brando.Villain.Parser do
 
     ~s(<ul class="villain-timeline">#{timeline_html}</ul>)
   end
+
+  def fragment(%{active: false} = block, opts), do: maybe_annotate("", block.uid, opts)
 
   def fragment(%{fragment_id: nil}, _),
     do: "<!-- fragment not embedded. fragment_id = nil -->"

@@ -23,6 +23,9 @@ defmodule E2EFixtureController do
         "admin-user" -> get_admin_user()
         "norwegian-admin-user" -> create_norwegian_admin_user()
         "media-upload" -> create_media_upload_module()
+        "markdown-source" -> E2E.MarkdownProvider.setup(get_admin_user())
+        "markdown-source-third" -> E2E.MarkdownProvider.advance(get_admin_user(), "c", "Third")
+        "markdown-source-fourth" -> E2E.MarkdownProvider.advance(get_admin_user(), "d", "Fourth")
       end
 
     # Log the user in

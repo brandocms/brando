@@ -411,9 +411,17 @@ defmodule Brando.Query.Mutations do
   # Post-mutation effect helpers with pattern matching to avoid nesting
   # Note: __trait__ returns false if not present, or opts list (possibly []) if present
 
-  defp maybe_create_revision(_entry, _user, false), do: {:ok, nil}
+  defp maybe_create_revision(entry, user, false) do
+    Brando.MarkdownSources.Publication.entry_saved(entry, user)
+    {:ok, nil}
+  end
 
-  defp maybe_create_revision(entry, user, _trait_opts), do: Revisions.create_revision(entry, user)
+  defp maybe_create_revision(entry, user, _trait_opts) do
+    with {:ok, revision} <- Revisions.create_revision(entry, user) do
+      Brando.MarkdownSources.Publication.entry_saved(entry, user)
+      {:ok, revision}
+    end
+  end
 
   defp maybe_notify(_entry, _action, _user, false), do: :ok
 

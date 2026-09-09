@@ -89,3 +89,16 @@ config :brando,
        _ -> :none
      end),
   site_key: "auth-alpha"
+
+# Test-only public GitHub provider; requests still traverse the real signed endpoint.
+config :brando, :markdown_sources,
+  connections: %{
+    "e2e-docs" => %{
+      repository: "brando-e2e/docs",
+      repository_id: 2582,
+      secret: "e2e-markdown-webhook-secret-do-not-use-in-production",
+      destinations: [nil]
+    }
+  }
+
+config :brando, :markdown_sources_provider, E2E.MarkdownProvider

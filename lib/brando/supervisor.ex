@@ -25,6 +25,7 @@ defmodule Brando.Supervisor do
     Brando.Videos.ProviderConfigCheck.run()
 
     children = [
+      Brando.MarkdownSources.RateLimiter,
       %{id: :main_cache, start: {Cachex, :start_link, [:cache, []]}},
       %{id: :query_cache, start: {Cachex, :start_link, [:query, []]}},
       %{

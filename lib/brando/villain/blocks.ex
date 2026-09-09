@@ -12,6 +12,7 @@ defmodule Brando.Villain.Blocks do
     input: Module.concat(["Brando", "Villain", "Blocks", "InputBlock"]),
     map: Module.concat(["Brando", "Villain", "Blocks", "MapBlock"]),
     markdown: Module.concat(["Brando", "Villain", "Blocks", "MarkdownBlock"]),
+    markdown_source: Module.concat(["Brando", "Villain", "Blocks", "MarkdownSourceBlock"]),
     media: Module.concat(["Brando", "Villain", "Blocks", "MediaBlock"]),
     module: Module.concat(["Brando", "Villain", "Blocks", "ModuleBlock"]),
     picture: Module.concat(["Brando", "Villain", "Blocks", "PictureBlock"]),

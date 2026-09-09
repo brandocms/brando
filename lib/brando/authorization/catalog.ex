@@ -16,6 +16,8 @@ defmodule Brando.Authorization.Catalog do
     Brando.Content.Identifier
   ]
   @operation_resources [
+    {:markdown_sources, "brando.markdown_sources", "Markdown sources", "Content",
+     [:read, :create, :update, :sync, :publish], [:standalone, :site]},
     {:backend, "brando.admin", "Backend", "Workspace", [:access], [:standalone, :site, :installation]},
     {:profile, "brando.profile", "Own profile", "Workspace", [:read, :update], [:standalone, :site, :installation]},
     {:groups, "brando.groups", "Groups", "Access", [:read, :create, :update, :delete, :assign],
