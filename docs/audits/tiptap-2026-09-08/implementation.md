@@ -51,9 +51,11 @@ style keys and AI request IDs are never saved as text or styling.
 | Additional nested-keyboard and 20-editor checks | 2 passed | 2.9 s including a fresh Vite start |
 | Focused ExUnit: rich text, link dialog, AI, inputs, module sync/DSL, form recovery | 63 passed | 2.4 s after compilation |
 | Client/server event contract | 2 passed | 0.3 s after compilation |
+| Remote field delivery and targeted rich-text replacements | 2 passed | 0.1 s after compilation |
 | Actual consumer DB: normal destination mutation, ref/field rewrite, owner cache and render job | 1 passed | 0.4 s after compilation |
 | CMS: module creation with additive presets | passed | 2.6 s test body |
 | CMS: Norwegian footnotes and ordinary-field note save/reload | 2 passed | 3.9 s combined test bodies |
+| CMS: late-joining rich-text editor and file delivery to another editor | 2 passed | 8 s combined test bodies |
 | CMS: safe/unsafe links, unrelated edits, undo/redo, expanded mode, identifier save/reload, responsive dialog | passed | approximately 5 s test body |
 | Actual E2E consumer production build | passed | 4.25 s |
 
@@ -85,6 +87,7 @@ mix test test/brando/rich_text_test.exs \
   test/brando/content/module_sync_test.exs \
   test/brando/content/definition_test.exs \
   test/brando_admin/live/form_recovery_test.exs \
+  test/brando_admin/components/form/remote_field_changes_test.exs \
   test/brando_admin/wire_contract_test.exs
 
 cd e2e
@@ -97,6 +100,7 @@ pnpm exec playwright test --config tiptap.config.js
 pnpm exec playwright test tests/blocks/tiptap-editor.spec.js --retries=0
 pnpm exec playwright test tests/configuration/modules.spec.js --grep 'create a simple text module' --retries=0
 pnpm exec playwright test tests/blocks/block-footnotes.spec.js --grep 'Blueprint rich text|uses Norwegian' --retries=0
+pnpm exec playwright test tests/blocks/block-multiuser-sync.spec.js tests/projects/file-field-sync.spec.js --grep 'late joiner receives tiptap|file drawer save ships' --retries=0
 ```
 
 Run the browser configurations sequentially because the application suite clears

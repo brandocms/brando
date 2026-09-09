@@ -221,7 +221,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:form, to_form(updated_changeset, []))
      |> Drafts.dirty()
-     |> force_svelte_remounts(Map.keys(changes))}
+     |> force_svelte_remounts(Enum.map(changes, & &1.field))}
   end
 
   def update(%{action: :image_processed, image_id: id}, socket) do
