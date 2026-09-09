@@ -33,7 +33,7 @@ export default app => ({
       const attrs = editor.getAttributes('link')
       const scope = this.el.closest('.blocks-wrapper') || this._input.form || this.el
       const anchors = [...scope.querySelectorAll('[data-type="jump-anchor"][id], [data-block-anchor]')].map(el => el.id || el.dataset.blockAnchor).filter(Boolean)
-      this.pushEventTo(this.el, 'tiptap_link_dialog', {
+      this.pushEditorEvent('tiptap_link_dialog', {
         current_href: attrs.href || '', current_target: attrs.target ?? null, current_rel: attrs.rel || '', current_class: attrs.class || '',
         current_identifier_id: attrs['data-identifier-id'] || null, mark_type: markType, tiptap_id: this.el.id, request_id: this._linkRequest,
         link_text: editor.state.doc.textBetween(this._linkRange.from, this._linkRange.to), has_selection: !editor.state.selection.empty, anchors,
@@ -46,17 +46,17 @@ export default app => ({
         content: this._input.value || '', extensions: this.el.getAttribute('data-tiptap-extensions'), styles: this.el.dataset.tiptapStyles,
         labels: readJSON(this.el.dataset.tiptapLabels), labelMode: this.el.dataset.tiptapLabelMode || 'compact', typography: readJSON(this.el.dataset.tiptapTypography),
         accessibility: this.accessibility(),
-        onFocus: () => this.pushEventTo(this.el, 'focus', { field: this._field }),
+        onFocus: () => this.pushEditorEvent('focus', { field: this._field }),
         onBlur: () => { if (this.el.dataset.footnotes === 'true' || this.el.closest('.block-slot-drawer')) this.commitInput() },
         onToggleLink: onToggle('link'), onToggleButton: onToggle('button'),
         footnotes: this.el.dataset.footnotes === 'true', footnoteLabels: readFootnoteLabels(this.el),
         onOpenFootnote: (uid, number) => {
           if (!uid) this._footnoteRange = captureRange(this._editor, { from: this._editor.state.selection.to, to: this._editor.state.selection.to })
-          this.pushEventTo(this.el, uid ? 'open_footnote' : 'create_footnote', { uid, number, ref_name: this.el.dataset.footnoteRef, field: this.el.dataset.footnoteField, tiptap_id: this.el.id })
+          this.pushEditorEvent(uid ? 'open_footnote' : 'create_footnote', { uid, number, ref_name: this.el.dataset.footnoteRef, field: this.el.dataset.footnoteField, tiptap_id: this.el.id })
         },
         aiEnabled: this.el.dataset.tiptapAi === 'true',
-        onGenerateAi: payload => this.pushEventTo(this.el, 'tiptap_ai_generate', { ...payload, tiptap_id: this.el.id, ref_name: this.el.dataset.footnoteRef, field_name: this._input.name, field_key: this.el.dataset.tiptapField }),
-        onCancelAi: request_id => this.pushEventTo(this.el, 'tiptap_ai_cancel', { request_id, tiptap_id: this.el.id }),
+        onGenerateAi: payload => this.pushEditorEvent('tiptap_ai_generate', { ...payload, tiptap_id: this.el.id, ref_name: this.el.dataset.footnoteRef, field_name: this._input.name, field_key: this.el.dataset.tiptapField }),
+        onCancelAi: request_id => this.pushEditorEvent('tiptap_ai_cancel', { request_id, tiptap_id: this.el.id }),
         onEditorCreated: editor => {
           this._editor = editor
           if (this._restoreSelection) { editor.commands.setTextSelection(this._restoreSelection); this._restoreSelection = null }
@@ -70,6 +70,15 @@ export default app => ({
         tiptapInput: this._input,
       },
     })
+  },
+
+  // A nested RenderVar is a presentation component. Editor actions belong to
+  // the explicitly targeted component or the field's form owner, just like
+  // validation. Resolve each time so LiveView patches cannot leave a stale CID.
+  pushEditorEvent(name, payload, callback) {
+    const form = this._input?.form
+    const target = this.el.getAttribute('phx-target') || form?.getAttribute('phx-target') || form || this.el
+    return this.pushEventTo(target, name, payload, callback)
   },
 
   accessibility() {
@@ -110,7 +119,14 @@ export default app => ({
       if (payload.request_id && payload.request_id !== this._linkRequest) return
       if (payload.cancel || payload.closed) { this._instance.linkClosed?.(); this._linkRange = null; return }
       const editor = this._editor, range = this._linkRange
-      const result = applied => this.pushEventTo(this.el, 'tiptap_link_result', { request_id: this._linkRequest, applied })
+      const request_id = this._linkRequest
+      const result = applied => {
+        const acknowledge = () => this.pushEditorEvent('tiptap_link_result', { request_id, applied })
+        // The dialog must not finish before a block's owner has the new HTML.
+        // Its normal debounced change can otherwise arrive after an immediate save.
+        if (applied && this._input.form) this.commitInput(acknowledge)
+        else acknowledge()
+      }
       if (!editor?.isEditable || !range?.valid) { result(false); return }
       const chain = editor.chain().setTextSelection({ from: range.from, to: range.to })
       if (payload.unset) result(chain.unsetLink().run())
@@ -190,7 +206,7 @@ export default app => ({
     if (!form || !this._editor || this._destroyed) return
     input.value = this._editor.getHTML()
     const fields = Array.from(new FormData(form)).filter(([, value]) => typeof value === 'string')
-    this.pushEventTo(this.el, 'commit_tiptap', { form: new URLSearchParams(fields).toString(), target: input.name.match(/[^\[\]]+/g) }, onCommitted)
+    this.pushEditorEvent('commit_tiptap', { form: new URLSearchParams(fields).toString(), target: input.name.match(/[^\[\]]+/g) }, onCommitted)
   },
 
   destroyed() {

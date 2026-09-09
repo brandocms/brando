@@ -253,6 +253,11 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   def handle_event("focus", _, socket), do: {:noreply, socket}
   def handle_event("blur", _, socket), do: {:noreply, socket}
 
+  def handle_event("commit_tiptap", %{"form" => form, "target" => target}, socket)
+      when is_binary(form) and is_list(target) do
+    handle_event("validate", Map.put(Plug.Conn.Query.decode(form), "_target", target), socket)
+  end
+
   def handle_event("tiptap_link_dialog", params, socket) do
     TipTapLinkDialog.open(params, nil)
     {:noreply, socket}

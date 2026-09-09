@@ -9,6 +9,67 @@ async function setup(page, options = {}) {
 const html = page => page.evaluate(() => harness.current.editor.getHTML())
 const command = (page, name, ...args) => page.evaluate(({ name, args }) => harness.current.editor.commands[name](...args), { name, args })
 
+for (const [name, options, target] of [
+  ['block form', { formTarget: '42' }, '42'],
+  ['explicit editor target', { formTarget: '42', editorTarget: '43' }, '43'],
+  ['LiveView form', {}, null],
+]) {
+  test(`nested editor routes link requests and replies to its ${name}`, async ({ page }) => {
+    await setup(page, { ...options, nestedComponent: '99', content: '<p>Oslo</p>' })
+    await page.locator('.ProseMirror').click()
+    await command(page, 'selectAll')
+    await page.getByRole('button', { name: 'Link', exact: true }).click()
+    expect(await page.evaluate(() => harness.current.sent.find(e => e.name === 'tiptap_link_dialog').target)).toBe(target)
+    await page.evaluate(() => {
+      const c = harness.current, request = c.sent.find(e => e.name === 'tiptap_link_dialog').payload
+      c.emit('set_link', { request_id: request.request_id, href: '/oslo', mark_type: 'link', link_text: 'Oslo' })
+    })
+    expect(await page.evaluate(() => harness.current.sent.find(e => e.name === 'tiptap_link_result'))).toMatchObject({ target, payload: { applied: true } })
+    expect(await html(page)).toContain('href="/oslo"')
+  })
+}
+
+test('nested editor routes footnotes, commits and AI to its current form owner', async ({ page }) => {
+  await setup(page, { nestedComponent: '99', formTarget: '42', content: '<p>Oslo</p>' })
+  await page.locator('.ProseMirror').click()
+  await command(page, 'setTextSelection', 5)
+  await page.getByRole('button', { name: 'Add footnote', exact: true }).click()
+  await page.evaluate(() => harness.current.emit('insert_footnote', { uid: 'oslo-note' }))
+  await page.getByRole('button', { name: 'Edit footnote 1', exact: true }).click()
+  const sent = await page.evaluate(() => harness.current.sent)
+  for (const name of ['focus', 'create_footnote', 'commit_tiptap', 'open_footnote']) {
+    expect(sent.find(e => e.name === name)).toMatchObject({ target: '42' })
+  }
+  expect(sent.findLast(e => e.name === 'commit_tiptap').payload.form).toContain('oslo-note')
+
+  // The next event must use the patched form target, not a CID cached at mount.
+  await page.evaluate(() => harness.current.form.setAttribute('phx-target', '44'))
+  await page.getByRole('button', { name: 'Write with AI', exact: true }).click()
+  await page.getByRole('button', { name: 'Generate suggestion', exact: true }).click()
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+  expect(await page.evaluate(() => harness.current.sent.find(e => e.name === 'tiptap_ai_generate'))).toMatchObject({ target: '44' })
+  expect(await page.evaluate(() => harness.current.sent.find(e => e.name === 'tiptap_ai_cancel'))).toMatchObject({ target: '44' })
+})
+
+test('link dialog acknowledges success only after the owning form commits the HTML', async ({ page }) => {
+  await setup(page, { formTarget: '42', nestedComponent: '99', footnotes: false, deferCommits: true, content: '<p>Oslo</p>' })
+  await command(page, 'selectAll')
+  await page.getByRole('button', { name: 'Link', exact: true }).click()
+  await page.evaluate(() => {
+    const c = harness.current, request = c.sent.find(e => e.name === 'tiptap_link_dialog').payload
+    c.emit('set_link', { request_id: request.request_id, href: '/oslo', mark_type: 'link', link_text: 'Oslo' })
+  })
+  const pending = await page.evaluate(() => harness.current.sent)
+  const commit = pending.find(e => e.name === 'commit_tiptap')
+  expect(commit.target).toBe('42')
+  expect(new URLSearchParams(commit.payload.form).get('page[body]')).toContain('href="/oslo"')
+  expect(pending.some(e => e.name === 'tiptap_link_result')).toBe(false)
+  await page.evaluate(() => harness.current.commitReplies.shift()({}))
+  expect(await page.evaluate(() => harness.current.sent.at(-1))).toMatchObject({
+    name: 'tiptap_link_result', target: '42', payload: { applied: true },
+  })
+})
+
 test('writing focus uses the editor frame and toolbar keyboard focus stays visible', async ({ page }) => {
   await setup(page)
   const editor = page.locator('.ProseMirror'), shell = page.locator('.tiptap-editor-shell')

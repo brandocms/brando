@@ -14,22 +14,30 @@ window.harness = {
     form.innerHTML = `<div class="field-wrapper"><label class="control-label">Introduction</label><div class="tiptap-wrapper"><div id="${id}" data-tiptap-type="rich_text"><div class="tiptap-target"></div><input type="hidden" class="tiptap-text" id="${id}-text" name="page[body]"></div></div></div><button type="button">After editor</button>`
     document.getElementById('fixture').append(form)
     const el = form.querySelector(`#${id}`)
+    if (options.formTarget) form.setAttribute('phx-target', options.formTarget)
+    if (options.editorTarget) el.setAttribute('phx-target', options.editorTarget)
+    if (options.nestedComponent) form.querySelector('.field-wrapper').dataset.phxComponent = options.nestedComponent
     el.dataset.tiptapExtensions = options.extensions ?? 'all'
     el.dataset.tiptapStyles = JSON.stringify(options.styles || [])
     el.dataset.footnotes = String(options.footnotes ?? true)
     el.dataset.tiptapAi = String(options.ai ?? true)
     el.dataset.tiptapField = 'body'
     el.querySelector('input').value = options.content || '<p>Havglimt is a small retreat by the sea.</p>'
-    const handlers = new Map(), sent = []
+    const handlers = new Map(), sent = [], commitReplies = []
     const hook = Object.assign(hookFactory(app), {
       el,
       handleEvent(name, handler) { handlers.set(name, handler); return name },
       removeHandleEvent(name) { handlers.delete(name) },
-      pushEventTo(_el, name, payload, callback) { sent.push({ name, payload }); callback?.({}) },
+      pushEventTo(destination, name, payload, callback) {
+        const target = typeof destination === 'string' ? destination : destination.closest('[data-phx-component]')?.dataset.phxComponent || null
+        sent.push({ name, payload, target })
+        if (options.deferCommits && name === 'commit_tiptap') commitReplies.push(callback)
+        else callback?.({})
+      },
     })
     hook.mounted()
     await tick()
-    this.current = { hook, sent, handlers, form, get editor() { return hook._editor }, input: el.querySelector('.tiptap-text'), emit(name, data) { handlers.get(`b:tiptap:${name}:${id}`)?.(data) } }
+    this.current = { hook, sent, handlers, form, commitReplies, get editor() { return hook._editor }, input: el.querySelector('.tiptap-text'), emit(name, data) { handlers.get(`b:tiptap:${name}:${id}`)?.(data) } }
     return id
   },
 }
