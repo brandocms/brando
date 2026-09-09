@@ -154,6 +154,12 @@ defmodule Brando.Content.Module do
                          |> JS.push()
                          |> BrandoAdmin.JSCommands.show_modal("#module-export-modal")
 
+      selection_action label: t("Export DSL files"),
+                       event:
+                         "export_module_files"
+                         |> JS.push()
+                         |> BrandoAdmin.JSCommands.show_modal("#module-files-modal")
+
       child_listing name: :module_entries, schema: Brando.Content.Module
       component &__MODULE__.listing_row/1
     end

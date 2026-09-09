@@ -20,11 +20,13 @@ defmodule Brando.Content.TableTemplate do
 
   trait :creator
   trait :timestamped
+  trait :ensure_uid
 
   identifier "{{ entry.name }}"
   persist_identifier false
 
   attributes do
+    attribute :uid, :string, required: true
     attribute :name, :string, required: true
   end
 

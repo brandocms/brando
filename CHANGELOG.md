@@ -302,6 +302,14 @@
 
 #### Features
 
+- Add bidirectional module-definition DSL export/import with adjacent HEEx or
+  Liquid files, complete ref/var settings, child and table-template dependencies,
+  baseline conflict checks, dry-run plans and atomic imports. The new
+  `mix brando.modules` command supports standalone and explicit tenant scopes.
+  The admin can download DSL ZIPs, preview and apply uploaded bundles, inspect
+  field changes/conflicts, and download an updated baseline for the next edit.
+  Migration 172 adds stable table-template UIDs. See the module definitions guide.
+
 - Configure Vite development servers independently with `BRANDO_VITE_FRONTEND_HOST`
   / `BRANDO_VITE_FRONTEND_PORT` and `BRANDO_VITE_ADMIN_HOST` / `BRANDO_VITE_ADMIN_PORT`.
   Brando's HMR script URLs and installer Vite configs read the same environment

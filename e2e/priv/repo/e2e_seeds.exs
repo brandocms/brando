@@ -1400,4 +1400,16 @@ Code.require_file("block_slots_seeds.exs", __DIR__)
 }
 |> E2eProject.Repo.insert!()
 
+# The fixtures insert structs directly, bypassing the UID trait used by admin
+# changesets. Match normal module/table creation so file round trips can identify
+# every seeded definition (including the block-slot fixtures above).
+Enum.each([Brando.Content.Module, Brando.Content.TableTemplate], fn schema ->
+  schema
+  |> E2eProject.Repo.all()
+  |> Enum.filter(&is_nil(&1.uid))
+  |> Enum.each(fn record ->
+    record |> Ecto.Changeset.change(uid: Brando.Utils.generate_uid()) |> E2eProject.Repo.update!()
+  end)
+end)
+
 if Brando.Authorization.enabled?(), do: Brando.Authorization.Migration.run()

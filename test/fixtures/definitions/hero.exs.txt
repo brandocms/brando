@@ -1,0 +1,28 @@
+defmodule Example.Hero do
+  use Brando.Content.Definition
+  uid "hero-test"
+  name en: "Hero", no: "Topp"
+  namespace en: "Sections"
+  help_text en: "Introduction"
+  class "hero"
+
+  refs do
+    ref :heading, :header do
+      description "Headline"
+      config level: 1
+      default text: "Hello"
+    end
+  end
+
+  vars do
+    var :theme, :select do
+      label "Theme"
+      default "light"
+      placement :config
+      width :half
+      options [{"Light", "light"}, {"Dark", "dark"}]
+    end
+  end
+
+  template :heex, ~S"<section class={@theme}><.ref block={@block} ref={:heading} /></section>"
+end

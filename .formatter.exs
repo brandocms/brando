@@ -168,9 +168,38 @@ locals_without_parens = [
   type: 2
 ]
 
+definition_locals_without_parens = [
+  uid: 1,
+  kind: 1,
+  namespace: 1,
+  help_text: 1,
+  class: 1,
+  svg: 1,
+  color: 1,
+  multi: 1,
+  sequence: 1,
+  datasource_module: 1,
+  datasource_type: 1,
+  datasource_query: 1,
+  table_template: 1,
+  active: 1,
+  collapsed: 1,
+  config: 1,
+  assets: 1,
+  placement: 1,
+  width: 1,
+  new_row: 1,
+  options: 1,
+  settings: 1,
+  child: 1,
+  template_file: 2
+]
+
 [
-  locals_without_parens: locals_without_parens ++ spark_locals_without_parens,
-  export: [locals_without_parens: locals_without_parens ++ spark_locals_without_parens],
+  locals_without_parens: locals_without_parens ++ spark_locals_without_parens ++ definition_locals_without_parens,
+  export: [
+    locals_without_parens: locals_without_parens ++ spark_locals_without_parens ++ definition_locals_without_parens
+  ],
   import_deps: [:ecto, :ecto_sql, :phoenix, :plug, :phoenix_html, :spark],
   plugins: [Phoenix.LiveView.HTMLFormatter, Spark.Formatter],
   line_length: 122,

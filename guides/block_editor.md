@@ -6,6 +6,9 @@ Blocks are Brando's structured content system: editors compose entries from
 into a schema, how the pieces fit, and how the editor manages state (useful
 when debugging).
 
+For exporting modules to editable Elixir DSL and importing changes back, see
+[Module definitions as files](module_definitions.md).
+
 ## Wiring blocks into a blueprint
 
 Add a `:blocks` relation and a `blocks` declaration in the form:
