@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.RichText
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Content.List.Row
   alias BrandoAdmin.Components.Form.Input
@@ -37,13 +38,16 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
      |> assign_new(:language, fn -> nil end)
      |> assign_new(:layout, fn -> :default end)
      |> assign_new(:statuses, fn -> nil end)
+     |> assign_new(:require_url, fn -> false end)
      |> sync_selection(assigns)
      |> refresh_filters()}
   end
 
   defp refresh_filters(socket) do
-    %{wanted_schemas: wanted, language: language, statuses: statuses, layout: layout} = socket.assigns
-    key = {Enum.map(wanted, &Module.concat(List.wrap(&1))), language, statuses, layout}
+    %{wanted_schemas: wanted, language: language, statuses: statuses, layout: layout, require_url: require_url} =
+      socket.assigns
+
+    key = {Enum.map(wanted, &Module.concat(List.wrap(&1))), language, statuses, layout, require_url}
 
     if socket.assigns[:identifier_filters] == key do
       socket
@@ -65,15 +69,29 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
       schemas = Enum.map(socket.assigns.available_schemas, &elem(&1, 1))
 
       query =
-        identifier_query(schemas, socket.assigns.language, socket.assigns.statuses) |> Ecto.Query.exclude(:order_by)
+        identifier_query(schemas, socket.assigns.language, socket.assigns.statuses, socket.assigns.require_url)
+        |> Ecto.Query.exclude(:order_by)
 
       counts =
-        Brando.Repo.all(
-          from identifier in query, group_by: identifier.schema, select: {identifier.schema, count(identifier.id)}
-        )
-        |> Map.new()
+        if socket.assigns.require_url do
+          # Use the same URI policy as selection and application, including for
+          # counts. Fetch only the fields needed to validate destinations.
+          Brando.Repo.all(from identifier in query, select: %{schema: identifier.schema, url: identifier.url})
+          |> filter_urls(true)
+          |> Enum.frequencies_by(& &1.schema)
+        else
+          Brando.Repo.all(
+            from identifier in query, group_by: identifier.schema, select: {identifier.schema, count(identifier.id)}
+          )
+          |> Map.new()
+        end
 
-      assign(socket, :schema_counts, counts)
+      available_schemas =
+        if socket.assigns.require_url,
+          do: Enum.filter(socket.assigns.available_schemas, fn {_, schema} -> Map.get(counts, schema, 0) > 0 end),
+          else: socket.assigns.available_schemas
+
+      assign(socket, schema_counts: counts, available_schemas: available_schemas)
     else
       socket
     end
@@ -114,7 +132,15 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     identifiers =
       if schema do
         query_schemas = if schema == :all, do: schemas, else: schema
-        {:ok, identifiers} = list_identifiers_for_schema(query_schemas, socket.assigns.language, socket.assigns.statuses)
+
+        {:ok, identifiers} =
+          list_identifiers_for_schema(
+            query_schemas,
+            socket.assigns.language,
+            socket.assigns.statuses,
+            socket.assigns.require_url
+          )
+
         identifiers
       else
         []
@@ -405,7 +431,9 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
 
   def handle_event("select_schema", %{"schema" => "all"}, %{assigns: %{layout: :workspace}} = socket) do
     schemas = Enum.map(socket.assigns.available_schemas, &elem(&1, 1))
-    {:ok, identifiers} = list_identifiers_for_schema(schemas, socket.assigns.language, socket.assigns.statuses)
+
+    {:ok, identifiers} =
+      list_identifiers_for_schema(schemas, socket.assigns.language, socket.assigns.statuses, socket.assigns.require_url)
 
     {:noreply,
      socket |> assign(:identifiers, identifiers) |> assign(:selected_schema, :all) |> assign(:selected_schema_raw, "all")}
@@ -415,7 +443,12 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     schema_module = Module.concat([schema])
 
     {:ok, identifiers} =
-      list_identifiers_for_schema(schema_module, socket.assigns.language, socket.assigns.statuses)
+      list_identifiers_for_schema(
+        schema_module,
+        socket.assigns.language,
+        socket.assigns.statuses,
+        socket.assigns.require_url
+      )
 
     {:noreply,
      socket
@@ -425,8 +458,15 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
   end
 
   def handle_event("select_identifier", %{"id" => id}, socket) do
-    {:ok, identifier} = Brando.Content.get_identifier(id)
+    with {:ok, identifier} <- Brando.Content.get_identifier(id),
+         true <- !socket.assigns.require_url || RichText.allowed_uri?(identifier.url) do
+      select_identifier(socket, identifier)
+    else
+      _ -> {:noreply, socket |> assign_available_schemas() |> assign_selected_schema()}
+    end
+  end
 
+  defp select_identifier(socket, identifier) do
     on_change = socket.assigns.on_change
 
     if on_change do
@@ -445,7 +485,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
 
     socket
     |> assign(:selected_identifier, identifier)
-    |> assign(:selected_identifier_id, id)
+    |> assign(:selected_identifier_id, identifier.id)
     |> assign(:selected_creator, selected_creator(identifier))
     |> then(&{:noreply, &1})
   end
@@ -502,11 +542,20 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
   defp status_label(:deleted), do: gettext("Deleted")
   defp status_label(_), do: gettext("Not set")
 
-  defp list_identifiers_for_schema(schema_module, language, statuses) do
-    {:ok, Brando.Repo.all(identifier_query(List.wrap(schema_module), language, statuses))}
+  defp list_identifiers_for_schema(schema_module, language, statuses, require_url) do
+    identifiers =
+      List.wrap(schema_module)
+      |> identifier_query(language, statuses, require_url)
+      |> Brando.Repo.all()
+      |> filter_urls(require_url)
+
+    {:ok, identifiers}
   end
 
-  defp identifier_query(schemas, language, statuses) do
+  defp filter_urls(identifiers, true), do: Enum.filter(identifiers, &RichText.allowed_uri?(&1.url))
+  defp filter_urls(identifiers, false), do: identifiers
+
+  defp identifier_query(schemas, language, statuses, require_url) do
     import Ecto.Query, only: [from: 2, where: 3]
 
     query =
@@ -529,6 +578,10 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
         query
       end
 
-    query
+    if require_url do
+      where(query, [t], not is_nil(t.url) and t.url != "")
+    else
+      query
+    end
   end
 end

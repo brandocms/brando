@@ -8983,3 +8983,114 @@ msgstr "Rediger fotnote %{number}"
 #, elixir-autogen, elixir-format
 msgid "Html"
 msgstr "HTML"
+
+#: lib/brando_admin/components/form/input/rich_text_labels.ex:51
+#, elixir-autogen, elixir-format
+msgid "Open link"
+msgstr "Åpne lenke"
+
+#: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:183
+#, elixir-autogen, elixir-format
+msgid "Destination"
+msgstr "Lenkeadresse"
+
+#: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:195
+#, elixir-autogen, elixir-format
+msgid "Web address, email, phone number or relative path"
+msgstr "Nettadresse, e-postadresse, telefonnummer eller relativ sti"
+
+#: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:274
+#, elixir-autogen, elixir-format
+msgid "Appearance"
+msgstr "Utseende"
+
+#: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:291
+#, elixir-autogen, elixir-format
+msgid "Open in a new tab"
+msgstr "Åpne i ny fane"
+
+#: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:297
+#, elixir-autogen, elixir-format
+msgid "Mark as nofollow"
+msgstr "Merk som nofollow"
+
+#: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:199
+#, elixir-autogen, elixir-format
+msgid "Anchor on this page"
+msgstr "Anker på denne siden"
+
+#: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:173
+#: lib/brando_admin/components/form/input/rich_text_labels.ex:42
+#, elixir-autogen, elixir-format
+msgid "Page anchor"
+msgstr "Sideanker"
+
+#: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:133
+#, elixir-autogen, elixir-format
+msgid "Choose a destination and link text"
+msgstr "Velg mål og lenketekst"
+
+#: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:177
+#, elixir-autogen, elixir-format
+msgid "The original content destination is unavailable. Check the saved URL or choose another destination."
+msgstr "Det opprinnelige lenkemålet er ikke tilgjengelig. Kontroller den lagrede lenkeadressen eller velg et annet mål."
+
+#: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:118
+#, elixir-autogen, elixir-format
+msgid "The text changed while this dialog was open. Cancel and select the text again."
+msgstr "Teksten ble endret mens dialogen var åpen. Avbryt og velg teksten på nytt."
+
+#: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:245
+#, elixir-autogen, elixir-format
+msgid "Applying…"
+msgstr "Legger til…"
+
+#: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:318
+#, elixir-autogen, elixir-format
+msgid "Enter a valid destination before applying the link."
+msgstr "Oppgi en gyldig lenkeadresse før du legger til lenken."
+
+#: lib/brando_admin/components/form/input/rich_text_labels.ex:43
+#, elixir-autogen, elixir-format
+msgid "Anchor name"
+msgstr "Ankernavn"
+
+#: lib/brando_admin/components/form/input/rich_text_labels.ex:44
+#, elixir-autogen, elixir-format
+msgid "Use a readable name, such as getting-here."
+msgstr "Bruk et beskrivende navn, for eksempel finn-veien."
+
+#: lib/brando_admin/components/form/input/rich_text_labels.ex:45
+#, elixir-autogen, elixir-format
+msgid "Use a name without spaces; it must be unique on this page."
+msgstr "Bruk et navn uten mellomrom som er unikt på denne siden."
+
+#: lib/brando_admin/components/form/input/rich_text_labels.ex:46
+#, elixir-autogen, elixir-format
+msgid "Apply"
+msgstr "Bruk"
+
+#: lib/brando_admin/components/form/input/rich_text_labels.ex:49
+#, elixir-autogen, elixir-format
+msgid "Copy link"
+msgstr "Kopier lenke"
+
+#: lib/brando_admin/components/form/input/rich_text_labels.ex:50
+#, elixir-autogen, elixir-format
+msgid "Link copied"
+msgstr "Lenken er kopiert"
+
+#: lib/brando_admin/components/form/input/rich_text_labels.ex:55
+#, elixir-autogen, elixir-format
+msgid "The selected text changed. Try again with the current text."
+msgstr "Den valgte teksten ble endret. Prøv igjen med den nye teksten."
+
+#: lib/brando_admin/components/form/input/rich_text_labels.ex:56
+#, elixir-autogen, elixir-format
+msgid "The link could not be applied. Check the destination and selection."
+msgstr "Lenken kunne ikke legges til. Kontroller lenkemålet og den valgte teksten."
+
+#: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:149
+#, elixir-autogen, elixir-format
+msgid "Link destination"
+msgstr "Lenkemål"

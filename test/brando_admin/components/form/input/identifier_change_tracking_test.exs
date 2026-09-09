@@ -69,6 +69,83 @@ defmodule BrandoAdmin.Components.Form.Input.IdentifierChangeTrackingTest do
     assert Enum.map(socket.assigns.identifiers, & &1.id) == [first.id]
   end
 
+  test "link pickers exclude missing and invalid URLs from entries, content types and counts" do
+    linked = identifier(Brando.Pages.Page, :en, :published, "/linked")
+    home = identifier(Brando.Pages.Page, :en, :published, "/")
+    invalid_urls = [nil, "", " \t\n", "/&lt;url cannot be localized&gt;", "javascript:alert(1)", "data:text/html,hello"]
+    Enum.each(invalid_urls, &identifier(Brando.Pages.Page, :en, :published, &1))
+    identifier(Brando.Pages.Fragment, :en, :published)
+    identifier(Brando.Pages.Page, :en, :draft, "/draft")
+    identifier(Brando.Pages.Page, :no, :published, "/norsk")
+
+    props = %{
+      id: "picker",
+      wanted_schemas: [Brando.Pages.Page, Brando.Pages.Fragment],
+      layout: :workspace,
+      initial_schema: :all,
+      language: "en",
+      statuses: [:published],
+      require_url: true
+    }
+
+    {:ok, socket} = SelectIdentifier.update(props, %Phoenix.LiveView.Socket{})
+    assert Enum.sort(Enum.map(socket.assigns.identifiers, & &1.id)) == Enum.sort([linked.id, home.id])
+    assert socket.assigns.schema_counts == %{Brando.Pages.Page => 2}
+    assert Enum.map(socket.assigns.available_schemas, &elem(&1, 1)) == [Brando.Pages.Page]
+
+    {:noreply, socket} =
+      SelectIdentifier.handle_event("select_schema", %{"schema" => to_string(Brando.Pages.Page)}, socket)
+
+    assert length(socket.assigns.identifiers) == 2
+    {:noreply, socket} = SelectIdentifier.handle_event("select_schema", %{"schema" => "all"}, socket)
+    assert length(socket.assigns.identifiers) == 2
+
+    {:ok, socket} = SelectIdentifier.update(%{props | require_url: false}, socket)
+    assert length(socket.assigns.identifiers) == length(invalid_urls) + 3
+    assert socket.assigns.schema_counts == %{Brando.Pages.Page => length(invalid_urls) + 2, Brando.Pages.Fragment => 1}
+  end
+
+  test "an entry that loses its URL cannot be selected from stale link results" do
+    linked = identifier(Brando.Pages.Page, :en, :published, "/linked")
+
+    props = %{
+      id: "picker",
+      wanted_schemas: [Brando.Pages.Page],
+      layout: :workspace,
+      require_url: true,
+      on_change: fn params -> send(self(), {:selected, params}) end
+    }
+
+    {:ok, socket} = SelectIdentifier.update(props, %Phoenix.LiveView.Socket{})
+    linked |> Changeset.change(url: nil) |> Brando.Repo.update!()
+
+    {:noreply, socket} = SelectIdentifier.handle_event("select_identifier", %{"id" => to_string(linked.id)}, socket)
+    assert socket.assigns.selected_identifier_id == nil
+    assert socket.assigns.identifiers == []
+    refute_receive {:selected, _}
+
+    {:ok, socket} = SelectIdentifier.update(%{props | require_url: false}, socket)
+    {:noreply, socket} = SelectIdentifier.handle_event("select_identifier", %{"id" => to_string(linked.id)}, socket)
+    assert socket.assigns.selected_identifier_id == linked.id
+    assert_receive {:selected, %{data: %{identifier: %{id: id}}}}
+    assert id == linked.id
+  end
+
+  test "an existing content link without a current URL keeps its saved address available for repair" do
+    identifier = identifier(Brando.Pages.Page, :en, :published)
+    alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog, as: Dialog
+    {:ok, socket} = Dialog.mount(%Phoenix.LiveView.Socket{})
+
+    {:ok, socket} =
+      Dialog.update(%{event: :open, current_identifier_id: identifier.id, current_href: "/saved-address"}, socket)
+
+    assert socket.assigns.unavailable_destination
+    assert socket.assigns.selected_identifier_id == nil
+    assert socket.assigns.link_type == :url
+    assert socket.assigns.draft["url"] == "/saved-address"
+    assert socket.assigns.has_existing_link?
+  end
+
   test "Entries reconciles parent associations, including unloaded selections and removal" do
     a = identifier(Brando.Pages.Page, :en, :published)
     b = identifier(Brando.Pages.Page, :en, :published)
@@ -103,11 +180,12 @@ defmodule BrandoAdmin.Components.Form.Input.IdentifierChangeTrackingTest do
     assert Enum.map(socket.assigns.available_identifiers, & &1.id) == [b.id]
   end
 
-  defp identifier(schema, language, status) do
+  defp identifier(schema, language, status, url \\ nil) do
     Brando.Repo.insert!(%Identifier{
       schema: schema,
       language: language,
       status: status,
+      url: url,
       entry_id: System.unique_integer([:positive]),
       title: "Fixture"
     })

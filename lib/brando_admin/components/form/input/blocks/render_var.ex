@@ -1201,6 +1201,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           var_type={@var_type}
           wanted_schemas={@wanted_schemas}
           layout={:workspace}
+          require_url
           on_change={@on_change}
           target={@target}
         >

@@ -3,6 +3,19 @@ import { syncLV } from '../utils'
 
 test.beforeEach(async ({ page }) => page.setViewportSize({ width: 1440, height: 1000 }))
 
+async function fixture(page, schema, attributes) {
+  const response = await page.request.post('/__e2e/db/factory', { data: { schema, attributes, creator_id: 1, fields: ['id'] } })
+  expect(response.ok(), await response.text()).toBeTruthy()
+  return response.json()
+}
+
+async function linkDestination(page, clientId) {
+  // Create a routable destination after the application has loaded its router.
+  // Legacy datasource seeds can contain a missing-route diagnostic as their URL.
+  const client = clientId ? { id: clientId } : await fixture(page, 'E2eProject.Projects.Client', { name: 'Link client', slug: 'link-client', status: 'published', language: 'en' })
+  return fixture(page, 'E2eProject.Projects.Project', { title: 'Linked Project Alpha', slug: 'linked-project-alpha', introduction: '<p>Link destination.</p>', client_id: client.id, status: 'published', language: 'en' })
+}
+
 async function capture(page, modal, testInfo, name) {
   await expect(modal).toBeVisible()
   await page.evaluate(() => document.fonts.ready)
@@ -47,6 +60,7 @@ async function capture(page, modal, testInfo, name) {
 test('link picker aligns metadata and keeps the selected content through parent updates', async ({ page }, testInfo) => {
   await page.goto('/admin/config/navigation/menus/update/1')
   await syncLV(page)
+  await linkDestination(page)
   await page.locator('#menu_items_0_link_0_identifier_id-field-base .link-preview').click()
   const modal = page.locator('#var-menu_items_0_link_0-link-config')
   await modal.getByLabel('Content', { exact: true }).check()
@@ -61,10 +75,11 @@ test('link picker aligns metadata and keeps the selected content through parent 
   await expect(modal.locator('[id$="-result-count"]')).toHaveText('1')
   await modal.getByRole('button', { name: 'Clear filter', exact: true }).click()
   await modal.locator('.identifier-picker-nav button', { hasText: 'Cases' }).click()
-  const selected = modal.locator('.identifier-options .identifier').filter({ hasText: 'Test Project Alpha' })
+  const selected = modal.locator('.identifier-options .identifier').filter({ hasText: 'Linked Project Alpha' })
   await selected.click()
   await syncLV(page)
-  await expect(modal.locator('.identifier-picker-details h4')).toHaveText('Test Project Alpha')
+  await expect(modal.locator('.identifier-picker-details h4')).toHaveText('Linked Project Alpha')
+  await expect(modal.locator('.identifier-destination')).toHaveText('/project/linked-project-alpha')
   await expect(modal.locator('.modal-person')).toContainText('Creator')
   const alignment = await modal.locator('.modal-metadata').evaluate(el => {
     const values = [el.querySelector('dd > span'), el.querySelector('.modal-status > span')].map(e => e.getBoundingClientRect())
@@ -78,7 +93,7 @@ test('link picker aligns metadata and keeps the selected content through parent 
   await expect(sidebar.locator('.person-copy')).toHaveCSS('gap', '8px')
   await modal.getByLabel('Link text', { exact: true }).fill('Featured project')
   await syncLV(page)
-  await expect(modal.locator('.identifier-picker-details h4')).toHaveText('Test Project Alpha')
+  await expect(modal.locator('.identifier-picker-details h4')).toHaveText('Linked Project Alpha')
   await capture(page, modal, testInfo, 'link-picker')
   await modal.getByRole('button', { name: 'Done', exact: true }).click()
   await page.getByTestId('submit').click()
@@ -87,7 +102,7 @@ test('link picker aligns metadata and keeps the selected content through parent 
   await syncLV(page)
   await page.locator('#menu_items_0_link_0_identifier_id-field-base .link-preview').click()
   await expect(modal.getByLabel('Link text', { exact: true })).toHaveValue('Featured project')
-  await expect(modal.locator('.identifier-picker-details h4')).toHaveText('Test Project Alpha')
+  await expect(modal.locator('.identifier-picker-details h4')).toHaveText('Linked Project Alpha')
 })
 
 test('variable sections retain edits and Escape closes only the nested picker', async ({ page }, testInfo) => {
@@ -174,15 +189,11 @@ test('transfer summary keeps content and recipient visible with the approved tin
 })
 
 test('rich-text link picker applies, cancels and removes links', async ({ page }, testInfo) => {
-  async function fixture(schema, attributes) {
-    const response = await page.request.post('/__e2e/db/factory', { data: { schema, attributes, creator_id: 1, fields: ['id'] } })
-    expect(response.ok(), await response.text()).toBeTruthy()
-    return response.json()
-  }
-  const client = await fixture('E2eProject.Projects.Client', { name: 'Modal client', slug: 'modal-client', status: 'published', language: 'en' })
-  const project = await fixture('E2eProject.Projects.Project', { title: 'Link dialog', slug: 'link-dialog', introduction: '<p>View the project</p>', client_id: client.id, status: 'draft', language: 'en' })
+  const client = await fixture(page, 'E2eProject.Projects.Client', { name: 'Modal client', slug: 'modal-client', status: 'published', language: 'en' })
+  const project = await fixture(page, 'E2eProject.Projects.Project', { title: 'Link dialog', slug: 'link-dialog', introduction: '<p>View the project</p>', client_id: client.id, status: 'draft', language: 'en' })
   await page.goto(`/admin/projects/projects/update/${project.id}`)
   await syncLV(page)
+  await linkDestination(page, client.id)
   const editor = page.locator('[data-footnote-field="introduction"] .tiptap[contenteditable=true]')
   await editor.click()
   await editor.press('ControlOrMeta+a')
@@ -195,8 +206,9 @@ test('rich-text link picker applies, cancels and removes links', async ({ page }
   await page.getByRole('button', { name: 'Link', exact: true }).click()
   await modal.getByRole('button', { name: 'Content', exact: true }).click()
   await modal.locator('.identifier-picker-nav button').filter({ hasText: 'Cases' }).click()
-  await modal.locator('.identifier-options .identifier').filter({ hasText: 'Test Project Alpha' }).click()
-  await expect(modal.locator('.identifier-picker-details h4')).toHaveText('Test Project Alpha')
+  await modal.locator('.identifier-options .identifier').filter({ hasText: 'Linked Project Alpha' }).click()
+  await expect(modal.locator('.identifier-picker-details h4')).toHaveText('Linked Project Alpha')
+  await expect(modal.locator('.identifier-destination')).toHaveText('/project/linked-project-alpha')
   await capture(page, modal, testInfo, 'rich-text-link')
   await modal.getByRole('button', { name: 'Cancel', exact: true }).click()
   await expect(editor.locator('a')).toHaveAttribute('href', 'https://example.com/project')

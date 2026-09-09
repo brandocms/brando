@@ -9,6 +9,21 @@ async function setup(page, options = {}) {
 const html = page => page.evaluate(() => harness.current.editor.getHTML())
 const command = (page, name, ...args) => page.evaluate(({ name, args }) => harness.current.editor.commands[name](...args), { name, args })
 
+test('writing focus uses the editor frame and toolbar keyboard focus stays visible', async ({ page }) => {
+  await setup(page)
+  const editor = page.locator('.ProseMirror'), shell = page.locator('.tiptap-editor-shell')
+  await editor.click()
+  await expect(editor).toBeFocused()
+  await expect(editor).toHaveCSS('outline-style', 'none')
+  await expect(shell).not.toHaveCSS('box-shadow', 'none')
+  await editor.press('Alt+F10')
+  const button = page.getByRole('toolbar').locator('button:focus')
+  await expect(button).toBeFocused()
+  await expect(button).toHaveCSS('outline-style', 'solid')
+  await page.getByRole('button', { name: 'After editor', exact: true }).focus()
+  await expect(shell).toHaveCSS('box-shadow', 'none')
+})
+
 test('list input rules, Tab and Shift-Tab use one ProseMirror runtime', async ({ page }) => {
   await setup(page, { content: '<p></p>' })
   const doc = page.locator('.ProseMirror')

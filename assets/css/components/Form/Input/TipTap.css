@@ -5,8 +5,7 @@
   color: #1a1a1a;
 
   &:focus {
-    outline: 2px solid var(--brando-color-blue);
-    outline-offset: 3px;
+    outline: none;
   }
 
   strong {
@@ -160,6 +159,7 @@
   min-width: 0;
   background: var(--tiptap-paper);
   border-radius: 6px;
+  &:not(.expanded):has(.ProseMirror:focus) { box-shadow: 0 0 0 1px #8a9e90, 0 0 0 3px #254e3f0a; }
   .tiptap-document { padding: 16px; }
   .ProseMirror { min-height: 110px; width: 100%; }
   .ProseMirror p.is-editor-empty:first-child::before { color: var(--tiptap-muted); content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
@@ -184,7 +184,7 @@
     > span { display: inline-block; width: 18px; height: 18px; flex-shrink: 0; }
     &:hover, &[aria-pressed="true"] { background: #e4eee8; }
     &:disabled { opacity: .35; cursor: default; }
-    &:focus-visible { outline: 2px solid #254e3f; outline-offset: 2px; }
+    &:focus { outline: 2px solid #254e3f; outline-offset: 2px; }
   }
   .tiptap-type-control { width: auto; padding-inline: 9px; font-size: 13px; > span:first-child { width: auto; } > span:last-child { width: 12px; } }
   .tiptap-disclosure { width: 22px; min-width: 22px; }

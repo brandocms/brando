@@ -51,7 +51,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
 
     identifier =
       case params[:current_identifier_id] && Brando.Content.get_identifier(params.current_identifier_id) do
-        {:ok, entry} -> entry
+        {:ok, entry} -> if RichText.allowed_uri?(entry.url), do: entry
         _ -> nil
       end
 
@@ -174,7 +174,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
             </div>
           </div>
           <p :if={@unavailable_destination} class="tiptap-link-warning" role="status">
-            {gettext("The original content entry is unavailable. Check the saved URL or choose another destination.")}
+            {gettext("The original content destination is unavailable. Check the saved URL or choose another destination.")}
           </p>
 
           <div :if={@link_type != :identifier} class="tiptap-link-url-workspace">
@@ -222,6 +222,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
               layout={:workspace}
               initial_schema={:all}
               statuses={[:published]}
+              require_url
               on_change={
                 fn %{data: %{identifier: identifier}} ->
                   send_update(__MODULE__, id: @id, event: :identifier_selected, identifier: identifier)
@@ -242,7 +243,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
             form="tiptap-link-form"
             class="primary"
             phx-disable-with={gettext("Applying…")}
-            disabled={@applying || (@link_type == :identifier && is_nil(@selected_identifier_id))}
+            disabled={
+              @applying ||
+                (@link_type == :identifier && !RichText.allowed_uri?(@selected_identifier && @selected_identifier.url))
+            }
           >{gettext("Apply link")}</button>
           <button
             :if={@has_existing_link?}
@@ -270,18 +274,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
         name="link[text]"
         value={@draft["text"]}
       /></label>
-      <label class="tiptap-link-field" for="tiptap-link-appearance"><span>{gettext("Appearance")}</span><select
-        id="tiptap-link-appearance"
-        name="link[appearance]"
-      ><option :if={"link" in @appearances} value="link" selected={@draft["appearance"] == "link"}>
-        {gettext("Text link")}
-      </option><option
-        :if={"button" in @appearances}
-        value="button"
-        selected={@draft["appearance"] == "button"}
-      >
-        {gettext("Button")}
-      </option></select></label>
+      <div class="tiptap-link-field">
+        <label for="tiptap-link-appearance">{gettext("Appearance")}</label><select
+          id="tiptap-link-appearance"
+          name="link[appearance]"
+        ><option :if={"link" in @appearances} value="link" selected={@draft["appearance"] == "link"}>
+          {gettext("Text link")}
+        </option><option
+          :if={"button" in @appearances}
+          value="button"
+          selected={@draft["appearance"] == "button"}
+        >
+          {gettext("Button")}
+        </option></select>
+      </div>
       <label class="tiptap-link-check"><input type="hidden" name="link[target_blank]" value="false" /><input
         type="checkbox"
         name="link[target_blank]"
