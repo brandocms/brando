@@ -72,6 +72,7 @@ export default app => ({
   destroyed() {
     this.el.removeEventListener('keydown', this.onKeydown)
     this.observer?.disconnect()
+    cancelAnimationFrame(this.openFrame)
     clearTimeout(this.focusTimer)
     // A modal removed from the DOM while open would otherwise strand focus on
     // nothing, dropping the caret back to <body>.
@@ -92,6 +93,16 @@ export default app => ({
   },
 
   onOpened() {
+    // LiveView restores the previously focused control after a save reply.
+    // Take focus on the next frame, so the reply cannot move focus back
+    // behind a newly opened dialog.
+    cancelAnimationFrame(this.openFrame)
+    this.openFrame = requestAnimationFrame(() => this.focusOpened())
+  },
+
+  focusOpened() {
+    if (!this.el.isConnected || !this.isOpen()) return
+
     // Remember who opened it *before* moving focus, so closing returns the user
     // to the control they were on rather than to the top of the page.
     const active = document.activeElement
@@ -116,6 +127,7 @@ export default app => ({
   },
 
   restoreFocus() {
+    cancelAnimationFrame(this.openFrame)
     const opener = this.opener
     this.opener = null
     // Only take focus back if it is still inside the modal; if something else

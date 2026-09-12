@@ -73,6 +73,7 @@ test('dismissal continues editing and uses the saved URL for the next change', a
 test('escape dismisses the prompt and completes Save and create new', async ({ page }) => {
   await createPage(page)
   const dialog = await changeUrl(page, 'our-studio', 'new')
+  await expect.poll(() => dialog.evaluate(el => el.contains(document.activeElement))).toBe(true)
   await page.keyboard.press('Escape')
   await expect(dialog).not.toBeVisible()
   await expect(page).toHaveURL(/\/admin\/pages\/create$/)

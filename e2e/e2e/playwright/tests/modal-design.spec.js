@@ -10,8 +10,7 @@ async function fixture(page, schema, attributes) {
 }
 
 async function linkDestination(page, clientId) {
-  // Create a routable destination after the application has loaded its router.
-  // Legacy datasource seeds can contain a missing-route diagnostic as their URL.
+  // Give this test a distinct routable destination alongside the shared seeds.
   const client = clientId ? { id: clientId } : await fixture(page, 'E2eProject.Projects.Client', { name: 'Link client', slug: 'link-client', status: 'published', language: 'en' })
   return fixture(page, 'E2eProject.Projects.Project', { title: 'Linked Project Alpha', slug: 'linked-project-alpha', introduction: '<p>Link destination.</p>', client_id: client.id, status: 'published', language: 'en' })
 }
@@ -66,7 +65,7 @@ test('link picker aligns metadata and keeps the selected content through parent 
   await modal.getByLabel('Content', { exact: true }).check()
   await modal.getByRole('button', { name: /All content/ }).click()
   await expect(modal.getByRole('button', { name: /All content/ })).toHaveAttribute('aria-pressed', 'true')
-  await modal.locator('.identifier-picker-results input').fill('alpha')
+  await modal.locator('.identifier-picker-results input').fill('linked project')
   await expect(modal.locator('.identifier-options .identifier:visible')).toHaveCount(1)
   await expect(modal.locator('[id$="-result-count"]')).toHaveText('1')
   await modal.getByLabel('Link text', { exact: true }).fill('Pending link text')

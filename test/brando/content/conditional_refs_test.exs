@@ -2,7 +2,7 @@ defmodule Brando.Content.ConditionalRefsTest do
   # B5 verification — are refs inside `{% if %}` / `{% for %}` regions deleted
   # on the first keystroke?
   #
-  # `liquid_strip_logic/1` (block.ex) removes those regions from the module code
+  # `LiquidPreview.strip_logic/1` removes those regions from the module code
   # before the editor splits it into ref slots, so no inputs render for a ref
   # that lives inside one. `refs` is `on_replace: :delete_if_exists`, so the
   # question is what `cast_assoc(:refs)` does when params list a subset.
@@ -13,6 +13,8 @@ defmodule Brando.Content.ConditionalRefsTest do
 
   alias Brando.Content.Block
   alias Brando.Factory
+  alias Brando.Villain.Blocks.HeaderBlock
+  alias BrandoAdmin.Components.Form.Block.Render
   alias Ecto.Changeset
 
   setup do
@@ -145,6 +147,64 @@ defmodule Brando.Content.ConditionalRefsTest do
         &BrandoAdmin.Components.Form.Block.Render.carried_refs/1,
         refs_field: Phoenix.Component.to_form(changeset, as: "block")[:refs],
         liquid_splits: splits
+      )
+    end
+  end
+
+  describe "malformed Liquid preview" do
+    test "renders every persisted ref without duplicating carried identity inputs", %{block: block} do
+      html = render_failed_preview(Changeset.change(block))
+      document = Floki.parse_fragment!(html)
+
+      assert html =~ "The module preview is unavailable"
+
+      for name <- ["visible", "conditional"] do
+        assert length(Floki.find(document, ~s(section[b-ref="#{name}"]))) == 1
+      end
+
+      for index <- [0, 1] do
+        assert length(Floki.find(document, ~s(input[name="block[refs][#{index}][id]"]))) == 1
+      end
+
+      assert Floki.find(document, ".block-carried-refs input") == []
+    end
+
+    test "new refs added to the current form retain their editable data", %{block: block} do
+      changeset = Changeset.change(block)
+      # The same cached error is used before and after a new ref is added.
+      refute render_failed_preview(changeset) =~ ~s(b-ref="fresh")
+
+      new_ref =
+        Changeset.change(%Brando.Content.Ref{
+          name: "fresh",
+          uid: "freshheader",
+          description: "A new heading",
+          data: %HeaderBlock{type: "header", data: %HeaderBlock.Data{text: "Unsaved heading", level: 2}}
+        })
+
+      updated = Changeset.put_assoc(changeset, :refs, Changeset.get_assoc(changeset, :refs) ++ [new_ref])
+      document = updated |> render_failed_preview() |> Floki.parse_fragment!()
+
+      assert document |> Floki.find(~s(section[b-ref="fresh"] textarea)) |> Floki.text() |> String.trim() ==
+               "Unsaved heading"
+
+      assert Floki.find(document, ~s(input[name="block[refs][2][name]"][value="fresh"])) != []
+      assert Floki.find(document, ~s(input[name="block[refs][2][uid]"][value="freshheader"])) != []
+      assert Floki.find(document, ".block-carried-refs input") == []
+    end
+
+    defp render_failed_preview(changeset) do
+      render_component(&Render.module_content/1,
+        block_form: Phoenix.Component.to_form(changeset, as: "block"),
+        liquid_splits: [{:liquid_error, {:unclosed_tag, "if"}}],
+        module_class: "failed-preview",
+        uid: "failedpreview",
+        is_datasource?: false,
+        has_table_template?: false,
+        target: nil,
+        target_ref: nil,
+        form_id: "page-form",
+        config_open: false
       )
     end
   end

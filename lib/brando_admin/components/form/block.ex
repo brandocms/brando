@@ -47,6 +47,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   alias Brando.Content.BlockSlots
   alias Brando.Content.BlockSlots.Lifecycle, as: CollectionLifecycle
   alias BrandoAdmin.Components.Form.Block.Events
+  alias BrandoAdmin.Components.Form.Block.LiquidPreview
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.BlockField.Ops
   alias Ecto.Changeset
@@ -1615,11 +1616,6 @@ defmodule BrandoAdmin.Components.Form.Block do
     if block_initialized do
       socket
     else
-      module_code =
-        module_code
-        |> liquid_strip_logic()
-        |> emphasize_datasources(assigns)
-
       belongs_to = socket.assigns.belongs_to
       changeset = socket.assigns.form.source
       entry = socket.assigns.entry
@@ -1636,39 +1632,47 @@ defmodule BrandoAdmin.Components.Form.Block do
         end
 
       splits =
-        ~r/{% (?:ref|headless_ref) refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}|{% picture ([a-zA-Z0-9_.?|"-]+) {.*} %}/
-        |> Regex.split(module_code, include_captures: true)
-        |> Enum.map(fn chunk ->
-          case Regex.run(
-                 ~r/^{% (?:ref|headless_ref) refs.(?<ref>\w+) %}$|^{{ (?<content>[\w\s.|\"\']+) }}$|^{% picture (?<picture>[a-zA-Z0-9_.?|"-]+) {.*} %}$/,
-                 chunk,
-                 capture: :all_names
-               ) do
-            nil ->
-              chunk
+        case LiquidPreview.strip_logic(module_code) do
+          {:ok, module_code} ->
+            module_code = emphasize_datasources(module_code, assigns)
 
-            ["content", "", ""] ->
-              {:content, "content"}
+            ~r/{% (?:ref|headless_ref) refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}|{% picture ([a-zA-Z0-9_.?|"-]+) {.*} %}/
+            |> Regex.split(module_code, include_captures: true)
+            |> Enum.map(fn chunk ->
+              case Regex.run(
+                     ~r/^{% (?:ref|headless_ref) refs.(?<ref>\w+) %}$|^{{ (?<content>[\w\s.|\"\']+) }}$|^{% picture (?<picture>[a-zA-Z0-9_.?|"-]+) {.*} %}$/,
+                     chunk,
+                     capture: :all_names
+                   ) do
+                nil ->
+                  chunk
 
-            ["content | renderless", "", ""] ->
-              {:content, "content"}
+                ["content", "", ""] ->
+                  {:content, "content"}
 
-            ["entry." <> variable, "", ""] ->
-              {:entry_variable, variable, liquid_render_entry_variable(variable, entry)}
+                ["content | renderless", "", ""] ->
+                  {:content, "content"}
 
-            [module_variable, "", ""] ->
-              {:module_variable, module_variable, liquid_render_module_variable(module_variable, vars)}
+                ["entry." <> variable, "", ""] ->
+                  {:entry_variable, variable, liquid_render_entry_variable(variable, entry)}
 
-            ["", "entry." <> pic = pic_var, ""] ->
-              {:entry_picture, pic_var, liquid_render_entry_picture_src(pic, socket.assigns)}
+                [module_variable, "", ""] ->
+                  {:module_variable, module_variable, liquid_render_module_variable(module_variable, vars)}
 
-            ["", pic, ""] ->
-              {:module_picture, pic, liquid_render_module_picture_src(pic, vars)}
+                ["", "entry." <> pic = pic_var, ""] ->
+                  {:entry_picture, pic_var, liquid_render_entry_picture_src(pic, socket.assigns)}
 
-            ["", "", ref] ->
-              {:ref, ref}
-          end
-        end)
+                ["", pic, ""] ->
+                  {:module_picture, pic, liquid_render_module_picture_src(pic, vars)}
+
+                ["", "", ref] ->
+                  {:ref, ref}
+              end
+            end)
+
+          {:error, reason} ->
+            [{:liquid_error, reason}]
+        end
 
       socket
       |> assign(:liquid_splits, splits)
@@ -2668,14 +2672,6 @@ defmodule BrandoAdmin.Components.Form.Block do
          #{gettext("Content from datasource will be inserted here")}
       </div>
       """
-    )
-  end
-
-  defp liquid_strip_logic(module_code) do
-    Regex.replace(
-      ~r/(({% hide %}(?:.*?){% endhide %}))|((?:{%(?:-)? for (\w+) in [a-zA-Z0-9_.?|"-]+ (?:-)?%})(?:.*?)(?:{%(?:-)? endfor (?:-)?%}))|(<img.*?src="{{(?:-)? .*? (?:-)?}}".*?>)|({%(?:-)? assign .*? (?:-)?%})|(((?:{%(?:-)? if .*? (?:-)?%})(?:.*?)(?:{%(?:-)? endif (?:-)?%})))|(((?:{%(?:-)? unless .*? (?:-)?%})(?:.*?)(?:{%(?:-)? endunless (?:-)?%})))|(data-moonwalk-run(?:="\w+")|data-moonwalk-run|data-moonwalk-section(?:="\w+")|data-moonwalk-section|href(?:="[a-zA-Z0-9{}|._\s]+")|id(?:="{{[a-zA-Z0-9{}._\s]+}}"))/s,
-      module_code,
-      ""
     )
   end
 
