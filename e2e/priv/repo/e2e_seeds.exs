@@ -381,6 +381,10 @@ end
 |> E2eProject.Repo.insert!()
 
 # Create test projects for datasource selection and their identifiers
+# Seeding runs before any request loads the route helpers. The localized URL
+# resolver checks exported functions, so load the helpers before building URLs.
+Code.ensure_loaded!(E2eProjectWeb.Router.Helpers)
+
 project1 =
   %E2eProject.Projects.Project{
     title: "Test Project Alpha",
