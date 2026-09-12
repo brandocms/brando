@@ -35,31 +35,42 @@ Update the Brando dependency and fetch it, then run:
 mix deps.get
 mix deps.compile
 mix brando.migrate54
+mix brando.migrate55
 ```
+
+Applications already on Brando 0.54 skip `mix brando.migrate54` and run only
+`mix brando.migrate55`. Both tasks match legacy syntax or missing
+configuration only, so running one on source that no longer needs it changes
+nothing.
 
 Brando's optional task and helper modules automatically request recompilation
 when Igniter becomes available. The dependency remains optional at runtime.
 
-The task:
+`mix brando.migrate54` covers the 0.53 to 0.54 source changes. It:
 
 - rewrites legacy Blueprint list, single, and selection datasources; trait,
   villain/block, form, input, metadata, and JSON-LD syntax; and listing queries,
   filters, actions, selection actions, and supported exports;
-- preserves legacy Meta and JSON-LD path/mutator behavior and adds the narrow
-  listing component imports used by custom row functions;
+- preserves legacy Meta and JSON-LD path/mutator behavior;
 - renames legacy listing `filter:` keys and `list_villains/0` calls on
   `Brando.Villain`;
 - rewrites every legacy LivePreview target with its own layout and template
   module;
 - replaces `mix phx.digest` in a root Dockerfile, removes `?vsn=d` from font
-  URLs in application styles/templates, adds a missing single-Repo
-  `config :brando, repo_module:` setting, and defaults an unconfigured Swoosh
-  API client to `Swoosh.ApiClient.Req`, and pins declared
-  `phoenix_live_view` dependencies in `assets/**/package.json` to the loaded
-  server version;
-- updates Gettext source declarations through `igniter.update_gettext`;
-- archives a recognized consumer-owned `mix brando.upgrade` task and creates
-  `scripts/sync_gettext.sh` helper into the application;
+  URLs in application styles/templates, and adds a missing single-Repo
+  `config :brando, repo_module:` setting;
+- updates Gettext source declarations through `igniter.update_gettext` and
+  creates the `scripts/sync_gettext.sh` helper in the application.
+
+`mix brando.migrate55` covers the 0.54 to 0.55 source changes. It:
+
+- adds the narrow listing component imports used by custom row functions;
+- defaults an unconfigured Swoosh API client to `Swoosh.ApiClient.Req` and
+  pins declared `phoenix_live_view` dependencies in `assets/**/package.json`
+  to the loaded server version;
+- refreshes `scripts/sync_gettext.sh` and archives the consumer-owned
+  `mix brando.upgrade` task that 0.54 installed, so the library-owned
+  `mix brando.gen.migrations` can take over the task name;
 - creates `florist.config.exs` when both legacy `deployment.cfg` and
   `fabfile.py` exist and no Florist configuration is already present.
 
@@ -94,8 +105,8 @@ the deterministic application source changes without running migrations or
 copying live data; see `guides/tenancy_and_environments.md` for the ordered
 conversion workflow.
 
-The following 0.54 changelog items remain manual because their correct rewrite
-depends on application semantics:
+The following 0.54 and 0.55 changelog items remain manual because their
+correct rewrite depends on application semantics:
 
 - converting legacy `Brando.Type.Video` embedded values to
   `Brando.Videos.Video` records and migrating their data;
@@ -136,7 +147,8 @@ depends on application semantics:
 - transferring ownership of PostgreSQL's `oban_job_state` enum before the Oban
   v14 migration when deploying through the bundled Fabric workflow.
 
-The task reports these items as warnings so they cannot be missed in the review.
+The tasks report these items as warnings so they cannot be missed in the
+review.
 
 Review every source change. In particular, decide which Blueprints should not
 persist identifiers:
@@ -153,8 +165,7 @@ mix compile --warnings-as-errors
 mix test --warnings-as-errors
 ```
 
-Rerunning `mix brando.migrate54` is safe; a second run should produce no source
-diff.
+Rerunning either task is safe; a second run should produce no source diff.
 
 ### Review a generated Florist configuration
 
@@ -198,7 +209,8 @@ mix brando.gen.migrations
 
 The Igniter migration-file command does not start the application or touch the
 database. It allocates monotonically increasing Ecto versions and preserves
-historical files. A customized legacy `Mix.Tasks.Brando.Upgrade` must be renamed
+historical files. `mix brando.migrate55` archives the unmodified
+`Mix.Tasks.Brando.Upgrade` that 0.54 installed; a customized one must be renamed
 and compiled before using the library-owned versioned upgrade hook.
 
 Handle application Blueprints according to their history:
