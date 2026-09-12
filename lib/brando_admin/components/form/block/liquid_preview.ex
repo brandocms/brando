@@ -36,7 +36,7 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidPreview do
         finish(code, stack, acc)
 
       {offset, _length} ->
-        <<text::binary-size(offset), remaining::binary>> = code
+        {text, remaining} = :erlang.split_binary(code, offset)
         acc = keep(text, stack, acc)
 
         with {:ok, name, token, rest} <- take_token(remaining) do
@@ -47,7 +47,7 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidPreview do
 
   defp scan_token(name, token, rest, stack, acc) when name in ["raw", "comment"] do
     with {:ok, size} <- opaque_length(rest, name) do
-      <<body::binary-size(size), remaining::binary>> = rest
+      {body, remaining} = :erlang.split_binary(rest, size)
       scan(remaining, stack, keep([token, body], stack, acc))
     end
   end
@@ -82,7 +82,7 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidPreview do
         {:error, {:unclosed_tag, "comment"}}
 
       {offset, _} ->
-        <<_text::binary-size(offset), remaining::binary>> = code
+        {_text, remaining} = :erlang.split_binary(code, offset)
 
         with {:ok, name, token, rest} <- take_token(remaining) do
           length = length + offset + byte_size(token)
@@ -93,7 +93,7 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidPreview do
 
             name when name in ["raw", "comment"] ->
               with {:ok, size} <- opaque_length(rest, name) do
-                <<_body::binary-size(size), tail::binary>> = rest
+                {_body, tail} = :erlang.split_binary(rest, size)
                 comment_length(tail, length + size)
               end
 
@@ -138,7 +138,7 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidPreview do
 
   defp extract_token(code, name, {:ok, length}) do
     size = length + 2
-    <<token::binary-size(size), rest::binary>> = code
+    {token, rest} = :erlang.split_binary(code, size)
     {:ok, name, token, rest}
   end
 
