@@ -54,7 +54,7 @@ jobs:
       BRANDO_SMOKE_PGPASSWORD: postgres
       BRANDO_SMOKE_BOOTSTRAP: ${{ matrix.bootstrap }}
     steps:
-      - uses: actions/checkout@v6.0.3
+      - uses: actions/checkout@v7.0.1
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: 1.20.3
