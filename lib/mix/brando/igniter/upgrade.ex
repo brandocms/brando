@@ -164,7 +164,7 @@ if Code.ensure_loaded?(Igniter) do
 
         Version.compare(from, @minimum) == :lt ->
           {:error,
-           "Before upgrading from #{from}, follow guides/migrating_to_054.md and run mix brando.migrate54, then mix brando.migrate55. The automatic hook supports #{@minimum} and newer."}
+           "Before upgrading from #{from}, follow guides/migrating_from_053.md and run mix brando.migrate54, then mix brando.migrate55. The automatic hook supports #{@minimum} and newer."}
 
         to.major != 0 or to.minor not in @supported_minors ->
           {:error,

@@ -1,8 +1,10 @@
-# Migrating to Brando 0.54
+# Migrating from Brando 0.53 or 0.54
 
-Brando 0.54 changes application source, Brando-owned database tables, Blueprint
+Brando 0.55 changes application source, Brando-owned database tables, Blueprint
 storage contracts, persisted block data, identifiers, and Gettext structure.
 Treat the upgrade as a reviewed deployment, not as one automatic command.
+Applications on the `0.54` branch follow the same order; the source step below
+says which task they skip.
 
 ## 1. Establish a recovery point
 

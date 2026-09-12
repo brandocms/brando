@@ -249,7 +249,7 @@ Igniter calls the library-owned `brando.upgrade FROM TO` hook. The current recip
 accepts forward changes in the 0.54 development line, from `0.54.0-dev` onward,
 and never beyond the loaded dependency version. Equal versions are a no-op;
 use `brando.gen.migrations` to reconcile files during development. Applications
-with older DSL syntax must first follow [Migrating to 0.54](migrating_to_054.md).
+with older DSL syntax must first follow [Migrating from 0.53 or 0.54](migrating_from_053.md).
 Future release transitions require explicit upgrade recipes and qualification.
 
 ## Auxiliary generators

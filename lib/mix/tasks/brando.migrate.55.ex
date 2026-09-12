@@ -23,7 +23,7 @@ if Code.ensure_loaded?(Igniter) do
 
     The task changes source files only. Review and compile its diff before
     generating or running database migrations. The complete ordered workflow is
-    documented in `guides/migrating_to_054.md`.
+    documented in `guides/migrating_from_053.md`.
     """
 
     def info(_argv, _source) do
@@ -76,7 +76,7 @@ if Code.ensure_loaded?(Igniter) do
         7. After the database migration, run `mix brando.entries.resave` and
            `mix brando.identifiers.sync`.
 
-      See `guides/migrating_to_054.md` and `guides/blueprint_migrations.md` in
+      See `guides/migrating_from_053.md` and `guides/blueprint_migrations.md` in
       Brando for the full recovery and rebaseline instructions.
       """)
     end

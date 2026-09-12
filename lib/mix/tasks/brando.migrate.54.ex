@@ -20,7 +20,7 @@ if Code.ensure_loaded?(Igniter) do
     only, so rerunning it is safe. An application that already uses 0.54
     syntax is left unchanged. Continue with `mix brando.migrate55` for the
     0.54 to 0.55 changes; the complete ordered workflow is documented in
-    `guides/migrating_to_054.md`.
+    `guides/migrating_from_053.md`.
     """
 
     def info(_argv, _source) do
@@ -62,7 +62,7 @@ if Code.ensure_loaded?(Igniter) do
         2. Run `mix brando.migrate55` for the 0.54 to 0.55 source changes. Its
            notice continues with the database migration workflow.
 
-      See `guides/migrating_to_054.md` in Brando for the full recovery,
+      See `guides/migrating_from_053.md` in Brando for the full recovery,
       rebaseline, and gettext instructions.
       """)
     end

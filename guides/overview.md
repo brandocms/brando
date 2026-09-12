@@ -10,7 +10,7 @@ version when maintaining an older installation.
 | I want to… | Start here | Then read |
 | --- | --- | --- |
 | Start a new site | [Installation and generators](generators.md) | [Pages and fragments](pages.md) |
-| Upgrade an existing application | [Migrating to 0.54](migrating_to_054.md) | [Blueprint migrations](blueprint_migrations.md) |
+| Upgrade an existing application | [Migrating from 0.53 or 0.54](migrating_from_053.md) | [Blueprint migrations](blueprint_migrations.md) |
 | Define a content type and its admin screens | [Blueprints](blueprints.md) | [Querying and mutations](querying.md) |
 | Build translated pages and menus | [Languages and translations](i18n.md) | [Navigation](navigation.md) |
 | Build reusable page content | [Block editor](block_editor.md) | [Datasources](datasources.md) |
