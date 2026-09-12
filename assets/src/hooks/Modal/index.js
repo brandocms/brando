@@ -93,6 +93,13 @@ export default app => ({
   },
 
   onOpened() {
+    // Remember who opened it *now*, before anything else can move focus, so
+    // closing returns the user to the control they were on rather than to the
+    // top of the page. During a server patch the previously focused control
+    // may already be gone (focus sits on <body>); `focusOpened` fills that in
+    // once LiveView has restored it.
+    this.opener = this.openerCandidate() || this.opener
+
     // LiveView restores the previously focused control after a save reply.
     // Take focus on the next frame, so the reply cannot move focus back
     // behind a newly opened dialog.
@@ -100,13 +107,20 @@ export default app => ({
     this.openFrame = requestAnimationFrame(() => this.focusOpened())
   },
 
+  openerCandidate() {
+    const active = document.activeElement
+    return active && active !== document.body && !this.el.contains(active) ? active : null
+  },
+
   focusOpened() {
     if (!this.el.isConnected || !this.isOpen()) return
 
-    // Remember who opened it *before* moving focus, so closing returns the user
-    // to the control they were on rather than to the top of the page.
-    const active = document.activeElement
-    this.opener = active && !this.el.contains(active) ? active : this.opener
+    // A fast keyboard user (or a test) can reach a control inside the dialog
+    // before this frame runs. Taking focus then would yank it off that control
+    // and, because the opener was never recorded, strand the user on close.
+    if (this.el.contains(document.activeElement)) return
+
+    this.opener = this.opener || this.openerCandidate()
 
     // `show_modal/1` reveals the dialog with a 200ms transition, and this runs
     // the instant `display` changes — before its contents have a layout box, so
