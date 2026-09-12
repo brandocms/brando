@@ -264,11 +264,7 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert blueprint =~ "(&String.trim/1).(value)"
     assert blueprint =~ "field(\"generated\", & &1.title)"
 
-    assert blueprint =~ "import Brando.Blueprint.Listings.Components.Core"
-    assert blueprint =~ "import Brando.Blueprint.Listings.Components.Cover, only: [cover: 1]"
-
-    assert blueprint =~
-             "import Brando.Blueprint.Listings.Components.Children, only: [children_button: 1]"
+    refute blueprint =~ "Listings.Components"
 
     assert blueprint =~ "form do\n      default_params(%{status: :draft})"
     assert blueprint =~ "form :secondary do\n      default_params(%{status: :published})"
@@ -353,7 +349,7 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
 
       def listing_row(assigns) do
         ~H\"\"\"
-        <.url entry={@entry} />
+        <div>{@entry.title}</div>
         \"\"\"
       end
     end
@@ -409,7 +405,7 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
   # every included path before storing it, which hides the difference: the task
   # behaves identically here whether the globs are absolute or not.
   test "includes its globs relative to the project root" do
-    source = File.read!("lib/mix/tasks/brando.migrate.54.ex")
+    source = File.read!("lib/mix/brando/igniter/source_upgrade.ex")
 
     refute source =~ ~r/include_glob\(\s*Path\.expand/,
            "include_glob/2 must receive a project-relative glob"
@@ -424,73 +420,20 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     igniter = migrate(@legacy_blueprint, @legacy_live_preview)
 
     assert source(igniter, @brando_config_path) =~ "repo_module: LegacyApp.Repo"
-    assert source(igniter, @config_path) =~ "config :swoosh, api_client: Swoosh.ApiClient.Req"
     assert source(igniter, @dockerfile_path) =~ "RUN mix brando.digest"
     assert source(igniter, @dockerfile_path) =~ "RUN mix phx.digest.clean --all"
     assert source(igniter, @fonts_path) =~ "/fonts/legacy.woff2'"
     refute source(igniter, @fonts_path) =~ "/fonts/legacy.woff2?vsn=d"
     assert source(igniter, @fonts_path) =~ "/images/hero.png?vsn=d"
-    live_view_version = to_string(Application.spec(:phoenix_live_view, :vsn))
-
-    assert source(igniter, @package_json_path) =~
-             ~s("phoenix_live_view": "#{live_view_version}")
-
-    assert source(igniter, @package_json_path) =~ ~s("unrelated": "1.0.0")
-
-    assert_creates(igniter, @florist_config_path, fn config ->
-      assert {:ok, _ast} = Code.string_to_quoted(config)
-      assert config =~ "project_name(\"legacy_app\")"
-      assert config =~ "project_module(LegacyApp)"
-      assert config =~ "set(:type, :single)"
-      assert config =~ "set(:type, :nginx)"
-      assert config =~ "set(:blue_port, 8055)"
-      refute config =~ "legacy-secret"
-      refute config =~ "legacy-ssh-secret"
-    end)
   end
 
-  test "preserves an existing Florist configuration" do
-    existing_config = "use Florist.DSL\nproject_name \"already_configured\"\n"
+  test "leaves the 0.55 surface to brando.migrate55" do
+    igniter = migrate(@legacy_blueprint, @legacy_live_preview)
 
-    igniter =
-      [
-        app_name: :legacy_app,
-        files: %{
-          @deployment_config_path => @deployment_config,
-          @fabfile_path => @fabfile,
-          @florist_config_path => existing_config
-        }
-      ]
-      |> test_project_with_files()
-      |> Migrate54.igniter()
-
-    assert source(igniter, @florist_config_path) == existing_config
-    assert_unchanged(igniter, @florist_config_path)
-  end
-
-  test "warns without creating a Florist configuration from an incomplete legacy pair" do
-    igniter =
-      [app_name: :legacy_app, files: %{@deployment_config_path => @deployment_config}]
-      |> test_project_with_files()
-      |> Migrate54.igniter()
-
+    refute source(igniter, @config_path) =~ "Swoosh.ApiClient.Req"
+    assert source(igniter, @package_json_path) =~ ~s("phoenix_live_view": "~1.0.0")
     refute Map.has_key?(igniter.rewrite.sources, @florist_config_path)
-    assert_has_warning(igniter, &String.contains?(&1, "both legacy `deployment.cfg` and `fabfile.py` are required"))
-  end
-
-  test "preserves an explicitly configured Swoosh client" do
-    existing_config = """
-    import Config
-
-    config :legacy_app, ecto_repos: [LegacyApp.Repo]
-    config :swoosh, api_client: false
-    """
-
-    igniter = migrate(@legacy_blueprint, nil, %{@config_path => existing_config})
-    config = source(igniter, @config_path)
-
-    assert config =~ "config :swoosh, api_client: false"
-    refute config =~ "Swoosh.ApiClient.Req"
+    assert igniter.rms == []
   end
 
   test "warns instead of guessing when no Ecto Repo can be inferred" do
@@ -520,20 +463,16 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
 
     assert_has_task(igniter, "igniter.update_gettext", [])
     assert_has_notice(igniter, &String.contains?(&1, "Continue in this order"))
+    assert_has_notice(igniter, &String.contains?(&1, "mix brando.migrate55"))
     assert_has_warning(igniter, &String.contains?(&1, "Manual 0.54 decisions remain"))
     assert_has_warning(igniter, &String.contains?(&1, "Brando.Type.Video"))
     assert_has_warning(igniter, &String.contains?(&1, "legacy ref paths"))
     assert_has_warning(igniter, &String.contains?(&1, "Vite 5 manifest"))
-    assert_has_warning(igniter, &String.contains?(&1, "*_identifiers"))
     assert_has_warning(igniter, &String.contains?(&1, "remaining uses in standalone Ecto schemas"))
     assert_has_warning(igniter, &String.contains?(&1, "after_export"))
-    assert_has_warning(igniter, &String.contains?(&1, "phoenix_live_view"))
-    assert_has_warning(igniter, &String.contains?(&1, "Form.Primitives"))
-    assert_has_warning(igniter, &String.contains?(&1, "key_available?/2"))
-    assert_has_warning(igniter, &String.contains?(&1, "config_target"))
-    assert_has_warning(igniter, &String.contains?(&1, "oban_job_state"))
-    assert_has_warning(igniter, &String.contains?(&1, "Database passwords are intentionally not written"))
-    assert_has_notice(igniter, &String.contains?(&1, "Created `florist.config.exs`"))
+    refute Enum.any?(igniter.warnings, &String.contains?(&1, "Manual 0.55 decisions"))
+    refute Enum.any?(igniter.warnings, &String.contains?(&1, "Form.Primitives"))
+    refute Enum.any?(igniter.notices, &String.contains?(&1, "florist.config.exs"))
   end
 
   test "copied Gettext helper fills single-line translations portably" do

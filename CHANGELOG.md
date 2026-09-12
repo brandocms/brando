@@ -242,6 +242,16 @@
 
 #### Improvements
 
+- **The source upgrade task is split by version.** `mix brando.migrate54` now
+  covers only the 0.53 to 0.54 source changes and `mix brando.migrate55` covers
+  the 0.54 to 0.55 changes: the explicit listing component imports, the Req
+  Swoosh client, the `phoenix_live_view` JavaScript pin, Florist conversion,
+  the refreshed gettext helper, and archiving the consumer-owned
+  `mix brando.upgrade` task that 0.54 installed. Applications on 0.54 run
+  `mix brando.migrate55` only; applications on 0.53 run both. Both tasks are
+  idempotent, and `mix igniter.upgrade brando` composes `brando.migrate55`
+  for a 0.54 to 0.55 upgrade. `mix brando.install` no longer copies a
+  consumer-owned `brando.upgrade` task into new applications.
 - **The 251-module compile-connected dependency cycle is gone** (#2737), and the
   CI gate is back to `--fail-above 0`.
 

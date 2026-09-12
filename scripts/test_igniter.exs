@@ -11,6 +11,7 @@ default_tests =
       "test/mix/tasks/brando/brando.gen_test.exs",
       "test/mix/tasks/brando/brando.gen.mail_test.exs",
       "test/mix/tasks/brando_migrate54_test.exs",
+      "test/mix/tasks/brando_migrate55_test.exs",
       "test/mix/tasks/brando_setup_tenancy_test.exs",
       "test/brando/blueprints/migrations_test.exs",
       "test/brando/blueprints/migration_plan_test.exs",

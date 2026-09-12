@@ -22,9 +22,6 @@ defmodule Mix.Brando.Install.Templates do
     {:eex, "rel/vm.args.eex", "rel/vm.args.eex"},
     {:eex, "lib/application_name/release_tasks.ex", "lib/application_name/release_tasks.ex"},
 
-    # Brando migrator
-    {:eex, "lib/mix/brando.upgrade.ex", "lib/mix/brando.upgrade.ex"},
-
     # Application-owned migrations for named environment schemas
     {:keep, "tenant_migrations", "priv/repo/tenant_migrations"},
     {:eex, "tenant_migrations/20260816002300_add_shared_content_library.exs",

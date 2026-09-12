@@ -13,7 +13,14 @@ if Code.ensure_loaded?(Igniter) do
 
     @legacy_module Mix.Tasks.Brando.Upgrade
     @archive "priv/brando/legacy_tasks/brando.upgrade.ex.disabled"
+    @legacy_templates "priv/templates/brando.migrate/legacy_upgrade_tasks"
     @minimum "0.54.0-dev"
+
+    # Source recipes composed by the versioned hook, keyed by the target minor
+    # version. 0.54 has no recipe here because pre-0.54 source must run
+    # `mix brando.migrate54` before the dependency can compile.
+    @recipes %{55 => "brando.migrate55"}
+    @supported_minors Enum.sort([54 | Map.keys(@recipes)])
 
     # A separate task must remove the consumer module before the next Mix process
     # can resolve the library-owned brando.upgrade task. Never replace a loaded
@@ -33,9 +40,8 @@ if Code.ensure_loaded?(Igniter) do
 
     defp retire(igniter, source) do
       contents = Rewrite.Source.get(source, :content)
-      template = Application.app_dir(:brando, "priv/templates/brando.install/lib/mix/brando.upgrade.ex")
 
-      if normalized(contents) == normalized(File.read!(template)) do
+      if recognized_legacy_task?(contents) do
         igniter = Files.create(igniter, @archive, contents)
 
         if igniter.issues == [] do
@@ -57,6 +63,19 @@ if Code.ensure_loaded?(Igniter) do
         then compile before using Igniter upgrades. No legacy task was removed.
         """)
       end
+    end
+
+    # Every version of the task Brando ever installed into an application is
+    # kept verbatim under @legacy_templates; a match against any of them means
+    # the file is Brando-owned and safe to archive.
+    defp recognized_legacy_task?(contents) do
+      fingerprint = normalized(contents)
+
+      :brando
+      |> Application.app_dir(@legacy_templates)
+      |> Path.join("*.ex")
+      |> Path.wildcard()
+      |> Enum.any?(&(normalized(File.read!(&1)) == fingerprint))
     end
 
     defp normalized(contents), do: contents |> Sourceror.parse_string!() |> Sourceror.strip_meta()
@@ -107,8 +126,16 @@ if Code.ensure_loaded?(Igniter) do
           "Brando is already at #{to}; use mix brando.gen.migrations to reconcile missing framework migration files."
         )
       else
-        migrations(igniter)
+        igniter
+        |> compose_recipes(from, to)
+        |> migrations()
       end
+    end
+
+    defp compose_recipes(igniter, from, to) do
+      (from.minor + 1)..to.minor//1
+      |> Enum.flat_map(&List.wrap(@recipes[&1]))
+      |> Enum.reduce(igniter, &Igniter.compose_task(&2, &1, []))
     end
 
     defp version(value) when is_binary(value) do
@@ -137,11 +164,11 @@ if Code.ensure_loaded?(Igniter) do
 
         Version.compare(from, @minimum) == :lt ->
           {:error,
-           "Before upgrading from #{from}, follow guides/migrating_to_054.md and run mix brando.migrate54. The automatic hook supports #{@minimum} and newer."}
+           "Before upgrading from #{from}, follow guides/migrating_to_054.md and run mix brando.migrate54, then mix brando.migrate55. The automatic hook supports #{@minimum} and newer."}
 
-        to.major != 0 or to.minor != 54 ->
+        to.major != 0 or to.minor not in @supported_minors ->
           {:error,
-           "This upgrade recipe covers the 0.54 development line. #{to} requires a version-specific source upgrade recipe."}
+           "This upgrade recipe covers the 0.#{Enum.join(@supported_minors, " and 0.")} development lines. #{to} requires a version-specific source upgrade recipe."}
 
         true ->
           :ok

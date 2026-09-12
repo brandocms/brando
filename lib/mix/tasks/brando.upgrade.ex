@@ -8,8 +8,9 @@ if Code.ensure_loaded?(Igniter) do
     @shortdoc "Applies versioned Brando source upgrades through Igniter"
     @moduledoc """
     Called by mix igniter.upgrade brando with the old and new package versions.
-    Only forward upgrades within the supported 0.54 development line and no
-    newer than the loaded Brando dependency are accepted. Older applications
+    Only forward upgrades from the 0.54 development line onward and no newer
+    than the loaded Brando dependency are accepted. A 0.54 to 0.55 upgrade
+    composes mix brando.migrate55 before planning migrations. Older applications
     must first follow guides/migrating_to_054.md; that source conversion precedes
     dependency compilation. Future version transitions require explicit recipes.
 
