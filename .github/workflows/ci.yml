@@ -58,7 +58,7 @@ jobs:
           otp-version: ${{ matrix.otp }}
 
       - name: Restore deps and _build cache
-        uses: actions/cache@v5.0.5
+        uses: actions/cache@v6.1.0
         with:
           path: |
             deps
@@ -98,7 +98,7 @@ jobs:
           otp-version: 28.4.1
 
       - name: Restore deps and _build cache
-        uses: actions/cache@v5.0.5
+        uses: actions/cache@v6.1.0
         with:
           path: |
             deps
@@ -145,7 +145,7 @@ jobs:
           otp-version: 28.4.1
 
       - name: Restore docs dependencies and build cache
-        uses: actions/cache@v5.0.5
+        uses: actions/cache@v6.1.0
         with:
           path: |
             deps
