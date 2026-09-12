@@ -733,6 +733,68 @@ and deployment configuration at creation time. A later asset activation or
 target edit therefore affects new builds, never an artifact already being
 reviewed or deployed.
 
+### Shared previews pin an asset set
+
+A shared preview link (`/__p__/:preview_key`) stores fully rendered HTML, and
+that markup links the digested stylesheet and script names of the build it was
+rendered with. To keep the link working after a deploy or an activation,
+`Brando.LivePreview.share/5` pins the preview to an immutable asset set before
+rendering, records it in `sites_previews.asset_set_id`, and renders manifest,
+inline critical CSS, and asset URLs from that set even if another set is
+activated in the meantime:
+
+- when the active uploaded set is self-contained (every file its Vite manifest
+  lists is present), the preview reuses it;
+- otherwise Brando captures the effective build into
+  `sets/capture-<identity>`: the release's `priv/static` overlaid with the
+  active set, if any. Files are copied rather than symlinked, the copy is
+  published by an atomic rename from `staging/`, and the identity is derived
+  from the file listing and manifest, so sharing the same release twice reuses
+  one capture. Set `config :brando, :release_static_path` when the release
+  assets live outside the endpoint application's `priv/static`.
+
+`Brando.Plug.SiteAssets` serves a pinned set at the original URLs: after the
+active set misses, it looks the path up in every set an unexpired preview of
+that site still references. Only the content-addressed files a set's manifest
+lists (entries, chunks, CSS, imported fonts and images, plus their source
+maps) are served this way, so an old capture never shadows un-hashed files
+such as `favicon.ico`, and compiled CSS or JavaScript that uses root-relative
+`/assets/...` URLs keeps resolving without any rewriting or build changes.
+Previews created before this feature have no reference and are served as
+before; they cannot be repaired from a later manifest and must be recreated.
+
+A capture failure fails sharing visibly instead of storing a preview tied to
+ephemeral release files. Preview expiry and the frozen unsaved content are
+unchanged.
+
+### Pruning contract
+
+`Brando.Assets.SiteAssets.Retention` owns the deletion decision. A set is
+protected while it is active, while an unexpired preview references it
+(`expires_at` is compared directly, so expired rows the purge worker has not
+removed yet never prolong protection), or while a queued or running static
+build still needs it as its asset source. Deletion runs under the same
+per-scope advisory lock that sharing holds while it captures, renders, and
+saves a preview, so a set cannot disappear underneath a preview acquiring it.
+
+```elixir
+# Ordinary retention: keep the five newest uploaded sets, skip protected ones
+Brando.Assets.SiteAssets.Retention.prune_sets(keep: 5)
+Brando.Assets.SiteAssets.Retention.prune_sets(site, keep: 5)
+
+# Inspect without deleting
+Brando.Assets.SiteAssets.Retention.prunable_sets(site, keep: 5)
+
+# One set; refused with {:error, :asset_set_protected} while in use
+Brando.Assets.SiteAssets.Retention.delete_set(set_id)
+```
+
+Captured sets never count against `:keep` and are removed by the preview purge
+worker once the last preview that needs them has expired. Deployment tooling
+such as Florist must call this API instead of deleting set directories by age
+or count; protected sets may temporarily exceed the configured count. The
+admin assets screen marks sets that are in use by previews or builds.
+
 ## Build and publish static sites
 
 Declare public paths in your application's web SSG module:

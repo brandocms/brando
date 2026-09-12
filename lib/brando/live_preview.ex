@@ -66,6 +66,7 @@ defmodule Brando.LivePreview do
     opts_to_document: []
 
   require Logger
+  alias Brando.Assets.SiteAssets
   alias Brando.Exception.LivePreviewError
   alias Brando.Utils
   alias Brando.Worker
@@ -422,39 +423,64 @@ defmodule Brando.LivePreview do
   end
 
   @doc """
-  Renders the entry, stores in DB and returns URL
+  Renders the entry against a pinned frontend asset set, stores the HTML, and
+  returns the shareable URL.
+
+  The asset set is resolved and locked before rendering (see
+  `Brando.Assets.SiteAssets.with_preview_set/2`), so the stored markup, its
+  inline critical CSS, and the digested files it links stay available for the
+  preview's whole lifetime even if a deploy or activation replaces the
+  current assets. A capture failure fails sharing instead of storing a preview
+  tied to ephemeral release files.
   """
   def share(schema_module, changeset, user, updated_entry_assocs \\ %{}, target \\ nil) do
-    with :ok <- Brando.Authorization.Preview.authorize_share(user, changeset) do
-      cache_key = build_cache_key(:erlang.system_time())
-      entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
+    with :ok <- Brando.Authorization.Preview.authorize_share(user, changeset),
+         {:ok, scope} <- preview_asset_scope(),
+         {:ok, result} <-
+           SiteAssets.with_preview_set(
+             scope,
+             &store_preview(schema_module, changeset, user, updated_entry_assocs, target, &1)
+           ) do
+      result
+    end
+  end
 
-      expiry_days = Brando.config(:preview_expiry_days) || 2
+  defp preview_asset_scope do
+    case SiteAssets.current_scope() do
+      {:ok, scope} -> {:ok, scope}
+      :error -> {:error, :missing_site_context}
+    end
+  end
 
-      html =
-        schema_module
-        |> render(entry_struct, cache_key, include_meta: true, target: target)
-        |> Utils.term_to_binary()
+  defp store_preview(schema_module, changeset, user, updated_entry_assocs, target, asset_set) do
+    cache_key = build_cache_key(:erlang.system_time())
+    entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
+    expiry_days = Brando.config(:preview_expiry_days) || 2
 
-      preview_key = Utils.random_string(12)
-      expires_at = DateTime.add(DateTime.utc_now(), expiry_days, :day)
+    html =
+      schema_module
+      |> render(entry_struct, cache_key, include_meta: true, target: target)
+      |> Utils.term_to_binary()
 
-      preview = %{
-        html: html,
-        preview_key: preview_key,
-        expires_at: expires_at,
-        creator_id: user.id
-      }
+    expires_at = DateTime.add(DateTime.utc_now(), expiry_days, :day)
 
-      with :ok <- Brando.Authorization.Preview.authorize_share(user, changeset),
-           {:ok, preview} <- Brando.Sites.create_preview(preview, :system) do
-        %{id: preview.id}
-        |> Brando.Tenant.Job.attach()
-        |> Worker.PreviewPurger.new(scheduled_at: expires_at, tags: [:preview_purger])
-        |> Oban.insert()
+    preview = %{
+      html: html,
+      preview_key: Utils.random_string(12),
+      expires_at: expires_at,
+      creator_id: user.id,
+      asset_set_id: asset_set.id
+    }
 
-        {:ok, Brando.Sites.Preview.__absolute_url__(preview), expiry_days}
-      end
+    with {:ok, preview} <- Brando.Sites.create_preview(preview, :system) do
+      SiteAssets.invalidate_pinned(asset_set)
+
+      %{id: preview.id}
+      |> Brando.Tenant.Job.attach()
+      |> Worker.PreviewPurger.new(scheduled_at: expires_at, tags: [:preview_purger])
+      |> Oban.insert()
+
+      {:ok, Brando.Sites.Preview.__absolute_url__(preview), expiry_days}
     end
   end
 

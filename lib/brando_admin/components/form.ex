@@ -1816,10 +1816,22 @@ defmodule BrandoAdmin.Components.Form do
             type: "info"
           })
 
-        {:error, _} ->
+        {:error, :forbidden} ->
           push_event(socket, "b:alert", %{
             title: gettext("Cannot share preview"),
             message: gettext("You do not have permission to export this entry."),
+            type: "error"
+          })
+
+        {:error, reason} ->
+          Logger.error("Sharing a preview failed: #{inspect(reason)}")
+
+          push_event(socket, "b:alert", %{
+            title: gettext("Cannot share preview"),
+            message:
+              gettext(
+                "The frontend assets for this preview could not be captured, so no link was created. Check the server log and try again."
+              ),
             type: "error"
           })
       end

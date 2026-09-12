@@ -7,25 +7,37 @@ defmodule Brando.Assets.SiteAssets do
   the complete regular-file listing as a `MapSet` and the optional Vite
   manifest in `:persistent_term`, making non-matching request rejection a
   memory lookup with no filesystem access.
+
+  Shared previews pin the set they were rendered against (see
+  `with_preview_set/2` and `Brando.Assets.SiteAssets.Capture`). A pinned set
+  keeps serving its content-addressed build output at the original URLs until
+  the last preview that references it expires, so a later activation or release
+  cannot break a link that has already been shared. `Brando.Assets.SiteAssets.Retention`
+  owns the pruning rules that protect those sets.
   """
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Assets.SiteAssets.Capture
+  alias Brando.Assets.SiteAssets.Retention
   alias Brando.Assets.SiteAssetSet
   alias Brando.Repo
   alias Brando.Sites.Site
   alias Brando.Tenant
+  alias Brando.Tenant.Lock
   alias Brando.Tenant.Registry
   alias Brando.Tenant.Storage
 
   @public_opts [prefix: "public"]
   @cache_keys_key {:brando, :site_assets, :cache_keys}
+  @override_key {:brando, :site_assets, :override}
 
   @type scope :: Site.t() | nil
   @type cached_set :: %{
           set: SiteAssetSet.t(),
           path: String.t(),
           files: MapSet.t(String.t()),
+          pinned: MapSet.t(String.t()),
           manifest: map() | nil
         }
 
@@ -40,6 +52,10 @@ defmodule Brando.Assets.SiteAssets do
           {:ok, SiteAssetSet.t()} | {:error, term()}
   def register_set(%Site{} = site, path, metadata) when is_binary(path) and is_map(metadata) do
     register(site, path, metadata)
+  end
+
+  def register_set(nil, path, metadata) when is_binary(path) and is_map(metadata) do
+    register(nil, path, metadata)
   end
 
   def register_set(site_key, path, metadata)
@@ -113,6 +129,121 @@ defmodule Brando.Assets.SiteAssets do
     end
   end
 
+  @doc """
+  Returns cached file, pinned-file, and manifest information for any registered
+  set, active or not. The listing is scanned once and kept in `:persistent_term`
+  until `forget_set/1` or `invalidate_cache/0` runs.
+  """
+  @spec set_cache(SiteAssetSet.t()) :: {:ok, cached_set()} | {:error, term()}
+  def set_cache(%SiteAssetSet{id: id} = asset_set) do
+    key = set_cache_key(id)
+
+    case :persistent_term.get(key, :not_cached) do
+      :not_cached ->
+        with {:ok, cached} <- build_cache(asset_set) do
+          store(key, cached)
+          {:ok, cached}
+        end
+
+      cached ->
+        {:ok, cached}
+    end
+  end
+
+  @doc "Drops the runtime caches for one set, including the pinned listing of its scope."
+  @spec forget_set(SiteAssetSet.t()) :: :ok
+  def forget_set(%SiteAssetSet{id: id} = asset_set) do
+    :persistent_term.erase(set_cache_key(id))
+    invalidate_pinned(asset_set)
+  end
+
+  @doc """
+  Resolves the immutable set a shared preview must be pinned to and runs `fun`
+  with that set installed as the process-local asset source.
+
+  The scope's advisory lock is held for the whole call, so pruning cannot
+  remove the set while the preview is being captured, rendered, or saved. The
+  set is the active uploaded set when it is self-contained; otherwise the
+  effective release build is captured into a registered set first. Templates
+  rendered inside `fun` read the pinned manifest and critical CSS even if
+  another set is activated concurrently.
+  """
+  @spec with_preview_set(scope(), (SiteAssetSet.t() -> result)) :: {:ok, result} | {:error, term()}
+        when result: var
+  def with_preview_set(site \\ nil, fun) when is_function(fun, 1) do
+    Lock.with(lock_key(site), fn -> pin_and_run(site, fun) end)
+  end
+
+  defp pin_and_run(site, fun) do
+    with {:ok, asset_set} <- Capture.ensure_set(site),
+         {:ok, cached} <- set_cache(asset_set) do
+      with_override(cached, fn -> fun.(asset_set) end)
+    end
+  end
+
+  @doc "Runs `fun` with `asset_set` as the process-local manifest and file source."
+  @spec with_set(SiteAssetSet.t(), (-> result)) :: {:ok, result} | {:error, term()} when result: var
+  def with_set(%SiteAssetSet{} = asset_set, fun) when is_function(fun, 0) do
+    with {:ok, cached} <- set_cache(asset_set), do: with_override(cached, fun)
+  end
+
+  @doc "Returns the process-local set installed by `with_set/2`, if any."
+  @spec override() :: cached_set() | nil
+  def override, do: Process.get(@override_key)
+
+  @doc """
+  Resolves a request path to a file in the active set or, failing that, in a
+  set pinned by an unexpired shared preview for the same scope. Pinned lookups
+  only cover the content-addressed files listed in a set's Vite manifest, so an
+  old set never shadows un-hashed files such as favicons.
+  """
+  @spec serve_path(scope(), String.t()) :: String.t() | nil
+  def serve_path(site, relative_path) when is_binary(relative_path) do
+    active_file(site, relative_path) || pinned_file(site, relative_path)
+  end
+
+  @doc "Returns cached information for every set still pinned by a preview in the scope."
+  @spec pinned_sets(scope()) :: [cached_set()]
+  def pinned_sets(site \\ nil) do
+    key = pinned_cache_key(scope_key(site))
+
+    case :persistent_term.get(key, :not_cached) do
+      :not_cached -> warm_pinned(site)
+      pinned -> pinned
+    end
+  end
+
+  @doc "Clears the pinned-set listing for a scope so the next request rebuilds it."
+  @spec invalidate_pinned(scope() | SiteAssetSet.t()) :: :ok
+  def invalidate_pinned(scope \\ nil) do
+    :persistent_term.erase(pinned_cache_key(scope_key(scope)))
+    :ok
+  end
+
+  @doc "The advisory-lock key serializing capture, activation-sensitive pinning, and pruning."
+  @spec lock_key(scope() | SiteAssetSet.t()) :: String.t()
+  def lock_key(scope) do
+    case scope_key(scope) do
+      :standalone -> "site-assets:standalone"
+      {:site_id, site_id} -> "site-assets:#{site_id}"
+    end
+  end
+
+  @doc "Lists every output file a Vite manifest references: entries, chunks, CSS, and assets."
+  @spec manifest_files(map() | nil) :: [String.t()]
+  def manifest_files(nil), do: []
+
+  def manifest_files(manifest) when is_map(manifest) do
+    manifest
+    |> Map.values()
+    |> Enum.filter(&is_map/1)
+    |> Enum.flat_map(fn entry ->
+      [Map.get(entry, "file") | List.wrap(Map.get(entry, "css")) ++ List.wrap(Map.get(entry, "assets"))]
+    end)
+    |> Enum.filter(&is_binary/1)
+    |> Enum.uniq()
+  end
+
   @doc "Warms every persisted active set. Safe to call during application boot."
   @spec warm() :: :ok
   def warm do
@@ -143,20 +274,22 @@ defmodule Brando.Assets.SiteAssets do
     :ok
   end
 
-  @doc "Returns the current scope's cached uploaded Vite manifest, if present."
+  @doc """
+  Returns the Vite manifest of the process-local override set or, without one,
+  of the current scope's active set.
+  """
   @spec current_manifest() :: map() | nil
   def current_manifest do
-    case current_scope() do
-      {:ok, site} -> cached(site) |> cached_value(:manifest)
-      :error -> nil
+    case override() do
+      %{manifest: manifest} -> manifest
+      nil -> current_scope() |> scope_cached() |> cached_value(:manifest)
     end
   end
 
-  @doc "Resolves a regular file within the current active set."
+  @doc "Resolves a regular file within the override set or the current active set."
   @spec current_file(String.t()) :: String.t() | nil
   def current_file(relative_path) when is_binary(relative_path) do
-    with {:ok, site} <- current_scope(),
-         %{files: files, path: root} <- cached(site),
+    with %{files: files, path: root} <- override() || scope_cached(current_scope()),
          normalized when is_binary(normalized) <- normalize_relative_path(relative_path),
          true <- MapSet.member?(files, normalized) do
       Path.join(root, normalized)
@@ -165,12 +298,32 @@ defmodule Brando.Assets.SiteAssets do
     end
   end
 
-  @doc "Returns the current scope's active set root for static export tooling."
+  @doc "Returns the override or active set root for static export tooling."
   @spec current_root() :: String.t() | nil
   def current_root do
-    case current_scope() do
-      {:ok, site} -> cached(site) |> cached_value(:path)
-      :error -> nil
+    case override() do
+      %{path: path} -> path
+      nil -> current_scope() |> scope_cached() |> cached_value(:path)
+    end
+  end
+
+  @doc """
+  Resolves the scope of the current process: the tenant site in multi-site
+  mode, `nil` for standalone installations, and `:error` without site context.
+  """
+  @spec current_scope() :: {:ok, scope()} | :error
+  def current_scope do
+    case Tenant.mode() do
+      :multi ->
+        with site_key when is_binary(site_key) <- Tenant.current_site_key(),
+             site when not is_nil(site) <- Brando.Tenant.Cache.get_site(site_key) do
+          {:ok, site}
+        else
+          _missing_context -> :error
+        end
+
+      _standalone ->
+        {:ok, nil}
     end
   end
 
@@ -257,9 +410,77 @@ defmodule Brando.Assets.SiteAssets do
   defp build_cache(%SiteAssetSet{} = asset_set) do
     with {:ok, files, _size} <- scan_files(asset_set.path),
          {:ok, manifest} <- read_manifest(asset_set.path) do
-      {:ok, %{set: asset_set, path: asset_set.path, files: files, manifest: manifest}}
+      {:ok,
+       %{
+         set: asset_set,
+         path: asset_set.path,
+         files: files,
+         pinned: pinned_files(files, manifest),
+         manifest: manifest
+       }}
     end
   end
+
+  # Only content-addressed build output may be served from a pinned set. Source
+  # maps sit beside their hashed owners, so they are pinned when present.
+  defp pinned_files(files, manifest) do
+    manifest
+    |> manifest_files()
+    |> Enum.flat_map(&[&1, &1 <> ".map"])
+    |> MapSet.new()
+    |> MapSet.intersection(files)
+  end
+
+  defp active_file(site, relative_path) do
+    case cached(site) do
+      %{files: files, path: root} ->
+        if MapSet.member?(files, relative_path), do: Path.join(root, relative_path)
+
+      nil ->
+        nil
+    end
+  end
+
+  defp pinned_file(site, relative_path) do
+    site
+    |> pinned_sets()
+    |> Enum.find_value(fn %{pinned: pinned, path: root} ->
+      if MapSet.member?(pinned, relative_path), do: Path.join(root, relative_path)
+    end)
+  end
+
+  defp warm_pinned(site) do
+    pinned =
+      site
+      |> Retention.preview_pinned_sets()
+      |> Enum.flat_map(fn asset_set ->
+        case set_cache(asset_set) do
+          {:ok, cached} -> [cached]
+          {:error, _reason} -> []
+        end
+      end)
+
+    store(pinned_cache_key(scope_key(site)), pinned)
+    pinned
+  rescue
+    _migration_not_applied_yet ->
+      store(pinned_cache_key(scope_key(site)), [])
+      []
+  end
+
+  defp with_override(cached, fun) do
+    previous = Process.get(@override_key)
+    Process.put(@override_key, cached)
+
+    try do
+      {:ok, fun.()}
+    after
+      if previous, do: Process.put(@override_key, previous), else: Process.delete(@override_key)
+    end
+  end
+
+  defp scope_cached({:ok, site}), do: cached(site)
+  defp scope_cached(:error), do: nil
 
   defp read_manifest(root) do
     path = Path.join(root, "manifest.json")
@@ -316,21 +537,6 @@ defmodule Brando.Assets.SiteAssets do
     _migration_not_applied_yet -> nil
   end
 
-  defp current_scope do
-    case Tenant.mode() do
-      :multi ->
-        with site_key when is_binary(site_key) <- Tenant.current_site_key(),
-             site when not is_nil(site) <- Brando.Tenant.Cache.get_site(site_key) do
-          {:ok, site}
-        else
-          _missing_context -> :error
-        end
-
-      _standalone ->
-        {:ok, nil}
-    end
-  end
-
   defp scope_query(nil), do: from(asset_set in SiteAssetSet, where: is_nil(asset_set.site_id))
 
   defp scope_query(%Site{id: site_id}),
@@ -347,9 +553,12 @@ defmodule Brando.Assets.SiteAssets do
   defp scope_key(%Site{id: site_id}), do: {:site_id, site_id}
 
   defp cache_key(scope_key), do: {:brando, :site_assets, :active, scope_key}
+  defp pinned_cache_key(scope_key), do: {:brando, :site_assets, :pinned, scope_key}
+  defp set_cache_key(set_id), do: {:brando, :site_assets, :set, set_id}
 
-  defp put_cache(scope_key, value) do
-    key = cache_key(scope_key)
+  defp put_cache(scope_key, value), do: store(cache_key(scope_key), value)
+
+  defp store(key, value) do
     :persistent_term.put(key, value)
 
     keys = :persistent_term.get(@cache_keys_key, [])

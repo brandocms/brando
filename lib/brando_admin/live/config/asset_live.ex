@@ -6,6 +6,8 @@ defmodule BrandoAdmin.Sites.AssetLive do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Assets.SiteAssets
+  alias Brando.Assets.SiteAssets.Capture
+  alias Brando.Assets.SiteAssets.Retention
   alias Brando.Tenant
   alias BrandoAdmin.Components.Workspace
 
@@ -141,6 +143,7 @@ defmodule BrandoAdmin.Sites.AssetLive do
                   <td class="frontend-assets-build__identity">
                     <h3>{asset_set.name}</h3>
                     <code>{asset_set.metadata["revision"] || asset_set.path}</code>
+                    <p :if={Capture.captured?(asset_set)}>{gettext("Captured from a release for shared previews")}</p>
                   </td>
                   <td class="frontend-assets-build__uploaded">{format_datetime(asset_set.uploaded_at)}</td>
                   <td class="frontend-assets-build__bundle">
@@ -149,7 +152,7 @@ defmodule BrandoAdmin.Sites.AssetLive do
                   <td class="frontend-assets-build__status">
                     <span class={["frontend-assets-status", asset_set.active && "active"]}>
                       <span aria-hidden="true"></span>
-                      {if asset_set.active, do: gettext("Active"), else: gettext("Available")}
+                      {status_label(asset_set, @protected_ids)}
                     </span>
                   </td>
                   <td class="frontend-assets-build__actions row-actions">
@@ -205,11 +208,21 @@ defmodule BrandoAdmin.Sites.AssetLive do
   end
 
   defp refresh(socket) do
-    sets = SiteAssets.list_sets(socket.assigns.scope_site)
+    scope_site = socket.assigns.scope_site
+    sets = SiteAssets.list_sets(scope_site)
 
     socket
     |> assign(:sets, sets)
     |> assign(:active_set, Enum.find(sets, & &1.active))
+    |> assign(:protected_ids, Retention.protected_set_ids(scope_site))
+  end
+
+  defp status_label(%{active: true}, _protected_ids), do: gettext("Active")
+
+  defp status_label(asset_set, protected_ids) do
+    if MapSet.member?(protected_ids, asset_set.id),
+      do: gettext("In use by shared previews or builds"),
+      else: gettext("Available")
   end
 
   defp scope_site(socket) do

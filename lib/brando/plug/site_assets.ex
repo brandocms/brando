@@ -1,10 +1,14 @@
 defmodule Brando.Plug.SiteAssets do
   @moduledoc """
-  Serves files from the active persistent frontend asset set.
+  Serves files from the active persistent frontend asset set, or from a set a
+  shared preview has pinned.
 
-  Place this plug before the application's release `Plug.Static`. A cached
-  `MapSet` rejects misses without touching the filesystem; misses fall through
-  unchanged so release assets remain the fallback.
+  Place this plug before the application's release `Plug.Static`. Cached
+  `MapSet`s reject misses without touching the filesystem; misses fall through
+  unchanged so release assets remain the fallback. Pinned sets only serve the
+  content-addressed files their Vite manifest lists, at their original URLs,
+  so a preview rendered against an older build keeps loading its stylesheets,
+  chunks, and fonts after the active set or release changes.
   """
 
   import Plug.Conn, only: [halt: 1, put_resp_header: 3, send_file: 3]
@@ -20,13 +24,13 @@ defmodule Brando.Plug.SiteAssets do
 
   @impl Plug
   def call(%Plug.Conn{method: method} = conn, _opts) when method in @allowed_methods do
-    with {:ok, site} <- request_scope(conn),
-         %{files: files, path: root} <- SiteAssets.cached(site),
-         relative_path when is_binary(relative_path) <- relative_path(conn.path_info),
-         true <- MapSet.member?(files, relative_path) do
+    with relative_path when is_binary(relative_path) <- relative_path(conn.path_info),
+         {:ok, site} <- request_scope(conn),
+         file when is_binary(file) <- SiteAssets.serve_path(site, relative_path) do
       conn
+      |> put_resp_header("content-type", MIME.from_path(relative_path))
       |> put_resp_header("cache-control", "public, max-age=31536000, immutable")
-      |> send_file(200, Path.join(root, relative_path))
+      |> send_file(200, file)
       |> halt()
     else
       _miss -> conn
