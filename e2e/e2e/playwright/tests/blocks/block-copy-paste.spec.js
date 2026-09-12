@@ -128,7 +128,8 @@ test.describe('Block Copy/Paste', () => {
 
     // Add Single Asset block (has a string var "String label")
     await page.getByRole('button', { name: 'Add block' }).click()
-    await page.getByRole('button', { name: 'MEDIA' }).click()
+    await page.getByRole('navigation', { name: 'Module groups' })
+      .getByRole('button', { name: 'MEDIA' }).click()
     await page.getByRole('button', { name: 'Single Asset' }).click()
     await syncLV(page)
 
@@ -360,7 +361,8 @@ test.describe('Block Copy/Paste', () => {
     // Source entry with a block carrying an identifiable var value
     await createPage(page, 'Cross Entry Source', 'cross-entry-source')
     await page.getByRole('button', { name: 'Add block' }).click()
-    await page.getByRole('button', { name: 'MEDIA' }).click()
+    await page.getByRole('navigation', { name: 'Module groups' })
+      .getByRole('button', { name: 'MEDIA' }).click()
     await page.getByRole('button', { name: 'Single Asset' }).click()
     await syncLV(page)
 
