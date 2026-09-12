@@ -197,29 +197,35 @@ defmodule Brando.Assets.Vite do
     end
 
     def critical_css(scope \\ :app) do
-      cache_key = Brando.Tenant.cache_key(config(scope).critical_css_cache_key)
+      # A process-local set override (shared preview rendering) must read that
+      # set's critical CSS rather than the cached active-set result.
+      if scope == :app and Brando.Assets.SiteAssets.override() do
+        build_critical_css(scope)
+      else
+        cache_key = Brando.Tenant.cache_key(config(scope).critical_css_cache_key)
 
-      case :persistent_term.get(cache_key, nil) do
-        nil ->
-          manifest = Manifest.read(scope)
+        case :persistent_term.get(cache_key, nil) do
+          nil ->
+            res = build_critical_css(scope)
+            :persistent_term.put(cache_key, res)
+            res
 
-          critical_css_files =
-            get_in(manifest, [Access.key(:critical), Access.key(:css_files, [])])
+          res ->
+            res
+        end
+      end
+    end
 
-          res =
-            if critical_css_files == [] do
-              "/* no critical css */"
-            else
-              Brando.env()
-              |> critical_css(critical_css_files)
-              |> Phoenix.HTML.raw()
-            end
+    defp build_critical_css(scope) do
+      manifest = Manifest.read(scope)
+      critical_css_files = get_in(manifest, [Access.key(:critical), Access.key(:css_files, [])])
 
-          :persistent_term.put(cache_key, res)
-          res
-
-        res ->
-          res
+      if critical_css_files == [] do
+        "/* no critical css */"
+      else
+        Brando.env()
+        |> critical_css(critical_css_files)
+        |> Phoenix.HTML.raw()
       end
     end
 

@@ -21,4 +21,10 @@ defmodule Brando.Sites.Preview do
     attribute :expires_at, :datetime, required: true
     attribute :html, :text, required: true
   end
+
+  relations do
+    # The immutable frontend asset set the stored HTML was rendered against.
+    # Legacy previews created before pinning keep a nil reference.
+    relation :asset_set, :belongs_to, module: Brando.Assets.SiteAssetSet
+  end
 end

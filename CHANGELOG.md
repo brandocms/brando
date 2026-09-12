@@ -502,6 +502,20 @@
 
 #### Fixes
 
+- **Shared preview links no longer break on deploy.** The stored preview HTML
+  links the digested asset names of the build it was rendered with, and the
+  next release removed those files. Sharing now pins the preview to an
+  immutable asset set: the active uploaded set when it is self-contained,
+  otherwise a copy of the release's `priv/static` captured into
+  `site_assets/sets/capture-<identity>` and registered without activation.
+  `Brando.Plug.SiteAssets` serves the content-addressed files of every set an
+  unexpired preview references at their original URLs, and now sends a
+  `content-type` header. `Brando.Assets.SiteAssets.Retention` protects pinned,
+  active, and build-referenced sets from pruning and is the API deployment
+  tooling must use to delete sets. Run the `brando_173_add_asset_set_to_previews`
+  upgrade migration; previews created before it keep the legacy behaviour and
+  must be recreated if already broken.
+
 - Container blocks render without reading a module-only `multi` flag, restoring
   insertion, nested content and copy/paste after the footnote changes.
 
