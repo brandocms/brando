@@ -27,7 +27,8 @@ defmodule Brando.Villain.Migration do
   @doc """
   Macro for villain migrations.
   """
-  # TODO: Remove in 0.55
+  # Kept deliberately: historical application migrations call villain/1, and a
+  # fresh database still has to run them.
   @deprecated "Move to :blocks"
   defmacro villain(field \\ nil) do
     data_field = (field && field |> to_string() |> Kernel.<>("_data") |> String.to_atom()) || :data

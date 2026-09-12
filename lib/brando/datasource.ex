@@ -305,7 +305,8 @@ defmodule Brando.Datasource do
     Registry.meta(module, type, query)
   end
 
-  ## DEPRECATED——REMOVE in 0.55
+  ## DEPRECATED — keep until 0.56. `mix brando.migrate54` rewrites these calls,
+  ## and a 0.53 application must still compile far enough to run that task.
 
   @deprecated "list/2 outside of datasource/1 is deprecated. Wrap inside datasource/1"
   defmacro list(_, {_, _, [{_, _, [[_, _], _]}]}, _) do

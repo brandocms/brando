@@ -1,8 +1,47 @@
-## 0.54.0 (Unreleased)
+## 0.55.0 (Unreleased)
 
-### Unreleased
+### Upgrading
+
+Brando 0.55 continues the `next` line that diverged from the 0.54 release in
+February 2026. Projects on the `0.54` branch run `mix brando.migrate55`;
+projects still on 0.53 run `mix brando.migrate54` followed by
+`mix brando.migrate55`. Both tasks rewrite source only and are safe to rerun.
+Then copy the Brando migrations added since `brando_130` with
+`mix brando.gen.migrations`, review them, run `mix ecto.migrate`, and finish
+with `mix brando.entries.resave` and `mix brando.identifiers.sync`. The full
+ordered workflow, including Blueprint snapshot handling and Gettext recovery,
+is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Breaking
+
+- **Video Type Migration**: The deprecated `Brando.Type.Video` has been replaced with `Brando.Videos.Video`. The video schema has been updated:
+  - `source` field renamed to `type` (enum: `:upload`, `:external_file`, `:vimeo`, `:youtube`)
+  - `url` field renamed to `source_url`
+  - Added new fields: `title`, `caption`, `aspect_ratio`
+  - Videos are now stored as separate database entities instead of embedded JSON
+  - Video rendering components and parsers updated to use new schema
+  - If you were using `Brando.Type.Video` in your code, update to use `Brando.Videos.Video`
+  - Test data using video factories should use new field names (`type` instead of `source`)
+
+- **Image processing backend update**: Replaced `sharp-cli` usage with Image/Vix processors. If you had custom sharp-based processing setup, migrate to Image/Vix-based processing.
+
+- **`hackney` removed (Swoosh api_client)**: `hackney`/`tzdata` were dropped in favour of `tz` and
+  `req`. Swoosh defaults its API client to hackney, so apps will fail to boot with
+  `Could not find hackney dependency` / `missing hackney dependency`. Point Swoosh at the
+  Req-based client (`req` is already a dependency) in `config/config.exs`:
+
+  ```elixir
+  config :swoosh, :api_client, Swoosh.ApiClient.Req
+  ```
+
+  (Your `config/test.exs` likely already sets `config :swoosh, :api_client, false`.)
+
+- **Refs have been split out to their own table.** Run `mix brando.gen.migrations` to get migrations.
+  The refs structure has changed significantly:
+  - Refs are now stored in a separate table with foreign keys to media
+  - Picture refs: `{{ refs.my_image.data.data.path }}` becomes `{{ refs.my_image.path }}`
+  - Gallery refs: `{{ refs.my_gallery_ref.data.images }}` becomes `{{ refs.my_gallery_ref.gallery.gallery_objects }}`
+  - Video refs work similarly with direct property access
 
 - **The form's input primitives moved out of `BrandoAdmin.Components.Form` into
   `BrandoAdmin.Components.Form.Primitives`.** Twelve public functions:
@@ -1787,6 +1826,36 @@
 - Added `Brando.AI` config-resolution tests in `test/brando/ai_test.exs`.
 - Added AI input rendering tests for `meta_description` in `test/brando_admin/components/form/input_test.exs`.
 
+## 0.54.0
+
+Before running the migration script, you must fix some `form` syntax in your blueprints.
+If you're passing parameters to the `form` macro, they must be moved to their own functions.
+For instance, if you have:
+
+```elixir
+form default_params: %{"status" => "draft"} do
+  # ...
+end
+```
+
+You must change this to:
+
+```elixir
+form do
+  default_params %{"status" => "draft"}
+  # ...
+end
+```
+
+Then pull down migration changes with `mix brando.upgrade`.
+
+Commit all changes before running the migration script with `mix brando.migrate54`
+
+Then run migrations with `mix ecto.migrate`
+
+Finally resave entries with `mix brando.entries.resave`, sync identifiers with `mix brando.identifiers.sync`
+then sync translations with `chmod +x scripts/sync_gettext.sh` then `./scripts/sync_gettext.sh priv/gettext/backend/no/LC_MESSAGES`
+
 ### Features
 
 - **Advanced Listing Filters**: Added support for boolean switches and select dropdowns in listing filters.
@@ -1878,70 +1947,6 @@
 - **Filter DSL field renamed**: In listing filters, the `filter:` field has been renamed to `key:` for clarity.
   - Before: `filter label: "Title", filter: "title"`
   - After: `filter label: "Title", key: "title"`
-
-- **Video Type Migration**: The deprecated `Brando.Type.Video` has been replaced with `Brando.Videos.Video`. The video schema has been updated:
-  - `source` field renamed to `type` (enum: `:upload`, `:external_file`, `:vimeo`, `:youtube`)
-  - `url` field renamed to `source_url`
-  - Added new fields: `title`, `caption`, `aspect_ratio`
-  - Videos are now stored as separate database entities instead of embedded JSON
-  - Video rendering components and parsers updated to use new schema
-  - If you were using `Brando.Type.Video` in your code, update to use `Brando.Videos.Video`
-  - Test data using video factories should use new field names (`type` instead of `source`)
-
-- **Image processing backend update**: Replaced `sharp-cli` usage with Image/Vix processors. If you had custom sharp-based processing setup, migrate to Image/Vix-based processing.
-
-- **`hackney` removed (Swoosh api_client)**: `hackney`/`tzdata` were dropped in favour of `tz` and
-  `req`. Swoosh defaults its API client to hackney, so apps will fail to boot with
-  `Could not find hackney dependency` / `missing hackney dependency`. Point Swoosh at the
-  Req-based client (`req` is already a dependency) in `config/config.exs`:
-
-  ```elixir
-  config :swoosh, :api_client, Swoosh.ApiClient.Req
-  ```
-
-  (Your `config/test.exs` likely already sets `config :swoosh, :api_client, false`.)
-
-#### 0.54 upgrade checklist
-
-Follow the complete [Migrating to Brando 0.54](guides/migrating_to_054.md)
-guide. The required order is:
-
-1. Commit the existing application and back up the database and Gettext catalogs.
-2. Update Brando, then run `mix brando.migrate54`. The task rewrites legacy
-   datasource declarations, unnamed and named `form` options, listing queries,
-   filters, actions, selection actions, supported exports, Meta/JSON-LD path
-   fields, explicit custom-row imports, `Brando.Villain.list_villains/0`, root
-   Docker digest commands, font cache suffixes, and the declared LiveView
-   JavaScript dependency. It also fills missing single-Repo Brando and Swoosh
-   Req configuration and is safe to rerun. It warns about the video-data,
-   standalone datasource, legacy listing-row, template, related-entry, Vite,
-   custom admin form-module, head, navigation, CDN/provider,
-   dependency-client, secure config-target, and Fabric/Oban changes that require
-   manual application-specific decisions. When both legacy `deployment.cfg` and
-   `fabfile.py` exist, it also creates a non-secret `florist.config.exs` without
-   overwriting any existing Florist or Fabric files. Review the generated
-   single/nginx deployment, password environment variables, persistent media
-   symlink cutover, service configuration, backups, and rclone caveats in the
-   migration guide before using it.
-3. Review, format, compile, and test the source diff.
-4. Run `mix brando.upgrade`, then generate or deliberately rebaseline each
-   application's Blueprint storage history as documented in
-   [Blueprint migrations](guides/blueprint_migrations.md).
-5. Review and exercise every migration backward and forward before running
-   `mix ecto.migrate`.
-6. After migration, run `mix brando.entries.resave` and
-   `mix brando.identifiers.sync`, then reconcile backed-up Gettext catalogs.
-
-Do not use `--rebaseline` to avoid a required database migration. Existing
-tables without Blueprint snapshots must be verified against the live database
-before establishing their first baseline.
-
-* BREAKING: Refs have been split out to their own table. Run `mix brando.upgrade` to get migrations.
-  The refs structure has changed significantly:
-  - Refs are now stored in a separate table with foreign keys to media
-  - Picture refs: `{{ refs.my_image.data.data.path }}` becomes `{{ refs.my_image.path }}`
-  - Gallery refs: `{{ refs.my_gallery_ref.data.images }}` becomes `{{ refs.my_gallery_ref.gallery.gallery_objects }}`
-  - Video refs work similarly with direct property access
 
 * BREAKING: Galleries now have `gallery_objects` instead of `gallery_images`. 
   In your templates: `{{ entry.my_gallery.gallery_images }}` becomes `{{ entry.my_gallery.gallery_objects }}`

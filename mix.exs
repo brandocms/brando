@@ -1,7 +1,7 @@
 defmodule Brando.Mixfile do
   use Mix.Project
 
-  @version "0.54.0-dev"
+  @version "0.55.0-dev"
   @description "Brando CMS"
 
   def project do
@@ -24,7 +24,7 @@ defmodule Brando.Mixfile do
         source_url: "https://github.com/brandocms/brando",
         extras: [
           "guides/overview.md",
-          "guides/migrating_to_054.md",
+          "guides/migrating_from_053.md",
           "guides/tenancy_and_environments.md",
           "guides/blueprints.md",
           "guides/blueprint_migrations.md",
@@ -57,7 +57,7 @@ defmodule Brando.Mixfile do
         groups_for_extras: [
           Introduction: ["guides/overview.md"],
           Upgrading: [
-            "guides/migrating_to_054.md"
+            "guides/migrating_from_053.md"
           ],
           "Blueprint system": [
             "guides/blueprints.md",

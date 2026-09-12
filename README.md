@@ -22,18 +22,18 @@
 
 ## Install
 
-For Brando 0.54, follow [Installation and generators](guides/generators.md).
+For Brando 0.55, follow [Installation and generators](guides/generators.md).
 The walkthrough creates a fresh Phoenix consumer, runs `mix brando.install`,
 builds its frontend and admin assets through Vite/Yalc, applies migrations,
 initializes languages, and creates the first administrator.
 
 Keep the Elixir and BrandoJS dependencies on the same revision. The `next` branch
-contains the developing 0.54 API; data upgrades for older Brando applications are described in
-[Migrating to 0.54](guides/migrating_to_054.md).
+contains the developing 0.55 API; data upgrades for older Brando applications are described in
+[Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 ## Dependencies
 
-Brando 0.54 processes images through the Image library and Vix/libvips. The
+Brando 0.55 processes images through the Image library and Vix/libvips. The
 current processor does not require the former `sharp-cli` or `gifsicle` tools.
 See [Videos](guides/videos.md) for video processing and provider requirements.
 
@@ -45,11 +45,11 @@ and [Navigation](guides/navigation.md) to build a translated site.
 
 ## Documentation
 
-Start with the [Brando 0.54 guide index](guides/overview.md) for task-oriented
+Start with the [Brando 0.55 guide index](guides/overview.md) for task-oriented
 reading paths. The [coverage audit](https://github.com/brandocms/brando/blob/next/docs/documentation-coverage.md) records
 coverage and the validation used for the guide workflows.
 
-- [Migrating to Brando 0.54](guides/migrating_to_054.md) — ordered source,
+- [Migrating from Brando 0.53 or 0.54](guides/migrating_from_053.md) — ordered source,
   database, derived-data, and Gettext upgrade workflow.
 - [Blueprint system](guides/blueprints.md) — schema, validation, relations,
   assets, traits, listings, forms, and compile-time boundaries.
