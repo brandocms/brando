@@ -1058,7 +1058,23 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   end
 
   def module_content(assigns) do
-    assigns = assign(assigns, :footnote_refs, footnote_ref_names(assigns.block_form.source))
+    # On a malformed template, render the actual ref controls without template
+    # HTML. Resolve from the current form so newly added, unsaved refs retain
+    # their inputs too; identity-only carried_refs cannot preserve their data.
+    liquid_splits =
+      case assigns.liquid_splits do
+        [{:liquid_error, _reason} = error] ->
+          refs = Changeset.get_assoc(assigns.block_form.source, :refs, :struct)
+          [error | Enum.map(refs, &{:ref, &1.name})]
+
+        splits ->
+          splits
+      end
+
+    assigns =
+      assigns
+      |> assign(:footnote_refs, footnote_ref_names(assigns.block_form.source))
+      |> assign(:liquid_splits, liquid_splits)
 
     ~H"""
     <div class="block-content">
@@ -1094,6 +1110,12 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         <div class="block-liquex-preview">
           <%= for split <- @liquid_splits do %>
             <%= case split do %>
+              <% {:liquid_error, _reason} -> %>
+                <div class="alert danger" role="alert">
+                  {gettext(
+                    "The module preview is unavailable because its Liquid tags are incomplete or mismatched. Check the module template. You can still edit the fields below."
+                  )}
+                </div>
               <% {:ref, ref} -> %>
                 <.ref
                   refs_field={@block_form[:refs]}
@@ -1452,7 +1474,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   @doc """
   Hidden identity inputs for refs the module code does not render.
 
-  `liquid_strip_logic/1` removes `{% if %}` / `{% for %}` / `{% hide %}` regions
+  `LiquidPreview.strip_logic/1` removes `{% if %}` / `{% for %}` / `{% hide %}` regions
   before the code is split into ref slots, so a `{% ref refs.x %}` inside one
   produces no inputs at all. `refs` is `on_replace: :delete_if_exists`, so once
   *any* ref renders, the params carry a shortened list and `cast_assoc(:refs)`
