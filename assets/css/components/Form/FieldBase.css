@@ -134,6 +134,13 @@
     }
 
     .help-text {
+      /* Always rendered so `aria-describedby` can name it; an empty one is
+         hidden. The class sets `display: flex`, which would otherwise win
+         over the browser's own `[hidden]` rule. */
+      &[hidden] {
+        display: none;
+      }
+
       font-size: 10px;
       line-height: normal;
       margin-top: 2px;

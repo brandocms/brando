@@ -670,12 +670,15 @@ defmodule BrandoAdmin.Components.Form.Input do
   # Every control the admin renders passes through `input/1`, so the accessible
   # state of a field is decided here rather than in the ~20 wrapper components.
   #
-  # `Primitives.field_base/1` renders the message container as
+  # `Primitives.field_base/1` renders the instructions container as
+  # `"<field id>-instructions"` and the message container as
   # `"<field id>-error"`, and both derive that id from the field the same way
-  # (`process_input_id/1` mirrors `Primitives.field_id/1`), so the reference is
-  # always to an element that exists. It points there unconditionally: the
-  # container is rendered whether or not it currently holds a message, and an
-  # empty one contributes nothing to the accessible description.
+  # (`process_input_id/1` mirrors `Primitives.field_id/1`), so the references
+  # are always to elements that exist. It points at both unconditionally: each
+  # container is rendered whether or not it currently holds anything, and an
+  # empty one contributes nothing to the accessible description. Instructions
+  # come first — a screen reader should read what the field wants before what
+  # went wrong with it.
   #
   # A hidden input has no accessible presence to annotate, so it is skipped —
   # marking it invalid would announce a field the user cannot see or reach.
@@ -691,7 +694,7 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     assigns
     |> assign(:aria_invalid, (field_invalid?(field) && "true") || nil)
-    |> assign(:aria_describedby, "#{assigns.id}-error")
+    |> assign(:aria_describedby, "#{assigns.id}-instructions #{assigns.id}-error")
     |> assign(:aria_required, (field_required?(field) && "true") || nil)
   end
 

@@ -29,7 +29,8 @@ test.describe('Accessible form validation', () => {
     // added together with its content is not reliably announced.
     const errors = page.locator('#page_title-error')
     await expect(errors).toHaveAttribute('role', 'alert')
-    await expect(title).toHaveAttribute('aria-describedby', 'page_title-error')
+    // Instructions first, then the message — the order they should be read in.
+    await expect(title).toHaveAttribute('aria-describedby', 'page_title-instructions page_title-error')
 
     await page.getByTestId('submit').click()
     await syncLV(page)

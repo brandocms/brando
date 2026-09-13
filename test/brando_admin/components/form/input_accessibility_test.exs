@@ -36,27 +36,51 @@ defmodule BrandoAdmin.Components.Form.InputAccessibilityTest do
     )
   end
 
+  defp render_field_base(form, field, opts \\ []) do
+    render_component(
+      &Primitives.field_base/1,
+      Enum.into(opts, %{field: form[field], label: "Title", inner_block: []})
+    )
+  end
+
   describe "aria-describedby" do
-    test "points at the field's message container" do
+    test "names the field's instructions container, then its message container" do
       html = render_input(form(%{}, []), :title)
 
-      assert html =~ ~s(aria-describedby="page_title-error")
+      assert html =~ ~s(aria-describedby="page_title-instructions page_title-error")
     end
 
-    test "matches the id `field_base/1` gives that container" do
+    test "matches the ids `field_base/1` gives those containers" do
       form = form(%{"title" => ""}, title: "can't be blank")
 
       input = render_input(form, :title)
+      wrapper = render_field_base(form, :title, instructions: "Shown in the browser tab")
 
-      wrapper =
-        render_component(&Primitives.field_base/1, %{
-          field: form[:title],
-          label: "Title",
-          inner_block: []
-        })
-
-      assert input =~ ~s(aria-describedby="page_title-error")
+      assert input =~ ~s(aria-describedby="page_title-instructions page_title-error")
+      assert wrapper =~ ~s(id="page_title-instructions")
       assert wrapper =~ ~s(id="page_title-error")
+    end
+
+    test "a field with instructions exposes them in its description, with or without an error" do
+      # Issue #2755: the help text under the label carries the format or
+      # constraint the field actually needs, and used to be a bare div that
+      # nothing pointed at.
+      for form <- [form(%{}, []), form(%{"title" => ""}, title: "can't be blank")] do
+        wrapper = render_field_base(form, :title, instructions: "Shown in the browser tab")
+
+        assert [container] = Regex.run(~r/<div id="page_title-instructions"[^>]*>.*?<\/div>/s, wrapper)
+        assert container =~ "Shown in the browser tab"
+        refute container =~ "hidden"
+      end
+    end
+
+    test "a field without instructions renders the container empty and hidden" do
+      wrapper = render_field_base(form(%{}, []), :title)
+
+      assert [container] = Regex.run(~r/<div id="page_title-instructions"[^>]*>.*?<\/div>/s, wrapper)
+      assert container =~ ~s(hidden)
+      refute container =~ "↳"
+      assert container |> String.replace(~r/<[^>]+>/, "") |> String.trim() == ""
     end
   end
 
@@ -115,7 +139,7 @@ defmodule BrandoAdmin.Components.Form.InputAccessibilityTest do
 
       assert html =~ "<textarea"
       assert html =~ ~s(aria-invalid="true")
-      assert html =~ ~s(aria-describedby="page_title-error")
+      assert html =~ ~s(aria-describedby="page_title-instructions page_title-error")
     end
 
     test "a checkbox is annotated on the visible control, not the hidden partner" do
