@@ -2558,14 +2558,25 @@ defmodule BrandoAdmin.Components.Form.Block do
   def maybe_update_fragment(socket, _), do: socket
 
   # if the target param updated is a var and it's not an image or file, we extract the value
-  # and update the liquex block var
+  # and update the liquex block var.
+  #
+  # A child block's inputs are named `child_block[vars][i][value]`; a root block
+  # wraps its block in an entry_block, so its inputs are
+  # `entry_block[block][vars][i][value]`. Both shapes arrive here with the form
+  # name as the first segment and `value` as the last, and `params` is the map
+  # under that first segment — so the var is at the path in between.
   def maybe_update_liquex_block_var(socket, [_block_type, "vars", idx, "value"] = params_target, params) do
-    var_target =
-      params_target
-      |> List.delete_at(0)
-      |> List.delete_at(-1)
+    update_liquex_block_var_from_target(socket, params_target, idx, params)
+  end
 
-    value = params |> get_in(var_target) |> Map.get("value")
+  def maybe_update_liquex_block_var(socket, [_block_type, "block", "vars", idx, "value"] = params_target, params) do
+    update_liquex_block_var_from_target(socket, params_target, idx, params)
+  end
+
+  def maybe_update_liquex_block_var(socket, _, _), do: socket
+
+  defp update_liquex_block_var_from_target(socket, params_target, idx, params) do
+    value = get_in(params, List.delete_at(params_target, 0))
 
     # `key` and `type` describe the var's *definition*, which this screen never
     # edits — only `value` changes here. Read them from the changeset rather
@@ -2580,8 +2591,6 @@ defmodule BrandoAdmin.Components.Form.Block do
       {var_key, var_type} -> update_liquex_block_var(socket, var_key, var_type, %{value: value})
     end
   end
-
-  def maybe_update_liquex_block_var(socket, _, _), do: socket
 
   # The var changesets are in the same order the form rendered them, so the
   # params index addresses the same var. Returns nils rather than raising if it
