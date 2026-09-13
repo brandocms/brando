@@ -15,7 +15,7 @@ export default defineConfig({
     target: 'baseline-widely-available',
     outDir: '../../priv/static', // <- Phoenix expects our files here
     sourcemap: true, // we want to debug our code in production
-    rollupOptions: {
+    rolldownOptions: {
       input: {
         admin: 'src/main.js',
       },
@@ -28,7 +28,7 @@ export default defineConfig({
     terserOptions: {
       mangle: true,
       safari10: true,
-      output: {
+      format: {
         comments: false,
       },
       compress: {

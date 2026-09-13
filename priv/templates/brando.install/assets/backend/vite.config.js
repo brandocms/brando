@@ -23,7 +23,7 @@ export default defineConfig({
     target: 'es2022',
     outDir: '../../priv/static', // <- Phoenix expects our files here
     sourcemap: true, // we want to debug our code in production
-    rollupOptions: {
+    rolldownOptions: {
       input: {
         admin: 'src/main.js',
       },
@@ -36,7 +36,7 @@ export default defineConfig({
     terserOptions: {
       mangle: true,
       safari10: true,
-      output: {
+      format: {
         comments: false,
       },
       compress: {

@@ -30,10 +30,9 @@ export default defineConfig({
   build: {
     manifest: 'manifest.json',
     emptyOutDir: false,
-    target: 'modules',
     outDir: '../../priv/static', // <- Phoenix expects our files here
     sourcemap: true, // we want to debug our code in production
-    rollupOptions: {
+    rolldownOptions: {
       input: {
         main: 'js/index.js',
         critical: 'js/critical.js',
@@ -42,7 +41,7 @@ export default defineConfig({
     terserOptions: {
       mangle: true,
       safari10: true,
-      output: {
+      format: {
         comments: false,
       },
       compress: {

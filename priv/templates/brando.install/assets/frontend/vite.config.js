@@ -45,7 +45,7 @@ export default defineConfig(({ command }) => ({
     emptyOutDir: false,
     outDir: '../../priv/static', // <- Phoenix expects our files here
     sourcemap: true, // we want to debug our code in production
-    rollupOptions: {
+    rolldownOptions: {
       input: {
         main: 'js/index.js',
         critical: 'js/critical.js',
@@ -53,7 +53,7 @@ export default defineConfig(({ command }) => ({
     },
     terserOptions: {
       mangle: true,
-      output: { comments: false },
+      format: { comments: false },
       compress: {
         pure_funcs: ['console.info', 'console.debug', 'console.warn'],
       },

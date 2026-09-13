@@ -53,7 +53,7 @@ RUN mix compile
 # - job: assets backend
 # -----------------------------------
 
-FROM node:18 AS assets_backend
+FROM node:22 AS assets_backend
 WORKDIR /opt/app/assets/backend
 ENV YARN_CACHE_FOLDER ~/.yarn
 
@@ -78,7 +78,7 @@ RUN yarn build
 # - job: assets frontend
 # -----------------------------------
 
-FROM node:18 AS assets_frontend
+FROM node:22 AS assets_frontend
 WORKDIR /opt/app/assets/frontend
 ENV YARN_CACHE_FOLDER ~/.yarn
 
