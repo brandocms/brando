@@ -226,6 +226,39 @@
       border-radius: 0 0 10px 10px;
     }
 
+    .module-code-lint {
+      margin-top: 12px;
+
+      .alert {
+        margin-bottom: 0;
+        padding: 14px 16px;
+        border-radius: 10px;
+        gap: 12px;
+      }
+
+      .content {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+
+      p {
+        width: 100%;
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      code {
+        padding: 5px 8px;
+        border-radius: 6px;
+        background: white;
+        border: 1px solid #00000014;
+        font-size: 12px;
+      }
+    }
+
     .module-code-help {
       display: flex;
       flex-wrap: wrap;

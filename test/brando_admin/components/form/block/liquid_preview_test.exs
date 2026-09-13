@@ -171,4 +171,61 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidPreviewTest do
     assert LiquidPreview.strip_logic("{% raw %}unfinished") == {:error, {:unclosed_tag, "raw"}}
     assert LiquidPreview.strip_logic("{% comment %}unfinished") == {:error, {:unclosed_tag, "comment"}}
   end
+
+  describe "stripped_refs/1" do
+    test "names a ref that only appears inside a stripped region" do
+      for {_, opening, closing} <- @regions do
+        code = "{% ref refs.visible %}{% #{opening} %}<div>{% ref refs.hidden %}</div>{% #{closing} %}"
+        assert LiquidPreview.stripped_refs(code) == ["hidden"]
+      end
+    end
+
+    test "reports each hidden ref once, in source order, however deeply nested" do
+      code = """
+      {% if a %}{% ref refs.one %}{% for x in xs %}{% ref refs.two %}{% ref refs.one %}{% endfor %}{% endif %}
+      {% hide %}{% ref refs.three %}{% endhide %}
+      """
+
+      assert LiquidPreview.stripped_refs(code) == ["one", "two", "three"]
+    end
+
+    test "does not report a ref that is also rendered at the top level" do
+      code = "{% ref refs.text %}{% if a %}{% ref refs.text %}{% endif %}"
+      assert LiquidPreview.stripped_refs(code) == []
+    end
+
+    test "does not report headless_ref declarations or plain reads inside a region" do
+      # The supported pattern: declare the slot at the top level, read it inside.
+      code = """
+      {% headless_ref refs.text %}
+      {% if refs.text.active %}<div>{{ refs.text.data.data.text }}</div>{% else %}<div>No text</div>{% endif %}
+      """
+
+      assert LiquidPreview.stripped_refs(code) == []
+    end
+
+    test "recognizes trim markers and loose whitespace in the ref tag" do
+      assert LiquidPreview.stripped_refs("{% if a %}{%-  ref   refs.spaced -%}{% endif %}") == ["spaced"]
+    end
+
+    test "ignores ref tags inside raw, comment and quoted strings" do
+      code = """
+      {% if a %}{% raw %}{% ref refs.rawref %}{% endraw %}{% endif %}
+      {% comment %}{% ref refs.commented %}{% endcomment %}
+      {{ '{% ref refs.quoted %}' }}
+      """
+
+      # A `{% ref %}` inside raw/comment is never a slot at all, and one in a
+      # quoted string is text. None are "hidden by a conditional": inside a
+      # region the raw body is dropped with it, so `rawref` is reported as
+      # unreachable — it is.
+      assert LiquidPreview.stripped_refs(code) == ["rawref"]
+    end
+
+    test "reports nothing for malformed code or no code" do
+      assert LiquidPreview.stripped_refs("{% if a %}{% ref refs.text %}") == []
+      assert LiquidPreview.stripped_refs("") == []
+      assert LiquidPreview.stripped_refs(nil) == []
+    end
+  end
 end

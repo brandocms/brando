@@ -12,6 +12,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   alias Brando.Content.Var
   alias Brando.Villain.Blocks.TextBlock
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Form.Block.LiquidPreview
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
   alias BrandoAdmin.Components.Form.ModuleProps
@@ -47,6 +48,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
          |> assign_entry(entry_id)
          |> assign_current_user(token)
          |> assign_form()
+         |> assign_stripped_refs()
          |> set_admin_locale()
          |> maybe_use_public_library_context()}
 
@@ -97,6 +99,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
                 <code>&lcub;% ref refs.name %&rcub;</code>
                 <code>&lcub;&lcub; variable_key &rcub;&rcub;</code>
               </div>
+              <.stripped_refs_warning refs={@stripped_refs} />
             </div>
           </section>
 
@@ -440,6 +443,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
     socket
     |> assign(:form, updated_form)
+    |> assign_stripped_refs()
     |> then(&{:noreply, &1})
   end
 
@@ -534,6 +538,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
               socket
               |> assign(:entry, entry)
               |> assign(:form, module_form(entry, user, socket.assigns.shared_library?))
+              |> assign_stripped_refs()
 
             :listing when socket.assigns.shared_library? ->
               push_navigate(socket, to: "/admin/config/content/shared_library")
@@ -568,6 +573,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
         socket
         |> assign(:form, form)
+        |> assign_stripped_refs()
         |> then(&{:noreply, &1})
     end
   end
@@ -643,6 +649,57 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
       if shared_library?, do: Changeset.put_change(changeset, :version_note, ""), else: changeset
     end)
     |> to_form([])
+  end
+
+  # `LiquidPreview.strip_logic/1` removes `{% if %}`, `{% unless %}`, `{% for %}`
+  # and `{% hide %}` regions before the block editor splits module code into
+  # ref slots, so a `{% ref %}` inside one of them never gets an input. The
+  # module still saves and the front end still renders it — nothing else would
+  # tell the author. This is a lint, not an error: it never blocks saving.
+  defp assign_stripped_refs(%{assigns: %{form: form}} = socket) do
+    changeset = form.source
+
+    refs =
+      if Changeset.get_field(changeset, :type) == :liquid do
+        changeset |> Changeset.get_field(:code) |> LiquidPreview.stripped_refs()
+      else
+        []
+      end
+
+    assign(socket, :stripped_refs, refs)
+  end
+
+  attr :refs, :list, required: true
+
+  defp stripped_refs_warning(%{refs: []} = assigns) do
+    ~H"""
+    """
+  end
+
+  defp stripped_refs_warning(assigns) do
+    assigns = assign(assigns, :example, List.first(assigns.refs))
+
+    ~H"""
+    <div class="module-code-lint" role="status">
+      <.alert type={:warning}>
+        <p>
+          {ngettext(
+            "Reference %{refs} sits inside a conditional, loop or hide region, so the block editor cannot show an input for it.",
+            "References %{refs} sit inside conditional, loop or hide regions, so the block editor cannot show inputs for them.",
+            length(@refs),
+            refs: Enum.join(@refs, ", ")
+          )}
+        </p>
+        <p>
+          {gettext(
+            "Declare the reference at the top level with headless_ref and read it inside the condition. Saving is not blocked."
+          )}
+        </p>
+        <code>&lcub;% headless_ref refs.{@example} %&rcub;</code>
+        <code>&lcub;% if refs.{@example}.active %&rcub; … &lcub;% endif %&rcub;</code>
+      </.alert>
+    </div>
+    """
   end
 
   defp maybe_require_version_note(changeset, true),
