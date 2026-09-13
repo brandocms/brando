@@ -110,5 +110,6 @@ retained legacy graph; the Docker/package-manager migration remains tracked in
 The full E2E suite, all four complete Igniter installation scenarios, and Docker
 builds were not rerun locally. Existing Europa CSS processing warnings remain in
 the generated frontend; this work did not migrate Europa's template syntax.
-The admin Jupiter/GSAP imports and backend package-manager/Docker cleanup remain
+The admin Jupiter 5 upgrade, migration of all admin GSAP animations to Motion,
+removal of GSAP dependencies, and backend package-manager/Docker cleanup remain
 separate work under #2814. The pre-existing block-editor audit was left untouched.
