@@ -49,7 +49,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v6.0.3
+      - uses: actions/checkout@v7.0.1
 
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
@@ -89,7 +89,7 @@ jobs:
       MIX_ENV: test
 
     steps:
-      - uses: actions/checkout@v6.0.3
+      - uses: actions/checkout@v7.0.1
 
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
@@ -136,7 +136,7 @@ jobs:
       MIX_ENV: docs
 
     steps:
-      - uses: actions/checkout@v6.0.3
+      - uses: actions/checkout@v7.0.1
 
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
@@ -211,7 +211,7 @@ jobs:
 
     steps:
       - name: Check out Brando
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@v7.0.1
         with:
           path: brando
 
@@ -220,13 +220,13 @@ jobs:
         run: bash .github/scripts/check-e2e-paths.sh
 
       - name: Check out JSON API integration
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@v7.0.1
         with:
           repository: brandocms/brando_json_api
           path: brando_json_api
 
       - name: Check out GraphQL integration
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@v7.0.1
         with:
           repository: brandocms/brando_graphql
           path: brando_graphql
