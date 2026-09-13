@@ -11,6 +11,38 @@ defmodule BrandoAdmin.Live.Content.ModuleFormLiveTest do
   alias BrandoAdmin.Content.ModuleFormLive
   alias Ecto.Changeset
 
+  describe "stripped refs lint" do
+    defp validate(code, type) do
+      entry = %Module{type: type, code: ""}
+      user = %Brando.Users.User{id: 1}
+
+      socket =
+        %Phoenix.LiveView.Socket{}
+        |> Phoenix.Component.assign(:entry, entry)
+        |> Phoenix.Component.assign(:current_user, user)
+        |> Phoenix.Component.assign(:shared_library?, false)
+        |> Phoenix.Component.assign(:form, to_form(Changeset.change(entry), []))
+
+      assert {:noreply, socket} =
+               ModuleFormLive.handle_event("validate", %{"module" => %{"code" => code}}, socket)
+
+      socket.assigns.stripped_refs
+    end
+
+    test "validate names a ref hidden inside a conditional" do
+      assert validate("{% if show %}{% ref refs.text %}{% endif %}", :liquid) == ["text"]
+    end
+
+    test "validate clears the warning once the ref is declared at the top level" do
+      code = "{% headless_ref refs.text %}{% if refs.text.active %}{{ refs.text.data.data.text }}{% endif %}"
+      assert validate(code, :liquid) == []
+    end
+
+    test "heex modules are not linted" do
+      assert validate("{% if show %}{% ref refs.text %}{% endif %}", :heex) == []
+    end
+  end
+
   test "create_ref/2 initializes text refs with default styles preset" do
     changeset =
       %Module{}

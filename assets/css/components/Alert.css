@@ -11,6 +11,10 @@
     background-color: #ffedeb;
   }
 
+  &.warning {
+    background-color: #fff6de;
+  }
+
   .form-tab .row & {
     width: 100%;
     flex-basis: 100%;
