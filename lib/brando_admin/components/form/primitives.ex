@@ -117,33 +117,40 @@ defmodule BrandoAdmin.Components.Form.Primitives do
           {render_slot(@header)}
         </div>
       </div>
-      <%= if @raw_instructions || @meta do %>
-        <div :if={@meta_top} class={["meta", @left_justify_meta && "left"]}>
-          <%= if @raw_instructions do %>
-            <div class="help-text">
-              ↳ <span>{@raw_instructions}</span>
-            </div>
-            <div :if={@meta != []} class="extra">
-              {render_slot(@meta)}
-            </div>
-          <% end %>
-        </div>
-      <% end %>
+      <.field_meta :if={@meta_top} f_id={@f_id} instructions={@raw_instructions} left={@left_justify_meta} meta={@meta} />
       <div class="field-base" id={"#{@f_id}-field-base"}>
         {render_slot(@inner_block)}
       </div>
-      <%= if @raw_instructions || @meta do %>
-        <div :if={!@meta_top} class={["meta", @left_justify_meta && "left"]}>
-          <%= if @raw_instructions do %>
-            <div class="help-text">
-              ↳ <span>{@raw_instructions}</span>
-            </div>
-            <div :if={@meta != []} class="extra">
-              {render_slot(@meta)}
-            </div>
-          <% end %>
-        </div>
-      <% end %>
+      <.field_meta :if={!@meta_top} f_id={@f_id} instructions={@raw_instructions} left={@left_justify_meta} meta={@meta} />
+    </div>
+    """
+  end
+
+  # The instructions container is rendered whether or not the field has any,
+  # and always under `"<field id>-instructions"`, for the same reason the error
+  # container is: `Input.input/1` names both in `aria-describedby` without
+  # being told they exist, and an empty container contributes nothing to the
+  # accessible description. `hidden` keeps an empty one out of the layout; a
+  # hidden element that is directly referenced is still read.
+  #
+  # `field_base/1` renders the meta block in one of two positions, never both,
+  # so the id is emitted once.
+  attr :f_id, :string, required: true
+  attr :instructions, :any, required: true
+  attr :left, :any, required: true
+  attr :meta, :list, required: true
+
+  defp field_meta(assigns) do
+    ~H"""
+    <div class={["meta", @left && "left"]}>
+      <div id={"#{@f_id}-instructions"} class="help-text" hidden={!@instructions}>
+        <%= if @instructions do %>
+          ↳ <span>{@instructions}</span>
+        <% end %>
+      </div>
+      <div :if={@instructions && @meta != []} class="extra">
+        {render_slot(@meta)}
+      </div>
     </div>
     """
   end
@@ -628,8 +635,9 @@ defmodule BrandoAdmin.Components.Form.Primitives do
           region has to already be in the accessibility tree when content is
           inserted into it — a `role="alert"` element that appears *with* its
           message is not reliably announced. It also carries the single id that
-          `Input.input/1` points `aria-describedby` at; the messages used to be
-          sibling spans that each claimed the same id. --%>
+          `Input.input/1` points `aria-describedby` at (after the instructions
+          container); the messages used to be sibling spans that each claimed
+          the same id. --%>
     <div id={"#{@f_id}-error"} class="field-errors" role="alert">
       <span :for={error <- @errors} class="field-error">
         {@translate_fn.(error)}
