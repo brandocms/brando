@@ -60,7 +60,12 @@ app.registerCallback(Events.APPLICATION_READY, () => {
 app.registerCallback(Events.APPLICATION_PRELUDIUM, () => {
   app.moonwalk = new Moonwalk(app, configureMoonwalk(app))
   app.header = new FixedHeader(app, configureHeader(app))
-  app.mobileMenu = new MobileMenu(app, configureMobileMenu(app))
+  if (
+    document.querySelector('header .mobile-bg') &&
+    document.querySelector('header figure.menu-button .hamburger')
+  ) {
+    app.mobileMenu = new MobileMenu(app, configureMobileMenu(app))
+  }
   app.cookies = new Cookies(app)
   app.typo = new Typography()
 })
@@ -77,5 +82,5 @@ if (
 ) {
   app.initialize()
 } else {
-  document.addEventListener('DOMContentLoaded', app.initialize.apply(app))
+  document.addEventListener('DOMContentLoaded', () => app.initialize(), { once: true })
 }

@@ -2,7 +2,10 @@
   "name": "brando-igniter-smoke",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
-    "@playwright/test": "1.58.2"
+    "@playwright/test": "1.63.0"
   }
 }
