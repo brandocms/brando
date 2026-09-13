@@ -40,9 +40,14 @@ async function clickVarChipAction(page, label, outcome) {
   await outcome()
 }
 
+// Click a line, not the editor box: the page has more than one CodeMirror
+// (the SVG field is one too), and a click in the empty area below a short
+// document leaves focus on <body>, so the typed replacement goes nowhere.
 async function replaceModuleCode(page, code) {
   await openModuleTab(page, 'Template')
-  await page.click('.cm-editor')
+  const editor = page.locator('#module_code-code .cm-editor')
+  await editor.locator('.cm-line').first().click()
+  await expect(editor.locator('.cm-content')).toBeFocused()
   await page.keyboard.down('ControlOrMeta')
   await page.keyboard.press('A')
   await page.keyboard.up('ControlOrMeta')
@@ -88,6 +93,23 @@ test('create a simple text module', async ({ page }) => {
   await syncLV(page)
   await expect(page.getByRole('link', { name: 'New text module', exact: true })).toBeVisible()
   await expect(page.getByText('Helpful text', { exact: true })).toBeVisible()
+})
+
+// A `{% ref %}` inside `{% if %}`/`{% unless %}`/`{% for %}`/`{% hide %}` never
+// gets an input in the block editor, because those regions are stripped before
+// the code is split into slots. The editor says so instead of staying silent.
+test('warns when a ref sits inside a conditional, and clears once it is declared at the top level', async ({ page }) => {
+  await openNewModule(page)
+
+  const lint = page.locator('.module-code-lint')
+  await expect(lint).toHaveCount(0)
+
+  await replaceModuleCode(page, '{% if show %}{% ref refs.text %}{% endif %}')
+  await expect(lint).toContainText('Reference text sits inside a conditional')
+  await expect(lint).toContainText('headless_ref refs.text')
+
+  await replaceModuleCode(page, '{% headless_ref refs.text %}{% if refs.text.active %}shown{% endif %}')
+  await expect(lint).toHaveCount(0)
 })
 
 test('create, edit, duplicate, persist and delete refs and vars', async ({ page }) => {

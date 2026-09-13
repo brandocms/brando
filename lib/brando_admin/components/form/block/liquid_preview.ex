@@ -30,6 +30,43 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidPreview do
     end
   end
 
+  @ref_tag ~r/{%-?\s*ref\s+refs\.(\w+)/
+
+  @doc """
+  Names the refs that only appear inside regions `strip_logic/1` removes.
+
+  Such a ref never gets an editable slot in the block editor: the region it
+  sits in is gone before the code is split into slots. A ref that is also
+  rendered at the top level keeps its slot and is not reported. Malformed
+  code reports nothing — the preview already surfaces that error.
+
+  Uses the region scan alone, not the HTML cleanup pass, so the answer depends
+  only on where the ref sits in the Liquid structure.
+  """
+  @spec stripped_refs(String.t() | nil) :: [String.t()]
+  def stripped_refs(nil), do: []
+
+  def stripped_refs(code) when is_binary(code) do
+    case scan(code, [], []) do
+      {:ok, visible} ->
+        reachable = MapSet.new(ref_names(visible))
+
+        code
+        |> ref_names()
+        |> Enum.reject(&MapSet.member?(reachable, &1))
+        |> Enum.uniq()
+
+      {:error, _} ->
+        []
+    end
+  end
+
+  defp ref_names(code) do
+    @ref_tag
+    |> Regex.scan(code, capture: :all_but_first)
+    |> List.flatten()
+  end
+
   defp scan(code, stack, acc) do
     case :binary.match(code, ["{%", "{{"]) do
       :nomatch ->
