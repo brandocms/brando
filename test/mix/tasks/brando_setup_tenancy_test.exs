@@ -1,9 +1,17 @@
 defmodule Mix.Tasks.BrandoSetupTenancyTest do
-  use ExUnit.Case, async: true
+  # Mix.shell/1 changes global state shared by all Mix tasks.
+  use ExUnit.Case, async: false
 
   import Igniter.Test
 
   alias Mix.Tasks.Brando.Setup.Tenancy
+
+  setup do
+    shell = Mix.shell()
+    Mix.shell(Mix.Shell.Process)
+    on_exit(fn -> Mix.shell(shell) end)
+    :ok
+  end
 
   @config_path "config/brando.exs"
   @router_path "lib/legacy_app_web/router.ex"
@@ -136,14 +144,13 @@ defmodule Mix.Tasks.BrandoSetupTenancyTest do
   test "closed interactive input terminates without planning source changes" do
     send(self(), {:mix_shell_input, :prompt, :eof})
     igniter = setup_tenancy(["--interactive"])
+    assert_received {:mix_shell, :prompt, _}
+    refute_received {:mix_shell_input, :prompt, :eof}
     assert_has_issue(igniter, &String.contains?(&1, "--mode is required"))
     assert_unchanged(igniter)
   end
 
   test "asks for mode and site key when they are not passed" do
-    Mix.shell(Mix.Shell.Process)
-    on_exit(fn -> Mix.shell(Mix.Shell.Process) end)
-
     send(self(), {:mix_shell_input, :prompt, "single"})
     send(self(), {:mix_shell_input, :prompt, "by"})
 
@@ -159,9 +166,6 @@ defmodule Mix.Tasks.BrandoSetupTenancyTest do
   end
 
   test "re-asks until the site key is valid" do
-    Mix.shell(Mix.Shell.Process)
-    on_exit(fn -> Mix.shell(Mix.Shell.Process) end)
-
     send(self(), {:mix_shell_input, :prompt, "Not Valid"})
     send(self(), {:mix_shell_input, :prompt, "second-try"})
 
