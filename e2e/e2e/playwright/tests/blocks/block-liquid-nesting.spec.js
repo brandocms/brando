@@ -88,6 +88,10 @@ test('nested Liquid regions keep following blocks in their container after patch
   await following.getByLabel('Caption', { exact: true }).fill('Following caption edited')
   await awaitBlockDebounce(page)
   await assertStructure()
+  // Root blocks post their vars as `entry_block[block][vars][i][value]`; the
+  // inline preview must pick that up before a save (#2797).
+  await expect(nested.locator('.rendered-variable')).toHaveText('Nested caption edited')
+  await expect(following.locator('.rendered-variable')).toHaveText('Following caption edited')
 
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL(/\/admin\/pages$/)
