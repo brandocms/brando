@@ -48,6 +48,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
       assigns
       |> assign(:dirty?, dirty?(assigns.selected, assigns.draft, assigns.permissions))
       |> assign(:sections, permission_sections(assigns.catalog, assigns.search))
+      |> assign(:editable_keys, editable_keys(assigns.authorization, assigns.selected, assigns.catalog))
 
     ~H"""
     <div
@@ -308,8 +309,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                         section={section}
                         resources={resources}
                         permissions={@permissions}
-                        authorization={@authorization}
-                        selected={@selected}
+                        editable_keys={@editable_keys}
                         search={@search}
                       />
                     </div>
@@ -568,20 +568,19 @@ defmodule BrandoAdmin.Users.GroupsLive do
                   resource={resource}
                   row_permissions={permissions}
                   permissions={@permissions}
-                  authorization={@authorization}
-                  selected={@selected}
+                  editable_keys={@editable_keys}
                 />
               </th>
               <td :for={action <- @actions}>
                 <%= if permission = Enum.find(permissions, &(&1.action == action)) do %>
-                  <label class="authorization-cell" title={permission_hint(@authorization, @selected, permission)}>
+                  <label class="authorization-cell" title={permission_hint(@editable_keys, permission)}>
                     <input
                       type="checkbox"
                       name={"permissions[#{permission.key}]"}
                       value="true"
                       aria-label={"#{resource_label(permission)}: #{action_label(action)}"}
                       checked={MapSet.member?(@permissions, permission.key)}
-                      disabled={!editable_permission?(@authorization, @selected, permission)}
+                      disabled={!MapSet.member?(@editable_keys, permission.key)}
                     />
                     <span class="access-mobile-label">{action_label(action)}</span>
                   </label>
@@ -606,7 +605,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
   end
 
   defp row_toggle(assigns) do
-    keys = editable_keys(assigns.authorization, assigns.selected, assigns.row_permissions)
+    keys = MapSet.intersection(assigns.editable_keys, MapSet.new(assigns.row_permissions, & &1.key))
     display_keys = if MapSet.size(keys) == 0, do: MapSet.new(assigns.row_permissions, & &1.key), else: keys
 
     assigns =
@@ -737,9 +736,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
     visible =
       permission_sections(socket.assigns.catalog, socket.assigns.search)
       |> Enum.flat_map(fn {_, rows} -> Enum.flat_map(rows, &elem(&1, 1)) end)
-      |> Enum.filter(&editable_permission?(socket.assigns.authorization, socket.assigns.selected, &1))
-      |> Enum.map(& &1.key)
-      |> MapSet.new()
+      |> then(&editable_keys(socket.assigns.authorization, socket.assigns.selected, &1))
 
     submitted = params |> Map.get("permissions", %{}) |> Map.keys() |> MapSet.new()
 
@@ -973,8 +970,19 @@ defmodule BrandoAdmin.Users.GroupsLive do
     end)
   end
 
-  defp editable_keys(snapshot, group, permissions),
-    do: permissions |> Enum.filter(&editable_permission?(snapshot, group, &1)) |> MapSet.new(& &1.key)
+  defp editable_keys(_snapshot, nil, _permissions), do: MapSet.new()
+
+  defp editable_keys(snapshot, group, permissions) do
+    # Group edit authority is the same for every checkbox. Resolve it once per
+    # render/event; repeating Engine.can?/3 also repeats catalog discovery.
+    if group.preset != :superuser and can_save?(snapshot, group) do
+      permissions
+      |> Enum.filter(&(snapshot.superuser? or (&1.delegable and Map.has_key?(snapshot.grants, &1.key))))
+      |> MapSet.new(& &1.key)
+    else
+      MapSet.new()
+    end
+  end
 
   defp selection_state(keys, selected) do
     count = MapSet.size(MapSet.intersection(keys, selected))
@@ -985,11 +993,6 @@ defmodule BrandoAdmin.Users.GroupsLive do
       true -> "mixed"
     end
   end
-
-  defp editable_permission?(snapshot, group, p),
-    do:
-      group.preset != :superuser and can_save?(snapshot, group) and
-        (snapshot.superuser? or (p.delegable and Map.has_key?(snapshot.grants, p.key)))
 
   defp can_save?(snapshot, group), do: Engine.can?(snapshot, if(group.id, do: :update, else: :create), :groups)
 
@@ -1020,8 +1023,8 @@ defmodule BrandoAdmin.Users.GroupsLive do
   defp selected_count(resources, selected),
     do: resources |> Enum.flat_map(&elem(&1, 1)) |> Enum.count(&MapSet.member?(selected, &1.key))
 
-  defp permission_hint(snapshot, group, permission) do
-    if editable_permission?(snapshot, group, permission),
+  defp permission_hint(editable_keys, permission) do
+    if MapSet.member?(editable_keys, permission.key),
       do: permission.key,
       else: gettext("You cannot change this permission. Only permissions you hold in this scope can be granted.")
   end
