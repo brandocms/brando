@@ -16,11 +16,12 @@ Reviewed the implemented E2E application in Chromium at 1440 × 1050 and
 | Related content | Referenced entries appear in export review with an explicit Include entry action. Included relationships are remapped together; shared references remain visible for destination mapping. |
 | Entry review | Pale blue headers group the source entry, create/update choice, publication policy and editable destination keys. Creates show meaningful values in two columns; updates show changed values before and after. Owned content expands into readable details. |
 | Content diff | One unified text diff per block field, with muted red removals, sage additions, explicit −/+ markers, before/after line numbers and change counts. Unchanged lines provide context. Creates show additions without a fake empty-side deletion; append previews retain the current content. Inspected desktop and 390px wrapping. |
+| Media diff | Images, files, uploaded/external videos, posters, galleries, variables and table rows appear as readable references within their block. Filenames stay visible; IDs and generated variants stay out. Selected destination assets supply the compared identity and metadata. Moves show removal/addition at their respective placements, including repeated assets. Alt text, captions, links and focal points appear beneath the media line. |
 | Reuse | `TextDiff.diff/1` owns the line comparison and shared styles. Transfer supplies its block-specific wording; module-file import review uses the same panel with monospace text. The admin design guide documents the component API and suitable future uses. |
 | Publication and recovery | New entries default to Draft with no schedule. Updates preserve destination publication unless changed explicitly. Conflicting keys block apply with inline feedback. Recovery explains whether it restores an existing entry or removes a newly created one. |
 | Dropdowns | Shared `admin-select` styling uses the form input tokens, 40px controls, 13px labels and a small inset chevron. Inspected publication and language at desktop and mobile widths, including open options and visible keyboard focus. Tab and arrow-key selection work. |
 | Review continuity | Expanded field comparisons and owned-record details retain their open state across LiveView patches while publication and language change. |
-| Norwegian | The transfer and shared diff catalogs supply 414 translated messages, including dropdown options, publication states, built-in field labels, diff labels and counts, validation and recovery feedback. Background operations preserve the user's locale. Verified a Norwegian import and recovery, plus invalid archive and conflicting URI feedback. Site-authored content, custom schema labels and application validation details depend on the consumer's content and catalogs. |
+| Norwegian | The transfer and shared diff catalogs supply 421 translated messages, including dropdown options, publication states, built-in field labels, diff labels and counts, validation and recovery feedback. Background operations preserve the user's locale. Verified a Norwegian import and recovery, plus invalid archive and conflicting URI feedback. Site-authored content, custom schema labels and application validation details depend on the consumer's content and catalogs. |
 | Mobile navigation | Compact toolbar labels fit without hiding icons. A sticky selection shortcut reaches the export summary. The shortcut stays mounted so visibility changes preserve keyboard focus. |
 | Review action | Removed inherited global primary-button sizing. Measured 36px height and a centered 16px icon. Blue ready state, neutral disabled state, aligned footer, and a stable upload-panel minimum height. |
 | Upload states | Empty picker, uploading progress, uploaded bundle and invalid-file feedback. Uploaded files replace the contradictory native “No file chosen” message. Verified removal, replacement and a long filename at mobile width. |
@@ -54,9 +55,29 @@ Browser measurements remain attached to the focused Playwright test results.
 Screenshot inspection complements those measurements; this audit covers the
 Chromium E2E application, not every consumer font or browser.
 
-The block diff compares the readable text preview, not rendered layout or media.
+The block diff compares readable text, media references and selected media metadata.
+It does not render layout or exhaustively compare every configuration setting.
 Each side is limited to 12,000 characters and 400 lines, with a visible notice
-when shortened. Media and other fields remain available in their review sections.
+when shortened. Media movement is shown as removal and addition, without speculative
+“moved” labels. Technical asset identities distinguish identical filenames internally.
+The generic diff remains usable for plain strings and module import reviews.
+
+### Media follow-up
+
+- All eight content-transfer/module-file browser workflows passed. The media
+  workflow verifies replacement, removal/addition positions, destination remapping,
+  Norwegian labels, 390px wrapping and keyboard scrolling.
+- All 48 focused Elixir tests passed (projection, shared diff, module review and
+  transfer regressions), as did the consumer asset build and warning-free compile.
+- Inspected fresh desktop, mobile and Norwegian media screenshots; refreshed
+  existing review screenshots to match the new coverage note.
+
+- Regression coverage checks mapped asset identity, identical filenames, repeated
+  placements, gallery order and overrides, nested media, unresolved assets and
+  Norwegian labels.
+- Untitled media was missing from the destination dropdown: its SQL search used
+  the nullable title field. Search now follows the same title/path/filename
+  fallback as the displayed label, with a regression for listing and searching.
 
 ## Screenshots
 
@@ -76,6 +97,9 @@ when shortened. Media and other fields remain available in their review sections
 - [Publication options, open](content-transfer-publication-open.png)
 - [Expanded review, mobile](content-transfer-review-mobile.png)
 - [Update comparison](content-transfer-update-desktop.png)
+- [Media replacement and movement](content-transfer-media-diff.png)
+- [Media diff, mobile](content-transfer-media-diff-mobile.png)
+- [Media diff, Norwegian](content-transfer-media-diff-norwegian.png)
 - [Content diff, desktop](content-transfer-content-diff.png)
 - [Content diff, mobile](content-transfer-content-diff-mobile.png)
 - [Append diff](content-transfer-content-diff-append.png)

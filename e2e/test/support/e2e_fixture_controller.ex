@@ -32,6 +32,9 @@ defmodule E2EFixtureController do
         "content-transfer" ->
           create_content_transfer()
 
+        "content-transfer-media" ->
+          create_content_transfer_media()
+
         "content-transfer-related" ->
           user = create_content_transfer()
           source = Brando.Repo.get_by!(Brando.Pages.Page, uri: "campaign-launch")
@@ -179,6 +182,76 @@ defmodule E2EFixtureController do
       %Brando.Content.Block{} |> Brando.Content.Block.recursive_block_changeset(previous, user) |> Brando.Repo.insert!()
 
     Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: destination.id, block_id: previous.id, sequence: 0}))
+    user
+  end
+
+  defp create_content_transfer_media do
+    user = create_content_transfer()
+    alias Brando.{Content, Repo}
+    alias Ecto.Changeset
+
+    module = Repo.get_by!(Content.Module, name: %{"en" => "Campaign introduction"})
+
+    [old, replacement, moved] =
+      Enum.map(~w(coastal-house.jpg courtyard.jpg collection-detail.jpg), fn name ->
+        Repo.insert!(%Brando.Images.Image{
+          path: "images/" <> name,
+          width: 1200,
+          height: 800,
+          sizes: %{},
+          formats: [:jpg],
+          status: :processed,
+          config_target: "default",
+          creator_id: user.id
+        })
+      end)
+
+    picture = fn name, label, image, sequence ->
+      %Content.Ref{
+        name: name,
+        description: label,
+        image_id: image && image.id,
+        sequence: sequence,
+        uid: Brando.Utils.generate_uid(),
+        data: %Brando.Villain.Blocks.PictureBlock{type: "picture", data: %Brando.Villain.Blocks.PictureBlock.Data{}}
+      }
+    end
+
+    for {name, label, sequence} <- [{"cover", "Hero", 1}, {"detail", "Detail", 2}] do
+      picture.(name, label, nil, sequence) |> Map.put(:module_id, module.id) |> Repo.insert!()
+    end
+
+    for {uri, cover, detail_here, detail_below} <- [
+          {"campaign-launch", replacement, nil, moved},
+          {"destination-page", old, moved, nil}
+        ] do
+      page = Repo.get_by!(Brando.Pages.Page, uri: uri)
+      join = Repo.get_by!(Brando.Pages.Page.Blocks, entry_id: page.id)
+
+      for ref <- [picture.("cover", "Hero", cover, 1), picture.("detail", "Detail", detail_here, 2)] do
+        ref |> Map.put(:block_id, join.block_id) |> Repo.insert!()
+      end
+
+      story =
+        Repo.insert!(%Content.Block{
+          uid: Brando.Utils.generate_uid(),
+          type: :module,
+          module_id: module.id,
+          creator_id: user.id,
+          source: to_string(Brando.Pages.Page.Blocks),
+          description: "The details",
+          refs: [picture.("detail", "Detail", detail_below, 0)]
+        })
+
+      Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: story.id, sequence: 1}))
+    end
+
+    # A placement-only alt text change should appear next to its image.
+    source = Repo.get_by!(Brando.Pages.Page, uri: "campaign-launch")
+    join = Repo.get_by!(Brando.Pages.Page.Blocks, entry_id: source.id, sequence: 0)
+    ref = Repo.get_by!(Content.Ref, block_id: join.block_id, name: "cover")
+    data = %{ref.data | data: %{ref.data.data | alt: "The courtyard in morning light"}}
+    ref |> Changeset.change(data: data) |> Repo.update!()
     user
   end
 

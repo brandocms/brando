@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
   alias Brando.Content.Transfer
   alias Brando.Content.Transfer.{Catalog, Dependencies, Entries, EntryCodec, Labels, Portable}
   alias BrandoAdmin.Components.{TextDiff, Workspace}
+  alias BrandoAdmin.ContentPreview
 
   def __authorization__, do: {:read, :utilities}
 
@@ -39,6 +40,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
        archive: nil,
        filename: nil,
        plan: nil,
+       preview_assets: %{},
        targets: %{},
        dependency_mappings: %{},
        target_options: [],
@@ -651,11 +653,16 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                   :if={field.destination}
                   id={"field-text-diff-#{field.source["key"]}"}
                   label={field_label(field.source["field"])}
-                  before={field_text(field, :before)}
-                  after={field_text(field, :after)}
+                  before={field_text(field, :before, @preview_assets)}
+                  after={field_text(field, :after, @preview_assets)}
                   description={dgettext("content_transfer", "Current → after import")}
                   empty_text={dgettext("content_transfer", "No block content")}
-                  note={dgettext("content_transfer", "Text preview only. Review media and other fields separately.")}
+                  note={
+                    dgettext(
+                      "content_transfer",
+                      "Text and media references. Moves appear as removal and addition. Review layout and other settings separately."
+                    )
+                  }
                 />
               </details>
             </article>
@@ -823,7 +830,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 </div>
               </div>
               <TextDiff.diff
-                :for={{field, before_text, after_text} <- entry_block_texts(item)}
+                :for={{field, before_text, after_text} <- entry_block_texts(item, @preview_assets)}
                 id={"entry-text-diff-#{item.source["key"]}-#{field}"}
                 label={field_label(field)}
                 before={before_text}
@@ -834,7 +841,12 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                     else: dgettext("content_transfer", "Current → after import")
                 }
                 empty_text={dgettext("content_transfer", "No block content")}
-                note={dgettext("content_transfer", "Text preview only. Review media and other fields separately.")}
+                note={
+                  dgettext(
+                    "content_transfer",
+                    "Text and media references. Moves appear as removal and addition. Review layout and other settings separately."
+                  )
+                }
               />
               <details
                 id={"entry-owned-#{item.source["key"]}"}
@@ -1482,7 +1494,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
     case Transfer.preview(socket.assigns.archive, socket.assigns.targets, socket.assigns.current_user,
            dependencies: socket.assigns.dependency_mappings
          ) do
-      {:ok, plan} -> assign(socket, plan: plan)
+      {:ok, plan} -> assign(socket, plan: plan, preview_assets: preview_assets(plan))
       {:error, message} -> socket |> reset_import() |> assign(error: message)
     end
   end
@@ -1556,6 +1568,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
       assign(socket,
         archive: nil,
         plan: nil,
+        preview_assets: %{},
         result: nil,
         error: nil,
         targets: %{},
@@ -1730,11 +1743,20 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
 
   defp refresh_message(_), do: dgettext("content_transfer", "Content rendered and identifiers refreshed.")
 
-  defp entry_block_texts(item) do
+  defp preview_assets(plan) do
+    # Mapped videos can point at destination files absent from the source manifest.
+    # Load them together when the plan changes, never while rendering diff rows.
+    videos = for {token, %Brando.Videos.Video{} = video} <- plan.bindings, do: {token, video}
+    loaded = Brando.Repo.preload(Enum.map(videos, &elem(&1, 1)), [:file, :thumbnail])
+    bindings = Map.merge(plan.bindings, Map.new(Enum.zip(Enum.map(videos, &elem(&1, 0)), loaded)))
+    ContentPreview.bundle_assets(plan.archive.bundle["dependencies"], bindings)
+  end
+
+  defp entry_block_texts(item, assets) do
     current =
       if item.entry && item.mode == "update" do
         Map.new(Catalog.fields(item.entry.__struct__), fn field ->
-          {field.name, Enum.map(Map.get(item.entry, field.association, []), &Brando.Drafts.Params.snapshot(&1.block))}
+          {field.name, Enum.map(Map.get(item.entry, field.association, []), & &1.block)}
         end)
       else
         %{}
@@ -1745,38 +1767,17 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
     (Map.keys(current) ++ Map.keys(incoming))
     |> Enum.uniq()
     |> Enum.sort()
-    |> Enum.map(&{&1, content_text(Map.get(current, &1, [])), content_text(Map.get(incoming, &1, []))})
+    |> Enum.map(
+      &{&1, ContentPreview.lines(Map.get(current, &1, [])), ContentPreview.lines(Map.get(incoming, &1, []), assets)}
+    )
   end
 
-  defp field_text(field, :before), do: content_text(Enum.map(field.current, &Brando.Drafts.Params.snapshot(&1.block)))
+  defp field_text(field, :before, _assets), do: ContentPreview.lines(Enum.map(field.current, & &1.block))
 
-  defp field_text(%{mode: "append"} = field, :after) do
-    (Enum.map(field.current, &Brando.Drafts.Params.snapshot(&1.block)) ++ field.source["blocks"])
-    |> content_text()
-  end
+  defp field_text(%{mode: "append"} = field, :after, assets),
+    do: ContentPreview.lines(Enum.map(field.current, & &1.block) ++ field.source["blocks"], assets)
 
-  defp field_text(field, :after), do: content_text(field.source["blocks"])
-
-  defp content_text([]), do: ""
-
-  defp content_text(blocks) do
-    Portable.walk(blocks, fn block ->
-      text =
-        Enum.flat_map(block["refs"] || [], fn ref ->
-          data = get_in(ref, ["data", "data"]) || %{}
-          text = data["text"] || data["html"] || data["code"]
-          if is_binary(text), do: [text |> Floki.parse_fragment!() |> Floki.text()], else: []
-        end)
-
-      vars =
-        Enum.flat_map(block["vars"] || [], fn var ->
-          if var["value"] not in [nil, ""], do: ["#{var["label"] || var["key"]}: #{var["value"]}"], else: []
-        end)
-
-      Enum.join([block["description"] || Labels.field(block["type"] || "block") | text ++ vars], "\n")
-    end)
-    |> Enum.join("\n\n")
-  end
+  defp field_text(field, :after, assets), do: ContentPreview.lines(field.source["blocks"], assets)
 
   defp scope_label(socket) do
     site = socket.assigns[:current_site]

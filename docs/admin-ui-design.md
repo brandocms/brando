@@ -207,7 +207,11 @@ labels use the `admin_diff` Gettext domain.
 />
 ```
 
-Supply a stable ID and plain strings. Serialize structured values at the caller;
+Supply a stable ID and plain strings, or a list of `%{text: text, key: identity}` lines.
+Optional `type: :heading | :media | :detail` provides restrained hierarchy.
+Keys distinguish different assets with the same filename and different placements;
+they are never rendered. Keep keys stable across the two sides, including any
+source-to-destination asset mappings. Serialize structured values at the caller;
 use an empty string for an absent side so it does not appear as removed text.
 The panel escapes content, marks additions/removals, retains unchanged context,
 and includes line numbers, translated counts and a keyboard-scrollable viewport.
@@ -215,8 +219,13 @@ and includes line numbers, translated counts and a keyboard-scrollable viewport.
 is useful for code and JSON. The parent layout owns the surrounding spacing.
 
 Previews are bounded to 12,000 characters and 400 lines per side and explicitly
-label truncation. For extracted block text, explain that media and layout still
-need their own review. Shared-library template overrides and multiline recovery
+label truncation. For block comparisons, `BrandoAdmin.ContentPreview.lines/2`
+projects loaded blocks
+or portable blocks with an asset index into readable text and media references.
+It includes image/file/video filenames, gallery order and selected authored metadata.
+It preserves placement context, so moved media appears as removal and addition.
+Explain that rendered layout and other settings still need their own review.
+Shared-library template overrides and multiline recovery
 fields are suitable future uses; permission sets and record relationships need
 their structured comparisons.
 

@@ -128,6 +128,79 @@ test('whole entry export, conflict review, draft creation, update and recovery',
   await expect(page.locator('.phx-error')).toHaveCount(0)
 })
 
+test('media replacements and moves stay in their block context', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1050 })
+  expect((await page.request.post('/e2e/setup_fixtures/content-transfer-media')).ok()).toBeTruthy()
+  await page.goto('/admin/config/import-export')
+  await syncLV(page)
+  await page.getByRole('button', { name: 'Select Campaign launch', exact: true }).click()
+  await page.locator('#transfer-export-options input[name="media"]').uncheck()
+  await page.getByRole('button', { name: 'Prepare export', exact: true }).click()
+  const downloading = page.waitForEvent('download')
+  await page.getByRole('link', { name: 'Download content bundle' }).click()
+  const binary = await readFile(await (await downloading).path())
+
+  await page.getByRole('button', { name: 'Import content', exact: true }).click()
+  await page.locator('#transfer-upload-form input[type=file]').setInputFiles({ name: 'campaign-media.zip', mimeType: 'application/zip', buffer: binary })
+  await page.getByRole('button', { name: 'Review bundle', exact: true }).click()
+  await page.getByLabel('Import action', { exact: true }).selectOption('update')
+  await page.getByLabel('Destination entry', { exact: true }).selectOption({ label: 'Destination page · English' })
+  await page.getByLabel('URI', { exact: true }).fill('destination-media-copy')
+
+  for (const name of ['courtyard.jpg', 'collection-detail.jpg']) {
+    await page.getByLabel(`Destination for images/${name}`, { exact: true }).selectOption({ label: `images/${name}` })
+  }
+
+  await page.getByText('Review fields & content', { exact: true }).click()
+  const diff = page.locator('.admin-text-diff')
+  await expect(diff.locator('del')).toContainText([
+    'Discover the stories behind our previous collection.',
+    'Image · Hero: coastal-house.jpg',
+    'Image · Detail: collection-detail.jpg',
+  ])
+  await expect(diff.locator('ins')).toContainText([
+    'A considered introduction to our next collection.',
+    'Image · Hero: courtyard.jpg',
+    'Alt text: The courtyard in morning light',
+    'Image · Detail: collection-detail.jpg',
+  ])
+  const rows = await diff.locator('.text-diff-line').evaluateAll(elements => elements.map(el => ({
+    kind: el.className, text: el.querySelector('.text-diff-text').textContent,
+  })))
+  const heading = rows.findIndex(row => row.text === 'The details')
+  expect(rows.findIndex(row => row.text.includes('collection-detail.jpg') && row.kind.includes('is-del'))).toBeLessThan(heading)
+  expect(rows.findIndex(row => row.text.includes('collection-detail.jpg') && row.kind.includes('is-ins'))).toBeGreaterThan(heading)
+  await expect(diff).not.toContainText('Text preview only')
+  await diff.screenshot({ path: testInfo.outputPath('entries-media-diff.png') })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.waitForTimeout(600)
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  const viewport = diff.getByRole('region')
+  await viewport.focus()
+  await expect(viewport).toBeFocused()
+  await viewport.press('End')
+  await expect(diff.locator('ins').last()).toBeInViewport()
+  await viewport.press('Home')
+  await diff.screenshot({ path: testInfo.outputPath('entries-media-diff-mobile.png') })
+
+  // Selecting a different destination asset updates the preview to what will be imported.
+  await page.getByLabel('Destination for images/courtyard.jpg', { exact: true }).selectOption({ label: 'images/coastal-house.jpg' })
+  await expect(diff.locator('.is-eq.is-media')).toContainText('Image · Hero: coastal-house.jpg')
+  await expect(diff).not.toContainText('courtyard.jpg')
+
+  expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBeTruthy()
+  await page.goto('/admin/config/import-export')
+  await syncLV(page)
+  await page.getByRole('button', { name: 'Importer innhold', exact: true }).click()
+  await page.locator('#transfer-upload-form input[type=file]').setInputFiles({ name: 'campaign-media.zip', mimeType: 'application/zip', buffer: binary })
+  await page.getByRole('button', { name: 'Gjennomgå pakken', exact: true }).click()
+  await page.getByText('Gjennomgå felt og innhold', { exact: true }).click()
+  await expect(diff).toContainText('Bilde · Hero: courtyard.jpg')
+  await expect(diff).toContainText('Alternativ tekst: The courtyard in morning light')
+  await expect(diff).toContainText('Tekst og mediereferanser.')
+  await diff.screenshot({ path: testInfo.outputPath('entries-media-diff-norwegian.png') })
+})
+
 test('Norwegian import keeps translated dropdowns and validation after changes', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1050 })
   expect((await page.request.post('/e2e/setup_fixtures/content-transfer')).ok()).toBeTruthy()

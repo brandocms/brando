@@ -4,26 +4,26 @@ msgstr ""
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando_admin/components/text_diff.ex:45
+#: lib/brando_admin/components/text_diff.ex:47
 #, elixir-autogen, elixir-format
 msgid "%{count} line added"
 msgid_plural "%{count} lines added"
 msgstr[0] "%{count} linje lagt til"
 msgstr[1] "%{count} linjer lagt til"
 
-#: lib/brando_admin/components/text_diff.ex:37
+#: lib/brando_admin/components/text_diff.ex:39
 #, elixir-autogen, elixir-format
 msgid "%{count} line removed"
 msgid_plural "%{count} lines removed"
 msgstr[0] "%{count} linje fjernet"
 msgstr[1] "%{count} linjer fjernet"
 
-#: lib/brando_admin/components/text_diff.ex:122
+#: lib/brando_admin/components/text_diff.ex:142
 #, elixir-autogen, elixir-format
 msgid "Added:"
 msgstr "Lagt til:"
 
-#: lib/brando_admin/components/text_diff.ex:32
+#: lib/brando_admin/components/text_diff.ex:34
 #, elixir-autogen, elixir-format
 msgid "Before → after"
 msgstr "Før → etter"
@@ -33,32 +33,32 @@ msgstr "Før → etter"
 msgid "Current → imported"
 msgstr "Nåværende → importert"
 
-#: lib/brando_admin/components/text_diff.ex:74
+#: lib/brando_admin/components/text_diff.ex:76
 #, elixir-autogen, elixir-format
 msgid "No content"
 msgstr "Ikke noe innhold"
 
-#: lib/brando_admin/components/text_diff.ex:53
-#, elixir-autogen, elixir-format
-msgid "No text changes in this preview"
-msgstr "Ingen tekstendringer i denne forhåndsvisningen"
-
-#: lib/brando_admin/components/text_diff.ex:77
+#: lib/brando_admin/components/text_diff.ex:79
 #, elixir-autogen, elixir-format
 msgid "Preview shortened. More content exists beyond the lines shown."
 msgstr "Forhåndsvisningen er forkortet. Det finnes mer innhold enn linjene som vises."
 
-#: lib/brando_admin/components/text_diff.ex:123
+#: lib/brando_admin/components/text_diff.ex:143
 #, elixir-autogen, elixir-format
 msgid "Removed:"
 msgstr "Fjernet:"
 
-#: lib/brando_admin/components/text_diff.ex:61
-#, elixir-autogen, elixir-format
-msgid "Text changes in %{field}"
-msgstr "Tekstendringer i %{field}"
-
-#: lib/brando_admin/components/text_diff.ex:124
+#: lib/brando_admin/components/text_diff.ex:144
 #, elixir-autogen, elixir-format
 msgid "Unchanged:"
 msgstr "Uendret:"
+
+#: lib/brando_admin/components/text_diff.ex:63
+#, elixir-autogen, elixir-format
+msgid "Changes in %{field}"
+msgstr "Endringer i %{field}"
+
+#: lib/brando_admin/components/text_diff.ex:55
+#, elixir-autogen, elixir-format
+msgid "No changes in this preview"
+msgstr "Ingen endringer i denne forhåndsvisningen"
