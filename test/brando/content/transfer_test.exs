@@ -73,6 +73,14 @@ defmodule Brando.Content.TransferTest do
     archive
   end
 
+  test "media mapping options include untitled assets and search their filenames", c do
+    image = Factory.insert(:image, title: nil, path: "images/untitled-courtyard.jpg", creator_id: c.user.id)
+    options = Transfer.Dependencies.options("image", c.user)
+    assert Enum.any?(options, &(&1.id == image.id && &1.label == image.path))
+    assert [%{id: id}] = Transfer.Dependencies.options("image", c.user, "untitled-courtyard")
+    assert id == image.id
+  end
+
   test "whole entries carry authored metadata and owned variables, create as drafts, and recover", c do
     c.source
     |> Changeset.change(
