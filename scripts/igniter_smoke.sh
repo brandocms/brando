@@ -60,6 +60,7 @@ mix brando.install --yes > "$smoke_root/logs/rerun.log" 2>&1
 elixir "$framework_dir/scripts/igniter_smoke/fingerprint.exs" > "$smoke_root/after-rerun"
 cmp "$smoke_root/before-rerun" "$smoke_root/after-rerun"
 
+elixir "$framework_dir/scripts/igniter_smoke/frontend_fixture.exs"
 mix brando.assets.setup > "$smoke_root/logs/assets.log" 2>&1
 mix run --no-start "$framework_dir/scripts/igniter_smoke/check_assets.exs" "$framework_dir" > "$smoke_root/logs/asset-bytes.log" 2>&1
 mix ecto.create > "$smoke_root/logs/database-create.log" 2>&1
