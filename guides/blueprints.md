@@ -39,6 +39,28 @@ runtime. Embedded Blueprints must disable identifiers.
 Invalid template syntax and unsupported values fail during compilation with the
 Blueprint setting and parser location instead of failing during rendering.
 
+## Content transfer matching
+
+Registered Blueprints with block fields and persisted identifiers appear in
+[Content import and export](content_transfer.md). To suggest matching entries
+across installations, define a stable, JSON-safe key without database IDs:
+
+```elixir
+require Ecto.Query
+
+def content_transfer_key(entry), do: %{"slug" => entry.slug, "language" => to_string(entry.language)}
+
+def content_transfer_query(%{"slug" => slug, "language" => language}) do
+  Ecto.Query.from(entry in __MODULE__, where: entry.slug == ^slug and entry.language == ^language)
+end
+```
+
+Import checks the returned key and applies destination authorization to query
+results. `content_transfer_query/1` is optional; provide it on large content
+tables to avoid scanning entries for suggestions. Matching suggests a target;
+the editor still chooses the destination and block field. Pages and fragments
+have built-in keys and queries.
+
 ## Absolute URL
 
 Absolute URL templates drive admin preview links, SEO, sitemaps, and identifier

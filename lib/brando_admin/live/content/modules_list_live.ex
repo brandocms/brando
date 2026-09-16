@@ -63,6 +63,11 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       id="module-import-modal"
       close={JS.push("reset_import_vars") |> hide_modal("#module-import-modal")}
     >
+      <p>
+        {gettext(
+          "This imports independent module copies with new identities. Use Import / export in Configuration to move saved content while preserving module lineage."
+        )}
+      </p>
       <div :if={@imported_modules} class="imported-modules">
         <p>
           {Enum.count(@imported_modules)} {gettext("encoded modules found.")}

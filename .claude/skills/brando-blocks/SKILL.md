@@ -506,8 +506,12 @@ Saving a module re-syncs **every block that uses it, in every entry**:
 gates the module editor's confirmation dialog; `summary/1` gives the lines it
 shows.
 
-`Module.uid` is lineage identity for import replacement (not yet built). Export
-and import mint a fresh one at v1, so import produces copies.
+`Module.uid` is lineage identity for definition imports and saved-content
+transfers. The Configuration → Import / export workflow resolves lineage to a
+destination-local ID and stamps new blocks with the destination module version.
+The legacy module-list copy/import flow still mints fresh UIDs at version 1.
+See [Content import and export](../../../guides/content_transfer.md) for the
+archive, dependency, permission and recovery contracts.
 
 ---
 
