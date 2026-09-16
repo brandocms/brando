@@ -417,7 +417,18 @@ defmodule Brando.Content.Transfer.Dependencies do
 
   def options(kind, actor, query) do
     schema = schema!(kind)
-    label_field = Enum.find([:name, :title, :path, :filename], &(&1 in schema.__schema__(:fields))) || :id
+    label_fields = Enum.filter([:name, :title, :path, :filename], &(&1 in schema.__schema__(:fields)))
+    label_fields = if label_fields == [], do: [:id], else: label_fields
+
+    # Match the same fallback order as label/1. Untitled media must remain
+    # selectable and searchable by path/filename rather than disappearing in SQL.
+    label =
+      label_fields
+      |> Enum.reverse()
+      |> Enum.reduce(Ecto.Query.dynamic([r], ""), fn key, fallback ->
+        Ecto.Query.dynamic([r], fragment("COALESCE(CAST(? AS text), ?)", field(r, ^key), ^fallback))
+      end)
+
     # Restrict in SQL before loading assets. The cast also supports translated
     # module names stored as maps. Record authorization is checked below too.
     pattern =
@@ -428,8 +439,10 @@ defmodule Brando.Content.Transfer.Dependencies do
          |> String.replace("%", "\\%")
          |> String.replace("_", "\\_")) <> "%"
 
+    matching = Ecto.Query.dynamic([r], ilike(^label, ^pattern))
+
     from(r in schema,
-      where: ilike(fragment("CAST(? AS text)", field(r, ^label_field)), ^pattern),
+      where: ^matching,
       order_by: [desc: r.id],
       limit: 100
     )
