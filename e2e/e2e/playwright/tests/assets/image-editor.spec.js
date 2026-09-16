@@ -64,6 +64,9 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   await details.getByRole('button', { name: 'Browse library', exact: true }).click()
   const browser = page.getByRole('dialog', { name: 'Images', exact: true })
   await expect(browser).toBeVisible()
+  // The drawer becomes visible before its hook moves keyboard focus into it.
+  // Escape belongs to the nested picker only after that handoff completes.
+  await expect.poll(() => browser.evaluate(el => el.contains(document.activeElement))).toBe(true)
   await page.keyboard.press('Escape')
   await expect(browser).not.toBeVisible()
   await expect(details).toBeVisible()
