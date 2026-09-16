@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
   alias Brando.Content.{Definitions, Module}
   alias Brando.Content.Definition.{Archive, Plan}
   alias Brando.Repo
-  alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.{Content, TextDiff}
   alias Phoenix.LiveView.JS
 
   def mount(socket) do
@@ -187,13 +187,15 @@ defmodule BrandoAdmin.Components.ModuleFiles do
                 </p>
                 <p :if={item.reason}>{item.reason}</p>
                 <p :if={item.diff == []}>{gettext("The definition is unchanged.")}</p>
-                <section :for={change <- item.diff} class="module-files-diff">
-                  <h4>{change.field}</h4>
-                  <div>
-                    <div><span>{gettext("Current")}</span><pre>{display_value(change.before)}</pre></div>
-                    <div><span>{gettext("Imported")}</span><pre>{display_value(change.after)}</pre></div>
-                  </div>
-                </section>
+                <TextDiff.diff
+                  :for={change <- item.diff}
+                  id={"module-file-diff-#{item.uid}-#{change.field}"}
+                  label={change.field}
+                  description={dgettext("admin_diff", "Current → imported")}
+                  before={display_value(change.before)}
+                  after={display_value(change.after)}
+                  monospace
+                />
               </div>
             </details>
           </section>
@@ -411,7 +413,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
   defp action_label(:update), do: gettext("Update")
   defp action_label(:conflict), do: gettext("Conflict")
   defp action_label(:migration_required), do: gettext("Migration required")
-  defp display_value(nil), do: "—"
+  defp display_value(nil), do: ""
   defp display_value(value) when is_binary(value), do: value
   defp display_value(value), do: Jason.encode!(value, pretty: true)
 
