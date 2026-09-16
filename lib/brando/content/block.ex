@@ -145,6 +145,10 @@ defmodule Brando.Content.Block do
     cast_assoc(changeset, :block, with: &recursive_block_changeset(&1, &2, user))
   end
 
+  def maybe_cast_recursive(changeset, {:transfer, retained_slots}, user) do
+    cast_assoc(changeset, :block, with: &recursive_block_changeset(&1, &2, user, retained_slot_uids: retained_slots))
+  end
+
   def maybe_cast_recursive(changeset, false, user) do
     cast_assoc(changeset, :block, with: &block_changeset(&1, &2, user))
   end
@@ -191,7 +195,7 @@ defmodule Brando.Content.Block do
     end
   end
 
-  def recursive_block_changeset(block, attrs, user) do
+  def recursive_block_changeset(block, attrs, user, opts \\ []) do
     block
     |> cast(attrs, @block_attrs)
     |> validate_required(:uid)
@@ -204,8 +208,8 @@ defmodule Brando.Content.Block do
       drop_param: :drop_var_ids
     )
     |> cast_assoc(:refs, with: &ref_changeset(&1, &2, user))
-    |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user))
-    |> Brando.Content.BlockSlots.validate()
+    |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user, opts))
+    |> Brando.Content.BlockSlots.validate(opts)
     |> finalize_new_block(block)
   end
 

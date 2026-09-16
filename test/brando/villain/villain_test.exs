@@ -606,6 +606,7 @@ defmodule Brando.VillainTest do
 
     # insert module
     module_params = %Brando.Content.Module{
+      uid: Brando.Utils.generate_uid(),
       code: "{% ref refs.text %}",
       name: "Name",
       help_text: "Help text",
@@ -778,6 +779,7 @@ defmodule Brando.VillainTest do
 
   test "update module ref will update entries using ref", %{user: user} do
     module_params = %Brando.Content.Module{
+      uid: Brando.Utils.generate_uid(),
       code: "{% ref refs.intro %}",
       name: "Name",
       help_text: "Help text",
@@ -1474,6 +1476,7 @@ defmodule Brando.VillainTest do
       }
 
       module_struct = %Brando.Content.Module{
+        uid: Brando.Utils.generate_uid(),
         code: "{% ref refs.text %}",
         name: "IdentifierRefModule",
         help_text: "Help text",

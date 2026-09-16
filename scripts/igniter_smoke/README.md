@@ -42,7 +42,10 @@ applies the appropriate migrations, signs into the admin, creates and edits a
 Product, and checks its public rendering through Chromium. A second browser test
 edits the CMS homepage in admin and checks public cache invalidation, the CMS
 layout, published pages, draft protection, 404s, robots and frontend
-errors. No email or telemetry
+errors. After checking installer idempotence, a fixture adds application-owned
+navigation to the minimal CMS layout. A third browser test exercises frontend
+initialization and the installed mobile-menu animations, including reopening,
+resize and interrupted transitions. No email or telemetry
 is sent. A failure retains logs and browser traces in the printed temporary
 directory; the consumer server stops on exit.
 

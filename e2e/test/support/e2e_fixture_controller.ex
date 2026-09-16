@@ -20,18 +20,66 @@ defmodule E2EFixtureController do
     # Build the scenario
     scenario =
       case scenario_name do
-        "admin-user" -> get_admin_user()
-        "norwegian-admin-user" -> create_norwegian_admin_user()
-        "media-upload" -> create_media_upload_module()
-        "markdown-source" -> E2E.MarkdownProvider.setup(get_admin_user())
-        "markdown-source-third" -> E2E.MarkdownProvider.advance(get_admin_user(), "c", "Third")
-        "markdown-source-fourth" -> E2E.MarkdownProvider.advance(get_admin_user(), "d", "Fourth")
+        "admin-user" ->
+          get_admin_user()
+
+        "norwegian-admin-user" ->
+          create_norwegian_admin_user()
+
+        "media-upload" ->
+          create_media_upload_module()
+
+        "content-transfer" ->
+          create_content_transfer()
+
+        "content-transfer-related" ->
+          user = create_content_transfer()
+          source = Brando.Repo.get_by!(Brando.Pages.Page, uri: "campaign-launch")
+          parent = Brando.Repo.get_by!(Brando.Pages.Page, uri: "destination-page")
+          source |> Ecto.Changeset.change(parent_id: parent.id) |> Brando.Repo.update!()
+          user
+
+        "content-transfer-unmatched" ->
+          create_content_transfer()
+
+        "markdown-source" ->
+          E2E.MarkdownProvider.setup(get_admin_user())
+
+        "markdown-source-third" ->
+          E2E.MarkdownProvider.advance(get_admin_user(), "c", "Third")
+
+        "markdown-source-fourth" ->
+          E2E.MarkdownProvider.advance(get_admin_user(), "d", "Fourth")
       end
 
     # Log the user in
-    conn
-    |> login_user(scenario)
-    |> send_resp(200, "")
+    conn = login_user(conn, scenario)
+
+    if scenario_name == "content-transfer-unmatched" do
+      source = Brando.Repo.get_by!(Brando.Pages.Page, uri: "campaign-launch")
+
+      {:ok, exported} =
+        Brando.Content.Transfer.export([%{schema: Brando.Pages.Page, id: source.id, fields: ["blocks"]}], scenario)
+
+      module =
+        Brando.Repo.get_by!(Brando.Content.Module, name: %{"en" => "Campaign introduction"}) |> Brando.Repo.preload(:refs)
+
+      module |> Ecto.Changeset.change(uid: Ecto.UUID.generate()) |> Brando.Repo.update!()
+
+      Enum.each(module.refs, fn ref ->
+        ref |> Ecto.Changeset.change(uid: Brando.Utils.generate_uid()) |> Brando.Repo.update!()
+      end)
+
+      bundle =
+        exported.bundle
+        |> put_in(["source", "scope"], "external-test-installation")
+        |> put_in(["definitions", "source"], "external-test-installation")
+
+      {:ok, binary} = Brando.Content.Transfer.Archive.export(bundle, exported.files)
+      json(conn, %{bundle: Base.encode64(binary)})
+    else
+      send_resp(conn, 200, "")
+    end
   end
 
   defp create_norwegian_admin_user do
@@ -46,6 +94,91 @@ defmodule E2EFixtureController do
       })
 
     {:ok, _} = Brando.Authorization.Migration.run()
+    user
+  end
+
+  defp create_content_transfer do
+    user = get_admin_user()
+
+    module =
+      Brando.Repo.insert!(%Brando.Content.Module{
+        uid: Ecto.UUID.generate(),
+        type: :liquid,
+        name: %{"en" => "Campaign introduction"},
+        class: "campaign-introduction",
+        namespace: %{"en" => "Content"},
+        help_text: %{},
+        code: "{% ref refs.body %}",
+        refs: [
+          %Brando.Content.Ref{
+            name: "body",
+            uid: Brando.Utils.generate_uid(),
+            data: %Brando.Villain.Blocks.TextBlock{type: "text", data: %Brando.Villain.Blocks.TextBlock.Data{text: ""}}
+          }
+        ],
+        vars: []
+      })
+
+    [source, destination, _draft] =
+      Enum.map(
+        [
+          {"Campaign launch", "campaign-launch", :published},
+          {"Destination page", "destination-page", :published},
+          {"Autumn collection: the people, places and stories behind it", "autumn-collection", :draft}
+        ],
+        fn {title, uri, status} ->
+          page =
+            Brando.Repo.insert!(%Brando.Pages.Page{
+              title: title,
+              meta_title: if(uri == "campaign-launch", do: "A new collection, made with care"),
+              meta_description:
+                if(uri == "campaign-launch", do: "Discover the people and ideas behind our next collection."),
+              uri: uri,
+              language: :en,
+              status: status,
+              template: "default.html",
+              creator_id: user.id
+            })
+
+          Brando.Content.create_identifier(Brando.Pages.Page, page)
+          page
+        end
+      )
+
+    params = %{
+      "uid" => Brando.Utils.generate_uid(),
+      "type" => "module",
+      "module_id" => module.id,
+      "creator_id" => user.id,
+      "source" => to_string(Brando.Pages.Page.Blocks),
+      "description" => "Introduction",
+      "refs" => [
+        %{
+          "uid" => Brando.Utils.generate_uid(),
+          "name" => "body",
+          "data" => %{"type" => "text", "data" => %{"text" => "<p>A considered introduction to our next collection.</p>"}}
+        }
+      ]
+    }
+
+    block =
+      %Brando.Content.Block{} |> Brando.Content.Block.recursive_block_changeset(params, user) |> Brando.Repo.insert!()
+
+    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: source.id, block_id: block.id, sequence: 0}))
+
+    previous =
+      params
+      |> Map.put("uid", Brando.Utils.generate_uid())
+      |> put_in(["refs", Access.at(0), "uid"], Brando.Utils.generate_uid())
+      |> put_in(
+        ["refs", Access.at(0), "data", "data", "text"],
+        "<p>Discover the stories behind our previous collection.</p>"
+      )
+
+    previous =
+      %Brando.Content.Block{} |> Brando.Content.Block.recursive_block_changeset(previous, user) |> Brando.Repo.insert!()
+
+    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: destination.id, block_id: previous.id, sequence: 0}))
     user
   end
 

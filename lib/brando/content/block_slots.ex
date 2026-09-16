@@ -75,7 +75,7 @@ defmodule Brando.Content.BlockSlots do
       Enum.any?(allowed, &(&1.id == child.module_id && &1.library_origin == (child.module_origin || :local)))
   end
 
-  def validate(%Changeset{} = changeset) do
+  def validate(%Changeset{} = changeset, opts \\ []) do
     if changeset.data.type == :slot || Changeset.get_field(changeset, :type) == :slot do
       changeset =
         changeset
@@ -93,7 +93,7 @@ defmodule Brando.Content.BlockSlots do
         Changeset.add_error(changeset, :children, "contains a module that is not allowed in this collection")
       end
     else
-      changeset |> validate_owned_slots() |> Lifecycle.validate_remaps()
+      changeset |> validate_owned_slots(opts) |> Lifecycle.validate_remaps()
     end
   end
 
@@ -138,8 +138,13 @@ defmodule Brando.Content.BlockSlots do
     end)
   end
 
-  defp validate_owned_slots(changeset) do
-    retained = MapSet.new(children(changeset.data), & &1.uid)
+  defp validate_owned_slots(changeset, opts) do
+    # Portable import allocates new instance identities for retained collections.
+    # This server-only option carries their reviewed retention set; request
+    # parameters cannot opt out of module/slot validation.
+    retained =
+      MapSet.union(MapSet.new(children(changeset.data), & &1.uid), MapSet.new(Keyword.get(opts, :retained_slot_uids, [])))
+
     new_slots = Enum.filter(children(changeset), &(&1.type == :slot && !MapSet.member?(retained, &1.uid)))
 
     if new_slots == [] do

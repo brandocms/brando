@@ -91,6 +91,7 @@ defmodule Brando.Router do
         pipe_through [:admin, :brando_root_layout, :require_authenticated_user]
 
         get "/access-denied", BrandoAdmin.AccessDeniedController, :show
+        get "/content-transfer/download/:token", BrandoAdmin.ContentTransferDownloadController, :show
 
         post "/environment", BrandoAdmin.EnvironmentController, :update
         post "/api/content/image/replace_crop", BrandoAdmin.API.Content.Upload.ImageController, :replace_crop
@@ -131,6 +132,7 @@ defmodule Brando.Router do
             live "/scheduled_publishing", BrandoAdmin.Sites.ScheduledPublishingLive
             live "/seo", BrandoAdmin.Sites.SEOLive
             live "/utils", BrandoAdmin.Sites.UtilsLive
+            live "/import-export", BrandoAdmin.Sites.ContentTransferLive
 
             live "/navigation/menus", BrandoAdmin.Navigation.MenuListLive
             live "/navigation/menus/create", BrandoAdmin.Navigation.MenuFormLive, :create
