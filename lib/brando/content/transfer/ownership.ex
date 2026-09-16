@@ -1,4 +1,5 @@
 defmodule Brando.Content.Transfer.Ownership do
+  use Gettext, backend: Brando.Gettext
   @moduledoc false
   alias Brando.Content.Transfer.Error
   alias Brando.Repo
@@ -61,7 +62,8 @@ defmodule Brando.Content.Transfer.Ownership do
       Map.new(map, fn
         {"object_id", id} ->
           {"object_id",
-           Map.get(mapping, to_string(id)) || Error.fail!("A gallery override references an unknown placement.")}
+           Map.get(mapping, to_string(id)) ||
+             Error.fail!(dgettext("content_transfer", "A gallery override references an unknown placement."))}
 
         {key, value} ->
           {key, remap_objects(value, mapping)}

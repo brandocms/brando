@@ -16,6 +16,9 @@ Reviewed the implemented E2E application in Chromium at 1440 × 1050 and
 | Related content | Referenced entries appear in export review with an explicit Include entry action. Included relationships are remapped together; shared references remain visible for destination mapping. |
 | Entry review | Pale blue headers group the source entry, create/update choice, publication policy and editable destination keys. Creates show meaningful values in two columns; updates show changed values before and after. Owned content expands into readable details. |
 | Publication and recovery | New entries default to Draft with no schedule. Updates preserve destination publication unless changed explicitly. Conflicting keys block apply with inline feedback. Recovery explains whether it restores an existing entry or removes a newly created one. |
+| Dropdowns | Shared `admin-select` styling uses the form input tokens, 40px controls, 13px labels and a small inset chevron. Inspected publication and language at desktop and mobile widths, including open options and visible keyboard focus. Tab and arrow-key selection work. |
+| Review continuity | Expanded field comparisons and owned-record details retain their open state across LiveView patches while publication and language change. |
+| Norwegian | A dedicated catalog supplies 405 translated messages, including dropdown options, publication states, built-in field labels, validation and recovery feedback. Background operations preserve the user's locale. Verified a Norwegian import and recovery, plus invalid archive and conflicting URI feedback. Site-authored content, custom schema labels and application validation details depend on the consumer's content and catalogs. |
 | Mobile navigation | Compact toolbar labels fit without hiding icons. A sticky selection shortcut reaches the export summary. The shortcut stays mounted so visibility changes preserve keyboard focus. |
 | Review action | Removed inherited global primary-button sizing. Measured 36px height and a centered 16px icon. Blue ready state, neutral disabled state, aligned footer, and a stable upload-panel minimum height. |
 | Upload states | Empty picker, uploading progress, uploaded bundle and invalid-file feedback. Uploaded files replace the contradictory native “No file chosen” message. Verified removal, replacement and a long filename at mobile width. |
@@ -24,12 +27,16 @@ Reviewed the implemented E2E application in Chromium at 1440 × 1050 and
 ## Validation
 
 - E2E consumer asset build passed.
-- All four focused content-transfer browser workflows passed: related-entry
+- All five focused content-transfer browser workflows passed: related-entry
   inclusion; whole-entry creation, conflict review, update and recovery;
-  advanced block-field transfer and recovery; separate definition installation.
+  Norwegian dropdowns, validation, import and recovery; advanced block-field
+  transfer and recovery; separate definition installation.
 - 65 Elixir regression tests passed, covering transfer archives, definitions,
   block ownership, whole-entry validation, publication scheduling, related-entry
   remapping and recovery guards.
+- The dropdown and translation follow-up passed 52 focused Elixir regressions;
+  all Norwegian catalog entries have translations and matching interpolation
+  placeholders. Compilation with warnings treated as errors passed.
 - The consumer Project integration test passed with its client, owned category
   join, gallery and self-referencing entry selection, including recovery.
 - Export, upload and expanded import review fit the 390px viewport without
@@ -52,6 +59,10 @@ Chromium E2E application, not every consumer font or browser.
 - [Upload, mobile](content-transfer-import-mobile.png)
 - [Expanded review, desktop](content-transfer-review-desktop.png)
 - [Whole-entry review, detail](content-transfer-review-detail.png)
+- [Norwegian review, detail](content-transfer-review-norwegian-detail.png)
+- [Norwegian review, desktop](content-transfer-review-norwegian.png)
+- [Norwegian review, mobile](content-transfer-review-norwegian-mobile.png)
+- [Publication options, open](content-transfer-publication-open.png)
 - [Expanded review, mobile](content-transfer-review-mobile.png)
 - [Update comparison](content-transfer-update-desktop.png)
 - [Related-entry inclusion](content-transfer-related-desktop.png)

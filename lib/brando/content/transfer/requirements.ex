@@ -1,4 +1,5 @@
 defmodule Brando.Content.Transfer.Requirements do
+  use Gettext, backend: Brando.Gettext
   @moduledoc false
 
   # Definition defaults are reviewed separately. Only dependencies reachable
@@ -19,7 +20,9 @@ defmodule Brando.Content.Transfer.Requirements do
     else
       dependency =
         dependencies[token] ||
-          Brando.Content.Transfer.Error.fail!("The dependency manifest has an undeclared relationship.")
+          Brando.Content.Transfer.Error.fail!(
+            dgettext("content_transfer", "The dependency manifest has an undeclared relationship.")
+          )
 
       nested =
         case dependency["kind"] do

@@ -1,3 +1,35 @@
+/* Compact native select for configuration forms. Keep keyboard and mobile
+   picker behavior while sharing the admin input proportions and tokens. */
+select.admin-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 40px 0 14px;
+  font: 13px/20px "Main", sans-serif;
+  color: var(--brando-color-dark);
+  border: 1px solid var(--brando-input-border);
+  border-radius: var(--brando-input-radius);
+  box-shadow: var(--brando-input-shadow);
+  background-color: var(--brando-color-input);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23626d67' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  background-size: 16px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease;
+
+  &:hover:not(:disabled) { border-color: #9aafa3; }
+  &:focus-visible { border-color: var(--brando-color-blue); box-shadow: var(--brando-input-focus-shadow); outline: 2px solid #47775d; outline-offset: 2px; }
+  &:disabled { cursor: not-allowed; opacity: .55; }
+}
+
+@media (forced-colors: active) {
+  select.admin-select { appearance: auto; background-image: none; }
+}
+
 h2.titlecase {
   font-size: 12px !important;
   text-transform: uppercase;

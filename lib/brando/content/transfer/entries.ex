@@ -1,4 +1,5 @@
 defmodule Brando.Content.Transfer.Entries do
+  use Gettext, backend: Brando.Gettext
   @moduledoc false
   import Ecto.Query, only: [from: 2]
   alias Brando.Authorization.Boundary
@@ -58,16 +59,21 @@ defmodule Brando.Content.Transfer.Entries do
 
   def validate!(bundle) do
     entries = bundle["entries"]
-    unless is_list(entries) && length(entries) in 1..100, do: Error.fail!("An entry bundle must contain 1–100 entries.")
+
+    unless is_list(entries) && length(entries) in 1..100,
+      do: Error.fail!(dgettext("content_transfer", "An entry bundle must contain 1–100 entries."))
 
     Enum.each(entries, fn entry ->
       Value.keys!(entry, ~w(key schema title language hints data), "entry")
       Enum.each(~w(key schema title), &Value.nonempty!(entry[&1], "entry #{&1}"))
-      unless is_map(entry["hints"]) && is_binary(entry["language"]), do: Error.fail!("Invalid entry matching hints.")
+
+      unless is_map(entry["hints"]) && is_binary(entry["language"]),
+        do: Error.fail!(dgettext("content_transfer", "Invalid entry matching hints."))
+
       EntryCodec.validate!(entry["data"], EntryCodec.schema!(entry["schema"]), bundle["dependencies"])
       uids = entry["data"] |> EntryCodec.block_fields() |> List.flatten() |> Portable.walk(& &1["uid"])
       Value.unique!(uids, "entry block UIDs")
-      if length(uids) > 5_000, do: Error.fail!("An entry exceeds 5,000 blocks.")
+      if length(uids) > 5_000, do: Error.fail!(dgettext("content_transfer", "An entry exceeds 5,000 blocks."))
     end)
 
     Value.unique!(Enum.map(entries, & &1["key"]), "entries")
@@ -75,11 +81,13 @@ defmodule Brando.Content.Transfer.Entries do
     Enum.each(bundle["dependencies"], fn {_, dep} ->
       if entry = Enum.find(entries, &(&1["key"] == dep["entry_key"])) do
         unless dep["kind"] in ~w(entry identifier fragment) && dep["schema"] == entry["schema"],
-          do: Error.fail!("An included relationship points to an incompatible entry type.")
+          do: Error.fail!(dgettext("content_transfer", "An included relationship points to an incompatible entry type."))
       end
     end)
 
-    unless fields(entries) == bundle["fields"], do: Error.fail!("The entry and field manifests disagree.")
+    unless fields(entries) == bundle["fields"],
+      do: Error.fail!(dgettext("content_transfer", "The entry and field manifests disagree."))
+
     :ok
   end
 
@@ -87,7 +95,10 @@ defmodule Brando.Content.Transfer.Entries do
     Transfer.ensure_scope!(actor)
     bundle = Portable.validate!(archive.bundle)
     operation_id = Keyword.get(opts, :operation_id, Ecto.UUID.generate())
-    unless match?({:ok, _}, Ecto.UUID.cast(operation_id)), do: Error.fail!("Invalid import operation ID.")
+
+    unless match?({:ok, _}, Ecto.UUID.cast(operation_id)),
+      do: Error.fail!(dgettext("content_transfer", "Invalid import operation ID."))
+
     supplied = Keyword.get(opts, :dependencies, %{})
 
     entries =
@@ -118,7 +129,9 @@ defmodule Brando.Content.Transfer.Entries do
                schema = EntryCodec.schema!(source["schema"])
                target = targets[source["key"]] || %{}
                mode = target["mode"] || "create"
-               unless mode in ~w(create update), do: Error.fail!("Choose Create new or Update existing.")
+
+               unless mode in ~w(create update),
+                 do: Error.fail!(dgettext("content_transfer", "Choose Create new or Update existing."))
 
                entry =
                  if mode == "update",
@@ -135,7 +148,9 @@ defmodule Brando.Content.Transfer.Entries do
                Value.keys!(overrides, editable(source), "entry overrides")
                data = put_in(source["data"]["attributes"], Map.merge(source["data"]["attributes"], overrides))["data"]
                publication = target["publication"] || if(mode == "create", do: "draft", else: "preserve")
-               unless publication in ~w(draft preserve source), do: Error.fail!("Choose how to publish this entry.")
+
+               unless publication in ~w(draft preserve source),
+                 do: Error.fail!(dgettext("content_transfer", "Choose how to publish this entry."))
 
                data =
                  if Map.has_key?(data["attributes"], "status") do
@@ -223,12 +238,21 @@ defmodule Brando.Content.Transfer.Entries do
 
     issues =
       if length(keys) != length(Enum.uniq(keys)),
-        do: ["Two incoming entries use the same unique key. Choose distinct values before importing." | issues],
+        do: [
+          dgettext(
+            "content_transfer",
+            "Two incoming entries use the same unique key. Choose distinct values before importing."
+          )
+          | issues
+        ],
         else: issues
 
     issues =
       if length(destinations) != length(Enum.uniq(destinations)),
-        do: ["Two entries point to the same destination. Choose distinct destinations." | issues],
+        do: [
+          dgettext("content_transfer", "Two entries point to the same destination. Choose distinct destinations.")
+          | issues
+        ],
         else: issues
 
     issues =
@@ -294,12 +318,17 @@ defmodule Brando.Content.Transfer.Entries do
     cs = Transfer.field_changeset(item.entry, params, actor) |> Brando.Publisher.maybe_override_status()
 
     unless cs.valid?,
-      do: Error.fail!("Entry validation: #{inspect(Changeset.traverse_errors(cs, fn {message, _} -> message end))}")
+      do:
+        Error.fail!(
+          dgettext("content_transfer", "Entry validation: %{value1}",
+            value1: inspect(Changeset.traverse_errors(cs, fn {message, _} -> message end))
+          )
+        )
 
     unique!(cs)
 
     if Boundary.change(actor, if(item.mode == "create", do: :create, else: :update), cs) != :ok,
-      do: Error.fail!("You do not have permission to save or publish this entry.")
+      do: Error.fail!(dgettext("content_transfer", "You do not have permission to save or publish this entry."))
 
     cs
   end
@@ -334,7 +363,11 @@ defmodule Brando.Content.Transfer.Entries do
         if Repo.one(from(e in query, select: e.id, limit: 1)),
           do:
             Error.fail!(
-              "#{Phoenix.Naming.humanize(attribute.name)} is already in use. Update the matching entry or choose another value."
+              dgettext(
+                "content_transfer",
+                "%{value1} is already in use. Update the matching entry or choose another value.",
+                value1: Brando.Content.Transfer.Labels.field(attribute.name)
+              )
             )
       end
     end)
@@ -357,16 +390,19 @@ defmodule Brando.Content.Transfer.Entries do
     |> List.flatten()
     |> Portable.walk(fn block ->
       if token = block["module_id"] do
-        module = bindings[token] || Error.fail!("Resolve the required modules before reviewing content.")
+        module =
+          bindings[token] ||
+            Error.fail!(dgettext("content_transfer", "Resolve the required modules before reviewing content."))
+
         dep = bundle["dependencies"][token]
         Contracts.check!(block, dep["contract"], module)
 
         if dep["parent"] && bindings[dep["parent"]] && module.parent_id != bindings[dep["parent"]].id,
-          do: Error.fail!("The child module belongs to a different destination parent.")
+          do: Error.fail!(dgettext("content_transfer", "The child module belongs to a different destination parent."))
 
         if dep["table_template"] && bindings[dep["table_template"]] &&
              module.table_template_id != bindings[dep["table_template"]].id,
-           do: Error.fail!("Map the table template used by the destination module.")
+           do: Error.fail!(dgettext("content_transfer", "Map the table template used by the destination module."))
       end
     end)
   end
@@ -400,7 +436,7 @@ defmodule Brando.Content.Transfer.Entries do
 
               case result do
                 {:ok, %Brando.Content.Identifier{} = identifier} -> identifier
-                _ -> Error.fail!("The included entry does not support content links.")
+                _ -> Error.fail!(dgettext("content_transfer", "The included entry does not support content links."))
               end
             end
           else
@@ -446,7 +482,10 @@ defmodule Brando.Content.Transfer.Entries do
     if ready == [],
       do:
         Error.fail!(
-          "New entries refer to each other in a cycle. Map one of those references to an existing entry, then review again."
+          dgettext(
+            "content_transfer",
+            "New entries refer to each other in a cycle. Map one of those references to an existing entry, then review again."
+          )
         )
 
     items = Enum.map(ready, &elem(&1, 0))
@@ -456,7 +495,9 @@ defmodule Brando.Content.Transfer.Entries do
   def apply!(plan, actor) do
     Transfer.ensure_scope!(actor)
     Transfer.authorize_plan!(plan, actor)
-    unless Transfer.applicable?(plan), do: Error.fail!("Resolve every blocking problem before importing.")
+
+    unless Transfer.applicable?(plan),
+      do: Error.fail!(dgettext("content_transfer", "Resolve every blocking problem before importing."))
 
     case Transfer.receipt(plan.id, actor) do
       %Receipt{} = receipt -> {:ok, receipt}
@@ -487,7 +528,10 @@ defmodule Brando.Content.Transfer.Entries do
             current = preview!(plan.archive, plan.targets, actor, dependencies: plan.supplied, operation_id: plan.id)
 
             unless current.fingerprint == plan.fingerprint && Transfer.applicable?(current),
-              do: Error.fail!("The destination changed after preview. Review the import again.")
+              do:
+                Error.fail!(
+                  dgettext("content_transfer", "The destination changed after preview. Review the import again.")
+                )
 
             before =
               Enum.map(current.entries, fn item ->
@@ -588,7 +632,9 @@ defmodule Brando.Content.Transfer.Entries do
         %{rows: [[id]]} =
           Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT nextval(pg_get_serial_sequence($1, 'id'))", [table])
 
-        unless is_integer(id), do: Error.fail!("This Blueprint needs a generated integer entry ID.")
+        unless is_integer(id),
+          do: Error.fail!(dgettext("content_transfer", "This Blueprint needs a generated integer entry ID."))
+
         %{item | stub: %{item.stub | id: id}}
       end
 
@@ -678,7 +724,13 @@ defmodule Brando.Content.Transfer.Entries do
         entry = EntryCodec.load!(expected["schema"], expected["id"], actor)
 
         unless EntryCodec.fingerprint(entry) == expected["fingerprint"],
-          do: Error.fail!("Content changed after this import. Recovery would overwrite newer edits.")
+          do:
+            Error.fail!(
+              dgettext(
+                "content_transfer",
+                "Content changed after this import. Recovery would overwrite newer edits."
+              )
+            )
 
         {key, entry}
       end)
@@ -836,7 +888,10 @@ defmodule Brando.Content.Transfer.Entries do
   defp used!,
     do:
       Error.fail!(
-        "Other content now references an entry created by this import. Remove those references before recovering."
+        dgettext(
+          "content_transfer",
+          "Other content now references an entry created by this import. Remove those references before recovering."
+        )
       )
 
   defp actor_id(%Brando.Authorization.Scope{user_id: id}), do: id

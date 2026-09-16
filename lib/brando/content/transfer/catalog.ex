@@ -1,10 +1,11 @@
 defmodule Brando.Content.Transfer.Catalog do
+  use Gettext, backend: Brando.Gettext
   @moduledoc "Registered block-field providers and destination matching. No submitted schema names become atoms."
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Authorization.Boundary
   alias Brando.Content.{BlockPreloads, Identifier}
-  alias Brando.Content.Transfer.Error
+  alias Brando.Content.Transfer.{Error, Labels}
   alias Brando.Repo
 
   def schemas do
@@ -25,7 +26,7 @@ defmodule Brando.Content.Transfer.Catalog do
 
   def schema!(name) do
     Enum.find(schemas(), &(to_string(&1) == to_string(name))) ||
-      Error.fail!("This content type is not registered on this site.")
+      Error.fail!(dgettext("content_transfer", "This content type is not registered on this site."))
   end
 
   def fields(schema) do
@@ -33,13 +34,13 @@ defmodule Brando.Content.Transfer.Catalog do
 
     Enum.map(definitions, fn field ->
       name = to_string(field.name)
-      %{name: name, label: Phoenix.Naming.humanize(name), association: String.to_existing_atom("entry_" <> name)}
+      %{name: name, label: Labels.field(name), association: String.to_existing_atom("entry_" <> name)}
     end)
   end
 
   def field!(schema, name) do
     Enum.find(fields(schema), &(&1.name == to_string(name))) ||
-      Error.fail!("This block field does not exist on the destination.")
+      Error.fail!(dgettext("content_transfer", "This block field does not exist on the destination."))
   end
 
   def load!(schema_name, id, actor, action \\ :read, opts \\ []) do
@@ -47,15 +48,15 @@ defmodule Brando.Content.Transfer.Catalog do
     id = id!(id)
     query = from(e in schema, where: e.id == ^id) |> scoped_query(schema, actor, action)
     query = if opts[:lock], do: from(e in query, lock: "FOR UPDATE"), else: query
-    entry = Repo.one(query) || Error.fail!("The selected entry is no longer available.")
-    if Map.get(entry, :deleted_at), do: Error.fail!("The selected entry has been deleted.")
+    entry = Repo.one(query) || Error.fail!(dgettext("content_transfer", "The selected entry is no longer available."))
+    if Map.get(entry, :deleted_at), do: Error.fail!(dgettext("content_transfer", "The selected entry has been deleted."))
     authorize!(actor, action, entry)
     Repo.preload(entry, BlockPreloads.for_schema(schema))
   end
 
   def authorize!(actor, action, subject) do
     if Boundary.authorize(actor, action, subject) != :ok,
-      do: Error.fail!("You do not have permission to #{action} this content.")
+      do: Error.fail!(dgettext("content_transfer", "You do not have permission to access this content."))
 
     :ok
   end
@@ -147,7 +148,7 @@ defmodule Brando.Content.Transfer.Catalog do
       id: entry.id,
       key: "#{schema}:#{entry.id}",
       schema: to_string(schema),
-      type: Brando.Blueprint.get_singular(schema),
+      type: Brando.Content.Transfer.Labels.schema(schema),
       title: title,
       language: to_string(Map.get(entry, :language) || ""),
       status: to_string(Map.get(entry, :status) || ""),
@@ -171,7 +172,7 @@ defmodule Brando.Content.Transfer.Catalog do
   def candidates(source, actor, action \\ :update) do
     schema =
       Brando.Authorization.Catalog.schema(source["schema"]) ||
-        Error.fail!("This content type is not registered on this site.")
+        Error.fail!(dgettext("content_transfer", "This content type is not registered on this site."))
 
     hints = source["hints"] || %{}
 
@@ -212,11 +213,11 @@ defmodule Brando.Content.Transfer.Catalog do
   def id!(id) when is_binary(id) do
     case Integer.parse(id) do
       {number, ""} when number > 0 -> number
-      _ -> Error.fail!("Choose a destination record.")
+      _ -> Error.fail!(dgettext("content_transfer", "Choose a destination record."))
     end
   end
 
-  def id!(_), do: Error.fail!("Choose a destination record.")
+  def id!(_), do: Error.fail!(dgettext("content_transfer", "Choose a destination record."))
 
   defp escape_like(query),
     do: query |> String.replace("\\", "\\\\") |> String.replace("%", "\\%") |> String.replace("_", "\\_")

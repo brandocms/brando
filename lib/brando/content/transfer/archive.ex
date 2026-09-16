@@ -1,4 +1,5 @@
 defmodule Brando.Content.Transfer.Archive do
+  use Gettext, backend: Brando.Gettext
   @moduledoc "Bounded, checksummed ZIP transport for saved block-field content and media originals."
 
   require Record
@@ -20,7 +21,7 @@ defmodule Brando.Content.Transfer.Archive do
     manifest = Jason.encode!(bundle, pretty: true)
 
     if byte_size(manifest) > @manifest_bytes do
-      {:error, "Content manifest exceeds 8 MB. Export fewer fields."}
+      {:error, dgettext("content_transfer", "Content manifest exceeds 8 MB. Export fewer fields.")}
     else
       pack(Map.put(files, "content.json", manifest))
     end
@@ -29,23 +30,29 @@ defmodule Brando.Content.Transfer.Archive do
   def read(binary) when is_binary(binary) do
     TransferError.protect(fn ->
       files = unpack!(binary)
-      json = files["content.json"] || Error.raise!("ZIP", "content.json is missing; choose a content transfer bundle")
-      if byte_size(json) > @manifest_bytes, do: Error.raise!("content.json", "manifest exceeds 8 MB")
+
+      json =
+        files["content.json"] ||
+          Error.raise!("ZIP", dgettext("content_transfer", "content.json is missing; choose a content transfer bundle"))
+
+      if byte_size(json) > @manifest_bytes,
+        do: Error.raise!("content.json", dgettext("content_transfer", "manifest exceeds 8 MB"))
 
       bundle =
         case Jason.decode(json) do
           {:ok, bundle} when is_map(bundle) -> bundle
-          _ -> Error.raise!("content.json", "expected a JSON object")
+          _ -> Error.raise!("content.json", dgettext("content_transfer", "expected a JSON object"))
         end
 
       Brando.Content.Transfer.Portable.validate!(bundle)
 
       Enum.each(bundle["dependencies"], fn {_token, dependency} ->
         if asset = dependency["original"] do
-          body = files[asset["path"]] || Error.raise!("media", "a bundled original is missing")
+          body =
+            files[asset["path"]] || Error.raise!("media", dgettext("content_transfer", "a bundled original is missing"))
 
           unless byte_size(body) == asset["bytes"] && checksum(body) == asset["sha256"],
-            do: Error.raise!("media", "original checksum or size does not match")
+            do: Error.raise!("media", dgettext("content_transfer", "original checksum or size does not match"))
         end
       end)
 
@@ -53,7 +60,7 @@ defmodule Brando.Content.Transfer.Archive do
     end)
   rescue
     _ in [KeyError, BadMapError, FunctionClauseError, Protocol.UndefinedError, ArgumentError, CaseClauseError, MatchError] ->
-      {:error, "The content manifest is malformed. Export a fresh bundle from the source."}
+      {:error, dgettext("content_transfer", "The content manifest is malformed. Export a fresh bundle from the source.")}
   end
 
   def checksum(binary), do: :crypto.hash(:sha256, binary) |> Base.encode16(case: :lower)
@@ -65,24 +72,29 @@ defmodule Brando.Content.Transfer.Archive do
       entries = files |> Enum.sort() |> Enum.map(fn {name, body} -> {String.to_charlist(name), body} end)
 
       case :zip.create(~c"content.zip", entries, [:memory]) do
-        {:ok, {_, binary}} when byte_size(binary) <= @max_bytes -> binary
-        {:ok, _} -> Error.raise!("ZIP", "compressed bundle exceeds 128 MB; export fewer fields")
-        {:error, _} -> Error.raise!("ZIP", "could not create the bundle")
+        {:ok, {_, binary}} when byte_size(binary) <= @max_bytes ->
+          binary
+
+        {:ok, _} ->
+          Error.raise!("ZIP", dgettext("content_transfer", "compressed bundle exceeds 128 MB; export fewer fields"))
+
+        {:error, _} ->
+          Error.raise!("ZIP", dgettext("content_transfer", "could not create the bundle"))
       end
     end)
   end
 
   defp unpack!(binary) do
-    if byte_size(binary) > @max_bytes, do: Error.raise!("ZIP", "file exceeds 128 MB")
+    if byte_size(binary) > @max_bytes, do: Error.raise!("ZIP", dgettext("content_transfer", "file exceeds 128 MB"))
 
     table =
       case :zip.table(binary) do
         {:ok, table} -> table
-        {:error, _} -> Error.raise!("ZIP", "expected a valid ZIP archive")
+        {:error, _} -> Error.raise!("ZIP", dgettext("content_transfer", "expected a valid ZIP archive"))
       end
 
     entries = for zip_file() = entry <- table, do: entry
-    if length(entries) > @max_files, do: Error.raise!("ZIP", "bundle exceeds 2,000 entries")
+    if length(entries) > @max_files, do: Error.raise!("ZIP", dgettext("content_transfer", "bundle exceeds 2,000 entries"))
 
     files =
       Enum.flat_map(entries, fn zip_file(name: name, info: info, offset: offset) = entry ->
@@ -91,10 +103,17 @@ defmodule Brando.Content.Transfer.Archive do
         validate_path!(String.trim_trailing(name, "/"))
 
         cond do
-          file_info(info, :type) == :directory -> []
-          file_info(info, :type) != :regular -> Error.raise!("ZIP", "only regular files are supported")
-          ignored?(name) -> []
-          true -> [{name, entry}]
+          file_info(info, :type) == :directory ->
+            []
+
+          file_info(info, :type) != :regular ->
+            Error.raise!("ZIP", dgettext("content_transfer", "only regular files are supported"))
+
+          ignored?(name) ->
+            []
+
+          true ->
+            [{name, entry}]
         end
       end)
 
@@ -106,7 +125,7 @@ defmodule Brando.Content.Transfer.Archive do
     extracted =
       case :zip.extract(binary, [:memory, {:file_list, names}]) do
         {:ok, extracted} -> extracted
-        {:error, _} -> Error.raise!("ZIP", "could not read the archive")
+        {:error, _} -> Error.raise!("ZIP", dgettext("content_transfer", "could not read the archive"))
       end
 
     files = Enum.map(extracted, fn {name, body} -> {List.to_string(name), body} end)
@@ -117,7 +136,11 @@ defmodule Brando.Content.Transfer.Archive do
       validate_path!(name)
 
       unless name == "content.json" or Regex.match?(~r/^media\/[a-f0-9]{64}$/, name),
-        do: Error.raise!(name, "bundle may contain only content.json and checksummed media originals")
+        do:
+          Error.raise!(
+            name,
+            dgettext("content_transfer", "bundle may contain only content.json and checksummed media originals")
+          )
     end)
 
     # Files are written by us, never by ZIP extraction. Prefix collisions are
@@ -130,7 +153,8 @@ defmodule Brando.Content.Transfer.Archive do
       |> Enum.drop(-1)
       |> Enum.scan(&Path.join(&2, &1))
       |> Enum.each(fn parent ->
-        if MapSet.member?(filenames, parent), do: Error.raise!(name, "file and directory paths overlap")
+        if MapSet.member?(filenames, parent),
+          do: Error.raise!(name, dgettext("content_transfer", "file and directory paths overlap"))
       end)
     end)
 
@@ -152,24 +176,25 @@ defmodule Brando.Content.Transfer.Archive do
   defp validate_path!(name) do
     if name == "" or Path.type(name) != :relative or String.contains?(name, ["\\", ":", <<0>>]) or
          Enum.any?(String.split(name, "/"), &(&1 in ["", ".", ".."])) do
-      Error.raise!("ZIP", "unsafe archive path")
+      Error.raise!("ZIP", dgettext("content_transfer", "unsafe archive path"))
     end
   end
 
   # OTP sanitizes absolute names when listing ZIPs. Check the original local
   # header as well, so those names are rejected instead of silently renamed.
   defp validate_local_name!(binary, offset, name) do
-    if offset < 0 or offset + 30 > byte_size(binary), do: Error.raise!("ZIP", "invalid file header")
+    if offset < 0 or offset + 30 > byte_size(binary),
+      do: Error.raise!("ZIP", dgettext("content_transfer", "invalid file header"))
 
     case binary_part(binary, offset, 30) do
       <<"PK", 3, 4, _::binary-size(22), length::little-16, _extra::little-16>>
       when offset + 30 + length <= byte_size(binary) ->
         original = binary_part(binary, offset + 30, length)
         validate_path!(String.trim_trailing(original, "/"))
-        if original != name, do: Error.raise!("ZIP", "inconsistent archive filenames")
+        if original != name, do: Error.raise!("ZIP", dgettext("content_transfer", "inconsistent archive filenames"))
 
       _ ->
-        Error.raise!("ZIP", "invalid file header")
+        Error.raise!("ZIP", dgettext("content_transfer", "invalid file header"))
     end
   end
 
@@ -187,10 +212,10 @@ defmodule Brando.Content.Transfer.Archive do
 
     unless Bitwise.band(flags, 1) == 0 and method in [0, 8] and start + compressed <= byte_size(binary) and
              (descriptor? or (local_compressed == compressed and local_expanded == expanded)),
-           do: Error.raise!("ZIP", "unsupported compression or inconsistent file sizes")
+           do: Error.raise!("ZIP", dgettext("content_transfer", "unsupported compression or inconsistent file sizes"))
 
     if method == 0 do
-      if compressed != expanded, do: Error.raise!("ZIP", "inconsistent file sizes")
+      if compressed != expanded, do: Error.raise!("ZIP", dgettext("content_transfer", "inconsistent file sizes"))
     else
       stream = :zlib.open()
 
@@ -199,7 +224,8 @@ defmodule Brando.Content.Transfer.Archive do
         validate_chunks!(stream, binary_part(binary, start, compressed), expanded)
         :ok = :zlib.inflateEnd(stream)
       rescue
-        _ in [ErlangError, ArgumentError] -> Error.raise!("ZIP", "invalid compressed content")
+        _ in [ErlangError, ArgumentError] ->
+          Error.raise!("ZIP", dgettext("content_transfer", "invalid compressed content"))
       after
         :zlib.close(stream)
       end
@@ -209,18 +235,18 @@ defmodule Brando.Content.Transfer.Archive do
   defp validate_chunks!(stream, input, remaining) do
     {status, output} = :zlib.safeInflate(stream, input)
     remaining = remaining - IO.iodata_length(output)
-    if remaining < 0, do: Error.raise!("ZIP", "expanded content exceeds its declared size")
+    if remaining < 0, do: Error.raise!("ZIP", dgettext("content_transfer", "expanded content exceeds its declared size"))
 
     case status do
       :continue -> validate_chunks!(stream, [], remaining)
       :finished when remaining == 0 -> :ok
-      _ -> Error.raise!("ZIP", "inconsistent expanded content size")
+      _ -> Error.raise!("ZIP", dgettext("content_transfer", "inconsistent expanded content size"))
     end
   end
 
   defp validate_sizes!(sizes) do
     if length(sizes) > @max_files or Enum.any?(sizes, &(not is_integer(&1) or &1 < 0)) or
          Enum.sum(sizes) > @max_expanded_bytes,
-       do: Error.raise!("ZIP", "bundle exceeds 2,000 files or 256 MB of expanded content")
+       do: Error.raise!("ZIP", dgettext("content_transfer", "bundle exceeds 2,000 files or 256 MB of expanded content"))
   end
 end

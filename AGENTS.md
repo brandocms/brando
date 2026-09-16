@@ -35,6 +35,18 @@ copy, settings and metadata layouts, the global paragraph-margin pitfall, and
 browser verification with screenshots. Use its linked Utilities example as a
 reference alongside existing components.
 
+### Dropdowns
+
+Reuse the existing admin select component for form fields. For a small native
+select on a configuration screen, use the shared `admin-select` treatment in
+`assets/css/components/Form/Input/Select.css`; do not leave browser-default
+chrome or invent screen-specific dropdown styling. Match the surrounding input
+height, font, radius and focus treatment, with a small chevron inset from the
+right edge and enough padding for long translated labels. Verify the closed
+control, open options, keyboard selection and narrow layout in the browser, and
+capture screenshots. Check actual translated option labels as well as Gettext
+wrappers; status names and field labels must not fall back to humanized English.
+
 ## Subsystem skills
 
 Load only the skill needed for the state boundary being changed:

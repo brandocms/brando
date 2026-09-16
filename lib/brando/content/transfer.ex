@@ -1,4 +1,6 @@
 defmodule Brando.Content.Transfer do
+  use Gettext, backend: Brando.Gettext
+
   @moduledoc """
   Transfer complete saved entries or selected block fields between environments.
 
@@ -35,7 +37,7 @@ defmodule Brando.Content.Transfer do
 
   defp export!(selectors, actor, opts) do
     ensure_scope!(actor)
-    if selectors == [], do: Error.fail!("Select at least one entry.")
+    if selectors == [], do: Error.fail!(dgettext("content_transfer", "Select at least one entry."))
     whole_entries? = Keyword.get(opts, :scope) == :entries || Enum.any?(selectors, &(!Map.has_key?(&1, :fields)))
 
     {entries, state} =
@@ -119,7 +121,10 @@ defmodule Brando.Content.Transfer do
   defp preview!(archive, targets, actor, opts) do
     ensure_scope!(actor)
     operation_id = Keyword.get(opts, :operation_id, Ecto.UUID.generate())
-    unless match?({:ok, _}, Ecto.UUID.cast(operation_id)), do: Error.fail!("Invalid import operation ID.")
+
+    unless match?({:ok, _}, Ecto.UUID.cast(operation_id)),
+      do: Error.fail!(dgettext("content_transfer", "Invalid import operation ID."))
+
     bundle = Portable.validate!(archive.bundle)
     supplied = Keyword.get(opts, :dependencies, %{})
     {items, bindings} = resolve_dependencies(bundle, supplied, archive.files, actor)
@@ -136,9 +141,14 @@ defmodule Brando.Content.Transfer do
 
         result =
           Error.protect(fn ->
-            unless is_map(selected), do: Error.fail!("Choose a destination entry and block field.")
+            unless is_map(selected),
+              do: Error.fail!(dgettext("content_transfer", "Choose a destination entry and block field."))
+
             mode = selected["mode"] || "replace"
-            unless mode in ["replace", "append"], do: Error.fail!("Choose Replace or Append.")
+
+            unless mode in ["replace", "append"],
+              do: Error.fail!(dgettext("content_transfer", "Choose Replace or Append."))
+
             entry = Catalog.load!(selected["schema"] || source["schema"], selected["id"], actor, :update)
             field = Catalog.field!(entry.__struct__, selected["field"] || source["field"])
             current = Map.fetch!(entry, field.association)
@@ -183,7 +193,13 @@ defmodule Brando.Content.Transfer do
 
     problems =
       if duplicate?,
-        do: ["Two source fields point to the same destination field. Choose distinct destinations." | problems],
+        do: [
+          dgettext(
+            "content_transfer",
+            "Two source fields point to the same destination field. Choose distinct destinations."
+          )
+          | problems
+        ],
         else: problems
 
     fingerprint =
@@ -241,7 +257,13 @@ defmodule Brando.Content.Transfer do
 
             :reuse ->
               if dep["kind"] == "gallery",
-                do: Error.fail!("Map the gallery's media assets; its owned gallery is recreated from the bundle.")
+                do:
+                  Error.fail!(
+                    dgettext(
+                      "content_transfer",
+                      "Map the gallery's media assets; its owned gallery is recreated from the bundle."
+                    )
+                  )
 
               record = Dependencies.load!(dep, Catalog.id!(selected), actor)
 
@@ -260,7 +282,12 @@ defmodule Brando.Content.Transfer do
               {nil, Value.digest(dep)}
 
             :unresolved ->
-              Error.fail!("Resolve #{dep["kind"]} “#{dep["label"]}” on the destination.")
+              Error.fail!(
+                dgettext("content_transfer", "Resolve %{value1} “%{value2}” on the destination.",
+                  value1: dep["kind"],
+                  value2: dep["label"]
+                )
+              )
           end
         end)
 
@@ -307,17 +334,26 @@ defmodule Brando.Content.Transfer do
         case Error.protect(fn ->
                Portable.walk(field.source["blocks"], fn block ->
                  if token = block["module_id"] do
-                   module = bindings[token] || Error.fail!("Resolve the required modules before reviewing content.")
+                   module =
+                     bindings[token] ||
+                       Error.fail!(dgettext("content_transfer", "Resolve the required modules before reviewing content."))
+
                    Contracts.check!(block, bundle["dependencies"][token]["contract"], module, contracts[token])
                    parent = bundle["dependencies"][token]["parent"]
 
                    if parent && bindings[parent] && module.parent_id != bindings[parent].id,
-                     do: Error.fail!("The child module belongs to a different destination parent.")
+                     do:
+                       Error.fail!(
+                         dgettext("content_transfer", "The child module belongs to a different destination parent.")
+                       )
 
                    table = bundle["dependencies"][token]["table_template"]
 
                    if table && bindings[table] && module.table_template_id != bindings[table].id,
-                     do: Error.fail!("Map the table template used by the selected destination module.")
+                     do:
+                       Error.fail!(
+                         dgettext("content_transfer", "Map the table template used by the selected destination module.")
+                       )
                  end
                end)
 
@@ -328,11 +364,13 @@ defmodule Brando.Content.Transfer do
                unless cs.valid?,
                  do:
                    Error.fail!(
-                     "Field validation: #{inspect(Changeset.traverse_errors(cs, fn {message, _} -> message end))}"
+                     dgettext("content_transfer", "Field validation: %{value1}",
+                       value1: inspect(Changeset.traverse_errors(cs, fn {message, _} -> message end))
+                     )
                    )
 
                if Boundary.change(actor, :update, cs) != :ok,
-                 do: Error.fail!("You do not have permission to change this field.")
+                 do: Error.fail!(dgettext("content_transfer", "You do not have permission to change this field."))
 
                Catalog.authorize!(actor, :update, field.entry)
              end) do
@@ -362,7 +400,8 @@ defmodule Brando.Content.Transfer do
       if field.destination, do: Catalog.load!(field.destination.schema, field.destination.id, actor, :update)
     end)
 
-    unless applicable?(plan), do: Error.fail!("Resolve every blocking problem before importing.")
+    unless applicable?(plan),
+      do: Error.fail!(dgettext("content_transfer", "Resolve every blocking problem before importing."))
 
     case receipt(plan.id, actor) do
       %Receipt{} = receipt -> {:ok, receipt}
@@ -518,11 +557,20 @@ defmodule Brando.Content.Transfer do
       unless cs.valid?,
         do:
           Error.fail!(
-            "#{hd(fields).destination.title}: #{inspect(Changeset.traverse_errors(cs, fn {message, _} -> message end))}"
+            dgettext("content_transfer", "%{value1}: %{value2}",
+              value1: hd(fields).destination.title,
+              value2: inspect(Changeset.traverse_errors(cs, fn {message, _} -> message end))
+            )
           )
 
       if Boundary.change(actor, :update, cs) != :ok,
-        do: Error.fail!("You do not have permission to change these fields or publish this entry.")
+        do:
+          Error.fail!(
+            dgettext(
+              "content_transfer",
+              "You do not have permission to change these fields or publish this entry."
+            )
+          )
 
       Repo.update!(cs)
       available
@@ -655,7 +703,11 @@ defmodule Brando.Content.Transfer do
   def retry_refresh(id, actor) do
     Error.protect(fn ->
       ensure_scope!(actor)
-      receipt = receipt(id, actor) || Error.fail!("This import is not available in the current workspace.")
+
+      receipt =
+        receipt(id, actor) ||
+          Error.fail!(dgettext("content_transfer", "This import is not available in the current workspace."))
+
       refresh_receipt(receipt, actor)
     end)
   end
@@ -749,7 +801,7 @@ defmodule Brando.Content.Transfer do
     |> Enum.each(fn record ->
       if record.__struct__.__schema__(:source) do
         Repo.one(from(r in record.__struct__, where: r.id == ^record.id, lock: "FOR UPDATE")) ||
-          Error.fail!("Content was removed while applying. Review a new preview.")
+          Error.fail!(dgettext("content_transfer", "Content was removed while applying. Review a new preview."))
       end
     end)
   end
@@ -783,9 +835,10 @@ defmodule Brando.Content.Transfer do
                      where: r.id == ^id and r.scope == ^scope() and r.actor_id == ^actor_id!(actor),
                      lock: "FOR UPDATE"
                    )
-                 ) || Error.fail!("This recovery snapshot is not available.")
+                 ) || Error.fail!(dgettext("content_transfer", "This recovery snapshot is not available."))
 
-               if receipt.restored_at, do: Error.fail!("This import has already been restored.")
+               if receipt.restored_at,
+                 do: Error.fail!(dgettext("content_transfer", "This import has already been restored."))
 
                if receipt.mappings["version"] == 2 do
                  Brando.Content.Transfer.Entries.restore!(receipt, actor)
@@ -798,7 +851,13 @@ defmodule Brando.Content.Transfer do
                    current = Map.fetch!(entry, field.association) |> Params.snapshot()
 
                    unless Value.digest(current) == expected["fingerprint"],
-                     do: Error.fail!("Content changed after this import. Recovery would overwrite newer edits.")
+                     do:
+                       Error.fail!(
+                         dgettext(
+                           "content_transfer",
+                           "Content changed after this import. Recovery would overwrite newer edits."
+                         )
+                       )
 
                    before = receipt.before[key]["blocks"]
                    # Restore from trusted local snapshots, allocating new owned identities.
@@ -816,7 +875,10 @@ defmodule Brando.Content.Transfer do
 
                    {params, _} = Brando.Content.Transfer.Ownership.galleries(params, actor)
                    cs = field_changeset(entry, params, actor) |> stamp_versions(bindings)
-                   if Boundary.change(actor, :update, cs) != :ok, do: Error.fail!("Recovery is no longer authorized.")
+
+                   if Boundary.change(actor, :update, cs) != :ok,
+                     do: Error.fail!(dgettext("content_transfer", "Recovery is no longer authorized."))
+
                    Repo.update!(cs)
                  end)
                end
@@ -838,7 +900,11 @@ defmodule Brando.Content.Transfer do
     |> Portable.walk(fn block ->
       if id = block["module_id"] do
         module = Dependencies.load!("module", id, actor) |> Repo.preload([:refs, :vars])
-        contract = contracts[to_string(id)] || Error.fail!("The recovery module contract is unavailable.")
+
+        contract =
+          contracts[to_string(id)] ||
+            Error.fail!(dgettext("content_transfer", "The recovery module contract is unavailable."))
+
         Contracts.check!(block, contract, module)
         {"module:#{id}", module}
       end
@@ -850,12 +916,12 @@ defmodule Brando.Content.Transfer do
   @doc false
   def authorize_plan!(plan, actor) do
     unless plan.scope == scope() && plan.actor_id == actor_id!(actor),
-      do: Error.fail!("This preview belongs to another actor, site or environment.")
+      do: Error.fail!(dgettext("content_transfer", "This preview belongs to another actor, site or environment."))
   end
 
   defp actor_id!(%Brando.Authorization.Scope{user_id: id}) when is_integer(id), do: id
   defp actor_id!(%{id: id}) when is_integer(id), do: id
-  defp actor_id!(_), do: Error.fail!("Content transfer requires an authenticated actor.")
+  defp actor_id!(_), do: Error.fail!(dgettext("content_transfer", "Content transfer requires an authenticated actor."))
 
   @doc false
   def ensure_scope!(actor) do
@@ -865,6 +931,6 @@ defmodule Brando.Content.Transfer do
     actor_scope = Boundary.actor_scope(actor)
 
     unless actor_scope.user_id == id && (actor_scope.prefix || "public") == (Brando.Tenant.current_prefix() || "public"),
-      do: Error.fail!("The actor does not belong to the selected site/environment.")
+      do: Error.fail!(dgettext("content_transfer", "The actor does not belong to the selected site/environment."))
   end
 end
