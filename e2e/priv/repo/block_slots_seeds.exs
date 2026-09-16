@@ -11,6 +11,7 @@ end
 
 insert_module = fn name, code, refs, vars, sequence ->
   E2eProject.Repo.insert!(%Content.Module{
+    uid: Brando.Utils.generate_uid(),
     name: %{"en" => name, "no" => name},
     namespace: %{"en" => "09 NOTES & REGIONS", "no" => "09 NOTES & REGIONS"},
     type: :liquid,

@@ -275,7 +275,7 @@ entry_consumer_module =
          )
        ) do
     nil ->
-      Repo.insert!(struct(ContentModule, entry_consumer_attrs))
+      Repo.insert!(struct(ContentModule, Map.put(entry_consumer_attrs, :uid, Brando.Utils.generate_uid())))
 
     existing ->
       existing

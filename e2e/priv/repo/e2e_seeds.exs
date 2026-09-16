@@ -147,6 +147,7 @@ for lang <- languages do
 end
 
 example_module = %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   class: "example",
   code:
     "<article b-tpl=\"example\">\n\t<div class=\"inner\">\n\t\t{% ref refs.h1 %}\n        {% ref refs.p %}\n\t</div>\n</article>",
@@ -270,6 +271,7 @@ end
 # Create modules
 
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :liquid,
   name: %{"en" => "Heading", "no" => "Overskrift"},
   namespace: %{"en" => "01 HEADERS", "no" => "01 HEADINGER"},
@@ -310,6 +312,7 @@ end
 |> E2eProject.Repo.insert!()
 
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :liquid,
   name: %{"en" => "Single Asset", "no" => "Enkelt bilde/video"},
   namespace: %{"en" => "02 MEDIA", "no" => "02 MEDIA"},
@@ -424,6 +427,7 @@ Brando.Content.create_identifier(E2eProject.Projects.Project, project3)
 # Create table template for testing table rows
 table_template =
   %Brando.Content.TableTemplate{
+    uid: Brando.Utils.generate_uid(),
     name: "Person Table",
     creator_id: user.id,
     vars: [
@@ -451,6 +455,7 @@ table_template =
 
 # Create module with table template
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :liquid,
   name: %{"en" => "Person List", "no" => "Personliste"},
   namespace: %{"en" => "04 TABLES", "no" => "04 TABELLER"},
@@ -475,6 +480,7 @@ table_template =
 
 # Create module with datasource (selection type)
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :liquid,
   name: %{"en" => "Featured Projects", "no" => "Utvalgte prosjekter"},
   namespace: %{"en" => "03 DATASOURCE", "no" => "03 DATAKILDE"},
@@ -503,6 +509,7 @@ table_template =
 
 # Module 1: Single Image with Caption (picture ref + vars)
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :liquid,
   name: %{"en" => "Single Image with Caption", "no" => "Enkelt bilde med bildetekst"},
   namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
@@ -573,6 +580,7 @@ table_template =
 
 # Module 2: Gallery with Controls (gallery ref + vars)
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :liquid,
   name: %{"en" => "Gallery with Controls", "no" => "Galleri med kontroller"},
   namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
@@ -651,6 +659,7 @@ table_template =
 
 # Module 3: Styled Header (header ref + vars)
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :liquid,
   name: %{"en" => "Styled Header", "no" => "Stilisert overskrift"},
   namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
@@ -721,6 +730,7 @@ table_template =
 
 # Module 4: Rich Text Article (text ref + vars)
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :liquid,
   name: %{"en" => "Rich Text Article", "no" => "Rik tekstartikkel"},
   namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
@@ -782,6 +792,7 @@ table_template =
 
 # Module 5: Video Player (video ref + vars)
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :liquid,
   name: %{"en" => "Video Player", "no" => "Videospiller"},
   namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
@@ -849,6 +860,7 @@ table_template =
 # Module 6: Morph Preservation Test (hardcoded video + iframe + editable label)
 # Used to verify that skipFromChildren preserves video/iframe DOM elements during morphdom updates
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :liquid,
   name: %{"en" => "Morph Preservation", "no" => "Morph-bevaring"},
   namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
@@ -893,6 +905,7 @@ table_template =
 # Module 7: Map Embed (map ref) — regression coverage for the map block's
 # out-of-band embed_url commit (update_ref_data + propagate)
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :liquid,
   name: %{"en" => "Map Embed", "no" => "Kartinnbygging"},
   namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
@@ -931,6 +944,7 @@ table_template =
 # Module 8: HEEx parity — exercises the block editor preview, published live
 # preview, vars, parsed refs, headless refs, system assigns, routes and video.
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :heex,
   name: %{"en" => "HEEx Parity", "no" => "HEEx-paritet"},
   namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
@@ -1025,6 +1039,7 @@ table_template =
 # Multi module (parent) — "Team Section" that holds "Team Member" entries
 team_section =
   %Brando.Content.Module{
+    uid: Brando.Utils.generate_uid(),
     type: :liquid,
     name: %{"en" => "Team Section", "no" => "Teamblokk"},
     namespace: %{"en" => "06 COPY PASTE TEST", "no" => "06 COPY PASTE TEST"},
@@ -1061,6 +1076,7 @@ team_section =
 
 # Multi module (child) — "Team Member" entry
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :liquid,
   name: %{"en" => "Team Member", "no" => "Teammedlem"},
   namespace: %{"en" => "06 COPY PASTE TEST", "no" => "06 COPY PASTE TEST"},
@@ -1103,6 +1119,7 @@ team_section =
 # multi form and inherited `multi: true`; the block built from it then carries
 # multi=true even though it never takes children of its own.
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :liquid,
   name: %{"en" => "Team Lead", "no" => "Teamleder"},
   namespace: %{"en" => "06 COPY PASTE TEST", "no" => "06 COPY PASTE TEST"},
@@ -1138,6 +1155,7 @@ team_section =
 # `refs.<name>.active` from a module template.
 fallback_group =
   %Brando.Content.Module{
+    uid: Brando.Utils.generate_uid(),
     type: :liquid,
     name: %{"en" => "Fallback Group", "no" => "Fallbackgruppe"},
     namespace: %{"en" => "08 REF FALLBACK TEST", "no" => "08 REF FALLBACK TEST"},
@@ -1161,6 +1179,7 @@ fallback_group =
   |> E2eProject.Repo.insert!()
 
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :liquid,
   name: %{"en" => "Fallback Object", "no" => "Fallbackobjekt"},
   namespace: %{"en" => "08 REF FALLBACK TEST", "no" => "08 REF FALLBACK TEST"},
@@ -1257,6 +1276,7 @@ fallback_group =
 
 # Module with image and file vars for upload testing
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :liquid,
   name: %{"en" => "Image and File Vars", "no" => "Bilde- og filvariabler"},
   namespace: %{"en" => "07 VAR UPLOAD TEST", "no" => "07 VAR UPLOAD TEST"},
@@ -1317,6 +1337,7 @@ fallback_group =
 # what pins the rule that a closed modal must still round-trip their identity —
 # without it, `cast_assoc(:vars)` sees a shorter list and deletes them.
 %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   type: :liquid,
   name: %{"en" => "Config Vars", "no" => "Konfigvariabler"},
   namespace: %{"en" => "08 CONFIG VAR TEST", "no" => "08 CONFIG VAR TEST"},
@@ -1403,17 +1424,5 @@ Code.require_file("block_slots_seeds.exs", __DIR__)
   creator_id: user.id
 }
 |> E2eProject.Repo.insert!()
-
-# The fixtures insert structs directly, bypassing the UID trait used by admin
-# changesets. Match normal module/table creation so file round trips can identify
-# every seeded definition (including the block-slot fixtures above).
-Enum.each([Brando.Content.Module, Brando.Content.TableTemplate], fn schema ->
-  schema
-  |> E2eProject.Repo.all()
-  |> Enum.filter(&is_nil(&1.uid))
-  |> Enum.each(fn record ->
-    record |> Ecto.Changeset.change(uid: Brando.Utils.generate_uid()) |> E2eProject.Repo.update!()
-  end)
-end)
 
 if Brando.Authorization.enabled?(), do: Brando.Authorization.Migration.run()

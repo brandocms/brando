@@ -77,6 +77,7 @@ for lang <- languages do
 end
 
 example_module = %Brando.Content.Module{
+  uid: Brando.Utils.generate_uid(),
   class: "example",
   code:
     "<article b-tpl=\"example\">\n\t<div class=\"inner\">\n\t\t{% ref refs.h1 %}\n        {% ref refs.p %}\n\t</div>\n</article>",
