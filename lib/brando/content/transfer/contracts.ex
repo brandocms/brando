@@ -1,4 +1,5 @@
 defmodule Brando.Content.Transfer.Contracts do
+  use Gettext, backend: Brando.Gettext
   @moduledoc false
   alias Brando.Drafts.Params
   alias Brando.Content.Transfer.Error
@@ -53,7 +54,10 @@ defmodule Brando.Content.Transfer.Contracts do
     if changed != [],
       do:
         Error.fail!(
-          "Module “#{Brando.Content.Transfer.Dependencies.label(module)}” has incompatible settings: #{Enum.join(changed, ", ")}."
+          dgettext("content_transfer", "Module “%{value1}” has incompatible settings: %{value2}.",
+            value1: Brando.Content.Transfer.Dependencies.label(module),
+            value2: Enum.join(changed, ", ")
+          )
         )
 
     compare!(old["refs"], latest["refs"], "reference")
@@ -62,7 +66,13 @@ defmodule Brando.Content.Transfer.Contracts do
     compare!(types(block["vars"]), latest["vars"], "variable")
 
     if old["table"] != latest["table"],
-      do: Error.fail!("The destination table columns differ from the source. Reconcile the table template first.")
+      do:
+        Error.fail!(
+          dgettext(
+            "content_transfer",
+            "The destination table columns differ from the source. Reconcile the table template first."
+          )
+        )
 
     Enum.each(block["table_rows"], &compare!(types(&1["vars"]), latest["table"] || %{}, "table column"))
     :ok
@@ -72,7 +82,15 @@ defmodule Brando.Content.Transfer.Contracts do
     Enum.each(old || %{}, fn {name, type} ->
       # Retained region content survives a removed insertion point.
       unless (kind == "reference" && type == "blocks" && is_nil(current[name])) || compatible?(type, current[name]),
-        do: Error.fail!("The destination #{kind} “#{name}” is missing or has a different type.")
+        do:
+          Error.fail!(
+            dgettext(
+              "content_transfer",
+              "The destination %{value1} “%{value2}” is missing or has a different type.",
+              value1: kind,
+              value2: name
+            )
+          )
     end)
   end
 

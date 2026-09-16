@@ -1,4 +1,5 @@
 defmodule Brando.Content.Transfer.Media do
+  use Gettext, backend: Brando.Gettext
   @moduledoc "Media staging for archive imports. Only verified originals reach destination-owned paths."
   alias Brando.Content.Transfer.{Archive, Catalog, Dependencies, Error}
   alias Brando.Repo
@@ -19,7 +20,10 @@ defmodule Brando.Content.Transfer.Media do
     case File.stat(path) do
       {:ok, %{size: size}} when size > 256_000_000 ->
         Error.fail!(
-          "This original exceeds the 256 MB content bundle limit. Export without originals and map a destination asset."
+          dgettext(
+            "content_transfer",
+            "This original exceeds the 256 MB content bundle limit. Export without originals and map a destination asset."
+          )
         )
 
       _ ->
@@ -32,7 +36,11 @@ defmodule Brando.Content.Transfer.Media do
 
       _ ->
         Error.fail!(
-          "Original “#{Path.basename(relative)}” is unavailable locally. Restore it from storage, or export without originals and map an existing destination asset."
+          dgettext(
+            "content_transfer",
+            "Original “%{value1}” is unavailable locally. Restore it from storage, or export without originals and map an existing destination asset.",
+            value1: Path.basename(relative)
+          )
         )
     end
   end
@@ -42,24 +50,34 @@ defmodule Brando.Content.Transfer.Media do
     {:ok, cfg} = if kind == "image", do: Brando.Images.get_config_for(target), else: Brando.Files.get_config_for(target)
 
     unless Brando.Authorization.Media.authorize_config(actor, cfg) == :ok,
-      do: Error.fail!("You cannot import media into this destination configuration.")
+      do: Error.fail!(dgettext("content_transfer", "You cannot import media into this destination configuration."))
 
     cfg
   rescue
     _ in [ArgumentError, CaseClauseError, FunctionClauseError, MatchError, UndefinedFunctionError] ->
       Error.fail!(
-        "Media configuration “#{data["config_target"]}” is not available on the destination. Map an existing asset or deploy its Blueprint configuration first."
+        dgettext(
+          "content_transfer",
+          "Media configuration “%{value1}” is not available on the destination. Map an existing asset or deploy its Blueprint configuration first.",
+          value1: data["config_target"]
+        )
       )
   end
 
   def validate!(dependency, files, actor) do
     kind = dependency["kind"]
     data = dependency["data"]
-    original = dependency["original"] || Error.fail!("Map an existing destination asset; its original is not included.")
-    body = files[original["path"]] || Error.fail!("The media original is missing from the archive.")
+
+    original =
+      dependency["original"] ||
+        Error.fail!(dgettext("content_transfer", "Map an existing destination asset; its original is not included."))
+
+    body =
+      files[original["path"]] ||
+        Error.fail!(dgettext("content_transfer", "The media original is missing from the archive."))
 
     unless Archive.checksum(body) == original["sha256"] && byte_size(body) == original["bytes"],
-      do: Error.fail!("Media integrity check failed.")
+      do: Error.fail!(dgettext("content_transfer", "Media integrity check failed."))
 
     cfg = config!(kind, data, actor)
     name = Path.basename(data["path"] || data["filename"] || "")
@@ -73,16 +91,19 @@ defmodule Brando.Content.Transfer.Media do
     mime = MIME.from_path(name)
 
     unless "*" in cfg.allowed_mimetypes || mime in cfg.allowed_mimetypes,
-      do: Error.fail!("#{name} is not allowed by the destination media configuration.")
+      do:
+        Error.fail!(
+          dgettext("content_transfer", "%{value1} is not allowed by the destination media configuration.", value1: name)
+        )
 
     if kind == "image" do
       case Image.from_binary(body) do
         {:ok, image} ->
           if Image.width(image) * Image.height(image) > 100_000_000,
-            do: Error.fail!("The image exceeds the 100 megapixel import limit.")
+            do: Error.fail!(dgettext("content_transfer", "The image exceeds the 100 megapixel import limit."))
 
         _ ->
-          Error.fail!("#{name} is not a valid image original.")
+          Error.fail!(dgettext("content_transfer", "%{value1} is not a valid image original.", value1: name))
       end
     end
 
@@ -163,11 +184,14 @@ defmodule Brando.Content.Transfer.Media do
   def safe_path!(root, relative) when is_binary(relative) do
     if Path.type(relative) != :relative || Enum.any?(Path.split(relative), &(&1 in ["..", "."])) ||
          String.contains?(relative, ["\\", <<0>>]),
-       do: Error.fail!("Unsafe media path.")
+       do: Error.fail!(dgettext("content_transfer", "Unsafe media path."))
 
     root = Path.expand(root)
     path = Path.expand(relative, root)
-    unless String.starts_with?(path, root <> "/"), do: Error.fail!("Media path is outside this site's storage.")
+
+    unless String.starts_with?(path, root <> "/"),
+      do: Error.fail!(dgettext("content_transfer", "Media path is outside this site's storage."))
+
     # Check every existing path segment; resolving only the final filename
     # would allow a symlinked upload directory to escape the media root.
     relative
@@ -175,7 +199,7 @@ defmodule Brando.Content.Transfer.Media do
     |> Enum.scan(root, &Path.join(&2, &1))
     |> Enum.each(fn part ->
       case File.lstat(part) do
-        {:ok, %{type: :symlink}} -> Error.fail!("Media transfer does not follow symlinks.")
+        {:ok, %{type: :symlink}} -> Error.fail!(dgettext("content_transfer", "Media transfer does not follow symlinks."))
         _ -> :ok
       end
     end)

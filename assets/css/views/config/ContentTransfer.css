@@ -14,7 +14,7 @@
   h2 { font-size: 18px; line-height: 1.35; }
   h3 { font-size: 15px; line-height: 1.4; }
   p { color: var(--transfer-muted); font-size: 13px; }
-  :is(button, input, select, a) { font: inherit; }
+  :is(button, input, a) { font: inherit; }
   :is(button, a, input, select, summary):focus-visible { outline: 2px solid #47775d; outline-offset: 3px; }
   button { cursor: pointer; }
   button:disabled { cursor: not-allowed; opacity: .48; }
@@ -72,7 +72,6 @@
   .transfer-advanced form { display: grid; gap: 8px; padding: 14px 0 0; }
   .transfer-advanced p { font-size: 12px; }
   .transfer-advanced label { font-size: 12px; }
-  .transfer-advanced select { width: 100%; height: 40px; background-color: #fff; border: 1px solid var(--transfer-line); border-radius: 5px; padding: 8px 12px; font-size: 13px; }
   .transfer-related { display: grid; gap: 12px; margin-top: 24px; padding: 20px; background: #f5f8fc; border: 1px solid #e1e8ee; border-radius: 8px; }
   .transfer-related-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 12px; border-top: 1px solid #e1e8ee; }
   .transfer-related-row > div { min-width: 0; display: grid; gap: 4px; }
@@ -87,8 +86,7 @@
   .transfer-entry-overrides { margin-top: 20px; padding-top: 20px; border-top: 1px solid #edf0f2; }
   .transfer-entry-destination { grid-column: 1 / -1; }
   .transfer-whole-entry label { display: block; font-size: 12px; line-height: 18px; margin: 0 0 8px; color: #566761; text-transform: none; }
-  .transfer-whole-entry :is(input, select) { display: block; width: 100%; min-width: 0; height: 40px; padding: 8px 12px; font-size: 13px; color: var(--transfer-ink); border: 1px solid #dce2df; border-radius: 5px; background-color: #fff; }
-  .transfer-whole-entry select { padding-right: 30px; text-overflow: ellipsis; }
+  .transfer-whole-entry input { display: block; width: 100%; min-width: 0; height: 40px; padding: 8px 12px; font-size: 13px; color: var(--transfer-ink); border: 1px solid #dce2df; border-radius: var(--brando-input-radius); background-color: var(--brando-color-input); }
   .transfer-entry-effect { padding-top: 20px; font-size: 12px; }
   .transfer-whole-entry .transfer-inline-error { margin-top: 16px; padding: 12px 14px; border-radius: 5px; background: #fff5ed; color: #975033; font-size: 12px; }
   .transfer-entry-diff { margin-top: 20px; border-top: 1px solid #e6ece8; }
@@ -232,7 +230,6 @@
   .transfer-source p { font-size: 11px; }
   .transfer-source h3 { overflow-wrap: anywhere; }
   .transfer-destination label { display: block; font-size: 11px; margin-bottom: 7px; color: #59665d; }
-  .transfer-destination select, .transfer-dependency-choice select { display: block; width: 100%; min-width: 0; height: 40px; padding: 8px 28px 8px 10px; border: 1px solid #dce2d7; border-radius: 5px; background-color: white; font-size: 12px; color: var(--transfer-ink); text-overflow: ellipsis; }
   .transfer-destination-controls { display: grid; grid-template-columns: minmax(0, .65fr) minmax(0, 1fr); gap: 12px; padding-top: 14px; }
   .transfer-field-effect { padding-top: 12px; font-size: 11px; }
   .transfer-published { padding-top: 8px; font-size: 11px; color: #926829; }

@@ -5,7 +5,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
   use Gettext, backend: Brando.Gettext
   alias Brando.Authorization.Boundary
   alias Brando.Content.Transfer
-  alias Brando.Content.Transfer.{Catalog, Dependencies, Entries, EntryCodec, Portable}
+  alias Brando.Content.Transfer.{Catalog, Dependencies, Entries, EntryCodec, Labels, Portable}
   alias BrandoAdmin.Components.Workspace
 
   def __authorization__, do: {:read, :utilities}
@@ -24,7 +24,8 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
            do: get_connect_info(socket, :user_agent)
          ),
        tab: "export",
-       language_labels: Map.new(Brando.config(:languages), &{to_string(&1[:value]), &1[:text]}),
+       language_labels:
+         Map.new(Brando.config(:languages), &{to_string(&1[:value]), Labels.language(to_string(&1[:value]), &1[:text])}),
        search: "",
        results: Catalog.search(user, "", entries: true),
        selected: %{},
@@ -63,40 +64,40 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
   def render(assigns) do
     ~H"""
     <div class="admin-workspace transfer-workspace" id="content-transfer" aria-busy={to_string(@busy != nil)}>
-      <span class="transfer-eyebrow">{gettext("Configuration")}</span>
+      <span class="transfer-eyebrow">{dgettext("content_transfer", "Configuration")}</span>
       <Workspace.header
-        title={gettext("Import / export")}
-        subtitle={gettext("Move entries and their content between sites and environments.")}
+        title={dgettext("content_transfer", "Import / export")}
+        subtitle={dgettext("content_transfer", "Move entries and their content between sites and environments.")}
       >
         <div class="transfer-scope">
           <Brando.HTML.Icon.icon name="hero-globe-alt" /><div>
-            <span>{gettext("Current workspace")}</span><strong>{@scope_label}</strong>
+            <span>{dgettext("content_transfer", "Current workspace")}</span><strong>{@scope_label}</strong>
           </div>
         </div>
       </Workspace.header>
 
-      <nav class="transfer-tabs" aria-label={gettext("Content transfer workflows")}>
+      <nav class="transfer-tabs" aria-label={dgettext("content_transfer", "Content transfer workflows")}>
         <button
           type="button"
           phx-click="tab"
           phx-value-tab="export"
-          aria-label={gettext("Export content")}
+          aria-label={dgettext("content_transfer", "Export content")}
           aria-current={@tab == "export" && "page"}
           disabled={@busy != nil}
         >
           <Brando.HTML.Icon.icon name="hero-arrow-up-tray" />
-          <span class="transfer-control-label">{gettext("Export")}</span>
+          <span class="transfer-control-label">{dgettext("content_transfer", "Export")}</span>
         </button>
         <button
           type="button"
           phx-click="tab"
           phx-value-tab="import"
-          aria-label={gettext("Import content")}
+          aria-label={dgettext("content_transfer", "Import content")}
           aria-current={@tab == "import" && "page"}
           disabled={@busy != nil}
         >
           <Brando.HTML.Icon.icon name="hero-arrow-down-tray" />
-          <span class="transfer-control-label">{gettext("Import")}</span>
+          <span class="transfer-control-label">{dgettext("content_transfer", "Import")}</span>
         </button>
         <button
           type="button"
@@ -106,7 +107,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           disabled={@busy != nil}
         >
           <Brando.HTML.Icon.icon name="hero-clock" />
-          <span class="transfer-control-label">{gettext("Recent imports")}</span>
+          <span class="transfer-control-label">{dgettext("content_transfer", "Recent imports")}</span>
         </button>
       </nav>
       <div :if={@error} class="transfer-feedback error" role="alert">{@error}</div>
@@ -118,33 +119,38 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
         <div class="transfer-main">
           <div class="transfer-section-heading">
             <span class="transfer-step">01</span><div>
-              <h2 id="transfer-export-heading">{gettext("Choose your content")}</h2><p>
+              <h2 id="transfer-export-heading">{dgettext("content_transfer", "Choose your content")}</h2><p>
                 {if @export_scope == "entries",
-                  do: gettext("Take complete entries with their fields, metadata and block content."),
-                  else: gettext("Find an entry, then select the block fields to take with you.")}
+                  do: dgettext("content_transfer", "Take complete entries with their fields, metadata and block content."),
+                  else: dgettext("content_transfer", "Find an entry, then select the block fields to take with you.")}
               </p>
             </div>
           </div>
           <details class="transfer-advanced">
-            <summary>{gettext("Advanced export options")}</summary>
+            <summary>{dgettext("content_transfer", "Advanced export options")}</summary>
             <form id="transfer-export-scope" phx-change="export_scope">
-              <label for="export-scope">{gettext("Export scope")}</label>
-              <select id="export-scope" name="scope">
-                <option value="entries" selected={@export_scope == "entries"}>{gettext("Whole entries")}</option>
-                <option value="fields" selected={@export_scope == "fields"}>{gettext("Block fields only")}</option>
+              <label for="export-scope">{dgettext("content_transfer", "Export scope")}</label>
+              <select class="admin-select" id="export-scope" name="scope">
+                <option value="entries" selected={@export_scope == "entries"}>
+                  {dgettext("content_transfer", "Whole entries")}
+                </option>
+                <option value="fields" selected={@export_scope == "fields"}>
+                  {dgettext("content_transfer", "Block fields only")}
+                </option>
               </select>
-              <p>{gettext("Use block fields to move a layout into an entry you already have.")}</p>
+              <p>{dgettext("content_transfer", "Use block fields to move a layout into an entry you already have.")}</p>
             </form>
           </details>
           <form id="transfer-search" phx-change="search" phx-submit="search" class="transfer-search">
-            <Brando.HTML.Icon.icon name="hero-magnifying-glass" /><label class="sr-only" for="transfer-query">{gettext(
+            <Brando.HTML.Icon.icon name="hero-magnifying-glass" /><label class="sr-only" for="transfer-query">{dgettext(
+              "content_transfer",
               "Search saved content"
             )}</label>
             <input
               id="transfer-query"
               name="query"
               value={@search}
-              placeholder={gettext("Search pages, fragments and content…")}
+              placeholder={dgettext("content_transfer", "Search pages, fragments and content…")}
               phx-debounce="250"
               autocomplete="off"
             />
@@ -153,12 +159,14 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           <%!-- Keep the shortcut mounted so selection updates do not move the focused content list. --%>
           <a hidden={selected_count(@selected) == 0} href="#transfer-export-summary" class="transfer-mobile-selection">
             <span class="transfer-control-label">{selection_label(@selected, @export_scope)}</span>
-            <span class="transfer-control-label">{gettext("Review selection")}</span>
+            <span class="transfer-control-label">{dgettext("content_transfer", "Review selection")}</span>
           </a>
           <div class="transfer-entry-list" id="transfer-entry-list">
             <div :if={@results == []} class="transfer-empty">
-              <Brando.HTML.Icon.icon name="hero-document-magnifying-glass" /><h3>{gettext("No matching content")}</h3><p>
-                {gettext("Try another title or change the export scope.")}
+              <Brando.HTML.Icon.icon name="hero-document-magnifying-glass" /><h3>
+                {dgettext("content_transfer", "No matching content")}
+              </h3><p>
+                {dgettext("content_transfer", "Try another title or change the export scope.")}
               </p>
             </div>
             <article
@@ -184,7 +192,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 <div
                   class="transfer-field-pills"
                   role="group"
-                  aria-label={gettext("Fields to export from %{title}", title: entry.title)}
+                  aria-label={dgettext("content_transfer", "Fields to export from %{title}", title: entry.title)}
                 >
                   <button
                     :if={@export_scope == "entries"}
@@ -193,17 +201,19 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                     phx-click="toggle_entry"
                     phx-value-entry={entry.key}
                     aria-pressed={to_string(Map.has_key?(@selected, entry.key))}
-                    aria-label={gettext("Select %{title}", title: entry.title)}
+                    aria-label={dgettext("content_transfer", "Select %{title}", title: entry.title)}
                   ><span class="transfer-field-check" aria-hidden="true"><Brando.HTML.Icon.icon name="hero-check" /></span><span class="transfer-control-label">{if Map.has_key?(
                                                                                                                                                                       @selected,
                                                                                                                                                                       entry.key
                                                                                                                                                                     ),
                                                                                                                                                                     do:
-                                                                                                                                                                      gettext(
+                                                                                                                                                                      dgettext(
+                                                                                                                                                                        "content_transfer",
                                                                                                                                                                         "Entry selected"
                                                                                                                                                                       ),
                                                                                                                                                                     else:
-                                                                                                                                                                      gettext(
+                                                                                                                                                                      dgettext(
+                                                                                                                                                                        "content_transfer",
                                                                                                                                                                         "Select entry"
                                                                                                                                                                       )}</span></button>
                   <button
@@ -227,53 +237,73 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             </article>
           </div>
           <p class="transfer-footnote">
-            {gettext("Showing up to 60 matches. Search to narrow the list. Unsaved editor changes are not included.")}
+            {dgettext(
+              "content_transfer",
+              "Showing up to 60 matches. Search to narrow the list. Unsaved editor changes are not included."
+            )}
           </p>
         </div>
-        <aside class="transfer-summary" id="transfer-export-summary" tabindex="-1" aria-label={gettext("Your export")}>
-          <span class="transfer-eyebrow">{gettext("Your export")}</span><h2>
+        <aside
+          class="transfer-summary"
+          id="transfer-export-summary"
+          tabindex="-1"
+          aria-label={dgettext("content_transfer", "Your export")}
+        >
+          <span class="transfer-eyebrow">{dgettext("content_transfer", "Your export")}</span><h2>
             {selection_label(@selected, @export_scope)}
           </h2>
           <p :if={map_size(@selected) == 0}>
-            {gettext("Choose the entries you want to move. Review related content before downloading.")}
+            {dgettext("content_transfer", "Choose the entries you want to move. Review related content before downloading.")}
           </p>
           <ul :if={map_size(@selected) > 0} class="transfer-selection">
             <li :for={{key, selection} <- Enum.sort(@selected)}>
               <div>
                 <strong>{selection.entry.title}</strong><span>{if @export_scope == "entries",
-                  do: gettext("Whole entry"),
-                  else: Enum.map_join(selection.fields, ", ", &Phoenix.Naming.humanize/1)}</span>
+                  do: dgettext("content_transfer", "Whole entry"),
+                  else: Enum.map_join(selection.fields, ", ", &Labels.field/1)}</span>
               </div><button
                 type="button"
                 phx-click="remove_entry"
                 phx-value-key={key}
-                aria-label={gettext("Remove %{title}", title: selection.entry.title)}
+                aria-label={dgettext("content_transfer", "Remove %{title}", title: selection.entry.title)}
               >×</button>
             </li>
           </ul>
           <form id="transfer-export-options" phx-change="export_options" class="transfer-options">
-            <label><input type="checkbox" name="media" value="true" checked={@include_media} /><span><strong>{gettext(
+            <label><input type="checkbox" name="media" value="true" checked={@include_media} /><span><strong>{dgettext(
+              "content_transfer",
               "Media originals"
-            )}</strong><small>{gettext("Images, files and uploaded videos. Sizes are regenerated on arrival.")}</small></span></label>
-            <label><input type="checkbox" name="definitions" value="true" checked={@include_definitions} /><span><strong>{gettext(
+            )}</strong><small>{dgettext(
+              "content_transfer",
+              "Images, files and uploaded videos. Sizes are regenerated on arrival."
+            )}</small></span></label>
+            <label><input type="checkbox" name="definitions" value="true" checked={@include_definitions} /><span><strong>{dgettext(
+              "content_transfer",
               "Required definitions"
-            )}</strong><small>{gettext("Keep module lineage and include child modules and table templates.")}</small></span></label>
+            )}</strong><small>{dgettext(
+              "content_transfer",
+              "Keep module lineage and include child modules and table templates."
+            )}</small></span></label>
           </form>
           <button
             type="button"
             class="transfer-button is-primary"
             phx-click="prepare_export"
             disabled={selected_count(@selected) == 0 || @busy != nil}
-          ><span class="transfer-control-label">{gettext("Prepare export")}</span></button>
+          ><span class="transfer-control-label">{dgettext("content_transfer", "Prepare export")}</span></button>
           <div class="transfer-note">
             <Brando.HTML.Icon.icon name="hero-information-circle" /><p>
               {if @export_scope == "entries",
                 do:
-                  gettext(
+                  dgettext(
+                    "content_transfer",
                     "Entries include authored fields, metadata, owned records and all blocks. Shared references can travel with the bundle or be mapped on arrival."
                   ),
                 else:
-                  gettext("The complete saved field travels with you, including nested blocks and retained unused content.")}
+                  dgettext(
+                    "content_transfer",
+                    "The complete saved field travels with you, including nested blocks and retained unused content."
+                  )}
             </p>
           </div>
         </aside>
@@ -282,75 +312,97 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
       <section :if={@tab == "export" && @exported} class="transfer-review" id="transfer-export-review">
         <div class="transfer-section-heading">
           <span class="transfer-step complete">✓</span><div>
-            <h2>{gettext("Your bundle is ready")}</h2><p>
-              {gettext("Review what is included, then download it for the destination workspace.")}
+            <h2>{dgettext("content_transfer", "Your bundle is ready")}</h2><p>
+              {dgettext("content_transfer", "Review what is included, then download it for the destination workspace.")}
             </p>
           </div>
         </div>
         <dl class="transfer-stats">
           <div>
-            <dt>{if @exported.bundle["version"] == 2, do: gettext("Entries"), else: gettext("Fields")}</dt><dd>
+            <dt>
+              {if @exported.bundle["version"] == 2,
+                do: dgettext("content_transfer", "Entries"),
+                else: dgettext("content_transfer", "Fields")}
+            </dt><dd>
               {bundle_count(@exported.bundle)}
             </dd>
           </div><div>
-            <dt>{gettext("Blocks")}</dt><dd>
+            <dt>{dgettext("content_transfer", "Blocks")}</dt><dd>
               {Enum.sum(Enum.map(@exported.bundle["fields"], &Portable.count(&1["blocks"])))}
             </dd>
           </div><div>
-            <dt>{gettext("Dependencies")}</dt><dd>{map_size(@exported.bundle["dependencies"])}</dd>
+            <dt>{dgettext("content_transfer", "Dependencies")}</dt><dd>{map_size(@exported.bundle["dependencies"])}</dd>
           </div><div>
-            <dt>{gettext("Download size")}</dt><dd>{Brando.Utils.human_size(byte_size(@exported.binary))}</dd>
+            <dt>{dgettext("content_transfer", "Download size")}</dt><dd>
+              {Brando.Utils.human_size(byte_size(@exported.binary))}
+            </dd>
           </div>
         </dl>
         <div class="transfer-review-list">
           <article :for={entry <- @exported.bundle["entries"] || []}>
             <div>
               <h3>{entry["title"]}</h3><p>
-                {gettext("Whole entry")} · {Map.get(@language_labels, entry["language"], entry["language"])}
+                {dgettext("content_transfer", "Whole entry")} · {Map.get(
+                  @language_labels,
+                  entry["language"],
+                  entry["language"]
+                )}
               </p>
             </div>
-            <span class="transfer-badge">{gettext("Fields, metadata & content")}</span>
+            <span class="transfer-badge">{dgettext("content_transfer", "Fields, metadata & content")}</span>
           </article>
           <article :for={field <- if(@exported.bundle["version"] == 1, do: @exported.bundle["fields"], else: [])}>
             <div>
-              <h3>{field["title"]}</h3><p>{Phoenix.Naming.humanize(field["field"])} · {String.upcase(field["language"])}</p>
-            </div><span class="transfer-badge">{ngettext("%{count} block", "%{count} blocks", Portable.count(field["blocks"]))}</span>
+              <h3>{field["title"]}</h3><p>{Labels.field(field["field"])} · {String.upcase(field["language"])}</p>
+            </div><span class="transfer-badge">{dngettext(
+              "content_transfer",
+              "%{count} block",
+              "%{count} blocks",
+              Portable.count(field["blocks"])
+            )}</span>
           </article>
         </div>
         <section :if={@exported.bundle["version"] == 2 && related_entries(@exported.bundle) != []} class="transfer-related">
-          <h3>{gettext("Related entries")}</h3>
-          <p>{gettext("Include these entries too, or choose their destination when you import.")}</p>
+          <h3>{dgettext("content_transfer", "Related entries")}</h3>
+          <p>{dgettext("content_transfer", "Include these entries too, or choose their destination when you import.")}</p>
           <div :for={dep <- related_entries(@exported.bundle)} class="transfer-related-row">
-            <div><strong>{dep["label"]}</strong><span>{gettext("Referenced content")}</span></div>
+            <div><strong>{dep["label"]}</strong><span>{dgettext("content_transfer", "Referenced content")}</span></div>
             <button type="button" class="transfer-button" phx-click="include_entry" phx-value-key={dep["entry_key"]}>
-              <span class="transfer-control-label">{gettext("Include entry")}</span>
+              <span class="transfer-control-label">{dgettext("content_transfer", "Include entry")}</span>
             </button>
           </div>
         </section>
         <details class="transfer-details">
-          <summary>{gettext("Included dependencies")}</summary><div class="transfer-dependency-list">
+          <summary>{dgettext("content_transfer", "Included dependencies")}</summary><div class="transfer-dependency-list">
             <div :for={{_token, dep} <- Enum.sort(@exported.bundle["dependencies"])}>
-              <span>{dep["label"]}</span><small>{Phoenix.Naming.humanize(dep["kind"])} · {if dep["original"],
-                do: gettext("Original included"),
+              <span>{dep["label"]}</span><small>{Labels.field(dep["kind"])} · {if dep["original"],
+                do: dgettext("content_transfer", "Original included"),
                 else:
-                  if(included?(@exported.bundle, dep), do: gettext("Entry included"), else: gettext("Resolve on destination"))}</small>
+                  if(included?(@exported.bundle, dep),
+                    do: dgettext("content_transfer", "Entry included"),
+                    else: dgettext("content_transfer", "Resolve on destination")
+                  )}</small>
             </div>
           </div>
         </details>
         <div class="transfer-note">
           <Brando.HTML.Icon.icon name="hero-information-circle" /><p>
-            {gettext("Application code, CSS, JavaScript and service credentials use your normal deployment.")}
+            {dgettext(
+              "content_transfer",
+              "Application code, CSS, JavaScript and service credentials use your normal deployment."
+            )}
           </p>
         </div>
         <div class="transfer-actions">
-          <button type="button" class="transfer-button" phx-click="edit_export"><span class="transfer-control-label">{gettext(
+          <button type="button" class="transfer-button" phx-click="edit_export"><span class="transfer-control-label">{dgettext(
+            "content_transfer",
             "Edit selection"
           )}</span></button><a
             class="transfer-button is-primary"
             id="transfer-download"
             href={@download}
             download
-          ><span class="transfer-control-label">{gettext("Download content bundle")}</span></a>
+          ><span class="transfer-control-label">{dgettext("content_transfer", "Download content bundle")}</span></a>
         </div>
       </section>
 
@@ -358,8 +410,8 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
         <div class="transfer-upload-card">
           <div class="transfer-section-heading">
             <span class="transfer-step blue">01</span><div>
-              <h2>{gettext("Bring your content here")}</h2><p>
-                {gettext("Upload a content bundle to review entries, destinations and dependencies.")}
+              <h2>{dgettext("content_transfer", "Bring your content here")}</h2><p>
+                {dgettext("content_transfer", "Upload a content bundle to review entries, destinations and dependencies.")}
               </p>
             </div>
           </div>
@@ -372,9 +424,11 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 <Brando.HTML.Icon.icon name="hero-arrow-down-tray" />
               </div>
               <label for={@uploads.content_bundle.ref} class={@uploads.content_bundle.entries != [] && "sr-only"}>
-                {gettext("Choose a content bundle")}
+                {dgettext("content_transfer", "Choose a content bundle")}
               </label>
-              <p :if={@uploads.content_bundle.entries == []}>{gettext("or drop a ZIP file here · up to 128 MB")}</p>
+              <p :if={@uploads.content_bundle.entries == []}>
+                {dgettext("content_transfer", "or drop a ZIP file here · up to 128 MB")}
+              </p>
               <.live_file_input upload={@uploads.content_bundle} hidden={@uploads.content_bundle.entries != []} />
               <div :for={entry <- @uploads.content_bundle.entries} class="transfer-file">
                 <div class="transfer-upload-icon">
@@ -387,18 +441,28 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                   } />
                 </div>
                 <strong>{cond do
-                  upload_errors(@uploads.content_bundle, entry) != [] -> gettext("Upload needs attention")
-                  entry.done? -> gettext("Bundle uploaded")
-                  true -> gettext("Uploading bundle…")
+                  upload_errors(@uploads.content_bundle, entry) != [] ->
+                    dgettext("content_transfer", "Upload needs attention")
+
+                  entry.done? ->
+                    dgettext("content_transfer", "Bundle uploaded")
+
+                  true ->
+                    dgettext("content_transfer", "Uploading bundle…")
                 end}</strong>
                 <p class="transfer-filename">{entry.client_name}</p>
                 <span class="transfer-file-progress" role="status">
                   {Brando.Utils.human_size(entry.client_size)}
                   <span :if={upload_errors(@uploads.content_bundle, entry) == []}>
-                    · {if entry.done?, do: gettext("Ready to review"), else: "#{entry.progress}%"}
+                    · {if entry.done?, do: dgettext("content_transfer", "Ready to review"), else: "#{entry.progress}%"}
                   </span>
                 </span>
-                <button type="button" phx-click="cancel_upload" phx-value-ref={entry.ref} aria-label={gettext("Remove file")}>
+                <button
+                  type="button"
+                  phx-click="cancel_upload"
+                  phx-value-ref={entry.ref}
+                  aria-label={dgettext("content_transfer", "Remove file")}
+                >
                   <Brando.HTML.Icon.icon name="hero-x-mark" />
                 </button>
               </div>
@@ -415,7 +479,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
               {Enum.map_join(upload_errors(@uploads.content_bundle, entry), " ", &upload_error/1)}
             </p>
             <div class="transfer-upload-actions">
-              <p id="transfer-review-help">{gettext("Review first. Apply when you’re ready.")}</p>
+              <p id="transfer-review-help">{dgettext("content_transfer", "Review first. Apply when you’re ready.")}</p>
               <button
                 class="transfer-button is-primary is-blue"
                 type="submit"
@@ -423,27 +487,30 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 disabled={!upload_ready?(@uploads.content_bundle) || @busy != nil}
               >
                 <Brando.HTML.Icon.icon name="hero-document-magnifying-glass" />
-                <span class="transfer-control-label">{gettext("Review bundle")}</span>
+                <span class="transfer-control-label">{dgettext("content_transfer", "Review bundle")}</span>
               </button>
             </div>
           </form>
         </div>
         <aside class="transfer-explainer">
-          <h3>{gettext("A review before every import")}</h3><ol>
+          <h3>{dgettext("content_transfer", "A review before every import")}</h3><ol>
             <li>
-              <strong>{gettext("Choose destinations")}</strong><span>{gettext(
+              <strong>{dgettext("content_transfer", "Choose destinations")}</strong><span>{dgettext(
+                "content_transfer",
                 "Create entries or choose existing destinations in this workspace."
               )}</span>
             </li><li>
-              <strong>{gettext("Resolve dependencies")}</strong><span>{gettext(
+              <strong>{dgettext("content_transfer", "Resolve dependencies")}</strong><span>{dgettext(
+                "content_transfer",
                 "Reuse matching modules, bring media, and map referenced content."
               )}</span>
             </li><li>
-              <strong>{gettext("Review and apply")}</strong><span>{gettext(
+              <strong>{dgettext("content_transfer", "Review and apply")}</strong><span>{dgettext(
+                "content_transfer",
                 "Compare changes and apply. A recovery snapshot is saved with every import."
               )}</span>
             </li>
-          </ol><p>{gettext("Uploading and previewing do not change saved content or definitions.")}</p>
+          </ol><p>{dgettext("content_transfer", "Uploading and previewing do not change saved content or definitions.")}</p>
         </aside>
       </section>
 
@@ -454,21 +521,32 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
       >
         <div class="transfer-package">
           <div>
-            <span class="transfer-eyebrow">{gettext("Incoming bundle")}</span><h2>{@filename}</h2><p>
+            <span class="transfer-eyebrow">{dgettext("content_transfer", "Incoming bundle")}</span><h2>{@filename}</h2><p>
               {@archive.bundle["source"]["label"]} · {bundle_label(@archive.bundle)}
             </p>
-          </div><button type="button" class="transfer-button" phx-click="cancel_import" disabled={@busy != nil}><span class="transfer-control-label">{gettext(
+          </div><button type="button" class="transfer-button" phx-click="cancel_import" disabled={@busy != nil}><span class="transfer-control-label">{dgettext(
+            "content_transfer",
             "Cancel import"
           )}</span></button>
         </div>
         <div class="transfer-section-heading">
           <span class="transfer-step blue">02</span><div>
             <h2>
-              {if @archive.bundle["version"] == 2, do: gettext("Review your entries"), else: gettext("Choose destinations")}
+              {if @archive.bundle["version"] == 2,
+                do: dgettext("content_transfer", "Review your entries"),
+                else: dgettext("content_transfer", "Choose destinations")}
             </h2><p>
               {if @archive.bundle["version"] == 2,
-                do: gettext("Create new entries or update existing ones. Review their keys, publication and content."),
-                else: gettext("Suggestions use content keys and language. Confirm each destination before applying.")}
+                do:
+                  dgettext(
+                    "content_transfer",
+                    "Create new entries or update existing ones. Review their keys, publication and content."
+                  ),
+                else:
+                  dgettext(
+                    "content_transfer",
+                    "Suggestions use content keys and language. Confirm each destination before applying."
+                  )}
             </p>
           </div>
         </div>
@@ -479,13 +557,14 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           phx-submit="destination_search"
           class="transfer-search"
         >
-          <Brando.HTML.Icon.icon name="hero-magnifying-glass" /><label class="sr-only" for="destination-query">{gettext(
+          <Brando.HTML.Icon.icon name="hero-magnifying-glass" /><label class="sr-only" for="destination-query">{dgettext(
+            "content_transfer",
             "Find destination entries"
           )}</label><input
             id="destination-query"
             name="query"
             value={@destination_search}
-            placeholder={gettext("Find destination entries…")}
+            placeholder={dgettext("content_transfer", "Find destination entries…")}
             phx-debounce="250"
           />
         </form>
@@ -493,8 +572,11 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           <div class="transfer-mapping-list">
             <article :for={field <- @plan.fields} class="transfer-mapping-row">
               <div class="transfer-source">
-                <span class="transfer-eyebrow">{gettext("From bundle")}</span><h3>{field.source["title"]}</h3><p>
-                  {Phoenix.Naming.humanize(field.source["field"])} · {ngettext(
+                <span class="transfer-eyebrow">{dgettext("content_transfer", "From bundle")}</span><h3>
+                  {field.source["title"]}
+                </h3><p>
+                  {Labels.field(field.source["field"])} · {dngettext(
+                    "content_transfer",
                     "%{count} incoming block",
                     "%{count} incoming blocks",
                     field.incoming_count
@@ -502,10 +584,11 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 </p>
               </div>
               <div class="transfer-destination">
-                <label for={"target-#{field.source["key"]}"}>{gettext("Destination entry")}</label><select
+                <label for={"target-#{field.source["key"]}"}>{dgettext("content_transfer", "Destination entry")}</label><select
+                  class="admin-select"
                   id={"target-#{field.source["key"]}"}
                   name={"entries[#{field.source["key"]}]"}
-                ><option value="">{gettext("Choose an entry…")}</option><option
+                ><option value="">{dgettext("content_transfer", "Choose an entry…")}</option><option
                   :for={option <- entry_options(field, @target_options)}
                   value={option.key}
                   selected={selected_target(@targets, field.source["key"]) == option.key}
@@ -514,7 +597,8 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 </option></select>
                 <div class="transfer-destination-controls">
                   <div>
-                    <label for={"field-#{field.source["key"]}"}>{gettext("Block field")}</label><select
+                    <label for={"field-#{field.source["key"]}"}>{dgettext("content_transfer", "Block field")}</label><select
+                      class="admin-select"
                       id={"field-#{field.source["key"]}"}
                       name={"fields[#{field.source["key"]}]"}
                     ><option
@@ -525,40 +609,41 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                       {option.label}
                     </option></select>
                   </div><div>
-                    <label for={"mode-#{field.source["key"]}"}>{gettext("Import action")}</label><select
+                    <label for={"mode-#{field.source["key"]}"}>{dgettext("content_transfer", "Import action")}</label><select
+                      class="admin-select"
                       id={"mode-#{field.source["key"]}"}
                       name={"modes[#{field.source["key"]}]"}
                     ><option value="replace" selected={get_in(@targets, [field.source["key"], "mode"]) != "append"}>
-                      {gettext("Replace field contents")}
+                      {dgettext("content_transfer", "Replace field contents")}
                     </option><option value="append" selected={get_in(@targets, [field.source["key"], "mode"]) == "append"}>
-                      {gettext("Append to existing blocks")}
+                      {dgettext("content_transfer", "Append to existing blocks")}
                     </option></select>
                   </div>
                 </div>
                 <p :if={field.destination} class="transfer-field-effect">
                   {if field.mode == "append",
                     do:
-                      gettext("Keep %{count} current blocks and add %{incoming}.",
+                      dgettext("content_transfer", "Keep %{count} current blocks and add %{incoming}.",
                         count: field.current_count,
                         incoming: field.incoming_count
                       ),
                     else:
-                      gettext("Replace %{count} current blocks with %{incoming}.",
+                      dgettext("content_transfer", "Replace %{count} current blocks with %{incoming}.",
                         count: field.current_count,
                         incoming: field.incoming_count
                       )}
                 </p>
                 <p :if={field.destination && field.destination.status == "published"} class="transfer-published">
-                  {gettext("Published entry: the imported content becomes live after rendering.")}
+                  {dgettext("content_transfer", "Published entry: the imported content becomes live after rendering.")}
                 </p>
                 <p :if={field.issue} class="transfer-inline-error">{field.issue}</p>
               </div>
               <details class="transfer-content-preview">
-                <summary>{gettext("Compare content")}</summary><div class="transfer-compare">
+                <summary>{dgettext("content_transfer", "Compare content")}</summary><div class="transfer-compare">
                   <div>
-                    <h4>{gettext("Current content")}</h4><pre>{if field.destination, do: content_text(Enum.map(field.current, &Brando.Drafts.Params.snapshot(&1.block))), else: gettext("Choose a destination to compare.")}</pre>
+                    <h4>{dgettext("content_transfer", "Current content")}</h4><pre>{if field.destination, do: content_text(Enum.map(field.current, &Brando.Drafts.Params.snapshot(&1.block))), else: dgettext("content_transfer", "Choose a destination to compare.")}</pre>
                   </div><div>
-                    <h4>{gettext("Incoming content")}</h4><pre>{content_text(field.source["blocks"])}</pre>
+                    <h4>{dgettext("content_transfer", "Incoming content")}</h4><pre>{content_text(field.source["blocks"])}</pre>
                   </div>
                 </div>
               </details>
@@ -569,9 +654,12 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           <article :for={item <- @plan.entries} id={"entry-review-#{item.source["key"]}"} class="transfer-whole-entry">
             <header class="transfer-whole-entry-header">
               <div class="transfer-source">
-                <span class="transfer-eyebrow">{gettext("Whole entry")}</span><h3>{item.source["title"]}</h3>
+                <span class="transfer-eyebrow">{dgettext("content_transfer", "Whole entry")}</span><h3>
+                  {item.source["title"]}
+                </h3>
                 <p>
-                  {Map.get(@language_labels, item.source["language"], item.source["language"])} · {ngettext(
+                  {Map.get(@language_labels, item.source["language"], item.source["language"])} · {dngettext(
+                    "content_transfer",
                     "%{count} block",
                     "%{count} blocks",
                     item.incoming_count
@@ -579,35 +667,53 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 </p>
               </div>
               <span class={["transfer-badge", item.mode == "update" && "warning"]}>{if item.mode == "create",
-                do: gettext("Create new"),
-                else: gettext("Update existing")}</span>
+                do: dgettext("content_transfer", "Create new"),
+                else: dgettext("content_transfer", "Update existing")}</span>
             </header>
             <div class="transfer-entry-controls">
               <div>
-                <label for={"entry-action-#{item.source["key"]}"}>{gettext("Import action")}</label>
-                <select id={"entry-action-#{item.source["key"]}"} name={"targets[#{item.source["key"]}][mode]"}>
-                  <option value="create" selected={item.mode == "create"}>{gettext("Create a new entry")}</option>
-                  <option value="update" selected={item.mode == "update"}>{gettext("Update an existing entry")}</option>
+                <label for={"entry-action-#{item.source["key"]}"}>{dgettext("content_transfer", "Import action")}</label>
+                <select
+                  class="admin-select"
+                  id={"entry-action-#{item.source["key"]}"}
+                  name={"targets[#{item.source["key"]}][mode]"}
+                >
+                  <option value="create" selected={item.mode == "create"}>
+                    {dgettext("content_transfer", "Create a new entry")}
+                  </option>
+                  <option value="update" selected={item.mode == "update"}>
+                    {dgettext("content_transfer", "Update an existing entry")}
+                  </option>
                 </select>
               </div>
               <div>
-                <label for={"entry-publication-#{item.source["key"]}"}>{gettext("Publication")}</label>
-                <select id={"entry-publication-#{item.source["key"]}"} name={"targets[#{item.source["key"]}][publication]"}>
-                  <option value="draft" selected={publication(@targets, item) == "draft"}>{gettext("Save as draft")}</option>
+                <label for={"entry-publication-#{item.source["key"]}"}>{dgettext("content_transfer", "Publication")}</label>
+                <select
+                  class="admin-select"
+                  id={"entry-publication-#{item.source["key"]}"}
+                  name={"targets[#{item.source["key"]}][publication]"}
+                >
+                  <option value="draft" selected={publication(@targets, item) == "draft"}>
+                    {dgettext("content_transfer", "Save as draft")}
+                  </option>
                   <option :if={item.mode == "update"} value="preserve" selected={publication(@targets, item) == "preserve"}>
-                    {gettext("Keep destination status")}
+                    {dgettext("content_transfer", "Keep destination status")}
                   </option>
                   <option value="source" selected={publication(@targets, item) == "source"}>
-                    {gettext("Use source status: %{status}",
-                      status: Phoenix.Naming.humanize(item.source["data"]["attributes"]["status"] || "draft")
+                    {dgettext("content_transfer", "Use source status: %{status}",
+                      status: status_label(item.source["data"]["attributes"]["status"] || "draft")
                     )}
                   </option>
                 </select>
               </div>
               <div :if={item.mode == "update"} class="transfer-entry-destination">
-                <label for={"entry-target-#{item.source["key"]}"}>{gettext("Destination entry")}</label>
-                <select id={"entry-target-#{item.source["key"]}"} name={"targets[#{item.source["key"]}][id]"}>
-                  <option value="">{gettext("Choose an entry…")}</option>
+                <label for={"entry-target-#{item.source["key"]}"}>{dgettext("content_transfer", "Destination entry")}</label>
+                <select
+                  class="admin-select"
+                  id={"entry-target-#{item.source["key"]}"}
+                  name={"targets[#{item.source["key"]}][id]"}
+                >
+                  <option value="">{dgettext("content_transfer", "Choose an entry…")}</option>
                   <option
                     :for={
                       option <- entry_options(item, @target_options) |> Enum.filter(&(&1.schema == item.source["schema"]))
@@ -625,6 +731,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 <label for={"entry-#{name}-#{item.source["key"]}"}>{field_label(name)}</label>
                 <select
                   :if={name == "language"}
+                  class="admin-select"
                   id={"entry-#{name}-#{item.source["key"]}"}
                   name={"targets[#{item.source["key"]}][attributes][#{name}]"}
                 >
@@ -652,28 +759,40 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             </div>
             <p class="transfer-entry-effect">
               {if item.mode == "create",
-                do: gettext("Create this entry with its authored fields, metadata and owned content."),
-                else: gettext("Replace this entry’s authored fields, metadata and owned content with the bundle values.")}
+                do: dgettext("content_transfer", "Create this entry with its authored fields, metadata and owned content."),
+                else:
+                  dgettext(
+                    "content_transfer",
+                    "Replace this entry’s authored fields, metadata and owned content with the bundle values."
+                  )}
             </p>
             <p
               :if={item.status == :published}
               class="transfer-published"
             >
-              {gettext("This entry will be published. Imported content becomes live after rendering.")}
+              {dgettext("content_transfer", "This entry will be published. Imported content becomes live after rendering.")}
             </p>
             <p :if={item.issue} class="transfer-inline-error" role="status">{item.issue}</p>
-            <details class="transfer-entry-diff">
-              <summary>{gettext("Review fields & content")}</summary>
+            <details
+              id={"entry-diff-#{item.source["key"]}"}
+              class="transfer-entry-diff"
+              phx-mounted={JS.ignore_attributes("open")}
+            >
+              <summary>{dgettext("content_transfer", "Review fields & content")}</summary>
               <div
                 :if={item.changes != []}
                 class={["transfer-change-table", item.mode == "create" && "is-new"]}
                 role="table"
-                aria-label={gettext("Entry field changes")}
+                aria-label={dgettext("content_transfer", "Entry field changes")}
               >
                 <div class="transfer-change-head" role="row">
-                  <span role="columnheader">{gettext("Field")}</span><span :if={item.mode == "update"} role="columnheader">{gettext(
+                  <span role="columnheader">{dgettext("content_transfer", "Field")}</span><span
+                    :if={item.mode == "update"}
+                    role="columnheader"
+                  >{dgettext(
+                    "content_transfer",
                     "Current"
-                  )}</span><span role="columnheader">{gettext("After import")}</span>
+                  )}</span><span role="columnheader">{dgettext("content_transfer", "After import")}</span>
                 </div>
                 <div :for={change <- item.changes} class="transfer-change-row" role="row">
                   <strong role="cell">{field_label(change.field)}</strong><span :if={item.mode == "update"} role="cell">{if item.mode ==
@@ -694,14 +813,18 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
               </div>
               <div class="transfer-compare">
                 <div>
-                  <h4>{gettext("Current block content")}</h4><pre>{if item.entry && item.mode == "update", do: content_text(Enum.flat_map(Catalog.fields(item.entry.__struct__), fn field -> Enum.map(Map.get(item.entry, field.association, []), &Brando.Drafts.Params.snapshot(&1.block)) end)), else: gettext("New entry")}</pre>
+                  <h4>{dgettext("content_transfer", "Current block content")}</h4><pre>{if item.entry && item.mode == "update", do: content_text(Enum.flat_map(Catalog.fields(item.entry.__struct__), fn field -> Enum.map(Map.get(item.entry, field.association, []), &Brando.Drafts.Params.snapshot(&1.block)) end)), else: dgettext("content_transfer", "New entry")}</pre>
                 </div>
                 <div>
-                  <h4>{gettext("Incoming block content")}</h4><pre>{content_text(Map.values(item.source["data"]["blocks"]) |> List.flatten())}</pre>
+                  <h4>{dgettext("content_transfer", "Incoming block content")}</h4><pre>{content_text(Map.values(item.source["data"]["blocks"]) |> List.flatten())}</pre>
                 </div>
               </div>
-              <details class="transfer-owned-preview">
-                <summary>{gettext("Metadata, assets & owned records")}</summary>
+              <details
+                id={"entry-owned-#{item.source["key"]}"}
+                class="transfer-owned-preview"
+                phx-mounted={JS.ignore_attributes("open")}
+              >
+                <summary>{dgettext("content_transfer", "Metadata, assets & owned records")}</summary>
                 <dl>
                   <div :for={{label, value} <- owned_details(item.source["data"], @archive.bundle["dependencies"])}>
                     <dt>{label}</dt><dd>{value}</dd>
@@ -714,13 +837,16 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
         <section class="transfer-dependencies">
           <div class="transfer-section-heading">
             <span class="transfer-step blue">03</span><div>
-              <h2>{gettext("Resolve dependencies")}</h2><p>
-                {gettext("Module lineage matches automatically. Other references need a reviewed destination.")}
+              <h2>{dgettext("content_transfer", "Resolve dependencies")}</h2><p>
+                {dgettext(
+                  "content_transfer",
+                  "Module lineage matches automatically. Other references need a reviewed destination."
+                )}
               </p>
             </div>
           </div>
           <p :if={@plan.dependencies == []} class="transfer-feedback">
-            {gettext("This bundle has no external dependencies.")}
+            {dgettext("content_transfer", "This bundle has no external dependencies.")}
           </p>
           <form
             :if={Enum.any?(@plan.dependencies, &(&1.action != :create))}
@@ -729,32 +855,37 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             class="transfer-search"
           >
             <Brando.HTML.Icon.icon name="hero-magnifying-glass" />
-            <label class="sr-only" for="dependency-query">{gettext("Find destination dependencies")}</label>
+            <label class="sr-only" for="dependency-query">{dgettext("content_transfer", "Find destination dependencies")}</label>
             <input
               id="dependency-query"
               name="query"
               value={@dependency_search}
-              placeholder={gettext("Find destination modules, media or references…")}
+              placeholder={dgettext("content_transfer", "Find destination modules, media or references…")}
               phx-debounce="250"
             />
           </form>
           <form id="transfer-dependency-mappings" phx-change="map_dependencies">
             <article :for={item <- @plan.dependencies} class="transfer-dependency-row">
               <div>
-                <h3>{item.dependency["label"]}</h3><span>{Phoenix.Naming.humanize(item.dependency["kind"])}</span><code :if={
+                <h3>{item.dependency["label"]}</h3><span>{Labels.field(item.dependency["kind"])}</span><code :if={
                   item.dependency["uid"]
                 }>{item.dependency["uid"]}</code>
               </div><div class="transfer-dependency-choice">
-                <label class="sr-only" for={"dependency-#{item.token}"}>{gettext("Destination for %{label}",
+                <label class="sr-only" for={"dependency-#{item.token}"}>{dgettext(
+                  "content_transfer",
+                  "Destination for %{label}",
                   label: item.dependency["label"]
                 )}</label><select
+                  class="admin-select"
                   id={"dependency-#{item.token}"}
                   name={"dependencies[#{item.token}]"}
                   disabled={item.dependency["kind"] == "gallery" || @busy != nil}
                 ><option :if={included?(@archive.bundle, item.dependency)} value="bundle" selected={item.action == :bundle}>
-                  {gettext("Use included entry")}
+                  {dgettext("content_transfer", "Use included entry")}
                 </option><option value={if item.can_create?, do: "create", else: ""} selected={is_nil(item.id)}>
-                  {if item.can_create?, do: gettext("Create from bundle"), else: gettext("Choose a destination…")}
+                  {if item.can_create?,
+                    do: dgettext("content_transfer", "Create from bundle"),
+                    else: dgettext("content_transfer", "Choose a destination…")}
                 </option><option
                   :for={option <- @dependency_options[item.token] || []}
                   value={option.id}
@@ -768,16 +899,28 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                   {item.issue}
                 </p>
                 <p :if={item.dependency["kind"] == "gallery"} class="transfer-field-effect">
-                  {gettext("A separate gallery is created for every placement. Map its images and videos below.")}
+                  {dgettext(
+                    "content_transfer",
+                    "A separate gallery is created for every placement. Map its images and videos below."
+                  )}
                 </p>
                 <p :if={Enum.any?(item.suggestions, &(&1.match == :checksum))} class="transfer-field-effect">
-                  {gettext("An identical original was imported recently. Choose it above to reuse the asset.")}
+                  {dgettext(
+                    "content_transfer",
+                    "An identical original was imported recently. Choose it above to reuse the asset."
+                  )}
                 </p>
-                <p :if={item.dependency["unsupported"]} class="transfer-field-effect">{item.dependency["unsupported"]}</p>
+                <p :if={item.dependency["unsupported"]} class="transfer-field-effect">
+                  {dgettext(
+                    "content_transfer",
+                    "Map this Markdown source and immutable version on the destination; service credentials are not included."
+                  )}
+                </p>
                 <details :if={item.differences != []} class="transfer-content-preview">
-                  <summary>{gettext("Destination definition differs")}</summary>
+                  <summary>{dgettext("content_transfer", "Destination definition differs")}</summary>
                   <p class="transfer-field-effect">
-                    {gettext(
+                    {dgettext(
+                      "content_transfer",
                       "The destination uses different %{changes}. Imported content keeps its values; new references and variables use destination defaults.",
                       changes: Enum.map_join(item.differences, ", ", &definition_change/1)
                     )}
@@ -789,8 +932,12 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           <div :if={@archive.bundle["definitions"]} class="transfer-note">
             <Brando.HTML.Icon.icon name="hero-cube" /><div>
               <p>
-                {gettext("Module definitions are included. Review them if a required module is missing on this site.")}
-              </p><button type="button" class="transfer-button" phx-click="preview_definitions" disabled={@busy != nil}><span class="transfer-control-label">{gettext(
+                {dgettext(
+                  "content_transfer",
+                  "Module definitions are included. Review them if a required module is missing on this site."
+                )}
+              </p><button type="button" class="transfer-button" phx-click="preview_definitions" disabled={@busy != nil}><span class="transfer-control-label">{dgettext(
+                "content_transfer",
                 "Review included definitions"
               )}</span></button>
             </div>
@@ -799,17 +946,18 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             :if={@archive.bundle["definitions"] && map_size(@archive.bundle["definitions"]["references"]) > 0}
             class="transfer-content-preview"
           >
-            <summary>{gettext("Assets used by included definitions")}</summary>
+            <summary>{dgettext("content_transfer", "Assets used by included definitions")}</summary>
             <p class="transfer-field-effect">
-              {gettext(
+              {dgettext(
+                "content_transfer",
                 "Module defaults need existing destination assets before their definitions can be installed. Map them here; content media is reviewed above."
               )}
             </p>
             <form phx-change="map_definition_references">
               <div :for={{token, reference} <- @archive.bundle["definitions"]["references"]} class="transfer-dependency-row">
                 <label for={"definition-ref-#{token}"}>{definition_reference_label(token, reference, @archive)}</label>
-                <select id={"definition-ref-#{token}"} name={"references[#{token}]"}>
-                  <option value="">{gettext("Use the content mapping if available")}</option>
+                <select class="admin-select" id={"definition-ref-#{token}"} name={"references[#{token}]"}>
+                  <option value="">{dgettext("content_transfer", "Use the content mapping if available")}</option>
                   <option
                     :for={option <- @definition_options[token] || []}
                     value={option.id}
@@ -822,28 +970,40 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             </form>
           </details>
           <div :if={@definition_plan} class="transfer-definition-plan">
-            <h3>{gettext("Definition changes")}</h3><p>
-              {gettext(
+            <h3>{dgettext("content_transfer", "Definition changes")}</h3><p>
+              {dgettext(
+                "content_transfer",
                 "Only new definitions and identical existing definitions can be installed here. Changes to existing definitions require the module migration workflow."
               )}
             </p><ul>
               <li :for={item <- @definition_plan.items}>
-                {item.uid} · {item.action}<span :if={item.reason}> — {item.reason}</span>
+                {item.uid} · {definition_action(item.action)}<span :if={item.reason}> — {definition_reason(
+                  item.action,
+                  item.reason
+                )}</span>
               </li>
             </ul><button
               class="transfer-button"
               type="button"
               phx-click="install_definitions"
               disabled={!safe_definitions?(@definition_plan) || @busy != nil}
-            ><span class="transfer-control-label">{gettext("Install missing definitions")}</span></button>
+            ><span class="transfer-control-label">{dgettext("content_transfer", "Install missing definitions")}</span></button>
           </div>
         </section>
         <div class="transfer-apply-bar">
           <div>
             <strong>{if Transfer.applicable?(@plan),
-              do: gettext("Ready to import"),
-              else: ngettext("%{count} item needs attention", "%{count} items need attention", length(@plan.problems))}</strong><p>
-              {gettext("Destination: %{scope}. A recovery snapshot is saved before content changes.", scope: @scope_label)}
+              do: dgettext("content_transfer", "Ready to import"),
+              else:
+                dngettext(
+                  "content_transfer",
+                  "%{count} item needs attention",
+                  "%{count} items need attention",
+                  length(@plan.problems)
+                )}</strong><p>
+              {dgettext("content_transfer", "Destination: %{scope}. A recovery snapshot is saved before content changes.",
+                scope: @scope_label
+              )}
             </p>
           </div><button
             type="button"
@@ -851,23 +1011,25 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             id="transfer-apply"
             phx-click="apply_import"
             disabled={!Transfer.applicable?(@plan) || @busy != nil}
-          ><span class="transfer-control-label">{gettext("Apply content import")}</span></button>
+          ><span class="transfer-control-label">{dgettext("content_transfer", "Apply content import")}</span></button>
         </div>
       </section>
 
       <section :if={@tab == "import" && @result} id="transfer-result" class="transfer-result" role="status">
         <span class="transfer-result-icon"><Brando.HTML.Icon.icon name="hero-check" /></span><span class="transfer-eyebrow">{@scope_label}</span><h2>
-          {gettext("Content imported")}
+          {dgettext("content_transfer", "Content imported")}
         </h2><p>
           {if @result.mappings["version"] == 2,
             do:
-              ngettext(
+              dngettext(
+                "content_transfer",
                 "%{count} entry saved. Your recovery snapshot is ready.",
                 "%{count} entries saved. Your recovery snapshot is ready.",
                 map_size(@result.after)
               ),
             else:
-              ngettext(
+              dngettext(
+                "content_transfer",
                 "%{count} field saved. Your recovery snapshot is ready.",
                 "%{count} fields saved. Your recovery snapshot is ready.",
                 map_size(@result.after)
@@ -875,39 +1037,56 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
         </p><div :for={refresh <- @result.refresh} class={["transfer-feedback", refresh["status"] == "failed" && "error"]}>
           {refresh_message(refresh)}
         </div><p class="transfer-footnote">
-          {gettext(
+          {dgettext(
+            "content_transfer",
             "Media processing and static-site deployment may finish separately. Use your normal publishing workflow for a static site."
           )}
         </p><div class="transfer-actions">
-          <button class="transfer-button" phx-click="tab" phx-value-tab="history"><span class="transfer-control-label">{gettext(
+          <button class="transfer-button" phx-click="tab" phx-value-tab="history"><span class="transfer-control-label">{dgettext(
+            "content_transfer",
             "View recovery snapshot"
           )}</span></button><button
             class="transfer-button is-primary"
             phx-click="new_import"
-          ><span class="transfer-control-label">{gettext("Import another bundle")}</span></button>
+          ><span class="transfer-control-label">{dgettext("content_transfer", "Import another bundle")}</span></button>
         </div>
       </section>
 
       <section :if={@tab == "history"} class="transfer-history">
         <div class="transfer-section-heading">
           <span class="transfer-step">↶</span><div>
-            <h2>{gettext("Recent imports")}</h2><p>
-              {gettext("Your last 10 imports in this workspace. Recovery refuses to overwrite newer edits.")}
+            <h2>{dgettext("content_transfer", "Recent imports")}</h2><p>
+              {dgettext(
+                "content_transfer",
+                "Your last 10 imports in this workspace. Recovery refuses to overwrite newer edits."
+              )}
             </p>
           </div>
         </div><div :if={@history == []} class="transfer-empty">
-          <Brando.HTML.Icon.icon name="hero-clock" /><h3>{gettext("No imports yet")}</h3><p>
-            {gettext("Completed imports and their recovery snapshots will appear here.")}
+          <Brando.HTML.Icon.icon name="hero-clock" /><h3>{dgettext("content_transfer", "No imports yet")}</h3><p>
+            {dgettext("content_transfer", "Completed imports and their recovery snapshots will appear here.")}
           </p>
         </div><article :for={receipt <- @history} class="transfer-history-row">
           <div>
             <h3>
               {if receipt.mappings["version"] == 2,
-                do: ngettext("%{count} entry imported", "%{count} entries imported", map_size(receipt.after)),
-                else: ngettext("%{count} field imported", "%{count} fields imported", map_size(receipt.after))}
+                do:
+                  dngettext(
+                    "content_transfer",
+                    "%{count} entry imported",
+                    "%{count} entries imported",
+                    map_size(receipt.after)
+                  ),
+                else:
+                  dngettext(
+                    "content_transfer",
+                    "%{count} field imported",
+                    "%{count} fields imported",
+                    map_size(receipt.after)
+                  )}
             </h3><p>
-              {Calendar.strftime(receipt.inserted_at, "%d %b %Y, %H:%M UTC")}
-            </p><span :if={receipt.restored_at} class="transfer-badge">{gettext("Recovered")}</span><code>{receipt.package_id}</code>
+              {Calendar.strftime(receipt.inserted_at, "%Y-%m-%d, %H:%M UTC")}
+            </p><span :if={receipt.restored_at} class="transfer-badge">{dgettext("content_transfer", "Recovered")}</span><code>{receipt.package_id}</code>
           </div><div class="transfer-actions">
             <button
               type="button"
@@ -915,20 +1094,22 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
               phx-click="retry_refresh"
               phx-value-id={receipt.id}
               disabled={@busy != nil}
-            ><span class="transfer-control-label">{gettext("Retry rendering and media")}</span></button><button
+            ><span class="transfer-control-label">{dgettext("content_transfer", "Retry rendering and media")}</span></button><button
               type="button"
               class="transfer-button"
               phx-click="review_restore"
               phx-value-id={receipt.id}
               disabled={receipt.restored_at != nil || @busy != nil}
-            ><span class="transfer-control-label">{gettext("Recover previous content")}</span></button>
+            ><span class="transfer-control-label">{dgettext("content_transfer", "Recover previous content")}</span></button>
           </div><div :if={@restore_id == receipt.id} class="transfer-recovery-confirm">
             <p>
-              {gettext(
+              {dgettext(
+                "content_transfer",
                 "Restore updated content and remove entries created by this import? Published entries are affected too. Newer edits will block recovery."
               )}
             </p><div class="transfer-actions">
-              <button class="transfer-button" type="button" phx-click="cancel_restore"><span class="transfer-control-label">{gettext(
+              <button class="transfer-button" type="button" phx-click="cancel_restore"><span class="transfer-control-label">{dgettext(
+                "content_transfer",
                 "Cancel"
               )}</span></button><button
                 class="transfer-button is-primary"
@@ -936,7 +1117,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 phx-click="restore"
                 phx-value-id={receipt.id}
                 disabled={@busy != nil}
-              ><span class="transfer-control-label">{gettext("Restore previous content")}</span></button>
+              ><span class="transfer-control-label">{dgettext("content_transfer", "Restore previous content")}</span></button>
             </div>
           </div>
         </article>
@@ -1061,7 +1242,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
 
     user = socket.assigns.current_user
 
-    run(socket, :export, gettext("Preparing your saved content and media…"), fn ->
+    run(socket, :export, dgettext("content_transfer", "Preparing your saved content and media…"), fn ->
       Transfer.export(selectors, user, opts)
     end)
   end
@@ -1099,7 +1280,8 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           {:noreply, assign(socket, error: message)}
       end
     else
-      {:noreply, assign(socket, error: gettext("Wait for the upload to finish, then review the bundle."))}
+      {:noreply,
+       assign(socket, error: dgettext("content_transfer", "Wait for the upload to finish, then review the bundle."))}
     end
   end
 
@@ -1164,7 +1346,10 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
     plan = socket.assigns.plan
 
     if plan && Transfer.applicable?(plan),
-      do: run(socket, :apply, gettext("Verifying and importing content…"), fn -> Transfer.apply(plan, user) end),
+      do:
+        run(socket, :apply, dgettext("content_transfer", "Verifying and importing content…"), fn ->
+          Transfer.apply(plan, user)
+        end),
       else: {:noreply, socket}
   end
 
@@ -1202,7 +1387,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
 
     if plan && safe_definitions?(plan),
       do:
-        run(socket, :definitions, gettext("Installing missing definitions…"), fn ->
+        run(socket, :definitions, dgettext("content_transfer", "Installing missing definitions…"), fn ->
           Brando.Content.Definitions.apply(plan, user)
         end),
       else: {:noreply, socket}
@@ -1215,13 +1400,16 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
     user = socket.assigns.current_user
 
     if socket.assigns.restore_id == id,
-      do: run(socket, :restore, gettext("Restoring previous content…"), fn -> Transfer.restore(id, user) end),
+      do:
+        run(socket, :restore, dgettext("content_transfer", "Restoring previous content…"), fn ->
+          Transfer.restore(id, user)
+        end),
       else: {:noreply, socket}
   end
 
   def handle_event("retry_refresh", %{"id" => id}, socket) do
     user = socket.assigns.current_user
-    run(socket, :refresh, gettext("Retrying rendering…"), fn -> Transfer.retry_refresh(id, user) end)
+    run(socket, :refresh, dgettext("content_transfer", "Retrying rendering…"), fn -> Transfer.retry_refresh(id, user) end)
   end
 
   defp run(socket, name, message, fun) do
@@ -1230,11 +1418,12 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
     else
       scope = Boundary.current_scope()
       sandbox = socket.assigns.transfer_sandbox
+      locale = Gettext.get_locale(Brando.Gettext)
 
       work =
         Brando.Tenant.capture_context(fn ->
           if sandbox, do: Phoenix.Ecto.SQL.Sandbox.allow(sandbox, Ecto.Adapters.SQL.Sandbox)
-          Boundary.with_scope(scope, fun)
+          Gettext.with_locale(Brando.Gettext, locale, fn -> Boundary.with_scope(scope, fun) end)
         end)
 
       {:noreply, socket |> assign(busy: message, error: nil) |> start_async(name, work)}
@@ -1267,7 +1456,10 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
   def handle_async(_, {:exit, _}, socket),
     do:
       {:noreply,
-       assign(socket, busy: nil, error: gettext("The operation could not finish. Check recent imports before retrying."))}
+       assign(socket,
+         busy: nil,
+         error: dgettext("content_transfer", "The operation could not finish. Check recent imports before retrying.")
+       )}
 
   defp replan(socket) do
     case Transfer.preview(socket.assigns.archive, socket.assigns.targets, socket.assigns.current_user,
@@ -1363,15 +1555,14 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
       if prefix,
         do:
           Enum.map(node["attributes"], fn {name, value} ->
-            {prefix <> " · " <> Phoenix.Naming.humanize(name), display_value(value)}
+            {prefix <> " · " <> Labels.field(name), display_value(value)}
           end),
         else: []
 
     references =
       Enum.flat_map(node["references"], fn {name, tokens} ->
         Enum.map(List.wrap(tokens), fn token ->
-          {Enum.join(Enum.reject([prefix, Phoenix.Naming.humanize(name)], &is_nil/1), " · "),
-           dependencies[token]["label"]}
+          {Enum.join(Enum.reject([prefix, Labels.field(name)], &is_nil/1), " · "), dependencies[token]["label"]}
         end)
       end)
 
@@ -1382,7 +1573,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           owned_details(
             child,
             dependencies,
-            Enum.join(Enum.reject([prefix, Phoenix.Naming.humanize(name) <> " " <> to_string(index)], &is_nil/1), " · ")
+            Enum.join(Enum.reject([prefix, Labels.field(name) <> " " <> to_string(index)], &is_nil/1), " · ")
           )
         end)
       end)
@@ -1391,14 +1582,17 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
   end
 
   defp bundle_count(bundle), do: length(bundle["entries"] || bundle["fields"])
-  defp bundle_label(%{"version" => 2} = bundle), do: ngettext("%{count} entry", "%{count} entries", bundle_count(bundle))
-  defp bundle_label(bundle), do: ngettext("%{count} field", "%{count} fields", bundle_count(bundle))
+
+  defp bundle_label(%{"version" => 2} = bundle),
+    do: dngettext("content_transfer", "%{count} entry", "%{count} entries", bundle_count(bundle))
+
+  defp bundle_label(bundle), do: dngettext("content_transfer", "%{count} field", "%{count} fields", bundle_count(bundle))
 
   defp selection_label(selected, "entries"),
-    do: ngettext("%{count} entry selected", "%{count} entries selected", map_size(selected))
+    do: dngettext("content_transfer", "%{count} entry selected", "%{count} entries selected", map_size(selected))
 
   defp selection_label(selected, _),
-    do: ngettext("%{count} field selected", "%{count} fields selected", selected_count(selected))
+    do: dngettext("content_transfer", "%{count} field selected", "%{count} fields selected", selected_count(selected))
 
   defp included?(bundle, dep), do: Enum.any?(bundle["entries"] || [], &(&1["key"] == dep["entry_key"]))
 
@@ -1410,20 +1604,12 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
       |> Enum.uniq_by(& &1["entry_key"])
       |> Enum.sort_by(& &1["label"])
 
-  defp field_label("uri"), do: gettext("URI")
-  defp field_label("css_classes"), do: gettext("CSS classes")
-  defp field_label("json_ld_type"), do: gettext("Structured data type")
-  defp field_label("meta_title"), do: gettext("SEO title")
-  defp field_label("meta_description"), do: gettext("SEO description")
-  defp field_label("has_url"), do: gettext("Public URL")
-  defp field_label("publish_at"), do: gettext("Publication date")
-  defp field_label("sequence"), do: gettext("Order")
-  defp field_label(field), do: Phoenix.Naming.humanize(field)
+  defp field_label(field), do: Labels.field(field)
   defp display_field("language", value, labels), do: Map.get(labels, value, display_value(value))
-  defp display_field("status", value, _) when is_binary(value), do: Phoenix.Naming.humanize(value)
-  defp display_field(_, true, _), do: gettext("Yes")
-  defp display_field(_, false, _), do: gettext("No")
-  defp display_field(_, [], _), do: gettext("None")
+  defp display_field("status", value, _) when is_binary(value), do: status_label(value)
+  defp display_field(_, true, _), do: dgettext("content_transfer", "Yes")
+  defp display_field(_, false, _), do: dgettext("content_transfer", "No")
+  defp display_field(_, [], _), do: dgettext("content_transfer", "None")
   defp display_field(_, value, _), do: display_value(value)
   defp display_value(nil), do: "—"
   defp display_value(""), do: "—"
@@ -1435,11 +1621,11 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
 
   defp selected?(selected, key, field), do: field in (get_in(selected, [key, :fields]) || [])
 
-  defp status_label("published"), do: gettext("Published")
-  defp status_label("draft"), do: gettext("Draft")
-  defp status_label("pending"), do: gettext("Pending")
-  defp status_label("disabled"), do: gettext("Disabled")
-  defp status_label(status), do: Phoenix.Naming.humanize(status)
+  defp status_label("published"), do: dgettext("content_transfer", "Published")
+  defp status_label("draft"), do: dgettext("content_transfer", "Draft")
+  defp status_label("pending"), do: dgettext("content_transfer", "Pending")
+  defp status_label("disabled"), do: dgettext("content_transfer", "Disabled")
+  defp status_label(status), do: Labels.field(status)
 
   defp selected_count(selected), do: Enum.sum(Enum.map(selected, fn {_, selection} -> length(selection.fields) end))
   defp selected_target(targets, key), do: if(targets[key], do: "#{targets[key]["schema"]}:#{targets[key]["id"]}")
@@ -1460,42 +1646,74 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
     do: entry.done? && upload_errors(upload) == [] && upload_errors(upload, entry) == []
 
   defp upload_ready?(_), do: false
-  defp upload_error(:too_large), do: gettext("The bundle exceeds 128 MB. Export fewer fields or omit media originals.")
-  defp upload_error(:not_accepted), do: gettext("Choose a .zip content bundle.")
-  defp upload_error(_), do: gettext("The upload could not be completed. Remove the file and try again.")
+
+  defp upload_error(:too_large),
+    do: dgettext("content_transfer", "The bundle exceeds 128 MB. Export fewer fields or omit media originals.")
+
+  defp upload_error(:not_accepted), do: dgettext("content_transfer", "Choose a .zip content bundle.")
+
+  defp upload_error(_),
+    do: dgettext("content_transfer", "The upload could not be completed. Remove the file and try again.")
 
   defp safe_definitions?(plan),
     do: Enum.all?(plan.items, &(&1.action in [:create, :noop])) && Enum.any?(plan.items, &(&1.action == :create))
 
-  defp dependency_status(%{action: :bundle}), do: gettext("Included entry")
-  defp dependency_status(%{issue: issue}) when not is_nil(issue), do: gettext("Needs attention")
-  defp dependency_status(%{action: :create}), do: gettext("Create from bundle")
+  defp dependency_status(%{action: :bundle}), do: dgettext("content_transfer", "Included entry")
+  defp dependency_status(%{issue: issue}) when not is_nil(issue), do: dgettext("content_transfer", "Needs attention")
+  defp dependency_status(%{action: :create}), do: dgettext("content_transfer", "Create from bundle")
 
   defp dependency_status(item),
     do:
       if(Enum.any?(item.suggestions, &(&1.id == item.id && &1.match == :uid)),
-        do: gettext("Lineage matched"),
-        else: gettext("Destination selected")
+        do: dgettext("content_transfer", "Lineage matched"),
+        else: dgettext("content_transfer", "Destination selected")
       )
 
-  defp definition_change("code"), do: gettext("render code")
-  defp definition_change("class"), do: gettext("CSS classes")
-  defp definition_change("refs"), do: gettext("reference defaults")
-  defp definition_change("vars"), do: gettext("variable defaults")
+  defp definition_change("code"), do: dgettext("content_transfer", "render code")
+  defp definition_change("class"), do: dgettext("content_transfer", "CSS classes")
+  defp definition_change("refs"), do: dgettext("content_transfer", "reference defaults")
+  defp definition_change("vars"), do: dgettext("content_transfer", "variable defaults")
+
+  defp definition_action(:create), do: dgettext("content_transfer", "Create")
+  defp definition_action(:noop), do: dgettext("content_transfer", "Already installed")
+  defp definition_action(:update), do: dgettext("content_transfer", "Update")
+  defp definition_action(:conflict), do: dgettext("content_transfer", "Conflict")
+  defp definition_action(:migration_required), do: dgettext("content_transfer", "Migration required")
+
+  defp definition_reason(:migration_required, _),
+    do:
+      dgettext(
+        "content_transfer",
+        "Review structural changes in the module migration workflow before importing this content."
+      )
+
+  defp definition_reason(:conflict, "the exported definition was deleted from the target"),
+    do: dgettext("content_transfer", "The exported definition was deleted from the destination.")
+
+  defp definition_reason(:conflict, "missing baseline; export the target before editing it"),
+    do: dgettext("content_transfer", "Export the destination definition first so changes can be compared safely.")
+
+  defp definition_reason(:conflict, "target changed since export"),
+    do: dgettext("content_transfer", "The destination definition changed since export. Review a new bundle.")
+
+  defp definition_reason(_, _), do: nil
 
   defp definition_reference_label(token, reference, archive) do
     dependency = archive.bundle["dependencies"][token]
-    if dependency, do: dependency["label"], else: Phoenix.Naming.humanize(reference["kind"])
+    if dependency, do: dependency["label"], else: Labels.field(reference["kind"])
   end
 
   defp refresh_message(%{"kind" => "image", "status" => "failed"}),
-    do: gettext("Content saved; media processing needs a retry.")
+    do: dgettext("content_transfer", "Content saved; media processing needs a retry.")
 
-  defp refresh_message(%{"kind" => "image"}), do: gettext("Media is ready or queued for processing.")
-  defp refresh_message(%{"status" => "failed"}), do: gettext("Content saved; rendering needs a retry.")
-  defp refresh_message(_), do: gettext("Content rendered and identifiers refreshed.")
+  defp refresh_message(%{"kind" => "image"}), do: dgettext("content_transfer", "Media is ready or queued for processing.")
 
-  defp content_text([]), do: gettext("No blocks")
+  defp refresh_message(%{"status" => "failed"}),
+    do: dgettext("content_transfer", "Content saved; rendering needs a retry.")
+
+  defp refresh_message(_), do: dgettext("content_transfer", "Content rendered and identifiers refreshed.")
+
+  defp content_text([]), do: dgettext("content_transfer", "No blocks")
 
   defp content_text(blocks) do
     Portable.walk(blocks, fn block ->
@@ -1511,7 +1729,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           if var["value"] not in [nil, ""], do: ["#{var["label"] || var["key"]}: #{var["value"]}"], else: []
         end)
 
-      Enum.join([block["description"] || Phoenix.Naming.humanize(block["type"] || "block") | text ++ vars], "\n")
+      Enum.join([block["description"] || Labels.field(block["type"] || "block") | text ++ vars], "\n")
     end)
     |> Enum.join("\n\n")
     |> String.slice(0, 12_000)
@@ -1525,7 +1743,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
     |> Enum.reject(&is_nil/1)
     |> Enum.join(" / ")
     |> case do
-      "" -> Brando.config(:app_name) || gettext("Current site")
+      "" -> Brando.config(:app_name) || dgettext("content_transfer", "Current site")
       label -> label
     end
   end

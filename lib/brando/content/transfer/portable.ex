@@ -1,4 +1,5 @@
 defmodule Brando.Content.Transfer.Portable do
+  use Gettext, backend: Brando.Gettext
   @moduledoc "Version 1 of the portable block tree. Ownership is rebuilt exclusively at the destination."
   alias Brando.Content.Transfer.{Catalog, Dependencies, Error}
   alias Brando.Content.Definition.Value
@@ -27,7 +28,13 @@ defmodule Brando.Content.Transfer.Portable do
 
   def encode(block, state) do
     if block.module_origin == :shared || block.container_origin == :shared || block.palette_origin == :shared,
-      do: Error.fail!("Shared-library blocks must be installed as local definitions before transfer.")
+      do:
+        Error.fail!(
+          dgettext(
+            "content_transfer",
+            "Shared-library blocks must be installed as local definitions before transfer."
+          )
+        )
 
     params = Params.snapshot(block)
     {base, state} = params |> Map.take(@block) |> encode_values(state)
@@ -128,7 +135,7 @@ defmodule Brando.Content.Transfer.Portable do
     Value.keys!(bundle, ~w(format version id created_at source fields entries dependencies definitions), "content bundle")
 
     unless bundle["format"] == "brando-content" && bundle["version"] in [1, 2],
-      do: Error.fail!("This is not a supported Brando content bundle (versions 1 and 2).")
+      do: Error.fail!(dgettext("content_transfer", "This is not a supported Brando content bundle (versions 1 and 2)."))
 
     Value.nonempty!(bundle["id"], "package ID")
     Value.nonempty!(bundle["source"]["scope"], "source scope")
@@ -138,10 +145,10 @@ defmodule Brando.Content.Transfer.Portable do
     minimum = if bundle["version"] == 2, do: 0, else: 1
 
     unless is_list(bundle["fields"]) && length(bundle["fields"]) in minimum..100,
-      do: Error.fail!("A bundle can contain up to 100 saved block fields.")
+      do: Error.fail!(dgettext("content_transfer", "A bundle can contain up to 100 saved block fields."))
 
     unless is_map(bundle["dependencies"]) && map_size(bundle["dependencies"]) <= 2_000,
-      do: Error.fail!("The dependency manifest is invalid or too large.")
+      do: Error.fail!(dgettext("content_transfer", "The dependency manifest is invalid or too large."))
 
     Value.unique!(Enum.map(bundle["fields"], & &1["key"]), "field keys")
 
@@ -151,19 +158,25 @@ defmodule Brando.Content.Transfer.Portable do
       Value.nonempty!(field["schema"], "source schema")
       Value.nonempty!(field["field"], "source field")
       Value.nonempty!(field["title"], "source title")
-      unless is_map(field["hints"]) && is_binary(field["language"]), do: Error.fail!("Invalid content matching hints.")
-      unless is_list(field["blocks"]), do: Error.fail!("A field must contain an ordered block list.")
+
+      unless is_map(field["hints"]) && is_binary(field["language"]),
+        do: Error.fail!(dgettext("content_transfer", "Invalid content matching hints."))
+
+      unless is_list(field["blocks"]),
+        do: Error.fail!(dgettext("content_transfer", "A field must contain an ordered block list."))
+
       Enum.each(field["blocks"], &validate_block!(&1, bundle["dependencies"], 0))
       uids = walk(field["blocks"], & &1["uid"])
       Value.unique!(uids, "block instance UIDs")
-      if length(uids) > 5_000, do: Error.fail!("A field exceeds 5,000 blocks.")
+      if length(uids) > 5_000, do: Error.fail!(dgettext("content_transfer", "A field exceeds 5,000 blocks."))
     end)
 
     Enum.each(bundle["dependencies"], fn {token, dep} ->
       unless is_map(dep) && dep["kind"] in Dependencies.kinds() && String.starts_with?(token, dep["kind"] <> ":"),
-        do: Error.fail!("An unknown dependency type was found.")
+        do: Error.fail!(dgettext("content_transfer", "An unknown dependency type was found."))
 
-      unless Regex.match?(~r/^[a-z_]+:[A-Za-z0-9_-]+$/, token), do: Error.fail!("Invalid dependency token.")
+      unless Regex.match?(~r/^[a-z_]+:[A-Za-z0-9_-]+$/, token),
+        do: Error.fail!(dgettext("content_transfer", "Invalid dependency token."))
 
       Dependencies.validate!(dep)
 
@@ -176,7 +189,7 @@ defmodule Brando.Content.Transfer.Portable do
           if dep["palette"], do: reference!(dep["palette"], "palette", bundle["dependencies"])
 
         "module_set" ->
-          unless is_list(dep["members"]), do: Error.fail!("Invalid module set membership.")
+          unless is_list(dep["members"]), do: Error.fail!(dgettext("content_transfer", "Invalid module set membership."))
           Enum.each(dep["members"], &reference!(&1, "module", bundle["dependencies"]))
 
         _ ->
@@ -190,7 +203,7 @@ defmodule Brando.Content.Transfer.Portable do
     if bundle["version"] == 2 do
       Brando.Content.Transfer.Entries.validate!(bundle)
     else
-      if bundle["entries"], do: Error.fail!("Entry content requires bundle version 2.")
+      if bundle["entries"], do: Error.fail!(dgettext("content_transfer", "Entry content requires bundle version 2."))
     end
 
     bundle
@@ -202,10 +215,13 @@ defmodule Brando.Content.Transfer.Portable do
   defp validate_block!(block, deps, depth) when is_map(block) and depth <= 40 do
     Value.keys!(block, @block ++ ~w(refs vars children table_rows block_identifiers), "block")
     Value.nonempty!(block["uid"], "block UID")
-    unless block["type"] in ~w(module module_entry container fragment slot), do: Error.fail!("Unsupported block type.")
+
+    unless block["type"] in ~w(module module_entry container fragment slot),
+      do: Error.fail!(dgettext("content_transfer", "Unsupported block type."))
 
     Enum.each(~w(refs vars children table_rows block_identifiers), fn key ->
-      unless is_list(block[key]), do: Error.fail!("Invalid #{key} collection.")
+      unless is_list(block[key]),
+        do: Error.fail!(dgettext("content_transfer", "Invalid %{value1} collection.", value1: key))
     end)
 
     Enum.each(block["refs"], fn ref ->
@@ -228,7 +244,8 @@ defmodule Brando.Content.Transfer.Portable do
     Enum.each(block["children"], &validate_block!(&1, deps, depth + 1))
   end
 
-  defp validate_block!(_, _, _), do: Error.fail!("The block tree is malformed or exceeds 40 nesting levels.")
+  defp validate_block!(_, _, _),
+    do: Error.fail!(dgettext("content_transfer", "The block tree is malformed or exceeds 40 nesting levels."))
 
   defp validate_references!(map, deps) when is_map(map) do
     Enum.each(map, fn {key, value} ->
@@ -263,7 +280,14 @@ defmodule Brando.Content.Transfer.Portable do
 
   defp reference!(token, kind, deps) do
     unless is_binary(token) && match?(%{"kind" => ^kind}, deps[token]),
-      do: Error.fail!("An unresolved #{kind} reference was found. Database IDs are not portable references.")
+      do:
+        Error.fail!(
+          dgettext(
+            "content_transfer",
+            "An unresolved %{value1} reference was found. Database IDs are not portable references.",
+            value1: kind
+          )
+        )
   end
 
   def decode(blocks, bindings, source, creator, uids \\ nil) do
@@ -335,7 +359,9 @@ defmodule Brando.Content.Transfer.Portable do
 
     value =
       Regex.replace(@footnote_attribute, value, fn _, prefix, quote, uid ->
-        fresh = Map.get(uids, uid) || Error.fail!("A footnote points outside its owned field.")
+        fresh =
+          Map.get(uids, uid) || Error.fail!(dgettext("content_transfer", "A footnote points outside its owned field."))
+
         prefix <> quote <> fresh <> quote
       end)
 
@@ -368,7 +394,9 @@ defmodule Brando.Content.Transfer.Portable do
   def decode_values(value, _, _), do: value
 
   def resolve!(bindings, token),
-    do: Map.get(bindings, token) || Error.fail!("Resolve dependency #{token} before importing.")
+    do:
+      Map.get(bindings, token) ||
+        Error.fail!(dgettext("content_transfer", "Resolve dependency %{value1} before importing.", value1: token))
 
   defp fresh_uids(map) when is_map(map),
     do:

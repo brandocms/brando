@@ -1,4 +1,5 @@
 defmodule Brando.Content.Transfer.EntryCodec do
+  use Gettext, backend: Brando.Gettext
   @moduledoc false
   import Ecto.Query, only: [from: 2]
   alias Brando.Blueprint.{Attributes, Relations}
@@ -23,10 +24,11 @@ defmodule Brando.Content.Transfer.EntryCodec do
 
   def schema!(name) do
     schema =
-      Brando.Authorization.Catalog.schema(name) || Error.fail!("The entry's Blueprint is not registered on this site.")
+      Brando.Authorization.Catalog.schema(name) ||
+        Error.fail!(dgettext("content_transfer", "The entry's Blueprint is not registered on this site."))
 
     unless is_binary(schema.__schema__(:source)) && function_exported?(schema, :changeset, 5),
-      do: Error.fail!("Only saved Blueprint entries can be transferred.")
+      do: Error.fail!(dgettext("content_transfer", "Only saved Blueprint entries can be transferred."))
 
     schema
   end
@@ -35,14 +37,19 @@ defmodule Brando.Content.Transfer.EntryCodec do
     schema = schema!(name)
     query = from(e in schema, where: e.id == ^Catalog.id!(id)) |> Catalog.scoped_query(schema, actor, action)
     query = if opts[:lock], do: from(e in query, lock: "FOR UPDATE"), else: query
-    entry = Repo.one(query) || Error.fail!("The entry is no longer available in this workspace.")
-    if Map.get(entry, :deleted_at), do: Error.fail!("The entry has been deleted.")
+
+    entry =
+      Repo.one(query) || Error.fail!(dgettext("content_transfer", "The entry is no longer available in this workspace."))
+
+    if Map.get(entry, :deleted_at), do: Error.fail!(dgettext("content_transfer", "The entry has been deleted."))
     Catalog.authorize!(actor, action, entry)
     preload(entry)
   end
 
   def preload(entry, depth \\ 0)
-  def preload(_, depth) when depth > 20, do: Error.fail!("Owned entry content exceeds 20 nested levels.")
+
+  def preload(_, depth) when depth > 20,
+    do: Error.fail!(dgettext("content_transfer", "Owned entry content exceeds 20 nested levels."))
 
   def preload(entry, depth) do
     schema = entry.__struct__
@@ -160,7 +167,9 @@ defmodule Brando.Content.Transfer.EntryCodec do
   end
 
   def encode(entry, state, owner_key \\ nil, depth \\ 0)
-  def encode(_, _, _, depth) when depth > 20, do: Error.fail!("Owned entry content exceeds 20 nested levels.")
+
+  def encode(_, _, _, depth) when depth > 20,
+    do: Error.fail!(dgettext("content_transfer", "Owned entry content exceeds 20 nested levels."))
 
   def encode(entry, state, owner_key, depth) do
     schema = entry.__struct__
@@ -212,7 +221,9 @@ defmodule Brando.Content.Transfer.EntryCodec do
   end
 
   def validate!(node, schema, dependencies, owner_key \\ nil, depth \\ 0)
-  def validate!(_, _, _, _, depth) when depth > 20, do: Error.fail!("Owned entry content exceeds 20 nested levels.")
+
+  def validate!(_, _, _, _, depth) when depth > 20,
+    do: Error.fail!(dgettext("content_transfer", "Owned entry content exceeds 20 nested levels."))
 
   def validate!(node, schema, dependencies, owner_key, depth) do
     Value.keys!(node, ~w(attributes references owned blocks), "entry content")
@@ -224,14 +235,20 @@ defmodule Brando.Content.Transfer.EntryCodec do
       value = node["references"][to_string(name)]
 
       unless is_nil(value) || (cardinality == :many && is_list(value)) || (cardinality == :one && is_binary(value)),
-        do: Error.fail!("Invalid entry relationship #{name}.")
+        do: Error.fail!(dgettext("content_transfer", "Invalid entry relationship %{value1}.", value1: name))
 
       Enum.each(List.wrap(value), fn token ->
-        dep = dependencies[token] || Error.fail!("An entry relationship is missing from the bundle.")
+        dep =
+          dependencies[token] ||
+            Error.fail!(dgettext("content_transfer", "An entry relationship is missing from the bundle."))
+
         expected = @media[related] || "entry"
 
         unless dep["kind"] == expected && (expected != "entry" || dep["schema"] == to_string(related)),
-          do: Error.fail!("The relationship #{name} has an incompatible content type.")
+          do:
+            Error.fail!(
+              dgettext("content_transfer", "The relationship %{value1} has an incompatible content type.", value1: name)
+            )
       end)
     end)
 
@@ -244,7 +261,7 @@ defmodule Brando.Content.Transfer.EntryCodec do
 
       unless (contract.cardinality == :many && is_list(value)) ||
                (contract.cardinality == :one && (is_nil(value) || is_map(value))),
-             do: Error.fail!("Invalid owned collection #{name}.")
+             do: Error.fail!(dgettext("content_transfer", "Invalid owned collection %{value1}.", value1: name))
 
       Enum.each(List.wrap(node["owned"][to_string(name)]), &validate!(&1, related, dependencies, parent_key, depth + 1))
     end)
@@ -252,7 +269,7 @@ defmodule Brando.Content.Transfer.EntryCodec do
     Value.keys!(node["blocks"], Enum.map(Catalog.fields(schema), & &1.name), "entry block fields")
 
     Enum.each(node["blocks"], fn {_, blocks} ->
-      unless is_list(blocks), do: Error.fail!("Invalid entry block field.")
+      unless is_list(blocks), do: Error.fail!(dgettext("content_transfer", "Invalid entry block field."))
       Portable.validate_blocks!(blocks, dependencies)
     end)
 
@@ -272,7 +289,10 @@ defmodule Brando.Content.Transfer.EntryCodec do
              Enum.sort(Map.keys(node["blocks"])) == Enum.sort(Enum.map(Catalog.fields(schema), & &1.name)),
            do:
              Error.fail!(
-               "The entry fields differ from the destination Blueprint. Deploy the matching schema before importing."
+               dgettext(
+                 "content_transfer",
+                 "The entry fields differ from the destination Blueprint. Deploy the matching schema before importing."
+               )
              )
 
     :ok
@@ -369,7 +389,9 @@ defmodule Brando.Content.Transfer.EntryCodec do
   end
 
   defp resolve!(bindings, token),
-    do: bindings[token] || Error.fail!("Resolve the entry's referenced content before importing.")
+    do:
+      bindings[token] ||
+        Error.fail!(dgettext("content_transfer", "Resolve the entry's referenced content before importing."))
 
   def gallery_asset?(schema, name),
     do:

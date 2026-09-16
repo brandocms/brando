@@ -1,4 +1,5 @@
 defmodule Brando.Content.Transfer.Dependencies do
+  use Gettext, backend: Brando.Gettext
   @moduledoc false
   import Ecto.Query, only: [from: 2]
   alias Brando.Content.Transfer.{Archive, Catalog, Contracts, Error, Media, Portable}
@@ -37,7 +38,7 @@ defmodule Brando.Content.Transfer.Dependencies do
 
       unless is_map(contract) && is_map(contract["refs"]) && is_map(contract["vars"]) &&
                (is_nil(contract["table"]) || is_map(contract["table"])),
-             do: Error.fail!("Invalid module compatibility contract.")
+             do: Error.fail!(dgettext("content_transfer", "Invalid module compatibility contract."))
     end
 
     allowed =
@@ -64,7 +65,9 @@ defmodule Brando.Content.Transfer.Dependencies do
     if allowed, do: Value.keys!(dep["data"], allowed, "#{kind} metadata")
 
     if kind == "gallery" do
-      unless is_list(dep["objects"]) && length(dep["objects"]) <= 5_000, do: Error.fail!("Invalid gallery object list.")
+      unless is_list(dep["objects"]) && length(dep["objects"]) <= 5_000,
+        do: Error.fail!(dgettext("content_transfer", "Invalid gallery object list."))
+
       Value.unique!(Enum.map(dep["objects"], & &1["key"]), "gallery objects")
       Enum.each(dep["objects"], &Value.keys!(&1, ~w(key image_id video_id config sequence), "gallery object"))
     end
@@ -72,7 +75,9 @@ defmodule Brando.Content.Transfer.Dependencies do
     :ok
   end
 
-  def schema!(kind), do: @schemas[kind] || Error.fail!("Unsupported dependency #{kind}.")
+  def schema!(kind),
+    do: @schemas[kind] || Error.fail!(dgettext("content_transfer", "Unsupported dependency %{value1}.", value1: kind))
+
   def new(actor, opts), do: %{actor: actor, include_media: Keyword.get(opts, :media, true), dependencies: %{}, files: %{}}
 
   def add_entry(schema, id, state) do
@@ -122,7 +127,10 @@ defmodule Brando.Content.Transfer.Dependencies do
   end
 
   def add_set(title, state) do
-    set = Repo.get_by(Brando.Content.ModuleSet, title: title) || Error.fail!("Module set “#{title}” is missing.")
+    set =
+      Repo.get_by(Brando.Content.ModuleSet, title: title) ||
+        Error.fail!(dgettext("content_transfer", "Module set “%{value1}” is missing.", value1: title))
+
     add("module_set", set.id, state)
   end
 
@@ -134,18 +142,26 @@ defmodule Brando.Content.Transfer.Dependencies do
   def load!(%{"kind" => kind}, id, actor, action), do: load!(kind, id, actor, action)
 
   def load!(kind, id, actor, action) do
-    record = Repo.get(schema!(kind), id) || Error.fail!("The #{kind} dependency is missing.")
-    if Map.get(record, :deleted_at), do: Error.fail!("The #{kind} dependency has been deleted.")
+    record =
+      Repo.get(schema!(kind), id) ||
+        Error.fail!(dgettext("content_transfer", "The %{value1} dependency is missing.", value1: kind))
+
+    if Map.get(record, :deleted_at),
+      do: Error.fail!(dgettext("content_transfer", "The %{value1} dependency has been deleted.", value1: kind))
+
     authorize!(kind, record, actor, action)
     record
   end
 
   defp authorize!("identifier", record, actor, action) do
     schema =
-      Brando.Authorization.Catalog.schema(record.schema) || Error.fail!("The referenced content type is not registered.")
+      Brando.Authorization.Catalog.schema(record.schema) ||
+        Error.fail!(dgettext("content_transfer", "The referenced content type is not registered."))
 
-    entry = Repo.get(schema, record.entry_id) || Error.fail!("The referenced entry is missing.")
-    if Map.get(entry, :deleted_at), do: Error.fail!("The referenced entry was deleted.")
+    entry =
+      Repo.get(schema, record.entry_id) || Error.fail!(dgettext("content_transfer", "The referenced entry is missing."))
+
+    if Map.get(entry, :deleted_at), do: Error.fail!(dgettext("content_transfer", "The referenced entry was deleted."))
     Catalog.authorize!(actor, action, entry)
   end
 
@@ -156,13 +172,15 @@ defmodule Brando.Content.Transfer.Dependencies do
 
   defp authorize!(kind, _record, actor, action) when kind in ~w(markdown_source markdown_version) do
     if Brando.MarkdownSources.authorize(actor, if(action == :export, do: :read, else: action)) != :ok,
-      do: Error.fail!("You do not have permission to access this Markdown source.")
+      do: Error.fail!(dgettext("content_transfer", "You do not have permission to access this Markdown source."))
   end
 
   defp authorize!(_, record, actor, action), do: Catalog.authorize!(actor, action, record)
 
   defp describe("module", record, state) do
-    if record.source_module_id, do: Error.fail!("Shared module overrides are not supported by content transfer.")
+    if record.source_module_id,
+      do: Error.fail!(dgettext("content_transfer", "Shared module overrides are not supported by content transfer."))
+
     record = Repo.preload(record, [:refs, :vars])
     {table, state} = add("table_template", record.table_template_id, state)
     {parent, state} = add("module", record.parent_id, state)
@@ -265,7 +283,13 @@ defmodule Brando.Content.Transfer.Dependencies do
         total = Enum.reduce(state.files, 0, fn {_, file}, bytes -> bytes + byte_size(file) end)
 
         if !Map.has_key?(state.files, path) && total + byte_size(body) > 248_000_000,
-          do: Error.fail!("The originals exceed the bundle limit. Export fewer fields or omit media originals.")
+          do:
+            Error.fail!(
+              dgettext(
+                "content_transfer",
+                "The originals exceed the bundle limit. Export fewer fields or omit media originals."
+              )
+            )
 
         {%{"sha256" => sha, "bytes" => byte_size(body), "path" => path},
          %{state | files: Map.put(state.files, path, body)}}
@@ -304,13 +328,13 @@ defmodule Brando.Content.Transfer.Dependencies do
       [_, schema_name, id] ->
         schema =
           Enum.find(Brando.Authorization.Catalog.schemas(), &(inspect(&1) == schema_name || to_string(&1) == schema_name)) ||
-            Error.fail!("Unknown selected-entry metadata schema.")
+            Error.fail!(dgettext("content_transfer", "Unknown selected-entry metadata schema."))
 
         Repo.get_by(Brando.Content.Identifier, schema: schema, entry_id: Catalog.id!(id)) ||
-          Error.fail!("Selected-entry metadata references a missing identifier.")
+          Error.fail!(dgettext("content_transfer", "Selected-entry metadata references a missing identifier."))
 
       _ ->
-        Error.fail!("Selected-entry metadata has an invalid reference.")
+        Error.fail!(dgettext("content_transfer", "Selected-entry metadata has an invalid reference."))
     end
   end
 
