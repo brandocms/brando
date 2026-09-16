@@ -37,7 +37,7 @@ defmodule BrandoAdmin.Components.TextDiffTest do
 
   test "empty and unchanged content are distinct from deletion" do
     assert render("", "") =~ "No content"
-    assert render("Same content", "Same content") =~ "No text changes in this preview"
+    assert render("Same content", "Same content") =~ "No changes in this preview"
     assert render("Removed content", "") =~ "1 line removed"
     assert TextDiff.compare("Removed content", "").added == 0
   end
@@ -67,5 +67,21 @@ defmodule BrandoAdmin.Components.TextDiffTest do
       assert html =~ "Før → etter"
       refute html =~ "line added"
     end)
+  end
+
+  test "keyed lines distinguish identical filenames, escape text and bound structured previews" do
+    before = [%{text: "Image: cover.jpg", key: {:image, 1}, type: :media}]
+    after_lines = [%{text: "Image: cover.jpg", key: {:image, 2}, type: :media}]
+    diff = TextDiff.compare(before, after_lines)
+    assert diff.added == 1 && diff.removed == 1
+    html = render(before, after_lines)
+    assert html =~ "is-media"
+    refute html =~ "{:image"
+    assert TextDiff.compare(before, before).added == 0
+
+    document = render([], [%{text: "<script>unsafe</script>", key: 1}]) |> Floki.parse_fragment!()
+    assert Floki.find(document, "script") == []
+    assert TextDiff.compare([], List.duplicate(%{text: "a", key: nil}, 401)).truncated?
+    assert TextDiff.compare([], [%{text: String.duplicate("ø", 12_001)}]).truncated?
   end
 end

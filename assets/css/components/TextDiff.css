@@ -20,6 +20,9 @@
   .text-diff-line.is-ins { border-left-color: #78a985; background: #eef7ef; color: #285439; }
   .text-diff-line.is-del { border-left-color: #d29b91; background: #fdf0ee; color: #85463d; }
   .text-diff-line.is-eq { color: #68716b; }
+  .text-diff-line.is-heading .text-diff-text { font-weight: 500; }
+  .text-diff-line.is-media .text-diff-text { font-weight: 500; }
+  .text-diff-line.is-detail .text-diff-text { padding-left: 20px; font-size: 11px; }
   .text-diff-number, .text-diff-marker { padding: 4px 0; text-align: center; font-variant-numeric: tabular-nums; user-select: none; }
   .text-diff-number { font-size: 10px; opacity: .8; }
   .text-diff-marker { font-family: monospace; font-weight: 600; }

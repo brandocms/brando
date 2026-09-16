@@ -8,16 +8,18 @@ defmodule BrandoAdmin.Components.TextDiff do
 
   attr :id, :string, required: true
   attr :label, :string, required: true
-  attr :before, :string, required: true
-  attr :after, :string, required: true
+  attr :before, :any, required: true
+  attr :after, :any, required: true
   attr :description, :string, default: nil
   attr :note, :string, default: nil
   attr :empty_text, :string, default: nil
   attr :monospace, :boolean, default: false
 
   @doc """
-  A bounded line diff for plain text. Callers supply any serialization and
-  contextual labels; no text is interpreted as HTML. Parent layouts own spacing.
+  A bounded line diff for plain text or lists of `%{text: text, key: identity}`.
+  Optional line types (`:heading`, `:media`, `:detail`) provide visual hierarchy.
+  Keys distinguish equal labels with different identities; they are never rendered.
+  Callers supply serialization and contextual labels. All text is escaped.
   """
 
   def diff(assigns) do
@@ -50,7 +52,7 @@ defmodule BrandoAdmin.Components.TextDiff do
             )}
           </span>
           <span :if={@comparison.added == 0 && @comparison.removed == 0} class="is-unchanged">
-            {dgettext("admin_diff", "No text changes in this preview")}
+            {dgettext("admin_diff", "No changes in this preview")}
           </span>
         </div>
       </header>
@@ -58,10 +60,10 @@ defmodule BrandoAdmin.Components.TextDiff do
         :if={@comparison.rows != []}
         class="text-diff-lines"
         role="region"
-        aria-label={dgettext("admin_diff", "Text changes in %{field}", field: @label)}
+        aria-label={dgettext("admin_diff", "Changes in %{field}", field: @label)}
         tabindex="0"
       >
-        <div :for={row <- @comparison.rows} class={["text-diff-line", "is-#{row.kind}"]}>
+        <div :for={row <- @comparison.rows} class={["text-diff-line", "is-#{row.kind}", row[:type] && "is-#{row.type}"]}>
           <span class="text-diff-number" aria-hidden="true">{row.before}</span>
           <span class="text-diff-number" aria-hidden="true">{row.after}</span>
           <span class="text-diff-marker" aria-hidden="true">{marker(row.kind)}</span>
@@ -92,8 +94,9 @@ defmodule BrandoAdmin.Components.TextDiff do
       before_lines
       |> List.myers_difference(after_lines)
       |> Enum.map_reduce({1, 1}, fn {kind, lines}, position ->
-        Enum.map_reduce(lines, position, fn text, {old, new} ->
-          row = %{kind: kind, text: text, before: if(kind != :ins, do: old), after: if(kind != :del, do: new)}
+        Enum.map_reduce(lines, position, fn line, {old, new} ->
+          row = %{kind: kind, text: line.text, before: if(kind != :ins, do: old), after: if(kind != :del, do: new)}
+          row = if line.type, do: Map.put(row, :type, line.type), else: row
           {row, {old + if(kind == :ins, do: 0, else: 1), new + if(kind == :del, do: 0, else: 1)}}
         end)
       end)
@@ -110,10 +113,27 @@ defmodule BrandoAdmin.Components.TextDiff do
 
   defp lines(""), do: {[], false}
 
-  defp lines(text) do
+  defp lines(text) when is_binary(text) do
     preview = String.slice(text, 0, @max_characters)
-    lines = String.split(preview, ~r/\r\n|\n|\r/)
+    lines = Enum.map(String.split(preview, ~r/\r\n|\n|\r/), &%{text: &1, key: nil, type: nil})
     {Enum.take(lines, @max_lines), preview != text || length(lines) > @max_lines}
+  end
+
+  defp lines(lines) when is_list(lines) do
+    {preview, _, truncated?} =
+      Enum.reduce_while(Enum.with_index(lines), {[], 0, false}, fn {line, index}, {acc, used, _} ->
+        if index >= @max_lines || used >= @max_characters do
+          {:halt, {acc, used, true}}
+        else
+          text = String.slice(line.text, 0, @max_characters - used)
+          type = if line[:type] in [:heading, :media, :detail], do: line.type
+          normalized = %{text: text, key: line[:key], type: type}
+          next = {[normalized | acc], used + String.length(text) + 1, text != line.text}
+          if text != line.text, do: {:halt, next}, else: {:cont, next}
+        end
+      end)
+
+    {Enum.reverse(preview), truncated?}
   end
 
   defp marker(:ins), do: "+"
