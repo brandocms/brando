@@ -236,11 +236,7 @@
   .transfer-inline-error { color: #a05639; font-size: 11px; padding-top: 8px; }
   .transfer-content-preview { grid-column: 1 / -1; border-top: 1px solid #edf0e8; margin-top: 18px; }
   .transfer-content-preview summary { padding: 13px 0 0; color: #657459; }
-  .transfer-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding-top: 16px; }
-  .transfer-compare > div { min-width: 0; }
-  .transfer-compare h4 { font-size: 11px; color: var(--transfer-muted); margin-bottom: 7px; }
-  .transfer-compare pre { margin: 0; padding: 15px; border-radius: 5px; background: #f6f8f3; font-family: inherit; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 300px; overflow-y: auto; }
-  .transfer-compare > div + div pre { background: #f3f7fa; }
+  .admin-text-diff { margin-top: 20px; }
   .transfer-dependencies { padding-top: 32px; }
   .transfer-dependency-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; padding: 17px 0; border-bottom: 1px solid var(--transfer-line); }
   .transfer-dependency-row h3 { font-size: 13px; overflow-wrap: anywhere; }
@@ -285,7 +281,6 @@
     .transfer-scope { padding: 8px 10px; }
     .transfer-stats { grid-template-columns: repeat(2, 1fr); gap: 18px; }
     .transfer-mapping-row { grid-template-columns: 1fr; gap: 20px; padding: 20px; }
-    .transfer-compare { grid-template-columns: 1fr; }
     .transfer-destination-controls { grid-template-columns: 1fr; }
     .transfer-dependency-row { grid-template-columns: 1fr; gap: 12px; }
     .transfer-apply-bar { flex-direction: column; align-items: stretch; gap: 14px; bottom: 8px; }

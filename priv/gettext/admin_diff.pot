@@ -1,0 +1,71 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/brando_admin/components/text_diff.ex:45
+#, elixir-autogen, elixir-format
+msgid "%{count} line added"
+msgid_plural "%{count} lines added"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/text_diff.ex:37
+#, elixir-autogen, elixir-format
+msgid "%{count} line removed"
+msgid_plural "%{count} lines removed"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/text_diff.ex:122
+#, elixir-autogen, elixir-format
+msgid "Added:"
+msgstr ""
+
+#: lib/brando_admin/components/text_diff.ex:32
+#, elixir-autogen, elixir-format
+msgid "Before → after"
+msgstr ""
+
+#: lib/brando_admin/components/module_files.ex:194
+#, elixir-autogen, elixir-format
+msgid "Current → imported"
+msgstr ""
+
+#: lib/brando_admin/components/text_diff.ex:74
+#, elixir-autogen, elixir-format
+msgid "No content"
+msgstr ""
+
+#: lib/brando_admin/components/text_diff.ex:53
+#, elixir-autogen, elixir-format
+msgid "No text changes in this preview"
+msgstr ""
+
+#: lib/brando_admin/components/text_diff.ex:77
+#, elixir-autogen, elixir-format
+msgid "Preview shortened. More content exists beyond the lines shown."
+msgstr ""
+
+#: lib/brando_admin/components/text_diff.ex:123
+#, elixir-autogen, elixir-format
+msgid "Removed:"
+msgstr ""
+
+#: lib/brando_admin/components/text_diff.ex:61
+#, elixir-autogen, elixir-format
+msgid "Text changes in %{field}"
+msgstr ""
+
+#: lib/brando_admin/components/text_diff.ex:124
+#, elixir-autogen, elixir-format
+msgid "Unchanged:"
+msgstr ""

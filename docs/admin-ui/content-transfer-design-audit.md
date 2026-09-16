@@ -15,10 +15,12 @@ Reviewed the implemented E2E application in Chromium at 1440 × 1050 and
 | Entry selection | Whole entries are the default, with block fields available under Advanced. Checked controls and a sage selected card. Explicit string values for `aria-pressed`; stable list and button identities. Tab, Space and Enter work, and focus survives selection updates. |
 | Related content | Referenced entries appear in export review with an explicit Include entry action. Included relationships are remapped together; shared references remain visible for destination mapping. |
 | Entry review | Pale blue headers group the source entry, create/update choice, publication policy and editable destination keys. Creates show meaningful values in two columns; updates show changed values before and after. Owned content expands into readable details. |
+| Content diff | One unified text diff per block field, with muted red removals, sage additions, explicit −/+ markers, before/after line numbers and change counts. Unchanged lines provide context. Creates show additions without a fake empty-side deletion; append previews retain the current content. Inspected desktop and 390px wrapping. |
+| Reuse | `TextDiff.diff/1` owns the line comparison and shared styles. Transfer supplies its block-specific wording; module-file import review uses the same panel with monospace text. The admin design guide documents the component API and suitable future uses. |
 | Publication and recovery | New entries default to Draft with no schedule. Updates preserve destination publication unless changed explicitly. Conflicting keys block apply with inline feedback. Recovery explains whether it restores an existing entry or removes a newly created one. |
 | Dropdowns | Shared `admin-select` styling uses the form input tokens, 40px controls, 13px labels and a small inset chevron. Inspected publication and language at desktop and mobile widths, including open options and visible keyboard focus. Tab and arrow-key selection work. |
 | Review continuity | Expanded field comparisons and owned-record details retain their open state across LiveView patches while publication and language change. |
-| Norwegian | A dedicated catalog supplies 405 translated messages, including dropdown options, publication states, built-in field labels, validation and recovery feedback. Background operations preserve the user's locale. Verified a Norwegian import and recovery, plus invalid archive and conflicting URI feedback. Site-authored content, custom schema labels and application validation details depend on the consumer's content and catalogs. |
+| Norwegian | The transfer and shared diff catalogs supply 414 translated messages, including dropdown options, publication states, built-in field labels, diff labels and counts, validation and recovery feedback. Background operations preserve the user's locale. Verified a Norwegian import and recovery, plus invalid archive and conflicting URI feedback. Site-authored content, custom schema labels and application validation details depend on the consumer's content and catalogs. |
 | Mobile navigation | Compact toolbar labels fit without hiding icons. A sticky selection shortcut reaches the export summary. The shortcut stays mounted so visibility changes preserve keyboard focus. |
 | Review action | Removed inherited global primary-button sizing. Measured 36px height and a centered 16px icon. Blue ready state, neutral disabled state, aligned footer, and a stable upload-panel minimum height. |
 | Upload states | Empty picker, uploading progress, uploaded bundle and invalid-file feedback. Uploaded files replace the contradictory native “No file chosen” message. Verified removal, replacement and a long filename at mobile width. |
@@ -37,6 +39,11 @@ Reviewed the implemented E2E application in Chromium at 1440 × 1050 and
 - The dropdown and translation follow-up passed 52 focused Elixir regressions;
   all Norwegian catalog entries have translations and matching interpolation
   placeholders. Compilation with warnings treated as errors passed.
+- Six diff component tests passed: additions, replacement with unchanged context,
+  deletion and empty states, escaped HTML, bounded previews and Norwegian plurals.
+  The browser workflows also assert create/update/append diff contents.
+- Six module-file LiveView tests and both module-file browser workflows passed
+  with the shared diff component, including desktop/mobile review.
 - The consumer Project integration test passed with its client, owned category
   join, gallery and self-referencing entry selection, including recovery.
 - Export, upload and expanded import review fit the 390px viewport without
@@ -46,6 +53,10 @@ Reviewed the implemented E2E application in Chromium at 1440 × 1050 and
 Browser measurements remain attached to the focused Playwright test results.
 Screenshot inspection complements those measurements; this audit covers the
 Chromium E2E application, not every consumer font or browser.
+
+The block diff compares the readable text preview, not rendered layout or media.
+Each side is limited to 12,000 characters and 400 lines, with a visible notice
+when shortened. Media and other fields remain available in their review sections.
 
 ## Screenshots
 
@@ -65,6 +76,11 @@ Chromium E2E application, not every consumer font or browser.
 - [Publication options, open](content-transfer-publication-open.png)
 - [Expanded review, mobile](content-transfer-review-mobile.png)
 - [Update comparison](content-transfer-update-desktop.png)
+- [Content diff, desktop](content-transfer-content-diff.png)
+- [Content diff, mobile](content-transfer-content-diff-mobile.png)
+- [Append diff](content-transfer-content-diff-append.png)
+- [Shared component in module import](module-files-diff.png)
+- [Module import diff, mobile](module-files-diff-mobile.png)
 - [Related-entry inclusion](content-transfer-related-desktop.png)
 - [Advanced block-field review, desktop](content-transfer-fields-review-desktop.png)
 - [Advanced block-field review, mobile](content-transfer-fields-review-mobile.png)

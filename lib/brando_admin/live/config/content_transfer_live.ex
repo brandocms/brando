@@ -6,7 +6,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
   alias Brando.Authorization.Boundary
   alias Brando.Content.Transfer
   alias Brando.Content.Transfer.{Catalog, Dependencies, Entries, EntryCodec, Labels, Portable}
-  alias BrandoAdmin.Components.Workspace
+  alias BrandoAdmin.Components.{TextDiff, Workspace}
 
   def __authorization__, do: {:read, :utilities}
 
@@ -638,14 +638,25 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 </p>
                 <p :if={field.issue} class="transfer-inline-error">{field.issue}</p>
               </div>
-              <details class="transfer-content-preview">
-                <summary>{dgettext("content_transfer", "Compare content")}</summary><div class="transfer-compare">
-                  <div>
-                    <h4>{dgettext("content_transfer", "Current content")}</h4><pre>{if field.destination, do: content_text(Enum.map(field.current, &Brando.Drafts.Params.snapshot(&1.block))), else: dgettext("content_transfer", "Choose a destination to compare.")}</pre>
-                  </div><div>
-                    <h4>{dgettext("content_transfer", "Incoming content")}</h4><pre>{content_text(field.source["blocks"])}</pre>
-                  </div>
-                </div>
+              <details
+                id={"field-diff-#{field.source["key"]}"}
+                class="transfer-content-preview"
+                phx-mounted={JS.ignore_attributes("open")}
+              >
+                <summary>{dgettext("content_transfer", "Compare content")}</summary>
+                <p :if={!field.destination} class="transfer-field-effect">
+                  {dgettext("content_transfer", "Choose a destination to compare.")}
+                </p>
+                <TextDiff.diff
+                  :if={field.destination}
+                  id={"field-text-diff-#{field.source["key"]}"}
+                  label={field_label(field.source["field"])}
+                  before={field_text(field, :before)}
+                  after={field_text(field, :after)}
+                  description={dgettext("content_transfer", "Current → after import")}
+                  empty_text={dgettext("content_transfer", "No block content")}
+                  note={dgettext("content_transfer", "Text preview only. Review media and other fields separately.")}
+                />
               </details>
             </article>
           </div>
@@ -811,14 +822,20 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                   )}</span>
                 </div>
               </div>
-              <div class="transfer-compare">
-                <div>
-                  <h4>{dgettext("content_transfer", "Current block content")}</h4><pre>{if item.entry && item.mode == "update", do: content_text(Enum.flat_map(Catalog.fields(item.entry.__struct__), fn field -> Enum.map(Map.get(item.entry, field.association, []), &Brando.Drafts.Params.snapshot(&1.block)) end)), else: dgettext("content_transfer", "New entry")}</pre>
-                </div>
-                <div>
-                  <h4>{dgettext("content_transfer", "Incoming block content")}</h4><pre>{content_text(Map.values(item.source["data"]["blocks"]) |> List.flatten())}</pre>
-                </div>
-              </div>
+              <TextDiff.diff
+                :for={{field, before_text, after_text} <- entry_block_texts(item)}
+                id={"entry-text-diff-#{item.source["key"]}-#{field}"}
+                label={field_label(field)}
+                before={before_text}
+                after={after_text}
+                description={
+                  if item.mode == "create",
+                    do: dgettext("content_transfer", "New entry · all content is added"),
+                    else: dgettext("content_transfer", "Current → after import")
+                }
+                empty_text={dgettext("content_transfer", "No block content")}
+                note={dgettext("content_transfer", "Text preview only. Review media and other fields separately.")}
+              />
               <details
                 id={"entry-owned-#{item.source["key"]}"}
                 class="transfer-owned-preview"
@@ -1713,7 +1730,34 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
 
   defp refresh_message(_), do: dgettext("content_transfer", "Content rendered and identifiers refreshed.")
 
-  defp content_text([]), do: dgettext("content_transfer", "No blocks")
+  defp entry_block_texts(item) do
+    current =
+      if item.entry && item.mode == "update" do
+        Map.new(Catalog.fields(item.entry.__struct__), fn field ->
+          {field.name, Enum.map(Map.get(item.entry, field.association, []), &Brando.Drafts.Params.snapshot(&1.block))}
+        end)
+      else
+        %{}
+      end
+
+    incoming = item.source["data"]["blocks"]
+
+    (Map.keys(current) ++ Map.keys(incoming))
+    |> Enum.uniq()
+    |> Enum.sort()
+    |> Enum.map(&{&1, content_text(Map.get(current, &1, [])), content_text(Map.get(incoming, &1, []))})
+  end
+
+  defp field_text(field, :before), do: content_text(Enum.map(field.current, &Brando.Drafts.Params.snapshot(&1.block)))
+
+  defp field_text(%{mode: "append"} = field, :after) do
+    (Enum.map(field.current, &Brando.Drafts.Params.snapshot(&1.block)) ++ field.source["blocks"])
+    |> content_text()
+  end
+
+  defp field_text(field, :after), do: content_text(field.source["blocks"])
+
+  defp content_text([]), do: ""
 
   defp content_text(blocks) do
     Portable.walk(blocks, fn block ->
@@ -1732,7 +1776,6 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
       Enum.join([block["description"] || Labels.field(block["type"] || "block") | text ++ vars], "\n")
     end)
     |> Enum.join("\n\n")
-    |> String.slice(0, 12_000)
   end
 
   defp scope_label(socket) do

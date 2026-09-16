@@ -1,0 +1,64 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: no\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/brando_admin/components/text_diff.ex:45
+#, elixir-autogen, elixir-format
+msgid "%{count} line added"
+msgid_plural "%{count} lines added"
+msgstr[0] "%{count} linje lagt til"
+msgstr[1] "%{count} linjer lagt til"
+
+#: lib/brando_admin/components/text_diff.ex:37
+#, elixir-autogen, elixir-format
+msgid "%{count} line removed"
+msgid_plural "%{count} lines removed"
+msgstr[0] "%{count} linje fjernet"
+msgstr[1] "%{count} linjer fjernet"
+
+#: lib/brando_admin/components/text_diff.ex:122
+#, elixir-autogen, elixir-format
+msgid "Added:"
+msgstr "Lagt til:"
+
+#: lib/brando_admin/components/text_diff.ex:32
+#, elixir-autogen, elixir-format
+msgid "Before → after"
+msgstr "Før → etter"
+
+#: lib/brando_admin/components/module_files.ex:194
+#, elixir-autogen, elixir-format
+msgid "Current → imported"
+msgstr "Nåværende → importert"
+
+#: lib/brando_admin/components/text_diff.ex:74
+#, elixir-autogen, elixir-format
+msgid "No content"
+msgstr "Ikke noe innhold"
+
+#: lib/brando_admin/components/text_diff.ex:53
+#, elixir-autogen, elixir-format
+msgid "No text changes in this preview"
+msgstr "Ingen tekstendringer i denne forhåndsvisningen"
+
+#: lib/brando_admin/components/text_diff.ex:77
+#, elixir-autogen, elixir-format
+msgid "Preview shortened. More content exists beyond the lines shown."
+msgstr "Forhåndsvisningen er forkortet. Det finnes mer innhold enn linjene som vises."
+
+#: lib/brando_admin/components/text_diff.ex:123
+#, elixir-autogen, elixir-format
+msgid "Removed:"
+msgstr "Fjernet:"
+
+#: lib/brando_admin/components/text_diff.ex:61
+#, elixir-autogen, elixir-format
+msgid "Text changes in %{field}"
+msgstr "Tekstendringer i %{field}"
+
+#: lib/brando_admin/components/text_diff.ex:124
+#, elixir-autogen, elixir-format
+msgid "Unchanged:"
+msgstr "Uendret:"

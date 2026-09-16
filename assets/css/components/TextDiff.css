@@ -1,0 +1,32 @@
+.admin-text-diff {
+  min-width: 0;
+  font-family: "Main", sans-serif;
+  color: #272b2a;
+  border: 1px solid #dce4df;
+  border-radius: 8px;
+  overflow: hidden;
+  .admin-text-diff-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 14px 16px; background: #f8faf8; border-bottom: 1px solid #e4e9e5; }
+  .admin-text-diff-heading > div:first-child { display: grid; gap: 4px; }
+  .admin-text-diff-heading h4 { margin: 0; font-size: 13px; font-weight: 500; color: #272b2a; }
+  .admin-text-diff-heading p { font-size: 11px; line-height: 1.5; color: #626b66; margin: 0; }
+  .text-diff-counts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .text-diff-counts > span { display: inline-flex; align-items: center; gap: 5px; padding: 3px 7px; border-radius: 4px; font-size: 11px; line-height: 18px; white-space: nowrap; }
+  .text-diff-counts .is-added { background: #e7f2e9; color: #326343; }
+  .text-diff-counts .is-removed { background: #fae9e6; color: #965045; }
+  .text-diff-counts .is-unchanged { color: #626b66; background: #edf0ed; white-space: normal; }
+  .text-diff-lines { padding: 8px 0; max-height: 380px; overflow-y: auto; overscroll-behavior: contain; }
+  .text-diff-lines:focus-visible { outline: 2px solid #47775d; outline-offset: -2px; }
+  .text-diff-line { display: grid; grid-template-columns: 30px 30px 24px minmax(0, 1fr); min-height: 28px; border-left: 3px solid transparent; font-size: 12px; line-height: 20px; }
+  .text-diff-line.is-ins { border-left-color: #78a985; background: #eef7ef; color: #285439; }
+  .text-diff-line.is-del { border-left-color: #d29b91; background: #fdf0ee; color: #85463d; }
+  .text-diff-line.is-eq { color: #68716b; }
+  .text-diff-number, .text-diff-marker { padding: 4px 0; text-align: center; font-variant-numeric: tabular-nums; user-select: none; }
+  .text-diff-number { font-size: 10px; opacity: .8; }
+  .text-diff-marker { font-family: monospace; font-weight: 600; }
+  .text-diff-text { padding: 4px 16px 4px 8px; white-space: pre-wrap; overflow-wrap: anywhere; text-decoration: none; border-left: 1px solid #536b5712; }
+  footer { display: grid; gap: 5px; padding: 10px 16px; border-top: 1px solid #e4e9e5; background: #fcfdfb; }
+  footer p { font-size: 11px; line-height: 1.5; color: #626b66; margin: 0; }
+  .text-diff-truncated { color: #88572f; }
+  .text-diff-empty { padding: 16px; font-size: 12px; }
+  &.is-code .text-diff-text { font-family: Mono, monospace; }
+}
