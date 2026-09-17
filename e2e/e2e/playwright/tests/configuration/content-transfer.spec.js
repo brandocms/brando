@@ -18,6 +18,11 @@ test('related entries can be included from export review', async ({ page }, test
   await page.getByRole('button', { name: 'Select Campaign launch', exact: true }).click()
   await page.getByRole('button', { name: 'Prepare export', exact: true }).click()
   await expect(page.locator('.transfer-related')).toContainText('Destination page')
+  const downloading = page.waitForEvent('download')
+  await page.getByRole('link', { name: 'Download content bundle' }).click()
+  const file = await downloading
+  expect(file.suggestedFilename()).toBe('brando-content.zip')
+  expect((await readFile(await file.path())).subarray(0, 2).toString()).toBe('PK')
   await capturePage(page, { path: testInfo.outputPath('entries-related-desktop.png') })
   await page.getByRole('button', { name: 'Include entry', exact: true }).click()
   await expect(page.locator('.transfer-review-list article')).toHaveCount(2)

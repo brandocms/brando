@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.ContentTransferDownloadController do
   use BrandoAdmin, :controller
   alias Brando.Content.Transfer
-  alias Brando.Content.Transfer.{Catalog, Dependencies, Error}
+  alias Brando.Content.Transfer.{Catalog, Dependencies, EntryCodec, Error}
 
   def show(conn, %{"token" => token}) do
     user = conn.assigns.current_user
@@ -14,6 +14,11 @@ defmodule BrandoAdmin.ContentTransferDownloadController do
           %{scope: scope, exported: exported} when is_binary(scope) ->
             unless scope == Transfer.scope(), do: Error.fail!("Wrong workspace.")
 
+            Enum.each(exported.bundle["entries"] || [], fn entry ->
+              id = entry["key"] |> String.split(":") |> List.last() |> Catalog.id!()
+              EntryCodec.load!(entry["schema"], id, user, :export)
+            end)
+
             Enum.each(exported.bundle["fields"], fn field ->
               # Source IDs are scoped selector metadata, never import bindings.
               id = field["key"] |> String.split(":") |> Enum.at(-2) |> Catalog.id!()
@@ -21,7 +26,7 @@ defmodule BrandoAdmin.ContentTransferDownloadController do
             end)
 
             Enum.each(exported.bundle["dependencies"], fn {_, dep} ->
-              Dependencies.load!(dep["kind"], dep["source_id"], user, :export)
+              Dependencies.load!(dep, dep["source_id"], user, :export)
             end)
 
             exported.binary
