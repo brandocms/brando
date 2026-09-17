@@ -300,12 +300,12 @@ if Code.ensure_loaded?(Igniter) do
       Next, in this application:
         mix deps.get
         mix compile --warnings-as-errors
-        mix brando.assets.setup
-        mix ecto.create
-        mix ecto.migrate
-        mix brando.gen.languages
-        mix brando.gen.admin
+        mix brando.setup
         mix phx.server
+
+      mix brando.setup builds assets, creates and migrates the database, prompts
+      for a superuser and seeds default content. Each step is skipped when its
+      result already exists; run the individual tasks instead to control them.
 
       Review migrations before applying them. Asset setup uses the selected Brando
       checkout's JS via Yalc; pass --source /path/to/matching/brando/assets when

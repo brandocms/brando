@@ -94,6 +94,84 @@ defmodule Mix.Brando.Igniter.SiteTest do
     end
   end
 
+  test "replacing the homepage retires the generated request test and preserves a customized one" do
+    generated = """
+    defmodule StudioWeb.PageControllerTest do
+      use StudioWeb.ConnCase
+
+      test "GET /", %{conn: conn} do
+        conn = get(conn, ~p"/")
+        assert html_response(conn, 200) =~ "Peace of mind from prototype to production"
+      end
+    end
+    """
+
+    path = "test/studio_web/controllers/page_controller_test.exs"
+
+    result =
+      IgniterCase.phoenix_project(
+        files: %{
+          "lib/studio_web/router.ex" => """
+          defmodule StudioWeb.Router do
+            use StudioWeb, :router
+            import Brando.Router
+            admin_routes "/admin" do
+              live "/", StudioAdmin.DashboardLive
+            end
+            scope "/", StudioWeb do
+              pipe_through :browser
+              get "/", PageController, :home
+            end
+          end
+          """,
+          path => generated
+        }
+      )
+      |> generate(["--replace-phoenix-home", "--yes"])
+
+    assert result.issues == []
+    assert path in result.rms
+    assert Enum.any?(result.notices, &String.contains?(&1, "Removed #{path}"))
+
+    customized =
+      IgniterCase.phoenix_project(
+        files: %{
+          "lib/studio_web/router.ex" => """
+          defmodule StudioWeb.Router do
+            use StudioWeb, :router
+            import Brando.Router
+            admin_routes "/admin" do
+              live "/", StudioAdmin.DashboardLive
+            end
+            scope "/", StudioWeb do
+              pipe_through :browser
+              get "/", PageController, :home
+            end
+          end
+          """,
+          path => """
+          defmodule StudioWeb.PageControllerTest do
+            use StudioWeb.ConnCase
+
+            test "GET /", %{conn: conn} do
+              conn = get(conn, ~p"/")
+              assert html_response(conn, 200) =~ "Our studio"
+            end
+
+            test "GET /health", %{conn: conn} do
+              assert get(conn, "/health").status == 200
+            end
+          end
+          """
+        }
+      )
+      |> generate(["--replace-phoenix-home", "--yes"])
+
+    assert customized.issues == []
+    assert customized.rms == []
+    assert Enum.any?(customized.notices, &String.contains?(&1, "was preserved"))
+  end
+
   test "site generation composes with installation and custom owned files block replacement" do
     result = project() |> Igniter.compose_task(Mix.Tasks.Brando.Install, ["--public-site", "--replace-phoenix-home"])
     assert result.issues == []

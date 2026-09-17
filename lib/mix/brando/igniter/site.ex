@@ -25,12 +25,14 @@ if Code.ensure_loaded?(Igniter) do
         |> files(project)
         |> Config.configure_new("brando.exs", :brando, [:page_html_module], html)
         |> routes(project, state, controller)
+        |> home_test(project, state)
         |> Igniter.add_notice("""
         CMS pages are prepared under #{inspect(project.web_module)}.CMS.
         The root page and unmatched public paths use published Brando pages.
         Phoenix controllers, templates and layouts remain available in your application.
-        After asset/database/account setup, create and publish a Page with URI index
-        and template index.html in /admin/pages. No content was created by this plan.
+        No content was created by this plan: mix brando.setup seeds a published
+        index page, or create one yourself in /admin/pages with URI index and
+        template index.html. Until then / has no page to render.
         """)
       else
         {:error, %Igniter{} = igniter} -> igniter
@@ -113,6 +115,62 @@ if Code.ensure_loaded?(Igniter) do
       end
     rescue
       error in [Mix.Error, ErlangError] -> {:error, Exception.message(error)}
+    end
+
+    defp home_test(igniter, _project, %{home?: false}), do: igniter
+
+    defp home_test(igniter, project, _state) do
+      path = "test/#{Macro.underscore(project.web_module)}/controllers/page_controller_test.exs"
+
+      if Igniter.exists?(igniter, path) do
+        igniter = Igniter.include_existing_file(igniter, path)
+        contents = igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)
+
+        if generated_home_test?(contents, project) do
+          igniter
+          |> Igniter.rm(path)
+          |> Igniter.add_notice("""
+          Removed #{path}. It asserted the Phoenix homepage that CMS pages now own.
+          Its controller, templates and layouts remain; write request tests against
+          published pages when your content setup is in place.
+          """)
+        else
+          Igniter.add_notice(igniter, """
+          #{path} was preserved and still expects the replaced Phoenix homepage.
+          Update its expectations for CMS pages before running the test suite.
+          """)
+        end
+      else
+        igniter
+      end
+    end
+
+    # Recognizes the unmodified `mix phx.new` homepage request test, which cannot
+    # pass once CMS pages own `/`. Customized tests are preserved with a notice.
+    defp generated_home_test?(contents, project) do
+      case Sourceror.parse_string(contents) do
+        {:ok, ast} ->
+          {_ast, %{module: module, tests: tests}} =
+            Macro.prewalk(ast, %{module: nil, tests: []}, fn
+              {:defmodule, _, [{:__aliases__, _, segments} | _]} = node, acc ->
+                {node, %{acc | module: acc.module || Module.concat(segments)}}
+
+              # Sourceror wraps literals in :__block__ nodes, so a test name
+              # arrives as {:__block__, meta, ["GET /"]} rather than a binary.
+              {:test, _, [{:__block__, _, [name]} | _]} = node, acc when is_binary(name) ->
+                {node, %{acc | tests: [name | acc.tests]}}
+
+              node, acc ->
+                {node, acc}
+            end)
+
+          module == Module.concat(project.web_module, PageControllerTest) and
+            length(tests) == 1 and String.contains?(contents, ~s(~p"/")) and
+            String.contains?(contents, "html_response(conn, 200)")
+
+        _ ->
+          false
+      end
     end
 
     defp files(igniter, project) do

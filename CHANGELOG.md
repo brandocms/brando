@@ -351,6 +351,24 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Features
 
+- Add `mix brando.setup`, which runs the operational steps after
+  `mix brando.install`: asset builds, `ecto.create`/`ecto.migrate`, a superuser
+  account and default content seeds. Every step is skipped when its result
+  already exists, so a rerun after a failure resumes instead of duplicating.
+  Skip steps with `--no-assets`, `--no-db`, `--no-account` and `--no-seeds`;
+  supply `--email`, `--name` and `--password` for an unattended account.
+
+- Add `mix brando.gen.seeds`, seeding the content a new installation needs
+  before its first request succeeds: identity and SEO per configured language,
+  a Hero and a Text module, a published `index` page built from them, a `main`
+  navigation menu and a `partials/footer` fragment. Previously a fresh install
+  had no published page, so `/` responded 404 until one was created by hand.
+  The seeds are idempotent and never modify existing content.
+
+- `mix brando.install --public-site --replace-phoenix-home` now retires the
+  generated Phoenix homepage request test along with the route it covers.
+  A customized test is preserved with a notice instead.
+
 - Add bidirectional module-definition DSL export/import with adjacent HEEx or
   Liquid files, complete ref/var settings, child and table-template dependencies,
   baseline conflict checks, dry-run plans and atomic imports. The new

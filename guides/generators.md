@@ -134,10 +134,25 @@ own CMS templates while preserving your Phoenix PageHTML and layouts. Templates
 under `priv/templates/brando.gen.site` override packaged defaults. No page or
 account is created by this source generator.
 
-## Build assets
+## Run setup
 
 ```sh
 mix compile --warnings-as-errors
+mix brando.setup
+```
+
+`brando.setup` composes the operational steps an installed application needs:
+asset builds, `ecto.create`/`ecto.migrate`, a superuser account, and default
+content seeds. Each step is skipped when its result already exists, so a rerun
+after a failure resumes instead of duplicating. Skip steps with `--no-assets`,
+`--no-db`, `--no-account` and `--no-seeds`, and supply `--email`, `--name` and
+`--password` for an unattended account. The sections below describe the same
+steps as individual tasks, which is what to reach for when you want to control
+them separately.
+
+## Build assets
+
+```sh
 mix brando.assets.setup
 ```
 
@@ -162,14 +177,23 @@ mix ecto.create
 mix ecto.migrate
 mix brando.gen.languages
 mix brando.gen.admin
+mix brando.gen.seeds
 mix phx.server
 ```
 
 The language task creates identity/SEO defaults and prints language configuration;
 choose English (`en`) for the initial defaults. The admin task prompts for account
 details. Open `/admin/login` and sign in. Account creation and database operations
-are separate from the Igniter source plan. Existing Phoenix seeds are preserved;
-no Brando sample seeds run automatically.
+are separate from the Igniter source plan.
+
+`brando.gen.seeds` creates the content a new site needs before its first request
+succeeds: identity and SEO per configured language when missing, a Hero and a
+Text module, a published `index` page built from them, a `main` navigation menu
+and a `partials/footer` fragment. It owns an account with `--user ID`, defaulting
+to the oldest active superuser. Existing content of each kind is left untouched,
+so the task is safe to rerun; it is a starting point for editing in the admin,
+not a migration path. Without it, `/` has no published page and responds 404.
+Your application's own `priv/repo/seeds.exs` is preserved and never run for you.
 
 For `single`/`multi`, provision the site/environment after public migrations and
 initialize content inside that environment as described in the tenancy guide.
@@ -317,7 +341,9 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.gen.backend` / `brando.gen.frontend` | Reviewed asset scaffolds with conflict checks |
 | `brando.assets.setup` | Operational Yalc installation and consumer builds |
 | `brando.gen.blueprint_migration` | Reviewed migration/snapshot pair with stale-plan checks; database application is separate |
+| `brando.setup` | Operational post-install setup: assets, database, account, seeds |
 | `brando.gen.languages` / `brando.gen.admin` | Operational language/account initialization |
+| `brando.gen.seeds` | Operational default content: identity, modules, index page, menu |
 | `brando.setup.tenancy` | Igniter tenancy source preparation |
 | `brando.migrate_to_tenant` | Operational data conversion |
 | `brando.gen.sitemap` / `brando.gen.mail` / `brando.gen.authorization` | Reviewed auxiliary modules with conflict checks |

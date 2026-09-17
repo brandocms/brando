@@ -35,19 +35,7 @@ defmodule Mix.Tasks.Brando.Gen.Admin do
       """
     ])
 
-    # insert admin user
-    hashed_password = Bcrypt.hash_pwd_salt(password)
-
-    user = %Brando.Users.User{
-      name: name,
-      email: email,
-      password: hashed_password,
-      avatar: nil,
-      role: :superuser,
-      language: :en
-    }
-
-    Brando.Repo.insert!(user)
+    Brando.Setup.Account.create_superuser(%{email: email, name: name, password: password})
 
     Mix.shell().info([:green, "\n==> Done.\n"])
   end
