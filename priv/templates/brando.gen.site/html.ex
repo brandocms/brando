@@ -6,7 +6,6 @@ defmodule <%= web_module %>.CMS.PageHTML do
   def default(assigns) do
     ~H"""
     <main id="content">
-      <h1>{@page.title}</h1>
       {@page}
     </main>
     """

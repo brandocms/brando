@@ -23,6 +23,7 @@ defmodule Brando.Setup.Seeds do
 
   @hero_uid "brando-default-hero"
   @text_uid "brando-default-text"
+  @columns_uid "brando-default-columns"
 
   @doc """
   Seeds default content for every configured language.
@@ -132,10 +133,10 @@ defmodule Brando.Setup.Seeds do
             help_text: "Page introduction with a heading and a lead paragraph",
             class: "hero",
             code: """
-            <section b-tpl="hero" class="hero">
+            <section b-tpl="hero">
               <div class="inner">
                 {% ref refs.title %}
-                {% ref refs.lead %}
+                <div class="lead">{% ref refs.lead %}</div>
               </div>
             </section>
             """,
@@ -156,7 +157,7 @@ defmodule Brando.Setup.Seeds do
             help_text: "A section of rich text",
             class: "text",
             code: """
-            <section b-tpl="text" class="text">
+            <section b-tpl="text">
               <div class="inner">
                 {% ref refs.text %}
               </div>
@@ -165,6 +166,44 @@ defmodule Brando.Setup.Seeds do
             sequence: 1,
             vars: [],
             refs: [text_ref("text", "Text", 0)]
+          }
+        end),
+      columns:
+        upsert_module(@columns_uid, user, fn ->
+          %Content.Module{
+            uid: @columns_uid,
+            name: "Columns",
+            namespace: "general",
+            help_text: "Three columns, each with a heading and a paragraph",
+            class: "columns",
+            code: """
+            <section b-tpl="columns">
+              <div class="inner">
+                <div class="column">
+                  {% ref refs.first_title %}
+                  {% ref refs.first_text %}
+                </div>
+                <div class="column">
+                  {% ref refs.second_title %}
+                  {% ref refs.second_text %}
+                </div>
+                <div class="column">
+                  {% ref refs.third_title %}
+                  {% ref refs.third_text %}
+                </div>
+              </div>
+            </section>
+            """,
+            sequence: 2,
+            vars: [],
+            refs: [
+              header_ref("first_title", 2, "First heading", 0),
+              text_ref("first_text", "First paragraph", 1),
+              header_ref("second_title", 2, "Second heading", 2),
+              text_ref("second_text", "Second paragraph", 3),
+              header_ref("third_title", 2, "Third heading", 4),
+              text_ref("third_text", "Third paragraph", 5)
+            ]
           }
         end)
     }
@@ -221,18 +260,45 @@ defmodule Brando.Setup.Seeds do
           sequence: 0,
           entry_blocks: [
             module_block(modules.hero, 0, [
-              header_ref("title", 1, "Welcome to #{site_name()}", 0),
+              header_ref("title", 1, site_name(), 0),
               text_ref(
                 "lead",
-                "This page was created by <code>mix brando.setup</code>. Edit it in the admin, or replace it with your own content.",
+                "Your site is running on Brando. This page was seeded by " <>
+                  "<code>mix brando.setup</code> — every section below is a block you can " <>
+                  "edit, reorder or delete in the admin.",
                 1
               )
             ]),
             module_block(modules.text, 1, [
               text_ref(
                 "text",
-                "Sign in at <a href=\"/admin\">/admin</a> to edit pages, modules and navigation.",
+                "Sign in at <a href=\"/admin\">/admin</a> with the account you just created. " <>
+                  "Start by replacing this page's content with your own, then build the " <>
+                  "modules your design needs.",
                 0
+              )
+            ]),
+            module_block(modules.columns, 2, [
+              header_ref("first_title", 2, "Pages", 0),
+              text_ref(
+                "first_text",
+                "Pages are composed of blocks. Open this page under Pages to see the three " <>
+                  "blocks that make it up, and add another from the module picker.",
+                1
+              ),
+              header_ref("second_title", 2, "Modules", 2),
+              text_ref(
+                "second_text",
+                "A module is a small template with named refs. The Hero, Text and Columns " <>
+                  "modules rendering this page live under Configuration → Modules.",
+                3
+              ),
+              header_ref("third_title", 2, "Navigation", 4),
+              text_ref(
+                "third_text",
+                "The main menu is under Navigation. Menus and their items are content too, " <>
+                  "so they are edited rather than written into templates.",
+                5
               )
             ])
           ]

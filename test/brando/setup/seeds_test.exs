@@ -28,13 +28,16 @@ defmodule Brando.Setup.SeedsTest do
 
       # Repo inserts bypass the context rendering callbacks, so the seeds render
       # the entry themselves. Without that the first request renders nothing.
-      assert page.rendered_blocks =~ "Welcome to"
       assert page.rendered_blocks =~ "b-tpl=\"hero\""
       assert page.rendered_blocks =~ "b-tpl=\"text\""
+      assert page.rendered_blocks =~ "b-tpl=\"columns\""
+      assert page.rendered_blocks =~ "<h1>"
+      assert page.rendered_blocks =~ "mix brando.setup"
 
       assert Brando.Repo.get_by(Navigation.Menu, key: "main", language: :en)
       assert Brando.Repo.get_by(Content.Module, uid: "brando-default-hero")
       assert Brando.Repo.get_by(Content.Module, uid: "brando-default-text")
+      assert Brando.Repo.get_by(Content.Module, uid: "brando-default-columns")
       assert Brando.Repo.get_by(Pages.Fragment, parent_key: "partials", key: "footer")
       assert {:ok, _identity} = Brando.Sites.get_identity(%{matches: %{language: :en}})
       assert {:ok, _seo} = Brando.Sites.get_seo(%{matches: %{language: :en}})

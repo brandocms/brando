@@ -8,23 +8,80 @@ main {
   @space padding-top block;
 }
 
-[b-tpl="example"] {
+/**
+ * Styles for the modules created by `mix brando.gen.seeds`. Replace them as
+ * your own modules take over; the seeded modules are a starting point.
+ */
+
+[b-tpl="hero"] {
   @space container;
 
   .inner {
-    @column 8/12 >=ipad_portrait;
-    @column-offset 2:1/12 >=ipad_portrait;
+    @column 10/12 $lg;
+    @column 6/6 $sm;
+  }
 
-    @column 5/6 mobile;
+  h1 {
+    @fontsize xl/1;
+    @space margin-bottom xs;
+  }
 
-    h1 {
-      @fontsize xl/1;
-      @space margin-bottom block;
+  .lead {
+    @space width 8/10 $lg;
+
+    .paragraph {
+      @fontsize base/1.4;
+      @color fg dark;
+    }
+  }
+}
+
+[b-tpl="text"] {
+  @space container;
+
+  .inner {
+    @column 8/12 $lg;
+    @column-offset 2:1/12 $lg;
+    @column 6/6 $sm;
+  }
+
+  .paragraph {
+    @fontsize base/1.6;
+  }
+
+  .paragraph + .paragraph {
+    @space margin-top xs;
+  }
+}
+
+[b-tpl="columns"] {
+  @space container;
+
+  .inner {
+    @display flex/row/wrap;
+    justify-content: space-between;
+  }
+
+  .column {
+    @column 4/12 $lg;
+    @column 6/6 $sm;
+    @space padding-top xs;
+    @color border-top black;
+    border-top: 1px solid;
+
+    h2 {
+      @fontsize base/1.2;
+      @space margin-bottom xs;
     }
 
-    p {
+    .paragraph {
       @fontsize base/1.5;
+      @color fg gray.900;
     }
+  }
+
+  .column + .column {
+    @space margin-top xs $sm;
   }
 }
 
