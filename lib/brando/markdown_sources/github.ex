@@ -25,6 +25,67 @@ defmodule Brando.MarkdownSources.GitHub do
     end
   end
 
+  @doc "Lists ordinary Markdown files in a folder, including subfolders, at one verified commit."
+  def list_documents(connection, %{ref: ref, folder: folder}) do
+    client = Application.get_env(:brando, :markdown_sources_http, Brando.MarkdownSources.HTTP)
+    base = "/repos/" <> connection.repository
+    branch = String.replace_prefix(ref, "refs/", "")
+    folder = String.trim(folder, "/")
+
+    with true <- valid_folder?(folder),
+         true <-
+           Brando.MarkdownSources.Source.changeset(%Brando.MarkdownSources.Source{}, %{
+             name: "Folder",
+             connection: connection.key,
+             ref: ref,
+             path: "README.md"
+           }).valid?,
+         {:ok, %{"id" => id, "private" => false}} when id == connection.repository_id <- client.get(base),
+         {:ok, %{"object" => %{"type" => "commit", "sha" => commit}}} <-
+           client.get(base <> "/git/ref/" <> encode_path(branch)),
+         true <- sha?(commit),
+         {:ok, %{"tree" => %{"sha" => tree}}} <- client.get(base <> "/git/commits/" <> commit),
+         {:ok, tree} <- folder_tree(client, base, tree, if(folder == "", do: [], else: String.split(folder, "/"))),
+         {:ok, %{"tree" => nodes, "truncated" => false}} when is_list(nodes) <-
+           client.get(base <> "/git/trees/" <> tree <> "?recursive=1") do
+      paths =
+        nodes
+        |> Enum.filter(&(&1["type"] == "blob" && &1["mode"] in ["100644", "100755"]))
+        |> Enum.map(fn node -> if folder == "", do: node["path"], else: folder <> "/" <> node["path"] end)
+        |> Enum.filter(&Brando.MarkdownSources.Source.valid_path?/1)
+        |> Enum.uniq()
+        |> Enum.sort()
+
+      if length(paths) <= 200, do: {:ok, paths}, else: {:error, :too_many_documents}
+    else
+      {:ok, %{"truncated" => true}} -> {:error, :too_many_documents}
+      {:error, reason} -> {:error, reason}
+      _ -> {:error, :invalid_folder}
+    end
+  end
+
+  defp valid_folder?(""), do: true
+
+  defp valid_folder?(folder),
+    do: byte_size(folder) <= 480 && Brando.MarkdownSources.Source.valid_path?(folder <> "/file.md")
+
+  defp folder_tree(_, _, tree, []) do
+    if sha?(tree), do: {:ok, tree}, else: {:error, :invalid_folder}
+  end
+
+  defp folder_tree(_, _, _, parts) when length(parts) > 32, do: {:error, :invalid_folder}
+
+  defp folder_tree(client, base, tree, [part | rest]) do
+    with true <- sha?(tree),
+         {:ok, %{"tree" => nodes, "truncated" => false}} <- client.get(base <> "/git/trees/" <> tree),
+         %{"type" => "tree", "mode" => "040000", "sha" => child} <- Enum.find(nodes, &(&1["path"] == part)) do
+      folder_tree(client, base, child, rest)
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> {:error, :invalid_folder}
+    end
+  end
+
   defp find_blob(_, _, _, parts) when length(parts) > 32, do: {:error, :invalid_path}
 
   defp find_blob(client, base, tree, [part | rest]) do

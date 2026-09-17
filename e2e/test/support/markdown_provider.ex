@@ -3,6 +3,12 @@ defmodule E2E.MarkdownProvider do
   alias Brando.MarkdownSources.{Source, Version}
   alias Brando.Repo
 
+  def list_documents(_, %{folder: folder}) do
+    if folder == "guides",
+      do: {:ok, ["guides/install.md", "guides/publishing.md", "guides/editing/pages.md"]},
+      else: {:ok, []}
+  end
+
   def fetch(_, source) do
     version = source.id |> Brando.MarkdownSources.versions() |> hd()
     {:ok, Map.take(version, [:commit, :markdown, :repository, :path])}

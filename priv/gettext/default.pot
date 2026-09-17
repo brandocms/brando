@@ -9089,9 +9089,161 @@ msgstr ""
 msgid "Link destination"
 msgstr ""
 
+#: lib/brando_admin/live/config/markdown_sources_live.ex:309
+#, elixir-autogen, elixir-format
+msgid "%{count} document added. Refresh it to import the content."
+msgid_plural "%{count} documents added. Refresh them to import the content."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:54
+#, elixir-autogen, elixir-format
+msgid "A developer needs to connect your repository"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:183
+#, elixir-autogen, elixir-format
+msgid "Add %{count} document"
+msgid_plural "Add %{count} documents"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:199
+#, elixir-autogen, elixir-format
+msgid "Add a file or choose a folder. Each document becomes a source you can use in a content block."
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:66
+#, elixir-autogen, elixir-format
+msgid "Add a source"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:162
+#, elixir-autogen, elixir-format
+msgid "Add another source"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:69
+#, elixir-autogen, elixir-format
+msgid "Add documents"
+msgstr ""
+
+#: lib/brando_admin/components/form/input/blocks/markdown_source_block.ex:67
+#: lib/brando_admin/live/config/markdown_sources_live.ex:211
+#, elixir-autogen, elixir-format
+msgid "Branch"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:109
+#: lib/brando_admin/live/config/markdown_sources_live.ex:438
+#, elixir-autogen, elixir-format
+msgid "Branch ref"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:402
+#, elixir-autogen, elixir-format
+msgid "Build failed — see Publishing"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:404
+#: lib/brando_admin/live/config/markdown_sources_live.ex:415
+#, elixir-autogen, elixir-format
+msgid "Build queued"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:405
+#, elixir-autogen, elixir-format
+msgid "Building"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:403
+#, elixir-autogen, elixir-format
+msgid "Built — see Publishing for deployment"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:104
+#, elixir-autogen, elixir-format
+msgid "Choose a connection"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:283
+#, elixir-autogen, elixir-format
+msgid "Choose an available repository connection."
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:48
+#, elixir-autogen, elixir-format
+msgid "Connect repository documents to entry blocks."
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:193
+#, elixir-autogen, elixir-format
+msgid "Connected documents"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:208
+#, elixir-autogen, elixir-format
+msgid "Connection"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:434
+#, elixir-autogen, elixir-format
+msgid "Could not read this folder. Check the repository connection, branch and folder path, then try again."
+msgstr ""
+
 #: lib/brando_admin/live/content/modules_list_live.ex:218
 #, elixir-autogen, elixir-format
 msgid "Current workspace"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:401
+#, elixir-autogen, elixir-format
+msgid "Deployed"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:420
+#, elixir-autogen, elixir-format
+msgid "Document imported"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:421
+#, elixir-autogen, elixir-format
+msgid "Document unchanged"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:66
+#, elixir-autogen, elixir-format
+msgid "Edit source"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:143
+#, elixir-autogen, elixir-format
+msgid "Enable synchronization"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:156
+#, elixir-autogen, elixir-format
+msgid "Find Markdown files"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:164
+#, elixir-autogen, elixir-format
+msgid "Finding Markdown files…"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:132
+#, elixir-autogen, elixir-format
+msgid "Folder"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:81
+#, elixir-autogen, elixir-format
+msgid "From a folder"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:56
+#, elixir-autogen, elixir-format
+msgid "GitHub connections are configured by a developer in the project's runtime.exs. Ask them to add a repository and enable it for this environment. The connection will then appear here."
 msgstr ""
 
 #: lib/brando_admin/live/content/modules_list_live.ex:22
@@ -9099,7 +9251,189 @@ msgstr ""
 msgid "Import / export DSL"
 msgstr ""
 
+#: lib/brando_admin/live/config/markdown_sources_live.ex:135
+#, elixir-autogen, elixir-format
+msgid "Includes subfolders. Leave blank for the repository root. Choose which files to add in the next step."
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:219
+#, elixir-autogen, elixir-format
+msgid "Last checked"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:120
+#: lib/brando_admin/live/config/markdown_sources_live.ex:439
+#, elixir-autogen, elixir-format
+msgid "Markdown file"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:47
+#: lib/brando_admin/menu.ex:291
+#, elixir-autogen, elixir-format
+msgid "Markdown sources"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:222
+#, elixir-autogen, elixir-format
+msgid "Never"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:176
+#, elixir-autogen, elixir-format
+msgid "No Markdown files found in this folder."
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:198
+#, elixir-autogen, elixir-format
+msgid "No documents connected yet"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:413
+#, elixir-autogen, elixir-format
+msgid "Not imported"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:172
+#, elixir-autogen, elixir-format
+msgid "One source is created per selected file. Existing sources are skipped. New files added to the folder later must be selected here again."
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:226
+#, elixir-autogen, elixir-format
+msgid "Open Publishing"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:129
+#, elixir-autogen, elixir-format
+msgid "Path from the repository root. Use From a folder to add several files at once."
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:155
+#, elixir-autogen, elixir-format
+msgid "Please wait…"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:406
+#, elixir-autogen, elixir-format
+msgid "Previous build archived"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:231
+#, elixir-autogen, elixir-format
+msgid "Refresh from GitHub"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:353
+#, elixir-autogen, elixir-format
+msgid "Refresh is unavailable. Check the source connection and your permissions."
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:349
+#, elixir-autogen, elixir-format
+msgid "Refresh queued."
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:419
+#, elixir-autogen, elixir-format
+msgid "Refresh requested"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:414
+#, elixir-autogen, elixir-format
+msgid "Rendered"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:102
+#: lib/brando_admin/live/config/markdown_sources_live.ex:437
+#, elixir-autogen, elixir-format
+msgid "Repository connection"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:156
+#, elixir-autogen, elixir-format
+msgid "Save source"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:75
+#, elixir-autogen, elixir-format
+msgid "Single file"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:418
+#, elixir-autogen, elixir-format
+msgid "Source saved"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:329
+#, elixir-autogen, elixir-format
+msgid "Source saved. Refresh it to import the document."
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:215
+#, elixir-autogen, elixir-format
+msgid "Synchronization disabled"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:318
+#, elixir-autogen, elixir-format
+msgid "The documents could not be added. Check the connection and try again."
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:336
+#, elixir-autogen, elixir-format
+msgid "The source could not be saved. Check your access and reload if it changed."
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:429
+#, elixir-autogen, elixir-format
+msgid "This folder is too large. Choose a smaller folder with up to 200 Markdown files."
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:423
+#, elixir-autogen, elixir-format
+msgid "Document placement saved"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:422
+#, elixir-autogen, elixir-format
+msgid "Document refresh failed"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:425
+#, elixir-autogen, elixir-format
+msgid "Publication failed"
+msgstr ""
+
+#: lib/brando_admin/live/config/markdown_sources_live.ex:424
+#, elixir-autogen, elixir-format
+msgid "Publication queued"
+msgstr ""
+
 #: lib/brando_admin/live/content/modules_list_live.ex:67
 #, elixir-autogen, elixir-format
 msgid "This imports independent module copies with new identities. Use Import/Export in Configuration to move saved content while preserving module lineage."
+msgstr ""
+
+msgid "can't be blank"
+msgstr ""
+
+msgid "create a new source to change an imported document's identity"
+msgstr ""
+
+msgid "has already been taken"
+msgstr ""
+
+msgid "is invalid"
+msgstr ""
+
+msgid "is not enabled for this environment"
+msgstr ""
+
+msgid "must be a repository-relative Markdown file"
+msgstr ""
+
+msgid "must be a valid branch ref"
+msgstr ""
+
+msgid "should be at most %{count} character(s)"
 msgstr ""

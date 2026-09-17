@@ -81,6 +81,40 @@ defmodule Brando.MarkdownSources do
     Ecto.StaleEntryError -> {:error, :stale_source}
   end
 
+  def add_documents(connection, ref, paths, actor) when is_list(paths) and length(paths) in 1..200 do
+    with :ok <- authorize(actor, :create),
+         {:ok, _} <- Connection.current(connection) do
+      Brando.MarkdownSources.Publication.with_source_lock("new", fn ->
+        Repo.transaction(fn ->
+          Enum.reduce(Enum.uniq(paths), 0, fn path, count ->
+            if Repo.get_by(Source, connection: connection, ref: ref, path: path) do
+              count
+            else
+              attrs = %{
+                name: Path.basename(path, Path.extname(path)) |> String.replace(["-", "_"], " "),
+                connection: connection,
+                ref: ref,
+                path: path,
+                enabled: true
+              }
+
+              case Repo.insert(Source.changeset(%Source{}, attrs)) do
+                {:ok, source} ->
+                  audit(source, "source.saved", actor)
+                  count + 1
+
+                {:error, reason} ->
+                  Repo.rollback(reason)
+              end
+            end
+          end)
+        end)
+      end)
+    end
+  end
+
+  def add_documents(_, _, _, _), do: {:error, :invalid_selection}
+
   def refresh(source_id, actor) do
     with :ok <- authorize(actor, :sync),
          %Source{enabled: true} = source <- get_source(source_id),

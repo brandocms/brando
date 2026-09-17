@@ -9094,3 +9094,211 @@ msgstr "Lenken kunne ikke legges til. Kontroller lenkemålet og den valgte tekst
 #, elixir-autogen, elixir-format
 msgid "Link destination"
 msgstr "Lenkemål"
+
+msgid "Markdown sources"
+msgstr "Markdown-kilder"
+
+msgid "Connect repository documents to entry blocks."
+msgstr "Koble dokumenter fra et GitHub-repositorium til innholdsblokker."
+
+msgid "A developer needs to connect your repository"
+msgstr "En utvikler må koble til repositoriet"
+
+msgid "GitHub connections are configured by a developer in the project's runtime.exs. Ask them to add a repository and enable it for this environment. The connection will then appear here."
+msgstr "GitHub-tilkoblinger settes opp av en utvikler i prosjektets runtime.exs. Be utvikleren legge til et repositorium og aktivere det for dette miljøet. Tilkoblingen vil da vises her."
+
+msgid "Edit source"
+msgstr "Rediger kilde"
+
+msgid "Add a source"
+msgstr "Legg til kilde"
+
+msgid "Add documents"
+msgstr "Legg til dokumenter"
+
+msgid "Single file"
+msgstr "Enkeltfil"
+
+msgid "From a folder"
+msgstr "Fra en mappe"
+
+msgid "Repository connection"
+msgstr "GitHub-tilkobling"
+
+msgid "Choose a connection"
+msgstr "Velg tilkobling"
+
+msgid "Branch ref"
+msgstr "Grenreferanse"
+
+msgid "Markdown file"
+msgstr "Markdown-fil"
+
+msgid "Path from the repository root. Use From a folder to add several files at once."
+msgstr "Sti fra roten av repositoriet. Velg «Fra en mappe» for å legge til flere filer samtidig."
+
+msgid "Includes subfolders. Leave blank for the repository root. Choose which files to add in the next step."
+msgstr "Inkluderer undermapper. La feltet stå tomt for roten av repositoriet. Velg filene du vil legge til i neste steg."
+
+msgid "Enable synchronization"
+msgstr "Aktiver synkronisering"
+
+msgid "Find Markdown files"
+msgstr "Finn Markdown-filer"
+
+msgid "Save source"
+msgstr "Lagre kilde"
+
+msgid "Add another source"
+msgstr "Legg til en kilde til"
+
+msgid "Finding Markdown files…"
+msgstr "Finner Markdown-filer…"
+
+msgid "One source is created per selected file. Existing sources are skipped. New files added to the folder later must be selected here again."
+msgstr "Det opprettes én kilde per valgt fil. Eksisterende kilder hoppes over. Nye filer som legges i mappen senere, må velges her på nytt."
+
+msgid "No Markdown files found in this folder."
+msgstr "Ingen Markdown-filer ble funnet i denne mappen."
+
+msgid "Connected documents"
+msgstr "Tilkoblede dokumenter"
+
+msgid "No documents connected yet"
+msgstr "Ingen dokumenter er koblet til ennå"
+
+msgid "Add a file or choose a folder. Each document becomes a source you can use in a content block."
+msgstr "Legg til en fil eller velg en mappe. Hvert dokument blir en kilde du kan bruke i en innholdsblokk."
+
+msgid "Connection"
+msgstr "Tilkobling"
+
+msgid "Branch"
+msgstr "Gren"
+
+msgid "Last checked"
+msgstr "Sist sjekket"
+
+msgid "Never"
+msgstr "Aldri"
+
+msgid "Synchronization disabled"
+msgstr "Synkronisering deaktivert"
+
+msgid "Open Publishing"
+msgstr "Åpne publisering"
+
+msgid "Refresh from GitHub"
+msgstr "Hent fra GitHub"
+
+msgid "Choose an available repository connection."
+msgstr "Velg en tilgjengelig GitHub-tilkobling."
+
+msgid "The documents could not be added. Check the connection and try again."
+msgstr "Dokumentene kunne ikke legges til. Sjekk tilkoblingen og prøv igjen."
+
+msgid "Source saved. Refresh it to import the document."
+msgstr "Kilden er lagret. Hent fra GitHub for å importere dokumentet."
+
+msgid "The source could not be saved. Check your access and reload if it changed."
+msgstr "Kilden kunne ikke lagres. Sjekk tilgangen din og last siden på nytt hvis den har endret seg."
+
+msgid "Refresh queued."
+msgstr "Henting er satt i kø."
+
+msgid "Refresh is unavailable. Check the source connection and your permissions."
+msgstr "Henting er ikke tilgjengelig. Sjekk kildens tilkobling og tilgangene dine."
+
+msgid "Deployed"
+msgstr "Publisert"
+
+msgid "Build failed — see Publishing"
+msgstr "Bygging feilet – se Publisering"
+
+msgid "Built — see Publishing for deployment"
+msgstr "Ferdig bygget – gå til Publisering"
+
+msgid "Build queued"
+msgstr "Bygging satt i kø"
+
+msgid "Building"
+msgstr "Bygger"
+
+msgid "Previous build archived"
+msgstr "Forrige bygg er arkivert"
+
+msgid "Not imported"
+msgstr "Ikke importert"
+
+msgid "Rendered"
+msgstr "Innhold hentet"
+
+msgid "Source saved"
+msgstr "Kilde lagret"
+
+msgid "Refresh requested"
+msgstr "Henting forespurt"
+
+msgid "Document imported"
+msgstr "Dokument importert"
+
+msgid "Document unchanged"
+msgstr "Dokument uendret"
+
+msgid "This folder is too large. Choose a smaller folder with up to 200 Markdown files."
+msgstr "Denne mappen er for stor. Velg en mindre mappe med opptil 200 Markdown-filer."
+
+msgid "Could not read this folder. Check the repository connection, branch and folder path, then try again."
+msgstr "Kunne ikke lese mappen. Sjekk GitHub-tilkoblingen, grenen og mappestien, og prøv igjen."
+
+msgid "Please wait…"
+msgstr "Vennligst vent…"
+
+msgid "Add %{count} document"
+msgid_plural "Add %{count} documents"
+msgstr[0] "Legg til %{count} dokument"
+msgstr[1] "Legg til %{count} dokumenter"
+
+msgid "%{count} document added. Refresh it to import the content."
+msgid_plural "%{count} documents added. Refresh them to import the content."
+msgstr[0] "%{count} dokument er lagt til. Hent fra GitHub for å importere innholdet."
+msgstr[1] "%{count} dokumenter er lagt til. Hent fra GitHub for å importere innholdet."
+
+msgid "must be a repository-relative Markdown file"
+msgstr "må være en Markdown-fil med sti fra repositoriets rot"
+
+msgid "must be a valid branch ref"
+msgstr "må være en gyldig grenreferanse"
+
+msgid "is not enabled for this environment"
+msgstr "er ikke aktivert for dette miljøet"
+
+msgid "create a new source to change an imported document's identity"
+msgstr "opprett en ny kilde for å endre tilkobling, gren eller fil for et importert dokument"
+
+msgid "Folder"
+msgstr "Mappe"
+
+msgid "can't be blank"
+msgstr "må fylles ut"
+
+msgid "has already been taken"
+msgstr "er allerede i bruk"
+
+msgid "is invalid"
+msgstr "er ugyldig"
+
+msgid "should be at most %{count} character(s)"
+msgstr "kan ha høyst %{count} tegn"
+
+msgid "Document refresh failed"
+msgstr "Henting av dokument feilet"
+
+msgid "Document placement saved"
+msgstr "Dokumentplassering lagret"
+
+msgid "Publication queued"
+msgstr "Publisering satt i kø"
+
+msgid "Publication failed"
+msgstr "Publisering feilet"

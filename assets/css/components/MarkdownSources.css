@@ -32,7 +32,7 @@
   input[type="text"], select {
     width: 100%; min-width: 0; max-width: 100%; height: 40px;
     padding: 8px 12px; border: 1px solid #dce2dc; border-radius: 4px;
-    background: white; font-size: 14px;
+    background-color: white; font-size: 14px;
   }
   p, dd { overflow-wrap: anywhere; }
   label { font-size: 14px; }
@@ -75,4 +75,60 @@
 .markdown-source-preview {
   h1 { font-size: 28px; } h2 { font-size: 24px; } h3 { font-size: 20px; }
   p, li { font-size: 14px; line-height: 1.6; }
+}
+
+.admin-workspace.markdown-workspace {
+  max-width: 1120px;
+  .markdown-eyebrow { display: block; margin-bottom: 10px; color: var(--workspace-muted); font-size: 10px; text-transform: uppercase; letter-spacing: .12em; }
+  .markdown-connection-notice { display: flex; align-items: flex-start; gap: 16px; padding: 20px 24px; margin-bottom: 24px; border: 1px solid #e1dfce; border-radius: 7px; background: #faf9f3; }
+  .markdown-connection-notice > [data-icon] { flex: 0 0 20px; width: 20px; height: 20px; color: #82754a; }
+  .markdown-connection-notice h2 { font-size: 15px; margin-bottom: 8px; }
+  .markdown-connection-notice p { max-width: 760px; font-size: 13px; color: var(--workspace-muted); line-height: 1.65; }
+  .markdown-source-notice { margin: 0 0 24px; }
+  .markdown-sources-workspace { margin-top: 0; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); }
+  .markdown-source-panel { padding: 24px; }
+  .markdown-source-setup { background: #f8f9f5; }
+  .markdown-panel-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .markdown-panel-heading [data-icon] { flex: 0 0 18px; width: 18px; height: 18px; color: #5c7156; }
+  .markdown-panel-heading h2 { font-size: 18px; margin: 0; }
+  .markdown-panel-heading .workspace-badge { margin-left: auto; }
+  .markdown-documents { background: #fff; }
+  .markdown-documents .workspace-empty { padding: 32px 4px; }
+  .workspace-empty > [data-icon] { width: 28px; height: 28px; color: #85927f; margin-bottom: 8px; }
+  .markdown-source-row { display: grid; gap: 16px; }
+  .markdown-document-info { display: grid; gap: 16px; }
+  .markdown-document-title { display: grid; gap: 4px; }
+  .markdown-source-row h3 { font-size: 15px; line-height: 22px; margin: 0; }
+  .markdown-source-panel p { font-size: 13px; line-height: 20px; margin: 0; padding: 0; color: var(--workspace-muted); }
+  .markdown-source-panel .markdown-source-path { font-size: 12px; overflow-wrap: anywhere; }
+  .markdown-source-modes { display: flex; gap: 4px; padding: 4px; margin-bottom: 24px; border: 1px solid #dce2dc; border-radius: 6px; background: #eef1e9; }
+  .markdown-source-modes button { flex: 1; min-height: 32px; border: 1px solid transparent; border-radius: 4px; padding: 6px 10px; background: transparent; color: var(--workspace-muted); font-size: 12px; line-height: 18px; }
+  .markdown-source-modes button[aria-pressed="true"] { color: var(--workspace-ink); border-color: #d9dfd2; background: #fff; }
+  .markdown-source-panel form { display: block; }
+  .markdown-source-panel fieldset { padding: 0; margin: 0; border: 0; display: grid; gap: 16px; min-width: 0; }
+  .markdown-source-field { display: grid; gap: 8px; }
+  .markdown-source-field label { font-size: 13px; line-height: 20px; }
+  .markdown-source-field p { font-size: 13px; line-height: 20px; }
+  .markdown-source-field input, .markdown-source-field select { border-radius: 5px; color: var(--workspace-ink); }
+  .markdown-source-field :disabled { background-color: #f0f2ed; color: #7b8277; cursor: not-allowed; }
+  .markdown-source-checkbox { font-size: 13px; line-height: 20px; margin: 0; align-items: flex-start; }
+  input[type="checkbox"] { flex: 0 0 15px; width: 15px; height: 15px; margin: 2px 0 0; accent-color: var(--workspace-accent); }
+  .markdown-source-actions { padding-top: 8px; }
+  .markdown-source-row .markdown-source-actions { padding-top: 0; }
+  .markdown-source-meta { gap: 16px 24px; margin: 0; }
+  .markdown-source-meta dt { font-size: 12px; line-height: 18px; margin-bottom: 4px; }
+  .markdown-source-meta dd { font-size: 13px; line-height: 20px; }
+  .markdown-source-errors { color: #95463b; font-size: 12px; padding-left: 16px; margin: 0; }
+  .markdown-folder-files { display: grid; gap: 8px; margin: 0; max-height: 320px; overflow-y: auto; }
+  .markdown-folder-files span { overflow-wrap: anywhere; min-width: 0; }
+  .markdown-source-history { padding-left: 20px; }
+  @media (max-width: 850px) { .markdown-sources-workspace { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 500px) { .markdown-source-panel, .markdown-connection-notice { padding: 18px; } }
+  @media (pointer: coarse) { .markdown-source-modes button { min-height: 40px; } }
+}
+
+.admin-workspace.markdown-workspace {
+  select.admin-select { padding: 0 40px 0 14px; font-size: 14px; }
+  #markdown-folder-selection { display: grid; gap: 16px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--workspace-line); }
+  #markdown-folder-selection .markdown-source-actions { padding-top: 0; }
 }

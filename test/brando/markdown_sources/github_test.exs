@@ -40,9 +40,63 @@ defmodule Brando.MarkdownSources.GitHubTest do
     {:ok, connection: %{repository: "acme/docs", repository_id: 42}, source: %{path: "README.md", ref: "refs/heads/main"}}
   end
 
+  test "folder discovery includes nested Markdown and rejects incomplete trees", context do
+    url = "/repos/acme/docs/git/trees/#{@tree}?recursive=1"
+
+    nodes = [
+      %{"path" => "README.md", "type" => "blob", "mode" => "100644"},
+      %{"path" => "guides/install.markdown", "type" => "blob", "mode" => "100644"},
+      %{"path" => "photo.jpg", "type" => "blob", "mode" => "100644"},
+      %{"path" => "symlink.md", "type" => "blob", "mode" => "120000"},
+      %{"path" => "../unsafe.md", "type" => "blob", "mode" => "100644"}
+    ]
+
+    original = Process.get(:github_responses)
+    connection = Map.put(context.connection, :key, "docs")
+    Process.put(:github_responses, Map.put(original, url, {:ok, %{"tree" => nodes, "truncated" => false}}))
+
+    assert {:ok, ["README.md", "guides/install.markdown"]} =
+             GitHub.list_documents(connection, %{ref: "refs/heads/main", folder: ""})
+
+    assert {:error, _} = GitHub.list_documents(connection, %{ref: "refs/heads/main", folder: "../guides"})
+    Process.put(:github_responses, Map.put(original, url, {:ok, %{"tree" => nodes, "truncated" => true}}))
+    assert {:error, :too_many_documents} = GitHub.list_documents(connection, %{ref: "refs/heads/main", folder: ""})
+  end
+
   test "fetches the current ref and immutable ordinary blob through fixed provider URLs", context do
     assert {:ok, %{commit: @commit, markdown: "# Doc"}} = GitHub.fetch(context.connection, context.source)
     assert_received {:github_request, "/repos/acme/docs/git/blobs/" <> @blob}
+  end
+
+  test "folder discovery scopes the tree to the selected directory", context do
+    child = String.duplicate("d", 40)
+    directory = %{"path" => "guides", "type" => "tree", "mode" => "040000", "sha" => child}
+    original = Process.get(:github_responses)
+
+    responses =
+      original
+      |> Map.put("/repos/acme/docs/git/trees/#{@tree}", {:ok, %{"tree" => [directory], "truncated" => false}})
+      |> Map.put(
+        "/repos/acme/docs/git/trees/#{child}?recursive=1",
+        {:ok, %{"tree" => [%{"path" => "start.md", "type" => "blob", "mode" => "100644"}], "truncated" => false}}
+      )
+
+    Process.put(:github_responses, responses)
+    connection = Map.put(context.connection, :key, "docs")
+
+    assert {:ok, ["guides/start.md"]} =
+             GitHub.list_documents(connection, %{ref: "refs/heads/main", folder: "guides"})
+
+    refute_received {:github_request, "/repos/acme/docs/git/trees/" <> @tree <> "?recursive=1"}
+
+    symlink = Map.merge(directory, %{"type" => "blob", "mode" => "120000"})
+
+    Process.put(
+      :github_responses,
+      Map.put(responses, "/repos/acme/docs/git/trees/#{@tree}", {:ok, %{"tree" => [symlink], "truncated" => false}})
+    )
+
+    assert {:error, :invalid_folder} = GitHub.list_documents(connection, %{ref: "refs/heads/main", folder: "guides"})
   end
 
   test "rejects a replaced repository, private content, symlinks and oversized blobs", context do

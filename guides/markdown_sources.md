@@ -35,6 +35,10 @@ and configure the same value in GitHub. For installations without tenancy use
 allowed per connection. Only active sites and existing configured environments
 are eligible. There is no wildcard or request-selected destination.
 
+If the connection menu is empty, a developer must configure a connection and
+permit the current environment. The source manager explains this and disables
+source creation until a connection is available.
+
 Mount the optional plug in the application's endpoint **before `Plug.Parsers`**:
 
 ```elixir
@@ -66,6 +70,27 @@ selects configuration; it does not authenticate the request.
    ref: `{% ref refs.document %}` in Liquid, or
    `<.ref block={@block} ref={:document} />` in HEEx.
 3. Add the module to an entry, choose the source, select a policy, and save.
+
+### Add documents from a folder
+
+Choose **From a folder**, select the connection and branch, and enter a relative
+folder path (for example `guides`; leave it empty for the repository root).
+**Find Markdown files** lists ordinary `.md` and `.markdown` files in that folder
+and its subfolders. Select the documents to add and confirm the selection.
+Existing sources for the same connection, branch and path are skipped. New
+source names come from the filenames and can be edited individually.
+
+Discovery verifies the public repository and reads one immutable Git tree. It
+excludes symlinks and invalid paths, accepts at most 200 documents, and rejects
+truncated results; choose a smaller folder if necessary. Adding the selected
+sources is transactional. Use **Refresh from GitHub** to fetch each document's
+initial content, or let the next configured push refresh the sources.
+
+Each selected file remains an individual source with its own placements and
+history. This is a batch-add operation: files added to GitHub later appear when
+you scan the folder again. Existing sources continue to synchronize normally.
+
+### Publishing policies
 
 | Policy | Behavior |
 | --- | --- |
