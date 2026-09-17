@@ -66,10 +66,18 @@ defmodule Brando.Setup.Seeds do
     |> Enum.map(&String.to_existing_atom(&1[:value]))
   end
 
+  # The framework defaults are placeholders ("Organization name"), which would
+  # otherwise show up in the header and the page title of a new site.
   defp identity(language) do
     case Sites.get_identity(%{matches: %{language: language}}) do
-      {:ok, _identity} -> :exists
-      {:error, _} -> Sites.create_default_identity(language)
+      {:ok, _identity} ->
+        :exists
+
+      {:error, _} ->
+        language
+        |> Sites.create_default_identity()
+        |> Ecto.Changeset.change(%{name: site_name(), title: site_name(), title_prefix: nil})
+        |> Brando.Repo.update!()
     end
   end
 
@@ -144,7 +152,7 @@ defmodule Brando.Setup.Seeds do
             vars: [],
             refs: [
               header_ref("title", 1, "Heading", 0),
-              text_ref("lead", "Lead paragraph", 1)
+              text_ref("lead", "<p>Lead paragraph</p>", 1)
             ]
           }
         end),
@@ -165,7 +173,7 @@ defmodule Brando.Setup.Seeds do
             """,
             sequence: 1,
             vars: [],
-            refs: [text_ref("text", "Text", 0)]
+            refs: [text_ref("text", "<p>Text</p>", 0)]
           }
         end),
       columns:
@@ -198,11 +206,11 @@ defmodule Brando.Setup.Seeds do
             vars: [],
             refs: [
               header_ref("first_title", 2, "First heading", 0),
-              text_ref("first_text", "First paragraph", 1),
+              text_ref("first_text", "<p>First paragraph</p>", 1),
               header_ref("second_title", 2, "Second heading", 2),
-              text_ref("second_text", "Second paragraph", 3),
+              text_ref("second_text", "<p>Second paragraph</p>", 3),
               header_ref("third_title", 2, "Third heading", 4),
-              text_ref("third_text", "Third paragraph", 5)
+              text_ref("third_text", "<p>Third paragraph</p>", 5)
             ]
           }
         end)
@@ -231,6 +239,8 @@ defmodule Brando.Setup.Seeds do
     }
   end
 
+  # Text block content is tiptap HTML, so paragraphs arrive wrapped in `<p>`
+  # exactly as the editor would save them.
   defp text_ref(name, text, sequence) do
     %Content.Ref{
       name: name,
@@ -263,18 +273,19 @@ defmodule Brando.Setup.Seeds do
               header_ref("title", 1, site_name(), 0),
               text_ref(
                 "lead",
-                "Your site is running on Brando. This page was seeded by " <>
+                "<p>Your site is running on Brando. This page was seeded by " <>
                   "<code>mix brando.setup</code> — every section below is a block you can " <>
-                  "edit, reorder or delete in the admin.",
+                  "edit, reorder or delete in the admin.</p>",
                 1
               )
             ]),
             module_block(modules.text, 1, [
               text_ref(
                 "text",
-                "Sign in at <a href=\"/admin\">/admin</a> with the account you just created. " <>
-                  "Start by replacing this page's content with your own, then build the " <>
-                  "modules your design needs.",
+                "<p>Sign in at <a href=\"/admin\">/admin</a> with the account you just created, " <>
+                  "then replace this page's content with your own.</p>" <>
+                  "<p>Each section here is a module: a small template with named refs that " <>
+                  "editors fill in. Build the modules your design needs, and delete these.</p>",
                 0
               )
             ]),
@@ -282,29 +293,29 @@ defmodule Brando.Setup.Seeds do
               header_ref("first_title", 2, "Pages", 0),
               text_ref(
                 "first_text",
-                "Pages are composed of blocks. Open this page under Pages to see the three " <>
-                  "blocks that make it up, and add another from the module picker.",
+                "<p>Pages are composed of blocks. Open this page under Pages to see the three " <>
+                  "blocks that make it up, and add another from the module picker.</p>",
                 1
               ),
               header_ref("second_title", 2, "Modules", 2),
               text_ref(
                 "second_text",
-                "A module is a small template with named refs. The Hero, Text and Columns " <>
-                  "modules rendering this page live under Configuration → Modules.",
+                "<p>The Hero, Text and Columns modules rendering this page live under " <>
+                  "Configuration → Modules, with their markup and refs.</p>",
                 3
               ),
               header_ref("third_title", 2, "Navigation", 4),
               text_ref(
                 "third_text",
-                "The main menu is under Navigation. Menus and their items are content too, " <>
-                  "so they are edited rather than written into templates.",
+                "<p>The menu above is under Navigation. Menus and their items are content " <>
+                  "too, so they are edited rather than written into templates.</p>",
                 5
               )
             ])
           ]
         })
 
-      footer_fragment(page, language, user)
+      footer_fragment(page, language, user, modules)
 
       # Repo inserts bypass context rendering callbacks. Render here so the page
       # is usable on its first request, before any rendering worker has run.
@@ -329,16 +340,41 @@ defmodule Brando.Setup.Seeds do
     }
   end
 
-  defp footer_fragment(page, language, user) do
-    Brando.Repo.insert!(%Pages.Fragment{
-      parent_key: "partials",
-      key: "footer",
-      title: "Footer",
-      language: language,
-      entry_blocks: [],
-      page_id: page.id,
-      creator_id: user.id
-    })
+  defp footer_fragment(page, language, user, modules) do
+    fragment =
+      Brando.Repo.insert!(%Pages.Fragment{
+        parent_key: "partials",
+        key: "footer",
+        title: "Footer",
+        language: language,
+        page_id: page.id,
+        creator_id: user.id,
+        entry_blocks: [
+          %Pages.Fragment.Blocks{
+            sequence: 0,
+            block: %Content.Block{
+              type: :module,
+              uid: Brando.Utils.generate_uid(),
+              module_id: modules.text.id,
+              source: Pages.Fragment.Blocks,
+              multi: false,
+              sequence: 0,
+              vars: [],
+              refs: [
+                text_ref(
+                  "text",
+                  "<p>This footer is a page fragment. Edit it under Pages → Fragments, " <>
+                    "or remove it from the layout.</p>",
+                  0
+                )
+              ]
+            }
+          }
+        ]
+      })
+
+    {:ok, fragment} = Content.Blocks.render_entry(Pages.Fragment, fragment.id)
+    fragment
   end
 
   defp site_name do

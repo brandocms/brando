@@ -6,4 +6,5 @@ defmodule <%= web_module %>.CMS.SiteContext do
   plug Brando.Plug.Tenant
   plug :put_locale
   plug Brando.Plug.Identity
+  plug Brando.Plug.Navigation, key: "main", as: :navigation
 end

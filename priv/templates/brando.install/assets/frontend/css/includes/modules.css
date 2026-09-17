@@ -40,7 +40,7 @@ main > [b-tpl="hero"] + [b-tpl] {
   .lead {
     @space width 8/10 $lg;
 
-    .paragraph {
+    p {
       @fontsize text/lg;
       @color fg gray.800;
     }
@@ -55,12 +55,8 @@ main > [b-tpl="hero"] + [b-tpl] {
     @space padding-x indent $lg;
   }
 
-  .paragraph {
+  p {
     @fontsize text/base;
-  }
-
-  .paragraph + .paragraph {
-    @space margin-top sm;
   }
 }
 
@@ -95,19 +91,9 @@ main > [b-tpl="hero"] + [b-tpl] {
       @space margin-bottom xs;
     }
 
-    .paragraph {
+    p {
       @fontsize text/sm;
       @color fg gray.600;
     }
-  }
-}
-
-footer {
-  @space container;
-  @space padding-bottom xl;
-
-  .inner {
-    @column 6/12 $lg;
-    @space padding-x indent $lg;
   }
 }

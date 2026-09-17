@@ -78,6 +78,10 @@ module.exports = {
       dark: '#2b2b2b',
       light: '#f9f7f4',
 
+      /* One accent, used for interaction. Change it here and links, hovers and
+         highlights follow. */
+      accent: '#0f62fe',
+
       /* Debug helpers: `dbg` for ad-hoc highlighting, `grid` for the column
          overlay EuropaCSS draws. */
       dbg: 'pink',
@@ -271,18 +275,6 @@ module.exports = {
         },
       },
 
-      sections: {
-        navigation: {
-          iphone: { 'font-size': '34px' },
-          mobile: { 'font-size': '34px' },
-          ipad_portrait: { 'font-size': '42px' },
-          ipad_landscape: { 'font-size': '20px' },
-          desktop_md: { 'font-size': '20px' },
-          desktop_lg: { 'font-size': '20px' },
-          desktop_xl: { 'font-size': '20px' }
-        }
-      },
-
       families: {
         /* `main` is what `@europa base` sets on the body. */
         main: [
@@ -447,107 +439,6 @@ module.exports = {
           desktop_xl: '8dpx',
         },
       },
-    },
-
-    header: {
-      sections: {
-        brand: {
-          iphone: {
-            width: '100px',
-            height: '100px'
-          },
-          mobile: {
-            width: '100px',
-            height: '100px'
-          },
-          ipad_portrait: {
-            width: '100px',
-            height: '100px'
-          },
-          ipad_landscape: {
-            width: '100px',
-            height: '100px'
-          },
-          desktop_md: {
-            width: '100px',
-            height: '100px'
-          },
-          desktop_lg: {
-            width: '100px',
-            height: '100px'
-          },
-          desktop_xl: {
-            width: '100px',
-            height: '100px'
-          },
-        }
-      },
-
-      padding: {
-        /* When header is small */
-        small: {
-          iphone: {
-            'padding-top': '30px',
-            'padding-bottom': '30px'
-          },
-          mobile: {
-            'padding-top': '30px',
-            'padding-bottom': '30px'
-          },
-          ipad_portrait: {
-            'padding-top': '30px',
-            'padding-bottom': '30px'
-          },
-          ipad_landscape: {
-            'padding-top': '30px',
-            'padding-bottom': '30px'
-          },
-          desktop_md: {
-            'padding-top': '30px',
-            'padding-bottom': '30px'
-          },
-          desktop_lg: {
-            'padding-top': '30px',
-            'padding-bottom': '30px'
-          },
-          desktop_xl: {
-            'padding-top': '30px',
-            'padding-bottom': '30px'
-          },
-        },
-
-        /* When header is large */
-        large: {
-          iphone: {
-            'padding-top': '40px',
-            'padding-bottom': '40px'
-          },
-          mobile: {
-            'padding-top': '40px',
-            'padding-bottom': '40px'
-          },
-          ipad_portrait: {
-            'padding-top': '40px',
-            'padding-bottom': '40px'
-          },
-          ipad_landscape: {
-            'padding-top': '40px',
-            'padding-bottom': '40px'
-          },
-          desktop_md: {
-            'padding-top': '40px',
-            'padding-bottom': '40px'
-          },
-          desktop_lg: {
-            'padding-top': '40px',
-            'padding-bottom': '40px'
-          },
-          desktop_xl: {
-            'padding-top': '40px',
-            'padding-bottom': '40px'
-          },
-        }
-      }
     }
   }
 }

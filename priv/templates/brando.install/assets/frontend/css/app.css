@@ -12,6 +12,7 @@
 @import "./includes/common.css";
 @import "./includes/modules.css";
 @import "./includes/navigation.css";
+@import "./includes/footer.css";
 
 @europa arrows;
 @europa base;
@@ -115,25 +116,30 @@ p {
   /* One line of this element's own text, whatever size it renders at. */
   margin-bottom: 1lh;
 
-  &:last-of-type {
-    margin-bottom: 0 !important;
-  }
-
-  > a {
-    @color fg link.regular.text;
-    border-bottom: 1px solid theme(colors.link.regular.border);
-    transition: border-color 250ms ease-out, color 250ms ease-out;
-    padding-bottom: 3px;
-
-    &:hover {
-      @color fg link.hover.text;
-      border-bottom: 1px solid theme(colors.link.hover.border);
-      text-decoration: none;
-    }
-  }
-
-  > ul > li {
+  ul > li {
     font-size: inherit;
+  }
+}
+
+/* Villain wraps a text block's content, so the block — not the last paragraph
+   inside it — owns the trailing space. */
+.paragraph > :last-child {
+  margin-bottom: 0;
+}
+
+a {
+  @color fg link.regular.text;
+
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  text-decoration-color: theme(colors.gray.300);
+  transition: color 250ms ease-out, text-decoration-color 250ms ease-out;
+
+  &:hover {
+    @color fg accent;
+
+    text-decoration-color: currentColor;
   }
 }
 

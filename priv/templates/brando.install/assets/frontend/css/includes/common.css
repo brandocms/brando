@@ -1,3 +1,13 @@
+/* The header reserves this at the top of the page; `main` and anchor targets
+   read it back. */
+html {
+  --header-height: 80px;
+
+  @responsive $sm {
+    --header-height: 64px;
+  }
+}
+
 /**
  * Base element styles.
  *

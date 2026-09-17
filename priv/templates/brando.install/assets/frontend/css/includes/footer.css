@@ -1,0 +1,29 @@
+/**
+ * Site footer. Its content is the `partials/footer` page fragment, so it is
+ * edited in the admin rather than written here.
+ *
+ * The fragment renders modules, and a module brings its own container — so the
+ * footer itself must not add one, or its content indents twice.
+ */
+
+footer {
+  @space padding-y xl;
+  @color border-top gray.300;
+
+  border-top: 1px solid;
+
+  /* Same container/indent pair a module uses, so it lines up with the
+     fragment's content above it. */
+  .colophon {
+    @space container;
+    @space margin-top md;
+
+    .inner {
+      @space padding-x indent $lg;
+      @fontsize text/xs;
+      @color fg gray.600;
+
+      margin-bottom: 0;
+    }
+  }
+}
