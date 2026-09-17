@@ -130,74 +130,91 @@ defmodule Brando.Content.Transfer.Entries do
                target = targets[source["key"]] || %{}
                mode = target["mode"] || "create"
 
-               unless mode in ~w(create update),
-                 do: Error.fail!(dgettext("content_transfer", "Choose Create new or Update existing."))
+               unless mode in ~w(create update reuse),
+                 do:
+                   Error.fail!(
+                     dgettext("content_transfer", "Choose Create new, Update existing or Use existing unchanged.")
+                   )
 
-               entry =
-                 if mode == "update",
-                   do: EntryCodec.load!(schema, target["id"], actor, :update),
-                   else: EntryCodec.blank(schema)
+               if mode == "reuse" do
+                 entry = EntryCodec.load!(schema, target["id"], actor, :read)
 
-               Catalog.authorize!(
-                 actor,
-                 if(mode == "create", do: :create, else: :update),
-                 if(mode == "create", do: schema, else: entry)
-               )
+                 Map.merge(base, %{
+                   mode: mode,
+                   entry: entry,
+                   data: source["data"],
+                   stub: entry,
+                   destination: Catalog.describe(entry),
+                   before: EntryCodec.fingerprint(entry),
+                   status: Map.get(entry, :status)
+                 })
+               else
+                 entry =
+                   if mode == "update",
+                     do: EntryCodec.load!(schema, target["id"], actor, :update),
+                     else: EntryCodec.blank(schema)
 
-               overrides = target["attributes"] || %{}
-               Value.keys!(overrides, editable(source), "entry overrides")
-               data = put_in(source["data"]["attributes"], Map.merge(source["data"]["attributes"], overrides))["data"]
-               publication = target["publication"] || if(mode == "create", do: "draft", else: "preserve")
+                 Catalog.authorize!(
+                   actor,
+                   if(mode == "create", do: :create, else: :update),
+                   if(mode == "create", do: schema, else: entry)
+                 )
 
-               unless publication in ~w(draft preserve source),
-                 do: Error.fail!(dgettext("content_transfer", "Choose how to publish this entry."))
+                 overrides = target["attributes"] || %{}
+                 Value.keys!(overrides, editable(source), "entry overrides")
+                 data = put_in(source["data"]["attributes"], Map.merge(source["data"]["attributes"], overrides))["data"]
+                 publication = target["publication"] || if(mode == "create", do: "draft", else: "preserve")
 
-               data =
-                 if Map.has_key?(data["attributes"], "status") do
-                   status =
-                     case publication do
-                       "draft" -> "draft"
-                       "preserve" -> to_string(Map.get(entry, :status) || :draft)
-                       "source" -> source["data"]["attributes"]["status"]
-                     end
+                 unless publication in ~w(draft preserve source),
+                   do: Error.fail!(dgettext("content_transfer", "Choose how to publish this entry."))
 
-                   put_in(data["attributes"]["status"], status)
-                 else
-                   data
-                 end
+                 data =
+                   if Map.has_key?(data["attributes"], "status") do
+                     status =
+                       case publication do
+                         "draft" -> "draft"
+                         "preserve" -> to_string(Map.get(entry, :status) || :draft)
+                         "source" -> source["data"]["attributes"]["status"]
+                       end
 
-               data =
-                 if Map.has_key?(data["attributes"], "publish_at") do
-                   date =
-                     case publication do
-                       "draft" -> nil
-                       "preserve" -> Params.snapshot(Map.get(entry, :publish_at))
-                       "source" -> data["attributes"]["publish_at"]
-                     end
-
-                   put_in(data["attributes"]["publish_at"], date)
-                 else
-                   data
-                 end
-
-               stub =
-                 Enum.reduce(data["attributes"], %{entry | id: entry.id || -n}, fn {key, value}, acc ->
-                   field = Enum.find(EntryCodec.attributes(schema), &(to_string(&1) == key))
-
-                   case Ecto.Type.cast(schema.__schema__(:type, field), value) do
-                     {:ok, cast} -> Map.put(acc, field, cast)
-                     _ -> acc
+                     put_in(data["attributes"]["status"], status)
+                   else
+                     data
                    end
-                 end)
 
-               Map.merge(base, %{
-                 mode: mode,
-                 entry: entry,
-                 data: data,
-                 stub: stub,
-                 destination: Catalog.describe(stub),
-                 before: if(mode == "update", do: EntryCodec.fingerprint(entry))
-               })
+                 data =
+                   if Map.has_key?(data["attributes"], "publish_at") do
+                     date =
+                       case publication do
+                         "draft" -> nil
+                         "preserve" -> Params.snapshot(Map.get(entry, :publish_at))
+                         "source" -> data["attributes"]["publish_at"]
+                       end
+
+                     put_in(data["attributes"]["publish_at"], date)
+                   else
+                     data
+                   end
+
+                 stub =
+                   Enum.reduce(data["attributes"], %{entry | id: entry.id || -n}, fn {key, value}, acc ->
+                     field = Enum.find(EntryCodec.attributes(schema), &(to_string(&1) == key))
+
+                     case Ecto.Type.cast(schema.__schema__(:type, field), value) do
+                       {:ok, cast} -> Map.put(acc, field, cast)
+                       _ -> acc
+                     end
+                   end)
+
+                 Map.merge(base, %{
+                   mode: mode,
+                   entry: entry,
+                   data: data,
+                   stub: stub,
+                   destination: Catalog.describe(stub),
+                   before: if(mode == "update", do: EntryCodec.fingerprint(entry))
+                 })
+               end
              end) do
           {:ok, item} -> item
           {:error, message} -> %{base | issue: message}
@@ -205,11 +222,18 @@ defmodule Brando.Content.Transfer.Entries do
       end)
 
     bundled = bundled_bindings(bundle, entries, supplied, :preview)
-    {dependencies, bindings} = Transfer.resolve_dependencies(bundle, supplied, archive.files, actor, bundled)
+    # Reused entries only provide an identity. Their incoming fields and media
+    # must not require mappings or create unused assets on the destination.
+    incoming = for item <- entries, item.mode != "reuse", do: item.source
+    content_bundle = Map.merge(bundle, %{"entries" => incoming, "fields" => fields(incoming)})
+    {dependencies, bindings} = Transfer.resolve_dependencies(content_bundle, supplied, archive.files, actor, bundled)
     preview_bindings = Transfer.preview_bindings(bundle, bindings)
 
     entries =
       Enum.map(entries, fn
+        %{mode: "reuse"} = item ->
+          item
+
         %{issue: nil} = item ->
           case Error.protect(fn ->
                  validate_contracts!(item.data, bundle, bindings)
@@ -232,7 +256,16 @@ defmodule Brando.Content.Transfer.Entries do
           item
       end)
 
-    destinations = for %{mode: "update", destination: %{key: key}} <- entries, do: key
+    destination_groups =
+      entries
+      |> Enum.filter(&(&1.mode in ~w(update reuse) && &1.destination))
+      |> Enum.group_by(& &1.destination.key)
+
+    conflicting_destinations? =
+      Enum.any?(destination_groups, fn {_, items} ->
+        length(items) > 1 && Enum.any?(items, &(&1.mode == "update"))
+      end)
+
     issues = for item <- entries ++ dependencies, item.issue, do: item.issue
     keys = Enum.flat_map(entries, & &1.unique_keys)
 
@@ -248,7 +281,7 @@ defmodule Brando.Content.Transfer.Entries do
         else: issues
 
     issues =
-      if length(destinations) != length(Enum.uniq(destinations)),
+      if conflicting_destinations?,
         do: [
           dgettext("content_transfer", "Two entries point to the same destination. Choose distinct destinations.")
           | issues
@@ -424,6 +457,15 @@ defmodule Brando.Content.Transfer.Entries do
               existing =
                 if entry.id > 0, do: Repo.get_by(Brando.Content.Identifier, schema: entry.__struct__, entry_id: entry.id)
 
+              if item.mode == "reuse" && is_nil(existing),
+                do:
+                  Error.fail!(
+                    dgettext(
+                      "content_transfer",
+                      "The existing entry has no saved link identifier. Run Sync identifiers in Utilities, then review the import again."
+                    )
+                  )
+
               %{identifier | id: if(existing, do: existing.id, else: entry.id)}
             else
               generated = entry.__struct__.__identifier__(entry)
@@ -455,7 +497,7 @@ defmodule Brando.Content.Transfer.Entries do
 
     pending =
       Enum.map(entries, fn item ->
-        refs = Requirements.references(item.source["data"], bundle["dependencies"])
+        refs = if item.mode == "reuse", do: [], else: Requirements.references(item.source["data"], bundle["dependencies"])
 
         required =
           for token <- refs,
@@ -470,7 +512,7 @@ defmodule Brando.Content.Transfer.Entries do
       end)
 
     # Existing records already have stable identities, including self-links.
-    available = MapSet.new(Enum.filter(entries, &(&1.mode == "update" && &1.destination)), & &1.source["key"])
+    available = MapSet.new(Enum.filter(entries, &(&1.mode in ~w(update reuse) && &1.destination)), & &1.source["key"])
     sort(pending, available, [])
   end
 
@@ -534,7 +576,9 @@ defmodule Brando.Content.Transfer.Entries do
                 )
 
             before =
-              Enum.map(current.entries, fn item ->
+              current.entries
+              |> Enum.reject(&(&1.mode == "reuse"))
+              |> Enum.map(fn item ->
                 snapshot =
                   if item.mode == "update" do
                     {[source], state} = take!([%{schema: item.entry.__struct__, id: item.entry.id}], actor, media: false)
@@ -616,7 +660,7 @@ defmodule Brando.Content.Transfer.Entries do
 
   defp persist!(plan, bindings, actor) do
     # Replace preview placeholders for existing bundled destinations first.
-    existing = Enum.filter(plan.entries, &(&1.mode == "update"))
+    existing = Enum.filter(plan.entries, &(&1.mode in ~w(update reuse)))
     bindings = Map.merge(bindings, bundled_bindings(plan.archive.bundle, existing, plan.supplied, :preview))
     # Allocate destination identities inside the transaction before creating
     # their polymorphic identifiers. This supports self-links and mutual entry
@@ -643,29 +687,31 @@ defmodule Brando.Content.Transfer.Entries do
     available = MapSet.new(for {_, %Brando.Galleries.Gallery{id: id}} <- bindings, do: id)
 
     {saved, {bindings, _}} =
-      Enum.map_reduce(ordered(plan.entries, plan.archive.bundle, plan.supplied), {bindings, available}, fn item,
-                                                                                                           {bindings,
-                                                                                                            available} ->
-        validate_contracts!(item.data, plan.archive.bundle, bindings)
-        params = EntryCodec.decode(item.data, item.entry.__struct__, bindings, actor)
-        {params, available} = Ownership.galleries(params, actor, available)
-        cs = changeset!(item, params, actor) |> Transfer.stamp_versions(bindings)
-        {cs, available} = claim_galleries(cs, item.data, bindings, actor, available)
-        cs = if item.mode == "create", do: Changeset.put_change(cs, :id, reserved_ids[item.source["key"]]), else: cs
-        entry = if item.mode == "create", do: Repo.insert!(cs), else: Repo.update!(cs)
+      Enum.map_reduce(
+        ordered(plan.entries, plan.archive.bundle, plan.supplied) |> Enum.reject(&(&1.mode == "reuse")),
+        {bindings, available},
+        fn item, {bindings, available} ->
+          validate_contracts!(item.data, plan.archive.bundle, bindings)
+          params = EntryCodec.decode(item.data, item.entry.__struct__, bindings, actor)
+          {params, available} = Ownership.galleries(params, actor, available)
+          cs = changeset!(item, params, actor) |> Transfer.stamp_versions(bindings)
+          {cs, available} = claim_galleries(cs, item.data, bindings, actor, available)
+          cs = if item.mode == "create", do: Changeset.put_change(cs, :id, reserved_ids[item.source["key"]]), else: cs
+          entry = if item.mode == "create", do: Repo.insert!(cs), else: Repo.update!(cs)
 
-        if is_nil(Repo.get_by(Brando.Content.Identifier, schema: entry.__struct__, entry_id: entry.id)),
-          do: Brando.Content.create_identifier(entry.__struct__, entry)
+          if is_nil(Repo.get_by(Brando.Content.Identifier, schema: entry.__struct__, entry_id: entry.id)),
+            do: Brando.Content.create_identifier(entry.__struct__, entry)
 
-        if Map.has_key?(cs.changes, :publish_at) do
-          cancel_status_jobs(entry)
-          {:ok, _} = Brando.Publisher.schedule_publishing(entry, cs, actor)
+          if Map.has_key?(cs.changes, :publish_at) do
+            cancel_status_jobs(entry)
+            {:ok, _} = Brando.Publisher.schedule_publishing(entry, cs, actor)
+          end
+
+          saved = %{item | entry: EntryCodec.preload(entry)}
+          bindings = Map.merge(bindings, bundled_bindings(plan.archive.bundle, [saved], plan.supplied, :persist))
+          {saved, {bindings, available}}
         end
-
-        saved = %{item | entry: EntryCodec.preload(entry)}
-        bindings = Map.merge(bindings, bundled_bindings(plan.archive.bundle, [saved], plan.supplied, :persist))
-        {saved, {bindings, available}}
-      end)
+      )
 
     {saved, bindings}
   end

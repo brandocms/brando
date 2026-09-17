@@ -1,6 +1,6 @@
 # Content import and export
 
-**Configuration → Import / export** moves complete saved entries between Brando
+**Configuration → Import/Export** moves complete saved entries between Brando
 installations, sites and environments. Entries include authored fields, metadata,
 assets, owned records and every block field. Review the bundle before creating
 new entries or updating existing ones on the destination.
@@ -15,6 +15,8 @@ Repository screenshots: [Export](../docs/admin-ui/content-transfer-export.png),
 [mobile selection](../docs/admin-ui/content-transfer-export-mobile.png),
 [desktop review](../docs/admin-ui/content-transfer-review-desktop.png), and
 [mobile review](../docs/admin-ui/content-transfer-review-mobile.png).
+The [configuration refinements review](../docs/admin-ui/configuration-refinements/README.md)
+shows the content-type filters, related-entry paths and unchanged-entry reuse.
 
 ## Prepare the destination
 
@@ -32,16 +34,30 @@ not deploy application code or service credentials.
 ## Editor workflow
 
 1. **Export content.** Search saved entries across registered Blueprints and
-   select the entries to move. Fragments are searchable entries with their own
-   language, parent key and key.
+   select the entries to move. Use **Content types** to show one or several types
+   together, such as pages and cases. Filtering keeps entries already selected.
+   Each result shows its author and last update in the site's timezone.
+   Fragments are searchable entries with their own language, parent key and key.
 2. **Prepare the bundle.** Review entry, block and dependency counts. Include
    originals to transfer images and uploaded files; include definitions to make
    missing module lineages available on the destination. Unsaved editor changes
    are excluded: save the entry before exporting. Saved draft entries can be exported.
-   **Related entries** offers an explicit **Include entry** action. References
-   left outside the bundle require a destination mapping during import.
-3. **Review your entries.** Choose **Create a new entry** or **Update an existing
-   entry**. Review titles, URI/slug/key, language and publication. Key collisions
+   **Related entries** shows each entry's content type and which selected entry
+   and field reference it. **Include entry** moves it into the main export; its
+   own references can then appear in the related list. References left outside
+   the bundle require a destination mapping during import. Dependencies are
+   grouped by type, with separate labels for included originals, definitions and
+   references that need an existing destination. Entries already shown in the
+   main export or related list are not repeated in these dependency groups.
+3. **Review your entries.** Choose **Create a new entry**, **Update an existing
+   entry**, or **Use existing unchanged**. The last option connects references
+   to a selected destination while leaving its fields, content and publication
+   unchanged. Incoming media used only by that reused entry is not imported.
+   Choose this for shared categories or other related content already present
+   on the destination. Matching entries are suggestions; creating or overwriting
+   content is always an explicit import decision.
+   For entries being created or updated, review titles, URI/slug/key, language
+   and publication. Key collisions
    block import instead of silently renaming content. Expand **Review fields &
    content** to inspect changes, block text, assets and owned records.
    New entries default to Draft without a publication schedule; updates keep the
@@ -158,6 +174,9 @@ and rich-text links to created entries block removal; remove those references
 first. Recovery rechecks permissions and module contracts. A database rejection
 rolls back the entire recovery operation.
 
+Entries selected with **Use existing unchanged** are excluded from the saved
+entry count and recovery snapshots; recovery leaves their content untouched.
+
 Version-1 recovery remains limited to its selected block fields. Installed
 definitions and transferred library media remain available. Include receipts in the application's
 normal database backup and retention policy. Receipts are not copied between
@@ -173,7 +192,7 @@ Other referenced registered entries can be included from export review.
 Pages match by URI and language; fragments match by parent key, key and language.
 Custom Blueprints can define `content_transfer_key/1` and, for efficient lookup,
 `content_transfer_query/1`. See [Blueprint transfer matching](blueprints.md#content-transfer-matching).
-Hints suggest destinations; users still choose whether to create or update.
+Hints suggest destinations; users choose whether to create, update or reuse.
 
 The server API uses an authenticated, active `Brando.Users.User` and the current
 tenant context. It never accepts `:system` for content transfers:
@@ -198,6 +217,8 @@ end)
 
 # Updates use "mode" => "update", "id" => destination.id and
 # "publication" => "preserve" (or an explicit "draft" / "source" choice).
+# Reuse uses "mode" => "reuse" and "id" => destination.id, without publication
+# or attribute overrides. The destination supplies an identity and is not saved.
 
 mappings = %{} # Add reviewed destination IDs for unresolved dependency tokens.
 {:ok, plan} = Transfer.preview(archive, targets, user, dependencies: mappings)

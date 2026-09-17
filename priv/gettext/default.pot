@@ -6254,7 +6254,7 @@ msgstr ""
 
 #: lib/brando_admin/components/authorization_tools.ex:140
 #, elixir-autogen, elixir-format
-msgid "Import / export"
+msgid "Import/Export"
 msgstr ""
 
 #: lib/brando_admin/components/authorization_tools.ex:176
@@ -9087,4 +9087,19 @@ msgstr ""
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex:149
 #, elixir-autogen, elixir-format
 msgid "Link destination"
+msgstr ""
+
+#: lib/brando_admin/live/content/modules_list_live.ex:218
+#, elixir-autogen, elixir-format
+msgid "Current workspace"
+msgstr ""
+
+#: lib/brando_admin/live/content/modules_list_live.ex:22
+#, elixir-autogen, elixir-format
+msgid "Import / export DSL"
+msgstr ""
+
+#: lib/brando_admin/live/content/modules_list_live.ex:67
+#, elixir-autogen, elixir-format
+msgid "This imports independent module copies with new identities. Use Import/Export in Configuration to move saved content while preserving module lineage."
 msgstr ""

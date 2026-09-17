@@ -73,6 +73,49 @@ defmodule Brando.Content.TransferTest do
     archive
   end
 
+  test "reusing an included parent preserves its content and excludes its unused media", c do
+    c.source |> Changeset.change(parent_id: c.target.id) |> Repo.update!()
+    image = Factory.insert(:image, title: "Parent only", path: "images/parent-only.jpg", creator_id: c.user.id)
+    c.target |> Changeset.change(meta_image_id: image.id) |> Repo.update!()
+    before = c.target |> then(&Transfer.EntryCodec.load!(Page, &1.id, c.user)) |> Transfer.EntryCodec.fingerprint()
+    archive = entry_archive(c, [%{schema: Page, id: c.source.id}, %{schema: Page, id: c.target.id}])
+    source_key = "#{Page}:#{c.source.id}"
+    parent_key = "#{Page}:#{c.target.id}"
+
+    targets = %{
+      source_key => %{"attributes" => %{"uri" => "reused-parent-copy"}},
+      parent_key => %{"mode" => "reuse", "id" => c.target.id}
+    }
+
+    assert {:ok, plan} = Transfer.preview(archive, targets, c.user)
+    assert plan.problems == []
+    refute Enum.any?(plan.dependencies, &(&1.dependency["source_id"] == image.id && &1.dependency["kind"] == "image"))
+    assert {:ok, receipt} = Transfer.apply(plan, c.user)
+    assert map_size(receipt.after) == 1
+    refute Map.has_key?(receipt.before, parent_key)
+    created = Repo.get!(Page, receipt.after[source_key]["id"])
+    assert created.parent_id == c.target.id
+    assert before == Transfer.EntryCodec.fingerprint(Transfer.EntryCodec.load!(Page, c.target.id, c.user))
+    assert {:ok, _} = Transfer.restore(receipt.id, c.user)
+    assert before == Transfer.EntryCodec.fingerprint(Transfer.EntryCodec.load!(Page, c.target.id, c.user))
+  end
+
+  test "catalog type filters are combined before limiting results", c do
+    Brando.Content.create_identifier(Page, c.source)
+    results = Catalog.search(c.user, "", entries: true, schemas: [to_string(Page)])
+    assert [_ | _] = results
+    source = Enum.find(results, &(&1.id == c.source.id))
+    assert source.creator_name == c.user.name
+    assert source.updated_at == c.source.updated_at
+
+    assert Enum.all?(
+             Catalog.search(c.user, "", entries: true, schemas: [to_string(Page)]),
+             &(&1.schema == to_string(Page))
+           )
+
+    assert [] == Catalog.search(c.user, "", entries: true, schemas: ["Unregistered.Type"])
+  end
+
   test "media mapping options include untitled assets and search their filenames", c do
     image = Factory.insert(:image, title: nil, path: "images/untitled-courtyard.jpg", creator_id: c.user.id)
     options = Transfer.Dependencies.options("image", c.user)

@@ -65,7 +65,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     >
       <p>
         {gettext(
-          "This imports independent module copies with new identities. Use Import / export in Configuration to move saved content while preserving module lineage."
+          "This imports independent module copies with new identities. Use Import/Export in Configuration to move saved content while preserving module lineage."
         )}
       </p>
       <div :if={@imported_modules} class="imported-modules">

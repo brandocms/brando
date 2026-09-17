@@ -6260,8 +6260,8 @@ msgstr "Grupper er klargjort"
 
 #: lib/brando_admin/components/authorization_tools.ex:140
 #, elixir-autogen, elixir-format
-msgid "Import / export"
-msgstr "Import / eksport"
+msgid "Import/Export"
+msgstr "Import/Eksport"
 
 #: lib/brando_admin/components/authorization_tools.ex:176
 #, elixir-autogen, elixir-format

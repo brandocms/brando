@@ -728,7 +728,7 @@ msgstr ""
 
 #: lib/brando_admin/live/config/content_transfer_live.ex:71
 #, elixir-autogen, elixir-format
-msgid "Import / export"
+msgid "Import/Export"
 msgstr ""
 
 #: lib/brando_admin/live/config/content_transfer_live.ex:614
@@ -2117,4 +2117,102 @@ msgstr ""
 #: lib/brando_admin/content_preview.ex:184
 #, elixir-autogen, elixir-format
 msgid "Unnamed media"
+msgstr ""
+
+#: lib/brando_admin/live/config/content_transfer_live.ex:173
+#, elixir-autogen, elixir-format
+msgid "All types"
+msgstr ""
+
+#: lib/brando_admin/live/config/content_transfer_live.ex:1806
+#, elixir-autogen, elixir-format
+msgid "Choose existing on import"
+msgstr ""
+
+#: lib/brando_admin/live/config/content_transfer_live.ex:163
+#: lib/brando_admin/live/config/content_transfer_live.ex:165
+#, elixir-autogen, elixir-format
+msgid "Content types"
+msgstr ""
+
+#: lib/brando_admin/live/config/content_transfer_live.ex:1797
+#, elixir-autogen, elixir-format
+msgid "Definition included"
+msgstr ""
+
+#: lib/brando_admin/live/config/content_transfer_live.ex:1800
+#, elixir-autogen, elixir-format
+msgid "Gallery contents included"
+msgstr ""
+
+#: lib/brando_admin/live/config/content_transfer_live.ex:438
+#, elixir-autogen, elixir-format
+msgid "Media originals and definitions travel with the bundle when selected. Other references must be matched to content on the destination during import."
+msgstr ""
+
+#: lib/brando_admin/live/config/content_transfer_live.ex:1803
+#, elixir-autogen, elixir-format
+msgid "Video reference included"
+msgstr ""
+
+#: lib/brando/content/transfer/labels.ex:18
+#, elixir-autogen, elixir-format
+msgid "Categories"
+msgstr ""
+
+#: lib/brando/content/transfer/entries.ex:136
+#, elixir-autogen, elixir-format
+msgid "Choose Create new, Update existing or Use existing unchanged."
+msgstr ""
+
+#: lib/brando_admin/live/config/content_transfer_live.ex:615
+#, elixir-autogen, elixir-format
+msgid "Create new entries, update existing ones, or reuse existing entries without changing their content. Review each choice before importing."
+msgstr ""
+
+#: lib/brando/content/transfer/labels.ex:17
+#, elixir-autogen, elixir-format
+msgid "Parent"
+msgstr ""
+
+#: lib/brando/content/transfer/entries.ex:463
+#, elixir-autogen, elixir-format
+msgid "The existing entry has no saved link identifier. Run Sync identifiers in Utilities, then review the import again."
+msgstr ""
+
+#: lib/brando_admin/live/config/content_transfer_live.ex:776
+#: lib/brando_admin/live/config/content_transfer_live.ex:1746
+#, elixir-autogen, elixir-format
+msgid "Use existing unchanged"
+msgstr ""
+
+#: lib/brando_admin/live/config/content_transfer_live.ex:857
+#, elixir-autogen, elixir-format
+msgid "Use this destination for references. Its fields, content and publication status stay unchanged."
+msgstr ""
+
+#: lib/brando_admin/live/config/content_transfer_live.ex:425
+#, elixir-autogen, elixir-format
+msgid "Used by"
+msgstr ""
+
+#: lib/brando_admin/live/config/content_transfer_live.ex:223
+#, elixir-autogen, elixir-format
+msgid "Author"
+msgstr ""
+
+#: lib/brando_admin/live/config/content_transfer_live.ex:412
+#, elixir-autogen, elixir-format
+msgid "Include these entries in the export, or choose existing entries when importing. Including an entry may reveal its own references."
+msgstr ""
+
+#: lib/brando_admin/live/config/content_transfer_live.ex:227
+#, elixir-autogen, elixir-format
+msgid "Last updated"
+msgstr ""
+
+#: lib/brando_admin/live/config/content_transfer_live.ex:224
+#: lib/brando_admin/live/config/content_transfer_live.ex:231
+#, elixir-autogen, elixir-format
+msgid "Not recorded"
 msgstr ""

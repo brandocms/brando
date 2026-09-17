@@ -28,6 +28,8 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
        language_labels:
          Map.new(Brando.config(:languages), &{to_string(&1[:value]), Labels.language(to_string(&1[:value]), &1[:text])}),
        search: "",
+       content_types: content_types(user, "entries"),
+       selected_types: [],
        results: Catalog.search(user, "", entries: true),
        selected: %{},
        export_scope: "entries",
@@ -68,7 +70,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
     <div class="admin-workspace transfer-workspace" id="content-transfer" aria-busy={to_string(@busy != nil)}>
       <span class="transfer-eyebrow">{dgettext("content_transfer", "Configuration")}</span>
       <Workspace.header
-        title={dgettext("content_transfer", "Import / export")}
+        title={dgettext("content_transfer", "Import/Export")}
         subtitle={dgettext("content_transfer", "Move entries and their content between sites and environments.")}
       >
         <div class="transfer-scope">
@@ -158,6 +160,32 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             />
             <span>{length(@results)}</span>
           </form>
+          <div class="transfer-type-filters" role="group" aria-label={dgettext("content_transfer", "Content types")}>
+            <div class="transfer-type-heading">
+              <span>{dgettext("content_transfer", "Content types")}</span>
+              <button
+                type="button"
+                class="transfer-type-reset"
+                phx-click="filter_type"
+                phx-value-schema="all"
+                aria-pressed={to_string(@selected_types == [])}
+              >
+                {dgettext("content_transfer", "All types")}
+              </button>
+            </div>
+            <div class="transfer-type-options">
+              <button
+                :for={type <- @content_types}
+                type="button"
+                phx-click="filter_type"
+                phx-value-schema={type.schema}
+                aria-pressed={to_string(type.schema in @selected_types)}
+              >
+                <span class="transfer-type-check" aria-hidden="true"><Brando.HTML.Icon.icon name="hero-check" /></span>
+                <span>{type.label}</span>
+              </button>
+            </div>
+          </div>
           <%!-- Keep the shortcut mounted so selection updates do not move the focused content list. --%>
           <a hidden={selected_count(@selected) == 0} href="#transfer-export-summary" class="transfer-mobile-selection">
             <span class="transfer-control-label">{selection_label(@selected, @export_scope)}</span>
@@ -190,6 +218,20 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                   </div>
                 </div>
               </div>
+              <dl class="transfer-entry-metadata">
+                <div>
+                  <dt>{dgettext("content_transfer", "Author")}</dt>
+                  <dd>{entry.creator_name || dgettext("content_transfer", "Not recorded")}</dd>
+                </div>
+                <div>
+                  <dt>{dgettext("content_transfer", "Last updated")}</dt>
+                  <dd>
+                    <time :if={entry.updated_at} datetime={Calendar.strftime(entry.updated_at, "%Y-%m-%dT%H:%M:%SZ")}>
+                      {Brando.Utils.Datetime.format_datetime(entry.updated_at, "%d.%m.%Y · %H:%M")}
+                    </time><span :if={!entry.updated_at}>{dgettext("content_transfer", "Not recorded")}</span>
+                  </dd>
+                </div>
+              </dl>
               <div class="transfer-entry-footer">
                 <div
                   class="transfer-field-pills"
@@ -343,7 +385,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
         <div class="transfer-review-list">
           <article :for={entry <- @exported.bundle["entries"] || []}>
             <div>
-              <h3>{entry["title"]}</h3><p>
+              <h3>{entry["title"]} <span class="transfer-badge">{schema_label(entry["schema"])}</span></h3><p>
                 {dgettext("content_transfer", "Whole entry")} · {Map.get(
                   @language_labels,
                   entry["language"],
@@ -366,25 +408,55 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
         </div>
         <section :if={@exported.bundle["version"] == 2 && related_entries(@exported.bundle) != []} class="transfer-related">
           <h3>{dgettext("content_transfer", "Related entries")}</h3>
-          <p>{dgettext("content_transfer", "Include these entries too, or choose their destination when you import.")}</p>
+          <p>
+            {dgettext(
+              "content_transfer",
+              "Include these entries in the export, or choose existing entries when importing. Including an entry may reveal its own references."
+            )}
+          </p>
           <div :for={dep <- related_entries(@exported.bundle)} class="transfer-related-row">
-            <div><strong>{dep["label"]}</strong><span>{dgettext("content_transfer", "Referenced content")}</span></div>
+            <div class="transfer-related-content">
+              <div class="transfer-related-title">
+                <strong>{dep["label"]}</strong><span class="transfer-badge">{dependency_type(dep)}</span>
+              </div>
+              <ul class="transfer-reference-paths">
+                <li :for={usage <- dependency_usages(@exported.bundle, dep)}>
+                  <Brando.HTML.Icon.icon name="hero-link" />
+                  <span>{dgettext("content_transfer", "Used by")} <strong>{usage.title}</strong>
+                  <span class="transfer-reference-type">{usage.type}</span> · {usage.path}</span>
+                </li>
+              </ul>
+            </div>
             <button type="button" class="transfer-button" phx-click="include_entry" phx-value-key={dep["entry_key"]}>
               <span class="transfer-control-label">{dgettext("content_transfer", "Include entry")}</span>
             </button>
           </div>
         </section>
-        <details class="transfer-details">
-          <summary>{dgettext("content_transfer", "Included dependencies")}</summary><div class="transfer-dependency-list">
-            <div :for={{_token, dep} <- Enum.sort(@exported.bundle["dependencies"])}>
-              <span>{dep["label"]}</span><small>{Labels.field(dep["kind"])} · {if dep["original"],
-                do: dgettext("content_transfer", "Original included"),
-                else:
-                  if(included?(@exported.bundle, dep),
-                    do: dgettext("content_transfer", "Entry included"),
-                    else: dgettext("content_transfer", "Resolve on destination")
-                  )}</small>
-            </div>
+        <details :if={dependency_groups(@exported.bundle) != []} class="transfer-details">
+          <summary>{dgettext("content_transfer", "Included dependencies")}</summary>
+          <p class="transfer-footnote">
+            {dgettext(
+              "content_transfer",
+              "Media originals and definitions travel with the bundle when selected. Other references must be matched to content on the destination during import."
+            )}
+          </p>
+          <div class="transfer-dependency-groups">
+            <section
+              :for={{type, dependencies} <- dependency_groups(@exported.bundle)}
+              class="transfer-dependency-group"
+              data-kind={hd(dependencies)["kind"]}
+            >
+              <h3>
+                <Brando.HTML.Icon.icon name={dependency_icon(hd(dependencies)["kind"])} />{type}<span class="transfer-badge">{length(
+                  dependencies
+                )}</span>
+              </h3>
+              <div class="transfer-dependency-list">
+                <div :for={dep <- dependencies}>
+                  <span>{dep["label"]}</span><small class="transfer-badge">{export_dependency_status(@exported.bundle, dep)}</small>
+                </div>
+              </div>
+            </section>
           </div>
         </details>
         <div class="transfer-note">
@@ -403,7 +475,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             class="transfer-button is-primary"
             id="transfer-download"
             href={@download}
-            download
+            download="brando-content.zip"
           ><span class="transfer-control-label">{dgettext("content_transfer", "Download content bundle")}</span></a>
         </div>
       </section>
@@ -542,7 +614,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 do:
                   dgettext(
                     "content_transfer",
-                    "Create new entries or update existing ones. Review their keys, publication and content."
+                    "Create new entries, update existing ones, or reuse existing entries without changing their content. Review each choice before importing."
                   ),
                 else:
                   dgettext(
@@ -554,7 +626,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
         </div>
         <form
           id="transfer-destination-search"
-          hidden={@archive.bundle["version"] == 2 && !Enum.any?(@plan.entries, &(&1.mode == "update"))}
+          hidden={@archive.bundle["version"] == 2 && !Enum.any?(@plan.entries, &(&1.mode in ~w(update reuse)))}
           phx-change="destination_search"
           phx-submit="destination_search"
           class="transfer-search"
@@ -684,9 +756,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                   )}
                 </p>
               </div>
-              <span class={["transfer-badge", item.mode == "update" && "warning"]}>{if item.mode == "create",
-                do: dgettext("content_transfer", "Create new"),
-                else: dgettext("content_transfer", "Update existing")}</span>
+              <span class={["transfer-badge", item.mode == "update" && "warning"]}>{entry_mode_label(item.mode)}</span>
             </header>
             <div class="transfer-entry-controls">
               <div>
@@ -702,9 +772,12 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                   <option value="update" selected={item.mode == "update"}>
                     {dgettext("content_transfer", "Update an existing entry")}
                   </option>
+                  <option value="reuse" selected={item.mode == "reuse"}>
+                    {dgettext("content_transfer", "Use existing unchanged")}
+                  </option>
                 </select>
               </div>
-              <div>
+              <div :if={item.mode != "reuse"}>
                 <label for={"entry-publication-#{item.source["key"]}"}>{dgettext("content_transfer", "Publication")}</label>
                 <select
                   class="admin-select"
@@ -724,7 +797,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                   </option>
                 </select>
               </div>
-              <div :if={item.mode == "update"} class="transfer-entry-destination">
+              <div :if={item.mode in ~w(update reuse)} class="transfer-entry-destination">
                 <label for={"entry-target-#{item.source["key"]}"}>{dgettext("content_transfer", "Destination entry")}</label>
                 <select
                   class="admin-select"
@@ -744,7 +817,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 </select>
               </div>
             </div>
-            <div class="transfer-entry-overrides">
+            <div :if={item.mode != "reuse"} class="transfer-entry-overrides">
               <div :for={name <- Entries.editable(item.source)}>
                 <label for={"entry-#{name}-#{item.source["key"]}"}>{field_label(name)}</label>
                 <select
@@ -776,22 +849,32 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
               </div>
             </div>
             <p class="transfer-entry-effect">
-              {if item.mode == "create",
-                do: dgettext("content_transfer", "Create this entry with its authored fields, metadata and owned content."),
-                else:
+              {case item.mode do
+                "create" ->
+                  dgettext("content_transfer", "Create this entry with its authored fields, metadata and owned content.")
+
+                "reuse" ->
+                  dgettext(
+                    "content_transfer",
+                    "Use this destination for references. Its fields, content and publication status stay unchanged."
+                  )
+
+                _ ->
                   dgettext(
                     "content_transfer",
                     "Replace this entry’s authored fields, metadata and owned content with the bundle values."
-                  )}
+                  )
+              end}
             </p>
             <p
-              :if={item.status == :published}
+              :if={item.status == :published && item.mode != "reuse"}
               class="transfer-published"
             >
               {dgettext("content_transfer", "This entry will be published. Imported content becomes live after rendering.")}
             </p>
             <p :if={item.issue} class="transfer-inline-error" role="status">{item.issue}</p>
             <details
+              :if={item.mode != "reuse"}
               id={"entry-diff-#{item.source["key"]}"}
               class="transfer-entry-diff"
               phx-mounted={JS.ignore_attributes("open")}
@@ -896,7 +979,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           <form id="transfer-dependency-mappings" phx-change="map_dependencies">
             <article :for={item <- @plan.dependencies} class="transfer-dependency-row">
               <div>
-                <h3>{item.dependency["label"]}</h3><span>{Labels.field(item.dependency["kind"])}</span><code :if={
+                <h3>{item.dependency["label"]}</h3><span>{dependency_type(item.dependency)}</span><code :if={
                   item.dependency["uid"]
                 }>{item.dependency["uid"]}</code>
               </div><div class="transfer-dependency-choice">
@@ -1167,9 +1250,32 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
          search: params["query"] || "",
          results:
            Catalog.search(socket.assigns.current_user, params["query"] || "",
-             entries: socket.assigns.export_scope == "entries"
+             entries: socket.assigns.export_scope == "entries",
+             schemas: selected_schemas(socket.assigns.selected_types)
            )
        )}
+
+  def handle_event("filter_type", %{"schema" => schema}, socket) do
+    selected = socket.assigns.selected_types
+
+    selected =
+      cond do
+        schema == "all" -> []
+        !Enum.any?(socket.assigns.content_types, &(&1.schema == schema)) -> selected
+        schema in selected -> selected -- [schema]
+        true -> selected ++ [schema]
+      end
+
+    {:noreply,
+     assign(socket,
+       selected_types: selected,
+       results:
+         Catalog.search(socket.assigns.current_user, socket.assigns.search,
+           entries: socket.assigns.export_scope == "entries",
+           schemas: selected_schemas(selected)
+         )
+     )}
+  end
 
   def handle_event("toggle_field", %{"entry" => key, "field" => name}, socket) do
     entry = Enum.find(socket.assigns.results, &(&1.key == key))
@@ -1199,6 +1305,8 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
     {:noreply,
      assign(socket,
        export_scope: scope,
+       content_types: content_types(socket.assigns.current_user, scope),
+       selected_types: [],
        selected: selected,
        results: Catalog.search(socket.assigns.current_user, socket.assigns.search, entries: scope == "entries")
      )}
@@ -1321,7 +1429,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
          destination_search: params["query"] || "",
          target_options:
            Catalog.search(socket.assigns.current_user, params["query"] || "",
-             action: :update,
+             action: if(socket.assigns.archive.bundle["version"] == 2, do: :read, else: :update),
              entries: socket.assigns.archive.bundle["version"] == 2
            )
        )}
@@ -1557,7 +1665,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
       dependency_options: options,
       target_options:
         Catalog.search(user, socket.assigns.destination_search,
-          action: :update,
+          action: if(socket.assigns.archive.bundle["version"] == 2, do: :read, else: :update),
           entries: socket.assigns.archive.bundle["version"] == 2
         )
     )
@@ -1633,6 +1741,106 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
       |> Enum.filter(&(&1["entry_key"] && !included?(bundle, &1)))
       |> Enum.uniq_by(& &1["entry_key"])
       |> Enum.sort_by(& &1["label"])
+
+  defp entry_mode_label("create"), do: dgettext("content_transfer", "Create new")
+  defp entry_mode_label("reuse"), do: dgettext("content_transfer", "Use existing unchanged")
+  defp entry_mode_label(_), do: dgettext("content_transfer", "Update existing")
+
+  defp selected_schemas([]), do: nil
+  defp selected_schemas(selected), do: selected
+
+  defp content_types(user, scope) do
+    schemas = if scope == "entries", do: Catalog.entry_schemas(), else: Catalog.schemas()
+
+    schemas
+    |> Enum.filter(&(Boundary.authorize(user, :export, &1) == :ok))
+    |> Enum.map(&%{schema: to_string(&1), label: Labels.schema(&1)})
+    |> Enum.sort_by(& &1.label)
+  end
+
+  defp schema_label(name) do
+    case Brando.Authorization.Catalog.schema(name) do
+      nil -> dgettext("content_transfer", "Entry")
+      schema -> Labels.schema(schema)
+    end
+  end
+
+  defp dependency_type(%{"schema" => schema, "kind" => kind}) when kind in ~w(entry identifier fragment),
+    do: schema_label(schema)
+
+  defp dependency_type(dep), do: Labels.field(dep["kind"])
+
+  defp dependency_groups(bundle) do
+    bundle["dependencies"]
+    |> Map.values()
+    # Whole-entry references already appear in the main export or Related entries.
+    |> Enum.reject(&(bundle["version"] == 2 && &1["entry_key"]))
+    |> Enum.group_by(&dependency_type/1)
+    |> Enum.map(fn {type, deps} -> {type, Enum.sort_by(deps, & &1["label"])} end)
+    |> Enum.sort_by(&elem(&1, 0))
+  end
+
+  defp dependency_icon(kind) when kind in ~w(image gallery gallery_object), do: "hero-photo"
+  defp dependency_icon("video"), do: "hero-film"
+  defp dependency_icon(kind) when kind in ~w(module module_set table_template container palette), do: "hero-cube"
+  defp dependency_icon(_), do: "hero-document-text"
+
+  defp export_dependency_status(bundle, dep) do
+    cond do
+      dep["original"] ->
+        dgettext("content_transfer", "Original included")
+
+      included?(bundle, dep) ->
+        dgettext("content_transfer", "Entry included")
+
+      dep["kind"] in ~w(module table_template) && bundle["definitions"] ->
+        dgettext("content_transfer", "Definition included")
+
+      dep["kind"] == "gallery" ->
+        dgettext("content_transfer", "Gallery contents included")
+
+      dep["kind"] == "video" ->
+        dgettext("content_transfer", "Video reference included")
+
+      true ->
+        dgettext("content_transfer", "Choose existing on import")
+    end
+  end
+
+  defp dependency_usages(bundle, dep) do
+    tokens = for {token, candidate} <- bundle["dependencies"], candidate["entry_key"] == dep["entry_key"], do: token
+
+    for entry <- bundle["entries"] || [],
+        path <- reference_paths(entry["data"], tokens, bundle["dependencies"], [], MapSet.new()) do
+      %{title: entry["title"], type: schema_label(entry["schema"]), path: Enum.map_join(path, " / ", &Labels.field/1)}
+    end
+    |> Enum.uniq()
+  end
+
+  defp reference_paths(value, tokens, dependencies, path, visited) when is_binary(value) do
+    cond do
+      Enum.any?(Brando.Content.Transfer.Requirements.references(value, dependencies), &(&1 in tokens)) ->
+        [path]
+
+      Map.has_key?(dependencies, value) && !MapSet.member?(visited, value) ->
+        reference_paths(dependencies[value], tokens, dependencies, path, MapSet.put(visited, value))
+
+      true ->
+        []
+    end
+  end
+
+  defp reference_paths(value, tokens, dependencies, path, visited) when is_map(value) do
+    Enum.flat_map(value, fn {key, child} ->
+      next = if key in ~w(attributes references owned data), do: path, else: path ++ [key]
+      reference_paths(child, tokens, dependencies, next, visited)
+    end)
+  end
+
+  defp reference_paths(values, tokens, dependencies, path, visited) when is_list(values),
+    do: Enum.flat_map(values, &reference_paths(&1, tokens, dependencies, path, visited))
+
+  defp reference_paths(_, _, _, _, _), do: []
 
   defp field_label(field), do: Labels.field(field)
   defp display_field("language", value, labels), do: Map.get(labels, value, display_value(value))

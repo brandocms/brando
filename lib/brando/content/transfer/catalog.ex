@@ -74,6 +74,7 @@ defmodule Brando.Content.Transfer.Catalog do
     pattern = "%" <> escape_like(String.slice(query, 0, 150)) <> "%"
 
     selected
+    |> Enum.filter(&(is_nil(opts[:schemas]) || to_string(&1) in opts[:schemas]))
     |> Enum.filter(&(Boundary.authorize(actor, action, &1) == :ok))
     |> Enum.flat_map(fn schema ->
       # Fragments intentionally do not persist identifiers. They have their own
@@ -129,6 +130,7 @@ defmodule Brando.Content.Transfer.Catalog do
     end)
     |> Enum.sort_by(&{&1.title, &1.schema, &1.id})
     |> Enum.take(60)
+    |> with_authors()
   end
 
   def describe(entry, identifier \\ nil) do
@@ -152,10 +154,23 @@ defmodule Brando.Content.Transfer.Catalog do
       title: title,
       language: to_string(Map.get(entry, :language) || ""),
       status: to_string(Map.get(entry, :status) || ""),
+      creator_id: Map.get(entry, :creator_id),
+      updated_at: Map.get(entry, :updated_at) || Map.get(entry, :inserted_at),
       url: (identifier && identifier.url) || "",
       hints: hints(entry),
       fields: fields(schema)
     }
+  end
+
+  defp with_authors(entries) do
+    ids = entries |> Enum.map(& &1.creator_id) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+
+    names =
+      if ids == [],
+        do: %{},
+        else: Map.new(Repo.all(from(u in Brando.Users.User, where: u.id in ^ids, select: {u.id, u.name})))
+
+    Enum.map(entries, &Map.put(&1, :creator_name, names[&1.creator_id]))
   end
 
   def hints(%{__struct__: Brando.Pages.Page} = entry), do: %{"uri" => entry.uri, "language" => to_string(entry.language)}

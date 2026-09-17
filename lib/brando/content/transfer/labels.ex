@@ -14,6 +14,8 @@ defmodule Brando.Content.Transfer.Labels do
   def language("no", _), do: dgettext("content_transfer", "Norwegian")
   def language(_, text), do: text
 
+  defp label("parent"), do: dgettext("content_transfer", "Parent")
+  defp label("categories"), do: dgettext("content_transfer", "Categories")
   defp label("uri"), do: dgettext("content_transfer", "URI")
   defp label("css_classes"), do: dgettext("content_transfer", "CSS classes")
   defp label("json_ld_type"), do: dgettext("content_transfer", "Structured data type")

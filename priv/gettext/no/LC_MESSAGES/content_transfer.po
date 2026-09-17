@@ -721,8 +721,8 @@ msgstr "Importer"
 
 #: lib/brando_admin/live/config/content_transfer_live.ex:71
 #, elixir-autogen, elixir-format
-msgid "Import / export"
-msgstr "Import / eksport"
+msgid "Import/Export"
+msgstr "Import/Eksport"
 
 #: lib/brando_admin/live/config/content_transfer_live.ex:614
 #: lib/brando_admin/live/config/content_transfer_live.ex:693
@@ -2111,3 +2111,66 @@ msgstr "Utilgjengelig mediefil"
 #, elixir-autogen, elixir-format
 msgid "Unnamed media"
 msgstr "Mediefil uten navn"
+
+msgid "Content types"
+msgstr "Innholdstyper"
+
+msgid "All types"
+msgstr "Alle typer"
+
+msgid "These entries are referenced by your selection. Include their content, or choose an existing entry on the destination during import."
+msgstr "Disse oppføringene brukes av innholdet du har valgt. Ta med innholdet deres, eller velg en eksisterende oppføring på målstedet under import."
+
+msgid "Including an entry adds it to the main export and may reveal its own references. Existing content is only changed after you review the import."
+msgstr "Oppføringen legges til i hovedeksporten og kan ha egne relasjoner. Eksisterende innhold endres først etter at du har gjennomgått importen."
+
+msgid "Media originals and definitions travel with the bundle when selected. Other references must be matched to content on the destination during import."
+msgstr "Medieoriginaler og definisjoner følger med når de er valgt. Andre referanser må kobles til innhold på målstedet under import."
+
+msgid "Definition included"
+msgstr "Definisjon inkludert"
+
+msgid "Gallery contents included"
+msgstr "Galleriinnhold inkludert"
+
+msgid "Video reference included"
+msgstr "Videoreferanse inkludert"
+
+msgid "Choose existing on import"
+msgstr "Velg eksisterende ved import"
+
+msgid "Choose Create new, Update existing or Use existing unchanged."
+msgstr "Velg Opprett ny, Oppdater eksisterende eller Bruk eksisterende uten endringer."
+
+msgid "Create new entries, update existing ones, or reuse existing entries without changing their content. Review each choice before importing."
+msgstr "Opprett nye oppføringer, oppdater eksisterende eller bruk eksisterende uten å endre innholdet. Gjennomgå valgene før import."
+
+msgid "Use existing unchanged"
+msgstr "Bruk eksisterende uten endringer"
+
+msgid "Use this destination for references. Its fields, content and publication status stay unchanged."
+msgstr "Koble referansene til denne oppføringen. Feltene, innholdet og publiseringsstatusen beholdes uendret."
+
+msgid "Parent"
+msgstr "Forelder"
+
+msgid "Categories"
+msgstr "Kategorier"
+
+msgid "Used by"
+msgstr "Brukes av"
+
+msgid "The existing entry has no saved link identifier. Run Sync identifiers in Utilities, then review the import again."
+msgstr "Den eksisterende oppføringen mangler en lagret lenkeidentifikator. Kjør Synkroniser identifikatorer i Verktøy, og gjennomgå importen på nytt."
+
+msgid "Author"
+msgstr "Forfatter"
+
+msgid "Last updated"
+msgstr "Sist endret"
+
+msgid "Not recorded"
+msgstr "Ikke registrert"
+
+msgid "Include these entries in the export, or choose existing entries when importing. Including an entry may reveal its own references."
+msgstr "Ta med oppføringene i eksporten, eller velg eksisterende oppføringer ved import. Oppføringer du tar med, kan ha egne relasjoner."

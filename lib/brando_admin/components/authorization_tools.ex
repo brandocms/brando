@@ -137,7 +137,7 @@ defmodule BrandoAdmin.Components.AuthorizationTools do
         <div class="utils-transfer-heading">
           <div>
             <span class="utils-eyebrow">{gettext("Group configuration")}</span><h3 id="configuration-transfer-title">
-              {gettext("Import / export")}
+              {gettext("Import/Export")}
             </h3>
           </div>
           <div class="utils-transfer-scope">

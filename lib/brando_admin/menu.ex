@@ -290,7 +290,7 @@ defmodule BrandoAdmin.Menu do
                   publishing_menu_item(current_site),
                   %{name: gettext("Markdown sources"), url: "/admin/config/markdown-sources"},
                   frontend_assets_menu_item(current_user),
-                  %{name: gettext("Import / export"), url: "/admin/config/import-export"},
+                  %{name: gettext("Import/Export"), url: "/admin/config/import-export"},
                   %{
                     name: gettext("Cache"),
                     url: "/admin/config/cache"

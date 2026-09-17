@@ -73,6 +73,7 @@
   .transfer-advanced p { font-size: 12px; }
   .transfer-advanced label { font-size: 12px; }
   .transfer-related { display: grid; gap: 12px; margin-top: 24px; padding: 20px; background: #f5f8fc; border: 1px solid #e1e8ee; border-radius: 8px; }
+  .transfer-related > p { font-size: 13px; line-height: 20px; margin: 0; padding: 0; }
   .transfer-related-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 12px; border-top: 1px solid #e1e8ee; }
   .transfer-related-row > div { min-width: 0; display: grid; gap: 4px; }
   .transfer-related-row strong { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
@@ -305,4 +306,55 @@
     .transfer-related { padding: 16px; }
     .transfer-related-row { flex-wrap: wrap; }
   }
+}
+
+.transfer-workspace {
+  .transfer-type-filters { display: grid; gap: 12px; margin: 12px 0 20px; padding: 14px; border: 1px solid var(--transfer-line); border-radius: 8px; background: #f8faf6; }
+  .transfer-type-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; line-height: 18px; color: var(--transfer-muted); }
+  .transfer-type-heading .transfer-type-reset { border: 0; background: transparent; padding: 0; color: var(--transfer-green); font-size: 12px; line-height: 18px; text-decoration: underline; text-underline-offset: 3px; }
+  .transfer-type-options { display: flex; flex-wrap: wrap; gap: 6px; }
+  .transfer-type-options button { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 6px 10px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--transfer-muted); font-size: 12px; line-height: 18px; }
+  .transfer-type-options button:hover { background: #edf2e9; }
+  .transfer-type-options button[aria-pressed="true"] { background: #fff; color: var(--transfer-green); border-color: #bfceba; }
+  .transfer-type-check { display: grid; place-items: center; width: 14px; height: 14px; border: 1px solid #aab8a6; border-radius: 3px; background: #fff; }
+  .transfer-type-check [data-icon] { width: 10px; height: 10px; visibility: hidden; }
+  [aria-pressed="true"] > .transfer-type-check { background: var(--transfer-green); border-color: var(--transfer-green); color: #fff; }
+  [aria-pressed="true"] > .transfer-type-check [data-icon] { visibility: visible; }
+  .transfer-entry-metadata { display: flex; flex-wrap: wrap; gap: 8px 24px; padding-left: 48px; }
+  .transfer-entry-metadata > div { display: flex; flex-wrap: wrap; gap: 4px 6px; min-width: 0; font-size: 12px; line-height: 18px; }
+  .transfer-entry-metadata dt { color: var(--transfer-muted); font-weight: 400; }
+  .transfer-entry-metadata dd { color: var(--transfer-ink); overflow-wrap: anywhere; }
+  .transfer-entry-metadata time { font-variant-numeric: tabular-nums; }
+  .transfer-related-content { min-width: 0; }
+  .transfer-related-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .transfer-related-title .transfer-badge { margin: 0; display: inline-flex; }
+  .transfer-reference-paths { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; }
+  .transfer-reference-paths li { display: flex; align-items: baseline; gap: 8px; font-size: 12px; line-height: 1.6; color: var(--workspace-muted); overflow-wrap: anywhere; }
+  .transfer-reference-paths [data-icon] { width: 13px; height: 13px; flex-shrink: 0; }
+  .transfer-reference-paths li span, .transfer-reference-paths li strong { display: inline; margin: 0; font-size: inherit; }
+  .transfer-reference-type { color: #657992; }
+  .transfer-dependency-groups { display: grid; gap: 16px; margin-top: 16px; }
+  .transfer-dependency-group { border: 1px solid var(--workspace-line); border-radius: 6px; overflow: hidden; }
+  .transfer-dependency-group h3 { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #f6f8f4; font-size: 14px; }
+  .transfer-dependency-group h3 [data-icon] { width: 16px; height: 16px; }
+  .transfer-dependency-group h3 .transfer-badge { margin-left: auto; }
+  .transfer-dependency-list { margin: 0; padding: 0 16px; }
+  .transfer-dependency-list > div { gap: 16px; padding: 10px 0; border-top: 1px solid #edf0ea; }
+  .transfer-dependency-list > div > span { min-width: 0; overflow-wrap: anywhere; }
+  .transfer-dependency-list small { flex-shrink: 0; white-space: normal; }
+  @media (max-width: 600px) {
+    .transfer-dependency-list > div { align-items: flex-start; flex-direction: column; gap: 6px; }
+    .transfer-related-row { align-items: flex-start; flex-direction: column; }
+  }
+  @media (pointer: coarse) { .transfer-type-filters button { min-height: 40px; } }
+}
+.transfer-workspace {
+  .transfer-details > .transfer-footnote { padding: 16px 16px 0; }
+  .transfer-dependency-groups { margin: 16px; }
+  .transfer-dependency-group[data-kind="image"] h3,
+  .transfer-dependency-group[data-kind="gallery"] h3,
+  .transfer-dependency-group[data-kind="video"] h3 { background: #f1f6fa; color: #405c70; }
+  .transfer-dependency-group[data-kind="entry"] h3,
+  .transfer-dependency-group[data-kind="identifier"] h3,
+  .transfer-dependency-group[data-kind="fragment"] h3 { background: #f6f4fa; color: #625375; }
 }
