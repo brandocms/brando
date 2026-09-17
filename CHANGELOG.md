@@ -360,10 +360,23 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 - Add `mix brando.gen.seeds`, seeding the content a new installation needs
   before its first request succeeds: identity and SEO per configured language,
-  a Hero and a Text module, a published `index` page built from them, a `main`
+  seven modules, a published `index` page built from six of them, a `main`
   navigation menu and a `partials/footer` fragment. Previously a fresh install
   had no published page, so `/` responded 404 until one was created by hand.
   The seeds are idempotent and never modify existing content.
+
+  The seeded page is a designed welcome page rather than placeholder copy: a
+  hero with a fact row stating what the installer made, a three-step quick
+  start, a grid linking the framework guides, six tips, and a Toolbox module
+  rendering the mix tasks Brando adds — marking the ones that show a diff
+  before writing. Delete it when it has served its purpose; nothing is wired
+  into the templates.
+
+- Retune the installed frontend for a dark default: `europa.config.cjs` ships
+  a flat deep green ground (`#030e0a`), bone foregrounds at five opacities and
+  a single champagne accent, plus `heading/7xl` and `code/sm` type sizes. The
+  scaffold CSS is rewritten against it, and `.label`, `.button`, `.textlink`
+  and `.section-head` are available as shared furniture for your own modules.
 
 - `mix brando.install --public-site --replace-phoenix-home` now retires the
   generated Phoenix homepage request test along with the route it covers.

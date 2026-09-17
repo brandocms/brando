@@ -7,9 +7,12 @@
  */
 
 header[data-nav] {
-  @color bg body.background;
-  @color border-bottom gray.300;
+  @color border-bottom bone.hair;
 
+  /* Matches `body.background` at 80%, so content dims as it scrolls under
+     rather than disappearing behind a solid bar. */
+  background: rgb(3 14 10 / 80%);
+  backdrop-filter: saturate(160%) blur(16px);
   border-bottom: 1px solid;
   position: fixed;
   top: 0;
@@ -26,10 +29,11 @@ header[data-nav] {
   }
 
   .brand {
-    @fontsize text/sm;
+    @fontsize text/lg;
+    @color fg bone.full;
 
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    font-weight: 600;
+    letter-spacing: -0.02em;
     text-decoration: none;
   }
 
@@ -40,22 +44,33 @@ header[data-nav] {
     margin: 0;
     padding: 0;
     list-style: none;
+    align-items: center;
   }
 
   li {
-    @fontsize text/sm;
+    @font mono;
+    @fontsize text/xs;
+
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
   }
 
   a {
-    text-decoration-color: transparent;
+    @color fg bone.muted;
+
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    padding-bottom: 3px;
+    transition: color 250ms ease-out, border-color 250ms ease-out;
 
     &:hover {
-      @color fg accent;
+      @color fg bone.full;
     }
 
     /* `<.menu_item>` marks the current page. */
     &[data-link-active] {
-      text-decoration-color: currentColor;
+      @color fg bone.full;
+      @color border-bottom accent;
     }
   }
 }

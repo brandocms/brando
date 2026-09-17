@@ -1,28 +1,40 @@
 /**
- * Site footer. Its content is the `partials/footer` page fragment, so it is
- * edited in the admin rather than written here.
+ * Site footer.
  *
- * The fragment renders modules, and a module brings its own container — so the
- * footer itself must not add one, or its content indents twice.
+ * The footer fragment brings its own module markup, so this only owns the
+ * black ground the page lands on and the colophon beneath it.
  */
 
 footer {
-  @space padding-y xl;
-  @color border-top gray.300;
+  @color bg black;
 
-  border-top: 1px solid;
-
-  /* Same container/indent pair a module uses, so it lines up with the
-     fragment's content above it. */
-  .colophon {
+  > .inner {
     @space container;
-    @space margin-top md;
+    @space padding-top xl;
+  }
 
-    .inner {
-      @space padding-x indent $lg;
-      @fontsize text/xs;
-      @color fg gray.600;
+  /* The fragment's own module markup sits on the same indent as the page. */
+  > .inner > [b-tpl] {
+    @space padding-x indent $lg;
+  }
 
+  .colophon {
+    @space margin-top xl;
+    @space padding-y sm;
+    @space padding-x indent $lg;
+    @color border-top bone.hair;
+    @color fg bone.faint;
+    @font mono;
+    @fontsize text/xs;
+
+    @display flex/row/nowrap;
+
+    border-top: 1px solid;
+    justify-content: space-between;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+
+    p {
       margin-bottom: 0;
     }
   }

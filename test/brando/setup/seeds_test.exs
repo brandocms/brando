@@ -28,16 +28,23 @@ defmodule Brando.Setup.SeedsTest do
 
       # Repo inserts bypass the context rendering callbacks, so the seeds render
       # the entry themselves. Without that the first request renders nothing.
-      assert page.rendered_blocks =~ "b-tpl=\"hero\""
-      assert page.rendered_blocks =~ "b-tpl=\"text\""
-      assert page.rendered_blocks =~ "b-tpl=\"columns\""
+      for template <- ~w(hero steps cards tips terminal closing) do
+        assert page.rendered_blocks =~ ~s(b-tpl="#{template}")
+      end
+
       assert page.rendered_blocks =~ "<h1>"
       assert page.rendered_blocks =~ "mix brando.setup"
 
+      # The toolbox table documents the framework, so it renders from the
+      # module markup rather than from editable refs.
+      assert page.rendered_blocks =~ "brando<span class=\"punct\">.</span>install"
+      assert page.rendered_blocks =~ "task plans"
+
       assert Brando.Repo.get_by(Navigation.Menu, key: "main", language: :en)
-      assert Brando.Repo.get_by(Content.Module, uid: "brando-default-hero")
-      assert Brando.Repo.get_by(Content.Module, uid: "brando-default-text")
-      assert Brando.Repo.get_by(Content.Module, uid: "brando-default-columns")
+
+      for uid <- ~w(hero steps cards tips terminal closing footer) do
+        assert Brando.Repo.get_by(Content.Module, uid: "brando-default-#{uid}")
+      end
       assert Brando.Repo.get_by(Pages.Fragment, parent_key: "partials", key: "footer")
       assert {:ok, _identity} = Brando.Sites.get_identity(%{matches: %{language: :en}})
       assert {:ok, _seo} = Brando.Sites.get_seo(%{matches: %{language: :en}})

@@ -27,7 +27,7 @@ defmodule <%= web_module %>.CMS.Layouts do
           <div class="inner">
             {assigns[:partials] && @partials["footer"]}
             <div :if={site_name(assigns)} class="colophon">
-              <p class="inner">© {Date.utc_today().year} {site_name(assigns)}</p>
+              <p>© {Date.utc_today().year} {site_name(assigns)}</p>
             </div>
           </div>
         </footer>

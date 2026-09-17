@@ -10,7 +10,7 @@
 
 .cookie-container {
   color: var(--brando-color-dark);
-  @color bg light;
+  @color bg shell;
   display: none;
   position: fixed;
   bottom: 0;
@@ -18,7 +18,7 @@
   z-index: 9997;
   margin-bottom: 0 !important;
   max-width: 100% !important;
-  border-top: 1px solid theme(colors.dark);
+  border-top: 1px solid theme(colors.bone.hairStrong);
 
   @space padding-y xxs;
 
@@ -99,7 +99,7 @@
       border: 1px solid var(--brando-color-dark);
 
       &:hover {
-        @color fg light;
+        @color fg bone.full;
         color: var(--brando-color-dark);
       }
 

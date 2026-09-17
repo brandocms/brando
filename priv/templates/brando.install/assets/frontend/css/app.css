@@ -133,14 +133,22 @@ a {
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.18em;
-  text-decoration-color: theme(colors.gray.300);
+  text-decoration-color: theme(colors.link.regular.border);
   transition: color 250ms ease-out, text-decoration-color 250ms ease-out;
 
   &:hover {
-    @color fg accent;
+    @color fg link.hover.text;
 
     text-decoration-color: currentColor;
   }
+}
+
+/* Anything wearing a mono label is chrome, not prose: it carries its own
+   underline treatment, or none. */
+.label a,
+.button,
+.textlink {
+  text-decoration: none;
 }
 
 .video-wrapper {

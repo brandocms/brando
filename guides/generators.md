@@ -209,13 +209,30 @@ details. Open `/admin/login` and sign in. Account creation and database operatio
 are separate from the Igniter source plan.
 
 `brando.gen.seeds` creates the content a new site needs before its first request
-succeeds: identity and SEO per configured language when missing, a Hero and a
-Text module, a published `index` page built from them, a `main` navigation menu
-and a `partials/footer` fragment. It owns an account with `--user ID`, defaulting
-to the oldest active superuser. Existing content of each kind is left untouched,
+succeeds: identity and SEO per configured language when missing, seven modules,
+a published `index` page built from six of them, a `main` navigation menu and a
+`partials/footer` fragment. It owns an account with `--user ID`, defaulting to
+the oldest active superuser. Existing content of each kind is left untouched,
 so the task is safe to rerun; it is a starting point for editing in the admin,
 not a migration path. Without it, `/` has no published page and responds 404.
 Your application's own `priv/repo/seeds.exs` is preserved and never run for you.
+
+The seeded modules — Hero, Steps, Cards, Tips, Toolbox, Closing and Footer —
+double as worked examples of the ref conventions: mono micro-labels and links
+live in the module markup, while every piece of copy is a ref an editor can
+change. The Toolbox module keeps its task table in markup on purpose, since it
+documents the framework rather than the site. Delete the page and the modules
+once your own design takes over; nothing else depends on them.
+
+Two conventions the seeds rely on, worth knowing when you write your own:
+
+- A header block's text is inserted raw, so the hero headline carries a
+  `<span class="soft">` around its second line to step it back. Newlines in a
+  header ref become `<br>`.
+- Ref content is parsed for Liquid on its way into the module markup. Copy that
+  shows a `{% ref %}` tag — like the Quick start step that explains them — has
+  to escape its braces as `&#123;` / `&#125;`, or the renderer consumes it as a
+  tag of its own.
 
 For `single`/`multi`, provision the site/environment after public migrations and
 initialize content inside that environment as described in the tenancy guide.
@@ -365,7 +382,7 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.gen.blueprint_migration` | Reviewed migration/snapshot pair with stale-plan checks; database application is separate |
 | `brando.setup` | Operational post-install setup: assets, database, account, seeds |
 | `brando.gen.languages` / `brando.gen.admin` | Operational language/account initialization |
-| `brando.gen.seeds` | Operational default content: identity, modules, index page, menu |
+| `brando.gen.seeds` | Operational default content: identity, seven modules, index page, menu, footer fragment |
 | `brando.setup.tenancy` | Igniter tenancy source preparation |
 | `brando.migrate_to_tenant` | Operational data conversion |
 | `brando.gen.sitemap` / `brando.gen.mail` / `brando.gen.authorization` | Reviewed auxiliary modules with conflict checks |

@@ -9,91 +9,721 @@
 main {
   @display flex/column/nowrap;
   @space gap blocks;
-  @space padding-bottom blocks;
 
-  padding-top: var(--header-height, 80px);
-}
-
-main > [b-tpl="hero"] + [b-tpl] {
-  @space negate(blocks, blocksInner);
+  padding-top: var(--header-height);
 }
 
 /**
  * Styles for the modules created by `mix brando.gen.seeds`. Replace them as
  * your own modules take over; the seeded modules are a starting point.
+ *
+ * Every section is full-bleed so it can own a background, and carries the
+ * container itself. `.inner` adds the indent the text column sits on.
  */
 
-[b-tpl="hero"] {
+main > [b-tpl] {
   @space container;
+}
 
-  .inner {
-    @column 10/12 $lg;
-    @space padding-x indent $lg;
+main > [b-tpl] > .inner {
+  @space padding-x indent $lg;
+}
+
+/* Villain wraps a text block's content, so the block — not the last paragraph
+   inside it — owns the trailing space. */
+.paragraph > :last-child {
+  margin-bottom: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Hero
+   ───────────────────────────────────────────────────────────────────────── */
+
+[b-tpl="hero"] {
+  @space padding-top xl;
+
+  .eyebrow {
+    @display flex/row/nowrap;
+    @space gap xs;
+    @space margin-bottom md;
+
+    align-items: center;
+
+    .dot {
+      @color bg accent;
+
+      flex: none;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .rule {
+      @color bg bone.hairStrong;
+
+      flex: none;
+      width: 120px;
+      height: 1px;
+    }
+
+    .paragraph p {
+      @font mono;
+      @fontsize text/xs;
+      @color fg bone.dim;
+
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-bottom: 0;
+    }
   }
 
   h1 {
-    @space margin-bottom sm;
+    max-width: 15ch;
 
-    text-wrap: pretty;
+    /* The seeded heading carries a second line the design steps back, so the
+       eye lands on the statement and not the invitation. */
+    .soft {
+      @color fg bone.dim;
+    }
   }
 
   .lead {
-    @space width 8/10 $lg;
+    @space margin-top md;
+
+    max-width: 52ch;
 
     p {
       @fontsize text/lg;
-      @color fg gray.800;
+      @color fg bone.muted;
+    }
+
+    code {
+      @font mono;
+      @color fg accent;
+
+      white-space: nowrap;
+    }
+  }
+
+  .actions {
+    @display flex/row/nowrap;
+    @space gap md;
+    @space margin-top lg;
+
+    align-items: center;
+
+    @responsive $sm {
+      @display flex/column/nowrap;
+      @space gap sm;
+
+      align-items: flex-start;
+    }
+  }
+
+  /* What the installer actually made, stated as a fact row. */
+  .ledger {
+    @display flex/row/nowrap;
+    @space gap 1;
+    @space margin-top xxl;
+    @color border-top bone.hairStrong;
+
+    border-top: 1px solid;
+
+    .entry {
+      @space padding-y md;
+
+      flex: 1;
+    }
+
+    .entry + .entry {
+      @space padding-left md;
+      @color border-left bone.hair;
+
+      border-left: 1px solid;
+    }
+
+    .value p {
+      @fontsize heading/3xl;
+
+      font-weight: 600;
+      letter-spacing: -0.035em;
+      line-height: 1;
+      margin-bottom: 0;
+    }
+
+    .key p {
+      @font mono;
+      @fontsize text/xs;
+      @space margin-top xs;
+      @color fg bone.dim;
+
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      margin-bottom: 0;
+    }
+
+    @responsive $sm {
+      flex-wrap: wrap;
+
+      .entry {
+        flex: 0 0 50%;
+      }
+
+      .entry + .entry {
+        border-left: 0;
+        padding-left: 0;
+      }
     }
   }
 }
 
-[b-tpl="text"] {
-  @space container;
+/* ─────────────────────────────────────────────────────────────────────────
+   Quick start
+   ───────────────────────────────────────────────────────────────────────── */
 
-  .inner {
-    @column 6/12 $lg;
-    @space padding-x indent $lg;
-  }
+[b-tpl="steps"] {
+  .steps {
+    @display flex/row/nowrap;
 
-  p {
-    @fontsize text/base;
-  }
-}
-
-[b-tpl="columns"] {
-  @space container;
-
-  .inner {
-    @display flex/row/wrap;
-    @space padding-x indent $lg;
-
-    /* A bare `@space gap` emits its own breakpoint rule that can land after a
-       scoped one, so scope both sides. `1` is exactly one gutter, which is
-       what `@column` already subtracts from each column's width. */
     @responsive $lg {
       @space gap 1;
     }
 
     @responsive $sm {
+      @display flex/column/nowrap;
       @space gap lg;
     }
   }
 
-  .column {
-    @column 4/12 $lg;
+  .step {
     @space padding-top sm;
-    @color border-top black;
+    @color border-top bone.faint;
 
     border-top: 1px solid;
 
-    h2 {
-      @fontsize heading/xl;
-      @space margin-bottom xs;
+    @responsive $lg {
+      @column 4/12;
+    }
+
+    .index {
+      @color fg accent;
+    }
+
+    h3 {
+      @space margin-top sm;
     }
 
     p {
+      @space margin-top xs;
       @fontsize text/sm;
-      @color fg gray.600;
+      @color fg bone.muted;
+
+      max-width: 34ch;
+    }
+
+    .cmd {
+      @font mono;
+      @fontsize text/sm;
+      @space margin-top md;
+      @space padding-y xxs;
+      @space padding-x xs;
+      @color bg bone.wash;
+      @color border bone.hair;
+
+      display: inline-block;
+      border: 1px solid;
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   What's in the box
+   ───────────────────────────────────────────────────────────────────────── */
+
+[b-tpl="cards"] {
+  .cards {
+    @display flex/row/wrap;
+
+    @responsive $lg {
+      @space gap 1;
+
+      row-gap: 0;
+    }
+
+    @responsive $sm {
+      @display flex/column/nowrap;
+      @space gap lg;
+    }
+  }
+
+  .card {
+    @space padding-top sm;
+    @color border-top bone.hairStrong;
+
+    display: block;
+    border-top: 1px solid;
+    text-decoration: none;
+
+    @responsive $lg {
+      @column 4/12;
+      @space margin-bottom xl;
+    }
+
+    h3 {
+      @space margin-top sm;
+    }
+
+    p {
+      @space margin-top xs;
+      @fontsize text/sm;
+      @color fg bone.muted;
+
+      max-width: 33ch;
+    }
+
+    .go {
+      @font mono;
+      @fontsize text/xs;
+      @space margin-top sm;
+      @color fg accent;
+
+      display: inline-block;
+      letter-spacing: 0.16em;
+      border-bottom: 1px solid transparent;
+      padding-bottom: 3px;
+      transition: border-color 250ms ease-out;
+    }
+
+    &:hover .go {
+      @color border-bottom accent;
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Tips & tricks
+   ───────────────────────────────────────────────────────────────────────── */
+
+[b-tpl="tips"] {
+  .tips {
+    @display flex/row/wrap;
+
+    @responsive $lg {
+      @space gap 1;
+
+      row-gap: 0;
+    }
+  }
+
+  .tip {
+    @display flex/row/nowrap;
+    @space gap sm;
+    @space padding-y md;
+    @color border-top bone.hair;
+
+    border-top: 1px solid;
+
+    @responsive $lg {
+      @column 6/12;
+    }
+
+    .index {
+      @space padding-top xxs;
+      @color fg accent;
+
+      flex: none;
+      width: 22px;
+      letter-spacing: 0.1em;
+    }
+
+    p {
+      @space margin-top xxs;
+      @fontsize text/sm;
+      @color fg bone.muted;
+
+      margin-bottom: 0;
+    }
+
+    code {
+      @font mono;
+      @color fg accent;
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   The toolbox — a shell showing what Brando adds to mix
+   ───────────────────────────────────────────────────────────────────────── */
+
+[b-tpl="terminal"] {
+  .intro {
+    @space margin-bottom lg;
+
+    max-width: 62ch;
+
+    p {
+      @color fg bone.muted;
+    }
+
+    code {
+      @font mono;
+      @color fg accent;
+    }
+
+    .starred {
+      @color fg live;
+    }
+  }
+
+  .layout {
+    @display flex/row/nowrap;
+
+    @responsive $lg {
+      @space gap 1;
+    }
+
+    @responsive $sm {
+      @display flex/column/nowrap;
+      @space gap lg;
+    }
+  }
+
+  .shell {
+    @color bg shell;
+    @color border bone.hairStrong;
+
+    border: 1px solid;
+    border-radius: theme(spacing.radius.regular);
+    overflow: hidden;
+
+    @responsive $lg {
+      @column 8/12;
+    }
+  }
+
+  .rail {
+    @responsive $lg {
+      @column 4/12;
+    }
+  }
+
+  /* Window chrome. The version badge is the one live-looking thing here, so
+     it reads as a running system rather than a picture of one. */
+  .shell .bar {
+    @display flex/row/nowrap;
+    @space gap xxs;
+    @space padding-x sm;
+    @space padding-y xs;
+    @color bg bone.wash;
+    @color border-bottom bone.hair;
+
+    align-items: center;
+    border-bottom: 1px solid;
+
+    i {
+      @color bg bone.hairStrong;
+
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    i:first-child {
+      @color bg accent;
+    }
+
+    .path {
+      @font mono;
+      @fontsize text/xs;
+      @space margin-left xs;
+      @color fg bone.dim;
+
+      letter-spacing: 0.02em;
+      text-transform: none;
+    }
+
+    .badge {
+      @display flex/row/nowrap;
+      @space gap xxs;
+
+      margin-left: auto;
+      align-items: center;
+    }
+
+    .badge .dot {
+      @color bg live;
+
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      box-shadow: 0 0 0 3px rgb(111 207 151 / 18%);
+    }
+  }
+
+  .shell .output {
+    @font mono;
+    @fontsize code/sm;
+    @space padding md;
+
+    overflow-x: auto;
+  }
+
+  .shell .prompt .sigil {
+    @color fg live;
+  }
+
+  .shell .comment {
+    @color fg bone.faint;
+  }
+
+  /* A soft blink, not a strobe — this sits on the page for as long as the
+     reader does. */
+  .shell .caret {
+    @color bg bone.full;
+
+    display: inline-block;
+    width: 8px;
+    height: 15px;
+    vertical-align: -2px;
+    animation: caret-blink 1.1s steps(1) infinite;
+  }
+
+  .shell .group {
+    @space margin-top md;
+  }
+
+  .shell .group-name {
+    @display flex/row/nowrap;
+    @space gap sm;
+    @space margin-bottom xxs;
+    @color fg bone.faint;
+
+    align-items: center;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+
+    .rule {
+      @color bg bone.hair;
+
+      flex: 1;
+      height: 1px;
+    }
+  }
+
+  /* Name, then description, on one alignment — what makes a long list
+     scannable instead of a wall of text. */
+  .shell .task {
+    @display flex/row/nowrap;
+    @space padding-x xxs;
+
+    border-radius: 3px;
+    transition: background-color 150ms ease-out;
+
+    .name {
+      @color fg accent;
+
+      flex: none;
+      width: 20em;
+    }
+
+    .name .punct {
+      @color fg bone.faint;
+    }
+
+    .desc {
+      @color fg bone.muted;
+    }
+
+    &:hover {
+      @color bg bone.wash;
+    }
+  }
+
+  .shell .task.plans .name::after {
+    @color fg live;
+
+    content: " ★";
+    font-size: 0.8em;
+    vertical-align: 1px;
+  }
+
+  .shell .foot {
+    @display flex/row/nowrap;
+    @font mono;
+    @fontsize text/xs;
+    @space gap md;
+    @space padding-x md;
+    @space padding-y xs;
+    @color bg bone.wash;
+    @color border-top bone.hair;
+    @color fg bone.faint;
+
+    align-items: center;
+    border-top: 1px solid;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+
+    .key {
+      @color fg bone.dim;
+    }
+
+    .env {
+      margin-left: auto;
+    }
+
+    @responsive $sm {
+      display: none;
+    }
+  }
+
+  /* Instructions run alongside the shell rather than inside its output. */
+  .rail .item {
+    @space padding-y md;
+    @color border-top bone.hair;
+
+    border-top: 1px solid;
+
+    &:first-child {
+      @color border-top bone.hairStrong;
+    }
+
+    p {
+      @space margin-top xxs;
+      @fontsize text/sm;
+      @color fg bone.muted;
+
+      margin-bottom: 0;
+    }
+
+    code {
+      @font mono;
+      @color fg accent;
+    }
+  }
+
+  .rail .legend {
+    @font mono;
+    @fontsize text/xs;
+    @space margin-top md;
+    @color fg bone.faint;
+
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 2;
+
+    .starred {
+      @color fg live;
+    }
+  }
+}
+
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Closing — the page has reached black
+   ───────────────────────────────────────────────────────────────────────── */
+
+[b-tpl="closing"] {
+  @color bg black;
+  @color border-top bone.hair;
+  @space padding-y xxl;
+
+  border-top: 1px solid;
+
+  .row {
+    @display flex/row/nowrap;
+    @space gap lg;
+
+    align-items: flex-end;
+    justify-content: space-between;
+
+    @responsive $sm {
+      @display flex/column/nowrap;
+      @space gap md;
+
+      align-items: flex-start;
+    }
+  }
+
+  h2 {
+    @space margin-top sm;
+
+    max-width: 18ch;
+  }
+
+  p {
+    @space margin-top sm;
+    @color fg bone.dim;
+
+    max-width: 46ch;
+  }
+
+  .button {
+    flex: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Footer fragment
+   ───────────────────────────────────────────────────────────────────────── */
+
+[b-tpl="footer"] {
+  @display flex/row/nowrap;
+  @space gap lg;
+
+  .fragment {
+    @fontsize heading/xl;
+    @color fg bone.muted;
+
+    max-width: 30ch;
+    letter-spacing: -0.022em;
+  }
+
+  .lists {
+    @display flex/row/nowrap;
+    @space gap xl;
+
+    margin-left: auto;
+  }
+
+  .lists h5 {
+    @font mono;
+    @fontsize text/xs;
+    @space margin-bottom sm;
+    @color fg bone.faint;
+
+    font-weight: 400;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .lists ul {
+    @display flex/column/nowrap;
+    @space gap xxs;
+
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .lists a {
+    @fontsize text/sm;
+    @color fg bone.muted;
+  }
+
+  @responsive $sm {
+    @display flex/column/nowrap;
+    @space gap lg;
+
+    .lists {
+      @space gap lg;
+
+      margin-left: 0;
+      flex-wrap: wrap;
     }
   }
 }

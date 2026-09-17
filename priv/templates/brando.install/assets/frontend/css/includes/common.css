@@ -1,26 +1,32 @@
 /* The header reserves this at the top of the page; `main` and anchor targets
    read it back. */
 html {
-  --header-height: 80px;
+  --header-height: 72px;
 
   @responsive $sm {
-    --header-height: 64px;
+    --header-height: 60px;
   }
 }
 
 /**
  * Base element styles.
  *
- * The heading scale steps down one size below ipad_landscape. Components
- * override it where their design needs a different step.
+ * Headings are the body sans at 600, not a second family. The scale carries
+ * the hierarchy, and negative tracking keeps the large sizes from looking
+ * loose — the bigger the size, the tighter it is set.
  */
 
-h1 {
-  @fontsize heading/6xl $lg;
+h1, h2, h3, h4, h5 {
+  @font main;
 
-  @responsive $sm {
-    @fontsize heading/5xl;
-  }
+  font-weight: 600;
+}
+
+h1 {
+  @fontsize heading/7xl;
+
+  letter-spacing: -0.042em;
+  text-wrap: balance;
 }
 
 h2 {
@@ -29,29 +35,131 @@ h2 {
   @responsive $sm {
     @fontsize heading/3xl;
   }
+
+  letter-spacing: -0.035em;
+  text-wrap: balance;
 }
 
 h3 {
-  @fontsize heading/4xl $lg;
+  @fontsize heading/2xl;
 
-  @responsive $sm {
-    @fontsize heading/2xl;
-  }
+  letter-spacing: -0.03em;
 }
 
 h4 {
-  @fontsize heading/3xl $lg;
+  @fontsize heading/xl;
 
-  @responsive $sm {
-    @fontsize heading/xl;
-  }
+  letter-spacing: -0.022em;
 }
 
 h5 {
-  @fontsize heading/2xl $lg;
+  @fontsize text/lg;
+
+  letter-spacing: -0.018em;
+}
+
+/**
+ * The mono micro-label is this design's connective tissue: section indices,
+ * category tags, button text, the colophon. Uppercase, widely tracked, small.
+ */
+.label,
+.mono {
+  @font mono;
+  @fontsize text/xs;
+  @color fg bone.dim;
+
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/**
+ * Section head: a mono index, a title, a hairline running out to an aside.
+ * Every seeded module opens with one.
+ */
+.section-head {
+  @display flex/row/nowrap;
+  @space gap md;
+  @space margin-bottom lg;
+
+  align-items: baseline;
+
+  .label,
+  .note {
+    flex: none;
+  }
+
+  h2 {
+    flex: none;
+  }
+
+  .rule {
+    @color bg bone.hairStrong;
+
+    flex: 1;
+    height: 1px;
+    align-self: center;
+  }
+
+  .note {
+    @fontsize text/sm;
+    @color fg bone.dim;
+  }
 
   @responsive $sm {
-    @fontsize heading/xl;
+    @display flex/column/nowrap;
+    @space gap xs;
+
+    align-items: stretch;
+
+    .rule,
+    .note {
+      display: none;
+    }
+  }
+}
+
+/**
+ * Two link shapes: a filled bone block, and a text link on a hairline. Both
+ * wear the mono label, so they read as the same family of thing.
+ */
+.button {
+  @font mono;
+  @fontsize text/xs;
+  @color bg bone.full;
+  @color fg green;
+  @space padding-y sm;
+  @space padding-x md;
+
+  display: inline-block;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background-color 250ms ease-out, color 250ms ease-out;
+
+  &:hover {
+    @color bg accent;
+    @color fg green;
+  }
+}
+
+.textlink {
+  @font mono;
+  @fontsize text/xs;
+  @color fg bone.full;
+  @color border-bottom bone.hairStrong;
+
+  display: inline-block;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-bottom: 1px solid;
+  padding-bottom: 5px;
+  transition: color 250ms ease-out, border-color 250ms ease-out;
+
+  &:hover {
+    @color fg accent;
+    @color border-bottom accent;
   }
 }
 
@@ -61,7 +169,7 @@ figure {
   figcaption {
     @fontsize text/xs;
     @space margin-top xxs;
-    @color fg gray.600;
+    @color fg bone.dim;
   }
 
   figcaption:empty {

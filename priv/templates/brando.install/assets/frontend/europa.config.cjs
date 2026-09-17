@@ -75,58 +75,49 @@ module.exports = {
       transparent: 'transparent',
       white: '#ffffff',
       black: '#000000',
-      dark: '#2b2b2b',
-      light: '#f9f7f4',
 
-      /* One accent, used for interaction. Change it here and links, hovers and
-         highlights follow. */
-      accent: '#0f62fe',
+      /* The page is one flat, very dark green — roughly 4% lightness at hue
+         160. Everything on top of it is bone at a handful of opacities, plus
+         a single champagne accent for anything interactive or indexed. */
+      green: '#030e0a',
+
+      /* One step up from the page, for insets like the terminal block. */
+      shell: '#06150f',
+
+      accent: '#d9b87a',
+
+      /* Reserved for "this is running / this is safe" signals. */
+      live: '#6fcf97',
+
+      bone: {
+        full: '#ece5d8',
+        muted: 'rgb(236 229 216 / 70%)',
+        dim: 'rgb(236 229 216 / 50%)',
+        faint: 'rgb(236 229 216 / 34%)',
+        hairStrong: 'rgb(236 229 216 / 26%)',
+        hair: 'rgb(236 229 216 / 14%)',
+        wash: 'rgb(236 229 216 / 5%)'
+      },
 
       /* Debug helpers: `dbg` for ad-hoc highlighting, `grid` for the column
          overlay EuropaCSS draws. */
       dbg: 'pink',
-      grid: 'rgb(0 149 255 / 18%)',
-
-      gray: {
-        100: '#f4f4f4',
-        300: '#d4d4d4',
-        600: '#858585',
-        800: '#3d3d3d',
-        950: '#1a1a1a'
-      },
+      grid: 'rgb(111 207 151 / 20%)',
 
       body: {
-        foreground: '#000000',
-        background: '#ffffff'
+        foreground: '#ece5d8',
+        background: '#030e0a'
       },
 
       link: {
         regular: {
-          text: '#000000',
-          border: '#000000'
+          text: '#ece5d8',
+          border: 'rgb(236 229 216 / 26%)'
         },
         hover: {
-          text: '#000000',
-          border: '#000000'
+          text: '#d9b87a',
+          border: '#d9b87a'
         }
-      },
-
-      fader: {
-        background: '#f9f7f4',
-        foreground: '#2b2b2b'
-      },
-
-      footer: {
-        background: '#f9ece5'
-      },
-
-      header: {
-        background: '#f9f7f4',
-        foreground: '#000000'
-      },
-
-      navigation: {
-        backgroundAlt: 'ghostwhite'
       }
     },
 
@@ -208,6 +199,17 @@ module.exports = {
           desktop_xl: { 'font-size': '18dpx' },
         },
 
+        'code/sm': {
+          __base__: { 'line-height': '1.95em' },
+          iphone: { 'font-size': '12px' },
+          mobile: { 'font-size': '12px' },
+          ipad_portrait: { 'font-size': '13px' },
+          ipad_landscape: { 'font-size': '13px' },
+          desktop_md: { 'font-size': '13px' },
+          desktop_lg: { 'font-size': '13dpx' },
+          desktop_xl: { 'font-size': '13dpx' },
+        },
+
         'heading/xl': {
           __base__: { 'line-height': '140%' },
           iphone: { 'font-size': '20px' },
@@ -273,7 +275,18 @@ module.exports = {
           desktop_lg: { 'font-size': '60dpx' },
           desktop_xl: { 'font-size': '60dpx' },
         },
-      },
+         'heading/7xl': {
+          __base__: { 'line-height': '1em' },
+          iphone: { 'font-size': '44px' },
+          mobile: { 'font-size': '48px' },
+          ipad_portrait: { 'font-size': '56px' },
+          ipad_landscape: { 'font-size': '72px' },
+          desktop_md: { 'font-size': '80px' },
+          desktop_lg: { 'font-size': '92dpx' },
+          desktop_xl: { 'font-size': '92dpx' },
+        },
+
+     },
 
       families: {
         /* `main` is what `@europa base` sets on the body. */
