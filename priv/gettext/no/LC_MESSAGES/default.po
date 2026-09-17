@@ -9251,6 +9251,9 @@ msgstr "Denne mappen er for stor. Velg en mindre mappe med opptil 200 Markdown-f
 msgid "Could not read this folder. Check the repository connection, branch and folder path, then try again."
 msgstr "Kunne ikke lese mappen. Sjekk GitHub-tilkoblingen, grenen og mappestien, og prøv igjen."
 
+msgid "Shared values available across your site."
+msgstr "Felles verdier som kan brukes på hele nettstedet."
+
 msgid "Image and video collections used in your content."
 msgstr "Samlinger av bilder og videoer som brukes i innholdet."
 
@@ -9276,6 +9279,11 @@ msgid_plural "%{count} documents added. Refresh them to import the content."
 msgstr[0] "%{count} dokument er lagt til. Hent fra GitHub for å importere innholdet."
 msgstr[1] "%{count} dokumenter er lagt til. Hent fra GitHub for å importere innholdet."
 
+msgid "%{count} variable"
+msgid_plural "%{count} variables"
+msgstr[0] "%{count} variabel"
+msgstr[1] "%{count} variabler"
+
 msgid "must be a repository-relative Markdown file"
 msgstr "må være en Markdown-fil med sti fra repositoriets rot"
 
@@ -9290,6 +9298,12 @@ msgstr "opprett en ny kilde for å endre tilkobling, gren eller fil for et impor
 
 msgid "Folder"
 msgstr "Mappe"
+
+msgid "Reorder variable"
+msgstr "Flytt variabel"
+
+msgid "Delete variable"
+msgstr "Slett variabel"
 
 msgid "can't be blank"
 msgstr "må fylles ut"

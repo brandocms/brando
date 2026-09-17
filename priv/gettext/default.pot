@@ -9096,6 +9096,13 @@ msgid_plural "%{count} documents added. Refresh them to import the content."
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/sites/global_set.ex:76
+#, elixir-autogen, elixir-format
+msgid "%{count} variable"
+msgid_plural "%{count} variables"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/live/config/markdown_sources_live.ex:54
 #, elixir-autogen, elixir-format
 msgid "A developer needs to connect your repository"
@@ -9374,6 +9381,11 @@ msgstr ""
 msgid "Save source"
 msgstr ""
 
+#: lib/brando_admin/live/config/global_set_list_live.ex:11
+#, elixir-autogen, elixir-format
+msgid "Shared values available across your site."
+msgstr ""
+
 #: lib/brando_admin/live/config/markdown_sources_live.ex:75
 #, elixir-autogen, elixir-format
 msgid "Single file"
@@ -9409,6 +9421,11 @@ msgstr ""
 msgid "This folder is too large. Choose a smaller folder with up to 200 Markdown files."
 msgstr ""
 
+#: lib/brando_admin/components/form/input/vars.ex:58
+#, elixir-autogen, elixir-format
+msgid "Delete variable"
+msgstr ""
+
 #: lib/brando_admin/live/config/markdown_sources_live.ex:423
 #, elixir-autogen, elixir-format
 msgid "Document placement saved"
@@ -9427,6 +9444,11 @@ msgstr ""
 #: lib/brando_admin/live/config/markdown_sources_live.ex:424
 #, elixir-autogen, elixir-format
 msgid "Publication queued"
+msgstr ""
+
+#: lib/brando_admin/components/form/input/vars.ex:53
+#, elixir-autogen, elixir-format
+msgid "Reorder variable"
 msgstr ""
 
 #: lib/brando_admin/live/content/modules_list_live.ex:67

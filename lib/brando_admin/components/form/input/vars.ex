@@ -29,6 +29,7 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
     {:ok,
      socket
      |> assign(assigns)
+     |> BrandoAdmin.Utils.prepare_subform_component()
      |> assign(:empty_subform, empty_subform)}
   end
 
@@ -49,11 +50,12 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
               <input type="hidden" name={var[:_persistent_id].name} value={var.index} />
               <input type="hidden" name={"#{@field.form.name}[sort_var_ids][]"} value={var.index} />
               <div class="subform-tools">
-                <button type="button" class="subform-handle">
+                <button type="button" class="subform-handle" aria-label={gettext("Reorder variable")}>
                   <.icon name="hero-arrows-up-down" />
                 </button>
                 <button
                   type="button"
+                  aria-label={gettext("Delete variable")}
                   name={"#{@field.form.name}[drop_var_ids][]"}
                   value={var.index}
                   phx-click={JS.dispatch("change")}

@@ -30,7 +30,7 @@ async function addGlobalVar(
       .locator(`#global_set_vars_${index}_type-field-base`)
       .getByRole('button', { name: 'Select' })
       .click()
-    await page.getByRole('button', { name: type }).click()
+    await page.getByRole('button', { name: type, exact: true }).click()
   }
 
   // Select half width
@@ -96,5 +96,5 @@ test('add global string', async ({ page }) => {
 
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL('/admin/config/global_sets')
-  await expect(page.getByText('3 variables in set')).toHaveCount(1)
+  await expect(page.getByText('3 variables', { exact: true })).toHaveCount(1)
 })

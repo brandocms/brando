@@ -408,18 +408,24 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             <%!-- Still a disclosure: the entry-var editor (Input.Vars) stacks
                   several of these and opens them one at a time. In a modal
                   `initially_open` makes it moot. --%>
-            <div class="variable-header" phx-click={JS.push("toggle_visible", target: @myself)}>
+            <button
+              type="button"
+              class="variable-header"
+              aria-expanded={to_string(@visible)}
+              aria-controls={"#{@var.id}-variable-content"}
+              phx-click={JS.push("toggle_visible", target: @myself)}
+            >
               <span class="variable-type">{@var[:type].value}</span>
-              <div class="variable-key">
+              <span class="variable-key">
                 <code>&lcub;&lcub; {@var[:key].value} &rcub;&rcub;</code>
                 <span>{@var[:label].value || gettext("No label")}</span>
-              </div>
+              </span>
               <span class={["variable-chevron", @visible && "is-open"]} aria-hidden="true">
                 <.icon name="hero-chevron-down" />
               </span>
-            </div>
+            </button>
 
-            <div class={["variable-content", !@visible && "hidden"]}>
+            <div id={"#{@var.id}-variable-content"} class={["variable-content", !@visible && "hidden"]}>
               <Content.modal_sections id={"#{@var.id}-editor-sections"} enabled={@modal_editor}>
                 <:section id="definition" label={gettext("Definition")} icon="hero-code-bracket">
                   <section class="variable-section">

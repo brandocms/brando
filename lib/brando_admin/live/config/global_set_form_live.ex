@@ -7,18 +7,20 @@ defmodule BrandoAdmin.Sites.GlobalSetFormLive do
 
   def render(assigns) do
     ~H"""
-    <.live_component
-      module={Form}
-      id="global_set_form"
-      entry_id={@entry_id}
-      current_user={@current_user}
-      initial_params={%{language: @current_user.config.content_language}}
-      schema={@schema}
-    >
-      <:header>
-        {gettext("Edit global set")}
-      </:header>
-    </.live_component>
+    <div class="admin-workspace settings-workspace global-set-workspace">
+      <.live_component
+        module={Form}
+        id="global_set_form"
+        entry_id={@entry_id}
+        current_user={@current_user}
+        initial_params={%{language: @current_user.config.content_language}}
+        schema={@schema}
+      >
+        <:header>
+          {gettext("Edit global set")}
+        </:header>
+      </.live_component>
+    </div>
     """
   end
 

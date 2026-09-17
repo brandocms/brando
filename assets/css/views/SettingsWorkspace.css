@@ -158,3 +158,41 @@
   @media (max-width: 900px) { .dashboard-columns { grid-template-columns: 1fr; } }
   @media (max-width: 500px) { .dashboard-entry { align-items: flex-start; gap: 10px; } .dashboard-shortcuts { gap: 6px; } .dashboard-shortcut { flex: 1 1 42%; padding-inline: 10px; } }
 }
+
+.global-sets-workspace {
+  .global-set-title { display: flex; align-items: center; gap: 14px; }
+  .global-set-text { display: grid; gap: 8px; }
+  .global-set-name { display: block; line-height: 20px; text-box: trim-both cap alphabetic; }
+  .global-set-title small { display: block; margin: 0; color: var(--workspace-muted); font-size: 12px; line-height: 18px; font-weight: 400; text-box: trim-both cap alphabetic; }
+  .global-set-icon { display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 38px; background: #edf3e9; color: #476344; border-radius: 7px; }
+  .global-set-icon [data-icon] { width: 20px; height: 20px; }
+}
+.admin-workspace.global-set-workspace {
+  .brando-form .subform { background: #f5f9fd; border-color: #dce5ed; }
+  .subform > .label-wrapper label { color: #465f74; }
+  .brando-form .subform-entry { border-color: #dce5ed; padding: 12px; margin-bottom: 10px; align-items: flex-start; }
+  .brando-form .subform-tools { padding: 0 12px 0 0; }
+  .brando-form .subform-tools button { background: #edf3f8; color: #506d87; }
+  .add-entry-button { border-color: #cddbe6; color: #405e76; }
+  .add-entry-button:hover { background: #edf4fa; border-color: #abc2d5; }
+  .variable-header { width: 100%; margin: 0; text-align: left; color: var(--workspace-ink); border: 1px solid #e0e7ec; border-radius: 6px; background: #f9fbfd; box-shadow: none; }
+  .variable-type { background: #eaf0f6; color: #4e657b; }
+  .variable-key span { opacity: 1; color: var(--workspace-muted); }
+  .variable-content { padding: 0 8px 12px; }
+  .variable-section { margin-top: 24px; padding-top: 24px; }
+  .variable-section:first-child { margin-top: 0; }
+  .variable-section h3 { font-size: 17px; line-height: 24px; font-weight: 500; text-transform: none; letter-spacing: 0; opacity: 1; margin: 0 0 16px; }
+  .variable-grid { gap: 16px; }
+  .variable-grid + .variable-grid { margin-top: 16px; }
+  .variable-note { margin-top: 12px; color: var(--workspace-muted); opacity: 1; }
+  .variable .field-wrapper .meta { position: static; margin: 8px 0 0; padding: 0; font-size: 12px; line-height: 18px; color: var(--workspace-muted); }
+  .variable .field-wrapper .help-text { position: static; margin: 0; padding: 0; font-size: 12px; line-height: 18px; opacity: 1; text-wrap: pretty; }
+  @media (max-width: 600px) {
+    .brando-form .subform-entry { padding: 10px; }
+    .brando-form .subform-tools { padding-right: 8px; }
+    .variable-grid { grid-template-columns: minmax(0, 1fr); }
+    .variable-header { padding: 10px; gap: 8px; flex-wrap: wrap; }
+    .variable-key code { overflow-wrap: anywhere; }
+    .variable-content { padding-inline: 0; }
+  }
+}
