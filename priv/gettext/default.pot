@@ -9191,6 +9191,11 @@ msgstr ""
 msgid "Could not read this folder. Check the repository connection, branch and folder path, then try again."
 msgstr ""
 
+#: lib/brando_admin/live/galleries/gallery_list_live.ex:22
+#, elixir-autogen, elixir-format
+msgid "Create a gallery in an entry to see it here."
+msgstr ""
+
 #: lib/brando_admin/live/content/modules_list_live.ex:218
 #, elixir-autogen, elixir-format
 msgid "Current workspace"
@@ -9246,6 +9251,16 @@ msgstr ""
 msgid "GitHub connections are configured by a developer in the project's runtime.exs. Ask them to add a repository and enable it for this environment. The connection will then appear here."
 msgstr ""
 
+#: lib/brando_admin/live/galleries/gallery_list_live.ex:11
+#, elixir-autogen, elixir-format
+msgid "Image and video collections used in your content."
+msgstr ""
+
+#: lib/brando/galleries/gallery.ex:93
+#, elixir-autogen, elixir-format
+msgid "Images and videos"
+msgstr ""
+
 #: lib/brando_admin/live/content/modules_list_live.ex:22
 #, elixir-autogen, elixir-format
 msgid "Import / export DSL"
@@ -9286,6 +9301,11 @@ msgstr ""
 #: lib/brando_admin/live/config/markdown_sources_live.ex:198
 #, elixir-autogen, elixir-format
 msgid "No documents connected yet"
+msgstr ""
+
+#: lib/brando_admin/live/galleries/gallery_list_live.ex:21
+#, elixir-autogen, elixir-format
+msgid "No galleries yet"
 msgstr ""
 
 #: lib/brando_admin/live/config/markdown_sources_live.ex:413

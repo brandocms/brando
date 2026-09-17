@@ -9251,6 +9251,18 @@ msgstr "Denne mappen er for stor. Velg en mindre mappe med opptil 200 Markdown-f
 msgid "Could not read this folder. Check the repository connection, branch and folder path, then try again."
 msgstr "Kunne ikke lese mappen. Sjekk GitHub-tilkoblingen, grenen og mappestien, og prøv igjen."
 
+msgid "Image and video collections used in your content."
+msgstr "Samlinger av bilder og videoer som brukes i innholdet."
+
+msgid "No galleries yet"
+msgstr "Ingen gallerier ennå"
+
+msgid "Create a gallery in an entry to see it here."
+msgstr "Opprett et galleri i en oppføring for å se det her."
+
+msgid "Images and videos"
+msgstr "Bilder og videoer"
+
 msgid "Please wait…"
 msgstr "Vennligst vent…"
 

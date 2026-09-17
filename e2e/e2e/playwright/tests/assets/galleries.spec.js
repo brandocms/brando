@@ -41,6 +41,7 @@ test('lists galleries and edits a gallery', async ({ page }) => {
   await expect(page).toHaveURL(/\/admin\/assets\/galleries/)
   await syncLV(page)
 
-  // Verify the updated config_target is shown
-  await expect(rows.first()).toContainText('updated_target')
+  // Reopen to verify the configuration persisted.
+  await rows.first().getByRole('link', { name: /Gallery/ }).click()
+  await expect(page.getByRole('textbox', { name: 'Configuration target' })).toHaveValue('updated_target')
 })

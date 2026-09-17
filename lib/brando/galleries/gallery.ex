@@ -13,7 +13,7 @@ defmodule Brando.Galleries.Gallery do
   use Gettext, backend: Brando.Gettext
   import Brando.Blueprint.Listings.Components.Core
   import Brando.Blueprint.Listings.Components.Cover, only: [cover: 1]
-  import Ecto.Query
+  import Ecto.Query, only: [from: 2]
 
   trait :timestamped
   trait :soft_delete
@@ -73,7 +73,8 @@ defmodule Brando.Galleries.Gallery do
   def listing_row(assigns) do
     first_image =
       case assigns.entry.gallery_objects do
-        [%{image: image} | _] when not is_nil(image) -> image
+        [%{image: %Brando.Images.Image{} = image} | _] -> image
+        [%{video: %{thumbnail: %Brando.Images.Image{} = image}} | _] -> image
         _ -> nil
       end
 
@@ -85,19 +86,16 @@ defmodule Brando.Galleries.Gallery do
       |> assign(:object_count, object_count)
 
     ~H"""
-    <.field columns={1}>
-      <small class="monospace">#{@entry.id}</small>
-    </.field>
     <.cover image={@first_image} columns={2} size={:smallest} />
-    <.update_link entry={@entry} columns={12}>
+    <.update_link entry={@entry} columns={7}>
       {gettext("Gallery")} #{@entry.id}
       <:outside>
-        <br />
-        <small>{ngettext("1 object", "%{count} objects", @object_count)}</small>
-        <br />
-        <small :if={@entry.config_target} class="monospace">{@entry.config_target}</small>
+        <span class="gallery-description">{gettext("Images and videos")}</span>
       </:outside>
     </.update_link>
+    <.field columns={3} class="listing-gallery-count">
+      <span class="workspace-badge">{ngettext("1 object", "%{count} objects", @object_count)}</span>
+    </.field>
     """
   end
 

@@ -45,6 +45,12 @@ defmodule E2EFixtureController do
         "content-transfer-unmatched" ->
           create_content_transfer()
 
+        "gallery-preview" ->
+          {_filename, image} = create_directory_avatar()
+          [gallery | _] = Brando.Repo.all(Brando.Galleries.Gallery)
+          Brando.Repo.insert!(%Brando.Galleries.GalleryObject{gallery_id: gallery.id, image_id: image.id, sequence: 0})
+          get_admin_user()
+
         "markdown-source" ->
           E2E.MarkdownProvider.setup(get_admin_user())
 
