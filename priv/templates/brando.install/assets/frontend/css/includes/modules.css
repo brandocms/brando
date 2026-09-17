@@ -1,11 +1,21 @@
+/**
+ * Page rhythm.
+ *
+ * Sections are laid out as a flex column with one gap between them, rather
+ * than each section carrying its own margins. Use `negate` where a specific
+ * adjacency should sit at the tighter inner rhythm instead.
+ */
+
 main {
-  @space padding-top 250px $desktop;
-  @space padding-top 140px $tablet;
-  @space padding-top 90px $mobile;
+  @display flex/column/nowrap;
+  @space gap blocks;
+  @space padding-bottom blocks;
+
+  padding-top: var(--header-height, 80px);
 }
 
-[b-tpl] {
-  @space padding-top block;
+main > [b-tpl="hero"] + [b-tpl] {
+  @space negate(blocks, blocksInner);
 }
 
 /**
@@ -18,20 +28,21 @@ main {
 
   .inner {
     @column 10/12 $lg;
-    @column 6/6 $sm;
+    @space padding-x indent $lg;
   }
 
   h1 {
-    @fontsize xl/1;
-    @space margin-bottom xs;
+    @space margin-bottom sm;
+
+    text-wrap: pretty;
   }
 
   .lead {
     @space width 8/10 $lg;
 
     .paragraph {
-      @fontsize base/1.4;
-      @color fg dark;
+      @fontsize text/lg;
+      @color fg gray.800;
     }
   }
 }
@@ -40,17 +51,16 @@ main {
   @space container;
 
   .inner {
-    @column 8/12 $lg;
-    @column-offset 2:1/12 $lg;
-    @column 6/6 $sm;
+    @column 6/12 $lg;
+    @space padding-x indent $lg;
   }
 
   .paragraph {
-    @fontsize base/1.6;
+    @fontsize text/base;
   }
 
   .paragraph + .paragraph {
-    @space margin-top xs;
+    @space margin-top sm;
   }
 }
 
@@ -59,39 +69,45 @@ main {
 
   .inner {
     @display flex/row/wrap;
-    justify-content: space-between;
+    @space padding-x indent $lg;
+
+    /* A bare `@space gap` emits its own breakpoint rule that can land after a
+       scoped one, so scope both sides. `1` is exactly one gutter, which is
+       what `@column` already subtracts from each column's width. */
+    @responsive $lg {
+      @space gap 1;
+    }
+
+    @responsive $sm {
+      @space gap lg;
+    }
   }
 
   .column {
     @column 4/12 $lg;
-    @column 6/6 $sm;
-    @space padding-top xs;
+    @space padding-top sm;
     @color border-top black;
+
     border-top: 1px solid;
 
     h2 {
-      @fontsize base/1.2;
+      @fontsize heading/xl;
       @space margin-bottom xs;
     }
 
     .paragraph {
-      @fontsize base/1.5;
-      @color fg gray.900;
+      @fontsize text/sm;
+      @color fg gray.600;
     }
-  }
-
-  .column + .column {
-    @space margin-top xs $sm;
   }
 }
 
 footer {
   @space container;
-  @space margin-top block;
-  @space padding-bottom block;
+  @space padding-bottom xl;
 
   .inner {
-    @column 8/12 $lg;
-    @column-offset 2:1/12 $lg;
+    @column 6/12 $lg;
+    @space padding-x indent $lg;
   }
 }

@@ -20,7 +20,7 @@
   max-width: 100% !important;
   border-top: 1px solid theme(colors.dark);
 
-  @space padding-y 2xs;
+  @space padding-y xxs;
 
   @responsive >=desktop_md {
     @space! width 285px;

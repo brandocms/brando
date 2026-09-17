@@ -1,0 +1,75 @@
+/**
+ * Base element styles.
+ *
+ * The heading scale steps down one size below ipad_landscape. Components
+ * override it where their design needs a different step.
+ */
+
+h1 {
+  @fontsize heading/6xl $lg;
+
+  @responsive $sm {
+    @fontsize heading/5xl;
+  }
+}
+
+h2 {
+  @fontsize heading/5xl $lg;
+
+  @responsive $sm {
+    @fontsize heading/3xl;
+  }
+}
+
+h3 {
+  @fontsize heading/4xl $lg;
+
+  @responsive $sm {
+    @fontsize heading/2xl;
+  }
+}
+
+h4 {
+  @fontsize heading/3xl $lg;
+
+  @responsive $sm {
+    @fontsize heading/xl;
+  }
+}
+
+h5 {
+  @fontsize heading/2xl $lg;
+
+  @responsive $sm {
+    @fontsize heading/xl;
+  }
+}
+
+figure {
+  margin: 0;
+
+  figcaption {
+    @fontsize text/xs;
+    @space margin-top xxs;
+    @color fg gray.600;
+  }
+
+  figcaption:empty {
+    display: none;
+  }
+}
+
+/* The UA sheet's `[hidden]` loses to any author `display`. */
+[hidden] {
+  display: none !important;
+}
+
+.sr-only {
+  width: 1px;
+  height: 1px;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  position: absolute;
+  overflow: hidden;
+}

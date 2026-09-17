@@ -9,6 +9,7 @@
 
 @import './includes/fonts.css';
 @import "./includes/cookies.css";
+@import "./includes/common.css";
 @import "./includes/modules.css";
 @import "./includes/navigation.css";
 
@@ -94,15 +95,25 @@ html.moonwalk {
 }
 
 body {
+  @font main;
   @fontsize base;
   @color fg body.foreground;
   @color bg body.background;
 
-  text-rendering: optimizeLegibility;
+  line-height: normal;
+  font-feature-settings: 'calt' 1, 'liga' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Anchors into the page stop below a fixed header. */
+[id] {
+  scroll-margin-top: var(--header-height, 80px);
 }
 
 p {
-  @space margin-bottom vertical-rhythm(theme.typography.sizes.base);
+  /* One line of this element's own text, whatever size it renders at. */
+  margin-bottom: 1lh;
 
   &:last-of-type {
     margin-bottom: 0 !important;

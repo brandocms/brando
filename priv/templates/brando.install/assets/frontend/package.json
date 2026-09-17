@@ -9,7 +9,7 @@
     "serve": "vite preview"
   },
   "devDependencies": {
-    "@brandocms/europacss": "1.0.0-beta.3",
+    "@brandocms/europacss": "1.0.0-beta.16",
     "@vitejs/plugin-legacy": "^8.2.3",
     "css-mqgroup": "^7.1.0",
     "eslint-plugin-unused-imports": "^4.2.0",
