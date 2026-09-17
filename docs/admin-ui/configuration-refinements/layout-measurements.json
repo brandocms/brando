@@ -1,0 +1,25 @@
+{
+  "desktop_viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "mobile_viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "markdown_helper_font_sizes": [
+    "13px",
+    "13px"
+  ],
+  "markdown_helper_line_heights": [
+    "20px",
+    "20px"
+  ],
+  "markdown_path_to_metadata_gap_px": 16.0,
+  "markdown_selection_to_action_gap_px": 16.0,
+  "gallery_heading_bottom_border": "1px",
+  "gallery_first_row_top_border": "0px",
+  "global_set_title_to_key_trimmed_box_gap_px": 8.0,
+  "related_description_count": 1,
+  "related_description_to_list_gap_px": 12.0
+}
