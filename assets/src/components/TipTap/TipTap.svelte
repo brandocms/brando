@@ -210,7 +210,7 @@
   {/if}
   {#if editor}
     <div bind:this={toolbar} class="tiptap-menu" role="toolbar" tabindex="-1" aria-label={labels.toolbar} onkeydown={toolbarKeys} onfocusin={toolbarFocus}>
-      <button type="button" class="menu-item tiptap-type-control" aria-label={labels.styles} title={labels.styles} aria-expanded={currentMenu === 'type'} aria-controls={`${id}-types`} disabled={!active.editable} onclick={event => showMenu(typeMenu, event.currentTarget, 'type')}><span>{typeLabel}</span><span class="hero-chevron-down-mini" aria-hidden="true"></span></button>
+      <button type="button" class="menu-item tiptap-type-control" class:tiptap-type-pilcrow={typeLabel === '¶'} aria-label={labels.styles} title={labels.styles} aria-expanded={currentMenu === 'type'} aria-controls={`${id}-types`} disabled={!active.editable} onclick={event => showMenu(typeMenu, event.currentTarget, 'type')}><span>{typeLabel}</span><span class="hero-chevron-down-mini" aria-hidden="true"></span></button>
       {#if has('bold')}<button type="button" class="menu-item" aria-label={labels.bold} title={`${labels.bold} · ⌘/Ctrl B`} aria-pressed={active.bold} disabled={!active.editable} tabindex="-1" onclick={() => command('toggleBold')}><span class="tiptap-bold" aria-hidden="true"></span></button>{/if}
       {#if has('italic')}<button type="button" class="menu-item" aria-label={labels.italic} title={`${labels.italic} · ⌘/Ctrl I`} aria-pressed={active.italic} disabled={!active.editable} tabindex="-1" onclick={() => command('toggleItalic')}><span class="tiptap-italic" aria-hidden="true"></span></button>{/if}
       {#if has('list') || has('orderedList')}

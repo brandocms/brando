@@ -1349,7 +1349,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               {gettext("Drop images or videos here to add them.")}
             </p>
           </div>
-          <div class="actions">
+          <div class="actions segmented-buttons">
             <button type="button" class="media-button primary upload-trigger">{gettext("Upload media")}</button>
             <button
               :if={:image in @allowed_types}

@@ -281,11 +281,8 @@ button.btn-palette {
   border: 1px solid #e4edf6;
   color: #0c4a6e;
 
-  .tiptap-wrapper {
-    .tiptap-menu {
-      background-color: #f0f9ff;
-    }
-  }
+  /* The editor toolbar stays white in every block colour — the block's tint
+     belongs to its chrome (titlebar, border), not to the writing surface. */
 
   .ref_block {
     background-color: #fcffff;
@@ -345,12 +342,6 @@ button.btn-palette {
     border: 1px solid #fce7f3;
     color: #064e3b;
 
-    .tiptap-wrapper {
-      .tiptap-menu {
-        background-color: #fdf2f8;
-      }
-    }
-
     .block-toolbar {
       background-color: #fdf2f8;
       color: #831843;
@@ -398,12 +389,6 @@ button.btn-palette {
   &[data-color="emerald"] {
     border: 1px solid #d1fae5;
     color: #064e3b;
-
-    .tiptap-wrapper {
-      .tiptap-menu {
-        background-color: #ecfdf5;
-      }
-    }
 
     .block-toolbar {
       background-color: #ecfdf5;
@@ -464,12 +449,6 @@ button.btn-palette {
   &[data-color="peach"] {
     border: 1px solid #ffedd5;
     color: #7c2d12;
-
-    .tiptap-wrapper {
-      .tiptap-menu {
-        background-color: #fff7ed;
-      }
-    }
 
     .block-toolbar {
       background-color: #fff7ed;
@@ -676,10 +655,12 @@ button.btn-palette {
     flex-direction: column;
     gap: 10px;
 
+    /* Stretch, so the boxes on a row end at the same baseline even when one
+       holds a select and its neighbours only hold a toggle. */
     .block-vars-row {
       display: flex;
       gap: 10px;
-      align-items: flex-start;
+      align-items: stretch;
     }
 
     .variable {

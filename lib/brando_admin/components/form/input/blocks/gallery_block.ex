@@ -242,7 +242,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
               multiple
             />
 
-            <div class="gallery-buttons">
+            <div class="gallery-buttons segmented-buttons">
               <button type="button" class="media-button primary upload-trigger">
                 {gettext("Upload media")}
               </button>

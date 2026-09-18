@@ -90,6 +90,16 @@
 
     &.active {
       padding-bottom: 13px;
+      /* the bar's track, drawn along the bottom of the row; `overflow` keeps
+         the sweep below from escaping the row as it travels */
+      background-image: linear-gradient(
+        color-mix(in srgb, var(--brando-color-dark) 8%, transparent),
+        color-mix(in srgb, var(--brando-color-dark) 8%, transparent)
+      );
+      background-size: 100% 3px;
+      background-position: 0 100%;
+      background-repeat: no-repeat;
+      overflow: hidden;
 
       &::after {
         width: 12px;
@@ -100,21 +110,25 @@
         animation: spin 0.8s linear infinite;
       }
 
-      /* indeterminate progress bar — block rendering is one monolithic
-         render pass, so there is no real percentage to report */
+      /* Indeterminate: block rendering is one monolithic render pass, so
+         there is no real percentage to report.
+
+         Animated with `transform`, not `background-position`, because the
+         moment this most needs to keep moving is while the browser applies
+         the block tree's patch — and that blocks the main thread. A
+         transform runs on the compositor and sweeps straight through it;
+         a background-position animation would freeze exactly then. */
       &::before {
         content: '';
         position: absolute;
         left: 0;
-        right: 0;
         bottom: 0;
+        width: 40%;
         height: 3px;
         border-radius: 3px;
-        background-color: color-mix(in srgb, var(--brando-color-dark) 8%, transparent);
-        background-image: linear-gradient(90deg, transparent, var(--brando-color-blue), transparent);
-        background-size: 40% 100%;
-        background-repeat: no-repeat;
-        animation: form-loader-indeterminate 1.2s ease-in-out infinite;
+        background-color: var(--brando-color-blue);
+        will-change: transform;
+        animation: form-loader-sweep 1.2s ease-in-out infinite;
       }
     }
 
@@ -134,12 +148,12 @@
   }
 }
 
-@keyframes form-loader-indeterminate {
+@keyframes form-loader-sweep {
   0% {
-    background-position: -40% 0;
+    transform: translateX(-100%);
   }
 
   100% {
-    background-position: 140% 0;
+    transform: translateX(250%);
   }
 }

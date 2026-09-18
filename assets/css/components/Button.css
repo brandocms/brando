@@ -301,23 +301,34 @@ a.tiny {
     display: flex;
   }
 
-  .tiny {
+  .tiny,
+  .media-button {
     margin-top: 0;
     border-radius: 0;
     border-right-width: 0;
   }
 
   > :first-child,
-  > :first-child .tiny {
+  > :first-child .tiny,
+  > :first-child .media-button {
     border-top-left-radius: 5px;
     border-bottom-left-radius: 5px;
   }
 
   > :last-child,
-  > :last-child .tiny {
+  > :last-child .tiny,
+  > :last-child .media-button {
     border-top-right-radius: 5px;
     border-bottom-right-radius: 5px;
     border-right-width: 1px;
+  }
+
+  /* A hovered or focused member lifts above its neighbour so its full border
+     is visible, not clipped by the one sharing that edge. */
+  .media-button:hover,
+  .media-button:focus-visible {
+    position: relative;
+    z-index: 1;
   }
 }
 

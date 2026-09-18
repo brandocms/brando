@@ -103,7 +103,12 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         <button :if={!@asset && @browse} type="button" class="media-button" phx-click={@browse}>
           <.icon name="hero-folder" />{gettext("Browse library")}
         </button>
-        <button :if={@configure && (@asset || !@upload_enabled?)} type="button" class="media-button" phx-click={@configure}>
+        <button
+          :if={@compact? && @configure && (@asset || !@upload_enabled?)}
+          type="button"
+          class="media-button"
+          phx-click={@configure}
+        >
           {gettext("Configure")}
         </button>
         <button :if={@compact? && @asset && !@configure && @upload_enabled?} type="button" class="media-button upload-trigger">
@@ -112,10 +117,18 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         <button :if={@compact? && @asset && @browse} type="button" class="media-button" phx-click={@browse}>
           <.icon name="hero-folder" />{gettext("Browse library")}
         </button>
-        <div class={[
-          "media-field-secondary-actions",
-          @asset && @type == :image && !@compact? && @actions != [] && "media-field-split"
-        ]}>
+        <%!-- On a block the asset's own controls — configure, whatever the caller
+              adds, and replace — read as one segmented control. Remove stays
+              outside it, since it is the one action that discards work. --%>
+        <div class={["media-field-secondary-actions", @asset && !@compact? && "media-field-split"]}>
+          <button
+            :if={!@compact? && @configure && (@asset || !@upload_enabled?)}
+            type="button"
+            class="media-button"
+            phx-click={@configure}
+          >
+            {gettext("Configure")}
+          </button>
           {render_slot(@actions)}
           <div
             :if={@asset && !@compact? && (@upload_enabled? || @browse)}
@@ -138,7 +151,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         <button
           :if={@asset && @remove && (!@compact? || !@configure)}
           type="button"
-          class={["media-button quiet", @type == :image && "destructive"]}
+          class="media-button quiet destructive"
           phx-click={@remove}
         >
           {gettext("Remove")}

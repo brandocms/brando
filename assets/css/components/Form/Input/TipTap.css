@@ -94,8 +94,12 @@
     }
   }
 
-  > :is(h1, h2, h3, h4):first-child {
-    margin-top: 0.5em !important;
+  /* Whatever opens the document — heading, list, quote — has nothing above it
+     to be spaced from, so its leading margin only pushes the first line away
+     from the toolbar. */
+  > :first-child {
+    margin-top: 0 !important;
+    padding-top: 0;
   }
 
   ul {
@@ -159,9 +163,10 @@
   min-width: 0;
   background: var(--tiptap-paper);
   border-radius: 6px;
-  &:not(.expanded):has(.ProseMirror:focus) { box-shadow: 0 0 0 1px #8a9e90, 0 0 0 3px #254e3f0a; }
-  .tiptap-document { padding: 16px; }
-  .ProseMirror { min-height: 110px; width: 100%; }
+  /* No focus ring on the shell: the caret and the active toolbar already say
+     where the cursor is, and the ring boxed in every editor on the page. */
+  .tiptap-document { padding: 16px 0; }
+  .ProseMirror { min-height: 40px; width: 100%; }
   .ProseMirror p.is-editor-empty:first-child::before { color: var(--tiptap-muted); content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
   .ProseMirror [data-type="jump-anchor"] { text-decoration: underline dotted var(--brando-color-blue); text-underline-offset: 4px; }
 }
@@ -170,11 +175,13 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 3px;
-  padding: 8px;
+  /* Less above than below so the buttons sit optically centred between the
+     block titlebar and the rule under the toolbar. */
+  padding: 5px 8px 8px;
   position: sticky;
   top: 75px;
   z-index: 2;
-  background: #f4f7f5;
+  background: #fff;
   border-bottom: 1px solid #dce2dc;
   border-radius: 6px 6px 0 0;
   .menu-item-group { display: flex; }
@@ -187,11 +194,17 @@
     &:focus { outline: 2px solid #254e3f; outline-offset: 2px; }
   }
   .tiptap-type-control { width: auto; padding-inline: 9px; font-size: 13px; > span:first-child { width: auto; } > span:last-child { width: 12px; } }
+  /* The pilcrow is a glyph, not a heroicon, so it needs its own size to read
+     as the same weight as the icons beside it. */
+  .tiptap-type-control.tiptap-type-pilcrow > span:first-child { font-size: 17px; line-height: 18px; }
   .tiptap-disclosure { width: 22px; min-width: 22px; }
   .tiptap-undo { margin-left: auto; }
   .tiptap-ai-trigger { color: #6953a5; }
 }
 .field-base .tiptap-menu { top: 0; }
+/* Blocks supply their own gutter, so the document runs edge to edge there. A
+   bordered field has none, so keep the text off its border. */
+.field-base .tiptap-editor-shell .tiptap-document { padding-inline: 12px; }
 .tiptap-popover {
   box-sizing: border-box; margin: 0; padding: 6px; min-width: 180px; max-width: min(340px, calc(100vw - 16px));
   background: #fff; border: 1px solid #dce2dc; border-radius: 6px; box-shadow: 0 6px 20px #163a2020; color: #272b2a;

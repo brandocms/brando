@@ -83,7 +83,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
           <input type="file" class="file-input" multiple />
           <div id={"#{@id}-progress"} class="media-field-progress" phx-update="ignore" role="status" aria-live="polite"></div>
           <div class="media-field-drop" aria-hidden="true">{gettext("Drop to add to this gallery")}</div>
-          <div class="actions">
+          <div class="actions segmented-buttons">
             <button type="button" class="media-button primary upload-trigger">{gettext("Upload media")}</button>
             <button
               phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}

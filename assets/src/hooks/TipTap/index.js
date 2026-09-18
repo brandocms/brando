@@ -45,7 +45,7 @@ export default app => ({
       props: {
         content: this._input.value || '', extensions: this.el.getAttribute('data-tiptap-extensions'), styles: this.el.dataset.tiptapStyles,
         labels: readJSON(this.el.dataset.tiptapLabels), labelMode: this.el.dataset.tiptapLabelMode || 'compact', typography: readJSON(this.el.dataset.tiptapTypography),
-        accessibility: this.accessibility(),
+        accessibility: this._a11y(),
         onFocus: () => this.pushEditorEvent('focus', { field: this._field }),
         onBlur: () => { if (this.el.dataset.footnotes === 'true' || this.el.closest('.block-slot-drawer')) this.commitInput() },
         onToggleLink: onToggle('link'), onToggleButton: onToggle('button'),
@@ -86,6 +86,14 @@ export default app => ({
     return { 'aria-label': label, 'aria-describedby': this.el.dataset.tiptapDescribedby || '', 'aria-invalid': this.el.dataset.tiptapInvalid || 'false', 'aria-required': this.el.dataset.tiptapRequired || 'false' }
   },
 
+  // Remembers what the editor was last given, so `updated()` can tell an
+  // actual attribute change from the patch that merely touched this element.
+  _a11y() {
+    const a11y = this.accessibility()
+    this._a11yKey = JSON.stringify(a11y)
+    return a11y
+  },
+
   updateEditable() {
     const locked = !!this.el.closest('.block-locked, [data-presence-locked="true"], .field-locked') || this.el.dataset.tiptapReadonly === 'true'
     if (this._editor && !this._editor.isDestroyed && this._editor.isEditable === locked) {
@@ -106,10 +114,31 @@ export default app => ({
       this.mount()
       this._linkRange = null; this._footnoteRange = null
     }
-    this._editor?.setOptions({ editorProps: { ...this._editor.options.editorProps, attributes: { ...this._editor.options.editorProps.attributes, ...this.accessibility() } } })
+    // `setOptions` reaches ProseMirror's `view.setProps` -> `updateState`,
+    // which reads scroll geometry and so forces a synchronous layout of the
+    // whole document. LiveView calls `updated()` on every hook in a patch, so
+    // doing this unconditionally costs one full-document reflow per editor:
+    // on an entry with 155 editors the first patch spent ~57s in layout.
+    // The attributes almost never change, so only pay for it when they do.
+    if (this._editor && JSON.stringify(this.accessibility()) !== this._a11yKey) {
+      const a11y = this._a11y()
+
+      this._editor.setOptions({
+        editorProps: {
+          ...this._editor.options.editorProps,
+          attributes: { ...this._editor.options.editorProps.attributes, ...a11y }
+        }
+      })
+    }
+
     this.updateEditable()
     this.observeEditable?.()
-    renumberFootnotes(this.el)
+    // Scoped to `.blocks-wrapper`, so this walks every block on the page. Run
+    // it for an editor that carries footnotes, and for one that just lost its
+    // last — the numbering of the others depends on both.
+    const footnotes = !!this.el.querySelector('.tiptap-footnote')
+    if (footnotes || this._hadFootnotes) renumberFootnotes(this.el)
+    this._hadFootnotes = footnotes
   },
 
   configuration() { return ['tiptapExtensions', 'tiptapStyles', 'tiptapTypography', 'footnotes', 'tiptapAi'].map(key => this.el.dataset[key] || '').join('\u001f') },
