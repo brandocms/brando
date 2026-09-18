@@ -286,7 +286,9 @@ defmodule Brando.Authorization.Groups do
            nil -> false
            permission -> scope.kind in permission.scopes
          end
-       end), do: Enum.uniq(permissions), else: Repo.rollback(:invalid_permissions)
+       end),
+       do: Enum.uniq(permissions),
+       else: Repo.rollback(:invalid_permissions)
   end
 
   defp validate_permissions!(_, _), do: Repo.rollback(:invalid_permissions)

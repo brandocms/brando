@@ -15,8 +15,10 @@ Repository screenshots: [Export](../docs/admin-ui/content-transfer-export.png),
 [mobile selection](../docs/admin-ui/content-transfer-export-mobile.png),
 [desktop review](../docs/admin-ui/content-transfer-review-desktop.png), and
 [mobile review](../docs/admin-ui/content-transfer-review-mobile.png).
-The [configuration refinements review](../docs/admin-ui/configuration-refinements/README.md)
+The configuration refinements review in `docs/admin-ui/configuration-refinements/`
 shows the content-type filters, related-entry paths and unchanged-entry reuse.
+It is a repository review rather than a published page, so it is referenced by
+path: an ExDoc link to a Markdown file outside `extras` fails the docs build.
 
 ## Prepare the destination
 

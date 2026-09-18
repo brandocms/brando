@@ -45,6 +45,7 @@ defmodule Brando.Setup.SeedsTest do
       for uid <- ~w(hero steps cards tips terminal closing footer) do
         assert Brando.Repo.get_by(Content.Module, uid: "brando-default-#{uid}")
       end
+
       assert Brando.Repo.get_by(Pages.Fragment, parent_key: "partials", key: "footer")
       assert {:ok, _identity} = Brando.Sites.get_identity(%{matches: %{language: :en}})
       assert {:ok, _seo} = Brando.Sites.get_seo(%{matches: %{language: :en}})

@@ -198,7 +198,8 @@ defmodule Brando.Content.Definition.Importer do
     do: {:conflict, "missing baseline; export the target before editing it"}
 
   defp classify(_new, _old, _record, _cs, baseline, _digest, old_digest, _parent, _old_parent)
-       when baseline != old_digest, do: {:conflict, "target changed since export"}
+       when baseline != old_digest,
+       do: {:conflict, "target changed since export"}
 
   defp classify(new, old, record, cs, _baseline, _digest, _old_digest, parent, old_parent) do
     cond do

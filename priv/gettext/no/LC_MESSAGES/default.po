@@ -9263,6 +9263,15 @@ msgstr "Ingen gallerier ennå"
 msgid "Create a gallery in an entry to see it here."
 msgstr "Opprett et galleri i en oppføring for å se det her."
 
+msgid "Current workspace"
+msgstr "Gjeldende arbeidsområde"
+
+msgid "Import / export DSL"
+msgstr "Importer / eksporter DSL"
+
+msgid "This imports independent module copies with new identities. Use Import/Export in Configuration to move saved content while preserving module lineage."
+msgstr "Dette importerer frittstående modulkopier med nye identiteter. Bruk Import/Eksport under Konfigurasjon for å flytte lagret innhold og samtidig beholde modulidentiteten."
+
 msgid "Images and videos"
 msgstr "Bilder og videoer"
 

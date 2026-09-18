@@ -699,10 +699,8 @@ defmodule Brando.Setup.Seeds do
     steps = [
       {"Edit this page", "Pages → Index holds the blocks you're reading. Change a heading, save, reload.",
        "/admin/pages"},
-      {"Write a module", "Your markup, with named refs the editor fills in. You keep the HTML.",
-       "{% ref refs.title %}"},
-      {"Model your data", "A blueprint gives you schema, migration, admin forms and listings at once.",
-       "mix brando.gen"}
+      {"Write a module", "Your markup, with named refs the editor fills in. You keep the HTML.", "{% ref refs.title %}"},
+      {"Model your data", "A blueprint gives you schema, migration, admin forms and listings at once.", "mix brando.gen"}
     ]
 
     [header_ref("heading", 2, "Three moves to your own page.", 0)] ++
