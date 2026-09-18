@@ -97,7 +97,11 @@ defmodule BrandoAdmin.Nav do
     <div class="sidebar-wrapper">
       <button
         type="button"
-        phx-click={JS.toggle_class("hidden", to: "#sidebar") |> JS.toggle_class("minimized")}
+        phx-click={
+          JS.toggle_class("hidden", to: "#sidebar")
+          |> JS.toggle_class("sidebar-hidden", to: "body")
+          |> JS.toggle_class("minimized")
+        }
         class="fullscreen-toggle"
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="12" height="12">
@@ -110,8 +114,8 @@ defmodule BrandoAdmin.Nav do
       <div
         class="sidebar"
         id="sidebar"
-        data-js-hide={JS.add_class("hidden", to: "#sidebar")}
-        data-js-show={JS.remove_class("hidden", to: "#sidebar")}
+        data-js-hide={JS.add_class("hidden", to: "#sidebar") |> JS.add_class("sidebar-hidden", to: "body")}
+        data-js-show={JS.remove_class("hidden", to: "#sidebar") |> JS.remove_class("sidebar-hidden", to: "body")}
       >
         <section id="navigation">
           <div id="navigation-content">

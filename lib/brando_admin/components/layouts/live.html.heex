@@ -25,7 +25,7 @@
         current_user={@current_user}
       />
       <main id="brando-main" data-authorization-upload={Brando.Authorization.Media.token(@current_user)}>
-        <article class="content">
+        <article class={["content", assigns[:admin_workspace?] && "admin-workspace content-workspace"]}>
           {@inner_content}
         </article>
       </main>

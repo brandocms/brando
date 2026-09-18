@@ -47,6 +47,41 @@ control, open options, keyboard selection and narrow layout in the browser, and
 capture screenshots. Check actual translated option labels as well as Gettext
 wrappers; status names and field labels must not fall back to humanized English.
 
+### `:has()` must never sit on an ancestor of the block editor
+
+A `:has()` whose subject is an element containing the entry form is re-evaluated
+for every node LiveView inserts below it. The block editor inserts tens of
+thousands, so the cost is quadratic and lands on pages that the rule was never
+written for.
+
+This regressed in `e8e3777fa`, which styled *listings* with
+
+```css
+:is(.admin-workspace, :where(#brando-main > .content):has(> .content-list-wrapper)) { … }
+```
+
+`#brando-main > .content` is the shared layout container, so opening an entry
+with 155 rich-text editors went from **8s to 61s** — the socket dropped mid-load
+("Mainframe connection was dropped") because the main thread never yielded.
+Deleting every `:has()` rule at runtime brought the same page back to 4.9s.
+
+The rules:
+
+- **Derive page-level state on the server, not in CSS.** The container above is
+  marked by `BrandoAdmin.LiveView.Listing` (`:admin_workspace?` → a class in
+  `layouts/live.html.heex`).
+- **Never key on `body:has(…)` or `#brando-main:has(…)`.** Mirror the state as a
+  class where it is toggled — see `body.sidebar-hidden` in `live/nav.ex`.
+- **For open/closed widgets, style from the trigger's own `aria-expanded`**
+  rather than `:has(.dropdown-content:not(.hidden))` on their common parent.
+  `floatingDropdowns.js` already maintains the attribute.
+- `:has()` scoped *inside* a row, card or modal is fine — the subject must not
+  contain the editor.
+
+Verify with the block editor, not a listing: open the heaviest entry available
+and time it. A few seconds is normal; tens of seconds means a selector is being
+re-checked against the whole document.
+
 ## Subsystem skills
 
 Load only the skill needed for the state boundary being changed:

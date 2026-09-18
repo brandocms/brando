@@ -1140,7 +1140,10 @@ button.btn-palette {
         transform: rotate(90deg);
       }
 
-      &:has(.block-action-dropdown-content:not(.hidden)) > .block-action span {
+      /* Keyed on the trigger's own `aria-expanded`, which floatingDropdowns
+         already maintains. As `:has()` on `.block-action-dropdown` this was
+         re-evaluated for every mutation inside a block. */
+      > .block-action[aria-expanded="true"] span {
         transform: rotate(180deg);
       }
 

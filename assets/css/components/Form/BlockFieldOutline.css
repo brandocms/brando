@@ -14,7 +14,9 @@
     transform: rotate(90deg);
   }
 
-  &:has(.block-field-dropdown-content:not(.hidden)) > .block-field-dropdown-toggle span {
+  /* See Block.css: the open state comes from the trigger, not from a `:has()`
+     on an ancestor of the whole block field. */
+  > .block-field-dropdown-toggle[aria-expanded="true"] span {
     transform: rotate(180deg);
   }
 }

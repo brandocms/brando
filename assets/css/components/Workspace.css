@@ -1,6 +1,9 @@
-/* Explicit workspaces and existing application listings using Content.header/List.
-   Only direct listing children opt in, so editors and nested lists stay scoped. */
-:is(.admin-workspace, :where(#brando-main > .content):has(> .content-list-wrapper)) {
+/* Explicit workspaces, and listings whose layout container is marked by
+   `BrandoAdmin.LiveView.Listing` (see its hooks). The class is set server-side
+   rather than derived with `:has(> .content-list-wrapper)`: that container is
+   an ancestor of the block editor, so the match had to be re-evaluated for
+   every node LiveView inserted — a 155-editor entry took 61s to open. */
+.admin-workspace {
   --workspace-ink: #272b2a;
   --workspace-muted: #626b66;
   --workspace-line: #dce2dc;

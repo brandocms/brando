@@ -17,6 +17,12 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     socket =
       socket
       |> assign(:socket_connected, true)
+      # The layout marks its container so the listing stylesheet can key on a
+      # class. It used to derive this with `:has(> .content-list-wrapper)` on
+      # that container — which sits above the block editor, so every DOM
+      # mutation in an entry form paid for re-evaluating it. A schema-less
+      # listing is a dashboard, which renders no list and takes no treatment.
+      |> assign(:admin_workspace?, not is_nil(schema))
       |> set_admin_locale()
       |> assign_schema(schema)
       |> assign_create_url(schema)

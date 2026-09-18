@@ -172,7 +172,10 @@ figcaption.tiny {
 
   /* When the sidenav is collapsed (fullscreen toggle or live preview),
      the content slides to the viewport edge — follow it. */
-  body:has(#sidebar.hidden) &.left {
+  /* `body` carries the collapsed state as a class (set alongside the sidebar's
+     own, in nav.ex) — as `body:has(#sidebar.hidden)` this was a whole-document
+     `:has()` that every mutation had to account for. */
+  body.sidebar-hidden &.left {
     --drawer-left-offset: 0px;
   }
 
