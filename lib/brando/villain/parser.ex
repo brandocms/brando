@@ -1515,18 +1515,11 @@ defmodule Brando.Villain.Parser do
   end
 
   defp merge_ref_associations(%{data: %{type: "picture"}} = ref) do
-    # A not-yet-preloaded association (e.g. after a validate rebuild of a freshly
-    # picked image) arrives as %NotLoaded{}, which is truthy and would fall through
-    # to the "we have an image" branch below and break rendering. Normalize it to
-    # nil so the image_id refetch branch handles it, mirroring resolve_gallery_assoc/2.
-    image =
-      case Map.get(ref, :image) do
-        %Ecto.Association.NotLoaded{} -> nil
-        image -> image
-      end
+    image_id = normalize_ref_id(Map.get(ref, :image_id))
+    image = resolve_ref_assoc(Map.get(ref, :image), image_id)
 
     merged_data =
-      case {image, Map.get(ref, :image_id)} do
+      case {image, image_id} do
         {nil, nil} ->
           # No image association and no image_id, return the block data as-is
           ref.data.data
@@ -1558,17 +1551,9 @@ defmodule Brando.Villain.Parser do
   end
 
   defp merge_ref_associations(%{data: %{type: "video"}} = ref) do
-    # Same as the picture clause: a freshly picked video comes back as %NotLoaded{}
-    # after a validate rebuild (video_id preserved). Normalize to nil and refetch by
-    # video_id so it keeps rendering in the live preview, mirroring resolve_gallery_assoc/2.
-    video =
-      case Map.get(ref, :video) do
-        %Ecto.Association.NotLoaded{} -> nil
-        video -> video
-      end
-
     # video_id may arrive as an integer or as a string (freshly picked, before cast).
     video_id = normalize_ref_id(Map.get(ref, :video_id))
+    video = resolve_ref_assoc(Map.get(ref, :video), video_id)
 
     merged_data =
       cond do
@@ -1599,19 +1584,12 @@ defmodule Brando.Villain.Parser do
   end
 
   defp merge_ref_associations(%{data: %{type: "file"}} = ref) do
-    file =
-      case Map.get(ref, :file) do
-        %Ecto.Association.NotLoaded{} -> nil
-        file -> file
-      end
-
     file_id = normalize_ref_id(Map.get(ref, :file_id))
 
     file =
-      cond do
-        not is_nil(file) -> file
-        is_integer(file_id) -> Brando.Repo.get(Brando.Files.File, file_id)
-        true -> nil
+      case resolve_ref_assoc(Map.get(ref, :file), file_id) do
+        nil -> if is_integer(file_id), do: Brando.Repo.get(Brando.Files.File, file_id)
+        file -> file
       end
 
     data = Map.from_struct(ref.data.data || %Brando.Villain.Blocks.FileBlock.Data{})
@@ -1638,7 +1616,7 @@ defmodule Brando.Villain.Parser do
     gallery =
       ref
       |> Map.get(:gallery)
-      |> resolve_gallery_assoc(Map.get(ref, :gallery_id))
+      |> resolve_gallery_assoc(normalize_ref_id(Map.get(ref, :gallery_id)))
 
     {merged_data, merged_gallery} =
       case gallery do
@@ -1764,6 +1742,27 @@ defmodule Brando.Villain.Parser do
     end
   end
 
+  # A ref's `*_id` is the source of truth for which asset the ref points at. The
+  # preloaded association is only a cache of that id, and the two can disagree.
+  #
+  # Live preview materializes a root block by casting the op store's params —
+  # which carry the freshly picked `*_id` — onto the block's *persisted* base
+  # struct, whose association still holds the previously saved asset. Ecto never
+  # refetches an association that is already loaded, so the preview rendered the
+  # old asset after a swap and the removed one after a reset, and stayed wrong
+  # until the entry was saved and reloaded from the database.
+  #
+  # Returning nil for a disagreeing (or absent) association sends the caller down
+  # its refetch-by-id branch, which is the only branch that can be right.
+  defp resolve_ref_assoc(assoc, id)
+
+  # No id means the ref points at nothing — a stale association must not resurrect it.
+  defp resolve_ref_assoc(_assoc, nil), do: nil
+  defp resolve_ref_assoc(%Ecto.Association.NotLoaded{}, _id), do: nil
+  defp resolve_ref_assoc(nil, _id), do: nil
+  defp resolve_ref_assoc(%{id: id} = assoc, id), do: assoc
+  defp resolve_ref_assoc(_stale_assoc, _id), do: nil
+
   # A ref's *_id may arrive as an integer or as a string (freshly picked, before the
   # changeset is cast). Coerce to an integer id, or nil if it isn't a usable id.
   defp normalize_ref_id(id) when is_integer(id), do: id
@@ -1781,6 +1780,13 @@ defmodule Brando.Villain.Parser do
     do: fetch_gallery_assoc(gallery_id)
 
   defp resolve_gallery_assoc(nil, _gallery_id), do: nil
+
+  # The same staleness guard the flat media refs get from `resolve_ref_assoc/2`:
+  # a preloaded gallery that disagrees with `gallery_id` is a cache of the
+  # previous pick, so refetch by the id instead of rendering it.
+  defp resolve_gallery_assoc(%{id: id}, gallery_id) when not is_nil(gallery_id) and id != gallery_id,
+    do: fetch_gallery_assoc(gallery_id)
+
   defp resolve_gallery_assoc(gallery, _gallery_id), do: gallery
 
   defp fetch_gallery_assoc(nil), do: nil
