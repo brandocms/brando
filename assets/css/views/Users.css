@@ -11,7 +11,10 @@
   .content-list .list-tools .filter .filter-key span { display: inline-flex; align-items: center; gap: 4px; border: 0; padding: 0; line-height: 20px; }
   .content-list .list-tools .filter form { display: flex; align-items: center; min-width: 0; margin: 0; }
   .content-list .list-filters-and-sorts:empty { display: none; }
-  .content-list .active-filters { color: var(--workspace-muted); font-size: 12px; }
+  /* The toolbar keeps its 20px below the list; when the active filters follow
+     it, that gap is split between the two rather than stacked. */
+  .content-list .list-tools-wrapper.has-active-filters { margin-bottom: 8px; }
+  .content-list .active-filters { margin: 0 0 20px; color: var(--workspace-muted); font-size: 12px; }
   .content-list .active-filters .filter { background: var(--workspace-wash); color: var(--workspace-accent); border: 1px solid var(--workspace-line); border-radius: 4px; font-size: 11px; padding: 4px 8px; }
   .content-list .list-row { background: #fff; border-radius: 0; margin: 0; border-bottom: 1px solid var(--workspace-line); color: var(--workspace-ink); }
   .content-list .list-row:first-child { border-top: 1px solid var(--workspace-line); }

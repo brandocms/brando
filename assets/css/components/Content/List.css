@@ -167,6 +167,15 @@
     @space margin-bottom 20px;
   }
 
+  /* The active filters sit below the toolbar rather than inside it, so split
+     the gap that used to fall under the toolbar between the two instead of
+     paying it twice. The state is a server-rendered class rather than
+     `:has(+ .active-filters)` — AGENTS.md asks for page-level state to be
+     derived on the server, and a class costs nothing to match. */
+  .list-tools-wrapper.has-active-filters {
+    @space margin-bottom 8px;
+  }
+
   .list-filters-and-sorts {
     display: flex;
     justify-content: space-between;
@@ -660,7 +669,10 @@
 .active-filters {
   display: flex;
   align-items: center;
-  margin-top: 12px;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 0;
+  @space margin-bottom 20px;
   font-size: 13px;
 
   .filter {
@@ -671,7 +683,7 @@
     text-transform: uppercase;
     padding: 4px 10px 4px 4px;
     border-radius: 20px;
-    margin-left: 5px;
+    margin-left: 0;
     display: flex;
     gap: 5px;
 
