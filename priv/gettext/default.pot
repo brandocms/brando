@@ -9506,3 +9506,15 @@ msgstr ""
 
 msgid "No content changes in this preview."
 msgstr ""
+
+msgid "Related entry"
+msgstr ""
+
+msgid "Unavailable %{type}"
+msgstr ""
+
+msgid "Reference #%{id}"
+msgstr ""
+
+msgid "Related entries"
+msgstr ""

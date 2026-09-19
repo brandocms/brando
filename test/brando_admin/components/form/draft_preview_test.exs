@@ -96,6 +96,59 @@ defmodule BrandoAdmin.Components.Form.DraftPreviewTest do
     assert get_in(payload, ["blocks", "blocks", Access.at(0), "block", "uid"]) == "private-block-identity"
   end
 
+  test "media and related entries retain identity, names and previews across replacements and removals" do
+    alias DraftPreview.References
+
+    reference = fn kind, id, name ->
+      %References{kind: kind, id: id, title: name, detail: "Preview details", thumbnail: "/media/preview.jpg"}
+    end
+
+    references = %{
+      {:image, 1} => reference.(:image, 1, "cover.jpg"),
+      {:image, 2} => reference.(:image, 2, "cover.jpg"),
+      {:file, 3} => reference.(:file, 3, "guide.pdf"),
+      {:video, 4} => reference.(:video, 4, "Launch film"),
+      {:entry, 5} => reference.(:entry, 5, "Related story")
+    }
+
+    saved = %{
+      "main" => %{"image_id" => 1, "file_id" => 3},
+      "blocks" => %{"blocks" => [%{"refs" => [%{"name" => "hero", "image_id" => 1, "data" => %{}}]}]}
+    }
+
+    recovered = %{
+      "main" => %{"image_id" => "2", "image" => nil, "video_id" => 4, "related" => [%{"identifier_id" => 5}]},
+      "blocks" => %{
+        "blocks" => [
+          %{
+            "type" => "module",
+            "refs" => [%{"name" => "hero", "image_id" => 2, "data" => %{}}],
+            "block_identifiers" => [%{"identifier_id" => 5}]
+          }
+        ]
+      }
+    }
+
+    comparisons = DraftPreview.comparisons(saved, recovered, references: references)
+    rows = Enum.flat_map(comparisons, &TextDiff.compare(&1.before, &1.after).rows)
+    assert Enum.count(rows, &(&1.kind == :del && &1.text == "cover.jpg")) == 2
+    assert Enum.count(rows, &(&1.kind == :ins && &1.text == "cover.jpg")) == 2
+    assert Enum.any?(rows, &(&1.kind == :del && &1.text == "guide.pdf"))
+    assert Enum.any?(rows, &(&1.kind == :ins && &1.text == "Launch film"))
+    assert Enum.count(rows, &(&1.kind == :ins && &1.text == "Related story")) == 2
+    assert Enum.any?(rows, &(&1[:preview] && &1.preview.thumbnail == "/media/preview.jpg"))
+    assert recovered["main"]["image_id"] == "2"
+
+    assert DraftPreview.comparisons(saved, saved, references: references)
+           |> Enum.all?(&(&1.before == &1.after))
+  end
+
+  test "unavailable references remain explicit rather than disappearing from the diff" do
+    [section] = DraftPreview.comparisons(%{}, %{"main" => %{"image_id" => 999}}, references: %{})
+    assert Enum.any?(section.after, &(&1.text == "Unavailable Image"))
+    assert Enum.any?(section.after, &(&1[:preview] && &1.preview.detail == "Reference #999"))
+  end
+
   test "handles empty content and preserves text that is not HTML" do
     assert DraftPreview.sections(%{}) == []
     assert DraftPreview.sections(%{"blocks" => nil, "transformers" => []}) == []

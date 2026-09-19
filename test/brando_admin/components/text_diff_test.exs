@@ -60,6 +60,21 @@ defmodule BrandoAdmin.Components.TextDiffTest do
     assert render("", String.duplicate("a", 12_001)) =~ ~s(data-truncated="true")
   end
 
+  test "media rows render recognizable previews and escaped details" do
+    media = %{
+      text: "<cover>.jpg",
+      key: {:image, 1},
+      type: :media,
+      preview: %{kind: :image, thumbnail: "/media/cover.jpg", detail: "Image · 800 × 1000"}
+    }
+
+    document = render([], [media]) |> Floki.parse_fragment!()
+    assert Floki.attribute(document, "ins img", "src") == ["/media/cover.jpg"]
+    assert Floki.find(document, ".text-diff-reference-title") |> Floki.text() == "<cover>.jpg"
+    assert Floki.find(document, ".text-diff-reference-detail") |> Floki.text() == "Image · 800 × 1000"
+    assert Floki.find(document, "cover") == []
+  end
+
   test "authored HTML is shown as escaped text" do
     html = render("", "<script>alert('unsafe')</script>\n<img src=x onerror=alert(1)>")
     document = Floki.parse_fragment!(html)

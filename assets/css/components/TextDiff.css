@@ -27,6 +27,19 @@
   .text-diff-number { font-size: 10px; opacity: .8; }
   .text-diff-marker { font-family: monospace; font-weight: 600; }
   .text-diff-text { padding: 4px 16px 4px 8px; white-space: pre-wrap; overflow-wrap: anywhere; text-decoration: none; border-left: 1px solid #536b5712; }
+  .text-diff-reference { display: flex; align-items: center; gap: 14px; padding: 8px 0; white-space: normal; }
+  .text-diff-reference img { display: block; width: 96px; min-width: 0; max-width: 96px; height: auto; flex: 0 0 96px; border-radius: 4px; }
+  .text-diff-reference-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px; background: #ffffff80; border: 1px solid #536b5720; border-radius: 6px; }
+  .text-diff-reference-icon svg { width: 22px; height: 22px; }
+  .text-diff-reference-info { display: grid; gap: 4px; min-width: 0; }
+  .text-diff-reference-title { font-size: 13px; line-height: 20px; }
+  .text-diff-reference-detail { font-size: 11px; font-weight: 400; line-height: 17px; opacity: .85; }
+  @media (max-width: 600px) {
+    .text-diff-line { grid-template-columns: 20px 20px 18px minmax(0, 1fr); }
+    .text-diff-reference { flex-wrap: wrap; gap: 8px; }
+    .text-diff-reference img { width: 72px; max-width: 72px; flex-basis: 72px; }
+    .text-diff-reference-info { flex: 1 1 100px; }
+  }
   footer { display: grid; gap: 5px; padding: 10px 16px; border-top: 1px solid #e4e9e5; background: #fcfdfb; }
   footer p { font-size: 11px; line-height: 1.5; color: #626b66; margin: 0; }
   .text-diff-truncated { color: #88572f; }

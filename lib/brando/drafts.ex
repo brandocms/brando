@@ -105,7 +105,7 @@ defmodule Brando.Drafts do
             })
 
           if existing && existing.checksum == checksum do
-            existing |> Changeset.change(Map.take(attrs, [:generation, :expires_at])) |> Repo.update!()
+            update_metadata(existing, Map.take(attrs, [:generation, :expires_at]))
           else
             (existing || %EntryDraft{}) |> Changeset.change(attrs) |> Repo.repo().insert_or_update!(prefix: "public")
           end
@@ -171,7 +171,7 @@ defmodule Brando.Drafts do
 
         %{generation: current} = draft when current <= generation ->
           if owned?(draft, identity),
-            do: draft |> Changeset.change(resolved_attrs(now, opts)) |> Repo.update!(),
+            do: update_metadata(draft, resolved_attrs(now, opts)),
             else: Repo.rollback(:not_found)
 
         draft ->
@@ -300,10 +300,19 @@ defmodule Brando.Drafts do
 
       case get(identity, id) do
         nil -> Repo.rollback(:not_found)
-        %{resolved_at: nil, discarded_at: nil} = draft -> draft |> Changeset.change(attrs) |> Repo.update!()
+        %{resolved_at: nil, discarded_at: nil} = draft -> update_metadata(draft, attrs)
         _ -> Repo.rollback(:closed)
       end
     end)
+  end
+
+  # This timestamp is displayed as the content capture time. Dismissal, restore
+  # attempts and generation/retention bookkeeping must not make old content new.
+  defp update_metadata(draft, attrs) do
+    draft
+    |> Changeset.change(attrs)
+    |> Changeset.force_change(:updated_at, draft.updated_at)
+    |> Repo.update!()
   end
 
   defp lock(id),

@@ -18,6 +18,7 @@ defmodule BrandoAdmin.Components.TextDiff do
   @doc """
   A bounded line diff for plain text or lists of `%{text: text, key: identity}`.
   Optional line types (`:heading`, `:media`, `:detail`) provide visual hierarchy.
+  A media line may include `preview: %{kind: kind, thumbnail: url, detail: text}`.
   Keys distinguish equal labels with different identities; they are never rendered.
   Callers supply serialization and contextual labels. All text is escaped.
   """
@@ -83,9 +84,9 @@ defmodule BrandoAdmin.Components.TextDiff do
           <span class="text-diff-number" aria-hidden="true">{row.after}</span>
           <span class="text-diff-marker" aria-hidden="true">{marker(row.kind)}</span>
           <span class="sr-only">{line_label(row.kind)}</span>
-          <del :if={row.kind == :del} class="text-diff-text">{row.text}</del>
-          <ins :if={row.kind == :ins} class="text-diff-text">{row.text}</ins>
-          <span :if={row.kind == :eq} class="text-diff-text">{row.text}</span>
+          <del :if={row.kind == :del} class="text-diff-text"><.line_content row={row} /></del>
+          <ins :if={row.kind == :ins} class="text-diff-text"><.line_content row={row} /></ins>
+          <span :if={row.kind == :eq} class="text-diff-text"><.line_content row={row} /></span>
         </div>
       </div>
       <p :if={@comparison.rows == []} class="text-diff-empty">{@empty_text || dgettext("admin_diff", "No content")}</p>
@@ -98,6 +99,32 @@ defmodule BrandoAdmin.Components.TextDiff do
     </section>
     """
   end
+
+  attr :row, :map, required: true
+
+  defp line_content(%{row: %{preview: preview}} = assigns) do
+    assigns = assign(assigns, :preview, preview)
+
+    ~H"""
+    <span :if={@preview} class="text-diff-reference" data-kind={@preview.kind}>
+      <img :if={@preview.thumbnail} src={@preview.thumbnail} alt="" loading="lazy" />
+      <span :if={!@preview.thumbnail} class="text-diff-reference-icon" aria-hidden="true">
+        <Brando.HTML.Icon.icon name={reference_icon(@preview.kind)} />
+      </span>
+      <span class="text-diff-reference-info">
+        <span class="text-diff-reference-title">{@row.text}</span>
+        <span class="text-diff-reference-detail">{@preview.detail}</span>
+      </span>
+    </span>
+    """
+  end
+
+  defp line_content(assigns), do: ~H"{@row.text}"
+
+  defp reference_icon(:image), do: "hero-photo"
+  defp reference_icon(:video), do: "hero-film"
+  defp reference_icon(:file), do: "hero-document"
+  defp reference_icon(:entry), do: "hero-document-text"
 
   # A changes-only view still needs the field label, even when unchanged
   # paragraphs separate that label from its first changed line.
@@ -127,6 +154,7 @@ defmodule BrandoAdmin.Components.TextDiff do
         Enum.map_reduce(lines, position, fn line, {old, new} ->
           row = %{kind: kind, text: line.text, before: if(kind != :ins, do: old), after: if(kind != :del, do: new)}
           row = if line.type, do: Map.put(row, :type, line.type), else: row
+          row = if line[:preview], do: Map.put(row, :preview, line.preview), else: row
           {row, {old + if(kind == :ins, do: 0, else: 1), new + if(kind == :del, do: 0, else: 1)}}
         end)
       end)
@@ -158,6 +186,7 @@ defmodule BrandoAdmin.Components.TextDiff do
           text = String.slice(line.text, 0, @max_characters - used)
           type = if line[:type] in [:heading, :media, :detail], do: line.type
           normalized = %{text: text, key: line[:key], type: type}
+          normalized = if line[:preview], do: Map.put(normalized, :preview, line.preview), else: normalized
           next = {[normalized | acc], used + String.length(text) + 1, text != line.text}
           if text != line.text, do: {:halt, next}, else: {:cont, next}
         end

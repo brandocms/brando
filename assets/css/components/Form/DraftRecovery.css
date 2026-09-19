@@ -333,82 +333,6 @@
     font-size: 11px;
   }
 
-  .draft-comparison-heading {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 26px 0 12px;
-  }
-  .draft-comparison-heading h3 {
-    font-size: 16px;
-    font-weight: 600;
-  }
-  .draft-change-count {
-    padding: 2px 8px;
-    border-radius: 5px;
-    background: #eef1f6;
-    color: var(--draft-muted);
-    font-size: 11px;
-  }
-  .draft-comparison-frame {
-    overflow: hidden;
-    border: 1px solid var(--draft-line);
-    border-radius: 10px;
-  }
-
-  .draft-comparison {
-    width: 100%;
-    table-layout: fixed;
-    border-collapse: collapse;
-    text-align: left;
-    font-size: 13px;
-    line-height: 1.55;
-
-    th, td {
-      padding: 13px 18px;
-      border-bottom: 1px solid #e7ebf2;
-      overflow-wrap: anywhere;
-      vertical-align: top;
-    }
-    th {
-      text-align: left;
-      font-weight: 500;
-    }
-    thead th:first-child {
-      width: 23%;
-    }
-    thead th {
-      padding-block: 12px;
-      background: #f8f9fc;
-      color: var(--draft-muted);
-      font-size: 11px;
-      font-weight: 600;
-    }
-    thead th:last-child {
-      background: #edf2ff;
-      color: var(--draft-accent);
-    }
-    thead .draft-icon {
-      width: 14px;
-      height: 14px;
-      margin: -2px 7px 0 0;
-    }
-    tbody td:nth-child(2) {
-      color: var(--draft-muted);
-    }
-    tbody td:last-child {
-      background: #f7f9ff;
-    }
-    tbody tr:last-child th, tbody tr:last-child td {
-      border-bottom: 0;
-    }
-    .draft-empty-value {
-      color: var(--draft-muted);
-      font-size: 12px;
-      font-style: italic;
-    }
-  }
-
   .draft-preview-heading {
     display: flex;
     flex-wrap: wrap;
@@ -447,6 +371,7 @@
     min-width: 0;
     user-select: text;
   }
+  .draft-content-preview .text-diff-lines { max-height: none; }
   .draft-preview-toggle {
     display: inline-flex;
     align-items: center;
@@ -622,15 +547,6 @@
     .draft-panel-footer .draft-actions .draft-button {
       flex: 1 1 auto;
     }
-    .draft-comparison th, .draft-comparison td {
-      padding: 12px 10px;
-    }
-    .draft-comparison thead th:first-child {
-      width: 25%;
-    }
-    .draft-comparison thead .draft-icon {
-      display: none;
-    }
     .draft-recovery-notice {
       padding: 20px;
     }
@@ -654,52 +570,7 @@
 }
 
 @media (max-width: 540px) {
-  .draft-recovery .draft-comparison {
-    display: block;
 
-    /* Keep the column headers available to assistive technology in the stacked layout. */
-    thead {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
-    }
-    tbody {
-      display: block;
-    }
-    tbody tr {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      border-bottom: 1px solid var(--draft-line);
-    }
-    tbody tr:last-child {
-      border-bottom: 0;
-    }
-    tbody th {
-      grid-column: 1 / -1;
-      width: auto;
-      padding: 12px 14px 6px;
-      border: 0;
-      font-weight: 600;
-    }
-    tbody td {
-      padding: 8px 14px 14px;
-      border: 0;
-    }
-    tbody td::before {
-      display: block;
-      margin-bottom: 5px;
-      color: var(--draft-muted);
-      font-size: 10px;
-      font-weight: 500;
-      content: attr(data-label);
-    }
-    tbody td:last-child::before {
-      color: var(--draft-accent);
-    }
-  }
 }
 
 .draft-offline .draft-online-status {

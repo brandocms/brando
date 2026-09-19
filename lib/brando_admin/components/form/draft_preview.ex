@@ -2,12 +2,18 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
   @moduledoc false
   use Gettext, backend: Brando.Gettext
 
+  alias __MODULE__.References
+
   # Presentation only: the original payload remains intact for restore/export.
   @metadata ~w(id uid creator_id entry_id parent_id module_id block_id table_row_id module_version source sequence)
 
-  def comparisons(saved, recovered) do
-    before = sections(saved)
-    after_sections = sections(recovered)
+  def comparisons(saved, recovered, opts \\ []) do
+    {saved, recovered} =
+      if opts == [], do: {saved, recovered}, else: References.prepare(saved, recovered, opts)
+
+    labels = field_labels(opts[:schema], opts[:blueprint])
+    before = sections(saved) |> translate_fields(labels)
+    after_sections = sections(recovered) |> translate_fields(labels)
     before_by_title = Map.new(before, &{&1.title, &1})
     after_by_title = Map.new(after_sections, &{&1.title, &1})
 
@@ -27,10 +33,59 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
   defp lines(section) do
     Enum.flat_map(section.rows, fn row ->
       [%{text: row.field, key: {row.field, :label}, type: :heading}] ++
-        (row.value
-         |> to_string()
-         |> String.split(~r/\r\n|\n|\r/)
-         |> Enum.map(&%{text: &1, key: row.field}))
+        value_lines(row)
+    end)
+  end
+
+  defp value_lines(%{value: %References{} = reference, field: field}) do
+    [
+      %{
+        text: reference.title,
+        key: {field, reference.kind, reference.id},
+        type: :media,
+        preview: %{kind: reference.kind, thumbnail: reference.thumbnail, detail: reference.detail}
+      }
+    ]
+  end
+
+  defp value_lines(row) do
+    row.value
+    |> to_string()
+    |> String.split(~r/\r\n|\n|\r/)
+    |> Enum.map(&%{text: &1, key: row.field})
+  end
+
+  defp field_labels(nil, _), do: %{}
+  defp field_labels(_, nil), do: %{}
+
+  defp field_labels(schema, blueprint) do
+    naming = schema.__naming__()
+    domain = String.downcase("#{naming.domain}_#{naming.schema}")
+
+    blueprint.tabs
+    |> Enum.flat_map(& &1.fields)
+    |> Enum.flat_map(&Map.get(&1, :fields, []))
+    |> Enum.flat_map(fn input ->
+      case (Map.get(input, :opts) || [])[:label] do
+        text when is_binary(text) ->
+          [{label(to_string(input.name)), Gettext.dgettext(schema.__modules__().gettext, domain, text)}]
+
+        _ ->
+          []
+      end
+    end)
+    |> Map.new()
+  end
+
+  defp translate_fields(sections, labels) do
+    Enum.map(sections, fn section ->
+      Map.update!(section, :rows, fn rows ->
+        Enum.map(rows, fn row ->
+          Map.update!(row, :field, fn field ->
+            field |> String.split(" › ") |> Enum.map(&Map.get(labels, &1, &1)) |> Enum.join(" › ")
+          end)
+        end)
+      end)
     end)
   end
 
@@ -71,19 +126,21 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
 
   defp section(title, content), do: %{title: title, rows: rows(content, [])}
 
+  defp rows(%References{} = reference, path), do: [%{field: Enum.join(path, " › "), value: reference}]
+
   defp rows(%{"key" => key, "type" => type} = var, path) when is_binary(key) do
     name = if var["label"] in [nil, ""], do: label(key), else: var["label"]
     path = path ++ [name]
 
     case type do
       "boolean" -> rows(var["value_boolean"], path)
-      asset when asset in ["image", "video", "file", "gallery"] -> rows(Map.take(var, [asset <> "_id"]), path)
-      "link" -> rows(Map.take(var, ~w(value identifier_id link_text link_type link_target_blank)), path)
+      asset when asset in ["image", "video", "file", "gallery"] -> rows(Map.take(var, [asset <> "_id", asset]), path)
+      "link" -> rows(Map.take(var, ~w(value identifier_id identifier link_text link_type link_target_blank)), path)
       _ -> rows(var["value"], path)
     end
   end
 
-  defp rows(%{"name" => name, "data" => data}, path) when is_binary(name) and is_map(data) do
+  defp rows(%{"name" => name, "data" => data} = ref, path) when is_binary(name) and is_map(data) do
     # Ref editor capabilities describe controls, not the authored content.
     data = Map.drop(data, ~w(type extensions footnote_module_set))
 
@@ -92,12 +149,13 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
         do: Map.update!(data, "data", &Map.drop(&1, ~w(extensions footnote_module_set))),
         else: data
 
-    rows(data, path ++ [label(name)])
+    media = Map.take(ref, ~w(image_id image video_id video file_id file gallery_id gallery))
+    rows(Map.merge(data, media), path ++ [label(name)])
   end
 
   defp rows(%{"type" => type, "refs" => _} = block, path) when type in ["module", "module_entry", "container"] do
     block
-    |> Map.take(~w(refs vars children table_rows anchor description))
+    |> Map.take(~w(refs vars children table_rows block_identifiers anchor description))
     |> content_rows(path)
   end
 
@@ -126,7 +184,18 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
     |> Enum.sort_by(fn {key, _} -> {key not in ~w(title text value refs vars), key} end)
     |> Enum.flat_map(fn {key, value} ->
       # These are serialization wrappers, not field names an editor recognizes.
-      next = if key in ["block", "data", "refs", "vars"], do: path, else: path ++ [label(key)]
+      next =
+        cond do
+          key in ["block", "data", "refs", "vars"] ->
+            path
+
+          key == "identifier" && match?(%References{kind: :entry}, value) ->
+            if path == [], do: [gettext("Related entry")], else: path
+
+          true ->
+            path ++ [label(key)]
+        end
+
       rows(value, next)
     end)
   end
@@ -145,6 +214,8 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
   end
 
   defp readable(value), do: value
+
+  defp label("block_identifiers"), do: gettext("Related entries")
 
   defp label(key) do
     label = Phoenix.Naming.humanize(key)

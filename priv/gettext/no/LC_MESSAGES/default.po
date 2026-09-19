@@ -9364,3 +9364,15 @@ msgstr "Vis uendret innhold"
 
 msgid "No content changes in this preview."
 msgstr "Ingen innholdsendringer i denne forhåndsvisningen."
+
+msgid "Related entry"
+msgstr "Relatert innlegg"
+
+msgid "Unavailable %{type}"
+msgstr "Utilgjengelig: %{type}"
+
+msgid "Reference #%{id}"
+msgstr "Referanse #%{id}"
+
+msgid "Related entries"
+msgstr "Relaterte innlegg"

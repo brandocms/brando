@@ -131,34 +131,6 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
           </div>
 
           <div :if={@state.selected} class="draft-selected-content">
-            <div :if={@state.comparison != []} class="draft-comparison-heading">
-              <h3>{gettext("Changes to review")}</h3>
-              <span class="draft-change-count">
-                {ngettext("%{count} field", "%{count} fields", length(@state.comparison))}
-              </span>
-            </div>
-            <div :if={@state.comparison != []} class="draft-comparison-frame">
-              <table class="draft-comparison" role="table" aria-label={gettext("Changes in this recovery copy")}>
-                <thead>
-                  <tr>
-                    <th scope="col">{gettext("Field")}</th>
-                    <th scope="col">{gettext("Saved entry")}</th>
-                    <th scope="col"><.recovery_icon name="history" />{gettext("Recovery copy")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr :for={row <- @state.comparison}>
-                    <th scope="row">{row.field}</th>
-                    <td data-label={gettext("Saved entry")}>
-                      <span class={row.saved in [nil, ""] && "draft-empty-value"}>{display(row.saved)}</span>
-                    </td>
-                    <td data-label={gettext("Recovery copy")}>
-                      <span class={row.recovered in [nil, ""] && "draft-empty-value"}>{display(row.recovered)}</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
             <div class="draft-preview-heading">
               <div>
                 <h3>{gettext("Content changes")}</h3>
@@ -387,9 +359,4 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
 
   defp copy_title(%{payload: %{"main" => %{"title" => title}}}) when is_binary(title), do: title
   defp copy_title(_), do: gettext("Untitled entry")
-
-  defp display(value) when value in [nil, ""], do: gettext("No value")
-  defp display(true), do: gettext("Yes")
-  defp display(false), do: gettext("No")
-  defp display(value), do: to_string(value)
 end

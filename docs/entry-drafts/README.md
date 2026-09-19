@@ -33,15 +33,22 @@ claiming to have saved a recovery copy.
 
 The review panel lists recovery copies in a bounded, scrollable table with entry
 names, capture timestamps (including seconds), and block counts. Selected copies
-have an explicit checkmark. A shaded recovery column compares changed scalar
-fields with the saved entry, with readable empty and boolean values.
+have an explicit checkmark. Capture times track content writes: dismissing,
+reviewing, resolving or renewing an unchanged copy preserves its timestamp and
+position in history. Previously overwritten timestamps cannot be reconstructed
+from existing storage.
 
-The content preview uses the shared `TextDiff` component to compare block text,
+A single content preview uses the shared `TextDiff` component to compare block text,
 variable values, entry fields and related content against the freshly loaded
 saved entry. By default, only changed sections and added/removed lines are shown,
 with their field labels retained. “Show unchanged content” reveals the full
 preview, and the choice survives autosave patches and switching recovery copies.
-Text-editor capabilities such as extensions and footnote module
+Image references show thumbnails at their natural proportions; videos show their
+poster when available, and files and related entries show recognizable names.
+Reference identity is retained even when filenames match. Missing references are
+explicitly labelled. Both sides are resolved together in the current tenant;
+the stored recovery payload is untouched. Field labels reuse the form's
+translations. Text-editor capabilities such as extensions and footnote module
 sets stay in the full recovery data. Copy text copies only the recovery side of
 the readable preview; Copy JSON and Download JSON preserve the complete payload,
 including technical metadata. The
@@ -50,17 +57,15 @@ through LiveView patches using stable IDs and `JS.ignore_attributes("open")`.
 
 Controls have compact desktop proportions, larger touch targets, and visible
 keyboard focus. The footer groups restoration and clean-editor actions. On narrow
-screens, each changed field becomes a stacked comparison with saved and recovered
-values side by side, while the copy table keeps entry names and timestamps visible.
+screens, reference previews wrap while the copy table keeps entry names and
+timestamps visible. There is no duplicate scalar comparison above the diff.
 
-![Recovery history table and readable block content](recovery-table.png)
-
-![Review an unsaved page before restoring](recovery-available.png)
+![Image, video, file and related-entry changes in one review](recovery-media-diff.png)
 
 <details>
 <summary>Recovery on a narrow screen</summary>
 
-![Stacked comparisons and consistent controls at 390px](recovery-compact.png)
+![Media and related-entry changes at 390px](recovery-media-diff-mobile.png)
 
 </details>
 

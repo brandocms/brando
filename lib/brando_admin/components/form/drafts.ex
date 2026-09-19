@@ -51,7 +51,6 @@ defmodule BrandoAdmin.Components.Form.Drafts do
         selected: nil,
         error: nil,
         compatible?: false,
-        comparison: [],
         preview: [],
         issues: [],
         save_generation: nil,
@@ -362,18 +361,6 @@ defmodule BrandoAdmin.Components.Form.Drafts do
         saved = socket.assigns.schema.changeset(entry, %{}, socket.assigns.current_user)
         main = main_params(socket, saved)
 
-        recovered =
-          case selected.payload["main"] do
-            values when is_map(values) -> values
-            _ -> %{}
-          end
-
-        comparison =
-          recovered
-          |> Enum.filter(fn {key, value} -> !is_map(value) && !is_list(value) && value != main[key] end)
-          |> Enum.sort()
-          |> Enum.map(fn {key, value} -> %{field: Phoenix.Naming.humanize(key), saved: main[key], recovered: value} end)
-
         # Compare with the freshly loaded saved entry, never the working editor.
         saved_payload = %{
           "main" => main,
@@ -394,8 +381,11 @@ defmodule BrandoAdmin.Components.Form.Drafts do
             error: nil,
             issues: [],
             compatible?: false,
-            comparison: comparison,
-            preview: DraftPreview.comparisons(saved_payload, selected.payload)
+            preview:
+              DraftPreview.comparisons(saved_payload, selected.payload,
+                schema: socket.assigns.schema,
+                blueprint: socket.assigns.form_blueprint
+              )
         })
     end
   end

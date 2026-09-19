@@ -231,6 +231,13 @@ Show only changed sections and lines by default, retaining their field labels.
 The “Show unchanged content” checkbox reveals the full preview and persists
 through LiveView patches. Keep truncation notices visible in both modes.
 Copy text includes the recovery side; JSON export keeps the original payload.
+Keep one recovery comparison, without a duplicate scalar summary. Resolve media
+and related-entry references in batches for both sides; keep their identity in
+line keys and show thumbnails, filenames and entry titles. Optional line
+`preview` metadata supplies the kind, thumbnail and details to the shared viewer.
+Image thumbnails use fixed width and automatic height. Missing records remain
+visible as unavailable references. Recovery capture timestamps must not advance
+when a copy is dismissed, reviewed or renewed without content changes.
 Shared-library template overrides are another suitable use; permission sets and
 record relationships need their structured comparisons.
 

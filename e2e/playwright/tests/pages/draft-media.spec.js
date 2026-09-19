@@ -213,6 +213,7 @@ test.describe('Media in entry recovery copies', () => {
   })
 
   test('image, file and video fields recover selections, replacements and resets without duplicating assets', async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1440, height: 1100 })
     const { path, id } = await openProject(page)
     for (const [type, file] of [['image', 'image.jpg'], ['file', 'test.pdf'], ['video', 'video.mp4']]) {
       await uploadField(page, type, `./fixtures/${file}`)
@@ -237,7 +238,37 @@ test.describe('Media in entry recovery copies', () => {
     for (const field of fields) expect(replacement[field]).not.toBe(initial[field])
     await waitForCopy(page, 'project', id, copy => matchesFields(copy.main, replacement))
     counts = (await mediaState(page, 'project', id)).counts
-    await restore(page)
+    await page.getByRole('button', { name: 'Select entries', exact: true }).click()
+    const picker = page.getByRole('dialog', { name: 'Select entries', exact: true })
+    await picker.locator('.identifier').filter({ hasText: 'Test Project Alpha' }).click()
+    await picker.getByRole('searchbox', { name: 'Filter entries', exact: true }).press('Escape')
+    await waitForCopy(page, 'project', id, copy => copy.main.related_entries?.length === 1)
+    await page.reload()
+    await page.getByRole('button', { name: 'Review recovery copy', exact: true }).click()
+    const preview = page.locator('.draft-content-preview')
+    await expect(preview.locator('del .text-diff-reference[data-kind="image"] img')).toBeVisible()
+    await expect(preview.locator('ins .text-diff-reference[data-kind="image"] img')).toBeVisible()
+    await expect(preview.locator('ins [data-kind="video"]')).toContainText('Video')
+    await expect(preview.locator('ins [data-kind="file"]')).toContainText('.pdf')
+    await expect(preview.locator('ins [data-kind="entry"]')).toContainText('Test Project Alpha')
+    await expect(preview).not.toContainText('Listing image ID')
+    await expect(page.locator('.draft-comparison')).toHaveCount(0)
+    await expect.poll(() => preview.locator('img').evaluateAll(images => images.every(img => img.complete && img.naturalWidth > 0))).toBe(true)
+    await expect.poll(() => preview.locator('[data-kind="image"] img').evaluateAll(images => images.every(img =>
+      Math.abs(img.getBoundingClientRect().width - 96) < 1 &&
+      Math.abs(img.getBoundingClientRect().width / img.getBoundingClientRect().height - img.naturalWidth / img.naturalHeight) < .02
+    ))).toBe(true)
+    await preview.evaluate(el => el.scrollIntoView({ block: 'start' }))
+    await preview.screenshot({ path: testInfo.outputPath('recovery-media-diff-desktop.png') })
+    await page.setViewportSize({ width: 390, height: 1100 })
+    await expect.poll(() => preview.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    await preview.evaluate(el => el.scrollIntoView({ block: 'start' }))
+    await expect.poll(() => preview.locator('[data-kind="image"] img').evaluateAll(images => images.every(img => Math.abs(img.getBoundingClientRect().width - 72) < 1))).toBe(true)
+    await preview.screenshot({ path: testInfo.outputPath('recovery-media-diff-mobile.png') })
+    await page.setViewportSize({ width: 1440, height: 1100 })
+    await page.getByRole('button', { name: 'Restore recovery copy', exact: true }).click()
+    await expect(page.getByTestId('draft-panel')).toHaveCount(0)
+    await syncLV(page)
     expect(await fieldIds(page)).toEqual(replacement)
     await saveProject(page, path)
     state = await mediaState(page, 'project', id)
@@ -388,7 +419,15 @@ test.describe('Media in entry recovery copies', () => {
     }
     await waitForCopy(page, 'page', 'new', copy => media(copy).every(Boolean))
     const counts = (await mediaState(page, 'page')).counts
-    await restore(page)
+    await page.reload()
+    await page.getByRole('button', { name: 'Review recovery copy', exact: true }).click()
+    const preview = page.locator('.draft-content-preview')
+    await expect(preview.locator('ins [data-kind="image"]')).toHaveCount(2)
+    await expect(preview.locator('ins [data-kind="video"]')).toContainText('Test Video')
+    await expect(preview.locator('ins [data-kind="file"]')).toContainText('.pdf')
+    await page.getByRole('button', { name: 'Restore recovery copy', exact: true }).click()
+    await expect(page.getByTestId('draft-panel')).toHaveCount(0)
+    await syncLV(page)
     await expect(picture.locator('.media-field--block:visible img')).toBeVisible()
     await expect(page.locator('.video-block .media-field:visible')).toContainText('Test Video')
     await expect(blockMediaVar(page, 'image')).toHaveAttribute('data-asset-id', /\d+/)

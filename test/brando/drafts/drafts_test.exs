@@ -26,6 +26,34 @@ defmodule Brando.DraftsTest do
     assert length(Drafts.list(ctx.identity)) == 1
   end
 
+  test "capture times and ordering survive dismissal, review and unchanged captures", ctx do
+    {:ok, older} = Drafts.write(ctx.identity, ctx.id, 1, ctx.payload, "base", 0)
+    old_time = DateTime.add(DateTime.utc_now(), -86_400, :second)
+    older |> Ecto.Changeset.change(updated_at: old_time) |> Brando.Repo.update!()
+
+    {:ok, newer} =
+      Drafts.write(
+        ctx.identity,
+        Ecto.UUID.generate(),
+        1,
+        put_in(ctx.payload, ["main", "title"], "Newer content"),
+        "base",
+        0
+      )
+
+    assert {:ok, dismissed} = Drafts.dismiss(ctx.identity, older.id)
+    assert dismissed.updated_at == old_time
+    assert {:ok, repeated} = Drafts.write(ctx.identity, older.id, 2, ctx.payload, "base", 0)
+    assert repeated.updated_at == old_time
+    assert repeated.generation == 2
+    assert {:ok, reviewed} = Drafts.begin_restore(ctx.identity, older.id)
+    assert reviewed.updated_at == old_time
+    assert Enum.map(Drafts.candidates(ctx.identity), & &1.id) == [newer.id, older.id]
+
+    assert {:ok, edited} = Drafts.write(ctx.identity, newer.id, 2, ctx.payload, "base", 0)
+    assert DateTime.compare(edited.updated_at, newer.updated_at) == :gt
+  end
+
   test "isolates copies by user, entry, form and environment", ctx do
     assert {:ok, _} = Drafts.write(ctx.identity, ctx.id, 1, ctx.payload, "base", 0)
 
