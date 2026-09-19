@@ -421,6 +421,14 @@ defmodule BrandoAdmin.Components.Form.Drafts do
 
     with {:ok, original} <- Drafts.begin_restore(draft.identity, id),
          {:ok, entry} <- fresh_entry(socket) do
+      # Restoring settles every copy that was on offer, just like "Continue
+      # without restoring" does. `begin_restore` only dismisses the chosen copy,
+      # so without this the notice returns for the copies passed over — and for
+      # equivalent twins of the restored one, since the deduplicated candidate
+      # list may not represent the copy that was actually restored. The copies
+      # stay listed in the panel; only the notice goes quiet.
+      Enum.each(draft.candidates, &Drafts.dismiss(draft.identity, &1.id))
+
       result = Restore.prepare(original, entry, socket.assigns.schema, socket.assigns.current_user, opts)
 
       state = %{

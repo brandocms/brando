@@ -122,6 +122,23 @@ test.describe('Entry recovery copies', () => {
     await expect.poll(times).toEqual(before)
   })
 
+  test('restoring a copy settles the ones passed over instead of renewing the notice', async ({ page }) => {
+    await createDraft(page)
+    expect((await page.request.post('/e2e/drafts/history')).ok()).toBeTruthy()
+    await review(page)
+    const panel = page.getByTestId('draft-panel')
+    await expect(panel.locator('.draft-copy-table tbody tr')).toHaveCount(11)
+    await panel.getByRole('button', { name: 'Autumn campaign 3', exact: true }).click()
+    await page.getByRole('button', { name: 'Restore recovery copy', exact: true }).click()
+    await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Autumn campaign 3')
+    await expect(panel).toHaveCount(0)
+    // The other ten copies were reviewed and passed over, so they must not ask again.
+    await expect(page.getByTestId('draft-notice')).toHaveCount(0)
+    // They stay reachable from the history button.
+    await page.getByRole('button', { name: /^Recovery copies/ }).click()
+    await expect(panel.locator('.draft-copy-table tbody tr')).toHaveCount(11)
+  })
+
   test('recovers a new entry and unsaved block after reload, then resolves the copy on save', async ({ page }, testInfo) => {
     await createDraft(page)
     expect((await page.request.post('/e2e/drafts/duplicates')).ok()).toBeTruthy()
