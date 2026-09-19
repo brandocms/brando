@@ -179,7 +179,7 @@
      block titlebar and the rule under the toolbar. */
   padding: 5px 8px 8px;
   position: sticky;
-  top: 75px;
+  top: var(--form-toolbar-offset, 0px);
   z-index: 2;
   background: #fff;
   border-bottom: 1px solid #dce2dc;
@@ -201,7 +201,8 @@
   .tiptap-undo { margin-left: auto; }
   .tiptap-ai-trigger { color: #6953a5; }
 }
-.field-base .tiptap-menu { top: 0; }
+/* Dialogs and expanded editors scroll independently of the entry toolbar. */
+.modal, .drawer, .tiptap-editor-shell.expanded { --form-toolbar-offset: 0px; }
 /* Blocks supply their own gutter, so the document runs edge to edge there. A
    bordered field has none, so keep the text off its border. */
 .field-base .tiptap-editor-shell .tiptap-document { padding-inline: 12px; }

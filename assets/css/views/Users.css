@@ -22,8 +22,9 @@
   .content-list .list-row.selected { background: #edf3ed; }
   .content-list .list-row .main-content > div:first-of-type { padding-left: 0; }
   .content-list .list-row .entry-link { color: var(--workspace-ink); font-size: 15px; line-height: 22px; font-weight: 500; overflow-wrap: anywhere; }
-  .content-list .list-row .entry-link:hover { text-decoration: underline; text-underline-offset: 3px; }
-  .content-list .list-row .entry-link::after { display: none; }
+  .content-list .list-row .entry-link:hover, .content-list .list-row .entry-link:focus-visible { text-decoration: none; }
+  .content-list .list-row .entry-link::after { content: "→" / ""; color: currentColor; opacity: 0; }
+  .content-list .list-row .entry-link:hover::after, .content-list .list-row .entry-link:focus-visible::after { opacity: 1; transform: translate(6px, 1px); }
   .content-list .list-row .circle-dropdown { flex: 0 0 30px; margin: 0; }
   .content-list .list-row .circle-dropdown-button { display: grid; place-items: center; width: 30px; height: 30px; padding: 3px; color: var(--workspace-muted); }
   .content-list .list-row .circle-dropdown-button > svg { width: 20px; height: 20px; }

@@ -2910,15 +2910,15 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
       <%= if @module_datasource_type == :selection do %>
         <Content.modal title={gettext("Select entries")} id={"select-entries-#{@uid}"} remember_scroll_position narrow>
-          <h2 class="titlecase">{gettext("Available entries")}</h2>
-          <Entries.block_identifier
-            :for={identifier <- @available_identifiers}
-            :key={identifier.id}
-            identifier={identifier}
-            select={JS.push("select_identifier", value: %{id: identifier.id}, target: @target)}
-            available_identifiers={@available_identifiers}
-            block_identifiers={@block_identifiers}
-          />
+          <Entries.entry_picker id={"block-#{@uid}-entries"}>
+            <Entries.block_identifier
+              :for={identifier <- @available_identifiers}
+              identifier={identifier}
+              select={JS.push("select_identifier", value: %{id: identifier.id}, target: @target)}
+              available_identifiers={@available_identifiers}
+              block_identifiers={@block_identifiers}
+            />
+          </Entries.entry_picker>
         </Content.modal>
 
         <div class="module-datasource-selected">

@@ -61,7 +61,7 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   await details.getByLabel('Alternative text', { exact: true }).fill('Library description')
   await syncLV(page)
   await details.getByRole('button', { name: 'Replace', exact: true }).click()
-  await details.getByRole('button', { name: 'Browse library', exact: true }).click()
+  await details.getByRole('button', { name: 'Select image', exact: true }).click()
   const browser = page.getByRole('dialog', { name: 'Images', exact: true })
   await expect(browser).toBeVisible()
   // The drawer becomes visible before its hook moves keyboard focus into it.

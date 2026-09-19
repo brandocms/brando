@@ -1,0 +1,59 @@
+/* Entry side panels reuse the media browser's heading, close control and shell. */
+.drawer.media-workspace-drawer.editor-workspace-drawer {
+  width: min(900px, 100vw);
+  &.narrow { width: min(540px, 100vw); }
+  .drawer-info { padding: 20px 24px !important; background: #f7f9f4; border-bottom: 1px solid var(--workspace-line); }
+  .drawer-info p { margin: 0; padding: 0; font: 13px/20px "Main", sans-serif; color: var(--workspace-muted); }
+  .drawer-info p:last-of-type { margin-bottom: 0 !important; }
+  .drawer-info p + p { padding-top: 12px; }
+  .drawer-form { padding: 24px; }
+  .drawer-form > .brando-input + .brando-input { margin-top: 24px; }
+  .drawer-form .field-wrapper { margin: 0; }
+  .drawer-form .label-wrapper { margin-bottom: 8px; }
+  .drawer-form .control-label { color: var(--workspace-ink); font: 14px/20px "Main", sans-serif; }
+  .drawer-form input.text, .drawer-form .datetime-wrapper input, .drawer-form textarea, .drawer-form .multiselect {
+    background: #fff; color: var(--workspace-ink); border: 1px solid var(--workspace-line);
+    border-radius: 5px; font: 14px/20px "Main", sans-serif;
+  }
+  .drawer-form input.text, .drawer-form .datetime-wrapper input:not([type="hidden"]) { height: 44px; padding: 0 12px; }
+  .drawer-form textarea { padding: 10px 12px; }
+  .drawer-form .datetime-wrapper input:not([type="hidden"]) { padding-right: 80px; }
+  .datetime-wrapper .clear-datetime { top: 7px; right: 8px; min-height: 30px; padding: 4px 10px; border: 1px solid var(--workspace-line); border-radius: 4px; background: #f5f7f3; color: var(--workspace-ink); font: 12px/20px "Main", sans-serif; }
+  .datetime-wrapper .clear-datetime:hover { background: #e8f0e3; color: var(--workspace-accent); }
+  .datetime-wrapper .timezone { color: var(--workspace-muted); font-size: 12px; }
+  .drawer-form .character-count, .drawer-form .prefill-small { border-color: var(--workspace-line) !important; color: var(--workspace-muted); }
+  .drawer-form .media-field { border-color: var(--workspace-line); }
+  .drawer-form .media-button, button.secondary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    height: auto; min-height: 34px; margin: 0; padding: 6px 12px;
+    border: 1px solid var(--workspace-line) !important; border-radius: 5px;
+    background: #fff; color: var(--workspace-ink); font: 13px/20px "Main", sans-serif;
+    &:hover { background: #edf3e9; color: var(--workspace-accent); }
+  }
+  .button-group { display: flex; flex-wrap: wrap; width: auto; gap: 8px; margin: 0; padding-top: 16px; }
+  .button-group button { flex: 0 1 auto; margin: 0; border-radius: 5px; }
+  .revision-preview-notice, .revisions-empty { border: 1px solid var(--workspace-line); border-radius: 6px; background: #f5f8f1; color: var(--workspace-ink); padding: 12px; margin: 0 0 16px; }
+  .current-schema-version { color: var(--workspace-muted); font: 12px/20px "Main", sans-serif; padding-bottom: 12px; }
+  .current-schema-version .version { background: #eef3e9; color: var(--workspace-accent); border-radius: 3px; padding: 2px 6px; }
+  .revisions-table { margin: 0; }
+  .revisions-table th { padding: 10px; border: 0; border-bottom: 1px solid var(--workspace-line); background: #f5f7f3; color: var(--workspace-muted); font: 12px/18px "Main", sans-serif; text-transform: none; }
+  .revisions-table .revisions-line td { padding: 12px 10px; border: 0; border-bottom: 1px solid var(--workspace-line); background: #fff; color: var(--workspace-ink); font: 13px/20px "Main", sans-serif; }
+  .revisions-table .revisions-line.active td { background: #eef4e9; color: var(--workspace-accent); }
+  .revisions-table .revisions-line svg path:nth-of-type(2) { fill: currentColor; }
+  .revisions-table .revisions-line .circle-dropdown {
+    .main-circle { stroke: #626b66; }
+    line { stroke: #626b66; }
+    button:hover .main-circle { fill: #254e3f; stroke: #254e3f; }
+    button:hover line { stroke: #fff; }
+  }
+  .revisions-table .revisions-line td .revision-scheduled-badge { border-color: #d8e2d1; border-radius: 4px; background: #f1f5ef; color: #42634d; text-transform: none; font-size: 11px; }
+  .revisions-table .revisions-line td.revision-description { color: var(--workspace-muted); font-size: 12px; }
+  .revisions-table .revisions-line td.revision-publish_at .datepicker-and-button { gap: 8px; }
+  .revisions-table .revisions-line td.revision-publish_at .datepicker-and-button button { border: 1px solid var(--workspace-line) !important; border-radius: 5px; margin: 0; color: var(--workspace-accent); }
+  .revisions-load-more { margin-top: 16px; }
+  @media (max-width: 600px) {
+    .drawer-info { padding: 16px 18px !important; }
+    .drawer-form { padding: 18px; }
+    .button-group button { font-size: 12px; padding-inline: 8px; }
+  }
+}

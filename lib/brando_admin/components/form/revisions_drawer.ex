@@ -32,7 +32,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   def render(assigns) do
     ~H"""
     <div>
-      <Content.drawer id={@id} title={gettext("Entry revisions")} close={@close}>
+      <Content.drawer id={@id} title={gettext("Entry revisions")} close={@close} icon="hero-clock" workspace editor>
         <:info>
           <p>
             {gettext(

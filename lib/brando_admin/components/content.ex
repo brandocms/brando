@@ -44,6 +44,7 @@ defmodule BrandoAdmin.Components.Content do
       |> assign_new(:light, fn -> false end)
       |> assign_new(:left, fn -> false end)
       |> assign_new(:workspace, fn -> false end)
+      |> assign_new(:editor, fn -> false end)
       |> assign_new(:icon, fn -> "hero-photo" end)
       |> assign_new(:subtitle, fn -> nil end)
       |> assign_new(:footer, fn -> nil end)
@@ -60,6 +61,7 @@ defmodule BrandoAdmin.Components.Content do
         @dark && "dark",
         @light && "light",
         @workspace && "admin-workspace media-workspace media-workspace-drawer",
+        @editor && "editor-workspace-drawer",
         @left && "left"
       ]}
       style={"z-index: #{@z}"}
@@ -100,7 +102,7 @@ defmodule BrandoAdmin.Components.Content do
       style={"z-index: #{@z - 1}"}
       phx-click={@close}
       tabindex="-1"
-      aria-label={gettext("Close media panel")}
+      aria-label={gettext("Close")}
     />
     """
   end

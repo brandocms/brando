@@ -19,16 +19,16 @@
   h3 { font-size: 14px; line-height: 1.5; }
   button, input, select, textarea { font-family: inherit; }
   :is(button, input, select, textarea, a, summary, [tabindex]):focus-visible { outline: 2px solid var(--workspace-accent); outline-offset: 3px; }
-  .workspace-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--workspace-line); }
+  .workspace-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--workspace-line); }
   .workspace-heading > div:first-child { min-width: 0; }
   .workspace-heading p { margin-top: 8px; font-size: 13px; color: var(--workspace-muted); }
   .workspace-heading-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
   > #content-header {
     margin: 0 0 24px; padding: 0 0 24px; border-bottom: 1px solid var(--workspace-line);
-    > .content { display: flex; align-items: center; justify-content: space-between; gap: 24px; width: 100%; margin: 0; }
-    .main { flex: 1; min-width: 0; width: auto; max-width: none; margin: 0; padding: 0; }
+    > .content { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; width: 100%; margin: 0; padding: 0; }
+    > .content > .main { flex: 1; min-width: 0; width: auto; max-width: none; margin: 0; padding: 0; }
     .main h3 { margin: 8px 0 0; font-size: 13px; line-height: 1.55; color: var(--workspace-muted); }
-    .actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; flex: 0 0 auto; gap: 8px; width: auto; max-width: none; margin: 0; padding: 0; }
+    > .content > .actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; flex: 0 0 auto; gap: 8px; width: auto; max-width: none; margin: 0; padding: 0; }
   }
   :is(.workspace-button, #content-header .actions > a, #content-header .actions > button) {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;

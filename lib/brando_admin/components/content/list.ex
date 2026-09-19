@@ -1042,8 +1042,8 @@ defmodule BrandoAdmin.Components.Content.List do
       <span class="sorts-label">{gettext("Sort by")}</span>
       <.simple_dropdown id="sorts-dropdown" label={g(@schema, @active_sort.label)}>
         <:options>
-          <li>
-            <button :for={sort <- @sorts} :key={sort.key} type="button" phx-click={@on_update} phx-value-sort_key={sort.key}>
+          <li :for={sort <- @sorts} :key={sort.key}>
+            <button type="button" phx-click={@on_update} phx-value-sort_key={sort.key}>
               {g(@schema, sort.label)}
             </button>
           </li>
@@ -1186,14 +1186,12 @@ defmodule BrandoAdmin.Components.Content.List do
       @selected_rows == [] && "hidden"
     ]}>
       <div class="clear-selection">
-        <button phx-click="clear_selection" phx-target={@target} type="button" class="btn-outline-primary inverted">
+        <button phx-click="clear_selection" phx-target={@target} type="button" class="selection-clear">
           {gettext("Clear selection")}
         </button>
       </div>
       <div class="selection-actions">
-        {gettext("With")}
-        <div class="circle"><span>{@selected_rows_count}</span></div>
-        {gettext("selected, perform action")}: →
+        <span class="selection-count"><strong>{@selected_rows_count}</strong>{gettext("Selected")}</span>
         <div id="selected_rows_dropdown" class="circle-dropdown wrapper">
           <button
             class="circle-dropdown-button"
@@ -1202,13 +1200,7 @@ defmodule BrandoAdmin.Components.Content.List do
             phx-click-away={hide_dropdown("#selected-actions-dropdown-content")}
             type="button"
           >
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="20" cy="20" r="19.5" fill="#0047FF" class="main-circle inverted"></circle>
-              <line x1="12" y1="12.5" x2="28" y2="12.5" stroke="white" class="inverted"></line>
-              <line x1="18" y1="26.5" x2="28" y2="26.5" stroke="white" class="inverted"></line>
-              <line x1="12" y1="19.5" x2="28" y2="19.5" stroke="white" class="inverted"></line>
-              <circle cx="13.5" cy="26.5" r="1.5" fill="white" class="inverted"></circle>
-            </svg>
+            {gettext("Actions")}<.icon name="hero-chevron-up" />
           </button>
           <ul
             data-testid="circle-dropdown-content"

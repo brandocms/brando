@@ -58,7 +58,7 @@ for (const [type, module, file] of [
 
       await trigger.press('Space')
       await expectUnclipped(menu)
-      await menu.getByRole('button', { name: 'Browse library', exact: true }).click()
+      await menu.getByRole('button', { name: type === 'image' ? 'Select image' : 'Browse library', exact: true }).click()
       const picker = page.locator(`#${type}-picker`)
       await expect(picker).toBeVisible()
       await expect(menu).not.toBeVisible()

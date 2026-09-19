@@ -9337,3 +9337,18 @@ msgstr "Publisering satt i kø"
 
 msgid "Publication failed"
 msgstr "Publisering feilet"
+
+msgid "Select image"
+msgstr "Velg bilde"
+
+msgid "Selected"
+msgstr "valgt"
+
+msgid "Filter entries"
+msgstr "Filtrer innlegg"
+
+msgid "Filter entries…"
+msgstr "Filtrer innlegg…"
+
+msgid "No matching entries"
+msgstr "Ingen samsvarende innlegg"

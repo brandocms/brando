@@ -62,14 +62,14 @@ h2.titlecase + .button-group-vertical button:first-of-type {
       width: 100%;
       align-items: center;
       margin-bottom: 2px;
-      padding: 12px 14px;
+      min-height: 44px;
+      padding: 8px 10px 8px 14px;
+      line-height: 20px;
       border-radius: 8px;
       background-color: color-mix(in srgb, var(--brando-color-dark) 7%, transparent);
       @font mono;
 
-      &:hover {
-        background-color: color-mix(in srgb, var(--brando-color-dark) 11%, transparent);
-      }
+      &:hover { background-color: color-mix(in srgb, var(--brando-color-dark) 7%, transparent); }
 
       .selected-label-text {
         flex: 1;
@@ -82,7 +82,23 @@ h2.titlecase + .button-group-vertical button:first-of-type {
       }
 
       button.delete.tiny {
-        margin-left: auto;
+        flex: 0 0 28px;
+        width: 28px;
+        min-width: 28px;
+        height: 28px;
+        min-height: 28px;
+        margin: 0 0 0 auto;
+        padding: 7px;
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        color: #626b66;
+        display: grid;
+        place-items: center;
+        svg { width: 14px; height: 14px; margin: 0; }
+        svg line { stroke: currentColor; }
+        &:hover { background: #dce2dc; color: #272b2a; }
+        &:focus-visible { outline: 2px solid #254e3f; outline-offset: 2px; }
       }
     }
   }
@@ -295,7 +311,9 @@ h2.titlecase + .button-group-vertical button:first-of-type {
       color: var(--brando-color-dark);
       background-color: var(--brando-color-input);
       user-select: none;
-      padding: 12px 36px 12px 14px;
+      min-height: 44px;
+      line-height: 20px;
+      padding: 8px 36px 8px 14px;
       width: 100%;
       border: none;
       border-radius: 8px;

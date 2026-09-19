@@ -179,7 +179,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
                 phx-click={JS.dispatch("click", to: "#image-drawer-upload-input")}
               ><.icon name="hero-arrow-up-tray" />{gettext("Upload")}</button>
               <button type="button" phx-click={toggle_drawer("#image-picker")}><.icon name="hero-folder" />{gettext(
-                "Browse library"
+                "Select image"
               )}</button>
             </div>
           </div>

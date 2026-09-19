@@ -9479,3 +9479,18 @@ msgstr ""
 
 msgid "should be at most %{count} character(s)"
 msgstr ""
+
+msgid "Select image"
+msgstr ""
+
+msgid "Selected"
+msgstr ""
+
+msgid "Filter entries"
+msgstr ""
+
+msgid "Filter entries…"
+msgstr ""
+
+msgid "No matching entries"
+msgstr ""

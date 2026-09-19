@@ -428,3 +428,22 @@ slightly wider navigation column. Show unusual states such as drafts without
 repeating published status in every result. Use the existing icon family,
 actual counts and creator photos, and truthful completion actions for the
 form's state model.
+
+## Shared dropdowns and entry panels
+
+Action, sort, bulk-selection and block menus share `%admin_dropdown_panel` in
+`FloatingDropdown.css`: white surface, muted border, light shadow, compact rows
+and separators. Keep only positioning and trigger styling in the component.
+Bulk selection uses a light fixed bar above presence avatars, with a count and
+an explicit Actions button. Listing title links reveal an arrow on hover/focus.
+
+Meta, revisions and scheduled publishing use the media browser's workspace
+shell, with entry-specific contents in `EditorWorkspace.css`. Keep the header
+visible while the body scrolls. Formatting toolbars inherit
+`--form-toolbar-offset`, measured by the Form hook from the actual toolbar
+height plus an 8px gap; independent dialogs reset this offset.
+
+Related-entry pickers reuse `Entries.entry_picker` and `Brando.SelectFilter`.
+The filter control is client-owned; selection patches must retain its query
+and reapply it to the updated results. Selected multiselect rows share the
+available options' height, and only their square remove control responds to hover.

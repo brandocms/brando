@@ -50,6 +50,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         if(upload_enabled, do: drop_label(assigns.type, asset), else: gettext("Choose media from the library"))
       )
       |> assign(:icon, media_icon(assigns.type))
+      |> assign(:browse_label, if(assigns.type == :image, do: gettext("Select image"), else: gettext("Browse library")))
 
     ~H"""
     <div
@@ -101,7 +102,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
           <.icon name="hero-arrow-up-tray" />{gettext("Upload")}
         </button>
         <button :if={!@asset && @browse} type="button" class="media-button" phx-click={@browse}>
-          <.icon name="hero-folder" />{gettext("Browse library")}
+          <.icon name="hero-folder" />{@browse_label}
         </button>
         <button
           :if={@compact? && @configure && (@asset || !@upload_enabled?)}
@@ -115,7 +116,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
           {gettext("Upload replacement")}
         </button>
         <button :if={@compact? && @asset && @browse} type="button" class="media-button" phx-click={@browse}>
-          <.icon name="hero-folder" />{gettext("Browse library")}
+          <.icon name="hero-folder" />{@browse_label}
         </button>
         <%!-- On a block the asset's own controls — configure, whatever the caller
               adds, and replace — read as one segmented control. Remove stays
@@ -144,7 +145,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
               <button :if={@upload_enabled?} type="button" class="upload-trigger"><.icon name="hero-arrow-up-tray" />{gettext(
                 "Upload replacement"
               )}</button>
-              <button :if={@browse} type="button" phx-click={@browse}><.icon name="hero-folder" />{gettext("Browse library")}</button>
+              <button :if={@browse} type="button" phx-click={@browse}><.icon name="hero-folder" />{@browse_label}</button>
             </div>
           </div>
         </div>

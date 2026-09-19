@@ -944,6 +944,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     <%= if @deletable do %>
       <button
         class="delete tiny"
+        aria-label={gettext("Remove")}
         type="button"
         value={@opt.value}
         phx-click={JS.add_class("removing", to: {:closest, ".selected-label"}) |> JS.push("select_option", target: @target)}
@@ -987,6 +988,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     <%= if @deletable do %>
       <button
         class="delete tiny"
+        aria-label={gettext("Remove")}
         type="button"
         value={@entry_id}
         phx-click={JS.add_class("removing", to: {:closest, ".selected-label"}) |> JS.push("select_option", target: @target)}
@@ -1015,6 +1017,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     <%= if @deletable do %>
       <button
         class="delete tiny"
+        aria-label={gettext("Remove")}
         type="button"
         value={@entry_id}
         phx-click={JS.add_class("removing", to: {:closest, ".selected-label"}) |> JS.push("select_option", target: @target)}

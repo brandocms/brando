@@ -224,18 +224,54 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
             </button>
           </div>
           <%= if @selected_schema do %>
-            <h2 class="titlecase">{gettext("Available entries")}</h2>
-            <.assoc_identifier
-              :for={identifier <- @available_identifiers}
-              :key={identifier.id}
-              identifier={identifier}
-              select={JS.push("select_identifier", value: %{id: identifier.id}, target: @myself)}
-              available_identifiers={@available_identifiers}
-              assoc_identifiers={@field}
-            />
+            <.entry_picker id={"#{@field.id}-entries"}>
+              <.assoc_identifier
+                :for={identifier <- @available_identifiers}
+                identifier={identifier}
+                select={JS.push("select_identifier", value: %{id: identifier.id}, target: @myself)}
+                available_identifiers={@available_identifiers}
+                assoc_identifiers={@field}
+              />
+            </.entry_picker>
           <% end %>
         </Content.modal>
       </Primitives.field_base>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  slot :inner_block, required: true
+
+  def entry_picker(assigns) do
+    ~H"""
+    <div id={@id} phx-hook="Brando.SelectFilter" data-target=".identifier" data-filter-target={"##{@id}-options"}>
+      <div class="select-filter entry-picker-filter">
+        <div class="field-wrapper">
+          <div class="label-wrapper">
+            <label for={"#{@id}-search"} class="control-label">{gettext("Filter entries")}</label>
+          </div>
+          <%!-- This query is client-owned and must survive selection patches. --%>
+          <div id={"#{@id}-search-control"} class="field-base filter-input-wrapper" phx-update="ignore">
+            <.icon name="hero-magnifying-glass" class="filter-icon" />
+            <input
+              id={"#{@id}-search"}
+              type="search"
+              class="text"
+              placeholder={gettext("Filter entries…")}
+              autocomplete="off"
+            />
+            <button type="button" class="filter-clear" aria-label={gettext("Clear filter")}>
+              <.icon name="hero-x-mark" />
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id={"#{@id}-options"} class="entry-picker-options">
+        <h2 class="titlecase">{gettext("Available entries")}</h2>
+        <div class="no-results" role="status">{gettext("No matching entries")}</div>
+        {render_slot(@inner_block)}
+      </div>
     </div>
     """
   end
@@ -373,6 +409,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     <article
       :if={@identifier}
       data-id={@identifier.id}
+      data-label={@identifier.title}
       class={[
         "draggable",
         "identifier"
@@ -417,6 +454,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     ~H"""
     <article
       data-id={@identifier.id}
+      data-label={@identifier.title}
       class={[
         "identifier",
         @selected && "selected"
@@ -458,6 +496,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     ~H"""
     <article
       data-id={@identifier.id}
+      data-label={@identifier.title}
       class={[
         "draggable",
         "identifier",
@@ -507,6 +546,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     ~H"""
     <article
       data-id={@identifier.id}
+      data-label={@identifier.title}
       class={[
         "draggable",
         "identifier"
@@ -547,6 +587,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     ~H"""
     <article
       data-id={@identifier.id}
+      data-label={@identifier.title}
       class={[
         "identifier",
         @selected && "selected"

@@ -342,3 +342,25 @@ button.link-preview { text-align: left; }
 @media (max-width: 720px) {
   .modal--picker .identifier-picker-results .select-filter { position: static; }
 }
+
+/* Related-entry pickers share the quiet selection surface used by other pickers. */
+.modal .entry-picker-filter { background: #fff; padding-bottom: 12px; margin-bottom: 8px; }
+.entry-picker-filter .filter-clear > span { width: 14px; height: 14px; }
+.modal .entry-picker-options .identifier {
+  min-height: 58px; padding: 8px 10px; margin: 0 0 6px;
+  border: 1px solid #dce2dc; border-radius: 6px; background: #fff; color: #272b2a;
+  cursor: pointer;
+  &:hover { background: #f5f7f3; border-color: #bdcdbf; }
+  &.selected { background: #edf3e9; border-color: #b8cdb3; color: #254e3f; }
+  .cover-wrapper { flex: 0 0 40px; width: 40px; min-width: 40px; padding: 0; }
+  .cover, .cover img { width: 40px; height: 40px; }
+  .content { min-width: 0; }
+  .name { font: 14px/20px "Main", sans-serif; overflow-wrap: anywhere; }
+  .meta-info { font-size: 11px; color: #626b66; }
+  .remove:empty { display: none; }
+}
+@media (max-width: 600px) {
+  .select-modal-wrapper { grid-template-columns: minmax(0, 1fr); }
+  .select-modal-wrapper .select-modal { border-right: 0; border-bottom: 1px solid #dce2dc; padding: 0 0 16px; }
+  .select-modal-wrapper .selected-labels { padding: 0; }
+}

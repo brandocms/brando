@@ -53,6 +53,6 @@ for (const type of ['image', 'file']) {
     await expect(modal).not.toBeVisible()
     await expect(field).not.toHaveAttribute('data-asset-id', /\d+/)
     await expect(field.getByRole('button', { name: 'Upload', exact: true })).toBeVisible()
-    await expect(field.getByRole('button', { name: 'Browse library', exact: true })).toBeVisible()
+    await expect(field.getByRole('button', { name: type === 'image' ? 'Select image' : 'Browse library', exact: true })).toBeVisible()
   })
 }

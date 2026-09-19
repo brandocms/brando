@@ -120,7 +120,7 @@ test('image and video picker action menus escape scrolling rows', async ({ page 
     await field.locator('input[type=file]').setInputFiles(`./fixtures/${file}`)
     if (type === 'image') await confirmUploadFolder(page)
     await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
-    await field.getByRole('button', { name: 'Browse library', exact: true }).click()
+    await field.getByRole('button', { name: type === 'image' ? 'Select image' : 'Browse library', exact: true }).click()
     const picker = page.locator(`#${type}-picker`)
     await picker.getByRole('button', { name: 'List', exact: true }).click()
     for (const width of [1440, 390]) {

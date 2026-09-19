@@ -46,52 +46,12 @@
 }
 
 .block-field-dropdown-content {
+  @extend %admin_dropdown_panel;
   position: absolute;
   top: 30px;
   right: 0;
   z-index: 10;
-  min-width: 220px;
-  border-radius: 6px;
-  overflow: clip;
-  border: 1px solid var(--brando-color-dark);
-  background-color: var(--brando-color-peach);
-  color: var(--brando-color-dark);
-
-  li {
-    list-style: none;
-
-    &.dropdown-separator {
-      border-top: 1px solid color-mix(in srgb, var(--brando-color-dark) 15%, transparent);
-      margin: 2px 0;
-    }
-
-    button {
-      @font mono;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      width: 100%;
-      padding: 8px 12px;
-      border: none;
-      background: none;
-      font-size: 12px;
-      text-transform: uppercase;
-      cursor: pointer;
-      color: inherit;
-      white-space: nowrap;
-
-      span {
-        width: 14px;
-        height: 14px;
-        flex-shrink: 0;
-      }
-
-      &:hover {
-        background-color: var(--brando-color-dark);
-        color: var(--brando-color-peach);
-      }
-    }
-  }
+  text-transform: uppercase;
 }
 
 /* The clipboard's own name, trailing the "clear" label. Overrides the icon

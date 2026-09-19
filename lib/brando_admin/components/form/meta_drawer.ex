@@ -22,7 +22,15 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
       |> assign(:meta_description_opts, meta_description_opts)
 
     ~H"""
-    <Content.drawer id={@id} title={gettext("Meta properties")} close={@close}>
+    <Content.drawer
+      id={@id}
+      title={gettext("Meta properties")}
+      close={@close}
+      icon="hero-document-magnifying-glass"
+      workspace
+      editor
+      narrow
+    >
       <:info>
         <p>
           {gettext(

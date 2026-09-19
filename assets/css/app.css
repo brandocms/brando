@@ -88,6 +88,7 @@
 @import "./views/SettingsWorkspace.css";
 @import "./views/assets/Images.css";
 @import "./components/MediaWorkspace.css";
+@import "./components/EditorWorkspace.css";
 @import "./components/MarkdownSources.css";
 @import "./components/ModuleFiles.css";
 @import "./views/config/Cache.css";

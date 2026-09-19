@@ -15,6 +15,15 @@ export default (app) => ({
     this.$input = this.$form.querySelector('input')
     this.submitListenerEvent = this.submitListener.bind(this)
     this.draftRecovery = draftRecovery(this)
+    this.$toolbar = this.el.querySelector('.form-content > .form-tabs')
+    this.updateToolbarOffset = () => {
+      if (!this.$toolbar) return
+      const top = parseFloat(getComputedStyle(this.$toolbar).top) || 0
+      this.el.style.setProperty('--form-toolbar-offset', `${top + this.$toolbar.getBoundingClientRect().height + 8}px`)
+    }
+    this.toolbarObserver = new ResizeObserver(this.updateToolbarOffset)
+    if (this.$toolbar) this.toolbarObserver.observe(this.$toolbar)
+    this.updateToolbarOffset()
 
     if (!this.skipKeydown) {
       window.addEventListener('keydown', this.submitListenerEvent, false)
@@ -129,7 +138,10 @@ export default (app) => ({
     })
   },
 
+  updated() { this.updateToolbarOffset() },
+
   destroyed() {
+    this.toolbarObserver?.disconnect()
     this.draftRecovery?.destroy()
     if (!this.skipKeydown) {
       window.removeEventListener('keydown', this.submitListenerEvent, false)

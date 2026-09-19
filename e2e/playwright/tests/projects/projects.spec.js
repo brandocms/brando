@@ -204,7 +204,7 @@ test('creates project', async ({ page }) => {
   await listingImage.getByRole('button', { name: 'Configure', exact: true }).click()
   const imageDrawer = page.locator('#image-drawer')
   await imageDrawer.getByRole('button', { name: 'Replace', exact: true }).click()
-  await imageDrawer.getByRole('button', { name: 'Browse library', exact: true }).click()
+  await imageDrawer.getByRole('button', { name: 'Select image', exact: true }).click()
   await syncLV(page)
 
   const imagePicker = page.locator('#image-picker')
@@ -221,7 +221,7 @@ test('creates project', async ({ page }) => {
   await expect(imageDrawer.locator('img')).toBeVisible()
 
   await imageDrawer.getByRole('button', { name: 'Replace', exact: true }).click()
-  await imageDrawer.getByRole('button', { name: 'Browse library', exact: true }).click()
+  await imageDrawer.getByRole('button', { name: 'Select image', exact: true }).click()
   await syncLV(page)
 
   await expect(imagePicker.locator(`.image-picker__image[data-id="${replacementId}"]`)).toHaveClass(

@@ -1,5 +1,4 @@
-/* Shared positioning overrides for the older LiveView-driven menus. Keep
-   their colors, typography and action layout in their component stylesheets. */
+/* Shared menu surface. Components only own placement and trigger styling. */
 [data-floating-dropdown][popover] {
   position: fixed !important;
   right: auto !important;
@@ -18,4 +17,50 @@
     white-space: normal;
     overflow-wrap: anywhere;
   }
+}
+
+%admin_dropdown_panel {
+  width: max-content;
+  min-width: 220px;
+  max-width: calc(100vw - 16px);
+  margin: 0;
+  padding: 3px;
+  border: 1px solid #dce2dc;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--brando-color-dark);
+  box-shadow: 0 4px 16px #17291e14, 0 1px 3px #17291e0a;
+  font: 12px/20px "Main", sans-serif;
+  overflow: clip;
+
+  > li { list-style: none; margin: 0; padding: 0; }
+  > li + li, > button + button, > a + a { border-top: 1px solid #eef0ed; }
+  > li.dropdown-separator { display: none; }
+  button, a {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    float: none;
+    width: 100%;
+    min-width: 0;
+    min-height: 34px;
+    height: auto;
+    margin: 0;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: normal;
+    &:hover { background: #f5f7f3; color: inherit; }
+    &:focus-visible { outline: 2px solid #254e3f; outline-offset: -2px; }
+    &:disabled { opacity: .45; cursor: default; }
+    > [class^="hero-"] { width: 14px; height: 14px; flex-shrink: 0; }
+  }
+  @media (pointer: coarse) { button, a { min-height: 40px; } }
 }

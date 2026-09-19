@@ -77,10 +77,10 @@
   }
 
   .dropdown-content {
-    @extend %dropdown_options;
-    @font mono;
+    @extend %admin_dropdown_panel;
+    position: absolute;
+    right: 0;
     top: 30px;
-    font-size: 12px !important;
     text-transform: uppercase;
     z-index: 2;
 
@@ -138,42 +138,11 @@
   }
 
   .simple-dropdown-content {
-    background-color: var(--brando-color-peach);
-    color: var(--brando-color-dark);
+    @extend %admin_dropdown_panel;
     position: absolute;
-    min-width: 150px;
-    border: 1px solid var(--brando-color-dark);
     z-index: 2;
     top: 50px;
     right: 0;
-
-    &.over {
-      top: auto;
-      bottom: 50px;
-    }
-
-    li {
-      a,
-      button {
-        @font mono;
-        display: block;
-        padding: 8px 15px;
-        text-align: right;
-        line-height: 1.5;
-        float: right;
-        width: 100%;
-        font-size: 12px;
-        border: none;
-
-        &:hover {
-          background-color: var(--brando-color-dark);
-          color: theme(colors.peach);
-
-          .shortcut {
-            color: var(--brando-color-dark);
-          }
-        }
-      }
-    }
+    &.over { top: auto; bottom: 50px; }
   }
 }

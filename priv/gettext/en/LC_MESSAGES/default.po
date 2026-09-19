@@ -4039,3 +4039,15 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Use the frontend assets included in the current release?"
 msgstr ""
+
+msgid "Selected"
+msgstr ""
+
+msgid "Filter entries"
+msgstr ""
+
+msgid "Filter entries…"
+msgstr ""
+
+msgid "No matching entries"
+msgstr ""
