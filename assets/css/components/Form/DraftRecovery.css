@@ -441,47 +441,30 @@
   .draft-copy-content[data-copy-state="failed"] .draft-copy-failure {
     display: inline;
   }
-  .draft-content-preview {
-    max-height: 360px;
-    overflow: auto;
-    border: 1px solid var(--draft-line);
-    border-radius: 8px;
+  .draft-content-preview, .draft-preview-sections {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
     user-select: text;
   }
-  .draft-preview-section {
-    h4 {
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--draft-line);
-      background: #f8f9fc;
-      font-size: 13px;
-      font-weight: 600;
-    }
-    dl {
-      margin: 0;
-      padding: 0;
-      font-size: 13px;
-    }
-    .draft-preview-row {
-      display: grid;
-      grid-template-columns: minmax(140px, 28%) minmax(0, 1fr);
-      gap: 16px;
-      padding: 10px 14px;
-      border-bottom: 1px solid #edf0f5;
-    }
-    dt, dd {
-      margin: 0;
-      padding: 0;
-      font-size: inherit;
-      font-weight: 400;
-      overflow-wrap: anywhere;
-    }
-    dt {
-      color: var(--draft-muted);
-    }
-    dd {
-      white-space: pre-wrap;
-    }
+  .draft-preview-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    margin: 0;
+    color: #626b66;
+    font: 13px/20px "Main", sans-serif;
+    cursor: pointer;
+    input { appearance: auto; width: 16px; height: 16px; margin: 0; accent-color: #254e3f; cursor: pointer; }
+    input:focus-visible { outline: 2px solid #47775d; outline-offset: 3px; }
   }
+  .draft-content-preview[data-show-unchanged="false"] {
+    .text-diff-line.is-eq:not(.is-change-heading),
+    .admin-text-diff[data-changed="false"][data-truncated="false"] { display: none; }
+  }
+  .draft-content-preview[data-show-unchanged="true"] .draft-preview-unchanged { display: none; }
+  .draft-preview-unchanged { color: #626b66; font: 13px/20px "Main", sans-serif; }
   .draft-preview-empty {
     padding: 14px;
     color: var(--draft-muted);
@@ -754,10 +737,6 @@
     }
     .draft-copy-reviewed {
       padding-left: 40px;
-    }
-    .draft-preview-section .draft-preview-row {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 4px;
     }
     .draft-preview-heading .draft-actions {
       gap: 8px;

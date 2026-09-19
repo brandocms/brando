@@ -23,10 +23,17 @@ defmodule BrandoAdmin.Components.TextDiff do
   """
 
   def diff(assigns) do
-    assigns = assign(assigns, :comparison, compare(assigns.before, assigns.after))
+    comparison = compare(assigns.before, assigns.after)
+    assigns = assign(assigns, :comparison, Map.update!(comparison, :rows, &mark_changed_headings/1))
 
     ~H"""
-    <section id={@id} class={["admin-text-diff", @monospace && "is-code"]} aria-labelledby={@id <> "-title"}>
+    <section
+      id={@id}
+      class={["admin-text-diff", @monospace && "is-code"]}
+      aria-labelledby={@id <> "-title"}
+      data-changed={to_string(@comparison.added > 0 || @comparison.removed > 0)}
+      data-truncated={to_string(@comparison.truncated?)}
+    >
       <header class="admin-text-diff-heading">
         <div>
           <h4 id={@id <> "-title"}>{@label}</h4>
@@ -63,7 +70,15 @@ defmodule BrandoAdmin.Components.TextDiff do
         aria-label={dgettext("admin_diff", "Changes in %{field}", field: @label)}
         tabindex="0"
       >
-        <div :for={row <- @comparison.rows} class={["text-diff-line", "is-#{row.kind}", row[:type] && "is-#{row.type}"]}>
+        <div
+          :for={row <- @comparison.rows}
+          class={[
+            "text-diff-line",
+            "is-#{row.kind}",
+            row[:type] && "is-#{row.type}",
+            row.change_heading? && "is-change-heading"
+          ]}
+        >
           <span class="text-diff-number" aria-hidden="true">{row.before}</span>
           <span class="text-diff-number" aria-hidden="true">{row.after}</span>
           <span class="text-diff-marker" aria-hidden="true">{marker(row.kind)}</span>
@@ -82,6 +97,21 @@ defmodule BrandoAdmin.Components.TextDiff do
       </footer>
     </section>
     """
+  end
+
+  # A changes-only view still needs the field label, even when unchanged
+  # paragraphs separate that label from its first changed line.
+  defp mark_changed_headings(rows) do
+    {rows, _} =
+      rows
+      |> Enum.reverse()
+      |> Enum.map_reduce(false, fn row, changed? ->
+        heading? = row[:type] == :heading
+        next = if heading?, do: false, else: changed? || row.kind != :eq
+        {Map.put(row, :change_heading?, heading? && changed?), next}
+      end)
+
+    Enum.reverse(rows)
   end
 
   # Compare bounded text previews, never markup. HEEx escapes every displayed line.

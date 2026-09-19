@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
   use Phoenix.Component
   use Gettext, backend: Brando.Gettext
   alias Phoenix.LiveView.JS
+  alias BrandoAdmin.Components.TextDiff
 
   attr :id, :string, required: true
 
@@ -160,8 +161,8 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
             </div>
             <div class="draft-preview-heading">
               <div>
-                <h3>{gettext("Content in this copy")}</h3>
-                <p>{gettext("Browse the stored fields and block content before restoring.")}</p>
+                <h3>{gettext("Content changes")}</h3>
+                <p>{gettext("Compare the saved entry with this recovery copy before restoring.")}</p>
               </div>
               <div class="draft-actions">
                 <.copy_button
@@ -178,7 +179,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
                 </a>
               </div>
             </div>
-            <.content_preview id={"#{@id}-preview"} payload={@state.selected.payload} />
+            <.content_preview id={"#{@id}-preview"} sections={@state.preview} />
             <details
               id={"#{@id}-inspector"}
               class="draft-inspector draft-raw-content"
@@ -276,22 +277,44 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
   end
 
   attr :id, :string, required: true
-  attr :payload, :map, required: true
+  attr :sections, :list, required: true
 
   defp content_preview(assigns) do
-    assigns = assign(assigns, :sections, BrandoAdmin.Components.Form.DraftPreview.sections(assigns.payload))
-
     ~H"""
-    <div id={@id} class="draft-content-preview" tabindex="0" aria-label={gettext("Recovery content preview")}>
-      <section :for={section <- @sections} class="draft-preview-section">
-        <h4>{section.title}</h4>
-        <dl>
-          <div :for={row <- section.rows} class="draft-preview-row">
-            <dt>{row.field}</dt>
-            <dd>{display(row.value)}</dd>
-          </div>
-        </dl>
-      </section>
+    <div
+      id={@id}
+      class="draft-content-preview"
+      data-show-unchanged="false"
+      tabindex="0"
+      aria-label={gettext("Recovery content preview")}
+    >
+      <label
+        id={"#{@id}-toggle"}
+        class="draft-preview-toggle"
+        for={"#{@id}-show-unchanged"}
+        phx-update="ignore"
+      >
+        <input
+          id={"#{@id}-show-unchanged"}
+          type="checkbox"
+          aria-controls={"#{@id}-sections"}
+          phx-click={JS.toggle_attribute({"data-show-unchanged", "true", "false"}, to: "##{@id}")}
+        />
+        {gettext("Show unchanged content")}
+      </label>
+      <p :if={@sections != [] && Enum.all?(@sections, &(&1.before == &1.after))} class="draft-preview-unchanged">
+        {gettext("No content changes in this preview.")}
+      </p>
+      <div id={"#{@id}-sections"} class="draft-preview-sections">
+        <TextDiff.diff
+          :for={{section, index} <- Enum.with_index(@sections)}
+          id={"#{@id}-section-#{index}"}
+          label={section.title}
+          before={section.before}
+          after={section.after}
+          description={gettext("Saved entry") <> " → " <> gettext("Recovery copy")}
+        />
+      </div>
       <p :if={@sections == []} class="draft-preview-empty">
         {gettext("No readable fields in this copy. View or download the full recovery data below.")}
       </p>

@@ -9494,3 +9494,15 @@ msgstr ""
 
 msgid "No matching entries"
 msgstr ""
+
+msgid "Content changes"
+msgstr ""
+
+msgid "Compare the saved entry with this recovery copy before restoring."
+msgstr ""
+
+msgid "Show unchanged content"
+msgstr ""
+
+msgid "No content changes in this preview."
+msgstr ""

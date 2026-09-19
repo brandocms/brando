@@ -42,6 +42,24 @@ defmodule BrandoAdmin.Components.TextDiffTest do
     assert TextDiff.compare("Removed content", "").added == 0
   end
 
+  test "marks only headings that own changes, even after unchanged paragraphs" do
+    before = [
+      %{text: "Body", type: :heading},
+      %{text: "Unchanged introduction"},
+      %{text: "Previous ending"},
+      %{text: "Color", type: :heading},
+      %{text: "Blue"}
+    ]
+
+    after_lines = List.replace_at(before, 2, %{text: "Updated ending"})
+    document = render(before, after_lines) |> Floki.parse_fragment!()
+
+    assert Floki.find(document, ".is-change-heading .text-diff-text") |> Enum.map(&Floki.text/1) == ["Body"]
+    assert Floki.find(document, "[data-changed=true]") != []
+    assert render(before, before) =~ ~s(data-changed="false")
+    assert render("", String.duplicate("a", 12_001)) =~ ~s(data-truncated="true")
+  end
+
   test "authored HTML is shown as escaped text" do
     html = render("", "<script>alert('unsafe')</script>\n<img src=x onerror=alert(1)>")
     document = Floki.parse_fragment!(html)

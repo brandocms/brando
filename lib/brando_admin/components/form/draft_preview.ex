@@ -5,6 +5,35 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
   # Presentation only: the original payload remains intact for restore/export.
   @metadata ~w(id uid creator_id entry_id parent_id module_id block_id table_row_id module_version source sequence)
 
+  def comparisons(saved, recovered) do
+    before = sections(saved)
+    after_sections = sections(recovered)
+    before_by_title = Map.new(before, &{&1.title, &1})
+    after_by_title = Map.new(after_sections, &{&1.title, &1})
+
+    (after_sections ++ before)
+    |> Enum.uniq_by(& &1.title)
+    |> Enum.map(fn section ->
+      %{
+        title: section.title,
+        before: lines(before_by_title[section.title]),
+        after: lines(after_by_title[section.title])
+      }
+    end)
+  end
+
+  defp lines(nil), do: []
+
+  defp lines(section) do
+    Enum.flat_map(section.rows, fn row ->
+      [%{text: row.field, key: {row.field, :label}, type: :heading}] ++
+        (row.value
+         |> to_string()
+         |> String.split(~r/\r\n|\n|\r/)
+         |> Enum.map(&%{text: &1, key: row.field}))
+    end)
+  end
+
   def sections(payload) do
     entry = section(gettext("Entry fields"), payload["main"])
 
@@ -54,8 +83,17 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
     end
   end
 
-  defp rows(%{"name" => name, "data" => data}, path) when is_binary(name),
-    do: rows(data, path ++ [label(name)])
+  defp rows(%{"name" => name, "data" => data}, path) when is_binary(name) and is_map(data) do
+    # Ref editor capabilities describe controls, not the authored content.
+    data = Map.drop(data, ~w(type extensions footnote_module_set))
+
+    data =
+      if is_map(data["data"]),
+        do: Map.update!(data, "data", &Map.drop(&1, ~w(extensions footnote_module_set))),
+        else: data
+
+    rows(data, path ++ [label(name)])
+  end
 
   defp rows(%{"type" => type, "refs" => _} = block, path) when type in ["module", "module_entry", "container"] do
     block

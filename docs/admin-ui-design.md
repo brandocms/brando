@@ -192,7 +192,7 @@ behavioral coverage. When fixing a failing test, rerun that specific test first.
 ## Shared text diffs
 
 Use `BrandoAdmin.Components.TextDiff.diff/1` for line-by-line text comparisons.
-Content transfer and module-file import review use this component. Its shared
+Content transfer, module-file import review and recovery-copy previews use this component. Its shared
 styles live in `assets/css/components/TextDiff.css`, and its English/Norwegian
 labels use the `admin_diff` Gettext domain.
 
@@ -225,9 +225,14 @@ or portable blocks with an asset index into readable text and media references.
 It includes image/file/video filenames, gallery order and selected authored metadata.
 It preserves placement context, so moved media appears as removal and addition.
 Explain that rendered layout and other settings still need their own review.
-Shared-library template overrides and multiline recovery
-fields are suitable future uses; permission sets and record relationships need
-their structured comparisons.
+Recovery previews compare readable payload sections against a freshly loaded
+saved entry, retaining field identities and omitting editor capability settings.
+Show only changed sections and lines by default, retaining their field labels.
+The “Show unchanged content” checkbox reveals the full preview and persists
+through LiveView patches. Keep truncation notices visible in both modes.
+Copy text includes the recovery side; JSON export keeps the original payload.
+Shared-library template overrides are another suitable use; permission sets and
+record relationships need their structured comparisons.
 
 ## External references
 

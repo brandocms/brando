@@ -2,6 +2,68 @@ defmodule BrandoAdmin.Components.Form.DraftPreviewTest do
   use ExUnit.Case, async: true
 
   alias BrandoAdmin.Components.Form.DraftPreview
+  alias BrandoAdmin.Components.TextDiff
+
+  test "compares multiline content against saved values without ref editor configuration" do
+    ref = %{
+      "name" => "text",
+      "data" => %{
+        "type" => "text",
+        "data" => %{
+          "text" => "<p>Introduction</p><p>Saved paragraph</p>",
+          "extensions" => ["h2", "bold"],
+          "footnote_module_set" => "Footnotes"
+        }
+      }
+    }
+
+    saved = %{"blocks" => %{"blocks" => [%{"block" => %{"refs" => [ref]}}]}}
+
+    recovered =
+      put_in(
+        saved,
+        ["blocks", "blocks", Access.at(0), "block", "refs", Access.at(0), "data", "data", "text"],
+        "<p>Introduction</p><p>Recovered paragraph</p>"
+      )
+
+    assert [%{title: "Block 1", before: before, after: after_lines}] = DraftPreview.comparisons(saved, recovered)
+    diff = TextDiff.compare(before, after_lines)
+    assert diff.added == 1
+    assert diff.removed == 1
+    assert Enum.any?(diff.rows, &(&1.kind == :eq && &1.text == "Introduction"))
+    assert Enum.any?(diff.rows, &(&1.kind == :del && &1.text == "Saved paragraph"))
+    assert Enum.any?(diff.rows, &(&1.kind == :ins && &1.text == "Recovered paragraph"))
+    refute Enum.any?(after_lines, &(&1.text in ["h2", "bold", "Footnotes"]))
+
+    assert get_in(recovered, [
+             "blocks",
+             "blocks",
+             Access.at(0),
+             "block",
+             "refs",
+             Access.at(0),
+             "data",
+             "data",
+             "extensions"
+           ]) == ["h2", "bold"]
+  end
+
+  test "keeps removed sections, false values and equal text in different fields distinct" do
+    saved = %{
+      "main" => %{"title" => "Same text", "active" => false},
+      "blocks" => %{"blocks" => [%{"description" => "Removed block"}]}
+    }
+
+    recovered = %{"main" => %{"subtitle" => "Same text", "active" => false}}
+    sections = DraftPreview.comparisons(saved, recovered)
+    entry = Enum.find(sections, &(&1.title == "Entry fields"))
+    diff = TextDiff.compare(entry.before, entry.after)
+    assert Enum.any?(diff.rows, &(&1.kind == :eq && &1.text == "false"))
+    assert Enum.any?(diff.rows, &(&1.kind == :del && &1.text == "Same text"))
+    assert Enum.any?(diff.rows, &(&1.kind == :ins && &1.text == "Same text"))
+    assert %{after: [], before: [_ | _]} = Enum.find(sections, &(&1.title == "Block 1"))
+    assert DraftPreview.comparisons(%{}, %{}) == []
+  end
 
   test "shows nested recovery text, false values and media references without serialization metadata" do
     payload = %{

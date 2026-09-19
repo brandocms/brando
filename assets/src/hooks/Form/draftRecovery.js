@@ -77,7 +77,13 @@ export default function draftRecovery(hook) {
     if (!source || !hook.el.contains(source)) return
 
     try {
-      await navigator.clipboard.writeText(source.tagName === 'PRE' ? source.textContent : source.innerText)
+      const diffs = source.querySelectorAll('.admin-text-diff')
+      // Copy the recovery side only; deleted lines belong to the saved entry.
+      const text = diffs.length ? [...diffs].map(diff => [
+        diff.querySelector('h4').textContent,
+        ...[...diff.querySelectorAll('.text-diff-line:not(.is-del) .text-diff-text')].map(line => line.textContent),
+      ].join('\n')).join('\n\n') : source.tagName === 'PRE' ? source.textContent : source.innerText
+      await navigator.clipboard.writeText(text)
       if (button.isConnected) hook.js().setAttribute(button, 'data-copy-state', 'copied')
     } catch {
       // Clipboard permission can be unavailable; leave the content selected.

@@ -9352,3 +9352,15 @@ msgstr "Filtrer innlegg…"
 
 msgid "No matching entries"
 msgstr "Ingen samsvarende innlegg"
+
+msgid "Content changes"
+msgstr "Innholdsendringer"
+
+msgid "Compare the saved entry with this recovery copy before restoring."
+msgstr "Sammenlign den lagrede versjonen med denne gjenopprettingskopien før du gjenoppretter."
+
+msgid "Show unchanged content"
+msgstr "Vis uendret innhold"
+
+msgid "No content changes in this preview."
+msgstr "Ingen innholdsendringer i denne forhåndsvisningen."

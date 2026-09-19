@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
   alias Brando.Drafts.Modules
   alias Brando.Drafts.Params
   alias Brando.Drafts.Restore
+  alias BrandoAdmin.Components.Form.DraftPreview
 
   def init(%{assigns: %{draft: %{initialized?: true}}} = socket), do: socket
 
@@ -51,6 +52,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
         error: nil,
         compatible?: false,
         comparison: [],
+        preview: [],
         issues: [],
         save_generation: nil,
         status: :ready,
@@ -372,6 +374,19 @@ defmodule BrandoAdmin.Components.Form.Drafts do
           |> Enum.sort()
           |> Enum.map(fn {key, value} -> %{field: Phoenix.Naming.humanize(key), saved: main[key], recovered: value} end)
 
+        # Compare with the freshly loaded saved entry, never the working editor.
+        saved_payload = %{
+          "main" => main,
+          "blocks" =>
+            Map.new(socket.assigns.form_blueprint.blocks, fn field ->
+              {to_string(field.name), Params.snapshot(Map.get(entry, :"entry_#{field.name}") || [])}
+            end),
+          "transformers" =>
+            Map.new(socket.assigns.form_blueprint.transformers, fn {name, _, _} ->
+              {to_string(name), Params.snapshot(Map.get(entry, name) || [])}
+            end)
+        }
+
         assign(socket, :draft, %{
           socket.assigns.draft
           | selected: selected,
@@ -379,7 +394,8 @@ defmodule BrandoAdmin.Components.Form.Drafts do
             error: nil,
             issues: [],
             compatible?: false,
-            comparison: comparison
+            comparison: comparison,
+            preview: DraftPreview.comparisons(saved_payload, selected.payload)
         })
     end
   end

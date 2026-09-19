@@ -36,9 +36,15 @@ names, capture timestamps (including seconds), and block counts. Selected copies
 have an explicit checkmark. A shaded recovery column compares changed scalar
 fields with the saved entry, with readable empty and boolean values.
 
-The content preview puts block text and variable values first, followed by entry
-fields and related content. Copy text copies this readable view; Copy JSON and
-Download JSON preserve the complete payload, including technical metadata. The
+The content preview uses the shared `TextDiff` component to compare block text,
+variable values, entry fields and related content against the freshly loaded
+saved entry. By default, only changed sections and added/removed lines are shown,
+with their field labels retained. “Show unchanged content” reveals the full
+preview, and the choice survives autosave patches and switching recovery copies.
+Text-editor capabilities such as extensions and footnote module
+sets stay in the full recovery data. Copy text copies only the recovery side of
+the readable preview; Copy JSON and Download JSON preserve the complete payload,
+including technical metadata. The
 full-data disclosure and incompatible-block disclosures retain their open state
 through LiveView patches using stable IDs and `JS.ignore_attributes("open")`.
 
