@@ -76,7 +76,10 @@ test('writing focus uses the editor frame and toolbar keyboard focus stays visib
   await editor.click()
   await expect(editor).toBeFocused()
   await expect(editor).toHaveCSS('outline-style', 'none')
-  await expect(shell).not.toHaveCSS('box-shadow', 'none')
+  // cd07cfdbf dropped the shell's focus ring deliberately — it boxed in every
+  // editor on the page, and the caret plus the active toolbar carry the signal
+  // instead. Assert its absence so the ring cannot creep back.
+  await expect(shell).toHaveCSS('box-shadow', 'none')
   await editor.press('Alt+F10')
   const button = page.getByRole('toolbar').locator('button:focus')
   await expect(button).toBeFocused()
@@ -331,7 +334,12 @@ test('keyboard menus preserve focus and Escape closes only the nested menu', asy
   await expect(doc.locator('h2')).toHaveCount(1)
   await expect(doc).toBeFocused()
   await page.getByRole('button', { name: 'Expand editor' }).click()
+  // toggleExpanded ends with editor.commands.focus(), which lands after the
+  // click resolves. Focusing Done before that steals focus right back to the
+  // document, and Tab then wraps from there instead of leaving the header.
+  await expect(doc).toBeFocused()
   await page.getByRole('button', { name: 'Done', exact: true }).focus()
+  await expect(page.getByRole('button', { name: 'Done', exact: true })).toBeFocused()
   await page.keyboard.press('Tab')
   await expect(page.getByRole('button', { name: 'Paragraph and style' })).toBeFocused()
   await page.getByRole('button', { name: 'List types' }).click()

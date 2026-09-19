@@ -76,8 +76,14 @@ test('create a simple text module', async ({ page }) => {
   const options = page.getByRole('dialog', { name: 'Select options', exact: true })
   await options.getByRole('button', { name: /Color$/ }).click()
   await options.getByRole('button', { name: 'OK', exact: true }).click()
+  // `open` on <details> is client state, so a patch arriving after the summary
+  // click re-renders the element closed and the presets never appear. Let the
+  // extension selection settle first, then confirm the list actually opened.
+  await syncLV(page)
   await refModal.getByText('Add preset…', { exact: true }).click()
-  await refModal.getByRole('button', { name: /^Basic/ }).click()
+  const basicPreset = refModal.getByRole('button', { name: /^Basic/ })
+  await expect(basicPreset).toBeVisible()
+  await basicPreset.click()
   await expect(refModal.getByRole('button', { name: 'Bold', exact: true })).toBeVisible()
   const configured = await refModal.locator('input[name$="[extensions][]"]').evaluateAll(nodes => nodes.map(node => node.value))
   expect(configured).toContain('color')

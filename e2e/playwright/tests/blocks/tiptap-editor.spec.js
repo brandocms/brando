@@ -22,8 +22,11 @@ test('rich text links preserve wording through validation, another field change,
   await editor.press('ControlOrMeta+a')
   await page.keyboard.type('Havglimt is a small retreat by the sea.')
   await expect(editor).toHaveText('Havglimt is a small retreat by the sea.')
+  // cd07cfdbf dropped the shell's focus ring on purpose — it boxed in every
+  // editor on the page, and the caret plus the active toolbar already say where
+  // the cursor is. Assert the absence so the ring cannot creep back.
   await expect(editor).toHaveCSS('outline-style', 'none')
-  await expect(page.locator('.tiptap-editor-shell').first()).not.toHaveCSS('box-shadow', 'none')
+  await expect(page.locator('.tiptap-editor-shell').first()).toHaveCSS('box-shadow', 'none')
   await page.locator('[data-footnote-field="introduction"]').screenshot({ path: testInfo.outputPath('editor-focus-desktop.png') })
   await editor.press('ControlOrMeta+a')
   await page.getByRole('button', { name: 'Link', exact: true }).click()
