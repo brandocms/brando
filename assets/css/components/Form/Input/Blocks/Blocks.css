@@ -14,14 +14,83 @@
     background-color: transparent;
   }
 
-  > [data-block-uid] {
-    &.is-sorting {
-      opacity: 0.5;
+}
 
-      .block-plus {
-        opacity: 0;
-      }
+/* ---------------------------------------------------------------------------
+   Drag and drop affordances for the block lists.
+
+   Every SortableBlocks list — the root list, a multi-module's children, a
+   collection slot — drags a uid wrapper, not the block itself: the block is a
+   `.base-block > .block` some way inside it, and how far in is not fixed (a
+   root block has an extra unnamed div in between). So these match on the
+   outermost `.base-block` rather than a child step, and `:not(.base-block
+   .base-block)` is what keeps a container block's children from each drawing
+   their own outline inside their parent's.
+
+   The rule these replaced was keyed on `.blocks-wrapper > [data-block-uid]`,
+   which stopped matching anything once that wrapper was introduced — which is
+   why a drag had no placeholder styling left at all.
+   --------------------------------------------------------------------------- */
+
+/* Sortable's `ghostClass` lands on the ORIGINAL element — the one walked
+   through the list to show where the block will drop. Rendered as an ordinary
+   block it gave a drag two plausible-looking copies and neither read as the one
+   in hand. Empty it out and outline it instead: children go `visibility:
+   hidden` rather than `display: none`, so the slot holds the exact height the
+   block will occupy, and the dashed outline says "this is where it lands". */
+.is-sorting .base-block:not(.base-block .base-block),
+.base-block.is-sorting {
+  .block-plus {
+    opacity: 0;
+  }
+
+  > .block {
+    position: relative;
+    visibility: hidden;
+    background-color: transparent;
+    border-color: transparent;
+
+    &::after {
+      content: '';
+      visibility: visible;
+      position: absolute;
+      inset: 0;
+      border: 2px dashed #7aa5cc;
+      background-color: #f0f9ff80;
+      pointer-events: none;
     }
+  }
+}
+
+/* Sortable's `dragClass`, on the clone that follows the cursor. `fallbackOnBody`
+   moves that clone to <body>, so it cannot be reached through any of the block
+   editor's containers. `:has()` keeps this off the other sortables that share
+   the class name (outline rows, subform entries). */
+.drag-item:has(.base-block),
+.base-block.drag-item {
+  /* Sortable inlines `opacity: 0.8` on the clone. */
+  opacity: 1 !important;
+  cursor: grabbing;
+
+  /* Sortable positions the clone by READING its computed transform on every
+     pointer move and incrementing it (`ghostMatrix.e += dx - lastDx`). Any
+     transition on transform means that read returns a mid-flight value, so each
+     move starts from a position the clone has not reached yet and the error
+     compounds: measured over a 385px drag, the clone travelled 199px — roughly
+     half the cursor's distance, falling further behind the whole way.
+     Sortable clears the *inline* transition when it builds the clone, which
+     leaves any stylesheet rule free to apply, so it has to be refused here. */
+  transition: none !important;
+  animation: none !important;
+
+  .block-plus {
+    opacity: 0;
+  }
+
+  .base-block:not(.base-block .base-block) > .block,
+  &.base-block > .block {
+    border-color: #7aa5cc;
+    box-shadow: 0 12px 28px #0527521f;
   }
 }
 

@@ -20,6 +20,17 @@ export default app => ({
       // Fallback (synthetic mouse) dragging like the other sortable hooks —
       // native HTML5 DnD can't be driven by Playwright in the e2e suite.
       forceFallback: true,
+      // The clone that follows the cursor is positioned absolutely against its
+      // container, and Sortable measures that container once, at drag start.
+      // Left inside the list, the container is whichever ancestor happens to be
+      // positioned or transformed, so any scroll or LiveView re-render beneath
+      // the drag drifts the clone away from the pointer — the drop indicator
+      // stays right, the thing under your hand does not, and the gap reads as
+      // the drag skipping several blocks. Anchoring the clone to <body> puts it
+      // in page coordinates, where nothing in the editor can shift it.
+      fallbackOnBody: true,
+      // A few pixels of travel during an ordinary click is not a drag.
+      fallbackTolerance: 4,
 
       onStart: e => (isDragging = true), // prevent phx-blur from firing while dragging
       onEnd: e => {
