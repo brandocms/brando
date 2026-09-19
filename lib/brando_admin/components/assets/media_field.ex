@@ -45,6 +45,8 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       |> assign(:folder, Map.get(config, :upload_path))
       |> assign(:name, asset_name(asset, assigns.type))
       |> assign(:details, asset_details(asset, assigns.type))
+      |> assign(:processing_image?, assigns.type == :image && asset != nil && asset.status != :processed)
+      |> assign(:preview_ratio, image_ratio(asset, assigns.type))
       |> assign(
         :drop_label,
         if(upload_enabled, do: drop_label(assigns.type, asset), else: gettext("Choose media from the library"))
@@ -73,11 +75,17 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       data-upload-label={@label || @name || @drop_label}
       data-drop-label={@drop_label}
       data-asset-id={@asset && @asset.id}
+      data-processing-image={to_string(@processing_image?)}
+      data-upload-processing={gettext("Processing…")}
     >
       <input :if={@upload_enabled?} type="file" class="file-input" accept={@accept} aria-label={gettext("Upload media")} />
       {render_slot(@inner_block)}
       <div class="media-field-content">
-        <div class="media-field-preview" data-media-type={@type}>
+        <div
+          class="media-field-preview"
+          data-media-type={@type}
+          style={@processing_image? && "aspect-ratio: #{@preview_ratio}"}
+        >
           <%= cond do %>
             <% @type == :image && @asset && @asset.status == :processed -> %>
               <Content.image image={@asset} size={if @presentation == :block, do: :largest, else: :smallest} />
@@ -91,7 +99,11 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         </div>
         <div class="media-field-copy">
           <span class="media-field-name">{@name || @drop_label}</span>
-          <span :if={@asset} class="media-field-meta">{@details}</span>
+          <span :if={@details} class="media-field-meta">{@details}</span>
+          <span :if={@processing_image?} class="media-field-processing" role="status" aria-live="polite">
+            <span class="media-field-spinner" aria-hidden="true"></span>
+            {gettext("Processing image…")}
+          </span>
           <span :if={!@asset && @upload_enabled?} class="media-field-meta">
             {gettext("Up to %{size}", size: @limit)}
           </span>
@@ -211,13 +223,23 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   defp size_label(bytes), do: Brando.Utils.human_size(bytes)
 
   defp asset_details(nil, _), do: nil
-  defp asset_details(%{status: status}, :image) when status != :processed, do: gettext("Processing image…")
-  defp asset_details(asset, :image), do: "#{asset.width} × #{asset.height}"
+
+  defp asset_details(%{width: width, height: height}, :image)
+       when is_number(width) and width > 0 and is_number(height) and height > 0,
+       do: "#{width} × #{height}"
+
+  defp asset_details(_, :image), do: nil
   defp asset_details(asset, :file), do: Brando.Utils.human_size(asset.filesize)
   defp asset_details(%{type: :upload}, :video), do: gettext("Uploaded video")
   defp asset_details(%{type: :youtube}, :video), do: "YouTube"
   defp asset_details(%{type: :vimeo}, :video), do: "Vimeo"
   defp asset_details(_asset, :video), do: gettext("Video")
+
+  defp image_ratio(%{width: width, height: height}, :image)
+       when is_number(width) and width > 0 and is_number(height) and height > 0,
+       do: "#{width} / #{height}"
+
+  defp image_ratio(_, _), do: "1"
 
   defp drop_label(:image, nil), do: gettext("Drop an image here")
   defp drop_label(:file, nil), do: gettext("Drop a file here")

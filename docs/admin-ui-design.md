@@ -238,6 +238,13 @@ line keys and show thumbnails, filenames and entry titles. Optional line
 Image thumbnails use fixed width and automatic height. Missing records remain
 visible as unavailable references. Recovery capture timestamps must not advance
 when a copy is dismissed, reviewed or renewed without content changes.
+Match recovery blocks (including children) by UID and gallery placements by
+identity before comparing their content. Show reordering in a separate compact
+movement list with names/thumbnails and old → new positions; keep edits to those
+same items in the text diff. Inserting or deleting an item must not turn every
+shifted neighbour into a move. Gallery objects and their overrides should produce
+one movement summary. The expanded recovery diff uses page scrolling: reset both
+internal overflow and scroll containment so mouse-wheel input reaches the page.
 Shared-library template overrides are another suitable use; permission sets and
 record relationships need their structured comparisons.
 
@@ -470,3 +477,9 @@ Search fields with a custom clear control suppress the browser's native clear
 button. Image refs use a fixed thumbnail width (180px on desktop, 96px on mobile)
 and automatic height to preserve the loaded image's proportions. Keep metadata
 beside the thumbnail and actions below the row; the image does not fill the card.
+While an uploaded image is processing, reserve that same height from its known
+width/height ratio. Keep the dimensions visible and show one translated status
+with a small spinner beside the filename. Hide the duplicate upload-manager
+projection in the field, while keeping errors visible. Respect reduced-motion
+preferences. See the [portrait](admin-ui/image-ref-processing-portrait.png) and
+[landscape](admin-ui/image-ref-processing-landscape.png) processing examples.

@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
   use Gettext, backend: Brando.Gettext
 
   alias __MODULE__.References
+  alias __MODULE__.Structure
 
   # Presentation only: the original payload remains intact for restore/export.
   @metadata ~w(id uid creator_id entry_id parent_id module_id block_id table_row_id module_version source sequence)
@@ -12,19 +13,21 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
       if opts == [], do: {saved, recovered}, else: References.prepare(saved, recovered, opts)
 
     labels = field_labels(opts[:schema], opts[:blueprint])
-    before = sections(saved) |> translate_fields(labels)
-    after_sections = sections(recovered) |> translate_fields(labels)
-    before_by_title = Map.new(before, &{&1.title, &1})
-    after_by_title = Map.new(after_sections, &{&1.title, &1})
 
-    (after_sections ++ before)
-    |> Enum.uniq_by(& &1.title)
-    |> Enum.map(fn section ->
-      %{
-        title: section.title,
-        before: lines(before_by_title[section.title]),
-        after: lines(after_by_title[section.title])
-      }
+    saved
+    |> Structure.compare(recovered)
+    |> Enum.flat_map(fn
+      %{kind: :order} = order ->
+        [order]
+
+      comparison ->
+        [before, after_section] =
+          [section(comparison.title, comparison.before), section(comparison.title, comparison.after)]
+          |> translate_fields(labels)
+
+        if before.rows == [] && after_section.rows == [],
+          do: [],
+          else: [%{comparison | before: lines(before), after: lines(after_section)}]
     end)
   end
 
@@ -32,16 +35,16 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
 
   defp lines(section) do
     Enum.flat_map(section.rows, fn row ->
-      [%{text: row.field, key: {row.field, :label}, type: :heading}] ++
+      [%{text: row.field, key: {row[:key] || row.field, :label}, type: :heading}] ++
         value_lines(row)
     end)
   end
 
-  defp value_lines(%{value: %References{} = reference, field: field}) do
+  defp value_lines(%{value: %References{} = reference, field: field} = row) do
     [
       %{
         text: reference.title,
-        key: {field, reference.kind, reference.id},
+        key: {row[:key] || field, reference.kind, reference.id},
         type: :media,
         preview: %{kind: reference.kind, thumbnail: reference.thumbnail, detail: reference.detail}
       }
@@ -52,7 +55,7 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
     row.value
     |> to_string()
     |> String.split(~r/\r\n|\n|\r/)
-    |> Enum.map(&%{text: &1, key: row.field})
+    |> Enum.map(&%{text: &1, key: row[:key] || row.field})
   end
 
   defp field_labels(nil, _), do: %{}
@@ -125,6 +128,13 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
   end
 
   defp section(title, content), do: %{title: title, rows: rows(content, [])}
+
+  defp rows(%Structure{items: items}, path) do
+    Enum.flat_map(items, fn item ->
+      rows(item.value, path ++ [item.label])
+      |> Enum.map(&Map.put(&1, :key, {item.key, &1.field}))
+    end)
+  end
 
   defp rows(%References{} = reference, path), do: [%{field: Enum.join(path, " › "), value: reference}]
 
@@ -215,6 +225,8 @@ defmodule BrandoAdmin.Components.Form.DraftPreview do
 
   defp readable(value), do: value
 
+  defp label("gallery_object_overrides"), do: gettext("Image and video settings")
+  defp label("gallery_objects"), do: gettext("Images and videos")
   defp label("block_identifiers"), do: gettext("Related entries")
 
   defp label(key) do

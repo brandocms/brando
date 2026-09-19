@@ -9376,3 +9376,24 @@ msgstr "Referanse #%{id}"
 
 msgid "Related entries"
 msgstr "Relaterte innlegg"
+
+msgid "Block order"
+msgstr "Blokkrekkefølge"
+
+msgid "Gallery order"
+msgstr "Gallerirekkefølge"
+
+msgid "Order changed"
+msgstr "Rekkefølge endret"
+
+msgid "Position"
+msgstr "Plassering"
+
+msgid "Moved from position %{from} to %{to}"
+msgstr "Flyttet fra plass %{from} til %{to}"
+
+msgid "Item %{number}"
+msgstr "Element %{number}"
+
+msgid "Image and video settings"
+msgstr "Bilde- og videoinnstillinger"

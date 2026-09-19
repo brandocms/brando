@@ -28,6 +28,98 @@ async function drop(page, target, files) {
 
 const picture = page => page.locator('.picture-block .media-field--block:visible')
 
+test('processing image refs reserve their proportions and show one animated status', async ({ page }, testInfo) => {
+  test.setTimeout(90000)
+  let capture = null
+  // Real uploads finish very quickly with inline Oban. Hold subsequent socket
+  // frames once their unprocessed asset arrives so we can inspect that actual
+  // LiveView render before allowing the processed-image update through.
+  await page.routeWebSocket('**/live/websocket*', socket => {
+    const server = socket.connectToServer()
+    let messages = Promise.resolve()
+    server.onMessage(message => {
+      messages = messages.then(async () => {
+        if (page.isClosed()) return
+        socket.send(message)
+        if (!capture) return
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+        if (await picture(page).getAttribute('data-processing-image').catch(() => null) !== 'true') return
+        const pending = capture
+        capture = null
+        try { await pending.run(); pending.resolve() } catch (error) { pending.reject(error) }
+      })
+    })
+  })
+  await createPage(page, 'Image processing proportions', 'Single Image with Caption')
+  // Leave content below the image, so the fixed uploader does not obscure the
+  // field when bringing its mobile preview into the middle of the viewport.
+  await page.getByRole('button', { name: 'Add block' }).last().click()
+  await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+  await page.getByRole('button', { name: 'Styled Header', exact: true }).click()
+  await syncLV(page)
+  const portrait = await page.evaluate(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 240; canvas.height = 400
+    const context = canvas.getContext('2d')
+    context.fillStyle = '#dce7d3'; context.fillRect(0, 0, 240, 400)
+    context.fillStyle = '#254e3f'; context.fillRect(16, 16, 208, 368)
+    return canvas.toDataURL('image/png').split(',')[1]
+  })
+  const field = picture(page)
+  for (const [shape, file] of [
+    ['portrait', { name: 'portrait.png', mimeType: 'image/png', buffer: Buffer.from(portrait, 'base64') }],
+    ['landscape', './fixtures/image.jpg'],
+  ]) {
+    let ratio
+    const captured = new Promise((resolve, reject) => {
+      capture = { resolve, reject, run: async () => {
+        await expect(field.locator('.media-field-meta')).toHaveText(/\d+ × \d+/)
+        ratio = await field.locator('.media-field-preview').evaluate(el => {
+          const [width, height] = getComputedStyle(el).aspectRatio.split('/').map(Number)
+          return width / height
+        })
+        expect(ratio < 1).toBe(shape === 'portrait')
+        // Exercise the manager projection independently: its duplicate status
+        // is hidden, while a failed upload must still surface its error.
+        await field.evaluate(el => window.liveSocket.main.getHook(el).showProgress({ status: 'processing' }))
+        await expect(field.getByRole('status')).toHaveCount(1)
+        await expect(field.getByRole('status')).toHaveText('Processing image…')
+        const spinner = field.locator('.media-field-spinner')
+        expect(await spinner.evaluate(el => getComputedStyle(el).animationName)).toBe('media-field-spin')
+        await page.emulateMedia({ reducedMotion: 'reduce' })
+        expect(await spinner.evaluate(el => getComputedStyle(el).animationName)).toBe('none')
+        await page.emulateMedia({ reducedMotion: 'no-preference' })
+        for (const width of [1440, 390]) {
+          await page.setViewportSize({ width, height: 1000 })
+          await field.evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'instant' }))
+          await expect.poll(async () => {
+            const box = await field.locator('.media-field-preview').boundingBox()
+            return Math.abs(box.height - box.width / ratio)
+          }).toBeLessThan(1)
+          await field.screenshot({ path: testInfo.outputPath(`image-ref-processing-${shape}-${width}.png`) })
+        }
+        await field.evaluate(el => window.liveSocket.main.getHook(el).showProgress({ status: 'error', error: 'Image processing failed' }))
+        await expect(field.getByRole('status')).toHaveCount(1)
+        await expect(field.getByRole('status')).toHaveText('Image processing failed')
+        await expect(spinner).not.toBeVisible()
+        await field.evaluate(el => window.liveSocket.main.getHook(el).showProgress(null))
+        await expect(spinner).toBeVisible()
+        await expect(field.getByRole('status')).toHaveText('Processing image…')
+        await page.setViewportSize({ width: 1440, height: 1000 })
+      } }
+    })
+    await field.locator('input[type="file"]').setInputFiles(file)
+    await confirmUploadFolder(page)
+    await captured
+    const img = field.locator('.media-field-preview img')
+    await expect(img).toBeVisible({ timeout: 20000 })
+    await expect(field.locator('.media-field-processing')).toHaveCount(0)
+    await expect(field.getByRole('status')).toHaveCount(0)
+    const finalBox = await img.boundingBox()
+    expect(Math.abs(finalBox.height - finalBox.width / ratio)).toBeLessThan(1)
+  }
+})
+
 test('image refs use a fixed thumbnail width and natural portrait and landscape heights', async ({ page }, testInfo) => {
   await createPage(page, 'Natural image proportions', 'Single Image with Caption')
   const field = picture(page)

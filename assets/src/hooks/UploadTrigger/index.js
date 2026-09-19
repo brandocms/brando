@@ -270,10 +270,11 @@ export default (app) => ({
     const container = this.el.querySelector(':scope > .media-field-progress')
     if (!container) return
     container.replaceChildren()
+    delete container.dataset.state
     if (!state || state.status === 'done') return
     container.dataset.state = state.status
     const text = document.createElement('span')
-    const messages = { queued: 'Waiting to upload…', uploading: 'Uploading', processing: 'Processing…', cancelled: 'Upload cancelled' }
+    const messages = { queued: 'Waiting to upload…', uploading: 'Uploading', processing: this.el.dataset.uploadProcessing || 'Processing…', cancelled: 'Upload cancelled' }
     text.textContent = state.status === 'error' ? state.error :
       state.status === 'uploading' ? `${messages.uploading} · ${state.progress}%` : messages[state.status]
     if (state.total && state.status !== 'error') text.textContent += ` · ${state.completed} of ${state.total} ready${state.failed ? ` · ${state.failed} failed` : ''}`

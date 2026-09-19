@@ -9518,3 +9518,24 @@ msgstr ""
 
 msgid "Related entries"
 msgstr ""
+
+msgid "Block order"
+msgstr ""
+
+msgid "Gallery order"
+msgstr ""
+
+msgid "Order changed"
+msgstr ""
+
+msgid "Position"
+msgstr ""
+
+msgid "Moved from position %{from} to %{to}"
+msgstr ""
+
+msgid "Item %{number}"
+msgstr ""
+
+msgid "Image and video settings"
+msgstr ""

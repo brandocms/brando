@@ -274,23 +274,66 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
         />
         {gettext("Show unchanged content")}
       </label>
-      <p :if={@sections != [] && Enum.all?(@sections, &(&1.before == &1.after))} class="draft-preview-unchanged">
+      <p
+        :if={@sections != [] && Enum.all?(@sections, &(&1[:kind] != :order && &1.before == &1.after))}
+        class="draft-preview-unchanged"
+      >
         {gettext("No content changes in this preview.")}
       </p>
       <div id={"#{@id}-sections"} class="draft-preview-sections">
-        <TextDiff.diff
-          :for={{section, index} <- Enum.with_index(@sections)}
-          id={"#{@id}-section-#{index}"}
-          label={section.title}
-          before={section.before}
-          after={section.after}
-          description={gettext("Saved entry") <> " → " <> gettext("Recovery copy")}
-        />
+        <%= for {section, index} <- Enum.with_index(@sections) do %>
+          <.order_diff :if={section[:kind] == :order} id={"#{@id}-order-#{index}"} section={section} />
+          <TextDiff.diff
+            :if={section[:kind] != :order}
+            id={"#{@id}-section-#{index}"}
+            label={section.title}
+            before={section.before}
+            after={section.after}
+            description={gettext("Saved entry") <> " → " <> gettext("Recovery copy")}
+          />
+        <% end %>
       </div>
       <p :if={@sections == []} class="draft-preview-empty">
         {gettext("No readable fields in this copy. View or download the full recovery data below.")}
       </p>
     </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :section, :map, required: true
+
+  defp order_diff(assigns) do
+    ~H"""
+    <section id={@id} class="draft-order-diff" aria-labelledby={@id <> "-title"}>
+      <header>
+        <h4 id={@id <> "-title"}>{@section.title}</h4>
+        <span class="draft-order-badge">{gettext("Order changed")}</span>
+      </header>
+      <div class="draft-order-columns" aria-hidden="true">
+        <span>{gettext("Content")}</span>
+        <span>{gettext("Position")}</span>
+      </div>
+      <ol>
+        <li :for={move <- @section.moves}>
+          <div class="draft-order-item">
+            <img :if={move.thumbnail} src={move.thumbnail} alt="" loading="lazy" />
+            <span :if={!move.thumbnail} class="draft-order-icon" aria-hidden="true">
+              <Brando.HTML.Icon.icon name="hero-arrows-up-down" />
+            </span>
+            <span>{move.title}</span>
+          </div>
+          <span
+            class="draft-order-positions"
+            aria-label={gettext("Moved from position %{from} to %{to}", from: move.from, to: move.to)}
+          >
+            <span title={gettext("Saved entry")}>{move.from}</span>
+            <span aria-hidden="true">→</span>
+            <span title={gettext("Recovery copy")}>{move.to}</span>
+          </span>
+        </li>
+      </ol>
+    </section>
     """
   end
 

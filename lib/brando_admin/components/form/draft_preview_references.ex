@@ -52,6 +52,13 @@ defmodule BrandoAdmin.Components.Form.DraftPreview.References do
     |> Map.new()
   end
 
+  defp references(%{"object_id" => value, "object_type" => type} = map, fields)
+       when type in ["image", "video"] do
+    kind = if type == "image", do: :image, else: :video
+    reference = if id(value), do: [{kind, id(value)}], else: []
+    reference ++ references(Map.drop(map, ["object_id", "object_type"]), fields)
+  end
+
   defp references(map, fields) when is_map(map) do
     Enum.flat_map(map, fn {key, value} ->
       case {fields[key], id(value)} do
@@ -64,19 +71,21 @@ defmodule BrandoAdmin.Components.Form.DraftPreview.References do
   defp references(list, fields) when is_list(list), do: Enum.flat_map(list, &references(&1, fields))
   defp references(_, _), do: []
 
+  defp decorate(%{"object_id" => value, "object_type" => type} = map, fields, index)
+       when type in ["image", "video"] do
+    kind = if type == "image", do: :image, else: :video
+    rest = decorate(Map.drop(map, ["object_id", "object_type"]), fields, index)
+    map = Map.merge(rest, Map.take(map, ["object_id", "object_type"]))
+    if id(value), do: Map.put(map, "_gallery_preview", lookup(index, kind, id(value))), else: map
+  end
+
   defp decorate(map, fields, index) when is_map(map) do
     map
     |> Map.reject(fn {key, _} -> fields[key <> "_id"] && id(map[key <> "_id"]) end)
     |> Map.new(fn {key, value} ->
       case {fields[key], id(value)} do
         {kind, id} when not is_nil(kind) and not is_nil(id) ->
-          preview =
-            Map.get(index, {kind, id}, %__MODULE__{
-              kind: kind,
-              id: id,
-              title: gettext("Unavailable %{type}", type: kind_label(kind)),
-              detail: gettext("Reference #%{id}", id: id)
-            })
+          preview = lookup(index, kind, id)
 
           {String.trim_trailing(key, "_id"), preview}
 
@@ -88,6 +97,15 @@ defmodule BrandoAdmin.Components.Form.DraftPreview.References do
 
   defp decorate(list, fields, index) when is_list(list), do: Enum.map(list, &decorate(&1, fields, index))
   defp decorate(value, _, _), do: value
+
+  defp lookup(index, kind, id) do
+    Map.get(index, {kind, id}, %__MODULE__{
+      kind: kind,
+      id: id,
+      title: gettext("Unavailable %{type}", type: kind_label(kind)),
+      detail: gettext("Reference #%{id}", id: id)
+    })
+  end
 
   defp id(id) when is_integer(id) and id > 0, do: id
 

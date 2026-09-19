@@ -21,6 +21,7 @@
   .media-field-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .media-field-name { color: var(--media-ink); font: 500 14px/20px "Main", sans-serif; overflow-wrap: anywhere; }
   .media-field-meta, .media-field-hint { color: var(--media-muted); font: 12px/18px "Main", sans-serif; }
+  .media-field-processing { display: inline-flex; align-items: center; gap: 6px; color: var(--media-muted); font: 12px/18px "Main", sans-serif; }
   .media-field-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
   .media-field-destination { display: flex; align-items: center; gap: 6px; margin-top: 12px; color: var(--media-muted); font: 12px/18px "Main", sans-serif; overflow-wrap: anywhere; }
   .media-field-destination > [class^="hero-"] { width: 14px; height: 14px; flex: 0 0 14px; }
@@ -32,6 +33,17 @@
   .media-field-drop > [class^="hero-"] { width: 24px; height: 24px; }
   &.dragging > .media-field-drop { display: flex; }
 }
+/* The image's own status remains visible through processing and page reloads.
+   Only its duplicate manager projection is hidden; failures stay readable. */
+.media-field[data-processing-image="true"] > .media-field-progress[data-state="processing"] { display: none; }
+.media-field:has(> .media-field-progress[data-state="error"]) .media-field-processing { display: none; }
+.media-field-spinner {
+  display: inline-block; flex: 0 0 12px; width: 12px; height: 12px;
+  border: 1.5px solid #dce2dc; border-top-color: #254e3f; border-radius: 50%;
+  animation: media-field-spin 900ms linear infinite;
+}
+@keyframes media-field-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .media-field-spinner { animation: none; } }
 .media-field .media-button, .media-gallery .media-button, .media-button {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   width: auto; min-width: 0; height: auto; min-height: 32px; margin: 0; padding: 5px 11px; border: 1px solid #dce2dc;

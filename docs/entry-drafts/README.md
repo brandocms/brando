@@ -51,8 +51,13 @@ the stored recovery payload is untouched. Field labels reuse the form's
 translations. Text-editor capabilities such as extensions and footnote module
 sets stay in the full recovery data. Copy text copies only the recovery side of
 the readable preview; Copy JSON and Download JSON preserve the complete payload,
-including technical metadata. The
-full-data disclosure and incompatible-block disclosures retain their open state
+including technical metadata. Block and gallery reordering has a dedicated movement
+summary. Content is matched by identity (including nested blocks), so a swap
+cannot look like two whole blocks being replaced. Gallery overrides follow their
+image/video identity; accompanying text, caption or setting edits remain visible.
+Insertion/deletion alone does not mark shifted neighbours as reordered. Scroll
+wheels over the diff scroll the page. The full-data disclosure and
+incompatible-block disclosures retain their open state
 through LiveView patches using stable IDs and `JS.ignore_attributes("open")`.
 
 Controls have compact desktop proportions, larger touch targets, and visible
@@ -66,6 +71,15 @@ timestamps visible. There is no duplicate scalar comparison above the diff.
 <summary>Recovery on a narrow screen</summary>
 
 ![Media and related-entry changes at 390px](recovery-media-diff-mobile.png)
+
+</details>
+
+![Block and gallery movements with an accompanying text edit](recovery-order.png)
+
+<details>
+<summary>Reordering review on a narrow screen</summary>
+
+![Block and gallery movements at 390px](recovery-order-mobile.png)
 
 </details>
 
