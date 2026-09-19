@@ -273,15 +273,21 @@ test.describe('Media in entry recovery copies', () => {
     await gallery.locator('input[type="file"]').setInputFiles('./fixtures/video.mp4')
     await expect(gallery.locator('.gallery-object')).toHaveCount(3, { timeout: 30000 })
     const objects = gallery.locator('.gallery-object')
-    await gallery.scrollIntoViewIfNeeded()
-    await page.mouse.wheel(0, 350)
+    // The uploads keep patching the gallery after the third object appears. A
+    // patch landing mid-drag makes morphdom restore the original DOM order, so
+    // let the LiveView go quiet before measuring and dragging.
+    await syncLV(page)
     const previousOrder = await objects.evaluateAll(nodes => nodes.map(node => Number(node.dataset.id)))
-    const target = await objects.first().boundingBox()
-    const source = await objects.last().boundingBox()
-    await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2)
+    // hover() scrolls the object into view and waits for it to stop moving
+    // before placing the cursor. Reading bounding boxes straight after
+    // mouse.wheel() measured a still-animating scroll, so mouse.down() landed
+    // off the handle and SortableJS never started a drag.
+    await objects.last().hover()
     await page.mouse.down()
+    const source = await objects.last().boundingBox()
     await page.mouse.move(source.x + source.width / 2 + 10, source.y + source.height / 2, { steps: 4 })
     await expect(page.locator('.sortable-fallback')).toBeVisible()
+    const target = await objects.first().boundingBox()
     await page.mouse.move(target.x + 5, target.y + target.height / 2, { steps: 20 })
     await page.mouse.up()
     await expect(objects).toHaveCount(3)

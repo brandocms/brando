@@ -103,7 +103,14 @@ test('page text and select controls match and toolbar dropdown chevrons are iden
   await expect(page.locator('.preview-choices')).toHaveCount(0)
   await expect(page.locator('#page_language-field-wrapper .button-edit')).toHaveText('Select')
   await page.locator('#page_language-field-wrapper .button-edit').press('Enter')
-  await expect(page.getByRole('dialog', { name: 'Select option' })).toBeVisible()
+  const selectDialog = page.getByRole('dialog', { name: 'Select option' })
+  await expect(selectDialog).toBeVisible()
+  // The Modal hook takes focus a frame after the dialog appears and only acts
+  // on Escape raised from inside it, so pressing before that lands on the
+  // opener button and the dialog never closes.
+  await expect
+    .poll(() => selectDialog.evaluate(el => el.contains(document.activeElement)))
+    .toBe(true)
   await page.keyboard.press('Escape')
   await expect(page.locator('#page_language-field-wrapper .button-edit')).toHaveText('Select')
   await saveDropdown.press('Enter')

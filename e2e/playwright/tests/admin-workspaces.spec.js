@@ -52,7 +52,10 @@ for (const [name, route, heading] of screens) {
     await page.goto(route)
     await syncLV(page)
     await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible()
-    await expect(page.locator('.admin-workspace:not(.drawer)')).toBeVisible()
+    // 918125724 marks the shared layout container with admin-workspace so the
+    // listing CSS need not reach for :has(); the LiveView keeps its own
+    // .admin-workspace inside it, so the class legitimately nests.
+    await expect(page.locator('.admin-workspace:not(.drawer)').first()).toBeVisible()
     await expect(page.locator('.phx-error')).toHaveCount(0)
     await page.screenshot({ path: testInfo.outputPath(`${name}-desktop.png`), fullPage: true })
     if (name === 'modules') {

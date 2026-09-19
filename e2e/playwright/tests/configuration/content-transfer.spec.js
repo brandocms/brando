@@ -250,7 +250,10 @@ test('Norwegian import keeps translated dropdowns and validation after changes',
   await page.keyboard.press('Tab')
   await expect(publication).toBeFocused()
   await expect(publication).toHaveCSS('outline-style', 'solid')
-  await publication.press('ArrowDown')
+  // Type-ahead picks the option on every platform. ArrowDown only cycles a
+  // closed <select> on Linux/Windows; on macOS it opens the native popup, which
+  // the page cannot script, so the value never changes.
+  await publication.press('b')
   await publication.press('Tab')
   await expect(publication).toHaveValue('source')
   await expect(page.locator('.transfer-change-table')).toContainText('Publisert')

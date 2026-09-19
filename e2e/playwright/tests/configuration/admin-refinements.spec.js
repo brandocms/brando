@@ -123,8 +123,10 @@ test('Markdown folder selection adds multiple sources and is translated', async 
   await expect(page.locator('.markdown-source-meta')).toContainText('Innhold hentet')
   const connection = page.getByLabel('GitHub-tilkobling', { exact: true })
   await connection.focus()
-  await connection.press('ArrowDown')
-  await connection.press('Enter')
+  // Type-ahead picks the option on every platform. ArrowDown only cycles a
+  // closed <select> on Linux/Windows; on macOS it opens the native popup, which
+  // the page cannot script, so the value never changes.
+  await connection.press('e')
   await expect(connection).toHaveValue('e2e-docs')
   await connection.press('Space')
   await screenshot(page, testInfo, 'markdown-connection-options')
