@@ -436,14 +436,22 @@ Action, sort, bulk-selection and block menus share `%admin_dropdown_panel` in
 and separators. Keep only positioning and trigger styling in the component.
 Bulk selection uses a light fixed bar above presence avatars, with a count and
 an explicit Actions button. Listing title links reveal an arrow on hover/focus.
+Shortcut badges are compact and muted, with a shared right edge inside each menu.
 
 Meta, revisions and scheduled publishing use the media browser's workspace
 shell, with entry-specific contents in `EditorWorkspace.css`. Keep the header
 visible while the body scrolls. Formatting toolbars inherit
 `--form-toolbar-offset`, measured by the Form hook from the actual toolbar
 height plus an 8px gap; independent dialogs reset this offset.
+Keep the measured value in a form-scoped stylesheet rule outside LiveView's
+patched attributes. Revisions show explicit active/inactive, scheduled and protected
+labels, with schema metadata below the revision number. Narrow layouts stack the
+same information without horizontal scrolling.
 
 Related-entry pickers reuse `Entries.entry_picker` and `Brando.SelectFilter`.
 The filter control is client-owned; selection patches must retain its query
 and reapply it to the updated results. Selected multiselect rows share the
 available options' height, and only their square remove control responds to hover.
+Search fields with a custom clear control suppress the browser's native clear
+button. Image refs fill their card's available width and use automatic height
+to preserve the loaded image's proportions, with metadata and actions below.

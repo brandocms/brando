@@ -15,14 +15,28 @@ export default (app) => ({
     this.$input = this.$form.querySelector('input')
     this.submitListenerEvent = this.submitListener.bind(this)
     this.draftRecovery = draftRecovery(this)
-    this.$toolbar = this.el.querySelector('.form-content > .form-tabs')
+    // Keep the measurement outside LiveView's patched inline attributes.
+    this.toolbarStyle = document.createElement('style')
+    document.head.appendChild(this.toolbarStyle)
+    this.toolbarStyle.sheet.insertRule(`#${CSS.escape(this.el.id)} {}`)
+    const toolbarRule = this.toolbarStyle.sheet.cssRules[0].style
     this.updateToolbarOffset = () => {
-      if (!this.$toolbar) return
-      const top = parseFloat(getComputedStyle(this.$toolbar).top) || 0
-      this.el.style.setProperty('--form-toolbar-offset', `${top + this.$toolbar.getBoundingClientRect().height + 8}px`)
+      const toolbar = this.el.querySelector('.form-content > .form-tabs')
+      if (toolbar !== this.$toolbar) {
+        this.toolbarObserver.disconnect()
+        this.$toolbar = toolbar
+        if (toolbar) this.toolbarObserver.observe(toolbar)
+      }
+      if (!toolbar) return
+      const height = toolbar.getBoundingClientRect().height
+      if (!height) return
+      const top = parseFloat(getComputedStyle(toolbar).top) || 0
+      const offset = `${top + height + 8}px`
+      if (toolbarRule.getPropertyValue('--form-toolbar-offset') !== offset) {
+        toolbarRule.setProperty('--form-toolbar-offset', offset)
+      }
     }
     this.toolbarObserver = new ResizeObserver(this.updateToolbarOffset)
-    if (this.$toolbar) this.toolbarObserver.observe(this.$toolbar)
     this.updateToolbarOffset()
 
     if (!this.skipKeydown) {
@@ -142,6 +156,7 @@ export default (app) => ({
 
   destroyed() {
     this.toolbarObserver?.disconnect()
+    this.toolbarStyle?.remove()
     this.draftRecovery?.destroy()
     if (!this.skipKeydown) {
       window.removeEventListener('keydown', this.submitListenerEvent, false)

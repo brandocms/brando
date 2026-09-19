@@ -28,6 +28,35 @@ async function drop(page, target, files) {
 
 const picture = page => page.locator('.picture-block .media-field--block:visible')
 
+test('image refs fill the preview width and retain portrait and landscape proportions', async ({ page }, testInfo) => {
+  await createPage(page, 'Natural image proportions', 'Single Image with Caption')
+  const field = picture(page)
+  const portrait = {
+    name: 'portrait.svg', mimeType: 'image/svg+xml',
+    buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="400" viewBox="0 0 240 400"><rect width="240" height="400" fill="#dce7d3"/><rect x="16" y="16" width="208" height="368" rx="8" fill="#254e3f"/><circle cx="120" cy="148" r="64" fill="#e8c384"/><path d="M16 280L95 210L224 330V384H16Z" fill="#a5bd97"/><text x="120" y="360" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">240 × 400</text></svg>'),
+  }
+  for (const [shape, file] of [['portrait', portrait], ['landscape', './fixtures/image.jpg']]) {
+    await field.locator('input[type="file"]').setInputFiles(file)
+    await confirmUploadFolder(page)
+    const img = field.locator('.media-field-preview img')
+    await expect.poll(() => img.evaluate(el => el.complete && el.naturalWidth > 0).catch(() => false)).toBe(true)
+    await expect.poll(() => img.evaluate(el => el.naturalHeight > el.naturalWidth)).toBe(shape === 'portrait')
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 1000 })
+      const size = await img.evaluate(el => {
+        const image = el.getBoundingClientRect(), preview = el.closest('.media-field-preview').getBoundingClientRect()
+        const field = el.closest('.media-field'), style = getComputedStyle(field)
+        return { width: image.width, height: image.height, previewWidth: preview.width, ratio: el.naturalWidth / el.naturalHeight,
+          availableWidth: field.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) }
+      })
+      expect(size.width).toBeCloseTo(size.previewWidth, 0)
+      expect(size.width).toBeCloseTo(size.availableWidth, 0)
+      expect(size.height).toBeCloseTo(size.width / size.ratio, 0)
+      await field.screenshot({ path: testInfo.outputPath(`image-ref-${shape}-${width}.png`) })
+    }
+  }
+})
+
 test('image drops validate destination, preserve ref settings, and keep the modal usable on mobile', async ({ page }, testInfo) => {
   test.setTimeout(120000)
   const title = 'Media ref settings'

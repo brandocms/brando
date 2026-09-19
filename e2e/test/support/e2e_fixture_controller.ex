@@ -26,6 +26,9 @@ defmodule E2EFixtureController do
         "norwegian-admin-user" ->
           create_norwegian_admin_user()
 
+        "revision-panel" ->
+          create_revision_panel()
+
         "media-upload" ->
           create_media_upload_module()
 
@@ -103,6 +106,20 @@ defmodule E2EFixtureController do
       })
 
     {:ok, _} = Brando.Authorization.Migration.run()
+    user
+  end
+
+  defp create_revision_panel do
+    user = create_norwegian_admin_user()
+    author = Brando.Repo.get!(Brando.Users.User, 1)
+    author = author |> Ecto.Changeset.change(name: "Anne-Kristine Søndergaard") |> Brando.Repo.update!()
+    page = Brando.Repo.get!(Brando.Pages.Page, 1)
+    {:ok, _active} = Brando.Revisions.create_revision(page, author)
+    {:ok, protected} = Brando.Revisions.create_revision(page, author, false)
+    Brando.Revisions.protect_revision(Brando.Pages.Page, page.id, protected.revision, true)
+    {:ok, scheduled} = Brando.Revisions.create_revision(page, user, false)
+    Brando.Revisions.mark_revision_scheduled(Brando.Pages.Page, page.id, scheduled.revision, true)
+    {:ok, _inactive} = Brando.Revisions.create_revision(page, :system, false)
     user
   end
 

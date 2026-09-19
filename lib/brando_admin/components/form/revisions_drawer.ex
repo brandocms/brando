@@ -110,14 +110,18 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
             </div>
 
             <table :if={data.revisions != []} class="revisions-table">
+              <colgroup>
+                <col class="revision-column" />
+                <col class="status-column" />
+                <col class="created-column" />
+                <col class="author-column" />
+                <col class="actions-column" />
+              </colgroup>
               <thead>
                 <tr>
                   <th scope="col">{gettext("Revision")}</th>
                   <th scope="col">{gettext("Status")}</th>
-                  <th scope="col">{gettext("Protection")}</th>
-                  <th scope="col">{gettext("Schedule")}</th>
                   <th scope="col">{gettext("Created")}</th>
-                  <th scope="col">{gettext("Schema")}</th>
                   <th scope="col">{gettext("Author")}</th>
                   <th scope="col"><span class="sr-only">{gettext("Actions")}</span></th>
                 </tr>
@@ -132,7 +136,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                       revision.schema_version != @schema_version && "outdated"
                     ]}
                   >
-                    <td class="fit">
+                    <td class="revision-number">
                       <button
                         type="button"
                         id={"preview-revision-#{revision.revision}"}
@@ -148,44 +152,29 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                       >
                         #{revision.revision}
                       </button>
+                      <span :if={revision.schema_version} class="revision-schema">{gettext("Schema")} v{revision.schema_version}</span>
                     </td>
-                    <td class="fit status">
-                      <span
-                        :if={revision.active}
-                        class="revision-active-marker"
-                        title={gettext("Active revision")}
-                        aria-label={gettext("Active revision")}
-                      >
-                        &#9679;
-                      </span>
-                      <span :if={!revision.active}>{gettext("Inactive")}</span>
+                    <td class="status">
+                      <div class="revision-statuses">
+                        <span class={["revision-status", revision.active && "is-active"]}>
+                          {if revision.active, do: gettext("Active"), else: gettext("Inactive")}
+                        </span>
+                        <span :if={revision.scheduled} class="revision-status is-scheduled">
+                          <.icon name="hero-calendar-days" />{gettext("Scheduled")}
+                        </span>
+                        <span :if={revision.protected} class="revision-protection">
+                          <.icon name="hero-lock-closed" />{gettext("Protected")}
+                        </span>
+                      </div>
                     </td>
-                    <td class="fit protected">
-                      <span
-                        :if={revision.protected}
-                        title={gettext("Protected revision")}
-                        aria-label={gettext("Protected revision")}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                          <path fill="none" d="M0 0h24v24H0z" /><path d="M6 8V7a6 6 0 1 1 12 0v1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1h2zm13 2H5v10h14V10zm-8 5.732a2 2 0 1 1 2 0V18h-2v-2.268zM8 8h8V7a4 4 0 1 0-8 0v1z" />
-                        </svg>
-                      </span>
-                      <span :if={!revision.protected}>—</span>
+                    <td class="date" data-label={gettext("Created")}>
+                      <time datetime={revision_datetime(revision.inserted_at)}>
+                        {Brando.Utils.Datetime.format_datetime(revision.inserted_at, "%d/%m/%Y")}
+                        <span class="revision-time">{Brando.Utils.Datetime.format_datetime(revision.inserted_at, "%H:%M")}</span>
+                      </time>
                     </td>
-                    <td class="fit scheduled">
-                      <span :if={revision.scheduled} class="revision-scheduled-badge">
-                        {gettext("Scheduled")}
-                      </span>
-                      <span :if={!revision.scheduled}>—</span>
-                    </td>
-                    <td class="date fit">
-                      {Brando.Utils.Datetime.format_datetime(revision.inserted_at, "%d/%m/%y, %H:%M")}
-                    </td>
-                    <td class="schema-version fit">
-                      <span :if={revision.schema_version}>v{revision.schema_version}</span>
-                    </td>
-                    <td class="user">{creator_name(revision)}</td>
-                    <td class="activate fit">
+                    <td class="user" data-label={gettext("Author")}>{creator_name(revision)}</td>
+                    <td class="activate">
                       <CircleDropdown.render id={"revision-dropdown-#{revision.revision}"}>
                         <Button.dropdown
                           :if={!revision.active}
@@ -270,7 +259,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                   </tr>
 
                   <tr :if={@show_publish_at == revision.revision} class="revisions-line revision-schedule-row">
-                    <td colspan="8" class="revision-publish_at">
+                    <td colspan="5" class="revision-publish_at">
                       <div class="field-wrapper">
                         <label>{gettext("Publish at")}</label>
                         <div class="datepicker-and-button">
@@ -292,7 +281,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                   </tr>
 
                   <tr :if={revision.description} class="revisions-line revision-description-row">
-                    <td colspan="8" class="revision-description">&uarr; {revision.description}</td>
+                    <td colspan="5" class="revision-description">{revision.description}</td>
                   </tr>
                 <% end %>
               </tbody>
@@ -485,6 +474,9 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   end
 
   defp entry_schema(socket), do: socket.assigns.form.source.data.__struct__
+
+  defp revision_datetime(%NaiveDateTime{} = datetime), do: NaiveDateTime.to_iso8601(datetime) <> "Z"
+  defp revision_datetime(%DateTime{} = datetime), do: DateTime.to_iso8601(datetime)
 
   defp creator_name(%{creator: nil}), do: gettext("System")
   defp creator_name(%{creator: %{name: nil}}), do: gettext("Unknown user")

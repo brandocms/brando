@@ -72,24 +72,22 @@
   max-width: 620px;
   &:not(.media-field--empty) {
     .media-field-content { align-items: flex-start; }
-    /* The thumbnail keeps the asset's own shape — a portrait image reads as a
-       portrait, instead of sitting inside a fixed landscape frame. Height is
-       what stays constant; width follows, up to the old 180px. `contain`, not
-       `cover`: the src is a resized variant whose ratio need not match the
-       width/height attributes, and cropping the preview misrepresents the
-       asset. */
+    /* Non-image media retain the compact preview beside their metadata. */
     .media-field-preview {
       flex: 0 0 auto; width: auto; max-width: 180px; height: 132px; background: transparent;
-      /* Heights are given in px, not %: the preview centres its grid item
-         rather than stretching it, so a percentage height has no definite
-         box to resolve against and the image falls back to its intrinsic
-         3000px — which `overflow: hidden` then crops to a sliver. */
       .image-content { display: block; width: auto; max-width: 180px; height: 132px; }
       img, picture, video { display: block; width: auto; max-width: 180px; height: 132px; object-fit: contain; }
     }
     .media-field-preview:not(:has(img, picture, video)) { width: 76px; background: #f1f5ef; }
   }
   &.media-field--empty { min-height: 168px; }
+}
+.media-field--block[data-asset-type="image"]:not(.media-field--empty) {
+  .media-field-content { flex-direction: column; align-items: stretch; gap: 12px; }
+  .media-field-preview {
+    flex: 0 0 auto; width: 100%; max-width: none; height: auto;
+    .image-content, img, picture { width: 100%; max-width: 100%; height: auto; }
+  }
 }
 /* Keep ordinary fields close to the original thumbnail-and-details treatment.
    The drop overlay and live progress appear only when they are needed. */

@@ -179,7 +179,9 @@
      block titlebar and the rule under the toolbar. */
   padding: 5px 8px 8px;
   position: sticky;
-  top: var(--form-toolbar-offset, 0px);
+  top: var(--form-toolbar-offset, 75px);
+  /* Keep scrolling text from peeking through the gap above the sticky bar. */
+  &::before { content: ""; position: absolute; inset: -8px 0 auto; height: 8px; background: #fff; pointer-events: none; }
   z-index: 2;
   background: #fff;
   border-bottom: 1px solid #dce2dc;

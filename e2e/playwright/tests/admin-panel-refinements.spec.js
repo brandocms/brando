@@ -40,6 +40,11 @@ for (const context of ['field', 'block']) {
     await expect(option).toHaveClass(/selected/)
     await expect(filter).toHaveValue('Alpha')
     await expect(dialog.locator('.identifier:visible')).toHaveCount(1)
+    await filter.hover()
+    await page.screenshot({ path: testInfo.outputPath(`entries-${context}-filter-hover.png`) })
+    await dialog.getByRole('button', { name: 'Clear filter', exact: true }).click()
+    await expect(filter).toHaveValue('')
+    await expect(filter).toBeFocused()
     await filter.fill('no possible match')
     await expect(dialog.getByText('No matching entries', { exact: true })).toBeVisible()
     await filter.press('Escape')
@@ -179,7 +184,7 @@ test('block rich text keeps its toolbar below the form controls', async ({ page 
     name: { en: 'Long text', no: 'Long text' }, namespace: { en: 'PANELS', no: 'PANELS' },
     help_text: { en: 'Toolbar spacing' }, class: 'long-text', type: 'liquid', code: '{% ref refs.body %}',
     multi: false, datasource: false, vars: [],
-    refs: [{ name: 'body', description: 'Body', uid: 'panel-text-ref', data: { type: 'text', data: { text, type: 'paragraph', extensions: [] } } }],
+    refs: [{ name: 'body', description: 'Body', uid: 'panel-text-ref', data: { type: 'text', data: { text, type: 'paragraph', extensions: ['bold', 'italic', 'link', 'bullet_list'] } } }],
   })
   await page.goto('/admin/pages/create')
   await syncLV(page)
@@ -188,14 +193,36 @@ test('block rich text keeps its toolbar below the form controls', async ({ page 
   await page.getByRole('button', { name: 'Long text', exact: true }).click()
   await syncLV(page)
   const menu = page.locator('.entry-block .tiptap-menu').first()
+  const editor = page.locator('.entry-block .ProseMirror').first()
+  await editor.click()
+  await editor.press('Home')
+  await editor.pressSequentially('Toolbar after editing. ')
+  await editor.blur()
+  await syncLV(page)
+  await page.getByRole('button', { name: 'Advanced', exact: true }).click()
+  await page.getByRole('button', { name: 'Content', exact: true }).click()
+  await syncLV(page)
+  await page.getByLabel('Title', { exact: true }).fill('Sticky toolbar')
+  await page.getByLabel('URI', { exact: true }).fill('sticky-toolbar')
+  await page.getByTestId('split-dropdown-button').click()
+  await page.getByRole('button', { name: /Save and continue editing/ }).click()
+  await expect(page).toHaveURL(/\/update\//)
+  await page.reload()
+  await syncLV(page)
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 })
+    await page.waitForTimeout(350)
+    await page.evaluate(() => window.scrollTo(0, 0))
     await menu.evaluate(el => window.scrollBy(0, el.getBoundingClientRect().top + 150))
     await expect.poll(async () => {
       const a = await page.locator('.form-content > .form-tabs').boundingBox(), b = await menu.boundingBox()
       return Math.round(b.y - a.y - a.height)
     }).toBe(8)
     await page.screenshot({ path: testInfo.outputPath(`sticky-block-${width}.png`) })
+    const toolbar = await page.locator('.form-content > .form-tabs').boundingBox()
+    await page.screenshot({ path: testInfo.outputPath(`sticky-block-detail-${width}.png`), clip: {
+      x: toolbar.x, y: 0, width: toolbar.width, height: 420,
+    } })
   }
 })
 
@@ -207,4 +234,29 @@ test('Norwegian image fields use the short selection label', async ({ page }, te
   const field = page.locator('#project_listing_image-media')
   await expect(field.getByRole('button', { name: 'Velg bilde', exact: true })).toBeVisible()
   await field.screenshot({ path: testInfo.outputPath('image-field-norwegian.png') })
+})
+
+test('revision metadata is readable in Norwegian at desktop and mobile widths', async ({ page }, testInfo) => {
+  expect((await page.request.post('/e2e/setup_fixtures/revision-panel')).ok()).toBe(true)
+  await page.goto('/admin/pages/update/1')
+  await syncLV(page)
+  await page.getByRole('button', { name: 'Versjoner', exact: true }).click()
+  const drawer = page.locator('[id$="-revisions-drawer"]')
+  await expect(drawer.locator('.revision-status.is-active')).toHaveText('Aktiv')
+  await expect(drawer.locator('.revision-status.is-scheduled')).toHaveText('Planlagt')
+  await expect(drawer.locator('.revision-protection')).toHaveText('Beskyttet')
+  await expect(drawer.getByText('Inaktiv', { exact: true })).toHaveCount(3)
+  await expect(drawer).toContainText('Anne-Kristine Søndergaard')
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 1000 })
+    await page.waitForTimeout(350)
+    expect(await drawer.locator('.drawer-form').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    await drawer.screenshot({ path: testInfo.outputPath(`revisions-readable-${width}.png`) })
+    const row = drawer.locator('.revisions-line.active')
+    await row.scrollIntoViewIfNeeded()
+    await row.getByTestId('circle-dropdown-button').click()
+    await expect(row.getByRole('button', { name: 'Beskytt versjon', exact: true })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(drawer).toBeVisible()
+  }
 })

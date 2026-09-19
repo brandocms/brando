@@ -36,7 +36,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawerTest do
       active: false,
       creator: nil,
       description: "Ready for launch",
-      inserted_at: ~U[2026-07-15 12:00:00Z],
+      inserted_at: ~N[2026-07-15 12:00:00],
       protected: false,
       revision: 12,
       scheduled: true,
@@ -50,7 +50,21 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawerTest do
         form_cid: "form-target",
         myself: "drawer-target",
         preview_revision: nil,
-        revision_data: AsyncResult.ok(%{revisions: [revision], has_more: false}),
+        revision_data:
+          AsyncResult.ok(%{
+            revisions: [
+              revision,
+              %{
+                revision
+                | revision: 13,
+                  active: true,
+                  scheduled: false,
+                  protected: true,
+                  inserted_at: ~U[2026-07-15 12:00:00Z]
+              }
+            ],
+            has_more: false
+          }),
         schema_version: 2,
         show_publish_at: nil,
         status: :open
@@ -60,6 +74,10 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawerTest do
     assert html =~ "Store current editor state"
     assert html =~ "System"
     assert html =~ "Scheduled"
+    assert html =~ ~r/>\s*Active\s*<\/span>/
+    assert html =~ ~r/>\s*Inactive\s*<\/span>/
+    assert html =~ "Protected"
+    assert html =~ ~s(datetime="2026-07-15T12:00:00Z")
     assert html =~ ~s(id="preview-revision-12")
     assert html =~ "Unsaved editor changes will be replaced"
     assert html =~ "Cancel schedule"
