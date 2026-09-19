@@ -1,9 +1,13 @@
 # Admin content agent — proposed scope
 
+Tracking issue: [#2836](https://github.com/brandocms/brando/issues/2836).
+
 Assessment: 19 September 2026. Updated after interface exploration and the
 requirement that MCP must never have a network endpoint. Source inspection: Brando `a393e8634`,
 BrandoMCP `4d16042`. This is a design proposal, not an implementation or a
 production-readiness certification. No model calls or backend runtime tests were made.
+
+Selected interface: **A — Workspace**, extended with an on-demand page preview.
 
 An admin chat can support the requested workflow in development and production:
 upload media, describe changes across entries, review a visual proposal, then
@@ -32,6 +36,9 @@ This publication policy is a recommendation, not yet an accepted product decisio
    and Naming” and “Checking the Case block's media slots.”
 5. Review changes grouped by destination entry. Use the actual media and verified
    before/after data to draw the review; the model can supply a short explanation.
+   Open **Preview page** to see the proposed content in the site's own template,
+   compare it with the saved version and highlight the affected block. Keep the
+   conversation visible and make returning to all changes immediate.
 6. Refine in chat or approve. Refinements produce a new proposal version and
    invalidate approval of the old one. Cancellation leaves content untouched;
    already uploaded library assets remain available.
@@ -60,10 +67,71 @@ Use a wide review panel alongside chat, with entry cards, real media, compact
 block outlines, highlighted insertion points and expandable field differences.
 Provide “Adjust”, “Cancel” and an explicit confirmation such as “Apply 3 entry
 changes · affects 2 live pages.” Follow [the admin design guide](admin-ui-design.md).
-Full page previews can follow once proposal rendering is proven for the relevant
-templates; initial cards must not pretend to be exact page screenshots. Arbitrary
+Include page previews in v1 for configured targets, as described below. Review
+cards remain available when a content type has no page preview. Arbitrary
 model-generated HTML, JavaScript or generated illustrations are unnecessary for
 this review UI. Brando components render the structured proposal.
+
+### Page previews inside the workspace
+
+**Preview page** replaces the right-hand overview with a large preview; chat
+stays on the left. Entry tabs switch between Identity, Naming and Sommerro.
+Provide **Before / Proposed**, desktop/mobile viewport controls, **Show changes**,
+**Review fields** and **All changes**. The apply bar continues to describe the
+whole batch, including the number of live pages affected. Looking at one page
+must not accidentally imply that confirmation applies only that page.
+
+Use Brando's actual frontend layout, template, CSS and media rendering in an
+authenticated preview iframe. This is an ordinary Brando preview route, **not an
+MCP endpoint**. Keep it private to the authorized admin; public/share preview
+links are outside this feature. The checked-in mockup uses an illustrative site
+and is labelled accordingly; it demonstrates the interaction, not a real render.
+
+`Brando.LivePreview.initialize/4` already accepts an unsaved changeset, and its
+renderer runs the application's configured target. Add a proposal-preview
+adapter that materializes the reviewed operations in memory from the canonical
+plan. Do not save entries or publish content to obtain a preview. Both field
+diffs and page rendering must use the same immutable proposal version that the
+user can approve. Rendering, changing viewport and switching entries require no
+further LLM calls, though they consume ordinary server resources.
+
+Implementation boundaries:
+
+- Capture the saved baseline used by the proposal. **Before** means that baseline,
+  not a potentially stale CDN response. Recheck freshness before rendering and
+  applying; changed source content requires a new proposal/review. For a newly
+  created entry, Before displays “This page has not been created yet.”
+- Begin with the actual Category and Case preview targets. A new case may have
+  no database ID; templates, routes and associations must support that state.
+  Expose named targets separately from viewport controls where relevant. A
+  missing target shows “Page preview is not configured for this content type”
+  with the validated field/block review available. A render error should provide
+  an honest error and retry, never an invented page screenshot.
+- Existing block annotations can locate an inserted/updated block by stable UID
+  for scrolling and a removable outline. Keep highlights outside saved content
+  and preserve page layout. Keyboard users need access to the scrolling frame;
+  changing controls should retain focus. Media requiring new scripts or players
+  may need a full iframe reload rather than an HTML patch.
+- Use distinct preview cache identities for baseline/proposed, entry, target and
+  proposal revision, bound to the actor/site/environment. Clean up both HTML and
+  assign caches on expiry, cancellation and version replacement. Preserve fresh
+  permission checks and the existing preview ownership rules. Do not reuse an
+  editor's preview key or its unsaved form lifecycle.
+- Preloads, cached assign callbacks and `mutate_data` have a defined order.
+  Materializing one entry does not make staged entries visible to arbitrary
+  database queries in a template or assign callback. Where category blocks link
+  to the new case, explicitly support proposal-aware reference/assign resolution
+  for the chosen targets. Render unsaved relations from the proposal without
+  silently reloading persisted values. Do not fabricate IDs or save temporary
+  live records. If a dependency cannot be rendered reliably, explain the missing
+  preview and retain the structural review; do not claim full batch fidelity.
+- Showing a draft case inside an admin preview does not make its future public
+  link work. Keep the publication dependency check separate from preview success.
+
+The initial spike must prove the site's actual target/template behavior. General
+overlay support for arbitrary cross-entry queries is a larger follow-on; support
+the concrete Case/category workflow deliberately rather than promising that all
+custom templates will work automatically.
 
 ## What is already available
 
@@ -76,6 +144,7 @@ this review UI. Brando components render the structured proposal.
 | Content-transfer preview/apply | `lib/brando/content/transfer.ex`, `lib/brando/content/transfer/entries.ex` | Existing patterns for validated plans, dependency resolution, freshness checks under locks, receipts and recovery. Extract/reuse focused pieces; an agent proposal is not an import archive. |
 | Block construction | `lib/brando_admin/components/form/block_field.ex:build_block/5` | Module defaults, refs, vars, origin and version already have construction logic. Move the reusable part to a domain service. |
 | Editor recovery copies | `lib/brando/drafts.ex`, `lib/brando/drafts/entry_draft.ex` | Recovery storage exists, but is user-owned editor recovery, not a complete editorial branching/publishing workflow. |
+| Unsaved page rendering and preview authorization | `lib/brando/live_preview.ex`, `lib/brando/authorization/preview.ex` | Reuse configured frontend targets and ownership checks; add proposal materialization/cache isolation, not a second rendering engine. |
 | MCP discovery and CRUD | sibling `brando_mcp/lib/brando_mcp/brando.ex` | Compiled Blueprint discovery and generated contexts avoid a second CRUD implementation. |
 | MCP seed/translation workflows | sibling `brando_mcp/lib/brando_mcp/{seed,translation,brando}.ex` | Seeds support validation, batch references and transactional insertion; translation adds a source digest. General mixed create/update proposals are still needed. |
 
@@ -263,14 +332,17 @@ are the largest unknowns. The requested site's Case module has not been inspecte
 
 | Stage | Deliverable | Rough effort |
 | --- | --- | --- |
-| 1. Prove the content path | One real Case module; image/video placements on two entries; create case; validate/apply an explicit plan; verify real mutation, authorization and render behavior | 2–3 days |
+| 1. Prove the content path | One real Case module; image/video placements on two entries; create case; validate/apply an explicit plan; verify real mutation, authorization and unsaved target/template behavior | 2–3 days |
 | 2. Proposal services and MCP tools | Scoped discovery/contracts; mixed operations; deterministic preview; approval versions; freshness, transactions, receipts and recovery records | 5–8 days |
 | 3. Agent runtime | Reuse AI configuration; streaming tool loop; persistent conversations/runs; scope propagation; cancellation, retries and usage budgets | 3–5 days |
 | 4. Admin experience and release checks | Attachment tray/upload delivery; chat; visual review/diffs; publication labels; result links; browser and production-release verification | 5–8 days |
+| 5. Page preview integration | Reuse configured targets; baseline/proposed materialization; private cache lifecycle; entry/viewport controls; block highlighting and honest fallback states | 2–4 days |
 
-Total: roughly **15–24 engineering days (3–5 working weeks)** for a bounded,
+Total: roughly **17–28 engineering days (about 3–6 working weeks)** for a bounded,
 production-capable v1. This excludes full editorial branching, arbitrary custom
-block support and external MCP access. The first spike should
+block support and external MCP access. The preview increment assumes usable site
+targets and bounded reference resolution; complex custom queries can add scope.
+The first spike should
 produce an executable vertical slice before investing in the full chat UI.
 
 Initial limits: one site/environment per proposal, a small configurable entry
@@ -280,7 +352,7 @@ end. Keep provider configuration extensible; do not promise untested parity.
 Support named media folders and site/per-entry guidance from #2666.
 
 Follow-ons: removals with dependency-aware review; visual asset selection;
-rendered page previews; direct editing of unsaved forms; separate draft/publish
+arbitrary cross-entry preview overlays; direct editing of unsaved forms; separate draft/publish
 handoffs. MCP network access remains excluded from follow-on work. Deletion should share
 the same proposal machinery, but hard deletion of entries or assets is outside
 the first release. Merely adding a boolean confirmation is insufficient.
@@ -290,6 +362,10 @@ ambiguous targets, wrong media types, unrelated-block preservation, no pre-appro
 content writes, proposal tampering, stale records/modules, scope switching,
 revoked permissions, duplicate confirms, reconnect/restart, failure rollback,
 post-commit refresh retries, active-editor conflicts and budget exhaustion.
+Preview checks cover no content writes, actual template rendering, isolated
+baseline/proposal caches, unauthorized/revoked access, expiry, changed source
+content, missing targets, render failures, new entries without IDs, supported
+staged references, media reloads, highlight alignment and keyboard/viewport use.
 Test against real Brando contexts and database schemas, including relevant
 authorization/tenancy modes. Validate admin assets through the E2E consumer build
 and focused Playwright tests, including narrow layouts and the heaviest block
@@ -298,13 +374,14 @@ route, and that embedded tool execution still works with all MCP HTTP/stdio
 transports disabled. Runtime changes in the sibling `brando_mcp` repository
 must be tested and committed there as well as the Brando-side changes here.
 
-## Interface concepts before the GitHub issue
+## Selected interface and design artifacts
 
 Three interactive directions are available in
-[the concept prototype](admin-ui/content-agent-concepts/index.html):
+[the offline concept prototype](admin-ui/content-agent-concepts/concepts.html):
 
-- **A — Workspace:** persistent conversation beside a visual proposal. The
-  recommended default for tasks spanning entries and repeated refinements.
+- **A — Workspace (selected):** persistent conversation beside a visual proposal,
+  with on-demand page previews, Before / Proposed, viewport controls and change
+  highlighting. This is the implementation direction.
 - **B — Visual board:** media and destinations take the full canvas; a compact
   composer sits below. Strongest for media placement and overview.
 - **C — Guided review:** inspect one destination at a time, compare before/after
@@ -312,9 +389,10 @@ Three interactive directions are available in
 
 These are concept mockups with illustrative media and simulated actions, not
 implemented admin screens. They have no LLM, MCP or Brando data connection.
-Review the interaction direction before filing the full implementation plan as
-a GitHub issue. The user has authorized issue creation and changes in both
-repositories; no additional authorization is needed once the design is settled.
+The user selected A and requested page previews. The preview extension is shown
+in [desktop](admin-ui/content-agent-concepts/workspace-page-preview-desktop.png)
+and [mobile](admin-ui/content-agent-concepts/workspace-page-preview-mobile.png)
+screenshots. Open the offline prototype and choose **Preview page** on any card.
 
 Recommended next implementation step: prove the domain proposal/apply path for
 the actual site's Case definition and category schemas. That will establish the
