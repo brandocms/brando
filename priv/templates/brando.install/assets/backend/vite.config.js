@@ -13,6 +13,13 @@ export default defineConfig({
     headers: {
       'Access-Control-Allow-Origin': '*',
     },
+    watch: {
+      // brandojs is installed from .yalc, so `yalc push` writes it straight into
+      // node_modules -- which Vite's watcher ignores by default. Without this the
+      // transform cache is never invalidated and the pre-push copy keeps being
+      // served, even across a hard reload. The `!` re-includes just this package.
+      ignored: ['!**/node_modules/@brandocms/brandojs/**'],
+    },
   },
   optimizeDeps: {
     include: ['vex-js', 'vex-dialog'],
