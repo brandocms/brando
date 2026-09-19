@@ -28,7 +28,7 @@ async function drop(page, target, files) {
 
 const picture = page => page.locator('.picture-block .media-field--block:visible')
 
-test('image refs fill the preview width and retain portrait and landscape proportions', async ({ page }, testInfo) => {
+test('image refs use a fixed thumbnail width and natural portrait and landscape heights', async ({ page }, testInfo) => {
   await createPage(page, 'Natural image proportions', 'Single Image with Caption')
   const field = picture(page)
   const portrait = {
@@ -43,15 +43,18 @@ test('image refs fill the preview width and retain portrait and landscape propor
     await expect.poll(() => img.evaluate(el => el.naturalHeight > el.naturalWidth)).toBe(shape === 'portrait')
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 1000 })
+      await page.waitForTimeout(350)
       const size = await img.evaluate(el => {
         const image = el.getBoundingClientRect(), preview = el.closest('.media-field-preview').getBoundingClientRect()
-        const field = el.closest('.media-field'), style = getComputedStyle(field)
+        const copy = el.closest('.media-field-content').querySelector('.media-field-copy').getBoundingClientRect()
         return { width: image.width, height: image.height, previewWidth: preview.width, ratio: el.naturalWidth / el.naturalHeight,
-          availableWidth: field.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) }
+          metadataGap: copy.left - image.right, metadataTop: copy.top - image.top }
       })
       expect(size.width).toBeCloseTo(size.previewWidth, 0)
-      expect(size.width).toBeCloseTo(size.availableWidth, 0)
+      expect(size.width).toBe(width === 1440 ? 180 : 96)
       expect(size.height).toBeCloseTo(size.width / size.ratio, 0)
+      expect(size.metadataGap).toBeGreaterThanOrEqual(12)
+      expect(size.metadataTop).toBeCloseTo(0, 0)
       await field.screenshot({ path: testInfo.outputPath(`image-ref-${shape}-${width}.png`) })
     }
   }

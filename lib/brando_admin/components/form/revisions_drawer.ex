@@ -173,7 +173,14 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                         <span class="revision-time">{Brando.Utils.Datetime.format_datetime(revision.inserted_at, "%H:%M")}</span>
                       </time>
                     </td>
-                    <td class="user" data-label={gettext("Author")}>{creator_name(revision)}</td>
+                    <td class="user" data-label={gettext("Author")}>
+                      <Content.modal_person
+                        :if={revision.creator}
+                        user={%{revision.creator | name: creator_name(revision)}}
+                        compact
+                      />
+                      <span :if={!revision.creator}>{gettext("System")}</span>
+                    </td>
                     <td class="activate">
                       <CircleDropdown.render id={"revision-dropdown-#{revision.revision}"}>
                         <Button.dropdown
@@ -478,7 +485,6 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   defp revision_datetime(%NaiveDateTime{} = datetime), do: NaiveDateTime.to_iso8601(datetime) <> "Z"
   defp revision_datetime(%DateTime{} = datetime), do: DateTime.to_iso8601(datetime)
 
-  defp creator_name(%{creator: nil}), do: gettext("System")
   defp creator_name(%{creator: %{name: nil}}), do: gettext("Unknown user")
   defp creator_name(%{creator: %{name: name}}), do: name
 

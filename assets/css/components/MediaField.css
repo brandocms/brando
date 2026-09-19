@@ -83,11 +83,12 @@
   &.media-field--empty { min-height: 168px; }
 }
 .media-field--block[data-asset-type="image"]:not(.media-field--empty) {
-  .media-field-content { flex-direction: column; align-items: stretch; gap: 12px; }
+  --image-preview-width: 180px;
   .media-field-preview {
-    flex: 0 0 auto; width: 100%; max-width: none; height: auto;
+    flex: 0 0 var(--image-preview-width); width: var(--image-preview-width); max-width: none; height: auto;
     .image-content, img, picture { width: 100%; max-width: 100%; height: auto; }
   }
+  @media (max-width: 600px) { --image-preview-width: 96px; }
 }
 /* Keep ordinary fields close to the original thumbnail-and-details treatment.
    The drop overlay and live progress appear only when they are needed. */

@@ -54,6 +54,10 @@ defmodule Brando.Revisions.RevisionsTest do
     assert {:ok, {^revision, {0, snapshot}}} = Revisions.get_revision(Page, page.id, 0)
     assert snapshot.title == "Unsaved editor title"
     assert Brando.Repo.get!(Page, page.id).title == page.title
+
+    assert {:ok, [metadata]} = Revisions.list_revision_metadata(Page, page.id)
+    assert metadata.encoded_entry == nil
+    assert metadata.creator.avatar.id == user.avatar.id
   end
 
   test "the form's manual revision path captures its unsaved working copy", %{user: user} do

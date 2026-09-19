@@ -263,6 +263,7 @@ defmodule BrandoAdmin.Components.Content do
 
   attr :user, :any, required: true
   attr :caption, :string, default: nil
+  attr :compact, :boolean, default: false
 
   def modal_person(assigns) do
     avatar =
@@ -274,7 +275,7 @@ defmodule BrandoAdmin.Components.Content do
     assigns = assign(assigns, :avatar, avatar)
 
     ~H"""
-    <span class="modal-person">
+    <span class={["modal-person", @compact && "modal-person--compact"]}>
       <span class="modal-person-avatar">
         <img :if={@avatar} src={Brando.Utils.img_url(@avatar, :thumb, prefix: Brando.Utils.media_url())} alt="" />
         <span :if={!@avatar}>{String.first(@user.name || "?")}</span>

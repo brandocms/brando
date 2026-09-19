@@ -111,8 +111,12 @@ defmodule E2EFixtureController do
 
   defp create_revision_panel do
     user = create_norwegian_admin_user()
+    {_filename, avatar} = create_directory_avatar()
     author = Brando.Repo.get!(Brando.Users.User, 1)
-    author = author |> Ecto.Changeset.change(name: "Anne-Kristine Søndergaard") |> Brando.Repo.update!()
+
+    author =
+      author |> Ecto.Changeset.change(name: "Anne-Kristine Søndergaard", avatar_id: avatar.id) |> Brando.Repo.update!()
+
     page = Brando.Repo.get!(Brando.Pages.Page, 1)
     {:ok, _active} = Brando.Revisions.create_revision(page, author)
     {:ok, protected} = Brando.Revisions.create_revision(page, author, false)

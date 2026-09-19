@@ -85,7 +85,7 @@ defmodule Brando.Revisions do
       |> offset(^offset)
       |> select([r], struct(r, ^@metadata_fields))
       |> Brando.Authorization.Boundary.subject_query(entry_type, entry_id)
-      |> preload(:creator)
+      |> preload(creator: :avatar)
       |> Repo.all()
 
     {:ok, revisions}

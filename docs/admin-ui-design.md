@@ -445,13 +445,16 @@ visible while the body scrolls. Formatting toolbars inherit
 height plus an 8px gap; independent dialogs reset this offset.
 Keep the measured value in a form-scoped stylesheet rule outside LiveView's
 patched attributes. Revisions show explicit active/inactive, scheduled and protected
-labels, with schema metadata below the revision number. Narrow layouts stack the
-same information without horizontal scrolling.
+labels, with schema metadata below the revision number. Authors use the shared
+`Content.modal_person` component with preloaded avatars and an initial fallback.
+Use its `compact` option in revision rows: 26px avatar, 11px text and an 8px gap.
+Narrow layouts stack the same information without horizontal scrolling.
 
 Related-entry pickers reuse `Entries.entry_picker` and `Brando.SelectFilter`.
 The filter control is client-owned; selection patches must retain its query
 and reapply it to the updated results. Selected multiselect rows share the
 available options' height, and only their square remove control responds to hover.
 Search fields with a custom clear control suppress the browser's native clear
-button. Image refs fill their card's available width and use automatic height
-to preserve the loaded image's proportions, with metadata and actions below.
+button. Image refs use a fixed thumbnail width (180px on desktop, 96px on mobile)
+and automatic height to preserve the loaded image's proportions. Keep metadata
+beside the thumbnail and actions below the row; the image does not fill the card.

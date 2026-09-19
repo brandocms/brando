@@ -77,6 +77,13 @@
 .modal-person .person-copy strong, .modal-person .person-copy small { display: block; margin: 0; text-box: trim-both cap alphabetic; overflow-wrap: anywhere; }
 .modal-person .person-copy strong { font: 500 13px/18px "Main", sans-serif; color: var(--modal-ink); }
 .modal-person .person-copy small { font: 12px/18px "Main", sans-serif; color: var(--modal-muted); }
+.modal-person--compact {
+  gap: 8px;
+  .modal-person-avatar { width: 26px; height: 26px; flex-basis: 26px; }
+  .modal-person-avatar > span { font-size: 11px; }
+  .person-copy { gap: 2px; }
+  .person-copy strong, .person-copy small { font-size: 11px; line-height: 16px; }
+}
 
 /* B: sections remain mounted while the client switches the visible panel. */
 .modal--editor > .modal-dialog > .modal-content > .modal-body { padding: 0; overflow: hidden; }
