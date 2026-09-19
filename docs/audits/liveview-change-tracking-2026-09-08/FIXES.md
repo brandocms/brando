@@ -36,7 +36,7 @@ The focused regressions are in:
 - `test/brando_admin/components/change_tracking_render_test.exs`
 - `test/brando_admin/components/form/input/change_tracking_test.exs`
 - `test/brando_admin/components/form/input/identifier_change_tracking_test.exs`
-- `e2e/e2e/playwright/tests/change-tracking.spec.js`
+- `e2e/playwright/tests/change-tracking.spec.js`
 
 The E2E-only widget fixture is routed under the existing authenticated admin
 routes and is enabled only with the SQL sandbox configuration.

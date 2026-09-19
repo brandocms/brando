@@ -124,6 +124,6 @@ revocation behavior.
 When adding a target, verify an unsaved edit, a new entry, a cached collection
 assign after editing, switching back, reconnect recovery, and the shared output.
 The repository's consumer example is `e2e/lib/e2e_project_web/live_preview.ex`;
-`e2e/e2e/playwright/tests/blocks/block-preview-targets.spec.js` exercises these
+`e2e/playwright/tests/blocks/block-preview-targets.spec.js` exercises these
 editor transitions. If rendering fails, check the application logs and ensure
 that required preloads and template/layout assigns match the controller path.

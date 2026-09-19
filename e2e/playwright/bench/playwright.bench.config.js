@@ -20,7 +20,7 @@ export default defineConfig({
     // Resolved against this config file's directory (bench/), so it takes three
     // levels to reach the e2e project root that holds mix.exs. Latent until now
     // because `reuseExistingServer` skips the spawn whenever a server is up.
-    cwd: '../../../',
+    cwd: '../../',
     command: 'mix phx.server',
     env: {
       ...process.env,

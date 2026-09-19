@@ -479,7 +479,7 @@ defmodule E2EFixtureController do
     relative_path = Path.join("images", name)
     path = Path.join(Brando.config(:media_path), relative_path)
     File.mkdir_p!(Path.dirname(path))
-    File.cp!(Path.expand("../../e2e/playwright/fixtures/image2.jpg", __DIR__), path)
+    File.cp!(Path.expand("../../playwright/fixtures/image2.jpg", __DIR__), path)
 
     avatar =
       Brando.Repo.insert!(%Brando.Images.Image{

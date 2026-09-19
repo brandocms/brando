@@ -14,12 +14,12 @@ cd e2e && source .envrc && MIX_ENV=e2e mix run priv/repo/e2e_seeds_large.exs
 Builds `/bench-flat-5`, `/bench-flat-40`, `/bench-flat-115` (five mixed module
 types) and `/bench-nested` (40 containers × multi × 2 entries = 160 blocks over
 3 levels). Idempotent. Writes entry ids to
-`e2e/e2e/playwright/bench/fixture-ids.json` (gitignored).
+`e2e/playwright/bench/fixture-ids.json` (gitignored).
 
 ## 2. Payload and latency
 
 ```sh
-cd e2e/e2e/playwright
+cd e2e/playwright
 pnpm playwright test --config bench/playwright.bench.config.js
 ```
 
@@ -43,7 +43,7 @@ MIX_ENV=e2e elixir --sname brandobench --cookie benchcookie -S mix phx.server
 Hold an entry open (keeps the LiveView connected while you measure):
 
 ```sh
-cd e2e/e2e/playwright
+cd e2e/playwright
 BENCH_ENTRY=115 HOLD_MS=40000 pnpm playwright test \
   --config bench/playwright.bench.config.js --grep "hold entry"
 ```
@@ -87,7 +87,7 @@ while the profiler is already attached, so the two coordinate through flag
 files. Start the server as a named node (see above), then in one shell:
 
 ```sh
-cd e2e/e2e/playwright
+cd e2e/playwright
 BENCH_PROFILE=1 BENCH_OP=insert BENCH_ENTRY=115 pnpm playwright test \
   --config bench/playwright.bench.config.js bench/profile-op.spec.js
 ```
@@ -110,7 +110,7 @@ is going to raise.
   set one, so a mistyped locator in a long-timeout spec blocks for the whole test
   timeout instead of failing. `bench/playwright.bench.config.js` sets it to 20s;
   do the same in any spec that raises its own timeout.
-- `evalLV` in `e2e/e2e/playwright/utils.js` is dead — no `sandbox:eval` handler
+- `evalLV` in `e2e/playwright/utils.js` is dead — no `sandbox:eval` handler
   exists anywhere in the codebase. That's why memory is measured over
   distribution instead.
 - `:eprof` lives in OTP's `tools` app, which a Mix project does not put on the

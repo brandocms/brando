@@ -95,7 +95,7 @@ Entry → EntryBlock (join table) → Block → vars/refs/children/table_rows/bl
 | `test/brando/content_test.exs` | Content context tests |
 | `test/brando/villain/villain_test.exs` | Villain rendering tests |
 | `test/brando/villain/blocks/ref_apply_test.exs` | Ref apply_ref tests |
-| `e2e/e2e/playwright/tests/blocks/` | E2E tests (identifiers, table rows, live preview) |
+| `e2e/playwright/tests/blocks/` | E2E tests (identifiers, table rows, live preview) |
 
 ---
 

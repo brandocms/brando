@@ -64,7 +64,7 @@ else
 fi
 
 unset NO_COLOR
-cd e2e/playwright
+cd playwright
 
 # Bash 3 treats an empty array expansion as unbound under `set -u`.
 if [ "${#EXTRA_ARGS[@]}" -eq 0 ]; then

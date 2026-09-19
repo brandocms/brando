@@ -326,7 +326,7 @@ Logger.info("seeded /bench-nested with #{length(nested_blocks)} roots x 3 levels
 # The benchmark needs stable entry ids to deep-link into the editor. Page ids
 # change whenever the fixture is rebuilt, so publish them rather than making the
 # bench scrape the pages list.
-ids_path = Path.join([__DIR__, "..", "..", "e2e", "playwright", "bench", "fixture-ids.json"])
+ids_path = Path.join([__DIR__, "..", "..", "playwright", "bench", "fixture-ids.json"])
 File.mkdir_p!(Path.dirname(ids_path))
 
 File.write!(
