@@ -22,7 +22,7 @@
 #
 #   MIX_ENV=e2e elixir --sname brandobench --cookie benchcookie -S mix phx.server
 
-flag_dir = Path.expand("../e2e/playwright/bench", __DIR__)
+flag_dir = Path.expand("../playwright/bench", __DIR__)
 ready = Path.join(flag_dir, "op-ready.flag")
 go = Path.join(flag_dir, "op-go.flag")
 done = Path.join(flag_dir, "op-done.flag")

@@ -1,6 +1,6 @@
 // Run from the repository root. Override these paths when dependencies live in another checkout.
 const path = require('node:path');
-const playwrightPath = path.resolve(process.env.BRANDO_AUDIT_PLAYWRIGHT || 'e2e/e2e/playwright/node_modules/@playwright/test');
+const playwrightPath = path.resolve(process.env.BRANDO_AUDIT_PLAYWRIGHT || 'e2e/playwright/node_modules/@playwright/test');
 const liveViewPath = path.resolve(process.env.BRANDO_AUDIT_LIVEVIEW || 'deps/phoenix_live_view');
 const phoenixPath = path.resolve(process.env.BRANDO_AUDIT_PHOENIX || 'deps/phoenix');
 const { chromium } = require(playwrightPath);

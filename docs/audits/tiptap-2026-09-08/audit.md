@@ -185,7 +185,7 @@ Brando's current peer synchronization is at field/block level. Tiptap's Collabor
 
 **Validation should exercise the state boundaries and real author actions.**
 
-Existing tests cover basic text entry/persistence, rich-text link apply/cancel/remove, footnote drawers and recovery, and peer synchronization. Examples are [modal design](/Users/trond/.codex/worktrees/a5f5/brando_next/e2e/e2e/playwright/tests/modal-design.spec.js:175), [footnotes](/Users/trond/.codex/worktrees/a5f5/brando_next/e2e/e2e/playwright/tests/blocks/block-footnotes.spec.js), [multiuser sync](/Users/trond/.codex/worktrees/a5f5/brando_next/e2e/e2e/playwright/tests/blocks/block-multiuser-sync.spec.js:197), and [unused collection recovery](/Users/trond/.codex/worktrees/a5f5/brando_next/e2e/e2e/playwright/tests/blocks/block-unused-collections.spec.js). Generic form accessibility tests do not verify the rich-text editable surface.
+Existing tests cover basic text entry/persistence, rich-text link apply/cancel/remove, footnote drawers and recovery, and peer synchronization. Examples are [modal design](/Users/trond/.codex/worktrees/a5f5/brando_next/e2e/playwright/tests/modal-design.spec.js:175), [footnotes](/Users/trond/.codex/worktrees/a5f5/brando_next/e2e/playwright/tests/blocks/block-footnotes.spec.js), [multiuser sync](/Users/trond/.codex/worktrees/a5f5/brando_next/e2e/playwright/tests/blocks/block-multiuser-sync.spec.js:197), and [unused collection recovery](/Users/trond/.codex/worktrees/a5f5/brando_next/e2e/playwright/tests/blocks/block-unused-collections.spec.js). Generic form accessibility tests do not verify the rich-text editable surface.
 
 Add a focused editor matrix covering:
 

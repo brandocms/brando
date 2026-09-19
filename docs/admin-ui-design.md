@@ -397,7 +397,7 @@ Section changes keep inputs mounted so LiveView validation retains edits. Escape
 closes only the active dialog and returns focus to its opener; link openers must
 be real buttons. Show and hide commands target direct dialog children to avoid
 revealing nested dialogs. Cover these interactions with
-`e2e/e2e/playwright/tests/modal-design.spec.js`, alongside the existing form,
+`e2e/playwright/tests/modal-design.spec.js`, alongside the existing form,
 block persistence, upload and accessibility tests.
 
 ### Compare implementation against the approved sketch

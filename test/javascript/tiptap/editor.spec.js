@@ -1,4 +1,4 @@
-const { test, expect } = require('../../../e2e/e2e/playwright/node_modules/@playwright/test')
+const { test, expect } = require('../../../e2e/playwright/node_modules/@playwright/test')
 
 async function setup(page, options = {}) {
   await page.goto('/tiptap.html')

@@ -278,7 +278,7 @@ jobs:
           yarn build
 
       - name: Install Playwright
-        working-directory: brando/e2e/e2e/playwright
+        working-directory: brando/e2e/playwright
         run: |
           pnpm install --frozen-lockfile
           pnpm exec playwright install --with-deps chromium
@@ -289,7 +289,7 @@ jobs:
         run: |
           source .envrc
           node --test ../test/javascript/tiptap.test.mjs
-          cd e2e/playwright
+          cd playwright
           pnpm exec playwright test --config tiptap.config.js
 
       - name: Run legacy E2E shard
@@ -336,7 +336,7 @@ jobs:
         with:
           name: e2e-artifacts-${{ matrix.suite }}
           path: |
-            brando/e2e/e2e/playwright/playwright-report
-            brando/e2e/e2e/playwright/test-results
+            brando/e2e/playwright/playwright-report
+            brando/e2e/playwright/test-results
           if-no-files-found: ignore
           retention-days: 7

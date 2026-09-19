@@ -18,7 +18,7 @@ const baseURL = (
 module.exports = defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: {
-    cwd: '../../',
+    cwd: '../',
     command: 'mix phx.server',
     env: {
       ...process.env,

@@ -32,7 +32,7 @@ sys.stdout.buffer.write(out.getvalue())
 }
 
 async function fixtureZip() {
-  const file = path.resolve(__dirname, '../../../../../test/fixtures/definitions/hero.exs.txt')
+  const file = path.resolve(__dirname, '../../../../test/fixtures/definitions/hero.exs.txt')
   const source = (await readFile(file, 'utf8'))
     .replace('uid "hero-test"', 'uid "admin-files-hero"')
     .replace('"Hero"', '"DSL Hero"')

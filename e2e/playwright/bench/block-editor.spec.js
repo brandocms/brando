@@ -10,7 +10,7 @@ import path from 'path'
 //   cd e2e && source .envrc && MIX_ENV=e2e mix run priv/repo/e2e_seeds_large.exs
 //
 // Run:
-//   cd e2e/e2e/playwright && pnpm playwright test --config bench/playwright.bench.config.js
+//   cd e2e/playwright && pnpm playwright test --config bench/playwright.bench.config.js
 //
 // Answers the question the architecture decision rests on: does per-edit cost
 // stay flat as an entry grows, or does it scale with block count? See

@@ -97,4 +97,4 @@ Runtime checks also exposed and fixed a Videos-list preload error, stale image-l
 - [UploadTrigger](../../../assets/src/hooks/UploadTrigger/index.js) handles chooser/drop intake and destination confirmation. [uploadProgress](../../../assets/src/hooks/shared/uploadProgress.js) projects sticky state without owning transfers.
 - [AssetIntent](../../../lib/brando/uploads/asset_intent.ex), [UploadManager](../../../lib/brando_admin/live/upload_manager.ex), and [Form hooks](../../../lib/brando_admin/live_view/form/hooks.ex) validate and deliver to the canonical owner.
 - [MediaWorkspace styles](../../../assets/css/components/MediaWorkspace.css) adapt the existing Assets workspace to drawers and gallery dialogs.
-- [Focused media-flow tests](../../../e2e/e2e/playwright/tests/blocks/block-media-fields.spec.js) cover the new cross-surface behavior.
+- [Focused media-flow tests](../../../e2e/playwright/tests/blocks/block-media-fields.spec.js) cover the new cross-surface behavior.
