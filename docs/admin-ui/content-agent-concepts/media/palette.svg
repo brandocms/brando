@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+ <rect width="800" height="600" fill="#d4d2b8"/>
+ <rect x="90" y="72" width="270" height="440" rx="2" fill="#eee6d7" transform="rotate(-9 225 292)"/>
+ <rect x="385" y="112" width="270" height="400" rx="2" fill="#9f4834" transform="rotate(12 520 312)"/>
+ <text x="120" y="250" fill="#9f4834" font-family="Georgia,serif" font-size="100" font-style="italic" transform="rotate(-9 225 292)">So.</text>
+ <text x="421" y="328" fill="#eee6d7" font-family="Georgia,serif" font-size="65" transform="rotate(12 520 312)">Stay</text>
+ <text x="421" y="401" fill="#eee6d7" font-family="Georgia,serif" font-size="65" font-style="italic" transform="rotate(12 520 312)">a little.</text>
+</svg>

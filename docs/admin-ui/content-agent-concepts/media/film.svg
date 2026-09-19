@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#a64e3b"/>
+  <g fill="none" stroke="#d19270" opacity=".65">
+    <circle cx="705" cy="58" r="200"/><circle cx="705" cy="58" r="235"/><circle cx="705" cy="58" r="270"/><circle cx="705" cy="58" r="305"/><circle cx="705" cy="58" r="340"/>
+    <circle cx="50" cy="620" r="200"/><circle cx="50" cy="620" r="235"/><circle cx="50" cy="620" r="270"/>
+  </g>
+  <text x="62" y="80" fill="#edd9ba" font-family="Arial,sans-serif" font-size="14" letter-spacing="5">SOMMERRO — THE STORY</text>
+  <text x="62" y="282" fill="#f5e5c9" font-family="Georgia,serif" font-size="95">A little summer.</text>
+  <text x="62" y="391" fill="#f5e5c9" font-family="Georgia,serif" font-style="italic" font-size="100">All year round.</text>
+  <path d="M64 460H735" stroke="#cb8b6c"/>
+  <text x="64" y="532" fill="#efd9bc" font-family="Arial,sans-serif" font-size="13" letter-spacing="3">NAMING &amp; STORY</text>
+  <text x="735" y="532" text-anchor="end" fill="#efd9bc" font-family="Arial,sans-serif" font-size="13" letter-spacing="3">00:24</text>
+</svg>
