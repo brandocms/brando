@@ -116,12 +116,76 @@ function initializeLazyVideos(target = document) {
 }
 
 /**
+ * Stamp each block's top-level elements with a key morphdom can match on.
+ *
+ * Blocks are delimited by HTML comments (`[+:B<uid>]` … `[-:B<uid>]`), and
+ * comments are invisible to morphdom's matching. With nothing to key on,
+ * morphdom pairs `main`'s children up by POSITION, so any structural change —
+ * reordering a block, inserting or deleting one above it — makes every element
+ * after the change point get rewritten into its neighbour's content. For a
+ * video that means the live player is morphed away and a fresh, unbooted
+ * container appears in its place: the preview re-initializes a video that never
+ * actually changed.
+ *
+ * Keyed nodes are MOVED instead. morphdom looks the element up by key anywhere
+ * in the old tree and relocates it, so a reorder becomes a DOM move and the
+ * mounted player survives untouched — as do the `data-smart-video` guards
+ * below, which then have a booted player left to protect.
+ *
+ * Both trees have to be stamped before morphing, or the keys cannot pair up.
+ *
+ * @param {Node} root - document or parsed document body to stamp
+ */
+function stampBlockKeys(root) {
+  if (!root || !VALID_TARGET_NODES.includes(root.nodeType)) {
+    return
+  }
+
+  const iterator = document.createNodeIterator(root, NodeFilter.SHOW_COMMENT, null, false)
+  let curNode
+
+  while ((curNode = iterator.nextNode())) {
+    const value = curNode.nodeValue.trim()
+    if (!value.startsWith('[+:B')) {
+      continue
+    }
+
+    const uid = value.substring(value.indexOf('<') + 1, value.indexOf('>'))
+    let sibling = curNode.nextSibling
+    let index = 0
+    let safety = 0
+
+    while (sibling && safety++ < 10000) {
+      if (
+        sibling.nodeType === NODE_TYPES.COMMENT &&
+        sibling.nodeValue.trim().startsWith(`[-:B<${uid}`)
+      ) {
+        break
+      }
+      if (sibling.nodeType === NODE_TYPES.ELEMENT) {
+        sibling.setAttribute('data-lp-key', `${uid}:${index++}`)
+      }
+      sibling = sibling.nextSibling
+    }
+  }
+}
+
+/**
  * Creates a reusable morphdom configuration
  * @param {boolean} childrenOnly - Whether to only update children
  * @returns {Object} - Morphdom configuration object
  */
 function getMorphdomConfig(childrenOnly = true) {
   return {
+    // Falls back to morphdom's own default (`node.id`) so anything already
+    // relying on ids keeps working.
+    getNodeKey(node) {
+      if (node.nodeType !== NODE_TYPES.ELEMENT) {
+        return undefined
+      }
+      return node.getAttribute('data-lp-key') || node.id || undefined
+    },
+
     skipFromChildren(fromEl, toEl) {
       // Preserve a live video player's internals when its source is unchanged.
       // A container counts as booted if EITHER the live-preview stub (data-booted)
@@ -425,11 +489,16 @@ channel.on('update', function (payload) {
   
   const doc = parser.parseFromString(payload.html, 'text/html')
   const newMain = doc.querySelector('main')
-  
+
+  // Both trees, before the morph — see stampBlockKeys.
+  stampBlockKeys(document)
+  stampBlockKeys(doc)
+
   morphdom(main, newMain, MORPHDOM_CONFIG_CHILDREN_ONLY)
 
   initializeLazyImages()
   initializeLazyVideos()
+  stampBlockKeys(document)
   rebuildContentBlockRegistry()
 })
 
@@ -443,10 +512,14 @@ channel.on('rerender', function (payload) {
   const doc = parser.parseFromString(payload.html, 'text/html')
   const newBody = doc.querySelector('body')
 
+  stampBlockKeys(document)
+  stampBlockKeys(doc)
+
   morphdom(body, newBody, MORPHDOM_CONFIG_FULL)
 
   initializeLazyImages()
   initializeLazyVideos()
+  stampBlockKeys(document)
   rebuildContentBlockRegistry()
 
   body.classList.remove('unloaded')
