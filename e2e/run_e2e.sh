@@ -24,6 +24,14 @@ fi
 # then started from assets/frontend and died with "no mix.exs was found".
 # The two projects use different package managers: backend is pnpm
 # (pnpm-lock.yaml), frontend is yarn (yarn.lock + "packageManager": "yarn@…").
+# The two asset projects below both import from Brando's own assets/src, so they
+# resolve @tiptap/* and friends out of the root assets/node_modules. Nothing else
+# installs that tree, so it silently drifts from assets/package.json — a stale
+# Tiptap 2 tree failed the backend build on a missing v3 `TextStyleKit` export.
+# CI installs it as its own step; do the same here.
+echo "Installing Brando asset dependencies"
+(cd ../assets && pnpm install)
+
 echo "Building static assets [backend]"
 (cd assets/backend && pnpm install && pnpm build)
 echo "Building static assets [frontend]"
