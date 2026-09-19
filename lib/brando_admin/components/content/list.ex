@@ -979,7 +979,7 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign_new(:sorts, fn -> assigns.listing.sorts end)
 
     ~H"""
-    <div class="list-tools-wrapper">
+    <div class={["list-tools-wrapper", @display_filters != %{} && "has-active-filters"]}>
       <div class="list-tools">
         <%= if @has_status? do %>
           <div class="statuses">
@@ -1019,15 +1019,15 @@ defmodule BrandoAdmin.Components.Content.List do
         reset_filters={@reset_filters}
       />
       <div class="list-filters-and-sorts">
-        <.active_filters
-          :if={@display_filters != %{}}
-          active_filters={@display_filters}
-          filters={@filters}
-          delete={@delete_filter}
-        />
         <.sorts :if={@sorts != []} active_sort={@active_sort} sorts={@sorts} schema={@schema} on_update={@update_sort} />
       </div>
     </div>
+    <.active_filters
+      :if={@display_filters != %{}}
+      active_filters={@display_filters}
+      filters={@filters}
+      delete={@delete_filter}
+    />
     """
   end
 
