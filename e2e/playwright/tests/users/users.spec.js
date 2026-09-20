@@ -28,7 +28,9 @@ test('creates, updates and deletes a user with content transfer', async ({ page 
     await page.getByLabel('Password', { exact: true }).fill('brandocms')
     await page.getByLabel('English').check()
     if (groups) await expect(page.getByLabel('Editor', { exact: true })).toHaveCount(0)
-    else await page.getByLabel('Editor').check()
+    // Exact, like the branch above: the image editor drawer is rendered (hidden)
+    // on this form and its accessible name "Image Editor" also contains "Editor".
+    else await page.getByLabel('Editor', { exact: true }).check()
     await page.getByTestId('submit').click()
 
     await expect(page).toHaveURL('/admin/users')
