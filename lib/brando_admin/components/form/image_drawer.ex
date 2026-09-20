@@ -237,38 +237,66 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
       close={close_image_editor()}
       z={1002}
       wide
+      light
+      workspace
+      icon="hero-scissors"
+      subtitle={gettext("Adjust the crop and focal point.")}
     >
       <div
         id="image-editor-hook"
         phx-hook="Brando.ImageEditor"
         phx-update="ignore"
         data-label-crop-previews={gettext("Crop previews")}
+        data-label-crop-preview={gettext("Crop preview")}
+        data-label-aspect-ratio={gettext("Aspect ratio")}
+        data-label-free={gettext("Free")}
+        data-label-configured-crops={
+          gettext("These crops are set by the image configuration. Position and zoom apply to all previews.")
+        }
       >
         <div class="image-editor">
-          <div class="image-editor-main">
-            <canvas id="image-editor-canvas"></canvas>
-            <canvas id="image-editor-overlay"></canvas>
-            <div class="image-editor-focal-pin"></div>
-          </div>
-          <div class="image-editor-sidebar">
-            <div class="image-editor-controls">
-              <div class="zoom-header">
-                <label>{gettext("Zoom")}</label>
-                <span class="zoom-value" id="image-editor-zoom-value">1.00x</span>
+          <div class="image-editor-workspace">
+            <section class="image-editor-stage" aria-label={gettext("Original image")}>
+              <div class="image-editor-stage-heading">
+                <h3>{gettext("Original image")}</h3>
+                <span id="image-editor-dimensions"></span>
               </div>
-              <input type="range" id="image-editor-zoom" min="1" max="3" step="0.05" value="1" />
-              <button type="button" id="image-editor-reset">{gettext("Reset")}</button>
-            </div>
-            <div class="image-editor-previews" id="image-editor-previews"></div>
+              <div class="image-editor-main">
+                <canvas id="image-editor-canvas" aria-label={gettext("Original image")}></canvas>
+                <canvas id="image-editor-overlay" aria-hidden="true"></canvas>
+                <div class="image-editor-focal-pin" aria-hidden="true"></div>
+              </div>
+              <p class="image-editor-hint">
+                <.icon name="hero-cursor-arrow-rays" />
+                <span>{gettext("Drag the frame to move the crop. Drag a corner to resize it.")}</span>
+              </p>
+            </section>
+            <aside class="image-editor-sidebar" aria-label={gettext("Crop settings")}>
+              <div class="image-editor-controls">
+                <div class="image-editor-section-heading">
+                  <h3>{gettext("Crop settings")}</h3>
+                  <button type="button" id="image-editor-reset" class="workspace-button quiet">
+                    <.icon name="hero-arrow-path" />{gettext("Reset")}
+                  </button>
+                </div>
+                <div class="zoom-header">
+                  <label for="image-editor-zoom">{gettext("Zoom")}</label>
+                  <output class="zoom-value" id="image-editor-zoom-value" for="image-editor-zoom">1.00x</output>
+                </div>
+                <input type="range" id="image-editor-zoom" min="1" max="3" step="0.05" value="1" />
+              </div>
+              <div class="image-editor-previews" id="image-editor-previews"></div>
+            </aside>
           </div>
           <div class="image-editor-actions">
-            <button type="button" class="secondary" phx-click={close_image_editor()}>
+            <button type="button" class="workspace-button quiet image-editor-cancel" phx-click={close_image_editor()}>
               {gettext("Cancel")}
             </button>
-            <button type="button" class="secondary" id="image-editor-save-replace">
+            <button type="button" class="workspace-button" id="image-editor-save-replace">
               {gettext("Save changes")}
             </button>
-            <button type="button" class="primary" id="image-editor-save-new">
+            <button type="button" class="workspace-button primary" id="image-editor-save-new">
+              <.icon name="hero-document-duplicate" />
               {gettext("Save as new copy")}
             </button>
           </div>

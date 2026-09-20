@@ -1,5 +1,10 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, fillSlugSource, confirmUploadFolder } from '../../utils'
+import {
+  syncLV,
+  fillSlugSource,
+  confirmUploadFolder,
+  expectCanvasOverlayAligned,
+} from '../../utils'
 
 test('opens image editor, adjusts focal point, and saves', async ({ page }, testInfo) => {
   test.setTimeout(120000)
@@ -132,6 +137,31 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   await expect(previewsContainer).toBeVisible()
   const previewCanvases = previewsContainer.locator('canvas')
   await expect(previewCanvases).toHaveCount(1, { timeout: 5000 })
+  await expect(editorDrawer).toHaveAttribute('role', 'dialog')
+  await expect(previewsContainer.locator('.crop-preview-ratio')).toHaveText('3:2')
+  await expect(previewsContainer.locator('.crop-preview-sizes')).toContainText('xlarge_crop')
+  await expect(editorDrawer.locator('.freeform-ratios')).toHaveCount(0)
+  await expect(page.locator('#image-editor-save-new')).toBeInViewport()
+  await expectCanvasOverlayAligned(page)
+  await page.screenshot({ path: testInfo.outputPath('image-editor-configured-desktop.png') })
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expectCanvasOverlayAligned(page)
+  await expect(page.locator('#image-editor-save-new')).toBeInViewport()
+  expect(await editorDrawer.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+  await zoomSlider.scrollIntoViewIfNeeded()
+  await expect(zoomSlider).toBeInViewport()
+  await previewCanvases.first().scrollIntoViewIfNeeded()
+  await expect(previewCanvases.first()).toBeInViewport()
+  const cropPreviewRatio = await previewCanvases.first().evaluate(el => {
+    const bounds = el.getBoundingClientRect()
+    return bounds.width / bounds.height
+  })
+  expect(cropPreviewRatio).toBeCloseTo(1.5, 1)
+  await page.screenshot({ path: testInfo.outputPath('image-editor-configured-mobile.png') })
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await expectCanvasOverlayAligned(page)
+  await mainCanvas.scrollIntoViewIfNeeded()
 
   // Step 10: Interact with the focal point — click on the canvas
   const canvasBox = await mainCanvas.boundingBox()

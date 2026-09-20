@@ -1,9 +1,9 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder } from '../../utils'
+import { syncLV, confirmUploadFolder, expectCanvasOverlayAligned } from '../../utils'
 
 test.describe('Image Editor from Blocks', () => {
 
-  test('opens image editor from picture block preview icon', async ({ page }) => {
+  test('opens image editor from picture block preview icon', async ({ page }, testInfo) => {
     test.setTimeout(120000)
 
     await page.goto('/admin')
@@ -49,6 +49,42 @@ test.describe('Image Editor from Blocks', () => {
     // Verify "Save as new copy" is visible when opened from block
     const saveNewBtn = page.locator('#image-editor-save-new')
     await expect(saveNewBtn).toBeVisible()
+
+    // Free cropping uses labelled, keyboard-accessible ratio presets.
+    const ratios = editorDrawer.getByRole('group', { name: 'Aspect ratio' })
+    await expect(ratios.getByRole('button')).toHaveCount(7)
+    const portrait = ratios.getByRole('button', { name: '4:5', exact: true })
+    await portrait.focus()
+    await page.keyboard.press('Enter')
+    await expect(portrait).toHaveAttribute('aria-pressed', 'true')
+    const cropPreview = editorDrawer.locator('.freeform-preview canvas')
+    await expect.poll(() => cropPreview.evaluate(el => el.width / el.height)).toBeCloseTo(0.8, 1)
+    await page.setViewportSize({ width: 1440, height: 1000 })
+    await expectCanvasOverlayAligned(page)
+    await page.screenshot({ path: testInfo.outputPath('image-editor-freeform-desktop.png') })
+    await page.setViewportSize({ width: 390, height: 844 })
+    await expectCanvasOverlayAligned(page)
+    await expect(saveNewBtn).toBeInViewport()
+    expect(await editorDrawer.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+    await cropPreview.scrollIntoViewIfNeeded()
+    const previewRatio = await cropPreview.evaluate(el => {
+      const bounds = el.getBoundingClientRect()
+      return bounds.width / bounds.height
+    })
+    expect(previewRatio).toBeCloseTo(0.8, 1)
+    await page.screenshot({ path: testInfo.outputPath('image-editor-freeform-mobile.png') })
+    await page.setViewportSize({ width: 1440, height: 1000 })
+    await expectCanvasOverlayAligned(page)
+    await page.locator('#image-editor-reset').click()
+    await expect(ratios.getByRole('button', { name: 'Free', exact: true })).toHaveAttribute('aria-pressed', 'true')
+
+    // Escape closes only this workspace and returns focus to its opener.
+    await page.keyboard.press('Escape')
+    await expect(editorDrawer).not.toBeVisible()
+    await expect(page.locator('.picture-block .edit-image-btn')).toBeFocused()
+    await page.locator('.picture-block .edit-image-btn').click()
+    await expect(editorDrawer).toBeVisible()
+    await expect(editorDrawer.locator('.image-editor-focal-pin')).toBeVisible()
 
     // Click focal point on canvas
     const canvasBox = await mainCanvas.boundingBox()

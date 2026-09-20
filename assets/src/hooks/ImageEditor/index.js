@@ -301,6 +301,8 @@ export default app => ({
       // (e.g. after a crop that updated the DB but the :original file differs).
       this.imageWidth = img.naturalWidth
       this.imageHeight = img.naturalHeight
+      const dimensions = this.el.querySelector('#image-editor-dimensions')
+      if (dimensions) dimensions.textContent = `${this.imageWidth} × ${this.imageHeight}`
 
       // Initialize freeform crop rect after image loads
       if (this.freeformMode) {
@@ -401,6 +403,7 @@ export default app => ({
     // Update active button state
     this.el.querySelectorAll('.ratio-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.ratio === key)
+      btn.setAttribute('aria-pressed', String(btn.dataset.ratio === key))
     })
 
     this.updateAll()
@@ -455,6 +458,7 @@ export default app => ({
 
     // Fit image into the container
     const containerRect = container.getBoundingClientRect()
+    if (containerRect.width <= 20 || containerRect.height <= 20) return
     const maxW = containerRect.width - 20
     const maxH = containerRect.height - 20
 
@@ -491,11 +495,10 @@ export default app => ({
       overlay.style.width = this.displayW + 'px'
       overlay.style.height = this.displayH + 'px'
 
-      // Position overlay on top of canvas
-      overlay.style.position = 'absolute'
-      overlay.style.left = canvas.offsetLeft + 'px'
-      overlay.style.top = canvas.offsetTop + 'px'
-
+      // The overlay is centered on the canvas from CSS. Reading canvas.offsetLeft
+      // here would return the pre-resize layout: this runs inside a
+      // ResizeObserver callback, so the style writes above have not been laid
+      // out yet and the overlay would keep the previous viewport's position.
       const overlayCtx = overlay.getContext('2d')
       overlayCtx.scale(dpr, dpr)
     }
@@ -511,9 +514,17 @@ export default app => ({
     previewsContainer.innerHTML = ''
 
     if (this.freeformMode) {
+      const ratioTitle = document.createElement('h3')
+      ratioTitle.id = 'image-editor-ratios-title'
+      ratioTitle.className = 'image-editor-previews-title'
+      ratioTitle.textContent = this.el.dataset.labelAspectRatio || 'Aspect ratio'
+      previewsContainer.appendChild(ratioTitle)
+
       // Ratio buttons bar
       const ratiosBar = document.createElement('div')
       ratiosBar.className = 'freeform-ratios'
+      ratiosBar.setAttribute('role', 'group')
+      ratiosBar.setAttribute('aria-labelledby', ratioTitle.id)
 
       FREEFORM_RATIOS.forEach(entry => {
         const btn = document.createElement('button')
@@ -524,11 +535,13 @@ export default app => ({
             (entry.w !== 0 && this.freeformSelectedRatio === entry.w / entry.h)) {
           btn.classList.add('active')
         }
+        btn.setAttribute('aria-pressed', String(btn.classList.contains('active')))
 
         btn.innerHTML = ratioSVG(entry.w, entry.h, entry.w === 0)
+        btn.querySelector('svg').setAttribute('aria-hidden', 'true')
         const label = document.createElement('span')
         label.className = 'ratio-btn-label'
-        label.textContent = entry.label
+        label.textContent = entry.key === 'free' ? (this.el.dataset.labelFree || 'Free') : entry.label
         btn.appendChild(label)
 
         btn.addEventListener('click', () => this.selectFreeformRatio(entry.key))
@@ -537,20 +550,34 @@ export default app => ({
 
       previewsContainer.appendChild(ratiosBar)
 
+      const previewTitle = document.createElement('h3')
+      previewTitle.className = 'image-editor-previews-title'
+      previewTitle.textContent = this.el.dataset.labelCropPreview || 'Crop preview'
+      previewsContainer.appendChild(previewTitle)
+
       // Single preview canvas
       const previewWrapper = document.createElement('div')
-      previewWrapper.className = 'freeform-preview'
+      previewWrapper.className = 'freeform-preview crop-preview-image'
 
       const previewCanvas = document.createElement('canvas')
+      previewCanvas.setAttribute('role', 'img')
+      previewCanvas.setAttribute('aria-label', previewTitle.textContent)
       previewWrapper.appendChild(previewCanvas)
       previewsContainer.appendChild(previewWrapper)
 
       this.freeformPreviewCanvas = previewCanvas
     } else {
-      const title = document.createElement('div')
+      const heading = document.createElement('div')
+      heading.className = 'image-editor-previews-heading'
+      const title = document.createElement('h3')
       title.className = 'image-editor-previews-title'
       title.textContent = this.el.dataset.labelCropPreviews || 'Crop previews'
-      previewsContainer.appendChild(title)
+      heading.appendChild(title)
+      const hint = document.createElement('p')
+      hint.className = 'image-editor-previews-hint'
+      hint.textContent = this.el.dataset.labelConfiguredCrops || ''
+      heading.appendChild(hint)
+      previewsContainer.appendChild(heading)
 
       // Create a preview canvas for each unique crop ratio
       this.previewCanvases = []
@@ -558,13 +585,19 @@ export default app => ({
         const wrapper = document.createElement('div')
         wrapper.className = 'crop-preview'
 
+        const previewImage = document.createElement('div')
+        previewImage.className = 'crop-preview-image'
         const previewCanvas = document.createElement('canvas')
-        wrapper.appendChild(previewCanvas)
+        previewCanvas.setAttribute('role', 'img')
+        previewCanvas.setAttribute('aria-label', `${title.textContent} · ${group.label}`)
+        previewImage.appendChild(previewCanvas)
+        wrapper.appendChild(previewImage)
 
         const label = document.createElement('div')
         label.className = 'crop-preview-label'
 
         const labelText = document.createElement('span')
+        labelText.className = 'crop-preview-ratio'
         labelText.textContent = group.label
 
         const sizes = document.createElement('span')
@@ -670,6 +703,7 @@ export default app => ({
           this.initCropRect()
           this.el.querySelectorAll('.ratio-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.ratio === 'free')
+            btn.setAttribute('aria-pressed', String(btn.dataset.ratio === 'free'))
           })
           this.syncZoomFromCropRect()
         } else {
@@ -1181,8 +1215,14 @@ export default app => ({
     const canvas = this.el.querySelector('#image-editor-canvas')
     if (!pin || !canvas) return
 
-    pin.style.left = canvas.offsetLeft + (this.focalX / 100) * this.displayW + 'px'
-    pin.style.top = canvas.offsetTop + (this.focalY / 100) * this.displayH + 'px'
+    // Offset from the container's center, which is where the canvas is centered
+    // too. Deriving this from canvas.offsetLeft instead would drift on resize,
+    // for the reason described in setupMainCanvas.
+    const offsetX = (this.focalX / 100 - 0.5) * this.displayW
+    const offsetY = (this.focalY / 100 - 0.5) * this.displayH
+
+    pin.style.left = `calc(50% + ${offsetX}px)`
+    pin.style.top = `calc(50% + ${offsetY}px)`
     pin.classList.add('visible')
   },
 

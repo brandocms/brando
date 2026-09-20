@@ -1,268 +1,111 @@
-.image-editor {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  grid-template-rows: 1fr auto;
-  gap: 16px;
-  height: calc(100vh - 100px);
-}
-
-.image-editor-main {
-  position: relative;
-  grid-row: 1;
-  grid-column: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background-color: #0a1929;
-  border-radius: 4px;
-
-  canvas {
-    display: block;
+/* The crop editor uses the same shell as the Assets browser. Keep the canvas
+   and sidebar inside the available height; only the workspace body scrolls. */
+#image-editor-drawer {
+  .drawer-form { overflow: hidden; }
+  #image-editor-hook, .image-editor { height: 100%; min-height: 0; }
+  .image-editor { display: flex; flex-direction: column; }
+  .image-editor-workspace {
+    flex: 1; min-height: 0; display: grid;
+    grid-template-columns: minmax(0, 1fr) 304px;
   }
-
-  #image-editor-overlay {
-    position: absolute;
-    pointer-events: none;
+  .image-editor-stage {
+    min-width: 0; min-height: 0; padding: 24px;
+    display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 16px;
+    background: #f8f9f6;
   }
-
+  .image-editor-stage-heading, .image-editor-section-heading {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .image-editor-stage-heading h3, .image-editor-section-heading h3,
+  .image-editor-previews-title { font: 500 14px/20px "Main", sans-serif; }
+  #image-editor-dimensions { font-size: 12px; color: var(--workspace-muted); font-variant-numeric: tabular-nums; }
+  .image-editor-main {
+    position: relative; min-width: 0; min-height: 0;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+    background: #e9ede7; border: 1px solid #dce2d8; border-radius: 7px;
+    canvas { display: block; touch-action: none; }
+    /* Centered on the canvas, which the flex container centers too. Keeping
+       this in CSS means a viewport change can never leave the two out of sync. */
+    #image-editor-overlay {
+      position: absolute; pointer-events: none;
+      left: 50%; top: 50%; transform: translate(-50%, -50%);
+    }
+  }
   .image-editor-focal-pin {
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 2px solid white;
-    box-shadow:
-      0 0 0 1px rgba(0, 0, 0, 0.5),
-      0 0 8px rgba(0, 0, 0, 0.3);
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    z-index: 2;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-
-    &.visible {
-      opacity: 1;
-    }
-
+    position: absolute; width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid #fff; box-shadow: 0 0 0 1px #0008, 0 0 8px #0005;
+    transform: translate(-50%, -50%); pointer-events: none; z-index: 2; opacity: 0;
+    &.visible { opacity: 1; }
     &::after {
-      content: "";
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: white;
-      transform: translate(-50%, -50%);
+      content: ""; position: absolute; top: 50%; left: 50%; width: 4px; height: 4px;
+      border-radius: 50%; background: #fff; transform: translate(-50%, -50%);
     }
   }
-}
-
-.image-editor-sidebar {
-  grid-row: 1;
-  grid-column: 2;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.image-editor-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-
-  .zoom-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
+  .image-editor-hint {
+    display: flex; align-items: flex-start; gap: 8px;
+    color: var(--workspace-muted); font: 12px/18px "Main", sans-serif;
+    > [class^="hero-"] { width: 16px; height: 16px; flex: 0 0 16px; margin-top: 1px; }
   }
-
-  label {
-    font-family: "Mono";
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+  .image-editor-sidebar {
+    min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+    display: flex; flex-direction: column; gap: 24px;
+    padding: 24px 20px; border-left: 1px solid var(--workspace-line); background: #fff;
   }
-
-  input[type="range"] {
-    width: 100%;
-    accent-color: azure;
-    border: none;
-    background: transparent;
+  .image-editor-controls { display: flex; flex-direction: column; gap: 12px; }
+  .image-editor-section-heading { margin-bottom: 4px; }
+  #image-editor-reset { min-height: 30px; padding: 4px 7px; margin-right: -7px; }
+  .zoom-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .zoom-header label { font: 13px/20px "Main", sans-serif; color: var(--workspace-ink); }
+  .zoom-value { font: 12px/20px "Mono", monospace; color: var(--workspace-muted); }
+  #image-editor-zoom {
+    width: 100%; height: 20px; padding: 0; margin: 0;
+    accent-color: var(--workspace-accent); border: 0; background: transparent; cursor: pointer;
   }
-
-  .zoom-value {
-    font-family: "Mono";
-    font-size: 12px;
+  .image-editor-previews { display: flex; flex-direction: column; gap: 14px; }
+  .image-editor-previews-heading { display: flex; flex-direction: column; gap: 8px; }
+  .image-editor-previews-hint { font: 12px/18px "Main", sans-serif; color: var(--workspace-muted); }
+  .freeform-ratios { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+  .ratio-btn {
+    min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 9px 4px 7px; border: 1px solid var(--workspace-line); border-radius: 5px;
+    background: #fff; color: var(--workspace-muted); cursor: pointer;
+    &:hover { background: #f5f7f3; border-color: #aab9a5; color: var(--workspace-accent); }
+    &[aria-pressed="true"] { border-color: #7f9a72; background: #edf3e8; color: var(--workspace-accent); }
+    svg { display: block; width: 23px; height: 23px; }
+    .ratio-btn-label { font: 12px/16px "Main", sans-serif; }
   }
-
-  button {
-    font-family: "Mono";
-    font-size: 11px;
-    text-transform: uppercase;
-    color: azure;
-    border: 1px solid azure;
-    background: transparent;
-    padding: 6px 12px;
-    border-radius: 20px;
-    cursor: pointer;
-    transition:
-      background-color 250ms ease,
-      color 250ms ease;
-
-    &:hover {
-      background-color: azure;
-      color: #052753;
+  .crop-preview, .freeform-preview { min-width: 0; border: 1px solid var(--workspace-line); border-radius: 6px; overflow: hidden; }
+  .crop-preview-image {
+    display: flex; align-items: center; justify-content: center; padding: 10px;
+    background: #f3f5f0;
+    canvas { display: block; width: auto; height: auto; max-width: 100%; max-height: 260px; object-fit: contain; }
+  }
+  .crop-preview-label { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-top: 1px solid var(--workspace-line); }
+  .crop-preview-ratio { align-self: flex-start; padding: 2px 6px; background: #eef2e9; color: #40543a; border-radius: 3px; font: 500 12px/18px "Main", sans-serif; }
+  .crop-preview-sizes { color: var(--workspace-muted); font: 12px/18px "Main", sans-serif; overflow-wrap: anywhere; }
+  .image-editor-actions {
+    flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap;
+    gap: 8px; padding: 18px 24px; border-top: 1px solid var(--workspace-line); background: #fff;
+    .workspace-button { min-height: 36px; padding: 8px 14px; }
+    .image-editor-cancel { margin-right: auto; }
+  }
+  @media (max-width: 800px) {
+    .image-editor-workspace { display: block; overflow-y: auto; overscroll-behavior: contain; }
+    .image-editor-stage { padding: 18px; grid-template-rows: auto minmax(260px, 42dvh) auto; gap: 12px; }
+    .image-editor-sidebar { overflow: visible; padding: 20px 18px; border-left: 0; border-top: 1px solid var(--workspace-line); gap: 20px; }
+    .image-editor-previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+    .image-editor-previews-heading, .image-editor-previews-title, .freeform-ratios, .freeform-preview { grid-column: 1 / -1; }
+    .freeform-ratios { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    .crop-preview-image canvas { max-height: 220px; }
+    .image-editor-actions { padding: 14px 18px; }
+  }
+  @media (max-width: 480px) {
+    .freeform-ratios { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .image-editor-actions {
+      display: grid; grid-template-columns: auto minmax(0, 1fr);
+      .workspace-button { min-height: 40px; white-space: normal; }
+      .image-editor-cancel { margin: 0; }
+      #image-editor-save-new { grid-column: 1 / -1; }
     }
-  }
-}
-
-.image-editor-previews {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1;
-  overflow-y: auto;
-
-  .image-editor-previews-title {
-    font-family: "Mono";
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 4px;
-  }
-}
-
-.crop-preview {
-  canvas {
-    width: 100%;
-    height: auto;
-    display: block;
-    border-radius: 2px;
-    background-color: #0a1929;
-  }
-
-  .crop-preview-label {
-    font-family: "Mono";
-    font-size: 11px;
-    color: azure;
-    margin-top: 4px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .crop-preview-sizes {
-    font-size: 10px;
-    opacity: 0.6;
-  }
-}
-
-.image-editor-actions {
-  grid-row: 2;
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  align-items: center;
-  padding: 12px 0 4px;
-  border-top: 1px solid rgba(240, 255, 255, 0.15);
-
-  button {
-    font-family: "Mono" !important;
-    font-size: 12px !important;
-    padding: 8px 20px !important;
-    border-radius: 20px !important;
-    border: 1px solid azure !important;
-    cursor: pointer;
-    white-space: nowrap;
-    line-height: 1.4 !important;
-    transition:
-      background-color 250ms ease,
-      color 250ms ease;
-  }
-
-  button.primary {
-    background-color: azure !important;
-    color: #052753 !important;
-    height: auto !important;
-
-    &:hover {
-      background-color: #d0ffff !important;
-    }
-  }
-
-  button.secondary {
-    background-color: transparent !important;
-    color: azure !important;
-    margin-top: 0 !important;
-
-    &:hover {
-      background-color: azure !important;
-      color: #052753 !important;
-    }
-  }
-}
-
-/* Freeform ratio buttons */
-.freeform-ratios {
-  display: flex;
-  gap: 3px;
-}
-
-.ratio-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  padding: 4px 4px 2px;
-  border: 1px solid rgba(240, 255, 255, 0.25);
-  border-radius: 4px;
-  background: transparent;
-  color: rgba(240, 255, 255, 0.5);
-  cursor: pointer;
-  transition:
-    border-color 200ms ease,
-    color 200ms ease,
-    background-color 200ms ease;
-  flex: 1;
-  min-width: 0;
-
-  &:hover {
-    border-color: rgba(240, 255, 255, 0.5);
-    color: rgba(240, 255, 255, 0.8);
-  }
-
-  &.active {
-    border-color: azure;
-    color: azure;
-    background-color: rgba(240, 255, 255, 0.08);
-  }
-
-  svg {
-    display: block;
-    width: 24px;
-    height: 24px;
-  }
-
-  .ratio-btn-label {
-    font-family: "Mono";
-    font-size: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    line-height: 1;
-  }
-}
-
-/* Freeform preview */
-.freeform-preview {
-  canvas {
-    width: 100%;
-    height: auto;
-    display: block;
-    border-radius: 2px;
-    background-color: #0a1929;
   }
 }

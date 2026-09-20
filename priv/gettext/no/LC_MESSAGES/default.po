@@ -1203,7 +1203,7 @@ msgstr "Tilgjengelige alternativer"
 #: lib/brando_admin/components/form/input/gallery.ex:434
 #, elixir-autogen, elixir-format
 msgid "Configure"
-msgstr "Konfigurasjon"
+msgstr "Konfigurer"
 
 #: lib/brando_admin/components/form/block/render.ex:1425
 #, elixir-autogen, elixir-format
@@ -9397,3 +9397,43 @@ msgstr "Element %{number}"
 
 msgid "Image and video settings"
 msgstr "Bilde- og videoinnstillinger"
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Adjust the crop and focal point."
+msgstr "Juster beskjæring og fokuspunkt."
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Crop preview"
+msgstr "Forhåndsvisning"
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Aspect ratio"
+msgstr "Sideforhold"
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Free"
+msgstr "Fri"
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "These crops are set by the image configuration. Position and zoom apply to all previews."
+msgstr "Beskjæringene styres av bildeoppsettet. Plassering og zoom gjelder alle forhåndsvisningene."
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Original image"
+msgstr "Originalbilde"
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Drag the frame to move the crop. Drag a corner to resize it."
+msgstr "Dra rammen for å flytte utsnittet. Dra i et hjørne for å endre størrelsen."
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Crop settings"
+msgstr "Beskjæring"

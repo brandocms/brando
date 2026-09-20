@@ -9539,3 +9539,43 @@ msgstr ""
 
 msgid "Image and video settings"
 msgstr ""
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Adjust the crop and focal point."
+msgstr ""
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Crop preview"
+msgstr ""
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Aspect ratio"
+msgstr ""
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Free"
+msgstr ""
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "These crops are set by the image configuration. Position and zoom apply to all previews."
+msgstr ""
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Original image"
+msgstr ""
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Drag the frame to move the crop. Drag a corner to resize it."
+msgstr ""
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Crop settings"
+msgstr ""

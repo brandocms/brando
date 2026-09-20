@@ -306,12 +306,39 @@ const fillSlugSource = async (locator, text) => {
 // Image uploads first open the asset browser so the user can confirm the
 // destination folder. Keep upload specs aligned with that browser-first flow.
 const confirmUploadFolder = async page => {
-  const confirm = page.getByRole('button', { name: 'Upload here' })
+  // The picker renders in the admin user's language. Matching only the English
+  // label made this a silent no-op for a Norwegian admin: the destination
+  // drawer stayed open, the upload never started, and the caller timed out
+  // waiting for an image that was never going to appear.
+  const confirm = page.getByRole('button', { name: /^(Upload here|Last opp her)$/ })
   const opened = await confirm.waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false)
   if (!opened) return
 
   await confirm.click()
   await expect(confirm).not.toBeVisible({ timeout: 10000 })
+}
+
+// The image editor draws the crop frame, grid and focal pin on an overlay canvas
+// stacked on top of the image canvas, so the two must occupy the same box. They
+// used to drift apart on a viewport change: the overlay was positioned from
+// `canvas.offsetLeft` read inside a ResizeObserver callback, which returns the
+// pre-resize layout, leaving the frame up to 223px off the image at 390px wide.
+// Assert this after every resize, not just on load — that is when it regresses.
+const expectCanvasOverlayAligned = async page => {
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const canvas = document.querySelector('#image-editor-canvas').getBoundingClientRect()
+        const overlay = document.querySelector('#image-editor-overlay').getBoundingClientRect()
+        return Math.max(
+          Math.abs(canvas.x - overlay.x),
+          Math.abs(canvas.y - overlay.y),
+          Math.abs(canvas.width - overlay.width),
+          Math.abs(canvas.height - overlay.height)
+        )
+      })
+    )
+    .toBeLessThanOrEqual(1.5) // rounding only
 }
 
 module.exports = {
@@ -331,5 +358,6 @@ module.exports = {
   waitForPreviewUpdate,
   setPreviewDevice,
   fillSlugSource,
-  confirmUploadFolder
+  confirmUploadFolder,
+  expectCanvasOverlayAligned
 }
