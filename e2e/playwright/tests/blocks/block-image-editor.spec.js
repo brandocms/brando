@@ -78,7 +78,49 @@ test.describe('Image Editor from Blocks', () => {
     await page.locator('#image-editor-reset').click()
     await expect(ratios.getByRole('button', { name: 'Free', exact: true })).toHaveAttribute('aria-pressed', 'true')
 
+    // The focal point cannot leave the crop frame: everything outside the frame
+    // is discarded on save, so a focal out there names a pixel the saved file
+    // does not contain. Reset leaves a free crop over the middle 80%, so a click
+    // in the corner puts the pin on the frame's edge, not in the corner.
+    //
+    // Assert it here rather than after the reopen below: reopening pushes a
+    // fresh `b:image_editor:init`, and a click that lands before it arrives is
+    // undone by the re-init.
+    const resetCanvasBox = await mainCanvas.boundingBox()
+    const focalPosition = async () => {
+      const pin = await editorDrawer.locator('.image-editor-focal-pin').boundingBox()
+      return {
+        x: (pin.x + pin.width / 2 - resetCanvasBox.x) / resetCanvasBox.width,
+        y: (pin.y + pin.height / 2 - resetCanvasBox.y) / resetCanvasBox.height
+      }
+    }
+
+    await page.mouse.click(
+      resetCanvasBox.x + resetCanvasBox.width * 0.02,
+      resetCanvasBox.y + resetCanvasBox.height * 0.02
+    )
+    await expect.poll(async () => (await focalPosition()).x).toBeCloseTo(0.1, 2)
+    expect((await focalPosition()).y).toBeCloseTo(0.1, 2)
+
+    // Dragging the pin to a point inside the frame is untouched by the clamp.
+    await page.mouse.move(
+      resetCanvasBox.x + resetCanvasBox.width * 0.1,
+      resetCanvasBox.y + resetCanvasBox.height * 0.1
+    )
+    await page.mouse.down()
+    await page.mouse.move(
+      resetCanvasBox.x + resetCanvasBox.width * 0.3,
+      resetCanvasBox.y + resetCanvasBox.height * 0.6,
+      { steps: 5 }
+    )
+    await page.mouse.up()
+    await expect.poll(async () => (await focalPosition()).x).toBeCloseTo(0.3, 2)
+    expect((await focalPosition()).y).toBeCloseTo(0.6, 2)
+
     // Escape closes only this workspace and returns focus to its opener.
+    // The dialog listens for it on itself, and the canvas clicks above left
+    // focus on the body, so put it back inside the drawer first.
+    await editorDrawer.locator('#image-editor-reset').focus()
     await page.keyboard.press('Escape')
     await expect(editorDrawer).not.toBeVisible()
     await expect(page.locator('.picture-block .edit-image-btn')).toBeFocused()

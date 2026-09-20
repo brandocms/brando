@@ -1200,6 +1200,7 @@ export default app => ({
 
   updateAll() {
     if (this.freeformMode) {
+      this.clampFocalToCropRect()
       this.updateFocalPin()
       this.drawFreeformOverlay()
       this.drawFreeformPreview()
@@ -1208,6 +1209,31 @@ export default app => ({
       this.updateCropOverlays()
       this.updateCropPreviews()
     }
+  },
+
+  /**
+   * Keep the focal point inside the freeform crop rectangle.
+   *
+   * Everything outside the rectangle is discarded on save, so a focal out there
+   * names a pixel the saved file does not contain. Configured mode needs no
+   * equivalent: `calculateCropRegion` centres each region on the focal and only
+   * clamps the region to the image bounds, which always leaves the focal inside.
+   *
+   * Called from `updateAll`, the one place every crop-rect and focal change
+   * passes through: moving or resizing the rect, the zoom slider, ratio buttons,
+   * reset, and the incoming focal on load can all leave it outside.
+   */
+  clampFocalToCropRect() {
+    if (!this.cropRect || !this.imageWidth || !this.imageHeight) return
+
+    const r = this.cropRect
+    const clamp = (px, start, size) => Math.max(start, Math.min(px, start + size))
+
+    const focalPxX = clamp((this.focalX / 100) * this.imageWidth, r.left, r.width)
+    const focalPxY = clamp((this.focalY / 100) * this.imageHeight, r.top, r.height)
+
+    this.focalX = (focalPxX / this.imageWidth) * 100
+    this.focalY = (focalPxY / this.imageHeight) * 100
   },
 
   updateFocalPin() {
@@ -1261,7 +1287,7 @@ export default app => ({
   /**
    * Export the current crop/zoom state to a canvas.
    * Returns the canvas, or null if no crop is applied (full image unchanged).
-   * Also recomputes focal from crop center in freeform mode.
+   * Also re-expresses the focal point in the exported file's coordinates.
    */
   _exportCroppedCanvas() {
     const exportCanvas = document.createElement('canvas')
@@ -1276,8 +1302,7 @@ export default app => ({
         r.left, r.top, r.width, r.height,
         0, 0, r.width, r.height
       )
-      this.focalX = (r.left + r.width / 2) / this.imageWidth * 100
-      this.focalY = (r.top + r.height / 2) / this.imageHeight * 100
+      this._remapFocalToRegion(r)
     } else if (this.cropGroups.length > 0 && this.zoom > 1) {
       const region = calculateCropRegion(
         this.focalX, this.focalY,
@@ -1291,11 +1316,34 @@ export default app => ({
         region.left, region.top, region.width, region.height,
         0, 0, region.width, region.height
       )
+      this._remapFocalToRegion(region)
     } else {
       return null
     }
 
     return exportCanvas
+  },
+
+  /**
+   * Re-express the focal point in the coordinates of the region we just exported.
+   *
+   * The focal is a percentage of the image it is stored on, and after a crop that
+   * image is the region — so a focal left in the original's coordinates points
+   * somewhere else entirely. We used to save the crop's centre measured against
+   * the original: cropping the top left quarter of a 1000x800 image saved (25,
+   * 25) for a file whose centre is by definition (50, 50), and every `crop: true`
+   * size derived from it was then anchored toward the corner. The square `thumb`
+   * is the one that shows it worst, and `build_crop_groups/1` filters it out of
+   * the previews, so nothing here would have shown the damage either.
+   */
+  _remapFocalToRegion(region) {
+    const focalPxX = (this.focalX / 100) * this.imageWidth
+    const focalPxY = (this.focalY / 100) * this.imageHeight
+
+    const toPercent = (px, start, size) => Math.max(0, Math.min(100, ((px - start) / size) * 100))
+
+    this.focalX = toPercent(focalPxX, region.left, region.width)
+    this.focalY = toPercent(focalPxY, region.top, region.height)
   },
 
   /**
