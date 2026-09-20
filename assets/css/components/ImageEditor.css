@@ -33,13 +33,15 @@
   }
   /* The canvases keep whatever was last opened in them until the new image has
      decoded, and a click on that canvas is undone by the re-init that follows.
-     Cover them from the moment the drawer opens. The cover is transparent for
-     its first 150ms so a cached image does not flash a spinner, but it takes
-     the clicks for that time too. */
+     Cover them from the moment the drawer opens.
+
+     The fade goes on the wrapper, never on the spinner: `animation` is a
+     shorthand, so fading the spinner itself replaced the rotation it is made
+     of and left a ring sitting still. */
   #image-editor-hook[aria-busy="true"] .image-editor-main {
     .image-editor-focal-pin { visibility: hidden; }
     .image-editor-loading { display: flex; }
-    .image-editor-loading > * { animation: image-editor-loading-in 150ms linear 150ms forwards; }
+    .image-editor-loading-content { animation: image-editor-loading-in 150ms linear 150ms forwards; }
   }
   /* The cover itself is opaque from the first frame, so the previous image is
      never on screen under a new one; only the spinner waits, which keeps a
@@ -50,10 +52,10 @@
      margin, which would push an inset-0 overlay off its box. */
   .image-editor-loading {
     position: absolute; inset: 0; margin: 0; display: none;
-    align-items: center; justify-content: center; gap: 10px;
+    align-items: center; justify-content: center;
     background: #e9ede7; color: var(--workspace-muted); font: 12px/18px "Main", sans-serif;
-    > * { opacity: 0; }
   }
+  .image-editor-loading-content { display: flex; align-items: center; gap: 10px; opacity: 0; }
   .image-editor-spinner {
     flex: 0 0 18px; width: 18px; height: 18px; border: 2px solid #cfd8cc;
     border-top-color: var(--workspace-accent); border-radius: 50%;
@@ -63,7 +65,7 @@
   @keyframes image-editor-loading-in { to { opacity: 1; } }
   @media (prefers-reduced-motion: reduce) {
     .image-editor-spinner { animation: none; }
-    #image-editor-hook[aria-busy="true"] .image-editor-main .image-editor-loading > * {
+    #image-editor-hook[aria-busy="true"] .image-editor-main .image-editor-loading-content {
       animation: none; opacity: 1;
     }
   }

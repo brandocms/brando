@@ -142,7 +142,10 @@ test.describe('Image Editor from Blocks', () => {
     // The cover is opaque from the first frame, so the previous image is never
     // on screen under a new one; the spinner itself waits 150ms so a cached
     // image does not flash one.
-    await expect(loading.locator('.image-editor-spinner')).toHaveCSS('opacity', '1')
+    await expect(loading.locator('.image-editor-loading-content')).toHaveCSS('opacity', '1')
+    // And it spins. Fading the spinner itself rather than a wrapper replaced
+    // this animation with the fade, leaving a ring sitting still.
+    await expect(loading.locator('.image-editor-spinner')).toHaveCSS('animation-name', 'image-editor-spin')
     await expect(editorDrawer.locator('.image-editor-focal-pin')).toBeHidden()
     await page.screenshot({ path: testInfo.outputPath('image-editor-loading.png') })
     await page.unroute('**/media/**')

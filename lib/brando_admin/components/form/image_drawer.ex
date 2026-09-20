@@ -267,8 +267,10 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
                 <canvas id="image-editor-overlay" aria-hidden="true"></canvas>
                 <div class="image-editor-focal-pin" aria-hidden="true"></div>
                 <p class="image-editor-loading">
-                  <span class="image-editor-spinner"></span>
-                  <span>{gettext("Loading image...")}</span>
+                  <span class="image-editor-loading-content">
+                    <span class="image-editor-spinner"></span>
+                    <span>{gettext("Loading image...")}</span>
+                  </span>
                 </p>
               </div>
               <p class="image-editor-hint">
