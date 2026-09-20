@@ -9425,6 +9425,11 @@ msgstr "Beskjæringene styres av bildeoppsettet. Plassering og zoom gjelder alle
 
 #: lib/brando_admin/components/form/image_drawer.ex
 #, elixir-autogen, elixir-format
+msgid "Loading image..."
+msgstr "Laster bilde..."
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
 msgid "Original image"
 msgstr "Originalbilde"
 

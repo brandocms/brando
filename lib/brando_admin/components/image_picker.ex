@@ -520,7 +520,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
                   JS.push("edit_image_from_picker", target: @myself, value: %{id: @image.id})
                   |> hide_dropdown("##{@menu_id}")
                   |> toggle_drawer("#image-picker")
-                  |> toggle_drawer("#image-editor-drawer")
+                  |> open_image_editor_drawer()
                 }
               >
                 <.icon name="hero-pencil-square" />

@@ -9567,6 +9567,11 @@ msgstr ""
 
 #: lib/brando_admin/components/form/image_drawer.ex
 #, elixir-autogen, elixir-format
+msgid "Loading image..."
+msgstr ""
+
+#: lib/brando_admin/components/form/image_drawer.ex
+#, elixir-autogen, elixir-format
 msgid "Original image"
 msgstr ""
 

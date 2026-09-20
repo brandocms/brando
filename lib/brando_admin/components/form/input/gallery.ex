@@ -411,7 +411,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
                 phx-click={
                   JS.push("open_image_editor", target: @myself, value: %{image_id: @gallery_object.image_id})
                   |> hide_dropdown("##{@menu_id}")
-                  |> toggle_drawer("#image-editor-drawer")
+                  |> open_image_editor_drawer()
                 }
               >
                 <.icon name="hero-pencil-square" />

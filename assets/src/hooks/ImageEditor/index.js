@@ -263,10 +263,20 @@ export default app => ({
     if (previewsContainer) {
       previewsContainer.innerHTML = ''
     }
+
+    // The readout belongs to the image we are letting go of. Leaving it up
+    // states the previous image's size over the one that is loading.
+    const dimensions = this.el.querySelector('#image-editor-dimensions')
+    if (dimensions) dimensions.textContent = ''
   },
 
   initEditor(payload) {
     this.cleanup()
+
+    // Re-arm the busy state the opening click set. Opening a second image while
+    // the drawer is already up (from the picker) never passes through that
+    // click, and everything below is about to be replaced either way.
+    this.setBusy(true)
 
     this.imageWidth = payload.image_width
     this.imageHeight = payload.image_height
@@ -314,8 +324,30 @@ export default app => ({
       this.setupInteractions()
       this.updateAll()
       this.setupResizeObserver()
+
+      // Only now is what the canvas shows the image the payload named.
+      this.setBusy(false)
+    }
+    img.onerror = () => {
+      // Leaving this set would spin forever over an editor that can never load.
+      this.setBusy(false)
+      console.error('Image editor: could not load', payload.image_src)
     }
     img.src = payload.image_src
+  },
+
+  /**
+   * Flag whether the editor is still catching up with the image it was given.
+   *
+   * Through `this.js()` rather than `setAttribute`: the click that opens the
+   * drawer sets this same attribute with a `JS.set_attribute` command, which
+   * LiveView records as sticky and re-applies on every later patch of this
+   * element. A plain `setAttribute` here was overwritten by that record the
+   * next time anything patched, and the editor sat under a spinner with the
+   * image already on the canvas behind it.
+   */
+  setBusy(busy) {
+    this.js().setAttribute(this.el, 'aria-busy', busy ? 'true' : 'false')
   },
 
   /**

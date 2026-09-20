@@ -124,8 +124,31 @@ test.describe('Image Editor from Blocks', () => {
     await page.keyboard.press('Escape')
     await expect(editorDrawer).not.toBeVisible()
     await expect(page.locator('.picture-block .edit-image-btn')).toBeFocused()
+    // Reopening shows the drawer before the editor can show the image: the
+    // payload is a server round trip and the file still has to be fetched and
+    // decoded. Hold the image back to see what fills that gap — without it the
+    // canvas keeps the last session's render, and a click on it is undone by
+    // the re-init.
+    await page.route('**/media/**', async route => {
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      await route.continue()
+    })
     await page.locator('.picture-block .edit-image-btn').click()
     await expect(editorDrawer).toBeVisible()
+    const editorHook = page.locator('#image-editor-hook')
+    await expect(editorHook).toHaveAttribute('aria-busy', 'true')
+    const loading = editorDrawer.locator('.image-editor-loading')
+    await expect(loading).toBeVisible()
+    // The cover is opaque from the first frame, so the previous image is never
+    // on screen under a new one; the spinner itself waits 150ms so a cached
+    // image does not flash one.
+    await expect(loading.locator('.image-editor-spinner')).toHaveCSS('opacity', '1')
+    await expect(editorDrawer.locator('.image-editor-focal-pin')).toBeHidden()
+    await page.screenshot({ path: testInfo.outputPath('image-editor-loading.png') })
+    await page.unroute('**/media/**')
+
+    await expect(editorHook).toHaveAttribute('aria-busy', 'false', { timeout: 15000 })
+    await expect(loading).toBeHidden()
     await expect(editorDrawer.locator('.image-editor-focal-pin')).toBeVisible()
 
     // Click focal point on canvas

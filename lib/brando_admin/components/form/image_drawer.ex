@@ -246,6 +246,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
         id="image-editor-hook"
         phx-hook="Brando.ImageEditor"
         phx-update="ignore"
+        aria-busy="false"
         data-label-crop-previews={gettext("Crop previews")}
         data-label-crop-preview={gettext("Crop preview")}
         data-label-aspect-ratio={gettext("Aspect ratio")}
@@ -265,6 +266,10 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
                 <canvas id="image-editor-canvas" aria-label={gettext("Original image")}></canvas>
                 <canvas id="image-editor-overlay" aria-hidden="true"></canvas>
                 <div class="image-editor-focal-pin" aria-hidden="true"></div>
+                <p class="image-editor-loading">
+                  <span class="image-editor-spinner"></span>
+                  <span>{gettext("Loading image...")}</span>
+                </p>
               </div>
               <p class="image-editor-hint">
                 <.icon name="hero-cursor-arrow-rays" />
@@ -309,7 +314,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
   def open_image_editor(js \\ %JS{}, edit_image, target) do
     js
     |> JS.push("open_image_editor", value: %{image_id: edit_image.image.id}, target: target)
-    |> toggle_drawer("#image-editor-drawer")
+    |> open_image_editor_drawer()
   end
 
   def close_image_editor(js \\ %JS{}) do

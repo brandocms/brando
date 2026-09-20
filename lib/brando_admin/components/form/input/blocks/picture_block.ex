@@ -183,7 +183,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                 <button
                   class="media-button edit-image-btn"
                   type="button"
-                  phx-click={JS.push("open_image_editor", target: @myself) |> toggle_drawer("#image-editor-drawer")}
+                  phx-click={JS.push("open_image_editor", target: @myself) |> open_image_editor_drawer()}
                 >
                   <.icon name="hero-scissors" />{gettext("Edit/Crop")}
                 </button>
@@ -244,7 +244,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                         phx-click={
                           JS.push("close_block_config", target: @target)
                           |> JS.push("open_image_editor", target: @myself)
-                          |> toggle_drawer("#image-editor-drawer")
+                          |> open_image_editor_drawer()
                         }
                       >
                         <.icon name="hero-scissors" />{gettext("Edit/Crop")}

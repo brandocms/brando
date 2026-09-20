@@ -139,6 +139,7 @@ defmodule BrandoAdmin.Utils do
   defdelegate show_modal(js \\ %JS{}, modal_id), to: JSCommands
   defdelegate hide_modal(js \\ %JS{}, modal_id), to: JSCommands
   defdelegate toggle_drawer(js \\ %JS{}, drawer_id), to: JSCommands
+  defdelegate open_image_editor_drawer(js \\ %JS{}), to: JSCommands
 
   @doc """
   Derives the Form component ID from a form name string or a Phoenix.HTML.Form struct.

@@ -115,7 +115,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
             target: @myself,
             value: %{image_id: @gallery_object_form[:image_id].value}
           )
-          |> toggle_drawer("#image-editor-drawer")
+          |> open_image_editor_drawer()
         }
         data-sortable-filter
       >
