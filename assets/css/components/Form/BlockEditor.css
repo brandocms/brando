@@ -203,6 +203,49 @@
 .module-editor-panels {
   width: 100%;
 
+  /* Kept at panel level, not inside `.properties > .inner`: the variables
+     panel has no such wrapper, so an empty one was rendering with none of
+     this — no border, no padding, left aligned across the full width — while
+     the references panel beside it looked like an empty state should. */
+  .module-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 22px 18px;
+    border: 1px dashed #00000024;
+    border-radius: 10px;
+    text-align: center;
+
+    /* Direct child only. The add button below carries its own icon and sizes
+       it itself; reaching that one too inflated the button half again. */
+    > [data-icon] {
+      width: 24px;
+      height: 24px;
+      margin-bottom: 8px;
+      background-color: currentColor;
+      opacity: 0.45;
+    }
+
+    p {
+      margin: 0 0 3px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    span {
+      max-width: 34ch;
+      font-size: 12px;
+      line-height: 1.4;
+      opacity: 0.58;
+    }
+
+    /* Only the variables panel offers a way out of the empty state from here,
+       and it needs to sit off the sentence explaining it. */
+    .module-add-button {
+      margin-top: 14px;
+    }
+  }
+
   .module-panel {
     display: none;
 
@@ -425,36 +468,6 @@
         margin-top: 10px;
       }
 
-      .module-empty-state {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 22px 18px;
-        border: 1px dashed #00000024;
-        border-radius: 10px;
-        text-align: center;
-
-        [data-icon] {
-          width: 24px;
-          height: 24px;
-          margin-bottom: 8px;
-          background-color: currentColor;
-          opacity: 0.45;
-        }
-
-        p {
-          margin: 0 0 3px;
-          font-size: 14px;
-          font-weight: 600;
-        }
-
-        span {
-          max-width: 34ch;
-          font-size: 12px;
-          line-height: 1.4;
-          opacity: 0.58;
-        }
-      }
 
       .module-collection ul {
         display: flex;

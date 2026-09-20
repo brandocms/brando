@@ -442,7 +442,8 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           <button
             phx-click={show_modal("##{@form.id}-#{@key}-create-var")}
             type="button"
-            class="secondary"
+            class="module-add-button"
+            aria-label={gettext("Add variable")}
           >
             <.icon name="hero-plus" />
             {gettext("Add variable")}
