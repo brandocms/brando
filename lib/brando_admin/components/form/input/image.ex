@@ -17,6 +17,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
   # prop opts, :list, default: []
   # prop current_user, :map
   # prop uploads, :map
+  # prop on_change, :fun
 
   # data class, :string
   # data monospace, :boolean
@@ -42,6 +43,11 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      |> assign_new(:image, fn -> nil end)
      |> assign_new(:image_id, fn -> nil end)
      |> assign_new(:parent_form, fn -> nil end)
+     # Optional: only a block's image field hands one down, so the callers that
+     # do not — an entry's own image fields, the meta drawer — reached
+     # `select_image` with no such key at all and took the LiveView down with a
+     # KeyError on picking an image.
+     |> assign_new(:on_change, fn -> nil end)
      |> assign_new(:small, fn -> false end)
      |> assign_new(:square, fn -> false end)
      |> assign_new(:placeholder, fn -> nil end)}

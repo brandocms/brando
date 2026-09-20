@@ -163,6 +163,32 @@ test('creates meta information', async ({ page }) => {
   await imageField.locator('input[type="file"]').setInputFiles('./fixtures/image.jpg')
   await confirmUploadFolder(page)
   await expect(imageField.locator('img')).toBeVisible({ timeout: 30000 })
+
+  // Then pick from the library through the field itself. That lands in the
+  // image input's own `select_image`, which read an `on_change` callback only a
+  // block's image field hands down -- so every field outside a block, this one
+  // included, took the LiveView down with a KeyError on picking. Watch for the
+  // crash rather than its aftermath: LiveView remounts from the unsaved
+  // changeset, so the field looks untouched either way.
+  await page.evaluate(() => {
+    window.__phxErrors = 0
+    new MutationObserver((records) => {
+      for (const record of records) {
+        const cls = record.target.getAttribute('class') || ''
+        if (/phx-error|phx-server-error|phx-client-error/.test(cls)) window.__phxErrors++
+      }
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'], subtree: true })
+  })
+
+  await imageField.getByRole('button', { name: 'Select image', exact: true }).click()
+  const metaImagePicker = page.getByRole('dialog', { name: 'Images', exact: true })
+  await expect(metaImagePicker).toBeVisible()
+  await metaImagePicker.locator('.image-picker__image').first().click()
+  await expect(metaImagePicker).not.toBeVisible()
+  await syncLV(page)
+  expect(await page.evaluate(() => window.__phxErrors)).toBe(0)
+  await expect(imageField.locator('img')).toBeVisible()
+
   await page.locator('[id$="-meta-drawer"]').getByRole('button', { name: 'Close', exact: true }).click()
   await syncLV(page)
   await page.getByTestId('submit').click()
