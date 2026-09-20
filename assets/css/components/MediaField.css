@@ -113,10 +113,10 @@
   .media-field-name { font-weight: 400; }
   .media-button { padding-inline: 8px; }
   .media-field-actions { grid-column: 2; margin: 12px 10px 8px 0; align-self: end; gap: 0; }
-  .media-field-actions > .media-button:first-child:not(:only-child) { border-radius: 5px 0 0 5px; }
-  .media-field-actions > .media-button:nth-child(2) { border-radius: 0 5px 5px 0; margin-left: -1px; }
-  .media-field-actions > .media-button:nth-child(n+3) { margin-left: 6px; }
-  .media-field-actions > .media-button:hover, .media-field-actions > .media-button:focus-visible { position: relative; z-index: 1; }
+  /* Every action here now sits in a `media-field-split`, which owns the corners
+     and the shared borders. Remove is the one that does not, and this keeps it
+     off the group it must not read as part of. */
+  .media-field-actions > .media-button:not(:first-child) { margin-left: 6px; }
   .media-field-progress { grid-column: 1 / -1; margin: 8px 6px 6px; }
   .media-field-replace > .media-button { border-color: transparent; padding-inline: 7px; color: #626b66; }
   &.media-field--empty { background: #fff; border-style: solid; }

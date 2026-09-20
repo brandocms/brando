@@ -120,20 +120,25 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
             <.icon name="hero-folder" />{@browse_label}
           </button>
         </div>
-        <button
-          :if={@compact? && @configure && (@asset || !@upload_enabled?)}
-          type="button"
-          class="media-button"
-          phx-click={@configure}
-        >
-          {gettext("Configure")}
-        </button>
-        <button :if={@compact? && @asset && !@configure && @upload_enabled?} type="button" class="media-button upload-trigger">
-          {gettext("Upload replacement")}
-        </button>
-        <button :if={@compact? && @asset && @browse} type="button" class="media-button" phx-click={@browse}>
-          <.icon name="hero-folder" />{@browse_label}
-        </button>
+        <%!-- A filled field's own actions are one segmented control too. The
+              condition covers the union of the three below, so the group is
+              there exactly when one of them is. --%>
+        <div :if={@compact? && (@asset || !@upload_enabled?)} class="media-field-split">
+          <button
+            :if={@configure && (@asset || !@upload_enabled?)}
+            type="button"
+            class="media-button"
+            phx-click={@configure}
+          >
+            {gettext("Configure")}
+          </button>
+          <button :if={@asset && !@configure && @upload_enabled?} type="button" class="media-button upload-trigger">
+            {gettext("Upload replacement")}
+          </button>
+          <button :if={@asset && @browse} type="button" class="media-button" phx-click={@browse}>
+            <.icon name="hero-folder" />{@browse_label}
+          </button>
+        </div>
         <%!-- On a block the asset's own controls — configure, whatever the caller
               adds, and replace — read as one segmented control. Remove stays
               outside it, since it is the one action that discards work. --%>
