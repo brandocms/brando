@@ -341,7 +341,17 @@ defmodule BrandoAdmin.Components.ImagePicker do
         >
           <:main_header>
             <div class="image-picker-main-header">
-              <h3>{if @current_folder == "", do: gettext("Root folder"), else: Path.basename(@current_folder)}</h3>
+              <%!-- The full path, not "Root folder": this browser is rooted at the
+                    field's own upload path, so "root" names somewhere different
+                    for every field and tells you nothing about where you are. --%>
+              <div class="image-picker-main-heading">
+                <h3>{FolderBrowser.absolute_folder(@current_folder, @upload_root)}</h3>
+                <p class="image-picker-main-hint">
+                  {gettext(
+                    "Only images set up for this field. The rest of the library is cut to other sizes and is not offered here."
+                  )}
+                </p>
+              </div>
               <div class="image-picker-main-actions">
                 <span>
                   {ngettext("%{count} image", "%{count} images", @image_count, count: @image_count)}

@@ -3262,6 +3262,11 @@ msgstr ""
 msgid "No additional fields for this identity type."
 msgstr ""
 
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Only images set up for this field. The rest of the library is cut to other sizes and is not offered here."
+msgstr ""
+
 #: lib/brando_admin/components/image_picker.ex:360
 #, elixir-autogen, elixir-format
 msgid "No images in this folder"
