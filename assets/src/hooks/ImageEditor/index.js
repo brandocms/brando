@@ -88,6 +88,31 @@ function calculateCropRegion(focalX, focalY, origWidth, origHeight, targetRatio,
 }
 
 /**
+ * Move a focal point along one axis by however far its crop frame can follow.
+ *
+ * `calculateCropRegion` centres the frame on the focal and then clamps it to the
+ * image, so the frame stops at the edges while the focal has plenty of room
+ * left. Dragging the frame has to be measured in the frame's movement rather
+ * than the pointer's, or the two come apart at exactly the edges where a crop is
+ * usually set.
+ *
+ * @param {number} focal - Focal position on this axis, 0-100
+ * @param {number} delta - Pointer movement in original-image pixels
+ * @param {number} frame - Frame size on this axis, in original-image pixels
+ * @param {number} image - Image size on this axis, in original-image pixels
+ * @returns {number} The new focal position, 0-100
+ */
+function shiftFocalWithFrame(focal, delta, frame, image) {
+  const span = image - frame
+  if (span <= 0) return focal // frame fills the axis: nothing to drag
+
+  const start = Math.min(Math.max((focal / 100) * image - frame / 2, 0), span)
+  const moved = Math.min(Math.max(start + delta, 0), span) - start
+
+  return Math.min(100, Math.max(0, focal + (moved / image) * 100))
+}
+
+/**
  * Draw configured-ratio crop frame overlay.
  * Primary (first) region: dimmed exterior, solid white border, rule-of-thirds, L-handles.
  * Secondary regions: colored dashed outlines with labels.
@@ -1089,7 +1114,10 @@ export default app => ({
       startFocalX: this.focalX,
       startFocalY: this.focalY,
       startZoom: this.zoom,
-      cornerOffset: cornerOffsets[hit] || null
+      cornerOffset: cornerOffsets[hit] || null,
+      // The frame this drag started on. Held for the whole drag rather than
+      // recomputed: only a resize changes the zoom, and therefore its size.
+      startRegion: region
     }
   },
 
@@ -1108,11 +1136,22 @@ export default app => ({
     const dy = pos.y - state.startY
 
     if (state.mode === 'move') {
-      // Drag frame interior: shift focal point
-      const deltaFocalX = (dx / this.displayW) * 100
-      const deltaFocalY = (dy / this.displayH) * 100
-      this.focalX = Math.max(0, Math.min(100, state.startFocalX + deltaFocalX))
-      this.focalY = Math.max(0, Math.min(100, state.startFocalY + deltaFocalY))
+      // Drag frame interior: move the focal by as much as the frame actually
+      // moves, not by as much as the pointer did.
+      //
+      // The frame is centred on the focal and then clamped to the image, so
+      // once it is against an edge the focal went on travelling while the frame
+      // stayed put: the drag looked like it had come loose from the pointer,
+      // and the focal ended up somewhere nobody pointed at. Measuring the
+      // frame's own movement also keeps a focal that sits off-centre — set by
+      // clicking, with the frame already against an edge — at the same offset
+      // instead of snapping it to the middle of the frame.
+      this.focalX = shiftFocalWithFrame(
+        state.startFocalX, dx / this.displayScale, state.startRegion.width, this.imageWidth
+      )
+      this.focalY = shiftFocalWithFrame(
+        state.startFocalY, dy / this.displayScale, state.startRegion.height, this.imageHeight
+      )
       canvas.style.cursor = 'grabbing'
     } else {
       // Drag corner: scale zoom symmetrically from frame center

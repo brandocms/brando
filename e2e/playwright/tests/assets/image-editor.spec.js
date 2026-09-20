@@ -171,6 +171,42 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   )
   await page.waitForTimeout(300)
 
+  // Dragging the frame moves the focal by as much as the frame can follow, not
+  // by as much as the pointer moved. The frame is centred on the focal and then
+  // clamped to the image, so once it is against an edge the focal used to carry
+  // on alone: the drag came loose from the pointer and left the focal somewhere
+  // nobody pointed at.
+  const focalPosition = async () => {
+    const pin = await editorDrawer.locator('.image-editor-focal-pin').boundingBox()
+    return {
+      x: (pin.x + pin.width / 2 - canvasBox.x) / canvasBox.width,
+      y: (pin.y + pin.height / 2 - canvasBox.y) / canvasBox.height
+    }
+  }
+
+  const dragFrame = async (toX, toY) => {
+    await page.mouse.move(canvasBox.x + canvasBox.width / 2, canvasBox.y + canvasBox.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(canvasBox.x + canvasBox.width * toX, canvasBox.y + canvasBox.height * toY, { steps: 5 })
+    await page.mouse.up()
+    return focalPosition()
+  }
+
+  // This crop is 3:2 on a wider image, so at 1.00x it is as tall as the image
+  // and has nowhere to go vertically. A drag straight down must leave the focal
+  // exactly where it was.
+  const start = await focalPosition()
+  const draggedDown = await dragFrame(0.5, 2)
+  expect(draggedDown.y).toBeCloseTo(start.y, 2)
+  expect(draggedDown.x).toBeCloseTo(start.x, 2)
+
+  // Sideways it has a little room, so the focal follows the frame into the edge
+  // and stops there — nowhere near the pointer, which left the canvas entirely.
+  const draggedRight = await dragFrame(2, 0.5)
+  expect(draggedRight.x).toBeGreaterThan(start.x)
+  expect(draggedRight.x).toBeLessThan(start.x + 0.15)
+  expect(draggedRight.y).toBeCloseTo(start.y, 2)
+
   // Step 11: Test zoom slider
   await zoomSlider.fill('1.5')
   await zoomSlider.dispatchEvent('input')
