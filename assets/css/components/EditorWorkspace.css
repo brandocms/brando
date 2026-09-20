@@ -30,6 +30,18 @@
     background: #fff; color: var(--workspace-ink); font: 13px/20px "Main", sans-serif;
     &:hover { background: #edf3e9; color: var(--workspace-accent); }
   }
+  /* A media field joins its actions into one segmented control, which the
+     normalisation above takes apart: it rounds every corner and drops the
+     overlap that makes neighbours share a border. Hand the geometry back to
+     the group, which is the only thing that knows who its neighbours are. */
+  .drawer-form .media-field-split > .media-button { border-radius: 0; }
+  .drawer-form .media-field-split > * + * { margin-left: -1px; }
+  .drawer-form .media-field-split > :first-child, .drawer-form .media-field-split > :first-child > .media-button {
+    border-top-left-radius: 5px; border-bottom-left-radius: 5px;
+  }
+  .drawer-form .media-field-split > :last-child, .drawer-form .media-field-split > :last-child > .media-button {
+    border-top-right-radius: 5px; border-bottom-right-radius: 5px;
+  }
   .button-group { display: flex; flex-wrap: wrap; width: auto; gap: 8px; margin: 0; padding-top: 16px; }
   .button-group button { flex: 0 1 auto; margin: 0; border-radius: 5px; }
   .revision-preview-notice, .revisions-empty { border: 1px solid var(--workspace-line); border-radius: 6px; background: #f5f8f1; color: var(--workspace-ink); padding: 12px; margin: 0 0 16px; }

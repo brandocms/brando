@@ -151,6 +151,17 @@
   position: relative;
   min-width: 0;
   .field-base & { background: var(--brando-color-input, #fff); border: 1px solid var(--brando-input-border, #dce2dc); border-radius: var(--brando-input-radius, 6px); }
+  /* The toolbar masks the 8px above itself so text scrolling under it, once it
+     is stuck, cannot peek through the gap. Unstuck, the toolbar sits flush
+     against this border — one pixel inside it — and that opaque mask paints
+     straight over the top edge of the field. The mask is a child of a
+     positioned toolbar, so it draws above the border no matter what the
+     wrapper does; draw the border again over the top of it. */
+  .field-base &::after {
+    content: ""; position: absolute; inset: -1px; z-index: 3; pointer-events: none;
+    border: 1px solid var(--brando-input-border, #dce2dc);
+    border-radius: var(--brando-input-radius, 6px);
+  }
 }
 .tiptap-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .tiptap-editor-shell {

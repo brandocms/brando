@@ -110,12 +110,16 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         </div>
       </div>
       <div :if={@editable} class="media-field-actions">
-        <button :if={!@asset && @upload_enabled?} type="button" class="media-button primary upload-trigger">
-          <.icon name="hero-arrow-up-tray" />{gettext("Upload")}
-        </button>
-        <button :if={!@asset && @browse} type="button" class="media-button" phx-click={@browse}>
-          <.icon name="hero-folder" />{@browse_label}
-        </button>
+        <%!-- The two ways of filling an empty field read as one segmented control,
+              the same as the asset's own actions do once it has been filled. --%>
+        <div :if={!@asset && (@upload_enabled? || @browse)} class="media-field-split">
+          <button :if={@upload_enabled?} type="button" class="media-button primary upload-trigger">
+            <.icon name="hero-arrow-up-tray" />{gettext("Upload")}
+          </button>
+          <button :if={@browse} type="button" class="media-button" phx-click={@browse}>
+            <.icon name="hero-folder" />{@browse_label}
+          </button>
+        </div>
         <button
           :if={@compact? && @configure && (@asset || !@upload_enabled?)}
           type="button"
