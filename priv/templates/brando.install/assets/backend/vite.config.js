@@ -1,3 +1,4 @@
+import yalcAutoUpdate from '@brandocms/brandojs/vite/yalcAutoUpdate.mjs'
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 
@@ -6,7 +7,7 @@ const host = process.env.BRANDO_VITE_ADMIN_HOST ?? 'localhost'
 const port = Number(process.env.BRANDO_VITE_ADMIN_PORT ?? 3333)
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   server: {
     host,
     port,
@@ -14,15 +15,23 @@ export default defineConfig({
       'Access-Control-Allow-Origin': '*',
     },
     watch: {
-      // brandojs is installed from .yalc, so `yalc push` writes it straight into
-      // node_modules -- which Vite's watcher ignores by default. Without this the
-      // transform cache is never invalidated and the pre-push copy keeps being
-      // served, even across a hard reload. The `!` re-includes just this package.
+      // brandojs is installed from .yalc, so `yalc update` writes it straight
+      // into node_modules -- which Vite's watcher ignores by default. Without
+      // this the transform cache is never invalidated and the copy from before
+      // the update keeps being served, even across a hard reload. The `!`
+      // re-includes just this package.
       ignored: ['!**/node_modules/@brandocms/brandojs/**'],
     },
   },
   optimizeDeps: {
     include: ['vex-js', 'vex-dialog'],
+    // Vite keys its pre-bundle cache on package.json and the lockfile, so
+    // pulling a new brandojs never invalidates it: the dev server keeps
+    // answering from a bundle built before the pull, while Phoenix's templates
+    // and this package's CSS -- both read from disk -- are already new. Serving
+    // it as source instead is what the watcher override above assumes.
+    // Dev only; `vite build` does not pre-bundle at all.
+    ...(command === 'serve' && { exclude: ['@brandocms/brandojs'] }),
   },
   build: {
     manifest: 'admin_manifest.json',
@@ -55,5 +64,8 @@ export default defineConfig({
     },
   },
 
-  plugins: [svelte()],
-})
+  // `yalc publish` in brando/assets only writes to the yalc store. This pulls
+  // it from there into this project as it lands, so the admin never runs new
+  // templates against the JS from a previous publish.
+  plugins: [svelte(), yalcAutoUpdate()],
+}))
