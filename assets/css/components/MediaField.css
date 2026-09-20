@@ -214,7 +214,13 @@
   .brando-input input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) { height: 40px; border: 1px solid #dce2dc; border-radius: 5px; color: #272b2a; font: 14px/20px "Main", sans-serif; }
   .label-wrapper { margin-bottom: 8px; }
   .control-label { color: #272b2a; font: 13px/18px "Main", sans-serif; }
-  .drawer-close-button { border-radius: 5px; border: 1px solid #dce2dc; color: #272b2a; background: #fff; font: 13px/20px "Main", sans-serif; min-height: 36px; padding: 6px 12px; }
+  /* The word "Close", which is what a drawer renders when it is not a
+     workspace. A workspace renders an icon and styles it in its own header —
+     and this rule, carrying an id, would otherwise out-specify that and put a
+     36px white box around the icon. Written as a negation rather than by
+     dropping #image-drawer from the list above, so converting another of these
+     drawers to a workspace does not bring the box back with it. */
+  &:not(.media-workspace-drawer) .drawer-close-button { border-radius: 5px; border: 1px solid #dce2dc; color: #272b2a; background: #fff; font: 13px/20px "Main", sans-serif; min-height: 36px; padding: 6px 12px; }
   .media-field-progress { color: #254e3f; font: 12px/18px "Main", sans-serif; padding-bottom: 12px; }
   .media-field-progress:empty { display: none; }
   .media-field-progress[data-state="error"] { color: #983e30; }
