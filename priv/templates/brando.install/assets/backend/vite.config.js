@@ -7,7 +7,7 @@ const host = process.env.BRANDO_VITE_ADMIN_HOST ?? 'localhost'
 const port = Number(process.env.BRANDO_VITE_ADMIN_PORT ?? 3333)
 
 // https://vitejs.dev/config/
-export default defineConfig(({ command }) => ({
+export default defineConfig({
   server: {
     host,
     port,
@@ -25,13 +25,6 @@ export default defineConfig(({ command }) => ({
   },
   optimizeDeps: {
     include: ['vex-js', 'vex-dialog'],
-    // Vite keys its pre-bundle cache on package.json and the lockfile, so
-    // pulling a new brandojs never invalidates it: the dev server keeps
-    // answering from a bundle built before the pull, while Phoenix's templates
-    // and this package's CSS -- both read from disk -- are already new. Serving
-    // it as source instead is what the watcher override above assumes.
-    // Dev only; `vite build` does not pre-bundle at all.
-    ...(command === 'serve' && { exclude: ['@brandocms/brandojs'] }),
   },
   build: {
     manifest: 'admin_manifest.json',
@@ -68,4 +61,4 @@ export default defineConfig(({ command }) => ({
   // it from there into this project as it lands, so the admin never runs new
   // templates against the JS from a previous publish.
   plugins: [svelte(), yalcAutoUpdate()],
-}))
+})

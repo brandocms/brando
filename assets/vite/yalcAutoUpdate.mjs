@@ -28,20 +28,9 @@ const POLL_MS = 1500
  *
  *     import yalcAutoUpdate from '@brandocms/brandojs/vite/yalcAutoUpdate.mjs'
  *
- *     export default defineConfig(({ command }) => ({
- *       optimizeDeps: {
- *         // Vite keys its pre-bundle cache on package.json and the lockfile, so
- *         // a pull never invalidates it. Without this the dev server answers
- *         // from a bundle built before the pull, and the pull changes nothing.
- *         ...(command === 'serve' && { exclude: ['@brandocms/brandojs'] })
- *       },
- *       server: {
- *         // Vite ignores node_modules by default, and that is where the pull
- *         // lands.
- *         watch: { ignored: ['!**\/node_modules/@brandocms/brandojs/**'] }
- *       },
- *       plugins: [yalcAutoUpdate()]
- *     }))
+ *     export default defineConfig({
+ *       plugins: [svelte(), yalcAutoUpdate()]
+ *     })
  *
  * The plugin comes from the package it keeps fresh, so a change to the plugin
  * itself needs one manual `yalc update` to arrive. Config is read once at
@@ -133,11 +122,20 @@ export default function yalcAutoUpdate(packageName = DEFAULT_PACKAGE) {
 
           // Say so: an update that lands silently is indistinguishable from the
           // stale state it just fixed.
-          server.config.logger.info(`[yalc] pulled ${packageName}, reloading`)
+          server.config.logger.info(`[yalc] pulled ${packageName}, re-optimising`)
 
-          // `hot` from Vite 5.1, `ws` for anything older. Projects are on either
-          // side of that line, and this plugin ships to all of them.
-          ;(server.hot ?? server.ws).send({ type: 'full-reload', path: '*' })
+          // Restarting with the optimizer forced is what makes the pull visible.
+          // Vite keys its pre-bundle cache on package.json and the lockfile, so
+          // new files in node_modules do not invalidate it and a plain reload
+          // re-fetches the same pre-pull bundle.
+          //
+          // The alternative, `optimizeDeps.exclude`, reloads faster and needs no
+          // restart, but it also stops the pre-bundler converting this package's
+          // CJS dependencies to ESM -- jupiter's `lodash.defaultsdeep` has no
+          // `main`, `module` or `exports` and dies as `does not provide an export
+          // named 'default'`. Keeping that list correct across two packages'
+          // transitive deps is not a thing a project config should have to do.
+          server.restart(true).catch(failed)
         })
       }
 
