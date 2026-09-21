@@ -97,13 +97,26 @@ defmodule Brando.JSONLD.Schema.IdentityTypeFieldsTest do
     {"employment_agency", Schema.EmploymentAgency}
   ]
 
+  test "a comma-separated string from before the list change still renders as a list" do
+    built =
+      Schema.Organization.build({identity("organization", knows_about: "Merkevarebygging, identitetsdesign"), seo()})
+
+    assert built.knowsAbout == ["Merkevarebygging", "identitetsdesign"]
+  end
+
+  test "an empty list is omitted rather than encoded as []" do
+    built = Schema.Organization.build({identity("organization", area_served: []), seo()})
+    assert built.areaServed == nil
+    refute Brando.JSONLD.to_graph_json([built]) =~ "areaServed"
+  end
+
   for {type, mod} <- @all_types do
     test "#{type} carries every Organization property" do
       config = [
         legal_name: "Bielke & Yang AS",
         vat_id: "NO123456789MVA",
-        area_served: "Worldwide",
-        knows_about: "Merkevarebygging, identitetsdesign"
+        area_served: ["Norway", "Worldwide"],
+        knows_about: ["Merkevarebygging", "identitetsdesign"]
       ]
 
       built = unquote(mod).build({identity(unquote(type), config), seo()})
@@ -111,8 +124,8 @@ defmodule Brando.JSONLD.Schema.IdentityTypeFieldsTest do
       for {field, expected} <- [
             legalName: "Bielke & Yang AS",
             vatID: "NO123456789MVA",
-            areaServed: "Worldwide",
-            knowsAbout: "Merkevarebygging, identitetsdesign"
+            areaServed: ["Norway", "Worldwide"],
+            knowsAbout: ["Merkevarebygging", "identitetsdesign"]
           ] do
         assert Map.fetch!(built, field) == expected,
                "#{unquote(inspect(mod))} dropped #{field}"

@@ -18,6 +18,47 @@ defmodule BrandoAdmin.Components.Form.InputTest do
     end
   end
 
+  defmodule TestMarkets do
+    use Ecto.Schema
+
+    embedded_schema do
+      field :area_served, Brando.Type.StringList, default: []
+    end
+  end
+
+  describe "input/1 with type :string_list" do
+    defp markets_form(params) do
+      %TestMarkets{}
+      |> cast(params, [:area_served])
+      |> to_form(as: :config)
+    end
+
+    test "renders one text input per value plus a trailing empty one" do
+      form = markets_form(%{"area_served" => ["Norway", "Europe"]})
+      html = render_component(&Input.input/1, type: :string_list, field: form[:area_served])
+
+      assert html =~ ~s(name="config[area_served][]")
+      assert html =~ ~s(id="config_area_served_0")
+      assert html =~ ~s(value="Norway")
+      assert html =~ ~s(value="Europe")
+      assert html =~ ~s(id="config_area_served_2")
+      assert length(Regex.scan(~r/<input/, html)) == 3
+    end
+
+    test "a legacy comma string renders as rows" do
+      form = markets_form(%{"area_served" => "Norway, Europe"})
+      html = render_component(&Input.input/1, type: :string_list, field: form[:area_served])
+      assert html =~ ~s(value="Norway")
+      assert html =~ ~s(value="Europe")
+    end
+
+    test "an empty list renders only the empty row" do
+      form = markets_form(%{})
+      html = render_component(&Input.input/1, type: :string_list, field: form[:area_served])
+      assert length(Regex.scan(~r/<input/, html)) == 1
+    end
+  end
+
   defmodule TestPlayback do
     use Ecto.Schema
 

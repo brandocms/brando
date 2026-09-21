@@ -135,8 +135,8 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
     shared = %{
       legalName: config.legal_name,
       vatID: config.vat_id,
-      areaServed: config.area_served,
-      knowsAbout: config.knows_about
+      areaServed: list_or_nil(config.area_served),
+      knowsAbout: list_or_nil(config.knows_about)
     }
 
     base
@@ -204,4 +204,12 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
     do: Enum.map(links, & &1.url)
 
   def build_social_media(_), do: nil
+
+  # Empty lists would encode as `[]`, which reads as "serves nowhere".
+  defp list_or_nil(nil), do: nil
+  defp list_or_nil([]), do: nil
+  defp list_or_nil(list) when is_list(list), do: list
+
+  defp list_or_nil(value) when is_binary(value),
+    do: value |> String.split(",") |> Brando.Type.StringList.normalize() |> list_or_nil()
 end

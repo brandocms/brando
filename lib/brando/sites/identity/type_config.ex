@@ -34,11 +34,10 @@ defmodule Brando.Sites.Identity.TypeConfig do
     # Corporation only
     attribute :ticker_symbol, :string
 
-    # ProfessionalService / LocalBusiness / Restaurant
-    attribute :area_served, :string
-
-    # ProfessionalService
-    attribute :knows_about, :string
+    # Organization properties, one entry per market / topic. Lists, so a
+    # consumer reads eleven services as eleven topics rather than one string.
+    attribute :area_served, Brando.Type.StringList, default: []
+    attribute :knows_about, Brando.Type.StringList, default: []
 
     # LocalBusiness / Restaurant / ArtGallery — structured opening hours
     # Stored as map keyed by day: %{"monday" => %{"opens" => "09:00", "closes" => "17:00", "closed" => false}, ...}
