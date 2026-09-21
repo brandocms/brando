@@ -168,6 +168,12 @@ defmodule Brando.JSONLD do
     if key_count > 0, do: to_slim_map(map)
   end
 
+  defp slim_map(list) when is_list(list) do
+    list
+    |> Enum.map(&slim_map/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
   defp slim_map(value), do: value
 
   @doc """

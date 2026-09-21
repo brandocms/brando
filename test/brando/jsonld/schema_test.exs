@@ -163,4 +163,29 @@ defmodule Brando.JSONLDSchemaTest do
     assert Brando.JSONLD.to_datetime(~N[2021-10-08 07:56:00.000000]) ==
              "2021-10-08T07:56:00.000000Z"
   end
+
+  test "slim_map strips nils inside lists" do
+    breadcrumbs =
+      Brando.JSONLD.Schema.BreadcrumbList.build([
+        Brando.JSONLD.Schema.ListItem.build(1, "Home", "/"),
+        Brando.JSONLD.Schema.ListItem.build(2, "Current page", nil)
+      ])
+
+    json = Brando.JSONLD.to_graph_json([breadcrumbs])
+
+    refute json =~ ~s("item":null)
+
+    assert %{
+             "@graph" => [
+               %{
+                 "itemListElement" => [
+                   %{"@type" => "ListItem", "position" => 1, "name" => "Home", "item" => _},
+                   last
+                 ]
+               }
+             ]
+           } = Jason.decode!(json)
+
+    assert last == %{"@type" => "ListItem", "position" => 2, "name" => "Current page"}
+  end
 end
