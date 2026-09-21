@@ -21,6 +21,7 @@ defmodule Brando.JSONLD.HTML do
         build_website(cached_identity, cached_seo),
         build_webpage(conn, cached_identity, cached_seo),
         build_breadcrumbs(conn),
+        build_services(cached_identity),
         build_content_entity(conn)
       ]
 
@@ -74,6 +75,8 @@ defmodule Brando.JSONLD.HTML do
   end
 
   defp build_breadcrumbs(_), do: nil
+
+  defp build_services(cached_identity), do: Brando.Sites.Services.to_json_ld(cached_identity)
 
   defp build_content_entity(%{assigns: %{json_ld_entities: entities}}), do: entities
   defp build_content_entity(%{assigns: %{json_ld_entity: entity}}), do: entity

@@ -5,6 +5,10 @@ defmodule Brando.Cache.Identity do
   alias Brando.Cache
   alias Brando.Sites
 
+  # Services are resolved against their linked entries here, once, so page
+  # renders and the JSON-LD graph read them without a query.
+  @preloads [:logo, services: :identifier]
+
   @type identity :: Brando.Sites.Identity.t()
   @type changeset :: Ecto.Changeset.t()
 
@@ -27,7 +31,7 @@ defmodule Brando.Cache.Identity do
   """
   @spec set :: map()
   def set do
-    {:ok, identities} = Sites.list_identities(%{preload: [:logo]})
+    {:ok, identities} = Sites.list_identities(%{preload: @preloads})
     identity_map = process_identities(identities)
     Cache.put(:identity, identity_map, :infinite)
     identity_map
@@ -39,7 +43,7 @@ defmodule Brando.Cache.Identity do
   @spec update({:ok, any()} | {:error, changeset}) ::
           {:ok, map()} | {:error, changeset}
   def update({:ok, identity}) do
-    {:ok, identities} = Sites.list_identities(%{preload: [:logo]})
+    {:ok, identities} = Sites.list_identities(%{preload: @preloads})
     identity_map = process_identities(identities)
     Cache.update(:identity, identity_map)
     {:ok, identity}
@@ -50,7 +54,7 @@ defmodule Brando.Cache.Identity do
   defp process_identities(identities) do
     Enum.reduce(identities, %{}, fn
       %{language: language} = identity, acc ->
-        put_in(acc, [Brando.Utils.access_map(to_string(language))], identity)
+        put_in(acc, [Brando.Utils.access_map(to_string(language))], Brando.Sites.Services.resolve_all(identity))
     end)
   end
 end

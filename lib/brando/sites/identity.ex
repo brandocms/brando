@@ -76,6 +76,14 @@ defmodule Brando.Sites.Identity do
     relation :type_config, :embeds_one,
       module: Brando.Sites.Identity.TypeConfig,
       on_replace: :delete
+
+    relation :services, :has_many,
+      module: Brando.Sites.Service,
+      preload_order: [asc: :sequence],
+      drop_param: :drop_services_ids,
+      sort_param: :sort_services_ids,
+      on_replace: :delete_if_exists,
+      cast: true
   end
 
   forms do
@@ -205,6 +213,48 @@ defmodule Brando.Sites.Identity do
           end
         end
       end
+
+      tab t("Services") do
+        fieldset do
+          size :full
+
+          inputs_for :services do
+            label t("Services")
+            style :listing
+            listing &__MODULE__.service_summary/1
+            cardinality :many
+            size :full
+            default &__MODULE__.default_service/2
+
+            input :name, :text, label: t("Name", Brando.Sites.Service)
+
+            input :description, :textarea,
+              label: t("Description", Brando.Sites.Service),
+              instructions: t("Leave empty to use the linked page's meta description", Brando.Sites.Service)
+
+            input :identifier_id, :select,
+              options: &Brando.Sites.Services.identifier_options/2,
+              resetable: true,
+              label: t("Page", Brando.Sites.Service),
+              instructions:
+                t("The page that presents this service; supplies its URL and description", Brando.Sites.Service)
+
+            input :alternate_names, :string_list,
+              label: t("Alternate names", Brando.Sites.Service),
+              instructions: t("Other phrasings and the other language's wording, one per row", Brando.Sites.Service)
+
+            input :service_type, :text, label: t("Service type", Brando.Sites.Service)
+
+            input :url, :text,
+              label: t("URL", Brando.Sites.Service),
+              instructions: t("Only when the service has no page of its own", Brando.Sites.Service)
+
+            input :area_served, :string_list,
+              label: t("Area served", Brando.Sites.Service),
+              instructions: t("Leave empty to inherit the organization's markets", Brando.Sites.Service)
+          end
+        end
+      end
     end
   end
 
@@ -228,7 +278,24 @@ defmodule Brando.Sites.Identity do
   @doc "Builds a default metadata entry for the identity form."
   def default_meta(_identity, _asset), do: %Brando.Meta{}
 
+  @doc "Builds a default service for the identity form."
+  def default_service(_identity, _asset), do: %Brando.Sites.Service{}
+
+  @doc "Summary line for a service in the identity form's listing."
+  def service_summary(assigns) do
+    assigns = Phoenix.Component.assign(assigns, :detail, service_detail(assigns.entry))
+
+    ~H"""
+    <strong>{@entry.name || gettext("New service")}</strong>
+    <small>{@detail}</small>
+    """
+  end
+
+  defp service_detail(%{description: description}) when is_binary(description) and description != "", do: description
+  defp service_detail(%{identifier: %{title: title}}) when is_binary(title), do: gettext("Linked to %{page}", page: title)
+  defp service_detail(_), do: gettext("Describe the service or link it to a page")
+
   def query_with_preloads(id) do
-    %{matches: %{id: id}, preload: [:logo]}
+    %{matches: %{id: id}, preload: [:logo, services: :identifier]}
   end
 end
