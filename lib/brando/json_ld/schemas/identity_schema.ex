@@ -36,25 +36,19 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
         "organization" ->
           %{
             foundingDate: format_date(config.founding_date),
-            numberOfEmployees: config.number_of_employees,
-            areaServed: config.area_served,
-            knowsAbout: config.knows_about
+            numberOfEmployees: config.number_of_employees
           }
 
         "corporation" ->
           %{
             foundingDate: format_date(config.founding_date),
             numberOfEmployees: config.number_of_employees,
-            tickerSymbol: config.ticker_symbol,
-            areaServed: config.area_served,
-            knowsAbout: config.knows_about
+            tickerSymbol: config.ticker_symbol
           }
 
         "professional_service" ->
           %{
             foundingDate: format_date(config.founding_date),
-            areaServed: config.area_served,
-            knowsAbout: config.knows_about,
             openingHoursSpecification: build_opening_hours(config),
             priceRange: config.price_range,
             geo: build_geo(config)
@@ -64,7 +58,6 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
           %{
             openingHoursSpecification: build_opening_hours(config),
             priceRange: config.price_range,
-            areaServed: config.area_served,
             geo: build_geo(config)
           }
 
@@ -113,15 +106,12 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
           %{
             openingHoursSpecification: build_opening_hours(config),
             priceRange: config.price_range,
-            areaServed: config.area_served,
             geo: build_geo(config)
           }
 
         "architect" ->
           %{
             foundingDate: format_date(config.founding_date),
-            areaServed: config.area_served,
-            knowsAbout: config.knows_about,
             openingHoursSpecification: build_opening_hours(config),
             priceRange: config.price_range,
             geo: build_geo(config)
@@ -131,7 +121,6 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
           %{
             openingHoursSpecification: build_opening_hours(config),
             priceRange: config.price_range,
-            areaServed: config.area_served,
             geo: build_geo(config)
           }
 
@@ -139,7 +128,18 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
           %{}
       end
 
-    Map.merge(base, type_fields)
+    # areaServed and knowsAbout are Organization properties, so every identity
+    # type descends from something that can carry them. Applying them here
+    # rather than per type is what stopped sites reaching for a LocalBusiness
+    # subtype just to get at a field they already had.
+    shared = %{
+      areaServed: config.area_served,
+      knowsAbout: config.knows_about
+    }
+
+    base
+    |> Map.merge(shared)
+    |> Map.merge(type_fields)
   end
 
   defp merge_type_config(base, _), do: base

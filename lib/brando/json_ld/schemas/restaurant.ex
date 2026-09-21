@@ -17,6 +17,8 @@ defmodule Brando.JSONLD.Schema.Restaurant do
             name: nil,
             sameAs: nil,
             url: nil,
+            knowsAbout: nil,
+            areaServed: nil,
             openingHoursSpecification: nil,
             priceRange: nil,
             servesCuisine: nil,

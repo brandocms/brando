@@ -17,6 +17,8 @@ defmodule Brando.JSONLD.Schema.EducationalOrganization do
             name: nil,
             sameAs: nil,
             url: nil,
+            knowsAbout: nil,
+            areaServed: nil,
             foundingDate: nil,
             numberOfEmployees: nil
 

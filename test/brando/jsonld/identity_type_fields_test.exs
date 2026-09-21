@@ -73,20 +73,49 @@ defmodule Brando.JSONLD.Schema.IdentityTypeFieldsTest do
   end
 
   for {type, mod} <- @organization do
-    test "#{type} reaches areaServed and knowsAbout without a LocalBusiness type" do
-      config = [area_served: "Worldwide", knows_about: "Merkevarebygging, identitetsdesign"]
-      built = unquote(mod).build({identity(unquote(type), config), seo()})
-
-      assert built.areaServed == "Worldwide"
-      assert built.knowsAbout == "Merkevarebygging, identitetsdesign"
-    end
-
     test "#{type} stays out of LocalBusiness territory" do
       keys = Map.keys(unquote(mod).__struct__())
 
       for field <- [:priceRange, :geo, :openingHoursSpecification] do
         refute field in keys, "#{unquote(inspect(mod))} should not carry #{field}"
       end
+    end
+  end
+
+  @all_types [
+    {"organization", Schema.Organization},
+    {"corporation", Schema.Corporation},
+    {"professional_service", Schema.ProfessionalService},
+    {"local_business", Schema.LocalBusiness},
+    {"restaurant", Schema.Restaurant},
+    {"educational_organization", Schema.EducationalOrganization},
+    {"government_organization", Schema.GovernmentOrganization},
+    {"ngo", Schema.NGO},
+    {"medical_organization", Schema.MedicalOrganization},
+    {"sports_organization", Schema.SportsOrganization},
+    {"art_gallery", Schema.ArtGallery},
+    {"architect", Schema.Architect},
+    {"employment_agency", Schema.EmploymentAgency}
+  ]
+
+  for {type, mod} <- @all_types do
+    test "#{type} carries areaServed and knowsAbout" do
+      config = [area_served: "Worldwide", knows_about: "Merkevarebygging, identitetsdesign"]
+      built = unquote(mod).build({identity(unquote(type), config), seo()})
+
+      assert built.areaServed == "Worldwide",
+             "#{unquote(inspect(mod))} dropped areaServed"
+
+      assert built.knowsAbout == "Merkevarebygging, identitetsdesign",
+             "#{unquote(inspect(mod))} dropped knowsAbout"
+    end
+
+    test "#{type} omits them when unconfigured" do
+      built = unquote(mod).build({identity(unquote(type)), seo()})
+      json = Brando.JSONLD.to_graph_json([built])
+
+      refute json =~ "areaServed"
+      refute json =~ "knowsAbout"
     end
   end
 end
