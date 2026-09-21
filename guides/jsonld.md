@@ -174,6 +174,34 @@ extra = [%{name: :image, type: :image, value_fn: &get_hero_image/1}]
 put_json_ld(conn, MyApp.Blog.Post, post, extra)
 ```
 
+### Collections rendered by datasource blocks
+
+`put_json_ld/4` assembles the graph from controller assigns, but a datasource
+block resolves its entries during block rendering and the output is cached in
+`rendered_<field>`. On a cached page the datasource never re-runs, so nothing
+controller-side can see those entries.
+
+Emit the node from the template instead, using the list the block just
+rendered:
+
+```liquid
+{{ entries | json_ld: "CreativeWork" }}
+```
+
+```heex
+<.json_ld entries={@entries} type="CreativeWork" />
+```
+
+Both go through `Brando.JSONLD.Collection.from_entries/2`, which builds an
+`ItemList` (or a `CollectionPage` with the `page` flag) from every entry whose
+Blueprint resolves an `absolute_url`, and renders it as an inline
+`<script type="application/ld+json">`. Inline JSON-LD is valid anywhere in the
+document; consumers merge it with the `@graph` in `<head>` by `@id`.
+
+Because the markup is produced by the same render as the HTML, it is refreshed
+when the entry is re-rendered and never fresher or staler than the listing it
+describes. See the [datasources guide](datasources.md#describe-the-collection-for-crawlers).
+
 ### WebPage type
 
 Pages have a `json_ld_type` attribute (default: `"WebPage"`) that controls the

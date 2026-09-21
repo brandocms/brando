@@ -27,6 +27,38 @@ defmodule Brando.Villain.ComponentsTest do
     end
   end
 
+  describe "json_ld/1" do
+    alias Brando.JSONLD.CollectionTest.Thing
+
+    test "emits an inline ItemList for the rendered entries" do
+      assigns = %{entries: [%Thing{id: 1, title: "A", slug: "a"}], type: "CreativeWork", __changed__: %{}}
+      result = rendered_to_string(Components.json_ld(assigns))
+
+      assert result =~ ~s(<script type="application/ld+json">)
+      assert result =~ ~s("@type":"CreativeWork")
+      refute result =~ "&quot;"
+    end
+
+    test "emits nothing when no entry has a page" do
+      assigns = %{entries: [], __changed__: %{}}
+      assert rendered_to_string(Components.json_ld(assigns)) == ""
+    end
+
+    test "wraps in a CollectionPage when page is set" do
+      assigns = %{
+        entries: [%Thing{id: 1, title: "A", slug: "a"}],
+        page: true,
+        url: "/things",
+        language: "en",
+        __changed__: %{}
+      }
+
+      result = rendered_to_string(Components.json_ld(assigns))
+      assert result =~ ~s("@type":"CollectionPage")
+      assert result =~ ~s("inLanguage":"en")
+    end
+  end
+
   describe "video/1" do
     test "passes the source to the Brando video component" do
       assigns = %{src: "https://cdn.example/video.mp4", opts: [controls: true], __changed__: %{}}

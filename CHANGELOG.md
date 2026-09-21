@@ -357,6 +357,14 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   gets a `:string_list` input (one entry per row; the last row is always empty
   and clearing a row removes it). `Brando.Type.StringList` still loads the old
   comma-separated shape, and the `brando_176` migration rewrites stored rows.
+- Datasource blocks can emit JSON-LD for the entries they rendered. The
+  `json_ld` Liquex filter (`{{ entries | json_ld: "CreativeWork" }}`) and the
+  `<.json_ld entries={@entries} type="CreativeWork" />` HEEx component build an
+  `ItemList` — or a `CollectionPage` with the `page` flag — through
+  `Brando.JSONLD.Collection` from the same list the template iterated, so the
+  markup is cached with `rendered_<field>` and cannot drift from the HTML.
+  Entries without an `absolute_url` are skipped. `ListItem.build/3` no longer
+  double-prefixes the host on an already absolute URL.
 - Add `mix brando.setup`, which runs the operational steps after
   `mix brando.install`: asset builds, `ecto.create`/`ecto.migrate`, a superuser
   account and default content seeds. Every step is skipped when its result
