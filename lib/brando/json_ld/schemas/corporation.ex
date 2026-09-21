@@ -18,6 +18,8 @@ defmodule Brando.JSONLD.Schema.Corporation do
             sameAs: nil,
             url: nil,
             foundingDate: nil,
+            areaServed: nil,
+            knowsAbout: nil,
             numberOfEmployees: nil,
             tickerSymbol: nil
 

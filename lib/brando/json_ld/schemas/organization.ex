@@ -18,6 +18,8 @@ defmodule Brando.JSONLD.Schema.Organization do
             sameAs: nil,
             url: nil,
             foundingDate: nil,
+            areaServed: nil,
+            knowsAbout: nil,
             numberOfEmployees: nil
 
   def build(args) do

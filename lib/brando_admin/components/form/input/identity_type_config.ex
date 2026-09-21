@@ -161,7 +161,9 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
   defp type_fields("organization") do
     [
       {:founding_date, :date, gettext("Founding date"), []},
-      {:number_of_employees, :number, gettext("Number of employees"), []}
+      {:number_of_employees, :number, gettext("Number of employees"), []},
+      {:area_served, :text, gettext("Area served"), []},
+      {:knows_about, :text, gettext("Knows about"), []}
     ]
   end
 
@@ -169,7 +171,9 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
     [
       {:founding_date, :date, gettext("Founding date"), []},
       {:number_of_employees, :number, gettext("Number of employees"), []},
-      {:ticker_symbol, :text, gettext("Ticker symbol"), []}
+      {:ticker_symbol, :text, gettext("Ticker symbol"), []},
+      {:area_served, :text, gettext("Area served"), []},
+      {:knows_about, :text, gettext("Knows about"), []}
     ]
   end
 
@@ -177,7 +181,10 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
     [
       {:founding_date, :date, gettext("Founding date"), []},
       {:area_served, :text, gettext("Area served"), []},
-      {:knows_about, :text, gettext("Knows about"), []}
+      {:knows_about, :text, gettext("Knows about"), []},
+      {:price_range, :text, gettext("Price range"), [instructions: gettext("e.g. $$, $$$")]},
+      {:geo_latitude, :text, gettext("Latitude"), []},
+      {:geo_longitude, :text, gettext("Longitude"), []}
     ]
   end
 
@@ -250,7 +257,10 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
     [
       {:founding_date, :date, gettext("Founding date"), []},
       {:area_served, :text, gettext("Area served"), []},
-      {:knows_about, :text, gettext("Knows about"), []}
+      {:knows_about, :text, gettext("Knows about"), []},
+      {:price_range, :text, gettext("Price range"), [instructions: gettext("e.g. $$, $$$")]},
+      {:geo_latitude, :text, gettext("Latitude"), []},
+      {:geo_longitude, :text, gettext("Longitude"), []}
     ]
   end
 

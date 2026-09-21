@@ -36,21 +36,28 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
         "organization" ->
           %{
             foundingDate: format_date(config.founding_date),
-            numberOfEmployees: config.number_of_employees
+            numberOfEmployees: config.number_of_employees,
+            areaServed: config.area_served,
+            knowsAbout: config.knows_about
           }
 
         "corporation" ->
           %{
             foundingDate: format_date(config.founding_date),
             numberOfEmployees: config.number_of_employees,
-            tickerSymbol: config.ticker_symbol
+            tickerSymbol: config.ticker_symbol,
+            areaServed: config.area_served,
+            knowsAbout: config.knows_about
           }
 
         "professional_service" ->
           %{
             foundingDate: format_date(config.founding_date),
             areaServed: config.area_served,
-            knowsAbout: config.knows_about
+            knowsAbout: config.knows_about,
+            openingHoursSpecification: build_opening_hours(config),
+            priceRange: config.price_range,
+            geo: build_geo(config)
           }
 
         "local_business" ->
@@ -114,7 +121,10 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
           %{
             foundingDate: format_date(config.founding_date),
             areaServed: config.area_served,
-            knowsAbout: config.knows_about
+            knowsAbout: config.knows_about,
+            openingHoursSpecification: build_opening_hours(config),
+            priceRange: config.price_range,
+            geo: build_geo(config)
           }
 
         "employment_agency" ->
