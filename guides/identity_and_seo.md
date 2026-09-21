@@ -83,6 +83,35 @@ configs, or links for rendering. Direct `Repo` writes skip those callbacks. Duri
 a controlled import, refresh the cache in each affected environment and invoke
 `Brando.Sites.update_villains_referencing_identity({:ok, identity})` afterwards.
 
+## Describe your services
+
+The **Services** tab on the identity takes a repeatable list of what the
+organization provides: name, description, alternate names (the other
+language's wording, industry synonyms), service type, URL and area served.
+Each service can link to an entry; it then takes that page's URL and — when it
+has no description of its own — the page's meta description or block text, so
+the markup describes content that is actually published.
+
+Every service is emitted into the JSON-LD graph as a `Service` node joined to
+`#identity`, inheriting the organization's `areaServed` unless it names its
+own. Nothing else is needed for the structured data.
+
+Markup alone mostly feeds AI retrieval. Present the services on the page too,
+so the nodes describe a real section:
+
+```heex
+<Brando.HTML.Services.list language={@language}>
+  <:heading>What we do</:heading>
+</Brando.HTML.Services.list>
+```
+
+The component reads the cached identity, renders one item per service with
+its resolved URL and description, and emits only structural classes
+(`services`, `service`, `service-name`, `service-description`). Pass
+`services` to render a subset, or an `:item` slot to control each entry's
+markup. Outside a template, `Brando.HTML.Services.for_language("en")` returns
+the resolved list.
+
 ## Configure metadata fallbacks and robots
 
 Open **Configuration → SEO**, choose the language, and set the fallback title,

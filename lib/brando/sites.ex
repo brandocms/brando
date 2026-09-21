@@ -54,7 +54,9 @@ defmodule Brando.Sites do
   @doc """
   Update existing identity
   """
-  mutation :update, Identity do
+  # Services are cast as a nested collection, so the entry must carry them
+  # before the changeset runs — whether the caller passed an id or a struct.
+  mutation :update, {Identity, preload: [services: :identifier]} do
     fn entry ->
       {:ok, entry}
       |> Cache.Identity.update()

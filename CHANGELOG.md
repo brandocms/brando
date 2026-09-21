@@ -351,6 +351,17 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Features
 
+- Services are configurable on the identity. A new **Services** tab in
+  Configuration → Identity takes a repeatable list (name, description,
+  alternate names, service type, URL, area served) and an optional link to
+  an entry; a linked service takes that page's URL and — when it has no
+  description of its own — the page's meta description or block text, so the
+  markup describes content that is actually published. Every service is
+  rendered into the JSON-LD graph as a `Service` node joined to `#identity`,
+  inheriting the organization's `areaServed` unless it names its own.
+  `<Brando.HTML.Services.list language={@language}>` renders them as a visible
+  section so the markup has a real counterpart. The `brando_177` migration
+  adds `sites_services`.
 - Identity `area_served` and `knows_about` are lists. A site with eleven
   services no longer emits one long `knowsAbout` string that a consumer reads
   as a single topic, and `areaServed` can name the actual markets. The admin

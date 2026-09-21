@@ -952,6 +952,31 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :instructions, :string
   attr :class, :string
   attr :compact, :boolean
+  attr :opts, :list
+
+  @doc """
+  A repeatable list of short strings, as a blueprint form input.
+
+      input :alternate_names, :string_list, label: t("Alternate names")
+
+  Wraps the stateless `:string_list` control (see `input/1`) in the standard
+  field chrome. The attribute should use `Brando.Type.StringList`.
+  """
+  def string_list(assigns) do
+    assigns = prepare_input_component(assigns)
+
+    ~H"""
+    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+      <.input type={:string_list} field={@field} />
+    </Primitives.field_base>
+    """
+  end
+
+  attr :field, FormField
+  attr :label, :string
+  attr :instructions, :string
+  attr :class, :string
+  attr :compact, :boolean
   attr :placeholder, :string
   attr :disabled, :boolean
   attr :readonly, :boolean, default: nil
