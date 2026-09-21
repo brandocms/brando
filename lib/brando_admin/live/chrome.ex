@@ -129,14 +129,25 @@ defmodule BrandoAdmin.Chrome do
     presences = build_presences(scope)
     {active, inactive} = Enum.split_with(presences, &(&1.status in ["online", "idle"]))
 
+    # Realtime.users/1 answers "who may be seen", not "in what order", so it has
+    # no order_by and Repo.all hands back heap order. Reversing that just gave a
+    # different arbitrary order. Sort on the value actually rendered instead.
+    inactive = Enum.sort_by(inactive, & &1.last_seen, &sort_recent_first/2)
+
     socket
     |> assign(:active_presences, active)
-    |> assign(:inactive_presences, Enum.reverse(inactive))
+    |> assign(:inactive_presences, inactive)
     |> stream(:active_presences, active, reset: true)
-    |> stream(:inactive_presences, Enum.reverse(inactive), reset: true)
+    |> stream(:inactive_presences, inactive, reset: true)
   end
 
   def assign_presences(socket), do: refresh_authorization(socket)
+
+  # Most recently seen first; never-seen users sort last rather than first.
+  defp sort_recent_first(nil, nil), do: true
+  defp sort_recent_first(nil, _b), do: false
+  defp sort_recent_first(_a, nil), do: true
+  defp sort_recent_first(a, b), do: NaiveDateTime.compare(a, b) != :lt
 
   defp build_presences(scope) do
     presence_map = Map.new(Brando.presence().list("lobby"))
