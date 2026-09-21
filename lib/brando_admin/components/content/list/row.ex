@@ -516,7 +516,16 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     ~H""
   end
 
-  def creator(%{entry: %{creator: nil}} = assigns) do
+  @doc """
+  Who last touched the entry, and when.
+
+  Shows the last human editor with `edited_at` when the entry has been edited
+  through a user-scoped save, otherwise the creator with `inserted_at`. It never
+  pairs the creator with `updated_at`: that column moves on re-renders and
+  deploys, which would read as "Evan updated this today" about an entry nobody
+  opened. Soft-deleted entries show `deleted_at` instead.
+  """
+  def creator(%{entry: %{creator: nil, updated_by: nil}} = assigns) do
     ~H"""
     <div class="col-4">
       —
@@ -524,31 +533,43 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
-  def creator(%{entry: %{creator: %{avatar: _avatar}}} = assigns) do
-    assigns = assign(assigns, :entry_id, make_id(assigns.entry))
+  def creator(%{entry: %{creator: %{avatar: _}}} = assigns), do: editor(assigns)
+  def creator(%{entry: %{updated_by: %Brando.Users.User{}}} = assigns), do: editor(assigns)
+
+  def creator(assigns) do
+    ~H"""
+    """
+  end
+
+  defp editor(assigns) do
+    {user, label, at} = editor_facts(assigns.entry, assigns.soft_delete?)
+
+    assigns =
+      assigns
+      |> assign(:entry_id, make_id(assigns.entry))
+      |> assign(:user, user)
+      |> assign(:label, label)
+      |> assign(:at, at)
 
     ~H"""
-    <div class="col-4 listing-creator">
+    <div class="col-4 listing-creator" aria-label={@label}>
       <article class="item-meta">
         <section class="avatar-wrapper">
           <div class="avatar" aria-hidden="true">
-            <Content.image :if={@entry.creator.avatar} image={@entry.creator.avatar} size={:thumb} />
-            <span :if={!@entry.creator.avatar} class="creator-initials">{String.first(@entry.creator.name || "?")}</span>
+            <Content.image :if={@user.avatar} image={@user.avatar} size={:thumb} />
+            <span :if={!@user.avatar} class="creator-initials">{String.first(@user.name || "?")}</span>
           </div>
         </section>
         <section class="content">
           <div class="info">
             <div class="name">
-              {@entry.creator.name}
+              {@user.name}
             </div>
 
-            <div class="time" id={"entry_creator_time_icon_#{@entry_id}"}>
-              <%= if @soft_delete? and @entry.deleted_at do %>
-                {format_datetime(@entry.deleted_at, "%d/%m/%y")}
-                <span>•</span> {format_datetime(@entry.deleted_at, "%H:%M")}
-              <% else %>
-                {format_datetime(@entry.updated_at, "%d/%m/%y")}
-                <span>•</span> {format_datetime(@entry.updated_at, "%H:%M")}
+            <div class="time" id={"entry_creator_time_icon_#{@entry_id}"} title={@label}>
+              <%= if @at do %>
+                {format_datetime(@at, "%d/%m/%y")}
+                <span>•</span> {format_datetime(@at, "%H:%M")}
               <% end %>
             </div>
           </div>
@@ -558,9 +579,16 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
-  def creator(assigns) do
-    ~H"""
-    """
+  defp editor_facts(%{deleted_at: %{} = deleted_at} = entry, true) do
+    {Map.get(entry, :updated_by) || entry.creator, gettext("Deleted"), deleted_at}
+  end
+
+  defp editor_facts(%{updated_by: %Brando.Users.User{} = updated_by} = entry, _) do
+    {updated_by, gettext("Edited by"), Map.get(entry, :edited_at) || entry.updated_at}
+  end
+
+  defp editor_facts(entry, _) do
+    {entry.creator, gettext("Created by"), entry.inserted_at}
   end
 
   def child_row(%{schema: schema, entry: entry, child_listing: child_listing} = assigns) do

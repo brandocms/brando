@@ -8,7 +8,7 @@ defmodule Brando.Content.Transfer.EntryCodec do
   alias Brando.Drafts.Params
   alias Brando.Repo
 
-  @system ~w(id uid creator_id inserted_at updated_at deleted_at marked_as_deleted password password_confirmation password_hash)a
+  @system ~w(id uid creator_id updated_by_id inserted_at updated_at edited_at deleted_at marked_as_deleted password password_confirmation password_hash)a
   @media %{
     Brando.Images.Image => "image",
     Brando.Files.File => "file",

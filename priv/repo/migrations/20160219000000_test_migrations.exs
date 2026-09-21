@@ -65,11 +65,15 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :config_target, :text
       add :deleted_at, :utc_datetime
       add :creator_id, references(:users, on_delete: :nothing)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
       timestamps()
     end
 
     alter table(:images) do
       add :creator_id, references(:users)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
     end
 
     create table(:files) do
@@ -83,6 +87,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :deleted_at, :utc_datetime
       timestamps()
       add :creator_id, references(:users, on_delete: :nothing)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
     end
 
     create index(:files, [:folder_id], name: :files_folder_id_idx)
@@ -109,6 +115,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :file_id, references(:files, on_delete: :nilify_all)
       add :thumbnail_id, references(:images, on_delete: :nilify_all)
       add :creator_id, references(:users, on_delete: :nothing)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
       add :deleted_at, :utc_datetime
       timestamps()
     end
@@ -122,6 +130,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :image_id, references(:images, on_delete: :delete_all)
       add :video_id, references(:videos, on_delete: :delete_all)
       add :creator_id, references(:users, on_delete: :nothing)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
       timestamps()
     end
 
@@ -146,6 +156,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :cover, :text
       add :status, :integer
       add :creator_id, references(:users)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
       add :meta_description, :text
       add :featured, :boolean
       add :published, :boolean
@@ -169,6 +181,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :is_homepage, :boolean
       add :parent_id, references(:pages), default: nil
       add :creator_id, references(:users)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
       add :css_classes, :text
       add :template, :text
       add :publish_at, :utc_datetime
@@ -203,6 +217,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :sequence, :integer
       add :publish_at, :utc_datetime
       add :creator_id, references(:users)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
       add :page_id, references(:pages)
       soft_delete()
       timestamps()
@@ -224,6 +240,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :name, :text
       add :sequence, :integer
       add :creator_id, references(:users, on_delete: :nilify_all)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
 
       timestamps()
     end
@@ -255,6 +273,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
     create table(:content_module_sets) do
       add :title, :text
       add :creator_id, references(:users, on_delete: :nothing)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
       timestamps()
     end
 
@@ -276,6 +296,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :colors, :jsonb
       add :deleted_at, :utc_datetime
       add :creator_id, references(:users, on_delete: :nilify_all)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
 
       timestamps()
     end
@@ -287,6 +309,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :instructions, :text
       add :deleted_at, :utc_datetime
       add :creator_id, references(:users, on_delete: :nilify_all)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
       add :rendered_blocks, :text
       add :rendered_blocks_at, :utc_datetime
       timestamps()
@@ -338,6 +362,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :fragment_id, references(:pages_fragments, on_delete: :delete_all)
       add :palette_id, references(:content_palettes, on_delete: :nilify_all)
       add :creator_id, references(:users, on_delete: :nothing)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
       add :refs, :jsonb
       add :identifier_metas, :jsonb
     end
@@ -361,6 +387,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
 
       timestamps()
       add :creator_id, references(:users, on_delete: :nothing)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
     end
 
     create index(:content_refs, [:module_id])
@@ -421,6 +449,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :pdf_id, references(:files)
       add :properties, :map
       add :creator_id, references(:users, on_delete: :nilify_all)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
       add :rendered_blocks, :text
       add :rendered_blocks_at, :utc_datetime
 
@@ -441,6 +471,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :deleted_at, :utc_datetime
       timestamps()
       add :creator_id, references(:users)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
     end
 
     create table(:persons, primary_key: false) do
@@ -453,6 +485,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :language, :text
       add :profile_id, references(:persons_profile, type: :uuid)
       add :creator_id, references(:users)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
     end
 
     create index(:persons, [:language])
@@ -462,6 +496,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :expires_at, :utc_datetime, null: false
       add :html, :binary
       add :creator_id, references(:users, on_delete: :nilify_all)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
       timestamps()
     end
 
@@ -515,6 +551,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :language, :text
       add :globals, :jsonb
       add :creator_id, references(:users)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
       timestamps()
     end
 
@@ -525,6 +563,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :language, :text
       add :template, :text
       add :creator_id, references(:users)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
       add :items, :map
       add :sequence, :integer
       timestamps()
@@ -536,6 +576,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :key, :string, null: false
       add :menu_id, references(:navigation_menus, on_delete: :delete_all)
       add :creator_id, references(:users, on_delete: :nilify_all)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
       add :parent_id, references(:navigation_items, on_delete: :delete_all)
       timestamps()
     end
@@ -557,6 +599,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :entry_type, :string, null: false
       add :encoded_entry, :binary, null: false
       add :creator_id, references(:users, on_delete: :nilify_all)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
       add :description, :string
       add :metadata, :map, null: false
       add :revision, :integer, null: false
@@ -607,6 +651,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :table_row_id, references(:content_table_rows, on_delete: :nilify_all)
       add :menu_item_id, references(:navigation_items, on_delete: :nilify_all)
       add :creator_id, references(:users, on_delete: :nothing)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
 
       timestamps()
     end
@@ -618,6 +664,8 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :prices, :jsonb
       add :sequence, :integer
       add :creator_id, references(:users, on_delete: :nothing)
+      add :updated_by_id, references(:users, on_delete: :nilify_all)
+      add :edited_at, :utc_datetime
       timestamps()
     end
   end

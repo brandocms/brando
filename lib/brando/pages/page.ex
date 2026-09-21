@@ -126,13 +126,13 @@ defmodule Brando.Pages.Page do
           fragments: %{
             module: @fragment_module,
             order: [asc: :sequence],
-            preload: [creator: :avatar],
+            preload: [creator: :avatar, updated_by: :avatar],
             hide_deleted: true
           },
           children: %{
             module: __MODULE__,
             order: [asc: :sequence],
-            preload: [:alternate_entries, creator: :avatar],
+            preload: [:alternate_entries, creator: :avatar, updated_by: :avatar],
             hide_deleted: true
           }
         ],

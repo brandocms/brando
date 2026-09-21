@@ -24,6 +24,7 @@ defmodule Brando.Revisions.RevisionsTest do
       fragments: [],
       parent: nil,
       meta_image: nil,
+      updated_by: nil,
       vars: []
     }
 

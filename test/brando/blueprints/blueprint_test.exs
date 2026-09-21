@@ -113,7 +113,7 @@ defmodule Brando.Blueprint.BlueprintTest do
 
   test "__optional_attrs__" do
     optional_attrs = Brando.BlueprintTest.Project.__optional_attrs__()
-    assert optional_attrs == [:deleted_at, :inserted_at, :sequence, :title, :updated_at]
+    assert optional_attrs == [:deleted_at, :edited_at, :inserted_at, :sequence, :title, :updated_at]
   end
 
   test "attributes" do
@@ -121,6 +121,12 @@ defmodule Brando.Blueprint.BlueprintTest do
 
     assert strip_spark_metadata(attrs) ==
              strip_spark_metadata([
+               %Brando.Blueprint.Attributes.Attribute{
+                 __identifier__: :edited_at,
+                 name: :edited_at,
+                 opts: %{},
+                 type: :datetime
+               },
                %Brando.Blueprint.Attributes.Attribute{
                  __identifier__: :status,
                  name: :status,
@@ -312,6 +318,12 @@ defmodule Brando.Blueprint.BlueprintTest do
                  type: :belongs_to
                },
                %Brando.Blueprint.Relations.Relation{
+                 __identifier__: :updated_by,
+                 name: :updated_by,
+                 opts: %{module: Brando.Users.User},
+                 type: :belongs_to
+               },
+               %Brando.Blueprint.Relations.Relation{
                  name: :alternates,
                  type: :has_many,
                  opts: %{module: :alternates},
@@ -331,6 +343,7 @@ defmodule Brando.Blueprint.BlueprintTest do
 
     assert schema == [
              :id,
+             :edited_at,
              :status,
              :language,
              :title,
@@ -343,6 +356,7 @@ defmodule Brando.Blueprint.BlueprintTest do
              :cover_cdn_id,
              :pdf_id,
              :creator_id,
+             :updated_by_id,
              :properties
            ]
   end
