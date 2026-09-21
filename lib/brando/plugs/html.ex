@@ -126,6 +126,29 @@ defmodule Brando.Plug.HTML do
 
   def put_json_ld(conn, :breadcrumbs, breadcrumbs), do: assign(conn, :json_ld_breadcrumbs, breadcrumbs)
 
+  @doc """
+  Adds pre-built JSON-LD nodes to the graph.
+
+  `put_json_ld/4` derives a node from an entry through its blueprint's
+  `json_ld_schema`. Nodes that describe the business rather than an entry —
+  `Service`, `Place`, a hand-built `Event` — have no entry to derive from, so
+  build the struct and append it:
+
+      services =
+        Brando.JSONLD.Schema.Service.build_all(@services,
+          provider: "\#{Brando.Utils.hostname()}/#identity",
+          area_served: "Worldwide"
+        )
+
+      put_json_ld(conn, :entities, services)
+
+  Appends, so it composes with `put_json_ld/4` in any order.
+  """
+  def put_json_ld(conn, :entities, entities) do
+    existing = Map.get(conn.assigns, :json_ld_entities, [])
+    assign(conn, :json_ld_entities, existing ++ List.wrap(entities))
+  end
+
   def put_json_ld(conn, module, data, extra_fields \\ []) do
     meta_meta = %{
       __meta__: %{

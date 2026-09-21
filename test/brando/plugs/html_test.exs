@@ -2,6 +2,33 @@ defmodule Brando.Plug.HTMLTest do
   use ExUnit.Case, async: true
   alias Brando.Plug.HTML
 
+  describe "put_json_ld/3 with :entities" do
+    setup do
+      %{conn: %Plug.Conn{private: %{plug_session: %{}}, assigns: %{}}}
+    end
+
+    test "attaches pre-built nodes that have no entry to derive from", %{conn: conn} do
+      service = Brando.JSONLD.Schema.Service.build(%{name: "Identitetsdesign"})
+
+      conn = HTML.put_json_ld(conn, :entities, service)
+
+      assert conn.assigns.json_ld_entities == [service]
+    end
+
+    test "appends rather than replacing, so calls compose", %{conn: conn} do
+      a = Brando.JSONLD.Schema.Service.build(%{name: "A"})
+      b = Brando.JSONLD.Schema.Service.build(%{name: "B"})
+      c = Brando.JSONLD.Schema.Service.build(%{name: "C"})
+
+      conn =
+        conn
+        |> HTML.put_json_ld(:entities, a)
+        |> HTML.put_json_ld(:entities, [b, c])
+
+      assert conn.assigns.json_ld_entities == [a, b, c]
+    end
+  end
+
   test "put_section" do
     mock_conn = %Plug.Conn{private: %{plug_session: %{}}}
     conn = HTML.put_section(mock_conn, "section-name")
