@@ -108,6 +108,41 @@ omits it. Treat a callback error as a real rendering failure: the adapters expec
 `{:ok, entries}`, so return `{:ok, []}` for a legitimate empty result and avoid
 silently turning an unavailable external service into “no content.”
 
+### Describe the collection for crawlers
+
+A listing rendered by a datasource block is a collection, but nothing in the
+output says so. Emit JSON-LD from the same list the template just iterated and
+it cannot drift from the HTML: both come out of the same render and are cached
+together in the entry's `rendered_<field>` column.
+
+```heex
+<section :if={@entries != []} aria-label="Related pages">
+  <ul>
+    <li :for={page <- @entries}>
+      <a href={Brando.Blueprint.URL.resolve(page)}>{page.title}</a>
+    </li>
+  </ul>
+</section>
+<.json_ld entries={@entries} type="Article" />
+```
+
+```liquid
+{% for page in entries %}…{% endfor %}
+{{ entries | json_ld: "Article" }}
+```
+
+Both build an `ItemList` through `Brando.JSONLD.Collection`. Pass the item
+`@type` that describes the entries — `"CreativeWork"` for a portfolio,
+`"Article"` for a listing — rather than leaving them as bare list items. Add
+the `page` flag (`<.json_ld … page url={@url} language={@language} />`,
+`{{ entries | json_ld: "Article", "page" }}`) to wrap the list in a
+`CollectionPage` joined to the site's `#website` and `#identity` nodes.
+
+Entries are included only when their Blueprint declares an `absolute_url` and it
+resolves; an entry without a page of its own is skipped rather than given a
+fabricated URL, and an empty collection emits nothing. The markup is refreshed
+exactly when the HTML is — see [Keep dependent pages fresh](#keep-dependent-pages-fresh).
+
 ## Variables, selection metadata, and single results
 
 The list callback's third argument is a map of the module block's variables,

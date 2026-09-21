@@ -1052,6 +1052,48 @@ defmodule Brando.Villain.Filters do
   end
 
   @doc """
+  Emit JSON-LD for the entries a datasource block rendered.
+
+  Builds an `ItemList` — or a `CollectionPage` wrapping one when given the
+  `"page"` flag — from the same list the template just iterated, so the markup
+  can never disagree with the HTML. See `Brando.JSONLD.Collection`.
+
+      {{ entries | json_ld }}
+      {{ entries | json_ld: "CreativeWork" }}
+      {{ entries | json_ld: "Article", "page" }}
+
+  The page variant takes its URL and language from the render context.
+  """
+  def json_ld(entries, context), do: json_ld(entries, nil, context)
+
+  def json_ld(entries, "page", context), do: json_ld(entries, nil, "page", context)
+
+  def json_ld(entries, type, _context) do
+    entries
+    |> Brando.JSONLD.Collection.from_entries(type: type)
+    |> json_ld_script()
+  end
+
+  def json_ld(entries, type, "page", context) do
+    page = %{
+      url: Context.get(context, "url"),
+      language: Context.get(context, "language")
+    }
+
+    entries
+    |> Brando.JSONLD.Collection.from_entries(type: type, page: page)
+    |> json_ld_script()
+  end
+
+  def json_ld(entries, type, _flag, context), do: json_ld(entries, type, context)
+
+  defp json_ld_script(node) do
+    node
+    |> Brando.JSONLD.Collection.script()
+    |> Phoenix.HTML.safe_to_string()
+  end
+
+  @doc """
   Prefix media url to file/image
   """
   def media_url(%Brando.Files.File{} = file, _) do

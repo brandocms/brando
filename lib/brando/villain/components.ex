@@ -266,6 +266,43 @@ defmodule Brando.Villain.Components do
 
   # -- route component --
 
+  attr :entries, :list, required: true
+  attr :type, :string, default: nil
+  attr :name, :string, default: nil
+  attr :page, :boolean, default: false
+  attr :url, :string, default: nil
+  attr :language, :string, default: nil
+
+  @doc """
+  Emit JSON-LD for the entries a datasource block rendered.
+
+  Builds an `ItemList` from `@entries` — or a `CollectionPage` wrapping one when
+  `page` is set — through `Brando.JSONLD.Collection`, so the markup is produced
+  by the same render as the HTML and cached with it.
+
+      <.json_ld entries={@entries} type="CreativeWork" />
+      <.json_ld entries={@entries} type="Article" page url={@url} language={@language} />
+  """
+  def json_ld(assigns) do
+    page =
+      if assigns.page do
+        %{url: assigns.url, language: assigns.language}
+      end
+
+    node =
+      Brando.JSONLD.Collection.from_entries(assigns.entries,
+        type: assigns.type,
+        name: assigns.name,
+        page: page
+      )
+
+    assigns = assign(assigns, :script, Brando.JSONLD.Collection.script(node))
+
+    ~H"""
+    {@script}
+    """
+  end
+
   attr :helper, :atom, required: true
   attr :action, :atom, required: true
   attr :args, :list, default: []
