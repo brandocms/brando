@@ -42,6 +42,67 @@ defmodule Brando.Blueprint.Value do
   end
 
   @doc """
+  Extracts plain text from an entry's rendered block field.
+
+  Block fields keep a `rendered_<field>` column that Brando refreshes on every
+  save, so this needs no preloads — which matters, since meta tags are usually
+  built in a controller that only preloads images.
+
+  The HTML is flattened with whitespace at every tag boundary (so
+  `<h2>Title</h2><p>Body</p>` does not collapse into `TitleBody`), entities are
+  decoded, runs of whitespace are squeezed, and the result is truncated.
+
+  Returns `nil` when the field is empty or holds no text, so it composes with
+  `fallback/1`:
+
+      field ["description", "og:description"], fn entry ->
+        fallback([entry.meta_description, rendered_text(entry)])
+      end
+
+  ## Options
+
+    * `:length` - characters to truncate to. Defaults to `160`.
+    * `:field` - block field name. Defaults to `:blocks`.
+
+  ## Examples
+
+      iex> Brando.Blueprint.Value.rendered_text(%{rendered_blocks: "<h2>Tittel</h2><p>Brød &amp; tekst</p>"})
+      "Tittel Brød & tekst"
+
+      iex> Brando.Blueprint.Value.rendered_text(%{rendered_blocks: "<p>  </p>"})
+      nil
+
+      iex> Brando.Blueprint.Value.rendered_text(%{rendered_blocks: nil})
+      nil
+  """
+  @spec rendered_text(map(), keyword()) :: String.t() | nil
+  def rendered_text(entry, opts \\ []) do
+    field = Keyword.get(opts, :field, :blocks)
+    length = Keyword.get(opts, :length, 160)
+
+    entry
+    |> Map.get(:"rendered_#{field}")
+    |> flatten_html()
+    |> case do
+      nil -> nil
+      "" -> nil
+      text -> truncate(text, length)
+    end
+  end
+
+  defp flatten_html(nil), do: nil
+
+  defp flatten_html(html) when is_binary(html) do
+    html
+    |> String.replace(~r/<[^>]*>/, " ")
+    |> HtmlEntities.decode()
+    |> String.replace(~r/\s+/u, " ")
+    |> String.trim()
+  end
+
+  defp flatten_html(_), do: nil
+
+  @doc """
   Converts a language code to the locale expected by Open Graph consumers.
   """
   @spec encode_locale(String.t()) :: String.t()

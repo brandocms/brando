@@ -139,6 +139,16 @@ defmodule Brando.Blueprint.Utils do
   end
 
   @doc """
+  Extracts plain text from an entry's rendered block field.
+
+  See `Brando.Blueprint.Value.rendered_text/2`.
+  """
+  def rendered_text(entry, opts \\ []) do
+    value_helpers = Module.concat(["Brando", "Blueprint", "Value"])
+    value_helpers.rendered_text(entry, opts)
+  end
+
+  @doc """
   Converts a language code to an Open Graph locale.
   """
   def encode_locale(locale) do
