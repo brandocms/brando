@@ -1,0 +1,17 @@
+.string-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+
+  .string-list-row {
+    width: 100%;
+  }
+
+  .string-list-row:last-child {
+    opacity: 0.7;
+  }
+
+  .string-list-row:last-child:focus {
+    opacity: 1;
+  }
+}

@@ -351,6 +351,12 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Features
 
+- Identity `area_served` and `knows_about` are lists. A site with eleven
+  services no longer emits one long `knowsAbout` string that a consumer reads
+  as a single topic, and `areaServed` can name the actual markets. The admin
+  gets a `:string_list` input (one entry per row; the last row is always empty
+  and clearing a row removes it). `Brando.Type.StringList` still loads the old
+  comma-separated shape, and the `brando_176` migration rewrites stored rows.
 - Add `mix brando.setup`, which runs the operational steps after
   `mix brando.install`: asset builds, `ecto.create`/`ecto.migrate`, a superuser
   account and default content seeds. Every step is skipped when its result

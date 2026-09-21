@@ -42,6 +42,7 @@
 @import "./components/Form/Input/File.css";
 @import "./components/Form/Input/Gallery.css";
 @import "./components/Form/Input/Image.css";
+@import "./components/Form/Input/StringList.css";
 @import "./components/Form/Input/Video.css";
 @import "./components/Form/Input/Radios.css";
 @import "./components/Form/Input/Select.css";

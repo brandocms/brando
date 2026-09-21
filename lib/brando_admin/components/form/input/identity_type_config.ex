@@ -30,8 +30,10 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
     [
       {:legal_name, :text, gettext("Legal name"), [instructions: gettext("e.g. Example AS")]},
       {:vat_id, :text, gettext("VAT / organisation number"), []},
-      {:area_served, :text, gettext("Area served"), []},
-      {:knows_about, :text, gettext("Knows about"), []}
+      {:area_served, :string_list, gettext("Area served"),
+       [instructions: gettext("One market per line — a country, a region, or Worldwide")]},
+      {:knows_about, :string_list, gettext("Knows about"),
+       [instructions: gettext("One topic per line — what the organization is known for")]}
     ]
   end
 

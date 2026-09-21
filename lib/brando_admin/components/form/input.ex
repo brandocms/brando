@@ -604,6 +604,40 @@ defmodule BrandoAdmin.Components.Form.Input do
     end
   end
 
+  # A repeatable list of short strings. Stateless on purpose: every value is a
+  # text input named `field[]`, and the last row is always empty so typing in
+  # it adds an entry on the next validate. Clearing a row removes it — the
+  # type drops blanks on cast. Row ids are positional, so the row that was the
+  # empty one keeps its id (and focus) when it becomes a value.
+  def input(%{type: :string_list} = assigns) do
+    {:ok, values} = Brando.Type.StringList.cast(assigns.field.value)
+
+    assigns =
+      assigns
+      |> assign(:id, assigns.id || assigns.field.id)
+      |> assign(:name, assigns.name || assigns.field.name)
+      |> assign(:values, values ++ [""])
+      |> process_input_id()
+      |> assign_a11y()
+
+    ~H"""
+    <div class="string-list" id={@id} aria-describedby={@aria_describedby}>
+      <input
+        :for={{value, index} <- Enum.with_index(@values)}
+        type="text"
+        name={"#{@name}[]"}
+        id={"#{@id}_#{index}"}
+        value={value}
+        class="text string-list-row"
+        placeholder={index == length(@values) - 1 && gettext("Add another…")}
+        phx-debounce="300"
+        aria-invalid={@aria_invalid}
+        aria-label={"#{@field.field} #{index + 1}"}
+      />
+    </div>
+    """
+  end
+
   def input(%{type: :textarea} = assigns) do
     assigns =
       if assigns[:value] do
