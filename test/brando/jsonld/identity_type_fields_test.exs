@@ -99,23 +99,34 @@ defmodule Brando.JSONLD.Schema.IdentityTypeFieldsTest do
   ]
 
   for {type, mod} <- @all_types do
-    test "#{type} carries areaServed and knowsAbout" do
-      config = [area_served: "Worldwide", knows_about: "Merkevarebygging, identitetsdesign"]
+    test "#{type} carries every Organization property" do
+      config = [
+        legal_name: "Bielke & Yang AS",
+        vat_id: "NO123456789MVA",
+        area_served: "Worldwide",
+        knows_about: "Merkevarebygging, identitetsdesign"
+      ]
+
       built = unquote(mod).build({identity(unquote(type), config), seo()})
 
-      assert built.areaServed == "Worldwide",
-             "#{unquote(inspect(mod))} dropped areaServed"
-
-      assert built.knowsAbout == "Merkevarebygging, identitetsdesign",
-             "#{unquote(inspect(mod))} dropped knowsAbout"
+      for {field, expected} <- [
+            legalName: "Bielke & Yang AS",
+            vatID: "NO123456789MVA",
+            areaServed: "Worldwide",
+            knowsAbout: "Merkevarebygging, identitetsdesign"
+          ] do
+        assert Map.fetch!(built, field) == expected,
+               "#{unquote(inspect(mod))} dropped #{field}"
+      end
     end
 
     test "#{type} omits them when unconfigured" do
       built = unquote(mod).build({identity(unquote(type)), seo()})
       json = Brando.JSONLD.to_graph_json([built])
 
-      refute json =~ "areaServed"
-      refute json =~ "knowsAbout"
+      for field <- ~w(legalName vatID areaServed knowsAbout) do
+        refute json =~ field
+      end
     end
   end
 end

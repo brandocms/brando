@@ -15,6 +15,8 @@ defmodule Brando.JSONLD.Schema.ProfessionalService do
             image: nil,
             logo: nil,
             name: nil,
+            vatID: nil,
+            legalName: nil,
             sameAs: nil,
             url: nil,
             foundingDate: nil,

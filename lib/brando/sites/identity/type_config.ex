@@ -2,8 +2,11 @@ defmodule Brando.Sites.Identity.TypeConfig do
   @moduledoc """
   Embedded schema for type-specific Identity configuration.
 
-  Stores fields that only apply to certain identity types
-  (e.g. `opening_hours_specification` for LocalBusiness/Restaurant).
+  Holds the schema.org fields behind the identity's JSON-LD.
+
+  Some apply only to certain types (`opening_hours_specification` for
+  LocalBusiness and friends); others — `legal_name`, `vat_id`, `area_served`,
+  `knows_about` — are Organization properties every type can carry.
   """
 
   use Brando.Blueprint,
@@ -20,6 +23,10 @@ defmodule Brando.Sites.Identity.TypeConfig do
   persist_identifier false
 
   attributes do
+    # Organization properties — every identity type descends from Organization
+    attribute :legal_name, :string
+    attribute :vat_id, :string
+
     # Organization / Corporation / EducationalOrganization / GovernmentOrganization / NGO
     attribute :founding_date, :date
     attribute :number_of_employees, :integer

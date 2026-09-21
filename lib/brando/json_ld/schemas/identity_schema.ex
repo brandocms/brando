@@ -133,6 +133,8 @@ defmodule Brando.JSONLD.Schema.IdentitySchema do
     # rather than per type is what stopped sites reaching for a LocalBusiness
     # subtype just to get at a field they already had.
     shared = %{
+      legalName: config.legal_name,
+      vatID: config.vat_id,
       areaServed: config.area_served,
       knowsAbout: config.knows_about
     }

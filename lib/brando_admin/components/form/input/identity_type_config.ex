@@ -24,6 +24,17 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
 
   @opening_hours_types ["local_business", "restaurant", "art_gallery", "employment_agency"]
 
+  # Organization properties: every identity type descends from Organization, so
+  # these are offered regardless of the type picked.
+  defp shared_fields do
+    [
+      {:legal_name, :text, gettext("Legal name"), [instructions: gettext("e.g. Example AS")]},
+      {:vat_id, :text, gettext("VAT / organisation number"), []},
+      {:area_served, :text, gettext("Area served"), []},
+      {:knows_about, :text, gettext("Knows about"), []}
+    ]
+  end
+
   def mount(socket) do
     {:ok, socket}
   end
@@ -34,7 +45,7 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
       |> Ecto.Changeset.get_field(:type)
       |> to_string()
 
-    fields = type_fields(identity_type)
+    fields = shared_fields() ++ type_fields(identity_type)
     has_opening_hours = identity_type in @opening_hours_types
 
     {:ok,
@@ -73,9 +84,6 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
               day_key={day_key}
               day_label={day_label}
             />
-          </div>
-          <div :if={@type_fields == [] && !@has_opening_hours} class="type-config-empty">
-            <p>{gettext("No additional fields for this identity type.")}</p>
           </div>
         </.inputs_for>
       </Primitives.field_base>
@@ -161,9 +169,7 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
   defp type_fields("organization") do
     [
       {:founding_date, :date, gettext("Founding date"), []},
-      {:number_of_employees, :number, gettext("Number of employees"), []},
-      {:area_served, :text, gettext("Area served"), []},
-      {:knows_about, :text, gettext("Knows about"), []}
+      {:number_of_employees, :number, gettext("Number of employees"), []}
     ]
   end
 
@@ -171,17 +177,13 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
     [
       {:founding_date, :date, gettext("Founding date"), []},
       {:number_of_employees, :number, gettext("Number of employees"), []},
-      {:ticker_symbol, :text, gettext("Ticker symbol"), []},
-      {:area_served, :text, gettext("Area served"), []},
-      {:knows_about, :text, gettext("Knows about"), []}
+      {:ticker_symbol, :text, gettext("Ticker symbol"), []}
     ]
   end
 
   defp type_fields("professional_service") do
     [
       {:founding_date, :date, gettext("Founding date"), []},
-      {:area_served, :text, gettext("Area served"), []},
-      {:knows_about, :text, gettext("Knows about"), []},
       {:price_range, :text, gettext("Price range"), [instructions: gettext("e.g. $$, $$$")]},
       {:geo_latitude, :text, gettext("Latitude"), []},
       {:geo_longitude, :text, gettext("Longitude"), []}
@@ -191,10 +193,8 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
   defp type_fields("local_business") do
     [
       {:price_range, :text, gettext("Price range"), [instructions: gettext("e.g. $$, $$$")]},
-      {:area_served, :text, gettext("Area served"), []},
       {:geo_latitude, :text, gettext("Latitude"), []},
-      {:geo_longitude, :text, gettext("Longitude"), []},
-      {:knows_about, :text, gettext("Knows about"), []}
+      {:geo_longitude, :text, gettext("Longitude"), []}
     ]
   end
 
@@ -204,36 +204,28 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
       {:serves_cuisine, :text, gettext("Serves cuisine"), []},
       {:has_menu, :text, gettext("Menu URL"), []},
       {:geo_latitude, :text, gettext("Latitude"), []},
-      {:geo_longitude, :text, gettext("Longitude"), []},
-      {:area_served, :text, gettext("Area served"), []},
-      {:knows_about, :text, gettext("Knows about"), []}
+      {:geo_longitude, :text, gettext("Longitude"), []}
     ]
   end
 
   defp type_fields("educational_organization") do
     [
       {:founding_date, :date, gettext("Founding date"), []},
-      {:number_of_employees, :number, gettext("Number of employees"), []},
-      {:area_served, :text, gettext("Area served"), []},
-      {:knows_about, :text, gettext("Knows about"), []}
+      {:number_of_employees, :number, gettext("Number of employees"), []}
     ]
   end
 
   defp type_fields("government_organization") do
     [
       {:founding_date, :date, gettext("Founding date"), []},
-      {:number_of_employees, :number, gettext("Number of employees"), []},
-      {:area_served, :text, gettext("Area served"), []},
-      {:knows_about, :text, gettext("Knows about"), []}
+      {:number_of_employees, :number, gettext("Number of employees"), []}
     ]
   end
 
   defp type_fields("ngo") do
     [
       {:founding_date, :date, gettext("Founding date"), []},
-      {:number_of_employees, :number, gettext("Number of employees"), []},
-      {:area_served, :text, gettext("Area served"), []},
-      {:knows_about, :text, gettext("Knows about"), []}
+      {:number_of_employees, :number, gettext("Number of employees"), []}
     ]
   end
 
@@ -241,9 +233,7 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
     [
       {:founding_date, :date, gettext("Founding date"), []},
       {:number_of_employees, :number, gettext("Number of employees"), []},
-      {:medical_specialty, :text, gettext("Medical specialty"), []},
-      {:area_served, :text, gettext("Area served"), []},
-      {:knows_about, :text, gettext("Knows about"), []}
+      {:medical_specialty, :text, gettext("Medical specialty"), []}
     ]
   end
 
@@ -251,27 +241,21 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
     [
       {:founding_date, :date, gettext("Founding date"), []},
       {:number_of_employees, :number, gettext("Number of employees"), []},
-      {:sport, :text, gettext("Sport"), []},
-      {:area_served, :text, gettext("Area served"), []},
-      {:knows_about, :text, gettext("Knows about"), []}
+      {:sport, :text, gettext("Sport"), []}
     ]
   end
 
   defp type_fields("art_gallery") do
     [
       {:price_range, :text, gettext("Price range"), [instructions: gettext("e.g. Free, $$")]},
-      {:area_served, :text, gettext("Area served"), []},
       {:geo_latitude, :text, gettext("Latitude"), []},
-      {:geo_longitude, :text, gettext("Longitude"), []},
-      {:knows_about, :text, gettext("Knows about"), []}
+      {:geo_longitude, :text, gettext("Longitude"), []}
     ]
   end
 
   defp type_fields("architect") do
     [
       {:founding_date, :date, gettext("Founding date"), []},
-      {:area_served, :text, gettext("Area served"), []},
-      {:knows_about, :text, gettext("Knows about"), []},
       {:price_range, :text, gettext("Price range"), [instructions: gettext("e.g. $$, $$$")]},
       {:geo_latitude, :text, gettext("Latitude"), []},
       {:geo_longitude, :text, gettext("Longitude"), []}
@@ -281,10 +265,8 @@ defmodule BrandoAdmin.Components.Form.Input.IdentityTypeConfig do
   defp type_fields("employment_agency") do
     [
       {:price_range, :text, gettext("Price range"), [instructions: gettext("e.g. $$, $$$")]},
-      {:area_served, :text, gettext("Area served"), []},
       {:geo_latitude, :text, gettext("Latitude"), []},
-      {:geo_longitude, :text, gettext("Longitude"), []},
-      {:knows_about, :text, gettext("Knows about"), []}
+      {:geo_longitude, :text, gettext("Longitude"), []}
     ]
   end
 

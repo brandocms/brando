@@ -15,6 +15,8 @@ defmodule Brando.JSONLD.Schema.EducationalOrganization do
             image: nil,
             logo: nil,
             name: nil,
+            vatID: nil,
+            legalName: nil,
             sameAs: nil,
             url: nil,
             knowsAbout: nil,
