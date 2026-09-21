@@ -14,6 +14,12 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
 
 #### Breaking
 
+- **`trait :creator` adds two columns.** Every schema with the creator trait now
+  has `updated_by_id` and `edited_at`. Run `mix brando.gen.migrations` for
+  Brando's tables and `mix brando.gen.blueprint_migration MyApp.Domain.Schema`
+  for each application blueprint, then `mix ecto.migrate`; until then, queries
+  on those schemas fail with a missing-column error.
+
 - **Video Type Migration**: The deprecated `Brando.Type.Video` has been replaced with `Brando.Videos.Video`. The video schema has been updated:
   - `source` field renamed to `type` (enum: `:upload`, `:external_file`, `:vimeo`, `:youtube`)
   - `url` field renamed to `source_url`
@@ -395,6 +401,16 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   HTML rather than by re-rendering the block tree, which the new
   `Brando.AI.Context` does for both the form and everything outside one. All
   of it is hidden unless `Brando.AI` has a provider configured.
+- Entries record who last edited them. `Brando.Trait.Creator` now adds
+  `updated_by` and `edited_at` next to `creator`; they move only on
+  user-initiated saves (`:system` saves, block re-rendering, migrations and
+  `mix brando.entries.resave` leave them alone, while `updated_at` keeps its
+  Ecto meaning). The entry listing shows "Edited by <editor> · edited_at" once an
+  entry has been edited, and "Created by <creator> · inserted_at" before that —
+  it no longer pairs the creator with `updated_at`. Brando's own tables get the
+  columns from the `brando_175` migration (`mix brando.gen.migrations`);
+  application blueprints get them planned by
+  `mix brando.gen.blueprint_migration MyApp.Schema`.
 - Add `mix brando.setup`, which runs the operational steps after
   `mix brando.install`: asset builds, `ecto.create`/`ecto.migrate`, a superuser
   account and default content seeds. Every step is skipped when its result

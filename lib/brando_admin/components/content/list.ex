@@ -556,7 +556,9 @@ defmodule BrandoAdmin.Components.Content.List do
 
   defp maybe_preload_creator(list_opts, schema) do
     if schema.has_trait(Creator) do
-      add_preload(list_opts, creator: :avatar)
+      list_opts
+      |> add_preload(creator: :avatar)
+      |> add_preload(updated_by: :avatar)
     else
       list_opts
     end

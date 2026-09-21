@@ -2,7 +2,7 @@ defmodule Brando.Drafts.Params do
   @moduledoc "Versionable, JSON-safe editor parameters, including values that failed casting."
   alias Ecto.Changeset
 
-  @ignored ~w(__meta__ __struct__ password password_confirmation password_hash inserted_at updated_at rendered_at)
+  @ignored ~w(__meta__ __struct__ password password_confirmation password_hash inserted_at updated_at edited_at updated_by_id rendered_at)
 
   def snapshot(%Changeset{} = cs) do
     cs.data
