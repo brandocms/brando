@@ -505,6 +505,7 @@ defmodule BrandoIntegration.TestRop.Migrations.CreateTestTables do
       add :language, :string
       add :robots, :text
       add :redirects, :map
+      add :ai_context_fields, :map
       timestamps()
     end
 

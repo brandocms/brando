@@ -376,6 +376,25 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   markup is cached with `rendered_<field>` and cannot drift from the HTML.
   Entries without an `absolute_url` are skipped. `ListItem.build/3` no longer
   double-prefixes the host on an already absolute URL.
+- Configuration → SEO gains a **Content SEO** tab that audits published entries
+  with a page of their own: meta title and description present and of display
+  length, an own description rather than the site fallback, a sharing image,
+  a resolvable URL, sitemap membership, and titles or descriptions shared with
+  other entries in the language. Each entry gets a weighted score, the tab a
+  badge, and the overview lists duplicates and counts. Runs on demand with one
+  read per content type that leaves the rendered block HTML out. Blueprints
+  can add checks by overriding `__seo_checks__/1` with
+  `Brando.SEO.Check` structs. Recorded 404s whose slug matches an audited
+  entry are listed as missing redirects with a one-click "Create redirect"
+  that appends to the SEO settings.
+- Write an entry's meta description from the Content SEO tab, without opening
+  the entry. The prompt is the one the blueprint declares through
+  `trait :meta, ai: [...]`, and the tab lets you pick which of the entry's
+  fields it reads — stored per content type on the site's SEO settings, so the
+  choice outlives a deploy. Block fields are read from the entry's rendered
+  HTML rather than by re-rendering the block tree, which the new
+  `Brando.AI.Context` does for both the form and everything outside one. All
+  of it is hidden unless `Brando.AI` has a provider configured.
 - Add `mix brando.setup`, which runs the operational steps after
   `mix brando.install`: asset builds, `ecto.create`/`ecto.migrate`, a superuser
   account and default content seeds. Every step is skipped when its result

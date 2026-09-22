@@ -42,6 +42,8 @@ defmodule Brando.AI do
   field config from `trait :meta, ai: [...]` on the blueprint.
   """
 
+  use Gettext, backend: Brando.Gettext
+
   alias ReqLLM.Keys
   alias ReqLLM.Response
 
@@ -100,6 +102,34 @@ defmodule Brando.AI do
       error -> {:error, error}
     end
   end
+
+  @doc """
+  The human name configured for `language`, for prompts that must name it.
+
+  Falls back to the upcased code, which reads well enough in a prompt for a
+  language the project never listed.
+  """
+  @spec language_name(String.t() | atom()) :: String.t()
+  def language_name(language) do
+    language = to_string(language)
+
+    case Enum.find(Brando.config(:languages) || [], &(&1[:value] == language)) do
+      nil -> String.upcase(language)
+      config -> config[:text] || String.upcase(language)
+    end
+  end
+
+  @doc "A message an editor can act on for the errors the AI path returns."
+  @spec error_message(term()) :: String.t()
+  def error_message(:missing_field), do: gettext("Could not resolve AI settings for this field")
+  def error_message(:missing_ai_config), do: gettext("No AI configuration was found for this field")
+  def error_message(:missing_prompt), do: gettext("Missing AI prompt configuration")
+  def error_message(:missing_model), do: gettext("Missing AI model configuration")
+  def error_message(:missing_api_key), do: gettext("Missing API key for selected AI provider")
+  def error_message(:empty_response), do: gettext("AI returned an empty response")
+  def error_message(:invalid_field_name), do: gettext("Could not update this field from AI response")
+  def error_message(:no_context), do: gettext("This entry has no text to describe")
+  def error_message(_), do: gettext("Failed to generate text with AI")
 
   def normalize_ai_opts(nil), do: []
   def normalize_ai_opts(opts) when is_list(opts), do: opts

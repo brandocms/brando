@@ -234,6 +234,11 @@ defmodule Brando.Blueprint do
       def __has_absolute_url__, do: false
       defoverridable __has_absolute_url__: 0
 
+      # Extra content SEO checks for this schema, run by `Brando.SEO.Audit`
+      # after the built-in ones. Receives the audit row, returns `Brando.SEO.Check`s.
+      def __seo_checks__(_row), do: []
+      defoverridable __seo_checks__: 1
+
       def __has_identifier__, do: false
       defoverridable __has_identifier__: 0
 

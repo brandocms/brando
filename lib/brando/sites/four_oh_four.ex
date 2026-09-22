@@ -6,6 +6,12 @@ defmodule Brando.Sites.FourOhFour do
     conn
   end
 
+  @doc "Forgets a recorded URL, e.g. once a redirect covers it."
+  def remove(url) when is_binary(url) do
+    Cachex.del(:four_oh_four, Brando.Tenant.cache_key(url))
+    :ok
+  end
+
   def list do
     current_prefix = Brando.Tenant.current_prefix()
 
