@@ -60,4 +60,27 @@ defmodule Mix.Brando.Igniter.AssetsTest do
     assert package["devDependencies"]["vite"]
     assert Enum.all?(plan.tasks, fn {task, _args} -> task == "brando.assets.copy" end)
   end
+
+  # A stylesheet the installer copies but whose `@import` it does not is only
+  # found once a generated site runs `vite build`, which is the consumer smoke
+  # in CI rather than anything here. `includes/common.css` and
+  # `includes/footer.css` were missing for exactly that reason.
+  test "every @import in a copied stylesheet is itself copied" do
+    targets = MapSet.new(Templates.manifest(), fn {_format, _source, target} -> target end)
+
+    for {format, source, target} <- Templates.manifest(),
+        Path.extname(target) == ".css",
+        imported <- imports(Templates.contents(format, source)) do
+      resolved = target |> Path.dirname() |> Path.join(imported) |> Path.expand("/") |> Path.relative_to("/")
+
+      assert MapSet.member?(targets, resolved),
+             "#{target} imports #{imported}, which the install manifest does not copy"
+    end
+  end
+
+  defp imports(contents) do
+    ~r/@import\s+['"]([^'"]+)['"]/
+    |> Regex.scan(contents)
+    |> Enum.map(fn [_, path] -> path end)
+  end
 end

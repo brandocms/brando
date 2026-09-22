@@ -35,7 +35,6 @@ defmodule Brando.JSONLD.Schema.IdentityTypeFieldsTest do
       type: type,
       name: "Bielke&Yang",
       logo: nil,
-
       type_config: struct(Sites.Identity.TypeConfig, config)
     }
   end
