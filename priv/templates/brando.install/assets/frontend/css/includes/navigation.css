@@ -73,4 +73,82 @@ header[data-nav] {
       @color border-bottom accent;
     }
   }
+
+  /**
+   * Below `$lg` the menu collapses. `MOBILE_MENU.js` shows `section.main` over
+   * a full-height `.mobile-bg` and drives the hamburger; it writes `display`
+   * inline on both, so the desktop rules have to out-rank that.
+   */
+  .mobile-bg {
+    @color bg green;
+
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 3;
+    width: 100%;
+    height: 100vh;
+    transform: translateX(100%);
+    user-select: none;
+    pointer-events: none;
+  }
+
+  section.main {
+    @responsive $lg {
+      display: block !important;
+    }
+
+    @responsive $sm {
+      @space padding-top lg;
+
+      display: none;
+      position: fixed;
+      top: var(--header-height);
+      right: 0;
+      left: 0;
+      z-index: 5;
+    }
+  }
+
+  section.main ul {
+    @responsive $sm {
+      @display flex/column/nowrap;
+      @space gap md;
+      @space container;
+
+      align-items: flex-start;
+    }
+  }
+
+  figure.menu-button {
+    display: flex;
+    position: relative;
+    z-index: 5;
+
+    @responsive $lg {
+      display: none;
+    }
+
+    .hamburger {
+      @color fg bone.full;
+
+      display: block;
+      width: 22px;
+      padding: 0;
+      border-bottom: 0;
+
+      i {
+        display: block;
+        width: 22px;
+        height: 2px;
+        margin-bottom: 5px;
+        background: currentColor;
+
+        &:last-of-type {
+          margin-bottom: 0;
+        }
+      }
+    }
+  }
 }
