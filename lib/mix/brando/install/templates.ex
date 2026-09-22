@@ -197,8 +197,10 @@ defmodule Mix.Brando.Install.Templates do
     # Frontend src - CSS
     {:copy, "assets/frontend/css/app.css", "assets/frontend/css/app.css"},
     {:copy, "assets/frontend/css/critical.css", "assets/frontend/css/critical.css"},
+    {:copy, "assets/frontend/css/includes/common.css", "assets/frontend/css/includes/common.css"},
     {:copy, "assets/frontend/css/includes/cookies.css", "assets/frontend/css/includes/cookies.css"},
     {:copy, "assets/frontend/css/includes/fonts.css", "assets/frontend/css/includes/fonts.css"},
+    {:copy, "assets/frontend/css/includes/footer.css", "assets/frontend/css/includes/footer.css"},
     {:copy, "assets/frontend/css/includes/modules.css", "assets/frontend/css/includes/modules.css"},
     {:copy, "assets/frontend/css/includes/navigation.css", "assets/frontend/css/includes/navigation.css"},
 
