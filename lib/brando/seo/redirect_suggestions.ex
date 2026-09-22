@@ -26,8 +26,8 @@ defmodule Brando.SEO.RedirectSuggestions do
   @noise_prefixes ~w(/wp- /wordpress /xmlrpc /cgi-bin /.well-known /admin /api /media /static /assets /sitemaps)
 
   @doc """
-  Suggests a destination for each 404 in `four_oh_fours` (as returned by
-  `Brando.Sites.FourOhFour.list/0`) from the audited `rows`, sorted by hits.
+  Suggests a destination for each 404 in `four_oh_fours` — the recorded
+  misses and their hit counts — from the audited `rows`, sorted by hits.
   """
   @spec suggest([map()], [map()], String.t()) :: [suggestion()]
   def suggest(four_oh_fours, rows, language) do
