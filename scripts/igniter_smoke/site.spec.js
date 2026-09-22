@@ -5,7 +5,11 @@ test('CMS pages render through their own layout and keep unpublished content pri
   page.on('pageerror', error => errors.push(error.message))
   let response = await page.goto('/')
   expect(response.status()).toBe(200)
-  await expect(page.getByRole('heading', { name: 'CMS smoke home', exact: true })).toBeVisible()
+  // The page's own h1 is content — a level-1 header block the editor writes —
+  // so a page seeded with only a title has an empty `main`. Assert what the
+  // layout and controller actually put on a bare CMS page.
+  await expect(page).toHaveTitle('CMS smoke home')
+  await expect(page.locator('main#content')).toHaveCount(1)
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
 
   await page.goto('/admin/login')
@@ -20,11 +24,12 @@ test('CMS pages render through their own layout and keep unpublished content pri
   await expect(page).toHaveURL(/\/admin\/pages$/)
   response = await page.goto('/')
   expect(response.status()).toBe(200)
-  await expect(page.getByRole('heading', { name: 'CMS smoke home updated', exact: true })).toBeVisible()
+  await expect(page).toHaveTitle('CMS smoke home updated')
 
   response = await page.goto('/about')
   expect(response.status()).toBe(200)
-  await expect(page.getByRole('heading', { name: 'CMS smoke about', exact: true })).toBeVisible()
+  // Only the index action skips the identity prefix.
+  await expect(page).toHaveTitle(/CMS smoke about$/)
   for (const path of ['/draft', '/missing-page']) {
     response = await page.goto(path)
     expect(response.status()).toBe(404)
