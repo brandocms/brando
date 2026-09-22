@@ -56,18 +56,21 @@
   .workspace-table-scroll { position: relative; overflow-x: auto; padding: 0 16px; }
   .workspace-table {
     width: 100%; border-collapse: collapse; margin: 0; font-size: 13px;
-    th, td { text-align: left; vertical-align: middle; border: 0; }
-    th { font-size: 12px; color: var(--workspace-muted); font-weight: 400; padding: 10px 12px; border-bottom: 1px solid var(--workspace-line); white-space: nowrap; }
-    td { padding: 12px; border-bottom: 1px solid #ecf0ea; }
-    :is(th, td):first-child { padding-left: 0; }
-    :is(th, td):last-child { padding-right: 0; }
-    tbody tr:last-child td { border: 0; }
-    tbody tr:hover { background: #fafbf8; }
+    /* Own rows only: an expanded row may hold a table of its own, and these
+       would otherwise strip its borders and padding from the outside. */
+    > :is(thead, tbody) > tr > :is(th, td) { text-align: left; vertical-align: middle; border: 0; }
+    > thead > tr > th { font-size: 12px; color: var(--workspace-muted); font-weight: 400; padding: 10px 12px; border-bottom: 1px solid var(--workspace-line); white-space: nowrap; }
+    > tbody > tr > td { padding: 12px; border-bottom: 1px solid #ecf0ea; }
+    > :is(thead, tbody) > tr > :is(th, td):first-child { padding-left: 0; }
+    > :is(thead, tbody) > tr > :is(th, td):last-child { padding-right: 0; }
+    > tbody > tr:last-child > td { border: 0; }
+    > tbody > tr:hover { background: #fafbf8; }
     code { font-family: theme(typography.families.mono); font-size: 12px; }
-    small { display: block; margin-top: 3px; color: var(--workspace-muted); font-size: 12px; }
+    > tbody > tr > td small { display: block; margin-top: 3px; color: var(--workspace-muted); font-size: 12px; }
     .row-actions { width: 1%; text-align: right; white-space: nowrap; }
   }
   code { background: transparent; padding: 0; border: 0; }
+  .workspace-mono { font-family: theme(typography.families.mono); font-size: 12px; }
   .workspace-badge { display: inline-flex; align-items: center; gap: 6px; padding: 2px 7px; border-radius: 4px; font-size: 11px; line-height: 18px; font-weight: 400; white-space: nowrap; background: #eef0eb; color: #566153; }
   .workspace-badge.positive { background: #e9f2e9; color: #355e43; }
   .workspace-badge.warning { background: #fbefda; color: #87662d; }

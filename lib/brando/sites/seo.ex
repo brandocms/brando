@@ -34,6 +34,10 @@ defmodule Brando.Sites.SEO do
     attribute :fallback_meta_title, :text
     attribute :base_url, :string
     attribute :robots, :text
+    # Which blueprint fields feed an AI meta prompt, per schema:
+    # `%{"MyApp.Projects.Project" => ["title", "blocks"]}`. Picked in the
+    # Content SEO tab rather than the form, so it is not declared as an input.
+    attribute :ai_context_fields, :map
   end
 
   assets do

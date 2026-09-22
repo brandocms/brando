@@ -422,14 +422,7 @@ defmodule Brando.AI.Translation do
     {system_prompt, numbered_content}
   end
 
-  defp resolve_language_name(lang) do
-    lang_str = to_string(lang)
-
-    case Enum.find(Brando.config(:languages), fn l -> l[:value] == lang_str end) do
-      nil -> String.upcase(lang_str)
-      config -> config[:text] || String.upcase(lang_str)
-    end
-  end
+  defp resolve_language_name(lang), do: Brando.AI.language_name(lang)
 
   defp build_batches(items, _source_lang, _target_lang) do
     # Flatten items to just text for size calculation, keeping tags

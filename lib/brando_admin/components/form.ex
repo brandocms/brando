@@ -5099,27 +5099,13 @@ defmodule BrandoAdmin.Components.Form do
         if prompt == "" do
           {:error, :missing_prompt}
         else
-          context_fields =
+          context_values =
             ai_opts
             |> Keyword.get(:context, [])
-            |> normalize_ai_context_fields()
+            |> Brando.AI.Context.normalize_fields()
+            |> then(&build_ai_context_values(socket, &1))
 
-          context_values = build_ai_context_values(socket, context_fields)
-
-          context_lines =
-            context_values
-            |> Enum.map(fn {field, value} -> "#{field}: #{value}" end)
-            |> Enum.reject(&(&1 == ""))
-
-          full_prompt =
-            if context_lines == [] do
-              prompt
-            else
-              [prompt, "\n\nContext:\n", Enum.join(context_lines, "\n")]
-              |> IO.iodata_to_binary()
-            end
-
-          {:ok, full_prompt}
+          {:ok, Brando.AI.Context.build_prompt(prompt, context_values)}
         end
 
       _ ->
@@ -5127,47 +5113,21 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp normalize_ai_context_fields(context) when is_list(context) do
-    context
-    |> Enum.map(&normalize_ai_context_field/1)
-    |> Enum.reject(&is_nil/1)
-  end
-
-  defp normalize_ai_context_fields(context) do
-    context
-    |> List.wrap()
-    |> normalize_ai_context_fields()
-  end
-
-  defp normalize_ai_context_field(field) when is_atom(field), do: field
-
-  defp normalize_ai_context_field(field) when is_binary(field) do
-    String.to_existing_atom(field)
-  rescue
-    ArgumentError -> nil
-  end
-
-  defp normalize_ai_context_field(_), do: nil
-
+  # `:blocks` keeps its own path: in a form the editor's unsaved state is what
+  # should be summarized, not the `rendered_blocks` column the entry was last
+  # saved with. Every other field reads the applied changeset headlessly.
   defp build_ai_context_values(socket, context_fields) do
     entry = apply_changes(socket.assigns.form.source)
 
-    Enum.reduce(context_fields, [], fn
-      :blocks, acc ->
+    Enum.flat_map(context_fields, fn
+      :blocks ->
         case render_ai_blocks_context(socket) do
-          nil -> acc
-          "" -> acc
-          value -> acc ++ [{:blocks, value}]
+          value when value in [nil, ""] -> []
+          value -> [{:blocks, value}]
         end
 
-      field, acc ->
-        value = Map.get(entry, field) |> format_ai_context_value()
-
-        if value in [nil, ""] do
-          acc
-        else
-          acc ++ [{field, value}]
-        end
+      field ->
+        Brando.AI.Context.for_entry(entry, [field])
     end)
   end
 
@@ -5189,29 +5149,6 @@ defmodule BrandoAdmin.Components.Form do
     |> Enum.map_join("\n\n", &HtmlSanitizeEx.strip_tags/1)
     |> String.trim()
   end
-
-  defp format_ai_context_value(nil), do: nil
-
-  defp format_ai_context_value(value) when is_binary(value),
-    do: value |> HtmlSanitizeEx.strip_tags() |> String.trim()
-
-  defp format_ai_context_value(value) when is_integer(value), do: Integer.to_string(value)
-  defp format_ai_context_value(value) when is_float(value), do: to_string(value)
-  defp format_ai_context_value(value) when is_boolean(value), do: to_string(value)
-
-  defp format_ai_context_value(value) when is_list(value) do
-    value
-    |> Enum.map(&format_ai_context_value/1)
-    |> Enum.reject(&(&1 in [nil, ""]))
-    |> Enum.join(", ")
-  end
-
-  defp format_ai_context_value(value) when is_map(value) do
-    value
-    |> inspect(pretty: false, limit: :infinity)
-  end
-
-  defp format_ai_context_value(value), do: to_string(value)
 
   defp parse_form_field_name(field_name, singular) do
     segments = Regex.scan(~r/[^\[\]]+/, field_name) |> List.flatten()
@@ -5275,21 +5212,7 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp ai_error_message(:missing_field),
-    do: gettext("Could not resolve AI settings for this field")
-
-  defp ai_error_message(:missing_ai_config),
-    do: gettext("No AI configuration was found for this field")
-
-  defp ai_error_message(:missing_prompt), do: gettext("Missing AI prompt configuration")
-  defp ai_error_message(:missing_model), do: gettext("Missing AI model configuration")
-  defp ai_error_message(:missing_api_key), do: gettext("Missing API key for selected AI provider")
-  defp ai_error_message(:empty_response), do: gettext("AI returned an empty response")
-
-  defp ai_error_message(:invalid_field_name),
-    do: gettext("Could not update this field from AI response")
-
-  defp ai_error_message(_), do: gettext("Failed to generate text with AI")
+  defp ai_error_message(reason), do: Brando.AI.error_message(reason)
 
   defp safe_to_existing_atom(value) when is_atom(value), do: {:ok, value}
 
