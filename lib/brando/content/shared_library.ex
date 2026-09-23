@@ -632,7 +632,7 @@ defmodule Brando.Content.SharedLibrary do
     entry
     |> Map.from_struct()
     |> Map.take(entry.__struct__.__schema__(:fields))
-    |> Map.drop([:id, :inserted_at, :updated_at, :deleted_at, :creator_id] ++ owner_fields)
+    |> Map.drop([:id, :inserted_at, :updated_at, :edited_at, :deleted_at, :creator_id, :updated_by_id] ++ owner_fields)
     |> Brando.Utils.map_from_struct()
   end
 

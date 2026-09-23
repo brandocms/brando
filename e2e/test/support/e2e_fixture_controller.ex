@@ -410,7 +410,7 @@ defmodule E2EFixtureController do
       })
 
     Brando.Repo.get!(Brando.Images.Image, image_id)
-    |> Ecto.Changeset.change(creator_id: creator.id)
+    |> Ecto.Changeset.change(creator_id: creator.id, updated_by_id: creator.id)
     |> Brando.Repo.update!()
 
     json(conn, %{name: name})
