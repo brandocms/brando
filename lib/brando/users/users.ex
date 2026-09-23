@@ -156,6 +156,10 @@ defmodule Brando.Users do
     Enum.map(rows, fn [table, column] -> {table, column} end)
   end
 
+  # Edit history, not ownership. The user is soft-deleted, so these keep
+  # pointing at who actually made the edit instead of crediting the recipient.
+  @history_columns ~w(updated_by_id)
+
   @doc """
   Returns a content summary for `user_id` — a list of tables and how many
   rows reference this user, filtering out tables with zero rows.
@@ -163,8 +167,9 @@ defmodule Brando.Users do
   @spec get_user_content_summary(integer()) :: [map()]
   def get_user_content_summary(user_id) do
     get_user_foreign_key_references()
-    |> Enum.reject(fn {table, _col} ->
-      table == "users_tokens" or table == "user_sites" or String.starts_with?(table, "authorization_")
+    |> Enum.reject(fn {table, column} ->
+      table == "users_tokens" or table == "user_sites" or String.starts_with?(table, "authorization_") or
+        column in @history_columns
     end)
     |> Enum.map(fn {table, column} ->
       %{rows: [[count]]} =
@@ -208,6 +213,7 @@ defmodule Brando.Users do
 
   defp transfer_or_delete_ref("authorization_" <> _, _column, _from, _to), do: 0
   defp transfer_or_delete_ref("user_sites", _column, _from, _to), do: 0
+  defp transfer_or_delete_ref(_table, column, _from, _to) when column in @history_columns, do: 0
 
   defp transfer_or_delete_ref(table, column, from_user_id, to_user_id) do
     %{num_rows: num_rows} =

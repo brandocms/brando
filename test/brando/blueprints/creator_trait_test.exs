@@ -96,4 +96,20 @@ defmodule Brando.Trait.CreatorTest do
     assert same.updated_by_id == user.id
     assert same.edited_at == page.edited_at
   end
+
+  test "transferring a user's content moves ownership but keeps the edit history" do
+    leaving = Factory.insert(:random_user)
+    recipient = Factory.insert(:random_user)
+    {:ok, page} = Pages.create_page(page_params(), leaving)
+
+    summary = Brando.Users.get_user_content_summary(leaving.id)
+    assert %{table: "pages", column: "creator_id", count: 1} in summary
+    refute Enum.any?(summary, &(&1.column == "updated_by_id"))
+
+    {:ok, _} = Brando.Users.transfer_user_content(leaving.id, recipient.id)
+    transferred = Brando.Repo.get!(Pages.Page, page.id)
+
+    assert transferred.creator_id == recipient.id
+    assert transferred.updated_by_id == leaving.id
+  end
 end

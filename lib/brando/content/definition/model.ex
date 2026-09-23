@@ -18,7 +18,7 @@ defmodule Brando.Content.Definition.Model do
 
   def var_fields do
     Var.__schema__(:fields) --
-      (~w(id creator_id inserted_at updated_at)a ++
+      (~w(id creator_id updated_by_id inserted_at updated_at edited_at)a ++
          @var_owners ++ Enum.map(@var_assets, &String.to_existing_atom(&1 <> "_id")))
   end
 
