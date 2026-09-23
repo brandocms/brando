@@ -156,30 +156,27 @@ defmodule Brando.Users do
     Enum.map(rows, fn [table, column] -> {table, column} end)
   end
 
-  # Edit history, not ownership. The user is soft-deleted, so these keep
-  # pointing at who actually made the edit instead of crediting the recipient.
-  @history_columns ~w(updated_by_id)
-
   @doc """
   Returns a content summary for `user_id` — a list of tables and how many
   rows reference this user, filtering out tables with zero rows.
+
+  A row that references the user from several columns (say `creator_id` and
+  `updated_by_id`) is counted once.
   """
   @spec get_user_content_summary(integer()) :: [map()]
   def get_user_content_summary(user_id) do
     get_user_foreign_key_references()
-    |> Enum.reject(fn {table, column} ->
-      table == "users_tokens" or table == "user_sites" or String.starts_with?(table, "authorization_") or
-        column in @history_columns
+    |> Enum.reject(fn {table, _column} ->
+      table == "users_tokens" or table == "user_sites" or String.starts_with?(table, "authorization_")
     end)
-    |> Enum.map(fn {table, column} ->
-      %{rows: [[count]]} =
-        Ecto.Adapters.SQL.query!(
-          Brando.repo(),
-          "SELECT count(*) FROM #{table} WHERE #{column} = $1",
-          [user_id]
-        )
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Enum.map(fn {table, columns} ->
+      matches = Enum.map_join(columns, " OR ", &"#{&1} = $1")
 
-      %{table: table, column: column, count: count}
+      %{rows: [[count]]} =
+        Ecto.Adapters.SQL.query!(Brando.repo(), "SELECT count(*) FROM #{table} WHERE #{matches}", [user_id])
+
+      %{table: table, columns: columns, count: count}
     end)
     |> Enum.reject(&(&1.count == 0))
   end
@@ -213,7 +210,6 @@ defmodule Brando.Users do
 
   defp transfer_or_delete_ref("authorization_" <> _, _column, _from, _to), do: 0
   defp transfer_or_delete_ref("user_sites", _column, _from, _to), do: 0
-  defp transfer_or_delete_ref(_table, column, _from, _to) when column in @history_columns, do: 0
 
   defp transfer_or_delete_ref(table, column, from_user_id, to_user_id) do
     %{num_rows: num_rows} =
