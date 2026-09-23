@@ -51,7 +51,7 @@ defmodule Brando.JSONLD.Collection do
       given, the result is a `CollectionPage` whose `mainEntity` is the list,
       joined to the site's `#website` and `#identity` nodes by reference.
   """
-  @spec from_entries([term()], [option()]) :: ItemList.t() | CollectionPage.t() | nil
+  @spec from_entries([term()], [option()]) :: %ItemList{} | %CollectionPage{} | nil
   def from_entries(entries, opts \\ [])
 
   def from_entries(entries, opts) when is_list(entries) do
