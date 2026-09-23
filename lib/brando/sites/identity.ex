@@ -233,7 +233,7 @@ defmodule Brando.Sites.Identity do
               instructions: t("Leave empty to use the linked page's meta description", Brando.Sites.Service)
 
             input :identifier_id, :select,
-              options: &Brando.Sites.Services.identifier_options/2,
+              options: &__MODULE__.service_page_options/2,
               resetable: true,
               label: t("Page", Brando.Sites.Service),
               instructions:
@@ -280,6 +280,9 @@ defmodule Brando.Sites.Identity do
 
   @doc "Builds a default service for the identity form."
   def default_service(_identity, _asset), do: %Brando.Sites.Service{}
+
+  @doc "Page options for a service; see `Brando.Sites.Services.identifier_options/2`."
+  def service_page_options(form, opts), do: Brando.Sites.Services.identifier_options(form, opts)
 
   @doc "Summary line for a service in the identity form's listing."
   def service_summary(assigns) do
