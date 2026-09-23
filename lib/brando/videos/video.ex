@@ -13,7 +13,7 @@ defmodule Brando.Videos.Video do
   use Gettext, backend: Brando.Gettext
   import Brando.Blueprint.Listings.Components.Core
 
-  trait :creator
+  trait :creator, derived: [:status, :remote_id, :meta, :width, :height, :aspect_ratio, :duration]
   trait :timestamped
   trait :soft_delete
 

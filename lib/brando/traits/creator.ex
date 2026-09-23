@@ -3,11 +3,20 @@ defmodule Brando.Trait.Creator do
   Records who created an entry and who last edited it.
 
   Adds `creator` (set once, on insert), plus `updated_by` and `edited_at`,
-  which move only on user-initiated saves. `updated_at` is Ecto's and keeps
+  which stay empty on insert and move only on later user-initiated saves, so
+  an entry nobody has edited since creating it reads as created, not edited. `updated_at` is Ecto's and keeps
   meaning "something wrote to this row": block re-rendering, migrations and
   `mix brando.entries.resave` all bump it without going through this trait,
   and saves made as `:system` leave `updated_by`/`edited_at` alone. A save
   whose only changes are `rendered_*` columns does not count as an edit.
+
+  ## Options
+
+    * `:derived` - fields a processing pipeline writes on the user's behalf
+      (image sizes, a video's provider status). A save that changes only these,
+      and `rendered_*` columns, is not an edit:
+
+          trait :creator, derived: [:sizes, :formats, :status]
   """
   use Brando.Trait
 
@@ -34,12 +43,12 @@ defmodule Brando.Trait.Creator do
     changeset
   end
 
-  def changeset_mutator(_, _cfg, changeset, user, _) do
+  def changeset_mutator(_, cfg, changeset, user, _) do
     user_id = user_id(user)
 
     changeset
     |> put_creator(user_id)
-    |> put_editor(user_id)
+    |> put_editor(user_id, Map.get(cfg, :derived, []))
   end
 
   defp user_id(%{id: id}), do: id
@@ -53,10 +62,10 @@ defmodule Brando.Trait.Creator do
 
   defp put_creator(changeset, _user_id), do: changeset
 
-  defp put_editor(%{data: %{id: nil}} = changeset, user_id), do: stamp_editor(changeset, user_id)
+  defp put_editor(%{data: %{id: nil}} = changeset, _user_id, _derived), do: changeset
 
-  defp put_editor(changeset, user_id) do
-    if edited?(changeset), do: stamp_editor(changeset, user_id), else: changeset
+  defp put_editor(changeset, user_id, derived) do
+    if edited?(changeset, derived), do: stamp_editor(changeset, user_id), else: changeset
   end
 
   defp stamp_editor(changeset, user_id) do
@@ -65,10 +74,11 @@ defmodule Brando.Trait.Creator do
     |> Changeset.put_change(:edited_at, DateTime.truncate(DateTime.utc_now(), :second))
   end
 
-  # A re-render writes only rendered_<field> and rendered_<field>_at; that is
-  # not a human edit even when it comes through a user-scoped save.
-  defp edited?(%{changes: changes}) do
-    Enum.any?(changes, fn {key, _} -> not render_field?(key) end)
+  # A re-render writes only rendered_<field> and rendered_<field>_at, and a
+  # processing pipeline only its derived fields; neither is a human edit even
+  # when it comes through a user-scoped save.
+  defp edited?(%{changes: changes}, derived) do
+    Enum.any?(changes, fn {key, _} -> not render_field?(key) and key not in derived end)
   end
 
   defp render_field?(key), do: key |> Atom.to_string() |> String.starts_with?("rendered_")

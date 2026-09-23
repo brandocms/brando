@@ -16,7 +16,7 @@ defmodule Brando.Images.Image do
 
   alias Brando.Images.Focal
 
-  trait :creator
+  trait :creator, derived: [:sizes, :formats, :status, :cdn, :dominant_color]
   trait :timestamped
   trait :soft_delete
   trait :focal

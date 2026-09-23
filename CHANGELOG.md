@@ -402,10 +402,13 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   `Brando.AI.Context` does for both the form and everything outside one. All
   of it is hidden unless `Brando.AI` has a provider configured.
 - Entries record who last edited them. `Brando.Trait.Creator` now adds
-  `updated_by` and `edited_at` next to `creator`; they move only on
-  user-initiated saves (`:system` saves, block re-rendering, migrations and
-  `mix brando.entries.resave` leave them alone, while `updated_at` keeps its
-  Ecto meaning). The entry listing shows "Edited by <editor> · edited_at" once an
+  `updated_by` and `edited_at` next to `creator`; they stay empty on insert and
+  move only on later user-initiated saves (`:system` saves, block re-rendering,
+  migrations and `mix brando.entries.resave` leave them alone, while
+  `updated_at` keeps its Ecto meaning). `trait :creator, derived: [...]` names
+  fields a processing pipeline writes, so image sizes or a video provider's
+  status do not count as edits either. Deleting a user transfers their edits
+  along with their content. The entry listing shows "Edited by <editor> · edited_at" once an
   entry has been edited, and "Created by <creator> · inserted_at" before that —
   it no longer pairs the creator with `updated_at`. Brando's own tables get the
   columns from the `brando_175` migration (`mix brando.gen.migrations`);

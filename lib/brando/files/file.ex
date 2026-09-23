@@ -14,7 +14,7 @@ defmodule Brando.Files.File do
   use Gettext, backend: Brando.Gettext
   import Brando.Blueprint.Listings.Components.Core
 
-  trait :creator
+  trait :creator, derived: [:cdn]
   trait :soft_delete
   trait :timestamped
 
