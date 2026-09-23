@@ -272,8 +272,10 @@ jobs:
 
       - name: Build frontend assets
         working-directory: brando/e2e/assets/frontend
+        # Only the yarn shim: a bare `corepack enable` also replaces the pnpm
+        # pinned above with whatever pnpm is newest that day.
         run: |
-          corepack enable
+          corepack enable yarn
           yarn install --frozen-lockfile
           yarn build
 
