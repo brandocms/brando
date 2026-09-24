@@ -673,6 +673,11 @@ defmodule Brando.Villain.Parser do
   def picture(nil, _), do: ""
 
   def picture(data, opts) do
+    # The image's own title/credits/alt are language → text maps; a
+    # placement override is already a string. Resolve both to the entry's
+    # language before anything reads them as text.
+    data = Brando.Images.resolve_texts(data, language(opts))
+
     # Extract data fields with defaults
     fields = extract_picture_fields(data)
 
@@ -884,11 +889,22 @@ defmodule Brando.Villain.Parser do
 
   defp gallery_items(media, data, opts, wrapper) do
     parser = parser_module(opts)
+    language = language(opts)
 
     media
-    |> Enum.map(&gallery_item(&1, data, parser, wrapper))
+    |> Enum.map(fn
+      {:image, img} -> gallery_item({:image, Brando.Images.resolve_texts(img, language)}, data, parser, wrapper)
+      item -> gallery_item(item, data, parser, wrapper)
+    end)
     |> Enum.intersperse("\n")
   end
+
+  @doc """
+  The language blocks are being rendered in — the entry's — from the parse
+  context, or `nil` outside one.
+  """
+  def language(%{context: %Liquex.Context{} = context}), do: Liquex.Context.get(context, "language")
+  def language(_opts), do: nil
 
   defp gallery_item({:image, img}, data, parser, wrapper) do
     title = Map.get(img, :title, nil)

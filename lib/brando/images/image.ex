@@ -26,9 +26,10 @@ defmodule Brando.Images.Image do
 
   attributes do
     attribute :status, :enum, values: [:processed, :unprocessed]
-    attribute :title, :text
-    attribute :credits, :text
-    attribute :alt, :text
+    # Language → text maps; read them with `Brando.Images.text/3`.
+    attribute :title, :i18n_string
+    attribute :credits, :i18n_string
+    attribute :alt, :i18n_string
 
     attribute :formats, {:array, Ecto.Enum}, values: [:original, :jpg, :png, :gif, :webp, :avif, :svg]
 
@@ -88,13 +89,16 @@ defmodule Brando.Images.Image do
       assigns
       |> assign(:image_formats, formats)
       |> assign(:size_count, map_size(assigns.entry.sizes || %{}))
+      |> assign(:title, Brando.Images.text(assigns.entry, :title, nil))
+      |> assign(:alt_missing, Brando.Images.AltText.missing_languages(assigns.entry))
+      |> assign(:language_count, length(Brando.Images.AltText.languages()))
 
     ~H"""
     <.cover image={@entry} columns={2} size={:smallest} class="library-thumbnail" />
     <.update_link entry={@entry} columns={9} class="library-image-info">
       {Path.basename(@entry.path)}
       <:outside>
-        <p :if={@entry.title} class="library-image-title">{@entry.title}</p>
+        <p :if={@title} class="library-image-title">{@title}</p>
         <div class="library-image-meta">
           <span :if={@image_formats != []} class="library-formats" role="group" aria-label={gettext("Formats")}>
             <span :for={format <- @image_formats} class="library-format">{format}</span>
@@ -103,9 +107,16 @@ defmodule Brando.Images.Image do
           <span :if={@size_count > 0} class="library-size-count">
             {ngettext("%{count} size", "%{count} sizes", @size_count)}
           </span>
-          <span class={["library-alt", @entry.alt in [nil, ""] && "missing"]}>{if @entry.alt in [nil, ""],
-            do: gettext("No alt text"),
-            else: gettext("Alt text added")}</span>
+          <span class={["library-alt", @alt_missing != [] && "missing"]}>
+            <%= cond do %>
+              <% @alt_missing == [] -> %>
+                {gettext("Alt text added")}
+              <% length(@alt_missing) == @language_count -> %>
+                {gettext("No alt text")}
+              <% true -> %>
+                {gettext("No alt text in %{languages}", languages: Enum.join(@alt_missing, ", "))}
+            <% end %>
+          </span>
           <span :if={@entry.status != :processed}>{gettext("Processing")}</span>
         </div>
       </:outside>
@@ -118,9 +129,9 @@ defmodule Brando.Images.Image do
       tab gettext("Content") do
         fieldset do
           size :half
-          input :title, :text, label: t("Title")
-          input :credits, :text, label: t("Credits")
-          input :alt, :text, label: t("Alt. text")
+          input :title, :i18n_text, label: t("Title"), languages: :content
+          input :credits, :i18n_text, label: t("Credits"), languages: :content
+          input :alt, :i18n_text, label: t("Alt. text"), languages: :content
           input :path, :text, label: t("Path"), monospace: true
         end
 

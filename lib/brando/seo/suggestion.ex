@@ -31,6 +31,9 @@ defmodule Brando.SEO.Suggestion do
     field :field, Ecto.Enum, values: @fields
     field :title, :string
     field :text, :string
+    # Image alt text, one per language; `text` then holds the default
+    # language's, for display.
+    field :values, :map
     field :model, :string
     field :status, Ecto.Enum, values: @statuses, default: :queued
     field :error, :string
@@ -51,6 +54,7 @@ defmodule Brando.SEO.Suggestion do
       :field,
       :title,
       :text,
+      :values,
       :model,
       :status,
       :error,

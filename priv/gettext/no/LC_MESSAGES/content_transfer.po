@@ -623,7 +623,7 @@ msgid "Fields, metadata & content"
 msgstr "Felt, metadata og innhold"
 
 #: lib/brando/content/transfer/labels.ex:47
-#: lib/brando_admin/content_preview.ex:201
+#: lib/brando_admin/content_preview.ex:214
 #, elixir-autogen, elixir-format
 msgid "File"
 msgstr "Fil"
@@ -664,7 +664,7 @@ msgid "From bundle"
 msgstr "Fra pakken"
 
 #: lib/brando/content/transfer/labels.ex:49
-#: lib/brando_admin/content_preview.ex:203
+#: lib/brando_admin/content_preview.ex:216
 #, elixir-autogen, elixir-format
 msgid "Gallery"
 msgstr "Galleri"
@@ -690,7 +690,7 @@ msgid "Height"
 msgstr "Høyde"
 
 #: lib/brando/content/transfer/labels.ex:46
-#: lib/brando_admin/content_preview.ex:200
+#: lib/brando_admin/content_preview.ex:213
 #, elixir-autogen, elixir-format
 msgid "Image"
 msgstr "Bilde"
@@ -1340,12 +1340,12 @@ msgstr "Velg minst én oppføring."
 msgid "Select entry"
 msgstr "Velg oppføring"
 
-#: lib/brando/content/transfer/dependencies.ex:325
+#: lib/brando/content/transfer/dependencies.ex:326
 #, elixir-autogen, elixir-format
 msgid "Selected-entry metadata has an invalid reference."
 msgstr "Metadata for valgte oppføringer har en ugyldig referanse."
 
-#: lib/brando/content/transfer/dependencies.ex:322
+#: lib/brando/content/transfer/dependencies.ex:323
 #, elixir-autogen, elixir-format
 msgid "Selected-entry metadata references a missing identifier."
 msgstr "Metadata for valgte oppføringer viser til en manglende identifikator."
@@ -1669,7 +1669,7 @@ msgstr "URI"
 msgid "URL"
 msgstr "URL"
 
-#: lib/brando/content/transfer/dependencies.ex:319
+#: lib/brando/content/transfer/dependencies.ex:320
 #, elixir-autogen, elixir-format
 msgid "Unknown selected-entry metadata schema."
 msgstr "Ukjent metadataskjema for valgte oppføringer."
@@ -1756,7 +1756,7 @@ msgid "Verifying and importing content…"
 msgstr "Kontrollerer og importerer innhold…"
 
 #: lib/brando/content/transfer/labels.ex:48
-#: lib/brando_admin/content_preview.ex:202
+#: lib/brando_admin/content_preview.ex:215
 #, elixir-autogen, elixir-format
 msgid "Video"
 msgstr "Video"
@@ -2078,7 +2078,7 @@ msgstr "Tekst og mediereferanser. Flyttinger vises som fjerning og tillegg. Gjen
 msgid "Unavailable media"
 msgstr "Utilgjengelig mediefil"
 
-#: lib/brando_admin/content_preview.ex:190
+#: lib/brando_admin/content_preview.ex:192
 #, elixir-autogen, elixir-format
 msgid "Unnamed media"
 msgstr "Mediefil uten navn"

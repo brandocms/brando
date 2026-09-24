@@ -908,43 +908,14 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :monospace, :boolean
   attr :change, :any, default: nil
   attr :target, :any, default: nil
+  attr :opts, :list, default: []
 
   def i18n_text(assigns) do
-    assigns = prepare_input_component(assigns)
-
-    admin_languages =
-      :admin_languages
-      |> Brando.config()
-      |> Enum.map(fn [{:value, val}, _] -> val end)
-
-    existing_languages = Map.keys(assigns.field.value || %{})
-    missing_languages = admin_languages -- existing_languages
-
-    updated_field =
-      Enum.reduce(missing_languages, assigns.field, fn lang, acc ->
-        %{acc | value: Map.put(acc.value || %{}, lang, "")}
-      end)
-
-    assigns = assign(assigns, :field, updated_field)
-
-    ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
-      <Primitives.map_inputs :let={%{value: value, key: language, name: name}} field={@field}>
-        <div class="field-base i18n-text">
-          <div class="language">{language}</div>
-          <input
-            type="text"
-            name={"#{name}"}
-            value={"#{value}"}
-            class="text"
-            phx-debounce={@debounce}
-            phx-target={@target}
-            data-watch-focus
-          />
-        </div>
-      </Primitives.map_inputs>
-    </Primitives.field_base>
-    """
+    assigns
+    |> prepare_input_component()
+    |> assign_new(:opts, fn -> [] end)
+    |> assign(:kind, :text)
+    |> i18n_field()
   end
 
   attr :field, FormField
@@ -1242,49 +1213,114 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :monospace, :boolean
   attr :change, :any, default: nil
   attr :target, :any, default: nil
+  attr :opts, :list, default: []
 
   def i18n_textarea(assigns) do
-    assigns = prepare_input_component(assigns)
+    assigns
+    |> prepare_input_component()
+    |> assign_new(:opts, fn -> [] end)
+    |> assign(:kind, :textarea)
+    |> i18n_field()
+  end
 
-    admin_languages =
-      :admin_languages
-      |> Brando.config()
-      |> Enum.map(fn [{:value, val}, _] -> val end)
+  @doc """
+  The languages an i18n input offers: `:admin` (the admin interface's, the
+  default — what module names use) or `:content` (the site's content
+  languages — what image text uses).
+  """
+  @spec i18n_languages(:admin | :content) :: [{String.t(), String.t()}]
+  def i18n_languages(source \\ :admin) do
+    key = if source == :content, do: :languages, else: :admin_languages
 
-    existing_languages = Map.keys(assigns.field.value || %{})
-    missing_languages = admin_languages -- existing_languages
+    key
+    |> Brando.config()
+    |> List.wrap()
+    |> Enum.map(fn language -> {to_string(language[:value]), language[:text] || to_string(language[:value])} end)
+  end
 
-    updated_field =
-      Enum.reduce(missing_languages, assigns.field, fn lang, acc ->
-        %{acc | value: Map.put(acc.value || %{}, lang, "")}
-      end)
+  # One tab per language over a single input area. Which tab is open lives
+  # in the browser (JS class commands, which survive patches); every
+  # language's input is always in the form, so all of them submit.
+  defp i18n_field(assigns) do
+    opts = assigns.opts || []
+    languages = i18n_languages(Keyword.get(opts, :languages, :admin))
+    value = if is_map(assigns.field.value), do: assigns.field.value, else: %{}
 
     assigns =
       assigns
-      |> assign(:rows, assigns.opts[:rows] || 3)
-      |> assign(:generated_uid, make_uid(assigns.field, assigns.uid))
-      |> assign(:monospace, assigns.opts[:monospace])
-      |> assign(:field, updated_field)
+      |> assign(:languages, languages)
+      |> assign(:value, value)
+      |> assign(:rows, opts[:rows] || 3)
+      |> assign(:i18n_id, "#{assigns.field.id}-i18n")
+      |> assign(:first, languages |> List.first() |> then(&(&1 && elem(&1, 0))))
 
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
-      <Primitives.map_inputs :let={%{value: value, key: language, name: name}} field={@field}>
-        <div class="field-base i18n-textarea">
-          <div class="language">{language}</div>
+      <div class={["i18n-field", "i18n-#{@kind}"]} id={@i18n_id}>
+        <div class="i18n-tabs" role="tablist" aria-label={@label}>
+          <button
+            :for={{language, name} <- @languages}
+            type="button"
+            role="tab"
+            id={"#{@i18n_id}-tab-#{language}"}
+            class={["i18n-tab", language == @first && "is-active"]}
+            aria-selected={to_string(language == @first)}
+            aria-controls={"#{@i18n_id}-panel-#{language}"}
+            title={name}
+            data-empty={to_string(blank_i18n?(@value[language]))}
+            phx-click={select_i18n_tab(@i18n_id, language)}
+          >
+            {language}
+          </button>
+        </div>
+        <div
+          :for={{language, name} <- @languages}
+          id={"#{@i18n_id}-panel-#{language}"}
+          role="tabpanel"
+          aria-labelledby={"#{@i18n_id}-tab-#{language}"}
+          class={["i18n-panel", language == @first && "is-active"]}
+        >
+          <input
+            :if={@kind == :text}
+            type="text"
+            id={"#{@field.id}_#{language}"}
+            name={"#{@field.name}[#{language}]"}
+            value={@value[language]}
+            class="text"
+            lang={language}
+            aria-label={"#{@label} (#{name})"}
+            phx-debounce={@debounce}
+            phx-target={@target}
+            data-watch-focus
+          />
           <textarea
-            name={"#{name}"}
+            :if={@kind == :textarea}
+            id={"#{@field.id}_#{language}"}
+            name={"#{@field.name}[#{language}]"}
             class="text"
             rows={@rows}
+            lang={language}
+            aria-label={"#{@label} (#{name})"}
             disabled={@disabled}
             phx-debounce={@debounce}
             phx-target={@target}
             data-watch-focus
-          ><%= value %></textarea>
+          >{@value[language]}</textarea>
         </div>
-      </Primitives.map_inputs>
+      </div>
     </Primitives.field_base>
     """
   end
+
+  defp select_i18n_tab(id, language) do
+    JS.remove_class("is-active", to: "##{id} > .i18n-tabs > .i18n-tab, ##{id} > .i18n-panel")
+    |> JS.set_attribute({"aria-selected", "false"}, to: "##{id} > .i18n-tabs > .i18n-tab")
+    |> JS.add_class("is-active", to: "##{id}-tab-#{language}, ##{id}-panel-#{language}")
+    |> JS.set_attribute({"aria-selected", "true"}, to: "##{id}-tab-#{language}")
+  end
+
+  defp blank_i18n?(value) when is_binary(value), do: String.trim(value) == ""
+  defp blank_i18n?(_), do: true
 
   def toggle(assigns) do
     assigns =

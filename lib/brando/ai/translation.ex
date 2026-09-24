@@ -48,7 +48,7 @@ defmodule Brando.AI.Translation do
 
       entry ->
         progress_fn.(:collecting)
-        items = collect_translatable_content(entry, schema)
+        items = collect_translatable_content(entry, schema, %{source: source_lang, target: target_lang})
 
         if items == [] do
           progress_fn.(:complete)
@@ -117,9 +117,9 @@ defmodule Brando.AI.Translation do
   - `{:ref_gallery, ref_id, override_idx, field, text}`
   - `{:table_var, var_id, text}`
   """
-  def collect_translatable_content(entry, schema) do
+  def collect_translatable_content(entry, schema, langs \\ %{}) do
     field_items = collect_entry_fields(entry, schema)
-    block_items = collect_block_content(entry, schema)
+    block_items = collect_block_content(entry, schema, langs)
     field_items ++ block_items
   end
 
@@ -180,7 +180,7 @@ defmodule Brando.AI.Translation do
     |> Enum.reverse()
   end
 
-  defp collect_block_content(entry, schema) do
+  defp collect_block_content(entry, schema, langs) do
     if schema.has_trait(Brando.Trait.Blocks) do
       schema.__blocks_fields__()
       |> Enum.flat_map(fn %{name: assoc_name} ->
@@ -189,7 +189,7 @@ defmodule Brando.AI.Translation do
         case Map.get(entry, entry_assoc_name) do
           entry_blocks when is_list(entry_blocks) ->
             Enum.flat_map(entry_blocks, fn entry_block ->
-              collect_from_block(entry_block.block)
+              collect_from_block(entry_block.block, langs)
             end)
 
           _ ->
@@ -201,17 +201,17 @@ defmodule Brando.AI.Translation do
     end
   end
 
-  defp collect_from_block(nil), do: []
+  defp collect_from_block(nil, _langs), do: []
 
-  defp collect_from_block(block) do
+  defp collect_from_block(block, langs) do
     var_items = collect_from_vars(block.vars || [])
-    ref_items = collect_from_refs(block.refs || [])
+    ref_items = collect_from_refs(block.refs || [], langs)
     table_items = collect_from_table_rows(block.table_rows || [])
     meta_items = collect_from_identifier_metas(block)
 
     child_items =
       (block.children || [])
-      |> Enum.flat_map(&collect_from_block/1)
+      |> Enum.flat_map(&collect_from_block(&1, langs))
 
     var_items ++ ref_items ++ table_items ++ meta_items ++ child_items
   end
@@ -227,7 +227,7 @@ defmodule Brando.AI.Translation do
     |> Enum.reverse()
   end
 
-  defp collect_from_refs(refs) do
+  defp collect_from_refs(refs, langs) do
     Enum.flat_map(refs, fn ref ->
       # PolymorphicEmbed resolves to wrapper struct (e.g. %TextBlock{data: %TextBlock.Data{text: ...}})
       case ref.data do
@@ -241,13 +241,13 @@ defmodule Brando.AI.Translation do
           end
 
         %PictureBlock{data: inner_data} ->
-          collect_picture_overrides(ref, inner_data)
+          collect_picture_overrides(ref, inner_data, langs)
 
         %VideoBlock{data: inner_data} ->
           collect_video_overrides(ref, inner_data)
 
         %GalleryBlock{data: inner_data} ->
-          collect_gallery_overrides(ref, inner_data)
+          collect_gallery_overrides(ref, inner_data, langs)
 
         _ ->
           []
@@ -255,7 +255,7 @@ defmodule Brando.AI.Translation do
     end)
   end
 
-  defp collect_picture_overrides(ref, data) do
+  defp collect_picture_overrides(ref, data, langs) do
     fields = [:title, :credits, :alt]
 
     Enum.reduce(fields, [], fn field, acc ->
@@ -266,10 +266,7 @@ defmodule Brando.AI.Translation do
         if is_binary(override_val) and override_val != "" do
           override_val
         else
-          case ref.image do
-            %{} = image -> Map.get(image, field)
-            _ -> nil
-          end
+          inherited_text(ref.image, field, langs)
         end
 
       if is_binary(text) and text != "" do
@@ -301,14 +298,14 @@ defmodule Brando.AI.Translation do
     end
   end
 
-  defp collect_gallery_overrides(ref, data) do
+  defp collect_gallery_overrides(ref, data, langs) do
     overrides = data.gallery_object_overrides || []
     gallery_objects = get_gallery_objects(ref)
 
     overrides
     |> Enum.with_index()
     |> Enum.flat_map(fn {override, idx} ->
-      collect_single_gallery_override(ref.id, override, idx, gallery_objects)
+      collect_single_gallery_override(ref.id, override, idx, gallery_objects, langs)
     end)
   end
 
@@ -319,7 +316,7 @@ defmodule Brando.AI.Translation do
     end
   end
 
-  defp collect_single_gallery_override(ref_id, override, idx, gallery_objects) do
+  defp collect_single_gallery_override(ref_id, override, idx, gallery_objects, langs) do
     [:title, :credits, :alt]
     |> Enum.reduce([], fn field, acc ->
       use_default_field = :"use_default_#{field}"
@@ -331,7 +328,7 @@ defmodule Brando.AI.Translation do
           override_val
         else
           # Fall back to gallery object's image/video text
-          find_gallery_object_text(gallery_objects, override, field)
+          find_gallery_object_text(gallery_objects, override, field, langs)
         end
 
       if is_binary(text) and text != "" do
@@ -345,10 +342,10 @@ defmodule Brando.AI.Translation do
 
   # An override points at its image or video, not at the gallery object, and
   # images and videos are numbered separately.
-  defp find_gallery_object_text(gallery_objects, override, field) do
+  defp find_gallery_object_text(gallery_objects, override, field, langs) do
     Enum.find_value(gallery_objects, fn
       %{image: %Brando.Images.Image{id: id} = image} ->
-        if GalleryObjectOverride.for_media?(override, :image, id), do: Map.get(image, field)
+        if GalleryObjectOverride.for_media?(override, :image, id), do: inherited_text(image, field, langs)
 
       %{video: %Brando.Videos.Video{id: id} = video} ->
         if GalleryObjectOverride.for_media?(override, :video, id), do: Map.get(video, field)
@@ -357,6 +354,29 @@ defmodule Brando.AI.Translation do
         nil
     end)
   end
+
+  # An image's own text, which a placement without an override inherits. The
+  # image already translated into the target language needs nothing: the
+  # page renders that. Otherwise the source language's text is translated
+  # into the placement.
+  defp inherited_text(%Brando.Images.Image{} = image, field, langs) do
+    values = Map.get(image, field)
+
+    if has_text?(values, langs[:target]),
+      do: nil,
+      else: Brando.Images.text(image, field, langs[:source])
+  end
+
+  defp inherited_text(_image, _field, _langs), do: nil
+
+  defp has_text?(%{} = values, language) when not is_nil(language) do
+    case Map.get(values, to_string(language)) do
+      text when is_binary(text) -> String.trim(text) != ""
+      _ -> false
+    end
+  end
+
+  defp has_text?(_values, _language), do: false
 
   defp collect_from_table_rows(table_rows) do
     Enum.flat_map(table_rows, fn row ->

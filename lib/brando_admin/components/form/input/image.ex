@@ -417,7 +417,9 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
           <div :if={!@compact} class="info-wrapper">
             <div class="filename">{@file_name}</div>
             <div class="dims">{@image.width}&times;{@image.height}</div>
-            <div :if={@image.title} class="title">● {@image.title}</div>
+            <div :if={Brando.Images.text(@image, :title, nil)} class="title">
+              ● {Brando.Images.text(@image, :title, nil)}
+            </div>
           </div>
           <button class="tiny" type="button" phx-click={@click}>
             {gettext("Edit image")}

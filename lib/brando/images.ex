@@ -140,6 +140,45 @@ defmodule Brando.Images do
   defp remap_format(:gif), do: :webp
   defp remap_format(format), do: format
 
+  @doc """
+  An image's `:alt`, `:title` or `:credits` in `language`: that language's
+  text, else the default content language's, else `nil`.
+
+  These fields are maps of language → text. Pass the language explicitly —
+  the entry's when rendering its blocks, the request's in a template — rather
+  than relying on the current locale: blocks are rendered in the admin, under
+  the editor's locale.
+
+  Plain strings (block data saved before the fields were translated, or a
+  map already resolved) are returned as they are.
+
+      Brando.Images.text(image, :alt, "no")
+  """
+  @spec text(map() | nil, :alt | :title | :credits, String.t() | atom() | nil) :: String.t() | nil
+  def text(nil, _field, _language), do: nil
+
+  def text(image, field, language) when field in [:alt, :title, :credits] do
+    image |> Map.get(field) |> Brando.Type.I18nString.get(language)
+  end
+
+  @doc """
+  `image` — or picture data merged from one — with `:title`, `:credits` and
+  `:alt` as text in `language`: the image's language maps resolved, a
+  placement's override strings left as they are. Renderers call this once,
+  where the language is known, so nothing downstream sees a map.
+  """
+  @spec resolve_texts(map(), String.t() | atom() | nil) :: map()
+  def resolve_texts(image, language) when is_map(image) do
+    Enum.reduce([:title, :credits, :alt], image, fn field, acc ->
+      case Map.fetch(acc, field) do
+        {:ok, value} when is_map(value) -> Map.put(acc, field, Brando.Type.I18nString.get(value, language))
+        _ -> acc
+      end
+    end)
+  end
+
+  def resolve_texts(image, _language), do: image
+
   def list_generated_sizes(image) do
     {:ok, %{formats: _formats, sizes: _sizes}} = get_config_for(image)
   end

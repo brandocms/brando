@@ -66,14 +66,16 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
 
     changeset = socket.assigns.image_changeset
 
-    assert Changeset.get_field(changeset, :title) == "typed caption"
-    assert Changeset.get_field(changeset, :credits) == "typed credits"
+    # Recovery state from before the texts were translated is a plain string;
+    # it lands under the default language.
+    assert Changeset.get_field(changeset, :title) == %{"en" => "typed caption"}
+    assert Changeset.get_field(changeset, :credits) == %{"en" => "typed credits"}
 
     # They must be *changes*, not merely applied into data — a value sitting in
     # `data` never reaches SQL, which is the single mistake behind most of this
     # audit's findings.
-    assert changeset.changes.title == "typed caption"
-    assert changeset.changes.credits == "typed credits"
+    assert changeset.changes.title == %{"en" => "typed caption"}
+    assert changeset.changes.credits == %{"en" => "typed credits"}
   end
 
   test "the drawer still restores when there were no pending edits", %{image: image} do
@@ -110,7 +112,7 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
 
     changeset = socket.assigns.image_changeset
 
-    assert changeset.changes.title == "ok"
+    assert changeset.changes.title == %{"en" => "ok"}
     refute Map.has_key?(changeset.changes, :creator_id)
     refute Map.has_key?(changeset.changes, :path)
   end

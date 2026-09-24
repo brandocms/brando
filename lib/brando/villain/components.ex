@@ -188,6 +188,8 @@ defmodule Brando.Villain.Components do
   Render a picture tag. Delegates to `Brando.HTML.Images.picture/1`.
   """
   def picture(assigns) do
+    assigns = assign(assigns, :opts, Keyword.put_new(assigns.opts, :language, assigns[:language]))
+
     ~H"""
     <Brando.HTML.Images.picture src={@src} opts={@opts} />
     """

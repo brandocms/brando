@@ -12,12 +12,12 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/images/image.ex:145
+#: lib/brando/images/image.ex:156
 #, elixir-autogen, elixir-format
 msgid "x"
 msgstr ""
 
-#: lib/brando/images/image.ex:146
+#: lib/brando/images/image.ex:157
 #, elixir-autogen, elixir-format
 msgid "y"
 msgstr ""

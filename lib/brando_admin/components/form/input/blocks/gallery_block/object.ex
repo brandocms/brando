@@ -298,7 +298,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
   defp base_display_values(obj) do
     cond do
       loaded_assoc?(obj, :image) ->
-        %{title: obj.image.title, alt: obj.image.alt, credits: obj.image.credits}
+        %{
+          title: Brando.Images.text(obj.image, :title, nil),
+          alt: Brando.Images.text(obj.image, :alt, nil),
+          credits: Brando.Images.text(obj.image, :credits, nil)
+        }
 
       loaded_assoc?(obj, :video) ->
         %{title: obj.video.title, alt: nil, credits: nil}

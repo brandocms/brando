@@ -147,9 +147,9 @@ defmodule Brando.VillainTest do
             data: %{
               type: "picture",
               data: %{
-                alt: image.alt,
-                title: image.title,
-                credits: image.credits
+                alt: Brando.Images.text(image, :alt, "en"),
+                title: Brando.Images.text(image, :title, "en"),
+                credits: Brando.Images.text(image, :credits, "en")
               }
             }
           }
@@ -190,9 +190,9 @@ defmodule Brando.VillainTest do
             data: %{
               type: "picture",
               data: %Brando.Villain.Blocks.PictureBlock.Data{
-                alt: image.alt,
-                title: image.title,
-                credits: image.credits
+                alt: Brando.Images.text(image, :alt, "en"),
+                title: Brando.Images.text(image, :title, "en"),
+                credits: Brando.Images.text(image, :credits, "en")
               }
             }
           }
@@ -381,9 +381,9 @@ defmodule Brando.VillainTest do
           data: %{
             type: "picture",
             data: %Brando.Villain.Blocks.PictureBlock.Data{
-              alt: image.alt,
-              title: image.title,
-              credits: image.credits
+              alt: Brando.Images.text(image, :alt, "en"),
+              title: Brando.Images.text(image, :title, "en"),
+              credits: Brando.Images.text(image, :credits, "en")
             }
           }
         }

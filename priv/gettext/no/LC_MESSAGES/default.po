@@ -76,7 +76,7 @@ msgid "Configuration"
 msgstr "Konfigurasjon"
 
 #: lib/brando/galleries/gallery.ex:51
-#: lib/brando/images/image.ex:118
+#: lib/brando/images/image.ex:129
 #: lib/brando/videos/video.ex:103
 #: lib/brando_admin/components/form/draft_recovery.ex:90
 #: lib/brando_admin/components/form/draft_recovery.ex:314
@@ -277,7 +277,7 @@ msgstr "Oppdater side"
 
 #: lib/brando_admin/components/form.ex:3185
 #: lib/brando_admin/components/form.ex:3197
-#: lib/brando_admin/components/form.ex:4781
+#: lib/brando_admin/components/form.ex:4779
 #, elixir-autogen, elixir-format
 msgid "Error"
 msgstr "Feil"
@@ -502,7 +502,7 @@ msgid "Edit global set"
 msgstr "Oppdater globalsett"
 
 #: lib/brando_admin/components/form/input/gallery.ex:421
-#: lib/brando_admin/components/form/input/image.ex:423
+#: lib/brando_admin/components/form/input/image.ex:425
 #: lib/brando_admin/components/image_picker.ex:537
 #: lib/brando_admin/live/images/image_form_live.ex:15
 #, elixir-autogen, elixir-format
@@ -626,8 +626,8 @@ msgstr "Paletter"
 msgid "Picture"
 msgstr "Bilde"
 
-#: lib/brando_admin/components/form.ex:5472
-#: lib/brando_admin/components/form.ex:5475
+#: lib/brando_admin/components/form.ex:5470
+#: lib/brando_admin/components/form.ex:5473
 #: lib/brando_admin/live/config/asset_live.ex:46
 #: lib/brando_admin/live/config/environment_live.ex:65
 #: lib/brando_admin/live/config/publishing_live.ex:55
@@ -637,7 +637,7 @@ msgstr "Bilde"
 msgid "Refresh"
 msgstr "Oppdater"
 
-#: lib/brando_admin/components/form.ex:4350
+#: lib/brando_admin/components/form.ex:4348
 #, elixir-autogen, elixir-format
 msgid "Refreshing Live Preview..."
 msgstr "Oppdaterer live-forhåndsvisning …"
@@ -708,7 +708,7 @@ msgid "Uploading..."
 msgstr "Laster opp…"
 
 #: lib/brando_admin/components/assets/media_field.ex:245
-#: lib/brando_admin/components/form/draft_preview_references.ex:183
+#: lib/brando_admin/components/form/draft_preview_references.ex:187
 #: lib/brando_admin/components/form/input/blocks/media_block.ex:211
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:472
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1284
@@ -802,12 +802,12 @@ msgstr "Velg språk du vil filtrere innlegg etter"
 msgid "Current content language"
 msgstr "Valgt innholdsspråk"
 
-#: lib/brando_admin/components/form/input/image.ex:436
+#: lib/brando_admin/components/form/input/image.ex:438
 #, elixir-autogen, elixir-format
 msgid "Add image"
 msgstr "Legg til bilde"
 
-#: lib/brando_admin/components/form/input/image.ex:434
+#: lib/brando_admin/components/form/input/image.ex:436
 #, elixir-autogen, elixir-format
 msgid "No image associated with field"
 msgstr "Inget bilde knyttet til feltet"
@@ -1133,7 +1133,7 @@ msgstr "Tøm alle lagre"
 msgid "Entry ID"
 msgstr "Oppførings-ID"
 
-#: lib/brando_admin/components/form/draft_preview_references.ex:182
+#: lib/brando_admin/components/form/draft_preview_references.ex:186
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex:223
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:467
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1234
@@ -1234,7 +1234,7 @@ msgstr "Lazyload"
 msgid "Moonwalk"
 msgstr "Månevandring"
 
-#: lib/brando/images/image.ex:107
+#: lib/brando/images/image.ex:115
 #: lib/brando_admin/components/form/input/blocks/gallery_block/object.ex:125
 #: lib/brando_admin/components/form/input/gallery.ex:393
 #, elixir-autogen, elixir-format
@@ -1271,7 +1271,7 @@ msgstr "gjenopprettet"
 msgid "Entry revisions"
 msgstr "Revisjoner"
 
-#: lib/brando_admin/components/form.ex:4448
+#: lib/brando_admin/components/form.ex:4446
 #, elixir-autogen, elixir-format
 msgid "Notice"
 msgstr "Merk"
@@ -1281,7 +1281,7 @@ msgstr "Merk"
 msgid "Set a future publishing date for this entry. Leave blank for immediate publishing."
 msgstr "Angi en fremtidig publiseringsdato for denne oppføringen. La stå tomt for umiddelbar publisering."
 
-#: lib/brando_admin/components/form.ex:4451
+#: lib/brando_admin/components/form.ex:4449
 #, elixir-autogen, elixir-format
 msgid "To create and administrate revisions, the entry must be saved at least one time first."
 msgstr "For å opprette og administrere revisjoner, må oppføringen lagres minst én gang først."
@@ -1354,7 +1354,7 @@ msgstr "ID for palett å velge farger fra"
 msgid "None selected"
 msgstr "Ingen valgt"
 
-#: lib/brando_admin/components/form.ex:5483
+#: lib/brando_admin/components/form.ex:5481
 #, elixir-autogen, elixir-format
 msgid "Open preview in new window"
 msgstr "Åpne forhåndsvisning i nytt vindu"
@@ -1384,14 +1384,14 @@ msgstr "Legg til fil"
 msgid "Edit file"
 msgstr "Rediger fil"
 
-#: lib/brando_admin/components/form.ex:5033
-#: lib/brando_admin/components/form.ex:5058
-#: lib/brando_admin/components/form.ex:5067
+#: lib/brando_admin/components/form.ex:5031
+#: lib/brando_admin/components/form.ex:5056
+#: lib/brando_admin/components/form.ex:5065
 #, elixir-autogen, elixir-format
 msgid "Error uploading"
 msgstr "Feil ved opplasting av fil"
 
-#: lib/brando_admin/components/form/draft_preview_references.ex:184
+#: lib/brando_admin/components/form/draft_preview_references.ex:188
 #: lib/brando_admin/components/form/input/blocks/file_block.ex:107
 #: lib/brando_admin/components/form/input/blocks/markdown_source_block.ex:64
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:464
@@ -1472,7 +1472,7 @@ msgstr "Tilbakestill alle ref.blokker"
 msgid "Reset all variables"
 msgstr "Tilbakestill alle variabler"
 
-#: lib/brando_admin/components/form.ex:4785
+#: lib/brando_admin/components/form.ex:4783
 #, elixir-autogen, elixir-format
 msgid "Error while saving form. Please correct marked fields and resubmit<br><br>Fields marked invalid:"
 msgstr "Feil ved lagring av skjema. Rett merkede felt og send inn på nytt<br><br>Felt som er ugyldige:"
@@ -1877,7 +1877,7 @@ msgstr "Blokken har oppdateringer"
 msgid "Block variables"
 msgstr "Blokkvariabler"
 
-#: lib/brando_admin/components/form.ex:4787
+#: lib/brando_admin/components/form.ex:4785
 #, elixir-autogen, elixir-format
 msgid "Cannot open Live Preview with errors in form. Please correct marked fields and try again<br><br>Fields marked invalid:"
 msgstr "Kan ikke åpne Live Preview med feil i skjemaet. Vennligst rett markerte felter og prøv igjen<br><br>Ugyldige felter:"
@@ -2021,7 +2021,7 @@ msgstr "Filnavn"
 msgid "GMaps"
 msgstr "GMaps"
 
-#: lib/brando_admin/components/form.ex:4254
+#: lib/brando_admin/components/form.ex:4252
 #, elixir-autogen, elixir-format
 msgid "Gathering blocks for sharing..."
 msgstr "Samler blokker til delingslenken…"
@@ -2104,8 +2104,8 @@ msgstr "Kun superbrukere kan endre passord for andre brukere."
 msgid "Open link in new window/tab"
 msgstr "Åpne lenke i nytt vindu/fane"
 
-#: lib/brando_admin/components/form.ex:4399
-#: lib/brando_admin/components/form.ex:4411
+#: lib/brando_admin/components/form.ex:4397
+#: lib/brando_admin/components/form.ex:4409
 #, elixir-autogen, elixir-format
 msgid "Opening stand alone live preview window..."
 msgstr "Åpner frittstående live preview vindu…"
@@ -2141,7 +2141,7 @@ msgstr "Lagre (⌘S)"
 msgid "Show instructions"
 msgstr "Vis instruksjoner"
 
-#: lib/brando_admin/components/form.ex:4392
+#: lib/brando_admin/components/form.ex:4390
 #, elixir-autogen, elixir-format
 msgid "Starting Live Preview — fetching initial render..."
 msgstr "Starter Live Preview — henter data…"
@@ -2683,7 +2683,7 @@ msgstr "Velg video"
 msgid "Show controls"
 msgstr "Vis kontroller"
 
-#: lib/brando_admin/components/form.ex:4374
+#: lib/brando_admin/components/form.ex:4372
 #, elixir-autogen, elixir-format
 msgid "Starting Live Preview..."
 msgstr "Starter Live Preview..."
@@ -2898,13 +2898,13 @@ msgstr "Rediger/Beskjær"
 msgid "Changes saved. Image is reprocessing."
 msgstr "Endringer lagret. Bildet behandles på nytt."
 
-#: lib/brando_admin/components/form.ex:4974
+#: lib/brando_admin/components/form.ex:4972
 #, elixir-autogen, elixir-format
 msgid "Error creating image"
 msgstr "Feil ved oppretting av bilde"
 
-#: lib/brando_admin/components/form.ex:3972
-#: lib/brando_admin/components/form.ex:4954
+#: lib/brando_admin/components/form.ex:3970
+#: lib/brando_admin/components/form.ex:4952
 #, elixir-autogen, elixir-format
 msgid "New image created."
 msgstr "Nytt bilde opprettet."
@@ -3010,7 +3010,7 @@ msgstr "Kontroller"
 msgid "Could not resolve AI settings for this field"
 msgstr "Fant ikke KI-innstillinger for dette feltet"
 
-#: lib/brando_admin/components/form.ex:5060
+#: lib/brando_admin/components/form.ex:5058
 #, elixir-autogen, elixir-format
 msgid "Could not store uploaded file. Check upload settings and try again."
 msgstr "Klarte ikke lagre den opplastede filen. Sjekk opplastingsinnstillingene og prøv igjen."
@@ -3091,7 +3091,7 @@ msgstr "Dra til en mappe"
 msgid "Element"
 msgstr "Element"
 
-#: lib/brando/ai.ex:166
+#: lib/brando/ai.ex:167
 #, elixir-autogen, elixir-format
 msgid "Failed to generate text with AI"
 msgstr "Klarte ikke generere tekst med KI"
@@ -3124,7 +3124,7 @@ msgstr "Mapper"
 msgid "Founding date"
 msgstr "Stiftelsesdato"
 
-#: lib/brando_admin/components/form/input.ex:1231
+#: lib/brando_admin/components/form/input.ex:1202
 #, elixir-autogen, elixir-format
 msgid "Generate with AI"
 msgstr "Generer med KI"
@@ -3328,7 +3328,7 @@ msgid "Rename"
 msgstr "Gi nytt navn"
 
 #: lib/brando_admin/components/form/input.ex:444
-#: lib/brando_admin/components/form/input.ex:1070
+#: lib/brando_admin/components/form/input.ex:1041
 #, elixir-autogen, elixir-format
 msgid "Reset to default"
 msgstr "Tilbakestill til standard"
@@ -3338,7 +3338,7 @@ msgstr "Tilbakestill til standard"
 msgid "Root"
 msgstr "Rot"
 
-#: lib/brando_admin/components/form.ex:5036
+#: lib/brando_admin/components/form.ex:5034
 #, elixir-autogen, elixir-format
 msgid "Server rejected %{kind} type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}"
 msgstr "Tjeneren avviste %{kind}-typen [%{rejected_type}].<br><br>Tillatte typer er:<br>%{allowed_types}"
@@ -3419,18 +3419,18 @@ msgstr "f.eks. $$, $$$"
 msgid "e.g. Free, $$"
 msgstr "f.eks. Gratis, $$"
 
+#: lib/brando_admin/components/form.ex:5072
 #: lib/brando_admin/components/form.ex:5074
-#: lib/brando_admin/components/form.ex:5076
 #, elixir-autogen, elixir-format
 msgid "file"
 msgstr "fil"
 
-#: lib/brando_admin/components/form.ex:5073
+#: lib/brando_admin/components/form.ex:5071
 #, elixir-autogen, elixir-format
 msgid "image"
 msgstr "bilde"
 
-#: lib/brando_admin/components/form.ex:5075
+#: lib/brando_admin/components/form.ex:5073
 #: lib/brando_admin/components/form/input/blocks/render_var.ex:1421
 #, elixir-autogen, elixir-format
 msgid "video"
@@ -3525,7 +3525,7 @@ msgstr "Kunne ikke lagre opplastet fil"
 
 #: lib/brando_admin/components/form/block_field.ex:1938
 #: lib/brando_admin/components/form/transformer.ex:470
-#: lib/brando_admin/components/suggestion_review.ex:70
+#: lib/brando_admin/components/suggestion_review.ex:71
 #: lib/brando_admin/live/content/shared_library_live.ex:272
 #: lib/brando_admin/live/upload_manager.ex:796
 #, elixir-autogen, elixir-format
@@ -4147,7 +4147,7 @@ msgstr "Klarte ikke tilbakestille videominiatyren"
 msgid "Could not save module. Check the highlighted fields."
 msgstr "Klarte ikke lagre modulen. Sjekk de markerte feltene."
 
-#: lib/brando_admin/components/form.ex:4746
+#: lib/brando_admin/components/form.ex:4744
 #, elixir-autogen, elixir-format
 msgid "Could not save revision"
 msgstr "Klarte ikke lagre versjonen"
@@ -4579,7 +4579,7 @@ msgstr "Miljøer"
 msgid "Everything"
 msgstr "Alt"
 
-#: lib/brando_admin/components/form.ex:4103
+#: lib/brando_admin/components/form.ex:4101
 #, elixir-autogen, elixir-format
 msgid "External video URLs are disabled for this field"
 msgstr "Eksterne video-URL-er er deaktivert for dette feltet"
@@ -5272,7 +5272,7 @@ msgstr "Versjon slettet"
 msgid "Revision error"
 msgstr "Versjonsfeil"
 
-#: lib/brando_admin/components/form.ex:4714
+#: lib/brando_admin/components/form.ex:4712
 #, elixir-autogen, elixir-format
 msgid "Revision saved"
 msgstr "Versjon lagret"
@@ -5313,7 +5313,7 @@ msgstr "Lagre tilgang"
 msgid "Save deployment settings"
 msgstr "Lagre publiseringsinnstillinger"
 
-#: lib/brando_admin/components/form.ex:4261
+#: lib/brando_admin/components/form.ex:4259
 #, elixir-autogen, elixir-format
 msgid "Saving a revision..."
 msgstr "Lagrer en versjon …"
@@ -5655,7 +5655,7 @@ msgstr "Publiseringsdatoen må være frem i tid."
 msgid "The revision could not be activated."
 msgstr "Versjonen kunne ikke aktiveres."
 
-#: lib/brando_admin/components/form.ex:4747
+#: lib/brando_admin/components/form.ex:4745
 #, elixir-autogen, elixir-format
 msgid "The revision was not saved. Please try again."
 msgstr "Versjonen ble ikke lagret. Prøv igjen."
@@ -5859,7 +5859,7 @@ msgstr "f.eks: `video:Elixir.MyApp.Schema:function:fn_name`"
 msgid "live"
 msgstr "live"
 
-#: lib/brando_admin/components/form.ex:4862
+#: lib/brando_admin/components/form.ex:4860
 #, elixir-autogen, elixir-format
 msgid "or"
 msgstr "eller"
@@ -6028,7 +6028,7 @@ msgstr "Bla gjennom denne mappen"
 
 #: lib/brando_admin/components/file_picker.ex:219
 #: lib/brando_admin/components/video_picker.ex:638
-#: lib/brando_admin/live/images/alt_text_live.ex:286
+#: lib/brando_admin/live/images/alt_text_live.ex:287
 #: lib/brando_admin/live/images/image_list_live.ex:242
 #, elixir-format, elixir-autogen
 msgid "Root folder"
@@ -6044,12 +6044,12 @@ msgstr "Ingen bilder i denne visningen"
 msgid "Choose a folder, upload an image, or adjust your search."
 msgstr "Velg en mappe, last opp et bilde eller juster søket."
 
-#: lib/brando/images/image.ex:108
+#: lib/brando/images/image.ex:113
 #, elixir-format, elixir-autogen
 msgid "Alt text added"
 msgstr "Har alt-tekst"
 
-#: lib/brando/images/image.ex:109
+#: lib/brando/images/image.ex:120
 #, elixir-format, elixir-autogen
 msgid "Processing"
 msgstr "Behandler"
@@ -6099,12 +6099,12 @@ msgstr "Tøm hurtigbuffer %{key}"
 msgid "Build"
 msgstr "Bygg"
 
-#: lib/brando/images/image.ex:99
+#: lib/brando/images/image.ex:103
 #, elixir-format, elixir-autogen
 msgid "Formats"
 msgstr "Formater"
 
-#: lib/brando/images/image.ex:104
+#: lib/brando/images/image.ex:108
 #, elixir-format, elixir-autogen
 msgid "%{count} size"
 msgid_plural "%{count} sizes"
@@ -7268,7 +7268,7 @@ msgstr "Tekstlenke"
 msgid "The configured site was not found. Check the site configuration before preparing groups."
 msgstr "Det konfigurerte nettstedet ble ikke funnet. Kontroller nettstedskonfigurasjonen før du klargjør grupper."
 
-#: lib/brando_admin/components/form.ex:4659
+#: lib/brando_admin/components/form.ex:4657
 #, elixir-autogen, elixir-format
 msgid "The entry was saved, but an existing redirect on its new URL could not be removed. Please check the SEO redirect settings."
 msgstr "Elementet ble lagret, men en eksisterende omdirigering på den nye URL-en kunne ikke fjernes. Kontroller omdirigeringene i SEO-innstillingene."
@@ -7384,7 +7384,7 @@ msgstr "Region uten samsvar"
 msgid "Unreferenced footnote"
 msgstr "Fotnote uten referanse"
 
-#: lib/brando_admin/components/form/draft_preview_references.ex:157
+#: lib/brando_admin/components/form/draft_preview_references.ex:161
 #: lib/brando_admin/components/form/draft_recovery.ex:404
 #, elixir-autogen, elixir-format
 msgid "Untitled entry"
@@ -7784,12 +7784,12 @@ msgstr "Erstatt bildet og behold innstillingene for denne referansen."
 msgid "Replace the video while keeping this reference’s settings."
 msgstr "Erstatt videoen og behold innstillingene for denne referansen."
 
-#: lib/brando_admin/components/form/input.ex:1146
+#: lib/brando_admin/components/form/input.ex:1117
 #, elixir-autogen, elixir-format
 msgid "Reset %{label} to default"
 msgstr "Tilbakestill %{label} til standard"
 
-#: lib/brando_admin/components/form/input.ex:1117
+#: lib/brando_admin/components/form/input.ex:1088
 #, elixir-autogen, elixir-format
 msgid "Reset all to defaults"
 msgstr "Tilbakestill alle til standard"
@@ -8476,7 +8476,7 @@ msgstr "Gjennomgå tillatelsene og medlemmene, eller opprett en gruppe for teame
 msgid "Review permission changes"
 msgstr "Gjennomgå endringer i tillatelser"
 
-#: lib/brando_admin/components/suggestion_review.ex:42
+#: lib/brando_admin/components/suggestion_review.ex:43
 #: lib/brando_admin/live/users/groups_live.ex:196
 #, elixir-autogen, elixir-format
 msgid "Saving…"
@@ -9223,7 +9223,7 @@ msgid "Finding Markdown files…"
 msgstr "Finner Markdown-filer…"
 
 #: lib/brando_admin/live/config/markdown_sources_live.ex:132
-#: lib/brando_admin/live/images/alt_text_live.ex:84
+#: lib/brando_admin/live/images/alt_text_live.ex:85
 #, elixir-autogen, elixir-format
 msgid "Folder"
 msgstr "Mappe"
@@ -9508,7 +9508,7 @@ msgid "No content changes in this preview."
 msgstr "Ingen innholdsendringer i denne forhåndsvisningen."
 
 #: lib/brando_admin/components/form/draft_preview.ex:203
-#: lib/brando_admin/components/form/draft_preview_references.ex:185
+#: lib/brando_admin/components/form/draft_preview_references.ex:189
 #, elixir-autogen
 msgid "Related entry"
 msgstr "Relatert innlegg"
@@ -9706,7 +9706,7 @@ msgstr "(ingen beskrivelse — nettstedets standardbeskrivelse vises)"
 msgid "Open entry"
 msgstr "Åpne oppføring"
 
-#: lib/brando_admin/components/suggestion_review.ex:65
+#: lib/brando_admin/components/suggestion_review.ex:66
 #: lib/brando_admin/live/config/seo_live.ex:371
 #, elixir-autogen, elixir-format
 msgid "Writing…"
@@ -9742,7 +9742,7 @@ msgstr[0] "Skriver en beskrivelse for én oppføring. Ingenting lagres før du g
 msgstr[1] "Skriver beskrivelser for %{count} oppføringer. Ingenting lagres før du godtar dem."
 
 #: lib/brando_admin/live/config/seo_live.ex:441
-#: lib/brando_admin/live/images/alt_text_live.ex:113
+#: lib/brando_admin/live/images/alt_text_live.ex:114
 #, elixir-autogen, elixir-format
 msgid "At most %{max} per run; run it again for the rest."
 msgstr "Høyst %{max} per kjøring; kjør igjen for resten."
@@ -9764,22 +9764,22 @@ msgstr[1] "Skriv %{count} beskrivelser"
 msgid "Suggested descriptions"
 msgstr "Foreslåtte beskrivelser"
 
-#: lib/brando_admin/components/suggestion_review.ex:30
+#: lib/brando_admin/components/suggestion_review.ex:31
 #, elixir-autogen, elixir-format
 msgid "%{count} being written"
 msgstr "%{count} skrives"
 
-#: lib/brando_admin/components/suggestion_review.ex:31
+#: lib/brando_admin/components/suggestion_review.ex:32
 #, elixir-autogen, elixir-format
 msgid "%{count} to review"
 msgstr "%{count} til gjennomgang"
 
-#: lib/brando_admin/components/suggestion_review.ex:32
+#: lib/brando_admin/components/suggestion_review.ex:33
 #, elixir-autogen, elixir-format
 msgid "%{count} failed"
 msgstr "%{count} mislyktes"
 
-#: lib/brando_admin/components/suggestion_review.ex:42
+#: lib/brando_admin/components/suggestion_review.ex:43
 #, elixir-autogen, elixir-format
 msgid "Accept all"
 msgstr "Godta alle"
@@ -9790,12 +9790,12 @@ msgid "Suggested description for %{title}"
 msgstr "Foreslått beskrivelse for %{title}"
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:65
-#: lib/brando_admin/components/suggestion_review.ex:84
+#: lib/brando_admin/components/suggestion_review.ex:99
 #, elixir-autogen, elixir-format
 msgid "Accept"
 msgstr "Godta"
 
-#: lib/brando_admin/components/suggestion_review.ex:86
+#: lib/brando_admin/components/suggestion_review.ex:101
 #, elixir-autogen, elixir-format
 msgid "Reject"
 msgstr "Avvis"
@@ -9925,7 +9925,7 @@ msgstr[0] "Én beskrivelse lagret"
 msgstr[1] "%{count} beskrivelser lagret"
 
 #: lib/brando_admin/live/config/seo_live.ex:944
-#: lib/brando_admin/live/images/alt_text_live.ex:238
+#: lib/brando_admin/live/images/alt_text_live.ex:239
 #, elixir-autogen, elixir-format
 msgid "%{accepted} saved, %{failed} could not be saved"
 msgstr "%{accepted} lagret, %{failed} kunne ikke lagres"
@@ -9936,7 +9936,7 @@ msgid "Could not save the descriptions"
 msgstr "Klarte ikke lagre beskrivelsene"
 
 #: lib/brando_admin/live/config/seo_live.ex:1089
-#: lib/brando_admin/live/images/alt_text_live.ex:207
+#: lib/brando_admin/live/images/alt_text_live.ex:208
 #, elixir-autogen, elixir-format
 msgid "This suggestion was already reviewed"
 msgstr "Dette forslaget er allerede gjennomgått"
@@ -10956,7 +10956,7 @@ msgid_plural "%{count} missing"
 msgstr[0] "%{count} mangler"
 msgstr[1] "%{count} mangler"
 
-#: lib/brando_admin/live/images/alt_text_live.ex:86
+#: lib/brando_admin/live/images/alt_text_live.ex:87
 #, elixir-autogen, elixir-format
 msgid "All folders"
 msgstr "Alle mapper"
@@ -10966,12 +10966,12 @@ msgstr "Alle mapper"
 msgid "Alt text describes an image to people who cannot see it, and to search engines. It is written on the image and used wherever the image appears, unless a placement overrides it."
 msgstr "Alt-tekst beskriver et bilde for folk som ikke kan se det, og for søkemotorer. Den skrives på bildet og brukes overalt hvor bildet vises, med mindre en plassering overstyrer den."
 
-#: lib/brando_admin/live/images/alt_text_live.ex:204
+#: lib/brando_admin/live/images/alt_text_live.ex:205
 #, elixir-autogen, elixir-format
 msgid "Alt text saved"
 msgstr "Alt-teksten er lagret"
 
-#: lib/brando_admin/live/images/alt_text_live.ex:160
+#: lib/brando_admin/live/images/alt_text_live.ex:161
 #, elixir-autogen, elixir-format
 msgid "An estimate from the model's published prices and each image's size; your provider bills what is actually used. The images are sent to the provider."
 msgstr "Et anslag ut fra modellens publiserte priser og størrelsen på hvert bilde; leverandøren fakturerer faktisk bruk. Bildene sendes til leverandøren."
@@ -10981,44 +10981,44 @@ msgstr "Et anslag ut fra modellens publiserte priser og størrelsen på hvert bi
 msgid "Back to images"
 msgstr "Tilbake til bilder"
 
-#: lib/brando_admin/live/images/alt_text_live.ex:105
+#: lib/brando_admin/live/images/alt_text_live.ex:106
 #, elixir-autogen, elixir-format
 msgid "Connect an AI provider to write alt text from the images themselves, or add it on each image in the library."
 msgstr "Koble til en KI-leverandør for å skrive alt-tekst ut fra selve bildene, eller legg den inn på hvert bilde i biblioteket."
 
-#: lib/brando_admin/live/images/alt_text_live.ex:213
-#: lib/brando_admin/live/images/alt_text_live.ex:242
+#: lib/brando_admin/live/images/alt_text_live.ex:214
+#: lib/brando_admin/live/images/alt_text_live.ex:243
 #, elixir-autogen, elixir-format
 msgid "Could not save the alt text"
 msgstr "Klarte ikke lagre alt-teksten"
 
-#: lib/brando_admin/live/images/alt_text_live.ex:122
+#: lib/brando_admin/live/images/alt_text_live.ex:123
 #, elixir-autogen, elixir-format
 msgid "Describe one image"
 msgid_plural "Describe %{count} images"
 msgstr[0] "Beskriv ett bilde"
 msgstr[1] "Beskriv %{count} bilder"
 
-#: lib/brando_admin/live/images/alt_text_live.ex:194
+#: lib/brando_admin/live/images/alt_text_live.ex:195
 #, elixir-autogen, elixir-format
 msgid "Describing one image"
 msgid_plural "Describing %{count} images"
 msgstr[0] "Beskriver ett bilde"
 msgstr[1] "Beskriver %{count} bilder"
 
-#: lib/brando_admin/live/images/alt_text_live.ex:150
+#: lib/brando_admin/live/images/alt_text_live.ex:151
 #, elixir-autogen, elixir-format
 msgid "Describing one image with %{model} costs about %{total}."
 msgid_plural "Describing %{count} images with %{model} costs about %{total} — roughly %{each} per image."
 msgstr[0] "Å beskrive ett bilde med %{model} koster omtrent %{total}."
 msgstr[1] "Å beskrive %{count} bilder med %{model} koster omtrent %{total} — rundt %{each} per bilde."
 
-#: lib/brando_admin/live/images/alt_text_live.ex:96
+#: lib/brando_admin/live/images/alt_text_live.ex:97
 #, elixir-autogen, elixir-format
 msgid "Every image has alt text"
 msgstr "Alle bildene har alt-tekst"
 
-#: lib/brando_admin/live/images/alt_text_live.ex:101
+#: lib/brando_admin/live/images/alt_text_live.ex:102
 #, elixir-autogen, elixir-format
 msgid "Every image without alt text already has a suggestion below."
 msgstr "Alle bilder uten alt-tekst har allerede et forslag under."
@@ -11028,44 +11028,39 @@ msgstr "Alle bilder uten alt-tekst har allerede et forslag under."
 msgid "Images without alt text"
 msgstr "Bilder uten alt-tekst"
 
-#: lib/brando_admin/live/images/alt_text_live.ex:97
+#: lib/brando_admin/live/images/alt_text_live.ex:98
 #, elixir-autogen, elixir-format
 msgid "New uploads without alt text will be listed here."
 msgstr "Nye opplastinger uten alt-tekst vises her."
 
-#: lib/brando_admin/live/images/alt_text_live.ex:170
+#: lib/brando_admin/live/images/alt_text_live.ex:171
 #, elixir-autogen, elixir-format
 msgid "No price is known for the configured AI model. Check your provider's pricing before describing many images."
 msgstr "Det finnes ingen pris for den konfigurerte KI-modellen. Sjekk leverandørens priser før du beskriver mange bilder."
 
-#: lib/brando_admin/live/images/alt_text_live.ex:233
+#: lib/brando_admin/live/images/alt_text_live.ex:234
 #, elixir-autogen, elixir-format
 msgid "One alt text saved"
 msgid_plural "%{count} alt texts saved"
 msgstr[0] "Én alt-tekst lagret"
 msgstr[1] "%{count} alt-tekster lagret"
 
-#: lib/brando_admin/live/images/alt_text_live.ex:131
+#: lib/brando_admin/live/images/alt_text_live.ex:132
 #, elixir-autogen, elixir-format
 msgid "Suggested alt text"
 msgstr "Foreslått alt-tekst"
 
-#: lib/brando_admin/live/images/alt_text_live.ex:135
+#: lib/brando_admin/live/images/alt_text_live.ex:136
 #, elixir-autogen, elixir-format
 msgid "Suggested alt text for %{title}"
 msgstr "Foreslått alt-tekst for %{title}"
-
-#: lib/brando_admin/live/images/alt_text_live.ex:75
-#, elixir-autogen, elixir-format
-msgid "Text is written in %{language}, the site's default language."
-msgstr "Teksten skrives på %{language}, nettstedets standardspråk."
 
 #: lib/brando/ai.ex:163
 #, elixir-autogen, elixir-format
 msgid "The configured AI model cannot read images"
 msgstr "Den konfigurerte KI-modellen kan ikke lese bilder"
 
-#: lib/brando_admin/live/images/alt_text_live.ex:166
+#: lib/brando_admin/live/images/alt_text_live.ex:167
 #, elixir-autogen, elixir-format
 msgid "The configured AI model cannot read images. Configure one that can for the alt field."
 msgstr "Den konfigurerte KI-modellen kan ikke lese bilder. Konfigurer en som kan, for alt-feltet."
@@ -11085,7 +11080,22 @@ msgstr "Bildet er i et format KI-modellen ikke kan lese"
 msgid "Write alt text"
 msgstr "Skriv alt-tekst"
 
-#: lib/brando_admin/live/images/alt_text_live.ex:210
+#: lib/brando_admin/live/images/alt_text_live.ex:211
 #, elixir-autogen, elixir-format
 msgid "Write the alt text before accepting it"
 msgstr "Skriv alt-teksten før du godtar den"
+
+#: lib/brando_admin/live/images/alt_text_live.ex:75
+#, elixir-autogen, elixir-format
+msgid "Missing in at least one of %{languages}. Each image is described in every language it lacks, in one request."
+msgstr "Mangler på minst ett av %{languages}. Hvert bilde beskrives på alle språkene det mangler, i én forespørsel."
+
+#: lib/brando/images/image.ex:117
+#, elixir-autogen, elixir-format
+msgid "No alt text in %{languages}"
+msgstr "Ingen alt-tekst på %{languages}"
+
+#: lib/brando/ai.ex:166
+#, elixir-autogen, elixir-format
+msgid "The AI reply could not be read"
+msgstr "Klarte ikke lese KI-svaret"

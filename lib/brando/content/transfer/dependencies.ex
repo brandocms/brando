@@ -307,7 +307,8 @@ defmodule Brando.Content.Transfer.Dependencies do
         "#{record.__struct__ |> Module.split() |> List.last() |> Macro.underscore() |> Phoenix.Naming.humanize()} ##{record.id}"
 
     if is_map(value),
-      do: Map.get(value, "en") || value |> Map.values() |> List.first() || "Untitled",
+      do:
+        Brando.Type.I18nString.get(value, nil) || value |> Map.values() |> Enum.find(&(&1 not in [nil, ""])) || "Untitled",
       else: to_string(value)
   end
 

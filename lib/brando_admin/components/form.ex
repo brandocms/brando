@@ -3905,13 +3905,11 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def handle_event("validate_image", %{"image" => image_params}, socket) do
+    # Cast rather than change: the fields are language → text maps, and a
+    # plain string (older recovery state) must land under the default language.
     image_changeset =
       socket.assigns.edit_image.image
-      |> change(%{
-        title: image_params["title"],
-        credits: image_params["credits"],
-        alt: image_params["alt"]
-      })
+      |> cast(Map.take(image_params, ["title", "credits", "alt"]), [:title, :credits, :alt])
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, :image_changeset, image_changeset)}

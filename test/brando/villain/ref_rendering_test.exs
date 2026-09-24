@@ -153,6 +153,60 @@ defmodule Brando.Villain.RefRenderingTest do
       assert parsed =~ "/media/image/"
     end
 
+    test "an image's own alt and caption render in the entry's language", %{user: user} do
+      image =
+        Factory.insert(:image,
+          creator: user,
+          alt: %{"en" => "A ferry at dusk", "no" => "En ferje i skumringen"},
+          title: %{"en" => "The harbour", "no" => "Havna"}
+        )
+
+      module_params =
+        Factory.params_for(:module, %{
+          code: "Cover: {% ref refs.cover %}",
+          refs: [%{name: "cover", image_id: image.id, uid: Utils.generate_uid(), data: %{type: "picture", data: %{}}}]
+        })
+
+      {:ok, module} = Content.create_module(module_params, user)
+
+      block = fn override ->
+        %{
+          block: %{
+            type: :module,
+            module_id: module.id,
+            refs: [
+              %{
+                name: "cover",
+                description: nil,
+                image_id: image.id,
+                image: image,
+                uid: Utils.generate_uid(),
+                data: %Brando.Villain.Blocks.PictureBlock{
+                  type: "picture",
+                  data: struct(Brando.Villain.Blocks.PictureBlock.Data, override)
+                }
+              }
+            ],
+            uid: Utils.generate_uid(),
+            vars: []
+          }
+        }
+      end
+
+      norwegian = Brando.Villain.parse([block.(%{})], %Brando.Pages.Page{language: :no})
+      assert norwegian =~ ~s(alt="En ferje i skumringen")
+      assert norwegian =~ "Havna"
+      refute norwegian =~ "A ferry"
+      refute norwegian =~ "%{"
+
+      english = Brando.Villain.parse([block.(%{})], %Brando.Pages.Page{language: :en})
+      assert english =~ ~s(alt="A ferry at dusk")
+
+      # A placement's own alt text still wins over the image's.
+      overridden = Brando.Villain.parse([block.(%{alt: "Placement alt"})], %Brando.Pages.Page{language: :no})
+      assert overridden =~ ~s(alt="Placement alt")
+    end
+
     test "renders video refs with video associations", %{user: user, video: video} do
       module_params =
         Factory.params_for(:module, %{

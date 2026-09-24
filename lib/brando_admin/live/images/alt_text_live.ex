@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Images.AltTextLive do
   them with AI would cost, and the review list for what it wrote.
 
   Nothing is saved until a suggestion is accepted (`Brando.SEO.Suggestions`).
-  The text goes on the image asset, in the site's default language.
+  The text goes on the image asset, in every content language it lacks.
   """
   use BrandoAdmin, :live_view
   use Gettext, backend: Brando.Gettext
@@ -72,8 +72,9 @@ defmodule BrandoAdmin.Images.AltTextLive do
           <div>
             <h2>{gettext("Images without alt text")}</h2>
             <p>
-              {gettext("Text is written in %{language}, the site's default language.",
-                language: AI.language_name(@language)
+              {gettext(
+                "Missing in at least one of %{languages}. Each image is described in every language it lacks, in one request.",
+                languages: Enum.map_join(AltText.languages(), ", ", &AI.language_name/1)
               )}
             </p>
           </div>
@@ -199,7 +200,7 @@ defmodule BrandoAdmin.Images.AltTextLive do
   end
 
   def handle_event("accept_suggestion", %{"suggestion_id" => id} = params, socket) do
-    case Suggestions.accept(id, params["text"], socket.assigns.current_user) do
+    case Suggestions.accept(id, params["values"] || params["text"], socket.assigns.current_user) do
       {:ok, _suggestion} ->
         send(self(), {:toast, gettext("Alt text saved")})
 
@@ -304,10 +305,5 @@ defmodule BrandoAdmin.Images.AltTextLive do
     _ -> nil
   end
 
-  defp image_title(image) do
-    case image.title do
-      title when is_binary(title) and title != "" -> title
-      _ -> Path.basename(image.path)
-    end
-  end
+  defp image_title(image), do: Brando.Images.text(image, :title, nil) || Path.basename(image.path)
 end
