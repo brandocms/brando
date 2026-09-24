@@ -973,6 +973,60 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    @image_text_extensions ~w(.ex .heex .eex .leex)
+    @image_text_limit 50
+
+    @doc """
+    Warns about application code that reads an image's `alt`, `title` or
+    `credits` as a string. Since 0.55 they are language → text maps, and only
+    a person can tell which language each call site means, so this lists
+    the places — it rewrites nothing.
+    """
+    def warn_image_text_reads(igniter) do
+      igniter = Igniter.include_glob(igniter, "lib/**/*.{ex,heex,eex,leex}")
+
+      sources =
+        igniter.rewrite
+        |> Rewrite.sources()
+        |> Enum.map(&{Source.get(&1, :path), Source.get(&1, :content)})
+        |> Enum.filter(fn {path, _content} ->
+          String.starts_with?(path, "lib/") and Path.extname(path) in @image_text_extensions
+        end)
+
+      assets =
+        sources
+        |> Enum.filter(fn {_path, content} -> String.contains?(content, "use Brando.Blueprint") end)
+        |> Enum.flat_map(fn {_path, content} -> Brando.Images.TextUsage.image_assets(content) end)
+        |> Enum.uniq()
+
+      findings =
+        for {path, content} <- Enum.sort(sources),
+            %{line: line, text: text} <- Brando.Images.TextUsage.scan_code(content, assets),
+            do: "#{path}:#{line}: #{text}"
+
+      case findings do
+        [] ->
+          igniter
+
+        findings ->
+          shown = Enum.take(findings, @image_text_limit)
+          more = length(findings) - length(shown)
+
+          Igniter.add_warning(igniter, """
+          Image alt text, title and credits are now maps of language → text.
+          These lines look like they read them as strings (matched by name, so
+          check each one):
+
+          #{Enum.map_join(shown, "\n", &("  " <> &1))}#{if more > 0, do: "\n  … and #{more} more", else: ""}
+
+          Read one language with `Brando.Images.text(image, :alt, language)`,
+          or all three with `Brando.Images.resolve_texts(image, language)`.
+          `<Brando.HTML.picture>` needs nothing: it renders the request's
+          language, or `language:` when given.
+          """)
+      end
+    end
+
     defp rewrite_matching_sources(igniter, path_predicate, content_updater) do
       igniter.rewrite
       |> Rewrite.sources()

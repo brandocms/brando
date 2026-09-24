@@ -37,6 +37,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.pin_live_view_javascript()
       |> SourceUpgrade.create_florist_config()
       |> SourceUpgrade.refresh_gettext_script()
+      |> SourceUpgrade.warn_image_text_reads()
       |> Mix.Brando.Igniter.Upgrade.prepare()
       |> add_notices()
       |> add_warnings()
@@ -75,6 +76,10 @@ if Code.ensure_loaded?(Igniter) do
         6. Run `mix ecto.migrate` only after that review.
         7. After the database migration, run `mix brando.entries.resave` and
            `mix brando.identifiers.sync`.
+        8. Run `mix brando.check.image_texts` to find module, container and
+           menu templates that print an image's alt text, title or credits
+           without the `i18n` filter. Templates live in the database, so this
+           source migration cannot see them.
 
       See `guides/migrating_from_053.md` and `guides/blueprint_migrations.md` in
       Brando for the full recovery and rebaseline instructions.

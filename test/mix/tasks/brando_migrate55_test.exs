@@ -289,6 +289,50 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     refute config =~ "Swoosh.ApiClient.Req"
   end
 
+  describe "image text reads" do
+    @hero_blueprint String.replace(@blueprint_054, "attribute :title, :string", """
+                    attribute :title, :string
+
+                      assets do
+                        asset :hero, :image
+                      end
+                    """)
+
+    test "lists code that reads an image's texts as strings, using the Blueprints' own asset names" do
+      view = """
+      defmodule LegacyAppWeb.ProjectHTML do
+        use LegacyAppWeb, :html
+
+        def show(assigns) do
+          ~H\"\"\"
+          <img alt={@project.cover.alt} />
+          <p>{@project.hero.title}</p>
+          <p>{@project.title}</p>
+          <p>{Brando.Images.text(@project.cover, :credits, "no")}</p>
+          \"\"\"
+        end
+      end
+      """
+
+      igniter = migrate(@hero_blueprint, %{"lib/legacy_app_web/project_html.ex" => view})
+
+      assert_has_warning(igniter, fn warning ->
+        String.contains?(warning, "language → text") and
+          String.contains?(warning, "lib/legacy_app_web/project_html.ex:6: <img alt={@project.cover.alt} />") and
+          String.contains?(warning, "lib/legacy_app_web/project_html.ex:7: <p>{@project.hero.title}</p>") and
+          not String.contains?(warning, ":8:") and not String.contains?(warning, ":9:")
+      end)
+
+      # Report only: the file is untouched.
+      assert source(igniter, "lib/legacy_app_web/project_html.ex") == view
+    end
+
+    test "stays quiet when nothing reads them" do
+      igniter = migrate(@blueprint_054)
+      refute Enum.any?(igniter.warnings, &String.contains?(&1, "language → text"))
+    end
+  end
+
   test "reports only the 0.55 manual workflow" do
     igniter = migrate(@blueprint_054)
 
