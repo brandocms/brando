@@ -393,6 +393,12 @@ is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
   `Brando.SEO.Check` structs. Recorded 404s whose slug matches an audited
   entry are listed as missing redirects with a one-click "Create redirect"
   that appends to the SEO settings.
+- The Content SEO audit flags **thin content**: an entry whose rendered blocks
+  hold fewer than 300 words warns, and one with no body text fails. The words
+  are counted by the database from the `rendered_<field>` columns, so the HTML
+  still never leaves it. Change the threshold with
+  `config :brando, Brando.SEO, thin_content_words: 300`. A meta description
+  that opens by repeating the title now warns as well.
 - Write an entry's meta description from the Content SEO tab, without opening
   the entry. The prompt is the one the blueprint declares through
   `trait :meta, ai: [...]`, and the tab lets you pick which of the entry's

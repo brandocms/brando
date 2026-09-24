@@ -14,13 +14,18 @@ defmodule Brando.SEO.Checks do
 
   @title_range 30..60
   @description_range 120..160
+  # Below this many words of body text a page gives search engines little to
+  # rank and readers little reason to stay. Coverage floor, not a ranking
+  # factor: a contact page may legitimately sit under it, hence a warning.
+  @thin_content_words 300
 
   @type ctx :: %{
           fallback_title: String.t() | nil,
           fallback_description: String.t() | nil,
           title_counts: %{String.t() => pos_integer()},
           description_counts: %{String.t() => pos_integer()},
-          sitemap: MapSet.t() | nil
+          sitemap: MapSet.t() | nil,
+          thin_content_words: pos_integer()
         }
 
   @doc "Runs every built-in check for `row`."
@@ -37,8 +42,19 @@ defmodule Brando.SEO.Checks do
       duplicate_title(row, ctx),
       duplicate_description(row, ctx),
       url_resolves(row),
-      in_sitemap(row, ctx)
+      in_sitemap(row, ctx),
+      thin_content(row, ctx)
     ]
+  end
+
+  @doc """
+  The word count under which an entry's body counts as thin.
+
+      config :brando, Brando.SEO, thin_content_words: 300
+  """
+  @spec thin_content_words() :: pos_integer()
+  def thin_content_words do
+    :brando |> Application.get_env(Brando.SEO, []) |> Keyword.get(:thin_content_words, @thin_content_words)
   end
 
   @doc "Normalises a meta value for duplicate detection."
@@ -98,12 +114,27 @@ defmodule Brando.SEO.Checks do
     )
   end
 
+  # Identical copy fails; a description that merely opens with the title
+  # wastes the first words a search result shows, and only warns.
   def title_not_description(row) do
-    same? = present?(row.meta_title) and normalize(row.meta_title) == normalize(row.meta_description)
+    title = normalize(row.meta_title)
+    description = normalize(row.meta_description)
 
-    check(:title_not_description, not same?, :low, gettext("Title differs from description"),
-      hint: gettext("The meta title and description are identical.")
-    )
+    {status, hint} =
+      cond do
+        is_nil(title) or is_nil(description) -> {:pass, nil}
+        title == description -> {:fail, gettext("The meta title and description are identical.")}
+        String.starts_with?(description, title) -> {:warn, gettext("The description opens by repeating the title.")}
+        true -> {:pass, nil}
+      end
+
+    %Check{
+      key: :title_not_description,
+      status: status,
+      weight: :low,
+      label: gettext("Title differs from description"),
+      hint: hint
+    }
   end
 
   def duplicate_title(row, ctx),
@@ -124,6 +155,33 @@ defmodule Brando.SEO.Checks do
     check(:in_sitemap, present?(row.url) and MapSet.member?(sitemap, path(row.url)), :normal, gettext("In sitemap"),
       hint: gettext("Not in the generated sitemap. Check the sitemap module, or regenerate it.")
     )
+  end
+
+  @doc """
+  Body text below `thin_content_words/0` warns; an entry whose blocks render
+  no text at all fails. Skipped for schemas without block fields, where the
+  audit has no body to count.
+  """
+  def thin_content(%{word_count: nil}, _ctx), do: skip(:thin_content, :normal, gettext("Content length"))
+
+  def thin_content(row, ctx) do
+    minimum = Map.get(ctx, :thin_content_words) || thin_content_words()
+
+    status =
+      cond do
+        row.word_count == 0 -> :fail
+        row.word_count < minimum -> :warn
+        true -> :pass
+      end
+
+    %Check{
+      key: :thin_content,
+      status: status,
+      weight: :normal,
+      label: gettext("Content length"),
+      hint: gettext("Thin content: aim for at least %{count} words of body text.", count: minimum),
+      value: gettext("%{count} words", count: row.word_count)
+    }
   end
 
   defp duplicate(key, value, counts, label) do
