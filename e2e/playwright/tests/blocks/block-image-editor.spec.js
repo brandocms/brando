@@ -129,9 +129,14 @@ test.describe('Image Editor from Blocks', () => {
     // decoded. Hold the image back to see what fills that gap — without it the
     // canvas keeps the last session's render, and a click on it is undone by
     // the re-init.
+    // The handler only delays. If the browser drops the request while it sleeps
+    // (the editor re-points its image, or the drawer closes), the route is
+    // already finished by the time it wakes and there is nothing to continue.
     await page.route('**/media/**', async route => {
       await new Promise(resolve => setTimeout(resolve, 1500))
-      await route.continue()
+      await route.continue().catch(error => {
+        if (!/Route is already handled/.test(error.message)) throw error
+      })
     })
     await page.locator('.picture-block .edit-image-btn').click()
     await expect(editorDrawer).toBeVisible()

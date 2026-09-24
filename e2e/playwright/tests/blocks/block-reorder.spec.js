@@ -5,6 +5,7 @@ import {
   getPreviewFrame,
   waitForPreviewReady,
   waitForPreviewUpdate,
+  awaitBlockShip,
 } from '../../utils'
 
 // Regression coverage for root-block drag reordering — the `reposition` event
@@ -46,31 +47,43 @@ test.describe('Block reordering (root blocks)', () => {
     await syncLV(page)
   }
 
+  // Drag `items.nth(from)` by its handle into `from`'s place at index `to`.
+  //
   // SortableJS needs incremental mouse movement for its drag-over detection —
-  // a single-jump mouse.move never triggers the reorder. `edge` picks whether
-  // we aim just inside the target's top or bottom edge, which decides whether
-  // Sortable drops the dragged block before or after the target.
-  const dragBlock = async (page, sourceHandle, target, edge) => {
-    // syncLV only waits for pending client-initiated events; the position
-    // handshake after an insert re-renders blocks server-side slightly later,
-    // and a patch landing mid-drag detaches the dragged element. Let it settle.
-    await page.waitForTimeout(750)
+  // a single-jump mouse.move never triggers the reorder. We aim just inside the
+  // target's top edge when moving up and its bottom edge when moving down, which
+  // is what makes Sortable drop the block before or after the target.
+  //
+  // The release waits for the dragged block (Sortable's `is-sorting` ghost) to
+  // actually sit at `to`. Sortable ignores a target for the length of its 150ms
+  // swap animation and re-tests the resting pointer on a 50ms loop, so on a slow
+  // runner the last swap can still be pending when a fixed sleep lets go — and
+  // the block drops one slot short.
+  const dragBlock = async (page, items, from, to) => {
+    // The last edit's blur ships the block after a client-side timer, and the
+    // patch that answers it must not land mid-drag.
+    await awaitBlockShip(page)
+    const sourceHandle = items.nth(from).locator('.sort-handle').first()
+    const target = items.nth(to)
     await sourceHandle.scrollIntoViewIfNeeded()
     await target.scrollIntoViewIfNeeded()
     const sourceBox = await sourceHandle.boundingBox()
     const targetBox = await target.boundingBox()
-    const targetY = edge === 'top' ? targetBox.y + 8 : targetBox.y + targetBox.height - 8
+    const targetY = to < from ? targetBox.y + 8 : targetBox.y + targetBox.height - 8
 
     await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2)
     await page.mouse.down()
     await page.waitForTimeout(100)
     await page.mouse.move(targetBox.x + targetBox.width / 2, targetY, { steps: 20 })
-    await page.waitForTimeout(100)
+    await expect
+      .poll(() => items.evaluateAll(els => els.findIndex(el => el.classList.contains('is-sorting'))))
+      .toBe(to)
     await page.mouse.up()
     await syncLV(page)
   }
 
-  const sortHandle = (page, index) => page.locator('.entry-block').nth(index).locator('.sort-handle').first()
+  const rootBlocks = page => page.locator('.entry-block')
+  const sortHandle = (page, index) => rootBlocks(page).nth(index).locator('.sort-handle').first()
 
   const expectHeaderOrder = async (page, texts) => {
     for (let i = 0; i < texts.length; i++) {
@@ -93,7 +106,7 @@ test.describe('Block reordering (root blocks)', () => {
     await expect(previewHeaders.nth(0)).toContainText('Alpha')
 
     // Drag Gamma (3rd block) to the top → [Gamma, Alpha, Beta]
-    await dragBlock(page, sortHandle(page, 2), page.locator('.entry-block').nth(0), 'top')
+    await dragBlock(page, rootBlocks(page), 2, 0)
     await expectHeaderOrder(page, ['Gamma', 'Alpha', 'Beta'])
 
     // The preview refresh is gated on every root block acking its new
@@ -122,11 +135,11 @@ test.describe('Block reordering (root blocks)', () => {
     await addStyledHeader(page, 'Gamma', 2)
 
     // Gamma to the top → [Gamma, Alpha, Beta]
-    await dragBlock(page, sortHandle(page, 2), page.locator('.entry-block').nth(0), 'top')
+    await dragBlock(page, rootBlocks(page), 2, 0)
     await expectHeaderOrder(page, ['Gamma', 'Alpha', 'Beta'])
 
     // Gamma (now 1st) back to the bottom → [Alpha, Beta, Gamma]
-    await dragBlock(page, sortHandle(page, 0), page.locator('.entry-block').nth(2), 'bottom')
+    await dragBlock(page, rootBlocks(page), 0, 2)
     await expectHeaderOrder(page, ['Alpha', 'Beta', 'Gamma'])
 
     await page.getByRole('button', { name: 'Save', exact: true }).click()
@@ -176,12 +189,7 @@ test.describe('Block reordering (root blocks)', () => {
     }
 
     await expectMemberOrder(['Alice', 'Bob', 'Charlie'])
-    await dragBlock(
-      page,
-      childEntries.nth(2).locator('.sort-handle').first(),
-      childEntries.nth(0),
-      'top'
-    )
+    await dragBlock(page, childEntries, 2, 0)
     await expectMemberOrder(['Charlie', 'Alice', 'Bob'])
 
     await page.getByRole('button', { name: 'Save', exact: true }).click()
@@ -202,7 +210,7 @@ test.describe('Block reordering (root blocks)', () => {
   // to jump several positions.
   test.describe('drag affordances', () => {
     const startDrag = async (page, handle) => {
-      await page.waitForTimeout(750)
+      await awaitBlockShip(page)
       await handle.scrollIntoViewIfNeeded()
       const box = await handle.boundingBox()
       const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
@@ -384,7 +392,7 @@ test.describe('Block reordering (root blocks)', () => {
       })
 
       // Gamma to the top → [Gamma, Alpha, Beta]
-      await dragBlock(page, sortHandle(page, 2), page.locator('.entry-block').nth(0), 'top')
+      await dragBlock(page, rootBlocks(page), 2, 0)
       await expectHeaderOrder(page, ['Gamma', 'Alpha', 'Beta'])
       await waitForPreviewUpdate(page)
       await expect(headers.nth(0)).toContainText('Gamma')

@@ -77,20 +77,30 @@ test.describe('Block regressions: media persistence + insert position', () => {
     await page.getByLabel('Title', { exact: true }).fill('Insert Position Test')
     await page.getByLabel('URI').fill('insert-position-test')
 
+    const headers = page.locator('.header-block textarea')
+
     // Insert a Styled Header via a specific block's gap "+" (renders above that block),
     // then set its text. `entryIndex` is the .entry-block whose gap "+" we click.
     const fillHeader = async (textIndex, text) => {
-      const textarea = page.locator('.header-block textarea').nth(textIndex)
+      const textarea = headers.nth(textIndex)
       await textarea.fill(text)
       await textarea.blur()
       await syncLV(page)
     }
 
+    // The picker hands the insert to the block field with a `send_update`, which
+    // renders after the click has been answered — so `syncLV` can return before
+    // the new block exists, while `nth(textIndex)` still resolves to the block
+    // that used to sit there. Wait for the new block, still carrying the module's
+    // default text, before typing into it.
     const insertHeaderAbove = async (entryIndex, textIndex, text) => {
+      const count = await headers.count()
       await page.locator('.entry-block').nth(entryIndex).locator('.block-plus').first().click()
       await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
       await page.getByRole('button', { name: 'Styled Header' }).click()
       await syncLV(page)
+      await expect(headers).toHaveCount(count + 1)
+      await expect(headers.nth(textIndex)).toHaveValue('Header Text')
       await fillHeader(textIndex, text)
     }
 
@@ -106,8 +116,8 @@ test.describe('Block regressions: media persistence + insert position', () => {
     await insertHeaderAbove(1, 1, 'Second')
 
     // Order in the editor must be First, Second, Anchor.
-    await expect(page.locator('.header-block textarea').nth(0)).toHaveValue('First')
-    await expect(page.locator('.header-block textarea').nth(1)).toHaveValue('Second')
-    await expect(page.locator('.header-block textarea').nth(2)).toHaveValue('Anchor')
+    await expect(headers.nth(0)).toHaveValue('First')
+    await expect(headers.nth(1)).toHaveValue('Second')
+    await expect(headers.nth(2)).toHaveValue('Anchor')
   })
 })
