@@ -1372,21 +1372,12 @@ span[data-icon] {
   }
 }
 
-input::-webkit-input-placeholder {
+/* Placeholder text takes the input's own size, so screens that set a smaller
+   input (settings, link fields) do not get a placeholder larger than what the
+   editor types. */
+input::placeholder {
   @font main;
-  @fontsize input;
-}
-input:-ms-input-placeholder {
-  @font main;
-  @fontsize input;
-}
-input:-moz-placeholder {
-  @font main;
-  @fontsize input;
-}
-input::-moz-placeholder {
-  @font main;
-  @fontsize input;
+  font-size: inherit;
 }
 
 .avatar-sm {
